@@ -6383,3 +6383,37 @@ The PDF side is fixed separately.
   `dict://` URLs open the Dictionary app through `navigation.external` in
   VS Code and Cursor. In a remote window the extension host is not macOS,
   so the item shows but does nothing (the plugin's README).
+
+## Selection drags past the note's edge in VS Code (2026-11-01)
+
+Reported: dragging a selection to the edge of the note sometimes did not
+scroll, and sometimes the note shifted a little when the pointer was not at
+an edge.
+
+- Reproduced in a real VS Code window (the `test/vscode` harness driving the
+  pointer): holding the pointer in CodeMirror's 6 px band scrolled, but
+  carrying the drag out past the top or bottom edge, in one move or in
+  steps, never did. Logging every event in the page showed why: once the
+  pointer leaves the webview during a drag, the page receives nothing, not
+  even `mouseleave` or the `mouseup`; `setPointerCapture` does not change
+  that. CodeMirror scrolls from the pointer's position past the edge, which
+  it never sees. Chromium in the browser harness delivers those events, so
+  the browser suite could not show it.
+- The shift: Lumière's extra motion (the `dragScrollSpeed` multiplier) ran
+  at full speed on the first frame after any move into the band, so
+  selecting on the last visible line moved the note by several pixels.
+- `drag-scroll.ts`: when the pointer goes silent within 64 px of the top or
+  bottom edge (outside CodeMirror's own band) heading for it fast enough to
+  have crossed it in 80 ms, the plugin sends CodeMirror a move 16 px past
+  that edge; CodeMirror's timer then scrolls and extends the selection until
+  a real move arrives (the pointer is back; a move without buttons ends the
+  drag as before). The extra motion ramps in over 250 ms in the band.
+- Real VS Code, before → after: steps past the bottom edge 0 → about
+  3,000 px/s; past the top edge 0 → the same upward; a brush of the band and
+  back 0 px shift (was a jump of several pixels on the first frame); a jump
+  to the middle after a fast move does not start a scroll.
+- Unit tests in `drag-scroll.test.ts` cover the exit rule, the ramp, the
+  synthetic move and a pointer resting near the edge. Limit: a single jump
+  from the middle of the note to outside it, with no event on the way,
+  carries no direction and is not scrolled; a real pointer always reports
+  moves on the way.

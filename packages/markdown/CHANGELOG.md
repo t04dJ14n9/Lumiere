@@ -2,6 +2,10 @@
 
 ## 0.1.0 (unreleased)
 
+- Dragging a selection out past the top or bottom of a note in VS Code now
+  keeps scrolling until the pointer comes back, and selecting on the last
+  visible line no longer nudges the note.
+
 - On macOS, **Look Up** in a note's right-click menu opens the word you
   right-clicked in the Dictionary app, as in Lumière PDF. It works whatever
   the trackpad's Look Up gesture is set to.
