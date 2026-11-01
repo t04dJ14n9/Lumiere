@@ -55,6 +55,8 @@ const WEBVIEW_LOADERS: Record<string, () => Promise<Plugin<unknown>>> = {
   lineNumbers: () =>
     import("../plugins/lineNumbers/webview").then((m) => m.lineNumbersWebview),
   links: () => import("../plugins/links/webview").then((m) => m.linksWebview),
+  lookUp: () =>
+    import("../plugins/lookUp/webview").then((m) => m.lookUpWebview),
   math: () => import("../plugins/math/webview").then((m) => m.mathWebview),
   sketch: () =>
     import("../plugins/sketch/webview").then((m) => m.sketchWebview),

@@ -6336,3 +6336,50 @@ The fence now has `contain: inline-size` and `max-width: 100%`, with
 `overflow-y: hidden` so the horizontal scrollport does not also take the
 vertical wheel. A wide SVG scrolls inside the column. A small one stays
 its native size, centred. Dark mode is still the CSS invert.
+
+## macOS Look Up in notes — 2026-11-01
+
+Reported: a hard press on the trackpad (force click) does not look up a word
+in a note or a PDF. A web page is never told a click's force: on a force
+click, or a three-finger tap, Chromium reads the word under the pointer from
+the DOM itself (Blink's AttributedWordAtPoint) and shows the Dictionary
+popover. The known way to break it is `user-select: none` on the text, the
+cause of the same bug in VS Code's editor (microsoft/vscode#85632). Probed
+in the browser harness under a heading, a paragraph, bold text, a rendered
+link, a list item and a quote: `caretRangeFromPoint` lands in a real text
+node, nothing covers it, its `user-select` is `auto`, and the DOM under the
+pointer does not change while the button is held. No Markdown-side cause
+was found, so the gesture should work; whether it does in VS Code and
+Cursor is for the owner to check (docs/MANUAL_TEST_PLAN.md, lookUp step 4).
+The PDF side is fixed separately.
+
+- `test/browser/look-up.spec.ts` pins those prerequisites for each kind of
+  text, at rest and 300 ms into a press. Forcing `user-select: none` on
+  `.cm-line` fails it. This is new browser coverage, which the testing
+  policy admits only with the owner's explicit approval: it was asked for
+  with this change and should be confirmed or dropped at review.
+- New plugin `lookUp`, the dependable path, matching Lumière PDF: **Look
+  Up** in the note's right-click menu, macOS only (`isMac`) and over the
+  note's text, in group `0_agent@3` after Copy Link for Agent and Selection
+  Actions; hidden from the palette. The webview half records the word when
+  the menu opens (a one-word selection, else the word drawn under the
+  pointer, by Unicode word boundaries, punctuation trimmed), because the
+  macOS secondary click selects the word and Live Preview then reveals the
+  line's Markdown and shifts the text. The host half, per note and
+  deferred, re-checks the word (one word, at most 100 characters, no
+  control characters), builds `dict://<encoded word>` itself and opens it
+  with `navigation.external`, only when the plugin host's platform is
+  `darwin`. VS Code's adapter hands any scheme to `vscode.env.openExternal`,
+  as the PDF's Look Up does, so no host service changed. `needs:
+  ["workbench"]` keeps it off outside VS Code and Cursor: host-node's menu
+  has no `isMac` key, so the item could not show, and its page opens
+  external links with `window.open`, untried with `dict:`.
+- Unit tests: `src/plugins/lookUp/words.test.ts` (word rules, URL, checks),
+  `host.test.ts` (macOS only, refused words, the request schema) and
+  `manifest.test.ts` (when-clause, menu order, palette, host needs). The
+  browser spec also covers the command: right-clicked words, a selected
+  word, a word inside a longer selection, and nothing over empty space.
+- Not verified on a Mac (this ran on Linux, headless Chromium): that
+  `dict://` URLs open the Dictionary app through `navigation.external` in
+  VS Code and Cursor. In a remote window the extension host is not macOS,
+  so the item shows but does nothing (the plugin's README).

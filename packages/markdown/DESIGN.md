@@ -1016,6 +1016,7 @@ corresponds to. "Source" names the module on the source branch.
 | `spellcheck` | *Spellcheck* | on | editor | content attributes |
 | `formatting` | `editor:toggle-*`, `editor:set-heading-*` and similar | on | editor, commands | `editor/markdown.ts` `wrapSelection`, main branch `obsidianLikeCommands` |
 | `agentBridge` | none (from LLM Wiki) | on | editors, documents, workbench | `selectionHandoff.ts`, `agentClipboard.ts` (Markdown part) |
+| `lookUp` | none (macOS's own Look Up gesture) | on, macOS | editor, commands, navigation | new; matches Lumière PDF's Look Up |
 | `linkUpdates` | *Automatically update internal links* | on (prompt) | vault, workbench | new |
 | `quickSwitcher` | Quick switcher | on | vault, workbench | new |
 | `wordCount` | Word count (status bar) | on | editors, workbench | new |
@@ -1112,6 +1113,7 @@ the active editor. They work in the command palette, keybindings and menus.
 | `openAsText` | none | editor | title action |
 | `toggleTextEditor` | none | editor | Mod+E (Lumière ↔ host text editor; not Obsidian's LP↔Source) |
 | `agentBridge` | none | copyLinkForAgent | none (context menu) |
+| `lookUp` | none (`editor:look-up` in the webview) | lookUp | none (context menu, macOS only) |
 | `quickSwitcher` | `switcher:open` | quickSwitcher | none by default (Mod+O conflicts with VS Code's Open) |
 
 Rules:

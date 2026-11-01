@@ -9,6 +9,8 @@
  *    cause of the same bug in VS Code's own editor (microsoft/vscode#85632).
  *    A force click starts as a press, so it must also hold while the button
  *    is down. These checks guard those prerequisites for each kind of text.
+ * 2. The fallback: Look Up in the note's context menu (src/plugins/lookUp)
+ *    asks the host for the word under the menu.
  */
 import { expect, test } from "@playwright/test";
 import type { Page } from "@playwright/test";
@@ -129,3 +131,79 @@ for (const [place, word] of Object.entries(PLACES)) {
     await page.mouse.up();
   });
 }
+
+/** The webview half loads after first paint; wait for its command. */
+async function lookUpReady(page: Page): Promise<void> {
+  await expect
+    .poll(() =>
+      page.evaluate(
+        () =>
+          [...window.harness.views[0]!.plugins].find(
+            (plugin) => plugin.definition.name === "lookUp",
+          )?.state,
+      ),
+    )
+    .toBe("active");
+}
+
+async function lookUpAt(page: Page, point: Point): Promise<boolean> {
+  await page.mouse.click(point.x, point.y, { button: "right" });
+  return page.evaluate(() => window.harness.run("editor:look-up"));
+}
+
+test("Look Up in the context menu asks the host for the word right-clicked, as drawn", async ({
+  page,
+}) => {
+  await open(page, SOURCE);
+  await lookUpReady(page);
+  for (const word of [...Object.values(PLACES), "here"]) {
+    await renderAll(page);
+    expect(await lookUpAt(page, await glyphCentre(page, word))).toBe(true);
+  }
+  // The link's label, not its source; "here." without its full stop.
+  expect(await page.evaluate(() => window.harness.lookedUp)).toEqual([
+    ...Object.values(PLACES),
+    "here",
+  ]);
+});
+
+test("Look Up takes a selected word, and the word under the pointer inside a longer selection", async ({
+  page,
+}) => {
+  await open(page, SOURCE);
+  await lookUpReady(page);
+  await renderAll(page);
+  const bravo = await glyphCentre(page, "bravo");
+  await page.mouse.dblclick(bravo.x, bravo.y);
+  expect(await lookUpAt(page, bravo)).toBe(true);
+
+  await renderAll(page);
+  const from = await glyphCentre(page, "Paragraph");
+  const here = await glyphCentre(page, "here");
+  await page.mouse.move(from.x, from.y);
+  await page.mouse.down();
+  // Past the line's end, so "here." is wholly selected.
+  await page.mouse.move(here.x + 40, here.y, { steps: 5 });
+  await page.mouse.up();
+  expect(
+    await page.evaluate(() => document.getSelection()?.toString()),
+  ).toContain("bravo here");
+  expect(await lookUpAt(page, here)).toBe(true);
+
+  expect(await page.evaluate(() => window.harness.lookedUp)).toEqual([
+    "bravo",
+    "here",
+  ]);
+});
+
+test("Look Up over empty space asks the host for nothing", async ({ page }) => {
+  await open(page, SOURCE);
+  await lookUpReady(page);
+  await renderAll(page);
+  const end = await glyphCentre(page, "End");
+  const lineEnd = await page.evaluate(
+    () => document.querySelector(".cm-content")!.getBoundingClientRect().right,
+  );
+  expect(await lookUpAt(page, { x: lineEnd - 5, y: end.y })).toBe(false);
+  expect(await page.evaluate(() => window.harness.lookedUp)).toEqual([]);
+});

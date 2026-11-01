@@ -47,6 +47,7 @@ Reference: Obsidian 1.13.7, to be compared by the owner in a disposable vault. N
 | `spellcheck` | not observed | not manually observed | Manual scenario pending; automated evidence is in phase records | not observed |
 | `formatting` | 2026-10-17, behaviour measured over the DevTools protocol in a throwaway vault: Cmd+B, Cmd+I, Cmd+K and Cmd+/ | Matches the measured behaviour (docs/OBSIDIAN_KEYS.md) | Differential probe (Obsidian and the browser harness, same keys); unit tests pin each rule | behaviour measured; visual parity not observed |
 | `copyLinkForAgent` | not observed | not manually observed | Manual scenario pending; automated evidence is in phase records | not observed |
+| `lookUp` | not observed | not manually observed | macOS only; manual scenario pending; automated evidence is in the 2026-11-01 record | not observed |
 | `linkUpdates` | not observed | not manually observed | Manual scenario pending; automated evidence is in phase records | not observed |
 | `settings` | not observed | not manually observed | Manual scenario pending; automated evidence is in phase records | not observed |
 | `quickSwitcher` | 2026-10-17, read from Obsidian 1.14.4's switcher and checked with its public fuzzy search | Same scoring as suggestions: name, then path a point lower, attachments listed, excluded files 10 lower; an empty query lists recently modified rather than recently opened notes (src/plugins/quickSwitcher/README.md) | Unit tests pin each rule | behaviour measured; visual parity not observed |
@@ -398,3 +399,5 @@ Reference: Obsidian 1.13.7, to be compared by the owner in a disposable vault. N
 | Submenu: lumiere.markdown.menu.format | not observed | not manually observed | Manual scenario pending | not observed |
 | Submenu: lumiere.markdown.menu.highlight | not observed | not manually observed | Manual scenario pending | not observed |
 | Submenu: lumiere.markdown.menu.insert | not observed | not manually observed | Manual scenario pending | not observed |
+| Command: lumiere.markdown.lookUp | not observed | not manually observed | macOS only. Unit tests in src/plugins/lookUp/; browser spec test/browser/look-up.spec.ts; manual scenario pending | not observed |
+| Setting: lumiere.markdown.plugins.lookUp.enabled | not observed | not manually observed | Unit tests in src/plugins/lookUp/manifest.test.ts; manual scenario pending | not observed |

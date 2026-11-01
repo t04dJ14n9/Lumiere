@@ -493,6 +493,11 @@
         "category": "Lumière"
       },
       {
+        "command": "lumiere.markdown.lookUp",
+        "title": "Look Up",
+        "category": "Lumière"
+      },
+      {
         "command": "lumiere.markdown.marp.preview",
         "title": "Open Marp Preview to the Side",
         "category": "Lumière"
@@ -1871,6 +1876,10 @@
           "when": "activeCustomEditorId == 'lumiere.markdown.editor' && lumiere.markdown.plugin.livePreview"
         },
         {
+          "command": "lumiere.markdown.lookUp",
+          "when": "false"
+        },
+        {
           "command": "lumiere.markdown.marp.preview",
           "when": "config.lumiere.markdown.preset != 'minimal' && config.lumiere.markdown.plugins.marp.enabled"
         },
@@ -2331,6 +2340,11 @@
           "command": "lumiere.markdown.selectionActions",
           "when": "webviewId == 'lumiere.markdown.editor' && lumiere.markdown.plugin.editor && webviewSection == 'markdownContent' && lumiere.markdown.hasSelection && lumiere.markdown.hasSelectionActions",
           "group": "0_agent@2"
+        },
+        {
+          "command": "lumiere.markdown.lookUp",
+          "when": "webviewId == 'lumiere.markdown.editor' && lumiere.markdown.plugin.lookUp && isMac && webviewSection == 'markdownContent'",
+          "group": "0_agent@3"
         },
         {
           "command": "lumiere.markdown.insertSketch",
@@ -2931,6 +2945,12 @@
             "default": true,
             "scope": "resource",
             "description": "Follow Markdown links and wikilinks."
+          },
+          "lumiere.markdown.plugins.lookUp.enabled": {
+            "type": "boolean",
+            "default": true,
+            "scope": "resource",
+            "description": "macOS: Look Up in a note's right-click menu opens the word in the Dictionary app."
           },
           "lumiere.markdown.plugins.marp.enabled": {
             "type": "boolean",

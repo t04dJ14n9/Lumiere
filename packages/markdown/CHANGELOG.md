@@ -2,6 +2,10 @@
 
 ## 0.1.0 (unreleased)
 
+- On macOS, **Look Up** in a note's right-click menu opens the word you
+  right-clicked in the Dictionary app, as in Lumière PDF. It works whatever
+  the trackpad's Look Up gesture is set to.
+
 - Dark Mermaid diagrams use Obsidian's invert of the default palette
   (`invert(100%) hue-rotate(180deg) saturate(1.25)`), including the diagram
   inspector. Light (`vscode-light`, `vscode-high-contrast-light`) stays the
