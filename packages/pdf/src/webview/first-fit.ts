@@ -1,5 +1,9 @@
 import { useViewportCapability } from "@embedpdf/plugin-viewport/react";
-import { ZoomMode, useZoom, type ZoomLevel } from "@embedpdf/plugin-zoom/react";
+import {
+  ZoomMode,
+  useZoomCapability,
+  type ZoomLevel,
+} from "@embedpdf/plugin-zoom/react";
 import { useEffect } from "react";
 
 /**
@@ -17,11 +21,15 @@ import { useEffect } from "react";
  */
 export function useFirstFitNow(documentId: string): void {
   const { provides: viewport } = useViewportCapability();
-  const { provides: zoom } = useZoom(documentId);
+  // Not `useZoom`: its `provides` is a new object on every render (which
+  // would run this effect, and fit again, after every render, undoing
+  // every jump), and it re-renders the viewer on every zoom change.
+  const { provides: zoomCapability } = useZoomCapability();
   useEffect(() => {
-    if (!viewport || !zoom) {
+    if (!viewport || !zoomCapability) {
       return;
     }
+    const zoom = zoomCapability.forDocument(documentId);
     let fitted = false;
     const fitNow = (width: number, height: number): void => {
       if (fitted || width <= 0 || height <= 0) {
@@ -30,7 +38,9 @@ export function useFirstFitNow(documentId: string): void {
       fitted = true;
       const level = zoom.getState().zoomLevel;
       if (isAutomatic(level)) {
-        zoom.requestZoom(level);
+        // The top of the view stays put, as in the plugin's own fit; the
+        // default (the middle) would leave the first page scrolled down.
+        zoom.requestZoom(level, { vx: width / 2, vy: 0 });
       }
     };
     const stop = viewport.onViewportResize(({ documentId: id, metrics }) => {
@@ -46,7 +56,7 @@ export function useFirstFitNow(documentId: string): void {
       fitNow(clientWidth, clientHeight);
     }
     return stop;
-  }, [viewport, zoom, documentId]);
+  }, [viewport, zoomCapability, documentId]);
 }
 
 function isAutomatic(level: ZoomLevel): boolean {

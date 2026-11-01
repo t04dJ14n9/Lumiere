@@ -2,8 +2,8 @@
 
 ## Unreleased
 
-- PDFs show their first page sooner: about 75 to 110 ms less from the
-  document opening to the first page in VS Code (the automatic zoom is now
+- PDFs show their first page sooner: about 100 ms less from the document
+  opening to the first page in VS Code (the automatic zoom is now
   applied as soon as the viewer has a size, not after a 150 ms debounce).
 - Highlights are kept in a Markdown sidecar beside the PDF
   (`paper.pdf.lumiere.md`), never in the PDF. Notes link to one with

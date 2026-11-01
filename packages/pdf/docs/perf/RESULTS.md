@@ -31,25 +31,27 @@ regression without flaking.
 ## The first fit, 2026-11-01
 
 Real VS Code 1.144 on Linux Xvfb, `PERF=1` probe above, production build
-(`node scripts/build.mjs --production`), three runs each; ms from document
-opened to first page painted:
+(`node scripts/build.mjs --production` at the repository root, which is
+what the VSIX packs); ms from document opened to first page painted:
 
-| | baseline | first fit now |
+| | baseline (3 runs) | first fit now (5 runs) |
 |---|---|---|
-| small (12 pages) | 220, 215, 218 | 336 (cold), 144, 155 |
-| 600 pages | 216, 227, 955 (outlier) | 146, 155, 108 |
+| small (12 pages), first in the window | 220, 215, 218 | 111, 68, 224, 86, 265 |
+| 600 pages | 216, 227, 955 (outlier) | 127, 92, 99, 120, 118 |
 
-The 600-page PDF's first page came 650, 655 and 609 ms after the viewer
-script started, against 758 and 805 (and an outlier) before. In the browser
-harness (production build, five runs each) the same segment went from about
-195 to about 80 ms.
+The small PDF is the first one the window opens, and varies most. In the
+browser harness (production build, seven runs each) the same segment went
+from a median of 197 to 57 ms.
 
 Cause: EmbedPDF's zoom plugin re-fits an automatic zoom 150 ms after a
 viewport resize (a debounce for window drags). The viewport first gets its
 size when the viewer mounts, after the document loaded, so the first fit,
 and every page (the viewport is gated until the zoom is known), waited out
 that debounce. `webview/first-fit.ts` requests the same automatic zoom on the
-first size, at once.
+first size, at once. It takes the zoom capability, not `useZoom`: that hook's
+`provides` is a new object on every render, so an effect depending on it
+fits again after every render, and undid every jump (the first version did,
+and the browser suite caught it).
 
 Tried and dropped, each measured with three runs before and after in real
 VS Code (no gain beyond the box's noise):
