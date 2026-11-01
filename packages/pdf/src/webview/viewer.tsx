@@ -42,6 +42,7 @@ import { useViewActions, useViewReporting } from "./view-sync";
 import { useHostMessages } from "./host-messages";
 import { useWheelZoom } from "./wheel-zoom";
 import { useJumpHistory } from "./jump-history";
+import { useFirstFitNow } from "./first-fit";
 
 /**
  * The open PDF: an optional search bar and the scrolling pages. Controls
@@ -106,6 +107,7 @@ function useViewerState(pdf: PdfDocumentObject) {
   const navigation = withHistory(rawNavigation, history);
   const search = useSearch();
   useOutlinePublishing(DOCUMENT_ID, pdf);
+  useFirstFitNow(DOCUMENT_ID);
   const documentArea = useRef<HTMLDivElement>(null);
   useDocumentInput(documentArea, { choices, navigation, smooth });
   const [lookUp, setLookUp] = useState(false);
