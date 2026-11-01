@@ -2,6 +2,8 @@
 
 ## Unreleased
 
+- With dark page colors, a page still being drawn during a fast scroll
+  shows dark paper instead of a white sheet.
 - The text selection no longer shows darker stripes where selected lines
   overlap (tightly set lines, or a line with a larger word).
 - The extension was renamed from Agent PDF Viewer (EmbedPDF) to PDF Workshop (package `vscode-pdf-workshop`).

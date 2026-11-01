@@ -1,7 +1,7 @@
 /* A page and the layers drawn over it. */
 .page {
   position: relative;
-  background: #fff;
+  background: var(--paper);
   box-shadow: 0 1px 6px #0006;
 }
 
