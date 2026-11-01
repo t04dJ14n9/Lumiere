@@ -9,14 +9,14 @@ import {
   TEXT_MIDLINE,
 } from "./viewer-support";
 
-/** A sidecar highlight over "Synthetic" on page 1 (x 72 to about 135). */
+/** A sidecar highlight over "Synthetic" on page 1 (its glyphs end before x 148). */
 const SYNTHETIC = {
   id: "hl-0badf00d",
   page: 1,
   subtype: "highlight" as const,
   color: "#FFE566",
   opacity: 0.45,
-  segmentRects: [{ x: 72, y: 88, w: 62, h: 14 }],
+  segmentRects: [{ x: 72, y: 88, w: 76, h: 14 }],
   quote: "Synthetic",
   contextBefore: "",
   contextAfter: " page 1",
@@ -82,6 +82,8 @@ test("with a sidecar, the highlight tool writes the sidecar and never the PDF", 
   // The PDF is not written: no save, and no EmbedPDF mark in the page.
   await page.waitForTimeout(800);
   expect(await pdfSaves(page)).toEqual([]);
+  // A highlight just made is in place: re-attaching leaves it alone.
+  expect(await writes(page)).toHaveLength(1);
   expect(
     await page.locator('.page [style*="mix-blend-mode: multiply"]').count(),
   ).toBe(0);
@@ -173,4 +175,49 @@ test("a sidecar highlight stays out of the PDF when another tool saves it", asyn
     (await writes(page))[0] as unknown as { highlight: { id: string } }
   ).highlight.id;
   expect(saved).not.toContain(id);
+});
+
+test("a highlight whose text moved is re-attached by its quote; one whose quote is gone is marked stale", async ({
+  page,
+}) => {
+  await open(page, "?toolbar=chrome");
+  // As if written for an older version of the PDF: the boxes sit 200 points
+  // below "Synthetic", which the quote and its context still find.
+  const moved = {
+    ...SYNTHETIC,
+    id: "hl-moved",
+    segmentRects: [{ x: 72, y: 288, w: 62, h: 14 }],
+  };
+  const gone = {
+    ...SYNTHETIC,
+    id: "hl-gone",
+    quote: "words no longer on the page",
+    segmentRects: [{ x: 72, y: 200, w: 62, h: 14 }],
+  };
+  await send(page, { type: "sidecar", highlights: [SYNTHETIC, moved, gone] });
+  await expect
+    .poll(async () =>
+      (await writes(page)).map(
+        (write) =>
+          (write as unknown as { highlight?: { id: string } }).highlight?.id,
+      ),
+    )
+    .toEqual(["hl-moved"]);
+  const rewritten = (
+    (await writes(page))[0] as unknown as {
+      highlight: typeof moved;
+    }
+  ).highlight;
+  expect(rewritten.modified).not.toBe(moved.modified);
+  const [rect] = rewritten.segmentRects;
+  expect(rect!.x).toBeGreaterThanOrEqual(70);
+  expect(rect!.y).toBeGreaterThan(80);
+  expect(rect!.y + rect!.h).toBeLessThan(110);
+  await expect(
+    page.locator('.sidecar-highlight.is-stale[data-highlight-id="hl-gone"]'),
+  ).toHaveCount(1);
+  // The highlight already in place is left alone, and none is checked twice.
+  await page.waitForTimeout(500);
+  expect(await writes(page)).toHaveLength(1);
+  expect(await pdfSaves(page)).toEqual([]);
 });

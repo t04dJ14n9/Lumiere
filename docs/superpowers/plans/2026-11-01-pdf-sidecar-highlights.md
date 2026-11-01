@@ -26,10 +26,11 @@
 - [x] Browser: create → `sidecarWrite`, no `annotationSave`, no EmbedPDF mark; select + Delete; malformed host entries dropped; a later underline save contains no `/Highlight` and no sidecar id — `test/browser/sidecar.spec.ts`.
 - [ ] Host GUI pass in a real VS Code window (sidecar file appears, reopen restores, note link jumps and flashes) with screenshots.
 
-## Slice 2 — re-attach (not started)
+## Slice 2 — re-attach (done 2026-11-01)
 
-- [ ] Pure matcher: find `quote` near `contextBefore`/`contextAfter` in page text; unique match → new rects.
-- [ ] On open, when stored rects no longer sit on the quote's text, re-attach and rewrite that block (`modified`); no unique match → keep rects, draw the mark as stale.
+- [x] Pure matcher `findQuote`: the only occurrence of the quote in the page text, or the one whose surroundings best match `contextBefore`/`contextAfter`; a tie or no match finds nothing. `lineRects` rebuilds one box per line from glyph boxes — `test/unit/sidecar.test.ts`.
+- [x] In place or moved: a highlight is in place while its boxes cover the centres of its quote's glyphs (`coversGlyphs`). Boxes are not compared for equality, because the text selection measures lines differently from glyph boxes; a highlight just made is never rewritten.
+- [x] Viewer (`webview/sidecar-reattach.ts`): each highlight is checked once per version (`id@modified`) when the host sends the sidecar; a moved one gets new boxes and `modified` and is written back; a lost quote leaves the boxes and draws the highlight as stale (dashed, fainter). Hand-written highlights with no quote are left alone — `test/browser/sidecar.spec.ts`.
 
 ## Slice 3 — citations and references (not started)
 

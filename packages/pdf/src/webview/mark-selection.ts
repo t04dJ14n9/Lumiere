@@ -5,12 +5,13 @@ import {
 } from "./annotation-selection";
 import { DOCUMENT_ID } from "./plugins";
 import { useSidecarHighlightWriting } from "./sidecar-writing";
+import { useSidecarReattach } from "./sidecar-reattach";
 import { useSidecarSelection } from "./sidecar-selection";
 
 /**
  * The marks selected in Annotate mode: the PDF's own (EmbedPDF) or a
  * sidecar highlight, never both. Sidecar highlights are written as the tool
- * finishes a selection.
+ * finishes a selection, and re-attached when the PDF changed under them.
  */
 export function useMarkSelection(
   pdf: PdfDocumentObject,
@@ -18,6 +19,7 @@ export function useMarkSelection(
   setAnnotationRegion: SetAnnotationRegion,
 ): { hasAnnotationSelection: boolean; deleteSelected: () => void } {
   useSidecarHighlightWriting(pdf);
+  useSidecarReattach(pdf);
   const embedded = useAnnotationSelection(
     DOCUMENT_ID,
     pdf,

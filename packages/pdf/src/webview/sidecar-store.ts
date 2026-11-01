@@ -10,9 +10,15 @@ import type { SidecarHighlight } from "../shared/sidecar-format";
 export interface SidecarState {
   readonly highlights: readonly SidecarHighlight[] | null;
   readonly selectedId: string | undefined;
+  /** Highlights whose quote is no longer on their page (sidecar-reattach.ts). */
+  readonly staleIds: readonly string[];
 }
 
-let state: SidecarState = { highlights: null, selectedId: undefined };
+let state: SidecarState = {
+  highlights: null,
+  selectedId: undefined,
+  staleIds: [],
+};
 const listeners = new Set<() => void>();
 
 export function sidecarState(): SidecarState {
@@ -31,7 +37,13 @@ export function rememberSidecar(
   highlights: readonly SidecarHighlight[] | null,
 ): void {
   const kept = highlights?.some(({ id }) => id === state.selectedId);
-  update({ highlights, selectedId: kept ? state.selectedId : undefined });
+  update({
+    highlights,
+    selectedId: kept ? state.selectedId : undefined,
+    staleIds: state.staleIds.filter((stale) =>
+      highlights?.some(({ id }) => id === stale),
+    ),
+  });
 }
 
 /** Show a highlight the viewer just made (or changed) before the host confirms it. */
@@ -39,7 +51,18 @@ export function showSidecarHighlight(highlight: SidecarHighlight): void {
   const others = (state.highlights ?? []).filter(
     ({ id }) => id !== highlight.id,
   );
-  update({ ...state, highlights: [...others, highlight] });
+  update({
+    ...state,
+    highlights: [...others, highlight],
+    staleIds: state.staleIds.filter((id) => id !== highlight.id),
+  });
+}
+
+/** Draw highlight `id` as stale: its quote was not found on its page. */
+export function markSidecarStale(id: string): void {
+  if (!state.staleIds.includes(id)) {
+    update({ ...state, staleIds: [...state.staleIds, id] });
+  }
 }
 
 export function hideSidecarHighlight(id: string): void {
@@ -48,6 +71,7 @@ export function hideSidecarHighlight(id: string): void {
       (highlight) => highlight.id !== id,
     ),
     selectedId: state.selectedId === id ? undefined : state.selectedId,
+    staleIds: state.staleIds.filter((stale) => stale !== id),
   });
 }
 

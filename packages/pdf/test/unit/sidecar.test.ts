@@ -259,3 +259,94 @@ test("a sidecar for another PDF is not this PDF's", () => {
     ),
   );
 });
+
+test("a quote is found again by its context when it repeats, and not on a tie", async () => {
+  const { findQuote } = await import("../../src/shared/sidecar-reattach");
+  const page = "the model uses attention. Later, attention again here.";
+  assert.deepEqual(
+    findQuote(page, {
+      quote: "attention",
+      contextBefore: "Later, ",
+      contextAfter: " again",
+    }),
+    { start: 33, end: 42 },
+  );
+  assert.deepEqual(
+    findQuote(page, {
+      quote: "attention",
+      contextBefore: "model uses ",
+      contextAfter: ".",
+    }),
+    { start: 15, end: 24 },
+  );
+  assert.equal(
+    findQuote(page, {
+      quote: "attention",
+      contextBefore: "",
+      contextAfter: "",
+    }),
+    undefined,
+    "two equal candidates",
+  );
+  assert.deepEqual(
+    findQuote(page, { quote: "model", contextBefore: "", contextAfter: "" }),
+    { start: 4, end: 9 },
+    "the only occurrence",
+  );
+  assert.equal(
+    findQuote(page, { quote: "gone", contextBefore: "", contextAfter: "" }),
+    undefined,
+  );
+  assert.equal(
+    findQuote(page, { quote: "  ", contextBefore: "", contextAfter: "" }),
+    undefined,
+  );
+});
+
+test("glyph boxes become one box per line, and nearby boxes are the same place", async () => {
+  const { lineRects, sameRects } =
+    await import("../../src/shared/sidecar-reattach");
+  const rects = lineRects([
+    [72, 100, 80, 112],
+    [80, 101, 88, 112],
+    [72, 116, 80, 128],
+    [80, 116, 90, 129],
+  ]);
+  assert.deepEqual(rects, [
+    { x: 72, y: 100, w: 16, h: 12 },
+    { x: 72, y: 116, w: 18, h: 13 },
+  ]);
+  assert.ok(
+    sameRects(rects, [
+      { x: 73, y: 101, w: 15, h: 12 },
+      { x: 72, y: 116, w: 18, h: 13 },
+    ]),
+  );
+  assert.ok(
+    !sameRects(rects, [
+      { x: 72, y: 130, w: 16, h: 12 },
+      { x: 72, y: 116, w: 18, h: 13 },
+    ]),
+  );
+  assert.ok(!sameRects(rects, rects.slice(1)));
+  assert.deepEqual(lineRects([]), []);
+});
+
+test("a highlight is in place while its boxes cover its quote's glyphs", async () => {
+  const { coversGlyphs } = await import("../../src/shared/sidecar-reattach");
+  const rects = [{ x: 72, y: 98, w: 40, h: 16 }];
+  assert.ok(
+    coversGlyphs(rects, [
+      [72, 100, 80, 112],
+      [104, 100, 112, 112],
+    ]),
+  );
+  assert.ok(!coversGlyphs(rects, [[72, 140, 80, 152]]), "the text moved down");
+  assert.ok(
+    !coversGlyphs(rects, [
+      [72, 100, 80, 112],
+      [120, 100, 128, 112],
+    ]),
+  );
+  assert.ok(coversGlyphs(rects, []));
+});

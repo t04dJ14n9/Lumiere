@@ -84,9 +84,20 @@ Sidecars kept in a folder also record the PDF's workspace-relative `path`.
 - `src/webview/sidecar-layer.tsx`, `sidecar-selection.ts`, `sidecar-store.ts`:
   drawing, Annotate-mode selection and the viewer's copy of the highlights.
 
+## When the PDF changes
+
+Each highlight keeps its quote and a little text on either side. When the
+PDF is replaced by a version whose layout moved (a new arXiv version), the
+viewer checks every highlight once: if its boxes no longer lie over its
+quote, the quote is found again on its page (the text around it decides
+between repeats), the highlight moves there, and its block in the sidecar is
+rewritten with the new boxes and `modified` time. A quote that is no longer
+on its page leaves the highlight where it was, drawn dashed and fainter as
+stale. Highlights written by hand without a quote are left alone.
+(`src/shared/sidecar-reattach.ts`, `src/webview/sidecar-reattach.ts`.)
+
 ## Not done yet
 
 See the plan's status (`docs/superpowers/plans/2026-11-01-pdf-sidecar-highlights.md`):
-re-attaching highlights by quote after the PDF's layout changes, citation
-paragraph auto-highlights, the references list and cite/reference jumps,
-and sidecars in the desktop app and DSH.
+citation paragraph auto-highlights, the references list and cite/reference
+jumps, and sidecars in the desktop app and DSH.

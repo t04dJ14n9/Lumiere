@@ -14,7 +14,7 @@ export function SidecarHighlightLayer({
   pageIndex: number;
   scale: number;
 }): React.JSX.Element | null {
-  const { highlights, selectedId } = useSyncExternalStore(
+  const { highlights, selectedId, staleIds } = useSyncExternalStore(
     onSidecarChange,
     sidecarState,
   );
@@ -27,7 +27,7 @@ export function SidecarHighlightLayer({
       {marks.map((highlight) => (
         <div
           key={highlight.id}
-          className={`sidecar-highlight${highlight.id === selectedId ? " is-selected" : ""}`}
+          className={classNames(highlight.id, selectedId, staleIds)}
           data-highlight-id={highlight.id}
           style={
             {
@@ -52,4 +52,16 @@ export function SidecarHighlightLayer({
       ))}
     </>
   );
+}
+
+function classNames(
+  id: string,
+  selectedId: string | undefined,
+  staleIds: readonly string[],
+): string {
+  return [
+    "sidecar-highlight",
+    ...(id === selectedId ? ["is-selected"] : []),
+    ...(staleIds.includes(id) ? ["is-stale"] : []),
+  ].join(" ");
 }
