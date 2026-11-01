@@ -9,8 +9,10 @@ import {
   splitTableSource,
   tableBlockRange,
   extendTableRangeForWidths,
-  sourceAfterOperation,
   widthsAfterOperation,
+  columnEdgeAt,
+  indentRows,
+  rowPrefix,
 } from "./column-widths";
 import type { TableOperation } from "../../markdown/tables/operations";
 
@@ -119,16 +121,50 @@ test("extendTableRangeForWidths only grows when the next line is widths metadata
   });
 });
 
-test("sourceAfterOperation remaps widths when a column is deleted", () => {
-  const table = "| a | b |\n| --- | --- |\n| 1 | 2 |";
+test("widthsAfterOperation remaps widths when a column is deleted", () => {
   const op: TableOperation = {
     type: "delete",
     axis: "column",
     from: 0,
     to: 0,
   };
-  // operateTable not needed here: sourceAfterOperation only joins remapped widths
-  const source = sourceAfterOperation(table, [100, 200], op);
-  assert.equal(source, `${table}\n<!-- lumiere-col-widths: 200 -->`);
   assert.deepEqual(widthsAfterOperation([100, 200], op), [200]);
+  const table = "| a |\n| --- |\n| 2 |";
+  assert.equal(
+    joinTableSource(table, widthsAfterOperation([100, 200], op)),
+    `${table}\n<!-- lumiere-col-widths: 200 -->`,
+  );
+});
+
+test("columnEdgeAt finds the column whose right border the pointer is on", () => {
+  const rights = [100, 160, 400];
+  assert.equal(columnEdgeAt(rights, 100), 0);
+  assert.equal(columnEdgeAt(rights, 98), 0, "2 px inside");
+  assert.equal(columnEdgeAt(rights, 102), 0, "2 px outside");
+  assert.equal(columnEdgeAt(rights, 97), undefined, "the cell's padding");
+  assert.equal(columnEdgeAt(rights, 103), undefined, "the next cell's");
+  assert.equal(columnEdgeAt(rights, 130), undefined, "mid-cell");
+  assert.equal(columnEdgeAt(rights, 401), 2, "the last border too");
+  assert.equal(columnEdgeAt([100, 103], 102), 1, "the nearer of two");
+  assert.equal(columnEdgeAt([], 0), undefined);
+});
+
+test("rows of a table in a list item keep its indent", () => {
+  const listed = "| a | b |\n  | - | - |\n  | 1 | 2 |";
+  assert.equal(rowPrefix(listed), "  ");
+  assert.equal(rowPrefix("| a |\n\t| - |\n\t| 1 |"), "\t");
+  assert.equal(rowPrefix(table), "");
+  assert.equal(
+    indentRows(
+      joinTableSource("| a | b |\n| - | - |\n| 1 | 2 |", [90, 60]),
+      "  ",
+    ),
+    `${listed}\n  <!-- lumiere-col-widths: 90,60 -->`,
+  );
+  assert.equal(indentRows(table, ""), table);
+  // The comment's indent does not stop it being read back.
+  assert.deepEqual(
+    splitTableSource(`${listed}\n  <!-- lumiere-col-widths: 90,60 -->`).widths,
+    [90, 60],
+  );
 });

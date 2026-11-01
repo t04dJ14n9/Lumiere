@@ -76,6 +76,49 @@ export function joinTableSource(
   return `${table}\n${formatColWidthsComment(widths)}`;
 }
 
+/**
+ * What goes before each row of a table after its first line: a list item's
+ * indent. The block starts at the header's first character, so the header
+ * has none.
+ */
+export function rowPrefix(source: string): string {
+  const second = source.split("\n")[1] ?? "";
+  return /^[ \t]*/.exec(second)![0];
+}
+
+/** `source` with `prefix` before every line after the first. */
+export function indentRows(source: string, prefix: string): string {
+  return prefix ? source.split("\n").join(`\n${prefix}`) : source;
+}
+
+/**
+ * How far from a column's right border a press resizes the column, in CSS
+ * px. Three pixels in, a press is the cell's again: it opens the cell at the
+ * end of its text (or, in the next cell, at the start).
+ */
+export const COLUMN_EDGE_REACH = 2;
+
+/**
+ * The column whose right border `x` is on, within `reach` (the nearest, if
+ * two are); `rights` are the columns' right borders, left to right.
+ */
+export function columnEdgeAt(
+  rights: readonly number[],
+  x: number,
+  reach = COLUMN_EDGE_REACH,
+): number | undefined {
+  let best: number | undefined;
+  let bestDistance = Infinity;
+  rights.forEach((right, column) => {
+    const distance = Math.abs(x - right);
+    if (distance <= reach && distance < bestDistance) {
+      best = column;
+      bestDistance = distance;
+    }
+  });
+  return best;
+}
+
 export function applyColumnWidth(
   widths: number[],
   column: number,
@@ -170,18 +213,6 @@ export function widthsAfterOperation(
     });
   }
   return widths;
-}
-
-/** Apply a structural edit and keep column-width metadata in sync. */
-export function sourceAfterOperation(
-  tableMarkdown: string,
-  widths: ColumnWidth[] | undefined,
-  operation: TableOperation,
-): string {
-  return joinTableSource(
-    tableMarkdown,
-    widthsAfterOperation(widths, operation),
-  );
 }
 
 /** Grow a Table range when the next line is a widths comment (EditorState-friendly). */

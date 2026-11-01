@@ -2,6 +2,13 @@
 
 ## 0.1.0 (unreleased)
 
+- Table columns resize by dragging their border, in any row, as the
+  resize cursor and a guide line show. The handles were a few pixels inside
+  the header cells, so pressing the border did nothing. Saved widths now
+  survive adding a row or column, a paste and Delete.
+- A table in a list item keeps all its rows (they used to end it after the
+  header), and editing or resizing it keeps it in the item.
+
 - Dragging a selection out past the top or bottom of a note in VS Code now
   keeps scrolling until the pointer comes back, and selecting on the last
   visible line no longer nudges the note.

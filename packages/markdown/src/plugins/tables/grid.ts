@@ -7,7 +7,12 @@ import {
 import { editGroup } from "../document/api";
 import type { RenderBlock } from "../livePreview/api";
 import type { ColumnWidth } from "./column-widths";
-import { joinTableSource, splitTableSource } from "./column-widths";
+import {
+  indentRows,
+  joinTableSource,
+  rowPrefix,
+  splitTableSource,
+} from "./column-widths";
 import type { TableEnvironment } from "./environment";
 
 /** Rendered cells and their current source snapshot. It owns no selection. */
@@ -53,7 +58,17 @@ export class TableGrid {
     return `table-command-${++this.operationSequence}`;
   }
 
-  replace(source: string): void {
+  /**
+   * Write `tableMarkdown` (a table without its widths comment) back as this
+   * block, with `widths` (by default the saved ones) in the comment after
+   * it, and every line after the first indented like the table's rows, so a
+   * table in a list item stays in it.
+   */
+  replace(
+    tableMarkdown: string,
+    widths: ColumnWidth[] | undefined = this.widths,
+  ): void {
+    const source = this.sourceFor(tableMarkdown, widths);
     if (source === this.block.source) {
       return;
     }
@@ -64,12 +79,17 @@ export class TableGrid {
     });
   }
 
-  /** Replace the GFM table while preserving or updating column widths. */
-  replaceTable(
+  /** The block's source for `tableMarkdown` and `widths` (see `replace`). */
+  sourceFor(
     tableMarkdown: string,
     widths: ColumnWidth[] | undefined = this.widths,
-  ): void {
-    this.replace(joinTableSource(tableMarkdown, widths));
+  ): string {
+    const prefix = rowPrefix(this.block.source);
+    const table = tableMarkdown.split("\n").map((line, index) =>
+      // Rows already written with the prefix (the source itself) keep it.
+      index > 0 && line.startsWith(prefix) ? line.slice(prefix.length) : line,
+    );
+    return indentRows(joinTableSource(table.join("\n"), widths), prefix);
   }
 
   /** Table markdown without a trailing widths comment. */

@@ -21,7 +21,7 @@ import { TableClipboard } from "./clipboard";
 import { TableToolbar } from "./toolbar";
 import { TableHandles } from "./handles";
 import { ColumnResize } from "./column-resize";
-import { sourceAfterOperation, splitTableSource } from "./column-widths";
+import { splitTableSource, widthsAfterOperation } from "./column-widths";
 import { activeTables, tableSelectionChanges } from "./state";
 import { TableStickyHScroll } from "./sticky-hscroll";
 import { bindTableFocus } from "./focus-lifetime";
@@ -73,9 +73,9 @@ export class TableController {
     this.columnResize = new ColumnResize(
       this.grid.root,
       this.grid.table,
-      (widths) => this.grid.replaceTable(this.grid.tableSource(), widths),
+      this.grid.scroll,
+      (widths) => this.grid.replace(this.grid.tableSource(), widths),
     );
-    this.columnResize.refresh();
     this.columnResize.applyWidths(this.grid.widths);
     this.sticky = new TableStickyHScroll(this.grid.scroll, outer.scrollDOM);
   }
@@ -230,11 +230,8 @@ export class TableController {
             destination: to,
           };
           this.grid.replace(
-            sourceAfterOperation(
-              operateTable(this.grid.model, op),
-              this.grid.widths,
-              op,
-            ),
+            operateTable(this.grid.model, op),
+            widthsAfterOperation(this.grid.widths, op),
           );
           this.selected.selectAxis(axis, to);
         },
@@ -287,7 +284,6 @@ export class TableController {
     }
     this.highlight();
     this.handles.refresh();
-    this.columnResize.refresh();
     this.columnResize.applyWidths(this.grid.widths);
   }
 
@@ -376,8 +372,8 @@ export class TableController {
 
   execute(operation: TableOperation, focus: CellPosition): void {
     const table = operateTable(this.grid.model, operation);
-    const source = sourceAfterOperation(table, this.grid.widths, operation);
-    if (source === this.grid.block.source) {
+    const widths = widthsAfterOperation(this.grid.widths, operation);
+    if (this.grid.sourceFor(table, widths) === this.grid.block.source) {
       (this.editor ?? this.grid.outer).focus();
       return;
     }
@@ -393,7 +389,7 @@ export class TableController {
           ),
         }
       : undefined;
-    this.grid.replace(source);
+    this.grid.replace(table, widths);
     if (!next) {
       this.grid.outer.focus();
     }

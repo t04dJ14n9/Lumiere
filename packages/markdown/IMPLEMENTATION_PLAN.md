@@ -6417,3 +6417,30 @@ an edge.
   from the middle of the note to outside it, with no event on the way,
   carries no direction and is not scrolled; a real pointer always reports
   moves on the way.
+
+## Table column resize from the border (2026-11-01)
+
+Asked for: drag a table column's border to set its width, as in Obsidian.
+Resizing existed (#445) but did nothing in practice: its handles were 6 px
+strips inside the header cells' first line, about 8 px left of the visible
+border, so a press on the border (or on any body row) went to the cell.
+
+- `column-resize.ts` hit-tests the pointer against the columns' right
+  borders (`columnEdgeAt`, 2 px either side, any row of the table). Hover
+  shows `col-resize` and an accent guide down the table; a drag fixes every
+  other column at its width and moves only this one; a press without a move
+  writes nothing. 3 px in stays the cell's (the right-padding and
+  left-padding click specs).
+- Saved widths were dropped by every rewrite but resize and column
+  operations (paste, Delete, Tab past the last row, the add strips):
+  `TableGrid.replace(table, widths = saved)` is now the one write path.
+- Tables in list items: the Obsidian table-end rule compared rows with the
+  line's start, so an item's indented rows ended the table after its header
+  (Lezer's GFM parser keeps them). It now reads rows from the item's margin
+  (`line.basePos`; quotes are unchanged, since the widget cannot draw a
+  table in a quote). Rewrites indent every line after the header like the
+  rows, and the widths comment too, so the table stays in the item.
+- Tests: `src/plugins/tables/column-widths.test.ts`,
+  `test/unit/markdown/table-rows.test.ts`, and the new browser spec
+  `test/browser/tables-column-resize.spec.ts` (new browser coverage: needs
+  the owner's approval).
