@@ -71,3 +71,26 @@
   left: 0;
   transform-origin: 0 0;
 }
+
+/*
+ * The word under the pointer as invisible text, for macOS Look Up
+ * (look-up-word.tsx). It must stay selectable for the system to read it, even
+ * where EmbedPDF makes the page unselectable; look-up.ts stops a selection
+ * from starting in it instead.
+ */
+.look-up-word {
+  position: absolute;
+  margin: 0;
+  padding: 0;
+  font-family: system-ui, sans-serif;
+  white-space: pre;
+  color: transparent;
+  transform-origin: 0 0;
+  cursor: inherit;
+  user-select: text;
+  -webkit-user-select: text;
+}
+
+.look-up-word::selection {
+  background: transparent;
+}

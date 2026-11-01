@@ -2,6 +2,9 @@
 
 ## Unreleased
 
+- macOS Look Up: a hard press (or a three-finger tap) on a word shows the
+  system's Dictionary popover, as in Preview. The viewer puts the word under
+  the pointer into the page as invisible text for the system to find.
 - With dark page colors, a page still being drawn during a fast scroll
   shows dark paper instead of a white sheet.
 - The text selection no longer shows darker stripes where selected lines

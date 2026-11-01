@@ -136,11 +136,11 @@ out and in, and find buttons. `lumiere.pdf.toolbar.statusBarButtons`
 
 ## macOS Look Up
 
-On macOS, right-click a word and choose **Look Up** to open it in the Dictionary
-app (a force click does the same where the engine reports it). Turn it off with
-`lumiere.pdf.lookUp.enabled`. The system's own three-finger-tap popup cannot
-see text drawn by the viewer; see [docs/look-up.md](docs/look-up.md) for what is
-native, what is a fallback, and what needs a Mac to verify.
+On macOS, press hard on a word (or tap it with three fingers) for the system's
+Dictionary popover, as in Preview, or right-click a word and choose **Look Up**
+to open it in the Dictionary app. Turn it off with
+`lumiere.pdf.lookUp.enabled`. See [docs/look-up.md](docs/look-up.md) for how the
+viewer gives the system a word to find, and what needs a Mac to verify.
 
 ## What an agent receives
 

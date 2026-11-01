@@ -2,6 +2,7 @@ import assert from "node:assert/strict";
 import { test } from "node:test";
 import {
   coreWord,
+  glyphRangeBox,
   isLookUpWord,
   lookUpEnabled,
   lookUpUrl,
@@ -69,4 +70,18 @@ test("Look Up is for macOS with the setting on", () => {
   assert.ok(!lookUpEnabled("darwin", false));
   assert.ok(!lookUpEnabled("linux", true));
   assert.ok(!lookUpEnabled("win32", true));
+});
+
+test("a word's box spans its glyphs and skips the ones without a box", () => {
+  const glyphs = line("read the paper");
+  assert.deepEqual(glyphRangeBox(glyphs, [5, 8]), [50, 0, 80, 12]);
+  const raised: (WordGlyph | undefined)[] = [
+    { isSpace: false, box: [0, 2, 10, 12] },
+    undefined,
+    { isSpace: false },
+    { isSpace: false, box: [20, 0, 26, 9] },
+  ];
+  assert.deepEqual(glyphRangeBox(raised, [0, 4]), [0, 0, 26, 12]);
+  assert.equal(glyphRangeBox(raised, [1, 3]), undefined);
+  assert.equal(glyphRangeBox([], [0, 0]), undefined);
 });

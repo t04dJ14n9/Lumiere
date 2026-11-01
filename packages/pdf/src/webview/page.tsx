@@ -10,6 +10,7 @@ import type { Highlight } from "./navigation";
 import { PageLinks } from "./page-links";
 import { DOCUMENT_ID } from "./plugins";
 import { PageImage } from "./page-bitmaps";
+import { LookUpWord } from "./look-up-word";
 import { renderPixelRatio } from "./render-resolution";
 
 export interface PageProps {
@@ -28,11 +29,12 @@ export interface PageProps {
 }
 
 /**
- * One page, as layers from bottom to top: the rendered image, search hits,
- * clickable links, a highlighted location, the selected region, annotations
- * (absolute overlay; pointer-events auto only in Annotate mode so View
- * text/region drags stay unblocked), and EmbedPDF's text selection (which
- * also draws the region being dragged).
+ * One page, as layers from bottom to top: the rendered image, the hidden
+ * word for macOS Look Up, search hits, clickable links, a highlighted
+ * location, the selected region, annotations (absolute overlay;
+ * pointer-events auto only in Annotate mode so View text/region drags stay
+ * unblocked), and EmbedPDF's text selection (which also draws the region
+ * being dragged).
  */
 export function Page({
   pdf,
@@ -109,6 +111,7 @@ function PageLayers({
         {...layer}
         dpr={renderPixelRatio(scale, devicePixelRatio, width, height)}
       />
+      <LookUpWord {...layer} />
       <SearchLayer documentId={DOCUMENT_ID} {...layer} />
       <PageLinks pdf={pdf} {...layer} onOpenPage={onOpenPage} />
       <PageMarks
