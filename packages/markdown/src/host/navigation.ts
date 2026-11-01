@@ -349,7 +349,8 @@ export const PDF_OPEN_LOCATION_COMMAND = "lumiere.pdf.openLocation";
 
 /**
  * Open a PDF in Lumière PDF, at the page a link such as
- * `[[paper.pdf#page=3]]` names. Any other fragment (Obsidian ignores those
+ * `[[paper.pdf#page=3]]` names, or at a highlight kept in its sidecar
+ * (`paper.pdf#hl-a1b2c3d4`). Any other fragment (Obsidian ignores those
  * too) opens the PDF where it was left.
  */
 async function openPdf(
@@ -357,7 +358,9 @@ async function openPdf(
   fragment: string,
   column: vscode.ViewColumn,
 ): Promise<void> {
-  const location = /^page=\d+(&|$)/i.test(fragment) ? fragment : "";
+  const location = /^(page=\d+(&|$)|hl-[\w-]+$)/i.test(fragment)
+    ? fragment
+    : "";
   await vscode.commands.executeCommand(
     PDF_OPEN_LOCATION_COMMAND,
     uri.with({ fragment: location }),

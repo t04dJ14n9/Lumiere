@@ -1,0 +1,36 @@
+import type { PdfDocumentObject } from "@embedpdf/models";
+import {
+  useAnnotationSelection,
+  type SetAnnotationRegion,
+} from "./annotation-selection";
+import { DOCUMENT_ID } from "./plugins";
+import { useSidecarHighlightWriting } from "./sidecar-writing";
+import { useSidecarSelection } from "./sidecar-selection";
+
+/**
+ * The marks selected in Annotate mode: the PDF's own (EmbedPDF) or a
+ * sidecar highlight, never both. Sidecar highlights are written as the tool
+ * finishes a selection.
+ */
+export function useMarkSelection(
+  pdf: PdfDocumentObject,
+  annotate: boolean,
+  setAnnotationRegion: SetAnnotationRegion,
+): { hasAnnotationSelection: boolean; deleteSelected: () => void } {
+  useSidecarHighlightWriting(pdf);
+  const embedded = useAnnotationSelection(
+    DOCUMENT_ID,
+    pdf,
+    annotate,
+    setAnnotationRegion,
+  );
+  // After EmbedPDF's: its region is cleared before a sidecar mark reports its own.
+  const sidecar = useSidecarSelection(pdf, annotate, setAnnotationRegion);
+  return {
+    hasAnnotationSelection:
+      embedded.hasAnnotationSelection || sidecar.hasSelection,
+    deleteSelected: sidecar.hasSelection
+      ? sidecar.deleteSelected
+      : embedded.deleteSelected,
+  };
+}

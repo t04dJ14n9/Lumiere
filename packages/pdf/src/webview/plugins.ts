@@ -17,6 +17,7 @@ import { ZoomPluginPackage } from "@embedpdf/plugin-zoom/react";
 import { MAX_ZOOM, MIN_ZOOM } from "../shared/zoom-steps";
 import { autoZoom, rememberedPosition } from "./reading-position";
 import { nativeSpread } from "./spread-mode";
+import { sidecarHighlightTool } from "./sidecar-highlight-tool";
 
 /** The viewer shows one document under this id. */
 export const DOCUMENT_ID = "pdf";
@@ -50,6 +51,8 @@ export function viewerPlugins(buffer: ArrayBuffer) {
     createPluginRegistration(SelectionPluginPackage),
     createPluginRegistration(HistoryPluginPackage),
     createPluginRegistration(AnnotationPluginPackage, {
+      // The highlight tool writes the sidecar, not the PDF, where the host keeps one.
+      tools: [sidecarHighlightTool],
       annotationAuthor: "Lumière",
       autoCommit: true,
       selectAfterCreate: true,

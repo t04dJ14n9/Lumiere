@@ -32,7 +32,7 @@ import { isEditableTarget } from "./editable-target";
 import { useSelectionReporting } from "./selection";
 import { useAnnotationMode } from "./annotation-mode";
 import { useAnnotationSaveSession } from "./annotation-session";
-import { useAnnotationSelection } from "./annotation-selection";
+import { useMarkSelection } from "./mark-selection";
 import { shouldDeleteAnnotationOnKey } from "../shared/annotation-delete-keys";
 import { useToolMode } from "./tool-mode";
 import { currentToolbarSettings } from "./toolbar-settings";
@@ -167,8 +167,7 @@ function useViewerTools(pdf: PdfDocumentObject, deps: ViewerToolsDeps) {
   const selection = useSelectionReporting(DOCUMENT_ID, pdf, () =>
     Boolean(annotationSelected.current),
   );
-  const annotationSelection = useAnnotationSelection(
-    DOCUMENT_ID,
+  const annotationSelection = useMarkSelection(
     pdf,
     tool === "annotate",
     selection.setAnnotationRegion,

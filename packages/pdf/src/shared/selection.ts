@@ -4,6 +4,7 @@
  * only through `parseSelection`.
  */
 import { isPageRect, type PageRect } from "./geometry";
+import { isHighlightId } from "./sidecar-format";
 
 /** Highlighted text, possibly spanning pages; one rectangle per text line. */
 export interface TextSelection {
@@ -19,6 +20,8 @@ export interface RegionSelection {
   rect: PageRect;
   /** The text inside the box, line by line, once read; missing when it has none. */
   text?: string;
+  /** A sidecar highlight selected in Annotate mode: its link is `#hl-<id>`. */
+  highlightId?: string;
 }
 
 export type PdfSelection = TextSelection | RegionSelection;
@@ -57,6 +60,9 @@ function parseRegionSelection(
     page: value.page,
     rect: value.rect,
     ...(text ? { text } : {}),
+    ...(isHighlightId(value.highlightId)
+      ? { highlightId: value.highlightId }
+      : {}),
   };
 }
 

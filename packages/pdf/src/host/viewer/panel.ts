@@ -26,6 +26,7 @@ import { PdfSelectionState, type SelectionSnapshot } from "./selection";
 import { AnnotationSave } from "./annotation-save";
 import { PdfSource } from "./source";
 import { createPdfViewId } from "./view-id";
+import type { SidecarHighlight } from "../../shared/sidecar-format";
 import type { ViewerPanelHost, ViewerPanelOptions } from "./panel-types";
 export type {
   PluginMessage,
@@ -80,6 +81,7 @@ export class PdfViewerPanel {
   private readonly navigation: PdfNavigation;
   private readonly disposables: Subscription[] = [];
   private lookUp = false;
+  private sidecarHighlights: SidecarHighlight[] | null = null;
   private zen = false;
   /** The number of the last `load` sent, and the last patch version applied. */
   private loads = 0;
@@ -283,6 +285,15 @@ export class PdfViewerPanel {
     this.post({ type: "lookUp", enabled });
   }
 
+  /**
+   * The sidecar highlights shown over the pages (plugin `pdfSidecar`), kept
+   * for the viewer's next load; null takes them away.
+   */
+  setSidecar(highlights: SidecarHighlight[] | null): void {
+    this.sidecarHighlights = highlights;
+    this.post({ type: "sidecar", highlights });
+  }
+
   /** Zen mode is on or off: status bar is hidden by VS Code; controls are command-only. */
   setZen(on: boolean): void {
     this.zen = on;
@@ -346,6 +357,7 @@ export class PdfViewerPanel {
         await this.onHistoryJump(message);
         break;
       case "historyTraverse":
+      case "sidecarWrite":
         if (this.isCurrentLoad(message.load)) {
           await this.options.route(message);
         }
@@ -466,6 +478,9 @@ export class PdfViewerPanel {
     this.post({ type: "historyState", ...this.historyState });
     if (this.lookUp) {
       this.post({ type: "lookUp", enabled: true });
+    }
+    if (this.sidecarHighlights) {
+      this.post({ type: "sidecar", highlights: this.sidecarHighlights });
     }
     if (this.zen) {
       this.post({ type: "zen", on: true });

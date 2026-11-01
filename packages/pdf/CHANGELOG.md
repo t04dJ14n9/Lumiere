@@ -2,6 +2,14 @@
 
 ## Unreleased
 
+- Highlights are kept in a Markdown sidecar beside the PDF
+  (`paper.pdf.lumiere.md`), never in the PDF. Notes link to one with
+  `paper.pdf#hl-<id>`; the link opens the PDF on it and flashes it. Click a
+  highlight in Annotate mode to select it, copy its link or delete it.
+  `lumiere.pdf.sidecar.location` / `.directory` keep sidecars in a workspace
+  folder instead. See `docs/sidecar-highlights.md`.
+- **Copy Link for Agent** is now called **Copy link to this**; what it copies
+  is unchanged, except that a selected sidecar highlight copies its `#hl-` link.
 - macOS Look Up: a hard press (or a three-finger tap) on a word shows the
   system's Dictionary popover, as in Preview. The viewer puts the word under
   the pointer into the page as invisible text for the system to find.

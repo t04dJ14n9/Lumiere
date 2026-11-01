@@ -15,7 +15,8 @@ export type PluginMessage = Extract<
       | "lookUp"
       | "zen"
       | "historyJump"
-      | "historyTraverse";
+      | "historyTraverse"
+      | "sidecarWrite";
   }
 >;
 

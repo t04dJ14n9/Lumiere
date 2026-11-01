@@ -94,3 +94,23 @@
 .look-up-word::selection {
   background: transparent;
 }
+
+/* A sidecar highlight (sidecar-layer.tsx): a highlighter over the page's text. */
+.sidecar-highlight-line {
+  position: absolute;
+  background: var(--highlight-color);
+  opacity: var(--highlight-opacity);
+  mix-blend-mode: multiply;
+  pointer-events: none;
+}
+
+/* Dark paper: multiplying would hide the colour, so lay it on, fainter. */
+#root[data-page-colors="dark"] .sidecar-highlight-line {
+  opacity: calc(var(--highlight-opacity) * 0.4);
+  mix-blend-mode: normal;
+}
+
+.sidecar-highlight.is-selected .sidecar-highlight-line {
+  outline: 2px solid var(--selection-edge);
+  outline-offset: 1px;
+}
