@@ -13,6 +13,7 @@ import {
 import { protocol as commandProtocol } from "../../src/plugins/commands/protocol";
 import { protocol as gitGutterProtocol } from "../../src/plugins/gitGutter/protocol";
 import { protocol as linksProtocol } from "../../src/plugins/links/protocol";
+import { protocol as lookUpProtocol } from "../../src/plugins/lookUp/protocol";
 import { protocol as propertiesProtocol } from "../../src/plugins/properties/protocol";
 import { frontmatter } from "../../src/markdown/properties";
 import type { PropertyTypes } from "../../src/markdown/properties/types";
@@ -43,6 +44,8 @@ export class BrowserHost {
   trusted = false;
   /** Links the editor asked the host to open. */
   readonly opened: string[] = [];
+  /** Words the editor asked the host to look up in the Dictionary app. */
+  readonly lookedUp: string[] = [];
   /** Per-plugin settings sent to the editor; set before `open`. */
   features: Record<
     string,
@@ -238,6 +241,10 @@ export class BrowserHost {
     host.handle(linksProtocol, "missing", () => true);
     host.handle(linksProtocol, "open", ({ href }) => {
       this.opened.push(href);
+      return true;
+    });
+    host.handle(lookUpProtocol, "lookUp", ({ word }) => {
+      this.lookedUp.push(word);
       return true;
     });
     host.handle(videoProtocol, "details", ({ provider, id }) => {

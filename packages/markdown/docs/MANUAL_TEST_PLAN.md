@@ -916,6 +916,31 @@ Off by default.
    lists the item. On Windows or Linux, right-click with only a caret: the
    menu has no Copy Link for Agent.
 
+### lookUp
+
+Setup: `Core.md` and `Links.md` in the fixture vault, Live Preview, on macOS
+in VS Code and in Cursor.
+
+1. Two-finger click (then Ctrl-click) a word in a paragraph, a heading, bold
+   text, a rendered link's label, a list item and a quote. The menu lists
+   **Look Up** right after Copy Link for Agent; choosing it opens the
+   Dictionary app at that word, without its punctuation ("word," looks up
+   "word"), and the note is unchanged.
+2. Select one word, two-finger click inside it: Look Up looks up that word.
+   Select two words and two-finger click on one of them: it looks up the
+   word under the pointer.
+3. Two-finger click past the end of a short line or on a blank line:
+   choosing Look Up does nothing.
+4. With "Look up & data detectors" set to Force Click with one finger
+   (System Settings › Trackpad), force-click a word in each place of step 1;
+   then set it to Tap with three fingers and tap each. macOS shows the
+   Dictionary popover for that word. If it does not, record the place, the
+   editor (VS Code or Cursor) and its version: Lumière cannot answer that
+   gesture itself, only keep the word in the page's text
+   (`test/browser/look-up.spec.ts` guards that).
+5. Turn `lumiere.markdown.plugins.lookUp.enabled` off: the item leaves the
+   menu. On Windows or Linux the menu never lists it.
+
 ### cursorBridge
 
 In **Cursor** only: select text in Live Preview, press Cmd/Ctrl+L (Chat) and
@@ -1186,6 +1211,7 @@ Use the disposable fixture vault from Setup. These rows enumerate every generate
 | `lumiere.markdown.openLinkInNewTab` — Open Link in New Tab | unbound | On a disposable fixture, run Open Link in New Tab; confirm its named action using the plugin scenarios above, then undo where applicable. Repeat after disable/re-enable and switching panes. |
 | `lumiere.markdown.openLinkToSide` — Open Link to Side | unbound | On a disposable fixture, run Open Link to Side; confirm its named action using the plugin scenarios above, then undo where applicable. Repeat after disable/re-enable and switching panes. |
 | `lumiere.markdown.toggleSourceMode` — Toggle Live Preview/Source Mode | unbound | On a disposable fixture, run Toggle Live Preview/Source Mode; confirm its named action using the plugin scenarios above, then undo where applicable. Repeat after disable/re-enable and switching panes. |
+| `lumiere.markdown.lookUp` — Look Up | unbound | On macOS, right-click a word in a note and choose Look Up: the Dictionary app opens at that word (see the lookUp scenarios above). Hidden from the palette and absent from the menu off macOS. |
 | `lumiere.markdown.marp.preview` — Open Marp Preview to the Side | unbound | On a disposable fixture, run Open Marp Preview to the Side; confirm its named action using the plugin scenarios above, then undo where applicable. Repeat after disable/re-enable and switching panes. |
 | `lumiere.markdown.marp.export` — Export Marp Slide Deck | unbound | On a disposable fixture, run Export Marp Slide Deck; confirm its named action using the plugin scenarios above, then undo where applicable. Repeat after disable/re-enable and switching panes. |
 | `lumiere.markdown.marp.toggle` — Toggle Marp | unbound | On a disposable fixture, run Toggle Marp; confirm its named action using the plugin scenarios above, then undo where applicable. Repeat after disable/re-enable and switching panes. |
@@ -1290,6 +1316,7 @@ Use the disposable fixture vault from Setup. These rows enumerate every generate
 | `lumiere.markdown.plugins.lineNumbers.enabled` | `true` | boolean; change at workspace-folder scope, verify the owning plugin scenario, then reset the override. |
 | `lumiere.markdown.plugins.linkUpdates.enabled` | `true` | boolean; change at workspace-folder scope, verify the owning plugin scenario, then reset the override. |
 | `lumiere.markdown.plugins.links.enabled` | `true` | boolean; change at workspace-folder scope, verify the owning plugin scenario, then reset the override. |
+| `lumiere.markdown.plugins.lookUp.enabled` | `true` | boolean; turn off on macOS and confirm Look Up leaves the note's right-click menu; then reset. |
 | `lumiere.markdown.plugins.marp.enabled` | `true` | boolean; change at workspace-folder scope, verify the owning plugin scenario, then reset the override. |
 | `lumiere.markdown.plugins.math.enabled` | `true` | boolean; change at workspace-folder scope, verify the owning plugin scenario, then reset the override. |
 | `lumiere.markdown.plugins.obsidianCompat.enabled` | `true` | boolean; change at workspace-folder scope, verify the owning plugin scenario, then reset the override. |

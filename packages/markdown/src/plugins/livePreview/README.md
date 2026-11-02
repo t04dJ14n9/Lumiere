@@ -62,6 +62,17 @@ syntax parser and HTML renderer share the highlight-aware emphasis flanking rule
 - `code-lines.test.ts`: code and thematic break line classes and hidden text.
 - `invalidation.test.ts`: incremental index and decorations equal a full rebuild (randomised); invalidation reasons.
 - `decoration-cost.test.ts`: renderer matches and widgets built per caret move and edit on a 4,000-block note.
+- `viewport-cost.test.ts`: tree steps to decorate one screen, the same in a note four times longer (counted, not timed).
+- `heading-drag.ts`: a drag that starts at the start of a heading's text,
+  its `#` marks hidden (reveal is frozen from the press), starts at the start
+  of the line, so the selection takes the marks as in Obsidian.
+  `heading-drag.test.ts` covers it.
+- `plain-edit.ts`: whether an edit is plain text that can change no block
+  (no line break or block mark, the line's leading marks kept, the same
+  blocks around it in the tree after it); indexes of the note's blocks then
+  map their positions instead of walking the whole note on every keystroke.
+  `test/unit/livePreview/plain-edit.test.ts` applies random edits and checks
+  every index that took that shortcut against a fresh walk.
 
 ## Incremental invalidation
 

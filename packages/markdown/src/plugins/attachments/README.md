@@ -30,9 +30,13 @@ a pinned tab (`EditorDropTarget` forces `pinned: true`) instead of delivering
 webview; the VS Code adapter watches pinned media tab opens instead (see
 `src/host/attachments-explorer-reclaim.ts`, wired through
 `customEditors.registerExplorerAttachmentReclaim`): when the prior active
-editor in that column was a Lumière note that is still open, it closes the
-media tab, copies the file into `files.attachmentFolder` under a timestamp
-name, and inserts the embed into the note. Portable hosts omit the hook.
+editor in that column was a Lumière note that is still open, it asks
+"Add image.png to note.md as an attachment?" and leaves the media tab open.
+Only **Add to Note** closes the tab, copies the file into
+`files.attachmentFolder` under a timestamp name, and inserts the embed. Such an
+open looks exactly like `code image.png` in a terminal, Quick Open or a
+double-click, which used to be inserted into the note without asking.
+Portable hosts omit the hook.
 
 Sketch placement uses the same shared helpers, so sketches and pasted images
 share one folder and link story.
@@ -56,8 +60,7 @@ A failed save leaves that item unchanged and shows a short error; no broken
 vault link is inserted. Other items in a multi-drop may still succeed.
 
 Single-click preview media while a Lumière note is focused is left alone
-(preview tabs are not reclaimed). Double-click (also pinned) or any permanent
-open while the note is focused in the same group can look like Explorer
-drop-without-Shift and may be reclaimed as an attachment; open-to-the-side is
-left alone. When `workbench.editor.enablePreview` is false, single-click also
-opens pinned and may be reclaimed.
+(preview tabs are not offered). Any other pinned open of media in the note's
+group (a double-click, Quick Open, `code image.png`, Explorer drop without
+Shift) opens normally and shows the question; ignoring it keeps the image
+open and the note unchanged. Open-to-the-side is left alone.

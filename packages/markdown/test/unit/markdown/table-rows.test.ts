@@ -38,6 +38,35 @@ test("a table ends at a line that is not a row, as in Obsidian 1.14.4", () => {
   ]);
 });
 
+test("in a list item, rows start at the item's margin", () => {
+  assert.deepEqual(
+    blocks(
+      "- item\n\n  | a | b |\n  | - | - |\n  | c | d |\n  | e | f |\n\n- next\n",
+    ),
+    [
+      "Paragraph: item",
+      "TableRow: | c | d |",
+      "TableRow: | e | f |",
+      "Paragraph: next",
+    ],
+  );
+  assert.deepEqual(
+    blocks("- item\n\n  | a | b |\n  | - | - |\n  | c | d |\n  below\n"),
+    ["Paragraph: item", "TableRow: | c | d |", "Paragraph: below"],
+  );
+  // Not in a quote: the table widget cannot draw one there (yet).
+  assert.ok(
+    !blocks("> | a | b |\n> | - | - |\n> | c | d |\n").some((block) =>
+      block.startsWith("TableRow"),
+    ),
+  );
+  // Further in than the container's margin is still not a row.
+  assert.deepEqual(
+    blocks("- item\n\n  | a | b |\n  | - | - |\n    | c | d |\n"),
+    ["Paragraph: item", "Paragraph: | c | d |"],
+  );
+});
+
 test("the row rule follows the header's leading pipe", () => {
   assert.equal(continuesTable("| a | b |", "| c | d |"), true);
   assert.equal(continuesTable("| a | b |", "c | d"), false);

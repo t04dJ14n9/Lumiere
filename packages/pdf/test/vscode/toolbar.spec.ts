@@ -187,7 +187,7 @@ test("editor title actions zoom, fit and switch the selection tool", async ({
   await expect(
     viewer.getByRole("toolbar", { name: "PDF region actions" }),
   ).toHaveCount(0);
-  await contextMenu(page, at(100, 100), "Copy Link for Agent");
+  await contextMenu(page, at(100, 100), "Copy link to this");
   await expect
     .poll(() => agentChatInput(page), { timeout: 15_000 })
     .toContain(withoutSpaces(`[outline.pdf · p.1](${PDF}#page=1&viewrect=`));

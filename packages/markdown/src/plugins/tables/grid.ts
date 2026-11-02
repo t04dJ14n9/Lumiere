@@ -6,8 +6,7 @@ import {
 } from "../../markdown/tables/model";
 import { editGroup } from "../document/api";
 import type { RenderBlock } from "../livePreview/api";
-import type { ColumnWidth } from "./column-widths";
-import { joinTableSource, splitTableSource } from "./column-widths";
+import { indentRows, rowPrefix } from "./column-widths";
 import type { TableEnvironment } from "./environment";
 
 /** Rendered cells and their current source snapshot. It owns no selection. */
@@ -18,8 +17,6 @@ export class TableGrid {
   readonly scroll: HTMLElement;
   cells: HTMLElement[][] = [];
   model: Table;
-  /** Pixel column widths from a trailing `lumiere-col-widths` comment. */
-  widths: ColumnWidth[] | undefined;
   private operationSequence = 0;
 
   constructor(
@@ -31,9 +28,7 @@ export class TableGrid {
       "disposeContent" | "renderContent"
     >,
   ) {
-    const split = splitTableSource(block.source);
-    this.model = parseTable(split.table)!;
-    this.widths = split.widths;
+    this.model = parseTable(block.source)!;
     this.table.className = "markdown-rendered table-editor";
     this.table.setAttribute("aria-label", "Markdown table");
     // A wide table scrolls by itself, as in Obsidian, not the whole note.
@@ -53,7 +48,12 @@ export class TableGrid {
     return `table-command-${++this.operationSequence}`;
   }
 
-  replace(source: string): void {
+  /**
+   * Write `tableMarkdown` back as this block, every line after the first
+   * indented like the table's rows, so a table in a list item stays in it.
+   */
+  replace(tableMarkdown: string): void {
+    const source = this.sourceFor(tableMarkdown);
     if (source === this.block.source) {
       return;
     }
@@ -64,17 +64,19 @@ export class TableGrid {
     });
   }
 
-  /** Replace the GFM table while preserving or updating column widths. */
-  replaceTable(
-    tableMarkdown: string,
-    widths: ColumnWidth[] | undefined = this.widths,
-  ): void {
-    this.replace(joinTableSource(tableMarkdown, widths));
+  /** The block's source for `tableMarkdown` (see `replace`). */
+  sourceFor(tableMarkdown: string): string {
+    const prefix = rowPrefix(this.block.source);
+    const table = tableMarkdown.split("\n").map((line, index) =>
+      // Rows already written with the prefix (the source itself) keep it.
+      index > 0 && line.startsWith(prefix) ? line.slice(prefix.length) : line,
+    );
+    return indentRows(table.join("\n"), prefix);
   }
 
-  /** Table markdown without a trailing widths comment. */
+  /** The table's Markdown, as in the note. */
   tableSource(): string {
-    return splitTableSource(this.block.source).table;
+    return this.block.source;
   }
 
   render(): void {

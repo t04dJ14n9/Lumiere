@@ -5,6 +5,7 @@ import {
   type CellPosition,
 } from "../../markdown/tables/model";
 import { tableSourceChanges } from "./source-edits";
+import { indentRows, rowPrefix } from "./column-widths";
 import { CellEditor, type CellSelection } from "./cell-editor";
 import type { Action, TableEnvironment } from "./environment";
 import {
@@ -297,9 +298,11 @@ export function projectedChanges(
   if (!table) {
     return [];
   }
-  const next = writeCells(table, { anchor: position, head: position }, [
-    [text],
-  ]);
+  // Rows of a table in a list item keep its indent (the header has none).
+  const next = indentRows(
+    writeCells(table, { anchor: position, head: position }, [[text]]),
+    rowPrefix(source),
+  );
   return tableSourceChanges(table, next).map((change) => ({
     ...change,
     from: start + change.from,

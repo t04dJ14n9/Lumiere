@@ -15,7 +15,14 @@ source. Insert Footnote adds a reference and definition in one edit.
 
 ## How it works
 
-Shared metadata supplies numbering, definitions and reference ranges. The
+A per-document footnote registry (`markdown/metadata/footnote-extract.ts`,
+shared with the note's metadata, never the whole metadata) supplies
+numbering, definitions and reference ranges. While a large note is still
+parsing, references are numbered from Live Preview's partial tree (a number
+depends only on the references before it) rather than a parse of the whole
+note; `carry.ts` moves the registry to the next document version through a
+plain edit that touches no footnote, so typing does not extract them all
+again. The
 markdown dialect claims `[^label]:` lines before CommonMark link-reference
 definitions, so a body that is only a link or URL still parses as a
 paragraph with FootnoteRef (and Link / WikiLink) for Live Preview. The
@@ -46,6 +53,7 @@ whole heading so its text and outline entry stay intact.
 - `manifest.ts`: feature identity and Insert Footnote contribution.
 - `webview.ts`: named invalidation, renderer and command registrations.
 - `inline.ts`: the Live Preview renderer for references and definitions.
+- `carry.ts`: carries the registry through edits that cannot change it.
 - `preprocess.ts`: pure reference resolution and placeholder substitution.
 - `render-references.ts`: pass reference registry and mounted-control lifetime.
 - `reference-widget.ts`: reference widget, its number, and the hover/focus

@@ -9,6 +9,8 @@ import type { useJumpHistory } from "./jump-history";
 import type { Navigation } from "./navigation";
 import { currentViewSettings, rememberViewSettings } from "./reading-position";
 import { rememberPageColors } from "./page-colors";
+import { parseSidecarHighlights } from "../shared/sidecar-messages";
+import { rememberSidecar } from "./sidecar-store";
 import { rememberToolbarSettings } from "./toolbar-settings";
 import type { useViewActions } from "./view-sync";
 
@@ -87,12 +89,31 @@ function handleHostMessage(
     case "pageColors":
       handlers.setPageColors(rememberPageColors(message.effective));
       return;
+    default:
+      handleMarksMessage(message, handlers);
+  }
+}
+
+/** The messages about the reader's marks: saves into the PDF, and the sidecar. */
+function handleMarksMessage(
+  message: Exclude<HostMessage, { type: "load" }>,
+  handlers: HostMessageHandlers,
+): void {
+  switch (message.type) {
     case "annotationSaveResult":
       applyAnnotationHostMessage(message);
       return;
     case "annotationRetry":
       handlers.retryAnnotationSave?.();
       return;
+    case "sidecar": {
+      // From a file anyone can edit: only well-formed highlights are shown.
+      const highlights = parseSidecarHighlights(message.highlights);
+      if (highlights !== undefined) {
+        rememberSidecar(highlights);
+      }
+      return;
+    }
   }
 }
 

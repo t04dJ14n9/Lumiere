@@ -2,6 +2,22 @@
 
 ## Unreleased
 
+- PDFs show their first page sooner: about 100 ms less from the document
+  opening to the first page in VS Code (the automatic zoom is now
+  applied as soon as the viewer has a size, not after a 150 ms debounce).
+- Highlights are kept in a Markdown sidecar beside the PDF
+  (`paper.pdf.lumiere.md`), never in the PDF. Notes link to one with
+  `paper.pdf#hl-<id>`; the link opens the PDF on it and flashes it. Click a
+  highlight in Annotate mode to select it, copy its link or delete it.
+  `lumiere.pdf.sidecar.location` / `.directory` keep sidecars in a workspace
+  folder instead. See `docs/sidecar-highlights.md`.
+- **Copy Link for Agent** is now called **Copy link to this**; what it copies
+  is unchanged, except that a selected sidecar highlight copies its `#hl-` link.
+- macOS Look Up: a hard press (or a three-finger tap) on a word shows the
+  system's Dictionary popover, as in Preview. The viewer puts the word under
+  the pointer into the page as invisible text for the system to find.
+- With dark page colors, a page still being drawn during a fast scroll
+  shows dark paper instead of a white sheet.
 - The text selection no longer shows darker stripes where selected lines
   overlap (tightly set lines, or a line with a larger word).
 - The extension was renamed from Agent PDF Viewer (EmbedPDF) to PDF Workshop (package `vscode-pdf-workshop`).

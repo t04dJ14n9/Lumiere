@@ -12,7 +12,9 @@ export function registerNativeLinks(panels: PdfPanels): vscode.Disposable {
   return registerSourceLinks({
     command: OPEN_NATIVE_LINK_COMMAND_ID,
     accepts: (file, fragment) =>
-      /\.pdf$/i.test(file) && !!parseLocationFragment(fragment),
+      /\.pdf$/i.test(file) &&
+      (!!parseLocationFragment(fragment) ||
+        !!panels.fragmentHandlerFor(fragment)),
     authorize: contained,
     begin() {
       let cancelled = false;
@@ -40,8 +42,11 @@ export function registerNativeLinks(panels: PdfPanels): vscode.Disposable {
       if (!panel || !run.current()) {
         return;
       }
+      const handler = panels.fragmentHandlerFor(target.fragment);
       const location = parseLocationFragment(target.fragment);
-      if (location) {
+      if (handler) {
+        await handler.open(panel, target.fragment);
+      } else if (location) {
         await deliverNativeLocation(panel, location, run, cancellations);
       }
     },

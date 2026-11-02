@@ -6,6 +6,7 @@ import {
   drag,
   TEXT_MIDLINE,
 } from "./viewer-support";
+import { send } from "./view-controls-support";
 
 const THEMES = {
   "Light Modern": {
@@ -145,4 +146,23 @@ test("selections and flashed boxes stand out on the page in every theme", async 
     );
     expect(flashes[name], `${name} location border`).toBeGreaterThanOrEqual(3);
   }
+});
+
+// While a page waits for its picture (a fast scroll outruns the renderer), its
+// box is all that shows: it must be the paper of the current page colors, not
+// white on dark paper.
+test("a page with no picture yet shows the paper of the page colors", async ({
+  page,
+}) => {
+  await open(page);
+  const paper = () =>
+    page.evaluate(() => {
+      const box = document.querySelector<HTMLElement>(".page[data-page-index]");
+      return box ? getComputedStyle(box).backgroundColor : undefined;
+    });
+  expect(await paper()).toBe("rgb(255, 255, 255)");
+  await send(page, { type: "pageColors", effective: "dark" });
+  await expect.poll(paper).toBe("rgb(30, 30, 30)");
+  await send(page, { type: "pageColors", effective: "normal" });
+  await expect.poll(paper).toBe("rgb(255, 255, 255)");
 });

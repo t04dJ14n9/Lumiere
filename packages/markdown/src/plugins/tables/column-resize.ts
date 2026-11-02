@@ -1,58 +1,242 @@
+import type { TableOperation } from "../../markdown/tables/operations";
 import {
   applyColumnWidth,
+  columnEdgeAt,
   MIN_COLUMN_WIDTH,
+  widthsAfterOperation,
   type ColumnWidth,
 } from "./column-widths";
 
-interface ResizeDrag {
+interface ColumnEdge {
   column: number;
-  pointer: number;
-  startX: number;
-  startWidth: number;
-  handle: HTMLElement;
+  /** The column's right border, in client pixels. */
+  edge: number;
 }
 
-/** Drag the right edge of a column to set its width; does not use move grips. */
+interface ResizeDrag extends ColumnEdge {
+  pointer: number;
+  startX: number;
+  /** Every column's width when the drag began; only `column` changes. */
+  frozen: number[];
+  width: number;
+  /** Ends the listeners that live only as long as the drag. */
+  stop: AbortController;
+}
+
+/**
+ * Drag a column's right border, in any row, to set its width. The border is
+ * the handle: a press within `COLUMN_EDGE_REACH` pixels of it starts the
+ * drag, and hovering there shows the resize cursor and a guide line down
+ * the whole table. The move grips sit above and beside the table, outside
+ * that band. Widths stay with the open table and are never written to the
+ * note, as Obsidian keeps none (see `ColumnWidth`).
+ */
 export class ColumnResize {
   private readonly events = new AbortController();
+  private readonly guide = document.createElement("div");
+  private widths: ColumnWidth[] | undefined;
   private drag?: ResizeDrag;
 
   constructor(
     private readonly root: HTMLElement,
     private readonly table: HTMLTableElement,
-    private readonly persist: (
-      widths: number[],
-      column: number,
-      width: number,
-    ) => void,
+    private readonly scroll: HTMLElement,
   ) {
+    this.guide.className = "table-col-resize-guide";
+    this.guide.hidden = true;
+    this.guide.setAttribute("aria-hidden", "true");
+    root.append(this.guide);
     this.register();
-    this.refresh();
   }
 
+  /** Paint the widths again, after the table's rows were drawn again. */
   refresh(): void {
-    const header = this.table.rows[0];
-    if (!header) {
-      return;
+    if (!this.drag) {
+      this.paint(this.widths);
     }
-    Array.from(header.cells).forEach((cell, index) => {
-      const wrapper = cell.querySelector<HTMLElement>(".table-cell-wrapper");
-      if (!wrapper || wrapper.querySelector(".table-col-resizer")) {
-        return;
-      }
-      const handle = document.createElement("div");
-      handle.className = "table-col-resizer";
-      handle.dataset.column = String(index);
-      handle.title = "Drag to resize column";
-      handle.setAttribute("role", "separator");
-      handle.setAttribute("aria-orientation", "vertical");
-      handle.setAttribute("aria-label", `Resize column ${index + 1}`);
-      wrapper.append(handle);
+  }
+
+  /** Keep each width with its column when columns are added, moved or removed. */
+  remap(operation: TableOperation): void {
+    this.widths = widthsAfterOperation(this.widths, operation);
+  }
+
+  destroy(): void {
+    this.cancel();
+    this.events.abort();
+    this.guide.remove();
+  }
+
+  private register(): void {
+    const signal = this.events.signal;
+    this.root.addEventListener("pointerdown", (event) => this.press(event), {
+      capture: true,
+      signal,
+    });
+    this.root.addEventListener("pointermove", (event) => this.hover(event), {
+      passive: true,
+      signal,
+    });
+    this.root.addEventListener("pointerleave", () => this.showHover(), {
+      signal,
+    });
+    this.scroll.addEventListener("scroll", () => this.showHover(), {
+      passive: true,
+      signal,
     });
   }
 
-  /** Paint `<colgroup>` from persisted widths; omit cols that are still auto. */
-  applyWidths(widths: ColumnWidth[] | undefined): void {
+  private hover(event: PointerEvent): void {
+    // Another drag (a cell selection, say) shows no resize chrome.
+    if (!this.drag && event.buttons === 0) {
+      this.showHover(this.edgeAt(event.clientX, event.clientY));
+    }
+  }
+
+  private press(event: PointerEvent): void {
+    if (event.button !== 0 || !event.isPrimary || this.drag) {
+      return;
+    }
+    const hit = this.edgeAt(event.clientX, event.clientY);
+    if (!hit) {
+      return;
+    }
+    // Not a cell press: no cell opens, no selection starts.
+    event.preventDefault();
+    event.stopPropagation();
+    this.begin(event, hit);
+  }
+
+  /** The column border under the pointer, if any. */
+  private edgeAt(x: number, y: number): ColumnEdge | undefined {
+    const header = this.table.rows[0];
+    if (!header) {
+      return undefined;
+    }
+    const box = this.table.getBoundingClientRect();
+    const view = this.scroll.getBoundingClientRect();
+    if (y < box.top || y > box.bottom || x < view.left || x > view.right) {
+      return undefined;
+    }
+    const edges = Array.from(
+      header.cells,
+      (cell) => cell.getBoundingClientRect().right,
+    );
+    const column = columnEdgeAt(edges, x);
+    return column === undefined ? undefined : { column, edge: edges[column]! };
+  }
+
+  private showHover(hit?: ColumnEdge): void {
+    this.root.classList.toggle("table-col-resize-hover", hit !== undefined);
+    this.placeGuide(hit?.edge);
+  }
+
+  private placeGuide(edge: number | undefined): void {
+    if (edge === undefined) {
+      this.guide.hidden = true;
+      return;
+    }
+    const root = this.root.getBoundingClientRect();
+    const box = this.table.getBoundingClientRect();
+    this.guide.hidden = false;
+    this.guide.style.left = `${edge - root.left - this.root.clientLeft}px`;
+    this.guide.style.top = `${box.top - root.top - this.root.clientTop}px`;
+    this.guide.style.height = `${box.height}px`;
+  }
+
+  private begin(event: PointerEvent, hit: ColumnEdge): void {
+    const frozen = this.measureColumns();
+    const stop = new AbortController();
+    this.drag = {
+      ...hit,
+      pointer: event.pointerId,
+      startX: event.clientX,
+      frozen,
+      width: frozen[hit.column]!,
+      stop,
+    };
+    // Fix every column at its width, so only the dragged one moves.
+    this.paint(frozen);
+    try {
+      this.root.setPointerCapture(event.pointerId);
+    } catch {
+      // A pointer that is no longer active cannot be captured.
+    }
+    this.root.classList.add("table-col-resizing");
+    this.placeGuide(hit.edge);
+    const signal = stop.signal;
+    window.addEventListener("pointermove", (next) => this.move(next), {
+      signal,
+    });
+    window.addEventListener("pointerup", (next) => this.finish(next), {
+      signal,
+    });
+    window.addEventListener(
+      "pointercancel",
+      (next) => {
+        if (next.pointerId === this.drag?.pointer) {
+          this.cancel();
+        }
+      },
+      { signal },
+    );
+    window.addEventListener("blur", () => this.cancel(), { signal });
+  }
+
+  private move(event: PointerEvent): void {
+    const drag = this.drag;
+    if (!drag || event.pointerId !== drag.pointer) {
+      return;
+    }
+    event.preventDefault();
+    const start = drag.frozen[drag.column]!;
+    const width = Math.max(
+      MIN_COLUMN_WIDTH,
+      Math.round(start + event.clientX - drag.startX),
+    );
+    if (width === drag.width) {
+      return;
+    }
+    drag.width = width;
+    this.liveCol(drag.column).style.width = `${width}px`;
+    this.placeGuide(drag.edge + width - start);
+  }
+
+  private finish(event: PointerEvent): void {
+    const drag = this.drag;
+    if (!drag || event.pointerId !== drag.pointer) {
+      return;
+    }
+    this.end();
+    if (drag.width !== drag.frozen[drag.column]) {
+      this.widths = applyColumnWidth(drag.frozen, drag.column, drag.width);
+    }
+    this.paint(this.widths);
+    this.showHover(this.edgeAt(event.clientX, event.clientY));
+  }
+
+  private cancel(): void {
+    if (this.drag) {
+      this.end();
+      this.paint(this.widths);
+    }
+  }
+
+  private end(): void {
+    const drag = this.drag;
+    if (!drag) {
+      return;
+    }
+    delete this.drag;
+    drag.stop.abort();
+    this.root.classList.remove("table-col-resizing");
+    if (this.root.hasPointerCapture(drag.pointer)) {
+      this.root.releasePointerCapture(drag.pointer);
+    }
+    this.showHover();
+  }
+
+  private paint(widths: ColumnWidth[] | undefined): void {
     this.table.querySelector("colgroup")?.remove();
     if (!widths?.some((width) => width !== undefined)) {
       this.table.style.tableLayout = "";
@@ -75,119 +259,14 @@ export class ColumnResize {
     this.table.prepend(group);
   }
 
-  destroy(): void {
-    this.cancel();
-    this.events.abort();
-  }
-
-  private register(): void {
-    const options = { capture: true, signal: this.events.signal };
-    this.root.addEventListener(
-      "pointerdown",
-      (event) => {
-        const handle = this.handle(event.target);
-        if (handle) {
-          this.begin(event, handle);
-        }
-      },
-      options,
-    );
-    window.addEventListener("pointermove", (event) => this.move(event), {
-      signal: this.events.signal,
-    });
-    window.addEventListener("pointerup", (event) => this.finish(event), {
-      signal: this.events.signal,
-    });
-    window.addEventListener(
-      "pointercancel",
-      (event) => {
-        if (this.drag?.pointer === event.pointerId) {
-          this.cancel();
-        }
-      },
-      { signal: this.events.signal },
-    );
-    window.addEventListener("blur", () => this.cancel(), {
-      signal: this.events.signal,
-    });
-  }
-
-  private handle(target: EventTarget | null): HTMLElement | undefined {
-    if (!(target instanceof Element)) {
-      return undefined;
+  /** The dragged column's `<col>`, painted again if a re-render dropped it. */
+  private liveCol(column: number): HTMLElement {
+    let col = this.table.querySelectorAll("col")[column];
+    if (!col) {
+      this.paint(this.drag?.frozen);
+      col = this.table.querySelectorAll("col")[column]!;
     }
-    const node = target.closest<HTMLElement>(".table-col-resizer");
-    return node && this.table.contains(node) ? node : undefined;
-  }
-
-  private begin(event: PointerEvent, handle: HTMLElement): void {
-    if (event.button !== 0 || !event.isPrimary) {
-      return;
-    }
-    event.preventDefault();
-    event.stopPropagation();
-    const column = Number(handle.dataset.column);
-    const cell = this.table.rows[0]?.cells[column];
-    if (!cell) {
-      return;
-    }
-    this.drag = {
-      column,
-      pointer: event.pointerId,
-      startX: event.clientX,
-      startWidth: cell.getBoundingClientRect().width,
-      handle,
-    };
-    handle.setPointerCapture(event.pointerId);
-    this.root.classList.add("table-col-resizing");
-  }
-
-  private move(event: PointerEvent): void {
-    const drag = this.drag;
-    if (!drag || event.pointerId !== drag.pointer) {
-      return;
-    }
-    event.preventDefault();
-    const width = Math.max(
-      MIN_COLUMN_WIDTH,
-      Math.round(drag.startWidth + event.clientX - drag.startX),
-    );
-    const col =
-      this.table.querySelectorAll("col")[drag.column] ??
-      this.ensureLiveCol(drag.column);
-    col.style.width = `${width}px`;
-    this.table.style.tableLayout = "fixed";
-  }
-
-  private ensureLiveCol(column: number): HTMLElement {
-    let group = this.table.querySelector("colgroup");
-    if (!group) {
-      group = document.createElement("colgroup");
-      const count = this.table.rows[0]?.cells.length ?? column + 1;
-      for (let index = 0; index < count; index++) {
-        group.append(document.createElement("col"));
-      }
-      this.table.prepend(group);
-    }
-    while (group.children.length <= column) {
-      group.append(document.createElement("col"));
-    }
-    return group.children[column] as HTMLElement;
-  }
-
-  private finish(event: PointerEvent): void {
-    const drag = this.drag;
-    if (!drag || event.pointerId !== drag.pointer) {
-      return;
-    }
-    const width = Math.max(
-      MIN_COLUMN_WIDTH,
-      Math.round(drag.startWidth + event.clientX - drag.startX),
-    );
-    const measured = this.measureColumns();
-    const seeded = applyColumnWidth(measured, drag.column, width);
-    this.cancel();
-    this.persist(seeded, drag.column, width);
+    return col;
   }
 
   private measureColumns(): number[] {
@@ -195,20 +274,11 @@ export class ColumnResize {
     if (!header) {
       return [];
     }
-    return Array.from(header.cells).map((cell) =>
+    return Array.from(header.cells, (cell) =>
       Math.max(
         MIN_COLUMN_WIDTH,
         Math.round(cell.getBoundingClientRect().width),
       ),
     );
-  }
-
-  private cancel(): void {
-    const drag = this.drag;
-    delete this.drag;
-    this.root.classList.remove("table-col-resizing");
-    if (drag?.handle.hasPointerCapture(drag.pointer)) {
-      drag.handle.releasePointerCapture(drag.pointer);
-    }
   }
 }

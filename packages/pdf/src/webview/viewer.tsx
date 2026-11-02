@@ -32,7 +32,7 @@ import { isEditableTarget } from "./editable-target";
 import { useSelectionReporting } from "./selection";
 import { useAnnotationMode } from "./annotation-mode";
 import { useAnnotationSaveSession } from "./annotation-session";
-import { useAnnotationSelection } from "./annotation-selection";
+import { useMarkSelection } from "./mark-selection";
 import { shouldDeleteAnnotationOnKey } from "../shared/annotation-delete-keys";
 import { useToolMode } from "./tool-mode";
 import { currentToolbarSettings } from "./toolbar-settings";
@@ -42,6 +42,7 @@ import { useViewActions, useViewReporting } from "./view-sync";
 import { useHostMessages } from "./host-messages";
 import { useWheelZoom } from "./wheel-zoom";
 import { useJumpHistory } from "./jump-history";
+import { useFirstFitNow } from "./first-fit";
 
 /**
  * The open PDF: an optional search bar and the scrolling pages. Controls
@@ -106,6 +107,7 @@ function useViewerState(pdf: PdfDocumentObject) {
   const navigation = withHistory(rawNavigation, history);
   const search = useSearch();
   useOutlinePublishing(DOCUMENT_ID, pdf);
+  useFirstFitNow(DOCUMENT_ID);
   const documentArea = useRef<HTMLDivElement>(null);
   useDocumentInput(documentArea, { choices, navigation, smooth });
   const [lookUp, setLookUp] = useState(false);
@@ -167,8 +169,7 @@ function useViewerTools(pdf: PdfDocumentObject, deps: ViewerToolsDeps) {
   const selection = useSelectionReporting(DOCUMENT_ID, pdf, () =>
     Boolean(annotationSelected.current),
   );
-  const annotationSelection = useAnnotationSelection(
-    DOCUMENT_ID,
+  const annotationSelection = useMarkSelection(
     pdf,
     tool === "annotate",
     selection.setAnnotationRegion,

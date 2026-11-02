@@ -31,6 +31,7 @@ import diagrams from "./diagrams/manifest";
 import math from "./math/manifest";
 import codeBlocks from "./codeBlocks/manifest";
 import links from "./links/manifest";
+import lookUp from "./lookUp/manifest";
 import formatting from "./formatting/manifest";
 import type { Manifest } from "../shared/manifest";
 import {
@@ -89,6 +90,7 @@ export const features: readonly Manifest[] = inPluginOrder(
     inlineTitle,
     lineNumbers,
     links,
+    lookUp,
     math,
     onlineVideos,
     pagePreview,

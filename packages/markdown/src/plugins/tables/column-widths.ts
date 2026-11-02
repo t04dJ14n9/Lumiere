@@ -2,8 +2,12 @@ import type { TableOperation } from "../../markdown/tables/operations";
 /** Minimum rendered column width in CSS pixels (matches cell min-width). */
 export const MIN_COLUMN_WIDTH = 60;
 
-const WIDTHS_COMMENT = /^<!--\s*lumiere-col-widths:\s*([0-9.,\s]*)\s*-->\s*$/;
-
+/**
+ * A column's width set by dragging its border, in CSS pixels; `undefined`
+ * while its content sizes it. Widths live with the open table only and are
+ * never written to the note: Obsidian keeps no widths for a Markdown table
+ * (it has no column resizing), and GFM has no syntax for them.
+ */
 export type ColumnWidth = number | undefined;
 
 export type ColumnWidthOp =
@@ -12,68 +16,47 @@ export type ColumnWidthOp =
   | { type: "move"; from: number; to: number; destination: number }
   | { type: "duplicate"; from: number; to: number };
 
-/** Parse `<!-- lumiere-col-widths: 120,80 -->` on its own line. */
-export function parseColWidthsComment(line: string): ColumnWidth[] | undefined {
-  const match = WIDTHS_COMMENT.exec(line.trim());
-  if (!match) {
-    return undefined;
-  }
-  const parts = match[1]!.split(",");
-  if (!parts.length) {
-    return undefined;
-  }
-  const widths: ColumnWidth[] = parts.map((part) => {
-    const trimmed = part.trim();
-    if (!trimmed) {
-      return undefined;
-    }
-    const value = Number(trimmed);
-    return Number.isFinite(value) && value >= 0 ? Math.round(value) : undefined;
-  });
-  if (!widths.some((width) => width !== undefined)) {
-    return undefined;
-  }
-  return widths;
+/**
+ * What goes before each row of a table after its first line: a list item's
+ * indent. The block starts at the header's first character, so the header
+ * has none.
+ */
+export function rowPrefix(source: string): string {
+  const second = source.split("\n")[1] ?? "";
+  return /^[ \t]*/.exec(second)![0];
 }
 
-export function formatColWidthsComment(widths: ColumnWidth[]): string {
-  const body = widths
-    .map((width) => (width === undefined ? "" : String(Math.round(width))))
-    .join(",");
-  return `<!-- lumiere-col-widths: ${body} -->`;
+/** `source` with `prefix` before every line after the first. */
+export function indentRows(source: string, prefix: string): string {
+  return prefix ? source.split("\n").join(`\n${prefix}`) : source;
 }
 
 /**
- * Split a table block source into GFM table text and optional trailing widths
- * comment. Convention: the comment sits on the line immediately after the
- * table (no blank line), so Lumière can round-trip pixel column widths in
- * source. GFM has no column-width syntax; Obsidian Live Preview does not
- * persist ordinary-table widths either.
+ * How far from a column's right border a press resizes the column, in CSS
+ * px. Three pixels in, a press is the cell's again: it opens the cell at the
+ * end of its text (or, in the next cell, at the start).
  */
-export function splitTableSource(source: string): {
-  table: string;
-  widths: ColumnWidth[] | undefined;
-} {
-  const lines = source.split("\n");
-  if (lines.length < 2) {
-    return { table: source, widths: undefined };
-  }
-  const last = lines[lines.length - 1]!;
-  const widths = parseColWidthsComment(last);
-  if (!widths) {
-    return { table: source, widths: undefined };
-  }
-  return { table: lines.slice(0, -1).join("\n"), widths };
-}
+export const COLUMN_EDGE_REACH = 2;
 
-export function joinTableSource(
-  table: string,
-  widths: ColumnWidth[] | undefined,
-): string {
-  if (!widths?.length || !widths.some((width) => width !== undefined)) {
-    return table;
-  }
-  return `${table}\n${formatColWidthsComment(widths)}`;
+/**
+ * The column whose right border `x` is on, within `reach` (the nearest, if
+ * two are); `rights` are the columns' right borders, left to right.
+ */
+export function columnEdgeAt(
+  rights: readonly number[],
+  x: number,
+  reach = COLUMN_EDGE_REACH,
+): number | undefined {
+  let best: number | undefined;
+  let bestDistance = Infinity;
+  rights.forEach((right, column) => {
+    const distance = Math.abs(x - right);
+    if (distance <= reach && distance < bestDistance) {
+      best = column;
+      bestDistance = distance;
+    }
+  });
+  return best;
 }
 
 export function applyColumnWidth(
@@ -87,7 +70,7 @@ export function applyColumnWidth(
   return result;
 }
 
-/** Keep stored widths aligned when columns are inserted, removed or moved. */
+/** Keep widths aligned when columns are inserted, removed or moved. */
 export function remapColumnWidths(
   widths: ColumnWidth[] | undefined,
   operation: ColumnWidthOp,
@@ -116,31 +99,7 @@ export function remapColumnWidths(
   return next;
 }
 
-/**
- * Expand a Table syntax node so a trailing `lumiere-col-widths` comment is
- * part of the same Live Preview block (and is not claimed as HTMLBlock).
- */
-export function tableBlockRange(
-  doc: string,
-  from: number,
-  to: number,
-): { from: number; to: number } {
-  if (to >= doc.length || doc[to] !== "\n") {
-    return { from, to };
-  }
-  const lineStart = to + 1;
-  let lineEnd = doc.indexOf("\n", lineStart);
-  if (lineEnd < 0) {
-    lineEnd = doc.length;
-  }
-  const line = doc.slice(lineStart, lineEnd);
-  if (!parseColWidthsComment(line)) {
-    return { from, to };
-  }
-  return { from, to: lineEnd };
-}
-
-/** Remap stored widths for a table structural operation (column axis only). */
+/** Remap widths for a table structural operation (column axis only). */
 export function widthsAfterOperation(
   widths: ColumnWidth[] | undefined,
   operation: TableOperation,
@@ -170,29 +129,4 @@ export function widthsAfterOperation(
     });
   }
   return widths;
-}
-
-/** Apply a structural edit and keep column-width metadata in sync. */
-export function sourceAfterOperation(
-  tableMarkdown: string,
-  widths: ColumnWidth[] | undefined,
-  operation: TableOperation,
-): string {
-  return joinTableSource(
-    tableMarkdown,
-    widthsAfterOperation(widths, operation),
-  );
-}
-
-/** Grow a Table range when the next line is a widths comment (EditorState-friendly). */
-export function extendTableRangeForWidths(
-  nextLineText: string | undefined,
-  from: number,
-  to: number,
-  nextLineTo: number,
-): { from: number; to: number } {
-  if (!nextLineText || !parseColWidthsComment(nextLineText)) {
-    return { from, to };
-  }
-  return { from, to: nextLineTo };
 }

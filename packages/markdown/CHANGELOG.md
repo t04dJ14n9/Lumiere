@@ -2,6 +2,41 @@
 
 ## 0.1.0 (unreleased)
 
+- Dragging a selection from the start of a heading takes its `#` marks, as
+  in Obsidian; the marks were hidden when the drag began, so the selection
+  started after them.
+
+- Opening an image or PDF over a note (`code image.png` in a terminal, Quick
+  Open, a double-click) opens it again, instead of closing it and inserting
+  it into the note. For an Explorer drop without Shift, which VS Code opens
+  the same way, a prompt offers **Add to Note**.
+
+- Large notes scroll and take typing faster. On an 835 KB, 30,000-line note
+  (Chromium, browser harness): the worst frame when reading on 533 -> 200 ms
+  and when scrolling straight after opening 470-670 -> 100-200 ms; script time
+  scrolling down 30-50% lower; typing 166 -> 55 ms a key. List lines no
+  longer scan the whole note on every screen, footnotes no longer compute
+  the note's whole metadata (or parse it whole while it is still loading),
+  and a word typed outside headings, footnotes and embeds no longer makes
+  sticky scroll, line numbers, footnotes and embeds walk the whole note.
+
+- Table columns resize by dragging their border, in any row, as the
+  resize cursor and a guide line show. The handles were a few pixels inside
+  the header cells, so pressing the border did nothing. Widths are no longer
+  written to the note (Obsidian keeps none): they last while the note is
+  open. A `<!-- lumiere-col-widths: … -->` line written before is an
+  ordinary comment now, and can be deleted.
+- A table in a list item keeps all its rows (they used to end it after the
+  header), and editing or resizing it keeps it in the item.
+
+- Dragging a selection out past the top or bottom of a note in VS Code now
+  keeps scrolling until the pointer comes back, and selecting on the last
+  visible line no longer nudges the note.
+
+- On macOS, **Look Up** in a note's right-click menu opens the word you
+  right-clicked in the Dictionary app, as in Lumière PDF. It works whatever
+  the trackpad's Look Up gesture is set to.
+
 - Dark Mermaid diagrams use Obsidian's invert of the default palette
   (`invert(100%) hue-rotate(180deg) saturate(1.25)`), including the diagram
   inspector. Light (`vscode-light`, `vscode-high-contrast-light`) stays the

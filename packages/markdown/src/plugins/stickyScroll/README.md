@@ -18,7 +18,9 @@ the field, overlay, scroll listener and margins.
 ## Files
 
 - `manifest.ts`: on-by-default enablement and maximum row setting.
-- `model.ts`: section index, ancestor selection and document state field.
+- `model.ts`: section index, ancestor selection and document state field;
+  a plain edit outside every heading moves the index instead of extracting
+  every heading again.
 - `view.ts`: measured overlay, heading buttons and scroll margins.
 - `webview.ts`: owned registration, configuration updates and jump history.
 - `stickyScroll.css`: VS Code theme colors, compact rows and focus styling.

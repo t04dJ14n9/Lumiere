@@ -134,6 +134,8 @@ test("a link to a PDF opens it in Lumière PDF at its page, beside when asked", 
   const navigation = createNavigation(() => []);
   await navigation.open(root, pdf, "page=3", "here");
   await navigation.open(root, pdf, "page=5&viewrect=1,2,3,4", "side");
+  // A highlight in the PDF's sidecar: Lumière PDF finds it.
+  await navigation.open(root, pdf, "hl-a1b2c3d4", "here");
   // Not a PDF location (a heading, say): open the PDF where it was left.
   await navigation.open(root, pdf, "Introduction", "here");
   assert.deepEqual(commands, [
@@ -143,6 +145,12 @@ test("a link to a PDF opens it in Lumière PDF at its page, beside when asked", 
       `${pdf}#page=5&viewrect=1,2,3,4`,
       undefined,
       { viewColumn: -2 },
+    ],
+    [
+      PDF_OPEN_LOCATION_COMMAND,
+      `${pdf}#hl-a1b2c3d4`,
+      undefined,
+      { viewColumn: 1 },
     ],
     [PDF_OPEN_LOCATION_COMMAND, pdf, undefined, { viewColumn: 1 }],
   ]);

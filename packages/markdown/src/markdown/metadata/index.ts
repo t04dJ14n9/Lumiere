@@ -2,7 +2,7 @@ import { Text } from "@codemirror/state";
 import { parseMarkdown, markdownParser } from "../dialect/parser";
 import { frontmatter } from "../properties";
 import { validTag } from "../tags/grammar";
-import { extractFootnotes, type Footnote } from "./footnote-extract";
+import { footnoteRegistry, type Footnote } from "./footnote-extract";
 import { frontmatterLinks } from "./frontmatter";
 import { extractHeadings } from "./heading-extract";
 import { extractBlocks } from "./block-extract";
@@ -50,7 +50,7 @@ function extractMetadata(doc: Text): NoteMetadata {
     })),
     sections: [],
     blocks: Object.create(null) as NoteMetadata["blocks"],
-    footnotes: extractFootnotes(doc, tree),
+    footnotes: footnoteRegistry(doc, tree),
     listItems: [],
     ...(header && { frontmatter: header.values }),
     frontmatterLinks: [],

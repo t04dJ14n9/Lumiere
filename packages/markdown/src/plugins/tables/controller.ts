@@ -21,7 +21,6 @@ import { TableClipboard } from "./clipboard";
 import { TableToolbar } from "./toolbar";
 import { TableHandles } from "./handles";
 import { ColumnResize } from "./column-resize";
-import { sourceAfterOperation, splitTableSource } from "./column-widths";
 import { activeTables, tableSelectionChanges } from "./state";
 import { TableStickyHScroll } from "./sticky-hscroll";
 import { bindTableFocus } from "./focus-lifetime";
@@ -73,10 +72,8 @@ export class TableController {
     this.columnResize = new ColumnResize(
       this.grid.root,
       this.grid.table,
-      (widths) => this.grid.replaceTable(this.grid.tableSource(), widths),
+      this.grid.scroll,
     );
-    this.columnResize.refresh();
-    this.columnResize.applyWidths(this.grid.widths);
     this.sticky = new TableStickyHScroll(this.grid.scroll, outer.scrollDOM);
   }
 
@@ -229,13 +226,8 @@ export class TableController {
             to: from,
             destination: to,
           };
-          this.grid.replace(
-            sourceAfterOperation(
-              operateTable(this.grid.model, op),
-              this.grid.widths,
-              op,
-            ),
-          );
+          this.columnResize.remap(op);
+          this.grid.replace(operateTable(this.grid.model, op));
           this.selected.selectAxis(axis, to);
         },
         menu: (axis, index, point) => {
@@ -261,8 +253,7 @@ export class TableController {
       this.toolbar.close();
     }
     this.grid.outer = outer;
-    const split = splitTableSource(block.source);
-    const model = parseTable(split.table);
+    const model = parseTable(block.source);
     if (!model) {
       return;
     }
@@ -271,11 +262,10 @@ export class TableController {
       model.rows.length !== previousModel.rows.length ||
       model.alignments.length !== previousModel.alignments.length;
     const moved = shapeChanged
-      ? this.relocatedCell(model, split.table)
+      ? this.relocatedCell(model, block.source)
       : undefined;
     this.grid.block = block;
     this.grid.model = model;
-    this.grid.widths = split.widths;
     this.refreshCells(shapeChanged, moved, previousModel, force);
     this.projection.update();
     if (this.requested) {
@@ -288,7 +278,6 @@ export class TableController {
     this.highlight();
     this.handles.refresh();
     this.columnResize.refresh();
-    this.columnResize.applyWidths(this.grid.widths);
   }
 
   private canSkipUpdate(b: RenderBlock, outer: EditorView, force: boolean) {
@@ -376,8 +365,7 @@ export class TableController {
 
   execute(operation: TableOperation, focus: CellPosition): void {
     const table = operateTable(this.grid.model, operation);
-    const source = sourceAfterOperation(table, this.grid.widths, operation);
-    if (source === this.grid.block.source) {
+    if (this.grid.sourceFor(table) === this.grid.block.source) {
       (this.editor ?? this.grid.outer).focus();
       return;
     }
@@ -393,7 +381,8 @@ export class TableController {
           ),
         }
       : undefined;
-    this.grid.replace(source);
+    this.columnResize.remap(operation);
+    this.grid.replace(table);
     if (!next) {
       this.grid.outer.focus();
     }

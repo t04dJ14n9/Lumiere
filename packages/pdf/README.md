@@ -4,7 +4,7 @@
 
 A Lumière PDF viewer for VS Code and Cursor, built on [EmbedPDF](https://www.embedpdf.com/)
 and its PDFium engine. Select text or drag a box over a figure and press
-**Copy Link for Agent**: the clipboard gets a link to the exact page and
+**Copy link to this**: the clipboard gets a link to the exact page and
 box, the file's hash, the selected text, and for a box the path of a
 snapshot of it, ready to paste into your agent. When the editor's own chat
 is the only agent installed (or you pick one), that chat opens with it.
@@ -33,6 +33,18 @@ is the only agent installed (or you pick one), that chat opens with it.
   [Toolbar and shortcuts](#toolbar-and-shortcuts) for the other layouts.
 - **Select Region tool.** Draws a region even over text (a paragraph with its
   equation, a table with its caption); Escape puts the tool down.
+- **Highlights that leave the PDF alone.** In Annotate mode, the
+  **Highlight** tool keeps its highlights in a Markdown file beside the PDF,
+  `paper.pdf.lumiere.md`, and never writes the PDF itself. Each highlight
+  has an id; link to it from any note with `[label](paper.pdf#hl-a1b2c3d4)`,
+  and the link opens the PDF on the highlight and flashes it. Click a
+  highlight in Annotate mode to select it: **Copy link to this** copies its
+  `#hl-` link, Delete removes it from the sidecar. Write your own notes in
+  the sidecar around the highlight blocks; they are kept.
+  `lumiere.pdf.sidecar.location` and `lumiere.pdf.sidecar.directory` keep
+  sidecars in a workspace folder instead. Other marks (underline, ink,
+  shapes) are still saved into the PDF. See
+  [docs/sidecar-highlights.md](docs/sidecar-highlights.md).
 - **PDF Outline in the Explorer.** The PDF's bookmarks appear as a native
   tree view; click an entry to open its page. The title bar offers **Expand All**
   and **Collapse All**. Turn on **Follow Cursor** in the **…** menu to select
@@ -41,15 +53,15 @@ is the only agent installed (or you pick one), that chat opens with it.
   Opening a Lumière PDF editor hides VS Code's native **Outline** and shows
   **PDF Outline**; leaving restores the native Outline after a short debounce,
   skipped if Lumière already owns the active tab.
-- **Copy Link for Agent.** Select text, or drag over empty page
+- **Copy link to this.** Select text, or drag over empty page
   space to select a region (a figure, table or equation), then use the
   button next to the selection, the right-click menu, the editor title
-  button, or **PDF: Copy Link for Agent**. ⌘C / Ctrl+C copies just the selected
+  button, or **PDF: Copy link to this**. ⌘C / Ctrl+C copies just the selected
   text (there is no Copy text button). There is no separate Copy for
   Agent or Ask Agent: this one action always copies, and opens a chat only
   as described below.
 
-  **Copy Link for Agent** copies the selection and, when it knows which agent you use,
+  **Copy link to this** copies the selection and, when it knows which agent you use,
   opens that agent's chat with it typed in, ready for your question:
   - in Cursor, a new agent chat, with a region's snapshot attached;
   - in VS Code, the chat view when a chat extension such as Copilot Chat is
@@ -57,7 +69,7 @@ is the only agent installed (or you pick one), that chat opens with it.
 
   Extensions cannot see which agent chat is focused, so this happens only when
   the editor's chat is the only agent installed. With Claude Code or Codex
-  installed as well, Copy Link for Agent does not guess: it copies the selection (with
+  installed as well, Copy link to this does not guess: it copies the selection (with
   the region snapshot's path) and asks you to paste it into your agent.
 
   The `lumiere.pdf.copyLinkForAgent.target` setting sends it to one agent instead:
@@ -65,7 +77,7 @@ is the only agent installed (or you pick one), that chat opens with it.
   `codex` (the selection and snapshot attached to the Codex thread), `cursor`,
   `chat`, or `clipboard`.
 
-  In Cursor, the editor title bar keeps only a few buttons, so **Copy Link for Agent**
+  In Cursor, the editor title bar keeps only a few buttons, so **Copy link to this**
   sits in the **…** (More Actions) menu while something is selected. To pin
   it to the title bar, open that menu, choose **Configure Icon Visibility**
   and tick it.
@@ -136,11 +148,11 @@ out and in, and find buttons. `lumiere.pdf.toolbar.statusBarButtons`
 
 ## macOS Look Up
 
-On macOS, right-click a word and choose **Look Up** to open it in the Dictionary
-app (a force click does the same where the engine reports it). Turn it off with
-`lumiere.pdf.lookUp.enabled`. The system's own three-finger-tap popup cannot
-see text drawn by the viewer; see [docs/look-up.md](docs/look-up.md) for what is
-native, what is a fallback, and what needs a Mac to verify.
+On macOS, press hard on a word (or tap it with three fingers) for the system's
+Dictionary popover, as in Preview, or right-click a word and choose **Look Up**
+to open it in the Dictionary app. Turn it off with
+`lumiere.pdf.lookUp.enabled`. See [docs/look-up.md](docs/look-up.md) for how the
+viewer gives the system a word to find, and what needs a Mac to verify.
 
 ## What an agent receives
 
@@ -178,7 +190,7 @@ the workspace itself (global storage when no folder is open). Together they
 use at most `lumiere.pdf.regionImageCache.maxSizeMB` megabytes (default 100,
 at least 1; a change applies from the next snapshot). This is a hard limit:
 past it, the least recently used are deleted, and a single snapshot larger than
-the limit is not saved at all (Copy Link for Agent then copies the link and the
+the limit is not saved at all (Copy link to this then copies the link and the
 selection without the image, and says why). Copying or asking about a region
 again counts as a use. A selection across pages lists one link per
 page.
@@ -197,9 +209,9 @@ for Claude Code / Codex…**, which offers to) and the extension starts a local
 
 | Tool                         | What it does                                                                                                                                                                    |
 | ---------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| `get_current_pdf_selection`  | The text or region selected in the PDF you last looked at: the same text Copy Link for Agent copies, and for a region its PNG snapshot.                                         |
+| `get_current_pdf_selection`  | The text or region selected in the PDF you last looked at: the same text Copy link to this copies, and for a region its PNG snapshot.                                         |
 | `open_pdf_location`          | Opens a `path#page=N&viewrect=…` link in the viewer.                                                                                                                            |
-| `get_current_note_selection` | The selection in Lumière (the same extension), as `@path#lines` and the quoted text (the same text as its Copy Link for Agent; see `packages/agents/docs/agent-handoff-format.md`). |
+| `get_current_note_selection` | The selection in Lumière (the same extension), as `@path#lines` and the quoted text (the same text as its Copy link to this; see `packages/agents/docs/agent-handoff-format.md`). |
 
 The server is off by default because it opens a port. When on, it listens on
 `127.0.0.1` only, on a random port, requires a random bearer token, and
@@ -227,7 +239,7 @@ clipboard. `vscodeEmbedPdf.bridge.envelope` returns a Workbench v1 envelope
 Workshop's `parseBridgeEnvelope` already consumes (`capturedAt`,
 `source.identity` / `kind` / `media`, `locator`, `view`, `selection`,
 `revision`). Lumière is the aggregator and may call this command;
-this command does not call Workshop back. Copy Link for Agent still copies
+this command does not call Workshop back. Copy link to this still copies
 the same source-link text. See [docs/bridge-envelope.md](docs/bridge-envelope.md).
 
 ## Opening a location from another extension
@@ -257,8 +269,8 @@ src/
 │   ├── messages.ts       every message between extension and viewer, validated
 │   ├── selection.ts      text and region selections
 │   ├── pdf-location.ts   page + viewrect links (RFC 8118)
-│   ├── agent-text.ts     the text Copy Link for Agent hands over
-│   ├── agent-target.ts   which agent chat Copy Link for Agent opens
+│   ├── agent-text.ts     the text Copy link to this hands over
+│   ├── agent-target.ts   which agent chat Copy link to this opens
 │   ├── note-reference.ts the @note#lines text the agent bridge returns
 │   │                     (shared format: packages/agents/docs/agent-handoff-format.md)
 │   ├── region-text.ts    the text inside a region, line by line
@@ -279,7 +291,7 @@ src/
 │       ├── pdfToolbar/         where the controls go; status bar entries
 │       ├── pdfOutline/         the PDF Outline tree
 │       ├── pdfRegions/         region snapshots saved for agents (size-capped)
-│       └── agentBridge/        AgentHandoff (Copy Link for Agent), the agent
+│       └── agentBridge/        AgentHandoff (Copy link to this), the agent
 │                               chat, and the opt-in MCP bridge (mcp/), whose
 │                               server is a separate lazily loaded bundle
 └── webview/     the viewer (React + EmbedPDF), one module per concern

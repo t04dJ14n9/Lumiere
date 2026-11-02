@@ -31,9 +31,14 @@ export class PdfEditorProvider implements vscode.CustomReadonlyEditorProvider {
       route: (message) => this.panels.route(panel, message),
     });
     this.panels.add(panel);
-    // A link such as `paper.pdf#page=3` opens at that page.
-    const location = parseLocationFragment(document.uri.fragment);
-    if (location) {
+    // A link such as `paper.pdf#page=3` opens at that page; `#hl-…` at a
+    // highlight, through the plugin that keeps them.
+    const fragment = document.uri.fragment;
+    const handler = this.panels.fragmentHandlerFor(fragment);
+    const location = handler ? undefined : parseLocationFragment(fragment);
+    if (handler) {
+      void handler.open(panel, fragment);
+    } else if (location) {
       panel.goTo(location);
     }
   }

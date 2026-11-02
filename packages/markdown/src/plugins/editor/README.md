@@ -117,7 +117,7 @@ editor and VSCodeVim (`docs/vim-caret.md`).
 - `extensions.ts`: deterministic ordered extension registry.
 - `settings.ts`: CodeMirror editor settings, indentation and font presentation.
 - `drag-scroll.ts`: configurable extra scroll motion for CodeMirror selection drags.
-- `drag-scroll.test.ts`: speed/schema validation, settings reconfiguration and gesture cleanup units.
+- `drag-scroll.test.ts`: speed/schema validation, settings reconfiguration, gesture cleanup, the zone ramp and leaving the webview past an edge.
 - `clipboard.ts`: validated clipboard RPC client.
 - `contributions.ts`: feature-owned view-state validation and restoration.
 - `persistence.ts`: view capture, restore and ordinary edit/scroll persistence.
@@ -215,7 +215,16 @@ table selection/handles and property reordering retain their existing speed.
 The speed curve follows CodeMirror 6's 6 px trigger zone and accelerates further
 outside the viewport. CodeMirror
 continues selecting at its normal timer cadence while extra scroll motion uses
-animation frames.
+animation frames. The extra motion ramps in over 250 ms in the zone, so
+selecting on the last visible line does not move the note.
+
+In VS Code the note is a webview, and once a drag leaves it the page receives
+no events at all (no moves, no mouseup), so CodeMirror never saw the pointer
+past the edge: a drag carried out of the note did not scroll. When the
+pointer goes silent within 64 px of the top or bottom edge, heading for it
+fast enough to have crossed it, the plugin sends CodeMirror a move 16 px past
+that edge; CodeMirror's own timer then scrolls and extends the selection
+until the pointer comes back.
 
 Editor config owns default mode, readable line length (700 px), strict rendered
 line breaks, right-to-left direction, tabs and tab size. Changing default mode

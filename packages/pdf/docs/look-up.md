@@ -8,27 +8,36 @@ plugin `pdfLookUp`, on by default on macOS only
 
 | Gesture | Works? | How |
 | --- | --- | --- |
-| Three-finger tap, or a force click when the system Look Up gesture is "Force Click" | **No**, not natively | The system asks the web page for text under the pointer. This viewer draws the page as images (PDFium), and its selection is painted by EmbedPDF, so there is no text in the page for the system to find. Making the text selectable DOM text would need an invisible text layer over every page, which would intercept the clicks and drags of the text selection; it was left out. |
-| Force click (hard press) | **Fallback**, unverified | The viewer listens for Safari's `webkitmouseforcedown` event, finds the word under the pointer from the PDF's glyph boxes, and the extension opens `dict://<word>` in the Dictionary app. Chromium (VS Code's engine) does not fire this event today, so it only helps in engines that do. |
+| Force click (hard press) or three-finger tap, in VS Code and Cursor | **Yes**, the system's own popover, unverified on a Mac | Chromium never tells a webpage about the force of a click: on a force click (with the system's Look Up gesture set to "Force Click with one finger") or a three-finger tap, it reads the word under the pointer from the page's DOM and shows the Dictionary popover itself. This viewer draws pages as images, so there was no text to read. While Look Up is on, the viewer now puts the word the pointer rests on (or presses) into the page as invisible text, stretched over the word's glyphs (`look-up-word.tsx`), so Chromium finds it. The text sits just above the page picture and below links and annotations, so those keep their clicks; it never becomes a DOM selection (its `selectstart` is cancelled). In Annotate mode the annotation layer covers the page, so this gesture finds nothing there; the menu still works. |
+| Force click in WebKit (the desktop app, Safari) | **Fallback** | WebKit fires `webkitmouseforcedown`: the viewer finds the word from the PDF's glyph boxes and the extension opens `dict://<word>` in the Dictionary app. |
 | Right-click → **Look Up** | **Fallback**, works wherever the menu does | The menu is available when Look Up is enabled on macOS. Its command resolves the saved right-click point, then opens Dictionary for that word. Blank space does nothing. A later hover cannot replace the clicked word, and scrolling or new reader input cancels the old target. |
 
-The Dictionary app opens at the word (`dict://`); the small system popover of
-Preview is not reachable from an extension (Electron's
-`webContents.showDefinitionForSelection()` is not exposed to extensions).
+The right-click entry and the WebKit fallback open the Dictionary app
+(`dict://`); only the native gesture shows the small popover, because
+Electron's `webContents.showDefinitionForSelection()` is not exposed to
+extensions.
 
 ## Verifying on a Mac
 
-Unit and browser tests cover the word finder (`wordGlyphRange`, `coreWord`),
-the viewer's event wiring (force click and context menu messages) and the
-plugin's on/off switch. Only a real Mac can show the Dictionary opening:
+Unit and browser tests cover the word finder (`wordGlyphRange`, `coreWord`,
+`glyphRangeBox`), the hidden word (it is the text Chromium finds at the
+pointer, it follows the pointer, drags and double clicks still select the
+PDF's text, links and Annotate marks keep their clicks), the viewer's event
+wiring (force click and context menu messages) and the plugin's on/off
+switch. Only a real Mac can show the popover:
 
-1. Open a PDF in VS Code on macOS, right-click a word, choose **Look Up**.
-   The Dictionary app opens at that word.
-2. Hard-press a word: if nothing happens, Chromium sent no force event (expected).
-3. Set `lumiere.pdf.lookUp.enabled` to `false`: the menu entry disappears.
+1. In System Settings → Trackpad, set Look up & data detectors to "Force
+   Click with one finger".
+2. Open a PDF in VS Code on macOS, rest the pointer on a word and press hard.
+   The Dictionary popover opens on that word.
+3. Right-click a word and choose **Look Up**: the Dictionary app opens at it.
+4. Set `lumiere.pdf.lookUp.enabled` to `false`: the menu entry disappears and
+   a hard press finds nothing.
 
 ## Design
 
 - `src/shared/look-up.ts`: pure word finding, URL and platform rule (unit tested).
 - `src/webview/look-up.ts`: the events; off until the host sends `lookUp { enabled }`.
+- `src/webview/look-up-target.ts`, `src/webview/look-up-word.tsx`: the word
+  under the pointer, shown in its page as invisible text.
 - `src/extension/plugins/pdfLookUp`: the plugin; stopping it switches every viewer's side off.

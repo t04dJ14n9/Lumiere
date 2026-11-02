@@ -1,7 +1,8 @@
 import { protocol as links } from "../links/protocol";
 import { EditorView } from "@codemirror/view";
 import type { Context, Plugin } from "@workshop/core";
-import { extractFootnotes } from "../../markdown/metadata/footnote-extract";
+import { footnoteRegistry } from "../../markdown/metadata/footnote-extract";
+import { footnoteCarry } from "./carry";
 import type { Footnote } from "../../markdown/metadata/footnotes";
 import type {} from "../editor/api";
 import type {} from "../commands/api";
@@ -37,6 +38,7 @@ function registerDefinitionInvalidation(ctx: Context): void {
   ctx.effect(() => () => {
     active = false;
   });
+  ctx.effect(() => ctx.editor.extend(footnoteCarry));
   ctx.effect(() =>
     ctx.editor.extend(
       EditorView.updateListener.of((update) => {
@@ -46,12 +48,18 @@ function registerDefinitionInvalidation(ctx: Context): void {
         if (key === "" && !update.state.doc.toString().includes("[^")) {
           return;
         }
-        const tree = update.state.field(documentTree, false);
-        const definitions = extractFootnotes(
+        // Shared with Live Preview's references (cached per document).
+        const definitions = footnoteRegistry(
           update.state.doc,
-          tree,
+          update.state.field(documentTree, false),
         ).definitions;
-        const next = definitions.length ? JSON.stringify(definitions) : "";
+        // What rendered blocks show of the footnotes, not where they are:
+        // their positions move with every edit above them.
+        const next = definitions.length
+          ? JSON.stringify(
+              definitions.map((note) => [note.label, note.number, note.text]),
+            )
+          : "";
         if (next === key) {
           return;
         }
