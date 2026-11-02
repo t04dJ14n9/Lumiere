@@ -163,8 +163,8 @@ importers:
   packages/core:
     dependencies:
       cordis:
-        specifier: 4.0.0-rc.11
-        version: 4.0.0-rc.11
+        specifier: 4.0.0-rc.12
+        version: 4.0.0-rc.12
 
   packages/dsh:
     dependencies:
@@ -1942,12 +1942,12 @@ packages:
     resolution: {integrity: sha512-yki5XnKuf750l50uGTllt6kKILY4nQ1eNIQatoXEByZ5dWgnKqbnqmTrBE5B4N7lrMJKQ2ytWMiTO2o0v6Ew/w==}
     engines: {node: '>= 0.6'}
 
-  cordis@4.0.0-rc.11:
-    resolution: {integrity: sha512-03PHbcYJzp84XRKnW7jd17g26bPvG5UvSyhyjxGIu/1VQs3bweNMACo3t1W0ikzoZ7q+wytHyk8jJsaIQOkPkA==}
+  cordis@4.0.0-rc.12:
+    resolution: {integrity: sha512-/ZtRivYxr5sffTULPewHuX5kEy5sWi8oADHSpnt0KjAd8uKRIj+kv4fh3lxtutIfVlgwJVFVXWOQp/gYa+kIOQ==}
     hasBin: true
     peerDependencies:
-      '@cordisjs/plugin-include': ^1.1.1
-      '@cordisjs/plugin-loader': ^1.0.0-rc.8
+      '@cordisjs/plugin-include': ^1.2.0
+      '@cordisjs/plugin-loader': ^1.0.0-rc.9
     peerDependenciesMeta:
       '@cordisjs/plugin-include':
         optional: true
@@ -5136,7 +5136,7 @@ snapshots:
 
   cookie@0.7.2: {}
 
-  cordis@4.0.0-rc.11:
+  cordis@4.0.0-rc.12:
     dependencies:
       '@standard-schema/spec': 1.1.0
       cosmokit: 1.8.1

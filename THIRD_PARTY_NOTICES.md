@@ -3384,7 +3384,7 @@ TORT OR OTHERWISE, ARISING FROM, OUT OF OR IN CONNECTION WITH THE
 SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
 ```
 
-## cordis 4.0.0-rc.11
+## cordis 4.0.0-rc.12
 
 License: MIT  
 Source: https://github.com/cordiverse/cordis
