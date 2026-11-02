@@ -2,6 +2,15 @@
 
 ## 0.1.0 (unreleased)
 
+- Dragging a selection from the start of a heading takes its `#` marks, as
+  in Obsidian; the marks were hidden when the drag began, so the selection
+  started after them.
+
+- Opening an image or PDF over a note (`code image.png` in a terminal, Quick
+  Open, a double-click) opens it again, instead of closing it and inserting
+  it into the note. For an Explorer drop without Shift, which VS Code opens
+  the same way, a prompt offers **Add to Note**.
+
 - Large notes scroll and take typing faster. On an 835 KB, 30,000-line note
   (Chromium, browser harness): the worst frame when reading on 533 -> 200 ms
   and when scrolling straight after opening 470-670 -> 100-200 ms; script time

@@ -6506,3 +6506,30 @@ Plugin start-up after first paint reconfigures the editor once (about
 100–250 ms on a large note). Opening itself (first paint about 90 ms) was
 already fast.
 
+
+## Opening media over a note; dragging from a heading (2026-11-02)
+
+Reported with screenshots:
+
+- `code image.png` in a terminal inserted the image into the open note
+  instead of opening it. The Explorer reclaim (#456) treats any pinned media
+  open in a note's group, while the note was the active tab, as an Explorer
+  drop without Shift (which VS Code opens that way because it disables the
+  webview's pointer events during Explorer drags). A terminal `code`, Quick
+  Open and a double-click open exactly the same way, and VS Code gives
+  extensions nothing to tell them apart. The tab now stays open and a
+  non-modal prompt asks "Add image.png to note.md as an attachment?"; only
+  **Add to Note** closes it and inserts the embed. Host test with a fake
+  `vscode`: `test/unit/attachments/explorer-reclaim-host.test.ts`.
+- Dragging a selection from the start of a heading left out its `#`: reveal
+  is frozen from the press to the release, so the marks were hidden and the
+  press landed after them. `livePreview/heading-drag.ts` starts such a drag
+  at the line start (Live Preview only; a click keeps the caret at the
+  text; marks shown at the press, code and tags are left alone). Checked
+  with a real mouse drag in the browser harness (offset 15 -> 13).
+- PDF selection boxes not lining up with the text: not reproduced. In the
+  browser harness the selection encloses each line's ink within 1-2 px
+  horizontally (plus the font's ascent above) on a plain page, an offset
+  CropBox, an offset MediaBox, device pixel ratios 1.25 and 1.5, text at the
+  bottom of a 1,584 pt page and "Attention Is All You Need" (arXiv
+  1706.03762). Waiting for the owner's PDF, zoom and screenshot.

@@ -26,6 +26,7 @@ import { blockDecorations, blockViewportSupport } from "./viewport-decorations";
 import { documentTree, documentTreeParser } from "./document-tree";
 import { frontmatterPlaceholderRenderer } from "./frontmatter-placeholder";
 import { hybridInline } from "./inline";
+import { headingDragStart } from "./heading-drag";
 import type {} from "../render/api";
 import {
   evictMarkdownBlockDomPool,
@@ -169,6 +170,7 @@ function engineExtensions(ctx: Context) {
     fenceGuardSelectionSupport,
     clickPositionSync,
     ruleClick,
+    headingDragStart,
     persistentNodesCarry,
     hybridInline,
     blockIndex,

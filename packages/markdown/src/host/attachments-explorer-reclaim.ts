@@ -1,9 +1,14 @@
 /**
- * VS Code-only: reclaim Explorer drop-without-Shift media tabs as attachments.
+ * VS Code-only: offer to add a media file opened over a note as an
+ * attachment, for Explorer drops without Shift.
  *
  * Workbench disables pointer events on custom-editor webviews during Explorer
  * drags unless Shift is held, so the drop opens a pinned tab instead of
- * reaching the page. Portable hosts omit this hook (no `tabGroups`).
+ * reaching the page. That open cannot be told apart from any other pinned
+ * open in the note's group (`code image.png` in a terminal, Quick Open, a
+ * double-click), so the tab stays open and the reader is asked; only
+ * "Add to Note" closes it and inserts the embed. Portable hosts omit this
+ * hook (no `tabGroups`).
  */
 import * as vscode from "vscode";
 import type { Disposer } from "@workshop/core";
@@ -45,64 +50,81 @@ export function registerAttachmentsExplorerReclaim(
   };
   syncPrior();
   const sub = vscode.window.tabGroups.onDidChangeTabs((event) => {
-    const victims = [...event.opened];
-    // Snapshot priors before syncing — opens have already stolen active.
-    void reclaimOpenedTabs(handlers, victims, priorLumiere).finally(syncPrior);
+    // Decide with the priors from before these opens, which have already
+    // taken the active tab; the question does not hold up the next opens.
+    for (const tab of event.opened) {
+      const offer = reclaimOffer(tab, priorLumiere);
+      if (offer) {
+        void offerAttachment(handlers, tab, offer);
+      }
+    }
+    syncPrior();
   });
   return () => sub.dispose();
 }
 
-async function reclaimOpenedTabs(
-  handlers: ExplorerAttachmentReclaimHandlers,
-  opened: readonly vscode.Tab[],
-  priorLumiere: ReadonlyMap<number, string>,
-): Promise<void> {
-  for (const tab of opened) {
-    await reclaimOneTab(handlers, tab, priorLumiere);
-  }
+interface ReclaimOffer {
+  resource: vscode.Uri;
+  column: number;
+  lumiereUri: string;
 }
 
-async function reclaimOneTab(
-  handlers: ExplorerAttachmentReclaimHandlers,
+function reclaimOffer(
   tab: vscode.Tab,
   priorLumiere: ReadonlyMap<number, string>,
-): Promise<void> {
+): ReclaimOffer | undefined {
   const resource = tabUri(tab);
   const column = tab.group.viewColumn;
   if (!resource || column === undefined) {
-    return;
+    return undefined;
   }
   const priorNote = priorLumiere.get(column);
   const lumiereTab = tab.group.tabs.find(isLumiereTab);
   const lumiereUri = lumiereTab ? tabUri(lumiereTab)?.toString() : undefined;
   if (
+    !lumiereUri ||
     !shouldReclaimExplorerOpen({
       openedPath: resource.fsPath || resource.path,
       isPreview: tab.isPreview,
-      groupHadLumiereNote: Boolean(lumiereUri),
-      priorActiveWasLumiere: Boolean(
-        priorNote && lumiereUri && priorNote === lumiereUri,
-      ),
+      groupHadLumiereNote: true,
+      priorActiveWasLumiere: priorNote === lumiereUri,
     })
   ) {
-    return;
+    return undefined;
   }
-  if (!lumiereUri) {
-    return;
-  }
+  return { resource, column, lumiereUri };
+}
 
+export const ADD_TO_NOTE = "Add to Note";
+
+/** Ask; on "Add to Note", close the media tab and insert the embed. */
+async function offerAttachment(
+  handlers: ExplorerAttachmentReclaimHandlers,
+  tab: vscode.Tab,
+  offer: ReclaimOffer,
+): Promise<void> {
+  const choice = await vscode.window.showInformationMessage(
+    `Add ${baseName(offer.resource)} to ${baseName(vscode.Uri.parse(offer.lumiereUri))} as an attachment?`,
+    ADD_TO_NOTE,
+  );
+  if (choice !== ADD_TO_NOTE) {
+    return;
+  }
   // Close the workbench's open-on-drop tab; the plugin reveals the note.
   try {
     await vscode.window.tabGroups.close(tab, true);
   } catch {
     // Tab may already be gone.
   }
-
   await handlers.reclaim({
-    resourceUri: resource.toString(),
-    column,
-    lumiereUri,
+    resourceUri: offer.resource.toString(),
+    column: offer.column,
+    lumiereUri: offer.lumiereUri,
   });
+}
+
+function baseName(uri: vscode.Uri): string {
+  return uri.path.split("/").pop() || uri.path;
 }
 
 function isLumiereTab(tab: vscode.Tab): boolean {
