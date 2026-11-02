@@ -96,8 +96,8 @@ editor and VSCodeVim (`docs/vim-caret.md`).
 - `host.ts`: panel registry, editor service and active-context registrations.
 - `panel.ts`: per-panel context, session connection and RPC lifetimes.
 - `logging.ts`: webview log forwarding over RPC and its host-side receiver.
-- `associations.ts`: **Use Lumière for Markdown in This Workspace**.
-- `toggle-text-editor.ts`: **Toggle Text Editor** (Ctrl/Cmd+E) between Lumière
+- `associations.ts`: **Use Lumia for Markdown in This Workspace**.
+- `toggle-text-editor.ts`: **Toggle Text Editor** (Ctrl/Cmd+E) between Lumia
   and the host default text editor. Capture-phase Mod+E ownership (BH-003) lives
   in `commands/toggle-text-editor-keys.ts`.
 - `webview-html.ts`: CSP, scripts and native webview HTML.
@@ -117,7 +117,7 @@ editor and VSCodeVim (`docs/vim-caret.md`).
 - `extensions.ts`: deterministic ordered extension registry.
 - `settings.ts`: CodeMirror editor settings, indentation and font presentation.
 - `drag-scroll.ts`: configurable extra scroll motion for CodeMirror selection drags.
-- `drag-scroll.test.ts`: speed/schema validation, settings reconfiguration and gesture cleanup units.
+- `drag-scroll.test.ts`: speed/schema validation, settings reconfiguration, gesture cleanup, the zone ramp and leaving the webview past an edge.
 - `clipboard.ts`: validated clipboard RPC client.
 - `contributions.ts`: feature-owned view-state validation and restoration.
 - `persistence.ts`: view capture, restore and ordinary edit/scroll persistence.
@@ -147,12 +147,12 @@ keys for the active panel. Core settings include `editor.useTabs` (true),
 under `lumiere.markdown`.
 
 Each panel kernel logs through the window's logger, tagged with the panel ID,
-to the **Lumière** output channel. The webview forwards its logs over
+to the **Lumia** output channel. The webview forwards its logs over
 the editor channel (`log`) at warn and above, and at debug too while
 `lumiere.markdown.debug.logging` (default false) is on; the host re-checks that
 setting before writing a forwarded debug line.
 
-**Use Lumière for Markdown in This Workspace** writes `*.md` and
+**Use Lumia for Markdown in This Workspace** writes `*.md` and
 `*.markdown` into the workspace's `workbench.editorAssociations`, keeping its
 other entries. The editor is otherwise only an option for Markdown (DESIGN
 §25.2), so it does not take over every README; this makes a workspace behave
@@ -166,12 +166,12 @@ editor. Clean text tabs are closed; dirty text tabs keep their native document
 and undo. A note the reader put in the text editor (a switch in place, Open as
 Text, asking twice) is kept there until its last text tab closes; the kept
 notes are saved in workspace state, so a reload keeps them too.
-**Toggle Text Editor** (Ctrl/Cmd+E) switches the active note between Lumière
+**Toggle Text Editor** (Ctrl/Cmd+E) switches the active note between Lumia
 and the host's default text editor via `vscode.openWith` (`default` ↔
 `lumiere.markdown.editor`). Opening as text sets the reclaim bypass, and the
 text tab it opens is then kept as the reader's. After `openWith`, the previous
 view's tab for the same URI is closed in the active group (clean tabs only),
-so the toggle leaves one tab rather than Lumière + Text Editor side by side
+so the toggle leaves one tab rather than Lumia + Text Editor side by side
 (BH-011 / BH-003). This is **not** Obsidian's Ctrl/Cmd+E (Live Preview ↔
 Source); Source mode stays on the unbound **Toggle Live Preview/Source Mode**
 command. Selection and caret are not restored across the switch
@@ -202,7 +202,7 @@ custom-editor handoff assertion before `resolveCustomTextEditor` runs.
 
 ## Limits and differences from Obsidian
 
-Ctrl/Cmd+E toggles Lumière ↔ the host text editor, not Live Preview ↔ Source
+Ctrl/Cmd+E toggles Lumia ↔ the host text editor, not Live Preview ↔ Source
 (an intentional diverge from Obsidian for host integration). Caret and
 selection are not preserved across that switch.
 
@@ -215,7 +215,16 @@ table selection/handles and property reordering retain their existing speed.
 The speed curve follows CodeMirror 6's 6 px trigger zone and accelerates further
 outside the viewport. CodeMirror
 continues selecting at its normal timer cadence while extra scroll motion uses
-animation frames.
+animation frames. The extra motion ramps in over 250 ms in the zone, so
+selecting on the last visible line does not move the note.
+
+In VS Code the note is a webview, and once a drag leaves it the page receives
+no events at all (no moves, no mouseup), so CodeMirror never saw the pointer
+past the edge: a drag carried out of the note did not scroll. When the
+pointer goes silent within 64 px of the top or bottom edge, heading for it
+fast enough to have crossed it, the plugin sends CodeMirror a move 16 px past
+that edge; CodeMirror's own timer then scrolls and extends the selection
+until the pointer comes back.
 
 Editor config owns default mode, readable line length (700 px), strict rendered
 line breaks, right-to-left direction, tabs and tab size. Changing default mode

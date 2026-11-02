@@ -1,7 +1,8 @@
 import type { EditorState } from "@codemirror/state";
 import { revealRanges } from "../../webview/ui/pointer-selection";
 import { WidgetType } from "@codemirror/view";
-import { footnotes } from "../../markdown/metadata/footnotes";
+import { footnoteRegistry } from "../../markdown/metadata/footnote-extract";
+import { documentTree } from "../livePreview/api";
 import type { Footnote } from "../../markdown/metadata/footnotes";
 import type { InlineContext, InlineRenderer } from "../livePreview/api";
 import type { RenderService } from "../render/api";
@@ -25,7 +26,13 @@ export function footnoteInline(
   return {
     nodes: ["FootnoteRef", "InlineFootnote"],
     decorate(node, cx) {
-      const registry = footnotes(cx.state.doc);
+      // Live Preview's tree, which may cover only the start of a large note
+      // still parsing: enough for every reference on screen, and no parse
+      // of the whole note inside a scroll.
+      const registry = footnoteRegistry(
+        cx.state.doc,
+        cx.state.field(documentTree, false),
+      );
       const definition = registry.definitions.find(
         (note) => note.label && note.marker === node.from,
       );
@@ -141,7 +148,7 @@ function decorateDefinition(cx: InlineContext, note: Footnote): void {
     );
   }
   // Obsidian keeps the blank line after a footnote definition at footnote
-  // size (0.875em). Lumière used to leave it at body size (OBSIDIAN_LAYOUT).
+  // size (0.875em). Lumia used to leave it at body size (OBSIDIAN_LAYOUT).
   const trailing = last.number + 1;
   if (trailing <= doc.lines) {
     const blank = doc.line(trailing);

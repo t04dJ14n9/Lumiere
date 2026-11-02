@@ -1,18 +1,18 @@
 # Agent instructions
 
-One VS Code and Cursor extension, "Lumière: Markdown Editor and PDF Reader", in a pnpm
+One VS Code and Cursor extension, "Lumia: Markdown Editor and PDF Reader", in a pnpm
 workspace. Everything is a plugin:
 
 | Path | What it is | Read first |
 | --- | --- | --- |
 | `packages/core` | The plugin core on Cordis | its README.md |
 | `packages/agents` | What both products hand to agents | its README.md |
-| `packages/markdown` | Lumière: Obsidian-like Live Preview | its DESIGN.md, IMPLEMENTATION_PLAN.md |
-| `packages/pdf` | Lumière PDF: EmbedPDF viewer with agent links | its README.md, AGENTS.md |
+| `packages/markdown` | Lumia: Obsidian-like Live Preview | its DESIGN.md, IMPLEMENTATION_PLAN.md |
+| `packages/pdf` | Lumia PDF: EmbedPDF viewer with agent links | its README.md, AGENTS.md |
 | `src/extension.ts` | The composition root: one plugin tree for both | |
 | `packages/host-node` | The plugins' host outside VS Code: services, editor routes, tree views | its README.md |
-| `packages/dsh` | Lumière in DeepSeek Harness, on host-node | its README.md |
-| `packages/app` | Lumière's own server and Typora-like window, on host-node | its README.md |
+| `packages/dsh` | Lumia in DeepSeek Harness, on host-node | its README.md |
+| `packages/app` | Lumia's own server and Typora-like window, on host-node | its README.md |
 | `apps/desktop` | The Tauri desktop app around `packages/app` | its README.md, [docs/HOSTS_PLAN.md](docs/HOSTS_PLAN.md) |
 
 If the task is a user / third-party custom plugin, read

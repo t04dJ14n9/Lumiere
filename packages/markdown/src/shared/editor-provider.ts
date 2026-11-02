@@ -26,7 +26,7 @@ export interface EditorProvider {
 
 export const MARKDOWN_EDITOR: EditorProvider = Object.freeze({
   viewType: "lumiere.markdown.editor",
-  displayName: "Lumière",
+  displayName: "Lumia",
   filenamePatterns: Object.freeze(["*.md", "*.markdown"]),
   document: "text",
   priority: "option",
@@ -34,7 +34,7 @@ export const MARKDOWN_EDITOR: EditorProvider = Object.freeze({
   multipleEditorsPerDocument: true,
 });
 
-/** Workspace state: Markdown opens through text first, then transfers to Lumière. */
+/** Workspace state: Markdown opens through text first, then transfers to Lumia. */
 export const MARKDOWN_WORKSPACE_EDITOR_KEY = "lumiere.markdown.workspaceEditor";
 
 /** `activeCustomEditorId == '<viewType>'`, for when-clauses. */

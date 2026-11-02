@@ -5,19 +5,29 @@ import type {
   PdfGlyphObject,
 } from "@embedpdf/models";
 import { useCallback, useEffect, useRef } from "react";
-import { coreWord, wordGlyphRange, type WordGlyph } from "../shared/look-up";
+import {
+  coreWord,
+  glyphRangeBox,
+  wordGlyphRange,
+  type WordGlyph,
+} from "../shared/look-up";
 import { postToHost } from "./host";
+import { setLookUpTarget, type LookUpTarget } from "./look-up-target";
 
 /** How often the word under the pointer is looked for while it moves. */
 const HOVER_MS = 120;
 
 /**
  * macOS Look Up. The page text is drawn as images, so the system's own Look
- * Up (three-finger tap) has no text to find. Two triggers are wired instead:
+ * Up (a force click, or a three-finger tap) has no text to find. Three
+ * triggers are wired:
  *
- * - `webkitmouseforcedown`, Safari's force click event (a hard press): look
- *   the word up at once. Chromium does not fire it today; kept for engines
- *   that do.
+ * - the word under the pointer is put in the page as hidden text
+ *   (look-up-word.tsx), so the system's own Look Up finds it and shows its
+ *   Dictionary popover. This is how a hard press works in VS Code and
+ *   Cursor: Chromium tells a webpage nothing about the force of a click.
+ * - `webkitmouseforcedown`, WebKit's force click event: look the word up at
+ *   once in the Dictionary app.
  * - the context menu: the word under the pointer is reported when it opens,
  *   so its Look Up entry knows which word to open.
  *
@@ -54,6 +64,12 @@ function attach(
 
 type Glyphs = readonly (WordGlyph | undefined)[];
 
+/** A word found under the pointer: the word itself, and where it is drawn. */
+interface FoundWord {
+  word: string;
+  target: LookUpTarget;
+}
+
 /** The words on the pages of one PDF, found under window points. */
 class PageWords {
   private readonly glyphs = new Map<number, Promise<Glyphs | undefined>>();
@@ -64,7 +80,7 @@ class PageWords {
   ) {}
 
   /** The word under a window point, if the pointer is still on it. */
-  async at(x: number, y: number): Promise<string | undefined> {
+  async at(x: number, y: number): Promise<FoundWord | undefined> {
     const target = pageAt(this.pdf, x, y);
     const engine = this.engine();
     if (!target || !engine) {
@@ -106,7 +122,26 @@ class PageWords {
     ) {
       return undefined;
     }
-    return coreWord(texts?.[0] ?? "") || undefined;
+    const text = texts?.[0] ?? "";
+    const word = coreWord(text);
+    const box = glyphRangeBox(list!, range);
+    if (!word || !box) {
+      return undefined;
+    }
+    return { word, target: { pageIndex: page.index, box, text } };
+  }
+
+  /** Whether `target` is the word drawn under a window point. */
+  covers(target: LookUpTarget | undefined, x: number, y: number): boolean {
+    const here = pageAt(this.pdf, x, y);
+    if (!target || here?.page.index !== target.pageIndex) {
+      return false;
+    }
+    const [left, top, right, bottom] = target.box;
+    const { point } = here;
+    return (
+      point.x >= left && point.x <= right && point.y >= top && point.y <= bottom
+    );
   }
 
   private glyphsOf(
@@ -138,13 +173,23 @@ class LookUpBinding {
   /** A context menu is open over a word: hovering no longer moves it. */
   private menuTarget = false;
   private clicked: { x: number; y: number } | undefined;
+  /** Where the pointer last rested, to find its word again after a scroll. */
+  private pointer: { x: number; y: number } | undefined;
+  private shown: LookUpTarget | undefined;
+  /**
+   * A button is down. EmbedPDF captures the pointer on the element pressed,
+   * which may be the hidden word: removing it mid-drag would end the capture.
+   */
+  private pressed = false;
   private timer: ReturnType<typeof setTimeout> | undefined;
   private readonly listeners: [
     string,
     EventListener,
     boolean | AddEventListenerOptions,
   ][] = [
-    ["pointerdown", this.clearTarget.bind(this), true],
+    ["pointerdown", this.onPointerDown.bind(this) as EventListener, true],
+    ["pointerup", () => (this.pressed = false), true],
+    ["pointercancel", () => (this.pressed = false), true],
     [
       "keydown",
       ((event: KeyboardEvent) => {
@@ -154,9 +199,12 @@ class LookUpBinding {
       }) as EventListener,
       true,
     ],
-    ["scroll", this.clearTarget.bind(this), true],
+    ["scroll", this.onScroll.bind(this), true],
     ["pointermove", this.onMove.bind(this) as EventListener, { passive: true }],
     ["contextmenu", this.onContextMenu.bind(this) as EventListener, true],
+    // The hidden word must stay selectable for the system to read it, but a
+    // drag or a double click on it must not select it instead of the page.
+    ["selectstart", preventInLookUpWord, true],
     // Keep Safari's own force-click preview from opening as well.
     ["webkitmouseforcewillbegin", (event) => event.preventDefault(), true],
     ["webkitmouseforcedown", this.onForceDown.bind(this), true],
@@ -182,23 +230,33 @@ class LookUpBinding {
     for (const [type, listener, options] of this.listeners) {
       document.removeEventListener(type, listener, options);
     }
+    this.show(undefined);
   };
 
   private report(x: number, y: number, open: boolean): void {
     const request = ++this.generation;
-    void this.words.at(x, y).then((word) => {
+    void this.words.at(x, y).then((found) => {
       if (this.live && request === this.generation) {
-        postToHost({ type: "lookUp", word: word ?? null, open });
+        this.show(found?.target);
+        postToHost({ type: "lookUp", word: found?.word ?? null, open });
       }
     });
   }
 
+  private show(target: LookUpTarget | undefined): void {
+    this.shown = target;
+    setLookUpTarget(target);
+  }
+
   private onMove(event: PointerEvent): void {
-    if (this.menuTarget) {
+    // A drag (a selection, a pan) moves nothing: the word stays where the
+    // press began, which is where a hard press looks it up.
+    if (this.menuTarget || event.buttons) {
       return;
     }
     clearTimeout(this.timer);
     const { clientX, clientY } = event;
+    this.pointer = { x: clientX, y: clientY };
     this.generation++;
     this.timer = setTimeout(() => {
       this.timer = undefined;
@@ -214,6 +272,42 @@ class LookUpBinding {
     postToHost({ type: "lookUp", word: null, open: false });
   }
 
+  /**
+   * A hard press starts as a click: keep the hidden word, and put it under
+   * the press now if the pointer had not rested long enough to place it.
+   */
+  private onPointerDown(event: PointerEvent): void {
+    this.clearTarget();
+    this.pressed = true;
+    const { clientX: x, clientY: y } = event;
+    if (this.words.covers(this.shown, x, y)) {
+      return;
+    }
+    const request = this.generation;
+    void this.words.at(x, y).then((found) => {
+      if (this.live && request === this.generation) {
+        this.show(found?.target);
+      }
+    });
+  }
+
+  /** The pages move under a still pointer: find its word once they stop. */
+  private onScroll(): void {
+    this.clearTarget();
+    if (this.pressed) {
+      return;
+    }
+    this.show(undefined);
+    const pointer = this.pointer;
+    if (!pointer) {
+      return;
+    }
+    this.timer = setTimeout(() => {
+      this.timer = undefined;
+      this.report(pointer.x, pointer.y, false);
+    }, HOVER_MS);
+  }
+
   // Always resolve the clicked point. A nearby pointer or cached pre-scroll
   // word is not evidence for the word under this context menu.
   private onContextMenu(event: MouseEvent): void {
@@ -227,6 +321,16 @@ class LookUpBinding {
     const { clientX, clientY } = event as MouseEvent;
     this.clearTarget();
     this.report(clientX, clientY, true);
+  }
+}
+
+/** Stop a text selection that would start in the hidden Look Up word. */
+function preventInLookUpWord(event: Event): void {
+  const node = event.target as Node | null;
+  const element =
+    node?.nodeType === 1 ? (node as Element) : (node?.parentElement ?? null);
+  if (element?.closest(".look-up-word")) {
+    event.preventDefault();
   }
 }
 

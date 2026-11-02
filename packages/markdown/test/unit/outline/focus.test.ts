@@ -133,7 +133,7 @@ test("leave after peer Workshop is active does not restore native Outline", asyn
   await settle();
   executed.length = 0;
   focus.sync(false);
-  // Peer Lumière PDF took the tab before the debounce fired.
+  // Peer Lumia PDF took the tab before the debounce fired.
   active.viewType = PDF_WORKSHOP_EDITOR;
   pending!();
   await settle();

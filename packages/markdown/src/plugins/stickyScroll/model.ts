@@ -5,7 +5,7 @@ import {
   extractHeadings,
   type Heading,
 } from "../../markdown/metadata/heading-extract";
-import { documentTree } from "../livePreview/api";
+import { documentTree, editTouches, isPlainTextEdit } from "../livePreview/api";
 
 /** Container-local headings in quotes and lists do not define note sections. */
 export function sectionHeadings(doc: Text, syntax?: Tree): readonly Heading[] {
@@ -44,6 +44,27 @@ export const headingIndex = StateField.define<readonly Heading[]>({
   create: (state) =>
     sectionHeadings(state.doc, state.field(documentTree, false)),
   update(headings, transaction) {
+    if (
+      isPlainTextEdit(transaction) &&
+      !headings.some((heading) =>
+        editTouches(transaction, heading.from, heading.to),
+      )
+    ) {
+      // A word typed outside every heading: the same headings, moved.
+      const { changes } = transaction;
+      return headings.map((heading) => ({
+        ...heading,
+        from: changes.mapPos(heading.from, 1),
+        to: changes.mapPos(heading.to, -1),
+        end: changes.mapPos(heading.end, 1),
+        // The span of the heading's parent (the note), `from:to`.
+        scope: heading.scope.replace(
+          /^(\d+):(\d+)$/,
+          (_all, from: string, to: string) =>
+            `${changes.mapPos(Number(from), -1)}:${changes.mapPos(Number(to), 1)}`,
+        ),
+      }));
+    }
     if (
       transaction.docChanged ||
       transaction.startState.field(documentTree, false) !==

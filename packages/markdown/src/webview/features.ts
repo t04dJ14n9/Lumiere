@@ -3,10 +3,25 @@ import type {} from "../plugins/render/api";
 import type { BaseContext, Infer, Plugin } from "@workshop/core";
 import type { featureSettings } from "../shared/features";
 import { PluginSwitch, type WantedPlugin } from "../shared/plugin-switch";
-import { features } from "../plugins/catalog";
+import {
+  features as editorFeatures,
+  workbenchFeatures,
+} from "../plugins/catalog";
 import type { Manifest } from "../shared/manifest";
 
 type FeatureSettings = Infer<typeof featureSettings>;
+
+/**
+ * Every feature with a webview half: the editor features, and the few
+ * window-level ones that report from the note (Markdown Outline follows
+ * its scrolling).
+ */
+const features: readonly Manifest[] = [
+  ...editorFeatures,
+  ...workbenchFeatures.filter((manifest) =>
+    manifest.surfaces.includes("webview"),
+  ),
+];
 
 /**
  * Dynamic loaders for every catalog feature that has a webview half. Keeps the
@@ -55,7 +70,11 @@ const WEBVIEW_LOADERS: Record<string, () => Promise<Plugin<unknown>>> = {
   lineNumbers: () =>
     import("../plugins/lineNumbers/webview").then((m) => m.lineNumbersWebview),
   links: () => import("../plugins/links/webview").then((m) => m.linksWebview),
+  lookUp: () =>
+    import("../plugins/lookUp/webview").then((m) => m.lookUpWebview),
   math: () => import("../plugins/math/webview").then((m) => m.mathWebview),
+  outline: () =>
+    import("../plugins/outline/webview").then((m) => m.outlineWebview),
   sketch: () =>
     import("../plugins/sketch/webview").then((m) => m.sketchWebview),
   onlineVideos: () =>

@@ -1,6 +1,6 @@
 import type { Context, Plugin } from "@workshop/core";
 import type { TreeHandle } from "../../shared/host";
-import type {} from "../editor/api";
+import type { EditorPanel } from "../editor/api";
 import type {} from "../vault/api";
 import {
   expandMode,
@@ -11,6 +11,7 @@ import {
 } from "./actions";
 import { OPEN_COMMAND, VIEW_ID } from "./commands";
 import { createOutlineFocus } from "./focus";
+import { protocol } from "./protocol";
 import { registerSymbolPicker } from "./symbol-picker";
 import { OutlineSource } from "./tree";
 import { OutlineView } from "./view";
@@ -47,14 +48,16 @@ export const outlineHost: Plugin = {
     ctx.effect(() => () => view.dispose());
     registerOutlineCommandContext(ctx);
     registerOutlineUpdates(ctx, view, tree);
+    registerReadingPosition(ctx, view);
     registerOutlineActions(ctx, view, tree);
     registerFollowCursor(ctx, view);
     registerSymbolPicker(ctx, ctx.dialogs);
     registerOutlineFocus(ctx);
     ctx.effect(() =>
-      ctx.hostCommands.register(OPEN_COMMAND, (uri, offset) =>
-        ctx.vaults.open(String(uri), { offset: Number(offset) }),
-      ),
+      ctx.hostCommands.register(OPEN_COMMAND, (uri, offset) => {
+        view.jumpedTo(Number(offset));
+        return ctx.vaults.open(String(uri), { offset: Number(offset) });
+      }),
     );
     view.refresh();
   },
@@ -87,6 +90,43 @@ function registerOutlineUpdates(
       }
     }),
   );
+}
+
+/** Each panel's scroll reports, followed while the panel is active. */
+function registerReadingPosition(ctx: Context, view: OutlineView): void {
+  const listening = new Map<string, () => void>();
+  const listen = (panel: EditorPanel) => {
+    if (listening.has(panel.id)) {
+      return;
+    }
+    listening.set(
+      panel.id,
+      panel.rpc.on(protocol, "readingPosition", (position) => {
+        if (panel === ctx.editors.active()) {
+          void view.followReading(panel, position);
+        }
+      }),
+    );
+  };
+  ctx.on("editor/opened", (opened) => {
+    const panel = ctx.editors.all().find((item) => item.id === opened.id);
+    if (panel) {
+      listen(panel);
+    }
+  });
+  ctx.on("editor/closed", (closed) => {
+    listening.get(closed.id)?.();
+    listening.delete(closed.id);
+  });
+  ctx.effect(() => () => {
+    for (const stop of listening.values()) {
+      stop();
+    }
+    listening.clear();
+  });
+  for (const panel of ctx.editors.all()) {
+    listen(panel);
+  }
 }
 
 function registerOutlineFocus(ctx: Context): void {

@@ -1,5 +1,5 @@
 /**
- * Lumière PDF's settings (`lumiere.pdf.*`) and the editor settings it
+ * Lumia PDF's settings (`lumiere.pdf.*`) and the editor settings it
  * follows (`editor.smoothScrolling`), as the host keeps them. Only the PDF
  * product reads and writes `lumiere.pdf.` keys (AGENTS.md).
  */

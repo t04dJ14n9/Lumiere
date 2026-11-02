@@ -18,7 +18,7 @@ async function editorFrame(page: Page): Promise<Frame> {
       return frame;
     }
   }
-  throw new Error("No Lumière frame");
+  throw new Error("No Lumia frame");
 }
 
 /** Settings.json changes reach the open note live, without reloading it. */

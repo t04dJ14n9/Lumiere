@@ -1,6 +1,6 @@
 # Bridge envelope
 
-Lumière and Lumière PDF stay separate extensions. Each
+Lumia and Lumia PDF stay separate extensions. Each
 publishes a command that returns the user's current selection as one
 versioned envelope. This is not the Copy Link for Agent clipboard text
 (`docs/agent-handoff-format.md` is unchanged).
@@ -13,7 +13,7 @@ versioned envelope. This is not the Copy Link for Agent clipboard text
 The PDF command keeps its `vscodeEmbedPdf.bridge.envelope` id across the PDF
 Workshop rename so existing peer integrations can discover it.
 
-Version is `1`. The object matches Lumière's Workbench v1
+Version is `1`. The object matches Lumia's Workbench v1
 `BridgeEnvelope` so Workshop's `parseBridgeEnvelope` accepts a PDF result.
 
 Workshop is the aggregator: it returns a Markdown selection when the active

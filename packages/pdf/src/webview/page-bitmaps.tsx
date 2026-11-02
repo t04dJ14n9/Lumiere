@@ -312,7 +312,11 @@ function requestBitmaps(
   };
 }
 
-/** EmbedPDF render options; pageColors only when the pinned engine exposes it. */
+/**
+ * EmbedPDF render options; pageColors only when the pinned engine exposes it.
+ * The dark background is also the page's `--paper` (styles/base.css), shown
+ * until its picture arrives.
+ */
 function renderOptions(
   scaleFactor: number,
   dpr: number,

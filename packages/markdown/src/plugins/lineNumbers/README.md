@@ -1,7 +1,7 @@
 # Line numbers
 
 Shows a source line-number gutter laid out like VS Code's text editor, so a note
-looks the same in Lumière and in **Open With > Text Editor**. It is on
+looks the same in Lumia and in **Open With > Text Editor**. It is on
 by default and follows `editor.lineNumbers` for Markdown files.
 
 ## How it works
@@ -37,7 +37,8 @@ Catalog rank places line numbers before folding.
 - `gutter.ts`: labels per style, one number per rendered block, the gutter.
 - `gutter.test.ts`: labels, block numbering and marker equality.
 - `headings.ts`: gutter classes on heading lines, so numbers align with the
-  larger heading text.
+  larger heading text. A plain edit (Live Preview's `isPlainTextEdit`) maps
+  them; anything else walks the tree again.
 - `lineNumbers.css`: the plugin's styles, bundled through `src/webview/styles/index.css`.
 
 ## Services, events and settings

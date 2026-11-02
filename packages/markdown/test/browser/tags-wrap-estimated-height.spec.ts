@@ -28,11 +28,9 @@ test("many wrapping tags keep estimatedHeight near the measured sheet", async ({
   await open(page, note(36));
   await constrain(page);
   await expect(page.locator(".hybrid-properties")).toBeVisible();
-  // OKF listPreviewCount (default 3) hides extras until disclosure.
-  const more = page.locator("[data-property-list-more]");
-  await expect(more).toBeVisible();
-  await more.click();
-  await expect(page.locator(".property-chip")).toHaveCount(36);
+  // Every tag shows, as in Obsidian: no "Showing 3 of 36" disclosure.
+  await expect(page.locator(".property-chip:visible")).toHaveCount(36);
+  await expect(page.locator("[data-property-list-more]")).toHaveCount(0);
 
   const result = await page.evaluate(async () => {
     const fiber = [...window.harness.views[0]!.plugins].find(

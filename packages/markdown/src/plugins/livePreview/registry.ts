@@ -1,4 +1,4 @@
-import { Facet } from "@codemirror/state";
+import { Facet, StateField, type Transaction } from "@codemirror/state";
 import { revealRanges } from "../../webview/ui/pointer-selection";
 import type { EditorState } from "@codemirror/state";
 import type { SyntaxNode, Tree } from "@lezer/common";
@@ -6,6 +6,7 @@ import { documentTree } from "./document-tree";
 import { inlineHtmlEnd } from "./inline-html";
 import { embedsImage } from "../../markdown/images";
 import type { BlockRenderer, InlineContext, InlineRenderer } from "./api";
+import { editTouches, isPlainTextEdit } from "./plain-edit";
 export const blockRenderers = Facet.define<
   BlockRenderer,
   readonly BlockRenderer[]
@@ -117,7 +118,8 @@ export interface PersistentInlineEntry {
   name: string;
   from: number;
   to: number;
-  node: SyntaxNode;
+  /** Absent for an entry carried to a newer tree; looked up when drawn. */
+  node?: SyntaxNode;
 }
 const persistentNodesCache = new WeakMap<
   Tree,
@@ -169,14 +171,92 @@ export function decoratePersistentOffViewport(
   if (persistent.size === 0) {
     return;
   }
-  for (const entry of cachedPersistentNodes(
-    state.field(documentTree),
-    persistent,
-  )) {
+  const tree = state.field(documentTree);
+  for (const entry of cachedPersistentNodes(tree, persistent)) {
     if (!visibleRanges.some((v) => entry.from < v.to && entry.to > v.from)) {
-      allRenderers
-        .find((r) => r.nodes.includes(entry.name))
-        ?.decorate(entry.node, builder);
+      const node = entry.node ?? nodeOf(tree, entry);
+      if (node) {
+        allRenderers
+          .find((r) => r.nodes.includes(entry.name))
+          ?.decorate(node, builder);
+      }
     }
   }
+}
+
+function nodeOf(tree: Tree, entry: PersistentInlineEntry): SyntaxNode | null {
+  for (
+    let node: SyntaxNode | null = tree.resolveInner(entry.from, 1);
+    node && node.from >= entry.from;
+    node = node.parent
+  ) {
+    if (node.name === entry.name && node.to === entry.to) {
+      return node;
+    }
+  }
+  return null;
+}
+
+/**
+ * Hands a tree's embeds (the nodes drawn while off screen) on to the next
+ * tree through an edit that cannot add, remove or reshape one, so typing
+ * does not walk every node of a long note to find them again (14 ms a key
+ * on an 835 KB note).
+ */
+export const persistentNodesCarry = StateField.define<null>({
+  create: () => null,
+  update(value, transaction) {
+    const before = transaction.startState.field(documentTree, false);
+    const after = transaction.state.field(documentTree, false);
+    const known = before && persistentNodesCache.get(before);
+    if (
+      known &&
+      after &&
+      after !== before &&
+      !persistentNodesCache.has(after) &&
+      embedsUnchanged(transaction, known)
+    ) {
+      const map = (at: number) => transaction.changes.mapPos(at);
+      persistentNodesCache.set(
+        after,
+        new Map(
+          [...known].map(([key, entries]) => [
+            key,
+            entries.map(({ name, from, to }) => ({
+              name,
+              from: map(from),
+              to: map(to),
+            })),
+          ]),
+        ),
+      );
+    }
+    return value;
+  },
+});
+
+function embedsUnchanged(
+  transaction: Transaction,
+  known: Map<string, readonly PersistentInlineEntry[]>,
+): boolean {
+  if (!isPlainTextEdit(transaction)) {
+    return false;
+  }
+  const before = transaction.startState.doc;
+  const after = transaction.newDoc;
+  let marks = false;
+  transaction.changes.iterChanges((...change) => {
+    const [fromA, toA, , , inserted] = change;
+    // An image or embed starts with `![`; a word on its line can reshape it.
+    const line = before.lineAt(fromA);
+    marks ||=
+      /[![\]()]/.test(before.sliceString(fromA, toA) + inserted.toString()) ||
+      /!\[/.test(line.text + "\n" + after.line(line.number).text);
+  });
+  return (
+    !marks &&
+    ![...known.values()].some((entries) =>
+      entries.some((entry) => editTouches(transaction, entry.from, entry.to)),
+    )
+  );
 }

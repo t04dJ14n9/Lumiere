@@ -12,7 +12,7 @@ import {
 } from "./edit";
 
 /**
- * **Lumière: Open Settings**, **Change Setting…** and the commands
+ * **Lumia: Open Settings**, **Change Setting…** and the commands
  * for the common settings. Each one reads and writes the same
  * `lumiere.markdown.*` key as the Settings UI, in the workspace when the
  * workspace sets it and in the user settings otherwise. They hold no state:
@@ -88,11 +88,11 @@ async function changeSetting(
   if (argument === undefined) {
     const all = editing.settings.contributed();
     if (all.length === 0) {
-      editing.error("The Lumière settings are not available.");
+      editing.error("The Lumia settings are not available.");
       return;
     }
     const picked = await editing.dialogs.pick({
-      placeholder: "Change a Lumière setting…",
+      placeholder: "Change a Lumia setting…",
       items: (query) =>
         settingRows(
           all,
@@ -105,7 +105,7 @@ async function changeSetting(
     // A key from a keybinding or another extension: only ours is accepted.
     chosen = ownSetting(editing, argument);
     if (!chosen) {
-      editing.error("That is not a Lumière setting.");
+      editing.error("That is not a Lumia setting.");
       return;
     }
   }

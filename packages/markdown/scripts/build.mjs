@@ -1,5 +1,5 @@
 import { prismPlugin } from "./prism.mjs";
-// Builds Lumière's assets into this package's dist/: the editor,
+// Builds Lumia's assets into this package's dist/: the editor,
 // diff and graph webviews, the vault and search workers, and the public API
 // declarations. The extension host is bundled by the repository root
 // (scripts/build.mjs there), which copies this dist/ into dist/markdown/.

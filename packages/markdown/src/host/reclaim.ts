@@ -260,7 +260,7 @@ function createReclaimTransfer(
       pending.set(tab, next);
       void reopen(uri, next, navigation)
         .catch((error) => {
-          console.error("Lumière editor transfer failed", error);
+          console.error("Lumia editor transfer failed", error);
         })
         .finally(() => {
           if (pending.get(tab) === next) {

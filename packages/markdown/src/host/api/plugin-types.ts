@@ -89,7 +89,7 @@ export interface PublicServices {
     error(message: string, detail?: unknown): void;
   };
 }
-/** A link click in an editor, before Lumière opens it (DESIGN §16). */
+/** A link click in an editor, before Lumia opens it (DESIGN §16). */
 export interface LinkRequest {
   readonly editorId: string;
   readonly href: string;

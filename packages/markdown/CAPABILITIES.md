@@ -1,6 +1,6 @@
 # Capabilities
 
-What Lumière does, plugin by plugin, and where it differs from
+What Lumia does, plugin by plugin, and where it differs from
 Obsidian. Each plugin's README (`src/plugins/<id>/README.md`) has the
 details. "Default" is the `obsidian` preset; the `minimal` preset loads only
 the core plugins. No row here is an Obsidian parity claim until the owner
@@ -61,6 +61,7 @@ records it in `docs/PARITY.md`.
 | vim | Vim mode with `:w`, `:q`, `:u`, `:red` mapped to VS Code | Off by default |
 | pasteHtml | Rich paste as Markdown | Images are not downloaded |
 | agentBridge | **Copy Link for Agent** copies `@path#lines` and the quoted passage, opening a chat only when the editor's own chat is the only agent or a target is set | Not an Obsidian feature. The separate Copy for Agent command was removed (plain Ctrl+C copies text). No public API |
+| lookUp | macOS: **Look Up** in a note's right-click menu opens the word right-clicked (or the selected word) in the Dictionary app | macOS, VS Code and Cursor only; opens the Dictionary app, not the popover; not in the palette |
 | bridge | **Copy Bridge Envelope** copies a versioned JSON selection. The hidden `bridge.envelope` command returns the same object. Agent PDF Viewer is called only when `vscodeEmbedPdf.bridge.envelope` is registered | Does not open a chat. The envelope is not wiki metadata. See `docs/bridge-envelope.md` |
 | wiki | Reads `.wiki/layout.json` and the registry, reports pages inside the bundle, and copies a wiki reference or envelope | Does not run an agent, scaffold folders, or ingest inbox. A broken layout is not treated as legacy. Wikilinks are reported, not rewritten |
 | attachments | Drop, paste, or HTML-paste images into `files.attachmentFolder` with Obsidian-style timestamp names and embeds | Shares folder/embed rules with sketches. Import Asset / `assets.path` removed |
@@ -71,9 +72,9 @@ records it in `docs/PARITY.md`.
 
 ## Workshop
 
-- **Manage Plugins**, **Show Plugin Status** and **Use Lumière
+- **Manage Plugins**, **Show Plugin Status** and **Use Lumia
   for Markdown in This Workspace**.
-- A **Lumière** log output channel;
+- A **Lumia** log output channel;
   `lumiere.markdown.debug.logging` adds debug lines from host and webview.
 - Untrusted workspaces: no remote images, media or frames, and no external
   code block processors.

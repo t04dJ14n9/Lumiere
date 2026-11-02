@@ -7,10 +7,11 @@
  *
  *     > Scaled dot-product attention
  *
- * Href is only `path#page=&viewrect=` (RFC 8118). No Source: prefix, no file
- * hash, no cite instruction, no Markdown escapes in the label. The lines
- * match LLM Wiki's agent clipboard shape (link, blank line, `> ` quote), so
- * agents and skills that read one also read the other.
+ * Href is only `path#page=&viewrect=` (RFC 8118), or `path#hl-<id>` for a
+ * sidecar highlight (see the sidecar highlights design in docs/superpowers).
+ * No Source: prefix, no file hash, no cite instruction, no Markdown escapes
+ * in the label. The lines match LLM Wiki's agent clipboard shape (link, blank
+ * line, `> ` quote), so agents and skills that read one also read the other.
  *
  * A region uses the same link shape; any text found inside the box is quoted.
  * Region image paths are not copied (chat attachment / MCP can still attach a
@@ -18,6 +19,7 @@
  */
 import { boundingRect, toViewRect } from "./geometry";
 import { pdfLink } from "./pdf-location";
+import { highlightFragment } from "./sidecar-format";
 import { selectedPages, type PdfSelection } from "./selection";
 
 export interface PdfSource {
@@ -43,10 +45,15 @@ export function agentText(selection: PdfSelection, source: PdfSource): string {
   const name = fileBasename(source.path);
   const links = selectedPages(selection).map(({ page, rects }) => {
     const label = `${name} · p.${page}`;
-    const href = pdfLink(source.path, {
-      page,
-      viewRect: toViewRect(boundingRect(rects)),
-    });
+    // A sidecar highlight has a link of its own, which follows it if the
+    // PDF's layout changes; anything else links the page box.
+    const href =
+      selection.kind === "region" && selection.highlightId
+        ? `${source.path}#${highlightFragment(selection.highlightId)}`
+        : pdfLink(source.path, {
+            page,
+            viewRect: toViewRect(boundingRect(rects)),
+          });
     return `[${label}](${href})`;
   });
   const body = selection.text?.trim() ? blockquote(selection.text) : undefined;

@@ -262,7 +262,7 @@ function arrow(view: EditorView, forward: boolean): boolean {
 
 /**
  * The inspect control Obsidian opens with Space on a selected image (REA
- * showSelectedImage → lightbox). Lumière's frosted-bar ⤢ / inspector is the
+ * showSelectedImage → lightbox). Lumia's frosted-bar ⤢ / inspector is the
  * host equivalent.
  */
 export function inspectButtonBesideImage(

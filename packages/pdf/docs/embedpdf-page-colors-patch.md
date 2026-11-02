@@ -1,6 +1,6 @@
 # EmbedPDF `pageColors` engines patch
 
-Lumière dark paper depends on a **`pnpm patch`** of `@embedpdf/engines@2.15.1`
+Lumia dark paper depends on a **`pnpm patch`** of `@embedpdf/engines@2.15.1`
 (and a small `@embedpdf/models@2.15.1` types patch). Upstream
 [embedpdf/embed-pdf-viewer#679](https://github.com/embedpdf/embed-pdf-viewer/issues/679)
 is still open; PDFium WASM already exports
@@ -28,7 +28,7 @@ Patch files:
 
 Declared in `pnpm-workspace.yaml` → `patchedDependencies`.
 
-## Lumière wiring
+## Lumia wiring
 
 - `PAGE_COLORS_ENGINE_AVAILABLE = true` in
   `packages/pdf/src/shared/page-colors-engine.ts`.
@@ -46,7 +46,7 @@ Declared in `pnpm-workspace.yaml` → `patchedDependencies`.
    - Same for models types if the upstream interface still lacks `pageColors`.
 3. Run `pnpm install`, then PDF unit / browser checks.
 4. If upstream ships #679-equivalent wiring, delete both patches, remove
-   `patchedDependencies` entries, and keep the Lumière flag true.
+   `patchedDependencies` entries, and keep the Lumia flag true.
 
 ## Limits
 

@@ -21,6 +21,6 @@ test("viewerPlugins registers History then Annotation after Selection", () => {
   const history = body.indexOf("HistoryPluginPackage");
   const annotation = body.indexOf("AnnotationPluginPackage");
   assert.ok(selection > 0 && history > selection && annotation > history);
-  assert.match(source, /annotationAuthor:\s*["']Lumière["']/);
+  assert.match(source, /annotationAuthor:\s*["']Lumia["']/);
   assert.match(source, /autoCommit:\s*true/);
 });

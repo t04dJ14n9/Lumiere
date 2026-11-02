@@ -2,6 +2,69 @@
 
 ## 0.1.0 (unreleased)
 
+- Markdown Outline follows scrolling as well as the caret, like a page's
+  table of contents: the section being read (the caret's while it is on
+  screen, else the one at the middle of the editor) is selected, its parents
+  and subheadings open and every other branch closes.
+
+- Properties: a `tags` list (and any list) shows every item, as Obsidian
+  does, instead of three and a **Showing 3 of N** button
+  (`properties.listPreviewCount` now defaults to 0, off). `sources` is no
+  longer clamped to three lines: it shows up to 300 px and scrolls past
+  that. OKF `generated` and `verified` are editable in place, as YAML text
+  that reads like any other value, instead of read-only chips; an edit
+  keeps the map.
+
+- Lumière is now called Lumia wherever it shows: the editor's name in
+  **Reopen Editor With…**, command titles, settings titles and messages.
+  Ids (`lumiere.*` commands and settings, the `lumiere.markdown.editor`
+  view type) are unchanged.
+
+- Double-clicking a heading in the Markdown Outline goes to that heading
+  again. The first click's jump re-applied the accordion, collapsing the
+  rows around it, so the second click landed on another heading and went
+  there. A click in the outline now leaves the tree as it is.
+
+- Live Preview and the editor parse a note once instead of twice: Live
+  Preview now reads CodeMirror's syntax tree. Jumping around a large note no
+  longer re-parses 100,000 characters each time (script time over four
+  scrollbar jumps in an 835 KB note: about 330-400 -> 90-100 ms).
+
+- Dragging a selection from the start of a heading takes its `#` marks, as
+  in Obsidian; the marks were hidden when the drag began, so the selection
+  started after them.
+
+- Opening an image or PDF over a note (`code image.png` in a terminal, Quick
+  Open, a double-click) opens it again, instead of closing it and inserting
+  it into the note. For an Explorer drop without Shift, which VS Code opens
+  the same way, a prompt offers **Add to Note**.
+
+- Large notes scroll and take typing faster. On an 835 KB, 30,000-line note
+  (Chromium, browser harness): the worst frame when reading on 533 -> 200 ms
+  and when scrolling straight after opening 470-670 -> 100-200 ms; script time
+  scrolling down 30-50% lower; typing 166 -> 55 ms a key. List lines no
+  longer scan the whole note on every screen, footnotes no longer compute
+  the note's whole metadata (or parse it whole while it is still loading),
+  and a word typed outside headings, footnotes and embeds no longer makes
+  sticky scroll, line numbers, footnotes and embeds walk the whole note.
+
+- Table columns resize by dragging their border, in any row, as the
+  resize cursor and a guide line show. The handles were a few pixels inside
+  the header cells, so pressing the border did nothing. Widths are no longer
+  written to the note (Obsidian keeps none): they last while the note is
+  open. A `<!-- lumiere-col-widths: … -->` line written before is an
+  ordinary comment now, and can be deleted.
+- A table in a list item keeps all its rows (they used to end it after the
+  header), and editing or resizing it keeps it in the item.
+
+- Dragging a selection out past the top or bottom of a note in VS Code now
+  keeps scrolling until the pointer comes back, and selecting on the last
+  visible line no longer nudges the note.
+
+- On macOS, **Look Up** in a note's right-click menu opens the word you
+  right-clicked in the Dictionary app, as in Lumière PDF. It works whatever
+  the trackpad's Look Up gesture is set to.
+
 - Dark Mermaid diagrams use Obsidian's invert of the default palette
   (`invert(100%) hue-rotate(180deg) saturate(1.25)`), including the diagram
   inspector. Light (`vscode-light`, `vscode-high-contrast-light`) stays the

@@ -30,7 +30,7 @@ test("inline git changes: toggle, track changes, restore, waits for the bars", a
     const page = workbenchPage(browser);
     await openWorkbench(page, NOTE);
     await frameWith(page, ".mw-git-gutter .mw-git-bar");
-    await command(page, "Lumière: Toggle Inline Git Changes");
+    await command(page, "Lumia: Toggle Inline Git Changes");
     // Palette text must not be mistaken for an insert mark (scope to note body).
     await expect(page.locator(".quick-input-widget")).toBeHidden({
       timeout: 15000,
@@ -88,7 +88,7 @@ test("inline git changes: toggle, track changes, restore, waits for the bars", a
 
     // Toggled off, every mark goes and the text stays.
     const before = readGitNote();
-    await command(page, "Lumière: Toggle Inline Git Changes");
+    await command(page, "Lumia: Toggle Inline Git Changes");
     await expect(
       frame.locator(".mw-gi-ghost, del.mw-gi-removed, .mw-gi-inserted"),
     ).toHaveCount(0, {

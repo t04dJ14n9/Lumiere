@@ -123,7 +123,7 @@ export class DiagramRenderer {
 
   private async renderMermaidSvg(source: string): Promise<string> {
     const { default: mermaid } = await import("mermaid");
-    // Obsidian Allow (`mermaid-vault-trust`) enables HTML labels; Lumière still
+    // Obsidian Allow (`mermaid-vault-trust`) enables HTML labels; Lumia still
     // sanitizes SVG output once before caching. Untrusted stays strict.
     // Obsidian omits theme → Mermaid default (light); dark UI uses CSS invert.
     const trusted = this.trust.isTrusted();

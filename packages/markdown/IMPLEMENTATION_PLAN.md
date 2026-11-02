@@ -6336,3 +6336,238 @@ The fence now has `contain: inline-size` and `max-width: 100%`, with
 `overflow-y: hidden` so the horizontal scrollport does not also take the
 vertical wheel. A wide SVG scrolls inside the column. A small one stays
 its native size, centred. Dark mode is still the CSS invert.
+
+## macOS Look Up in notes — 2026-11-01
+
+Reported: a hard press on the trackpad (force click) does not look up a word
+in a note or a PDF. A web page is never told a click's force: on a force
+click, or a three-finger tap, Chromium reads the word under the pointer from
+the DOM itself (Blink's AttributedWordAtPoint) and shows the Dictionary
+popover. The known way to break it is `user-select: none` on the text, the
+cause of the same bug in VS Code's editor (microsoft/vscode#85632). Probed
+in the browser harness under a heading, a paragraph, bold text, a rendered
+link, a list item and a quote: `caretRangeFromPoint` lands in a real text
+node, nothing covers it, its `user-select` is `auto`, and the DOM under the
+pointer does not change while the button is held. No Markdown-side cause
+was found, so the gesture should work; whether it does in VS Code and
+Cursor is for the owner to check (docs/MANUAL_TEST_PLAN.md, lookUp step 4).
+The PDF side is fixed separately.
+
+- `test/browser/look-up.spec.ts` pins those prerequisites for each kind of
+  text, at rest and 300 ms into a press. Forcing `user-select: none` on
+  `.cm-line` fails it. This is new browser coverage, which the testing
+  policy admits only with the owner's explicit approval: it was asked for
+  with this change and should be confirmed or dropped at review.
+- New plugin `lookUp`, the dependable path, matching Lumière PDF: **Look
+  Up** in the note's right-click menu, macOS only (`isMac`) and over the
+  note's text, in group `0_agent@3` after Copy Link for Agent and Selection
+  Actions; hidden from the palette. The webview half records the word when
+  the menu opens (a one-word selection, else the word drawn under the
+  pointer, by Unicode word boundaries, punctuation trimmed), because the
+  macOS secondary click selects the word and Live Preview then reveals the
+  line's Markdown and shifts the text. The host half, per note and
+  deferred, re-checks the word (one word, at most 100 characters, no
+  control characters), builds `dict://<encoded word>` itself and opens it
+  with `navigation.external`, only when the plugin host's platform is
+  `darwin`. VS Code's adapter hands any scheme to `vscode.env.openExternal`,
+  as the PDF's Look Up does, so no host service changed. `needs:
+  ["workbench"]` keeps it off outside VS Code and Cursor: host-node's menu
+  has no `isMac` key, so the item could not show, and its page opens
+  external links with `window.open`, untried with `dict:`.
+- Unit tests: `src/plugins/lookUp/words.test.ts` (word rules, URL, checks),
+  `host.test.ts` (macOS only, refused words, the request schema) and
+  `manifest.test.ts` (when-clause, menu order, palette, host needs). The
+  browser spec also covers the command: right-clicked words, a selected
+  word, a word inside a longer selection, and nothing over empty space.
+- Not verified on a Mac (this ran on Linux, headless Chromium): that
+  `dict://` URLs open the Dictionary app through `navigation.external` in
+  VS Code and Cursor. In a remote window the extension host is not macOS,
+  so the item shows but does nothing (the plugin's README).
+
+## Selection drags past the note's edge in VS Code (2026-11-01)
+
+Reported: dragging a selection to the edge of the note sometimes did not
+scroll, and sometimes the note shifted a little when the pointer was not at
+an edge.
+
+- Reproduced in a real VS Code window (the `test/vscode` harness driving the
+  pointer): holding the pointer in CodeMirror's 6 px band scrolled, but
+  carrying the drag out past the top or bottom edge, in one move or in
+  steps, never did. Logging every event in the page showed why: once the
+  pointer leaves the webview during a drag, the page receives nothing, not
+  even `mouseleave` or the `mouseup`; `setPointerCapture` does not change
+  that. CodeMirror scrolls from the pointer's position past the edge, which
+  it never sees. Chromium in the browser harness delivers those events, so
+  the browser suite could not show it.
+- The shift: Lumière's extra motion (the `dragScrollSpeed` multiplier) ran
+  at full speed on the first frame after any move into the band, so
+  selecting on the last visible line moved the note by several pixels.
+- `drag-scroll.ts`: when the pointer goes silent within 64 px of the top or
+  bottom edge (outside CodeMirror's own band) heading for it fast enough to
+  have crossed it in 80 ms, the plugin sends CodeMirror a move 16 px past
+  that edge; CodeMirror's timer then scrolls and extends the selection until
+  a real move arrives (the pointer is back; a move without buttons ends the
+  drag as before). The extra motion ramps in over 250 ms in the band.
+- Real VS Code, before → after: steps past the bottom edge 0 → about
+  3,000 px/s; past the top edge 0 → the same upward; a brush of the band and
+  back 0 px shift (was a jump of several pixels on the first frame); a jump
+  to the middle after a fast move does not start a scroll.
+- Unit tests in `drag-scroll.test.ts` cover the exit rule, the ramp, the
+  synthetic move and a pointer resting near the edge. Limit: a single jump
+  from the middle of the note to outside it, with no event on the way,
+  carries no direction and is not scrolled; a real pointer always reports
+  moves on the way.
+
+## Table column resize from the border (2026-11-01)
+
+Asked for: drag a table column's border to set its width, as in Obsidian.
+Resizing existed (#445) but did nothing in practice: its handles were 6 px
+strips inside the header cells' first line, about 8 px left of the visible
+border, so a press on the border (or on any body row) went to the cell.
+
+- `column-resize.ts` hit-tests the pointer against the columns' right
+  borders (`columnEdgeAt`, 2 px either side, any row of the table). Hover
+  shows `col-resize` and an accent guide down the table; a drag fixes every
+  other column at its width and moves only this one. 3 px in stays the
+  cell's (the right-padding and left-padding click specs).
+- Widths are not saved (owner, 2026-11-02): Obsidian 1.14 has no column
+  resizing for Markdown tables and keeps no widths; community plugins that
+  add it keep them outside the note. #445's `<!-- lumiere-col-widths -->`
+  line is gone: nothing writes or reads it, and an old one is an ordinary
+  comment. Widths live in `ColumnResize` for the table's lifetime (tables
+  are retained across scrolling while the note is open), repainted after
+  each redraw and remapped on column insert, delete, move and duplicate.
+- Tables in list items: the Obsidian table-end rule compared rows with the
+  line's start, so an item's indented rows ended the table after its header
+  (Lezer's GFM parser keeps them). It now reads rows from the item's margin
+  (`line.basePos`; quotes are unchanged, since the widget cannot draw a
+  table in a quote). `TableGrid.replace` and cell edits indent every line
+  after the header like the rows, so the table stays in the item.
+- Tests: `src/plugins/tables/column-widths.test.ts`,
+  `test/unit/markdown/table-rows.test.ts`, and the new browser spec
+  `test/browser/tables-column-resize.spec.ts` (new browser coverage: needs
+  the owner's approval).
+
+## Large notes: scrolling and typing (2026-11-02)
+
+Asked for: faster scrolling in large Markdown notes and faster opening,
+referencing Obsidian and other open source editors. Measured with scratch
+Playwright scenarios over the browser harness (the real webview code in
+Chromium) on an 835 KB, 30,000-line note of headings, paragraphs with marks
+and links, nested lists and tasks, code, tables, callouts, footnotes and
+math; CPU profiles summed by caller chain. Like Obsidian (one CodeMirror
+syntax tree, decorations for the viewport only), the rule applied is that
+per-screen and per-keystroke work must not grow with the note.
+
+| | before (ad669b4) | after |
+| --- | --- | --- |
+| Reading scroll (60 px a frame): worst frame, long frames, script | 533 ms, 7, 1,016 ms | 200 ms, 1, 477 ms |
+| Fling (300 px a frame): script | 1,422 ms | 885 ms |
+| Flick straight after first paint: worst frame (5 runs) | 467–667 ms | 100–200 ms |
+| Typing in the middle: per key, median | 166 ms | 55 ms (about 18 ms of it the harness's host) |
+| Opening: first paint, all features (median of 5) | 101, 164 ms | 91, 150 ms |
+
+Fixed, by cost:
+
+1. `decorateListItem` looked up a `ListMark` child before checking the node
+   was a list item; it runs for every node the inline decorator enters, the
+   document included, so every screen scanned all of the note's blocks.
+2. Footnote references computed the whole note's metadata to number one
+   (283 ms on the first footnote in view, again after every edit), and
+   while the note was still parsing, parsed it whole (176 ms). The registry
+   is now cached on its own per document, numbered from Live Preview's
+   partial tree while loading, shared with the metadata and the edit
+   listener (which extracted it a second time), and the listener compares
+   what blocks show (labels, numbers, text), not positions, so it no longer
+   redraws rendered blocks on every keystroke.
+3. Table cells re-parsed DOMPurify's options on every sanitize call.
+4. Plain edits (`livePreview/plain-edit.ts`): sticky scroll's section
+   index, the line-number gutter classes, the footnote registry and the
+   off-screen embed list each walked the whole note on every keystroke
+   (about 23, 27, 28 and 14 ms). An edit that adds or removes no line break
+   or block mark, keeps its line's leading marks, and leaves the same blocks
+   around it in the new tree now maps them instead. Random edits (120,000
+   in a one-off run, 720 in the suite) check every shortcut against a fresh
+   walk; the text rules alone missed cases the tree check catches (a fence
+   inside a quote, an empty list item that cannot interrupt a paragraph).
+
+Portable checks: `viewport-cost.test.ts` counts syntax tree steps for one
+screen of a note and of one four times longer; it fails without fix 1.
+The other fixes have unit tests (footnote partial registry with no whole
+parse, plain-edit rules and the randomized equivalence test).
+
+Left: CodeMirror's language still parses the note a second time, in 100 ms
+background slices (it yields on `isInputPending`) and 100,000 characters
+past the viewport after a jump (~300 ms after opening this note, ~200 ms
+after jumps); sharing one tree with Live Preview, as Obsidian does, is the
+next step. Publishing the finished background parse still re-indexes the
+note once (about 135 ms: block index, section headings, gutter classes).
+Plugin start-up after first paint reconfigures the editor once (about
+100–250 ms on a large note). Opening itself (first paint about 90 ms) was
+already fast.
+
+
+## Opening media over a note; dragging from a heading (2026-11-02)
+
+Reported with screenshots:
+
+- `code image.png` in a terminal inserted the image into the open note
+  instead of opening it. The Explorer reclaim (#456) treats any pinned media
+  open in a note's group, while the note was the active tab, as an Explorer
+  drop without Shift (which VS Code opens that way because it disables the
+  webview's pointer events during Explorer drags). A terminal `code`, Quick
+  Open and a double-click open exactly the same way, and VS Code gives
+  extensions nothing to tell them apart. The tab now stays open and a
+  non-modal prompt asks "Add image.png to note.md as an attachment?"; only
+  **Add to Note** closes it and inserts the embed. Host test with a fake
+  `vscode`: `test/unit/attachments/explorer-reclaim-host.test.ts`.
+- Dragging a selection from the start of a heading left out its `#`: reveal
+  is frozen from the press to the release, so the marks were hidden and the
+  press landed after them. `livePreview/heading-drag.ts` starts such a drag
+  at the line start (Live Preview only; a click keeps the caret at the
+  text; marks shown at the press, code and tags are left alone). Checked
+  with a real mouse drag in the browser harness (offset 15 -> 13).
+- PDF selection boxes not lining up with the text: not reproduced. In the
+  browser harness the selection encloses each line's ink within 1-2 px
+  horizontally (plus the font's ascent above) on a plain page, an offset
+  CropBox, an offset MediaBox, device pixel ratios 1.25 and 1.5, text at the
+  bottom of a 1,584 pt page and "Attention Is All You Need" (arXiv
+  1706.03762). Waiting for the owner's PDF, zoom and screenshot.
+
+## One syntax tree (2026-11-02)
+
+Owner's choice after comparing the options: Live Preview reads CodeMirror's
+syntax tree instead of parsing the note a second time (as Obsidian has one
+tree). Both trees came from the same Lezer parser (the dialect in
+`markdown/dialect`); what differed was the scheduling around it: Live
+Preview's own (`document-parse.ts`, `document-tree.ts`, about 360 lines)
+and CodeMirror's language (`@codemirror/language`'s `ParseContext` and
+parse worker), which is now the only one.
+
+- `documentTree` is CodeMirror's tree, pushed with `ensureSyntaxTree` only
+  when Live Preview needs more: the first 10,000 characters before the first
+  paint (CodeMirror starts with 3,000), the viewport and a margin when it
+  outruns the tree (in a microtask, before the frame paints), the rest of the
+  note in idle slices of up to 5 ms (CodeMirror stops 100,000 characters past
+  the viewport; whole-note blocks keep the scroll height stable), and never
+  less coverage after an edit than before it. A finished tree is still kept
+  for readers that parse the document (`rememberParsedMarkdown`). A state
+  without the Markdown language (bare unit tests) parses the document whole.
+- `treeReached`: a tree can now also grow inside an edit (CodeMirror hands
+  on parse progress with it) or without one (CodeMirror's worker publishes).
+  The block index, the changed region and the plain-edit shortcuts look at
+  the newly covered part, not only at `replaceDocumentTree`.
+- The first-line frontmatter rule Live Preview's parse had moved into the
+  parser CodeMirror runs (`EditorMarkdownParser` in `dialect/language.ts`),
+  so CodeMirror's tree, which Source mode and the editor commands read too,
+  is right after typing `---` on line 1.
+
+Measured (browser harness, 835 KB note, three runs each, before -> after):
+four scrollbar jumps, script 321-396 -> 89-101 ms, long frames 5-7 -> 2,
+worst frame 67-83 -> 33-50 ms; Lezer parsing after opening 363 -> 281 ms;
+reading, flinging, typing and first paint unchanged within noise. (The
+"about 300 ms" estimated for CodeMirror's parse after opening was too high:
+the profile filter also counted Live Preview's own parse function, also
+named `work`.) Tests: `document-tree.test.ts` rewritten for the shared parse;
+the randomized edit test also runs on CodeMirror's parse and checks the tree
+equals a fresh parse after every edit (40,000 edits in a one-off run).

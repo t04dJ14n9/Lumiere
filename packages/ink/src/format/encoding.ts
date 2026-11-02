@@ -68,11 +68,11 @@ export function decodeSketch(json: string): Sketch {
   }
   const fields = readSketchFields(value);
   if (fields.format !== FORMAT_NAME) {
-    throw new SketchFormatError("This is not a Lumière sketch.");
+    throw new SketchFormatError("This is not a Lumia sketch.");
   }
   if (fields.version > FORMAT_VERSION) {
     throw new SketchFormatError(
-      `This sketch was saved by a newer Lumière (format ${fields.version}).`,
+      `This sketch was saved by a newer Lumia (format ${fields.version}).`,
     );
   }
   const columns = pointColumns(fields.fields);

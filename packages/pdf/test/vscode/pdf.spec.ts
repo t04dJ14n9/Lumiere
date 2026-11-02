@@ -37,7 +37,7 @@ const PDF = "docs/outline.pdf";
 const TEXT_MIDLINE = 94;
 
 /**
- * Copy Link for Agent from the PDF webview context menu until the chat holds
+ * Copy link to this from the PDF webview context menu until the chat holds
  * `text`. The action copies the selection the extension already has.
  */
 async function copyLinkUntilChatHas(
@@ -48,7 +48,7 @@ async function copyLinkUntilChatHas(
   await expect
     .poll(
       async () => {
-        await contextMenu(page, at, "Copy Link for Agent");
+        await contextMenu(page, at, "Copy link to this");
         await page.waitForTimeout(500);
         return agentChatInput(page);
       },
@@ -81,8 +81,16 @@ test("a PDF opens with its outline in the Explorer, shown only while the PDF is 
       outline.getByRole("treeitem", { name: new RegExp(title) }),
     ).toBeVisible();
   }
+  // Follow Cursor's accordion: the part being read is open, the other closed.
+  await expect(
+    outline.getByRole("treeitem", { name: /Section 2\.1/ }),
+  ).toHaveCount(0);
   await outline.getByRole("treeitem", { name: /Section 1\.2/ }).click();
   await expect.poll(() => pageAtTop(viewer, 3)).toBe(true);
+  await outline
+    .getByRole("treeitem", { name: /Part Two/ })
+    .locator(".monaco-tl-twistie")
+    .click();
   // "Section 2.1" points 130 points down page 9 (test/fixtures/make-fixtures.mjs).
   await outline.getByRole("treeitem", { name: /Section 2\.1/ }).click();
   await expect.poll(() => pointAtTop(viewer, 9, 130)).toBe(true);
@@ -96,7 +104,7 @@ test("a PDF opens with its outline in the Explorer, shown only while the PDF is 
   await expect(header).toBeVisible();
 });
 
-test("Copy Link for Agent is context-menu only; selection menus and title button are gone", async ({
+test("Copy link to this is context-menu only; selection menus and title button are gone", async ({
   workbench: page,
 }) => {
   await openFile(page, PDF);
@@ -108,7 +116,7 @@ test("Copy Link for Agent is context-menu only; selection menus and title button
   // With nothing selected the menu offers the view, not the link.
   const unselected = await contextMenuLabels(page, at(100, TEXT_MIDLINE));
   expect(unselected).toContain("Go to Page…");
-  expect(unselected).not.toContain("Copy Link for Agent");
+  expect(unselected).not.toContain("Copy link to this");
   await selectText(page, viewer, at(74, TEXT_MIDLINE), at(205, TEXT_MIDLINE));
   await expect(
     viewer.getByRole("toolbar", { name: "PDF text selection actions" }),
@@ -116,10 +124,10 @@ test("Copy Link for Agent is context-menu only; selection menus and title button
   await expect(
     page
       .locator(".editor-actions")
-      .getByRole("button", { name: /^Copy Link for Agent/u }),
+      .getByRole("button", { name: /^Copy link to this/u }),
   ).toHaveCount(0);
 
-  await contextMenu(page, at(100, TEXT_MIDLINE), "Copy Link for Agent");
+  await contextMenu(page, at(100, TEXT_MIDLINE), "Copy link to this");
   await expect
     .poll(() => agentChatInput(page), { timeout: 15_000 })
     .toContain(withoutSpaces(`[outline.pdf · p.3](${PDF}#page=3&viewrect=`));
@@ -163,7 +171,7 @@ test("Copy Link for Agent is context-menu only; selection menus and title button
   await page.keyboard.press("Escape");
 });
 
-test("Copy Link for Agent from the context menu opens the agent chat with the region typed in and its snapshot attached", async ({
+test("Copy link to this from the context menu opens the agent chat with the region typed in and its snapshot attached", async ({
   workbench: page,
 }) => {
   // VS Code's chat counts as served thanks to test/fixtures/chat-participant; Cursor has its own.
@@ -180,7 +188,7 @@ test("Copy Link for Agent from the context menu opens the agent chat with the re
     })
     .toBeGreaterThan(0);
   const link = `[outline.pdf · p.3](${PDF}#page=3&viewrect=60,70,170,80)`;
-  await contextMenu(page, at(100, TEXT_MIDLINE), "Copy Link for Agent");
+  await contextMenu(page, at(100, TEXT_MIDLINE), "Copy link to this");
   await expect
     .poll(() => agentChatInput(page), { timeout: 15_000 })
     .toContain(withoutSpaces(link));
