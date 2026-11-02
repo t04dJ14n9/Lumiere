@@ -4,8 +4,8 @@ import { Decoration, WidgetType } from "@codemirror/view";
 import type { EditorView } from "@codemirror/view";
 import type { DecorationSet } from "@codemirror/view";
 import { blockRenderers, revealed } from "./registry";
-import { documentTree, replaceDocumentTree } from "./document-tree";
-import type { BlockRenderer, RenderBlock } from "./api";
+import { documentTree } from "./document-tree";
+import { treeReached, type BlockRenderer, type RenderBlock } from "./api";
 import { rendererMatcher, visitRendererNodes } from "./block-discovery";
 import {
   changedRegion,
@@ -37,7 +37,9 @@ export const blockIndex = StateField.define<IndexedBlock[]>({
     ) {
       return reuseIndexedBlocks(value, index(tr.state));
     }
-    if (tr.effects.some((effect) => effect.is(replaceDocumentTree))) {
+    // A parse that reached further without an edit (published by Live
+    // Preview or by CodeMirror's background parse) or a replaced tree.
+    if (!tr.docChanged && treeReached(tr) !== undefined) {
       return reuseIndexedBlocks(value, index(tr.state));
     }
     return tr.docChanged ? reindex(value, tr) : value;

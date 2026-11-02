@@ -5,6 +5,7 @@ import {
 } from "../../webview/ui/pointer-selection";
 import type { Tree } from "@lezer/common";
 import { documentTree } from "./document-tree";
+import { treeReached } from "./api";
 import { blockRenderers } from "./registry";
 
 /**
@@ -44,9 +45,25 @@ export function changedRegion(tr: Transaction): Region | null {
   if (cached !== undefined) {
     return cached;
   }
-  const region = tr.docChanged ? computeRegion(tr) : null;
+  const region = tr.docChanged ? withReach(tr, computeRegion(tr)) : null;
   regions.set(tr, region);
   return region;
+}
+
+/**
+ * An edit can also bring a tree that reaches further than the old one (the
+ * background parse's progress, handed on with the edit): blocks there are
+ * new, so the region takes them in.
+ */
+function withReach(tr: Transaction, region: Region): Region {
+  const reach = treeReached(tr);
+  if (reach === undefined) {
+    return region;
+  }
+  return {
+    from: Math.min(region.from, reach),
+    to: Math.max(region.to, tr.state.field(documentTree).length),
+  };
 }
 
 function computeRegion(tr: Transaction): Region {
