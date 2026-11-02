@@ -5526,7 +5526,7 @@ licenses; we recommend you read them, as their terms may differ from the
 terms above.
 ```
 
-## lucide 1.61.0
+## lucide 1.64.0
 
 License: ISC  
 Source: https://lucide.dev
@@ -6014,7 +6014,7 @@ OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
 SOFTWARE.
 ```
 
-## sigma 4.0.3
+## sigma 4.0.4
 
 License: MIT  
 Source: https://www.sigmajs.org
