@@ -3398,10 +3398,10 @@
           },
           "lumiere.markdown.properties.listPreviewCount": {
             "type": "number",
-            "minimum": 1,
+            "minimum": 0,
             "maximum": 50,
-            "default": 3,
-            "description": "How many list chips to show before a disclosure control. Applies to tags, aliases, cssclasses, and other lists.",
+            "default": 0,
+            "description": "How many list items to show before a Showing N of M control. 0, the default, shows them all, as Obsidian does. Applies to tags, aliases, cssclasses, and other lists.",
             "scope": "resource"
           },
           "lumiere.markdown.scratch.folder": {

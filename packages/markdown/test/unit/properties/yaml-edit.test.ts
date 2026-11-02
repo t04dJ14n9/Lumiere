@@ -52,9 +52,9 @@ function assertOkfGenerated(source: string): void {
   const next = html.indexOf('data-property-key="', keyAt + 1);
   const slice = html.slice(keyAt, next < 0 ? keyAt + 4000 : next);
   assert.ok(
-    slice.includes("mod-okf-provenance") ||
-      slice.includes('data-property-type="generated"'),
-    "Expected OKF generated UI",
+    slice.includes('data-property-type="generated"') &&
+      slice.includes('data-property-kind="yaml"'),
+    "Expected generated as an editable YAML field",
   );
   assert.ok(!slice.includes("mod-unknown"), "generated must not be Unknown");
 }
@@ -320,8 +320,10 @@ test("Unknown JSON shows nested maps; text longtext still round-trips spaces", (
   const source =
     '---\ngenerated:\n  by: old\n  notes: |+\n    a\n\ntext: " one\\n two"\n---\n';
   const html = renderProperties(source);
-  assert.match(html, /data-property-key="generated"[\s\S]*mod-okf-provenance/);
-  assert.match(html, /okf-provenance-by[^>]*>old</);
+  assert.match(
+    html,
+    /data-property-input="generated" data-property-kind="yaml">[^<]*by: old/,
+  );
   const text = html.match(
     /data-property-input="text"[^>]*>([\s\S]*?)<\/textarea>/,
   )?.[1];

@@ -61,7 +61,7 @@ test("a multiline text value uses YAML-draft estimate (not one row per source li
   assert.equal(estimate("---\nnote: |\n  one\n  two\n  three\n---\n"), 182);
 });
 
-test("a large sources list estimates as clamped text, not stacked articles", () => {
+test("a large sources list estimates as a scrolling field, not stacked articles", () => {
   const entries = Array.from(
     { length: 108 },
     (_, index) =>
@@ -71,7 +71,8 @@ test("a large sources list estimates as clamped text, not stacked articles", () 
   const height = estimate(source);
   const short = estimate("---\nsources: hi\n---\n");
   assert.ok(height > short, `${height} vs ${short}`);
-  assert.ok(height < 200, String(height));
+  // 324 lines of YAML, held to the field's 300px.
+  assert.ok(height < 300 + 121, String(height));
   const ignored = estimate(source, {
     renderValue: () =>
       '<div class="source-rows"><article class="source-row"><p class="source-title">Tall</p></article></div>',
@@ -89,11 +90,7 @@ test("a wrapping tags list reserves more than one control row", () => {
     { length: 36 },
     (_, index) => `  - project-area-${index}-long-label`,
   ).join("\n");
-  // Expand past listPreviewCount so wrap estimate sees every chip.
-  const height = estimate(`---\ntags:\n${tags}\n---\n`, {
-    listPreviewCount: 3,
-    expandedLists: new Set(["tags"]),
-  });
+  const height = estimate(`---\ntags:\n${tags}\n---\n`);
   assert.ok(height > 200, String(height));
   assert.ok(height > estimate("---\ntags:\n  - a\n---\n") * 2, String(height));
 });
@@ -110,4 +107,15 @@ test("longtext estimate caps at three unfocused lines, as in Obsidian", () => {
   assert.ok(height > short, `${height} vs short ${short}`);
   // Unclamped 80×"wrapping" used to reserve >200px; the 3-line cap stays under.
   assert.ok(height < 200, String(height));
+});
+
+test("sources has no three-line clamp: it is reserved up to its scroll height", () => {
+  const sources = (count: number) =>
+    Array.from(
+      { length: count },
+      (_, index) => `  - https://example.com/${index}`,
+    ).join("\n");
+  const three = estimate(`---\nsources:\n${sources(3)}\n---\n`);
+  const ten = estimate(`---\nsources:\n${sources(10)}\n---\n`);
+  assert.ok(ten > three + 100, `${ten} vs ${three}`);
 });

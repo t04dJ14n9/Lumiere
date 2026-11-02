@@ -2,6 +2,14 @@
 
 ## 0.1.0 (unreleased)
 
+- Properties: a `tags` list (and any list) shows every item, as Obsidian
+  does, instead of three and a **Showing 3 of N** button
+  (`properties.listPreviewCount` now defaults to 0, off). `sources` is no
+  longer clamped to three lines: it shows up to 300 px and scrolls past
+  that. OKF `generated` and `verified` are editable in place, as YAML text
+  that reads like any other value, instead of read-only chips; an edit
+  keeps the map.
+
 - Lumière is now called Lumia wherever it shows: the editor's name in
   **Reopen Editor With…**, command titles, settings titles and messages.
   Ids (`lumiere.*` commands and settings, the `lumiere.markdown.editor`

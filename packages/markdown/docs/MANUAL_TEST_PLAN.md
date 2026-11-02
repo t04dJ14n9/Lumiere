@@ -315,10 +315,11 @@ Reference: the measured Obsidian 1.14.4 spec and `docs/properties-diff.md`.
    source/live-preview toggles keep the native document authoritative. Check
    menu clipboard permissions, native pickers/locales and actual IME with the
    owner's editor; these are not established by the DOM event unit fakes.
-9b. `lumiere.markdown.properties.listPreviewCount` (default 3): a tags, aliases,
-   cssclasses, or other list with more than N items shows disclosure; raise/lower
-   N and confirm the chip preview count updates without rewriting YAML. `sources`
-   is text, so this setting does not apply to it.
+9b. `lumiere.markdown.properties.listPreviewCount` (default 0): a tags, aliases,
+   cssclasses, or other list shows every item, as in Obsidian. Set N above 0: a
+   list with more than N items shows disclosure; raise/lower N and confirm the
+   chip preview count updates without rewriting YAML. `sources` is text, so
+   this setting does not apply to it.
 10. Keep `title` as an ordinary editable text property (WorkVault uses the
     filename stem). Add `decision_confidence_and_supporting_evidence: high` and
     a nested `decision_conf` map with `score`, `rationale` and a `factors` list.
@@ -983,13 +984,16 @@ and dark themes.
 1. `sources` is a text property, the same control as `title` or any other
    string: a text field, type Text, no stacked rows, chips, source links, or
    disclosure. Edit the text and leave the field. The note stores a string.
-   Undo restores the previous value.
+   Undo restores the previous value. A list of 30 sources shows about 14
+   lines, unclamped, and the wheel scrolls the rest without focusing it.
 2. A YAML list under `sources` still opens as that same text field (the list's
    YAML text), not as cards or Unknown JSON. Committing the field stores a
    string. Replacing the list with one line of text keeps that string indented
    under `sources:` (a YAML plain scalar), not as a list.
 3. `generated` (and any other nested map / list-of-maps) is editable as YAML in
-   Properties and writes back into the note. Scalar and scalar-list properties
+   Properties and writes back into the note, still a map. `generated` and
+   `verified` read like other text values: no border or code font, and no
+   empty line under the last one. Scalar and scalar-list properties
    keep their usual controls.
 4. Add a comment between `generated.by` and `generated.checksum`, and quote the
    checksum. Open the YAML draft: its comments and quoting match the source.
@@ -1381,7 +1385,7 @@ Use the disposable fixture vault from Setup. These rows enumerate every generate
 | `lumiere.markdown.outline.followCursor` | `true` | boolean; change at workspace-folder scope, verify the owning plugin scenario, then reset the override. |
 | `lumiere.markdown.outline.expandMode` | `"accordion"` | accordion / all; change at workspace-folder scope, verify the owning plugin scenario, then reset the override. |
 | `lumiere.markdown.properties.display` | `"visible"` | visible / hidden / source; change at workspace-folder scope, verify the owning plugin scenario, then reset the override. |
-| `lumiere.markdown.properties.listPreviewCount` | `3` | number; change at workspace-folder scope, verify the owning plugin scenario, then reset the override. |
+| `lumiere.markdown.properties.listPreviewCount` | `0` | number; change at workspace-folder scope, verify the owning plugin scenario, then reset the override. |
 | `lumiere.markdown.scratch.folder` | `"scratch"` | string; change at workspace-folder scope, verify the owning plugin scenario, then reset the override. |
 | `lumiere.markdown.stickyScroll.maxLines` | `5` | number; change at workspace-folder scope, verify the owning plugin scenario, then reset the override. |
 | `lumiere.markdown.tags.viewSort` | `"frequency"` | name / frequency; change at workspace-folder scope, verify the owning plugin scenario, then reset the override. |

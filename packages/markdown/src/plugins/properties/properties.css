@@ -144,19 +144,30 @@
   overflow-wrap: anywhere;
 }
 /* Obsidian 1.14.4 (rea recovered app.css): unfocused text clamps to 3 lines;
- * focus clears the clamp and scrolls inside max-height. YAML drafts keep rows. */
-.metadata-properties .metadata-input-longtext:not(.metadata-input-yaml) {
+ * focus clears the clamp and scrolls inside max-height. YAML drafts keep rows,
+ * and `sources` (.mod-scroll) is never clamped: see below. */
+.metadata-properties
+  .metadata-input-longtext:not(.metadata-input-yaml):not(.mod-scroll) {
   -webkit-box-orient: vertical;
   -webkit-line-clamp: 3;
   max-height: 300px;
 }
 .metadata-properties
-  .metadata-input-longtext:not(.metadata-input-yaml):not(:empty) {
+  .metadata-input-longtext:not(.metadata-input-yaml):not(.mod-scroll):not(
+    :empty
+  ) {
   display: -webkit-box;
   overflow: hidden;
 }
-.metadata-properties .metadata-input-longtext:not(.metadata-input-yaml):focus {
+.metadata-properties
+  .metadata-input-longtext:not(.metadata-input-yaml):not(.mod-scroll):focus {
   -webkit-line-clamp: unset;
+  overflow-y: auto;
+}
+/* `sources` holds a source a line: every line shows up to max-height, and a
+ * longer list scrolls there, focused or not. */
+.metadata-properties .metadata-input-longtext.mod-scroll {
+  max-height: 300px;
   overflow-y: auto;
 }
 .metadata-input-longtext:empty::before,
@@ -429,6 +440,17 @@
   color: inherit;
   padding: 4px 8px; /* match --metadata-input-padding */
 }
+/* OKF generated / verified: YAML that reads like any other text value. It
+ * grows with its lines (field-sizing; rows where that is not supported). */
+.metadata-input-yaml.mod-inline {
+  field-sizing: content;
+  min-height: 0;
+  max-height: none;
+  font: inherit;
+  line-height: inherit;
+  resize: none;
+  border-color: transparent;
+}
 
 /* Obsidian unknown nested maps: JSON.stringify, single-line ellipsis;
  * padding matches --metadata-input-padding (REA app.css). */
@@ -447,36 +469,6 @@
   min-width: 0;
 }
 
-/* OKF generated / verified: typed actor + time chips. */
-.metadata-property-value .mod-okf-provenance {
-  display: flex;
-  flex-wrap: wrap;
-  gap: 6px 10px;
-  align-items: baseline;
-  min-width: 0;
-  padding: 0;
-  font-size: inherit;
-}
-.metadata-property-value .mod-okf-verified-list {
-  display: flex;
-  flex-direction: column;
-  gap: 4px;
-  min-width: 0;
-}
-.metadata-property-value .mod-okf-provenance > span {
-  min-width: 0;
-  overflow: hidden;
-  text-overflow: ellipsis;
-  white-space: nowrap;
-}
-.metadata-property-value .okf-provenance-by {
-  font-weight: 600;
-}
-.metadata-property-value .okf-provenance-at,
-.metadata-property-value .okf-provenance-extra {
-  color: var(--vscode-descriptionForeground, inherit);
-  opacity: 0.9;
-}
 .property-list [data-property-list-more] {
   display: inline-block;
   margin: 2px 0;

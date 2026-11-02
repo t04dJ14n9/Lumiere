@@ -20,16 +20,33 @@ test("property sheet distinguishes editable scalars, list chips and Obsidian unk
   assert.doesNotMatch(html, /<script>|<b>/);
 });
 
-test("generated is OKF typed provenance; sources is a plain text property", () => {
+test("generated is its YAML in an editable field; sources is a plain text property that scrolls", () => {
   const html = renderProperties(
     '---\ngenerated:\n  by: agent\n  at: "2026-10-15T00:00:00Z"\nsources:\n  - resource: ../raw/a.pdf\n    id: a1\nnote: hello\n---\n',
   );
-  assert.match(html, /data-property-key="generated"[\s\S]*mod-okf-provenance/);
   assert.match(html, /data-property-type="generated"/);
-  assert.match(html, /okf-provenance-by[^>]*>agent</);
+  const generated = html.match(
+    /<textarea [^>]*data-property-input="generated"[^>]*>([\s\S]*?)<\/textarea>/,
+  );
+  assert.ok(generated, "generated is a text field");
+  assert.match(generated![0], /data-property-kind="yaml"/);
+  // Reads like other text values, two lines tall, with no empty last line.
+  assert.match(generated![0], /class="[^"]*mod-inline" rows="2"/);
+  assert.doesNotMatch(generated![1]!, /\n$/);
+  assert.match(generated![1]!, /by: agent/);
+  assert.match(generated![1]!, /at: /);
   assert.match(
     html,
     /data-property-input="sources"[^>]*data-property-kind="text"/,
+  );
+  // No three-line clamp: the field shows its sources, then scrolls.
+  assert.match(
+    html,
+    /class="metadata-input-longtext mod-scroll"[^>]*data-property-input="sources"/,
+  );
+  assert.match(
+    html,
+    /class="metadata-input-longtext"[^>]*data-property-input="note"/,
   );
   assert.match(
     html,
@@ -42,7 +59,7 @@ test("generated is OKF typed provenance; sources is a plain text property", () =
   assert.match(html, /resource: \.\.\/raw\/a\.pdf/);
   assert.doesNotMatch(
     html,
-    /source-row|source-title|mod-unknown|data-property-type="sources"|data-property-list="sources"|data-property-kind="yaml"/,
+    /source-row|source-title|mod-unknown|data-property-type="sources"|data-property-list="sources"|data-property-input="sources"[^>]*data-property-kind="yaml"/,
   );
 });
 
@@ -280,7 +297,16 @@ decision_confirmation:
   assert.match(decision!, /metadata-property-warning-icon" hidden/);
 });
 
-test("listPreviewCount shows top chips with disclosure (default 3)", () => {
+test("a list shows every item by default, as in Obsidian", () => {
+  const html = renderProperties("---\ntags: [a, b, c, d, e]\n---\n");
+  assert.equal(html.match(/data-property-chip="/g)?.length, 5);
+  assert.doesNotMatch(
+    html,
+    /Showing|data-property-chip-extra|\bhidden data-property-chip/,
+  );
+});
+
+test("listPreviewCount, when set, shows the top items with a disclosure", () => {
   const html = renderProperties(
     "---\ntags: [a, b, c, d, e]\n---\n",
     {},
@@ -304,20 +330,25 @@ test("decision_confirmation stays Obsidian Unknown JSON (not OKF typed)", () => 
     html,
     /data-property-key="decision_confirmation"[\s\S]*mod-unknown/,
   );
-  assert.doesNotMatch(html, /mod-okf-provenance/);
+  assert.doesNotMatch(html, /data-property-kind="yaml"/);
 });
 
-test("verified map and list use OKF typed provenance UI", () => {
+test("verified map and list are YAML in an editable field", () => {
   const single = renderProperties(
     "---\nverified: {by: human:a, at: '2026-01-01T00:00:00Z'}\n---\n",
   );
   assert.match(single, /data-property-type="verified"/);
-  assert.match(single, /mod-okf-provenance/);
+  assert.match(
+    single,
+    /<textarea [^>]*data-property-input="verified" data-property-kind="yaml">[^<]*human:a/,
+  );
   const list = renderProperties(
     "---\nverified:\n  - {by: human:a, at: '2026-01-01T00:00:00Z'}\n  - {by: human:b}\n---\n",
   );
-  assert.match(list, /mod-okf-verified-list/);
-  assert.match(list, /okf-provenance-by[^>]*>human:a</);
+  assert.match(
+    list,
+    /<textarea [^>]*data-property-input="verified" data-property-kind="yaml">[^<]*human:a[^<]*human:b/,
+  );
 });
 
 test("sheet heading and add control use Obsidian class aliases and lucide-plus", () => {
@@ -333,4 +364,15 @@ test("sheet heading and add control use Obsidian class aliases and lucide-plus",
   );
   assert.match(html, /data-lucide="plus"/);
   assert.doesNotMatch(html, /＋/);
+});
+
+test("generated keeps a final newline its value needs", () => {
+  const html = renderProperties(
+    "---\ngenerated:\n  by: agent\n  notes: |+\n    a\n\n---\n",
+  );
+  const text = html.match(
+    /data-property-input="generated" data-property-kind="yaml">([\s\S]*?)<\/textarea>/,
+  )?.[1];
+  assert.ok(text);
+  assert.match(text!, /\n\n$/);
 });
