@@ -544,7 +544,7 @@ test("keeping a note as text ends with its last text tab", async (t) => {
   tabsChanged.fire({ opened: [], changed: [], closed: [text] });
   assert.deepEqual(state.values.get("lumiere.reclaim.readerText"), []);
 
-  // A chat link then opens the note as text in a new tab: back to Lumière.
+  // A chat link then opens the note as text in a new tab: back to Lumia.
   const link = cursorTab();
   link.input = new TabInputText(Uri.parse(note));
   tabsChanged.fire({ opened: [link], changed: [], closed: [] });
@@ -916,7 +916,7 @@ test("Cursor handoff surface forces language markdown on open and show", async (
   );
 });
 
-test("dismiss reopens Lumière when only the mirror tab remains", async () => {
+test("dismiss reopens Lumia when only the mirror tab remains", async () => {
   const surface = host.cursorHandoff.createCursorHandoffSurface();
   const mirror = cursorTab();
   mirror.input = new TabInputText(Uri.parse(note));
@@ -1085,7 +1085,7 @@ test("dismiss closes the mirror tab by identity while another tab is active", as
   ]);
 });
 
-test("dismiss does not reopen Lumière when a Live Preview sibling remains", async () => {
+test("dismiss does not reopen Lumia when a Live Preview sibling remains", async () => {
   const surface = host.cursorHandoff.createCursorHandoffSurface();
   workshopTab();
   const mirror = cursorTab();

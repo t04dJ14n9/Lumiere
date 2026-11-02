@@ -1,11 +1,11 @@
-# AGENT.md — Developing a Lumière custom plugin
+# AGENT.md — Developing a Lumia custom plugin
 
 > Complementary to [AGENTS.md](AGENTS.md); does **not** replace it. Use this
 > file for **user / third-party custom plugins**; use AGENTS.md when changing
-> Lumière itself.
+> Lumia itself.
 
 This file teaches an **external coding agent** (local Codex or a human) how to
-build a **user / third-party plugin** that obeys Lumière’s extension
+build a **user / third-party plugin** that obeys Lumia’s extension
 core. If you are changing Workshop itself (kernel, built-in `src/plugins/`,
 webview), stop and read **AGENTS.md** instead.
 
@@ -58,7 +58,7 @@ core contributors only. Copy the **sample external plugin** instead:
 
 ## 2. Prerequisites
 
-- Lumière installed (or under development) with **API version 1**.
+- Lumia installed (or under development) with **API version 1**.
 - Extension ID to depend on: `t04dj14n9.vscode-markdown-workshop`.
 - Node.js tooling to bundle your extension (`esbuild` / `tsc` as you prefer).
 - For packaging: `@vscode/vsce`.
@@ -196,7 +196,7 @@ Only these (declare in `inject`):
 | `markers` | `set`, `clear`, `registerAction` — badges on note ranges |
 | `commands` | `register(id, run)` — `id` must start with your extension id |
 | `codeBlocks` | `register({ language, render })` — returns `{ markdown }` **or** `{ html }`; sanitized; **trusted workspaces only** (Workshop gate) |
-| `logger` | `debug` / `warn` / `error` → Lumière output channel |
+| `logger` | `debug` / `warn` / `error` → Lumia output channel |
 
 Always available on context (not via inject list semantics beyond docs): `on`,
 `effect` — treat them as part of the external context contract in API.md.
@@ -312,7 +312,7 @@ code --user-data-dir /tmp/mdwb-plugin-dev/user \
   /path/to/a/markdown/vault
 ```
 
-Install or also develop Lumière into the **same local profile** first
+Install or also develop Lumia into the **same local profile** first
 (VSIX or second `--extensionDevelopmentPath` as your tooling allows) so they can
 run together locally; both must ultimately resolve to the **same Extension Host**.
 The canonical v1 consumer/sample is a Node-host extension with a `main` entry.
@@ -344,7 +344,7 @@ Before claiming a custom plugin works (**API / lifecycle + manual integration**)
    (`apiVersion` guard / missing export). Separately understand that
    `extensionDependencies` may prevent normal activation if Workshop is not
    installed — that is VS Code behavior, not the same as your guard.
-2. Plugin appears in **Lumière: Show Plugin Status** / catalog
+2. Plugin appears in **Lumia: Show Plugin Status** / catalog
    (same local Extension Host).
 3. At least one trivial contribution works (marker **or** command **or**
    claimed link **or** code-block language). Prefer proving **command + marker**
@@ -402,8 +402,8 @@ Before claiming a custom plugin works (**API / lifecycle + manual integration**)
 
 ## 12. Relationship statement (for maintainers)
 
-- **AGENTS.md** = how to develop Lumière.
-- **AGENT.md** = how to develop a plugin that **uses** Lumière.
+- **AGENTS.md** = how to develop Lumia.
+- **AGENT.md** = how to develop a plugin that **uses** Lumia.
 - Keep both. Cross-link; never merge into one file without an explicit owner
   decision.
 - **AGENTS.md must** contain an imperative routing sentence pointing custom /

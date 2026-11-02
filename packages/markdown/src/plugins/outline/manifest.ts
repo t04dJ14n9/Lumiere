@@ -7,7 +7,7 @@ export const config = Schema.object({
   followCursor: Schema.boolean()
     .default(true)
     .description(
-      "Select and reveal the current heading in Markdown Outline as the cursor moves, without taking focus.",
+      "Select and reveal the current heading in Markdown Outline as the cursor moves or the note scrolls, without taking focus.",
     ),
   expandMode: Schema.union(["accordion", "all"])
     .default("accordion")
@@ -23,7 +23,7 @@ export default defineManifest({
     "Markdown Outline with expansion actions and optional cursor following. Go to Heading (Ctrl+Shift+O) searches the active Workshop note's headings.",
   kind: "feature",
   defaultEnabled: true,
-  surfaces: ["host"],
+  surfaces: ["host", "webview"],
   capabilities: ["views", "navigation", "commands", "keybindings"],
   config,
   contributes: {
@@ -65,8 +65,8 @@ export default defineManifest({
       {
         id: "outline.toggle",
         key: "ctrl+alt+o",
-        // Match Lumière PDF: Control+Command+O on macOS.
-        // Editor-scoped so the same keys do not steal Lumière PDF's outline toggle.
+        // Match Lumia PDF: Control+Command+O on macOS.
+        // Editor-scoped so the same keys do not steal Lumia PDF's outline toggle.
         mac: "ctrl+cmd+o",
       },
     ],

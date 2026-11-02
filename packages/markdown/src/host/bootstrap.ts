@@ -59,7 +59,7 @@ export interface BootstrapOptions {
 }
 
 /**
- * Start Lumière's plugins in `root` (the extension's plugin tree;
+ * Start Lumia's plugins in `root` (the extension's plugin tree;
  * tests get a fresh one). Nothing here may import `vscode`: other editors
  * start the same plugins over their own host services.
  */

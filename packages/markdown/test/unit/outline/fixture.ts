@@ -223,7 +223,18 @@ export async function outlineFixture(
     },
     configure,
     panel(id: string, path = "A.md", head = 0) {
+      const notifications = new Map<string, Set<(params: unknown) => void>>();
       const cursor = {
+        /** As the webview reports a scroll: where the reader is now. */
+        read(offset: number, version?: number): void {
+          for (const run of notifications.get("outline.readingPosition") ??
+            []) {
+            run({ offset, version: version ?? cursor.version });
+          }
+        },
+        get listeners(): number {
+          return notifications.get("outline.readingPosition")?.size ?? 0;
+        },
         head,
         version: 0,
         documentVersion: 1,
@@ -255,6 +266,17 @@ export async function outlineFixture(
             assert.equal(method, "captureCursor");
             cursor.calls++;
             return cursor.capture();
+          },
+          on(
+            protocol: { id: string },
+            method: string,
+            run: (params: unknown) => void,
+          ) {
+            const key = `${protocol.id}.${method}`;
+            const set = notifications.get(key) ?? new Set();
+            set.add(run);
+            notifications.set(key, set);
+            return () => set.delete(run);
           },
         },
       } as unknown as EditorPanel;

@@ -2,7 +2,7 @@
   "customEditors": [
     {
       "viewType": "lumiere.pdf.viewer",
-      "displayName": "Lumi\u00e8re PDF",
+      "displayName": "Lumia PDF",
       "selector": [
         {
           "filenamePattern": "*.pdf"
@@ -373,12 +373,12 @@
     {
       "command": "lumiere.pdf.ideContext.copy",
       "title": "Copy IDE Context",
-      "category": "Lumi\u00e8re PDF"
+      "category": "Lumia PDF"
     },
     {
       "command": "lumiere.pdf.ideContext.send",
       "title": "Send IDE Context to Agent\u2026",
-      "category": "Lumi\u00e8re PDF"
+      "category": "Lumia PDF"
     }
   ],
   "menus": {
@@ -813,12 +813,12 @@
     ]
   },
   "configuration": {
-    "title": "Lumi\u00e8re PDF",
+    "title": "Lumia PDF",
     "properties": {
       "lumiere.pdf.outline.followCursor": {
         "type": "boolean",
-        "default": false,
-        "description": "Reveal and select the bookmark containing the current PDF page and reading position in PDF Outline, without moving focus. Toggle Follow Cursor in the outline's More Actions menu."
+        "default": true,
+        "description": "Select the bookmark of the current PDF page and reading position in PDF Outline as you scroll, without moving focus. Its parents and its own sub-bookmarks open and every other branch closes. Toggle Follow Cursor in the outline's More Actions menu."
       },
       "lumiere.pdf.copyLinkForAgent.target": {
         "type": "string",
@@ -1147,7 +1147,7 @@
   "mcpServerDefinitionProviders": [
     {
       "id": "lumiere.pdf.agentBridge",
-      "label": "Lumi\u00e8re PDF"
+      "label": "Lumia PDF"
     }
   ]
 }

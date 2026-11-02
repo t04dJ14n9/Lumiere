@@ -7,11 +7,13 @@ import {
   type Transaction,
 } from "@codemirror/state";
 import type { SyntaxNodeRef, Tree } from "@lezer/common";
-import { language, syntaxTree } from "@codemirror/language";
+import { ensureSyntaxTree, language, syntaxTree } from "@codemirror/language";
 import type { EditorView, WidgetType } from "@codemirror/view";
 import type { Disposer } from "@workshop/core";
-import { parseMarkdown } from "../../markdown/dialect/parser";
-import { DocumentParse } from "./document-parse";
+import {
+  parseMarkdown,
+  rememberParsedMarkdown,
+} from "../../markdown/dialect/parser";
 export interface RenderBlock {
   from: number;
   to: number;
@@ -104,55 +106,88 @@ export const FIRST_PAINT_PARSE_CHARS = 10000;
 /** Swap in a further-parsed (or rebuilt) tree of the same document. */
 export const replaceDocumentTree = StateEffect.define<Tree>();
 
-/** The opening band of a large note (whole blocks); all of a small one. */
-export function parseForFirstPaint(
-  doc: Text,
-  budget = FIRST_PAINT_PARSE_CHARS,
-): Tree {
-  if (doc.length <= budget) {
-    return parseMarkdown(doc);
-  }
-  return new DocumentParse(doc).coverTo(budget);
-}
+/** Time for a parse that must finish now, in milliseconds: no limit. */
+const NOW = 1e9;
 
 /**
- * Parse again only what the edit touched. A complete tree stays complete; a
- * prefix stays the same prefix, so typing in a large note that is still
- * parsing never parses the rest of it.
+ * CodeMirror's syntax tree of `state`, parsed now at least up to `upto`
+ * (in whole blocks, so it may reach past it). Live Preview and CodeMirror
+ * share one parse, kept by CodeMirror's language; this only asks it to go
+ * further when Live Preview needs more of the note than it has yet.
  */
-function updateDocumentTree(tree: Tree, transaction: Transaction): Tree {
-  const { changes, newDoc } = transaction;
-  const startDoc = transaction.startState.doc;
-  const fragments = DocumentParse.from(startDoc, tree).fragmentsAfter(
-    changes,
-    newDoc,
-  );
-  const upto =
-    tree.length >= startDoc.length
-      ? newDoc.length
-      : changes.mapPos(tree.length, 1);
-  return new DocumentParse(newDoc, fragments).coverTo(upto);
+export function languageTree(state: EditorState, upto: number): Tree {
+  const tree = syntaxTree(state);
+  if (tree.length >= Math.min(upto, state.doc.length)) {
+    return tree;
+  }
+  return ensureSyntaxTree(state, upto, NOW) ?? tree;
+}
+
+/** A whole tree is also kept for readers that parse the document. */
+function remembered(doc: Text, tree: Tree): Tree {
+  if (tree.length >= doc.length) {
+    rememberParsedMarkdown(doc, tree);
+  }
+  return tree;
 }
 
 /**
- * Live Preview's syntax tree: the whole note, or while a large note is still
- * parsing, a prefix that covers at least the viewport. Reuses unchanged
- * syntax across edits without making distant headings or footnotes
- * viewport-dependent once complete.
+ * Live Preview's syntax tree: CodeMirror's, covering the whole note, or
+ * while a large note is still parsing, a prefix that covers at least the
+ * opening band and, through `documentTreeParser`, the viewport. It never
+ * covers less after a transaction than before it: a whole tree stays
+ * whole, a prefix keeps its end (an edit parses again only where it
+ * touched; CodeMirror reuses the rest). A state without the Markdown
+ * language (a bare test state) gets a parse of its own.
  */
 export const documentTree = StateField.define<Tree>({
-  create: (state) => parseForFirstPaint(state.doc),
+  create: (state) =>
+    remembered(
+      state.doc,
+      state.facet(language)
+        ? languageTree(state, FIRST_PAINT_PARSE_CHARS)
+        : parseMarkdown(state.doc),
+    ),
   update(tree, transaction) {
     for (const effect of transaction.effects) {
       if (effect.is(replaceDocumentTree)) {
-        return effect.value;
+        return remembered(transaction.newDoc, effect.value);
       }
     }
-    return transaction.docChanged
-      ? updateDocumentTree(tree, transaction)
-      : tree;
+    const state = transaction.state;
+    if (!state.facet(language)) {
+      return transaction.docChanged ? parseMarkdown(state.doc) : tree;
+    }
+    const reach =
+      tree.length >= transaction.startState.doc.length
+        ? state.doc.length
+        : transaction.changes.mapPos(tree.length, 1);
+    const next = languageTree(state, Math.max(reach, FIRST_PAINT_PARSE_CHARS));
+    return next === tree ? tree : remembered(state.doc, next);
   },
 });
+
+/**
+ * Whether `transaction` brought a tree that is more than the old one parsed
+ * again where the text changed: a replaced tree, or a parse that reached
+ * further (CodeMirror's background parse, or Live Preview's, published
+ * with or without an edit). Indexes of the note look at the new part then.
+ */
+export function treeReached(transaction: Transaction): number | undefined {
+  const before = transaction.startState.field(documentTree, false);
+  const after = transaction.state.field(documentTree, false);
+  if (!before || !after || before === after) {
+    return undefined;
+  }
+  const reach =
+    before.length >= transaction.startState.doc.length
+      ? transaction.newDoc.length
+      : transaction.changes.mapPos(before.length, 1);
+  return after.length > reach ||
+    transaction.effects.some((effect) => effect.is(replaceDocumentTree))
+    ? reach
+    : undefined;
+}
 
 /**
  * The Markdown syntax tree of an editor state: Live Preview's while it is

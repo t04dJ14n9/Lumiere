@@ -57,7 +57,7 @@ function harness(initial: unknown) {
   return { host, writes, messages, errors, storage };
 }
 
-test("the workspace command records Lumière and uses the native selection route", async () => {
+test("the workspace command records Lumia and uses the native selection route", async () => {
   const h = harness({ "*.pdf": "pdf.preview" });
   await useForMarkdownInWorkspace(h.host);
   assert.deepEqual(h.writes, [

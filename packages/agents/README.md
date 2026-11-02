@@ -1,6 +1,6 @@
 # @workshop/agents
 
-What Lumière and Lumière PDF hand to coding agents (Claude Code,
+What Lumia and Lumia PDF hand to coding agents (Claude Code,
 Codex, Cursor, VS Code chat), defined once for both:
 
 - `src/handoff.ts`: the note reference and quoted payload Copy Link for Agent

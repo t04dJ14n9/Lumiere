@@ -98,9 +98,13 @@ function propertyRowHeight(row: string): number {
 }
 
 function valueColumnHeight(row: string): number {
-  // Unknown JSON / OKF provenance chips are one value line.
-  if (row.includes("mod-unknown") || row.includes("mod-okf-provenance")) {
+  // Unknown JSON is one value line.
+  if (row.includes("mod-unknown")) {
     return VALUE_MIN;
+  }
+  const inline = /<textarea class="[^"]*mod-inline" rows="(\d+)"/.exec(row);
+  if (inline) {
+    return Math.max(VALUE_MIN, Number(inline[1]) * LINE + 8);
   }
   if (
     row.includes("metadata-input-yaml") &&
@@ -155,6 +159,8 @@ function listHeight(row: string): number | undefined {
  * that unfocused paint so remounts do not reserve a full unclamped essay.
  */
 const LONGTEXT_CLAMP_LINES = 3;
+/** `sources` (`mod-scroll`) shows up to this height, then scrolls. */
+const SCROLL_TEXT_MAX = 300;
 
 function longTextHeight(row: string): number {
   const field =
@@ -169,6 +175,9 @@ function longTextHeight(row: string): number {
   for (const line of plain.split("\n")) {
     const width = Math.max(line.length, 1) * CHAR_WIDTH;
     rows += Math.max(1, Math.ceil(width / LIST_WIDTH));
+  }
+  if (tag.includes("mod-scroll")) {
+    return Math.max(VALUE_MIN, Math.min(rows * LINE, SCROLL_TEXT_MAX));
   }
   return Math.max(VALUE_MIN, Math.min(rows, LONGTEXT_CLAMP_LINES) * LINE);
 }

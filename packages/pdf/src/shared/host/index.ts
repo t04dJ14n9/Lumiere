@@ -1,5 +1,5 @@
 /**
- * What a host (VS Code, or host-node outside it) offers Lumière PDF, one
+ * What a host (VS Code, or host-node outside it) offers Lumia PDF, one
  * contract per concern. The viewer core in `src/host` is written against
  * these; VS Code's adapters are in `src/extension`.
  */

@@ -1,22 +1,13 @@
 import * as vscode from "vscode";
 import type { OutlineItem } from "../../../shared/messages";
-import {
-  findActiveOutlineItem,
-  flattenOutlineForPicker,
-} from "../../../shared/outline";
+import { flattenOutlineForPicker } from "../../../shared/outline";
 import type { PdfSettings } from "../../settings";
 import type { PdfPanel } from "../pdf/panel";
 import type { PdfPanels } from "../pdf/panels";
 import { OUTLINE_COMMAND_IDS } from "../../../shared/command-ids";
 import { createOutlineFocus } from "./focus";
+import { FOLLOW_SETTING, OutlineFollower, VIEW_ID } from "./outline-follower";
 
-const FOLLOW_SETTING = "lumiere.pdf.outline.followCursor";
-const FOLLOW_CONTEXT = "lumiere.pdf.outlineFollowCursor";
-
-/**
- * The "PDF Outline" view in the Explorer: the bookmarks of the PDF in the
- * active editor. Clicking an entry opens its page (Go to Outline Item).
- */
 export function registerOutlineView(
   panels: PdfPanels,
   settings: PdfSettings,
@@ -24,7 +15,7 @@ export function registerOutlineView(
 ): vscode.Disposable {
   let disposed = false;
   const provider = new OutlineProvider(panels);
-  const view = vscode.window.createTreeView("lumiere.pdf.outline", {
+  const view = vscode.window.createTreeView(VIEW_ID, {
     treeDataProvider: provider,
     showCollapseAll: true,
   });
@@ -73,120 +64,6 @@ export function registerOutlineView(
   });
 }
 
-/** With "follow cursor" on, keeps the bookmark of the reading position selected. */
-class OutlineFollower implements vscode.Disposable {
-  private disposed = false;
-  private enabled = false;
-  private following = false;
-  private followed: OutlineItem | undefined;
-
-  constructor(
-    private readonly view: vscode.TreeView<OutlineItem>,
-    private readonly provider: OutlineProvider,
-    private readonly panels: PdfPanels,
-    private readonly log: Pick<vscode.LogOutputChannel, "warn">,
-  ) {}
-
-  get isDisposed(): boolean {
-    return this.disposed;
-  }
-
-  dispose(): void {
-    this.disposed = true;
-  }
-
-  /** The reading position moved; with a new tree, select from scratch. */
-  treeChanged(newTree: boolean): void {
-    if (newTree) {
-      this.followed = undefined;
-    }
-    void this.follow();
-  }
-
-  applySetting(): void {
-    const enabled = vscode.workspace
-      .getConfiguration()
-      .get<boolean>(FOLLOW_SETTING, false);
-    if (enabled !== this.enabled) {
-      this.enabled = enabled;
-      this.followed = undefined;
-    }
-    void Promise.resolve(
-      vscode.commands.executeCommand("setContext", FOLLOW_CONTEXT, enabled),
-    ).catch((error) =>
-      this.log.warn(
-        `Could not update the PDF outline context: ${String(error)}`,
-      ),
-    );
-    void this.follow();
-  }
-
-  async setEnabled(enabled: boolean, settings: PdfSettings): Promise<void> {
-    await settings.update(FOLLOW_SETTING, enabled);
-    if (!this.disposed) {
-      this.applySetting();
-    }
-  }
-
-  /**
-   * Serialize reveals, then re-read the active panel: a scroll or tab switch
-   * during a reveal must finish with the newest position selected. Never
-   * rejects; event handlers can start it without awaiting it.
-   */
-  private async follow(): Promise<void> {
-    if (this.disposed || this.following) {
-      return;
-    }
-    this.following = true;
-    try {
-      while (!this.disposed && this.enabled && this.view.visible) {
-        if (!(await this.revealNext())) {
-          break;
-        }
-      }
-    } finally {
-      this.following = false;
-    }
-  }
-
-  /** Reveal the reading position's bookmark; false when there is no more to do. */
-  private async revealNext(): Promise<boolean> {
-    const panel = this.panels.active;
-    const state = panel?.view;
-    if (!state) {
-      return false;
-    }
-    // The offset belongs to readingPage, which can precede current page.
-    const item = findActiveOutlineItem(this.provider.getChildren(), {
-      page: state.page,
-      top: state.readingPage === state.page ? state.top : 0,
-    });
-    if (!item || item === this.followed) {
-      return false;
-    }
-    this.followed = item;
-    try {
-      await this.view.reveal(item, {
-        select: true,
-        focus: false,
-        expand: false,
-      });
-      return true;
-    } catch (error) {
-      this.followed = undefined;
-      if (this.disposed) {
-        return false;
-      }
-      // Old nodes can disappear while VS Code is resolving their parents.
-      if (panel !== this.panels.active || !this.provider.nodes.includes(item)) {
-        return true;
-      }
-      this.log.warn(`Could not follow the PDF outline: ${String(error)}`);
-      return false;
-    }
-  }
-}
-
 interface OutlineParts {
   panels: PdfPanels;
   view: vscode.TreeView<OutlineItem>;
@@ -222,7 +99,13 @@ function outlineCommands(parts: OutlineParts): vscode.Disposable[] {
     ),
     vscode.commands.registerCommand(
       OUTLINE_COMMAND_IDS.goToOutlineItem,
-      (page: unknown, top?: unknown) => goToOutlineItem(parts, page, top),
+      (page: unknown, top?: unknown) => {
+        // A tree click: the row stays where the pointer is.
+        if (typeof page === "number") {
+          follower.jumpedTo(page, typeof top === "number" ? top : undefined);
+        }
+        return goToOutlineItem(parts, page, top);
+      },
     ),
   ];
 }
@@ -367,6 +250,7 @@ class OutlineProvider
   private panel: PdfPanel | undefined;
   private outline: OutlineItem[] | undefined;
   private readonly parents = new Map<OutlineItem, OutlineItem>();
+  private accordion = false;
   nodes: OutlineItem[] = [];
 
   constructor(private readonly panels: PdfPanels) {
@@ -398,6 +282,18 @@ class OutlineProvider
     return true;
   }
 
+  /**
+   * Follow Cursor's accordion: every branch starts closed and following
+   * opens the reading position's path. VS Code would apply an open start
+   * state after the follower closed the tree, leaving other parts open.
+   */
+  setAccordion(on: boolean): void {
+    if (on !== this.accordion) {
+      this.accordion = on;
+      this.changed.fire();
+    }
+  }
+
   getChildren(item?: OutlineItem): OutlineItem[] {
     return item ? item.children : (this.outline ?? []);
   }
@@ -427,12 +323,12 @@ class OutlineProvider
     this.nodes = [];
   }
 
-  /** Top-level bookmarks start expanded, deeper ones collapsed. */
+  /** Top-level bookmarks start expanded, deeper ones (and all, with the accordion) collapsed. */
   private collapsibleState(item: OutlineItem): vscode.TreeItemCollapsibleState {
     if (item.children.length === 0) {
       return vscode.TreeItemCollapsibleState.None;
     }
-    return this.outline?.includes(item)
+    return !this.accordion && this.outline?.includes(item)
       ? vscode.TreeItemCollapsibleState.Expanded
       : vscode.TreeItemCollapsibleState.Collapsed;
   }

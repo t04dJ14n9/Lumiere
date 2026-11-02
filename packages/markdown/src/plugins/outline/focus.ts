@@ -10,15 +10,15 @@ export const NATIVE_OUTLINE_ID = "outline";
  */
 export const TAGS_VIEW_ID = contributionId("tags");
 
-/** Lumière custom editor view type. */
+/** Lumia custom editor view type. */
 export const MARKDOWN_WORKSHOP_EDITOR = "lumiere.markdown.editor";
 
-/** Lumière PDF custom editor view type (peer product). */
+/** Lumia PDF custom editor view type (peer product). */
 export const PDF_WORKSHOP_EDITOR = "lumiere.pdf.viewer";
 
 /**
  * Delay before restoring the native Outline after leaving a Workshop editor.
- * A short window lets a Lumière PDF tab take over without flashing Outline.
+ * A short window lets a Lumia PDF tab take over without flashing Outline.
  */
 export const LEAVE_RESTORE_MS = 120;
 
@@ -35,10 +35,10 @@ export type OutlineFocusOptions = {
   focusEditor: () => Promise<unknown>;
   /**
    * Active tab's custom editor viewType, if any. Used to abort native Outline
-   * restore when Markdown or Lumière PDF already owns the sidebar swap.
+   * restore when Markdown or Lumia PDF already owns the sidebar swap.
    */
   activeCustomEditorViewType?: () => string | undefined;
-  /** This product's custom editor id (defaults to Lumière). */
+  /** This product's custom editor id (defaults to Lumia). */
   ownEditorViewType?: string;
   outlineViewId?: string;
   leaveDelayMs?: number;
@@ -60,7 +60,7 @@ type FocusState = {
 };
 
 /**
- * One-shot sidebar swap while a Lumière custom editor is active:
+ * One-shot sidebar swap while a Lumia custom editor is active:
  * hide the native Outline, focus Markdown Outline (expanded), leave Tags and
  * other Explorer subpanels collapsed, then restore the native Outline on leave
  * (debounced for Workshop↔PDF handoffs).

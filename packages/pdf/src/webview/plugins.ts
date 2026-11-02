@@ -53,7 +53,7 @@ export function viewerPlugins(buffer: ArrayBuffer) {
     createPluginRegistration(AnnotationPluginPackage, {
       // The highlight tool writes the sidecar, not the PDF, where the host keeps one.
       tools: [sidecarHighlightTool],
-      annotationAuthor: "Lumière",
+      annotationAuthor: "Lumia",
       autoCommit: true,
       selectAfterCreate: true,
       deactivateToolAfterCreate: false,

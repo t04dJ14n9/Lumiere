@@ -85,7 +85,7 @@ function answerNotePages(ctx: Context): void {
 
 /**
  * When the VS Code adapter offers Explorer drop reclaim, convert matching
- * pinned media tabs into attachments on the prior Lumière note.
+ * pinned media tabs into attachments on the prior Lumia note.
  */
 function reclaimExplorerOpens(ctx: Context): void {
   const register = ctx.customEditors?.registerExplorerAttachmentReclaim;

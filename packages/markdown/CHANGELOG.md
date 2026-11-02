@@ -2,6 +2,34 @@
 
 ## 0.1.0 (unreleased)
 
+- Markdown Outline follows scrolling as well as the caret, like a page's
+  table of contents: the section being read (the caret's while it is on
+  screen, else the one at the middle of the editor) is selected, its parents
+  and subheadings open and every other branch closes.
+
+- Properties: a `tags` list (and any list) shows every item, as Obsidian
+  does, instead of three and a **Showing 3 of N** button
+  (`properties.listPreviewCount` now defaults to 0, off). `sources` is no
+  longer clamped to three lines: it shows up to 300 px and scrolls past
+  that. OKF `generated` and `verified` are editable in place, as YAML text
+  that reads like any other value, instead of read-only chips; an edit
+  keeps the map.
+
+- Lumière is now called Lumia wherever it shows: the editor's name in
+  **Reopen Editor With…**, command titles, settings titles and messages.
+  Ids (`lumiere.*` commands and settings, the `lumiere.markdown.editor`
+  view type) are unchanged.
+
+- Double-clicking a heading in the Markdown Outline goes to that heading
+  again. The first click's jump re-applied the accordion, collapsing the
+  rows around it, so the second click landed on another heading and went
+  there. A click in the outline now leaves the tree as it is.
+
+- Live Preview and the editor parse a note once instead of twice: Live
+  Preview now reads CodeMirror's syntax tree. Jumping around a large note no
+  longer re-parses 100,000 characters each time (script time over four
+  scrollbar jumps in an 835 KB note: about 330-400 -> 90-100 ms).
+
 - Dragging a selection from the start of a heading takes its `#` marks, as
   in Obsidian; the marks were hidden when the drag began, so the selection
   started after them.

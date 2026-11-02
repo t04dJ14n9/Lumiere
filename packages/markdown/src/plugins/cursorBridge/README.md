@@ -3,7 +3,7 @@
 In Cursor, **Cmd/Ctrl+L** opens Cursor Chat and **Cmd/Ctrl+K** opens Cursor
 Edit on the Live Preview selection, using Cursor’s native Accept/Reject. Plain
 VS Code is unchanged. Obsidian has no built-in equivalent; this is Cursor muscle
-memory on Lumière’s custom editor.
+memory on Lumia’s custom editor.
 
 ## How it works
 
@@ -31,12 +31,12 @@ Edit, and `openCursorEdit` preserves that id. If override-only fails, the host
 mirrors into a focused native tab and retries Edit without overrides, using
 that editor and its selection. Passing
 `overrideUri` again would force a reload through `workbench.editorAssociations`,
-which can reopen Lumière instead of a text editor. If that still fails (or Edit
+which can reopen Lumia instead of a text editor. If that still fails (or Edit
 is missing/throws), it releases the lease, dismisses any native mirror, and
 falls back to Chat so no orphan Plain Text tab remains. Each handoff acquires a
 pending lease token and promotes it after verified Edit (or Chat’s native
 confirmation). Verified Edit success arms one-shot mirror cleanup and shows a
-left status-bar action (**Return to Lumière**). Clicking it releases that
+left status-bar action (**Return to Lumia**). Clicking it releases that
 handoff's token and dismisses the text mirror so Live Preview can return.
 Hard backups still abandon when the last native text tab closes or the active
 tab/editor leaves the mirror. An optional Explorer when-probe may also end
@@ -60,7 +60,7 @@ model. Dirty notes are allowed without autosave.
 - `handoff.ts`: Lease + version-safe native editor mirror.
 - `host.ts`: Context keys, command registration, status-bar dismiss and one-shot Edit mirror cleanup.
 - `edit-prompt-probe.ts`: optional empty Explorer tree and ownership of the armed context.
-- `../../host/cursor-handoff.ts`: native handoff surface and mirror dismissal (reopens Lumière when no Live Preview sibling remains).
+- `../../host/cursor-handoff.ts`: native handoff surface and mirror dismissal (reopens Lumia when no Live Preview sibling remains).
 - `../../host/cursor-edit-end.ts`: optional when-probe visibility and tab/editor departure hard backup.
 
 ## Services, events and settings
@@ -88,7 +88,7 @@ Cursor Edit Selection showed that X/Esc alone often leave the native Markdown
 mirror open: `activeTextEditor` stays on the mirror, and the Explorer when-probe
 (`(editcontextbarcursor || editorHasPromptBar) &&
 lumiere.markdown.editPromptArmed`) may never become visibly true. The reliable
-dismiss path is therefore a left status-bar action (**Return to Lumière**)
+dismiss path is therefore a left status-bar action (**Return to Lumia**)
 armed on verified Edit success; its click runs the same abandon path (release
 lease + dismiss mirror). Tab/editor departure remains a hard auto backup
 (500 ms opening grace, 250 ms poll). The when-probe stays as an optional weak
@@ -100,7 +100,7 @@ window's armed probe context until their last owner releases it; the status
 bar tracks the most recently armed URI. Focus-return and visible-range capacity
 heuristics are no longer used. Closing the mirror reveals a Live Preview
 sibling when one is open; if only the mirror tab remained, dismiss reopens
-Lumière via `vscode.openWith` in the mirror's group, in the background when
+Lumia via `vscode.openWith` in the mirror's group, in the background when
 the reader had moved to another tab. A mirror the reader closed (Cmd+W, Close
 All) is not reopened: the Edit-end watcher reports `restore: false` when the
 mirror tab is in the closed-tab event (or disappears during the leave settle),

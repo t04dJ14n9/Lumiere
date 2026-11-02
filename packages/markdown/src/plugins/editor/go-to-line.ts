@@ -1,7 +1,7 @@
 /**
  * Ctrl+G → Go to Line in Live Preview / Source (BH-033).
  *
- * VS Code's `workbench.action.gotoLine` needs a text editor. Lumière is a
+ * VS Code's `workbench.action.gotoLine` needs a text editor. Lumia is a
  * custom editor, so the stock chord shows "Open a text editor first…". Own
  * Ctrl+G (same as the PDF viewer) and jump via vaults.open at the line start.
  */

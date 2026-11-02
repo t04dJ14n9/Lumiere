@@ -344,11 +344,11 @@ async function openNavigation(options: OpenNavigation): Promise<void> {
   }
 }
 
-/** Lumière PDF's public command (in this extension): open a PDF at a location. */
+/** Lumia PDF's public command (in this extension): open a PDF at a location. */
 export const PDF_OPEN_LOCATION_COMMAND = "lumiere.pdf.openLocation";
 
 /**
- * Open a PDF in Lumière PDF, at the page a link such as
+ * Open a PDF in Lumia PDF, at the page a link such as
  * `[[paper.pdf#page=3]]` names, or at a highlight kept in its sidecar
  * (`paper.pdf#hl-a1b2c3d4`). Any other fragment (Obsidian ignores those
  * too) opens the PDF where it was left.

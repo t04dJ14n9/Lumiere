@@ -10,44 +10,52 @@ these headings in a native Quick Pick while the Workshop editor is active.
 The view parses the active panel's authoritative document text into nested
 headings and refreshes after edits. Follow Cursor defaults to on; its checked
 overflow action persists `outline.followCursor` through VS Code settings.
-When enabled, cursor movement, panel changes and view visibility reveal and
-select the current section without taking focus. The default expand mode is
-accordion: only the active heading's ancestor path stays open, without
-rebuilding the tree. `all` starts every parent expanded and follow only
+When enabled, cursor movement, scrolling, panel changes and view visibility
+reveal and select the current section without taking focus. A scroll follows
+where the reader is (`reading-position.ts`, the plugin's webview half): the
+caret while it is on screen, else the line at the middle of the editor (the
+middle because a click in the outline centres its heading). The default
+expand mode is accordion, like a page's table of contents: the active
+heading's parents and its own subheadings are open and every other branch
+is closed, without rebuilding the tree. `all` starts every parent expanded and follow only
 selects. Version and panel identity guards discard stale captures. Collapse All uses VS Code's native tree action;
 Expand All reveals every node in order so deeply nested headings also expand.
 Clicking a heading opens the note at its offset; the links plugin's `navigate` then
 scrolls that offset to the vertical centre of the editor, as VS Code's Outline
 (`revealRange` with `InCenter`) and Obsidian's do. Near the start or end of a
 note the scroll range ends first, so the heading stays above or below the
-centre.
+centre. The jump a click makes does not collapse or expand anything (nor
+does the caret the editor reports from before it): rows that moved under
+the pointer sent a double-click's second click to another heading. The
+accordion applies again once the caret or the reading position moves on.
 
-Ctrl+Shift+O (Command+Shift+O on macOS), or **Lumière: Go to
+Ctrl+Shift+O (Command+Shift+O on macOS), or **Lumia: Go to
 Heading…** in the command palette, opens a searchable heading picker. It reads
 the active panel's authoritative text, shows heading levels and parent titles,
 and navigates through the same path as the tree. Dismissed or stale picks
 (edited document, changed panel or stopped plugin) do not navigate.
 
 Ctrl+Alt+O (Control+Command+O on macOS) toggles Markdown Outline while the Workshop
-editor is active (editor-scoped keybinding, so Lumière PDF keeps the same keys).
+editor is active (editor-scoped keybinding, so Lumia PDF keeps the same keys).
 The command palette entry is workbench/config-gated like Quick Switcher. Hiding
 targets the view itself, including after moving it to the secondary sidebar or
 panel; showing restores and focuses it in its current location.
 
-When a Lumière editor becomes active, the plugin hides VS Code's
+When a Lumia editor becomes active, the plugin hides VS Code's
 native **Outline**, focuses **Markdown Outline** (expanded by default), and
 returns focus to the editor. **Tags** and other Explorer subpanels stay
 collapsed by default (`visibility: "collapsed"`); they are not focused on
 enter. Leaving the last Workshop editor restores the native Outline after a
-short debounce; restore is skipped if Lumière PDF (or another Workshop editor) already owns the active tab. Manual
+short debounce; restore is skipped if Lumia PDF (or another Workshop editor) already owns the active tab. Manual
 changes to Outline while a Workshop editor stays active are left alone until the
 next enter/leave. Tags also use the same `activeCustomEditorId` when-clause as
 Markdown Outline so they do not linger beside non-Workshop editors.
 
-
 ## Files
 
 - `host.ts`: the plugin registrations and editor/document event routing.
+- `webview.ts`, `reading-position.ts`: report where the reader is after a
+  scroll (debounced, only when it changes), over `protocol.ts`.
 - `symbol-picker.ts`: searchable headings and guarded navigation for Quick Pick.
 - `symbols.ts`: nested heading symbols with enclosing section ranges.
 - `tree.ts`: heading nodes, parent lookup and editor-to-source coordinates.
@@ -63,7 +71,9 @@ Markdown Outline so they do not linger beside non-Workshop editors.
 - Injects the host services `hostCommands`, `dialogs`, `views` and `settings`, `vaults` (navigation) and `editors`.
 - Listens to `editor/opened`, `editor/closed`, `editor/ready`,
   `editor/activeChanged`, `editor/selectionChanged` and `document/changed`,
-  plus native configuration and tree visibility changes. Emits no events and
+  each panel's `outline.readingPosition` notification, plus native
+  configuration and tree visibility changes. The webview half injects
+  `editor` and `rpc`. Emits no events and
   provides no services.
 - Maintains `lumiere.markdown.plugin.outline` while the window plugin is
   running, so editor-scoped shortcuts (Go to Heading, Ctrl+Alt+O) reflect its

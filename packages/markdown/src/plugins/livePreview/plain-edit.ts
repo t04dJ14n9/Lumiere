@@ -1,6 +1,6 @@
 import type { Transaction } from "@codemirror/state";
 import type { Tree } from "@lezer/common";
-import { markdownTree, replaceDocumentTree } from "./api";
+import { markdownTree, treeReached } from "./api";
 
 /**
  * Characters an edit may not add or remove and still be plain: a line
@@ -61,10 +61,7 @@ export function isPlainTextEdit(transaction: Transaction): boolean {
 const verdicts = new WeakMap<Transaction, boolean>();
 
 function plainTextEdit(transaction: Transaction): boolean {
-  if (
-    !transaction.docChanged ||
-    transaction.effects.some((effect) => effect.is(replaceDocumentTree))
-  ) {
+  if (!transaction.docChanged || treeReached(transaction) !== undefined) {
     return false;
   }
   const doc = transaction.startState.doc;

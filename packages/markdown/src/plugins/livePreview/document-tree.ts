@@ -1,19 +1,15 @@
 import { ViewPlugin, type EditorView, type ViewUpdate } from "@codemirror/view";
+import { ensureSyntaxTree, language, syntaxTree } from "@codemirror/language";
+import type { Tree } from "@lezer/common";
 import {
   documentTree,
   FIRST_PAINT_PARSE_CHARS,
-  parseForFirstPaint,
+  languageTree,
   replaceDocumentTree,
 } from "./api";
 import { backgroundUpdate } from "../editor/api";
-import { DocumentParse } from "./document-parse";
 
-export {
-  documentTree,
-  FIRST_PAINT_PARSE_CHARS,
-  parseForFirstPaint,
-  replaceDocumentTree,
-};
+export { documentTree, FIRST_PAINT_PARSE_CHARS, replaceDocumentTree };
 
 /**
  * Characters past the viewport parsed together with it, so the next few
@@ -35,16 +31,19 @@ export type ParsedView = Pick<EditorView, "state" | "viewport" | "dispatch">;
 
 /**
  * Keeps Live Preview's tree of a large note ahead of the viewport and
- * finishes it in the background.
+ * finishes it in the background, on CodeMirror's own parse (one parse of
+ * the note, kept by CodeMirror's language; see `documentTree`).
  *
  * While the tree is a prefix, a viewport that passes its end has the parse
- * resumed at once, up to the viewport and a margin: those lines need their
+ * pushed at once, up to the viewport and a margin: those lines need their
  * syntax this frame. The rest is parsed in short idle slices, scrolling or
- * not, and published when complete. An edit hands everything parsed so far
- * to the next document version, so nothing restarts from the top.
+ * not, and published when complete; CodeMirror's own background parse,
+ * which stops 100,000 characters past the viewport, works on the same parse
+ * between them. An edit hands the parse on to the next document version
+ * (CodeMirror reuses every block it did not touch), so nothing restarts
+ * from the top.
  */
 export class DocumentTreeParser {
-  private parse: DocumentParse;
   private cancelSlice: (() => void) | undefined;
   private isCatchUpQueued = false;
   private isDestroyed = false;
@@ -53,22 +52,10 @@ export class DocumentTreeParser {
     private readonly view: ParsedView,
     private readonly scheduler: IdleScheduler = browserIdleScheduler(),
   ) {
-    this.parse = DocumentParse.from(
-      view.state.doc,
-      view.state.field(documentTree),
-    );
     this.keepUp();
   }
 
-  update(update: ViewUpdate): void {
-    const tree = update.state.field(documentTree);
-    if (update.docChanged || tree !== this.parse.tree) {
-      const fragments =
-        this.parse.doc === update.startState.doc
-          ? this.parse.fragmentsAfter(update.changes, update.state.doc)
-          : [];
-      this.parse = DocumentParse.from(update.state.doc, tree, fragments);
-    }
+  update(_update: ViewUpdate): void {
     this.keepUp();
   }
 
@@ -78,16 +65,38 @@ export class DocumentTreeParser {
     this.cancelSlice = undefined;
   }
 
+  private get tree(): Tree {
+    return this.view.state.field(documentTree);
+  }
+
   private keepUp(): void {
-    if (this.parse.isComplete) {
-      this.cancelSlice?.();
-      this.cancelSlice = undefined;
+    const { state, viewport } = this.view;
+    if (!state.facet(language)) {
       return;
     }
-    if (this.view.viewport.to > this.parse.tree.length) {
+    if (viewport.to > this.tree.length || this.isAheadOfCodeMirror()) {
       this.queueCatchUp();
     }
-    this.scheduleSlice();
+    if (this.tree.length >= state.doc.length) {
+      this.cancelSlice?.();
+      this.cancelSlice = undefined;
+    } else {
+      this.scheduleSlice();
+    }
+  }
+
+  /**
+   * Whether Live Preview made CodeMirror's parse reach further than the
+   * tree CodeMirror's state holds (inside an edit, which cannot dispatch):
+   * one more transaction hands it to CodeMirror's own readers.
+   */
+  private isAheadOfCodeMirror(): boolean {
+    const { state } = this.view;
+    return (
+      syntaxTree(state).length < this.tree.length &&
+      // The tree CodeMirror's parse holds, published in its state or not.
+      ensureSyntaxTree(state, 0, 0) === this.tree
+    );
   }
 
   /** A view update cannot dispatch, so the catch-up runs right after it. */
@@ -103,16 +112,20 @@ export class DocumentTreeParser {
   }
 
   private catchUpWithViewport(): void {
-    const { to } = this.view.viewport;
-    if (
-      this.isDestroyed ||
-      this.view.state.field(documentTree, false) !== this.parse.tree ||
-      to <= this.parse.tree.length
-    ) {
+    if (this.isDestroyed) {
       return;
     }
-    this.parse.coverTo(to + PARSE_AHEAD_CHARS);
-    this.publish();
+    const { state, viewport } = this.view;
+    if (viewport.to > this.tree.length) {
+      const tree = languageTree(state, viewport.to + PARSE_AHEAD_CHARS);
+      if (tree !== this.tree) {
+        this.publish(tree);
+        return;
+      }
+    }
+    if (this.isAheadOfCodeMirror()) {
+      this.view.dispatch({ annotations: backgroundUpdate.of(true) });
+    }
   }
 
   private scheduleSlice(): void {
@@ -121,20 +134,23 @@ export class DocumentTreeParser {
     }
     this.cancelSlice = this.scheduler.request((budget) => {
       this.cancelSlice = undefined;
-      if (this.isDestroyed || this.parse.isComplete) {
+      const { state } = this.view;
+      if (this.isDestroyed || this.tree.length >= state.doc.length) {
         return;
       }
-      if (this.parse.work(performance.now() + budget)) {
-        this.publish();
+      // At least one block per slice, however short the budget.
+      const done = ensureSyntaxTree(state, state.doc.length, budget);
+      if (done) {
+        this.publish(done);
       } else {
         this.scheduleSlice();
       }
     });
   }
 
-  private publish(): void {
+  private publish(tree: Tree): void {
     this.view.dispatch({
-      effects: replaceDocumentTree.of(this.parse.tree),
+      effects: replaceDocumentTree.of(tree),
       annotations: backgroundUpdate.of(true),
     });
   }

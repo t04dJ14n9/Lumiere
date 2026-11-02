@@ -4,6 +4,7 @@ import {
   settablePropertyValue,
 } from "../../markdown/properties";
 import { propertyYamlDraft } from "../../markdown/properties/yaml-draft";
+import { propertyYamlInput } from "../../markdown/properties/values";
 import {
   DEFAULT_LIST_PREVIEW_COUNT,
   listPreviewCount as clampPreview,
@@ -35,6 +36,8 @@ interface PropertyRowOptions {
   draft: string | undefined;
   listPreviewCount: number;
   listExpanded: boolean;
+  /** No three-line clamp: up to 300px, then the field scrolls (`sources`). */
+  scrollText?: boolean;
 }
 
 export function renderProperties(
@@ -113,9 +116,11 @@ function propertyBody(
   options: PropertyRowOptions,
 ): string {
   if (isPlainTextSources(key)) {
+    // A source a line: they show unclamped, and a long list scrolls.
     return editableValue(key, sourcesDisplayValue(value, options.draft), {
       ...options,
       kind: "text",
+      scrollText: true,
     });
   }
   // Custom renderers: typed UI with an on-demand YAML editor when draftable.
@@ -128,11 +133,10 @@ function propertyBody(
   if (options.editable) {
     return editableValue(key, value, options);
   }
-  // OKF generated / verified (map or list of {by,at}) — typed actor+time.
+  // OKF generated / verified (map or list of {by,at}): its YAML, edited in
+  // place like any other value; a commit keeps it a map (or list of maps).
   if (options.draft !== undefined && isOkfProvenance(key, value)) {
-    return Array.isArray(value)
-      ? okfVerifiedListValue(value)
-      : okfProvenanceValue(value);
+    return editableYaml(key, withoutFinalNewline(options.draft), true);
   }
   // Nested non-OKF (incl. decision_confirmation): Obsidian Unknown + JSON.
   if (options.draft !== undefined && isUnknownPropertyValue(value)) {
@@ -230,7 +234,8 @@ function editableValue(
   }
   const text = propertyInputText(value);
   if (kind === "text") {
-    const input = `<div class="metadata-input-longtext" contenteditable="true" role="textbox" tabindex="-1" data-placeholder="Empty"${attr("aria-label", key)}${attr("data-property-input", key)} data-property-kind="text">${escape(text)}</div>`;
+    const scroll = options.scrollText ? " mod-scroll" : "";
+    const input = `<div class="metadata-input-longtext${scroll}" contenteditable="true" role="textbox" tabindex="-1" data-placeholder="Empty"${attr("aria-label", key)}${attr("data-property-input", key)} data-property-kind="text">${escape(text)}</div>`;
     if (/^\[\[[^\n]+\]\]$/.test(text)) {
       return `<span class="metadata-link" data-property-display>${renderInline(text)}<button type="button" tabindex="-1" class="metadata-property-link-flair" data-property-edit${attr("aria-label", `Edit ${key}`)}>${propertyFlairIcon("pencil")}</button></span>${input.replace("<div ", "<div hidden ")}`;
     }
@@ -251,20 +256,22 @@ function editableList(
   expanded: boolean,
 ): string {
   const values = value === null || value === undefined ? [] : asList(value);
+  // 0 shows every item, as Obsidian does.
+  const capped = previewCount > 0 && !expanded;
   const chips = values
     .map((item, index) => {
       const raw = propertyInputText(item);
       const text = key.toLowerCase() === "tags" ? raw.replace(/^#/, "") : raw;
       const label = pillLabel(text, key.toLowerCase() === "tags");
       const extra =
-        !expanded && index >= previewCount
+        capped && index >= previewCount
           ? " hidden data-property-chip-extra"
           : "";
       return `<span class="property-chip multi-select-pill"${extra} tabindex="-1" data-property-chip="${index}"><span class="multi-select-pill-content">${label}</span><button type="button" tabindex="-1" class="multi-select-pill-remove-button" data-property-remove="${index}"${attr("aria-label", `Remove ${text} from ${key}`)}>×</button></span>`;
     })
     .join("");
   const more =
-    !expanded && values.length > previewCount
+    capped && values.length > previewCount
       ? `<button type="button" data-property-list-more>Showing ${previewCount} of ${values.length}</button>`
       : "";
   return `<div class="property-list multi-select-container"${attr("data-property-list", key)}>${chips}${more}<div class="multi-select-input" contenteditable="true" role="textbox" tabindex="-1" data-property-list-input${attr("aria-label", `Add item to ${key}`)}${values.length ? "" : ' data-placeholder="Empty"'}></div></div>`;
@@ -302,8 +309,9 @@ function isUnknownPropertyValue(value: unknown): boolean {
 }
 
 /**
- * OKF SPEC §5.2 `generated` / `verified` — typed actor+time UI.
- * `decision_confirmation` is WorkVault-only and stays Unknown+JSON.
+ * OKF SPEC §5.2 `generated` / `verified`: a `{by, at}` map or a list of
+ * them, edited as YAML text. `decision_confirmation` is WorkVault-only and
+ * stays Unknown+JSON.
  */
 function isOkfProvenance(key: string, value: unknown): boolean {
   const name = key.toLowerCase();
@@ -329,45 +337,34 @@ function isOkfProvenance(key: string, value: unknown): boolean {
   );
 }
 
-function okfProvenanceValue(value: unknown): string {
-  const record = value as Record<string, unknown>;
-  const parts: string[] = [];
-  if (typeof record.by === "string" && record.by) {
-    parts.push(
-      `<span class="okf-provenance-by"${attr("title", "by")}>${escape(record.by)}</span>`,
-    );
-  }
-  if (record.at !== null && record.at !== undefined && record.at !== "") {
-    parts.push(
-      `<span class="okf-provenance-at"${attr("title", "at")}>${escape(String(record.at))}</span>`,
-    );
-  }
-  const known = new Set(["by", "at"]);
-  const extra = Object.fromEntries(
-    Object.entries(record).filter(([k]) => !known.has(k)),
-  );
-  if (Object.keys(extra).length > 0) {
-    parts.push(
-      `<span class="okf-provenance-extra"${attr("title", "other")}>${escape(JSON.stringify(extra))}</span>`,
-    );
-  }
-  return `<div class="metadata-property-value-item mod-okf-provenance" tabindex="0">${parts.join("")}</div>`;
-}
-
-function okfVerifiedListValue(value: unknown[]): string {
-  const rows = value.map((entry) => okfProvenanceValue(entry)).join("");
-  return `<div class="metadata-property-value-item mod-okf-verified-list" tabindex="0">${rows}</div>`;
-}
-
 /** Obsidian REA: `metadata-property-value-item mod-unknown` + JSON.stringify. */
 function unknownPropertyValue(value: unknown): string {
   return `<span class="metadata-property-value-item mod-unknown" tabindex="0">${escape(JSON.stringify(value))}</span>`;
 }
 
-function editableYaml(key: string, text: string): string {
+/**
+ * The draft without its final newline, which would show as an empty last
+ * line, unless the value needs it (a `|+` block scalar at the end).
+ */
+function withoutFinalNewline(draft: string): string {
+  const trimmed = draft.replace(/\n$/, "");
+  return trimmed === draft ||
+    JSON.stringify(propertyYamlInput(trimmed)) !==
+      JSON.stringify(propertyYamlInput(draft))
+    ? draft
+    : trimmed;
+}
+
+/**
+ * A YAML draft. `inline` looks like any other text value (OKF `generated`):
+ * no border or code font, and as tall as its lines.
+ */
+function editableYaml(key: string, text: string, inline = false): string {
   // textarea keeps Enter as real newlines (contenteditable textContent does not).
-  const rows = Math.min(12, Math.max(3, text.split("\n").length));
-  return `<textarea class="metadata-input-longtext metadata-input-yaml" rows="${rows}" tabindex="-1" data-placeholder="Empty"${attr("aria-label", key)}${attr("data-property-input", key)} data-property-kind="yaml">${escape(text)}</textarea>`;
+  const lines = text.replace(/\n$/, "").split("\n").length;
+  const rows = inline ? lines : Math.min(12, Math.max(3, lines));
+  const mod = inline ? " mod-inline" : "";
+  return `<textarea class="metadata-input-longtext metadata-input-yaml${mod}" rows="${rows}" tabindex="-1" data-placeholder="Empty"${attr("aria-label", key)}${attr("data-property-input", key)} data-property-kind="yaml">${escape(text)}</textarea>`;
 }
 
 function complexFallback(draft: string | undefined): string {

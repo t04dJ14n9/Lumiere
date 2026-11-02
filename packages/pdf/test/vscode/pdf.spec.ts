@@ -81,8 +81,16 @@ test("a PDF opens with its outline in the Explorer, shown only while the PDF is 
       outline.getByRole("treeitem", { name: new RegExp(title) }),
     ).toBeVisible();
   }
+  // Follow Cursor's accordion: the part being read is open, the other closed.
+  await expect(
+    outline.getByRole("treeitem", { name: /Section 2\.1/ }),
+  ).toHaveCount(0);
   await outline.getByRole("treeitem", { name: /Section 1\.2/ }).click();
   await expect.poll(() => pageAtTop(viewer, 3)).toBe(true);
+  await outline
+    .getByRole("treeitem", { name: /Part Two/ })
+    .locator(".monaco-tl-twistie")
+    .click();
   // "Section 2.1" points 130 points down page 9 (test/fixtures/make-fixtures.mjs).
   await outline.getByRole("treeitem", { name: /Section 2\.1/ }).click();
   await expect.poll(() => pointAtTop(viewer, 9, 130)).toBe(true);

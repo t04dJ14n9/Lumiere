@@ -4,7 +4,7 @@ import type { EditorSubmenu } from "./editor-menus";
 /**
  * What a plugin does, in terms an editor host can reason about without
  * reading its code: which extension points it uses and which side effects
- * it may have. Lumière PDF's manifests use the same idea (and the same
+ * it may have. Lumia PDF's manifests use the same idea (and the same
  * names where they overlap: `commands`, `statusBar`, `agentHandoff`).
  * Invariants checked by test/unit/plugins/capabilities.test.ts: a plugin
  * declares `commands`, `keybindings` or `views` exactly when it contributes
@@ -133,7 +133,7 @@ export interface Manifest {
       when?: string;
       /**
        * Initial Explorer section state (`visible` | `collapsed` | `hidden`).
-       * Only Markdown Outline starts expanded; other Lumière subpanels collapse.
+       * Only Markdown Outline starts expanded; other Lumia subpanels collapse.
        */
       visibility?: "visible" | "collapsed" | "hidden";
     }[];

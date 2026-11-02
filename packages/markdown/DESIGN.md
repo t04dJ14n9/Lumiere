@@ -1,10 +1,10 @@
-# Lumière — design and architecture
+# Lumia — design and architecture
 
 Status: design, 7 October 2026. Audience: the agent implementing it (Codex)
 and the owner reviewing it. Read this document, then
 [IMPLEMENTATION_PLAN.md](IMPLEMENTATION_PLAN.md), before writing code.
 
-Lumière is a VS Code and Cursor extension that edits Markdown the
+Lumia is a VS Code and Cursor extension that edits Markdown the
 way Obsidian does: one CodeMirror 6 surface in Live Preview, where Markdown
 renders in place and reveals its syntax around the caret. It is extracted from
 LLM Wiki for VS Code (`~/Code/human-learning`), as PDF Workbench
@@ -17,7 +17,7 @@ plugin**.
 
 | Topic | Decision |
 | --- | --- |
-| Identity | Display name **Lumière**, one half of the extension **Lumière: Markdown Editor and PDF Reader** (package `lumiere`, publisher `t04dj14n9`, extension ID `t04dj14n9.lumiere`); editor view type `lumiere.markdown.editor`; settings, commands and context keys under `lumiere.markdown.` |
+| Identity | Display name **Lumia**, one half of the extension **Lumia: Markdown Editor and PDF Reader** (package `lumiere`, publisher `t04dj14n9`, extension ID `t04dj14n9.lumiere`); editor view type `lumiere.markdown.editor`; settings, commands and context keys under `lumiere.markdown.` |
 | Source to extract | `claude/markdown-integration` at `ff3a902ef4ec50a136455c0cf2ccaff698682a06` in `~/Code/human-learning`. Not `main`, whose 4,900-line `webview-src/markdown-editor.ts` it supersedes |
 | Architecture | `@workshop/core` (on Cordis) runs in the extension host, in each webview and in unit tests. Every capability, the core ones included, is a plugin that injects services, provides services, owns effects and extends others through typed events |
 | Behaviour reference | Obsidian 1.13.7 as observed, plus the 1.12.7 source study. Implement behaviour independently; never copy Obsidian code |
@@ -305,7 +305,7 @@ array, object, record. That covers every setting in §15.
 - Core errors are `CoreError` with codes such as `UndeclaredService`,
   `DuplicateService` and `Disposed`.
 - Each fiber has a `Logger` tagged with the plugin name. The host writes to the
-  **Lumière** output channel; webview logs are forwarded over RPC at
+  **Lumia** output channel; webview logs are forwarded over RPC at
   `warn` and above, plus all levels when `lumiere.markdown.debug.logging` is
   on. Load and stop timings are logged.
 - **Show Plugin Status** lists every fiber per open editor: active, pending
@@ -496,7 +496,7 @@ VS Code needs static `contributes`. `scripts/generate-contributions.ts` builds
 
 ### 6.5 Plugin management UI
 
-As in PDF Workbench: **Lumière: Manage Plugins** opens Settings
+As in PDF Workbench: **Lumia: Manage Plugins** opens Settings
 filtered to `lumiere.markdown.plugins`, and **Show Plugin Status** shows a
 quick pick of states for the active editor. `setPluginEnabled` and
 `resetPluginOverride` take an explicit scope (user, workspace, folder).
@@ -1016,7 +1016,7 @@ corresponds to. "Source" names the module on the source branch.
 | `spellcheck` | *Spellcheck* | on | editor | content attributes |
 | `formatting` | `editor:toggle-*`, `editor:set-heading-*` and similar | on | editor, commands | `editor/markdown.ts` `wrapSelection`, main branch `obsidianLikeCommands` |
 | `agentBridge` | none (from LLM Wiki) | on | editors, documents, workbench | `selectionHandoff.ts`, `agentClipboard.ts` (Markdown part) |
-| `lookUp` | none (macOS's own Look Up gesture) | on, macOS | editor, commands, navigation | new; matches Lumière PDF's Look Up |
+| `lookUp` | none (macOS's own Look Up gesture) | on, macOS | editor, commands, navigation | new; matches Lumia PDF's Look Up |
 | `linkUpdates` | *Automatically update internal links* | on (prompt) | vault, workbench | new |
 | `quickSwitcher` | Quick switcher | on | vault, workbench | new |
 | `wordCount` | Word count (status bar) | on | editors, workbench | new |
@@ -1060,7 +1060,7 @@ Short specifications, beyond the source's tested behaviour:
   `vault.backlinks`, keeping aliases, subpaths and the link style. The default,
   `prompt`, shows a **Update links in N files?** dialog; `always` and `never`
   skip it. Heading renames are a later enhancement.
-- **quickSwitcher**: **Lumière: Quick Switcher** opens a quick pick
+- **quickSwitcher**: **Lumia: Quick Switcher** opens a quick pick
   over notes, aliases and unresolved links, with Obsidian's scoring. Enter
   opens; an unresolved or new name creates the note in the configured
   new-note folder.
@@ -1111,7 +1111,7 @@ the active editor. They work in the command palette, keybindings and menus.
 | table commands (insert/move/delete row and column, align, sort) | `editor:table-*` | tables | — |
 | `toggleSourceMode` | `editor:toggle-source` | livePreview | — |
 | `openAsText` | none | editor | title action |
-| `toggleTextEditor` | none | editor | Mod+E (Lumière ↔ host text editor; not Obsidian's LP↔Source) |
+| `toggleTextEditor` | none | editor | Mod+E (Lumia ↔ host text editor; not Obsidian's LP↔Source) |
 | `agentBridge` | none | copyLinkForAgent | none (context menu) |
 | `lookUp` | none (`editor:look-up` in the webview) | lookUp | none (context menu, macOS only) |
 | `quickSwitcher` | `switcher:open` | quickSwitcher | none by default (Mod+O conflicts with VS Code's Open) |
@@ -1142,7 +1142,7 @@ Rules:
 
 ## 15. Settings
 
-### 15.1 Editor settings (Obsidian → Lumière)
+### 15.1 Editor settings (Obsidian → Lumia)
 
 Defaults are Obsidian's application defaults, except where the owner decided
 otherwise (2026-10-09): line numbers on, readable line length off, Mermaid on.
@@ -1406,7 +1406,7 @@ become an external plugin that resolves its anchors and sets markers.
 ### 18.5 Webview modules (v2, designed now)
 
 The VS Code Markdown preview lets extensions add `markdown.markdownItPlugins`
-and `markdown.previewScripts`. Lumière v2 adds:
+and `markdown.previewScripts`. Lumia v2 adds:
 
 ```json
 "contributes": { "lumiere.markdown.webviewPlugins": [{ "id": "acme.wavedrom", "module": "./dist/wavedrom.js", "styles": ["./dist/wavedrom.css"] }] }
@@ -1588,10 +1588,10 @@ of `dist/` outputs and the docs.
 
 ## 25. Open questions (recommended defaults in bold)
 
-1. **Name.** **Lumière** (pairs with PDF Workbench). Changing it is a
+1. **Name.** **Lumia** (pairs with PDF Workbench). Changing it is a
    find-and-replace across these documents and the manifest.
 2. **Default editor for `*.md`.** **`priority: "option"`**, plus a command,
-   **Use Lumière for Markdown in This Workspace**, that writes the
+   **Use Lumia for Markdown in This Workspace**, that writes the
    workspace's `workbench.editorAssociations`. The alternative, `"default"`,
    would capture every README in code repositories.
 3. **Defaults.** **Obsidian's defaults** (Vim and line numbers off, readable
@@ -1599,7 +1599,7 @@ of `dist/` outputs and the docs.
    profile as product defaults.
 4. **Outline.** **Native view only**, or also keep the in-editor panel.
 5. **Where Backlinks, Outgoing links and Tags appear.** **Explorer sections**
-   (like PDF Outline), or a Lumière activity-bar container.
+   (like PDF Outline), or a Lumia activity-bar container.
 6. **Link updates on rename.** **`prompt`**, or Obsidian's always-update
    behaviour.
 7. **Kernel.** **In-house (decided; Cordis is a reference only, §5.9)**, or depend on the
