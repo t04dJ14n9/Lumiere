@@ -52,9 +52,10 @@ export const outlineHost: Plugin = {
     registerSymbolPicker(ctx, ctx.dialogs);
     registerOutlineFocus(ctx);
     ctx.effect(() =>
-      ctx.hostCommands.register(OPEN_COMMAND, (uri, offset) =>
-        ctx.vaults.open(String(uri), { offset: Number(offset) }),
-      ),
+      ctx.hostCommands.register(OPEN_COMMAND, (uri, offset) => {
+        view.jumpedTo(Number(offset));
+        return ctx.vaults.open(String(uri), { offset: Number(offset) });
+      }),
     );
     view.refresh();
   },

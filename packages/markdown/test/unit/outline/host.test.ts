@@ -477,3 +477,56 @@ test("Toggle Markdown Outline targets the view's hide command and restores it wi
   await fixture.fake.commands.get(TOGGLE_COMMAND)!();
   assert.deepEqual(fixture.executed.at(-1), ["lumiere.markdown.outline.focus"]);
 });
+
+test("a click on an outline row leaves the tree as it is, so a double-click's second click hits the same row", async (t) => {
+  const fixture = await outlineFixture({ "A.md": NESTED });
+  t.after(() => fixture.root.dispose());
+  const { panel, cursor } = fixture.panel("one");
+  fixture.open(panel);
+  await tick();
+  const text = fixture.texts.get("A.md")!;
+  cursor.head = text.indexOf("body-a");
+  fixture.root.emit("editor/selectionChanged", panel, false);
+  await tick();
+  const collapseAllBefore = fixture.collapseAllCount;
+  fixture.expands.length = 0;
+  // Click "B": the outline opens it. The editor takes focus first, still
+  // reporting its caret from before; then the caret lands on "B".
+  await fixture.fake.commands.get(OPEN_COMMAND)!(
+    uriOf("A.md"),
+    text.indexOf("# B"),
+  );
+  fixture.root.emit("editor/activeChanged", panel);
+  await tick();
+  assert.equal(
+    fixture.collapseAllCount,
+    collapseAllBefore,
+    "the caret from before the click lays nothing out",
+  );
+  cursor.head = text.indexOf("# B");
+  fixture.root.emit("editor/selectionChanged", panel, false);
+  await tick();
+  assert.equal(
+    fixture.collapseAllCount,
+    collapseAllBefore,
+    "no collapse under the pointer",
+  );
+  assert.equal(fixture.expands.length, 0, "no rows opened above it either");
+  // The second click of the double-click, and its caret move: still alone.
+  await fixture.fake.commands.get(OPEN_COMMAND)!(
+    uriOf("A.md"),
+    text.indexOf("# B"),
+  );
+  fixture.root.emit("editor/selectionChanged", panel, false);
+  await tick();
+  assert.equal(fixture.collapseAllCount, collapseAllBefore);
+  // Moving on in the editor applies the accordion as before.
+  cursor.head = text.indexOf("body-b");
+  fixture.root.emit("editor/selectionChanged", panel, false);
+  await tick();
+  assert.equal(fixture.collapseAllCount, collapseAllBefore + 1);
+  assert.deepEqual(fixture.expands.map((node) => node.label).sort(), [
+    "B",
+    "B1",
+  ]);
+});

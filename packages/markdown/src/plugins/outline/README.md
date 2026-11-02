@@ -20,7 +20,10 @@ Clicking a heading opens the note at its offset; the links plugin's `navigate` t
 scrolls that offset to the vertical centre of the editor, as VS Code's Outline
 (`revealRange` with `InCenter`) and Obsidian's do. Near the start or end of a
 note the scroll range ends first, so the heading stays above or below the
-centre.
+centre. The jump a click makes does not collapse or expand anything (nor
+does the caret the editor reports from before it): rows that moved under
+the pointer sent a double-click's second click to another heading. The
+accordion applies again once the caret moves on in the editor.
 
 Ctrl+Shift+O (Command+Shift+O on macOS), or **Lumière: Go to
 Heading…** in the command palette, opens a searchable heading picker. It reads

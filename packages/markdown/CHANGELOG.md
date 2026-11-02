@@ -2,6 +2,11 @@
 
 ## 0.1.0 (unreleased)
 
+- Double-clicking a heading in the Markdown Outline goes to that heading
+  again. The first click's jump re-applied the accordion, collapsing the
+  rows around it, so the second click landed on another heading and went
+  there. A click in the outline now leaves the tree as it is.
+
 - Live Preview and the editor parse a note once instead of twice: Live
   Preview now reads CodeMirror's syntax tree. Jumping around a large note no
   longer re-parses 100,000 characters each time (script time over four
