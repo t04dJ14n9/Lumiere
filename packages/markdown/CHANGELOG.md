@@ -2,6 +2,11 @@
 
 ## 0.1.0 (unreleased)
 
+- Live Preview and the editor parse a note once instead of twice: Live
+  Preview now reads CodeMirror's syntax tree. Jumping around a large note no
+  longer re-parses 100,000 characters each time (script time over four
+  scrollbar jumps in an 835 KB note: about 330-400 -> 90-100 ms).
+
 - Dragging a selection from the start of a heading takes its `#` marks, as
   in Obsidian; the marks were hidden when the drag began, so the selection
   started after them.

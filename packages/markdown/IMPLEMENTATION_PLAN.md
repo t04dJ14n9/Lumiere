@@ -6533,3 +6533,41 @@ Reported with screenshots:
   CropBox, an offset MediaBox, device pixel ratios 1.25 and 1.5, text at the
   bottom of a 1,584 pt page and "Attention Is All You Need" (arXiv
   1706.03762). Waiting for the owner's PDF, zoom and screenshot.
+
+## One syntax tree (2026-11-02)
+
+Owner's choice after comparing the options: Live Preview reads CodeMirror's
+syntax tree instead of parsing the note a second time (as Obsidian has one
+tree). Both trees came from the same Lezer parser (the dialect in
+`markdown/dialect`); what differed was the scheduling around it: Live
+Preview's own (`document-parse.ts`, `document-tree.ts`, about 360 lines)
+and CodeMirror's language (`@codemirror/language`'s `ParseContext` and
+parse worker), which is now the only one.
+
+- `documentTree` is CodeMirror's tree, pushed with `ensureSyntaxTree` only
+  when Live Preview needs more: the first 10,000 characters before the first
+  paint (CodeMirror starts with 3,000), the viewport and a margin when it
+  outruns the tree (in a microtask, before the frame paints), the rest of the
+  note in idle slices of up to 5 ms (CodeMirror stops 100,000 characters past
+  the viewport; whole-note blocks keep the scroll height stable), and never
+  less coverage after an edit than before it. A finished tree is still kept
+  for readers that parse the document (`rememberParsedMarkdown`). A state
+  without the Markdown language (bare unit tests) parses the document whole.
+- `treeReached`: a tree can now also grow inside an edit (CodeMirror hands
+  on parse progress with it) or without one (CodeMirror's worker publishes).
+  The block index, the changed region and the plain-edit shortcuts look at
+  the newly covered part, not only at `replaceDocumentTree`.
+- The first-line frontmatter rule Live Preview's parse had moved into the
+  parser CodeMirror runs (`EditorMarkdownParser` in `dialect/language.ts`),
+  so CodeMirror's tree, which Source mode and the editor commands read too,
+  is right after typing `---` on line 1.
+
+Measured (browser harness, 835 KB note, three runs each, before -> after):
+four scrollbar jumps, script 321-396 -> 89-101 ms, long frames 5-7 -> 2,
+worst frame 67-83 -> 33-50 ms; Lezer parsing after opening 363 -> 281 ms;
+reading, flinging, typing and first paint unchanged within noise. (The
+"about 300 ms" estimated for CodeMirror's parse after opening was too high:
+the profile filter also counted Live Preview's own parse function, also
+named `work`.) Tests: `document-tree.test.ts` rewritten for the shared parse;
+the randomized edit test also runs on CodeMirror's parse and checks the tree
+equals a fresh parse after every edit (40,000 edits in a one-off run).
