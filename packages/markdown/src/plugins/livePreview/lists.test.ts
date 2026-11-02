@@ -3,7 +3,9 @@ import assert from "node:assert/strict";
 import { EditorState } from "@codemirror/state";
 import { documentTree } from "./document-tree";
 import { inlineDecorations } from "./inline";
-import { markerWidth } from "./lists";
+import { decorateListItem, markerWidth } from "./lists";
+import type { SyntaxNodeRef } from "@lezer/common";
+import type { InlineContext } from "./api";
 
 function decorate(doc: string) {
   const state = EditorState.create({
@@ -176,4 +178,21 @@ test("nested hang continuations keep ancestor guides only (no extra hang column)
   assert.deepEqual(styles, [
     "--list-depth: 1; --list-marker: calc(1.25em + 3px)",
   ]);
+});
+
+test("only a list item looks at its children", () => {
+  // The decorator calls this for every node it enters, the document too:
+  // looking for a marker under the document scanned all of a note's
+  // blocks on every scroll step (410 of 2,600 ms flinging an 835 KB note).
+  for (const name of ["Document", "BulletList", "Paragraph", "Emphasis"]) {
+    const node = {
+      name,
+      from: 0,
+      to: 10,
+      get node(): never {
+        throw new Error(`${name} was looked into`);
+      },
+    } as unknown as SyntaxNodeRef;
+    decorateListItem(node, {} as InlineContext);
+  }
 });

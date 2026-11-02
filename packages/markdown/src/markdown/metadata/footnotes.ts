@@ -1,10 +1,15 @@
 import { Text } from "@codemirror/state";
-import { metadata } from "./index";
+import { footnoteRegistry } from "./footnote-extract";
 import type { Footnotes, Footnote } from "./footnote-extract";
 import type { SourceRange } from "./fragments";
 export type { Footnotes, Footnote } from "./footnote-extract";
+/**
+ * A note's footnotes, cached per document. Live Preview asks for them while
+ * drawing a reference, so they must not cost the rest of the note's
+ * metadata (links, tags, headings, blocks), which took ten times as long.
+ */
 export function footnotes(doc: Text): Footnotes {
-  return metadata(doc).footnotes;
+  return footnoteRegistry(doc);
 }
 /** Supply definitions needed by a fragment without admitting unrelated note content. */
 export function fragmentWithFootnotes(

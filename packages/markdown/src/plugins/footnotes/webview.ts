@@ -1,7 +1,7 @@
 import { protocol as links } from "../links/protocol";
 import { EditorView } from "@codemirror/view";
 import type { Context, Plugin } from "@workshop/core";
-import { extractFootnotes } from "../../markdown/metadata/footnote-extract";
+import { footnoteRegistry } from "../../markdown/metadata/footnote-extract";
 import type { Footnote } from "../../markdown/metadata/footnotes";
 import type {} from "../editor/api";
 import type {} from "../commands/api";
@@ -46,10 +46,13 @@ function registerDefinitionInvalidation(ctx: Context): void {
         if (key === "" && !update.state.doc.toString().includes("[^")) {
           return;
         }
+        // Shared with Live Preview's references (cached per document); a
+        // tree still parsing would leave definitions out, so only a whole one.
+        const doc = update.state.doc;
         const tree = update.state.field(documentTree, false);
-        const definitions = extractFootnotes(
-          update.state.doc,
-          tree,
+        const definitions = footnoteRegistry(
+          doc,
+          tree && tree.length >= doc.length ? tree : undefined,
         ).definitions;
         const next = definitions.length ? JSON.stringify(definitions) : "";
         if (next === key) {

@@ -41,8 +41,10 @@ function renderService({
   passes: Set<RenderPass>;
 }): RenderService {
   const purifier = createDOMPurify(window);
-  const sanitize = (html: string) =>
-    purifier.sanitize(html, sanitizerOptions(trusted));
+  // Once: options passed with every call are parsed again on every call,
+  // about half of what sanitizing a table cell costs.
+  purifier.setConfig(sanitizerOptions(trusted));
+  const sanitize = (html: string) => purifier.sanitize(html);
   return {
     trusted,
     into(container, source, context = {}) {

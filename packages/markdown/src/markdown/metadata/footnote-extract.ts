@@ -22,6 +22,18 @@ export interface Footnotes {
   references: Map<number, Footnote>;
 }
 
+const registries = new WeakMap<Text, Footnotes>();
+
+/** `extractFootnotes`, once per document (shared by metadata and Live Preview). */
+export function footnoteRegistry(doc: Text, existingTree?: Tree): Footnotes {
+  let registry = registries.get(doc);
+  if (!registry) {
+    registry = extractFootnotes(doc, existingTree);
+    registries.set(doc, registry);
+  }
+  return registry;
+}
+
 export function extractFootnotes(doc: Text, existingTree?: Tree): Footnotes {
   const source = doc.toString();
   if (!source.includes("[^") && !source.includes("^[")) {

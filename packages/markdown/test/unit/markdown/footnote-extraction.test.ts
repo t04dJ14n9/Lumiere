@@ -42,3 +42,25 @@ test("candidate collection drops unmappable ranges and duplicate definitions ret
   assert.equal(registry.definitions[0]!.number, undefined);
   assert.equal(registry.definitions[1]!.number, 1);
 });
+
+test("footnotes are kept per document and shared with the note's metadata", async () => {
+  const { footnotes } =
+    await import("../../../src/markdown/metadata/footnotes");
+  const { metadata } = await import("../../../src/markdown/metadata/index");
+  const doc = Text.of(["A[^a] and B[^b].", "", "[^a]: one", "[^b]: two"]);
+  const registry = footnotes(doc);
+  assert.equal(footnotes(doc), registry, "once per document");
+  assert.deepEqual(
+    registry.definitions.map((note) => [note.label, note.number]),
+    [
+      ["a", 1],
+      ["b", 2],
+    ],
+  );
+  // Live Preview draws references from `footnotes` alone; the rest of the
+  // metadata, when something asks for it, reuses the same registry.
+  assert.equal(metadata(doc).footnotes, registry);
+  const edited = Text.of(["A[^b] and B[^a].", "", "[^a]: one", "[^b]: two"]);
+  assert.notEqual(footnotes(edited), registry, "a new document, new numbers");
+  assert.equal(footnotes(edited).references.get(1)?.label, "b");
+});
