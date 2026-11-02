@@ -28,14 +28,15 @@ Drag a column's right border, in any row, to set its width. Within 2 px
 of the border the cursor turns to `col-resize` and an accent guide runs down
 the table; 3 px in, a press is the cell's again (it opens at the end of the
 text, or in the next cell at the start). While dragging, every other column
-keeps its width; a press that does not move writes nothing. Widths persist in
-source as an HTML comment on the line immediately after the table:
-`<!-- lumiere-col-widths: 120,80,200 -->`. GFM has no column-width syntax; this is a
-Lumière round-trip convention (Obsidian ordinary MD Live Preview has no col-resize).
+keeps its width. Widths stay with the open table (across edits, added rows
+and columns, and scrolling away and back) and are never written to the note:
+Obsidian has no column resizing for Markdown tables and keeps no widths, and
+GFM has no syntax for them. A `<!-- lumiere-col-widths: … -->` line left by
+an earlier version is an ordinary comment now.
 Every rewrite of the table (a paste, Delete, an added row or column, a moved
-column) goes through `TableGrid.replace`, which keeps the comment, and, for a
-table in a list item, indents every line after the header (comment included)
-like the table's rows, so the table stays in the item.
+column) goes through `TableGrid.replace`, which, for a table in a list item,
+indents every line after the header like the table's rows, so the table
+stays in the item.
 
 Tall wide tables also show a sticky mirror of the table's horizontal
 scrollbar (BH-016) while the native bar is below the note viewport, so
@@ -103,8 +104,8 @@ plugin registrations and widget lifetimes end when the plugin stops.
 - `toolbar.ts`: add-row/column controls and contextual menu lifetime. Horizontal pans on the add-row strip scroll `.table-scroll` and do not insert (BH-019); a true click still adds a row.
 - `menu.ts`: menu items and their operation/focus targets.
 - `handles.ts`: row/column grips, drag feedback and drop handling.
-- `column-widths.ts`: trailing `<!-- lumiere-col-widths: … -->` parse/join and remap on column ops (GFM has no width syntax); the border hit test (`columnEdgeAt`); a list item's row indent (`rowPrefix`, `indentRows`).
-- `column-widths.test.ts`: apply, persist/reload, remap, border hit and row indent unit tests.
+- `column-widths.ts`: the open table's column widths and their remap on column ops; the border hit test (`columnEdgeAt`); a list item's row indent (`rowPrefix`, `indentRows`).
+- `column-widths.test.ts`: apply, remap, border hit and row indent unit tests.
 - `column-resize.ts`: hover and drag a column's right border in any row (`col-resize` cursor, guide line); clear of the move grips.
 - `hit-test.ts`: cell and axis hit testing.
 - `commands.ts`: command IDs to table operations.

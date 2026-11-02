@@ -4,8 +4,10 @@
 
 - Table columns resize by dragging their border, in any row, as the
   resize cursor and a guide line show. The handles were a few pixels inside
-  the header cells, so pressing the border did nothing. Saved widths now
-  survive adding a row or column, a paste and Delete.
+  the header cells, so pressing the border did nothing. Widths are no longer
+  written to the note (Obsidian keeps none): they last while the note is
+  open. A `<!-- lumiere-col-widths: … -->` line written before is an
+  ordinary comment now, and can be deleted.
 - A table in a list item keeps all its rows (they used to end it after the
   header), and editing or resizing it keeps it in the item.
 

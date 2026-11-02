@@ -6428,18 +6428,21 @@ border, so a press on the border (or on any body row) went to the cell.
 - `column-resize.ts` hit-tests the pointer against the columns' right
   borders (`columnEdgeAt`, 2 px either side, any row of the table). Hover
   shows `col-resize` and an accent guide down the table; a drag fixes every
-  other column at its width and moves only this one; a press without a move
-  writes nothing. 3 px in stays the cell's (the right-padding and
-  left-padding click specs).
-- Saved widths were dropped by every rewrite but resize and column
-  operations (paste, Delete, Tab past the last row, the add strips):
-  `TableGrid.replace(table, widths = saved)` is now the one write path.
+  other column at its width and moves only this one. 3 px in stays the
+  cell's (the right-padding and left-padding click specs).
+- Widths are not saved (owner, 2026-11-02): Obsidian 1.14 has no column
+  resizing for Markdown tables and keeps no widths; community plugins that
+  add it keep them outside the note. #445's `<!-- lumiere-col-widths -->`
+  line is gone: nothing writes or reads it, and an old one is an ordinary
+  comment. Widths live in `ColumnResize` for the table's lifetime (tables
+  are retained across scrolling while the note is open), repainted after
+  each redraw and remapped on column insert, delete, move and duplicate.
 - Tables in list items: the Obsidian table-end rule compared rows with the
   line's start, so an item's indented rows ended the table after its header
   (Lezer's GFM parser keeps them). It now reads rows from the item's margin
   (`line.basePos`; quotes are unchanged, since the widget cannot draw a
-  table in a quote). Rewrites indent every line after the header like the
-  rows, and the widths comment too, so the table stays in the item.
+  table in a quote). `TableGrid.replace` and cell edits indent every line
+  after the header like the rows, so the table stays in the item.
 - Tests: `src/plugins/tables/column-widths.test.ts`,
   `test/unit/markdown/table-rows.test.ts`, and the new browser spec
   `test/browser/tables-column-resize.spec.ts` (new browser coverage: needs

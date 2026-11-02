@@ -1,9 +1,10 @@
 /**
  * A column's right border, in any row, is its resize handle: hovering it
- * shows the resize cursor and a guide down the table; dragging it sets the
- * column's width live and, on release, in the `lumiere-col-widths` comment
- * after the table. The handles used to sit inside the header's first line
- * only, a few pixels left of the border, so pressing the border did nothing.
+ * shows the resize cursor and a guide down the table, and dragging it sets
+ * the column's width. The handles used to sit inside the header's first
+ * line only, a few pixels left of the border, so pressing the border did
+ * nothing. Widths stay with the open table and are never written to the
+ * note: Obsidian keeps no widths for a Markdown table.
  */
 import { test, expect, type Page } from "@playwright/test";
 import { open } from "./harness";
@@ -40,7 +41,7 @@ function source(page: Page): Promise<string> {
   return page.evaluate(() => window.harness.text);
 }
 
-test("dragging a column's border in a body row resizes it live and saves the widths", async ({
+test("dragging a column's border in a body row resizes it live and writes nothing to the note", async ({
   page,
 }) => {
   await open(page, DOC, "obsidian", NO_VIM);
@@ -69,22 +70,15 @@ test("dragging a column's border in a body row resizes it live and saves the wid
     expect(live.slice(1), "the other columns stay").toEqual(before.slice(1));
   }
   await page.mouse.up();
-  const wide = before[0]! + 60;
-  await expect
-    .poll(() => source(page))
-    .toBe(
-      DOC.replace(
-        TABLE,
-        `${TABLE}\n<!-- lumiere-col-widths: ${wide},${before[1]},${before[2]} -->`,
-      ),
-    );
-  expect(await widths(page)).toEqual([wide, before[1], before[2]]);
+  await page.waitForTimeout(200);
+  expect(await widths(page)).toEqual([before[0]! + 60, before[1], before[2]]);
+  expect(await source(page)).toBe(DOC);
   await expect(page.getByRole("textbox", { name: /^Table cell/ })).toHaveCount(
     0,
   );
 });
 
-test("a press on a border that does not move writes nothing and opens no cell", async ({
+test("a press on a border that does not move changes nothing and opens no cell", async ({
   page,
 }) => {
   await open(page, DOC, "obsidian", NO_VIM);
@@ -106,24 +100,45 @@ test("a press on a border that does not move writes nothing and opens no cell", 
   ).toBeFocused();
 });
 
-test("a column does not go below its minimum, and saved widths come back on open", async ({
+test("a column does not go below its minimum", async ({ page }) => {
+  await open(page, DOC, "obsidian", NO_VIM);
+  const before = await widths(page);
+  const at = await border(page, 0, 2);
+  await page.mouse.move(at.x, at.y);
+  await page.mouse.down();
+  await page.mouse.move(at.x - 1000, at.y, { steps: 5 });
+  await page.mouse.up();
+  await expect.poll(() => widths(page)).toEqual([before[0], before[1], 60]);
+});
+
+test("widths stay while the table is edited: an added row, a cell edit, an added column", async ({
   page,
 }) => {
-  const saved = DOC.replace(
-    TABLE,
-    `${TABLE}\n<!-- lumiere-col-widths: 150,90,300 -->`,
-  );
-  await open(page, saved, "obsidian", NO_VIM);
-  expect(await widths(page)).toEqual([150, 90, 300]);
+  await open(page, DOC, "obsidian", NO_VIM);
   const at = await border(page, 0, 0);
   await page.mouse.move(at.x, at.y);
   await page.mouse.down();
-  await page.mouse.move(at.x - 200, at.y, { steps: 5 });
+  await page.mouse.move(at.x + 50, at.y, { steps: 5 });
   await page.mouse.up();
-  await expect
-    .poll(() => source(page))
-    .toContain("<!-- lumiere-col-widths: 60,90,300 -->");
-  expect(await widths(page)).toEqual([60, 90, 300]);
+  const resized = await widths(page);
+
+  await page.locator(".hybrid-table").hover();
+  await page.getByRole("button", { name: "Add row below" }).click();
+  await expect(page.locator(".hybrid-table tr")).toHaveCount(4);
+  expect(await widths(page)).toEqual(resized);
+
+  await page.locator(".hybrid-table .table-cell-content").nth(4).click();
+  await page.keyboard.press("End");
+  await page.keyboard.type("!");
+  await page.keyboard.press("Escape");
+  await expect.poll(() => source(page)).toContain("| math! |");
+  expect(await widths(page)).toEqual(resized);
+
+  await page.locator(".hybrid-table").hover();
+  await page.getByRole("button", { name: "Add column to the right" }).click();
+  await expect(page.locator(".hybrid-table thead th")).toHaveCount(4);
+  expect(await widths(page)).toEqual(resized);
+  expect(await source(page)).not.toContain("<!--");
 });
 
 test("a table in a list item stays in it: all its rows, a resize, a cell edit and an added row", async ({
@@ -140,14 +155,8 @@ test("a table in a list item stays in it: all its rows, a resize, a cell edit an
   await page.mouse.down();
   await page.mouse.move(at.x + 40, at.y, { steps: 4 });
   await page.mouse.up();
-  await expect
-    .poll(() => source(page))
-    .toMatch(
-      /^- item one\n\n {2}\| a \| b \|\n {2}\| --- \| --- \|\n {2}\| 1 \| 2 \|\n {2}<!-- lumiere-col-widths: \d+,\d+ -->\n\n- item two\n$/,
-    );
-  const comment = /<!-- lumiere-col-widths: \d+,\d+ -->/.exec(
-    await source(page),
-  )![0];
+  await page.waitForTimeout(200);
+  expect(await source(page)).toBe(listed);
 
   await page.locator(".hybrid-table .table-cell-content").nth(2).click();
   await page.keyboard.press("End");
@@ -156,7 +165,7 @@ test("a table in a list item stays in it: all its rows, a resize, a cell edit an
   await expect
     .poll(() => source(page))
     .toBe(
-      `- item one\n\n  | a    | b   |\n  | ---- | --- |\n  | 1xyz | 2   |\n  ${comment}\n\n- item two\n`,
+      "- item one\n\n  | a    | b   |\n  | ---- | --- |\n  | 1xyz | 2   |\n\n- item two\n",
     );
 
   await page.locator(".hybrid-table").hover();
@@ -164,20 +173,6 @@ test("a table in a list item stays in it: all its rows, a resize, a cell edit an
   await expect
     .poll(() => source(page))
     .toBe(
-      `- item one\n\n  | a    | b   |\n  | ---- | --- |\n  | 1xyz | 2   |\n  |      |     |\n  ${comment}\n\n- item two\n`,
+      "- item one\n\n  | a    | b   |\n  | ---- | --- |\n  | 1xyz | 2   |\n  |      |     |\n\n- item two\n",
     );
-});
-
-test("adding a row keeps the saved widths", async ({ page }) => {
-  const saved = DOC.replace(
-    TABLE,
-    `${TABLE}\n<!-- lumiere-col-widths: 150,90,300 -->`,
-  );
-  await open(page, saved, "obsidian", NO_VIM);
-  await page.locator(".hybrid-table").hover();
-  await page.getByRole("button", { name: "Add row below" }).click();
-  await expect
-    .poll(() => source(page))
-    .toMatch(/\| +\| +\| +\|\n<!-- lumiere-col-widths: 150,90,300 -->\n/);
-  expect(await widths(page)).toEqual([150, 90, 300]);
 });

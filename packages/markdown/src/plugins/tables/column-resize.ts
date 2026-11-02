@@ -1,7 +1,9 @@
+import type { TableOperation } from "../../markdown/tables/operations";
 import {
   applyColumnWidth,
   columnEdgeAt,
   MIN_COLUMN_WIDTH,
+  widthsAfterOperation,
   type ColumnWidth,
 } from "./column-widths";
 
@@ -26,7 +28,8 @@ interface ResizeDrag extends ColumnEdge {
  * the handle: a press within `COLUMN_EDGE_REACH` pixels of it starts the
  * drag, and hovering there shows the resize cursor and a guide line down
  * the whole table. The move grips sit above and beside the table, outside
- * that band. A press that does not move writes nothing.
+ * that band. Widths stay with the open table and are never written to the
+ * note, as Obsidian keeps none (see `ColumnWidth`).
  */
 export class ColumnResize {
   private readonly events = new AbortController();
@@ -38,11 +41,6 @@ export class ColumnResize {
     private readonly root: HTMLElement,
     private readonly table: HTMLTableElement,
     private readonly scroll: HTMLElement,
-    private readonly persist: (
-      widths: number[],
-      column: number,
-      width: number,
-    ) => void,
   ) {
     this.guide.className = "table-col-resize-guide";
     this.guide.hidden = true;
@@ -51,12 +49,16 @@ export class ColumnResize {
     this.register();
   }
 
-  /** Paint `<colgroup>` from persisted widths; omit cols that are still auto. */
-  applyWidths(widths: ColumnWidth[] | undefined): void {
-    this.widths = widths;
+  /** Paint the widths again, after the table's rows were drawn again. */
+  refresh(): void {
     if (!this.drag) {
-      this.paint(widths);
+      this.paint(this.widths);
     }
+  }
+
+  /** Keep each width with its column when columns are added, moved or removed. */
+  remap(operation: TableOperation): void {
+    this.widths = widthsAfterOperation(this.widths, operation);
   }
 
   destroy(): void {
@@ -206,15 +208,10 @@ export class ColumnResize {
       return;
     }
     this.end();
-    if (drag.width === drag.frozen[drag.column]) {
-      this.paint(this.widths);
-    } else {
-      this.persist(
-        applyColumnWidth(drag.frozen, drag.column, drag.width),
-        drag.column,
-        drag.width,
-      );
+    if (drag.width !== drag.frozen[drag.column]) {
+      this.widths = applyColumnWidth(drag.frozen, drag.column, drag.width);
     }
+    this.paint(this.widths);
     this.showHover(this.edgeAt(event.clientX, event.clientY));
   }
 
