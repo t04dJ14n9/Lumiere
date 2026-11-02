@@ -66,7 +66,7 @@ test("highlight annotation survives saveAsCopy → atomic write → reopen", asy
         color: "#FFE600",
         opacity: 0.5,
         blendMode: PdfBlendMode.Multiply,
-        author: "Lumière",
+        author: "Lumia",
         contents: "roundtrip",
         created: new Date(),
         modified: new Date(),

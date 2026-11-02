@@ -6,7 +6,7 @@ import {
   parsePdfLocation,
 } from "../../../shared/pdf-location";
 import { resolvePdfCandidates } from "../../../shared/pdf-target-resolution";
-import { VIEW_TYPE, type PdfPanels } from "./panels";
+import { VIEW_TYPE, type FragmentHandler, type PdfPanels } from "./panels";
 import { OPEN_LOCATION_COMMAND_ID } from "../../../shared/command-ids";
 
 /** PDF: Open Location, which makes the viewer a navigation target for links and other extensions. */
@@ -107,19 +107,39 @@ async function openLocation(
     return false;
   }
   const uri = resolved.target;
-  const destination =
-    location !== undefined
-      ? parsePdfLocation(location)
-      : parseLocationFragment(uri.fragment);
-  if ((location !== undefined || uri.fragment.length > 0) && !destination) {
+  const arrival = arrivalOf(panels, uri.fragment, location);
+  if (arrival === "invalid") {
     void vscode.window.showWarningMessage(
       "The PDF location is invalid. Use a positive whole page number, optionally with a valid viewrect.",
     );
     return false;
   }
   return request.dispatch(() =>
-    openAt(panels, uri.with({ fragment: "" }), destination, request),
+    openAt(panels, uri.with({ fragment: "" }), arrival, request),
   );
+}
+
+/** Where the viewer goes once open: a page (and box), or a fragment a plugin opens. */
+type Arrival =
+  PdfDestination | { fragment: string; handler: FragmentHandler } | "invalid";
+
+function arrivalOf(
+  panels: PdfPanels,
+  fragment: string,
+  location: unknown,
+): Arrival {
+  if (location !== undefined) {
+    return parsePdfLocation(location) ?? "invalid";
+  }
+  if (!fragment) {
+    return undefined;
+  }
+  // A plugin's fragment wins: a link with both `#hl-…` and `page=` opens the highlight.
+  const handler = panels.fragmentHandlerFor(fragment);
+  if (handler) {
+    return { fragment, handler };
+  }
+  return parseLocationFragment(fragment) ?? "invalid";
 }
 
 function askForLink(
@@ -140,7 +160,7 @@ function askForLink(
 async function openAt(
   panels: PdfPanels,
   file: vscode.Uri,
-  destination: PdfDestination,
+  destination: Exclude<Arrival, "invalid">,
   request: OpenRequest,
 ): Promise<boolean> {
   if (!request.current()) {
@@ -159,7 +179,9 @@ async function openAt(
   if (!panel || !request.current()) {
     return false;
   }
-  if (destination) {
+  if (destination && "handler" in destination) {
+    await destination.handler.open(panel, destination.fragment);
+  } else if (destination) {
     panel.goTo(destination);
   }
   return true;

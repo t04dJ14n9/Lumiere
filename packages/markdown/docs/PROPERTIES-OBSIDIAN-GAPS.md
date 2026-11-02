@@ -1,8 +1,8 @@
-# Lumière Properties ↔ Obsidian 1.14.4 — REA gap survey
+# Lumia Properties ↔ Obsidian 1.14.4 — REA gap survey
 
 **Date:** 2026-10-20 (Asia/Shanghai)  
 **Obsidian evidence:** `/workspace/obsidian-rea/recovered/application/{app.css,app.js}` (REA pipeline; Obsidian 1.14.4)  
-**Lumière:** `packages/markdown/src/plugins/properties/`  
+**Lumia:** `packages/markdown/src/plugins/properties/`  
 **Prior docs:** `docs/properties-diff.md`, `/workspace/plans/obsidian-properties-behaviour.md`
 
 Do not copy Obsidian code/CSS/assets. Gaps below are behaviour/layout targets.
@@ -22,7 +22,7 @@ Severity: **P0** height/remount or editing broken · **P1** clear visual/interac
 
 ## High severity — fix next
 
-| ID | Sev | Obsidian (rea) | Lumière today | Action |
+| ID | Sev | Obsidian (rea) | Lumia today | Action |
 | --- | --- | --- | --- | --- |
 | G2 | P1 → PR | `.metadata-container { margin-block-end: 2rem; padding: var(--size-4-2) 0 }` → **8px 0** + **32px** below | `.properties { padding: 4px 0 16px }` — only 16px bottom, no margin-block-end | Match padding top 8px + `margin-block-end: 2rem`; sync `SHEET_PADDING` / `COLLAPSED` in `estimated-height.ts` |
 | G3 | P1 → PR | `--metadata-label-font-size` / `--metadata-input-font-size: var(--font-smaller)` = **0.875em** | `.properties { font-size: var(--text-size) }` — full editor size; rows taller than Obsidian | Set sheet/inputs to `0.875em`; heading already ~0.875 of root — avoid double-shrink; set `TEXT=14` in estimate |
@@ -32,7 +32,7 @@ Severity: **P0** height/remount or editing broken · **P1** clear visual/interac
 
 ## Medium — layout tokens
 
-| ID | Sev | Obsidian | Lumière | Action |
+| ID | Sev | Obsidian | Lumia | Action |
 | --- | --- | --- | --- | --- |
 | G5 | P2 → PR | `--metadata-gap: 3px` flex column on `.metadata-properties` | Rows stacked with `padding: 2px 0` each, no gap | `display:flex; flex-direction:column; gap:3px`; zero row vertical padding; adjust `ROW_PADDING` |
 | G6 | P2 | `--metadata-label-width: 9em` fixed key column | `minmax(0, min(40%, 18em))` | **Keep** — intentional long-key editability (MW props) |
@@ -52,8 +52,8 @@ Severity: **P0** height/remount or editing broken · **P1** clear visual/interac
 | G13 | OK | Type submenu / reserved tags·aliases·cssclasses | Matched (parity tests) |
 | G14 | OK | Tab key→value→row; Delete removes; Backspace does not | Matched |
 | G15 | OK | Caret never in frontmatter widget | Matched (`caret-guard`) |
-| G16 | P2 | Obsidian heading has no Enter-toggle; Lumière Enter toggles | Minor extra; keep or drop |
-| G17 | P2 | Obsidian `o` / `j`/`k` vim-ish on container | Lumière has vim `o` in row-nav; verify container-level parity |
+| G16 | P2 | Obsidian heading has no Enter-toggle; Lumia Enter toggles | Minor extra; keep or drop |
+| G17 | P2 | Obsidian `o` / `j`/`k` vim-ish on container | Lumia has vim `o` in row-nav; verify container-level parity |
 
 ---
 
@@ -61,7 +61,7 @@ Severity: **P0** height/remount or editing broken · **P1** clear visual/interac
 
 | ID | Sev | Topic | Decision |
 | --- | --- | --- | --- |
-| G18 | N/A | Nested/`unknown` → Obsidian `JSON.stringify` + `lucide-file-question` | Lumière editable YAML drafts — **keep** (documented enhancement) |
+| G18 | N/A | Nested/`unknown` → Obsidian `JSON.stringify` + `lucide-file-question` | Lumia editable YAML drafts — **keep** (documented enhancement) |
 | G19 | N/A | OKF `sources` stacked articles + disclosure + YAML | Removed. `sources` is a plain text property, same control as any other string |
 | G20 | N/A | Sources expand session + remeasure | Widget removed with G19. Tall-sheet tests use plain text rows |
 | G21 | N/A | Sources article chrome vs estimate `ARTICLE_CHROME` | Removed with the Sources widget. `sources` estimates as clamped text |

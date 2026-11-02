@@ -7,6 +7,7 @@
  *   pdfToolbar   where the controls are: status bar entries, the mode setting
  *   pdfOutline   the PDF Outline view in the Explorer
  *   pdfLookUp    macOS Look Up: a force click or the context menu opens the Dictionary
+ *   pdfSidecar   highlights in a Markdown sidecar beside the PDF, and #hl- links to them
  *   pdfSettings  PDF: Open Settings and the commands that change the common settings
  *   pdfZen       zen mode: core Zen Mode, and a floating bar with Exit zen in the viewer
  *   pdfRegions   PNG snapshots of selected regions, for agents
@@ -18,6 +19,7 @@ import { ideContextPlugin } from "./ideContext/plugin";
 import { pdfAnnotationsPlugin } from "./pdfAnnotations/plugin";
 import { pdfPlugin } from "./pdf/plugin";
 import { pdfLookUpPlugin } from "./pdfLookUp/plugin";
+import { pdfSidecarPlugin } from "./pdfSidecar/plugin";
 import { pdfSettingsPlugin } from "./pdfSettings/plugin";
 import { pdfOutlinePlugin } from "./pdfOutline/plugin";
 import { pdfRegionsPlugin } from "./pdfRegions/plugin";
@@ -34,6 +36,7 @@ export const plugins: readonly Plugin[] = [
   pdfOutlinePlugin,
   pdfRegionsPlugin,
   pdfLookUpPlugin,
+  pdfSidecarPlugin,
   pdfZenPlugin,
   pdfSettingsPlugin,
   agentBridgePlugin,

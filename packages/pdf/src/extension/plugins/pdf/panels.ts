@@ -5,6 +5,17 @@ import type { PdfPanel } from "./panel";
 export { VIEW_TYPE } from "../../../host/viewer/panels";
 
 /**
+ * Opens link fragments other than `#page=…&viewrect=…`, such as a sidecar
+ * highlight's `#hl-…` (plugin `pdfSidecar`).
+ */
+export interface FragmentHandler {
+  /** Whether this handler opens `fragment` (without the `#`). */
+  accepts(fragment: string): boolean;
+  /** Show `fragment` in the editor just opened on its PDF. */
+  open(panel: PdfPanel, fragment: string): Promise<void>;
+}
+
+/**
  * Every open PDF editor in VS Code (see `PdfViewerPanels`). The active one
  * is the one in the active tab.
  */
@@ -16,6 +27,8 @@ export class PdfPanels
     vscode.window.tabGroups.onDidChangeTabs(() => this.update()),
     vscode.window.tabGroups.onDidChangeTabGroups(() => this.update()),
   ];
+
+  private readonly fragmentHandlers = new Set<FragmentHandler>();
 
   constructor() {
     super(
@@ -30,6 +43,21 @@ export class PdfPanels
         panel.webviewPanel.onDidChangeViewState(() => listener()),
       onDispose: (listener) => panel.webviewPanel.onDidDispose(listener),
     });
+  }
+
+  /** Let a plugin open link fragments of its own (until the disposable is). */
+  handleFragment(handler: FragmentHandler): vscode.Disposable {
+    this.fragmentHandlers.add(handler);
+    return new vscode.Disposable(() => this.fragmentHandlers.delete(handler));
+  }
+
+  /** The plugin that opens `fragment`, if one does. */
+  fragmentHandlerFor(fragment: string): FragmentHandler | undefined {
+    const bare = fragment.replace(/^#/, "");
+    if (!bare) {
+      return undefined;
+    }
+    return [...this.fragmentHandlers].find((handler) => handler.accepts(bare));
   }
 
   /** Wait (briefly) for the editor opened for `uri` to register. */

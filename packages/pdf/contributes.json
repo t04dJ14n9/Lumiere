@@ -2,7 +2,7 @@
   "customEditors": [
     {
       "viewType": "lumiere.pdf.viewer",
-      "displayName": "Lumi\u00e8re PDF",
+      "displayName": "Lumia PDF",
       "selector": [
         {
           "filenamePattern": "*.pdf"
@@ -99,7 +99,7 @@
     },
     {
       "command": "lumiere.pdf.copyLinkForAgent",
-      "title": "Copy Link for Agent",
+      "title": "Copy link to this",
       "category": "PDF",
       "icon": "$(comment-discussion)",
       "enablement": "lumiere.pdf.hasSelection"
@@ -373,12 +373,12 @@
     {
       "command": "lumiere.pdf.ideContext.copy",
       "title": "Copy IDE Context",
-      "category": "Lumi\u00e8re PDF"
+      "category": "Lumia PDF"
     },
     {
       "command": "lumiere.pdf.ideContext.send",
       "title": "Send IDE Context to Agent\u2026",
-      "category": "Lumi\u00e8re PDF"
+      "category": "Lumia PDF"
     }
   ],
   "menus": {
@@ -813,12 +813,12 @@
     ]
   },
   "configuration": {
-    "title": "Lumi\u00e8re PDF",
+    "title": "Lumia PDF",
     "properties": {
       "lumiere.pdf.outline.followCursor": {
         "type": "boolean",
-        "default": false,
-        "description": "Reveal and select the bookmark containing the current PDF page and reading position in PDF Outline, without moving focus. Toggle Follow Cursor in the outline's More Actions menu."
+        "default": true,
+        "description": "Select the bookmark of the current PDF page and reading position in PDF Outline as you scroll, without moving focus. Its parents and its own sub-bookmarks open and every other branch closes. Toggle Follow Cursor in the outline's More Actions menu."
       },
       "lumiere.pdf.copyLinkForAgent.target": {
         "type": "string",
@@ -839,13 +839,13 @@
           "Codex: the selection (and a region's snapshot) attached to the thread.",
           "Only copy the selection."
         ],
-        "markdownDescription": "Which agent chat, if any, **Copy Link for Agent** opens with a PDF selection. The link and selection are always copied. Extensions cannot see which agent you are working in, so `auto` only opens a chat when there is a single agent; pick one here to send the selection to it."
+        "markdownDescription": "Which agent chat, if any, **Copy link to this** opens with a PDF selection. The link and selection are always copied. Extensions cannot see which agent you are working in, so `auto` only opens a chat when there is a single agent; pick one here to send the selection to it."
       },
       "lumiere.pdf.regionImageCache.maxSizeMB": {
         "type": "number",
         "default": 100,
         "minimum": 1,
-        "markdownDescription": "The most disk space, in megabytes, that PNG snapshots of selected regions may use in the extension's storage. This is a hard limit: when a new snapshot takes them past it, the least recently used ones are deleted, and a single snapshot larger than the limit is not saved (Copy Link for Agent then copies the link without the image). Values below 1 count as 1."
+        "markdownDescription": "The most disk space, in megabytes, that PNG snapshots of selected regions may use in the extension's storage. This is a hard limit: when a new snapshot takes them past it, the least recently used ones are deleted, and a single snapshot larger than the limit is not saved (Copy link to this then copies the link without the image). Values below 1 count as 1."
       },
       "lumiere.pdf.toolbar.mode": {
         "type": "string",
@@ -943,7 +943,22 @@
       "lumiere.pdf.lookUp.enabled": {
         "type": "boolean",
         "default": true,
-        "markdownDescription": "macOS only: look up the word under the pointer in the Dictionary app with a force click (hard press on the trackpad), or with **Look Up** in the right-click menu of a PDF. Has no effect on other systems."
+        "markdownDescription": "macOS only: look up the word under the pointer with a force click (hard press on the trackpad) or a three-finger tap, which shows the Dictionary popover, or with **Look Up** in the right-click menu of a PDF, which opens the Dictionary app. Has no effect on other systems."
+      },
+      "lumiere.pdf.sidecar.location": {
+        "type": "string",
+        "enum": ["sibling", "directory"],
+        "enumDescriptions": [
+          "Beside the PDF: `paper.pdf.lumiere.md` next to `paper.pdf`.",
+          "In the workspace folder set by `#lumiere.pdf.sidecar.directory#`."
+        ],
+        "default": "sibling",
+        "markdownDescription": "Where PDF highlights are kept. Highlights never change the PDF: they live in a Markdown sidecar, `paper.pdf.lumiere.md`, which notes can link into with `paper.pdf#hl-…`. An existing sidecar beside the PDF is still used after switching to a folder, until you move it."
+      },
+      "lumiere.pdf.sidecar.directory": {
+        "type": "string",
+        "default": "",
+        "markdownDescription": "The workspace folder for PDF highlight sidecars when `#lumiere.pdf.sidecar.location#` is `directory`, relative to the workspace root (for example `notes/pdf-sidecars`). Sidecars are kept flat there by the PDF's file name, so two PDFs of the same name share a name: the second is not saved over the first. An empty, absolute or outside path keeps sidecars beside the PDF."
       },
       "lumiere.pdf.keyboardShortcuts": {
         "type": "boolean",
@@ -1132,7 +1147,7 @@
   "mcpServerDefinitionProviders": [
     {
       "id": "lumiere.pdf.agentBridge",
-      "label": "Lumi\u00e8re PDF"
+      "label": "Lumia PDF"
     }
   ]
 }

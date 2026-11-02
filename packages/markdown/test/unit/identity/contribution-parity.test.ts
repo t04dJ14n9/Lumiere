@@ -65,7 +65,7 @@ import {
 import { fakeDocument, fakeHost, withHost } from "../../support/vscode-fake";
 import { extensionManifest } from "../../support/manifest";
 
-/** Lumière's own entries in the shipped manifest (Lumière PDF's sit beside them). */
+/** Lumia's own entries in the shipped manifest (Lumia PDF's sit beside them). */
 const manifest = extensionManifest();
 const isMarkdownOwned = (id: string) => id.startsWith(SETTING_PREFIX);
 const pkg = {

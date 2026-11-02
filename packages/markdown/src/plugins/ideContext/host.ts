@@ -51,7 +51,7 @@ export const ideContextHost: Plugin = {
 async function gatherInput(ctx: Context) {
   const panel = ctx.editors.active();
   if (!panel) {
-    ctx.dialogs.inform("Open a Lumière note first");
+    ctx.dialogs.inform("Open a Lumia note first");
     return undefined;
   }
   const host = ctx.agentHost.ideContextHost?.();

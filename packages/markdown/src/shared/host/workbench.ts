@@ -139,7 +139,7 @@ export interface ActiveEditor {
   /**
    * After Toggle Text Editor's `openWith`, close the leave-behind tab of the
    * other view for this URI in the active group (BH-011). Dirty tabs stay.
-   * `keep` is the view that should remain: host text or Lumière.
+   * `keep` is the view that should remain: host text or Lumia.
    */
   closeSiblingTabs(uri: string, keep: "text" | "lumiere"): Promise<void>;
   /** The view type of the custom editor in the active tab, if one is there. */

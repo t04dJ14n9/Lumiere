@@ -13,7 +13,7 @@ import { sourceText } from "./source-text";
 import { contributionId } from "../../shared/setting-schema";
 
 interface Services {
-  /** Undefined when the window has no Lumière editors. */
+  /** Undefined when the window has no Lumia editors. */
   editors: Editors | undefined;
   dialogs: Dialogs;
   vaults: Vaults;

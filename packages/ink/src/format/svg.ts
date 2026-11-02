@@ -1,7 +1,7 @@
 /**
  * A sketch file, `*.sketch.svg`: an SVG any viewer shows as drawn (Obsidian,
  * GitHub, VS Code, a browser), with the portable strokes in its
- * `<metadata>` so Lumière can edit it again.
+ * `<metadata>` so Lumia can edit it again.
  *
  * Each stroke is a filled outline whose width follows the widths stored at
  * its points (outline.ts), not a line of one width. Where a stroke's
@@ -48,7 +48,7 @@ export function sketchToSvg(sketch: Sketch): string {
 
 /**
  * The sketch an SVG file holds. Throws `SketchFormatError` when the file is
- * not a Lumière sketch (a plain SVG drawn elsewhere, or a damaged one).
+ * not a Lumia sketch (a plain SVG drawn elsewhere, or a damaged one).
  */
 export function sketchFromSvg(svg: string): Sketch {
   const metadata = /<metadata\b[^>]*>([\s\S]*?)<\/metadata\s*>/i.exec(svg)?.[1];
@@ -58,7 +58,7 @@ export function sketchFromSvg(svg: string): Sketch {
       metadata,
     )?.[1];
   if (element === undefined || element === "") {
-    throw new SketchFormatError("This SVG has no Lumière sketch in it.");
+    throw new SketchFormatError("This SVG has no Lumia sketch in it.");
   }
   return checkedPencilKit(decodeSketch(elementText(element)));
 }
@@ -180,7 +180,7 @@ function cdataSafe(json: string): string {
 }
 
 /**
- * The element's text: a CDATA section as Lumière writes it, or escaped text
+ * The element's text: a CDATA section as Lumia writes it, or escaped text
  * as an SVG editor may write it back.
  */
 function elementText(element: string): string {

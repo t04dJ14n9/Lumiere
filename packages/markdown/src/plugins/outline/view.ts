@@ -15,9 +15,23 @@ interface OutlineViewOptions {
   logger: Logger;
 }
 
+/**
+ * How long after a click on an outline row the jump it made is left alone:
+ * long enough for a double-click's second click and the editor's reply.
+ */
+const OUTLINE_JUMP_MS = 1000;
+
+/** A heading a click in the outline opened, and whether the caret got there. */
+interface OutlineJump {
+  id: string;
+  until: number;
+  landed: boolean;
+}
+
 /** Owns refresh timing and rejects caret captures from an obsolete panel or text. */
 export class OutlineView {
   private panel: EditorPanel | undefined;
+  private outlineJump: OutlineJump | undefined;
   private sourceVersion = 0;
   private revision = 0;
   private followRequest = 0;
@@ -27,6 +41,23 @@ export class OutlineView {
   private timer: ReturnType<typeof setTimeout> | undefined;
 
   constructor(private readonly options: OutlineViewOptions) {}
+
+  /**
+   * A click on the outline row of the heading at `offset` opened it. Until
+   * the caret moves on from there, the tree is not laid out again: the row
+   * is already selected, and the accordion's collapse would move rows under
+   * the pointer, so the second click of a double-click landed on another
+   * heading (and jumped there). The editor first reports its caret from
+   * before the click, as it takes focus, so that is left alone too.
+   */
+  jumpedTo(offset: number): void {
+    const node = this.options.source.activeNode(offset);
+    this.outlineJump = node && {
+      id: node.id,
+      until: Date.now() + OUTLINE_JUMP_MS,
+      landed: false,
+    };
+  }
 
   schedule(): void {
     this.followRequest++;
@@ -55,8 +86,34 @@ export class OutlineView {
     void this.followCaret();
   }
 
+  /** Follow the active panel's caret. */
+  followCaret(): Promise<void> {
+    return this.follow((panel) =>
+      panel.rpc.call(editorProtocol, "captureCursor", {}),
+    );
+  }
+
+  /**
+   * Follow where the reader is after a scroll in `panel` (see
+   * `reading-position.ts`): the caret while it is on screen, else the line
+   * at the middle of the editor.
+   */
+  followReading(
+    panel: EditorPanel,
+    position: { offset: number; version: number },
+  ): Promise<void> {
+    if (panel !== this.panel) {
+      return Promise.resolve();
+    }
+    return this.follow(() =>
+      Promise.resolve({ head: position.offset, version: position.version }),
+    );
+  }
+
   /** Detached event work has its own error sink, including closed-panel RPC failures. */
-  async followCaret(): Promise<void> {
+  private async follow(
+    capture: (panel: EditorPanel) => Promise<{ head: number; version: number }>,
+  ): Promise<void> {
     const request = ++this.followRequest;
     const panel = this.panel;
     if (!panel || !this.canFollow(panel, request)) {
@@ -67,7 +124,7 @@ export class OutlineView {
       if (!this.canFollow(panel, request)) {
         return;
       }
-      const caret = await panel.rpc.call(editorProtocol, "captureCursor", {});
+      const caret = await capture(panel);
       if (
         !this.canFollow(panel, request) ||
         caret.version !== panel.session.version
@@ -75,7 +132,7 @@ export class OutlineView {
         return;
       }
       const node = this.options.source.activeNode(caret.head);
-      if (!node) {
+      if (!node || this.isOutlineJump(node)) {
         return;
       }
       if (
@@ -141,6 +198,26 @@ export class OutlineView {
       select: false,
       focus: false,
     });
+  }
+
+  /** Whether the caret at `node` is still where an outline click put it, or on its way. */
+  private isOutlineJump(node: TreeNode): boolean {
+    const jump = this.outlineJump;
+    if (!jump || Date.now() > jump.until) {
+      this.outlineJump = undefined;
+      return false;
+    }
+    if (node.id === jump.id) {
+      jump.landed = true;
+      return true;
+    }
+    if (jump.landed) {
+      // The caret moved on from the heading the click opened.
+      this.outlineJump = undefined;
+      return false;
+    }
+    // The caret from before the click, reported before the jump landed.
+    return true;
   }
 
   private async applyAccordion(active: TreeNode): Promise<void> {

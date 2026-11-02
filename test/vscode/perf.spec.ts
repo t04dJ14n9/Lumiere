@@ -30,7 +30,7 @@ async function frameOf(page: Page): Promise<Frame> {
       return frame;
     }
   }
-  throw new Error("No Lumière frame");
+  throw new Error("No Lumia frame");
 }
 
 async function sample(page: Page, file: string): Promise<Sample> {

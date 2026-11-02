@@ -28,10 +28,10 @@ never open a real vault.
 
    For Cursor use `cursor` with the same flags. Delete `/tmp/mdwb-manual`
    and `/tmp/mdwb-vault` afterwards.
-4. Run **Lumière: Use Lumière for Markdown in This
+4. Run **Lumia: Use Lumia for Markdown in This
    Workspace** once, so `.md` files open in Workshop (see Editor below).
 5. Turn on `lumiere.markdown.debug.logging` while testing and keep the
-   **Lumière** output channel open; note any error lines in the
+   **Lumia** output channel open; note any error lines in the
    result.
 
 Change settings at workspace scope (or folder scope in a multi-root
@@ -99,11 +99,11 @@ Owns the text, saving and history; VS Code's TextDocument is the authority.
 The CodeMirror view in a webview panel, its commands and view state.
 
 Cursor Remote SSH handoff regression (use the disposable vault): associate
-`*.md` with Lumière and leave both `editor.warmTextDocument` and
+`*.md` with Lumia and leave both `editor.warmTextDocument` and
 `editor.reclaimTextEditor` at `auto`. Have an agent edit a note on disk, open
 it with Cursor's built-in Markdown editor, and make an unsaved edit there.
-Let Cursor auto-transfer the note into Lumière, then repeat with
-**Reopen Editor With… → Lumière**. The custom editor opens without
+Let Cursor auto-transfer the note into Lumia, then repeat with
+**Reopen Editor With… → Lumia**. The custom editor opens without
 the `Argument is 'undefined' or 'null.'` assertion, the unsaved text survives,
 and native undo still restores the edit. Repeat with a `.markdown` note and
 the matching association, and after reloading with the dirty note already
@@ -142,7 +142,7 @@ do not install a VSIX or use the owner's profile.
    editor: the exact source is copied.
 2. Give two panels different selections, scroll positions and modes; reload
    the window: each panel restores its own state.
-3. Run **Use Lumière for Markdown in This Workspace**: the
+3. Run **Use Lumia for Markdown in This Workspace**: the
    workspace `settings.json` gets `workbench.editorAssociations` entries for
    `*.md` and `*.markdown`, other associations stay, and running it again
    changes nothing. A note opened from the Explorer now opens in the
@@ -154,7 +154,7 @@ do not install a VSIX or use the owner's profile.
    and `lumiere.markdown.editor.tabSize` with the note open: the editor
    updates without reopening and keeps text, folds and selection.
    `lumiere.markdown.editor.defaultMode` applies to newly opened panels.
-6. With `lumiere.markdown.debug.logging` on, the **Lumière**
+6. With `lumiere.markdown.debug.logging` on, the **Lumia**
    output channel shows debug lines from the host and the webview; with it
    off, only warnings and errors.
 7. Right-click a selection that spans hidden syntax (bold, a link): the
@@ -315,10 +315,11 @@ Reference: the measured Obsidian 1.14.4 spec and `docs/properties-diff.md`.
    source/live-preview toggles keep the native document authoritative. Check
    menu clipboard permissions, native pickers/locales and actual IME with the
    owner's editor; these are not established by the DOM event unit fakes.
-9b. `lumiere.markdown.properties.listPreviewCount` (default 3): a tags, aliases,
-   cssclasses, or other list with more than N items shows disclosure; raise/lower
-   N and confirm the chip preview count updates without rewriting YAML. `sources`
-   is text, so this setting does not apply to it.
+9b. `lumiere.markdown.properties.listPreviewCount` (default 0): a tags, aliases,
+   cssclasses, or other list shows every item, as in Obsidian. Set N above 0: a
+   list with more than N items shows disclosure; raise/lower N and confirm the
+   chip preview count updates without rewriting YAML. `sources` is text, so
+   this setting does not apply to it.
 10. Keep `title` as an ordinary editable text property (WorkVault uses the
     filename stem). Add `decision_confidence_and_supporting_evidence: high` and
     a nested `decision_conf` map with `score`, `rationale` and a `factors` list.
@@ -916,12 +917,37 @@ Off by default.
    lists the item. On Windows or Linux, right-click with only a caret: the
    menu has no Copy Link for Agent.
 
+### lookUp
+
+Setup: `Core.md` and `Links.md` in the fixture vault, Live Preview, on macOS
+in VS Code and in Cursor.
+
+1. Two-finger click (then Ctrl-click) a word in a paragraph, a heading, bold
+   text, a rendered link's label, a list item and a quote. The menu lists
+   **Look Up** right after Copy Link for Agent; choosing it opens the
+   Dictionary app at that word, without its punctuation ("word," looks up
+   "word"), and the note is unchanged.
+2. Select one word, two-finger click inside it: Look Up looks up that word.
+   Select two words and two-finger click on one of them: it looks up the
+   word under the pointer.
+3. Two-finger click past the end of a short line or on a blank line:
+   choosing Look Up does nothing.
+4. With "Look up & data detectors" set to Force Click with one finger
+   (System Settings › Trackpad), force-click a word in each place of step 1;
+   then set it to Tap with three fingers and tap each. macOS shows the
+   Dictionary popover for that word. If it does not, record the place, the
+   editor (VS Code or Cursor) and its version: Lumia cannot answer that
+   gesture itself, only keep the word in the page's text
+   (`test/browser/look-up.spec.ts` guards that).
+5. Turn `lumiere.markdown.plugins.lookUp.enabled` off: the item leaves the
+   menu. On Windows or Linux the menu never lists it.
+
 ### cursorBridge
 
 In **Cursor** only: select text in Live Preview, press Cmd/Ctrl+L (Chat) and
 Cmd/Ctrl+K (Edit). Edit should open Cursor’s native bar; Accept updates the note
-in Lumière without a custom apply-back. After a verified Edit, a left status-bar
-item (`Return to Lumière`) appears; click it (or run
+in Lumia without a custom apply-back. After a verified Edit, a left status-bar
+item (`Return to Lumia`) appears; click it (or run
 `lumiere.markdown.cursorBridge.dismissEditMirror`) to abandon the mirror and
 return to Live Preview. With no selection, both Chat and Edit no-op with a short
 notice. Disable `lumiere.markdown.plugins.cursorBridge.enabled`
@@ -932,7 +958,7 @@ Cmd/Ctrl+K. Leave `agentBridge` behaviour unchanged.
 ### openCopiedAgentReference
 
 1. Copy `@Core.md#2-3` and run **Open Copied Agent Reference**, with no note
-   open. Confirm the prefilled reference: Lumière opens and
+   open. Confirm the prefilled reference: Lumia opens and
    selects those complete source lines. Repeat with a quoted reference and
    a one-line `#2` reference. A copied agent payload prefills only its first
    line; unrelated clipboard content leaves the prompt empty.
@@ -958,13 +984,16 @@ and dark themes.
 1. `sources` is a text property, the same control as `title` or any other
    string: a text field, type Text, no stacked rows, chips, source links, or
    disclosure. Edit the text and leave the field. The note stores a string.
-   Undo restores the previous value.
+   Undo restores the previous value. A list of 30 sources shows about 14
+   lines, unclamped, and the wheel scrolls the rest without focusing it.
 2. A YAML list under `sources` still opens as that same text field (the list's
    YAML text), not as cards or Unknown JSON. Committing the field stores a
    string. Replacing the list with one line of text keeps that string indented
    under `sources:` (a YAML plain scalar), not as a list.
 3. `generated` (and any other nested map / list-of-maps) is editable as YAML in
-   Properties and writes back into the note. Scalar and scalar-list properties
+   Properties and writes back into the note, still a map. `generated` and
+   `verified` read like other text values: no border or code font, and no
+   empty line under the last one. Scalar and scalar-list properties
    keep their usual controls.
 4. Add a comment between `generated.by` and `generated.checksum`, and quote the
    checksum. Open the YAML draft: its comments and quoting match the source.
@@ -1125,12 +1154,12 @@ Use the disposable fixture vault from Setup. These rows enumerate every generate
 | `lumiere.markdown.openAsText` — Open as Text | unbound | On a disposable fixture, run Open as Text; confirm its named action using the plugin scenarios above, then undo where applicable. Repeat after disable/re-enable and switching panes. |
 | `lumiere.markdown.cursorBridge.chat` — Cursor Chat with Selection | ctrl+l (Mac cmd+l) | On a disposable fixture, run Cursor Chat with Selection; confirm its named action using the plugin scenarios above, then undo where applicable. Repeat after disable/re-enable and switching panes. |
 | `lumiere.markdown.cursorBridge.edit` — Cursor Edit Selection | ctrl+k (Mac cmd+k) | On a disposable fixture, run Cursor Edit Selection; confirm its named action using the plugin scenarios above, then undo where applicable. Repeat after disable/re-enable and switching panes. |
-| `lumiere.markdown.cursorBridge.dismissEditMirror` — Return to Lumière | unbound | On a disposable fixture, run Return to Lumière; confirm its named action using the plugin scenarios above, then undo where applicable. Repeat after disable/re-enable and switching panes. |
+| `lumiere.markdown.cursorBridge.dismissEditMirror` — Return to Lumia | unbound | On a disposable fixture, run Return to Lumia; confirm its named action using the plugin scenarios above, then undo where applicable. Repeat after disable/re-enable and switching panes. |
 | `lumiere.markdown.jumpBack` — Go Back in Note | unbound | On a disposable fixture, run Go Back in Note; confirm its named action using the plugin scenarios above, then undo where applicable. Repeat after disable/re-enable and switching panes. |
 | `lumiere.markdown.jumpForward` — Go Forward in Note | unbound | On a disposable fixture, run Go Forward in Note; confirm its named action using the plugin scenarios above, then undo where applicable. Repeat after disable/re-enable and switching panes. |
 | `lumiere.markdown.titleActions` — Note Actions | unbound | On a disposable fixture, run Note Actions; confirm its named action using the plugin scenarios above, then undo where applicable. Repeat after disable/re-enable and switching panes. |
 | `lumiere.markdown.selectionActions` — Selection Actions | unbound | On a disposable fixture, run Selection Actions; confirm its named action using the plugin scenarios above, then undo where applicable. Repeat after disable/re-enable and switching panes. |
-| `lumiere.markdown.useForMarkdownInWorkspace` — Use Lumière for Markdown in This Workspace | unbound | On a disposable fixture, run Use Lumière for Markdown in This Workspace; confirm its named action using the plugin scenarios above, then undo where applicable. Repeat after disable/re-enable and switching panes. |
+| `lumiere.markdown.useForMarkdownInWorkspace` — Use Lumia for Markdown in This Workspace | unbound | On a disposable fixture, run Use Lumia for Markdown in This Workspace; confirm its named action using the plugin scenarios above, then undo where applicable. Repeat after disable/re-enable and switching panes. |
 | `lumiere.markdown.toggleTextEditor` — Toggle Text Editor | ctrl+e (Mac cmd+e); ctrl+e (Mac cmd+e) | On a disposable fixture, run Toggle Text Editor; confirm its named action using the plugin scenarios above, then undo where applicable. Repeat after disable/re-enable and switching panes. |
 | `lumiere.markdown.goToLine` — Go to Line… | ctrl+g (Mac ctrl+g) | On a disposable fixture, run Go to Line…; confirm its named action using the plugin scenarios above, then undo where applicable. Repeat after disable/re-enable and switching panes. |
 | `lumiere.markdown.insertEmbed` — Insert Embed | unbound | On a disposable fixture, run Insert Embed; confirm its named action using the plugin scenarios above, then undo where applicable. Repeat after disable/re-enable and switching panes. |
@@ -1186,6 +1215,7 @@ Use the disposable fixture vault from Setup. These rows enumerate every generate
 | `lumiere.markdown.openLinkInNewTab` — Open Link in New Tab | unbound | On a disposable fixture, run Open Link in New Tab; confirm its named action using the plugin scenarios above, then undo where applicable. Repeat after disable/re-enable and switching panes. |
 | `lumiere.markdown.openLinkToSide` — Open Link to Side | unbound | On a disposable fixture, run Open Link to Side; confirm its named action using the plugin scenarios above, then undo where applicable. Repeat after disable/re-enable and switching panes. |
 | `lumiere.markdown.toggleSourceMode` — Toggle Live Preview/Source Mode | unbound | On a disposable fixture, run Toggle Live Preview/Source Mode; confirm its named action using the plugin scenarios above, then undo where applicable. Repeat after disable/re-enable and switching panes. |
+| `lumiere.markdown.lookUp` — Look Up | unbound | On macOS, right-click a word in a note and choose Look Up: the Dictionary app opens at that word (see the lookUp scenarios above). Hidden from the palette and absent from the menu off macOS. |
 | `lumiere.markdown.marp.preview` — Open Marp Preview to the Side | unbound | On a disposable fixture, run Open Marp Preview to the Side; confirm its named action using the plugin scenarios above, then undo where applicable. Repeat after disable/re-enable and switching panes. |
 | `lumiere.markdown.marp.export` — Export Marp Slide Deck | unbound | On a disposable fixture, run Export Marp Slide Deck; confirm its named action using the plugin scenarios above, then undo where applicable. Repeat after disable/re-enable and switching panes. |
 | `lumiere.markdown.marp.toggle` — Toggle Marp | unbound | On a disposable fixture, run Toggle Marp; confirm its named action using the plugin scenarios above, then undo where applicable. Repeat after disable/re-enable and switching panes. |
@@ -1290,6 +1320,7 @@ Use the disposable fixture vault from Setup. These rows enumerate every generate
 | `lumiere.markdown.plugins.lineNumbers.enabled` | `true` | boolean; change at workspace-folder scope, verify the owning plugin scenario, then reset the override. |
 | `lumiere.markdown.plugins.linkUpdates.enabled` | `true` | boolean; change at workspace-folder scope, verify the owning plugin scenario, then reset the override. |
 | `lumiere.markdown.plugins.links.enabled` | `true` | boolean; change at workspace-folder scope, verify the owning plugin scenario, then reset the override. |
+| `lumiere.markdown.plugins.lookUp.enabled` | `true` | boolean; turn off on macOS and confirm Look Up leaves the note's right-click menu; then reset. |
 | `lumiere.markdown.plugins.marp.enabled` | `true` | boolean; change at workspace-folder scope, verify the owning plugin scenario, then reset the override. |
 | `lumiere.markdown.plugins.math.enabled` | `true` | boolean; change at workspace-folder scope, verify the owning plugin scenario, then reset the override. |
 | `lumiere.markdown.plugins.obsidianCompat.enabled` | `true` | boolean; change at workspace-folder scope, verify the owning plugin scenario, then reset the override. |
@@ -1354,7 +1385,7 @@ Use the disposable fixture vault from Setup. These rows enumerate every generate
 | `lumiere.markdown.outline.followCursor` | `true` | boolean; change at workspace-folder scope, verify the owning plugin scenario, then reset the override. |
 | `lumiere.markdown.outline.expandMode` | `"accordion"` | accordion / all; change at workspace-folder scope, verify the owning plugin scenario, then reset the override. |
 | `lumiere.markdown.properties.display` | `"visible"` | visible / hidden / source; change at workspace-folder scope, verify the owning plugin scenario, then reset the override. |
-| `lumiere.markdown.properties.listPreviewCount` | `3` | number; change at workspace-folder scope, verify the owning plugin scenario, then reset the override. |
+| `lumiere.markdown.properties.listPreviewCount` | `0` | number; change at workspace-folder scope, verify the owning plugin scenario, then reset the override. |
 | `lumiere.markdown.scratch.folder` | `"scratch"` | string; change at workspace-folder scope, verify the owning plugin scenario, then reset the override. |
 | `lumiere.markdown.stickyScroll.maxLines` | `5` | number; change at workspace-folder scope, verify the owning plugin scenario, then reset the override. |
 | `lumiere.markdown.tags.viewSort` | `"frequency"` | name / frequency; change at workspace-folder scope, verify the owning plugin scenario, then reset the override. |

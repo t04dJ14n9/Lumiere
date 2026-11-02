@@ -39,7 +39,7 @@ export default defineManifest({
       },
       {
         id: "cursorBridge.dismissEditMirror",
-        title: "Return to Lumière",
+        title: "Return to Lumia",
         palette: false,
         scope: "workbench",
         when: bridgeWhen,

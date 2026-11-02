@@ -59,6 +59,13 @@ input {
   );
   --paper-accent-soft: oklch(from var(--paper-accent) l c h / 0.15);
   --selection-edge: var(--paper-accent);
+  /*
+   * The paper under a page's picture. It is all that shows of a page whose
+   * picture is still being drawn (a fast scroll outruns the renderer), so it
+   * matches the background the pictures are drawn on (renderOptions in
+   * page-bitmaps.tsx).
+   */
+  --paper: #fff;
 
   display: grid;
   /* minmax(0, …) keeps the pages from widening the column they fit to. */
@@ -87,6 +94,7 @@ input {
   );
   --paper-accent-soft: oklch(from var(--paper-accent) l c h / 0.25);
   --selection-edge: var(--paper-accent);
+  --paper: #1e1e1e;
 }
 
 .document {

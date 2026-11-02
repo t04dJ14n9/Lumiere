@@ -57,6 +57,32 @@ export function wordGlyphRange(
 }
 
 /**
+ * The box around glyphs [start, end) that have one: left, top, right, bottom
+ * in points. Undefined when none of them has a box.
+ */
+export function glyphRangeBox(
+  glyphs: readonly (WordGlyph | undefined)[],
+  [start, end]: [number, number],
+): [number, number, number, number] | undefined {
+  let box: [number, number, number, number] | undefined;
+  for (const glyph of glyphs.slice(start, end)) {
+    const next = glyph?.box;
+    if (!next) {
+      continue;
+    }
+    box = box
+      ? [
+          Math.min(box[0], next[0]),
+          Math.min(box[1], next[1]),
+          Math.max(box[2], next[2]),
+          Math.max(box[3], next[3]),
+        ]
+      : [...next];
+  }
+  return box;
+}
+
+/**
  * The word inside what was read from the PDF: surrounding punctuation is
  * dropped, apostrophes and hyphens inside it stay ("don’t", "state-of-the-art").
  * Empty when there are no letters or digits.

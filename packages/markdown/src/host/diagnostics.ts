@@ -55,6 +55,6 @@ function diagnostic(item: DiagnosticItem): vscode.Diagnostic {
     item.message,
     severities[item.severity],
   );
-  problem.source = "Lumière";
+  problem.source = "Lumia";
   return problem;
 }

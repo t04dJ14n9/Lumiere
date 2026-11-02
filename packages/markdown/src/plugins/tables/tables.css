@@ -296,22 +296,24 @@
   line-height: 1.3;
 }
 
-/* Column width drag: right-edge affordance, clear of the top move grip (⠶). */
-.table-col-resizer {
+/* Column width drag: a column's right border, in any row (column-resize.ts). */
+.hybrid-table.table-col-resize-hover,
+.hybrid-table.table-col-resize-hover *,
+.hybrid-table.table-col-resizing,
+.hybrid-table.table-col-resizing * {
+  cursor: col-resize;
+}
+.hybrid-table.table-col-resizing {
+  user-select: none;
+}
+.table-col-resize-guide {
   position: absolute;
-  top: 0;
-  right: -3px;
-  z-index: 3;
-  width: 6px;
-  height: 100%;
-  cursor: col-resize;
-  touch-action: none;
-  user-select: none;
+  z-index: 4;
+  width: 2px;
+  margin-left: -1px;
+  background: var(--accent);
+  pointer-events: none;
 }
-.table-col-resizing,
-.table-col-resizing .table-col-resizer {
-  cursor: col-resize;
-}
-.table-col-resizing {
-  user-select: none;
+.table-col-resize-guide[hidden] {
+  display: none;
 }

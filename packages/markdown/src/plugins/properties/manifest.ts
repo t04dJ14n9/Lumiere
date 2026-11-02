@@ -3,11 +3,11 @@ import { defineManifest } from "../../shared/manifest";
 export const config = Schema.object({
   display: Schema.union(["visible", "hidden", "source"]).default("visible"),
   listPreviewCount: Schema.number()
-    .min(1)
+    .min(0)
     .max(50)
-    .default(3)
+    .default(0)
     .description(
-      "How many list chips to show before a disclosure control. Applies to tags, aliases, cssclasses, and other lists.",
+      "How many list items to show before a Showing N of M control. 0, the default, shows them all, as Obsidian does. Applies to tags, aliases, cssclasses, and other lists.",
     ),
 });
 export default defineManifest({

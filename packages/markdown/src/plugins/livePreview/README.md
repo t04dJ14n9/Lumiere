@@ -6,9 +6,14 @@ Live Preview. Each panel can switch between Live Preview and Source mode.
 ## How it works
 
 A shared document tree feeds block indexes and viewport inline decorations.
-For a large note it starts as the opening band; when the viewport passes its
-end, the parse resumes up to the viewport and a margin, and idle slices of a
-few milliseconds finish the rest, during scrolling too.
+It is CodeMirror's own syntax tree: the editor parses a note once, in
+CodeMirror's language, and Live Preview reads that tree and only asks the
+parse to go further when it needs more of the note (as in Obsidian, one tree
+for everything). For a large note it starts as the opening band; when the
+viewport passes its end, the parse is pushed up to the viewport and a margin
+before the frame paints, and idle slices of a few milliseconds finish the
+rest, during scrolling too (CodeMirror's own background parse stops 100,000
+characters past the viewport).
 Feature renderers are selected in catalog rank order; generic core blocks use
 the base slot. Caller-bound registrations retain the contributing plugin's owner.
 Built-in block renderers declare their eligible node names. Structural syntax
@@ -31,17 +36,21 @@ syntax parser and HTML renderer share the highlight-aware emphasis flanking rule
 
 - `manifest.ts`: core metadata and Toggle Source command.
 - `api.ts`: renderer, inline context and service contracts; `documentTree`,
-  the syntax tree (a prefix while a large note is still parsing), which an
-  edit parses again only where it touched.
+  CodeMirror's syntax tree as Live Preview needs it (a prefix while a large
+  note is still parsing, never covering less after an edit than before it);
+  `treeReached`, where a transaction's tree became more than the old one
+  parsed again, for indexes of the note.
 - `host.ts`: native Toggle Source command routing.
 - `webview.ts`: engine/service, invalidation, fallback and mode registrations.
 - `registry.ts`: renderer facets and reveal rules.
-- `document-tree.ts`: parses past the viewport when it outruns the tree and
-  finishes a large note in idle slices.
-- `document-parse.ts`: a Markdown parse that stops part-way, resumes, and
-  hands its work on to the next document version.
-- `document-tree.test.ts`: first-paint prefix, viewport catch-up, idle
-  slices and reuse across edits.
+- `document-tree.ts`: pushes CodeMirror's parse past the viewport when the
+  viewport outruns the tree, and finishes a large note in idle slices.
+- `../../markdown/dialect/language.ts`: the parser CodeMirror's language
+  runs, with the first-line frontmatter rule Lezer's block reuse lacks.
+- `document-tree.test.ts`: first-paint band, one parse shared with
+  CodeMirror, viewport catch-up, idle slices, reach kept across edits,
+  progress handed on, first-line frontmatter edits, indexing what a parse
+  newly reached.
 - `blocks.ts`: block index, widget decorations and render revision.
 - `block-discovery.ts`: structural syntax cache and renderer candidate selection.
 - `block-discovery.test.ts`: registration cost, discovery parity and unrestricted renderers.
@@ -62,6 +71,17 @@ syntax parser and HTML renderer share the highlight-aware emphasis flanking rule
 - `code-lines.test.ts`: code and thematic break line classes and hidden text.
 - `invalidation.test.ts`: incremental index and decorations equal a full rebuild (randomised); invalidation reasons.
 - `decoration-cost.test.ts`: renderer matches and widgets built per caret move and edit on a 4,000-block note.
+- `viewport-cost.test.ts`: tree steps to decorate one screen, the same in a note four times longer (counted, not timed).
+- `heading-drag.ts`: a drag that starts at the start of a heading's text,
+  its `#` marks hidden (reveal is frozen from the press), starts at the start
+  of the line, so the selection takes the marks as in Obsidian.
+  `heading-drag.test.ts` covers it.
+- `plain-edit.ts`: whether an edit is plain text that can change no block
+  (no line break or block mark, the line's leading marks kept, the same
+  blocks around it in the tree after it); indexes of the note's blocks then
+  map their positions instead of walking the whole note on every keystroke.
+  `test/unit/livePreview/plain-edit.test.ts` applies random edits and checks
+  every index that took that shortcut against a fresh walk.
 
 ## Incremental invalidation
 

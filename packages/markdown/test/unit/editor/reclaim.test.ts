@@ -58,7 +58,7 @@ test("auto reclaims only in Cursor; on and off are explicit", () => {
 });
 
 test("a switch in place to the text editor is the reader's choice and stays", () => {
-  // Reopen Editor With… › Text Editor from Lumière, Cursor's Markdown button.
+  // Reopen Editor With… › Text Editor from Lumia, Cursor's Markdown button.
   assert.equal(shouldReclaim(swap("workbench", "text"), context), false);
   assert.equal(shouldReclaim(swap("other", "text"), context), false);
 });
@@ -103,7 +103,7 @@ test("the handoff from Cursor Markdown into Workshop is left in place", () => {
   assert.equal(shouldReclaim(swap("workbench", "workbench"), context), false);
 });
 
-test("only notes the workspace routes to Lumière are reclaimed", () => {
+test("only notes the workspace routes to Lumia are reclaimed", () => {
   const associations = { "*.md": "lumiere.markdown.editor" };
   const viewType = "lumiere.markdown.editor";
   assert.equal(associatedWith(associations, note, viewType), true);
@@ -490,7 +490,7 @@ test("a held swap stays held when its session ends some other way", () => {
 
 test("tabs open before reclaim starts are judged: the shown one now, the rest when first activated", () => {
   // A restored window: a note shown as text, another note behind it, and a
-  // note already in Lumière.
+  // note already in Lumia.
   const group: FakeGroup = { tabs: [], activeTab: undefined };
   const shown: FakeTab = { uri: note, kind: "text", group };
   const behind: FakeTab = {
@@ -527,7 +527,7 @@ test("tabs open before reclaim starts are judged: the shown one now, the rest wh
     swaps.next({ opened: [], changed: [behind] }, new Set()),
     [],
   );
-  // A tab already in Lumière is never reclaimed.
+  // A tab already in Lumia is never reclaimed.
   group.activeTab = workshop;
   const kept = swaps.next({ opened: [], changed: [workshop] }, new Set());
   assert.equal(shouldReclaim(kept[0]!.swap, context), false);

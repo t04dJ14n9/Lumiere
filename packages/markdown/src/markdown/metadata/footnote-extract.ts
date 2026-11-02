@@ -22,6 +22,104 @@ export interface Footnotes {
   references: Map<number, Footnote>;
 }
 
+const registries = new WeakMap<Text, Footnotes>();
+const partialRegistries = new WeakMap<
+  Text,
+  { length: number; registry: Footnotes }
+>();
+
+/**
+ * `extractFootnotes`, once per document (shared by metadata and Live
+ * Preview). Given a tree that covers only the start of a large note (Live
+ * Preview's, while the rest parses in the background), it uses that tree
+ * instead of parsing the whole note at once: references there are numbered
+ * exactly (a number depends only on the references before it), and
+ * definitions are found line by line as always (the tree only rules out
+ * those in code). Such a registry is not kept as the document's.
+ */
+export function footnoteRegistry(doc: Text, existingTree?: Tree): Footnotes {
+  const complete = registries.get(doc);
+  if (complete) {
+    return complete;
+  }
+  if (existingTree && existingTree.length < doc.length) {
+    const partial = partialRegistries.get(doc);
+    if (partial && partial.length >= existingTree.length) {
+      return partial.registry;
+    }
+    const registry = extractFootnotes(doc, existingTree);
+    partialRegistries.set(doc, { length: existingTree.length, registry });
+    return registry;
+  }
+  const registry = extractFootnotes(doc, existingTree);
+  registries.set(doc, registry);
+  return registry;
+}
+
+/**
+ * Hand `from`'s footnotes on to `to`, the next version of the document,
+ * through an edit that changed none of them: the same footnotes, numbered
+ * the same, at positions moved by `map`. Nothing happens if `from` has none
+ * yet or `to` already has some.
+ */
+export function carryFootnotes(
+  from: Text,
+  to: Text,
+  map: (position: number) => number,
+): void {
+  const complete = registries.get(from);
+  if (complete && !registries.has(to)) {
+    registries.set(to, mapFootnotes(complete, map));
+    return;
+  }
+  const partial = partialRegistries.get(from);
+  if (partial && !registries.has(to) && !partialRegistries.has(to)) {
+    partialRegistries.set(to, {
+      length: map(partial.length),
+      registry: mapFootnotes(partial.registry, map),
+    });
+  }
+}
+
+/** The footnotes known for `doc`, complete or not, without extracting any. */
+export function knownFootnotes(doc: Text): Footnotes | undefined {
+  return registries.get(doc) ?? partialRegistries.get(doc)?.registry;
+}
+
+function mapFootnotes(
+  registry: Footnotes,
+  map: (position: number) => number,
+): Footnotes {
+  const moved = new Map<Footnote, Footnote>();
+  const move = (note: Footnote): Footnote => {
+    let next = moved.get(note);
+    if (!next) {
+      next = {
+        ...note,
+        from: map(note.from),
+        marker: map(note.marker),
+        to: map(note.to),
+        references: note.references.map(map),
+        ...(note.segments && {
+          segments: note.segments.map((segment) => ({
+            ...segment,
+            from: map(segment.from),
+            to: map(segment.to),
+          })),
+        }),
+      };
+      moved.set(note, next);
+    }
+    return next;
+  };
+  return {
+    definitions: registry.definitions.map(move),
+    references: new Map(
+      [...registry.references].map(([at, note]) => [map(at), move(note)]),
+    ),
+  };
+}
+
 export function extractFootnotes(doc: Text, existingTree?: Tree): Footnotes {
   const source = doc.toString();
   if (!source.includes("[^") && !source.includes("^[")) {

@@ -88,3 +88,24 @@ test("a region with text quotes it; image paths are not on the clipboard", () =>
   );
   assert.doesNotMatch(text, /Region image|SHA-256|Source:/u);
 });
+
+test("a selected sidecar highlight links to the highlight, not to its box", () => {
+  const text = agentText(
+    {
+      kind: "region",
+      page: 3,
+      rect: [72, 410, 292, 436],
+      text: "scaled dot-product attention",
+      highlightId: "hl-a1b2c3d4",
+    },
+    source,
+  );
+  assert.equal(
+    text,
+    [
+      "[attention_v2.pdf · p.3](papers/attention_v2.pdf#hl-a1b2c3d4)",
+      "",
+      "> scaled dot-product attention",
+    ].join("\n"),
+  );
+});

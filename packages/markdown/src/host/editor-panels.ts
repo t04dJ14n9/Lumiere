@@ -63,7 +63,7 @@ function revealNativeSelection(
   }
   const intent = navigation.begin();
   void navigation.revealPanel(panel.id, selection, intent).catch((error) => {
-    console.error("Lumière editor selection reveal failed", error);
+    console.error("Lumia editor selection reveal failed", error);
   });
 }
 

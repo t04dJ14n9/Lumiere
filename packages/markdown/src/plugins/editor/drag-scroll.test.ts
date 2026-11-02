@@ -6,6 +6,12 @@ import { EditorView } from "@codemirror/view";
 import type { ViewUpdate } from "@codemirror/view";
 import {
   additionalDragVelocity,
+  exitedEdge,
+  EXIT_OVERSHOOT_PX,
+  EXIT_REACH_PX,
+  EXIT_SILENCE_MS,
+  EXTRA_SPEED_RAMP_MS,
+  extraSpeedRamp,
   selectionDragScroll,
   SelectionDragScroll,
 } from "./drag-scroll";
@@ -71,6 +77,8 @@ test("a stationary selection drag scrolls on frames and reads live settings", (t
   const fixture = dragFixture(t);
   fixture.drag.start(mouse("mousedown"));
   fixture.doc.dispatchEvent(mouse("mousemove", { clientX: 200, clientY: 400 }));
+  // Past the ramp: the pointer has rested in the zone.
+  fixture.clock.now = EXTRA_SPEED_RAMP_MS;
   fixture.frame(0);
   fixture.frame(50);
   assert.equal(fixture.viewport.scrollTop, 531);
@@ -94,6 +102,7 @@ test("the shared helper scrolls left/up and stops when content disconnects", (t)
   const fixture = dragFixture(t);
   fixture.drag.start(mouse("mousedown"));
   fixture.doc.dispatchEvent(mouse("mousemove", { clientX: 0, clientY: 0 }));
+  fixture.clock.now = EXTRA_SPEED_RAMP_MS;
   fixture.frame(0);
   fixture.frame(50);
   assert.equal(fixture.viewport.scrollTop, 469);
@@ -214,6 +223,17 @@ function dragFixture(t: TestContext) {
       observe() {}
       disconnect() {}
     },
+    MouseEvent: class extends Event {
+      readonly clientX: number;
+      readonly clientY: number;
+      readonly buttons: number;
+      constructor(type: string, init: MouseEventInit = {}) {
+        super(type, init);
+        this.clientX = init.clientX ?? 0;
+        this.clientY = init.clientY ?? 0;
+        this.buttons = init.buttons ?? 0;
+      }
+    },
   };
   const descriptors = new Map<string, PropertyDescriptor | undefined>();
   for (const [key, value] of Object.entries(globals)) {
@@ -221,7 +241,11 @@ function dragFixture(t: TestContext) {
     descriptors.set(key, descriptor);
     Object.defineProperty(globalThis, key, { value, configurable: true });
   }
-  const drag = new SelectionDragScroll(view as unknown as EditorView);
+  const clock = { now: 0 };
+  const drag = new SelectionDragScroll(
+    view as unknown as EditorView,
+    () => clock.now,
+  );
   t.after(() => {
     drag.destroy();
     for (const [key, descriptor] of descriptors) {
@@ -234,6 +258,7 @@ function dragFixture(t: TestContext) {
   });
   return {
     drag,
+    clock,
     viewport,
     content,
     doc,
@@ -256,3 +281,84 @@ function dragFixture(t: TestContext) {
     },
   };
 }
+
+test("a pointer that went silent heading out of the note crossed the edge", () => {
+  const bounds = { top: 0, bottom: 400 };
+  const at = (y: number, velocityY: number) => ({
+    x: 0,
+    y,
+    time: 0,
+    velocityY,
+  });
+  assert.equal(exitedEdge(at(380, 1), bounds), "bottom", "20 px in 80 ms");
+  assert.equal(exitedEdge(at(300, 1), bounds), undefined, "too far to reach");
+  assert.equal(
+    exitedEdge(at(399, 0), bounds),
+    undefined,
+    "resting at the edge",
+  );
+  assert.equal(exitedEdge(at(399, -1), bounds), undefined, "heading back in");
+  assert.equal(exitedEdge(at(30, -0.5), bounds), "top");
+  assert.equal(exitedEdge(at(30, -0.2), bounds), undefined);
+  // In CodeMirror's 6 px zone it already scrolls, and keeps scrolling.
+  assert.equal(exitedEdge(at(397, 5), bounds), undefined);
+  // A jump toward the middle and a stop is not leaving through the far edge.
+  assert.equal(exitedEdge(at(200, -10), bounds), undefined);
+  assert.equal(exitedEdge(at(400 - EXIT_REACH_PX, 2), bounds), "bottom");
+  assert.equal(exitedEdge(at(399 - EXIT_REACH_PX, 2), bounds), undefined);
+});
+
+test("the extra speed ramps in over the zone dwell", () => {
+  assert.equal(extraSpeedRamp(0), 0);
+  assert.equal(extraSpeedRamp(-5), 0);
+  assert.equal(extraSpeedRamp(EXTRA_SPEED_RAMP_MS / 2), 0.5);
+  assert.equal(extraSpeedRamp(EXTRA_SPEED_RAMP_MS * 3), 1);
+});
+
+test("brushing the zone for a frame does not move the note", (t) => {
+  const fixture = dragFixture(t);
+  fixture.drag.start(mouse("mousedown"));
+  fixture.doc.dispatchEvent(mouse("mousemove", { clientX: 200, clientY: 398 }));
+  fixture.frame(0);
+  fixture.clock.now = 16;
+  fixture.doc.dispatchEvent(mouse("mousemove", { clientX: 200, clientY: 300 }));
+  fixture.frame(16);
+  assert.equal(fixture.viewport.scrollTop, 500);
+});
+
+test("a drag carried out past the bottom edge keeps CodeMirror scrolling as if it saw the pointer", async (t) => {
+  const fixture = dragFixture(t);
+  const seen: { y: number; buttons: number }[] = [];
+  fixture.doc.addEventListener("mousemove", (event) => {
+    const move = event as MouseEvent;
+    seen.push({ y: move.clientY, buttons: move.buttons });
+  });
+  fixture.drag.start(mouse("mousedown"));
+  fixture.doc.dispatchEvent(mouse("mousemove", { clientY: 300 }));
+  fixture.clock.now = 16;
+  // 30 px a frame toward the bottom, then nothing: it left the webview.
+  fixture.doc.dispatchEvent(mouse("mousemove", { clientY: 360 }));
+  await new Promise((resolve) => setTimeout(resolve, EXIT_SILENCE_MS + 40));
+  assert.deepEqual(seen.at(-1), {
+    y: 400 + EXIT_OVERSHOOT_PX,
+    buttons: 1,
+  });
+  // The extra motion runs at once, at full speed.
+  fixture.frame(200);
+  fixture.frame(250);
+  assert.ok(fixture.viewport.scrollTop > 500);
+});
+
+test("a pointer resting near the edge is not taken for one that left", async (t) => {
+  const fixture = dragFixture(t);
+  const seen: number[] = [];
+  fixture.doc.addEventListener("mousemove", (event) =>
+    seen.push((event as MouseEvent).clientY),
+  );
+  fixture.drag.start(mouse("mousedown"));
+  fixture.doc.dispatchEvent(mouse("mousemove", { clientY: 360 }));
+  fixture.clock.now = 100;
+  fixture.doc.dispatchEvent(mouse("mousemove", { clientY: 362 }));
+  await new Promise((resolve) => setTimeout(resolve, EXIT_SILENCE_MS + 40));
+  assert.deepEqual(seen, [360, 362]);
+});

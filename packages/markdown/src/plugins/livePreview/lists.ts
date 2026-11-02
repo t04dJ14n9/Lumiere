@@ -68,8 +68,13 @@ export function decorateListItem(
   cx: InlineContext,
   visible?: { from: number; to: number },
 ): void {
+  // Called for every node the decorator enters: check the name first, as
+  // looking for a child of the document scans all of a note's blocks.
+  if (node.name !== "ListItem") {
+    return;
+  }
   const mark = node.node.getChild("ListMark");
-  if (node.name !== "ListItem" || !mark) {
+  if (!mark) {
     return;
   }
   const line = cx.state.doc.lineAt(node.from);

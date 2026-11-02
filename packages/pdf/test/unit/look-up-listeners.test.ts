@@ -8,9 +8,10 @@ import * as words from "../../src/shared/look-up";
 function harness() {
   const listeners = new Map<
     string,
-    (event: { clientX: number; clientY: number }) => void
+    (event: { clientX: number; clientY: number; buttons?: number }) => void
   >();
   const messages: { word: string | null; open: boolean }[] = [];
+  const targets: ({ text: string } | undefined)[] = [];
   let timer: (() => void) | undefined;
   let dispose = () => {};
   let top = 0;
@@ -57,6 +58,10 @@ function harness() {
       useRegistry: () => ({ registry: { getEngine: () => engine } }),
     },
     "../shared/look-up": words,
+    "./look-up-target": {
+      setLookUpTarget: (target: { text: string } | undefined) =>
+        targets.push(target),
+    },
     "./host": {
       postToHost: (message: { word: string | null; open: boolean }) =>
         messages.push(message),
@@ -114,8 +119,10 @@ function harness() {
   return {
     open,
     messages,
-    emit: (name: string, x = 2) =>
-      listeners.get(name)?.({ clientX: x, clientY: 5 }),
+    /** The hidden word's text after each change, or undefined when none. */
+    shown: () => targets.at(-1)?.text,
+    emit: (name: string, x = 2, buttons = 0) =>
+      listeners.get(name)?.({ clientX: x, clientY: 5, buttons } as never),
     hover: () => {
       const run = timer;
       timer = undefined;
@@ -192,5 +199,49 @@ test("the native command resolves the saved click, not a later hover point", asy
   h.open();
   await tick();
   assert.equal(h.messages.length, count);
+  h.dispose();
+});
+
+test("the word the pointer rests on is shown as hidden text for the system's Look Up", async () => {
+  const h = harness();
+  h.emit("pointermove");
+  h.hover();
+  await tick();
+  assert.equal(h.shown(), "alpha");
+  h.emit("pointermove", 12);
+  h.hover();
+  await tick();
+  assert.equal(h.shown(), "beta");
+  h.dispose();
+  assert.equal(h.shown(), undefined, "turning Look Up off removes it");
+});
+
+test("a press keeps the hidden word, or places it at once, and a drag does not move it", async () => {
+  const h = harness();
+  h.emit("pointermove");
+  h.hover();
+  await tick();
+  h.emit("pointerdown");
+  await tick();
+  assert.equal(h.shown(), "alpha", "the press began on the shown word");
+  h.emit("pointerdown", 12);
+  await tick();
+  assert.equal(h.shown(), "beta", "a press too quick for the hover places it");
+  h.emit("pointermove", 2, 1);
+  h.hover();
+  await tick();
+  assert.equal(h.shown(), "beta", "dragging leaves it under the press");
+  h.emit("scroll");
+  assert.equal(h.shown(), "beta", "a scroll mid-drag leaves it too");
+  h.emit("pointerup");
+  h.emit("scroll");
+  assert.equal(h.shown(), undefined, "a scroll moves the word away");
+  h.hover();
+  await tick();
+  assert.equal(
+    h.shown(),
+    "alpha",
+    "and it is found again where the pointer rests",
+  );
   h.dispose();
 });

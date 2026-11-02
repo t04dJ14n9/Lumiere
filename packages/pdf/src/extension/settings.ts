@@ -13,7 +13,7 @@ export interface ExtensionIdentity {
 }
 
 /**
- * Lumière PDF's settings: what the extension contributes, and writes under
+ * Lumia PDF's settings: what the extension contributes, and writes under
  * the key the Settings editor uses (`lumiere.pdf.view.smoothScrolling`, …):
  * in the workspace if it is set there, else in the user settings. Commands
  * keep no state of their own, so the Settings editor and the commands agree.
