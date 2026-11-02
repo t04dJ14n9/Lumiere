@@ -21,8 +21,12 @@ import {
   cachedPersistentNodes,
   persistentNodesCarry,
 } from "../../../src/plugins/livePreview/registry";
-import { parseMarkdown } from "../../../src/markdown/dialect";
+import {
+  markdownLanguageSupport,
+  parseMarkdown,
+} from "../../../src/markdown/dialect";
 import { Text } from "@codemirror/state";
+import type { Tree } from "@lezer/common";
 
 const start = EditorState.create({
   doc: "Some text here\n# Head\n- item one",
@@ -92,6 +96,14 @@ function randomNote(seed: number): string {
 
 const EMBEDS = new Set(["WikiEmbed", "Image"]);
 
+function shape(tree: Tree): string[] {
+  const out: string[] = [];
+  tree.iterate({
+    enter: (node) => void out.push(`${node.name}:${node.from}-${node.to}`),
+  });
+  return out;
+}
+
 function random(seed: number) {
   let value = seed;
   return () => (value = (value * 1103515245 + 12345) % 2 ** 31) / 2 ** 31;
@@ -119,13 +131,14 @@ const typed = [
   "`",
 ];
 
-test("heading, gutter and footnote indexes after random edits equal a fresh walk", () => {
+function randomEdits(withLanguage: boolean, seeds: number): number {
   let total = 0;
-  for (let seed = 1; seed <= 6; seed++) {
+  for (let seed = 1; seed <= seeds; seed++) {
     const next = random(seed);
     let state = EditorState.create({
       doc: randomNote(seed),
       extensions: [
+        ...(withLanguage ? [markdownLanguageSupport()] : []),
         documentTree,
         headingIndex,
         headingGutterClasses,
@@ -148,6 +161,14 @@ test("heading, gutter and footnote indexes after random edits equal a fresh walk
       }
       state = transaction.state;
       const tree = state.field(documentTree);
+      if (withLanguage) {
+        assert.equal(tree.length, state.doc.length, "a whole tree stays whole");
+        assert.deepEqual(
+          shape(tree),
+          shape(parseMarkdown(Text.of(state.doc.toString().split("\n")))),
+          `tree, seed ${seed} step ${step}`,
+        );
+      }
       assert.deepEqual(
         state.field(headingIndex),
         sectionHeadings(state.doc, tree),
@@ -204,5 +225,15 @@ test("heading, gutter and footnote indexes after random edits equal a fresh walk
     }
     total += shortcuts;
   }
+  return total;
+}
+
+test("heading, gutter and footnote indexes after random edits equal a fresh walk", () => {
+  const total = randomEdits(false, 6);
   assert.ok(total > 60, `${total} plain edits took the shortcut`);
+});
+
+test("on CodeMirror's parse, as in the editor: the tree too equals a fresh parse after every edit", () => {
+  const total = randomEdits(true, 4);
+  assert.ok(total > 40, `${total} plain edits took the shortcut`);
 });
