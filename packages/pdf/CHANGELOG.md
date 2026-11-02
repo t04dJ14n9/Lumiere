@@ -2,6 +2,12 @@
 
 ## Unreleased
 
+- PDF Outline follows the reading position by default
+  (`lumiere.pdf.outline.followCursor` now defaults to on), and as an
+  accordion like Markdown Outline: the current bookmark's parents and its
+  sub-bookmarks open and every other branch closes. A click on a bookmark
+  leaves the tree as it is, so a double-click's second click hits the same
+  row.
 - Lumière PDF is now called Lumia PDF wherever it shows: the viewer's name
   in **Reopen Editor With…**, command titles, settings titles, the MCP
   server's name and the author of new annotations. Ids (`lumiere.pdf.*`)

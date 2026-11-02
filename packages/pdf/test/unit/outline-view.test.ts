@@ -44,6 +44,8 @@ interface Reveal {
   item: OutlineItem;
   options: { expand: boolean; select: boolean; focus: boolean };
 }
+const COLLAPSE_ALL =
+  "workbench.actions.treeView.lumiere.pdf.outline.collapseAll";
 
 function harness(enabled = false, visible = true) {
   let active: Panel | undefined;
@@ -222,21 +224,42 @@ function harness(enabled = false, visible = true) {
       });
     },
   };
-  const source = readFileSync(
-    new URL(
-      "../../src/extension/plugins/pdfOutline/outline-view.ts",
-      import.meta.url,
-    ),
-    "utf8",
-  );
-  const output = ts.transpileModule(source, {
-    compilerOptions: {
-      module: ts.ModuleKind.CommonJS,
-      target: ts.ScriptTarget.ES2022,
-    },
-  }).outputText;
+  /** Transpile and run one of the outline's modules against `modules`. */
+  const load = (file: string) => {
+    const source = readFileSync(
+      new URL(
+        `../../src/extension/plugins/pdfOutline/${file}`,
+        import.meta.url,
+      ),
+      "utf8",
+    );
+    const output = ts.transpileModule(source, {
+      compilerOptions: {
+        module: ts.ModuleKind.CommonJS,
+        target: ts.ScriptTarget.ES2022,
+      },
+    }).outputText;
+    const module = { exports: {} as Record<string, unknown> };
+    const evaluate = runInNewContext(
+      `(function(require,module,exports){${output}\n})`,
+    ) as (
+      require: (name: string) => unknown,
+      module: unknown,
+      exports: unknown,
+    ) => void;
+    evaluate(
+      (name) => {
+        assert.ok(name in modules, name);
+        return modules[name];
+      },
+      module,
+      module.exports,
+    );
+    return module.exports;
+  };
+  modules["./outline-follower"] = load("outline-follower.ts");
   const module = {
-    exports: {} as {
+    exports: load("outline-view.ts") as {
       registerOutlineView(
         panels: unknown,
         settings: unknown,
@@ -244,21 +267,6 @@ function harness(enabled = false, visible = true) {
       ): Disposable;
     },
   };
-  const evaluate = runInNewContext(
-    `(function(require,module,exports){${output}\n})`,
-  ) as (
-    require: (name: string) => unknown,
-    module: unknown,
-    exports: unknown,
-  ) => void;
-  evaluate(
-    (name) => {
-      assert.ok(name in modules, name);
-      return modules[name];
-    },
-    module,
-    module.exports,
-  );
   const panels = {
     get active() {
       return active;
@@ -269,6 +277,12 @@ function harness(enabled = false, visible = true) {
   return {
     view,
     reveals,
+    /** The bookmarks follow selected, in order (not the branches it opened). */
+    selected: () =>
+      reveals
+        .filter((reveal) => reveal.options.select)
+        .map((reveal) => reveal.item),
+    executed,
     contexts,
     warnings,
     writes,
@@ -344,7 +358,7 @@ function harness(enabled = false, visible = true) {
   };
 }
 
-test("follow is off by default; its commands save the setting and update the context and selection", async (t) => {
+test("with follow turned off, its commands save the setting and update the context and selection", async (t) => {
   const h = harness();
   t.after(h.dispose);
   const child = heading("Child", 2);
@@ -358,10 +372,10 @@ test("follow is off by default; its commands save the setting and update the con
   assert.equal(h.saved, true);
   assert.equal(h.contexts.get(CONTEXT), true);
   assert.equal(h.reveals.at(-1)?.item, child);
-  assert.equal(
-    h.reveals.length,
-    1,
-    "the command and configuration event reveal only once",
+  assert.deepEqual(
+    h.selected(),
+    [child],
+    "the command and configuration event select only once",
   );
   assert.deepEqual(h.reveals.at(-1)?.options, {
     select: true,
@@ -407,10 +421,7 @@ test("persisted follow selects nested headings on page and offset changes withou
   await tick();
   h.changed();
   await tick();
-  assert.deepEqual(
-    h.reveals.map((reveal) => reveal.item),
-    [root, child, lower],
-  );
+  assert.deepEqual(h.selected(), [root, child, lower]);
   assert.equal(
     refreshes,
     0,
@@ -511,10 +522,7 @@ test("page and panel changes during an asynchronous reveal finish with the newes
   h.hold();
   release();
   await tick();
-  assert.deepEqual(
-    h.reveals.map((reveal) => reveal.item),
-    [first, latest],
-  );
+  assert.deepEqual(h.selected(), [first, latest]);
 });
 
 test("Expand All reveals every node beyond the API depth limit without selecting or focusing", async (t) => {
@@ -755,7 +763,7 @@ test("outline actions contribute Expand All and mutually exclusive overflow Foll
   }>();
   assert.deepEqual(
     contributes.configuration.properties[SETTING]?.default,
-    false,
+    true,
   );
   assert.equal(contributes.configuration.properties[SETTING]?.type, "boolean");
   const menus = contributes.menus["view/title"]!;
@@ -784,4 +792,97 @@ test("outline actions contribute Expand All and mutually exclusive overflow Foll
       "Follow Cursor belongs in the overflow menu",
     );
   }
+});
+
+test("follow is an accordion: the reading position's parents and own children open, other branches close", async (t) => {
+  const h = harness(true);
+  t.after(h.dispose);
+  const intro = heading("Intro", 1);
+  const detail = heading("Detail", 3);
+  const part = heading("Part", 3, [detail], 0);
+  const chapter = heading("Chapter", 2, [part]);
+  const appendix = heading("Appendix", 5, [heading("A.1", 5, [], 200)]);
+  const panel = h.panel([intro, chapter, appendix]);
+  h.activate(panel);
+  h.start();
+  await tick();
+  const collapses = () =>
+    h.executed.filter((command) => command === COLLAPSE_ALL).length;
+  assert.equal(collapses(), 1, "every other branch closes");
+  assert.deepEqual(h.selected(), [intro]);
+  // Into the chapter's part: the chapter and the part open.
+  h.reveals.length = 0;
+  panel.view = { page: 3, readingPage: 3, top: 0 };
+  h.changed();
+  await tick();
+  assert.equal(collapses(), 2);
+  assert.deepEqual(
+    h.reveals.map((reveal) => [reveal.item.title, reveal.options.expand]),
+    [
+      ["Chapter", true],
+      ["Part", true],
+      ["Detail", false],
+    ],
+  );
+  assert.deepEqual(h.selected(), [detail]);
+  // Still under the same branches: nothing closes again.
+  panel.view = { page: 3, readingPage: 3, top: 0 };
+  h.changed();
+  await tick();
+  assert.equal(collapses(), 2);
+  // On to the appendix: the chapter closes, the appendix opens.
+  panel.view = { page: 5, readingPage: 5, top: 0 };
+  h.changed();
+  await tick();
+  assert.equal(collapses(), 3);
+  assert.deepEqual(h.selected().at(-1), appendix);
+});
+
+test("a click on a bookmark leaves the tree as it is, so a double-click's second click hits the same row", async (t) => {
+  const h = harness(true);
+  t.after(h.dispose);
+  const intro = heading("Intro", 1, [heading("Background", 1, [], 300)]);
+  const chapter = heading("Chapter", 4, [heading("Part", 4, [], 300)]);
+  const panel = h.panel([intro, chapter]);
+  h.activate(panel);
+  h.start();
+  await tick();
+  const before = h.executed.length;
+  const reveals = h.reveals.length;
+  // Click "Chapter": the viewer first reports where it was, then lands.
+  await h.command("goToOutlineItem", 4, 0);
+  h.changed();
+  await tick();
+  panel.view = { page: 4, readingPage: 4, top: 0 };
+  h.changed();
+  await tick();
+  // The second click of the double-click, and its report.
+  await h.command("goToOutlineItem", 4, 0);
+  h.changed();
+  await tick();
+  assert.equal(h.executed.length, before, "nothing closes under the pointer");
+  assert.equal(h.reveals.length, reveals, "nothing opens either");
+  assert.equal(h.navigations.length, 2);
+  // Reading on applies the accordion again.
+  panel.view = { page: 4, readingPage: 4, top: 400 };
+  h.changed();
+  await tick();
+  assert.equal(h.executed.at(-1), COLLAPSE_ALL);
+  assert.equal(h.selected().at(-1)?.title, "Part");
+});
+
+test("with follow on, every branch starts closed; with it off, top-level bookmarks start open", async (t) => {
+  const h = harness(true);
+  t.after(h.dispose);
+  const chapter = heading("Chapter", 1, [heading("Part", 1, [], 300)]);
+  h.activate(h.panel([chapter]));
+  h.start();
+  await tick();
+  const state = () =>
+    (h.provider.getTreeItem(chapter) as unknown as { collapsibleState: number })
+      .collapsibleState;
+  assert.equal(state(), TreeItemCollapsibleState.Collapsed);
+  h.setting(false);
+  await tick();
+  assert.equal(state(), TreeItemCollapsibleState.Expanded);
 });

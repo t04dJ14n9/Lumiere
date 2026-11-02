@@ -47,9 +47,13 @@ is the only agent installed (or you pick one), that chat opens with it.
   [docs/sidecar-highlights.md](docs/sidecar-highlights.md).
 - **PDF Outline in the Explorer.** The PDF's bookmarks appear as a native
   tree view; click an entry to open its page. The title bar offers **Expand All**
-  and **Collapse All**. Turn on **Follow Cursor** in the **…** menu to select
-  the bookmark for the current page and reading position without moving focus.
-  This choice is saved as `lumiere.pdf.outline.followCursor` (off by default).
+  and **Collapse All**. **Follow Cursor** (on by default; toggle it in the **…**
+  menu) selects the bookmark for the current page and reading position as you
+  scroll, without moving focus, like a page's table of contents: that
+  bookmark's parents and its own sub-bookmarks are open and every other
+  branch is closed. A click on a bookmark leaves the tree as it is, so a
+  double-click's second click hits the same row. This choice is saved as
+  `lumiere.pdf.outline.followCursor`.
   Opening a Lumia PDF editor hides VS Code's native **Outline** and shows
   **PDF Outline**; leaving restores the native Outline after a short debounce,
   skipped if Lumia already owns the active tab.

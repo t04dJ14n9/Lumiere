@@ -530,3 +530,75 @@ test("a click on an outline row leaves the tree as it is, so a double-click's se
     "B1",
   ]);
 });
+
+test("scrolling the note moves the accordion to the section being read, as the caret does", async (t) => {
+  const fixture = await outlineFixture({ "A.md": NESTED });
+  t.after(() => fixture.root.dispose());
+  const { panel, cursor } = fixture.panel("one");
+  fixture.open(panel);
+  await tick();
+  const text = fixture.texts.get("A.md")!;
+  cursor.head = text.indexOf("body-a");
+  fixture.root.emit("editor/selectionChanged", panel, false);
+  await tick();
+  assert.equal(cursor.listeners, 1, "the panel's scroll reports are heard");
+  const collapses = fixture.collapseAllCount;
+  fixture.expands.length = 0;
+  // The caret stays in A1a; the reader scrolls down to B1a.
+  cursor.read(text.indexOf("body-b"));
+  await tick();
+  assert.equal(fixture.collapseAllCount, collapses + 1);
+  assert.deepEqual(fixture.expands.map((node) => node.label).sort(), [
+    "B",
+    "B1",
+  ]);
+  assert.equal(fixture.reveals.at(-1)?.node.label, "B1a");
+  // A report for an older text, or from a panel in the background, is not.
+  cursor.read(text.indexOf("body-a2"), cursor.version - 1);
+  await tick();
+  assert.equal(fixture.collapseAllCount, collapses + 1);
+  const other = fixture.panel("two");
+  other.cursor.read(text.indexOf("body-a2"));
+  await tick();
+  assert.equal(fixture.collapseAllCount, collapses + 1);
+});
+
+test("a scroll report after a click in the outline leaves the tree as it is", async (t) => {
+  const fixture = await outlineFixture({ "A.md": NESTED });
+  t.after(() => fixture.root.dispose());
+  const { panel, cursor } = fixture.panel("one");
+  fixture.open(panel);
+  await tick();
+  const text = fixture.texts.get("A.md")!;
+  cursor.head = text.indexOf("body-a");
+  fixture.root.emit("editor/selectionChanged", panel, false);
+  await tick();
+  const collapses = fixture.collapseAllCount;
+  await fixture.fake.commands.get(OPEN_COMMAND)!(
+    uriOf("A.md"),
+    text.indexOf("# B"),
+  );
+  // The editor centres "B", with the caret on it, and reports that.
+  cursor.head = text.indexOf("# B");
+  cursor.read(text.indexOf("# B"));
+  await tick();
+  assert.equal(fixture.collapseAllCount, collapses);
+});
+
+test("scroll reports stop when the panel closes or the outline stops", async (t) => {
+  const fixture = await outlineFixture({ "A.md": NESTED });
+  t.after(() => fixture.root.dispose());
+  const first = fixture.panel("one");
+  fixture.open(first.panel);
+  await tick();
+  assert.equal(first.cursor.listeners, 1);
+  fixture.root.emit("editor/closed", first.panel);
+  await tick();
+  assert.equal(first.cursor.listeners, 0);
+  const second = fixture.panel("two");
+  fixture.open(second.panel);
+  await tick();
+  assert.equal(second.cursor.listeners, 1);
+  await fixture.root.dispose();
+  assert.equal(second.cursor.listeners, 0);
+});

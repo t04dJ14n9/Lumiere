@@ -817,8 +817,8 @@
     "properties": {
       "lumiere.pdf.outline.followCursor": {
         "type": "boolean",
-        "default": false,
-        "description": "Reveal and select the bookmark containing the current PDF page and reading position in PDF Outline, without moving focus. Toggle Follow Cursor in the outline's More Actions menu."
+        "default": true,
+        "description": "Select the bookmark of the current PDF page and reading position in PDF Outline as you scroll, without moving focus. Its parents and its own sub-bookmarks open and every other branch closes. Toggle Follow Cursor in the outline's More Actions menu."
       },
       "lumiere.pdf.copyLinkForAgent.target": {
         "type": "string",

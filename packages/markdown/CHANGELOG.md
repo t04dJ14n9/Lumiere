@@ -2,6 +2,11 @@
 
 ## 0.1.0 (unreleased)
 
+- Markdown Outline follows scrolling as well as the caret, like a page's
+  table of contents: the section being read (the caret's while it is on
+  screen, else the one at the middle of the editor) is selected, its parents
+  and subheadings open and every other branch closes.
+
 - Properties: a `tags` list (and any list) shows every item, as Obsidian
   does, instead of three and a **Showing 3 of N** button
   (`properties.listPreviewCount` now defaults to 0, off). `sources` is no

@@ -44,7 +44,7 @@ test("Markdown Outline title actions expose one checked or unchecked Follow Curs
     default: true,
     scope: "resource",
     description:
-      "Select and reveal the current heading in Markdown Outline as the cursor moves, without taking focus.",
+      "Select and reveal the current heading in Markdown Outline as the cursor moves or the note scrolls, without taking focus.",
   });
   assert.deepEqual(properties["lumiere.markdown.outline.expandMode"], {
     enum: ["accordion", "all"],

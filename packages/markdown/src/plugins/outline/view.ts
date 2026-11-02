@@ -86,8 +86,34 @@ export class OutlineView {
     void this.followCaret();
   }
 
+  /** Follow the active panel's caret. */
+  followCaret(): Promise<void> {
+    return this.follow((panel) =>
+      panel.rpc.call(editorProtocol, "captureCursor", {}),
+    );
+  }
+
+  /**
+   * Follow where the reader is after a scroll in `panel` (see
+   * `reading-position.ts`): the caret while it is on screen, else the line
+   * at the middle of the editor.
+   */
+  followReading(
+    panel: EditorPanel,
+    position: { offset: number; version: number },
+  ): Promise<void> {
+    if (panel !== this.panel) {
+      return Promise.resolve();
+    }
+    return this.follow(() =>
+      Promise.resolve({ head: position.offset, version: position.version }),
+    );
+  }
+
   /** Detached event work has its own error sink, including closed-panel RPC failures. */
-  async followCaret(): Promise<void> {
+  private async follow(
+    capture: (panel: EditorPanel) => Promise<{ head: number; version: number }>,
+  ): Promise<void> {
     const request = ++this.followRequest;
     const panel = this.panel;
     if (!panel || !this.canFollow(panel, request)) {
@@ -98,7 +124,7 @@ export class OutlineView {
       if (!this.canFollow(panel, request)) {
         return;
       }
-      const caret = await panel.rpc.call(editorProtocol, "captureCursor", {});
+      const caret = await capture(panel);
       if (
         !this.canFollow(panel, request) ||
         caret.version !== panel.session.version
