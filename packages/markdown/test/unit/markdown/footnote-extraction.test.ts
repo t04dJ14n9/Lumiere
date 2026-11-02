@@ -64,3 +64,38 @@ test("footnotes are kept per document and shared with the note's metadata", asyn
   assert.notEqual(footnotes(edited), registry, "a new document, new numbers");
   assert.equal(footnotes(edited).references.get(1)?.label, "b");
 });
+
+test("a tree of the note's start is enough for its references, with no parse of the whole note", async () => {
+  const { footnoteRegistry } =
+    await import("../../../src/markdown/metadata/footnote-extract");
+  const lines = ["First[^b] then[^a].", ""];
+  for (let i = 0; i < 400; i++) {
+    lines.push(`Filler paragraph ${i} with **bold** text.`, "");
+  }
+  lines.push("[^a]: alpha", "[^b]: beta");
+  const doc = Text.of(lines);
+  const prefix = markdownParser.parse(doc.sliceString(0, 200));
+  const parse = markdownParser.parse;
+  let parsed = 0;
+  markdownParser.parse = ((...args: Parameters<typeof parse>) => {
+    parsed++;
+    return parse.apply(markdownParser, args);
+  }) as typeof parse;
+  try {
+    const partial = footnoteRegistry(doc, prefix);
+    assert.equal(parsed, 0, "the whole note is not parsed");
+    // Numbered in order of first reference; definitions found further down.
+    assert.equal(partial.references.get(5)?.label, "b");
+    assert.equal(partial.references.get(5)?.number, 1);
+    assert.equal(partial.references.get(14)?.label, "a");
+    assert.equal(partial.references.get(14)?.number, 2);
+    assert.equal(partial.definitions.length, 2);
+    assert.equal(footnoteRegistry(doc, prefix), partial, "kept for that tree");
+  } finally {
+    markdownParser.parse = parse;
+  }
+  // The whole tree, once there, makes the document's own registry.
+  const whole = footnoteRegistry(doc, markdownParser.parse(doc.toString()));
+  assert.equal(whole.references.get(5)?.number, 1);
+  assert.equal(footnoteRegistry(doc), whole);
+});

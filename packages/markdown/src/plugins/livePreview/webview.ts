@@ -11,7 +11,11 @@ import { keymap } from "@codemirror/view";
 import type {} from "../editor/api";
 import type {} from "../commands/api";
 import type {} from "./api";
-import { blockRenderers, inlineRenderers } from "./registry";
+import {
+  blockRenderers,
+  inlineRenderers,
+  persistentNodesCarry,
+} from "./registry";
 import {
   blockIndex,
   visiblePosition,
@@ -78,7 +82,7 @@ function registerEngine(
           ctx.editor.extend(inlineRenderers.of(renderer), { owner }),
       };
     },
-    inlineExtensions: () => [documentTree, hybridInline],
+    inlineExtensions: () => [documentTree, persistentNodesCarry, hybridInline],
     position: renderedPosition,
     visiblePosition,
     verticalPosition: verticalBlock,
@@ -165,6 +169,7 @@ function engineExtensions(ctx: Context) {
     fenceGuardSelectionSupport,
     clickPositionSync,
     ruleClick,
+    persistentNodesCarry,
     hybridInline,
     blockIndex,
     ...blockViewportSupport,

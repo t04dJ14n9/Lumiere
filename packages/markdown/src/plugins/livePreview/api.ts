@@ -166,3 +166,5 @@ export function markdownTree(state: EditorState): Tree {
     (state.facet(language) ? syntaxTree(state) : parseMarkdown(state.doc))
   );
 }
+
+export { editTouches, isPlainTextEdit } from "./plain-edit";

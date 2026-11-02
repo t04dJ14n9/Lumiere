@@ -6447,3 +6447,62 @@ border, so a press on the border (or on any body row) went to the cell.
   `test/unit/markdown/table-rows.test.ts`, and the new browser spec
   `test/browser/tables-column-resize.spec.ts` (new browser coverage: needs
   the owner's approval).
+
+## Large notes: scrolling and typing (2026-11-02)
+
+Asked for: faster scrolling in large Markdown notes and faster opening,
+referencing Obsidian and other open source editors. Measured with scratch
+Playwright scenarios over the browser harness (the real webview code in
+Chromium) on an 835 KB, 30,000-line note of headings, paragraphs with marks
+and links, nested lists and tasks, code, tables, callouts, footnotes and
+math; CPU profiles summed by caller chain. Like Obsidian (one CodeMirror
+syntax tree, decorations for the viewport only), the rule applied is that
+per-screen and per-keystroke work must not grow with the note.
+
+| | before (ad669b4) | after |
+| --- | --- | --- |
+| Reading scroll (60 px a frame): worst frame, long frames, script | 533 ms, 7, 1,016 ms | 200 ms, 1, 477 ms |
+| Fling (300 px a frame): script | 1,422 ms | 885 ms |
+| Flick straight after first paint: worst frame (5 runs) | 467–667 ms | 100–200 ms |
+| Typing in the middle: per key, median | 166 ms | 55 ms (about 18 ms of it the harness's host) |
+| Opening: first paint, all features (median of 5) | 101, 164 ms | 91, 150 ms |
+
+Fixed, by cost:
+
+1. `decorateListItem` looked up a `ListMark` child before checking the node
+   was a list item; it runs for every node the inline decorator enters, the
+   document included, so every screen scanned all of the note's blocks.
+2. Footnote references computed the whole note's metadata to number one
+   (283 ms on the first footnote in view, again after every edit), and
+   while the note was still parsing, parsed it whole (176 ms). The registry
+   is now cached on its own per document, numbered from Live Preview's
+   partial tree while loading, shared with the metadata and the edit
+   listener (which extracted it a second time), and the listener compares
+   what blocks show (labels, numbers, text), not positions, so it no longer
+   redraws rendered blocks on every keystroke.
+3. Table cells re-parsed DOMPurify's options on every sanitize call.
+4. Plain edits (`livePreview/plain-edit.ts`): sticky scroll's section
+   index, the line-number gutter classes, the footnote registry and the
+   off-screen embed list each walked the whole note on every keystroke
+   (about 23, 27, 28 and 14 ms). An edit that adds or removes no line break
+   or block mark, keeps its line's leading marks, and leaves the same blocks
+   around it in the new tree now maps them instead. Random edits (120,000
+   in a one-off run, 720 in the suite) check every shortcut against a fresh
+   walk; the text rules alone missed cases the tree check catches (a fence
+   inside a quote, an empty list item that cannot interrupt a paragraph).
+
+Portable checks: `viewport-cost.test.ts` counts syntax tree steps for one
+screen of a note and of one four times longer; it fails without fix 1.
+The other fixes have unit tests (footnote partial registry with no whole
+parse, plain-edit rules and the randomized equivalence test).
+
+Left: CodeMirror's language still parses the note a second time, in 100 ms
+background slices (it yields on `isInputPending`) and 100,000 characters
+past the viewport after a jump (~300 ms after opening this note, ~200 ms
+after jumps); sharing one tree with Live Preview, as Obsidian does, is the
+next step. Publishing the finished background parse still re-indexes the
+note once (about 135 ms: block index, section headings, gutter classes).
+Plugin start-up after first paint reconfigures the editor once (about
+100–250 ms on a large note). Opening itself (first paint about 90 ms) was
+already fast.
+

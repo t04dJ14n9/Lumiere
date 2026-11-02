@@ -5,7 +5,7 @@ import {
   type Range,
 } from "@codemirror/state";
 import { GutterMarker, gutterLineClass } from "@codemirror/view";
-import { markdownTree } from "../livePreview/api";
+import { isPlainTextEdit, markdownTree } from "../livePreview/api";
 
 /**
  * Marks the gutter cells of heading, code and list item lines, so line
@@ -93,6 +93,10 @@ export function headingLines(state: EditorState): RangeSet<GutterMarker> {
 export const headingGutterClasses = StateField.define<RangeSet<GutterMarker>>({
   create: headingLines,
   update(value, transaction) {
+    if (isPlainTextEdit(transaction)) {
+      // No line became or stopped being a heading, list item or code line.
+      return value.map(transaction.changes);
+    }
     return markdownTree(transaction.state) ===
       markdownTree(transaction.startState)
       ? value

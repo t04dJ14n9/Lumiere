@@ -2,6 +2,15 @@
 
 ## 0.1.0 (unreleased)
 
+- Large notes scroll and take typing faster. On an 835 KB, 30,000-line note
+  (Chromium, browser harness): the worst frame when reading on 533 -> 200 ms
+  and when scrolling straight after opening 470-670 -> 100-200 ms; script time
+  scrolling down 30-50% lower; typing 166 -> 55 ms a key. List lines no
+  longer scan the whole note on every screen, footnotes no longer compute
+  the note's whole metadata (or parse it whole while it is still loading),
+  and a word typed outside headings, footnotes and embeds no longer makes
+  sticky scroll, line numbers, footnotes and embeds walk the whole note.
+
 - Table columns resize by dragging their border, in any row, as the
   resize cursor and a guide line show. The handles were a few pixels inside
   the header cells, so pressing the border did nothing. Widths are no longer
