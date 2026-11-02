@@ -1,8 +1,8 @@
-# Lumière PDF
+# Lumia PDF
 
 [![CI](https://github.com/t04dJ14n9/vscode-embedPDF/actions/workflows/ci.yml/badge.svg)](https://github.com/t04dJ14n9/vscode-embedPDF/actions/workflows/ci.yml)
 
-A Lumière PDF viewer for VS Code and Cursor, built on [EmbedPDF](https://www.embedpdf.com/)
+A Lumia PDF viewer for VS Code and Cursor, built on [EmbedPDF](https://www.embedpdf.com/)
 and its PDFium engine. Select text or drag a box over a figure and press
 **Copy link to this**: the clipboard gets a link to the exact page and
 box, the file's hash, the selected text, and for a box the path of a
@@ -50,9 +50,9 @@ is the only agent installed (or you pick one), that chat opens with it.
   and **Collapse All**. Turn on **Follow Cursor** in the **…** menu to select
   the bookmark for the current page and reading position without moving focus.
   This choice is saved as `lumiere.pdf.outline.followCursor` (off by default).
-  Opening a Lumière PDF editor hides VS Code's native **Outline** and shows
+  Opening a Lumia PDF editor hides VS Code's native **Outline** and shows
   **PDF Outline**; leaving restores the native Outline after a short debounce,
-  skipped if Lumière already owns the active tab.
+  skipped if Lumia already owns the active tab.
 - **Copy link to this.** Select text, or drag over empty page
   space to select a region (a figure, table or equation), then use the
   button next to the selection, the right-click menu, the editor title
@@ -211,7 +211,7 @@ for Claude Code / Codex…**, which offers to) and the extension starts a local
 | ---------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
 | `get_current_pdf_selection`  | The text or region selected in the PDF you last looked at: the same text Copy link to this copies, and for a region its PNG snapshot.                                         |
 | `open_pdf_location`          | Opens a `path#page=N&viewrect=…` link in the viewer.                                                                                                                            |
-| `get_current_note_selection` | The selection in Lumière (the same extension), as `@path#lines` and the quoted text (the same text as its Copy link to this; see `packages/agents/docs/agent-handoff-format.md`). |
+| `get_current_note_selection` | The selection in Lumia (the same extension), as `@path#lines` and the quoted text (the same text as its Copy link to this; see `packages/agents/docs/agent-handoff-format.md`). |
 
 The server is off by default because it opens a port. When on, it listens on
 `127.0.0.1` only, on a random port, requires a random bearer token, and
@@ -238,7 +238,7 @@ clipboard. `vscodeEmbedPdf.bridge.envelope` returns a Workbench v1 envelope
 (`producer` `"pdf"`) for the PDF you last looked at: the same shape Markdown
 Workshop's `parseBridgeEnvelope` already consumes (`capturedAt`,
 `source.identity` / `kind` / `media`, `locator`, `view`, `selection`,
-`revision`). Lumière is the aggregator and may call this command;
+`revision`). Lumia is the aggregator and may call this command;
 this command does not call Workshop back. Copy link to this still copies
 the same source-link text. See [docs/bridge-envelope.md](docs/bridge-envelope.md).
 

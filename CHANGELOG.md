@@ -8,6 +8,13 @@
 
 ## Unreleased
 
+- **Lumière is now Lumia.** Its name in the Extensions view, **Reopen
+  Editor With…**, the Command Palette (**Lumia: …**), the Settings UI and
+  its messages says Lumia, and so does Lumia PDF. The extension id
+  (`t04dJ14n9.lumiere`), command ids and `lumiere.*` settings are unchanged,
+  so an installed copy updates in place and keeps its settings and
+  keybindings.
+
 - **Lumière for iPad (preview)**: the same window on the iPad, over the
   app's own folder and folders picked in Files, with no server (`apps/ipad`).
   On a narrow screen the note takes the whole width and the files or the

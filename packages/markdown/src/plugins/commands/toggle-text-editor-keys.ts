@@ -4,7 +4,7 @@
  * VS Code forwards webview keydowns to the workbench, but @replit/codemirror-vim
  * handles Ctrl+E as scroll-window first. Capture-phase ownership matches
  * history-keys / BH-006: preventDefault + stop so Vim cannot scroll, then the
- * note runs `toggleTextEditor` (Lumière product choice over Obsidian-vim scroll).
+ * note runs `toggleTextEditor` (Lumia product choice over Obsidian-vim scroll).
  */
 
 export interface ToggleTextEditorKey {

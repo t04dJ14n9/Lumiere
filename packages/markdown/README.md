@@ -1,4 +1,4 @@
-# Lumière
+# Lumia
 
 [![CI](https://github.com/t04dJ14n9/vscode-markdown-workbench/actions/workflows/ci.yml/badge.svg)](https://github.com/t04dJ14n9/vscode-markdown-workbench/actions/workflows/ci.yml)
 
@@ -13,9 +13,9 @@ their own through a versioned API.
 
 ## Install
 
-Lumière ships in the **Lumière: Markdown Editor and PDF Reader** extension
+Lumia ships in the **Lumia: Markdown Editor and PDF Reader** extension
 ([`t04dJ14n9.lumiere`](https://marketplace.visualstudio.com/items?itemName=t04dJ14n9.lumiere)
-on the VS Code Marketplace). Search for **Lumière** in the Extensions view, or
+on the VS Code Marketplace). Search for **Lumia** in the Extensions view, or
 install that listing. To build a VSIX yourself, from the repository root:
 
 ```sh
@@ -29,8 +29,8 @@ profile as described in [docs/MANUAL_TEST_PLAN.md](docs/MANUAL_TEST_PLAN.md#buil
 
 ## Use
 
-- Open a note with **Open With… › Lumière**, or run **Markdown
-  Workshop: Use Lumière for Markdown in This Workspace** to make
+- Open a note with **Open With… › Lumia**, or run **Markdown
+  Workshop: Use Lumia for Markdown in This Workspace** to make
   it the editor for `*.md` in the workspace.
 - A folder containing `.obsidian/` is a vault: links, tags, backlinks and
   search work within it. Without one, each workspace folder is a vault.
@@ -75,7 +75,7 @@ profile as described in [docs/MANUAL_TEST_PLAN.md](docs/MANUAL_TEST_PLAN.md#buil
   (default 4); 1 restores CodeMirror's original speed. Changes apply live in
   Live Preview and Source mode. Table-cell selection and row/property
   reordering keep their existing edge-scroll behavior.
-- **Lumière: Open Settings** opens the Settings UI filtered to this
+- **Lumia: Open Settings** opens the Settings UI filtered to this
   extension. **Change Setting…** lists every setting of the extension (by
   plugin, with its value) and edits the one you pick by its type. **Set Note Font Size**, **Toggle Line Numbers**, **Toggle
   Readable Line Width**, **Toggle Mermaid Diagrams**, **Toggle Inline Title**
@@ -90,14 +90,14 @@ profile as described in [docs/MANUAL_TEST_PLAN.md](docs/MANUAL_TEST_PLAN.md#buil
 ### In Cursor
 
 Cursor opens `*.md` in its own **Markdown Editor**, with a **Preview |
-Markdown** switch in the editor's top-right corner. **Use Lumière
+Markdown** switch in the editor's top-right corner. **Use Lumia
 for Markdown in This Workspace** writes a workspace editor association, which
 takes precedence over Cursor's editor for notes opened afterwards; reopen
 tabs that were already open.
 
 Tools also open notes in a new plain text tab: a Markdown link in a chat,
 or a review card's open arrow. `lumiere.markdown.editor.reclaimTextEditor`
-(`auto`, on only in Cursor) reopens such a note in Lumière and closes the
+(`auto`, on only in Cursor) reopens such a note in Lumia and closes the
 text tab, for notes the workspace association routes here; it does the
 same for a note switched into Cursor's own Markdown editor. A note you put
 in the text editor stays there: **Reopen Editor With… › Text Editor**,
@@ -183,7 +183,7 @@ MIT. Bundled packages and their licenses are listed in
 
 ### Precise jumps within a note
 
-Use **Lumière: Go Back in Note** / **Go Forward in Note**, also
+Use **Lumia: Go Back in Note** / **Go Forward in Note**, also
 available as note-title arrows, to revisit deliberate link, heading, footnote,
 explicit find-match and API/reference jumps. The 100-entry history belongs to
 one note pane, stays in extension-host memory across webview recreation, and is

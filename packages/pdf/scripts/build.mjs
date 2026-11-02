@@ -1,4 +1,4 @@
-// Builds Lumière PDF's assets into this package's dist/ (the repository root
+// Builds Lumia PDF's assets into this package's dist/ (the repository root
 // bundles the extension host and copies this dist/ into dist/pdf/):
 //   dist/agent-bridge-server.js  the agent bridge's MCP server, loaded by the
 //                             host only when the bridge starts (it carries the

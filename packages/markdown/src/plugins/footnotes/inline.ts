@@ -148,7 +148,7 @@ function decorateDefinition(cx: InlineContext, note: Footnote): void {
     );
   }
   // Obsidian keeps the blank line after a footnote definition at footnote
-  // size (0.875em). Lumière used to leave it at body size (OBSIDIAN_LAYOUT).
+  // size (0.875em). Lumia used to leave it at body size (OBSIDIAN_LAYOUT).
   const trailing = last.number + 1;
   if (trailing <= doc.lines) {
     const blank = doc.line(trailing);

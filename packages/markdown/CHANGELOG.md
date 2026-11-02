@@ -2,6 +2,11 @@
 
 ## 0.1.0 (unreleased)
 
+- Lumière is now called Lumia wherever it shows: the editor's name in
+  **Reopen Editor With…**, command titles, settings titles and messages.
+  Ids (`lumiere.*` commands and settings, the `lumiere.markdown.editor`
+  view type) are unchanged.
+
 - Double-clicking a heading in the Markdown Outline goes to that heading
   again. The first click's jump re-applied the accordion, collapsing the
   rows around it, so the second click landed on another heading and went

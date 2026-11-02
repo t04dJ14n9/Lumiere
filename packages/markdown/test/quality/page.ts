@@ -20,7 +20,7 @@ const PAGE =
 /**
  * Open `source` as the harness does, and wait until every feature has
  * loaded. Times are from asking the editor to open the note: the harness
- * loads all of Lumière as one test bundle first, which the real webview
+ * loads all of Lumia as one test bundle first, which the real webview
  * does not.
  */
 export async function openNote(

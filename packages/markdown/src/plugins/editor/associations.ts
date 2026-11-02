@@ -11,7 +11,7 @@ const NATIVE_TEXT_EDITOR = "default";
 
 /**
  * Route Markdown through VS Code's text editor so Search can expose its range;
- * reclaim immediately transfers that tab to Lumière. Other patterns are kept.
+ * reclaim immediately transfers that tab to Lumia. Other patterns are kept.
  */
 export function withMarkdownWorkshop(
   existing: unknown,
@@ -82,14 +82,14 @@ export async function useForMarkdownInWorkspace(
   }
   if (opensMarkdownHere(existing, host.storage)) {
     host.dialogs.inform(
-      "Markdown files in this workspace already open in Lumière.",
+      "Markdown files in this workspace already open in Lumia.",
     );
     return;
   }
   await host.storage.update(MARKDOWN_WORKSPACE_EDITOR_KEY, true);
   await associations.write(withMarkdownWorkshop(existing));
   host.dialogs.inform(
-    "Markdown files in this workspace now open in Lumière. Use Open as Text or Reopen Editor With… for the text editor.",
+    "Markdown files in this workspace now open in Lumia. Use Open as Text or Reopen Editor With… for the text editor.",
   );
 }
 

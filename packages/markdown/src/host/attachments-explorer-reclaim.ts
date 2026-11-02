@@ -18,12 +18,12 @@ import type { ExplorerAttachmentReclaimHandlers } from "../shared/host";
 
 /**
  * Watch tab opens and convert matching pinned media tabs into attachments on
- * the prior Lumière note in that column.
+ * the prior Lumia note in that column.
  */
 export function registerAttachmentsExplorerReclaim(
   handlers: ExplorerAttachmentReclaimHandlers,
 ): Disposer {
-  /** viewColumn → Lumière note URI last known active in that column. */
+  /** viewColumn → Lumia note URI last known active in that column. */
   const priorLumiere = new Map<number, string>();
   const syncPrior = () => {
     const groups = vscode.window?.tabGroups?.all;

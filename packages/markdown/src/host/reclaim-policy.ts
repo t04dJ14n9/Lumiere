@@ -35,7 +35,7 @@ export interface TabSwap {
 
 /**
  * Whether an associated note arriving in the text or Cursor Markdown editor
- * should go back to Lumière: a switch into Cursor's own Markdown editor, and
+ * should go back to Lumia: a switch into Cursor's own Markdown editor, and
  * a new text tab, as a chat link or a review card opens. A switch in place to
  * the text editor (Reopen Editor With…, Cursor's Markdown button) is the
  * reader asking for the text, so it stays. Diffs, Git and untitled files are

@@ -39,7 +39,7 @@ export interface BridgeOptions {
   /** Plugin-owned LastPdf shared with the envelope command. */
   lastPdf: LastPdf;
   handoff: AgentHandoff;
-  /** The Markdown editor's selections, when Lumière runs. */
+  /** The Markdown editor's selections, when Lumia runs. */
   notes?: NoteSelections;
   log: BridgeLog;
   /** See ServerOptions.discoveryDir. */

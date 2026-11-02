@@ -25,24 +25,24 @@ does the caret the editor reports from before it): rows that moved under
 the pointer sent a double-click's second click to another heading. The
 accordion applies again once the caret moves on in the editor.
 
-Ctrl+Shift+O (Command+Shift+O on macOS), or **Lumière: Go to
+Ctrl+Shift+O (Command+Shift+O on macOS), or **Lumia: Go to
 Heading…** in the command palette, opens a searchable heading picker. It reads
 the active panel's authoritative text, shows heading levels and parent titles,
 and navigates through the same path as the tree. Dismissed or stale picks
 (edited document, changed panel or stopped plugin) do not navigate.
 
 Ctrl+Alt+O (Control+Command+O on macOS) toggles Markdown Outline while the Workshop
-editor is active (editor-scoped keybinding, so Lumière PDF keeps the same keys).
+editor is active (editor-scoped keybinding, so Lumia PDF keeps the same keys).
 The command palette entry is workbench/config-gated like Quick Switcher. Hiding
 targets the view itself, including after moving it to the secondary sidebar or
 panel; showing restores and focuses it in its current location.
 
-When a Lumière editor becomes active, the plugin hides VS Code's
+When a Lumia editor becomes active, the plugin hides VS Code's
 native **Outline**, focuses **Markdown Outline** (expanded by default), and
 returns focus to the editor. **Tags** and other Explorer subpanels stay
 collapsed by default (`visibility: "collapsed"`); they are not focused on
 enter. Leaving the last Workshop editor restores the native Outline after a
-short debounce; restore is skipped if Lumière PDF (or another Workshop editor) already owns the active tab. Manual
+short debounce; restore is skipped if Lumia PDF (or another Workshop editor) already owns the active tab. Manual
 changes to Outline while a Workshop editor stays active are left alone until the
 next enter/leave. Tags also use the same `activeCustomEditorId` when-clause as
 Markdown Outline so they do not linger beside non-Workshop editors.

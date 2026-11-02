@@ -769,7 +769,7 @@ test("Edit success shows the left status-bar dismiss control", async (t) => {
   await f.handlers.get(contributionId("cursorBridge.edit"))!();
   assert.deepEqual(f.statusEvents, ["show"]);
   assert.equal(f.statusShows.length, 1);
-  assert.equal(f.statusShows[0]?.text, "$(markdown) Return to Lumière");
+  assert.equal(f.statusShows[0]?.text, "$(markdown) Return to Lumia");
   assert.equal(
     f.statusShows[0]?.command,
     contributionId("cursorBridge.dismissEditMirror"),

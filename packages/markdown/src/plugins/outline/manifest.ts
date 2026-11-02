@@ -65,8 +65,8 @@ export default defineManifest({
       {
         id: "outline.toggle",
         key: "ctrl+alt+o",
-        // Match Lumière PDF: Control+Command+O on macOS.
-        // Editor-scoped so the same keys do not steal Lumière PDF's outline toggle.
+        // Match Lumia PDF: Control+Command+O on macOS.
+        // Editor-scoped so the same keys do not steal Lumia PDF's outline toggle.
         mac: "ctrl+cmd+o",
       },
     ],

@@ -1,9 +1,13 @@
-# Lumière: Markdown Editor and PDF Reader
+# Lumia: Markdown Editor and PDF Reader
 
 Obsidian-style Live Preview for Markdown and a PDF reader, in VS Code and
 Cursor, with links your AI agent can follow.
 
-Lumière turns your editor into a place to write notes and read papers. Notes
+Lumia used to be called Lumière. The extension id
+(`t04dJ14n9.lumiere`), its commands and its `lumiere.*` settings keep the
+old name, so an installed copy updates in place and keeps its settings.
+
+Lumia turns your editor into a place to write notes and read papers. Notes
 render as you type, the way Obsidian's Live Preview does, and PDFs open in a
 fast reader in the next tab. Every passage you select in either one can go
 straight to your agent, with a link that points it back to the exact lines or
@@ -67,33 +71,33 @@ through a versioned API.
 
 ## Get started
 
-1. Install [Lumière](https://marketplace.visualstudio.com/items?itemName=t04dJ14n9.lumiere)
-   (`t04dJ14n9.lumiere`) from the VS Code Marketplace, or search for **Lumière**
+1. Install [Lumia](https://marketplace.visualstudio.com/items?itemName=t04dJ14n9.lumiere)
+   (`t04dJ14n9.lumiere`) from the VS Code Marketplace, or search for **Lumia**
    in the Extensions view.
 2. Open a folder of notes. An existing Obsidian vault works as it is.
-3. Run **Use Lumière for Markdown in This Workspace** from the Command Palette, so
-   `*.md` files in that folder open in Lumière. It is an option rather than
+3. Run **Use Lumia for Markdown in This Workspace** from the Command Palette, so
+   `*.md` files in that folder open in Lumia. It is an option rather than
    the default, so it does not take over every README you open.
 4. Open a PDF. If another PDF extension opens it first, use **Open With… ›
-   Lumière PDF**.
+   Lumia PDF**.
 
-**Open Settings** shows all of Lumière's settings, grouped by plugin, and
+**Open Settings** shows all of Lumia's settings, grouped by plugin, and
 **Change Setting…** edits any one of them from the Command Palette.
 
 ### In Cursor
 
 Cursor has its own Markdown editor, with a **Preview | Markdown** switch in
-the editor's corner. Once Lumière is the workspace's Markdown editor, notes
-that Cursor opens in its text editor come back to Lumière, while diffs, Git
+the editor's corner. Once Lumia is the workspace's Markdown editor, notes
+that Cursor opens in its text editor come back to Lumia, while diffs, Git
 views and anything you open with **Open as Text** stay as they are. Cursor
 keeps most extension buttons in the editor's **…** menu, so the PDF reader's
 page and zoom controls live in the status bar.
 
 ### In DeepSeek Harness
 
-Lumière's Markdown editor also runs in
+Lumia's Markdown editor also runs in
 [DeepSeek Harness](https://www.deepseek.com/en/harness/) (0.2.1 or later), as
-a DSH plugin: a workspace's notes open in Lumière in DSH's preview sidebar,
+a DSH plugin: a workspace's notes open in Lumia in DSH's preview sidebar,
 with the same Live Preview, links, properties and math, and save as you type.
 Build it with `pnpm --filter @workshop/dsh build`, then add
 `packages/dsh/dist/bundle` to a DSH profile:
@@ -135,4 +139,4 @@ agents: read [AGENTS.md](AGENTS.md) first.
 MIT. Bundled libraries and their licenses are listed in
 [THIRD_PARTY_NOTICES.md](THIRD_PARTY_NOTICES.md).
 
-Lumière is not affiliated with or endorsed by Obsidian.
+Lumia is not affiliated with or endorsed by Obsidian.

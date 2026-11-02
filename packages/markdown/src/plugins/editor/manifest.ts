@@ -66,7 +66,7 @@ export default defineManifest({
       { id: "selectionActions", title: "Selection Actions" },
       {
         id: "useForMarkdownInWorkspace",
-        title: "Use Lumière for Markdown in This Workspace",
+        title: "Use Lumia for Markdown in This Workspace",
         scope: "workbench",
       },
       {
@@ -90,14 +90,14 @@ export default defineManifest({
         mac: "ctrl+g",
         scope: "editor",
       },
-      // Lumière focused: Ctrl/Cmd+E → default text editor.
+      // Lumia focused: Ctrl/Cmd+E → default text editor.
       {
         id: "toggleTextEditor",
         key: "ctrl+e",
         mac: "cmd+e",
         scope: "editor",
       },
-      // Built-in Markdown text editor focused: Ctrl/Cmd+E → Lumière.
+      // Built-in Markdown text editor focused: Ctrl/Cmd+E → Lumia.
       // workbench scope so the binding is not gated on activeCustomEditorId /
       // editorFocus (those keys are false while the text editor has focus).
       {

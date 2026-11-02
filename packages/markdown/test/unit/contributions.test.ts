@@ -174,7 +174,7 @@ test("macOS Vim consumes Control keys while preserving Command editor shortcuts"
   );
 });
 
-test("Tags and Markdown Outline views require the Lumière editor", async () => {
+test("Tags and Markdown Outline views require the Lumia editor", async () => {
   const { views } = await contributions();
   assert.ok(views);
   const outline = views.explorer.find(
@@ -193,7 +193,7 @@ test("Tags and Markdown Outline views require the Lumière editor", async () => 
   );
 });
 
-test("Explorer Markdown Outline expands by default; Tags and other Lumière subpanels collapse", async () => {
+test("Explorer Markdown Outline expands by default; Tags and other Lumia subpanels collapse", async () => {
   const { views } = await contributions();
   assert.ok(views);
   const byId = Object.fromEntries(
@@ -220,7 +220,7 @@ test("Toggle Markdown Outline is workbench-scoped in the palette and editor-scop
     (entry) => entry.command === "lumiere.markdown.outline.toggle",
   );
   assert.equal(command?.title, "Toggle Markdown Outline");
-  assert.equal(command?.category, "Lumière");
+  assert.equal(command?.category, "Lumia");
   const paletteWhen =
     "config.lumiere.markdown.preset != 'minimal' && config.lumiere.markdown.plugins.outline.enabled";
   assert.equal(
@@ -266,7 +266,7 @@ test("Go to Heading overrides the symbol shortcut only for enabled Workshop pane
   );
 });
 
-test("Go to Line owns Ctrl+G for Lumière panels (BH-033)", async () => {
+test("Go to Line owns Ctrl+G for Lumia panels (BH-033)", async () => {
   const { commands, keybindings, menus } = await contributions();
   const commandId = "lumiere.markdown.goToLine";
   assert.equal(
@@ -307,7 +307,7 @@ test("a note's keybindings need the note to have focus, not only to be active", 
   }
 });
 
-test("Ctrl/Cmd+E toggles Lumière and the host text editor, not Source mode", async () => {
+test("Ctrl/Cmd+E toggles Lumia and the host text editor, not Source mode", async () => {
   const { keybindings, commands } = await contributions();
   assert.ok(
     commands.some(
@@ -339,7 +339,7 @@ test("Ctrl/Cmd+E toggles Lumière and the host text editor, not Source mode", as
   const inText = bindings.find((binding) =>
     /editorLangId == 'markdown'/.test(binding.when ?? ""),
   );
-  assert.ok(inLumiere, "one binding for Lumière focus");
+  assert.ok(inLumiere, "one binding for Lumia focus");
   assert.match(inLumiere!.when ?? "", /&& lumiere\.markdown\.editorFocus$/);
   assert.ok(inText, "one binding for the built-in Markdown text editor");
   assert.match(inText!.when ?? "", /editorTextFocus && !activeCustomEditorId/);

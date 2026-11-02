@@ -48,7 +48,7 @@ export function applyLineColEdits(
 }
 
 /**
- * Planned final text for notes open in a Lumière custom editor. Used after
+ * Planned final text for notes open in a Lumia custom editor. Used after
  * the rename to apply link updates that VS Code's onWill WorkspaceEdit does
  * not land on CustomTextEditor buffers (BH-014).
  */
@@ -71,7 +71,7 @@ export function expectedOpenEditorText(
 }
 
 /**
- * Split link-update edits into notes open in Lumière (apply+save ourselves)
+ * Split link-update edits into notes open in Lumia (apply+save ourselves)
  * and closed notes (waitUntil WorkspaceEdit + saveAfterRename so disk is
  * written without a manual Save — Obsidian parity).
  */

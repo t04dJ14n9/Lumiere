@@ -2,8 +2,8 @@ import type { MarkdownWorkshopApi } from "@workshop/markdown/host";
 import type { NoteSelections } from "@workshop/pdf/host";
 
 /**
- * Lumière PDF's agent bridge reads note selections through this adapter
- * over Lumière's public API. `api` is undefined until Markdown
+ * Lumia PDF's agent bridge reads note selections through this adapter
+ * over Lumia's public API. `api` is undefined until Markdown
  * Workshop has started.
  */
 export function markdownNoteSelections(

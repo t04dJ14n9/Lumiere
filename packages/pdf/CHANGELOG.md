@@ -2,6 +2,10 @@
 
 ## Unreleased
 
+- Lumière PDF is now called Lumia PDF wherever it shows: the viewer's name
+  in **Reopen Editor With…**, command titles, settings titles, the MCP
+  server's name and the author of new annotations. Ids (`lumiere.pdf.*`)
+  are unchanged.
 - PDFs show their first page sooner: about 100 ms less from the document
   opening to the first page in VS Code (the automatic zoom is now
   applied as soon as the viewer has a size, not after a 150 ms debounce).
