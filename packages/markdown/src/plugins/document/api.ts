@@ -29,6 +29,10 @@ export interface ViewDocument {
   inputGroups?(
     vimMode?: (view: EditorView) => { insertMode?: boolean } | undefined,
   ): InputGrouping;
+  /** Late-bind Vim mode for the note editor's host undo grouping. */
+  useVimMode?(
+    vimMode?: (view: EditorView) => { insertMode?: boolean } | undefined,
+  ): void;
   beforeFlush?(commit: () => void): Disposer;
   readonly extension: Extension;
   attach(view: EditorView): Disposer;

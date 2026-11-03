@@ -33,6 +33,11 @@ export class ViewConnection implements ViewDocument {
     return new InputGroups(vimMode);
   }
 
+  /** Wire the note editor's undo groups to Vim insert/normal boundaries. */
+  useVimMode(vimMode?: ConstructorParameters<typeof InputGroups>[0]): void {
+    this.groups.useVimMode(vimMode);
+  }
+
   beforeFlush(commit: () => void): () => void {
     this.commits.add(commit);
     return () => {
