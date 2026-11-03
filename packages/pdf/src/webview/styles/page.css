@@ -111,8 +111,8 @@
    EmbedPDF stock #FFCD45@1 at paint time while new dark defaults (#FFF59D @ 0.4)
    pass through unchanged. */
 #root[data-page-colors="dark"] .sidecar-highlight-line {
-  /* Fallback 0.3 if --highlight-opacity unset (would otherwise paint opacity 1). */
-  opacity: var(--highlight-opacity, 0.3);
+  /* Fallback matches HIGHLIGHT_BY_PAPER.dark if --highlight-opacity unset. */
+  opacity: var(--highlight-opacity, 0.4);
   mix-blend-mode: normal;
 }
 

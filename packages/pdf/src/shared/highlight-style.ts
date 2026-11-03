@@ -40,17 +40,6 @@ export function highlightStyleForPaper(
   return HIGHLIGHT_BY_PAPER[paper];
 }
 
-/** True when colour/opacity still look like EmbedPDF stock (or fully opaque). */
-export function isEmbedPdfStockHighlight(
-  color: string,
-  opacity: number,
-): boolean {
-  if (color.toUpperCase() === EMBEDPDF_STOCK_HIGHLIGHT_COLOR) {
-    return true;
-  }
-  return opacity === EMBEDPDF_STOCK_HIGHLIGHT_OPACITY;
-}
-
 /**
  * Colour and opacity from an EmbedPDF tool's defaults, else paper fallback.
  * Stock `#FFCD45` (and any opacity 1 left by EmbedPDF) is replaced with the

@@ -17,7 +17,6 @@ import {
   highlightStyleForPaper,
   highlightStyleOf,
   highlightToolDefaults,
-  isEmbedPdfStockHighlight,
 } from "../../src/shared/highlight-style";
 
 test("light and dark paper have distinct lighter highlight pairs", () => {
@@ -84,15 +83,9 @@ test("dark paper preserves legacy 0.45 effective opacity (~0.18) while new 0.4 s
   assert.equal(displayHighlightOpacity(0.3, "dark"), 0.3);
 });
 
-test("EmbedPDF stock #FFCD45@1 is recognized (CVM dark-paper dazzle)", () => {
+test("EmbedPDF stock constants match CVM dark-paper dazzle (#FFCD45@1)", () => {
   assert.equal(EMBEDPDF_STOCK_HIGHLIGHT_COLOR, "#FFCD45");
   assert.equal(EMBEDPDF_STOCK_HIGHLIGHT_OPACITY, 1);
-  assert.equal(isEmbedPdfStockHighlight("#FFCD45", 1), true);
-  assert.equal(isEmbedPdfStockHighlight("#ffcd45", 1), true);
-  assert.equal(isEmbedPdfStockHighlight("#FFCD45", 0.4), true);
-  assert.equal(isEmbedPdfStockHighlight("#FFE566", 1), true);
-  assert.equal(isEmbedPdfStockHighlight("#FFE566", 0.3), false);
-  assert.equal(isEmbedPdfStockHighlight("#FFF59D", 0.4), false);
 });
 
 test("highlightStyleOf remaps EmbedPDF stock defaults to paper-aware style", () => {
