@@ -1,0 +1,15 @@
+pdf=docs/outline.pdf
+host=cursor
+branch=fix/pdf-dark-sidecar-highlight-readability
+preloaded_sidecar_color=#FFCD45
+preloaded_sidecar_opacity=1
+page_colors=Dark
+stock_paint_color=#FFF59D
+stock_paint_opacity=0.4
+stock_css_background=rgb(255, 245, 157)
+stock_css_opacity=0.4
+stock_line_count=2
+sidecar_file_still_stock=true
+new_dark_write_color=#FFF59D
+new_dark_write_opacity=0.4
+result=PASS
