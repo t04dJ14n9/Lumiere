@@ -215,14 +215,12 @@ test("PDF: Change Setting… lists every setting, grouped with its value, and ed
     .filter({ has: page.getByText("Mode", { exact: true }) })
     .first()
     .click();
-  await expect(rows(page).filter({ hasText: "floating" })).toContainText(
-    "floating over the pages",
-  );
-  await rows(page)
-    .filter({ hasText: /^\s*slim/u })
-    .first()
-    .click();
-  await expect.poll(() => userSetting("lumiere.pdf.toolbar.mode")).toBe("slim");
+  const none = rows(page)
+    .filter({ hasText: /^\s*none/u })
+    .first();
+  await expect(none).toContainText("No status-bar PDF entries");
+  await none.click();
+  await expect.poll(() => userSetting("lumiere.pdf.toolbar.mode")).toBe("none");
 
   // A true/false/null setting: the third choice follows the editor.
   await command(page, "PDF: Change Setting…");
