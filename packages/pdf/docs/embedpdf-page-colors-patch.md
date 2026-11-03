@@ -32,8 +32,20 @@ Declared in `pnpm-workspace.yaml` → `patchedDependencies`.
 
 - `PAGE_COLORS_ENGINE_AVAILABLE = true` in
   `packages/pdf/src/shared/page-colors-engine.ts`.
-- `packages/pdf/src/webview/page-bitmaps.tsx` `renderOptions()` passes
-  background `#1e1e1e` and text/path `#e8e6e3` when effective mode is dark.
+- On dark paper `packages/pdf/src/webview/page-bitmaps.tsx` does not show the
+  color-scheme render. PDFium's color scheme paints every filled shape one
+  colour and all text one colour, so a node box and its label came out the
+  same colour (the label vanished) and the bars of a chart all turned the
+  same. Each page is rendered twice (`src/webview/dark-render.ts`): as
+  authored, and with the color scheme on a **transparent** background and
+  ink of alpha 1 (`FORCED_PAGE_COLORS`). The scheme leaves pictures alone, so
+  the only opaque pixels of the second render are pictures. `darkenPage`
+  (`src/shared/dark-page.ts`) inverts the lightness of every other pixel of
+  the first render, keeping hue (the matrix of CSS
+  `invert(1) hue-rotate(180deg)`, laid between the dark paper `#1e1e1e` and
+  the ink `#e8e6e3`) and leaves pictures as authored. Alpha, not a colour
+  comparison, finds the pictures: a light grey fill is close to the ink's
+  colour and was taken for one.
 
 ## Refreshing on an EmbedPDF bump
 
@@ -50,8 +62,12 @@ Declared in `pnpm-workspace.yaml` → `patchedDependencies`.
 
 ## Limits
 
-PDFium color scheme does **not** recolor embedded images or scanned page
-content; those stay as-authored (often bright).
+- A dark page costs two renders and a pixel pass (about 7 ms per 1.3 MP page
+  on the main thread), so about twice a normal page's render time.
+- Embedded pictures and scanned pages stay as authored (often bright):
+  the second render leaves them opaque, so they are not inverted. Shadings
+  (gradients) are pictures to the color scheme too, and stay as authored.
+- Vector content drawn over a picture keeps its authored colours there.
 
 ## Packaging footgun
 
@@ -65,4 +81,5 @@ CI always runs `pnpm install --frozen-lockfile` before `pnpm package`, so CI
 artifacts include the patch. Locally: **reinstall after the patch lands**, then
 package. `scripts/build.mjs` and `.github/scripts/check-vsix.sh` assert
 `resolveEmbedPdfPageColors` / `0xff1e1e1e` / `useColorScheme` in
-`dist/pdf/webview/viewer.js` so an unpatched ship fails the build.
+`dist/pdf/webview/viewer.js` so an unpatched ship fails the build. The dark
+page still needs the patch: its second render is the color-scheme render.
