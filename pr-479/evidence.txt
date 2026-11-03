@@ -1,8 +1,13 @@
 pdf=docs/outline.pdf
 sha256_before=ad3f5412ccbb90e0023ae6ab4b66df9b63b431739f6ff73c72d0c2190cfa5819
 sha256_after=ad3f5412ccbb90e0023ae6ab4b66df9b63b431739f6ff73c72d0c2190cfa5819
-mtime_before_ms=1793687363351.0474
-mtime_after_ms=1793687363351.0474
+mtime_before_ms=1793689067341.123
+mtime_after_ms=1793689067341.123
 sidecar=outline.pdf.lumiere.md
 sidecar_bytes=359
 sidecar_has_highlight=true
+shots_show_sidecar_explorer_row=true
+shots_show_open_sidecar_md=true
+sidecar_basename_in_frame=outline.pdf.lumiere.md
+shot_03=explorer sidecar row + open sidecar md beside PDF
+shot_04=same after evidence write (sidecar still visible)
