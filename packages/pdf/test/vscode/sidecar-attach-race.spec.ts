@@ -87,7 +87,12 @@ test("Annotate Highlight after open leaves the PDF bytes alone and writes the si
   expect(afterHash, "PDF bytes must be unchanged").toBe(beforeHash);
   expect(afterMtimeMs, "PDF mtime must be unchanged").toBe(beforeMtimeMs);
 
-  // Show the sidecar in-frame: explorer row selected + markdown open beside PDF.
+  // Host GUI frames may open the synthetic sidecar beside the PDF. Contents
+  // must stay fixture-only (outline.pdf "Synthetic page …" quote / placeholder
+  // highlight). Never point shots at WorkVault or personal note text.
+  expect(sidecar).toMatch(/quote:\s*"Synthetic page 1"/);
+  expect(sidecar).not.toMatch(/WorkVault|金扬/);
+
   await command(page, "View: Show Explorer");
   await command(page, "View: Split Editor Right");
   await openFile(page, SIDECAR);
@@ -100,6 +105,15 @@ test("Annotate Highlight after open leaves the PDF bytes alone and writes the si
       name: new RegExp(sidecarBasename.replace(/\./gu, "\\.")),
     }),
   ).toBeVisible({ timeout: 15_000 });
+  // Tabs must be fixture-only (PDF and/or synthetic sidecar). Split Editor
+  // Right may briefly keep a duplicate PDF tab; never allow other names.
+  const tabLabels = page.locator(".tabs-container .tab .label-name");
+  await expect.poll(async () => {
+    const labels = await tabLabels.allTextContents();
+    return labels.every((t) =>
+      t === "outline.pdf" || t === sidecarBasename,
+    );
+  }).toBe(true);
 
   await page.screenshot({
     path: path.join(SHOT_DIR, "03-after-highlight.png"),
@@ -119,9 +133,10 @@ test("Annotate Highlight after open leaves the PDF bytes alone and writes the si
       `sidecar_has_highlight=${/id:\s*hl-[0-9a-f]{8}/.test(sidecar)}`,
       `shots_show_sidecar_explorer_row=true`,
       `shots_show_open_sidecar_md=true`,
+      `shots_sidecar_content=synthetic_fixture_only`,
       `sidecar_basename_in_frame=${sidecarBasename}`,
-      `shot_03=explorer sidecar row + open sidecar md beside PDF`,
-      `shot_04=same after evidence write (sidecar still visible)`,
+      `shot_03=explorer sidecar row + open synthetic sidecar md beside PDF`,
+      `shot_04=same after evidence write (synthetic sidecar still visible)`,
       "",
     ].join("\n"),
   );
