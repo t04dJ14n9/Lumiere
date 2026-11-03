@@ -1,0 +1,11 @@
+pr=480
+fix=unresolvedKey percent-decode align with knownNoteKeys
+head_code=99a5af2c
+visual_harness=ac229fb7
+fixtures=synthetic_only
+notes=Hub.md,样例.md,Alpha（Beta-Gamma）.md,Plain.md
+links_in_hub=[样例](%E6%A0%B7%E4%BE%8B.md),[Alpha（Beta-Gamma）](Alpha%EF%BC%88Beta-Gamma%EF%BC%89.md),[Plain](Plain.md)
+before=encoded Unicode/fullwidth links dim (is-unresolved) vs bright Plain
+after=all three bright resolved link styling
+shots_show_open_vault_md=false
+shots_content=synthetic_fixture_only
