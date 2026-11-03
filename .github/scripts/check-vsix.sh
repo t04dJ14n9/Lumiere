@@ -39,4 +39,19 @@ if hits=$(grep -rlE "$secrets" "$workdir"); then
   status=1
 fi
 
+# EmbedPDF pageColors engines patch must be in the shipped viewer (stale
+# node_modules without pnpm install after the patch omits it; CI always installs).
+viewer_js="$workdir/extension/dist/pdf/webview/viewer.js"
+if [[ ! -f "$viewer_js" ]]; then
+  echo "::error file=$vsix::Missing extension/dist/pdf/webview/viewer.js"
+  status=1
+elif ! grep -q 'resolveEmbedPdfPageColors' "$viewer_js" \
+  || ! grep -q '0xff1e1e1e' "$viewer_js" \
+  || ! grep -q 'useColorScheme' "$viewer_js"; then
+  echo "::error file=$vsix::viewer.js missing EmbedPDF pageColors engines-patch markers (resolveEmbedPdfPageColors / 0xff1e1e1e / useColorScheme)"
+  status=1
+else
+  echo "viewer.js: EmbedPDF pageColors engines-patch markers present"
+fi
+
 exit $status

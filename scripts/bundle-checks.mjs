@@ -11,3 +11,18 @@
 export function keepsBasenameCreate(extensionJs) {
   return /create:\s*[\w$]+\.wiki\s*\|\|/.test(extensionJs);
 }
+
+/**
+ * Whether the PDF viewer bundle still includes the `@embedpdf/engines`
+ * pageColors patch (pnpm patchedDependencies). A stale node_modules without
+ * `pnpm install` after #467 ships Matrix-only JS: status can show Follow
+ * (Dark) while paper stays white.
+ * @param {string} viewerJs
+ */
+export function keepsEmbedPdfPageColorsPatch(viewerJs) {
+  return (
+    viewerJs.includes("resolveEmbedPdfPageColors") &&
+    viewerJs.includes("0xff1e1e1e") &&
+    viewerJs.includes("useColorScheme")
+  );
+}

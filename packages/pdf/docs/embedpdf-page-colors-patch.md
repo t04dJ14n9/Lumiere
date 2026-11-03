@@ -52,3 +52,17 @@ Declared in `pnpm-workspace.yaml` → `patchedDependencies`.
 
 PDFium color scheme does **not** recolor embedded images or scanned page
 content; those stay as-authored (often bright).
+
+## Packaging footgun
+
+`pnpm package` bundles whatever `@embedpdf/engines` is currently in
+`node_modules`. After pulling the patch (#467), a tree that never re-ran
+`pnpm install` still has the stock Matrix-only engines package (folder name
+without `patch_hash=…`). The resulting VSIX looks fine (WASM still exports
+ColorScheme Start; status can show Follow (Dark)) but paper stays white.
+
+CI always runs `pnpm install --frozen-lockfile` before `pnpm package`, so CI
+artifacts include the patch. Locally: **reinstall after the patch lands**, then
+package. `scripts/build.mjs` and `.github/scripts/check-vsix.sh` assert
+`resolveEmbedPdfPageColors` / `0xff1e1e1e` / `useColorScheme` in
+`dist/pdf/webview/viewer.js` so an unpatched ship fails the build.

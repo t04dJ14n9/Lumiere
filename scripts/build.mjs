@@ -12,7 +12,10 @@ import path from "node:path";
 import * as esbuild from "esbuild";
 import { lazyBridgeServer } from "../packages/pdf/scripts/lazy-bridge-server.mjs";
 import { lazyYaml } from "../packages/markdown/scripts/lazy-yaml.mjs";
-import { keepsBasenameCreate } from "./bundle-checks.mjs";
+import {
+  keepsBasenameCreate,
+  keepsEmbedPdfPageColorsPatch,
+} from "./bundle-checks.mjs";
 
 const production = process.argv.includes("--production");
 const root = path.dirname(path.dirname(new URL(import.meta.url).pathname));
@@ -75,6 +78,15 @@ const extensionJs = await readFile(path.join(dist, "extension.js"), "utf8");
 if (!keepsBasenameCreate(extensionJs)) {
   throw new Error(
     "dist/extension.js missing Markdown basename create path (expected create:<wiki>||...)",
+  );
+}
+const viewerJs = await readFile(
+  path.join(dist, "pdf", "webview", "viewer.js"),
+  "utf8",
+);
+if (!keepsEmbedPdfPageColorsPatch(viewerJs)) {
+  throw new Error(
+    "dist/pdf/webview/viewer.js missing EmbedPDF pageColors engines-patch markers (resolveEmbedPdfPageColors / 0xff1e1e1e / useColorScheme). Re-run pnpm install so patchedDependencies apply, then rebuild.",
   );
 }
 if (production && !/yaml-runtime\.cjs/.test(extensionJs)) {
