@@ -6,7 +6,7 @@ import { editGroup } from "./input-annotation";
 /** Group transport batches by the user's edit, while keeping native history authoritative. */
 export class InputGroups {
   constructor(
-    private readonly vimMode: (
+    private vimMode: (
       view: EditorView,
     ) => { insertMode?: boolean } | undefined = () => undefined,
   ) {}
@@ -14,6 +14,14 @@ export class InputGroups {
   private sequence = 0;
   private previous?: { time: number; ranges: { from: number; to: number }[] };
   private readonly events = new AbortController();
+
+  /** Late-bind Vim mode so the note editor can join insert sessions into one undo atom. */
+  useVimMode(
+    vimMode: (view: EditorView) => { insertMode?: boolean } | undefined = () =>
+      undefined,
+  ): void {
+    this.vimMode = vimMode;
+  }
 
   readonly extension = EditorState.transactionExtender.of((transaction) => {
     if (

@@ -10,6 +10,7 @@ import type { Context, Infer, Plugin } from "@workshop/core";
 import type {} from "../editor/api";
 import type {} from "./api";
 import type {} from "../commands/api";
+import type { ViewDocument } from "../document/api";
 import { vimCaretMode } from "./caret";
 import { config } from "./manifest";
 import { revealBlockMotion } from "./motion";
@@ -35,7 +36,10 @@ const caretProfiles = new WeakMap<
 /** Each webview has one editor; restore the library hooks when its fiber stops. */
 export const vimWebview: Plugin<Infer<typeof config>> = {
   name: "vim",
-  inject: { required: ["editor", "commands"], optional: ["livePreview"] },
+  inject: {
+    required: ["editor", "commands"],
+    optional: ["livePreview", "document"],
+  },
   provides: ["vim"],
   config,
   reconfigure(ctx, options) {
@@ -54,6 +58,7 @@ export const vimWebview: Plugin<Infer<typeof config>> = {
       caretProfiles.delete(ctx);
     });
     registerVimService(ctx);
+    registerVimUndoGroups(ctx);
     registerShortcutConsumer(ctx);
     registerNativeActions(ctx);
     registerExCommands(ctx);
@@ -110,6 +115,22 @@ function registerVimService(ctx: Context): void {
         to.dispatch({ selection });
       }
     },
+  });
+}
+
+function registerVimUndoGroups(ctx: Context): void {
+  // Table cells already pass vimMode into document.inputGroups(); the note
+  // editor's primary InputGroups needs the same late binding so one insert
+  // session is one host undo step (DESIGN.md §8.2).
+  // document is optional here — absent until the note editor publishes it.
+  const document = ctx.document as ViewDocument | undefined;
+  const useVimMode = document?.useVimMode?.bind(document);
+  if (!useVimMode) {
+    return;
+  }
+  ctx.effect(() => {
+    useVimMode((view) => getCM(view)?.state.vim ?? undefined);
+    return () => useVimMode(() => undefined);
   });
 }
 
