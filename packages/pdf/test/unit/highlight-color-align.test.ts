@@ -8,8 +8,11 @@ import {
 import {
   BUILTIN_HIGHLIGHT_COLOR,
   BUILTIN_HIGHLIGHT_OPACITY,
+  EMBEDPDF_STOCK_HIGHLIGHT_COLOR,
+  EMBEDPDF_STOCK_HIGHLIGHT_OPACITY,
   HIGHLIGHT_BY_PAPER,
   LEGACY_SIDECAR_OPACITY,
+  displayHighlightAppearance,
   displayHighlightOpacity,
   highlightStyleForPaper,
   highlightStyleOf,
@@ -78,4 +81,46 @@ test("dark paper preserves legacy 0.45 effective opacity (~0.18) while new 0.4 s
   assert.equal(displayHighlightOpacity(0.45, "normal"), 0.45);
   assert.equal(displayHighlightOpacity(0.3, "normal"), 0.3);
   assert.equal(displayHighlightOpacity(0.3, "dark"), 0.3);
+});
+
+test("EmbedPDF stock constants match CVM dark-paper dazzle (#FFCD45@1)", () => {
+  assert.equal(EMBEDPDF_STOCK_HIGHLIGHT_COLOR, "#FFCD45");
+  assert.equal(EMBEDPDF_STOCK_HIGHLIGHT_OPACITY, 1);
+});
+
+test("highlightStyleOf remaps EmbedPDF stock defaults to paper-aware style", () => {
+  assert.deepEqual(
+    highlightStyleOf({ color: "#FFCD45", opacity: 1 }, "dark"),
+    HIGHLIGHT_BY_PAPER.dark,
+  );
+  assert.deepEqual(
+    highlightStyleOf({ strokeColor: "#FFCD45", opacity: 1 }, "normal"),
+    HIGHLIGHT_BY_PAPER.normal,
+  );
+  // Opaque non-stock colour keeps hue; opacity becomes paper default.
+  assert.deepEqual(highlightStyleOf({ color: "#FF6B6B", opacity: 1 }, "dark"), {
+    color: "#FF6B6B",
+    opacity: HIGHLIGHT_BY_PAPER.dark.opacity,
+  });
+});
+
+test("displayHighlightAppearance remaps stock sidecar paint on dark paper", () => {
+  assert.deepEqual(
+    displayHighlightAppearance({ color: "#FFCD45", opacity: 1 }, "dark"),
+    HIGHLIGHT_BY_PAPER.dark,
+  );
+  assert.deepEqual(
+    displayHighlightAppearance({ color: "#ffcd45", opacity: 1 }, "normal"),
+    HIGHLIGHT_BY_PAPER.normal,
+  );
+  // Legacy 0.45 still migrates on dark; colour unchanged.
+  assert.deepEqual(
+    displayHighlightAppearance({ color: "#FFE566", opacity: 0.45 }, "dark"),
+    { color: "#FFE566", opacity: 0.18 },
+  );
+  // Healthy #482 dark write passes through.
+  assert.deepEqual(
+    displayHighlightAppearance({ color: "#FFF59D", opacity: 0.4 }, "dark"),
+    { color: "#FFF59D", opacity: 0.4 },
+  );
 });

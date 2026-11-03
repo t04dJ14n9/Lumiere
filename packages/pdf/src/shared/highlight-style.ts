@@ -27,13 +27,24 @@ export const HIGHLIGHT_BY_PAPER: Record<
 export const BUILTIN_HIGHLIGHT_COLOR = HIGHLIGHT_BY_PAPER.normal.color;
 export const BUILTIN_HIGHLIGHT_OPACITY = HIGHLIGHT_BY_PAPER.normal.opacity;
 
+/**
+ * EmbedPDF's built-in highlight tool default before Lumia `setToolDefaults`.
+ * CVM dark-paper bands measured median rgb(255,205,69) = this stock @ opacity 1.
+ */
+export const EMBEDPDF_STOCK_HIGHLIGHT_COLOR = "#FFCD45";
+export const EMBEDPDF_STOCK_HIGHLIGHT_OPACITY = 1;
+
 export function highlightStyleForPaper(
   paper: EffectivePageColors,
 ): HighlightAppearance {
   return HIGHLIGHT_BY_PAPER[paper];
 }
 
-/** Colour and opacity from an EmbedPDF tool's defaults, else paper fallback. */
+/**
+ * Colour and opacity from an EmbedPDF tool's defaults, else paper fallback.
+ * Stock `#FFCD45` (and any opacity 1 left by EmbedPDF) is replaced with the
+ * paper-aware pair so a missed `setToolDefaults` cannot write solid yellow.
+ */
 export function highlightStyleOf(
   defaults: {
     strokeColor?: unknown;
@@ -48,10 +59,17 @@ export function highlightStyleOf(
       typeof value === "string" && /^#[0-9a-f]{6}$/i.test(value),
   );
   const opacity = Number(defaults.opacity);
-  return {
+  const resolved: HighlightAppearance = {
     color: (color ?? fallback.color).toUpperCase(),
     opacity: opacity > 0 && opacity <= 1 ? opacity : fallback.opacity,
   };
+  if (resolved.color === EMBEDPDF_STOCK_HIGHLIGHT_COLOR) {
+    return fallback;
+  }
+  if (resolved.opacity === EMBEDPDF_STOCK_HIGHLIGHT_OPACITY) {
+    return { color: resolved.color, opacity: fallback.opacity };
+  }
+  return resolved;
 }
 
 /** EmbedPDF `setToolDefaults` payload for the highlight tool / colour picks. */
@@ -89,4 +107,29 @@ export function displayHighlightOpacity(
     return 0.18;
   }
   return stored;
+}
+
+/**
+ * Paint-time colour + opacity for a stored sidecar mark. Remaps EmbedPDF stock
+ * `#FFCD45` / opacity 1 to the current paper pair so legacy opaque yellow does
+ * not dazzle on dark paper even when the sidecar file was never rewritten.
+ */
+export function displayHighlightAppearance(
+  stored: { color: string; opacity: number },
+  paper: EffectivePageColors,
+): HighlightAppearance {
+  const color = stored.color.toUpperCase();
+  if (color === EMBEDPDF_STOCK_HIGHLIGHT_COLOR) {
+    return highlightStyleForPaper(paper);
+  }
+  if (stored.opacity === EMBEDPDF_STOCK_HIGHLIGHT_OPACITY) {
+    return {
+      color,
+      opacity: highlightStyleForPaper(paper).opacity,
+    };
+  }
+  return {
+    color,
+    opacity: displayHighlightOpacity(stored.opacity, paper),
+  };
 }
