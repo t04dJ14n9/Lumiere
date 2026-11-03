@@ -2,6 +2,11 @@
 
 ## 0.1.0 (unreleased)
 
+- Markdown Outline no longer flashes shut and open when the reading position
+  moves into a section that has subsections: it collapses the tree only when
+  a branch that is open must close (leaving a chapter, or a section with
+  subsections), and otherwise just opens the rows it needs.
+
 - Markdown Outline follows scrolling as well as the caret, like a page's
   table of contents: the section being read (the caret's while it is on
   screen, else the one at the middle of the editor) is selected, its parents

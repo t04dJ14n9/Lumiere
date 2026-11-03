@@ -179,8 +179,11 @@ export class OutlineFollower implements vscode.Disposable {
   }
 
   /**
-   * Open `item`'s parents and its own children and close every other
-   * branch, then select it. The branches change only when the path does.
+   * Open `item`'s parents and its own children and select it, closing the
+   * other branches only when one that is open is not on its path: VS Code can
+   * close a single row only through the whole-tree collapse, which flashes the
+   * tree shut and open again, so a move that only opens rows (into a bookmark
+   * that has children, or deeper) leaves the rest alone.
    */
   private async applyAccordion(item: OutlineItem): Promise<void> {
     const path: OutlineItem[] = [];
@@ -192,15 +195,22 @@ export class OutlineFollower implements vscode.Disposable {
       path.unshift(node);
     }
     const branches = path.filter((node) => node.children.length > 0);
-    const same =
-      this.opened?.length === branches.length &&
-      this.opened.every((node, index) => node === branches[index]);
+    const opened = this.opened;
+    const mustClose =
+      !opened || opened.some((branch) => !branches.includes(branch));
     // A flat outline has nothing to open or close.
-    if (!same && this.provider.nodes.some((node) => node.children.length)) {
+    const hasBranches = this.provider.nodes.some(
+      (node) => node.children.length,
+    );
+    let toOpen = branches.filter((branch) => !opened?.includes(branch));
+    if (mustClose && hasBranches) {
       await vscode.commands.executeCommand(
         `workbench.actions.treeView.${VIEW_ID}.collapseAll`,
       );
-      for (const branch of branches) {
+      toOpen = branches;
+    }
+    if (hasBranches) {
+      for (const branch of toOpen) {
         if (this.disposed) {
           return;
         }

@@ -35,8 +35,11 @@ export class OutlineView {
   private sourceVersion = 0;
   private revision = 0;
   private followRequest = 0;
-  /** Ids of parents the last accordion apply left open, so a repeat path is a no-op. */
-  private lastAccordionKey: string | undefined;
+  /**
+   * Ids of the parents the accordion has left open; undefined when the tree
+   * is fresh or Expand All opened it, so what is open is not known.
+   */
+  private openBranches: ReadonlySet<string> | undefined;
   private isDisposed = false;
   private timer: ReturnType<typeof setTimeout> | undefined;
 
@@ -81,7 +84,7 @@ export class OutlineView {
     );
     this.options.source.parentsStartExpanded =
       this.options.expandMode() === "all";
-    this.lastAccordionKey = undefined;
+    this.openBranches = undefined;
     this.options.tree.refresh();
     void this.followCaret();
   }
@@ -176,9 +179,10 @@ export class OutlineView {
         await this.openForExpandAll(node);
       }
     } finally {
-      // The tree is fully open. Forget the last accordion path so the next
-      // follow closes every other branch, even inside the same section.
-      this.lastAccordionKey = undefined;
+      // The tree is fully open. Forget which branches the accordion opened
+      // so the next follow closes every other branch, even inside the same
+      // section.
+      this.openBranches = undefined;
     }
   }
 
@@ -220,6 +224,13 @@ export class OutlineView {
     return true;
   }
 
+  /**
+   * Open `active`'s path and select it. Branches are closed only when one
+   * that is open is not on the path: VS Code can close a single row only
+   * through the whole-tree collapse, which flashes the tree shut and open
+   * again, so a move that only opens rows (into a section that has
+   * sub-sections, or deeper) leaves the rest alone.
+   */
   private async applyAccordion(active: TreeNode): Promise<void> {
     const path = this.options.source.pathTo(active);
     const expandIds = new Set<string>();
@@ -228,10 +239,15 @@ export class OutlineView {
         expandIds.add(node.id);
       }
     }
-    const key = [...expandIds].sort().join("\0");
-    if (key !== this.lastAccordionKey) {
-      this.lastAccordionKey = key;
+    const open = this.openBranches;
+    this.openBranches = expandIds;
+    if (!open || [...open].some((id) => !expandIds.has(id))) {
       await this.resetAccordion(path, expandIds);
+    } else {
+      await this.expandPath(
+        path,
+        new Set([...expandIds].filter((id) => !open.has(id))),
+      );
     }
     await this.options.tree.reveal(active, { select: true, focus: false });
   }
