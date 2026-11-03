@@ -8,6 +8,7 @@ import {
   drag,
   editorTitleAction,
   expect,
+  goToPage,
   inCursor,
   openFile,
   pageAtTop,
@@ -229,11 +230,7 @@ test("keyboard shortcuts page, zoom, fit, find and pick the tool while the PDF h
   // for meanwhile would be scrolled away from.
   await scrollSettled(viewer);
 
-  await page.keyboard.press("Control+g");
-  const input = quickInputTitled(page, /^Go to Page/u);
-  await expect(input).toHaveValue(/^\d+$/u);
-  await input.fill("9");
-  await input.press("Enter");
+  await goToPage(page, viewer, 9, () => page.keyboard.press("Control+g"));
   await expect(statusBarEntry(page, /^Page 9 \/ 12$/u)).toBeVisible();
 
   await focusViewer(page, viewer, 9);
@@ -268,7 +265,6 @@ test("the toolbar setting takes the controls off the status bar and back, live",
     await setToolbarMode(page, /None/u);
     await expect(statusBarEntry(page, PAGE_STATUS)).toHaveCount(0);
     await expect(zoomStatus(page)).toHaveCount(0);
-    await expect(viewerBar).toHaveCount(0);
     // The commands still work.
     await command(page, "PDF: Fit Page");
     await expect
@@ -283,6 +279,9 @@ test("the toolbar setting takes the controls off the status bar and back, live",
         }),
       )
       .toBe(true);
+    // Checked once the viewer has answered a command: a bar the setting
+    // brought would be drawn by then.
+    await expect(viewerBar).toHaveCount(0);
   } finally {
     await setToolbarMode(page, /Status Bar/u);
   }

@@ -4,7 +4,13 @@ import { readFileSync, writeFileSync } from "node:fs";
 import path from "node:path";
 import { paths } from "./state";
 export { QUICK_INPUT, command, focusWorkbench, openPalette } from "./palette";
-import { QUICK_INPUT, command, focusWorkbench, openPalette } from "./palette";
+import {
+  QUICK_INPUT,
+  command,
+  focusWorkbench,
+  leaveWebview,
+  openPalette,
+} from "./palette";
 
 /** Finish native closing, including a delayed synthetic-buffer discard prompt. */
 export async function closeEditorGroups(page: Page) {
@@ -44,7 +50,7 @@ export async function openWorkbench(
   await expect(async () => {
     if (!(await page.locator(QUICK_INPUT).isVisible())) {
       // Take the focus out of a webview left from the previous note.
-      await page.locator(".part.statusbar").click({ position: { x: 5, y: 5 } });
+      await leaveWebview(page);
       await page.keyboard.press("ControlOrMeta+p");
     }
     await expect(page.locator(QUICK_INPUT)).toBeVisible({ timeout: 2000 });

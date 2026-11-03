@@ -13,24 +13,31 @@ import type { Page } from "@playwright/test";
 export const QUICK_INPUT =
   ".quick-input-widget input:not([type='checkbox']):visible";
 /**
- * Click the workbench outside every webview: the status bar, or, while Zen
- * Mode hides it, the window's top-left corner (the tab bar or the margin of
- * the centred editor, never a webview).
+ * Leave a webview's input context with a click on the status bar, which is
+ * outside every webview. While Zen Mode hides it nothing is clicked: no other
+ * spot is sure to miss the webviews (without zen's centred layout the window's
+ * corner is a tab, or the editor itself), and the palette keys still reach the
+ * workbench from a webview.
  */
-async function clickOutsideWebviews(page: Page) {
+export async function leaveWebview(page: Page) {
   const statusBar = page.locator(".part.statusbar");
-  const target = (await statusBar.isVisible())
-    ? statusBar
-    : page.locator(".monaco-workbench");
-  await target.click({ position: { x: 5, y: 5 } });
+  if (await statusBar.isVisible()) {
+    // Zen can hide it between the check and the click: the caller retries.
+    await statusBar.click({ position: { x: 5, y: 5 }, timeout: 2000 });
+  }
 }
 /** CDP can drive a background window whose native focus-dependent UI is hidden. */
 export async function focusWorkbench(page: Page) {
   await page.bringToFront();
   // Closing the last editor can leave focus on Electron's window chrome.
-  // Activating the window alone does not return focus to its document.
+  // Activating the window alone does not return focus to its document; any
+  // click does, on the status bar or, while zen hides it, the window's corner.
   if (!(await page.evaluate(() => document.hasFocus()))) {
-    await clickOutsideWebviews(page);
+    const statusBar = page.locator(".part.statusbar");
+    const target = (await statusBar.isVisible())
+      ? statusBar
+      : page.locator(".monaco-workbench");
+    await target.click({ position: { x: 5, y: 5 }, timeout: 2000 });
   }
   await expect.poll(() => page.evaluate(() => document.hasFocus())).toBe(true);
 }
@@ -44,8 +51,7 @@ export async function openPalette(page: Page) {
   await expect(async () => {
     if (!(await input.isVisible())) {
       await focusWorkbench(page);
-      // Leave a webview's input context before opening the host's palette.
-      await clickOutsideWebviews(page);
+      await leaveWebview(page);
       // F1 opens the palette too, when the shortcut is swallowed.
       await page.keyboard.press(
         attempt++ % 2 === 0 ? "ControlOrMeta+Shift+p" : "F1",
