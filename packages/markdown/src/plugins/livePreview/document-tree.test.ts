@@ -183,13 +183,17 @@ function parsedView(doc: string, extensions: Extension[] = []) {
       parser.update(viewUpdate(view.state.update({}), true));
       await new Promise((resolve) => setImmediate(resolve));
     },
-    /** Run pending slices, each with no time to spare, until none are left. */
+    /**
+     * Run pending slices, each allowed one block, until none are left.
+     * ensureSyntaxTree uses Date.now(), so budget 0 still gets ~1 ms of
+     * work; a negative budget stops after the first advance.
+     */
     runSlices() {
       let count = 0;
       while (slices.size) {
         const [slice] = slices;
         slices.delete(slice!);
-        slice!(0);
+        slice!(-1);
         count++;
       }
       return count;
@@ -218,7 +222,7 @@ test("idle slices finish the tree a little at a time, and it matches a fresh par
   const editor = parsedView(doc);
   await editor.scroll(30000, 33000);
   const slices = editor.runSlices();
-  assert.ok(slices >= 1, `${slices} slices`);
+  assert.ok(slices > 100, `${slices} slices`);
   const tree = editor.tree();
   assert.equal(tree.length, doc.length);
   assert.equal(cachedMarkdown(editor.view.state.doc), tree);
