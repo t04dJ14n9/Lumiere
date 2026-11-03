@@ -127,10 +127,7 @@ export class OutlineView {
   ): Promise<void> {
     const request = ++this.followRequest;
     const panel = this.panel;
-    if (
-      !this.options.followsCursor() ||
-      this.options.expandMode() !== "accordion"
-    ) {
+    if (!this.isAccordionOn()) {
       // The reader opens and closes rows while the accordion is off: what it
       // opened is no longer known when it comes back.
       this.openBranches = undefined;
@@ -154,10 +151,7 @@ export class OutlineView {
       if (!node || this.isOutlineJump(node)) {
         return;
       }
-      if (
-        this.options.followsCursor() &&
-        this.options.expandMode() === "accordion"
-      ) {
+      if (this.isAccordionOn()) {
         const isCurrent = () => this.canFollow(panel, request);
         await this.oneAtATime(async () => {
           if (isCurrent()) {
@@ -186,15 +180,34 @@ export class OutlineView {
   }
 
   private canFollow(panel: EditorPanel, request: number): boolean {
-    return (
-      !this.isDisposed &&
-      request === this.followRequest &&
-      this.options.followsCursor() &&
-      this.options.tree.visible &&
-      panel === this.panel &&
-      panel === this.options.editors.active() &&
-      panel.document.version === this.sourceVersion
-    );
+    if (this.isDisposed || request !== this.followRequest) {
+      return false;
+    }
+    try {
+      return (
+        this.options.followsCursor() &&
+        this.options.tree.visible &&
+        panel === this.panel &&
+        panel === this.options.editors.active() &&
+        panel.document.version === this.sourceVersion
+      );
+    } catch {
+      // The plugin is stopping: its settings and editors are withdrawn
+      // before dispose() runs, and a follow in flight must just stop.
+      return false;
+    }
+  }
+
+  /** Whether follow is on with the accordion; false once the plugin is stopping. */
+  private isAccordionOn(): boolean {
+    try {
+      return (
+        this.options.followsCursor() &&
+        this.options.expandMode() === "accordion"
+      );
+    } catch {
+      return false;
+    }
   }
 
   async expandAll(): Promise<void> {
