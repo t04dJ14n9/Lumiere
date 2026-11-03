@@ -10,6 +10,7 @@ import path from "node:path";
 import type { Page } from "@playwright/test";
 import { paths } from "./state";
 import {
+  command,
   drag,
   expect,
   fitPage,
@@ -26,6 +27,7 @@ import {
  * the null→[] claim; this proves the product path on a real Cursor/VS Code.
  */
 const PDF = "docs/outline.pdf";
+const SIDECAR = `${PDF}.lumiere.md`;
 const TEXT_MIDLINE = 94;
 const SHOT_DIR = path.join(paths.repository, "test-results", "host-gui-pr479");
 
@@ -42,7 +44,8 @@ test("Annotate Highlight after open leaves the PDF bytes alone and writes the si
 }) => {
   mkdirSync(SHOT_DIR, { recursive: true });
   const pdfPath = path.join(paths.workspace, PDF);
-  const sidecarPath = `${pdfPath}.lumiere.md`;
+  const sidecarPath = path.join(paths.workspace, SIDECAR);
+  const sidecarBasename = path.basename(sidecarPath);
   const beforeHash = sha256(pdfPath);
   const beforeMtimeMs = statSync(pdfPath).mtimeMs;
 
@@ -69,10 +72,6 @@ test("Annotate Highlight after open leaves the PDF bytes alone and writes the si
   await expect(viewer.locator(".sidecar-highlight-line").first()).toBeVisible({
     timeout: 15_000,
   });
-  await page.screenshot({
-    path: path.join(SHOT_DIR, "03-after-highlight.png"),
-    fullPage: true,
-  });
 
   await expect
     .poll(() => existsSync(sidecarPath), { timeout: 15_000 })
@@ -88,6 +87,25 @@ test("Annotate Highlight after open leaves the PDF bytes alone and writes the si
   expect(afterHash, "PDF bytes must be unchanged").toBe(beforeHash);
   expect(afterMtimeMs, "PDF mtime must be unchanged").toBe(beforeMtimeMs);
 
+  // Show the sidecar in-frame: explorer row selected + markdown open beside PDF.
+  await command(page, "View: Show Explorer");
+  await command(page, "View: Split Editor Right");
+  await openFile(page, SIDECAR);
+  await command(page, "File: Reveal Active File in Explorer View");
+  await expect(
+    page.locator(".tabs-container .tab", { hasText: sidecarBasename }),
+  ).toBeVisible({ timeout: 15_000 });
+  await expect(
+    page.getByRole("treeitem", {
+      name: new RegExp(sidecarBasename.replace(/\./gu, "\\.")),
+    }),
+  ).toBeVisible({ timeout: 15_000 });
+
+  await page.screenshot({
+    path: path.join(SHOT_DIR, "03-after-highlight.png"),
+    fullPage: true,
+  });
+
   writeFileSync(
     path.join(SHOT_DIR, "evidence.txt"),
     [
@@ -96,9 +114,14 @@ test("Annotate Highlight after open leaves the PDF bytes alone and writes the si
       `sha256_after=${afterHash}`,
       `mtime_before_ms=${beforeMtimeMs}`,
       `mtime_after_ms=${afterMtimeMs}`,
-      `sidecar=${path.basename(sidecarPath)}`,
+      `sidecar=${sidecarBasename}`,
       `sidecar_bytes=${Buffer.byteLength(sidecar)}`,
       `sidecar_has_highlight=${/id:\s*hl-[0-9a-f]{8}/.test(sidecar)}`,
+      `shots_show_sidecar_explorer_row=true`,
+      `shots_show_open_sidecar_md=true`,
+      `sidecar_basename_in_frame=${sidecarBasename}`,
+      `shot_03=explorer sidecar row + open sidecar md beside PDF`,
+      `shot_04=same after evidence write (sidecar still visible)`,
       "",
     ].join("\n"),
   );
