@@ -301,7 +301,10 @@ test("unresolvedKey decodes percent-encoded Markdown destinations to match known
   assert.equal(unresolvedKey(sampleEncoded), "样例");
 
   // #fragment and |alias still stripped after decode
-  assert.equal(unresolvedKey(`${alphaEncoded}#Heading|alias`), "alpha（beta-gamma）");
+  assert.equal(
+    unresolvedKey(`${alphaEncoded}#Heading|alias`),
+    "alpha（beta-gamma）",
+  );
   assert.equal(unresolvedKey(`${sampleEncoded}#^block`), "样例");
 
   // Literal filename # via %23 stays in the path (split is on literal # only)
