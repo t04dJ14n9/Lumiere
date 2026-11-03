@@ -42,6 +42,8 @@ export class OutlineView {
   private openBranches: ReadonlySet<string> | undefined;
   private isDisposed = false;
   private timer: ReturnType<typeof setTimeout> | undefined;
+  /** The accordion's tree work in progress (see `oneAtATime`). */
+  private treeWork: Promise<void> = Promise.resolve();
 
   constructor(private readonly options: OutlineViewOptions) {}
 
@@ -84,7 +86,13 @@ export class OutlineView {
     );
     this.options.source.parentsStartExpanded =
       this.options.expandMode() === "all";
-    this.openBranches = undefined;
+    // An edit refreshes the tree after every pause in typing. Where rows stay
+    // open across a refresh (VS Code), what the accordion opened is still
+    // open: forgetting it would collapse the whole tree, a visible flash,
+    // on the next follow each time.
+    if (!this.options.tree.keepsExpansion) {
+      this.openBranches = undefined;
+    }
     this.options.tree.refresh();
     void this.followCaret();
   }
@@ -119,6 +127,14 @@ export class OutlineView {
   ): Promise<void> {
     const request = ++this.followRequest;
     const panel = this.panel;
+    if (
+      !this.options.followsCursor() ||
+      this.options.expandMode() !== "accordion"
+    ) {
+      // The reader opens and closes rows while the accordion is off: what it
+      // opened is no longer known when it comes back.
+      this.openBranches = undefined;
+    }
     if (!panel || !this.canFollow(panel, request)) {
       return;
     }
@@ -142,7 +158,12 @@ export class OutlineView {
         this.options.followsCursor() &&
         this.options.expandMode() === "accordion"
       ) {
-        await this.applyAccordion(node);
+        const isCurrent = () => this.canFollow(panel, request);
+        await this.oneAtATime(async () => {
+          if (isCurrent()) {
+            await this.applyAccordion(node, isCurrent);
+          }
+        });
       } else {
         await this.options.tree.reveal(node, { select: true, focus: false });
       }
@@ -151,6 +172,17 @@ export class OutlineView {
         this.options.logger.warn("Outline cursor follow failed", error);
       }
     }
+  }
+
+  /**
+   * Run one follow's tree work after the previous one's. A tree call already
+   * sent cannot be taken back: interleaved, an older follow's expand would
+   * land after a newer one's collapse and leave its branch open.
+   */
+  private async oneAtATime(work: () => Promise<void>): Promise<void> {
+    const run = this.treeWork.then(work);
+    this.treeWork = run.catch(() => undefined);
+    await run;
   }
 
   private canFollow(panel: EditorPanel, request: number): boolean {
@@ -225,13 +257,18 @@ export class OutlineView {
   }
 
   /**
-   * Open `active`'s path and select it. Branches are closed only when one
-   * that is open is not on the path: VS Code can close a single row only
+   * Open `active`'s path and select it. VS Code can close a single row only
    * through the whole-tree collapse, which flashes the tree shut and open
-   * again, so a move that only opens rows (into a section that has
-   * sub-sections, or deeper) leaves the rest alone.
+   * again, so there the tree is collapsed only when a branch that is open is
+   * not on the path: a move that only opens rows (into a section that has
+   * sub-sections, or deeper) leaves the rest alone. A tree without that
+   * collapse closes rows one by one, without a flash, whenever the path
+   * changes. `isCurrent` turns false when a newer follow takes over.
    */
-  private async applyAccordion(active: TreeNode): Promise<void> {
+  private async applyAccordion(
+    active: TreeNode,
+    isCurrent: () => boolean,
+  ): Promise<void> {
     const path = this.options.source.pathTo(active);
     const expandIds = new Set<string>();
     for (const node of path) {
@@ -240,44 +277,61 @@ export class OutlineView {
       }
     }
     const open = this.openBranches;
-    this.openBranches = expandIds;
-    if (!open || [...open].some((id) => !expandIds.has(id))) {
-      await this.resetAccordion(path, expandIds);
+    // Unknown while the tree changes: a follow that takes over meanwhile, or
+    // comes after this one failed, lays the whole path out again.
+    this.openBranches = undefined;
+    const toOpen = [...expandIds].filter((id) => !open?.has(id));
+    const mustClose = !open || [...open].some((id) => !expandIds.has(id));
+    const canOnlyOpen = this.options.tree.collapseAll !== undefined;
+    if (mustClose || (!canOnlyOpen && toOpen.length > 0)) {
+      await this.resetAccordion(path, expandIds, isCurrent);
     } else {
-      await this.expandPath(
-        path,
-        new Set([...expandIds].filter((id) => !open.has(id))),
-      );
+      await this.expandPath(path, new Set(toOpen), isCurrent);
     }
+    if (!isCurrent()) {
+      return;
+    }
+    this.openBranches = expandIds;
     await this.options.tree.reveal(active, { select: true, focus: false });
   }
 
   private async resetAccordion(
     path: readonly TreeNode[],
     expandIds: ReadonlySet<string>,
+    isCurrent: () => boolean,
   ): Promise<void> {
     if (this.options.tree.collapseAll) {
       await this.options.tree.collapseAll();
-      await this.expandPath(path, expandIds);
+      await this.expandPath(path, expandIds, isCurrent);
       return;
     }
-    await this.expandPath(path, expandIds);
-    await this.collapseOthers(expandIds);
+    await this.expandPath(path, expandIds, isCurrent);
+    await this.collapseOthers(expandIds, isCurrent);
   }
 
   private async expandPath(
     path: readonly TreeNode[],
     expandIds: ReadonlySet<string>,
+    isCurrent: () => boolean,
   ): Promise<void> {
     for (const node of path) {
+      if (!isCurrent()) {
+        return;
+      }
       if (expandIds.has(node.id)) {
         await this.options.tree.expand(node);
       }
     }
   }
 
-  private async collapseOthers(expandIds: ReadonlySet<string>): Promise<void> {
+  private async collapseOthers(
+    expandIds: ReadonlySet<string>,
+    isCurrent: () => boolean,
+  ): Promise<void> {
     for (const node of this.options.source.allNodes()) {
+      if (!isCurrent()) {
+        return;
+      }
       if (
         this.options.source.children(node).length > 0 &&
         !expandIds.has(node.id)

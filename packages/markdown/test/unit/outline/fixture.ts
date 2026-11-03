@@ -28,6 +28,14 @@ export async function outlineFixture(
   notes: Record<string, string> = {
     "A.md": "# Title\nintro\n## Part\nbody\n",
   },
+  {
+    /**
+     * VS Code's tree: a native collapse-all, and rows that stay open across
+     * a refresh. Otherwise rows close one by one, and a refresh lays the
+     * tree out again from the nodes' flags, as in the other hosts.
+     */
+    native = true,
+  }: { native?: boolean } = {},
 ) {
   const fake = fakeViews();
   const { vaults, texts, opened } = memoryVaults(notes);
@@ -39,6 +47,8 @@ export async function outlineFixture(
   const collapses: TreeNode[] = [];
   let collapseAllCount = 0;
   let refreshCount = 0;
+  let expandHold: Promise<void> | undefined;
+  let failNextExpand = false;
   // VS Code keeps a node open when refresh does not change collapsibleState.
   // Reveal-expand opens it visually; only expand() records the provider flag
   // that a later collapse can change.
@@ -69,6 +79,10 @@ export async function outlineFixture(
       ...base,
       refresh() {
         refreshCount++;
+        if (!native) {
+          visuallyOpen.clear();
+          providerExpanded.clear();
+        }
         originalRefresh();
       },
       async reveal(node, options) {
@@ -79,6 +93,11 @@ export async function outlineFixture(
         }
       },
       async expand(node) {
+        if (failNextExpand) {
+          failNextExpand = false;
+          throw new Error("expand failed");
+        }
+        await expandHold;
         expands.push(node);
         openLabels.set(node.id, node.label);
         providerExpanded.set(node.id, true);
@@ -93,11 +112,14 @@ export async function outlineFixture(
           visuallyOpen.delete(node.id);
         }
       },
-      async collapseAll() {
-        collapseAllCount++;
-        visuallyOpen.clear();
-        providerExpanded.clear();
-      },
+      ...(native && {
+        async collapseAll() {
+          collapseAllCount++;
+          visuallyOpen.clear();
+          providerExpanded.clear();
+        },
+        keepsExpansion: true,
+      }),
       get visible() {
         return visible;
       },
@@ -198,6 +220,19 @@ export async function outlineFixture(
     },
     get collapseAllCount() {
       return collapseAllCount;
+    },
+    /** Hold every expand of the tree until the returned function runs. */
+    holdExpands(): () => void {
+      const gate = deferred<void>();
+      expandHold = gate.promise;
+      return () => {
+        expandHold = undefined;
+        gate.resolve();
+      };
+    },
+    /** Make the tree's next expand fail. */
+    failNextExpand(): void {
+      failNextExpand = true;
     },
     isOpen(label: string) {
       for (const id of visuallyOpen) {

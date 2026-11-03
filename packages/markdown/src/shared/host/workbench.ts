@@ -77,6 +77,12 @@ export interface TreeHandle {
   collapse(node: TreeNode): Promise<void>;
   /** Close every expandable node, when the native tree supports it. */
   collapseAll?(): Promise<void>;
+  /**
+   * Whether a row left open stays open across `refresh()`: VS Code keeps a
+   * row's expansion by its TreeItem id. Otherwise a refresh lays the tree
+   * out again from the nodes' own `expanded` flags.
+   */
+  readonly keepsExpansion?: boolean;
   readonly visible: boolean;
   onVisibilityChanged(listener: (visible: boolean) => void): Disposer;
   dispose(): void;
