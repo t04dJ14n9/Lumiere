@@ -108,12 +108,12 @@ test("Annotate Highlight after open leaves the PDF bytes alone and writes the si
   // Tabs must be fixture-only (PDF and/or synthetic sidecar). Split Editor
   // Right may briefly keep a duplicate PDF tab; never allow other names.
   const tabLabels = page.locator(".tabs-container .tab .label-name");
-  await expect.poll(async () => {
-    const labels = await tabLabels.allTextContents();
-    return labels.every((t) =>
-      t === "outline.pdf" || t === sidecarBasename,
-    );
-  }).toBe(true);
+  await expect
+    .poll(async () => {
+      const labels = await tabLabels.allTextContents();
+      return labels.every((t) => t === "outline.pdf" || t === sidecarBasename);
+    })
+    .toBe(true);
 
   await page.screenshot({
     path: path.join(SHOT_DIR, "03-after-highlight.png"),
