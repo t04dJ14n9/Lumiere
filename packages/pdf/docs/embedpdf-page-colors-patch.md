@@ -56,7 +56,11 @@ Declared in `pnpm-workspace.yaml` → `patchedDependencies`.
      color-scheme branch onto the new dist bundles (direct + worker, ESM + CJS).
    - `pnpm patch-commit <edit-dir>`
    - Same for models types if the upstream interface still lacks `pageColors`.
-3. Run `pnpm install`, then PDF unit / browser checks.
+3. Run `pnpm install`, then PDF unit / browser checks. Two tests render figure.pdf (a label on a
+   light box, coloured bars, thin marks and a picture) on dark paper and fail when one of them
+   comes out wrong, for example if the engine no longer leaves pictures opaque in the
+   color-scheme render: `test/unit/dark-page-engine.test.ts` with the real PDFium (part of
+   `pnpm check`) and `test/browser/dark-paper.spec.ts` on the picture the viewer shows.
 4. If upstream ships #679-equivalent wiring, delete both patches, remove
    `patchedDependencies` entries, and keep the Lumia flag true.
 

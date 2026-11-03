@@ -1,6 +1,7 @@
 // Writes the PDFs the tests open into test/fixtures/generated/.
 //
 // short.pdf: 3 pages, no outline. one.pdf, five.pdf and landscape.pdf: 1, 5 and 4 (400 x 300) pages.
+// figure.pdf: one page with a diagram, a bar chart and a picture (FIGURE).
 // outline.pdf: 12 pages of 300 x 400 points. Every page says "Synthetic page N"
 // in 18 pt Helvetica on a baseline 100 points below the top (x 72 to about
 // 206), and "Second line N" on a baseline 130 points below the top. It has a
@@ -160,6 +161,78 @@ export function largePdf(pageCount = 600) {
   return pdf.toBuffer(catalog);
 }
 
+/**
+ * figure.pdf: one 420 x 300 page with a diagram and a chart, the kind of
+ * figure dark paper must keep readable. Its areas are [left, top, right,
+ * bottom] in points from the page's top-left corner, as the other fixtures
+ * are described.
+ */
+export const FIGURE = {
+  size: { width: 420, height: 300 },
+  /** Part of a light grey (0.9) node box, beside its label and clear of its rounded corners. */
+  box: [90, 64, 110, 96],
+  /** The black label "Pending" on that box, 11 pt Helvetica. */
+  label: [45, 75, 86, 87],
+  /** The filled black head of the arrow between the boxes. */
+  arrowhead: [163, 77, 169, 83],
+  /** A black rule 0.6 pt thick, as LaTeX draws one, with paper above and below. */
+  rule: [40, 116, 380, 124],
+  /** Bars filled red, blue and green, without their edges. */
+  bars: { red: [44, 190, 66, 250], blue: [94, 210, 116, 250], green: [144, 170, 166, 250] },
+  /** A raster picture (a colour ramp with a dot grid), without its edges. */
+  picture: [306, 144, 392, 194],
+  /** Bare paper. */
+  paper: [200, 10, 280, 50],
+};
+
+export function figurePdf() {
+  const rounded = (x, y, w, h, r) =>
+    `${x + r} ${y} m ${x + w - r} ${y} l ${x + w} ${y} ${x + w} ${y} ${x + w} ${y + r} c ` +
+    `${x + w} ${y + h - r} l ${x + w} ${y + h} ${x + w} ${y + h} ${x + w - r} ${y + h} c ` +
+    `${x + r} ${y + h} l ${x} ${y + h} ${x} ${y + h} ${x} ${y + h - r} c ` +
+    `${x} ${y + r} l ${x} ${y} ${x} ${y} ${x + r} ${y} c h`;
+  const content = [
+    // Node boxes: light grey fill, black labels on them, an arrow between.
+    '0.9 0.9 0.9 rg',
+    `${rounded(30, 200, 90, 40, 8)} f`,
+    `${rounded(170, 200, 90, 40, 8)} f`,
+    '0 g BT /F1 11 Tf 45 216 Td (Pending) Tj ET',
+    'BT /F1 11 Tf 188 216 Td (Running) Tj ET',
+    '0 G 1 w 120 220 m 170 220 l S',
+    '0 g 170 220 m 162 225 l 162 215 l h f',
+    // A thin rule, as LaTeX draws one.
+    '0 g 30 180 360 0.6 re f',
+    // A bar chart with an axis and labels.
+    '0.85 0.2 0.2 rg 40 40 30 80 re f',
+    '0.2 0.4 0.85 rg 90 40 30 60 re f',
+    '0.2 0.65 0.3 rg 140 40 30 100 re f',
+    '0 G 0.8 w 30 40 m 190 40 l S 30 40 m 30 140 l S',
+    '0 g BT /F1 9 Tf 40 28 Td (red) Tj ET BT /F1 9 Tf 92 28 Td (blue) Tj ET BT /F1 9 Tf 140 28 Td (green) Tj ET',
+    // The picture, drawn at an odd scale.
+    'q 97.3 0 0 61.7 300 100 cm /Im1 Do Q',
+  ].join('\n');
+  const side = 32;
+  let pixels = '';
+  for (let y = 0; y < side; y++) {
+    for (let x = 0; x < side; x++) {
+      const dot = x % 4 === 0 && y % 4 === 0 ? 255 : 0;
+      const ramp = Math.round((x / (side - 1)) * 255);
+      pixels += String.fromCharCode(Math.min(255, ramp + dot), Math.round((y / (side - 1)) * 255), 255 - ramp);
+    }
+  }
+  const pdf = new PdfWriter();
+  const catalog = pdf.reserve();
+  const pagesNode = pdf.reserve();
+  const font = pdf.add('<< /Type /Font /Subtype /Type1 /BaseFont /Helvetica >>');
+  const image = pdf.add(`<< /Type /XObject /Subtype /Image /Width ${side} /Height ${side} /ColorSpace /DeviceRGB /BitsPerComponent 8 /Length ${pixels.length} >>\nstream\n${pixels}\nendstream`);
+  const contents = pdf.add(stream(content));
+  const { width, height } = FIGURE.size;
+  const pageObject = pdf.add(`<< /Type /Page /Parent ${pagesNode} 0 R /MediaBox [0 0 ${width} ${height}] /Resources << /Font << /F1 ${font} 0 R >> /XObject << /Im1 ${image} 0 R >> >> /Contents ${contents} 0 R >>`);
+  pdf.set(pagesNode, `<< /Type /Pages /Kids [${pageObject} 0 R] /Count 1 >>`);
+  pdf.set(catalog, `<< /Type /Catalog /Pages ${pagesNode} 0 R >>`);
+  return pdf.toBuffer(catalog);
+}
+
 export const GENERATED = path.join(path.dirname(new URL(import.meta.url).pathname), 'generated');
 
 if (process.argv[1] === new URL(import.meta.url).pathname) {
@@ -171,5 +244,6 @@ if (process.argv[1] === new URL(import.meta.url).pathname) {
   writeFileSync(path.join(GENERATED, 'landscape.pdf'), landscapePdf());
   writeFileSync(path.join(GENERATED, 'rotated.pdf'), rotatedPdf());
   writeFileSync(path.join(GENERATED, 'large.pdf'), largePdf());
+  writeFileSync(path.join(GENERATED, 'figure.pdf'), figurePdf());
   console.log(`Wrote test PDFs to ${GENERATED}`);
 }
