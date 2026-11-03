@@ -144,7 +144,7 @@ test("Annotate highlight delete + paper-aware colors on Cursor (sidecar + underl
     .poll(() => existsSync(sidecarPath), { timeout: 15_000 })
     .toBe(true);
 
-  let sidecar = readFileSync(sidecarPath, "utf8");
+  const sidecar = readFileSync(sidecarPath, "utf8");
   expect(sidecar).toMatch(/lumiere-pdf-sidecar:\s*1/);
   expect(sidecar).toMatch(/<!--[ \t]*lumiere-highlight\b/);
   expect(sidecar).toMatch(/id:\s*hl-[0-9a-f]{8}/);
