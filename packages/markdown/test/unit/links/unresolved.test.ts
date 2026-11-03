@@ -288,3 +288,71 @@ test("the path basename matches known notes for folder/Note keys", () => {
     "md-link md-link-rendered",
   );
 });
+
+test("unresolvedKey decodes percent-encoded Markdown destinations to match known notes", () => {
+  const bcsDecoded = "BCS（TKEx-IEG）.md";
+  const bcsEncoded = encodeURIComponent(bcsDecoded);
+  const zhiyanDecoded = "智研.md";
+  const zhiyanEncoded = encodeURIComponent(zhiyanDecoded);
+
+  assert.equal(unresolvedKey(bcsEncoded), unresolvedKey(bcsDecoded));
+  assert.equal(unresolvedKey(bcsEncoded), "bcs（tkex-ieg）");
+  assert.equal(unresolvedKey(zhiyanEncoded), unresolvedKey(zhiyanDecoded));
+  assert.equal(unresolvedKey(zhiyanEncoded), "智研");
+
+  // #fragment and |alias still stripped after decode
+  assert.equal(unresolvedKey(`${bcsEncoded}#Heading|alias`), "bcs（tkex-ieg）");
+  assert.equal(unresolvedKey(`${zhiyanEncoded}#^block`), "智研");
+});
+
+test("percent-encoded Markdown destinations stay bright when known notes have the decoded key", () => {
+  const bcsDecoded = "BCS（TKEx-IEG）.md";
+  const bcsEncoded = encodeURIComponent(bcsDecoded);
+  const zhiyanDecoded = "智研.md";
+  const zhiyanEncoded = encodeURIComponent(zhiyanDecoded);
+  const doc = `See [BCS](${bcsEncoded}) and [智研](${zhiyanEncoded}) and [TKE](TKE.md).\n\nend`;
+
+  const classes = (known: string[]) => {
+    const state = EditorState.create({
+      doc,
+      selection: EditorSelection.cursor(doc.length),
+      extensions: [
+        documentTree,
+        unresolvedLinks.init(() => new Set()),
+        knownNotes.init(() => new Set(known)),
+      ],
+    });
+    const byHref: Record<string, string> = {};
+    inlineDecorations(state, [{ from: 0, to: doc.length }]).between(
+      0,
+      doc.length,
+      (_from, _to, value) => {
+        const href = value.spec.attributes?.["data-href"];
+        if (href && value.spec.class?.includes("md-link")) {
+          byHref[href] = value.spec.class;
+        }
+      },
+    );
+    return byHref;
+  };
+
+  const known = ["bcs（tkex-ieg）", "智研", "tke"];
+  const byHref = classes(known);
+  assert.equal(
+    byHref[bcsEncoded],
+    "md-link md-link-rendered",
+    "encoded BCS with fullwidth parens must not false-dim",
+  );
+  assert.equal(
+    byHref[zhiyanEncoded],
+    "md-link md-link-rendered",
+    "encoded CJK basename must not false-dim",
+  );
+  assert.equal(byHref["TKE.md"], "md-link md-link-rendered");
+
+  // Without decode, known-keys miss would dim — confirm missing note still dims
+  assert.equal(
+    classes(["tke"])[bcsEncoded],
+    "md-link md-link-rendered is-unresolved",
+  );
+});
