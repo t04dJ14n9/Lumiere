@@ -1,0 +1,21 @@
+PDF pageColors packaging assert — Host GUI + VSIX evidence
+Date: 2026-11-03 Asia/Singapore
+
+Fail VSIX (markers ABSENT):
+  Path: /workspace/lumiere-0.1.10-main-db38c368.vsix
+  SHA256: 109ddc96ef5ed3af2948a9c3ce748de2dc15b69d8e5702e3bc2997c39ebb9e96
+  Markers resolveEmbedPdfPageColors / 0xff1e1e1e / useColorScheme: ABSENT
+  Effect: status can show Follow (Dark) while page bitmaps stay white (Matrix-only).
+
+Pass / CI VSIX (markers PRESENT):
+  Path: /tmp/ci-vsix-db38/lumiere-0.1.10.vsix (CI artifact for db38c368)
+  SHA256: 84364375bf4387e1072c40536bdda2add0e29f239831e1ddbf5e7fbc869dafaa
+  Markers resolveEmbedPdfPageColors / 0xff1e1e1e / useColorScheme: PRESENT
+
+Host GUI (both hosts, CI VSIX): PASS
+  - VS Code 1.142.0 Follow (Dark): paper #1e1e1e — vscode-follow-dark-dummy.png
+  - VS Code 1.142.0 Dark: paper #1e1e1e — vscode-dark-mode-dummy.png
+  - VS Code 1.142.0 Normal: paper white rgb(255,255,255) — vscode-normal-dummy.png
+  - Cursor Follow (Dark): paper #1e1e1e — cursor-follow-dark-dummy.png
+
+Conclusion: VS Code “failure” was unpatched sideloaded VSIX vs patched Host GUI VSIX, not a host runtime split.
