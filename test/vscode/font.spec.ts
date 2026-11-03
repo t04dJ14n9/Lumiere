@@ -213,6 +213,11 @@ test("the note's lines are the line height setting times the size (1.5 by defaul
       await expect
         .poll(async () => (await workbenchLines(frame)).text)
         .toBeCloseTo(expected, 1);
+      // CodeMirror sizes the gutter in its next measure, a frame after the
+      // text reflows: read the line numbers once they have caught up.
+      await expect
+        .poll(async () => (await workbenchLines(frame)).number)
+        .toBeCloseTo(expected, 1);
       const lines = await workbenchLines(frame);
       expect(lines.size, label).toBe(`${size}px`);
       // Code lines are a size smaller, as in Obsidian.
