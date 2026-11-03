@@ -1,5 +1,5 @@
 import React, { useSyncExternalStore } from "react";
-import { displayHighlightOpacity } from "../shared/highlight-style";
+import { displayHighlightAppearance } from "../shared/highlight-style";
 import { currentPageColors, onPageColorsChange } from "./page-colors";
 import { onSidecarChange, sidecarState } from "./sidecar-store";
 
@@ -20,7 +20,7 @@ export function SidecarHighlightLayer({
     onSidecarChange,
     sidecarState,
   );
-  // Re-render when paper flips so legacy 0.45 → dark display opacity updates.
+  // Re-render when paper flips so legacy 0.45 / EmbedPDF stock paint updates.
   useSyncExternalStore(onPageColorsChange, currentPageColors);
   const paper = currentPageColors();
   const marks = highlights?.filter(({ page }) => page === pageIndex + 1);
@@ -34,15 +34,7 @@ export function SidecarHighlightLayer({
           key={highlight.id}
           className={classNames(highlight.id, selectedId, staleIds)}
           data-highlight-id={highlight.id}
-          style={
-            {
-              "--highlight-color": highlight.color,
-              "--highlight-opacity": displayHighlightOpacity(
-                highlight.opacity,
-                paper,
-              ),
-            } as React.CSSProperties
-          }
+          style={paintVars(highlight, paper)}
         >
           {highlight.segmentRects.map((rect, index) => (
             <div
@@ -60,6 +52,17 @@ export function SidecarHighlightLayer({
       ))}
     </>
   );
+}
+
+function paintVars(
+  highlight: { color: string; opacity: number },
+  paper: ReturnType<typeof currentPageColors>,
+): React.CSSProperties {
+  const painted = displayHighlightAppearance(highlight, paper);
+  return {
+    "--highlight-color": painted.color,
+    "--highlight-opacity": painted.opacity,
+  } as React.CSSProperties;
 }
 
 function classNames(

@@ -98,8 +98,8 @@
 /* A sidecar highlight (sidecar-layer.tsx): a highlighter over the page's text. */
 .sidecar-highlight-line {
   position: absolute;
-  background: var(--highlight-color);
-  opacity: var(--highlight-opacity);
+  background: var(--highlight-color, #ffe566);
+  opacity: var(--highlight-opacity, 0.3);
   mix-blend-mode: multiply;
   pointer-events: none;
 }
@@ -107,10 +107,12 @@
 /* Dark paper: multiplying would hide the colour, so lay it on at the stored
    opacity (already translucent — do not multiply again or text wash vanishes).
    Do not CSS-scale opacity here: legacy sidecars still store 0.45 (old default
-   that used to be *0.4 ≈ 0.18); displayHighlightOpacity migrates that at paint
-   time while new dark defaults (#FFF59D @ 0.4) pass through unchanged. */
+   that used to be *0.4 ≈ 0.18); displayHighlightAppearance migrates that and
+   EmbedPDF stock #FFCD45@1 at paint time while new dark defaults (#FFF59D @ 0.4)
+   pass through unchanged. */
 #root[data-page-colors="dark"] .sidecar-highlight-line {
-  opacity: var(--highlight-opacity);
+  /* Fallback 0.3 if --highlight-opacity unset (would otherwise paint opacity 1). */
+  opacity: var(--highlight-opacity, 0.3);
   mix-blend-mode: normal;
 }
 
