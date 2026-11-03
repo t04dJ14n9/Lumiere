@@ -13,7 +13,7 @@
  *     page: 3
  *     subtype: highlight
  *     color: "#FFE566"
- *     opacity: 0.45
+ *     opacity: 0.3
  *     segmentRects:
  *       - { x: 72, y: 410, w: 220, h: 12 }
  *     quote: "scaled dot-product attention"
@@ -66,7 +66,7 @@ export interface SidecarFile {
 }
 
 export const DEFAULT_HIGHLIGHT_COLOR = "#FFE566";
-export const DEFAULT_HIGHLIGHT_OPACITY = 0.45;
+export const DEFAULT_HIGHLIGHT_OPACITY = 0.3;
 /** The longest quote kept; a longer selection is cut here. */
 export const MAX_QUOTE_LENGTH = 2_000;
 /** How much text around the quote is kept to find it again. */

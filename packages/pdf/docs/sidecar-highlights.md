@@ -33,7 +33,7 @@ id: hl-a1b2c3d4
 page: 3
 subtype: highlight
 color: "#FFE566"
-opacity: 0.45
+opacity: 0.3
 segmentRects:
   - { x: 72, y: 410, w: 220, h: 12 }
 quote: "scaled dot-product attention"

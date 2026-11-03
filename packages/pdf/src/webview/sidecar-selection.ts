@@ -1,9 +1,9 @@
 import { useAnnotationCapability } from "@embedpdf/plugin-annotation/react";
 import type { PdfDocumentObject } from "@embedpdf/models";
 import { useCallback, useEffect, useRef, useSyncExternalStore } from "react";
-import type { PageRect } from "../shared/geometry";
+import { findEmbeddedSelectHit } from "../shared/embedded-hit";
 import type { SidecarHighlight } from "../shared/sidecar-format";
-import type { RegionSelection } from "../shared/selection";
+import { regionOf } from "../shared/sidecar-region";
 import { annotationLoadState } from "./annotation-load-state";
 import type { SetAnnotationRegion } from "./annotation-selection";
 import { postToHost } from "./host";
@@ -16,8 +16,15 @@ import {
   sidecarState,
 } from "./sidecar-store";
 
-/** How far outside a highlight's lines a click still selects it, in points. */
-const HIT_SLOP = 1;
+/**
+ * How far outside a highlight's lines a click still selects it, in points.
+ * User repro: tiny viewrect Copy-link (not `#hl-`) meant the click missed the
+ * mark and became text/region selection; Delete then no-oped. A few points of
+ * slop plus a bounds fallback covers gaps between multi-line segments.
+ */
+const HIT_SLOP = 4;
+/** Looser hit against the union box of all segment lines (between-line clicks). */
+const BOUNDS_SLOP = 2;
 
 /**
  * Annotate mode on sidecar highlights, as on the PDF's own marks: a click
@@ -58,15 +65,29 @@ function useSelectOnClick(pdf: PdfDocumentObject, annotate: boolean): void {
     }
     const scope = annots?.forDocument(DOCUMENT_ID);
     const onPointerDown = (event: PointerEvent): void => {
-      const hit = highlightAt(pdf, event.clientX, event.clientY);
-      if (!hit) {
+      const pageHit = pagePointAt(pdf, event.clientX, event.clientY);
+      if (!pageHit) {
         selectSidecarHighlight(undefined);
         return;
       }
-      // EmbedPDF's page listeners would start a new mark here instead.
-      event.stopPropagation();
-      scope?.deselectAnnotation();
-      selectSidecarHighlight(hit.id);
+      const sidecar = sidecarAt(pageHit);
+      if (sidecar) {
+        // Stop text-selection / new-mark tools from stealing the click.
+        event.preventDefault();
+        event.stopImmediatePropagation();
+        scope?.deselectAnnotation();
+        selectSidecarHighlight(sidecar.id);
+        return;
+      }
+      const embedded = embeddedAt(scope, pageHit);
+      if (embedded) {
+        event.preventDefault();
+        event.stopImmediatePropagation();
+        selectSidecarHighlight(undefined);
+        scope?.selectAnnotation(embedded.pageIndex, embedded.id);
+        return;
+      }
+      selectSidecarHighlight(undefined);
     };
     document.addEventListener("pointerdown", onPointerDown, true);
     const stopFollowing = scope?.onStateChange(() => {
@@ -101,30 +122,13 @@ function useReportSelected(
   }, [selectedId]);
 }
 
-/** The selection a highlight stands for: its box, its quote and its id. */
-export function regionOf(highlight: SidecarHighlight): RegionSelection {
-  const rect: PageRect = [
-    Math.min(...highlight.segmentRects.map((r) => r.x)),
-    Math.min(...highlight.segmentRects.map((r) => r.y)),
-    Math.max(...highlight.segmentRects.map((r) => r.x + r.w)),
-    Math.max(...highlight.segmentRects.map((r) => r.y + r.h)),
-  ];
-  const text = highlight.quote.trim();
-  return {
-    kind: "region",
-    page: highlight.page,
-    rect,
-    ...(text ? { text } : {}),
-    highlightId: highlight.id,
-  };
-}
+type PageHit = { pageIndex: number; px: number; py: number };
 
-/** The sidecar highlight drawn under a window point, if any. */
-function highlightAt(
+function pagePointAt(
   pdf: PdfDocumentObject,
   x: number,
   y: number,
-): SidecarHighlight | undefined {
+): PageHit | undefined {
   const element = document
     .elementsFromPoint(x, y)
     .find((candidate) => candidate.hasAttribute("data-page-index"));
@@ -136,21 +140,91 @@ function highlightAt(
   }
   const box = element.getBoundingClientRect();
   const scale = box.width / Math.max(1, page.size.width);
-  const px = (x - box.left) / scale;
-  const py = (y - box.top) / scale;
+  return {
+    pageIndex: index,
+    px: (x - box.left) / scale,
+    py: (y - box.top) / scale,
+  };
+}
+
+/** The sidecar highlight under a page point, if any. */
+function sidecarAt({
+  pageIndex,
+  px,
+  py,
+}: PageHit): SidecarHighlight | undefined {
   const highlights = sidecarState().highlights ?? [];
   // The newest on top, as drawn.
   return [...highlights]
     .reverse()
     .find(
       (highlight) =>
-        highlight.page === index + 1 &&
-        highlight.segmentRects.some(
-          (r) =>
-            px >= r.x - HIT_SLOP &&
-            px <= r.x + r.w + HIT_SLOP &&
-            py >= r.y - HIT_SLOP &&
-            py <= r.y + r.h + HIT_SLOP,
-        ),
+        highlight.page === pageIndex + 1 &&
+        rectsHit(highlight.segmentRects, px, py),
     );
+}
+
+type EmbeddedHit = { pageIndex: number; id: string };
+
+/** Prefer selecting an existing EmbedPDF mark over starting text selection. */
+function embeddedAt(
+  scope:
+    | {
+        getAnnotations: (options: { pageIndex: number }) => Array<{
+          object: {
+            id: string;
+            pageIndex: number;
+            type?: unknown;
+            rect?: {
+              origin: { x: number; y: number };
+              size: { width: number; height: number };
+            };
+            segmentRects?: Array<{
+              origin: { x: number; y: number };
+              size: { width: number; height: number };
+            }>;
+          };
+        }>;
+      }
+    | undefined,
+  hit: PageHit,
+): EmbeddedHit | undefined {
+  if (!scope) {
+    return undefined;
+  }
+  return findEmbeddedSelectHit(
+    scope.getAnnotations({ pageIndex: hit.pageIndex }),
+    hit,
+  );
+}
+
+function rectsHit(
+  rects: Array<{ x: number; y: number; w: number; h: number }>,
+  px: number,
+  py: number,
+): boolean {
+  if (
+    rects.some(
+      (r) =>
+        px >= r.x - HIT_SLOP &&
+        px <= r.x + r.w + HIT_SLOP &&
+        py >= r.y - HIT_SLOP &&
+        py <= r.y + r.h + HIT_SLOP,
+    )
+  ) {
+    return true;
+  }
+  if (rects.length === 0) {
+    return false;
+  }
+  const left = Math.min(...rects.map((r) => r.x));
+  const top = Math.min(...rects.map((r) => r.y));
+  const right = Math.max(...rects.map((r) => r.x + r.w));
+  const bottom = Math.max(...rects.map((r) => r.y + r.h));
+  return (
+    px >= left - BOUNDS_SLOP &&
+    px <= right + BOUNDS_SLOP &&
+    py >= top - BOUNDS_SLOP &&
+    py <= bottom + BOUNDS_SLOP
+  );
 }

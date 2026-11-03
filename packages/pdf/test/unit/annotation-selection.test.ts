@@ -18,6 +18,7 @@ test("selectionFromAnnotation maps 0-based pageIndex and EmbedPDF rect to region
     page: 3,
     rect: [10, 20, 40, 60],
     text: "hello",
+    mark: true,
   });
 });
 
@@ -30,6 +31,7 @@ test("selectionFromAnnotation omits empty text for link-only handoff", () => {
     kind: "region",
     page: 1,
     rect: [0, 0, 1, 1],
+    mark: true,
   });
   assert.equal(
     agentText(selection, { path: "papers/attention.pdf" }),

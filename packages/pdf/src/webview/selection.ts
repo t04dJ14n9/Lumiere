@@ -45,13 +45,14 @@ export function useSelectionReporting(
   useCopiedText(state);
   useEffect(
     () =>
-      followMenuContext(
-        document,
-        () =>
+      followMenuContext(document, () => {
+        const hasAnnotationSelection = Boolean(extra.current?.());
+        const hasSelection =
           Boolean(state.region) ||
           Boolean(selection?.forDocument(documentId).getState().selection) ||
-          Boolean(extra.current?.()),
-      ),
+          hasAnnotationSelection;
+        return { hasSelection, hasAnnotationSelection };
+      }),
     [state, documentId, selection],
   );
   /** Report the selection now: the extension asks before Copy Link for Agent. */

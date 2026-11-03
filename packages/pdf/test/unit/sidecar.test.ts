@@ -156,7 +156,7 @@ test("blocks that are not highlights are skipped, odd values fall back", () => {
   assert.deepEqual(rest, []);
   assert.equal(only?.id, "7f");
   assert.equal(only?.color, "#FFE566");
-  assert.equal(only?.opacity, 0.45);
+  assert.equal(only?.opacity, 0.3);
   assert.equal(only?.quote, "");
   assert.equal(highlightFragment(only!.id), "hl-7f");
 });

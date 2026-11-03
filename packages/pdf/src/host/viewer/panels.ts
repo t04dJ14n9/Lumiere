@@ -178,6 +178,7 @@ function contextKeys(
   return {
     pdfActive: Boolean(panel),
     hasSelection: Boolean(panel?.selection),
+    hasAnnotationSelection: isAnnotationMarkSelection(panel?.selection),
     outlineLoading: Boolean(panel && !panel.outline),
     ...(view ? viewKeys(view) : NO_VIEW),
   };
@@ -203,4 +204,15 @@ function viewKeys(view: ViewState): typeof NO_VIEW {
     canGoBack: view.canGoBack,
     canGoForward: view.canGoForward,
   };
+}
+
+/** Annotate-mode mark (sidecar `#hl-` or embedded `mark: true`), not plain text/marquee. */
+function isAnnotationMarkSelection(
+  selection: PdfViewerPanel["selection"] | undefined,
+): boolean {
+  return Boolean(
+    selection &&
+    selection.kind === "region" &&
+    (selection.highlightId !== undefined || selection.mark === true),
+  );
 }

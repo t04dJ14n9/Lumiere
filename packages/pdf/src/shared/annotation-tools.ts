@@ -55,7 +55,7 @@ export const ANNOTATION_TOOL_ICONS: Record<AnnotationToolId, string> = {
 };
 
 export const ANNOTATION_COLOR_PRESETS = [
-  "#FFE600",
+  "#FFE566",
   "#FF6B6B",
   "#4DABF7",
   "#51CF66",

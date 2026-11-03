@@ -85,7 +85,10 @@ test("with no reply it gives up after the timeout; with a selection it asks noth
 });
 
 test("the context menu carries the viewer's selection as it is when the menu opens", () => {
-  assert.equal(menuContext(true), '{"lumiere.pdf.hasSelection":true}');
+  assert.equal(
+    menuContext({ hasSelection: true, hasAnnotationSelection: false }),
+    '{"lumiere.pdf.hasSelection":true,"lumiere.pdf.hasAnnotationSelection":false}',
+  );
   const attributes: Record<string, string> = {};
   const listeners: { type: string; listener: () => void; capture: unknown }[] =
     [];
@@ -104,23 +107,23 @@ test("the context menu carries the viewer's selection as it is when the menu ope
       listeners.splice(index, 1);
     },
   };
-  let selected = false;
-  const stop = followMenuContext(doc as never, () => selected);
+  let state = { hasSelection: false, hasAnnotationSelection: false };
+  const stop = followMenuContext(doc as never, () => state);
   assert.deepEqual(
     listeners.map(({ type, capture }) => [type, capture]),
     [["contextmenu", true]],
   );
-  selected = true;
+  state = { hasSelection: true, hasAnnotationSelection: false };
   listeners[0]!.listener();
   assert.equal(
     attributes["data-vscode-context"],
-    '{"lumiere.pdf.hasSelection":true}',
+    '{"lumiere.pdf.hasSelection":true,"lumiere.pdf.hasAnnotationSelection":false}',
   );
-  selected = false;
+  state = { hasSelection: false, hasAnnotationSelection: false };
   listeners[0]!.listener();
   assert.equal(
     attributes["data-vscode-context"],
-    '{"lumiere.pdf.hasSelection":false}',
+    '{"lumiere.pdf.hasSelection":false,"lumiere.pdf.hasAnnotationSelection":false}',
   );
   stop();
   assert.equal(listeners.length, 0);
