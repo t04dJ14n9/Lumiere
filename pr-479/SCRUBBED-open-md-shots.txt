@@ -1,1 +1,1 @@
-scrubbed: open sidecar Markdown Host GUI frames removed per user (Nov 3). Explorer-row-only re-host pending.
+placeholders: open-md frames removed; synthetic Host GUI re-host pending
