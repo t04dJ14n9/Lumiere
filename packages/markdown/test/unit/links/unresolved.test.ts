@@ -303,6 +303,9 @@ test("unresolvedKey decodes percent-encoded Markdown destinations to match known
   // #fragment and |alias still stripped after decode
   assert.equal(unresolvedKey(`${bcsEncoded}#Heading|alias`), "bcs（tkex-ieg）");
   assert.equal(unresolvedKey(`${zhiyanEncoded}#^block`), "智研");
+
+  // Literal filename # via %23 stays in the path (split is on literal # only)
+  assert.equal(unresolvedKey("foo%23bar.md"), "foo#bar");
 });
 
 test("percent-encoded Markdown destinations stay bright when known notes have the decoded key", () => {
