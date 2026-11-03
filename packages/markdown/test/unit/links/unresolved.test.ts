@@ -290,30 +290,30 @@ test("the path basename matches known notes for folder/Note keys", () => {
 });
 
 test("unresolvedKey decodes percent-encoded Markdown destinations to match known notes", () => {
-  const bcsDecoded = "BCS（TKEx-IEG）.md";
-  const bcsEncoded = encodeURIComponent(bcsDecoded);
-  const zhiyanDecoded = "智研.md";
-  const zhiyanEncoded = encodeURIComponent(zhiyanDecoded);
+  const alphaDecoded = "Alpha（Beta-Gamma）.md";
+  const alphaEncoded = encodeURIComponent(alphaDecoded);
+  const sampleDecoded = "样例.md";
+  const sampleEncoded = encodeURIComponent(sampleDecoded);
 
-  assert.equal(unresolvedKey(bcsEncoded), unresolvedKey(bcsDecoded));
-  assert.equal(unresolvedKey(bcsEncoded), "bcs（tkex-ieg）");
-  assert.equal(unresolvedKey(zhiyanEncoded), unresolvedKey(zhiyanDecoded));
-  assert.equal(unresolvedKey(zhiyanEncoded), "智研");
+  assert.equal(unresolvedKey(alphaEncoded), unresolvedKey(alphaDecoded));
+  assert.equal(unresolvedKey(alphaEncoded), "alpha（beta-gamma）");
+  assert.equal(unresolvedKey(sampleEncoded), unresolvedKey(sampleDecoded));
+  assert.equal(unresolvedKey(sampleEncoded), "样例");
 
   // #fragment and |alias still stripped after decode
-  assert.equal(unresolvedKey(`${bcsEncoded}#Heading|alias`), "bcs（tkex-ieg）");
-  assert.equal(unresolvedKey(`${zhiyanEncoded}#^block`), "智研");
+  assert.equal(unresolvedKey(`${alphaEncoded}#Heading|alias`), "alpha（beta-gamma）");
+  assert.equal(unresolvedKey(`${sampleEncoded}#^block`), "样例");
 
   // Literal filename # via %23 stays in the path (split is on literal # only)
   assert.equal(unresolvedKey("foo%23bar.md"), "foo#bar");
 });
 
 test("percent-encoded Markdown destinations stay bright when known notes have the decoded key", () => {
-  const bcsDecoded = "BCS（TKEx-IEG）.md";
-  const bcsEncoded = encodeURIComponent(bcsDecoded);
-  const zhiyanDecoded = "智研.md";
-  const zhiyanEncoded = encodeURIComponent(zhiyanDecoded);
-  const doc = `See [BCS](${bcsEncoded}) and [智研](${zhiyanEncoded}) and [TKE](TKE.md).\n\nend`;
+  const alphaDecoded = "Alpha（Beta-Gamma）.md";
+  const alphaEncoded = encodeURIComponent(alphaDecoded);
+  const sampleDecoded = "样例.md";
+  const sampleEncoded = encodeURIComponent(sampleDecoded);
+  const doc = `See [Alpha](${alphaEncoded}) and [样例](${sampleEncoded}) and [Plain](Plain.md).\n\nend`;
 
   const classes = (known: string[]) => {
     const state = EditorState.create({
@@ -339,23 +339,23 @@ test("percent-encoded Markdown destinations stay bright when known notes have th
     return byHref;
   };
 
-  const known = ["bcs（tkex-ieg）", "智研", "tke"];
+  const known = ["alpha（beta-gamma）", "样例", "plain"];
   const byHref = classes(known);
   assert.equal(
-    byHref[bcsEncoded],
+    byHref[alphaEncoded],
     "md-link md-link-rendered",
-    "encoded BCS with fullwidth parens must not false-dim",
+    "encoded Alpha with fullwidth parens must not false-dim",
   );
   assert.equal(
-    byHref[zhiyanEncoded],
+    byHref[sampleEncoded],
     "md-link md-link-rendered",
-    "encoded CJK basename must not false-dim",
+    "encoded Unicode basename must not false-dim",
   );
-  assert.equal(byHref["TKE.md"], "md-link md-link-rendered");
+  assert.equal(byHref["Plain.md"], "md-link md-link-rendered");
 
   // Without decode, known-keys miss would dim — confirm missing note still dims
   assert.equal(
-    classes(["tke"])[bcsEncoded],
+    classes(["plain"])[alphaEncoded],
     "md-link md-link-rendered is-unresolved",
   );
 });
