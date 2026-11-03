@@ -10,11 +10,11 @@ const NATIVE_TEXT_EDITOR = "default";
 /**
  * Associations already route `*.md` through the text editor (the Search→reclaim
  * path from #458) but the workspaceEditor storage flag was never set — common
- * when settings.json copies `"*.md": "default"` without running Use Lumière for
+ * when settings.json copies `"*.md": "default"` without running Use Lumia for
  * Markdown. Reclaim then treats notes as unassociated. Set the flag and clear
  * false readerText sticks from that misconfiguration.
  *
- * Returns whether the workspace should treat Markdown as Lumière-owned
+ * Returns whether the workspace should treat Markdown as Lumia-owned
  * (existing key or just healed). The memory write is fire-and-forget; the
  * returned flag covers the same activation so the first tab event sees it.
  */

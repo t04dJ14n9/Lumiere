@@ -542,7 +542,7 @@ test("default: workbench→text without bypass ends with its last text tab", asy
   tabsChanged.fire({ opened: [], changed: [], closed: [text] });
   assert.deepEqual(state.values.get("lumiere.reclaim.readerText"), []);
 
-  // A chat link then opens the note as text in a new tab: back to Lumière.
+  // A chat link then opens the note as text in a new tab: back to Lumia.
   const link = cursorTab();
   link.input = new TabInputText(Uri.parse(note));
   tabsChanged.fire({ opened: [link], changed: [], closed: [] });

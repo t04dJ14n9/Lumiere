@@ -7,14 +7,14 @@ export const config = Schema.object({
   /** Reopen notes Cursor's Preview | Markdown switch sends to the text editor. */
   reclaimTextEditor: Schema.union(["auto", "on", "off"]).default("auto"),
   /**
-   * Reclaim when a tool replaces a Lumière tab in place with the text editor
+   * Reclaim when a tool replaces a Lumia tab in place with the text editor
    * (Claude chat open_file / showTextDocument). Off by default so mainline
    * in-place workbench→text stays native unless the reader opts in.
    */
   reclaimInPlaceTextEditor: Schema.boolean()
     .default(false)
     .description(
-      "Reclaim when a tool replaces a Lumière tab in place with the text editor (Claude chat open_file). Off by default.",
+      "Reclaim when a tool replaces a Lumia tab in place with the text editor (Claude chat open_file). Off by default.",
     ),
   /** Open TextDocuments early so Cursor can resolve our custom editor for agent-edited notes. */
   warmTextDocument: Schema.union(["auto", "on", "off"]).default("auto"),
