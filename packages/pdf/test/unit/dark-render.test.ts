@@ -24,12 +24,13 @@ function harness() {
       done: (_image: ImageDataLike): void => undefined,
       fail: (_error: unknown): void => undefined,
     };
+    const result = new Promise<ImageDataLike>((resolve, reject) => {
+      record.done = resolve;
+      record.fail = reject;
+    });
     renders.push(record);
     return {
-      wait(ok, bad) {
-        record.done = ok;
-        record.fail = bad;
-      },
+      toPromise: () => result,
       abort() {
         record.aborted = true;
       },

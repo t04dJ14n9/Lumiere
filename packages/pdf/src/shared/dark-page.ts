@@ -14,14 +14,14 @@
  * - `normal`: as authored, on white paper;
  * - `forced`: with the colour scheme, on a transparent background and with
  *   ink that is all but transparent. The scheme recolours vectors and text
- *   but leaves embedded pictures alone, so the only opaque pixels of this
- *   render are pictures. Its colours do not matter, only its alpha does:
- *   comparing colours instead would take a light box for a picture whenever
- *   its grey happened to be near the ink's.
+ *   but leaves embedded pictures (and shadings) alone, so they are what is
+ *   opaque in this render, with whatever is drawn over them. Its colours do
+ *   not matter, only its alpha does: comparing colours instead would take a
+ *   light box for a picture whenever its grey happened to be near the ink's.
  *
- * `darkenPage` turns `normal` into the dark page: where `forced` is opaque
- * there is a picture and its pixels stay as authored, as the page colors
- * design asks; every other pixel has its lightness inverted.
+ * `darkenPage` turns `normal` into the dark page: where `forced` is mostly
+ * opaque there is a picture and its pixels stay as authored, as the page
+ * colors design asks; every other pixel has its lightness inverted.
  */
 
 export type Rgb = readonly [number, number, number];
@@ -41,8 +41,8 @@ export const DARK_PALETTE: DarkPalette = {
 /**
  * The colour scheme of the `forced` render (`#AARRGGBB`). Ink of alpha 1, not
  * 0: a pixel's alpha then counts the shapes painted over it, so only a
- * picture (or hundreds of layers) reaches 255. Fully transparent ink might
- * not be drawn at all.
+ * picture (or more than a hundred layers) reaches `PICTURE_ALPHA`. Fully
+ * transparent ink might not be drawn at all.
  */
 export const FORCED_PAGE_COLORS = {
   background: "#00000000",
@@ -53,8 +53,13 @@ export const FORCED_PAGE_COLORS = {
   textStroke: "#01e8e6e3",
 } as const;
 
-/** Alpha of a pixel of the `forced` render that only a picture reaches. */
-const OPAQUE = 255;
+/**
+ * Alpha from which a pixel of the `forced` render is a picture: one at least
+ * half covered by a picture. An anti-aliased picture edge has a partial
+ * alpha; this keeps its mostly-picture pixels as authored rather than
+ * inverting part of the picture into a halo.
+ */
+const PICTURE_ALPHA = 128;
 
 /**
  * The dark counterpart of one opaque colour: its lightness inverted with its
@@ -95,8 +100,8 @@ function between(from: number, to: number, level: number): number {
 
 /**
  * Turn `normal` (RGBA, rendered on white paper) into the dark page, in place.
- * `forced` is the same page rendered with `FORCED_PAGE_COLORS`; its opaque
- * pixels are pictures and are left as they are.
+ * `forced` is the same page rendered with `FORCED_PAGE_COLORS`; its mostly
+ * opaque pixels are pictures and are left as they are.
  */
 export function darkenPage(
   normal: Uint8ClampedArray,
@@ -114,7 +119,7 @@ export function darkenPage(
   let lastBlue = -1;
   const dark = [0, 0, 0];
   for (let at = 0; at + 3 < normal.length; at += 4) {
-    if (forced[at + 3] === OPAQUE) {
+    if (forced[at + 3]! >= PICTURE_ALPHA) {
       continue;
     }
     const r = normal[at]!;
