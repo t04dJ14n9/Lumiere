@@ -1,6 +1,7 @@
 import { useAnnotationCapability } from "@embedpdf/plugin-annotation/react";
 import type { PdfDocumentObject } from "@embedpdf/models";
 import { useCallback, useEffect, useRef, useSyncExternalStore } from "react";
+import { findEmbeddedSelectHit } from "../shared/embedded-hit";
 import type { SidecarHighlight } from "../shared/sidecar-format";
 import { regionOf } from "../shared/sidecar-region";
 import { annotationLoadState } from "./annotation-load-state";
@@ -173,6 +174,7 @@ function embeddedAt(
           object: {
             id: string;
             pageIndex: number;
+            type?: unknown;
             rect?: {
               origin: { x: number; y: number };
               size: { width: number; height: number };
@@ -185,40 +187,15 @@ function embeddedAt(
         }>;
       }
     | undefined,
-  { pageIndex, px, py }: PageHit,
+  hit: PageHit,
 ): EmbeddedHit | undefined {
   if (!scope) {
     return undefined;
   }
-  const annotations = scope.getAnnotations({ pageIndex });
-  for (let i = annotations.length - 1; i >= 0; i -= 1) {
-    const object = annotations[i]?.object;
-    if (!object) {
-      continue;
-    }
-    const segments = object.segmentRects?.map((r) => ({
-      x: r.origin.x,
-      y: r.origin.y,
-      w: r.size.width,
-      h: r.size.height,
-    }));
-    if (segments && segments.length > 0 && rectsHit(segments, px, py)) {
-      return { pageIndex: object.pageIndex, id: object.id };
-    }
-    if (object.rect) {
-      const { origin, size } = object.rect;
-      if (
-        rectsHit(
-          [{ x: origin.x, y: origin.y, w: size.width, h: size.height }],
-          px,
-          py,
-        )
-      ) {
-        return { pageIndex: object.pageIndex, id: object.id };
-      }
-    }
-  }
-  return undefined;
+  return findEmbeddedSelectHit(
+    scope.getAnnotations({ pageIndex: hit.pageIndex }),
+    hit,
+  );
 }
 
 function rectsHit(

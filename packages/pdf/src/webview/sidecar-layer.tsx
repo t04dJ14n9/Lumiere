@@ -1,4 +1,6 @@
 import React, { useSyncExternalStore } from "react";
+import { displayHighlightOpacity } from "../shared/highlight-style";
+import { currentPageColors, onPageColorsChange } from "./page-colors";
 import { onSidecarChange, sidecarState } from "./sidecar-store";
 
 /**
@@ -18,6 +20,9 @@ export function SidecarHighlightLayer({
     onSidecarChange,
     sidecarState,
   );
+  // Re-render when paper flips so legacy 0.45 → dark display opacity updates.
+  useSyncExternalStore(onPageColorsChange, currentPageColors);
+  const paper = currentPageColors();
   const marks = highlights?.filter(({ page }) => page === pageIndex + 1);
   if (!marks?.length) {
     return null;
@@ -32,7 +37,10 @@ export function SidecarHighlightLayer({
           style={
             {
               "--highlight-color": highlight.color,
-              "--highlight-opacity": highlight.opacity,
+              "--highlight-opacity": displayHighlightOpacity(
+                highlight.opacity,
+                paper,
+              ),
             } as React.CSSProperties
           }
         >

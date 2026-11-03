@@ -9,6 +9,8 @@ import {
   BUILTIN_HIGHLIGHT_COLOR,
   BUILTIN_HIGHLIGHT_OPACITY,
   HIGHLIGHT_BY_PAPER,
+  LEGACY_SIDECAR_OPACITY,
+  displayHighlightOpacity,
   highlightStyleForPaper,
   highlightStyleOf,
   highlightToolDefaults,
@@ -64,4 +66,16 @@ test("highlightToolDefaults and highlightStyleOf follow paper mode", () => {
     color: "#FF6B6B",
     opacity: 0.5,
   });
+});
+
+test("dark paper preserves legacy 0.45 effective opacity (~0.18) while new 0.4 stays 0.4", () => {
+  assert.equal(LEGACY_SIDECAR_OPACITY, 0.45);
+  // Old sidecars: CSS used to multiply by 0.4 on dark → ~0.18.
+  assert.equal(displayHighlightOpacity(0.45, "dark"), 0.18);
+  // New dark default must render as stored (no *0.4).
+  assert.equal(displayHighlightOpacity(0.4, "dark"), 0.4);
+  // Light paper never applied the dark factor.
+  assert.equal(displayHighlightOpacity(0.45, "normal"), 0.45);
+  assert.equal(displayHighlightOpacity(0.3, "normal"), 0.3);
+  assert.equal(displayHighlightOpacity(0.3, "dark"), 0.3);
 });

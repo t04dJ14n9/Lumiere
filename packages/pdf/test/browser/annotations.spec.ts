@@ -151,6 +151,24 @@ test("click-to-select mark reports region and survives reportSelection", async (
         : undefined;
     })
     .toBe("region");
+  // Capture-phase embedded select → Delete (Nit from #482 review).
+  await page.keyboard.press("Delete");
+  await expect.poll(() => highlightMarkCount(page)).toBe(baseline);
+  // Recreate for the reportSelection path below.
+  await page.mouse.move(...at(74, TEXT_MIDLINE));
+  await page.mouse.down();
+  await page.mouse.move(...at(205, TEXT_MIDLINE), { steps: 10 });
+  await page.mouse.up();
+  await expect.poll(() => highlightMarkCount(page)).toBeGreaterThan(baseline);
+  await page.mouse.click(...mid);
+  await expect
+    .poll(async () => {
+      const selection = await lastSelection(page);
+      return selection && typeof selection === "object"
+        ? (selection as { kind?: string }).kind
+        : undefined;
+    })
+    .toBe("region");
 
   // Host Copy Link / ensureSelection path: reportSelection keeps the region.
   const before = await lastSelection(page);

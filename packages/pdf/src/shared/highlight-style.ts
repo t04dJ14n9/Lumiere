@@ -67,3 +67,26 @@ export function highlightToolDefaults(
     opacity: style.opacity,
   };
 }
+
+/**
+ * Pre-#482 sidecar default. Dark paper CSS multiplied by 0.4, so 0.45 rendered
+ * ~0.18. New writes use paper-aware 0.3 / 0.4 with no CSS factor.
+ */
+export const LEGACY_SIDECAR_OPACITY = 0.45;
+/** Former `#root[data-page-colors="dark"]` factor on `--highlight-opacity`. */
+export const LEGACY_DARK_OPACITY_FACTOR = 0.4;
+
+/**
+ * Opacity applied when painting a sidecar mark. On dark paper, legacy 0.45
+ * keeps its old effective look (~0.18); new 0.4 (and other values) pass through.
+ */
+export function displayHighlightOpacity(
+  stored: number,
+  paper: EffectivePageColors,
+): number {
+  if (paper === "dark" && stored === LEGACY_SIDECAR_OPACITY) {
+    // Exact former effective opacity (0.45 * 0.4); avoid float noise.
+    return 0.18;
+  }
+  return stored;
+}

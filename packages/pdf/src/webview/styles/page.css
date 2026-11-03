@@ -105,7 +105,10 @@
 }
 
 /* Dark paper: multiplying would hide the colour, so lay it on at the stored
-   opacity (already translucent — do not multiply again or text wash vanishes). */
+   opacity (already translucent — do not multiply again or text wash vanishes).
+   Do not CSS-scale opacity here: legacy sidecars still store 0.45 (old default
+   that used to be *0.4 ≈ 0.18); displayHighlightOpacity migrates that at paint
+   time while new dark defaults (#FFF59D @ 0.4) pass through unchanged. */
 #root[data-page-colors="dark"] .sidecar-highlight-line {
   opacity: var(--highlight-opacity);
   mix-blend-mode: normal;
