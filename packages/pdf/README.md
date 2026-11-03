@@ -100,13 +100,9 @@ open PDF follows at once.
 | Mode               | Controls                                                                                                                                                                                                               |
 | ------------------ | ---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
 | `chrome` (default) | Editor title buttons (find, zoom out and in, fit page or width, Select Region / Select Text, View) and status bar entries for the page, zoom and View. Click them to open Go to Page, the zoom picker or view choices. |
-| `slim`             | A slim bar along the top of the viewer, with every control.                                                                                                                                                            |
-| `floating`         | A bar over the pages, docked to the middle of an edge. Drag its grip to another edge, or focus the grip and press an arrow key; the edge is remembered for every PDF. It fades while the pointer rests.                |
 | `none`             | No controls: keyboard shortcuts, the right-click menu, the **…** menu and the command palette.                                                                                                                         |
 
-| Zoom picker (`chrome`)                              | Slim bar, light theme                           | Floating bar                                           |
-| --------------------------------------------------- | ----------------------------------------------- | ------------------------------------------------------ |
-| ![Zoom picker](docs/images/toolbar-zoom-picker.png) | ![Slim bar](docs/images/toolbar-slim-light.png) | ![Floating bar](docs/images/toolbar-floating-dark.png) |
+![The zoom picker, opened from the status bar](docs/images/toolbar-zoom-picker.png)
 
 Every action is also a **PDF:** command with a shortcut, active while a PDF
 editor has focus (not in a text field, the side bar or the panel):
@@ -148,7 +144,7 @@ out and in, and find buttons. `lumiere.pdf.toolbar.statusBarButtons`
 
 ## Zen mode
 
-**PDF: Enter Zen Mode** (`Ctrl+Alt+Z`, `Ctrl+Cmd+Z` on macOS) is VS Code's Zen Mode with a floating toolbar and an Exit zen button for the PDF. See [docs/zen.md](docs/zen.md); unverified on macOS and in Cursor.
+**PDF: Enter Zen Mode** (`Ctrl+Alt+Z`, `Ctrl+Cmd+Z` on macOS) is VS Code's Zen Mode for the PDF. The status bar is hidden while it lasts, so the PDF controls are the keyboard shortcuts and the command palette; the same key, **PDF: Exit Zen Mode** or Escape Escape leaves it. See [docs/zen.md](docs/zen.md); not tried in Cursor.
 
 ## macOS Look Up
 
