@@ -163,21 +163,26 @@ export function largePdf(pageCount = 600) {
 
 /**
  * figure.pdf: one 420 x 300 page with a diagram and a chart, the kind of
- * figure dark paper must keep readable. Rectangles are [left, bottom, right,
- * top] in PDF points (up from the bottom).
+ * figure dark paper must keep readable. Its areas are [left, top, right,
+ * bottom] in points from the page's top-left corner, as the other fixtures
+ * are described.
  */
 export const FIGURE = {
   size: { width: 420, height: 300 },
   /** Part of a light grey (0.9) node box, beside its label and clear of its rounded corners. */
-  box: [90, 204, 110, 236],
+  box: [90, 64, 110, 96],
   /** The black label "Pending" on that box, 11 pt Helvetica. */
-  label: [45, 213, 86, 225],
+  label: [45, 75, 86, 87],
+  /** The filled black head of the arrow between the boxes. */
+  arrowhead: [163, 77, 169, 83],
+  /** A black rule 0.6 pt thick, as LaTeX draws one, with paper above and below. */
+  rule: [40, 116, 380, 124],
   /** Bars filled red, blue and green, without their edges. */
-  bars: { red: [44, 50, 66, 110], blue: [94, 50, 116, 90], green: [144, 50, 166, 130] },
+  bars: { red: [44, 190, 66, 250], blue: [94, 210, 116, 250], green: [144, 170, 166, 250] },
   /** A raster picture (a colour ramp with a dot grid), without its edges. */
-  picture: [306, 106, 392, 156],
+  picture: [306, 144, 392, 194],
   /** Bare paper. */
-  paper: [200, 250, 280, 290],
+  paper: [200, 10, 280, 50],
 };
 
 export function figurePdf() {
