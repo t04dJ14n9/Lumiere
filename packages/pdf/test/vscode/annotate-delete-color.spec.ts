@@ -301,10 +301,12 @@ test("Annotate highlight delete + paper-aware colors on Cursor (sidecar + underl
     fullPage: true,
   });
 
-  // Click near the underline and Delete via command (selection routing).
+  // New marks auto-select; Delete key removes EmbedPDF underline (direct-to-PDF).
+  // Palette "PDF: Delete Annotation" is when-clause gated and flaky to discover
+  // on Cursor when focus is in the webview — keyboard matches product UX.
   await page.mouse.click(...at(120, TEXT_MIDLINE).screen);
-  await page.waitForTimeout(500);
-  await command(page, "PDF: Delete Annotation");
+  await page.waitForTimeout(300);
+  await page.keyboard.press("Delete");
   await expect
     .poll(() => sha256(pdfPath), { timeout: 20_000 })
     .not.toBe(afterUnderlineHash);
@@ -312,6 +314,7 @@ test("Annotate highlight delete + paper-aware colors on Cursor (sidecar + underl
   evidence.push(
     `sha256_after_underline_delete=${afterUnderlineDeleteHash}`,
     `underline_delete_changed_pdf=${afterUnderlineDeleteHash !== afterUnderlineHash}`,
+    `underline_delete_via=keyboard`,
     `result=PASS`,
   );
   await page.screenshot({
