@@ -1,5 +1,5 @@
 import {
-  splitLinktext,
+  decodeLinkPath,
   withoutNoteExtension,
   type LinkSyntax,
 } from "../../shared/vault-path";
@@ -25,14 +25,16 @@ export function externalScheme(href: string): string | undefined {
 }
 
 /**
- * A wikilink target's key in the host's unresolved set: the path as written
+ * A link target's key in the host's unresolved / known-notes sets: the path
  * without its `#subpath` or a note's `.md` (as Obsidian names it), lower-cased
- * because links resolve regardless of case.
+ * because links resolve regardless of case. Markdown destinations are
+ * percent-decoded so keys match vault paths (e.g. fullwidth CJK names).
  */
 export function unresolvedKey(href: string): string {
-  return withoutNoteExtension(
-    splitLinktext(href.split("|")[0]!).path,
-  ).toLowerCase();
+  const clean = href.split("|")[0]!;
+  const hash = clean.indexOf("#");
+  const path = decodeLinkPath(hash < 0 ? clean : clean.slice(0, hash));
+  return withoutNoteExtension(path).toLowerCase();
 }
 
 /**

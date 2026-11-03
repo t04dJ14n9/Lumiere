@@ -288,3 +288,77 @@ test("the path basename matches known notes for folder/Note keys", () => {
     "md-link md-link-rendered",
   );
 });
+
+test("unresolvedKey decodes percent-encoded Markdown destinations to match known notes", () => {
+  const alphaDecoded = "Alpha（Beta-Gamma）.md";
+  const alphaEncoded = encodeURIComponent(alphaDecoded);
+  const sampleDecoded = "样例.md";
+  const sampleEncoded = encodeURIComponent(sampleDecoded);
+
+  assert.equal(unresolvedKey(alphaEncoded), unresolvedKey(alphaDecoded));
+  assert.equal(unresolvedKey(alphaEncoded), "alpha（beta-gamma）");
+  assert.equal(unresolvedKey(sampleEncoded), unresolvedKey(sampleDecoded));
+  assert.equal(unresolvedKey(sampleEncoded), "样例");
+
+  // #fragment and |alias still stripped after decode
+  assert.equal(
+    unresolvedKey(`${alphaEncoded}#Heading|alias`),
+    "alpha（beta-gamma）",
+  );
+  assert.equal(unresolvedKey(`${sampleEncoded}#^block`), "样例");
+
+  // Literal filename # via %23 stays in the path (split is on literal # only)
+  assert.equal(unresolvedKey("foo%23bar.md"), "foo#bar");
+});
+
+test("percent-encoded Markdown destinations stay bright when known notes have the decoded key", () => {
+  const alphaDecoded = "Alpha（Beta-Gamma）.md";
+  const alphaEncoded = encodeURIComponent(alphaDecoded);
+  const sampleDecoded = "样例.md";
+  const sampleEncoded = encodeURIComponent(sampleDecoded);
+  const doc = `See [Alpha](${alphaEncoded}) and [样例](${sampleEncoded}) and [Plain](Plain.md).\n\nend`;
+
+  const classes = (known: string[]) => {
+    const state = EditorState.create({
+      doc,
+      selection: EditorSelection.cursor(doc.length),
+      extensions: [
+        documentTree,
+        unresolvedLinks.init(() => new Set()),
+        knownNotes.init(() => new Set(known)),
+      ],
+    });
+    const byHref: Record<string, string> = {};
+    inlineDecorations(state, [{ from: 0, to: doc.length }]).between(
+      0,
+      doc.length,
+      (_from, _to, value) => {
+        const href = value.spec.attributes?.["data-href"];
+        if (href && value.spec.class?.includes("md-link")) {
+          byHref[href] = value.spec.class;
+        }
+      },
+    );
+    return byHref;
+  };
+
+  const known = ["alpha（beta-gamma）", "样例", "plain"];
+  const byHref = classes(known);
+  assert.equal(
+    byHref[alphaEncoded],
+    "md-link md-link-rendered",
+    "encoded Alpha with fullwidth parens must not false-dim",
+  );
+  assert.equal(
+    byHref[sampleEncoded],
+    "md-link md-link-rendered",
+    "encoded Unicode basename must not false-dim",
+  );
+  assert.equal(byHref["Plain.md"], "md-link md-link-rendered");
+
+  // Without decode, known-keys miss would dim — confirm missing note still dims
+  assert.equal(
+    classes(["plain"])[alphaEncoded],
+    "md-link md-link-rendered is-unresolved",
+  );
+});
