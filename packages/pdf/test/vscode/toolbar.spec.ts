@@ -255,66 +255,20 @@ test("keyboard shortcuts page, zoom, fit, find and pick the tool while the PDF h
   await page.keyboard.press("Escape");
 });
 
-test("the toolbar setting moves the controls into the viewer and back, live", async ({
+test("the toolbar setting takes the controls off the status bar and back, live", async ({
   workbench: page,
 }) => {
   await openFile(page, PDF);
-  let viewer = await pdfViewer(page);
+  const viewer = await pdfViewer(page);
+  // The viewer has no bar of its own in VS Code, whatever the setting.
+  const viewerBar = viewer.getByRole("toolbar", { name: "PDF toolbar" });
   await expect(statusBarEntry(page, PAGE_STATUS)).toBeVisible();
+  await expect(zoomStatus(page)).toBeVisible();
   try {
-    await setToolbarMode(page, /Slim Bar/u);
-    await expect(
-      viewer.getByRole("toolbar", { name: "PDF toolbar" }),
-    ).toContainText("of 12");
-    await expect(statusBarEntry(page, PAGE_STATUS)).toHaveCount(0);
-    await expect(
-      page.locator(".editor-actions").getByRole("button", { name: "Zoom In" }),
-    ).toHaveCount(0);
-    // The bar's outline button shows the PDF Outline view, or hides the
-    // side bar it is shown in.
-    const outline = page.locator(".pane-header", { hasText: "PDF Outline" });
-    const entry = page.getByRole("treeitem", { name: /Part One/u });
-    await expect(outline).toBeVisible();
-    const toggle = viewer.getByRole("button", { name: "Toggle outline" });
-    // A fresh profile may have the view collapsed: then the button opens it.
-    if (!(await entry.isVisible())) {
-      await toggle.click();
-      await expect(entry).toBeVisible();
-    }
-    await toggle.click();
-    await expect(outline).toBeHidden();
-    await toggle.click();
-    await expect(entry).toBeVisible();
-
-    // The floating bar: dragged to an edge, it stays there for PDFs opened later.
-    await setToolbarMode(page, /Floating Bar/u);
-    const floating = viewer.getByRole("toolbar", { name: "PDF toolbar" });
-    await expect(floating).toHaveAttribute("aria-orientation", "horizontal");
-    const grip = floating.getByRole("button", { name: /^Move toolbar/u });
-    const from = (await grip.boundingBox())!;
-    const area = (await viewer.locator(".viewport").boundingBox())!;
-    await page.mouse.move(from.x + from.width / 2, from.y + from.height / 2);
-    await page.mouse.down();
-    await page.mouse.move(area.x + area.width - 30, area.y + area.height / 2, {
-      steps: 10,
-    });
-    await page.mouse.up();
-    await expect(floating).toHaveAttribute("aria-orientation", "vertical");
-    await command(page, "View: Close Editor");
-    await openFile(page, PDF);
-    viewer = await pdfViewer(page);
-    const reopened = viewer.getByRole("toolbar", { name: "PDF toolbar" });
-    await expect(reopened).toHaveAttribute("aria-orientation", "vertical");
-    // Back to the bottom, with the keyboard.
-    await reopened.getByRole("button", { name: /^Move toolbar/u }).focus();
-    await page.keyboard.press("ArrowDown");
-    await expect(reopened).toHaveAttribute("aria-orientation", "horizontal");
-
     await setToolbarMode(page, /None/u);
-    await expect(
-      viewer.getByRole("toolbar", { name: "PDF toolbar" }),
-    ).toHaveCount(0);
     await expect(statusBarEntry(page, PAGE_STATUS)).toHaveCount(0);
+    await expect(zoomStatus(page)).toHaveCount(0);
+    await expect(viewerBar).toHaveCount(0);
     // The commands still work.
     await command(page, "PDF: Fit Page");
     await expect
@@ -330,10 +284,9 @@ test("the toolbar setting moves the controls into the viewer and back, live", as
       )
       .toBe(true);
   } finally {
-    await setToolbarMode(page, /Editor Title Bar/u);
+    await setToolbarMode(page, /Status Bar/u);
   }
   await expect(statusBarEntry(page, PAGE_STATUS)).toBeVisible();
-  await expect(
-    viewer.getByRole("toolbar", { name: "PDF toolbar" }),
-  ).toHaveCount(0);
+  await expect(zoomStatus(page)).toBeVisible();
+  await expect(viewerBar).toHaveCount(0);
 });
