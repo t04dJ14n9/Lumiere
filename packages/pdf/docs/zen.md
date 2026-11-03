@@ -3,8 +3,6 @@
 **PDF: Enter Zen Mode** (`Ctrl+Alt+Z`, `Ctrl+Cmd+Z` on macOS, or *Zen Mode* in the viewer's right-click menu) reads
 the PDF with nothing else on screen. It is VS Code's own Zen Mode, with the part a PDF needs added.
 
-![A PDF in zen mode, with the floating bar](images/zen-mode.png)
-
 ## What it does
 
 - VS Code's **Zen Mode** hides the side bar, panels and status bar and goes full screen, using your `zenMode.*`
@@ -29,5 +27,6 @@ All of the PDF shortcuts are turned off by `lumiere.pdf.keyboardShortcuts`, thes
   it clears its zen flag by itself.
 - A web page inside VS Code cannot go full screen itself (VS Code does not allow it), which is why the extension
   builds on Zen Mode instead.
-- **Not verified on macOS or in Cursor.** Tested in VS Code 1.141 on Linux. Check `Ctrl+Cmd+Z` on a Mac. Cursor
-  has its own panes in zen; they were not tried.
+- **Not verified in Cursor.** The real-VS Code spec (`test/vscode/zen.spec.ts`) passes in VS Code on macOS
+  (`Ctrl+Cmd+Z`, Escape Escape); VS Code 1.141 on Linux was tried before the floating bar was removed. Cursor has its
+  own panes in zen; they were not tried.
