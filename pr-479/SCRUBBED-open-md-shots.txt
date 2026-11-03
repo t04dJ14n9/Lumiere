@@ -1,1 +1,0 @@
-placeholders: open-md frames removed; synthetic Host GUI re-host pending
