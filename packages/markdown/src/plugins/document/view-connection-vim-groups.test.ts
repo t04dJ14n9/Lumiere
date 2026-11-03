@@ -55,3 +55,47 @@ test("ViewConnection.useVimMode makes main-editor inserts one Vim undo atom acro
   assert.notEqual(insert("c", 1100), first);
   connection.dispose();
 });
+
+test("ViewConnection.useVimMode unbind restores plain input-* groups across a pause", () => {
+  const connection = new ViewConnection(
+    { version: 0, clientID: "test" },
+    {} as Endpoint,
+    () => {},
+  );
+  const view = {
+    hasFocus: true,
+    dom: {
+      addEventListener() {},
+      setAttribute() {},
+    },
+    composing: false,
+  } as unknown as EditorView;
+  connection.attach(view);
+
+  let state = EditorState.create({
+    doc: "",
+    extensions: connection.extension,
+  });
+  const insert = (text: string, time: number) => {
+    const transaction = state.update({
+      changes: { from: state.doc.length, insert: text },
+      userEvent: "input.type",
+      annotations: Transaction.time.of(time),
+    });
+    state = transaction.state;
+    return transaction.annotation(editGroup);
+  };
+
+  connection.useVimMode(() => ({ insertMode: true }));
+  const vimAtom = insert("a", 0);
+  assert.ok(vimAtom?.startsWith("vim-"));
+  assert.equal(insert("b", 1000), vimAtom);
+
+  connection.useVimMode(() => undefined);
+  const plainFirst = insert("c", 2000);
+  assert.ok(plainFirst?.startsWith("input-"));
+  const plainPaused = insert("d", 3000);
+  assert.ok(plainPaused?.startsWith("input-"));
+  assert.notEqual(plainPaused, plainFirst);
+  connection.dispose();
+});

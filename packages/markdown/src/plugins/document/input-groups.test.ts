@@ -120,3 +120,35 @@ test("without vimMode, a pause splits plain input groups", () => {
   assert.notEqual(insert("b", 1000), first);
   groups.dispose();
 });
+
+test("useVimMode unbind restores plain input-* groups across a pause", () => {
+  const groups = new InputGroups();
+  groups.attach({
+    hasFocus: true,
+    dom: { addEventListener() {} },
+  } as unknown as EditorView);
+  let state = EditorState.create({ doc: "", extensions: groups.extension });
+  const insert = (text: string, time: number) => {
+    const transaction = state.update({
+      changes: { from: state.doc.length, insert: text },
+      userEvent: "input.type",
+      annotations: Transaction.time.of(time),
+    });
+    state = transaction.state;
+    return transaction.annotation(editGroup);
+  };
+
+  groups.useVimMode(() => ({ insertMode: true }));
+  const vimAtom = insert("a", 0);
+  assert.equal(vimAtom, "vim-0");
+  assert.equal(insert("b", 1000), vimAtom);
+
+  // Fiber-stop cleanup: same call site as registerVimUndoGroups dispose.
+  groups.useVimMode(() => undefined);
+  const plainFirst = insert("c", 2000);
+  assert.ok(plainFirst?.startsWith("input-"));
+  const plainPaused = insert("d", 3000);
+  assert.ok(plainPaused?.startsWith("input-"));
+  assert.notEqual(plainPaused, plainFirst);
+  groups.dispose();
+});
