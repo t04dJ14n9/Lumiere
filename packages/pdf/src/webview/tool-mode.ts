@@ -6,6 +6,8 @@ import { useAnnotationCapability } from "@embedpdf/plugin-annotation/react";
 import { useSelectionCapability } from "@embedpdf/plugin-selection/react";
 import { useCallback, useEffect, useState } from "react";
 import { DEFAULT_ANNOTATION_TOOL } from "../shared/annotation-tools";
+import { highlightToolDefaults } from "../shared/highlight-style";
+import { currentPageColors } from "./page-colors";
 import type { ToolMode } from "../shared/view-state";
 import { touchOnly } from "./touch";
 
@@ -40,6 +42,11 @@ export function useToolMode(documentId: string): {
       if (tool === "annotate") {
         selection?.forDocument(documentId).clear();
         scope.activateDefaultMode();
+        // Override EmbedPDF stock #FFCD45@1 so built-in matches sidecar light yellow.
+        annots?.setToolDefaults(
+          DEFAULT_ANNOTATION_TOOL,
+          highlightToolDefaults(currentPageColors()) as never,
+        );
         annots?.forDocument(documentId).setActiveTool(DEFAULT_ANNOTATION_TOOL);
         setAnnotate(true);
         return;

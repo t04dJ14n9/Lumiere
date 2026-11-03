@@ -6,6 +6,8 @@ import {
   type AnnotationToolId,
   isAnnotationToolId,
 } from "../shared/annotation-tools";
+import { highlightToolDefaults } from "../shared/highlight-style";
+import { currentPageColors, onPageColorsChange } from "./page-colors";
 
 const HISTORY_TOPIC = "annotations";
 
@@ -26,6 +28,7 @@ export function useAnnotationMode(documentId: string): AnnotationMode {
   const [annotationTool, setAnnotationToolState] =
     useState<AnnotationToolId | null>(null);
   const { canUndo, canRedo } = useAnnotationHistory(documentId, history);
+  useHighlightPaperDefaults(annots);
 
   useEffect(() => {
     if (!annots) {
@@ -51,11 +54,10 @@ export function useAnnotationMode(documentId: string): AnnotationMode {
   const setColor = useCallback(
     (color: string) => {
       const id = annotationTool ?? DEFAULT_ANNOTATION_TOOL;
-      annots?.setToolDefaults(id, {
-        strokeColor: color,
-        color,
-        opacity: 0.5,
-      } as never);
+      annots?.setToolDefaults(
+        id,
+        highlightToolDefaults(currentPageColors(), color) as never,
+      );
     },
     [annots, annotationTool],
   );
@@ -78,6 +80,25 @@ export function useAnnotationMode(documentId: string): AnnotationMode {
     canUndo,
     canRedo,
   };
+}
+
+/** Keep highlight tool defaults aligned with effective paper (Follow/Normal/Dark). */
+function useHighlightPaperDefaults(
+  annots: ReturnType<typeof useAnnotationCapability>["provides"],
+): void {
+  useEffect(() => {
+    if (!annots) {
+      return;
+    }
+    const sync = (): void => {
+      annots.setToolDefaults(
+        DEFAULT_ANNOTATION_TOOL,
+        highlightToolDefaults(currentPageColors()) as never,
+      );
+    };
+    sync();
+    return onPageColorsChange(sync);
+  }, [annots]);
 }
 
 function runAnnotationHistory(

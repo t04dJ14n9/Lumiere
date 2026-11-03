@@ -91,5 +91,30 @@ test("webview context contributes Delete for annotate selection", () => {
   assert.ok(entry, "webview/context Delete");
   assert.match(entry?.when ?? "", /webviewId == 'lumiere\.pdf\.viewer'/);
   assert.match(entry?.when ?? "", /lumiere\.pdf\.tool == 'annotate'/);
-  assert.match(entry?.when ?? "", /lumiere\.pdf\.hasSelection/);
+  assert.match(entry?.when ?? "", /lumiere\.pdf\.hasAnnotationSelection/);
+});
+
+test("Delete Annotation enablement requires annotation selection, not any selection", () => {
+  const contributes = pdfContributes<{
+    commands: { command: string; enablement?: string }[];
+    menus: Record<string, { command: string; when?: string }[]>;
+  }>();
+  const command = contributes.commands.find(
+    (entry) => entry.command === "lumiere.pdf.deleteAnnotation",
+  );
+  assert.ok(command?.enablement);
+  assert.match(command!.enablement!, /lumiere\.pdf\.hasAnnotationSelection/);
+  assert.doesNotMatch(
+    command!.enablement!.replace(/hasAnnotationSelection/g, ""),
+    /hasSelection/,
+  );
+  const entry = contributes.menus["webview/context"]?.find(
+    (item) => item.command === "lumiere.pdf.deleteAnnotation",
+  );
+  assert.ok(entry?.when);
+  assert.match(entry!.when!, /lumiere\.pdf\.hasAnnotationSelection/);
+  assert.doesNotMatch(
+    entry!.when!.replace(/hasAnnotationSelection/g, ""),
+    /hasSelection/,
+  );
 });

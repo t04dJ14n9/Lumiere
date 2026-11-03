@@ -47,8 +47,8 @@ test("parseViewerAction accepts setTool annotate and annotation tools", () => {
     undefined,
   );
   assert.deepEqual(
-    parseViewerAction({ action: "setAnnotationColor", color: "#FFE600" }),
-    { action: "setAnnotationColor", color: "#FFE600" },
+    parseViewerAction({ action: "setAnnotationColor", color: "#FFE566" }),
+    { action: "setAnnotationColor", color: "#FFE566" },
   );
   assert.equal(
     parseViewerAction({ action: "setAnnotationColor", color: "red" }),

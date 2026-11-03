@@ -22,6 +22,12 @@ export interface RegionSelection {
   text?: string;
   /** A sidecar highlight selected in Annotate mode: its link is `#hl-<id>`. */
   highlightId?: string;
+  /**
+   * True when this region is an Annotate-mode mark (EmbedPDF or sidecar).
+   * Host / menu Delete uses this so a plain text or marquee selection does
+   * not enable a no-op Delete Annotation.
+   */
+  mark?: boolean;
 }
 
 export type PdfSelection = TextSelection | RegionSelection;
@@ -63,6 +69,7 @@ function parseRegionSelection(
     ...(isHighlightId(value.highlightId)
       ? { highlightId: value.highlightId }
       : {}),
+    ...(value.mark === true ? { mark: true } : {}),
   };
 }
 

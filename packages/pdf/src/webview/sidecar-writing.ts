@@ -5,12 +5,12 @@ import { useSelectionCapability } from "@embedpdf/plugin-selection/react";
 import { useEffect } from "react";
 import {
   CONTEXT_LENGTH,
-  DEFAULT_HIGHLIGHT_COLOR,
-  DEFAULT_HIGHLIGHT_OPACITY,
   MAX_QUOTE_LENGTH,
   newHighlightId,
   type SidecarHighlight,
 } from "../shared/sidecar-format";
+import { highlightStyleOf } from "../shared/highlight-style";
+import { currentPageColors } from "./page-colors";
 import { annotationLoadState } from "./annotation-load-state";
 import { postToHost } from "./host";
 import { DOCUMENT_ID } from "./plugins";
@@ -111,20 +111,14 @@ function highlightStyle(tool: AnnotationTool): {
   color: string;
   opacity: number;
 } {
-  const defaults = tool.defaults as {
-    strokeColor?: unknown;
-    color?: unknown;
-    opacity?: unknown;
-  };
-  const color = [defaults.strokeColor, defaults.color].find(
-    (value): value is string =>
-      typeof value === "string" && /^#[0-9a-f]{6}$/i.test(value),
+  return highlightStyleOf(
+    tool.defaults as {
+      strokeColor?: unknown;
+      color?: unknown;
+      opacity?: unknown;
+    },
+    currentPageColors(),
   );
-  const opacity = Number(defaults.opacity);
-  return {
-    color: (color ?? DEFAULT_HIGHLIGHT_COLOR).toUpperCase(),
-    opacity: opacity > 0 && opacity <= 1 ? opacity : DEFAULT_HIGHLIGHT_OPACITY,
-  };
 }
 
 function segmentRect({

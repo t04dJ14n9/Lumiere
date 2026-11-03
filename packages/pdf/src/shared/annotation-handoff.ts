@@ -36,6 +36,7 @@ export function selectionFromAnnotation(
     page: input.pageIndex + 1,
     rect,
     ...(text ? { text } : {}),
+    mark: true,
   };
 }
 

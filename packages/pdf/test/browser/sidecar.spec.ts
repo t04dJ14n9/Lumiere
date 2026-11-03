@@ -72,6 +72,9 @@ test("with a sidecar, the highlight tool writes the sidecar and never the PDF", 
     page: 1,
     subtype: "highlight",
     quote: expect.stringContaining("Synthetic page"),
+    // Light-paper default (harness has normal paper).
+    color: "#FFE566",
+    opacity: 0.3,
   });
   expect(write!.highlight.segmentRects.length).toBeGreaterThan(0);
   await expect(page.locator(".sidecar-highlight-line")).not.toHaveCount(0);
@@ -220,4 +223,29 @@ test("a highlight whose text moved is re-attached by its quote; one whose quote 
   await page.waitForTimeout(500);
   expect(await writes(page)).toHaveLength(1);
   expect(await pdfSaves(page)).toEqual([]);
+});
+
+test("a click slightly off a sidecar line still selects it for Delete while the highlight tool is active", async ({
+  page,
+}) => {
+  await open(page, "?toolbar=chrome");
+  await send(page, { type: "sidecar", highlights: [SYNTHETIC] });
+  await sendAction(page, { action: "setTool", tool: "annotate" });
+  await sendAction(page, { action: "setAnnotationTool", tool: "highlight" });
+  const at = await pagePoint(page, 1);
+  // Just outside the 14pt-tall line (y 88..102) — within HIT_SLOP.
+  await page.mouse.click(...at(100, 104));
+  await expect.poll(() => selectedKind(page)).toBe("hl-0badf00d");
+  expect(await lastSelection(page)).toMatchObject({
+    kind: "region",
+    highlightId: "hl-0badf00d",
+    mark: true,
+  });
+  await page.keyboard.press("Delete");
+  await expect
+    .poll(async () => (await writes(page)).at(-1))
+    .toMatchObject({ op: "delete", id: "hl-0badf00d" });
+  await expect(
+    page.locator('.sidecar-highlight[data-highlight-id="hl-0badf00d"]'),
+  ).toHaveCount(0);
 });

@@ -104,9 +104,10 @@
   pointer-events: none;
 }
 
-/* Dark paper: multiplying would hide the colour, so lay it on, fainter. */
+/* Dark paper: multiplying would hide the colour, so lay it on at the stored
+   opacity (already translucent — do not multiply again or text wash vanishes). */
 #root[data-page-colors="dark"] .sidecar-highlight-line {
-  opacity: calc(var(--highlight-opacity) * 0.4);
+  opacity: var(--highlight-opacity);
   mix-blend-mode: normal;
 }
 

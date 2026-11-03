@@ -1093,7 +1093,7 @@
         "command": "lumiere.pdf.deleteAnnotation",
         "title": "Delete Annotation",
         "category": "PDF",
-        "enablement": "lumiere.pdf.pdfActive && lumiere.pdf.tool == 'annotate' && lumiere.pdf.hasSelection"
+        "enablement": "lumiere.pdf.pdfActive && lumiere.pdf.tool == 'annotate' && lumiere.pdf.hasAnnotationSelection"
       },
       {
         "command": "lumiere.pdf.selectToolbarMode",
@@ -2379,7 +2379,7 @@
         },
         {
           "command": "lumiere.pdf.deleteAnnotation",
-          "when": "webviewId == 'lumiere.pdf.viewer' && lumiere.pdf.tool == 'annotate' && lumiere.pdf.hasSelection",
+          "when": "webviewId == 'lumiere.pdf.viewer' && lumiere.pdf.tool == 'annotate' && lumiere.pdf.hasAnnotationSelection",
           "group": "0_agent@3"
         },
         {
