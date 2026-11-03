@@ -2,6 +2,17 @@
 
 ## Unreleased
 
+- Dark page colors now invert each colour's lightness and keep its hue,
+  instead of painting every fill and all text one colour. In diagrams the
+  labels of boxes are readable (they were the same colour as the box), the
+  bars of a chart keep different colours, and rules and arrowheads show.
+  Embedded pictures stay as authored. A dark page is now two renders (as
+  authored and with PDFium's colour scheme, to find the pictures) and a pixel
+  pass, about twice the work of a normal page. See
+  `docs/embedpdf-page-colors-patch.md`.
+- PDF Outline no longer flashes shut and open when the reading position
+  moves into a bookmark that has children: it collapses the tree only when
+  an open branch must close.
 - PDF Outline follows the reading position by default
   (`lumiere.pdf.outline.followCursor` now defaults to on), and as an
   accordion like Markdown Outline: the current bookmark's parents and its

@@ -343,12 +343,13 @@ test("accordion follow expands only the active path and does not refresh", async
   assert.equal(fixture.refreshCount, refreshAfterOpen, "no caret-only refresh");
   assert.equal(
     fixture.collapseAllCount,
-    collapseAllBeforeFollow + 1,
-    "native collapse all resets every off-path branch",
+    collapseAllBeforeFollow,
+    "A, open since the note opened, is on the path: nothing has to close",
   );
   assert.deepEqual(
     fixture.expands.map((node) => node.label).sort(),
-    ["A", "A1", "A1a"].sort(),
+    ["A1", "A1a"].sort(),
+    "only the rows that were not open yet",
   );
   assert.equal(fixture.reveals.at(-1)?.node.label, "A1a");
 });
@@ -370,6 +371,46 @@ test("unchanged accordion path skips expand/collapse", async (t) => {
   assert.deepEqual(fixture.expands, []);
   assert.deepEqual(fixture.collapses, []);
   assert.equal(fixture.reveals.at(-1)?.node.label, "A1a");
+});
+
+// VS Code can close one row only by collapsing the whole tree, which flashes
+// the outline shut and open again: it is done only when a branch must close.
+test("moving into a section that has sub-sections only opens rows, without collapsing the tree", async (t) => {
+  const text = "# A\nintro\n## A1\n### A1a\nleaf\n## A2\nlast\n";
+  const fixture = await outlineFixture({ "A.md": text });
+  t.after(() => fixture.root.dispose());
+  const { panel, cursor } = fixture.panel("one");
+  fixture.open(panel);
+  await tick();
+  cursor.head = text.indexOf("intro");
+  fixture.root.emit("editor/selectionChanged", panel, false);
+  await tick();
+  assert.deepEqual(
+    fixture.expands.map((node) => node.label),
+    ["A"],
+  );
+  const collapses = fixture.collapseAllCount;
+  fixture.expands.length = 0;
+  // A1 has a sub-section: its row opens, nothing needs to close.
+  cursor.head = text.indexOf("leaf");
+  fixture.root.emit("editor/selectionChanged", panel, false);
+  await tick();
+  assert.equal(fixture.collapseAllCount, collapses, "nothing flashes shut");
+  assert.deepEqual(
+    fixture.expands.map((node) => node.label),
+    ["A1"],
+  );
+  assert.equal(fixture.isOpen("A"), true);
+  assert.equal(fixture.isOpen("A1"), true);
+  assert.equal(fixture.reveals.at(-1)?.node.label, "A1a");
+  // Leaving A1 for A2 does close a branch: now the tree is reset.
+  cursor.head = text.indexOf("last");
+  fixture.root.emit("editor/selectionChanged", panel, false);
+  await tick();
+  assert.equal(fixture.collapseAllCount, collapses + 1);
+  assert.equal(fixture.isOpen("A1"), false);
+  assert.equal(fixture.isOpen("A"), true);
+  assert.equal(fixture.reveals.at(-1)?.node.label, "A2");
 });
 
 test("accordion chapter switch closes the prior path in the tree UI", async (t) => {

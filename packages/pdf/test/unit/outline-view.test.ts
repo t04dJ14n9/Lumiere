@@ -810,12 +810,13 @@ test("follow is an accordion: the reading position's parents and own children op
     h.executed.filter((command) => command === COLLAPSE_ALL).length;
   assert.equal(collapses(), 1, "every other branch closes");
   assert.deepEqual(h.selected(), [intro]);
-  // Into the chapter's part: the chapter and the part open.
+  // Into the chapter's part: the chapter and the part open. Nothing open has
+  // to close, so the tree is not collapsed (it would flash shut and open).
   h.reveals.length = 0;
   panel.view = { page: 3, readingPage: 3, top: 0 };
   h.changed();
   await tick();
-  assert.equal(collapses(), 2);
+  assert.equal(collapses(), 1);
   assert.deepEqual(
     h.reveals.map((reveal) => [reveal.item.title, reveal.options.expand]),
     [
@@ -829,13 +830,46 @@ test("follow is an accordion: the reading position's parents and own children op
   panel.view = { page: 3, readingPage: 3, top: 0 };
   h.changed();
   await tick();
-  assert.equal(collapses(), 2);
+  assert.equal(collapses(), 1);
   // On to the appendix: the chapter closes, the appendix opens.
   panel.view = { page: 5, readingPage: 5, top: 0 };
   h.changed();
   await tick();
-  assert.equal(collapses(), 3);
+  assert.equal(collapses(), 2);
   assert.deepEqual(h.selected().at(-1), appendix);
+});
+
+test("follow opens only the rows that are not open yet when no branch has to close", async (t) => {
+  const h = harness(true);
+  t.after(h.dispose);
+  const part = heading("Part", 2, [heading("Detail", 3)], 0);
+  const chapter = heading("Chapter", 1, [part]);
+  const panel = h.panel([chapter]);
+  h.activate(panel);
+  h.start();
+  await tick();
+  const collapses = () =>
+    h.executed.filter((command) => command === COLLAPSE_ALL).length;
+  // On the chapter itself: it opens.
+  assert.equal(collapses(), 1);
+  h.reveals.length = 0;
+  // Into the part: the chapter is open already, only the part opens.
+  panel.view = { page: 2, readingPage: 2, top: 0 };
+  h.changed();
+  await tick();
+  assert.equal(collapses(), 1, "nothing flashes shut");
+  assert.deepEqual(
+    h.reveals.map((reveal) => [reveal.item.title, reveal.options.expand]),
+    [
+      ["Part", true],
+      ["Part", false],
+    ],
+  );
+  // Back to the chapter's own text: the part must close, so the tree resets.
+  panel.view = { page: 1, readingPage: 1, top: 0 };
+  h.changed();
+  await tick();
+  assert.equal(collapses(), 2);
 });
 
 test("a click on a bookmark leaves the tree as it is, so a double-click's second click hits the same row", async (t) => {

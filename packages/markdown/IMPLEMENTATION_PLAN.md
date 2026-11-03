@@ -6571,3 +6571,26 @@ the profile filter also counted Live Preview's own parse function, also
 named `work`.) Tests: `document-tree.test.ts` rewritten for the shared parse;
 the randomized edit test also runs on CodeMirror's parse and checks the tree
 equals a fresh parse after every edit (40,000 edits in a one-off run).
+
+## Outline accordion: collapse only when a branch must close (2026-11-02)
+
+Reported: the outline sometimes flickers when the reading position moves to
+the next section. Cause: every change of the accordion's open path ran
+`collapseAll` and then opened the path again, so VS Code painted the tree
+shut (scrolled to the top) and open again. Checked in VS Code 1.144 with a
+throwaway extension in an isolated profile: refreshing one tree element with
+a different `collapsibleState` does not collapse it, whether the element
+object is stable or new each call and with or without an `id`; only the
+`collapseAll` command collapses. So a single row cannot be closed, and
+`TreeHandle.collapse` (an element refresh) does nothing in VS Code.
+
+`OutlineView` now keeps the ids of the parents it left open (`openBranches`,
+unknown after a rebuild or Expand All) and runs the whole-tree collapse only
+when one of them is not on the new path; otherwise it opens just the missing
+parents. Moving into a section with subsections, or deeper, no longer
+collapses anything; leaving a chapter still does, and still flashes. A
+branch the reader opened by hand now stays open until the path leaves it.
+The PDF outline follower (`pdfOutline/outline-follower.ts`) got the same
+rule. Tests: `host.test.ts` (new case, one updated) and
+`outline-view.test.ts` in the PDF package. Not run: the real-VS Code specs.
+

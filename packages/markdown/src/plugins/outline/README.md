@@ -17,7 +17,12 @@ caret while it is on screen, else the line at the middle of the editor (the
 middle because a click in the outline centres its heading). The default
 expand mode is accordion, like a page's table of contents: the active
 heading's parents and its own subheadings are open and every other branch
-is closed, without rebuilding the tree. `all` starts every parent expanded and follow only
+is closed, without rebuilding the tree. VS Code can close a single row only
+through the whole-tree collapse, which flashes the outline shut and open
+again, so the accordion uses it only when a branch that is open is not on
+the new path (leaving a chapter or a section that has subsections); a move
+that only opens rows (into a section that has subsections, or deeper) opens
+them and collapses nothing. `all` starts every parent expanded and follow only
 selects. Version and panel identity guards discard stale captures. Collapse All uses VS Code's native tree action;
 Expand All reveals every node in order so deeply nested headings also expand.
 Clicking a heading opens the note at its offset; the links plugin's `navigate` then

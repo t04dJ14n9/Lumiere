@@ -1,4 +1,5 @@
 import type { PdfDocumentObject } from "@embedpdf/models";
+import type { RenderScope } from "@embedpdf/plugin-render";
 import { useRenderCapability } from "@embedpdf/plugin-render/react";
 import React, {
   createContext,
@@ -15,6 +16,7 @@ import {
   type RenderTask,
 } from "../shared/bitmap-cache";
 import { DOCUMENT_ID } from "./plugins";
+import { darkPageRender, type RawRenderTask } from "./dark-render";
 import { currentPageColors, onPageColorsChange } from "./page-colors";
 import { PAGE_COLORS_ENGINE_AVAILABLE } from "../shared/page-colors-engine";
 
@@ -68,10 +70,11 @@ export function PageBitmaps({
       provides
         ? new BitmapCache(
             (pageIndex, scaleFactor, dpr) =>
-              provides.forDocument(DOCUMENT_ID).renderPage({
-                pageIndex,
-                options: renderOptions(scaleFactor, dpr, pageColors),
-              }) as unknown as RenderTask,
+              renderPage(provides.forDocument(DOCUMENT_ID), pageIndex, {
+                scaleFactor,
+                dpr,
+                dark: PAGE_COLORS_ENGINE_AVAILABLE && pageColors === "dark",
+              }),
             urls,
           )
         : undefined,
@@ -313,25 +316,31 @@ function requestBitmaps(
 }
 
 /**
- * EmbedPDF render options; pageColors only when the pinned engine exposes it.
- * The dark background is also the page's `--paper` (styles/base.css), shown
- * until its picture arrives.
+ * One page's render task. On dark paper it is the page's two renders made
+ * into one dark page (dark-render.ts), not the engine's own colour scheme
+ * alone: that paints every fill and all text one colour, which hides the
+ * labels of a diagram and the differences between a chart's bars. The dark
+ * background is also the page's `--paper` (styles/base.css), shown until its
+ * picture arrives.
  */
-function renderOptions(
-  scaleFactor: number,
-  dpr: number,
-  pageColors: "normal" | "dark",
-): Record<string, unknown> {
-  const options: Record<string, unknown> = { scaleFactor, dpr };
-  if (PAGE_COLORS_ENGINE_AVAILABLE && pageColors === "dark") {
-    options.pageColors = {
-      background: "#1e1e1e",
-      text: "#e8e6e3",
-      pathFill: "#e8e6e3",
-      pathStroke: "#e8e6e3",
-      textFill: "#e8e6e3",
-      textStroke: "#e8e6e3",
-    };
+function renderPage(
+  scope: RenderScope,
+  pageIndex: number,
+  {
+    scaleFactor,
+    dpr,
+    dark,
+  }: { scaleFactor: number; dpr: number; dark: boolean },
+): RenderTask {
+  if (dark) {
+    return darkPageRender(
+      (options) =>
+        scope.renderPageRaw({ pageIndex, options }) as unknown as RawRenderTask,
+      { scaleFactor, dpr },
+    );
   }
-  return options;
+  return scope.renderPage({
+    pageIndex,
+    options: { scaleFactor, dpr },
+  }) as unknown as RenderTask;
 }
