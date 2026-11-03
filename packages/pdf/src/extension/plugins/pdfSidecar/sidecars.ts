@@ -37,6 +37,9 @@ export class Sidecars implements vscode.Disposable {
 
   /** Start keeping `panel`'s sidecar, until its editor closes. */
   open(panel: PdfPanel): void {
+    // Claim ownership before locate/read await: null means "no sidecar" and the
+    // highlight tool falls through to markPdf(); [] means owned/pending.
+    panel.setSidecar([]);
     void this.track(panel);
   }
 

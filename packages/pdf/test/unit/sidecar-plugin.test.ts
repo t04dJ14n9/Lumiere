@@ -189,12 +189,41 @@ const settle = () => new Promise((resolve) => setImmediate(resolve));
 /** Objects made inside the module's sandbox, comparable with this realm's. */
 const plain = (value: unknown): unknown => JSON.parse(JSON.stringify(value));
 
+test("open claims sidecar with [] before locate/read finishes so Highlight never falls through to markPdf", async () => {
+  const h = harness();
+  h.files.set(
+    "/work/papers/paper.pdf.lumiere.md",
+    format.createSidecar({ source: "paper.pdf" }, [highlight("hl-race")]),
+  );
+  const pdf = h.panel("/work/papers/paper.pdf");
+  h.sidecars.open(pdf);
+  // open() returns before attach awaits locate/read; highlights must already be
+  // non-null ([] = owned/pending) so the highlight tool never takes markPdf().
+  assert.deepEqual(
+    plain(pdf.shown),
+    [[]],
+    "open must setSidecar([]) before any await so highlights are never null while pdfSidecar owns the panel",
+  );
+  await settle();
+  assert.deepEqual(
+    pdf.shown.at(-1),
+    [highlight("hl-race")],
+    "reload still replaces the pending claim with real highlights",
+  );
+  h.sidecars.dispose();
+  assert.equal(pdf.shown.at(-1), null);
+});
+
 test("a PDF's sidecar beside it is read and shown, and a write creates it", async () => {
   const h = harness();
   const pdf = h.panel("/work/papers/paper.pdf");
   h.sidecars.open(pdf);
   await settle();
-  assert.deepEqual(plain(pdf.shown), [[]], "no sidecar yet: no highlights");
+  assert.deepEqual(
+    plain(pdf.shown.at(-1)),
+    [],
+    "no sidecar yet: no highlights",
+  );
   await h.sidecars.write(pdf, {
     type: "sidecarWrite",
     load: 1,
@@ -259,7 +288,7 @@ test("in a sidecar folder, another PDF's sidecar of the same name is neither sho
   const pdf = h.panel("/work/b/paper.pdf");
   h.sidecars.open(pdf);
   await settle();
-  assert.deepEqual(plain(pdf.shown), [[]]);
+  assert.deepEqual(plain(pdf.shown.at(-1)), []);
   await h.sidecars.write(pdf, {
     type: "sidecarWrite",
     load: 1,
