@@ -301,39 +301,56 @@ async function openMissingMarkdownBridge(
   uri: string,
   request: ReclaimRequest,
 ): Promise<void> {
-  const native = currentTab(request);
+  // Close the file: phantom FIRST while it is still active. Opening Lumia on
+  // the untitled bridge as a preview, then showTextDocument(file, preview)
+  // afterward, replaces that Lumia preview tab (Host GUI: untitled Text
+  // Editor / Monaco left active; Lumia listed but not Active).
+  if (!transferBlocked(uri, request)) {
+    await closeMissingFilePhantom(uri, request);
+  }
   await openBridgeForMissingMarkdown({
     intendedFileUri: uri,
     viewType,
     viewColumn: request.column,
-    preview: native?.isPreview ?? true,
+    // Pin so a later preview open cannot replace the Lumia bridge tab.
+    preview: false,
     bridge: missingOpenBridge,
     host: vscodeMissingOpenHost(),
   });
+}
+
+/** Discard Cursor's dirty/clean text tab for a missing file: path. */
+async function closeMissingFilePhantom(
+  uri: string,
+  request: ReclaimRequest,
+): Promise<void> {
   const left = currentTab(request);
-  if (!left || transferBlocked(uri, request)) {
+  if (!left) {
     return;
   }
-  // Missing-file phantoms are often dirty empty buffers Cursor created for a
-  // path that never existed. tabGroups.close keeps dirty tabs; revert+close.
   if (!left.isDirty) {
     await vscode.window.tabGroups.close(left, true);
     return;
   }
-  const doc = vscode.workspace.textDocuments.find(
-    (document) => document.uri.toString() === uri,
-  );
-  if (doc) {
-    await vscode.window.showTextDocument(doc, {
-      preview: true,
-      preserveFocus: false,
-    });
-    await vscode.commands.executeCommand(
-      "workbench.action.revertAndCloseActiveEditor",
+  // Prefer closing while the phantom is still active — avoids showTextDocument
+  // after Lumia is open (preview replacement). Focus only when needed.
+  if (vscode.window.tabGroups.activeTabGroup.activeTab !== left) {
+    const doc = vscode.workspace.textDocuments.find(
+      (document) => document.uri.toString() === uri,
     );
-    return;
+    if (doc) {
+      await vscode.window.showTextDocument(doc, {
+        preview: true,
+        preserveFocus: false,
+      });
+    } else {
+      await vscode.window.tabGroups.close(left, true);
+      return;
+    }
   }
-  await vscode.window.tabGroups.close(left, true);
+  await vscode.commands.executeCommand(
+    "workbench.action.revertAndCloseActiveEditor",
+  );
 }
 
 function vscodeMissingOpenHost(): MissingOpenBridgeHost {

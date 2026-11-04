@@ -219,6 +219,18 @@ const vscode = {
           new Range(new Position(0, 0), new Position(0, 0)),
       };
       vscode.window.activeTextEditor = editor;
+      // VS Code: opening a preview replaces the group's existing preview tab
+      // (Host GUI: showTextDocument after untitled Lumia openWith wiped Lumia).
+      if (
+        options.preview &&
+        !options.preserveFocus &&
+        group.activeTab?.isPreview
+      ) {
+        group.activeTab.input = new TabInputText(document.uri);
+        group.activeTab.label = document.uri.path.split("/").at(-1)!;
+        group.activeTab.isDirty = document.isDirty;
+        return editor;
+      }
       const match = group.tabs.find((tab) => {
         const input = tab.input as { uri?: Uri } | undefined;
         return input?.uri?.toString() === document.uri.toString();
@@ -3317,5 +3329,90 @@ test("reclaim bridges a dirty already-open Text Editor for a missing Markdown pa
     group.tabs.includes(tab),
     false,
     "dirty missing-file phantom text tab must be closed after bridge open",
+  );
+});
+
+test("after missing-open bridge, active editor is Lumia on untitled (Host GUI)", async (t) => {
+  // Host GUI @ 897b85db: bridge untitled URI appeared, but as untitledEditorInput
+  // / Monaco — Lumia listed in Reopen With, not Active. Lumia resolve ran
+  // (obsidianCompat on untitled:/…/workspace), then showTextDocument(file,
+  // preview:true) after openWith replaced the Lumia preview tab.
+  // Close the phantom BEFORE openWith so Lumia is never preview-replaced.
+  const missing = `file:///vault/missing-open/active-lumia.md`;
+  note = missing;
+  host.missingOpen.setMarkdownAbsentOnDiskForTests((uri) => uri === missing);
+  t.after(() => host.missingOpen.setMarkdownAbsentOnDiskForTests(() => false));
+
+  const bridgeUri = host.missingOpen.untitledBridgeUriFor(missing);
+  afterCommand = () => {
+    const last = commands[commands.length - 1];
+    if (
+      last?.[0] === "vscode.openWith" &&
+      last[1] === bridgeUri &&
+      last[2] === viewType
+    ) {
+      const options = last[3] as { preview?: boolean } | undefined;
+      const lumia: Tab = {
+        input: new TabInputCustom(Uri.parse(bridgeUri), viewType),
+        label: "active-lumia.md",
+        isDirty: true,
+        // Pin when preview:false so a later preview showTextDocument cannot
+        // replace Lumia (Host GUI failure mode).
+        isPreview: options?.preview ?? true,
+        group,
+      };
+      // openWith opens beside the native tab (reclaim contract), not in-place.
+      group.tabs.push(lumia);
+      group.activeTab = lumia;
+    }
+  };
+
+  const stop = host.reclaim.registerReclaim();
+  t.after(() => stop.dispose());
+
+  const tab = cursorTab(missing);
+  tab.input = new TabInputText(Uri.parse(missing));
+  tab.isDirty = true;
+  tab.isPreview = true;
+  documents[0]!.isDirty = true;
+
+  tabsChanged.fire({ opened: [tab], changed: [], closed: [] });
+  await tick();
+
+  const openWithIdx = commands.findIndex(
+    (entry) =>
+      entry[0] === "vscode.openWith" &&
+      entry[1] === bridgeUri &&
+      entry[2] === viewType,
+  );
+  const revertIdx = commands.findIndex(
+    (entry) => entry[0] === "workbench.action.revertAndCloseActiveEditor",
+  );
+  assert.ok(openWithIdx >= 0, "must openWith Lumia on untitled bridge");
+  assert.deepEqual(
+    (commands[openWithIdx] as unknown[])[3],
+    { viewColumn: 1, preview: false },
+    "bridge Lumia tab must be pinned (preview:false) so it cannot be replaced",
+  );
+  assert.ok(
+    revertIdx >= 0 && revertIdx < openWithIdx,
+    "must revert+close the file: phantom BEFORE openWith Lumia (not after)",
+  );
+
+  const active = group.activeTab;
+  assert.ok(
+    active?.input instanceof TabInputCustom,
+    "active tab must be Lumia custom editor, not default Text Editor",
+  );
+  assert.equal(active.input.viewType, viewType);
+  assert.equal(active.input.uri.toString(), bridgeUri);
+  assert.equal(
+    group.tabs.some(
+      (candidate) =>
+        candidate.input instanceof TabInputText &&
+        (candidate.input as TabInputText).uri.toString() === missing,
+    ),
+    false,
+    "missing file: phantom must not remain",
   );
 });
