@@ -413,7 +413,11 @@ class EmbedPass implements PassEmbeds {
  */
 export function missingEmbedText(
   target: string,
-  missing: { note?: string | undefined; section?: boolean | undefined; image?: boolean | undefined } = {},
+  missing: {
+    note?: string | undefined;
+    section?: boolean | undefined;
+    image?: boolean | undefined;
+  } = {},
 ): string {
   const path = target.split("|")[0]!.trim();
   const hash = path.indexOf("#");
