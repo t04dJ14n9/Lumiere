@@ -103,7 +103,9 @@ test("Copy link to this is clipboard Quote / page link; no agent chat", async ({
   );
   expect(pageOnly).not.toMatch(/viewrect=|#hl-|#:~:text=/u);
 
-  await page.locator(".tabs-container .tab", { hasText: "outline.pdf" }).click();
+  await page
+    .locator(".tabs-container .tab", { hasText: "outline.pdf" })
+    .click();
   await expect(statusBarEntry(page, /^Page 3 \/ 12$/u)).toBeVisible();
   await selectText(page, viewer, at(74, TEXT_MIDLINE), at(205, TEXT_MIDLINE));
   await expect(
@@ -125,7 +127,9 @@ test("Copy link to this is clipboard Quote / page link; no agent chat", async ({
   expect(quote).not.toMatch(/viewrect=|#hl-|selection=|search=/u);
 
   // Regions default off: empty-page drag creates no region.
-  await page.locator(".tabs-container .tab", { hasText: "outline.pdf" }).click();
+  await page
+    .locator(".tabs-container .tab", { hasText: "outline.pdf" })
+    .click();
   await expect
     .poll(() => pageFit(viewer))
     .toEqual({ fitsWidth: true, fitsHeight: true, fills: true });

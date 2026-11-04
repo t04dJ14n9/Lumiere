@@ -1,10 +1,5 @@
 import { createHash } from "node:crypto";
-import {
-  existsSync,
-  mkdirSync,
-  readFileSync,
-  writeFileSync,
-} from "node:fs";
+import { existsSync, mkdirSync, readFileSync, writeFileSync } from "node:fs";
 import path from "node:path";
 import type { Frame, Page } from "@playwright/test";
 import { paths } from "./state";
@@ -105,5 +100,8 @@ test("Annotate highlight burns in, creates no sidecar, Delete mutates PDF", asyn
     path: path.join(SHOT_DIR, "03-after-delete.png"),
     fullPage: true,
   });
-  writeFileSync(path.join(SHOT_DIR, "evidence.txt"), evidence.join("\n") + "\n");
+  writeFileSync(
+    path.join(SHOT_DIR, "evidence.txt"),
+    evidence.join("\n") + "\n",
+  );
 });

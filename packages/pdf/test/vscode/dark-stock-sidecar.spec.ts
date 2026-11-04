@@ -97,5 +97,8 @@ test("preloaded sidecar is not painted; file is left on disk", async ({
     fullPage: true,
   });
   evidence.push(`sidecar_still_on_disk=true`, `result=PASS`);
-  writeFileSync(path.join(SHOT_DIR, "evidence.txt"), evidence.join("\n") + "\n");
+  writeFileSync(
+    path.join(SHOT_DIR, "evidence.txt"),
+    evidence.join("\n") + "\n",
+  );
 });

@@ -202,7 +202,6 @@ test("editor title actions zoom, fit and switch the selection tool", async ({
   expect(quote).not.toMatch(/viewrect=|#hl-/u);
 });
 
-
 test("keyboard shortcuts page, zoom, fit, find and pick the tool while the PDF has focus", async ({
   workbench: page,
 }) => {

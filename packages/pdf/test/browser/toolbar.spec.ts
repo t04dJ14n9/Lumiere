@@ -69,7 +69,9 @@ test("Select region is absent from the slim toolbar when regions are disabled", 
 }) => {
   await open(page);
   const toolbar = page.getByRole("toolbar", { name: "PDF toolbar" });
-  await expect(toolbar.getByRole("button", { name: "Select text", exact: true })).toBeVisible();
+  await expect(
+    toolbar.getByRole("button", { name: "Select text", exact: true }),
+  ).toBeVisible();
   await expect(
     toolbar.getByRole("button", { name: "Select region", exact: true }),
   ).toHaveCount(0);

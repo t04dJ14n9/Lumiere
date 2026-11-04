@@ -57,9 +57,7 @@ export class AgentHandoff {
       }
     }
     if (!text) {
-      void vscode.window.showWarningMessage(
-        "Open a PDF page to copy a link.",
-      );
+      void vscode.window.showWarningMessage("Open a PDF page to copy a link.");
       return false;
     }
     await vscode.env.clipboard.writeText(text);
@@ -113,9 +111,13 @@ export class AgentHandoff {
       sha256: selected.sha256,
       selectedAt: selected.selectedAt,
       selection: selected.selection,
-      agentText: agentText(selected.selection, { path }, {
-        regionsEnabled: isRegionsEnabled(),
-      }),
+      agentText: agentText(
+        selected.selection,
+        { path },
+        {
+          regionsEnabled: isRegionsEnabled(),
+        },
+      ),
       ...(image ? { regionImage: image.fsPath } : {}),
     };
   }

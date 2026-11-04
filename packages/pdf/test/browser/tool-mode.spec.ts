@@ -11,7 +11,6 @@ import {
   TEXT_MIDLINE,
 } from "./viewer-support";
 
-
 test("Select Region tool stays off when regions are disabled", async ({
   page,
 }) => {

@@ -10,8 +10,6 @@ import {
   TEXT_MIDLINE,
 } from "./viewer-support";
 
-
-
 test("empty-page drag does not create a region when regions are off by default", async ({
   page,
 }) => {

@@ -174,7 +174,11 @@ test("annotation region survives a later textCleared (no null wipe)", () => {
   const regions: Array<RegionSelection | undefined> = [];
   const tracker = new SelectionTracker((region) => regions.push(region));
   const { scope, clearText } = mockSelectionScope();
-  tracker.follow(scope, { engine: () => undefined, pdf: {} }, { regionsEnabled: () => true });
+  tracker.follow(
+    scope,
+    { engine: () => undefined, pdf: {} },
+    { regionsEnabled: () => true },
+  );
 
   tracker.setAnnotationRegion(annotationRegion);
   assert.deepEqual(tracker.region, annotationRegion);
@@ -224,7 +228,11 @@ test("empty-space click does not clear an annotation-owned region", () => {
   const SelectionTracker = loadSelectionTracker(reports);
   const tracker = new SelectionTracker(() => undefined);
   const { scope, emptySpaceClick } = mockSelectionScope();
-  tracker.follow(scope, { engine: () => undefined, pdf: {} }, { regionsEnabled: () => true });
+  tracker.follow(
+    scope,
+    { engine: () => undefined, pdf: {} },
+    { regionsEnabled: () => true },
+  );
 
   tracker.setAnnotationRegion(annotationRegion);
   const before = reports.length;
@@ -242,7 +250,11 @@ test("marquee-cancel does not clear an annotation-owned region", () => {
   const SelectionTracker = loadSelectionTracker(reports);
   const tracker = new SelectionTracker(() => undefined);
   const { scope, marqueeCancel } = mockSelectionScope();
-  tracker.follow(scope, { engine: () => undefined, pdf: {} }, { regionsEnabled: () => true });
+  tracker.follow(
+    scope,
+    { engine: () => undefined, pdf: {} },
+    { regionsEnabled: () => true },
+  );
 
   tracker.setAnnotationRegion(annotationRegion);
   const before = reports.length;
@@ -260,7 +272,11 @@ test("empty-space click still clears a marquee (non-annotation) region", () => {
   const SelectionTracker = loadSelectionTracker(reports);
   const tracker = new SelectionTracker(() => undefined);
   const { scope, emptySpaceClick, marqueeEnd } = mockSelectionScope();
-  tracker.follow(scope, { engine: () => undefined, pdf: {} }, { regionsEnabled: () => true });
+  tracker.follow(
+    scope,
+    { engine: () => undefined, pdf: {} },
+    { regionsEnabled: () => true },
+  );
 
   marqueeEnd(0);
   assert.ok(tracker.region);
@@ -276,7 +292,11 @@ test("marquee-cancel still clears a marquee (non-annotation) region", () => {
   const SelectionTracker = loadSelectionTracker(reports);
   const tracker = new SelectionTracker(() => undefined);
   const { scope, marqueeCancel, marqueeEnd } = mockSelectionScope();
-  tracker.follow(scope, { engine: () => undefined, pdf: {} }, { regionsEnabled: () => true });
+  tracker.follow(
+    scope,
+    { engine: () => undefined, pdf: {} },
+    { regionsEnabled: () => true },
+  );
 
   marqueeEnd(0);
   assert.ok(tracker.region);

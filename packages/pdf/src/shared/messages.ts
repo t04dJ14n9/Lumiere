@@ -293,7 +293,6 @@ const VIEWER_PARSERS: Readonly<
       : undefined,
 };
 
-
 const MAX_NOTE_URI = 8_192;
 
 function parseOpenBacklinkNote(message: Fields): ViewerMessage | undefined {

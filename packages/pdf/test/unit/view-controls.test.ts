@@ -116,8 +116,14 @@ test("view settings parse defaults, percentages and malformed configuration with
     regionsEnabled: true,
   };
   assert.deepEqual(parseViewSettings(settings), settings);
-  assert.equal(parseViewSettings({ regionsEnabled: true }).regionsEnabled, true);
-  assert.equal(parseViewSettings({ regionsEnabled: "yes" }).regionsEnabled, false);
+  assert.equal(
+    parseViewSettings({ regionsEnabled: true }).regionsEnabled,
+    true,
+  );
+  assert.equal(
+    parseViewSettings({ regionsEnabled: "yes" }).regionsEnabled,
+    false,
+  );
   for (const value of ["fitWidth", "fitPage", "actual", 62.5] as const) {
     assert.equal(parseDefaultZoom(value), value);
   }

@@ -20,7 +20,11 @@ test("extractPdfBacklinks finds page+text links and ignores non-pdf", () => {
 
 test("lookup returns only that PDF's hits", () => {
   const index = new PdfBacklinkIndex();
-  index.replaceNote("u1", "n.md", "[a](papers/a.pdf#page=1)\n[b](papers/b.pdf#page=2)");
+  index.replaceNote(
+    "u1",
+    "n.md",
+    "[a](papers/a.pdf#page=1)\n[b](papers/b.pdf#page=2)",
+  );
   assert.equal(index.lookup("papers/a.pdf").length, 1);
   assert.equal(index.lookup("papers/b.pdf").length, 1);
 });

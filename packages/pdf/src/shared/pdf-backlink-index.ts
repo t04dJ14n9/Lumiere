@@ -76,14 +76,16 @@ export function extractPdfBacklinks(
   return hits;
 }
 
-
 /**
  * When the Markdown target is note-relative (`./`, `../`, or a bare filename),
  * join it with the note's directory and collapse `.` / `..` so the key matches
  * workspace-relative `displayPath`. Vault-root / Copy-link paths
  * (`papers/a.pdf`) are returned unchanged for `normalizePdfKey`.
  */
-function resolveNoteRelativePdfPath(pathPart: string, notePath: string): string {
+function resolveNoteRelativePdfPath(
+  pathPart: string,
+  notePath: string,
+): string {
   let value = pathPart.trim().replaceAll("\\", "/");
   try {
     value = decodeURIComponent(value);
@@ -94,16 +96,12 @@ function resolveNoteRelativePdfPath(pathPart: string, notePath: string): string 
     return pathPart;
   }
   const isNoteRelative =
-    value.startsWith("./") ||
-    value.startsWith("../") ||
-    !value.includes("/");
+    value.startsWith("./") || value.startsWith("../") || !value.includes("/");
   if (!isNoteRelative) {
     return pathPart;
   }
   const noteDir = dirnameWorkspacePath(notePath);
-  return collapseWorkspacePath(
-    noteDir ? `${noteDir}/${value}` : value,
-  );
+  return collapseWorkspacePath(noteDir ? `${noteDir}/${value}` : value);
 }
 
 function dirnameWorkspacePath(path: string): string {
@@ -302,5 +300,7 @@ function parseViewRectField(value: unknown): ViewRect | undefined {
 }
 
 function isBoundedString(value: unknown): value is string {
-  return typeof value === "string" && value.length > 0 && value.length <= MAX_STRING;
+  return (
+    typeof value === "string" && value.length > 0 && value.length <= MAX_STRING
+  );
 }

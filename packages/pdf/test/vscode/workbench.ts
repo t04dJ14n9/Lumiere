@@ -190,7 +190,6 @@ export async function pastedClipboard(page: Page): Promise<string> {
   return readFileSync(notes, "utf8");
 }
 
-
 /**
  * Right-click at a point and choose an item of VS Code's context menu, or of
  * the native menu Cursor draws instead.
