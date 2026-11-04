@@ -35,7 +35,10 @@ scrolls that offset to the vertical centre of the editor, as VS Code's Outline
 note the scroll range ends first, so the heading stays above or below the
 centre. The jump a click makes does not collapse or expand anything (nor
 does the caret the editor reports from before it): rows that moved under
-the pointer sent a double-click's second click to another heading. The
+the pointer sent a double-click's second click to another heading. Scroll
+follow (`followReading`) is held for that same jump window (`OUTLINE_JUMP_MS`)
+so a top-of-viewport report cannot yank selection off the clicked row while
+the heading is still centred; caret follow keeps using `isOutlineJump`. The
 accordion applies again once the caret or the reading position moves on.
 
 Ctrl+Shift+O (Command+Shift+O on macOS), or **Lumia: Go to
