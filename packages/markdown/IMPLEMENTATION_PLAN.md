@@ -6592,5 +6592,31 @@ collapses anything; leaving a chapter still does, and still flashes. A
 branch the reader opened by hand now stays open until the path leaves it.
 The PDF outline follower (`pdfOutline/outline-follower.ts`) got the same
 rule. Tests: `host.test.ts` (new case, one updated) and
-`outline-view.test.ts` in the PDF package. Not run: the real-VS Code specs.
+`outline-view.test.ts` in the PDF package. The real-VS Code specs were run
+before merging (#485) and passed, apart from failures that `main` had too
+(fixed in #486).
+
+## Outline accordion: review follow-ups (2026-11-03)
+
+A review of #485 found that the open-branch model could be wrong, and so
+leave branches open:
+
+- Every edit refreshed the outline after a pause in typing, and the refresh
+  forgot `openBranches`, so the next follow collapsed the whole tree: the
+  outline flashed after each pause (this predates #485). VS Code keeps a row
+  open across a refresh by its `TreeItem` id, so where the tree says so
+  (`TreeHandle.keepsExpansion`) a refresh now keeps the model. Other hosts
+  lay the tree out again from the nodes' flags and still forget it.
+- Follows were not serialized: an older follow's expand, already sent, could
+  land after a newer follow's collapse and leave its branch open. Follows now
+  run their tree work one at a time (`oneAtATime`), a superseded one stops
+  between tree calls, and the model is unknown while a follow applies it, so
+  a follow after a failure lays the whole path out again.
+- Turning follow off (or expandMode to all) and back forgot nothing, though
+  the reader may have opened rows meanwhile; the model is now dropped.
+- The "only open" shortcut applied in hosts without a native collapse-all,
+  which close rows one by one without a flash; they again close the other
+  rows whenever the path changes.
+
+Tests: five new cases in `host.test.ts`, each failing on the previous code.
 

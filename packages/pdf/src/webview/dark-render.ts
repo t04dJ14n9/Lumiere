@@ -1,13 +1,11 @@
+import { browserImageDataToBlobConverter } from "@embedpdf/engines/converters";
 import type { ImageDataLike } from "@embedpdf/models";
 import type { RenderTask } from "../shared/bitmap-cache";
 import { darkenPage, FORCED_PAGE_COLORS } from "../shared/dark-page";
 
 /** The part of EmbedPDF's raw render task this needs. */
 export interface RawRenderTask {
-  wait(
-    onReady: (image: ImageDataLike) => void,
-    onError: (error: unknown) => void,
-  ): void;
+  toPromise(): Promise<ImageDataLike>;
   abort(reason: { code: number; message: string }): void;
 }
 
@@ -52,7 +50,7 @@ class DarkPageRender implements RenderTask {
     onReady: (blob: unknown) => void,
     onError: (error: unknown) => void,
   ): void {
-    Promise.all([settled(this.normal), settled(this.forced)])
+    Promise.all([this.normal.toPromise(), this.forced.toPromise()])
       .then(([normal, forced]) => {
         if (this.cancelled) {
           return undefined;
@@ -87,26 +85,26 @@ class DarkPageRender implements RenderTask {
   }
 }
 
-function settled(task: RawRenderTask): Promise<ImageDataLike> {
-  return new Promise((resolve, reject) => task.wait(resolve, reject));
-}
-
-/** The page as a PNG, as the viewer's other bitmaps are. */
+/**
+ * The page as a PNG, as the viewer's other bitmaps are. An OffscreenCanvas
+ * encodes off the main thread; without one, EmbedPDF's own canvas converter.
+ */
 export async function encodePng(image: ImageDataLike): Promise<Blob> {
-  const pixels = new ImageData(image.data, image.width, image.height);
-  if (typeof OffscreenCanvas !== "undefined") {
-    const canvas = new OffscreenCanvas(image.width, image.height);
-    canvas.getContext("2d")!.putImageData(pixels, 0, 0);
-    return canvas.convertToBlob({ type: "image/png" });
+  if (typeof OffscreenCanvas === "undefined") {
+    return browserImageDataToBlobConverter(() => image, "image/png");
   }
-  const canvas = document.createElement("canvas");
-  canvas.width = image.width;
-  canvas.height = image.height;
-  canvas.getContext("2d")!.putImageData(pixels, 0, 0);
-  return new Promise((resolve, reject) =>
-    canvas.toBlob(
-      (blob) => (blob ? resolve(blob) : reject(new Error("PNG encode failed"))),
-      "image/png",
-    ),
+  const canvas = new OffscreenCanvas(image.width, image.height);
+  // Null past the browser's canvas size or memory limits.
+  const context = canvas.getContext("2d");
+  if (!context) {
+    throw new Error(
+      `No canvas to encode a ${image.width} x ${image.height} dark page`,
+    );
+  }
+  context.putImageData(
+    new ImageData(image.data, image.width, image.height),
+    0,
+    0,
   );
+  return canvas.convertToBlob({ type: "image/png" });
 }

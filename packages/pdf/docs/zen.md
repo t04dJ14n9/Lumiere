@@ -9,7 +9,8 @@ the PDF with nothing else on screen. It is VS Code's own Zen Mode, with the part
   settings, and puts everything back when it ends. The extension does not close or reopen anything itself.
 - The status bar is hidden in zen, so PDF controls are **command palette / keyboard only** until zen ends.
   Slim and floating viewer bars were removed; `lumiere.pdf.toolbar.mode` is never changed for zen.
-- **Exit**: `Ctrl+Alt+Z` again (`Ctrl+Cmd+Z`), **PDF: Exit Zen Mode**, or VS Code's own `Ctrl+K Z`.
+- **Exit**: `Ctrl+Alt+Z` again (`Ctrl+Cmd+Z`), **PDF: Exit Zen Mode**, Escape Escape, or VS Code's own `Ctrl+K Z`
+  (`Cmd+K Z` on macOS). VS Code binds Escape Escape to leave zen as well.
 
 All of the PDF shortcuts are turned off by `lumiere.pdf.keyboardShortcuts`, these too.
 
@@ -27,6 +28,8 @@ All of the PDF shortcuts are turned off by `lumiere.pdf.keyboardShortcuts`, thes
   it clears its zen flag by itself.
 - A web page inside VS Code cannot go full screen itself (VS Code does not allow it), which is why the extension
   builds on Zen Mode instead.
-- **Not verified in Cursor.** The real-VS Code spec (`test/vscode/zen.spec.ts`) passes in VS Code on macOS
-  (`Ctrl+Cmd+Z`, Escape Escape); VS Code 1.141 on Linux was tried before the floating bar was removed. Cursor has its
-  own panes in zen; they were not tried.
+- **Not verified in Cursor.** The real-VS Code spec (`packages/pdf/test/vscode/zen.spec.ts`) passes in VS Code on
+  macOS: the palette commands and `Ctrl+Cmd+Z` enter and leave zen, and Go to Page works in it. Escape Escape leaves
+  zen there too, but VS Code's own binding would do that alone, so the spec cannot tell the PDF's binding works. VS
+  Code 1.141 on Linux was tried before the floating bar was removed. Cursor has its own panes in zen; they were not
+  tried.

@@ -160,6 +160,9 @@ const createTree: WorkbenchViews["tree"] = (viewId, source, options) => {
       changed.fire(node);
     },
     collapseAll: () => collapseAll(view, expansion, viewId),
+    // TreeItem.id "is used to preserve the selection and expansion state of
+    // the tree item" (VS Code API), and treeItem() sets it.
+    keepsExpansion: true,
     get visible() {
       return view.visible;
     },

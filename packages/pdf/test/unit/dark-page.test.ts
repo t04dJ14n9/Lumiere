@@ -84,6 +84,20 @@ test("a pixel the forced render draws opaque is a picture and stays as it was", 
   assert.deepEqual([...normal.slice(8, 11)], [...DARK_PALETTE.background]);
 });
 
+test("a picture's edge pixel stays as authored when mostly picture, and is inverted when mostly paper", () => {
+  const edge: [number, number, number] = [120, 160, 200];
+  const normal = pixels(edge, edge);
+  darkenPage(normal, forcedAlphas(200, 60));
+  assert.deepEqual([...normal.slice(0, 3)], edge, "mostly picture");
+  assert.deepEqual([...normal.slice(4, 7)], darkColor(...edge), "mostly paper");
+});
+
+test("ink stacked many layers deep is still ink, not a picture", () => {
+  const normal = pixels([0, 0, 0]);
+  darkenPage(normal, forcedAlphas(40));
+  assert.deepEqual([...normal.slice(0, 3)], [...DARK_PALETTE.ink]);
+});
+
 test("a run of one colour broken by a picture is still inverted on both sides", () => {
   const red: [number, number, number] = [217, 51, 51];
   const normal = pixels(red, red, [10, 10, 10], red, red);

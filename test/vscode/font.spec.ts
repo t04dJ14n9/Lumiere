@@ -214,9 +214,14 @@ test("the note's lines are the line height setting times the size (1.5 by defaul
         .poll(async () => (await workbenchLines(frame)).text)
         .toBeCloseTo(expected, 1);
       // CodeMirror sizes the gutter in its next measure, a frame after the
-      // text reflows: read the line numbers once they have caught up.
+      // text reflows (0 to 7 ms measured): read the line numbers once they
+      // have caught up. Not bounded tighter: as the first case of a full run
+      // they have taken over a second, while VS Code was still reading the
+      // settings the previous spec restored.
       await expect
-        .poll(async () => (await workbenchLines(frame)).number)
+        .poll(async () => (await workbenchLines(frame)).number, {
+          message: `${label} number`,
+        })
         .toBeCloseTo(expected, 1);
       const lines = await workbenchLines(frame);
       expect(lines.size, label).toBe(`${size}px`);

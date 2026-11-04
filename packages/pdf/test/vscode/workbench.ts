@@ -339,6 +339,26 @@ export const PAGE_STATUS = /^Page \d+ \/ \d+$/u;
 export const ZOOM_STATUS = /^(Fit (Width|Page) \()?\d+%\)?$/u;
 
 /**
+ * Type `number` into the Go to Page box that `open` shows (the status bar's
+ * page entry, or Ctrl+G), and wait until that page is at the top.
+ */
+export async function goToPage(
+  page: Page,
+  viewer: Frame,
+  number: number,
+  open: () => Promise<void>,
+): Promise<void> {
+  await open();
+  const input = quickInputTitled(page, /^Go to Page/u);
+  // The box opens first and gets its value (the current page) after: typing
+  // before then would be overwritten.
+  await expect(input).toHaveValue(/^\d+$/u);
+  await input.fill(String(number));
+  await input.press("Enter");
+  await expect.poll(() => pageAtTop(viewer, number)).toBe(true);
+}
+
+/**
  * Show a page by clicking the status bar's page entry and typing it, and
  * wait until it is at the top.
  */
@@ -347,14 +367,9 @@ export async function showPage(
   viewer: Frame,
   number: number,
 ): Promise<void> {
-  await statusBarEntry(page, PAGE_STATUS).click();
-  const input = quickInputTitled(page, /^Go to Page/u);
-  // The box opens first and gets its value (the current page) after: typing
-  // before then would be overwritten.
-  await expect(input).toHaveValue(/^\d+$/u);
-  await input.fill(String(number));
-  await input.press("Enter");
-  await expect.poll(() => pageAtTop(viewer, number)).toBe(true);
+  await goToPage(page, viewer, number, () =>
+    statusBarEntry(page, PAGE_STATUS).click(),
+  );
   await expect(
     viewer.locator(`.page[data-page-index="${number - 1}"] img`),
   ).toBeVisible();

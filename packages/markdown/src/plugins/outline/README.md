@@ -22,8 +22,11 @@ through the whole-tree collapse, which flashes the outline shut and open
 again, so the accordion uses it only when a branch that is open is not on
 the new path (leaving a chapter or a section that has subsections); a move
 that only opens rows (into a section that has subsections, or deeper) opens
-them and collapses nothing. `all` starts every parent expanded and follow only
-selects. Version and panel identity guards discard stale captures. Collapse All uses VS Code's native tree action;
+them and collapses nothing. Rows stay open across the refresh an edit makes
+(VS Code keeps them by id), so typing does not flash the tree either. Follows
+change the tree one at a time; hosts without the native collapse close the
+other rows one by one whenever the path changes. `all` starts every parent
+expanded and follow only selects. Version and panel identity guards discard stale captures. Collapse All uses VS Code's native tree action;
 Expand All reveals every node in order so deeply nested headings also expand.
 Clicking a heading opens the note at its offset; the links plugin's `navigate` then
 scrolls that offset to the vertical centre of the editor, as VS Code's Outline

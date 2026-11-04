@@ -413,6 +413,136 @@ test("moving into a section that has sub-sections only opens rows, without colla
   assert.equal(fixture.reveals.at(-1)?.node.label, "A2");
 });
 
+// Each pause in typing refreshes the outline. VS Code keeps the open rows
+// across the refresh, so the next follow must not collapse the whole tree.
+test("an edit's refresh leaves the open rows alone, so the tree does not flash while typing", async (t) => {
+  const text = "# A\nintro\n## A1\n### A1a\nleaf\n## A2\nlast\n";
+  const fixture = await outlineFixture({ "A.md": text });
+  t.after(() => fixture.root.dispose());
+  const { panel, cursor } = fixture.panel("one");
+  fixture.open(panel);
+  await tick();
+  cursor.head = text.indexOf("leaf");
+  fixture.root.emit("editor/selectionChanged", panel, false);
+  await tick();
+  const collapses = fixture.collapseAllCount;
+  const typed = text.replace("leaf", "leafy");
+  fixture.texts.set("A.md", typed);
+  cursor.documentVersion++;
+  cursor.version++;
+  cursor.head = typed.indexOf("leafy") + 5;
+  fixture.root.emit("document/changed", panel.session);
+  await wait(350);
+  assert.equal(fixture.collapseAllCount, collapses, "nothing flashes shut");
+  assert.equal(fixture.isOpen("A1"), true);
+  assert.equal(fixture.reveals.at(-1)?.node.label, "A1a");
+});
+
+const TWO_CHAPTERS =
+  "# A\nintro\n## A1\n### A1a\nleaf\n# B\n## B1\n### B1a\nbleaf\n";
+
+test("a follow waits for the one before it, so an older expand cannot leave its branch open", async (t) => {
+  const fixture = await outlineFixture({ "A.md": TWO_CHAPTERS });
+  t.after(() => fixture.root.dispose());
+  const { panel, cursor } = fixture.panel("one");
+  fixture.open(panel);
+  await tick();
+  cursor.head = TWO_CHAPTERS.indexOf("intro");
+  fixture.root.emit("editor/selectionChanged", panel, false);
+  await tick();
+  const collapses = fixture.collapseAllCount;
+  const release = fixture.holdExpands();
+  // Into A1: its expand is still on its way when the reader moves on to B.
+  cursor.head = TWO_CHAPTERS.indexOf("leaf");
+  fixture.root.emit("editor/selectionChanged", panel, false);
+  await tick();
+  cursor.head = TWO_CHAPTERS.indexOf("bleaf");
+  fixture.root.emit("editor/selectionChanged", panel, false);
+  await tick();
+  release();
+  await wait(10);
+  assert.equal(fixture.collapseAllCount, collapses + 1);
+  assert.equal(fixture.isOpen("A1"), false, "the older follow's row closed");
+  assert.equal(fixture.isOpen("B"), true);
+  assert.equal(fixture.isOpen("B1"), true);
+  assert.equal(fixture.reveals.at(-1)?.node.label, "B1a");
+});
+
+test("after a follow fails partway, the next one lays the whole path out again", async (t) => {
+  const fixture = await outlineFixture({ "A.md": TWO_CHAPTERS });
+  t.after(() => fixture.root.dispose());
+  const { panel, cursor } = fixture.panel("one");
+  fixture.open(panel);
+  await tick();
+  cursor.head = TWO_CHAPTERS.indexOf("intro");
+  fixture.root.emit("editor/selectionChanged", panel, false);
+  await tick();
+  fixture.failNextExpand();
+  cursor.head = TWO_CHAPTERS.indexOf("leaf");
+  fixture.root.emit("editor/selectionChanged", panel, false);
+  await tick();
+  assert.equal(fixture.warnings.length, 1, "the failure is logged");
+  assert.equal(fixture.isOpen("A1"), false);
+  const collapses = fixture.collapseAllCount;
+  cursor.head = TWO_CHAPTERS.indexOf("leaf") + 1;
+  fixture.root.emit("editor/selectionChanged", panel, false);
+  await tick();
+  assert.equal(fixture.collapseAllCount, collapses + 1);
+  assert.equal(fixture.isOpen("A1"), true);
+});
+
+test("turning follow off and on forgets what the accordion opened", async (t) => {
+  const fixture = await outlineFixture({ "A.md": TWO_CHAPTERS });
+  t.after(() => fixture.root.dispose());
+  const { panel, cursor } = fixture.panel("one");
+  fixture.open(panel);
+  await tick();
+  cursor.head = TWO_CHAPTERS.indexOf("leaf");
+  fixture.root.emit("editor/selectionChanged", panel, false);
+  await tick();
+  fixture.fake.settings[FOLLOW_CURSOR_SETTING] = false;
+  fixture.configure();
+  await tick();
+  const collapses = fixture.collapseAllCount;
+  // Meanwhile the reader may open other chapters by hand. Turning follow back
+  // on follows the caret, on the same path as before.
+  fixture.fake.settings[FOLLOW_CURSOR_SETTING] = true;
+  fixture.configure();
+  await tick();
+  assert.equal(
+    fixture.collapseAllCount,
+    collapses + 1,
+    "the tree is laid out again, closing what the reader opened",
+  );
+  assert.equal(fixture.isOpen("A1"), true);
+  assert.equal(fixture.reveals.at(-1)?.node.label, "A1a");
+});
+
+test("a tree without a native collapse-all closes the other rows one by one whenever the path changes", async (t) => {
+  const fixture = await outlineFixture(
+    { "A.md": TWO_CHAPTERS },
+    { native: false },
+  );
+  t.after(() => fixture.root.dispose());
+  const { panel, cursor } = fixture.panel("one");
+  fixture.open(panel);
+  await tick();
+  cursor.head = TWO_CHAPTERS.indexOf("intro");
+  fixture.root.emit("editor/selectionChanged", panel, false);
+  await tick();
+  fixture.collapses.length = 0;
+  // Only rows to open: such a tree still closes the others, which costs no flash.
+  cursor.head = TWO_CHAPTERS.indexOf("leaf");
+  fixture.root.emit("editor/selectionChanged", panel, false);
+  await tick();
+  assert.deepEqual(
+    fixture.collapses.map((node) => node.label),
+    ["B", "B1"],
+  );
+  assert.equal(fixture.isOpen("A1"), true);
+  assert.equal(fixture.collapseAllCount, 0);
+});
+
 test("accordion chapter switch closes the prior path in the tree UI", async (t) => {
   const fixture = await outlineFixture({ "A.md": NESTED });
   t.after(() => fixture.root.dispose());

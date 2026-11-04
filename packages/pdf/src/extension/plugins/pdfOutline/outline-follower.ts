@@ -198,28 +198,25 @@ export class OutlineFollower implements vscode.Disposable {
     const opened = this.opened;
     const mustClose =
       !opened || opened.some((branch) => !branches.includes(branch));
-    // A flat outline has nothing to open or close.
-    const hasBranches = this.provider.nodes.some(
-      (node) => node.children.length,
-    );
-    let toOpen = branches.filter((branch) => !opened?.includes(branch));
-    if (mustClose && hasBranches) {
+    // A flat outline has nothing to close (and `branches` is empty).
+    if (mustClose && this.provider.nodes.some((node) => node.children.length)) {
       await vscode.commands.executeCommand(
         `workbench.actions.treeView.${VIEW_ID}.collapseAll`,
       );
-      toOpen = branches;
     }
-    if (hasBranches) {
-      for (const branch of toOpen) {
-        if (this.disposed) {
-          return;
-        }
-        await this.view.reveal(branch, {
-          select: false,
-          focus: false,
-          expand: true,
-        });
+    const toOpen =
+      mustClose || !opened
+        ? branches
+        : branches.filter((branch) => !opened.includes(branch));
+    for (const branch of toOpen) {
+      if (this.disposed) {
+        return;
       }
+      await this.view.reveal(branch, {
+        select: false,
+        focus: false,
+        expand: true,
+      });
     }
     this.opened = branches;
     if (!this.disposed) {
