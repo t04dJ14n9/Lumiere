@@ -40,14 +40,16 @@ input {
    */
   --selection-source: var(--vscode-editor-selectionBackground, #264f78);
   /*
-   * Text selection: 40% of that colour on white, but solid. EmbedPDF draws a
-   * box per line and multiplies them onto the page as one, so boxes that
-   * overlap (tight lines, a larger word) would darken twice if see-through.
-   * `/ 1` drops the theme colour's own transparency (Cursor Light's is 8%).
+   * Text selection: solid fill for the EmbedPDF isolation group. page.css
+   * forces mix-blend-mode: normal + wrapper opacity (~0.45) on both themes so
+   * overlapping line boxes do not double-darken and glyphs stay readable.
+   * Mix is stronger than the old multiply-era 40% so the tint still reads
+   * after group opacity. `/ 1` drops the theme colour's own transparency
+   * (Cursor Light's is 8%).
    */
   --selection-fill: color-mix(
     in srgb,
-    oklch(from var(--selection-source) clamp(0.45, l, 0.7) c h / 1) 40%,
+    oklch(from var(--selection-source) clamp(0.45, l, 0.7) c h / 1) 90%,
     white
   );
   --selection-soft: oklch(
