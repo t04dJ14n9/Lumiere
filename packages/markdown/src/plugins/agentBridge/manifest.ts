@@ -1,7 +1,7 @@
 import { defineManifest } from "../../shared/manifest";
 export default defineManifest({
   id: "agentBridge",
-  title: "Copy Link for Agent",
+  title: "Copy link to this",
   description:
     "Copy selected text with a link to its saved source lines, for an agent.",
   kind: "feature",
@@ -21,7 +21,7 @@ export default defineManifest({
     commands: [
       {
         id: "copyLinkForAgent",
-        title: "Copy Link for Agent",
+        title: "Copy link to this",
         icon: "$(comment-discussion)",
         editorCommand: "copyLinkForAgent",
       },

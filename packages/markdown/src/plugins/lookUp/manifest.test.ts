@@ -20,7 +20,7 @@ test("Look Up is in the note's menu on macOS only, over the note's text", async 
   }
 });
 
-test("Look Up follows Copy Link for Agent in the menu and stays out of the palette", async () => {
+test("Look Up follows Copy link to this in the menu and stays out of the palette", async () => {
   const generated = await contributions();
   const group = (command: string) =>
     generated.menus["webview/context"].find(

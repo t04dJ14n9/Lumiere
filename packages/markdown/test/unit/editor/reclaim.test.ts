@@ -9,6 +9,7 @@ import {
   shouldReclaim,
   shouldHoldNativeAfterReclaim,
   shouldWarmBeforeReclaim,
+  nativeStayBlocks,
   TabSwaps,
 } from "../../../src/host/reclaim-policy";
 import type {
@@ -123,8 +124,42 @@ test("a switch into Cursor's input-less Markdown editor is reclaimed", () => {
   );
 });
 
-test("a new input-less tab is left alone: its label could be Cursor's plan editor", () => {
-  assert.equal(shouldReclaim(swap("none", "other"), context), false);
+test("a restored or primary Cursor Markdown tab is reclaimed when its label names a note", () => {
+  // adoptOpenTabs and a first open classify as none→other. labelUri only
+  // resolves when exactly one open textDocument matches the tab label, so a
+  // plan editor without that document never reaches shouldReclaim. Reclaiming
+  // none→other restores Lumia menus (Copy link / Format) on the Preview|
+  // Markdown repro path.
+  assert.equal(shouldReclaim(swap("none", "other"), context), true);
+  assert.equal(
+    shouldReclaim(swap("none", "other"), {
+      ...context,
+      associated: () => false,
+    }),
+    false,
+  );
+});
+
+test("readerText sticks text only; Cursor Markdown still reclaims to Lumia", () => {
+  const stay = { bypass: false, handoff: false, readerText: true };
+  assert.equal(nativeStayBlocks("text", stay), true);
+  assert.equal(nativeStayBlocks("other", stay), false);
+  assert.equal(
+    nativeStayBlocks("other", {
+      bypass: true,
+      handoff: false,
+      readerText: true,
+    }),
+    true,
+  );
+  assert.equal(
+    nativeStayBlocks("other", {
+      bypass: false,
+      handoff: true,
+      readerText: false,
+    }),
+    true,
+  );
 });
 
 test("the handoff from Cursor Markdown into Workshop is left in place", () => {

@@ -731,10 +731,31 @@ test("an input-less dirty Cursor tab awaits warming before the custom-editor han
   );
 });
 
-test("a new input-less tab is left alone, since Cursor's plan editor has one too", async (t) => {
+test("a primary Cursor Markdown tab whose label names a note is reclaimed", async (t) => {
+  // cursorTab opens a matching textDocument so labelUri resolves. Plan editors
+  // without that document never classify (no URI) and stay alone.
   const stop = host.reclaim.registerReclaim();
   t.after(() => stop.dispose());
   tabsChanged.fire({ opened: [cursorTab()], changed: [], closed: [] });
+  await tick();
+  assert.equal(commands.length, 1);
+  assert.equal(commands[0]?.[0], "vscode.openWith");
+  assert.equal(commands[0]?.[2], viewType);
+});
+
+test("an input-less tab with no matching note document is left alone", async (t) => {
+  const stop = host.reclaim.registerReclaim();
+  t.after(() => stop.dispose());
+  const tab: Tab = {
+    input: undefined,
+    label: "Plan",
+    isDirty: false,
+    isPreview: false,
+    group,
+  };
+  group.tabs.push(tab);
+  group.activeTab = tab;
+  tabsChanged.fire({ opened: [tab], changed: [], closed: [] });
   await tick();
   assert.deepEqual(warmed, []);
   assert.deepEqual(commands, []);

@@ -158,7 +158,7 @@ export async function contributions() {
           default: "auto",
           scope: "window",
           markdownDescription:
-            "Which chat **Copy Link for Agent** opens after copying the link and passage. Extensions cannot see which agent you are working in, so `auto` only opens a chat when the editor's own chat is the only agent; pick one here to send the passage to it.",
+            "Which chat **Copy link to this** opens after copying the link and passage. Extensions cannot see which agent you are working in, so `auto` only opens a chat when the editor's own chat is the only agent; pick one here to send the passage to it.",
         },
         [contributionId("debug.logging")]: {
           type: "boolean",
@@ -252,7 +252,7 @@ function contributionKeyWhen(
  * webview/context must use `webviewId` (VS Code docs), not
  * `activeCustomEditorId`. The latter is a workbench key that is not always
  * true while the webview context menu is built (seen on Windows/Cursor
- * remote as Cut/Copy/Paste only — no Copy Link for Agent / formatting).
+ * remote as Cut/Copy/Paste only — no Copy link to this / formatting).
  * PDF already gates on webviewId; match that.
  */
 function menuEnablement(

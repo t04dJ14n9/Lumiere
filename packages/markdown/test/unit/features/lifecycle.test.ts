@@ -61,7 +61,7 @@ async function renderHooks(root: RootContext) {
 }
 
 // Plugins that only post-process rendered HTML, or only contribute commands
-// and selection-menu items (Copy Link for Agent), add no editor extensions.
+// and selection-menu items (Copy link to this), add no editor extensions.
 const noEditorExtensions = new Set([
   "onlineVideos",
   "agentBridge",
@@ -118,7 +118,7 @@ for (const manifest of features) {
     if (manifest.id === "agentBridge") {
       assert.deepEqual(
         activeMenu.map((item) => item.label),
-        ["Copy Link for Agent"],
+        ["Copy link to this"],
       );
       const ranked = await f.root.pipeline("editor/selectionMenu", [
         { label: "Clear selected cells", run: () => {} },
@@ -126,7 +126,7 @@ for (const manifest of features) {
       ]);
       assert.deepEqual(
         ranked.map((item) => item.label),
-        ["Copy Link for Agent", "Clear selected cells", "Cut"],
+        ["Copy link to this", "Clear selected cells", "Cut"],
       );
     }
     if (

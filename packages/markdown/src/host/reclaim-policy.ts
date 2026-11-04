@@ -68,9 +68,12 @@ export function shouldReclaim(
  * A text tab names its note. By default reclaim only a new text tab
  * (`before === "none"`). With `reclaimInPlace`, also reclaim when the note was
  * not already text (`before !== "text"`): workbench→text (Claude) and
- * other→text. An input-less tab is matched by its label, which Cursor's plan
- * editor and its other input-less editors share, so only one that replaced
- * the note's own tab is known to be Cursor's Markdown editor.
+ * other→text. Cursor's Markdown editor (`other`) has no public tab input; its
+ * URI comes from `labelUri` only when exactly one open textDocument matches
+ * the tab label, so a plan editor without that document never reaches
+ * `shouldReclaim`. Reclaim any arrival into `other` except other→other —
+ * including none→other (restored window / primary Cursor Markdown open) —
+ * so Preview|Markdown does not strand the note without Lumia menus.
  */
 export function landsInNativeEditor(
   { before, after }: TabSwap,
@@ -79,7 +82,23 @@ export function landsInNativeEditor(
   if (after === "text") {
     return reclaimInPlace ? before !== "text" : before === "none";
   }
-  return after === "other" && (before === "workbench" || before === "text");
+  return after === "other" && before !== "other";
+}
+
+/**
+ * Whether a native opt-out should skip reclaim for this arrival. Open as Text /
+ * Claude in-place `readerText` keeps the **text** editor only. Cursor Markdown
+ * (`other`, Preview|Markdown) has no Lumia webview menus — reclaim it unless a
+ * short textBypass window or Cursor Edit handoff lease still applies.
+ */
+export function nativeStayBlocks(
+  after: TabKind,
+  stay: { bypass: boolean; handoff: boolean; readerText: boolean },
+): boolean {
+  if (stay.bypass || stay.handoff) {
+    return true;
+  }
+  return after !== "other" && stay.readerText;
 }
 
 /** What reclaim reads from one tab. */

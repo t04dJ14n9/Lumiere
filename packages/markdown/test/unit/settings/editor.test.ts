@@ -310,7 +310,7 @@ test("agent commands copy a reference or open a reference the user already copie
       .filter((command) => /agent/i.test(command.command))
       .map((command) => command.title),
     [
-      "Copy Link for Agent",
+      "Copy link to this",
       "Open Copied Agent Reference",
       "Copy Wiki Reference for Agent",
     ],
