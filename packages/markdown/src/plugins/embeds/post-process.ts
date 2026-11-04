@@ -3,7 +3,7 @@ import type { Resource, Resources } from "../resources/api";
 import { mediaKind } from "../../shared/media-kinds";
 import { mediaRecovery } from "./webm";
 import { inspectImage } from "./image-dialog";
-import { mountImageEmbedActions } from "./embed-actions";
+import { IMAGE_EMBED, mountImageEmbedActions } from "./embed-actions";
 import { embeddedNote, MissingSection } from "./note";
 import { renderBaseEmbed } from "./base-embed";
 import { mountPdfEmbed } from "./pdf-embed";
@@ -109,10 +109,12 @@ class EmbedPass implements PassEmbeds {
     if (!this.ownTitles.has(node)) {
       this.ownTitles.set(node, node.title);
     }
+    node.classList.remove(IMAGE_EMBED);
     node.classList.add("unresolved-embed");
     node.textContent = missingEmbedText(target, {
       note: noteName(pass.documentUri),
       section: error instanceof MissingSection,
+      image: node instanceof HTMLImageElement,
     });
     node.title = String(error);
     pass.measure();
@@ -262,8 +264,14 @@ class EmbedPass implements PassEmbeds {
     image.addEventListener(
       "error",
       () => {
-        image.alt = `Could not load ${target}`;
-        pass.measure();
+        if (!this.isActive) {
+          return;
+        }
+        const surface =
+          image.parentElement?.classList.contains(IMAGE_EMBED) === true
+            ? image.parentElement
+            : node;
+        this.showError(surface, target, new Error(`Could not load ${target}`));
       },
       { signal: this.events.signal },
     );
@@ -402,13 +410,20 @@ class EmbedPass implements PassEmbeds {
  */
 export function missingEmbedText(
   target: string,
-  missing: { note?: string | undefined; section?: boolean } = {},
+  missing: {
+    note?: string | undefined;
+    section?: boolean;
+    image?: boolean;
+  } = {},
 ): string {
   const path = target.split("|")[0]!.trim();
   const hash = path.indexOf("#");
   if (missing.section && hash >= 0) {
     const note = path.slice(0, hash).split("/").at(-1) || missing.note;
     return `Unable to find “${path.slice(hash + 1)}” in ${note ?? "this note"}`;
+  }
+  if (missing.image || mediaKind(path) === "image") {
+    return "failed to fetch image";
   }
   return `"${path}" could not be found.`;
 }
