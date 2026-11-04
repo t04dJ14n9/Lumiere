@@ -297,7 +297,6 @@ function reopenableTab(request: ReclaimRequest): vscode.Tab | undefined {
     : undefined;
 }
 
-
 async function markdownFileExists(uri: vscode.Uri): Promise<boolean> {
   try {
     await vscode.workspace.fs.stat(uri);
