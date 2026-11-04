@@ -2,16 +2,16 @@ import test from "node:test";
 import assert from "node:assert/strict";
 import {
   isMarkdownAbsentOnDisk,
-  isMissingMarkdownFileUri,
+  isMarkdownFileUri,
   setMarkdownAbsentOnDiskForTests,
 } from "../../../src/host/markdown-absent-on-disk";
 
-test("isMissingMarkdownFileUri accepts file Markdown paths only", () => {
-  assert.equal(isMissingMarkdownFileUri("file:///vault/test.md"), true);
-  assert.equal(isMissingMarkdownFileUri("file:///vault/Note.markdown"), true);
-  assert.equal(isMissingMarkdownFileUri("file:///vault/a.ts"), false);
-  assert.equal(isMissingMarkdownFileUri("untitled:test.md"), false);
-  assert.equal(isMissingMarkdownFileUri("git:/vault/Note.md"), false);
+test("isMarkdownFileUri accepts file Markdown paths only", () => {
+  assert.equal(isMarkdownFileUri("file:///vault/test.md"), true);
+  assert.equal(isMarkdownFileUri("file:///vault/Note.markdown"), true);
+  assert.equal(isMarkdownFileUri("file:///vault/a.ts"), false);
+  assert.equal(isMarkdownFileUri("untitled:test.md"), false);
+  assert.equal(isMarkdownFileUri("git:/vault/Note.md"), false);
 });
 
 test("isMarkdownAbsentOnDisk uses the test override without touching disk", () => {

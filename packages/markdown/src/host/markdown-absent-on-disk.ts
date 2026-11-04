@@ -26,13 +26,13 @@ export function setMarkdownAbsentOnDiskForTests(check?: AbsentOnDisk): void {
 }
 
 /** file: Markdown note URI (path ends in .md / .markdown). */
-export function isMissingMarkdownFileUri(uri: string): boolean {
+export function isMarkdownFileUri(uri: string): boolean {
   return /^file:/i.test(uri) && /\.(md|markdown)$/i.test(uriPath(uri));
 }
 
 /** True when a file: Markdown URI has no backing path on disk. */
 export function isMarkdownAbsentOnDisk(fileUri: string): boolean {
-  return isMissingMarkdownFileUri(fileUri) && markdownAbsentOnDisk(fileUri);
+  return isMarkdownFileUri(fileUri) && markdownAbsentOnDisk(fileUri);
 }
 
 function uriPath(uri: string): string {

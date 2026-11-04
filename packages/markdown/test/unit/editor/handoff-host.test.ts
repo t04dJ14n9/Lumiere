@@ -186,7 +186,6 @@ const vscode = {
     },
     onDidOpenTextDocument: opened.event,
     onDidCreateFiles: createdFiles.event,
-    onWillSaveTextDocument: () => ({ dispose() {} }),
     fs: {
       async stat() {
         return { type: 1, ctime: 0, mtime: 0, size: 0 };
@@ -219,18 +218,6 @@ const vscode = {
           new Range(new Position(0, 0), new Position(0, 0)),
       };
       vscode.window.activeTextEditor = editor;
-      // VS Code: opening a preview replaces the group's existing preview tab
-      // (Host GUI: showTextDocument after untitled Lumia openWith wiped Lumia).
-      if (
-        options.preview &&
-        !options.preserveFocus &&
-        group.activeTab?.isPreview
-      ) {
-        group.activeTab.input = new TabInputText(document.uri);
-        group.activeTab.label = document.uri.path.split("/").at(-1)!;
-        group.activeTab.isDirty = document.isDirty;
-        return editor;
-      }
       const match = group.tabs.find((tab) => {
         const input = tab.input as { uri?: Uri } | undefined;
         return input?.uri?.toString() === document.uri.toString();
@@ -246,7 +233,7 @@ const vscode = {
       onDidChangeTabGroups: () => ({ dispose() {} }),
       onDidChangeTabs: tabsChanged.event,
       async close(tab: Tab) {
-        // Reclaim closes clean natives after openWith; dirty tabs stay.
+        assert.equal(tab.isDirty, false, "dirty tabs must survive the handoff");
         group.tabs = group.tabs.filter((candidate) => candidate !== tab);
       },
     },
@@ -271,19 +258,6 @@ const vscode = {
   },
   commands: {
     async executeCommand(id: string, uri?: Uri, ...args: unknown[]) {
-      if (id === "workbench.action.revertAndCloseActiveEditor") {
-        commands.push([id]);
-        const active = group.activeTab;
-        if (active) {
-          active.isDirty = false;
-          group.tabs = group.tabs.filter((candidate) => candidate !== active);
-          if (group.activeTab === active) {
-            group.activeTab = group.tabs[0];
-          }
-        }
-        await afterCommand?.();
-        return;
-      }
       if (uri === undefined) {
         commands.push([id]);
       } else {
@@ -3283,7 +3257,9 @@ test("reclaim skips missing Markdown paths (leaves built-in Text Editor)", async
   const missing = `file:///vault/missing-open/test.md`;
   note = missing;
   host.markdownAbsent.setMarkdownAbsentOnDiskForTests((uri) => uri === missing);
-  t.after(() => host.markdownAbsent.setMarkdownAbsentOnDiskForTests(() => false));
+  t.after(() =>
+    host.markdownAbsent.setMarkdownAbsentOnDiskForTests(() => false),
+  );
 
   const stop = host.reclaim.registerReclaim();
   t.after(() => stop.dispose());
@@ -3325,7 +3301,9 @@ test("reclaim still openWith Lumia for an existing Markdown path", async (t) => 
   note = existing;
   // Present on disk (default beforeEach forces false; keep explicit).
   host.markdownAbsent.setMarkdownAbsentOnDiskForTests(() => false);
-  t.after(() => host.markdownAbsent.setMarkdownAbsentOnDiskForTests(() => false));
+  t.after(() =>
+    host.markdownAbsent.setMarkdownAbsentOnDiskForTests(() => false),
+  );
 
   const stop = host.reclaim.registerReclaim();
   t.after(() => stop.dispose());
@@ -3347,5 +3325,62 @@ test("reclaim still openWith Lumia for an existing Markdown path", async (t) => 
         entry[2] === viewType,
     ),
     "existing Markdown path must openWith Lumia",
+  );
+});
+
+test("after Save makes a missing path exist, a later open reclaims to Lumia", async (t) => {
+  // Product path: skip while absent; once the file exists, a later none→text
+  // open (close/reopen after Save) must openWith Lumia.
+  const pathUri = `file:///vault/missing-open/save-then-reclaim.md`;
+  note = pathUri;
+  let absent = true;
+  host.markdownAbsent.setMarkdownAbsentOnDiskForTests(
+    (uri) => uri === pathUri && absent,
+  );
+  t.after(() =>
+    host.markdownAbsent.setMarkdownAbsentOnDiskForTests(() => false),
+  );
+
+  const stop = host.reclaim.registerReclaim();
+  t.after(() => stop.dispose());
+
+  const first = cursorTab(pathUri);
+  first.input = new TabInputText(Uri.parse(pathUri));
+  first.isDirty = true;
+  first.isPreview = true;
+  documents[0]!.isDirty = true;
+  tabsChanged.fire({ opened: [first], changed: [], closed: [] });
+  await tick();
+  assert.equal(
+    commands.some((entry) => entry[0] === "vscode.openWith"),
+    false,
+    "absent path must not openWith before Save",
+  );
+
+  // Save creates the file; close the dirty Text Editor and reopen clean.
+  absent = false;
+  group.tabs = group.tabs.filter((candidate) => candidate !== first);
+  if (group.activeTab === first) {
+    group.activeTab = group.tabs[0];
+  }
+  tabsChanged.fire({ opened: [], changed: [], closed: [first] });
+  await tick();
+
+  const second = cursorTab(pathUri);
+  second.input = new TabInputText(Uri.parse(pathUri));
+  second.isDirty = false;
+  second.isPreview = true;
+  documents[0]!.isDirty = false;
+  tabsChanged.fire({ opened: [second], changed: [], closed: [] });
+  await tick();
+
+  assert.ok(
+    commands.some(
+      (entry) =>
+        entry[0] === "vscode.openWith" &&
+        entry[1] === pathUri &&
+        entry[2] === viewType,
+    ),
+    "after Save, a later open of the now-existing path must openWith Lumia",
   );
 });
