@@ -19,8 +19,10 @@ test("dark paper forces text selection wrappers to mix-blend-mode normal", () =>
   const css = pageCss();
   // Match a dark-paper rule that targets the EmbedPDF isolation wrapper and
   // sets blend to normal (inline multiply must lose).
+  // Anchor on the isolation attribute selector so a sidecar dark rule above
+  // with mix-blend-mode cannot satisfy this assert across rule boundaries.
   assert.match(
     css,
-    /#root\[data-page-colors="dark"\][\s\S]*?isolation[\s\S]*?mix-blend-mode:\s*normal\s*!important/u,
+    /#root\[data-page-colors="dark"\][^{]*\[style\*="isolation:\s*isolate"\][^{]*\{[^}]*mix-blend-mode:\s*normal\s*!important/u,
   );
 });
