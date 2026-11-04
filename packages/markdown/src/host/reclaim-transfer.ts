@@ -177,9 +177,6 @@ async function reopen(
   navigation?: NativeNavigation,
 ): Promise<void> {
   const target = vscode.Uri.parse(uri);
-  if (await openMissingBridgeIfNeeded(uri, request, target)) {
-    return;
-  }
   // showTextDocument has already materialized a text tab's document. Avoid
   // another warm call and its awaits; Cursor Markdown still needs the reissue.
   const isDocumentOpen = vscode.workspace.textDocuments.some(
@@ -284,40 +281,12 @@ function reopenableTab(request: ReclaimRequest): vscode.Tab | undefined {
     : undefined;
 }
 
-async function markdownFileExists(uri: vscode.Uri): Promise<boolean> {
-  try {
-    await vscode.workspace.fs.stat(uri);
-    return true;
-  } catch (error) {
-    if (isFileNotFoundError(error)) {
-      return false;
-    }
-    throw error;
-  }
-}
-
 function transferBlocked(uri: string, request: ReclaimRequest): boolean {
   return (
     Boolean(request.keepNative) ||
     hasNativeOptOut(uri, request.kind) ||
     Boolean(request.intent?.token.cancelled)
   );
-}
-
-async function openMissingBridgeIfNeeded(
-  uri: string,
-  request: ReclaimRequest,
-  target: vscode.Uri,
-): Promise<boolean> {
-  if (
-    !isMissingMarkdownFileUri(uri) ||
-    transferBlocked(uri, request) ||
-    (await markdownFileExists(target))
-  ) {
-    return false;
-  }
-  await openMissingMarkdownBridge(uri, request);
-  return true;
 }
 
 async function openMissingMarkdownBridge(

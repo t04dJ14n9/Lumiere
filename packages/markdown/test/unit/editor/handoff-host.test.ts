@@ -186,6 +186,12 @@ const vscode = {
     },
     onDidOpenTextDocument: opened.event,
     onDidCreateFiles: createdFiles.event,
+    onWillSaveTextDocument: () => ({ dispose() {} }),
+    fs: {
+      async stat() {
+        return { type: 1, ctime: 0, mtime: 0, size: 0 };
+      },
+    },
     createFileSystemWatcher: () => ({
       dispose() {},
       onDidChange: changedFile.event,

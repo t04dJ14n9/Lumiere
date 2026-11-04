@@ -205,6 +205,10 @@ export function registerMissingOpenBridgeSave(
   bridge: MissingOpenBridge = missingOpenBridge,
   viewType: string = MARKDOWN_EDITOR.viewType,
 ): vscode.Disposable {
+  // Unit fakes may omit willSave; skip registration rather than throw.
+  if (typeof vscode.workspace.onWillSaveTextDocument !== "function") {
+    return { dispose() {} };
+  }
   return vscode.workspace.onWillSaveTextDocument((event) => {
     const bridgeUri = event.document.uri.toString();
     if (!bridge.peek(bridgeUri)) {
