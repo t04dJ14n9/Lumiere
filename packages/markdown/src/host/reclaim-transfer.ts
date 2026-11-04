@@ -18,6 +18,7 @@ import {
 import { hasNativeOptOut } from "./reclaim-opt-out";
 import {
   isFileNotFoundError,
+  isMarkdownAbsentOnDisk,
   isMissingMarkdownFileUri,
   missingOpenBridge,
   openBridgeForMissingMarkdown,
@@ -177,6 +178,13 @@ async function reopen(
   navigation?: NativeNavigation,
 ): Promise<void> {
   const target = vscode.Uri.parse(uri);
+  // Sync disk check (no await): Cursor may already hold a dirty in-memory
+  // TextDocument for a missing file: URI, so openWith never throws
+  // FileNotFound and the catch-bridge would never run.
+  if (isMarkdownAbsentOnDisk(uri) && !transferBlocked(uri, request)) {
+    await openMissingMarkdownBridge(uri, request);
+    return;
+  }
   // showTextDocument has already materialized a text tab's document. Avoid
   // another warm call and its awaits; Cursor Markdown still needs the reissue.
   const isDocumentOpen = vscode.workspace.textDocuments.some(
@@ -303,9 +311,29 @@ async function openMissingMarkdownBridge(
     host: vscodeMissingOpenHost(),
   });
   const left = currentTab(request);
-  if (left && !left.isDirty && !transferBlocked(uri, request)) {
-    await vscode.window.tabGroups.close(left, true);
+  if (!left || transferBlocked(uri, request)) {
+    return;
   }
+  // Missing-file phantoms are often dirty empty buffers Cursor created for a
+  // path that never existed. tabGroups.close keeps dirty tabs; revert+close.
+  if (!left.isDirty) {
+    await vscode.window.tabGroups.close(left, true);
+    return;
+  }
+  const doc = vscode.workspace.textDocuments.find(
+    (document) => document.uri.toString() === uri,
+  );
+  if (doc) {
+    await vscode.window.showTextDocument(doc, {
+      preview: true,
+      preserveFocus: false,
+    });
+    await vscode.commands.executeCommand(
+      "workbench.action.revertAndCloseActiveEditor",
+    );
+    return;
+  }
+  await vscode.window.tabGroups.close(left, true);
 }
 
 function vscodeMissingOpenHost(): MissingOpenBridgeHost {

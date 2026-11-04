@@ -6,8 +6,33 @@
  * intended basename (e.g. `untitled:/…/test.md` → tab `test.md`).
  */
 
+import { existsSync } from "node:fs";
+import { fileURLToPath } from "node:url";
 import * as vscode from "vscode";
 import { MARKDOWN_EDITOR } from "../shared/editor-provider";
+
+type AbsentOnDisk = (fileUri: string) => boolean;
+
+function defaultMarkdownAbsentOnDisk(fileUri: string): boolean {
+  try {
+    return !existsSync(fileURLToPath(fileUri));
+  } catch {
+    // Non-file or unparseable URI: let openWith decide.
+    return false;
+  }
+}
+
+let markdownAbsentOnDisk: AbsentOnDisk = defaultMarkdownAbsentOnDisk;
+
+/** Test-only override; call with no args to restore the real disk check. */
+export function setMarkdownAbsentOnDiskForTests(check?: AbsentOnDisk): void {
+  markdownAbsentOnDisk = check ?? defaultMarkdownAbsentOnDisk;
+}
+
+/** True when a file: Markdown URI has no backing path on disk. */
+export function isMarkdownAbsentOnDisk(fileUri: string): boolean {
+  return isMissingMarkdownFileUri(fileUri) && markdownAbsentOnDisk(fileUri);
+}
 
 /** file: Markdown notes that may use the missing-open bridge. */
 export function isMissingMarkdownFileUri(uri: string): boolean {

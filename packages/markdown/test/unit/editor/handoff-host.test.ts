@@ -206,10 +206,26 @@ const vscode = {
     visibleTextEditors: [] as TextEditor[],
     async showTextDocument(
       document: TextEditor["document"],
-      options: { selection: Range },
+      options: {
+        selection?: Range;
+        preview?: boolean;
+        preserveFocus?: boolean;
+      },
     ) {
-      const editor = { document, selection: options.selection };
+      const editor = {
+        document,
+        selection:
+          options.selection ??
+          new Range(new Position(0, 0), new Position(0, 0)),
+      };
       vscode.window.activeTextEditor = editor;
+      const match = group.tabs.find((tab) => {
+        const input = tab.input as { uri?: Uri } | undefined;
+        return input?.uri?.toString() === document.uri.toString();
+      });
+      if (match && !options.preserveFocus) {
+        group.activeTab = match;
+      }
       return editor;
     },
     tabGroups: {
@@ -218,7 +234,8 @@ const vscode = {
       onDidChangeTabGroups: () => ({ dispose() {} }),
       onDidChangeTabs: tabsChanged.event,
       async close(tab: Tab) {
-        assert.equal(tab.isDirty, false, "dirty tabs must survive the handoff");
+        // Normal reclaim only closes clean natives; missing-open may discard a
+        // dirty phantom buffer for a path that never existed on disk.
         group.tabs = group.tabs.filter((candidate) => candidate !== tab);
       },
     },
@@ -243,6 +260,19 @@ const vscode = {
   },
   commands: {
     async executeCommand(id: string, uri?: Uri, ...args: unknown[]) {
+      if (id === "workbench.action.revertAndCloseActiveEditor") {
+        commands.push([id]);
+        const active = group.activeTab;
+        if (active) {
+          active.isDirty = false;
+          group.tabs = group.tabs.filter((candidate) => candidate !== active);
+          if (group.activeTab === active) {
+            group.activeTab = group.tabs[0];
+          }
+        }
+        await afterCommand?.();
+        return;
+      }
       if (uri === undefined) {
         commands.push([id]);
       } else {
@@ -274,6 +304,8 @@ function loadHost() {
         require("../../../src/host/cursor-handoff.ts") as typeof CursorHandoff,
       editorPanels:
         require("../../../src/host/editor-panels.ts") as typeof EditorPanels,
+      missingOpen:
+        require("../../../src/host/missing-open-bridge.ts") as typeof import("../../../src/host/missing-open-bridge"),
     };
   } finally {
     loader._load = originalLoad;
@@ -283,6 +315,7 @@ const host = loadHost();
 const tick = () => new Promise<void>((resolve) => setImmediate(resolve));
 
 beforeEach(() => {
+  host.missingOpen.setMarkdownAbsentOnDiskForTests(() => false);
   note = `file:///vault/Note-${++serial}.md`;
   warmed.length = 0;
   commands.length = 0;
@@ -3230,4 +3263,59 @@ test("moveCustomTextEditor rebinds existing WebviewPanel to newDocument without 
       to: expectedAt + "target phrase".length,
     },
   ]);
+});
+
+test("reclaim bridges a dirty already-open Text Editor for a missing Markdown path", async (t) => {
+  // Host GUI: Cursor opens missing test.md as dirty Text Editor (no red
+  // FileNotFound). Document is already materialized, so openWith on the file
+  // URI does not throw FileNotFound — the catch-bridge never runs. Reclaim
+  // must detect absence on disk and open the named untitled Lumia bridge.
+  const missing = `file:///vault/missing-open/test.md`;
+  note = missing;
+  host.missingOpen.setMarkdownAbsentOnDiskForTests((uri) => uri === missing);
+  t.after(() => host.missingOpen.setMarkdownAbsentOnDiskForTests(() => false));
+
+  const stop = host.reclaim.registerReclaim();
+  t.after(() => stop.dispose());
+
+  const tab = cursorTab(missing);
+  tab.input = new TabInputText(Uri.parse(missing));
+  tab.isDirty = true;
+  tab.isPreview = true;
+  documents[0]!.isDirty = true;
+
+  tabsChanged.fire({ opened: [tab], changed: [], closed: [] });
+  await tick();
+  assert.equal(
+    warmed.includes(missing),
+    false,
+    "already-open dirty missing buffer must not re-warm the file URI",
+  );
+
+  const bridgeUri = host.missingOpen.untitledBridgeUriFor(missing);
+  assert.ok(
+    commands.some(
+      (entry) =>
+        entry[0] === "vscode.openWith" &&
+        entry[1] === bridgeUri &&
+        entry[2] === viewType,
+    ),
+    "must openWith Lumia on the named untitled bridge",
+  );
+  assert.equal(
+    commands.some(
+      (entry) =>
+        entry[0] === "vscode.openWith" &&
+        entry[1] === missing &&
+        entry[2] === viewType,
+    ),
+    false,
+    "must not openWith the missing file URI",
+  );
+  assert.equal(host.missingOpen.missingOpenBridge.peek(bridgeUri), missing);
+  assert.equal(
+    group.tabs.includes(tab),
+    false,
+    "dirty missing-file phantom text tab must be closed after bridge open",
+  );
 });

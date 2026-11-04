@@ -14,10 +14,12 @@ import { fileURLToPath, pathToFileURL } from "node:url";
 import {
   basenameForIntendedFileUri,
   isFileNotFoundError,
+  isMarkdownAbsentOnDisk,
   isMissingMarkdownFileUri,
   MissingOpenBridge,
   openBridgeForMissingMarkdown,
   persistMissingOpenBridge,
+  setMarkdownAbsentOnDiskForTests,
   untitledBridgeUriFor,
 } from "../../../src/host/missing-open-bridge";
 
@@ -207,4 +209,22 @@ test("persistMissingOpenBridge is a no-op when the bridge is not mapped", async 
     },
   });
   assert.equal(result, undefined);
+});
+
+test("isMarkdownAbsentOnDisk uses the test override without touching disk", () => {
+  try {
+    setMarkdownAbsentOnDiskForTests((uri) => uri.endsWith("ghost.md"));
+    assert.equal(isMarkdownAbsentOnDisk("file:///vault/ghost.md"), true);
+    assert.equal(isMarkdownAbsentOnDisk("file:///vault/real.md"), false);
+    assert.equal(isMarkdownAbsentOnDisk("untitled:/vault/ghost.md"), false);
+  } finally {
+    setMarkdownAbsentOnDiskForTests();
+  }
+});
+
+test("isMarkdownAbsentOnDisk default reports a surely-missing file path", () => {
+  setMarkdownAbsentOnDiskForTests();
+  const missing =
+    "file:///tmp/lumia-definitely-missing-open-bridge-test/nope.md";
+  assert.equal(isMarkdownAbsentOnDisk(missing), true);
 });
