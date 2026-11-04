@@ -1,0 +1,6 @@
+PR #496 Host GUI AFTER @ 668253b4 (jump-window product) / PR tip 4c977d83 docs
+Harness: /workspace/host-gui-496-668253b4/
+VSIX: lumiere-0.1.10-pr496-668253b4.vsix
+01: scroll top-follow — PASS (Chapter A active, caret was in A2)
+02: caret follow — PASS (Subsection A1a active)
+03: outline click jump stable — PASS (Section A2 stayed selected after 1.35s)
