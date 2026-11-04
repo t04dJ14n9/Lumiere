@@ -68,6 +68,20 @@ test("nativeOpeningSelection returns the exact topLine from the pending open", a
   assert.equal(hasTopLineOpen("file:///Note.md", 2), false);
 });
 
+test("hasTopLineOpen treats topLine: 0 as a present pin", async () => {
+  let during: { anchor: number; head: number; topLine?: number } | undefined;
+  await withNativeSelectionOpen(
+    "file:///Note.md",
+    1,
+    () => ({ at: 0, topLine: 0 }),
+    async () => {
+      during = nativeOpeningSelection("file:///Note.md", 1);
+      assert.equal(hasTopLineOpen("file:///Note.md", 1), true);
+    },
+  );
+  assert.deepEqual(during, { anchor: 0, head: 0, topLine: 0 });
+});
+
 test("a caret with topLine still yields an opening selection pin", async () => {
   let during: { anchor: number; head: number; topLine?: number } | undefined;
   await withNativeSelectionOpen(

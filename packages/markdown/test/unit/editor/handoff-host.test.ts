@@ -197,6 +197,7 @@ const vscode = {
     onDidChangeActiveTextEditor: activeEditorChanged.event,
     onDidChangeTextEditorVisibleRanges: visibleRangesChanged.event,
     activeTextEditor: undefined as TextEditor | undefined,
+    visibleTextEditors: [] as TextEditor[],
     async showTextDocument(
       document: TextEditor["document"],
       options: { selection: Range },
@@ -286,6 +287,7 @@ beforeEach(() => {
   group.activeTab = undefined;
   vscode.window.tabGroups.all = [group];
   vscode.window.activeTextEditor = undefined;
+  vscode.window.visibleTextEditors = [];
   beforeOpen = undefined;
   afterCommand = undefined;
   vscode.env.appName = "Cursor";
@@ -1324,6 +1326,62 @@ test("dismiss→Lumia preserves selection and exact top visible line", async () 
       topLine,
     },
     "top visible line identity must match exactly, not nearby",
+  );
+  assert.equal(
+    commands.some((entry) => entry[0] === "vscode.openWith"),
+    true,
+  );
+});
+
+test("dismiss captures mirror range when Chat stole focus but mirror tab remains", async () => {
+  const { nativeOpeningSelection } =
+    await import("../../../src/host/native-selection-open");
+  const surface = host.cursorHandoff.createCursorHandoffSurface();
+  const mirror = cursorTab();
+  mirror.input = new TabInputText(Uri.parse(note));
+  mirror.isDirty = false;
+  group.activeTab = mirror;
+  const lines = Array.from({ length: 40 }, (_, i) => `Line ${i}`);
+  const body = lines.join("\n");
+  const topLine = 12;
+  const selStart = new Position(18, 0);
+  const selEnd = new Position(18, 4);
+  const offsetAt = (position: Position) =>
+    lines
+      .slice(0, position.line)
+      .reduce((length, value) => length + value.length + 1, 0) +
+    position.character;
+  const mirrorEditor: TextEditor = {
+    document: {
+      uri: Uri.parse(note),
+      isDirty: false,
+      version: 1,
+      getText: () => body,
+      positionAt: (offset) => new Position(0, offset),
+      offsetAt,
+    },
+    selection: new Range(selStart, selEnd),
+    visibleRanges: [new Range(new Position(topLine, 0), new Position(30, 0))],
+  };
+  // Chat stole focus: active editor is gone, but the mirror stays visible.
+  vscode.window.activeTextEditor = undefined;
+  vscode.window.visibleTextEditors = [mirrorEditor];
+
+  let during: { anchor: number; head: number; topLine?: number } | undefined;
+  afterCommand = () => {
+    during = nativeOpeningSelection(note, 1);
+  };
+
+  await surface.dismiss(note, { restore: true });
+
+  assert.deepEqual(
+    during,
+    {
+      anchor: offsetAt(selStart),
+      head: offsetAt(selEnd),
+      topLine,
+    },
+    "restore pin must survive Chat focus steal via visible mirror editor",
   );
   assert.equal(
     commands.some((entry) => entry[0] === "vscode.openWith"),
@@ -2830,6 +2888,88 @@ test("registerEditor enables customTextEditorNavigation and revealRange respects
       preserveFocus: true,
     },
   ]);
+});
+
+test("topLine: 0 pin skips center revealNativeSelection on resolve", async (t) => {
+  const { withNativeSelectionOpen, openRange } =
+    await import("../../../src/host/native-selection-open");
+  const panels: PanelShell[] = [];
+  const navigation = host.navigation.createNavigation(() => panels);
+  let openedShell: PanelShell | undefined;
+  const stop = host.editorPanels.registerEditor(
+    MARKDOWN_EDITOR,
+    {
+      extensionUri: Uri.parse("file:///ext") as unknown as NativeUri,
+      documents: {
+        wrap: (doc: { uri: Uri }) =>
+          ({ uri: doc.uri.toString() }) as unknown as PanelShell["document"],
+      } as never,
+      navigation,
+    },
+    (shell) => {
+      openedShell = shell;
+      panels.push(shell);
+    },
+  );
+  t.after(stop);
+
+  const provider = registeredProviders[0]?.provider as {
+    resolveCustomTextEditor(doc: unknown, panel: unknown): void;
+  };
+  const lines = ["Heading", "Search result token", "Tail"];
+  const document = createFakeDoc(note, lines);
+  const panel = createFakeWebviewPanel();
+  const start = lines[1]!.indexOf("result");
+  const selection = new Range(
+    new Position(1, start),
+    new Position(1, start + "result token".length),
+  );
+  // Live selection would otherwise trigger a center reveal.
+  vscode.window.activeTextEditor = {
+    document,
+    selection,
+    viewColumn: 1,
+  };
+
+  const source = lines.join("\n");
+  const at = source.indexOf("result token");
+  const to = at + "result token".length;
+  const received: { at?: number; to?: number }[] = [];
+
+  await withNativeSelectionOpen(
+    note,
+    1,
+    () => openRange({ at, to, topLine: 0 }),
+    async () => {
+      provider.resolveCustomTextEditor(document, panel);
+      assert.ok(openedShell);
+      assert.deepEqual(openedShell.openingSelection, {
+        anchor: at,
+        head: to,
+        topLine: 0,
+      });
+      const unregister = navigation.registerReveal({
+        id: openedShell.id,
+        uri: note,
+        active: () => true,
+        async reveal(target) {
+          received.push({
+            ...(target.at === undefined ? {} : { at: target.at }),
+            ...(target.to === undefined ? {} : { to: target.to }),
+          });
+          return true;
+        },
+      });
+      t.after(unregister);
+    },
+  );
+
+  await tick();
+  assert.deepEqual(
+    received,
+    [],
+    "topLine: 0 must skip center reveal (falsy 0 must not look absent)",
+  );
 });
 
 test("registerEditor relays a native search selection while resolving its custom panel", async (t) => {

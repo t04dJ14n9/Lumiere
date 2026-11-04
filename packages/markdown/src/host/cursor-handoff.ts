@@ -118,12 +118,24 @@ async function dismissMirror(
   }
 }
 
+/** Mirror text editor by active focus, else any still-visible tab for the note. */
+function mirrorTextEditor(targetKey: string): vscode.TextEditor | undefined {
+  const active = vscode.window.activeTextEditor;
+  if (active?.document.uri.toString() === targetKey) {
+    return active;
+  }
+  return vscode.window.visibleTextEditors.find(
+    (candidate) => candidate.document.uri.toString() === targetKey,
+  );
+}
+
 /** Selection + top-line pin for Live Preview after Chat/Edit dismiss. */
 function captureMirrorOpenRange(
   targetKey: string,
 ): NativeOpenRange | undefined {
-  const editor = vscode.window.activeTextEditor;
-  if (!editor || editor.document.uri.toString() !== targetKey) {
+  // Chat may steal focus before dismiss; do not require activeTextEditor.
+  const editor = mirrorTextEditor(targetKey);
+  if (!editor) {
     return undefined;
   }
   const document = editor.document;

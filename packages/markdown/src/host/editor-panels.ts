@@ -11,6 +11,7 @@ import {
 } from "./custom-editor-navigation";
 import type { NativeNavigation } from "./navigation";
 import {
+  hasTopLineOpen,
   isNativeSelectionOpen,
   nativeOpeningSelection,
 } from "./native-selection-open";
@@ -57,8 +58,10 @@ function revealNativeSelection(
   navigation: NativeNavigation | undefined,
   panel: PanelShell,
   selection: { at: number; to: number } | undefined,
+  // topLine: 0 is a real pin — only undefined means "no pin".
+  skipForTopLinePin = false,
 ): void {
-  if (!navigation?.revealPanel || !selection) {
+  if (skipForTopLinePin || !navigation?.revealPanel || !selection) {
     return;
   }
   const intent = navigation.begin();
@@ -224,6 +227,35 @@ async function movePanelToDocument(
   binding.pendingRestore = snapshot;
   open(createPanelShell(provider, newDocument, panel, { host }));
 }
+function resolveEditorPanel(
+  document: vscode.TextDocument,
+  panel: vscode.WebviewPanel,
+  ctx: {
+    provider: EditorProvider;
+    host: EditorHost;
+    open: (panel: PanelShell) => void;
+  },
+): void {
+  const uri = document.uri.toString();
+  const selection = currentNativeSelection(document);
+  const column = panel.viewColumn ?? vscode.ViewColumn.One;
+  const openingSelection = openingSelectionFor(uri, column, selection);
+  const shell = createPanelShell(ctx.provider, document, panel, {
+    host: ctx.host,
+    openedFromNativeSelection:
+      selection !== undefined || isNativeSelectionOpen(uri, column),
+    ...(openingSelection ? { openingSelection } : {}),
+  });
+  ctx.open(shell);
+  // topLine pin is applied on first paint; a center reveal would move it.
+  revealNativeSelection(
+    ctx.host.navigation,
+    shell,
+    selection,
+    openingSelection?.topLine !== undefined || hasTopLineOpen(uri, column),
+  );
+}
+
 /** Register `provider` as a custom editor; each panel it opens goes to `open`. */
 export function registerEditor(
   provider: EditorProvider,
@@ -231,32 +263,12 @@ export function registerEditor(
   open: (panel: PanelShell) => void,
 ) {
   enableCustomTextEditorProposals(host.extension);
+  const ctx = { provider, host, open };
   const registration = vscode.window.registerCustomEditorProvider(
     provider.viewType,
     {
       resolveCustomTextEditor(document, panel) {
-        const selection = currentNativeSelection(document);
-        const column = panel.viewColumn ?? vscode.ViewColumn.One;
-        const transferredSelection = isNativeSelectionOpen(
-          document.uri.toString(),
-          column,
-        );
-        const openingSelection = openingSelectionFor(
-          document.uri.toString(),
-          column,
-          selection,
-        );
-        const shell = createPanelShell(provider, document, panel, {
-          host,
-          openedFromNativeSelection:
-            selection !== undefined || transferredSelection,
-          ...(openingSelection ? { openingSelection } : {}),
-        });
-        open(shell);
-        // topLine pin is applied on first paint; a center reveal would move it.
-        if (!openingSelection?.topLine) {
-          revealNativeSelection(host.navigation, shell, selection);
-        }
+        resolveEditorPanel(document, panel, ctx);
       },
       resolveCustomTextEditorNavigation(
         document: vscode.TextDocument,
