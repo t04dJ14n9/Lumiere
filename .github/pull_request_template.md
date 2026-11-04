@@ -37,6 +37,4 @@
 
 ## Screenshots
 
-<!-- Host GUI (PDF backlink overlays / Medium UI): Copy link Quote, overlays,
-     Del split, regions off — see docs/host-gui/pdf-backlink-overlays-checklist.md.
-     Upload shots to the PR body; do not commit PNGs. -->
+<!-- Before and after, for UI changes. -->

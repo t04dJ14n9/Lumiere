@@ -67,7 +67,7 @@ Rectangles are in points from the page's top-left corner, like `viewrect`.
 
 - `src/shared/sidecar-format.ts`, `sidecar-path.ts`, `sidecar-messages.ts`
 - `src/extension/plugins/pdfSidecar` — read / relocate / `reveal` for `#hl-`;
-  upsert writes are ignored
+  all sidecarWrite ops (upsert and delete) are ignored
 - `src/webview/sidecar-store.ts` + `host-messages.ts` — may still receive a
   sidecar list from the host (paint layer is unmounted)
 

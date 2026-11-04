@@ -434,3 +434,32 @@ test("an old sidecar beside the PDF stays readable after switching to a folder; 
   assert.equal(bad.warnings.length, 1, "said once, not per editor");
   assert.match(bad.warnings[0]!, /leaves the workspace/);
 });
+
+test("sidecarWrite delete leaves a pre-existing sidecar untouched", async () => {
+  const h = harness();
+  const existing = format.createSidecar({ source: "paper.pdf" }, [
+    highlight("hl-keep"),
+  ]);
+  h.files.set("/work/papers/paper.pdf.lumiere.md", existing);
+  const pdf = h.panel("/work/papers/paper.pdf");
+  h.sidecars.open(pdf);
+  await settle();
+  assert.deepEqual(pdf.shown.at(-1), [highlight("hl-keep")]);
+  await h.sidecars.write(pdf, {
+    type: "sidecarWrite",
+    load: 1,
+    op: "delete",
+    id: "hl-keep",
+  });
+  assert.equal(
+    h.files.get("/work/papers/paper.pdf.lumiere.md"),
+    existing,
+    "delete must not mutate sidecar after write teardown",
+  );
+  assert.deepEqual(
+    pdf.shown.at(-1),
+    [highlight("hl-keep")],
+    "ignored delete must not clear the in-memory claim from disk",
+  );
+  h.sidecars.dispose();
+});

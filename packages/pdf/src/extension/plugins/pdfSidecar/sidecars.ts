@@ -1,16 +1,13 @@
 import * as vscode from "vscode";
 import {
-  createSidecar,
   highlightFragment,
   parseSidecar,
-  removeHighlight,
   sidecarBelongsTo,
-  upsertHighlight,
   type SidecarHighlight,
 } from "../../../shared/sidecar-format";
 import type { SidecarWrite } from "../../../shared/sidecar-messages";
 import type { PdfPanel } from "../pdf/panel";
-import { readSidecar, writeSidecar } from "./document";
+import { readSidecar } from "./document";
 import { locateSidecar, type SidecarFile } from "./location";
 
 /** What one PDF editor shows from its sidecar. */
@@ -24,16 +21,15 @@ interface PanelSidecar {
 
 /**
  * Legacy sidecar highlights of every open PDF editor: read when it opens and
- * whenever the file changes, and opened from `#hl-…` links. Create/upsert
- * writes are ignored — vault Markdown is the highlight store. Existing
- * `*.pdf.lumiere.md` files are never auto-deleted.
+ * whenever the file changes, and opened from `#hl-…` links. All `sidecarWrite`
+ * ops (upsert and delete) are ignored — vault Markdown is the highlight store
+ * and the webview is untrusted. Existing `*.pdf.lumiere.md` files are never
+ * auto-deleted.
  */
 export class Sidecars implements vscode.Disposable {
   private readonly panels = new Map<PdfPanel, PanelSidecar>();
   /** Editors whose sidecar is still being located: one search each. */
   private readonly attaching = new Map<PdfPanel, Promise<PanelSidecar>>();
-  /** Writes run one at a time: each reads the text the previous one left. */
-  private writing: Promise<unknown> = Promise.resolve();
   private readonly warned = new Set<string>();
 
   /** Start keeping `panel`'s sidecar, until its editor closes. */
@@ -58,14 +54,12 @@ export class Sidecars implements vscode.Disposable {
     }
   }
 
-  /** Apply a write from a viewer. Upserts are ignored after create-path teardown. */
-  write(panel: PdfPanel, message: SidecarWrite): Promise<void> {
-    if (message.op === "upsert") {
-      return Promise.resolve();
-    }
-    const run = this.writing.then(() => this.applyWrite(panel, message));
-    this.writing = run.catch(() => undefined);
-    return run;
+  /**
+   * Ignore every write from the untrusted viewer (upsert and delete). Legacy
+   * sidecars stay readable for `#hl-…` only; vault Markdown is the store.
+   */
+  write(_panel: PdfPanel, _message: SidecarWrite): Promise<void> {
+    return Promise.resolve();
   }
 
   /** Show highlight `id` (a `#hl-…` fragment) in `panel`, and flash it. */
@@ -164,44 +158,6 @@ export class Sidecars implements vscode.Disposable {
     }
   }
 
-  private async applyWrite(
-    panel: PdfPanel,
-    message: SidecarWrite,
-  ): Promise<void> {
-    // Same attach window as reveal: open claims [] before panels.set, so a
-    // sidecarWrite during locate must wait on attaching or the write is dropped
-    // and an optimistic mark vanishes on reload.
-    const state =
-      this.panels.get(panel) ??
-      (await (this.attaching.get(panel) ?? this.track(panel)));
-    await state.loaded;
-    const { uri, owner } = state.file;
-    const before = await readSidecar(uri);
-    if (
-      before !== undefined &&
-      !sidecarBelongsTo(parseSidecar(before), owner)
-    ) {
-      void vscode.window.showWarningMessage(
-        `${basename(uri)} belongs to another PDF named ${owner.source}; the highlight was not saved. Rename the PDF, or set lumiere.pdf.sidecar.location.`,
-      );
-      await this.reload(panel);
-      return;
-    }
-    const after = nextText(before, message, owner);
-    if (after !== undefined && after !== before) {
-      await writeSidecar(uri, before, after);
-    }
-    await this.reloadAllOf(uri);
-  }
-
-  private async reloadAllOf(uri: vscode.Uri): Promise<void> {
-    const key = uri.toString();
-    const same = [...this.panels].filter(
-      ([, state]) => state.file.uri.toString() === key,
-    );
-    await Promise.all(same.map(([panel]) => this.reload(panel)));
-  }
-
   /** Say a problem once per session, not on every editor. */
   private warn(message: string): void {
     if (!this.warned.has(message)) {
@@ -209,21 +165,6 @@ export class Sidecars implements vscode.Disposable {
       void vscode.window.showWarningMessage(message);
     }
   }
-}
-
-function nextText(
-  before: string | undefined,
-  message: SidecarWrite,
-  owner: SidecarFile["owner"],
-): string | undefined {
-  if (message.op === "delete") {
-    return before === undefined
-      ? undefined
-      : removeHighlight(before, message.id);
-  }
-  return before === undefined || before.trim() === ""
-    ? createSidecar(owner, [message.highlight])
-    : upsertHighlight(before, message.highlight);
 }
 
 /** The box around a highlight's lines, which the viewer scrolls to and flashes. */

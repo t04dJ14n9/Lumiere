@@ -11,7 +11,7 @@ import { Sidecars } from "./sidecars";
 /**
  * Legacy PDF sidecar highlights (`paper.pdf.lumiere.md`): read + `#hl-…` open
  * only. New highlights live in vault Markdown / burn into the PDF via EmbedPDF;
- * create/upsert writes are ignored. Stopping the plugin clears the read claim.
+ * all sidecarWrite ops are ignored. Stopping the plugin clears the read claim.
  */
 export const pdfSidecarPlugin: Plugin = {
   name: manifest.id,

@@ -1,5 +1,6 @@
 import * as vscode from "vscode";
 import type { Context, Plugin } from "@workshop/core";
+import { isTrustedBacklinkNoteUri } from "../../../shared/backlink-note-uri";
 import { PdfBacklinkIndex } from "../../../shared/pdf-backlink-index";
 import { displayPath } from "../pdf/files";
 import type { PdfPanel } from "../pdf/panel";
@@ -46,7 +47,23 @@ export const pdfBacklinksPlugin: Plugin = {
 function wireOpenBacklinkNote(ctx: Context, panels: PdfPanels): void {
   ctx.own(
     panels.handle("openBacklinkNote", async (_panel, message) => {
-      const uri = vscode.Uri.parse(message.noteUri);
+      let uri: vscode.Uri;
+      try {
+        uri = vscode.Uri.parse(message.noteUri, true);
+      } catch {
+        return;
+      }
+      if (
+        !isTrustedBacklinkNoteUri({
+          noteUri: message.noteUri,
+          scheme: uri.scheme,
+          path: uri.path,
+          inWorkspace: vscode.workspace.getWorkspaceFolder(uri) !== undefined,
+        })
+      ) {
+        console.warn(`[pdfBacklinks] refused openBacklinkNote (${uri.scheme})`);
+        return;
+      }
       const document = await vscode.workspace.openTextDocument(uri);
       const editor = await vscode.window.showTextDocument(document);
       const position = document.positionAt(message.linkOffset);
