@@ -37,6 +37,9 @@ export class Sidecars implements vscode.Disposable {
 
   /** Start keeping `panel`'s sidecar, until its editor closes. */
   open(panel: PdfPanel): void {
+    // Claim ownership before locate/read await: null means "no sidecar" and the
+    // highlight tool falls through to markPdf(); [] means owned/pending.
+    panel.setSidecar([]);
     void this.track(panel);
   }
 
@@ -161,10 +164,12 @@ export class Sidecars implements vscode.Disposable {
     panel: PdfPanel,
     message: SidecarWrite,
   ): Promise<void> {
-    const state = this.panels.get(panel);
-    if (!state) {
-      return;
-    }
+    // Same attach window as reveal: open claims [] before panels.set, so a
+    // sidecarWrite during locate must wait on attaching or the write is dropped
+    // and an optimistic mark vanishes on reload.
+    const state =
+      this.panels.get(panel) ??
+      (await (this.attaching.get(panel) ?? this.track(panel)));
     await state.loaded;
     const { uri, owner } = state.file;
     const before = await readSidecar(uri);

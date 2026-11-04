@@ -58,7 +58,16 @@ const highlight = (id: string, page = 1): format.SidecarHighlight => ({
   modified: "2026-11-01T18:00:00.000Z",
 });
 
-function harness(settings: Record<string, unknown> = {}) {
+function harness(
+  settings: Record<string, unknown> = {},
+  options: { holdLocate?: boolean } = {},
+) {
+  let releaseLocate = (): void => undefined;
+  const locateHeld = options.holdLocate
+    ? new Promise<void>((resolve) => {
+        releaseLocate = resolve;
+      })
+    : null;
   const files = new Map<string, string>();
   const warnings: string[] = [];
   const watchers: { disposed: boolean }[] = [];
@@ -160,6 +169,20 @@ function harness(settings: Record<string, unknown> = {}) {
     }
     return loaded.get(file);
   };
+  // Wrap locate before Sidecars loads so attach can stay pending under test.
+  const locationExports = load("location") as {
+    locateSidecar: (
+      pdf: Uri,
+      warn: (message: string) => void,
+    ) => Promise<unknown>;
+  };
+  if (locateHeld) {
+    const inner = locationExports.locateSidecar;
+    locationExports.locateSidecar = async (pdf, warn) => {
+      await locateHeld;
+      return inner(pdf, warn);
+    };
+  }
   const { Sidecars } = load("sidecars") as {
     Sidecars: new () => {
       open(panel: unknown): void;
@@ -181,7 +204,14 @@ function harness(settings: Record<string, unknown> = {}) {
       jumps,
     };
   };
-  return { files, warnings, watchers, sidecars: new Sidecars(), panel };
+  return {
+    files,
+    warnings,
+    watchers,
+    sidecars: new Sidecars(),
+    panel,
+    releaseLocate,
+  };
 }
 
 const settle = () => new Promise((resolve) => setImmediate(resolve));
@@ -189,12 +219,74 @@ const settle = () => new Promise((resolve) => setImmediate(resolve));
 /** Objects made inside the module's sandbox, comparable with this realm's. */
 const plain = (value: unknown): unknown => JSON.parse(JSON.stringify(value));
 
+test("write during delayed locate persists the highlight after attach", async () => {
+  const h = harness({}, { holdLocate: true });
+  const pdf = h.panel("/work/papers/paper.pdf");
+  h.sidecars.open(pdf);
+  assert.deepEqual(
+    plain(pdf.shown),
+    [[]],
+    "open still claims [] while locate is held",
+  );
+
+  // sidecarWrite while attaching: panels not set yet; must wait like reveal.
+  const writing = h.sidecars.write(pdf, {
+    type: "sidecarWrite",
+    load: 1,
+    op: "upsert",
+    highlight: highlight("hl-during-attach"),
+  });
+  h.releaseLocate();
+  await writing;
+
+  const text = h.files.get("/work/papers/paper.pdf.lumiere.md");
+  assert.ok(text, "write must create the sidecar once attach finishes");
+  assert.deepEqual(format.parseSidecar(text).highlights, [
+    highlight("hl-during-attach"),
+  ]);
+  assert.deepEqual(
+    pdf.shown.at(-1),
+    [highlight("hl-during-attach")],
+    "panel shows the highlight after attach+write",
+  );
+  h.sidecars.dispose();
+});
+
+test("open claims sidecar with [] before locate/read finishes so Highlight never falls through to markPdf", async () => {
+  const h = harness();
+  h.files.set(
+    "/work/papers/paper.pdf.lumiere.md",
+    format.createSidecar({ source: "paper.pdf" }, [highlight("hl-race")]),
+  );
+  const pdf = h.panel("/work/papers/paper.pdf");
+  h.sidecars.open(pdf);
+  // open() returns before attach awaits locate/read; highlights must already be
+  // non-null ([] = owned/pending) so the highlight tool never takes markPdf().
+  assert.deepEqual(
+    plain(pdf.shown),
+    [[]],
+    "open must setSidecar([]) before any await so highlights are never null while pdfSidecar owns the panel",
+  );
+  await settle();
+  assert.deepEqual(
+    pdf.shown.at(-1),
+    [highlight("hl-race")],
+    "reload still replaces the pending claim with real highlights",
+  );
+  h.sidecars.dispose();
+  assert.equal(pdf.shown.at(-1), null);
+});
+
 test("a PDF's sidecar beside it is read and shown, and a write creates it", async () => {
   const h = harness();
   const pdf = h.panel("/work/papers/paper.pdf");
   h.sidecars.open(pdf);
   await settle();
-  assert.deepEqual(plain(pdf.shown), [[]], "no sidecar yet: no highlights");
+  assert.deepEqual(
+    plain(pdf.shown.at(-1)),
+    [],
+    "no sidecar yet: no highlights",
+  );
   await h.sidecars.write(pdf, {
     type: "sidecarWrite",
     load: 1,
@@ -259,7 +351,7 @@ test("in a sidecar folder, another PDF's sidecar of the same name is neither sho
   const pdf = h.panel("/work/b/paper.pdf");
   h.sidecars.open(pdf);
   await settle();
-  assert.deepEqual(plain(pdf.shown), [[]]);
+  assert.deepEqual(plain(pdf.shown.at(-1)), []);
   await h.sidecars.write(pdf, {
     type: "sidecarWrite",
     load: 1,
