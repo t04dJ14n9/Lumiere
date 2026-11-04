@@ -301,11 +301,12 @@ export class OutlineView {
     if (willReset) {
       this.openBranches = undefined;
     }
+    let opened = new Set<string>();
     try {
       if (willReset) {
         await this.resetAccordion(path, expandIds, isCurrent);
       } else {
-        await this.expandPath(path, new Set(toOpen), isCurrent);
+        opened = await this.expandPath(path, new Set(toOpen), isCurrent);
       }
     } catch (error) {
       // A failed follow leaves the model unknown so the next one lays the
@@ -314,6 +315,12 @@ export class OutlineView {
       throw error;
     }
     if (!isCurrent()) {
+      // Open-only work may have expanded rows before this follow was
+      // superseded. Remember them so a later sibling leave still sees
+      // mustClose (without clearing to unknown, which would flash).
+      if (!willReset && opened.size > 0) {
+        this.openBranches = new Set([...(open ?? []), ...opened]);
+      }
       return;
     }
     this.openBranches = expandIds;
@@ -338,15 +345,20 @@ export class OutlineView {
     path: readonly TreeNode[],
     expandIds: ReadonlySet<string>,
     isCurrent: () => boolean,
-  ): Promise<void> {
+  ): Promise<Set<string>> {
+    const opened = new Set<string>();
     for (const node of path) {
       if (!isCurrent()) {
-        return;
+        return opened;
       }
       if (expandIds.has(node.id)) {
         await this.options.tree.expand(node);
+        // Count the expand even if a newer follow has already taken over:
+        // the row is open in the tree and mustClose must see it next.
+        opened.add(node.id);
       }
     }
+    return opened;
   }
 
   private async collapseOthers(
