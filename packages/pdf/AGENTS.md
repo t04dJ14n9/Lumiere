@@ -11,11 +11,13 @@ are specific to the PDF code. Read README.md for the layout.
   `parseViewerMessage`; add a validator when adding a message.
 - Track editors per panel (`PdfPanels`), never by file path: the same PDF can
   be open twice.
-- Keep the Copy Link for Agent clipboard Quote-first: blockquote then
+- Keep the Copy link clipboard Quote-first: blockquote then
   `basename · p.N` with Chrome `#page=` / `#:~:text=` (and `viewrect=` only when
   regions are enabled; never `#hl-`) — see `packages/agents/docs/agent-handoff-format.md`.
-  UI entry is webview context menu only. The structured selection envelope is a
-  separate contract (`docs/bridge-envelope.md`, command `vscodeEmbedPdf.bridge.envelope`).
+  Clipboard only (no `openAgentChat`); with no selection, copy a page-only link
+  for the reading page. UI entry is webview context menu (enabled whenever the
+  PDF is active). The structured selection envelope is a separate contract
+  (`docs/bridge-envelope.md`, command `vscodeEmbedPdf.bridge.envelope`).
 - Features are plugins (`src/extension/plugins/<id>/`, listed in
   `catalog.ts`). Register every VS Code resource through the plugin's scope
   so it is released when the plugin stops; `test/unit/plugin-leaks.test.ts`

@@ -63,9 +63,9 @@ test("Copy Link for Agent still writes the source-link clipboard text and does n
     assert.equal(
       clipboard[0],
       [
-        "[attention_v2.pdf · p.3](papers/attention_v2.pdf#page=3&viewrect=72,83,134,21)",
-        "",
         "> Scaled dot-product attention",
+        ">",
+        "> [attention_v2.pdf · p.3](papers/attention_v2.pdf#page=3#:~:text=Scaled%20dot%2Dproduct%20attention)",
       ].join("\n"),
     );
     assert.doesNotMatch(clipboard[0] ?? "", /Source:|SHA-256|\\_/u);

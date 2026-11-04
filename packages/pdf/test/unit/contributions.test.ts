@@ -3,7 +3,7 @@ import { test } from "node:test";
 import { extensionManifest, pdfContributes } from "./support/manifest";
 
 interface Contributes {
-  commands: { command: string; title: string }[];
+  commands: { command: string; title: string; enablement?: string }[];
   configuration: { properties: Record<string, unknown> };
   menus: Record<string, { command: string; when?: string }[]>;
   keybindings?: {
@@ -381,4 +381,39 @@ test("PDF location history has distinct commands and does not claim native or Vi
       ),
     );
   }
+});
+
+test("Copy link to this is enabled when the PDF is active even without selection", () => {
+  const command = contributes.commands.find(
+    (entry) => entry.command === "lumiere.pdf.copyLinkForAgent",
+  );
+  assert.ok(command, "Copy link command");
+  assert.match(
+    command!.enablement ?? "",
+    /lumiere\.pdf\.pdfActive/,
+    "enablement requires an active PDF, not a selection",
+  );
+  assert.doesNotMatch(
+    command!.enablement ?? "",
+    /hasSelection/,
+    "enablement must not require hasSelection",
+  );
+  const context = contributes.menus["webview/context"]?.find(
+    (entry) => entry.command === "lumiere.pdf.copyLinkForAgent",
+  );
+  assert.ok(context?.when, "webview/context when");
+  assert.match(context!.when!, /webviewId == 'lumiere\.pdf\.viewer'/);
+  assert.doesNotMatch(
+    context!.when!,
+    /hasSelection/,
+    "context menu must work without a selection",
+  );
+  assert.ok(
+    !contributes.commands.some((entry) => /add notes/iu.test(entry.title)),
+    "no Add notes command",
+  );
+  assert.ok(
+    !JSON.stringify(contributes).includes("Add notes"),
+    "no Add notes contribution",
+  );
 });

@@ -102,7 +102,7 @@
       "title": "Copy link to this",
       "category": "PDF",
       "icon": "$(comment-discussion)",
-      "enablement": "lumiere.pdf.hasSelection"
+      "enablement": "lumiere.pdf.pdfActive"
     },
     {
       "command": "vscodeEmbedPdf.bridge.envelope",
@@ -717,7 +717,7 @@
       },
       {
         "command": "lumiere.pdf.copyLinkForAgent",
-        "when": "webviewId == 'lumiere.pdf.viewer' && lumiere.pdf.hasSelection",
+        "when": "webviewId == 'lumiere.pdf.viewer'",
         "group": "0_agent@1"
       },
       {
@@ -839,7 +839,7 @@
           "Codex: the selection (and a region's snapshot) attached to the thread.",
           "Only copy the selection."
         ],
-        "markdownDescription": "Which agent chat, if any, **Copy link to this** opens with a PDF selection. The link and selection are always copied. Extensions cannot see which agent you are working in, so `auto` only opens a chat when there is a single agent; pick one here to send the selection to it."
+        "markdownDescription": "Legacy agent-target preference for IDE Context / MCP delivery. **Copy link to this** no longer opens agent chat: it only writes a Quote or page link to the clipboard. Pick a target here only when another path (IDE Context or MCP) still routes a selection to an agent."
       },
       "lumiere.pdf.regionImageCache.maxSizeMB": {
         "type": "number",
