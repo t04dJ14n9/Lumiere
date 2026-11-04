@@ -12,6 +12,11 @@ import {
   nativeStayBlocks,
   TabSwaps,
 } from "../../../src/host/reclaim-policy";
+import { hasNativeOptOut } from "../../../src/host/reclaim-opt-out";
+import { readerText } from "../../../src/host/reader-text";
+import { readFileSync } from "node:fs";
+import { fileURLToPath } from "node:url";
+import { dirname, join } from "node:path";
 import type {
   TabChange,
   TabKind,
@@ -160,6 +165,37 @@ test("readerText sticks text only; Cursor Markdown still reclaims to Lumia", () 
     }),
     true,
   );
+});
+
+test("hasNativeOptOut: readerText alone does not block Cursor Markdown transfer", () => {
+  // Transfer calls hasNativeOptOut(uri, request.kind). The default after="text"
+  // would incorrectly keepNative/abort an other (Cursor Markdown) reclaim when
+  // only readerText is stuck — pass kind so other ignores readerText.
+  const uri = "file:///vault/ReaderTextOther.md";
+  readerText.restore(undefined);
+  readerText.keep(uri);
+  try {
+    assert.equal(hasNativeOptOut(uri), true);
+    assert.equal(hasNativeOptOut(uri, "text"), true);
+    assert.equal(hasNativeOptOut(uri, "other"), false);
+  } finally {
+    readerText.clear();
+  }
+
+  const transfer = readFileSync(
+    join(
+      dirname(fileURLToPath(import.meta.url)),
+      "../../../src/host/reclaim-transfer.ts",
+    ),
+    "utf8",
+  );
+  const calls = [...transfer.matchAll(/hasNativeOptOut\(([^)]+)\)/g)].map(
+    (m) => m[1],
+  );
+  assert.equal(calls.length, 3);
+  for (const args of calls) {
+    assert.match(args, /request\.kind/);
+  }
 });
 
 test("the handoff from Cursor Markdown into Workshop is left in place", () => {

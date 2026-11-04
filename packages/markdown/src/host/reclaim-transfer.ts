@@ -189,7 +189,7 @@ async function reopen(
   // transfer that navigation cancelled. keepNative is sticky across bypass TTL.
   if (
     request.keepNative ||
-    hasNativeOptOut(uri) ||
+    hasNativeOptOut(uri, request.kind) ||
     request.intent?.token.cancelled
   ) {
     return;
@@ -212,7 +212,7 @@ async function revealOpenedWatchingOptOut(
   deliver: () => Promise<void>,
 ): Promise<void> {
   const noteOptOut = () => {
-    if (hasNativeOptOut(uri)) {
+    if (hasNativeOptOut(uri, request.kind)) {
       request.keepNative = true;
       request.intent?.token.cancel();
       return true;
@@ -238,7 +238,10 @@ async function revealOpenedWatchingOptOut(
 
 /** Warming can outlive a handoff, a newer jump, or the reader leaving this tab. */
 function reopenableTab(request: ReclaimRequest): vscode.Tab | undefined {
-  if (hasNativeOptOut(request.uri) || request.intent?.token.cancelled) {
+  if (
+    hasNativeOptOut(request.uri, request.kind) ||
+    request.intent?.token.cancelled
+  ) {
     return undefined;
   }
   const native = currentTab(request);
