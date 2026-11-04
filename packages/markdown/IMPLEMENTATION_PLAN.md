@@ -6620,3 +6620,15 @@ leave branches open:
 
 Tests: five new cases in `host.test.ts`, each failing on the previous code.
 
+## Outline accordion: scroll follow no longer flashes on open-only moves (2026-11-04)
+
+#488 stopped the typing-flash by keeping `openBranches` across a refresh when
+the tree keeps expansion. Scrolling still flashed: every accordion follow
+cleared `openBranches` before changing the tree, and a superseded follow
+(reading-position reports arrive while an expand is in flight) left it
+unknown, so the next follow ran `collapseAll` even when the path only needed
+more rows open. The model is now cleared only when that follow will reset the
+tree (or when it fails); an open-only follow that is superseded leaves the
+previous set. PDF's follower never cleared `opened` mid-apply, so it did not
+need the same change. Test: `host.test.ts` scroll-supersede case.
+

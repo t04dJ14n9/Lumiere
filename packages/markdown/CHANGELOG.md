@@ -2,6 +2,13 @@
 
 ## 0.1.0 (unreleased)
 
+- Markdown Outline no longer flashes shut and open while scrolling into a
+  section that only needs more rows open: a follow that is superseded mid-way
+  (common with reading-position reports) keeps the accordion's open-branch
+  model when it did not collapse the tree, so the next follow does not run
+  Collapse All. Leaving a chapter still collapses and can still flash, as in
+  #485.
+
 - Markdown Outline no longer flashes shut and open after each pause in
   typing: the rows the accordion opened stay open across the refresh an edit
   makes. Follows also change the tree one at a time, so a quick move from one
