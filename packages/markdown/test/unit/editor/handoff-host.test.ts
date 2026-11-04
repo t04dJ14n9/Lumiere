@@ -8,6 +8,7 @@ import type * as NativePlatform from "../../../src/host/api/native-platform";
 import type * as CursorHandoff from "../../../src/host/cursor-handoff";
 import type * as HostNavigation from "../../../src/host/navigation";
 import type * as EditorPanels from "../../../src/host/editor-panels";
+import type * as MarkdownAbsent from "../../../src/host/markdown-absent-on-disk";
 import type { PanelShell, RevealPanel } from "../../../src/shared/host";
 import type { Uri as NativeUri } from "vscode";
 import {
@@ -186,6 +187,11 @@ const vscode = {
     },
     onDidOpenTextDocument: opened.event,
     onDidCreateFiles: createdFiles.event,
+    fs: {
+      async stat() {
+        return { type: 1, ctime: 0, mtime: 0, size: 0 };
+      },
+    },
     createFileSystemWatcher: () => ({
       dispose() {},
       onDidChange: changedFile.event,
@@ -200,10 +206,26 @@ const vscode = {
     visibleTextEditors: [] as TextEditor[],
     async showTextDocument(
       document: TextEditor["document"],
-      options: { selection: Range },
+      options: {
+        selection?: Range;
+        preview?: boolean;
+        preserveFocus?: boolean;
+      },
     ) {
-      const editor = { document, selection: options.selection };
+      const editor = {
+        document,
+        selection:
+          options.selection ??
+          new Range(new Position(0, 0), new Position(0, 0)),
+      };
       vscode.window.activeTextEditor = editor;
+      const match = group.tabs.find((tab) => {
+        const input = tab.input as { uri?: Uri } | undefined;
+        return input?.uri?.toString() === document.uri.toString();
+      });
+      if (match && !options.preserveFocus) {
+        group.activeTab = match;
+      }
       return editor;
     },
     tabGroups: {
@@ -268,6 +290,8 @@ function loadHost() {
         require("../../../src/host/cursor-handoff.ts") as typeof CursorHandoff,
       editorPanels:
         require("../../../src/host/editor-panels.ts") as typeof EditorPanels,
+      markdownAbsent:
+        require("../../../src/host/markdown-absent-on-disk.ts") as typeof MarkdownAbsent,
     };
   } finally {
     loader._load = originalLoad;
@@ -277,6 +301,7 @@ const host = loadHost();
 const tick = () => new Promise<void>((resolve) => setImmediate(resolve));
 
 beforeEach(() => {
+  host.markdownAbsent.setMarkdownAbsentOnDiskForTests(() => false);
   note = `file:///vault/Note-${++serial}.md`;
   warmed.length = 0;
   commands.length = 0;
@@ -3224,4 +3249,139 @@ test("moveCustomTextEditor rebinds existing WebviewPanel to newDocument without 
       to: expectedAt + "target phrase".length,
     },
   ]);
+});
+
+test("reclaim skips missing Markdown paths (leaves built-in Text Editor)", async (t) => {
+  // Product lock 2026-11-04: opening a missing .md (e.g. code test.md) may use
+  // the built-in Text Editor dirty buffer until Save. Do not openWith Lumia,
+  // untitled bridge, or FileNotFound UI from Lumia.
+  const missing = `file:///vault/missing-open/test.md`;
+  note = missing;
+  host.markdownAbsent.setMarkdownAbsentOnDiskForTests((uri) => uri === missing);
+  t.after(() =>
+    host.markdownAbsent.setMarkdownAbsentOnDiskForTests(() => false),
+  );
+
+  const stop = host.reclaim.registerReclaim();
+  t.after(() => stop.dispose());
+
+  const tab = cursorTab(missing);
+  tab.input = new TabInputText(Uri.parse(missing));
+  tab.isDirty = true;
+  tab.isPreview = true;
+  documents[0]!.isDirty = true;
+
+  tabsChanged.fire({ opened: [tab], changed: [], closed: [] });
+  await tick();
+
+  assert.equal(
+    commands.some((entry) => entry[0] === "vscode.openWith"),
+    false,
+    "missing path must not openWith Lumia (or any view)",
+  );
+  assert.equal(
+    commands.some(
+      (entry) => entry[0] === "workbench.action.revertAndCloseActiveEditor",
+    ),
+    false,
+    "must not discard the built-in dirty Text Editor buffer",
+  );
+  assert.equal(
+    group.tabs.includes(tab),
+    true,
+    "built-in Text Editor tab for missing path must remain",
+  );
+  assert.ok(
+    group.activeTab?.input instanceof TabInputText,
+    "active editor stays the built-in Text Editor",
+  );
+});
+
+test("reclaim still openWith Lumia for an existing Markdown path", async (t) => {
+  const existing = `file:///vault/missing-open/Welcome.md`;
+  note = existing;
+  // Present on disk (default beforeEach forces false; keep explicit).
+  host.markdownAbsent.setMarkdownAbsentOnDiskForTests(() => false);
+  t.after(() =>
+    host.markdownAbsent.setMarkdownAbsentOnDiskForTests(() => false),
+  );
+
+  const stop = host.reclaim.registerReclaim();
+  t.after(() => stop.dispose());
+
+  const tab = cursorTab(existing);
+  tab.input = new TabInputText(Uri.parse(existing));
+  tab.isDirty = false;
+  tab.isPreview = true;
+  documents[0]!.isDirty = false;
+
+  tabsChanged.fire({ opened: [tab], changed: [], closed: [] });
+  await tick();
+
+  assert.ok(
+    commands.some(
+      (entry) =>
+        entry[0] === "vscode.openWith" &&
+        entry[1] === existing &&
+        entry[2] === viewType,
+    ),
+    "existing Markdown path must openWith Lumia",
+  );
+});
+
+test("after Save makes a missing path exist, a later open reclaims to Lumia", async (t) => {
+  // Product path: skip while absent; once the file exists, a later none→text
+  // open (close/reopen after Save) must openWith Lumia.
+  const pathUri = `file:///vault/missing-open/save-then-reclaim.md`;
+  note = pathUri;
+  let absent = true;
+  host.markdownAbsent.setMarkdownAbsentOnDiskForTests(
+    (uri) => uri === pathUri && absent,
+  );
+  t.after(() =>
+    host.markdownAbsent.setMarkdownAbsentOnDiskForTests(() => false),
+  );
+
+  const stop = host.reclaim.registerReclaim();
+  t.after(() => stop.dispose());
+
+  const first = cursorTab(pathUri);
+  first.input = new TabInputText(Uri.parse(pathUri));
+  first.isDirty = true;
+  first.isPreview = true;
+  documents[0]!.isDirty = true;
+  tabsChanged.fire({ opened: [first], changed: [], closed: [] });
+  await tick();
+  assert.equal(
+    commands.some((entry) => entry[0] === "vscode.openWith"),
+    false,
+    "absent path must not openWith before Save",
+  );
+
+  // Save creates the file; close the dirty Text Editor and reopen clean.
+  absent = false;
+  group.tabs = group.tabs.filter((candidate) => candidate !== first);
+  if (group.activeTab === first) {
+    group.activeTab = group.tabs[0];
+  }
+  tabsChanged.fire({ opened: [], changed: [], closed: [first] });
+  await tick();
+
+  const second = cursorTab(pathUri);
+  second.input = new TabInputText(Uri.parse(pathUri));
+  second.isDirty = false;
+  second.isPreview = true;
+  documents[0]!.isDirty = false;
+  tabsChanged.fire({ opened: [second], changed: [], closed: [] });
+  await tick();
+
+  assert.ok(
+    commands.some(
+      (entry) =>
+        entry[0] === "vscode.openWith" &&
+        entry[1] === pathUri &&
+        entry[2] === viewType,
+    ),
+    "after Save, a later open of the now-existing path must openWith Lumia",
+  );
 });

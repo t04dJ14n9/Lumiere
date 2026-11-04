@@ -16,6 +16,7 @@ import {
   uriOf,
 } from "./reclaim-tabs";
 import { hasNativeOptOut } from "./reclaim-opt-out";
+import { isMarkdownAbsentOnDisk } from "./markdown-absent-on-disk";
 
 const { viewType } = MARKDOWN_EDITOR;
 
@@ -56,6 +57,11 @@ export function createReclaimTransfer(
     open(tab: vscode.Tab, uri: string) {
       const shown = resolveLiveNativeTab(tab, uri);
       if (!shown) {
+        return;
+      }
+      // Missing file: leave built-in Text Editor (dirty buffer until Save).
+      // Do not openWith Lumia or untitled-bridge (product lock 2026-11-04).
+      if (isMarkdownAbsentOnDisk(uri)) {
         return;
       }
       startPendingReclaim({
@@ -202,11 +208,7 @@ async function reopen(
   // Opt-outs or a superseding jump may land during the reveal wait. Do not
   // close a native tab the user just chose (Open as Text / Edit lease) or a
   // transfer that navigation cancelled. keepNative is sticky across bypass TTL.
-  if (
-    request.keepNative ||
-    hasNativeOptOut(uri, request.kind) ||
-    request.intent?.token.cancelled
-  ) {
+  if (transferBlocked(uri, request)) {
     return;
   }
   // openWith opens a second tab beside the native one; left open, a Cursor
@@ -263,6 +265,14 @@ function reopenableTab(request: ReclaimRequest): vscode.Tab | undefined {
   return native && vscode.window.tabGroups.activeTabGroup.activeTab === native
     ? native
     : undefined;
+}
+
+function transferBlocked(uri: string, request: ReclaimRequest): boolean {
+  return (
+    Boolean(request.keepNative) ||
+    hasNativeOptOut(uri, request.kind) ||
+    Boolean(request.intent?.token.cancelled)
+  );
 }
 
 /**
