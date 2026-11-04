@@ -192,10 +192,11 @@ test("hasNativeOptOut: readerText alone does not block Cursor Markdown transfer"
   const calls = [...transfer.matchAll(/hasNativeOptOut\(([^)]+)\)/g)].map(
     (m) => m[1],
   );
-  assert.equal(calls.length, 3);
+  // Includes missing-open bridge guards that also pass kind (not default text).
+  assert.equal(calls.length, 6);
   for (const args of calls) {
     assert.ok(typeof args === "string");
-    assert.match(args, /request\.kind/);
+    assert.match(args, /(?:request|next)\.kind/);
   }
 });
 
