@@ -558,7 +558,7 @@ test("dark paper: selection blend is normal and boxes cover glyphs + bullets", a
     page,
     gypsy.x + 120,
     gypsy.y - gypsy.size,
-    gypsy.y + gypsy.size * 0.35,
+    gypsy.y + gypsy.size * 0.55,
     DARK_PAPER,
   );
   expect(vSpan, "vertical tint over descender line").toBeGreaterThan(
@@ -574,11 +574,12 @@ test("dark paper: selection blend is normal and boxes cover glyphs + bullets", a
   });
   expect(gypsyBoxes.length, "selection boxes on gypsy line").toBeGreaterThan(0);
   const gypsyBottom = Math.max(...gypsyBoxes.map((b) => b.bottom));
-  // Helvetica descender ≈ 0.207em; require cover through ink + small margin.
+  // Helvetica descender ≈ 0.207em; Host GUI still saw tails at scaleY(1.28)
+  // (~0.49em below baseline). Require ≥0.52em so 1.28 fails and ~1.42 passes.
   expect(
     gypsyBottom,
     `selection bottom ${gypsyBottom} must clear gypsy descenders`,
-  ).toBeGreaterThanOrEqual(gypsy.y + gypsy.size * 0.25);
+  ).toBeGreaterThanOrEqual(gypsy.y + gypsy.size * 0.52);
 
   // Selection-only paint in the below-baseline strip near "gypsy" must be tinted
   // (no page image — avoids counting bare glyph ink as coverage).
@@ -589,7 +590,7 @@ test("dark paper: selection blend is normal and boxes cover glyphs + bullets", a
       left: gypsyRight - 36,
       top: gypsy.y + 0.5,
       right: gypsyRight - 4,
-      bottom: gypsy.y + gypsy.size * 0.28,
+      bottom: gypsy.y + gypsy.size * 0.52,
     },
     DARK_PAPER,
     18,
@@ -641,7 +642,7 @@ test("light paper: selection blend is normal with shared descender pad", async (
     page,
     gypsy.x + 120,
     gypsy.y - gypsy.size,
-    gypsy.y + gypsy.size * 0.35,
+    gypsy.y + gypsy.size * 0.55,
     LIGHT_PAPER,
   );
   expect(vSpan, "light paper vertical tint").toBeGreaterThan(gypsy.size * 0.85);
@@ -656,5 +657,5 @@ test("light paper: selection blend is normal with shared descender pad", async (
   expect(
     gypsyBottom,
     `light selection bottom ${gypsyBottom} must clear gypsy descenders`,
-  ).toBeGreaterThanOrEqual(gypsy.y + gypsy.size * 0.25);
+  ).toBeGreaterThanOrEqual(gypsy.y + gypsy.size * 0.52);
 });
