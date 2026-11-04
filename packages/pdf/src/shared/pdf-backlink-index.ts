@@ -43,7 +43,9 @@ export function extractPdfBacklinks(
     if (!/\.pdf$/iu.test(pathPart)) {
       continue;
     }
-    const pdfKey = normalizePdfKey(pathPart);
+    const pdfKey = normalizePdfKey(
+      resolveNoteRelativePdfPath(pathPart, notePath),
+    );
     if (!pdfKey) {
       continue;
     }
@@ -72,6 +74,60 @@ export function extractPdfBacklinks(
     hits.push(hit);
   }
   return hits;
+}
+
+
+/**
+ * When the Markdown target is note-relative (`./`, `../`, or a bare filename),
+ * join it with the note's directory and collapse `.` / `..` so the key matches
+ * workspace-relative `displayPath`. Vault-root / Copy-link paths
+ * (`papers/a.pdf`) are returned unchanged for `normalizePdfKey`.
+ */
+function resolveNoteRelativePdfPath(pathPart: string, notePath: string): string {
+  let value = pathPart.trim().replaceAll("\\", "/");
+  try {
+    value = decodeURIComponent(value);
+  } catch {
+    // keep undecoded
+  }
+  if (value.startsWith("file:")) {
+    return pathPart;
+  }
+  const isNoteRelative =
+    value.startsWith("./") ||
+    value.startsWith("../") ||
+    !value.includes("/");
+  if (!isNoteRelative) {
+    return pathPart;
+  }
+  const noteDir = dirnameWorkspacePath(notePath);
+  return collapseWorkspacePath(
+    noteDir ? `${noteDir}/${value}` : value,
+  );
+}
+
+function dirnameWorkspacePath(path: string): string {
+  const normalized = path.trim().replaceAll("\\", "/");
+  const idx = normalized.lastIndexOf("/");
+  return idx >= 0 ? normalized.slice(0, idx) : "";
+}
+
+/** Collapse `.` / `..` segments; output uses `/` and has no leading `/`. */
+function collapseWorkspacePath(path: string): string {
+  const out: string[] = [];
+  for (const segment of path.split("/")) {
+    if (segment === "" || segment === ".") {
+      continue;
+    }
+    if (segment === "..") {
+      if (out.length > 0) {
+        out.pop();
+      }
+      continue;
+    }
+    out.push(segment);
+  }
+  return out.join("/");
 }
 
 /** Workspace-relative PDF path: `/` separators, decode once. */

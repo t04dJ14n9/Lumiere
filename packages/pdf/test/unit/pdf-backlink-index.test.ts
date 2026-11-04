@@ -31,3 +31,59 @@ test("replaceNote refreshes without full rebuild API on open", () => {
   index.replaceNote("u1", "n.md", "[a](papers/a.pdf#page=9#:~:text=z)");
   assert.equal(index.lookup("papers/a.pdf")[0]!.page, 9);
 });
+
+test("extractPdfBacklinks resolves ../ against note directory", () => {
+  const hits = extractPdfBacklinks(
+    "[x](../papers/a.pdf#page=3#:~:text=hi)",
+    "notes/n.md",
+    "file:///notes/n.md",
+  );
+  assert.equal(hits.length, 1);
+  assert.equal(hits[0]!.pdfKey, "papers/a.pdf");
+  assert.equal(hits[0]!.page, 3);
+  assert.equal(hits[0]!.textFragment?.textStart, "hi");
+});
+
+test("extractPdfBacklinks resolves ./ sibling against note directory", () => {
+  const hits = extractPdfBacklinks(
+    "[x](./sib.pdf#page=1)",
+    "notes/n.md",
+    "file:///notes/n.md",
+  );
+  assert.equal(hits.length, 1);
+  assert.equal(hits[0]!.pdfKey, "notes/sib.pdf");
+});
+
+test("extractPdfBacklinks resolves bare filename against note directory", () => {
+  const hits = extractPdfBacklinks(
+    "[x](sib.pdf#page=1)",
+    "notes/n.md",
+    "file:///notes/n.md",
+  );
+  assert.equal(hits.length, 1);
+  assert.equal(hits[0]!.pdfKey, "notes/sib.pdf");
+});
+
+test("extractPdfBacklinks keeps workspace-relative path without relative prefix", () => {
+  const hits = extractPdfBacklinks(
+    "[x](papers/a.pdf#page=3#:~:text=hi)",
+    "notes/n.md",
+    "file:///notes/n.md",
+  );
+  assert.equal(hits.length, 1);
+  assert.equal(hits[0]!.pdfKey, "papers/a.pdf");
+});
+
+test("index lookup finds note-relative ../ target under workspace-relative key", () => {
+  const index = new PdfBacklinkIndex();
+  index.replaceNote(
+    "file:///notes/n.md",
+    "notes/n.md",
+    "[x](../papers/a.pdf#page=3#:~:text=hi)",
+  );
+  const hits = index.lookup("papers/a.pdf");
+  assert.equal(hits.length, 1);
+  assert.equal(hits[0]!.pdfKey, "papers/a.pdf");
+  assert.equal(hits[0]!.page, 3);
+  assert.equal(hits[0]!.textFragment?.textStart, "hi");
+});
