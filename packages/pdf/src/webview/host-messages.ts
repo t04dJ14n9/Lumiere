@@ -11,6 +11,9 @@ import { currentViewSettings, rememberViewSettings } from "./reading-position";
 import { rememberPageColors } from "./page-colors";
 import { parseSidecarHighlights } from "../shared/sidecar-messages";
 import { rememberSidecar } from "./sidecar-store";
+import { rememberBacklinks } from "./backlink-store";
+import { parsePdfBacklinkHits } from "../shared/pdf-backlink-index";
+import { annotationLoadState } from "./annotation-load-state";
 import { rememberToolbarSettings } from "./toolbar-settings";
 import type { useViewActions } from "./view-sync";
 
@@ -24,6 +27,7 @@ export interface HostMessageHandlers {
   setZen: (on: boolean) => void;
   setToolbar: (toolbar: ToolbarSettings) => void;
   setMotionSetting: (setting: ViewSettings["smoothScrolling"]) => void;
+  setRegionsEnabled: (enabled: boolean) => void;
   setChoices: React.Dispatch<React.SetStateAction<ViewChoices>>;
   setPageColors: (effective: "normal" | "dark") => void;
   retryAnnotationSave?: () => void;
@@ -114,17 +118,29 @@ function handleMarksMessage(
       }
       return;
     }
+    case "pdfBacklinks": {
+      const hits = parsePdfBacklinkHits(message.hits);
+      const load = annotationLoadState()?.load;
+      if (hits !== undefined && message.load === load) {
+        rememberBacklinks(hits);
+      }
+      return;
+    }
   }
 }
 
 /** New view settings: smooth scrolling now, a new page layout for this PDF. */
 function applyViewSettings(
   next: ViewSettings,
-  handlers: Pick<HostMessageHandlers, "setMotionSetting" | "setChoices">,
+  handlers: Pick<
+    HostMessageHandlers,
+    "setMotionSetting" | "setRegionsEnabled" | "setChoices"
+  >,
 ): void {
   const previous = currentViewSettings();
   const settings = rememberViewSettings(next);
   handlers.setMotionSetting(settings.smoothScrolling);
+  handlers.setRegionsEnabled(settings.regionsEnabled);
   if (settings.pageLayout !== previous.pageLayout) {
     handlers.setChoices((current) => ({
       ...current,

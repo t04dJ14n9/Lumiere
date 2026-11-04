@@ -35,7 +35,7 @@ test("selectionFromAnnotation omits empty text for link-only handoff", () => {
   });
   assert.equal(
     agentText(selection, { path: "papers/attention.pdf" }),
-    "[attention.pdf · p.1](papers/attention.pdf#page=1&viewrect=0,0,1,1)",
+    "[attention.pdf · p.1](papers/attention.pdf#page=1)",
   );
 });
 

@@ -27,6 +27,8 @@ import { AnnotationSave } from "./annotation-save";
 import { PdfSource } from "./source";
 import { createPdfViewId } from "./view-id";
 import type { SidecarHighlight } from "../../shared/sidecar-format";
+import { PdfBacklinkOutlet } from "./pdf-backlinks";
+import { rehydrateViewerChrome } from "./panel-rehydrate";
 import type { ViewerPanelHost, ViewerPanelOptions } from "./panel-types";
 export type {
   PluginMessage,
@@ -82,6 +84,11 @@ export class PdfViewerPanel {
   private readonly disposables: Subscription[] = [];
   private lookUp = false;
   private sidecarHighlights: SidecarHighlight[] | null = null;
+  /** Vault Markdown → PDF backlink overlays for this pane. */
+  readonly backlinks = new PdfBacklinkOutlet(
+    (m) => this.post(m),
+    () => this.loads,
+  );
   private zen = false;
   /** The number of the last `load` sent, and the last patch version applied. */
   private loads = 0;
@@ -92,9 +99,7 @@ export class PdfViewerPanel {
   private toolbar: ToolbarSettings;
   private pageColorsMode: EffectivePageColors = "normal";
   private lastJump = 0;
-  private readonly history = new HistoryRequests((message) =>
-    this.post(message),
-  );
+  private readonly history = new HistoryRequests((m) => this.post(m));
   private historyState = { back: false, forward: false };
   private readonly annotations: AnnotationSave;
 
@@ -473,18 +478,16 @@ export class PdfViewerPanel {
     this.navigation.loadedNow();
     // A rebuilt page starts from the original HTML attributes. Rehydrate
     // changes made since the panel opened, after load retires its old inbox.
-    this.post({ type: "toolbar", toolbar: this.toolbar });
-    this.post({ type: "pageColors", effective: this.pageColorsMode });
-    this.post({ type: "historyState", ...this.historyState });
-    if (this.lookUp) {
-      this.post({ type: "lookUp", enabled: true });
-    }
-    if (this.sidecarHighlights) {
-      this.post({ type: "sidecar", highlights: this.sidecarHighlights });
-    }
-    if (this.zen) {
-      this.post({ type: "zen", on: true });
-    }
+    rehydrateViewerChrome({
+      post: (message) => this.post(message),
+      toolbar: this.toolbar,
+      pageColorsMode: this.pageColorsMode,
+      historyState: this.historyState,
+      lookUp: this.lookUp,
+      sidecarHighlights: this.sidecarHighlights,
+      backlinks: this.backlinks,
+      zen: this.zen,
+    });
   }
 
   private post(message: HostMessage): void {

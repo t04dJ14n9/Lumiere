@@ -63,6 +63,11 @@ function loadSelectionTracker(reports: unknown[]) {
             Promise.resolve({ text: "from page", image: undefined }),
         };
       }
+      if (id === "./reading-position") {
+        return {
+          currentViewSettings: () => ({ regionsEnabled: false }),
+        };
+      }
       throw new Error(`Unexpected runtime dependency: ${id}`);
     },
     module,
@@ -81,6 +86,7 @@ function loadSelectionTracker(reports: unknown[]) {
     follow(
       scope: unknown,
       source: { engine: () => unknown; pdf: unknown },
+      options?: { regionsEnabled?: () => boolean },
     ): () => void;
   };
   assert.equal(
@@ -168,7 +174,11 @@ test("annotation region survives a later textCleared (no null wipe)", () => {
   const regions: Array<RegionSelection | undefined> = [];
   const tracker = new SelectionTracker((region) => regions.push(region));
   const { scope, clearText } = mockSelectionScope();
-  tracker.follow(scope, { engine: () => undefined, pdf: {} });
+  tracker.follow(
+    scope,
+    { engine: () => undefined, pdf: {} },
+    { regionsEnabled: () => true },
+  );
 
   tracker.setAnnotationRegion(annotationRegion);
   assert.deepEqual(tracker.region, annotationRegion);
@@ -218,7 +228,11 @@ test("empty-space click does not clear an annotation-owned region", () => {
   const SelectionTracker = loadSelectionTracker(reports);
   const tracker = new SelectionTracker(() => undefined);
   const { scope, emptySpaceClick } = mockSelectionScope();
-  tracker.follow(scope, { engine: () => undefined, pdf: {} });
+  tracker.follow(
+    scope,
+    { engine: () => undefined, pdf: {} },
+    { regionsEnabled: () => true },
+  );
 
   tracker.setAnnotationRegion(annotationRegion);
   const before = reports.length;
@@ -236,7 +250,11 @@ test("marquee-cancel does not clear an annotation-owned region", () => {
   const SelectionTracker = loadSelectionTracker(reports);
   const tracker = new SelectionTracker(() => undefined);
   const { scope, marqueeCancel } = mockSelectionScope();
-  tracker.follow(scope, { engine: () => undefined, pdf: {} });
+  tracker.follow(
+    scope,
+    { engine: () => undefined, pdf: {} },
+    { regionsEnabled: () => true },
+  );
 
   tracker.setAnnotationRegion(annotationRegion);
   const before = reports.length;
@@ -254,7 +272,11 @@ test("empty-space click still clears a marquee (non-annotation) region", () => {
   const SelectionTracker = loadSelectionTracker(reports);
   const tracker = new SelectionTracker(() => undefined);
   const { scope, emptySpaceClick, marqueeEnd } = mockSelectionScope();
-  tracker.follow(scope, { engine: () => undefined, pdf: {} });
+  tracker.follow(
+    scope,
+    { engine: () => undefined, pdf: {} },
+    { regionsEnabled: () => true },
+  );
 
   marqueeEnd(0);
   assert.ok(tracker.region);
@@ -270,7 +292,11 @@ test("marquee-cancel still clears a marquee (non-annotation) region", () => {
   const SelectionTracker = loadSelectionTracker(reports);
   const tracker = new SelectionTracker(() => undefined);
   const { scope, marqueeCancel, marqueeEnd } = mockSelectionScope();
-  tracker.follow(scope, { engine: () => undefined, pdf: {} });
+  tracker.follow(
+    scope,
+    { engine: () => undefined, pdf: {} },
+    { regionsEnabled: () => true },
+  );
 
   marqueeEnd(0);
   assert.ok(tracker.region);
@@ -283,4 +309,20 @@ test("marquee-cancel still clears a marquee (non-annotation) region", () => {
   assert.equal(tracker.region, undefined);
   const last = reports.at(-1) as { selection?: { selection?: unknown } };
   assert.equal(last?.selection?.selection, null);
+});
+
+test("marquee end is ignored when regions are disabled", () => {
+  const reports: unknown[] = [];
+  const SelectionTracker = loadSelectionTracker(reports);
+  const tracker = new SelectionTracker(() => undefined);
+  const { scope, marqueeEnd } = mockSelectionScope();
+  tracker.follow(
+    scope,
+    { engine: () => undefined, pdf: {} },
+    { regionsEnabled: () => false },
+  );
+
+  marqueeEnd(0);
+  assert.equal(tracker.region, undefined);
+  assert.equal(reports.length, 0);
 });

@@ -2,6 +2,20 @@
 
 ## Unreleased
 
+- **Chrome-aligned PDF backlink overlays.** Passage highlights live in vault
+  Markdown as Copy link Quotes (`#page=` + `#:~:text=`), not in
+  `*.pdf.lumiere.md`. The viewer paints backlink overlays from those links
+  (hover preview, click opens the note; Del ignores overlays). Annotate
+  **Highlight** burns into the PDF again with Note / freeText. Sidecar create
+  is torn down; legacy `#hl-` open remains best-effort. **Select Region** /
+  empty-page drag and `viewrect=` in Copy link are opt-in via
+  `lumiere.pdf.regions.enabled` (default off). See `CAPABILITIES.md`,
+  `docs/sidecar-highlights.md`, and
+  `docs/superpowers/specs/2026-11-04-pdf-backlink-overlays-chrome-design.md`.
+- **Copy link to this** is clipboard-only (Quote or page link). It no longer
+  opens agent chat. With no selection it copies a page-only `#page=N` link for
+  the reading page.
+
 - Dark page colors now invert each colour's lightness and keep its hue,
   instead of painting every fill and all text one colour. In diagrams the
   labels of boxes are readable (they were the same colour as the box), the
@@ -26,14 +40,6 @@
 - PDFs show their first page sooner: about 100 ms less from the document
   opening to the first page in VS Code (the automatic zoom is now
   applied as soon as the viewer has a size, not after a 150 ms debounce).
-- Highlights are kept in a Markdown sidecar beside the PDF
-  (`paper.pdf.lumiere.md`), never in the PDF. Notes link to one with
-  `paper.pdf#hl-<id>`; the link opens the PDF on it and flashes it. Click a
-  highlight in Annotate mode to select it, copy its link or delete it.
-  `lumiere.pdf.sidecar.location` / `.directory` keep sidecars in a workspace
-  folder instead. See `docs/sidecar-highlights.md`.
-- **Copy Link for Agent** is now called **Copy link to this**; what it copies
-  is unchanged, except that a selected sidecar highlight copies its `#hl-` link.
 - macOS Look Up: a hard press (or a three-finger tap) on a word shows the
   system's Dictionary popover, as in Preview. The viewer puts the word under
   the pointer into the page as invisible text for the system to find.
@@ -46,7 +52,8 @@
   (`producer: "pdf"`) matching Markdown Workshop's `BridgeEnvelope`
   (`capturedAt`, `source.identity` / `kind` / `media`, `locator`, `view`,
   `selection`, `revision`). Workshop may call this command; this command does
-  not call Workshop back. Copy Link for Agent's clipboard text is unchanged.
+  not call Workshop back. The bridge envelope is separate from **Copy link to
+  this** (clipboard Quote / page link — see Unreleased above).
   See `docs/bridge-envelope.md`.
 - Memory-only, per-pane PDF location history: Back to Previous Location / Forward
   to Next Location restore page coordinates, zoom and view mode after deliberate
@@ -131,14 +138,11 @@
 - In Cursor, page, zoom and find buttons in the status bar.
 - Removed Copy for Agent (command, title button, context and selection menu
   items) and renamed Ask Agent to **Copy Link for Agent**
-  (`pdfWorkshop.copyLinkForAgent`, setting
-  `pdfWorkshop.copyLinkForAgent.target`; no migration). It copies the
-  same text, and ⌘C / Ctrl+C copies the selected text as plain text (the Copy text button is removed).
-- Copy Link for Agent does not guess the agent: `auto` opens a chat only when
-  the editor's own chat is the only agent installed, otherwise it copies and
-  asks you to paste. `pdfWorkshop.copyLinkForAgent.target` picks `cursor`,
-  `chat`, `claudeCode` (a new conversation with the selection typed in),
-  `codex` (selection and snapshot attached) or `clipboard`.
+  (`pdfWorkshop.copyLinkForAgent` / `pdfWorkshop.copyLinkForAgent.target`;
+  no migration). ⌘C / Ctrl+C copies the selected text as plain text (the Copy
+  text button is removed). Later Unreleased renames the command to **Copy
+  link to this** and makes it clipboard-only (Quote / page link — see above);
+  it no longer opens agent chat.
 - Experimental agent bridge, **off by default**
   (`pdfWorkshop.agentBridge.enabled`): a local MCP server (127.0.0.1,
   random port, bearer token) that serves the current PDF selection to VS Code

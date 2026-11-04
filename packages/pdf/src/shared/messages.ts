@@ -30,6 +30,8 @@
  *    │                                    or under a right click (to look up
  *    │                                    from the context menu)
  *    │  sidecar / ◄── sidecarWrite        sidecar highlights (sidecar-messages.ts)
+ *    │  pdfBacklinks { load, hits } ►     vault Markdown PDF backlink overlays
+ *    │  ◄──────────── openBacklinkNote   click a backlink overlay → open note
  *
  * State reports are batched: the viewer collects what changed for a frame
  * and sends one `patch` (only the latest of each part), so scrolling or a
@@ -57,6 +59,11 @@ import {
   type SidecarHostMessage,
   type SidecarWrite,
 } from "./sidecar-messages";
+import {
+  parseOpenBacklinkNote,
+  type OpenBacklinkNoteMessage,
+  type PdfBacklinksHostMessage,
+} from "./backlink-messages";
 import type { PdfLocation } from "./pdf-location";
 import { parseSelection, type PdfSelection } from "./selection";
 import {
@@ -144,6 +151,7 @@ export type ViewerMessage =
       data: ArrayBuffer;
     }
   | { type: "annotationSaveFailed"; load: number; message: string }
+  | OpenBacklinkNoteMessage
   | SidecarWrite;
 
 /**
@@ -201,6 +209,7 @@ export type HostMessage =
       message: string;
     }
   | { type: "annotationRetry"; load: number }
+  | PdfBacklinksHostMessage
   | SidecarHostMessage;
 
 const MAX_OUTLINE_ITEMS = 10_000;
@@ -253,6 +262,7 @@ const VIEWER_PARSERS: Readonly<
     isWebUrl(message.url)
       ? { type: "openExternal", url: message.url }
       : undefined,
+  openBacklinkNote: parseOpenBacklinkNote,
   lookUp: (message) =>
     typeof message.open === "boolean" &&
     (message.word === null || isLookUpWord(message.word))

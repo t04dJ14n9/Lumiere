@@ -1,3 +1,7 @@
+/**
+ * LEGACY / UNHOOKED — Unhooked: SidecarHighlightLayer removed from page.tsx. Passage marks are backlink-layer.tsx overlays.
+ * See packages/pdf/docs/sidecar-highlights.md.
+ */
 import React, { useSyncExternalStore } from "react";
 import { displayHighlightAppearance } from "../shared/highlight-style";
 import { currentPageColors, onPageColorsChange } from "./page-colors";

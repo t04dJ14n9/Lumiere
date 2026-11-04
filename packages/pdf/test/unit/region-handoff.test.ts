@@ -86,7 +86,7 @@ async function folderContents(): Promise<Record<string, string>> {
   );
 }
 
-test("a region snapshot over the cap is not saved and evicts nothing, but the link keeps page, region and text", async () => {
+test("Copy link with a region copies Quote text only and does not touch the region image cache", async () => {
   const images = new RegionImages(folder, () => CAP);
   // Two snapshots already in the cache, together near the cap.
   await images.save("/work/papers/attention.pdf", 1, png(1, 400));
@@ -100,7 +100,7 @@ test("a region snapshot over the cap is not saved and evicts nothing, but the li
     true,
   );
 
-  // Nothing saved, nothing evicted: the cache folder is byte-for-byte the same.
+  // Clipboard-only Copy link never saves or evicts region snapshots.
   assert.deepEqual(await folderContents(), before);
 
   assert.equal(clipboard.length, 1);
@@ -108,20 +108,16 @@ test("a region snapshot over the cap is not saved and evicts nothing, but the li
   assert.equal(
     text,
     [
-      "[attention.pdf · p.9](papers/attention.pdf#page=9&viewrect=92,126,427,261)",
-      "",
       "> base 6 512 2048",
+      ">",
+      "> [attention.pdf · p.9](papers/attention.pdf#page=9#:~:text=base%206%20512%202048)",
     ].join("\n"),
   );
   assert.doesNotMatch(
     text,
-    /Source:|SHA-256|Selected PDF region|Region image/u,
+    /Source:|SHA-256|Selected PDF region|Region image|viewrect=/u,
   );
-  assert.equal(warnings.length, 1);
-  assert.match(
-    warnings[0]!,
-    /^The region snapshot is .* MB, more than the .* MB snapshot limit \(lumiere\.pdf\.regionImageCache\.maxSizeMB\), so it was not attached\./u,
-  );
+  assert.deepEqual(warnings, []);
 });
 
 test("the MCP snapshot of an over-cap region has the same link and text, without a warning", async () => {
@@ -131,7 +127,7 @@ test("the MCP snapshot of an over-cap region has the same link and text, without
   assert.ok(snapshot);
   assert.equal(snapshot.regionImage, undefined);
   assert.equal("regionImage" in snapshot, false);
-  assert.match(snapshot.agentText, /#page=9&viewrect=92,126,427,261\)/u);
+  assert.match(snapshot.agentText, /#page=9#:~:text=base%206%20512%202048\)/u);
   assert.match(snapshot.agentText, /base 6 512 2048/u);
   assert.deepEqual(warnings, []);
   await assert.rejects(readdir(folder), { code: "ENOENT" });

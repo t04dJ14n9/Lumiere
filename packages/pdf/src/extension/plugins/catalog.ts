@@ -3,6 +3,7 @@
  * @workshop/core), so this order only decides event and command precedence.
  *
  *   pdf          the viewer: custom editor, open editors, page/zoom/find, Open Location
+ *   pdfBacklinks derived vault index of Markdown PDF deep links → viewer overlays
  *   pdfAnnotations conflict Reload/Keep mine and Retry for direct-to-PDF annotations
  *   pdfToolbar   where the controls are: status bar entries, the mode setting
  *   pdfOutline   the PDF Outline view in the Explorer
@@ -18,6 +19,7 @@ import { agentBridgePlugin } from "./agentBridge/plugin";
 import { ideContextPlugin } from "./ideContext/plugin";
 import { pdfAnnotationsPlugin } from "./pdfAnnotations/plugin";
 import { pdfPlugin } from "./pdf/plugin";
+import { pdfBacklinksPlugin } from "./pdfBacklinks/plugin";
 import { pdfLookUpPlugin } from "./pdfLookUp/plugin";
 import { pdfSidecarPlugin } from "./pdfSidecar/plugin";
 import { pdfSettingsPlugin } from "./pdfSettings/plugin";
@@ -30,6 +32,7 @@ import type { Plugin } from "@workshop/core";
 
 export const plugins: readonly Plugin[] = [
   pdfPlugin,
+  pdfBacklinksPlugin,
   pdfAnnotationsPlugin,
   pdfHistoryPlugin,
   pdfToolbarPlugin,

@@ -1,3 +1,7 @@
+/**
+ * LEGACY / UNHOOKED — Unhooked: Annotate Highlight no longer uses the sidecar tool (EmbedPDF default burns into the PDF). Kept for reference; do not re-register in plugins.ts.
+ * See packages/pdf/docs/sidecar-highlights.md.
+ */
 import { uuidV4, type PdfAnnotationObject } from "@embedpdf/models";
 import type {
   AnnotationTool,

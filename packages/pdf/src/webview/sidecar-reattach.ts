@@ -1,3 +1,7 @@
+/**
+ * LEGACY / UNHOOKED — Unhooked viewer reattach. Shared geometry helpers live in src/shared/sidecar-reattach.ts (still used by backlink resolve).
+ * See packages/pdf/docs/sidecar-highlights.md.
+ */
 import { useRegistry } from "@embedpdf/core/react";
 import type {
   PdfDocumentObject,

@@ -8,6 +8,7 @@
 
 ## Unreleased
 
+- Lumia PDF: Chrome-aligned Copy link Quotes and vault Markdown backlink overlays; sidecar highlight create removed (legacy `#hl-` open kept). Regions / `viewrect=` opt-in (`lumiere.pdf.regions.enabled`, default off). Details in `packages/pdf/CHANGELOG.md`.
 - **Lumière is now Lumia.** Its name in the Extensions view, **Reopen
   Editor With…**, the Command Palette (**Lumia: …**), the Settings UI and
   its messages says Lumia, and so does Lumia PDF. The extension id

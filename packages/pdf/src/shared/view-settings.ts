@@ -16,6 +16,8 @@ export interface ViewSettings extends ViewChoices {
   defaultZoom: ZoomChoice;
   /** null follows editor.smoothScrolling; the host resolves it before sending. */
   smoothScrolling: boolean | null;
+  /** Empty-page / Select Region; owned by pdfRegions (`lumiere.pdf.regions.enabled`). */
+  regionsEnabled: boolean;
 }
 
 export const DEFAULT_VIEW_CHOICES: ViewChoices = {
@@ -74,6 +76,7 @@ export function parseViewSettings(value: unknown): ViewSettings {
       typeof settings.smoothScrolling === "boolean"
         ? settings.smoothScrolling
         : null,
+    regionsEnabled: settings.regionsEnabled === true,
   };
 }
 

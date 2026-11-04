@@ -1,6 +1,7 @@
 import { expect, test, type Page } from "@playwright/test";
 import {
   open,
+  openWithRegions,
   pagePoint,
   selectText,
   drag,
@@ -91,7 +92,7 @@ function contrastOnPaper(
 test("selections and flashed boxes stand out on the page in every theme", async ({
   page,
 }) => {
-  await open(page);
+  await openWithRegions(page);
   const at = await pagePoint(page, 1);
   await selectText(page, at(74, TEXT_MIDLINE), at(205, TEXT_MIDLINE));
   const fills: Record<string, number> = {};

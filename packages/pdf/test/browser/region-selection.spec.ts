@@ -1,6 +1,7 @@
 import { expect, test } from "@playwright/test";
 import {
   open,
+  openWithRegions,
   messages,
   lastSelection,
   pagePoint,
@@ -9,10 +10,21 @@ import {
   TEXT_MIDLINE,
 } from "./viewer-support";
 
-test("a drag over empty space selects that region; Escape clears it", async ({
+test("empty-page drag does not create a region when regions are off by default", async ({
   page,
 }) => {
   await open(page);
+  const at = await pagePoint(page, 1);
+  await drag(page, at(150, 150), at(250, 250));
+  await expect(page.locator(".region-selection")).toHaveCount(0);
+  await expect(page.locator(".region-marquee")).toHaveCount(0);
+  expect(await lastSelection(page)).toBeNull();
+});
+
+test("a drag over empty space selects that region; Escape clears it", async ({
+  page,
+}) => {
+  await openWithRegions(page);
   const at = await pagePoint(page, 1);
   await drag(page, at(150, 150), at(250, 250));
   await expect(page.locator(".region-selection")).toBeVisible();
@@ -36,7 +48,7 @@ test("a drag over empty space selects that region; Escape clears it", async ({
 test("a region is reported again with the text inside it and a PNG snapshot", async ({
   page,
 }) => {
-  await open(page);
+  await openWithRegions(page);
   const at = await pagePoint(page, 1);
   // Around "Synthetic page 1", from empty space above and left of it.
   await drag(page, at(60, 70), at(230, 120));
@@ -74,7 +86,7 @@ test("a region is reported again with the text inside it and a PNG snapshot", as
 test("a region drag released outside the viewer ends when the pointer comes back", async ({
   page,
 }) => {
-  await open(page);
+  await openWithRegions(page);
   const at = await pagePoint(page, 1);
   await page.mouse.move(...at(150, 150));
   await page.mouse.down();
@@ -103,7 +115,7 @@ test("a region drag released outside the viewer ends when the pointer comes back
 test("a right-click keeps the selection, for the context menu, and later drags still work", async ({
   page,
 }) => {
-  await open(page);
+  await openWithRegions(page);
   const at = await pagePoint(page, 1);
   await drag(page, at(60, 70), at(230, 150));
   await expect(page.locator(".region-selection")).toBeVisible();

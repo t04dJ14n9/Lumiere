@@ -3,11 +3,12 @@
 [![CI](https://github.com/t04dJ14n9/vscode-embedPDF/actions/workflows/ci.yml/badge.svg)](https://github.com/t04dJ14n9/vscode-embedPDF/actions/workflows/ci.yml)
 
 A Lumia PDF viewer for VS Code and Cursor, built on [EmbedPDF](https://www.embedpdf.com/)
-and its PDFium engine. Select text or drag a box over a figure and press
-**Copy link to this**: the clipboard gets a link to the exact page and
-box, the file's hash, the selected text, and for a box the path of a
-snapshot of it, ready to paste into your agent. When the editor's own chat
-is the only agent installed (or you pick one), that chat opens with it.
+and its PDFium engine. Select text and choose **Copy link to this**: the
+clipboard gets a Quote with a Chrome-aligned deep link (`#page=` +
+`#:~:text=`), ready to paste into any note. Opening the PDF paints
+**backlink overlays** from those vault Markdown links. Annotate tools
+(Highlight, Note, freeText, …) burn into the PDF. Region / box selection
+is opt-in (`lumiere.pdf.regions.enabled`, default off).
 
 ## Features
 
@@ -31,19 +32,18 @@ is the only agent installed (or you pick one), that chat opens with it.
   title bar, and the page, zoom and **View** are in the status bar. Click **Page 4 / 15**
   to go to a page, or the zoom to pick one (or type one, such as `140`). See
   [Toolbar and shortcuts](#toolbar-and-shortcuts) for the other layouts.
-- **Select Region tool.** Draws a region even over text (a paragraph with its
-  equation, a table with its caption); Escape puts the tool down.
-- **Highlights that leave the PDF alone.** In Annotate mode, the
-  **Highlight** tool keeps its highlights in a Markdown file beside the PDF,
-  `paper.pdf.lumiere.md`, and never writes the PDF itself. Each highlight
-  has an id; link to it from any note with `[label](paper.pdf#hl-a1b2c3d4)`,
-  and the link opens the PDF on the highlight and flashes it. Click a
-  highlight in Annotate mode to select it: **Copy link to this** copies its
-  `#hl-` link, Delete removes it from the sidecar. Write your own notes in
-  the sidecar around the highlight blocks; they are kept.
-  `lumiere.pdf.sidecar.location` and `lumiere.pdf.sidecar.directory` keep
-  sidecars in a workspace folder instead. Other marks (underline, ink,
-  shapes) are still saved into the PDF. See
+- **Select Region tool (opt-in).** Off by default. Turn on
+  `lumiere.pdf.regions.enabled` to draw a region even over text (a paragraph
+  with its equation, a table with its caption); Escape puts the tool down.
+  When off, empty-page drag does nothing and Select Region is hidden.
+- **Passage highlights = vault Markdown.** **Copy link to this** copies a
+  Quote with `#page=N#:~:text=…` (or a page-only `#page=N` link with nothing
+  selected). Paste into any note; the viewer paints **backlink overlays**
+  from those links (hover preview, click opens the note; Del ignores
+  overlays). Annotate **Highlight** / Note / freeText / underline burn into
+  the PDF; Del deletes those embedded marks. Old `*.pdf.lumiere.md` sidecars
+  are not auto-deleted; legacy `#hl-` links still open best-effort when the
+  file is present. See [CAPABILITIES.md](CAPABILITIES.md) and
   [docs/sidecar-highlights.md](docs/sidecar-highlights.md).
 - **PDF Outline in the Explorer.** The PDF's bookmarks appear as a native
   tree view; click an entry to open its page. The title bar offers **Expand All**
@@ -57,34 +57,22 @@ is the only agent installed (or you pick one), that chat opens with it.
   Opening a Lumia PDF editor hides VS Code's native **Outline** and shows
   **PDF Outline**; leaving restores the native Outline after a short debounce,
   skipped if Lumia already owns the active tab.
-- **Copy link to this.** Select text, or drag over empty page
-  space to select a region (a figure, table or equation), then use the
-  button next to the selection, the right-click menu, the editor title
-  button, or **PDF: Copy link to this**. ⌘C / Ctrl+C copies just the selected
-  text (there is no Copy text button). There is no separate Copy for
-  Agent or Ask Agent: this one action always copies, and opens a chat only
-  as described below.
+- **Copy link to this.** Right-click the PDF (or run **PDF: Copy link to
+  this**). With text selected, the clipboard gets a Quote:
 
-  **Copy link to this** copies the selection and, when it knows which agent you use,
-  opens that agent's chat with it typed in, ready for your question:
-  - in Cursor, a new agent chat, with a region's snapshot attached;
-  - in VS Code, the chat view when a chat extension such as Copilot Chat is
-    installed (and `chat.disableAIFeatures` is off), with the snapshot attached.
+  ```markdown
+  > selected text
+  >
+  > [paper.pdf · p.3](papers/paper.pdf#page=3#:~:text=…)
+  ```
 
-  Extensions cannot see which agent chat is focused, so this happens only when
-  the editor's chat is the only agent installed. With Claude Code or Codex
-  installed as well, Copy link to this does not guess: it copies the selection (with
-  the region snapshot's path) and asks you to paste it into your agent.
-
-  The `lumiere.pdf.copyLinkForAgent.target` setting sends it to one agent instead:
-  `claudeCode` (a new Claude Code conversation with the selection typed in),
-  `codex` (the selection and snapshot attached to the Codex thread), `cursor`,
-  `chat`, or `clipboard`.
-
-  In Cursor, the editor title bar keeps only a few buttons, so **Copy link to this**
-  sits in the **…** (More Actions) menu while something is selected. To pin
-  it to the title bar, open that menu, choose **Configure Icon Visibility**
-  and tick it.
+  With nothing selected, it copies a page-only link for the reading page:
+  `[paper.pdf · p.N](papers/paper.pdf#page=N)`. Clipboard only — it does
+  **not** open agent chat. ⌘C / Ctrl+C still copies plain selected text.
+  `lumiere.pdf.copyLinkForAgent.target` is legacy for IDE Context / MCP
+  delivery only. Region `viewrect=` links appear only when
+  `lumiere.pdf.regions.enabled` is on. Contract:
+  `packages/agents/docs/agent-handoff-format.md`.
 
 - **Open Location.** **PDF: Open Location…** takes a link an agent printed and
   opens that page with the box highlighted.
@@ -99,7 +87,7 @@ open PDF follows at once.
 
 | Mode               | Controls                                                                                                                                                                                                               |
 | ------------------ | ---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| `chrome` (default) | Editor title buttons (find, zoom out and in, fit page or width, Select Region / Select Text, View) and status bar entries for the page, zoom and View. Click them to open Go to Page, the zoom picker or view choices. |
+| `chrome` (default) | Editor title buttons (find, zoom out and in, fit page or width, Select Text, View; Select Region when regions are enabled) and status bar entries for the page, zoom and View. Click them to open Go to Page, the zoom picker or view choices. |
 | `none`             | No controls: keyboard shortcuts, the right-click menu, the **…** menu and the command palette.                                                                                                                         |
 
 ![The zoom picker, opened from the status bar](docs/images/toolbar-zoom-picker.png)
@@ -120,7 +108,7 @@ editor has focus (not in a text field, the side bar or the panel):
 | Go to outline item…    | Ctrl+Shift+O              | ⌘⇧O                 |
 | Toggle the PDF Outline | Ctrl+Alt+O                | ⌃⌘O                 |
 | Select Text tool       | Ctrl+Alt+T                | ⌃⌘T                 |
-| Select Region tool     | Ctrl+Alt+R                | ⌃⌘R                 |
+| Select Region tool (when regions enabled) | Ctrl+Alt+R                | ⌃⌘R                 |
 
 ⌥Arrow on macOS is what Preview does to turn pages keeping the zoom (confirmed by the user, not by Apple documentation). Plain Alt+←/→ stay VS Code's Go Back / Forward, which is why Windows and Linux use Ctrl+Alt+Arrow. The plain arrow keys pan a zoomed page and turn it at its edge; they go to the top of the next page.
 
@@ -154,51 +142,30 @@ to open it in the Dictionary app. Turn it off with
 `lumiere.pdf.lookUp.enabled`. See [docs/look-up.md](docs/look-up.md) for how the
 viewer gives the system a word to find, and what needs a Mac to verify.
 
-## What an agent receives
+## What Copy link puts on the clipboard
 
-```text
-Source: [papers/attention.pdf (page 3)](<papers/attention.pdf#page=3&viewrect=72,83,134,21>)
-PDF source SHA-256: `9f86d081884c7d659a2feaa0c55ad015a3bf4f1b2b0b822cd15d6c15b0f00a08`
-
-Selected text:
-Scaled dot-product attention
-
-When you answer, cite the Source link above so the reader can reopen this spot in the PDF.
+```markdown
+> Scaled dot-product attention
+>
+> [attention.pdf · p.3](papers/attention.pdf#page=3#:~:text=Scaled%20dot%2Dproduct%20attention)
 ```
 
-The last line is there because agents rarely cite the link unprompted; with
-it they do, and **PDF: Open Location** opens what they cite.
+With no selection:
 
-For a region, the lines after the hash ask the agent to read or render the area inside
-the box, give the path of a PNG snapshot of it, and list the text inside it
-line by line (so a table reads row by row):
-
-```text
-Selected PDF region. Read the text inside the view rectangle, or render that area of the page to inspect figures and tables.
-Region image: `/…/workspaceStorage/…/regions/attention-p9-3f2a….png`
-
-Text in the region, line by line (table columns are not kept; see the image):
-Table 3: Variations on the Transformer architecture. …
-base 6 512 2048 8 64 64 0.1 0.1 100K 4.92 25.8 65
-…
-big 6 1024 4096 16 0.3 300K 4.33 26.4 213
+```markdown
+[attention.pdf · p.3](papers/attention.pdf#page=3)
 ```
 
-Snapshots are saved in a `regions` folder in the extension's storage for the
-workspace (`workspaceStorage/<id>/t04dj14n9.lumiere/regions`), not in
-the workspace itself (global storage when no folder is open). Together they
-use at most `lumiere.pdf.regionImageCache.maxSizeMB` megabytes (default 100,
-at least 1; a change applies from the next snapshot). This is a hard limit:
-past it, the least recently used are deleted, and a single snapshot larger than
-the limit is not saved at all (Copy link to this then copies the link and the
-selection without the image, and says why). Copying or asking about a region
-again counts as a use. A selection across pages lists one link per
-page.
+Paste into any note; **PDF: Open Location…** and clicking a Markdown link
+open that page (and resolve `#:~:text=` to an overlay when possible). Legacy
+`#page=N&viewrect=…` and `#hl-` links still open best-effort.
 
-The location uses the `page` and `viewrect` parameters of
-[RFC 8118](https://www.rfc-editor.org/rfc/rfc8118): `viewrect=left,top,width,height`
-in PDF points (1/72 inch), measured from the page's top-left corner. Paths are
-relative to the workspace folder, or absolute for files outside it.
+When **regions are enabled**, a region Copy link may include RFC 8118
+`viewrect=left,top,width,height` (PDF points from the page's top-left). MCP
+`get_current_pdf_selection` can still attach a region PNG snapshot from
+extension storage (`workspaceStorage/…/regions`); Copy link itself does not
+put the image path on the clipboard. See
+`packages/agents/docs/agent-handoff-format.md`.
 
 ## Agent bridge (MCP, experimental, off by default)
 

@@ -2,12 +2,19 @@ import { useRegistry } from "@embedpdf/core/react";
 import type { PdfDocumentObject, Rect } from "@embedpdf/models";
 import type { SelectionScope } from "@embedpdf/plugin-selection";
 import { useSelectionCapability } from "@embedpdf/plugin-selection/react";
-import { useCallback, useEffect, useRef, useState } from "react";
+import {
+  useCallback,
+  useEffect,
+  useRef,
+  useState,
+  type MutableRefObject,
+} from "react";
 import type { PageRect } from "../shared/geometry";
 import type { RegionSelection } from "../shared/selection";
 import { isEditableTarget } from "./editable-target";
 import { postToHost, reportToHost } from "./host";
 import { followMenuContext } from "./menu-context";
+import { currentViewSettings } from "./reading-position";
 import { readRegionDetails } from "./region-details";
 
 type Engine = Parameters<typeof readRegionDetails>[0];
@@ -39,22 +46,17 @@ export function useSelectionReporting(
     if (!selection) {
       return;
     }
-    const engine = () => registry?.getEngine();
-    return state.follow(selection.forDocument(documentId), { engine, pdf });
+    return state.follow(
+      selection.forDocument(documentId),
+      {
+        engine: () => registry?.getEngine(),
+        pdf,
+      },
+      { regionsEnabled: () => currentViewSettings().regionsEnabled === true },
+    );
   }, [state, documentId, pdf, registry, selection]);
   useCopiedText(state);
-  useEffect(
-    () =>
-      followMenuContext(document, () => {
-        const hasAnnotationSelection = Boolean(extra.current?.());
-        const hasSelection =
-          Boolean(state.region) ||
-          Boolean(selection?.forDocument(documentId).getState().selection) ||
-          hasAnnotationSelection;
-        return { hasSelection, hasAnnotationSelection };
-      }),
-    [state, documentId, selection],
-  );
+  useSelectionMenuContext(state, documentId, selection, extra);
   /** Report the selection now: the extension asks before Copy Link for Agent. */
   const reportNow = useCallback((): void => {
     void state.reportSelection(selection?.forDocument(documentId));
@@ -83,6 +85,26 @@ export function useSelectionReporting(
     [state],
   );
   return { region, clear, copyLinkForAgent, reportNow, setAnnotationRegion };
+}
+
+function useSelectionMenuContext(
+  state: SelectionTracker,
+  documentId: string,
+  selection: ReturnType<typeof useSelectionCapability>["provides"],
+  extra: MutableRefObject<(() => boolean) | undefined>,
+): void {
+  useEffect(
+    () =>
+      followMenuContext(document, () => {
+        const hasAnnotationSelection = Boolean(extra.current?.());
+        const hasSelection =
+          Boolean(state.region) ||
+          Boolean(selection?.forDocument(documentId).getState().selection) ||
+          hasAnnotationSelection;
+        return { hasSelection, hasAnnotationSelection };
+      }),
+    [state, documentId, selection, extra],
+  );
 }
 
 /** What is selected, as last reported to the extension. */
@@ -133,7 +155,11 @@ export class SelectionTracker {
   follow(
     scope: SelectionScope,
     source: { engine: () => Engine | undefined; pdf: PdfDocumentObject },
+    options: { regionsEnabled?: () => boolean } = {},
   ): () => void {
+    const regionsEnabled =
+      options.regionsEnabled ??
+      (() => currentViewSettings().regionsEnabled === true);
     /** Whether the marquee that just ended drew a region (else it was a click). */
     let marqueeEnded = false;
     const stops = [
@@ -156,6 +182,9 @@ export class SelectionTracker {
         }
       }),
       scope.onMarqueeEnd((event) => {
+        if (!regionsEnabled()) {
+          return;
+        }
         marqueeEnded = true;
         this.regionDrawn(event, source);
       }),

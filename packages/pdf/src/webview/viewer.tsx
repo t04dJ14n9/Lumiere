@@ -5,16 +5,12 @@ import { Viewport } from "@embedpdf/plugin-viewport/react";
 import { ZoomGestureWrapper } from "@embedpdf/plugin-zoom/react";
 import React, { useEffect, useRef, useState } from "react";
 import { useEndDragsReleasedOutside } from "./drag-release";
-import { useNavigation, type Navigation } from "./navigation";
+import { useNavigation } from "./navigation";
 import { useOutlinePublishing } from "./outline";
 import { Page } from "./page";
 import { PageBitmaps } from "./page-bitmaps";
 import { DOCUMENT_ID } from "./plugins";
-import {
-  currentViewSettings,
-  rememberedPosition,
-  useRestorePosition,
-} from "./reading-position";
+import { currentViewSettings, useRestorePosition } from "./reading-position";
 import type { ViewChoices } from "../shared/view-settings";
 import { usePagedScroll } from "./paged-scroll";
 import { usePagedWheel, usePagingKeys } from "./paging-input";
@@ -43,6 +39,11 @@ import { useHostMessages } from "./host-messages";
 import { useWheelZoom } from "./wheel-zoom";
 import { useJumpHistory } from "./jump-history";
 import { useFirstFitNow } from "./first-fit";
+import {
+  rememberedChoices,
+  useRegionsEnabled,
+  withHistory,
+} from "./viewer-helpers";
 
 /**
  * The open PDF: an optional search bar and the scrolling pages. Controls
@@ -54,7 +55,16 @@ export function Viewer({
   document: PdfDocumentObject;
 }): React.JSX.Element {
   const view = useViewerState(pdf);
-  const { choices, smooth, toolbar, tool, navigation, history, search } = view;
+  const {
+    choices,
+    smooth,
+    toolbar,
+    tool,
+    navigation,
+    history,
+    search,
+    regionsEnabled,
+  } = view;
   return (
     <div
       className={`viewer tool-${tool} toolbar-${toolbar.mode}${smooth ? " smooth-motion" : ""}`}
@@ -68,6 +78,7 @@ export function Viewer({
         <Toolbar
           navigation={navigation}
           tool={tool}
+          regionsEnabled={regionsEnabled}
           choices={choices}
           run={view.runAction}
           history={history}
@@ -101,6 +112,7 @@ function useViewerState(pdf: PdfDocumentObject) {
   const [motionSetting, setMotionSetting] = useState(
     () => currentViewSettings().smoothScrolling,
   );
+  const [regionsEnabled, setRegionsEnabled] = useRegionsEnabled();
   const smooth = useSmoothMotion(motionSetting);
   const rawNavigation = useNavigation(DOCUMENT_ID, choices.scrollMode, smooth);
   const history = useJumpHistory(rawNavigation, choices, setChoices);
@@ -120,6 +132,7 @@ function useViewerState(pdf: PdfDocumentObject) {
     search,
     choices,
     setChoices,
+    regionsEnabled,
   });
   useHostMessages({
     show: navigation.show,
@@ -131,6 +144,7 @@ function useViewerState(pdf: PdfDocumentObject) {
     setZen,
     setToolbar,
     setMotionSetting,
+    setRegionsEnabled,
     setChoices,
     setPageColors: rememberPageColors,
     retryAnnotationSave: tools.annotationSave.retry,
@@ -147,6 +161,7 @@ function useViewerState(pdf: PdfDocumentObject) {
     annotation: tools.annotation,
     annotationSelection: tools.annotationSelection,
     runAction: tools.runAction,
+    regionsEnabled,
     zen,
     toolbar: { ...setting, mode: zenToolbarMode(setting.mode, zen) },
   };
@@ -157,12 +172,13 @@ type ViewerToolsDeps = {
   search: ReturnType<typeof useSearch>;
   choices: ViewChoices;
   setChoices: React.Dispatch<React.SetStateAction<ViewChoices>>;
+  regionsEnabled: boolean;
 };
 
 /** Tool mode, annotations, selection reporting, view actions and keys. */
 function useViewerTools(pdf: PdfDocumentObject, deps: ViewerToolsDeps) {
-  const { navigation, search, choices, setChoices } = deps;
-  const { tool, setTool } = useToolMode(DOCUMENT_ID);
+  const { navigation, search, choices, setChoices, regionsEnabled } = deps;
+  const { tool, setTool } = useToolMode(DOCUMENT_ID, regionsEnabled);
   const annotation = useAnnotationMode(DOCUMENT_ID);
   const annotationSave = useAnnotationSaveSession(pdf);
   const annotationSelected = useRef(false);
@@ -202,41 +218,7 @@ function useViewerTools(pdf: PdfDocumentObject, deps: ViewerToolsDeps) {
   };
 }
 
-type JumpHistory = ReturnType<typeof useJumpHistory>;
 type Selection = ReturnType<typeof useSelectionReporting>;
-
-/** The remembered page layout and scrolling of this PDF. */
-function rememberedChoices(): ViewChoices {
-  const position = rememberedPosition();
-  return {
-    pageLayout: position.pageLayout,
-    scrollMode: position.scrollMode,
-    scrollDirection: position.scrollDirection,
-  };
-}
-
-/**
- * Navigation whose page and box moves are history entries: deliberate ones
- * jump, a search's passive reveal is a preview.
- */
-function withHistory(navigation: Navigation, history: JumpHistory) {
-  return {
-    ...navigation,
-    goToPage: (page: number, top?: number) =>
-      history.jump(() => navigation.goToPage(page, top)),
-    reveal: (
-      page: number,
-      rect: Parameters<Navigation["reveal"]>[1],
-      deliberate = true,
-    ) => {
-      if (deliberate) {
-        history.jump(() => navigation.reveal(page, rect), undefined, true);
-      } else {
-        history.preview(() => navigation.reveal(page, rect));
-      }
-    },
-  };
-}
 
 /** The search bar: open, and how many times Find was asked for. */
 function useSearch() {

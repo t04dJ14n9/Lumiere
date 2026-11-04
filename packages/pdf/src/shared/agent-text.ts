@@ -1,26 +1,23 @@
 /**
- * The text that Copy Link for Agent puts on the clipboard (and types into an
- * agent chat): a Markdown link to the page box, then the selection as a
- * blockquote. For example:
- *
- *     [attention.pdf · p.3](papers/attention.pdf#page=3&viewrect=72,83,134,21)
+ * The text that Copy Link for Agent puts on the clipboard: a Quote-first
+ * Markdown block with Chrome Text Fragment deep links. For example:
  *
  *     > Scaled dot-product attention
+ *     >
+ *     > [attention.pdf · p.3](papers/attention.pdf#page=3#:~:text=Scaled%20dot%2Dproduct%20attention)
  *
- * Href is only `path#page=&viewrect=` (RFC 8118), or `path#hl-<id>` for a
- * sidecar highlight (see the sidecar highlights design in docs/superpowers).
- * No Source: prefix, no file hash, no cite instruction, no Markdown escapes
- * in the label. The lines match LLM Wiki's agent clipboard shape (link, blank
- * line, `> ` quote), so agents and skills that read one also read the other.
+ * Href is `path#page=N` plus optional `#:~:text=…` (Chrome), or
+ * `path#page=N&viewrect=…` when regions are enabled. Never `#hl-`, never
+ * PDF++ `selection=`, never RFC `search=`. No Source: prefix, no file hash,
+ * no cite instruction, no Markdown escapes in the label.
  *
- * A region uses the same link shape; any text found inside the box is quoted.
- * Region image paths are not copied (chat attachment / MCP can still attach a
- * snapshot separately).
+ * A region uses the same Quote shape when it has readable text; viewrect is
+ * emitted only when `regionsEnabled` is true. Region image paths are not
+ * copied (chat attachment / MCP can still attach a snapshot separately).
  */
 import { boundingRect, toViewRect } from "./geometry";
-import { pdfLink } from "./pdf-location";
-import { highlightFragment } from "./sidecar-format";
 import { selectedPages, type PdfSelection } from "./selection";
+import { formatPdfDeepLink } from "./text-fragment";
 
 export interface PdfSource {
   /** Workspace-relative path, or an absolute path for files outside it. */
@@ -41,21 +38,41 @@ function fileBasename(path: string): string {
   return slash >= 0 ? noQuery.slice(slash + 1) : noQuery;
 }
 
-export function agentText(selection: PdfSelection, source: PdfSource): string {
+export function pageLinkText(source: PdfSource, page: number): string {
   const name = fileBasename(source.path);
-  const links = selectedPages(selection).map(({ page, rects }) => {
+  return `[${name} · p.${page}](${formatPdfDeepLink(source.path, { page })})`;
+}
+
+export function agentText(
+  selection: PdfSelection,
+  source: PdfSource,
+  options: { regionsEnabled?: boolean } = {},
+): string {
+  const regionsEnabled = options.regionsEnabled === true;
+  const name = fileBasename(source.path);
+  const pages = selectedPages(selection);
+  const quote = selection.text?.trim() ?? "";
+  const links = pages.map(({ page, rects }) => {
     const label = `${name} · p.${page}`;
-    // A sidecar highlight has a link of its own, which follows it if the
-    // PDF's layout changes; anything else links the page box.
-    const href =
-      selection.kind === "region" && selection.highlightId
-        ? `${source.path}#${highlightFragment(selection.highlightId)}`
-        : pdfLink(source.path, {
-            page,
-            viewRect: toViewRect(boundingRect(rects)),
-          });
-    return `[${label}](${href})`;
+    if (quote && selection.kind === "text") {
+      return `[${label}](${formatPdfDeepLink(source.path, { page, text: quote })})`;
+    }
+    if (selection.kind === "region" && regionsEnabled) {
+      return `[${label}](${formatPdfDeepLink(source.path, {
+        page,
+        viewRect: toViewRect(boundingRect(rects)),
+      })})`;
+    }
+    if (quote) {
+      return `[${label}](${formatPdfDeepLink(source.path, { page, text: quote })})`;
+    }
+    return `[${label}](${formatPdfDeepLink(source.path, { page })})`;
   });
-  const body = selection.text?.trim() ? blockquote(selection.text) : undefined;
-  return [...links, ...(body ? ["", body] : [])].join("\n");
+  if (!quote) {
+    return links.join("\n");
+  }
+  // Quote block, blank quoted line, then each link as a quoted Markdown line.
+  return [blockquote(quote), ">", ...links.map((link) => `> ${link}`)].join(
+    "\n",
+  );
 }

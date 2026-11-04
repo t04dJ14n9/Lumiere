@@ -219,7 +219,7 @@ const settle = () => new Promise((resolve) => setImmediate(resolve));
 /** Objects made inside the module's sandbox, comparable with this realm's. */
 const plain = (value: unknown): unknown => JSON.parse(JSON.stringify(value));
 
-test("write during delayed locate persists the highlight after attach", async () => {
+test("upsert during delayed locate is ignored and creates no sidecar", async () => {
   const h = harness({}, { holdLocate: true });
   const pdf = h.panel("/work/papers/paper.pdf");
   h.sidecars.open(pdf);
@@ -229,7 +229,6 @@ test("write during delayed locate persists the highlight after attach", async ()
     "open still claims [] while locate is held",
   );
 
-  // sidecarWrite while attaching: panels not set yet; must wait like reveal.
   const writing = h.sidecars.write(pdf, {
     type: "sidecarWrite",
     load: 1,
@@ -239,20 +238,20 @@ test("write during delayed locate persists the highlight after attach", async ()
   h.releaseLocate();
   await writing;
 
-  const text = h.files.get("/work/papers/paper.pdf.lumiere.md");
-  assert.ok(text, "write must create the sidecar once attach finishes");
-  assert.deepEqual(format.parseSidecar(text).highlights, [
-    highlight("hl-during-attach"),
-  ]);
+  assert.equal(
+    h.files.has("/work/papers/paper.pdf.lumiere.md"),
+    false,
+    "create/write teardown must not persist upserts",
+  );
   assert.deepEqual(
-    pdf.shown.at(-1),
-    [highlight("hl-during-attach")],
-    "panel shows the highlight after attach+write",
+    plain(pdf.shown.at(-1)),
+    [],
+    "panel stays empty when no sidecar exists on disk",
   );
   h.sidecars.dispose();
 });
 
-test("open claims sidecar with [] before locate/read finishes so Highlight never falls through to markPdf", async () => {
+test("open still reads a pre-existing sidecar before locate finishes", async () => {
   const h = harness();
   h.files.set(
     "/work/papers/paper.pdf.lumiere.md",
@@ -260,12 +259,11 @@ test("open claims sidecar with [] before locate/read finishes so Highlight never
   );
   const pdf = h.panel("/work/papers/paper.pdf");
   h.sidecars.open(pdf);
-  // open() returns before attach awaits locate/read; highlights must already be
-  // non-null ([] = owned/pending) so the highlight tool never takes markPdf().
+  // open() returns before attach awaits locate/read; [] claims ownership for legacy read.
   assert.deepEqual(
     plain(pdf.shown),
     [[]],
-    "open must setSidecar([]) before any await so highlights are never null while pdfSidecar owns the panel",
+    "open must setSidecar([]) before any await while pdfSidecar owns the panel",
   );
   await settle();
   assert.deepEqual(
@@ -277,7 +275,7 @@ test("open claims sidecar with [] before locate/read finishes so Highlight never
   assert.equal(pdf.shown.at(-1), null);
 });
 
-test("a PDF's sidecar beside it is read and shown, and a write creates it", async () => {
+test("a PDF's sidecar beside it is read; upsert no longer creates or changes it", async () => {
   const h = harness();
   const pdf = h.panel("/work/papers/paper.pdf");
   h.sidecars.open(pdf);
@@ -293,27 +291,35 @@ test("a PDF's sidecar beside it is read and shown, and a write creates it", asyn
     op: "upsert",
     highlight: highlight("hl-1"),
   });
-  const text = h.files.get("/work/papers/paper.pdf.lumiere.md")!;
-  assert.match(text, /^---\nlumiere-pdf-sidecar: 1\nsource: "paper.pdf"\n---/);
-  assert.deepEqual(format.parseSidecar(text).highlights, [highlight("hl-1")]);
-  assert.deepEqual(pdf.shown.at(-1), [highlight("hl-1")]);
-  // Another editor of the same PDF follows.
+  assert.equal(
+    h.files.has("/work/papers/paper.pdf.lumiere.md"),
+    false,
+    "upsert must not create a sidecar after create-path teardown",
+  );
+  assert.deepEqual(plain(pdf.shown.at(-1)), []);
+
+  const existing = format.createSidecar({ source: "paper.pdf" }, [
+    highlight("hl-old"),
+  ]);
+  h.files.set("/work/papers/paper.pdf.lumiere.md", existing);
   const twin = h.panel("/work/papers/paper.pdf");
   h.sidecars.open(twin);
   await settle();
-  await h.sidecars.write(pdf, {
+  assert.deepEqual(twin.shown.at(-1), [highlight("hl-old")]);
+  await h.sidecars.write(twin, {
     type: "sidecarWrite",
     load: 1,
-    op: "delete",
-    id: "hl-1",
+    op: "upsert",
+    highlight: highlight("hl-new"),
   });
-  assert.deepEqual(plain(twin.shown.at(-1)), []);
-  assert.doesNotMatch(
-    h.files.get("/work/papers/paper.pdf.lumiere.md")!,
-    /hl-1/,
+  assert.equal(
+    h.files.get("/work/papers/paper.pdf.lumiere.md"),
+    existing,
+    "upsert must leave a pre-existing sidecar untouched",
   );
+  assert.deepEqual(twin.shown.at(-1), [highlight("hl-old")]);
   h.sidecars.dispose();
-  assert.deepEqual(pdf.shown.at(-1), null, "stopping takes them off the pages");
+  assert.deepEqual(pdf.shown.at(-1), null, "stopping clears the panel claim");
   assert.ok(h.watchers.every((watcher) => watcher.disposed));
 });
 
@@ -338,7 +344,7 @@ test("a #hl- link goes to the highlight's box; a missing one says so", async () 
   assert.equal(h.watchers.length, 1, "one search, one watcher");
 });
 
-test("in a sidecar folder, another PDF's sidecar of the same name is neither shown nor written", async () => {
+test("in a sidecar folder, another PDF's sidecar of the same name is not shown; upserts stay no-ops", async () => {
   const h = harness({
     "lumiere.pdf.sidecar.location": "directory",
     "lumiere.pdf.sidecar.directory": "notes/sidecars",
@@ -362,8 +368,7 @@ test("in a sidecar folder, another PDF's sidecar of the same name is neither sho
     h.files.get("/work/notes/sidecars/paper.pdf.lumiere.md"),
     theirs,
   );
-  assert.match(h.warnings.at(-1)!, /belongs to another PDF/);
-  // Its own sidecar in the folder records its path.
+  assert.equal(h.warnings.length, 0, "ignored upserts must not warn");
   const other = h.panel("/work/c/other.pdf");
   h.sidecars.open(other);
   await settle();
@@ -374,22 +379,21 @@ test("in a sidecar folder, another PDF's sidecar of the same name is neither sho
     highlight: highlight("hl-c"),
   });
   assert.equal(
-    format.parseSidecar(
-      h.files.get("/work/notes/sidecars/other.pdf.lumiere.md")!,
-    ).path,
-    "c/other.pdf",
+    h.files.has("/work/notes/sidecars/other.pdf.lumiere.md"),
+    false,
+    "upsert must not create a folder sidecar after teardown",
   );
 });
 
-test("an old sidecar beside the PDF stays in use after switching to a folder; a bad folder falls back", async () => {
+test("an old sidecar beside the PDF stays readable after switching to a folder; upserts stay no-ops", async () => {
   const sibling = harness({
     "lumiere.pdf.sidecar.location": "directory",
     "lumiere.pdf.sidecar.directory": "notes",
   });
-  sibling.files.set(
-    "/work/paper.pdf.lumiere.md",
-    format.createSidecar({ source: "paper.pdf" }, [highlight("hl-old")]),
-  );
+  const existing = format.createSidecar({ source: "paper.pdf" }, [
+    highlight("hl-old"),
+  ]);
+  sibling.files.set("/work/paper.pdf.lumiere.md", existing);
   const pdf = sibling.panel("/work/paper.pdf");
   sibling.sidecars.open(pdf);
   await settle();
@@ -401,7 +405,11 @@ test("an old sidecar beside the PDF stays in use after switching to a folder; a 
     highlight: highlight("hl-new"),
   });
   assert.equal(sibling.files.has("/work/notes/paper.pdf.lumiere.md"), false);
-  assert.match(sibling.files.get("/work/paper.pdf.lumiere.md")!, /hl-new/);
+  assert.equal(
+    sibling.files.get("/work/paper.pdf.lumiere.md"),
+    existing,
+    "upsert must not rewrite a legacy sibling sidecar",
+  );
 
   const bad = harness({
     "lumiere.pdf.sidecar.location": "directory",
@@ -417,7 +425,41 @@ test("an old sidecar beside the PDF stays in use after switching to a folder; a 
     op: "upsert",
     highlight: highlight("hl-x"),
   });
-  assert.ok(bad.files.has("/work/x.pdf.lumiere.md"));
+  assert.equal(
+    bad.files.has("/work/x.pdf.lumiere.md"),
+    false,
+    "ignored upsert must not fall back to creating a sibling sidecar",
+  );
+  // Locating a bad folder still warns once for read path.
   assert.equal(bad.warnings.length, 1, "said once, not per editor");
   assert.match(bad.warnings[0]!, /leaves the workspace/);
+});
+
+test("sidecarWrite delete leaves a pre-existing sidecar untouched", async () => {
+  const h = harness();
+  const existing = format.createSidecar({ source: "paper.pdf" }, [
+    highlight("hl-keep"),
+  ]);
+  h.files.set("/work/papers/paper.pdf.lumiere.md", existing);
+  const pdf = h.panel("/work/papers/paper.pdf");
+  h.sidecars.open(pdf);
+  await settle();
+  assert.deepEqual(pdf.shown.at(-1), [highlight("hl-keep")]);
+  await h.sidecars.write(pdf, {
+    type: "sidecarWrite",
+    load: 1,
+    op: "delete",
+    id: "hl-keep",
+  });
+  assert.equal(
+    h.files.get("/work/papers/paper.pdf.lumiere.md"),
+    existing,
+    "delete must not mutate sidecar after write teardown",
+  );
+  assert.deepEqual(
+    pdf.shown.at(-1),
+    [highlight("hl-keep")],
+    "ignored delete must not clear the in-memory claim from disk",
+  );
+  h.sidecars.dispose();
 });

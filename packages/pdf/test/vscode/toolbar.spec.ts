@@ -2,10 +2,8 @@ import type { Frame, Page } from "@playwright/test";
 import {
   PAGE_STATUS,
   ZOOM_STATUS,
-  agentChatInput,
   contextMenu,
   command,
-  drag,
   editorTitleAction,
   expect,
   goToPage,
@@ -13,8 +11,10 @@ import {
   openFile,
   pageAtTop,
   pagePoint,
+  pastedClipboard,
   pdfViewer,
   quickInputTitled,
+  selectText,
   showPage,
   statusBarEntry,
   test,
@@ -26,6 +26,7 @@ import {
 // viewer does with each action is covered by the browser tests.
 
 const PDF = "docs/outline.pdf";
+const TEXT_MIDLINE = 94;
 
 function zoomStatus(page: Page) {
   return statusBarEntry(page, ZOOM_STATUS);
@@ -177,23 +178,28 @@ test("editor title actions zoom, fit and switch the selection tool", async ({
   ).toBeFocused();
   await page.keyboard.press("Escape");
 
-  // The Select Region tool draws a region over text; Copy Link is context-menu only.
+  // Regions default off: Select Region is hidden; Copy link is clipboard Quote.
   await editorTitleAction(page, "Fit Page");
   await showPage(page, viewer, 1);
-  await editorTitleAction(page, "Select Region Tool");
-  await expect.poll(() => tool(viewer)).toBe("region");
-  const at = await pagePoint(viewer, 1);
-  await drag(page, at(74, 90), at(205, 140));
-  await expect(viewer.locator(".region-selection")).toBeVisible();
+  await page.keyboard.press("F1");
+  await page
+    .locator(".quick-input-widget input:visible")
+    .fill(">PDF: Select Region Tool");
   await expect(
-    viewer.getByRole("toolbar", { name: "PDF region actions" }),
+    page.locator(".quick-input-list .monaco-list-row", {
+      hasText: "Select Region Tool",
+    }),
   ).toHaveCount(0);
-  await contextMenu(page, at(100, 100), "Copy link to this");
-  await expect
-    .poll(() => agentChatInput(page), { timeout: 15_000 })
-    .toContain(withoutSpaces(`[outline.pdf · p.1](${PDF}#page=1&viewrect=`));
-  await editorTitleAction(page, "Select Text Tool");
-  await expect.poll(() => tool(viewer)).toBe("text");
+  await page.keyboard.press("Escape");
+
+  const at = await pagePoint(viewer, 1);
+  await selectText(page, viewer, at(74, TEXT_MIDLINE), at(205, TEXT_MIDLINE));
+  await contextMenu(page, at(100, TEXT_MIDLINE), "Copy link to this");
+  const quote = await pastedClipboard(page);
+  expect(withoutSpaces(quote)).toContain(
+    withoutSpaces(`[outline.pdf · p.1](${PDF}#page=1#:~:text=`),
+  );
+  expect(quote).not.toMatch(/viewrect=|#hl-/u);
 });
 
 test("keyboard shortcuts page, zoom, fit, find and pick the tool while the PDF has focus", async ({
@@ -234,15 +240,10 @@ test("keyboard shortcuts page, zoom, fit, find and pick the tool while the PDF h
   await expect(statusBarEntry(page, /^Page 9 \/ 12$/u)).toBeVisible();
 
   await focusViewer(page, viewer, 9);
+  // Regions default off: Select Region shortcut is unbound / no-ops.
   await page.keyboard.press(
     process.platform === "darwin" ? "Control+Meta+r" : "Control+Alt+r",
   );
-  await expect.poll(() => tool(viewer)).toBe("region");
-  // The command returns the focus to the viewer; Escape goes there once it has it.
-  await expect
-    .poll(() => viewer.evaluate(() => document.hasFocus()))
-    .toBe(true);
-  await page.keyboard.press("Escape");
   await expect.poll(() => tool(viewer)).toBe("text");
 
   await page.keyboard.press(`${modifier}+f`);

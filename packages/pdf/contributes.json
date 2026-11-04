@@ -102,7 +102,7 @@
       "title": "Copy link to this",
       "category": "PDF",
       "icon": "$(comment-discussion)",
-      "enablement": "lumiere.pdf.hasSelection"
+      "enablement": "lumiere.pdf.pdfActive"
     },
     {
       "command": "vscodeEmbedPdf.bridge.envelope",
@@ -452,7 +452,7 @@
       },
       {
         "command": "lumiere.pdf.selectRegionTool",
-        "when": "activeCustomEditorId == 'lumiere.pdf.viewer'",
+        "when": "activeCustomEditorId == 'lumiere.pdf.viewer' && config.lumiere.pdf.regions.enabled",
         "group": "3_pdfTool@2"
       },
       {
@@ -625,7 +625,7 @@
       },
       {
         "command": "lumiere.pdf.selectRegionTool",
-        "when": "activeCustomEditorId == 'lumiere.pdf.viewer'"
+        "when": "activeCustomEditorId == 'lumiere.pdf.viewer' && config.lumiere.pdf.regions.enabled"
       },
       {
         "command": "lumiere.pdf.selectAnnotateTool",
@@ -717,7 +717,7 @@
       },
       {
         "command": "lumiere.pdf.copyLinkForAgent",
-        "when": "webviewId == 'lumiere.pdf.viewer' && lumiere.pdf.hasSelection",
+        "when": "webviewId == 'lumiere.pdf.viewer'",
         "group": "0_agent@1"
       },
       {
@@ -742,7 +742,7 @@
       },
       {
         "command": "lumiere.pdf.selectRegionTool",
-        "when": "webviewId == 'lumiere.pdf.viewer' && lumiere.pdf.tool != 'region'",
+        "when": "webviewId == 'lumiere.pdf.viewer' && lumiere.pdf.tool != 'region' && config.lumiere.pdf.regions.enabled",
         "group": "2_pdfTool@1"
       },
       {
@@ -839,13 +839,18 @@
           "Codex: the selection (and a region's snapshot) attached to the thread.",
           "Only copy the selection."
         ],
-        "markdownDescription": "Which agent chat, if any, **Copy link to this** opens with a PDF selection. The link and selection are always copied. Extensions cannot see which agent you are working in, so `auto` only opens a chat when there is a single agent; pick one here to send the selection to it."
+        "markdownDescription": "Legacy agent-target preference for IDE Context / MCP delivery. **Copy link to this** no longer opens agent chat: it only writes a Quote or page link to the clipboard. Pick a target here only when another path (IDE Context or MCP) still routes a selection to an agent."
       },
       "lumiere.pdf.regionImageCache.maxSizeMB": {
         "type": "number",
         "default": 100,
         "minimum": 1,
         "markdownDescription": "The most disk space, in megabytes, that PNG snapshots of selected regions may use in the extension's storage. This is a hard limit: when a new snapshot takes them past it, the least recently used ones are deleted, and a single snapshot larger than the limit is not saved (Copy link to this then copies the link without the image). Values below 1 count as 1."
+      },
+      "lumiere.pdf.regions.enabled": {
+        "type": "boolean",
+        "default": false,
+        "markdownDescription": "Allow empty-page region drags and the **Select Region** tool. When off (default), only text selection and page links are available for Copy link; new links never include `viewrect=`. Turn on to draw boxes and optionally emit `viewrect=` in Copy link."
       },
       "lumiere.pdf.toolbar.mode": {
         "type": "string",
@@ -953,12 +958,12 @@
           "In the workspace folder set by `#lumiere.pdf.sidecar.directory#`."
         ],
         "default": "sibling",
-        "markdownDescription": "Where PDF highlights are kept. Highlights never change the PDF: they live in a Markdown sidecar, `paper.pdf.lumiere.md`, which notes can link into with `paper.pdf#hl-…`. An existing sidecar beside the PDF is still used after switching to a folder, until you move it."
+        "markdownDescription": "Legacy: where old PDF highlight sidecars (`paper.pdf.lumiere.md`) are looked up for `#hl-…` open only. New highlights use vault Markdown links / burn into the PDF; the highlight tool no longer writes sidecars. An existing sidecar beside the PDF is still found after switching to a folder, until you move or delete it by hand."
       },
       "lumiere.pdf.sidecar.directory": {
         "type": "string",
         "default": "",
-        "markdownDescription": "The workspace folder for PDF highlight sidecars when `#lumiere.pdf.sidecar.location#` is `directory`, relative to the workspace root (for example `notes/pdf-sidecars`). Sidecars are kept flat there by the PDF's file name, so two PDFs of the same name share a name: the second is not saved over the first. An empty, absolute or outside path keeps sidecars beside the PDF."
+        "markdownDescription": "Legacy: workspace folder for old PDF highlight sidecars when `#lumiere.pdf.sidecar.location#` is `directory`, relative to the workspace root (for example `notes/pdf-sidecars`). Used only to find existing `*.pdf.lumiere.md` for `#hl-…` open; new highlights are not written here. An empty, absolute or outside path looks beside the PDF."
       },
       "lumiere.pdf.keyboardShortcuts": {
         "type": "boolean",
@@ -1135,7 +1140,7 @@
       "command": "lumiere.pdf.selectRegionTool",
       "key": "ctrl+alt+r",
       "mac": "ctrl+cmd+r",
-      "when": "activeCustomEditorId == 'lumiere.pdf.viewer' && !inputFocus && !sideBarFocus && !panelFocus && !auxiliaryBarFocus && config.lumiere.pdf.keyboardShortcuts"
+      "when": "activeCustomEditorId == 'lumiere.pdf.viewer' && !inputFocus && !sideBarFocus && !panelFocus && !auxiliaryBarFocus && config.lumiere.pdf.keyboardShortcuts && config.lumiere.pdf.regions.enabled"
     },
     {
       "command": "lumiere.pdf.toggleAnnotateTool",

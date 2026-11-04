@@ -24,3 +24,13 @@ test("viewerPlugins registers History then Annotation after Selection", () => {
   assert.match(source, /annotationAuthor:\s*["']Lumia["']/);
   assert.match(source, /autoCommit:\s*true/);
 });
+
+test("SelectionPluginPackage starts marquee from regionsEnabled (default off)", () => {
+  const source = readFileSync(pluginsPath, "utf8");
+  const body = source.slice(source.indexOf("export function viewerPlugins"));
+  assert.match(
+    body,
+    /createPluginRegistration\(\s*SelectionPluginPackage\s*,\s*\{[\s\S]*?marquee:\s*\{\s*enabled:\s*regionsEnabled/,
+  );
+  assert.match(body, /currentViewSettings\(\)\.regionsEnabled/);
+});
