@@ -119,9 +119,7 @@ function startPendingReclaim(options: {
       if (
         isMissingMarkdownFileUri(uri) &&
         isFileNotFoundError(error) &&
-        !next.keepNative &&
-        !hasNativeOptOut(uri, next.kind) &&
-        !next.intent?.token.cancelled
+        !transferBlocked(uri, next)
       ) {
         try {
           await openMissingMarkdownBridge(uri, next);
@@ -179,14 +177,7 @@ async function reopen(
   navigation?: NativeNavigation,
 ): Promise<void> {
   const target = vscode.Uri.parse(uri);
-  if (
-    isMissingMarkdownFileUri(uri) &&
-    !(await markdownFileExists(target)) &&
-    !request.keepNative &&
-    !hasNativeOptOut(uri, request.kind) &&
-    !request.intent?.token.cancelled
-  ) {
-    await openMissingMarkdownBridge(uri, request);
+  if (await openMissingBridgeIfNeeded(uri, request, target)) {
     return;
   }
   // showTextDocument has already materialized a text tab's document. Avoid
@@ -234,11 +225,7 @@ async function reopen(
   // Opt-outs or a superseding jump may land during the reveal wait. Do not
   // close a native tab the user just chose (Open as Text / Edit lease) or a
   // transfer that navigation cancelled. keepNative is sticky across bypass TTL.
-  if (
-    request.keepNative ||
-    hasNativeOptOut(uri, request.kind) ||
-    request.intent?.token.cancelled
-  ) {
+  if (transferBlocked(uri, request)) {
     return;
   }
   // openWith opens a second tab beside the native one; left open, a Cursor
@@ -309,6 +296,30 @@ async function markdownFileExists(uri: vscode.Uri): Promise<boolean> {
   }
 }
 
+function transferBlocked(uri: string, request: ReclaimRequest): boolean {
+  return (
+    Boolean(request.keepNative) ||
+    hasNativeOptOut(uri, request.kind) ||
+    Boolean(request.intent?.token.cancelled)
+  );
+}
+
+async function openMissingBridgeIfNeeded(
+  uri: string,
+  request: ReclaimRequest,
+  target: vscode.Uri,
+): Promise<boolean> {
+  if (
+    !isMissingMarkdownFileUri(uri) ||
+    transferBlocked(uri, request) ||
+    (await markdownFileExists(target))
+  ) {
+    return false;
+  }
+  await openMissingMarkdownBridge(uri, request);
+  return true;
+}
+
 async function openMissingMarkdownBridge(
   uri: string,
   request: ReclaimRequest,
@@ -323,13 +334,7 @@ async function openMissingMarkdownBridge(
     host: vscodeMissingOpenHost(),
   });
   const left = currentTab(request);
-  if (
-    left &&
-    !left.isDirty &&
-    !request.keepNative &&
-    !hasNativeOptOut(uri, request.kind) &&
-    !request.intent?.token.cancelled
-  ) {
+  if (left && !left.isDirty && !transferBlocked(uri, request)) {
     await vscode.window.tabGroups.close(left, true);
   }
 }
