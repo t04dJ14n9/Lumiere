@@ -188,6 +188,8 @@ export const workspace = {
     },
   }),
   onDidChangeConfiguration: event("workspace.configuration"),
+  onDidSaveTextDocument: event("workspace.saveTextDocument"),
+  findFiles: async (_include?: unknown, _exclude?: unknown) => [] as Uri[],
   createFileSystemWatcher: () =>
     track("fileSystemWatcher", {
       onDidChange: event("watcher.change"),

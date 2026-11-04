@@ -4,6 +4,7 @@ import type { PdfPanels } from "./pdf/panels";
 import type { RegionSnapshots } from "./pdfRegions/region-snapshots";
 import type { PdfSettings } from "../settings";
 import type { NoteSelections } from "./agentBridge/note-selections";
+import type { PdfBacklinkIndex } from "../../shared/pdf-backlink-index";
 
 /**
  * The services PDF plugins share. The extension's composition root provides
@@ -24,5 +25,7 @@ declare module "@workshop/core" {
     pdfHandoff: AgentHandoff;
     /** The composition root: the selection in the Markdown editor, for agents. */
     noteSelections: NoteSelections;
+    /** Plugin `pdfBacklinks`: derived vault Markdown → PDF deep-link index. */
+    pdfBacklinkIndex: PdfBacklinkIndex;
   }
 }

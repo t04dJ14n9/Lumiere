@@ -30,6 +30,7 @@
  *    │                                    or under a right click (to look up
  *    │                                    from the context menu)
  *    │  sidecar / ◄── sidecarWrite        sidecar highlights (sidecar-messages.ts)
+ *    │  pdfBacklinks { load, hits } ►     vault Markdown PDF backlink overlays
  *
  * State reports are batched: the viewer collects what changed for a frame
  * and sends one `patch` (only the latest of each part), so scrolling or a
@@ -57,6 +58,7 @@ import {
   type SidecarHostMessage,
   type SidecarWrite,
 } from "./sidecar-messages";
+import type { PdfBacklinkHit } from "./pdf-backlink-index";
 import type { PdfLocation } from "./pdf-location";
 import { parseSelection, type PdfSelection } from "./selection";
 import {
@@ -201,6 +203,11 @@ export type HostMessage =
       message: string;
     }
   | { type: "annotationRetry"; load: number }
+  | {
+      type: "pdfBacklinks";
+      load: number;
+      hits: PdfBacklinkHit[];
+    }
   | SidecarHostMessage;
 
 const MAX_OUTLINE_ITEMS = 10_000;
