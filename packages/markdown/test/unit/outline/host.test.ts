@@ -702,6 +702,35 @@ test("a click on an outline row leaves the tree as it is, so a double-click's se
   ]);
 });
 
+// A scroll fires follows in quick succession. Clearing openBranches for every
+// follow meant a superseded one left the model unknown, so the next follow
+// collapsed the whole tree even when the path only needed more rows open.
+test("a scroll that only opens rows does not flash when a slower follow is superseded", async (t) => {
+  const text = "# A\nintro\n## A1\n### A1a\nleaf\n## A2\nlast\n";
+  const fixture = await outlineFixture({ "A.md": text });
+  t.after(() => fixture.root.dispose());
+  const { panel, cursor } = fixture.panel("one");
+  fixture.open(panel);
+  await tick();
+  cursor.head = text.indexOf("intro");
+  fixture.root.emit("editor/selectionChanged", panel, false);
+  await tick();
+  const collapses = fixture.collapseAllCount;
+  const release = fixture.holdExpands();
+  // Into A1a: only A1 has to open. Hold that expand so the next scroll report
+  // can supersede this follow before openBranches is restored.
+  cursor.read(text.indexOf("leaf"));
+  await tick();
+  cursor.read(text.indexOf("leaf") + 1);
+  await tick();
+  release();
+  await wait(10);
+  assert.equal(fixture.collapseAllCount, collapses, "nothing flashes shut");
+  assert.equal(fixture.isOpen("A"), true);
+  assert.equal(fixture.isOpen("A1"), true);
+  assert.equal(fixture.reveals.at(-1)?.node.label, "A1a");
+});
+
 test("scrolling the note moves the accordion to the section being read, as the caret does", async (t) => {
   const fixture = await outlineFixture({ "A.md": NESTED });
   t.after(() => fixture.root.dispose());

@@ -290,16 +290,28 @@ export class OutlineView {
       }
     }
     const open = this.openBranches;
-    // Unknown while the tree changes: a follow that takes over meanwhile, or
-    // comes after this one failed, lays the whole path out again.
-    this.openBranches = undefined;
     const toOpen = [...expandIds].filter((id) => !open?.has(id));
     const mustClose = !open || [...open].some((id) => !expandIds.has(id));
     const canOnlyOpen = this.options.tree.collapseAll !== undefined;
-    if (mustClose || (!canOnlyOpen && toOpen.length > 0)) {
-      await this.resetAccordion(path, expandIds, isCurrent);
-    } else {
-      await this.expandPath(path, new Set(toOpen), isCurrent);
+    const willReset = mustClose || (!canOnlyOpen && toOpen.length > 0);
+    // Forget the model only when this follow will collapse or rebuild the
+    // tree. An open-only follow that is superseded (common while scrolling)
+    // must leave the previous set: otherwise the next follow treats the tree
+    // as unknown and runs collapseAll, flashing shut rows that are still open.
+    if (willReset) {
+      this.openBranches = undefined;
+    }
+    try {
+      if (willReset) {
+        await this.resetAccordion(path, expandIds, isCurrent);
+      } else {
+        await this.expandPath(path, new Set(toOpen), isCurrent);
+      }
+    } catch (error) {
+      // A failed follow leaves the model unknown so the next one lays the
+      // whole path out again (collapseAll where the host has it).
+      this.openBranches = undefined;
+      throw error;
     }
     if (!isCurrent()) {
       return;
