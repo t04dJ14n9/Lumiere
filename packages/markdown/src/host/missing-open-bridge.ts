@@ -6,6 +6,9 @@
  * intended basename (e.g. `untitled:/…/test.md` → tab `test.md`).
  */
 
+import * as vscode from "vscode";
+import { MARKDOWN_EDITOR } from "../shared/editor-provider";
+
 /** file: Markdown notes that may use the missing-open bridge. */
 export function isMissingMarkdownFileUri(uri: string): boolean {
   return /^file:/i.test(uri) && /\.(md|markdown)$/i.test(uriPath(uri));
@@ -25,15 +28,15 @@ export function basenameForIntendedFileUri(uri: string): string {
 
 /**
  * Untitled URI whose path ends with the intended basename so the tab label
- * is that basename (never `Untitled-N`).
+ * is that basename (never `Untitled-N`). Full path associates Save with the
+ * intended workspace location.
  */
 export function untitledBridgeUriFor(intendedFileUri: string): string {
   if (!isMissingMarkdownFileUri(intendedFileUri)) {
     throw new Error("missing-open bridge requires a file Markdown URI");
   }
-  const basename = basenameForIntendedFileUri(intendedFileUri);
-  // Leading slash keeps Uri path absolute; VS Code labels by basename.
-  return `untitled:/${encodeURIComponent(basename).replace(/%2F/gi, "/")}`;
+  const path = uriPath(intendedFileUri);
+  return `untitled:${path.startsWith("/") ? path : `/${path}`}`;
 }
 
 /** Maps bridge document URI → intended workspace `file:` URI. */
@@ -63,17 +66,6 @@ export class MissingOpenBridge {
   clear(bridgeUri: string): void {
     this.#intended.delete(bridgeUri);
   }
-}
-
-function uriPath(uri: string): string {
-  // Strip scheme://authority so path-only checks work for file: and untitled:.
-  const withoutScheme = uri.replace(/^[a-z][a-z0-9+.-]*:/i, "");
-  if (withoutScheme.startsWith("//")) {
-    const rest = withoutScheme.slice(2);
-    const slash = rest.indexOf("/");
-    return slash < 0 ? "" : rest.slice(slash);
-  }
-  return withoutScheme.startsWith("/") ? withoutScheme : `/${withoutScheme}`;
 }
 
 /** Shared bridge map for reclaim catch + Save swap. */
@@ -122,4 +114,122 @@ export async function openBridgeForMissingMarkdown(options: {
     ...(options.preview !== undefined ? { preview: options.preview } : {}),
   });
   return bridgeUri;
+}
+
+/** Host surface used to persist a bridge document onto its intended path. */
+export interface MissingOpenPersistHost {
+  ensureParentDir(fileUri: string): Promise<void>;
+  writeText(fileUri: string, content: string): Promise<void>;
+  openWith(
+    uri: string,
+    viewType: string,
+    options?: { viewColumn?: number; preview?: boolean },
+  ): Promise<void>;
+  closeUri(uri: string): Promise<void>;
+}
+
+/**
+ * Write bridge content to the intended `file:` path, open Lumia there, and
+ * close the untitled bridge. Creates parent directories when needed.
+ */
+export async function persistMissingOpenBridge(options: {
+  bridgeUri: string;
+  content: string;
+  bridge: MissingOpenBridge;
+  viewType: string;
+  host: MissingOpenPersistHost;
+}): Promise<string | undefined> {
+  const intended = options.bridge.take(options.bridgeUri);
+  if (intended === undefined) {
+    return undefined;
+  }
+  await options.host.ensureParentDir(intended);
+  await options.host.writeText(intended, options.content);
+  await options.host.openWith(intended, options.viewType);
+  await options.host.closeUri(options.bridgeUri);
+  return intended;
+}
+
+function vscodePersistHost(): MissingOpenPersistHost {
+  return {
+    async ensureParentDir(fileUri) {
+      const file = vscode.Uri.parse(fileUri);
+      const parent = vscode.Uri.joinPath(file, "..");
+      await vscode.workspace.fs.createDirectory(parent);
+    },
+    async writeText(fileUri, content) {
+      await vscode.workspace.fs.writeFile(
+        vscode.Uri.parse(fileUri),
+        new TextEncoder().encode(content),
+      );
+    },
+    async openWith(uri, type, options) {
+      await vscode.commands.executeCommand(
+        "vscode.openWith",
+        vscode.Uri.parse(uri),
+        type,
+        options,
+      );
+    },
+    async closeUri(uri) {
+      for (const group of vscode.window.tabGroups.all) {
+        for (const tab of group.tabs) {
+          const input = tab.input as { uri?: vscode.Uri } | undefined;
+          if (input?.uri?.toString() === uri && !tab.isDirty) {
+            await vscode.window.tabGroups.close(tab, true);
+            return;
+          }
+        }
+      }
+      const doc = vscode.workspace.textDocuments.find(
+        (document) => document.uri.toString() === uri,
+      );
+      if (doc) {
+        await vscode.window.showTextDocument(doc, {
+          preview: true,
+          preserveFocus: true,
+        });
+        await vscode.commands.executeCommand(
+          "workbench.action.revertAndCloseActiveEditor",
+        );
+      }
+    },
+  };
+}
+
+/**
+ * On Save of a mapped untitled bridge: write the intended path, open Lumia on
+ * the real file, and close the bridge tab.
+ */
+export function registerMissingOpenBridgeSave(
+  bridge: MissingOpenBridge = missingOpenBridge,
+  viewType: string = MARKDOWN_EDITOR.viewType,
+): vscode.Disposable {
+  return vscode.workspace.onWillSaveTextDocument((event) => {
+    const bridgeUri = event.document.uri.toString();
+    if (!bridge.peek(bridgeUri)) {
+      return;
+    }
+    const content = event.document.getText();
+    event.waitUntil(
+      persistMissingOpenBridge({
+        bridgeUri,
+        content,
+        bridge,
+        viewType,
+        host: vscodePersistHost(),
+      }).then(() => undefined),
+    );
+  });
+}
+
+function uriPath(uri: string): string {
+  // Strip scheme://authority so path-only checks work for file: and untitled:.
+  const withoutScheme = uri.replace(/^[a-z][a-z0-9+.-]*:/i, "");
+  if (withoutScheme.startsWith("//")) {
+    const rest = withoutScheme.slice(2);
+    const slash = rest.indexOf("/");
+    return slash < 0 ? "" : rest.slice(slash);
+  }
+  return withoutScheme.startsWith("/") ? withoutScheme : `/${withoutScheme}`;
 }
