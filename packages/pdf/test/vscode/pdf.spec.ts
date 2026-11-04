@@ -10,7 +10,6 @@ import type { Page } from "@playwright/test";
 import { paths } from "./state";
 import { pageFit } from "./pdf-geometry";
 import {
-  agentChatInput,
   command,
   contextMenu,
   contextMenuLabels,
@@ -20,6 +19,7 @@ import {
   openFile,
   pageAtTop,
   pagePoint,
+  pastedClipboard,
   pdfViewer,
   pointAtTop,
   selectText,
@@ -29,33 +29,11 @@ import {
   withoutSpaces,
 } from "./workbench";
 
-// The exact text Copy Link for Agent produces is covered by test/unit/agent-text.test.ts,
-// and the selection geometry by the browser tests. These tests check the parts
-// only a real VS Code has: the editor, the Explorer view, commands and buttons.
+// Exact Quote text is covered by test/unit/agent-text.test.ts; these tests
+// check real VS Code menus, clipboard-only Copy link, and Open Location.
 
 const PDF = "docs/outline.pdf";
 const TEXT_MIDLINE = 94;
-
-/**
- * Copy link to this from the PDF webview context menu until the chat holds
- * `text`. The action copies the selection the extension already has.
- */
-async function copyLinkUntilChatHas(
-  page: Page,
-  at: Parameters<typeof contextMenu>[1],
-  text: string,
-): Promise<void> {
-  await expect
-    .poll(
-      async () => {
-        await contextMenu(page, at, "Copy link to this");
-        await page.waitForTimeout(500);
-        return agentChatInput(page);
-      },
-      { timeout: 30_000, intervals: [250] },
-    )
-    .toContain(withoutSpaces(text));
-}
 
 /** The "PDF Outline" view in the Explorer, expanded. */
 async function outlineView(page: Page) {
@@ -104,7 +82,7 @@ test("a PDF opens with its outline in the Explorer, shown only while the PDF is 
   await expect(header).toBeVisible();
 });
 
-test("Copy link to this is context-menu only; selection menus and title button are gone", async ({
+test("Copy link to this is clipboard Quote / page link; no agent chat", async ({
   workbench: page,
 }) => {
   await openFile(page, PDF);
@@ -113,10 +91,20 @@ test("Copy link to this is context-menu only; selection menus and title button a
   await showPage(page, viewer, 3);
 
   const at = await pagePoint(viewer, 3);
-  // With nothing selected the menu offers the view, not the link.
+  // Enabled whenever the PDF is active — including with nothing selected.
   const unselected = await contextMenuLabels(page, at(100, TEXT_MIDLINE));
   expect(unselected).toContain("Go to Page…");
-  expect(unselected).not.toContain("Copy link to this");
+  expect(unselected).toContain("Copy link to this");
+
+  await contextMenu(page, at(100, TEXT_MIDLINE), "Copy link to this");
+  const pageOnly = await pastedClipboard(page);
+  expect(withoutSpaces(pageOnly)).toContain(
+    withoutSpaces(`[outline.pdf · p.3](${PDF}#page=3)`),
+  );
+  expect(pageOnly).not.toMatch(/viewrect=|#hl-|#:~:text=/u);
+
+  await page.locator(".tabs-container .tab", { hasText: "outline.pdf" }).click();
+  await expect(statusBarEntry(page, /^Page 3 \/ 12$/u)).toBeVisible();
   await selectText(page, viewer, at(74, TEXT_MIDLINE), at(205, TEXT_MIDLINE));
   await expect(
     viewer.getByRole("toolbar", { name: "PDF text selection actions" }),
@@ -128,28 +116,25 @@ test("Copy link to this is context-menu only; selection menus and title button a
   ).toHaveCount(0);
 
   await contextMenu(page, at(100, TEXT_MIDLINE), "Copy link to this");
-  await expect
-    .poll(() => agentChatInput(page), { timeout: 15_000 })
-    .toContain(withoutSpaces(`[outline.pdf · p.3](${PDF}#page=3&viewrect=`));
+  const quote = await pastedClipboard(page);
+  expect(quote).toMatch(/^>/u);
+  expect(withoutSpaces(quote)).toContain(
+    withoutSpaces(`[outline.pdf · p.3](${PDF}#page=3#:~:text=`),
+  );
+  expect(quote).toMatch(/Synthetic%20page%203|Synthetic page 3/u);
+  expect(quote).not.toMatch(/viewrect=|#hl-|selection=|search=/u);
 
+  // Regions default off: empty-page drag creates no region.
+  await page.locator(".tabs-container .tab", { hasText: "outline.pdf" }).click();
   await expect
     .poll(() => pageFit(viewer))
     .toEqual({ fitsWidth: true, fitsHeight: true, fills: true });
   const refit = await pagePoint(viewer, 3);
   await drag(page, refit(150, 150), refit(250, 250));
+  await expect(viewer.locator(".region-selection")).toHaveCount(0);
   await expect(
     viewer.getByRole("toolbar", { name: "PDF region actions" }),
   ).toHaveCount(0);
-  await expect(
-    page
-      .locator(".editor-actions")
-      .getByRole("button", { name: /^(Copy for Agent|Ask Agent)/u }),
-  ).toHaveCount(0);
-  await copyLinkUntilChatHas(
-    page,
-    refit(180, 180),
-    `[outline.pdf · p.3](${PDF}#page=3&viewrect=150,150,100,100)`,
-  );
 
   await page.keyboard.press("F1");
   await page
@@ -171,39 +156,12 @@ test("Copy link to this is context-menu only; selection menus and title button a
   await page.keyboard.press("Escape");
 });
 
-test("Copy link to this from the context menu opens the agent chat with the region typed in and its snapshot attached", async ({
-  workbench: page,
-}) => {
-  // VS Code's chat counts as served thanks to test/fixtures/chat-participant; Cursor has its own.
-  await openFile(page, PDF);
-  const viewer = await pdfViewer(page);
-  await fitPage(page, viewer);
-  await showPage(page, viewer, 3);
-  const at = await pagePoint(viewer, 3);
-  await drag(page, at(60, 70), at(230, 150));
-  await expect
-    .poll(async () => {
-      // Wait until the extension has the region (enables the context-menu item).
-      return viewer.locator(".region-selection").count();
-    })
-    .toBeGreaterThan(0);
-  const link = `[outline.pdf · p.3](${PDF}#page=3&viewrect=60,70,170,80)`;
-  await contextMenu(page, at(100, TEXT_MIDLINE), "Copy link to this");
-  await expect
-    .poll(() => agentChatInput(page), { timeout: 15_000 })
-    .toContain(withoutSpaces(link));
-  // The snapshot: attached in VS Code's chat, a file pill in Cursor's.
-  await expect
-    .poll(() => agentChatInput(page), { timeout: 15_000 })
-    .toMatch(/outline-p3-[0-9a-f]{12}\.png/u);
-});
-
 test("PDF: Open Location opens a pasted link at its page and flashes its box", async ({
   workbench: page,
 }) => {
   await command(page, "PDF: Open Location…");
   const input = page.locator(".quick-input-widget input:visible");
-  // The source line exactly as Copy Link for Agent writes it.
+  // Legacy viewrect still opens; new Copy link prefers #:~:text=.
   await input.fill(`[outline.pdf · p.5](${PDF}#page=5&viewrect=72,83,134,21)`);
   await input.press("Enter");
   const viewer = await pdfViewer(page);

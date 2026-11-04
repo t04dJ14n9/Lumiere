@@ -3,7 +3,7 @@
 Lumia PDF is one half of the "Lumia: Markdown Editor and PDF Reader" extension: a
 PDF viewer built on EmbedPDF that copies selections with exact page-and-box
 locations. The repository's [AGENTS.md](../../AGENTS.md) applies; these rules
-are specific to the PDF code. Read README.md for the layout.
+are specific to the PDF code. Read README.md for the layout and CAPABILITIES.md for the plugin table.
 
 - `src/shared` must run anywhere: no DOM, VS Code or Node APIs. The package's
   `tsconfig.json` enforces this.

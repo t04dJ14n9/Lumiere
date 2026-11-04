@@ -1,26 +1,32 @@
-# Sidecar highlights
+# Sidecar highlights (legacy)
 
-Highlights made with the **Highlight** tool in Annotate mode are kept in a
-Markdown file beside the PDF, never in the PDF: the file on disk stays
-byte-for-byte as it was. Design:
-[docs/superpowers/specs/2026-11-01-pdf-sidecar-highlights-design.md](../../../docs/superpowers/specs/2026-11-01-pdf-sidecar-highlights-design.md).
+> **Superseded as the highlight store** by vault Markdown deep links and
+> Chrome-aligned backlink overlays. See the design:
+> [docs/superpowers/specs/2026-11-04-pdf-backlink-overlays-chrome-design.md](../../../docs/superpowers/specs/2026-11-04-pdf-backlink-overlays-chrome-design.md).
+>
+> **Source of truth for passage highlights** is ordinary Markdown links in
+> notes (`path.pdf#page=N#:~:text=…`). **Copy link to this** puts a Quote on
+> the clipboard; paste it into any note. The viewer paints **backlink
+> overlays** from those links. Annotate **Highlight** burns into the PDF
+> again (with Note / freeText / underline / ink).
 
-## Using them
+## What still works (legacy)
 
-1. Open a PDF, enter Annotate mode (status bar), pick **Highlight**, and drag
-   over text. The highlight shows at once and is written to
-   `paper.pdf.lumiere.md` beside `paper.pdf` (created on the first one).
-2. Click a highlight in Annotate mode to select it. **Copy link to this**
-   (right-click) copies `[paper.pdf · p.3](papers/paper.pdf#hl-a1b2c3d4)` and
-   the quote; Delete or Backspace (or **Delete Annotation** in the menu)
-   removes it from the sidecar.
-3. Paste the link into any note. Following it opens the PDF, scrolls to the
-   highlight and flashes it. **PDF: Open Location…** takes the same link.
-4. Write notes in the sidecar itself, around the highlight blocks: edits to
-   highlights touch only their own block, so the prose is kept. Editing or
-   deleting a block by hand updates the open viewer when the file is saved.
+- Existing `*.pdf.lumiere.md` sidecar files are **not** auto-migrated or
+  auto-deleted. Delete them by hand when you no longer need them.
+- Opening a legacy `paper.pdf#hl-<id>` link still jumps to that highlight and
+  flashes it **when the sidecar file is present** (best-effort read + `goTo`).
+- Settings `lumiere.pdf.sidecar.location` / `.directory` remain for that
+  legacy `#hl-` lookup only. New Copy link never emits `#hl-`.
 
-## The file
+## What no longer happens
+
+- Annotate **Highlight** does **not** create or rewrite sidecar files.
+- The viewer does **not** paint `.sidecar-highlight` overlays from a sidecar
+  list. Passage marks come from vault Markdown backlinks instead.
+- New **Copy link to this** never copies `paper.pdf#hl-…`.
+
+## File format (unchanged for old files)
 
 ```markdown
 ---
@@ -47,57 +53,41 @@ modified: 2026-11-01T18:00:00.000Z
 ```
 
 Rectangles are in points from the page's top-left corner, like `viewrect`.
-Strings are JSON-quoted with `>` escaped, so no quote can end the comment.
-Sidecars kept in a folder also record the PDF's workspace-relative `path`.
 
-## Where sidecars live
+## Where sidecars lived
 
 | `lumiere.pdf.sidecar.location` | Sidecar of `papers/attn/paper.pdf` |
 | --- | --- |
 | `sibling` (default) | `papers/attn/paper.pdf.lumiere.md` |
 | `directory` | `<workspace>/<lumiere.pdf.sidecar.directory>/paper.pdf.lumiere.md` |
 
-- The folder must be inside the PDF's workspace folder. An empty, absolute or
-  escaping (`..`) value, or a PDF outside the workspace, keeps the sidecar
-  beside the PDF (with a warning for a bad value, once per session).
-- After switching to `directory`, an existing sidecar beside the PDF is still
-  the one read and written, until you move it, so notes are never split
-  between two files.
-- Folder sidecars are flat, named by the PDF's file name: a second PDF of the
-  same name finds the first one's sidecar, which is neither shown nor
-  overwritten (its `source`/`path` do not match); a warning says so.
+## Code map (legacy keep vs unhooked)
 
-## How it works
+**Still used for `#hl-` open / format / host push:**
 
-- `src/shared/sidecar-format.ts`, `sidecar-path.ts`, `sidecar-messages.ts`:
-  pure parsing, writing, placement and message validation (unit tested).
-- `src/extension/plugins/pdfSidecar`: the plugin. It finds each editor's
-  sidecar, reads it (from the open editor, unsaved edits included, or the
-  file), watches it, writes highlights (through a workspace edit of just the
-  changed text when the note is open, so the TextDocument keeps owning it),
-  and opens `#hl-` links through the `pdfPanels` fragment hook.
-- `src/webview/sidecar-highlight-tool.ts`: EmbedPDF's highlight tool with our
-  `selectionHandler`. No EmbedPDF annotation is created for a sidecar
-  highlight, so none can reach `saveAsCopy` when another tool saves the PDF;
-  the browser test checks the saved bytes. In a host without the plugin (the
-  desktop app for now), the tool marks the PDF as before.
-- `src/webview/sidecar-layer.tsx`, `sidecar-selection.ts`, `sidecar-store.ts`:
-  drawing, Annotate-mode selection and the viewer's copy of the highlights.
+- `src/shared/sidecar-format.ts`, `sidecar-path.ts`, `sidecar-messages.ts`
+- `src/extension/plugins/pdfSidecar` — read / relocate / `reveal` for `#hl-`;
+  upsert writes are ignored
+- `src/webview/sidecar-store.ts` + `host-messages.ts` — may still receive a
+  sidecar list from the host (paint layer is unmounted)
 
-## When the PDF changes
+**Unhooked create/paint modules** (left in tree; not imported by
+`plugins.ts` / `mark-selection.ts` / `page.tsx`):
 
-Each highlight keeps its quote and a little text on either side. When the
-PDF is replaced by a version whose layout moved (a new arXiv version), the
-viewer checks every highlight once: if its boxes no longer lie over its
-quote, the quote is found again on its page (the text around it decides
-between repeats), the highlight moves there, and its block in the sidecar is
-rewritten with the new boxes and `modified` time. A quote that is no longer
-on its page leaves the highlight where it was, drawn dashed and fainter as
-stale. Highlights written by hand without a quote are left alone.
-(`src/shared/sidecar-reattach.ts`, `src/webview/sidecar-reattach.ts`.)
+- `src/webview/sidecar-highlight-tool.ts`
+- `src/webview/sidecar-writing.ts`
+- `src/webview/sidecar-layer.tsx`
+- `src/webview/sidecar-selection.ts`
+- `src/webview/sidecar-reattach.ts`
 
-## Not done yet
+Do not re-wire these without a product decision. Prefer deleting them in a
+follow-up once Host GUI coverage for burn-in Highlight + vault overlays is
+stable.
 
-See the plan's status (`docs/superpowers/plans/2026-11-01-pdf-sidecar-highlights.md`):
-citation paragraph auto-highlights, the references list and cite/reference
-jumps, and sidecars in the desktop app and DSH.
+## Related
+
+- Vault backlinks: `src/extension/plugins/pdfBacklinks/`,
+  `src/webview/backlink-layer.tsx`
+- Copy link Quote: `src/shared/agent-text.ts`,
+  `packages/agents/docs/agent-handoff-format.md`
+- Regions opt-in: `lumiere.pdf.regions.enabled` (default off)

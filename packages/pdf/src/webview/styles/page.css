@@ -95,7 +95,7 @@
   background: transparent;
 }
 
-/* A sidecar highlight (sidecar-layer.tsx): a highlighter over the page's text. */
+/* Legacy sidecar highlight CSS (layer unmounted; kept for stale class names). */
 .sidecar-highlight-line {
   position: absolute;
   background: var(--highlight-color, #ffe566);

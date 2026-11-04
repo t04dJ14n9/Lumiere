@@ -31,7 +31,7 @@ test("Restricted Mode renders PDFs and ignores workspace agent settings", async 
   await expect(viewer.locator('.page[data-page-index="0"] img')).toBeVisible();
   const at = await pagePoint(viewer, 1);
   await selectText(page, viewer, at(74, 94), at(205, 94));
-  await contextMenu(page, at(100, 94), "Copy Link for Agent");
+  await contextMenu(page, at(100, 94), "Copy link to this");
 
   const reportFile = path.join(paths.workspace, "trust-state.json");
   await expect
@@ -43,7 +43,7 @@ test("Restricted Mode renders PDFs and ignores workspace agent settings", async 
       return (JSON.parse(readFileSync(reportFile, "utf8")) as TrustReport)
         .clipboard;
     })
-    .toContain("docs/outline.pdf#page=1&viewrect=");
+    .toMatch(/docs\/outline\.pdf#page=1#:~:text=/u);
   const report = JSON.parse(readFileSync(reportFile, "utf8")) as TrustReport;
   expect(report.trusted).toBe(false);
   expect(report.extensionActive).toBe(true);

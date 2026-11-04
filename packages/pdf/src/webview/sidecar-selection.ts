@@ -1,3 +1,7 @@
+/**
+ * LEGACY / UNHOOKED — Unhooked: Annotate hit-test / Del for sidecar overlays removed with the paint layer.
+ * See packages/pdf/docs/sidecar-highlights.md.
+ */
 import { useAnnotationCapability } from "@embedpdf/plugin-annotation/react";
 import type { PdfDocumentObject } from "@embedpdf/models";
 import { useCallback, useEffect, useRef, useSyncExternalStore } from "react";

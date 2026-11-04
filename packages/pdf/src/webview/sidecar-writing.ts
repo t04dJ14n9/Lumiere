@@ -1,3 +1,7 @@
+/**
+ * LEGACY / UNHOOKED — Unhooked: create/upsert path torn down (Task 6). Host ignores sidecarWrite upserts. Do not re-import from mark-selection.ts.
+ * See packages/pdf/docs/sidecar-highlights.md.
+ */
 import { useRegistry } from "@embedpdf/core/react";
 import type { PdfDocumentObject, PdfEngine, Rect } from "@embedpdf/models";
 import type { AnnotationTool } from "@embedpdf/plugin-annotation";

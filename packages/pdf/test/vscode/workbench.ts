@@ -2,6 +2,8 @@
  * Helpers for driving the real VS Code window: the command palette, Quick
  * Open, and the PDF viewer inside its webview.
  */
+import { readFileSync, writeFileSync } from "node:fs";
+import { paths, readState } from "./state";
 import {
   chromium,
   expect,
@@ -10,7 +12,6 @@ import {
   type Frame,
   type Page,
 } from "@playwright/test";
-import { readState } from "./state";
 import { command } from "../../../../test/vscode/palette";
 import { pageAtTop, pageFit, type Point } from "./pdf-geometry";
 import { chooseNativeItem, labels, nativeContextMenu } from "./native-menu";
@@ -164,6 +165,31 @@ export async function agentChatInput(page: Page): Promise<string> {
 export function withoutSpaces(text: string): string {
   return text.replace(/\s+/gu, "");
 }
+
+/**
+ * Paste the OS clipboard into notes.md and return its text (Copy link is
+ * clipboard-only; it no longer opens agent chat).
+ */
+export async function pastedClipboard(page: Page): Promise<string> {
+  const notes = `${paths.workspace}/notes.md`;
+  writeFileSync(notes, "");
+  await openFile(page, "notes.md");
+  await page.locator(".editor-instance .monaco-editor").first().click();
+  await page.keyboard.press("ControlOrMeta+a");
+  await page.keyboard.press("ControlOrMeta+v");
+  await page.keyboard.press("ControlOrMeta+s");
+  await expect
+    .poll(() => {
+      try {
+        return readFileSync(notes, "utf8");
+      } catch {
+        return "";
+      }
+    })
+    .not.toBe("");
+  return readFileSync(notes, "utf8");
+}
+
 
 /**
  * Right-click at a point and choose an item of VS Code's context menu, or of

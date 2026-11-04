@@ -2,6 +2,20 @@
 
 ## Unreleased
 
+- **Chrome-aligned PDF backlink overlays.** Passage highlights live in vault
+  Markdown as Copy link Quotes (`#page=` + `#:~:text=`), not in
+  `*.pdf.lumiere.md`. The viewer paints backlink overlays from those links
+  (hover preview, click opens the note; Del ignores overlays). Annotate
+  **Highlight** burns into the PDF again with Note / freeText. Sidecar create
+  is torn down; legacy `#hl-` open remains best-effort. **Select Region** /
+  empty-page drag and `viewrect=` in Copy link are opt-in via
+  `lumiere.pdf.regions.enabled` (default off). See `CAPABILITIES.md`,
+  `docs/sidecar-highlights.md`, and
+  `docs/superpowers/specs/2026-11-04-pdf-backlink-overlays-chrome-design.md`.
+- **Copy link to this** is clipboard-only (Quote or page link). It no longer
+  opens agent chat. With no selection it copies a page-only `#page=N` link for
+  the reading page.
+
 - Dark page colors now invert each colour's lightness and keep its hue,
   instead of painting every fill and all text one colour. In diagrams the
   labels of boxes are readable (they were the same colour as the box), the

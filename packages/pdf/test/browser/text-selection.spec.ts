@@ -1,6 +1,7 @@
 import { expect, test } from "@playwright/test";
 import {
   open,
+  openWithRegions,
   lastSelection,
   pagePoint,
   selectText,
@@ -88,9 +89,10 @@ test("text selection no longer shows a Copy Link for Agent floating menu", async
 test("region selection no longer shows a Copy Link for Agent floating menu", async ({
   page,
 }) => {
-  await open(page);
+  await openWithRegions(page);
   const at = await pagePoint(page, 1);
   await drag(page, at(60, 70), at(230, 120));
+  await expect(page.locator(".region-selection")).toBeVisible();
   await expect(
     page.getByRole("toolbar", { name: "PDF region actions" }),
   ).toHaveCount(0);

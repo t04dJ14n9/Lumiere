@@ -4,7 +4,7 @@
  *
  *     > Scaled dot-product attention
  *     >
- *     > [attention.pdf · p.3](papers/attention.pdf#page=3#:~:text=Scaled%20dot-product%20attention)
+ *     > [attention.pdf · p.3](papers/attention.pdf#page=3#:~:text=Scaled%20dot%2Dproduct%20attention)
  *
  * Href is `path#page=N` plus optional `#:~:text=…` (Chrome), or
  * `path#page=N&viewrect=…` when regions are enabled. Never `#hl-`, never
