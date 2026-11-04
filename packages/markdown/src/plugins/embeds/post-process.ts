@@ -307,9 +307,7 @@ class EmbedPass implements PassEmbeds {
       );
     };
     syncCompact();
-    image.addEventListener("load", syncCompact, {
-      signal: this.events.signal,
-    });
+    image.addEventListener("load", syncCompact, { signal: this.events.signal });
     const inspect = document.createElement("button");
     inspect.type = "button";
     inspect.className = "inspect-image";
@@ -415,11 +413,7 @@ class EmbedPass implements PassEmbeds {
  */
 export function missingEmbedText(
   target: string,
-  missing: {
-    note?: string | undefined;
-    section?: boolean;
-    image?: boolean;
-  } = {},
+  missing: { note?: string; section?: boolean; image?: boolean } = {},
 ): string {
   const path = target.split("|")[0]!.trim();
   const hash = path.indexOf("#");
