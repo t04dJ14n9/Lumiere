@@ -105,6 +105,7 @@ test("view settings parse defaults, percentages and malformed configuration with
     ...DEFAULT_VIEW_CHOICES,
     defaultZoom: "fitWidth",
     smoothScrolling: null,
+    regionsEnabled: false,
   });
   const settings = {
     defaultZoom: "actual",
@@ -112,8 +113,11 @@ test("view settings parse defaults, percentages and malformed configuration with
     scrollMode: "paged",
     scrollDirection: "horizontal",
     smoothScrolling: false,
+    regionsEnabled: true,
   };
   assert.deepEqual(parseViewSettings(settings), settings);
+  assert.equal(parseViewSettings({ regionsEnabled: true }).regionsEnabled, true);
+  assert.equal(parseViewSettings({ regionsEnabled: "yes" }).regionsEnabled, false);
   for (const value of ["fitWidth", "fitPage", "actual", 62.5] as const) {
     assert.equal(parseDefaultZoom(value), value);
   }

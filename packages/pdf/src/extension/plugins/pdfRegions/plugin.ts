@@ -10,6 +10,8 @@ import { RegionSnapshots } from "./region-snapshots";
  * PNG snapshots of selected regions, in the extension's storage, capped by
  * `lumiere.pdf.regionImageCache.maxSizeMB`. Each region is saved as soon
  * as it is selected, so its file exists before anything is copied.
+ * Region selection itself is gated by `lumiere.pdf.regions.enabled` (default
+ * off); this plugin owns that setting and keeps snapshots when regions are on.
  */
 export const pdfRegionsPlugin: Plugin = {
   name: manifest.id,

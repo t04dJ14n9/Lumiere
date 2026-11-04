@@ -417,3 +417,39 @@ test("Copy link to this is enabled when the PDF is active even without selection
     "no Add notes contribution",
   );
 });
+
+test("pdfRegions setting defaults off and gates Select Region menus and shortcut", () => {
+  const setting = contributes.configuration.properties[
+    "lumiere.pdf.regions.enabled"
+  ] as { type?: string; default?: boolean } | undefined;
+  assert.ok(setting, "lumiere.pdf.regions.enabled must be contributed");
+  assert.equal(setting?.type, "boolean");
+  assert.equal(setting?.default, false);
+
+  const gatedMenus = [
+    "editor/title",
+    "commandPalette",
+    "webview/context",
+  ] as const;
+  for (const menu of gatedMenus) {
+    const entry = contributes.menus[menu]?.find(
+      (item) => item.command === "lumiere.pdf.selectRegionTool",
+    );
+    assert.ok(entry, `${menu} Select Region entry`);
+    assert.match(
+      entry!.when ?? "",
+      /config\.lumiere\.pdf\.regions\.enabled/,
+      `${menu} must require regions.enabled`,
+    );
+  }
+
+  const binding = (contributes.keybindings ?? []).find(
+    (entry) => entry.command === "lumiere.pdf.selectRegionTool",
+  );
+  assert.ok(binding, "Select Region keybinding");
+  assert.match(
+    binding!.when ?? "",
+    /config\.lumiere\.pdf\.regions\.enabled/,
+    "keybinding must require regions.enabled",
+  );
+});

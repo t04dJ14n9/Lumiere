@@ -27,6 +27,7 @@ export interface HostMessageHandlers {
   setZen: (on: boolean) => void;
   setToolbar: (toolbar: ToolbarSettings) => void;
   setMotionSetting: (setting: ViewSettings["smoothScrolling"]) => void;
+  setRegionsEnabled: (enabled: boolean) => void;
   setChoices: React.Dispatch<React.SetStateAction<ViewChoices>>;
   setPageColors: (effective: "normal" | "dark") => void;
   retryAnnotationSave?: () => void;
@@ -131,11 +132,15 @@ function handleMarksMessage(
 /** New view settings: smooth scrolling now, a new page layout for this PDF. */
 function applyViewSettings(
   next: ViewSettings,
-  handlers: Pick<HostMessageHandlers, "setMotionSetting" | "setChoices">,
+  handlers: Pick<
+    HostMessageHandlers,
+    "setMotionSetting" | "setRegionsEnabled" | "setChoices"
+  >,
 ): void {
   const previous = currentViewSettings();
   const settings = rememberViewSettings(next);
   handlers.setMotionSetting(settings.smoothScrolling);
+  handlers.setRegionsEnabled(settings.regionsEnabled);
   if (settings.pageLayout !== previous.pageLayout) {
     handlers.setChoices((current) => ({
       ...current,

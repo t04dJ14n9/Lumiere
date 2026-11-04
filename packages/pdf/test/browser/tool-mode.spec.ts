@@ -1,6 +1,7 @@
 import { expect, test } from "@playwright/test";
 import {
   open,
+  openWithRegions,
   lastSelection,
   pagePoint,
   selectText,
@@ -10,10 +11,23 @@ import {
   TEXT_MIDLINE,
 } from "./viewer-support";
 
-test("the Select Region tool selects a region even over text; Escape puts it down", async ({
+
+test("Select Region tool stays off when regions are disabled", async ({
   page,
 }) => {
   await open(page);
+  await sendAction(page, { action: "setTool", tool: "region" });
+  await expect.poll(() => lastView(page)).toMatchObject({ tool: "text" });
+  const at = await pagePoint(page, 1);
+  await drag(page, at(150, 150), at(250, 250));
+  await expect(page.locator(".region-selection")).toHaveCount(0);
+  expect(await lastSelection(page)).toBeNull();
+});
+
+test("the Select Region tool selects a region even over text; Escape puts it down", async ({
+  page,
+}) => {
+  await openWithRegions(page);
   await sendAction(page, { action: "setTool", tool: "region" });
   await expect.poll(() => lastView(page)).toMatchObject({ tool: "region" });
   const at = await pagePoint(page, 1);
@@ -66,7 +80,7 @@ test("the Select Region tool selects a region even over text; Escape puts it dow
 test("switching to the Select Region tool clears a text selection", async ({
   page,
 }) => {
-  await open(page);
+  await openWithRegions(page);
   const at = await pagePoint(page, 1);
   await selectText(page, at(74, TEXT_MIDLINE), at(205, TEXT_MIDLINE));
   await expect

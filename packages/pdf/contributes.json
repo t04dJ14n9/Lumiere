@@ -452,7 +452,7 @@
       },
       {
         "command": "lumiere.pdf.selectRegionTool",
-        "when": "activeCustomEditorId == 'lumiere.pdf.viewer'",
+        "when": "activeCustomEditorId == 'lumiere.pdf.viewer' && config.lumiere.pdf.regions.enabled",
         "group": "3_pdfTool@2"
       },
       {
@@ -625,7 +625,7 @@
       },
       {
         "command": "lumiere.pdf.selectRegionTool",
-        "when": "activeCustomEditorId == 'lumiere.pdf.viewer'"
+        "when": "activeCustomEditorId == 'lumiere.pdf.viewer' && config.lumiere.pdf.regions.enabled"
       },
       {
         "command": "lumiere.pdf.selectAnnotateTool",
@@ -742,7 +742,7 @@
       },
       {
         "command": "lumiere.pdf.selectRegionTool",
-        "when": "webviewId == 'lumiere.pdf.viewer' && lumiere.pdf.tool != 'region'",
+        "when": "webviewId == 'lumiere.pdf.viewer' && lumiere.pdf.tool != 'region' && config.lumiere.pdf.regions.enabled",
         "group": "2_pdfTool@1"
       },
       {
@@ -846,6 +846,11 @@
         "default": 100,
         "minimum": 1,
         "markdownDescription": "The most disk space, in megabytes, that PNG snapshots of selected regions may use in the extension's storage. This is a hard limit: when a new snapshot takes them past it, the least recently used ones are deleted, and a single snapshot larger than the limit is not saved (Copy link to this then copies the link without the image). Values below 1 count as 1."
+      },
+      "lumiere.pdf.regions.enabled": {
+        "type": "boolean",
+        "default": false,
+        "markdownDescription": "Allow empty-page region drags and the **Select Region** tool. When off (default), only text selection and page links are available for Copy link; new links never include `viewrect=`. Turn on to draw boxes and optionally emit `viewrect=` in Copy link."
       },
       "lumiere.pdf.toolbar.mode": {
         "type": "string",
@@ -1135,7 +1140,7 @@
       "command": "lumiere.pdf.selectRegionTool",
       "key": "ctrl+alt+r",
       "mac": "ctrl+cmd+r",
-      "when": "activeCustomEditorId == 'lumiere.pdf.viewer' && !inputFocus && !sideBarFocus && !panelFocus && !auxiliaryBarFocus && config.lumiere.pdf.keyboardShortcuts"
+      "when": "activeCustomEditorId == 'lumiere.pdf.viewer' && !inputFocus && !sideBarFocus && !panelFocus && !auxiliaryBarFocus && config.lumiere.pdf.keyboardShortcuts && config.lumiere.pdf.regions.enabled"
     },
     {
       "command": "lumiere.pdf.toggleAnnotateTool",

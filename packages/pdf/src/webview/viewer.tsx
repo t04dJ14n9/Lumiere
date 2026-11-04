@@ -101,6 +101,9 @@ function useViewerState(pdf: PdfDocumentObject) {
   const [motionSetting, setMotionSetting] = useState(
     () => currentViewSettings().smoothScrolling,
   );
+  const [regionsEnabled, setRegionsEnabled] = useState(
+    () => currentViewSettings().regionsEnabled,
+  );
   const smooth = useSmoothMotion(motionSetting);
   const rawNavigation = useNavigation(DOCUMENT_ID, choices.scrollMode, smooth);
   const history = useJumpHistory(rawNavigation, choices, setChoices);
@@ -120,6 +123,7 @@ function useViewerState(pdf: PdfDocumentObject) {
     search,
     choices,
     setChoices,
+    regionsEnabled,
   });
   useHostMessages({
     show: navigation.show,
@@ -131,6 +135,7 @@ function useViewerState(pdf: PdfDocumentObject) {
     setZen,
     setToolbar,
     setMotionSetting,
+    setRegionsEnabled,
     setChoices,
     setPageColors: rememberPageColors,
     retryAnnotationSave: tools.annotationSave.retry,
@@ -157,12 +162,13 @@ type ViewerToolsDeps = {
   search: ReturnType<typeof useSearch>;
   choices: ViewChoices;
   setChoices: React.Dispatch<React.SetStateAction<ViewChoices>>;
+  regionsEnabled: boolean;
 };
 
 /** Tool mode, annotations, selection reporting, view actions and keys. */
 function useViewerTools(pdf: PdfDocumentObject, deps: ViewerToolsDeps) {
-  const { navigation, search, choices, setChoices } = deps;
-  const { tool, setTool } = useToolMode(DOCUMENT_ID);
+  const { navigation, search, choices, setChoices, regionsEnabled } = deps;
+  const { tool, setTool } = useToolMode(DOCUMENT_ID, regionsEnabled);
   const annotation = useAnnotationMode(DOCUMENT_ID);
   const annotationSave = useAnnotationSaveSession(pdf);
   const annotationSelected = useRef(false);

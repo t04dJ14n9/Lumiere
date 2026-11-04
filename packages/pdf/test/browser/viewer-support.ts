@@ -12,6 +12,12 @@ export async function open(page: Page, query = ""): Promise<void> {
   await expect(page.locator('.page[data-page-index="0"] img')).toBeVisible();
 }
 
+/** Open the harness with empty-page / Select Region enabled (opt-in setting). */
+export async function openWithRegions(page: Page): Promise<void> {
+  const view = encodeURIComponent(JSON.stringify({ regionsEnabled: true }));
+  await open(page, `?view=${view}`);
+}
+
 /**
  * What the viewer sent, with each state `patch` spelled out as one message
  * per part (outline, selection, view), in the order the host applies them.

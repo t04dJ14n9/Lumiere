@@ -109,6 +109,7 @@ test("smooth page/outline jumps and displayed zoom animate; explicit false and r
       scrollMode: "continuous",
       scrollDirection: "vertical",
       smoothScrolling: false,
+      regionsEnabled: false,
     },
   });
   await expect(page.locator(".viewer")).toHaveAttribute(
@@ -151,6 +152,7 @@ for (const [name, setup] of [
           scrollMode: "continuous",
           scrollDirection: "vertical",
           smoothScrolling: false,
+          regionsEnabled: false,
         },
       }),
   ],

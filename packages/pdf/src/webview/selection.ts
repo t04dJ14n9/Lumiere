@@ -8,6 +8,7 @@ import type { RegionSelection } from "../shared/selection";
 import { isEditableTarget } from "./editable-target";
 import { postToHost, reportToHost } from "./host";
 import { followMenuContext } from "./menu-context";
+import { currentViewSettings } from "./reading-position";
 import { readRegionDetails } from "./region-details";
 
 type Engine = Parameters<typeof readRegionDetails>[0];
@@ -40,7 +41,13 @@ export function useSelectionReporting(
       return;
     }
     const engine = () => registry?.getEngine();
-    return state.follow(selection.forDocument(documentId), { engine, pdf });
+    return state.follow(
+      selection.forDocument(documentId),
+      { engine, pdf },
+      {
+        regionsEnabled: () => currentViewSettings().regionsEnabled === true,
+      },
+    );
   }, [state, documentId, pdf, registry, selection]);
   useCopiedText(state);
   useEffect(
@@ -133,7 +140,11 @@ export class SelectionTracker {
   follow(
     scope: SelectionScope,
     source: { engine: () => Engine | undefined; pdf: PdfDocumentObject },
+    options: { regionsEnabled?: () => boolean } = {},
   ): () => void {
+    const regionsEnabled =
+      options.regionsEnabled ??
+      (() => currentViewSettings().regionsEnabled === true);
     /** Whether the marquee that just ended drew a region (else it was a click). */
     let marqueeEnded = false;
     const stops = [
@@ -156,6 +167,9 @@ export class SelectionTracker {
         }
       }),
       scope.onMarqueeEnd((event) => {
+        if (!regionsEnabled()) {
+          return;
+        }
         marqueeEnded = true;
         this.regionDrawn(event, source);
       }),
