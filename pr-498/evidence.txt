@@ -1,0 +1,13 @@
+fix=broken-image unresolved-embed
+head_code=71d40418
+before_main=c9da2679
+fixtures=synthetic_only
+note=Broken Images.md
+remote=![remote](https://example.invalid/no-such-image-xyz.png)
+local=![[missing-local-photo.png]]
+before_remote=broken img + alt "Could not load …"
+before_local=.unresolved-embed "missing-local-photo.png" could not be found.
+after_both=.unresolved-embed "failed to fetch image"
+shots_content=synthetic_fixture_only
+
+pr=498
