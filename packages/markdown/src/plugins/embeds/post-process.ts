@@ -3,7 +3,7 @@ import type { Resource, Resources } from "../resources/api";
 import { mediaKind } from "../../shared/media-kinds";
 import { mediaRecovery } from "./webm";
 import { inspectImage } from "./image-dialog";
-import { mountImageEmbedActions } from "./embed-actions";
+import { IMAGE_EMBED, mountImageEmbedActions } from "./embed-actions";
 import { embeddedNote, MissingSection } from "./note";
 import { renderBaseEmbed } from "./base-embed";
 import { mountPdfEmbed } from "./pdf-embed";
@@ -109,10 +109,16 @@ class EmbedPass implements PassEmbeds {
     if (!this.ownTitles.has(node)) {
       this.ownTitles.set(node, node.title);
     }
+    // After showImage wraps a markdown <img>, the error surface is the
+    // .image-embed host (not HTMLImageElement). Check before removing the class.
+    const image =
+      node instanceof HTMLImageElement || node.classList.contains(IMAGE_EMBED);
+    node.classList.remove(IMAGE_EMBED);
     node.classList.add("unresolved-embed");
     node.textContent = missingEmbedText(target, {
       note: noteName(pass.documentUri),
       section: error instanceof MissingSection,
+      image,
     });
     node.title = String(error);
     pass.measure();
@@ -262,8 +268,14 @@ class EmbedPass implements PassEmbeds {
     image.addEventListener(
       "error",
       () => {
-        image.alt = `Could not load ${target}`;
-        pass.measure();
+        if (!this.isActive) {
+          return;
+        }
+        const surface =
+          image.parentElement?.classList.contains(IMAGE_EMBED) === true
+            ? image.parentElement
+            : node;
+        this.showError(surface, target, new Error(`Could not load ${target}`));
       },
       { signal: this.events.signal },
     );
@@ -295,9 +307,7 @@ class EmbedPass implements PassEmbeds {
       );
     };
     syncCompact();
-    image.addEventListener("load", syncCompact, {
-      signal: this.events.signal,
-    });
+    image.addEventListener("load", syncCompact, { signal: this.events.signal });
     const inspect = document.createElement("button");
     inspect.type = "button";
     inspect.className = "inspect-image";
@@ -398,17 +408,25 @@ class EmbedPass implements PassEmbeds {
 /**
  * What an embed that can't be resolved says, as in Obsidian: a missing file
  * by its path, a missing heading or block in a note by the note's name (the
- * current note's for `![[#Heading]]`).
+ * current note's for `![[#Heading]]`). Image embeds (flag or image mediaKind)
+ * use the muted copy `failed to fetch image` instead.
  */
 export function missingEmbedText(
   target: string,
-  missing: { note?: string | undefined; section?: boolean } = {},
+  missing: {
+    note?: string | undefined;
+    section?: boolean | undefined;
+    image?: boolean | undefined;
+  } = {},
 ): string {
   const path = target.split("|")[0]!.trim();
   const hash = path.indexOf("#");
   if (missing.section && hash >= 0) {
     const note = path.slice(0, hash).split("/").at(-1) || missing.note;
     return `Unable to find “${path.slice(hash + 1)}” in ${note ?? "this note"}`;
+  }
+  if (missing.image || mediaKind(path) === "image") {
+    return "failed to fetch image";
   }
   return `"${path}" could not be found.`;
 }
