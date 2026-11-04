@@ -130,6 +130,17 @@
   opacity: 0.45;
 }
 
+/* Loose PDFium char boxes still undershoot rendered descenders (g/p/y). With
+   normal solid covers that shortfall is visible; grow each painted child
+   downward (~28% of box height) so tint encloses ink + a small margin.
+   transform-origin top keeps the top edge fixed; 11pt body / 16pt leading in
+   selection-cover.pdf leaves ~2pt gap between expanded lines. */
+#root[data-page-colors="dark"] .page [style*="isolation: isolate"] > *,
+#root[data-page-colors="dark"] .page [style*="isolation:isolate"] > * {
+  transform: scaleY(1.28);
+  transform-origin: top center;
+}
+
 .sidecar-highlight.is-selected .sidecar-highlight-line {
   outline: 2px solid var(--selection-edge);
   outline-offset: 1px;

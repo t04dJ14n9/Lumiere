@@ -3,7 +3,8 @@
  * on dark paper. Synthetic selection-cover.pdf only — never vault content.
  *
  * Root cause class: EmbedPDF SelectionLayer uses multiply + isolation; on dark
- * paper multiply only paints over light ink so boxes look short/shifted.
+ * paper multiply only paints over light ink so boxes look short/shifted. Loose
+ * char boxes also undershoot rendered descenders once covers are solid.
  */
 import path from "node:path";
 import { pathToFileURL } from "node:url";
@@ -51,9 +52,10 @@ async function paintedCoverage(
   rect: { left: number; top: number; right: number; bottom: number },
   paper: { r: number; g: number; b: number },
   delta = 18,
+  selectionOnly = false,
 ): Promise<number> {
   return page.evaluate(
-    ({ rect, paper, delta }) => {
+    ({ rect, paper, delta, selectionOnly }) => {
       const pageEl = document.querySelector<HTMLElement>(
         '.page[data-page-index="0"]',
       );
@@ -73,16 +75,18 @@ async function paintedCoverage(
       }
       ctx.fillStyle = `rgb(${paper.r},${paper.g},${paper.b})`;
       ctx.fillRect(0, 0, width, height);
-      for (const img of pageEl.querySelectorAll("img")) {
-        const r = img.getBoundingClientRect();
-        if (img.complete && img.naturalWidth > 0) {
-          ctx.drawImage(
-            img,
-            r.left - pageBox.left,
-            r.top - pageBox.top,
-            r.width,
-            r.height,
-          );
+      if (!selectionOnly) {
+        for (const img of pageEl.querySelectorAll("img")) {
+          const r = img.getBoundingClientRect();
+          if (img.complete && img.naturalWidth > 0) {
+            ctx.drawImage(
+              img,
+              r.left - pageBox.left,
+              r.top - pageBox.top,
+              r.width,
+              r.height,
+            );
+          }
         }
       }
       // Selection wrappers: honour computed mix-blend-mode when painting.
@@ -145,7 +149,7 @@ async function paintedCoverage(
       }
       return total === 0 ? 0 : hit / total;
     },
-    { rect, paper, delta },
+    { rect, paper, delta, selectionOnly },
   );
 }
 
@@ -386,6 +390,62 @@ async function horizontalTintSpan(
   return (last - first + 1) / scale;
 }
 
+/**
+ * Selection child boxes that overlap a PDF y-band, as page-top PDF points.
+ * Used to assert covers reach below the baseline into the descender zone —
+ * paintedCoverage alone can pass on glyph ink without a tall enough box.
+ */
+async function selectionBoxExtents(
+  page: Page,
+  band: { top: number; bottom: number },
+): Promise<
+  Array<{ top: number; bottom: number; left: number; right: number }>
+> {
+  return page.evaluate(
+    ({ band }) => {
+      const pageEl = document.querySelector<HTMLElement>(
+        '.page[data-page-index="0"]',
+      );
+      if (!pageEl) {
+        return [];
+      }
+      const pageBox = pageEl.getBoundingClientRect();
+      const scale = pageBox.width / 300;
+      const out: Array<{
+        top: number;
+        bottom: number;
+        left: number;
+        right: number;
+      }> = [];
+      for (const wrapper of pageEl.querySelectorAll<HTMLElement>(
+        '[style*="isolation"]',
+      )) {
+        for (const child of wrapper.children) {
+          const c = child as HTMLElement;
+          const fill = getComputedStyle(c).backgroundColor;
+          if (!fill || fill === "rgba(0, 0, 0, 0)") {
+            continue;
+          }
+          const box = c.getBoundingClientRect();
+          const top = (box.top - pageBox.top) / scale;
+          const bottom = (box.bottom - pageBox.top) / scale;
+          if (bottom < band.top || top > band.bottom) {
+            continue;
+          }
+          out.push({
+            top,
+            bottom,
+            left: (box.left - pageBox.left) / scale,
+            right: (box.right - pageBox.left) / scale,
+          });
+        }
+      }
+      return out;
+    },
+    { band },
+  );
+}
+
 const DARK_PAPER = { r: 30, g: 30, b: 30 };
 const LIGHT_PAPER = { r: 255, g: 255, b: 255 };
 
@@ -502,6 +562,41 @@ test("dark paper: selection blend is normal and boxes cover glyphs + bullets", a
   expect(vSpan, "vertical tint over descender line").toBeGreaterThan(
     gypsy.size * 0.85,
   );
+
+  // Geometry: loose PDFium boxes stop near the baseline; covers must reach the
+  // true descender zone for "gypsy" (g/p/y). Compare DOM box bottoms — ink-only
+  // pixel probes can pass while Host GUI still shows tails below the blue bar.
+  const gypsyBoxes = await selectionBoxExtents(page, {
+    top: gypsy.y - gypsy.size,
+    bottom: gypsy.y + gypsy.size,
+  });
+  expect(gypsyBoxes.length, "selection boxes on gypsy line").toBeGreaterThan(0);
+  const gypsyBottom = Math.max(...gypsyBoxes.map((b) => b.bottom));
+  // Helvetica descender ≈ 0.207em; require cover through ink + small margin.
+  expect(
+    gypsyBottom,
+    `selection bottom ${gypsyBottom} must clear gypsy descenders`,
+  ).toBeGreaterThanOrEqual(gypsy.y + gypsy.size * 0.25);
+
+  // Selection-only paint in the below-baseline strip near "gypsy" must be tinted
+  // (no page image — avoids counting bare glyph ink as coverage).
+  const gypsyRight = Math.max(...gypsyBoxes.map((b) => b.right));
+  const descenderCoverage = await paintedCoverage(
+    page,
+    {
+      left: gypsyRight - 36,
+      top: gypsy.y + 0.5,
+      right: gypsyRight - 4,
+      bottom: gypsy.y + gypsy.size * 0.28,
+    },
+    DARK_PAPER,
+    18,
+    true,
+  );
+  expect(
+    descenderCoverage,
+    "selection cover in gypsy descender strip",
+  ).toBeGreaterThan(0.5);
 
   // Horizontal: continuous band across the title, not letter-ink speckles.
   const hSpan = await horizontalTintSpan(

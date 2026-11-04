@@ -35,3 +35,17 @@ test("dark paper selection wrappers are translucent so white glyphs stay readabl
     /#root\[data-page-colors="dark"\][^{]*\[style\*="isolation:\s*isolate"\][^{]*\{[^}]*opacity:\s*0\.45/u,
   );
 });
+
+test("dark paper selection children expand vertically to cover descenders", () => {
+  const css = pageCss();
+  // Painted boxes use loose PDFium bounds that undershoot g/p/y ink; scaleY on
+  // isolation children grows the cover downward under dark paper only.
+  assert.match(
+    css,
+    /#root\[data-page-colors="dark"\][^{]*\[style\*="isolation:\s*isolate"\]\s*>\s*\*[^{]*\{[^}]*transform:\s*scaleY\(1\.28\)/u,
+  );
+  assert.match(
+    css,
+    /#root\[data-page-colors="dark"\][^{]*\[style\*="isolation:\s*isolate"\]\s*>\s*\*[^{]*\{[^}]*transform-origin:\s*top\s+center/u,
+  );
+});
