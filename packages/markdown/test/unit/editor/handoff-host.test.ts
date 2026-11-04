@@ -8,6 +8,7 @@ import type * as NativePlatform from "../../../src/host/api/native-platform";
 import type * as CursorHandoff from "../../../src/host/cursor-handoff";
 import type * as HostNavigation from "../../../src/host/navigation";
 import type * as EditorPanels from "../../../src/host/editor-panels";
+import type * as MarkdownAbsent from "../../../src/host/markdown-absent-on-disk";
 import type { PanelShell, RevealPanel } from "../../../src/shared/host";
 import type { Uri as NativeUri } from "vscode";
 import {
@@ -290,7 +291,7 @@ function loadHost() {
       editorPanels:
         require("../../../src/host/editor-panels.ts") as typeof EditorPanels,
       markdownAbsent:
-        require("../../../src/host/markdown-absent-on-disk.ts") as typeof import("../../../src/host/markdown-absent-on-disk"),
+        require("../../../src/host/markdown-absent-on-disk.ts") as typeof MarkdownAbsent,
     };
   } finally {
     loader._load = originalLoad;
