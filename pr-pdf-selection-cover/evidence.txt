@@ -1,0 +1,7 @@
+fixture=selection-cover.pdf (synthetic, packages/pdf/test/fixtures/make-fixtures.mjs)
+shots_content=synthetic_fixture_only
+before_blend=multiply
+after_blend=normal
+before=selection-cover-dark-before.png
+after=selection-cover-dark-after.png
+note=Host GUI on real Cursor still required before merge-ask (Medium UI).
