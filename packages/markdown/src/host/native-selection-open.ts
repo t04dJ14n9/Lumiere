@@ -3,6 +3,8 @@ const pending = new Map<string, Set<() => NativeOpenRange | undefined>>();
 export interface NativeOpenRange {
   at: number;
   to?: number;
+  /** 0-based native visible top line to restore in Live Preview. */
+  topLine?: number;
 }
 
 function key(uri: string, column: number): string {
@@ -17,6 +19,13 @@ export function isNativeSelectionOpen(uri: string, column: number): boolean {
   });
 }
 
+/** Whether this open carries a top-line viewport pin (skip centering reveals). */
+export function hasTopLineOpen(uri: string, column: number): boolean {
+  return [...(pending.get(key(uri, column)) ?? [])].some(
+    (read) => read()?.topLine !== undefined,
+  );
+}
+
 /**
  * The range being transferred into this custom panel, while its open is in
  * flight. Captured onto the panel at resolve: the webview's ready call can
@@ -25,11 +34,18 @@ export function isNativeSelectionOpen(uri: string, column: number): boolean {
 export function nativeOpeningSelection(
   uri: string,
   column: number,
-): { anchor: number; head: number } | undefined {
+): { anchor: number; head: number; topLine?: number } | undefined {
   for (const read of pending.get(key(uri, column)) ?? []) {
     const range = read();
-    if (range?.to !== undefined && range.to > range.at) {
-      return { anchor: range.at, head: range.to };
+    if (!range) {
+      continue;
+    }
+    const top = range.topLine !== undefined ? { topLine: range.topLine } : {};
+    if (range.to !== undefined && range.to > range.at) {
+      return { anchor: range.at, head: range.to, ...top };
+    }
+    if (range.topLine !== undefined) {
+      return { anchor: range.at, head: range.at, ...top };
     }
   }
   return undefined;
@@ -38,14 +54,16 @@ export function nativeOpeningSelection(
 export function openRange(request: {
   at: number | undefined;
   to: number | undefined;
+  topLine?: number | undefined;
 }): NativeOpenRange | undefined {
   if (request.at === undefined) {
     return undefined;
   }
-  if (request.to === undefined) {
-    return { at: request.at };
-  }
-  return { at: request.at, to: request.to };
+  return {
+    at: request.at,
+    ...(request.to !== undefined ? { to: request.to } : {}),
+    ...(request.topLine !== undefined ? { topLine: request.topLine } : {}),
+  };
 }
 
 /** Keep the native Search range's origin visible through the awaited openWith. */

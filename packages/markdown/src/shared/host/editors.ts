@@ -21,6 +21,7 @@ export interface PanelShell {
   readonly openingSelection?: {
     readonly anchor: number;
     readonly head: number;
+    readonly topLine?: number;
   };
   active(): boolean;
   reveal(): void;

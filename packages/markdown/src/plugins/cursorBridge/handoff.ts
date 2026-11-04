@@ -220,3 +220,39 @@ function samePosition(
 ): boolean {
   return left.line === right.line && left.character === right.character;
 }
+
+/** Release the lease then dismiss the mirror (Chat / Edit cleanup). */
+export async function abandonEditHandoff(
+  surface: HandoffSurface,
+  uri: string,
+  lease: HandoffLease,
+  end?: { restore?: boolean; promptId?: string },
+): Promise<void> {
+  lease.release();
+  try {
+    await surface.dismiss(uri, {
+      restore: end?.restore ?? true,
+      ...(end?.promptId ? { promptId: end.promptId } : {}),
+    });
+  } catch {
+    // Best-effort restore; the error toast/fallback still runs.
+  }
+}
+
+/** Release + dismiss after a Chat mirror attempt, even when confirm failed. */
+export async function abandonChatMirror(
+  surface: HandoffSurface,
+  uri: string,
+  handoff: Awaited<ReturnType<typeof handOffSelection>>,
+): Promise<void> {
+  if (handoff.ok) {
+    await abandonEditHandoff(surface, uri, handoff.lease, { restore: true });
+    return;
+  }
+  // show may have opened the tab before confirm failed; lease already released.
+  try {
+    await surface.dismiss(uri, { restore: true });
+  } catch {
+    // Best-effort restore; the error toast still runs.
+  }
+}

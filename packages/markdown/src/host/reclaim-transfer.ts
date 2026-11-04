@@ -27,6 +27,8 @@ interface ReclaimRequest {
   intent: NavigationIntent | undefined;
   at: number | undefined;
   to: number | undefined;
+  /** Pin this native viewport top line in Live Preview (skip centering). */
+  topLine: number | undefined;
   /** Once reveal delivery has started, later same-tab jumps must supersede. */
   delivering?: boolean;
   /**
@@ -102,6 +104,7 @@ function startPendingReclaim(options: {
     intent: navigation?.begin(),
     at: selection?.at,
     to: selection?.to,
+    topLine: selection?.topLine,
   };
   pending.set(key, next);
   void reopen(uri, next, navigation)
@@ -118,7 +121,7 @@ function startPendingReclaim(options: {
 export function nativeSelectionRange(
   tab: vscode.Tab,
   uri: string,
-): { at: number; to?: number } | undefined {
+): { at: number; to?: number; topLine?: number } | undefined {
   return readNativeSelectionRange(
     tab,
     uri,
@@ -126,7 +129,11 @@ export function nativeSelectionRange(
   );
 }
 
-export function hasSelectionTarget(s?: { at: number; to?: number }): boolean {
+export function hasSelectionTarget(s?: {
+  at: number;
+  to?: number;
+  topLine?: number;
+}): boolean {
   return s !== undefined && (s.at > 0 || (s.to !== undefined && s.to > s.at));
 }
 
@@ -139,6 +146,7 @@ function refreshRequestSelection(
   if (selection) {
     request.at = selection.at;
     request.to = selection.to;
+    request.topLine = selection.topLine;
   }
 }
 
@@ -169,7 +177,14 @@ async function reopen(
       preview: native.isPreview,
     });
   await withNativeSelectionOpen(uri, column, () => openRange(request), open);
-  if (navigation && request.intent && request.at !== undefined) {
+  // A topLine pin is applied by placeOpeningSelection (y:"start"). Centering
+  // via revealOpened would move that line off the top of the viewport.
+  if (
+    navigation &&
+    request.intent &&
+    request.at !== undefined &&
+    request.topLine === undefined
+  ) {
     request.delivering = true;
     refreshRequestSelection(native, uri, request);
     await revealOpenedWatchingOptOut(uri, request, () =>
