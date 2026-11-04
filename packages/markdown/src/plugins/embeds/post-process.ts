@@ -109,12 +109,16 @@ class EmbedPass implements PassEmbeds {
     if (!this.ownTitles.has(node)) {
       this.ownTitles.set(node, node.title);
     }
+    // After showImage wraps a markdown <img>, the error surface is the
+    // .image-embed host (not HTMLImageElement). Check before removing the class.
+    const image =
+      node instanceof HTMLImageElement || node.classList.contains(IMAGE_EMBED);
     node.classList.remove(IMAGE_EMBED);
     node.classList.add("unresolved-embed");
     node.textContent = missingEmbedText(target, {
       note: noteName(pass.documentUri),
       section: error instanceof MissingSection,
-      image: node instanceof HTMLImageElement,
+      image,
     });
     node.title = String(error);
     pass.measure();
@@ -406,7 +410,8 @@ class EmbedPass implements PassEmbeds {
 /**
  * What an embed that can't be resolved says, as in Obsidian: a missing file
  * by its path, a missing heading or block in a note by the note's name (the
- * current note's for `![[#Heading]]`).
+ * current note's for `![[#Heading]]`). Image embeds (flag or image mediaKind)
+ * use the muted copy `failed to fetch image` instead.
  */
 export function missingEmbedText(
   target: string,

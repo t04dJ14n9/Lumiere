@@ -296,6 +296,37 @@ test("a markdown img remote that fails replaces the image-embed host", async () 
   }
 });
 
+test("an extensionless remote markdown img still says failed to fetch after wrap", async () => {
+  const restoreDom = installFakeDom();
+  try {
+    const root = new FakeElement();
+    const photo = new FakeImageElement();
+    // No image extension — mediaKind is undefined; resolve still uses kind "image".
+    photo.dataset = { resource: "https://cdn.example/photo?id=1" };
+    root.append(photo);
+    enhanceEmbeds({
+      pass: passOf([photo]),
+      render: { trusted: true } as unknown as RenderService,
+      resources: {
+        async load(): Promise<Resource> {
+          throw new Error("should not load remote");
+        },
+      },
+      open: () => {},
+    });
+    await settled();
+    assert.equal(photo.src, "https://cdn.example/photo?id=1");
+    const host = photo.parentElement;
+    assert.ok(host, "markdown img is wrapped in an image-embed host");
+    assert.ok(host.classList.contains("image-embed"));
+    photo.dispatch("error");
+    assertFailedImageSurface(host);
+    assert.equal(host.children.length, 0);
+  } finally {
+    restoreDom();
+  }
+});
+
 test("a missing note embed keeps the could-not-be-found wording", async () => {
   const restoreDom = installFakeDom();
   try {

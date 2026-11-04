@@ -39,3 +39,14 @@ test("a missing heading or block in an existing note names the note, as Obsidian
     '"Gone#Heading" could not be found.',
   );
 });
+
+test("image flag forces failed-to-fetch even without an image extension", () => {
+  assert.equal(
+    missingEmbedText("https://cdn.example/photo?id=1", { image: true }),
+    "failed to fetch image",
+  );
+  assert.equal(
+    missingEmbedText("data:image/png;base64,xx", { image: true }),
+    "failed to fetch image",
+  );
+});
