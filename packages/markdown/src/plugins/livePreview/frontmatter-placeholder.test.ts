@@ -9,6 +9,7 @@ import { documentTree } from "./document-tree";
 import { blockRenderers } from "./registry";
 import {
   completeFrontmatter,
+  frontmatterPlaceholderHeight,
   frontmatterPlaceholderRenderer,
 } from "./frontmatter-placeholder";
 
@@ -83,4 +84,29 @@ test("placeholder indexes Frontmatter until a properties renderer registers", ()
     withProperties.field(blockIndex).map((block) => block.kind),
     ["properties"],
   );
+});
+
+test("placeholder reserves near expanded Properties height so body does not jump when the sheet mounts", () => {
+  // Two top-level keys: matches properties estimated-height floors (166).
+  const doc = "---\ntitle: hi\nstatus: open\n---\n\n# Heading\n";
+  assert.equal(frontmatterPlaceholderHeight(doc), 166);
+  const placeholder = frontmatterPlaceholderRenderer();
+  const end = doc.indexOf("\n#") + 1;
+  const widget = placeholder.widget({
+    from: 0,
+    to: end,
+    kind: "frontmatter-placeholder",
+    source: doc.slice(0, end),
+  });
+  assert.equal(widget.estimatedHeight, 166);
+});
+
+test("placeholder ignores indented YAML continuations when counting rows", () => {
+  const doc = "---\naliases:\n  - a\n  - b\n---\n";
+  // One top-level key only (continuations ignored) → 134.5
+  assert.equal(frontmatterPlaceholderHeight(doc), 134.5);
+});
+
+test("placeholder collapsed floor applies when the fence has no property rows", () => {
+  assert.equal(frontmatterPlaceholderHeight("---\n---\n\n# Heading\n"), 69);
 });

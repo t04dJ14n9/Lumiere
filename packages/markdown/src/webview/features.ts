@@ -105,17 +105,17 @@ const WEBVIEW_LOADERS: Record<string, () => Promise<Plugin<unknown>>> = {
 };
 
 /**
- * Properties sheet first: only the sheet so the real Properties widget does
- * not wait on tags/lineNumbers (or tables/callouts) chunks.
- * Wave 13: tags/lineNumbers moved to the paint set — they are not needed for
- * Properties-ready after the wave-12 body-first placeholder.
+ * Editor chrome geometry first: Properties sheet + line-number gutter so the
+ * first meaningful frame does not flash missing sheet/gutter then inject them
+ * on the later paint phase. Tags stay in paint (not layout chrome). Tables /
+ * callouts / … still wait on paint so they cannot gate the sheet.
  */
-const CHROME_FEATURE_IDS = new Set(["properties"]);
+const CHROME_FEATURE_IDS = new Set(["properties", "lineNumbers"]);
 
 /**
- * Visible structure for the first screen after the Properties sheet. Includes
- * light chrome (tags, lineNumbers) plus tables/callouts/… Editing helpers and
- * heavier features load in the deferred "all" phase after first paint.
+ * Visible structure for the first screen after chrome. Includes tags plus
+ * tables/callouts/… Editing helpers and heavier features load in the deferred
+ * "all" phase after first paint.
  */
 const RENDER_AFFECTING_FEATURE_IDS = new Set([
   "callouts",
@@ -135,7 +135,6 @@ const PAINT_FEATURE_IDS = new Set([
   ...CHROME_FEATURE_IDS,
   ...RENDER_AFFECTING_FEATURE_IDS,
   "formatting",
-  "lineNumbers",
   "smartLists",
   "vim",
 ]);
@@ -172,7 +171,7 @@ const PAINT_MANAGED_IDS = WEBVIEW_FEATURE_IDS.filter((id) =>
 
 export type FeaturePhase = "chrome" | "paint" | "all";
 
-/** Sheet chunk only (Properties). */
+/** Chrome chunks (Properties sheet + line-number gutter). */
 export function preloadChromeFeatures(): Promise<void> {
   return Promise.all(
     [...CHROME_FEATURE_IDS].map((id) => loadWebviewPlugin(id)),
@@ -180,9 +179,9 @@ export function preloadChromeFeatures(): Promise<void> {
 }
 
 /**
- * First-screen structure beyond the Properties sheet (tags, lineNumbers,
- * tables, callouts, …). Does not include sheet ids so a pending tables
- * download cannot gate Properties.
+ * First-screen structure beyond chrome (tags, tables, callouts, …). Does not
+ * include chrome ids so a pending tables download cannot gate Properties /
+ * lineNumbers.
  */
 export function preloadPaintFeatures(
   settings: FeatureSettings = {},
@@ -204,11 +203,11 @@ export function preloadPaintFeatures(
  * with `defaults`, those on by default), each with its parsed configuration.
  * Feature modules load in parallel the first time they are wanted.
  *
- * `phase: "chrome"` starts Properties only and must not wait on
- * tags/lineNumbers or tables/callouts chunk download. `phase: "paint"` adds
- * the rest of the first-screen structure (and does not stop deferred ones
- * that are not loaded yet). `phase: "all"` (default) applies the full wanted
- * set — used after first paint and on settings changes.
+ * `phase: "chrome"` starts Properties + lineNumbers and must not wait on
+ * tags or tables/callouts chunk download. `phase: "paint"` adds the rest of
+ * the first-screen structure (and does not stop deferred ones that are not
+ * loaded yet). `phase: "all"` (default) applies the full wanted set — used
+ * after first paint and on settings changes.
  */
 export function featureController(root: BaseContext) {
   const switches = new PluginSwitch(root);
