@@ -1278,6 +1278,106 @@ test("dismiss does not reopen Lumia when a Live Preview sibling remains", async 
   assert.deepEqual(commands, []);
 });
 
+test("dismiss→Lumia preserves selection and exact top visible line", async () => {
+  const { nativeOpeningSelection } =
+    await import("../../../src/host/native-selection-open");
+  const surface = host.cursorHandoff.createCursorHandoffSurface();
+  const mirror = cursorTab();
+  mirror.input = new TabInputText(Uri.parse(note));
+  mirror.isDirty = false;
+  group.activeTab = mirror;
+  const lines = Array.from({ length: 40 }, (_, i) => `Line ${i}`);
+  const body = lines.join("\n");
+  const topLine = 12;
+  const selStart = new Position(18, 0);
+  const selEnd = new Position(18, 4);
+  const offsetAt = (position: Position) =>
+    lines
+      .slice(0, position.line)
+      .reduce((length, value) => length + value.length + 1, 0) +
+    position.character;
+  vscode.window.activeTextEditor = {
+    document: {
+      uri: Uri.parse(note),
+      isDirty: false,
+      version: 1,
+      getText: () => body,
+      positionAt: (offset) => new Position(0, offset),
+      offsetAt,
+    },
+    selection: new Range(selStart, selEnd),
+    visibleRanges: [new Range(new Position(topLine, 0), new Position(30, 0))],
+  };
+
+  let during: { anchor: number; head: number; topLine?: number } | undefined;
+  afterCommand = () => {
+    during = nativeOpeningSelection(note, 1);
+  };
+
+  await surface.dismiss(note, { restore: true });
+
+  assert.deepEqual(
+    during,
+    {
+      anchor: offsetAt(selStart),
+      head: offsetAt(selEnd),
+      topLine,
+    },
+    "top visible line identity must match exactly, not nearby",
+  );
+  assert.equal(
+    commands.some((entry) => entry[0] === "vscode.openWith"),
+    true,
+  );
+});
+
+test("Search reclaim with a topLine pin keeps that exact line on openingSelection", async (t) => {
+  let openedShell: PanelShell | undefined;
+  const stopEditor = host.editorPanels.registerEditor(
+    MARKDOWN_EDITOR,
+    {
+      extensionUri: Uri.parse("file:///ext") as unknown as NativeUri,
+      documents: {
+        wrap: (doc: { uri: Uri }) =>
+          ({ uri: doc.uri.toString() }) as unknown as PanelShell["document"],
+      } as never,
+    },
+    (shell) => {
+      openedShell = shell;
+    },
+  );
+  t.after(stopEditor);
+  const provider = registeredProviders[0]?.provider as {
+    resolveCustomTextEditor(doc: unknown, panel: unknown): void;
+  };
+  const tab = cursorTab();
+  const editor = nativeHunkEditor(tab, 929);
+  const topLine = 900;
+  editor.visibleRanges = [
+    new Range(new Position(topLine, 0), new Position(980, 0)),
+  ];
+  const stopReclaim = host.reclaim.registerReclaim();
+  t.after(() => stopReclaim.dispose());
+  afterCommand = () => {
+    tab.input = new TabInputCustom(Uri.parse(note), viewType);
+    vscode.window.activeTextEditor = undefined;
+    provider.resolveCustomTextEditor(editor.document, createFakeWebviewPanel());
+  };
+
+  tabsChanged.fire({ opened: [tab], changed: [], closed: [] });
+  await tick();
+  await tick();
+
+  assert.equal(openedShell?.openedFromNativeSelection, true);
+  const anchor = editor.document.offsetAt!(editor.selection.start);
+  const head = editor.document.offsetAt!(editor.selection.end);
+  assert.deepEqual(openedShell?.openingSelection, {
+    anchor,
+    head,
+    topLine,
+  });
+});
+
 function editMirror() {
   workshopTab();
   const tab = cursorTab();

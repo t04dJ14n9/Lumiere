@@ -2,6 +2,10 @@ import type { EditorView } from "@codemirror/view";
 import type { Plugin } from "@workshop/core";
 import type {} from "../editor/api";
 import { protocol } from "./protocol";
+import {
+  selectionToolbarActions,
+  selectionToolbarExtension,
+} from "./selection-toolbar";
 
 /** Cmd on macOS, Ctrl elsewhere, as VS Code's keybindings use them. */
 const MAC = /Mac|iPhone|iPad/u.test(globalThis.navigator?.userAgent ?? "");
@@ -12,13 +16,21 @@ const MAC = /Mac|iPhone|iPad/u.test(globalThis.navigator?.userAgent ?? "");
  * outrank every extension's, and VS Code's webview shell forwards keydowns
  * from a window bubble listener — so the note must claim them in capture
  * on the document (same pattern as undo), before Vim and before the
- * forwarder, then ask the panel host to run Chat or Edit.
+ * forwarder, then ask the panel host to run Chat or Edit. A floating
+ * selection toolbar offers the same Chat/Edit handoff as Cursor's chrome.
  */
 export const cursorBridgeWebview: Plugin = {
   name: "cursorBridge",
   inject: { required: ["editor", "rpc"] },
   apply(ctx) {
     const { rpc, editor } = ctx;
+    const handOff = (mode: "chat" | "edit") => {
+      void rpc
+        .call(protocol, "handOff", { mode })
+        .catch((error: unknown) =>
+          ctx.logger.warn("Cursor hand-off failed", error),
+        );
+    };
     void rpc
       .call(protocol, "isCursor", {})
       .catch(() => false)
@@ -26,15 +38,17 @@ export const cursorBridgeWebview: Plugin = {
         if (!inCursor || !ctx.isLive) {
           return;
         }
+        ctx.effect(() => keepCursorKeysInEditor(editor.view, handOff));
         ctx.effect(() =>
-          keepCursorKeysInEditor(editor.view, (mode) => {
-            void rpc
-              .call(protocol, "handOff", { mode })
-              .catch((error: unknown) =>
-                ctx.logger.warn("Cursor hand-off failed", error),
-              );
-          }),
+          editor.extend(selectionToolbarExtension(handOff, MAC)),
         );
+        ctx.on("editor/selectionMenu", (items) => [
+          ...selectionToolbarActions(MAC).map((action) => ({
+            label: action.label,
+            run: () => handOff(action.id),
+          })),
+          ...items,
+        ]);
       });
   },
 };

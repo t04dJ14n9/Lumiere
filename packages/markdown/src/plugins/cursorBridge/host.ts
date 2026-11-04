@@ -8,6 +8,8 @@ import {
   openCursorEdit,
 } from "./cursor";
 import {
+  abandonChatMirror,
+  abandonEditHandoff,
   confirmActiveEditor,
   handOffSelection,
   prepareNativeMirror,
@@ -144,20 +146,38 @@ async function runBridge(
     await runEdit(ctx, config, captured, commands);
     return;
   }
-  const handoff = await handOffSelection(
-    config.surface,
-    captured.uri,
-    captured.selection,
-  );
+  await runChatWithSelection(ctx, config, captured, commands);
+}
+
+/**
+ * Chat with a selection: brief native mirror for Cursor's code-reference chip,
+ * then always release the lease and restore Live Preview so the reader is not
+ * left on built-in Markdown.
+ */
+async function runChatWithSelection(
+  ctx: Context,
+  config: BridgeSession,
+  captured: { uri: string; selection: SelectionSnapshot },
+  commands: ReadonlySet<string> | undefined,
+): Promise<void> {
+  const { uri, selection } = captured;
+  const handoff = await handOffSelection(config.surface, uri, selection);
   // The await above can resume after focus or selection changes. Keep this
   // check and Cursor invocation in the same synchronous turn.
-  const confirmed = handoff.ok
-    ? confirmActiveEditor(handoff.editor, captured.uri, captured.selection)
-    : handoff;
+  if (!handoff.ok) {
+    await abandonChatMirror(config.surface, uri, handoff);
+    ctx.dialogs.error(
+      handoff.reason === "changed"
+        ? "The note changed before Cursor could use the selection."
+        : "Could not mirror the selection into Cursor’s editor.",
+    );
+    return;
+  }
+  const confirmed = confirmActiveEditor(handoff.editor, uri, selection);
   if (!confirmed.ok) {
-    if (handoff.ok) {
-      handoff.lease.release();
-    }
+    await abandonEditHandoff(config.surface, uri, handoff.lease, {
+      restore: true,
+    });
     ctx.dialogs.error(
       confirmed.reason === "changed"
         ? "The note changed before Cursor could use the selection."
@@ -165,7 +185,13 @@ async function runBridge(
     );
     return;
   }
-  await runChat(ctx, captured.selection.text, commands);
+  try {
+    await runChat(ctx, selection.text, commands);
+  } finally {
+    await abandonEditHandoff(config.surface, uri, handoff.lease, {
+      restore: true,
+    });
+  }
 }
 
 /**
@@ -292,23 +318,6 @@ async function runEditFallbackChat(
       ? "Cursor Edit is unavailable. Opened Chat — paste the selection if it was not attached."
       : "Cursor Edit is unavailable. Opened Chat instead.",
   );
-}
-
-async function abandonEditHandoff(
-  surface: HandoffSurface,
-  uri: string,
-  lease: HandoffLease,
-  end?: { restore?: boolean; promptId?: string },
-): Promise<void> {
-  lease.release();
-  try {
-    await surface.dismiss(uri, {
-      restore: end?.restore ?? true,
-      ...(end?.promptId ? { promptId: end.promptId } : {}),
-    });
-  } catch {
-    // Best-effort restore; the error toast/fallback still runs.
-  }
 }
 
 function showDismissStatus(session: BridgeSession, uri: string): void {

@@ -4,6 +4,13 @@ import { warmMarkdownDocument } from "./document-warm";
 import { watchCursorEditEnd } from "./cursor-edit-end";
 import { MARKDOWN_EDITOR } from "../shared/editor-provider";
 import { CURSOR_COMMANDS } from "../plugins/cursorBridge/cursor";
+import { SourceCoordinates } from "../shared/document/coordinates";
+import {
+  openRange,
+  withNativeSelectionOpen,
+  type NativeOpenRange,
+} from "./native-selection-open";
+import { nativeViewportTopLine } from "./reclaim-selection";
 import type {
   HandoffSurface,
   NativeDocument,
@@ -78,23 +85,59 @@ async function dismissMirror(
     }
   }
 
+  // Capture selection + top visible line before the mirror tab closes.
+  const restoreRange = restore ? captureMirrorOpenRange(targetKey) : undefined;
   const closed = await closeMirrorEditor(targetKey);
   // Closing the note's only view puts Live Preview back in its place, behind
   // any tab the reader moved on to. A mirror the reader closed stays closed.
   if (restore && closed && !hasLumiereTab(targetKey)) {
-    await vscode.commands.executeCommand(
-      "vscode.openWith",
-      target,
-      MARKDOWN_EDITOR.viewType,
-      {
-        viewColumn: closed.viewColumn,
-        preview: false,
-        // Use pre-cleanup reader focus, not focus after prompt-bar close.
-        preserveFocus: !(readerFocus?.focused ?? closed.focused),
-        background: !(readerFocus?.shown ?? closed.shown),
-      },
-    );
+    const column = closed.viewColumn;
+    const open = () =>
+      vscode.commands.executeCommand(
+        "vscode.openWith",
+        target,
+        MARKDOWN_EDITOR.viewType,
+        {
+          viewColumn: column,
+          preview: false,
+          // Use pre-cleanup reader focus, not focus after prompt-bar close.
+          preserveFocus: !(readerFocus?.focused ?? closed.focused),
+          background: !(readerFocus?.shown ?? closed.shown),
+        },
+      );
+    if (restoreRange) {
+      await withNativeSelectionOpen(
+        targetKey,
+        column,
+        () => restoreRange,
+        open,
+      );
+    } else {
+      await open();
+    }
   }
+}
+
+/** Selection + top-line pin for Live Preview after Chat/Edit dismiss. */
+function captureMirrorOpenRange(
+  targetKey: string,
+): NativeOpenRange | undefined {
+  const editor = vscode.window.activeTextEditor;
+  if (!editor || editor.document.uri.toString() !== targetKey) {
+    return undefined;
+  }
+  const document = editor.document;
+  if (typeof document.offsetAt !== "function") {
+    return undefined;
+  }
+  const coordinates = new SourceCoordinates(document.getText());
+  const at = coordinates.toEditor(document.offsetAt(editor.selection.start));
+  const end = coordinates.toEditor(document.offsetAt(editor.selection.end));
+  return openRange({
+    at,
+    to: end > at ? end : undefined,
+    topLine: nativeViewportTopLine(editor.visibleRanges),
+  });
 }
 
 function clearStaleEditPrompt(uri: string): void | Promise<void> {

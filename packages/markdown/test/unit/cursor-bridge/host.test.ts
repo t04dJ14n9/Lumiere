@@ -362,7 +362,7 @@ test("Edit prefers override-only (no show) when Cursor returns a prompt-bar id",
   assert.deepEqual(f.errors, []);
 });
 
-test("Chat discovers commands before handoff and keeps the lease after invocation", async (t) => {
+test("Chat with a selection mirrors briefly then dismisses with restore and releases the lease", async (t) => {
   const f = await fixture();
   t.after(() => f.root.dispose());
   let release = () => {};
@@ -384,10 +384,54 @@ test("Chat discovers commands before handoff and keeps the lease after invocatio
     "open",
     "show",
     CURSOR_COMMANDS.chat,
+    "dismiss",
   ]);
-  assert.equal(f.lease.has(f.note), true);
-  assert.equal(f.editWatchers.length, 0, "Chat keeps its existing lifetime");
+  assert.equal(
+    f.lease.has(f.note),
+    false,
+    "Chat must not leave a reclaim lease held",
+  );
+  assert.deepEqual(f.dismissed, [f.note]);
+  assert.equal(f.dismissOptions[0]?.restore, true);
+  assert.equal(f.editWatchers.length, 0, "Chat does not arm Edit cleanup");
   assert.deepEqual(f.errors, []);
+  assert.deepEqual(
+    f.statusEvents,
+    [],
+    "Chat must not show Edit dismiss status",
+  );
+});
+
+test("Chat confirmation failure after handoff still dismisses and releases", async (t) => {
+  const f = await fixture();
+  t.after(() => f.root.dispose());
+  f.state.afterValidation = () => {
+    f.state.isActive = false;
+  };
+  await f.handlers.get(contributionId("cursorBridge.chat"))!();
+  assert.ok(f.events.includes("show"));
+  assert.ok(f.events.includes("dismiss"));
+  assert.equal(f.lease.has(f.note), false);
+  assert.deepEqual(f.dismissed, [f.note]);
+  assert.equal(f.dismissOptions[0]?.restore, true);
+  assert.equal(f.errors.length, 1);
+  assert.equal(
+    f.events.includes(CURSOR_COMMANDS.chat),
+    false,
+    "Chat must not run after a failed confirmation",
+  );
+});
+
+test("Chat clipboard fallback after handoff still dismisses and releases", async (t) => {
+  const f = await fixture({ commands: new Set() });
+  t.after(() => f.root.dispose());
+  await f.handlers.get(contributionId("cursorBridge.chat"))!();
+  assert.ok(f.events.includes("show"));
+  assert.ok(f.events.includes("dismiss"));
+  assert.equal(f.lease.has(f.note), false);
+  assert.deepEqual(f.dismissed, [f.note]);
+  assert.equal(f.dismissOptions[0]?.restore, true);
+  assert.ok(f.informs.some((message) => message.includes("Selection copied")));
 });
 
 for (const change of [

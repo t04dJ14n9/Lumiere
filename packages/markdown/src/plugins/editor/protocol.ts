@@ -71,6 +71,7 @@ export const protocol = defineProtocol("editor", {
         openingSelection: Schema.object({
           anchor: offset,
           head: offset,
+          topLine: Schema.number().min(0).optional(),
         }).optional(),
       }),
     },

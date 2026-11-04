@@ -5,6 +5,19 @@ import { reclaimKey } from "./reclaim-tabs";
 export interface NativeSelection {
   at: number;
   to?: number;
+  /** 0-based first visible line in the native editor viewport. */
+  topLine?: number;
+}
+
+/** First visible line of a native editor; undefined when the viewport is empty. */
+export function nativeViewportTopLine(
+  visibleRanges: readonly { start: { line: number } }[] | undefined,
+): number | undefined {
+  const line = visibleRanges?.[0]?.start.line;
+  if (typeof line !== "number" || !Number.isSafeInteger(line) || line < 0) {
+    return undefined;
+  }
+  return line;
 }
 
 export function nativeSelectionRange(
@@ -25,7 +38,9 @@ export function nativeSelectionRange(
   const coordinates = new SourceCoordinates(document.getText());
   const at = coordinates.toEditor(document.offsetAt(editor.selection.start));
   const to = coordinates.toEditor(document.offsetAt(editor.selection.end));
-  return to > at ? { at, to } : { at };
+  const topLine = nativeViewportTopLine(editor.visibleRanges);
+  const selection: NativeSelection = to > at ? { at, to } : { at };
+  return topLine === undefined ? selection : { ...selection, topLine };
 }
 
 /** A Search match has both ends. A caret, including one at offset 0, does not. */

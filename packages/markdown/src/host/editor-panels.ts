@@ -46,7 +46,7 @@ function openingSelectionFor(
   uri: string,
   column: number,
   live: { at: number; to: number } | undefined,
-): { anchor: number; head: number } | undefined {
+): { anchor: number; head: number; topLine?: number } | undefined {
   return (
     nativeOpeningSelection(uri, column) ??
     (live ? { anchor: live.at, head: live.to } : undefined)
@@ -125,7 +125,7 @@ function panelResourceRoots(
 
 function panelOpenFields(options: {
   openedFromNativeSelection?: boolean;
-  openingSelection?: { anchor: number; head: number };
+  openingSelection?: { anchor: number; head: number; topLine?: number };
 }): Pick<PanelShell, "openedFromNativeSelection" | "openingSelection"> {
   return {
     ...(options.openedFromNativeSelection
@@ -144,7 +144,7 @@ function createPanelShell(
   options: {
     host: EditorHost;
     openedFromNativeSelection?: boolean;
-    openingSelection?: { anchor: number; head: number };
+    openingSelection?: { anchor: number; head: number; topLine?: number };
   },
 ): PanelShell {
   const { extensionUri, documents } = options.host;
@@ -253,7 +253,10 @@ export function registerEditor(
           ...(openingSelection ? { openingSelection } : {}),
         });
         open(shell);
-        revealNativeSelection(host.navigation, shell, selection);
+        // topLine pin is applied on first paint; a center reveal would move it.
+        if (!openingSelection?.topLine) {
+          revealNativeSelection(host.navigation, shell, selection);
+        }
       },
       resolveCustomTextEditorNavigation(
         document: vscode.TextDocument,
