@@ -23,7 +23,6 @@ import {
 } from "./reclaim-selection";
 import { healWorkspaceEditorAssociation } from "./workspace-editor-heal";
 import { kindOf, labelUri, tabModel, uriOf } from "./reclaim-tabs";
-import { registerMissingOpenBridgeSave } from "./missing-open-bridge";
 
 export { textBypass, handoffLease } from "./reclaim-opt-out";
 
@@ -87,7 +86,6 @@ export function registerReclaim(
   });
   const stop = vscode.Disposable.from(
     tabs,
-    registerMissingOpenBridgeSave(),
     registerSelectionReclaim({
       capture: transfer.capture,
       ready: scheduler.ready,

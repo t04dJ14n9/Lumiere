@@ -10,6 +10,8 @@ Failure modes that matter in this repo (not style nits):
 - **Merge-gate cheat** — weakened tests, raised quality budgets, or new eslint exceptions without owner approval + list update.
 - **Editor/host breakage** — vscode/webview/contribution changes without Host GUI or `pnpm test:vscode` evidence when required.
 
+- **Missing `.md` open (2026-11-04 lock)** — reclaim must **skip** absent `file:` Markdown (leave built-in Text Editor); must not untitled-bridge or `openWith` Lumia for missing paths. Existing `.md` still reclaim to Lumia.
+
 Caps: prefer Important findings with file+line evidence. Cap nits. Skip generated lockfile noise unless the change is the lockfile.
 
 Risk tiers (also in Grok Bot skill lumiere-pr-review):

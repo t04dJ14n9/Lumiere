@@ -246,8 +246,7 @@ const vscode = {
       onDidChangeTabGroups: () => ({ dispose() {} }),
       onDidChangeTabs: tabsChanged.event,
       async close(tab: Tab) {
-        // Normal reclaim only closes clean natives; missing-open may discard a
-        // dirty phantom buffer for a path that never existed on disk.
+        // Reclaim closes clean natives after openWith; dirty tabs stay.
         group.tabs = group.tabs.filter((candidate) => candidate !== tab);
       },
     },
@@ -316,8 +315,8 @@ function loadHost() {
         require("../../../src/host/cursor-handoff.ts") as typeof CursorHandoff,
       editorPanels:
         require("../../../src/host/editor-panels.ts") as typeof EditorPanels,
-      missingOpen:
-        require("../../../src/host/missing-open-bridge.ts") as typeof import("../../../src/host/missing-open-bridge"),
+      markdownAbsent:
+        require("../../../src/host/markdown-absent-on-disk.ts") as typeof import("../../../src/host/markdown-absent-on-disk"),
     };
   } finally {
     loader._load = originalLoad;
@@ -327,7 +326,7 @@ const host = loadHost();
 const tick = () => new Promise<void>((resolve) => setImmediate(resolve));
 
 beforeEach(() => {
-  host.missingOpen.setMarkdownAbsentOnDiskForTests(() => false);
+  host.markdownAbsent.setMarkdownAbsentOnDiskForTests(() => false);
   note = `file:///vault/Note-${++serial}.md`;
   warmed.length = 0;
   commands.length = 0;
@@ -3277,15 +3276,14 @@ test("moveCustomTextEditor rebinds existing WebviewPanel to newDocument without 
   ]);
 });
 
-test("reclaim bridges a dirty already-open Text Editor for a missing Markdown path", async (t) => {
-  // Host GUI: Cursor opens missing test.md as dirty Text Editor (no red
-  // FileNotFound). Document is already materialized, so openWith on the file
-  // URI does not throw FileNotFound — the catch-bridge never runs. Reclaim
-  // must detect absence on disk and open the named untitled Lumia bridge.
+test("reclaim skips missing Markdown paths (leaves built-in Text Editor)", async (t) => {
+  // Product lock 2026-11-04: opening a missing .md (e.g. code test.md) may use
+  // the built-in Text Editor dirty buffer until Save. Do not openWith Lumia,
+  // untitled bridge, or FileNotFound UI from Lumia.
   const missing = `file:///vault/missing-open/test.md`;
   note = missing;
-  host.missingOpen.setMarkdownAbsentOnDiskForTests((uri) => uri === missing);
-  t.after(() => host.missingOpen.setMarkdownAbsentOnDiskForTests(() => false));
+  host.markdownAbsent.setMarkdownAbsentOnDiskForTests((uri) => uri === missing);
+  t.after(() => host.markdownAbsent.setMarkdownAbsentOnDiskForTests(() => false));
 
   const stop = host.reclaim.registerReclaim();
   t.after(() => stop.dispose());
@@ -3298,121 +3296,56 @@ test("reclaim bridges a dirty already-open Text Editor for a missing Markdown pa
 
   tabsChanged.fire({ opened: [tab], changed: [], closed: [] });
   await tick();
-  assert.equal(
-    warmed.includes(missing),
-    false,
-    "already-open dirty missing buffer must not re-warm the file URI",
-  );
 
-  const bridgeUri = host.missingOpen.untitledBridgeUriFor(missing);
-  assert.ok(
-    commands.some(
-      (entry) =>
-        entry[0] === "vscode.openWith" &&
-        entry[1] === bridgeUri &&
-        entry[2] === viewType,
-    ),
-    "must openWith Lumia on the named untitled bridge",
+  assert.equal(
+    commands.some((entry) => entry[0] === "vscode.openWith"),
+    false,
+    "missing path must not openWith Lumia (or any view)",
   );
   assert.equal(
     commands.some(
-      (entry) =>
-        entry[0] === "vscode.openWith" &&
-        entry[1] === missing &&
-        entry[2] === viewType,
+      (entry) => entry[0] === "workbench.action.revertAndCloseActiveEditor",
     ),
     false,
-    "must not openWith the missing file URI",
+    "must not discard the built-in dirty Text Editor buffer",
   );
-  assert.equal(host.missingOpen.missingOpenBridge.peek(bridgeUri), missing);
   assert.equal(
     group.tabs.includes(tab),
-    false,
-    "dirty missing-file phantom text tab must be closed after bridge open",
+    true,
+    "built-in Text Editor tab for missing path must remain",
+  );
+  assert.ok(
+    group.activeTab?.input instanceof TabInputText,
+    "active editor stays the built-in Text Editor",
   );
 });
 
-test("after missing-open bridge, active editor is Lumia on untitled (Host GUI)", async (t) => {
-  // Host GUI @ 897b85db: bridge untitled URI appeared, but as untitledEditorInput
-  // / Monaco — Lumia listed in Reopen With, not Active. Lumia resolve ran
-  // (obsidianCompat on untitled:/…/workspace), then showTextDocument(file,
-  // preview:true) after openWith replaced the Lumia preview tab.
-  // Close the phantom BEFORE openWith so Lumia is never preview-replaced.
-  const missing = `file:///vault/missing-open/active-lumia.md`;
-  note = missing;
-  host.missingOpen.setMarkdownAbsentOnDiskForTests((uri) => uri === missing);
-  t.after(() => host.missingOpen.setMarkdownAbsentOnDiskForTests(() => false));
-
-  const bridgeUri = host.missingOpen.untitledBridgeUriFor(missing);
-  afterCommand = () => {
-    const last = commands[commands.length - 1];
-    if (
-      last?.[0] === "vscode.openWith" &&
-      last[1] === bridgeUri &&
-      last[2] === viewType
-    ) {
-      const options = last[3] as { preview?: boolean } | undefined;
-      const lumia: Tab = {
-        input: new TabInputCustom(Uri.parse(bridgeUri), viewType),
-        label: "active-lumia.md",
-        isDirty: true,
-        // Pin when preview:false so a later preview showTextDocument cannot
-        // replace Lumia (Host GUI failure mode).
-        isPreview: options?.preview ?? true,
-        group,
-      };
-      // openWith opens beside the native tab (reclaim contract), not in-place.
-      group.tabs.push(lumia);
-      group.activeTab = lumia;
-    }
-  };
+test("reclaim still openWith Lumia for an existing Markdown path", async (t) => {
+  const existing = `file:///vault/missing-open/Welcome.md`;
+  note = existing;
+  // Present on disk (default beforeEach forces false; keep explicit).
+  host.markdownAbsent.setMarkdownAbsentOnDiskForTests(() => false);
+  t.after(() => host.markdownAbsent.setMarkdownAbsentOnDiskForTests(() => false));
 
   const stop = host.reclaim.registerReclaim();
   t.after(() => stop.dispose());
 
-  const tab = cursorTab(missing);
-  tab.input = new TabInputText(Uri.parse(missing));
-  tab.isDirty = true;
+  const tab = cursorTab(existing);
+  tab.input = new TabInputText(Uri.parse(existing));
+  tab.isDirty = false;
   tab.isPreview = true;
-  documents[0]!.isDirty = true;
+  documents[0]!.isDirty = false;
 
   tabsChanged.fire({ opened: [tab], changed: [], closed: [] });
   await tick();
 
-  const openWithIdx = commands.findIndex(
-    (entry) =>
-      entry[0] === "vscode.openWith" &&
-      entry[1] === bridgeUri &&
-      entry[2] === viewType,
-  );
-  const revertIdx = commands.findIndex(
-    (entry) => entry[0] === "workbench.action.revertAndCloseActiveEditor",
-  );
-  assert.ok(openWithIdx >= 0, "must openWith Lumia on untitled bridge");
-  assert.deepEqual(
-    (commands[openWithIdx] as unknown[])[3],
-    { viewColumn: 1, preview: false },
-    "bridge Lumia tab must be pinned (preview:false) so it cannot be replaced",
-  );
   assert.ok(
-    revertIdx >= 0 && revertIdx < openWithIdx,
-    "must revert+close the file: phantom BEFORE openWith Lumia (not after)",
-  );
-
-  const active = group.activeTab;
-  assert.ok(
-    active?.input instanceof TabInputCustom,
-    "active tab must be Lumia custom editor, not default Text Editor",
-  );
-  assert.equal(active.input.viewType, viewType);
-  assert.equal(active.input.uri.toString(), bridgeUri);
-  assert.equal(
-    group.tabs.some(
-      (candidate) =>
-        candidate.input instanceof TabInputText &&
-        (candidate.input as TabInputText).uri.toString() === missing,
+    commands.some(
+      (entry) =>
+        entry[0] === "vscode.openWith" &&
+        entry[1] === existing &&
+        entry[2] === viewType,
     ),
-    false,
-    "missing file: phantom must not remain",
+    "existing Markdown path must openWith Lumia",
   );
 });

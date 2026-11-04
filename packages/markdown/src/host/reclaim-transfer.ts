@@ -16,14 +16,7 @@ import {
   uriOf,
 } from "./reclaim-tabs";
 import { hasNativeOptOut } from "./reclaim-opt-out";
-import {
-  isFileNotFoundError,
-  isMarkdownAbsentOnDisk,
-  isMissingMarkdownFileUri,
-  missingOpenBridge,
-  openBridgeForMissingMarkdown,
-  type MissingOpenBridgeHost,
-} from "./missing-open-bridge";
+import { isMarkdownAbsentOnDisk } from "./markdown-absent-on-disk";
 
 const { viewType } = MARKDOWN_EDITOR;
 
@@ -64,6 +57,11 @@ export function createReclaimTransfer(
     open(tab: vscode.Tab, uri: string) {
       const shown = resolveLiveNativeTab(tab, uri);
       if (!shown) {
+        return;
+      }
+      // Missing file: leave built-in Text Editor (dirty buffer until Save).
+      // Do not openWith Lumia or untitled-bridge (product lock 2026-11-04).
+      if (isMarkdownAbsentOnDisk(uri)) {
         return;
       }
       startPendingReclaim({
@@ -116,20 +114,7 @@ function startPendingReclaim(options: {
   };
   pending.set(key, next);
   void reopen(uri, next, navigation)
-    .catch(async (error) => {
-      if (
-        isMissingMarkdownFileUri(uri) &&
-        isFileNotFoundError(error) &&
-        !transferBlocked(uri, next)
-      ) {
-        try {
-          await openMissingMarkdownBridge(uri, next);
-          return;
-        } catch (bridgeError) {
-          console.error("Lumia missing-open bridge failed", bridgeError);
-          return;
-        }
-      }
+    .catch((error) => {
       console.error("Lumia editor transfer failed", error);
     })
     .finally(() => {
@@ -178,13 +163,6 @@ async function reopen(
   navigation?: NativeNavigation,
 ): Promise<void> {
   const target = vscode.Uri.parse(uri);
-  // Sync disk check (no await): Cursor may already hold a dirty in-memory
-  // TextDocument for a missing file: URI, so openWith never throws
-  // FileNotFound and the catch-bridge would never run.
-  if (isMarkdownAbsentOnDisk(uri) && !transferBlocked(uri, request)) {
-    await openMissingMarkdownBridge(uri, request);
-    return;
-  }
   // showTextDocument has already materialized a text tab's document. Avoid
   // another warm call and its awaits; Cursor Markdown still needs the reissue.
   const isDocumentOpen = vscode.workspace.textDocuments.some(
@@ -295,78 +273,6 @@ function transferBlocked(uri: string, request: ReclaimRequest): boolean {
     hasNativeOptOut(uri, request.kind) ||
     Boolean(request.intent?.token.cancelled)
   );
-}
-
-async function openMissingMarkdownBridge(
-  uri: string,
-  request: ReclaimRequest,
-): Promise<void> {
-  // Close the file: phantom FIRST while it is still active. Opening Lumia on
-  // the untitled bridge as a preview, then showTextDocument(file, preview)
-  // afterward, replaces that Lumia preview tab (Host GUI: untitled Text
-  // Editor / Monaco left active; Lumia listed but not Active).
-  if (!transferBlocked(uri, request)) {
-    await closeMissingFilePhantom(uri, request);
-  }
-  await openBridgeForMissingMarkdown({
-    intendedFileUri: uri,
-    viewType,
-    viewColumn: request.column,
-    // Pin so a later preview open cannot replace the Lumia bridge tab.
-    preview: false,
-    bridge: missingOpenBridge,
-    host: vscodeMissingOpenHost(),
-  });
-}
-
-/** Discard Cursor's dirty/clean text tab for a missing file: path. */
-async function closeMissingFilePhantom(
-  uri: string,
-  request: ReclaimRequest,
-): Promise<void> {
-  const left = currentTab(request);
-  if (!left) {
-    return;
-  }
-  if (!left.isDirty) {
-    await vscode.window.tabGroups.close(left, true);
-    return;
-  }
-  // Prefer closing while the phantom is still active — avoids showTextDocument
-  // after Lumia is open (preview replacement). Focus only when needed.
-  if (vscode.window.tabGroups.activeTabGroup.activeTab !== left) {
-    const doc = vscode.workspace.textDocuments.find(
-      (document) => document.uri.toString() === uri,
-    );
-    if (doc) {
-      await vscode.window.showTextDocument(doc, {
-        preview: true,
-        preserveFocus: false,
-      });
-    } else {
-      await vscode.window.tabGroups.close(left, true);
-      return;
-    }
-  }
-  await vscode.commands.executeCommand(
-    "workbench.action.revertAndCloseActiveEditor",
-  );
-}
-
-function vscodeMissingOpenHost(): MissingOpenBridgeHost {
-  return {
-    async openTextDocument(uri) {
-      await vscode.workspace.openTextDocument(vscode.Uri.parse(uri));
-    },
-    async openWith(uri, type, options) {
-      await vscode.commands.executeCommand(
-        "vscode.openWith",
-        vscode.Uri.parse(uri),
-        type,
-        options,
-      );
-    },
-  };
 }
 
 /**
