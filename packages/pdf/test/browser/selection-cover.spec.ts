@@ -448,6 +448,98 @@ async function selectionBoxExtents(
   );
 }
 
+/**
+ * Cluster painted selection children into lines by top, then return consecutive
+ * inter-line gaps (nextTop − prevBottom) in PDF points. Positive ⇒ visible
+ * separation; ≤0 ⇒ fused multiline bars inside the isolation group.
+ */
+async function selectionInterLineGaps(page: Page): Promise<{
+  gaps: number[];
+  meanUnscaledHeight: number;
+  lineCount: number;
+}> {
+  return page.evaluate(() => {
+    const pageEl = document.querySelector<HTMLElement>(
+      '.page[data-page-index="0"]',
+    );
+    if (!pageEl) {
+      return { gaps: [], meanUnscaledHeight: 0, lineCount: 0 };
+    }
+    const pageBox = pageEl.getBoundingClientRect();
+    const scale = pageBox.width / 300;
+    const boxes: Array<{
+      top: number;
+      bottom: number;
+      unscaledHeight: number;
+    }> = [];
+    for (const wrapper of pageEl.querySelectorAll<HTMLElement>(
+      '[style*="isolation"]',
+    )) {
+      for (const child of wrapper.children) {
+        const c = child as HTMLElement;
+        const fill = getComputedStyle(c).backgroundColor;
+        if (!fill || fill === "rgba(0, 0, 0, 0)") {
+          continue;
+        }
+        const box = c.getBoundingClientRect();
+        // offsetHeight is pre-transform; getBoundingClientRect includes scaleY.
+        const unscaledHeight = c.offsetHeight / scale;
+        boxes.push({
+          top: (box.top - pageBox.top) / scale,
+          bottom: (box.bottom - pageBox.top) / scale,
+          unscaledHeight,
+        });
+      }
+    }
+    boxes.sort((a, b) => a.top - b.top || a.bottom - b.bottom);
+    const lines: Array<Array<(typeof boxes)[number]>> = [];
+    for (const b of boxes) {
+      const last = lines[lines.length - 1];
+      if (last && Math.abs(last[0]!.top - b.top) < 4) {
+        last.push(b);
+      } else {
+        lines.push([b]);
+      }
+    }
+    const gaps: number[] = [];
+    for (let i = 0; i < lines.length - 1; i += 1) {
+      const bottom = Math.max(...lines[i]!.map((x) => x.bottom));
+      const nextTop = Math.min(...lines[i + 1]!.map((x) => x.top));
+      gaps.push(nextTop - bottom);
+    }
+    const meanUnscaledHeight =
+      boxes.length === 0
+        ? 0
+        : boxes.reduce((s, b) => s + b.unscaledHeight, 0) / boxes.length;
+    return { gaps, meanUnscaledHeight, lineCount: lines.length };
+  });
+}
+
+async function selectBodyLines(page: Page, cover: SelectionCover) {
+  const at = await pagePoint(page, 1);
+  const first = cover.body[0]!;
+  const last = cover.body[cover.body.length - 1]!;
+  const x = first.x + 24;
+  const from = at(x, first.y - first.size * 0.35);
+  const to = at(x + 220, last.y - last.size * 0.35);
+  let nudge = 0;
+  await expect
+    .poll(async () => {
+      nudge = 1 - nudge;
+      await page.mouse.move(from[0] + nudge, from[1]);
+      return page.evaluate(
+        ([x, y]) =>
+          getComputedStyle(document.elementFromPoint(x, y) as Element).cursor,
+        from,
+      );
+    })
+    .toBe("text");
+  await page.mouse.move(...from);
+  await page.mouse.down();
+  await page.mouse.move(...to, { steps: 40 });
+  await page.mouse.up();
+}
+
 const DARK_PAPER = { r: 30, g: 30, b: 30 };
 const LIGHT_PAPER = { r: 255, g: 255, b: 255 };
 
@@ -574,8 +666,8 @@ test("dark paper: selection blend is normal and boxes cover glyphs + bullets", a
   });
   expect(gypsyBoxes.length, "selection boxes on gypsy line").toBeGreaterThan(0);
   const gypsyBottom = Math.max(...gypsyBoxes.map((b) => b.bottom));
-  // Helvetica descender ≈ 0.207em; Host GUI still saw tails at scaleY(1.28)
-  // (~0.49em below baseline). Require ≥0.52em so 1.28 fails and ~1.42 passes.
+  // Helvetica descender ≈ 0.207em. Keep the 0.52em floor if it still passes
+  // at scaleY(1.32); do not raise scaleY if this fails (merge risk).
   expect(
     gypsyBottom,
     `selection bottom ${gypsyBottom} must clear gypsy descenders`,
@@ -658,4 +750,42 @@ test("light paper: selection blend is normal with shared descender pad", async (
     gypsyBottom,
     `light selection bottom ${gypsyBottom} must clear gypsy descenders`,
   ).toBeGreaterThanOrEqual(gypsy.y + gypsy.size * 0.52);
+});
+
+test("contiguous body lines keep a positive inter-line selection gap", async ({
+  page,
+}) => {
+  const cover = await loadCover();
+  await open(page, "?pdf=selection-cover.pdf");
+  await selectBodyLines(page, cover);
+  await expect.poll(() => lastSelection(page)).toMatchObject({ kind: "text" });
+  const selection = (await lastSelection(page)) as { text?: string };
+  const selected = selection.text ?? "";
+  expect(selected.toLowerCase()).toContain("gypsy");
+  // Drag may start mid-glyph on line 1; require contiguous body coverage.
+  expect(selected).toMatch(/complementary|computation|context/i);
+
+  const { gaps, meanUnscaledHeight, lineCount } =
+    await selectionInterLineGaps(page);
+  expect(
+    lineCount,
+    "clustered selection lines for body",
+  ).toBeGreaterThanOrEqual(3);
+  // Fixture measure (browser): unscaled PDFium boxes ≈12pt on 16pt leading.
+  expect(
+    meanUnscaledHeight,
+    `mean unscaled box height ${meanUnscaledHeight}`,
+  ).toBeGreaterThan(11);
+  expect(meanUnscaledHeight).toBeLessThan(13);
+  expect(
+    gaps.length,
+    "inter-line gaps among body lines",
+  ).toBeGreaterThanOrEqual(2);
+  // Fail if any consecutive expanded covers fuse (overlap or touch).
+  for (const [i, gap] of gaps.entries()) {
+    expect(
+      gap,
+      `inter-line gap[${i}]=${gap} (mean unscaled box≈${meanUnscaledHeight.toFixed(2)}pt); fused if ≤0`,
+    ).toBeGreaterThan(0);
+  }
 });

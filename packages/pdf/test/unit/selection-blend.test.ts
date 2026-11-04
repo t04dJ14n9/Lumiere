@@ -48,7 +48,7 @@ test("selection children expand vertically to cover descenders on both themes", 
   // scaleY on isolation children grows the cover downward for light and dark.
   assert.match(
     css,
-    /\.page \[style\*="isolation:\s*isolate"\]\s*>\s*\*[^{]*\{[^}]*transform:\s*scaleY\(1\.42\)/u,
+    /\.page \[style\*="isolation:\s*isolate"\]\s*>\s*\*[^{]*\{[^}]*transform:\s*scaleY\(1\.32\)/u,
   );
   assert.match(
     css,

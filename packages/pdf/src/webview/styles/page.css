@@ -133,14 +133,16 @@
 
 /* Loose PDFium char boxes still undershoot rendered descenders (g/p/y). With
    normal covers that shortfall is visible; grow each painted child downward
-   (~42% of box height) so tint encloses ink + clear margin (Host GUI rejected
-   1.28 — tails still poked). transform-origin top keeps the top edge fixed;
-   PDFium boxes are shorter than the 11pt em, so 11pt/16pt leading in
-   selection-cover.pdf still leaves ~2pt between expanded lines. Shared on
-   both themes. */
+   so tint encloses ink. transform-origin top keeps the top edge fixed.
+   selection-cover.pdf body: 11pt Helvetica, baselines 16pt apart (y 100/116/
+   132). Browser-measured unscaled PDFium boxes ≈12.0pt tall → merge ceiling
+   scaleY ≈ 16/12 ≈ 1.333. Shared scaleY(1.32) stays just under that:
+   measured inter-line gap ≈ 0.16pt (16 − 12×1.32) — not the old "~2pt" claim.
+   Do not raise into merge territory without the inter-line gap browser assert.
+   Shared on both themes. */
 .page [style*="isolation: isolate"] > *,
 .page [style*="isolation:isolate"] > * {
-  transform: scaleY(1.42);
+  transform: scaleY(1.32);
   transform-origin: top center;
 }
 
