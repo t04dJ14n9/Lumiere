@@ -58,10 +58,10 @@ export async function bootstrap(
   }
   registerEditorSettings(root, rpc, editor);
   const configure = pluginReporting(root, rpc);
-  // Sheet (Properties/Sources) must not share the settle-window wire with
-  // tables/callouts. Start chrome preload as soon as we know the Obsidian
-  // preset; paint structure starts only at first-paint rAF (wave 13 — not
-  // the closed #288 wait-for-chrome-resolve serialize).
+  // Chrome (Properties + lineNumbers) must not share the settle-window wire
+  // with tables/callouts. Start chrome preload as soon as we know the
+  // Obsidian preset; paint structure starts only at first-paint rAF (wave
+  // 13 — not the closed #288 wait-for-chrome-resolve serialize).
   const chromeChunks =
     init.preset === "obsidian" ? earlyChrome : Promise.resolve();
   const startPaint =
@@ -87,9 +87,10 @@ export async function bootstrap(
 }
 
 /**
- * Glyphs first (rAF), then Properties as soon as sheet chunks are ready —
- * without waiting on tables/tags. Paint structure fetch starts on this same
- * frame (after chrome had the settle window alone) and configures next.
+ * Glyphs first (rAF), then Properties + lineNumbers as soon as chrome chunks
+ * are ready — without waiting on tables/tags. Paint structure fetch starts on
+ * this same frame (after chrome had the settle window alone) and configures
+ * next.
  */
 function scheduleFeaturePhases(options: {
   root: RootContext;
