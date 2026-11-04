@@ -106,8 +106,7 @@ export class OutlineView {
 
   /**
    * Follow where the reader is after a scroll in `panel` (see
-   * `reading-position.ts`): the caret while it is on screen, else the line
-   * at the middle of the editor.
+   * `reading-position.ts`): the line at the top of the editor viewport.
    */
   followReading(
     panel: EditorPanel,

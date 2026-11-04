@@ -5,20 +5,16 @@ import { ViewPlugin, type EditorView } from "@codemirror/view";
 export const READING_REPORT_MS = 100;
 
 /**
- * Where the reader is: the caret while any of its line is on screen, else
- * the start of the line at the middle of the editor. The middle, not the
- * top, because a click in the outline centres its heading.
+ * Where the reader is for scroll follow: the start of the line at the top
+ * of the editor viewport. Caret follow stays on `followCaret` /
+ * `editor/selectionChanged`; this offset is only for scroll reporting.
+ * A 1px inset avoids picking the previous line when the boundary sits
+ * exactly on a line edge.
  */
 export function readingOffset(view: EditorView): number {
   const box = view.scrollDOM.getBoundingClientRect();
   const top = box.top - view.documentTop;
-  const bottom = box.bottom - view.documentTop;
-  const head = view.state.selection.main.head;
-  const caret = view.lineBlockAt(head);
-  if (caret.bottom > top && caret.top < bottom) {
-    return head;
-  }
-  return view.lineBlockAtHeight((top + bottom) / 2).from;
+  return view.lineBlockAtHeight(top + 1).from;
 }
 
 /**

@@ -13,8 +13,9 @@ overflow action persists `outline.followCursor` through VS Code settings.
 When enabled, cursor movement, scrolling, panel changes and view visibility
 reveal and select the current section without taking focus. A scroll follows
 where the reader is (`reading-position.ts`, the plugin's webview half): the
-caret while it is on screen, else the line at the middle of the editor (the
-middle because a click in the outline centres its heading). The default
+line at the top of the editor viewport (so the outline tracks what you are
+reading at the top of the pane). Caret moves still follow via `followCaret`.
+The default
 expand mode is accordion, like a page's table of contents: the active
 heading's parents and its own subheadings are open and every other branch
 is closed, without rebuilding the tree. VS Code can close a single row only
