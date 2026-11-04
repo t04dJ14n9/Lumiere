@@ -1,0 +1,29 @@
+Lumière Host GUI — PR #489 outline scroll open-only flash — AFTER evidence
+Asia/Singapore (UTC+8): 2026-11-04 ~11:20 harness capture; evidence written 2026-11-04 11:22 +08
+
+OVERALL: PASS (open-only scroll no flash)
+
+Harness: /workspace/host-gui-489-a0e454fd/
+VSIX: /workspace/lumiere-0.1.10-pr489-a0e454fd.vsix (AFTER fix @ a0e454fd)
+Workspace fixture: Nested.md (synthetic nested headings only; no vault content)
+PR head at evidence time: 17640fed (sibling-leave supersede model union; unit-tested)
+Host GUI run commit: a0e454fd (scroll flash fix). Later 17640fed only tightens sibling-leave
+  supersede model; Host GUI already confirmed open-only scrolls do not flash, and A2 path
+  change collapses A1 children as designed (#485 intentional accordion).
+
+Shots (AFTER — no open-only flash):
+  01-after-outline-open-a1a.png
+    Outline Follow Cursor ON; Nested.md open in Lumia; path expanded to A1a (Chapter A /
+    Section A1 / Subsection A1a children visible).
+  02-after-scroll-still-expanded.png
+    After open-only scroll / reading-position follow stills: tree remains expanded (no
+    Collapse All flash). Leaving to A2 still collapses A1 children (intentional accordion).
+
+Hosted on branch host-gui-shot-images @ dfc5bf96 under pr-489/:
+  https://raw.githubusercontent.com/t04dJ14n9/Lumia/host-gui-shot-images/pr-489/01-after-outline-open-a1a.png
+  https://raw.githubusercontent.com/t04dJ14n9/Lumia/host-gui-shot-images/pr-489/02-after-scroll-still-expanded.png
+
+Reviewer: Round 2 Important: 0 (Importants from round 1 resolved on 17640fed).
+CI reminder (checked ~11:22 +08 on head 17640fed): check/quality/package/audit/secret-scan
+  pass; browser still pending — confirm all six green before merge ask.
+Do NOT merge without 金扬.
