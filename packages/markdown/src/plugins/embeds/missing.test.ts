@@ -2,14 +2,22 @@ import test from "node:test";
 import assert from "node:assert/strict";
 import { missingEmbedText } from "./post-process";
 
-test("an embed that can't be found says so, naming its path", () => {
+test("a missing image embed says it failed to fetch, not the note path wording", () => {
   assert.equal(
     missingEmbedText("attachments/missing.png"),
-    '"attachments/missing.png" could not be found.',
+    "failed to fetch image",
+  );
+  assert.equal(missingEmbedText("gone.png|200"), "failed to fetch image");
+});
+
+test("a missing non-image file still names its path", () => {
+  assert.equal(
+    missingEmbedText("attachments/report.pdf"),
+    '"attachments/report.pdf" could not be found.',
   );
   assert.equal(
-    missingEmbedText("gone.png|200"),
-    '"gone.png" could not be found.',
+    missingEmbedText("MissingNote"),
+    '"MissingNote" could not be found.',
   );
 });
 
