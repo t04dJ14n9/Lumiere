@@ -1,10 +1,12 @@
 /**
  * Text selection must cover glyphs (vertical + horizontal), bullets, and work
- * on dark paper. Synthetic selection-cover.pdf only — never vault content.
+ * on light and dark paper. Synthetic selection-cover.pdf only — never vault
+ * content.
  *
- * Root cause class: EmbedPDF SelectionLayer uses multiply + isolation; on dark
- * paper multiply only paints over light ink so boxes look short/shifted. Loose
- * char boxes also undershoot rendered descenders once covers are solid.
+ * Root cause class: EmbedPDF SelectionLayer uses multiply + isolation;
+ * multiply only paints over light ink so boxes look short/shifted. Both themes
+ * force normal blend + shared descender scaleY; colors differ via tokens.
+ * Loose char boxes also undershoot rendered descenders once covers are solid.
  */
 import path from "node:path";
 import { pathToFileURL } from "node:url";
@@ -625,14 +627,15 @@ test("dark paper: selection blend is normal and boxes cover glyphs + bullets", a
   );
 });
 
-test("light paper: selection still covers multi-line body (multiply OK on white)", async ({
+test("light paper: selection blend is normal with shared descender pad", async ({
   page,
 }) => {
   const cover = await loadCover();
   await open(page, "?pdf=selection-cover.pdf");
   await selectCoverRange(page, cover);
   await expect.poll(() => lastSelection(page)).toMatchObject({ kind: "text" });
-  expect(await selectionBlendMode(page)).toBe("multiply");
+  expect(await selectionBlendMode(page)).toBe("normal");
+
   const gypsy = cover.body[2]!;
   const vSpan = await verticalTintSpan(
     page,
@@ -642,4 +645,16 @@ test("light paper: selection still covers multi-line body (multiply OK on white)
     LIGHT_PAPER,
   );
   expect(vSpan, "light paper vertical tint").toBeGreaterThan(gypsy.size * 0.85);
+
+  // Shared scaleY pad: covers must reach the descender zone on light too.
+  const gypsyBoxes = await selectionBoxExtents(page, {
+    top: gypsy.y - gypsy.size,
+    bottom: gypsy.y + gypsy.size,
+  });
+  expect(gypsyBoxes.length, "selection boxes on gypsy line").toBeGreaterThan(0);
+  const gypsyBottom = Math.max(...gypsyBoxes.map((b) => b.bottom));
+  expect(
+    gypsyBottom,
+    `light selection bottom ${gypsyBottom} must clear gypsy descenders`,
+  ).toBeGreaterThanOrEqual(gypsy.y + gypsy.size * 0.25);
 });

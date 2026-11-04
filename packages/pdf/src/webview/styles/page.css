@@ -116,27 +116,29 @@
   mix-blend-mode: normal;
 }
 
-/* Text selection (EmbedPDF SelectionLayer): multiply on dark paper only
-   tints where it overlaps light glyph ink, so boxes look short/shifted —
-   the same class of bug sidecar highlights fix above. Target the group's
-   `isolation: isolate` wrapper (annotations do not use it).
-   Solid --selection-fill is meant for multiply; under normal it would paint
-   opaque over white glyphs. Opacity on the isolated group keeps overlaps
-   solid inside (no double-darkening) while letting ink read through — same
-   idea as sidecar's translucent normal blend. */
-#root[data-page-colors="dark"] .page [style*="isolation: isolate"],
-#root[data-page-colors="dark"] .page [style*="isolation:isolate"] {
+/* Text selection (EmbedPDF SelectionLayer): force normal blend on both
+   themes. Multiply only tints where it overlaps light glyph ink, so boxes
+   look short/shifted — the same class of bug sidecar highlights fix above.
+   Target the group's `isolation: isolate` wrapper (annotations do not use
+   it). Solid --selection-fill under normal would paint opaque over glyphs;
+   opacity on the isolated group keeps overlaps solid inside (no
+   double-darkening) while letting ink read through — same idea as sidecar's
+   translucent normal blend. Light vs dark differ by color tokens only
+   (--selection-fill in base.css / pageColors). */
+.page [style*="isolation: isolate"],
+.page [style*="isolation:isolate"] {
   mix-blend-mode: normal !important;
   opacity: 0.45;
 }
 
 /* Loose PDFium char boxes still undershoot rendered descenders (g/p/y). With
-   normal solid covers that shortfall is visible; grow each painted child
-   downward (~28% of box height) so tint encloses ink + a small margin.
+   normal covers that shortfall is visible; grow each painted child downward
+   (~28% of box height) so tint encloses ink + a small margin.
    transform-origin top keeps the top edge fixed; 11pt body / 16pt leading in
-   selection-cover.pdf leaves ~2pt gap between expanded lines. */
-#root[data-page-colors="dark"] .page [style*="isolation: isolate"] > *,
-#root[data-page-colors="dark"] .page [style*="isolation:isolate"] > * {
+   selection-cover.pdf leaves ~2pt gap between expanded lines. Shared on both
+   themes. */
+.page [style*="isolation: isolate"] > *,
+.page [style*="isolation:isolate"] > * {
   transform: scaleY(1.28);
   transform-origin: top center;
 }
