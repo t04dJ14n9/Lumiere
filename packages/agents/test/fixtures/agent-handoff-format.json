@@ -1,6 +1,6 @@
 {
   "version": 2,
-  "about": "Agent handoff text shared by Lumia and Lumia PDF (docs/agent-handoff-format.md). PDF clipboard is link + blockquote (no Source:/SHA/cite).",
+  "about": "Agent handoff text shared by Lumia and Lumia PDF (docs/agent-handoff-format.md). PDF clipboard is Quote-first + Chrome #page= / #:~:text= (no Source:/SHA/cite/#hl-).",
   "noteReferences": [
     {
       "path": "notes/a.md",
@@ -55,7 +55,7 @@
       "source": {
         "path": "papers/attention.pdf"
       },
-      "text": "[attention.pdf \u00b7 p.3](papers/attention.pdf#page=3&viewrect=72,83,134,21)\n\n> Scaled dot-product attention"
+      "text": "> Scaled dot-product attention\n>\n> [attention.pdf · p.3](papers/attention.pdf#page=3#:~:text=Scaled%20dot%2Dproduct%20attention)"
     }
   ]
 }

@@ -36,16 +36,20 @@ raw links, never a chat-specific mention syntax.
 ## PDF selections (Lumia PDF)
 
 ```text
-[attention.pdf · p.3](papers/attention.pdf#page=3&viewrect=72,83,134,21)
-
 > Scaled dot-product attention
+>
+> [attention.pdf · p.3](papers/attention.pdf#page=3#:~:text=Scaled%20dot%2Dproduct%20attention)
 ```
 
-- One Markdown link per selected page: label is `basename · p.N` (no
-  escapes), href is only `path#page=N&viewrect=x,y,w,h` (RFC 8118; no
-  angle brackets around the href).
-- After a blank line, the selected text is quoted with `> ` (same rules as
-  note payloads). A region with no readable text is link-only.
+- Quote-first: the selected text is quoted with `> ` (same rules as note
+  payloads), then a blank quoted line (`>`), then one Markdown link per
+  selected page as a quoted line. A page-only or empty-region copy is
+  link-only (no quote block).
+- Label is `basename · p.N` (no escapes). Href is Chrome-aligned:
+  `path#page=N` alone, or `path#page=N#:~:text=…` when there is selected
+  text, or `path#page=N&viewrect=x,y,w,h` when regions are enabled (no
+  angle brackets around the href). Never `#hl-`, never PDF++ `selection=`,
+  never RFC `search=`.
 - No `Source:` / `Sources:` prefix, no PDF SHA-256 line, no cite
   instruction, and no region-image path on the clipboard. File revision
   hashing remains on the structured bridge envelope / MCP side when needed.

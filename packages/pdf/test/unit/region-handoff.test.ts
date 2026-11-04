@@ -108,9 +108,9 @@ test("a region snapshot over the cap is not saved and evicts nothing, but the li
   assert.equal(
     text,
     [
-      "[attention.pdf · p.9](papers/attention.pdf#page=9&viewrect=92,126,427,261)",
-      "",
       "> base 6 512 2048",
+      ">",
+      "> [attention.pdf · p.9](papers/attention.pdf#page=9#:~:text=base%206%20512%202048)",
     ].join("\n"),
   );
   assert.doesNotMatch(
@@ -131,7 +131,7 @@ test("the MCP snapshot of an over-cap region has the same link and text, without
   assert.ok(snapshot);
   assert.equal(snapshot.regionImage, undefined);
   assert.equal("regionImage" in snapshot, false);
-  assert.match(snapshot.agentText, /#page=9&viewrect=92,126,427,261\)/u);
+  assert.match(snapshot.agentText, /#page=9#:~:text=base%206%20512%202048\)/u);
   assert.match(snapshot.agentText, /base 6 512 2048/u);
   assert.deepEqual(warnings, []);
   await assert.rejects(readdir(folder), { code: "ENOENT" });
