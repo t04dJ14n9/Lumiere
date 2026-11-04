@@ -59,7 +59,11 @@ import {
   type SidecarHostMessage,
   type SidecarWrite,
 } from "./sidecar-messages";
-import type { PdfBacklinkHit } from "./pdf-backlink-index";
+import {
+  parseOpenBacklinkNote,
+  type OpenBacklinkNoteMessage,
+  type PdfBacklinksHostMessage,
+} from "./backlink-messages";
 import type { PdfLocation } from "./pdf-location";
 import { parseSelection, type PdfSelection } from "./selection";
 import {
@@ -147,11 +151,7 @@ export type ViewerMessage =
       data: ArrayBuffer;
     }
   | { type: "annotationSaveFailed"; load: number; message: string }
-  | {
-      type: "openBacklinkNote";
-      noteUri: string;
-      linkOffset: number;
-    }
+  | OpenBacklinkNoteMessage
   | SidecarWrite;
 
 /**
@@ -209,11 +209,7 @@ export type HostMessage =
       message: string;
     }
   | { type: "annotationRetry"; load: number }
-  | {
-      type: "pdfBacklinks";
-      load: number;
-      hits: PdfBacklinkHit[];
-    }
+  | PdfBacklinksHostMessage
   | SidecarHostMessage;
 
 const MAX_OUTLINE_ITEMS = 10_000;
@@ -292,26 +288,6 @@ const VIEWER_PARSERS: Readonly<
         }
       : undefined,
 };
-
-const MAX_NOTE_URI = 8_192;
-
-function parseOpenBacklinkNote(message: Fields): ViewerMessage | undefined {
-  if (
-    typeof message.noteUri !== "string" ||
-    message.noteUri.length < 1 ||
-    message.noteUri.length > MAX_NOTE_URI ||
-    typeof message.linkOffset !== "number" ||
-    !Number.isSafeInteger(message.linkOffset) ||
-    message.linkOffset < 0
-  ) {
-    return undefined;
-  }
-  return {
-    type: "openBacklinkNote",
-    noteUri: message.noteUri,
-    linkOffset: message.linkOffset,
-  };
-}
 
 const MAX_ANNOTATION_SAVE_BYTES = 512_000_000;
 

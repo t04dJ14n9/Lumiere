@@ -37,19 +37,12 @@ export function useToolMode(
   useEffect(() => {
     registerToolModes(documentId, interaction, selection, regionsEnabled);
   }, [documentId, interaction, selection, regionsEnabled]);
-
-  useEffect(() => {
-    if (regionsEnabled) {
-      return;
-    }
-    const scope = interaction?.forDocument(documentId);
-    if (!scope) {
-      return;
-    }
-    if (state.activeMode === REGION_MODE) {
-      scope.activateDefaultMode();
-    }
-  }, [documentId, interaction, regionsEnabled, state.activeMode]);
+  useLeaveRegionWhenDisabled(
+    documentId,
+    interaction,
+    regionsEnabled,
+    state.activeMode,
+  );
 
   const setTool = useCallback(
     (tool: ToolMode): void => {
@@ -90,6 +83,23 @@ export function useToolMode(
     tool: resolveToolMode(annotate, state.activeMode, regionsEnabled),
     setTool,
   };
+}
+
+function useLeaveRegionWhenDisabled(
+  documentId: string,
+  interaction: ReturnType<typeof useInteractionManagerCapability>["provides"],
+  regionsEnabled: boolean,
+  activeMode: string,
+): void {
+  useEffect(() => {
+    if (regionsEnabled) {
+      return;
+    }
+    const scope = interaction?.forDocument(documentId);
+    if (scope && activeMode === REGION_MODE) {
+      scope.activateDefaultMode();
+    }
+  }, [documentId, interaction, regionsEnabled, activeMode]);
 }
 
 function resolveToolMode(

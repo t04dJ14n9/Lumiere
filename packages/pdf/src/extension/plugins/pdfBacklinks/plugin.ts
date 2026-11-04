@@ -1,5 +1,5 @@
 import * as vscode from "vscode";
-import type { Plugin } from "@workshop/core";
+import type { Context, Plugin } from "@workshop/core";
 import { PdfBacklinkIndex } from "../../../shared/pdf-backlink-index";
 import { displayPath } from "../pdf/files";
 import type { PdfPanel } from "../pdf/panel";
@@ -25,21 +25,6 @@ export const pdfBacklinksPlugin: Plugin = {
     const index = new PdfBacklinkIndex();
     ctx.provide("pdfBacklinkIndex", index);
 
-    ctx.own(
-      panels.handle("openBacklinkNote", async (_panel, message) => {
-        const uri = vscode.Uri.parse(message.noteUri);
-        const document = await vscode.workspace.openTextDocument(uri);
-        const editor = await vscode.window.showTextDocument(document);
-        const position = document.positionAt(message.linkOffset);
-        editor.selection = new vscode.Selection(position, position);
-        editor.revealRange(
-          new vscode.Range(position, position),
-          vscode.TextEditorRevealType.InCenterIfOutsideViewport,
-        );
-      }),
-      "open backlink note",
-    );
-
     let cancelled = false;
     ctx.own(
       {
@@ -51,74 +36,105 @@ export const pdfBacklinksPlugin: Plugin = {
       "index lifetime",
     );
 
-    const pushPanel = (panel: PdfPanel): void => {
-      const key = displayPath(panel.uri);
-      panel.setPdfBacklinks([...index.lookup(key)]);
-    };
-    const pushAll = (): void => {
-      for (const panel of panels.all) {
-        pushPanel(panel);
-      }
-    };
-
-    const ingestUri = async (uri: vscode.Uri): Promise<void> => {
-      if (cancelled || !isMarkdownUri(uri)) {
-        return;
-      }
-      try {
-        const bytes = await vscode.workspace.fs.readFile(uri);
-        const text = new TextDecoder("utf8").decode(bytes);
-        index.replaceNote(uri.toString(), displayPath(uri), text);
-        pushAll();
-      } catch {
-        // Unreadable notes are skipped; the index stays a best-effort cache.
-      }
-    };
-
-    for (const panel of panels.all) {
-      pushPanel(panel);
-    }
-    ctx.own(panels.onDidOpen(pushPanel), "open listener");
-
-    ctx.own(
-      vscode.workspace.onDidSaveTextDocument((document) => {
-        if (cancelled || !isMarkdownUri(document.uri)) {
-          return;
-        }
-        index.replaceNote(
-          document.uri.toString(),
-          displayPath(document.uri),
-          document.getText(),
-        );
-        pushAll();
-      }),
-      "save listener",
-    );
-
-    const watcher = vscode.workspace.createFileSystemWatcher(MD_GLOB);
-    ctx.own(watcher, "markdown watcher");
-    ctx.own(
-      watcher.onDidCreate((uri) => void ingestUri(uri)),
-      "create listener",
-    );
-    ctx.own(
-      watcher.onDidChange((uri) => void ingestUri(uri)),
-      "change listener",
-    );
-    ctx.own(
-      watcher.onDidDelete((uri) => {
-        if (cancelled || !isMarkdownUri(uri)) {
-          return;
-        }
-        index.removeNote(uri.toString());
-        pushAll();
-      }),
-      "delete listener",
-    );
-
+    wireOpenBacklinkNote(ctx, panels);
+    const pushAll = wirePanelPush(ctx, panels, index);
+    wireMarkdownListeners(ctx, index, () => cancelled, pushAll);
     void idleScan(index, () => cancelled, pushAll);
   },
 };
+
+function wireOpenBacklinkNote(ctx: Context, panels: PdfPanels): void {
+  ctx.own(
+    panels.handle("openBacklinkNote", async (_panel, message) => {
+      const uri = vscode.Uri.parse(message.noteUri);
+      const document = await vscode.workspace.openTextDocument(uri);
+      const editor = await vscode.window.showTextDocument(document);
+      const position = document.positionAt(message.linkOffset);
+      editor.selection = new vscode.Selection(position, position);
+      editor.revealRange(
+        new vscode.Range(position, position),
+        vscode.TextEditorRevealType.InCenterIfOutsideViewport,
+      );
+    }),
+    "open backlink note",
+  );
+}
+
+function wirePanelPush(
+  ctx: Context,
+  panels: PdfPanels,
+  index: PdfBacklinkIndex,
+): () => void {
+  const pushPanel = (panel: PdfPanel): void => {
+    panel.backlinks.set([...index.lookup(displayPath(panel.uri))]);
+  };
+  const pushAll = (): void => {
+    for (const panel of panels.all) {
+      pushPanel(panel);
+    }
+  };
+  for (const panel of panels.all) {
+    pushPanel(panel);
+  }
+  ctx.own(panels.onDidOpen(pushPanel), "open listener");
+  return pushAll;
+}
+
+function wireMarkdownListeners(
+  ctx: Context,
+  index: PdfBacklinkIndex,
+  isCancelled: () => boolean,
+  pushAll: () => void,
+): void {
+  ctx.own(
+    vscode.workspace.onDidSaveTextDocument((document) => {
+      if (isCancelled() || !isMarkdownUri(document.uri)) {
+        return;
+      }
+      index.replaceNote(
+        document.uri.toString(),
+        displayPath(document.uri),
+        document.getText(),
+      );
+      pushAll();
+    }),
+    "save listener",
+  );
+
+  const watcher = vscode.workspace.createFileSystemWatcher(MD_GLOB);
+  ctx.own(watcher, "markdown watcher");
+  const ingestUri = async (uri: vscode.Uri): Promise<void> => {
+    if (isCancelled() || !isMarkdownUri(uri)) {
+      return;
+    }
+    try {
+      const bytes = await vscode.workspace.fs.readFile(uri);
+      const text = new TextDecoder("utf8").decode(bytes);
+      index.replaceNote(uri.toString(), displayPath(uri), text);
+      pushAll();
+    } catch {
+      // Unreadable notes are skipped; the index stays a best-effort cache.
+    }
+  };
+  ctx.own(
+    watcher.onDidCreate((uri) => void ingestUri(uri)),
+    "create listener",
+  );
+  ctx.own(
+    watcher.onDidChange((uri) => void ingestUri(uri)),
+    "change listener",
+  );
+  ctx.own(
+    watcher.onDidDelete((uri) => {
+      if (isCancelled() || !isMarkdownUri(uri)) {
+        return;
+      }
+      index.removeNote(uri.toString());
+      pushAll();
+    }),
+    "delete listener",
+  );
+}
 
 function isMarkdownUri(uri: vscode.Uri): boolean {
   return uri.path.toLowerCase().endsWith(".md");

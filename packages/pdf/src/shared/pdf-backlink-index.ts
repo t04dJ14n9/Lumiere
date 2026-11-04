@@ -33,47 +33,53 @@ export function extractPdfBacklinks(
   MD_LINK.lastIndex = 0;
   let match: RegExpExecArray | null;
   while ((match = MD_LINK.exec(noteText)) !== null) {
-    const target = (match[2] ?? match[3] ?? "").trim();
-    if (!target) {
-      continue;
+    const hit = hitFromMarkdownLink(match, notePath, noteUri);
+    if (hit) {
+      hits.push(hit);
     }
-    const hash = target.indexOf("#");
-    const pathPart = hash >= 0 ? target.slice(0, hash) : target;
-    const fragment = hash >= 0 ? target.slice(hash + 1) : "";
-    if (!/\.pdf$/iu.test(pathPart)) {
-      continue;
-    }
-    const pdfKey = normalizePdfKey(
-      resolveNoteRelativePdfPath(pathPart, notePath),
-    );
-    if (!pdfKey) {
-      continue;
-    }
-    const parsed = fragment
-      ? parsePdfDeepLinkFragment(fragment)
-      : ({} as ReturnType<typeof parsePdfDeepLinkFragment>);
-    if (!parsed.page && !parsed.highlightId) {
-      continue;
-    }
-    const hit: PdfBacklinkHit = {
-      noteUri,
-      notePath,
-      linkOffset: match.index,
-      pdfKey,
-      page: parsed.page ?? 1,
-    };
-    if (parsed.textFragment) {
-      hit.textFragment = { textStart: parsed.textFragment.textStart };
-    }
-    if (parsed.viewRect) {
-      hit.viewRect = parsed.viewRect;
-    }
-    if (parsed.highlightId) {
-      hit.highlightId = parsed.highlightId;
-    }
-    hits.push(hit);
   }
   return hits;
+}
+
+function hitFromMarkdownLink(
+  match: RegExpExecArray,
+  notePath: string,
+  noteUri: string,
+): PdfBacklinkHit | undefined {
+  const target = (match[2] ?? match[3] ?? "").trim();
+  if (!target) {
+    return undefined;
+  }
+  const hash = target.indexOf("#");
+  const pathPart = hash >= 0 ? target.slice(0, hash) : target;
+  const fragment = hash >= 0 ? target.slice(hash + 1) : "";
+  if (!/\.pdf$/iu.test(pathPart)) {
+    return undefined;
+  }
+  const pdfKey = normalizePdfKey(
+    resolveNoteRelativePdfPath(pathPart, notePath),
+  );
+  if (!pdfKey) {
+    return undefined;
+  }
+  const parsed = fragment
+    ? parsePdfDeepLinkFragment(fragment)
+    : ({} as ReturnType<typeof parsePdfDeepLinkFragment>);
+  if (!parsed.page && !parsed.highlightId) {
+    return undefined;
+  }
+  return {
+    noteUri,
+    notePath,
+    linkOffset: match.index,
+    pdfKey,
+    page: parsed.page ?? 1,
+    ...(parsed.textFragment
+      ? { textFragment: { textStart: parsed.textFragment.textStart } }
+      : {}),
+    ...(parsed.viewRect ? { viewRect: parsed.viewRect } : {}),
+    ...(parsed.highlightId ? { highlightId: parsed.highlightId } : {}),
+  };
 }
 
 /**
@@ -228,6 +234,19 @@ function parsePdfBacklinkHit(value: unknown): PdfBacklinkHit | undefined {
     return undefined;
   }
   const fields = value as Record<string, unknown>;
+  const required = parseRequiredHitFields(fields);
+  if (!required) {
+    return undefined;
+  }
+  const optionals = parseOptionalHitFields(fields);
+  return optionals ? { ...required, ...optionals } : undefined;
+}
+
+function parseRequiredHitFields(
+  fields: Record<string, unknown>,
+):
+  | Omit<PdfBacklinkHit, "textFragment" | "viewRect" | "highlightId">
+  | undefined {
   if (
     !isBoundedString(fields.noteUri) ||
     !isBoundedString(fields.notePath) ||
@@ -241,40 +260,51 @@ function parsePdfBacklinkHit(value: unknown): PdfBacklinkHit | undefined {
   ) {
     return undefined;
   }
-  const hit: PdfBacklinkHit = {
+  return {
     noteUri: fields.noteUri,
     notePath: fields.notePath,
     linkOffset: fields.linkOffset,
     pdfKey: fields.pdfKey,
     page: fields.page,
   };
-  const textFragment = fields.textFragment;
-  if (textFragment !== undefined) {
-    if (
-      typeof textFragment !== "object" ||
-      textFragment === null ||
-      !isBoundedString((textFragment as { textStart?: unknown }).textStart)
-    ) {
+}
+
+function parseOptionalHitFields(
+  fields: Record<string, unknown>,
+):
+  | Pick<PdfBacklinkHit, "textFragment" | "viewRect" | "highlightId">
+  | undefined {
+  const out: Pick<PdfBacklinkHit, "textFragment" | "viewRect" | "highlightId"> =
+    {};
+  if (fields.textFragment !== undefined) {
+    const textStart = parseTextFragmentStart(fields.textFragment);
+    if (textStart === undefined) {
       return undefined;
     }
-    hit.textFragment = {
-      textStart: (textFragment as { textStart: string }).textStart,
-    };
+    out.textFragment = { textStart };
   }
   if (fields.viewRect !== undefined) {
     const viewRect = parseViewRectField(fields.viewRect);
     if (!viewRect) {
       return undefined;
     }
-    hit.viewRect = viewRect;
+    out.viewRect = viewRect;
   }
   if (fields.highlightId !== undefined) {
     if (!isBoundedString(fields.highlightId)) {
       return undefined;
     }
-    hit.highlightId = fields.highlightId;
+    out.highlightId = fields.highlightId;
   }
-  return hit;
+  return out;
+}
+
+function parseTextFragmentStart(value: unknown): string | undefined {
+  if (typeof value !== "object" || value === null) {
+    return undefined;
+  }
+  const textStart = (value as { textStart?: unknown }).textStart;
+  return isBoundedString(textStart) ? textStart : undefined;
 }
 
 function parseViewRectField(value: unknown): ViewRect | undefined {

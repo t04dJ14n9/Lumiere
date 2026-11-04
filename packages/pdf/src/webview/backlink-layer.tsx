@@ -4,7 +4,12 @@ import type {
   PdfEngine,
   PdfGlyphObject,
 } from "@embedpdf/models";
-import React, { useEffect, useState, useSyncExternalStore } from "react";
+import React, {
+  useEffect,
+  useMemo,
+  useState,
+  useSyncExternalStore,
+} from "react";
 import type { PdfBacklinkHit } from "../shared/pdf-backlink-index";
 import { resolveTextToLineRects } from "../shared/pdf-backlink-resolve";
 import type { SegmentRect } from "../shared/sidecar-format";
@@ -36,8 +41,10 @@ export function BacklinkLayer({
   const { registry } = useRegistry();
   const [overlays, setOverlays] = useState<ResolvedOverlay[]>([]);
   const page = pageIndex + 1;
-  const pageHits = hits.filter(
-    (hit) => hit.page === page && hit.textFragment?.textStart,
+  const pageHits = useMemo(
+    () =>
+      hits.filter((hit) => hit.page === page && hit.textFragment?.textStart),
+    [hits, page],
   );
 
   useEffect(() => {
@@ -55,7 +62,7 @@ export function BacklinkLayer({
     return () => {
       live = false;
     };
-  }, [registry, pdf, pageIndex, pageHitsKey(pageHits)]);
+  }, [registry, pdf, pageIndex, pageHits]);
 
   if (overlays.length === 0) {
     return null;
@@ -63,48 +70,50 @@ export function BacklinkLayer({
   return (
     <>
       {overlays.map((overlay) => (
-        <div
-          key={overlay.key}
-          className="pdf-backlink-overlay"
-          title={overlay.hit.notePath}
-          data-note-path={overlay.hit.notePath}
-          data-note-uri={overlay.hit.noteUri}
-          data-link-offset={overlay.hit.linkOffset}
-          onClick={(event) => {
-            event.preventDefault();
-            event.stopPropagation();
-            postToHost({
-              type: "openBacklinkNote",
-              noteUri: overlay.hit.noteUri,
-              linkOffset: overlay.hit.linkOffset,
-            });
-          }}
-        >
-          {overlay.rects.map((rect, index) => (
-            <div
-              key={index}
-              className="pdf-backlink-overlay-line"
-              style={{
-                left: rect.x * scale,
-                top: rect.y * scale,
-                width: rect.w * scale,
-                height: rect.h * scale,
-              }}
-            />
-          ))}
-        </div>
+        <BacklinkOverlay key={overlay.key} overlay={overlay} scale={scale} />
       ))}
     </>
   );
 }
 
-function pageHitsKey(hits: readonly PdfBacklinkHit[]): string {
-  return hits
-    .map(
-      (hit) =>
-        `${hit.noteUri}|${hit.linkOffset}|${hit.textFragment?.textStart ?? ""}`,
-    )
-    .join("\n");
+function BacklinkOverlay({
+  overlay,
+  scale,
+}: {
+  overlay: ResolvedOverlay;
+  scale: number;
+}): React.JSX.Element {
+  return (
+    <div
+      className="pdf-backlink-overlay"
+      title={overlay.hit.notePath}
+      data-note-path={overlay.hit.notePath}
+      data-note-uri={overlay.hit.noteUri}
+      data-link-offset={overlay.hit.linkOffset}
+      onClick={(event) => {
+        event.preventDefault();
+        event.stopPropagation();
+        postToHost({
+          type: "openBacklinkNote",
+          noteUri: overlay.hit.noteUri,
+          linkOffset: overlay.hit.linkOffset,
+        });
+      }}
+    >
+      {overlay.rects.map((rect, index) => (
+        <div
+          key={index}
+          className="pdf-backlink-overlay-line"
+          style={{
+            left: rect.x * scale,
+            top: rect.y * scale,
+            width: rect.w * scale,
+            height: rect.h * scale,
+          }}
+        />
+      ))}
+    </div>
+  );
 }
 
 async function resolvePage(

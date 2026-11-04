@@ -5,16 +5,12 @@ import { Viewport } from "@embedpdf/plugin-viewport/react";
 import { ZoomGestureWrapper } from "@embedpdf/plugin-zoom/react";
 import React, { useEffect, useRef, useState } from "react";
 import { useEndDragsReleasedOutside } from "./drag-release";
-import { useNavigation, type Navigation } from "./navigation";
+import { useNavigation } from "./navigation";
 import { useOutlinePublishing } from "./outline";
 import { Page } from "./page";
 import { PageBitmaps } from "./page-bitmaps";
 import { DOCUMENT_ID } from "./plugins";
-import {
-  currentViewSettings,
-  rememberedPosition,
-  useRestorePosition,
-} from "./reading-position";
+import { currentViewSettings, useRestorePosition } from "./reading-position";
 import type { ViewChoices } from "../shared/view-settings";
 import { usePagedScroll } from "./paged-scroll";
 import { usePagedWheel, usePagingKeys } from "./paging-input";
@@ -43,6 +39,11 @@ import { useHostMessages } from "./host-messages";
 import { useWheelZoom } from "./wheel-zoom";
 import { useJumpHistory } from "./jump-history";
 import { useFirstFitNow } from "./first-fit";
+import {
+  rememberedChoices,
+  useRegionsEnabled,
+  withHistory,
+} from "./viewer-helpers";
 
 /**
  * The open PDF: an optional search bar and the scrolling pages. Controls
@@ -111,9 +112,7 @@ function useViewerState(pdf: PdfDocumentObject) {
   const [motionSetting, setMotionSetting] = useState(
     () => currentViewSettings().smoothScrolling,
   );
-  const [regionsEnabled, setRegionsEnabled] = useState(
-    () => currentViewSettings().regionsEnabled,
-  );
+  const [regionsEnabled, setRegionsEnabled] = useRegionsEnabled();
   const smooth = useSmoothMotion(motionSetting);
   const rawNavigation = useNavigation(DOCUMENT_ID, choices.scrollMode, smooth);
   const history = useJumpHistory(rawNavigation, choices, setChoices);
@@ -219,41 +218,7 @@ function useViewerTools(pdf: PdfDocumentObject, deps: ViewerToolsDeps) {
   };
 }
 
-type JumpHistory = ReturnType<typeof useJumpHistory>;
 type Selection = ReturnType<typeof useSelectionReporting>;
-
-/** The remembered page layout and scrolling of this PDF. */
-function rememberedChoices(): ViewChoices {
-  const position = rememberedPosition();
-  return {
-    pageLayout: position.pageLayout,
-    scrollMode: position.scrollMode,
-    scrollDirection: position.scrollDirection,
-  };
-}
-
-/**
- * Navigation whose page and box moves are history entries: deliberate ones
- * jump, a search's passive reveal is a preview.
- */
-function withHistory(navigation: Navigation, history: JumpHistory) {
-  return {
-    ...navigation,
-    goToPage: (page: number, top?: number) =>
-      history.jump(() => navigation.goToPage(page, top)),
-    reveal: (
-      page: number,
-      rect: Parameters<Navigation["reveal"]>[1],
-      deliberate = true,
-    ) => {
-      if (deliberate) {
-        history.jump(() => navigation.reveal(page, rect), undefined, true);
-      } else {
-        history.preview(() => navigation.reveal(page, rect));
-      }
-    },
-  };
-}
 
 /** The search bar: open, and how many times Find was asked for. */
 function useSearch() {

@@ -2,7 +2,13 @@ import { useRegistry } from "@embedpdf/core/react";
 import type { PdfDocumentObject, Rect } from "@embedpdf/models";
 import type { SelectionScope } from "@embedpdf/plugin-selection";
 import { useSelectionCapability } from "@embedpdf/plugin-selection/react";
-import { useCallback, useEffect, useRef, useState } from "react";
+import {
+  useCallback,
+  useEffect,
+  useRef,
+  useState,
+  type MutableRefObject,
+} from "react";
 import type { PageRect } from "../shared/geometry";
 import type { RegionSelection } from "../shared/selection";
 import { isEditableTarget } from "./editable-target";
@@ -40,28 +46,17 @@ export function useSelectionReporting(
     if (!selection) {
       return;
     }
-    const engine = () => registry?.getEngine();
     return state.follow(
       selection.forDocument(documentId),
-      { engine, pdf },
       {
-        regionsEnabled: () => currentViewSettings().regionsEnabled === true,
+        engine: () => registry?.getEngine(),
+        pdf,
       },
+      { regionsEnabled: () => currentViewSettings().regionsEnabled === true },
     );
   }, [state, documentId, pdf, registry, selection]);
   useCopiedText(state);
-  useEffect(
-    () =>
-      followMenuContext(document, () => {
-        const hasAnnotationSelection = Boolean(extra.current?.());
-        const hasSelection =
-          Boolean(state.region) ||
-          Boolean(selection?.forDocument(documentId).getState().selection) ||
-          hasAnnotationSelection;
-        return { hasSelection, hasAnnotationSelection };
-      }),
-    [state, documentId, selection],
-  );
+  useSelectionMenuContext(state, documentId, selection, extra);
   /** Report the selection now: the extension asks before Copy Link for Agent. */
   const reportNow = useCallback((): void => {
     void state.reportSelection(selection?.forDocument(documentId));
@@ -90,6 +85,26 @@ export function useSelectionReporting(
     [state],
   );
   return { region, clear, copyLinkForAgent, reportNow, setAnnotationRegion };
+}
+
+function useSelectionMenuContext(
+  state: SelectionTracker,
+  documentId: string,
+  selection: ReturnType<typeof useSelectionCapability>["provides"],
+  extra: MutableRefObject<(() => boolean) | undefined>,
+): void {
+  useEffect(
+    () =>
+      followMenuContext(document, () => {
+        const hasAnnotationSelection = Boolean(extra.current?.());
+        const hasSelection =
+          Boolean(state.region) ||
+          Boolean(selection?.forDocument(documentId).getState().selection) ||
+          hasAnnotationSelection;
+        return { hasSelection, hasAnnotationSelection };
+      }),
+    [state, documentId, selection, extra],
+  );
 }
 
 /** What is selected, as last reported to the extension. */
