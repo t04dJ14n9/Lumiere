@@ -31,6 +31,7 @@
  *    │                                    from the context menu)
  *    │  sidecar / ◄── sidecarWrite        sidecar highlights (sidecar-messages.ts)
  *    │  pdfBacklinks { load, hits } ►     vault Markdown PDF backlink overlays
+ *    │  ◄──────────── openBacklinkNote   click a backlink overlay → open note
  *
  * State reports are batched: the viewer collects what changed for a frame
  * and sends one `patch` (only the latest of each part), so scrolling or a
@@ -146,6 +147,11 @@ export type ViewerMessage =
       data: ArrayBuffer;
     }
   | { type: "annotationSaveFailed"; load: number; message: string }
+  | {
+      type: "openBacklinkNote";
+      noteUri: string;
+      linkOffset: number;
+    }
   | SidecarWrite;
 
 /**
@@ -260,6 +266,7 @@ const VIEWER_PARSERS: Readonly<
     isWebUrl(message.url)
       ? { type: "openExternal", url: message.url }
       : undefined,
+  openBacklinkNote: parseOpenBacklinkNote,
   lookUp: (message) =>
     typeof message.open === "boolean" &&
     (message.word === null || isLookUpWord(message.word))
@@ -285,6 +292,27 @@ const VIEWER_PARSERS: Readonly<
         }
       : undefined,
 };
+
+
+const MAX_NOTE_URI = 8_192;
+
+function parseOpenBacklinkNote(message: Fields): ViewerMessage | undefined {
+  if (
+    typeof message.noteUri !== "string" ||
+    message.noteUri.length < 1 ||
+    message.noteUri.length > MAX_NOTE_URI ||
+    typeof message.linkOffset !== "number" ||
+    !Number.isSafeInteger(message.linkOffset) ||
+    message.linkOffset < 0
+  ) {
+    return undefined;
+  }
+  return {
+    type: "openBacklinkNote",
+    noteUri: message.noteUri,
+    linkOffset: message.linkOffset,
+  };
+}
 
 const MAX_ANNOTATION_SAVE_BYTES = 512_000_000;
 

@@ -25,6 +25,21 @@ export const pdfBacklinksPlugin: Plugin = {
     const index = new PdfBacklinkIndex();
     ctx.provide("pdfBacklinkIndex", index);
 
+    ctx.own(
+      panels.handle("openBacklinkNote", async (_panel, message) => {
+        const uri = vscode.Uri.parse(message.noteUri);
+        const document = await vscode.workspace.openTextDocument(uri);
+        const editor = await vscode.window.showTextDocument(document);
+        const position = document.positionAt(message.linkOffset);
+        editor.selection = new vscode.Selection(position, position);
+        editor.revealRange(
+          new vscode.Range(position, position),
+          vscode.TextEditorRevealType.InCenterIfOutsideViewport,
+        );
+      }),
+      "open backlink note",
+    );
+
     let cancelled = false;
     ctx.own(
       {

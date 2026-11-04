@@ -12,6 +12,8 @@ import { useSidecarSelection } from "./sidecar-selection";
  * The marks selected in Annotate mode: the PDF's own (EmbedPDF) or a
  * sidecar highlight, never both. Sidecar highlights are written as the tool
  * finishes a selection, and re-attached when the PDF changed under them.
+ * Vault backlink overlays never enter this path (no hasAnnotationSelection),
+ * so Delete/Backspace leave them alone.
  */
 export function useMarkSelection(
   pdf: PdfDocumentObject,

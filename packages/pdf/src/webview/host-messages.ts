@@ -11,6 +11,9 @@ import { currentViewSettings, rememberViewSettings } from "./reading-position";
 import { rememberPageColors } from "./page-colors";
 import { parseSidecarHighlights } from "../shared/sidecar-messages";
 import { rememberSidecar } from "./sidecar-store";
+import { rememberBacklinks } from "./backlink-store";
+import { parsePdfBacklinkHits } from "../shared/pdf-backlink-index";
+import { annotationLoadState } from "./annotation-load-state";
 import { rememberToolbarSettings } from "./toolbar-settings";
 import type { useViewActions } from "./view-sync";
 
@@ -111,6 +114,14 @@ function handleMarksMessage(
       const highlights = parseSidecarHighlights(message.highlights);
       if (highlights !== undefined) {
         rememberSidecar(highlights);
+      }
+      return;
+    }
+    case "pdfBacklinks": {
+      const hits = parsePdfBacklinkHits(message.hits);
+      const load = annotationLoadState()?.load;
+      if (hits !== undefined && message.load === load) {
+        rememberBacklinks(hits);
       }
       return;
     }

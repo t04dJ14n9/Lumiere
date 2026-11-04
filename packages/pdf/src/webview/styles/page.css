@@ -156,3 +156,30 @@
   opacity: calc(var(--highlight-opacity) * 0.5);
   outline: 1px dashed var(--selection-edge);
 }
+
+/* Vault Markdown backlink overlay (backlink-layer.tsx): above Annotate marks. */
+.pdf-backlink-overlay {
+  position: absolute;
+  inset: 0;
+  pointer-events: none;
+}
+
+.pdf-backlink-overlay-line {
+  position: absolute;
+  background: #7eb6ff;
+  opacity: 0.35;
+  mix-blend-mode: multiply;
+  pointer-events: auto;
+  cursor: pointer;
+}
+
+#root[data-page-colors="dark"] .pdf-backlink-overlay-line {
+  opacity: 0.45;
+  mix-blend-mode: normal;
+}
+
+.pdf-backlink-overlay:hover .pdf-backlink-overlay-line {
+  opacity: 0.55;
+  outline: 1px solid var(--selection-edge);
+  outline-offset: 1px;
+}

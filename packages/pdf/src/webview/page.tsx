@@ -12,6 +12,7 @@ import { DOCUMENT_ID } from "./plugins";
 import { PageImage } from "./page-bitmaps";
 import { LookUpWord } from "./look-up-word";
 import { SidecarHighlightLayer } from "./sidecar-layer";
+import { BacklinkLayer } from "./backlink-layer";
 import { renderPixelRatio } from "./render-resolution";
 
 export interface PageProps {
@@ -133,6 +134,7 @@ function PageLayers({
         }}
       />
       <TextSelection {...layer} />
+      <BacklinkLayer pdf={pdf} pageIndex={pageIndex} scale={scale} />
     </PagePointerProvider>
   );
 }
