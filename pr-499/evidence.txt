@@ -1,0 +1,30 @@
+Lumière Host GUI — PR #499 MD open flash (Properties / line numbers)
+Asia/Singapore (UTC+8): harness capture 2026-11-04 ~18:19; evidence written 2026-11-04 18:25 +08
+
+OVERALL: PASS (AFTER chrome includes gutter with Properties; BEFORE mid-open shows Properties without gutter)
+
+Harness BEFORE: /workspace/host-gui-499-main-before/  main @ 77207199
+Harness AFTER:  /workspace/host-gui-499-3ed6aa74/      tip @ 3ed6aa74
+VSIX BEFORE: /workspace/lumiere-0.1.10-main-77207199.vsix
+VSIX AFTER:  /workspace/lumiere-0.1.10-pr499-3ed6aa74.vsix
+Fixture: Open Flash Fixture.md (synthetic YAML frontmatter + headings only; no vault secrets)
+Settings: editor.lineNumbers=on; *.md → lumiere.markdown.editor
+DISPLAY=:15; capture via ffmpeg x11grab 30fps then 20fps extract around Lumia open
+
+Shots:
+  01-before-early-blank-webview.png
+    BEFORE: Lumia custom editor tab active; webview still blank — no Properties, no gutter.
+  02-before-early-props-no-gutter.png
+    BEFORE (smoking gun): Properties chrome rendered, body visible, **line-number gutter missing**.
+  03-before-settled.png
+    BEFORE settled: Properties + gutter both present (flash already snapped).
+  04-after-early-chrome-with-gutter.png
+    AFTER early chrome: Properties + line-number gutter present together (no missing-gutter flash).
+  05-after-settled.png
+    AFTER settled: same chrome stable; no body jump observed in open sequence.
+
+Limitation: full Properties→gutter snap window is short; 20fps still caught BEFORE props-without-gutter.
+  Stock Markdown buffer may briefly appear before Lumia custom editor association on cold launch
+  (not the bug under test); evidence frames are the Lumia Live Preview tab.
+
+Do NOT merge without 金扬. No Cloud Agents.
