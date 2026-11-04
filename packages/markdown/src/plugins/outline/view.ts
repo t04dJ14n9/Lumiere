@@ -106,8 +106,7 @@ export class OutlineView {
 
   /**
    * Follow where the reader is after a scroll in `panel` (see
-   * `reading-position.ts`): the caret while it is on screen, else the line
-   * at the middle of the editor.
+   * `reading-position.ts`): the line at the top of the editor viewport.
    */
   followReading(
     panel: EditorPanel,
@@ -115,6 +114,17 @@ export class OutlineView {
   ): Promise<void> {
     if (panel !== this.panel) {
       return Promise.resolve();
+    }
+    // After an outline click the editor centres the heading, so the top of
+    // the viewport is often a different heading. Ignore scroll follow for
+    // the whole jump window so that report cannot yank selection off the
+    // clicked row. Caret follow keeps using isOutlineJump.
+    const jump = this.outlineJump;
+    if (jump) {
+      if (Date.now() <= jump.until) {
+        return Promise.resolve();
+      }
+      this.outlineJump = undefined;
     }
     return this.follow(() =>
       Promise.resolve({ head: position.offset, version: position.version }),
