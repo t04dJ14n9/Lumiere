@@ -13,7 +13,6 @@ function viewStub(options: {
   documentTop?: number;
   viewportTop: number;
   viewportBottom: number;
-  caretHead: number;
   lines: LineBlock[];
 }): EditorView {
   const documentTop = options.documentTop ?? 0;
@@ -26,37 +25,23 @@ function viewStub(options: {
     }
     return lines.at(-1) ?? { from: 0, top: 0, bottom: 0 };
   };
-  const lineAt = (pos: number): LineBlock => {
-    for (const line of lines) {
-      if (pos >= line.from) {
-        const next = lines[lines.indexOf(line) + 1];
-        if (!next || pos < next.from) {
-          return line;
-        }
-      }
-    }
-    return lines[0] ?? { from: 0, top: 0, bottom: 0 };
-  };
   return {
     documentTop,
-    state: { selection: { main: { head: options.caretHead } } },
     scrollDOM: {
       getBoundingClientRect: () => ({
         top: options.viewportTop + documentTop,
         bottom: options.viewportBottom + documentTop,
       }),
     },
-    lineBlockAt: (pos: number) => lineAt(pos),
     lineBlockAtHeight: (height: number) => lineAtHeight(height),
   } as unknown as EditorView;
 }
 
 test("readingOffset uses the top-of-viewport line when the caret is lower in view", () => {
-  // Viewport 0–200; top line at 0, caret line fully visible in the lower half.
+  // Viewport 0–200; top line at 0, another line fully visible in the lower half.
   const view = viewStub({
     viewportTop: 0,
     viewportBottom: 200,
-    caretHead: 50,
     lines: [
       { from: 0, top: 0, bottom: 20 },
       { from: 10, top: 20, bottom: 40 },
@@ -67,17 +52,15 @@ test("readingOffset uses the top-of-viewport line when the caret is lower in vie
   assert.equal(
     readingOffset(view),
     0,
-    "must report the top line, not the on-screen caret",
+    "must report the top line, not a lower on-screen line",
   );
 });
 
 test("readingOffset prefers the top line over the middle of the viewport", () => {
-  // Caret off-screen so today's code falls through to the middle height.
   // Middle of 0–300 is 150 → line from 40; top-of-viewport is line from 0.
   const view = viewStub({
     viewportTop: 0,
     viewportBottom: 300,
-    caretHead: 999,
     lines: [
       { from: 0, top: 0, bottom: 20 },
       { from: 40, top: 140, bottom: 160 },
@@ -96,7 +79,6 @@ test("readingOffset returns a sane offset for an empty or short document", () =>
   const empty = viewStub({
     viewportTop: 0,
     viewportBottom: 400,
-    caretHead: 0,
     lines: [{ from: 0, top: 0, bottom: 0 }],
   });
   assert.equal(readingOffset(empty), 0);
@@ -104,18 +86,16 @@ test("readingOffset returns a sane offset for an empty or short document", () =>
   const short = viewStub({
     viewportTop: 0,
     viewportBottom: 400,
-    caretHead: 3,
     lines: [{ from: 0, top: 0, bottom: 24 }],
   });
   assert.equal(readingOffset(short), 0);
 });
 
 test("readingOffset tracks the line at the scrolled top, not a caret above the viewport", () => {
-  // Scrolled so document Y 200–400 is visible; caret still on an earlier line.
+  // Scrolled so document Y 200–400 is visible; an earlier line is above.
   const view = viewStub({
     viewportTop: 200,
     viewportBottom: 400,
-    caretHead: 0,
     lines: [
       { from: 0, top: 0, bottom: 20 },
       { from: 100, top: 200, bottom: 220 },

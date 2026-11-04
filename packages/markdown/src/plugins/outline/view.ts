@@ -115,6 +115,17 @@ export class OutlineView {
     if (panel !== this.panel) {
       return Promise.resolve();
     }
+    // After an outline click the editor centres the heading, so the top of
+    // the viewport is often a different heading. Ignore scroll follow for
+    // the whole jump window so that report cannot yank selection off the
+    // clicked row. Caret follow keeps using isOutlineJump.
+    const jump = this.outlineJump;
+    if (jump) {
+      if (Date.now() <= jump.until) {
+        return Promise.resolve();
+      }
+      this.outlineJump = undefined;
+    }
     return this.follow(() =>
       Promise.resolve({ head: position.offset, version: position.version }),
     );

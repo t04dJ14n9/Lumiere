@@ -756,6 +756,52 @@ test("a scroll report after a click in the outline leaves the tree as it is", as
   assert.equal(fixture.collapseAllCount, collapses);
 });
 
+test("top-of-viewport reading during an outline jump does not yank the clicked row", async (t) => {
+  const fixture = await outlineFixture({ "A.md": NESTED });
+  t.after(() => fixture.root.dispose());
+  const { panel, cursor } = fixture.panel("one");
+  fixture.open(panel);
+  await tick();
+  const text = fixture.texts.get("A.md")!;
+  cursor.head = text.indexOf("body-a");
+  fixture.root.emit("editor/selectionChanged", panel, false);
+  await tick();
+  // Freeze Date so the OUTLINE_JUMP_MS window is under the test's control.
+  t.mock.timers.enable({ apis: ["Date"] });
+  await fixture.fake.commands.get(OPEN_COMMAND)!(
+    uriOf("A.md"),
+    text.indexOf("# B"),
+  );
+  // Caret arrives on the clicked heading (jump lands).
+  cursor.head = text.indexOf("# B");
+  fixture.root.emit("editor/selectionChanged", panel, false);
+  await tick();
+  const collapses = fixture.collapseAllCount;
+  fixture.expands.length = 0;
+  fixture.reveals.length = 0;
+  // Centering put "B" mid-pane; ~100ms later readingPosition reports the
+  // top-of-viewport line — a heading above "B". Must not accordion-follow it.
+  cursor.read(text.indexOf("# A"));
+  await tick();
+  assert.equal(
+    fixture.collapseAllCount,
+    collapses,
+    "must ignore followReading for a different node while the jump window is open",
+  );
+  assert.equal(fixture.expands.length, 0);
+  assert.equal(
+    fixture.reveals.length,
+    0,
+    "must not reveal/select the top-of-viewport heading during the jump",
+  );
+  // After OUTLINE_JUMP_MS, scroll follow applies again.
+  t.mock.timers.tick(1001);
+  cursor.read(text.indexOf("# A"));
+  await tick();
+  assert.equal(fixture.collapseAllCount, collapses + 1);
+  assert.equal(fixture.reveals.at(-1)?.node.label, "A");
+});
+
 test("scroll reports stop when the panel closes or the outline stops", async (t) => {
   const fixture = await outlineFixture({ "A.md": NESTED });
   t.after(() => fixture.root.dispose());
