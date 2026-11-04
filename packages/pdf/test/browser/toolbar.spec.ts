@@ -1,5 +1,11 @@
 import { expect, test } from "@playwright/test";
-import { open, messages, lastView, sendAction } from "./viewer-support";
+import {
+  open,
+  openWithRegions,
+  messages,
+  lastView,
+  sendAction,
+} from "./viewer-support";
 
 test("with the controls in VS Code's own UI the viewer has no toolbar; the setting switches it live", async ({
   page,
@@ -58,10 +64,21 @@ test("with the controls in VS Code's own UI the viewer has no toolbar; the setti
   ).toBeVisible();
 });
 
-test("the slim bar's buttons page, fit, pick the tool and toggle the outline, and show which fit and tool are on", async ({
+test("Select region is absent from the slim toolbar when regions are disabled", async ({
   page,
 }) => {
   await open(page);
+  const toolbar = page.getByRole("toolbar", { name: "PDF toolbar" });
+  await expect(toolbar.getByRole("button", { name: "Select text", exact: true })).toBeVisible();
+  await expect(
+    toolbar.getByRole("button", { name: "Select region", exact: true }),
+  ).toHaveCount(0);
+});
+
+test("the slim bar's buttons page, fit, pick the tool and toggle the outline, and show which fit and tool are on", async ({
+  page,
+}) => {
+  await openWithRegions(page);
   const toolbar = page.getByRole("toolbar", { name: "PDF toolbar" });
   const button = (name: string) =>
     toolbar.getByRole("button", { name, exact: true });

@@ -20,6 +20,8 @@ function shortcut(mac: string, other: string): string {
 export interface ToolbarProps {
   navigation: Navigation;
   tool: ToolMode;
+  /** Empty-page / Select Region; hide the region tool when off. */
+  regionsEnabled: boolean;
   choices: ViewChoices;
   run: (action: ViewerAction) => void;
   history: {
@@ -69,6 +71,7 @@ function IconButton({
 export function ToolbarControls({
   navigation,
   tool,
+  regionsEnabled,
   choices,
   run,
   history,
@@ -87,7 +90,7 @@ export function ToolbarControls({
       <span className="separator" />
       <ViewControls choices={choices} run={run} />
       <span className="separator" />
-      <ToolGroup tool={tool} run={run} />
+      <ToolGroup tool={tool} regionsEnabled={regionsEnabled} run={run} />
       <span className="spacer" />
       <span className="toolbar-group">
         <IconButton
@@ -223,9 +226,11 @@ function ZoomGroup({ run }: { run: Run }): React.JSX.Element {
 
 function ToolGroup({
   tool,
+  regionsEnabled,
   run,
 }: {
   tool: ToolMode;
+  regionsEnabled: boolean;
   run: Run;
 }): React.JSX.Element {
   return (
@@ -237,13 +242,15 @@ function ToolGroup({
         pressed={tool === "text"}
         onClick={() => run({ action: "setTool", tool: "text" })}
       />
-      <IconButton
-        icon="inspect"
-        label="Select region"
-        keys={shortcut("⌃⌘R", "Ctrl+Alt+R")}
-        pressed={tool === "region"}
-        onClick={() => run({ action: "setTool", tool: "region" })}
-      />
+      {regionsEnabled && (
+        <IconButton
+          icon="inspect"
+          label="Select region"
+          keys={shortcut("⌃⌘R", "Ctrl+Alt+R")}
+          pressed={tool === "region"}
+          onClick={() => run({ action: "setTool", tool: "region" })}
+        />
+      )}
     </span>
   );
 }

@@ -15,7 +15,11 @@ import { SpreadPluginPackage } from "@embedpdf/plugin-spread/react";
 import { ViewportPluginPackage } from "@embedpdf/plugin-viewport/react";
 import { ZoomPluginPackage } from "@embedpdf/plugin-zoom/react";
 import { MAX_ZOOM, MIN_ZOOM } from "../shared/zoom-steps";
-import { autoZoom, rememberedPosition } from "./reading-position";
+import {
+  autoZoom,
+  currentViewSettings,
+  rememberedPosition,
+} from "./reading-position";
 import { nativeSpread } from "./spread-mode";
 
 /** The viewer shows one document under this id. */
@@ -27,6 +31,9 @@ export const PAGE_GAP = 12;
 /** The EmbedPDF plugins the viewer is built from, opening `buffer`. */
 export function viewerPlugins(buffer: ArrayBuffer) {
   const position = rememberedPosition();
+  // Match pdfRegions default-off: EmbedPDF enables pointerMode marquee until
+  // enableForMode runs; seed from view settings so empty drag never races.
+  const regionsEnabled = currentViewSettings().regionsEnabled;
   return [
     createPluginRegistration(DocumentManagerPluginPackage, {
       initialDocuments: [
@@ -47,7 +54,9 @@ export function viewerPlugins(buffer: ArrayBuffer) {
     }),
     createPluginRegistration(RenderPluginPackage),
     createPluginRegistration(InteractionManagerPluginPackage),
-    createPluginRegistration(SelectionPluginPackage),
+    createPluginRegistration(SelectionPluginPackage, {
+      marquee: { enabled: regionsEnabled },
+    }),
     createPluginRegistration(HistoryPluginPackage),
     createPluginRegistration(AnnotationPluginPackage, {
       // Highlight burns into the PDF again; vault Markdown is the highlight store.

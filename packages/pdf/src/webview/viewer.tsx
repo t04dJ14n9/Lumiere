@@ -54,7 +54,16 @@ export function Viewer({
   document: PdfDocumentObject;
 }): React.JSX.Element {
   const view = useViewerState(pdf);
-  const { choices, smooth, toolbar, tool, navigation, history, search } = view;
+  const {
+    choices,
+    smooth,
+    toolbar,
+    tool,
+    navigation,
+    history,
+    search,
+    regionsEnabled,
+  } = view;
   return (
     <div
       className={`viewer tool-${tool} toolbar-${toolbar.mode}${smooth ? " smooth-motion" : ""}`}
@@ -68,6 +77,7 @@ export function Viewer({
         <Toolbar
           navigation={navigation}
           tool={tool}
+          regionsEnabled={regionsEnabled}
           choices={choices}
           run={view.runAction}
           history={history}
@@ -152,6 +162,7 @@ function useViewerState(pdf: PdfDocumentObject) {
     annotation: tools.annotation,
     annotationSelection: tools.annotationSelection,
     runAction: tools.runAction,
+    regionsEnabled,
     zen,
     toolbar: { ...setting, mode: zenToolbarMode(setting.mode, zen) },
   };
