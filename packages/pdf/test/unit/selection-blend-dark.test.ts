@@ -26,3 +26,12 @@ test("dark paper forces text selection wrappers to mix-blend-mode normal", () =>
     /#root\[data-page-colors="dark"\][^{]*\[style\*="isolation:\s*isolate"\][^{]*\{[^}]*mix-blend-mode:\s*normal\s*!important/u,
   );
 });
+
+test("dark paper selection wrappers are translucent so white glyphs stay readable", () => {
+  const css = pageCss();
+  // Opacity on the same isolation rule: solid fill + normal would cover ink.
+  assert.match(
+    css,
+    /#root\[data-page-colors="dark"\][^{]*\[style\*="isolation:\s*isolate"\][^{]*\{[^}]*opacity:\s*0\.45/u,
+  );
+});

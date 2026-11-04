@@ -119,10 +119,15 @@
 /* Text selection (EmbedPDF SelectionLayer): multiply on dark paper only
    tints where it overlaps light glyph ink, so boxes look short/shifted —
    the same class of bug sidecar highlights fix above. Target the group's
-   `isolation: isolate` wrapper (annotations do not use it). */
+   `isolation: isolate` wrapper (annotations do not use it).
+   Solid --selection-fill is meant for multiply; under normal it would paint
+   opaque over white glyphs. Opacity on the isolated group keeps overlaps
+   solid inside (no double-darkening) while letting ink read through — same
+   idea as sidecar's translucent normal blend. */
 #root[data-page-colors="dark"] .page [style*="isolation: isolate"],
 #root[data-page-colors="dark"] .page [style*="isolation:isolate"] {
   mix-blend-mode: normal !important;
+  opacity: 0.45;
 }
 
 .sidecar-highlight.is-selected .sidecar-highlight-line {
