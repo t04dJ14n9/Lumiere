@@ -75,3 +75,51 @@ function uriPath(uri: string): string {
   }
   return withoutScheme.startsWith("/") ? withoutScheme : `/${withoutScheme}`;
 }
+
+/** Shared bridge map for reclaim catch + Save swap. */
+export const missingOpenBridge = new MissingOpenBridge();
+
+export function isFileNotFoundError(error: unknown): boolean {
+  if (!error || typeof error !== "object" || !("code" in error)) {
+    return false;
+  }
+  return error.code === "FileNotFound" || error.code === "ENOENT";
+}
+
+/** Host surface used to open the named untitled bridge in Lumia. */
+export interface MissingOpenBridgeHost {
+  openTextDocument(uri: string): Promise<void>;
+  openWith(
+    uri: string,
+    viewType: string,
+    options?: { viewColumn?: number; preview?: boolean },
+  ): Promise<void>;
+}
+
+/**
+ * Open an empty named untitled document in Lumia and remember the intended
+ * `file:` path for Save. Does not create the workspace file.
+ */
+export async function openBridgeForMissingMarkdown(options: {
+  intendedFileUri: string;
+  viewType: string;
+  viewColumn?: number;
+  preview?: boolean;
+  bridge: MissingOpenBridge;
+  host: MissingOpenBridgeHost;
+}): Promise<string> {
+  const { intendedFileUri, viewType, bridge, host } = options;
+  if (!isMissingMarkdownFileUri(intendedFileUri)) {
+    throw new Error("missing-open bridge requires a file Markdown URI");
+  }
+  const bridgeUri = untitledBridgeUriFor(intendedFileUri);
+  await host.openTextDocument(bridgeUri);
+  bridge.remember(bridgeUri, intendedFileUri);
+  await host.openWith(bridgeUri, viewType, {
+    ...(options.viewColumn !== undefined
+      ? { viewColumn: options.viewColumn }
+      : {}),
+    ...(options.preview !== undefined ? { preview: options.preview } : {}),
+  });
+  return bridgeUri;
+}

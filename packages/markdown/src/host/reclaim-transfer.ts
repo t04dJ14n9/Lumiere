@@ -16,6 +16,13 @@ import {
   uriOf,
 } from "./reclaim-tabs";
 import { hasNativeOptOut } from "./reclaim-opt-out";
+import {
+  isFileNotFoundError,
+  isMissingMarkdownFileUri,
+  missingOpenBridge,
+  openBridgeForMissingMarkdown,
+  type MissingOpenBridgeHost,
+} from "./missing-open-bridge";
 
 const { viewType } = MARKDOWN_EDITOR;
 
@@ -108,7 +115,22 @@ function startPendingReclaim(options: {
   };
   pending.set(key, next);
   void reopen(uri, next, navigation)
-    .catch((error) => {
+    .catch(async (error) => {
+      if (
+        isMissingMarkdownFileUri(uri) &&
+        isFileNotFoundError(error) &&
+        !next.keepNative &&
+        !hasNativeOptOut(uri, next.kind) &&
+        !next.intent?.token.cancelled
+      ) {
+        try {
+          await openMissingMarkdownBridge(uri, next);
+          return;
+        } catch (bridgeError) {
+          console.error("Lumia missing-open bridge failed", bridgeError);
+          return;
+        }
+      }
       console.error("Lumia editor transfer failed", error);
     })
     .finally(() => {
@@ -157,6 +179,16 @@ async function reopen(
   navigation?: NativeNavigation,
 ): Promise<void> {
   const target = vscode.Uri.parse(uri);
+  if (
+    isMissingMarkdownFileUri(uri) &&
+    !(await markdownFileExists(target)) &&
+    !request.keepNative &&
+    !hasNativeOptOut(uri, request.kind) &&
+    !request.intent?.token.cancelled
+  ) {
+    await openMissingMarkdownBridge(uri, request);
+    return;
+  }
   // showTextDocument has already materialized a text tab's document. Avoid
   // another warm call and its awaits; Cursor Markdown still needs the reissue.
   const isDocumentOpen = vscode.workspace.textDocuments.some(
@@ -263,6 +295,60 @@ function reopenableTab(request: ReclaimRequest): vscode.Tab | undefined {
   return native && vscode.window.tabGroups.activeTabGroup.activeTab === native
     ? native
     : undefined;
+}
+
+
+async function markdownFileExists(uri: vscode.Uri): Promise<boolean> {
+  try {
+    await vscode.workspace.fs.stat(uri);
+    return true;
+  } catch (error) {
+    if (isFileNotFoundError(error)) {
+      return false;
+    }
+    throw error;
+  }
+}
+
+async function openMissingMarkdownBridge(
+  uri: string,
+  request: ReclaimRequest,
+): Promise<void> {
+  const native = currentTab(request);
+  await openBridgeForMissingMarkdown({
+    intendedFileUri: uri,
+    viewType,
+    viewColumn: request.column,
+    preview: native?.isPreview ?? true,
+    bridge: missingOpenBridge,
+    host: vscodeMissingOpenHost(),
+  });
+  const left = currentTab(request);
+  if (
+    left &&
+    !left.isDirty &&
+    !request.keepNative &&
+    !hasNativeOptOut(uri, request.kind) &&
+    !request.intent?.token.cancelled
+  ) {
+    await vscode.window.tabGroups.close(left, true);
+  }
+}
+
+function vscodeMissingOpenHost(): MissingOpenBridgeHost {
+  return {
+    async openTextDocument(uri) {
+      await vscode.workspace.openTextDocument(vscode.Uri.parse(uri));
+    },
+    async openWith(uri, type, options) {
+      await vscode.commands.executeCommand(
+        "vscode.openWith",
+        vscode.Uri.parse(uri),
+        type,
+        options,
+      );
+    },
+  };
 }
 
 /**

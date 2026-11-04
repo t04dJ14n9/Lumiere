@@ -2,8 +2,10 @@ import test from "node:test";
 import assert from "node:assert/strict";
 import {
   basenameForIntendedFileUri,
+  isFileNotFoundError,
   isMissingMarkdownFileUri,
   MissingOpenBridge,
+  openBridgeForMissingMarkdown,
   untitledBridgeUriFor,
 } from "../../../src/host/missing-open-bridge";
 
@@ -60,6 +62,61 @@ test("MissingOpenBridge rejects remembering a non-markdown intended URI", () => 
         untitledBridgeUriFor("file:///vault/a.md"),
         "file:///vault/a.ts",
       ),
+    /markdown/i,
+  );
+});
+
+test("isFileNotFoundError matches VS Code and Node missing-file codes", () => {
+  assert.equal(isFileNotFoundError({ code: "FileNotFound" }), true);
+  assert.equal(isFileNotFoundError({ code: "ENOENT" }), true);
+  assert.equal(isFileNotFoundError(new Error("nope")), false);
+  assert.equal(isFileNotFoundError(undefined), false);
+});
+
+test("openBridgeForMissingMarkdown opens untitled then openWith Lumia and remembers mapping", async () => {
+  const bridge = new MissingOpenBridge();
+  const opened: string[] = [];
+  const openWithCalls: unknown[] = [];
+  const intended = "file:///vault/notes/test.md";
+  const viewType = "lumiere.markdown.editor";
+
+  const bridgeUri = await openBridgeForMissingMarkdown({
+    intendedFileUri: intended,
+    viewType,
+    viewColumn: 1,
+    preview: true,
+    bridge,
+    host: {
+      async openTextDocument(uri) {
+        opened.push(uri);
+      },
+      async openWith(uri, type, options) {
+        openWithCalls.push([uri, type, options]);
+      },
+    },
+  });
+
+  assert.match(bridgeUri, /^untitled:/i);
+  assert.match(bridgeUri, /test\.md$/i);
+  assert.deepEqual(opened, [bridgeUri]);
+  assert.deepEqual(openWithCalls, [
+    [bridgeUri, viewType, { viewColumn: 1, preview: true }],
+  ]);
+  assert.equal(bridge.peek(bridgeUri), intended);
+});
+
+test("openBridgeForMissingMarkdown rejects non-markdown intended URIs", async () => {
+  await assert.rejects(
+    () =>
+      openBridgeForMissingMarkdown({
+        intendedFileUri: "file:///vault/a.ts",
+        viewType: "lumiere.markdown.editor",
+        bridge: new MissingOpenBridge(),
+        host: {
+          async openTextDocument() {},
+          async openWith() {},
+        },
+      }),
     /markdown/i,
   );
 });
