@@ -44,7 +44,7 @@ profile as described in [docs/MANUAL_TEST_PLAN.md](docs/MANUAL_TEST_PLAN.md#buil
 - **Manage Plugins** opens the plugin switches
   (`lumiere.markdown.plugins.<id>.enabled`); **Show Plugin Status** lists
   every plugin and why one failed or is waiting.
-- **Copy Link for Agent** (right-click a selection) copies the passage
+- **Copy link to this** (right-click a selection) copies the passage
   and its `@Note.md#a-b` line link for your agent. It opens a chat only
   when the editor's own chat is the only agent, or when
   `lumiere.markdown.copyLinkForAgent.target` picks one. Plain Ctrl/Cmd+C

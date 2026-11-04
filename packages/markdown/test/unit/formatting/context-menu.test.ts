@@ -76,7 +76,7 @@ test("webview/context gates on webviewId (not activeCustomEditorId)", async () =
   const copyLink = actions.find(
     (action) => action.command === "lumiere.markdown.copyLinkForAgent",
   );
-  assert.ok(copyLink, "Copy Link for Agent on webview/context");
+  assert.ok(copyLink, "Copy link to this on webview/context");
   assert.match(copyLink.when, /webviewId == 'lumiere\.markdown\.editor'/);
   assert.ok(!copyLink.when.includes("activeCustomEditorId"));
   assert.ok(copyLink.when.includes("lumiere.markdown.hasSelection"));
@@ -87,4 +87,13 @@ test("webview/context gates on webviewId (not activeCustomEditorId)", async () =
   assert.ok(bold);
   assert.match(bold.when, /webviewId == 'lumiere\.markdown\.editor'/);
   assert.ok(!bold.when.includes("activeCustomEditorId"));
+});
+
+test("Copy link to this is the note menu label (matches PDF)", async () => {
+  const generated = await contributions();
+  const command = generated.commands.find(
+    (entry) => entry.command === "lumiere.markdown.copyLinkForAgent",
+  );
+  assert.ok(command);
+  assert.equal(command.title, "Copy link to this");
 });

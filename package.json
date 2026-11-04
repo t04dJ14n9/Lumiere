@@ -80,7 +80,7 @@
     "commands": [
       {
         "command": "lumiere.markdown.copyLinkForAgent",
-        "title": "Copy Link for Agent",
+        "title": "Copy link to this",
         "category": "Lumia",
         "icon": "$(comment-discussion)"
       },
@@ -3488,7 +3488,7 @@
             ],
             "default": "auto",
             "scope": "window",
-            "markdownDescription": "Which chat **Copy Link for Agent** opens after copying the link and passage. Extensions cannot see which agent you are working in, so `auto` only opens a chat when the editor's own chat is the only agent; pick one here to send the passage to it."
+            "markdownDescription": "Which chat **Copy link to this** opens after copying the link and passage. Extensions cannot see which agent you are working in, so `auto` only opens a chat when the editor's own chat is the only agent; pick one here to send the passage to it."
           },
           "lumiere.markdown.debug.logging": {
             "type": "boolean",

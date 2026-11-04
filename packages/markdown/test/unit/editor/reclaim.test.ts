@@ -9,8 +9,14 @@ import {
   shouldReclaim,
   shouldHoldNativeAfterReclaim,
   shouldWarmBeforeReclaim,
+  nativeStayBlocks,
   TabSwaps,
 } from "../../../src/host/reclaim-policy";
+import { hasNativeOptOut } from "../../../src/host/reclaim-opt-out";
+import { readerText } from "../../../src/host/reader-text";
+import { readFileSync } from "node:fs";
+import { fileURLToPath } from "node:url";
+import { dirname, join } from "node:path";
 import type {
   TabChange,
   TabKind,
@@ -123,8 +129,74 @@ test("a switch into Cursor's input-less Markdown editor is reclaimed", () => {
   );
 });
 
-test("a new input-less tab is left alone: its label could be Cursor's plan editor", () => {
-  assert.equal(shouldReclaim(swap("none", "other"), context), false);
+test("a restored or primary Cursor Markdown tab is reclaimed when its label names a note", () => {
+  // adoptOpenTabs and a first open classify as none→other. labelUri only
+  // resolves when exactly one open textDocument matches the tab label, so a
+  // plan editor without that document never reaches shouldReclaim. Reclaiming
+  // none→other restores Lumia menus (Copy link / Format) on the Preview|
+  // Markdown repro path.
+  assert.equal(shouldReclaim(swap("none", "other"), context), true);
+  assert.equal(
+    shouldReclaim(swap("none", "other"), {
+      ...context,
+      associated: () => false,
+    }),
+    false,
+  );
+});
+
+test("readerText sticks text only; Cursor Markdown still reclaims to Lumia", () => {
+  const stay = { bypass: false, handoff: false, readerText: true };
+  assert.equal(nativeStayBlocks("text", stay), true);
+  assert.equal(nativeStayBlocks("other", stay), false);
+  assert.equal(
+    nativeStayBlocks("other", {
+      bypass: true,
+      handoff: false,
+      readerText: true,
+    }),
+    true,
+  );
+  assert.equal(
+    nativeStayBlocks("other", {
+      bypass: false,
+      handoff: true,
+      readerText: false,
+    }),
+    true,
+  );
+});
+
+test("hasNativeOptOut: readerText alone does not block Cursor Markdown transfer", () => {
+  // Transfer calls hasNativeOptOut(uri, request.kind). The default after="text"
+  // would incorrectly keepNative/abort an other (Cursor Markdown) reclaim when
+  // only readerText is stuck — pass kind so other ignores readerText.
+  const uri = "file:///vault/ReaderTextOther.md";
+  readerText.restore(undefined);
+  readerText.keep(uri);
+  try {
+    assert.equal(hasNativeOptOut(uri), true);
+    assert.equal(hasNativeOptOut(uri, "text"), true);
+    assert.equal(hasNativeOptOut(uri, "other"), false);
+  } finally {
+    readerText.clear();
+  }
+
+  const transfer = readFileSync(
+    join(
+      dirname(fileURLToPath(import.meta.url)),
+      "../../../src/host/reclaim-transfer.ts",
+    ),
+    "utf8",
+  );
+  const calls = [...transfer.matchAll(/hasNativeOptOut\(([^)]+)\)/g)].map(
+    (m) => m[1],
+  );
+  assert.equal(calls.length, 3);
+  for (const args of calls) {
+    assert.ok(typeof args === "string");
+    assert.match(args, /request\.kind/);
+  }
 });
 
 test("the handoff from Cursor Markdown into Workshop is left in place", () => {
