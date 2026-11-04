@@ -194,6 +194,7 @@ test("hasNativeOptOut: readerText alone does not block Cursor Markdown transfer"
   );
   assert.equal(calls.length, 3);
   for (const args of calls) {
+    assert.ok(typeof args === "string");
     assert.match(args, /request\.kind/);
   }
 });
