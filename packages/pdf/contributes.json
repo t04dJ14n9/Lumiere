@@ -953,12 +953,12 @@
           "In the workspace folder set by `#lumiere.pdf.sidecar.directory#`."
         ],
         "default": "sibling",
-        "markdownDescription": "Where PDF highlights are kept. Highlights never change the PDF: they live in a Markdown sidecar, `paper.pdf.lumiere.md`, which notes can link into with `paper.pdf#hl-…`. An existing sidecar beside the PDF is still used after switching to a folder, until you move it."
+        "markdownDescription": "Legacy: where old PDF highlight sidecars (`paper.pdf.lumiere.md`) are looked up for `#hl-…` open only. New highlights use vault Markdown links / burn into the PDF; the highlight tool no longer writes sidecars. An existing sidecar beside the PDF is still found after switching to a folder, until you move or delete it by hand."
       },
       "lumiere.pdf.sidecar.directory": {
         "type": "string",
         "default": "",
-        "markdownDescription": "The workspace folder for PDF highlight sidecars when `#lumiere.pdf.sidecar.location#` is `directory`, relative to the workspace root (for example `notes/pdf-sidecars`). Sidecars are kept flat there by the PDF's file name, so two PDFs of the same name share a name: the second is not saved over the first. An empty, absolute or outside path keeps sidecars beside the PDF."
+        "markdownDescription": "Legacy: workspace folder for old PDF highlight sidecars when `#lumiere.pdf.sidecar.location#` is `directory`, relative to the workspace root (for example `notes/pdf-sidecars`). Used only to find existing `*.pdf.lumiere.md` for `#hl-…` open; new highlights are not written here. An empty, absolute or outside path looks beside the PDF."
       },
       "lumiere.pdf.keyboardShortcuts": {
         "type": "boolean",

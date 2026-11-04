@@ -9,11 +9,9 @@ import manifest from "./manifest";
 import { Sidecars } from "./sidecars";
 
 /**
- * Highlights kept in a Markdown sidecar beside the PDF
- * (`paper.pdf.lumiere.md`), never in the PDF: the viewer shows them over the
- * pages, the highlight tool writes them here, and `paper.pdf#hl-…` links
- * from any note open them. Stopping the plugin takes them off the pages, and
- * the highlight tool goes back to writing the PDF.
+ * Legacy PDF sidecar highlights (`paper.pdf.lumiere.md`): read + `#hl-…` open
+ * only. New highlights live in vault Markdown / burn into the PDF via EmbedPDF;
+ * create/upsert writes are ignored. Stopping the plugin clears the read claim.
  */
 export const pdfSidecarPlugin: Plugin = {
   name: manifest.id,

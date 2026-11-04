@@ -23,9 +23,10 @@ interface PanelSidecar {
 }
 
 /**
- * The sidecar highlights of every open PDF editor: read when it opens and
- * whenever the file changes, written when the reader highlights or deletes,
- * and opened from `#hl-…` links. The PDF itself is never written here.
+ * Legacy sidecar highlights of every open PDF editor: read when it opens and
+ * whenever the file changes, and opened from `#hl-…` links. Create/upsert
+ * writes are ignored — vault Markdown is the highlight store. Existing
+ * `*.pdf.lumiere.md` files are never auto-deleted.
  */
 export class Sidecars implements vscode.Disposable {
   private readonly panels = new Map<PdfPanel, PanelSidecar>();
@@ -57,8 +58,11 @@ export class Sidecars implements vscode.Disposable {
     }
   }
 
-  /** Apply a write from a viewer; every editor of the same sidecar follows. */
+  /** Apply a write from a viewer. Upserts are ignored after create-path teardown. */
   write(panel: PdfPanel, message: SidecarWrite): Promise<void> {
+    if (message.op === "upsert") {
+      return Promise.resolve();
+    }
     const run = this.writing.then(() => this.applyWrite(panel, message));
     this.writing = run.catch(() => undefined);
     return run;
