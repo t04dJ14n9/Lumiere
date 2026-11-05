@@ -103,13 +103,15 @@ function adjacentDestinationGroups(
         parent[find(j)] = find(i);
         continue;
       }
-      // Wrap-merge only orphan fragments. If each already has a same-line
-      // same-destination partner, year-of-N + author-of-N+1 look like a wrap
-      // and would transitively glue two cites into one cluster.
+      // Skip wrap-merge only when BOTH fragments already have a same-line
+      // same-destination partner (year-of-N + author-of-N+1). Allow wrap when
+      // either side is orphan — e.g. multi-box author + year on the next line.
       if (
         areLineWrap(a.rect, b.rect) &&
-        !hasSameLineSameDestPartner(ordered, i) &&
-        !hasSameLineSameDestPartner(ordered, j)
+        !(
+          hasSameLineSameDestPartner(ordered, i) &&
+          hasSameLineSameDestPartner(ordered, j)
+        )
       ) {
         parent[find(j)] = find(i);
       }

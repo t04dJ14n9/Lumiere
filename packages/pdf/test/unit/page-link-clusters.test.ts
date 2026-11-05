@@ -89,6 +89,17 @@ test("two consecutive same-dest cites on adjacent lines stay two clusters", () =
   assert.deepEqual(ids, ["a1,y1", "a2,y2"]);
 });
 
+test("multi-box author on one line + wrap-year on next stays one cluster", () => {
+  // Upper cite already has same-line partners; year is orphan on next line.
+  // Neither-partner wrap guard wrongly orphans the year; both-partners allows it.
+  const a1 = goto("ma1", rect(400, 200, 40, 12), 10, 100);
+  const a2 = goto("ma2", rect(443, 200, 35, 12), 10, 100);
+  const year = goto("my", rect(100, 214, 22, 12), 10, 100);
+  const clusters = clusterPageLinks([a1, a2, year]);
+  assert.equal(clusters.length, 1);
+  assert.deepEqual(clusters[0]!.segmentIds, ["ma1", "ma2", "my"]);
+});
+
 test("line-wrap: end-of-line + start-of-next-line same dest become one cluster", () => {
   // Real shape from arXiv 2503.20783 page 2: author ends near right margin,
   // year starts on the next line near the left margin (~3pt vertical overlap).
