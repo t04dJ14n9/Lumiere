@@ -233,9 +233,9 @@ The Markdown syntax, the HTML renderer and Live Preview's reveal-at-caret.
 
 Contained file access and the vault index (Obsidian's metadata cache).
 
-1. In `Links.md`, follow `[[Duplicate]]`: it opens `archive/Duplicate.md`
-   (nearest folder, then path order), as in Obsidian. From
-   `notes/Project plan.md`, `[[Duplicate]]` opens `notes/Duplicate.md`.
+1. In `Links.md`, follow `[[Duplicate]]`: it opens `notes/Duplicate.md`
+   (matches under the note's folder first, then shortest path), as in
+   Obsidian.
 2. Rename `attachments/diagram.svg` outside VS Code: its embeds in
    `Embeds.md` become unresolved within a second; rename it back.
 3. Add `"archive/"` to `lumiere.markdown.vault.excludedFiles`: links to it

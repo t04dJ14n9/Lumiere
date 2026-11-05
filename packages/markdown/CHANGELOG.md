@@ -2,6 +2,13 @@
 
 ## 0.1.0 (unreleased)
 
+- An ambiguous link (`[[x]]` with several `x.md` in the vault) resolves as
+  Obsidian resolves it: matches under the note's folder first, then the
+  rest, each by shortest path rather than nearest folder. From
+  `notes/daily/today.md`, `[[x]]` with `notes/x.md` and `y/x.md` opens
+  `y/x.md`. Rename link updates use the same order, so they no longer
+  retarget such a link.
+
 - Markdown Outline (and Go to Heading / in-note fragment jumps that share
   links `navigate`) put the jumped heading at the **top** of the editor
   viewport, not the vertical centre. The browser still clamps at both ends of
