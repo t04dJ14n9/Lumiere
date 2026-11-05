@@ -167,3 +167,18 @@ test("the edits are built from the text as it is when the dialog is answered", a
   );
   await root.dispose();
 });
+
+test("a case-only rename rewrites the links to the new spelling", async () => {
+  const { root, fake } = await start({ "linkUpdates.mode": "always" });
+  const edits = await fake.rename([
+    { oldUri: uriOf("Topic/Old.md"), newUri: uriOf("Topic/old.md") },
+  ]);
+  assert.deepEqual(
+    edits.map((file) => [file.uri, file.edits.map((edit) => edit.text)]),
+    [
+      [uriOf("A.md"), ["[[old|the old note]]", "[[old#Part]]"]],
+      [uriOf("B.md"), ["![[old]]"]],
+    ],
+  );
+  await root.dispose();
+});
