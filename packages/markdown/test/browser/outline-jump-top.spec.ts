@@ -2,8 +2,11 @@ import { test, expect } from "@playwright/test";
 import type { Page } from "@playwright/test";
 import { open as openNote } from "./harness";
 
-/** Within this many pixels counts as centred: half a line of rounding either way. */
-const TOLERANCE = 6;
+/**
+ * Within this many pixels counts as at the top: CodeMirror's default yMargin
+ * (5) plus half a line of rounding.
+ */
+const TOLERANCE = 8;
 
 /** Sixty sections of ten body lines, so the note is many viewports tall. */
 function longNote(): { source: string; offsetOf: (title: string) => number } {
@@ -36,6 +39,7 @@ async function geometry(page: Page, title: string) {
       viewportCenter: box.top + box.height / 2,
       viewportTop: box.top,
       viewportBottom: box.bottom,
+      headingTop: rect?.top,
       headingCenter: rect ? rect.top + rect.height / 2 : undefined,
       scrollTop: scroller.scrollTop,
       maxScrollTop: scroller.scrollHeight - scroller.clientHeight,
@@ -50,18 +54,24 @@ async function clickOutline(page: Page, offset: number) {
   );
 }
 
+function distanceFromTop(g: Awaited<ReturnType<typeof geometry>>): number {
+  return g.headingTop === undefined
+    ? Infinity
+    : Math.abs(g.headingTop - g.viewportTop);
+}
+
 /**
  * The harness mounts the editor in a plain block; the real webview gives it
- * the window's height. Constrain it the same way so the editor scrolls inside
- * its own viewport instead of growing to the height of the note. Give the panel
- * a definite height rather than relying on its content-sized initial flex basis.
+ * the window's height. Constrain the scroller the same way so the editor
+ * scrolls inside its own viewport instead of growing to the height of the note.
  */
 async function open(page: Page, source: string) {
   await openNote(page, source);
   await page.addStyleTag({
     content:
-      ".panel { height: 100vh; flex: 1; min-height: 0; display: flex; flex-direction: column; }",
+      "#app, #app .cm-editor, #app .cm-scroller { height: 640px !important; max-height: 640px !important; } #app .cm-scroller { overflow: auto !important; }",
   });
+  await page.evaluate(() => window.dispatchEvent(new Event("resize")));
   await expect
     .poll(() =>
       page.evaluate(() => document.querySelector(".cm-scroller")!.clientHeight),
@@ -74,24 +84,19 @@ test.beforeEach(async ({ page }) => {
 });
 
 for (const title of ["Section 5", "Section 30", "Section 55"]) {
-  test(`outline click centres "${title}" vertically in the viewport`, async ({
+  test(`outline click puts "${title}" at the top of the viewport`, async ({
     page,
   }) => {
     const { source, offsetOf } = longNote();
     await open(page, source);
     await clickOutline(page, offsetOf(title));
     await expect
-      .poll(async () => {
-        const g = await geometry(page, title);
-        return g.headingCenter === undefined
-          ? Infinity
-          : Math.abs(g.headingCenter - g.viewportCenter);
-      })
+      .poll(async () => distanceFromTop(await geometry(page, title)))
       .toBeLessThanOrEqual(TOLERANCE);
   });
 }
 
-test("a heading already on screen is still moved to the centre", async ({
+test("a heading already on screen is still moved to the top", async ({
   page,
 }) => {
   const { source, offsetOf } = longNote();
@@ -99,18 +104,13 @@ test("a heading already on screen is still moved to the centre", async ({
   await clickOutline(page, offsetOf("Section 30"));
   await clickOutline(page, offsetOf("Section 29"));
   await expect
-    .poll(async () => {
-      const g = await geometry(page, "Section 29");
-      return Math.abs((g.headingCenter ?? Infinity) - g.viewportCenter);
-    })
+    .poll(async () => distanceFromTop(await geometry(page, "Section 29")))
     .toBeLessThanOrEqual(TOLERANCE);
   // Section 29 is a full section (about 1000px) above 30, so this is a long
   // jump; the next click goes back by a few lines only.
   await clickOutline(page, offsetOf("Section 29") + 1);
   const after = await geometry(page, "Section 29");
-  expect(
-    Math.abs(after.headingCenter! - after.viewportCenter),
-  ).toBeLessThanOrEqual(TOLERANCE);
+  expect(distanceFromTop(after)).toBeLessThanOrEqual(TOLERANCE);
 });
 
 test("the first heading clamps at the top of the note", async ({ page }) => {
@@ -122,8 +122,7 @@ test("the first heading clamps at the top of the note", async ({ page }) => {
     .poll(async () => (await geometry(page, "Section 1")).scrollTop)
     .toBe(0);
   const g = await geometry(page, "Section 1");
-  expect(g.headingCenter!).toBeGreaterThanOrEqual(g.viewportTop);
-  expect(g.headingCenter!).toBeLessThan(g.viewportCenter);
+  expect(distanceFromTop(g)).toBeLessThanOrEqual(TOLERANCE);
 });
 
 /** Filler paragraphs, so a note is many viewports tall. */
@@ -131,10 +130,11 @@ const FILLER = Array.from({ length: 80 }, (_, n) => `Filler ${n}.`).join(
   "\n\n",
 );
 
-test("a heading near the start clamps at the top: centring would need a negative scroll", async ({
+test("a heading near the start clamps at the top: aligning to the top would need a negative scroll", async ({
   page,
 }) => {
-  const source = `# Title\n\n## Early\n\n${FILLER}\n\n## Far\n\n${FILLER}`;
+  // Early is the first heading, so y:"start" and y:"center" both clamp at 0.
+  const source = `## Early\n\n${FILLER}\n\n## Far\n\n${FILLER}`;
   await open(page, source);
   await clickOutline(page, source.indexOf("## Far"));
   await expect
@@ -145,8 +145,7 @@ test("a heading near the start clamps at the top: centring would need a negative
     .poll(async () => (await geometry(page, "Early")).scrollTop)
     .toBe(0);
   const g = await geometry(page, "Early");
-  expect(g.headingCenter!).toBeGreaterThan(g.viewportTop);
-  expect(g.headingCenter!).toBeLessThan(g.viewportCenter - TOLERANCE);
+  expect(distanceFromTop(g)).toBeLessThanOrEqual(TOLERANCE);
 });
 
 test("a heading on the last line clamps at the bottom of the scroll range", async ({
@@ -163,8 +162,9 @@ test("a heading on the last line clamps at the bottom of the scroll range", asyn
     .toBeLessThanOrEqual(1);
   const g = await geometry(page, "Last");
   expect(g.scrollTop).toBeGreaterThan(0);
-  expect(g.headingCenter!).toBeGreaterThan(g.viewportCenter + TOLERANCE);
-  expect(g.headingCenter!).toBeLessThan(g.viewportBottom);
+  // Cannot put the last line at the top; it stays below the top of the viewport.
+  expect(g.headingTop!).toBeGreaterThan(g.viewportTop + TOLERANCE);
+  expect(g.headingTop!).toBeLessThan(g.viewportBottom);
 });
 
 test("a heading in a note shorter than the viewport does not scroll", async ({
