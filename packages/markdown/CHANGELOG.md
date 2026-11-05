@@ -2,6 +2,10 @@
 
 ## 0.1.0 (unreleased)
 
+- CSS snippets load only when `.obsidian/appearance.json` lists them in
+  `enabledCssSnippets`, as in Obsidian. A vault with no `appearance.json`
+  (or no list in it) loaded every `.css` file in `.obsidian/snippets/`.
+
 - Markdown links (`[label](Missing.md)`) inside an embedded note are dimmed
   when they do not resolve, as wikilinks there already were; an embed with
   no wikilink was skipped.
