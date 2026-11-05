@@ -1,7 +1,7 @@
 # Design: Missing `.md` open → built-in Text Editor (not Lumia)
 
 **Date:** 2026-11-04  
-**Approved:** 金扬 via Lumia Projects (Nov 4 2026 product lock — Approach A abandoned)  
+**Approved:** user via Lumia Projects (Nov 4 2026 product lock — Approach A abandoned)  
 **Repo:** `t04dJ14n9/Lumia`  
 **Package:** `packages/markdown`  
 **Risk:** Medium (editor open)

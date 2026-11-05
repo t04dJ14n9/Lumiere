@@ -1,8 +1,8 @@
 # Design: vault HTML embeds (HTML Embed–style)
 
 **Date:** 2026-11-04  
-**Status:** Approved for implementation planning (design locked with 金扬)  
-**Approved:** 金扬, 2026-11-04 (Asia/Singapore)  
+**Status:** Approved for implementation planning (design locked with user)  
+**Approved:** user, 2026-11-04 (Asia/Singapore)  
 **Repo:** `t04dJ14n9/lumiere` (GitHub remote `t04dJ14n9/Lumia`)  
 **Package:** `packages/markdown` (`@workshop/markdown`), embeds + render security  
 **Risk:** Low for this docs PR; **Medium** when the feature is implemented (trusted-workspace script execution in a sealed iframe)  
@@ -189,7 +189,7 @@ When implementing (not in this design PR):
 
 ## Open questions
 
-None — all decisions in [Locked decisions](#locked-decisions) were fixed by 金扬 on 2026-11-04 (Asia/Singapore).
+None — all decisions in [Locked decisions](#locked-decisions) were fixed by user on 2026-11-04 (Asia/Singapore).
 
 ## Approval record
 
