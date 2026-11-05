@@ -14,8 +14,11 @@ When enabled, cursor movement, scrolling, panel changes and view visibility
 reveal and select the current section without taking focus. A scroll follows
 where the reader is (`reading-position.ts`, the plugin's webview half): the
 line at the top of the editor viewport (so the outline tracks what you are
-reading at the top of the pane). Caret moves still follow via `followCaret`.
-The default
+reading at the top of the pane). Caret moves still follow via `followCaret`,
+and the caret wins: a scroll the caret caused (an arrow past the bottom, Page
+Down, Ctrl+End, find next, a jump to a heading) is not reported, so the
+caret's section stays selected, as in Obsidian, whose outline follows the
+caret and not the scroll. The default
 expand mode is accordion, like a page's table of contents: the active
 heading's parents and its own subheadings are open and every other branch
 is closed, without rebuilding the tree. VS Code can close a single row only
@@ -71,7 +74,8 @@ Markdown Outline so they do not linger beside non-Workshop editors.
 
 - `host.ts`: the plugin registrations and editor/document event routing.
 - `webview.ts`, `reading-position.ts`: report where the reader is after a
-  scroll (debounced, only when it changes), over `protocol.ts`.
+  scroll (debounced, only when it changes and the caret did not cause the
+  scroll), over `protocol.ts`.
 - `symbol-picker.ts`: searchable headings and guarded navigation for Quick Pick.
 - `symbols.ts`: nested heading symbols with enclosing section ranges.
 - `tree.ts`: heading nodes, parent lookup and editor-to-source coordinates.

@@ -2,6 +2,11 @@
 
 ## 0.1.0 (unreleased)
 
+- Markdown Outline keeps the caret's section selected when the caret scrolls
+  the note: arrowing past the bottom, Page Down, Ctrl+End and find next no
+  longer have the section at the top of the viewport take over about 100 ms
+  later. Only scrolling the reader does follows the top line.
+
 - Markdown Outline (and Go to Heading / in-note fragment jumps that share
   links `navigate`) put the jumped heading at the **top** of the editor
   viewport, not the vertical centre. The browser still clamps at both ends of

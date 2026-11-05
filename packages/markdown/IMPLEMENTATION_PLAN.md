@@ -6632,3 +6632,18 @@ tree (or when it fails); an open-only follow that is superseded leaves the
 previous set. PDF's follower never cleared `opened` mid-apply, so it did not
 need the same change. Test: `host.test.ts` scroll-supersede case.
 
+
+## Outline: scroll follow no longer fights the caret (2026-11-05)
+
+A review of #496/#507 found four ways the outline's scroll follow went wrong.
+Obsidian's outline follows the caret in Live Preview and Source and uses the
+scroll position only in Reading view; Lumia keeps following the scroll too
+(#496) but never against the caret.
+
+- A scroll the caret caused (an arrow past the bottom, Page Down, Ctrl+End,
+  find next, the scroll a jump makes) was reported about 100 ms after the
+  caret follow, and the section at the top of the viewport took over. The
+  webview's `ReadingReporter` now tells a scroll that follows a selection
+  change (within `CARET_SCROLL_MS`) from the reader's own and reports only the
+  latter. The caret's scroll is remembered but not reported, so a later layout
+  shift to the same top line is not news either.
