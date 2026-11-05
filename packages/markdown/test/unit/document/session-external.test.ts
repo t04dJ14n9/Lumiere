@@ -5,12 +5,17 @@ import { provideHostServices } from "../../../src/shared/host";
 import type { HostDocument } from "../../../src/shared/host";
 import { Session } from "../../../src/plugins/document/session";
 import { documentHost } from "../../../src/plugins/document/host";
+import {
+  protocol,
+  updatesFullTextMax,
+} from "../../../src/plugins/document/protocol";
 import type {
   Documents,
   DocumentSession,
 } from "../../../src/plugins/document/api";
 import type { UndoGroups } from "../../../src/plugins/document/undo-groups";
 import { fakeDocument, fakeHost } from "../../support/vscode-fake";
+import { rpcPair } from "../../support/rpc-pair";
 
 type SessionInternals = {
   groups: UndoGroups;
@@ -173,4 +178,64 @@ test("dirty unexpected host rewrite clears stale saveEcho", () => {
   session.changed();
   assert.equal(internals(session).saveEcho, undefined);
   assert.equal(session.text, "external-dirty");
+});
+
+test("oversized clean external rewrite omits fullText but still delivers updates", async () => {
+  let text = "base";
+  const doc = fakeDocument({
+    getText: () => text,
+    get isDirty() {
+      return false;
+    },
+  });
+  const session = new Session(doc, fakeHost());
+  const pair = rpcPair();
+  const messages: Array<{
+    version: number;
+    updates: unknown[];
+    fullText?: string;
+  }> = [];
+  pair.client.on(protocol, "updates", (message) => {
+    messages.push(message);
+  });
+  await session.attach("panel", pair.host);
+
+  const oversize = "x".repeat(updatesFullTextMax + 1);
+  text = oversize;
+  session.changed();
+
+  assert.equal(messages.length, 1);
+  assert.equal("fullText" in messages[0]!, false);
+  assert.ok(messages[0]!.updates.length > 0);
+  assert.equal(session.text, oversize);
+  await pair.dispose();
+});
+
+test("normal-sized clean external rewrite includes fullText", async () => {
+  let text = "base";
+  const doc = fakeDocument({
+    getText: () => text,
+    get isDirty() {
+      return false;
+    },
+  });
+  const session = new Session(doc, fakeHost());
+  const pair = rpcPair();
+  const messages: Array<{
+    version: number;
+    updates: unknown[];
+    fullText?: string;
+  }> = [];
+  pair.client.on(protocol, "updates", (message) => {
+    messages.push(message);
+  });
+  await session.attach("panel", pair.host);
+
+  text = "external-normal";
+  session.changed();
+
+  assert.equal(messages.length, 1);
+  assert.equal(messages[0]!.fullText, "external-normal");
+  assert.ok(messages[0]!.updates.length > 0);
+  await pair.dispose();
 });

@@ -5,7 +5,7 @@ import type { Prepared } from "../../shared/document/authority";
 import type { HostDocument, HostServices, TextEdit } from "../../shared/host";
 import type { Endpoint } from "../../shared/rpc/endpoint";
 import { UndoGroups } from "./undo-groups";
-import { protocol } from "./protocol";
+import { protocol, updatesFullTextMax } from "./protocol";
 import type { DocumentSession } from "./api";
 export class Session implements DocumentSession {
   readonly authority: Authority;
@@ -155,11 +155,13 @@ export class Session implements DocumentSession {
       if (client.sent === this.version) {
         continue;
       }
-      client.rpc.notify(protocol, "updates", {
+      const text = this.authority.doc.toString();
+      const params = {
         version: client.sent,
         updates: this.authority.since(client.sent),
-        fullText: this.authority.doc.toString(),
-      });
+        ...(text.length <= updatesFullTextMax ? { fullText: text } : {}),
+      };
+      client.rpc.notify(protocol, "updates", params);
       client.sent = this.version;
     }
   }

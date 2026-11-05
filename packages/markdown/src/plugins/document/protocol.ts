@@ -17,13 +17,15 @@ const version = new Schema<number>(
   },
   { type: "integer", minimum: 0 },
 );
+/** Max length for updates.fullText; omit when authority text exceeds this. */
+export const updatesFullTextMax = 1_000_000;
 export const updates = Schema.object({
   version,
   updates: Schema.array(
     Schema.object({ clientID: Schema.string().max(128), changes: change }),
   ),
-  // Present on every Session.broadcast; required for Synchronizer host-skew reset.
-  fullText: Schema.string().max(1_000_000).optional(),
+  // Included when within max; required for Synchronizer host-skew reset when present.
+  fullText: Schema.string().max(updatesFullTextMax).optional(),
 });
 export const protocol = defineProtocol("document", {
   requests: {
