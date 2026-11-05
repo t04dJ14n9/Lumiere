@@ -202,6 +202,19 @@ export interface NativeNavigation extends Navigation {
   ): Promise<boolean | void>;
 }
 
+/** Absolute, foldered, or create → vault root; basename lookup → source parent. */
+function linkJoinRoot(
+  link: string,
+  create: boolean | undefined,
+  base: vscode.Uri,
+  sourceUri: vscode.Uri,
+): vscode.Uri {
+  if (link.startsWith("/") || create || link.includes("/")) {
+    return base;
+  }
+  return vscode.Uri.joinPath(sourceUri, "..");
+}
+
 async function resolveNavigation({
   root,
   source,
@@ -216,11 +229,7 @@ async function resolveNavigation({
   let uri = !link
     ? sourceUri
     : vscode.Uri.joinPath(
-        // Foldered or absolute links resolve from vault root (Obsidian parity);
-        // basename-only stays relative to the source parent when not creating.
-        link.startsWith("/") || create || link.includes("/")
-          ? base
-          : vscode.Uri.joinPath(sourceUri, ".."),
+        linkJoinRoot(link, create, base, sourceUri),
         link.replace(/^\//, ""),
       );
   await contained(base, uri);

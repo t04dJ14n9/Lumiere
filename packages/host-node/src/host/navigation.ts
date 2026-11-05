@@ -68,6 +68,19 @@ export function createHostNavigation(
 type ResolveRequest = Parameters<Navigation["resolve"]>[0];
 
 /** The file a link names, or the note created for it; undefined when there is none. */
+/** Absolute, foldered, or create → vault root; basename lookup → source parent. */
+function linkJoinRoot(
+  link: string,
+  create: boolean | undefined,
+  root: string,
+  sourceParent: string,
+): string {
+  if (link.startsWith("/") || create || link.includes("/")) {
+    return root;
+  }
+  return sourceParent;
+}
+
 export async function resolveLink(
   files: HostFiles,
   request: ResolveRequest,
@@ -77,11 +90,7 @@ export async function resolveLink(
     ? source
     : joinUri(
         files,
-        // Foldered or absolute links resolve from vault root (Obsidian parity);
-        // basename-only stays relative to the source parent when not creating.
-        link.startsWith("/") || create || link.includes("/")
-          ? root
-          : parentUri(files, source),
+        linkJoinRoot(link, create, root, parentUri(files, source)),
         link.replace(/^\//, ""),
       );
   await requireInside(files, root, target);
