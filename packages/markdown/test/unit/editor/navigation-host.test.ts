@@ -443,9 +443,8 @@ test("resolve: foldered path (create:false) is vault-relative, not under source 
     // Must not have looked under wiki/areas/wiki/resources/...
     assert.notEqual(
       resolved,
-      pathToFileURL(
-        join(directory, "wiki/areas/wiki/resources/mocs/Target.md"),
-      ).href,
+      pathToFileURL(join(directory, "wiki/areas/wiki/resources/mocs/Target.md"))
+        .href,
     );
   });
 });
