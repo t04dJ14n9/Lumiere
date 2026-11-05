@@ -7,6 +7,7 @@ import ts from "typescript";
 import * as locations from "../../src/shared/pdf-location";
 import * as targets from "../../src/shared/pdf-target-resolution";
 import { OPEN_LOCATION_COMMAND_ID } from "../../src/shared/command-ids";
+import { formatPdfDeepLink } from "../../src/shared/text-fragment";
 
 class Uri {
   readonly path: string;
@@ -270,5 +271,24 @@ test("a highlight's #hl- link opens the PDF and hands the fragment to the plugin
   ]);
   assert.equal(await state.invokeLink("file:///work/paper.pdf#nothing"), false);
   assert.match(state.warnings.at(-1) ?? "", /location is invalid/);
+  state.registration.dispose();
+});
+
+test("a Copy link quote link opens the PDF at its page, pasted bare or inside its Markdown line", async () => {
+  const state = harness();
+  const link = formatPdfDeepLink("file:///work/papers/attention.pdf", {
+    page: 3,
+    text: "Scaled dot-product attention",
+  });
+  for (const text of [link, `> [attention.pdf · p.3](${link})`]) {
+    const done = state.invokeLink(text);
+    await microtasks();
+    state.opened.at(-1)!.resolve();
+    assert.equal(await done, true, text);
+  }
+  assert.deepEqual(state.jumps, [
+    { file: "/work/papers/attention.pdf", page: 3 },
+    { file: "/work/papers/attention.pdf", page: 3 },
+  ]);
   state.registration.dispose();
 });

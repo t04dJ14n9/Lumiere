@@ -316,7 +316,9 @@ export const PDF_OPEN_LOCATION_COMMAND = "lumiere.pdf.openLocation";
 /**
  * Open a PDF in Lumia PDF, at the page a link such as
  * `[[paper.pdf#page=3]]` names, or at a highlight kept in its sidecar
- * (`paper.pdf#hl-a1b2c3d4`). Any other fragment (Obsidian ignores those
+ * (`paper.pdf#hl-a1b2c3d4`). Lumia PDF's Copy link writes
+ * `paper.pdf#page=3#:~:text=…`, so `page=N` may be followed by `&…`, by that
+ * `#:~:` directive, or by nothing. Any other fragment (Obsidian ignores those
  * too) opens the PDF where it was left.
  */
 async function openPdf(
@@ -324,7 +326,7 @@ async function openPdf(
   fragment: string,
   column: vscode.ViewColumn,
 ): Promise<void> {
-  const location = /^(page=\d+(&|$)|hl-[\w-]+$)/i.test(fragment)
+  const location = /^(page=\d+(&|#:~:|$)|hl-[\w-]+$)/i.test(fragment)
     ? fragment
     : "";
   await vscode.commands.executeCommand(

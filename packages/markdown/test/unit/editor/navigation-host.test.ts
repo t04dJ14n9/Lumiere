@@ -145,6 +145,16 @@ test("a link to a PDF opens it in Lumia PDF at its page, beside when asked", asy
   await navigation.open(root, pdf, "hl-a1b2c3d4", "here");
   // Not a PDF location (a heading, say): open the PDF where it was left.
   await navigation.open(root, pdf, "Introduction", "here");
+  // Lumia PDF's Copy link: `paper.pdf#page=3#:~:text=…` (a Chrome text fragment).
+  await navigation.open(
+    root,
+    pdf,
+    "page=3#:~:text=Scaled%20dot%2Dproduct%20attention",
+    "here",
+  );
+  // `page=` must be a whole number before the directive or the end.
+  await navigation.open(root, pdf, "page=3x#:~:text=a", "here");
+  await navigation.open(root, pdf, "#:~:text=a", "here");
   assert.deepEqual(commands, [
     [PDF_OPEN_LOCATION_COMMAND, `${pdf}#page=3`, undefined, { viewColumn: 1 }],
     [
@@ -159,6 +169,14 @@ test("a link to a PDF opens it in Lumia PDF at its page, beside when asked", asy
       undefined,
       { viewColumn: 1 },
     ],
+    [PDF_OPEN_LOCATION_COMMAND, pdf, undefined, { viewColumn: 1 }],
+    [
+      PDF_OPEN_LOCATION_COMMAND,
+      `${pdf}#page=3#:~:text=Scaled%20dot%2Dproduct%20attention`,
+      undefined,
+      { viewColumn: 1 },
+    ],
+    [PDF_OPEN_LOCATION_COMMAND, pdf, undefined, { viewColumn: 1 }],
     [PDF_OPEN_LOCATION_COMMAND, pdf, undefined, { viewColumn: 1 }],
   ]);
 });

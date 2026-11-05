@@ -1,4 +1,8 @@
-import { formatLocationFragment, parseLocationFragment } from "./pdf-location";
+import {
+  formatLocationFragment,
+  parseLocationFragment,
+  splitFragmentDirective,
+} from "./pdf-location";
 import type { ViewRect } from "./geometry";
 import { highlightIdOfFragment } from "./sidecar-format";
 
@@ -32,6 +36,15 @@ export function decodeTextFragment(
   }
 }
 
+/**
+ * A selection that spans PDF lines holds line breaks, which would encode as
+ * `%0A`. Readers refuse control characters in a link (native-links
+ * `localFragment`), so a multi-line quote would never open.
+ */
+function collapseWhitespace(text: string): string {
+  return text.replace(/\s+/gu, " ").trim();
+}
+
 export function formatPdfDeepLink(
   path: string,
   opts: { page: number; text?: string; viewRect?: ViewRect },
@@ -40,7 +53,7 @@ export function formatPdfDeepLink(
     page: opts.page,
     ...(opts.viewRect ? { viewRect: opts.viewRect } : {}),
   });
-  const text = opts.text?.trim();
+  const text = collapseWhitespace(opts.text ?? "");
   if (!text) {
     return `${path}#${pdfPart}`;
   }
@@ -53,13 +66,10 @@ export function parsePdfDeepLinkFragment(fragment: string): {
   textFragment?: ReturnType<typeof decodeTextFragment>;
   highlightId?: string;
 } {
-  const cleaned = fragment.replace(/^#/, "");
-  const textAt = cleaned.indexOf("#:~:");
-  const pdfHalf = textAt >= 0 ? cleaned.slice(0, textAt) : cleaned;
-  const textHalf = textAt >= 0 ? cleaned.slice(textAt + 1) : undefined;
+  const { location: pdfHalf, directive } = splitFragmentDirective(fragment);
   const location = parseLocationFragment(pdfHalf);
   const highlightId = highlightIdOfFragment(pdfHalf);
-  const textFragment = textHalf ? decodeTextFragment(textHalf) : undefined;
+  const textFragment = directive ? decodeTextFragment(directive) : undefined;
   return {
     ...(location?.page ? { page: location.page } : {}),
     ...(location?.viewRect ? { viewRect: location.viewRect } : {}),
