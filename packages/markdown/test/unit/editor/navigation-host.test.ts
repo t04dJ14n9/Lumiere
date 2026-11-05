@@ -316,6 +316,13 @@ test("createNote: basename respects newNoteFolder; foldered path is vault-relati
     foldered,
     pathToFileURL(join(directory, "wiki/projects/DServer/Decision.md")).href,
   );
+  assert.equal(
+    await readFile(
+      join(directory, "wiki/projects/DServer/Decision.md"),
+      "utf8",
+    ),
+    "",
+  );
   await assert.rejects(
     () => readFile(join(nested, "wiki/projects/DServer/Decision.md"), "utf8"),
     /ENOENT/,
