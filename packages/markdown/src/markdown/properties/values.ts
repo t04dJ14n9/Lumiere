@@ -203,7 +203,7 @@ export function obsidianDateTextFromYamlSource(
   source: string,
 ): string | undefined {
   const match =
-    /^(\d{4}-\d{2}-\d{2})(?:[Tt](\d{2}:\d{2})(?::(\d{2}))?(?:\.\d+)?(?:Z|[+-]\d{2}:\d{2})?)?$/.exec(
+    /^(\d{4}-\d{2}-\d{2})(?:[Tt ](\d{2}:\d{2})(?::(\d{2}))?(?:\.\d+)?(?:\s*(?:Z|[+-]\d{2}:\d{2}))?)?$/.exec(
       source.trim(),
     );
   if (!match) {
@@ -264,10 +264,15 @@ export function plainDocumentDates(document: Document): unknown {
   }
 }
 
-/** Walk a parsed YAML value and replace Dates with plain date strings. */
+/**
+ * Walk a parsed YAML value tree. Dates are left unchanged — wall-clock
+ * conversion needs each scalar's YAML `.source` via `plainDocumentDates`.
+ * Callers that still hold bare Dates (yamlValue / yaml-draft) must not get a
+ * silent UTC `toISOString` fallback here.
+ */
 export function plainPropertyDates(value: unknown): unknown {
   if (value instanceof Date) {
-    return propertyDateText(value);
+    return value;
   }
   if (!value || typeof value !== "object") {
     return value;

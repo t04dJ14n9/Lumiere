@@ -93,14 +93,40 @@ test("propertyDateText keeps wall-clock from YAML source for offsets and Z", () 
     "2026-10-15T14:30",
   );
   assert.equal(
+    propertyDateText(offset, "2026-10-15 14:30:00 +08:00"),
+    "2026-10-15T14:30",
+  );
+  assert.equal(
     propertyDateText(
       new Date("2026-10-15T14:30:00.000Z"),
       "2026-10-15T14:30:00Z",
     ),
     "2026-10-15T14:30",
   );
+  assert.equal(
+    propertyDateText(
+      new Date("2026-10-15T14:30:00.000Z"),
+      "2026-10-15 14:30:00 Z",
+    ),
+    "2026-10-15T14:30",
+  );
   // Without source, ISO/UTC remains the fallback.
   assert.equal(propertyDateText(offset), "2026-10-15T06:30");
+});
+
+test("obsidianDateTextFromYamlSource accepts space between date and time", () => {
+  assert.equal(
+    obsidianDateTextFromYamlSource("2026-10-15 14:30:00 +08:00"),
+    "2026-10-15T14:30",
+  );
+  assert.equal(
+    obsidianDateTextFromYamlSource("2026-10-15 14:30:00"),
+    "2026-10-15T14:30",
+  );
+  assert.equal(
+    obsidianDateTextFromYamlSource("2026-10-15 14:30:45"),
+    "2026-10-15T14:30:45",
+  );
 });
 
 test("obsidianDateTextFromYamlSource treats T00:00:00 as datetime, not date", () => {
@@ -117,9 +143,10 @@ test("obsidianDateTextFromYamlSource treats T00:00:00 as datetime, not date", ()
 
 test("frontmatter preserves !!timestamp wall-clock for +08:00 and Z", () => {
   const header = frontmatter(
-    "---\nlocal: !!timestamp 2026-10-15T14:30:00+08:00\nutc: !!timestamp 2026-10-15T14:30:00Z\nmidnight: !!timestamp 2026-10-15T00:00:00\n---\n",
+    "---\nlocal: !!timestamp 2026-10-15T14:30:00+08:00\nspaced: !!timestamp 2026-10-15 14:30:00 +08:00\nutc: !!timestamp 2026-10-15T14:30:00Z\nmidnight: !!timestamp 2026-10-15T00:00:00\n---\n",
   );
   assert.equal(header?.values?.local, "2026-10-15T14:30");
+  assert.equal(header?.values?.spaced, "2026-10-15T14:30");
   assert.equal(header?.values?.utc, "2026-10-15T14:30");
   assert.equal(header?.values?.midnight, "2026-10-15T00:00");
   assert.equal(inferPropertyKind("local", header?.values?.local), "datetime");
@@ -132,6 +159,10 @@ test("frontmatter preserves !!timestamp wall-clock for +08:00 and Z", () => {
 test("YAML drafts keep +08:00 and Z wall-clock as plain datetime strings", () => {
   assert.equal(
     propertyYamlInput("!!timestamp 2026-10-15T14:30:00+08:00"),
+    "2026-10-15T14:30",
+  );
+  assert.equal(
+    propertyYamlInput("!!timestamp 2026-10-15 14:30:00 +08:00"),
     "2026-10-15T14:30",
   );
   assert.equal(
