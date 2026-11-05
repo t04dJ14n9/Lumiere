@@ -233,61 +233,6 @@ export function figurePdf() {
   return pdf.toBuffer(catalog);
 }
 
-
-/**
- * selection-cover.pdf: one synthetic page for text-selection coverage
- * asserts (dark paper). Multi-line body with descenders, plus two bullets.
- * Coordinates are points from the page top-left (same as FIGURE).
- */
-export const SELECTION_COVER = {
-  size: PAGE_SIZE,
-  /** Section title line (14 pt). */
-  title: { text: '2.3. Relationship to Dynamic Composability', y: 72, size: 14, x: 40 },
-  /** Body lines with descenders (g, y, p) so short selection boxes fail coverage. */
-  body: [
-    { text: 'Effect systems are complementary: they typically', y: 100, size: 11, x: 40 },
-    { text: 'track how a computation produces effects and how', y: 116, size: 11, x: 40 },
-    { text: 'it depends on its context. Glyphs go below: gypsy.', y: 132, size: 11, x: 40 },
-  ],
-  /** Bullet marks (filled squares) and their labels. */
-  bullets: [
-    { mark: [44, 158, 50, 164], text: 'Temporal composability', textX: 58, y: 164, size: 11 },
-    { mark: [44, 178, 50, 184], text: 'Spatial composability', textX: 58, y: 184, size: 11 },
-  ],
-};
-
-/** One-page PDF for selection-cover browser geometry asserts. */
-export function selectionCoverPdf() {
-  const { size, title, body, bullets } = SELECTION_COVER;
-  const lines = [
-    `BT /F1 ${title.size} Tf ${title.x} ${size.height - title.y} Td (${title.text}) Tj ET`,
-    ...body.map(
-      (line) =>
-        `BT /F1 ${line.size} Tf ${line.x} ${size.height - line.y} Td (${line.text}) Tj ET`,
-    ),
-    ...bullets.flatMap((bullet) => {
-      const [left, top, right, bottom] = bullet.mark;
-      const pdfBottom = size.height - bottom;
-      const pdfTop = size.height - top;
-      return [
-        `0 g ${left} ${pdfBottom} ${right - left} ${pdfTop - pdfBottom} re f`,
-        `BT /F1 ${bullet.size} Tf ${bullet.textX} ${size.height - bullet.y} Td (${bullet.text}) Tj ET`,
-      ];
-    }),
-  ];
-  const pdf = new PdfWriter();
-  const catalog = pdf.reserve();
-  const pagesNode = pdf.reserve();
-  const font = pdf.add('<< /Type /Font /Subtype /Type1 /BaseFont /Helvetica >>');
-  const contents = pdf.add(stream(lines.join('\n')));
-  const pageObject = pdf.add(
-    `<< /Type /Page /Parent ${pagesNode} 0 R /MediaBox [0 0 ${size.width} ${size.height}] /Resources << /Font << /F1 ${font} 0 R >> >> /Contents ${contents} 0 R >>`,
-  );
-  pdf.set(pagesNode, `<< /Type /Pages /Kids [${pageObject} 0 R] /Count 1 >>`);
-  pdf.set(catalog, `<< /Type /Catalog /Pages ${pagesNode} 0 R >>`);
-  return pdf.toBuffer(catalog);
-}
-
 export const GENERATED = path.join(path.dirname(new URL(import.meta.url).pathname), 'generated');
 
 if (process.argv[1] === new URL(import.meta.url).pathname) {
@@ -300,6 +245,5 @@ if (process.argv[1] === new URL(import.meta.url).pathname) {
   writeFileSync(path.join(GENERATED, 'rotated.pdf'), rotatedPdf());
   writeFileSync(path.join(GENERATED, 'large.pdf'), largePdf());
   writeFileSync(path.join(GENERATED, 'figure.pdf'), figurePdf());
-  writeFileSync(path.join(GENERATED, 'selection-cover.pdf'), selectionCoverPdf());
   console.log(`Wrote test PDFs to ${GENERATED}`);
 }

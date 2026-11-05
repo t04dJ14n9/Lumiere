@@ -116,36 +116,6 @@
   mix-blend-mode: normal;
 }
 
-/* Text selection (EmbedPDF SelectionLayer): force normal blend on both
-   themes. Multiply only tints where it overlaps light glyph ink, so boxes
-   look short/shifted — the same class of bug sidecar highlights fix above.
-   Target the group's `isolation: isolate` wrapper (annotations do not use
-   it). Solid --selection-fill under normal would paint opaque over glyphs;
-   opacity on the isolated group keeps overlaps solid inside (no
-   double-darkening) while letting ink read through — same idea as sidecar's
-   translucent normal blend. Light vs dark differ by color tokens only
-   (--selection-fill in base.css / pageColors). */
-.page [style*="isolation: isolate"],
-.page [style*="isolation:isolate"] {
-  mix-blend-mode: normal !important;
-  opacity: 0.45;
-}
-
-/* Loose PDFium char boxes still undershoot rendered descenders (g/p/y). With
-   normal covers that shortfall is visible; grow each painted child downward
-   so tint encloses ink. transform-origin top keeps the top edge fixed.
-   selection-cover.pdf body: 11pt Helvetica, baselines 16pt apart (y 100/116/
-   132). Browser-measured unscaled PDFium boxes ≈12.0pt tall → merge ceiling
-   scaleY ≈ 16/12 ≈ 1.333. Shared scaleY(1.32) stays just under that:
-   measured inter-line gap ≈ 0.16pt (16 − 12×1.32) — not the old "~2pt" claim.
-   Do not raise into merge territory without the inter-line gap browser assert.
-   Shared on both themes. */
-.page [style*="isolation: isolate"] > *,
-.page [style*="isolation:isolate"] > * {
-  transform: scaleY(1.32);
-  transform-origin: top center;
-}
-
 .sidecar-highlight.is-selected .sidecar-highlight-line {
   outline: 2px solid var(--selection-edge);
   outline-offset: 1px;
