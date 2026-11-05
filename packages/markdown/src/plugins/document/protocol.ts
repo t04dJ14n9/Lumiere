@@ -38,6 +38,8 @@ export const protocol = defineProtocol("document", {
       result: Schema.boolean(),
     },
     flush: { params: Schema.object({}), result: Schema.boolean() },
+    // The revisions a panel missed, from the version it has synchronized.
+    catchUp: { params: Schema.object({ version }), result: updates },
   },
   notifications: { updates },
 });

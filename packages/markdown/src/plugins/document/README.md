@@ -13,6 +13,11 @@ it runs strict draft commit participants; invalid drafts reject saving. Session
 queues serialize edits and host actions, while logical grouping coordinates native
 undo steps. All registrations and synchronizers follow their context/view lifetime.
 
+If a panel receives updates against a version it never reached (a broadcast it
+missed), it asks the host for the revision log from its own version (`catchUp`)
+and applies it like any other update. Unsent local edits are rebased over it,
+and edits the host already took are confirmed, never dropped or applied twice.
+
 ## Files
 
 - `manifest.ts`: core plugin identity and runtime surfaces.

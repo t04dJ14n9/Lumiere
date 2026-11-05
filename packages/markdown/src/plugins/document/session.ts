@@ -105,10 +105,24 @@ export class Session implements DocumentSession {
       this.queue = request.catch(() => {});
       return request;
     });
+    const stopCatchUp = this.serveCatchUp(client);
     return async () => {
       this.clients.delete(id);
+      await stopCatchUp();
       await stop();
     };
+  }
+  /**
+   * A panel whose version differs from `client.sent` missed a broadcast, and
+   * only the revision log can tell which of its unsent edits the host already
+   * has. The answer covers everything up to now, so broadcasts resume from there.
+   */
+  private serveCatchUp(client: { rpc: Endpoint; sent: number }) {
+    return client.rpc.handle(protocol, "catchUp", ({ version }) => {
+      const updates = this.authority.since(version);
+      client.sent = this.version;
+      return { version, updates };
+    });
   }
   changed(): void {
     const hostText = this.document.getText();
