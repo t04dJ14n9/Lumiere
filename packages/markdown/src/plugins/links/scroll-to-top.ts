@@ -3,7 +3,7 @@ import type { StateEffect } from "@codemirror/state";
 
 /**
  * Height of the sticky-heading pin overlay inside the editor, if visible.
- * Same DOM query sticky pin clicks use; do not import stickyScroll internals.
+ * Same `.mw-sticky-scroll` selector the sticky overlay uses; do not import stickyScroll internals.
  */
 export function stickyChromeHeight(root: ParentNode): number {
   const sticky = root.querySelector(".mw-sticky-scroll");

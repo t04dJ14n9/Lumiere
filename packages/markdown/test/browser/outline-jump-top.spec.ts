@@ -157,11 +157,12 @@ test("a heading on the last line clamps at the bottom of the scroll range", asyn
   await expect
     .poll(async () => {
       const g = await geometry(page, "Last");
-      // CodeMirror may stop a few pixels short of the computed max (yMargin /
-      // padding); within a line height still means the scroll range ended.
+      // Measured under y:"start" (this PR's path): |scrollTop - maxScrollTop|
+      // was 0 in the harness. Bound to suite TOLERANCE (8), not an arbitrary
+      // line-height slack.
       return Math.abs(g.scrollTop - g.maxScrollTop);
     })
-    .toBeLessThanOrEqual(30);
+    .toBeLessThanOrEqual(TOLERANCE);
   const g = await geometry(page, "Last");
   expect(g.scrollTop).toBeGreaterThan(0);
   // Cannot put the last line at the top; it stays below the top of the viewport.

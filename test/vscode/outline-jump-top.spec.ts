@@ -112,9 +112,11 @@ test("clicking a heading in the Markdown Outline puts it at the top of the edito
     await expect
       .poll(async () => {
         const g = await geometry(await editorFrame(page), "Last");
+        // Browser harness measured gap 0 under y:"start"; bind to suite
+        // TOLERANCE (10 here) rather than an arbitrary 30px slack.
         return Math.abs(g.scrollTop - g.maxScrollTop);
       })
-      .toBeLessThanOrEqual(30);
+      .toBeLessThanOrEqual(TOLERANCE);
     const last = await geometry(await editorFrame(page), "Last");
     expect(last.headingTop!).toBeGreaterThan(last.viewportTop + TOLERANCE);
     expect(last.headingTop!).toBeLessThan(last.viewportBottom);
