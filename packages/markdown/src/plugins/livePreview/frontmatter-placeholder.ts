@@ -60,22 +60,38 @@ export function propertiesRendererRegistered(state: EditorState): boolean {
 }
 
 /**
+ * True for a line that opens a top-level mapping entry, i.e. one Properties
+ * row. Blanks, indented continuations, `#` comments and flush `- item` lines
+ * (YAML lets a sequence sit unindented under its key) belong to a row or to
+ * none, so they must not add a control to the reserve.
+ */
+function opensTopLevelEntry(line: string): boolean {
+  if (!line.trim() || /^[ \t#]/.test(line)) {
+    return false;
+  }
+  return !/^-(?:[ \t]|$)/.test(line);
+}
+
+/**
  * Rough expanded Properties height from YAML body lines — no YAML parse.
- * Top-level (non-indented, non-empty) rows each reserve one control; indented
- * continuations are ignored so multiline values stay a floor, not a guess.
+ * Each top-level key reserves one control; everything else is ignored so
+ * multiline values stay a floor, not a guess.
+ *
+ * It always reserves the expanded sheet, even for a note whose Properties are
+ * stored collapsed (`properties/collapse-store`). That flag lives in the
+ * host's preference store and reaches the webview only over the Properties
+ * RPC, after the Properties plugin has configured, which is also when this
+ * placeholder stops matching. livePreview may not import that plugin, and the
+ * editor protocol's `ready` payload that could carry the flag is a contract
+ * with the host, so a collapsed note still paints one expanded-height frame
+ * first.
  */
 export function frontmatterPlaceholderHeight(source: string): number {
   const header = headerParts(source.slice(0, FRONTMATTER_PROBE_MAX));
   if (!header) {
     return 0;
   }
-  let rows = 0;
-  for (const line of header.body.split(/\r?\n/)) {
-    if (!line.trim() || /^[ \t]/.test(line)) {
-      continue;
-    }
-    rows += 1;
-  }
+  const rows = header.body.split(/\r?\n/).filter(opensTopLevelEntry).length;
   if (rows === 0) {
     return COLLAPSED;
   }
