@@ -1,6 +1,7 @@
 import type { Document } from "yaml";
 import { loadYaml } from "./load-yaml";
 import {
+  plainPropertyDates,
   propertyYamlInput,
   settablePropertyNode,
   settablePropertyValue,
@@ -52,7 +53,8 @@ function rawPropertyYamlDraft(
     )
     .join("\n");
   const parsed = propertyYamlInput(text);
-  return parsed !== undefined && yamlDraftEqual(parsed, value)
+  return parsed !== undefined &&
+    yamlDraftEqual(parsed, plainPropertyDates(value))
     ? text
     : undefined;
 }

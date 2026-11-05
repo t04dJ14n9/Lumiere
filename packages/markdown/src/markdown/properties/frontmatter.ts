@@ -66,9 +66,10 @@ function editableScalar(node: unknown): boolean {
     isScalar(node) &&
     settablePropertyNode(node) &&
     (node.value === null ||
-      ["boolean", "string", "number"].includes(typeof node.value)) &&
+      ["boolean", "string", "number"].includes(typeof node.value) ||
+      (node.value instanceof Date && Number.isFinite(node.value.valueOf()))) &&
     !/BLOCK/.test(node.type ?? "") &&
-    !/[\r\n]/.test(String(node.value)) &&
+    (node.value instanceof Date || !/[\r\n]/.test(String(node.value))) &&
     (typeof node.value !== "number" || Number.isFinite(node.value))
   );
 }

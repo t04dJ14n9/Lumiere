@@ -89,7 +89,9 @@ export function settablePropertyNode(
       if (
         child.tag &&
         (!isScalar(child) ||
-          !/^tag:yaml.org,2002:(?:str|int|float|bool|null)$/.test(child.tag))
+          !/^tag:yaml.org,2002:(?:str|int|float|bool|null|timestamp)$/.test(
+            child.tag,
+          ))
       ) {
         settable = false;
         return visit.BREAK;
@@ -125,7 +127,9 @@ export function propertyYamlInput(text: string): PropertyValue | undefined {
     ) {
       return undefined;
     }
-    const value: unknown = document.toJS({ maxAliasCount: 100 });
+    const value: unknown = plainPropertyDates(
+      document.toJS({ maxAliasCount: 100 }),
+    );
     return settablePropertyValue(value) ? value : undefined;
   } catch {
     return undefined;
@@ -140,7 +144,8 @@ export function settablePropertyValue(
     value === null ||
     typeof value === "string" ||
     typeof value === "boolean" ||
-    (typeof value === "number" && Number.isFinite(value))
+    (typeof value === "number" && Number.isFinite(value)) ||
+    (value instanceof Date && Number.isFinite(value.valueOf()))
   ) {
     return true;
   }
@@ -148,7 +153,6 @@ export function settablePropertyValue(
     !value ||
     typeof value !== "object" ||
     ancestors.has(value) ||
-    value instanceof Date ||
     value instanceof Map ||
     value instanceof Set
   ) {
@@ -185,7 +189,40 @@ export function matchesPropertyKind(
     case "date":
     case "datetime":
       return (
-        typeof value === "string" && propertyInput(kind, value) !== undefined
+        (typeof value === "string" &&
+          propertyInput(kind, value) !== undefined) ||
+        (value instanceof Date &&
+          propertyInput(kind, propertyDateText(value)) !== undefined)
       );
   }
+}
+
+/** Obsidian-stable YAML/date-input text for a JS Date from !!timestamp. */
+export function propertyDateText(value: Date): string {
+  if (!Number.isFinite(value.valueOf())) {
+    return "";
+  }
+  const iso = value.toISOString();
+  // YAML !!timestamp date-only values parse as UTC midnight.
+  if (iso.endsWith("T00:00:00.000Z")) {
+    return iso.slice(0, 10);
+  }
+  // Match inferPropertyKind / propertyInput: drop zero seconds.
+  return iso.endsWith(":00.000Z") ? iso.slice(0, 16) : iso.slice(0, 19);
+}
+
+/** Walk a parsed YAML value and replace Dates with plain date strings. */
+export function plainPropertyDates(value: unknown): unknown {
+  if (value instanceof Date) {
+    return propertyDateText(value);
+  }
+  if (!value || typeof value !== "object") {
+    return value;
+  }
+  if (Array.isArray(value)) {
+    return value.map(plainPropertyDates);
+  }
+  return Object.fromEntries(
+    Object.entries(value).map(([key, item]) => [key, plainPropertyDates(item)]),
+  );
 }

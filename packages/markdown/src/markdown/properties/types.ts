@@ -73,6 +73,10 @@ export function inferPropertyKind(
   if (typeof value === "number") {
     return "number";
   }
+  if (value instanceof Date && Number.isFinite(value.valueOf())) {
+    const iso = value.toISOString();
+    return iso.endsWith("T00:00:00.000Z") ? "date" : "datetime";
+  }
   if (typeof value === "string" && /^\d{4}-\d{2}-\d{2}$/.test(value)) {
     return "date";
   }

@@ -1,6 +1,7 @@
 import {
   frontmatter,
   matchesPropertyKind,
+  propertyDateText,
   settablePropertyValue,
 } from "../../markdown/properties";
 import { propertyYamlDraft } from "../../markdown/properties/yaml-draft";
@@ -294,6 +295,9 @@ function asList(value: unknown): unknown[] {
 function propertyInputText(value: unknown): string {
   if (value === null || value === undefined) {
     return "";
+  }
+  if (value instanceof Date) {
+    return propertyDateText(value);
   }
   if (typeof value === "object") {
     return Array.isArray(value)

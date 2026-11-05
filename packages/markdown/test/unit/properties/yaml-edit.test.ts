@@ -206,7 +206,6 @@ for (const yaml of [
   "{nested: !!pairs [a: 1]}",
   "!!map {a: 1}",
   "!!set {a: null}",
-  "{at: !!timestamp 2026-10-15}",
 ]) {
   test(`tagged values stay display-only and cannot be stripped by set: ${yaml}`, () => {
     const source = `---\nvalue: ${yaml}\nkeep: yes\n---\n`;
@@ -498,9 +497,41 @@ test("anchor mentions in comments do not retarget valueStart", () => {
   assert.equal(frontmatter(next)?.values?.keep, "yes");
 });
 
-test("YAML drafts reject tagged timestamps instead of coercing to strings", () => {
-  assert.equal(propertyYamlInput("at: !!timestamp 2026-10-15"), undefined);
-  assert.equal(propertyYamlInput("{at: !!timestamp 2026-10-15}"), undefined);
+test("YAML drafts accept !!timestamp scalars as Obsidian plain date strings", () => {
+  assert.equal(propertyYamlInput("!!timestamp 2026-10-15"), "2026-10-15");
+  assert.equal(
+    propertyYamlInput("!!timestamp 2026-10-15T14:30:00"),
+    "2026-10-15T14:30",
+  );
+  assert.deepEqual(propertyYamlInput("{at: !!timestamp 2026-10-15}"), {
+    at: "2026-10-15",
+  });
+});
+
+test("editing a !!timestamp date property writes a plain YYYY-MM-DD string", () => {
+  const source =
+    "---\ncreated: !!timestamp 2026-10-15\nkeep: yes\n---\n";
+  const next = edit(source, {
+    type: "set",
+    key: "created",
+    value: "2026-10-16",
+  });
+  assert.match(next, /^---\ncreated: 2026-10-16\nkeep: yes\n---\n$/);
+  assert.doesNotMatch(next, /!!timestamp/);
+  assert.equal(frontmatter(next)?.values?.created, "2026-10-16");
+});
+
+test("editing a !!timestamp datetime property writes a plain datetime string", () => {
+  const source =
+    "---\nupdated: !!timestamp 2026-10-15T14:30:00\n---\n";
+  const next = edit(source, {
+    type: "set",
+    key: "updated",
+    value: "2026-10-15T15:45",
+  });
+  assert.match(next, /updated: 2026-10-15T15:45\n/);
+  assert.doesNotMatch(next, /!!timestamp/);
+  assert.equal(frontmatter(next)?.values?.updated, "2026-10-15T15:45");
 });
 
 test("nested alias sites keep multiline collection inserts indented", () => {

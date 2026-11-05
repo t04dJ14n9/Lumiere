@@ -236,13 +236,31 @@ test("tagged YAML sets that cannot round-trip stay non-draft displays", () => {
   );
 });
 
-test("tagged timestamps that do not round-trip stay non-draft displays", () => {
+test("top-level !!timestamp date scalars render editable Date controls", () => {
+  const html = renderProperties(
+    "---\ncreated: !!timestamp 2026-10-15\nupdated: !!timestamp 2026-10-15T14:30:00\n---\n",
+  );
+  assert.match(
+    html,
+    /type="date"[^>]*data-property-input="created"[^>]*value="2026-10-15"|data-property-input="created"[^>]*type="date"[^>]*value="2026-10-15"/,
+  );
+  assert.match(
+    html,
+    /type="datetime-local"[^>]*data-property-input="updated"[^>]*value="2026-10-15T14:30"|data-property-input="updated"[^>]*type="datetime-local"[^>]*value="2026-10-15T14:30"/,
+  );
+  assert.doesNotMatch(html, /data-property-key="created"[\s\S]*Source mode/);
+  assert.doesNotMatch(html, /data-property-key="updated"[\s\S]*Source mode/);
+});
+
+test("OKF maps with nested !!timestamp stay editable YAML drafts when Date is settable", () => {
   const html = renderProperties(
     "---\ngenerated: {at: !!timestamp 2026-10-15, by: old}\n---\n",
   );
+  // Nested timestamps may become draftable once Date scalars are settable;
+  // they must not fall back to the Source-mode dead-end for the whole map.
   assert.doesNotMatch(
     html,
-    /data-property-input="generated"[^>]*data-property-kind="yaml"/,
+    /data-property-key="generated"[\s\S]*Source mode/,
   );
 });
 
