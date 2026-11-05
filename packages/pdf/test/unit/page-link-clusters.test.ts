@@ -74,6 +74,21 @@ test("same dest appearing twice far apart on a page yields two clusters", () => 
   assert.deepEqual(ids, ["f1,f2", "n1,n2"]);
 });
 
+test("two consecutive same-dest cites on adjacent lines stay two clusters", () => {
+  // Year of cite N + author of cite N+1 satisfy wrap geometry; must not
+  // transitively merge into one four-segment cluster.
+  const a1 = goto("a1", rect(100, 200, 50, 12), 10, 100);
+  const y1 = goto("y1", rect(153, 200, 22, 12), 10, 100);
+  const a2 = goto("a2", rect(100, 214, 50, 12), 10, 100);
+  const y2 = goto("y2", rect(153, 214, 22, 12), 10, 100);
+  const clusters = clusterPageLinks([a1, y1, a2, y2]);
+  assert.equal(clusters.length, 2);
+  const ids = clusterIds(clusters)
+    .map((ids) => ids.slice().sort().join(","))
+    .sort();
+  assert.deepEqual(ids, ["a1,y1", "a2,y2"]);
+});
+
 test("line-wrap: end-of-line + start-of-next-line same dest become one cluster", () => {
   // Real shape from arXiv 2503.20783 page 2: author ends near right margin,
   // year starts on the next line near the left margin (~3pt vertical overlap).

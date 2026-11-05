@@ -96,7 +96,21 @@ function adjacentDestinationGroups(
     for (let j = i + 1; j < ordered.length; j++) {
       const a = ordered[i]!;
       const b = ordered[j]!;
-      if (sameDestination(a, b) && areAdjacent(a.rect, b.rect)) {
+      if (!sameDestination(a, b)) {
+        continue;
+      }
+      if (areOnSameLine(a.rect, b.rect)) {
+        parent[find(j)] = find(i);
+        continue;
+      }
+      // Wrap-merge only orphan fragments. If each already has a same-line
+      // same-destination partner, year-of-N + author-of-N+1 look like a wrap
+      // and would transitively glue two cites into one cluster.
+      if (
+        areLineWrap(a.rect, b.rect) &&
+        !hasSameLineSameDestPartner(ordered, i) &&
+        !hasSameLineSameDestPartner(ordered, j)
+      ) {
         parent[find(j)] = find(i);
       }
     }
@@ -142,8 +156,22 @@ function sameDestination(a: PageLinkInput, b: PageLinkInput): boolean {
   return Math.abs(a.top - b.top) < TOP_EPSILON;
 }
 
-function areAdjacent(a: PageLinkRect, b: PageLinkRect): boolean {
-  return areOnSameLine(a, b) || areLineWrap(a, b);
+/** True when another same-destination link sits on the same line. */
+function hasSameLineSameDestPartner(
+  ordered: readonly PageLinkInput[],
+  index: number,
+): boolean {
+  const link = ordered[index]!;
+  for (let i = 0; i < ordered.length; i++) {
+    if (i === index) {
+      continue;
+    }
+    const other = ordered[i]!;
+    if (sameDestination(link, other) && areOnSameLine(link.rect, other.rect)) {
+      return true;
+    }
+  }
+  return false;
 }
 
 function areOnSameLine(a: PageLinkRect, b: PageLinkRect): boolean {
