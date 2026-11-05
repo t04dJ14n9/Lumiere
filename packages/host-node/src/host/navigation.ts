@@ -107,7 +107,9 @@ async function createNote(
   const { root, request } = options;
   let target = options.target;
   const link = request.path;
-  if (!link.startsWith("/")) {
+  // Basename-only links respect newNoteFolder; a path with folders (or a
+  // leading "/") creates at that vault-relative path under the vault root.
+  if (!link.startsWith("/") && !link.includes("/")) {
     const folder = request.newNoteFolder ?? "";
     const parent =
       folder === "."

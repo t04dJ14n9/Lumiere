@@ -1,6 +1,13 @@
 import test from "node:test";
 import assert from "node:assert/strict";
-import { mkdtemp, readFile, rm, symlink, writeFile } from "node:fs/promises";
+import {
+  mkdtemp,
+  mkdir,
+  readFile,
+  rm,
+  symlink,
+  writeFile,
+} from "node:fs/promises";
 import { tmpdir } from "node:os";
 import * as path from "node:path";
 import { pathToFileURL } from "node:url";
@@ -206,4 +213,103 @@ test("revealing in a hidden tab that focuses itself still tells the presenting t
     },
   });
   assert.equal(hub.active()?.id, second.id);
+});
+
+test("basename create respects newNoteFolder; foldered wikilink creates vault-relative", async (t) => {
+  const dir = await mkdtemp(path.join(tmpdir(), "lumiere-nav-create-"));
+  t.after(() => rm(dir, { recursive: true, force: true }));
+  const nested = path.join(dir, "wiki", "resources", "notes");
+  await writeFile(path.join(dir, "Note.md"), "root");
+  await mkdir(nested, { recursive: true });
+  const sourceNote = path.join(nested, "Source.md");
+  await writeFile(sourceNote, "[[wiki/projects/DServer/Decision]]");
+  const root = pathToFileURL(dir).toString();
+  const source = pathToFileURL(sourceNote).toString();
+  const base = {
+    root,
+    source,
+    create: true,
+    folderNote: "",
+  };
+
+  // Basename + "." → beside the source note.
+  const beside = await resolveLink(nodeFiles, {
+    ...base,
+    path: "Beside",
+    newNoteFolder: ".",
+  });
+  assert.equal(
+    beside,
+    pathToFileURL(path.join(nested, "Beside.md")).toString(),
+  );
+
+  // Basename + empty → vault root.
+  const atRoot = await resolveLink(nodeFiles, {
+    ...base,
+    path: "RootNote",
+    newNoteFolder: "",
+  });
+  assert.equal(atRoot, pathToFileURL(path.join(dir, "RootNote.md")).toString());
+
+  // Basename + configured folder → under that vault folder.
+  const inbox = await resolveLink(nodeFiles, {
+    ...base,
+    path: "InboxNote",
+    newNoteFolder: "Inbox",
+  });
+  assert.equal(
+    inbox,
+    pathToFileURL(path.join(dir, "Inbox", "InboxNote.md")).toString(),
+  );
+
+  // Foldered path + "." → vault-relative (the bug: must NOT nest under source folder).
+  const folderedDot = await resolveLink(nodeFiles, {
+    ...base,
+    path: "wiki/projects/DServer/Decision",
+    newNoteFolder: ".",
+  });
+  assert.equal(
+    folderedDot,
+    pathToFileURL(
+      path.join(dir, "wiki", "projects", "DServer", "Decision.md"),
+    ).toString(),
+  );
+  assert.equal(
+    await readFile(
+      path.join(dir, "wiki", "projects", "DServer", "Decision.md"),
+      "utf8",
+    ),
+    "",
+  );
+  // Must not have created under the source note's folder.
+  await assert.rejects(
+    () =>
+      readFile(
+        path.join(nested, "wiki", "projects", "DServer", "Decision.md"),
+        "utf8",
+      ),
+    /ENOENT/,
+  );
+
+  // Foldered path + Inbox → still vault-relative, not Inbox/wiki/...
+  const folderedInbox = await resolveLink(nodeFiles, {
+    ...base,
+    path: "wiki/other/Topic",
+    newNoteFolder: "Inbox",
+  });
+  assert.equal(
+    folderedInbox,
+    pathToFileURL(path.join(dir, "wiki", "other", "Topic.md")).toString(),
+  );
+
+  // Leading / already vault-relative.
+  const absolute = await resolveLink(nodeFiles, {
+    ...base,
+    path: "/wiki/abs/Note",
+    newNoteFolder: ".",
+  });
+  assert.equal(
+    absolute,
+    pathToFileURL(path.join(dir, "wiki", "abs", "Note.md")).toString(),
+  );
 });

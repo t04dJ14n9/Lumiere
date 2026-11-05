@@ -274,7 +274,9 @@ async function createNote({
 }): Promise<string | undefined> {
   folder ??= "";
   let uri = candidate;
-  if (!link.startsWith("/")) {
+  // Basename-only links respect newNoteFolder; a path with folders (or a
+  // leading "/") creates at that vault-relative path under the vault root.
+  if (!link.startsWith("/") && !link.includes("/")) {
     const parent =
       folder === "."
         ? vscode.Uri.joinPath(sourceUri, "..")
