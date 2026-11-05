@@ -158,6 +158,7 @@ export class Session implements DocumentSession {
       client.rpc.notify(protocol, "updates", {
         version: client.sent,
         updates: this.authority.since(client.sent),
+        fullText: this.authority.doc.toString(),
       });
       client.sent = this.version;
     }

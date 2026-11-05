@@ -26,17 +26,20 @@ export class Synchronizer {
   receive(message: {
     version: number;
     updates: { clientID: string; changes: unknown }[];
+    fullText?: string;
   }): void {
     const synced = getSyncedVersion(this.view.state);
     if (message.version !== synced) {
+      const { fullText } = message;
       if (
         !message.updates.length ||
-        message.updates.some((update) => update.clientID !== "host")
+        message.updates.some((update) => update.clientID !== "host") ||
+        typeof fullText !== "string"
       ) {
         this.fail(new Error(revisionMismatch));
         return;
       }
-      this.applyHostReset(message);
+      this.applyHostReset({ ...message, fullText });
       return;
     }
     try {
@@ -56,26 +59,21 @@ export class Synchronizer {
   }
   /**
    * Host-only updates arrived against a different collab version than this
-   * panel's. Replace the doc in one `userEvent: "set"` and jump the collab
-   * synced version to `message.version + updates.length` so the panel stays
-   * usable instead of dying with the reopen/copy error.
+   * panel's. Skew recovery requires `message.fullText` (do not apply host
+   * ChangeSets onto the live wrong-base doc). Replace with that text in one
+   * `userEvent: "set"` and jump the collab synced version to
+   * `message.version + updates.length` so the panel stays usable instead of
+   * dying with the reopen/copy error.
    */
   private applyHostReset(message: {
     version: number;
     updates: { clientID: string; changes: unknown }[];
+    fullText: string;
   }): void {
     try {
-      const parsed = message.updates.map((update) => ({
-        clientID: update.clientID,
-        changes: ChangeSet.fromJSON(update.changes),
-      }));
-      let doc = this.view.state.doc;
-      for (const update of parsed) {
-        doc = update.changes.apply(doc);
-      }
-      const target = doc.toString();
+      const nextVersion = message.version + message.updates.length;
       const synced = getSyncedVersion(this.view.state);
-      const nextVersion = message.version + parsed.length;
+      const target = message.fullText;
 
       // One full-document replace; single undoable set on the view.
       this.view.dispatch({

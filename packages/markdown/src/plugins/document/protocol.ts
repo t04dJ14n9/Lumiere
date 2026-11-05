@@ -22,6 +22,8 @@ export const updates = Schema.object({
   updates: Schema.array(
     Schema.object({ clientID: Schema.string().max(128), changes: change }),
   ),
+  // Present on every Session.broadcast; required for Synchronizer host-skew reset.
+  fullText: Schema.string().max(1_000_000).optional(),
 });
 export const protocol = defineProtocol("document", {
   requests: {

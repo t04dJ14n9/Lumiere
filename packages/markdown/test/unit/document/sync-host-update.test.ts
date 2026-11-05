@@ -60,6 +60,7 @@ test("host update with skewed version replaces instead of failing", () => {
         changes: difference("base", "ext").toJSON(),
       },
     ],
+    fullText: "ext",
   });
 
   assert.equal(sync.error, undefined);
@@ -96,4 +97,69 @@ test("skewed version with empty updates still fails", () => {
   sync.receive({ version: 1, updates: [] });
 
   assert.match(String(sync.error), /copy your edits before reopening/);
+});
+
+test("same-length wrong-base skew without fullText fails closed", () => {
+  const view = viewWith("xxxx", { clientID: "panel", startVersion: 0 });
+  const sync = new Synchronizer(view, stubRpc(), () => {});
+
+  sync.receive({
+    version: 1,
+    updates: [
+      {
+        clientID: "host",
+        changes: difference("base", "ext").toJSON(),
+      },
+    ],
+  });
+
+  assert.match(String(sync.error), /copy your edits before reopening/);
+  assert.equal(view.state.doc.toString(), "xxxx");
+});
+
+test("same-length wrong-base skew with fullText uses fullText", () => {
+  const view = viewWith("xxxx", { clientID: "panel", startVersion: 0 });
+  const sync = new Synchronizer(view, stubRpc(), () => {});
+
+  sync.receive({
+    version: 1,
+    updates: [
+      {
+        clientID: "host",
+        // Would yield "zzzz" if applied to the live wrong-base doc.
+        changes: difference("base", "zzzz").toJSON(),
+      },
+    ],
+    fullText: "ext",
+  });
+
+  assert.equal(sync.error, undefined);
+  assert.equal(view.state.doc.toString(), "ext");
+  assert.equal(getSyncedVersion(view.state), 2);
+  assert.equal(sendableUpdates(view.state).length, 0);
+});
+
+test("skew recovery with unconfirmed local edits confirms then pads", () => {
+  const view = viewWith("base", { clientID: "panel", startVersion: 0 });
+  view.dispatch({
+    changes: { from: 4, to: 4, insert: "!" },
+  });
+  assert.ok(sendableUpdates(view.state).length > 0);
+
+  const sync = new Synchronizer(view, stubRpc(), () => {});
+  sync.receive({
+    version: 1,
+    updates: [
+      {
+        clientID: "host",
+        changes: difference("base", "ext").toJSON(),
+      },
+    ],
+    fullText: "ext",
+  });
+
+  assert.equal(sync.error, undefined);
+  assert.equal(view.state.doc.toString(), "ext");
+  assert.equal(sendableUpdates(view.state).length, 0);
+  assert.equal(getSyncedVersion(view.state), 2);
 });
