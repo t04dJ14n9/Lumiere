@@ -332,8 +332,134 @@ test("createNote: basename respects newNoteFolder; foldered path is vault-relati
     await create("wiki/other/Topic", "Inbox"),
     pathToFileURL(join(directory, "wiki/other/Topic.md")).href,
   );
+
   assert.equal(
     await create("/wiki/abs/Note", "."),
     pathToFileURL(join(directory, "wiki/abs/Note.md")).href,
   );
+});
+
+/** Shared vscode fake + vault layout for resolve (create:false) path tests. */
+async function withResolveVault(
+  t: { after: (fn: () => void | Promise<void>) => void },
+  run: (ctx: {
+    navigation: ReturnType<
+      ReturnType<typeof loadNavigation>["createNavigation"]
+    >;
+    root: string;
+    source: string;
+    directory: string;
+    areas: string;
+  }) => Promise<void>,
+) {
+  const directory = await mkdtemp(join(tmpdir(), "mw-navigation-resolve-"));
+  t.after(() => rm(directory, { recursive: true, force: true }));
+  const areas = join(directory, "wiki", "areas");
+  const mocs = join(directory, "wiki", "resources", "mocs");
+  await mkdir(areas, { recursive: true });
+  await mkdir(mocs, { recursive: true });
+  const sourcePath = join(areas, "Source.md");
+  await writeFile(sourcePath, "source");
+  await writeFile(join(mocs, "Target.md"), "target");
+  await writeFile(join(areas, "Beside.md"), "beside");
+  const root = pathToFileURL(directory).href;
+  const source = pathToFileURL(sourcePath).href;
+
+  class FileSystemError extends Error {
+    constructor(
+      message: string,
+      readonly code: string,
+    ) {
+      super(message);
+    }
+  }
+  function fileUri(fsPath: string) {
+    const href = pathToFileURL(fsPath).href;
+    const url = new URL(href);
+    const uri = {
+      scheme: url.protocol.slice(0, -1),
+      authority: url.host,
+      path: decodeURIComponent(url.pathname),
+      fsPath,
+      toString: () => href,
+      with({ path: next }: { path: string }) {
+        return fileUri(next);
+      },
+    };
+    return uri;
+  }
+  function joinPath(base: ReturnType<typeof fileUri>, ...parts: string[]) {
+    return fileUri(join(base.fsPath, ...parts));
+  }
+
+  const { createNavigation } = loadNavigation({
+    Uri: {
+      parse: (value: string) => fileUri(fileURLToPath(value)),
+      joinPath,
+    },
+    FileSystemError,
+    FileType: { File: 1, Directory: 2, SymbolicLink: 64 },
+    env: { appName: "Cursor", uriScheme: "vscode" },
+    window: { tabGroups: { activeTabGroup: { viewColumn: 1 } } },
+    workspace: {
+      getConfiguration: () => ({ get: () => "on" }),
+      fs: {
+        async stat(uri: { fsPath: string }) {
+          try {
+            await access(uri.fsPath);
+            return { type: 1 };
+          } catch {
+            throw new FileSystemError("missing", "FileNotFound");
+          }
+        },
+      },
+    },
+    commands: { async executeCommand() {} },
+  });
+
+  await run({
+    navigation: createNavigation(() => []),
+    root,
+    source,
+    directory,
+    areas,
+  });
+}
+
+test("resolve: foldered path (create:false) is vault-relative, not under source parent", async (t) => {
+  await withResolveVault(t, async ({ navigation, root, source, directory }) => {
+    const resolved = await navigation.resolve({
+      root,
+      source,
+      path: "wiki/resources/mocs/Target.md",
+      create: false,
+      folderNote: "",
+      newNoteFolder: "",
+    });
+    assert.equal(
+      resolved,
+      pathToFileURL(join(directory, "wiki/resources/mocs/Target.md")).href,
+    );
+    // Must not have looked under wiki/areas/wiki/resources/...
+    assert.notEqual(
+      resolved,
+      pathToFileURL(
+        join(directory, "wiki/areas/wiki/resources/mocs/Target.md"),
+      ).href,
+    );
+  });
+});
+
+test("resolve: basename (create:false) still uses source parent", async (t) => {
+  await withResolveVault(t, async ({ navigation, root, source, areas }) => {
+    const resolved = await navigation.resolve({
+      root,
+      source,
+      path: "Beside.md",
+      create: false,
+      folderNote: "",
+      newNoteFolder: "",
+    });
+    assert.equal(resolved, pathToFileURL(join(areas, "Beside.md")).href);
+  });
 });

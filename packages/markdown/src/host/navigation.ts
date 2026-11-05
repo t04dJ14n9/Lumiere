@@ -216,7 +216,9 @@ async function resolveNavigation({
   let uri = !link
     ? sourceUri
     : vscode.Uri.joinPath(
-        link.startsWith("/") || create
+        // Foldered or absolute links resolve from vault root (Obsidian parity);
+        // basename-only stays relative to the source parent when not creating.
+        link.startsWith("/") || create || link.includes("/")
           ? base
           : vscode.Uri.joinPath(sourceUri, ".."),
         link.replace(/^\//, ""),

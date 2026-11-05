@@ -77,7 +77,11 @@ export async function resolveLink(
     ? source
     : joinUri(
         files,
-        link.startsWith("/") || create ? root : parentUri(files, source),
+        // Foldered or absolute links resolve from vault root (Obsidian parity);
+        // basename-only stays relative to the source parent when not creating.
+        link.startsWith("/") || create || link.includes("/")
+          ? root
+          : parentUri(files, source),
         link.replace(/^\//, ""),
       );
   await requireInside(files, root, target);

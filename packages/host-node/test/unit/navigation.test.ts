@@ -313,3 +313,48 @@ test("basename create respects newNoteFolder; foldered wikilink creates vault-re
     pathToFileURL(path.join(dir, "wiki", "abs", "Note.md")).toString(),
   );
 });
+
+test("resolve: foldered path (create:false) is vault-relative, not under source parent", async (t) => {
+  const dir = await mkdtemp(path.join(tmpdir(), "lumiere-nav-resolve-"));
+  t.after(() => rm(dir, { recursive: true, force: true }));
+  const areas = path.join(dir, "wiki", "areas");
+  const mocs = path.join(dir, "wiki", "resources", "mocs");
+  await mkdir(areas, { recursive: true });
+  await mkdir(mocs, { recursive: true });
+  const sourceNote = path.join(areas, "Source.md");
+  await writeFile(sourceNote, "source");
+  await writeFile(path.join(mocs, "Target.md"), "target");
+  await writeFile(path.join(areas, "Beside.md"), "beside");
+  const root = pathToFileURL(dir).toString();
+  const source = pathToFileURL(sourceNote).toString();
+
+  const foldered = await resolveLink(nodeFiles, {
+    root,
+    source,
+    path: "wiki/resources/mocs/Target.md",
+    create: false,
+    folderNote: "",
+  });
+  assert.equal(
+    foldered,
+    pathToFileURL(path.join(mocs, "Target.md")).toString(),
+  );
+  assert.notEqual(
+    foldered,
+    pathToFileURL(
+      path.join(areas, "wiki", "resources", "mocs", "Target.md"),
+    ).toString(),
+  );
+
+  const basename = await resolveLink(nodeFiles, {
+    root,
+    source,
+    path: "Beside.md",
+    create: false,
+    folderNote: "",
+  });
+  assert.equal(
+    basename,
+    pathToFileURL(path.join(areas, "Beside.md")).toString(),
+  );
+});
