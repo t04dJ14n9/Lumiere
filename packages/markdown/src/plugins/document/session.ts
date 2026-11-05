@@ -129,11 +129,22 @@ export class Session implements DocumentSession {
       this.broadcast();
       return;
     }
-    if (!this.expected && !this.historyAction) {
-      this.groups.clear();
+    if (this.expected || this.historyAction) {
+      this.authority.record(hostText, this.expected);
+      delete this.expected;
+      this.broadcast();
+      return;
     }
-    this.authority.record(hostText, this.expected);
-    delete this.expected;
+    // Real host rewrite (agent / git / reload).
+    if (!this.document.isDirty) {
+      this.authority.record(hostText);
+      this.lastSaved = hostText;
+      this.broadcast();
+      return; // keep UndoGroups
+    }
+    // Dirty unexpected host rewrite: keep today's clear + record (slim: no merge).
+    this.groups.clear();
+    this.authority.record(hostText);
     this.broadcast();
   }
   private broadcast(): void {

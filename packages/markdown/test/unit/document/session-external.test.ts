@@ -115,3 +115,28 @@ test("saveEcho rewrite-bytes path keeps UndoGroups when text differs from author
   assert.equal((session as any).saveEcho, undefined);
   assert.equal(session.text, "note!");
 });
+
+test("clean external rewrite does not clear UndoGroups", () => {
+  let text = "base";
+  const doc = fakeDocument({
+    getText: () => text,
+    get isDirty() {
+      return false;
+    },
+  });
+  const session = new Session(doc, fakeHost());
+  const groups = (session as any).groups;
+  const clears: string[] = [];
+  const clear = groups.clear.bind(groups);
+  groups.clear = () => {
+    clears.push("clear");
+    clear();
+  };
+  groups.record("base", "base");
+  text = "external";
+  session.changed();
+  assert.deepEqual(clears, []);
+  assert.equal(session.text, "external");
+  assert.equal((session as any).lastSaved, "external");
+  assert.equal(session.authority.since(0).at(-1)?.clientID, "host");
+});
