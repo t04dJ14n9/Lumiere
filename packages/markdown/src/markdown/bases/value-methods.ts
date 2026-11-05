@@ -243,7 +243,8 @@ export function evalDateMethod(
   return NULL_VAL;
 }
 
-function formatWithPattern(ms: number, pattern: string): string {
+/** Formats the UTC fields of `ms` with the tokens YYYY, MM, DD, HH, mm and ss. */
+export function formatWithPattern(ms: number, pattern: string): string {
   const d = new Date(ms);
   const pad = (n: number) => String(n).padStart(2, "0");
   return pattern

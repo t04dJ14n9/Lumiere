@@ -1096,6 +1096,31 @@ On by default; VS Code's text diff stays the default until
    rendered panel follows both changes. Close the panel and repeat: no disposed
    panel updates or retained subscriptions should remain.
 
+### templates and daily notes
+
+Use a disposable vault with `Templates/Meeting.md` containing
+`# {{title}}`, `{{date}} {{time}}` and `{{date:DD.MM.YYYY}}`.
+
+1. With `lumiere.markdown.templates.folder` empty, **Insert Template** says
+   to set it. Set it to `Templates`: the picker lists `Meeting`; choosing it
+   in `Notes/Plan.md` inserts `# Plan` and today's date and time at the
+   caret, replacing a selection if there is one, with the caret after the
+   text. Undo removes it.
+2. **Open Today's Daily Note** with defaults creates `YYYY-MM-DD.md` at the
+   vault root and opens it; running it again opens the same note unchanged.
+   Set `dailyNotes.folder` to `Journal`, `dailyNotes.dateFormat` to
+   `YYYY/MM/YYYY-MM-DD` and `dailyNotes.template` to `Templates/Meeting`:
+   the note is created under `Journal/<year>/<month>/` from the template.
+   A missing template creates an empty note and says so.
+3. Create two older daily notes with a gap: **Open Previous Daily Note** and
+   **Open Next Daily Note** skip the gap, and say so at either end.
+4. In a vault whose `.obsidian/daily-notes.json` sets `folder` and `format`
+   and whose `templates.json` sets `folder`, the commands use those values
+   until the matching Lumia setting is set explicitly. A `format` such as
+   `YYYY-MM-DD dddd` is not carried over. No `.obsidian` file changes.
+5. In host-node (the app or DSH), repeat steps 1 and 2 from its Command
+   Palette.
+
 ### wiki, scratch and Marp
 
 Use a disposable folder, never a personal vault. Add the slim
@@ -1244,6 +1269,10 @@ Use the disposable fixture vault from Setup. These rows enumerate every generate
 | `lumiere.markdown.quickSwitcher` — Quick Switcher | unbound | On a disposable fixture, run Quick Switcher; confirm its named action using the plugin scenarios above, then undo where applicable. Repeat after disable/re-enable and switching panes. |
 | `lumiere.markdown.scratch.new` — New Scratch Note | unbound | On a disposable fixture, run New Scratch Note; confirm its named action using the plugin scenarios above, then undo where applicable. Repeat after disable/re-enable and switching panes. |
 | `lumiere.markdown.scratch.promote` — Promote Scratch Note | unbound | On a disposable fixture, run Promote Scratch Note; confirm its named action using the plugin scenarios above, then undo where applicable. Repeat after disable/re-enable and switching panes. |
+| `lumiere.markdown.templates.insert` — Insert Template | unbound | On a disposable fixture, run Insert Template; confirm its named action using the plugin scenarios above, then undo where applicable. Repeat after disable/re-enable and switching panes. |
+| `lumiere.markdown.dailyNotes.openToday` — Open Today's Daily Note | unbound | On a disposable fixture, run Open Today's Daily Note; confirm its named action using the plugin scenarios above, then undo where applicable. Repeat after disable/re-enable and switching panes. |
+| `lumiere.markdown.dailyNotes.openPrevious` — Open Previous Daily Note | unbound | On a disposable fixture, run Open Previous Daily Note; confirm its named action using the plugin scenarios above, then undo where applicable. Repeat after disable/re-enable and switching panes. |
+| `lumiere.markdown.dailyNotes.openNext` — Open Next Daily Note | unbound | On a disposable fixture, run Open Next Daily Note; confirm its named action using the plugin scenarios above, then undo where applicable. Repeat after disable/re-enable and switching panes. |
 | `lumiere.markdown.openSettings` — Open Settings | unbound | On a disposable fixture, run Open Settings; confirm its named action using the plugin scenarios above, then undo where applicable. Repeat after disable/re-enable and switching panes. |
 | `lumiere.markdown.changeSetting` — Change Setting… | unbound | On a disposable fixture, run Change Setting…; confirm its named action using the plugin scenarios above, then undo where applicable. Repeat after disable/re-enable and switching panes. |
 | `lumiere.markdown.setNoteFontSize` — Set Note Font Size | unbound | On a disposable fixture, run Set Note Font Size; confirm its named action using the plugin scenarios above, then undo where applicable. Repeat after disable/re-enable and switching panes. |
@@ -1388,6 +1417,14 @@ Use the disposable fixture vault from Setup. These rows enumerate every generate
 | `lumiere.markdown.properties.display` | `"visible"` | visible / hidden / source; change at workspace-folder scope, verify the owning plugin scenario, then reset the override. |
 | `lumiere.markdown.properties.listPreviewCount` | `0` | number; change at workspace-folder scope, verify the owning plugin scenario, then reset the override. |
 | `lumiere.markdown.scratch.folder` | `"scratch"` | string; change at workspace-folder scope, verify the owning plugin scenario, then reset the override. |
+| `lumiere.markdown.plugins.templates.enabled` | `true` | boolean; change at workspace-folder scope, verify the owning plugin scenario, then reset the override. |
+| `lumiere.markdown.plugins.dailyNotes.enabled` | `true` | boolean; change at workspace-folder scope, verify the owning plugin scenario, then reset the override. |
+| `lumiere.markdown.templates.folder` | `""` | string; change at workspace-folder scope, verify the owning plugin scenario, then reset the override. |
+| `lumiere.markdown.templates.dateFormat` | `"YYYY-MM-DD"` | string; change at workspace-folder scope, verify the owning plugin scenario, then reset the override. |
+| `lumiere.markdown.templates.timeFormat` | `"HH:mm"` | string; change at workspace-folder scope, verify the owning plugin scenario, then reset the override. |
+| `lumiere.markdown.dailyNotes.folder` | `""` | string; change at workspace-folder scope, verify the owning plugin scenario, then reset the override. |
+| `lumiere.markdown.dailyNotes.dateFormat` | `"YYYY-MM-DD"` | string; change at workspace-folder scope, verify the owning plugin scenario, then reset the override. |
+| `lumiere.markdown.dailyNotes.template` | `""` | string; change at workspace-folder scope, verify the owning plugin scenario, then reset the override. |
 | `lumiere.markdown.stickyScroll.maxLines` | `5` | number; change at workspace-folder scope, verify the owning plugin scenario, then reset the override. |
 | `lumiere.markdown.tags.viewSort` | `"frequency"` | name / frequency; change at workspace-folder scope, verify the owning plugin scenario, then reset the override. |
 | `lumiere.markdown.tags.viewNested` | `true` | boolean; change at workspace-folder scope, verify the owning plugin scenario, then reset the override. |
