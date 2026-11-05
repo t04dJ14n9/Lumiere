@@ -15,17 +15,28 @@ export class Session implements DocumentSession {
   private expected?: Prepared;
   private readonly groups = new UndoGroups();
   private historyAction = false;
+  private lastSaved: string;
+  private saveEcho: string | undefined;
   constructor(
     readonly document: HostDocument,
     private readonly host: HostServices,
   ) {
     this.authority = new Authority(document.getText());
+    this.lastSaved = document.getText();
   }
   private fingerprint(): string {
     return this.host.hostDocuments.fingerprint(this.text);
   }
-  save(): Promise<boolean> {
-    return saveDocument(this.document, this.host);
+  markSaved(text: string): void {
+    this.lastSaved = text;
+    this.saveEcho = text;
+  }
+  async save(): Promise<boolean> {
+    const ok = await saveDocument(this.document, this.host);
+    if (ok) {
+      this.markSaved(this.document.getText());
+    }
+    return ok;
   }
   withAction<T>(action: () => Promise<T>): Promise<T> {
     const result = this.actions.then(action);
@@ -100,15 +111,28 @@ export class Session implements DocumentSession {
     };
   }
   changed(): void {
+    const hostText = this.document.getText();
     // A change event with no new text (a dirty-state change; Cursor can send
     // one before an edit lands) must not consume the expected panel edit.
-    if (textDocument(this.document.getText()).eq(this.authority.doc)) {
+    if (textDocument(hostText).eq(this.authority.doc)) {
+      if (this.saveEcho !== undefined && hostText === this.saveEcho) {
+        delete this.saveEcho;
+      }
+      return;
+    }
+    // Own save can echo as a host rewrite of the same bytes. Record without
+    // wiping undo grouping.
+    if (this.saveEcho !== undefined && hostText === this.saveEcho) {
+      delete this.saveEcho;
+      this.authority.record(hostText, this.expected);
+      delete this.expected;
+      this.broadcast();
       return;
     }
     if (!this.expected && !this.historyAction) {
       this.groups.clear();
     }
-    this.authority.record(this.document.getText(), this.expected);
+    this.authority.record(hostText, this.expected);
     delete this.expected;
     this.broadcast();
   }
