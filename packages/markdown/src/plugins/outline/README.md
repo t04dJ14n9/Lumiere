@@ -85,6 +85,7 @@ Markdown Outline so they do not linger beside non-Workshop editors.
 - `symbols.ts`: nested heading symbols with enclosing section ranges.
 - `tree.ts`: heading nodes, parent lookup and editor-to-source coordinates.
 - `view.ts`: refresh timing, cursor following and expansion traversal.
+- `jump-window.ts`: the second after an outline click, when the tree and scroll follow are left alone.
 - `actions.ts`: commands, configuration reads and the follow context key.
 - `focus.ts`: native Outline ↔ Markdown Outline enter/leave swap (Tags stay collapsed).
 - `commands.ts`: view, command, setting and context identifiers.
