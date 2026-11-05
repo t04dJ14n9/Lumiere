@@ -1,8 +1,11 @@
 import * as vscode from "vscode";
 import type { Context, Plugin } from "@workshop/core";
 import { isTrustedBacklinkNoteUri } from "../../../shared/backlink-note-uri";
-import { PdfBacklinkIndex } from "../../../shared/pdf-backlink-index";
-import { displayPath } from "../pdf/files";
+import {
+  PdfBacklinkIndex,
+  type PdfFile,
+} from "../../../shared/pdf-backlink-index";
+import { workspaceLocation } from "../pdf/files";
 import type { PdfPanel } from "../pdf/panel";
 import type { PdfPanels } from "../pdf/panels";
 import type {} from "../services";
@@ -82,8 +85,33 @@ function wirePanelPush(
   panels: PdfPanels,
   index: PdfBacklinkIndex,
 ): () => void {
+  // The vault-root file is looked up on disk, so a push finishes later. An
+  // older push must not overwrite a newer one (a note saved meanwhile), nor
+  // post to a viewer that has closed or after the plugin has stopped.
+  const generations = new WeakMap<PdfPanel, number>();
+  let stopped = false;
+  ctx.own(
+    {
+      dispose: () => {
+        stopped = true;
+      },
+    },
+    "push lifetime",
+  );
   const pushPanel = (panel: PdfPanel): void => {
-    panel.backlinks.set([...index.lookup(displayPath(panel.uri))]);
+    const generation = (generations.get(panel) ?? 0) + 1;
+    generations.set(panel, generation);
+    void index
+      .hitsFor(workspaceLocation(panel.uri), isWorkspaceFile)
+      .then((hits) => {
+        const isCurrent =
+          generations.get(panel) === generation &&
+          !stopped &&
+          panels.all.includes(panel);
+        if (isCurrent) {
+          panel.backlinks.set(hits);
+        }
+      });
   };
   const pushAll = (): void => {
     for (const panel of panels.all) {
@@ -97,6 +125,31 @@ function wirePanelPush(
   return pushAll;
 }
 
+/** Whether the folder holds a file at `path`; anything else (even an error) is no. */
+async function isWorkspaceFile(file: PdfFile): Promise<boolean> {
+  if (!file.folder) {
+    return false;
+  }
+  try {
+    const stat = await vscode.workspace.fs.stat(
+      vscode.Uri.joinPath(vscode.Uri.parse(file.folder), file.path),
+    );
+    return (stat.type & vscode.FileType.File) !== 0;
+  } catch {
+    return false;
+  }
+}
+
+/** A note's links, under its workspace folder: see `workspaceLocation`. */
+function indexNote(
+  index: PdfBacklinkIndex,
+  uri: vscode.Uri,
+  text: string,
+): void {
+  const { folder, path } = workspaceLocation(uri);
+  index.replaceNote(uri.toString(), path, text, folder);
+}
+
 function wireMarkdownListeners(
   ctx: Context,
   index: PdfBacklinkIndex,
@@ -108,11 +161,7 @@ function wireMarkdownListeners(
       if (isCancelled() || !isMarkdownUri(document.uri)) {
         return;
       }
-      index.replaceNote(
-        document.uri.toString(),
-        displayPath(document.uri),
-        document.getText(),
-      );
+      indexNote(index, document.uri, document.getText());
       pushAll();
     }),
     "save listener",
@@ -127,7 +176,7 @@ function wireMarkdownListeners(
     try {
       const bytes = await vscode.workspace.fs.readFile(uri);
       const text = new TextDecoder("utf8").decode(bytes);
-      index.replaceNote(uri.toString(), displayPath(uri), text);
+      indexNote(index, uri, text);
       pushAll();
     } catch {
       // Unreadable notes are skipped; the index stays a best-effort cache.
@@ -182,7 +231,7 @@ async function idleScan(
         try {
           const bytes = await vscode.workspace.fs.readFile(uri);
           const text = new TextDecoder("utf8").decode(bytes);
-          index.replaceNote(uri.toString(), displayPath(uri), text);
+          indexNote(index, uri, text);
         } catch {
           // skip unreadable
         }

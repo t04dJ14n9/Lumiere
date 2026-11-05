@@ -22,6 +22,9 @@ export function loadModule(
   const module = { exports: {} as Record<string, unknown> };
   const evaluate = runInNewContext(
     `(function(require, module, exports) { ${output}\n})`,
+    // A new context has the language's globals only; these are the ones a
+    // module may take from the host.
+    { console, setImmediate, setTimeout, clearTimeout, TextDecoder, URL },
   ) as (
     require: (id: string) => unknown,
     module: { exports: Record<string, unknown> },
