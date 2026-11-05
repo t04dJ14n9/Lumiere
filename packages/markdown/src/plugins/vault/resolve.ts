@@ -34,6 +34,10 @@ export function resolveCandidates(
   if (direct) {
     return [direct];
   }
+  // Rooted (absolute) links: a miss is final — no suffix or folder-note fuzzy.
+  if (written.startsWith("/")) {
+    return [];
+  }
   const suffix = suffixMatches(files, path, sourcePath);
   if (suffix.length > 0) {
     return suffix;
@@ -97,7 +101,8 @@ function withExtension(files: FileTable, path: string): VaultFile | undefined {
 }
 
 /**
- * Step 6: files whose path ends with the link path, nearest folder first.
+ * Step 6: files whose path ends with the link path. Prefer candidates under
+ * the source note's folder (or a descendant), then nearest folder, then path.
  * Only files sharing the link's basename can match, so the lookup table
  * bounds the search instead of a scan of the vault.
  */
@@ -110,7 +115,7 @@ function suffixMatches(
   const wantedMd = extensionOf(wanted) ? wanted : `${wanted}.md`;
   const wantedMarkdown = extensionOf(wanted) ? wanted : `${wanted}.markdown`;
   const sourceFolder = folderOf(sourcePath);
-  return files
+  const matched = files
     .withKey(linkLookupKey(path))
     .filter((file) => {
       const candidate = file.path.toLowerCase();
@@ -123,11 +128,31 @@ function suffixMatches(
     .map((file) => ({
       file,
       distance: folderDistance(sourceFolder, folderOf(file.path)),
-    }))
-    .sort(
-      (a, b) => a.distance - b.distance || compare(a.file.path, b.file.path),
-    )
-    .map(({ file }) => file);
+      underSource: isUnderSourceFolder(folderOf(file.path), sourceFolder),
+    }));
+  const byDistanceThenPath = (
+    a: (typeof matched)[number],
+    b: (typeof matched)[number],
+  ) => a.distance - b.distance || compare(a.file.path, b.file.path);
+  return [
+    ...matched.filter((m) => m.underSource).sort(byDistanceThenPath),
+    ...matched.filter((m) => !m.underSource).sort(byDistanceThenPath),
+  ].map(({ file }) => file);
+}
+
+/** Source folder itself, or a descendant; empty sourceFolder is the vault root. */
+function isUnderSourceFolder(
+  candidateFolder: string,
+  sourceFolder: string,
+): boolean {
+  if (sourceFolder === "") {
+    // Every vault path is under the root; treat all as under-source.
+    return true;
+  }
+  return (
+    candidateFolder === sourceFolder ||
+    candidateFolder.startsWith(`${sourceFolder}/`)
+  );
 }
 
 function endsWithSegments(path: string, suffix: string): boolean {

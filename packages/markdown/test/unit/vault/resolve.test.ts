@@ -125,6 +125,19 @@ const cases: [string, string, string, string | undefined][] = [
   ],
   ["unknown note does not resolve", "Missing", "Home.md", undefined],
   [
+    // Rooted miss must not fall through to suffix / folder-note fuzzy resolve.
+    "rooted miss does not fuzzy-match a basename",
+    "/Shared",
+    "Home.md",
+    undefined,
+  ],
+  [
+    "rooted miss of an unknown path resolves to nothing",
+    "/does-not-exist",
+    "notes/Local.md",
+    undefined,
+  ],
+  [
     "folder link without a folder note does not resolve",
     "Folder",
     "Home.md",
@@ -210,4 +223,40 @@ test("a relative link resolves as Obsidian resolves it", () => {
   assert.equal(resolve("../Same", "dup/A/src.md"), undefined);
   assert.equal(resolve("../Same", "dup/A/Sub/src2.md"), "dup/A/Same.md");
   assert.equal(resolve("./Same", "dup/A/Sub/src2.md"), undefined);
+});
+
+test("resolveLink: rooted miss does not open a folder note", () => {
+  const index = vault(files, "_index.md");
+  assert.equal(index.resolveLink("/Folder", "Home.md"), undefined);
+});
+
+// Source-folder (and descendant) suffix hits rank ahead of nearer outsiders.
+test("suffixMatches: source-folder descendant ranks before other folders", () => {
+  const paths = ["a/b/note.md", "a/b/c/x.md", "z/x.md"];
+  assert.equal(
+    vault(paths).resolveLink("x", "a/b/note.md")?.path,
+    "a/b/c/x.md",
+  );
+  assert.deepEqual(
+    vault(paths)
+      .resolveLinkCandidates("x", "a/b/note.md")
+      .map((file) => file.path),
+    ["a/b/c/x.md", "z/x.md"],
+  );
+});
+
+test("suffixMatches: source-folder hit beats a closer non-descendant", () => {
+  // Distance-only: a/x.md is closer to a/b than a/b/c/d/x.md (1 vs 2).
+  // Source-folder preference must still pick the under-a/b candidate first.
+  const paths = ["a/b/note.md", "a/b/c/d/x.md", "a/x.md"];
+  assert.equal(
+    vault(paths).resolveLink("x", "a/b/note.md")?.path,
+    "a/b/c/d/x.md",
+  );
+  assert.deepEqual(
+    vault(paths)
+      .resolveLinkCandidates("x", "a/b/note.md")
+      .map((file) => file.path),
+    ["a/b/c/d/x.md", "a/x.md"],
+  );
 });
