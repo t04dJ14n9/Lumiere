@@ -11,6 +11,7 @@ import React, {
   useSyncExternalStore,
 } from "react";
 import type { PdfBacklinkHit } from "../shared/pdf-backlink-index";
+import { alignGlyphText } from "../shared/page-glyph-text";
 import { resolveTextToLineRects } from "../shared/pdf-backlink-resolve";
 import type { SegmentRect } from "../shared/sidecar-format";
 import { type GlyphBox } from "../shared/sidecar-reattach";
@@ -132,11 +133,14 @@ async function resolvePage(
   }
   const overlays: ResolvedOverlay[] = [];
   for (const hit of hits) {
-    const textStart = hit.textFragment?.textStart;
-    if (!textStart) {
+    if (!hit.textFragment) {
       continue;
     }
-    const rects = resolveTextToLineRects(text.text, text.boxes, textStart);
+    const rects = resolveTextToLineRects(
+      text.text,
+      text.boxes,
+      hit.textFragment,
+    );
     if (!rects) {
       continue;
     }
@@ -149,6 +153,7 @@ async function resolvePage(
   return overlays;
 }
 
+/** A page's text and the box of each of its UTF-16 units (none for spaces). */
 async function readPage(
   engine: PdfEngine,
   pdf: PdfDocumentObject,
@@ -156,12 +161,28 @@ async function readPage(
 ): Promise<{ text: string; boxes: (GlyphBox | undefined)[] } | undefined> {
   try {
     const glyphs = await engine.getPageGlyphs(pdf, page).toPromise();
-    const [text] = await engine
+    const boxes = Array.from(glyphs, glyphBox);
+    const [text = ""] = await engine
       .getTextSlices(pdf, [
         { pageIndex: page.index, charIndex: 0, charCount: glyphs.length },
       ])
       .toPromise();
-    return { text: text ?? "", boxes: Array.from(glyphs, glyphBox) };
+    if (text.length === glyphs.length) {
+      return { text, boxes };
+    }
+    // EmbedPDF drops markers from the text (a hyphen at a line end), so its
+    // characters no longer line up with the glyphs: read them one by one.
+    const perGlyph = await engine
+      .getTextSlices(
+        pdf,
+        Array.from({ length: glyphs.length }, (_, charIndex) => ({
+          pageIndex: page.index,
+          charIndex,
+          charCount: 1,
+        })),
+      )
+      .toPromise();
+    return alignGlyphText(perGlyph, boxes);
   } catch {
     return undefined;
   }
