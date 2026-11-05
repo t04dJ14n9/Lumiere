@@ -2,6 +2,11 @@
 
 ## 0.1.0 (unreleased)
 
+- Page preview on hover needs Mod (Cmd or Ctrl) for links rendered in
+  tables, callouts and embeds too, as it already did for Live Preview
+  wikilinks and as Obsidian's editor does. A plain hover over those links
+  popped a preview.
+
 - The graph's **Orphans** toggle means what Obsidian's does: on (the
   default) shows notes with no links, off hides them. It used to mean
   "only orphans". A panel saved with that old filter opens with the

@@ -11,6 +11,18 @@ export interface PreviewContext {
 export function canPreview(href: string): boolean {
   return Boolean(href) && !/^(?:[a-z][a-z\d+.-]*:|\/\/)/i.test(href);
 }
+
+/**
+ * Hovering previews a link only with Mod (Cmd or Ctrl) held, as Obsidian's
+ * editor hover source does by default (`defaultMod`). The same holds for
+ * links rendered inside tables, callouts and embeds: they are in the editor
+ * too, so a plain hover over a table full of links does not pop previews.
+ */
+export function isPreviewHover(
+  event: Pick<MouseEvent, "metaKey" | "ctrlKey">,
+): boolean {
+  return event.metaKey || event.ctrlKey;
+}
 export function linkPreviews(
   root: HTMLElement,
   context: () => PreviewContext,
@@ -183,15 +195,7 @@ class LinkPreviews {
           clearTimeout(this.timer);
           this.hovered = target;
         }
-        if (
-          target &&
-          (event.metaKey ||
-            event.ctrlKey ||
-            (target.tagName === "A" &&
-              (target.dataset.wiki === "true" ||
-                target.classList.contains("internal-link")))) &&
-          this.shown !== target
-        ) {
+        if (target && isPreviewHover(event) && this.shown !== target) {
           this.scheduleShow(target);
         }
       },
