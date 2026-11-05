@@ -100,13 +100,14 @@ function navigator(ctx: Context): Navigate {
           anchor: target.from,
           head: target.selectTo ?? target.from,
         },
-        // Centre the target as VS Code's Outline and Obsidian's do. The browser
+        // Put the target at the top of the editor viewport (product choice:
+        // Outline / Go to Heading / in-note fragment jumps). The browser still
         // clamps the scroll at both ends, so a heading near the start or end
-        // of the note lands as close to the centre as the note allows.
+        // of the note lands as close to the top as the note allows.
         effects: [
           ...unfoldTargetEffects(view.state, target.from, target.to),
           setFlashing.of({ from: target.from, to: target.to }),
-          EditorView.scrollIntoView(target.from, { y: "center" }),
+          EditorView.scrollIntoView(target.from, { y: "start" }),
         ],
       });
     });

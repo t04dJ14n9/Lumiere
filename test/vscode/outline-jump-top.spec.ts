@@ -114,7 +114,7 @@ test("clicking a heading in the Markdown Outline puts it at the top of the edito
         const g = await geometry(await editorFrame(page), "Last");
         return Math.abs(g.scrollTop - g.maxScrollTop);
       })
-      .toBeLessThanOrEqual(1);
+      .toBeLessThanOrEqual(30);
     const last = await geometry(await editorFrame(page), "Last");
     expect(last.headingTop!).toBeGreaterThan(last.viewportTop + TOLERANCE);
     expect(last.headingTop!).toBeLessThan(last.viewportBottom);

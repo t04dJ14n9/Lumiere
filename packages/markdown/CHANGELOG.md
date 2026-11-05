@@ -2,6 +2,11 @@
 
 ## 0.1.0 (unreleased)
 
+- Markdown Outline (and Go to Heading / in-note fragment jumps that share
+  links `navigate`) put the jumped heading at the **top** of the editor
+  viewport, not the vertical centre. The browser still clamps at both ends of
+  the note.
+
 - Markdown Outline no longer flashes shut and open while scrolling into a
   section that only needs more rows open: a follow that is superseded mid-way
   (common with reading-position reports) keeps the accordion's open-branch

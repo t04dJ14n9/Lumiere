@@ -32,16 +32,17 @@ other rows one by one whenever the path changes. `all` starts every parent
 expanded and follow only selects. Version and panel identity guards discard stale captures. Collapse All uses VS Code's native tree action;
 Expand All reveals every node in order so deeply nested headings also expand.
 Clicking a heading opens the note at its offset; the links plugin's `navigate` then
-scrolls that offset to the vertical centre of the editor, as VS Code's Outline
-(`revealRange` with `InCenter`) and Obsidian's do. Near the start or end of a
-note the scroll range ends first, so the heading stays above or below the
-centre. The jump a click makes does not collapse or expand anything (nor
-does the caret the editor reports from before it): rows that moved under
-the pointer sent a double-click's second click to another heading. Scroll
-follow (`followReading`) is held for that same jump window (`OUTLINE_JUMP_MS`)
-so a top-of-viewport report cannot yank selection off the clicked row while
-the heading is still centred; caret follow keeps using `isOutlineJump`. The
-accordion applies again once the caret or the reading position moves on.
+scrolls that offset to the **top** of the editor viewport (intentional product
+choice — not VS Code Outline `InCenter` / Obsidian centre). Near the start or
+end of a note the scroll range ends first, so the heading stays as close to
+the top as the note allows. The jump a click makes does not collapse or expand
+anything (nor does the caret the editor reports from before it): rows that
+moved under the pointer sent a double-click's second click to another heading.
+Scroll follow (`followReading`) is held for that same jump window
+(`OUTLINE_JUMP_MS`) so a top-of-viewport report cannot yank selection off the
+clicked row while the heading is still settling at the top; caret follow keeps
+using `isOutlineJump`. The accordion applies again once the caret or the
+reading position moves on.
 
 Ctrl+Shift+O (Command+Shift+O on macOS), or **Lumia: Go to
 Heading…** in the command palette, opens a searchable heading picker. It reads
