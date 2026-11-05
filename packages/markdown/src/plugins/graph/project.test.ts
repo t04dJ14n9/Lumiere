@@ -125,6 +125,22 @@ test("orphans are decided before filters, and an excluded focus is not retargete
   assert.equal(local.graph.nodes.length, 0);
 });
 
+test("orphans show by default and the toggle hides them, as Obsidian's showOrphans", () => {
+  const graph = buildConceptGraph({
+    bundleRoot: "bundle",
+    notes: notes(),
+    resolve: (linktext) => resolve(linktext),
+  });
+  const ids = (showOrphans: boolean) =>
+    filterGraph(graph, { ...emptyFilters(), showOrphans }).graph.nodes.map(
+      (node) => node.id,
+    );
+  assert.equal(emptyFilters().showOrphans, true);
+  assert.ok(ids(true).includes("bundle/notes/alone.md"));
+  assert.ok(!ids(false).includes("bundle/notes/alone.md"));
+  assert.ok(ids(false).includes("bundle/metrics/topic.md"));
+});
+
 test("folder prefixes match path segments, and conformant-only reports the omission", () => {
   assert.equal(folderMatches("bundle/notes", "bundle"), true);
   assert.equal(folderMatches("bundle-old/notes", "bundle"), false);

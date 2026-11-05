@@ -5,7 +5,12 @@ export interface GraphFilters {
   tags: readonly string[];
   folders: readonly string[];
   text: string;
-  orphans: boolean;
+  /**
+   * Obsidian's `showOrphans`: on by default; off hides notes with no links.
+   * Panels saved before it replaced `orphans` (which meant "only orphans")
+   * fall back to the default.
+   */
+  showOrphans: boolean;
   conformantOnly: boolean;
 }
 
@@ -14,7 +19,7 @@ export const emptyFilters = (): GraphFilters => ({
   tags: [],
   folders: [],
   text: "",
-  orphans: false,
+  showOrphans: true,
   conformantOnly: false,
 });
 
@@ -80,7 +85,7 @@ export function localGraph(
 }
 
 function matches(node: ConceptNode, filters: GraphFilters): boolean {
-  if (filters.orphans && !node.orphan) {
+  if (!filters.showOrphans && node.orphan) {
     return false;
   }
   if (filters.conformantOnly && node.classification !== "conformant") {

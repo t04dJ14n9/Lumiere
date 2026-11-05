@@ -11,7 +11,9 @@ whole vault when no OKF bundles exist. The host builds a concept graph from
 Markdown files in that scope, drops reserved `index.md` and `log.md`, and
 aggregates body links, note embeds and frontmatter wikilinks. A worker lays
 the drawing out. The panel reads the worker script from the extension and
-starts it from a blob URL, which a webview is allowed to do. Filtering and
+starts it from a blob URL, which a webview is allowed to do. Filters narrow
+the drawing by type, tag, folder and text; **Orphans** (on by default, as
+Obsidian's `showOrphans`) hides notes with no links when off. Filtering and
 later edits keep coordinates; a large change waits for **Re-layout**.
 Clicking a node asks the host to open that note. The host checks the scope, the
 snapshot generation and that the id is still in the drawing.

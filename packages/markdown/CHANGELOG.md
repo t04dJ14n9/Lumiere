@@ -2,6 +2,11 @@
 
 ## 0.1.0 (unreleased)
 
+- The graph's **Orphans** toggle means what Obsidian's does: on (the
+  default) shows notes with no links, off hides them. It used to mean
+  "only orphans". A panel saved with that old filter opens with the
+  default.
+
 - CSS snippets load only when `.obsidian/appearance.json` lists them in
   `enabledCssSnippets`, as in Obsidian. A vault with no `appearance.json`
   (or no list in it) loaded every `.css` file in `.obsidian/snippets/`.

@@ -205,7 +205,7 @@ function copyFilters(filters: ViewParams["filters"]): GraphFilters {
     tags: filters.tags,
     folders: filters.folders,
     text: filters.text,
-    orphans: filters.orphans,
+    showOrphans: filters.showOrphans,
     conformantOnly: filters.conformantOnly,
   };
 }
