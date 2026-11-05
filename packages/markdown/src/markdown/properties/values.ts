@@ -166,6 +166,16 @@ export function settablePropertyValue(
   return ok;
 }
 
+function matchesDateKind(kind: "date" | "datetime", value: unknown): boolean {
+  if (typeof value === "string") {
+    return propertyInput(kind, value) !== undefined;
+  }
+  if (value instanceof Date) {
+    return propertyInput(kind, propertyDateText(value)) !== undefined;
+  }
+  return false;
+}
+
 export function matchesPropertyKind(
   kind: PropertyKind,
   value: unknown,
@@ -186,12 +196,7 @@ export function matchesPropertyKind(
       return typeof value === "boolean";
     case "date":
     case "datetime":
-      return (
-        (typeof value === "string" &&
-          propertyInput(kind, value) !== undefined) ||
-        (value instanceof Date &&
-          propertyInput(kind, propertyDateText(value)) !== undefined)
-      );
+      return matchesDateKind(kind, value);
   }
 }
 
