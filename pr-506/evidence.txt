@@ -1,0 +1,23 @@
+Lumia Host GUI — PR #506 foldered wikilink create path
+Asia/Singapore (UTC+8): capture 2026-11-05 ~18:13–18:17
+
+OVERALL: PASS
+
+Harness: /workspace/host-gui-506-977079bb/
+VSIX built from: 977079bb (createNote vault-relative guard)
+PR code head at verify time: 0bc10771 (Nit fix; same createNote logic)
+DISPLAY: :82 (Xvfb 1920x1200), real Cursor Host GUI
+Settings: files.newNoteFolder = "." (VS Code + Obsidian newFileLocation=current)
+Source: wiki/resources/notes/source.md
+
+Results:
+- Click [[wiki/projects/Target]] → created wiki/projects/Target.md (vault root)
+  NOT wiki/resources/notes/wiki/projects/Target.md
+- Click [[BrandNewBeside]] → created wiki/resources/notes/BrandNewBeside.md (beside source)
+
+Shots:
+- 01-before-unresolved-links.png
+- 02-after-foldered-create-at-vault-root.png
+- 03-after-basename-beside-source.png
+
+Do NOT merge without user.
