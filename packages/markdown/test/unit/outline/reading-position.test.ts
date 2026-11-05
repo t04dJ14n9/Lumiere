@@ -13,12 +13,16 @@ type LineBlock = { from: number; top: number; bottom: number };
 /**
  * Stub EditorView for readingOffset: document-relative line blocks and a
  * viewport rect. Heights are document Y (same space as lineBlockAtHeight).
+ * `inset` is the embedder's `--lumiere-inset-top`; `sticky` the sticky
+ * overlay, whose `bottom` is document Y too.
  */
 function viewStub(options: {
   documentTop?: number;
   viewportTop: number;
   viewportBottom: number;
   lines: LineBlock[];
+  inset?: number;
+  sticky?: { bottom: number; hidden?: boolean };
 }): EditorView {
   const documentTop = options.documentTop ?? 0;
   const lines = [...options.lines].sort((a, b) => a.top - b.top);
@@ -30,13 +34,33 @@ function viewStub(options: {
     }
     return lines.at(-1) ?? { from: 0, top: 0, bottom: 0 };
   };
+  const sticky = options.sticky && {
+    hidden: options.sticky.hidden ?? false,
+    getBoundingClientRect: () => ({
+      bottom: (options.sticky?.bottom ?? 0) + documentTop,
+    }),
+  };
   return {
     documentTop,
     scrollDOM: {
+      clientTop: 0,
       getBoundingClientRect: () => ({
         top: options.viewportTop + documentTop,
         bottom: options.viewportBottom + documentTop,
       }),
+    },
+    dom: {
+      ownerDocument: {
+        documentElement: {},
+        defaultView: {
+          getComputedStyle: () => ({
+            getPropertyValue: () =>
+              options.inset === undefined ? "" : `${options.inset}px`,
+          }),
+        },
+      },
+      querySelector: (selector: string) =>
+        selector === ".mw-sticky-scroll" ? (sticky ?? null) : null,
     },
     lineBlockAtHeight: (height: number) => lineAtHeight(height),
   } as unknown as EditorView;
@@ -108,6 +132,74 @@ test("readingOffset tracks the line at the scrolled top, not a caret above the v
     ],
   });
   assert.equal(readingOffset(view), 100);
+});
+
+test("readingOffset reads below the sticky headings, not under them", () => {
+  // A jump put "## Nested" (from 200) right below two pinned parents. The
+  // lines under the pins belong to the section before it.
+  const lines = [
+    { from: 100, top: 200, bottom: 220 },
+    { from: 150, top: 220, bottom: 240 },
+    { from: 200, top: 240, bottom: 260 },
+    { from: 250, top: 260, bottom: 280 },
+  ];
+  const pinned = viewStub({
+    viewportTop: 200,
+    viewportBottom: 400,
+    lines,
+    sticky: { bottom: 240 },
+  });
+  assert.equal(readingOffset(pinned), 200);
+
+  const unpinned = viewStub({ viewportTop: 200, viewportBottom: 400, lines });
+  assert.equal(readingOffset(unpinned), 100, "no pins: the top line");
+
+  const hidden = viewStub({
+    viewportTop: 200,
+    viewportBottom: 400,
+    lines,
+    sticky: { bottom: 240, hidden: true },
+  });
+  assert.equal(readingOffset(hidden), 100, "a hidden overlay covers nothing");
+});
+
+test("readingOffset reads below the embedder's controls", () => {
+  const lines = [
+    { from: 0, top: 0, bottom: 20 },
+    { from: 10, top: 20, bottom: 40 },
+    { from: 20, top: 40, bottom: 60 },
+    { from: 30, top: 60, bottom: 80 },
+  ];
+  const covered = viewStub({
+    viewportTop: 0,
+    viewportBottom: 200,
+    lines,
+    inset: 48,
+  });
+  assert.equal(readingOffset(covered), 20, "48px of controls hide two lines");
+
+  const none = viewStub({ viewportTop: 0, viewportBottom: 200, lines });
+  assert.equal(readingOffset(none), 0);
+});
+
+test("readingOffset reads below whichever of the controls and the pins reaches lower", () => {
+  const lines = [
+    { from: 0, top: 0, bottom: 20 },
+    { from: 10, top: 20, bottom: 40 },
+    { from: 20, top: 40, bottom: 60 },
+    { from: 30, top: 60, bottom: 80 },
+  ];
+  const view = (inset: number, bottom: number) =>
+    viewStub({
+      documentTop: 30,
+      viewportTop: 0,
+      viewportBottom: 200,
+      lines,
+      inset,
+      sticky: { bottom },
+    });
+  assert.equal(readingOffset(view(48, 30)), 20, "controls reach lower");
+  assert.equal(readingOffset(view(10, 70)), 30, "pins reach lower");
 });
 
 /** A reporter whose reader is at `position.offset`, with timers under test control. */

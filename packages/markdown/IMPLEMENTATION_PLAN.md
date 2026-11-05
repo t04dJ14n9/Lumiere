@@ -6647,3 +6647,16 @@ scroll position only in Reading view; Lumia keeps following the scroll too
   change (within `CARET_SCROLL_MS`) from the reader's own and reports only the
   latter. The caret's scroll is remembered but not reported, so a later layout
   shift to the same top line is not news either.
+- Go to Heading, `[[#Heading]]` links and sticky pins also put a heading at
+  the top (`scrollTargetToTop`), but only outline clicks held back scroll
+  follow. Near the end of the note the `y: "start"` scroll is clamped, so the
+  top line belongs to an earlier heading and the outline selected that; and a
+  nested heading placed just below the sticky pins was under them for the
+  probe at the viewport's top edge, so the section before it was selected.
+  `readingOffset` now probes below the sticky overlay and the
+  `--lumiere-inset-top` inset (found through the DOM and the CSS variable;
+  nothing of sticky scroll's is imported), and the reporter observes the
+  editor's `onNavigate`, so the scroll of any deliberate jump is the jump's,
+  not the reader's. No host-side hold was added for these sources: they never
+  reach the host as scroll reports, and the host's hold also keeps the tree
+  still under a double-click, which only an outline click needs.

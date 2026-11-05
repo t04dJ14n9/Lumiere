@@ -1,5 +1,7 @@
 import type { Extension } from "@codemirror/state";
 import { ViewPlugin, type EditorView } from "@codemirror/view";
+import type { Disposer } from "@workshop/core";
+import { chromeInsetTop } from "../../webview/ui/chrome-inset";
 
 /** A scroll is reported once it has paused this long. */
 export const READING_REPORT_MS = 100;
@@ -14,16 +16,42 @@ export const READING_REPORT_MS = 100;
 export const CARET_SCROLL_MS = 250;
 
 /**
- * Where the reader is for scroll follow: the start of the line at the top
- * of the editor viewport. Caret follow stays on `followCaret` /
- * `editor/selectionChanged`; this offset is only for scroll reporting.
- * A 1px inset avoids picking the previous line when the boundary sits
- * exactly on a line edge.
+ * Where the reader is for scroll follow: the start of the first line they
+ * can see at the top of the editor viewport, below the embedder's controls
+ * and the sticky headings that overlay the note. Caret follow stays on
+ * `followCaret` / `editor/selectionChanged`; this offset is only for scroll
+ * reporting. A 1px inset avoids picking the previous line when the boundary
+ * sits exactly on a line edge.
  */
 export function readingOffset(view: EditorView): number {
-  const box = view.scrollDOM.getBoundingClientRect();
-  const top = box.top - view.documentTop;
-  return view.lineBlockAtHeight(top + 1).from;
+  return view.lineBlockAtHeight(visibleTop(view) - view.documentTop + 1).from;
+}
+
+/**
+ * Viewport Y of the first line the reader can see. Sticky scroll probes below
+ * its own overlay for the same reason: the viewport's top edge is under the
+ * pins and the controls, so a heading a jump put right below them would read
+ * as the section before it.
+ */
+function visibleTop(view: EditorView): number {
+  const scroller = view.scrollDOM;
+  const controls =
+    scroller.getBoundingClientRect().top +
+    scroller.clientTop +
+    chromeInsetTop(view.dom.ownerDocument);
+  return Math.max(controls, stickyBottom(view));
+}
+
+/**
+ * Where the sticky headings end. Found by the overlay's class, as the links
+ * plugin does for its jumps, so this plugin imports nothing of sticky scroll's.
+ */
+function stickyBottom(view: EditorView): number {
+  const sticky = view.dom.querySelector<HTMLElement>(".mw-sticky-scroll");
+  if (!sticky || sticky.hidden) {
+    return Number.NEGATIVE_INFINITY;
+  }
+  return sticky.getBoundingClientRect().bottom;
 }
 
 interface ReadingReporterOptions {
@@ -50,10 +78,10 @@ export class ReadingReporter {
   constructor(private readonly options: ReadingReporterOptions) {}
 
   /**
-   * The selection was set. The outline followed the caret, so the next
-   * scroll reports again even to the position last reported, and a scroll
-   * of the reader's that is still waiting to be reported is older than the
-   * caret now.
+   * The selection was set, or a deliberate jump placed it. The outline
+   * followed the caret, so the next scroll reports again even to the position
+   * last reported, and a scroll of the reader's that is still waiting to be
+   * reported is older than the caret now.
    */
   caretMoved(): void {
     this.last = undefined;
@@ -96,9 +124,15 @@ export class ReadingReporter {
   }
 }
 
-/** Reports the reading position after each scroll, once it changes. */
+/**
+ * Reports the reading position after each scroll, once it changes.
+ * `observeJumps` says when a deliberate jump (Go to Heading, a heading link,
+ * a sticky pin, an outline click) was made, whatever it dispatched: the
+ * scroll of a jump is the caret's, not the reader's.
+ */
 export function readingPositionReporter(
   report: (view: EditorView, offset: number) => void,
+  observeJumps: (jumped: () => void) => Disposer,
 ): Extension {
   return ViewPlugin.define((view) => {
     const reporter = new ReadingReporter({
@@ -107,6 +141,7 @@ export function readingPositionReporter(
     });
     const onScroll = () => reporter.scrolled();
     view.scrollDOM.addEventListener("scroll", onScroll, { passive: true });
+    const stopJumps = observeJumps(() => reporter.caretMoved());
     return {
       update(update) {
         if (update.docChanged) {
@@ -117,6 +152,7 @@ export function readingPositionReporter(
         }
       },
       destroy() {
+        void stopJumps();
         reporter.dispose();
         view.scrollDOM.removeEventListener("scroll", onScroll);
       },

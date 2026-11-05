@@ -13,12 +13,17 @@ overflow action persists `outline.followCursor` through VS Code settings.
 When enabled, cursor movement, scrolling, panel changes and view visibility
 reveal and select the current section without taking focus. A scroll follows
 where the reader is (`reading-position.ts`, the plugin's webview half): the
-line at the top of the editor viewport (so the outline tracks what you are
-reading at the top of the pane). Caret moves still follow via `followCaret`,
-and the caret wins: a scroll the caret caused (an arrow past the bottom, Page
-Down, Ctrl+End, find next, a jump to a heading) is not reported, so the
-caret's section stays selected, as in Obsidian, whose outline follows the
-caret and not the scroll. The default
+first line visible at the top of the editor viewport, below the sticky
+headings and the embedder's controls (`--lumiere-inset-top`), so a heading a
+jump put right under the pins is the one read. Caret moves still follow via
+`followCaret`, and the caret wins: a scroll the caret caused (an arrow past
+the bottom, Page Down, Ctrl+End, find next) is not reported, so the caret's
+section stays selected, as in Obsidian, whose outline follows the caret and
+not the scroll. Every deliberate jump (Go to Heading, a `[[#Heading]]` link, a
+sticky pin, an outline click) goes through the editor's `navigate`, which the
+reporter observes: what it scrolls is the jump's, however it was clamped at
+the end of the note, and the caret follow has the heading the jump selected.
+The default
 expand mode is accordion, like a page's table of contents: the active
 heading's parents and its own subheadings are open and every other branch
 is closed, without rebuilding the tree. VS Code can close a single row only

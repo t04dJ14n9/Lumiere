@@ -2,6 +2,13 @@
 
 ## 0.1.0 (unreleased)
 
+- Markdown Outline keeps the heading you jumped to selected after Go to
+  Heading, a `[[#Heading]]` link or a sticky-heading click, as it does for an
+  outline click. Near the end of the note, where the jump cannot put the
+  heading at the top, the section above no longer takes over. Scroll follow
+  also reads below the sticky headings and the embedder's top controls, so a
+  nested heading just under its pinned parents is the one selected.
+
 - Markdown Outline keeps the caret's section selected when the caret scrolls
   the note: arrowing past the bottom, Page Down, Ctrl+End and find next no
   longer have the section at the top of the viewport take over about 100 ms
