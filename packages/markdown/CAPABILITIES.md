@@ -26,8 +26,8 @@ records it in `docs/PARITY.md`.
 | --- | --- | --- |
 | properties | The properties sheet: every type, chips, type menu, sort, drag, structured copy and paste | Type choices are stored per vault by this extension |
 | inlineTitle | Off by default. The file name above the note; edit it to rename | Off so line 1 starts at the top, as in VS Code (Obsidian shows it by default). Only saved local files can be renamed |
-| links | Click to follow, Mod-click in source, open to side, create missing notes, unresolved links dimmed | Source-mode wiki/MD/embed source dimmed; MD links in LP and links inside embeds not yet |
-| embeds | Notes, sections, blocks, images (with an inspector), audio, video, PDF cards | PDFs open in their own editor rather than inline; remote media needs a trusted workspace |
+| links | Click to follow, Mod-click in source, open to side, create missing notes, unresolved links dimmed | Wikilinks and Markdown links dimmed when unresolved, in Live Preview, source mode and inside embeds |
+| embeds | Notes, sections, blocks, images (with an inspector), audio, video, PDFs | A PDF embed draws one page inline (`#page=`, `#height=`) with page buttons and an Open button for Lumia PDF, not Obsidian's full PDF viewer; remote media needs a trusted workspace |
 | onlineVideos | YouTube (watch, youtu.be, Shorts) and Bilibili (BV, av, `?p=`) links written as images show as cards with a button that opens the browser; in trusted workspaces the title, author, length and cover (Bilibili via its public API, YouTube via oEmbed, looked up by the extension host) | Not in Obsidian. No player by default: YouTube refuses to play in VS Code webviews (error 153) and Bilibili's player does not buffer there (`onlineVideos.bilibiliPlayer` brings back **Play here**); nothing is fetched in an untrusted workspace |
 | pagePreview | Mod-hover preview of notes, headings, blocks and attachments | External links are not previewed |
 | tables | Spreadsheet-style table editing, selection, TSV clipboard, row and column commands and dragging | — |
@@ -43,9 +43,9 @@ records it in `docs/PARITY.md`.
 | outline | Explorer **Markdown Outline** and **Go to Heading…** (Ctrl+Shift+O) | No drag to reorder sections; VS Code's native Outline and breadcrumbs apply to the plain text editor |
 | backlinks | Explorer **Backlinks** with unlinked mentions and a status bar count | Off by default (owner decision) |
 | outgoingLinks | Explorer **Outgoing Links** | Off by default; no unlinked mentions section |
-| quickSwitcher | **Quick Switcher** over notes, aliases and unresolved links | No key binding (Mod+O is VS Code's Open File); empty query lists recently modified notes |
+| quickSwitcher | **Quick Switcher** over notes, aliases and unresolved links | No key binding (Mod+O is VS Code's Open File); an empty query lists recently opened notes, then recently modified ones never opened here |
 | wordCount | Words and characters in the status bar | Counting rules are this extension's reading of Obsidian's |
-| linkUpdates | Updates links when notes or folders are renamed in VS Code | Asks first by default (`prompt`); heading renames do not update links |
+| linkUpdates | Updates links when notes or folders are renamed in VS Code | Asks first by default (`prompt`, with Always Update); **Rename Heading…** updates links to a heading |
 | folding | Heading and list folding, restored on reload | — |
 | lineNumbers | Line numbers laid out like VS Code's gutter, following `editor.lineNumbers`; rendered blocks list all their source lines' numbers | On by default |
 | gitGutter | Git change bars (added, modified, deleted) beside the line numbers against HEAD or the index, through VS Code's git extension; click a bar for a rendered peek with Revert and Stage File; Alt+F5 / Shift+Alt+F5 move between changes | On by default |
@@ -68,6 +68,7 @@ records it in `docs/PARITY.md`.
 | scratch | **New Scratch Note** writes a temporary note outside the bundle. **Promote Scratch Note** files it as a Concept, Source Summary, Entity or Raw Source | No automatic ingest. Marp decks are not promoted. Collection indexes are not rewritten |
 | marp | Detects `marp: true` and bridges to VS Code preview and Marp export. **Move Marp Deck Outside Bundle** keeps the deck's frontmatter | Slide widgets and Marp themes are not drawn here. A deck inside the bundle is not given a page contract |
 | markers | Badges and actions that other extensions place on source ranges | Plain text only; at most 1,000 per plugin per editor |
+| graph | **Open Vault Graph**: notes of the whole vault or one OKF bundle as a directed graph in a panel, global or local, filtered by type, tag, folder, text and orphans | Hard caps (2000 notes, 20000 links); a larger graph is refused, not sampled; no 3D view |
 | settings | Open Settings, Change Setting… (any contributed setting, edited by type), and commands to set the note font size and toggle line numbers, readable line width, Mermaid, inline title and Vim | Same keys as the Settings UI, no state of its own; Obsidian has no such commands |
 
 ## Workshop
@@ -88,8 +89,7 @@ Webview-side plugins from other extensions are not in v1.
 
 ## Not implemented
 
-- Reading view, canvas, graph view, daily notes, templates, bookmarks,
-  publish and sync.
-- Obsidian community plugins and themes (CSS snippets that use `data-task`
-  or similar attributes may work, but are not supported).
-- Heading-rename link updates; performance measurement against DESIGN §20.
+- Reading view, canvas, daily notes, templates, bookmarks, publish and sync.
+- Obsidian community plugins and themes. CSS snippets are supported: those
+  `.obsidian/appearance.json` enables load from `.obsidian/snippets/`.
+- Performance measurement against DESIGN §20.
