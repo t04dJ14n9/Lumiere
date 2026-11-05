@@ -2,7 +2,11 @@ import { provideHostServices } from "../../../src/shared/host";
 import test from "node:test";
 import assert from "node:assert/strict";
 import { createRoot } from "@workshop/core";
-import { linkUpdatesHost } from "../../../src/plugins/linkUpdates/host";
+import {
+  linkUpdatesHost,
+  settledWithin,
+} from "../../../src/plugins/linkUpdates/host";
+import { metadata } from "../../../src/markdown/metadata";
 import { fakeViews, memoryVaults, uriOf, hostWith } from "../views/fakes";
 
 const notes = {
@@ -13,7 +17,7 @@ const notes = {
 };
 
 async function start(settings: Record<string, unknown> = {}) {
-  const { vaults } = memoryVaults(notes);
+  const { vaults, index, texts } = memoryVaults(notes);
   const fake = fakeViews(settings);
   const root = createRoot();
   root.provide("vaults", vaults);
@@ -21,7 +25,7 @@ async function start(settings: Record<string, unknown> = {}) {
   provideHostServices(root, host);
   root.plugin(linkUpdatesHost);
   await root.settled();
-  return { root, fake, host };
+  return { root, fake, host, vaults, index, texts };
 }
 
 const rename = [
@@ -95,4 +99,39 @@ test("edits are computed from the open document, not a stale vault copy", async 
     ],
   );
   await root.dispose();
+});
+
+test("a rename waits for queued parses before reading backlinks", async () => {
+  const { root, fake, vaults, index, texts } = await start({
+    "linkUpdates.mode": "always",
+  });
+  const located = await vaults.locate(uriOf("C.md"));
+  assert.ok(located);
+  // C.md's new link to Old is still queued when the rename starts.
+  texts.set("C.md", "Now [[Old]]");
+  located.vault.settled = async () => {
+    index.setMetadata("C.md", metadata("Now [[Old]]"));
+  };
+  const edits = await fake.rename(rename);
+  assert.deepEqual(
+    edits.map((file) => file.uri),
+    [uriOf("A.md"), uriOf("B.md"), uriOf("C.md")],
+  );
+  await root.dispose();
+});
+
+test("settledWithin stops waiting at the limit", async () => {
+  const started = Date.now();
+  await settledWithin({ settled: () => new Promise<void>(() => {}) }, 20);
+  assert.ok(Date.now() - started < 1_000);
+  let settled = false;
+  await settledWithin(
+    {
+      settled: async () => {
+        settled = true;
+      },
+    },
+    60_000,
+  );
+  assert.equal(settled, true);
 });

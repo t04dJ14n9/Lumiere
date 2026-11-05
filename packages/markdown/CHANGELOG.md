@@ -2,6 +2,10 @@
 
 ## 0.1.0 (unreleased)
 
+- Renaming a note waits (up to five seconds) for the vault index to finish
+  parsing queued notes before it looks for links to update, so a link
+  typed or synced just before the rename is updated too.
+
 - An ambiguous link (`[[x]]` with several `x.md` in the vault) resolves as
   Obsidian resolves it: matches under the note's folder first, then the
   rest, each by shortest path rather than nearest folder. From

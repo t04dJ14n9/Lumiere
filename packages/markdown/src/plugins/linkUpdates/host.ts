@@ -65,6 +65,29 @@ async function confirm(dialogs: Dialogs, files: number): Promise<boolean> {
   return answer === update;
 }
 
+/**
+ * How long a rename waits for the index. VS Code cancels will-rename
+ * participants after `files.participants.timeout` (60 s by default), and the
+ * prompt must fit in that time too, so a slow scan gives up well before it.
+ */
+const SETTLE_LIMIT_MS = 5_000;
+
+/** Waits until the vault has indexed what is queued, or `limitMs` passes. */
+export async function settledWithin(
+  vault: Pick<Vault, "settled">,
+  limitMs: number,
+): Promise<void> {
+  let timer: ReturnType<typeof setTimeout> | undefined;
+  const limit = new Promise<void>((resolve) => {
+    timer = setTimeout(resolve, limitMs);
+  });
+  try {
+    await Promise.race([vault.settled(), limit]);
+  } finally {
+    clearTimeout(timer);
+  }
+}
+
 /** Edits for every note in the renamed files' vault that links to them. */
 async function linkEdits(
   vaults: Vaults,
@@ -76,6 +99,9 @@ async function linkEdits(
     return [];
   }
   const { vault } = first;
+  // Backlinks and folder contents come from the index; a note still queued
+  // for parsing would otherwise keep its link to the old path.
+  await settledWithin(vault, SETTLE_LIMIT_MS);
   const paths = expandFolders(vault, renames);
   if (paths.size === 0) {
     return [];

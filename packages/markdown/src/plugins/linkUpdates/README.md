@@ -6,7 +6,8 @@ links** setting.
 
 ## How it works
 
-Before VS Code renames files, the plugin finds every note that links to them
+Before VS Code renames files, the plugin waits (up to five seconds) for the
+vault index to parse what is queued, finds every note that links to them
 (through the vault index's backlinks), re-reads each note's current text and
 rewrites only the path of each link: a wikilink stays a wikilink, a Markdown
 link stays a Markdown link, and `#subpaths` and aliases are kept. The path is
