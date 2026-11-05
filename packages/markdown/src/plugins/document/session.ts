@@ -5,7 +5,7 @@ import type { Prepared } from "../../shared/document/authority";
 import type { HostDocument, HostServices, TextEdit } from "../../shared/host";
 import type { Endpoint } from "../../shared/rpc/endpoint";
 import { UndoGroups } from "./undo-groups";
-import { protocol, updatesFullTextMax } from "./protocol";
+import { protocol } from "./protocol";
 import type { DocumentSession } from "./api";
 export class Session implements DocumentSession {
   readonly authority: Authority;
@@ -15,20 +15,17 @@ export class Session implements DocumentSession {
   private expected?: Prepared;
   private readonly groups = new UndoGroups();
   private historyAction = false;
-  private lastSaved: string;
   private saveEcho?: string;
   constructor(
     readonly document: HostDocument,
     private readonly host: HostServices,
   ) {
     this.authority = new Authority(document.getText());
-    this.lastSaved = document.getText();
   }
   private fingerprint(): string {
     return this.host.hostDocuments.fingerprint(this.text);
   }
   markSaved(text: string): void {
-    this.lastSaved = text;
     this.saveEcho = text;
   }
   async save(): Promise<boolean> {
@@ -154,7 +151,6 @@ export class Session implements DocumentSession {
     if (!this.document.isDirty) {
       delete this.saveEcho;
       this.authority.record(hostText);
-      this.lastSaved = hostText;
       this.broadcast();
       return; // keep UndoGroups
     }
@@ -169,13 +165,10 @@ export class Session implements DocumentSession {
       if (client.sent === this.version) {
         continue;
       }
-      const text = this.authority.doc.toString();
-      const params = {
+      client.rpc.notify(protocol, "updates", {
         version: client.sent,
         updates: this.authority.since(client.sent),
-        ...(text.length <= updatesFullTextMax ? { fullText: text } : {}),
-      };
-      client.rpc.notify(protocol, "updates", params);
+      });
       client.sent = this.version;
     }
   }
