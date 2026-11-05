@@ -1,0 +1,6 @@
+head=c5238fffe9886bd82fed86b1fc287bfbdee5e143
+hoverLit both segments of Pan et al., 2025 lit (shared group hover)
+dragGhost anyDraggable=false
+afterClickPage=12 (year segment click)
+source=browser-harness paper.pdf dark ~175%
+host-gui=attempted Cursor source-mode; PDF viewer open timed out — browser harness uses same webview
