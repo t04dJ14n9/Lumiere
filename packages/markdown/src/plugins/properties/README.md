@@ -103,8 +103,11 @@ workspaces. Native picker appearance depends on Chromium, OS and locale. Heading
 note links are not provided because the editor has no daily-note capability.
 Unknown nested maps use Obsidian `mod-unknown` JSON with 4px 8px padding (`--metadata-input-padding`). YAML drafts must parse independently; external references use serialized copies,
 which may lose original formatting or precision when committed. Recursive aliases,
-tagged collections (including `!!pairs`, `!!map` and `!!set`) and timestamps remain
-display-only with a Source mode message.
+tagged collections (including `!!pairs`, `!!map` and `!!set`), and non-finite floats
+(`.inf`) remain display-only with a Source mode message. Top-level YAML `!!timestamp`
+(and YAML 1.1 date) scalars render as editable Date / Date & time controls, matching
+Obsidian; a commit writes a plain `YYYY-MM-DD` or `YYYY-MM-DDTHH:mm` string (seconds
+kept when non-zero) and drops the tag.
 Concurrent frontmatter changes reject an active draft without overwriting source.
 
 ## The caret never enters the block

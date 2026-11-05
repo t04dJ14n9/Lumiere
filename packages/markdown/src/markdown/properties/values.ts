@@ -89,7 +89,9 @@ export function settablePropertyNode(
       if (
         child.tag &&
         (!isScalar(child) ||
-          !/^tag:yaml.org,2002:(?:str|int|float|bool|null)$/.test(child.tag))
+          !/^tag:yaml.org,2002:(?:str|int|float|bool|null|timestamp)$/.test(
+            child.tag,
+          ))
       ) {
         settable = false;
         return visit.BREAK;
@@ -125,7 +127,7 @@ export function propertyYamlInput(text: string): PropertyValue | undefined {
     ) {
       return undefined;
     }
-    const value: unknown = document.toJS({ maxAliasCount: 100 });
+    const value: unknown = plainDocumentDates(document);
     return settablePropertyValue(value) ? value : undefined;
   } catch {
     return undefined;
@@ -140,7 +142,8 @@ export function settablePropertyValue(
     value === null ||
     typeof value === "string" ||
     typeof value === "boolean" ||
-    (typeof value === "number" && Number.isFinite(value))
+    (typeof value === "number" && Number.isFinite(value)) ||
+    (value instanceof Date && Number.isFinite(value.valueOf()))
   ) {
     return true;
   }
@@ -148,7 +151,6 @@ export function settablePropertyValue(
     !value ||
     typeof value !== "object" ||
     ancestors.has(value) ||
-    value instanceof Date ||
     value instanceof Map ||
     value instanceof Set
   ) {
@@ -162,6 +164,16 @@ export function settablePropertyValue(
       );
   ancestors.delete(value);
   return ok;
+}
+
+function matchesDateKind(kind: "date" | "datetime", value: unknown): boolean {
+  if (typeof value === "string") {
+    return propertyInput(kind, value) !== undefined;
+  }
+  if (value instanceof Date) {
+    return propertyInput(kind, propertyDateText(value)) !== undefined;
+  }
+  return false;
 }
 
 export function matchesPropertyKind(
@@ -184,8 +196,96 @@ export function matchesPropertyKind(
       return typeof value === "boolean";
     case "date":
     case "datetime":
-      return (
-        typeof value === "string" && propertyInput(kind, value) !== undefined
-      );
+      return matchesDateKind(kind, value);
   }
+}
+
+/**
+ * Obsidian plain date/datetime text from a YAML timestamp scalar's source.
+ * Keeps civil wall-clock digits; strips offset/Z and zero seconds.
+ */
+export function obsidianDateTextFromYamlSource(
+  source: string,
+): string | undefined {
+  const match =
+    /^(\d{4}-\d{2}-\d{2})(?:[Tt ](\d{2}:\d{2})(?::(\d{2}))?(?:\.\d+)?(?:\s*(?:Z|[+-]\d{2}:\d{2}))?)?$/.exec(
+      source.trim(),
+    );
+  if (!match) {
+    return undefined;
+  }
+  const [, date, hm, sec] = match;
+  if (!hm) {
+    return date;
+  }
+  // Match propertyInput / prior toISOString path: drop zero seconds.
+  return !sec || sec === "00" ? `${date}T${hm}` : `${date}T${hm}:${sec}`;
+}
+
+/** Obsidian-stable YAML/date-input text for a JS Date from !!timestamp. */
+export function propertyDateText(value: Date, source?: string): string {
+  if (!Number.isFinite(value.valueOf())) {
+    return "";
+  }
+  if (typeof source === "string") {
+    const fromSource = obsidianDateTextFromYamlSource(source);
+    if (fromSource !== undefined) {
+      return fromSource;
+    }
+  }
+  const iso = value.toISOString();
+  // YAML !!timestamp date-only values parse as UTC midnight.
+  if (iso.endsWith("T00:00:00.000Z")) {
+    return iso.slice(0, 10);
+  }
+  // Match inferPropertyKind / propertyInput: drop zero seconds.
+  return iso.endsWith(":00.000Z") ? iso.slice(0, 16) : iso.slice(0, 19);
+}
+
+/**
+ * Replace !!timestamp Dates using each scalar's YAML source (wall-clock),
+ * then toJS. Restores Date values afterward so the document stays editable.
+ */
+export function plainDocumentDates(document: Document): unknown {
+  const { visit } = loadYaml();
+  const restored: { node: { value: unknown }; prior: Date }[] = [];
+  visit(document, {
+    Scalar(_key, node) {
+      if (node.value instanceof Date && Number.isFinite(node.value.valueOf())) {
+        restored.push({ node, prior: node.value });
+        node.value = propertyDateText(
+          node.value,
+          typeof node.source === "string" ? node.source : undefined,
+        );
+      }
+    },
+  });
+  try {
+    return document.toJS({ maxAliasCount: 100 });
+  } finally {
+    for (const { node, prior } of restored) {
+      node.value = prior;
+    }
+  }
+}
+
+/**
+ * Walk a parsed YAML value tree. Dates are left unchanged — wall-clock
+ * conversion needs each scalar's YAML `.source` via `plainDocumentDates`.
+ * Callers that still hold bare Dates (yamlValue / yaml-draft) must not get a
+ * silent UTC `toISOString` fallback here.
+ */
+export function plainPropertyDates(value: unknown): unknown {
+  if (value instanceof Date) {
+    return value;
+  }
+  if (!value || typeof value !== "object") {
+    return value;
+  }
+  if (Array.isArray(value)) {
+    return value.map(plainPropertyDates);
+  }
+  return Object.fromEntries(
+    Object.entries(value).map(([key, item]) => [key, plainPropertyDates(item)]),
+  );
 }

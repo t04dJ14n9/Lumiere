@@ -1,6 +1,6 @@
 import { loadYaml } from "./load-yaml";
 import type { headerParts } from "./header-parts";
-import type { PropertyScalar } from "./values";
+import { plainPropertyDates, type PropertyScalar } from "./values";
 
 export interface PropertyChange {
   from: number;
@@ -12,7 +12,7 @@ type Header = NonNullable<ReturnType<typeof headerParts>>;
 
 export const yamlValue = (value: unknown): string =>
   loadYaml()
-    .stringify(value, {
+    .stringify(plainPropertyDates(value), {
       collectionStyle: "flow",
       flowCollectionPadding: false,
       lineWidth: 0,
@@ -160,6 +160,36 @@ function blockListChange(
   return { from, to, insert: valueAfterKey(value, header.eol) + ends };
 }
 
+/** Include a leading `!!tag` so edits drop the tag with the scalar value. */
+function taggedScalarStart(
+  body: string,
+  start: number,
+  range0: number,
+  tag: string | null | undefined,
+): number {
+  if (!tag?.startsWith("tag:yaml.org,2002:")) {
+    return start;
+  }
+  const token = `!!${tag.slice("tag:yaml.org,2002:".length)}`;
+  // Prefer the last real tag token at or before the scalar; skip comment text.
+  let at = -1;
+  const searchFrom = Math.max(0, range0 - token.length - 16);
+  for (let from = searchFrom; from < range0;) {
+    const found = body.indexOf(token, from);
+    if (found < 0 || found >= range0) {
+      break;
+    }
+    const after = body[found + token.length];
+    const whole = !after || !/[A-Za-z0-9_-]/.test(after);
+    const lineStart = body.lastIndexOf("\n", found - 1) + 1;
+    if (whole && !commentStartsBefore(body, lineStart, found)) {
+      at = found;
+    }
+    from = found + 1;
+  }
+  return at >= 0 ? Math.min(start, at) : start;
+}
+
 export function setPropertyChange(
   source: string,
   header: Header,
@@ -194,8 +224,15 @@ export function setPropertyChange(
       insert = JSON.stringify(value);
     }
   }
-  const from =
-    header.offset + valueStart(header.body, node.range[0], node.anchor);
+  const contentStart = loadYaml().isScalar(node)
+    ? taggedScalarStart(
+        header.body,
+        valueStart(header.body, node.range[0], node.anchor),
+        node.range[0],
+        node.tag,
+      )
+    : valueStart(header.body, node.range[0], node.anchor);
+  const from = header.offset + contentStart;
   const to = header.offset + node.range[1];
   if (source[from - 1] === ":") {
     insert = " " + insert;

@@ -83,7 +83,6 @@ for (const yaml of [
   "!!map {a: 1}",
   "&a {child: *a}",
   ".inf",
-  "{at: !!timestamp 2026-10-15}",
 ]) {
   test(`unsupported ${yaml} has no YAML draft`, () => {
     const body = `value: ${yaml}\n`;
