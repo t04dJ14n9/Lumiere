@@ -1,7 +1,7 @@
 head=8999e916517f6ce89d5281b7ed0c1cbc448cc90f
-hoverLit both segments of Pan et al., 2025 lit (shared group hover) — browser harness
-dragGhost anyDraggable=false — browser harness
-afterClickPage=12 (year segment click) — browser harness
-source=browser-harness paper.pdf dark ~175%
-host-gui=BLOCKED 2026-11-05 Asia/Singapore — real Cursor launches @ /workspace/host-gui-505-8999e916 (DISPLAY :78/:79, vsix 8999e916); paper.pdf opens as Plain Text; exthost never activates t04dj14n9.lumiere / onCustomEditor:lumiere.pdf.viewer; executor has no ComputerUse to Reopen With. Details: evidence-host-gui-505-8999e916.txt. Prior AFTER shots below remain browser-harness captures (not re-shot). Do not fake Host GUI.
+hoverLit both segments of (Shao et al., 2024) lit (shared group hover) — Host GUI ComputerUse
+dragGhost no page ghost mid-drag — Host GUI ComputerUse
+source=Host GUI ComputerUse paper.pdf dark fit-to-width ~207% DISPLAY :75 harness /workspace/host-gui-505-8999e916
+host-gui=SUCCESS 2026-11-05 Asia/Singapore — Lumia PDF opened via editorAssociations; whole-cite hover + no drag ghost confirmed. Details: HOST-GUI-NOTES.txt / evidence-host-gui-505-8999e916.txt
 wrap-merge-fix=8999e916 — skip wrap-merge when each fragment already has same-line same-dest partner; synthetic regression expects two clusters of two
+browser-harness-before=01-before-cite-fragment-hover.png / 02-before-page-drag-ghost.png retained

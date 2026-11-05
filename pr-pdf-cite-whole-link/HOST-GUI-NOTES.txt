@@ -1,0 +1,25 @@
+Host GUI AFTER shots — Lumia PR #505 (whole-cite hover / no page-drag ghost)
+Commit: 8999e916
+When: 2026-11-05 ~16:43–16:48 Asia/Singapore (UTC+8)
+Display: :75, Cursor window "workspace - Cursor" maximized (1920x1159). Not closed. Not signed in.
+
+Lumia PDF opened: YES
+How: single click on paper.pdf in the Explorer. workbench.editorAssociations (*.pdf → lumiere.pdf.viewer) took effect on this click. The editor rendered the dark Lumia PDF viewer (pageColors: dark), with link coloring and the Page N tooltip. It did NOT open as Plain Text (%PDF). Reopen Editor With… was not required.
+
+Zoom: fit-to-width. Rendered page width ≈ 1264 px for a 612 pt page ≈ 207% (pdf.js 100% = 612 px). No separate zoom readout in the Cursor status bar (status bar stayed Cursor-Tab / Tab Stats / Agent Stats). Viewer chrome is the dark custom editor, cyan link text, and the "Page 11" link tooltip.
+
+Cite hovered: page 1, Figure 1 caption, "(Shao et al., 2024)".
+PDF link rects (two fragments, same baseline):
+  author "Shao et al."  x=183.7–232.1 pt
+  year   "2024"         x=235.5–257.8 pt
+Mouse was over the author fragment. BOTH segments showed the shared blue hover background (page-link-group hover). A "Page 11" tooltip appeared. Whole-cite hover: YES, visually confirmed.
+
+Drag ghost: NO.
+Drag started with button-down on that same cite and moved down-right (screen ~720,570 → 980,760) while the button stayed down. 04-after-drag-no-ghost.png is that mid-drag frame: text selection follows the pointer (I-beam), the page stays put, and there is no translucent page-drag ghost.
+
+Shots:
+  shots/02-viewer-open.png            Lumia PDF confirmed open (selection cleared after the drag)
+  shots/03-after-cite-whole-hover.png whole-cite hover on (Shao et al., 2024)
+  shots/04-after-drag-no-ghost.png    mid-drag on that cite, no page ghost
+
+Cursor left open on paper.pdf.
