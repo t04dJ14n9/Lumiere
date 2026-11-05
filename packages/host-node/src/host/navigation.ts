@@ -5,7 +5,10 @@
  */
 import {
   RevealRouter,
+  followsNewNoteFolder,
+  linkLocation,
   type HostSettings,
+  type LinkFolder,
   type Navigation,
   type NavigationIntent,
   type NavigationTarget,
@@ -67,49 +70,55 @@ export function createHostNavigation(
 
 type ResolveRequest = Parameters<Navigation["resolve"]>[0];
 
-/** The file a link names, or the note created for it; undefined when there is none. */
-/** Absolute, foldered, or create → vault root; basename lookup → source parent. */
-function linkJoinRoot(
-  link: string,
-  create: boolean | undefined,
-  root: string,
-  sourceParent: string,
-): string {
-  if (link.startsWith("/") || create || link.includes("/")) {
-    return root;
+/** The places a link may name, in the order `linkLocation` tries them. */
+function linkCandidates(
+  files: HostFiles,
+  request: ResolveRequest,
+): [string, ...string[]] {
+  const { root, source, path: link, create } = request;
+  if (!link) {
+    return [source];
   }
-  return sourceParent;
+  const { relative, folders } = linkLocation(link, create);
+  const place = (folder: LinkFolder) =>
+    joinUri(
+      files,
+      folder === "vault" ? root : parentUri(files, source),
+      relative,
+    );
+  const [first, ...rest] = folders;
+  return [place(first), ...rest.map(place)];
 }
 
+/** The file a link names, or the note created for it; undefined when there is none. */
 export async function resolveLink(
   files: HostFiles,
   request: ResolveRequest,
 ): Promise<string | undefined> {
-  const { root, source, path: link, create, folderNote, intent } = request;
-  let target = !link
-    ? source
-    : joinUri(
-        files,
-        linkJoinRoot(link, create, root, parentUri(files, source)),
-        link.replace(/^\//, ""),
-      );
-  await requireInside(files, root, target);
-  const info = await files.stat(target);
-  if (intent?.token.cancelled) {
-    return undefined;
-  }
-  if (info?.kind === "folder") {
+  const { root, folderNote, intent } = request;
+  const candidates = linkCandidates(files, request);
+  for (const candidate of candidates) {
+    await requireInside(files, root, candidate);
+    const info = await files.stat(candidate);
+    if (intent?.token.cancelled) {
+      return undefined;
+    }
+    if (!info) {
+      continue;
+    }
+    if (info.kind !== "folder") {
+      return candidate;
+    }
     if (!folderNote) {
       return undefined;
     }
-    target = joinUri(files, target, folderNote);
-    await requireInside(files, root, target);
+    const note = joinUri(files, candidate, folderNote);
+    await requireInside(files, root, note);
+    return note;
   }
-  if (info) {
-    return target;
-  }
-  return create && !intent?.token.cancelled
-    ? createNote(files, { root, request, target })
+  // Creating never falls back: the first place is where the link points.
+  return request.create
+    ? createNote(files, { root, request, target: candidates[0] })
     : undefined;
 }
 
@@ -121,8 +130,8 @@ async function createNote(
   let target = options.target;
   const link = request.path;
   // Basename-only links respect newNoteFolder; a path with folders (or a
-  // leading "/") creates at that vault-relative path under the vault root.
-  if (!link.startsWith("/") && !link.includes("/")) {
+  // leading "/") creates at the place it names, not under that setting.
+  if (followsNewNoteFolder(link)) {
     const folder = request.newNoteFolder ?? "";
     const parent =
       folder === "."

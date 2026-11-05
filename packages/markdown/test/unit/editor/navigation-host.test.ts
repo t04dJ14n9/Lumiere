@@ -392,11 +392,19 @@ async function withResolveVault(
     return fileUri(join(base.fsPath, ...parts));
   }
 
+  class WorkspaceEdit {
+    creates: ReturnType<typeof fileUri>[] = [];
+    createFile(uri: ReturnType<typeof fileUri>) {
+      this.creates.push(uri);
+    }
+  }
+
   const { createNavigation } = loadNavigation({
     Uri: {
       parse: (value: string) => fileUri(fileURLToPath(value)),
       joinPath,
     },
+    WorkspaceEdit,
     FileSystemError,
     FileType: { File: 1, Directory: 2, SymbolicLink: 64 },
     env: { appName: "Cursor", uriScheme: "vscode" },
@@ -412,6 +420,13 @@ async function withResolveVault(
             throw new FileSystemError("missing", "FileNotFound");
           }
         },
+      },
+      async applyEdit(edit: WorkspaceEdit) {
+        for (const uri of edit.creates) {
+          await mkdir(join(uri.fsPath, ".."), { recursive: true });
+          await writeFile(uri.fsPath, "");
+        }
+        return true;
       },
     },
     commands: { async executeCommand() {} },
@@ -460,5 +475,74 @@ test("resolve: basename (create:false) still uses source parent", async (t) => {
       newNoteFolder: "",
     });
     assert.equal(resolved, pathToFileURL(join(areas, "Beside.md")).href);
+  });
+});
+
+test("resolve: ./ and ../ start from the source note's folder, sub/ falls back to it", async (t) => {
+  await withResolveVault(t, async ({ navigation, root, source, directory }) => {
+    const areas = join(directory, "wiki", "areas");
+    await mkdir(join(areas, "sub"), { recursive: true });
+    await mkdir(join(directory, "sub"), { recursive: true });
+    await writeFile(join(areas, "sub", "Only.md"), "only here");
+    await writeFile(join(areas, "sub", "N.md"), "nested");
+    await writeFile(join(directory, "sub", "N.md"), "root twin");
+    const resolve = (path: string, create = false) =>
+      navigation.resolve({
+        root,
+        source,
+        path,
+        create,
+        folderNote: "",
+        newNoteFolder: "",
+      });
+    const href = (...parts: string[]) =>
+      pathToFileURL(join(directory, ...parts)).href;
+
+    assert.equal(await resolve("./Beside.md"), href("wiki/areas/Beside.md"));
+    assert.equal(
+      await resolve("../resources/mocs/Target.md"),
+      href("wiki/resources/mocs/Target.md"),
+    );
+    assert.equal(await resolve("./sub/N.md"), href("wiki/areas/sub/N.md"));
+    assert.equal(
+      await resolve("/wiki/resources/mocs/Target.md"),
+      href("wiki/resources/mocs/Target.md"),
+    );
+    assert.equal(await resolve("./missing.md"), undefined);
+    // sub/Only.md is not at the vault root: the source folder is the fallback.
+    assert.equal(await resolve("sub/Only.md"), href("wiki/areas/sub/Only.md"));
+    // The exact vault path wins over the source-relative one, as in Obsidian.
+    assert.equal(await resolve("sub/N.md"), href("sub/N.md"));
+    assert.equal(await resolve("sub/Nope.md"), undefined);
+
+    // An explicit relative path is also where a new note is made.
+    assert.equal(await resolve("./Fresh", true), href("wiki/areas/Fresh.md"));
+    assert.equal(await readFile(join(areas, "Fresh.md"), "utf8"), "");
+  });
+});
+
+test("resolve: a relative path that leaves the vault is still refused", async (t) => {
+  await withResolveVault(t, async ({ navigation, root, source }) => {
+    for (const path of [
+      "../../../outside.md",
+      "./../../../outside.md",
+      "sub/../../outside.md",
+    ]) {
+      for (const create of [false, true]) {
+        await assert.rejects(
+          () =>
+            navigation.resolve({
+              root,
+              source,
+              path,
+              create,
+              folderNote: "",
+              newNoteFolder: "",
+            }),
+          /escapes the vault/,
+          `${path} (create: ${create})`,
+        );
+      }
+    }
   });
 });
