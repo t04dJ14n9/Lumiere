@@ -33,7 +33,8 @@ expanded and follow only selects. Version and panel identity guards discard stal
 Expand All reveals every node in order so deeply nested headings also expand.
 Clicking a heading opens the note at its offset; the links plugin's `navigate` then
 scrolls that offset to the **top** of the editor viewport (intentional product
-choice — not VS Code Outline `InCenter` / Obsidian centre). Near the start or
+choice — not VS Code Outline `InCenter` / Obsidian centre), below sticky-heading
+chrome when a parent pin is present or appears after the jump. Near the start or
 end of a note the scroll range ends first, so the heading stays as close to
 the top as the note allows. The jump a click makes does not collapse or expand
 anything (nor does the caret the editor reports from before it): rows that

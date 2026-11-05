@@ -178,3 +178,84 @@ test("a heading in a note shorter than the viewport does not scroll", async ({
   expect(g.scrollTop).toBe(0);
   expect(g.maxScrollTop).toBeLessThanOrEqual(0);
 });
+
+/**
+ * Nested jump: parent becomes sticky after the scroll, so a plain y:"start"
+ * lands the child under the pin. Expect the heading below sticky chrome.
+ */
+test("a nested outline jump keeps the heading below sticky chrome", async ({
+  page,
+}) => {
+  const filler = Array.from(
+    { length: 40 },
+    (_, n) => `Para under A ${n}.`,
+  ).join("\n\n");
+  const source = `# Chapter A\n\n${filler}\n\n## Section A1\n\n${filler}\n\n# Chapter B\n\n${filler}`;
+  await openNote(page, source, "obsidian", {
+    features: { stickyScroll: { enabled: true, config: { maxLines: 5 } } },
+  });
+  await page.addStyleTag({
+    content:
+      "#app, #app .cm-editor, #app .cm-scroller { height: 640px !important; max-height: 640px !important; } #app .cm-scroller { overflow: auto !important; }",
+  });
+  await page.evaluate(() => window.dispatchEvent(new Event("resize")));
+  await expect
+    .poll(() =>
+      page.evaluate(() => document.querySelector(".cm-scroller")!.clientHeight),
+    )
+    .toBeLessThanOrEqual(700);
+
+  await clickOutline(page, source.indexOf("## Section A1"));
+
+  await expect
+    .poll(async () =>
+      page.evaluate(() => {
+        const sticky = document.querySelector(
+          ".mw-sticky-scroll",
+        ) as HTMLElement | null;
+        if (!sticky || sticky.hidden) {
+          return 0;
+        }
+        return sticky.getBoundingClientRect().height;
+      }),
+    )
+    .toBeGreaterThan(0);
+
+  await expect
+    .poll(async () =>
+      page.evaluate(() => {
+        const sticky = document.querySelector(
+          ".mw-sticky-scroll",
+        ) as HTMLElement;
+        const labels = [
+          ...sticky.querySelectorAll("button.mw-sticky-heading"),
+        ].map((button) => button.textContent ?? "");
+        return labels.some((label) => /Chapter A/i.test(label));
+      }),
+    )
+    .toBe(true);
+
+  // Heading text top must sit at or below the sticky pin's bottom (not under it).
+  await expect
+    .poll(async () =>
+      page.evaluate(() => {
+        const sticky = document.querySelector(
+          ".mw-sticky-scroll",
+        ) as HTMLElement;
+        const line = [...document.querySelectorAll(".cm-line")].find(
+          (candidate) =>
+            candidate.textContent?.replace(/^#+ /, "") === "Section A1",
+        );
+        if (!line) {
+          return -999;
+        }
+        const text = document.createRange();
+        text.selectNodeContents(line);
+        return (
+          text.getBoundingClientRect().top -
+          sticky.getBoundingClientRect().bottom
+        );
+      }),
+    )
+    .toBeGreaterThanOrEqual(-TOLERANCE);
+});

@@ -1,6 +1,7 @@
 import { linkSuggestion } from "./suggestions";
 import { Prec } from "@codemirror/state";
-import { EditorView, ViewPlugin, keymap } from "@codemirror/view";
+import { ViewPlugin, keymap } from "@codemirror/view";
+import type { EditorView } from "@codemirror/view";
 import type { Context, Plugin } from "@workshop/core";
 import type {} from "../editor/api";
 import type {} from "../commands/api";
@@ -18,13 +19,8 @@ import { tagUnresolvedAnchors } from "./tag-unresolved-anchors";
 import { protocol } from "./protocol";
 import { linkAt, followCaretLink } from "./caret-link";
 import { linkClickHandlers, type OpenLink } from "./clicks";
-import {
-  bindFlashingLifecycle,
-  flashingHighlights,
-  resolveNavigationTarget,
-  setFlashing,
-  unfoldTargetEffects,
-} from "./target-highlight";
+import { bindFlashingLifecycle, flashingHighlights } from "./target-highlight";
+import { navigator, type Navigate } from "./navigate";
 export { linkAt } from "./caret-link";
 
 export const linksWebview: Plugin = {
@@ -60,60 +56,6 @@ export const linksWebview: Plugin = {
     registerLinkFollowing(ctx, open);
   },
 };
-
-type Navigate = (target: {
-  fragment: string;
-  at?: number;
-  to?: number;
-  preserveFocus?: boolean;
-}) => boolean;
-
-function navigator(ctx: Context): Navigate {
-  const view = ctx.editor.view;
-  return ({
-    fragment,
-    at,
-    to,
-    preserveFocus,
-  }: {
-    fragment: string;
-    at?: number;
-    to?: number;
-    preserveFocus?: boolean;
-  }) => {
-    const target = resolveNavigationTarget(view.state, fragment, at, to);
-    if (!target) {
-      void ctx.rpc
-        .call(protocol, "missing", { fragment })
-        .catch((error) =>
-          ctx.logger.warn("Missing-fragment message failed", error),
-        );
-      return false;
-    }
-    ctx.editor.navigate(() => {
-      // Focusing after measured scrolling can restore the previous viewport.
-      if (!preserveFocus) {
-        view.focus();
-      }
-      view.dispatch({
-        selection: {
-          anchor: target.from,
-          head: target.selectTo ?? target.from,
-        },
-        // Put the target at the top of the editor viewport (product choice:
-        // Outline / Go to Heading / in-note fragment jumps). The browser still
-        // clamps the scroll at both ends, so a heading near the start or end
-        // of the note lands as close to the top as the note allows.
-        effects: [
-          ...unfoldTargetEffects(view.state, target.from, target.to),
-          setFlashing.of({ from: target.from, to: target.to }),
-          EditorView.scrollIntoView(target.from, { y: "start" }),
-        ],
-      });
-    });
-    return true;
-  };
-}
 
 function linkOpener(ctx: Context, navigate: Navigate): OpenLink {
   return async (href, wiki, { side = false, tab = false, source } = {}) => {

@@ -51,6 +51,10 @@ renderer adds `is-unresolved` to rendered links whose path is in it.
 - `caret-link.ts`: source caret lookup and focus-guarded link following for any editor.
 - `webview.ts`: decoration (including unresolved styling), click
   handling, navigation and commands.
+- `navigate.ts`: webview fragment navigation (top-of-viewport jump).
+- `scroll-to-top.ts`: fragment / outline jumps use `y: "start"`, then one
+  post-paint correction with sticky chrome height as `yMargin` when a parent
+  pin is present after the jump.
 - `links.test.ts`: target parsing and caret lookup units.
 - `host.test.ts`: source identity, scheme policy, side opens and handler lifecycle.
 - `test/unit/links/unresolved.test.ts`: unresolved keys, styled decorations and
