@@ -13,30 +13,27 @@ import React, {
 import type { PdfBacklinkHit } from "../shared/pdf-backlink-index";
 import { alignGlyphText } from "../shared/page-glyph-text";
 import { resolveTextToLineRects } from "../shared/pdf-backlink-resolve";
-import type { SegmentRect } from "../shared/sidecar-format";
 import { type GlyphBox } from "../shared/sidecar-reattach";
-import { postToHost } from "./host";
+import { BacklinkOverlay, type ResolvedOverlay } from "./backlink-overlay";
 import { backlinkState, onBacklinkChange } from "./backlink-store";
-
-interface ResolvedOverlay {
-  key: string;
-  hit: PdfBacklinkHit;
-  rects: SegmentRect[];
-}
 
 /**
  * Vault backlink overlays on one page: resolve `#:~:text=` to glyph line
  * boxes, paint above hard-written annotations, hover shows the note path,
- * click opens that note at the link. Overlays never enter mark selection.
+ * click opens that note at the link. Overlays never enter mark selection,
+ * and in Annotate mode they let pointer events through to the annotations.
  */
 export function BacklinkLayer({
   pdf,
   pageIndex,
   scale,
+  annotate,
 }: {
   pdf: PdfDocumentObject;
   pageIndex: number;
   scale: number;
+  /** The Annotate tool is active. */
+  annotate: boolean;
 }): React.JSX.Element | null {
   const { hits } = useSyncExternalStore(onBacklinkChange, backlinkState);
   const { registry } = useRegistry();
@@ -71,49 +68,14 @@ export function BacklinkLayer({
   return (
     <>
       {overlays.map((overlay) => (
-        <BacklinkOverlay key={overlay.key} overlay={overlay} scale={scale} />
-      ))}
-    </>
-  );
-}
-
-function BacklinkOverlay({
-  overlay,
-  scale,
-}: {
-  overlay: ResolvedOverlay;
-  scale: number;
-}): React.JSX.Element {
-  return (
-    <div
-      className="pdf-backlink-overlay"
-      title={overlay.hit.notePath}
-      data-note-path={overlay.hit.notePath}
-      data-note-uri={overlay.hit.noteUri}
-      data-link-offset={overlay.hit.linkOffset}
-      onClick={(event) => {
-        event.preventDefault();
-        event.stopPropagation();
-        postToHost({
-          type: "openBacklinkNote",
-          noteUri: overlay.hit.noteUri,
-          linkOffset: overlay.hit.linkOffset,
-        });
-      }}
-    >
-      {overlay.rects.map((rect, index) => (
-        <div
-          key={index}
-          className="pdf-backlink-overlay-line"
-          style={{
-            left: rect.x * scale,
-            top: rect.y * scale,
-            width: rect.w * scale,
-            height: rect.h * scale,
-          }}
+        <BacklinkOverlay
+          key={overlay.key}
+          overlay={overlay}
+          scale={scale}
+          isPassive={annotate}
         />
       ))}
-    </div>
+    </>
   );
 }
 
