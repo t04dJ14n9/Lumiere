@@ -14,10 +14,23 @@
   user-select: none;
 }
 
+.page-links {
+  position: absolute;
+  inset: 0;
+  /* Hits come from the anchors; the layer itself must not steal them. */
+  pointer-events: none;
+}
+
+/* .page-link-group:hover .page-link lights every segment of one cite. */
+
 .page-link {
   position: absolute;
   z-index: 2;
   cursor: pointer;
+  pointer-events: auto;
+  /* Chromium otherwise lets large LINK anchors drag a page-chunk ghost. */
+  -webkit-user-drag: none;
+  user-select: none;
 }
 
 /* VS Code outlines focused links; show that for the keyboard only. */
@@ -25,7 +38,8 @@
   outline: none;
 }
 
-.page-link:hover {
+.page-link:hover,
+.page-link-group:hover .page-link {
   background: color-mix(
     in srgb,
     var(--vscode-textLink-foreground, #3794ff) 15%,
