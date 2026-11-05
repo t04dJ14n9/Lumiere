@@ -1,0 +1,8 @@
+PR: Properties YAML !!timestamp dates editable like Obsidian
+Branch: fix/properties-yaml-dates-obsidian
+Fix SHA: e525fe9f6082d8346fcdb118f05140642d20c7ca
+BEFORE base: main @ 0f7db841
+Harness note: Timestamp Dates.md (synthetic) — created !!timestamp date, updated !!timestamp datetime, broken !!set
+BEFORE: created/updated/broken all "Edit in Source mode: tagged, recursive or unsupported YAML."
+AFTER: created Date picker (10/15/2026); updated Date & time (10/15/2026, 02:30 PM); broken still Source mode
+Host: real Cursor on box DISPLAY=:71; Lumia 0.1.10 VSIX from SHA
