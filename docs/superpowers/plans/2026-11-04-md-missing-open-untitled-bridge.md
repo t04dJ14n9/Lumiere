@@ -1,6 +1,6 @@
 # Missing `.md` open — skip Lumia reclaim (built-in Text Editor)
 
-> Supersedes the untitled-bridge plan. **Product lock (金扬, Nov 4 2026):** missing `.md` stays in built-in Text Editor; existing files still reclaim to Lumia. Approach A untitled bridge abandoned.
+> Supersedes the untitled-bridge plan. **Product lock (user, Nov 4 2026):** missing `.md` stays in built-in Text Editor; existing files still reclaim to Lumia. Approach A untitled bridge abandoned.
 
 **Goal:** Opening a missing `.md` path does not openWith Lumia / untitled bridge / FileNotFound from Lumia; existing notes still openWith Lumia.
 

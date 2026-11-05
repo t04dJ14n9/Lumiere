@@ -191,7 +191,7 @@ trust, links and hover plugins. Each push is one compact message per change, deb
 | `minConcepts`, `typeRatio` | `3`, `0.8` | Heuristic thresholds |
 | `bundles` | `{}` | Per-bundle overrides `{ "<folder>": { enabled, actor, staleSoonDays, exclude[], typeColors{} } }`. This is the **per-bundle settings** home. |
 | `maxConcepts` | `20000` | Above this the bundle is `partial` (the vault limit is 50,000) |
-| `actor` | `""` | Default actor for writes, e.g. `human:jinyang` (S§7). Used by the review, new-concept and log plugins. Empty ⇒ ask once. |
+| `actor` | `""` | Default actor for writes, e.g. `human:user` (S§7). Used by the review, new-concept and log plugins. Empty ⇒ ask once. |
 
 ---
 
