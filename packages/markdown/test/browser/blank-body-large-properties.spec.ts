@@ -254,7 +254,7 @@ test("in-note fragment jump with a tall sheet keeps neighbours painted", async (
   await constrain(page);
   await expect(page.locator(".hybrid-properties")).toBeVisible();
 
-  // Production path: links navigate centres the fragment target.
+  // Production path: links navigate puts the fragment target at the top.
   await page.evaluate(() => window.harness.navigate({ fragment: "progress" }));
   await page.waitForTimeout(150);
 

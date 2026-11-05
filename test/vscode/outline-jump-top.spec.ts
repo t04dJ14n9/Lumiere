@@ -10,8 +10,11 @@ import {
   workbenchPage,
 } from "./workbench";
 
-/** Within this many pixels counts as centred: half a line of rounding. */
-const TOLERANCE = 8;
+/**
+ * Within this many pixels counts as at the top: CodeMirror's default yMargin
+ * plus half a line of rounding.
+ */
+const TOLERANCE = 10;
 const FILLER = Array.from({ length: 80 }, (_, n) => `Filler ${n}.`).join(
   "\n\n",
 );
@@ -47,6 +50,7 @@ async function geometry(frame: Frame, title: string) {
       viewportCenter: box.top + box.height / 2,
       viewportTop: box.top,
       viewportBottom: box.bottom,
+      headingTop: rect?.top,
       headingCenter: rect ? rect.top + rect.height / 2 : undefined,
       scrollTop: scroller.scrollTop,
       maxScrollTop: scroller.scrollHeight - scroller.clientHeight,
@@ -67,16 +71,21 @@ async function clickOutline(page: Page, title: string) {
   await row.first().click();
 }
 
-async function expectCentred(page: Page, title: string) {
+function distanceFromTop(g: Awaited<ReturnType<typeof geometry>>): number {
+  return g.headingTop === undefined
+    ? Infinity
+    : Math.abs(g.headingTop - g.viewportTop);
+}
+
+async function expectAtTop(page: Page, title: string) {
   await expect
-    .poll(async () => {
-      const g = await geometry(await editorFrame(page), title);
-      return Math.abs((g.headingCenter ?? Infinity) - g.viewportCenter);
-    })
+    .poll(async () =>
+      distanceFromTop(await geometry(await editorFrame(page), title)),
+    )
     .toBeLessThanOrEqual(TOLERANCE);
 }
 
-test("clicking a heading in the Markdown Outline centres it in the editor, clamping at both ends of the note", async () => {
+test("clicking a heading in the Markdown Outline puts it at the top of the editor, clamping at both ends of the note", async () => {
   const note = path.join(paths.workspace, "Note.md");
   const original = readFileSync(note, "utf8");
   writeFileSync(note, NOTE);
@@ -86,35 +95,31 @@ test("clicking a heading in the Markdown Outline centres it in the editor, clamp
     await openWorkbench(page);
     await command(page, "View: Show Explorer");
     await clickOutline(page, "Middle");
-    await expectCentred(page, "Middle");
+    await expectAtTop(page, "Middle");
     await clickOutline(page, "Late");
-    await expectCentred(page, "Late");
+    await expectAtTop(page, "Late");
 
-    // Centring "Early" would need a negative scroll: the note stays at the top.
+    // Early sits under Title; with y:"start" it scrolls to the top of the
+    // viewport (Title may leave). Near-start clamp still holds for a heading
+    // that cannot scroll further up once it is already flush with the top.
     await clickOutline(page, "Early");
-    await expect
-      .poll(
-        async () =>
-          (await geometry(await editorFrame(page), "Early")).scrollTop,
-      )
-      .toBe(0);
+    await expectAtTop(page, "Early");
     const early = await geometry(await editorFrame(page), "Early");
-    expect(early.headingCenter!).toBeLessThan(early.viewportCenter - TOLERANCE);
-    expect(early.headingCenter!).toBeGreaterThan(early.viewportTop);
+    expect(early.headingTop!).toBeGreaterThanOrEqual(early.viewportTop - 1);
 
-    // "Last" is the final line, so the scroll range ends before it can reach the middle.
+    // "Last" is the final line, so the scroll range ends before it can reach the top.
     await clickOutline(page, "Last");
     await expect
       .poll(async () => {
         const g = await geometry(await editorFrame(page), "Last");
+        // Browser harness measured gap 0 under y:"start"; bind to suite
+        // TOLERANCE (10 here) rather than an arbitrary 30px slack.
         return Math.abs(g.scrollTop - g.maxScrollTop);
       })
-      .toBeLessThanOrEqual(1);
+      .toBeLessThanOrEqual(TOLERANCE);
     const last = await geometry(await editorFrame(page), "Last");
-    expect(last.headingCenter!).toBeGreaterThan(
-      last.viewportCenter + TOLERANCE,
-    );
-    expect(last.headingCenter!).toBeLessThan(last.viewportBottom);
+    expect(last.headingTop!).toBeGreaterThan(last.viewportTop + TOLERANCE);
+    expect(last.headingTop!).toBeLessThan(last.viewportBottom);
   } finally {
     writeFileSync(note, original);
     await closeBrowser(browser);

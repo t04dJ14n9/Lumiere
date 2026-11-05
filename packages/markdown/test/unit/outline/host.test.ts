@@ -811,7 +811,7 @@ test("a scroll report after a click in the outline leaves the tree as it is", as
     uriOf("A.md"),
     text.indexOf("# B"),
   );
-  // The editor centres "B", with the caret on it, and reports that.
+  // The editor jumps "B" to the top, with the caret on it, and reports that.
   cursor.head = text.indexOf("# B");
   cursor.read(text.indexOf("# B"));
   await tick();
