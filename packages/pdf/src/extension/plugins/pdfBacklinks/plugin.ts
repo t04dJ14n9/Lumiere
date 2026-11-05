@@ -2,6 +2,11 @@ import * as vscode from "vscode";
 import type { Context, Plugin } from "@workshop/core";
 import { isTrustedBacklinkNoteUri } from "../../../shared/backlink-note-uri";
 import {
+  MARKDOWN_GLOB,
+  isMarkdownPath,
+  scanExclude,
+} from "../../../shared/markdown-scan";
+import {
   PdfBacklinkIndex,
   type PdfFile,
 } from "../../../shared/pdf-backlink-index";
@@ -11,8 +16,6 @@ import type { PdfPanels } from "../pdf/panels";
 import type {} from "../services";
 import manifest from "./manifest";
 
-const MD_GLOB = "**/*.md";
-const MD_EXCLUDE = "{**/node_modules/**,**/.git/**}";
 const SCAN_CHUNK = 40;
 
 /**
@@ -167,7 +170,7 @@ function wireMarkdownListeners(
     "save listener",
   );
 
-  const watcher = vscode.workspace.createFileSystemWatcher(MD_GLOB);
+  const watcher = vscode.workspace.createFileSystemWatcher(MARKDOWN_GLOB);
   ctx.own(watcher, "markdown watcher");
   const ingestUri = async (uri: vscode.Uri): Promise<void> => {
     if (isCancelled() || !isMarkdownUri(uri)) {
@@ -203,7 +206,25 @@ function wireMarkdownListeners(
 }
 
 function isMarkdownUri(uri: vscode.Uri): boolean {
-  return uri.path.toLowerCase().endsWith(".md");
+  return isMarkdownPath(uri.path);
+}
+
+/**
+ * The notes of every workspace folder, one search per folder because
+ * `files.exclude` is set per folder (see `scanExclude`).
+ */
+async function findNotes(): Promise<vscode.Uri[]> {
+  const found = await Promise.all(
+    (vscode.workspace.workspaceFolders ?? []).map((folder) =>
+      vscode.workspace.findFiles(
+        new vscode.RelativePattern(folder, MARKDOWN_GLOB),
+        scanExclude(
+          vscode.workspace.getConfiguration("files", folder.uri).get("exclude"),
+        ),
+      ),
+    ),
+  );
+  return found.flat();
 }
 
 /** Scan vault Markdown in chunks so activation stays responsive. */
@@ -214,7 +235,7 @@ async function idleScan(
 ): Promise<void> {
   let files: vscode.Uri[];
   try {
-    files = await vscode.workspace.findFiles(MD_GLOB, MD_EXCLUDE);
+    files = await findNotes();
   } catch {
     return;
   }

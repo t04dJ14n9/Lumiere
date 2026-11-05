@@ -7,6 +7,7 @@ import crypto from "node:crypto";
 import path from "node:path";
 import { test } from "node:test";
 import * as backlinkNoteUri from "../../src/shared/backlink-note-uri";
+import * as markdownScan from "../../src/shared/markdown-scan";
 import * as backlinkIndex from "../../src/shared/pdf-backlink-index";
 import { loadModule } from "./support/load-module";
 
@@ -24,6 +25,13 @@ class Uri {
   toString(): string {
     return `file://${this.path}`;
   }
+}
+
+class RelativePattern {
+  constructor(
+    readonly base: { uri: Uri },
+    readonly pattern: string,
+  ) {}
 }
 
 interface FakeNote {
@@ -46,6 +54,8 @@ function launch(options: {
   viewers: string[];
   /** One entry per `stat`, in order: it waits for the entry before answering. */
   statGates?: Promise<void>[];
+  /** The `files.exclude` setting of each workspace folder, by its path. */
+  filesExclude?: Record<string, unknown>;
 }) {
   const folders = (options.folders ?? ["/A", "/B"]).map((folder) => ({
     uri: new Uri(folder),
@@ -56,8 +66,10 @@ function launch(options: {
   const saved: ((document: unknown) => void)[] = [];
   const texts = new Map(options.notes.map((note) => [note.path, note.text]));
   const gates = [...(options.statGates ?? [])];
+  const searches: { folder: string; glob: string; exclude: unknown }[] = [];
   const vscode = {
     Uri,
+    RelativePattern,
     FileType: { File: 1 },
     workspace: {
       workspaceFolders: folders,
@@ -76,7 +88,22 @@ function launch(options: {
         onDidDelete: () => ({ dispose: () => undefined }),
         dispose: () => undefined,
       }),
-      findFiles: async () => options.notes.map((note) => new Uri(note.path)),
+      getConfiguration: (section: string, uri: Uri) => ({
+        get: (key: string) =>
+          section === "files" && key === "exclude"
+            ? options.filesExclude?.[uri.path]
+            : undefined,
+      }),
+      findFiles: async (include: RelativePattern, exclude: unknown) => {
+        searches.push({
+          folder: include.base.uri.path,
+          glob: include.pattern,
+          exclude,
+        });
+        return options.notes
+          .filter((note) => note.path.startsWith(`${include.base.uri.path}/`))
+          .map((note) => new Uri(note.path));
+      },
       fs: {
         readFile: async (uri: Uri) => Buffer.from(texts.get(uri.path) ?? ""),
         stat: async (uri: Uri) => {
@@ -106,6 +133,7 @@ function launch(options: {
     {
       vscode,
       "../../../shared/backlink-note-uri": backlinkNoteUri,
+      "../../../shared/markdown-scan": markdownScan,
       "../../../shared/pdf-backlink-index": backlinkIndex,
       "../pdf/files": files,
       "./manifest": { default: { id: "pdfBacklinks" } },
@@ -133,6 +161,7 @@ function launch(options: {
   });
   return {
     panels,
+    searches,
     /** Save a note with new text, as VS Code reports it. */
     save: (note: FakeNote) => {
       texts.set(note.path, note.text);
@@ -236,4 +265,52 @@ test("a push that finishes after the plugin stopped posts nothing", async () => 
   slow.open();
   await settle();
   assert.equal(app.panels[0]!.received.length, received);
+});
+
+test("each folder is searched for .md and .markdown, keeping its own files.exclude", async () => {
+  const app = launch({
+    notes: [],
+    files: [],
+    viewers: [],
+    filesExclude: {
+      "/A": { "**/.git": true, "**/drafts": true, "**/shown": false },
+      "/B": { "**/gen": { when: "$(basename).ts" } },
+    },
+  });
+  await settle();
+  assert.deepEqual(app.searches, [
+    {
+      folder: "/A",
+      glob: "**/*.{md,markdown}",
+      exclude: "{**/node_modules/**,**/.git/**,**/.git,**/drafts}",
+    },
+    {
+      folder: "/B",
+      glob: "**/*.{md,markdown}",
+      exclude: "{**/node_modules/**,**/.git/**}",
+    },
+  ]);
+});
+
+test("a .markdown note is indexed from the scan and when saved", async () => {
+  const scanned = { path: "/A/notes/scanned.markdown", text: NOTE.text };
+  const app = launch({
+    folders: ["/A"],
+    notes: [scanned],
+    files: ["/A/papers/a.pdf"],
+    viewers: ["/A/papers/a.pdf"],
+  });
+  await settle();
+  assert.deepEqual(summary(app.panels[0]!), [
+    ["file:///A/notes/scanned.markdown", 1],
+  ]);
+  app.save({
+    path: "/A/notes/saved.markdown",
+    text: "[y](papers/a.pdf#page=4)",
+  });
+  await settle();
+  assert.deepEqual(
+    summary(app.panels[0]!).map(([, page]) => page),
+    [1, 4],
+  );
 });
