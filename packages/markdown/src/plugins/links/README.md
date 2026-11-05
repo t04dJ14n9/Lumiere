@@ -77,9 +77,9 @@ and `links/open` with bail semantics. Settings: plugin enabled (true),
 The native adapter rechecks containment and symlinks before opening or creating.
 External application schemes ask first; script, data, command and file schemes
 are refused. Unresolved wikilinks can create notes. Basename Markdown destinations
-(`Note`, `Note.md`) create too; relative Markdown paths stay open-only. Unresolved styling applies to wikilinks in Live Preview while they are
-rendered, and to wiki / Markdown / embed link source in source mode. Markdown
-links in Live Preview and links inside embedded notes are not styled yet. A link typed just
+(`Note`, `Note.md`) create too; relative Markdown paths stay open-only. Unresolved styling applies to wikilinks and Markdown links in Live Preview
+while they are rendered, to wiki / Markdown / embed link source in source
+mode, and to both kinds of link inside embedded notes. A link typed just
 now is dimmed optimistically when its target is not among the vault's known
 note keys; the open-note overlay re-index still refreshes the authoritative
 unresolved set shortly after. Host claim handlers may override default opening.

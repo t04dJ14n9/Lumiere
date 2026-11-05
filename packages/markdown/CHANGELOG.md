@@ -2,6 +2,10 @@
 
 ## 0.1.0 (unreleased)
 
+- Markdown links (`[label](Missing.md)`) inside an embedded note are dimmed
+  when they do not resolve, as wikilinks there already were; an embed with
+  no wikilink was skipped.
+
 - The rename dialog offers **Always Update**, as Obsidian's does: it
   updates the links and sets `lumiere.markdown.linkUpdates.mode` to
   `always`. The edits are now built after the answer, so a note edited
