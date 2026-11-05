@@ -3,6 +3,7 @@
  * Source of truth is the notes; this cache is never written to disk.
  */
 import type { ViewRect } from "./geometry";
+import { readLinkDestination } from "./native-links";
 import { parsePdfDeepLinkFragment } from "./text-fragment";
 
 export interface PdfBacklinkHit {
@@ -16,9 +17,8 @@ export interface PdfBacklinkHit {
   highlightId?: string;
 }
 
-/** Markdown `[label](target)` / `[label](<target>)` destinations. */
-const MD_LINK =
-  /\[([^\]]*)\]\(\s*(?:<([^>\n]+)>|([^)\s]+))\s*(?:["'][^"']*["'])?\s*\)/gu;
+/** The `[label](` that opens an inline link; its destination follows. */
+const MD_LINK_START = /\[[^\]]*\]\(\s*/gu;
 
 /**
  * Collect PDF deep-link hits from one note's Markdown text.
@@ -30,10 +30,11 @@ export function extractPdfBacklinks(
   noteUri: string,
 ): PdfBacklinkHit[] {
   const hits: PdfBacklinkHit[] = [];
-  MD_LINK.lastIndex = 0;
-  let match: RegExpExecArray | null;
-  while ((match = MD_LINK.exec(noteText)) !== null) {
-    const hit = hitFromMarkdownLink(match, notePath, noteUri);
+  for (const match of noteText.matchAll(MD_LINK_START)) {
+    const target = destinationAt(noteText, match.index + match[0].length);
+    const hit = target
+      ? hitFromTarget(target, { linkOffset: match.index, notePath, noteUri })
+      : undefined;
     if (hit) {
       hits.push(hit);
     }
@@ -41,24 +42,28 @@ export function extractPdfBacklinks(
   return hits;
 }
 
-function hitFromMarkdownLink(
-  match: RegExpExecArray,
-  notePath: string,
-  noteUri: string,
+/**
+ * The destination in either CommonMark form: `<papers/my paper.pdf#page=2>`
+ * or bare, with balanced parentheses (`papers/a(1).pdf#page=2`). Copy link
+ * writes the bare form, percent-encoded. A destination never spans lines.
+ */
+function destinationAt(text: string, start: number): string | undefined {
+  const lineEnd = text.indexOf("\n", start);
+  const line = text.slice(start, lineEnd < 0 ? text.length : lineEnd);
+  return readLinkDestination(line, 0)?.href.trim();
+}
+
+function hitFromTarget(
+  target: string,
+  source: { linkOffset: number; notePath: string; noteUri: string },
 ): PdfBacklinkHit | undefined {
-  const target = (match[2] ?? match[3] ?? "").trim();
-  if (!target) {
-    return undefined;
-  }
   const hash = target.indexOf("#");
   const pathPart = hash >= 0 ? target.slice(0, hash) : target;
   const fragment = hash >= 0 ? target.slice(hash + 1) : "";
   if (!/\.pdf$/iu.test(pathPart)) {
     return undefined;
   }
-  const pdfKey = normalizePdfKey(
-    resolveNoteRelativePdfPath(pathPart, notePath),
-  );
+  const pdfKey = pdfKeyOfLinkPath(pathPart, source.notePath);
   if (!pdfKey) {
     return undefined;
   }
@@ -69,9 +74,9 @@ function hitFromMarkdownLink(
     return undefined;
   }
   return {
-    noteUri,
-    notePath,
-    linkOffset: match.index,
+    noteUri: source.noteUri,
+    notePath: source.notePath,
+    linkOffset: source.linkOffset,
     pdfKey,
     page: parsed.page ?? 1,
     ...(parsed.textFragment
@@ -83,28 +88,48 @@ function hitFromMarkdownLink(
 }
 
 /**
- * When the Markdown target is note-relative (`./`, `../`, or a bare filename),
- * join it with the note's directory and collapse `.` / `..` so the key matches
- * workspace-relative `displayPath`. Vault-root / Copy-link paths
- * (`papers/a.pdf`) are returned unchanged for `normalizePdfKey`.
+ * The workspace-relative key a link's path names. The path is percent-decoded
+ * once, here: Copy link encodes `%`, so a second decode would turn a file
+ * named `a%20b.pdf` into `a b.pdf`.
  */
-function resolveNoteRelativePdfPath(
-  pathPart: string,
-  notePath: string,
-): string {
-  let value = pathPart.trim().replaceAll("\\", "/");
+function pdfKeyOfLinkPath(pathPart: string, notePath: string): string {
+  if (/^file:/iu.test(pathPart)) {
+    return fileUrlKey(pathPart);
+  }
+  return normalizePdfKey(
+    resolveNoteRelativePdfPath(decodeLinkPath(pathPart), notePath),
+  );
+}
+
+function decodeLinkPath(path: string): string {
   try {
-    value = decodeURIComponent(value);
+    return decodeURIComponent(path);
   } catch {
-    // keep undecoded
+    // A stray `%` in a hand-written link is part of the name.
+    return path;
   }
-  if (value.startsWith("file:")) {
-    return pathPart;
+}
+
+function fileUrlKey(url: string): string {
+  try {
+    return decodeURIComponent(new URL(url).pathname).replace(/^\/+/u, "");
+  } catch {
+    return url.replace(/^file:\/\//iu, "").replace(/^\/+/u, "");
   }
+}
+
+/**
+ * When the (decoded) Markdown path is note-relative (`./`, `../`, or a bare
+ * filename), join it with the note's directory and collapse `.` / `..` so the
+ * key matches workspace-relative `displayPath`. Vault-root / Copy-link paths
+ * (`papers/a.pdf`) are returned unchanged.
+ */
+function resolveNoteRelativePdfPath(path: string, notePath: string): string {
+  const value = path.trim().replaceAll("\\", "/");
   const isNoteRelative =
     value.startsWith("./") || value.startsWith("../") || !value.includes("/");
   if (!isNoteRelative) {
-    return pathPart;
+    return value;
   }
   const noteDir = dirnameWorkspacePath(notePath);
   return collapseWorkspacePath(noteDir ? `${noteDir}/${value}` : value);
@@ -134,24 +159,12 @@ function collapseWorkspacePath(path: string): string {
   return out.join("/");
 }
 
-/** Workspace-relative PDF path: `/` separators, decode once. */
+/**
+ * A workspace-relative PDF path as `displayPath` writes it: `/` separators.
+ * Never decoded: it is a real path, so a `%` in it is part of the name.
+ */
 export function normalizePdfKey(raw: string): string {
-  let value = raw.trim().replaceAll("\\", "/");
-  try {
-    value = decodeURIComponent(value);
-  } catch {
-    // keep undecoded
-  }
-  value = value.replace(/^\.\//u, "");
-  if (value.startsWith("file:")) {
-    try {
-      const path = new URL(value).pathname;
-      value = decodeURIComponent(path).replace(/^\/+/u, "");
-    } catch {
-      value = value.replace(/^file:\/\//u, "").replace(/^\/+/u, "");
-    }
-  }
-  return value;
+  return raw.trim().replaceAll("\\", "/").replace(/^\.\//u, "");
 }
 
 /**

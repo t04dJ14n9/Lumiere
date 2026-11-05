@@ -156,6 +156,10 @@ With no selection:
 [attention.pdf · p.3](papers/attention.pdf#page=3)
 ```
 
+A path with spaces or parentheses is percent-encoded
+(`papers/my%20paper%20%28v2%29.pdf`) so the link stays one Markdown link, and
+the quote's `(`, `)`, `-`, `,` and `&` are encoded too.
+
 Paste into any note; **PDF: Open Location…** and clicking a Markdown link
 open that page (and resolve `#:~:text=` to an overlay when possible). Legacy
 `#page=N&viewrect=…` and `#hl-` links still open best-effort.
