@@ -1,0 +1,36 @@
+Host GUI evidence — PR #505 Important 2 (whole-cite hover / drag no ghost)
+Asia/Singapore (UTC+8): 2026-11-05 ~16:33–16:38
+
+OVERALL: BLOCKED — could not get Lumia PDF custom editor to open paper.pdf
+
+Harness: /workspace/host-gui-505-8999e916/
+VSIX: /workspace/lumiere-0.1.10-pr505-8999e916.vsix (head 8999e916)
+Extension unpacked to extensions/t04dj14n9.lumiere-0.1.10
+DISPLAY: :78 then :79 (Xvfb 1920x1200)
+Cursor AppImage: /workspace/tools/cursor-full/squashfs-root/usr/share/cursor/cursor (3.25.9 / vscode 1.128.0)
+
+What was attempted (real Cursor launches, not faked):
+1. Launch with paper.pdf + workbench.editorAssociations *.pdf → lumiere.pdf.viewer
+   (user + workspace settings). Result: PDF opened as Plain Text (raw %PDF-1.7).
+   Boot shot: shots/_boot.png
+2. Relaunch with cwd=harness/workspace opening workspace folder — window terminated
+   unexpectedly (launch-failed code 1002). Shot: shots/_boot2.png
+3. Fresh user-data on DISPLAY :79, seeded editorOverride/customEditors memento from
+   known-good host-gui-503 user-data, associations set. Still Plain Text.
+   Shot: shots/_boot3.png, shots/_boot4-seeded.png
+4. --install-extension vsix hung (GUI); aborted.
+
+exthost.log never showed:
+  ExtensionService#_doActivateExtension t04dj14n9.lumiere
+  onCustomEditor:lumiere.pdf.viewer
+(Contrast: host-gui-503 activated Lumiere on that event when ComputerUse drove the UI.)
+
+Executor limitation: this subagent has no ComputerUse / desktop-drive tools
+(box-desktop requires delegating clicks). Cannot run "Reopen Editor With… → Lumia PDF"
+or hover/drag cite segments. Parent may need a computer-use subagent or user override.
+
+Prior PR body already noted Host GUI timeout; browser harness on same webview code
+path remains the working evidence (host-gui-shot-images/pr-pdf-cite-whole-link @ prior head).
+AFTER hover/drag Host GUI shots NOT updated this round — do not fake them.
+
+Do NOT merge without user.

@@ -1,6 +1,7 @@
-head=c5238fffe9886bd82fed86b1fc287bfbdee5e143
-hoverLit both segments of Pan et al., 2025 lit (shared group hover)
-dragGhost anyDraggable=false
-afterClickPage=12 (year segment click)
+head=8999e916517f6ce89d5281b7ed0c1cbc448cc90f
+hoverLit both segments of Pan et al., 2025 lit (shared group hover) — browser harness
+dragGhost anyDraggable=false — browser harness
+afterClickPage=12 (year segment click) — browser harness
 source=browser-harness paper.pdf dark ~175%
-host-gui=attempted Cursor source-mode; PDF viewer open timed out — browser harness uses same webview
+host-gui=BLOCKED 2026-11-05 Asia/Singapore — real Cursor launches @ /workspace/host-gui-505-8999e916 (DISPLAY :78/:79, vsix 8999e916); paper.pdf opens as Plain Text; exthost never activates t04dj14n9.lumiere / onCustomEditor:lumiere.pdf.viewer; executor has no ComputerUse to Reopen With. Details: evidence-host-gui-505-8999e916.txt. Prior AFTER shots below remain browser-harness captures (not re-shot). Do not fake Host GUI.
+wrap-merge-fix=8999e916 — skip wrap-merge when each fragment already has same-line same-dest partner; synthetic regression expects two clusters of two
