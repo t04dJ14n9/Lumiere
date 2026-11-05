@@ -15,10 +15,16 @@ interface OutlineJump {
  * The time after a click on an outline row while the view leaves the tree
  * alone: the row is already selected, and the accordion's collapse would
  * move rows under the pointer, so the second click of a double-click landed
- * on another heading (and jumped there).
+ * on another heading (and jumped there). `Report` is a scroll report held
+ * back meanwhile.
  */
-export class OutlineJumpWindow {
+export class OutlineJumpWindow<Report> {
   private jump: OutlineJump | undefined;
+  private held: Report | undefined;
+  private timer: ReturnType<typeof setTimeout> | undefined;
+
+  /** `release` gets the last report held back once the window closes. */
+  constructor(private readonly release: (report: Report) => void) {}
 
   /**
    * A click opened the heading whose row is `id`. The editor first reports its
@@ -26,6 +32,8 @@ export class OutlineJumpWindow {
    * too, until the caret moves on from the heading.
    */
   start(id: string | undefined): void {
+    // Whatever was held belongs to the previous click.
+    this.dropHeld();
     this.jump =
       id === undefined
         ? undefined
@@ -36,17 +44,32 @@ export class OutlineJumpWindow {
    * After a click the editor puts the heading at the top, so the top of the
    * viewport is often a different heading: scroll follow is held for the
    * whole window so that report cannot yank selection off the clicked row.
+   * Returns whether the report was held. The last one held is released when
+   * the window closes: the webview counted it as sent, so dropping it would
+   * leave the outline on the clicked row until the top line changed again.
    */
-  isHoldingReading(): boolean {
+  holdReading(report: Report): boolean {
     const jump = this.jump;
     if (!jump) {
       return false;
     }
-    if (Date.now() <= jump.until) {
-      return true;
+    const left = jump.until - Date.now();
+    if (left < 0) {
+      this.jump = undefined;
+      this.dropHeld();
+      return false;
     }
-    this.jump = undefined;
-    return false;
+    this.held = report;
+    // One timer for the window; later reports only replace the one held.
+    this.timer ??= setTimeout(() => this.close(), left + 1);
+    return true;
+  }
+
+  /** A caret move or a refresh is newer than any report held back. */
+  dropHeld(): void {
+    clearTimeout(this.timer);
+    this.timer = undefined;
+    this.held = undefined;
   }
 
   /** Whether the caret at row `id` is still where a click put it, or on its way. */
@@ -67,5 +90,19 @@ export class OutlineJumpWindow {
     }
     // The caret from before the click, reported before the jump landed.
     return true;
+  }
+
+  dispose(): void {
+    this.jump = undefined;
+    this.dropHeld();
+  }
+
+  private close(): void {
+    const held = this.held;
+    this.jump = undefined;
+    this.dropHeld();
+    if (held !== undefined) {
+      this.release(held);
+    }
   }
 }

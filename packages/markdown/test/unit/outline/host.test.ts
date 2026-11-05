@@ -1,4 +1,4 @@
-import test from "node:test";
+import test, { type TestContext } from "node:test";
 import assert from "node:assert/strict";
 import {
   DISABLE_FOLLOW_COMMAND,
@@ -9,6 +9,7 @@ import {
   OPEN_COMMAND,
   TOGGLE_COMMAND,
 } from "../../../src/plugins/outline/commands";
+import { OUTLINE_JUMP_MS } from "../../../src/plugins/outline/jump-window";
 import { deferred, outlineFixture, tick } from "./fixture";
 import { render, uriOf, wait } from "../views/fakes";
 
@@ -862,6 +863,132 @@ test("top-of-viewport reading during an outline jump does not yank the clicked r
   await tick();
   assert.equal(fixture.collapseAllCount, collapses + 1);
   assert.equal(fixture.reveals.at(-1)?.node.label, "A");
+});
+
+/** Click "B" in the outline with the caret in "A1a": the jump has landed on "B". */
+async function clickB(
+  fixture: Awaited<ReturnType<typeof outlineFixture>>,
+  t: TestContext,
+) {
+  const { panel, cursor } = fixture.panel("one");
+  fixture.open(panel);
+  await tick();
+  const text = fixture.texts.get("A.md")!;
+  cursor.head = text.indexOf("body-a");
+  fixture.root.emit("editor/selectionChanged", panel, false);
+  await tick();
+  // Freeze the clock so the OUTLINE_JUMP_MS window is under the test's control.
+  t.mock.timers.enable({ apis: ["Date", "setTimeout"] });
+  await fixture.fake.commands.get(OPEN_COMMAND)!(
+    uriOf("A.md"),
+    text.indexOf("# B"),
+  );
+  cursor.head = text.indexOf("# B");
+  fixture.root.emit("editor/selectionChanged", panel, false);
+  await tick();
+  fixture.reveals.length = 0;
+  return { panel, cursor, text };
+}
+
+test("the last scroll made during an outline click's hold is applied when it ends", async (t) => {
+  const fixture = await outlineFixture({ "A.md": NESTED });
+  t.after(() => fixture.root.dispose());
+  const { cursor, text } = await clickB(fixture, t);
+  // Click B, scroll on to A2a within the second, and stop: the webview
+  // reported both positions once and will not say them again.
+  t.mock.timers.tick(300);
+  cursor.read(text.indexOf("body-a"));
+  t.mock.timers.tick(300);
+  cursor.read(text.indexOf("body-a2"));
+  await tick();
+  assert.equal(fixture.reveals.length, 0, "held while the jump settles");
+  t.mock.timers.tick(OUTLINE_JUMP_MS - 600);
+  await tick();
+  assert.equal(fixture.reveals.length, 0, "still held at the last moment");
+  t.mock.timers.tick(2);
+  await tick();
+  assert.deepEqual(
+    fixture.reveals.map((reveal) => reveal.node.label),
+    ["A2a"],
+    "the newest report only, once the hold ends",
+  );
+});
+
+test("a scroll made after the hold is followed at once", async (t) => {
+  const fixture = await outlineFixture({ "A.md": NESTED });
+  t.after(() => fixture.root.dispose());
+  const { cursor, text } = await clickB(fixture, t);
+  cursor.read(text.indexOf("body-a"));
+  t.mock.timers.tick(OUTLINE_JUMP_MS + 2);
+  await tick();
+  fixture.reveals.length = 0;
+  cursor.read(text.indexOf("body-a2"));
+  await tick();
+  assert.deepEqual(
+    fixture.reveals.map((reveal) => reveal.node.label),
+    ["A2a"],
+  );
+});
+
+test("a caret move after a held scroll wins over it", async (t) => {
+  const fixture = await outlineFixture({ "A.md": NESTED });
+  t.after(() => fixture.root.dispose());
+  const { panel, cursor, text } = await clickB(fixture, t);
+  t.mock.timers.tick(300);
+  cursor.read(text.indexOf("body-a2"));
+  await tick();
+  // The reader moves the caret on from "B" to "A1a" before the hold ends.
+  t.mock.timers.tick(300);
+  cursor.head = text.indexOf("body-a");
+  fixture.root.emit("editor/selectionChanged", panel, false);
+  await tick();
+  assert.equal(fixture.reveals.at(-1)?.node.label, "A1a");
+  fixture.reveals.length = 0;
+  t.mock.timers.tick(OUTLINE_JUMP_MS);
+  await tick();
+  assert.equal(fixture.reveals.length, 0, "the older scroll is not applied");
+});
+
+test("a second click drops the scroll the first one held", async (t) => {
+  const fixture = await outlineFixture({ "A.md": NESTED });
+  t.after(() => fixture.root.dispose());
+  const { cursor, text } = await clickB(fixture, t);
+  t.mock.timers.tick(300);
+  cursor.read(text.indexOf("body-a2"));
+  t.mock.timers.tick(300);
+  await fixture.fake.commands.get(OPEN_COMMAND)!(
+    uriOf("A.md"),
+    text.indexOf("## B1"),
+  );
+  // The first click's window would end here; the second one's has not.
+  t.mock.timers.tick(OUTLINE_JUMP_MS - 600 + 2);
+  await tick();
+  assert.equal(fixture.reveals.length, 0);
+  t.mock.timers.tick(OUTLINE_JUMP_MS);
+  await tick();
+  assert.equal(fixture.reveals.length, 0, "nothing was held for the second");
+});
+
+test("a scroll held for an old text is not applied when the hold ends", async (t) => {
+  const fixture = await outlineFixture({ "A.md": NESTED });
+  t.after(() => fixture.root.dispose());
+  const { cursor, text } = await clickB(fixture, t);
+  cursor.read(text.indexOf("body-a2"));
+  // The webview's text moved on: the offset means something else now.
+  cursor.version++;
+  t.mock.timers.tick(OUTLINE_JUMP_MS + 2);
+  await tick();
+  assert.equal(fixture.reveals.length, 0);
+});
+
+test("a stopped outline applies no held scroll", async (t) => {
+  const fixture = await outlineFixture({ "A.md": NESTED });
+  const { cursor, text } = await clickB(fixture, t);
+  cursor.read(text.indexOf("body-a2"));
+  await fixture.root.dispose();
+  t.mock.timers.tick(OUTLINE_JUMP_MS + 2);
+  await tick();
+  assert.equal(fixture.reveals.length, 0);
 });
 
 test("scroll reports stop when the panel closes or the outline stops", async (t) => {

@@ -16,10 +16,18 @@ interface OutlineViewOptions {
   logger: Logger;
 }
 
+/** A scroll report held back while an outline click's jump settles. */
+interface HeldReading {
+  panel: EditorPanel;
+  position: { offset: number; version: number };
+}
+
 /** Owns refresh timing and rejects caret captures from an obsolete panel or text. */
 export class OutlineView {
   private panel: EditorPanel | undefined;
-  private readonly jumpWindow = new OutlineJumpWindow();
+  private readonly jumpWindow = new OutlineJumpWindow<HeldReading>(
+    ({ panel, position }) => void this.followReading(panel, position),
+  );
   private sourceVersion = 0;
   private revision = 0;
   private followRequest = 0;
@@ -79,6 +87,8 @@ export class OutlineView {
 
   /** Follow the active panel's caret. */
   followCaret(): Promise<void> {
+    // The caret is newer than a scroll report held back: it wins.
+    this.jumpWindow.dropHeld();
     return this.follow((panel) =>
       panel.rpc.call(editorProtocol, "captureCursor", {}),
     );
@@ -95,7 +105,7 @@ export class OutlineView {
     if (panel !== this.panel) {
       return Promise.resolve();
     }
-    if (this.jumpWindow.isHoldingReading()) {
+    if (this.jumpWindow.holdReading({ panel, position })) {
       return Promise.resolve();
     }
     return this.follow(() =>
@@ -344,5 +354,6 @@ export class OutlineView {
     this.isDisposed = true;
     this.followRequest++;
     clearTimeout(this.timer);
+    this.jumpWindow.dispose();
   }
 }

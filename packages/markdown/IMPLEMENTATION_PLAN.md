@@ -6660,3 +6660,11 @@ scroll position only in Reading view; Lumia keeps following the scroll too
   not the reader's. No host-side hold was added for these sources: they never
   reach the host as scroll reports, and the host's hold also keeps the tree
   still under a double-click, which only an outline click needs.
+- After an outline click the view dropped every scroll report for a second,
+  but the webview had already recorded them as sent: click row B, scroll on
+  to D within the second and stop, and the outline stayed on B until the top
+  line changed again. `OutlineJumpWindow` (`jump-window.ts`, moved out of
+  `view.ts`, which was four lines short of its limit) now keeps the last
+  report it holds back and applies it when the window ends, unless a caret
+  move, another click, a refresh or a stop came after it. The report goes
+  through `followReading` again, so the panel and text-version checks apply.

@@ -2,6 +2,10 @@
 
 ## 0.1.0 (unreleased)
 
+- Markdown Outline no longer stays on the row you clicked when you scroll on to
+  another section within the second after the click and stop: the last scroll
+  position held back during that second is applied when it ends.
+
 - Markdown Outline keeps the heading you jumped to selected after Go to
   Heading, a `[[#Heading]]` link or a sticky-heading click, as it does for an
   outline click. Near the end of the note, where the jump cannot put the

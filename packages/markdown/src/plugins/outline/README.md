@@ -48,10 +48,13 @@ the top as the note allows. The jump a click makes does not collapse or expand
 anything (nor does the caret the editor reports from before it): rows that
 moved under the pointer sent a double-click's second click to another heading.
 Scroll follow (`followReading`) is held for that same jump window
-(`OUTLINE_JUMP_MS`) so a top-of-viewport report cannot yank selection off the
-clicked row while the heading is still settling at the top; caret follow keeps
-using `isOutlineJump`. The accordion applies again once the caret or the
-reading position moves on.
+(`OUTLINE_JUMP_MS`, `jump-window.ts`) so a top-of-viewport report cannot yank
+selection off the clicked row while the heading is still settling at the top;
+caret follow keeps using `isCaretOnJump`. The webview counts a report as sent,
+so the last one held back is applied when the window ends (scroll on to
+another section within the second and stop, and the outline moves there a
+moment later), unless a caret move or another click came after it. The
+accordion applies again once the caret or the reading position moves on.
 
 Ctrl+Shift+O (Command+Shift+O on macOS), or **Lumia: Go to
 Heading…** in the command palette, opens a searchable heading picker. It reads
