@@ -5,8 +5,22 @@ import { provideHostServices } from "../../../src/shared/host";
 import type { HostDocument } from "../../../src/shared/host";
 import { Session } from "../../../src/plugins/document/session";
 import { documentHost } from "../../../src/plugins/document/host";
-import type { Documents } from "../../../src/plugins/document/api";
+import type {
+  Documents,
+  DocumentSession,
+} from "../../../src/plugins/document/api";
+import type { UndoGroups } from "../../../src/plugins/document/undo-groups";
 import { fakeDocument, fakeHost } from "../../support/vscode-fake";
+
+type SessionInternals = {
+  groups: UndoGroups;
+  lastSaved: string;
+  saveEcho?: string;
+};
+
+function internals(session: DocumentSession): SessionInternals {
+  return session as unknown as SessionInternals;
+}
 
 test("own save echo does not clear UndoGroups", async () => {
   let text = "note";
@@ -23,9 +37,9 @@ test("own save echo does not clear UndoGroups", async () => {
   });
   const clears: string[] = [];
   const session = new Session(doc, fakeHost());
-  const groups = (session as any).groups;
+  const groups = internals(session).groups;
   const clear = groups.clear.bind(groups);
-  groups.clear = () => {
+  internals(session).groups.clear = () => {
     clears.push("clear");
     clear();
   };
@@ -37,7 +51,7 @@ test("own save echo does not clear UndoGroups", async () => {
   await session.save();
   session.changed(); // echo
   assert.deepEqual(clears, []);
-  assert.equal((session as any).lastSaved, "note!");
+  assert.equal(internals(session).lastSaved, "note!");
 });
 
 test("native hostDocuments.onSave arms saveEcho without Session.save", async () => {
@@ -68,9 +82,9 @@ test("native hostDocuments.onSave arms saveEcho without Session.save", async () 
   });
   const session = (root.service("documents") as Documents).session(doc);
   const clears: string[] = [];
-  const groups = (session as any).groups;
+  const groups = internals(session).groups;
   const clear = groups.clear.bind(groups);
-  groups.clear = () => {
+  internals(session).groups.clear = () => {
     clears.push("clear");
     clear();
   };
@@ -84,11 +98,11 @@ test("native hostDocuments.onSave arms saveEcho without Session.save", async () 
     "documentHost must subscribe to hostDocuments.onSave",
   );
   onSave!(doc);
-  assert.equal((session as any).saveEcho, "note!");
-  assert.equal((session as any).lastSaved, "note!");
+  assert.equal(internals(session).saveEcho, "note!");
+  assert.equal(internals(session).lastSaved, "note!");
   session.changed(); // rewrite-bytes echo: host text === saveEcho, ≠ authority
   assert.deepEqual(clears, []);
-  assert.equal((session as any).saveEcho, undefined);
+  assert.equal(internals(session).saveEcho, undefined);
   assert.equal(session.text, "note!");
   await root.dispose();
 });
@@ -100,9 +114,9 @@ test("saveEcho rewrite-bytes path keeps UndoGroups when text differs from author
   });
   const clears: string[] = [];
   const session = new Session(doc, fakeHost());
-  const groups = (session as any).groups;
+  const groups = internals(session).groups;
   const clear = groups.clear.bind(groups);
-  groups.clear = () => {
+  internals(session).groups.clear = () => {
     clears.push("clear");
     clear();
   };
@@ -112,7 +126,7 @@ test("saveEcho rewrite-bytes path keeps UndoGroups when text differs from author
   session.markSaved(text);
   session.changed();
   assert.deepEqual(clears, []);
-  assert.equal((session as any).saveEcho, undefined);
+  assert.equal(internals(session).saveEcho, undefined);
   assert.equal(session.text, "note!");
 });
 
@@ -125,23 +139,23 @@ test("clean external rewrite does not clear UndoGroups", () => {
     },
   });
   const session = new Session(doc, fakeHost());
-  const groups = (session as any).groups;
+  const groups = internals(session).groups;
   const clears: string[] = [];
   const clear = groups.clear.bind(groups);
-  groups.clear = () => {
+  internals(session).groups.clear = () => {
     clears.push("clear");
     clear();
   };
   groups.record("base", "base");
   // Stale armed echo must not survive a real host rewrite.
   session.markSaved("stale-echo");
-  assert.equal((session as any).saveEcho, "stale-echo");
+  assert.equal(internals(session).saveEcho, "stale-echo");
   text = "external";
   session.changed();
   assert.deepEqual(clears, []);
   assert.equal(session.text, "external");
-  assert.equal((session as any).lastSaved, "external");
-  assert.equal((session as any).saveEcho, undefined);
+  assert.equal(internals(session).lastSaved, "external");
+  assert.equal(internals(session).saveEcho, undefined);
   assert.equal(session.authority.since(0).at(-1)?.clientID, "host");
 });
 
@@ -157,6 +171,6 @@ test("dirty unexpected host rewrite clears stale saveEcho", () => {
   session.markSaved("stale-echo");
   text = "external-dirty";
   session.changed();
-  assert.equal((session as any).saveEcho, undefined);
+  assert.equal(internals(session).saveEcho, undefined);
   assert.equal(session.text, "external-dirty");
 });

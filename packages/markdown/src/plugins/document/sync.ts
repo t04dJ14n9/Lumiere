@@ -106,7 +106,7 @@ export class Synchronizer {
         this.view.dispatch(receiveUpdates(this.view.state, batch));
       }
 
-      this.error = undefined;
+      delete this.error;
       this.status("");
     } catch (error) {
       this.fail(error instanceof Error ? error : new Error(revisionMismatch));

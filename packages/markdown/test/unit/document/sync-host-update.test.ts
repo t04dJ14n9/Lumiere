@@ -1,10 +1,6 @@
 import test from "node:test";
 import assert from "node:assert/strict";
-import {
-  collab,
-  getSyncedVersion,
-  sendableUpdates,
-} from "@codemirror/collab";
+import { collab, getSyncedVersion, sendableUpdates } from "@codemirror/collab";
 import {
   EditorState,
   Transaction,

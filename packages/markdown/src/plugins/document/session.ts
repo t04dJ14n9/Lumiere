@@ -16,7 +16,7 @@ export class Session implements DocumentSession {
   private readonly groups = new UndoGroups();
   private historyAction = false;
   private lastSaved: string;
-  private saveEcho: string | undefined;
+  private saveEcho?: string;
   constructor(
     readonly document: HostDocument,
     private readonly host: HostServices,
