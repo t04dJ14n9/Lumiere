@@ -703,6 +703,8 @@ Both are off by default (owner decision). Turn on
 1. Rename `Target.md` to `Goal.md` in the Explorer: a dialog asks to update
    links in the notes that link to it. Accept: links (with aliases,
    headings and blocks) now point at `Goal`. Decline: nothing changes.
+   **Always Update** updates them and sets `linkUpdates.mode` to `always`,
+   so the next rename does not ask.
 2. `lumiere.markdown.linkUpdates.mode`: `always` skips the dialog,
    `never` changes nothing.
 

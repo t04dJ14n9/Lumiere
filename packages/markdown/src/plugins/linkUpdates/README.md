@@ -13,8 +13,10 @@ rewrites only the path of each link: a wikilink stays a wikilink, a Markdown
 link stays a Markdown link, and `#subpaths` and aliases are kept. The path is
 written in the new-link format. A moved note's own path-style links are
 rewritten too. Folder renames cover every file inside. By default it asks
-first; the edits are applied together with the rename, so one undo reverts
-them.
+first (Update Links, Always Update, which sets the mode to `always`, or
+Don't Update), and builds the edits after the answer, so text typed while
+the dialog is open is what gets rewritten. The edits are applied together
+with the rename, so one undo reverts them.
 
 ## Rename Heading
 

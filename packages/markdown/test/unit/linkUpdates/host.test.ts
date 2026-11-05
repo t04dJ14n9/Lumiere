@@ -135,3 +135,35 @@ test("settledWithin stops waiting at the limit", async () => {
   );
   assert.equal(settled, true);
 });
+
+test("Always Update rewrites the links and stops asking for that note", async () => {
+  const { root, fake, host } = await start();
+  const writes: unknown[][] = [];
+  host.settings.access.update = async (key, value, resource) => {
+    writes.push([key, value, resource]);
+    return "workspaceFolder";
+  };
+  fake.answerWith("Always Update");
+  assert.equal((await fake.rename(rename)).length, 2);
+  assert.deepEqual(writes, [
+    ["linkUpdates.mode", "always", uriOf("Topic/Old.md")],
+  ]);
+  await root.dispose();
+});
+
+test("the edits are built from the text as it is when the dialog is answered", async () => {
+  const { root, fake, host } = await start();
+  const typed = "Typed during the dialog: [[Old]]";
+  host.dialogs.ask = async () => {
+    host.hostDocuments.text = (uri) =>
+      uri === uriOf("A.md") ? typed : undefined;
+    return "Update Links";
+  };
+  const edits = await fake.rename(rename);
+  const a = edits.find((file) => file.uri === uriOf("A.md"));
+  assert.deepEqual(
+    a?.edits.map((edit) => [edit.start.line, edit.start.col, edit.text]),
+    [[0, 25, "[[New]]"]],
+  );
+  await root.dispose();
+});

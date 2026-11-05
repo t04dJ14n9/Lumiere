@@ -1,5 +1,5 @@
 import type { Plugin } from "@workshop/core";
-import type { Dialogs, FileTextEdits, HostServices } from "../../shared/host";
+import type { FileTextEdits, HostServices } from "../../shared/host";
 import type { Vault, Vaults } from "../vault/api";
 import type {} from "../editor/api";
 import { rewriteLinks } from "./rewrite";
@@ -30,39 +30,65 @@ export const linkUpdatesHost: Plugin = {
       hostDocuments: ctx.hostDocuments,
     });
     ctx.effect(() =>
-      ctx.hostDocuments.onWillRename(async (renames) => {
-        const resource = renames[0]?.oldUri;
-        if (resource) {
-          await ctx.settings.effective.prepare(resource);
-        }
-        const mode = ctx.settings.get<string>(
-          "linkUpdates.mode",
-          "prompt",
-          resource,
-        );
-        if (mode === "never") {
-          return [];
-        }
-        const edits = await linkEdits(ctx.vaults, ctx, renames);
-        if (edits.length === 0) {
-          return [];
-        }
-        if (mode === "prompt" && !(await confirm(ctx.dialogs, edits.length))) {
-          return [];
-        }
-        return edits;
-      }),
+      ctx.hostDocuments.onWillRename((renames) => renameEdits(ctx, renames)),
     );
   },
 };
 
-async function confirm(dialogs: Dialogs, files: number): Promise<boolean> {
-  const update = "Update Links";
-  const answer = await dialogs.ask(
-    `Update links in ${files} file${files === 1 ? "" : "s"}?`,
-    [update, "Don't Update"],
+type RenameHost = Pick<
+  HostServices,
+  "settings" | "hostDocuments" | "dialogs"
+> & {
+  vaults: Vaults;
+};
+
+type Renames = readonly { oldUri: string; newUri: string }[];
+
+/** The link edits VS Code applies together with a rename, per `linkUpdates.mode`. */
+async function renameEdits(
+  host: RenameHost,
+  renames: Renames,
+): Promise<FileTextEdits[]> {
+  const resource = renames[0]?.oldUri;
+  if (resource) {
+    await host.settings.effective.prepare(resource);
+  }
+  const mode = host.settings.get<string>(
+    "linkUpdates.mode",
+    "prompt",
+    resource,
   );
-  return answer === update;
+  if (mode === "never") {
+    return [];
+  }
+  if (mode === "prompt" && !(await askToUpdate(host, renames, resource))) {
+    return [];
+  }
+  // Built after the answer: a note edited while the dialog was open is
+  // rewritten as it is now, not as it was when the rename started.
+  return linkEdits(host.vaults, host, renames);
+}
+
+/** Asks unless nothing would change; "Always" also stops asking for this resource. */
+async function askToUpdate(
+  host: RenameHost,
+  renames: Renames,
+  resource: string | undefined,
+): Promise<boolean> {
+  const files = (await linkEdits(host.vaults, host, renames)).length;
+  if (files === 0) {
+    return false;
+  }
+  const update = "Update Links";
+  const always = "Always Update";
+  const answer = await host.dialogs.ask(
+    `Update links in ${files} file${files === 1 ? "" : "s"}?`,
+    [update, always, "Don't Update"],
+  );
+  if (answer === always) {
+    await host.settings.access.update("linkUpdates.mode", "always", resource);
+  }
+  return answer === update || answer === always;
 }
 
 /**
@@ -92,7 +118,7 @@ export async function settledWithin(
 async function linkEdits(
   vaults: Vaults,
   host: Pick<HostServices, "settings" | "hostDocuments">,
-  renames: readonly { oldUri: string; newUri: string }[],
+  renames: Renames,
 ): Promise<FileTextEdits[]> {
   const first = renames[0] ? await vaults.locate(renames[0].oldUri) : undefined;
   if (!first) {
