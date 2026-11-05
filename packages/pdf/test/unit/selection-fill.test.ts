@@ -17,12 +17,10 @@ function selectionFill(): string {
     .trim();
 }
 
-test("the text selection fill is solid; group opacity prevents double-darkening", () => {
-  // EmbedPDF draws one box per line inside an isolation wrapper. page.css
-  // paints with mix-blend-mode: normal + wrapper opacity, so a solid fill
-  // keeps overlaps from stacking while glyphs stay readable. The theme's
-  // colour is made solid first: some themes' are see-through. Mix is strong
-  // enough that the tint still reads after ~0.45 group opacity.
+test("the text selection is painted solid, so overlapping line boxes do not darken twice", () => {
+  // EmbedPDF draws one box per line and multiplies them onto the page as a
+  // group; tight lines and larger words make neighbouring boxes overlap.
+  // The theme's colour is made solid first: some themes' are see-through.
   const fill = selectionFill();
-  assert.match(fill, /^color-mix\(in srgb, oklch\(.+ \/ 1\) 90%, white\)$/u);
+  assert.match(fill, /^color-mix\(in srgb, oklch\(.+ \/ 1\) 40%, white\)$/u);
 });

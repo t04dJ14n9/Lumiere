@@ -19,28 +19,3 @@ export const FIGURE: {
 };
 
 export function figurePdf(): Buffer<ArrayBuffer>;
-
-export const SELECTION_COVER: {
-  readonly size: { readonly width: number; readonly height: number };
-  readonly title: {
-    readonly text: string;
-    readonly y: number;
-    readonly size: number;
-    readonly x: number;
-  };
-  readonly body: ReadonlyArray<{
-    readonly text: string;
-    readonly y: number;
-    readonly size: number;
-    readonly x: number;
-  }>;
-  readonly bullets: ReadonlyArray<{
-    readonly mark: readonly [number, number, number, number];
-    readonly text: string;
-    readonly textX: number;
-    readonly y: number;
-    readonly size: number;
-  }>;
-};
-
-export function selectionCoverPdf(): Buffer;
