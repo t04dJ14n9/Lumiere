@@ -5,7 +5,7 @@ import type { Prepared } from "../../shared/document/authority";
 import type { HostDocument, HostServices, TextEdit } from "../../shared/host";
 import type { Endpoint } from "../../shared/rpc/endpoint";
 import { UndoGroups } from "./undo-groups";
-import { protocol } from "./protocol";
+import { protocol, updatesFullTextMax } from "./protocol";
 import type { DocumentSession } from "./api";
 export class Session implements DocumentSession {
   readonly authority: Authority;
@@ -15,17 +15,28 @@ export class Session implements DocumentSession {
   private expected?: Prepared;
   private readonly groups = new UndoGroups();
   private historyAction = false;
+  private lastSaved: string;
+  private saveEcho?: string;
   constructor(
     readonly document: HostDocument,
     private readonly host: HostServices,
   ) {
     this.authority = new Authority(document.getText());
+    this.lastSaved = document.getText();
   }
   private fingerprint(): string {
     return this.host.hostDocuments.fingerprint(this.text);
   }
-  save(): Promise<boolean> {
-    return saveDocument(this.document, this.host);
+  markSaved(text: string): void {
+    this.lastSaved = text;
+    this.saveEcho = text;
+  }
+  async save(): Promise<boolean> {
+    const ok = await saveDocument(this.document, this.host);
+    if (ok) {
+      this.markSaved(this.document.getText());
+    }
+    return ok;
   }
   withAction<T>(action: () => Promise<T>): Promise<T> {
     const result = this.actions.then(action);
@@ -100,16 +111,43 @@ export class Session implements DocumentSession {
     };
   }
   changed(): void {
+    const hostText = this.document.getText();
     // A change event with no new text (a dirty-state change; Cursor can send
     // one before an edit lands) must not consume the expected panel edit.
-    if (textDocument(this.document.getText()).eq(this.authority.doc)) {
+    if (textDocument(hostText).eq(this.authority.doc)) {
+      if (this.saveEcho !== undefined && hostText === this.saveEcho) {
+        delete this.saveEcho;
+      }
       return;
     }
-    if (!this.expected && !this.historyAction) {
-      this.groups.clear();
+    // Own save can echo as a host rewrite of the same bytes. Record without
+    // wiping undo grouping.
+    if (this.saveEcho !== undefined && hostText === this.saveEcho) {
+      delete this.saveEcho;
+      this.authority.record(hostText, this.expected);
+      delete this.expected;
+      this.broadcast();
+      return;
     }
-    this.authority.record(this.document.getText(), this.expected);
-    delete this.expected;
+    if (this.expected || this.historyAction) {
+      this.authority.record(hostText, this.expected);
+      delete this.expected;
+      this.broadcast();
+      return;
+    }
+    // Real host rewrite (agent / git / reload). Drop any armed saveEcho so a
+    // later identical echo cannot false-match after this external rewrite.
+    if (!this.document.isDirty) {
+      delete this.saveEcho;
+      this.authority.record(hostText);
+      this.lastSaved = hostText;
+      this.broadcast();
+      return; // keep UndoGroups
+    }
+    // Dirty unexpected host rewrite: keep today's clear + record (slim: no merge).
+    delete this.saveEcho;
+    this.groups.clear();
+    this.authority.record(hostText);
     this.broadcast();
   }
   private broadcast(): void {
@@ -117,10 +155,13 @@ export class Session implements DocumentSession {
       if (client.sent === this.version) {
         continue;
       }
-      client.rpc.notify(protocol, "updates", {
+      const text = this.authority.doc.toString();
+      const params = {
         version: client.sent,
         updates: this.authority.since(client.sent),
-      });
+        ...(text.length <= updatesFullTextMax ? { fullText: text } : {}),
+      };
+      client.rpc.notify(protocol, "updates", params);
       client.sent = this.version;
     }
   }

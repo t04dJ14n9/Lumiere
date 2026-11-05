@@ -8,6 +8,10 @@ import type { EditorView } from "@codemirror/view";
 import type { Endpoint } from "../../shared/rpc/endpoint";
 import { protocol } from "./protocol";
 import { editGroup } from "./input-annotation";
+
+const revisionMismatch =
+  "Document revisions differ. Keep this tab open and copy your edits before reopening.";
+
 export class Synchronizer {
   private sending = false;
   private stopped = false;
@@ -22,13 +26,20 @@ export class Synchronizer {
   receive(message: {
     version: number;
     updates: { clientID: string; changes: unknown }[];
+    fullText?: string;
   }): void {
-    if (message.version !== getSyncedVersion(this.view.state)) {
-      this.fail(
-        new Error(
-          "Document revisions differ. Keep this tab open and copy your edits before reopening.",
-        ),
-      );
+    const synced = getSyncedVersion(this.view.state);
+    if (message.version !== synced) {
+      const { fullText } = message;
+      if (
+        !message.updates.length ||
+        message.updates.some((update) => update.clientID !== "host") ||
+        typeof fullText !== "string"
+      ) {
+        this.fail(new Error(revisionMismatch));
+        return;
+      }
+      this.applyHostReset({ ...message, fullText });
       return;
     }
     try {
@@ -43,6 +54,61 @@ export class Synchronizer {
       );
     } catch (error) {
       this.fail(error);
+    }
+    queueMicrotask(() => this.pump());
+  }
+  /**
+   * Host-only updates arrived against a different collab version than this
+   * panel's. Skew recovery requires `message.fullText` (do not apply host
+   * ChangeSets onto the live wrong-base doc). Replace with that text in one
+   * `userEvent: "set"` and jump the collab synced version to
+   * `message.version + updates.length` so the panel stays usable instead of
+   * dying with the reopen/copy error.
+   */
+  private applyHostReset(message: {
+    version: number;
+    updates: { clientID: string; changes: unknown }[];
+    fullText: string;
+  }): void {
+    try {
+      const nextVersion = message.version + message.updates.length;
+      const synced = getSyncedVersion(this.view.state);
+      const target = message.fullText;
+
+      // One full-document replace; single undoable set on the view.
+      this.view.dispatch({
+        changes: {
+          from: 0,
+          to: this.view.state.doc.length,
+          insert: target,
+        },
+        userEvent: "set",
+      });
+
+      // Confirm the local set (and any prior unconfirmed) via matching
+      // clientIDs, then pad with host no-ops so synced version == nextVersion.
+      const pending = sendableUpdates(this.view.state).map((update) => ({
+        clientID: update.clientID,
+        changes: update.changes,
+      }));
+      const afterConfirm = synced + pending.length;
+      const fillers: { clientID: string; changes: ChangeSet }[] = [];
+      if (nextVersion > afterConfirm) {
+        const noop = ChangeSet.empty(this.view.state.doc.length);
+        for (let i = afterConfirm; i < nextVersion; i++) {
+          fillers.push({ clientID: "host", changes: noop });
+        }
+      }
+      const batch = [...pending, ...fillers];
+      if (batch.length) {
+        this.view.dispatch(receiveUpdates(this.view.state, batch));
+      }
+
+      delete this.error;
+      this.status("");
+    } catch (error) {
+      this.fail(error instanceof Error ? error : new Error(revisionMismatch));
+      return;
     }
     queueMicrotask(() => this.pump());
   }

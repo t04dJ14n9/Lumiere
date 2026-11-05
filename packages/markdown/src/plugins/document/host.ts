@@ -51,6 +51,14 @@ export const documentHost: Plugin = {
         }
       }),
     );
+    ctx.effect(() =>
+      ctx.hostDocuments.onSave((document) => {
+        const session = sessions.get(document)?.session;
+        if (session) {
+          session.markSaved(document.getText());
+        }
+      }),
+    );
     ctx.effect(() => () => sessions.clear());
   },
 };
