@@ -42,6 +42,19 @@ const settingsEditor = (page: Page) => page.locator(".settings-editor");
 /** The rows of the open quick pick, as text. */
 const rows = (page: Page) => page.locator(".quick-input-list .monaco-list-row");
 
+/**
+ * Choose a row of the quick pick that is opening by typing its label. A
+ * scripted click right after the previous pick can land on a row of the list
+ * being replaced: a click on "Off" there chose "On".
+ */
+async function pickByLabel(page: Page, label: string): Promise<void> {
+  await expect(
+    rows(page).filter({ has: page.getByText(label, { exact: true }) }),
+  ).toBeVisible();
+  await page.locator(".quick-input-widget input:visible").fill(label);
+  await page.keyboard.press("Enter");
+}
+
 test.afterEach(async ({ workbench: page }) => {
   await closeSettingsEditor(page);
   // Keep the watched directory alive: macOS can coalesce its deletion and
@@ -226,14 +239,14 @@ test("PDF: Change Setting… lists every setting, grouped with its value, and ed
   await command(page, "PDF: Change Setting…");
   await widget.locator("input:visible").fill("Smooth Scrolling");
   await rows(page).filter({ hasText: "Smooth Scrolling" }).first().click();
-  await rows(page).filter({ hasText: "Off" }).first().click();
+  await pickByLabel(page, "Off");
   await expect
     .poll(() => userSetting("lumiere.pdf.view.smoothScrolling"))
     .toBe(false);
   await command(page, "PDF: Change Setting…");
   await widget.locator("input:visible").fill("Smooth Scrolling");
   await rows(page).filter({ hasText: "Smooth Scrolling" }).first().click();
-  await rows(page).filter({ hasText: "Follow the editor" }).first().click();
+  await pickByLabel(page, "Follow the editor");
   await expect
     .poll(() => userSetting("lumiere.pdf.view.smoothScrolling"))
     .toBeNull();
