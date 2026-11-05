@@ -203,16 +203,20 @@ export interface NativeNavigation extends Navigation {
 }
 
 /** Absolute, foldered, or create → vault root; basename lookup → source parent. */
-function linkJoinRoot(
+function resolvedLinkUri(
   link: string,
   create: boolean | undefined,
   base: vscode.Uri,
   sourceUri: vscode.Uri,
 ): vscode.Uri {
-  if (link.startsWith("/") || create || link.includes("/")) {
-    return base;
+  if (!link) {
+    return sourceUri;
   }
-  return vscode.Uri.joinPath(sourceUri, "..");
+  const root =
+    link.startsWith("/") || create || link.includes("/")
+      ? base
+      : vscode.Uri.joinPath(sourceUri, "..");
+  return vscode.Uri.joinPath(root, link.replace(/^\//, ""));
 }
 
 async function resolveNavigation({
@@ -226,12 +230,7 @@ async function resolveNavigation({
 }: Parameters<Navigation["resolve"]>[0]): Promise<string | undefined> {
   const base = vscode.Uri.parse(root);
   const sourceUri = vscode.Uri.parse(source);
-  let uri = !link
-    ? sourceUri
-    : vscode.Uri.joinPath(
-        linkJoinRoot(link, create, base, sourceUri),
-        link.replace(/^\//, ""),
-      );
+  let uri = resolvedLinkUri(link, create, base, sourceUri);
   await contained(base, uri);
   try {
     const stat = await vscode.workspace.fs.stat(uri);
