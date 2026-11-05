@@ -5,8 +5,10 @@ import { loadYaml } from "../../../src/markdown/properties/load-yaml";
 import { inferPropertyKind } from "../../../src/markdown/properties/types";
 import {
   matchesPropertyKind,
+  obsidianDateTextFromYamlSource,
   propertyDateText,
   propertyInput,
+  propertyYamlInput,
   settablePropertyNode,
   settablePropertyValue,
 } from "../../../src/markdown/properties/values";
@@ -81,5 +83,59 @@ test("matchesPropertyKind accepts Date for date and datetime kinds", () => {
   assert.equal(
     matchesPropertyKind("date", new Date("2026-10-15T14:30:00.000Z")),
     false,
+  );
+});
+
+test("propertyDateText keeps wall-clock from YAML source for offsets and Z", () => {
+  const offset = new Date("2026-10-15T06:30:00.000Z");
+  assert.equal(
+    propertyDateText(offset, "2026-10-15T14:30:00+08:00"),
+    "2026-10-15T14:30",
+  );
+  assert.equal(
+    propertyDateText(
+      new Date("2026-10-15T14:30:00.000Z"),
+      "2026-10-15T14:30:00Z",
+    ),
+    "2026-10-15T14:30",
+  );
+  // Without source, ISO/UTC remains the fallback.
+  assert.equal(propertyDateText(offset), "2026-10-15T06:30");
+});
+
+test("obsidianDateTextFromYamlSource treats T00:00:00 as datetime, not date", () => {
+  assert.equal(obsidianDateTextFromYamlSource("2026-10-15"), "2026-10-15");
+  assert.equal(
+    obsidianDateTextFromYamlSource("2026-10-15T00:00:00"),
+    "2026-10-15T00:00",
+  );
+  assert.equal(
+    obsidianDateTextFromYamlSource("2026-10-15T00:00:00Z"),
+    "2026-10-15T00:00",
+  );
+});
+
+test("frontmatter preserves !!timestamp wall-clock for +08:00 and Z", () => {
+  const header = frontmatter(
+    "---\nlocal: !!timestamp 2026-10-15T14:30:00+08:00\nutc: !!timestamp 2026-10-15T14:30:00Z\nmidnight: !!timestamp 2026-10-15T00:00:00\n---\n",
+  );
+  assert.equal(header?.values?.local, "2026-10-15T14:30");
+  assert.equal(header?.values?.utc, "2026-10-15T14:30");
+  assert.equal(header?.values?.midnight, "2026-10-15T00:00");
+  assert.equal(inferPropertyKind("local", header?.values?.local), "datetime");
+  assert.equal(
+    inferPropertyKind("midnight", header?.values?.midnight),
+    "datetime",
+  );
+});
+
+test("YAML drafts keep +08:00 and Z wall-clock as plain datetime strings", () => {
+  assert.equal(
+    propertyYamlInput("!!timestamp 2026-10-15T14:30:00+08:00"),
+    "2026-10-15T14:30",
+  );
+  assert.equal(
+    propertyYamlInput("!!timestamp 2026-10-15T14:30:00Z"),
+    "2026-10-15T14:30",
   );
 });

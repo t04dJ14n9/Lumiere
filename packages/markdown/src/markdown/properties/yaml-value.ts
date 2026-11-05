@@ -171,9 +171,23 @@ function taggedScalarStart(
     return start;
   }
   const token = `!!${tag.slice("tag:yaml.org,2002:".length)}`;
+  // Prefer the last real tag token at or before the scalar; skip comment text.
+  let at = -1;
   const searchFrom = Math.max(0, range0 - token.length - 16);
-  const at = body.indexOf(token, searchFrom);
-  return at >= 0 && at < range0 ? Math.min(start, at) : start;
+  for (let from = searchFrom; from < range0;) {
+    const found = body.indexOf(token, from);
+    if (found < 0 || found >= range0) {
+      break;
+    }
+    const after = body[found + token.length];
+    const whole = !after || !/[A-Za-z0-9_-]/.test(after);
+    const lineStart = body.lastIndexOf("\n", found - 1) + 1;
+    if (whole && !commentStartsBefore(body, lineStart, found)) {
+      at = found;
+    }
+    from = found + 1;
+  }
+  return at >= 0 ? Math.min(start, at) : start;
 }
 
 export function setPropertyChange(

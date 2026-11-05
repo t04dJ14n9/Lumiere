@@ -509,8 +509,7 @@ test("YAML drafts accept !!timestamp scalars as Obsidian plain date strings", ()
 });
 
 test("editing a !!timestamp date property writes a plain YYYY-MM-DD string", () => {
-  const source =
-    "---\ncreated: !!timestamp 2026-10-15\nkeep: yes\n---\n";
+  const source = "---\ncreated: !!timestamp 2026-10-15\nkeep: yes\n---\n";
   const next = edit(source, {
     type: "set",
     key: "created",
@@ -522,8 +521,7 @@ test("editing a !!timestamp date property writes a plain YYYY-MM-DD string", () 
 });
 
 test("editing a !!timestamp datetime property writes a plain datetime string", () => {
-  const source =
-    "---\nupdated: !!timestamp 2026-10-15T14:30:00\n---\n";
+  const source = "---\nupdated: !!timestamp 2026-10-15T14:30:00\n---\n";
   const next = edit(source, {
     type: "set",
     key: "updated",
@@ -532,6 +530,22 @@ test("editing a !!timestamp datetime property writes a plain datetime string", (
   assert.match(next, /updated: 2026-10-15T15:45\n/);
   assert.doesNotMatch(next, /!!timestamp/);
   assert.equal(frontmatter(next)?.values?.updated, "2026-10-15T15:45");
+});
+
+test("!!timestamp mentions in comments do not retarget taggedScalarStart", () => {
+  const source =
+    "---\n# reuse !!timestamp here\ncreated: !!timestamp 2026-10-15\nkeep: yes\n---\n";
+  const next = edit(source, {
+    type: "set",
+    key: "created",
+    value: "2026-10-16",
+  });
+  assert.match(
+    next,
+    /^---\n# reuse !!timestamp here\ncreated: 2026-10-16\nkeep: yes\n---\n$/,
+  );
+  assert.equal(frontmatter(next)?.values?.created, "2026-10-16");
+  assert.equal(frontmatter(next)?.values?.keep, "yes");
 });
 
 test("nested alias sites keep multiline collection inserts indented", () => {

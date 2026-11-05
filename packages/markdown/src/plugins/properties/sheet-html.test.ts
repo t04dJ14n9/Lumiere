@@ -252,16 +252,28 @@ test("top-level !!timestamp date scalars render editable Date controls", () => {
   assert.doesNotMatch(html, /data-property-key="updated"[\s\S]*Source mode/);
 });
 
+test("!!timestamp with +08:00 or Z keeps wall-clock in datetime-local value", () => {
+  const html = renderProperties(
+    "---\nlocal: !!timestamp 2026-10-15T14:30:00+08:00\nutc: !!timestamp 2026-10-15T14:30:00Z\n---\n",
+  );
+  assert.match(
+    html,
+    /data-property-input="local"[^>]*value="2026-10-15T14:30"|value="2026-10-15T14:30"[^>]*data-property-input="local"/,
+  );
+  assert.match(
+    html,
+    /data-property-input="utc"[^>]*value="2026-10-15T14:30"|value="2026-10-15T14:30"[^>]*data-property-input="utc"/,
+  );
+  assert.doesNotMatch(html, /value="2026-10-15T06:30"/);
+});
+
 test("OKF maps with nested !!timestamp stay editable YAML drafts when Date is settable", () => {
   const html = renderProperties(
     "---\ngenerated: {at: !!timestamp 2026-10-15, by: old}\n---\n",
   );
   // Nested timestamps may become draftable once Date scalars are settable;
   // they must not fall back to the Source-mode dead-end for the whole map.
-  assert.doesNotMatch(
-    html,
-    /data-property-key="generated"[\s\S]*Source mode/,
-  );
+  assert.doesNotMatch(html, /data-property-key="generated"[\s\S]*Source mode/);
 });
 
 for (const value of ["!!pairs [a: 1]", "!!map {a: 1}", ".inf", "[.inf]"]) {

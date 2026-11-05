@@ -1,7 +1,7 @@
 import type { Document } from "yaml";
 import { headerParts } from "./header-parts";
 import { loadYaml } from "./load-yaml";
-import { settablePropertyNode } from "./values";
+import { plainDocumentDates, settablePropertyNode } from "./values";
 
 export { headerParts } from "./header-parts";
 
@@ -26,7 +26,7 @@ export function frontmatter(source: string):
     if (document.errors.length) {
       throw new Error(document.errors[0]!.message);
     }
-    const value: unknown = document.toJS({ maxAliasCount: 100 });
+    const value: unknown = plainDocumentDates(document);
     if (value !== null && (typeof value !== "object" || Array.isArray(value))) {
       throw new Error("Properties must be a YAML mapping.");
     }
