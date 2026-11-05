@@ -1,0 +1,15 @@
+fixture=selection-cover.pdf (synthetic; copied from #490 Host GUI harness)
+shots_content=synthetic_fixture_only
+path=vanilla_embedpdf_selectionlayer
+after_blend=multiply (EmbedPDF stock; no Lumia isolation CSS override)
+after_opacity=n/a (no group opacity override)
+after_scaleY=n/a (no descender pad override)
+light_selection_fill=40% (pre-#490 multiply-era token)
+host_gui_result=captured
+host_gui_dark=captured (subtle/short multiply tint expected on dark paper)
+host_gui_light=captured (stock SelectionLayer boxes)
+host_gui_zoom=300%
+host_gui_head=2e4695de
+pr=503
+note=Host GUI AFTER shots for #503 vanilla restore @ 2e4695de zoom=300%. Dark selection uses EmbedPDF multiply (subtle/short over glyph ink — intentional). Light selection shows stock gray boxes. Synthetic fixture only.
+shots=01-dark-paper-open.png,02-dark-multiline-selection.png,03-dark-descenders-bullets.png,04-light-paper-selection.png,05-light-paper-open.png
