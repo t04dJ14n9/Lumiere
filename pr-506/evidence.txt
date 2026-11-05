@@ -5,8 +5,8 @@ OVERALL: PASS
 
 Harness (create): /workspace/host-gui-506-977079bb/
 Harness (resolve/hover): /workspace/host-gui-506-a80dadc0/
-VSIX / product SHA for resolve shots: a80dadc0 (product same as tip 51920d36 for resolve)
-Tip for merge: 51920d363172e959fe224ac584f61b8f3b29b20f
+VSIX / product SHA for resolve shots: a80dadc0 (product same as tip f8fa61e4; VSIX built @ a80dadc0)
+Tip for merge: f8fa61e4042406945fbd68859eb810b68ace088d
 Prior create VSIX: 977079bb (createNote vault-relative guard)
 DISPLAY: :82 (Xvfb 1920x1200), real Cursor Host GUI
 Settings: files.newNoteFolder = "." (VS Code + Obsidian newFileLocation=current)
