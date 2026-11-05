@@ -770,6 +770,25 @@ test("a primary Cursor Markdown tab whose label names a note is reclaimed", asyn
   assert.equal(commands[0]?.[2], viewType);
 });
 
+for (const unidentified of [
+  "file:///vault/Feature.plan.md",
+  "file:///vault/.cursor/plans/Feature.md",
+  "file:///vault/.claude/commands/Feature.md",
+]) {
+  test(`an input-less tab labelled like the note ${unidentified} is not identified as Cursor Markdown and stays`, async (t) => {
+    // Cursor's plan editor is input-less and named by basename too; its tab
+    // must survive even though a matching textDocument makes labelUri resolve.
+    const stop = host.reclaim.registerReclaim();
+    t.after(() => stop.dispose());
+    const tab = cursorTab(unidentified);
+    tabsChanged.fire({ opened: [tab], changed: [], closed: [] });
+    await tick();
+    assert.deepEqual(warmed, []);
+    assert.deepEqual(commands, []);
+    assert.deepEqual(group.tabs, [tab], "the tab is not closed");
+  });
+}
+
 test("an input-less tab with no matching note document is left alone", async (t) => {
   const stop = host.reclaim.registerReclaim();
   t.after(() => stop.dispose());
