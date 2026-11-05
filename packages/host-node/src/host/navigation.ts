@@ -68,6 +68,19 @@ export function createHostNavigation(
 type ResolveRequest = Parameters<Navigation["resolve"]>[0];
 
 /** The file a link names, or the note created for it; undefined when there is none. */
+/** Absolute, foldered, or create → vault root; basename lookup → source parent. */
+function linkJoinRoot(
+  link: string,
+  create: boolean | undefined,
+  root: string,
+  sourceParent: string,
+): string {
+  if (link.startsWith("/") || create || link.includes("/")) {
+    return root;
+  }
+  return sourceParent;
+}
+
 export async function resolveLink(
   files: HostFiles,
   request: ResolveRequest,
@@ -77,7 +90,7 @@ export async function resolveLink(
     ? source
     : joinUri(
         files,
-        link.startsWith("/") || create ? root : parentUri(files, source),
+        linkJoinRoot(link, create, root, parentUri(files, source)),
         link.replace(/^\//, ""),
       );
   await requireInside(files, root, target);
@@ -107,7 +120,9 @@ async function createNote(
   const { root, request } = options;
   let target = options.target;
   const link = request.path;
-  if (!link.startsWith("/")) {
+  // Basename-only links respect newNoteFolder; a path with folders (or a
+  // leading "/") creates at that vault-relative path under the vault root.
+  if (!link.startsWith("/") && !link.includes("/")) {
     const folder = request.newNoteFolder ?? "";
     const parent =
       folder === "."

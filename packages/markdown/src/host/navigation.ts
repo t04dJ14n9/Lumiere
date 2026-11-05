@@ -202,6 +202,23 @@ export interface NativeNavigation extends Navigation {
   ): Promise<boolean | void>;
 }
 
+/** Absolute, foldered, or create → vault root; basename lookup → source parent. */
+function resolvedLinkUri(
+  link: string,
+  create: boolean | undefined,
+  base: vscode.Uri,
+  sourceUri: vscode.Uri,
+): vscode.Uri {
+  if (!link) {
+    return sourceUri;
+  }
+  const root =
+    link.startsWith("/") || create || link.includes("/")
+      ? base
+      : vscode.Uri.joinPath(sourceUri, "..");
+  return vscode.Uri.joinPath(root, link.replace(/^\//, ""));
+}
+
 async function resolveNavigation({
   root,
   source,
@@ -213,14 +230,7 @@ async function resolveNavigation({
 }: Parameters<Navigation["resolve"]>[0]): Promise<string | undefined> {
   const base = vscode.Uri.parse(root);
   const sourceUri = vscode.Uri.parse(source);
-  let uri = !link
-    ? sourceUri
-    : vscode.Uri.joinPath(
-        link.startsWith("/") || create
-          ? base
-          : vscode.Uri.joinPath(sourceUri, ".."),
-        link.replace(/^\//, ""),
-      );
+  let uri = resolvedLinkUri(link, create, base, sourceUri);
   await contained(base, uri);
   try {
     const stat = await vscode.workspace.fs.stat(uri);
@@ -274,7 +284,9 @@ async function createNote({
 }): Promise<string | undefined> {
   folder ??= "";
   let uri = candidate;
-  if (!link.startsWith("/")) {
+  // Basename-only links respect newNoteFolder; a path with folders (or a
+  // leading "/") creates at that vault-relative path under the vault root.
+  if (!link.startsWith("/") && !link.includes("/")) {
     const parent =
       folder === "."
         ? vscode.Uri.joinPath(sourceUri, "..")
