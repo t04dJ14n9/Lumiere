@@ -17,6 +17,12 @@ const INVISIBLE = new Set([
 
 const WHITESPACE = /\s/u;
 
+/** Characters [start, end) of a text. */
+export interface TextRange {
+  start: number;
+  end: number;
+}
+
 export interface FoldedText {
   /** The raw text this was folded from. */
   readonly raw: string;
@@ -73,7 +79,7 @@ export function rawRangeOf(
   folded: FoldedText,
   start: number,
   end: number,
-): { start: number; end: number } {
+): TextRange {
   const first = folded.rawIndex[start] ?? 0;
   const last = folded.rawIndex[end - 1] ?? first;
   const lastLength = (folded.raw.codePointAt(last) ?? 0) > 0xffff ? 2 : 1;

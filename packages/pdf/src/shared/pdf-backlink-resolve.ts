@@ -6,7 +6,8 @@
  * That matters because a link's quote was joined with single spaces when it
  * was copied, while the page text has the "\r\n" PDFium puts between lines.
  */
-import { foldText, rawRangeOf } from "./page-text-fold";
+import { findQuoteAtPageEdge } from "./pdf-backlink-page-edge";
+import { foldText, rawRangeOf, type TextRange } from "./page-text-fold";
 import type { SegmentRect } from "./sidecar-format";
 import { lineRects, type GlyphBox } from "./sidecar-reattach";
 
@@ -19,12 +20,6 @@ export interface TextFragmentQuery {
   prefix?: string;
   /** Text that must come right after the passage; not part of it. */
   suffix?: string;
-}
-
-/** Characters [start, end) of a text. */
-export interface TextRange {
-  start: number;
-  end: number;
 }
 
 /**
@@ -48,15 +43,18 @@ export function findTextFragment(
 
 /**
  * Line rects over the glyphs of the first match; glyph boxes are parallel to
- * the characters of `pageText` (`undefined` for spaces / empty glyphs). No
- * match or no drawable glyphs → undefined (skip overlay paint).
+ * the characters of `pageText` (`undefined` for spaces / empty glyphs). When
+ * the whole quote is not on the page, the part of it that is at the page's
+ * edge is painted: a quote that crosses a page break is in the links of both
+ * pages. No match or no drawable glyphs → undefined (skip overlay paint).
  */
 export function resolveTextToLineRects(
   pageText: string,
   glyphBoxes: readonly (GlyphBox | undefined)[],
   query: TextFragmentQuery | string,
 ): SegmentRect[] | undefined {
-  const range = findTextFragment(pageText, query);
+  const range =
+    findTextFragment(pageText, query) ?? findQuotePartOnPage(pageText, query);
   if (!range) {
     return undefined;
   }
@@ -68,6 +66,22 @@ export function resolveTextToLineRects(
   }
   const rects = lineRects(boxes);
   return rects.length > 0 ? rects : undefined;
+}
+
+/**
+ * The part of a quote that crosses a page break which is on this page. Only
+ * a plain quote can be cut: with a `textEnd` the link names the passage's two
+ * ends, not its text, and prefix and suffix cannot be checked across pages.
+ */
+function findQuotePartOnPage(
+  pageText: string,
+  query: TextFragmentQuery | string,
+): TextRange | undefined {
+  const { textStart, textEnd } =
+    typeof query === "string"
+      ? { textStart: query, textEnd: undefined }
+      : query;
+  return textEnd ? undefined : findQuoteAtPageEdge(pageText, textStart);
 }
 
 /** The query folded like page text; undefined when `textStart` is blank. */
