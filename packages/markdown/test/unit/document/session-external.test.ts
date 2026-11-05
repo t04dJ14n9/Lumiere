@@ -133,10 +133,30 @@ test("clean external rewrite does not clear UndoGroups", () => {
     clear();
   };
   groups.record("base", "base");
+  // Stale armed echo must not survive a real host rewrite.
+  session.markSaved("stale-echo");
+  assert.equal((session as any).saveEcho, "stale-echo");
   text = "external";
   session.changed();
   assert.deepEqual(clears, []);
   assert.equal(session.text, "external");
   assert.equal((session as any).lastSaved, "external");
+  assert.equal((session as any).saveEcho, undefined);
   assert.equal(session.authority.since(0).at(-1)?.clientID, "host");
+});
+
+test("dirty unexpected host rewrite clears stale saveEcho", () => {
+  let text = "base";
+  const doc = fakeDocument({
+    getText: () => text,
+    get isDirty() {
+      return true;
+    },
+  });
+  const session = new Session(doc, fakeHost());
+  session.markSaved("stale-echo");
+  text = "external-dirty";
+  session.changed();
+  assert.equal((session as any).saveEcho, undefined);
+  assert.equal(session.text, "external-dirty");
 });

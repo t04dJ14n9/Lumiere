@@ -135,14 +135,17 @@ export class Session implements DocumentSession {
       this.broadcast();
       return;
     }
-    // Real host rewrite (agent / git / reload).
+    // Real host rewrite (agent / git / reload). Drop any armed saveEcho so a
+    // later identical echo cannot false-match after this external rewrite.
     if (!this.document.isDirty) {
+      delete this.saveEcho;
       this.authority.record(hostText);
       this.lastSaved = hostText;
       this.broadcast();
       return; // keep UndoGroups
     }
     // Dirty unexpected host rewrite: keep today's clear + record (slim: no merge).
+    delete this.saveEcho;
     this.groups.clear();
     this.authority.record(hostText);
     this.broadcast();
