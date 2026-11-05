@@ -55,6 +55,9 @@ so the last one held back is applied when the window ends (scroll on to
 another section within the second and stop, and the outline moves there a
 moment later), unless a caret move or another click came after it. The
 accordion applies again once the caret or the reading position moves on.
+Above the first heading (frontmatter or a preamble) no section is current, and
+Obsidian clears the highlight; the view does the same through the tree's
+optional `clearSelection`, leaving the open rows as they are.
 
 Ctrl+Shift+O (Command+Shift+O on macOS), or **Lumia: Go to
 Heading…** in the command palette, opens a searchable heading picker. It reads
@@ -120,6 +123,9 @@ Markdown Outline so they do not linger beside non-Workshop editors.
 
 ## Limits and differences from Obsidian
 
+- VS Code's TreeView API can select a row but not clear the selection, so
+  there the last row stays highlighted while the caret or the top line is above
+  the first heading. The app's outline panel (host-node) clears it.
 - No drag-and-drop reordering of sections.
 - VS Code's native Outline and breadcrumbs require an editor integration that
   the supported CustomTextEditorProvider API does not supply. Workshop uses

@@ -991,6 +991,145 @@ test("a stopped outline applies no held scroll", async (t) => {
   assert.equal(fixture.reveals.length, 0);
 });
 
+const PREAMBLE = `---
+title: Note
+---
+Intro before any heading.
+
+# A
+body-a
+## A1
+body-a1
+`;
+
+test("a caret above the first heading clears the selected row", async (t) => {
+  const fixture = await outlineFixture(
+    { "A.md": PREAMBLE },
+    { clearsSelection: true },
+  );
+  t.after(() => fixture.root.dispose());
+  const { panel, cursor } = fixture.panel("one");
+  const text = fixture.texts.get("A.md")!;
+  cursor.head = text.indexOf("body-a1");
+  fixture.open(panel);
+  await tick();
+  assert.equal(fixture.reveals.at(-1)?.node.label, "A1");
+  assert.equal(fixture.clearCount, 0);
+  fixture.reveals.length = 0;
+  cursor.head = text.indexOf("Intro");
+  fixture.root.emit("editor/selectionChanged", panel, false);
+  await tick();
+  assert.equal(fixture.clearCount, 1);
+  assert.equal(fixture.reveals.length, 0, "nothing else is selected");
+  assert.deepEqual(fixture.warnings, []);
+  // Back into a section: it is selected again.
+  cursor.head = text.indexOf("body-a\n");
+  fixture.root.emit("editor/selectionChanged", panel, false);
+  await tick();
+  assert.equal(fixture.reveals.at(-1)?.node.label, "A");
+  assert.equal(fixture.clearCount, 1);
+});
+
+test("a note that opens above its first heading starts with nothing selected", async (t) => {
+  const fixture = await outlineFixture(
+    { "A.md": PREAMBLE },
+    { clearsSelection: true },
+  );
+  t.after(() => fixture.root.dispose());
+  const { panel } = fixture.panel("one");
+  fixture.open(panel);
+  await tick();
+  assert.equal(fixture.clearCount, 1);
+  assert.equal(fixture.reveals.length, 0);
+});
+
+test("scrolling the top line above the first heading clears the selected row", async (t) => {
+  const fixture = await outlineFixture(
+    { "A.md": PREAMBLE },
+    { clearsSelection: true },
+  );
+  t.after(() => fixture.root.dispose());
+  const { panel, cursor } = fixture.panel("one");
+  const text = fixture.texts.get("A.md")!;
+  cursor.head = text.indexOf("body-a1");
+  fixture.open(panel);
+  await tick();
+  fixture.reveals.length = 0;
+  cursor.read(0);
+  await tick();
+  assert.equal(fixture.clearCount, 1);
+  assert.equal(fixture.reveals.length, 0);
+});
+
+test("a tree that cannot unselect a row keeps following without it", async (t) => {
+  // VS Code's TreeView API has no way to clear the selection.
+  const fixture = await outlineFixture({ "A.md": PREAMBLE });
+  t.after(() => fixture.root.dispose());
+  const { panel, cursor } = fixture.panel("one");
+  const text = fixture.texts.get("A.md")!;
+  cursor.head = text.indexOf("body-a1");
+  fixture.open(panel);
+  await tick();
+  fixture.reveals.length = 0;
+  cursor.head = text.indexOf("Intro");
+  fixture.root.emit("editor/selectionChanged", panel, false);
+  await tick();
+  assert.equal(fixture.clearCount, 0);
+  assert.equal(fixture.reveals.length, 0);
+  assert.deepEqual(fixture.warnings, []);
+  cursor.head = text.indexOf("body-a\n");
+  fixture.root.emit("editor/selectionChanged", panel, false);
+  await tick();
+  assert.equal(fixture.reveals.at(-1)?.node.label, "A");
+});
+
+test("a note without headings has no row to unselect", async (t) => {
+  const fixture = await outlineFixture(
+    { "A.md": "just text\n" },
+    { clearsSelection: true },
+  );
+  t.after(() => fixture.root.dispose());
+  const { panel, cursor } = fixture.panel("one");
+  fixture.open(panel);
+  await tick();
+  cursor.head = 4;
+  fixture.root.emit("editor/selectionChanged", panel, false);
+  await tick();
+  assert.equal(fixture.clearCount, 0);
+});
+
+test("the caret from before an outline click does not clear the clicked row", async (t) => {
+  const fixture = await outlineFixture(
+    { "A.md": PREAMBLE },
+    { clearsSelection: true },
+  );
+  t.after(() => fixture.root.dispose());
+  const { panel, cursor } = fixture.panel("one");
+  const text = fixture.texts.get("A.md")!;
+  cursor.head = text.indexOf("Intro");
+  fixture.open(panel);
+  await tick();
+  assert.equal(fixture.clearCount, 1, "above the first heading at the start");
+  t.mock.timers.enable({ apis: ["Date"] });
+  await fixture.fake.commands.get(OPEN_COMMAND)!(
+    uriOf("A.md"),
+    text.indexOf("## A1"),
+  );
+  // The editor reports its caret from before the click, then from the jump.
+  fixture.root.emit("editor/selectionChanged", panel, false);
+  await tick();
+  cursor.head = text.indexOf("## A1");
+  fixture.root.emit("editor/selectionChanged", panel, false);
+  await tick();
+  assert.equal(fixture.clearCount, 1, "the clicked row stays selected");
+  assert.equal(fixture.reveals.length, 0, "the click selected it already");
+  // Once the jump has landed, a caret above the first heading is news.
+  cursor.head = text.indexOf("Intro");
+  fixture.root.emit("editor/selectionChanged", panel, false);
+  await tick();
+  assert.equal(fixture.clearCount, 2);
+});
+
 test("scroll reports stop when the panel closes or the outline stops", async (t) => {
   const fixture = await outlineFixture({ "A.md": NESTED });
   t.after(() => fixture.root.dispose());

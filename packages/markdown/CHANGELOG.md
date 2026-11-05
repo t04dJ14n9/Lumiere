@@ -2,6 +2,11 @@
 
 ## 0.1.0 (unreleased)
 
+- Markdown Outline in the app clears its highlighted row when the caret or the
+  top line is above the first heading (frontmatter or a preamble), as Obsidian
+  does, instead of leaving the last section marked. VS Code's tree view has no
+  way to clear a selection, so there the last row stays marked.
+
 - Markdown Outline no longer stays on the row you clicked when you scroll on to
   another section within the second after the click and stop: the last scroll
   position held back during that second is applied when it ends.

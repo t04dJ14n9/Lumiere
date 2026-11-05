@@ -72,8 +72,11 @@ export class OutlineJumpWindow<Report> {
     this.held = undefined;
   }
 
-  /** Whether the caret at row `id` is still where a click put it, or on its way. */
-  isCaretOnJump(id: string): boolean {
+  /**
+   * Whether the caret at row `id` is still where a click put it, or on its
+   * way. `undefined` is a caret above the first heading.
+   */
+  isCaretOnJump(id: string | undefined): boolean {
     const jump = this.jump;
     if (!jump || Date.now() > jump.until) {
       this.jump = undefined;

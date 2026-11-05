@@ -6668,3 +6668,13 @@ scroll position only in Reading view; Lumia keeps following the scroll too
   report it holds back and applies it when the window ends, unless a caret
   move, another click, a refresh or a stop came after it. The report goes
   through `followReading` again, so the panel and text-version checks apply.
+- With the caret or the top line above the first heading (frontmatter,
+  preamble) the follow returned early and the old row stayed highlighted;
+  Obsidian clears it. `TreeHandle` gets an optional `clearSelection`;
+  host-node's tree emits a `deselect` event and the app's tree panel unmarks
+  the current row. VS Code's TreeView can select a row (`reveal`) but has no
+  API to clear the selection (`TreeView.selection` is read-only, and the
+  list's `list.clear` acts on whichever list was focused last), so its adapter
+  does not implement it and the row stays highlighted there. The caret from
+  before an outline click, reported above the first heading, is held like any
+  other so it cannot clear the clicked row.

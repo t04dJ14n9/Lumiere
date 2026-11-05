@@ -140,7 +140,12 @@ export class OutlineView {
         return;
       }
       const node = this.options.source.activeNode(caret.head);
-      if (!node || this.jumpWindow.isCaretOnJump(node.id)) {
+      // Above the first heading too: the caret from before a click is not news.
+      if (this.jumpWindow.isCaretOnJump(node?.id)) {
+        return;
+      }
+      if (!node) {
+        await this.clearSelection(panel, request);
         return;
       }
       if (this.isAccordionOn()) {
@@ -158,6 +163,25 @@ export class OutlineView {
         this.options.logger.warn("Outline cursor follow failed", error);
       }
     }
+  }
+
+  /**
+   * The caret or the top line is above the first heading (preamble or
+   * frontmatter): no section is current, and Obsidian clears the highlight.
+   * Only trees that can unselect a row do; VS Code's cannot.
+   */
+  private async clearSelection(
+    panel: EditorPanel,
+    request: number,
+  ): Promise<void> {
+    if (this.options.source.isEmpty || !this.options.tree.clearSelection) {
+      return;
+    }
+    await this.oneAtATime(async () => {
+      if (this.canFollow(panel, request)) {
+        await this.options.tree.clearSelection?.();
+      }
+    });
   }
 
   /**
