@@ -1,6 +1,5 @@
 import {
   extensionOf,
-  folderDistance,
   folderOf,
   joinVaultPath,
   linkLookupKey,
@@ -101,10 +100,13 @@ function withExtension(files: FileTable, path: string): VaultFile | undefined {
 }
 
 /**
- * Step 6: files whose path ends with the link path. Prefer candidates under
- * the source note's folder (or a descendant), then nearest folder, then path.
- * Only files sharing the link's basename can match, so the lookup table
- * bounds the search instead of a scan of the vault.
+ * Step 6: files whose path ends with the link path. Candidates under the
+ * source note's folder (or a descendant) come first; within each group the
+ * shortest path wins, as in Obsidian, so a link from `notes/daily/` to a name
+ * in both `notes/` and `y/` opens `y/x.md`, not the nearer folder. Path order
+ * breaks ties so the result does not depend on index order. Only files
+ * sharing the link's basename can match, so the lookup table bounds the
+ * search instead of a scan of the vault.
  */
 function suffixMatches(
   files: FileTable,
@@ -125,19 +127,13 @@ function suffixMatches(
         endsWithSegments(candidate, wanted)
       );
     })
-    .map((file) => ({
-      file,
-      distance: folderDistance(sourceFolder, folderOf(file.path)),
-      underSource: isUnderSourceFolder(folderOf(file.path), sourceFolder),
-    }));
-  const byDistanceThenPath = (
-    a: (typeof matched)[number],
-    b: (typeof matched)[number],
-  ) => a.distance - b.distance || compare(a.file.path, b.file.path);
+    .sort(byLengthThenPath);
+  const isUnderSource = (file: VaultFile) =>
+    isUnderSourceFolder(folderOf(file.path), sourceFolder);
   return [
-    ...matched.filter((m) => m.underSource).sort(byDistanceThenPath),
-    ...matched.filter((m) => !m.underSource).sort(byDistanceThenPath),
-  ].map(({ file }) => file);
+    ...matched.filter(isUnderSource),
+    ...matched.filter((file) => !isUnderSource(file)),
+  ];
 }
 
 /** Source folder itself, or a descendant; empty sourceFolder is the vault root. */
@@ -157,6 +153,10 @@ function isUnderSourceFolder(
 
 function endsWithSegments(path: string, suffix: string): boolean {
   return path === suffix || path.endsWith(`/${suffix}`);
+}
+
+function byLengthThenPath(a: VaultFile, b: VaultFile): number {
+  return a.path.length - b.path.length || compare(a.path, b.path);
 }
 
 function compare(a: string, b: string): number {

@@ -4,7 +4,7 @@ export const config = Schema.object({
   mode: Schema.union(["prompt", "always", "never"])
     .default("prompt")
     .description(
-      "Obsidian's Automatically update internal links: `prompt` asks before rewriting links in other notes when a file is renamed or moved.",
+      "Obsidian's Automatically update internal links: `prompt` asks before rewriting links in other notes when a file is renamed or moved; its Always Update button sets this to `always`.",
     ),
 });
 export default defineManifest({

@@ -177,16 +177,14 @@ function registerKnownNotes(
 
 /**
  * Dim unresolved anchors inside rendered HTML (note embeds) using that note's
- * outbound unresolved set — not the host note's.
+ * outbound unresolved set — not the host note's. Markdown links count as much
+ * as wikilinks: an embed may hold only `[label](Missing.md)`.
  */
-function registerEmbedUnresolved(
+export function registerEmbedUnresolved(
   ctx: Context,
   unresolvedBySource: Map<string, Promise<readonly string[]>>,
 ): void {
   ctx.on("render/postProcess", (pass) => {
-    if (pass.container.querySelectorAll('a[data-wiki="true"]').length === 0) {
-      return;
-    }
     const source = pass.documentUri ?? "";
     if (!source) {
       const current = ctx.editor.view.state.field(unresolvedLinks, false);

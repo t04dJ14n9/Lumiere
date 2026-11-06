@@ -40,35 +40,16 @@ async function authorizeAndReadText(
   }
 }
 
-async function listSnippetFiles(
-  workspace: HostWorkspace,
-  vaultRoot: string,
-  snippetsDir: string,
-): Promise<readonly string[]> {
-  try {
-    if (workspace.files.authorize) {
-      await workspace.files.authorize(vaultRoot, snippetsDir);
-    }
-    const entries = await workspace.files.list(snippetsDir);
-    if (!entries) {
-      return [];
-    }
-    return entries
-      .filter(
-        (name) => name.toLowerCase().endsWith(".css") && !name.startsWith("."),
-      )
-      .sort((left, right) => left.localeCompare(right));
-  } catch {
-    return [];
-  }
-}
-
+/**
+ * The snippet files `enabledCssSnippets` names. As in Obsidian, a snippet
+ * loads only once it is switched on: no `appearance.json`, or no list in
+ * it, loads none, however many `.css` files the folder holds.
+ */
 function resolveSnippetFiles(
   enabled: readonly string[] | undefined,
-  discovered: readonly string[],
 ): readonly string[] {
   if (!enabled) {
-    return discovered;
+    return [];
   }
   const files: string[] = [];
   for (const entry of enabled) {
@@ -105,11 +86,7 @@ export async function loadVaultCssSnippets(
   const appearanceRaw = appearanceUri
     ? await authorizeAndReadText(workspace, vaultRoot, appearanceUri)
     : undefined;
-  const enabled = parseEnabledSnippets(appearanceRaw);
-  const discovered = enabled
-    ? []
-    : await listSnippetFiles(workspace, vaultRoot, snippetsDir);
-  const filenames = resolveSnippetFiles(enabled, discovered);
+  const filenames = resolveSnippetFiles(parseEnabledSnippets(appearanceRaw));
   const results: string[] = [];
   for (const filename of filenames) {
     const uri = joinContained(snippetsDir, filename);

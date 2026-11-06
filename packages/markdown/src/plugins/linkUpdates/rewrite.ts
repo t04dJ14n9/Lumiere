@@ -40,6 +40,42 @@ export interface RewriteContext {
 
 type Edit = FileTextEdits["edits"][number];
 
+/** A link a rename changes, and the vault path it points at afterwards. */
+export interface LinkChange {
+  link: LinkMetadata;
+  newTarget: string;
+}
+
+/**
+ * The links of a note that renaming files changes: those to a renamed file,
+ * and a renamed note's own path-style links when its folder changes. It
+ * needs only link resolution, so the index's parsed links answer it as well
+ * as a note's text does.
+ */
+export function changedLinks(
+  links: readonly LinkMetadata[],
+  sourcePath: string,
+  context: Pick<RewriteContext, "renames" | "resolve">,
+): LinkChange[] {
+  const newSource = context.renames.get(sourcePath) ?? sourcePath;
+  const sourceMoved =
+    newSource !== sourcePath && folderOf(newSource) !== folderOf(sourcePath);
+  const changes: LinkChange[] = [];
+  for (const link of links) {
+    const linkpath = linkpathOf(link)!;
+    const target = context.resolve(linkpath, sourcePath, linkSyntax(link));
+    if (!target) {
+      continue;
+    }
+    const newTarget = context.renames.get(target) ?? target;
+    const isPathStyle = linkpath.includes("/") || linkpath.startsWith(".");
+    if (newTarget !== target || (sourceMoved && isPathStyle)) {
+      changes.push({ link, newTarget });
+    }
+  }
+  return changes;
+}
+
 /**
  * Edits that keep a note's links pointing at renamed files, as Obsidian's
  * **Automatically update internal links**. Each link keeps its form
@@ -53,28 +89,17 @@ export function rewriteLinks(
   context: RewriteContext,
 ): Edit[] {
   const newSource = context.renames.get(sourcePath) ?? sourcePath;
-  const edits: Edit[] = [];
-  for (const link of vaultLinks(metadata(text))) {
-    const linkpath = linkpathOf(link)!;
-    const target = context.resolve(linkpath, sourcePath, linkSyntax(link));
-    if (!target) {
-      continue;
-    }
-    const newTarget = context.renames.get(target) ?? target;
-    const sourceMoved =
-      newSource !== sourcePath && folderOf(newSource) !== folderOf(sourcePath);
-    const isPathStyle = linkpath.includes("/") || linkpath.startsWith(".");
-    if (newTarget === target && !(sourceMoved && isPathStyle)) {
-      continue;
-    }
-    const path = targetText(newTarget, newSource, context);
-    edits.push({
+  return changedLinks(vaultLinks(metadata(text)), sourcePath, context).map(
+    ({ link, newTarget }) => ({
       start: link.position.start,
       end: link.position.end,
-      text: rewritten(link, path, newTarget),
-    });
-  }
-  return edits;
+      text: rewritten(
+        link,
+        targetText(newTarget, newSource, context),
+        newTarget,
+      ),
+    }),
+  );
 }
 
 /** The new path text for a link, without the `.md` of notes. */

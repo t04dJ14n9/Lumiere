@@ -2,6 +2,43 @@
 
 ## 0.1.0 (unreleased)
 
+- Page preview on hover needs Mod (Cmd or Ctrl) for links rendered in
+  tables, callouts and embeds too, as it already did for Live Preview
+  wikilinks and as Obsidian's editor does. A plain hover over those links
+  popped a preview.
+
+- The graph's **Orphans** toggle means what Obsidian's does: on (the
+  default) shows notes with no links, off hides them. The old "only
+  orphans" mode is removed, not renamed: the graph has no way to show
+  only orphans now. A panel saved with that filter ignores it and opens
+  with all notes.
+
+- CSS snippets load only when `.obsidian/appearance.json` lists them in
+  `enabledCssSnippets`, as in Obsidian. A vault with no `appearance.json`
+  (or no list in it) loaded every `.css` file in `.obsidian/snippets/`.
+
+- Markdown links (`[label](Missing.md)`) inside an embedded note are dimmed
+  when they do not resolve, as wikilinks there already were; an embed with
+  no wikilink was skipped.
+
+- The rename dialog offers **Always Update**, as Obsidian's does: it
+  updates the links and sets `lumiere.markdown.linkUpdates.mode` to
+  `always`. The edits are now built after the answer, so a note edited
+  while the dialog is open is rewritten as it is then. The dialog counts
+  the notes from the vault index instead of rewriting every one of them
+  first, so asking does not eat into VS Code's rename-participant timeout.
+
+- Renaming a note waits (up to five seconds) for the vault index to finish
+  parsing queued notes before it looks for links to update, so a link
+  typed or synced just before the rename is updated too.
+
+- An ambiguous link (`[[x]]` with several `x.md` in the vault) resolves as
+  Obsidian resolves it: matches under the note's folder first, then the
+  rest, each by shortest path rather than nearest folder. From
+  `notes/daily/today.md`, `[[x]]` with `notes/x.md` and `y/x.md` opens
+  `y/x.md`. Rename link updates use the same order, so they no longer
+  retarget such a link.
+
 - Heading links match the way Obsidian matches them: heading text without
   case, with punctuation such as `/`, `:` and `?` read as spaces, so
   `[[Note#A B]]` reaches `## A/B`. `[[Note#A#B]]` finds a deeper heading B

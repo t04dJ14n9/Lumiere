@@ -30,7 +30,10 @@ No kernel events are registered. The feature switch is
 
 ## Limits and differences from Obsidian
 
-External schemes are not fetched. Missing notes, resolve errors and unsupported
+Hover needs Mod (Cmd or Ctrl) everywhere in the editor, including links
+rendered in tables, callouts and embeds, as Obsidian's editor hover source
+does by default; Obsidian's per-source setting to change that is not
+offered. External schemes are not fetched. Missing notes, resolve errors and unsupported
 attachments use Obsidian `.mod-empty` centred chrome. Previews use this
 extension's renderers and VS Code theme.
 All timers, listeners, popup DOM and render passes stop with the view/plugin.

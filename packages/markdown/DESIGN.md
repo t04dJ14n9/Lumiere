@@ -947,9 +947,10 @@ interface VaultIndex {
 3. A unique basename match in `uniqueFileLookup`.
 4. `./` and `../` relative to the source's folder.
 5. A leading `/` from the vault root.
-6. Otherwise, files whose path ends with the link path, sorted by folder
-   distance from the source (same folder first), then by path. The first
-   wins; `resolveLinkCandidates` returns all of them.
+6. Otherwise, files whose path ends with the link path: those under the
+   source's folder (or a descendant) first, then the rest, each group by
+   path length, shortest first, then by path. The first wins;
+   `resolveLinkCandidates` returns all of them.
 
 A folder link resolves to `lumiere.markdown.links.folderNote` inside it when
 that setting is set (default empty; LLM Wiki uses `_index.md`), and otherwise

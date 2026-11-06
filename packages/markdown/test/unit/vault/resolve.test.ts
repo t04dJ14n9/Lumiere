@@ -106,16 +106,23 @@ const cases: [string, string, string, string | undefined][] = [
     "notes/Shared.md",
   ],
   [
-    "ambiguous name prefers the nearest folder",
+    "ambiguous name prefers a match under the source folder",
     "Shared",
     "notes/deep/Note.md",
     "notes/deep/Shared.md",
   ],
   [
-    "ambiguous name with equal distance sorts by path",
+    "ambiguous name from the root prefers the shortest path",
     "Shared",
     "Home.md",
-    "archive/Shared.md",
+    "notes/Shared.md",
+  ],
+  [
+    // As in Obsidian: outside the source folder, length beats folder distance.
+    "ambiguous name outside the source folder prefers the shortest path",
+    "Shared",
+    "notes/sub/Child.md",
+    "notes/Shared.md",
   ],
   [
     "path suffix narrows ambiguous names",
@@ -161,12 +168,43 @@ test("resolveLink: a folder link opens the configured folder note", () => {
   assert.equal(index.resolveLink("Other", "Home.md")?.path, "Folder/Other.md");
 });
 
-test("resolveLinkCandidates lists every ambiguous match nearest first", () => {
+test("resolveLinkCandidates lists every ambiguous match shortest first", () => {
   assert.deepEqual(
     vault(files)
       .resolveLinkCandidates("Shared", "notes/sub/Child.md")
       .map((file) => file.path),
-    ["notes/Shared.md", "notes/deep/Shared.md", "archive/Shared.md"],
+    ["notes/Shared.md", "archive/Shared.md", "notes/deep/Shared.md"],
+  );
+});
+
+test("resolveLink: a shorter path beats a nearer folder outside the source", () => {
+  // From notes/daily/, notes/x.md is one folder away and y/x.md three, but
+  // Obsidian ranks by path length, so a rename rewrite must target y/x.md.
+  assert.equal(
+    vault(["notes/x.md", "y/x.md", "notes/daily/today.md"]).resolveLink(
+      "x",
+      "notes/daily/today.md",
+    )?.path,
+    "y/x.md",
+  );
+});
+
+test("resolveLink: under the source folder still wins over a shorter path", () => {
+  assert.equal(
+    vault([
+      "notes/daily/deep/x.md",
+      "a/x.md",
+      "notes/daily/today.md",
+    ]).resolveLink("x", "notes/daily/today.md")?.path,
+    "notes/daily/deep/x.md",
+  );
+});
+
+test("resolveLink: equal-length matches tie-break by path", () => {
+  assert.equal(
+    vault(["b/x.md", "a/x.md", "c/today.md"]).resolveLink("x", "c/today.md")
+      ?.path,
+    "a/x.md",
   );
 });
 

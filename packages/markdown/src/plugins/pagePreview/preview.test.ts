@@ -1,6 +1,6 @@
 import test from "node:test";
 import assert from "node:assert/strict";
-import { canPreview } from "./controller";
+import { canPreview, isPreviewHover } from "./controller";
 test("page previews load only internal targets and fragments", () => {
   for (const href of ["Note", "../Folder/Note.md#Heading", "#^block"]) {
     assert.equal(canPreview(href), true);
@@ -14,6 +14,12 @@ test("page previews load only internal targets and fragments", () => {
   ]) {
     assert.equal(canPreview(href), false);
   }
+});
+
+test("hover previews need Mod on every editor surface, as Obsidian's editor source", () => {
+  assert.equal(isPreviewHover({ metaKey: false, ctrlKey: false }), false);
+  assert.equal(isPreviewHover({ metaKey: true, ctrlKey: false }), true);
+  assert.equal(isPreviewHover({ metaKey: false, ctrlKey: true }), true);
 });
 
 test("note previews retain source offsets and disable embedded task edits", async () => {

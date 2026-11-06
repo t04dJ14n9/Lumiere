@@ -1,7 +1,8 @@
 # Embeds
 
 Transcludes notes, headings and block IDs and displays images, audio and video,
-like Obsidian's embeds. PDFs and other attachments appear as cards that open files.
+like Obsidian's embeds. A PDF shows one page inline; other attachments appear as
+cards that open files.
 
 ## How it works
 
@@ -63,6 +64,7 @@ workspace trust from Render. YouTube/Bilibili image links share the EmbedBlock h
 ## Limits and differences from Obsidian
 
 Cycles and ancestry depth of twelve are refused. Local files remain host-contained;
-remote media requires a trusted workspace. PDF embeds open cards rather than an
-inline PDF viewer; a card opens the PDF in Lumia PDF at the embed's page. WebM recovery supports VP8/VP9 and Opus/Vorbis when the host
+remote media requires a trusted workspace. A PDF embed draws one page (`#page=`,
+`#height=`) with page buttons rather than Obsidian's full PDF viewer; its Open
+button opens the PDF in Lumia PDF at that page. WebM recovery supports VP8/VP9 and Opus/Vorbis when the host
 MediaSource supports them. Visual and playback parity await owner comparison. Image embeds use Obsidian's `.embed-actions` frosted bar (inspect control; VS Code tokens).

@@ -235,9 +235,9 @@ The Markdown syntax, the HTML renderer and Live Preview's reveal-at-caret.
 
 Contained file access and the vault index (Obsidian's metadata cache).
 
-1. In `Links.md`, follow `[[Duplicate]]`: it opens `archive/Duplicate.md`
-   (nearest folder, then path order), as in Obsidian. From
-   `notes/Project plan.md`, `[[Duplicate]]` opens `notes/Duplicate.md`.
+1. In `Links.md`, follow `[[Duplicate]]`: it opens `notes/Duplicate.md`
+   (matches under the note's folder first, then shortest path), as in
+   Obsidian.
 2. Rename `attachments/diagram.svg` outside VS Code: its embeds in
    `Embeds.md` become unresolved within a second; rename it back.
 3. Add `"archive/"` to `lumiere.markdown.vault.excludedFiles`: links to it
@@ -705,6 +705,8 @@ Both are off by default (owner decision). Turn on
 1. Rename `Target.md` to `Goal.md` in the Explorer: a dialog asks to update
    links in the notes that link to it. Accept: links (with aliases,
    headings and blocks) now point at `Goal`. Decline: nothing changes.
+   **Always Update** updates them and sets `linkUpdates.mode` to `always`,
+   so the next rename does not ask.
 2. `lumiere.markdown.linkUpdates.mode`: `always` skips the dialog,
    `never` changes nothing.
 
@@ -1030,7 +1032,11 @@ the command again reveals it. The panel is not tied to a Markdown document.
    of the last node you clicked. Depth is 1–3. If filters hide that note, the
    panel says **Focus excluded by filters**. **Clear filters** brings it back
    and does not jump to a different note.
-4. Orphans, type, tag, folder and text search narrow the drawing. A vault over
+4. **Orphans** is on by default; turning it off hides notes with no links,
+   as Obsidian's toggle does. The old "only orphans" mode is gone, so no
+   setting of the toggle shows only orphans. Type, tag, folder and text
+   search narrow the
+   drawing. A vault over
    the node or edge cap shows the counts and draws nothing until the filters
    fit. There is no sampled substitute. **Re-layout** runs after a large change;
    filtering does not throw the remaining notes to new coordinates.

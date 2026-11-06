@@ -66,7 +66,7 @@ test("noteCssClassesExtension provides editorAttributes and contentAttributes an
   assert.deepEqual(state.facet(EditorView.contentAttributes).at(-1), {});
 });
 
-test("loadVaultCssSnippets honors appearance.json enabledCssSnippets or discovers .obsidian/snippets/*.css", async () => {
+test("loadVaultCssSnippets loads only the snippets appearance.json enables", async () => {
   const files = new Map<string, string>([
     [
       "file:///vault/.obsidian/appearance.json",
@@ -113,9 +113,11 @@ test("loadVaultCssSnippets honors appearance.json enabledCssSnippets or discover
   assert.equal(enabledOnly.length, 1);
   assert.match(enabledOnly[0]!, /custom-question-type/);
 
+  // As in Obsidian, a snippet in the folder is off until it is enabled.
+  files.set("file:///vault/.obsidian/appearance.json", "{}");
+  assert.deepEqual(await loadVaultCssSnippets(workspace, "file:///vault"), []);
   files.delete("file:///vault/.obsidian/appearance.json");
-  const allDiscovered = await loadVaultCssSnippets(workspace, "file:///vault");
-  assert.equal(allDiscovered.length, 2);
+  assert.deepEqual(await loadVaultCssSnippets(workspace, "file:///vault"), []);
 });
 
 test("resolveCalloutIcon and applyCustomCalloutStyles resolve custom --callout-icon and normalize --callout-color", (t) => {
