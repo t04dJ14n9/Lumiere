@@ -5,10 +5,9 @@ the plugin trees, the hosts and the contracts between them, and how a note
 travels from disk to the screen and back. It also records where the design
 is sound, where it has drifted, and what to change next.
 
-State: `main` at #507, plus the open PRs it describes as current. The
-`catchUp` sync and `shared/link-location.ts` come from #508. The text
-editor's `[[` suggestions and `pdfOutlines` come from the link-suggestion
-PR. Update this document when the structure it describes changes.
+State: `main` at 0.1.11 (#515). The text editor's `[[` suggestions and
+`pdfOutlines` come from the link-suggestion PR, which is not merged yet.
+Update this document when the structure it describes changes.
 
 Read this first, then the detailed documents it points to:
 
@@ -448,89 +447,74 @@ deliver them.
 
 The path from "open `Note.md`" to an editable note:
 
-1. VS Code activates the extension (once per window; about 15–20 ms of our
-   own time) and resolves the custom editor.
+1. VS Code activates the extension (once per window, at window start through
+   `workspaceContains:**/*.md`; about 15–20 ms of our own time) and resolves
+   the custom editor. **Use Lumia for Markdown in This Workspace** associates
+   `*.md` and `*.markdown` with `lumiere.markdown.editor` itself, so VS Code
+   hands the note straight to Lumia. A workspace set up the old way
+   (`"default"`, then take over the text tab) is migrated on activation;
+   the takeover (`host/reclaim.ts`) remains for text tabs opened another
+   way, and waits 40 ms after the text editor reports.
 2. The editor host creates the panel root, its vault (indexed on first use,
    or loaded from a snapshot), and the critical panel hosts.
-3. The webview loads its HTML and entry bundle, starts its core plugins, and
-   sends `ready`.
-4. The host answers `ready` with the text, version, settings and the list of
+3. The host builds the page's HTML with the note's first screen already in
+   it: inert, escaped HTML under the editor's own classes and gutters
+   (`firstPaintSnapshot`, on by default). VS Code shows a webview only after
+   its `load` event, so the editor entry loads by `import()` from a nonce'd
+   inline script, and the first view's feature chunks are listed as
+   `<link rel="modulepreload">` (`feature-chunks.json`).
+4. The webview loads its entry (one file; the build merges the entry graph
+   into `editor.js`), starts its core plugins and sends `ready`. Messages
+   that arrive before the transport is up are kept and replayed through
+   the same origin check.
+5. The host answers `ready` with the text, version, settings and the list of
    active features. Deferred panel hosts start after this answer.
-5. The webview builds the CodeMirror state, runs the first Live Preview pass
-   and paints; feature chunks load lazily and attach as they arrive.
+6. The webview builds the CodeMirror state, runs the first Live Preview pass
+   and replaces the snapshot without moving it; feature phases start one
+   task after that paint. A jump (Search match, outline, heading link) is
+   held below the sticky bar until the layout settles.
 
 Measured on the production build in VS Code 1.144 on Apple Silicon (November
-2026), from the Enter key in Quick Open. Each figure is a median: n=8–9 for
-cold opens, 12–15 reopens for warm ones. Cold means the first open in a new
-VS Code process; warm means reopening in the same window.
+2026), installed VSIX, from the Enter key in Quick Open to the note's text
+on screen; medians of interleaved runs. Cold means the first open in a new
+VS Code process.
 
-| Note | Cold: first paint | Cold: all features | Warm: first paint | Warm: all features |
-| --- | --- | --- | --- | --- |
-| Small (56 lines) | 512 ms | 581 ms | 198 ms | 227 ms |
-| Large (5,032 lines) | 604 ms | 749 ms | 230 ms | 318 ms |
-| 25 properties | | 785 ms | | 312 ms |
-| 100 properties | | 3,540 ms | | 1,518 ms |
-
-Where a cold open of a small note spends its time:
-
-| Phase | Cold | Warm | Whose |
+| Note | Cold, before #513 | Cold, now | Warm, now |
 | --- | --- | --- | --- |
-| Enter to `resolveCustomTextEditor` | 30 or ~300 ms (two modes, cause unknown) | ~20 ms | VS Code |
-| Lumia's host work: panel root, `vaultHost`, critical hosts | ~5 ms | ~3 ms | Lumia |
-| HTML set to iframe, iframe to inner document | ~200 ms | ~60 ms | VS Code |
-| Entry bundle (58 files, 875 KB) to `main` | ~53 ms | ~65 ms | Lumia |
-| `ready` round trip (settings included) | ~7 ms | ~7 ms | Lumia |
-| Webview core plugins (EditorView ~15 ms, Live Preview ~12 ms) | ~35 ms | ~24 ms | Lumia |
-| To first paint | ~43 ms | ~27 ms | Lumia |
-| Feature chunks (three dynamic-import rounds) | 30–150 ms | 20–100 ms | Lumia |
+| Small (56 lines) | 613 ms | 329 ms | ~150 ms |
+| Large (5,032 lines) | 632 ms | 331 ms | ~180 ms |
+| 100 properties | 516 ms | 294 ms | ~170 ms |
+
+A note with 381 properties, which often never finished loading, settles in
+about 2 s cold.
 
 Findings:
 
-- **VS Code's own work is 60–75 % of a cold open** (235–490 ms before
-  Lumia's page starts). Lumia's share, from the page starting to every
-  feature attached, is 150–175 ms, and its host side about 10 ms.
-  Activation is not on the open path: the extension activates at window
-  start (`workspaceContains:**/*.md`) in 20–40 ms.
+- **Most of a cold open is now VS Code's.** Creating the webview's iframe
+  and inner document takes about 195 ms cold, which the extension cannot
+  shorten. Lumia's host side is about 10 ms.
 - **Vault size does not slow opening.** With 3,000 notes, `forDocument`
   takes 7–23 ms because opening does not wait for indexing.
-- **Large frontmatter is the real bottleneck.** On open, the outline's
-  caret-follow asks the webview for the caret, which flushes the document.
-  The flush commits every Properties input. Each list input calls
-  `refresh()` even when nothing changed, and each refresh rebuilds the
-  whole sheet: it parses the YAML again and creates a new DOMPurify
-  instance. Re-renders grow with the number of properties (83 for 100
-  properties), so the cost is quadratic. A 381-property note settled in
-  times from 0.6 s to more than 90 s, and the deferred chunk imports failed
-  meanwhile. First paint is not affected; everything after it is. Turning
-  the outline off cuts the 100-property note from 3.5 s to 0.74 s, but a
-  second flush source remains.
-- **Three rounds of lazy feature chunks** follow `main` (chrome, then paint,
-  then the rest), each followed by an editor reconfigure: 30–60 ms on a
-  small note, 60–100 ms on a large one.
-- **The CPU profile is flat**: no single function above 30 ms on a large
-  note (CodeMirror 68 ms, Lezer 28 ms, plugin core 25 ms out of 363 ms).
-- **Budgets.** The Chromium harness stays within `test/quality/budgets.ts`
-  (first paint 37–62 ms against 150–200 ms). No budget covers frontmatter:
-  25 properties already reach 291 ms of the 300 ms first-paint-to-features
-  budget, and 100 properties take ten times it. `test/vscode/perf.spec.ts`
-  starts its clock after Reopen With, so it misses VS Code's wait, and it
-  reads a log file name that no longer exists (`Workshop.log`, now
-  `Lumia.log`).
+- **Frontmatter was quadratic** and is fixed: each document flush asked
+  every Properties list input to commit, and an empty one rebuilt the whole
+  sheet. Empty inputs are skipped and one DOMPurify instance is reused per
+  window (a flush with 100 properties: 551 → 17 ms). The quality budgets
+  cover a frontmatter flush.
+- **Loading rounds.** With the merged entry and preload hints, an open makes
+  49 requests instead of 105, and features are ready 25–190 ms sooner.
 
-What to do, in order:
+Not done:
 
-1. Make an empty or unchanged list commit a no-op instead of a `refresh()`
-   (expected: 100 properties from 3.5 s to under 0.5 s; low risk).
-2. Reuse one DOMPurify instance and skip rebuilding an unchanged sheet
-   (about half of each re-render's cost).
-3. Let the outline read the caret without forcing a flush when nothing is
-   dirty; coalesce `refresh()` calls into one `render/changed` per frame.
-4. Add frontmatter notes (25 and 100 properties) to the quality budgets,
-   and fix `perf.spec.ts`'s clock start and log name.
-5. Put the chrome and paint feature chunks in the entry graph or preload
-   them (30–100 ms; costs about 10 ms per 150 KB of entry).
-
-VS Code's own part cannot be changed from the extension.
+- On a Search click the snapshot shows the top of the note for a moment
+  before the editor appears at the match; the host does not know the match
+  when it builds the page.
+- On a fresh profile Markdown Outline starts collapsed. Opening a note no
+  longer focuses it, because focusing reveals the Explorer and replaced
+  the Search sidebar. The PDF viewer's outline still does
+  (`pdfOutline/focus.ts`).
+- `test/vscode/perf.spec.ts` starts its clock after Reopen With, so it
+  misses VS Code's own wait, and it reads a log file name that no longer
+  exists (`Workshop.log`, now `Lumia.log`).
 
 ## 16. Security boundaries
 
