@@ -2,6 +2,7 @@ import type { Context, Plugin } from "@workshop/core";
 import { linkTrigger, type LinkTrigger } from "../../markdown/link-trigger";
 import type { TextCompletion, TextCompletionProvider } from "../../shared/host";
 import type { VaultIndex } from "../vault/api";
+import type {} from "../../shared/pdf-outlines";
 import type { Suggestion } from "./protocol";
 import { SuggestionIndex } from "./sources";
 
@@ -11,7 +12,10 @@ import { SuggestionIndex } from "./sources";
  */
 export const nativeSuggestHost: Plugin = {
   name: "suggest",
-  inject: { required: ["vaults", "settings", "hostDocuments"] },
+  inject: {
+    required: ["vaults", "settings", "hostDocuments"],
+    optional: ["pdfOutlines"],
+  },
   apply(ctx) {
     if (!ctx.hostDocuments.registerCompletions) {
       return;
@@ -43,7 +47,12 @@ function nativeCompletions(ctx: Context): TextCompletionProvider["complete"] {
     if (!located || token.cancelled || !ctx.isLive) {
       return [];
     }
-    return indexOf(located.vault.index)
+    const index = indexOf(located.vault.index);
+    await index.prepare(located.path, trigger);
+    if (token.cancelled || !ctx.isLive) {
+      return [];
+    }
+    return index
       .query(located.path, trigger, links?.config.useWikilinks !== false)
       .map((item) => completion(item, { trigger, before }));
   };
@@ -53,6 +62,7 @@ function nativeCompletions(ctx: Context): TextCompletionProvider["complete"] {
  * One index per vault, reset when the vault changes, as the panel half does.
  * It has no way to read a note's text, so it offers only the blocks that
  * already have an id: giving another block one would edit a second file.
+ * A PDF's bookmarks come from `pdfOutlines` where the host has one.
  */
 function suggestionIndexes(ctx: Context) {
   const indexes = new Map<VaultIndex, SuggestionIndex>();
@@ -61,7 +71,12 @@ function suggestionIndexes(ctx: Context) {
     if (known) {
       return known;
     }
-    const index = new SuggestionIndex(vault);
+    const outlines = ctx.pdfOutlines;
+    const index = new SuggestionIndex(
+      vault,
+      undefined,
+      outlines && ((file) => outlines.sections(file.uri)),
+    );
     ctx.effect(() => vault.onDidChange((change) => index.invalidate(change)));
     ctx.effect(() => vault.onDidResolve(() => index.invalidate()));
     indexes.set(vault, index);

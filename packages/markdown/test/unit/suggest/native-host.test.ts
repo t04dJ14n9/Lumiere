@@ -9,6 +9,7 @@ import type {
   NoteSettings,
   TextCompletionProvider,
 } from "../../../src/shared/host";
+import type { PdfOutlines } from "../../../src/shared/pdf-outlines";
 import { CancelToken } from "../../../src/shared/rpc/lifecycle";
 import { fakeHost } from "../../support/vscode-fake";
 import { memoryVaults, uriOf } from "../views/fakes";
@@ -21,8 +22,14 @@ const notes = {
 };
 const home = uriOf("Home.md");
 
-async function start(options: { registers?: boolean } = {}) {
-  const { vaults, index } = memoryVaults(notes);
+async function start(
+  options: {
+    registers?: boolean;
+    extra?: Record<string, string>;
+    outlines?: PdfOutlines;
+  } = {},
+) {
+  const { vaults, index } = memoryVaults({ ...notes, ...options.extra });
   let provider: TextCompletionProvider | undefined;
   let note: NoteSettings = {
     preset: "obsidian",
@@ -31,6 +38,9 @@ async function start(options: { registers?: boolean } = {}) {
   };
   const root = createRoot();
   root.provide("vaults", vaults);
+  if (options.outlines) {
+    root.provide("pdfOutlines", options.outlines);
+  }
   provideHostServices(
     root,
     fakeHost({
@@ -214,5 +224,36 @@ test("a cancelled request answers nothing, and stopping withdraws the provider",
 test("a host without a text editor of its own starts the plugin and registers nothing", async () => {
   const { root, registered } = await start({ registers: false });
   assert.equal(registered(), false);
+  await root.dispose();
+});
+
+test("[[paper.pdf# offers the PDF's bookmarks where the host can read them", async () => {
+  const asked: string[] = [];
+  const { root, complete } = await start({
+    extra: { "papers/paper.pdf": "" },
+    outlines: {
+      sections: async (uri) => {
+        asked.push(uri);
+        return [
+          { title: "Introduction", page: 1, depth: 0 },
+          { title: "Methods", page: 5, depth: 1 },
+        ];
+      },
+    },
+  });
+  const items = await complete("[[paper.pdf#meth");
+  assert.deepEqual(
+    items.map((item) => item.insert),
+    ["page=5|Methods]]"],
+  );
+  assert.deepEqual(asked, [uriOf("papers/paper.pdf")]);
+  await root.dispose();
+});
+
+test("[[paper.pdf# offers nothing without pdfOutlines", async () => {
+  const { root, complete } = await start({
+    extra: { "papers/paper.pdf": "" },
+  });
+  assert.deepEqual(await complete("[[paper.pdf#"), []);
   await root.dispose();
 });

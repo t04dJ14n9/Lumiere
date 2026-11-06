@@ -1,5 +1,6 @@
 import type { VaultIndex, VaultFile } from "../vault/api";
 import type { NoteBlock } from "../../markdown/metadata/note-blocks";
+import type { PdfSection } from "../../shared/pdf-outlines";
 import { tagTree } from "../../markdown/tags/tree";
 import { nameOf } from "../../shared/vault-path";
 export type Value =
@@ -12,7 +13,9 @@ export type Value =
       /** Where a block without an id gets this one, with what goes before. */
       newId?: { at: number; before: string; insert: string };
     }
-  | { kind: "heading"; target: VaultFile; text: string };
+  | { kind: "heading"; target: VaultFile; text: string }
+  /** A bookmark of a PDF: `[[paper.pdf#page=5|Methods]]`. */
+  | { kind: "pdfSection"; target: VaultFile; page: number; title: string };
 export interface Candidate {
   label: string;
   detail: string;
@@ -105,6 +108,24 @@ const byName = new Intl.Collator(undefined, {
   sensitivity: "base",
   numeric: true,
 }).compare;
+
+/**
+ * The bookmarks of a PDF, offered after `[[paper.pdf#`. A PDF has no headings
+ * in the vault, so these stand in for them, matched on their title.
+ */
+export function pdfSectionCandidates(
+  file: VaultFile,
+  sections: readonly PdfSection[],
+): Candidate[] {
+  return sections.map(({ title, page }) =>
+    candidate(title, `p.${page} · ${file.path}`, {
+      kind: "pdfSection",
+      target: file,
+      page,
+      title,
+    }),
+  );
+}
 
 /**
  * Every tag in the vault, as Obsidian suggests them: parents too (`#a` for
