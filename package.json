@@ -2159,7 +2159,7 @@
         },
         {
           "command": "lumiere.markdown.templates.insert",
-          "when": "activeCustomEditorId == 'lumiere.markdown.editor' && lumiere.markdown.plugin.templates"
+          "when": "config.lumiere.markdown.preset != 'minimal' && config.lumiere.markdown.plugins.templates.enabled && activeCustomEditorId == 'lumiere.markdown.editor'"
         },
         {
           "command": "lumiere.markdown.consumeVimHostShortcut",

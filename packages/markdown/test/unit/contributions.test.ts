@@ -2,6 +2,7 @@ import test from "node:test";
 import assert from "node:assert/strict";
 import { readFileSync } from "node:fs";
 import { contributions } from "../../scripts/contributions";
+import { features } from "../../src/plugins/catalog";
 import {
   FOLLOW_CURSOR_CONTEXT,
   GO_TO_HEADING_COMMAND,
@@ -346,5 +347,31 @@ test("Ctrl/Cmd+E toggles Lumia and the host text editor, not Source mode", async
   assert.doesNotMatch(
     inText!.when ?? "",
     /activeCustomEditorId == 'lumiere\.markdown\.editor'/,
+  );
+});
+
+// The editor host sets `lumiere.markdown.plugin.<id>` for the editor features
+// and the three core ones; outline and ideContext set their own. A window
+// feature (templates, dailyNotes, ...) has no such key, so a command that
+// waits for it is never in the palette: use scope "workbench" for those.
+test("no contribution waits for a plugin context key that nothing sets", async () => {
+  const settable = new Set([
+    ...features.map((manifest) => manifest.id),
+    "editor",
+    "commands",
+    "livePreview",
+    "outline",
+    "ideContext",
+  ]);
+  const used = new Set(
+    [
+      ...JSON.stringify(await contributions()).matchAll(
+        /lumiere\.markdown\.plugin\.(\w+)/g,
+      ),
+    ].map((match) => match[1]!),
+  );
+  assert.deepEqual(
+    [...used].filter((id) => !settable.has(id)),
+    [],
   );
 });

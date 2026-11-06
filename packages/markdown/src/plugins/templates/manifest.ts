@@ -30,6 +30,15 @@ export default defineManifest({
   capabilities: ["commands", "vaultIndex"],
   config,
   contributes: {
-    commands: [{ id: "templates.insert", title: "Insert Template" }],
+    commands: [
+      {
+        id: "templates.insert",
+        title: "Insert Template",
+        // The editor host sets no plugin key for a window feature, so only
+        // the setting and the open editor decide.
+        scope: "workbench",
+        when: "activeCustomEditorId == 'lumiere.markdown.editor'",
+      },
+    ],
   },
 } as const);
