@@ -76,7 +76,7 @@ async function askToUpdate(
   renames: Renames,
   resource: string | undefined,
 ): Promise<boolean> {
-  const files = await affectedNoteCount(host.vaults, renames);
+  const files = await affectedNoteCount(host, renames);
   if (files === 0) {
     return false;
   }
@@ -158,24 +158,35 @@ function candidateNotes(vault: Vault, paths: Map<string, string>): VaultFile[] {
  * How many notes the rename would change, from the links the index already
  * parsed: no note is read or rewritten, so the prompt costs a lookup per
  * link, not a second pass of `linkEdits`.
+ *
+ * A candidate the index has no links for (its parse was still queued when
+ * the settle gave up) would count as unchanged here although its text may
+ * link to the renamed notes. Then the index cannot be trusted, and the count
+ * comes from `linkEdits` on the live text, so the prompt still asks when
+ * edits exist.
  */
 async function affectedNoteCount(
-  vaults: Vaults,
+  host: Pick<RenameHost, "settings" | "hostDocuments" | "vaults">,
   renames: Renames,
 ): Promise<number> {
-  const plan = await planRename(vaults, renames);
+  const plan = await planRename(host.vaults, renames);
   if (!plan) {
     return 0;
   }
   const { vault, paths } = plan;
+  const candidates = candidateNotes(vault, paths).map((file) => ({
+    file,
+    parsed: vault.index.metadata(file.path),
+  }));
+  if (candidates.some(({ parsed }) => parsed === undefined)) {
+    return (await linkEdits(host.vaults, host, renames)).length;
+  }
   const context = { renames: paths, resolve: resolverOf(vault) };
-  return candidateNotes(vault, paths).filter((file) => {
-    const parsed = vault.index.metadata(file.path);
-    return (
+  return candidates.filter(
+    ({ file, parsed }) =>
       parsed !== undefined &&
-      changedLinks(vaultLinks(parsed), file.path, context).length > 0
-    );
-  }).length;
+      changedLinks(vaultLinks(parsed), file.path, context).length > 0,
+  ).length;
 }
 
 /** Edits for every note in the renamed files' vault that links to them. */

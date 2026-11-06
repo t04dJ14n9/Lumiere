@@ -246,3 +246,35 @@ test("moving a note asks about its own path-style links", async () => {
   );
   await root.dispose();
 });
+
+test("a moved note the index has not parsed still asks about its own links", async () => {
+  const { root, fake, index } = await start(
+    {},
+    { "D.md": "From [[Topic/Old]]." },
+  );
+  // The settle timed out before D.md was parsed: the index knows no links
+  // for it, but its text does.
+  index.setMetadata("D.md", undefined);
+  fake.answerWith("Update Links");
+  const edits = await fake.rename([
+    { oldUri: uriOf("D.md"), newUri: uriOf("Sub/D.md") },
+  ]);
+  assert.deepEqual(fake.prompts, ["Update links in 1 file?"]);
+  assert.deepEqual(
+    edits.map((file) => [file.uri, file.edits.map((edit) => edit.text)]),
+    [[uriOf("D.md"), ["[[Old]]"]]],
+  );
+  await root.dispose();
+});
+
+test("a moved note the index has not parsed and that links nothing does not ask", async () => {
+  const { root, fake, index } = await start({}, { "D.md": "Nothing here." });
+  index.setMetadata("D.md", undefined);
+  fake.answerWith("Update Links");
+  const edits = await fake.rename([
+    { oldUri: uriOf("D.md"), newUri: uriOf("Sub/D.md") },
+  ]);
+  assert.deepEqual(fake.prompts, []);
+  assert.deepEqual(edits, []);
+  await root.dispose();
+});

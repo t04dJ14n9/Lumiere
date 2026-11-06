@@ -15,7 +15,8 @@ written in the new-link format. A moved note's own path-style links are
 rewritten too. Folder renames cover every file inside. By default it asks
 first (Update Links, Always Update, which sets the mode to `always`, or
 Don't Update), counting the notes from the index's parsed links so that
-asking reads and rewrites nothing, and builds the edits once, after the
+asking reads and rewrites nothing (unless a note is still unparsed, then
+from the notes' current text), and builds the edits once, after the
 answer, so text typed while the dialog is open is what gets rewritten. The edits are applied together
 with the rename, so one undo reverts them.
 
