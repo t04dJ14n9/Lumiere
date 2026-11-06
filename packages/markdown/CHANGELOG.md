@@ -16,8 +16,16 @@
   from #458, which reclaimed every note into Lumia). VS Code hands a note to
   Lumia directly: a cold open shows the note about 75 ms sooner (no text
   editor tab first). A workspace set up the old way is moved over on
-  activation. A Search result still opens with its match selected, but on a
-  long note the match can be scrolled out of view.
+  activation. A Search result still opens with its match selected.
+
+- A Search result, Markdown Outline click, Go to Heading or heading link now
+  leaves its target on screen when the note opens or the jump comes soon after
+  it: the target is held at the top of the viewport, below the sticky
+  headings, while the features that load after the first paint (the sticky
+  bar, tables, callouts, line numbers) change the heights around it. Before,
+  on a short note the match could land under the sticky bar, and on a long one
+  the scroll could stop hundreds of lines short, leaving the match below the
+  viewport.
 
 - Notes open faster in VS Code: the page asks for the chunks of the first
   view (Properties, line numbers, tables, callouts, links and the rest of what

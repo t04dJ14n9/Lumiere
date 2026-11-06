@@ -153,8 +153,8 @@ it yet.
 - `contributions.ts`: feature-owned view-state validation and restoration.
 - `persistence.ts`: view capture, restore and ordinary edit/scroll persistence.
 - `persistence.test.ts`: which updates save view state.
-- `view-state.ts`: geometric scroll anchoring and presentation restoration; a restored line stays pinned until the reader scrolls anywhere in the scroller.
-- `view-state.test.ts`: the reader's scroll and input end the pin, the pin's own corrections do not, and every listener is passive.
+- `view-state.ts`: geometric scroll anchoring and presentation restoration; a restored line stays pinned until the reader scrolls anywhere in the scroller. `holdAtTop` pins a jump's target the same way.
+- `view-state.test.ts`: the reader's scroll and input end the pin, the pin's own corrections do not, every listener is passive, and a held jump target stays below the top margin as content above it grows.
 - `keep-below-still.ts`: when a rendered block across the top edge resizes, holds its bottom, so the text below stays still.
 - `keep-below-still.test.ts`: which block is held, and by how much the view scrolls.
 - `view-transfer.ts`: flushed, version-checked native view transfers.
@@ -227,8 +227,12 @@ the initial selection even while `openWith` is in flight. Delivery waits for tha
 link-navigation readiness and uses its existing focus, centered scroll and
 caret path. A newer navigation or provider disposal cancels pending delivery;
 Cursor Edit handoff leases and explicit text bypasses suppress the bridge.
-The public custom-editor API supplies no range for a direct custom-editor open;
-when the host exposes no native text selection, there is no position to transfer.
+A direct custom-editor open (the `*.md` association is Lumia itself) has no text
+tab to transfer from. VS Code 1.144 still calls `resolveCustomTextEditorNavigation`
+for a Search result about 100 ms after `resolveCustomTextEditor`, and its
+`revealRange` reaches the panel through the same reveal path (`navigation.revealPanel`,
+then the links plugin's `navigate`), so the match is selected and scrolled to the
+top of the viewport below the sticky headings, after the first paint.
 
 `editor.warmTextDocument` (`auto`/`on`/`off`, auto meaning on in Cursor) opens
 Markdown `TextDocument`s early: at activation for open notes, on document open,

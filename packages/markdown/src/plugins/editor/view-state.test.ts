@@ -1,7 +1,11 @@
 import assert from "node:assert/strict";
 import test from "node:test";
 import { Compartment, EditorSelection, EditorState } from "@codemirror/state";
-import type { Extension, TransactionSpec } from "@codemirror/state";
+import type {
+  Extension,
+  SelectionRange,
+  TransactionSpec,
+} from "@codemirror/state";
 import { EditorView } from "@codemirror/view";
 import { createRoot } from "@workshop/core";
 import { createViewState } from "./view-state";
@@ -298,6 +302,218 @@ test("keeping the place leaves a view at the top, and a restore on its way, alon
   assert.equal(restoring.dispatched.length, 1, "only the restore's dispatch");
   // The restore still lands where it was going.
   assert.equal(restoring.scroll(70), true);
+  await root.dispose();
+});
+
+/**
+ * A note whose line at 40 starts 5000 px down, scrolled to the top, with the
+ * embedder's controls `inset` px tall, and `spaceAbove` px of space above the
+ * line's text (a heading's), unless its row is not drawn (`drawn: false`). A
+ * scroll to a line goes through the view's scroll handler, as CodeMirror's
+ * measuring does it.
+ */
+function jumpedPanel(
+  presentation: ReturnType<typeof createViewState>,
+  { inset = 0, spaceAbove = 0, drawn: initiallyDrawn = true } = {},
+) {
+  let drawn = initiallyDrawn;
+  let state = EditorState.create({
+    doc: "x".repeat(100),
+    extensions: presentation.restoreScrollPosition,
+  });
+  const line = { from: 40, top: 5000 };
+  const scrollDOM = new FakeScroller(0);
+  const measures: ScrollMeasurement[] = [];
+  const scrolls: number[] = [];
+  const view = {
+    get state() {
+      return state;
+    },
+    dom: {
+      ownerDocument: {
+        documentElement: {},
+        defaultView: {
+          getComputedStyle: () => ({
+            getPropertyValue: () => `${inset}px`,
+            paddingTop: `${spaceAbove}px`,
+          }),
+        },
+      },
+    },
+    // Only a drawn line has a DOM element, whose padding is the space above.
+    get viewport() {
+      return drawn ? { from: 0, to: 100 } : { from: 500, to: 600 };
+    },
+    domAtPos: () => ({
+      node: { nodeType: 1, closest: () => ({}) },
+    }),
+    get documentTop() {
+      return -scrollDOM.scrollTop;
+    },
+    scaleY: 1,
+    scrollDOM,
+    lineBlockAt: () => line,
+    requestMeasure(request: ScrollMeasurement) {
+      measures.push(request);
+    },
+    dispatch(spec: TransactionSpec) {
+      state = state.update(spec).state;
+      const effects = spec.effects;
+      for (const effect of Array.isArray(effects) ? effects : [effects]) {
+        const range = (effect as { value?: { range?: SelectionRange } })?.value
+          ?.range;
+        if (range) {
+          scrolls.push(range.head);
+          state.facet(EditorView.scrollHandler)[0]!(view, range, {
+            x: "nearest",
+            y: "start",
+            xMargin: 0,
+            yMargin: 0,
+          });
+        }
+      }
+    },
+  } as unknown as EditorView;
+  /** CodeMirror's scroll to a line: the handler decides where it goes. */
+  const scroll = (head: number) =>
+    state.facet(EditorView.scrollHandler)[0]!(
+      view,
+      EditorSelection.cursor(head),
+      { x: "nearest", y: "start", xMargin: 0, yMargin: 0 },
+    );
+  return {
+    view,
+    line,
+    scrollDOM,
+    scrolls,
+    scroll,
+    /**
+     * CodeMirror's measurement after a layout change, which runs the
+     * corrections queued so far, and what they queue after it.
+     */
+    async measure() {
+      for (const request of measures) {
+        request.write?.(request.read(view), view);
+      }
+      await Promise.resolve();
+    },
+    /** The row's line is drawn: its text has a place of its own. */
+    draw() {
+      drawn = true;
+    },
+    /** Where the line's text is on screen, from the top of the viewport. */
+    get lineOnScreen() {
+      return line.top + (drawn ? spaceAbove : 0) - scrollDOM.scrollTop;
+    },
+  };
+}
+
+test("a held line sits below the top margin and stays there as content grows above it", async () => {
+  const root = createRoot();
+  const presentation = createViewState(root);
+  const panel = jumpedPanel(presentation);
+  presentation.holdAtTop(panel.view, 40, 5);
+  assert.equal(panel.scroll(40), true, "the hold takes the scroll");
+  assert.equal(panel.lineOnScreen, 5);
+
+  // Features loaded after the jump make the notes above it taller, with
+  // CodeMirror's own anchoring not undoing it.
+  panel.line.top += 12_000;
+  await panel.measure();
+  assert.equal(panel.lineOnScreen, 5);
+  panel.line.top -= 300;
+  await panel.measure();
+  assert.equal(panel.lineOnScreen, 5);
+  await root.dispose();
+});
+
+test("a held line puts its text at the margin, not the space above it", async () => {
+  const root = createRoot();
+  const presentation = createViewState(root);
+  // A heading has space above its text inside its line.
+  const panel = jumpedPanel(presentation, { spaceAbove: 16 });
+  presentation.holdAtTop(panel.view, 40, 5);
+  panel.scroll(40);
+  assert.equal(panel.lineOnScreen, 5);
+  panel.line.top += 900;
+  await panel.measure();
+  assert.equal(panel.lineOnScreen, 5);
+  await root.dispose();
+});
+
+test("a line not drawn yet is held by its line's top, and by its text once drawn", async () => {
+  const root = createRoot();
+  const presentation = createViewState(root);
+  const panel = jumpedPanel(presentation, { spaceAbove: 16, drawn: false });
+  presentation.holdAtTop(panel.view, 40, 5);
+  panel.scroll(40);
+  assert.equal(panel.lineOnScreen, 5, "line top at the margin");
+
+  panel.draw();
+  panel.line.top += 40;
+  await panel.measure();
+  assert.equal(panel.lineOnScreen, 5, "text at the margin");
+  await root.dispose();
+});
+
+test("a held line is placed below the embedder's controls too", async () => {
+  const root = createRoot();
+  const presentation = createViewState(root);
+  const panel = jumpedPanel(presentation, { inset: 48 });
+  presentation.holdAtTop(panel.view, 40, 22);
+  panel.scroll(40);
+  assert.equal(panel.lineOnScreen, 70, "inset 48 plus the sticky bar's 22");
+  await root.dispose();
+});
+
+test("moving a hold puts the line below the sticky bar without letting it go", async () => {
+  const root = createRoot();
+  const presentation = createViewState(root);
+  const panel = jumpedPanel(presentation);
+  const hold = presentation.holdAtTop(panel.view, 40, 5);
+  panel.scroll(40);
+  assert.equal(hold.isHeld(), true);
+
+  // The sticky bar appeared over the line: hold it 22 px lower.
+  assert.equal(hold.move(22), true);
+  assert.deepEqual(panel.scrolls, [40], "the move scrolls to the line itself");
+  assert.equal(panel.lineOnScreen, 22);
+  assert.equal(hold.isHeld(), true);
+
+  // And content then grows above it: still held at the new place.
+  panel.line.top += 4_000;
+  await panel.measure();
+  assert.equal(panel.lineOnScreen, 22);
+  await root.dispose();
+});
+
+test("the reader's input ends a hold, and it is not put back", async () => {
+  const root = createRoot();
+  const presentation = createViewState(root);
+  for (const type of ["wheel", "touchstart", "pointerdown", "keydown"]) {
+    const panel = jumpedPanel(presentation);
+    const hold = presentation.holdAtTop(panel.view, 40, 5);
+    panel.scroll(40);
+    panel.scrollDOM.dispatchEvent(new Event(type));
+    assert.equal(hold.isHeld(), false, type);
+    assert.equal(hold.move(22), false, type);
+    assert.deepEqual(panel.scrolls, [], `${type}: no scroll after the reader`);
+    panel.line.top += 600;
+    await panel.measure();
+    assert.equal(panel.lineOnScreen, 605, `${type}: content moves freely`);
+  }
+  await root.dispose();
+});
+
+test("a hold ends when another line is held in the view", async () => {
+  const root = createRoot();
+  const presentation = createViewState(root);
+  const panel = jumpedPanel(presentation);
+  const first = presentation.holdAtTop(panel.view, 40, 5);
+  const second = presentation.holdAtTop(panel.view, 70, 5);
+  assert.equal(first.isHeld(), false);
+  assert.equal(first.move(22), false);
+  assert.equal(second.isHeld(), true);
   await root.dispose();
 });
 

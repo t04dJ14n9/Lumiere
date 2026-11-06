@@ -6860,3 +6860,62 @@ enter; hidden once when shown; restored only when hidden; peer and dispose
 cases), `outline/host.test.ts` (Search showing, Explorer showing, switching to
 the Explorer under an open note, closing under each; the tree fake now keeps
 every visibility listener, as VS Code's does).
+
+## A Search click's match stays on screen (2026-11-06)
+
+With the direct association a Search click selected the match (breadcrumb on
+its section) but the scroll was wrong: on Small the match sat under the sticky
+heading bar, on Large (5,000 lines) the scroll stopped 160-360 lines short.
+
+How the match arrives (traced with host and webview marks in a VSIX built from
+a clone): `activeTextEditor` is not the note at `resolveCustomTextEditor`, and
+nothing is transferred. About 100 ms later VS Code 1.144 calls
+`resolveCustomTextEditorNavigation` (the proposal the 2026-10-30 note found
+unusable still reaches the installed extension through
+`enableCustomTextEditorProposals`), then `revealRange` with the match range
+and `preserveFocus`; that goes `navigation.revealPanel` -> the links plugin's
+`navigate` -> `scrollTargetToTop` (`y: "start"`, since #507 for every jump,
+Search matches included). `placeOpeningSelection` has no selection to place.
+
+Two races, both from features that load after the first paint:
+- Small: the one sticky correction (two frames after the jump) measured the
+  bar before the stickyScroll feature had drawn it (0 px), then the bar
+  appeared 22 px tall over the match.
+- Large: the jump landed (topLine = match), then a late feature configure
+  pinned the top line through `keepPlace`, and the sticky correction's own
+  `scrollIntoView` ended that pin (a scroll the pin did not make is the
+  reader's). A ~12,000 px height change above the match (133,694 px final
+  against 121,662) then arrived with CodeMirror's anchoring not undoing it in
+  some runs (scrollTop unchanged, top line 4005 -> 3644, match 9,600 px below
+  the viewport); other runs it did, which is why it was intermittent.
+
+Fix: `EditorService.holdAtTop(position, yMargin)` (view-state's pin: the line is
+held at its place while layout settles, until the reader scrolls or types)
+pins the jump's target before it scrolls, and the sticky correction moves that
+hold (`ScrollHold.move`) instead of scrolling past it. The correction keeps
+looking while the hold lasts (45 looks, about 1.5 s, at most 3 corrections),
+so a bar that draws late, or whose row height changes once the line height is
+measured (43 -> 49 px on Large), is still cleared. The pin holds the line's text
+rather than the line: a heading has 16 px of padding above its text, which put
+the jumped heading 16 px lower than `outline-jump-top.spec.ts` allows. The
+padding is read from the line's DOM, because CodeMirror refuses layout reads
+(`coordsAtPos`) while it measures, which is when the scroll handler runs.
+Hosts without `holdAtTop` keep the single look. Goes through `navigate`, so Outline clicks, Go to
+Heading and in-note fragment links get the same hold.
+
+Verified in VS Code 1.144, installed VSIX, fresh profile, Search click as the
+first Markdown open, then warm clicks: Small ("quote 12", line 29) lands at
+22 px under the 22 px bar; Large (4005, 1859) lands 43-49 px under the 43-49 px
+bar, 3 of 3 cold runs (before, with the diagnostic build, 4 of 6 cold runs
+left the match off screen), and Small -> Large 108 -> Large 50 -> Small stays
+on screen on each, twice. Tests: `scroll-to-top.test.ts`
+(hold made before the scroll, the late and the changing bar, the bound on
+corrections, the reader taking over) and `view-state.test.ts` (a held line
+stays below the margin and the embedder's inset as content above grows, moving
+a hold, the reader's input and another hold end it). `scrollTargetToTop` takes
+an options object instead of the bare `isCurrent`.
+
+Not done: the first-paint snapshot (top of the note) still shows until the
+features load, so a Search click paints the top of the note first and the
+editor then appears at the match; the host does not know the match when it
+builds the page.
