@@ -13,19 +13,20 @@ its `dailyNotes.*` settings, seeded from `.obsidian/daily-notes.json` by
 a `/` in the format makes subfolders. When neither the vault index nor its
 folder listing has it, the plugin creates the folders, reads the template,
 expands it with `expandTemplate` (title: the file name; `{{date}}`: the
-daily-note format) and writes the note, refusing paths through symbolic
-links. A template is read only after the host's containment check
-(`workspace.files.authorize`) passes for its real location. Previous and
-next match vault paths against the format and open the nearest earlier or
-later note, starting from the open daily note, or from today when the open
-note is not one. Nothing opens on startup.
+daily-note format) and creates the note only if nothing is there by then
+(`workspace.files.createText`; a note made meanwhile is opened, not
+replaced), refusing paths through symbolic links. A template is read only
+after the host's containment check (`workspace.files.authorize`) passes for
+its real location. Previous and next match vault paths against the format
+and open the nearest earlier or later note, starting from the open daily
+note, or from today when the open note is not one. Nothing opens on startup.
 
 ## Files
 
 - `manifest.ts`: the three commands and settings.
 - `host.ts`: the commands, the vault and its settings.
 - `names.ts`: today's path, the template path, and ordering notes by date.
-- `create.ts`: the existence check and writing a new note from the template.
+- `create.ts`: the existence check and creating a new note from the template.
 
 ## Services, events and settings
 

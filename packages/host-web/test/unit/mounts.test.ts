@@ -82,9 +82,9 @@ test("saving needs an existing file, creating never overwrites, and watchers hea
   await assert.rejects(files.save(uri("New.md"), "x"), {
     code: "FileNotFound",
   });
-  await files.create(uri("New.md"));
+  assert.equal(await files.create(uri("New.md")), true);
   await files.save(uri("New.md"), "# New");
-  await files.create(uri("New.md"));
+  assert.equal(await files.create(uri("New.md")), false);
   assert.equal(await files.readText(uri("New.md")), "# New");
   stopFile();
   stopTree();

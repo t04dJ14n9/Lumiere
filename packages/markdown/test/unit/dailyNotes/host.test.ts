@@ -89,8 +89,12 @@ async function start(options: {
         },
         mkdir: async () => {},
         readText: async (uri: string) => data.get(uri),
-        writeText: async (uri: string, text: string) => {
+        createText: async (uri: string, text: string) => {
+          if (data.has(uri)) {
+            return false;
+          }
           data.set(uri, text);
+          return true;
         },
         isSymbolicLink: async () => false,
         authorize: async () => {},

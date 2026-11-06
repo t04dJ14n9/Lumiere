@@ -10,7 +10,12 @@ export interface DailyNoteFiles {
   readonly root: string;
   readonly files: Pick<
     WorkspaceFiles,
-    "list" | "mkdir" | "readText" | "writeText" | "isSymbolicLink" | "authorize"
+    | "list"
+    | "mkdir"
+    | "readText"
+    | "createText"
+    | "isSymbolicLink"
+    | "authorize"
   >;
   isIndexed(path: string): boolean;
   inform(message: string): void;
@@ -18,8 +23,9 @@ export interface DailyNoteFiles {
 }
 
 /**
- * The URI of the daily note at `path`, written from the template first when
- * it does not exist. Undefined when nothing could be written.
+ * The URI of the daily note at `path`, created from the template when it
+ * does not exist. A note that appears while this runs is kept, not replaced.
+ * Undefined when nothing could be written.
  */
 export async function createDailyNote(
   io: DailyNoteFiles,
@@ -54,7 +60,9 @@ export async function createDailyNote(
   }
   const title = baseName(note.path).replace(/\.md$/i, "");
   const template = await readTemplate(io, note.template);
-  await io.files.writeText(uri, note.expand(template, title));
+  // The note may have appeared since the check above (another window, a
+  // sync, a slow template read): then it is opened as it is, never replaced.
+  await io.files.createText(uri, note.expand(template, title));
   return uri;
 }
 

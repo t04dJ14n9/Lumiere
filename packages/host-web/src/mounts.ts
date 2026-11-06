@@ -104,10 +104,14 @@ export class Mounts implements HostFiles {
     this.changed(full);
   }
 
-  async create(uri: string): Promise<void> {
+  async create(uri: string): Promise<boolean> {
     const { fs, path, full } = this.resolve(uri);
+    // A file system's "create" does not say whether it wrote anything, so
+    // this check is a step apart from it, as in the file system itself.
+    const isNew = (await fs.stat(path)) === undefined;
     await fs.write(path, new Uint8Array(), "create");
     this.changed(full);
+    return isNew;
   }
 
   async stat(uri: string): Promise<HostFileInfo | undefined> {

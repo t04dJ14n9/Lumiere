@@ -15,6 +15,8 @@ function filesWith(options: {
   links?: Record<string, string>;
   /** A host without a containment check. */
   unauthorized?: boolean;
+  /** Template reads wait until the test releases them. */
+  gate?: Promise<void>;
 }) {
   const data = new Map(Object.entries(options.existing ?? {}));
   const links = Object.entries(options.links ?? {});
@@ -43,10 +45,15 @@ function filesWith(options: {
       },
       readText: async (uri) => {
         reads.push(uri);
+        await options.gate;
         return data.get(real(uri));
       },
-      writeText: async (uri, text) => {
+      createText: async (uri, text) => {
+        if (data.has(uri)) {
+          return false;
+        }
         data.set(uri, text);
+        return true;
       },
       isSymbolicLink: async (uri) => options.symlinks?.includes(uri) ?? false,
       ...(options.unauthorized
@@ -184,4 +191,30 @@ test("a host with no containment check reads no template", async () => {
   assert.equal(data.get(uri!), "");
   assert.deepEqual(reads, []);
   assert.match(messages[0]!, /outside the vault/);
+});
+
+test("a note that appears while the template is read is opened, not overwritten", async () => {
+  let release = () => {};
+  const gate = new Promise<void>((resolve) => {
+    release = resolve;
+  });
+  const { io, data, messages, reads } = filesWith({
+    existing: { [`${ROOT}/Templates/Daily.md`]: "# {{title}}\n" },
+    gate,
+  });
+  const pending = createDailyNote(io, {
+    path: "2026-11-05.md",
+    template: "Templates/Daily",
+    expand,
+  });
+  while (reads.length === 0) {
+    await new Promise<void>((resolve) => setImmediate(resolve));
+  }
+  // Another window, or a sync, creates today's note while the template is read.
+  const uri = `${ROOT}/2026-11-05.md`;
+  data.set(uri, "written elsewhere");
+  release();
+  assert.equal(await pending, uri);
+  assert.equal(data.get(uri), "written elsewhere");
+  assert.deepEqual(messages, []);
 });
