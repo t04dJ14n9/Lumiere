@@ -15,9 +15,11 @@ function strictFiles() {
     uriOf: (path: string) => `file://${path}`,
     mkdir: async () => {},
     create: async (uri: string) => {
-      if (!texts.has(uri)) {
-        texts.set(uri, "");
+      if (texts.has(uri)) {
+        return false;
       }
+      texts.set(uri, "");
+      return true;
     },
     save: async (uri: string, text: string) => {
       if (!texts.has(uri)) {
@@ -48,5 +50,28 @@ test("writeText makes a new file where save alone only replaces one", async () =
   );
 
   await assert.rejects(workspace.writeText("file:///elsewhere/a.md", "x"));
+  assert.equal(texts.has("file:///elsewhere/a.md"), false);
+});
+
+test("createText fills a new file and leaves an existing one as it is", async () => {
+  const { files, texts } = strictFiles();
+  const workspace = createWorkspaceFiles(files, () => ["file:///vault"]);
+
+  assert.equal(
+    await workspace.createText(
+      "file:///vault/Journal/2026-11-05.md",
+      "# Today",
+    ),
+    true,
+  );
+  assert.equal(texts.get("file:///vault/Journal/2026-11-05.md"), "# Today");
+
+  assert.equal(
+    await workspace.createText("file:///vault/Journal/2026-11-05.md", "other"),
+    false,
+  );
+  assert.equal(texts.get("file:///vault/Journal/2026-11-05.md"), "# Today");
+
+  await assert.rejects(workspace.createText("file:///elsewhere/a.md", "x"));
   assert.equal(texts.has("file:///elsewhere/a.md"), false);
 });

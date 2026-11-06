@@ -97,6 +97,7 @@ test("loadVaultCssSnippets loads only the snippets appearance.json enables", asy
       authorize: async () => {},
       readText: async (uri) => files.get(uri),
       writeText: async () => {},
+      createText: async () => true,
       writeBytes: async () => {},
       list: async () => ["callouts.css", "extra.css"],
       mkdir: async () => {},

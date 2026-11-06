@@ -1,7 +1,11 @@
 import type { Disposer } from "@workshop/core";
-import type { ConfigFiles } from "./config-files";
+import type { ConfigFile, ConfigFiles } from "./config-files";
 import type { ObsidianOverrides } from "./api";
 import { mapAppSettings } from "./app-settings";
+import {
+  mapDailyNotesSettings,
+  mapTemplatesSettings,
+} from "./core-plugin-settings";
 import { TypesRegistry } from "./types-registry";
 
 export interface VaultConfigOptions {
@@ -10,15 +14,30 @@ export interface VaultConfigOptions {
   warn(message: string, error: unknown): void;
 }
 
+/** The files that seed Lumia settings, each mapped on its own. */
+const SETTINGS_FILES: readonly {
+  file: ConfigFile;
+  map(value: unknown): ObsidianOverrides;
+}[] = [
+  { file: "app.json", map: mapAppSettings },
+  { file: "daily-notes.json", map: mapDailyNotesSettings },
+  { file: "templates.json", map: mapTemplatesSettings },
+];
+
+interface SettingsSnapshot {
+  source: string | undefined;
+  overrides: ObsidianOverrides;
+  hasWarned: boolean;
+}
+
 /** A vault's watchers and last-good snapshots; no dependency on editor focus. */
 export class VaultConfig {
   readonly types: TypesRegistry;
   overrides: ObsidianOverrides = Object.freeze({});
-  private appSource: string | undefined;
-  private appQueue = Promise.resolve();
+  private readonly snapshots = new Map<ConfigFile, SettingsSnapshot>();
+  private settingsQueue = Promise.resolve();
   private readonly stops: Disposer[] = [];
   private isStopped = false;
-  private hasWarned = false;
 
   constructor(private readonly options: VaultConfigOptions) {
     this.types = new TypesRegistry({
@@ -42,11 +61,16 @@ export class VaultConfig {
             ),
           );
       }),
-      this.options.files.watch("app.json", () => {
-        void this.refreshApp();
-      }),
+      ...SETTINGS_FILES.map((source) =>
+        this.options.files.watch(source.file, () => {
+          void this.refreshSettings(source);
+        }),
+      ),
     );
-    await Promise.all([this.types.refresh(), this.refreshApp()]);
+    await Promise.all([
+      this.types.refresh(),
+      ...SETTINGS_FILES.map((source) => this.refreshSettings(source)),
+    ]);
   }
 
   async dispose(): Promise<void> {
@@ -55,35 +79,53 @@ export class VaultConfig {
       await stop();
     }
     await this.types.dispose();
-    await this.appQueue;
+    await this.settingsQueue;
   }
 
   /** Never rejects: a watcher failure keeps the previous snapshot and logs once. */
-  private refreshApp(): Promise<void> {
-    this.appQueue = this.appQueue.then(async () => {
+  private refreshSettings(
+    settings: (typeof SETTINGS_FILES)[number],
+  ): Promise<void> {
+    this.settingsQueue = this.settingsQueue.then(async () => {
       if (this.isStopped) {
         return;
       }
+      const snapshot = this.snapshot(settings.file);
       try {
-        const source = await this.options.files.read("app.json");
-        const overrides = mapAppSettings(
+        const source = await this.options.files.read(settings.file);
+        const overrides = settings.map(
           source === undefined ? {} : JSON.parse(source),
         );
-        if (!this.isStopped && source !== this.appSource) {
-          this.appSource = source;
-          this.overrides = overrides;
+        if (!this.isStopped && source !== snapshot.source) {
+          snapshot.source = source;
+          snapshot.overrides = overrides;
+          this.overrides = Object.freeze(
+            Object.assign(
+              {},
+              ...[...this.snapshots.values()].map((item) => item.overrides),
+            ),
+          );
           this.options.changed();
         }
       } catch (error) {
-        if (!this.hasWarned) {
-          this.hasWarned = true;
+        if (!snapshot.hasWarned) {
+          snapshot.hasWarned = true;
           this.options.warn(
-            "Could not read Obsidian app.json; keeping the last good settings.",
+            `Could not read Obsidian ${settings.file}; keeping the last good settings.`,
             error,
           );
         }
       }
     });
-    return this.appQueue;
+    return this.settingsQueue;
+  }
+
+  private snapshot(file: ConfigFile): SettingsSnapshot {
+    let snapshot = this.snapshots.get(file);
+    if (!snapshot) {
+      snapshot = { source: undefined, overrides: {}, hasWarned: false };
+      this.snapshots.set(file, snapshot);
+    }
+    return snapshot;
   }
 }

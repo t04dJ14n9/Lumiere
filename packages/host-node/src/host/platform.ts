@@ -44,10 +44,11 @@ export interface HostFiles {
   /** Replace an existing file's bytes; a symbolic link in its place is not followed. */
   saveBytes(uri: string, data: Uint8Array): Promise<void>;
   /**
-   * Write a new, empty file. An existing file is left as it is, and a
-   * symbolic link in its place is not followed.
+   * Write a new, empty file; true when this call made it. An existing file
+   * is left as it is (false), and a symbolic link in its place is not
+   * followed.
    */
-  create(uri: string): Promise<void>;
+  create(uri: string): Promise<boolean>;
   /** The file or folder; undefined when there is none. */
   stat(uri: string): Promise<HostFileInfo | undefined>;
   /** `stat` of `uri` itself: a symbolic link's own time, not its target's. */

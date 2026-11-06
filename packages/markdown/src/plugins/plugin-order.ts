@@ -92,6 +92,8 @@ export const WORKBENCH_FEATURE_ORDER = [
   "ideContext",
   "wiki",
   "scratch",
+  "templates",
+  "dailyNotes",
   "marp",
   "gitDiffEditor",
   // Compatibility supplies settings; core plugins keep owning their behavior.

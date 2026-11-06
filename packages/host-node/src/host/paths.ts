@@ -171,18 +171,23 @@ export async function writeThroughBytes(
   }
 }
 
-/** Create an empty file, and leave an existing one untouched. */
-export async function createEmptyFile(file: string): Promise<void> {
+/**
+ * Create an empty file and say so (true), or leave an existing one untouched
+ * (false). `O_EXCL` makes the check and the creation one step.
+ */
+export async function createEmptyFile(file: string): Promise<boolean> {
   try {
     const handle = await open(
       file,
       constants.O_CREAT | constants.O_EXCL | constants.O_WRONLY | noFollow(),
     );
     await handle.close();
+    return true;
   } catch (error) {
     if ((error as NodeJS.ErrnoException).code !== "EEXIST") {
       throw error;
     }
+    return false;
   }
 }
 
