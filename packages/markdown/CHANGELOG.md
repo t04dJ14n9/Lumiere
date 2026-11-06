@@ -2,6 +2,15 @@
 
 ## 0.1.0 (unreleased)
 
+- Heading links match the way Obsidian matches them: heading text without
+  case, with punctuation such as `/`, `:` and `?` read as spaces, so
+  `[[Note#A B]]` reaches `## A/B`. `[[Note#A#B]]` finds a deeper heading B
+  after A, not only A's direct child. Block ids (`#^id`) match without case.
+- Heading links also accept GitHub's slugs, as written for GitHub or VS Code:
+  `[x](Note.md#use-postgres)` reaches `## Use Postgres`, and repeated
+  headings are reached with `-1`, `-2`. Obsidian itself opens such links at
+  the top of the note. Lumia still writes heading links the Obsidian way.
+
 - Markdown Outline (and Go to Heading / in-note fragment jumps that share
   links `navigate`) put the jumped heading at the **top** of the editor
   viewport, not the vertical centre. The browser still clamps at both ends of
