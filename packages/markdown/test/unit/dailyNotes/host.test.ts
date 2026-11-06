@@ -93,6 +93,7 @@ async function start(options: {
           data.set(uri, text);
         },
         isSymbolicLink: async () => false,
+        authorize: async () => {},
       } as never,
     },
   });

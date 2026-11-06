@@ -10,7 +10,7 @@ export interface DailyNoteFiles {
   readonly root: string;
   readonly files: Pick<
     WorkspaceFiles,
-    "list" | "mkdir" | "readText" | "writeText" | "isSymbolicLink"
+    "list" | "mkdir" | "readText" | "writeText" | "isSymbolicLink" | "authorize"
   >;
   isIndexed(path: string): boolean;
   inform(message: string): void;
@@ -81,6 +81,12 @@ async function readTemplate(
   }
   const path = dailyTemplatePath(setting);
   const uri = path ? joinContained(io.root, path) : undefined;
+  if (uri && !(await isInsideVault(io, uri))) {
+    io.error(
+      `Daily note template ${setting} is outside the vault or follows a symbolic link; the note was created empty.`,
+    );
+    return "";
+  }
   const text = uri ? await io.files.readText(uri) : undefined;
   if (text === undefined) {
     io.inform(
@@ -89,6 +95,27 @@ async function readTemplate(
     return "";
   }
   return text;
+}
+
+/**
+ * True when the template's real location, through symbolic links on the file or any
+ * folder above it, is inside the vault. `joinContained` only checks the
+ * spelling, so a linked Templates folder could pull in any readable file.
+ * A host that cannot check reads nothing.
+ */
+async function isInsideVault(
+  io: DailyNoteFiles,
+  uri: string,
+): Promise<boolean> {
+  if (!io.files.authorize) {
+    return false;
+  }
+  try {
+    await io.files.authorize(io.root, uri);
+    return true;
+  } catch {
+    return false;
+  }
 }
 
 function parentOf(path: string): string {

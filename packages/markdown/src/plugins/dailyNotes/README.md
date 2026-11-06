@@ -14,9 +14,11 @@ a `/` in the format makes subfolders. When neither the vault index nor its
 folder listing has it, the plugin creates the folders, reads the template,
 expands it with `expandTemplate` (title: the file name; `{{date}}`: the
 daily-note format) and writes the note, refusing paths through symbolic
-links. Previous and next match vault paths against the format and open the
-nearest earlier or later note, starting from the open daily note, or from
-today when the open note is not one. Nothing opens on startup.
+links. A template is read only after the host's containment check
+(`workspace.files.authorize`) passes for its real location. Previous and
+next match vault paths against the format and open the nearest earlier or
+later note, starting from the open daily note, or from today when the open
+note is not one. Nothing opens on startup.
 
 ## Files
 
@@ -42,3 +44,5 @@ today when the open note is not one. Nothing opens on startup.
 - No "open daily note on startup", no ribbon button and no calendar.
 - A date property does not link to its daily note.
 - A missing template creates an empty note with a message, rather than no note.
+  So does a template that leaves the vault through a symbolic link, or on a
+  host that cannot check containment; its contents are never read.

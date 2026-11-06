@@ -11,8 +11,21 @@ function filesWith(options: {
   existing?: Record<string, string>;
   indexed?: string[];
   symlinks?: string[];
+  /** Symbolic links by URI to the URI they point at, followed by reads. */
+  links?: Record<string, string>;
+  /** A host without a containment check. */
+  unauthorized?: boolean;
 }) {
   const data = new Map(Object.entries(options.existing ?? {}));
+  const links = Object.entries(options.links ?? {});
+  const reads: string[] = [];
+  // The real path: the longest linked prefix replaced by its target.
+  const real = (uri: string): string => {
+    const link = links
+      .filter(([from]) => uri === from || uri.startsWith(`${from}/`))
+      .sort(([a], [b]) => b.length - a.length)[0];
+    return link ? real(link[1] + uri.slice(link[0].length)) : uri;
+  };
   const made: string[] = [];
   const messages: string[] = [];
   const io: DailyNoteFiles = {
@@ -28,17 +41,29 @@ function filesWith(options: {
       mkdir: async (uri) => {
         made.push(uri);
       },
-      readText: async (uri) => data.get(uri),
+      readText: async (uri) => {
+        reads.push(uri);
+        return data.get(real(uri));
+      },
       writeText: async (uri, text) => {
         data.set(uri, text);
       },
       isSymbolicLink: async (uri) => options.symlinks?.includes(uri) ?? false,
+      ...(options.unauthorized
+        ? {}
+        : {
+            authorize: async (root: string, target: string) => {
+              if (!real(target).startsWith(`${root}/`)) {
+                throw new Error("Link symlink escapes the vault");
+              }
+            },
+          }),
     },
     isIndexed: (path) => options.indexed?.includes(path) ?? false,
     inform: (message) => messages.push(`inform: ${message}`),
     error: (message) => messages.push(`error: ${message}`),
   };
-  return { io, data, made, messages };
+  return { io, data, made, messages, reads };
 }
 
 const expand = (text: string, title: string) =>
@@ -100,4 +125,63 @@ test("a path through a symbolic link is refused before writing", async () => {
   assert.equal(uri, undefined);
   assert.equal(data.size, 0);
   assert.match(messages[0]!, /symbolic link/);
+});
+
+test("a template that is a symbolic link out of the vault is not read", async () => {
+  const { io, data, messages, reads } = filesWith({
+    existing: { "file:///outside/secret.md": "SECRET {{title}}" },
+    links: { [`${ROOT}/Templates/Daily.md`]: "file:///outside/secret.md" },
+  });
+  const uri = await createDailyNote(io, {
+    path: "2026-11-05.md",
+    template: "Templates/Daily",
+    expand,
+  });
+  assert.equal(data.get(uri!), "");
+  assert.deepEqual(reads, []);
+  assert.match(messages[0]!, /^error: .*Templates\/Daily.*outside the vault/);
+});
+
+test("a template under a symbolic link to a folder outside the vault is not read", async () => {
+  const { io, data, messages, reads } = filesWith({
+    existing: { "file:///outside/Templates/Daily.md": "SECRET {{title}}" },
+    links: { [`${ROOT}/Templates`]: "file:///outside/Templates" },
+  });
+  const uri = await createDailyNote(io, {
+    path: "2026-11-05.md",
+    template: "Templates/Daily.md",
+    expand,
+  });
+  assert.equal(data.get(uri!), "");
+  assert.deepEqual(reads, []);
+  assert.match(messages[0]!, /outside the vault/);
+});
+
+test("a symbolic link that stays inside the vault is a usable template", async () => {
+  const { io, data, messages } = filesWith({
+    existing: { [`${ROOT}/Shared/Daily.md`]: "# {{title}}\n" },
+    links: { [`${ROOT}/Templates`]: `${ROOT}/Shared` },
+  });
+  const uri = await createDailyNote(io, {
+    path: "2026-11-05.md",
+    template: "Templates/Daily",
+    expand,
+  });
+  assert.equal(data.get(uri!), "# 2026-11-05\n");
+  assert.deepEqual(messages, []);
+});
+
+test("a host with no containment check reads no template", async () => {
+  const { io, data, messages, reads } = filesWith({
+    existing: { [`${ROOT}/Templates/Daily.md`]: "# {{title}}\n" },
+    unauthorized: true,
+  });
+  const uri = await createDailyNote(io, {
+    path: "2026-11-05.md",
+    template: "Templates/Daily",
+    expand,
+  });
+  assert.equal(data.get(uri!), "");
+  assert.deepEqual(reads, []);
+  assert.match(messages[0]!, /outside the vault/);
 });
