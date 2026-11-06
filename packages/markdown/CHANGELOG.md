@@ -2,6 +2,15 @@
 
 ## 0.1.0 (unreleased)
 
+- Typing `[[` in VS Code's own text editor now suggests links, as the Lumia
+  editor does: `[[Note` lists notes (with aliases), `[[Note#` the note's
+  headings, `[[Note#^` its blocks that already have an id, and `[[Note|` keeps
+  the note offered while an alias is typed. It uses the same index, ranking and
+  insertion text, so the two agree, including with Use Wikilinks off; picking
+  an entry finishes the link with `]]`. This is for vaults whose notes open as
+  text (`"workbench.editorAssociations": {"*.md": "default"}`). Blocks without
+  an id and tags are not suggested there.
+
 - Markdown Outline (and Go to Heading / in-note fragment jumps that share
   links `navigate`) put the jumped heading at the **top** of the editor
   viewport, not the vertical centre. The browser still clamps at both ends of

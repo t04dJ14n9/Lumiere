@@ -37,7 +37,9 @@ renderer adds `is-unresolved` to rendered links whose path is in it.
 
 ## Files
 
-- `suggestions.ts`: plugin-owned completion trigger through `suggest/trigger`.
+- `suggestions.ts`: plugin-owned completion trigger through `suggest/trigger`,
+  reading the text typed after `[[` with `src/markdown/link-trigger.ts`, which
+  Suggestions' native text editor half reads too.
 
 - `native-host.ts`: window-scoped native link registration through the host services `dialogs`, `settings` and `navigation`.
 - `manifest.ts`: link settings and insert/follow/side command contributions.

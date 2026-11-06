@@ -1,4 +1,5 @@
 import type { Disposer } from "@workshop/core";
+import type { Cancellation } from "../rpc/lifecycle";
 
 /** A text document VS Code owns; its text, saving and undo are VS Code's. */
 export interface HostDocument {
@@ -36,6 +37,33 @@ export interface FileTextEdits {
   }[];
 }
 
+/** One entry of the suggest list VS Code opens while typing in a text document. */
+export interface TextCompletion {
+  label: string;
+  /** Shown beside the label, such as the note's path. */
+  detail: string;
+  /**
+   * Replaces the line from column `replaceFrom` (UTF-16, as VS Code counts)
+   * up to the caret, and as much of `absorbs` as follows the caret.
+   */
+  insert: string;
+  replaceFrom: number;
+  absorbs?: string;
+}
+
+/** Answers for the caret of a text document. */
+export interface TextCompletionProvider {
+  /**
+   * The entries for a caret in the document at `uri` that follows `before`,
+   * the text of its line up to it. Best first; VS Code keeps this order and
+   * asks again as the user types.
+   */
+  complete(
+    request: { uri: string; before: string },
+    token: Cancellation,
+  ): Promise<readonly TextCompletion[]>;
+}
+
 /** VS Code's text documents: edits, saves and renames. */
 export interface HostDocuments {
   /** A stable hash of a text, to tell whether a document changed. */
@@ -58,4 +86,9 @@ export interface HostDocuments {
       renames: readonly { oldUri: string; newUri: string }[],
     ) => Promise<readonly FileTextEdits[]>,
   ): Disposer;
+  /**
+   * VS Code's suggest list for Markdown notes opened as text. Hosts without
+   * a text editor of their own leave it out.
+   */
+  registerCompletions?(provider: TextCompletionProvider): Disposer;
 }

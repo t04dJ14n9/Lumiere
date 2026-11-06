@@ -110,6 +110,8 @@ forbids this package from importing `vscode` or any embedder.
 - No rendered or native diffs, no status bar entries and no extra panels
   (the vault graph) yet: `inert.ts` answers for them as VS Code does when
   they are unavailable.
+- No text editor of its own, so `HostDocuments.registerCompletions` is left
+  out: typing `[[` suggests notes in the Lumia editor only.
 - No command palette or keybindings: commands run from clicks, links and the
   editor's own menus.
 - `TreeHandle.expand` / `collapse` emit `expand` / `collapse` events (and
