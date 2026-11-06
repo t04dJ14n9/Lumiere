@@ -145,8 +145,10 @@ do not install a VSIX or use the owner's profile.
 3. Run **Use Lumia for Markdown in This Workspace**: the
    workspace `settings.json` gets `workbench.editorAssociations` entries for
    `*.md` and `*.markdown`, other associations stay, and running it again
-   changes nothing. A note opened from the Explorer now opens in the
-   Workshop editor. **Open as Text** still opens the text editor.
+   changes nothing. The entries name `lumiere.markdown.editor` (not
+   `default`). A note opened from the Explorer now opens in the
+   Workshop editor without a text editor tab first. **Open as Text** still
+   opens the text editor, and that tab is not reclaimed.
 4. Run **Note Actions** and **Selection Actions** from the palette (with and
    without a selection): a quick pick lists the registered actions.
 5. Change `lumiere.markdown.editor.readableLineLength`,
@@ -1354,6 +1356,7 @@ Use the disposable fixture vault from Setup. These rows enumerate every generate
 | `lumiere.markdown.editor.reclaimTextEditor` | `"auto"` | auto / on / off; change at workspace-folder scope, verify the owning plugin scenario, then reset the override. |
 | `lumiere.markdown.editor.reclaimInPlaceTextEditor` | `false` | boolean; change at workspace-folder scope, verify the owning plugin scenario, then reset the override. |
 | `lumiere.markdown.editor.warmTextDocument` | `"auto"` | auto / on / off; change at workspace-folder scope, verify the owning plugin scenario, then reset the override. |
+| `lumiere.markdown.editor.firstPaintSnapshot` | `true` | boolean; open a note with it on, then off, in a real window: the first screen (headings, paragraphs, lists, quotes, code) shows before the editor loads and does not move when the editor replaces it; reset the override. |
 | `lumiere.markdown.editor.strictLineBreaks` | `false` | boolean; change at workspace-folder scope, verify the owning plugin scenario, then reset the override. |
 | `lumiere.markdown.editor.rightToLeft` | `false` | boolean; change at workspace-folder scope, verify the owning plugin scenario, then reset the override. |
 | `lumiere.markdown.editor.dragScrollSpeed` | `4` | number; change at workspace-folder scope, verify the owning plugin scenario, then reset the override. |

@@ -597,6 +597,7 @@ test("opt-in reclaimInPlace: tab rebuild during Search wait still reclaims workb
   t.mock.timers.enable({ apis: ["setTimeout"] });
   const state = memento();
   await state.update(MARKDOWN_WORKSPACE_EDITOR_KEY, true);
+  settings.set("workbench.editorAssociations", { "*.md": "default" });
   settings.set("lumiere.markdown.editor.reclaimInPlaceTextEditor", true);
   const stop = host.reclaim.registerReclaim(undefined, state as never);
   t.after(() => stop.dispose());
@@ -615,6 +616,7 @@ test("opt-in reclaimInPlace: selection ready after tab rebuild reclaims without 
   t.mock.timers.enable({ apis: ["setTimeout"] });
   const state = memento();
   await state.update(MARKDOWN_WORKSPACE_EDITOR_KEY, true);
+  settings.set("workbench.editorAssociations", { "*.md": "default" });
   settings.set("lumiere.markdown.editor.reclaimInPlaceTextEditor", true);
   const stop = host.reclaim.registerReclaim(undefined, state as never);
   t.after(() => stop.dispose());
@@ -2272,6 +2274,115 @@ test("a caret at the start does not reclaim before Search applies its range", as
   assert.deepEqual(destination.ranges, [{ at, to: at + 4 }]);
 });
 
+test("a plain open reclaims one settle after the text editor reports, not after the full wait", async (t) => {
+  // Quick Open, the Explorer and links apply no range: waiting the whole
+  // report timeout for one only delays the note's Lumia tab.
+  t.mock.timers.enable({ apis: ["setTimeout"] });
+  const state = memento();
+  await state.update(MARKDOWN_WORKSPACE_EDITOR_KEY, true);
+  settings.set("workbench.editorAssociations", { "*.md": "default" });
+  const tab = cursorTab();
+  const destination = hunkDestination(tab);
+  const stop = host.reclaim.registerReclaim(
+    destination.navigation,
+    state as never,
+  );
+  t.after(() => stop.dispose());
+  tab.input = new TabInputText(Uri.parse(note));
+  const editor = nativeHunkEditor(tab, 0);
+  editor.selection = new Range(new Position(0, 0), new Position(0, 0));
+  destination.ready();
+
+  tabsChanged.fire({ opened: [tab], changed: [], closed: [] });
+  t.mock.timers.tick(0);
+  await tick();
+  assert.deepEqual(commands, [], "the range gets a settle first");
+  t.mock.timers.tick(39);
+  await tick();
+  assert.deepEqual(commands, [], "still inside the settle");
+  t.mock.timers.tick(1);
+  await tick();
+
+  assert.equal(commands.length, 1);
+  assert.equal(commands[0]?.[0], "vscode.openWith");
+  assert.deepEqual(destination.ranges, [{ at: 0 }], "a caret, not a match");
+});
+
+test("a Search range arriving inside the settle opens with that range", async (t) => {
+  t.mock.timers.enable({ apis: ["setTimeout"] });
+  const state = memento();
+  await state.update(MARKDOWN_WORKSPACE_EDITOR_KEY, true);
+  settings.set("workbench.editorAssociations", { "*.md": "default" });
+  const tab = cursorTab();
+  const destination = hunkDestination(tab);
+  const stop = host.reclaim.registerReclaim(
+    destination.navigation,
+    state as never,
+  );
+  t.after(() => stop.dispose());
+  tab.input = new TabInputText(Uri.parse(note));
+  const editor = nativeHunkEditor(tab, 0);
+  editor.selection = new Range(new Position(0, 0), new Position(0, 0));
+  destination.ready();
+
+  tabsChanged.fire({ opened: [tab], changed: [], closed: [] });
+  t.mock.timers.tick(0);
+  await tick();
+  t.mock.timers.tick(30);
+  assert.deepEqual(commands, []);
+  editor.selection = new Range(new Position(947, 0), new Position(949, 4));
+  selectionChanged.fire({ textEditor: editor });
+  await tick();
+
+  const text = editor.document.getText();
+  assert.deepEqual(destination.ranges, [
+    { at: text.indexOf("Line 948\n"), to: text.indexOf("Line 950\n") + 4 },
+  ]);
+});
+
+test("a text tab whose editor never reports waits the full report timeout", async (t) => {
+  t.mock.timers.enable({ apis: ["setTimeout"] });
+  const state = memento();
+  await state.update(MARKDOWN_WORKSPACE_EDITOR_KEY, true);
+  settings.set("workbench.editorAssociations", { "*.md": "default" });
+  const tab = cursorTab();
+  const destination = hunkDestination(tab);
+  const stop = host.reclaim.registerReclaim(
+    destination.navigation,
+    state as never,
+  );
+  t.after(() => stop.dispose());
+  tab.input = new TabInputText(Uri.parse(note));
+  nativeHunkEditor(tab, 0);
+  destination.ready();
+  vscode.window.activeTextEditor = undefined;
+
+  tabsChanged.fire({ opened: [tab], changed: [], closed: [] });
+  t.mock.timers.tick(249);
+  await tick();
+  assert.deepEqual(commands, []);
+  t.mock.timers.tick(1);
+  await tick();
+
+  assert.equal(commands.length, 1);
+  assert.equal(commands[0]?.[0], "vscode.openWith");
+});
+
+test("with Lumia associated directly, a text tab is not held for a Search range", async (t) => {
+  // Use Lumia for Markdown associates Lumia itself: the flag stays set, but a
+  // text tab is one someone chose, so the Search selection wait must not run.
+  t.mock.timers.enable({ apis: ["setTimeout"] });
+  const state = memento();
+  await state.update(MARKDOWN_WORKSPACE_EDITOR_KEY, true);
+  settings.set("lumiere.markdown.editor.reclaimInPlaceTextEditor", true);
+  const stop = host.reclaim.registerReclaim(undefined, state as never);
+  t.after(() => stop.dispose());
+  switchToText();
+  await tick();
+  assert.equal(commands.length, 1, "reclaimed at once, with no 250 ms wait");
+  assert.equal(commands[0]?.[2], viewType);
+});
+
 test("heal restores Search reclaim when associations are default without workspaceEditor", async (t) => {
   // Host GUI range-link probe: settings.json had "*.md": "default" but never
   // set lumiere.markdown.workspaceEditor, and readerText stuck the note.
@@ -3431,6 +3542,47 @@ test("reclaim skips missing Markdown paths (leaves built-in Text Editor)", async
     group.activeTab?.input instanceof TabInputText,
     "active editor stays the built-in Text Editor",
   );
+});
+
+test("a missing note opened in Lumia directly goes back to the built-in Text Editor", async (t) => {
+  // With *.md associated to Lumia, VS Code resolves Lumia's editor even for
+  // a path that does not exist yet; the 2026-11-04 lock keeps it as text.
+  const missing = `file:///vault/missing-open/direct.md`;
+  host.markdownAbsent.setMarkdownAbsentOnDiskForTests((uri) => uri === missing);
+  t.after(() =>
+    host.markdownAbsent.setMarkdownAbsentOnDiskForTests(() => false),
+  );
+  const extension = {
+    id: "lumiere.markdown",
+    extensionUri: Uri.parse("file:///ext"),
+    packageJSON: { name: "lumiere", enabledApiProposals: [] as string[] },
+  };
+  const opened: PanelShell[] = [];
+  const stop = host.editorPanels.registerEditor(
+    MARKDOWN_EDITOR,
+    {
+      extension,
+      extensionUri: extension.extensionUri as unknown as NativeUri,
+      documents: {
+        wrap: (doc: { uri: Uri }) =>
+          ({ uri: doc.uri.toString() }) as unknown as PanelShell["document"],
+      } as never,
+    },
+    (shell) => opened.push(shell),
+  );
+  t.after(stop);
+  const provider = registeredProviders.at(-1)?.provider as {
+    resolveCustomTextEditor(doc: unknown, panel: unknown): void;
+  };
+  const panel = createFakeWebviewPanel();
+  provider.resolveCustomTextEditor(createFakeDoc(missing, [""]), panel);
+  await tick();
+
+  assert.equal(opened.length, 0, "no Lumia panel for a missing note");
+  const openWith = commands.find((entry) => entry[0] === "vscode.openWith");
+  assert.equal(String(openWith?.[1]), missing);
+  assert.equal(openWith?.[2], "default");
+  assert.equal(panel.disposed, true);
 });
 
 test("reclaim still openWith Lumia for an existing Markdown path", async (t) => {

@@ -6,22 +6,23 @@ import {
   useForMarkdownInWorkspace,
   withMarkdownWorkshop,
 } from "../../../src/plugins/editor/associations";
+import { MARKDOWN_WORKSPACE_EDITOR_KEY } from "../../../src/shared/editor-provider";
 import { provideHostServices } from "../../../src/shared/host";
 import { fakeHost } from "../../support/vscode-fake";
 
-test("Markdown patterns route through the text editor; other associations stay", () => {
+test("Markdown patterns open in Lumia directly; other associations stay", () => {
   assert.deepEqual(
     withMarkdownWorkshop({ "*.pdf": "pdf.preview", "*.md": "default" }),
     {
       "*.pdf": "pdf.preview",
-      "*.md": "default",
-      "*.markdown": "default",
+      "*.md": "lumiere.markdown.editor",
+      "*.markdown": "lumiere.markdown.editor",
     },
   );
   for (const malformed of [undefined, null, [], "x", { "*.txt": 3 }]) {
     assert.deepEqual(withMarkdownWorkshop(malformed), {
-      "*.md": "default",
-      "*.markdown": "default",
+      "*.md": "lumiere.markdown.editor",
+      "*.markdown": "lumiere.markdown.editor",
     });
   }
 });
@@ -57,14 +58,14 @@ function harness(initial: unknown) {
   return { host, writes, messages, errors, storage };
 }
 
-test("the workspace command records Lumia and uses the native selection route", async () => {
+test("the workspace command records Lumia and opens Markdown in it directly", async () => {
   const h = harness({ "*.pdf": "pdf.preview" });
   await useForMarkdownInWorkspace(h.host);
   assert.deepEqual(h.writes, [
     {
       "*.pdf": "pdf.preview",
-      "*.md": "default",
-      "*.markdown": "default",
+      "*.md": "lumiere.markdown.editor",
+      "*.markdown": "lumiere.markdown.editor",
     },
   ]);
   assert.deepEqual([...h.storage.values()], [true]);
@@ -83,16 +84,10 @@ test("without a workspace there is nothing to write", async () => {
   }
 });
 
-test("activation migrates the old direct custom-editor association", async (t) => {
-  const h = harness({
-    "*.pdf": "pdf.preview",
-    "*.md": "lumiere.markdown.editor",
-    "*.markdown": "lumiere.markdown.editor",
-  });
+function activate(t: test.TestContext, h: ReturnType<typeof harness>) {
   const root = createRoot();
   t.after(() => root.dispose());
   provideHostServices(root, h.host);
-
   root.plugin({
     name: "association-migration-test",
     inject: {
@@ -100,32 +95,46 @@ test("activation migrates the old direct custom-editor association", async (t) =
     },
     apply: registerMarkdownAssociation,
   });
-  await root.settled();
+  return root.settled();
+}
 
+test("activation moves Lumia's text-editor route to the direct association", async (t) => {
+  const h = harness({
+    "*.pdf": "pdf.preview",
+    "*.md": "default",
+    "*.markdown": "default",
+  });
+  h.storage.set(MARKDOWN_WORKSPACE_EDITOR_KEY, true);
+  await activate(t, h);
   assert.deepEqual(h.writes, [
     {
       "*.pdf": "pdf.preview",
-      "*.md": "default",
-      "*.markdown": "default",
+      "*.md": "lumiere.markdown.editor",
+      "*.markdown": "lumiere.markdown.editor",
     },
   ]);
-  assert.deepEqual([...h.storage.values()], [true]);
   assert.deepEqual(h.messages, [], "migration is silent");
 });
 
-test("activation migrates a workspace that only associates *.md", async (t) => {
-  const h = harness({ "*.md": "lumiere.markdown.editor" });
-  const root = createRoot();
-  t.after(() => root.dispose());
-  provideHostServices(root, h.host);
-  root.plugin({
-    name: "association-migration-md-only",
-    inject: {
-      required: ["hostCommands", "settings", "dialogs", "storage"],
+test("activation migrates a workspace that only routes *.md through text", async (t) => {
+  const h = harness({ "*.md": "default" });
+  h.storage.set(MARKDOWN_WORKSPACE_EDITOR_KEY, true);
+  await activate(t, h);
+  assert.deepEqual(h.writes, [
+    {
+      "*.md": "lumiere.markdown.editor",
+      "*.markdown": "lumiere.markdown.editor",
     },
-    apply: registerMarkdownAssociation,
-  });
-  await root.settled();
-  assert.deepEqual(h.writes, [{ "*.md": "default", "*.markdown": "default" }]);
-  assert.deepEqual([...h.storage.values()], [true]);
+  ]);
+});
+
+test("activation leaves a text association Lumia did not write", async (t) => {
+  for (const initial of [
+    { "*.md": "default" },
+    { "*.md": "lumiere.markdown.editor" },
+  ]) {
+    const h = harness(initial);
+    await activate(t, h);
+    assert.deepEqual(h.writes, [], JSON.stringify(initial));
+  }
 });

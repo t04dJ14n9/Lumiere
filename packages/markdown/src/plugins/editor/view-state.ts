@@ -2,6 +2,8 @@ import { EditorView, ViewPlugin } from "@codemirror/view";
 import type { SelectionRange, StateEffect } from "@codemirror/state";
 import type { BaseContext, Infer } from "@workshop/core";
 import type {} from "./api";
+import { chromeInsetTop } from "../../webview/ui/chrome-inset";
+import type { ScrollHold } from "./api";
 import { keepTextBelowStill } from "./keep-below-still";
 import type { viewState } from "./protocol";
 type EditorViewState = Infer<typeof viewState>;
@@ -15,6 +17,12 @@ type EditorViewState = Infer<typeof viewState>;
 interface PendingScroll {
   from: number;
   offset: number;
+  /**
+   * `offset` is that of the text of the line `from` is on, not of the line
+   * itself: a jump puts the text it targets at the top, below the space a
+   * heading has above its text.
+   */
+  text?: boolean | undefined;
   left: number;
   applied: boolean;
   settleUntil: number;
@@ -32,6 +40,23 @@ const SETTLE_MS = 1500;
 const READER_INPUT = ["wheel", "touchstart", "pointerdown", "keydown"] as const;
 /** Browsers round scroll positions to device pixels. */
 const SCROLL_TOLERANCE = 1;
+
+/**
+ * How far below its line's top the line's text starts (a heading's padding),
+ * where the line is drawn. CodeMirror does not allow reading its layout
+ * while it measures, which is when a pin is placed, so this reads the DOM.
+ */
+function spaceAboveText(view: EditorView, from: number): number {
+  if (from < view.viewport.from || from > view.viewport.to) {
+    return 0;
+  }
+  const node = view.domAtPos(from).node;
+  const element = node.nodeType === 1 ? (node as Element) : node.parentElement;
+  const line = element?.closest(".cm-line");
+  const style =
+    line && view.dom.ownerDocument.defaultView?.getComputedStyle(line);
+  return Number.parseFloat(style ? style.paddingTop : "") || 0;
+}
 
 /** True when something other than the pin moved the scroller since it last wrote. */
 function isScrolledByOthers(scrollTop: number, saved: PendingScroll): boolean {
@@ -94,10 +119,11 @@ class ViewState {
     return listening;
   }
 
-  private anchorOffset(view: EditorView, from: number): number {
+  private anchorOffset(view: EditorView, from: number, byText = false): number {
     const block = view.lineBlockAt(from);
     const top = view.scrollDOM.getBoundingClientRect().top;
-    return block.top + (view.documentTop - top) / view.scaleY;
+    const blockTop = block.top + (view.documentTop - top) / view.scaleY;
+    return byText ? blockTop + spaceAboveText(view, from) : blockTop;
   }
 
   /**
@@ -131,7 +157,8 @@ class ViewState {
     if (this.pendingScroll.get(view) !== saved) {
       return;
     }
-    const difference = this.anchorOffset(view, saved.from) - saved.offset;
+    const difference =
+      this.anchorOffset(view, saved.from, saved.text) - saved.offset;
     if (Math.abs(difference) > 0.5) {
       this.scrollPinned(view, saved, difference);
     } else {
@@ -191,7 +218,7 @@ class ViewState {
     this.scrollPinned(
       view,
       saved,
-      this.anchorOffset(view, saved.from) - saved.offset,
+      this.anchorOffset(view, saved.from, saved.text) - saved.offset,
     );
     view.scrollDOM.scrollLeft = saved.left;
     this.correctPinnedScroll(view, saved);
@@ -233,7 +260,7 @@ class ViewState {
     }
     // Still settling from the last change: keep the same line pinned.
     const top = pinned
-      ? { from: pinned.from, offset: pinned.offset }
+      ? { from: pinned.from, offset: pinned.offset, text: pinned.text }
       : this.topLine(view);
     const left = view.scrollDOM.scrollLeft;
     change();
@@ -247,6 +274,42 @@ class ViewState {
     view.dispatch({
       effects: EditorView.scrollIntoView(top.from, { y: "start" }),
     });
+  }
+
+  /**
+   * The next scroll to `position` puts its line `yMargin` px below the top of
+   * the viewport (below the embedder's controls, as a scroll margin would) and
+   * holds it there as a restored view's line is held: until the layout has
+   * settled, the reader scrolls or types, or another place is pinned.
+   */
+  holdAtTop(view: EditorView, position: number, yMargin: number): ScrollHold {
+    const hold = (margin: number): void =>
+      this.pin(view, {
+        from: position,
+        offset: chromeInsetTop(view.dom.ownerDocument) + margin,
+        text: true,
+        left: view.scrollDOM.scrollLeft,
+        applied: false,
+        settleUntil: 0,
+        scrollTop: 0,
+      });
+    // A hold that a later restore or reconfigure re-pinned is still the same
+    // line, so held means: the view is pinned to this position.
+    const isHeld = () => this.pendingScroll.get(view)?.from === position;
+    hold(yMargin);
+    return {
+      isHeld,
+      move: (margin) => {
+        if (!isHeld()) {
+          return false;
+        }
+        hold(margin);
+        view.dispatch({
+          effects: EditorView.scrollIntoView(position, { y: "start" }),
+        });
+        return true;
+      },
+    };
   }
 
   /** Restore presentation without the unfolding and centering of source navigation. */

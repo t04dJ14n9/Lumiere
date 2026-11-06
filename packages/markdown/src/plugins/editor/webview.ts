@@ -111,6 +111,8 @@ export const editorWebview: Plugin<EditorConfig> = {
       source: config.source,
       mode: config.mode,
       rpc: ctx.rpc,
+      holdAtTop: (position, yMargin) =>
+        presentation.holdAtTop(view, position, yMargin),
       onModeChanged: (mode) =>
         view.dispatch({ effects: modeClass.reconfigure(modeAttributes(mode)) }),
     });

@@ -2,7 +2,7 @@ import { afterLayout } from "./layout";
 import { observeNavigation, runNavigation } from "./navigation";
 import { editorSettings } from "./settings";
 import { bindCaller, type CallerBound, type Context } from "@workshop/core";
-import type { EditorService } from "./api";
+import type { EditorService, ScrollHold } from "./api";
 import type { Endpoint } from "../../shared/rpc/endpoint";
 import type { ExtensionRegistry } from "./extensions";
 import type { ViewContributions } from "./contributions";
@@ -17,6 +17,7 @@ export function createEditorService(options: {
   source: string;
   mode: EditorService["mode"];
   rpc: Endpoint;
+  holdAtTop(position: number, yMargin: number): ScrollHold;
   onModeChanged(mode: EditorService["mode"]): void;
 }): EditorService & CallerBound<EditorService> {
   const { view, registry, contributions, source, rpc } = options;
@@ -42,6 +43,7 @@ export function createEditorService(options: {
     },
     settled: () => afterLayout(view),
     navigate: (jump) => runNavigation(view, jump),
+    holdAtTop: options.holdAtTop,
     onNavigate: (capture) => observeNavigation(view, capture),
     focus() {
       view.focus();
