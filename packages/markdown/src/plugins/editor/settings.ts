@@ -3,16 +3,12 @@ import { EditorState, Facet } from "@codemirror/state";
 import { EditorView } from "@codemirror/view";
 import type { Infer } from "@workshop/core";
 import { config } from "./manifest";
-import { fontVariables } from "./font";
+import { fontVariables, platformOf } from "./font";
 import type { Platform } from "./font";
 const defaults = Object.freeze(config.parse({}));
 /** The platform, for VS Code's default font family list. */
 function platform(): Platform {
-  const name = typeof navigator === "undefined" ? "" : navigator.platform;
-  if (/Mac|iPhone|iPad/.test(name ?? "")) {
-    return "mac";
-  }
-  return /Win/.test(name ?? "") ? "windows" : "linux";
+  return platformOf(typeof navigator === "undefined" ? "" : navigator.platform);
 }
 export const editorSettings = Facet.define<
   Infer<typeof config>,

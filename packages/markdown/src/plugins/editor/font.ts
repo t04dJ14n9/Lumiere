@@ -157,6 +157,14 @@ function variationSettings(variations: boolean | string, weight: number) {
  */
 export type Platform = "mac" | "windows" | "linux";
 
+/** The platform a browser reports in `navigator.platform` (or Node's `process.platform`). */
+export function platformOf(name: string): Platform {
+  if (/Mac|iPhone|iPad|darwin/.test(name)) {
+    return "mac";
+  }
+  return /Win|win32/.test(name) ? "windows" : "linux";
+}
+
 /** VS Code's `EDITOR_FONT_DEFAULTS.fontFamily` for each platform. */
 export const defaultFontFamily: Readonly<Record<Platform, string>> = {
   mac: "Menlo, Monaco, 'Courier New', monospace",

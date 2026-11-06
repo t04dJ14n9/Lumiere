@@ -40,6 +40,8 @@ export class BrowserHost {
   propertyNames: string[] = ["status", "list"];
   propertiesCollapsed = false;
   snippets: string[] = [];
+  /** Editor settings sent to the editor; set before `open`. */
+  editorSettings: Record<string, unknown> = {};
   /** Workspace trust sent to the editor; set before `open`. */
   trusted = false;
   /** Links the editor asked the host to open. */
@@ -225,7 +227,7 @@ export class BrowserHost {
         version: this.session.version,
         debugLogging: false,
         features: this.features,
-        editor: editorConfig.parse({}),
+        editor: editorConfig.parse(this.editorSettings),
         trusted: this.trusted,
         clientID: id,
         source: this.document.uri,
