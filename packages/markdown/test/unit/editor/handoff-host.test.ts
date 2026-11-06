@@ -2136,6 +2136,100 @@ test("a caret at the start does not reclaim before Search applies its range", as
   assert.deepEqual(destination.ranges, [{ at, to: at + 4 }]);
 });
 
+test("a plain open reclaims one settle after the text editor reports, not after the full wait", async (t) => {
+  // Quick Open, the Explorer and links apply no range: waiting the whole
+  // report timeout for one only delays the note's Lumia tab.
+  t.mock.timers.enable({ apis: ["setTimeout"] });
+  const state = memento();
+  await state.update(MARKDOWN_WORKSPACE_EDITOR_KEY, true);
+  settings.set("workbench.editorAssociations", { "*.md": "default" });
+  const tab = cursorTab();
+  const destination = hunkDestination(tab);
+  const stop = host.reclaim.registerReclaim(
+    destination.navigation,
+    state as never,
+  );
+  t.after(() => stop.dispose());
+  tab.input = new TabInputText(Uri.parse(note));
+  const editor = nativeHunkEditor(tab, 0);
+  editor.selection = new Range(new Position(0, 0), new Position(0, 0));
+  destination.ready();
+
+  tabsChanged.fire({ opened: [tab], changed: [], closed: [] });
+  t.mock.timers.tick(0);
+  await tick();
+  assert.deepEqual(commands, [], "the range gets a settle first");
+  t.mock.timers.tick(39);
+  await tick();
+  assert.deepEqual(commands, [], "still inside the settle");
+  t.mock.timers.tick(1);
+  await tick();
+
+  assert.equal(commands.length, 1);
+  assert.equal(commands[0]?.[0], "vscode.openWith");
+  assert.deepEqual(destination.ranges, [{ at: 0 }], "a caret, not a match");
+});
+
+test("a Search range arriving inside the settle opens with that range", async (t) => {
+  t.mock.timers.enable({ apis: ["setTimeout"] });
+  const state = memento();
+  await state.update(MARKDOWN_WORKSPACE_EDITOR_KEY, true);
+  settings.set("workbench.editorAssociations", { "*.md": "default" });
+  const tab = cursorTab();
+  const destination = hunkDestination(tab);
+  const stop = host.reclaim.registerReclaim(
+    destination.navigation,
+    state as never,
+  );
+  t.after(() => stop.dispose());
+  tab.input = new TabInputText(Uri.parse(note));
+  const editor = nativeHunkEditor(tab, 0);
+  editor.selection = new Range(new Position(0, 0), new Position(0, 0));
+  destination.ready();
+
+  tabsChanged.fire({ opened: [tab], changed: [], closed: [] });
+  t.mock.timers.tick(0);
+  await tick();
+  t.mock.timers.tick(30);
+  assert.deepEqual(commands, []);
+  editor.selection = new Range(new Position(947, 0), new Position(949, 4));
+  selectionChanged.fire({ textEditor: editor });
+  await tick();
+
+  const text = editor.document.getText();
+  assert.deepEqual(destination.ranges, [
+    { at: text.indexOf("Line 948\n"), to: text.indexOf("Line 950\n") + 4 },
+  ]);
+});
+
+test("a text tab whose editor never reports waits the full report timeout", async (t) => {
+  t.mock.timers.enable({ apis: ["setTimeout"] });
+  const state = memento();
+  await state.update(MARKDOWN_WORKSPACE_EDITOR_KEY, true);
+  settings.set("workbench.editorAssociations", { "*.md": "default" });
+  const tab = cursorTab();
+  const destination = hunkDestination(tab);
+  const stop = host.reclaim.registerReclaim(
+    destination.navigation,
+    state as never,
+  );
+  t.after(() => stop.dispose());
+  tab.input = new TabInputText(Uri.parse(note));
+  nativeHunkEditor(tab, 0);
+  destination.ready();
+  vscode.window.activeTextEditor = undefined;
+
+  tabsChanged.fire({ opened: [tab], changed: [], closed: [] });
+  t.mock.timers.tick(249);
+  await tick();
+  assert.deepEqual(commands, []);
+  t.mock.timers.tick(1);
+  await tick();
+
+  assert.equal(commands.length, 1);
+  assert.equal(commands[0]?.[0], "vscode.openWith");
+});
+
 test("heal restores Search reclaim when associations are default without workspaceEditor", async (t) => {
   // Host GUI range-link probe: settings.json had "*.md": "default" but never
   // set lumiere.markdown.workspaceEditor, and readerText stuck the note.
