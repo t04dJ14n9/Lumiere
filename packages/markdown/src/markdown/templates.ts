@@ -46,16 +46,18 @@ export function formatLocalDate(date: Date, pattern: string): string {
   return formatWithPattern(date.getTime() - offset, pattern);
 }
 
-const SUPPORTED_TOKENS = /YYYY|MM|DD|HH|mm|ss/g;
+const SUPPORTED_TOKENS = new Set(["YYYY", "MM", "DD", "HH", "mm", "ss"]);
 
 /**
- * True when every letter in the pattern belongs to a supported token, so the
- * formatted text means what the pattern says (Moment's `ddd` or `[literal]`
- * would come out as written).
+ * True when every run of one letter in the pattern is exactly a supported
+ * token. Moment reads a run as one token, so `MMMM` (the month's name) and
+ * `Do` are not `MM` twice or `D` plus `o`: the formatter would write
+ * `1111`, and `ddd` or `[literal]` would come out as written.
  */
 export function isSupportedDateFormat(pattern: string): boolean {
-  if (pattern.trim() === "") {
+  if (pattern.trim() === "" || /[[\]]/.test(pattern)) {
     return false;
   }
-  return !/[A-Za-z[\]]/.test(pattern.replace(SUPPORTED_TOKENS, ""));
+  const runs = pattern.match(/([A-Za-z])\1*/g) ?? [];
+  return runs.every((run) => SUPPORTED_TOKENS.has(run));
 }

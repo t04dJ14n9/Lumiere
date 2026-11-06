@@ -68,6 +68,9 @@ test("only formats made of supported tokens are supported", () => {
     "YYYY/MM/YYYY-MM-DD",
     "HH:mm",
     "DD.MM.YYYY",
+    "YYYYMMDD",
+    "YYYY-MM-DD_HHmmss",
+    "YYYY年MM月DD日",
   ]) {
     assert.equal(isSupportedDateFormat(format), true, format);
   }
@@ -78,6 +81,31 @@ test("only formats made of supported tokens are supported", () => {
     "Do MMMM",
     "[Week] W",
     "YY",
+  ]) {
+    assert.equal(isSupportedDateFormat(format), false, format);
+  }
+});
+
+// Moment reads a run of one letter as a single token, so MMMM is the month's
+// name, not MM twice. The formatter would write "1111" for it.
+test("a token Lumia cannot write is unsupported even when it is made of supported ones", () => {
+  assert.equal(formatLocalDate(NOW, "MMMM DD, YYYY"), "1111 05, 2026");
+  for (const format of [
+    "MMMM DD, YYYY",
+    "MMM",
+    "DDDD",
+    "DDD",
+    "Do",
+    "ddd",
+    "YYYYYY",
+    "YYYYY",
+    "YY",
+    "M/D/YYYY",
+    "HHH:mm",
+    "H:mm",
+    "mmm",
+    "sss",
+    "YYYY-MM-DD hh:mm",
   ]) {
     assert.equal(isSupportedDateFormat(format), false, format);
   }

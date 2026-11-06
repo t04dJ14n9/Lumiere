@@ -201,5 +201,25 @@ test("templates.json and daily-notes.json seed only usable values", () => {
     {},
   );
   assert.deepEqual(mapTemplatesSettings({ dateFormat: "Do MMMM" }), {});
+  // MMMM and DDDD are one Moment token each, not MM or DD twice.
+  assert.deepEqual(
+    mapDailyNotesSettings({
+      folder: "Journal",
+      format: "MMMM DD, YYYY",
+      template: "Templates/Daily",
+    }),
+    {
+      "dailyNotes.folder": "Journal",
+      "dailyNotes.template": "Templates/Daily",
+    },
+  );
+  assert.deepEqual(
+    mapTemplatesSettings({
+      folder: "Templates",
+      dateFormat: "DDDD",
+      timeFormat: "HH:mm:sss",
+    }),
+    { "templates.folder": "Templates" },
+  );
   assert.throws(() => mapDailyNotesSettings([]), /daily-notes.json/);
 });
