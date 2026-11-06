@@ -5,6 +5,7 @@ import path from "node:path";
 import { paths, readState } from "./state";
 import {
   closeBrowser,
+  docScreenshot,
   nativeTextEditor,
   openWorkbench,
   reopenWith,
@@ -91,6 +92,9 @@ test("typing [[ in VS Code's text editor offers notes and headings, and Enter wr
     await expect(list).toContainText("Target Note");
     await page.keyboard.type("et Note#", { delay: 50 });
     await expect(list).toContainText("Second Section");
+    await page.screenshot({
+      path: docScreenshot("text-editor-link-suggest.png"),
+    });
     // The headings come in document order: narrow them down to the second.
     await page.keyboard.type("Sec", { delay: 50 });
     await expect(list.locator(".monaco-list-row")).toHaveCount(1);

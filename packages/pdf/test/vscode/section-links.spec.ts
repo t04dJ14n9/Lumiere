@@ -1,7 +1,7 @@
 import { readFileSync, rmSync, writeFileSync } from "node:fs";
 import path from "node:path";
 import type { Frame, Page } from "@playwright/test";
-import { reopenWith } from "../../../../test/vscode/workbench";
+import { docScreenshot, reopenWith } from "../../../../test/vscode/workbench";
 import { paths } from "./state";
 import { closeAllEditors, expect, openFile, test } from "./workbench";
 
@@ -48,6 +48,7 @@ test("typing [[docs/outline.pdf#Sec lists the PDF's bookmarks, and Enter links t
       /Section 2\.1/u,
     ]);
     await expect(options.first()).toContainText("p.2 · docs/outline.pdf");
+    await page.screenshot({ path: docScreenshot("pdf-section-links.png") });
 
     await page.keyboard.press("Enter");
     await page.keyboard.press("ControlOrMeta+s");
