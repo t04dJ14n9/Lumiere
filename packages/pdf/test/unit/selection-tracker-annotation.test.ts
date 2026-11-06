@@ -338,7 +338,11 @@ test("reportSelection with nothing selected reports none at once", async () => {
   await tracker.reportSelection({
     getState: () => ({ selection: undefined }),
   });
-  assert.equal(reports.length, 1);
-  const last = reports.at(-1) as { selection?: { selection?: unknown } };
-  assert.equal(last?.selection?.selection, null);
+  // No scope at all: the viewer's selection is missing for this document.
+  await tracker.reportSelection(undefined);
+  assert.equal(reports.length, 2);
+  for (const report of reports) {
+    const answer = report as { selection?: { selection?: unknown } };
+    assert.equal(answer.selection?.selection, null);
+  }
 });
