@@ -52,7 +52,7 @@ export const outlineHost: Plugin = {
     registerOutlineActions(ctx, view, tree);
     registerFollowCursor(ctx, view);
     registerSymbolPicker(ctx, ctx.dialogs);
-    registerOutlineFocus(ctx);
+    registerOutlineFocus(ctx, tree);
     ctx.effect(() =>
       ctx.hostCommands.register(OPEN_COMMAND, (uri, offset) => {
         view.jumpedTo(Number(offset));
@@ -129,16 +129,25 @@ function registerReadingPosition(ctx: Context, view: OutlineView): void {
   }
 }
 
-function registerOutlineFocus(ctx: Context): void {
+function registerOutlineFocus(ctx: Context, tree: TreeHandle): void {
   // Captured while live: the focus check can run after the plugin stops.
   const activeEditor = ctx.activeEditor;
   const focus = createOutlineFocus({
     execute: (command) => ctx.hostCommands.execute(command),
     focusEditor: () =>
       ctx.hostCommands.execute("workbench.action.focusActiveEditorGroup"),
+    isOutlineShown: () => tree.visible,
     activeCustomEditorViewType: () => activeEditor.customEditorViewType(),
   });
   ctx.effect(() => () => focus.dispose());
+  // The view is on screen only where the Explorer is the sidebar's container.
+  ctx.effect(() =>
+    tree.onVisibilityChanged((visible) => {
+      if (visible) {
+        focus.outlineShown();
+      }
+    }),
+  );
   const sync = () => {
     const active = ctx.editors.active();
     focus.sync(Boolean(active && !active.openedFromNativeSelection));

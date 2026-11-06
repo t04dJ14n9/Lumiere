@@ -29,7 +29,7 @@ const filters = Schema.object({
   tags: Schema.array(Schema.string().max(200)).max(50),
   folders: Schema.array(Schema.string().max(500)).max(50),
   text: Schema.string().max(200),
-  orphans: Schema.boolean(),
+  showOrphans: Schema.boolean(),
   conformantOnly: Schema.boolean(),
 });
 

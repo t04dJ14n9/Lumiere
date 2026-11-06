@@ -50,24 +50,54 @@ export function hasRangeSelection(
   return selection?.to !== undefined && selection.to > selection.at;
 }
 
+/** Longest wait for the text editor to report; it never does in some hosts. */
+const EDITOR_REPORT_TIMEOUT_MS = 250;
+/**
+ * Wait after the text editor reports without a range. Search puts its range
+ * in the editor's first snapshot or in a selection event right after it. An
+ * open from Quick Open, the Explorer or a link never has one, and would
+ * otherwise sit out the full timeout with its Lumia tab not yet requested.
+ */
+const RANGE_SETTLE_MS = 40;
+
+interface PendingWait {
+  uri: string;
+  fallback: ReturnType<typeof setTimeout>;
+  settling: boolean;
+}
+
+/** Swaps the pending wait's report timeout for the short settle, once. */
+function startSettle(
+  timers: Set<ReturnType<typeof setTimeout>>,
+  pending: PendingWait,
+  open: () => void,
+): void {
+  pending.settling = true;
+  clearTimeout(pending.fallback);
+  timers.delete(pending.fallback);
+  pending.fallback = scheduleTimer(timers, open, RANGE_SETTLE_MS);
+}
+
 export function createReclaimScheduler(options: {
   open: (tab: vscode.Tab, uri: string) => void;
   readSelection: (tab: vscode.Tab, uri: string) => NativeSelection | undefined;
   waitForTextSelection: () => boolean;
 }) {
   const timers = new Set<ReturnType<typeof setTimeout>>();
-  const waiting = new Map<
-    string,
-    { uri: string; fallback: ReturnType<typeof setTimeout> }
-  >();
+  const waiting = new Map<string, PendingWait>();
   const ready = (tab: vscode.Tab, uri: string, force = false): void => {
     const key = reclaimKey(uri, tab.group.viewColumn);
     const pending = waiting.get(key);
-    if (
-      !pending ||
-      pending.uri !== uri ||
-      (!force && !hasRangeSelection(options.readSelection(tab, uri)))
-    ) {
+    if (!pending || pending.uri !== uri) {
+      return;
+    }
+    const selection = options.readSelection(tab, uri);
+    if (!force && !hasRangeSelection(selection)) {
+      if (selection && !pending.settling) {
+        // The editor has reported but holds no Search match yet: give the
+        // range one settle instead of the full report timeout.
+        startSettle(timers, pending, () => ready(tab, uri, true));
+      }
       return;
     }
     waiting.delete(key);
@@ -88,8 +118,12 @@ export function createReclaimScheduler(options: {
     // the matching active editor; the fallback keeps nonstandard hosts moving.
     // Key by uri+column so a Tab rebuild during the wait still hits ready().
     const key = reclaimKey(uri, tab.group.viewColumn);
-    const fallback = scheduleTimer(timers, () => ready(tab, uri, true), 250);
-    waiting.set(key, { uri, fallback });
+    const fallback = scheduleTimer(
+      timers,
+      () => ready(tab, uri, true),
+      EDITOR_REPORT_TIMEOUT_MS,
+    );
+    waiting.set(key, { uri, fallback, settling: false });
     scheduleTimer(timers, () => ready(tab, uri), 0);
   };
   return {

@@ -48,6 +48,8 @@ export type TreeEvent =
       readonly id: string;
       readonly select: boolean;
     }
+  /** Nothing is current: the reader is above the first heading. */
+  | { readonly type: "deselect"; readonly viewId: string }
   | {
       readonly type: "expand";
       readonly viewId: string;

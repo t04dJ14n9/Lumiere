@@ -7,6 +7,7 @@ import ts from "typescript";
 import * as locations from "../../src/shared/pdf-location";
 import * as targets from "../../src/shared/pdf-target-resolution";
 import { OPEN_LOCATION_COMMAND_ID } from "../../src/shared/command-ids";
+import { formatPdfDeepLink } from "../../src/shared/text-fragment";
 
 class Uri {
   readonly path: string;
@@ -67,7 +68,7 @@ interface OpenRequest {
 }
 
 /** Actual command module; only the VS Code transport is replaced with controlled promises. */
-function harness() {
+function harness(isFile: (file: string) => boolean = () => true) {
   let invoke:
     ((target?: unknown, location?: unknown) => Promise<boolean>) | undefined;
   const opened: OpenRequest[] = [];
@@ -80,7 +81,14 @@ function harness() {
     FileType: { File: 1, Directory: 2 },
     workspace: {
       workspaceFolders: [],
-      fs: { stat: async () => ({ type: 1 }) },
+      fs: {
+        stat: async (uri: Uri) => {
+          if (!isFile(uri.path)) {
+            throw new Error("FileNotFound");
+          }
+          return { type: 1 };
+        },
+      },
     },
     window: {
       showInputBox: async () => undefined,
@@ -270,5 +278,55 @@ test("a highlight's #hl- link opens the PDF and hands the fragment to the plugin
   ]);
   assert.equal(await state.invokeLink("file:///work/paper.pdf#nothing"), false);
   assert.match(state.warnings.at(-1) ?? "", /location is invalid/);
+  state.registration.dispose();
+});
+
+test("a Copy link line for a PDF with spaces and parentheses opens that file at its page", async () => {
+  const onDisk = "/work/papers/my paper (v2) 100%.pdf";
+  const state = harness((file) => file === onDisk);
+  const link = formatPdfDeepLink(onDisk, { page: 4, text: "a) first" });
+  assert.match(link, /^\/work\/papers\/my%20paper%20%28v2%29%20100%25\.pdf#/u);
+  const done = state.invokeLink(`> [my paper (v2) 100%.pdf · p.4](${link})`);
+  await microtasks();
+  assert.deepEqual(
+    state.opened.map((request) => request.file),
+    [onDisk],
+  );
+  state.opened[0]!.resolve();
+  assert.equal(await done, true);
+  assert.deepEqual(state.jumps, [{ file: onDisk, page: 4 }]);
+  state.registration.dispose();
+});
+
+test("a path typed with a literal %20 in its file name still opens", async () => {
+  const onDisk = "/work/a%20b.pdf";
+  const state = harness((file) => file === onDisk);
+  const done = state.invokeLink(`${onDisk}#page=2`);
+  await microtasks();
+  assert.deepEqual(
+    state.opened.map((request) => request.file),
+    [onDisk],
+  );
+  state.opened[0]!.resolve();
+  assert.equal(await done, true);
+  state.registration.dispose();
+});
+
+test("a Copy link quote link opens the PDF at its page, pasted bare or inside its Markdown line", async () => {
+  const state = harness();
+  const link = formatPdfDeepLink("file:///work/papers/attention.pdf", {
+    page: 3,
+    text: "Scaled dot-product attention",
+  });
+  for (const text of [link, `> [attention.pdf · p.3](${link})`]) {
+    const done = state.invokeLink(text);
+    await microtasks();
+    state.opened.at(-1)!.resolve();
+    assert.equal(await done, true, text);
+  }
+  assert.deepEqual(state.jumps, [
+    { file: "/work/papers/attention.pdf", page: 3 },
+    { file: "/work/papers/attention.pdf", page: 3 },
+  ]);
   state.registration.dispose();
 });

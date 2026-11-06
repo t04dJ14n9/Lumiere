@@ -10,8 +10,9 @@ const { viewType, filenamePatterns: markdownPatterns } = MARKDOWN_EDITOR;
 const NATIVE_TEXT_EDITOR = "default";
 
 /**
- * Route Markdown through VS Code's text editor so Search can expose its range;
- * reclaim immediately transfers that tab to Lumia. Other patterns are kept.
+ * Open Markdown in Lumia directly, so VS Code hands a note to Lumia without
+ * first opening it in its text editor (about 75 ms of a cold open). Other
+ * patterns are kept.
  */
 export function withMarkdownWorkshop(
   existing: unknown,
@@ -25,7 +26,7 @@ export function withMarkdownWorkshop(
     }
   }
   for (const pattern of markdownPatterns) {
-    associations[pattern] = NATIVE_TEXT_EDITOR;
+    associations[pattern] = viewType;
   }
   return associations;
 }
@@ -39,29 +40,38 @@ function opensMarkdownHere(
     !!existing &&
     typeof existing === "object" &&
     markdownPatterns.every(
-      (pattern) =>
-        (existing as Record<string, unknown>)[pattern] === NATIVE_TEXT_EDITOR,
+      (pattern) => (existing as Record<string, unknown>)[pattern] === viewType,
     )
   );
 }
 
-function directlyOpensMarkdown(existing: unknown): boolean {
-  if (!existing || typeof existing !== "object" || Array.isArray(existing)) {
+/** Lumia's earlier route (#458): Markdown through the text editor, then reclaimed. */
+function opensThroughText(
+  existing: unknown,
+  storage: HostServices["storage"],
+): boolean {
+  if (
+    !storage.get(MARKDOWN_WORKSPACE_EDITOR_KEY, false) ||
+    !existing ||
+    typeof existing !== "object" ||
+    Array.isArray(existing)
+  ) {
     return false;
   }
   const associations = existing as Record<string, unknown>;
-  // A workspace often records only `*.md`. Either pattern is the old route.
-  return markdownPatterns.some((pattern) => associations[pattern] === viewType);
+  // A workspace often records only `*.md`. Either pattern is that route.
+  return markdownPatterns.some(
+    (pattern) => associations[pattern] === NATIVE_TEXT_EDITOR,
+  );
 }
 
-async function migrateDirectAssociation(
+async function migrateTextRoute(
   host: Pick<HostServices, "settings" | "storage">,
 ): Promise<void> {
   const existing = host.settings.editorAssociations.read();
-  if (!directlyOpensMarkdown(existing)) {
+  if (!opensThroughText(existing, host.storage)) {
     return;
   }
-  await host.storage.update(MARKDOWN_WORKSPACE_EDITOR_KEY, true);
   await host.settings.editorAssociations.write(withMarkdownWorkshop(existing));
 }
 
@@ -94,7 +104,7 @@ export async function useForMarkdownInWorkspace(
 }
 
 export function registerMarkdownAssociation(ctx: Context): void {
-  ctx.track(migrateDirectAssociation(ctx));
+  ctx.track(migrateTextRoute(ctx));
   ctx.effect(() =>
     ctx.hostCommands.register(contributionId("useForMarkdownInWorkspace"), () =>
       useForMarkdownInWorkspace(ctx),

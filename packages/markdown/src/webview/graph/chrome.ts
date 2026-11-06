@@ -31,7 +31,7 @@ export function mountChrome(
   fields.relayout.addEventListener("click", () => relayout());
   fields.clear.addEventListener("click", () => {
     fields.search.value = "";
-    fields.orphans.checked = false;
+    fields.orphans.checked = true;
     fields.conformant.checked = false;
     clearChecks(facets);
     listener();
@@ -106,7 +106,7 @@ function buildControls(root: HTMLElement, initial: GraphViewState): Fields {
   search.type = "search";
   search.placeholder = "Search title, path or description";
   search.value = initial.filters.text;
-  const orphans = checkbox("Orphans", initial.filters.orphans);
+  const orphans = checkbox("Orphans", initial.filters.showOrphans);
   const conformant = checkbox(
     "Conformant only",
     initial.filters.conformantOnly,
@@ -147,7 +147,7 @@ function viewFrom(fields: Fields, facets: HTMLElement): GraphViewState {
       tags: groupValues(facets, "tag"),
       folders: groupValues(facets, "folder"),
       text: fields.search.value,
-      orphans: fields.orphans.checked,
+      showOrphans: fields.orphans.checked,
       conformantOnly: fields.conformant.checked,
     },
   };

@@ -114,6 +114,8 @@ forbids this package from importing `vscode` or any embedder.
   out: typing `[[` suggests notes in the Lumia editor only.
 - No command palette or keybindings: commands run from clicks, links and the
   editor's own menus.
+- `TreeHandle.clearSelection` emits `deselect` (the Outline when the reader is
+  above the first heading); the app's tree panel unmarks the current row.
 - `TreeHandle.expand` / `collapse` emit `expand` / `collapse` events (and
   record the override on the next snapshot) for accordion outlines. They do
   not emit `changed`. Embedders that ignore those events leave expansion at

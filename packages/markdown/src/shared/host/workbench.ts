@@ -78,6 +78,12 @@ export interface TreeHandle {
   /** Close every expandable node, when the native tree supports it. */
   collapseAll?(): Promise<void>;
   /**
+   * Unselect the selected row, when the tree can. VS Code's TreeView API can
+   * select a row (`reveal`) but has no way to clear the selection, so its
+   * adapter leaves this out.
+   */
+  clearSelection?(): Promise<void>;
+  /**
    * Whether a row left open stays open across `refresh()`: VS Code keeps a
    * row's expansion by its TreeItem id. Otherwise a refresh lays the tree
    * out again from the nodes' own `expanded` flags.

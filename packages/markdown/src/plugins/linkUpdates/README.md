@@ -6,14 +6,19 @@ links** setting.
 
 ## How it works
 
-Before VS Code renames files, the plugin finds every note that links to them
+Before VS Code renames files, the plugin waits (up to five seconds) for the
+vault index to parse what is queued, finds every note that links to them
 (through the vault index's backlinks), re-reads each note's current text and
 rewrites only the path of each link: a wikilink stays a wikilink, a Markdown
 link stays a Markdown link, and `#subpaths` and aliases are kept. The path is
 written in the new-link format. A moved note's own path-style links are
 rewritten too. Folder renames cover every file inside. By default it asks
-first; the edits are applied together with the rename, so one undo reverts
-them.
+first (Update Links, Always Update, which sets the mode to `always`, or
+Don't Update), counting the notes from the index's parsed links so that
+asking reads and rewrites nothing (unless a note is still unparsed, then
+from the notes' current text), and builds the edits once, after the
+answer, so text typed while the dialog is open is what gets rewritten. The edits are applied together
+with the rename, so one undo reverts them.
 
 ## Rename Heading
 
@@ -26,7 +31,7 @@ and in every note linking to it, keeping its path, form and alias
 ## Files
 
 - `host.ts`: the rename hook, the prompt and folder expansion.
-- `rewrite.ts`: the edits for one note.
+- `rewrite.ts`: the links a rename changes in one note, and their edits.
 - `manifest.ts`: the plugin's switch and `mode` setting.
 
 ## Services, events and settings

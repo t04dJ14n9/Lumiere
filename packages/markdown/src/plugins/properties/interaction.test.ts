@@ -671,3 +671,52 @@ test("clicking .source-title inside .property-complex opens YAML textarea even w
   assert.equal(textarea.hidden, false);
   assert.equal(document.activeElement, textarea);
 });
+
+test("a flush leaves an empty list input alone, and clears a duplicate with one refresh", (t) => {
+  const document = installPropertyDOM(t);
+  const container = new PropertyElement(document);
+  const list = new PropertyElement(document);
+  list.dataset.propertyList = "tags";
+  const add = new PropertyElement(document);
+  list.children = [add];
+  list.find = () => add;
+  list.findAll = () => [];
+  container.findAll = () => [list];
+  container.find = (selector) =>
+    selector.includes("data-property-list-input") ? add : list;
+  container.nearest = () => container;
+  const source = "---\ntags: [one]\n---\n";
+  let refreshes = 0;
+  let writes = 0;
+  const close = bindPropertyLists(html(container), source, {
+    source: "current",
+    copy: () => {},
+    openMenu: () => () => {},
+    propertyEditor: {
+      source: "current",
+      currentSource: () => source,
+      set: () => {
+        writes++;
+        return true;
+      },
+      refresh: () => {
+        refreshes++;
+      },
+    },
+  });
+  // Every flush (save, caret capture, …) asks each input to commit; an empty
+  // one has nothing to commit and must not rebuild the sheet.
+  for (let flush = 0; flush < 3; flush++) {
+    assert.equal(
+      add.dispatchEvent(new Event("property-commit", { cancelable: true })),
+      true,
+    );
+  }
+  assert.equal(refreshes, 0);
+  add.textContent = "one";
+  add.dispatchEvent(new Event("property-commit", { cancelable: true }));
+  assert.equal(add.textContent, "");
+  assert.equal(refreshes, 1);
+  assert.equal(writes, 0);
+  close();
+});

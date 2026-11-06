@@ -34,4 +34,4 @@ export {
 } from "./host/settings-service";
 export { listVault } from "./host/vault";
 export type { TreeHub } from "./host/trees";
-export { STATE_FILE } from "./host/workspace";
+export { createWorkspaceFiles, STATE_FILE } from "./host/workspace";

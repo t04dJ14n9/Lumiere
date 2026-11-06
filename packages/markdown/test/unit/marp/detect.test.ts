@@ -98,6 +98,9 @@ test("moving a deck outside does not add page-contract frontmatter", async () =>
     async writeText(uri, text) {
       written.set(uri, text);
     },
+    async createText() {
+      return true;
+    },
     async writeBytes() {},
     async list() {
       return [];

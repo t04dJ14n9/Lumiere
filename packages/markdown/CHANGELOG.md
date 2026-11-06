@@ -11,6 +11,105 @@
   text (`"workbench.editorAssociations": {"*.md": "default"}`). Blocks without
   an id and tags are not suggested there.
 
+- Page preview on hover needs Mod (Cmd or Ctrl) for links rendered in
+  tables, callouts and embeds too, as it already did for Live Preview
+  wikilinks and as Obsidian's editor does. A plain hover over those links
+  popped a preview.
+
+- The graph's **Orphans** toggle means what Obsidian's does: on (the
+  default) shows notes with no links, off hides them. The old "only
+  orphans" mode is removed, not renamed: the graph has no way to show
+  only orphans now. A panel saved with that filter ignores it and opens
+  with all notes.
+
+- CSS snippets load only when `.obsidian/appearance.json` lists them in
+  `enabledCssSnippets`, as in Obsidian. A vault with no `appearance.json`
+  (or no list in it) loaded every `.css` file in `.obsidian/snippets/`.
+
+- Markdown links (`[label](Missing.md)`) inside an embedded note are dimmed
+  when they do not resolve, as wikilinks there already were; an embed with
+  no wikilink was skipped.
+
+- The rename dialog offers **Always Update**, as Obsidian's does: it
+  updates the links and sets `lumiere.markdown.linkUpdates.mode` to
+  `always`. The edits are now built after the answer, so a note edited
+  while the dialog is open is rewritten as it is then. The dialog counts
+  the notes from the vault index instead of rewriting every one of them
+  first, so asking does not eat into VS Code's rename-participant timeout.
+
+- Renaming a note waits (up to five seconds) for the vault index to finish
+  parsing queued notes before it looks for links to update, so a link
+  typed or synced just before the rename is updated too.
+
+- An ambiguous link (`[[x]]` with several `x.md` in the vault) resolves as
+  Obsidian resolves it: matches under the note's folder first, then the
+  rest, each by shortest path rather than nearest folder. From
+  `notes/daily/today.md`, `[[x]]` with `notes/x.md` and `y/x.md` opens
+  `y/x.md`. Rename link updates use the same order, so they no longer
+  retarget such a link.
+
+- Heading links match the way Obsidian matches them: heading text without
+  case, with punctuation such as `/`, `:` and `?` read as spaces, so
+  `[[Note#A B]]` reaches `## A/B`. `[[Note#A#B]]` finds a deeper heading B
+  after A, not only A's direct child. Block ids (`#^id`) match without case.
+- Heading links also accept GitHub's slugs, as written for GitHub or VS Code:
+  `[x](Note.md#use-postgres)` reaches `## Use Postgres`, and repeated
+  headings are reached with `-1`, `-2`. Obsidian itself opens such links at
+  the top of the note. Lumia still writes heading links the Obsidian way.
+
+- Opening a note no longer swaps the sidebar for the Explorer. The first note
+  opened in a window (from Search, Quick Open or anywhere else) used to focus
+  Markdown Outline, which brought up the Explorer over the Search view you were
+  using. Markdown Outline now shows itself where the Explorer is already
+  showing, hides VS Code's native Outline when it does, and the native Outline
+  comes back when you leave the note only if Lumia hid it. VS Code lists an
+  extension's Explorer views collapsed the first time, so expand Markdown
+  Outline once; VS Code remembers it.
+
+- **Use Lumia for Markdown in This Workspace** now associates `*.md` and
+  `*.markdown` with Lumia itself instead of VS Code's text editor (the route
+  from #458, which reclaimed every note into Lumia). VS Code hands a note to
+  Lumia directly: a cold open shows the note about 75 ms sooner (no text
+  editor tab first). A workspace set up the old way is moved over on
+  activation. A Search result still opens with its match selected.
+
+- A Search result, Markdown Outline click, Go to Heading or heading link now
+  leaves its target on screen when the note opens or the jump comes soon after
+  it: the target is held at the top of the viewport, below the sticky
+  headings, while the features that load after the first paint (the sticky
+  bar, tables, callouts, line numbers) change the heights around it. Before,
+  on a short note the match could land under the sticky bar, and on a long one
+  the scroll could stop hundreds of lines short, leaving the match below the
+  viewport.
+
+- Notes open faster in VS Code: the page asks for the chunks of the first
+  view (Properties, line numbers, tables, callouts, links and the rest of what
+  a note shows first) together with the editor script instead of one after
+  another, and the editor script itself is one file instead of 55. On a
+  small note the features are in place about 50 ms sooner, on a 5,000-line
+  note about 70 ms, and on a note with 100 properties about 170 ms.
+
+- Markdown Outline in the app clears its highlighted row when the caret or the
+  top line is above the first heading (frontmatter or a preamble), as Obsidian
+  does, instead of leaving the last section marked. VS Code's tree view has no
+  way to clear a selection, so there the last row stays marked.
+
+- Markdown Outline no longer stays on the row you clicked when you scroll on to
+  another section within the second after the click and stop: the last scroll
+  position held back during that second is applied when it ends.
+
+- Markdown Outline keeps the heading you jumped to selected after Go to
+  Heading, a `[[#Heading]]` link or a sticky-heading click, as it does for an
+  outline click. Near the end of the note, where the jump cannot put the
+  heading at the top, the section above no longer takes over. Scroll follow
+  also reads below the sticky headings and the embedder's top controls, so a
+  nested heading just under its pinned parents is the one selected.
+
+- Markdown Outline keeps the caret's section selected when the caret scrolls
+  the note: arrowing past the bottom, Page Down, Ctrl+End and find next no
+  longer have the section at the top of the viewport take over about 100 ms
+  later. Only scrolling the reader does follows the top line.
+
 - Markdown Outline (and Go to Heading / in-note fragment jumps that share
   links `navigate`) put the jumped heading at the **top** of the editor
   viewport, not the vertical centre. The browser still clamps at both ends of

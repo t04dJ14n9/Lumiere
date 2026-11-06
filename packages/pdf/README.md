@@ -162,6 +162,17 @@ With no selection:
 [attention.pdf · p.3](papers/attention.pdf#page=3)
 ```
 
+A path with spaces or parentheses is percent-encoded
+(`papers/my%20paper%20%28v2%29.pdf`) so the link stays one Markdown link, and
+the quote's `(`, `)`, `-`, `,` and `&` are encoded too.
+
+Backlink overlays read a note's link path the way the Markdown editor opens
+it: `./`, `../` and a bare name from the note's folder, a leading `/` from the
+workspace folder's root, and any other foldered path (`papers/a.pdf`) from that
+root, or from the note's folder when the root has no such file. In a
+multi-root workspace a note's links reach only PDFs in its own workspace
+folder.
+
 Paste into any note; **PDF: Open Location…** and clicking a Markdown link
 open that page (and resolve `#:~:text=` to an overlay when possible). Legacy
 `#page=N&viewrect=…` and `#hl-` links still open best-effort.

@@ -11,31 +11,29 @@ import React, {
   useSyncExternalStore,
 } from "react";
 import type { PdfBacklinkHit } from "../shared/pdf-backlink-index";
+import { alignGlyphText } from "../shared/page-glyph-text";
 import { resolveTextToLineRects } from "../shared/pdf-backlink-resolve";
-import type { SegmentRect } from "../shared/sidecar-format";
 import { type GlyphBox } from "../shared/sidecar-reattach";
-import { postToHost } from "./host";
+import { BacklinkOverlay, type ResolvedOverlay } from "./backlink-overlay";
 import { backlinkState, onBacklinkChange } from "./backlink-store";
-
-interface ResolvedOverlay {
-  key: string;
-  hit: PdfBacklinkHit;
-  rects: SegmentRect[];
-}
 
 /**
  * Vault backlink overlays on one page: resolve `#:~:text=` to glyph line
  * boxes, paint above hard-written annotations, hover shows the note path,
- * click opens that note at the link. Overlays never enter mark selection.
+ * click opens that note at the link. Overlays never enter mark selection,
+ * and in Annotate mode they let pointer events through to the annotations.
  */
 export function BacklinkLayer({
   pdf,
   pageIndex,
   scale,
+  annotate,
 }: {
   pdf: PdfDocumentObject;
   pageIndex: number;
   scale: number;
+  /** The Annotate tool is active. */
+  annotate: boolean;
 }): React.JSX.Element | null {
   const { hits } = useSyncExternalStore(onBacklinkChange, backlinkState);
   const { registry } = useRegistry();
@@ -70,49 +68,14 @@ export function BacklinkLayer({
   return (
     <>
       {overlays.map((overlay) => (
-        <BacklinkOverlay key={overlay.key} overlay={overlay} scale={scale} />
-      ))}
-    </>
-  );
-}
-
-function BacklinkOverlay({
-  overlay,
-  scale,
-}: {
-  overlay: ResolvedOverlay;
-  scale: number;
-}): React.JSX.Element {
-  return (
-    <div
-      className="pdf-backlink-overlay"
-      title={overlay.hit.notePath}
-      data-note-path={overlay.hit.notePath}
-      data-note-uri={overlay.hit.noteUri}
-      data-link-offset={overlay.hit.linkOffset}
-      onClick={(event) => {
-        event.preventDefault();
-        event.stopPropagation();
-        postToHost({
-          type: "openBacklinkNote",
-          noteUri: overlay.hit.noteUri,
-          linkOffset: overlay.hit.linkOffset,
-        });
-      }}
-    >
-      {overlay.rects.map((rect, index) => (
-        <div
-          key={index}
-          className="pdf-backlink-overlay-line"
-          style={{
-            left: rect.x * scale,
-            top: rect.y * scale,
-            width: rect.w * scale,
-            height: rect.h * scale,
-          }}
+        <BacklinkOverlay
+          key={overlay.key}
+          overlay={overlay}
+          scale={scale}
+          isPassive={annotate}
         />
       ))}
-    </div>
+    </>
   );
 }
 
@@ -132,11 +95,14 @@ async function resolvePage(
   }
   const overlays: ResolvedOverlay[] = [];
   for (const hit of hits) {
-    const textStart = hit.textFragment?.textStart;
-    if (!textStart) {
+    if (!hit.textFragment) {
       continue;
     }
-    const rects = resolveTextToLineRects(text.text, text.boxes, textStart);
+    const rects = resolveTextToLineRects(
+      text.text,
+      text.boxes,
+      hit.textFragment,
+    );
     if (!rects) {
       continue;
     }
@@ -149,6 +115,7 @@ async function resolvePage(
   return overlays;
 }
 
+/** A page's text and the box of each of its UTF-16 units (none for spaces). */
 async function readPage(
   engine: PdfEngine,
   pdf: PdfDocumentObject,
@@ -156,12 +123,28 @@ async function readPage(
 ): Promise<{ text: string; boxes: (GlyphBox | undefined)[] } | undefined> {
   try {
     const glyphs = await engine.getPageGlyphs(pdf, page).toPromise();
-    const [text] = await engine
+    const boxes = Array.from(glyphs, glyphBox);
+    const [text = ""] = await engine
       .getTextSlices(pdf, [
         { pageIndex: page.index, charIndex: 0, charCount: glyphs.length },
       ])
       .toPromise();
-    return { text: text ?? "", boxes: Array.from(glyphs, glyphBox) };
+    if (text.length === glyphs.length) {
+      return { text, boxes };
+    }
+    // EmbedPDF drops markers from the text (a hyphen at a line end), so its
+    // characters no longer line up with the glyphs: read them one by one.
+    const perGlyph = await engine
+      .getTextSlices(
+        pdf,
+        Array.from({ length: glyphs.length }, (_, charIndex) => ({
+          pageIndex: page.index,
+          charIndex,
+          charCount: 1,
+        })),
+      )
+      .toPromise();
+    return alignGlyphText(perGlyph, boxes);
   } catch {
     return undefined;
   }

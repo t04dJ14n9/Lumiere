@@ -45,7 +45,15 @@ const SHOT_DIR = path.join(
   "test-results",
   "host-gui-pdf-backlink-overlays",
 );
-const EVIDENCE_DIR = "/workspace/agent-tools/sdd-backlink";
+// This checklist collects evidence for the PR bot, which runs Cursor under
+// xvfb and names where the evidence goes. Elsewhere its DOM-menu and clipboard
+// steps do not hold, and a failure midway leaves editors open that every later
+// spec trips over, so it runs only when that place is given.
+const EVIDENCE_DIR = process.env.LUMIERE_HOST_GUI_EVIDENCE_DIR ?? "";
+test.skip(
+  !EVIDENCE_DIR,
+  "PR-bot evidence run: set LUMIERE_HOST_GUI_EVIDENCE_DIR to run it",
+);
 const SHOT_COPY_DIR = path.join(EVIDENCE_DIR, "host-gui-shots");
 
 test.setTimeout(480_000);

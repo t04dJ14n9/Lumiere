@@ -54,9 +54,12 @@ renderer adds `is-unresolved` to rendered links whose path is in it.
 - `webview.ts`: decoration (including unresolved styling), click
   handling, navigation and commands.
 - `navigate.ts`: webview fragment navigation (top-of-viewport jump).
-- `scroll-to-top.ts`: fragment / outline jumps use `y: "start"`, then one
-  post-paint correction with sticky chrome height as `yMargin` when a parent
-  pin is present after the jump.
+- `scroll-to-top.ts`: fragment / outline / Search-match jumps use `y: "start"`
+  and hold the target there (`EditorService.holdAtTop`) while the layout
+  settles, with the sticky chrome height as the margin once a parent pin is
+  present. The sticky bar can draw after the jump (its feature loads late) or
+  change height; the margin follows it for about a second and a half, a few
+  times at most, until the reader scrolls.
 - `links.test.ts`: target parsing and caret lookup units.
 - `host.test.ts`: source identity, scheme policy, side opens and handler lifecycle.
 - `test/unit/links/unresolved.test.ts`: unresolved keys, styled decorations and
@@ -79,9 +82,9 @@ and `links/open` with bail semantics. Settings: plugin enabled (true),
 The native adapter rechecks containment and symlinks before opening or creating.
 External application schemes ask first; script, data, command and file schemes
 are refused. Unresolved wikilinks can create notes. Basename Markdown destinations
-(`Note`, `Note.md`) create too; relative Markdown paths stay open-only. Unresolved styling applies to wikilinks in Live Preview while they are
-rendered, and to wiki / Markdown / embed link source in source mode. Markdown
-links in Live Preview and links inside embedded notes are not styled yet. A link typed just
+(`Note`, `Note.md`) create too; relative Markdown paths stay open-only. Unresolved styling applies to wikilinks and Markdown links in Live Preview
+while they are rendered, to wiki / Markdown / embed link source in source
+mode, and to both kinds of link inside embedded notes. A link typed just
 now is dimmed optimistically when its target is not among the vault's known
 note keys; the open-note overlay re-index still refreshes the authoritative
 unresolved set shortly after. Host claim handlers may override default opening.

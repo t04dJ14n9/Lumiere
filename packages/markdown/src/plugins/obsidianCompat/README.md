@@ -1,7 +1,7 @@
 # Obsidian Compatibility
 
-Uses a vault's Obsidian property types and eight Files & Links/editor policies in
-Lumia, like Obsidian's vault configuration. This is a host-only
+Uses a vault's Obsidian property types, eight Files & Links/editor policies and
+its Templates and Daily notes options in Lumia, like Obsidian's vault configuration. This is a host-only
 feature, enabled by default in the Obsidian preset.
 
 ## How it works
@@ -25,6 +25,7 @@ settings are written. Watcher changes and plugin teardown notify those consumers
 - `types-document.ts`: lossless JSON edits, built-in guards and UI/wire conversion.
 - `types-registry.ts`: last-good property cache, operation queue and conflicts.
 - `app-settings.ts`: the eight ranked `app.json` mappings and input validation.
+- `core-plugin-settings.ts`: the `templates.json` and `daily-notes.json` mappings.
 - `precedence.ts`: pure detection of all explicit inspect layers.
 - `config-dir.ts`: independent, contained config-folder selection.
 - `config-files.ts`: strict contained reads, watchers and read-only write rejection.
@@ -59,6 +60,15 @@ owning their settings. Supported `app.json` mappings, in rank order:
 | `livePreview` | `editor.defaultMode` (true → livePreview, false → source) |
 | `alwaysUpdateLinks === true` | `linkUpdates.mode` → always (false contributes nothing) |
 
+`templates.json` and `daily-notes.json` seed the Templates and Daily Notes
+plugins' settings the same way. A date format is carried over only when it
+uses Lumia's tokens (`YYYY MM DD HH mm ss`); empty strings contribute nothing.
+
+| Obsidian | Lumia |
+| --- | --- |
+| `templates.json` `folder`, `dateFormat`, `timeFormat` | `templates.folder`, `templates.dateFormat`, `templates.timeFormat` |
+| `daily-notes.json` `folder`, `format`, `template` | `dailyNotes.folder`, `dailyNotes.dateFormat`, `dailyNotes.template` |
+
 ## Limits and differences from Obsidian
 
 The property UI still uses its existing preference storage; it does not yet
@@ -83,5 +93,5 @@ Ignored-file prefixes and globs use Lumia's existing exclusion semantics; Obsidi
 regular-expression filters are not translated. Changes to `editor.defaultMode`
 affect new editor views, preserving an existing view's current mode.
 
-CSS snippets, appearance, templates, daily notes, graph configuration, hotkeys,
+CSS snippets, appearance, graph configuration, hotkeys,
 themes, workspace state and community plugins are outside this phase.

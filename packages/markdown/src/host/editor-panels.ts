@@ -3,6 +3,8 @@ import type { EditorProvider } from "../shared/editor-provider";
 import type { PanelShell } from "../shared/host";
 import { SourceCoordinates } from "../shared/document/coordinates";
 import { panelIsActive } from "./active-panel";
+import { firstViewPreload } from "./feature-chunks";
+import { isMarkdownAbsentOnDisk } from "./markdown-absent-on-disk";
 import {
   bindShellState,
   bindingForPanel,
@@ -167,6 +169,7 @@ function createPanelShell(
     trusted: vscode.workspace.isTrusted,
     ...panelOpenFields(options),
     transport: panelTransport(panel),
+    preload: firstViewPreload(extensionUri),
     active: () => isActivePanel(provider.viewType, binding.document, panel),
     reveal() {
       panel.reveal();
@@ -256,6 +259,31 @@ function resolveEditorPanel(
   );
 }
 
+/**
+ * A missing note (`code test.md`) opens in the built-in text editor, whose
+ * buffer the user saves to create it (product lock 2026-11-04). With Lumia
+ * associated directly VS Code asks Lumia first, so hand the tab back.
+ */
+function openMissingNoteAsText(
+  document: vscode.TextDocument,
+  panel: vscode.WebviewPanel,
+): void {
+  void vscode.commands
+    .executeCommand(
+      "vscode.openWith",
+      document.uri,
+      "default",
+      panel.viewColumn ?? vscode.ViewColumn.Active,
+    )
+    .then(
+      () => panel.dispose(),
+      (error: unknown) => {
+        console.error("Lumia could not open a missing note as text", error);
+        panel.dispose();
+      },
+    );
+}
+
 /** Register `provider` as a custom editor; each panel it opens goes to `open`. */
 export function registerEditor(
   provider: EditorProvider,
@@ -268,6 +296,10 @@ export function registerEditor(
     provider.viewType,
     {
       resolveCustomTextEditor(document, panel) {
+        if (isMarkdownAbsentOnDisk(document.uri.toString())) {
+          openMissingNoteAsText(document, panel);
+          return;
+        }
         resolveEditorPanel(document, panel, ctx);
       },
       resolveCustomTextEditorNavigation(

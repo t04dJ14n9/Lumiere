@@ -4,13 +4,21 @@ import { webviewTransport } from "./transport";
 import { Endpoint } from "../shared/rpc/endpoint";
 import { bootstrap } from "./bootstrap";
 import "./styles/index.css";
-declare function acquireVsCodeApi(): {
+interface VsCodeApi {
   postMessage(message: unknown): void;
   getState(): unknown;
   setState(state: unknown): void;
-};
+}
+declare function acquireVsCodeApi(): VsCodeApi;
+declare global {
+  interface Window {
+    /** The API the page's inline loader took first (plugins/editor/webview-html.ts). */
+    lumiaVsCodeApi?: VsCodeApi;
+  }
+}
 performance.mark("mw:main");
-const vscode = acquireVsCodeApi();
+// The page may call it once only: its loader has, when it has a snapshot.
+const vscode = window.lumiaVsCodeApi ?? acquireVsCodeApi();
 const logging = webviewLogging((record) => rpc.notify(protocol, "log", record));
 const rpc: Endpoint = new Endpoint(
   webviewTransport(vscode),

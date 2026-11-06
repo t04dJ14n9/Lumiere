@@ -11,6 +11,9 @@ import type { PanelShell, HostServices } from "../../shared/host";
 import { Endpoint, RpcError } from "../../shared/rpc/endpoint";
 import { config as editorConfig } from "./manifest";
 import { protocol } from "./protocol";
+import { platformOf } from "./font";
+import { webviewSnapshot } from "./snapshot";
+import { opensAtTop } from "./snapshot-layout";
 import { webviewHTML } from "./webview-html";
 interface PanelOptions {
   onClose(): void;
@@ -44,7 +47,9 @@ export function createPanel(
   // Kick off webview HTML (and editor.js fetch/parse) before panel host
   // plugins configure, so download overlaps with host work. ready still
   // waits for owned.settled() and settings prepare.
-  shell.setHTML(webviewHTML(shell));
+  shell.setHTML(
+    webviewHTML(shell, pageSnapshot(shell, session, host, owned.logger)),
+  );
   configure(owned, shell);
   const reporting = panelReporting(owned, rpc, shell.document, host);
   const panel: EditorPanel = {
@@ -77,6 +82,43 @@ export function createPanel(
   registerClipboard(owned, rpc, host.clipboard);
   registerConfiguration(owned, rpc, shell.document, host);
   return panel;
+}
+
+/**
+ * The note's first screen for the page's first HTML (snapshot.ts); "" when it
+ * has none. A search match or a transferred view opens elsewhere than the top.
+ * It only speeds up painting, so a failure must never stop the note opening.
+ */
+function pageSnapshot(
+  shell: PanelShell,
+  session: Pick<EditorPanel["session"], "text">,
+  host: Pick<HostServices, "settings">,
+  logger: Logger,
+): string {
+  try {
+    // The off switch is read on its own: all the note's settings cost a couple
+    // of milliseconds that opening a note should not wait for when it is off.
+    const uri = shell.document.uri;
+    const isOn = host.settings.get("editor.firstPaintSnapshot", true, uri);
+    if (!isOn || !opensAtTop(shell.openingSelection)) {
+      return "";
+    }
+    const note = host.settings.forNote(shell.document);
+    return webviewSnapshot(session.text, note, platformOf(hostPlatform()));
+  } catch (error) {
+    logger.warn("First-paint snapshot failed", error);
+    return "";
+  }
+}
+
+/**
+ * The OS the plugins run on, as Node's `process.platform` names it: "" where
+ * there is no Node (the web host, whose plugins are compiled without its types).
+ */
+function hostPlatform(): string {
+  const runtime = (globalThis as unknown as { process?: { platform?: string } })
+    .process;
+  return runtime?.platform ?? "";
 }
 
 function registerSessionHandshake(

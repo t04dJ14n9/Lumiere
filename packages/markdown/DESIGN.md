@@ -652,7 +652,7 @@ Split `vscode-extension/src/markdown/provider.ts` (752 lines) into:
 | `panels.ts` | Registry of panels by panel ID (never by path), active panel via `tabGroups.activeTabGroup.activeTab` (a webview's `active` flag can be stale), events |
 | `panel.ts` | One editor: its transport, RPC, plugin state for its document, selection flag, disposal |
 | `view-transfer.ts` | Capture and restore view state across rename and reopen (current `renamedViews` logic) |
-| `webview-html.ts` | HTML, CSP and nonce (§19) |
+| `webview-html.ts` | HTML, CSP and nonce (§19); carries the first-screen snapshot of the note (`snapshot.ts`), inert markup the editor replaces once it has loaded |
 
 The editor is described by an `EditorProvider` (`src/shared/editor-provider.ts`:
 view type, display name, file patterns, document kind, panel options);
@@ -947,9 +947,10 @@ interface VaultIndex {
 3. A unique basename match in `uniqueFileLookup`.
 4. `./` and `../` relative to the source's folder.
 5. A leading `/` from the vault root.
-6. Otherwise, files whose path ends with the link path, sorted by folder
-   distance from the source (same folder first), then by path. The first
-   wins; `resolveLinkCandidates` returns all of them.
+6. Otherwise, files whose path ends with the link path: those under the
+   source's folder (or a descendant) first, then the rest, each group by
+   path length, shortest first, then by path. The first wins;
+   `resolveLinkCandidates` returns all of them.
 
 A folder link resolves to `lumiere.markdown.links.folderNote` inside it when
 that setting is set (default empty; LLM Wiki uses `_index.md`), and otherwise
@@ -1525,7 +1526,7 @@ exceptions from changing unnoticed.
 | Output | Entry | Format |
 | --- | --- | --- |
 | `dist/extension.js` | `src/host/extension.ts` | CJS, node20, `vscode` external |
-| `dist/webview/editor.js` (+ chunks, `editor.css`) | `src/webview/main.ts` | ESM, splitting, chrome120. MathJax, Mermaid and Prism grammars stay lazy chunks |
+| `dist/webview/editor.js` (+ chunks, `editor.css`, `feature-chunks.json`) | `src/webview/main.ts` | ESM, splitting, chrome120. MathJax, Mermaid and Prism grammars stay lazy chunks. esbuild splits the entry's static graph into ~55 shared chunks; `scripts/merge-entry-graph.mjs` folds them back into `editor.js` (one request instead of 55). `feature-chunks.json` lists each feature's chunks; the VS Code host puts the first view's in the page as `modulepreload` hints so their fetch overlaps the entry's |
 | `dist/workers/vault.cjs` | `src/workers/vault.ts` | CJS, node20 |
 | `dist/workers/search.cjs` | `src/workers/search.ts` | CJS, node20 |
 | `dist/api/**/*.d.ts` | `src/host/api/types.ts` | `tsc` declarations |

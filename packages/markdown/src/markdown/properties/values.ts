@@ -201,25 +201,36 @@ export function matchesPropertyKind(
 }
 
 /**
+ * The `!!timestamp` pattern of the yaml library's YAML 1.1 schema (yaml@2.9.1,
+ * schema/yaml-1.1/timestamp.js). It is mirrored on purpose: whatever the
+ * library turns into a Date must also be read here, or its wall-clock digits
+ * fall back to a UTC `toISOString` and the day can shift. That means
+ * one-digit month, day, hour, minute and second, and bare offsets such as
+ * `-5`, `+08` or `+5:30`, not only `±HH:MM`.
+ */
+const YAML_TIMESTAMP_SOURCE =
+  /^(\d{4})-(\d{1,2})-(\d{1,2})(?:(?:[Tt]|[ \t]+)(\d{1,2}):(\d{1,2}):(\d{1,2})(?:\.\d+)?(?:[ \t]*(?:Z|[-+][012]?\d(?::\d{2})?))?)?$/;
+
+/**
  * Obsidian plain date/datetime text from a YAML timestamp scalar's source.
  * Keeps civil wall-clock digits; strips offset/Z and zero seconds.
  */
 export function obsidianDateTextFromYamlSource(
   source: string,
 ): string | undefined {
-  const match =
-    /^(\d{4}-\d{2}-\d{2})(?:[Tt ](\d{2}:\d{2})(?::(\d{2}))?(?:\.\d+)?(?:\s*(?:Z|[+-]\d{2}:\d{2}))?)?$/.exec(
-      source.trim(),
-    );
+  const match = YAML_TIMESTAMP_SOURCE.exec(source.trim());
   if (!match) {
     return undefined;
   }
-  const [, date, hm, sec] = match;
-  if (!hm) {
+  const [, year, month, day, hour, minute, second] = match;
+  const date = `${year}-${month!.padStart(2, "0")}-${day!.padStart(2, "0")}`;
+  if (hour === undefined) {
     return date;
   }
+  const time = `${hour.padStart(2, "0")}:${minute!.padStart(2, "0")}`;
   // Match propertyInput / prior toISOString path: drop zero seconds.
-  return !sec || sec === "00" ? `${date}T${hm}` : `${date}T${hm}:${sec}`;
+  const seconds = second!.padStart(2, "0");
+  return seconds === "00" ? `${date}T${time}` : `${date}T${time}:${seconds}`;
 }
 
 /** Obsidian-stable YAML/date-input text for a JS Date from !!timestamp. */
