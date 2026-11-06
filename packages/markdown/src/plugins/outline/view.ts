@@ -2,6 +2,7 @@ import type { Logger } from "@workshop/core";
 import type { TreeHandle, TreeNode } from "../../shared/host";
 import type { EditorPanel, Editors } from "../editor/api";
 import { protocol as editorProtocol } from "../editor/protocol";
+import { OutlineJumpWindow } from "./jump-window";
 import type { OutlineSource } from "./tree";
 
 const REFRESH_DELAY_MS = 300;
@@ -15,23 +16,18 @@ interface OutlineViewOptions {
   logger: Logger;
 }
 
-/**
- * How long after a click on an outline row the jump it made is left alone:
- * long enough for a double-click's second click and the editor's reply.
- */
-const OUTLINE_JUMP_MS = 1000;
-
-/** A heading a click in the outline opened, and whether the caret got there. */
-interface OutlineJump {
-  id: string;
-  until: number;
-  landed: boolean;
+/** A scroll report held back while an outline click's jump settles. */
+interface HeldReading {
+  panel: EditorPanel;
+  position: { offset: number; version: number };
 }
 
 /** Owns refresh timing and rejects caret captures from an obsolete panel or text. */
 export class OutlineView {
   private panel: EditorPanel | undefined;
-  private outlineJump: OutlineJump | undefined;
+  private readonly jumpWindow = new OutlineJumpWindow<HeldReading>(
+    ({ panel, position }) => void this.followReading(panel, position),
+  );
   private sourceVersion = 0;
   private revision = 0;
   private followRequest = 0;
@@ -49,19 +45,11 @@ export class OutlineView {
 
   /**
    * A click on the outline row of the heading at `offset` opened it. Until
-   * the caret moves on from there, the tree is not laid out again: the row
-   * is already selected, and the accordion's collapse would move rows under
-   * the pointer, so the second click of a double-click landed on another
-   * heading (and jumped there). The editor first reports its caret from
-   * before the click, as it takes focus, so that is left alone too.
+   * the caret moves on from there, the tree is not laid out again (see
+   * `OutlineJumpWindow`).
    */
   jumpedTo(offset: number): void {
-    const node = this.options.source.activeNode(offset);
-    this.outlineJump = node && {
-      id: node.id,
-      until: Date.now() + OUTLINE_JUMP_MS,
-      landed: false,
-    };
+    this.jumpWindow.start(this.options.source.activeNode(offset)?.id);
   }
 
   schedule(): void {
@@ -99,6 +87,8 @@ export class OutlineView {
 
   /** Follow the active panel's caret. */
   followCaret(): Promise<void> {
+    // The caret is newer than a scroll report held back: it wins.
+    this.jumpWindow.dropHeld();
     return this.follow((panel) =>
       panel.rpc.call(editorProtocol, "captureCursor", {}),
     );
@@ -115,16 +105,8 @@ export class OutlineView {
     if (panel !== this.panel) {
       return Promise.resolve();
     }
-    // After an outline click the editor puts the heading at the top, so the top of
-    // the viewport is often a different heading. Ignore scroll follow for
-    // the whole jump window so that report cannot yank selection off the
-    // clicked row. Caret follow keeps using isOutlineJump.
-    const jump = this.outlineJump;
-    if (jump) {
-      if (Date.now() <= jump.until) {
-        return Promise.resolve();
-      }
-      this.outlineJump = undefined;
+    if (this.jumpWindow.holdReading({ panel, position })) {
+      return Promise.resolve();
     }
     return this.follow(() =>
       Promise.resolve({ head: position.offset, version: position.version }),
@@ -158,7 +140,12 @@ export class OutlineView {
         return;
       }
       const node = this.options.source.activeNode(caret.head);
-      if (!node || this.isOutlineJump(node)) {
+      // Above the first heading too: the caret from before a click is not news.
+      if (this.jumpWindow.isCaretOnJump(node?.id)) {
+        return;
+      }
+      if (!node) {
+        await this.clearSelection(panel, request);
         return;
       }
       if (this.isAccordionOn()) {
@@ -176,6 +163,25 @@ export class OutlineView {
         this.options.logger.warn("Outline cursor follow failed", error);
       }
     }
+  }
+
+  /**
+   * The caret or the top line is above the first heading (preamble or
+   * frontmatter): no section is current, and Obsidian clears the highlight.
+   * Only trees that can unselect a row do; VS Code's cannot.
+   */
+  private async clearSelection(
+    panel: EditorPanel,
+    request: number,
+  ): Promise<void> {
+    if (this.options.source.isEmpty || !this.options.tree.clearSelection) {
+      return;
+    }
+    await this.oneAtATime(async () => {
+      if (this.canFollow(panel, request)) {
+        await this.options.tree.clearSelection?.();
+      }
+    });
   }
 
   /**
@@ -257,26 +263,6 @@ export class OutlineView {
       select: false,
       focus: false,
     });
-  }
-
-  /** Whether the caret at `node` is still where an outline click put it, or on its way. */
-  private isOutlineJump(node: TreeNode): boolean {
-    const jump = this.outlineJump;
-    if (!jump || Date.now() > jump.until) {
-      this.outlineJump = undefined;
-      return false;
-    }
-    if (node.id === jump.id) {
-      jump.landed = true;
-      return true;
-    }
-    if (jump.landed) {
-      // The caret moved on from the heading the click opened.
-      this.outlineJump = undefined;
-      return false;
-    }
-    // The caret from before the click, reported before the jump landed.
-    return true;
   }
 
   /**
@@ -392,5 +378,6 @@ export class OutlineView {
     this.isDisposed = true;
     this.followRequest++;
     clearTimeout(this.timer);
+    this.jumpWindow.dispose();
   }
 }

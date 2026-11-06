@@ -75,18 +75,26 @@ async function body(page: Page): Promise<void> {
   await expect.poll(indexes).toEqual([0, 1]);
   await command(page, "PDF: Next Page");
   await expect.poll(indexes).toEqual([2, 3]);
-  await expect(viewer.locator('.page[data-page-index="2"] img')).toBeVisible();
+  await expect(
+    viewer.locator('.page[data-page-index="2"] img.page-image'),
+  ).toBeVisible();
   await showPage(page, viewer, 4);
   await expect.poll(indexes).toEqual([2, 3]);
   await command(page, "PDF: Previous Page");
   await expect.poll(indexes).toEqual([0, 1]);
-  await expect(viewer.locator('.page[data-page-index="0"] img')).toBeVisible();
+  await expect(
+    viewer.locator('.page[data-page-index="0"] img.page-image'),
+  ).toBeVisible();
   await command(page, "PDF: Two Pages with Cover (1, 2–3)");
   await expect.poll(indexes).toEqual([0]);
   await command(page, "PDF: Next Page");
   await expect.poll(indexes).toEqual([1, 2]);
-  await expect(viewer.locator('.page[data-page-index="1"] img')).toBeVisible();
-  await expect(viewer.locator('.page[data-page-index="2"] img')).toBeVisible();
+  await expect(
+    viewer.locator('.page[data-page-index="1"] img.page-image'),
+  ).toBeVisible();
+  await expect(
+    viewer.locator('.page[data-page-index="2"] img.page-image'),
+  ).toBeVisible();
   await command(page, "PDF: Horizontal Scrolling");
   await expect(viewer.locator(".viewer")).toHaveAttribute(
     "data-scroll-direction",
@@ -116,7 +124,9 @@ async function body(page: Page): Promise<void> {
     "data-scroll-direction",
     "horizontal",
   );
-  await expect(viewer.locator('.page[data-page-index="1"] img')).toBeVisible();
+  await expect(
+    viewer.locator('.page[data-page-index="1"] img.page-image'),
+  ).toBeVisible();
   await expect.poll(indexes).toEqual([1, 2]);
   await expect(statusBarEntry(page, /^100%$/u)).toBeVisible();
 

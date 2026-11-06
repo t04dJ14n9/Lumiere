@@ -68,21 +68,48 @@ export function shouldReclaim(
  * A text tab names its note. By default reclaim only a new text tab
  * (`before === "none"`). With `reclaimInPlace`, also reclaim when the note was
  * not already text (`before !== "text"`): workbench→text (Claude) and
- * other→text. Cursor's Markdown editor (`other`) has no public tab input; its
- * URI comes from `labelUri` only when exactly one open textDocument matches
- * the tab label, so a plan editor without that document never reaches
- * `shouldReclaim`. Reclaim any arrival into `other` except other→other —
- * including none→other (restored window / primary Cursor Markdown open) —
- * so Preview|Markdown does not strand the note without Lumia menus.
+ * other→text.
+ *
+ * Cursor's Markdown editor (`other`) has no public tab input, and its tab is
+ * named by the file's basename, which is also how Cursor's plan editor and
+ * other input-less editors name theirs. So an arrival into `other` is
+ * reclaimed only when something positively says it is Cursor's Markdown
+ * editor: it replaced the note's own tab in place (Preview | Markdown,
+ * Reopen Editor With…; `before` is workbench or text), or it opened from
+ * nowhere (restored window, primary open) for a file that editor takes. An
+ * input-less tab that is neither is left alone.
  */
 export function landsInNativeEditor(
-  { before, after }: TabSwap,
+  { uri, before, after }: TabSwap,
   reclaimInPlace = false,
 ): boolean {
   if (after === "text") {
     return reclaimInPlace ? before !== "text" : before === "none";
   }
-  return after === "other" && before !== "other";
+  if (after !== "other") {
+    return false;
+  }
+  if (before === "workbench" || before === "text") {
+    return true;
+  }
+  return before === "none" && cursorMarkdownEditorTakes(uri);
+}
+
+/**
+ * Whether Cursor's own Markdown editor opens this file. Checked against
+ * Cursor 3.27's editor eligibility: `.md`, but not `.plan.md` (those open in
+ * the plan editor, whose tab is input-less and shares the basename label), and
+ * not under `.cursor`, `.claude` or `.codex`. It errs toward refusing: a
+ * nested agent-config folder Cursor would accept is refused too, which only
+ * costs a reclaim, never a closed plan tab.
+ */
+export function cursorMarkdownEditorTakes(uri: string): boolean {
+  const lower = uri.toLowerCase();
+  return (
+    lower.endsWith(".md") &&
+    !lower.endsWith(".plan.md") &&
+    !/\/\.(?:cursor|claude|codex)\//.test(uri)
+  );
 }
 
 /**

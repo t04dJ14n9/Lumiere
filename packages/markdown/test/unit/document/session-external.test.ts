@@ -5,10 +5,8 @@ import { provideHostServices } from "../../../src/shared/host";
 import type { HostDocument } from "../../../src/shared/host";
 import { Session } from "../../../src/plugins/document/session";
 import { documentHost } from "../../../src/plugins/document/host";
-import {
-  protocol,
-  updatesFullTextMax,
-} from "../../../src/plugins/document/protocol";
+import { protocol } from "../../../src/plugins/document/protocol";
+import type { Endpoint } from "../../../src/shared/rpc/endpoint";
 import type {
   Documents,
   DocumentSession,
@@ -19,7 +17,6 @@ import { rpcPair } from "../../support/rpc-pair";
 
 type SessionInternals = {
   groups: UndoGroups;
-  lastSaved: string;
   saveEcho?: string;
 };
 
@@ -56,7 +53,6 @@ test("own save echo does not clear UndoGroups", async () => {
   await session.save();
   session.changed(); // echo
   assert.deepEqual(clears, []);
-  assert.equal(internals(session).lastSaved, "note!");
 });
 
 test("native hostDocuments.onSave arms saveEcho without Session.save", async () => {
@@ -104,7 +100,6 @@ test("native hostDocuments.onSave arms saveEcho without Session.save", async () 
   );
   onSave!(doc);
   assert.equal(internals(session).saveEcho, "note!");
-  assert.equal(internals(session).lastSaved, "note!");
   session.changed(); // rewrite-bytes echo: host text === saveEcho, ≠ authority
   assert.deepEqual(clears, []);
   assert.equal(internals(session).saveEcho, undefined);
@@ -159,7 +154,6 @@ test("clean external rewrite does not clear UndoGroups", () => {
   session.changed();
   assert.deepEqual(clears, []);
   assert.equal(session.text, "external");
-  assert.equal(internals(session).lastSaved, "external");
   assert.equal(internals(session).saveEcho, undefined);
   assert.equal(session.authority.since(0).at(-1)?.clientID, "host");
 });
@@ -180,7 +174,49 @@ test("dirty unexpected host rewrite clears stale saveEcho", () => {
   assert.equal(session.text, "external-dirty");
 });
 
-test("oversized clean external rewrite omits fullText but still delivers updates", async () => {
+/** Captures what the host puts on the wire, before any schema can strip it. */
+function recordingPanel() {
+  const sent: { version: number; updates: unknown[] }[] = [];
+  const rpc = {
+    handle: () => () => {},
+    notify: (_protocol: unknown, _method: string, params: never) => {
+      sent.push(params);
+    },
+  } as unknown as Endpoint;
+  return { rpc, sent };
+}
+
+test("update broadcasts carry the changes, never the document text", () => {
+  const huge = "x".repeat(900_000);
+  let text = huge;
+  const doc = fakeDocument({
+    getText: () => text,
+    get isDirty() {
+      return false;
+    },
+  });
+  const session = new Session(doc, fakeHost());
+  const first = recordingPanel();
+  const second = recordingPanel();
+  session.attach("first", first.rpc);
+  session.attach("second", second.rpc);
+
+  text = `${huge.slice(0, 10)}y${huge.slice(11)}`;
+  session.changed();
+
+  for (const panel of [first, second]) {
+    assert.equal(panel.sent.length, 1);
+    assert.deepEqual(Object.keys(panel.sent[0]!).sort(), [
+      "updates",
+      "version",
+    ]);
+    assert.ok(panel.sent[0]!.updates.length > 0);
+    assert.ok(JSON.stringify(panel.sent[0]).length < 1000);
+  }
+  assert.equal(session.text, text);
+});
+
+test("an oversized clean external rewrite still delivers its updates", async () => {
   let text = "base";
   const doc = fakeDocument({
     getText: () => text,
@@ -190,52 +226,18 @@ test("oversized clean external rewrite omits fullText but still delivers updates
   });
   const session = new Session(doc, fakeHost());
   const pair = rpcPair();
-  const messages: Array<{
-    version: number;
-    updates: unknown[];
-    fullText?: string;
-  }> = [];
+  const messages: { version: number; updates: unknown[] }[] = [];
   pair.client.on(protocol, "updates", (message) => {
     messages.push(message);
   });
-  await session.attach("panel", pair.host);
+  session.attach("panel", pair.host);
 
-  const oversize = "x".repeat(updatesFullTextMax + 1);
+  const oversize = "x".repeat(1_000_001);
   text = oversize;
   session.changed();
 
   assert.equal(messages.length, 1);
-  assert.equal("fullText" in messages[0]!, false);
   assert.ok(messages[0]!.updates.length > 0);
   assert.equal(session.text, oversize);
-  await pair.dispose();
-});
-
-test("normal-sized clean external rewrite includes fullText", async () => {
-  let text = "base";
-  const doc = fakeDocument({
-    getText: () => text,
-    get isDirty() {
-      return false;
-    },
-  });
-  const session = new Session(doc, fakeHost());
-  const pair = rpcPair();
-  const messages: Array<{
-    version: number;
-    updates: unknown[];
-    fullText?: string;
-  }> = [];
-  pair.client.on(protocol, "updates", (message) => {
-    messages.push(message);
-  });
-  await session.attach("panel", pair.host);
-
-  text = "external-normal";
-  session.changed();
-
-  assert.equal(messages.length, 1);
-  assert.equal(messages[0]!.fullText, "external-normal");
-  assert.ok(messages[0]!.updates.length > 0);
   await pair.dispose();
 });
