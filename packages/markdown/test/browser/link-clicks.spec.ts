@@ -73,7 +73,7 @@ test("plain click on a rendered markdown link does not open; Mod-click opens", a
     .toBe("https://example.com");
 });
 
-test("plain click on a wikilink inside a rendered table cell follows the link, and hovering previews it", async ({
+test("plain click on a wikilink inside a rendered table cell follows the link, and Mod-hovering previews it", async ({
   page,
 }) => {
   const source =
@@ -85,10 +85,24 @@ test("plain click on a wikilink inside a rendered table cell follows the link, a
   await expect(link).toBeVisible();
   await expect(link).toHaveAttribute("data-href", "Target");
 
-  await link.hover();
+  // As everywhere in the editor (Obsidian's editor hover source), a plain
+  // hover does not preview; holding Mod does. The preview opens from a 300 ms
+  // timer, so the clock is paused and run past that delay: a preview that
+  // plain hover scheduled has fired by then, with no sleep to outlast.
   const preview = page.locator(".link-preview");
+  await page.clock.install();
+  await page.clock.pauseAt(Date.now() + 1_000);
+  await link.hover();
+  await page.clock.runFor(1_000);
+  await expect(preview).toHaveCount(0);
+  await page.clock.resume();
+  await page.mouse.move(0, 0);
+  await page.keyboard.down("ControlOrMeta");
+  await link.hover();
   await expect(preview).toBeVisible();
   await expect(preview).toContainText("Preview body text.");
+  await page.keyboard.up("ControlOrMeta");
+  await page.keyboard.press("Escape");
 
   await link.click();
   await expect

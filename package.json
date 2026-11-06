@@ -2,7 +2,7 @@
   "name": "lumiere",
   "displayName": "Lumia: Markdown Editor and PDF Reader",
   "description": "Obsidian-style Live Preview for Markdown and a PDF reader, in VS Code and Cursor, with links your AI agent can follow.",
-  "version": "0.1.10",
+  "version": "0.1.11",
   "publisher": "t04dj14n9",
   "license": "MIT",
   "icon": "media/icon.png",
@@ -173,6 +173,21 @@
       {
         "command": "lumiere.markdown.cursorBridge.dismissEditMirror",
         "title": "Return to Lumia",
+        "category": "Lumia"
+      },
+      {
+        "command": "lumiere.markdown.dailyNotes.openToday",
+        "title": "Open Today's Daily Note",
+        "category": "Lumia"
+      },
+      {
+        "command": "lumiere.markdown.dailyNotes.openPrevious",
+        "title": "Open Previous Daily Note",
+        "category": "Lumia"
+      },
+      {
+        "command": "lumiere.markdown.dailyNotes.openNext",
+        "title": "Open Next Daily Note",
         "category": "Lumia"
       },
       {
@@ -824,6 +839,11 @@
       {
         "command": "lumiere.markdown.cycleListChecklist",
         "title": "Cycle List Checklist",
+        "category": "Lumia"
+      },
+      {
+        "command": "lumiere.markdown.templates.insert",
+        "title": "Insert Template",
         "category": "Lumia"
       },
       {
@@ -1638,6 +1658,18 @@
           "when": "false"
         },
         {
+          "command": "lumiere.markdown.dailyNotes.openToday",
+          "when": "config.lumiere.markdown.preset != 'minimal' && config.lumiere.markdown.plugins.dailyNotes.enabled"
+        },
+        {
+          "command": "lumiere.markdown.dailyNotes.openPrevious",
+          "when": "config.lumiere.markdown.preset != 'minimal' && config.lumiere.markdown.plugins.dailyNotes.enabled"
+        },
+        {
+          "command": "lumiere.markdown.dailyNotes.openNext",
+          "when": "config.lumiere.markdown.preset != 'minimal' && config.lumiere.markdown.plugins.dailyNotes.enabled"
+        },
+        {
           "command": "lumiere.markdown.jumpBack",
           "when": "activeCustomEditorId == 'lumiere.markdown.editor' && lumiere.markdown.plugin.editor"
         },
@@ -2124,6 +2156,10 @@
         {
           "command": "lumiere.markdown.cycleListChecklist",
           "when": "activeCustomEditorId == 'lumiere.markdown.editor' && lumiere.markdown.plugin.tasks"
+        },
+        {
+          "command": "lumiere.markdown.templates.insert",
+          "when": "config.lumiere.markdown.preset != 'minimal' && config.lumiere.markdown.plugins.templates.enabled && activeCustomEditorId == 'lumiere.markdown.editor'"
         },
         {
           "command": "lumiere.markdown.consumeVimHostShortcut",
@@ -2851,6 +2887,12 @@
             "scope": "resource",
             "description": "In Cursor, Cmd/Ctrl+L opens Chat and Cmd/Ctrl+K opens Edit on the Live Preview selection."
           },
+          "lumiere.markdown.plugins.dailyNotes.enabled": {
+            "type": "boolean",
+            "default": true,
+            "scope": "resource",
+            "description": "Open or create today's note from a template, like Obsidian's Daily notes."
+          },
           "lumiere.markdown.plugins.diagrams.enabled": {
             "type": "boolean",
             "default": true,
@@ -3079,6 +3121,12 @@
             "scope": "resource",
             "description": "Interactive checkboxes and checklist commands."
           },
+          "lumiere.markdown.plugins.templates.enabled": {
+            "type": "boolean",
+            "default": true,
+            "scope": "resource",
+            "description": "Insert a note from your templates folder at the caret, like Obsidian's Templates."
+          },
           "lumiere.markdown.plugins.vim.enabled": {
             "type": "boolean",
             "default": false,
@@ -3124,6 +3172,24 @@
             "description": "Show the lines above and below each backlink match (Obsidian “Show more context”). Off by default.",
             "scope": "resource"
           },
+          "lumiere.markdown.dailyNotes.folder": {
+            "type": "string",
+            "default": "",
+            "description": "Vault-relative folder for daily notes. Empty puts them at the vault root.",
+            "scope": "resource"
+          },
+          "lumiere.markdown.dailyNotes.dateFormat": {
+            "type": "string",
+            "default": "YYYY-MM-DD",
+            "description": "File name of a daily note. Tokens: YYYY, MM, DD, HH, mm and ss; a / makes subfolders.",
+            "scope": "resource"
+          },
+          "lumiere.markdown.dailyNotes.template": {
+            "type": "string",
+            "default": "",
+            "description": "Vault-relative path of the template for new daily notes, with or without .md. Empty creates an empty note.",
+            "scope": "resource"
+          },
           "lumiere.markdown.editor.defaultMode": {
             "enum": [
               "livePreview",
@@ -3159,6 +3225,12 @@
               "off"
             ],
             "default": "auto",
+            "scope": "resource"
+          },
+          "lumiere.markdown.editor.firstPaintSnapshot": {
+            "type": "boolean",
+            "default": true,
+            "description": "Draw the note's first screen in the editor's first HTML, so its text shows before the editor has loaded and is replaced by the live editor without moving. Skipped for Source mode, a centred page, an inline title and notes with unusual gutters. Applies to notes opened after the change.",
             "scope": "resource"
           },
           "lumiere.markdown.editor.strictLineBreaks": {
@@ -3285,7 +3357,7 @@
               "never"
             ],
             "default": "prompt",
-            "description": "Obsidian's Automatically update internal links: `prompt` asks before rewriting links in other notes when a file is renamed or moved.",
+            "description": "Obsidian's Automatically update internal links: `prompt` asks before rewriting links in other notes when a file is renamed or moved; its Always Update button sets this to `always`.",
             "scope": "resource"
           },
           "lumiere.markdown.links.newLinkFormat": {
@@ -3437,6 +3509,24 @@
             "type": "boolean",
             "default": true,
             "description": "Show nested tags (`#a/b`) under their parent in the Tags view, rather than as a flat list.",
+            "scope": "resource"
+          },
+          "lumiere.markdown.templates.folder": {
+            "type": "string",
+            "default": "",
+            "description": "Vault-relative folder of template notes. Insert Template lists the Markdown files in it.",
+            "scope": "resource"
+          },
+          "lumiere.markdown.templates.dateFormat": {
+            "type": "string",
+            "default": "YYYY-MM-DD",
+            "description": "Format of {{date}} in templates. Tokens: YYYY, MM, DD, HH, mm and ss.",
+            "scope": "resource"
+          },
+          "lumiere.markdown.templates.timeFormat": {
+            "type": "string",
+            "default": "HH:mm",
+            "description": "Format of {{time}} in templates. Tokens: YYYY, MM, DD, HH, mm and ss.",
             "scope": "resource"
           },
           "lumiere.markdown.vault.rootMarkers": {

@@ -8,7 +8,7 @@
 - To a block: [[Target#^key-point]]
 - Same note heading: [[#Markdown links]]
 - Path: [[notes/Project plan]]
-- Ambiguous name, resolved by folder distance: [[Duplicate]]
+- Ambiguous name, resolved by shortest path: [[Duplicate]]
 - Unresolved (dimmed, creates the note on click): [[Missing note]]
 - An alias is not a file name, so this stays unresolved, as in Obsidian:
   [[Home]] (typing `[[Ho` suggests `[[Welcome|Home]]` instead)

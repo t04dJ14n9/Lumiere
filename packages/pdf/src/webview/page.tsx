@@ -132,7 +132,7 @@ function PageLayers({
         }}
       />
       <TextSelection {...layer} />
-      <BacklinkLayer pdf={pdf} pageIndex={pageIndex} scale={scale} />
+      <BacklinkLayer pdf={pdf} {...layer} annotate={annotate} />
     </PagePointerProvider>
   );
 }

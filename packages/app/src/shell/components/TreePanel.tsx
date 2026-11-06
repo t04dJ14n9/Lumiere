@@ -2,7 +2,7 @@
  * One of the plugins' tree views (Outline, Backlinks…), drawn from host-node's
  * snapshot. A click runs the node's command in the host: for Outline that
  * scrolls the note to the heading. The plugin's reveals (Follow Cursor) mark
- * the current node and bring it into view.
+ * the current node and bring it into view; a deselect unmarks it.
  */
 import { useEffect, useRef, useState } from "react";
 import type { TreeItem, TreeSnapshot } from "@workshop/host-node/views";
@@ -32,19 +32,10 @@ export function TreePanel({
 }: TreePanelProps) {
   const snapshot = useSnapshot(viewId, report);
   const [toggled, setToggled] = useState<Toggled>(new Map());
-  const [current, setCurrent] = useState<string>();
+  const current = useCurrentNode(viewId);
   const list = useRef<HTMLDivElement>(null);
 
   useVisibility(viewId, visible, report);
-  useEffect(
-    () =>
-      backend().views.events((event) => {
-        if (event.type === "reveal" && event.viewId === viewId) {
-          setCurrent(event.id);
-        }
-      }),
-    [viewId],
-  );
   // Open the way to the current node and scroll it into view.
   useEffect(() => {
     const path = current && snapshot && ancestors(snapshot.items, current);
@@ -85,6 +76,27 @@ export function TreePanel({
       />
     </div>
   );
+}
+
+/** The node the plugin last revealed (Follow Cursor), until it deselects. */
+function useCurrentNode(viewId: string): string | undefined {
+  const [current, setCurrent] = useState<string>();
+  useEffect(
+    () =>
+      backend().views.events((event) => {
+        if (event.viewId !== viewId) {
+          return;
+        }
+        if (event.type === "reveal") {
+          setCurrent(event.id);
+        }
+        if (event.type === "deselect") {
+          setCurrent(undefined);
+        }
+      }),
+    [viewId],
+  );
+  return current;
 }
 
 /** Tell the host whether the tree is on screen: some plugins follow the caret only then. */

@@ -1,23 +1,28 @@
 import test from "node:test";
 import assert from "node:assert/strict";
-import { missingEmbedText } from "./post-process";
+import { missingEmbedText } from "./missing";
 
-test("a missing image embed says it failed to fetch, not the note path wording", () => {
+// Obsidian shows “linktext” could not be found. for a missing attachment,
+// images included (measured in r2.json, `![[pic.png]]` and `![alt](pic.png)`).
+test("a missing image names its path, like any other missing file", () => {
   assert.equal(
     missingEmbedText("attachments/missing.png"),
-    "failed to fetch image",
+    "“attachments/missing.png” could not be found.",
   );
-  assert.equal(missingEmbedText("gone.png|200"), "failed to fetch image");
+  assert.equal(
+    missingEmbedText("gone.png|200"),
+    "“gone.png” could not be found.",
+  );
 });
 
-test("a missing non-image file still names its path", () => {
+test("a missing non-image file names its path", () => {
   assert.equal(
     missingEmbedText("attachments/report.pdf"),
-    '"attachments/report.pdf" could not be found.',
+    "“attachments/report.pdf” could not be found.",
   );
   assert.equal(
     missingEmbedText("MissingNote"),
-    '"MissingNote" could not be found.',
+    "“MissingNote” could not be found.",
   );
 });
 
@@ -36,17 +41,17 @@ test("a missing heading or block in an existing note names the note, as Obsidian
   );
   assert.equal(
     missingEmbedText("Gone#Heading"),
-    '"Gone#Heading" could not be found.',
+    "“Gone#Heading” could not be found.",
   );
 });
 
-test("image flag forces failed-to-fetch even without an image extension", () => {
+test("an image whose bytes failed to load says failed to fetch, even without an image extension", () => {
   assert.equal(
-    missingEmbedText("https://cdn.example/photo?id=1", { image: true }),
+    missingEmbedText("https://cdn.example/photo?id=1", { fetchFailed: true }),
     "failed to fetch image",
   );
   assert.equal(
-    missingEmbedText("data:image/png;base64,xx", { image: true }),
+    missingEmbedText("data:image/png;base64,xx", { fetchFailed: true }),
     "failed to fetch image",
   );
 });

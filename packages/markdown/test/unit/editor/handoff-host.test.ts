@@ -597,6 +597,7 @@ test("opt-in reclaimInPlace: tab rebuild during Search wait still reclaims workb
   t.mock.timers.enable({ apis: ["setTimeout"] });
   const state = memento();
   await state.update(MARKDOWN_WORKSPACE_EDITOR_KEY, true);
+  settings.set("workbench.editorAssociations", { "*.md": "default" });
   settings.set("lumiere.markdown.editor.reclaimInPlaceTextEditor", true);
   const stop = host.reclaim.registerReclaim(undefined, state as never);
   t.after(() => stop.dispose());
@@ -615,6 +616,7 @@ test("opt-in reclaimInPlace: selection ready after tab rebuild reclaims without 
   t.mock.timers.enable({ apis: ["setTimeout"] });
   const state = memento();
   await state.update(MARKDOWN_WORKSPACE_EDITOR_KEY, true);
+  settings.set("workbench.editorAssociations", { "*.md": "default" });
   settings.set("lumiere.markdown.editor.reclaimInPlaceTextEditor", true);
   const stop = host.reclaim.registerReclaim(undefined, state as never);
   t.after(() => stop.dispose());
@@ -769,6 +771,25 @@ test("a primary Cursor Markdown tab whose label names a note is reclaimed", asyn
   assert.equal(commands[0]?.[0], "vscode.openWith");
   assert.equal(commands[0]?.[2], viewType);
 });
+
+for (const unidentified of [
+  "file:///vault/Feature.plan.md",
+  "file:///vault/.cursor/plans/Feature.md",
+  "file:///vault/.claude/commands/Feature.md",
+]) {
+  test(`an input-less tab labelled like the note ${unidentified} is not identified as Cursor Markdown and stays`, async (t) => {
+    // Cursor's plan editor is input-less and named by basename too; its tab
+    // must survive even though a matching textDocument makes labelUri resolve.
+    const stop = host.reclaim.registerReclaim();
+    t.after(() => stop.dispose());
+    const tab = cursorTab(unidentified);
+    tabsChanged.fire({ opened: [tab], changed: [], closed: [] });
+    await tick();
+    assert.deepEqual(warmed, []);
+    assert.deepEqual(commands, []);
+    assert.deepEqual(group.tabs, [tab], "the tab is not closed");
+  });
+}
 
 test("an input-less tab with no matching note document is left alone", async (t) => {
   const stop = host.reclaim.registerReclaim();
@@ -1412,6 +1433,123 @@ test("dismiss captures mirror range when Chat stole focus but mirror tab remains
     commands.some((entry) => entry[0] === "vscode.openWith"),
     true,
   );
+});
+
+test("dismiss restores the mirror's own selection when the note is also open natively in another column", async () => {
+  const { nativeOpeningSelection } =
+    await import("../../../src/host/native-selection-open");
+  const surface = host.cursorHandoff.createCursorHandoffSurface();
+  const mirror = cursorTab();
+  mirror.input = new TabInputText(Uri.parse(note));
+  mirror.isDirty = false;
+  const native = cursorTab();
+  native.input = new TabInputText(Uri.parse(note));
+  native.isDirty = false;
+  // The mirror is the note's first text tab in column 1; the same note is
+  // also open natively in column 2.
+  const beside = { viewColumn: 2, tabs: [native], activeTab: native };
+  native.group = beside;
+  group.tabs = [mirror];
+  group.activeTab = mirror;
+  vscode.window.tabGroups.all.push(beside);
+  const lines = Array.from({ length: 40 }, (_, i) => `Line ${i}`);
+  const body = lines.join("\n");
+  const offsetAt = (position: Position) =>
+    lines
+      .slice(0, position.line)
+      .reduce((length, value) => length + value.length + 1, 0) +
+    position.character;
+  const editorAt = (
+    viewColumn: number,
+    selection: Range,
+    topLine: number,
+  ): TextEditor => ({
+    viewColumn,
+    document: {
+      uri: Uri.parse(note),
+      isDirty: false,
+      version: 1,
+      getText: () => body,
+      positionAt: (offset) => new Position(0, offset),
+      offsetAt,
+    },
+    selection,
+    visibleRanges: [new Range(new Position(topLine, 0), new Position(30, 0))],
+  });
+  const mirrorSelection = new Range(new Position(18, 0), new Position(18, 4));
+  const mirrorEditor = editorAt(1, mirrorSelection, 12);
+  const nativeEditor = editorAt(
+    2,
+    new Range(new Position(3, 1), new Position(3, 2)),
+    1,
+  );
+  // The native editor is first in visibleTextEditors and is the active one.
+  vscode.window.activeTextEditor = nativeEditor;
+  vscode.window.visibleTextEditors = [nativeEditor, mirrorEditor];
+
+  let during: { anchor: number; head: number; topLine?: number } | undefined;
+  afterCommand = () => {
+    during = nativeOpeningSelection(note, 1);
+  };
+
+  await surface.dismiss(note, { restore: true });
+
+  assert.deepEqual(
+    during,
+    {
+      anchor: offsetAt(mirrorSelection.start),
+      head: offsetAt(mirrorSelection.end),
+      topLine: 12,
+    },
+    "the editor in the closed mirror's column, not the first visible one",
+  );
+  assert.deepEqual(group.tabs, [], "only the mirror tab was closed");
+  assert.deepEqual(beside.tabs, [native]);
+});
+
+test("dismiss falls back to the visible note editor when none sits in the mirror's column", async () => {
+  const { nativeOpeningSelection } =
+    await import("../../../src/host/native-selection-open");
+  const surface = host.cursorHandoff.createCursorHandoffSurface();
+  const mirror = cursorTab();
+  mirror.input = new TabInputText(Uri.parse(note));
+  mirror.isDirty = false;
+  const lines = Array.from({ length: 10 }, (_, i) => `Line ${i}`);
+  const offsetAt = (position: Position) =>
+    lines
+      .slice(0, position.line)
+      .reduce((length, value) => length + value.length + 1, 0) +
+    position.character;
+  const selection = new Range(new Position(4, 0), new Position(4, 2));
+  // Only editors in other columns (or without one) are visible.
+  vscode.window.visibleTextEditors = [
+    {
+      viewColumn: 3,
+      document: {
+        uri: Uri.parse(note),
+        isDirty: false,
+        version: 1,
+        getText: () => lines.join("\n"),
+        positionAt: (offset) => new Position(0, offset),
+        offsetAt,
+      },
+      selection,
+      visibleRanges: [new Range(new Position(2, 0), new Position(9, 0))],
+    },
+  ];
+
+  let during: { anchor: number; head: number; topLine?: number } | undefined;
+  afterCommand = () => {
+    during = nativeOpeningSelection(note, 1);
+  };
+
+  await surface.dismiss(note, { restore: true });
+
+  assert.deepEqual(during, {
+    anchor: offsetAt(selection.start),
+    head: offsetAt(selection.end),
+    topLine: 2,
+  });
 });
 
 test("Search reclaim with a topLine pin keeps that exact line on openingSelection", async (t) => {
@@ -2134,6 +2272,115 @@ test("a caret at the start does not reclaim before Search applies its range", as
   await tick();
 
   assert.deepEqual(destination.ranges, [{ at, to: at + 4 }]);
+});
+
+test("a plain open reclaims one settle after the text editor reports, not after the full wait", async (t) => {
+  // Quick Open, the Explorer and links apply no range: waiting the whole
+  // report timeout for one only delays the note's Lumia tab.
+  t.mock.timers.enable({ apis: ["setTimeout"] });
+  const state = memento();
+  await state.update(MARKDOWN_WORKSPACE_EDITOR_KEY, true);
+  settings.set("workbench.editorAssociations", { "*.md": "default" });
+  const tab = cursorTab();
+  const destination = hunkDestination(tab);
+  const stop = host.reclaim.registerReclaim(
+    destination.navigation,
+    state as never,
+  );
+  t.after(() => stop.dispose());
+  tab.input = new TabInputText(Uri.parse(note));
+  const editor = nativeHunkEditor(tab, 0);
+  editor.selection = new Range(new Position(0, 0), new Position(0, 0));
+  destination.ready();
+
+  tabsChanged.fire({ opened: [tab], changed: [], closed: [] });
+  t.mock.timers.tick(0);
+  await tick();
+  assert.deepEqual(commands, [], "the range gets a settle first");
+  t.mock.timers.tick(39);
+  await tick();
+  assert.deepEqual(commands, [], "still inside the settle");
+  t.mock.timers.tick(1);
+  await tick();
+
+  assert.equal(commands.length, 1);
+  assert.equal(commands[0]?.[0], "vscode.openWith");
+  assert.deepEqual(destination.ranges, [{ at: 0 }], "a caret, not a match");
+});
+
+test("a Search range arriving inside the settle opens with that range", async (t) => {
+  t.mock.timers.enable({ apis: ["setTimeout"] });
+  const state = memento();
+  await state.update(MARKDOWN_WORKSPACE_EDITOR_KEY, true);
+  settings.set("workbench.editorAssociations", { "*.md": "default" });
+  const tab = cursorTab();
+  const destination = hunkDestination(tab);
+  const stop = host.reclaim.registerReclaim(
+    destination.navigation,
+    state as never,
+  );
+  t.after(() => stop.dispose());
+  tab.input = new TabInputText(Uri.parse(note));
+  const editor = nativeHunkEditor(tab, 0);
+  editor.selection = new Range(new Position(0, 0), new Position(0, 0));
+  destination.ready();
+
+  tabsChanged.fire({ opened: [tab], changed: [], closed: [] });
+  t.mock.timers.tick(0);
+  await tick();
+  t.mock.timers.tick(30);
+  assert.deepEqual(commands, []);
+  editor.selection = new Range(new Position(947, 0), new Position(949, 4));
+  selectionChanged.fire({ textEditor: editor });
+  await tick();
+
+  const text = editor.document.getText();
+  assert.deepEqual(destination.ranges, [
+    { at: text.indexOf("Line 948\n"), to: text.indexOf("Line 950\n") + 4 },
+  ]);
+});
+
+test("a text tab whose editor never reports waits the full report timeout", async (t) => {
+  t.mock.timers.enable({ apis: ["setTimeout"] });
+  const state = memento();
+  await state.update(MARKDOWN_WORKSPACE_EDITOR_KEY, true);
+  settings.set("workbench.editorAssociations", { "*.md": "default" });
+  const tab = cursorTab();
+  const destination = hunkDestination(tab);
+  const stop = host.reclaim.registerReclaim(
+    destination.navigation,
+    state as never,
+  );
+  t.after(() => stop.dispose());
+  tab.input = new TabInputText(Uri.parse(note));
+  nativeHunkEditor(tab, 0);
+  destination.ready();
+  vscode.window.activeTextEditor = undefined;
+
+  tabsChanged.fire({ opened: [tab], changed: [], closed: [] });
+  t.mock.timers.tick(249);
+  await tick();
+  assert.deepEqual(commands, []);
+  t.mock.timers.tick(1);
+  await tick();
+
+  assert.equal(commands.length, 1);
+  assert.equal(commands[0]?.[0], "vscode.openWith");
+});
+
+test("with Lumia associated directly, a text tab is not held for a Search range", async (t) => {
+  // Use Lumia for Markdown associates Lumia itself: the flag stays set, but a
+  // text tab is one someone chose, so the Search selection wait must not run.
+  t.mock.timers.enable({ apis: ["setTimeout"] });
+  const state = memento();
+  await state.update(MARKDOWN_WORKSPACE_EDITOR_KEY, true);
+  settings.set("lumiere.markdown.editor.reclaimInPlaceTextEditor", true);
+  const stop = host.reclaim.registerReclaim(undefined, state as never);
+  t.after(() => stop.dispose());
+  switchToText();
+  await tick();
+  assert.equal(commands.length, 1, "reclaimed at once, with no 250 ms wait");
+  assert.equal(commands[0]?.[2], viewType);
 });
 
 test("heal restores Search reclaim when associations are default without workspaceEditor", async (t) => {
@@ -3295,6 +3542,47 @@ test("reclaim skips missing Markdown paths (leaves built-in Text Editor)", async
     group.activeTab?.input instanceof TabInputText,
     "active editor stays the built-in Text Editor",
   );
+});
+
+test("a missing note opened in Lumia directly goes back to the built-in Text Editor", async (t) => {
+  // With *.md associated to Lumia, VS Code resolves Lumia's editor even for
+  // a path that does not exist yet; the 2026-11-04 lock keeps it as text.
+  const missing = `file:///vault/missing-open/direct.md`;
+  host.markdownAbsent.setMarkdownAbsentOnDiskForTests((uri) => uri === missing);
+  t.after(() =>
+    host.markdownAbsent.setMarkdownAbsentOnDiskForTests(() => false),
+  );
+  const extension = {
+    id: "lumiere.markdown",
+    extensionUri: Uri.parse("file:///ext"),
+    packageJSON: { name: "lumiere", enabledApiProposals: [] as string[] },
+  };
+  const opened: PanelShell[] = [];
+  const stop = host.editorPanels.registerEditor(
+    MARKDOWN_EDITOR,
+    {
+      extension,
+      extensionUri: extension.extensionUri as unknown as NativeUri,
+      documents: {
+        wrap: (doc: { uri: Uri }) =>
+          ({ uri: doc.uri.toString() }) as unknown as PanelShell["document"],
+      } as never,
+    },
+    (shell) => opened.push(shell),
+  );
+  t.after(stop);
+  const provider = registeredProviders.at(-1)?.provider as {
+    resolveCustomTextEditor(doc: unknown, panel: unknown): void;
+  };
+  const panel = createFakeWebviewPanel();
+  provider.resolveCustomTextEditor(createFakeDoc(missing, [""]), panel);
+  await tick();
+
+  assert.equal(opened.length, 0, "no Lumia panel for a missing note");
+  const openWith = commands.find((entry) => entry[0] === "vscode.openWith");
+  assert.equal(String(openWith?.[1]), missing);
+  assert.equal(openWith?.[2], "default");
+  assert.equal(panel.disposed, true);
 });
 
 test("reclaim still openWith Lumia for an existing Markdown path", async (t) => {

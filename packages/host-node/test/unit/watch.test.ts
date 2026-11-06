@@ -69,3 +69,44 @@ test("watching under a path that cannot exist neither throws nor hears", () => {
   );
   stop();
 });
+
+import { watchTree } from "../../src/host/watch-tree";
+
+test("folders created and removed at once under a watched tree throw nothing, and files are still heard", async (t) => {
+  const dir = await scratch(t);
+  const heard: string[] = [];
+  const uncaught: Error[] = [];
+  const onUncaught = (error: Error) => uncaught.push(error);
+  process.on("uncaughtException", onUncaught);
+  t.after(() => process.off("uncaughtException", onUncaught));
+  // The Linux path, whatever this machine is: it is the one that can throw.
+  const stop = watchTree(dir, (relative) => heard.push(relative), "linux");
+  t.after(stop);
+  for (let round = 0; round < 40; round++) {
+    const nested = path.join(dir, `gone-${round}`, "logs", "deeper");
+    await mkdir(nested, { recursive: true });
+    await rm(path.join(dir, `gone-${round}`), { recursive: true });
+  }
+  await new Promise((resolve) => setTimeout(resolve, 300));
+  assert.deepEqual(uncaught, []);
+
+  await mkdir(path.join(dir, "kept", "sub"), { recursive: true });
+  await new Promise((resolve) => setTimeout(resolve, 200));
+  await writeFile(path.join(dir, "kept", "sub", "note.md"), "x");
+  await writeFile(path.join(dir, "top.md"), "x");
+  await until(
+    () => heard.includes("kept/sub/note.md") && heard.includes("top.md"),
+    "files under the tree",
+  );
+  assert.deepEqual(uncaught, []);
+});
+
+test("a stopped tree watch hears nothing more", async (t) => {
+  const dir = await scratch(t);
+  const heard: string[] = [];
+  const stop = watchTree(dir, (relative) => heard.push(relative), "linux");
+  stop();
+  await writeFile(path.join(dir, "late.md"), "x");
+  await new Promise((resolve) => setTimeout(resolve, 200));
+  assert.deepEqual(heard, []);
+});

@@ -1,4 +1,6 @@
 import { prismPlugin } from "./prism.mjs";
+import { featureChunks } from "./feature-chunks.mjs";
+import { mergeEntryGraph } from "./merge-entry-graph.mjs";
 // Builds Lumia's assets into this package's dist/: the editor,
 // diff and graph webviews, the vault and search workers, and the public API
 // declarations. The extension host is bundled by the repository root
@@ -28,21 +30,26 @@ execFileSync(
   [require.resolve("typescript/bin/tsc"), "-p", "tsconfig.api.json"],
   { stdio: "inherit" },
 );
+// Separate builds, so the editor's chunks are shared with nothing else: the
+// diff and graph pages would otherwise import them, and editor.js below.
+const webview = {
+  ...shared,
+  outdir: "dist/webview",
+  platform: "browser",
+  format: "esm",
+  splitting: true,
+  target: "chrome120",
+  plugins: [prismPlugin],
+};
 const builds = [
+  { ...webview, entryPoints: { editor: "src/webview/main.ts" } },
+  { ...webview, entryPoints: { diff: "src/webview/diff/main.ts" } },
   {
-    ...shared,
+    ...webview,
     entryPoints: {
-      editor: "src/webview/main.ts",
-      diff: "src/webview/diff/main.ts",
       graph: "src/webview/graph/main.ts",
       "graph-layout": "src/webview/graph/layout-worker.ts",
     },
-    outdir: "dist/webview",
-    platform: "browser",
-    format: "esm",
-    splitting: true,
-    target: "chrome120",
-    plugins: [prismPlugin],
   },
   {
     ...shared,
@@ -63,12 +70,43 @@ const builds = [
     target: "node20",
   },
 ];
+/**
+ * After the editor build: list each feature's chunks (the host puts the first
+ * view's in the page as modulepreload hints), then fold the entry's static
+ * graph into editor.js (scripts/merge-entry-graph.mjs).
+ */
+async function finishEditorBuild(result, options) {
+  const workingDirectory = process.cwd();
+  await writeFile(
+    "dist/webview/feature-chunks.json",
+    JSON.stringify(
+      featureChunks({
+        metafile: result.metafile,
+        workingDirectory,
+        distDirectory: "dist",
+      }),
+    ),
+  );
+  await mergeEntryGraph({
+    metafile: result.metafile,
+    workingDirectory,
+    directory: path.resolve("dist/webview"),
+    build: {
+      minify: options.minify,
+      sourcemap: options.sourcemap,
+      target: options.target,
+    },
+  });
+}
 const inputs = new Set();
 for (const options of builds) {
   if (watch) {
     await (await esbuild.context(options)).watch();
   } else {
     const result = await esbuild.build(options);
+    if (options.entryPoints.editor) {
+      await finishEditorBuild(result, options);
+    }
     for (const input of Object.keys(result.metafile.inputs)) {
       inputs.add(input);
     }

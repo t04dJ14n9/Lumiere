@@ -1,7 +1,8 @@
 # Embeds
 
 Transcludes notes, headings and block IDs and displays images, audio and video,
-like Obsidian's embeds. PDFs and other attachments appear as cards that open files.
+like Obsidian's embeds. A PDF shows one page inline; other attachments appear as
+cards that open files.
 
 ## How it works
 
@@ -30,6 +31,8 @@ it go (`image-selection.ts`, `image-size.ts`). While selected, the caret is hidd
 - `manifest.ts`: enablement and Insert Embed contribution.
 - `webview.ts`: renderer, post-processor and command registrations.
 - `post-process.ts`: resource resolution, per-kind display and pass lifetime.
+- `missing.ts`: the text an embed that cannot be shown says (`“x.png” could not be found.`, a missing heading, `failed to fetch image` for bytes that did not load).
+- `stand-in.ts`: the `.file-embed` block that takes a failed Markdown `<img>`'s place, since an `<img>` shows no text.
 - `resource-cache.ts`: what embeds resolved, so a block rendered again shows its files at once.
 - `note.ts`: note/heading/block selection, ancestry and source-line mapping.
 - `image.ts`: zoom toolbar, fit/actual sizing, pan and resize controls.
@@ -61,6 +64,7 @@ workspace trust from Render. YouTube/Bilibili image links share the EmbedBlock h
 ## Limits and differences from Obsidian
 
 Cycles and ancestry depth of twelve are refused. Local files remain host-contained;
-remote media requires a trusted workspace. PDF embeds open cards rather than an
-inline PDF viewer; a card opens the PDF in Lumia PDF at the embed's page. WebM recovery supports VP8/VP9 and Opus/Vorbis when the host
+remote media requires a trusted workspace. A PDF embed draws one page (`#page=`,
+`#height=`) with page buttons rather than Obsidian's full PDF viewer; its Open
+button opens the PDF in Lumia PDF at that page. WebM recovery supports VP8/VP9 and Opus/Vorbis when the host
 MediaSource supports them. Visual and playback parity await owner comparison. Image embeds use Obsidian's `.embed-actions` frosted bar (inspect control; VS Code tokens).

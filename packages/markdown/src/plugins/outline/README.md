@@ -13,8 +13,16 @@ overflow action persists `outline.followCursor` through VS Code settings.
 When enabled, cursor movement, scrolling, panel changes and view visibility
 reveal and select the current section without taking focus. A scroll follows
 where the reader is (`reading-position.ts`, the plugin's webview half): the
-line at the top of the editor viewport (so the outline tracks what you are
-reading at the top of the pane). Caret moves still follow via `followCaret`.
+first line visible at the top of the editor viewport, below the sticky
+headings and the embedder's controls (`--lumiere-inset-top`), so a heading a
+jump put right under the pins is the one read. Caret moves still follow via
+`followCaret`, and the caret wins: a scroll the caret caused (an arrow past
+the bottom, Page Down, Ctrl+End, find next) is not reported, so the caret's
+section stays selected, as in Obsidian, whose outline follows the caret and
+not the scroll. Every deliberate jump (Go to Heading, a `[[#Heading]]` link, a
+sticky pin, an outline click) goes through the editor's `navigate`, which the
+reporter observes: what it scrolls is the jump's, however it was clamped at
+the end of the note, and the caret follow has the heading the jump selected.
 The default
 expand mode is accordion, like a page's table of contents: the active
 heading's parents and its own subheadings are open and every other branch
@@ -40,10 +48,16 @@ the top as the note allows. The jump a click makes does not collapse or expand
 anything (nor does the caret the editor reports from before it): rows that
 moved under the pointer sent a double-click's second click to another heading.
 Scroll follow (`followReading`) is held for that same jump window
-(`OUTLINE_JUMP_MS`) so a top-of-viewport report cannot yank selection off the
-clicked row while the heading is still settling at the top; caret follow keeps
-using `isOutlineJump`. The accordion applies again once the caret or the
-reading position moves on.
+(`OUTLINE_JUMP_MS`, `jump-window.ts`) so a top-of-viewport report cannot yank
+selection off the clicked row while the heading is still settling at the top;
+caret follow keeps using `isCaretOnJump`. The webview counts a report as sent,
+so the last one held back is applied when the window ends (scroll on to
+another section within the second and stop, and the outline moves there a
+moment later), unless a caret move or another click came after it. The
+accordion applies again once the caret or the reading position moves on.
+Above the first heading (frontmatter or a preamble) no section is current, and
+Obsidian clears the highlight; the view does the same through the tree's
+optional `clearSelection`, leaving the open rows as they are.
 
 Ctrl+Shift+O (Command+Shift+O on macOS), or **Lumia: Go to
 Heading…** in the command palette, opens a searchable heading picker. It reads
@@ -57,27 +71,36 @@ The command palette entry is workbench/config-gated like Quick Switcher. Hiding
 targets the view itself, including after moving it to the secondary sidebar or
 panel; showing restores and focuses it in its current location.
 
-When a Lumia editor becomes active, the plugin hides VS Code's
-native **Outline**, focuses **Markdown Outline** (expanded by default), and
-returns focus to the editor. **Tags** and other Explorer subpanels stay
-collapsed by default (`visibility: "collapsed"`); they are not focused on
-enter. Leaving the last Workshop editor restores the native Outline after a
-short debounce; restore is skipped if Lumia PDF (or another Workshop editor) already owns the active tab. Manual
-changes to Outline while a Workshop editor stays active are left alone until the
-next enter/leave. Tags also use the same `activeCustomEditorId` when-clause as
+When a Lumia editor is active, **Markdown Outline** stands in for VS Code's
+native **Outline**: the native one is hidden as soon as Markdown Outline is on
+screen, and comes back when the last Workshop editor is left (after a short
+debounce, skipped if Lumia PDF or another Workshop editor already owns the
+active tab), but only if this plugin hid it. Opening a note never changes which
+sidebar container is shown: a note opened from Search or Quick Open leaves the
+Search view in place, because focusing the view (`lumiere.markdown.outline.focus`)
+would bring up the Explorer. Markdown Outline is therefore never focused on open. It
+shows itself where the Explorer is already the container; VS Code lists an
+extension's Explorer views collapsed the first time, so the reader expands it
+once and VS Code remembers that. (Until then the native Outline is left alone.)
+**Tags** and other Explorer subpanels stay collapsed by default
+(`visibility: "collapsed"`). Manual changes to Outline while a Workshop editor
+stays active are left alone: the native Outline is hidden once per time a note
+becomes active. Tags also use the same `activeCustomEditorId` when-clause as
 Markdown Outline so they do not linger beside non-Workshop editors.
 
 ## Files
 
 - `host.ts`: the plugin registrations and editor/document event routing.
 - `webview.ts`, `reading-position.ts`: report where the reader is after a
-  scroll (debounced, only when it changes), over `protocol.ts`.
+  scroll (debounced, only when it changes and the caret did not cause the
+  scroll), over `protocol.ts`.
 - `symbol-picker.ts`: searchable headings and guarded navigation for Quick Pick.
 - `symbols.ts`: nested heading symbols with enclosing section ranges.
 - `tree.ts`: heading nodes, parent lookup and editor-to-source coordinates.
 - `view.ts`: refresh timing, cursor following and expansion traversal.
+- `jump-window.ts`: the second after an outline click, when the tree and scroll follow are left alone.
 - `actions.ts`: commands, configuration reads and the follow context key.
-- `focus.ts`: native Outline ↔ Markdown Outline enter/leave swap (Tags stay collapsed).
+- `focus.ts`: native Outline ↔ Markdown Outline swap while a Workshop editor is active, without changing the sidebar container (Tags stay collapsed).
 - `commands.ts`: view, command, setting and context identifiers.
 - `headings.ts`: nesting headings and finding the caret's section.
 - `manifest.ts`: view/title actions, the view, keybinding and the follow setting.
@@ -107,6 +130,9 @@ Markdown Outline so they do not linger beside non-Workshop editors.
 
 ## Limits and differences from Obsidian
 
+- VS Code's TreeView API can select a row but not clear the selection, so
+  there the last row stays highlighted while the caret or the top line is above
+  the first heading. The app's outline panel (host-node) clears it.
 - No drag-and-drop reordering of sections.
 - VS Code's native Outline and breadcrumbs require an editor integration that
   the supported CustomTextEditorProvider API does not supply. Workshop uses

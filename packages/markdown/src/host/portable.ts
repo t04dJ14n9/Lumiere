@@ -22,6 +22,11 @@ export { readSettings } from "./settings";
 export { createVaultParser } from "./vault-parser";
 export { isIgnoredPath } from "../plugins/vault/exclusion";
 export { MARKDOWN_EDITOR } from "../shared/editor-provider";
+export {
+  followsNewNoteFolder,
+  linkLocation,
+  type LinkFolder,
+} from "../shared/link-location";
 export { RevealRouter, chooseRevealPanel } from "./reveal-router";
 export { SourceCoordinates } from "../shared/document/coordinates";
 export type * from "../shared/host";

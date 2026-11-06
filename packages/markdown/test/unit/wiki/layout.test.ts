@@ -69,6 +69,9 @@ function filesWith(entries: Record<string, string>): WorkspaceFiles {
       return entries[uri];
     },
     async writeText() {},
+    async createText() {
+      return true;
+    },
     async writeBytes() {},
     async list() {
       return undefined;

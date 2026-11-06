@@ -116,7 +116,13 @@ function workspaceFileWrites(
   inside: (uri: string) => Promise<void>,
 ): Pick<
   WorkspaceFiles,
-  "writeText" | "writeBytes" | "mkdir" | "copy" | "move" | "remove"
+  | "writeText"
+  | "createText"
+  | "writeBytes"
+  | "mkdir"
+  | "copy"
+  | "move"
+  | "remove"
 > {
   // `save` / `saveBytes` only replace; `create` leaves an existing file as-is.
   const prepareWrite = async (uri: string) => {
@@ -128,6 +134,16 @@ function workspaceFileWrites(
     writeText: async (uri, text) => {
       await prepareWrite(uri);
       await files.save(uri, text);
+    },
+    createText: async (uri, text) => {
+      await inside(uri);
+      await files.mkdir(parentUri(files, uri));
+      // Only the writer that made the file fills it.
+      if (!(await files.create(uri))) {
+        return false;
+      }
+      await files.save(uri, text);
+      return true;
     },
     writeBytes: async (uri, data) => {
       await prepareWrite(uri);

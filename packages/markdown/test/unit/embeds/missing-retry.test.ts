@@ -118,8 +118,27 @@ class FakeElement {
   }
 }
 
+/**
+ * A void element: the browser keeps text assigned to an <img> but never
+ * paints it, so `visibleText` skips it. A failure written into the image
+ * itself is therefore invisible here, as it is on a page.
+ */
 class FakeImageElement extends FakeElement {
   override tagName = "IMG";
+}
+
+/** The text a reader can see in `node` and below, as the browser paints it. */
+function visibleText(node: FakeElement): string {
+  if (node.tagName === "IMG") {
+    return "";
+  }
+  return node.textContent + node.children.map(visibleText).join("");
+}
+
+function hasImage(node: FakeElement): boolean {
+  return (
+    node.tagName === "IMG" || node.children.some((child) => hasImage(child))
+  );
 }
 
 function installFakeDom(): () => void {
@@ -154,9 +173,9 @@ function settled(): Promise<void> {
   return new Promise((resolve) => setTimeout(resolve, 0));
 }
 
+/** An image that was there but would not load: remote, or found and broken. */
 function assertFailedImageSurface(node: FakeElement): void {
-  assert.ok(node.classList.contains("unresolved-embed"));
-  assert.equal(node.textContent, "failed to fetch image");
+  assertUnresolved(node, "failed to fetch image");
   assert.equal(
     node.children.some(
       (child) =>
@@ -169,6 +188,13 @@ function assertFailedImageSurface(node: FakeElement): void {
     "no img or action controls on a failed image",
   );
   assert.equal(node.classList.contains("image-embed"), false);
+}
+
+/** `surface` is something a reader sees, in the unresolved-embed style. */
+function assertUnresolved(surface: FakeElement, message: string): void {
+  assert.ok(surface.classList.contains("unresolved-embed"));
+  assert.equal(surface.tagName === "IMG", false, "an <img> shows no text");
+  assert.equal(visibleText(surface), message);
 }
 
 test("an embed whose file was missing shows it in place once the file is there", async () => {
@@ -191,6 +217,8 @@ test("an embed whose file was missing shows it in place once the file is there",
     const photo = new FakeImageElement();
     photo.dataset = { resource: "photo.png" };
     photo.title = "The plan";
+    const page = new FakeElement();
+    page.append(photo);
     const embeds = enhanceEmbeds({
       pass: passOf([sketch, photo]),
       render: { trusted: true } as unknown as RenderService,
@@ -198,8 +226,10 @@ test("an embed whose file was missing shows it in place once the file is there",
       open: () => {},
     });
     await settled();
-    assertFailedImageSurface(sketch);
-    assertFailedImageSurface(photo);
+    assertUnresolved(sketch, "“Sketch.sketch.svg” could not be found.");
+    // The <img> cannot show text: a block takes its place on the page.
+    assert.equal(hasImage(page), false);
+    assertUnresolved(page.children[0]!, "“photo.png” could not be found.");
 
     arrived.add("Sketch.sketch.svg");
     embeds.retryMissing();
@@ -216,14 +246,15 @@ test("an embed whose file was missing shows it in place once the file is there",
       sketch.children.find((child) => child.tagName === "IMG")?.src,
       "file:///vault/Sketch.sketch.svg?v=1",
     );
-    assert.ok(photo.classList.contains("unresolved-embed"), "still missing");
-    assert.equal(photo.textContent, "failed to fetch image");
+    assert.equal(hasImage(page), false, "still missing");
+    assertUnresolved(page.children[0]!, "“photo.png” could not be found.");
 
     arrived.add("photo.png");
     embeds.retryMissing();
     await settled();
     assert.deepEqual(loads.splice(0), ["photo.png"], "only what was missing");
-    assert.equal(photo.classList.contains("unresolved-embed"), false);
+    assert.equal(hasImage(page), true, "the image is back");
+    assert.doesNotMatch(visibleText(page), /could not be found/);
     assert.equal(photo.title, "The plan", "its own title, not the error");
     assert.equal(photo.src, "file:///vault/photo.png?v=1");
 
@@ -261,6 +292,39 @@ test("a remote https image that fails to load shows unresolved-embed without act
     image.dispatch("error");
     assertFailedImageSurface(node);
     assert.equal(node.children.length, 0, "img and embed-actions are cleared");
+  } finally {
+    restoreDom();
+  }
+});
+
+test("a missing Markdown image says so where the image was, and the image returns on dispose", async () => {
+  const restoreDom = installFakeDom();
+  try {
+    const page = new FakeElement();
+    const photo = new FakeImageElement();
+    photo.dataset = { resource: "attachments/missing.png" };
+    page.append(photo);
+    const embeds = enhanceEmbeds({
+      pass: passOf([photo]),
+      render: { trusted: true } as unknown as RenderService,
+      resources: {
+        async load(): Promise<Resource> {
+          throw new Error("Resource not found");
+        },
+      },
+      open: () => {},
+    });
+    await settled();
+    assert.equal(page.children.length, 1);
+    const [message] = page.children;
+    assert.equal(message!.tagName, "SPAN");
+    assert.equal(message!.className, "file-embed", "styled as ![[…]] is");
+    assertUnresolved(message!, "“attachments/missing.png” could not be found.");
+    assert.equal(message!.title, "Error: Resource not found");
+    assert.equal(hasImage(page), false);
+
+    embeds.dispose();
+    assert.deepEqual(page.children, [photo]);
   } finally {
     restoreDom();
   }
@@ -343,8 +407,7 @@ test("a missing note embed keeps the could-not-be-found wording", async () => {
       open: () => {},
     });
     await settled();
-    assert.ok(note.classList.contains("unresolved-embed"));
-    assert.equal(note.textContent, '"MissingNote" could not be found.');
+    assertUnresolved(note, "“MissingNote” could not be found.");
   } finally {
     restoreDom();
   }

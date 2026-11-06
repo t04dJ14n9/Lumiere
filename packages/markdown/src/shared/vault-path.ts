@@ -107,17 +107,6 @@ export function relativeVaultPath(folder: string, target: string): string {
   return [...up, ...to.slice(common)].join("/");
 }
 
-/** Folder steps between two folders: 0 for the same folder. */
-export function folderDistance(from: string, to: string): number {
-  const a = from ? from.split("/") : [];
-  const b = to ? to.split("/") : [];
-  let common = 0;
-  while (common < a.length && common < b.length && a[common] === b[common]) {
-    common++;
-  }
-  return a.length - common + (b.length - common);
-}
-
 /** `https:`, `mailto:`, `obsidian:` and similar links never name vault files. */
 export function isExternalLink(link: string): boolean {
   return /^[a-z][a-z0-9+.-]*:/i.test(link);

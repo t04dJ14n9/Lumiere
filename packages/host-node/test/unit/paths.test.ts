@@ -62,6 +62,13 @@ test("writing does not follow a symlink, and creating does not truncate", async 
 
   const file = path.join(root, "New.md");
   await writeFile(file, "keep");
-  await createEmptyFile(file);
+  assert.equal(await createEmptyFile(file), false);
   assert.equal(await readFile(file, "utf8"), "keep");
+  // A link in the way counts as taken, whatever it points at.
+  assert.equal(await createEmptyFile(link), false);
+  assert.equal(await readFile(secret, "utf8"), "keep");
+
+  const fresh = path.join(root, "Fresh.md");
+  assert.equal(await createEmptyFile(fresh), true);
+  assert.equal(await readFile(fresh, "utf8"), "");
 });

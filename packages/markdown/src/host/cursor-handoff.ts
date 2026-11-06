@@ -118,15 +118,33 @@ async function dismissMirror(
   }
 }
 
-/** Mirror text editor by active focus, else any still-visible tab for the note. */
-function mirrorTextEditor(targetKey: string): vscode.TextEditor | undefined {
+/**
+ * Mirror text editor: the note's editor in the mirror's own column, else the
+ * active one, else any still-visible one. The same note can also be open
+ * natively in another column; its selection and scroll are not the mirror's,
+ * so the column wins over focus. `column` is unknown when the mirror's tab
+ * could not be found, and the focus-based guess is the only signal left.
+ */
+function mirrorTextEditor(
+  targetKey: string,
+  column: vscode.ViewColumn | undefined,
+): vscode.TextEditor | undefined {
   const active = vscode.window.activeTextEditor;
-  if (active?.document.uri.toString() === targetKey) {
+  const isNote = (candidate: vscode.TextEditor) =>
+    candidate.document.uri.toString() === targetKey;
+  if (column !== undefined) {
+    const inColumn = [
+      ...(active ? [active] : []),
+      ...vscode.window.visibleTextEditors,
+    ].find((candidate) => isNote(candidate) && candidate.viewColumn === column);
+    if (inColumn) {
+      return inColumn;
+    }
+  }
+  if (active && isNote(active)) {
     return active;
   }
-  return vscode.window.visibleTextEditors.find(
-    (candidate) => candidate.document.uri.toString() === targetKey,
-  );
+  return vscode.window.visibleTextEditors.find(isNote);
 }
 
 /** Selection + top-line pin for Live Preview after Chat/Edit dismiss. */
@@ -134,7 +152,13 @@ function captureMirrorOpenRange(
   targetKey: string,
 ): NativeOpenRange | undefined {
   // Chat may steal focus before dismiss; do not require activeTextEditor.
-  const editor = mirrorTextEditor(targetKey);
+  // This runs before closeMirrorEditor, so ask mirrorFocusState for the tab
+  // that scan will close: both take the note's first text tab, and no await
+  // separates them.
+  const editor = mirrorTextEditor(
+    targetKey,
+    mirrorFocusState(targetKey)?.viewColumn,
+  );
   if (!editor) {
     return undefined;
   }

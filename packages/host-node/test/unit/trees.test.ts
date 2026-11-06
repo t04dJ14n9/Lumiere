@@ -132,6 +132,18 @@ test("expand and collapse emit without a full changed refresh", async () => {
   );
 });
 
+test("clearing the selection reaches the embedder; a disposed tree says nothing", async () => {
+  const { trees, events } = hub();
+  const handle = trees.tree("outline", outline());
+  events.length = 0;
+  await handle.clearSelection?.();
+  assert.deepEqual(events, [{ type: "deselect", viewId: "outline" }]);
+  handle.dispose();
+  events.length = 0;
+  await handle.clearSelection?.();
+  assert.deepEqual(events, []);
+});
+
 test("visibility set before a tree registers is preserved on the registered handle", () => {
   const { trees } = hub();
   trees.setVisible("outline", true);
