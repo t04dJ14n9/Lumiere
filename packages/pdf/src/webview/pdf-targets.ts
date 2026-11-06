@@ -7,17 +7,9 @@ import {
   type PdfLinkTarget,
 } from "@embedpdf/models";
 import type { OutlineItem } from "../shared/messages";
+import { targetDestination, targetPage } from "../shared/pdf-link-target";
 
-/**
- * The 1-based page a bookmark or link opens, if it points inside the PDF.
- * External links (URLs, other files) have none.
- */
-export function targetPage(
-  target: PdfLinkTarget | undefined,
-): number | undefined {
-  const destination = targetDestination(target);
-  return destination ? destination.pageIndex + 1 : undefined;
-}
+export { targetPage };
 
 /**
  * How far down its page a bookmark or link opens, in points from the top,
@@ -41,20 +33,6 @@ export function targetTop(
   }
   const top = height - Math.min(height, fromBottom);
   return top >= 0 ? top : undefined;
-}
-
-function targetDestination(
-  target: PdfLinkTarget | undefined,
-): PdfDestinationObject | undefined {
-  if (!target) {
-    return undefined;
-  }
-  if (target.type === "destination") {
-    return target.destination;
-  }
-  return target.action.type === PdfActionType.Goto
-    ? target.action.destination
-    : undefined;
 }
 
 /** The height a destination names, in PDF points up from the page bottom. */

@@ -5,36 +5,57 @@ import {
   candidate,
   fileCandidates,
   noteBlockCandidates,
+  pdfSectionCandidates,
   tagCandidates,
   type Candidate,
 } from "./candidates";
 import { noteBlocks } from "../../markdown/metadata/note-blocks";
+import type { PdfSection } from "../../shared/pdf-outlines";
 import { rankedCandidates } from "./rank";
+const isPdf = (file: VaultFile) => file.extension.toLowerCase() === "pdf";
 /** Groups rebuild after index changes; unchanged files retain prepared ranking text. */
 export class SuggestionIndex {
   private readonly groups = new Map<string, readonly Candidate[]>();
   private readonly files = new Map<string, readonly Candidate[]>();
+  /** The bookmarks last read from each PDF, and what they were made into. */
+  private readonly pdfSections = new Map<
+    string,
+    { read: readonly PdfSection[]; candidates: readonly Candidate[] }
+  >();
   /**
    * @param readText A note's current text, to offer every one of its blocks;
    *   without it only blocks with an id are offered.
+   * @param readSections A PDF's bookmarks, to offer them after `[[paper.pdf#`;
+   *   without it a PDF has nothing to offer there.
    */
   constructor(
     private readonly vault: VaultIndex,
     private readonly readText?: (file: VaultFile) => Promise<string>,
+    private readonly readSections?: (
+      file: VaultFile,
+    ) => Promise<readonly PdfSection[]>,
   ) {}
 
-  /** Read the note whose blocks `request` asks for, so `query` offers them all. */
+  /**
+   * Read what `request` asks for beyond the vault's metadata, so `query` can
+   * answer at once: every block of a note, or the bookmarks of a PDF.
+   */
   async prepare(source: string, request: Query): Promise<void> {
     const path = this.targetPath(source, request);
     const file = path === undefined ? undefined : this.vault.file(path);
-    const note = file && this.vault.metadata(file.path);
-    const key = `allBlocks:${path}`;
-    if (
-      request.kind !== "block" ||
-      !this.readText ||
-      !note ||
-      this.files.has(key)
-    ) {
+    if (!file) {
+      return;
+    }
+    if (request.kind === "block") {
+      await this.prepareBlocks(file);
+    } else if (request.kind === "heading" && isPdf(file)) {
+      await this.prepareSections(file);
+    }
+  }
+  private async prepareBlocks(file: VaultFile): Promise<void> {
+    const note = this.vault.metadata(file.path);
+    const key = `allBlocks:${file.path}`;
+    if (!this.readText || !note || this.files.has(key)) {
       return;
     }
     const text = await this.readText(file);
@@ -42,6 +63,25 @@ export class SuggestionIndex {
       key,
       noteBlockCandidates(file, text, noteBlocks(text, note)),
     );
+    this.groups.clear();
+  }
+  /**
+   * Asked on every keystroke: the reader answers from its own cache until the
+   * PDF changes, so what was made into candidates is reused while it is the
+   * same list.
+   */
+  private async prepareSections(file: VaultFile): Promise<void> {
+    if (!this.readSections) {
+      return;
+    }
+    const read = await this.readSections(file);
+    if (this.pdfSections.get(file.path)?.read === read) {
+      return;
+    }
+    this.pdfSections.set(file.path, {
+      read,
+      candidates: pdfSectionCandidates(file, read),
+    });
     this.groups.clear();
   }
   invalidate(change?: VaultChange): void {
@@ -57,6 +97,7 @@ export class SuggestionIndex {
     for (const kind of ["link", "heading", "block", "allBlocks"]) {
       this.files.delete(`${kind}:${path}`);
     }
+    this.pdfSections.delete(path);
   }
   query(source: string, request: Query, useWikilinks = true): Suggestion[] {
     const entries = this.candidates(source, request);
@@ -160,13 +201,7 @@ export class SuggestionIndex {
       if (file.excluded && kind !== "link") {
         continue;
       }
-      // One note's blocks are all offered once read; a vault-wide search
-      // offers the blocks with an id.
-      const all =
-        path !== undefined && this.files.get(`allBlocks:${file.path}`);
-      result.push(
-        ...(kind === "block" && all ? all : this.forFile(file, kind)),
-      );
+      result.push(...this.offered(file, kind, path !== undefined));
       if (kind === "link") {
         for (const text of this.vault.unresolvedLinks(file.path).keys()) {
           unresolved.add(text);
@@ -179,6 +214,27 @@ export class SuggestionIndex {
       );
     }
     return result;
+  }
+  /**
+   * What `file` offers for `kind`. One note's blocks are all offered once
+   * read; a vault-wide search offers the blocks with an id. A PDF offers its
+   * bookmarks where a note offers its headings.
+   */
+  private offered(
+    file: VaultFile,
+    kind: "link" | "heading" | "block",
+    singleFile: boolean,
+  ): readonly Candidate[] {
+    if (kind === "block" && singleFile) {
+      const all = this.files.get(`allBlocks:${file.path}`);
+      if (all) {
+        return all;
+      }
+    }
+    if (kind === "heading" && isPdf(file)) {
+      return this.pdfSections.get(file.path)?.candidates ?? [];
+    }
+    return this.forFile(file, kind);
   }
   private forFile(
     file: VaultFile,

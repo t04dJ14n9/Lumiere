@@ -12,7 +12,7 @@ import {
   startMarkdown,
   type MarkdownWorkshopApi,
 } from "@workshop/markdown/host";
-import { startPdf } from "@workshop/pdf/host";
+import { createPdfOutlines, startPdf } from "@workshop/pdf/host";
 import { markdownNoteSelections } from "./note-selections";
 
 let root: RootContext | undefined;
@@ -38,6 +38,12 @@ export async function activate(
     "noteSelections",
     markdownNoteSelections(() => markdown.api),
   );
+  // Lumia reads PDF bookmarks, for `[[paper.pdf#`, with the viewer's PDFium.
+  // Provided before Lumia starts, so its editor host does not restart when it
+  // arrives.
+  const outlines = createPdfOutlines(context, channel);
+  context.subscriptions.push({ dispose: () => outlines.dispose() });
+  root.provide("pdfOutlines", outlines);
   startPdf(root);
   const api = await startMarkdown(root, context);
   markdown.api = api;

@@ -48,6 +48,10 @@ function wikiText(
   if (value.kind === "literal" || value.kind === "heading") {
     return value.text;
   }
+  if (value.kind === "pdfSection") {
+    // The alias cannot hold brackets: `]]` would end the link early.
+    return `page=${value.page}|${value.title.replace(/[[\]]/gu, "")}`;
+  }
   if (value.kind === "block") {
     return globalBlock
       ? `${vault.linkText(value.target, source)}#^${value.id}`
@@ -74,6 +78,9 @@ function markdownLink(entry: Candidate, source: string): string {
 function fragment(value: Value): string {
   if (value.kind === "heading") {
     return `#${encodeDestination(value.text)}`;
+  }
+  if (value.kind === "pdfSection") {
+    return `#page=${value.page}`;
   }
   return value.kind === "block" ? `#^${encodeDestination(value.id)}` : "";
 }

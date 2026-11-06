@@ -1,19 +1,22 @@
 import type { Context, Plugin } from "@workshop/core";
 import type { PanelShell } from "../../shared/host";
 import type {} from "../vault/api";
+import type {} from "../../shared/pdf-outlines";
 import { protocol } from "./protocol";
 import { SuggestionIndex } from "./sources";
 export const suggestHost: Plugin<{ panel: PanelShell }> = {
   name: "suggest",
   inject: {
     required: ["rpc", "vault", "settings"],
-    optional: ["vaults", "hostDocuments"],
+    optional: ["vaults", "hostDocuments", "pdfOutlines"],
   },
   apply(ctx, { panel }) {
     const vaults = ctx.vaults;
+    const outlines = ctx.pdfOutlines;
     const index = new SuggestionIndex(
       ctx.vault,
       vaults && ((file) => vaults.text(file.uri)),
+      outlines && ((file) => outlines.sections(file.uri)),
     );
     registerBlockIds(ctx);
     ctx.effect(() =>

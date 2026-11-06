@@ -4,6 +4,9 @@
 //                             host only when the bridge starts (it carries the
 //                             MCP SDK and zod, which the host never loads otherwise)
 //   dist/bridge-stdio.js      the stdio shim MCP clients run (see Copy MCP Setup)
+//   dist/outline-engine.js    the extension host's PDFium for reading bookmarks
+//                             (note suggestions); loaded on first use, with
+//                             the viewer's pdfium.wasm
 //   dist/webview/viewer.js    the PDF viewer page (browser), plus viewer.css
 //   dist/webview/pdfium.wasm  the PDF engine, loaded by the viewer at runtime
 //
@@ -51,6 +54,39 @@ const bridgeStdio = {
   target: "node20",
 };
 
+/**
+ * `@embedpdf/engines/pdfium` also imports the tables of CDN font URLs behind
+ * its font fallback, seven packages, which the outline engine never turns on.
+ * They stay out of the bundle and its notices.
+ */
+const withoutFontFallbackTables = {
+  name: "without-font-fallback-tables",
+  setup(build) {
+    build.onResolve({ filter: /^@embedpdf\/fonts-/ }, (args) => ({
+      path: args.path,
+      namespace: "no-fonts",
+    }));
+    build.onLoad({ filter: /.*/, namespace: "no-fonts" }, () => ({
+      contents: "export const fonts = [];",
+    }));
+  },
+};
+
+const outlineEngine = {
+  ...shared,
+  entryPoints: [path.join(root, "src/extension/outlines/engine.ts")],
+  outfile: path.join(dist, "outline-engine.js"),
+  platform: "node",
+  format: "cjs",
+  target: "node20",
+  // PDFium's loader reads `import.meta.url`, which a CommonJS bundle lacks.
+  define: { "import.meta.url": "__importMetaUrl" },
+  banner: {
+    js: 'const __importMetaUrl = require("node:url").pathToFileURL(__filename).href;',
+  },
+  plugins: [withoutFontFallbackTables],
+};
+
 const webview = viewerBuild({
   out: path.join(dist, "webview"),
   production,
@@ -60,14 +96,14 @@ await rm(dist, { recursive: true, force: true });
 await copyEngine(path.join(dist, "webview"));
 if (watch) {
   const contexts = await Promise.all(
-    [bridgeServer, bridgeStdio, webview].map((options) =>
+    [bridgeServer, bridgeStdio, outlineEngine, webview].map((options) =>
       esbuild.context(options),
     ),
   );
   await Promise.all(contexts.map((context) => context.watch()));
 } else {
   const results = await Promise.all(
-    [bridgeServer, bridgeStdio, webview].map((options) =>
+    [bridgeServer, bridgeStdio, outlineEngine, webview].map((options) =>
       esbuild.build(options),
     ),
   );

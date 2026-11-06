@@ -19,3 +19,12 @@ export const FIGURE: {
 };
 
 export function figurePdf(): Buffer<ArrayBuffer>;
+
+export const OUTLINE: readonly {
+  readonly title: string;
+  readonly page: number;
+  readonly children: typeof OUTLINE;
+}[];
+
+export function outlinePdf(): Buffer<ArrayBuffer>;
+export function shortPdf(): Buffer<ArrayBuffer>;

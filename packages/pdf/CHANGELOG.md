@@ -2,6 +2,9 @@
 
 ## Unreleased
 
+- **Section links from notes.** Lumia reads a PDF's bookmarks with Lumia
+  PDF's PDFium (`dist/pdf/outline-engine.js`, loaded on first use) to suggest
+  them after `[[paper.pdf#`.
 - **Chrome-aligned PDF backlink overlays.** Passage highlights live in vault
   Markdown as Copy link Quotes (`#page=` + `#:~:text=`), not in
   `*.pdf.lumiere.md`. The viewer paints backlink overlays from those links

@@ -21,6 +21,14 @@ a space at the end of a paragraph, list item or footnote, or on a line of its
 own after any other block, in this note or in the other one (if the text
 there has not changed).
 
+`[[paper.pdf#` offers the PDF's bookmarks, as Obsidian offers a note's
+headings. Picking one writes the page and its title:
+`[[paper.pdf#page=5|Methods]]`, or `[Methods](paper.pdf#page=5)` with
+`links.useWikilinks` off. Lumia and Lumia PDF already open `paper.pdf#page=5`
+at that page. The bookmarks come from the injected `pdfOutlines` service;
+before a bookmark list is ranked, `prepare()` asks for it, as it reads a note
+for `[[Note#^`.
+
 A source may instead return a list it makes itself (`LocalSuggestions`, the
 highlight colours after `==`), shown without asking the host; Tab does not
 take its entries, as in Obsidian. Each entry builds its acceptance transaction
@@ -42,7 +50,7 @@ nothing typed, notes come most recently changed first.
 - `manifest.ts`: default enablement and surfaces.
 - `protocol.ts`: bounded query and result schemas.
 - `sources.ts`: indexed candidate groups and per-file cache invalidation.
-- `candidates.ts`: metadata candidate construction.
+- `candidates.ts`: metadata candidate construction, PDF bookmarks included.
 - `insertion.ts`: deferred wiki/Markdown insertion and destination encoding.
 - `rank.ts`: Obsidian's scoring and bounded best-50 selection.
 - `host.ts`: per-panel RPC and source enablement checks.
@@ -53,7 +61,10 @@ nothing typed, notes come most recently changed first.
 ## Services, events and settings
 
 Provides `suggest.register`; webview injects `editor` and `rpc`, host injects
-`rpc`, `vault` and the host service `settings`. Emits the `suggest/trigger` bail event; Links and
+`rpc`, `vault` and the host service `settings`, and optionally `vaults`,
+`hostDocuments` and `pdfOutlines` (`src/shared/pdf-outlines.ts`: the
+extension's root provides it from Lumia PDF; the editor host hands it to each
+panel). Emits the `suggest/trigger` bail event; Links and
 Tags listen independently. `lumiere.markdown.plugins.suggest.enabled` defaults
 to true. No palette commands or assigned verify shortcuts.
 
@@ -65,6 +76,12 @@ differently. First candidate construction can exceed a frame on large vaults;
 warm queries reuse cached candidates. Existing indexed metadata can lag typing by the indexer's
 refresh interval. The popup uses CodeMirror's UI. A vault-wide block search
 (`[[^^`) offers blocks with an id only.
+
+PDF bookmarks are listed flat, in document order, without their nesting, and
+only those that open a page of the PDF itself. They exist only where a PDF
+engine does: in VS Code and Cursor. Elsewhere (the web app, the iPad, DSH)
+`[[paper.pdf#` offers nothing. Obsidian offers no PDF bookmarks; the
+`#page=N|title` form is Lumia's.
 
 With `links.useWikilinks` off, accepting a link/head/block completion replaces
 the entire partial wiki token with a Markdown link. Existing `]]` are consumed.
