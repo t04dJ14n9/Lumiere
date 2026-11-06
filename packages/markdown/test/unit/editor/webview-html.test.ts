@@ -98,6 +98,8 @@ test("with a snapshot it is in #app and the editor loads by import()", () => {
   assert.ok(html.includes(`'nonce-${nonce}'`), "the CSP allows that script");
   assert.match(html, /import\("vscode-resource:\/webview\/editor.js"\)/);
   assert.match(html, /window\.lumiaEarlyMessages=early/);
+  // A failed load stops keeping messages nobody will read.
+  assert.match(html, /\.catch\(\(error\)=>\{[^}]*early\.stop\(\)/);
   // A restored view opens elsewhere than the top: no snapshot over it.
   assert.match(
     html,

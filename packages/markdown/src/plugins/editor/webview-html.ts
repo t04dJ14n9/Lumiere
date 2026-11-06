@@ -23,7 +23,7 @@ function importEditor(entry: string): string {
     `const early={queue:[],stop(){removeEventListener("message",keep)}};` +
     `function keep(event){if(early.queue.length<1000){early.queue.push(event)}}` +
     `addEventListener("message",keep);window.lumiaEarlyMessages=early;` +
-    `import(${url}).catch((error)=>{${drop};console.error(error)})})()`
+    `import(${url}).catch((error)=>{${drop};early.stop();console.error(error)})})()`
   );
 }
 
