@@ -86,11 +86,16 @@ test("plain click on a wikilink inside a rendered table cell follows the link, a
   await expect(link).toHaveAttribute("data-href", "Target");
 
   // As everywhere in the editor (Obsidian's editor hover source), a plain
-  // hover does not preview; holding Mod does.
+  // hover does not preview; holding Mod does. The preview opens from a 300 ms
+  // timer, so the clock is paused and run past that delay: a preview that
+  // plain hover scheduled has fired by then, with no sleep to outlast.
   const preview = page.locator(".link-preview");
+  await page.clock.install();
+  await page.clock.pauseAt(Date.now() + 1_000);
   await link.hover();
-  await page.waitForTimeout(500);
+  await page.clock.runFor(1_000);
   await expect(preview).toHaveCount(0);
+  await page.clock.resume();
   await page.mouse.move(0, 0);
   await page.keyboard.down("ControlOrMeta");
   await link.hover();
