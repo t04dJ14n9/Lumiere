@@ -6632,3 +6632,49 @@ tree (or when it fails); an open-only follow that is superseded leaves the
 previous set. PDF's follower never cleared `opened` mid-apply, so it did not
 need the same change. Test: `host.test.ts` scroll-supersede case.
 
+
+## Outline: scroll follow no longer fights the caret (2026-11-05)
+
+A review of #496/#507 found four ways the outline's scroll follow went wrong.
+Obsidian's outline follows the caret in Live Preview and Source and uses the
+scroll position only in Reading view; Lumia keeps following the scroll too
+(#496) but never against the caret.
+
+- A scroll the caret caused (an arrow past the bottom, Page Down, Ctrl+End,
+  find next, the scroll a jump makes) was reported about 100 ms after the
+  caret follow, and the section at the top of the viewport took over. The
+  webview's `ReadingReporter` now tells a scroll that follows a selection
+  change (within `CARET_SCROLL_MS`) from the reader's own and reports only the
+  latter. The caret's scroll is remembered but not reported, so a later layout
+  shift to the same top line is not news either.
+- Go to Heading, `[[#Heading]]` links and sticky pins also put a heading at
+  the top (`scrollTargetToTop`), but only outline clicks held back scroll
+  follow. Near the end of the note the `y: "start"` scroll is clamped, so the
+  top line belongs to an earlier heading and the outline selected that; and a
+  nested heading placed just below the sticky pins was under them for the
+  probe at the viewport's top edge, so the section before it was selected.
+  `readingOffset` now probes below the sticky overlay and the
+  `--lumiere-inset-top` inset (found through the DOM and the CSS variable;
+  nothing of sticky scroll's is imported), and the reporter observes the
+  editor's `onNavigate`, so the scroll of any deliberate jump is the jump's,
+  not the reader's. No host-side hold was added for these sources: they never
+  reach the host as scroll reports, and the host's hold also keeps the tree
+  still under a double-click, which only an outline click needs.
+- After an outline click the view dropped every scroll report for a second,
+  but the webview had already recorded them as sent: click row B, scroll on
+  to D within the second and stop, and the outline stayed on B until the top
+  line changed again. `OutlineJumpWindow` (`jump-window.ts`, moved out of
+  `view.ts`, which was four lines short of its limit) now keeps the last
+  report it holds back and applies it when the window ends, unless a caret
+  move, another click, a refresh or a stop came after it. The report goes
+  through `followReading` again, so the panel and text-version checks apply.
+- With the caret or the top line above the first heading (frontmatter,
+  preamble) the follow returned early and the old row stayed highlighted;
+  Obsidian clears it. `TreeHandle` gets an optional `clearSelection`;
+  host-node's tree emits a `deselect` event and the app's tree panel unmarks
+  the current row. VS Code's TreeView can select a row (`reveal`) but has no
+  API to clear the selection (`TreeView.selection` is read-only, and the
+  list's `list.clear` acts on whichever list was focused last), so its adapter
+  does not implement it and the row stays highlighted there. The caret from
+  before an outline click, reported above the first heading, is held like any
+  other so it cannot clear the clicked row.

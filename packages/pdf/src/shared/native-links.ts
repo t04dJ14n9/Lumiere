@@ -26,28 +26,52 @@ function inlineLinks(line: string, offset: number): NativeLink[] {
     if (escaped(line, match.index)) {
       continue;
     }
-    const start = match.index + match[0].length;
-    const end = destinationEnd(line, start);
-    if (end === undefined) {
+    const destination = readLinkDestination(
+      line,
+      match.index + match[0].length,
+    );
+    if (!destination) {
       continue;
     }
-    const angle = line[start] === "<";
-    const from = start + (angle ? 1 : 0);
-    const to = end - (angle ? 1 : 0);
-    const tail = line.slice(end);
-    if (!/^\s*(?:["'][^\n]*?["']\s*)?\)/.test(tail)) {
-      continue;
-    }
-    const href = line
-      .slice(from, to)
-      .replace(/\\([!"#$%&'()*+,\-./:;<=>?@[\]\\^_`{|}~])/g, "$1");
+    const { href } = destination;
     // Entities require a complete HTML entity parser; leave them to the host.
     if (/&(?:#\w+|\w+);/.test(href)) {
       continue;
     }
-    result.push({ from: offset + from, to: offset + to, href });
+    result.push({
+      from: offset + destination.from,
+      to: offset + destination.to,
+      href,
+    });
   }
   return result;
+}
+
+/**
+ * The destination of an inline link whose `(` (and the space after it) ends
+ * just before `start` in `line`: `<angle form>` or a bare one with balanced
+ * parentheses, then an optional title and the closing `)`. `from`/`to` are
+ * the destination's own range, without angle brackets; `href` has its
+ * backslash escapes removed but is still percent-encoded.
+ */
+export function readLinkDestination(
+  line: string,
+  start: number,
+): NativeLink | undefined {
+  const end = destinationEnd(line, start);
+  if (end === undefined) {
+    return undefined;
+  }
+  const angle = line[start] === "<";
+  const from = start + (angle ? 1 : 0);
+  const to = end - (angle ? 1 : 0);
+  if (!/^\s*(?:["'][^\n]*?["']\s*)?\)/.test(line.slice(end))) {
+    return undefined;
+  }
+  const href = line
+    .slice(from, to)
+    .replace(/\\([!"#$%&'()*+,\-./:;<=>?@[\]\\^_`{|}~])/g, "$1");
+  return { from, to, href };
 }
 
 function escaped(text: string, at: number): boolean {

@@ -110,3 +110,32 @@ test("placeholder ignores indented YAML continuations when counting rows", () =>
 test("placeholder collapsed floor applies when the fence has no property rows", () => {
   assert.equal(frontmatterPlaceholderHeight("---\n---\n\n# Heading\n"), 69);
 });
+
+test("placeholder does not count # comment lines as properties", () => {
+  const doc =
+    "---\n# a note about the keys\ntitle: hi\n# another\nstatus: open\n---\n";
+  // Same two rows as the comment-free fence (166).
+  assert.equal(frontmatterPlaceholderHeight(doc), 166);
+  assert.equal(
+    frontmatterPlaceholderHeight("---\n# only a comment\n---\n"),
+    69,
+  );
+});
+
+test("placeholder does not count flush `- item` lines as properties", () => {
+  // YAML allows a sequence at its key's indentation: `tags:` is one row.
+  const doc = "---\ntags:\n- a\n- b\n-\n- c\ntitle: hi\n---\n";
+  assert.equal(frontmatterPlaceholderHeight(doc), 166);
+});
+
+test("placeholder counts plain keys that only contain # or - characters", () => {
+  // `-dash` and `a-b` are keys; `#` only comments out a whole line.
+  const doc = "---\n-dash: 1\na-b: 2\n---\n";
+  assert.equal(frontmatterPlaceholderHeight(doc), 166);
+});
+
+test("placeholder counts CRLF fences by top-level key only", () => {
+  const doc = "---\r\n# c\r\ntitle: hi\r\ntags:\r\n- a\r\n  \r\n---\r\n";
+  // Two rows: title and tags.
+  assert.equal(frontmatterPlaceholderHeight(doc), 166);
+});

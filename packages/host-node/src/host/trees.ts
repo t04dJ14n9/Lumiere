@@ -139,6 +139,11 @@ export class TreeHub {
           });
         }
       },
+      clearSelection: async () => {
+        if (live()) {
+          this.emit({ type: "deselect", viewId });
+        }
+      },
       expand: async (node) => {
         if (live()) {
           tree.expansion.set(node.id, true);

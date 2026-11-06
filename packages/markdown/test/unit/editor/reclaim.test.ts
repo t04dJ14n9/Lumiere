@@ -3,6 +3,7 @@ import assert from "node:assert/strict";
 import {
   associatedWith,
   Bypass,
+  cursorMarkdownEditorTakes,
   Lease,
   isReclaimableNote,
   reclaimEnabled,
@@ -131,16 +132,72 @@ test("a switch into Cursor's input-less Markdown editor is reclaimed", () => {
 
 test("a restored or primary Cursor Markdown tab is reclaimed when its label names a note", () => {
   // adoptOpenTabs and a first open classify as none→other. labelUri only
-  // resolves when exactly one open textDocument matches the tab label, so a
-  // plan editor without that document never reaches shouldReclaim. Reclaiming
-  // none→other restores Lumia menus (Copy link / Format) on the Preview|
-  // Markdown repro path.
+  // resolves when exactly one open textDocument matches the tab label, and
+  // the file must be one Cursor's Markdown editor takes (not a plan file; see
+  // the tests below). Reclaiming none→other restores Lumia menus (Copy link /
+  // Format) on the Preview | Markdown repro path.
   assert.equal(shouldReclaim(swap("none", "other"), context), true);
   assert.equal(
     shouldReclaim(swap("none", "other"), {
       ...context,
       associated: () => false,
     }),
+    false,
+  );
+});
+
+test("Cursor's Markdown editor takes .md files, not plan files or agent config folders", () => {
+  for (const uri of [
+    "file:///vault/Note.md",
+    "file:///vault/sub%20dir/Upper.MD",
+    "file:///vault/.hidden/Note.md",
+    "file:///vault/notes.plan/Note.md",
+  ]) {
+    assert.equal(cursorMarkdownEditorTakes(uri), true, uri);
+  }
+  for (const uri of [
+    "file:///vault/My%20Plan.plan.md",
+    "file:///vault/My.PLAN.MD",
+    "file:///vault/.cursor/plans/feature.plan.md",
+    "file:///vault/.cursor/rules/Note.md",
+    "file:///vault/.claude/commands/Note.md",
+    "file:///vault/pkg/.codex/Note.md",
+    "file:///vault/Note.markdown",
+    "file:///vault/Note.txt",
+  ]) {
+    assert.equal(cursorMarkdownEditorTakes(uri), false, uri);
+  }
+});
+
+test("an input-less tab that opened from nowhere is reclaimed only for a file Cursor's Markdown editor takes", () => {
+  // Cursor's plan editor is input-less too and names its tab by basename, so
+  // none→other for a plan file (or any file that editor never opens) is not
+  // evidence of Cursor Markdown.
+  assert.equal(shouldReclaim(swap("none", "other", note), context), true);
+  for (const uri of [
+    "file:///vault/My.plan.md",
+    "file:///vault/.cursor/plans/feature.plan.md",
+    "file:///vault/.claude/skills/Note.md",
+    "file:///vault/Note.markdown",
+  ]) {
+    assert.equal(
+      shouldReclaim(swap("none", "other", uri), context),
+      false,
+      uri,
+    );
+  }
+});
+
+test("an in-place switch into an input-less tab is identified by the note tab it replaced", () => {
+  // The replaced tab is the positive signal, so the file name is not judged.
+  for (const before of ["text", "workbench"] as const) {
+    assert.equal(
+      shouldReclaim(swap(before, "other", "file:///vault/Note.md"), context),
+      true,
+    );
+  }
+  assert.equal(
+    shouldReclaim(swap("other", "other", "file:///vault/Note.md"), context),
     false,
   );
 });

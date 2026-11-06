@@ -79,6 +79,31 @@ test("creating a note stays inside the workspace and does not follow a symlink o
   assert.equal(await readFile(path.join(dir, "NoteTwo.markdown"), "utf8"), "");
 });
 
+test("a navigation cancelled while its folder is made creates no note", async (t) => {
+  const { dir, root, source } = await vault(t);
+  const token = { cancelled: false };
+  const files = {
+    ...nodeFiles,
+    mkdir: async (uri: string) => {
+      await nodeFiles.mkdir(uri);
+      token.cancelled = true;
+    },
+  };
+  const created = await resolveLink(files, {
+    root,
+    source,
+    path: "sub/New.md",
+    create: true,
+    folderNote: "",
+    intent: { token },
+  } as unknown as Parameters<typeof resolveLink>[1]);
+  assert.equal(created, undefined);
+  assert.equal(
+    await readFile(path.join(dir, "sub", "New.md"), "utf8").catch(() => null),
+    null,
+  );
+});
+
 test("a link to a note open in another tab asks that tab to come forward", async (t) => {
   const { dir, root } = await vault(t);
   const other = path.join(dir, "Other.md");
@@ -357,4 +382,73 @@ test("resolve: foldered path (create:false) is vault-relative, not under source 
     basename,
     pathToFileURL(path.join(areas, "Beside.md")).toString(),
   );
+});
+
+test("resolve: ./ and ../ start from the source note's folder, sub/ falls back to it", async (t) => {
+  const dir = await mkdtemp(path.join(tmpdir(), "lumiere-nav-relative-"));
+  t.after(() => rm(dir, { recursive: true, force: true }));
+  const folderA = path.join(dir, "a");
+  await mkdir(path.join(folderA, "sub"), { recursive: true });
+  await mkdir(path.join(dir, "b"), { recursive: true });
+  await mkdir(path.join(dir, "sub"), { recursive: true });
+  const sourceNote = path.join(folderA, "Src.md");
+  await writeFile(sourceNote, "source");
+  await writeFile(path.join(folderA, "Sib.md"), "sibling");
+  await writeFile(path.join(folderA, "sub", "N.md"), "nested");
+  await writeFile(path.join(folderA, "sub", "Only.md"), "only here");
+  await writeFile(path.join(dir, "b", "O.md"), "other");
+  await writeFile(path.join(dir, "sub", "N.md"), "root twin");
+  const root = pathToFileURL(dir).toString();
+  const source = pathToFileURL(sourceNote).toString();
+  const resolve = (link: string, create = false) =>
+    resolveLink(nodeFiles, {
+      root,
+      source,
+      path: link,
+      create,
+      folderNote: "",
+    });
+  const uri = (...parts: string[]) =>
+    pathToFileURL(path.join(dir, ...parts)).toString();
+
+  assert.equal(await resolve("./Sib.md"), uri("a", "Sib.md"));
+  assert.equal(await resolve("../b/O.md"), uri("b", "O.md"));
+  assert.equal(await resolve("./sub/N.md"), uri("a", "sub", "N.md"));
+  assert.equal(await resolve("/b/O.md"), uri("b", "O.md"));
+  assert.equal(await resolve("./missing.md"), undefined);
+  // sub/Only.md is not at the vault root: the source folder is the fallback.
+  assert.equal(await resolve("sub/Only.md"), uri("a", "sub", "Only.md"));
+  // The exact vault path wins over the source-relative one, as in Obsidian.
+  assert.equal(await resolve("sub/N.md"), uri("sub", "N.md"));
+  assert.equal(await resolve("sub/Nope.md"), undefined);
+
+  // An explicit relative path is also where a new note is made.
+  assert.equal(await resolve("./Fresh", true), uri("a", "Fresh.md"));
+  assert.equal(await readFile(path.join(folderA, "Fresh.md"), "utf8"), "");
+});
+
+test("resolve: a relative path that leaves the vault is still refused", async (t) => {
+  const dir = await mkdtemp(path.join(tmpdir(), "lumiere-nav-escape-"));
+  t.after(() => rm(dir, { recursive: true, force: true }));
+  await mkdir(path.join(dir, "a"), { recursive: true });
+  const sourceNote = path.join(dir, "a", "Src.md");
+  await writeFile(sourceNote, "source");
+  const request = {
+    root: pathToFileURL(dir).toString(),
+    source: pathToFileURL(sourceNote).toString(),
+    folderNote: "",
+  };
+  for (const link of [
+    "../../outside.md",
+    "./../../outside.md",
+    "sub/../../outside.md",
+  ]) {
+    for (const create of [false, true]) {
+      await assert.rejects(
+        () => resolveLink(nodeFiles, { ...request, path: link, create }),
+        /outside the vault/,
+        `${link} (create: ${create})`,
+      );
+    }
+  }
 });
