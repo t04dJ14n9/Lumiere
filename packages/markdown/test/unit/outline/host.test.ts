@@ -9,6 +9,7 @@ import {
   OPEN_COMMAND,
   TOGGLE_COMMAND,
 } from "../../../src/plugins/outline/commands";
+import { LEAVE_RESTORE_MS } from "../../../src/plugins/outline/focus";
 import { OUTLINE_JUMP_MS } from "../../../src/plugins/outline/jump-window";
 import { deferred, outlineFixture, tick } from "./fixture";
 import { render, uriOf, wait } from "../views/fakes";
@@ -52,6 +53,105 @@ test("opening from a native selection leaves the Search sidebar in place", async
     [],
   );
 });
+
+/** Commands that show a view, and with it the container (the Explorer) the view is in. */
+const REVEALING_COMMANDS = [
+  "lumiere.markdown.outline.focus",
+  "outline.focus",
+  "workbench.view.explorer",
+];
+
+/** What the host asked VS Code to do to the sidebar, in order. */
+function sidebarCommands(fixture: { executed: unknown[][] }): string[] {
+  return fixture.executed
+    .map(([command]) => String(command))
+    .filter(
+      (command) =>
+        command === "outline.removeView" ||
+        command === "workbench.action.focusActiveEditorGroup" ||
+        REVEALING_COMMANDS.includes(command),
+    );
+}
+
+test("opening a note with the Search view showing does not bring up the Explorer", async (t) => {
+  const fixture = await outlineFixture();
+  t.after(() => fixture.root.dispose());
+  // Markdown Outline is a view of the Explorer: not on screen under Search.
+  fixture.show(false);
+  const { panel } = fixture.panel("quick-open");
+
+  fixture.open(panel);
+  await tick();
+
+  assert.deepEqual(sidebarCommands(fixture), []);
+});
+
+test("with the Explorer showing, Markdown Outline replaces the native Outline without being focused", async (t) => {
+  const fixture = await outlineFixture();
+  t.after(() => fixture.root.dispose());
+  const { panel } = fixture.panel("one");
+
+  fixture.open(panel);
+  await tick();
+
+  assert.deepEqual(sidebarCommands(fixture), ["outline.removeView"]);
+});
+
+test("switching to the Explorer under an open note then replaces the native Outline", async (t) => {
+  const fixture = await outlineFixture();
+  t.after(() => fixture.root.dispose());
+  fixture.show(false);
+  const { panel } = fixture.panel("one");
+  fixture.open(panel);
+  await tick();
+  assert.deepEqual(sidebarCommands(fixture), []);
+
+  fixture.show(true);
+  await tick();
+  assert.deepEqual(sidebarCommands(fixture), ["outline.removeView"]);
+
+  fixture.show(false);
+  fixture.show(true);
+  await tick();
+  assert.deepEqual(
+    sidebarCommands(fixture),
+    ["outline.removeView"],
+    "the reader may show the native Outline again: hidden once per note",
+  );
+});
+
+test("closing the note restores the native Outline only where it was hidden", async (t) => {
+  const search = await outlineFixture();
+  t.after(() => search.root.dispose());
+  search.show(false);
+  const underSearch = search.panel("search").panel;
+  search.open(underSearch);
+  await tick();
+  search.switchTo(undefined);
+  await restoreWindow();
+  assert.deepEqual(
+    sidebarCommands(search),
+    [],
+    "nothing was hidden, so nothing is shown (and the Explorer stays away)",
+  );
+
+  const explorer = await outlineFixture();
+  t.after(() => explorer.root.dispose());
+  const underExplorer = explorer.panel("explorer").panel;
+  explorer.open(underExplorer);
+  await tick();
+  explorer.switchTo(undefined);
+  await restoreWindow();
+  assert.deepEqual(sidebarCommands(explorer), [
+    "outline.removeView",
+    "outline.focus",
+    "workbench.action.focusActiveEditorGroup",
+  ]);
+});
+
+/** Past the debounce that lets a PDF tab take over without flashing the Outline. */
+const restoreWindow = () =>
+  new Promise<void>((resolve) => setTimeout(resolve, LEAVE_RESTORE_MS + 80));
 
 test("Follow Cursor commands persist the setting and update the checked context", async (t) => {
   const fixture = await outlineFixture();

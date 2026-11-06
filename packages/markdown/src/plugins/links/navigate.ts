@@ -52,7 +52,12 @@ export function navigator(ctx: Context): Navigate {
           ...unfoldTargetEffects(view.state, target.from, target.to),
           setFlashing.of({ from: target.from, to: target.to }),
         ],
-        () => generation === jump,
+        {
+          isCurrent: () => generation === jump,
+          ...(ctx.editor.holdAtTop
+            ? { holdAtTop: ctx.editor.holdAtTop.bind(ctx.editor) }
+            : {}),
+        },
       );
     });
     return true;

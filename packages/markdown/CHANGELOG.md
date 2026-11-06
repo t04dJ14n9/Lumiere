@@ -11,6 +11,38 @@
   headings are reached with `-1`, `-2`. Obsidian itself opens such links at
   the top of the note. Lumia still writes heading links the Obsidian way.
 
+- Opening a note no longer swaps the sidebar for the Explorer. The first note
+  opened in a window (from Search, Quick Open or anywhere else) used to focus
+  Markdown Outline, which brought up the Explorer over the Search view you were
+  using. Markdown Outline now shows itself where the Explorer is already
+  showing, hides VS Code's native Outline when it does, and the native Outline
+  comes back when you leave the note only if Lumia hid it. VS Code lists an
+  extension's Explorer views collapsed the first time, so expand Markdown
+  Outline once; VS Code remembers it.
+
+- **Use Lumia for Markdown in This Workspace** now associates `*.md` and
+  `*.markdown` with Lumia itself instead of VS Code's text editor (the route
+  from #458, which reclaimed every note into Lumia). VS Code hands a note to
+  Lumia directly: a cold open shows the note about 75 ms sooner (no text
+  editor tab first). A workspace set up the old way is moved over on
+  activation. A Search result still opens with its match selected.
+
+- A Search result, Markdown Outline click, Go to Heading or heading link now
+  leaves its target on screen when the note opens or the jump comes soon after
+  it: the target is held at the top of the viewport, below the sticky
+  headings, while the features that load after the first paint (the sticky
+  bar, tables, callouts, line numbers) change the heights around it. Before,
+  on a short note the match could land under the sticky bar, and on a long one
+  the scroll could stop hundreds of lines short, leaving the match below the
+  viewport.
+
+- Notes open faster in VS Code: the page asks for the chunks of the first
+  view (Properties, line numbers, tables, callouts, links and the rest of what
+  a note shows first) together with the editor script instead of one after
+  another, and the editor script itself is one file instead of 55. On a
+  small note the features are in place about 50 ms sooner, on a 5,000-line
+  note about 70 ms, and on a note with 100 properties about 170 ms.
+
 - Markdown Outline in the app clears its highlighted row when the caret or the
   top line is above the first heading (frontmatter or a preamble), as Obsidian
   does, instead of leaving the last section marked. VS Code's tree view has no

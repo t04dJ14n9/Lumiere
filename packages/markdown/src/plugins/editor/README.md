@@ -76,6 +76,30 @@ the line's text start and blink with VS Code's own timings (a hard 500 ms
 blink; 0.5 s smooth/phase/expand for 20 half cycles), measured in the built-in
 editor and VSCodeVim (`docs/vim-caret.md`).
 
+The page's first HTML carries the note's first screen (`snapshot.ts`), so its
+text is painted before the editor's script has loaded, as in Obsidian. The host
+draws the first 80 lines or 8 KB of source that Live Preview draws as plain
+lines, with Live Preview's own classes and the settled editor's three gutter
+columns, as inert markup (escaped text; no scripts, handlers, addresses or
+images), and ends before the first thing it cannot draw exactly: tables,
+callouts, images, embeds, math, tags, footnotes, HTML, tasks, a Properties
+sheet that is taller than its placeholder. The editor mounts beneath it
+(`webview/snapshot.ts`); once every feature has loaded and a frame has painted
+the snapshot is removed, which moves nothing (`test/browser/first-paint-snapshot.spec.ts`
+compares every line). The host builds it before a vault's own settings are
+known, so the snapshot carries a layout key (`snapshot-layout.ts`) and the
+editor drops it at once when its own settings, a search match or a saved view
+say the note will not look as drawn. `lumiere.markdown.editor.firstPaintSnapshot`
+(default on) turns it off; Source mode, a centred page, right-to-left text, an
+inline title and notes without the line-number, change-bar and fold gutters
+never get one. VS Code shows a webview only once its page has fired `load`, and
+a module script's import graph delays that, so a page with a snapshot loads
+the editor by `import()` from a small inline script (`webview-html.ts`): the
+snapshot is visible as soon as the page's stylesheet is, and host messages that
+arrive before the editor's own listener are kept and replayed by
+`webview/transport.ts`. Hosts that build their own page (host-node) do not draw
+it yet.
+
 ## Files
 
 - `selection.ts`: host-held frozen selection snapshots, source coordinates and stale validation.
@@ -100,7 +124,14 @@ editor and VSCodeVim (`docs/vim-caret.md`).
 - `toggle-text-editor.ts`: **Toggle Text Editor** (Ctrl/Cmd+E) between Lumia
   and the host default text editor. Capture-phase Mod+E ownership (BH-003) lives
   in `commands/toggle-text-editor-keys.ts`.
-- `webview-html.ts`: CSP, scripts and native webview HTML.
+- `webview-html.ts`: CSP, scripts and native webview HTML, with
+  `<link rel="modulepreload">` hints for the chunks the first view needs
+  (`PanelShell.preload`, from `host/feature-chunks.ts`).
+- `snapshot.ts`, `snapshot-blocks.ts`, `snapshot-inline.ts`: the first-screen
+  snapshot: the note's first lines as inert markup in the page's first HTML.
+- `snapshot-layout.ts`: the presentation the snapshot assumes, as a key the
+  webview compares with its own settings (`webview/snapshot.ts`).
+- `snapshot.css`: its scroller and content, sized as the editor's are.
 - `indentation.ts`: Tab and Shift+Tab commands (capture-phase for Vim NORMAL, BH-040).
 - `find.ts`, `find-panel.ts`, `find-caret.ts`, `find-count.ts`, `find.css`: in-note find and replace.
 - `find-keys.ts`: capture-phase Ctrl/Cmd+F Find and Ctrl/Cmd+H Replace (BH-023 / BH-025).
@@ -122,8 +153,8 @@ editor and VSCodeVim (`docs/vim-caret.md`).
 - `contributions.ts`: feature-owned view-state validation and restoration.
 - `persistence.ts`: view capture, restore and ordinary edit/scroll persistence.
 - `persistence.test.ts`: which updates save view state.
-- `view-state.ts`: geometric scroll anchoring and presentation restoration; a restored line stays pinned until the reader scrolls anywhere in the scroller.
-- `view-state.test.ts`: the reader's scroll and input end the pin, the pin's own corrections do not, and every listener is passive.
+- `view-state.ts`: geometric scroll anchoring and presentation restoration; a restored line stays pinned until the reader scrolls anywhere in the scroller. `holdAtTop` pins a jump's target the same way.
+- `view-state.test.ts`: the reader's scroll and input end the pin, the pin's own corrections do not, every listener is passive, and a held jump target stays below the top margin as content above it grows.
 - `keep-below-still.ts`: when a rendered block across the top edge resizes, holds its bottom, so the text below stays still.
 - `keep-below-still.test.ts`: which block is held, and by how much the view scrolls.
 - `view-transfer.ts`: flushed, version-checked native view transfers.
@@ -196,8 +227,12 @@ the initial selection even while `openWith` is in flight. Delivery waits for tha
 link-navigation readiness and uses its existing focus, centered scroll and
 caret path. A newer navigation or provider disposal cancels pending delivery;
 Cursor Edit handoff leases and explicit text bypasses suppress the bridge.
-The public custom-editor API supplies no range for a direct custom-editor open;
-when the host exposes no native text selection, there is no position to transfer.
+A direct custom-editor open (the `*.md` association is Lumia itself) has no text
+tab to transfer from. VS Code 1.144 still calls `resolveCustomTextEditorNavigation`
+for a Search result about 100 ms after `resolveCustomTextEditor`, and its
+`revealRange` reaches the panel through the same reveal path (`navigation.revealPanel`,
+then the links plugin's `navigate`), so the match is selected and scrolled to the
+top of the viewport below the sticky headings, after the first paint.
 
 `editor.warmTextDocument` (`auto`/`on`/`off`, auto meaning on in Cursor) opens
 Markdown `TextDocument`s early: at activation for open notes, on document open,

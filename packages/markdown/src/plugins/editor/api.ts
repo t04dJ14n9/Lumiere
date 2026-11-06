@@ -42,6 +42,13 @@ export interface Menu {
     label?: string,
   ): Disposer;
 }
+/** A line held below the top of the viewport while the layout settles. */
+export interface ScrollHold {
+  /** Hold it `yMargin` px below the top instead; false once the hold has ended. */
+  move(yMargin: number): boolean;
+  /** Whether the hold is still keeping the line in place. */
+  isHeld(): boolean;
+}
 export interface EditorService {
   readonly settings: Infer<typeof editorConfig>;
   /** Own a modal caret source through the same extension registration as its keys. */
@@ -63,6 +70,15 @@ export interface EditorService {
   ): Disposer;
   /** Record a deliberate jump, excluding ordinary editing and cursor motion. */
   navigate<T>(jump: () => T): T;
+  /**
+   * Hold the line of `position` `yMargin` px below the top of the viewport
+   * (as `EditorView.scrollIntoView` with `y: "start"` and that margin would
+   * place it) for the next scroll to `position`, and keep it there while the
+   * layout settles: features that load after a jump change the heights above
+   * it, and CodeMirror's own anchoring does not always undo that. The hold
+   * ends when the reader scrolls or types, or a jump elsewhere replaces it.
+   */
+  holdAtTop?(position: number, yMargin: number): ScrollHold;
   onNavigate(capture: () => () => void): Disposer;
   batch?<T>(fn: () => T): T;
   flush?(): void;

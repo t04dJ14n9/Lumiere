@@ -12,3 +12,4 @@
 !dist/**/*.ttf
 !dist/**/*.wasm
 !dist/markdown/api/**/*.d.ts
+!dist/markdown/webview/feature-chunks.json

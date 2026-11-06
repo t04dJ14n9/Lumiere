@@ -140,7 +140,9 @@ test("scrollTargetToTop first jump omits sticky yMargin and corrects from initia
     },
   } as unknown as EditorView;
 
-  scrollTargetToTop(view, { from: 12, to: 20 }, [], () => true);
+  scrollTargetToTop(view, { from: 12, to: 20 }, [], {
+    isCurrent: () => true,
+  });
 
   assert.equal(dispatches.length, 1, "one immediate dispatch");
   assert.deepEqual(dispatches[0]!.selection, { anchor: 12, head: 12 });
@@ -202,4 +204,172 @@ test("scrollTargetToTop refuses sticky-before-jump: matching leftover initialHei
     },
   );
   assert.equal(rescrolls, 1, "initialHeight 0 still corrects when pin remains");
+});
+
+/** Let every look that chains onto the one before it run. */
+const drain = () => new Promise<void>((resolve) => setImmediate(resolve));
+
+function jumpView(options: {
+  /** The sticky bar's height at each look, the last one for every later. */
+  heights: number[];
+  onDispatch?: () => void;
+}) {
+  let looks = 0;
+  const sticky = {
+    hidden: false,
+    getBoundingClientRect: () => ({
+      height: options.heights[Math.min(looks++, options.heights.length - 1)],
+    }),
+  };
+  const view = {
+    dom: {
+      querySelector: (selector: string) =>
+        selector === ".mw-sticky-scroll" ? sticky : null,
+    },
+    dispatch: () => options.onDispatch?.(),
+  } as unknown as EditorView;
+  return { view, looks: () => looks };
+}
+
+test("a sticky bar that appears after the first look is still corrected, and followed while it settles", () => {
+  // The jump can arrive before the sticky feature has loaded; the bar then
+  // draws over the line the jump put at the top, and its row height can still
+  // change once the editor's line height is measured.
+  const rescrolls: number[] = [];
+  const runs: Array<() => void> = [];
+  let height = 0;
+  scheduleStickyScrollCorrection({} as EditorView, 100, 0, {
+    measure: () => height,
+    schedule: (run) => runs.push(run),
+    keepWaiting: () => true,
+    rescroll: (yMargin) => rescrolls.push(yMargin),
+  });
+
+  runs.shift()!();
+  assert.deepEqual(rescrolls, [], "no bar yet");
+  assert.equal(runs.length, 1, "it looks again");
+
+  height = 22;
+  runs.shift()!();
+  assert.deepEqual(rescrolls, [22]);
+
+  runs.shift()!();
+  assert.deepEqual(rescrolls, [22], "unchanged: nothing to correct");
+
+  height = 25;
+  runs.shift()!();
+  assert.deepEqual(rescrolls, [22, 25], "changed again: corrected again");
+});
+
+test("a sticky bar that keeps changing is corrected a few times, not for ever", () => {
+  const rescrolls: number[] = [];
+  const runs: Array<() => void> = [];
+  let height = 0;
+  scheduleStickyScrollCorrection({} as EditorView, 100, 0, {
+    measure: () => (height += 1),
+    schedule: (run) => runs.push(run),
+    keepWaiting: () => true,
+    rescroll: (yMargin) => rescrolls.push(yMargin),
+  });
+  while (runs.length > 0 && rescrolls.length < 1000) {
+    runs.shift()!();
+  }
+  assert.ok(rescrolls.length > 1 && rescrolls.length < 10, `${rescrolls}`);
+});
+
+test("waiting for a sticky bar stops once nothing is held any more", () => {
+  const rescrolls: number[] = [];
+  const runs: Array<() => void> = [];
+  let held = true;
+  scheduleStickyScrollCorrection({} as EditorView, 100, 0, {
+    measure: () => 0,
+    schedule: (run) => runs.push(run),
+    keepWaiting: () => held,
+    rescroll: (yMargin) => rescrolls.push(yMargin),
+  });
+  runs.shift()!();
+  assert.equal(runs.length, 1);
+  // The reader scrolled: a bar that appears now belongs to where they are.
+  held = false;
+  runs.shift()!();
+  assert.equal(runs.length, 0, "no further look");
+  assert.deepEqual(rescrolls, []);
+});
+
+test("waiting for a sticky bar that never comes ends", () => {
+  const runs: Array<() => void> = [];
+  let looks = 0;
+  scheduleStickyScrollCorrection({} as EditorView, 100, 0, {
+    measure: () => 0,
+    schedule: (run) => runs.push(run),
+    keepWaiting: () => true,
+    rescroll: () => assert.fail("no bar, no correction"),
+  });
+  while (runs.length > 0 && looks < 1000) {
+    runs.shift()!();
+    looks++;
+  }
+  assert.ok(looks > 1 && looks < 1000, `${looks} looks`);
+});
+
+test("without a way to wait the sticky bar is looked for once, as before", () => {
+  const runs: Array<() => void> = [];
+  scheduleStickyScrollCorrection({} as EditorView, 100, 0, {
+    measure: () => 0,
+    schedule: (run) => runs.push(run),
+  });
+  runs.shift()!();
+  assert.equal(runs.length, 0);
+});
+
+test("scrollTargetToTop holds the target before it scrolls there, and the sticky bar moves that hold", async () => {
+  const events: string[] = [];
+  const moves: number[] = [];
+  const { view } = jumpView({
+    heights: [0, 0, 30],
+    onDispatch: () => events.push("dispatch"),
+  });
+
+  scrollTargetToTop(view, { from: 12, to: 20 }, [], {
+    isCurrent: () => true,
+    holdAtTop: (position, yMargin) => {
+      events.push(`hold ${position} ${yMargin}`);
+      return {
+        isHeld: () => true,
+        move: (margin) => {
+          moves.push(margin);
+          return true;
+        },
+      };
+    },
+  });
+  // The hold must exist when CodeMirror's measuring reaches the scroll.
+  assert.deepEqual(events, ["hold 12 5", "dispatch"]);
+
+  await drain();
+  assert.deepEqual(moves, [30], "the late bar moved the hold, once");
+  assert.deepEqual(
+    events,
+    ["hold 12 5", "dispatch"],
+    "and was not a scroll that would have ended the hold",
+  );
+});
+
+test("scrollTargetToTop stops waiting for the bar once the hold has ended", async () => {
+  const moves: number[] = [];
+  const { view, looks } = jumpView({ heights: [0, 0, 30] });
+  scrollTargetToTop(view, { from: 12, to: 20 }, [], {
+    isCurrent: () => true,
+    holdAtTop: () => ({
+      // The reader scrolls after the second look.
+      isHeld: () => looks() < 2,
+      move: (margin) => {
+        moves.push(margin);
+        return true;
+      },
+    }),
+  });
+  await drain();
+  assert.equal(looks(), 2, "no look after the hold ended");
+  assert.deepEqual(moves, [], "and a bar that comes later is left alone");
 });
