@@ -183,6 +183,12 @@ class PropertyList {
       return false;
     }
     if (!value || latest.includes(value)) {
+      // Every flush asks each input to commit: an empty one has nothing to
+      // clear, and rebuilding the sheet for it made opening a note with
+      // many list properties quadratic.
+      if (!inputText(this.input)) {
+        return true;
+      }
       setInputText(this.input, "");
       this.options.editor.refresh?.();
       return true;
