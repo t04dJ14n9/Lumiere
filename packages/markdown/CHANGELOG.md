@@ -39,6 +39,15 @@
   `y/x.md`. Rename link updates use the same order, so they no longer
   retarget such a link.
 
+- Heading links match the way Obsidian matches them: heading text without
+  case, with punctuation such as `/`, `:` and `?` read as spaces, so
+  `[[Note#A B]]` reaches `## A/B`. `[[Note#A#B]]` finds a deeper heading B
+  after A, not only A's direct child. Block ids (`#^id`) match without case.
+- Heading links also accept GitHub's slugs, as written for GitHub or VS Code:
+  `[x](Note.md#use-postgres)` reaches `## Use Postgres`, and repeated
+  headings are reached with `-1`, `-2`. Obsidian itself opens such links at
+  the top of the note. Lumia still writes heading links the Obsidian way.
+
 - Opening a note no longer swaps the sidebar for the Explorer. The first note
   opened in a window (from Search, Quick Open or anywhere else) used to focus
   Markdown Outline, which brought up the Explorer over the Search view you were
