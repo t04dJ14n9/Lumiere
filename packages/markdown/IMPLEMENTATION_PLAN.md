@@ -6633,6 +6633,60 @@ previous set. PDF's follower never cleared `opened` mid-apply, so it did not
 need the same change. Test: `host.test.ts` scroll-supersede case.
 
 
+## Templates and daily notes (2026-11-05)
+
+Items 16 and 17 of the Obsidian gap plan
+(`obsidian-re/docs/implementation-plan.md`). Both are new host-only
+workbench plugins, so they run in VS Code and in host-node through the same
+`bootstrap`.
+
+- `src/markdown/templates.ts`: pure `expandTemplate(text, { title, now,
+  dateFormat?, timeFormat? })` for `{{title}}`, `{{date}}`, `{{time}}`,
+  `{{date:FORMAT}}` and `{{time:FORMAT}}`, plus `formatLocalDate` and
+  `isSupportedDateFormat`. It reuses the Bases formatter
+  (`formatWithPattern`, now exported) by shifting local time into its UTC
+  fields; no date library.
+- `templates` plugin: **Insert Template** quick-picks the Markdown files
+  under `templates.folder` and replaces the active Lumia editor's selection
+  through `hostDocuments.apply`, inside the panel's document action after a
+  flush and `captureSelection`, then reveals the caret after the text.
+- `dailyNotes` plugin: **Open Today's Daily Note** opens
+  `folder/format(today).md`, creating it (and its folders) from the template
+  when missing; **Open Previous/Next Daily Note** step through existing daily
+  notes by date. Never opens on startup.
+- `obsidianCompat` reads `daily-notes.json` and `templates.json` beside
+  `app.json`, each with its own last-good snapshot and watcher, and seeds the
+  six settings with the same precedence (explicit VS Code layers win). Date
+  formats with Moment tokens Lumia cannot write are not carried over. Still
+  read-only.
+- Not done: the plan's "date property links to a daily note" hook
+  (`properties/value-input.ts` has no resolver point to hang it on).
+- Unit tests: `test/unit/templates` (expansion, listing, selection
+  replacement with CRLF mapping and stale versions), `test/unit/dailyNotes`
+  (paths, ordering, creation, and the commands through the plugin), and
+  `test/unit/obsidianCompat` (mapping and effective settings). No browser
+  coverage added.
+- Review fixes (PR 510): `dailyNotes` starts with the urgent window features,
+  because VS Code activates the extension for a contributed command and then
+  looks the handler up, so one registered after the first panel is "not
+  found" in a fresh window (`quickSwitcher`, `scratch` and the other deferred
+  window features still have that gap). A daily note template is read only
+  after `workspace.files.authorize` passes for its real location. A note is
+  created through the new `WorkspaceFiles.createText`, which refuses an
+  existing file (VS Code: a `createFile` edit with `overwrite: false`;
+  host-node: `HostFiles.create` now reports whether its exclusive create
+  made the file; host-web: `Mounts.create` queues creates per path, so
+  overlapping calls in one page cannot both make the file), so a note made
+  meanwhile is opened, not replaced. Not covered in host-web: another tab,
+  another app or a sync writing the same path at the same moment, because
+  its folders have no exclusive create.
+  `isSupportedDateFormat` reads each run of one letter as one Moment token.
+  Insert Template's palette entry is workbench-scoped: the editor host sets
+  `lumiere.markdown.plugin.<id>` only for editor features, so it never
+  appeared. Real VS Code: `test/vscode/daily-notes-templates.spec.ts` reloads
+  the window with no editor open, runs Open Today's Daily Note, then runs
+  Insert Template over a selection.
+
 ## Opening: the first view's chunks in the page, one editor.js (2026-11-05)
 
 Measured in VS Code (production build, isolated profile, instrumented webview;

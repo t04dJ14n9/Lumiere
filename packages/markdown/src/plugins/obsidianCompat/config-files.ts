@@ -1,7 +1,8 @@
 import type { HostServices } from "../../shared/host";
 import { joinContained } from "../../shared/workspace-path";
 
-export type ConfigFile = "types.json" | "app.json";
+export type ConfigFile =
+  "types.json" | "app.json" | "daily-notes.json" | "templates.json";
 export interface ConfigFiles {
   read(file: ConfigFile): Promise<string | undefined>;
   /** Atomically replace the expected source, or reject without writing. */

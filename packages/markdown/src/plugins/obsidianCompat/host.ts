@@ -1,6 +1,7 @@
 import type { Context, Plugin } from "@workshop/core";
 import type { Configuration } from "../../shared/configuration";
 import { OVERRIDE_KEYS } from "./app-settings";
+import { CORE_PLUGIN_OVERRIDE_KEYS } from "./core-plugin-settings";
 import { ContainedConfigFiles } from "./config-files";
 import { hasExplicitSetting } from "./precedence";
 import { VaultConfigs } from "./vault-configs";
@@ -45,6 +46,10 @@ function isEnabled(configuration: Configuration, resource: string): boolean {
     configuration.get("plugins.obsidianCompat.enabled", true, resource)
   );
 }
+const SEEDED_KEYS: readonly string[] = [
+  ...OVERRIDE_KEYS,
+  ...CORE_PLUGIN_OVERRIDE_KEYS,
+];
 function registerOverrides(ctx: Context, configs: VaultConfigs): void {
   const configuration = ctx.settings.effective;
   if (!configuration) {
@@ -55,7 +60,7 @@ function registerOverrides(ctx: Context, configs: VaultConfigs): void {
     configuration.register({
       get(key, resource) {
         if (
-          !OVERRIDE_KEYS.some((candidate) => candidate === key) ||
+          !SEEDED_KEYS.includes(key) ||
           !isEnabled(configuration, resource) ||
           hasExplicitSetting(configuration.inspect(key, resource))
         ) {

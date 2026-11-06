@@ -31,6 +31,8 @@ export class Mounts implements HostFiles {
     string,
     Set<(relative: string) => void>
   >();
+  /** The end of the last create queued for each path (`inTurn`). */
+  private readonly turns = new Map<string, Promise<void>>();
 
   /** Mount `fs` at an absolute path (`/vaults/Notes`); returns the way to unmount it. */
   mount(root: string, fs: VaultFileSystem): () => void {
@@ -104,10 +106,21 @@ export class Mounts implements HostFiles {
     this.changed(full);
   }
 
-  async create(uri: string): Promise<void> {
+  async create(uri: string): Promise<boolean> {
     const { fs, path, full } = this.resolve(uri);
-    await fs.write(path, new Uint8Array(), "create");
+    // A file system's "create" does not say whether it wrote anything, so
+    // the check is a step apart from it. Creates of one path take turns, so
+    // of overlapping calls here only the first finds the file missing, and
+    // `createText` never fills a file twice. A write from outside between
+    // the check and the write (another tab or app, a sync) is not covered:
+    // these file systems have no exclusive create.
+    const isNew = await this.inTurn(full, async () => {
+      const missing = (await fs.stat(path)) === undefined;
+      await fs.write(path, new Uint8Array(), "create");
+      return missing;
+    });
     this.changed(full);
+    return isNew;
   }
 
   async stat(uri: string): Promise<HostFileInfo | undefined> {
@@ -177,6 +190,26 @@ export class Mounts implements HostFiles {
         }
       }
     }
+  }
+
+  /**
+   * Run `task` once those queued before it for `key` have ended; one that
+   * fails does not hold up the next. The key is the normalized absolute path,
+   * so every spelling of a URI for one file shares a queue.
+   */
+  private inTurn<T>(key: string, task: () => Promise<T>): Promise<T> {
+    const result = (this.turns.get(key) ?? Promise.resolve()).then(task);
+    const ended = result.then(
+      () => {},
+      () => {},
+    );
+    this.turns.set(key, ended);
+    void ended.then(() => {
+      if (this.turns.get(key) === ended) {
+        this.turns.delete(key);
+      }
+    });
+    return result;
   }
 
   private resolve(uri: string): Resolved {

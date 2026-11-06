@@ -66,6 +66,8 @@ records it in `docs/PARITY.md`.
 | wiki | Reads `.wiki/layout.json` and the registry, reports pages inside the bundle, and copies a wiki reference or envelope | Does not run an agent, scaffold folders, or ingest inbox. A broken layout is not treated as legacy. Wikilinks are reported, not rewritten |
 | attachments | Drop, paste, or HTML-paste images into `files.attachmentFolder` with Obsidian-style timestamp names and embeds | Shares folder/embed rules with sketches. Import Asset / `assets.path` removed |
 | scratch | **New Scratch Note** writes a temporary note outside the bundle. **Promote Scratch Note** files it as a Concept, Source Summary, Entity or Raw Source | No automatic ingest. Marp decks are not promoted. Collection indexes are not rewritten |
+| templates | **Insert Template** inserts a note from `templates.folder` at the caret, expanding `{{title}}`, `{{date}}`, `{{time}}` and `{{date:FORMAT}}` | Formats know `YYYY MM DD HH mm ss` only; Lumia's editor only |
+| dailyNotes | **Open Today's Daily Note** opens or creates `folder/format(today).md` from a template; **Open Previous/Next Daily Note** step through existing ones | Same format tokens; no startup open or calendar; date properties do not link to daily notes |
 | marp | Detects `marp: true` and bridges to VS Code preview and Marp export. **Move Marp Deck Outside Bundle** keeps the deck's frontmatter | Slide widgets and Marp themes are not drawn here. A deck inside the bundle is not given a page contract |
 | markers | Badges and actions that other extensions place on source ranges | Plain text only; at most 1,000 per plugin per editor |
 | settings | Open Settings, Change Setting… (any contributed setting, edited by type), and commands to set the note font size and toggle line numbers, readable line width, Mermaid, inline title and Vim | Same keys as the Settings UI, no state of its own; Obsidian has no such commands |
@@ -88,8 +90,7 @@ Webview-side plugins from other extensions are not in v1.
 
 ## Not implemented
 
-- Reading view, canvas, graph view, daily notes, templates, bookmarks,
-  publish and sync.
+- Reading view, canvas, graph view, bookmarks, publish and sync.
 - Obsidian community plugins and themes (CSS snippets that use `data-task`
   or similar attributes may work, but are not supported).
 - Heading-rename link updates; performance measurement against DESIGN §20.

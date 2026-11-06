@@ -8,6 +8,7 @@ export function createWorkspaceFiles(): WorkspaceFiles {
     authorize: (root, target) => contained(parse(root), parse(target)),
     readText,
     writeText,
+    createText,
     writeBytes,
     list,
     mkdir,
@@ -33,6 +34,33 @@ async function writeText(uri: string, text: string): Promise<void> {
     parse(uri),
     new TextEncoder().encode(text),
   );
+}
+
+async function createText(uri: string, text: string): Promise<boolean> {
+  const target = parse(uri);
+  const edit = new vscode.WorkspaceEdit();
+  // VS Code refuses to create over a file that is there and checks that in
+  // the same step, so a note made meanwhile is never overwritten.
+  edit.createFile(target, {
+    overwrite: false,
+    contents: new TextEncoder().encode(text),
+  });
+  if (await vscode.workspace.applyEdit(edit)) {
+    return true;
+  }
+  if (await exists(target)) {
+    return false;
+  }
+  throw new Error(`Could not create ${target.toString()}`);
+}
+
+async function exists(target: vscode.Uri): Promise<boolean> {
+  try {
+    await vscode.workspace.fs.stat(target);
+    return true;
+  } catch {
+    return false;
+  }
 }
 
 async function writeBytes(uri: string, data: Uint8Array): Promise<void> {

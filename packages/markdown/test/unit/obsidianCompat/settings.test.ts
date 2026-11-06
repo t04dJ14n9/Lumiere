@@ -5,6 +5,10 @@ import {
   mapAppSettings,
   OVERRIDE_KEYS,
 } from "../../../src/plugins/obsidianCompat/app-settings";
+import {
+  mapDailyNotesSettings,
+  mapTemplatesSettings,
+} from "../../../src/plugins/obsidianCompat/core-plugin-settings";
 import { resolveConfigDirectory } from "../../../src/plugins/obsidianCompat/config-dir";
 import { findVaultRoot, foldersUpTo } from "../../../src/plugins/vault/roots";
 import { exclusionMatcher } from "../../../src/plugins/vault/exclusion";
@@ -160,3 +164,62 @@ for (const folder of [
     );
   });
 }
+
+test("templates.json and daily-notes.json seed only usable values", () => {
+  assert.deepEqual(
+    mapTemplatesSettings({
+      folder: "Templates",
+      dateFormat: "DD.MM.YYYY",
+      timeFormat: "HH:mm:ss",
+    }),
+    {
+      "templates.folder": "Templates",
+      "templates.dateFormat": "DD.MM.YYYY",
+      "templates.timeFormat": "HH:mm:ss",
+    },
+  );
+  assert.deepEqual(
+    mapDailyNotesSettings({
+      folder: "Journal",
+      format: "YYYY/MM/YYYY-MM-DD",
+      template: "Templates/Daily",
+      autorun: true,
+    }),
+    {
+      "dailyNotes.folder": "Journal",
+      "dailyNotes.dateFormat": "YYYY/MM/YYYY-MM-DD",
+      "dailyNotes.template": "Templates/Daily",
+    },
+  );
+  // A Moment format Lumia cannot write would name notes differently.
+  assert.deepEqual(
+    mapDailyNotesSettings({
+      folder: "",
+      format: "YYYY-MM-DD dddd",
+      template: 3,
+    }),
+    {},
+  );
+  assert.deepEqual(mapTemplatesSettings({ dateFormat: "Do MMMM" }), {});
+  // MMMM and DDDD are one Moment token each, not MM or DD twice.
+  assert.deepEqual(
+    mapDailyNotesSettings({
+      folder: "Journal",
+      format: "MMMM DD, YYYY",
+      template: "Templates/Daily",
+    }),
+    {
+      "dailyNotes.folder": "Journal",
+      "dailyNotes.template": "Templates/Daily",
+    },
+  );
+  assert.deepEqual(
+    mapTemplatesSettings({
+      folder: "Templates",
+      dateFormat: "DDDD",
+      timeFormat: "HH:mm:sss",
+    }),
+    { "templates.folder": "Templates" },
+  );
+  assert.throws(() => mapDailyNotesSettings([]), /daily-notes.json/);
+});
