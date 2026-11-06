@@ -3408,6 +3408,47 @@ test("reclaim skips missing Markdown paths (leaves built-in Text Editor)", async
   );
 });
 
+test("a missing note opened in Lumia directly goes back to the built-in Text Editor", async (t) => {
+  // With *.md associated to Lumia, VS Code resolves Lumia's editor even for
+  // a path that does not exist yet; the 2026-11-04 lock keeps it as text.
+  const missing = `file:///vault/missing-open/direct.md`;
+  host.markdownAbsent.setMarkdownAbsentOnDiskForTests((uri) => uri === missing);
+  t.after(() =>
+    host.markdownAbsent.setMarkdownAbsentOnDiskForTests(() => false),
+  );
+  const extension = {
+    id: "lumiere.markdown",
+    extensionUri: Uri.parse("file:///ext"),
+    packageJSON: { name: "lumiere", enabledApiProposals: [] as string[] },
+  };
+  const opened: PanelShell[] = [];
+  const stop = host.editorPanels.registerEditor(
+    MARKDOWN_EDITOR,
+    {
+      extension,
+      extensionUri: extension.extensionUri as unknown as NativeUri,
+      documents: {
+        wrap: (doc: { uri: Uri }) =>
+          ({ uri: doc.uri.toString() }) as unknown as PanelShell["document"],
+      } as never,
+    },
+    (shell) => opened.push(shell),
+  );
+  t.after(stop);
+  const provider = registeredProviders.at(-1)?.provider as {
+    resolveCustomTextEditor(doc: unknown, panel: unknown): void;
+  };
+  const panel = createFakeWebviewPanel();
+  provider.resolveCustomTextEditor(createFakeDoc(missing, [""]), panel);
+  await tick();
+
+  assert.equal(opened.length, 0, "no Lumia panel for a missing note");
+  const openWith = commands.find((entry) => entry[0] === "vscode.openWith");
+  assert.equal(String(openWith?.[1]), missing);
+  assert.equal(openWith?.[2], "default");
+  assert.equal(panel.disposed, true);
+});
+
 test("reclaim still openWith Lumia for an existing Markdown path", async (t) => {
   const existing = `file:///vault/missing-open/Welcome.md`;
   note = existing;
