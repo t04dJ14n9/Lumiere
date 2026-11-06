@@ -3285,7 +3285,7 @@
               "never"
             ],
             "default": "prompt",
-            "description": "Obsidian's Automatically update internal links: `prompt` asks before rewriting links in other notes when a file is renamed or moved.",
+            "description": "Obsidian's Automatically update internal links: `prompt` asks before rewriting links in other notes when a file is renamed or moved; its Always Update button sets this to `always`.",
             "scope": "resource"
           },
           "lumiere.markdown.links.newLinkFormat": {
