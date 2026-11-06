@@ -36,7 +36,9 @@ export interface WorkspaceFiles {
    * Write `text` to a new file, unless something is already at `uri`: then
    * false, and nothing is written. The check and the creation are one step
    * where the host's files allow it, so two writers never overwrite each
-   * other; `writeText` after a check would.
+   * other; `writeText` after a check would. The browser host has no such
+   * step: it makes writers in one page take turns, and another tab or app
+   * can still win the same path.
    */
   createText(uri: string, text: string): Promise<boolean>;
   /** Replace or create a file with raw bytes (images, etc.). */

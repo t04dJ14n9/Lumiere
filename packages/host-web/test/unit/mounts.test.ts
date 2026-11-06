@@ -1,7 +1,10 @@
 import test from "node:test";
 import assert from "node:assert/strict";
 import { pathToFileURL } from "node:url";
-import { OutsideWorkspace } from "@workshop/host-node/core";
+import {
+  createWorkspaceFiles,
+  OutsideWorkspace,
+} from "@workshop/host-node/core";
 import { MemoryFileSystem } from "../../src/memory-fs";
 import { Mounts } from "../../src/mounts";
 
@@ -97,6 +100,57 @@ test("saving needs an existing file, creating never overwrites, and watchers hea
     "file",
     "tree:New.md",
   ]);
+});
+
+test("of overlapping creates of one path, however it is spelled, only the first makes the file", async () => {
+  const files = mounted();
+  const results = await Promise.all([
+    files.create(uri("New.md")),
+    files.create(uri("daily/../New.md")),
+    files.create(uri("New.md")),
+  ]);
+  assert.deepEqual(results, [true, false, false]);
+});
+
+test("a create that fails does not hold up the next one for its path", async () => {
+  const files = new Mounts();
+  const memory = new MemoryFileSystem();
+  const write = memory.write.bind(memory);
+  let failNext = true;
+  files.mount(
+    ROOT,
+    Object.assign(memory, {
+      write: async (
+        path: string,
+        data: Uint8Array,
+        mode: "replace" | "create",
+      ) => {
+        if (failNext) {
+          failNext = false;
+          throw new Error("disk full");
+        }
+        return write(path, data, mode);
+      },
+    }),
+  );
+  const first = files.create(uri("New.md"));
+  const second = files.create(uri("New.md"));
+  await assert.rejects(first, /disk full/);
+  assert.equal(await second, true);
+});
+
+test("of overlapping createText calls one makes the note and its body stays", async () => {
+  const files = mounted();
+  const workspace = createWorkspaceFiles(files, () => [
+    pathToFileURL(ROOT).href,
+  ]);
+  const note = uri("daily/2026-11-05.md");
+  const results = await Promise.all([
+    workspace.createText(note, "# First"),
+    workspace.createText(note, "# Second"),
+  ]);
+  assert.deepEqual(results, [true, false]);
+  assert.equal(await files.readText(note), "# First");
 });
 
 test("folders are made, files moved and copied, and removed", async () => {

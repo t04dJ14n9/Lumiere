@@ -6675,7 +6675,11 @@ workbench plugins, so they run in VS Code and in host-node through the same
   created through the new `WorkspaceFiles.createText`, which refuses an
   existing file (VS Code: a `createFile` edit with `overwrite: false`;
   host-node: `HostFiles.create` now reports whether its exclusive create
-  made the file), so a note made meanwhile is opened, not replaced.
+  made the file; host-web: `Mounts.create` queues creates per path, so
+  overlapping calls in one page cannot both make the file), so a note made
+  meanwhile is opened, not replaced. Not covered in host-web: another tab,
+  another app or a sync writing the same path at the same moment, because
+  its folders have no exclusive create.
   `isSupportedDateFormat` reads each run of one letter as one Moment token.
   Insert Template's palette entry is workbench-scoped: the editor host sets
   `lumiere.markdown.plugin.<id>` only for editor features, so it never

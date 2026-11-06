@@ -47,3 +47,9 @@ note, or from today when the open note is not one. Nothing opens on startup.
 - A missing template creates an empty note with a message, rather than no note.
   So does a template that leaves the vault through a symbolic link, or on a
   host that cannot check containment; its contents are never read.
+- A note made meanwhile is opened, never replaced, in VS Code and in
+  host-node (the file system refuses an existing file). In the browser and
+  iPad host, creates of one path in the same page take turns, so they cannot
+  both win; another tab, another app or a sync writing the same path at the
+  same moment can still overwrite, because those folders have no exclusive
+  create.
