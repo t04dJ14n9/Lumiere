@@ -6686,3 +6686,336 @@ workbench plugins, so they run in VS Code and in host-node through the same
   appeared. Real VS Code: `test/vscode/daily-notes-templates.spec.ts` reloads
   the window with no editor open, runs Open Today's Daily Note, then runs
   Insert Template over a selection.
+
+## Opening: the first view's chunks in the page, one editor.js (2026-11-05)
+
+Measured in VS Code (production build, isolated profile, instrumented webview;
+medians of 9 warm and 7 cold opens of a small note, a 5,000-line note and a
+note with 100 properties). After the entry ran (`mw:main`), the features loaded
+in three rounds, each a dynamic `import()` followed by an editor reconfigure:
+
+| Round                              |    Files |  Bytes | Fetch to loaded                                         | Reconfigure                    |
+| ---------------------------------- | -------: | -----: | ------------------------------------------------------- | ------------------------------ |
+| entry (static graph)               | 55 + css | 875 KB | 47 ms after the document starts, then 12 ms to evaluate |                                |
+| chrome (Properties, line numbers)  |        4 | 193 KB | 14 ms after first paint                                 | 3 ms                           |
+| paint (tables, callouts, links, …) |       22 | 258 KB | 25 ms after first paint                                 | 8 ms (24 ms on the large note) |
+| the rest                           |       20 | 203 KB | 18 ms                                                   | 6 ms                           |
+
+The time was fetching, not reconfiguring. Two things made it slow. Every
+round was a waterfall: a feature's chunk was fetched, parsed, and only then
+were its shared chunks (the 120 KB YAML chunk in the chrome round) requested.
+And the responses to those requests waited behind the main thread, busy with
+the editor's own startup, so they were handled after first paint. A request
+through the webview resource loader costs about 0.5 ms and the 55 entry files
+queue behind each other. The entry graph is that fragmented because esbuild
+puts every set of modules that a different group of lazy features shares in a
+chunk of its own (median 1.1 KB). Nothing in the entry's graph is large and
+unneeded (CodeMirror 174 KB, markdown-it and its parts 105 KB, DOMPurify 30
+KB): the only big thing the first view does not need on most notes is YAML,
+whose loader is synchronous, so it stays.
+
+Kept:
+
+- **Modulepreload hints.** The build writes `webview/feature-chunks.json`
+  (each feature's chunks beyond the entry's graph); the VS Code host reads it
+  once and `webviewHTML` lists the entry and the chunks of the first-view
+  features that are on by default as `<link rel="modulepreload">`. They are
+  fetched and compiled while the entry loads, and evaluated only when
+  imported. Other hosts pass no list and get the page as before.
+- **One `editor.js`.** The build's editor entry is a build of its own and
+  `scripts/merge-entry-graph.mjs` folds the entry's static graph into
+  `editor.js` (the lazy chunks import it under per-chunk names). 55 requests
+  become 1; evaluating one big module costs ~13 ms more on a cold open, which
+  the fetch saves (cold first paint is unchanged, warm is 20–30 ms sooner).
+- **Feature phases after a task, one configure when preloaded.** With the
+  chunks already fetched, the phases would run inside the first-paint frame
+  (the sheet of 100 properties takes ~70 ms), so they start a task after it.
+  When the page has preload hints, chrome and paint are configured together
+  (`webview/feature-phases.ts`): one reconfigure fewer; a note with 100
+  properties has its features ~40 ms sooner, a small note 4 ms.
+
+Tried and dropped: preloading the entry's own chunks as well (its 55
+requests then compete with the first view's: first paint 4–12 ms later, no
+earlier features); `fetchpriority="low"` on the first view's hints (5–45 ms
+slower to features on all three notes); folding the entry's graph without the
+hints (first paint 0–12 ms sooner, features no earlier: the fetch saving is
+partly lost to evaluating one big module).
+
+Results (webview-relative, ms from the document start; medians before →
+after; 9 warm and 7 cold opens each, build alternated between rounds):
+
+|                                       | small note | 5,000 lines | 100 properties |
+| ------------------------------------- | ---------- | ----------- | -------------- |
+| first paint, warm                     | 116 → 92   | 140 → 120   | 120 → 88       |
+| first paint, cold                     | 132 → 132  | 156 → 156   | 124 → 120      |
+| features loaded (`mw:features`), warm | 131 → 81   | 185 → 116   | 299 → 129      |
+| features loaded, cold                 | 150 → 125  | 194 → 171   | 384 → 190      |
+| every plugin applied, warm            | 149 → 99   | 223 → 183   | 346 → 305      |
+| every plugin applied, cold            | 175 → 161  | 310 → 294   | 440 → 414      |
+| requests                              | 105 → 49   | 111 → 55    | 102 → 46       |
+
+Bytes fetched are unchanged (1,568 → 1,566 KB on the small note); the VSIX is
+61 KB larger (diff.js grew from 8 to 230 KB: the diff and graph pages now
+carry their own copies of the code they shared with the editor's chunks). Quality checks (`pnpm test:quality`)
+pass; their harness loads Lumia as one bundle, so it neither fetches chunks
+nor sees the hints, and its first-paint and features-after-paint figures are
+unchanged (38 and 37 ms, small note). Risks: a host that does not list the
+first view's chunks (host-node: DSH, the app, the desktop app) gets the one
+`editor.js` and the later phases but not the hints; a stale
+`feature-chunks.json` makes a hint 404, which the browser ignores; the merge
+step rewrites esbuild's chunk imports with a pattern and fails the build if
+any is left over.
+
+## First-paint snapshot of the note (2026-11-05)
+
+Opening a note in VS Code painted nothing of it until the editor's script (57
+files, 878 KB) had loaded and mounted: 110 to 150 ms of the webview's own time
+after VS Code's own ~200 ms to create the iframe. The host now puts the
+note's first screen in the page's first HTML (`plugins/editor/snapshot.ts`),
+and the editor mounts beneath it.
+
+- **What it draws.** The first 80 lines or 8 KB of source, as Live Preview draws
+  them, with Live Preview's own classes and the settled editor's three gutter
+  columns (so the text starts at the same x): headings (line 1 with its `#`
+  shown, where the caret starts), paragraphs with bold, italic, strike,
+  highlight, code, links, wikilinks, bare URLs, tags and escapes, bullet and
+  numbered lists, one-level quotes, code fences of plain languages, rules, and
+  the Properties placeholder. It ends before the first block it cannot draw
+  exactly (tables, callouts, images, embeds, math, footnotes, HTML, tasks,
+  setext headings, indented code, a wrapped list item, diagrams, a Properties
+  sheet taller than its estimate). Everything is escaped text in `div`, `span`,
+  `br` and `wbr`; no script, handler, address or image.
+- **Same layout.** Hidden syntax leaves a zero-width image either side in the
+  editor, and a line may break at an image: the snapshot has `<wbr>` there,
+  outside the styled span. `test/browser/first-paint-snapshot.spec.ts` compares
+  every line's box and text width with the editor's at 18 widths and sizes
+  (within 0.5 px). The one known difference is the Properties sheet, which can
+  be taller than its placeholder (`frontmatterPlaceholderHeight` is a floor):
+  FM100 by 90 px in VS Code. Nothing with text sits below it then.
+- **Settings.** `lumiere.markdown.editor.firstPaintSnapshot` (default on). None
+  for Source mode, a centred page, right-to-left text, an inline title, the
+  links plugin off, or without the line-number, change-bar and fold gutters. The
+  host builds the snapshot before an Obsidian vault's own settings are read, so
+  it carries a layout key (`snapshot-layout.ts`) and the editor drops it at once
+  when its own settings (or a search match) differ.
+- **VS Code shows a webview only after its page's `load` event**
+  (`webview/browser/pre/index.html`), and a module script's import graph delays
+  `load`. With the snapshot in the HTML alone, a first trial barely moved the
+  first paint (76 to 88 ms from the document's start, against 64 to 136
+  without). A page with a snapshot loads the editor by `import()` from an inline
+  script instead (which does not delay `load`); host messages that arrive before
+  the editor's listener are kept and replayed (`webview/transport.ts`); the
+  script also drops the snapshot for a restored view (`getState()`).
+- **Swap.** After every feature has loaded and two frames have painted (at most
+  2 s), `webview/snapshot.ts` removes it.
+
+Measured in VS Code 1.144 on the study machine, production build, the same
+vsix with the setting on and off, interleaved launches (3 per cell, each
+followed by 3 reopens; cold is the first open of a launch): Enter to first
+contentful paint, median ms (cold n=3, warm n=9):
+
+| Note | cold on / off | warm on / off |
+| --- | --- | --- |
+| Small.md (925 B) | 507 / 561 | 113 / 213 |
+| Large.md (93 KB) | 522 / 636 | 175 / 223 |
+| FM100.md (100 properties) | 451 / 520 | 135 / 188 |
+
+The webview's own time to first paint falls from 112 to 148 ms to 40 to 48 ms
+(inner document start to FCP). Enter to every feature loaded does not change
+beyond the noise. Host cost: 5 to 7 ms on a cold open (the first parse), 2.4 ms
+warm, of which about 2 ms is reading the note's settings. The text of the
+snapshot is 1.4 to 2.7 KB of HTML. Layout at the swap, in the editor itself:
+the first 24 lines moved 0.02 px (Small), 0 px (Large).
+
+Not done: hosts that build their own page (host-node) get the same HTML but
+this was not tried there; tasks, tables and callouts end the snapshot; line
+numbers and git bars appear at the swap (the gutter is drawn empty).
+
+## Opening: associate Lumia directly again (2026-11-06)
+
+The #458 route (`*.md` → `"default"`, then reclaim) put VS Code's text editor
+in front of every note: the tab opened as text, VS Code compiled the Markdown
+TextMate grammar (~110 ms of a cold open), and Lumia reclaimed the tab after
+the selection wait. Measured cold, Enter to Lumia's resolve was ~150 ms with
+the 40 ms settle and ~30 ms with a direct association. The owner chose speed
+over the Search range: **Use Lumia for Markdown in This Workspace** now writes
+`lumiere.markdown.editor` for both patterns, and activation moves a workspace
+Lumia set up the old way (`workspaceEditor` set, a pattern on `"default"`).
+A text association Lumia did not write is left alone.
+
+Reclaim's workspace default (the Search selection wait, reclaiming every text
+tab) now also requires the live associations to route Markdown through text
+(`routesMarkdownThroughText`). With the direct association a Markdown text tab
+is one someone chose (Open as Text, an agent's showTextDocument) and follows
+the ordinary reclaim rules. Tests: `associations.test.ts` (direct write,
+migration, a text association Lumia did not write), `handoff-host.test.ts`
+(no Search wait under the direct association; the two Search-wait tests now
+set the text route explicitly).
+
+Measured in VS Code 1.144 (installed VSIX, 7 cold / 21 warm opens of Small,
+Large and FM100, interleaved): Enter to resolve fell from 167–180 ms to
+36–43 ms, and Enter to first contentful paint by 64–77 ms cold (Small 406 →
+329, Large 395 → 331, FM100 369 → 294). Warm opens were already direct (no
+text tab) and are unchanged.
+
+A Search click still opens Lumia with the match selected (the breadcrumb shows
+its section), contrary to the 2026-10-30 note. Its scroll is off: on Small the
+match sits under the sticky heading bar, and on Large the scroll stops short
+and the match is below the viewport. The first Lumia editor in a window also
+swaps the sidebar from Search to Explorer; that happens on any first open,
+including Quick Open, on the text route too (where only a Search click
+avoided it). Both are follow-ups.
+
+
+## Opening a note keeps the sidebar container (2026-11-06)
+
+The first Lumia editor in a window swapped the sidebar to the Explorer within
+a second, from a Search click as much as from Quick Open (the 2026-10-30 note
+only avoided it for a Search click on the text route, where the panel carried
+`openedFromNativeSelection`). Cause: `outline/focus.ts` ran `outline.removeView`,
+then `lumiere.markdown.outline.focus`, then `focusActiveEditorGroup`. Markdown
+Outline is a view of the Explorer, and VS Code's `<view>.focus` opens the
+view's container. `<view>.removeView` and `<view>.toggleVisibility`, by
+contrast, act only while the view's container is the one shown (the
+`removeView` command's own description in VS Code 1.144: "Hides the view if it
+is visible and the view container it is located in is visible").
+
+Findings in VS Code 1.144 (installed VSIX, fresh profile): a tree view of the
+Explorer that is collapsed reports `visible: false` and fires no visibility
+event, and an extension's Explorer view starts collapsed whatever its
+`visibility` (Markdown Outline appeared collapsed at 300 ms to 5 s after the
+open, `visibility: "visible"` notwithstanding). Nothing the extension API
+exposes says which container is shown without showing it (`TreeView.reveal`
+opens the view too; no command reads a context key).
+
+Now nothing is focused on open. `createOutlineFocus` hides the native Outline
+when Markdown Outline becomes visible (`outlineShown`, from the tree's
+`onDidChangeVisibility`, or at once when the editor becomes active under an
+Outline already on screen), and restores it on leave or dispose only if it
+hid it, so a note opened and closed under Search leaves both Search and the
+Outline alone. The reader expands Markdown Outline once; VS Code remembers
+it, and from then on it opens expanded with the native Outline hidden (one
+run sampled every 60 ms: Markdown Outline in by 180 ms, the native Outline
+gone by 450 ms, so the two show together for up to ~300 ms).
+
+Verified in VS Code 1.144 with an installed VSIX, in a fresh profile: Search
+showing, a first open from Quick Open (Search still showing at 300 ms, 1, 2.5,
+5 s and after closing the note) and from a Search click, then a second click
+(Search showing throughout); Explorer showing, a first open (Markdown Outline
+collapsed, native Outline untouched), expanding it by hand (native Outline
+hidden at once, restored with the note closed), and a second launch with the
+expansion remembered (Markdown Outline expanded, native Outline hidden by
+450 ms). Not done: a fresh profile gets Markdown Outline collapsed on its first
+open rather than expanded, and closing a note after the reader has moved from
+the Explorer to another container still focuses the native Outline (the
+Explorer comes up then); Lumia PDF's `pdfOutline/focus.ts` still has the old
+focus and the same swap. Tests: `outline/focus.test.ts` (nothing focused on
+enter; hidden once when shown; restored only when hidden; peer and dispose
+cases), `outline/host.test.ts` (Search showing, Explorer showing, switching to
+the Explorer under an open note, closing under each; the tree fake now keeps
+every visibility listener, as VS Code's does).
+
+## A Search click's match stays on screen (2026-11-06)
+
+With the direct association a Search click selected the match (breadcrumb on
+its section) but the scroll was wrong: on Small the match sat under the sticky
+heading bar, on Large (5,000 lines) the scroll stopped 160-360 lines short.
+
+How the match arrives (traced with host and webview marks in a VSIX built from
+a clone): `activeTextEditor` is not the note at `resolveCustomTextEditor`, and
+nothing is transferred. About 100 ms later VS Code 1.144 calls
+`resolveCustomTextEditorNavigation` (the proposal the 2026-10-30 note found
+unusable still reaches the installed extension through
+`enableCustomTextEditorProposals`), then `revealRange` with the match range
+and `preserveFocus`; that goes `navigation.revealPanel` -> the links plugin's
+`navigate` -> `scrollTargetToTop` (`y: "start"`, since #507 for every jump,
+Search matches included). `placeOpeningSelection` has no selection to place.
+
+Two races, both from features that load after the first paint:
+- Small: the one sticky correction (two frames after the jump) measured the
+  bar before the stickyScroll feature had drawn it (0 px), then the bar
+  appeared 22 px tall over the match.
+- Large: the jump landed (topLine = match), then a late feature configure
+  pinned the top line through `keepPlace`, and the sticky correction's own
+  `scrollIntoView` ended that pin (a scroll the pin did not make is the
+  reader's). A ~12,000 px height change above the match (133,694 px final
+  against 121,662) then arrived with CodeMirror's anchoring not undoing it in
+  some runs (scrollTop unchanged, top line 4005 -> 3644, match 9,600 px below
+  the viewport); other runs it did, which is why it was intermittent.
+
+Fix: `EditorService.holdAtTop(position, yMargin)` (view-state's pin: the line is
+held at its place while layout settles, until the reader scrolls or types)
+pins the jump's target before it scrolls, and the sticky correction moves that
+hold (`ScrollHold.move`) instead of scrolling past it. The correction keeps
+looking while the hold lasts (45 looks, about 1.5 s, at most 3 corrections),
+so a bar that draws late, or whose row height changes once the line height is
+measured (43 -> 49 px on Large), is still cleared. The pin holds the line's text
+rather than the line: a heading has 16 px of padding above its text, which put
+the jumped heading 16 px lower than `outline-jump-top.spec.ts` allows. The
+padding is read from the line's DOM, because CodeMirror refuses layout reads
+(`coordsAtPos`) while it measures, which is when the scroll handler runs.
+Hosts without `holdAtTop` keep the single look. Goes through `navigate`, so Outline clicks, Go to
+Heading and in-note fragment links get the same hold.
+
+Verified in VS Code 1.144, installed VSIX, fresh profile, Search click as the
+first Markdown open, then warm clicks: Small ("quote 12", line 29) lands at
+22 px under the 22 px bar; Large (4005, 1859) lands 43-49 px under the 43-49 px
+bar, 3 of 3 cold runs (before, with the diagnostic build, 4 of 6 cold runs
+left the match off screen), and Small -> Large 108 -> Large 50 -> Small stays
+on screen on each, twice. Tests: `scroll-to-top.test.ts`
+(hold made before the scroll, the late and the changing bar, the bound on
+corrections, the reader taking over) and `view-state.test.ts` (a held line
+stays below the margin and the embedder's inset as content above grows, moving
+a hold, the reader's input and another hold end it). `scrollTargetToTop` takes
+an options object instead of the bare `isCurrent`.
+
+Not done: the first-paint snapshot (top of the note) still shows until the
+features load, so a Search click paints the top of the note first and the
+editor then appears at the match; the host does not know the match when it
+builds the page.
+
+## Outline: scroll follow no longer fights the caret (2026-11-05)
+
+A review of #496/#507 found four ways the outline's scroll follow went wrong.
+Obsidian's outline follows the caret in Live Preview and Source and uses the
+scroll position only in Reading view; Lumia keeps following the scroll too
+(#496) but never against the caret.
+
+- A scroll the caret caused (an arrow past the bottom, Page Down, Ctrl+End,
+  find next, the scroll a jump makes) was reported about 100 ms after the
+  caret follow, and the section at the top of the viewport took over. The
+  webview's `ReadingReporter` now tells a scroll that follows a selection
+  change (within `CARET_SCROLL_MS`) from the reader's own and reports only the
+  latter. The caret's scroll is remembered but not reported, so a later layout
+  shift to the same top line is not news either.
+- Go to Heading, `[[#Heading]]` links and sticky pins also put a heading at
+  the top (`scrollTargetToTop`), but only outline clicks held back scroll
+  follow. Near the end of the note the `y: "start"` scroll is clamped, so the
+  top line belongs to an earlier heading and the outline selected that; and a
+  nested heading placed just below the sticky pins was under them for the
+  probe at the viewport's top edge, so the section before it was selected.
+  `readingOffset` now probes below the sticky overlay and the
+  `--lumiere-inset-top` inset (found through the DOM and the CSS variable;
+  nothing of sticky scroll's is imported), and the reporter observes the
+  editor's `onNavigate`, so the scroll of any deliberate jump is the jump's,
+  not the reader's. No host-side hold was added for these sources: they never
+  reach the host as scroll reports, and the host's hold also keeps the tree
+  still under a double-click, which only an outline click needs.
+- After an outline click the view dropped every scroll report for a second,
+  but the webview had already recorded them as sent: click row B, scroll on
+  to D within the second and stop, and the outline stayed on B until the top
+  line changed again. `OutlineJumpWindow` (`jump-window.ts`, moved out of
+  `view.ts`, which was four lines short of its limit) now keeps the last
+  report it holds back and applies it when the window ends, unless a caret
+  move, another click, a refresh or a stop came after it. The report goes
+  through `followReading` again, so the panel and text-version checks apply.
+- With the caret or the top line above the first heading (frontmatter,
+  preamble) the follow returned early and the old row stayed highlighted;
+  Obsidian clears it. `TreeHandle` gets an optional `clearSelection`;
+  host-node's tree emits a `deselect` event and the app's tree panel unmarks
+  the current row. VS Code's TreeView can select a row (`reveal`) but has no
+  API to clear the selection (`TreeView.selection` is read-only, and the
+  list's `list.clear` acts on whichever list was focused last), so its adapter
+  does not implement it and the row stays highlighted there. The caret from
+  before an outline click, reported above the first heading, is held like any
+  other so it cannot clear the clicked row.

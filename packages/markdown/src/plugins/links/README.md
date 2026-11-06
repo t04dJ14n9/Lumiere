@@ -52,9 +52,12 @@ renderer adds `is-unresolved` to rendered links whose path is in it.
 - `webview.ts`: decoration (including unresolved styling), click
   handling, navigation and commands.
 - `navigate.ts`: webview fragment navigation (top-of-viewport jump).
-- `scroll-to-top.ts`: fragment / outline jumps use `y: "start"`, then one
-  post-paint correction with sticky chrome height as `yMargin` when a parent
-  pin is present after the jump.
+- `scroll-to-top.ts`: fragment / outline / Search-match jumps use `y: "start"`
+  and hold the target there (`EditorService.holdAtTop`) while the layout
+  settles, with the sticky chrome height as the margin once a parent pin is
+  present. The sticky bar can draw after the jump (its feature loads late) or
+  change height; the margin follows it for about a second and a half, a few
+  times at most, until the reader scrolls.
 - `links.test.ts`: target parsing and caret lookup units.
 - `host.test.ts`: source identity, scheme policy, side opens and handler lifecycle.
 - `test/unit/links/unresolved.test.ts`: unresolved keys, styled decorations and

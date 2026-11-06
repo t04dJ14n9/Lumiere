@@ -3,12 +3,21 @@
  * Source of truth is the notes; this cache is never written to disk.
  */
 import type { ViewRect } from "./geometry";
+import { readLinkDestination } from "./native-links";
+import {
+  normalizePdfKey,
+  pdfKeysOfLinkPath,
+  type PdfLinkKeys,
+} from "./pdf-backlink-key";
 import { parsePdfDeepLinkFragment } from "./text-fragment";
+
+export { normalizePdfKey };
 
 export interface PdfBacklinkHit {
   noteUri: string;
   notePath: string;
   linkOffset: number;
+  /** The PDF this link opens, as a path in the note's workspace folder. */
   pdfKey: string;
   page: number;
   textFragment?: { textStart: string };
@@ -16,9 +25,20 @@ export interface PdfBacklinkHit {
   highlightId?: string;
 }
 
-/** Markdown `[label](target)` / `[label](<target>)` destinations. */
-const MD_LINK =
-  /\[([^\]]*)\]\(\s*(?:<([^>\n]+)>|([^)\s]+))\s*(?:["'][^"']*["'])?\s*\)/gu;
+/** A hit with the other PDFs its path may name; the viewer never sees `keys`. */
+export interface IndexedHit {
+  hit: PdfBacklinkHit;
+  keys: PdfLinkKeys;
+}
+
+/** A PDF: its workspace folder (`""` outside every folder) and its path in it. */
+export interface PdfFile {
+  folder: string;
+  path: string;
+}
+
+/** The `[label](` that opens an inline link; its destination follows. */
+const MD_LINK_START = /\[[^\]]*\]\(\s*/gu;
 
 /**
  * Collect PDF deep-link hits from one note's Markdown text.
@@ -29,37 +49,50 @@ export function extractPdfBacklinks(
   notePath: string,
   noteUri: string,
 ): PdfBacklinkHit[] {
-  const hits: PdfBacklinkHit[] = [];
-  MD_LINK.lastIndex = 0;
-  let match: RegExpExecArray | null;
-  while ((match = MD_LINK.exec(noteText)) !== null) {
-    const hit = hitFromMarkdownLink(match, notePath, noteUri);
-    if (hit) {
-      hits.push(hit);
-    }
-  }
-  return hits;
+  return extractIndexedHits(noteText, notePath, noteUri).map(({ hit }) => hit);
 }
 
-function hitFromMarkdownLink(
-  match: RegExpExecArray,
+export function extractIndexedHits(
+  noteText: string,
   notePath: string,
   noteUri: string,
-): PdfBacklinkHit | undefined {
-  const target = (match[2] ?? match[3] ?? "").trim();
-  if (!target) {
-    return undefined;
+): IndexedHit[] {
+  const entries: IndexedHit[] = [];
+  for (const match of noteText.matchAll(MD_LINK_START)) {
+    const target = destinationAt(noteText, match.index + match[0].length);
+    const entry = target
+      ? hitFromTarget(target, { linkOffset: match.index, notePath, noteUri })
+      : undefined;
+    if (entry) {
+      entries.push(entry);
+    }
   }
+  return entries;
+}
+
+/**
+ * The destination in either CommonMark form: `<papers/my paper.pdf#page=2>`
+ * or bare, with balanced parentheses (`papers/a(1).pdf#page=2`). Copy link
+ * writes the bare form, percent-encoded. A destination never spans lines.
+ */
+function destinationAt(text: string, start: number): string | undefined {
+  const lineEnd = text.indexOf("\n", start);
+  const line = text.slice(start, lineEnd < 0 ? text.length : lineEnd);
+  return readLinkDestination(line, 0)?.href.trim();
+}
+
+function hitFromTarget(
+  target: string,
+  source: { linkOffset: number; notePath: string; noteUri: string },
+): IndexedHit | undefined {
   const hash = target.indexOf("#");
   const pathPart = hash >= 0 ? target.slice(0, hash) : target;
   const fragment = hash >= 0 ? target.slice(hash + 1) : "";
   if (!/\.pdf$/iu.test(pathPart)) {
     return undefined;
   }
-  const pdfKey = normalizePdfKey(
-    resolveNoteRelativePdfPath(pathPart, notePath),
-  );
-  if (!pdfKey) {
+  const keys = pdfKeysOfLinkPath(pathPart, source.notePath);
+  if (!keys) {
     return undefined;
   }
   const parsed = fragment
@@ -68,11 +101,11 @@ function hitFromMarkdownLink(
   if (!parsed.page && !parsed.highlightId) {
     return undefined;
   }
-  return {
-    noteUri,
-    notePath,
-    linkOffset: match.index,
-    pdfKey,
+  const hit: PdfBacklinkHit = {
+    noteUri: source.noteUri,
+    notePath: source.notePath,
+    linkOffset: source.linkOffset,
+    pdfKey: keys.pdfKey,
     page: parsed.page ?? 1,
     ...(parsed.textFragment
       ? { textFragment: { textStart: parsed.textFragment.textStart } }
@@ -80,101 +113,82 @@ function hitFromMarkdownLink(
     ...(parsed.viewRect ? { viewRect: parsed.viewRect } : {}),
     ...(parsed.highlightId ? { highlightId: parsed.highlightId } : {}),
   };
+  return { hit, keys };
 }
+
+type Table = Map<string, IndexedHit[]>;
 
 /**
- * When the Markdown target is note-relative (`./`, `../`, or a bare filename),
- * join it with the note's directory and collapse `.` / `..` so the key matches
- * workspace-relative `displayPath`. Vault-root / Copy-link paths
- * (`papers/a.pdf`) are returned unchanged for `normalizePdfKey`.
+ * Two folders of a multi-root workspace can each hold `papers/a.pdf`, so a
+ * key means something only inside its workspace folder.
  */
-function resolveNoteRelativePdfPath(
-  pathPart: string,
-  notePath: string,
-): string {
-  let value = pathPart.trim().replaceAll("\\", "/");
-  try {
-    value = decodeURIComponent(value);
-  } catch {
-    // keep undecoded
-  }
-  if (value.startsWith("file:")) {
-    return pathPart;
-  }
-  const isNoteRelative =
-    value.startsWith("./") || value.startsWith("../") || !value.includes("/");
-  if (!isNoteRelative) {
-    return pathPart;
-  }
-  const noteDir = dirnameWorkspacePath(notePath);
-  return collapseWorkspacePath(noteDir ? `${noteDir}/${value}` : value);
+function slot(folder: string, key: string): string {
+  return `${folder}\u0000${key}`;
 }
 
-function dirnameWorkspacePath(path: string): string {
-  const normalized = path.trim().replaceAll("\\", "/");
-  const idx = normalized.lastIndexOf("/");
-  return idx >= 0 ? normalized.slice(0, idx) : "";
+function addTo(table: Table, key: string, entry: IndexedHit): void {
+  const list = table.get(key);
+  if (list) {
+    list.push(entry);
+  } else {
+    table.set(key, [entry]);
+  }
 }
 
-/** Collapse `.` / `..` segments; output uses `/` and has no leading `/`. */
-function collapseWorkspacePath(path: string): string {
-  const out: string[] = [];
-  for (const segment of path.split("/")) {
-    if (segment === "" || segment === ".") {
-      continue;
-    }
-    if (segment === "..") {
-      if (out.length > 0) {
-        out.pop();
-      }
-      continue;
-    }
-    out.push(segment);
+function removeFrom(table: Table, key: string, noteUri: string): void {
+  const next = (table.get(key) ?? []).filter(
+    ({ hit }) => hit.noteUri !== noteUri,
+  );
+  if (next.length === 0) {
+    table.delete(key);
+  } else {
+    table.set(key, next);
   }
-  return out.join("/");
 }
 
-/** Workspace-relative PDF path: `/` separators, decode once. */
-export function normalizePdfKey(raw: string): string {
-  let value = raw.trim().replaceAll("\\", "/");
-  try {
-    value = decodeURIComponent(value);
-  } catch {
-    // keep undecoded
-  }
-  value = value.replace(/^\.\//u, "");
-  if (value.startsWith("file:")) {
-    try {
-      const path = new URL(value).pathname;
-      value = decodeURIComponent(path).replace(/^\/+/u, "");
-    } catch {
-      value = value.replace(/^file:\/\//u, "").replace(/^\/+/u, "");
-    }
-  }
-  return value;
+/** The hit as the looked-up PDF's own key names it. */
+function atKey(hit: PdfBacklinkHit, pdfKey: string): PdfBacklinkHit {
+  return hit.pdfKey === pdfKey ? hit : { ...hit, pdfKey };
 }
 
 /**
  * Per-PDF lookup of backlink hits. `replaceNote` refreshes one note without
  * a full vault rebuild; `lookup` is O(hits for that PDF).
+ *
+ * A foldered link path (`papers/a.pdf`) opens the vault-root file when there
+ * is one, else the one beside the note. Only the file system knows which, so
+ * the index keeps the note-relative reading apart (`fallbacks`) and `hitsFor`
+ * asks.
  */
 export class PdfBacklinkIndex {
-  private readonly byNote = new Map<string, PdfBacklinkHit[]>();
-  private readonly byPdf = new Map<string, PdfBacklinkHit[]>();
+  private readonly byNote = new Map<
+    string,
+    { folder: string; entries: IndexedHit[] }
+  >();
+  private readonly byPdf: Table = new Map();
+  private readonly fallbacks: Table = new Map();
 
-  replaceNote(noteUri: string, notePath: string, text: string): void {
+  /** `folder` is the note's workspace folder, any string that names it. */
+  replaceNote(
+    noteUri: string,
+    notePath: string,
+    text: string,
+    folder = "",
+  ): void {
     this.removeNote(noteUri);
-    const hits = extractPdfBacklinks(text, notePath, noteUri);
-    if (hits.length === 0) {
+    const entries = extractIndexedHits(text, notePath, noteUri);
+    if (entries.length === 0) {
       return;
     }
-    this.byNote.set(noteUri, hits);
-    for (const hit of hits) {
-      const list = this.byPdf.get(hit.pdfKey);
-      if (list) {
-        list.push(hit);
-      } else {
-        this.byPdf.set(hit.pdfKey, [hit]);
+    this.byNote.set(noteUri, { folder, entries });
+    for (const entry of entries) {
+      const { pdfKey, fallbackKey, externalKey } = entry.keys;
+      addTo(this.byPdf, slot(folder, pdfKey), entry);
+      if (externalKey) {
+        addTo(this.byPdf, slot("", externalKey), entry);
+      }
+      if (fallbackKey) {
+        addTo(this.fallbacks, slot(folder, fallbackKey), entry);
       }
     }
   }
@@ -185,27 +199,57 @@ export class PdfBacklinkIndex {
       return;
     }
     this.byNote.delete(noteUri);
-    for (const hit of previous) {
-      const list = this.byPdf.get(hit.pdfKey);
-      if (!list) {
-        continue;
+    const { folder, entries } = previous;
+    for (const { keys } of entries) {
+      removeFrom(this.byPdf, slot(folder, keys.pdfKey), noteUri);
+      if (keys.externalKey) {
+        removeFrom(this.byPdf, slot("", keys.externalKey), noteUri);
       }
-      const next = list.filter((entry) => entry.noteUri !== noteUri);
-      if (next.length === 0) {
-        this.byPdf.delete(hit.pdfKey);
-      } else {
-        this.byPdf.set(hit.pdfKey, next);
+      if (keys.fallbackKey) {
+        removeFrom(this.fallbacks, slot(folder, keys.fallbackKey), noteUri);
       }
     }
   }
 
-  lookup(pdfKey: string): readonly PdfBacklinkHit[] {
-    return this.byPdf.get(normalizePdfKey(pdfKey)) ?? [];
+  /** Links whose first reading is this PDF; see `hitsFor` for the rest. */
+  lookup(pdfKey: string, folder = ""): readonly PdfBacklinkHit[] {
+    const key = normalizePdfKey(pdfKey);
+    return (this.byPdf.get(slot(folder, key)) ?? []).map(({ hit }) =>
+      atKey(hit, key),
+    );
+  }
+
+  /**
+   * Every link that opens this PDF: those that name it first, and the
+   * note-relative readings of foldered paths whose vault-root file is not
+   * one (`isFile`), as the editor opens them.
+   */
+  async hitsFor(
+    pdf: PdfFile,
+    isFile: (file: PdfFile) => Promise<boolean>,
+  ): Promise<PdfBacklinkHit[]> {
+    const key = normalizePdfKey(pdf.path);
+    const direct = this.lookup(key, pdf.folder);
+    const candidates = this.fallbacks.get(slot(pdf.folder, key)) ?? [];
+    const rootKeys = [...new Set(candidates.map(({ hit }) => hit.pdfKey))];
+    const rootIsFile = new Map(
+      await Promise.all(
+        rootKeys.map(
+          async (path) =>
+            [path, await isFile({ folder: pdf.folder, path })] as const,
+        ),
+      ),
+    );
+    const beside = candidates
+      .filter(({ hit }) => !rootIsFile.get(hit.pdfKey))
+      .map(({ hit }) => atKey(hit, key));
+    return [...direct, ...beside];
   }
 
   clear(): void {
     this.byNote.clear();
     this.byPdf.clear();
+    this.fallbacks.clear();
   }
 }
 

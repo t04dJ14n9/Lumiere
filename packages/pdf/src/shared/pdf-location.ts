@@ -30,14 +30,32 @@ export function formatLocationFragment(location: PdfLocation): string {
 }
 
 /**
- * Read a location from a link fragment. Unknown parameters are ignored; an
- * invalid page makes the whole fragment invalid, an invalid box is dropped.
+ * Split a link fragment at its text-fragment directive. Copy Link writes
+ * `page=3#:~:text=…`: the part before the second `#` is the PDF location, the
+ * rest (`:~:text=…`) is the Chrome directive. Every reader of such a link
+ * must split here first, or the directive ends up inside the `page` value.
+ */
+export function splitFragmentDirective(fragment: string): {
+  location: string;
+  directive?: string;
+} {
+  const cleaned = fragment.replace(/^#/, "");
+  const at = cleaned.indexOf("#:~:");
+  return at < 0
+    ? { location: cleaned }
+    : { location: cleaned.slice(0, at), directive: cleaned.slice(at + 1) };
+}
+
+/**
+ * Read a location from a link fragment, ignoring a trailing `#:~:text=…`
+ * directive. Unknown parameters are ignored; an invalid page makes the whole
+ * fragment invalid, an invalid box is dropped.
  */
 export function parseLocationFragment(
   fragment: string,
 ): PdfLocation | undefined {
   const parameters = new Map<string, string>();
-  for (const part of fragment.replace(/^#/, "").split("&")) {
+  for (const part of splitFragmentDirective(fragment).location.split("&")) {
     const separator = part.indexOf("=");
     if (separator > 0) {
       const key = part.slice(0, separator).toLowerCase();

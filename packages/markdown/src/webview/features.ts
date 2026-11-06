@@ -7,6 +7,11 @@ import {
   features as editorFeatures,
   workbenchFeatures,
 } from "../plugins/catalog";
+import {
+  CHROME_FEATURE_IDS,
+  PAINT_FEATURE_IDS,
+  RENDER_AFFECTING_FEATURE_IDS,
+} from "../shared/first-view";
 import type { Manifest } from "../shared/manifest";
 
 type FeatureSettings = Infer<typeof featureSettings>;
@@ -103,41 +108,6 @@ const WEBVIEW_LOADERS: Record<string, () => Promise<Plugin<unknown>>> = {
   tasks: () => import("../plugins/tasks/webview").then((m) => m.tasksWebview),
   vim: () => import("../plugins/vim/webview").then((m) => m.vimWebview),
 };
-
-/**
- * Editor chrome geometry first: Properties sheet + line-number gutter so the
- * first meaningful frame does not flash missing sheet/gutter then inject them
- * on the later paint phase. Tags stay in paint (not layout chrome). Tables /
- * callouts / … still wait on paint so they cannot gate the sheet.
- */
-const CHROME_FEATURE_IDS = new Set(["properties", "lineNumbers"]);
-
-/**
- * Visible structure for the first screen after chrome. Includes tags plus
- * tables/callouts/… Editing helpers and heavier features load in the deferred
- * "all" phase after first paint.
- */
-const RENDER_AFFECTING_FEATURE_IDS = new Set([
-  "callouts",
-  "codeBlocks",
-  "diagrams",
-  "embeds",
-  "footnotes",
-  "links",
-  "math",
-  "onlineVideos",
-  "tables",
-  "tags",
-  "tasks",
-]);
-
-const PAINT_FEATURE_IDS = new Set([
-  ...CHROME_FEATURE_IDS,
-  ...RENDER_AFFECTING_FEATURE_IDS,
-  "formatting",
-  "smartLists",
-  "vim",
-]);
 
 const loaded = new Map<string, Plugin<unknown>>();
 

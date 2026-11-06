@@ -7,6 +7,20 @@ export function fromHost(event: MessageEvent<unknown>): boolean {
     event.origin === window.location.origin
   );
 }
+/**
+ * Host messages the page's inline loader kept while the editor's script was
+ * loading (plugins/editor/webview-html.ts, which loads it after `load`).
+ */
+interface EarlyMessages {
+  readonly queue: readonly MessageEvent<unknown>[];
+  stop(): void;
+}
+declare global {
+  interface Window {
+    lumiaEarlyMessages?: EarlyMessages;
+  }
+}
+
 export function webviewTransport(api: {
   postMessage(message: unknown): void;
 }): Transport {
@@ -19,6 +33,10 @@ export function webviewTransport(api: {
         }
       };
       window.addEventListener("message", listener);
+      // Same task as the listener's registration: nothing can interleave.
+      const early = window.lumiaEarlyMessages;
+      early?.stop();
+      early?.queue.forEach(listener);
       return () => window.removeEventListener("message", listener);
     },
   };

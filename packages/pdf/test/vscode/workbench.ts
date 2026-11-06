@@ -2,7 +2,8 @@
  * Helpers for driving the real VS Code window: the command palette, Quick
  * Open, and the PDF viewer inside its webview.
  */
-import { readFileSync, writeFileSync } from "node:fs";
+import { copyFileSync, readFileSync, rmSync, writeFileSync } from "node:fs";
+import path from "node:path";
 import { paths, readState } from "./state";
 import {
   chromium,
@@ -38,11 +39,33 @@ export const test = base.extend<{ workbench: Page }>({
     await closeSettingsEditor(page);
     await closeSecondarySideBar(page);
     await closeAllEditors(page);
+    resetWorkspaceFiles();
     await dismissCorruptInstallWarning(page);
     await use(page);
     await browser.close();
   },
 });
+
+/**
+ * Put back the files specs change. The workspace is made once for the whole
+ * run, so without this a spec sees what earlier ones left: a sidecar, a
+ * highlight burnt into the PDF, or a note whose link to the PDF paints a
+ * backlink overlay over the text a later spec selects. Editors are closed
+ * first. notes.md is left alone: VS Code may still hold a model of it, and a
+ * write here races the one `pastedClipboard` makes, which then fails to save;
+ * `pastedClipboard` empties it itself instead.
+ */
+function resetWorkspaceFiles(): void {
+  const docs = path.join(paths.workspace, "docs");
+  copyFileSync(
+    path.join(paths.fixtures, "outline.pdf"),
+    path.join(docs, "outline.pdf"),
+  );
+  rmSync(path.join(docs, "outline.pdf.lumiere.md"), { force: true });
+  for (const note of ["NativeLinks.md", "vault-backlink.md"]) {
+    rmSync(path.join(paths.workspace, note), { force: true });
+  }
+}
 
 async function findWorkbench(browser: Browser): Promise<Page> {
   let workbench: Page | undefined;
@@ -187,7 +210,14 @@ export async function pastedClipboard(page: Page): Promise<string> {
       }
     })
     .not.toBe("");
-  return readFileSync(notes, "utf8");
+  const pasted = readFileSync(notes, "utf8");
+  // Empty the note through the editor, so its link to the PDF does not paint
+  // a backlink overlay in later specs.
+  await page.keyboard.press("ControlOrMeta+a");
+  await page.keyboard.press("Delete");
+  await page.keyboard.press("ControlOrMeta+s");
+  await expect.poll(() => readFileSync(notes, "utf8")).toBe("");
+  return pasted;
 }
 
 /**
@@ -396,6 +426,6 @@ export async function showPage(
     statusBarEntry(page, PAGE_STATUS).click(),
   );
   await expect(
-    viewer.locator(`.page[data-page-index="${number - 1}"] img`),
+    viewer.locator(`.page[data-page-index="${number - 1}"] img.page-image`),
   ).toBeVisible();
 }

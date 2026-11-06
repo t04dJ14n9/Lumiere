@@ -33,6 +33,17 @@ export function healWorkspaceEditorAssociation(
   return true;
 }
 
+/**
+ * Whether Markdown still opens in the text editor first, to be reclaimed. Use
+ * Lumia for Markdown now associates Lumia directly, and then a text tab is one
+ * someone chose, not a note on its way to Lumia.
+ */
+export function routesMarkdownThroughText(
+  associations: unknown = workbenchAssociations(),
+): boolean {
+  return markdownOpensAsDefaultText(associations);
+}
+
 function workbenchAssociations(): unknown {
   return vscode.workspace
     .getConfiguration("workbench")

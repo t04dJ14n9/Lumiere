@@ -1,4 +1,4 @@
-import test from "node:test";
+import test, { type TestContext } from "node:test";
 import assert from "node:assert/strict";
 import {
   DISABLE_FOLLOW_COMMAND,
@@ -9,6 +9,8 @@ import {
   OPEN_COMMAND,
   TOGGLE_COMMAND,
 } from "../../../src/plugins/outline/commands";
+import { LEAVE_RESTORE_MS } from "../../../src/plugins/outline/focus";
+import { OUTLINE_JUMP_MS } from "../../../src/plugins/outline/jump-window";
 import { deferred, outlineFixture, tick } from "./fixture";
 import { render, uriOf, wait } from "../views/fakes";
 
@@ -51,6 +53,105 @@ test("opening from a native selection leaves the Search sidebar in place", async
     [],
   );
 });
+
+/** Commands that show a view, and with it the container (the Explorer) the view is in. */
+const REVEALING_COMMANDS = [
+  "lumiere.markdown.outline.focus",
+  "outline.focus",
+  "workbench.view.explorer",
+];
+
+/** What the host asked VS Code to do to the sidebar, in order. */
+function sidebarCommands(fixture: { executed: unknown[][] }): string[] {
+  return fixture.executed
+    .map(([command]) => String(command))
+    .filter(
+      (command) =>
+        command === "outline.removeView" ||
+        command === "workbench.action.focusActiveEditorGroup" ||
+        REVEALING_COMMANDS.includes(command),
+    );
+}
+
+test("opening a note with the Search view showing does not bring up the Explorer", async (t) => {
+  const fixture = await outlineFixture();
+  t.after(() => fixture.root.dispose());
+  // Markdown Outline is a view of the Explorer: not on screen under Search.
+  fixture.show(false);
+  const { panel } = fixture.panel("quick-open");
+
+  fixture.open(panel);
+  await tick();
+
+  assert.deepEqual(sidebarCommands(fixture), []);
+});
+
+test("with the Explorer showing, Markdown Outline replaces the native Outline without being focused", async (t) => {
+  const fixture = await outlineFixture();
+  t.after(() => fixture.root.dispose());
+  const { panel } = fixture.panel("one");
+
+  fixture.open(panel);
+  await tick();
+
+  assert.deepEqual(sidebarCommands(fixture), ["outline.removeView"]);
+});
+
+test("switching to the Explorer under an open note then replaces the native Outline", async (t) => {
+  const fixture = await outlineFixture();
+  t.after(() => fixture.root.dispose());
+  fixture.show(false);
+  const { panel } = fixture.panel("one");
+  fixture.open(panel);
+  await tick();
+  assert.deepEqual(sidebarCommands(fixture), []);
+
+  fixture.show(true);
+  await tick();
+  assert.deepEqual(sidebarCommands(fixture), ["outline.removeView"]);
+
+  fixture.show(false);
+  fixture.show(true);
+  await tick();
+  assert.deepEqual(
+    sidebarCommands(fixture),
+    ["outline.removeView"],
+    "the reader may show the native Outline again: hidden once per note",
+  );
+});
+
+test("closing the note restores the native Outline only where it was hidden", async (t) => {
+  const search = await outlineFixture();
+  t.after(() => search.root.dispose());
+  search.show(false);
+  const underSearch = search.panel("search").panel;
+  search.open(underSearch);
+  await tick();
+  search.switchTo(undefined);
+  await restoreWindow();
+  assert.deepEqual(
+    sidebarCommands(search),
+    [],
+    "nothing was hidden, so nothing is shown (and the Explorer stays away)",
+  );
+
+  const explorer = await outlineFixture();
+  t.after(() => explorer.root.dispose());
+  const underExplorer = explorer.panel("explorer").panel;
+  explorer.open(underExplorer);
+  await tick();
+  explorer.switchTo(undefined);
+  await restoreWindow();
+  assert.deepEqual(sidebarCommands(explorer), [
+    "outline.removeView",
+    "outline.focus",
+    "workbench.action.focusActiveEditorGroup",
+  ]);
+});
+
+/** Past the debounce that lets a PDF tab take over without flashing the Outline. */
+const restoreWindow = () =>
+  new Promise<void>((resolve) => setTimeout(resolve, LEAVE_RESTORE_MS + 80));
 
 test("Follow Cursor commands persist the setting and update the checked context", async (t) => {
   const fixture = await outlineFixture();
@@ -862,6 +963,271 @@ test("top-of-viewport reading during an outline jump does not yank the clicked r
   await tick();
   assert.equal(fixture.collapseAllCount, collapses + 1);
   assert.equal(fixture.reveals.at(-1)?.node.label, "A");
+});
+
+/** Click "B" in the outline with the caret in "A1a": the jump has landed on "B". */
+async function clickB(
+  fixture: Awaited<ReturnType<typeof outlineFixture>>,
+  t: TestContext,
+) {
+  const { panel, cursor } = fixture.panel("one");
+  fixture.open(panel);
+  await tick();
+  const text = fixture.texts.get("A.md")!;
+  cursor.head = text.indexOf("body-a");
+  fixture.root.emit("editor/selectionChanged", panel, false);
+  await tick();
+  // Freeze the clock so the OUTLINE_JUMP_MS window is under the test's control.
+  t.mock.timers.enable({ apis: ["Date", "setTimeout"] });
+  await fixture.fake.commands.get(OPEN_COMMAND)!(
+    uriOf("A.md"),
+    text.indexOf("# B"),
+  );
+  cursor.head = text.indexOf("# B");
+  fixture.root.emit("editor/selectionChanged", panel, false);
+  await tick();
+  fixture.reveals.length = 0;
+  return { panel, cursor, text };
+}
+
+test("the last scroll made during an outline click's hold is applied when it ends", async (t) => {
+  const fixture = await outlineFixture({ "A.md": NESTED });
+  t.after(() => fixture.root.dispose());
+  const { cursor, text } = await clickB(fixture, t);
+  // Click B, scroll on to A2a within the second, and stop: the webview
+  // reported both positions once and will not say them again.
+  t.mock.timers.tick(300);
+  cursor.read(text.indexOf("body-a"));
+  t.mock.timers.tick(300);
+  cursor.read(text.indexOf("body-a2"));
+  await tick();
+  assert.equal(fixture.reveals.length, 0, "held while the jump settles");
+  t.mock.timers.tick(OUTLINE_JUMP_MS - 600);
+  await tick();
+  assert.equal(fixture.reveals.length, 0, "still held at the last moment");
+  t.mock.timers.tick(2);
+  await tick();
+  assert.deepEqual(
+    fixture.reveals.map((reveal) => reveal.node.label),
+    ["A2a"],
+    "the newest report only, once the hold ends",
+  );
+});
+
+test("a scroll made after the hold is followed at once", async (t) => {
+  const fixture = await outlineFixture({ "A.md": NESTED });
+  t.after(() => fixture.root.dispose());
+  const { cursor, text } = await clickB(fixture, t);
+  cursor.read(text.indexOf("body-a"));
+  t.mock.timers.tick(OUTLINE_JUMP_MS + 2);
+  await tick();
+  fixture.reveals.length = 0;
+  cursor.read(text.indexOf("body-a2"));
+  await tick();
+  assert.deepEqual(
+    fixture.reveals.map((reveal) => reveal.node.label),
+    ["A2a"],
+  );
+});
+
+test("a caret move after a held scroll wins over it", async (t) => {
+  const fixture = await outlineFixture({ "A.md": NESTED });
+  t.after(() => fixture.root.dispose());
+  const { panel, cursor, text } = await clickB(fixture, t);
+  t.mock.timers.tick(300);
+  cursor.read(text.indexOf("body-a2"));
+  await tick();
+  // The reader moves the caret on from "B" to "A1a" before the hold ends.
+  t.mock.timers.tick(300);
+  cursor.head = text.indexOf("body-a");
+  fixture.root.emit("editor/selectionChanged", panel, false);
+  await tick();
+  assert.equal(fixture.reveals.at(-1)?.node.label, "A1a");
+  fixture.reveals.length = 0;
+  t.mock.timers.tick(OUTLINE_JUMP_MS);
+  await tick();
+  assert.equal(fixture.reveals.length, 0, "the older scroll is not applied");
+});
+
+test("a second click drops the scroll the first one held", async (t) => {
+  const fixture = await outlineFixture({ "A.md": NESTED });
+  t.after(() => fixture.root.dispose());
+  const { cursor, text } = await clickB(fixture, t);
+  t.mock.timers.tick(300);
+  cursor.read(text.indexOf("body-a2"));
+  t.mock.timers.tick(300);
+  await fixture.fake.commands.get(OPEN_COMMAND)!(
+    uriOf("A.md"),
+    text.indexOf("## B1"),
+  );
+  // The first click's window would end here; the second one's has not.
+  t.mock.timers.tick(OUTLINE_JUMP_MS - 600 + 2);
+  await tick();
+  assert.equal(fixture.reveals.length, 0);
+  t.mock.timers.tick(OUTLINE_JUMP_MS);
+  await tick();
+  assert.equal(fixture.reveals.length, 0, "nothing was held for the second");
+});
+
+test("a scroll held for an old text is not applied when the hold ends", async (t) => {
+  const fixture = await outlineFixture({ "A.md": NESTED });
+  t.after(() => fixture.root.dispose());
+  const { cursor, text } = await clickB(fixture, t);
+  cursor.read(text.indexOf("body-a2"));
+  // The webview's text moved on: the offset means something else now.
+  cursor.version++;
+  t.mock.timers.tick(OUTLINE_JUMP_MS + 2);
+  await tick();
+  assert.equal(fixture.reveals.length, 0);
+});
+
+test("a stopped outline applies no held scroll", async (t) => {
+  const fixture = await outlineFixture({ "A.md": NESTED });
+  const { cursor, text } = await clickB(fixture, t);
+  cursor.read(text.indexOf("body-a2"));
+  await fixture.root.dispose();
+  t.mock.timers.tick(OUTLINE_JUMP_MS + 2);
+  await tick();
+  assert.equal(fixture.reveals.length, 0);
+});
+
+const PREAMBLE = `---
+title: Note
+---
+Intro before any heading.
+
+# A
+body-a
+## A1
+body-a1
+`;
+
+test("a caret above the first heading clears the selected row", async (t) => {
+  const fixture = await outlineFixture(
+    { "A.md": PREAMBLE },
+    { clearsSelection: true },
+  );
+  t.after(() => fixture.root.dispose());
+  const { panel, cursor } = fixture.panel("one");
+  const text = fixture.texts.get("A.md")!;
+  cursor.head = text.indexOf("body-a1");
+  fixture.open(panel);
+  await tick();
+  assert.equal(fixture.reveals.at(-1)?.node.label, "A1");
+  assert.equal(fixture.clearCount, 0);
+  fixture.reveals.length = 0;
+  cursor.head = text.indexOf("Intro");
+  fixture.root.emit("editor/selectionChanged", panel, false);
+  await tick();
+  assert.equal(fixture.clearCount, 1);
+  assert.equal(fixture.reveals.length, 0, "nothing else is selected");
+  assert.deepEqual(fixture.warnings, []);
+  // Back into a section: it is selected again.
+  cursor.head = text.indexOf("body-a\n");
+  fixture.root.emit("editor/selectionChanged", panel, false);
+  await tick();
+  assert.equal(fixture.reveals.at(-1)?.node.label, "A");
+  assert.equal(fixture.clearCount, 1);
+});
+
+test("a note that opens above its first heading starts with nothing selected", async (t) => {
+  const fixture = await outlineFixture(
+    { "A.md": PREAMBLE },
+    { clearsSelection: true },
+  );
+  t.after(() => fixture.root.dispose());
+  const { panel } = fixture.panel("one");
+  fixture.open(panel);
+  await tick();
+  assert.equal(fixture.clearCount, 1);
+  assert.equal(fixture.reveals.length, 0);
+});
+
+test("scrolling the top line above the first heading clears the selected row", async (t) => {
+  const fixture = await outlineFixture(
+    { "A.md": PREAMBLE },
+    { clearsSelection: true },
+  );
+  t.after(() => fixture.root.dispose());
+  const { panel, cursor } = fixture.panel("one");
+  const text = fixture.texts.get("A.md")!;
+  cursor.head = text.indexOf("body-a1");
+  fixture.open(panel);
+  await tick();
+  fixture.reveals.length = 0;
+  cursor.read(0);
+  await tick();
+  assert.equal(fixture.clearCount, 1);
+  assert.equal(fixture.reveals.length, 0);
+});
+
+test("a tree that cannot unselect a row keeps following without it", async (t) => {
+  // VS Code's TreeView API has no way to clear the selection.
+  const fixture = await outlineFixture({ "A.md": PREAMBLE });
+  t.after(() => fixture.root.dispose());
+  const { panel, cursor } = fixture.panel("one");
+  const text = fixture.texts.get("A.md")!;
+  cursor.head = text.indexOf("body-a1");
+  fixture.open(panel);
+  await tick();
+  fixture.reveals.length = 0;
+  cursor.head = text.indexOf("Intro");
+  fixture.root.emit("editor/selectionChanged", panel, false);
+  await tick();
+  assert.equal(fixture.clearCount, 0);
+  assert.equal(fixture.reveals.length, 0);
+  assert.deepEqual(fixture.warnings, []);
+  cursor.head = text.indexOf("body-a\n");
+  fixture.root.emit("editor/selectionChanged", panel, false);
+  await tick();
+  assert.equal(fixture.reveals.at(-1)?.node.label, "A");
+});
+
+test("a note without headings has no row to unselect", async (t) => {
+  const fixture = await outlineFixture(
+    { "A.md": "just text\n" },
+    { clearsSelection: true },
+  );
+  t.after(() => fixture.root.dispose());
+  const { panel, cursor } = fixture.panel("one");
+  fixture.open(panel);
+  await tick();
+  cursor.head = 4;
+  fixture.root.emit("editor/selectionChanged", panel, false);
+  await tick();
+  assert.equal(fixture.clearCount, 0);
+});
+
+test("the caret from before an outline click does not clear the clicked row", async (t) => {
+  const fixture = await outlineFixture(
+    { "A.md": PREAMBLE },
+    { clearsSelection: true },
+  );
+  t.after(() => fixture.root.dispose());
+  const { panel, cursor } = fixture.panel("one");
+  const text = fixture.texts.get("A.md")!;
+  cursor.head = text.indexOf("Intro");
+  fixture.open(panel);
+  await tick();
+  assert.equal(fixture.clearCount, 1, "above the first heading at the start");
+  t.mock.timers.enable({ apis: ["Date"] });
+  await fixture.fake.commands.get(OPEN_COMMAND)!(
+    uriOf("A.md"),
+    text.indexOf("## A1"),
+  );
+  // The editor reports its caret from before the click, then from the jump.
+  fixture.root.emit("editor/selectionChanged", panel, false);
+  await tick();
+  cursor.head = text.indexOf("## A1");
+  fixture.root.emit("editor/selectionChanged", panel, false);
+  await tick();
+  assert.equal(fixture.clearCount, 1, "the clicked row stays selected");
+  assert.equal(fixture.reveals.length, 0, "the click selected it already");
+  // Once the jump has landed, a caret above the first heading is news.
+  cursor.head = text.indexOf("Intro");
+  fixture.root.emit("editor/selectionChanged", panel, false);
+  await tick();
+  assert.equal(fixture.clearCount, 2);
 });
 
 test("scroll reports stop when the panel closes or the outline stops", async (t) => {

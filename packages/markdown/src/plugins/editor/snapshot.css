@@ -1,0 +1,50 @@
+/*
+ * The first-paint snapshot (snapshot.ts): the note's first screen as plain
+ * markup, over the page until the editor has mounted beneath it. It sits where
+ * the settled editor's scroller does and borrows its classes for the lines
+ * (headings, lists, quotes, code) and the gutter columns, so the text lands
+ * where the editor puts it. What the editor's scroller and content get from
+ * CodeMirror's base theme, which loads with the script, is repeated here.
+ */
+.mw-snapshot {
+  position: fixed;
+  inset: 0;
+  z-index: 1;
+  display: flex;
+  align-items: flex-start;
+  overflow: hidden auto;
+  pointer-events: none;
+  user-select: none;
+  color: var(--vscode-editor-foreground, #222);
+  background: var(--vscode-editor-background, #fff);
+  font-family: var(--text-font);
+  font-size: var(--text-size);
+  font-weight: var(--text-weight, normal);
+  line-height: var(--line-height, 1.5);
+  letter-spacing: var(--text-letter-spacing, normal);
+  font-feature-settings: var(--text-features, normal);
+  font-variation-settings: var(--text-variations, normal);
+}
+/* The editor has a scrollbar once the note is longer than the window. */
+.mw-snapshot.is-truncated {
+  overflow-y: scroll;
+}
+.mw-snapshot-gutters {
+  display: flex;
+  flex: none;
+  visibility: hidden;
+}
+.mw-snapshot-gutters > .cm-gutter {
+  display: flex;
+  flex: none;
+  flex-direction: column;
+  overflow: hidden;
+}
+.mw-snapshot-text {
+  flex: 2 1 auto;
+  min-width: 0;
+  padding: var(--file-margin-top) var(--file-margins) 40vh 0;
+  white-space: break-spaces;
+  word-break: break-word;
+  overflow-wrap: anywhere;
+}

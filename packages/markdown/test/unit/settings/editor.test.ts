@@ -38,6 +38,8 @@ test("editor settings have application defaults and reconfigure without changing
     reclaimInPlaceTextEditor: false,
     // Auto: materialize TextDocuments early so Cursor can open our custom editor.
     warmTextDocument: "auto",
+    // On: the page's first HTML draws the note's first screen.
+    firstPaintSnapshot: true,
     strictLineBreaks: false,
     rightToLeft: false,
     dragScrollSpeed: 4,
