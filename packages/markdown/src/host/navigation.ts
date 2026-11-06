@@ -4,8 +4,6 @@ import { pluginConfiguration } from "./settings";
 import type { Configuration } from "../shared/configuration";
 import { createConfiguration } from "./configuration-access";
 import * as vscode from "vscode";
-import { realpath } from "node:fs/promises";
-import path from "node:path";
 import type {
   Navigation,
   OpenPlace,
@@ -14,84 +12,16 @@ import type {
   PanelShell,
 } from "../shared/host";
 import { warmMarkdownDocument } from "./document-warm";
+import { contained } from "./navigation-containment";
 import { registerNativeLinks } from "./native-links";
 import { MARKDOWN_EDITOR } from "../shared/editor-provider";
+import {
+  followsNewNoteFolder,
+  linkLocation,
+  type LinkFolder,
+} from "../shared/link-location";
 
-/** All navigation paths are checked again in the native adapter, including symlinks. */
-export async function contained(
-  root: vscode.Uri,
-  target: vscode.Uri,
-): Promise<void> {
-  const relative = path.posix.relative(root.path, target.path);
-  if (
-    root.scheme !== target.scheme ||
-    root.authority !== target.authority ||
-    relative === ".." ||
-    relative.startsWith("../") ||
-    path.posix.isAbsolute(relative)
-  ) {
-    throw new Error("Link escapes the vault");
-  }
-  if (root.scheme === "file") {
-    await containedLocalPath(root, target);
-  } else {
-    await containedVirtualPath(root, relative);
-  }
-}
-
-async function containedLocalPath(
-  root: vscode.Uri,
-  target: vscode.Uri,
-): Promise<void> {
-  const base = await realpath(root.fsPath);
-  let candidate = target.fsPath;
-  while (true) {
-    try {
-      const actual = await realpath(candidate);
-      const rel = path.relative(base, actual);
-      if (
-        rel === ".." ||
-        rel.startsWith(".." + path.sep) ||
-        path.isAbsolute(rel)
-      ) {
-        throw new Error("Link symlink escapes the vault");
-      }
-      break;
-    } catch (error) {
-      if ((error as NodeJS.ErrnoException).code !== "ENOENT") {
-        throw error;
-      }
-      const parent = path.dirname(candidate);
-      if (parent === candidate) {
-        throw error;
-      }
-      candidate = parent;
-    }
-  }
-}
-
-async function containedVirtualPath(
-  root: vscode.Uri,
-  relative: string,
-): Promise<void> {
-  let current = root;
-  for (const component of relative.split("/").filter(Boolean)) {
-    current = vscode.Uri.joinPath(current, component);
-    try {
-      const stat = await vscode.workspace.fs.stat(current);
-      if (stat.type & vscode.FileType.SymbolicLink) {
-        throw new Error("Symbolic link refused");
-      }
-    } catch (error) {
-      if (
-        !(error instanceof vscode.FileSystemError) ||
-        error.code !== "FileNotFound"
-      ) {
-        throw error;
-      }
-    }
-  }
-}
+export { contained };
 
 export type OffsetRevealTarget =
   number | { at: number; to?: number; preserveFocus?: boolean };
@@ -202,21 +132,57 @@ export interface NativeNavigation extends Navigation {
   ): Promise<boolean | void>;
 }
 
-/** Absolute, foldered, or create → vault root; basename lookup → source parent. */
-function resolvedLinkUri(
+/** The places a link may name, in the order `linkLocation` tries them. */
+function linkCandidates(
   link: string,
-  create: boolean | undefined,
+  create: boolean,
   base: vscode.Uri,
   sourceUri: vscode.Uri,
-): vscode.Uri {
+): [vscode.Uri, ...vscode.Uri[]] {
   if (!link) {
-    return sourceUri;
+    return [sourceUri];
   }
-  const root =
-    link.startsWith("/") || create || link.includes("/")
-      ? base
-      : vscode.Uri.joinPath(sourceUri, "..");
-  return vscode.Uri.joinPath(root, link.replace(/^\//, ""));
+  const { relative, folders } = linkLocation(link, create);
+  const sourceFolder = vscode.Uri.joinPath(sourceUri, "..");
+  const place = (folder: LinkFolder) =>
+    vscode.Uri.joinPath(folder === "vault" ? base : sourceFolder, relative);
+  const [first, ...rest] = folders;
+  return [place(first), ...rest.map(place)];
+}
+
+async function statIfPresent(
+  uri: vscode.Uri,
+): Promise<vscode.FileStat | undefined> {
+  try {
+    return await vscode.workspace.fs.stat(uri);
+  } catch (error) {
+    if (
+      error instanceof vscode.FileSystemError &&
+      error.code === "FileNotFound"
+    ) {
+      return undefined;
+    }
+    throw error;
+  }
+}
+
+/** A folder opens its folder note, or is shown in the Explorer without one. */
+async function existingTarget(
+  base: vscode.Uri,
+  found: { uri: vscode.Uri; stat: vscode.FileStat },
+  folderNote: string,
+): Promise<string | undefined> {
+  const { uri, stat } = found;
+  if (!(stat.type & vscode.FileType.Directory)) {
+    return uri.toString();
+  }
+  if (!folderNote) {
+    await vscode.commands.executeCommand("revealInExplorer", uri);
+    return undefined;
+  }
+  const note = vscode.Uri.joinPath(uri, folderNote);
+  await contained(base, note);
+  return note.toString();
 }
 
 async function resolveNavigation({
@@ -230,38 +196,26 @@ async function resolveNavigation({
 }: Parameters<Navigation["resolve"]>[0]): Promise<string | undefined> {
   const base = vscode.Uri.parse(root);
   const sourceUri = vscode.Uri.parse(source);
-  let uri = resolvedLinkUri(link, create, base, sourceUri);
-  await contained(base, uri);
-  try {
-    const stat = await vscode.workspace.fs.stat(uri);
+  const candidates = linkCandidates(link, create, base, sourceUri);
+  for (const uri of candidates) {
+    await contained(base, uri);
+    const stat = await statIfPresent(uri);
     if (intent?.token.cancelled) {
       return undefined;
     }
-    if (stat.type & vscode.FileType.Directory) {
-      if (!folderNote) {
-        await vscode.commands.executeCommand("revealInExplorer", uri);
-        return undefined;
-      }
-      uri = vscode.Uri.joinPath(uri, folderNote);
-      await contained(base, uri);
-    }
-    return uri.toString();
-  } catch (error) {
-    if (
-      !(error instanceof vscode.FileSystemError) ||
-      error.code !== "FileNotFound"
-    ) {
-      throw error;
+    if (stat) {
+      return existingTarget(base, { uri, stat }, folderNote);
     }
   }
-  if (!create || intent?.token.cancelled) {
+  if (!create) {
     return undefined;
   }
   return createNote({
     base,
     sourceUri,
     link,
-    uri,
+    // Creating never falls back: the first place is where the link points.
+    uri: candidates[0],
     folder: newNoteFolder,
     ...(intent ? { intent } : {}),
   });
@@ -285,8 +239,8 @@ async function createNote({
   folder ??= "";
   let uri = candidate;
   // Basename-only links respect newNoteFolder; a path with folders (or a
-  // leading "/") creates at that vault-relative path under the vault root.
-  if (!link.startsWith("/") && !link.includes("/")) {
+  // leading "/") creates at the place it names, not under that setting.
+  if (followsNewNoteFolder(link)) {
     const parent =
       folder === "."
         ? vscode.Uri.joinPath(sourceUri, "..")
@@ -362,7 +316,9 @@ export const PDF_OPEN_LOCATION_COMMAND = "lumiere.pdf.openLocation";
 /**
  * Open a PDF in Lumia PDF, at the page a link such as
  * `[[paper.pdf#page=3]]` names, or at a highlight kept in its sidecar
- * (`paper.pdf#hl-a1b2c3d4`). Any other fragment (Obsidian ignores those
+ * (`paper.pdf#hl-a1b2c3d4`). Lumia PDF's Copy link writes
+ * `paper.pdf#page=3#:~:text=…`, so `page=N` may be followed by `&…`, by that
+ * `#:~:` directive, or by nothing. Any other fragment (Obsidian ignores those
  * too) opens the PDF where it was left.
  */
 async function openPdf(
@@ -370,7 +326,7 @@ async function openPdf(
   fragment: string,
   column: vscode.ViewColumn,
 ): Promise<void> {
-  const location = /^(page=\d+(&|$)|hl-[\w-]+$)/i.test(fragment)
+  const location = /^(page=\d+(&|#:~:|$)|hl-[\w-]+$)/i.test(fragment)
     ? fragment
     : "";
   await vscode.commands.executeCommand(

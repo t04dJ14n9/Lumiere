@@ -223,16 +223,33 @@ function candidatesFor(target: unknown): vscode.Uri[] | undefined {
       return [vscode.Uri.parse(text)];
     }
     const hash = text.indexOf("#");
-    const file = hash < 0 ? text : text.slice(0, hash);
     const fragment = hash < 0 ? "" : text.slice(hash + 1);
-    const files = path.isAbsolute(file)
-      ? [vscode.Uri.file(file)]
-      : (vscode.workspace.workspaceFolders ?? []).map((folder) =>
-          vscode.Uri.joinPath(folder.uri, file),
-        );
+    const files = pathReadings(hash < 0 ? text : text.slice(0, hash)).flatMap(
+      (file) =>
+        path.isAbsolute(file)
+          ? [vscode.Uri.file(file)]
+          : (vscode.workspace.workspaceFolders ?? []).map((folder) =>
+              vscode.Uri.joinPath(folder.uri, file),
+            ),
+    );
     return files.map((uri) => uri.with({ fragment }));
   } catch {
     return undefined;
+  }
+}
+
+/**
+ * Copy link writes a Markdown destination, so `my paper.pdf` arrives as
+ * `my%20paper.pdf`; a path typed into the prompt is as it is on disk. Try the
+ * decoded reading first, and the text as given for a file named with a literal
+ * `%20`: only a reading that is a PDF opens.
+ */
+function pathReadings(file: string): string[] {
+  try {
+    const decoded = decodeURIComponent(file);
+    return decoded === file ? [file] : [decoded, file];
+  } catch {
+    return [file];
   }
 }
 

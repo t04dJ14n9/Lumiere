@@ -41,3 +41,18 @@ test("parsePdfDeepLinkFragment reads page and text across double hash", () => {
 test("decodeTextFragment rejects empty text", () => {
   assert.equal(decodeTextFragment(":~:text="), undefined);
 });
+
+test("formatPdfDeepLink collapses line breaks in a quote to single spaces", () => {
+  const href = formatPdfDeepLink("a.pdf", {
+    page: 2,
+    text: "  Scaled dot-product\n attention\r\n\tover  keys \n",
+  });
+  assert.equal(
+    href,
+    "a.pdf#page=2#:~:text=Scaled%20dot%2Dproduct%20attention%20over%20keys",
+  );
+  assert.equal(
+    formatPdfDeepLink("a.pdf", { page: 2, text: " \n\t " }),
+    "a.pdf#page=2",
+  );
+});

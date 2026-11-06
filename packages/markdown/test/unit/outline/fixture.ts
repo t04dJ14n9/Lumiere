@@ -35,7 +35,12 @@ export async function outlineFixture(
      * tree out again from the nodes' flags, as in the other hosts.
      */
     native = true,
-  }: { native?: boolean } = {},
+    /**
+     * Whether the tree can unselect a row, as host-node's can and VS Code's
+     * cannot.
+     */
+    clearsSelection = false,
+  }: { native?: boolean; clearsSelection?: boolean } = {},
 ) {
   const fake = fakeViews();
   const { vaults, texts, opened } = memoryVaults(notes);
@@ -46,6 +51,7 @@ export async function outlineFixture(
   const expands: TreeNode[] = [];
   const collapses: TreeNode[] = [];
   let collapseAllCount = 0;
+  let clearCount = 0;
   let refreshCount = 0;
   let expandHold: Promise<void> | undefined;
   let failNextExpand = false;
@@ -113,6 +119,11 @@ export async function outlineFixture(
           visuallyOpen.delete(node.id);
         }
       },
+      ...(clearsSelection && {
+        async clearSelection() {
+          clearCount++;
+        },
+      }),
       ...(native && {
         async collapseAll() {
           collapseAllCount++;
@@ -221,6 +232,10 @@ export async function outlineFixture(
     },
     get collapseAllCount() {
       return collapseAllCount;
+    },
+    /** How many times the tree was told to unselect its row. */
+    get clearCount() {
+      return clearCount;
     },
     /** Hold every expand of the tree until the returned function runs. */
     holdExpands(): () => void {

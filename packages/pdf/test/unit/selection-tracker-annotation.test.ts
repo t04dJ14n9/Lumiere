@@ -326,3 +326,23 @@ test("marquee end is ignored when regions are disabled", () => {
   assert.equal(tracker.region, undefined);
   assert.equal(reports.length, 0);
 });
+
+// Copy link to this asks the viewer for its selection and waits for the
+// answer (PdfViewerPanel.ensureSelection). With nothing selected the viewer
+// must still answer, or the page-only link is copied only after the wait
+// times out, and a paste in the meantime gets the old clipboard.
+test("reportSelection with nothing selected reports none at once", async () => {
+  const reports: unknown[] = [];
+  const SelectionTracker = loadSelectionTracker(reports);
+  const tracker = new SelectionTracker(() => undefined);
+  await tracker.reportSelection({
+    getState: () => ({ selection: undefined }),
+  });
+  // No scope at all: the viewer's selection is missing for this document.
+  await tracker.reportSelection(undefined);
+  assert.equal(reports.length, 2);
+  for (const report of reports) {
+    const answer = report as { selection?: { selection?: unknown } };
+    assert.equal(answer.selection?.selection, null);
+  }
+});

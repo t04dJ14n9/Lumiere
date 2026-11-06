@@ -34,6 +34,27 @@
   small note the features are in place about 50 ms sooner, on a 5,000-line
   note about 70 ms, and on a note with 100 properties about 170 ms.
 
+- Markdown Outline in the app clears its highlighted row when the caret or the
+  top line is above the first heading (frontmatter or a preamble), as Obsidian
+  does, instead of leaving the last section marked. VS Code's tree view has no
+  way to clear a selection, so there the last row stays marked.
+
+- Markdown Outline no longer stays on the row you clicked when you scroll on to
+  another section within the second after the click and stop: the last scroll
+  position held back during that second is applied when it ends.
+
+- Markdown Outline keeps the heading you jumped to selected after Go to
+  Heading, a `[[#Heading]]` link or a sticky-heading click, as it does for an
+  outline click. Near the end of the note, where the jump cannot put the
+  heading at the top, the section above no longer takes over. Scroll follow
+  also reads below the sticky headings and the embedder's top controls, so a
+  nested heading just under its pinned parents is the one selected.
+
+- Markdown Outline keeps the caret's section selected when the caret scrolls
+  the note: arrowing past the bottom, Page Down, Ctrl+End and find next no
+  longer have the section at the top of the viewport take over about 100 ms
+  later. Only scrolling the reader does follows the top line.
+
 - Markdown Outline (and Go to Heading / in-note fragment jumps that share
   links `navigate`) put the jumped heading at the **top** of the editor
   viewport, not the vertical centre. The browser still clamps at both ends of

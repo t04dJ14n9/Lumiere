@@ -185,10 +185,12 @@ test("editor title actions zoom, fit and switch the selection tool", async ({
   await page
     .locator(".quick-input-widget input:visible")
     .fill(">PDF: Select Region Tool");
+  // Match the command's own label: VS Code adds a "similar commands" row
+  // whose text carries the query.
   await expect(
-    page.locator(".quick-input-list .monaco-list-row", {
-      hasText: "Select Region Tool",
-    }),
+    page
+      .locator(".quick-input-list .monaco-list-row")
+      .getByText("PDF: Select Region Tool", { exact: true }),
   ).toHaveCount(0);
   await page.keyboard.press("Escape");
 

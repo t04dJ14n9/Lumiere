@@ -202,13 +202,16 @@ export class SelectionTracker {
    * text selection is reported when the drag ends, after an asynchronous text
    * read; a click right after the drag could beat that report, so the text is
    * re-read and reported first. A region waits for its text and snapshot.
-   * Messages arrive in order.
+   * Nothing selected is reported too: the extension waits for an answer
+   * before copying a page-only link. Messages arrive in order.
    */
   async reportSelection(scope: SelectionScope | undefined): Promise<void> {
     if (scope?.getState().selection) {
       await reportText(scope);
     } else if (this.region) {
       await this.regionDetails;
+    } else {
+      reportToHost({ selection: { selection: null } });
     }
   }
 

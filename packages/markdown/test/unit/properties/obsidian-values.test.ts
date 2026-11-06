@@ -170,3 +170,87 @@ test("YAML drafts keep +08:00 and Z wall-clock as plain datetime strings", () =>
     "2026-10-15T14:30",
   );
 });
+
+// YAML 1.1 timestamps the yaml library accepts beyond ±HH:MM: bare hour
+// offsets and one-digit fields. They must keep the source's wall-clock digits
+// instead of falling back to a UTC toISOString that can shift the day.
+const YAML_TIMESTAMP_FORMS: readonly [source: string, expected: string][] = [
+  ["2024-01-02 22:00:00 -5", "2024-01-02T22:00"],
+  ["2024-01-02 22:00:00 +08", "2024-01-02T22:00"],
+  ["2024-01-02 22:00:00 -05", "2024-01-02T22:00"],
+  ["2024-01-02T22:00:00-5", "2024-01-02T22:00"],
+  ["2024-01-02T22:00:00+5:30", "2024-01-02T22:00"],
+  ["2024-01-02T22:00:00+05:30", "2024-01-02T22:00"],
+  ["2024-01-02T22:00:00-0", "2024-01-02T22:00"],
+  ["2024-01-02T22:00:00 Z", "2024-01-02T22:00"],
+  ["2024-1-2", "2024-01-02"],
+  ["2024-1-12", "2024-01-12"],
+  ["2024-11-2", "2024-11-02"],
+  ["2024-1-2 3:04:05", "2024-01-02T03:04:05"],
+  ["2024-1-2 3:4:5", "2024-01-02T03:04:05"],
+  ["2024-1-2t3:4:0 +8", "2024-01-02T03:04"],
+  ["2024-01-02\t22:00:00\t-5", "2024-01-02T22:00"],
+  ["2024-01-02  22:00:00.5 -5", "2024-01-02T22:00"],
+  ["2024-01-02 22:00:30.250 -05:00", "2024-01-02T22:00:30"],
+];
+
+test("obsidianDateTextFromYamlSource reads every timestamp form yaml accepts", () => {
+  for (const [source, expected] of YAML_TIMESTAMP_FORMS) {
+    assert.equal(obsidianDateTextFromYamlSource(source), expected, source);
+  }
+});
+
+test("obsidianDateTextFromYamlSource rejects text yaml does not read as a timestamp", () => {
+  for (const source of [
+    "24-01-02",
+    "2024-001-02",
+    "2024-01-02 22:00",
+    "2024-01-02T22:00:00 +123",
+    "2024-01-02T22:00:00 z",
+    "2024-01-02T22:00:00 +08:0",
+    "2024-01-02 22:00:00 UTC",
+    "2024-01-02 junk",
+    "",
+  ]) {
+    assert.equal(obsidianDateTextFromYamlSource(source), undefined, source);
+  }
+});
+
+test("every form in the table is also one the yaml library reads as a Date", () => {
+  const { parseDocument } = loadYaml();
+  for (const [source] of YAML_TIMESTAMP_FORMS) {
+    const document = parseDocument(`d: !!timestamp ${source}\n`);
+    const node = document.get("d", true) as { value: unknown };
+    assert.equal(document.errors.length, 0, source);
+    assert.ok(node.value instanceof Date, source);
+    assert.ok(Number.isFinite(node.value.valueOf()), source);
+  }
+});
+
+test("propertyDateText keeps the source wall-clock for -5, +08, -05 and one-digit fields", () => {
+  const { parseDocument } = loadYaml();
+  for (const [source, expected] of YAML_TIMESTAMP_FORMS) {
+    const document = parseDocument(`d: !!timestamp ${source}\n`);
+    const node = document.get("d", true) as { value: Date; source?: string };
+    assert.equal(propertyDateText(node.value, node.source), expected, source);
+  }
+});
+
+test("a !!timestamp with a bare hour offset shows its source day, not the UTC day", () => {
+  const header = frontmatter(
+    "---\nd: !!timestamp 2024-01-02 22:00:00 -5\ne: !!timestamp 2024-01-02 01:00:00 +08\nf: !!timestamp 2024-1-2 3:4:5 -05\n---\n",
+  );
+  assert.equal(header?.values?.d, "2024-01-02T22:00");
+  assert.equal(header?.values?.e, "2024-01-02T01:00");
+  assert.equal(header?.values?.f, "2024-01-02T03:04:05");
+  assert.equal(inferPropertyKind("d", header?.values?.d), "datetime");
+  assert.equal(
+    propertyYamlInput("!!timestamp 2024-01-02 22:00:00 -5"),
+    "2024-01-02T22:00",
+  );
+  assert.equal(
+    propertyYamlInput("!!timestamp 2024-01-02 01:00:00 +08"),
+    "2024-01-02T01:00",
+  );
+  assert.equal(propertyYamlInput("!!timestamp 2024-1-2"), "2024-01-02");
+});

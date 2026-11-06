@@ -17,15 +17,13 @@ const version = new Schema<number>(
   },
   { type: "integer", minimum: 0 },
 );
-/** Max length for updates.fullText; omit when authority text exceeds this. */
-export const updatesFullTextMax = 1_000_000;
+// Never carries the document text: a broadcast reaches every panel on every
+// keystroke, and a panel that missed one recovers through `catchUp` instead.
 export const updates = Schema.object({
   version,
   updates: Schema.array(
     Schema.object({ clientID: Schema.string().max(128), changes: change }),
   ),
-  // Included when within max; required for Synchronizer host-skew reset when present.
-  fullText: Schema.string().max(updatesFullTextMax).optional(),
 });
 export const protocol = defineProtocol("document", {
   requests: {
@@ -38,6 +36,8 @@ export const protocol = defineProtocol("document", {
       result: Schema.boolean(),
     },
     flush: { params: Schema.object({}), result: Schema.boolean() },
+    // The revisions a panel missed, from the version it has synchronized.
+    catchUp: { params: Schema.object({ version }), result: updates },
   },
   notifications: { updates },
 });
