@@ -1031,7 +1031,9 @@ the command again reveals it. The panel is not tied to a Markdown document.
    panel says **Focus excluded by filters**. **Clear filters** brings it back
    and does not jump to a different note.
 4. **Orphans** is on by default; turning it off hides notes with no links,
-   as Obsidian's toggle does. Type, tag, folder and text search narrow the
+   as Obsidian's toggle does. The old "only orphans" mode is gone, so no
+   setting of the toggle shows only orphans. Type, tag, folder and text
+   search narrow the
    drawing. A vault over
    the node or edge cap shows the counts and draws nothing until the filters
    fit. There is no sampled substitute. **Re-layout** runs after a large change;

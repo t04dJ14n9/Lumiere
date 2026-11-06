@@ -8,9 +8,10 @@
   popped a preview.
 
 - The graph's **Orphans** toggle means what Obsidian's does: on (the
-  default) shows notes with no links, off hides them. It used to mean
-  "only orphans". A panel saved with that old filter opens with the
-  default.
+  default) shows notes with no links, off hides them. The old "only
+  orphans" mode is removed, not renamed: the graph has no way to show
+  only orphans now. A panel saved with that filter ignores it and opens
+  with all notes.
 
 - CSS snippets load only when `.obsidian/appearance.json` lists them in
   `enabledCssSnippets`, as in Obsidian. A vault with no `appearance.json`

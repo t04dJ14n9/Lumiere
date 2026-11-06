@@ -55,5 +55,7 @@ The graph scope is one OKF bundle or the whole vault (picker includes
 frontmatter wikilinks, and OKF `sources` rows whose `resource` is a vault path
 (http(s) sources stay off the graph). Caps are hard: 2000 notes, 20000
 aggregated edges and 1.5 MB. A larger graph is refused, not sampled. There is
-no 3D view, saved layout or trust badge. Layout is a bounded force pass in a
+no 3D view, saved layout or trust badge, and no "only orphans" view (the
+old `orphans` filter was removed, and a saved panel that has it opens with all
+notes). Layout is a bounded force pass in a
 worker that stops while the panel is hidden and when the panel closes.
