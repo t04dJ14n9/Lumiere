@@ -55,9 +55,11 @@ const obsidianKey = (text: string): string =>
     .toLowerCase();
 
 /**
- * Obsidian's `resolveSubpath`: `A#B` is a heading A, then a deeper heading B
- * after it (not necessarily A's child), compared as text without case or
- * punctuation.
+ * Obsidian's `resolveSubpath`: each part matches the next heading deeper than
+ * the previous match, compared as text without case or punctuation. Like
+ * Obsidian, a part's section is not a bound: in `# Top`, `# Other`, `## Deep`,
+ * `Top#Deep` reaches the `## Deep` under `Other` (only the last match ends at
+ * the next heading of its level or higher).
  */
 function obsidianHeading(
   headings: readonly HeadingEntry[],

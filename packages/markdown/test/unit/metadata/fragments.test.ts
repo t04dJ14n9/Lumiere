@@ -33,6 +33,20 @@ test("Obsidian: A#B is a deeper heading after A, not only its child", () => {
   assert.equal(noteFragment(source, "Deep#Top"), undefined);
 });
 
+test("Obsidian: an earlier part's section does not bound the next part", () => {
+  // Same as Obsidian's resolveSubpath: after Top, any later heading deeper
+  // than Top may match Deep, even one under a later sibling of Top.
+  const source = "# Top\n## OnlyHere\n# Other\n## Deep\n";
+  assert.equal(
+    noteFragment(source, "Top#Deep")?.from,
+    source.indexOf("## Deep"),
+  );
+  assert.equal(
+    noteFragment(source, "Other#Deep")?.from,
+    source.indexOf("## Deep"),
+  );
+});
+
 test("GitHub: a slug reaches its heading, as on GitHub and in VS Code", () => {
   const source = [
     "# Use Postgres",
