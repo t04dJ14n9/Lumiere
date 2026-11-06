@@ -28,6 +28,11 @@ export interface PanelShell {
   dispose(): void;
   setHTML(html: string): void;
   asset(relative: string): string;
+  /**
+   * Files under the extension's dist/markdown the page will fetch right
+   * after its entry, so the page can ask for them all at once.
+   */
+  readonly preload?: readonly string[];
   resource(uri: string): string;
   onDispose(listener: () => void): Disposer;
   onState(listener: () => void): Disposer;

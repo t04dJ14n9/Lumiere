@@ -2,6 +2,7 @@ import { webviewLogging } from "../plugins/editor/logging";
 import { pluginRank } from "../plugins/catalog";
 import { pluginReporting } from "./plugin-reporting";
 import { preloadChromeFeatures, preloadPaintFeatures } from "./features";
+import { runFeaturePhases } from "./feature-phases";
 import { registerEditorSettings } from "./editor-settings";
 import { createRoot, type RootContext } from "@workshop/core";
 import type { Infer } from "@workshop/core";
@@ -104,22 +105,20 @@ function scheduleFeaturePhases(options: {
     options;
   requestAnimationFrame(() => {
     performance.mark("mw:first-paint");
-    // Kick paint download now — chrome already had exclusive settle time.
-    // Do not wait for chromeChunks.resolve (#288); overlap paint fetch with
-    // sheet configure CPU once the sheet graph is warm.
-    const paintChunks = startPaint();
-    void chromeChunks
-      .then(() => configure(features, defaults, "chrome"))
-      .then(() => {
-        performance.mark("mw:properties");
-        return paintChunks.then(() => configure(features, defaults, "paint"));
-      })
-      .then(() => {
-        performance.mark("mw:features");
-        return configure(features, defaults, "all");
-      })
-      .catch((error: unknown) =>
+    // A task later, not in this frame: the page lists the first view's chunks
+    // as modulepreload hints, so they are usually fetched by now and the
+    // phases would run in this task, before the browser paints the glyphs
+    // (building the sheet of a note with 100 properties takes ~70 ms).
+    setTimeout(() => {
+      runFeaturePhases({
+        chromeChunks,
+        startPaint,
+        configure: (phase) => configure(features, defaults, phase),
+        mark: (name) => performance.mark(name),
+        preloaded: document.querySelector('link[rel="modulepreload"]') !== null,
+      }).catch((error: unknown) =>
         root.logger.error("Deferred features failed", error),
       );
+    }, 0);
   });
 }

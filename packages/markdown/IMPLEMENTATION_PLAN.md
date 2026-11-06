@@ -6632,3 +6632,82 @@ tree (or when it fails); an open-only follow that is superseded leaves the
 previous set. PDF's follower never cleared `opened` mid-apply, so it did not
 need the same change. Test: `host.test.ts` scroll-supersede case.
 
+
+## Opening: the first view's chunks in the page, one editor.js (2026-11-05)
+
+Measured in VS Code (production build, isolated profile, instrumented webview;
+medians of 9 warm and 7 cold opens of a small note, a 5,000-line note and a
+note with 100 properties). After the entry ran (`mw:main`), the features loaded
+in three rounds, each a dynamic `import()` followed by an editor reconfigure:
+
+| Round                              |    Files |  Bytes | Fetch to loaded                                         | Reconfigure                    |
+| ---------------------------------- | -------: | -----: | ------------------------------------------------------- | ------------------------------ |
+| entry (static graph)               | 55 + css | 875 KB | 47 ms after the document starts, then 12 ms to evaluate |                                |
+| chrome (Properties, line numbers)  |        4 | 193 KB | 14 ms after first paint                                 | 3 ms                           |
+| paint (tables, callouts, links, …) |       22 | 258 KB | 25 ms after first paint                                 | 8 ms (24 ms on the large note) |
+| the rest                           |       20 | 203 KB | 18 ms                                                   | 6 ms                           |
+
+The time was fetching, not reconfiguring. Two things made it slow. Every
+round was a waterfall: a feature's chunk was fetched, parsed, and only then
+were its shared chunks (the 120 KB YAML chunk in the chrome round) requested.
+And the responses to those requests waited behind the main thread, busy with
+the editor's own startup, so they were handled after first paint. A request
+through the webview resource loader costs about 0.5 ms and the 55 entry files
+queue behind each other. The entry graph is that fragmented because esbuild
+puts every set of modules that a different group of lazy features shares in a
+chunk of its own (median 1.1 KB). Nothing in the entry's graph is large and
+unneeded (CodeMirror 174 KB, markdown-it and its parts 105 KB, DOMPurify 30
+KB): the only big thing the first view does not need on most notes is YAML,
+whose loader is synchronous, so it stays.
+
+Kept:
+
+- **Modulepreload hints.** The build writes `webview/feature-chunks.json`
+  (each feature's chunks beyond the entry's graph); the VS Code host reads it
+  once and `webviewHTML` lists the entry and the chunks of the first-view
+  features that are on by default as `<link rel="modulepreload">`. They are
+  fetched and compiled while the entry loads, and evaluated only when
+  imported. Other hosts pass no list and get the page as before.
+- **One `editor.js`.** The build's editor entry is a build of its own and
+  `scripts/merge-entry-graph.mjs` folds the entry's static graph into
+  `editor.js` (the lazy chunks import it under per-chunk names). 55 requests
+  become 1; evaluating one big module costs ~13 ms more on a cold open, which
+  the fetch saves (cold first paint is unchanged, warm is 20–30 ms sooner).
+- **Feature phases after a task, one configure when preloaded.** With the
+  chunks already fetched, the phases would run inside the first-paint frame
+  (the sheet of 100 properties takes ~70 ms), so they start a task after it.
+  When the page has preload hints, chrome and paint are configured together
+  (`webview/feature-phases.ts`): one reconfigure fewer; a note with 100
+  properties has its features ~40 ms sooner, a small note 4 ms.
+
+Tried and dropped: preloading the entry's own chunks as well (its 55
+requests then compete with the first view's: first paint 4–12 ms later, no
+earlier features); `fetchpriority="low"` on the first view's hints (5–45 ms
+slower to features on all three notes); folding the entry's graph without the
+hints (first paint 0–12 ms sooner, features no earlier: the fetch saving is
+partly lost to evaluating one big module).
+
+Results (webview-relative, ms from the document start; medians before →
+after; 9 warm and 7 cold opens each, build alternated between rounds):
+
+|                                       | small note | 5,000 lines | 100 properties |
+| ------------------------------------- | ---------- | ----------- | -------------- |
+| first paint, warm                     | 116 → 92   | 140 → 120   | 120 → 88       |
+| first paint, cold                     | 132 → 132  | 156 → 156   | 124 → 120      |
+| features loaded (`mw:features`), warm | 131 → 81   | 185 → 116   | 299 → 129      |
+| features loaded, cold                 | 150 → 125  | 194 → 171   | 384 → 190      |
+| every plugin applied, warm            | 149 → 99   | 223 → 183   | 346 → 305      |
+| every plugin applied, cold            | 175 → 161  | 310 → 294   | 440 → 414      |
+| requests                              | 105 → 49   | 111 → 55    | 102 → 46       |
+
+Bytes fetched are unchanged (1,568 → 1,566 KB on the small note); the VSIX is
+61 KB larger (diff.js grew from 8 to 230 KB: the diff and graph pages now
+carry their own copies of the code they shared with the editor's chunks). Quality checks (`pnpm test:quality`)
+pass; their harness loads Lumia as one bundle, so it neither fetches chunks
+nor sees the hints, and its first-paint and features-after-paint figures are
+unchanged (38 and 37 ms, small note). Risks: a host that does not list the
+first view's chunks (host-node: DSH, the app, the desktop app) gets the one
+`editor.js` and the later phases but not the hints; a stale
+`feature-chunks.json` makes a hint 404, which the browser ignores; the merge
+step rewrites esbuild's chunk imports with a pattern and fails the build if
+any is left over.

@@ -100,7 +100,9 @@ editor and VSCodeVim (`docs/vim-caret.md`).
 - `toggle-text-editor.ts`: **Toggle Text Editor** (Ctrl/Cmd+E) between Lumia
   and the host default text editor. Capture-phase Mod+E ownership (BH-003) lives
   in `commands/toggle-text-editor-keys.ts`.
-- `webview-html.ts`: CSP, scripts and native webview HTML.
+- `webview-html.ts`: CSP, scripts and native webview HTML, with
+  `<link rel="modulepreload">` hints for the chunks the first view needs
+  (`PanelShell.preload`, from `host/feature-chunks.ts`).
 - `indentation.ts`: Tab and Shift+Tab commands (capture-phase for Vim NORMAL, BH-040).
 - `find.ts`, `find-panel.ts`, `find-caret.ts`, `find-count.ts`, `find.css`: in-note find and replace.
 - `find-keys.ts`: capture-phase Ctrl/Cmd+F Find and Ctrl/Cmd+H Replace (BH-023 / BH-025).
