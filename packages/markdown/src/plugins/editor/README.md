@@ -76,6 +76,30 @@ the line's text start and blink with VS Code's own timings (a hard 500 ms
 blink; 0.5 s smooth/phase/expand for 20 half cycles), measured in the built-in
 editor and VSCodeVim (`docs/vim-caret.md`).
 
+The page's first HTML carries the note's first screen (`snapshot.ts`), so its
+text is painted before the editor's script has loaded, as in Obsidian. The host
+draws the first 80 lines or 8 KB of source that Live Preview draws as plain
+lines, with Live Preview's own classes and the settled editor's three gutter
+columns, as inert markup (escaped text; no scripts, handlers, addresses or
+images), and ends before the first thing it cannot draw exactly: tables,
+callouts, images, embeds, math, tags, footnotes, HTML, tasks, a Properties
+sheet that is taller than its placeholder. The editor mounts beneath it
+(`webview/snapshot.ts`); once every feature has loaded and a frame has painted
+the snapshot is removed, which moves nothing (`test/browser/first-paint-snapshot.spec.ts`
+compares every line). The host builds it before a vault's own settings are
+known, so the snapshot carries a layout key (`snapshot-layout.ts`) and the
+editor drops it at once when its own settings, a search match or a saved view
+say the note will not look as drawn. `lumiere.markdown.editor.firstPaintSnapshot`
+(default on) turns it off; Source mode, a centred page, right-to-left text, an
+inline title and notes without the line-number, change-bar and fold gutters
+never get one. VS Code shows a webview only once its page has fired `load`, and
+a module script's import graph delays that, so a page with a snapshot loads
+the editor by `import()` from a small inline script (`webview-html.ts`): the
+snapshot is visible as soon as the page's stylesheet is, and host messages that
+arrive before the editor's own listener are kept and replayed by
+`webview/transport.ts`. Hosts that build their own page (host-node) do not draw
+it yet.
+
 ## Files
 
 - `selection.ts`: host-held frozen selection snapshots, source coordinates and stale validation.
@@ -101,6 +125,11 @@ editor and VSCodeVim (`docs/vim-caret.md`).
   and the host default text editor. Capture-phase Mod+E ownership (BH-003) lives
   in `commands/toggle-text-editor-keys.ts`.
 - `webview-html.ts`: CSP, scripts and native webview HTML.
+- `snapshot.ts`, `snapshot-blocks.ts`, `snapshot-inline.ts`: the first-screen
+  snapshot: the note's first lines as inert markup in the page's first HTML.
+- `snapshot-layout.ts`: the presentation the snapshot assumes, as a key the
+  webview compares with its own settings (`webview/snapshot.ts`).
+- `snapshot.css`: its scroller and content, sized as the editor's are.
 - `indentation.ts`: Tab and Shift+Tab commands (capture-phase for Vim NORMAL, BH-040).
 - `find.ts`, `find-panel.ts`, `find-caret.ts`, `find-count.ts`, `find.css`: in-note find and replace.
 - `find-keys.ts`: capture-phase Ctrl/Cmd+F Find and Ctrl/Cmd+H Replace (BH-023 / BH-025).

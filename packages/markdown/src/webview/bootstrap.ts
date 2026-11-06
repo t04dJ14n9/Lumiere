@@ -3,6 +3,7 @@ import { pluginRank } from "../plugins/catalog";
 import { pluginReporting } from "./plugin-reporting";
 import { preloadChromeFeatures, preloadPaintFeatures } from "./features";
 import { registerEditorSettings } from "./editor-settings";
+import { settleSnapshot } from "./snapshot";
 import { createRoot, type RootContext } from "@workshop/core";
 import type { Infer } from "@workshop/core";
 import type { viewState } from "../plugins/editor/protocol";
@@ -74,7 +75,7 @@ export async function bootstrap(
     throw failed.error;
   }
   performance.mark("mw:plugins");
-  scheduleFeaturePhases({
+  const featuresLoaded = scheduleFeaturePhases({
     root,
     configure,
     chromeChunks,
@@ -82,6 +83,7 @@ export async function bootstrap(
     features: init.features,
     defaults: init.preset === "obsidian",
   });
+  settleSnapshot(parent, init, featuresLoaded);
   rpc.notify(protocol, "initialized", {});
   return root;
 }
@@ -99,9 +101,14 @@ function scheduleFeaturePhases(options: {
   startPaint: () => Promise<void>;
   features: FeatureSettings;
   defaults: boolean;
-}): void {
+}): Promise<void> {
   const { root, configure, chromeChunks, startPaint, features, defaults } =
     options;
+  // Settles once every phase has run (or failed): the snapshot's cue to go.
+  let finish!: () => void;
+  const finished = new Promise<void>((resolve) => {
+    finish = resolve;
+  });
   requestAnimationFrame(() => {
     performance.mark("mw:first-paint");
     // Kick paint download now — chrome already had exclusive settle time.
@@ -120,6 +127,8 @@ function scheduleFeaturePhases(options: {
       })
       .catch((error: unknown) =>
         root.logger.error("Deferred features failed", error),
-      );
+      )
+      .finally(finish);
   });
+  return finished;
 }

@@ -6632,3 +6632,68 @@ tree (or when it fails); an open-only follow that is superseded leaves the
 previous set. PDF's follower never cleared `opened` mid-apply, so it did not
 need the same change. Test: `host.test.ts` scroll-supersede case.
 
+
+## First-paint snapshot of the note (2026-11-05)
+
+Opening a note in VS Code painted nothing of it until the editor's script (57
+files, 878 KB) had loaded and mounted: 110 to 150 ms of the webview's own time
+after VS Code's own ~200 ms to create the iframe. The host now puts the
+note's first screen in the page's first HTML (`plugins/editor/snapshot.ts`),
+and the editor mounts beneath it.
+
+- **What it draws.** The first 80 lines or 8 KB of source, as Live Preview draws
+  them, with Live Preview's own classes and the settled editor's three gutter
+  columns (so the text starts at the same x): headings (line 1 with its `#`
+  shown, where the caret starts), paragraphs with bold, italic, strike,
+  highlight, code, links, wikilinks, bare URLs, tags and escapes, bullet and
+  numbered lists, one-level quotes, code fences of plain languages, rules, and
+  the Properties placeholder. It ends before the first block it cannot draw
+  exactly (tables, callouts, images, embeds, math, footnotes, HTML, tasks,
+  setext headings, indented code, a wrapped list item, diagrams, a Properties
+  sheet taller than its estimate). Everything is escaped text in `div`, `span`,
+  `br` and `wbr`; no script, handler, address or image.
+- **Same layout.** Hidden syntax leaves a zero-width image either side in the
+  editor, and a line may break at an image: the snapshot has `<wbr>` there,
+  outside the styled span. `test/browser/first-paint-snapshot.spec.ts` compares
+  every line's box and text width with the editor's at 18 widths and sizes
+  (within 0.5 px). The one known difference is the Properties sheet, which can
+  be taller than its placeholder (`frontmatterPlaceholderHeight` is a floor):
+  FM100 by 90 px in VS Code. Nothing with text sits below it then.
+- **Settings.** `lumiere.markdown.editor.firstPaintSnapshot` (default on). None
+  for Source mode, a centred page, right-to-left text, an inline title, the
+  links plugin off, or without the line-number, change-bar and fold gutters. The
+  host builds the snapshot before an Obsidian vault's own settings are read, so
+  it carries a layout key (`snapshot-layout.ts`) and the editor drops it at once
+  when its own settings (or a search match) differ.
+- **VS Code shows a webview only after its page's `load` event**
+  (`webview/browser/pre/index.html`), and a module script's import graph delays
+  `load`. With the snapshot in the HTML alone, a first trial barely moved the
+  first paint (76 to 88 ms from the document's start, against 64 to 136
+  without). A page with a snapshot loads the editor by `import()` from an inline
+  script instead (which does not delay `load`); host messages that arrive before
+  the editor's listener are kept and replayed (`webview/transport.ts`); the
+  script also drops the snapshot for a restored view (`getState()`).
+- **Swap.** After every feature has loaded and two frames have painted (at most
+  2 s), `webview/snapshot.ts` removes it.
+
+Measured in VS Code 1.144 on the study machine, production build, the same
+vsix with the setting on and off, interleaved launches (3 per cell, each
+followed by 3 reopens; cold is the first open of a launch): Enter to first
+contentful paint, median ms (cold n=3, warm n=9):
+
+| Note | cold on / off | warm on / off |
+| --- | --- | --- |
+| Small.md (925 B) | 507 / 561 | 113 / 213 |
+| Large.md (93 KB) | 522 / 636 | 175 / 223 |
+| FM100.md (100 properties) | 451 / 520 | 135 / 188 |
+
+The webview's own time to first paint falls from 112 to 148 ms to 40 to 48 ms
+(inner document start to FCP). Enter to every feature loaded does not change
+beyond the noise. Host cost: 5 to 7 ms on a cold open (the first parse), 2.4 ms
+warm, of which about 2 ms is reading the note's settings. The text of the
+snapshot is 1.4 to 2.7 KB of HTML. Layout at the swap, in the editor itself:
+the first 24 lines moved 0.02 px (Small), 0 px (Large).
+
+Not done: hosts that build their own page (host-node) get the same HTML but
+this was not tried there; tasks, tables and callouts end the snapshot; line
+numbers and git bars appear at the swap (the gutter is drawn empty).

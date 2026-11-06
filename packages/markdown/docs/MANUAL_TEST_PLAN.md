@@ -1354,6 +1354,7 @@ Use the disposable fixture vault from Setup. These rows enumerate every generate
 | `lumiere.markdown.editor.reclaimTextEditor` | `"auto"` | auto / on / off; change at workspace-folder scope, verify the owning plugin scenario, then reset the override. |
 | `lumiere.markdown.editor.reclaimInPlaceTextEditor` | `false` | boolean; change at workspace-folder scope, verify the owning plugin scenario, then reset the override. |
 | `lumiere.markdown.editor.warmTextDocument` | `"auto"` | auto / on / off; change at workspace-folder scope, verify the owning plugin scenario, then reset the override. |
+| `lumiere.markdown.editor.firstPaintSnapshot` | `true` | boolean; open a note with it on, then off, in a real window: the first screen (headings, paragraphs, lists, quotes, code) shows before the editor loads and does not move when the editor replaces it; reset the override. |
 | `lumiere.markdown.editor.strictLineBreaks` | `false` | boolean; change at workspace-folder scope, verify the owning plugin scenario, then reset the override. |
 | `lumiere.markdown.editor.rightToLeft` | `false` | boolean; change at workspace-folder scope, verify the owning plugin scenario, then reset the override. |
 | `lumiere.markdown.editor.dragScrollSpeed` | `4` | number; change at workspace-folder scope, verify the owning plugin scenario, then reset the override. |
