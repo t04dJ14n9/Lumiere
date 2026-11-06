@@ -6776,3 +6776,39 @@ the first 24 lines moved 0.02 px (Small), 0 px (Large).
 Not done: hosts that build their own page (host-node) get the same HTML but
 this was not tried there; tasks, tables and callouts end the snapshot; line
 numbers and git bars appear at the swap (the gutter is drawn empty).
+
+## Opening: associate Lumia directly again (2026-11-06)
+
+The #458 route (`*.md` → `"default"`, then reclaim) put VS Code's text editor
+in front of every note: the tab opened as text, VS Code compiled the Markdown
+TextMate grammar (~110 ms of a cold open), and Lumia reclaimed the tab after
+the selection wait. Measured cold, Enter to Lumia's resolve was ~150 ms with
+the 40 ms settle and ~30 ms with a direct association. The owner chose speed
+over the Search range: **Use Lumia for Markdown in This Workspace** now writes
+`lumiere.markdown.editor` for both patterns, and activation moves a workspace
+Lumia set up the old way (`workspaceEditor` set, a pattern on `"default"`).
+A text association Lumia did not write is left alone.
+
+Reclaim's workspace default (the Search selection wait, reclaiming every text
+tab) now also requires the live associations to route Markdown through text
+(`routesMarkdownThroughText`). With the direct association a Markdown text tab
+is one someone chose (Open as Text, an agent's showTextDocument) and follows
+the ordinary reclaim rules. Tests: `associations.test.ts` (direct write,
+migration, a text association Lumia did not write), `handoff-host.test.ts`
+(no Search wait under the direct association; the two Search-wait tests now
+set the text route explicitly).
+
+Measured in VS Code 1.144 (installed VSIX, 7 cold / 21 warm opens of Small,
+Large and FM100, interleaved): Enter to resolve fell from 167–180 ms to
+36–43 ms, and Enter to first contentful paint by 64–77 ms cold (Small 406 →
+329, Large 395 → 331, FM100 369 → 294). Warm opens were already direct (no
+text tab) and are unchanged.
+
+A Search click still opens Lumia with the match selected (the breadcrumb shows
+its section), contrary to the 2026-10-30 note. Its scroll is off: on Small the
+match sits under the sticky heading bar, and on Large the scroll stops short
+and the match is below the viewport. The first Lumia editor in a window also
+swaps the sidebar from Search to Explorer; that happens on any first open,
+including Quick Open, on the text route too (where only a Search click
+avoided it). Both are follow-ups.
+

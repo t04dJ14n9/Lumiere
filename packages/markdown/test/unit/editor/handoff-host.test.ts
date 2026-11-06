@@ -597,6 +597,7 @@ test("opt-in reclaimInPlace: tab rebuild during Search wait still reclaims workb
   t.mock.timers.enable({ apis: ["setTimeout"] });
   const state = memento();
   await state.update(MARKDOWN_WORKSPACE_EDITOR_KEY, true);
+  settings.set("workbench.editorAssociations", { "*.md": "default" });
   settings.set("lumiere.markdown.editor.reclaimInPlaceTextEditor", true);
   const stop = host.reclaim.registerReclaim(undefined, state as never);
   t.after(() => stop.dispose());
@@ -615,6 +616,7 @@ test("opt-in reclaimInPlace: selection ready after tab rebuild reclaims without 
   t.mock.timers.enable({ apis: ["setTimeout"] });
   const state = memento();
   await state.update(MARKDOWN_WORKSPACE_EDITOR_KEY, true);
+  settings.set("workbench.editorAssociations", { "*.md": "default" });
   settings.set("lumiere.markdown.editor.reclaimInPlaceTextEditor", true);
   const stop = host.reclaim.registerReclaim(undefined, state as never);
   t.after(() => stop.dispose());
@@ -2228,6 +2230,21 @@ test("a text tab whose editor never reports waits the full report timeout", asyn
 
   assert.equal(commands.length, 1);
   assert.equal(commands[0]?.[0], "vscode.openWith");
+});
+
+test("with Lumia associated directly, a text tab is not held for a Search range", async (t) => {
+  // Use Lumia for Markdown associates Lumia itself: the flag stays set, but a
+  // text tab is one someone chose, so the Search selection wait must not run.
+  t.mock.timers.enable({ apis: ["setTimeout"] });
+  const state = memento();
+  await state.update(MARKDOWN_WORKSPACE_EDITOR_KEY, true);
+  settings.set("lumiere.markdown.editor.reclaimInPlaceTextEditor", true);
+  const stop = host.reclaim.registerReclaim(undefined, state as never);
+  t.after(() => stop.dispose());
+  switchToText();
+  await tick();
+  assert.equal(commands.length, 1, "reclaimed at once, with no 250 ms wait");
+  assert.equal(commands[0]?.[2], viewType);
 });
 
 test("heal restores Search reclaim when associations are default without workspaceEditor", async (t) => {

@@ -21,7 +21,10 @@ import {
   createReclaimScheduler,
   registerSelectionReclaim,
 } from "./reclaim-selection";
-import { healWorkspaceEditorAssociation } from "./workspace-editor-heal";
+import {
+  healWorkspaceEditorAssociation,
+  routesMarkdownThroughText,
+} from "./workspace-editor-heal";
 import { kindOf, labelUri, tabModel, uriOf } from "./reclaim-tabs";
 
 export { textBypass, handoffLease } from "./reclaim-opt-out";
@@ -63,8 +66,9 @@ export function registerReclaim(
   readerText.restore(memory);
   const workspaceEditorHealed = healWorkspaceEditorAssociation(memory);
   const workspaceDefault = () =>
-    workspaceEditorHealed ||
-    (memory?.get(MARKDOWN_WORKSPACE_EDITOR_KEY, false) ?? false);
+    (workspaceEditorHealed ||
+      (memory?.get(MARKDOWN_WORKSPACE_EDITOR_KEY, false) ?? false)) &&
+    routesMarkdownThroughText();
   const scheduler = createReclaimScheduler({
     open: transfer.open,
     readSelection: nativeSelectionRange,

@@ -145,8 +145,10 @@ do not install a VSIX or use the owner's profile.
 3. Run **Use Lumia for Markdown in This Workspace**: the
    workspace `settings.json` gets `workbench.editorAssociations` entries for
    `*.md` and `*.markdown`, other associations stay, and running it again
-   changes nothing. A note opened from the Explorer now opens in the
-   Workshop editor. **Open as Text** still opens the text editor.
+   changes nothing. The entries name `lumiere.markdown.editor` (not
+   `default`). A note opened from the Explorer now opens in the
+   Workshop editor without a text editor tab first. **Open as Text** still
+   opens the text editor, and that tab is not reclaimed.
 4. Run **Note Actions** and **Selection Actions** from the palette (with and
    without a selection): a quick pick lists the registered actions.
 5. Change `lumiere.markdown.editor.readableLineLength`,

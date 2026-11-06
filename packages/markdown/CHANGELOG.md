@@ -2,6 +2,14 @@
 
 ## 0.1.0 (unreleased)
 
+- **Use Lumia for Markdown in This Workspace** now associates `*.md` and
+  `*.markdown` with Lumia itself instead of VS Code's text editor (the route
+  from #458, which reclaimed every note into Lumia). VS Code hands a note to
+  Lumia directly: a cold open shows the note about 75 ms sooner (no text
+  editor tab first). A workspace set up the old way is moved over on
+  activation. A Search result still opens with its match selected, but on a
+  long note the match can be scrolled out of view.
+
 - Notes open faster in VS Code: the page asks for the chunks of the first
   view (Properties, line numbers, tables, callouts, links and the rest of what
   a note shows first) together with the editor script instead of one after
