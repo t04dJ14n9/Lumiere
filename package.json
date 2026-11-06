@@ -3161,6 +3161,12 @@
             "default": "auto",
             "scope": "resource"
           },
+          "lumiere.markdown.editor.firstPaintSnapshot": {
+            "type": "boolean",
+            "default": true,
+            "description": "Draw the note's first screen in the editor's first HTML, so its text shows before the editor has loaded and is replaced by the live editor without moving. Skipped for Source mode, a centred page, an inline title and notes with unusual gutters. Applies to notes opened after the change.",
+            "scope": "resource"
+          },
           "lumiere.markdown.editor.strictLineBreaks": {
             "type": "boolean",
             "default": false,

@@ -32,6 +32,10 @@ export const budgets = {
   firstPaintMs: { small: 150, large: 200, diagrams: 150 },
   /** From first paint until every feature has loaded (ms). */
   featuresAfterPaintMs: 300,
+  /** One document flush (save, caret capture) in a note with 100
+   * properties (ms). Each empty list input rebuilt the whole sheet on every
+   * flush, so a note with large frontmatter took seconds to settle. */
+  frontmatterFlushMs: 50,
   /** The host answering a note's `ready` in a 30,000-file vault (ms). */
   readyInLargeVaultMs: 1000,
   /** Bytes the host sends an open note per vault change, on average over

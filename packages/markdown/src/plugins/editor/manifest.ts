@@ -18,6 +18,11 @@ export const config = Schema.object({
     ),
   /** Open TextDocuments early so Cursor can resolve our custom editor for agent-edited notes. */
   warmTextDocument: Schema.union(["auto", "on", "off"]).default("auto"),
+  firstPaintSnapshot: Schema.boolean()
+    .default(true)
+    .description(
+      "Draw the note's first screen in the editor's first HTML, so its text shows before the editor has loaded and is replaced by the live editor without moving. Skipped for Source mode, a centred page, an inline title and notes with unusual gutters. Applies to notes opened after the change.",
+    ),
   strictLineBreaks: Schema.boolean().default(false),
   rightToLeft: Schema.boolean().default(false),
   dragScrollSpeed: Schema.number()

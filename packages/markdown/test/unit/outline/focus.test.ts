@@ -9,7 +9,84 @@ import {
 } from "../../../src/plugins/outline/focus";
 import { VIEW_ID } from "../../../src/plugins/outline/commands";
 
-test("entering a Workshop editor hides native Outline and expands only Markdown Outline", async () => {
+test("entering a Workshop editor runs no view command until Markdown Outline is on screen", async () => {
+  const executed: string[] = [];
+  const focus = createOutlineFocus({
+    execute: async (command) => {
+      executed.push(command);
+    },
+    focusEditor: async () => {
+      executed.push("focusEditor");
+    },
+    isOutlineShown: () => false,
+    schedule: () => ({ dispose() {} }),
+  });
+  focus.sync(true);
+  await settle();
+  // Focusing a view reveals its container: from Search or Quick Open that
+  // would swap the Search view for the Explorer.
+  assert.deepEqual(executed, [], "the sidebar container is left as it is");
+  focus.dispose();
+  await settle();
+});
+
+test("Markdown Outline appearing replaces the native Outline once, without focusing a view", async () => {
+  const executed: string[] = [];
+  const focus = createOutlineFocus({
+    execute: async (command) => {
+      executed.push(command);
+    },
+    focusEditor: async () => {
+      executed.push("focusEditor");
+    },
+    isOutlineShown: () => false,
+    schedule: () => ({ dispose() {} }),
+  });
+  focus.sync(true);
+  focus.outlineShown();
+  await settle();
+  assert.deepEqual(executed, [`${NATIVE_OUTLINE_ID}.removeView`]);
+  assert.ok(
+    !executed.includes(`${VIEW_ID}.focus`),
+    "Markdown Outline shows itself; focusing it would bring up the Explorer",
+  );
+  assert.ok(
+    !executed.includes(`${TAGS_VIEW_ID}.focus`),
+    "Tags must stay collapsed: do not call tags.focus on enter",
+  );
+  executed.length = 0;
+  focus.outlineShown();
+  focus.sync(true);
+  await settle();
+  assert.deepEqual(
+    executed,
+    [],
+    "shown again or re-entered while engaged is a no-op",
+  );
+  focus.dispose();
+  await settle();
+});
+
+test("an editor activated under an Outline already on screen hides the native Outline at once", async () => {
+  const executed: string[] = [];
+  const focus = createOutlineFocus({
+    execute: async (command) => {
+      executed.push(command);
+    },
+    focusEditor: async () => {
+      executed.push("focusEditor");
+    },
+    isOutlineShown: () => true,
+    schedule: () => ({ dispose() {} }),
+  });
+  focus.sync(true);
+  await settle();
+  assert.deepEqual(executed, [`${NATIVE_OUTLINE_ID}.removeView`]);
+  focus.dispose();
+  await settle();
+});
+
+test("Markdown Outline appearing with no Workshop editor active hides nothing", async () => {
   const executed: string[] = [];
   const focus = createOutlineFocus({
     execute: async (command) => {
@@ -20,21 +97,9 @@ test("entering a Workshop editor hides native Outline and expands only Markdown 
     },
     schedule: () => ({ dispose() {} }),
   });
-  focus.sync(true);
+  focus.outlineShown();
   await settle();
-  assert.deepEqual(executed, [
-    `${NATIVE_OUTLINE_ID}.removeView`,
-    `${VIEW_ID}.focus`,
-    "focusEditor",
-  ]);
-  assert.ok(
-    !executed.includes(`${TAGS_VIEW_ID}.focus`),
-    "Tags must stay collapsed: do not call tags.focus on enter",
-  );
-  executed.length = 0;
-  focus.sync(true);
-  await settle();
-  assert.deepEqual(executed, [], "re-enter is a no-op while still engaged");
+  assert.deepEqual(executed, []);
   focus.dispose();
   await settle();
 });
@@ -61,6 +126,7 @@ test("leaving restores native Outline after the debounce window", async () => {
     },
   });
   focus.sync(true);
+  focus.outlineShown();
   await settle();
   executed.length = 0;
   focus.sync(false);
@@ -71,6 +137,71 @@ test("leaving restores native Outline after the debounce window", async () => {
   assert.deepEqual(executed, [`${NATIVE_OUTLINE_ID}.focus`, "focusEditor"]);
   focus.dispose();
   await settle();
+});
+
+test("leaving restores nothing when the native Outline was never hidden", async () => {
+  const executed: string[] = [];
+  let pending: (() => void) | undefined;
+  const focus = createOutlineFocus({
+    execute: async (command) => {
+      executed.push(command);
+    },
+    focusEditor: async () => {
+      executed.push("focusEditor");
+    },
+    activeCustomEditorViewType: () => undefined,
+    schedule: (run) => {
+      pending = run;
+      return {
+        dispose() {
+          pending = undefined;
+        },
+      };
+    },
+  });
+  // Search was showing the whole time: Markdown Outline never appeared.
+  focus.sync(true);
+  await settle();
+  focus.sync(false);
+  pending!();
+  await settle();
+  // Restoring means focusing the native Outline, which would bring up the
+  // Explorer for an Outline that is still where it was.
+  assert.deepEqual(executed, []);
+  focus.dispose();
+  await settle();
+});
+
+test("the native Outline is restored once per hiding", async () => {
+  const executed: string[] = [];
+  let pending: (() => void) | undefined;
+  const focus = createOutlineFocus({
+    execute: async (command) => {
+      executed.push(command);
+    },
+    focusEditor: async () => {
+      executed.push("focusEditor");
+    },
+    activeCustomEditorViewType: () => undefined,
+    schedule: (run) => {
+      pending = run;
+      return { dispose() {} };
+    },
+  });
+  focus.sync(true);
+  focus.outlineShown();
+  focus.sync(false);
+  pending!();
+  await settle();
+  executed.length = 0;
+  focus.dispose();
+  await settle();
+  assert.deepEqual(executed, [], "already restored on leave");
+  focus.sync(true);
+  focus.sync(false);
+  pending!();
+  await settle();
+  assert.deepEqual(executed, [], "no second restore without a second hiding");
 });
 
 test("a quick re-enter cancels the pending native Outline restore", async () => {
@@ -130,6 +261,7 @@ test("leave after peer Workshop is active does not restore native Outline", asyn
     },
   });
   focus.sync(true);
+  focus.outlineShown();
   await settle();
   executed.length = 0;
   focus.sync(false);
@@ -160,6 +292,7 @@ test("dispose restores native Outline unless a peer Workshop owns the tab", asyn
     schedule: () => ({ dispose() {} }),
   });
   focus.sync(true);
+  focus.outlineShown();
   await settle();
   executed.length = 0;
   focus.dispose();
@@ -177,6 +310,7 @@ test("dispose restores native Outline unless a peer Workshop owns the tab", asyn
     schedule: () => ({ dispose() {} }),
   });
   peer.sync(true);
+  peer.outlineShown();
   await settle();
   executed.length = 0;
   active.viewType = PDF_WORKSHOP_EDITOR;
