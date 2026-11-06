@@ -14,9 +14,16 @@ import { NODE_HOST_OFFERS } from "../../src/host/inert";
  * away from where git says the repository is), so containment and git's
  * resolved paths have to agree.
  */
-async function scratch(t: test.TestContext): Promise<string> {
+async function scratch(
+  t: test.TestContext,
+  release: () => void = () => {},
+): Promise<string> {
   const dir = await mkdtemp(path.join(tmpdir(), "lumiere-git-"));
-  t.after(() => rm(dir, { recursive: true, force: true }));
+  // `release` first: a watcher still open on the folder sees it being deleted.
+  t.after(() => {
+    release();
+    return rm(dir, { recursive: true, force: true });
+  });
   return dir;
 }
 
@@ -36,7 +43,8 @@ async function repository(t: test.TestContext): Promise<{
   uri: string;
   access: NodeGitAccess;
 }> {
-  const dir = await scratch(t);
+  const stops: Array<() => void> = [];
+  const dir = await scratch(t, () => stops.forEach((stop) => stop()));
   git(dir, "init", "--quiet");
   git(dir, "config", "user.name", "Ada");
   git(dir, "config", "user.email", "ada@example.com");
@@ -45,7 +53,7 @@ async function repository(t: test.TestContext): Promise<{
   git(dir, "add", "note.md");
   git(dir, "commit", "--quiet", "-m", "First");
   const access = new NodeGitAccess({ roots: () => [fileUri(dir)] });
-  t.after(() => access.dispose());
+  stops.push(() => access.dispose());
   return { dir, note, uri: fileUri(note), access };
 }
 

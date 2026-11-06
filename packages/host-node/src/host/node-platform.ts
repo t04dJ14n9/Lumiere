@@ -5,7 +5,6 @@
  * that never follow a symbolic link, creation that never overwrites.
  */
 import { createHash } from "node:crypto";
-import { watch } from "node:fs";
 import {
   cp,
   lstat,
@@ -33,6 +32,7 @@ import type { HostEntry, HostFiles, HostPlatform, HostStore } from "./platform";
 import { fileUri } from "./uris";
 import { listVault } from "./vault";
 import { watchFile } from "./watch";
+import { watchTree } from "./watch-tree";
 
 export interface NodePlatformOptions {
   /** Where settings, state and vault snapshots are kept. */
@@ -120,27 +120,12 @@ export const nodeFiles: HostFiles = {
   // A file, not a tree: VS Code's workspace fs deletes one entry.
   remove: (uri) => rm(toFile(uri), { recursive: false, force: true }),
   watch: (uri, listener) => watchFile(toFile(uri), listener),
-  watchTree,
+  watchTree: (uri, listener) => watchTree(toFile(uri), listener),
   toPath: (uri) => fileURLToPath(uri),
   // Through this runtime's own pathToFileURL, whatever it encodes.
   uriOf: (file) => pathToFileURL(fileURLToPath(fileUri(file))).href,
   realContains,
 };
-
-/**
- * Node reports the path that changed under a folder. macOS also reports the
- * watched folder itself, by its own name, which is dropped.
- */
-function watchTree(uri: string, listener: (relative: string) => void) {
-  const base = toFile(uri);
-  const watcher = watch(base, { recursive: true }, (_event, name) => {
-    if (name !== null && name.toString() !== path.basename(base)) {
-      listener(name.toString().split(path.sep).join("/"));
-    }
-  });
-  watcher.on("error", () => watcher.close());
-  return () => watcher.close();
-}
 
 /** The host's own files, in a folder. */
 function folderStore(folder: string): HostStore {
