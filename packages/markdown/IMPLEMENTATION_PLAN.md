@@ -6666,3 +6666,19 @@ workbench plugins, so they run in VS Code and in host-node through the same
   (paths, ordering, creation, and the commands through the plugin), and
   `test/unit/obsidianCompat` (mapping and effective settings). No browser
   coverage added.
+- Review fixes (PR 510): `dailyNotes` starts with the urgent window features,
+  because VS Code activates the extension for a contributed command and then
+  looks the handler up, so one registered after the first panel is "not
+  found" in a fresh window (`quickSwitcher`, `scratch` and the other deferred
+  window features still have that gap). A daily note template is read only
+  after `workspace.files.authorize` passes for its real location. A note is
+  created through the new `WorkspaceFiles.createText`, which refuses an
+  existing file (VS Code: a `createFile` edit with `overwrite: false`;
+  host-node: `HostFiles.create` now reports whether its exclusive create
+  made the file), so a note made meanwhile is opened, not replaced.
+  `isSupportedDateFormat` reads each run of one letter as one Moment token.
+  Insert Template's palette entry is workbench-scoped: the editor host sets
+  `lumiere.markdown.plugin.<id>` only for editor features, so it never
+  appeared. Real VS Code: `test/vscode/daily-notes-templates.spec.ts` reloads
+  the window with no editor open, runs Open Today's Daily Note, then runs
+  Insert Template over a selection.
