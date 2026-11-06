@@ -6812,3 +6812,51 @@ swaps the sidebar from Search to Explorer; that happens on any first open,
 including Quick Open, on the text route too (where only a Search click
 avoided it). Both are follow-ups.
 
+
+## Opening a note keeps the sidebar container (2026-11-06)
+
+The first Lumia editor in a window swapped the sidebar to the Explorer within
+a second, from a Search click as much as from Quick Open (the 2026-10-30 note
+only avoided it for a Search click on the text route, where the panel carried
+`openedFromNativeSelection`). Cause: `outline/focus.ts` ran `outline.removeView`,
+then `lumiere.markdown.outline.focus`, then `focusActiveEditorGroup`. Markdown
+Outline is a view of the Explorer, and VS Code's `<view>.focus` opens the
+view's container. `<view>.removeView` and `<view>.toggleVisibility`, by
+contrast, act only while the view's container is the one shown (the
+`removeView` command's own description in VS Code 1.144: "Hides the view if it
+is visible and the view container it is located in is visible").
+
+Findings in VS Code 1.144 (installed VSIX, fresh profile): a tree view of the
+Explorer that is collapsed reports `visible: false` and fires no visibility
+event, and an extension's Explorer view starts collapsed whatever its
+`visibility` (Markdown Outline appeared collapsed at 300 ms to 5 s after the
+open, `visibility: "visible"` notwithstanding). Nothing the extension API
+exposes says which container is shown without showing it (`TreeView.reveal`
+opens the view too; no command reads a context key).
+
+Now nothing is focused on open. `createOutlineFocus` hides the native Outline
+when Markdown Outline becomes visible (`outlineShown`, from the tree's
+`onDidChangeVisibility`, or at once when the editor becomes active under an
+Outline already on screen), and restores it on leave or dispose only if it
+hid it, so a note opened and closed under Search leaves both Search and the
+Outline alone. The reader expands Markdown Outline once; VS Code remembers
+it, and from then on it opens expanded with the native Outline hidden (one
+run sampled every 60 ms: Markdown Outline in by 180 ms, the native Outline
+gone by 450 ms, so the two show together for up to ~300 ms).
+
+Verified in VS Code 1.144 with an installed VSIX, in a fresh profile: Search
+showing, a first open from Quick Open (Search still showing at 300 ms, 1, 2.5,
+5 s and after closing the note) and from a Search click, then a second click
+(Search showing throughout); Explorer showing, a first open (Markdown Outline
+collapsed, native Outline untouched), expanding it by hand (native Outline
+hidden at once, restored with the note closed), and a second launch with the
+expansion remembered (Markdown Outline expanded, native Outline hidden by
+450 ms). Not done: a fresh profile gets Markdown Outline collapsed on its first
+open rather than expanded, and closing a note after the reader has moved from
+the Explorer to another container still focuses the native Outline (the
+Explorer comes up then); Lumia PDF's `pdfOutline/focus.ts` still has the old
+focus and the same swap. Tests: `outline/focus.test.ts` (nothing focused on
+enter; hidden once when shown; restored only when hidden; peer and dispose
+cases), `outline/host.test.ts` (Search showing, Explorer showing, switching to
+the Explorer under an open note, closing under each; the tree fake now keeps
+every visibility listener, as VS Code's does).

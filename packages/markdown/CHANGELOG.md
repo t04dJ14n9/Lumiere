@@ -2,6 +2,15 @@
 
 ## 0.1.0 (unreleased)
 
+- Opening a note no longer swaps the sidebar for the Explorer. The first note
+  opened in a window (from Search, Quick Open or anywhere else) used to focus
+  Markdown Outline, which brought up the Explorer over the Search view you were
+  using. Markdown Outline now shows itself where the Explorer is already
+  showing, hides VS Code's native Outline when it does, and the native Outline
+  comes back when you leave the note only if Lumia hid it. VS Code lists an
+  extension's Explorer views collapsed the first time, so expand Markdown
+  Outline once; VS Code remembers it.
+
 - **Use Lumia for Markdown in This Workspace** now associates `*.md` and
   `*.markdown` with Lumia itself instead of VS Code's text editor (the route
   from #458, which reclaimed every note into Lumia). VS Code hands a note to

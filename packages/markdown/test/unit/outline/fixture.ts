@@ -68,7 +68,8 @@ export async function outlineFixture(
   let active: EditorPanel | undefined;
   let visible = true;
   let configure = () => {};
-  let visibilityChanged = (_visible: boolean) => {};
+  // As VS Code's tree view: any number of listeners, each its own subscription.
+  const visibilityListeners = new Set<(visible: boolean) => void>();
   let treeOptions: Parameters<typeof fake.views.tree>[2];
   const originalTree = fake.views.tree;
   fake.views.tree = (id, source, options) => {
@@ -124,9 +125,9 @@ export async function outlineFixture(
         return visible;
       },
       onVisibilityChanged(listener) {
-        visibilityChanged = listener;
+        visibilityListeners.add(listener);
         return () => {
-          visibilityChanged = () => {};
+          visibilityListeners.delete(listener);
         };
       },
     };
@@ -328,7 +329,9 @@ export async function outlineFixture(
     },
     show(isVisible: boolean) {
       visible = isVisible;
-      visibilityChanged(isVisible);
+      for (const listener of [...visibilityListeners]) {
+        listener(isVisible);
+      }
     },
   };
 }
