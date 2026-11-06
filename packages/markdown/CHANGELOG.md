@@ -2,6 +2,13 @@
 
 ## 0.1.0 (unreleased)
 
+- Notes open faster in VS Code: the page asks for the chunks of the first
+  view (Properties, line numbers, tables, callouts, links and the rest of what
+  a note shows first) together with the editor script instead of one after
+  another, and the editor script itself is one file instead of 55. On a
+  small note the features are in place about 50 ms sooner, on a 5,000-line
+  note about 70 ms, and on a note with 100 properties about 170 ms.
+
 - Markdown Outline (and Go to Heading / in-note fragment jumps that share
   links `navigate`) put the jumped heading at the **top** of the editor
   viewport, not the vertical centre. The browser still clamps at both ends of

@@ -1525,7 +1525,7 @@ exceptions from changing unnoticed.
 | Output | Entry | Format |
 | --- | --- | --- |
 | `dist/extension.js` | `src/host/extension.ts` | CJS, node20, `vscode` external |
-| `dist/webview/editor.js` (+ chunks, `editor.css`) | `src/webview/main.ts` | ESM, splitting, chrome120. MathJax, Mermaid and Prism grammars stay lazy chunks |
+| `dist/webview/editor.js` (+ chunks, `editor.css`, `feature-chunks.json`) | `src/webview/main.ts` | ESM, splitting, chrome120. MathJax, Mermaid and Prism grammars stay lazy chunks. esbuild splits the entry's static graph into ~55 shared chunks; `scripts/merge-entry-graph.mjs` folds them back into `editor.js` (one request instead of 55). `feature-chunks.json` lists each feature's chunks; the VS Code host puts the first view's in the page as `modulepreload` hints so their fetch overlaps the entry's |
 | `dist/workers/vault.cjs` | `src/workers/vault.ts` | CJS, node20 |
 | `dist/workers/search.cjs` | `src/workers/search.ts` | CJS, node20 |
 | `dist/api/**/*.d.ts` | `src/host/api/types.ts` | `tsc` declarations |

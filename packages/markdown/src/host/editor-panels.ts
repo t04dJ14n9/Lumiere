@@ -3,6 +3,7 @@ import type { EditorProvider } from "../shared/editor-provider";
 import type { PanelShell } from "../shared/host";
 import { SourceCoordinates } from "../shared/document/coordinates";
 import { panelIsActive } from "./active-panel";
+import { firstViewPreload } from "./feature-chunks";
 import {
   bindShellState,
   bindingForPanel,
@@ -167,6 +168,7 @@ function createPanelShell(
     trusted: vscode.workspace.isTrusted,
     ...panelOpenFields(options),
     transport: panelTransport(panel),
+    preload: firstViewPreload(extensionUri),
     active: () => isActivePanel(provider.viewType, binding.document, panel),
     reveal() {
       panel.reveal();

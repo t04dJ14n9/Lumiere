@@ -52,3 +52,26 @@ test("each page gets a fresh script nonce", () => {
     policy(true).get("script-src"),
   );
 });
+
+test("the page lists the files the host says it will fetch as modulepreload hints", () => {
+  const html = webviewHTML({
+    ...shell(true),
+    preload: ["webview/editor.js", "webview/chunk-A.js"],
+  } as unknown as PanelShell);
+  assert.deepEqual(
+    [...html.matchAll(/<link rel="modulepreload" href="([^"]*)">/g)].map(
+      (match) => match[1],
+    ),
+    [
+      "vscode-resource:/webview/editor.js",
+      "vscode-resource:/webview/chunk-A.js",
+    ],
+  );
+  assert.ok(
+    html.indexOf("modulepreload") < html.indexOf('<script type="module"'),
+  );
+});
+
+test("a host with nothing to preload gets a page without hints", () => {
+  assert.doesNotMatch(webviewHTML(shell(true)), /modulepreload/);
+});
