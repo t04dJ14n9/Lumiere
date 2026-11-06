@@ -14,8 +14,9 @@ link stays a Markdown link, and `#subpaths` and aliases are kept. The path is
 written in the new-link format. A moved note's own path-style links are
 rewritten too. Folder renames cover every file inside. By default it asks
 first (Update Links, Always Update, which sets the mode to `always`, or
-Don't Update), and builds the edits after the answer, so text typed while
-the dialog is open is what gets rewritten. The edits are applied together
+Don't Update), counting the notes from the index's parsed links so that
+asking reads and rewrites nothing, and builds the edits once, after the
+answer, so text typed while the dialog is open is what gets rewritten. The edits are applied together
 with the rename, so one undo reverts them.
 
 ## Rename Heading
@@ -29,7 +30,7 @@ and in every note linking to it, keeping its path, form and alias
 ## Files
 
 - `host.ts`: the rename hook, the prompt and folder expansion.
-- `rewrite.ts`: the edits for one note.
+- `rewrite.ts`: the links a rename changes in one note, and their edits.
 - `manifest.ts`: the plugin's switch and `mode` setting.
 
 ## Services, events and settings

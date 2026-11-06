@@ -1,8 +1,9 @@
 import type { Plugin } from "@workshop/core";
 import type { FileTextEdits, HostServices } from "../../shared/host";
-import type { Vault, Vaults } from "../vault/api";
+import { vaultLinks } from "../../markdown/metadata/linkpaths";
+import type { Vault, VaultFile, Vaults } from "../vault/api";
 import type {} from "../editor/api";
-import { rewriteLinks } from "./rewrite";
+import { changedLinks, rewriteLinks } from "./rewrite";
 import { sourceText } from "./source-text";
 import { registerRenameHeading } from "./rename-heading";
 
@@ -75,7 +76,7 @@ async function askToUpdate(
   renames: Renames,
   resource: string | undefined,
 ): Promise<boolean> {
-  const files = (await linkEdits(host.vaults, host, renames)).length;
+  const files = await affectedNoteCount(host.vaults, renames);
   if (files === 0) {
     return false;
   }
@@ -114,24 +115,80 @@ export async function settledWithin(
   }
 }
 
-/** Edits for every note in the renamed files' vault that links to them. */
-async function linkEdits(
+/** The vault of the renamed files, and old → new vault paths for each of them. */
+interface RenamePlan {
+  vault: Vault;
+  paths: Map<string, string>;
+}
+
+/** What a rename touches, once the index has caught up; `undefined` if nothing in a vault. */
+async function planRename(
   vaults: Vaults,
-  host: Pick<HostServices, "settings" | "hostDocuments">,
   renames: Renames,
-): Promise<FileTextEdits[]> {
+): Promise<RenamePlan | undefined> {
   const first = renames[0] ? await vaults.locate(renames[0].oldUri) : undefined;
   if (!first) {
-    return [];
+    return undefined;
   }
   const { vault } = first;
   // Backlinks and folder contents come from the index; a note still queued
   // for parsing would otherwise keep its link to the old path.
   await settledWithin(vault, SETTLE_LIMIT_MS);
   const paths = expandFolders(vault, renames);
-  if (paths.size === 0) {
+  return paths.size === 0 ? undefined : { vault, paths };
+}
+
+const resolverOf =
+  (vault: Vault): RewriteContext["resolve"] =>
+  (linkpath, source, syntax) =>
+    vault.index.resolveLink(linkpath, source, syntax)?.path;
+
+/** The notes a rename can change: the renamed ones, for their own links, and those linking to them. */
+function candidateNotes(vault: Vault, paths: Map<string, string>): VaultFile[] {
+  const sources = new Set<string>(paths.keys());
+  for (const path of paths.keys()) {
+    vault.index.backlinks(path).forEach((link) => sources.add(link.path));
+  }
+  return [...sources]
+    .map((source) => vault.index.file(source))
+    .filter((file): file is VaultFile => file?.extension === "md");
+}
+
+/**
+ * How many notes the rename would change, from the links the index already
+ * parsed: no note is read or rewritten, so the prompt costs a lookup per
+ * link, not a second pass of `linkEdits`.
+ */
+async function affectedNoteCount(
+  vaults: Vaults,
+  renames: Renames,
+): Promise<number> {
+  const plan = await planRename(vaults, renames);
+  if (!plan) {
+    return 0;
+  }
+  const { vault, paths } = plan;
+  const context = { renames: paths, resolve: resolverOf(vault) };
+  return candidateNotes(vault, paths).filter((file) => {
+    const parsed = vault.index.metadata(file.path);
+    return (
+      parsed !== undefined &&
+      changedLinks(vaultLinks(parsed), file.path, context).length > 0
+    );
+  }).length;
+}
+
+/** Edits for every note in the renamed files' vault that links to them. */
+async function linkEdits(
+  vaults: Vaults,
+  host: Pick<HostServices, "settings" | "hostDocuments">,
+  renames: Renames,
+): Promise<FileTextEdits[]> {
+  const plan = await planRename(vaults, renames);
+  if (!plan) {
     return [];
   }
+  const { vault, paths } = plan;
   const format = host.settings.get<LinkFormat>(
     "links.newLinkFormat",
     "shortest",
@@ -139,8 +196,7 @@ async function linkEdits(
   );
   const context: RewriteContext = {
     renames: paths,
-    resolve: (linkpath, source, syntax) =>
-      vault.index.resolveLink(linkpath, source, syntax)?.path,
+    resolve: resolverOf(vault),
     pathsAfter: vault.index
       .files()
       .map((file) => paths.get(file.path) ?? file.path),
@@ -148,19 +204,11 @@ async function linkEdits(
     preferredText: (target: string, source: string) =>
       vault.index.describeLink(target, source),
   };
-  const sources = new Set<string>(paths.keys());
-  for (const path of paths.keys()) {
-    vault.index.backlinks(path).forEach((link) => sources.add(link.path));
-  }
   const result: FileTextEdits[] = [];
-  for (const source of sources) {
-    const file = vault.index.file(source);
-    if (file?.extension !== "md") {
-      continue;
-    }
+  for (const file of candidateNotes(vault, paths)) {
     const edits = rewriteLinks(
       await sourceText(vaults, host.hostDocuments, file.uri),
-      source,
+      file.path,
       context,
     );
     if (edits.length > 0) {

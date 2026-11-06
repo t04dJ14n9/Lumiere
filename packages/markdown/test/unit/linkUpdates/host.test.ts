@@ -16,8 +16,11 @@ const notes = {
   "C.md": "Unrelated [[A]]",
 };
 
-async function start(settings: Record<string, unknown> = {}) {
-  const { vaults, index, texts } = memoryVaults(notes);
+async function start(
+  settings: Record<string, unknown> = {},
+  extraNotes: Record<string, string> = {},
+) {
+  const { vaults, index, texts } = memoryVaults({ ...notes, ...extraNotes });
   const fake = fakeViews(settings);
   const root = createRoot();
   root.provide("vaults", vaults);
@@ -179,6 +182,67 @@ test("a case-only rename rewrites the links to the new spelling", async () => {
       [uriOf("A.md"), ["[[old|the old note]]", "[[old#Part]]"]],
       [uriOf("B.md"), ["![[old]]"]],
     ],
+  );
+  await root.dispose();
+});
+
+test("the prompt counts from the index and the answer is followed by the only rewrite pass", async () => {
+  const { root, fake, host } = await start();
+  const reads: string[] = [];
+  host.hostDocuments.text = (uri) => {
+    reads.push(uri);
+    return undefined;
+  };
+  const prompted: string[][] = [];
+  host.dialogs.ask = async (message) => {
+    prompted.push([message, ...reads]);
+    return "Update Links";
+  };
+  const edits = await fake.rename(rename);
+  // Nothing was read to build the question: that is left to the answer.
+  assert.deepEqual(prompted, [["Update links in 2 files?"]]);
+  // Each candidate note was read once, so the rewrite ran once.
+  assert.deepEqual(
+    [...reads].sort(),
+    [uriOf("A.md"), uriOf("B.md"), uriOf("Topic/Old.md")].sort(),
+  );
+  assert.equal(edits.length, 2);
+  await root.dispose();
+});
+
+test("the prompt counts the notes the rename would change, as a folder rename does", async () => {
+  const { root, fake } = await start();
+  fake.answerWith("Update Links");
+  const edits = await fake.rename([
+    { oldUri: uriOf("Topic"), newUri: uriOf("Subject") },
+  ]);
+  assert.deepEqual(fake.prompts, ["Update links in 2 files?"]);
+  assert.equal(edits.length, 2);
+  await root.dispose();
+});
+
+test("a rename that changes no link does not ask", async () => {
+  const { root, fake } = await start();
+  fake.answerWith("Update Links");
+  // Nothing links to C.md, and its own link is not path-style.
+  const edits = await fake.rename([
+    { oldUri: uriOf("C.md"), newUri: uriOf("Topic/C.md") },
+  ]);
+  assert.deepEqual(fake.prompts, []);
+  assert.deepEqual(edits, []);
+  await root.dispose();
+});
+
+test("moving a note asks about its own path-style links", async () => {
+  const { root, fake } = await start({}, { "D.md": "From [[Topic/Old]]." });
+  fake.answerWith("Update Links");
+  const edits = await fake.rename([
+    { oldUri: uriOf("D.md"), newUri: uriOf("Sub/D.md") },
+  ]);
+  assert.deepEqual(fake.prompts, ["Update links in 1 file?"]);
+  assert.deepEqual(
+    edits.map((file) => file.uri),
+    [uriOf("D.md")],
   );
   await root.dispose();
 });
