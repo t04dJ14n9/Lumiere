@@ -125,7 +125,7 @@ export async function resolveLink(
 async function createNote(
   files: HostFiles,
   options: { root: string; request: ResolveRequest; target: string },
-): Promise<string> {
+): Promise<string | undefined> {
   const { root, request } = options;
   let target = options.target;
   const link = request.path;
@@ -144,6 +144,10 @@ async function createNote(
   }
   await requireInside(files, root, target);
   await files.mkdir(parentUri(files, target));
+  // A navigation cancelled while the folder was made creates nothing.
+  if (request.intent?.token.cancelled) {
+    return undefined;
+  }
   // An existing file, or a symlink planted in its place, is not written.
   await files.create(target);
   return target;

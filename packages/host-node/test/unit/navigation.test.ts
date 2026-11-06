@@ -79,6 +79,31 @@ test("creating a note stays inside the workspace and does not follow a symlink o
   assert.equal(await readFile(path.join(dir, "NoteTwo.markdown"), "utf8"), "");
 });
 
+test("a navigation cancelled while its folder is made creates no note", async (t) => {
+  const { dir, root, source } = await vault(t);
+  const token = { cancelled: false };
+  const files = {
+    ...nodeFiles,
+    mkdir: async (uri: string) => {
+      await nodeFiles.mkdir(uri);
+      token.cancelled = true;
+    },
+  };
+  const created = await resolveLink(files, {
+    root,
+    source,
+    path: "sub/New.md",
+    create: true,
+    folderNote: "",
+    intent: { token },
+  } as unknown as Parameters<typeof resolveLink>[1]);
+  assert.equal(created, undefined);
+  assert.equal(
+    await readFile(path.join(dir, "sub", "New.md"), "utf8").catch(() => null),
+    null,
+  );
+});
+
 test("a link to a note open in another tab asks that tab to come forward", async (t) => {
   const { dir, root } = await vault(t);
   const other = path.join(dir, "Other.md");
