@@ -1,0 +1,643 @@
+# Lumia architecture
+
+How the whole repository fits together: the two products, the plugin core,
+the plugin trees, the hosts and the contracts between them, and how a note
+travels from disk to the screen and back. It also records where the design
+is sound, where it has drifted, and what to change next.
+
+State: `main` at #507, plus the open PRs it describes as current. The
+`catchUp` sync and `shared/link-location.ts` come from #508. The text
+editor's `[[` suggestions and `pdfOutlines` come from the link-suggestion
+PR. Update this document when the structure it describes changes.
+
+Read this first, then the detailed documents it points to:
+
+| For | Read |
+| --- | --- |
+| The Markdown editor in depth: plugin API, document sync, Live Preview, vault, settings, public API | [packages/markdown/DESIGN.md](../packages/markdown/DESIGN.md) |
+| The plugin core and its lifecycle guarantees | [packages/core/README.md](../packages/core/README.md) |
+| Hosts other than VS Code: layers, contracts, milestones | [HOSTS_PLAN.md](HOSTS_PLAN.md), [IPAD_PLAN.md](IPAD_PLAN.md) |
+| The PDF product | [packages/pdf/README.md](../packages/pdf/README.md), [packages/pdf/AGENTS.md](../packages/pdf/AGENTS.md) |
+| One plugin | its `README.md` under `packages/markdown/src/plugins/<id>/` or `packages/pdf/src/extension/plugins/<id>/` |
+| Rules for changing code | [AGENTS.md](../AGENTS.md), [REVIEW.md](../REVIEW.md) |
+
+## Contents
+
+1. [The products](#1-the-products)
+2. [Repository layout and dependency direction](#2-repository-layout-and-dependency-direction)
+3. [The plugin core](#3-the-plugin-core)
+4. [Plugin trees at run time](#4-plugin-trees-at-run-time)
+5. [Anatomy of a plugin](#5-anatomy-of-a-plugin)
+6. [Host services: the seam between plugins and a host](#6-host-services-the-seam-between-plugins-and-a-host)
+7. [Hosts](#7-hosts)
+8. [Services shared by the two products](#8-services-shared-by-the-two-products)
+9. [The document: who owns the text](#9-the-document-who-owns-the-text)
+10. [The vault index and link resolution](#10-the-vault-index-and-link-resolution)
+11. [Parsing and rendering](#11-parsing-and-rendering)
+12. [Links end to end](#12-links-end-to-end)
+13. [The PDF product](#13-the-pdf-product)
+14. [Agent handoff](#14-agent-handoff)
+15. [Opening a note: the path and its cost](#15-opening-a-note-the-path-and-its-cost)
+16. [Security boundaries](#16-security-boundaries)
+17. [Testing layers](#17-testing-layers)
+18. [Assessment: what holds, what drifted](#18-assessment-what-holds-what-drifted)
+19. [Recommended changes](#19-recommended-changes)
+
+## 1. The products
+
+One VS Code and Cursor extension, "Lumia: Markdown Editor and PDF Reader",
+ships two products that share one plugin tree:
+
+- **Lumia (Markdown).** Obsidian's editing experience on a VS Code custom
+  editor: Live Preview that reveals syntax at the caret, wikilinks resolved
+  as Obsidian resolves them, embeds, callouts, properties, tables, math,
+  diagrams, tasks, tags, backlinks, outline and graph. VS Code keeps the
+  text, saving and undo.
+- **Lumia PDF.** A PDF viewer on EmbedPDF (PDFium compiled to WebAssembly).
+  Its signature feature is **Copy link to this**: a quote with a deep link
+  (`paper.pdf#page=3#:~:text=…`) that notes can paste, and that paints
+  backlink overlays back onto the PDF.
+
+The Markdown product also runs outside VS Code, on the same plugins:
+
+| Host | Package | Where it runs |
+| --- | --- | --- |
+| VS Code, Cursor | `packages/markdown/src/host` | the extension host (Node) plus one webview per editor |
+| DeepSeek Harness | `packages/dsh` on `packages/host-node` | DSH's server and preview sidebar |
+| Lumia's own server and window | `packages/app` on `packages/host-node` | a local server and a browser page |
+| Desktop app | `apps/desktop` (Tauri) around `packages/app` | a native window |
+| Web app | `apps/web` on `packages/host-web` | a static, offline site |
+| iPad | `apps/ipad` (Capacitor) on `packages/host-web` | a native app with no server |
+
+The PDF product runs only in VS Code and Cursor today (see
+[section 13](#13-the-pdf-product)).
+
+## 2. Repository layout and dependency direction
+
+```text
+packages/core          plugin core (Cordis underneath). Pure: no DOM, Node or VS Code.
+packages/agents        what both products hand to coding agents. Pure.
+packages/ink           sketch format, outlines and the ink service. Pure + a web canvas.
+packages/markdown      the Markdown plugins, their webview, and VS Code's host services
+packages/pdf           the PDF plugins (VS Code only), its portable host code and React webview
+packages/host-node     host services outside VS Code; the shared host core has no Node
+packages/host-web      the shared host on a browser's or the iPad's folders
+packages/dsh           DSH embedder
+packages/app           Lumia's server and window
+apps/desktop, web, ipad
+src/extension.ts       the composition root of the VS Code extension
+```
+
+Imports point one way:
+
+```text
+core, agents, ink  ◄── markdown, pdf ◄── markdown/src/host (VS Code) ◄── src/extension.ts
+                                    ◄── host-node ◄── host-web ◄── apps/web, apps/ipad
+                                                 ◄── dsh
+                                                 ◄── app ◄── apps/desktop
+```
+
+Inside each product, `src/shared` and `src/markdown` are pure too. The
+tsconfig projects and the `architecture/boundaries` lint rule enforce all of
+this, so a forbidden import fails `pnpm check`, not a review.
+
+## 3. The plugin core
+
+`packages/core` (about 1,500 lines) is the API every plugin programs
+against. Underneath it runs [Cordis](https://github.com/cordiverse/cordis)
+4.0.0-rc.12, pinned exactly.
+
+### 3.1 Concepts
+
+- **Plugin.** An object with a `name`, an `inject` list (`required` and
+  `optional` services), a `provides` list and an `apply(ctx, config)`
+  function. Everything a plugin acquires in `apply` (listeners, editor
+  extensions, commands, child plugins, services) goes through `ctx`, so it is
+  released when the plugin stops.
+- **Service.** A plain value published with `ctx.provide(name, value)` and
+  typed by declaration merging on `Services`. A plugin may read only what it
+  injects and publish only what it declares; anything else throws. That
+  makes the dependency graph a property of the definitions: tools and tests
+  build it without running anything (`plugins/plugin-graph.ts`).
+- **Fiber.** One started plugin. It starts when every required service
+  exists, restarts when one is replaced or an optional one comes or goes,
+  and stops only after the plugins that depend on its services have stopped.
+- **Events.** A ranked bus (`event-bus.ts`): `emit` (all listeners),
+  `bail` (first non-undefined answer wins, synchronous) and `pipeline`.
+  Listeners run in plugin rank, so a restarted plugin keeps its place, and
+  a throwing listener is logged and skipped.
+
+### 3.2 What the core adds to Cordis, and why
+
+| Guarantee | Why the products need it |
+| --- | --- |
+| Release is last-first, one at a time, and joined: a stop resolves only when every cleanup has settled | Editor extensions reconfigure CodeMirror as they are removed; overlapping releases corrupted editor state |
+| An `apply` still running when its plugin stops is abandoned; what it acquires afterwards is undone at once | Async starts (index loads, chunk fetches) would otherwise leak into a closed panel |
+| Optional services | Most cross-feature links are "use it if present" (`vim`, `pdfOutlines`, `hostDocuments.registerCompletions`) |
+| Ranked, error-isolated events | Link clicks and opens are claimed by the first plugin that wants them, in a stable order |
+| Ownership tree and a resource ledger | Leak tests count live resources per owner after a stop |
+| Declared `inject`/`provides`, enforced | The graph is checkable statically; undeclared reads fail loudly |
+
+The core's conformance suite (`packages/core/test/conformance`, 23
+lifecycle scenarios) is the contract; stock Cordis passes 6 of them, which
+is why the layer exists. In practice Cordis serves as a service-gated fiber
+scheduler: its `Service` classes, `isolate`, `extend`, `intercept` and
+`mixin` are unused, and every fiber is created on one Cordis root with
+ownership tracked by the core.
+
+### 3.3 Cost
+
+Starting plugins is cheap: on warm Node about 0.15 ms per plugin (41
+trivial plugins in 6.3 ms). Opening a note starts about 50 fibers across
+two trees, so the machinery costs single-digit milliseconds. What plugins
+do in `apply`, and fetching their webview chunks, is what costs time
+([section 15](#15-opening-a-note-the-path-and-its-cost)).
+
+## 4. Plugin trees at run time
+
+A VS Code window holds several trees. Services do not flow between trees by
+themselves; the bootstrap hands them over explicitly.
+
+```text
+Extension root (src/extension.ts) ─ createRoot()
+│  provides: extensionContext, outputChannel, noteSelections, pdfOutlines
+│
+├─ PDF plugins (startPdf): pdf (pdfPanels hub), pdfToolbar, pdfOutline, pdfHistory,
+│     pdfBacklinks, pdfSidecar, pdfRegions, pdfAnnotations, pdfLookUp, pdfZen,
+│     pdfSettings, agentBridge, ideContext
+│
+└─ Markdown (startMarkdown → host/bootstrap.ts)
+   ├─ host services (VS Code adapters), vaults (vaultsHost)
+   ├─ core host plugins: document, editor, dialect, settings, commands, links, …
+   ├─ window features (startWindowFeatures): nativeLinks, nativeSuggest, outline,
+   │     backlinks, outgoingLinks, quickSwitcher, wordCount, linkUpdates, graph, …
+   │     (17 of them deferred until the first editor is ready)
+   │
+   └─ one panel root per open editor (editor/panel.ts → createRoot)
+        re-provided: host services, vaults, okf facade, pdfOutlines
+        vaultHost (this note's vault), resourcesHost
+        critical hosts:  links, tasks, properties, tags, cursorBridgePanel
+        deferred hosts:  gitGutter, gitBlame, suggest, search, onlineVideos, lookUp
+              (started after the webview's ready handshake has been answered)
+
+Webview (one per panel, its own JavaScript realm) ─ createRoot()
+   core: document (collab), editor (EditorView), dialect, livePreview, render, …
+   features: the ones the host says are on for this note, each a lazy chunk
+```
+
+Points that matter when changing code:
+
+- **Panel trees are separate roots.** Because the core does not use Cordis's
+  `isolate`, each editor panel gets its own root, and the bootstrap
+  re-provides what panel plugins need (`bootstrap.ts` `configure`,
+  `editor/host.ts`). A new root service that panel plugins need must be
+  added there too, and to `ROOT_SERVICES` in `plugins/plugin-graph.ts`.
+- **Critical and deferred.** Panel hosts that must answer before the first
+  paint (links, properties, tags, tasks) start with the panel. Hosts that
+  only answer later requests start after the webview's `ready` has been
+  answered, so they never delay first paint (`host/features.ts`).
+- **Order.** `plugins/plugin-order.ts` sets precedence (event rank and start
+  order where it is meaningful). Real start order still comes from service
+  gating.
+- **Optional services restart their consumers.** When an optional service
+  appears after its consumer started, the consumer restarts. For a panel's
+  `editor` host that would close the editor, which is why services such as
+  `noteSelections` and `pdfOutlines` are provided on the root before either
+  product starts (`bootstrap.ts`, `src/extension.ts`).
+- **Feature switches.** Every plugin has `lumiere.markdown.plugins.<id>.enabled`
+  (resource-scoped). `PluginSwitch` starts and stops the halves as settings
+  change. The same id is the user's unit of control and the unit of fault
+  isolation: a plugin that throws is stopped and reported; the others go on.
+
+## 5. Anatomy of a plugin
+
+A Markdown plugin lives in `packages/markdown/src/plugins/<id>/`:
+
+| File | Holds |
+| --- | --- |
+| `manifest.ts` | id, title, kind (core or feature), default on/off, surfaces (`host`, `webview`), capabilities, settings schema, commands and keys. `package.json` contributions are generated from manifests |
+| `host.ts` | the extension-host half (Node; no `vscode` import) |
+| `webview.ts` | the webview half (CodeMirror extensions, DOM) |
+| `protocol.ts` | the RPC between the halves: requests and notifications, each with a schema validated on both sides |
+| `api.ts` | the types and service shapes other plugins may import |
+| `README.md` | what it does, how it works, files, services, limits and differences from Obsidian |
+| `*.css` | styles, bundled through `src/webview/styles/index.css` |
+
+Rules: another plugin is reached through its `api.ts` (types and services)
+or its `protocol.ts`, never its internals. Of 276 cross-plugin imports, 259
+are `api` and 17 `protocol`; there are no imports of internals. The one
+import cycle is `livePreview` ↔ `links`: `livePreview/inline.ts` reads a
+CodeMirror state field exported by `links/api.ts`.
+
+Registering a plugin today touches six or seven shared files:
+`plugins/catalog.ts`, `plugin-order.ts`, `plugins/host.ts` and
+`plugins/webview.ts`, `webview/features.ts` (lazy loader map and the
+chrome, render and paint sets), `host/features.ts` or `host/bootstrap.ts`
+(critical, deferred and `defer` lists), then the generated `package.json`.
+See [section 19](#19-recommended-changes) for making this manifest-driven.
+
+PDF plugins (`packages/pdf/src/extension/plugins/<id>/`) follow the same core
+but are simpler: one `plugin.ts` each, most of them injecting the `pdfPanels`
+hub that owns the viewer panels; the viewer itself is one React application
+rather than plugin halves.
+
+## 6. Host services: the seam between plugins and a host
+
+Markdown plugins never import `vscode`. They inject host services, declared
+in `packages/markdown/src/shared/host`:
+
+| Service | What plugins get |
+| --- | --- |
+| `hostDocuments` | open, read and edit text documents; optional `registerCompletions` for the native text editor |
+| `hostCommands` | run and register commands |
+| `clipboard`, `dialogs` | clipboard; pickers, input boxes, messages |
+| `views` | tree views (outline, backlinks, tags, …) |
+| `activeEditor` | the focused editor and its selection |
+| `settings` | per-note settings (`forNote`), effective settings, `prepare(uri)` |
+| `workspace` | folders, trust, vault code trust |
+| `storage` | workspace storage (snapshots, recents) |
+| `extensions` | other extensions (public API v1) |
+| `navigation` | open a link target, create notes, native document links |
+| `customEditors` | the custom editor registration |
+| `agentHost`, `git`, `diffViews` | agent bridge, git data, diff editors |
+
+They have two implementations:
+
+- **VS Code:** `packages/markdown/src/host/services` (about 1,000 lines).
+- **Everything else:** `packages/host-node/src/host/services.ts`, on a
+  `HostPlatform` (Node files, or a browser's mounted folders through
+  host-web). Services a host cannot offer are inert stubs
+  (`host-node/src/host/inert.ts`), and a manifest's `needs` keeps the plugin
+  off there.
+
+Both hosts run the same `bootstrap`, which is what lets DSH, the app, the
+web app and the iPad use the plugins unchanged. Tests fake the seam with
+`fakeHost(overrides)`.
+
+Known duplication: the vault's file listing, stat and watch are written
+twice (`host/vault-system.ts` and `host-node/src/host/vault.ts`), each with
+its own concurrent tree walk. Two link-resolution helpers had already
+drifted between the hosts before they were unified in
+`shared/link-location.ts`.
+
+## 7. Hosts
+
+```text
+packages/core, agents, markdown, pdf   the plugins: the same in every host
+        │
+        ├─ packages/markdown/src/host  VS Code's host services
+        └─ packages/host-node          the shared host (src/core.ts has no Node)
+             ├─ packages/host-web      on a browser's or the iPad's folders
+             ├─ packages/dsh           on DSH's server and preview sidebar
+             └─ packages/app           the window over a WindowBackend (HTTP, or host-web in-page)
+                  ├─ apps/desktop      Tauri: native window, menu, picker
+                  └─ apps/web          a static, offline site
+```
+
+The editor page is the same webview bundle in every host. Outside VS Code a
+page shim stands in for the webview API and talks to host-node over a socket
+or a `MessagePort` (`host-node/src/protocol.ts`). Each contract between the
+layers is written once in code and changed on both sides in one PR; the full
+table is [HOSTS_PLAN.md section 4](HOSTS_PLAN.md#4-the-contracts).
+
+Where a change belongs: how a note edits, renders or links goes in the
+plugin, for every host at once; never patch one host for a Markdown bug
+([HOSTS_PLAN.md section 3](HOSTS_PLAN.md#3-architecture)).
+
+## 8. Services shared by the two products
+
+Both products start on one root in `src/extension.ts`. They share services
+through it, with the consumer owning the interface and the root wiring the
+provider:
+
+| Service | Provider | Consumer | Interface |
+| --- | --- | --- | --- |
+| `noteSelections` | Markdown's public API | PDF agent bridge | `src/note-selections.ts` |
+| `pdfOutlines` | PDF's outline reader (PDFium in the extension host, loaded on first use) | Markdown suggestions (`[[paper.pdf#`) | `packages/markdown/src/shared/pdf-outlines.ts` |
+
+Neither product imports the other. Hosts that lack a provider simply lack
+the feature (no PDF sections outside VS Code).
+
+The PDF backlink index does not use Markdown's vault index: it scans notes
+itself (`pdf/src/shared/pdf-backlink-index.ts`, `pdfBacklinks/plugin.ts`) and has
+had to copy the editor's path rules to stay consistent. See
+[section 19](#19-recommended-changes).
+
+## 9. The document: who owns the text
+
+VS Code's `TextDocument` owns the text, saving and undo. A webview never
+writes a file; it edits a local CodeMirror copy and synchronizes.
+
+- The host keeps an **authority** per document (`plugins/document/`): a
+  version number and a log of recent revisions.
+- The webview sends its changes as versioned updates with its client id
+  (collab-style). The host applies them to the `TextDocument` as a
+  `WorkspaceEdit`, assigns the next version, and broadcasts the accepted
+  changes to every panel of that document (one file can be open in several
+  panels; editors are tracked per panel, never by path).
+- Changes from elsewhere (another editor, git, an agent writing the file)
+  arrive as `TextDocument` changes and are broadcast the same way.
+- When a panel falls behind (its base version is older than the host's), it
+  asks for the revisions it missed (`catchUp`) and replays them, rebasing
+  its unsent edits on top. (Before #508, a version skew replaced the panel's
+  text with the host's full text and could drop unsent typing.)
+- Undo and redo are VS Code's: the webview forwards the commands; the host
+  runs them on the document; the result comes back as an ordinary change.
+- Save is VS Code's; plugins may contribute to a flush before save
+  (`document/save.ts`).
+
+Details: [DESIGN.md section 8](../packages/markdown/DESIGN.md#8-document-model-and-synchronization-document-plugin).
+
+## 10. The vault index and link resolution
+
+A **vault** is the workspace folder that contains a note (or the note's
+folder outside a workspace). `vaults.forDocument(uri)` indexes it on first
+use; `vaults.locate(uri)` gives the vault and the vault path.
+
+- **Indexing** runs in a worker (`workers/vault-worker.ts`; a web variant for
+  host-web): it parses each note's metadata (headings, blocks, links,
+  embeds, tags, frontmatter, aliases) with the same parser the editor uses.
+  A snapshot in workspace storage lets the next window start warm. Open
+  notes are re-indexed from their unsaved text.
+- **The index** (`plugins/vault/api.ts`, `VaultIndex`) answers files,
+  metadata, resolved and unresolved links, backlinks, and change events.
+  Suggestions, backlinks, outline, graph, link updates, search and the
+  quick switcher all read it.
+- **Resolution** (`plugins/vault/resolve.ts`, `shared/link-location.ts`)
+  follows Obsidian's `getLinkpathDest`: case-insensitive, `.md` optional,
+  `./` and `../` from the note's folder, a leading `/` from the vault root,
+  other foldered paths from the root then the note's folder, attachments
+  included. Aliases are not destinations, as in Obsidian. Plugins can
+  register a resolution policy (`vaults.registerLinkPolicy`) without the
+  vault importing them.
+
+Known difference: when a name matches in several folders, Lumia ranks by
+folder distance then alphabetically; Obsidian ranks by path length. See
+[section 18.3](#183-wikilinks).
+
+## 11. Parsing and rendering
+
+- **One parser.** The `dialect` plugin extends CodeMirror's Lezer Markdown
+  with Obsidian's syntax (wikilinks, embeds, callouts, highlights, comments,
+  math, tags, block ids, footnotes). The editor, the metadata collector and
+  the HTML renderer all use it, so they agree on what a link or a heading
+  is ([DESIGN.md section 10](../packages/markdown/DESIGN.md#10-markdown-dialect-and-rendering-dialect-and-render-plugins)).
+- **Live Preview** (`livePreview` plugin) decorates the syntax tree in view:
+  replaced ranges, widgets and line classes, through a renderer registry
+  feature plugins add to. The reveal rule shows a construct's source when
+  the caret or selection touches it. Block widgets (tables, embeds,
+  callouts, properties) keep measured heights so remounts do not jump.
+- **HTML rendering** (`render` plugin) serves embeds, hover previews and
+  callout bodies with the same dialect.
+
+## 12. Links end to end
+
+| Step | Where |
+| --- | --- |
+| Parse `[[…]]`, `![[…]]`, `[](…)` | `markdown/dialect/wiki.ts`, `html/helpers.ts` |
+| Index outgoing links, resolve them, keep unresolved sets | `plugins/vault` (worker + `resolve.ts`) |
+| Render in Live Preview, dim unresolved | `plugins/links/webview.ts`, `livePreview/inline.ts` |
+| Follow (click, Mod+Enter), navigate to heading or block | `plugins/links` (webview → RPC → host `navigation`) |
+| Open in the host: note, PDF page, external URL (with scheme policy), create a missing note | `host/navigation.ts`, `host-node` equivalent |
+| Suggest while typing in Lumia's editor | `plugins/suggest` (`SuggestionIndex`, Obsidian's fuzzy ranking) via `links/suggestions.ts` |
+| Suggest while typing in VS Code's own text editor | `suggest/native-host.ts` → `hostDocuments.registerCompletions` → `host/text-completions.ts` |
+| Suggest a PDF's sections after `[[paper.pdf#` | `pdfOutlines` → `SuggestionIndex.prepare`; inserts `[[paper.pdf#page=N\|Title]]` |
+| Update links on rename | `plugins/linkUpdates` |
+| Backlinks, outgoing links, unlinked mentions, graph | their plugins, all on the vault index |
+| Native document links in VS Code's text editor | `host/source-links.ts` (inline Markdown links only) |
+
+Both suggestion paths share one trigger parser (`src/markdown/link-trigger.ts`)
+and one index, ranking and insertion, so they offer the same entries and
+write the same text.
+
+## 13. The PDF product
+
+```text
+extension host                                   webview (React, EmbedPDF + PDFium wasm)
+  pdf plugin (pdfPanels hub) ── messages.ts ──►    viewer.tsx, pages, selection, search,
+  pdfToolbar, pdfOutline, pdfHistory, …            outline, backlink overlays, annotations
+  pdfBacklinks (scans notes, matches quotes)
+  pdfSidecar (paper.pdf.lumiere.md)
+  outlines/ (PDFium in Node, on demand)
+src/host (no vscode): portable viewer logic, reused by host-node
+```
+
+- The extension plugins are VS Code-only: 47 of 78 production files import
+  `vscode`, and 11 of 13 plugins inject the `pdfPanels` hub.
+  `packages/pdf/src/host` (no `vscode` imports) holds the portable part,
+  already reused by host-node's PDF pages.
+- Links into PDFs are plain fragments (`#page=N`, `#:~:text=`), so Obsidian
+  and browsers open them too. Lumia's own links add a text fragment for the
+  quote; the backlink index matches it against the page text (folding case,
+  whitespace and hyphenated line breaks, across page edges) and paints an
+  overlay that opens the note.
+- Bookmarks are read in the webview for the viewer's outline, and in the
+  extension host by the `pdfOutlines` reader (one PDFium instance, started
+  on first use, cached per file by mtime and size, PDFs over 200 MB skipped).
+
+## 14. Agent handoff
+
+`packages/agents` defines, once, what both products hand to coding agents:
+the Copy Link for Agent reference (`@notes/a.md#12-18`, compatible with LLM
+Wiki), the quoted payload, and the IDE context packet (active note or PDF,
+selection, visible range) that bridges such as Cursor's and Claude Code's
+read. The `agentBridge`, `ideContext`, `cursorBridge` and `bridge` plugins
+deliver them.
+
+## 15. Opening a note: the path and its cost
+
+The path from "open `Note.md`" to an editable note:
+
+1. VS Code activates the extension (once per window; about 15–20 ms of our
+   own time) and resolves the custom editor.
+2. The editor host creates the panel root, its vault (indexed on first use,
+   or loaded from a snapshot), and the critical panel hosts.
+3. The webview loads its HTML and entry bundle, starts its core plugins, and
+   sends `ready`.
+4. The host answers `ready` with the text, version, settings and the list of
+   active features. Deferred panel hosts start after this answer.
+5. The webview builds the CodeMirror state, runs the first Live Preview pass
+   and paints; feature chunks load lazily and attach as they arrive.
+
+Measured on the production build in VS Code 1.144 on Apple Silicon (November
+2026), from the Enter key in Quick Open. Each figure is a median: n=8–9 for
+cold opens, 12–15 reopens for warm ones. Cold means the first open in a new
+VS Code process; warm means reopening in the same window.
+
+| Note | Cold: first paint | Cold: all features | Warm: first paint | Warm: all features |
+| --- | --- | --- | --- | --- |
+| Small (56 lines) | 512 ms | 581 ms | 198 ms | 227 ms |
+| Large (5,032 lines) | 604 ms | 749 ms | 230 ms | 318 ms |
+| 25 properties | | 785 ms | | 312 ms |
+| 100 properties | | 3,540 ms | | 1,518 ms |
+
+Where a cold open of a small note spends its time:
+
+| Phase | Cold | Warm | Whose |
+| --- | --- | --- | --- |
+| Enter to `resolveCustomTextEditor` | 30 or ~300 ms (two modes, cause unknown) | ~20 ms | VS Code |
+| Lumia's host work: panel root, `vaultHost`, critical hosts | ~5 ms | ~3 ms | Lumia |
+| HTML set to iframe, iframe to inner document | ~200 ms | ~60 ms | VS Code |
+| Entry bundle (58 files, 875 KB) to `main` | ~53 ms | ~65 ms | Lumia |
+| `ready` round trip (settings included) | ~7 ms | ~7 ms | Lumia |
+| Webview core plugins (EditorView ~15 ms, Live Preview ~12 ms) | ~35 ms | ~24 ms | Lumia |
+| To first paint | ~43 ms | ~27 ms | Lumia |
+| Feature chunks (three dynamic-import rounds) | 30–150 ms | 20–100 ms | Lumia |
+
+Findings:
+
+- **VS Code's own work is 60–75 % of a cold open** (235–490 ms before
+  Lumia's page starts). Lumia's share, from the page starting to every
+  feature attached, is 150–175 ms, and its host side about 10 ms.
+  Activation is not on the open path: the extension activates at window
+  start (`workspaceContains:**/*.md`) in 20–40 ms.
+- **Vault size does not slow opening.** With 3,000 notes, `forDocument`
+  takes 7–23 ms because opening does not wait for indexing.
+- **Large frontmatter is the real bottleneck.** On open, the outline's
+  caret-follow asks the webview for the caret, which flushes the document.
+  The flush commits every Properties input. Each list input calls
+  `refresh()` even when nothing changed, and each refresh rebuilds the
+  whole sheet: it parses the YAML again and creates a new DOMPurify
+  instance. Re-renders grow with the number of properties (83 for 100
+  properties), so the cost is quadratic. A 381-property note settled in
+  times from 0.6 s to more than 90 s, and the deferred chunk imports failed
+  meanwhile. First paint is not affected; everything after it is. Turning
+  the outline off cuts the 100-property note from 3.5 s to 0.74 s, but a
+  second flush source remains.
+- **Three rounds of lazy feature chunks** follow `main` (chrome, then paint,
+  then the rest), each followed by an editor reconfigure: 30–60 ms on a
+  small note, 60–100 ms on a large one.
+- **The CPU profile is flat**: no single function above 30 ms on a large
+  note (CodeMirror 68 ms, Lezer 28 ms, plugin core 25 ms out of 363 ms).
+- **Budgets.** The Chromium harness stays within `test/quality/budgets.ts`
+  (first paint 37–62 ms against 150–200 ms). No budget covers frontmatter:
+  25 properties already reach 291 ms of the 300 ms first-paint-to-features
+  budget, and 100 properties take ten times it. `test/vscode/perf.spec.ts`
+  starts its clock after Reopen With, so it misses VS Code's wait, and it
+  reads a log file name that no longer exists (`Workshop.log`, now
+  `Lumia.log`).
+
+What to do, in order:
+
+1. Make an empty or unchanged list commit a no-op instead of a `refresh()`
+   (expected: 100 properties from 3.5 s to under 0.5 s; low risk).
+2. Reuse one DOMPurify instance and skip rebuilding an unchanged sheet
+   (about half of each re-render's cost).
+3. Let the outline read the caret without forcing a flush when nothing is
+   dirty; coalesce `refresh()` calls into one `render/changed` per frame.
+4. Add frontmatter notes (25 and 100 properties) to the quality budgets,
+   and fix `perf.spec.ts`'s clock start and log name.
+5. Put the chrome and paint feature chunks in the entry graph or preload
+   them (30–100 ms; costs about 10 ms per 150 KB of entry).
+
+VS Code's own part cannot be changed from the extension.
+
+## 16. Security boundaries
+
+- **Webviews are untrusted.** Every message has a schema and is validated
+  in both directions (`shared/rpc/endpoint.ts`); the host re-checks paths
+  and containment (symlinks included) before opening, creating or writing.
+- **Link schemes.** External application schemes ask first; script, data,
+  command and file schemes are refused.
+- **Vault code** (Obsidian community plugins) runs only where the owner said
+  yes: workspace trust in VS Code, an explicit per-vault answer in the app,
+  never in DSH.
+- **Native links** in VS Code's text editor carry a signed ticket that is
+  checked against the clicked text, the document version and containment.
+
+## 17. Testing layers
+
+| Layer | Command | What it proves |
+| --- | --- | --- |
+| Unit (Node) | `pnpm test` | pure logic, plugins against `fakeHost`, the core's conformance suite, parity tables against recovered Obsidian behaviour |
+| Browser (Chromium) | `pnpm test:browser` | the webview with a fake host: rendering, selection, keys, layout |
+| Quality budgets | `pnpm test:quality` | first paint, scroll and large-vault budgets (`test/quality/budgets.ts`) |
+| Real VS Code / Cursor | `pnpm test:vscode` (`VSCODE_EXECUTABLE=…` for Cursor) | the packaged extension in the real workbench over CDP: native editors, the command palette, settings, clipboard |
+| Everything | `pnpm check:full` | all of the above |
+
+The real-VS Code specs share one workspace per suite; each spec must restore
+what it changes, or a later spec fails for the wrong reason.
+
+## 18. Assessment: what holds, what drifted
+
+### 18.1 The plugin model: keep it
+
+- The boundaries hold. Cross-plugin imports go only through `api` and
+  `protocol`; the host seam is respected (no `vscode` in plugins); pure code
+  is lint-enforced.
+- The runtime cost is negligible (section 3.3); lazy webview chunks are
+  already in place.
+- One plugin per user-visible feature is right: the plugin id is a setting
+  users toggle and the unit of fault isolation. Merging plugins into larger
+  modules would lose both.
+- The core's divergences from Cordis are justified by the conformance suite.
+  The cost is that panels need separate roots and manual re-provision of
+  services (section 4).
+
+### 18.2 Where the structure strains
+
+- **The `editor` plugin is a hub.** About 8,100 lines in 67 files; 63 plugin
+  halves depend on its services. About 730 lines in 13 files are syntax
+  knowledge that belongs to the owning plugins (callout, footnote, math,
+  fence, setext, heading, link-reference and quote handling), and the Vim
+  caret profiles are hard-coded in `editor/caret.ts`.
+- **Registration is hand-maintained** in six or seven files (section 5),
+  and whether a plugin is enabled is computed at eight sites.
+- **Back-channels.** `shared/vim-hooks.ts` and `shared/completion-hooks.ts`
+  are module singletons used instead of optional services.
+- **One cycle**, `livePreview` ↔ `links` (section 5).
+- **Name clashes across products.** Both products have plugins named
+  `agentBridge` and `ideContext` on the same root, which conflates ranks,
+  ledger entries and log tags.
+- **PDF sits outside the seam.** Its extension plugins import `vscode`
+  directly, and its backlink index re-scans the vault instead of reading
+  Markdown's index. The last two backlink fixes were both drift repairs.
+- **Doc drift.** Some documents still name Cordis rc.11.
+
+### 18.3 Wikilinks
+
+Common wikilinks work end to end: parsing, embeds (notes, headings, blocks,
+sized images, PDF pages, media), Live Preview, Obsidian's resolution rules,
+following, creating missing notes, suggestions (notes, aliases, headings,
+blocks, PDF sections), link format settings, rename updates, backlinks and
+the graph. Gaps, most important first:
+
+| Gap | Effect | Size |
+| --- | --- | --- |
+| VS Code's own text editor has `[[` suggestions but no wikilink following, hover or unresolved marks | Cmd+click on `[[Note]]` does nothing there | M |
+| `%` in a wikilink (`[[100% Done]]`, `#50% done`) is URI-decoded | following throws or reports "heading not found" | S |
+| Links to PDFs and images are styled as unresolved | resolved links look broken | S |
+| Same name in several folders ranks by distance, not path length | can open a different note than Obsidian | S |
+| `\|` escaped pipe in raw source | Mod+Enter fails; a rename drops the backslash and breaks the table | S |
+| `[[Note#Heading]]` displays `Note#Heading`; Obsidian shows `Note > Heading` | cosmetic | S–M |
+| Nested heading paths that skip a level; block ids are case-sensitive | some valid links miss | S |
+| `![[img.png\|alt\|300]]` loses its width | sizing | S |
+| Mod+click opens in place; no middle-click, no new-tab key | differs from Obsidian (an owner decision, BH-020) | S |
+| Markdown-link suggestions ignore `newLinkFormat`; link updates only rewrite `.md` sources and lack "Always" | minor | S each |
+
+## 19. Recommended changes
+
+Ranked by value for effort. S, M and L are rough sizes.
+
+| # | Change | Size | Why |
+| --- | --- | --- | --- |
+| 0 | Stop the Properties sheet's quadratic re-renders on open (section 15) and add frontmatter budgets | S | notes with large frontmatter take seconds, or never settle |
+| 1 | Fix the small wikilink bugs: `%` decoding, PDF/image unresolved styling, path-length ranking, escaped pipes | S | silent wrong behaviour for users coming from Obsidian |
+| 2 | One `isEnabled(manifest, settings)` helper replacing the eight sites | S | removes a class of "on here, off there" bugs |
+| 3 | Rename PDF's `agentBridge` and `ideContext`; fix rc.11 references | S | clean ranks, ledger and logs |
+| 4 | Wikilink document links, hover and unresolved diagnostics in VS Code's text editor | M | completes the text-editor story that `[[` suggestions began |
+| 5 | Manifest-driven registration: each manifest declares its phase (critical, paint, deferred) and loaders; the catalog, host and webview lists, loader map and defer lists are generated; keep one explicit precedence list | M | adding a plugin touches one folder |
+| 6 | Shrink the `editor` hub: an extension point for syntax-specific editing, so callout, footnote, math and other handlers move to their plugins; turn `vim-hooks` and `completion-hooks` into optional services; move the `links` state field behind a `livePreview` API | S–M | restores "core knows no features" |
+| 7 | PDF backlinks read Markdown's vault index through a root service instead of scanning | M | ends the path-rule drift |
+| 8 | Build VS Code's vault file system on the shared `HostFiles` walk | S–M | removes the duplicated listing and watch code |
+| 9 | Late-bound optional services (watch a service without restarting) | S–M | retires the "provide it on the root first" ordering workarounds |
+| 10 | A panel scope in the core that inherits the parent's services and events | M–L | only if a third manual bridge appears |
+
+Not recommended now:
+
+- Porting every PDF plugin behind host services before a second host needs
+  the PDF viewer.
+- Moving the vault index to a shared worker service: budgets already guard
+  it; measure first.
+- Lazy-loading host halves: activation is already 15–20 ms.
+- Merging plugins into larger modules.

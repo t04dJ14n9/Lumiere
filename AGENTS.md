@@ -1,7 +1,8 @@
 # Agent instructions
 
 One VS Code and Cursor extension, "Lumia: Markdown Editor and PDF Reader", in a pnpm
-workspace. Everything is a plugin:
+workspace. Everything is a plugin. The whole-repository map is
+[docs/ARCHITECTURE.md](docs/ARCHITECTURE.md):
 
 | Path | What it is | Read first |
 | --- | --- | --- |
