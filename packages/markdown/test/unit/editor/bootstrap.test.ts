@@ -1,4 +1,5 @@
 import { MARKDOWN_EDITOR } from "../../../src/shared/editor-provider";
+import { contributionId } from "../../../src/shared/setting-schema";
 import test from "node:test";
 import assert from "node:assert/strict";
 import type { RuntimePluginState } from "../../../src/shared/plugin-state";
@@ -109,5 +110,33 @@ test("the editor provider registers once, so an editor opened during activation 
   assert.equal(registrations, 1);
   assert.equal(unregistrations, 0);
   assert.equal(disposed, false);
+  await root.dispose();
+});
+
+// VS Code runs a contributed command by activating the extension, so a
+// command whose handler waits for the first Lumia panel (editor/ready) is
+// "not found" in a window where no note has been opened yet.
+test("Open Today's Daily Note works before any Lumia editor opens", async () => {
+  const commands = new Set<string>();
+  const host = fakeHost({
+    hostCommands: {
+      register: (id) => {
+        commands.add(id);
+        return () => {};
+      },
+    },
+  });
+  host.views = fakeViews().views;
+  const fs = new MemoryFileSystem({ "A.md": "" });
+  const root = await bootstrap(host, memorySystem(fs).value);
+  await wait();
+  assert.equal(root.service("editors")?.all().length, 0);
+  for (const id of [
+    "dailyNotes.openToday",
+    "dailyNotes.openPrevious",
+    "dailyNotes.openNext",
+  ]) {
+    assert.ok(commands.has(contributionId(id)), `${id} is registered`);
+  }
   await root.dispose();
 });

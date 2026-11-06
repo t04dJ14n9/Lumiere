@@ -120,7 +120,11 @@ export async function bootstrap(
 
 // Window features that wait for editor/ready so activation settles fast.
 // The ones left out are needed before the first panel's settings.prepare /
-// link open path.
+// link open path, or serve a command that must work with no Lumia editor
+// open yet: VS Code activates the extension for a contributed command and
+// then looks the handler up, so a handler registered only after the first
+// panel is "not found" in a fresh window (dailyNotes: Open Today's Daily
+// Note). Insert Template needs an open panel anyway, so it can wait.
 const DEFERRED_WINDOW_FEATURES = [
   "backlinks",
   "outgoingLinks",
@@ -133,7 +137,6 @@ const DEFERRED_WINDOW_FEATURES = [
   "attachments",
   "scratch",
   "templates",
-  "dailyNotes",
   "gitDiffEditor",
   "marp",
   "tags",
