@@ -47,7 +47,12 @@ export function externalServices(
       resolveLink: api.resolveLink,
       getMetadata: api.getMetadata,
       getBacklinks: api.getBacklinks,
-      onDidResolveLinks: api.onDidResolveLinks,
+      onDidResolveLinks: (listener, thisArgs, disposables) => {
+        const sub = api.onDidResolveLinks(listener, thisArgs);
+        const owned = ownedDisposable(host, () => sub.dispose());
+        disposables?.push(owned);
+        return owned;
+      },
     });
   }
   if (host.markers) {
@@ -64,6 +69,13 @@ function editorServices(
   assertLive: (id?: string) => void,
 ): PublicServices["editors"] {
   const { host, api, available } = bindings;
+  // Per-folder enablement is a property of an open note. An id that is not
+  // open is gated only by the plugin being live, so the API answers
+  // EditorNotFound, which clients use to clean up after a closed editor.
+  const assertEditorLive = (id: string) => {
+    const isOpen = host.editors.all().some((panel) => panel.id === id);
+    assertLive(isOpen ? id : undefined);
+  };
   const register = (action: EditorAction, scope: "selection" | "title") => {
     assertLive();
     if (!action || typeof action.run !== "function") {
@@ -83,11 +95,23 @@ function editorServices(
     );
   };
   return Object.freeze({
-    getEditors: api.getEditors,
-    getActiveEditor: api.getActiveEditor,
+    getEditors: () =>
+      Object.freeze(
+        api.getEditors().filter((editor) => available(editor.editorId)),
+      ),
+    getActiveEditor: () => {
+      const active = api.getActiveEditor();
+      return active && available(active.editorId) ? active : undefined;
+    },
     open: api.open,
-    reveal: api.reveal,
-    getSelection: api.getSelection,
+    reveal: async (id, target, options) => {
+      assertEditorLive(id);
+      return api.reveal(id, target, options);
+    },
+    getSelection: async (id, options) => {
+      assertEditorLive(id);
+      return api.getSelection(id, options);
+    },
     registerSelectionAction: (action) => register(action, "selection"),
     registerTitleAction: (action) => register(action, "title"),
   });
