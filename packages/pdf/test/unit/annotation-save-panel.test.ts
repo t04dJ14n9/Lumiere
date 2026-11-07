@@ -161,6 +161,24 @@ test("overlapping saves reach the disk in the order the viewer sent them", async
   assert.deepEqual([...disk], [...bytesOf(1, 2)]);
 });
 
+test("Keep mine that cannot write reports the failure as a save does", async () => {
+  const { posted, receive, panel, errors } = open({
+    writeAtomic: async () => {
+      throw new Error("EACCES: permission denied");
+    },
+  });
+  const failed: unknown[] = [];
+  panel.onAnnotationSaveFailed((message) => failed.push(message));
+  await receive({ type: "ready" });
+  const load = posted.find((m) => m.type === "load");
+  assert.ok(load && load.type === "load");
+  await assert.doesNotReject(panel.keepMine(new ArrayBuffer(4), load.load));
+  assert.equal(failed.length, 1);
+  assert.match(errors.at(-1) ?? "", /EACCES/);
+  const result = posted.filter((m) => m.type === "annotationSaveResult").at(-1);
+  assert.ok(result && result.type === "annotationSaveResult" && !result.ok);
+});
+
 test("annotationSave conflicts when disk hash diverges", async () => {
   let writes = 0;
   const { posted, receive, panel } = open({

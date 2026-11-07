@@ -71,13 +71,7 @@ export class AnnotationSave {
     if (!this.deps.isCurrentLoad(load) || !this.files.writeAtomic) {
       return;
     }
-    const bytes = new Uint8Array(data);
-    const sha256 = createHash("sha256").update(bytes).digest("hex");
-    this.source.expectWrite(sha256);
-    const written = await this.files.writeAtomic(this.fileUri, bytes);
-    this.wrote(load, written.sha256);
-    this.dirty = "clean";
-    this.deps.post({ type: "annotationSaveResult", load, ok: true, sha256 });
+    await this.write(this.files.writeAtomic, load, new Uint8Array(data));
   }
 
   private async saveNow(
@@ -110,17 +104,28 @@ export class AnnotationSave {
       this.reportConflict(message, "The PDF was modified on disk.");
       return;
     }
-    const bytes = new Uint8Array(message.data);
-    const sha256 = createHash("sha256").update(bytes).digest("hex");
-    this.source.expectWrite(sha256);
+    await this.write(
+      this.files.writeAtomic,
+      message.load,
+      new Uint8Array(message.data),
+    );
+  }
+
+  /** Write `bytes` over the file and tell the viewer whether it worked. */
+  private async write(
+    writeAtomic: NonNullable<PdfFiles["writeAtomic"]>,
+    load: number,
+    bytes: Uint8Array,
+  ): Promise<void> {
+    this.source.expectWrite(createHash("sha256").update(bytes).digest("hex"));
     this.dirty = "saving";
     try {
-      const written = await this.files.writeAtomic(this.fileUri, bytes);
-      this.wrote(message.load, written.sha256);
+      const written = await writeAtomic(this.fileUri, bytes);
+      this.wrote(load, written.sha256);
       this.dirty = "clean";
       this.deps.post({
         type: "annotationSaveResult",
-        load: message.load,
+        load,
         ok: true,
         sha256: written.sha256,
       });
@@ -131,7 +136,7 @@ export class AnnotationSave {
       this.deps.failed(text);
       this.deps.post({
         type: "annotationSaveResult",
-        load: message.load,
+        load,
         ok: false,
         reason: "error",
         message: text,
