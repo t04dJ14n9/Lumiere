@@ -109,12 +109,15 @@ export function fenceLines(
   };
 }
 
-/** Insert Tag, as in Obsidian: `#` before the selection, the caret after it. */
+/**
+ * Insert Tag, as in Obsidian: `#` before the selection, the caret after it,
+ * and the edit asks for suggestions, so the list of tags opens at once.
+ */
 export function tagEdit(state: EditorState): TransactionSpec {
   const { from } = state.selection.main;
   return {
     changes: { from, insert: "#" },
     selection: { anchor: from + 1 },
-    userEvent: "input",
+    userEvent: "input.autocomplete",
   };
 }
