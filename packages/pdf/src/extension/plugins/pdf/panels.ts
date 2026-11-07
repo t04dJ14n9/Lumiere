@@ -107,9 +107,11 @@ export class PdfPanels
     ) {
       return undefined;
     }
+    // A PDF opened from a link keeps its `#page=…` on the tab, not the panel.
+    const file = input.uri.with({ fragment: "" }).toString();
     const candidates = [...panels].filter(
       (panel) =>
-        panel.uri.toString() === input.uri.toString() &&
+        panel.uri.toString() === file &&
         panel.webviewPanel.viewColumn === group.viewColumn,
     );
     return (
