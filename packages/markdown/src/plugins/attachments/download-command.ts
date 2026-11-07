@@ -10,6 +10,7 @@ import {
   type SavedAttachment,
   type SourceBytes,
 } from "../../attachments";
+import { SourceCoordinates } from "../../shared/document/coordinates";
 import { contributionId } from "../../shared/setting-schema";
 import { attachmentTarget, type AttachmentTarget } from "./target";
 
@@ -36,7 +37,7 @@ export async function downloadAttachments(ctx: Context): Promise<void> {
     return;
   }
   const urls = [
-    ...new Set(remoteImages(panel.document.getText()).map(({ url }) => url)),
+    ...new Set(remoteImages(editorText(panel.document)).map(({ url }) => url)),
   ];
   if (urls.length === 0) {
     ctx.dialogs.inform("This note shows no images from the web.");
@@ -56,7 +57,7 @@ export async function downloadAttachments(ctx: Context): Promise<void> {
     return;
   }
   const saved = await saveAll(target, urls);
-  const edits = withDownloadedImages(panel.document.getText(), (url, alt) => {
+  const edits = withDownloadedImages(editorText(panel.document), (url, alt) => {
     const file = saved.get(url);
     return file && embedFor({ ...target, ...file, alt });
   });
@@ -71,6 +72,15 @@ export async function downloadAttachments(ctx: Context): Promise<void> {
   } else {
     ctx.dialogs.error(message);
   }
+}
+
+/**
+ * The note with LF line breaks, whose offsets are the editor's: that is what
+ * `hostDocuments.apply` takes, and it maps them onto the note's own breaks,
+ * so offsets read from the CRLF source would be shifted twice.
+ */
+function editorText(document: { getText(): string }): string {
+  return new SourceCoordinates(document.getText()).editor.toString();
 }
 
 /** Download and save each URL in turn; the ones that fail are left out. */
