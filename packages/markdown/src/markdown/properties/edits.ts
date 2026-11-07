@@ -13,6 +13,7 @@ import {
   scalarValue,
   setPropertyChange,
   valueAfterKey,
+  sameWritten,
   type PropertyChange,
 } from "./yaml-value";
 
@@ -354,18 +355,6 @@ function editTouchesKey(edit: KeyEdit, key: string): boolean {
     (edit.type === "set" && key === edit.key) ||
     (edit.type === "remove" && edit.keys.includes(key)) ||
     (edit.type === "rename" && key === edit.key)
-  );
-}
-
-/**
- * Whether a value reads back as the one written. An empty list is written as
- * a bare `key:`, as Obsidian writes it, which reads back as no value.
- */
-function sameWritten(after: unknown, written: unknown): boolean {
-  const empty = Array.isArray(written) && written.length === 0;
-  return (
-    JSON.stringify(after) === JSON.stringify(written) ||
-    (empty && (after === null || after === undefined))
   );
 }
 
