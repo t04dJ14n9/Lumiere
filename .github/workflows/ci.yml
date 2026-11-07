@@ -34,7 +34,9 @@ jobs:
   browser:
     name: browser
     runs-on: ubuntu-latest
-    timeout-minutes: 20
+    # Passing runs take 12-19 minutes on the 7 GB runners private
+    # repositories get; 20 cancelled them.
+    timeout-minutes: 35
     steps:
       - uses: actions/checkout@v7
       - uses: ./.github/actions/setup
