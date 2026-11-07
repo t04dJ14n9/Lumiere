@@ -6,13 +6,14 @@ import {
   vaultLinks,
 } from "../../markdown/metadata/linkpaths";
 import type { FileTextEdits } from "../../shared/host";
+import { formatLinkSource, linkSource } from "./link-source";
+import { withRenamedLabel } from "./rename-label";
 import {
   folderOf,
   isMarkdownPath,
   lookupKey,
   nameOf,
   relativeVaultPath,
-  splitLinktext,
   withoutNoteExtension,
   type LinkSyntax,
 } from "../../shared/vault-path";
@@ -44,6 +45,11 @@ type Edit = FileTextEdits["edits"][number];
 export interface LinkChange {
   link: LinkMetadata;
   newTarget: string;
+  /**
+   * The link's written path when its target was renamed; `undefined` when
+   * only the source note moved, so its own links keep their text.
+   */
+  oldPath: string | undefined;
 }
 
 /**
@@ -70,7 +76,11 @@ export function changedLinks(
     const newTarget = context.renames.get(target) ?? target;
     const isPathStyle = linkpath.includes("/") || linkpath.startsWith(".");
     if (newTarget !== target || (sourceMoved && isPathStyle)) {
-      changes.push({ link, newTarget });
+      changes.push({
+        link,
+        newTarget,
+        oldPath: newTarget === target ? undefined : linkpath,
+      });
     }
   }
   return changes;
@@ -90,14 +100,13 @@ export function rewriteLinks(
 ): Edit[] {
   const newSource = context.renames.get(sourcePath) ?? sourcePath;
   return changedLinks(vaultLinks(metadata(text)), sourcePath, context).map(
-    ({ link, newTarget }) => ({
+    ({ link, newTarget, oldPath }) => ({
       start: link.position.start,
       end: link.position.end,
-      text: rewritten(
-        link,
-        targetText(newTarget, newSource, context),
-        newTarget,
-      ),
+      text: rewritten(link, targetText(newTarget, newSource, context), {
+        target: newTarget,
+        oldPath,
+      }),
     }),
   );
 }
@@ -126,20 +135,23 @@ function targetText(
   return withoutNote(target);
 }
 
-/** The link's source text with only its path replaced. */
-function rewritten(link: LinkMetadata, path: string, target: string): string {
-  const wikilink = /^(!?)\[\[([^\]|#]*)(#[^\]|]*)?(\|[^\]]*)?\]\]$/.exec(
-    link.original,
-  );
-  if (wikilink) {
-    const [, bang = "", , subpath = "", alias = ""] = wikilink;
-    return `${bang}[[${path}${subpath}${alias}]]`;
+/**
+ * The link's source text with its path replaced, and with an alias or text
+ * that showed the renamed file's name (`oldPath`) following it.
+ */
+function rewritten(
+  link: LinkMetadata,
+  path: string,
+  { target, oldPath }: { target: string; oldPath: string | undefined },
+): string {
+  const source = linkSource(link.original);
+  if (!source) {
+    return link.original;
   }
-  const { subpath } = splitLinktext(link.link);
-  const extension = isMarkdownPath(target) ? ".md" : "";
-  const destination = `${path}${extension}`.replace(/ /g, "%20") + subpath;
-  return link.original.replace(
-    /\]\((<?)[^)>]*(>?)/,
-    (_, open, close) => `](${open}${destination}${close}`,
-  );
+  const isWikilink = source.opening.endsWith("[[");
+  const extension = !isWikilink && isMarkdownPath(target) ? ".md" : "";
+  const newPath = `${path}${extension}`;
+  const labelled =
+    oldPath === undefined ? source : withRenamedLabel(source, oldPath, newPath);
+  return formatLinkSource(labelled, newPath, source.subpath);
 }

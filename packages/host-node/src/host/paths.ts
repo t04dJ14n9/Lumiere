@@ -6,7 +6,14 @@
  * vault's URI and then leaves it.
  */
 import { constants } from "node:fs";
-import { mkdir, open, realpath, rename, writeFile } from "node:fs/promises";
+import {
+  lstat,
+  mkdir,
+  open,
+  realpath,
+  rename,
+  writeFile,
+} from "node:fs/promises";
 import * as path from "node:path";
 import { fileURLToPath, pathToFileURL } from "node:url";
 
@@ -211,11 +218,27 @@ async function nearestExisting(file: string): Promise<string> {
       if ((error as NodeJS.ErrnoException).code !== "ENOENT") {
         throw error;
       }
+      // `realpath` throws ENOENT for a dangling symlink as well as a missing
+      // path; a symlink whose target is missing could point outside the root.
+      if (await isSymbolicLink(candidate)) {
+        throw new OutsideWorkspace();
+      }
       const parent = path.dirname(candidate);
       if (parent === candidate) {
         throw error;
       }
       candidate = parent;
     }
+  }
+}
+
+async function isSymbolicLink(candidate: string): Promise<boolean> {
+  try {
+    return (await lstat(candidate)).isSymbolicLink();
+  } catch (error) {
+    if ((error as NodeJS.ErrnoException).code === "ENOENT") {
+      return false;
+    }
+    throw error;
   }
 }

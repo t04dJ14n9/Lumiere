@@ -1,8 +1,8 @@
 /** Files served as they are: the built editor, the page shim, a note's images. */
-import { createReadStream } from "node:fs";
-import { stat } from "node:fs/promises";
+import { open, stat } from "node:fs/promises";
 import type { ServerResponse } from "node:http";
 import * as path from "node:path";
+import { pipeline } from "node:stream/promises";
 
 const CONTENT_TYPES: Readonly<Record<string, string>> = {
   ".html": "text/html; charset=utf-8",
@@ -53,8 +53,12 @@ export async function serveFile(
   res: ServerResponse,
   file: string | URL,
 ): Promise<void> {
+  // stat before open: opening a FIFO would block until something writes to it.
   const info = await stat(file).catch(() => undefined);
-  if (!info?.isFile()) {
+  const handle = info?.isFile()
+    ? await open(file, "r").catch(() => undefined)
+    : undefined;
+  if (!info || !handle) {
     res.writeHead(404).end();
     return;
   }
@@ -67,5 +71,7 @@ export async function serveFile(
     "cache-control": "no-cache",
     "x-content-type-options": "nosniff",
   });
-  createReadStream(file).pipe(res);
+  // An unhandled stream error would end the whole server; pipeline destroys
+  // the response instead, and closes the file when the client goes away.
+  await pipeline(handle.createReadStream(), res).catch(() => undefined);
 }

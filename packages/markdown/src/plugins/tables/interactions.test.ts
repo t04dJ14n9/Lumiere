@@ -219,6 +219,34 @@ test("table menus preserve axis bounds, command focus and action order", () => {
   );
 });
 
+test("a column menu adds columns aligned as the selection's edge columns", () => {
+  const aligned = parseTable(
+    "| a | b | c |\n| :--- | :---: | ---: |\n| 1 | 2 | 3 |",
+  )!;
+  const operations: unknown[] = [];
+  const actions: TableMenuActions = {
+    copy: () => {},
+    paste: async () => {},
+    selectAll: () => {},
+    format: () => {},
+    clear: () => {},
+    execute: (operation) => {
+      operations.push(operation);
+    },
+  };
+  const range = {
+    anchor: { row: 0, column: 0 },
+    head: { row: aligned.rows.length - 1, column: 1 },
+  };
+  const menu = tableMenu(aligned, range, actions, "column");
+  menu[0]!.run!();
+  menu[1]!.run!();
+  assert.deepEqual(operations, [
+    { type: "insert", axis: "column", index: 0, alignAs: 0 },
+    { type: "insert", axis: "column", index: 2, alignAs: 1 },
+  ]);
+});
+
 test("cell menu includes all row operations, disabled boundary moves and working clipboard callbacks", async () => {
   const calls: unknown[] = [];
   const actions: TableMenuActions = {

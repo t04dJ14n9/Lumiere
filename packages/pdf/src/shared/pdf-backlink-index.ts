@@ -3,7 +3,8 @@
  * Source of truth is the notes; this cache is never written to disk.
  */
 import type { ViewRect } from "./geometry";
-import { readLinkDestination } from "./native-links";
+import { nativeLinkContext } from "./native-link-context";
+import { escaped, readLinkDestination } from "./native-links";
 import {
   normalizePdfKey,
   pdfKeysOfLinkPath,
@@ -52,13 +53,22 @@ export function extractPdfBacklinks(
   return extractIndexedHits(noteText, notePath, noteUri).map(({ hit }) => hit);
 }
 
+/**
+ * Links in code, HTML comments and HTML blocks are text, not links, as the
+ * Markdown editor shows them; so is an escaped `\[`. An embed (`![…](…)`)
+ * still points at the page.
+ */
 export function extractIndexedHits(
   noteText: string,
   notePath: string,
   noteUri: string,
 ): IndexedHit[] {
   const entries: IndexedHit[] = [];
-  for (const match of noteText.matchAll(MD_LINK_START)) {
+  const context = nativeLinkContext(noteText);
+  for (const match of context.matchAll(MD_LINK_START)) {
+    if (escaped(context, match.index)) {
+      continue;
+    }
     const target = destinationAt(noteText, match.index + match[0].length);
     const entry = target
       ? hitFromTarget(target, { linkOffset: match.index, notePath, noteUri })
