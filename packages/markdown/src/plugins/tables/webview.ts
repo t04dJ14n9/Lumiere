@@ -29,6 +29,7 @@ import { insertTable, tableOperation } from "./commands";
 import { vimTableEntry } from "./vim-entry";
 import { listenForTableWheel } from "./scroll-input";
 import { cellPointerOffset } from "./cell-pointer";
+import { matchesEditableTable } from "./renderer-match";
 export const tablesWebview: Plugin = {
   name: "tables",
   inject: {
@@ -150,7 +151,7 @@ function registerTableRenderer(
       kind: "Table",
       nodes: ["Table"],
       editing: "widget",
-      match: (node) => node.name === "Table",
+      match: matchesEditableTable,
       widget: (block) => new TableWidget(block, 0, environment),
     }),
   );

@@ -1,27 +1,68 @@
-import type { EditorState, TransactionSpec } from "@codemirror/state";
+import type { EditorState, Line, TransactionSpec } from "@codemirror/state";
 
-/** A list item's indentation and marker: a bullet, a number, or a task. */
-const LIST_ITEM = /^(\s*)((?:[-*+]|\d+[.)]) (?:\[.\] )?)?/u;
+/**
+ * A line's quote markers and indentation, which stay as they are, then its
+ * list marker: a bullet, a number, or a task.
+ */
+const LIST_ITEM = /^([>\s]*)((?:[-*+]|\d+[.)]) (?:\[.\] )?)?/u;
+
+/** A line's quote markers and indentation, then its heading marker. */
+const HEADING = /^([>\s]*)(#{1,6}[ \t]+)?/u;
+
+type LineChange = { from: number; to?: number; insert?: string };
+
+/**
+ * The length of one level of quote at the start of `text`, or `undefined`
+ * when it has none: up to three spaces, `>`, and a space after it unless
+ * that space starts indented code (four spaces) inside the quote.
+ */
+function quoteLength(text: string): number | undefined {
+  const match = /^(\s{0,3}>)(\s*)/u.exec(text);
+  if (!match) {
+    return undefined;
+  }
+  let after = match[2]!;
+  while (after.startsWith("    ")) {
+    after = after.slice(4);
+  }
+  return match[1]!.length + (after.startsWith(" ") ? 1 : 0);
+}
 
 /** Whether a line already is the kind of line `prefix` makes. */
 function isKind(text: string, prefix: string): boolean {
-  if (prefix === "1. ") {
-    return /^\s*\d+[.)] (?!\[.\] )/u.test(text);
+  if (prefix === "> ") {
+    return quoteLength(text) !== undefined;
   }
-  if (prefix === "- ") {
-    return /^\s*[-*+] (?!\[.\] )/u.test(text);
-  }
-  return text.startsWith(prefix);
+  const marker = LIST_ITEM.exec(text)![2] ?? "";
+  return prefix === "1. "
+    ? /^\d+[.)] $/u.test(marker)
+    : /^[-*+] $/u.test(marker);
 }
 
 /**
  * Headings, lists and quotes on the selected lines, as in Obsidian: a
  * heading replaces the line's heading; a list marker replaces another list's
  * (a task's checkbox goes too), or comes off when every line has it; a quote
- * marker goes on, or comes off. A caret on an empty line ends up after the
- * marker. A selection ending at column zero does not include that line.
+ * marker goes on the lines without one, or one level comes off when every
+ * line has one. Markers go after a line's quote markers and indentation, so
+ * a quote or callout stays one. Blank lines in a selection of several are
+ * left alone. A caret on an empty line ends up after the marker. A
+ * selection ending at column zero does not include that line.
  */
 export function lineEdit(state: EditorState, prefix: string): TransactionSpec {
+  const lines = selectedLines(state);
+  const all = lines.every((line) => isKind(line.text, prefix));
+  const changes = state.changes(
+    lines.map((line, index) => lineChange(line, prefix, { all, index })),
+  );
+  return {
+    changes,
+    selection: state.selection.map(changes, 1),
+    userEvent: "input",
+  };
+}
+
+function selectedLines(state: EditorState): Line[] {
   const selection = state.selection.main;
   const first = state.doc.lineAt(selection.from);
   const last = state.doc.lineAt(
@@ -31,29 +72,30 @@ export function lineEdit(state: EditorState, prefix: string): TransactionSpec {
     { length: last.number - first.number + 1 },
     (_, index) => state.doc.line(first.number + index),
   );
-  const all = lines.every((line) => isKind(line.text, prefix));
-  const changes = state.changes(
-    lines.map((line, index) => {
-      if (/^#{0,6} ?$/u.test(prefix)) {
-        const old = /^#{1,6}\s+/u.exec(line.text)?.[0] ?? "";
-        return { from: line.from, to: line.from + old.length, insert: prefix };
-      }
-      if (prefix === "> ") {
-        return all
-          ? { from: line.from, to: line.from + prefix.length }
-          : { from: line.from, insert: prefix };
-      }
-      const [, indent = "", marker = ""] = LIST_ITEM.exec(line.text)!;
-      const from = line.from + indent.length;
-      const insert = prefix === "1. " ? `${index + 1}. ` : prefix;
-      return { from, to: from + marker.length, insert: all ? "" : insert };
-    }),
-  );
-  return {
-    changes,
-    selection: state.selection.map(changes, 1),
-    userEvent: "input",
-  };
+  return lines.length > 1 ? lines.filter((line) => line.text.trim()) : lines;
+}
+
+function lineChange(
+  line: Line,
+  prefix: string,
+  { all, index }: { all: boolean; index: number },
+): LineChange {
+  if (/^#{0,6} ?$/u.test(prefix)) {
+    const [, lead = "", old = ""] = HEADING.exec(line.text)!;
+    const from = line.from + lead.length;
+    return { from, to: from + old.length, insert: prefix };
+  }
+  if (prefix === "> ") {
+    const quote = quoteLength(line.text);
+    if (all) {
+      return { from: line.from, to: line.from + (quote ?? 0) };
+    }
+    return { from: line.from, insert: quote === undefined ? prefix : "" };
+  }
+  const [, lead = "", marker = ""] = LIST_ITEM.exec(line.text)!;
+  const from = line.from + lead.length;
+  const insert = prefix === "1. " ? `${index + 1}. ` : prefix;
+  return { from, to: from + marker.length, insert: all ? "" : insert };
 }
 /**
  * Insert Link, as in Obsidian: the selection becomes the label and the caret
@@ -109,12 +151,15 @@ export function fenceLines(
   };
 }
 
-/** Insert Tag, as in Obsidian: `#` before the selection, the caret after it. */
+/**
+ * Insert Tag, as in Obsidian: `#` before the selection, the caret after it,
+ * and the edit asks for suggestions, so the list of tags opens at once.
+ */
 export function tagEdit(state: EditorState): TransactionSpec {
   const { from } = state.selection.main;
   return {
     changes: { from, insert: "#" },
     selection: { anchor: from + 1 },
-    userEvent: "input",
+    userEvent: "input.autocomplete",
   };
 }

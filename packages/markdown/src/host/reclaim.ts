@@ -15,6 +15,7 @@ import {
   nativeSelectionRange,
 } from "./reclaim-transfer";
 import { MARKDOWN_WORKSPACE_EDITOR_KEY } from "../shared/editor-provider";
+import { isMarkdownAbsentOnDisk } from "./markdown-absent-on-disk";
 import { readerText } from "./reader-text";
 import type { NativeNavigation } from "./navigation";
 import {
@@ -150,6 +151,7 @@ function createReclaimJudge(options: {
         swap.after === "text" &&
         isReclaimableNote(swap.uri) &&
         (hasNativeOptOut(swap.uri) ||
+          isMarkdownAbsentOnDisk(swap.uri) ||
           (!unbiddenInPlace && !unassociatedNewText));
       if (keep) {
         readerText.keep(swap.uri);

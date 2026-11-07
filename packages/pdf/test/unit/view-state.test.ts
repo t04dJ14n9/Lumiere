@@ -86,6 +86,7 @@ test("view reports from the viewer are validated and the zoom rounded", () => {
     { ...choices, page: 16, pageCount: 15, zoomPercent: 100 },
     { ...choices, page: 1.5, pageCount: 15, zoomPercent: 100 },
     { ...choices, page: -1, pageCount: 15, zoomPercent: 100 },
+    { ...choices, page: 0, pageCount: 15, zoomPercent: 100 },
     { ...choices, page: 1, pageCount: 15, zoomPercent: 0 },
     { ...choices, page: 1, pageCount: 15, zoomPercent: Number.NaN },
     { ...choices, page: 1, pageCount: 15, zoomPercent: "100" },

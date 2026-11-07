@@ -93,14 +93,22 @@ export class ContextImpl implements BaseContext {
     if (value === undefined) {
       throw new CoreError("DuplicateService", `${name} cannot be undefined`);
     }
+    const entry = { owner: this.owner, value };
+    const previous = this.runtime.published.get(name);
+    // Recorded before publishing: on an active root context, Cordis notifies
+    // service watchers synchronously inside `publish`.
+    this.runtime.published.set(name, entry);
     let withdraw: Disposer;
     try {
       withdraw = this.scope.publish(name, value);
     } catch (error) {
+      if (previous) {
+        this.runtime.published.set(name, previous);
+      } else {
+        this.runtime.published.delete(name);
+      }
       throw new CoreError("DuplicateService", name, { cause: error });
     }
-    const entry = { owner: this.owner, value };
-    this.runtime.published.set(name, entry);
     this.activation.acquire("service", async () => {
       await withdraw();
       if (this.runtime.published.get(name) === entry) {

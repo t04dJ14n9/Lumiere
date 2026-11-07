@@ -55,10 +55,10 @@ test("an OKF policy resolves bundle-absolute links and drops basename fallback",
     true,
   );
   assert.equal(
-    // A wikilink passes through to the vault's rules: neither match is under
-    // bundle/notes/, so the shorter path wins, as in Obsidian.
+    // Inside a bundle, a wikilink prefers the bundle's own candidate over a
+    // shorter path outside it.
     vault.resolveLink("topic", "bundle/notes/source.md")?.path,
-    "metrics/topic.md",
+    "bundle/metrics/topic.md",
   );
   assert.equal(
     vault.describeLink("bundle/metrics/topic.md", "bundle/notes/source.md"),
@@ -175,5 +175,6 @@ test("link rewrites prefer the policy's bundle-absolute text", () => {
       preferredText: () => "/metrics/renamed",
     },
   );
-  assert.equal(edits[0]?.text, "[topic](/metrics/renamed.md)");
+  // The text was the note's name, so it follows the rename too.
+  assert.equal(edits[0]?.text, "[renamed](/metrics/renamed.md)");
 });

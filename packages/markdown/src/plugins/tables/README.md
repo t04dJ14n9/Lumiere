@@ -2,6 +2,8 @@
 
 Edit Markdown tables as a grid with cell editing, rectangular selections,
 row/column operations and clipboard commands, like Obsidian's Live Preview tables.
+As in Obsidian, a column added with Insert Column or the menu is aligned as the
+column beside it; the add strip's new last column has no alignment.
 
 ## How it works
 

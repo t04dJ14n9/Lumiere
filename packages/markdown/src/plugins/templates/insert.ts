@@ -1,4 +1,3 @@
-import { SourceCoordinates } from "../../shared/document/coordinates";
 import type { HostDocuments } from "../../shared/host";
 import type { EditorPanel } from "../editor/api";
 import { protocol as editorProtocol } from "../editor/protocol";
@@ -19,15 +18,12 @@ export async function insertAtSelection(
     if (range.version !== panel.session.version) {
       throw new Error("The note changed while inserting. Try again.");
     }
-    const coordinates = new SourceCoordinates(panel.document.getText());
     const insert =
       panel.document.eol === "\r\n" ? lines.replace(/\n/g, "\r\n") : lines;
+    // `apply` takes the editor's offsets and maps them onto the note's own
+    // line breaks; mapping them here as well would shift a CRLF edit twice.
     const isApplied = await documents.apply(panel.document, [
-      {
-        from: coordinates.toSource(range.from),
-        to: coordinates.toSource(range.to),
-        insert,
-      },
+      { from: range.from, to: range.to, insert },
     ]);
     return isApplied ? range.from + lines.length : undefined;
   });

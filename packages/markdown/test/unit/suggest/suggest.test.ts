@@ -7,6 +7,7 @@ import { linkSuggestion } from "../../../src/plugins/links/suggestions";
 import { tagSuggestion } from "../../../src/plugins/tags/suggestions";
 import {
   allowsSuggestions,
+  asksForSuggestions,
   completionEdit,
 } from "../../../src/plugins/suggest/completion";
 import { suggestions } from "../../../src/plugins/suggest/sources";
@@ -22,6 +23,18 @@ import { rpcPair } from "../../support/rpc-pair";
 function context(doc: string) {
   return { state: EditorState.create({ doc }), pos: doc.length };
 }
+
+test("an edit marked input.autocomplete asks for suggestions; typing is CodeMirror's", () => {
+  const state = EditorState.create({ doc: "" });
+  const insert = (userEvent?: string) =>
+    state.update({
+      changes: { from: 0, insert: "[[]]" },
+      ...(userEvent && { userEvent }),
+    });
+  assert.equal(asksForSuggestions([insert("input.autocomplete")]), true);
+  assert.equal(asksForSuggestions([insert("input.type")]), false);
+  assert.equal(asksForSuggestions([insert()]), false);
+});
 test("link and tag sources recognize partial links, headings, local and global blocks", () => {
   assert.deepEqual(linkSuggestion(context("[[Note#^ab")), {
     kind: "block",
@@ -185,6 +198,121 @@ test("suggestion RPC rejects extra fields and oversized results", () => {
       Array(51).fill({ label: "a", insert: "a", detail: "" }),
     ),
   );
+});
+test("addBlockId accepts only a vault note and a generated block id", () => {
+  const params = protocol.requests.addBlockId.params;
+  assert.throws(() =>
+    params.parse({
+      uri: "file:///outside/config.ini",
+      at: 0,
+      before: "",
+      insert: "compromised=true\n",
+      here: false,
+    }),
+  );
+  assert.throws(() =>
+    params.parse({
+      uri: "file:///vault/Home.md",
+      at: 1,
+      before: "x",
+      insert: "not-a-block-id",
+      here: false,
+    }),
+  );
+  assert.throws(() =>
+    params.parse({
+      uri: "file:///vault/Home.md",
+      at: -1,
+      before: "x",
+      insert: " ^abc123",
+      here: false,
+    }),
+  );
+  params.parse({
+    uri: "file:///vault/Home.md",
+    at: 28,
+    before: "#project",
+    insert: " ^abc123",
+    here: false,
+  });
+});
+test("addBlockId does not open files outside the vault", async () => {
+  const pair = rpcPair();
+  const opened: string[] = [];
+  const applied: { from: number; insert: string }[] = [];
+  const notes: Record<string, string> = {
+    "file:///vault/Home.md": "[[Missing]] #Project #project",
+  };
+  const root = createRoot();
+  root.provide("rpc", pair.host);
+  root.provide("vault", index());
+  provideHostServices(
+    root,
+    fakeHost({
+      hostDocuments: {
+        open: async (uri) => {
+          opened.push(uri);
+          return fakeDocument({
+            uri,
+            getText: () => notes[uri] ?? "",
+          });
+        },
+        text: (uri) => notes[uri],
+        apply: async (_document, edits) => {
+          applied.push(
+            ...edits.map((edit) => ({ from: edit.from, insert: edit.insert })),
+          );
+          return true;
+        },
+      },
+    }),
+  );
+  root.plugin(suggestHost, {
+    panel: {
+      document: fakeDocument({ uri: "file:///vault/Home.md" }),
+    } as PanelShell,
+  });
+  await root.settled();
+  assert.equal(
+    await pair.client.call(protocol, "addBlockId", {
+      uri: "file:///outside/config.ini",
+      at: 1,
+      before: "x",
+      insert: " ^abc123",
+      here: false,
+    }),
+    false,
+  );
+  assert.deepEqual(opened, []);
+  assert.equal(
+    await pair.client.call(protocol, "addBlockId", {
+      uri: "file:///vault/Hidden.md",
+      at: 1,
+      before: "x",
+      insert: " ^abc123",
+      here: false,
+    }),
+    false,
+  );
+  assert.deepEqual(opened, []);
+  const home = notes["file:///vault/Home.md"]!;
+  const at = home.length;
+  const before = "#project";
+  assert.equal(home.slice(at - before.length, at), before);
+  assert.equal(
+    await pair.client.call(protocol, "addBlockId", {
+      uri: "file:///vault/Home.md",
+      at,
+      before,
+      insert: " ^abc123",
+      here: false,
+    }),
+    true,
+  );
+  assert.deepEqual(opened, ["file:///vault/Home.md"]);
+  assert.deepEqual(applied, [{ from: at, insert: " ^abc123" }]);
+  await root.dispose();
+  await pair.dispose();
 });
 test("suggest host enforces source feature switches and disposes RPC handlers", async () => {
   const pair = rpcPair();
