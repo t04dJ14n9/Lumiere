@@ -61,7 +61,7 @@ function answerNotePages(ctx: Context): void {
         );
         owned.effect(() =>
           panel.rpc.handle(protocol, "importUrl", (params) =>
-            importUrlForPanel(ctx, panel, params.url),
+            importUrlForPanel(ctx, panel, params.url, { imagesOnly: true }),
           ),
         );
       },
@@ -139,8 +139,10 @@ async function importUrlForPanel(
   ctx: Context,
   panel: EditorPanel,
   url: string,
+  { imagesOnly = false } = {},
 ): Promise<SaveResult> {
   const loaded = await loadAttachmentSource(url, {
+    imagesOnly,
     fetch: (target) => fetch(target),
     readFile: async (uri) => {
       try {
