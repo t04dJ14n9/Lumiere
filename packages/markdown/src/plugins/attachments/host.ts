@@ -17,10 +17,11 @@ import {
   loadAttachmentSource,
   saveAttachment,
 } from "../../attachments";
-import { asString } from "../../shared/values";
 import type { EditorPanel } from "../editor/api";
 import type {} from "../vault/api";
+import { NO_VAULT, registerDownloadAttachments } from "./download-command";
 import { protocol } from "./protocol";
+import { attachmentTarget } from "./target";
 
 type SaveResult = {
   ok: boolean;
@@ -39,12 +40,14 @@ export const attachmentsHost: Plugin = {
       "settings",
       "dialogs",
       "hostDocuments",
+      "hostCommands",
     ],
     optional: ["customEditors"],
   },
   apply(ctx) {
     answerNotePages(ctx);
     reclaimExplorerOpens(ctx);
+    registerDownloadAttachments(ctx);
   },
 };
 
@@ -164,23 +167,12 @@ async function writeAttachment(
   bytes: Uint8Array,
   ext: string,
 ): Promise<SaveResult> {
-  const located = await ctx.vaults.locate(panel.document.uri);
-  if (!located) {
-    return fail(ctx, "Attachments need a vault: open this note from one.");
+  const target = await attachmentTarget(ctx, panel);
+  if (!target) {
+    return fail(ctx, NO_VAULT);
   }
-  const links = ctx.settings.forNote(panel.document).features?.links?.config;
   try {
-    const saved = await saveAttachment({
-      files: ctx.workspace.files,
-      root: located.vault.index.root,
-      notePath: located.path,
-      attachmentFolder: asString(links?.attachmentFolder) ?? "",
-      useWikilinks: links?.useWikilinks !== false,
-      format: linkFormat(links?.newLinkFormat),
-      ext,
-      bytes,
-      vaultPaths: located.vault.index.files().map((file) => file.path),
-    });
+    const saved = await saveAttachment({ ...target, ext, bytes });
     if (!saved) {
       return fail(ctx, "Could not save the attachment.");
     }
@@ -195,8 +187,4 @@ async function writeAttachment(
 function fail(ctx: Context, error: string): SaveResult {
   ctx.dialogs.error(error);
   return { ok: false, error };
-}
-
-function linkFormat(value: unknown): "shortest" | "relative" | "absolute" {
-  return value === "relative" || value === "absolute" ? value : "shortest";
 }

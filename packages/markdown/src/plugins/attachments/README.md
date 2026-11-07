@@ -41,15 +41,33 @@ Portable hosts omit the hook.
 Sketch placement uses the same shared helpers, so sketches and pasted images
 share one folder and link story.
 
+### Download Attachments for Current File
+
+Obsidian's command of the same name. It finds the note's Markdown images
+whose source is `http(s):` or a `data:` URI (`src/attachments/download.ts`;
+images in code and wikilink embeds are skipped), asks once, then downloads
+each URL once on the host and saves it in `files.attachmentFolder` under the
+name at the end of its URL (`cat.png`, then `cat 1.png` when taken; `Image`
+for a data URI or a URL without a file name). Each image becomes an embed in
+the Links format that keeps its alt text (`![[cat.png|A cat]]`), found again
+in the note as it is after the downloads, in one edit. Only what is served or
+named as an image is saved: a note's links can point anywhere.
+
 ## Files
 
-- `manifest.ts`: feature switch.
+- `manifest.ts`: feature switch and the Download command.
 - `protocol.ts`: webview → host `save` / `importUrl` requests.
 - `host.ts`: write into the vault; bind each open note page; opt into Explorer
   reclaim when the adapter offers it (no `vscode` import).
+- `target.ts`: a note's attachment folder and link settings.
+- `download-command.ts`: Download Attachments for Current File.
 - `webview.ts`: DnD, clipboard image paste, HTML image rewrite.
 
-## Settings
+## Services, commands and settings
+
+Injects `editors`, `vaults`, `workspace`, `settings`, `dialogs`,
+`hostDocuments` and `hostCommands`; optionally `customEditors`. Command:
+`lumiere.markdown.downloadAttachments`, in a Lumia note.
 
 Folder: `files.attachmentFolder` (Links). Links: `links.useWikilinks` and
 `links.newLinkFormat`. No filename-template setting in v1.
@@ -64,3 +82,9 @@ Single-click preview media while a Lumia note is focused is left alone
 group (a double-click, Quick Open, `code image.png`, Explorer drop without
 Shift) opens normally and shows the question; ignoring it keeps the image
 open and the note unchanged. Open-to-the-side is left alone.
+
+Download Attachments differs from Obsidian's: it asks once for all the images
+(Obsidian shows a gallery to untick some); it does not download image URLs
+in properties (Obsidian turns those into `[[…]]`) nor read a
+`Content-Disposition` file name; and a URL that serves no image is left
+alone, where Obsidian saves the answer as `Image.jpg`.
