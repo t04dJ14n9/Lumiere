@@ -95,7 +95,10 @@ async function saveAll(
 
 function loadImage(url: string): Promise<SourceBytes | undefined> {
   if (/^data:/iu.test(url)) {
-    return Promise.resolve(decodeDataUri(url));
+    // decodeDataUri names any payload `.png`; a note's data URI must say it is an image.
+    return Promise.resolve(
+      /^data:image\/[^;,]+[;,]/iu.test(url) ? decodeDataUri(url) : undefined,
+    );
   }
   // A note can come from anywhere: keep only what is served or named as an image.
   return loadAttachmentSource(url, {

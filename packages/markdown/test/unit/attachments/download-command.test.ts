@@ -20,9 +20,11 @@ async function run(
   t: test.TestContext,
   answer: string | undefined,
   settings: Record<string, unknown> = {},
+  options: { note?: string; applies?: boolean } = {},
 ): Promise<Run> {
-  const { vaults } = memoryVaults({ "Note.md": NOTE, "cat.png": "" });
-  const result: Run = { asked: [], told: [], written: [], text: NOTE };
+  const note = options.note ?? NOTE;
+  const { vaults } = memoryVaults({ "Note.md": note, "cat.png": "" });
+  const result: Run = { asked: [], told: [], written: [], text: note };
   const document = { uri: uriOf("Note.md"), getText: () => result.text };
   const original = globalThis.fetch;
   globalThis.fetch = (async (url: string) => ({
@@ -70,6 +72,9 @@ async function run(
         _document: unknown,
         edits: { from: number; to: number; insert: string }[],
       ) => {
+        if (options.applies === false) {
+          return false;
+        }
         for (const edit of [...edits].sort((a, b) => b.from - a.from)) {
           result.text =
             result.text.slice(0, edit.from) +
@@ -118,4 +123,23 @@ test("declining downloads and changes nothing", async (t) => {
   const result = await run(t, undefined);
   assert.deepEqual(result.written, []);
   assert.equal(result.text, NOTE);
+});
+
+test("a data URI that is not an image is not saved", async (t) => {
+  const note = [
+    "![page](data:text/html;base64,PGgxPng8L2gxPg==)",
+    "![blank](data:;base64,R0lG) ![dot](data:image/gif;base64,R0lG)",
+  ].join("\n");
+  const result = await run(t, "Download", {}, { note });
+  assert.deepEqual(result.written, [uriOf("Image.gif")]);
+  assert.equal(
+    result.text,
+    [
+      "![page](data:text/html;base64,PGgxPng8L2gxPg==)",
+      "![blank](data:;base64,R0lG) ![[Image.gif|dot]]",
+    ].join("\n"),
+  );
+  assert.deepEqual(result.told, [
+    "Downloaded 1 attachment. 2 could not be downloaded.",
+  ]);
 });
