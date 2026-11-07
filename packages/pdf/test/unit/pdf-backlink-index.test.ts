@@ -39,6 +39,79 @@ test("extractPdfBacklinks skips what is not a link: code, comments, escapes", ()
   );
 });
 
+function pagesOf(markdown: string): number[] {
+  return extractPdfBacklinks(markdown, "notes/n.md", "file:///notes/n.md").map(
+    (hit) => hit.page!,
+  );
+}
+
+test("a comment opener inside code is text: later links stay", () => {
+  const fenced = [
+    "```markdown",
+    "<!-- an example comment",
+    "```",
+    "[a](papers/a.pdf#page=2)",
+    "a stray --> in prose",
+    "[b](papers/a.pdf#page=3)",
+  ].join("\n");
+  assert.deepEqual(pagesOf(fenced), [2, 3]);
+  const spans = [
+    "Write `<!--` to open a comment.",
+    "[a](papers/a.pdf#page=2)",
+    "and `-->` to close it, then [b](papers/a.pdf#page=3)",
+  ].join("\n");
+  assert.deepEqual(pagesOf(spans), [2, 3]);
+});
+
+test("a fence marker inside a comment is not a fence", () => {
+  const md = [
+    "<!--",
+    "```",
+    "[hidden](papers/a.pdf#page=9)",
+    "-->",
+    "[real](papers/a.pdf#page=2)",
+  ].join("\n");
+  assert.deepEqual(pagesOf(md), [2]);
+});
+
+test("a lone <!-- in prose is text, not a comment running to the end", () => {
+  const md = "Use <!-- to start one.\n[real](papers/a.pdf#page=2)";
+  assert.deepEqual(pagesOf(md), [2]);
+});
+
+test("a line that merely starts with an inline tag is a paragraph", () => {
+  const md = [
+    "<span>caption</span> [a](papers/a.pdf#page=2)",
+    "[b](papers/a.pdf#page=3)",
+    "",
+    '<a href="x">anchor</a> [c](papers/a.pdf#page=4)',
+  ].join("\n");
+  assert.deepEqual(pagesOf(md), [2, 3, 4]);
+});
+
+test("HTML blocks still hide links until their end", () => {
+  const md = [
+    "<div>",
+    "[hidden](papers/a.pdf#page=9)",
+    "",
+    "<span>",
+    "[also hidden](papers/a.pdf#page=9)",
+    "",
+    "<pre>",
+    "[raw](papers/a.pdf#page=9)",
+    "",
+    "[raw too](papers/a.pdf#page=9)",
+    "</pre>",
+    "[after](papers/a.pdf#page=2)",
+  ].join("\n");
+  assert.deepEqual(pagesOf(md), [2]);
+});
+
+test("a lone tag cannot interrupt a paragraph", () => {
+  const md = "prose\n<br>\n[kept](papers/a.pdf#page=2)";
+  assert.deepEqual(pagesOf(md), [2]);
+});
+
 test("lookup returns only that PDF's hits", () => {
   const index = new PdfBacklinkIndex();
   index.replaceNote(
