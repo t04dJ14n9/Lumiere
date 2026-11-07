@@ -10,20 +10,31 @@ export interface PropertyChange {
 
 type Header = NonNullable<ReturnType<typeof headerParts>>;
 
+/**
+ * A string that opens like a document marker. yaml writes one at the root as a
+ * block scalar, which a key or a list item cannot be, so it is quoted.
+ */
+const markerLike = (value: unknown): value is string =>
+  typeof value === "string" && /^(?:---|\.\.\.)/.test(value);
+
 export const yamlValue = (value: unknown): string =>
-  loadYaml()
-    .stringify(plainPropertyDates(value), {
-      collectionStyle: "flow",
-      flowCollectionPadding: false,
-      lineWidth: 0,
-      aliasDuplicateObjects: false,
-      defaultKeyType: "PLAIN",
-    })
-    .trimEnd();
+  markerLike(value)
+    ? JSON.stringify(value)
+    : loadYaml()
+        .stringify(plainPropertyDates(value), {
+          collectionStyle: "flow",
+          flowCollectionPadding: false,
+          lineWidth: 0,
+          aliasDuplicateObjects: false,
+          defaultKeyType: "PLAIN",
+        })
+        .trimEnd();
 
 /** A block list item: quoted only where YAML needs it (a comma does not). */
 const blockItem = (value: unknown): string =>
-  loadYaml().stringify(value, { lineWidth: 0 }).trimEnd();
+  markerLike(value)
+    ? JSON.stringify(value)
+    : loadYaml().stringify(value, { lineWidth: 0 }).trimEnd();
 
 /** Whether a value is a list of scalars, which Obsidian writes as a block list. */
 const isScalarList = (value: unknown): value is readonly unknown[] =>
@@ -52,13 +63,15 @@ function afterColon(body: string, start: number): number | undefined {
 
 /** Property names stay plain unless YAML requires quoting. */
 export const yamlKey = (key: string): string =>
-  loadYaml()
-    .stringify(key, {
-      lineWidth: 0,
-      defaultStringType: "PLAIN",
-      defaultKeyType: "PLAIN",
-    })
-    .trimEnd();
+  markerLike(key)
+    ? JSON.stringify(key)
+    : loadYaml()
+        .stringify(key, {
+          lineWidth: 0,
+          defaultStringType: "PLAIN",
+          defaultKeyType: "PLAIN",
+        })
+        .trimEnd();
 
 export const scalarValue = (value: unknown): value is PropertyScalar =>
   value === null ||
