@@ -48,7 +48,7 @@ export class Sidecars implements vscode.Disposable {
 
   /** The settings changed: find every sidecar again. */
   relocateAll(): void {
-    for (const panel of [...this.panels.keys()]) {
+    for (const panel of this.trackedPanels()) {
       this.close(panel);
       this.open(panel);
     }
@@ -81,15 +81,25 @@ export class Sidecars implements vscode.Disposable {
   }
 
   dispose(): void {
-    for (const [panel, state] of this.panels) {
+    for (const state of this.panels.values()) {
       state.watcher.dispose();
+    }
+    for (const panel of this.trackedPanels()) {
       panel.setSidecar(null);
     }
     this.panels.clear();
+    this.attaching.clear();
+  }
+
+  private trackedPanels(): Set<PdfPanel> {
+    return new Set([...this.panels.keys(), ...this.attaching.keys()]);
   }
 
   private track(panel: PdfPanel): Promise<PanelSidecar> {
-    const pending = this.attach(panel).finally(() => {
+    const pending: Promise<PanelSidecar> = this.attach(
+      panel,
+      (): boolean => this.attaching.get(panel) === pending,
+    ).finally(() => {
       if (this.attaching.get(panel) === pending) {
         this.attaching.delete(panel);
       }
@@ -98,13 +108,16 @@ export class Sidecars implements vscode.Disposable {
     return pending;
   }
 
-  private async attach(panel: PdfPanel): Promise<PanelSidecar> {
+  private async attach(
+    panel: PdfPanel,
+    isCurrent: () => boolean,
+  ): Promise<PanelSidecar> {
     const file = await locateSidecar(panel.uri, (message) =>
       this.warn(message),
     );
     let done = (): void => undefined;
-    // The editor closed while its sidecar was being found: keep nothing.
-    const closed = !this.attaching.has(panel);
+    // The editor closed or relocated while its sidecar was being found: keep nothing.
+    const closed = !isCurrent();
     const state: PanelSidecar = {
       file,
       highlights: [],
