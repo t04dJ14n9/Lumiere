@@ -3,6 +3,7 @@ import {
   copyCellsHtml,
   copyCellsMarkdown,
   copyCellsObsidian,
+  parseTable,
   pastedCells,
   pastedMarkdownCells,
   rangeTexts,
@@ -253,10 +254,8 @@ export class TableClipboard {
 }
 
 function looksLikeMarkdownTable(text: string): boolean {
+  // The header and delimiter rows decide, as in the editor's table parser:
+  // one or more dashes per delimiter cell and as many cells as the header.
   const lines = text.replace(/\r\n?/g, "\n").trim().split("\n");
-  return (
-    lines.length >= 2 &&
-    lines[0]!.includes("|") &&
-    /^\s*\|?\s*:?-{3,}/.test(lines[1]!)
-  );
+  return parseTable(lines.slice(0, 2).join("\n")) !== undefined;
 }

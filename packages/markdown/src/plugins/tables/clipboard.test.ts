@@ -183,6 +183,44 @@ test("copy shortcut leaves cell text and unrelated shortcuts to their editors", 
   assert.deepEqual(fixture.copied, []);
 });
 
+test("a pasted Markdown table keeps its cells for every delimiter row GFM allows, short ones included", () => {
+  const origin = { row: 0, column: 0 };
+  // serializeTable writes `:-:`, `:--` and `--:` for narrow aligned columns.
+  for (const delimiter of [
+    "| :-: | --- |",
+    "| :-- | --: |",
+    "| - | -- |",
+    "|-|-|",
+    ":-: | --",
+  ]) {
+    const fixture = clipboardFixture();
+    fixture.clipboard.pasteText(`| h1 | h2 |\n${delimiter}\n| 9 | 8 |`, {
+      anchor: origin,
+      head: origin,
+    });
+    assert.deepEqual(
+      parseTable(fixture.grid.block.source)!.rows.map((row) =>
+        row.map((cell) => cell.text),
+      ),
+      [
+        ["h1", "h2"],
+        ["9", "8"],
+      ],
+      delimiter,
+    );
+  }
+});
+
+test("pasted text is not a Markdown table when its delimiter row has another cell count than the header", () => {
+  const fixture = clipboardFixture();
+  const origin = { row: 0, column: 0 };
+  fixture.clipboard.pasteText("a|b\n-", { anchor: origin, head: origin });
+  assert.deepEqual(
+    parseTable(fixture.grid.block.source)!.rows.map((row) => row[0]!.text),
+    ["a\\|b", "-"],
+  );
+});
+
 test("ClipboardEvent copy sets plain TSV, markdown, HTML and obsidian/table", () => {
   const fixture = clipboardFixture();
   const range = {
