@@ -2,6 +2,7 @@ import type { Document } from "yaml";
 import { loadYaml } from "./load-yaml";
 import { headerParts, frontmatter } from "./frontmatter";
 import {
+  sameWritten,
   scalarValue,
   valueAfterKey,
   yamlKey,
@@ -185,9 +186,7 @@ function verifiesMergedValues(
   const result = frontmatter(candidate)?.values;
   if (
     !result ||
-    [...expected].some(
-      ([key, value]) => JSON.stringify(result[key]) !== JSON.stringify(value),
-    )
+    [...expected].some(([key, value]) => !sameWritten(result[key], value))
   ) {
     return false;
   }

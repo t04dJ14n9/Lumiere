@@ -60,6 +60,18 @@ export const yamlKey = (key: string): string =>
     })
     .trimEnd();
 
+/**
+ * Whether a value reads back as the one written. An empty list is written as
+ * a bare `key:`, as Obsidian writes it, which reads back as no value.
+ */
+export function sameWritten(after: unknown, written: unknown): boolean {
+  const empty = Array.isArray(written) && written.length === 0;
+  return (
+    JSON.stringify(after) === JSON.stringify(written) ||
+    (empty && (after === null || after === undefined))
+  );
+}
+
 export const scalarValue = (value: unknown): value is PropertyScalar =>
   value === null ||
   typeof value === "string" ||
