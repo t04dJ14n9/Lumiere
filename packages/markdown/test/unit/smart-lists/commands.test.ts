@@ -628,6 +628,29 @@ test("Enter at callout title content start exits below intact (BH-085)", () => {
   assert.equal(apply("> [!NOTE] Title|", continueList), "> [!NOTE] Title\n> |");
 });
 
+test("Enter treats any callout type as Obsidian does: metadata, spaces, CJK", () => {
+  assert.equal(apply("> [!笔记] |标题", continueList), "> [!笔记] 标题\n> |");
+  assert.equal(apply("> [!my type]- |", continueList), "> |");
+  // `apply` reads a `|` as the caret, so this one places it by offset.
+  const doc = "> [!note|wide] Title";
+  let state = EditorState.create({
+    doc,
+    selection: { anchor: doc.indexOf("Title") },
+    extensions: [markdownLanguageSupport()],
+  });
+  ensureSyntaxTree(state, state.doc.length, 5000);
+  assert.ok(
+    continueList({
+      state,
+      dispatch: (tr) => {
+        state = tr.state;
+      },
+    }),
+  );
+  assert.equal(state.doc.toString(), "> [!note|wide] Title\n> ");
+  assert.equal(state.selection.main.head, state.doc.length);
+});
+
 test("Enter on empty callout title unwraps opener (BH-086)", () => {
   assert.equal(apply("> [!NOTE] |", continueList), "> |");
   assert.equal(apply("> [!NOTE]- |", continueList), "> |");

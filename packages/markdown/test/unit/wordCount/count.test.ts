@@ -1,5 +1,7 @@
 import test from "node:test";
 import assert from "node:assert/strict";
+import Module, { createRequire } from "node:module";
+import type * as WorkbenchService from "../../../src/host/services/workbench";
 import { countText, formatCounts } from "../../../src/plugins/wordCount/count";
 
 // Each count below was read from Obsidian's status bar for the same text.
@@ -53,4 +55,58 @@ test("counts read like Obsidian's status bar", () => {
     formatCounts({ words: 1200, characters: 6543 }),
     "1,200 words 6,543 characters",
   );
+});
+
+function loadWorkbench(vscode: unknown) {
+  const loader = Module as typeof Module & {
+    _load(id: string, ...args: unknown[]): unknown;
+  };
+  const originalLoad = loader._load;
+  loader._load = (id, ...args) =>
+    id === "vscode" ? vscode : originalLoad.call(Module, id, ...args);
+  const require = createRequire(import.meta.url);
+  for (const id of Object.keys(require.cache)) {
+    if (id.includes("/src/host/") || id.includes("/src/shared/")) {
+      delete require.cache[id];
+    }
+  }
+  try {
+    return require("../../../src/host/services/workbench.ts") as typeof WorkbenchService;
+  } finally {
+    loader._load = originalLoad;
+  }
+}
+
+test("textEditor prefers the active text editor when a note is split across two text panes", () => {
+  const uri = "file:///vault/Note.md";
+  const text = "alpha beta gamma delta";
+  const makeDocument = () => ({
+    uri: { toString: () => uri },
+    getText: (selection?: { from: number; to: number }) =>
+      selection ? text.slice(selection.from, selection.to) : text,
+  });
+  const firstPane = {
+    document: makeDocument(),
+    selections: [{ from: 0, to: 5 }],
+  };
+  const secondPane = {
+    document: makeDocument(),
+    selections: [{ from: 6, to: 16 }],
+  };
+  const { createActiveEditor } = loadWorkbench({
+    window: {
+      activeTextEditor: secondPane,
+      visibleTextEditors: [firstPane, secondPane],
+      tabGroups: {
+        onDidChangeTabs: () => ({ dispose() {} }),
+        onDidChangeTabGroups: () => ({ dispose() {} }),
+      },
+      onDidChangeTextEditorSelection: () => ({ dispose() {} }),
+    },
+  });
+  const activeEditor = createActiveEditor();
+  assert.deepEqual(activeEditor.textEditor(uri), {
+    text,
+    selection: "beta gamma",
+  });
 });

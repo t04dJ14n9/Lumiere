@@ -65,3 +65,41 @@ test("a new heading name must not break the links to it", () => {
     assert.ok(headingNameProblem(bad), bad);
   }
 });
+
+test("a renamed heading keeps a table row's escaped pipe, angle brackets and titles", () => {
+  const heading = headingAt(PROBE, PROBE.indexOf("Old Name"))!;
+  const renamed: RenamedHeading = {
+    path: "probe.md",
+    text: PROBE,
+    heading,
+    name: "New Name",
+  };
+  const text = [
+    "| [[probe#Old Name\\|alias]] | b |",
+    "| - | - |",
+    '[a](<probe.md#Old Name>) [b](probe.md#Old%20Name "Title")',
+  ].join("\n");
+  assert.equal(
+    apply(text, headingLinkEdits(text, "other.md", renamed, resolve)),
+    [
+      "| [[probe#New Name\\|alias]] | b |",
+      "| - | - |",
+      '[a](<probe.md#New Name>) [b](probe.md#New%20Name "Title")',
+    ].join("\n"),
+  );
+});
+
+test("a renamed heading's link keeps a title with escaped quotes", () => {
+  const heading = headingAt(PROBE, PROBE.indexOf("Old Name"))!;
+  const renamed: RenamedHeading = {
+    path: "probe.md",
+    text: PROBE,
+    heading,
+    name: "New Name",
+  };
+  const text = '[a](probe.md#Old%20Name "Say \\"hello\\"")';
+  assert.equal(
+    apply(text, headingLinkEdits(text, "other.md", renamed, resolve)),
+    '[a](probe.md#New%20Name "Say \\"hello\\"")',
+  );
+});

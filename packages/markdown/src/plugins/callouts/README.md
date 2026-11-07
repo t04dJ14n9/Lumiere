@@ -2,6 +2,9 @@
 
 Displays Obsidian-style callouts, including nested and foldable callouts, in Live
 Preview. Insert Callout quotes selected lines; the caret reveals callout source.
+As in Obsidian, a type is any text but `]` (`[!笔记]`, `[!my type]` as
+`my-type`), and what follows a `|` is metadata that CSS snippets select with
+`data-callout-metadata` (`[!note|wide]`).
 
 ## How it works
 

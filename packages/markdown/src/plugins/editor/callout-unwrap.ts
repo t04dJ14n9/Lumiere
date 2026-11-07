@@ -6,11 +6,12 @@ interface Target {
 }
 
 /**
- * Optional blockquote prefix, then Obsidian callout opener `[!TYPE]` with an
- * optional fold marker (`+`/`-`) and the required space/tab before the title.
- * Keeps quote markers (BH-064 / BH-078: `> [!NOTE]- Title` → `> Title`).
+ * Optional blockquote prefix, then Obsidian callout opener `[!TYPE]` (any type
+ * but `]`, as `[!note|wide]`) with an optional fold marker (`+`/`-`) and the
+ * required space/tab before the title. Keeps quote markers (BH-064 / BH-078:
+ * `> [!NOTE]- Title` → `> Title`).
  */
-const quotedCallout = /^((?:[ \t]*>[ \t]?)*)(\[![\w-]+\][+-]?[ \t]+)/u;
+const quotedCallout = /^((?:[ \t]*>[ \t]?)*)(\[![^\]\n]+\][+-]?[ \t]+)/u;
 
 /**
  * Backspace at callout title text start unwraps `[!TYPE] ` / `[!TYPE]- `

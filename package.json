@@ -85,6 +85,11 @@
         "icon": "$(comment-discussion)"
       },
       {
+        "command": "lumiere.markdown.downloadAttachments",
+        "title": "Download Attachments for Current File",
+        "category": "Lumia"
+      },
+      {
         "command": "lumiere.markdown.backlinks.sortByAlphabetical",
         "title": "✓ File name (A to Z)",
         "category": "Lumia"
@@ -1584,6 +1589,10 @@
         {
           "command": "lumiere.markdown.copyLinkForAgent",
           "when": "activeCustomEditorId == 'lumiere.markdown.editor' && lumiere.markdown.plugin.agentBridge"
+        },
+        {
+          "command": "lumiere.markdown.downloadAttachments",
+          "when": "activeCustomEditorId == 'lumiere.markdown.editor' && lumiere.markdown.plugin.attachments"
         },
         {
           "command": "lumiere.markdown.backlinks.sortByAlphabetical",

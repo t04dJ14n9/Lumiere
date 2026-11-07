@@ -13,9 +13,10 @@ export const query = Schema.object({
  */
 export const blockId = Schema.object({
   uri: Schema.string().max(8192),
-  at: Schema.number(),
-  before: Schema.string().max(64),
-  insert: Schema.string().max(64),
+  at: Schema.number().min(0),
+  before: Schema.string().min(1).max(64),
+  // A generated id only: space or a blank line, then six hex digits.
+  insert: Schema.string().pattern(/^(?: |\n\n)\^[0-9a-f]{6}$/u),
   /** The block is in the note being edited. */
   here: Schema.boolean(),
 });

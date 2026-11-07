@@ -8,6 +8,7 @@ import {
   splitLinktext,
   type LinkSyntax,
 } from "../../shared/vault-path";
+import { linkSource, type LinkSource } from "./link-source";
 
 /** A heading to rename: where it starts, its name and where the name is. */
 export interface HeadingToRename {
@@ -103,15 +104,17 @@ export function headingLinkEdits(
 
 /** A link's source text with its `#subpath` replaced by `name`. */
 function withSubpath(original: string, name: string): string {
-  const wikilink = /^(!?\[\[[^\]|#]*)#[^\]|]*((?:\|[^\]]*)?\]\])$/u.exec(
-    original,
-  );
-  if (wikilink) {
-    return `${wikilink[1]}#${name}${wikilink[2]}`;
+  const source = linkSource(original);
+  if (!source) {
+    return original;
   }
-  return original.replace(
-    /\]\((<?)([^)#>]*)#[^)>]*(>?)/u,
-    (_, open: string, path: string, close: string) =>
-      `](${open}${path}#${open ? name : name.replace(/ /gu, "%20")}${close}`,
-  );
+  const isBare = !source.isAngled && !source.opening.endsWith("[[");
+  const subpath = `#${isBare ? name.replace(/ /gu, "%20") : name}`;
+  return `${source.opening}${destinationOf(source, subpath)}${source.closing}`;
+}
+
+/** The path as written followed by `subpath`, in the link's own brackets. */
+function destinationOf(source: LinkSource, subpath: string): string {
+  const written = `${source.path}${subpath}`;
+  return source.isAngled ? `<${written}>` : written;
 }

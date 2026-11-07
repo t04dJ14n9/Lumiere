@@ -185,7 +185,16 @@ export class NoteDocuments implements HostDocuments {
     this.users.delete(uri);
     const note = this.notes.get(uri);
     if (note?.isDirty) {
-      await this.save(note);
+      // No one awaits a release (its panel is gone): report a failed write
+      // like one made after typing paused. Keep the unsaved note open, so
+      // opening it again shows the text; dispose() still closes its watch.
+      const saved = await this.save(note).catch((error: unknown) => {
+        this.reportSaveFailed(uri, error);
+        return false;
+      });
+      if (!saved) {
+        return;
+      }
     }
     if ((this.users.get(uri) ?? 0) > 0) {
       return;
@@ -252,7 +261,9 @@ export class NoteDocuments implements HostDocuments {
   /** One write at a time per note; a save asked for during a write follows it. */
   save(note: NoteDocument): Promise<boolean> {
     const previous = this.saving.get(note.uri) ?? Promise.resolve(true);
-    const next = previous.then(() => this.write(note));
+    // A failed write was already reported to its caller; the next one must
+    // still run, or one full disk would stop every later save of the note.
+    const next = previous.catch(() => false).then(() => this.write(note));
     this.saving.set(note.uri, next);
     return next;
   }
@@ -282,13 +293,17 @@ export class NoteDocuments implements HostDocuments {
       note.uri,
       setTimeout(() => {
         this.timers.delete(note.uri);
-        this.save(note).catch((error: unknown) => {
-          for (const listener of this.saveFailedListeners) {
-            listener(note.uri, error);
-          }
-        });
+        this.save(note).catch((error: unknown) =>
+          this.reportSaveFailed(note.uri, error),
+        );
       }, this.delay),
     );
+  }
+
+  private reportSaveFailed(uri: string, error: unknown): void {
+    for (const listener of this.saveFailedListeners) {
+      listener(uri, error);
+    }
   }
 
   private cancelSave(uri: string): void {

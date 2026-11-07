@@ -67,6 +67,8 @@ export interface LumiereHost {
   readonly commands?: CommandPalette;
   /** A workspace a note was opened from; vaults are found inside these. */
   addRoot(root: string): void;
+  /** Workspace roots already registered with `addRoot`. */
+  workspaceRoots(): readonly string[];
   /**
    * Run one of the plugins' commands (`lumiere.markdown.*`), as a menu item
    * does: for the embedder's own menus, such as the iPad's edit menu.
@@ -122,6 +124,7 @@ export async function startHost(
     addRoot: (item) => {
       roots.add(item.replace(/\/+$/, ""));
     },
+    workspaceRoots: () => [...roots],
     run: (command) => commands.execute(command),
     stop: () => stopHost({ stopMenus, panels, root, git, documents }),
   };
