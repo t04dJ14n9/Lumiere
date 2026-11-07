@@ -187,6 +187,23 @@ test("undeclared services throw; optional injection is allowed and refreshes on 
   assert.deepEqual(seen, [undefined, 3]);
   await root.dispose();
 });
+test("optional injection refreshes when the root context provides a service after plugin start", async () => {
+  const root = createRoot();
+  const seen: (number | undefined)[] = [];
+  root.plugin({
+    name: "optional",
+    inject: { optional: ["value"] },
+    apply(ctx) {
+      seen.push(ctx.value);
+    },
+  });
+  await root.settled();
+  assert.deepEqual(seen, [undefined]);
+  root.provide("value", 42);
+  await root.settled();
+  assert.deepEqual(seen, [undefined, 42]);
+  await root.dispose();
+});
 test("update reconfigures or restarts with validated config; failed apply retries and rolls back", async () => {
   const root = createRoot();
   let runs = 0;
