@@ -71,7 +71,9 @@ export class PluginHandleImpl<C> implements PluginHandle<C>, Settling {
       case CordisState.Active:
         return "active";
       case CordisState.Failed:
-        return "failed";
+        // Cordis keeps `Failed` until a reload runs, even after `update` clears
+        // `_error` while a required service is missing.
+        return this.error !== undefined ? "failed" : "pending";
       default:
         return "pending";
     }
@@ -116,6 +118,12 @@ export class PluginHandleImpl<C> implements PluginHandle<C>, Settling {
     }
     this.config = parsed;
     this.error = undefined;
+    if (this.hasOptionalChanged()) {
+      this.replaceFiber();
+      await this.replacing;
+      await this.fiber?.await().catch(() => {});
+      return;
+    }
     if (this.fiber) {
       this.activation?.cancel();
       // Cordis's update clears a failure and restarts with a new revision.
@@ -187,7 +195,7 @@ export class PluginHandleImpl<C> implements PluginHandle<C>, Settling {
   }
 
   private serviceChanged(name: ServiceName): void {
-    if (this.isDisposed) {
+    if (this.isDisposed || this.error !== undefined) {
       return;
     }
     const isStarting =
@@ -200,13 +208,15 @@ export class PluginHandleImpl<C> implements PluginHandle<C>, Settling {
       // Cordis would wait for this start to finish before restarting.
       this.activation?.cancel();
     }
-    const isPresent = this.runtime.has(name);
-    if (
-      this.optional.includes(name) &&
-      isPresent !== this.presentOptional.includes(name)
-    ) {
+    if (this.optional.includes(name) && this.hasOptionalChanged()) {
       this.replaceFiber();
     }
+  }
+
+  private hasOptionalChanged(): boolean {
+    return this.optional.some(
+      (name) => this.runtime.has(name) !== this.presentOptional.includes(name),
+    );
   }
 
   /** Re-plug with the optional services that exist now. */
