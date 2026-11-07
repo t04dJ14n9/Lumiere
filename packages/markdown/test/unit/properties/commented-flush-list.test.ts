@@ -1,0 +1,59 @@
+import test from "node:test";
+import assert from "node:assert/strict";
+import { frontmatter, propertyChanges } from "../../../src/markdown/properties";
+
+function apply(
+  source: string,
+  operation: Parameters<typeof propertyChanges>[1],
+): string {
+  const changes = propertyChanges(source, operation);
+  assert.ok(changes, `Rejected ${operation.type}`);
+  for (const change of [...changes].sort((a, b) => b.from - a.from)) {
+    source =
+      source.slice(0, change.from) + change.insert + source.slice(change.to);
+  }
+  return source;
+}
+
+test("setting a list written flush under a commented key keeps the comment", () => {
+  assert.equal(
+    apply("---\ntags: # keep\n- a\n---\nBody\n", {
+      type: "set",
+      key: "tags",
+      value: ["a", "b"],
+    }),
+    "---\ntags: # keep\n  - a\n  - b\n---\nBody\n",
+  );
+});
+
+test("comment lines between the key and a flush list stay, and the next property is untouched", () => {
+  const next = apply("---\ntags: # one\n# two\n- a\n- b\nnext: 1\n---\n", {
+    type: "set",
+    key: "tags",
+    value: ["c"],
+  });
+  assert.equal(next, "---\ntags: # one\n# two\n  - c\nnext: 1\n---\n");
+  assert.deepEqual(frontmatter(next)?.values, { tags: ["c"], next: 1 });
+});
+
+test("clearing a flush list under a commented key keeps the comment and leaves no blank line", () => {
+  assert.equal(
+    apply("---\ntags: # keep\n- a\nnext: 1\n---\n", {
+      type: "set",
+      key: "tags",
+      value: [],
+    }),
+    "---\ntags: # keep\nnext: 1\n---\n",
+  );
+});
+
+test("a flush list under a commented key keeps CRLF line ends", () => {
+  assert.equal(
+    apply("---\r\ntags: # keep\r\n- a\r\n---\r\n", {
+      type: "set",
+      key: "tags",
+      value: ["a", "b"],
+    }),
+    "---\r\ntags: # keep\r\n  - a\r\n  - b\r\n---\r\n",
+  );
+});
