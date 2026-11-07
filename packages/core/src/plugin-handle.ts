@@ -118,7 +118,9 @@ export class PluginHandleImpl<C> implements PluginHandle<C>, Settling {
     }
     this.config = parsed;
     this.error = undefined;
-    if (this.hasOptionalChanged()) {
+    // A child its owner has not committed yet has no fiber and no
+    // `presentOptional`: replacing here would start it before the commit.
+    if (this.isStarted && this.hasOptionalChanged()) {
       this.replaceFiber();
       await this.replacing;
       await this.fiber?.await().catch(() => {});
