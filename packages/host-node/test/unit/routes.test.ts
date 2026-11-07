@@ -1,6 +1,6 @@
 import test from "node:test";
 import assert from "node:assert/strict";
-import { mkdtemp, rm, writeFile } from "node:fs/promises";
+import { mkdtemp, realpath, rm, writeFile } from "node:fs/promises";
 import { createServer } from "node:http";
 import { tmpdir } from "node:os";
 import * as path from "node:path";
@@ -146,7 +146,10 @@ test("tree views are served as snapshots, clicks and visibility", async (t) => {
 });
 
 test("serving an editor page registers the workspace root before opening the panel", async (t) => {
-  const dir = await mkdtemp(path.join(tmpdir(), "lumiere-route-"));
+  // macOS's temporary folder is behind a symlink; the route resolves it.
+  const dir = await realpath(
+    await mkdtemp(path.join(tmpdir(), "lumiere-route-")),
+  );
   t.after(() => rm(dir, { recursive: true, force: true }));
   const notePath = path.join(dir, "First.md");
   await writeFile(notePath, "# First");
