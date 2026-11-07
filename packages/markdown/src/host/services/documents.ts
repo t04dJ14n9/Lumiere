@@ -4,7 +4,7 @@ import { SourceCoordinates } from "../../shared/document/coordinates";
 import { MARKDOWN_EDITOR } from "../../shared/editor-provider";
 import type { FileTextEdits, HostDocuments } from "../../shared/host";
 import { renameFile } from "../file-rename";
-import { applyLineColEdits, cleanEditedUris } from "../rename-save";
+import { applyLineColEdits, cleanEditedUris, renamesKey } from "../rename-save";
 import type { NativeDocuments } from "./native-documents";
 
 /** VS Code's text documents, wrapped as `HostDocument`s by `documents`. */
@@ -68,10 +68,7 @@ export function createHostDocuments(documents: NativeDocuments): HostDocuments {
 const onWillRename: HostDocuments["onWillRename"] = (listener) =>
   toDisposer(
     vscode.workspace.onWillRenameFiles((event) => {
-      const renames = event.files.map(({ oldUri, newUri }) => ({
-        oldUri: oldUri.toString(),
-        newUri: newUri.toString(),
-      }));
+      const renames = renamePairs(event.files);
       event.waitUntil(
         listener(renames).then(async (files) => {
           // BH-014: VS Code applies onWill edits in a participant that may
@@ -89,6 +86,24 @@ const onWillRename: HostDocuments["onWillRename"] = (listener) =>
       );
     }),
   );
+
+/** A rename event's files as URI strings, the form the host services use. */
+function renamePairs(
+  files: readonly { oldUri: vscode.Uri; newUri: vscode.Uri }[],
+): { oldUri: string; newUri: string }[] {
+  return files.map(({ oldUri, newUri }) => ({
+    oldUri: oldUri.toString(),
+    newUri: newUri.toString(),
+  }));
+}
+
+/**
+ * Link updates planned for renames that have not finished yet, by
+ * `renamesKey`. VS Code has no "rename cancelled" event, so a rename dropped
+ * in Refactor Preview leaves its plan here: only a did-rename for the same
+ * files may run it, and planning that rename again replaces it.
+ */
+const pendingLinkUpdates = new Map<string, vscode.Disposable>();
 
 /** URIs that currently have a Lumia custom editor tab. */
 function lumiereOpenUris(): Set<string> {
@@ -117,6 +132,9 @@ async function scheduleLinkUpdatesAfterRename(
   files: readonly FileTextEdits[],
   renames: readonly { oldUri: string; newUri: string }[],
 ): Promise<void> {
+  const key = renamesKey(renames);
+  pendingLinkUpdates.get(key)?.dispose();
+  pendingLinkUpdates.delete(key);
   const targets = files.filter((file) => file.edits.length > 0);
   if (targets.length === 0) {
     return;
@@ -136,10 +154,15 @@ async function scheduleLinkUpdatesAfterRename(
     expected.set(uri, applyLineColEdits(text, file.edits));
     postTargets.push({ uri, edits: file.edits });
   }
-  const done = vscode.workspace.onDidRenameFiles(() => {
+  const done = vscode.workspace.onDidRenameFiles((event) => {
+    if (renamesKey(renamePairs(event.files)) !== key) {
+      return;
+    }
     done.dispose();
+    pendingLinkUpdates.delete(key);
     void settleLinkUpdates(postTargets, expected, clean);
   });
+  pendingLinkUpdates.set(key, done);
 }
 
 /**
@@ -190,27 +213,33 @@ async function settleLinkUpdates(
   expected: ReadonlyMap<string, string>,
   clean: ReadonlySet<string>,
 ): Promise<void> {
+  const settled = new Set<string>();
   for (let attempt = 0; attempt < SETTLE_ATTEMPTS; attempt++) {
     if (attempt > 0) {
       await wait(SETTLE_GAP_MS);
     }
-    if (await ensureLinkUpdates(files, expected, clean)) {
+    if (await ensureLinkUpdates(files, expected, clean, settled)) {
       return;
     }
   }
-  await ensureLinkUpdates(files, expected, clean);
+  await ensureLinkUpdates(files, expected, clean, settled);
 }
 
-/** @returns true when every target matches expected and clean notes are saved. */
+/**
+ * @returns true when every target matches expected and clean notes are saved.
+ * A note added to `settled` is left alone on later attempts, so what the user
+ * types into it while another note is still retried is not overwritten.
+ */
 async function ensureLinkUpdates(
   files: readonly FileTextEdits[],
   expected: ReadonlyMap<string, string>,
   clean: ReadonlySet<string>,
+  settled: Set<string>,
 ): Promise<boolean> {
   let done = true;
   for (const file of files) {
     const want = expected.get(file.uri);
-    if (want === undefined) {
+    if (want === undefined || settled.has(file.uri)) {
       continue;
     }
     const uri = vscode.Uri.parse(file.uri);
@@ -234,8 +263,10 @@ async function ensureLinkUpdates(
     if (clean.has(file.uri) && document.isDirty) {
       if (!(await document.save())) {
         done = false;
+        continue;
       }
     }
+    settled.add(file.uri);
   }
   return done;
 }
