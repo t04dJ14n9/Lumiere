@@ -106,6 +106,61 @@ test("annotationSave overwrites and suppresses watcher reload", async () => {
   );
 });
 
+const bytesOf = (...values: number[]) =>
+  new Uint8Array([37, 80, 68, 70, ...values]);
+const save = (load: number, base: string, data: Uint8Array) => ({
+  type: "annotationSave",
+  load,
+  baseSha256: base,
+  data: data.buffer.slice(data.byteOffset, data.byteOffset + data.byteLength),
+});
+
+test("a second save sent before the first one's result is no conflict", async () => {
+  const { posted, receive, panel, writes } = open();
+  const conflicts: unknown[] = [];
+  panel.onAnnotationConflict((payload) => conflicts.push(payload));
+  await receive({ type: "ready" });
+  const load = posted.find((m) => m.type === "load");
+  assert.ok(load && load.type === "load");
+  // The viewer still names the file as loaded: the first result is on its way.
+  await receive(save(load.load, INITIAL_SHA, bytesOf(1)));
+  await receive(save(load.load, INITIAL_SHA, bytesOf(1, 2)));
+  assert.equal(conflicts.length, 0);
+  assert.equal(writes(), 2);
+  const results = posted.filter((m) => m.type === "annotationSaveResult");
+  assert.deepEqual(
+    results.map((m) => m.type === "annotationSaveResult" && m.ok),
+    [true, true],
+  );
+});
+
+test("overlapping saves reach the disk in the order the viewer sent them", async () => {
+  let disk = INITIAL;
+  let firstHash = true;
+  const { posted, receive } = open({
+    read: async () => disk,
+    hash: async () => {
+      // The first save's check of the disk is the slow one.
+      if (firstHash) {
+        firstHash = false;
+        await new Promise((resolve) => setTimeout(resolve, 30));
+      }
+      return createHash("sha256").update(disk).digest("hex");
+    },
+    writeAtomic: async (_uri, bytes) => {
+      disk = new Uint8Array(bytes);
+      return { sha256: createHash("sha256").update(disk).digest("hex") };
+    },
+  });
+  await receive({ type: "ready" });
+  const load = posted.find((m) => m.type === "load");
+  assert.ok(load && load.type === "load");
+  const first = receive(save(load.load, INITIAL_SHA, bytesOf(1)));
+  const second = receive(save(load.load, INITIAL_SHA, bytesOf(1, 2)));
+  await Promise.all([first, second]);
+  assert.deepEqual([...disk], [...bytesOf(1, 2)]);
+});
+
 test("annotationSave conflicts when disk hash diverges", async () => {
   let writes = 0;
   const { posted, receive, panel } = open({
