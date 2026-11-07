@@ -7,6 +7,7 @@ import {
   mkdir,
   readFile,
   rm,
+  symlink,
   writeFile,
 } from "node:fs/promises";
 import { tmpdir } from "node:os";
@@ -562,5 +563,57 @@ test("resolve: a relative path that leaves the vault is still refused", async (t
         );
       }
     }
+  });
+});
+
+test("contained and createNote refuse dangling symlinks that point outside the vault", async (t) => {
+  const outside = await mkdtemp(join(tmpdir(), "mw-navigation-outside-"));
+  t.after(() => rm(outside, { recursive: true, force: true }));
+  await withResolveVault(t, async ({ navigation, root, source, directory }) => {
+    const { contained } = loadNavigation({ Uri: { parse: parseUri } });
+    const danglingFile = join(directory, "escape.md");
+    const danglingDir = join(directory, "escape-dir");
+    await symlink(join(outside, "pwned.md"), danglingFile);
+    await symlink(join(outside, "missing-dir"), danglingDir);
+
+    await assert.rejects(
+      () =>
+        contained(
+          parseUri(root) as never,
+          parseUri(pathToFileURL(danglingFile).href) as never,
+        ),
+      /symlink escapes the vault/,
+    );
+    await assert.rejects(
+      () =>
+        contained(
+          parseUri(root) as never,
+          parseUri(pathToFileURL(join(danglingDir, "pwned.md")).href) as never,
+        ),
+      /symlink escapes the vault/,
+    );
+    await contained(
+      parseUri(root) as never,
+      parseUri(
+        pathToFileURL(join(directory, "new-folder/fresh.md")).href,
+      ) as never,
+    );
+
+    await assert.rejects(
+      () =>
+        navigation.resolve({
+          root,
+          source,
+          path: "/escape",
+          create: true,
+          folderNote: "",
+          newNoteFolder: "",
+        }),
+      /symlink escapes the vault/,
+    );
+    await assert.rejects(
+      () => readFile(join(outside, "pwned.md"), "utf8"),
+      /ENOENT/,
+    );
   });
 });
