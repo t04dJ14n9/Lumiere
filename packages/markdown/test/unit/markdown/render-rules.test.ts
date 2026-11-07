@@ -23,6 +23,29 @@ test("callout aliases, fallback kinds and fold flags preserve distinct container
   assert.equal((result.match(/<\/details>/g) ?? []).length, 2);
 });
 
+// Obsidian 1.15.0's callout syntax, read from its app.js with REA
+// (2026-11-07): the type is any text but `]`, lowercased with its spaces as
+// hyphens; what follows a `|` is metadata, which CSS snippets select on.
+test("a callout's type may be any text, with metadata after a |, as in Obsidian", () => {
+  assert.match(
+    renderMarkdown("> [!note|wide] Title\n> Body"),
+    /<aside class="callout" data-callout="note" data-callout-metadata="wide"><div class="callout-title"><span class="callout-title-text">Title<\/span>/,
+  );
+  assert.match(
+    renderMarkdown("> [!My Type]\n> Body"),
+    /<aside class="callout" data-callout="my-type"><div class="callout-title"><span class="callout-title-text">My type<\/span>/,
+  );
+  assert.match(
+    renderMarkdown("> [!笔记]\n> 内容"),
+    /<aside class="callout" data-callout="笔记"><div class="callout-title"><span class="callout-title-text">笔记<\/span>/,
+  );
+  assert.match(
+    renderMarkdown('> [!a"b|c"<d]\n> Body'),
+    /data-callout="a&quot;b" data-callout-metadata="c&quot;&lt;d"/,
+  );
+  assert.doesNotMatch(renderMarkdown("> [!note]text\n> Body"), /callout/);
+});
+
 test("an untitled callout of a hyphenated type reads as words, as in Obsidian", () => {
   assert.match(
     renderMarkdown("> [!unknown-type]\n> Body"),
