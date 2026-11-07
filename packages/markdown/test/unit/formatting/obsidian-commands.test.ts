@@ -142,6 +142,58 @@ test("a list marker replaces another list's, checkbox and all, and a second pres
   );
 });
 
+// Obsidian 1.15.0's line commands, read from its app.js with REA
+// (2026-11-07): markers go after a line's `>` and indentation, and blank
+// lines in a selection of several are skipped.
+test("inside a quote or callout, headings and list markers go after the `>`", () => {
+  assert.equal(
+    edit("> te|xt", (s) => lineEdit(s, "## ")),
+    "> ## te|xt",
+  );
+  assert.equal(
+    edit("> ### te|xt", (s) => lineEdit(s, "")),
+    "> te|xt",
+  );
+  assert.equal(
+    edit("> [!note]\n> ‹a\n> b›", (s) => lineEdit(s, "- ")),
+    "> [!note]\n> - ‹a\n> - b›",
+  );
+  assert.equal(
+    edit("‹> - a\n> - b›", (s) => lineEdit(s, "- ")),
+    "‹> a\n> b›",
+  );
+  assert.equal(
+    edit("‹> a\n> b›", (s) => lineEdit(s, "1. ")),
+    "‹> 1. a\n> 2. b›",
+  );
+  assert.equal(
+    edit("  - nes|ted", (s) => lineEdit(s, "1. ")),
+    "  1. nes|ted",
+  );
+});
+
+test("a quote goes on the lines without one, or one level comes off every line", () => {
+  assert.equal(
+    edit("‹> a\nb›", (s) => lineEdit(s, "> ")),
+    "‹> a\n> b›",
+  );
+  assert.equal(
+    edit("‹> a\n>b\n> > c›", (s) => lineEdit(s, "> ")),
+    "‹a\nb\n> c›",
+  );
+});
+
+test("blank lines in a selection of several lines get no marker", () => {
+  assert.equal(
+    edit("‹a\n\nb›", (s) => lineEdit(s, "- ")),
+    "- ‹a\n\n- b›",
+  );
+  assert.equal(
+    edit("‹a\n  \nb›", (s) => lineEdit(s, "> ")),
+    "> ‹a\n  \n> b›",
+  );
+});
+
 test("a horizontal rule goes on a line of its own, the caret on the line after", () => {
   assert.equal(edit("|", ruleEdit), "\n---\n|");
   assert.equal(edit("above\n|\nbelow", ruleEdit), "above\n\n---\n|\nbelow");
