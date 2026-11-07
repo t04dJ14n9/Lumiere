@@ -407,9 +407,14 @@ export function writeCells(
     rows.push([]);
   }
   for (let row = 0; row < height; row++) {
+    const target = rows[area.top + row]!;
     for (let column = 0; column < width; column++) {
-      rows[area.top + row]![area.left + column] =
-        values[repeat ? 0 : row]?.[repeat ? 0 : column] ?? "";
+      const value = values[repeat ? 0 : row]?.[repeat ? 0 : column];
+      // A short clipboard row leaves the cells it does not cover as they were;
+      // only cells the table does not have yet start out empty.
+      if (value !== undefined || target[area.left + column] === undefined) {
+        target[area.left + column] = value ?? "";
+      }
     }
   }
   return serializeTable(rows, alignments);

@@ -57,6 +57,33 @@ test("every write aligns the entire table, including omitted cells and existing 
   assert.deepEqual(parseTable(next)!.alignments, table.alignments);
 });
 
+test("pasting ragged rows leaves the cells a short row does not cover as they were", () => {
+  const table = parseTable("| a | b |\n| --- | --- |\n| 1 | 2 |\n| 3 | 4 |")!;
+  const body = (values: string[][], row: number, column: number) =>
+    parseTable(
+      writeCells(
+        table,
+        { anchor: { row, column }, head: { row, column } },
+        values,
+      ),
+    )!.rows.map((cells) => cells.map((cell) => cell.text));
+  assert.deepEqual(body([["X", "Y"], ["Z"]], 1, 0).slice(1), [
+    ["X", "Y"],
+    ["Z", "4"],
+  ]);
+  assert.deepEqual(body([["X"], ["Y", "Z"]], 1, 0).slice(1), [
+    ["X", "2"],
+    ["Y", "Z"],
+  ]);
+  // Cells the table does not have yet are still created empty.
+  assert.deepEqual(body([["P", "Q"], ["R"]], 2, 1), [
+    ["a", "b", ""],
+    ["1", "2", ""],
+    ["3", "P", "Q"],
+    ["", "R", ""],
+  ]);
+});
+
 test("pipe escaping is idempotent, retains typed backslashes and keeps code pipes within one cell", () => {
   for (let count = 0; count <= 5; count++) {
     const text = `x${"\\".repeat(count)}|y\\z`;
