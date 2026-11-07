@@ -47,6 +47,7 @@ export function parseLease(raw: string | Uint8Array): LeaseSidecar | undefined {
     const obj = JSON.parse(text) as LeaseSidecar;
     if (
       typeof obj?.leaseUntil === "string" &&
+      Number.isFinite(Date.parse(obj.leaseUntil)) &&
       (obj.owner === "markdownWorkshop" || obj.owner === "pdfWorkshop") &&
       typeof obj.sessionId === "string"
     ) {

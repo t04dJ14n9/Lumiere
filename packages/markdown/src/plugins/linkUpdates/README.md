@@ -10,8 +10,12 @@ Before VS Code renames files, the plugin waits (up to five seconds) for the
 vault index to parse what is queued, finds every note that links to them
 (through the vault index's backlinks), re-reads each note's current text and
 rewrites only the path of each link: a wikilink stays a wikilink, a Markdown
-link stays a Markdown link, and `#subpaths` and aliases are kept. The path is
-written in the new-link format. A moved note's own path-style links are
+link stays a Markdown link, and `#subpaths`, aliases, titles, `<…>`
+destinations and a table row's escaped `\|` are kept. The path is written in
+the new-link format. As in Obsidian, text that only showed the renamed file's
+name follows it: a Markdown link's text equal to the note's name
+(`[Old](Old.md)`) or to its path when that has folders, and a wikilink alias
+equal to the name when the link has folders (`[[f/Old|Old]]`). A moved note's own path-style links are
 rewritten too. Folder renames cover every file inside. By default it asks
 first (Update Links, Always Update, which sets the mode to `always`, or
 Don't Update), counting the notes from the index's parsed links so that
@@ -26,12 +30,16 @@ Rename Heading… renames the heading at the caret and updates the links to
 it, as Obsidian's Rename heading does: each link whose single `#subpath`
 names the heading (as links resolve, so case does not matter), in the note
 and in every note linking to it, keeping its path, form and alias
-(`heading-rename.ts`, `rename-heading.ts`).
+(`heading-rename.ts`, `rename-heading.ts`). The note itself is edited first;
+if it changed while the name was being asked for, nothing is renamed and the
+command says so.
 
 ## Files
 
 - `host.ts`: the rename hook, the prompt and folder expansion.
 - `rewrite.ts`: the links a rename changes in one note, and their edits.
+- `link-source.ts`: a link's source split around its path, and written back.
+- `rename-label.ts`: the alias or link text that follows a rename.
 - `manifest.ts`: the plugin's switch and `mode` setting.
 
 ## Services, events and settings

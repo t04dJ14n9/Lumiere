@@ -11,7 +11,9 @@ settings, including the vault root. It registers a link policy with the vault.
 Inside a bundle, a Markdown path is explicit: `/` is bundle-absolute, and any
 other Markdown destination, including one without an extension, is relative to
 the source file. A miss stays unresolved. Wikilinks, including `[[topic.md]]`,
-keep the vault's own resolution. A rename into another bundle rewrites the
+keep the vault's own resolution, except that among the notes it accepts the
+source's own bundle comes first: `[[topic]]` is the bundle's topic even when
+a shorter same-name path elsewhere would win in the vault. A rename into another bundle rewrites the
 link as an explicit source-relative path. The policy is removed when the
 plugin stops. Open panels share a facade, so turning OKF off does not restart
 the editor.

@@ -1,4 +1,5 @@
 import { loadYaml } from "../../markdown/properties/load-yaml";
+import { plainDocumentDates } from "../../markdown/properties/values";
 
 /** Menu paste uses the injected plain clipboard; keyboard paste keeps its MIME payload. */
 export function clipboardProperties(
@@ -12,7 +13,8 @@ export function clipboardProperties(
     if (document.errors.length) {
       return undefined;
     }
-    const values: unknown = document.toJS({ maxAliasCount: 100 });
+    // Timestamps become the wall-clock text the sheet shows, not a UTC Date.
+    const values = plainDocumentDates(document);
     return values && typeof values === "object" && !Array.isArray(values)
       ? (values as Record<string, unknown>)
       : undefined;

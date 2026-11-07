@@ -3,6 +3,7 @@ import test from "node:test";
 import type { EditorPanel } from "../../../src/plugins/editor/api";
 import type { TextEdit } from "../../../src/shared/host";
 import { insertAtSelection } from "../../../src/plugins/templates/insert";
+import { SourceCoordinates } from "../../../src/shared/document/coordinates";
 import { fakeDocument } from "../../support/vscode-fake";
 
 function panelWith(options: {
@@ -60,20 +61,33 @@ test("inserts at the caret after flushing, then reveals the end of the text", as
   });
 });
 
-test("replaces a selection, mapping LF editor offsets onto CRLF source", async () => {
-  // Editor text "one\ntwo\nthree"; selecting "two" is 4–7 there, 5–8 in source.
+test("replaces the selected text in a CRLF note, where apply maps editor offsets onto the source", async () => {
+  // Editor text "one\ntwo\nthree"; "two" is 4–7 there and 5–8 in the source.
+  const text = "one\r\ntwo\r\nthree";
   const { panel } = panelWith({
-    text: "one\r\ntwo\r\nthree",
+    text,
     eol: "\r\n",
     selection: { from: 4, to: 7, version: 2 },
   });
-  const edits: TextEdit[] = [];
+  let result = text;
   await insertAtSelection(
-    { apply: async (_document, next) => (edits.push(...next), true) },
+    {
+      // As the hosts do: edits arrive in editor offsets and land on the source.
+      apply: async (_document, edits) => {
+        const coordinates = new SourceCoordinates(result);
+        for (const edit of [...edits].reverse()) {
+          result =
+            result.slice(0, coordinates.toSource(edit.from)) +
+            edit.insert +
+            result.slice(coordinates.toSource(edit.to));
+        }
+        return true;
+      },
+    },
     panel,
     "a\nb",
   );
-  assert.deepEqual(edits, [{ from: 5, to: 8, insert: "a\r\nb" }]);
+  assert.equal(result, "one\r\na\r\nb\r\nthree");
 });
 
 test("a selection from an older version is refused without editing", async () => {

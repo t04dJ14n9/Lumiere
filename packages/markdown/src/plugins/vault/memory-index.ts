@@ -302,6 +302,10 @@ export class MemoryVaultIndex implements VaultIndex {
       sourcePath,
       syntax,
       find: (path: string) => this.table.find(path)?.path,
+      candidates: () =>
+        resolveCandidates(this.table, linktext, sourcePath, this.options).map(
+          (file) => file.path,
+        ),
     };
     for (const policy of this.policies) {
       const decision = policy.resolve(query);

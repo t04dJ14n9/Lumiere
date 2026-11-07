@@ -1,4 +1,4 @@
-import type { EditorState, TransactionSpec } from "@codemirror/state";
+import type { EditorState, Line, TransactionSpec } from "@codemirror/state";
 import { lineMarkup } from "../../markdown/list-markup";
 import { taskMarker } from "../../markdown/tasks";
 import type { TextEdit } from "../../shared/host";
@@ -25,46 +25,36 @@ export function taskEdit(
     marker;
   return { from, to: from + 1, insert: checked ? "x" : " " };
 }
+/**
+ * How far along the checklist a line is, in order. Cycling goes text,
+ * bullet, open, done, bullet; toggling the status treats text as a bullet,
+ * giving it a bullet and a box at once.
+ */
+const STEPS = ["text", "bullet", "open", "done"] as const;
+type Step = (typeof STEPS)[number];
+
+/**
+ * Toggle Checkbox Status and Cycle List Checklist, as in Obsidian: the
+ * selected lines move together to the step after the least advanced one.
+ * Every task is checked while any is open; once all are done they open
+ * again, or lose their boxes when cycling. Lines behind join the others,
+ * which stay as they are (Obsidian drops their boxes). Blank lines in a
+ * selection of several are left alone. A selection ending at column zero
+ * does not include that line.
+ */
 export function checklistEdit(
   state: EditorState,
   cycle: boolean,
 ): TransactionSpec {
-  const { from, to } = state.selection.main;
-  const first = state.doc.lineAt(from).number;
-  const last = state.doc.lineAt(
-    to > from && state.doc.lineAt(to).from === to ? to - 1 : to,
-  ).number;
-  const changes: TextEdit[] = [];
-  for (let number = first; number <= last; number++) {
-    const line = state.doc.line(number);
-    const marker = taskMarker(line.text);
-    if (marker !== undefined) {
-      if (cycle && line.text[marker] !== " ") {
-        changes.push({
-          from: line.from + marker - 1,
-          to: line.from + marker + 2 + (line.text[marker + 2] === " " ? 1 : 0),
-          insert: "",
-        });
-      } else {
-        changes.push({
-          from: line.from + marker,
-          to: line.from + marker + 1,
-          insert: line.text[marker] === " " ? "x" : " ",
-        });
-      }
-    } else {
-      // After the list marker, or else after the quotes and indentation, as
-      // in Obsidian (a heading's # stays after the new box). Cycling makes
-      // plain text a bullet first: text, bullet, [ ], [x], bullet.
-      const { quotes, marker: list } = lineMarkup(line.text);
-      const at = line.from + quotes.length + list.length;
-      let insert = "[ ] ";
-      if (!list) {
-        insert = cycle ? "- " : "- [ ] ";
-      }
-      changes.push({ from: at, to: at, insert });
-    }
+  const lines = selectedLines(state);
+  // A loop, not Math.min(...), which throws a RangeError for a selection of
+  // more than about 125,000 lines.
+  let least = STEPS.length - 1;
+  for (const line of lines) {
+    least = Math.min(least, STEPS.indexOf(stepOf(line.text, cycle)));
   }
+  const step = STEPS[least]!;
+  const changes = lines.flatMap((line) => stepEdit(line, step, cycle) ?? []);
   // A caret where the box goes ends up after it, as in Obsidian.
   const set = state.changes(changes);
   return {
@@ -72,4 +62,55 @@ export function checklistEdit(
     selection: state.selection.map(set, 1),
     userEvent: "input.checklist",
   };
+}
+
+function selectedLines(state: EditorState): Line[] {
+  const { from, to, empty } = state.selection.main;
+  const first = state.doc.lineAt(from).number;
+  const last = state.doc.lineAt(empty ? to : Math.max(from, to - 1)).number;
+  const lines = Array.from({ length: last - first + 1 }, (_, index) =>
+    state.doc.line(first + index),
+  );
+  return lines.length > 1 ? lines.filter((line) => line.text.trim()) : lines;
+}
+
+function stepOf(text: string, cycle: boolean): Step {
+  const box = taskMarker(text);
+  if (box !== undefined) {
+    return text[box] === " " ? "open" : "done";
+  }
+  return cycle && !lineMarkup(text).marker ? "text" : "bullet";
+}
+
+/**
+ * The edit that takes `line` to the step after the selection's `step`, or
+ * none when the line is already past it.
+ */
+function stepEdit(
+  line: Line,
+  step: Step,
+  cycle: boolean,
+): TextEdit | undefined {
+  const box = taskMarker(line.text);
+  if (box === undefined) {
+    // After the list marker, or else after the quotes and indentation, as
+    // in Obsidian (a heading's # stays after the new box).
+    const { quotes, marker } = lineMarkup(line.text);
+    if (step === "text" && marker) {
+      return undefined;
+    }
+    const at = line.from + quotes.length + marker.length;
+    const bullet = marker ? "" : "- ";
+    const insert = step === "text" ? bullet : `${bullet}[ ] `;
+    return { from: at, to: at, insert };
+  }
+  const at = line.from + box;
+  if (step === "done" && cycle) {
+    const space = line.text[box + 2] === " " ? 1 : 0;
+    return { from: at - 1, to: at + 2 + space, insert: "" };
+  }
+  if (step === "open" || step === "done") {
+    return { from: at, to: at + 1, insert: step === "open" ? "x" : " " };
+  }
+  return undefined;
 }

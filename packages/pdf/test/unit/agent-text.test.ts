@@ -120,3 +120,29 @@ test("a region with text quotes it when regions enabled; no image path", () => {
   );
   assert.doesNotMatch(text, /Region image|SHA-256|Source:|#hl-|#:~:text=/u);
 });
+
+test("file names and folders containing # or ? keep the full basename in the label", () => {
+  assert.equal(
+    pageLinkText({ path: "papers/issue#1.pdf" }, 3),
+    "[issue#1.pdf · p.3](papers/issue%231.pdf#page=3)",
+  );
+  assert.equal(
+    pageLinkText({ path: "C#/what?.pdf" }, 3),
+    "[what?.pdf · p.3](C%23/what?.pdf#page=3)",
+  );
+  assert.equal(
+    agentText(
+      {
+        kind: "text",
+        text: "Scaled dot-product attention",
+        pages: [{ page: 3, rects: [[72, 83, 150, 95]] }],
+      },
+      { path: "C#/issue#1.pdf" },
+    ),
+    [
+      "> Scaled dot-product attention",
+      ">",
+      "> [issue#1.pdf · p.3](C%23/issue%231.pdf#page=3#:~:text=Scaled%20dot%2Dproduct%20attention)",
+    ].join("\n"),
+  );
+});

@@ -123,3 +123,37 @@ test("opaque multiline Markdown contexts never create executable precise links",
     1,
   );
 });
+
+function hrefsOf(text: string): string[] {
+  return nativeLinks(text).map((link) => link.href);
+}
+
+test("a comment opener inside code is text: later links stay", () => {
+  assert.deepEqual(
+    hrefsOf(
+      "```md\n<!-- example\n```\n[a](target.md#one)\nstray --> in prose\n[b](target.md#two)",
+    ),
+    ["target.md#one", "target.md#two"],
+  );
+  assert.deepEqual(
+    hrefsOf("Write `<!--` to open.\n[a](target.md#one) and `-->` to close"),
+    ["target.md#one"],
+  );
+  assert.deepEqual(
+    hrefsOf("<!--\n```\n[hidden](target.md#h)\n-->\n[a](t.md#1)"),
+    ["t.md#1"],
+  );
+  assert.deepEqual(hrefsOf("Use <!-- to start.\n[a](target.md#one)"), [
+    "target.md#one",
+  ]);
+});
+
+test("a line that merely starts with an inline tag is a paragraph", () => {
+  assert.deepEqual(
+    hrefsOf(
+      "<span>caption</span> [a](t.md#1)\n[b](t.md#2)\n\n<br>\n[hidden](t.md#h)",
+    ),
+    ["t.md#1", "t.md#2"],
+  );
+  assert.deepEqual(hrefsOf("prose\n<br>\n[kept](t.md#1)"), ["t.md#1"]);
+});

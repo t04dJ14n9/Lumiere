@@ -7,7 +7,10 @@ import { afterEach, beforeEach, test } from "node:test";
 // First: everything below imports 'vscode', which this points at the fake.
 import "./support/install-fake-vscode";
 import * as vscode from "./support/fake-vscode";
-import { registerAgentBridge } from "../../src/extension/plugins/agentBridge/mcp/controller";
+import {
+  mcpSetupOptions,
+  registerAgentBridge,
+} from "../../src/extension/plugins/agentBridge/mcp/controller";
 import {
   routeLabel,
   startAgentBridge,
@@ -305,4 +308,100 @@ test("a registration error quoting the token is scrubbed from the startup error 
   } finally {
     vscode.lm.registerMcpServerDefinitionProvider = register;
   }
+});
+
+test("copyMcpSetup quotes a globalStorage path containing spaces", async () => {
+  vscode.configuration.set("lumiere.pdf.agentBridge.enabled", true);
+  const registerCommand = vscode.commands.registerCommand;
+  const showQuickPick = vscode.window.showQuickPick;
+  let runCommand: (() => Promise<void>) | undefined;
+  let pickedOptions: { label: string; detail: string }[] = [];
+  vscode.commands.registerCommand = ((id: string, cb: () => Promise<void>) => {
+    if (id === "lumiere.pdf.copyMcpSetup") {
+      runCommand = cb;
+    }
+    return registerCommand(id);
+  }) as never;
+  vscode.window.showQuickPick = (async (
+    items: { label: string; detail: string }[],
+  ) => {
+    pickedOptions = items;
+    return undefined;
+  }) as never;
+  const storage =
+    "/Users/alice/Library/Application Support/Code/User/globalStorage/lumia";
+  const controller = registerAgentBridge({
+    extensionUri: vscode.Uri.file("/nonexistent-extension") as never,
+    globalStorageUri: vscode.Uri.file(storage) as never,
+    panels: panels(0),
+    lastPdf: new LastPdf(panels(0)),
+    handoff,
+    log,
+    discoveryDir: path.join(folder, "bridges"),
+    shutdownGraceMs: 100,
+  });
+  try {
+    await runCommand!();
+    const quote = process.platform === "win32" ? '"' : "'";
+    const claude = pickedOptions.find(
+      (item) => item.label === "Claude Code",
+    )?.detail;
+    assert.equal(
+      claude,
+      `claude mcp add --scope user agent-pdf-viewer -- node ${quote}${storage}/bridge-stdio.js${quote}`,
+    );
+  } finally {
+    await controller.dispose();
+    vscode.commands.registerCommand = registerCommand;
+    vscode.window.showQuickPick = showQuickPick;
+  }
+});
+
+test("MCP setup snippets quote paths with spaces or apostrophes for POSIX shells", () => {
+  const macShim =
+    "/Users/alice/Library/Application Support/Code/User/globalStorage/lumia/bridge-stdio.js";
+  const byLabel = new Map(
+    mcpSetupOptions(macShim, "darwin").map((item) => [item.label, item.detail]),
+  );
+  assert.equal(
+    byLabel.get("Claude Code"),
+    `claude mcp add --scope user agent-pdf-viewer -- node '${macShim}'`,
+  );
+  assert.equal(
+    byLabel.get("Codex"),
+    `codex mcp add agent-pdf-viewer -- node '${macShim}'`,
+  );
+  assert.equal(
+    byLabel.get("Codex (config.toml)"),
+    `[mcp_servers.agent-pdf-viewer]\ncommand = "node"\nargs = ["${macShim}"]`,
+  );
+
+  const apostropheShim = "/Users/alice's/Library/Application Support/shim.js";
+  const apostropheClaude = mcpSetupOptions(apostropheShim, "linux").find(
+    (item) => item.label === "Claude Code",
+  )?.detail;
+  assert.equal(
+    apostropheClaude,
+    "claude mcp add --scope user agent-pdf-viewer -- node '/Users/alice'\\''s/Library/Application Support/shim.js'",
+  );
+});
+
+test("MCP setup snippets quote Windows paths for the shell and escape backslashes in TOML", () => {
+  const winShim =
+    "C:\\Users\\Alice Smith\\AppData\\Roaming\\Code\\User\\globalStorage\\lumia\\bridge-stdio.js";
+  const byLabel = new Map(
+    mcpSetupOptions(winShim, "win32").map((item) => [item.label, item.detail]),
+  );
+  assert.equal(
+    byLabel.get("Claude Code"),
+    `claude mcp add --scope user agent-pdf-viewer -- node "${winShim}"`,
+  );
+  assert.equal(
+    byLabel.get("Codex"),
+    `codex mcp add agent-pdf-viewer -- node "${winShim}"`,
+  );
+  assert.equal(
+    byLabel.get("Codex (config.toml)"),
+    `[mcp_servers.agent-pdf-viewer]\ncommand = "node"\nargs = [${JSON.stringify(winShim)}]`,
+  );
 });

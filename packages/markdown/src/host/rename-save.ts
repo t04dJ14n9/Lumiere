@@ -10,6 +10,19 @@ export function cleanEditedUris(
     .map((file) => file.uri);
 }
 
+/**
+ * Identity of a rename batch, independent of the order VS Code lists its
+ * files in: a will-rename plan and its did-rename event share one key.
+ */
+export function renamesKey(
+  renames: readonly { oldUri: string; newUri: string }[],
+): string {
+  return renames
+    .map(({ oldUri, newUri }) => `${oldUri}\n${newUri}`)
+    .sort()
+    .join("\n");
+}
+
 type LineEdit = FileTextEdits["edits"][number];
 
 /** UTF-16 offset of `(line, col)` in `text` (0-based, LF/CRLF line breaks). */

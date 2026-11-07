@@ -6,11 +6,17 @@ import {
   completionStatus,
   moveCompletionSelection,
   selectedCompletion,
+  startCompletion,
   type Completion,
   type CompletionContext,
   type CompletionResult,
 } from "@codemirror/autocomplete";
-import { keymap, type EditorView } from "@codemirror/view";
+import {
+  keymap,
+  ViewPlugin,
+  type EditorView,
+  type ViewUpdate,
+} from "@codemirror/view";
 import type {
   ChangeSpec,
   EditorState,
@@ -27,7 +33,11 @@ import type { LocalSuggestions, Suggest, SuggestionTrigger } from "./api";
 import { CancelToken } from "../../shared/rpc/lifecycle";
 import { protocol, type Suggestion } from "./protocol";
 import { registerCompletionHooks } from "../../shared/completion-hooks";
-import { allowsSuggestions, completionEdit } from "./completion";
+import {
+  allowsSuggestions,
+  asksForSuggestions,
+  completionEdit,
+} from "./completion";
 
 registerCompletionHooks({ completionStatus, moveCompletionSelection });
 
@@ -101,11 +111,34 @@ function registerCompletions(ctx: Context): void {
           { key: "Ctrl-p", run: moveCompletionSelection(false) },
           ...completionKeymap.filter((binding) => binding.key !== "Escape"),
         ]),
+        openOnRequest,
       ],
       { slot: "suggest" },
     ),
   );
 }
+
+/** Opens suggestions after an edit that asks for them (Insert Wikilink). */
+const openOnRequest = ViewPlugin.fromClass(
+  class {
+    private destroyed = false;
+    constructor(private readonly view: EditorView) {}
+    update(update: ViewUpdate): void {
+      if (!asksForSuggestions(update.transactions)) {
+        return;
+      }
+      // A view cannot dispatch while it is updating.
+      queueMicrotask(() => {
+        if (!this.destroyed) {
+          startCompletion(this.view);
+        }
+      });
+    }
+    destroy(): void {
+      this.destroyed = true;
+    }
+  },
+);
 async function requestCompletions(
   ctx: Context,
   options: {

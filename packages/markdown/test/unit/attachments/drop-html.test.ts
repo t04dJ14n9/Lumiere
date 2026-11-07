@@ -159,6 +159,66 @@ test("loadAttachmentSource downloads http and reads file URIs", async () => {
   assert.equal(fail, undefined);
 });
 
+test("a URL from the page loads only images, never any file on the disk", async () => {
+  const read: string[] = [];
+  const fetched: string[] = [];
+  const served = (type: string) => async (url: string) => {
+    fetched.push(url);
+    return {
+      ok: true,
+      headers: {
+        get: (name: string) => (name === "content-type" ? type : null),
+      },
+      arrayBuffer: async () => new Uint8Array([1]).buffer,
+    };
+  };
+  const options = (type: string) => ({
+    imagesOnly: true,
+    fetch: served(type),
+    readFile: async (uri: string) => {
+      read.push(uri);
+      return new Uint8Array([7]);
+    },
+  });
+  for (const url of [
+    "file:///Users/me/.ssh/id_rsa",
+    "file:///Users/me/project/.env",
+    "file:///Users/me/notes/secrets.json",
+  ]) {
+    assert.equal(
+      await loadAttachmentSource(url, options("text/plain")),
+      undefined,
+      url,
+    );
+  }
+  assert.deepEqual(read, [], "nothing but an image is read");
+  assert.equal(
+    (await loadAttachmentSource("file:///tmp/clip.PNG", options("")))?.ext,
+    "png",
+  );
+  assert.equal(
+    await loadAttachmentSource(
+      "http://127.0.0.1:8080/admin",
+      options("application/json"),
+    ),
+    undefined,
+  );
+  assert.equal(
+    (
+      await loadAttachmentSource(
+        "https://ex/avatar.php?id=1",
+        options("image/jpeg"),
+      )
+    )?.ext,
+    "jpg",
+    "an image is kept under its type's extension",
+  );
+  assert.equal(
+    (await loadAttachmentSource("https://ex/a.webp", options("")))?.ext,
+    "webp",
+  );
+});
+
 test("urisFromDataTransfer reads VS Code ResourceURLs JSON", () => {
   assert.deepEqual(
     urisFromDataTransfer(

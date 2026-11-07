@@ -1,6 +1,10 @@
 import type { EditorState, TransactionSpec } from "@codemirror/state";
+/**
+ * Whether a quote opens with a callout's `[!type]`, as Obsidian reads it: any
+ * type but `]` (`[!note|wide]`, `[!笔记]`), then a space or the line's end.
+ */
 export function isCallout(source: string): boolean {
-  return /^\s*>\s*\[![\w-]+\]/.test(source);
+  return /^\s*>\s*\[![^\]\n]+\][+-]?(?:\s|$)/.test(source);
 }
 /**
  * Insert Callout, as in Obsidian: the selected lines go into a note callout,

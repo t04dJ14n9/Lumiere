@@ -5,6 +5,7 @@ import {
   splitLinktext,
   type LinkSyntax,
 } from "../../shared/vault-path";
+import { isInsideBundle } from "./paths";
 
 export type OkfLinkAction =
   | { action: "passthrough" }
@@ -23,28 +24,48 @@ export interface OkfLinkQuery {
   syntax: LinkSyntax;
   /** Canonical vault path when that exact path exists. */
   find(path: string): string | undefined;
+  /** The paths the vault's own rules accept for the link, best first. */
+  candidates?(): readonly string[];
 }
 
 /**
- * Context-aware OKF resolution. Outside a bundle, and for wikilinks, the
- * vault's own rules still apply (`passthrough`). A leading `/` is
- * bundle-root relative. Other Markdown paths, including `./` and `../`, are
- * source-file relative. A miss is unresolved and must not basename-fallback.
+ * Context-aware OKF resolution. Outside a bundle the vault's own rules apply
+ * (`passthrough`). A wikilink follows them too, except that among the notes
+ * they accept, the source's own bundle comes first: `[[topic]]` is the
+ * bundle's topic, not a shorter same-name note elsewhere in the vault. A
+ * leading `/` is bundle-root relative. Other Markdown paths, including `./`
+ * and `../`, are source-file relative. A miss is unresolved and must not
+ * basename-fallback.
  */
 export function resolveOkfLink(query: OkfLinkQuery): OkfLinkAction {
-  if (query.bundleRoot === undefined) {
+  const { bundleRoot } = query;
+  if (bundleRoot === undefined) {
     return { action: "passthrough" };
   }
   const { path } = splitLinktext(query.linktext);
-  if (path === "" || leavesToVault(path, query.syntax)) {
+  if (path === "") {
     return { action: "passthrough" };
   }
-  const joined = explicitPath(path, query.sourcePath, query.bundleRoot);
+  if (leavesToVault(path, query.syntax)) {
+    return preferBundle(query.candidates?.() ?? [], bundleRoot);
+  }
+  const joined = explicitPath(path, query.sourcePath, bundleRoot);
   if (joined === undefined) {
     return { action: "unresolved" };
   }
   const found = locateFile(query.find, joined);
   return found ? { action: "resolved", path: found } : { action: "unresolved" };
+}
+
+/** The first candidate inside the bundle, when the vault would pick another. */
+function preferBundle(
+  candidates: readonly string[],
+  bundleRoot: string,
+): OkfLinkAction {
+  const own = candidates.find((path) => isInsideBundle(path, bundleRoot));
+  return own === undefined || own === candidates[0]
+    ? { action: "passthrough" }
+    : { action: "resolved", path: own };
 }
 
 function leavesToVault(path: string, syntax: LinkSyntax): boolean {

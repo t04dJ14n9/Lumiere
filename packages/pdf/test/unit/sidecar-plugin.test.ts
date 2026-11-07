@@ -179,14 +179,16 @@ function harness(
   if (locateHeld) {
     const inner = locationExports.locateSidecar;
     locationExports.locateSidecar = async (pdf, warn) => {
+      const located = inner(pdf, warn);
       await locateHeld;
-      return inner(pdf, warn);
+      return located;
     };
   }
   const { Sidecars } = load("sidecars") as {
     Sidecars: new () => {
       open(panel: unknown): void;
       close(panel: unknown): void;
+      relocateAll(): void;
       write(panel: unknown, message: unknown): Promise<void>;
       reveal(panel: unknown, id: string): Promise<void>;
       dispose(): void;
@@ -462,4 +464,55 @@ test("sidecarWrite delete leaves a pre-existing sidecar untouched", async () => 
     "ignored delete must not clear the in-memory claim from disk",
   );
   h.sidecars.dispose();
+});
+
+test("dispose and relocateAll handle panels still locating their sidecar", async () => {
+  const disposing = harness({}, { holdLocate: true });
+  const closingPdf = disposing.panel("/work/papers/paper.pdf");
+  disposing.sidecars.open(closingPdf);
+  disposing.sidecars.dispose();
+  assert.equal(
+    closingPdf.shown.at(-1),
+    null,
+    "dispose clears the pending claim before locate settles",
+  );
+  disposing.releaseLocate();
+  await settle();
+  assert.equal(
+    disposing.watchers.length,
+    0,
+    "late locate after dispose must not create a watcher",
+  );
+  assert.equal(
+    closingPdf.shown.at(-1),
+    null,
+    "late locate after dispose must not re-claim the panel",
+  );
+
+  const settings: Record<string, unknown> = {};
+  const relocating = harness(settings, { holdLocate: true });
+  relocating.files.set(
+    "/work/notes/paper.pdf.lumiere.md",
+    format.createSidecar({ source: "paper.pdf", path: "papers/paper.pdf" }, [
+      highlight("hl-relocated"),
+    ]),
+  );
+  const movingPdf = relocating.panel("/work/papers/paper.pdf");
+  relocating.sidecars.open(movingPdf);
+  settings["lumiere.pdf.sidecar.location"] = "directory";
+  settings["lumiere.pdf.sidecar.directory"] = "notes";
+  relocating.sidecars.relocateAll();
+  relocating.releaseLocate();
+  await settle();
+  assert.deepEqual(
+    movingPdf.shown.at(-1),
+    [highlight("hl-relocated")],
+    "relocateAll restarts an in-flight locate against the new settings",
+  );
+  assert.equal(
+    relocating.watchers.length,
+    1,
+    "superseded locate does not create a second watcher",
+  );
+  relocating.sidecars.dispose();
 });

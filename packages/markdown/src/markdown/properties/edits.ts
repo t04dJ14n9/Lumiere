@@ -1,4 +1,4 @@
-import type { Document } from "yaml";
+import type { Document, Pair } from "yaml";
 import { loadYaml } from "./load-yaml";
 import { headerParts, frontmatter } from "./frontmatter";
 import { orderPropertyBody } from "./order";
@@ -13,6 +13,7 @@ import {
   scalarValue,
   setPropertyChange,
   valueAfterKey,
+  sameWritten,
   type PropertyChange,
 } from "./yaml-value";
 
@@ -109,15 +110,17 @@ function createHeader(
   source: string,
   edit: KeyEdit,
 ): PropertyChange[] | undefined {
-  if (edit.type !== "add" || /^---(?:\r?\n|$)/.test(source)) {
+  if (edit.type !== "add" || /^\uFEFF?---(?:\r?\n|$)/.test(source)) {
     return undefined;
   }
-  // As Obsidian writes it: the new header right before the note's text.
+  // As Obsidian writes it: the new header right before the note's text, and
+  // after a byte order mark, which must stay the first character.
   const eol = source.includes("\r\n") ? "\r\n" : "\n";
+  const at = source.startsWith("\uFEFF") ? 1 : 0;
   return [
     {
-      from: 0,
-      to: 0,
+      from: at,
+      to: at,
       insert: `---${eol}${newPropertyLine(edit, eol)}${eol}---${eol}`,
     },
   ];
@@ -250,10 +253,7 @@ class PropertyMapEdits {
       }
       const start =
         this.header.body.lastIndexOf("\n", item.key.range[0] - 1) + 1;
-      let end =
-        loadYaml().isNode(item.value) && item.value.range
-          ? item.value.range[2]
-          : item.key.range[2];
+      let end = entryEnd(this.header.body, item, item.key.range[2]);
       if (this.header.body[end] === "\r") {
         end++;
       }
@@ -269,6 +269,24 @@ class PropertyMapEdits {
       ];
     });
   }
+}
+
+/**
+ * Where a removed entry's own text ends. yaml stretches an empty value (`a:`)
+ * over the comment lines after it, which belong to the next entry, so such a
+ * value ends with its line.
+ */
+function entryEnd(body: string, item: Pair, keyEnd: number): number {
+  const { isNode, isScalar } = loadYaml();
+  const value: unknown = item.value;
+  if (!isNode(value) || !value.range) {
+    return keyEnd;
+  }
+  if (!isScalar(value) || value.range[0] !== value.range[1]) {
+    return value.range[2];
+  }
+  const lineEnd = body.indexOf("\n", value.range[1]);
+  return lineEnd < 0 ? body.length : lineEnd;
 }
 
 /** The property name a plain scalar key reads back as: `1: a` is "1". */
@@ -350,18 +368,6 @@ function editTouchesKey(edit: KeyEdit, key: string): boolean {
     (edit.type === "set" && key === edit.key) ||
     (edit.type === "remove" && edit.keys.includes(key)) ||
     (edit.type === "rename" && key === edit.key)
-  );
-}
-
-/**
- * Whether a value reads back as the one written. An empty list is written as
- * a bare `key:`, as Obsidian writes it, which reads back as no value.
- */
-function sameWritten(after: unknown, written: unknown): boolean {
-  const empty = Array.isArray(written) && written.length === 0;
-  return (
-    JSON.stringify(after) === JSON.stringify(written) ||
-    (empty && (after === null || after === undefined))
   );
 }
 

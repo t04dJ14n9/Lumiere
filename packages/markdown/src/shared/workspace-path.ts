@@ -126,7 +126,9 @@ export function relativePosix(fromFile: string, toFile: string): string {
 export function encodeLinkPath(relative: string): string {
   return relative
     .split("/")
-    .map((segment) => encodeURIComponent(segment))
+    .map((segment) =>
+      encodeURIComponent(segment).replaceAll("(", "%28").replaceAll(")", "%29"),
+    )
     .join("/");
 }
 

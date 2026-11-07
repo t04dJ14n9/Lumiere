@@ -122,3 +122,31 @@ test("outside an OKF bundle the resolver does not change vault rules", () => {
   });
   assert.deepEqual(hit, { action: "passthrough" });
 });
+
+test("a wikilink in a bundle prefers the bundle's own note among the vault's matches", () => {
+  const query = (candidates: readonly string[], bundleRoot = "bundle") =>
+    resolveOkfLink({
+      linktext: "topic",
+      sourcePath: "bundle/notes/source.md",
+      bundleRoot,
+      syntax: "wikilink",
+      find,
+      candidates: () => candidates,
+    });
+  // The vault's order puts the shorter path first (Obsidian's rule).
+  assert.deepEqual(query(["metrics/topic.md", "bundle/metrics/topic.md"]), {
+    action: "resolved",
+    path: "bundle/metrics/topic.md",
+  });
+  assert.deepEqual(
+    query(["bundle/metrics/topic.md", "metrics/topic.md"]),
+    { action: "passthrough" },
+    "the vault already picks the bundle's note",
+  );
+  assert.deepEqual(query(["metrics/topic.md"]), { action: "passthrough" });
+  assert.deepEqual(
+    query(["metrics/topic.md", "bundle/metrics/topic.md"], ""),
+    { action: "passthrough" },
+    "a bundle at the vault root holds every note",
+  );
+});

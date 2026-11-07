@@ -4,7 +4,9 @@
  * stay off the YAML runtime.
  */
 export function headerParts(source: string) {
-  const opening = /^---\r?\n/.exec(source);
+  // A byte order mark (hosts that read files as text keep it) is the file's
+  // encoding, not the note's first line, so it may precede the fence.
+  const opening = /^\uFEFF?---\r?\n/.exec(source);
   if (!opening) {
     return undefined;
   }

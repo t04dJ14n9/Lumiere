@@ -6,7 +6,8 @@ export const frontmatter: MarkdownConfig = {
       name: "Frontmatter",
       before: "HorizontalRule",
       parse(cx, line) {
-        if (cx.lineStart !== 0 || line.text !== "---") {
+        // The fence may follow a byte order mark, as headerParts reads it.
+        if (cx.lineStart !== 0 || !/^\uFEFF?---$/.test(line.text)) {
           return false;
         }
         const from = cx.lineStart;
