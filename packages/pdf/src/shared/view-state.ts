@@ -145,7 +145,7 @@ export function parseViewState(value: unknown): ViewState | undefined {
   return view;
 }
 
-/** The page, the first visible page and the page count agree. */
+/** The page and the first visible page are pages of the document, from 1. */
 function validPages(report: Record<string, unknown>): report is Record<
   string,
   unknown
@@ -158,6 +158,7 @@ function validPages(report: Record<string, unknown>): report is Record<
   return (
     isCount(pageCount) &&
     isCount(page) &&
+    page >= 1 &&
     page <= pageCount &&
     isCount(readingPage) &&
     readingPage >= 1 &&
