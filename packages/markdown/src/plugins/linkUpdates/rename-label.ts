@@ -26,14 +26,14 @@ function renamedAlias(source: LinkSource, newPath: string): LinkSource {
   const alias = /^(\\?\|)(.*)(\]\])$/su.exec(source.closing);
   // Obsidian compares with the written path and subpath together.
   const written = `${source.path}${source.subpath}`;
-  if (
-    !alias ||
-    !written.includes("/") ||
-    stemOf(written) !== alias[2]!.trim()
-  ) {
+  // Only the path can end in `.md`; a dot in the subpath is part of it.
+  const shown = `${shownName(source.path)}${source.subpath}`;
+  if (!alias || !written.includes("/") || shown !== alias[2]!.trim()) {
     return source;
   }
-  return { ...source, closing: `${alias[1]}${stemOf(newPath)}${alias[3]}` };
+  // A wikilink writes a note without `.md`, so what follows the last dot of
+  // `newPath` belongs to the name and is never an extension to strip.
+  return { ...source, closing: `${alias[1]}${nameOf(newPath)}${alias[3]}` };
 }
 
 function renamedText(
@@ -54,7 +54,15 @@ function renamedText(
   }
   return renamed === undefined
     ? source
-    : { ...source, opening: `${opening[1]}${renamed}${opening[3]}` };
+    : {
+        ...source,
+        opening: `${opening[1]}${escapeLabel(renamed)}${opening[3]}`,
+      };
+}
+
+/** A file name written as link text must not end it or escape its end. */
+function escapeLabel(text: string): string {
+  return text.replace(/[\\[\]]/gu, "\\$&");
 }
 
 /** A note's name without `.md`; any other file's name with its extension. */

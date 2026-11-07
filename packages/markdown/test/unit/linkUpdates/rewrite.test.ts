@@ -188,6 +188,48 @@ test("text showing the renamed file's name follows it; the writer's own text sta
   );
 });
 
+test("a dot in a wikilink's note name is not an extension when its alias follows", () => {
+  const text = [
+    "[[sub/Report.v1|Report]] [[sub/Report.v1|Report.v1]] [[sub/Report.v1\\|Report.v1]]",
+    "[[sub/Old|Old]] [Old](sub/Old.md) [[sub/pic.png|pic.png]]",
+  ].join("\n");
+  const notes = {
+    "sub/Report.v1.md": "",
+    "sub/Old.md": "",
+    "sub/pic.png": "",
+    "A.md": text,
+  };
+  const ctx = context(
+    notes,
+    {
+      "sub/Report.v1.md": "lib/Final.md",
+      "sub/Old.md": "lib/New.v2.md",
+      "sub/pic.png": "lib/photo.v2.png",
+    },
+    "absolute",
+  );
+  assert.equal(
+    apply(text, rewriteLinks(text, "A.md", ctx)),
+    [
+      "[[lib/Final|Report]] [[lib/Final|Final]] [[lib/Final\\|Final]]",
+      "[[lib/New.v2|New.v2]] [New.v2](lib/New.v2.md) [[lib/photo.v2.png|photo.v2.png]]",
+    ].join("\n"),
+  );
+});
+
+test("link text written from a new name escapes brackets and backslashes", () => {
+  const text = "[Old](Old.md) ![Old](Old.md) [sub/Deep](sub/Deep.md)";
+  const ctx = context(
+    { ...vault, "A.md": text },
+    { "Old.md": "a[b]\\c.md", "sub/Deep.md": "lib/De]ep.md" },
+    "absolute",
+  );
+  assert.equal(
+    apply(text, rewriteLinks(text, "A.md", ctx)),
+    "[a\\[b\\]\\\\c](a[b]%5Cc.md) ![a\\[b\\]\\\\c](a[b]%5Cc.md) [lib/De\\]ep](lib/De]ep.md)",
+  );
+});
+
 test("a bare destination may hold a literal quote, as the parser reads it", () => {
   const text = '[a](Old"note.md) [b](Old"note.md "Title")';
   const notes = { 'Old"note.md': "", "A.md": text };
