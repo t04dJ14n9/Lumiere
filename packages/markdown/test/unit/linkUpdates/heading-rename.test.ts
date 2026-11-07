@@ -88,3 +88,18 @@ test("a renamed heading keeps a table row's escaped pipe, angle brackets and tit
     ].join("\n"),
   );
 });
+
+test("a renamed heading's link keeps a title with escaped quotes", () => {
+  const heading = headingAt(PROBE, PROBE.indexOf("Old Name"))!;
+  const renamed: RenamedHeading = {
+    path: "probe.md",
+    text: PROBE,
+    heading,
+    name: "New Name",
+  };
+  const text = '[a](probe.md#Old%20Name "Say \\"hello\\"")';
+  assert.equal(
+    apply(text, headingLinkEdits(text, "other.md", renamed, resolve)),
+    '[a](probe.md#New%20Name "Say \\"hello\\"")',
+  );
+});
