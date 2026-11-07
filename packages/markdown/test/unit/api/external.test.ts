@@ -22,6 +22,7 @@ test("external plugins are real isolated fibers with owned markers, actions, com
   let retained!: ExternalContext;
   let runs = 0;
   let cleaned = 0;
+  const resolvedVaults: string[] = [];
   const plugin = f.api.plugin({
     ...definition,
     inject: {
@@ -30,6 +31,9 @@ test("external plugins are real isolated fibers with owned markers, actions, com
     },
     apply(ctx) {
       retained = ctx;
+      ctx.vault?.onDidResolveLinks((event) => {
+        resolvedVaults.push(event.vault.toString());
+      });
       for (const key of [
         "runtime",
         "rpc",
@@ -166,6 +170,8 @@ test("external plugins are real isolated fibers with owned markers, actions, com
   assert.throws(() => retained.editors.getEditors(), {
     code: "PluginDisabled",
   });
+  f.root.emit("vault/resolved", "file:///vault");
+  assert.deepEqual(resolvedVaults, []);
   await f.api.resetPluginOverride(plugin.id, { target: "global" });
   assert.equal(plugin.state.state, "active");
   assert.equal((await f.pair.client.call(actions, "current", {})).length, 2);
@@ -228,6 +234,10 @@ test("external ownership validation, undeclared services and failed apply are is
 
 test("resource disable removes markers and actions for that note without stopping globally enabled provider", async () => {
   const f = await fixture();
+  f.panels[1] = {
+    ...f.panels[1]!,
+    document: { ...f.panel.document, uri: "file:///other/Other.md" },
+  };
   let retained!: ExternalContext;
   const plugin = f.api.plugin({
     ...definition,
@@ -268,6 +278,17 @@ test("resource disable removes markers and actions for that note without stoppin
     [],
   );
   assert.throws(() => retained.markers.set("panel", []), {
+    code: "PluginDisabled",
+  });
+  assert.deepEqual(
+    retained.editors.getEditors().map((editor) => editor.editorId),
+    ["second"],
+  );
+  assert.equal(retained.editors.getActiveEditor(), undefined);
+  await assert.rejects(retained.editors.reveal("panel", { line: 1 }), {
+    code: "PluginDisabled",
+  });
+  await assert.rejects(retained.editors.getSelection("panel"), {
     code: "PluginDisabled",
   });
   await f.api.resetPluginOverride(plugin.id, {

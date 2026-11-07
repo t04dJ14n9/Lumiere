@@ -47,7 +47,12 @@ export function externalServices(
       resolveLink: api.resolveLink,
       getMetadata: api.getMetadata,
       getBacklinks: api.getBacklinks,
-      onDidResolveLinks: api.onDidResolveLinks,
+      onDidResolveLinks: (listener, thisArgs, disposables) => {
+        const sub = api.onDidResolveLinks(listener, thisArgs);
+        const owned = ownedDisposable(host, () => sub.dispose());
+        disposables?.push(owned);
+        return owned;
+      },
     });
   }
   if (host.markers) {
@@ -83,11 +88,23 @@ function editorServices(
     );
   };
   return Object.freeze({
-    getEditors: api.getEditors,
-    getActiveEditor: api.getActiveEditor,
+    getEditors: () =>
+      Object.freeze(
+        api.getEditors().filter((editor) => available(editor.editorId)),
+      ),
+    getActiveEditor: () => {
+      const active = api.getActiveEditor();
+      return active && available(active.editorId) ? active : undefined;
+    },
     open: api.open,
-    reveal: api.reveal,
-    getSelection: api.getSelection,
+    reveal: async (id, target, options) => {
+      assertLive(id);
+      return api.reveal(id, target, options);
+    },
+    getSelection: async (id, options) => {
+      assertLive(id);
+      return api.getSelection(id, options);
+    },
     registerSelectionAction: (action) => register(action, "selection"),
     registerTitleAction: (action) => register(action, "title"),
   });
