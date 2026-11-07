@@ -32,6 +32,17 @@ test("sort works in both directions, is stable for ties and keeps the header and
   );
 });
 
+test("a column added beside another can take its alignment", () => {
+  const table = parseTable(source)!;
+  const inserted = (index: number, alignAs: number) =>
+    parseTable(
+      operateTable(table, { type: "insert", axis: "column", index, alignAs }),
+    )!.alignments;
+  assert.deepEqual(inserted(1, 1), ["left", "right", "right"]);
+  assert.deepEqual(inserted(0, 0), ["left", "left", "right"]);
+  assert.deepEqual(inserted(2, 1), ["left", "right", "right"]);
+});
+
 test("all row and column operations preserve whole rows, column alignment and aligned source", () => {
   const table = parseTable(source)!;
   const insertedRow = parseTable(

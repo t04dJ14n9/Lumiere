@@ -2,7 +2,13 @@ import { serializeTable, type Table } from "./model";
 
 export type Axis = "row" | "column";
 export type TableOperation =
-  | { type: "insert"; axis: Axis; index: number }
+  | {
+      type: "insert";
+      axis: Axis;
+      index: number;
+      /** The column whose alignment a new column takes. */
+      alignAs?: number;
+    }
   | { type: "delete" | "duplicate"; axis: Axis; from: number; to: number }
   | { type: "move"; axis: Axis; from: number; to: number; destination: number }
   | {
@@ -46,7 +52,11 @@ export function operateTable(table: Table, operation: TableOperation): string {
     if (operation.axis === "row") {
       edit(rows, () => Array<string>(alignments.length).fill(""));
     } else {
-      edit(alignments, () => null);
+      const alignAs =
+        operation.type === "insert" ? operation.alignAs : undefined;
+      edit(alignments, () =>
+        alignAs === undefined ? null : (table.alignments[alignAs] ?? null),
+      );
       for (const row of rows) {
         edit(row, () => "");
       }
