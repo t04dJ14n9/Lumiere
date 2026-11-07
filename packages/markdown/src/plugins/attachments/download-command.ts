@@ -61,10 +61,17 @@ export async function downloadAttachments(ctx: Context): Promise<void> {
     const file = saved.get(url);
     return file && embedFor({ ...target, ...file, alt });
   });
-  if (edits.length > 0) {
-    await ctx.hostDocuments.apply(panel.document, edits);
+  // The host refuses the edit when the note was closed during the downloads;
+  // the files are saved by then, so say the note still shows the web images.
+  const edited =
+    edits.length === 0 ||
+    (await ctx.hostDocuments.apply(panel.document, edits));
+  const message = summary(saved.size, urls.length - saved.size, edited);
+  if (edited) {
+    ctx.dialogs.inform(message);
+  } else {
+    ctx.dialogs.error(message);
   }
-  ctx.dialogs.inform(summary(saved.size, urls.length - saved.size));
 }
 
 /**
@@ -105,7 +112,10 @@ async function saveAll(
 
 function loadImage(url: string): Promise<SourceBytes | undefined> {
   if (/^data:/iu.test(url)) {
-    return Promise.resolve(decodeDataUri(url));
+    // decodeDataUri names any payload `.png`; a note's data URI must say it is an image.
+    return Promise.resolve(
+      /^data:image\/[^;,]+[;,]/iu.test(url) ? decodeDataUri(url) : undefined,
+    );
   }
   // A note can come from anywhere: keep only what is served or named as an image.
   return loadAttachmentSource(url, {
@@ -115,10 +125,10 @@ function loadImage(url: string): Promise<SourceBytes | undefined> {
   });
 }
 
-function summary(downloaded: number, failed: number): string {
-  const done =
-    downloaded === 1
-      ? "Downloaded 1 attachment."
-      : `Downloaded ${downloaded} attachments.`;
+function summary(downloaded: number, failed: number, edited: boolean): string {
+  const count = downloaded === 1 ? "1 attachment" : `${downloaded} attachments`;
+  const done = edited
+    ? `Downloaded ${count}.`
+    : `Saved ${count} in the vault, but the note was not changed.`;
   return failed > 0 ? `${done} ${failed} could not be downloaded.` : done;
 }

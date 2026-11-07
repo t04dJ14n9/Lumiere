@@ -21,8 +21,9 @@ async function run(
   t: test.TestContext,
   answer: string | undefined,
   settings: Record<string, unknown> = {},
-  note = NOTE,
+  options: { note?: string; applies?: boolean } = {},
 ): Promise<Run> {
+  const note = options.note ?? NOTE;
   const { vaults } = memoryVaults({ "Note.md": note, "cat.png": "" });
   const result: Run = { asked: [], told: [], written: [], text: note };
   const document = { uri: uriOf("Note.md"), getText: () => result.text };
@@ -72,6 +73,9 @@ async function run(
         _document: unknown,
         edits: { from: number; to: number; insert: string }[],
       ) => {
+        if (options.applies === false) {
+          return false;
+        }
         // Like the real host: offsets are the editor's (LF lines), and it
         // maps them onto the note's own line breaks.
         const coordinates = new SourceCoordinates(result.text);
@@ -138,9 +142,37 @@ test("a note with CRLF line breaks is edited where its images are", async (t) =>
     "![](https://ex.com/img/dog.png)",
     "",
   ].join("\r\n");
-  const result = await run(t, "Download", {}, note);
+  const result = await run(t, "Download", {}, { note });
   assert.equal(
     result.text,
     ["Line 1", "![[dog.png|A dog]]", "Line 3", "![[dog.png]]", ""].join("\r\n"),
   );
+});
+
+test("a data URI that is not an image is not saved", async (t) => {
+  const note = [
+    "![page](data:text/html;base64,PGgxPng8L2gxPg==)",
+    "![blank](data:;base64,R0lG) ![dot](data:image/gif;base64,R0lG)",
+  ].join("\n");
+  const result = await run(t, "Download", {}, { note });
+  assert.deepEqual(result.written, [uriOf("Image.gif")]);
+  assert.equal(
+    result.text,
+    [
+      "![page](data:text/html;base64,PGgxPng8L2gxPg==)",
+      "![blank](data:;base64,R0lG) ![[Image.gif|dot]]",
+    ].join("\n"),
+  );
+  assert.deepEqual(result.told, [
+    "Downloaded 1 attachment. 2 could not be downloaded.",
+  ]);
+});
+
+test("when the note cannot be edited, the files are kept and the reader is told it is unchanged", async (t) => {
+  const result = await run(t, "Download", {}, { applies: false });
+  assert.deepEqual(result.written, [uriOf("cat 1.png"), uriOf("Image.gif")]);
+  assert.equal(result.text, NOTE);
+  assert.deepEqual(result.told, [
+    "Saved 2 attachments in the vault, but the note was not changed. 1 could not be downloaded.",
+  ]);
 });
