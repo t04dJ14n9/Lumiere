@@ -4,7 +4,9 @@ Makes Markdown task checkboxes clickable in Live Preview and embedded notes,
 like Obsidian. Commands toggle checklist status or cycle list/checklist form;
 Mod+L toggles the status, Obsidian's default (in Cursor, where Cmd/Ctrl+L
 opens the chat, the Cursor bridge keeps that key). A line without a list
-gets `- [ ] ` after its quotes and indentation.
+gets `- [ ] ` after its quotes and indentation. Selected lines move together,
+as in Obsidian: every task is checked while any is open, and blank lines in
+the selection are left alone.
 
 ## How it works
 
@@ -50,4 +52,6 @@ defaults to true. Both checklist command bindings remain unbound for verificatio
 
 Preview-only tasks are disabled. Stale source lines reject edits, and embedded
 sources must already be authorized by Resources. Text, saves and undo belong to
-VS Code; exact interaction parity remains for the owner's manual pass.
+VS Code; exact interaction parity remains for the owner's manual pass. When
+some selected lines have no box yet, the tasks among them keep theirs while
+the others catch up; Obsidian 1.15 drops those tasks' boxes.

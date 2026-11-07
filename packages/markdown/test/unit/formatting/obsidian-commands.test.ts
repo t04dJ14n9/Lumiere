@@ -170,6 +170,74 @@ test("cycling a line goes text, bullet, [ ], [x], bullet", () => {
   );
 });
 
+// Obsidian 1.15.0's Toggle checkbox status and Cycle list checklist, read
+// from its app.js with REA (2026-11-07): the selected lines move together to
+// the step after the least advanced one, and blank lines in a selection of
+// several are skipped.
+test("several tasks are checked together while any is open, then opened together", () => {
+  assert.equal(
+    edit("‹- [ ] a\n- [x] b›", (s) => checklistEdit(s, false)),
+    "‹- [x] a\n- [x] b›",
+  );
+  assert.equal(
+    edit("‹- [/] a\n- [ ] b›", (s) => checklistEdit(s, false)),
+    "‹- [x] a\n- [x] b›",
+  );
+  assert.equal(
+    edit("‹- [x] a\n- [-] b›", (s) => checklistEdit(s, false)),
+    "‹- [ ] a\n- [ ] b›",
+  );
+  assert.equal(
+    edit("‹- [ ] a\n- [x] b›", (s) => checklistEdit(s, true)),
+    "‹- [x] a\n- [x] b›",
+  );
+  assert.equal(
+    edit("‹- [x] a\n- [x] b›", (s) => checklistEdit(s, true)),
+    "‹- a\n- b›",
+  );
+});
+
+test("lines without a box catch up with the selection's tasks, which keep theirs", () => {
+  // Obsidian drops the tasks' boxes here; Lumia keeps them.
+  assert.equal(
+    edit("‹a\n- [x] b›", (s) => checklistEdit(s, false)),
+    "- [ ] ‹a\n- [x] b›",
+  );
+  assert.equal(
+    edit("‹a\n- b\n- [ ] c›", (s) => checklistEdit(s, true)),
+    "- ‹a\n- b\n- [ ] c›",
+  );
+  assert.equal(
+    edit("‹- a\n- [x] c›", (s) => checklistEdit(s, true)),
+    "‹- [ ] a\n- [x] c›",
+  );
+});
+
+test("blank lines in a selection of several lines get no box", () => {
+  assert.equal(
+    edit("‹a\n\nb›", (s) => checklistEdit(s, false)),
+    "- [ ] ‹a\n\n- [ ] b›",
+  );
+  assert.equal(
+    edit("‹a\n  \nb›", (s) => checklistEdit(s, true)),
+    "- ‹a\n  \n- b›",
+  );
+});
+
+test("a selection of a very large number of lines does not overflow the call stack", () => {
+  // Spreading one argument per line into Math.min fails above ~125k lines.
+  const count = 200_000;
+  const doc = Array.from({ length: count }, () => "a").join("\n");
+  const state = EditorState.create({
+    doc,
+    selection: { anchor: 0, head: doc.length },
+  });
+  const next = state.update(checklistEdit(state, false)).state;
+  assert.equal(next.doc.lines, count);
+  assert.equal(next.doc.line(1).text, "- [ ] a");
+  assert.equal(next.doc.line(count).text, "- [ ] a");
+});
+
 test("a new table goes after the line the selection starts on, the caret at its start", () => {
   const table = "|     |     |\n| --- | --- |\n|     |     |";
   assert.equal(edit("|", insertTable), `\n|${table}\n`);
