@@ -68,8 +68,16 @@ function startWorker(
   });
   const fallbackToHost = () => {
     onExit();
+    // This runs inside a worker event listener, where a throw would skip the
+    // remaining requests and leave them pending forever.
     for (const request of pending.values()) {
-      request.resolve(metadata(request.text));
+      try {
+        request.resolve(metadata(request.text));
+      } catch (error) {
+        request.reject(
+          error instanceof Error ? error : new Error(String(error)),
+        );
+      }
     }
     pending.clear();
   };

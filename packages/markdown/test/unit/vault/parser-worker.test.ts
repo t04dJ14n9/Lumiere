@@ -52,3 +52,34 @@ test("when the worker fails to load or exits during a parse, parsing falls back 
     metadata("# Second\n#tag\n"),
   );
 });
+
+test("a parse the host cannot finish after the worker fails is rejected and the others still settle", async () => {
+  let fail!: (error: Error) => void;
+  const crashing: WorkerLauncher = {
+    start: () => ({
+      post() {},
+      onMessage() {},
+      onError(listener) {
+        fail = listener;
+      },
+      onExit() {},
+      unref() {},
+      terminate: () => Promise.resolve(),
+    }),
+  };
+  const parser = createVaultParser(crashing);
+  // metadata() has no known string it throws on, so the first request is not
+  // text at all.
+  const broken = parser.parse(null as unknown as string);
+  const first = "# First\n[[One]]\n";
+  const second = "# Second\n#tag\n";
+  const fine = [parser.parse(first), parser.parse(second)];
+  fail(new Error("worker crashed"));
+  await assert.rejects(broken, TypeError);
+  assert.deepEqual(await Promise.all(fine), [
+    metadata(first),
+    metadata(second),
+  ]);
+  // The worker is gone, so later parses run in the host.
+  assert.deepEqual(await parser.parse(first), metadata(first));
+});
