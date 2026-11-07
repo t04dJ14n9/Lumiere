@@ -7,11 +7,11 @@ interface Target {
 }
 
 /**
- * Optional blockquote prefix, Obsidian callout opener `[!TYPE]` with optional
- * fold marker `+`/`-`, then the required space/tab before the title (BH-064 /
- * BH-078 / BH-085 opener shape).
+ * Optional blockquote prefix, Obsidian callout opener `[!TYPE]` (any type but
+ * `]`, as `[!note|wide]`) with optional fold marker `+`/`-`, then the required
+ * space/tab before the title (BH-064 / BH-078 / BH-085 opener shape).
  */
-const calloutOpener = /^((?:[ \t]*>[ \t]?)*)(\[![\w-]+\][+-]?[ \t]+)/u;
+const calloutOpener = /^((?:[ \t]*>[ \t]?)*)(\[![^\]\n]+\][+-]?[ \t]+)/u;
 
 /**
  * Enter / Shift+Enter at callout title content start:

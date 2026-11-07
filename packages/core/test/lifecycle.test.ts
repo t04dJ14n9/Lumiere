@@ -187,6 +187,23 @@ test("undeclared services throw; optional injection is allowed and refreshes on 
   assert.deepEqual(seen, [undefined, 3]);
   await root.dispose();
 });
+test("optional injection refreshes when the root context provides a service after plugin start", async () => {
+  const root = createRoot();
+  const seen: (number | undefined)[] = [];
+  root.plugin({
+    name: "optional",
+    inject: { optional: ["value"] },
+    apply(ctx) {
+      seen.push(ctx.value);
+    },
+  });
+  await root.settled();
+  assert.deepEqual(seen, [undefined]);
+  root.provide("value", 42);
+  await root.settled();
+  assert.deepEqual(seen, [undefined, 42]);
+  await root.dispose();
+});
 test("update reconfigures or restarts with validated config; failed apply retries and rolls back", async () => {
   const root = createRoot();
   let runs = 0;
@@ -234,6 +251,105 @@ test("update reconfigures or restarts with validated config; failed apply retrie
   await root.dispose();
   assert.equal(cleanups, 3);
   await assert.rejects(plugin.update(1), /config/);
+});
+test("a failed plugin stays failed across optional service changes and transitions to pending on update when a required service is missing", async () => {
+  const root = createRoot();
+  const requiredProvider = root.plugin({
+    name: "required-provider",
+    provides: ["value"],
+    apply(ctx) {
+      ctx.provide("value", 10);
+    },
+  });
+  await root.settled();
+  const seen: {
+    config: number;
+    required: number;
+    optional: number | undefined;
+  }[] = [];
+  const plugin = root.plugin(
+    {
+      name: "failable",
+      inject: { required: ["value"], optional: ["replacement"] },
+      apply(ctx, config: number) {
+        seen.push({
+          config,
+          required: ctx.value,
+          optional: ctx.replacement,
+        });
+        if (config === 0) {
+          throw new Error("initial failure");
+        }
+      },
+    },
+    0,
+  );
+  await root.settled();
+  assert.equal(plugin.state, "failed");
+  assert.equal(seen.length, 1);
+
+  // (b) An optional service appearing while failed must not re-run apply.
+  const optionalProvider = root.plugin({
+    name: "optional-provider",
+    provides: ["replacement"],
+    apply(ctx) {
+      ctx.provide("replacement", 99);
+    },
+  });
+  await root.settled();
+  assert.equal(plugin.state, "failed");
+  assert.equal(seen.length, 1);
+  await optionalProvider.dispose();
+  await root.settled();
+  assert.equal(plugin.state, "failed");
+  assert.equal(seen.length, 1);
+
+  // (a) Losing a required service while failed, then calling update, moves to pending.
+  await requiredProvider.dispose();
+  await root.settled();
+  assert.equal(plugin.state, "failed");
+  await plugin.update(1);
+  await root.settled();
+  assert.equal(plugin.state, "pending");
+  assert.equal(plugin.error, undefined);
+  assert.deepEqual(plugin.waitingFor, ["value"]);
+  assert.equal(seen.length, 1);
+
+  // Providing the missing required service starts the updated plugin.
+  root.plugin({
+    name: "required-provider-2",
+    provides: ["value"],
+    apply(ctx) {
+      ctx.provide("value", 20);
+    },
+  });
+  await root.settled();
+  assert.equal(plugin.state, "active");
+
+  // Failing again while an optional service appears, then updating, picks up the optional service.
+  await plugin.update(0);
+  await root.settled();
+  assert.equal(plugin.state, "failed");
+  root.plugin({
+    name: "optional-provider-2",
+    provides: ["replacement"],
+    apply(ctx) {
+      ctx.provide("replacement", 99);
+    },
+  });
+  await root.settled();
+  assert.equal(plugin.state, "failed");
+  assert.equal(seen.length, 3);
+  await plugin.update(2);
+  await root.settled();
+  assert.equal(plugin.state, "active");
+  assert.deepEqual(seen, [
+    { config: 0, required: 10, optional: undefined },
+    { config: 1, required: 20, optional: undefined },
+    { config: 0, required: 20, optional: undefined },
+    { config: 2, required: 20, optional: 99 },
+  ]);
+  await root.dispose();
 });
 test("async failure rolls back effects and does not fail siblings", async () => {
   const root = createRoot();

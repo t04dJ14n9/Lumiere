@@ -18,6 +18,7 @@ export { isUnresolved, knownNotes, unresolvedLinks } from "./api";
 import { tagUnresolvedAnchors } from "./tag-unresolved-anchors";
 import { protocol } from "./protocol";
 import { linkAt, followCaretLink } from "./caret-link";
+import { wikilinkEdit } from "../../markdown/wikilink-edit";
 import { linkClickHandlers, type OpenLink } from "./clicks";
 import { bindFlashingLifecycle, flashingHighlights } from "./target-highlight";
 import { navigator, type Navigate } from "./navigate";
@@ -321,16 +322,7 @@ function registerLinkCommands(ctx: Context, open: OpenLink): void {
   const view = ctx.editor.view;
   ctx.effect(() =>
     ctx.commands.register("editor:insert-wikilink", () => {
-      const selection = view.state.selection.main;
-      view.dispatch({
-        changes: {
-          from: selection.from,
-          to: selection.to,
-          insert: `[[${view.state.sliceDoc(selection.from, selection.to)}]]`,
-        },
-        // As in Obsidian: the caret after the text, ready for an alias or `#`.
-        selection: { anchor: selection.to + 2 },
-      });
+      view.dispatch(wikilinkEdit(view.state, false));
       return true;
     }),
   );

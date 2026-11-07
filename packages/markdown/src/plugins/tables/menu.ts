@@ -80,15 +80,16 @@ function axisItems(options: AxisMenuOptions): MenuItem[] {
     run: () => actions.execute(operation, focus(index)),
     disabled,
   });
+  // As in Obsidian, a new column is aligned as the one it is added beside.
   const items = [
     item(
       `Add ${axis} ${row ? "above" : "to the left"}`,
-      { type: "insert", axis, index: from },
+      { type: "insert", axis, index: from, ...(!row && { alignAs: from }) },
       from,
     ),
     item(
       `Add ${axis} ${row ? "below" : "to the right"}`,
-      { type: "insert", axis, index: to + 1 },
+      { type: "insert", axis, index: to + 1, ...(!row && { alignAs: to }) },
       to + 1,
     ),
   ];

@@ -216,14 +216,18 @@ export class SelectionTracker {
   }
 
   private textSelected(scope: SelectionScope): void {
-    if (!scope.getState().selection) {
+    const selected = scope.getState().selection;
+    if (!selected) {
       return;
     }
     this.annotationOwned = false;
     this.region = undefined;
     this.setRegion(undefined);
     void reportText(scope).then((text) => {
-      this.selectedText = text;
+      // A newer selection's read may have finished first.
+      if (scope.getState().selection === selected) {
+        this.selectedText = text;
+      }
     });
   }
 
@@ -304,11 +308,20 @@ function useCopiedText(state: SelectionTracker): void {
 
 export type SelectionReporting = ReturnType<typeof useSelectionReporting>;
 
-/** Read the selected text and its line boxes, report them, and return the text. */
+/**
+ * Read the selected text and its line boxes, report them, and return the
+ * text. The engine reads asynchronously, slowly while it renders pages, so
+ * a selection cleared or replaced meanwhile is not reported.
+ */
 function reportText(scope: SelectionScope): Promise<string | undefined> {
+  const selected = scope.getState().selection;
   return new Promise((resolve) => {
     scope.getSelectedText().wait(
       (lines) => {
+        if (scope.getState().selection !== selected) {
+          resolve(undefined);
+          return;
+        }
         const text = lines.join(" ").replace(/\s+/gu, " ").trim();
         const pages = scope.getFormattedSelection().map((page) => ({
           page: page.pageIndex + 1,

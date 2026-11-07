@@ -6,6 +6,7 @@ import {
   type TabKind,
 } from "./reclaim-policy";
 import { MARKDOWN_EDITOR } from "../shared/editor-provider";
+import { isMarkdownAbsentOnDisk } from "./markdown-absent-on-disk";
 import { hasNativeOptOut } from "./reclaim-opt-out";
 
 const { viewType } = MARKDOWN_EDITOR;
@@ -29,7 +30,8 @@ export function reclaimContext(
       workspaceDefault,
     ),
     reclaimInPlace: editor.get("editor.reclaimInPlaceTextEditor", false),
-    isNote: isReclaimableNote,
+    isNote: (value: string) =>
+      isReclaimableNote(value) && !isMarkdownAbsentOnDisk(value),
     associated: (value: string) =>
       associatedWith(
         vscode.workspace

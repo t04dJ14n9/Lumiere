@@ -1,7 +1,7 @@
 import test from "node:test";
 import assert from "node:assert/strict";
 import { createRoot } from "@workshop/core";
-import type { Context } from "@workshop/core";
+import type { Context, PluginHandle } from "@workshop/core";
 
 declare module "@workshop/core" {
   interface Services {
@@ -82,6 +82,57 @@ test("an async apply publishes its services and starts its children only on comm
   assert.equal(childStarted, true);
   assert.ok(root.service("backed"));
   await root.dispose();
+});
+
+test("updating a pending child whose optional service is present only stores the config; the parent's commit starts it once", async () => {
+  const root = createRoot();
+  root.plugin({
+    name: "provider",
+    provides: ["backed"],
+    apply(ctx) {
+      ctx.provide("backed", { read: () => "present" });
+    },
+  });
+  await root.settled();
+  let resolve!: () => void;
+  const gate = new Promise<void>((r) => {
+    resolve = r;
+  });
+  let child: PluginHandle<number> | undefined;
+  const configs: number[] = [];
+  let released = 0;
+  root.plugin({
+    name: "parent",
+    async apply(ctx) {
+      child = ctx.plugin(
+        {
+          name: "child",
+          inject: { optional: ["backed"] },
+          apply(childCtx, config: number) {
+            configs.push(config);
+            childCtx.effect(() => () => {
+              released++;
+            });
+          },
+        },
+        0,
+      );
+      await gate;
+    },
+  });
+  await tick();
+  assert.ok(child);
+  await child.update(1);
+  await tick();
+  assert.deepEqual(configs, []);
+  assert.equal(child.state, "pending");
+  resolve();
+  await root.settled();
+  assert.deepEqual(configs, [1]);
+  assert.equal(child.state, "active");
+  await root.dispose();
+  assert.equal(released, 1);
+  assert.deepEqual(root.ledger.snapshot(), {});
 });
 
 test("consumers finish stopping before the resource backing a service is released", async () => {

@@ -7,7 +7,7 @@ interface Target {
 }
 
 export function isCalloutOpener(text: string, quotes: string): boolean {
-  return /^\[![\w-]+\]/.test(text.slice(quotes.length));
+  return /^\[![^\]\n]+\][+-]?(?:\s|$)/.test(text.slice(quotes.length));
 }
 
 /** Quote-prefixed line with no list/task marker. */

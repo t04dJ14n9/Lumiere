@@ -11,7 +11,10 @@ requests ranked candidates over validated RPC, and
 installs CodeMirror completion keys in the suggestion priority slot. The host
 caches candidates by file, invalidates on index changes, materializes only 50
 link texts and honors source feature switches. Accepting a link reuses closing
-brackets. Aborted requests and plugin disposal cancel pending work.
+brackets. Aborted requests and plugin disposal cancel pending work. Typing opens
+suggestions; so does an edit marked `input.autocomplete`, as Insert Wikilink,
+Insert Embed and Insert Tag mark theirs, so their list opens at once, as in
+Obsidian.
 
 `[[Note#^` and `[[Note^` offer every block of the note, as Obsidian 1.14
 does (`src/markdown/metadata/note-blocks.ts`): headings, paragraphs, each list

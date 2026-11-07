@@ -95,9 +95,13 @@ function activeNote(): string | undefined {
 }
 
 function textEditor(uri: string) {
-  const editor = vscode.window.visibleTextEditors.find(
-    (candidate) => candidate.document.uri.toString() === uri,
-  );
+  const active = vscode.window.activeTextEditor;
+  const editor =
+    active?.document.uri.toString() === uri
+      ? active
+      : vscode.window.visibleTextEditors.find(
+          (candidate) => candidate.document.uri.toString() === uri,
+        );
   if (!editor) {
     return undefined;
   }

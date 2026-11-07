@@ -1,14 +1,15 @@
 import type { Context, Plugin } from "@workshop/core";
 import type { PanelShell } from "../../shared/host";
+import type {} from "../resources/api";
 import type {} from "../vault/api";
 import type {} from "../../shared/pdf-outlines";
-import { protocol } from "./protocol";
+import { protocol, type Suggestion } from "./protocol";
 import { SuggestionIndex } from "./sources";
 export const suggestHost: Plugin<{ panel: PanelShell }> = {
   name: "suggest",
   inject: {
     required: ["rpc", "vault", "settings"],
-    optional: ["vaults", "hostDocuments", "pdfOutlines"],
+    optional: ["vaults", "hostDocuments", "resources", "pdfOutlines"],
   },
   apply(ctx, { panel }) {
     const vaults = ctx.vaults;
@@ -57,22 +58,37 @@ export const suggestHost: Plugin<{ panel: PanelShell }> = {
  * that note changed where the id goes.
  */
 function registerBlockIds(ctx: Context): void {
-  const documents = ctx.hostDocuments;
   ctx.effect(() =>
-    ctx.rpc.handle(
-      protocol,
-      "addBlockId",
-      async ({ uri, at, before, insert }) => {
-        if (!documents) {
-          return false;
-        }
-        const document = await documents.open(uri);
-        const text = documents.text(uri) ?? "";
-        if (text.slice(at - before.length, at) !== before) {
-          return false;
-        }
-        return documents.apply(document, [{ from: at, to: at, insert }]);
-      },
+    ctx.rpc.handle(protocol, "addBlockId", (request) =>
+      addBlockId(ctx, request),
     ),
   );
+}
+
+type BlockId = NonNullable<Suggestion["blockId"]>;
+
+async function addBlockId(ctx: Context, request: BlockId): Promise<boolean> {
+  const documents = ctx.hostDocuments;
+  if (!documents || !isVaultNote(ctx, request.uri)) {
+    return false;
+  }
+  try {
+    await ctx.resources?.authorizeTarget?.(request.uri);
+  } catch {
+    return false;
+  }
+  const { uri, at, before, insert } = request;
+  if (!Number.isInteger(at)) {
+    return false;
+  }
+  const document = await documents.open(uri);
+  const text = documents.text(uri) ?? document.getText();
+  if (text.slice(at - before.length, at) !== before) {
+    return false;
+  }
+  return documents.apply(document, [{ from: at, to: at, insert }]);
+}
+
+function isVaultNote(ctx: Context, uri: string): boolean {
+  return ctx.vault.files().some((file) => file.uri === uri && !file.excluded);
 }

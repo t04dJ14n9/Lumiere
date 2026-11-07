@@ -23,7 +23,8 @@ export const protocol = defineProtocol("attachments", {
     save: {
       params: Schema.object({
         bytesBase64: Schema.string().max(MAX_BASE64),
-        ext: Schema.string().max(32),
+        // One extension, never a path: the name it ends is the host's.
+        ext: Schema.string().pattern(/^[A-Za-z0-9]{1,8}$/u),
       }),
       result: saveResult,
     },

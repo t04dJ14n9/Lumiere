@@ -41,6 +41,28 @@ test("every contributed table command produces a valid operation and preserves a
   });
 });
 
+// Obsidian 1.15.0's column commands and table menu, read from its app.js with
+// REA (2026-11-07): a column added beside another takes its alignment.
+test("Insert Column Left and Right align the new column as the cell's", () => {
+  const model = parseTable("| a | b |\n| --- | :---: |\n| 1 | 2 |")!;
+  const inserted = (id: string) =>
+    parseTable(
+      operateTable(model, tableOperation(id, { row: 1, column: 1 })!),
+    )!;
+  const left = inserted("insert-column-left");
+  assert.deepEqual(left.alignments, [null, "center", "center"]);
+  assert.deepEqual(
+    left.rows[1]!.map((cell) => cell.text),
+    ["1", "", "2"],
+  );
+  const right = inserted("insert-column-right");
+  assert.deepEqual(right.alignments, [null, "center", "center"]);
+  assert.deepEqual(
+    right.rows[1]!.map((cell) => cell.text),
+    ["1", "2", ""],
+  );
+});
+
 test("table hit testing uses physical coordinates in RTL", () => {
   assert.deepEqual(arrowStep("ArrowLeft", true), { row: 0, column: 1 });
   const entries = [100, 50, 0].map((left) => ({

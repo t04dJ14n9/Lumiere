@@ -47,10 +47,12 @@ function lineOperation(
   index: number,
 ): TableOperation | undefined {
   if (id.startsWith("insert-")) {
+    // As in Obsidian, a new column is aligned as the cell's.
     return {
       type: "insert",
       axis,
       index: index + (id.endsWith("below") || id.endsWith("right") ? 1 : 0),
+      ...(axis === "column" && { alignAs: index }),
     };
   }
   if (id.startsWith("delete-") || id.startsWith("duplicate-")) {

@@ -2,6 +2,7 @@ import test from "node:test";
 import assert from "node:assert/strict";
 import { MemoryTempFs } from "../support/memory-temp-fs";
 import {
+  parseLease,
   renewLeaseAtomic,
   writeLeaseAtomic,
   leasePathFor,
@@ -180,4 +181,49 @@ test("young *.lease.renew-* within grace is kept", async () => {
   fs.setMtime(renew, 1_000_000 - 30_000);
   await reclaimEligible(fs, DIR, () => 1_000_000, caps);
   assert.equal(fs.exists("ide-context-x.json.lease.renew-young"), true);
+});
+
+test("corrupt sidecar with unparsable leaseUntil does not protect payload or orphan sidecar", async () => {
+  for (const invalidDate of ["", "not-a-valid-date"]) {
+    assert.equal(
+      parseLease(
+        JSON.stringify({
+          leaseUntil: invalidDate,
+          owner: "markdownWorkshop",
+          sessionId: "corrupt",
+        }),
+      ),
+      undefined,
+    );
+  }
+  const fs = new MemoryTempFs();
+  fs.nowMs = 0;
+  await fs.mkdir(DIR, { recursive: true });
+  const payload = `${DIR}/ide-context-corrupt.json`;
+  await fs.writeFile(payload, Buffer.from("{}"));
+  await writeLeaseAtomic(fs, leasePathFor(payload), {
+    leaseUntil: "not-a-valid-date",
+    owner: "markdownWorkshop",
+    sessionId: "corrupt-payload",
+  });
+  const orphanLease = `${DIR}/ide-context-orphan-corrupt.json.lease`;
+  await writeLeaseAtomic(fs, orphanLease, {
+    leaseUntil: "",
+    owner: "pdfWorkshop",
+    sessionId: "corrupt-orphan",
+  });
+
+  assert.equal(
+    await isReclaimablePayload(
+      fs,
+      DIR,
+      "ide-context-corrupt.json",
+      () => 100_000,
+    ),
+    true,
+  );
+  await reclaimEligible(fs, DIR, () => 100_000, caps);
+  assert.equal(fs.exists("ide-context-corrupt.json"), false);
+  assert.equal(fs.exists("ide-context-corrupt.json.lease"), false);
+  assert.equal(fs.exists("ide-context-orphan-corrupt.json.lease"), false);
 });

@@ -37,6 +37,17 @@ test("rejects non-workspace schemes even with inWorkspace true", () => {
   }
 });
 
+test("allows .markdown notes, which the backlink index scans too", () => {
+  assert.equal(
+    isTrustedBacklinkNoteUri({
+      ...ok,
+      path: "/work/notes/a.markdown",
+      noteUri: "file:///work/notes/a.markdown",
+    }),
+    true,
+  );
+});
+
 test("rejects URIs outside a workspace folder", () => {
   assert.equal(isTrustedBacklinkNoteUri({ ...ok, inWorkspace: false }), false);
 });

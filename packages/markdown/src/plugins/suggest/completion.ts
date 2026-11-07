@@ -1,6 +1,23 @@
 import { syntaxTree } from "@codemirror/language";
-import type { EditorState, TransactionSpec } from "@codemirror/state";
+import type {
+  EditorState,
+  Transaction,
+  TransactionSpec,
+} from "@codemirror/state";
 import type { Query } from "./protocol";
+
+/**
+ * Whether an edit asks for suggestions. As in Obsidian, the commands that
+ * insert `[[`, `![[` or `#` mark their edits `input.autocomplete` and the list
+ * opens at once; typing is left to CodeMirror's own activation.
+ */
+export function asksForSuggestions(
+  transactions: readonly Transaction[],
+): boolean {
+  return transactions.some((transaction) =>
+    transaction.isUserEvent("input.autocomplete"),
+  );
+}
 
 /** True when `pos` sits inside literal code or YAML frontmatter. */
 export function inLiteralCodeOrFrontmatter(

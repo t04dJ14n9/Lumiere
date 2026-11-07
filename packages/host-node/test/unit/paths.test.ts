@@ -48,6 +48,30 @@ test("a note opens only when its real path stays inside the workspace", async (t
       pathToFileURL(path.join(root, "link.md")).toString(),
     ),
   );
+  await symlink(
+    path.join(outside, "missing.md"),
+    path.join(root, "dangling.md"),
+  );
+  await symlink(
+    path.join(outside, "missing-dir"),
+    path.join(root, "dangling-dir"),
+  );
+  await assert.rejects(
+    assertContained(
+      pathToFileURL(root).toString(),
+      pathToFileURL(path.join(root, "dangling.md")).toString(),
+    ),
+  );
+  await assert.rejects(
+    assertContained(
+      pathToFileURL(root).toString(),
+      pathToFileURL(path.join(root, "dangling-dir", "pwned.md")).toString(),
+    ),
+  );
+  await assertContained(
+    pathToFileURL(root).toString(),
+    pathToFileURL(path.join(root, "new-folder", "fresh.md")).toString(),
+  );
 });
 
 test("writing does not follow a symlink, and creating does not truncate", async (t) => {
