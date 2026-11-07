@@ -110,15 +110,17 @@ function createHeader(
   source: string,
   edit: KeyEdit,
 ): PropertyChange[] | undefined {
-  if (edit.type !== "add" || /^---(?:\r?\n|$)/.test(source)) {
+  if (edit.type !== "add" || /^\uFEFF?---(?:\r?\n|$)/.test(source)) {
     return undefined;
   }
-  // As Obsidian writes it: the new header right before the note's text.
+  // As Obsidian writes it: the new header right before the note's text, and
+  // after a byte order mark, which must stay the first character.
   const eol = source.includes("\r\n") ? "\r\n" : "\n";
+  const at = source.startsWith("\uFEFF") ? 1 : 0;
   return [
     {
-      from: 0,
-      to: 0,
+      from: at,
+      to: at,
       insert: `---${eol}${newPropertyLine(edit, eol)}${eol}---${eol}`,
     },
   ];
