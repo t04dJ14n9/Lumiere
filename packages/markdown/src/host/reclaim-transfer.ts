@@ -17,6 +17,7 @@ import {
 } from "./reclaim-tabs";
 import { hasNativeOptOut } from "./reclaim-opt-out";
 import { isMarkdownAbsentOnDisk } from "./markdown-absent-on-disk";
+import { readerText } from "./reader-text";
 
 const { viewType } = MARKDOWN_EDITOR;
 
@@ -59,9 +60,13 @@ export function createReclaimTransfer(
       if (!shown) {
         return;
       }
-      // Missing file: leave built-in Text Editor (dirty buffer until Save).
+      // Missing file: leave built-in Text Editor (dirty buffer until Save)
+      // and keep it as the reader's text editor until that tab closes.
       // Do not openWith Lumia or untitled-bridge (product lock 2026-11-04).
       if (isMarkdownAbsentOnDisk(uri)) {
+        if (kindOf(shown) === "text") {
+          readerText.keep(uri);
+        }
         return;
       }
       startPendingReclaim({
