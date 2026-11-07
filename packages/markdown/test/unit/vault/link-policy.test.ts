@@ -175,5 +175,6 @@ test("link rewrites prefer the policy's bundle-absolute text", () => {
       preferredText: () => "/metrics/renamed",
     },
   );
-  assert.equal(edits[0]?.text, "[topic](/metrics/renamed.md)");
+  // The text was the note's name, so it follows the rename too.
+  assert.equal(edits[0]?.text, "[renamed](/metrics/renamed.md)");
 });

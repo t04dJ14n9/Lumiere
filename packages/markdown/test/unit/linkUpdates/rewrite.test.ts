@@ -160,6 +160,47 @@ test("a bare destination encodes backslashes as well as spaces", () => {
   );
 });
 
+// Obsidian 1.15.0's rule for link text on rename, read from its link
+// updater with REA (2026-11-07).
+test("text showing the renamed file's name follows it; the writer's own text stays", () => {
+  const text = [
+    "[Old](Old.md) [ Old ](Old.md) [Old\u00A0](Old.md) [mine](Old.md)",
+    "[sub/Deep](sub/Deep.md) [[sub/Deep|Deep]] [[sub/Deep|mine]]",
+    "[[Old|Old]] [[sub/Deep\\|Deep]] ![pic.png](pic.png)",
+  ].join("\n");
+  const ctx = context(
+    { ...vault, "A.md": text },
+    {
+      "Old.md": "New.md",
+      "sub/Deep.md": "lib/Deeper.md",
+      "pic.png": "photo.png",
+    },
+    "absolute",
+  );
+  assert.equal(
+    apply(text, rewriteLinks(text, "A.md", ctx)),
+    [
+      "[New](New.md) [New](New.md) [New](New.md) [mine](New.md)",
+      "[lib/Deeper](lib/Deeper.md) [[lib/Deeper|Deeper]] [[lib/Deeper|mine]]",
+      // Without a folder in the link, Obsidian keeps a wikilink's alias.
+      "[[New|Old]] [[lib/Deeper\\|Deeper]] ![photo.png](photo.png)",
+    ].join("\n"),
+  );
+});
+
+test("a moved note's own links keep their text", () => {
+  const text = "[sub/Deep](sub/Deep.md)";
+  const ctx = context(
+    { ...vault, "A.md": text },
+    { "A.md": "notes/A.md" },
+    "relative",
+  );
+  assert.equal(
+    apply(text, rewriteLinks(text, "A.md", ctx)),
+    "[sub/Deep](../sub/Deep.md)",
+  );
+});
+
 test("links that do not touch a renamed file are left alone", () => {
   const text = "[[Other]] [[Missing]] [web](https://example.com)";
   const ctx = context({ ...vault, "A.md": text }, { "Old.md": "New.md" });
