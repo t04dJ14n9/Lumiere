@@ -18,6 +18,27 @@ test("extractPdfBacklinks finds page+text links and ignores non-pdf", () => {
   assert.equal(hits[1]!.highlightId, "hl-deadbeef");
 });
 
+test("extractPdfBacklinks skips what is not a link: code, comments, escapes", () => {
+  const md = [
+    "```markdown",
+    "[fenced](papers/a.pdf#page=2#:~:text=fenced)",
+    "```",
+    "Inline `[code](papers/a.pdf#page=3#:~:text=code)` and",
+    "<!-- [comment](papers/a.pdf#page=4#:~:text=comment) -->",
+    "\\[escaped](papers/a.pdf#page=5#:~:text=escaped)",
+    "but [real](papers/a.pdf#page=6#:~:text=real) and",
+    "![embed](papers/a.pdf#page=7#:~:text=embed)",
+  ].join("\n");
+  const hits = extractPdfBacklinks(md, "notes/n.md", "file:///notes/n.md");
+  assert.deepEqual(
+    hits.map((hit) => [hit.page, hit.linkOffset]),
+    [
+      [6, md.indexOf("[real]")],
+      [7, md.indexOf("[embed]")],
+    ],
+  );
+});
+
 test("lookup returns only that PDF's hits", () => {
   const index = new PdfBacklinkIndex();
   index.replaceNote(
