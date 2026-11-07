@@ -69,6 +69,13 @@ function editorServices(
   assertLive: (id?: string) => void,
 ): PublicServices["editors"] {
   const { host, api, available } = bindings;
+  // Per-folder enablement is a property of an open note. An id that is not
+  // open is gated only by the plugin being live, so the API answers
+  // EditorNotFound, which clients use to clean up after a closed editor.
+  const assertEditorLive = (id: string) => {
+    const isOpen = host.editors.all().some((panel) => panel.id === id);
+    assertLive(isOpen ? id : undefined);
+  };
   const register = (action: EditorAction, scope: "selection" | "title") => {
     assertLive();
     if (!action || typeof action.run !== "function") {
@@ -98,11 +105,11 @@ function editorServices(
     },
     open: api.open,
     reveal: async (id, target, options) => {
-      assertLive(id);
+      assertEditorLive(id);
       return api.reveal(id, target, options);
     },
     getSelection: async (id, options) => {
-      assertLive(id);
+      assertEditorLive(id);
       return api.getSelection(id, options);
     },
     registerSelectionAction: (action) => register(action, "selection"),

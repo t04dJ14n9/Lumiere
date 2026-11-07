@@ -299,6 +299,26 @@ test("resource disable removes markers and actions for that note without stoppin
   await f.dispose();
 });
 
+test("reveal and getSelection on a closed editor id report EditorNotFound, not PluginDisabled", async () => {
+  const f = await fixture();
+  let retained!: ExternalContext;
+  const plugin = f.api.plugin({
+    ...definition,
+    inject: { required: ["editors"] },
+    apply(ctx) {
+      retained = ctx;
+    },
+  });
+  await plugin.settled();
+  await assert.rejects(retained.editors.reveal("closed", { line: 1 }), {
+    code: "EditorNotFound",
+  });
+  await assert.rejects(retained.editors.getSelection("closed"), {
+    code: "EditorNotFound",
+  });
+  await f.dispose();
+});
+
 test("public marker API maps native edits and drops replaced source ranges", async () => {
   const f = await fixture();
   const plugin = f.api.plugin({
