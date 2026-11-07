@@ -26,11 +26,17 @@ jobs:
       - uses: ./.github/actions/setup
       - name: pnpm check (format, lint, typecheck, unit tests, contributions)
         run: pnpm check
+        env:
+          # ESLint over the whole repository peaks near 3.7 GB. Node's default
+          # heap on the 7 GB runners private repositories get is about 2 GB.
+          NODE_OPTIONS: --max-old-space-size=4096
 
   browser:
     name: browser
     runs-on: ubuntu-latest
-    timeout-minutes: 20
+    # Passing runs take 12-19 minutes on the 7 GB runners private
+    # repositories get; 20 cancelled them.
+    timeout-minutes: 35
     steps:
       - uses: actions/checkout@v7
       - uses: ./.github/actions/setup
