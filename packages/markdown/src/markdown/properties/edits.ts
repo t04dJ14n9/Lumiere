@@ -1,4 +1,4 @@
-import type { Document } from "yaml";
+import type { Document, Pair } from "yaml";
 import { loadYaml } from "./load-yaml";
 import { headerParts, frontmatter } from "./frontmatter";
 import { orderPropertyBody } from "./order";
@@ -13,6 +13,7 @@ import {
   scalarValue,
   setPropertyChange,
   valueAfterKey,
+  sameWritten,
   type PropertyChange,
 } from "./yaml-value";
 
@@ -109,15 +110,17 @@ function createHeader(
   source: string,
   edit: KeyEdit,
 ): PropertyChange[] | undefined {
-  if (edit.type !== "add" || /^---(?:\r?\n|$)/.test(source)) {
+  if (edit.type !== "add" || /^\uFEFF?---(?:\r?\n|$)/.test(source)) {
     return undefined;
   }
-  // As Obsidian writes it: the new header right before the note's text.
+  // As Obsidian writes it: the new header right before the note's text, and
+  // after a byte order mark, which must stay the first character.
   const eol = source.includes("\r\n") ? "\r\n" : "\n";
+  const at = source.startsWith("\uFEFF") ? 1 : 0;
   return [
     {
-      from: 0,
-      to: 0,
+      from: at,
+      to: at,
       insert: `---${eol}${newPropertyLine(edit, eol)}${eol}---${eol}`,
     },
   ];
@@ -218,43 +221,39 @@ class PropertyMapEdits {
   }
 
   private remove(keys: readonly string[]): PropertyChange[] | undefined {
-    if (
-      keys.some((key) => !validPropertyName(key) || !this.document.has(key))
-    ) {
+    // Every key counts, not only the strings: a note with `1: a` has a property
+    // named "1" that the fence must outlive, and that can itself be removed.
+    const stored = this.items.flatMap((item) => keyName(item.key) ?? []);
+    if (keys.some((key) => !validPropertyName(key) || !stored.includes(key))) {
       return undefined;
     }
-    const stored = this.items.flatMap((item) =>
-      loadYaml().isScalar(item.key) && typeof item.key.value === "string"
-        ? [item.key.value]
-        : [],
-    );
     // Obsidian drops the empty `---` fence when the last property is removed
     // (BH-013); leaving `---\n---` would count as body and inflate stats.
     if (stored.length > 0 && stored.every((key) => keys.includes(key))) {
       return dropFrontmatterFence(this.header);
     }
-    if (
-      loadYaml().isMap(this.document.contents) &&
-      this.document.contents.flow
-    ) {
-      keys.forEach((key) => this.document.delete(key));
+    const map = this.document.contents;
+    if (loadYaml().isMap(map) && map.flow) {
+      // Not document.delete(key): it matches a key's type, so "1" misses `1`.
+      map.items = map.items.filter((item) => {
+        const name = keyName(item.key);
+        return name === undefined || !keys.includes(name);
+      });
       return this.wholeMap();
     }
     return this.items.flatMap((item) => {
+      const name = keyName(item.key);
       if (
+        name === undefined ||
+        !keys.includes(name) ||
         !loadYaml().isScalar(item.key) ||
-        typeof item.key.value !== "string" ||
-        !keys.includes(item.key.value) ||
         !item.key.range
       ) {
         return [];
       }
       const start =
         this.header.body.lastIndexOf("\n", item.key.range[0] - 1) + 1;
-      let end =
-        loadYaml().isNode(item.value) && item.value.range
-          ? item.value.range[2]
-          : item.key.range[2];
+      let end = entryEnd(this.header.body, item, item.key.range[2]);
       if (this.header.body[end] === "\r") {
         end++;
       }
@@ -270,6 +269,36 @@ class PropertyMapEdits {
       ];
     });
   }
+}
+
+/**
+ * Where a removed entry's own text ends. yaml stretches an empty value (`a:`)
+ * over the comment lines after it, which belong to the next entry, so such a
+ * value ends with its line.
+ */
+function entryEnd(body: string, item: Pair, keyEnd: number): number {
+  const { isNode, isScalar } = loadYaml();
+  const value: unknown = item.value;
+  if (!isNode(value) || !value.range) {
+    return keyEnd;
+  }
+  if (!isScalar(value) || value.range[0] !== value.range[1]) {
+    return value.range[2];
+  }
+  const lineEnd = body.indexOf("\n", value.range[1]);
+  return lineEnd < 0 ? body.length : lineEnd;
+}
+
+/** The property name a plain scalar key reads back as: `1: a` is "1". */
+function keyName(key: unknown): string | undefined {
+  if (!loadYaml().isScalar(key)) {
+    return undefined;
+  }
+  const { value } = key;
+  return value === null ||
+    ["string", "number", "boolean"].includes(typeof value)
+    ? String(value)
+    : undefined;
 }
 
 /** Remove the opening fence, body and closing fence (always at offset 0). */
@@ -339,18 +368,6 @@ function editTouchesKey(edit: KeyEdit, key: string): boolean {
     (edit.type === "set" && key === edit.key) ||
     (edit.type === "remove" && edit.keys.includes(key)) ||
     (edit.type === "rename" && key === edit.key)
-  );
-}
-
-/**
- * Whether a value reads back as the one written. An empty list is written as
- * a bare `key:`, as Obsidian writes it, which reads back as no value.
- */
-function sameWritten(after: unknown, written: unknown): boolean {
-  const empty = Array.isArray(written) && written.length === 0;
-  return (
-    JSON.stringify(after) === JSON.stringify(written) ||
-    (empty && (after === null || after === undefined))
   );
 }
 

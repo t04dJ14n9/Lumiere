@@ -1,4 +1,4 @@
-import type { Document, YAMLMap } from "yaml";
+import type { Document, Pair, YAMLMap } from "yaml";
 import { loadYaml } from "./load-yaml";
 
 /** Move complete YAML entries so comments, quoting and multiline values travel together. */
@@ -16,7 +16,7 @@ export function orderPropertyBody(
       return keys.length === 0 && original.contents === null ? body : undefined;
     }
     const map = original.contents;
-    const entries = propertyEntries(map);
+    const entries = propertyEntries(map, body);
     const byKey = new Map(entries.map((entry) => [entry.key, entry]));
     if (
       keys.length !== entries.length ||
@@ -39,7 +39,7 @@ export function orderPropertyBody(
   }
 }
 
-function propertyEntries(map: YAMLMap) {
+function propertyEntries(map: YAMLMap, body: string) {
   return map.items.map((pair, index) => {
     if (
       !loadYaml().isScalar(pair.key) ||
@@ -48,10 +48,30 @@ function propertyEntries(map: YAMLMap) {
     ) {
       throw new Error("Unsupported property key");
     }
-    const start =
-      index === 0 ? 0 : (pair.srcToken?.start[0]?.offset ?? pair.key.range[0]);
+    const start = index === 0 ? 0 : entryStart(body, pair, pair.key.range[0]);
     return { key: pair.key.value, pair, start };
   });
+}
+
+/**
+ * Where an entry's chunk begins. The comment lines under an empty `a:` belong
+ * to `a` for the parser, so the next entry's first token can be the newline
+ * that ends such a line, in the middle of a line. A chunk must begin at a line
+ * start: take the comment line along with the entry it precedes, as for any
+ * other value, or begin after the newline.
+ */
+function entryStart(body: string, pair: Pair, keyStart: number): number {
+  const first = pair.srcToken?.start[0];
+  if (!first) {
+    return keyStart;
+  }
+  if (first.type !== "newline" || body[first.offset - 1] === "\n") {
+    return first.offset;
+  }
+  const lineStart = body.lastIndexOf("\n", first.offset - 1) + 1;
+  return /^[ \t]*#/.test(body.slice(lineStart, first.offset))
+    ? lineStart
+    : first.offset + first.source.length;
 }
 
 interface ReorderOptions {

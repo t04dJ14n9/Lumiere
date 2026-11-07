@@ -12,7 +12,7 @@ import {
  * dialect's Frontmatter rule (an unclosed block is not a properties block).
  */
 export function frontmatterBodyStart(doc: Text): number | undefined {
-  if (doc.lines < 2 || doc.line(1).text !== "---") {
+  if (doc.lines < 2 || !/^\uFEFF?---$/.test(doc.line(1).text)) {
     return undefined;
   }
   for (let number = 2; number <= doc.lines; number++) {

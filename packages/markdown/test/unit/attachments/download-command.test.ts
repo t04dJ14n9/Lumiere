@@ -1,6 +1,7 @@
 import test from "node:test";
 import assert from "node:assert/strict";
 import type { Context } from "@workshop/core";
+import { SourceCoordinates } from "../../../src/shared/document/coordinates";
 import { downloadAttachments } from "../../../src/plugins/attachments/download-command";
 import { ROOT, memoryVaults, uriOf } from "../views/fakes";
 
@@ -75,7 +76,15 @@ async function run(
         if (options.applies === false) {
           return false;
         }
-        for (const edit of [...edits].sort((a, b) => b.from - a.from)) {
+        // Like the real host: offsets are the editor's (LF lines), and it
+        // maps them onto the note's own line breaks.
+        const coordinates = new SourceCoordinates(result.text);
+        const source = edits.map((edit) => ({
+          from: coordinates.toSource(edit.from),
+          to: coordinates.toSource(edit.to),
+          insert: edit.insert,
+        }));
+        for (const edit of source.sort((a, b) => b.from - a.from)) {
           result.text =
             result.text.slice(0, edit.from) +
             edit.insert +
@@ -123,6 +132,21 @@ test("declining downloads and changes nothing", async (t) => {
   const result = await run(t, undefined);
   assert.deepEqual(result.written, []);
   assert.equal(result.text, NOTE);
+});
+
+test("a note with CRLF line breaks is edited where its images are", async (t) => {
+  const note = [
+    "Line 1",
+    "![A dog](https://ex.com/img/dog.png)",
+    "Line 3",
+    "![](https://ex.com/img/dog.png)",
+    "",
+  ].join("\r\n");
+  const result = await run(t, "Download", {}, { note });
+  assert.equal(
+    result.text,
+    ["Line 1", "![[dog.png|A dog]]", "Line 3", "![[dog.png]]", ""].join("\r\n"),
+  );
 });
 
 test("a data URI that is not an image is not saved", async (t) => {

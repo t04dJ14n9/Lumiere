@@ -82,12 +82,15 @@ async function promote(ctx: Context): Promise<void> {
   if (!picked?.item) {
     return;
   }
-  const values = frontmatter(note.text)?.values;
+  // The picker stays open while the user keeps typing: promote what the note
+  // holds now, not what it held before the picker opened.
+  const text = note.document.getText();
+  const values = frontmatter(text)?.values;
   const titled = asString(values?.title)?.trim();
   await promoteScratchNote(io(ctx, located), {
     target: picked.item.value,
     title: titled || baseName(located.relative).replace(/\.md$/i, ""),
-    text: note.text,
+    text,
     at: new Date().toISOString(),
     scratchRelative: located.relative,
     document: note.document,
@@ -143,7 +146,7 @@ function io(ctx: Context, located: { root: string; layout?: ResolvedLayout }) {
 
 async function openNote(
   ctx: Context,
-): Promise<{ uri: string; text: string; document: HostDocument } | undefined> {
+): Promise<{ uri: string; document: HostDocument } | undefined> {
   const panel = ctx.editors?.active();
   if (!panel || typeof panel.document?.getText !== "function") {
     return undefined;
@@ -155,5 +158,5 @@ async function openNote(
   if (panel.document.uri.startsWith("untitled:")) {
     return undefined;
   }
-  return { uri: panel.document.uri, text, document: panel.document };
+  return { uri: panel.document.uri, document: panel.document };
 }

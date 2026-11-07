@@ -279,3 +279,64 @@ test("retaining a dirty note while release() is saving keeps the document open",
   assert.deepEqual(closed, []);
   assert.equal(documents.text(uri), "updated");
 });
+
+test("a save that failed does not block the next save of the note", async (t) => {
+  const { file, uri, cleanup } = await note("start");
+  t.after(cleanup);
+  let diskFull = true;
+  const documents = new NoteDocuments(
+    {
+      ...NODE_NOTES,
+      save: async (target, text) => {
+        if (diskFull) {
+          throw new Error("The disk is full");
+        }
+        await NODE_NOTES.save(target, text);
+      },
+    },
+    60_000,
+  );
+  t.after(() => documents.dispose());
+  const document = await documents.open(uri);
+  await documents.apply(document, [{ from: 0, to: 5, insert: "first" }]);
+  await assert.rejects(document.save(), /The disk is full/);
+  diskFull = false;
+  await documents.apply(document, [{ from: 0, to: 5, insert: "again" }]);
+  assert.equal(await document.save(), true);
+  assert.equal(await readFile(file, "utf8"), "again");
+});
+
+test("a save that fails when the last panel closes is reported, and the text stays open", async (t) => {
+  const { uri, cleanup } = await note("start");
+  t.after(cleanup);
+  let watchClosed = false;
+  const documents = new NoteDocuments(
+    {
+      ...NODE_NOTES,
+      save: async () => {
+        throw new Error("The disk is full");
+      },
+      watch: (target, onChange) => {
+        const stop = NODE_NOTES.watch(target, onChange);
+        return () => {
+          watchClosed = true;
+          stop();
+        };
+      },
+    },
+    60_000,
+  );
+  const failed: [string, string][] = [];
+  documents.onSaveFailed((target, error) =>
+    failed.push([target, (error as Error).message]),
+  );
+  const document = await documents.open(uri);
+  documents.retain(uri);
+  await documents.apply(document, [{ from: 0, to: 5, insert: "typed" }]);
+  await documents.release(uri);
+  assert.deepEqual(failed, [[uri, "The disk is full"]]);
+  assert.equal(documents.text(uri), "typed");
+  assert.equal(watchClosed, false);
+  await documents.dispose().catch(() => {});
+  assert.equal(watchClosed, true);
+});

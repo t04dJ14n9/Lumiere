@@ -171,7 +171,7 @@ export class PropertyEditing {
     }
     const source = view.state.doc.toString();
     const header = frontmatter(source);
-    if (header?.error || (!header && /^---(?:\r?\n|$)/.test(source))) {
+    if (header?.error || (!header && /^\uFEFF?---(?:\r?\n|$)/.test(source))) {
       this.options.setStatus(
         "Fix the properties source before adding a field.",
       );

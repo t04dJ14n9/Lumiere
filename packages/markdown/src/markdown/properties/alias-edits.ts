@@ -3,7 +3,7 @@ import { loadYaml } from "./load-yaml";
 import type { headerParts } from "./header-parts";
 import { setPropertyChange, type PropertyChange } from "./yaml-value";
 import { setPropertyYamlChange } from "./yaml-source-edit";
-import { settablePropertyNode } from "./values";
+import { propertyDateText, settablePropertyNode } from "./values";
 
 /** Alias sites are mid-line; keep inserts indentation-independent. */
 function inlineYamlValue(value: unknown): string {
@@ -45,6 +45,11 @@ function anchoredTargets(body: string, node: Node): Map<Node, string> {
       // BigInt has no negative zero; YAML and Number retain its sign.
       if (scalar.value === 0n && scalar.source?.startsWith("-")) {
         scalar.value = -0;
+      }
+      // The sheet shows a timestamp's wall-clock text, not its UTC instant, so
+      // an alias inlined here must read back as that same text.
+      if (scalar.value instanceof Date && Number.isFinite(+scalar.value)) {
+        scalar.value = propertyDateText(scalar.value, scalar.source);
       }
     },
   });
