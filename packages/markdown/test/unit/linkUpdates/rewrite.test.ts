@@ -160,6 +160,76 @@ test("a bare destination encodes backslashes as well as spaces", () => {
   );
 });
 
+// Obsidian 1.15.0's rule for link text on rename, read from its link
+// updater with REA (2026-11-07).
+test("text showing the renamed file's name follows it; the writer's own text stays", () => {
+  const text = [
+    "[Old](Old.md) [ Old ](Old.md) [Old\u00A0](Old.md) [mine](Old.md)",
+    "[sub/Deep](sub/Deep.md) [[sub/Deep|Deep]] [[sub/Deep|mine]]",
+    "[[Old|Old]] [[sub/Deep\\|Deep]] ![pic.png](pic.png)",
+  ].join("\n");
+  const ctx = context(
+    { ...vault, "A.md": text },
+    {
+      "Old.md": "New.md",
+      "sub/Deep.md": "lib/Deeper.md",
+      "pic.png": "photo.png",
+    },
+    "absolute",
+  );
+  assert.equal(
+    apply(text, rewriteLinks(text, "A.md", ctx)),
+    [
+      "[New](New.md) [New](New.md) [New](New.md) [mine](New.md)",
+      "[lib/Deeper](lib/Deeper.md) [[lib/Deeper|Deeper]] [[lib/Deeper|mine]]",
+      // Without a folder in the link, Obsidian keeps a wikilink's alias.
+      "[[New|Old]] [[lib/Deeper\\|Deeper]] ![photo.png](photo.png)",
+    ].join("\n"),
+  );
+});
+
+test("a dot in a wikilink's note name is not an extension when its alias follows", () => {
+  const text = [
+    "[[sub/Report.v1|Report]] [[sub/Report.v1|Report.v1]] [[sub/Report.v1\\|Report.v1]]",
+    "[[sub/Old|Old]] [Old](sub/Old.md) [[sub/pic.png|pic.png]]",
+  ].join("\n");
+  const notes = {
+    "sub/Report.v1.md": "",
+    "sub/Old.md": "",
+    "sub/pic.png": "",
+    "A.md": text,
+  };
+  const ctx = context(
+    notes,
+    {
+      "sub/Report.v1.md": "lib/Final.md",
+      "sub/Old.md": "lib/New.v2.md",
+      "sub/pic.png": "lib/photo.v2.png",
+    },
+    "absolute",
+  );
+  assert.equal(
+    apply(text, rewriteLinks(text, "A.md", ctx)),
+    [
+      "[[lib/Final|Report]] [[lib/Final|Final]] [[lib/Final\\|Final]]",
+      "[[lib/New.v2|New.v2]] [New.v2](lib/New.v2.md) [[lib/photo.v2.png|photo.v2.png]]",
+    ].join("\n"),
+  );
+});
+
+test("link text written from a new name escapes brackets and backslashes", () => {
+  const text = "[Old](Old.md) ![Old](Old.md) [sub/Deep](sub/Deep.md)";
+  const ctx = context(
+    { ...vault, "A.md": text },
+    { "Old.md": "a[b]\\c.md", "sub/Deep.md": "lib/De]ep.md" },
+    "absolute",
+  );
+  assert.equal(
+    apply(text, rewriteLinks(text, "A.md", ctx)),
+    "[a\\[b\\]\\\\c](a[b]%5Cc.md) ![a\\[b\\]\\\\c](a[b]%5Cc.md) [lib/De\\]ep](lib/De]ep.md)",
+  );
+});
+
 test("a bare destination may hold a literal quote, as the parser reads it", () => {
   const text = '[a](Old"note.md) [b](Old"note.md "Title")';
   const notes = { 'Old"note.md': "", "A.md": text };
@@ -184,6 +254,19 @@ test("a title with escaped quotes survives a rename", () => {
       "[b](New%20(1).md 'it\\'s')",
       '[c](<New (1).md> "Say \\"hello\\"")',
     ].join("\n"),
+  );
+});
+
+test("a moved note's own links keep their text", () => {
+  const text = "[sub/Deep](sub/Deep.md)";
+  const ctx = context(
+    { ...vault, "A.md": text },
+    { "A.md": "notes/A.md" },
+    "relative",
+  );
+  assert.equal(
+    apply(text, rewriteLinks(text, "A.md", ctx)),
+    "[sub/Deep](../sub/Deep.md)",
   );
 });
 
