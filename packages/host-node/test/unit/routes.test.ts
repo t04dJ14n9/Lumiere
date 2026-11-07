@@ -1,6 +1,6 @@
 import test from "node:test";
 import assert from "node:assert/strict";
-import { mkdtemp, rm, writeFile } from "node:fs/promises";
+import { mkdir, mkdtemp, realpath, rm, writeFile } from "node:fs/promises";
 import { createServer } from "node:http";
 import { tmpdir } from "node:os";
 import * as path from "node:path";
@@ -19,6 +19,7 @@ function fakeHost(): LumiereHost {
     },
     trees: new TreeHub({ execute: async () => undefined }),
     addRoot: () => {},
+    workspaceRoots: () => [],
     stop: async () => {},
   } as unknown as LumiereHost;
 }
@@ -146,12 +147,16 @@ test("tree views are served as snapshots, clicks and visibility", async (t) => {
 });
 
 test("serving an editor page registers the workspace root before opening the panel", async (t) => {
-  const dir = await mkdtemp(path.join(tmpdir(), "lumiere-route-"));
+  // macOS's temporary folder is behind a symlink; the route resolves it.
+  const dir = await realpath(
+    await mkdtemp(path.join(tmpdir(), "lumiere-route-")),
+  );
   t.after(() => rm(dir, { recursive: true, force: true }));
   const notePath = path.join(dir, "First.md");
   await writeFile(notePath, "# First");
 
   const order: string[] = [];
+  const registered: string[] = [];
   const host = {
     panels: {
       open: async () => {
@@ -166,8 +171,10 @@ test("serving an editor page registers the workspace root before opening the pan
     },
     trees: new TreeHub({ execute: async () => undefined }),
     addRoot: (uri: string) => {
+      registered.push(uri);
       order.push(`addRoot:${uri}`);
     },
+    workspaceRoots: () => registered,
     stop: async () => {},
   } as unknown as LumiereHost;
 
@@ -190,4 +197,55 @@ test("serving an editor page registers the workspace root before opening the pan
   );
   assert.equal(response.status, 200);
   assert.deepEqual(order, [`addRoot:${pathToFileURL(dir).toString()}`, "open"]);
+});
+
+test("an editor page cannot widen the workspace root to a parent folder", async (t) => {
+  const scratch = await realpath(
+    await mkdtemp(path.join(tmpdir(), "lumiere-widen-")),
+  );
+  t.after(() => rm(scratch, { recursive: true, force: true }));
+  const vault = path.join(scratch, "vault");
+  await mkdir(vault);
+  const notePath = path.join(vault, "Note.md");
+  await writeFile(notePath, "# Note");
+  await writeFile(path.join(scratch, "secret.md"), "secret");
+
+  const added: string[] = [];
+  const host = {
+    panels: {
+      open: async () => ({
+        id: "p1",
+        html: '<!doctype html><html><head><meta charset="UTF-8"></head><body><script type="module" nonce="n" src="/e.js"></script></body></html>',
+      }),
+      get: () => undefined,
+      attach: () => false,
+    },
+    trees: new TreeHub({ execute: async () => undefined }),
+    addRoot: (uri: string) => {
+      added.push(uri);
+    },
+    workspaceRoots: () => added,
+    stop: async () => {},
+  } as unknown as LumiereHost;
+
+  const routes = createEditorRoutes(host, { markdown: "/none", shim: "/none" });
+  const server = createServer((req, res) => {
+    void routes.handle(req, res).then((handled) => {
+      if (!handled) {
+        res.writeHead(404).end();
+      }
+    });
+  });
+  await new Promise<void>((resolve) => server.listen(0, "127.0.0.1", resolve));
+  t.after(() => {
+    routes.close();
+    server.close();
+  });
+  const { port } = server.address() as { port: number };
+  const editor = (note: string, root: string) =>
+    `http://127.0.0.1:${port}/lumiere/editor?path=${encodeURIComponent(note)}&root=${encodeURIComponent(root)}`;
+  assert.equal((await fetch(editor(notePath, vault))).status, 200);
+  assert.deepEqual(added, [pathToFileURL(vault).toString()]);
+  assert.equal((await fetch(editor(notePath, scratch))).status, 403);
+  assert.deepEqual(added, [pathToFileURL(vault).toString()]);
 });

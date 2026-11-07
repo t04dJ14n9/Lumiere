@@ -17,7 +17,12 @@ import { NODE_HOST_OFFERS } from "./inert";
 import { injectShim, socketSource } from "./page";
 import { pageQuery } from "./page-query";
 import type { PageSocket, PanelUrls } from "./panel";
-import { assertContained, fileUriToPath, resolveContainedNote } from "./paths";
+import {
+  assertContained,
+  fileUriToPath,
+  isInside,
+  resolveContainedNote,
+} from "./paths";
 import type { LumiereHost } from "./start";
 import { createPdfRoutes, NO_PDF_ROUTES, type PdfRoutes } from "./pdf-routes";
 import { serveFile, serveStatic } from "./static";
@@ -176,6 +181,19 @@ interface PageRequest {
   readonly roots: Map<string, string>;
 }
 
+/** First GET may register a vault; later GETs cannot climb to a parent of one. */
+function acceptEditorRoot(host: LumiereHost, rootUri: string): boolean {
+  const registered = host.workspaceRoots();
+  if (registered.some((root) => isInside(root, rootUri))) {
+    return true;
+  }
+  if (registered.length > 0) {
+    return false;
+  }
+  host.addRoot(rootUri);
+  return true;
+}
+
 async function servePage({
   req,
   res,
@@ -195,8 +213,13 @@ async function servePage({
     return;
   }
   const rootUri = pathToFileURL(resolved.root).toString();
-  // Register the workspace root before opening so the first note indexes the vault.
-  host.addRoot(rootUri);
+  // A note page is same-origin with this GET. It must not widen the
+  // workspace to a parent of a vault already registered (DSH bootstraps
+  // the first root here; later requests stay inside it).
+  if (!acceptEditorRoot(host, rootUri)) {
+    res.writeHead(403).end();
+    return;
+  }
   const { id, html } = await host.panels.open({
     uri: pathToFileURL(resolved.note).toString(),
     urls: (panelId) => panelUrls(panelId, req.headers.host ?? ""),
