@@ -286,7 +286,9 @@ test("post-rename link updates open renamed and folder-moved notes at their new 
         waitUntil(thenable: Promise<unknown>): void;
       }) => void)
     | undefined;
-  let didRenameListener: (() => void) | undefined;
+  let didRenameListener:
+    | ((event: { files: { oldUri: FakeUri; newUri: FakeUri }[] }) => void)
+    | undefined;
 
   const fakeVscode = {
     Uri: FakeUri,
@@ -305,7 +307,7 @@ test("post-rename link updates open renamed and folder-moved notes at their new 
         willRenameListener = listener;
         return { dispose() {} };
       },
-      onDidRenameFiles(listener: () => void) {
+      onDidRenameFiles(listener: NonNullable<typeof didRenameListener>) {
         didRenameListener = listener;
         return { dispose() {} };
       },
@@ -404,18 +406,20 @@ test("post-rename link updates open renamed and folder-moved notes at their new 
     },
   ]);
 
+  // The did-rename event names the same files, so it runs this plan.
+  const renamed = [
+    {
+      oldUri: FakeUri.parse("file:///vault/Moved.md"),
+      newUri: FakeUri.parse("file:///vault/Sub/Moved.md"),
+    },
+    {
+      oldUri: FakeUri.parse("file:///vault/Folder"),
+      newUri: FakeUri.parse("file:///vault/RenamedFolder"),
+    },
+  ];
   let waitPromise: Promise<unknown> | undefined;
   willRenameListener!({
-    files: [
-      {
-        oldUri: FakeUri.parse("file:///vault/Moved.md"),
-        newUri: FakeUri.parse("file:///vault/Sub/Moved.md"),
-      },
-      {
-        oldUri: FakeUri.parse("file:///vault/Folder"),
-        newUri: FakeUri.parse("file:///vault/RenamedFolder"),
-      },
-    ],
+    files: renamed,
     waitUntil(thenable) {
       waitPromise = thenable;
     },
@@ -427,7 +431,7 @@ test("post-rename link updates open renamed and folder-moved notes at their new 
   textDocuments[1]!.uri = FakeUri.parse(
     "file:///vault/RenamedFolder/InFolder.md",
   );
-  didRenameListener!();
+  didRenameListener!({ files: renamed });
   await new Promise((resolve) => setImmediate(resolve));
   await new Promise((resolve) => setImmediate(resolve));
 
