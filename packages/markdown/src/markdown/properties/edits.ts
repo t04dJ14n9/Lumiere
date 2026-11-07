@@ -1,4 +1,4 @@
-import type { Document } from "yaml";
+import type { Document, Pair } from "yaml";
 import { loadYaml } from "./load-yaml";
 import { headerParts, frontmatter } from "./frontmatter";
 import { orderPropertyBody } from "./order";
@@ -251,10 +251,7 @@ class PropertyMapEdits {
       }
       const start =
         this.header.body.lastIndexOf("\n", item.key.range[0] - 1) + 1;
-      let end =
-        loadYaml().isNode(item.value) && item.value.range
-          ? item.value.range[2]
-          : item.key.range[2];
+      let end = entryEnd(this.header.body, item, item.key.range[2]);
       if (this.header.body[end] === "\r") {
         end++;
       }
@@ -270,6 +267,24 @@ class PropertyMapEdits {
       ];
     });
   }
+}
+
+/**
+ * Where a removed entry's own text ends. yaml stretches an empty value (`a:`)
+ * over the comment lines after it, which belong to the next entry, so such a
+ * value ends with its line.
+ */
+function entryEnd(body: string, item: Pair, keyEnd: number): number {
+  const { isNode, isScalar } = loadYaml();
+  const value: unknown = item.value;
+  if (!isNode(value) || !value.range) {
+    return keyEnd;
+  }
+  if (!isScalar(value) || value.range[0] !== value.range[1]) {
+    return value.range[2];
+  }
+  const lineEnd = body.indexOf("\n", value.range[1]);
+  return lineEnd < 0 ? body.length : lineEnd;
 }
 
 /** Remove the opening fence, body and closing fence (always at offset 0). */
