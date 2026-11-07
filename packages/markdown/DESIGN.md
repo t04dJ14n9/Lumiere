@@ -950,7 +950,8 @@ interface VaultIndex {
 6. Otherwise, files whose path ends with the link path: those under the
    source's folder (or a descendant) first, then the rest, each group by
    path length, shortest first, then by path. The first wins;
-   `resolveLinkCandidates` returns all of them.
+   `resolveLinkCandidates` returns all of them. Inside an OKF bundle, a
+   wikilink takes the first of them in the source's bundle (okfCore).
 
 A folder link resolves to `lumiere.markdown.links.folderNote` inside it when
 that setting is set (default empty; LLM Wiki uses `_index.md`), and otherwise

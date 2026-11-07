@@ -1,3 +1,5 @@
+import { isMarkdownPath } from "./markdown-scan";
+
 /**
  * Host-side trust check for `openBacklinkNote` from the untrusted PDF webview.
  * Pure so unit tests cover the allow-list without VS Code.
@@ -18,8 +20,8 @@ export type BacklinkNoteUriParts = {
 
 /**
  * Whether the host may open this note for a backlink click. Rejects non-
- * workspace schemes, URIs outside a folder, encoded separators, and
- * non-Markdown paths (the index only scans `*.md`).
+ * workspace schemes, URIs outside a folder, encoded separators, and paths
+ * the index does not scan (only `.md` and `.markdown` notes).
  */
 export function isTrustedBacklinkNoteUri(parts: BacklinkNoteUriParts): boolean {
   if (/%(?:2f|5c)/i.test(parts.noteUri)) {
@@ -31,5 +33,5 @@ export function isTrustedBacklinkNoteUri(parts: BacklinkNoteUriParts): boolean {
   if (!parts.inWorkspace) {
     return false;
   }
-  return parts.path.toLowerCase().endsWith(".md");
+  return isMarkdownPath(parts.path);
 }

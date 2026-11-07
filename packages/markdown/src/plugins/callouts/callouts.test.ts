@@ -25,3 +25,14 @@ test("Insert Callout quotes the selected lines, apart from the text around, with
   assert.equal(isCallout("> ordinary quote"), false);
   assert.equal(isCallout("> [!warning]- Custom"), true);
 });
+
+// Obsidian 1.15.0's callout syntax, read from its app.js with REA
+// (2026-11-07): the type is any text but `]`, a `|` starts metadata, and a
+// space or the line's end follows the `]` and fold sign.
+test("a callout's type is any text but ], as in Obsidian", () => {
+  assert.equal(isCallout("> [!note|wide] Title\n> body"), true);
+  assert.equal(isCallout("> [!笔记]\n> 内容"), true);
+  assert.equal(isCallout("> [!my type]- Folded"), true);
+  assert.equal(isCallout("> [!note]text"), false);
+  assert.equal(isCallout("> [!info](https://example.com)"), false);
+});

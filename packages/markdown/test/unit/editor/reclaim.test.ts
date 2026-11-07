@@ -1,5 +1,8 @@
 import test from "node:test";
 import assert from "node:assert/strict";
+import Module, { createRequire } from "node:module";
+import type * as ReclaimModule from "../../../src/host/reclaim";
+import type * as ReclaimTransferModule from "../../../src/host/reclaim-transfer";
 import {
   associatedWith,
   Bypass,
@@ -15,6 +18,8 @@ import {
 } from "../../../src/host/reclaim-policy";
 import { hasNativeOptOut } from "../../../src/host/reclaim-opt-out";
 import { readerText } from "../../../src/host/reader-text";
+import { setMarkdownAbsentOnDiskForTests } from "../../../src/host/markdown-absent-on-disk";
+import { MARKDOWN_EDITOR } from "../../../src/shared/editor-provider";
 import { readFileSync } from "node:fs";
 import { fileURLToPath } from "node:url";
 import { dirname, join } from "node:path";
@@ -706,5 +711,274 @@ test("skip keep: unassociated none→text does not permanently stick", () => {
       },
     ),
     false,
+  );
+});
+
+test("a missing note kept in the text editor stays there on command selection after Save, and reclaims on reopen", async (t) => {
+  class FakeUri {
+    static parse(value: string) {
+      return new FakeUri(value);
+    }
+    constructor(private readonly value: string) {}
+    get path() {
+      return decodeURIComponent(new URL(this.value).pathname);
+    }
+    toString() {
+      return this.value;
+    }
+  }
+  class FakeTabInputText {
+    constructor(readonly uri: FakeUri) {}
+  }
+  class FakeTabInputCustom {
+    constructor(
+      readonly uri: FakeUri,
+      readonly viewType: string,
+    ) {}
+  }
+  class FakePosition {
+    constructor(
+      readonly line: number,
+      readonly character: number,
+    ) {}
+  }
+  class FakeRange {
+    constructor(
+      readonly start: FakePosition,
+      readonly end: FakePosition,
+    ) {}
+  }
+  class Emitter<T> {
+    private readonly listeners = new Set<(value: T) => void>();
+    readonly event = (listener: (value: T) => void) => {
+      this.listeners.add(listener);
+      return { dispose: () => this.listeners.delete(listener) };
+    };
+    fire(value: T) {
+      for (const listener of this.listeners) {
+        listener(value);
+      }
+    }
+  }
+
+  interface NativeTab {
+    input: unknown;
+    label: string;
+    isDirty: boolean;
+    isPreview: boolean;
+    group: {
+      viewColumn: number;
+      tabs: NativeTab[];
+      activeTab: NativeTab | undefined;
+    };
+  }
+
+  const group = {
+    viewColumn: 1,
+    tabs: [] as NativeTab[],
+    activeTab: undefined as NativeTab | undefined,
+  };
+  const tabsChanged = new Emitter<{
+    opened: NativeTab[];
+    changed: NativeTab[];
+    closed: NativeTab[];
+  }>();
+  const selectionChanged = new Emitter<{
+    textEditor: unknown;
+    kind?: number;
+  }>();
+  const activeEditorChanged = new Emitter<unknown>();
+  const commands: unknown[][] = [];
+
+  const pathUri = "file:///vault/missing-after-save.md";
+  const doc = {
+    uri: FakeUri.parse(pathUri),
+    isDirty: true,
+    languageId: "markdown",
+    getText: () => "# Heading\nBody text\n",
+    offsetAt: (pos: FakePosition) =>
+      pos.line === 0 ? pos.character : 10 + pos.character,
+  };
+  const textDocuments = [doc];
+
+  const fakeVscode = {
+    Uri: FakeUri,
+    TabInputText: FakeTabInputText,
+    TabInputCustom: FakeTabInputCustom,
+    Position: FakePosition,
+    Range: FakeRange,
+    TextEditorSelectionChangeKind: { Keyboard: 1, Mouse: 2, Command: 3 },
+    Disposable: {
+      from: (...items: { dispose(): unknown }[]) => ({
+        dispose: () => items.forEach((item) => item.dispose()),
+      }),
+    },
+    env: { appName: "Cursor" },
+    workspace: {
+      textDocuments,
+      getConfiguration(section: string) {
+        return {
+          get(key: string, fallback?: unknown) {
+            if (section === "workbench" && key === "editorAssociations") {
+              return { "*.md": MARKDOWN_EDITOR.viewType };
+            }
+            return fallback;
+          },
+        };
+      },
+      async openTextDocument() {
+        return doc;
+      },
+    },
+    window: {
+      activeTextEditor: undefined as unknown,
+      onDidChangeTextEditorSelection: selectionChanged.event,
+      onDidChangeActiveTextEditor: activeEditorChanged.event,
+      tabGroups: {
+        all: [group],
+        activeTabGroup: group,
+        onDidChangeTabs: tabsChanged.event,
+        async close(tab: NativeTab) {
+          group.tabs = group.tabs.filter((candidate) => candidate !== tab);
+        },
+      },
+    },
+    commands: {
+      async executeCommand(id: string, uri?: FakeUri, ...rest: unknown[]) {
+        commands.push([id, uri?.toString(), ...rest]);
+      },
+    },
+  };
+
+  const require = createRequire(import.meta.url);
+  for (const rel of [
+    "../../../src/host/reader-text.ts",
+    "../../../src/host/reclaim-opt-out.ts",
+    "../../../src/host/reclaim-context.ts",
+    "../../../src/host/reclaim-transfer.ts",
+    "../../../src/host/reclaim.ts",
+  ]) {
+    delete require.cache[require.resolve(rel)];
+  }
+  const loader = Module as typeof Module & {
+    _load(id: string, ...args: unknown[]): unknown;
+  };
+  const originalLoad = loader._load;
+  loader._load = (id, ...args) =>
+    id === "vscode" ? fakeVscode : originalLoad.call(Module, id, ...args);
+  let reclaimModule: typeof ReclaimModule;
+  let transferModule: typeof ReclaimTransferModule;
+  let hostReaderText: typeof readerText;
+  try {
+    ({
+      readerText: hostReaderText,
+    } = require("../../../src/host/reader-text.ts"));
+    reclaimModule = require("../../../src/host/reclaim.ts");
+    transferModule = require("../../../src/host/reclaim-transfer.ts");
+  } finally {
+    loader._load = originalLoad;
+  }
+
+  let absent = true;
+  setMarkdownAbsentOnDiskForTests((uri) => uri === pathUri && absent);
+  t.after(() => {
+    setMarkdownAbsentOnDiskForTests();
+    hostReaderText.clear();
+  });
+
+  const stop = reclaimModule.registerReclaim();
+  t.after(() => stop.dispose());
+
+  const first: NativeTab = {
+    input: new FakeTabInputText(FakeUri.parse(pathUri)),
+    label: "missing-after-save.md",
+    isDirty: true,
+    isPreview: true,
+    group,
+  };
+  group.tabs.push(first);
+  group.activeTab = first;
+  tabsChanged.fire({ opened: [first], changed: [], closed: [] });
+  await new Promise((resolve) => setImmediate(resolve));
+
+  assert.equal(
+    commands.some((entry) => entry[0] === "vscode.openWith"),
+    false,
+    "missing note must stay in the built-in Text Editor",
+  );
+
+  // User saves the buffer (file now exists on disk) and runs Select All / Find
+  // (TextEditorSelectionChangeKind.Command) in the same text editor.
+  absent = false;
+  first.isDirty = false;
+  doc.isDirty = false;
+  const editor = {
+    viewColumn: 1,
+    document: doc,
+    selection: new FakeRange(new FakePosition(0, 0), new FakePosition(0, 9)),
+    visibleRanges: [
+      new FakeRange(new FakePosition(0, 0), new FakePosition(1, 0)),
+    ],
+  };
+  fakeVscode.window.activeTextEditor = editor;
+  selectionChanged.fire({
+    textEditor: editor,
+    kind: fakeVscode.TextEditorSelectionChangeKind.Command,
+  });
+  await new Promise((resolve) => setImmediate(resolve));
+
+  assert.equal(
+    commands.some((entry) => entry[0] === "vscode.openWith"),
+    false,
+    "command selection after Save must not reclaim the kept text editor",
+  );
+  assert.equal(group.tabs.includes(first), true);
+  assert.equal(hostReaderText.has(pathUri), true);
+
+  // Also check transfer.open directly when absent: it keeps readerText too.
+  hostReaderText.clear();
+  absent = true;
+  const directTransfer = transferModule.createReclaimTransfer(
+    undefined,
+    new Bypass(),
+  );
+  t.after(() => directTransfer.dispose());
+  directTransfer.open(first as never, pathUri);
+  assert.equal(
+    hostReaderText.has(pathUri),
+    true,
+    "transfer.open for an absent text tab must record readerText.keep",
+  );
+  absent = false;
+
+  // Closing the kept text tab forgets it; reopening the now-existing note
+  // reclaims to Lumia per the 2026-11-04 lock.
+  group.tabs = [];
+  group.activeTab = undefined;
+  tabsChanged.fire({ opened: [], changed: [], closed: [first] });
+  await new Promise((resolve) => setImmediate(resolve));
+  assert.equal(hostReaderText.has(pathUri), false);
+
+  const second: NativeTab = {
+    input: new FakeTabInputText(FakeUri.parse(pathUri)),
+    label: "missing-after-save.md",
+    isDirty: false,
+    isPreview: true,
+    group,
+  };
+  group.tabs.push(second);
+  group.activeTab = second;
+  tabsChanged.fire({ opened: [second], changed: [], closed: [] });
+  await new Promise((resolve) => setImmediate(resolve));
+
+  assert.equal(
+    commands.some(
+      (entry) =>
+        entry[0] === "vscode.openWith" &&
+        entry[1] === pathUri &&
+        entry[2] === MARKDOWN_EDITOR.viewType,
+    ),
+    true,
+    "reopening the saved note must reclaim to Lumia",
   );
 });

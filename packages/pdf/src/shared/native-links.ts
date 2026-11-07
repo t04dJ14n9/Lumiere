@@ -74,7 +74,8 @@ export function readLinkDestination(
   return { from, to, href };
 }
 
-function escaped(text: string, at: number): boolean {
+/** Whether the character at `at` is escaped by an odd run of backslashes. */
+export function escaped(text: string, at: number): boolean {
   let count = 0;
   while (at > 0 && text[--at] === "\\") {
     count++;

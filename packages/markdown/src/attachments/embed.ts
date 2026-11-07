@@ -12,6 +12,8 @@ export interface EmbedLink {
   readonly format: "shortest" | "relative" | "absolute";
   /** Whether no other vault file has the attachment's name. */
   readonly isNameUnique: boolean;
+  /** Text shown for the image: a wikilink's alias, a Markdown image's alt. */
+  readonly alt?: string;
 }
 
 /** The embed a note gets for a saved attachment, as Obsidian would write it. */
@@ -22,7 +24,15 @@ export function embedFor(link: EmbedLink): string {
   } else if (link.format === "shortest" && link.isNameUnique) {
     target = nameOf(link.path);
   }
-  return link.useWikilinks
-    ? `![[${target}]]`
-    : `![](${encodeLinkPath(target)})`;
+  // Brackets and pipes in the text would end the link early.
+  const alt = (link.alt ?? "")
+    .replace(/[[\]|]/gu, " ")
+    .replace(/\s+/gu, " ")
+    .trim();
+  if (!link.useWikilinks) {
+    return `![${alt}](${encodeLinkPath(target)})`;
+  }
+  return alt && alt.toLowerCase() !== target.toLowerCase()
+    ? `![[${target}|${alt}]]`
+    : `![[${target}]]`;
 }

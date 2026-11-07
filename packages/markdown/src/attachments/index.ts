@@ -1,5 +1,11 @@
 export { resolveAttachmentDir } from "./folder";
-export { timestampStem, uniqueTimestampName } from "./naming";
+export { timestampStem, uniqueName, uniqueTimestampName } from "./naming";
+export {
+  downloadStem,
+  remoteImages,
+  withDownloadedImages,
+  type RemoteImage,
+} from "./download";
 export { embedFor, type EmbedLink } from "./embed";
 export { insertEmbed } from "./insert";
 export {

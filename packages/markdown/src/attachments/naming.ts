@@ -24,3 +24,21 @@ export function uniqueTimestampName(
     }
   }
 }
+
+/**
+ * `stem.ext`, or `stem 1.ext`, `stem 2.ext`… when that name is taken
+ * (compared without case), as Obsidian makes a downloaded attachment's name
+ * unique.
+ */
+export function uniqueName(
+  stem: string,
+  ext: string,
+  existing: readonly string[],
+): string {
+  const taken = new Set(existing.map((name) => name.toLowerCase()));
+  let name = `${stem}.${ext}`;
+  for (let count = 1; taken.has(name.toLowerCase()); count++) {
+    name = `${stem} ${count}.${ext}`;
+  }
+  return name;
+}

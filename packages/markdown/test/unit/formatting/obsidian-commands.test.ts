@@ -17,6 +17,7 @@ import {
 import { withCaretAt } from "../../../src/plugins/formatting/cursors";
 import { checklistEdit } from "../../../src/plugins/tasks/edits";
 import { insertTable } from "../../../src/plugins/tables/commands";
+import { wikilinkEdit } from "../../../src/markdown/wikilink-edit";
 
 // Every expected note is Obsidian's, measured by running its command on the
 // same note and selection in a throwaway vault (2026-10-17). "|" is the caret;
@@ -141,6 +142,58 @@ test("a list marker replaces another list's, checkbox and all, and a second pres
   );
 });
 
+// Obsidian 1.15.0's line commands, read from its app.js with REA
+// (2026-11-07): markers go after a line's `>` and indentation, and blank
+// lines in a selection of several are skipped.
+test("inside a quote or callout, headings and list markers go after the `>`", () => {
+  assert.equal(
+    edit("> te|xt", (s) => lineEdit(s, "## ")),
+    "> ## te|xt",
+  );
+  assert.equal(
+    edit("> ### te|xt", (s) => lineEdit(s, "")),
+    "> te|xt",
+  );
+  assert.equal(
+    edit("> [!note]\n> ‹a\n> b›", (s) => lineEdit(s, "- ")),
+    "> [!note]\n> - ‹a\n> - b›",
+  );
+  assert.equal(
+    edit("‹> - a\n> - b›", (s) => lineEdit(s, "- ")),
+    "‹> a\n> b›",
+  );
+  assert.equal(
+    edit("‹> a\n> b›", (s) => lineEdit(s, "1. ")),
+    "‹> 1. a\n> 2. b›",
+  );
+  assert.equal(
+    edit("  - nes|ted", (s) => lineEdit(s, "1. ")),
+    "  1. nes|ted",
+  );
+});
+
+test("a quote goes on the lines without one, or one level comes off every line", () => {
+  assert.equal(
+    edit("‹> a\nb›", (s) => lineEdit(s, "> ")),
+    "‹> a\n> b›",
+  );
+  assert.equal(
+    edit("‹> a\n>b\n> > c›", (s) => lineEdit(s, "> ")),
+    "‹a\nb\n> c›",
+  );
+});
+
+test("blank lines in a selection of several lines get no marker", () => {
+  assert.equal(
+    edit("‹a\n\nb›", (s) => lineEdit(s, "- ")),
+    "- ‹a\n\n- b›",
+  );
+  assert.equal(
+    edit("‹a\n  \nb›", (s) => lineEdit(s, "> ")),
+    "> ‹a\n  \n> b›",
+  );
+});
+
 test("a horizontal rule goes on a line of its own, the caret on the line after", () => {
   assert.equal(edit("|", ruleEdit), "\n---\n|");
   assert.equal(edit("above\n|\nbelow", ruleEdit), "above\n\n---\n|\nbelow");
@@ -170,6 +223,74 @@ test("cycling a line goes text, bullet, [ ], [x], bullet", () => {
   );
 });
 
+// Obsidian 1.15.0's Toggle checkbox status and Cycle list checklist, read
+// from its app.js with REA (2026-11-07): the selected lines move together to
+// the step after the least advanced one, and blank lines in a selection of
+// several are skipped.
+test("several tasks are checked together while any is open, then opened together", () => {
+  assert.equal(
+    edit("‹- [ ] a\n- [x] b›", (s) => checklistEdit(s, false)),
+    "‹- [x] a\n- [x] b›",
+  );
+  assert.equal(
+    edit("‹- [/] a\n- [ ] b›", (s) => checklistEdit(s, false)),
+    "‹- [x] a\n- [x] b›",
+  );
+  assert.equal(
+    edit("‹- [x] a\n- [-] b›", (s) => checklistEdit(s, false)),
+    "‹- [ ] a\n- [ ] b›",
+  );
+  assert.equal(
+    edit("‹- [ ] a\n- [x] b›", (s) => checklistEdit(s, true)),
+    "‹- [x] a\n- [x] b›",
+  );
+  assert.equal(
+    edit("‹- [x] a\n- [x] b›", (s) => checklistEdit(s, true)),
+    "‹- a\n- b›",
+  );
+});
+
+test("lines without a box catch up with the selection's tasks, which keep theirs", () => {
+  // Obsidian drops the tasks' boxes here; Lumia keeps them.
+  assert.equal(
+    edit("‹a\n- [x] b›", (s) => checklistEdit(s, false)),
+    "- [ ] ‹a\n- [x] b›",
+  );
+  assert.equal(
+    edit("‹a\n- b\n- [ ] c›", (s) => checklistEdit(s, true)),
+    "- ‹a\n- b\n- [ ] c›",
+  );
+  assert.equal(
+    edit("‹- a\n- [x] c›", (s) => checklistEdit(s, true)),
+    "‹- [ ] a\n- [x] c›",
+  );
+});
+
+test("blank lines in a selection of several lines get no box", () => {
+  assert.equal(
+    edit("‹a\n\nb›", (s) => checklistEdit(s, false)),
+    "- [ ] ‹a\n\n- [ ] b›",
+  );
+  assert.equal(
+    edit("‹a\n  \nb›", (s) => checklistEdit(s, true)),
+    "- ‹a\n  \n- b›",
+  );
+});
+
+test("a selection of a very large number of lines does not overflow the call stack", () => {
+  // Spreading one argument per line into Math.min fails above ~125k lines.
+  const count = 200_000;
+  const doc = Array.from({ length: count }, () => "a").join("\n");
+  const state = EditorState.create({
+    doc,
+    selection: { anchor: 0, head: doc.length },
+  });
+  const next = state.update(checklistEdit(state, false)).state;
+  assert.equal(next.doc.lines, count);
+  assert.equal(next.doc.line(1).text, "- [ ] a");
+  assert.equal(next.doc.line(count).text, "- [ ] a");
+});
+
 test("a new table goes after the line the selection starts on, the caret at its start", () => {
   const table = "|     |     |\n| --- | --- |\n|     |     |";
   assert.equal(edit("|", insertTable), `\n|${table}\n`);
@@ -191,6 +312,31 @@ test("code blocks fence the selected lines, and Insert Tag types # before the se
   assert.equal(edit("‹one\ntwo›", fence), "```\n‹one\ntwo›\n```");
   assert.equal(edit("te|xt", tagEdit), "te#|xt");
   assert.equal(edit("a ‹word› b", tagEdit), "a #|word b");
+});
+
+// Obsidian 1.15.0's Insert Wikilink, Insert Embed and Insert Tag, read from
+// its app.js with REA (2026-11-07): each marks its edit `input.autocomplete`,
+// which opens the suggester at once.
+test("Insert Wikilink and Insert Embed wrap the selection, the caret after it", () => {
+  assert.equal(
+    edit("te|xt", (s) => wikilinkEdit(s, false)),
+    "te[[|]]xt",
+  );
+  assert.equal(
+    edit("a ‹note› b", (s) => wikilinkEdit(s, false)),
+    "a [[note|]] b",
+  );
+  assert.equal(
+    edit("‹pic.png›", (s) => wikilinkEdit(s, true)),
+    "![[pic.png|]]",
+  );
+});
+
+test("Insert Wikilink, Insert Embed and Insert Tag ask for suggestions", () => {
+  const state = parse("|");
+  assert.equal(wikilinkEdit(state, false).userEvent, "input.autocomplete");
+  assert.equal(wikilinkEdit(state, true).userEvent, "input.autocomplete");
+  assert.equal(tagEdit(state).userEvent, "input.autocomplete");
 });
 
 test("an added caret becomes the main one, and carets stay in order", () => {

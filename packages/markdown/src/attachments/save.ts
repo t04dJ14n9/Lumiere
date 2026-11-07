@@ -8,7 +8,7 @@ import { joinContained } from "../shared/workspace-path";
 import type { WorkspaceFiles } from "../shared/workspace-files";
 import { embedFor, type EmbedLink } from "./embed";
 import { resolveAttachmentDir } from "./folder";
-import { uniqueTimestampName } from "./naming";
+import { uniqueName, uniqueTimestampName } from "./naming";
 
 export interface SaveAttachmentInput {
   readonly files: Pick<
@@ -27,6 +27,11 @@ export interface SaveAttachmentInput {
   readonly bytes?: Uint8Array;
   readonly text?: string;
   readonly now?: Date;
+  /**
+   * The file's name without its extension (a downloaded `photo`), made
+   * unique as `photo 1`; without it, the name is a timestamp.
+   */
+  readonly stem?: string;
   /** Existing vault paths, for shortest-link uniqueness. */
   readonly vaultPaths?: readonly string[];
 }
@@ -36,6 +41,8 @@ export interface SavedAttachment {
   readonly path: string;
   /** Embed markdown/wikilink to insert in the note. */
   readonly embed: string;
+  /** Whether no other vault file has its name (for more embeds of it). */
+  readonly isNameUnique: boolean;
 }
 
 /** Write one attachment; undefined when the folder or write fails containment. */
@@ -51,7 +58,10 @@ export async function saveAttachment(
   if (!existing) {
     await input.files.mkdir(folderUri);
   }
-  const name = uniqueTimestampName(input.ext, existing ?? [], input.now);
+  const name =
+    input.stem === undefined
+      ? uniqueTimestampName(input.ext, existing ?? [], input.now)
+      : uniqueName(input.stem, input.ext.replace(/^\./u, ""), existing ?? []);
   const path = folder ? `${folder}/${name}` : name;
   const uri = joinContained(input.root, path);
   if (!uri) {
@@ -71,6 +81,7 @@ export async function saveAttachment(
   );
   return {
     path,
+    isNameUnique,
     embed: embedFor({
       path,
       notePath: input.notePath,

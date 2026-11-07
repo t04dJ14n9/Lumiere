@@ -180,21 +180,45 @@ async function bridgeTurnedOn(): Promise<boolean> {
   return true;
 }
 
-/** Let the user wire Claude Code / Codex (and any stdio MCP client) to the bridge. */
-async function copyMcpSetup(shim: string): Promise<void> {
+export interface McpSetupOption {
+  label: string;
+  detail: string;
+}
+
+/**
+ * Quote a filesystem path for the user's shell: POSIX single quotes on
+ * macOS/Linux (where VS Code's globalStorage lives under 'Application Support'
+ * and double quotes would still expand `$` and `\`), and double quotes on
+ * Windows (where `cmd.exe` does not treat single quotes as quoting).
+ */
+function quoteShellPath(path: string, platform: NodeJS.Platform): string {
+  if (platform === "win32") {
+    return `"${path.replace(/"/gu, '\\"')}"`;
+  }
+  return `'${path.replace(/'/gu, "'\\''")}'`;
+}
+
+/** Build the CLI commands and config snippets that wire MCP clients to the shim. */
+export function mcpSetupOptions(
+  shim: string,
+  platform: NodeJS.Platform = process.platform,
+): McpSetupOption[] {
   const node = "node";
-  const options = [
+  const quotedShim = quoteShellPath(shim, platform);
+  // JSON.stringify produces a valid TOML basic string with `\` and `"` escaped.
+  const tomlShim = JSON.stringify(shim);
+  return [
     {
       label: "Claude Code",
-      detail: `claude mcp add --scope user ${SERVER_NAME} -- ${node} ${shim}`,
+      detail: `claude mcp add --scope user ${SERVER_NAME} -- ${node} ${quotedShim}`,
     },
     {
       label: "Codex",
-      detail: `codex mcp add ${SERVER_NAME} -- ${node} ${shim}`,
+      detail: `codex mcp add ${SERVER_NAME} -- ${node} ${quotedShim}`,
     },
     {
       label: "Codex (config.toml)",
-      detail: `[mcp_servers.${SERVER_NAME}]\ncommand = "${node}"\nargs = ["${shim}"]`,
+      detail: `[mcp_servers.${SERVER_NAME}]\ncommand = "${node}"\nargs = [${tomlShim}]`,
     },
     {
       label: "Project .mcp.json (Claude Code)",
@@ -205,7 +229,11 @@ async function copyMcpSetup(shim: string): Promise<void> {
       ),
     },
   ];
-  const picked = await vscode.window.showQuickPick(options, {
+}
+
+/** Let the user wire Claude Code / Codex (and any stdio MCP client) to the bridge. */
+async function copyMcpSetup(shim: string): Promise<void> {
+  const picked = await vscode.window.showQuickPick(mcpSetupOptions(shim), {
     title: "Copy MCP setup for…",
   });
   if (!picked) {

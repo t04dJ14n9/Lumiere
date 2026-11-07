@@ -162,6 +162,8 @@ export interface LinkPolicyQuery {
   syntax: LinkSyntax;
   /** Canonical path when that exact vault path exists. */
   find(path: string): string | undefined;
+  /** The paths the vault's own rules accept for the link, best first. */
+  candidates(): readonly string[];
 }
 
 export type LinkPolicyDecision =

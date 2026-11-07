@@ -9,6 +9,14 @@ export type AnnotationDirty = "clean" | "saving" | "failed";
 export class AnnotationSave {
   dirty: AnnotationDirty = "clean";
   lastBytes: ArrayBuffer | undefined;
+  /** Saves and Keep mine run one at a time, in the order they came. */
+  private queue: Promise<void> = Promise.resolve();
+  /**
+   * The file's hashes during the viewer's current load: as loaded, then as
+   * this editor wrote it. A viewer that saves again before the last result
+   * reaches it still names an earlier one as its base.
+   */
+  private known = { load: Number.NaN, hashes: new Set<string>() };
 
   constructor(
     private readonly fileUri: string,
@@ -27,27 +35,53 @@ export class AnnotationSave {
     this.dirty = "failed";
   }
 
-  async keepMine(data: ArrayBuffer, load: number): Promise<void> {
+  keepMine(data: ArrayBuffer, load: number): Promise<void> {
+    return this.enqueue(() => this.keepMineNow(data, load));
+  }
+
+  save(
+    message: Extract<ViewerMessage, { type: "annotationSave" }>,
+  ): Promise<void> {
+    return this.enqueue(() => this.saveNow(message));
+  }
+
+  private enqueue(run: () => Promise<void>): Promise<void> {
+    const next = this.queue.then(run);
+    this.queue = next.catch(() => undefined);
+    return next;
+  }
+
+  /** Whether `base` is the file as the viewer's load had it at some point. */
+  private isKnownBase(load: number, base: string): boolean {
+    if (this.known.load !== load) {
+      const loaded = this.source.sha256;
+      this.known = { load, hashes: new Set(loaded ? [loaded] : []) };
+    }
+    return this.known.hashes.has(base);
+  }
+
+  private wrote(load: number, sha256: string): void {
+    this.source.acceptWrite(sha256);
+    if (this.known.load === load) {
+      this.known.hashes.add(sha256);
+    }
+  }
+
+  private async keepMineNow(data: ArrayBuffer, load: number): Promise<void> {
     if (!this.deps.isCurrentLoad(load) || !this.files.writeAtomic) {
       return;
     }
-    const bytes = new Uint8Array(data);
-    const sha256 = createHash("sha256").update(bytes).digest("hex");
-    this.source.expectWrite(sha256);
-    const written = await this.files.writeAtomic(this.fileUri, bytes);
-    this.source.acceptWrite(written.sha256);
-    this.dirty = "clean";
-    this.deps.post({ type: "annotationSaveResult", load, ok: true, sha256 });
+    await this.write(this.files.writeAtomic, load, new Uint8Array(data));
   }
 
-  async save(
+  private async saveNow(
     message: Extract<ViewerMessage, { type: "annotationSave" }>,
   ): Promise<void> {
     if (!this.deps.isCurrentLoad(message.load)) {
       return;
     }
     this.lastBytes = message.data;
-    if (message.baseSha256 !== this.source.sha256) {
+    if (!this.isKnownBase(message.load, message.baseSha256)) {
       this.reportConflict(
         message,
         "The PDF changed since this editor loaded it.",
@@ -70,17 +104,28 @@ export class AnnotationSave {
       this.reportConflict(message, "The PDF was modified on disk.");
       return;
     }
-    const bytes = new Uint8Array(message.data);
-    const sha256 = createHash("sha256").update(bytes).digest("hex");
-    this.source.expectWrite(sha256);
+    await this.write(
+      this.files.writeAtomic,
+      message.load,
+      new Uint8Array(message.data),
+    );
+  }
+
+  /** Write `bytes` over the file and tell the viewer whether it worked. */
+  private async write(
+    writeAtomic: NonNullable<PdfFiles["writeAtomic"]>,
+    load: number,
+    bytes: Uint8Array,
+  ): Promise<void> {
+    this.source.expectWrite(createHash("sha256").update(bytes).digest("hex"));
     this.dirty = "saving";
     try {
-      const written = await this.files.writeAtomic(this.fileUri, bytes);
-      this.source.acceptWrite(written.sha256);
+      const written = await writeAtomic(this.fileUri, bytes);
+      this.wrote(load, written.sha256);
       this.dirty = "clean";
       this.deps.post({
         type: "annotationSaveResult",
-        load: message.load,
+        load,
         ok: true,
         sha256: written.sha256,
       });
@@ -91,7 +136,7 @@ export class AnnotationSave {
       this.deps.failed(text);
       this.deps.post({
         type: "annotationSaveResult",
-        load: message.load,
+        load,
         ok: false,
         reason: "error",
         message: text,

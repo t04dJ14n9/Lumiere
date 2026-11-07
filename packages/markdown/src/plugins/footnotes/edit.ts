@@ -5,13 +5,7 @@ export function insertFootnote(state: EditorState): TransactionSpec & {
   label: string;
   reference: number;
 } {
-  const labels = new Set(
-    footnotes(state.doc).definitions.map((note) => note.label),
-  );
-  let number = 1;
-  while (labels.has(String(number))) {
-    number++;
-  }
+  const number = nextFootnoteNumber(state);
   // As in Obsidian 1.14: the reference goes before the selection, which
   // stays as it is (a caret after the reference), and the definition at the
   // end of the note, edited in a popover (`definition-popover.ts`).
@@ -40,6 +34,34 @@ export function insertFootnote(state: EditorState): TransactionSpec & {
     label: String(number),
     reference,
   };
+}
+
+/**
+ * One more than the highest numbered definition, as Obsidian 1.15 numbers a
+ * new footnote: `[^1]` and `[^3]` give `[^4]`, never the gap's `[^2]`, and
+ * named footnotes (`[^note]`) do not count. When that successor is not a safe
+ * integer (a definition labelled 2^53 or more), it takes the first unused
+ * number instead.
+ */
+function nextFootnoteNumber(state: EditorState): number {
+  const labels = new Set<string>();
+  let highest = 0;
+  for (const { label } of footnotes(state.doc).definitions) {
+    labels.add(label);
+    if (/^\d+$/u.test(label)) {
+      highest = Math.max(highest, Number.parseInt(label, 10));
+    }
+  }
+  // Beyond 2^53 the sum repeats the highest label, or prints as `1e+21` or
+  // `Infinity`.
+  if (Number.isSafeInteger(highest + 1)) {
+    return highest + 1;
+  }
+  let number = 1;
+  while (labels.has(String(number))) {
+    number++;
+  }
+  return number;
 }
 
 function referenceInsertion(state: EditorState) {

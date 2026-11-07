@@ -77,6 +77,7 @@ function loadSelectionTracker(reports: unknown[]) {
     setRegion: (region: RegionSelection | undefined) => void,
   ) => {
     region: RegionSelection | undefined;
+    selectedText: string | undefined;
     changeRegion(next: RegionSelection | undefined): void;
     setAnnotationRegion(
       next: RegionSelection | undefined,
@@ -160,6 +161,99 @@ function mockSelectionScope() {
       }),
   };
 }
+
+/**
+ * A scope whose text selections are made, cleared and read by hand; each
+ * read of the selected text waits until the test finishes it.
+ */
+function mockTextScope() {
+  const base = mockSelectionScope();
+  let endSelection: (() => void) | undefined;
+  let selectionChange: ((range: unknown) => void) | undefined;
+  let selection: object | null = null;
+  const reads: Array<(lines: string[]) => void> = [];
+  return {
+    scope: {
+      ...base.scope,
+      onEndSelection: (listener: () => void) => {
+        endSelection = listener;
+        return () => undefined;
+      },
+      onSelectionChange: (listener: (range: unknown) => void) => {
+        selectionChange = listener;
+        return () => undefined;
+      },
+      getState: () => ({ selection }),
+      getSelectedText: () => ({
+        wait: (done: (lines: string[]) => void) => {
+          reads.push(done);
+        },
+      }),
+      getFormattedSelection: () => [
+        {
+          pageIndex: 0,
+          segmentRects: [
+            { origin: { x: 1, y: 2 }, size: { width: 3, height: 4 } },
+          ],
+        },
+      ],
+    },
+    /** A drag that selects text ends. */
+    select(): void {
+      selection = {};
+      endSelection?.();
+    },
+    /** A click clears the selection. */
+    clear(): void {
+      selection = null;
+      selectionChange?.(null);
+    },
+    reads,
+  };
+}
+
+/** Reports made in the tracker's context, as plain data. */
+const plain = (value: unknown): unknown => JSON.parse(JSON.stringify(value));
+
+const textReport = (text: string) => ({
+  selection: {
+    selection: {
+      kind: "text",
+      text,
+      pages: [{ page: 1, rects: [[1, 2, 4, 6]] }],
+    },
+  },
+});
+
+test("a text read that ends after the selection is cleared reports nothing", async () => {
+  const reports: unknown[] = [];
+  const SelectionTracker = loadSelectionTracker(reports);
+  const tracker = new SelectionTracker(() => undefined);
+  const text = mockTextScope();
+  tracker.follow(text.scope, { engine: () => undefined, pdf: {} });
+  text.select();
+  text.clear();
+  text.reads[0]!(["old text"]);
+  await Promise.resolve();
+  assert.deepEqual(plain(reports), [{ selection: { selection: null } }]);
+  assert.equal(tracker.selectedText, undefined);
+});
+
+test("an older text read never replaces a newer selection's text", async () => {
+  const reports: unknown[] = [];
+  const SelectionTracker = loadSelectionTracker(reports);
+  const tracker = new SelectionTracker(() => undefined);
+  const text = mockTextScope();
+  tracker.follow(text.scope, { engine: () => undefined, pdf: {} });
+  text.select();
+  text.clear();
+  text.select();
+  text.reads[1]!(["new text"]);
+  text.reads[0]!(["old text"]);
+  await Promise.resolve();
+  assert.deepEqual(plain(reports.at(-1)), textReport("new text"));
+  assert.equal(tracker.selectedText, "new text");
+});
 
 const annotationRegion: RegionSelection = {
   kind: "region",
