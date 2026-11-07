@@ -1,6 +1,9 @@
 import assert from "node:assert/strict";
 import test from "node:test";
+import { metadata } from "../../src/markdown/metadata";
+import { portableMarkdownLink } from "../../src/shared/markdown-link";
 import {
+  encodeLinkPath,
   joinContained,
   relativeFilePath,
   walksSymbolicLink,
@@ -42,4 +45,14 @@ test("a symbolic link on the path blocks a write, and a missing file does not", 
     await walksSymbolicLink("../secret", "file:///proj", async () => false),
     true,
   );
+});
+
+test("encodeLinkPath encodes parentheses so portableMarkdownLink parses whole", () => {
+  assert.equal(
+    encodeLinkPath("a (1)/section 1).md"),
+    "a%20%281%29/section%201%29.md",
+  );
+  const link = portableMarkdownLink("index.md", "section 1).md");
+  assert.equal(link, "[section 1)](section%201%29.md)");
+  assert.equal(metadata(link).links[0]?.link, "section%201%29.md");
 });
