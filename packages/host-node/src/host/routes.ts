@@ -181,13 +181,19 @@ interface PageRequest {
   readonly roots: Map<string, string>;
 }
 
-/** First GET may register a vault; later GETs cannot climb to a parent of one. */
+/**
+ * Whether a page may open from `rootUri`, registering it when new. DSH adds
+ * no root of its own, so each session's workspace and each note's own folder
+ * arrive here: an unseen folder is fine. A folder that holds a registered one
+ * is not: it would widen what that workspace can reach.
+ */
 function acceptEditorRoot(host: LumiereHost, rootUri: string): boolean {
   const registered = host.workspaceRoots();
+  // Checked first: the app may register a vault that holds another vault.
   if (registered.some((root) => isInside(root, rootUri))) {
     return true;
   }
-  if (registered.length > 0) {
+  if (registered.some((root) => isInside(rootUri, root))) {
     return false;
   }
   host.addRoot(rootUri);
@@ -213,9 +219,8 @@ async function servePage({
     return;
   }
   const rootUri = pathToFileURL(resolved.root).toString();
-  // A note page is same-origin with this GET. It must not widen the
-  // workspace to a parent of a vault already registered (DSH bootstraps
-  // the first root here; later requests stay inside it).
+  // A note page is same-origin with this GET, so the query is not trusted to
+  // widen a workspace already registered (see acceptEditorRoot).
   if (!acceptEditorRoot(host, rootUri)) {
     res.writeHead(403).end();
     return;
