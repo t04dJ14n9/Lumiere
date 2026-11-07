@@ -5,6 +5,7 @@ import type { WorkerChannel, WorkerLauncher } from "../shared/workers";
 import type { ParseRequest, ParseResponse } from "../workers/vault-worker";
 
 interface Pending {
+  text: string;
   resolve: (value: NoteMetadata) => void;
   reject: (error: Error) => void;
 }
@@ -32,7 +33,7 @@ export function createVaultParser(workers: WorkerLauncher): {
       const buffer = new TextEncoder().encode(text).buffer as ArrayBuffer;
       const request: ParseRequest = { id, text: buffer };
       return new Promise((resolve, reject) => {
-        pending.set(id, { resolve, reject });
+        pending.set(id, { text, resolve, reject });
         worker!.post(request, [buffer]);
       });
     },
@@ -65,12 +66,16 @@ function startWorker(
       request?.resolve(response.metadata);
     }
   });
-  worker.onExit(() => {
+  const fallbackToHost = () => {
     onExit();
     for (const request of pending.values()) {
-      request.reject(new Error("The indexing worker stopped"));
+      request.resolve(metadata(request.text));
     }
     pending.clear();
-  });
+  };
+  // Node's Worker emits an unhandled `error` when its script is missing or
+  // crashes; finish in-flight parses in the host so indexing never stops.
+  worker.onError(fallbackToHost);
+  worker.onExit(fallbackToHost);
   return worker;
 }

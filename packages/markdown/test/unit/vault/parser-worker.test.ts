@@ -39,3 +39,16 @@ test("without a worker the vault parser parses in the host", async () => {
   assert.deepEqual(await parser.parse(text), metadata(text));
   parser.dispose();
 });
+
+test("when the worker fails to load or exits during a parse, parsing falls back to the host", async (t) => {
+  const directory = await mkdtemp(join(tmpdir(), "mw-vault-missing-"));
+  t.after(() => rm(directory, { recursive: true, force: true }));
+  const parser = createVaultParser(nodeWorkerLauncher(directory));
+  t.after(() => parser.dispose());
+  const text = "# Heading\n[[Target]]\n";
+  assert.deepEqual(await parser.parse(text), metadata(text));
+  assert.deepEqual(
+    await parser.parse("# Second\n#tag\n"),
+    metadata("# Second\n#tag\n"),
+  );
+});
