@@ -72,14 +72,37 @@ function revealNativeSelection(
   });
 }
 
-function panelTransport(panel: vscode.WebviewPanel): PanelShell["transport"] {
+function panelTransport(
+  panel: vscode.WebviewPanel,
+  shellDisposeListeners: Set<() => void>,
+): PanelShell["transport"] {
+  let disposed = false;
+  const stops = new Set<vscode.Disposable>();
+  // When a panel moves to a new document, the WebviewPanel stays alive while
+  // the old shell's endpoint is still tearing down; disconnect it immediately.
+  shellDisposeListeners.add(() => {
+    disposed = true;
+    for (const stop of stops) {
+      stop.dispose();
+    }
+    stops.clear();
+  });
   return {
     send(message) {
-      void panel.webview.postMessage(message);
+      if (!disposed) {
+        void panel.webview.postMessage(message);
+      }
     },
     listen(receive) {
+      if (disposed) {
+        return () => {};
+      }
       const stop = panel.webview.onDidReceiveMessage(receive);
-      return () => stop.dispose();
+      stops.add(stop);
+      return () => {
+        stops.delete(stop);
+        stop.dispose();
+      };
     },
   };
 }
@@ -168,7 +191,7 @@ function createPanelShell(
     cspSource: panel.webview.cspSource,
     trusted: vscode.workspace.isTrusted,
     ...panelOpenFields(options),
-    transport: panelTransport(panel),
+    transport: panelTransport(panel, binding.shellDisposeListeners),
     preload: firstViewPreload(extensionUri),
     active: () => isActivePanel(provider.viewType, binding.document, panel),
     reveal() {
@@ -220,6 +243,9 @@ async function movePanelToDocument(
     snapshot = await binding.viewState?.capture();
   } catch {
     snapshot = undefined;
+  }
+  if (token?.isCancellationRequested) {
+    return;
   }
   for (const listener of [...binding.shellDisposeListeners]) {
     listener();
