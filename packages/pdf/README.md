@@ -18,8 +18,8 @@ is opt-in (`lumiere.pdf.regions.enabled`, default off).
   Ctrl/⌘+wheel and pinch zoom, find in PDF (⌘F / Ctrl+F), internal links and web links.
   When the file changes on disk (a rebuilt paper), the viewer reloads at the
   same page and zoom.
-- **View controls.** A compact **View** menu in slim and floating toolbars,
-  and a View picker in the editor title/status bar, selects zoom, layout,
+- **View controls.** A View picker in the editor title/status bar, and a
+  compact **View** menu in the slim toolbar of the web and iPad hosts, selects zoom, layout,
   scrolling mode and direction. Saved choices and reading position return
   when a PDF reopens. Next/previous moves by spreads in two-page layouts;
   go to page opens its containing spread, and fit modes measure the whole spread.
@@ -254,7 +254,7 @@ src/
 │   ├── region-text.ts    the text inside a region, line by line
 │   ├── zoom-steps.ts     the zoom levels the buttons and wheel step through
 │   ├── view-state.ts     page and zoom reported by the viewer; view actions
-│   ├── toolbar-settings.ts  toolbar modes and the floating bar's edge
+│   ├── toolbar-settings.ts  toolbar modes; old floating-bar values still parse
 │   └── geometry.ts       page rectangles
 ├── bridge-stdio/  the stdio shim Claude Code and Codex run to reach the bridge
 ├── extension/   the VS Code side
@@ -279,7 +279,7 @@ src/
     ├── engine.tsx, plugins.ts  PDFium in a worker (main-thread fallback)
     ├── viewer.tsx              toolbar, search, pages
     ├── toolbar.tsx             the slim bar's controls
-    ├── floating-toolbar.tsx    the floating bar: docking, dragging, fading
+    ├── floating-toolbar.tsx    the removed floating bar, no longer shown
     ├── view-sync.ts            page and zoom to the extension, its actions back
     ├── tool-mode.ts            the Select Text and Select Region tools
     ├── page.tsx, page-links.tsx
@@ -304,7 +304,7 @@ network requests.
 
 `PDF: Back to Previous Location` and `PDF: Forward to Next Location` return
 through deliberate jumps in the current PDF editor. They also appear in the
-editor title and slim/floating PDF toolbar. These are separate from Previous/
+editor title and the slim PDF toolbar. These are separate from Previous/
 Next Page and VS Code's file-level Back/Forward. No native or Vim shortcut changes.
 
 Each open PDF pane keeps up to 100 locations in extension-host memory: page,
