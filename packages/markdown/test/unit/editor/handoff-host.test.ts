@@ -2999,6 +2999,8 @@ function createFakeDoc(uriStr: string, lines: readonly string[]) {
 
 function createFakeWebviewPanel() {
   const disposeListeners = new Set<() => void>();
+  const messages = new Emitter<unknown>();
+  const posted: unknown[] = [];
   let disposed = false;
   return {
     viewColumn: 1,
@@ -3006,12 +3008,17 @@ function createFakeWebviewPanel() {
     get disposed() {
       return disposed;
     },
+    posted,
+    receive: (message: unknown) => messages.fire(message),
     webview: {
       options: {},
       cspSource: "vscode-webview:",
       html: "",
-      postMessage: async () => true,
-      onDidReceiveMessage: () => ({ dispose() {} }),
+      postMessage: async (message: unknown) => {
+        posted.push(message);
+        return true;
+      },
+      onDidReceiveMessage: messages.event,
       asWebviewUri: (u: Uri) => u,
     },
     reveal() {},
@@ -3496,6 +3503,132 @@ test("moveCustomTextEditor rebinds existing WebviewPanel to newDocument without 
       to: expectedAt + "target phrase".length,
     },
   ]);
+});
+
+test("moveCustomTextEditor aborts if cancelled during viewState capture and disconnects the old shell transport on move", async (t) => {
+  const { createPanel } = await import("../../../src/plugins/editor/panel");
+  const { fakeHost, fakeDocument } = await import("../../support/vscode-fake");
+  const openedShells: PanelShell[] = [];
+  let holdCleanup = () => {};
+  const cleanupGate = new Promise<void>((resolve) => {
+    holdCleanup = resolve;
+  });
+  t.after(() => holdCleanup());
+
+  const fake = fakeHost();
+  const documents = {
+    session: (doc: PanelShell["document"]) => ({
+      text: doc.getText(),
+      version: 1,
+      attach: () => () => {},
+      flush: async () => {},
+    }),
+    release() {},
+  };
+  const stop = host.editorPanels.registerEditor(
+    MARKDOWN_EDITOR,
+    {
+      extensionUri: Uri.parse("file:///ext") as unknown as NativeUri,
+      documents: {
+        wrap: (doc: { uri: Uri; getText(): string }) =>
+          fakeDocument({
+            id: doc.uri.toString(),
+            uri: doc.uri.toString(),
+            getText: () => doc.getText(),
+          }),
+      } as never,
+    },
+    (shell) => {
+      openedShells.push(shell);
+      createPanel(shell, documents as never, fake, {
+        onClose() {},
+        onState() {},
+        configure(context) {
+          context.effect(() => async () => {
+            await cleanupGate;
+          });
+        },
+      });
+    },
+  );
+  t.after(stop);
+
+  const provider = registeredProviders[0]?.provider as {
+    resolveCustomTextEditor(doc: unknown, panel: unknown): void;
+    moveCustomTextEditor(
+      newDocument: unknown,
+      panel: unknown,
+      token?: { isCancellationRequested: boolean },
+    ): Promise<void>;
+  };
+
+  const oldDoc = createFakeDoc(note, ["Old header"]);
+  const fakePanel = createFakeWebviewPanel();
+  provider.resolveCustomTextEditor(oldDoc, fakePanel);
+  assert.equal(openedShells.length, 1);
+  const firstShell = openedShells[0]!;
+
+  let firstShellDisposed = 0;
+  firstShell.onDispose(() => {
+    firstShellDisposed++;
+  });
+  const token = { isCancellationRequested: false };
+  firstShell.bindViewState?.({
+    capture: async () => {
+      token.isCancellationRequested = true;
+      return { scrollTop: 50 };
+    },
+    restore: async () => {},
+  });
+
+  const renamedUri = "file:///vault/Renamed.md";
+  const newDoc = createFakeDoc(renamedUri, ["New header"]);
+  await provider.moveCustomTextEditor(newDoc, fakePanel, token);
+
+  assert.equal(
+    firstShellDisposed,
+    0,
+    "cancelled move during capture must not dispose old shell",
+  );
+  assert.equal(
+    openedShells.length,
+    1,
+    "cancelled move during capture must not open a new shell",
+  );
+
+  // Now allow the move to complete while the first panel's async cleanup is still in flight.
+  firstShell.bindViewState?.({
+    capture: async () => ({ scrollTop: 50 }),
+    restore: async () => {},
+  });
+  await provider.moveCustomTextEditor(newDoc, fakePanel);
+  assert.equal(firstShellDisposed, 1);
+  assert.equal(openedShells.length, 2);
+
+  fakePanel.posted.length = 0;
+  fakePanel.receive({
+    kind: "request",
+    id: 1,
+    channel: "editor",
+    method: "ready",
+    params: {},
+  });
+  await tick();
+  await tick();
+
+  const errors = fakePanel.posted.filter(
+    (msg) => (msg as { kind?: string }).kind === "error",
+  );
+  assert.deepEqual(
+    errors,
+    [],
+    "dying old shell endpoint must not answer webview ready request with an error",
+  );
+  const responses = fakePanel.posted.filter(
+    (msg) => (msg as { kind?: string }).kind === "response",
+  );
+  assert.equal(responses.length, 1);
+  holdCleanup();
 });
 
 test("reclaim skips missing Markdown paths (leaves built-in Text Editor)", async (t) => {
