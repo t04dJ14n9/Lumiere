@@ -8,5 +8,13 @@ export default defineManifest({
   kind: "feature",
   defaultEnabled: true,
   surfaces: ["host", "webview"],
-  capabilities: ["editing", "clipboard", "fileWrites"],
-});
+  capabilities: ["editing", "clipboard", "fileWrites", "commands"],
+  contributes: {
+    commands: [
+      {
+        id: "downloadAttachments",
+        title: "Download Attachments for Current File",
+      },
+    ],
+  },
+} as const);
