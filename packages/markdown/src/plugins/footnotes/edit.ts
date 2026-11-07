@@ -39,16 +39,29 @@ export function insertFootnote(state: EditorState): TransactionSpec & {
 /**
  * One more than the highest numbered definition, as Obsidian 1.15 numbers a
  * new footnote: `[^1]` and `[^3]` give `[^4]`, never the gap's `[^2]`, and
- * named footnotes (`[^note]`) do not count.
+ * named footnotes (`[^note]`) do not count. When that successor is not a safe
+ * integer (a definition labelled 2^53 or more), it takes the first unused
+ * number instead.
  */
 function nextFootnoteNumber(state: EditorState): number {
+  const labels = new Set<string>();
   let highest = 0;
   for (const { label } of footnotes(state.doc).definitions) {
+    labels.add(label);
     if (/^\d+$/u.test(label)) {
       highest = Math.max(highest, Number.parseInt(label, 10));
     }
   }
-  return highest + 1;
+  // Beyond 2^53 the sum repeats the highest label, or prints as `1e+21` or
+  // `Infinity`.
+  if (Number.isSafeInteger(highest + 1)) {
+    return highest + 1;
+  }
+  let number = 1;
+  while (labels.has(String(number))) {
+    number++;
+  }
+  return number;
 }
 
 function referenceInsertion(state: EditorState) {

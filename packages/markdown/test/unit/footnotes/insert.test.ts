@@ -39,3 +39,30 @@ test("the reference goes at the caret and the definition at the end, a blank lin
     "existing blank lines at the end are reused",
   );
 });
+
+test("labels too large for exact arithmetic never repeat a label or print as an exponent", () => {
+  const definition = (label: string) =>
+    `Body[^${label}].\n\n[^${label}]: Keep.`;
+  // 2^53 plus one rounds back to 2^53; 1e21 prints as "1e+21"; 400 digits
+  // parse to Infinity. Each falls back to the first unused number.
+  for (const label of [
+    "9007199254740991",
+    "9007199254740992",
+    "1000000000000000000000",
+    "9".repeat(400),
+  ]) {
+    assert.equal(inserted(definition(label), 0).label, "1", label);
+  }
+  assert.equal(
+    inserted(
+      "A[^1] b[^9007199254740992]\n\n[^1]: one\n[^9007199254740992]: big",
+      0,
+    ).label,
+    "2",
+  );
+  assert.equal(
+    inserted(definition("9007199254740990"), 0).label,
+    "9007199254740991",
+    "the largest safe successor is still one more than the highest",
+  );
+});
