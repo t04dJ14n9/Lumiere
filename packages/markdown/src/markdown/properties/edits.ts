@@ -218,33 +218,32 @@ class PropertyMapEdits {
   }
 
   private remove(keys: readonly string[]): PropertyChange[] | undefined {
-    if (
-      keys.some((key) => !validPropertyName(key) || !this.document.has(key))
-    ) {
+    // Every key counts, not only the strings: a note with `1: a` has a property
+    // named "1" that the fence must outlive, and that can itself be removed.
+    const stored = this.items.flatMap((item) => keyName(item.key) ?? []);
+    if (keys.some((key) => !validPropertyName(key) || !stored.includes(key))) {
       return undefined;
     }
-    const stored = this.items.flatMap((item) =>
-      loadYaml().isScalar(item.key) && typeof item.key.value === "string"
-        ? [item.key.value]
-        : [],
-    );
     // Obsidian drops the empty `---` fence when the last property is removed
     // (BH-013); leaving `---\n---` would count as body and inflate stats.
     if (stored.length > 0 && stored.every((key) => keys.includes(key))) {
       return dropFrontmatterFence(this.header);
     }
-    if (
-      loadYaml().isMap(this.document.contents) &&
-      this.document.contents.flow
-    ) {
-      keys.forEach((key) => this.document.delete(key));
+    const map = this.document.contents;
+    if (loadYaml().isMap(map) && map.flow) {
+      // Not document.delete(key): it matches a key's type, so "1" misses `1`.
+      map.items = map.items.filter((item) => {
+        const name = keyName(item.key);
+        return name === undefined || !keys.includes(name);
+      });
       return this.wholeMap();
     }
     return this.items.flatMap((item) => {
+      const name = keyName(item.key);
       if (
+        name === undefined ||
+        !keys.includes(name) ||
         !loadYaml().isScalar(item.key) ||
-        typeof item.key.value !== "string" ||
-        !keys.includes(item.key.value) ||
         !item.key.range
       ) {
         return [];
@@ -270,6 +269,18 @@ class PropertyMapEdits {
       ];
     });
   }
+}
+
+/** The property name a plain scalar key reads back as: `1: a` is "1". */
+function keyName(key: unknown): string | undefined {
+  if (!loadYaml().isScalar(key)) {
+    return undefined;
+  }
+  const { value } = key;
+  return value === null ||
+    ["string", "number", "boolean"].includes(typeof value)
+    ? String(value)
+    : undefined;
 }
 
 /** Remove the opening fence, body and closing fence (always at offset 0). */
