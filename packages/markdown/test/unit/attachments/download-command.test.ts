@@ -143,3 +143,12 @@ test("a data URI that is not an image is not saved", async (t) => {
     "Downloaded 1 attachment. 2 could not be downloaded.",
   ]);
 });
+
+test("when the note cannot be edited, the files are kept and the reader is told it is unchanged", async (t) => {
+  const result = await run(t, "Download", {}, { applies: false });
+  assert.deepEqual(result.written, [uriOf("cat 1.png"), uriOf("Image.gif")]);
+  assert.equal(result.text, NOTE);
+  assert.deepEqual(result.told, [
+    "Saved 2 attachments in the vault, but the note was not changed. 1 could not be downloaded.",
+  ]);
+});
