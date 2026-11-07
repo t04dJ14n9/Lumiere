@@ -1,5 +1,5 @@
 import * as vscode from "vscode";
-import { realpath } from "node:fs/promises";
+import { lstat, realpath } from "node:fs/promises";
 import path from "node:path";
 
 /** All navigation paths are checked again in the native adapter, including symlinks. */
@@ -46,12 +46,28 @@ async function containedLocalPath(
       if ((error as NodeJS.ErrnoException).code !== "ENOENT") {
         throw error;
       }
+      // `realpath` throws ENOENT for a dangling symlink as well as a missing
+      // path; a symlink whose target is missing could point outside the vault.
+      if (await isSymbolicLink(candidate)) {
+        throw new Error("Link symlink escapes the vault", { cause: error });
+      }
       const parent = path.dirname(candidate);
       if (parent === candidate) {
         throw error;
       }
       candidate = parent;
     }
+  }
+}
+
+async function isSymbolicLink(candidate: string): Promise<boolean> {
+  try {
+    return (await lstat(candidate)).isSymbolicLink();
+  } catch (error) {
+    if ((error as NodeJS.ErrnoException).code === "ENOENT") {
+      return false;
+    }
+    throw error;
   }
 }
 
