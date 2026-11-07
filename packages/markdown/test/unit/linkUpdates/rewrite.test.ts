@@ -115,6 +115,78 @@ test("a moved note rewrites its own path-style links, not bare names", () => {
   );
 });
 
+test("an escaped pipe in a table row stays escaped", () => {
+  const text = "| [[Old\\|shown]] | [[Old#Part\\|x]] |\n| - | - |";
+  const ctx = context({ ...vault, "A.md": text }, { "Old.md": "New.md" });
+  assert.equal(
+    apply(text, rewriteLinks(text, "A.md", ctx)),
+    "| [[New\\|shown]] | [[New#Part\\|x]] |\n| - | - |",
+  );
+});
+
+test("a Markdown link keeps its angle brackets and its title", () => {
+  const text = [
+    "[a](<Old.md#Some Part>)",
+    '[b](Old.md "Title")',
+    "[c](<Old.md> 'single')",
+  ].join("\n");
+  const ctx = context({ ...vault, "A.md": text }, { "Old.md": "New (1).md" });
+  assert.equal(
+    apply(text, rewriteLinks(text, "A.md", ctx)),
+    [
+      "[a](<New (1).md#Some Part>)",
+      '[b](New%20(1).md "Title")',
+      "[c](<New (1).md> 'single')",
+    ].join("\n"),
+  );
+});
+
+test("a renamed note in angle brackets with parentheses is replaced whole", () => {
+  const text = "[a](<Old (b).md>) after";
+  const notes = { "Old (b).md": "", "A.md": text };
+  const ctx = context(notes, { "Old (b).md": "New.md" });
+  assert.equal(
+    apply(text, rewriteLinks(text, "A.md", ctx)),
+    "[a](<New.md>) after",
+  );
+});
+
+test("a bare destination encodes backslashes as well as spaces", () => {
+  const text = "[a](Old.md)";
+  const ctx = context({ ...vault, "A.md": text }, { "Old.md": "a\\b c.md" });
+  assert.equal(
+    apply(text, rewriteLinks(text, "A.md", ctx)),
+    "[a](a%5Cb%20c.md)",
+  );
+});
+
+test("a bare destination may hold a literal quote, as the parser reads it", () => {
+  const text = '[a](Old"note.md) [b](Old"note.md "Title")';
+  const notes = { 'Old"note.md': "", "A.md": text };
+  const ctx = context(notes, { 'Old"note.md': "New.md" });
+  assert.equal(
+    apply(text, rewriteLinks(text, "A.md", ctx)),
+    '[a](New.md) [b](New.md "Title")',
+  );
+});
+
+test("a title with escaped quotes survives a rename", () => {
+  const text = [
+    '[a](Old.md "Say \\"hello\\"")',
+    "[b](Old.md 'it\\'s')",
+    '[c](<Old.md> "Say \\"hello\\"")',
+  ].join("\n");
+  const ctx = context({ ...vault, "A.md": text }, { "Old.md": "New (1).md" });
+  assert.equal(
+    apply(text, rewriteLinks(text, "A.md", ctx)),
+    [
+      '[a](New%20(1).md "Say \\"hello\\"")',
+      "[b](New%20(1).md 'it\\'s')",
+      '[c](<New (1).md> "Say \\"hello\\"")',
+    ].join("\n"),
+  );
+});
+
 test("links that do not touch a renamed file are left alone", () => {
   const text = "[[Other]] [[Missing]] [web](https://example.com)";
   const ctx = context({ ...vault, "A.md": text }, { "Old.md": "New.md" });

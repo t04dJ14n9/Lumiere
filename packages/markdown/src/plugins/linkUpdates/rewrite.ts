@@ -6,13 +6,13 @@ import {
   vaultLinks,
 } from "../../markdown/metadata/linkpaths";
 import type { FileTextEdits } from "../../shared/host";
+import { formatLinkSource, linkSource } from "./link-source";
 import {
   folderOf,
   isMarkdownPath,
   lookupKey,
   nameOf,
   relativeVaultPath,
-  splitLinktext,
   withoutNoteExtension,
   type LinkSyntax,
 } from "../../shared/vault-path";
@@ -128,18 +128,11 @@ function targetText(
 
 /** The link's source text with only its path replaced. */
 function rewritten(link: LinkMetadata, path: string, target: string): string {
-  const wikilink = /^(!?)\[\[([^\]|#]*)(#[^\]|]*)?(\|[^\]]*)?\]\]$/.exec(
-    link.original,
-  );
-  if (wikilink) {
-    const [, bang = "", , subpath = "", alias = ""] = wikilink;
-    return `${bang}[[${path}${subpath}${alias}]]`;
+  const source = linkSource(link.original);
+  if (!source) {
+    return link.original;
   }
-  const { subpath } = splitLinktext(link.link);
-  const extension = isMarkdownPath(target) ? ".md" : "";
-  const destination = `${path}${extension}`.replace(/ /g, "%20") + subpath;
-  return link.original.replace(
-    /\]\((<?)[^)>]*(>?)/,
-    (_, open, close) => `](${open}${destination}${close}`,
-  );
+  const isWikilink = source.opening.endsWith("[[");
+  const extension = !isWikilink && isMarkdownPath(target) ? ".md" : "";
+  return formatLinkSource(source, `${path}${extension}`, source.subpath);
 }
