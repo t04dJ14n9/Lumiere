@@ -91,12 +91,8 @@ export const scalarValue = (value: unknown): value is PropertyScalar =>
   typeof value === "boolean" ||
   (typeof value === "number" && Number.isFinite(value));
 
-/** True when a YAML `#` comment (outside quotes) begins before `pos` on the line. */
-function commentStartsBefore(
-  body: string,
-  lineStart: number,
-  pos: number,
-): boolean {
+/** Where a YAML `#` comment (outside quotes) begins before `pos` on the line, or -1. */
+function commentStart(body: string, lineStart: number, pos: number): number {
   let inSingle = false;
   let inDouble = false;
   for (let i = lineStart; i < pos; i++) {
@@ -126,11 +122,17 @@ function commentStartsBefore(
       continue;
     }
     if (ch === "#" && (i === lineStart || /[ \t]/.test(body[i - 1]!))) {
-      return true;
+      return i;
     }
   }
-  return false;
+  return -1;
 }
+
+const commentStartsBefore = (
+  body: string,
+  lineStart: number,
+  pos: number,
+): boolean => commentStart(body, lineStart, pos) >= 0;
 
 /** Include a leading `&anchor` so replacement does not leave aliases retargeted. */
 export function valueStart(
@@ -160,6 +162,56 @@ export function valueStart(
   return at >= 0 ? at : start;
 }
 
+/** `afterColon`, stepping back over comments between the colon and `start`. */
+function afterColonPastComments(
+  body: string,
+  start: number,
+): number | undefined {
+  let at = start;
+  while (at > 0) {
+    const colon = afterColon(body, at);
+    if (colon !== undefined) {
+      return colon;
+    }
+    const end = body.slice(0, at).trimEnd().length;
+    if (end === 0) {
+      return undefined;
+    }
+    const hash = commentStart(body, body.lastIndexOf("\n", end - 1) + 1, end);
+    if (hash < 0) {
+      return undefined;
+    }
+    at = hash;
+  }
+  return undefined;
+}
+
+/**
+ * A list under a key with a comment between the key and its items
+ * (`tags: # note`, items flush left): the comment lines stay and the item
+ * lines are rewritten in place, as a block list two spaces in.
+ */
+function commentedListChange(
+  source: string,
+  header: Header,
+  range: readonly number[],
+  value: readonly unknown[],
+): PropertyChange | undefined {
+  const { body, offset, eol } = header;
+  const lineStart = body.lastIndexOf("\n", range[0]! - 1) + 1;
+  if (
+    afterColonPastComments(body, range[0]!) === undefined ||
+    body.slice(lineStart, range[0]).trim() !== ""
+  ) {
+    return undefined;
+  }
+  const from = offset + lineStart;
+  const to = offset + range[1]!;
+  const items = valueAfterKey(value, eol).slice(eol.length);
+  const ends = source.slice(from, to).endsWith("\n") ? eol : "";
+  return { from, to, insert: items && items + ends };
+}
+
 /** A list of scalars written as Obsidian writes it, from just after `key:`. */
 function blockListChange(
   source: string,
@@ -176,8 +228,13 @@ function blockListChange(
     node.range[1]!,
     lineEnd < 0 ? undefined : lineEnd,
   );
-  if (!isScalarList(value) || colon === undefined || rest.includes("#")) {
+  if (!isScalarList(value) || rest.includes("#")) {
     return undefined;
+  }
+  if (colon === undefined) {
+    return node.anchor
+      ? undefined
+      : commentedListChange(source, header, node.range, value);
   }
   const from = header.offset + colon;
   const to = header.offset + node.range[1]!;
