@@ -18,6 +18,7 @@ export function okfLinkPolicy(
         bundleRoot,
         syntax: query.syntax,
         find: query.find,
+        candidates: query.candidates,
       });
       if (action.action === "passthrough") {
         return undefined;
