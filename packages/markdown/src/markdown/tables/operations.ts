@@ -22,22 +22,7 @@ export function operateTable(table: Table, operation: TableOperation): string {
       alignments[column] = operation.alignment;
     }
   } else if (operation.type === "sort") {
-    const collator = new Intl.Collator(undefined, {
-      numeric: true,
-      sensitivity: "base",
-    });
-    const direction = operation.direction === "ascending" ? 1 : -1;
-    const body = rows
-      .slice(1)
-      .sort(
-        (left, right) =>
-          direction *
-          collator.compare(
-            left[operation.column] ?? "",
-            right[operation.column] ?? "",
-          ),
-      );
-    rows.splice(1, rows.length - 1, ...body);
+    sortBody(rows, operation);
   } else {
     const edit = <T>(items: T[], empty: () => T): void => {
       if (operation.type === "insert") {
@@ -70,4 +55,26 @@ export function operateTable(table: Table, operation: TableOperation): string {
   return rows.length && alignments.length
     ? serializeTable(rows, alignments)
     : "";
+}
+
+/** Sorts the rows below the header by one column, numbers by their value. */
+function sortBody(
+  rows: string[][],
+  {
+    column,
+    direction,
+  }: { column: number; direction: "ascending" | "descending" },
+): void {
+  const collator = new Intl.Collator(undefined, {
+    numeric: true,
+    sensitivity: "base",
+  });
+  const sign = direction === "ascending" ? 1 : -1;
+  const body = rows
+    .slice(1)
+    .sort(
+      (left, right) =>
+        sign * collator.compare(left[column] ?? "", right[column] ?? ""),
+    );
+  rows.splice(1, rows.length - 1, ...body);
 }
