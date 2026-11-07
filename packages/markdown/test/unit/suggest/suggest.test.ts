@@ -7,6 +7,7 @@ import { linkSuggestion } from "../../../src/plugins/links/suggestions";
 import { tagSuggestion } from "../../../src/plugins/tags/suggestions";
 import {
   allowsSuggestions,
+  asksForSuggestions,
   completionEdit,
 } from "../../../src/plugins/suggest/completion";
 import { suggestions } from "../../../src/plugins/suggest/sources";
@@ -22,6 +23,18 @@ import { rpcPair } from "../../support/rpc-pair";
 function context(doc: string) {
   return { state: EditorState.create({ doc }), pos: doc.length };
 }
+
+test("an edit marked input.autocomplete asks for suggestions; typing is CodeMirror's", () => {
+  const state = EditorState.create({ doc: "" });
+  const insert = (userEvent?: string) =>
+    state.update({
+      changes: { from: 0, insert: "[[]]" },
+      ...(userEvent && { userEvent }),
+    });
+  assert.equal(asksForSuggestions([insert("input.autocomplete")]), true);
+  assert.equal(asksForSuggestions([insert("input.type")]), false);
+  assert.equal(asksForSuggestions([insert()]), false);
+});
 test("link and tag sources recognize partial links, headings, local and global blocks", () => {
   assert.deepEqual(linkSuggestion(context("[[Note#^ab")), {
     kind: "block",

@@ -17,6 +17,7 @@ import {
 import { withCaretAt } from "../../../src/plugins/formatting/cursors";
 import { checklistEdit } from "../../../src/plugins/tasks/edits";
 import { insertTable } from "../../../src/plugins/tables/commands";
+import { wikilinkEdit } from "../../../src/markdown/wikilink-edit";
 
 // Every expected note is Obsidian's, measured by running its command on the
 // same note and selection in a throwaway vault (2026-10-17). "|" is the caret;
@@ -191,6 +192,31 @@ test("code blocks fence the selected lines, and Insert Tag types # before the se
   assert.equal(edit("‹one\ntwo›", fence), "```\n‹one\ntwo›\n```");
   assert.equal(edit("te|xt", tagEdit), "te#|xt");
   assert.equal(edit("a ‹word› b", tagEdit), "a #|word b");
+});
+
+// Obsidian 1.15.0's Insert Wikilink, Insert Embed and Insert Tag, read from
+// its app.js with REA (2026-11-07): each marks its edit `input.autocomplete`,
+// which opens the suggester at once.
+test("Insert Wikilink and Insert Embed wrap the selection, the caret after it", () => {
+  assert.equal(
+    edit("te|xt", (s) => wikilinkEdit(s, false)),
+    "te[[|]]xt",
+  );
+  assert.equal(
+    edit("a ‹note› b", (s) => wikilinkEdit(s, false)),
+    "a [[note|]] b",
+  );
+  assert.equal(
+    edit("‹pic.png›", (s) => wikilinkEdit(s, true)),
+    "![[pic.png|]]",
+  );
+});
+
+test("Insert Wikilink, Insert Embed and Insert Tag ask for suggestions", () => {
+  const state = parse("|");
+  assert.equal(wikilinkEdit(state, false).userEvent, "input.autocomplete");
+  assert.equal(wikilinkEdit(state, true).userEvent, "input.autocomplete");
+  assert.equal(tagEdit(state).userEvent, "input.autocomplete");
 });
 
 test("an added caret becomes the main one, and carets stay in order", () => {

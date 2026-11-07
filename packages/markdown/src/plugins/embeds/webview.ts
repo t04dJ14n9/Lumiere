@@ -17,6 +17,7 @@ import { MarkdownInline } from "../../webview/ui/inline-widget";
 import { protocol as links } from "../links/protocol";
 import { enhanceEmbeds, type PassEmbeds } from "./post-process";
 import { forgetEmbedResources } from "./resource-cache";
+import { wikilinkEdit } from "../../markdown/wikilink-edit";
 import {
   embedEditing,
   embedsImage,
@@ -250,17 +251,7 @@ function registerInsertion(ctx: Context): void {
   ctx.effect(() =>
     ctx.commands.register("editor:insert-embed", () => {
       const view = ctx.editor.view;
-      const { from, to } = view.state.selection.main;
-      view.dispatch({
-        changes: {
-          from,
-          to,
-          insert: `![[${view.state.sliceDoc(from, to)}]]`,
-        },
-        // As in Obsidian: the caret after the text.
-        selection: { anchor: to + 3 },
-        userEvent: "input.embed",
-      });
+      view.dispatch(wikilinkEdit(view.state, true));
       return true;
     }),
   );
