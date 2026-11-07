@@ -162,8 +162,26 @@ test("Tab nests a plain blockquote instead of tab-before-> (BH-058)", () => {
   assert.equal(apply("> |quoted", indentTab, "  "), "> > |quoted");
   assert.equal(apply("> > |nested", indentTab, "  "), "> > > |nested");
   assert.equal(apply("> quoted| text", indentTab, "  "), "> > quoted| text");
-  // Callout opener: no-op (do not tab-before-> or nest).
+  // Callout opener: no-op (do not tab-before-> or nest), whatever its type.
   assert.equal(apply("> [!note] |Title", indentTab, "  "), "> [!note] |Title");
+  assert.equal(apply("> [!笔记] |标题", indentTab, "  "), "> [!笔记] |标题");
+  // `apply` drops every `|`, so the metadata's is placed by offset.
+  const metadata = "> [!note|wide] Title";
+  const changed: string[] = [];
+  assert.ok(
+    indentTab({
+      state: EditorState.create({
+        doc: metadata,
+        selection: { anchor: metadata.indexOf("Title") },
+      }),
+      dispatch: (tr) => {
+        changed.push(tr.state.doc.toString());
+      },
+    }),
+  );
+  assert.deepEqual(changed, []);
+  // `[!note]text` is no callout in Obsidian: Tab nests the quote.
+  assert.equal(apply("> |[!note]text", indentTab, "  "), "> > |[!note]text");
   // Quote-list still nests indent after > (BH-057), not another >.
   assert.equal(apply("> - |item", indentTab, "  "), ">   - |item");
 });
@@ -416,6 +434,22 @@ test("Backspace at list/task ATX heading text start unwraps marker (BH-063)", ()
 
 test("Backspace at callout title text start unwraps marker (BH-064)", () => {
   assert.equal(apply("> [!NOTE] |Title", outdentBackspace, "  "), "> |Title");
+  assert.equal(apply("> [!笔记]- |标题", outdentBackspace, "  "), "> |标题");
+  // `apply` drops every `|`, so the metadata's is placed by offset.
+  const metadata = "> [!note|wide] Title";
+  let unwrapped = "";
+  assert.ok(
+    outdentBackspace({
+      state: EditorState.create({
+        doc: metadata,
+        selection: { anchor: metadata.indexOf("Title") },
+      }),
+      dispatch: (tr) => {
+        unwrapped = tr.state.doc.toString();
+      },
+    }),
+  );
+  assert.equal(unwrapped, "> Title");
   assert.equal(apply("> [!tip] |Hint", outdentBackspace, "  "), "> |Hint");
   assert.equal(apply("> [!warning] |Warn", outdentBackspace, "  "), "> |Warn");
   assert.equal(

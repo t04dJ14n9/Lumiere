@@ -21,6 +21,8 @@ interface Callout {
   kind: string;
   title: string;
   fold?: string;
+  /** What follows the type's `|`, for CSS snippets: `[!note|wide]`. */
+  metadata?: string;
 }
 export function callouts(
   md: MarkdownIt,
@@ -35,9 +37,15 @@ export function callouts(
     const data = tokens[index]!.meta as unknown as Callout;
     const title = md.renderInline(data.title, env);
     const heading = `${calloutIcon(data.kind)}<span class="callout-title-text">${title}</span>`;
+    const { escapeHtml } = md.utils;
+    const attributes = `class="callout" data-callout="${escapeHtml(data.kind)}"${
+      data.metadata === undefined
+        ? ""
+        : ` data-callout-metadata="${escapeHtml(data.metadata)}"`
+    }`;
     return data.fold
-      ? `<details class="callout" data-callout="${data.kind}"${data.fold === "+" ? " open" : ""}><summary class="callout-title">${heading}<button type="button" class="callout-fold" aria-label="Toggle callout">›</button></summary><div class="callout-content">`
-      : `<aside class="callout" data-callout="${data.kind}"><div class="callout-title">${heading}</div><div class="callout-content">`;
+      ? `<details ${attributes}${data.fold === "+" ? " open" : ""}><summary class="callout-title">${heading}<button type="button" class="callout-fold" aria-label="Toggle callout">›</button></summary><div class="callout-content">`
+      : `<aside ${attributes}><div class="callout-title">${heading}</div><div class="callout-content">`;
   };
   md.renderer.rules.callout_close = (tokens, index) =>
     `</div></${(tokens[index]!.meta as unknown as Callout).fold ? "details" : "aside"}>`;
@@ -57,7 +65,7 @@ function transformCallout(
   if (paragraph?.type !== "paragraph_open" || inline?.type !== "inline") {
     return;
   }
-  const match = /^\[!([\w-]+)\]([+-])?(?:[ \t]+([^\n]*))?(?:\n|$)/.exec(
+  const match = /^\[!([^\]\n]+)\]([+-])?(?:[ \t]+([^\n]*))?(?:\n|$)/.exec(
     inline.content,
   );
   if (!match) {
@@ -97,16 +105,22 @@ function closingQuote(tokens: Token[], index: number): number {
 /** A callout without a title shows its type, capitalised, hyphens as spaces. */
 function defaultTitle(type: string): string {
   const words = type.replace(/-/g, " ");
-  return words[0]!.toUpperCase() + words.slice(1);
+  return words.charAt(0).toUpperCase() + words.slice(1);
 }
 
+/**
+ * `[!type|metadata]` as Obsidian reads it: the type lowercased, its runs of
+ * spaces as hyphens, and anything after the first `|` its metadata.
+ */
 function calloutData(match: RegExpExecArray): Callout {
-  const raw = match[1]!.toLowerCase();
+  const [type = "", ...metadata] = match[1]!.split("|");
+  const raw = type.trim().toLowerCase().replace(/\s+/g, "-");
   const canonical = calloutAliases[raw] ?? raw;
   const fold = match[2];
   return {
     kind: canonical,
     title: match[3] || defaultTitle(raw),
     ...(fold === undefined ? {} : { fold }),
+    ...(metadata.length ? { metadata: metadata.join("|") } : {}),
   };
 }
