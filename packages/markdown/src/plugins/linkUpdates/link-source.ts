@@ -20,10 +20,12 @@ const WIKILINK = /^(!?\[\[)(.*?)((?:\\?\|.*)?\]\])$/su;
 
 /**
  * `[text](destination "title")`, the destination bare or in `<…>`. Anchored
- * at both ends, so a bare destination may hold balanced parentheses.
+ * at both ends, so a bare destination may hold balanced parentheses and
+ * quotes: only whitespace ends it, and `Old"note.md` is a valid file name.
+ * A quoted title may hold its own delimiter backslash-escaped.
  */
 const MARKDOWN_LINK =
-  /^(!?\[.*?\]\(\s*)(<[^>\n]*>|[^\s"]+?)((?:\s+(?:"[^"]*"|'[^']*'|\([^)]*\)))?\s*\))$/su;
+  /^(!?\[.*?\]\(\s*)(<[^>\n]*>|\S+?)((?:\s+(?:"(?:[^"\\]|\\.)*"|'(?:[^'\\]|\\.)*'|\([^)]*\)))?\s*\))$/su;
 
 /** The parts of a wikilink or inline Markdown link, or `undefined`. */
 export function linkSource(original: string): LinkSource | undefined {

@@ -188,6 +188,33 @@ test("text showing the renamed file's name follows it; the writer's own text sta
   );
 });
 
+test("a bare destination may hold a literal quote, as the parser reads it", () => {
+  const text = '[a](Old"note.md) [b](Old"note.md "Title")';
+  const notes = { 'Old"note.md': "", "A.md": text };
+  const ctx = context(notes, { 'Old"note.md': "New.md" });
+  assert.equal(
+    apply(text, rewriteLinks(text, "A.md", ctx)),
+    '[a](New.md) [b](New.md "Title")',
+  );
+});
+
+test("a title with escaped quotes survives a rename", () => {
+  const text = [
+    '[a](Old.md "Say \\"hello\\"")',
+    "[b](Old.md 'it\\'s')",
+    '[c](<Old.md> "Say \\"hello\\"")',
+  ].join("\n");
+  const ctx = context({ ...vault, "A.md": text }, { "Old.md": "New (1).md" });
+  assert.equal(
+    apply(text, rewriteLinks(text, "A.md", ctx)),
+    [
+      '[a](New%20(1).md "Say \\"hello\\"")',
+      "[b](New%20(1).md 'it\\'s')",
+      '[c](<New (1).md> "Say \\"hello\\"")',
+    ].join("\n"),
+  );
+});
+
 test("a moved note's own links keep their text", () => {
   const text = "[sub/Deep](sub/Deep.md)";
   const ctx = context(
