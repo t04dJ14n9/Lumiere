@@ -30,12 +30,11 @@ function blockquote(text: string): string {
   return lines.map((line) => (line ? `> ${line}` : ">")).join("\n");
 }
 
-/** Last path segment of a workspace path or file URL path. */
+/** Last path segment of a workspace or absolute file path. */
 function fileBasename(path: string): string {
   const cleaned = path.replace(/\\/gu, "/");
-  const noQuery = cleaned.split(/[?#]/u, 1)[0] ?? cleaned;
-  const slash = noQuery.lastIndexOf("/");
-  return slash >= 0 ? noQuery.slice(slash + 1) : noQuery;
+  const slash = cleaned.lastIndexOf("/");
+  return slash >= 0 ? cleaned.slice(slash + 1) : cleaned;
 }
 
 export function pageLinkText(source: PdfSource, page: number): string {
