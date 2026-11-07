@@ -47,10 +47,13 @@ export function checklistEdit(
   cycle: boolean,
 ): TransactionSpec {
   const lines = selectedLines(state);
-  const step =
-    STEPS[
-      Math.min(...lines.map((line) => STEPS.indexOf(stepOf(line.text, cycle))))
-    ]!;
+  // A loop, not Math.min(...), which throws a RangeError for a selection of
+  // more than about 125,000 lines.
+  let least = STEPS.length - 1;
+  for (const line of lines) {
+    least = Math.min(least, STEPS.indexOf(stepOf(line.text, cycle)));
+  }
+  const step = STEPS[least]!;
   const changes = lines.flatMap((line) => stepEdit(line, step, cycle) ?? []);
   // A caret where the box goes ends up after it, as in Obsidian.
   const set = state.changes(changes);

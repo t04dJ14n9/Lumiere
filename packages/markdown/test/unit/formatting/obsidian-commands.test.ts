@@ -224,6 +224,20 @@ test("blank lines in a selection of several lines get no box", () => {
   );
 });
 
+test("a selection of a very large number of lines does not overflow the call stack", () => {
+  // Spreading one argument per line into Math.min fails above ~125k lines.
+  const count = 200_000;
+  const doc = Array.from({ length: count }, () => "a").join("\n");
+  const state = EditorState.create({
+    doc,
+    selection: { anchor: 0, head: doc.length },
+  });
+  const next = state.update(checklistEdit(state, false)).state;
+  assert.equal(next.doc.lines, count);
+  assert.equal(next.doc.line(1).text, "- [ ] a");
+  assert.equal(next.doc.line(count).text, "- [ ] a");
+});
+
 test("a new table goes after the line the selection starts on, the caret at its start", () => {
   const table = "|     |     |\n| --- | --- |\n|     |     |";
   assert.equal(edit("|", insertTable), `\n|${table}\n`);
