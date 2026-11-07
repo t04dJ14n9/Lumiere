@@ -83,7 +83,7 @@ const onWillRename: HostDocuments["onWillRename"] = (listener) =>
           // Lumia-open tabs stay out of waitUntil so a failed custom-editor
           // apply cannot abort the whole batch.
           const lumiere = lumiereOpenUris();
-          await scheduleLinkUpdatesAfterRename(files);
+          await scheduleLinkUpdatesAfterRename(files, renames);
           return workspaceEdit(files.filter((file) => !lumiere.has(file.uri)));
         }),
       );
@@ -110,10 +110,12 @@ function lumiereOpenUris(): Set<string> {
 /**
  * Plan post-rename apply+save for every note the link update touches.
  * Expected text is captured here (open buffer or on-disk bytes) so a delayed
- * Preview → Apply cannot leave disk on the old name.
+ * Preview → Apply cannot leave disk on the old name; targets are mapped to
+ * their post-rename URIs because `onDidRenameFiles` runs after the move.
  */
 async function scheduleLinkUpdatesAfterRename(
   files: readonly FileTextEdits[],
+  renames: readonly { oldUri: string; newUri: string }[],
 ): Promise<void> {
   const targets = files.filter((file) => file.edits.length > 0);
   if (targets.length === 0) {
@@ -124,17 +126,41 @@ async function scheduleLinkUpdatesAfterRename(
       vscode.workspace.textDocuments.some(
         (document) => document.uri.toString() === uri && document.isDirty,
       ),
-    ),
+    ).map((uri) => postRenameUri(uri, renames)),
   );
   const expected = new Map<string, string>();
+  const postTargets: FileTextEdits[] = [];
   for (const file of targets) {
     const text = await noteTextForLinkUpdate(file.uri);
-    expected.set(file.uri, applyLineColEdits(text, file.edits));
+    const uri = postRenameUri(file.uri, renames);
+    expected.set(uri, applyLineColEdits(text, file.edits));
+    postTargets.push({ uri, edits: file.edits });
   }
   const done = vscode.workspace.onDidRenameFiles(() => {
     done.dispose();
-    void settleLinkUpdates(targets, expected, clean);
+    void settleLinkUpdates(postTargets, expected, clean);
   });
+}
+
+/**
+ * Map a pre-rename file URI to its URI after `renames` (an exact file rename
+ * or a renamed parent folder).
+ */
+function postRenameUri(
+  uri: string,
+  renames: readonly { oldUri: string; newUri: string }[],
+): string {
+  for (const { oldUri, newUri } of renames) {
+    if (uri === oldUri) {
+      return newUri;
+    }
+    const prefix = oldUri.endsWith("/") ? oldUri : `${oldUri}/`;
+    if (uri.startsWith(prefix)) {
+      const target = newUri.endsWith("/") ? newUri.slice(0, -1) : newUri;
+      return `${target}/${uri.slice(prefix.length)}`;
+    }
+  }
+  return uri;
 }
 
 /** Open buffer text, or the file on disk without stamping a TextDocument version. */
