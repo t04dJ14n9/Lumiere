@@ -1,6 +1,6 @@
 import type { Context } from "@workshop/core";
 import { SourceCoordinates } from "../../shared/document/coordinates";
-import type { Dialogs, HostDocuments } from "../../shared/host";
+import type { Dialogs, HostDocument, HostDocuments } from "../../shared/host";
 import type { Editors } from "../editor/api";
 import { protocol as editorProtocol } from "../editor/protocol";
 import type { Vaults } from "../vault/api";
@@ -43,9 +43,8 @@ export async function renameHeading(ctx: Services): Promise<void> {
   const caret = await panel?.rpc
     .call(editorProtocol, "captureSelection", {})
     .catch(() => undefined);
-  const text = panel?.document.getText() ?? "";
-  const heading =
-    caret && headingAt(text, new SourceCoordinates(text).toSource(caret.from));
+  const text = editorText(panel?.document.getText() ?? "");
+  const heading = caret && headingAt(text, caret.from);
   if (!panel || !heading) {
     ctx.dialogs.inform("Put the caret on a heading to rename it.");
     return;
@@ -63,11 +62,45 @@ export async function renameHeading(ctx: Services): Promise<void> {
     return;
   }
   const renamed: RenamedHeading = { path, text, heading, name };
-  await updateLinks(ctx, located.vault, renamed);
-  await ctx.hostDocuments.apply(panel.document, [
+  await applyRename(ctx, panel.document, renamed, located.vault);
+}
+
+/**
+ * Rename in `document`, then in the notes linking to it. The offsets in
+ * `renamed` belong to the note as it was when the name was asked for, so an
+ * edit made meanwhile refuses the rename rather than land them in the wrong
+ * place. This note goes first, with no await since that check, so its offsets
+ * cannot go stale; the other notes are read afresh as each is updated.
+ */
+async function applyRename(
+  ctx: Services,
+  document: HostDocument,
+  renamed: RenamedHeading,
+  vault: Vault,
+): Promise<void> {
+  if (editorText(document.getText()) !== renamed.text) {
+    ctx.dialogs.inform(
+      "The note changed while the heading was being renamed. Try again.",
+    );
+    return;
+  }
+  const { heading, name, path, text } = renamed;
+  const isApplied = await ctx.hostDocuments.apply(document, [
     { from: heading.nameFrom, to: heading.nameTo, insert: name },
-    ...headingLinkEdits(text, path, renamed, resolver(located.vault)),
+    ...headingLinkEdits(text, path, renamed, resolver(vault)),
   ]);
+  if (isApplied) {
+    await updateLinks(ctx, vault, renamed);
+  }
+}
+
+/**
+ * A note's text with LF line ends, the coordinates `hostDocuments.apply`
+ * takes offsets in; offsets read from the source text of a CRLF note do not
+ * fit it.
+ */
+function editorText(source: string): string {
+  return new SourceCoordinates(source).editor.toString();
 }
 
 type Vault = NonNullable<Awaited<ReturnType<Vaults["locate"]>>>["vault"];
@@ -92,7 +125,9 @@ async function updateLinks(
     if (file?.extension !== "md") {
       continue;
     }
-    const text = await sourceText(ctx.vaults, ctx.hostDocuments, file.uri);
+    const text = editorText(
+      await sourceText(ctx.vaults, ctx.hostDocuments, file.uri),
+    );
     const edits = headingLinkEdits(text, source, renamed, resolver(vault));
     if (edits.length > 0) {
       await ctx.hostDocuments.apply(
