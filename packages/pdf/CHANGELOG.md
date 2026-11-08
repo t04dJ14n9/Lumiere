@@ -2,6 +2,17 @@
 
 ## Unreleased
 
+- **Annotations no longer change the PDF.** Highlights, notes, underlines,
+  free text and ink are kept in `.lumiere/pdf-annotations/<sha256>.json` in
+  the workspace folder, named by the PDF's SHA-256, and come back when the
+  PDF opens. `lumiere.pdf.annotations.folder` sets another folder. A vault that records the hash of its immutable sources (such as
+  `.raw/`) keeps a matching hash, and a PDF annotated in `inbox/` shows the
+  same annotations once captured. **PDF: Save Annotations into This PDF**
+  writes them into the file on request (refused in
+  `lumiere.pdf.annotations.protectedFolders`, default `.raw`), and **PDF:
+  Export Annotated Copy…** writes a new PDF. Annotations already in a PDF
+  still show; changes to them are kept only by saving into the PDF.
+
 - **Legacy PDF sidecars are gone.** Existing `*.pdf.lumiere.md` highlight files
   are no longer read, and `lumiere.pdf.sidecar.location` and
   `lumiere.pdf.sidecar.directory` are removed (delete them from your settings;

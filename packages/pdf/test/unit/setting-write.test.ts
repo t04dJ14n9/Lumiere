@@ -87,3 +87,12 @@ test("every contributed setting accepts its own default", () => {
     );
   }
 });
+
+test("a list setting takes a list whose items fit, and nothing else", () => {
+  const key = "lumiere.pdf.annotations.protectedFolders";
+  assert.equal(problem(key, []), undefined);
+  assert.equal(problem(key, [".raw", "sources/archive"]), undefined);
+  assert.ok(problem(key, ".raw"));
+  assert.ok(problem(key, [".raw", 3]));
+  assert.ok(problem(key, null));
+});

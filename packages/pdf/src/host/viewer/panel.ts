@@ -23,7 +23,8 @@ import { HistoryRequests } from "./history-requests";
 import { PdfNavigation } from "./navigation";
 import { viewerHtml } from "./page";
 import { PdfSelectionState, type SelectionSnapshot } from "./selection";
-import { AnnotationSave } from "./annotation-save";
+import { PanelAnnotations } from "./panel-annotations";
+import { isAnnotationViewerMessage } from "../../shared/annotation-messages";
 import { PdfSource } from "./source";
 import { createPdfViewId } from "./view-id";
 import { PdfBacklinkOutlet } from "./pdf-backlinks";
@@ -67,15 +68,14 @@ export class PdfViewerPanel {
   private readonly selected = new Emitter<SelectionSnapshot | undefined>();
   /** Fires with each new selection (or none), after `onDidChange`. */
   readonly onDidChangeSelection = this.selected.event;
-  private readonly annotationConflict = new Emitter<{
-    data: ArrayBuffer;
-    load: number;
-  }>();
-  /** Disk diverged from the editor's base bytes during an annotation save. */
-  readonly onAnnotationConflict = this.annotationConflict.event;
-  private readonly annotationSaveFailed = new Emitter<string>();
-  /** An annotation overwrite failed (I/O error). */
-  readonly onAnnotationSaveFailed = this.annotationSaveFailed.event;
+  /** Disk diverged from the editor's base bytes while saving into the PDF. */
+  readonly onAnnotationConflict: PanelAnnotations["conflict"]["event"];
+  /** An annotation save failed (I/O error). */
+  readonly onAnnotationSaveFailed: PanelAnnotations["failed"]["event"];
+  /** The viewer sent the PDF with its annotations for Export Annotated Copy. */
+  readonly onAnnotationExport: PanelAnnotations["exported"]["event"];
+  /** An annotation that is part of the PDF changed; only saving into the PDF keeps that. */
+  readonly onAnnotationEmbeddedEdit: PanelAnnotations["embeddedEdit"]["event"];
 
   private readonly source: PdfSource;
   private readonly selectionState = new PdfSelectionState();
@@ -99,7 +99,7 @@ export class PdfViewerPanel {
   private lastJump = 0;
   private readonly history = new HistoryRequests((m) => this.post(m));
   private historyState = { back: false, forward: false };
-  private readonly annotations: AnnotationSave;
+  private readonly annotations: PanelAnnotations;
 
   constructor(
     /** The file's URI, without a fragment. */
@@ -116,20 +116,20 @@ export class PdfViewerPanel {
       changed: () => void this.load(),
       failed: (message) => host.error(message),
     });
-    this.annotations = new AnnotationSave(fileUri, host.files, this.source, {
+    this.annotations = new PanelAnnotations(fileUri, host, this.source, {
       isCurrentLoad: (load) => this.isCurrentLoad(load),
       post: (message) => this.post(message),
-      error: (message) => host.error(message),
-      conflict: (payload) => this.annotationConflict.fire(payload),
-      failed: (message) => this.annotationSaveFailed.fire(message),
     });
+    this.onAnnotationConflict = this.annotations.conflict.event;
+    this.onAnnotationSaveFailed = this.annotations.failed.event;
+    this.onAnnotationExport = this.annotations.exported.event;
+    this.onAnnotationEmbeddedEdit = this.annotations.embeddedEdit.event;
     // The listener's promise goes back to the host (tests await it).
     const stopReceiving = webview.onMessage((message) => this.receive(message));
     this.disposables.push(
       this.changed,
       this.selected,
-      this.annotationConflict,
-      this.annotationSaveFailed,
+      this.annotations,
       this.source,
       {
         dispose: stopReceiving,
@@ -321,6 +321,11 @@ export class PdfViewerPanel {
     this.post({ type: "annotationRetry", load: this.loads });
   }
 
+  /** Ask the viewer for the PDF with its annotations: to save into the open file, or for a copy. */
+  writeAnnotations(to: "pdf" | "copy"): void {
+    this.post({ type: "annotationWrite", load: this.loads, to });
+  }
+
   private async receive(raw: unknown): Promise<void> {
     const message = parseViewerMessage(raw);
     if (!message) {
@@ -355,18 +360,12 @@ export class PdfViewerPanel {
           await this.options.route(message);
         }
         break;
-      case "annotationSave":
-        await this.annotations.save(message);
-        break;
-      case "annotationSaveFailed":
-        if (this.isCurrentLoad(message.load)) {
-          this.annotations.markFailed();
-          this.host.error(`Could not save PDF annotations: ${message.message}`);
-          this.annotationSaveFailed.fire(message.message);
-        }
-        break;
       default:
-        await this.options.route(message);
+        if (isAnnotationViewerMessage(message)) {
+          await this.annotations.handle(message);
+        } else {
+          await this.options.route(message);
+        }
     }
   }
 
@@ -452,6 +451,7 @@ export class PdfViewerPanel {
     if (!bytes) {
       return;
     }
+    const annotations = await this.annotations.read(bytes.sha256);
     this.loads++;
     this.post({
       type: "load",
@@ -460,6 +460,7 @@ export class PdfViewerPanel {
       settings: this.settings,
       sha256: bytes.sha256,
       ...(this.position ? { position: this.position } : {}),
+      ...(annotations === undefined ? {} : { annotations }),
     });
     this.history.newViewer();
     this.loading = false;

@@ -16,4 +16,17 @@ export interface PdfFiles {
    * annotation saves then fail with a clear error.
    */
   writeAtomic?(uri: string, bytes: Uint8Array): Promise<{ sha256: string }>;
+  /**
+   * The annotation file kept for the PDF at `uri` whose bytes hash to
+   * `sha256` (see `annotation-store`). Hosts without one keep no annotations
+   * between sessions.
+   */
+  annotations?: PdfAnnotationFiles;
+}
+
+export interface PdfAnnotationFiles {
+  /** The file's text; undefined when there is none. */
+  read(uri: string, sha256: string): Promise<string | undefined>;
+  /** Replace the file with `text`, or remove it when `text` is undefined. */
+  write(uri: string, sha256: string, text: string | undefined): Promise<void>;
 }

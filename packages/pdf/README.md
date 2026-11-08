@@ -7,7 +7,8 @@ and its PDFium engine. Select text and choose **Copy link to this**: the
 clipboard gets a Quote with a Chrome-aligned deep link (`#page=` +
 `#:~:text=`), ready to paste into any note. Opening the PDF paints
 **backlink overlays** from those vault Markdown links. Annotate tools
-(Highlight, Note, freeText, …) burn into the PDF. Region / box selection
+(Highlight, Note, freeText, …) never change the PDF: their marks are kept in
+the workspace's `.lumiere/pdf-annotations/`. Region / box selection
 is opt-in (`lumiere.pdf.regions.enabled`, default off).
 
 ## Features
@@ -40,9 +41,22 @@ is opt-in (`lumiere.pdf.regions.enabled`, default off).
   Quote with `#page=N#:~:text=…` (or a page-only `#page=N` link with nothing
   selected). Paste into any note; the viewer paints **backlink overlays**
   from those links (hover preview, click opens the note; Del ignores
-  overlays). Annotate **Highlight** / Note / freeText / underline burn into
-  the PDF; Del deletes those embedded marks. See
-  [CAPABILITIES.md](CAPABILITIES.md).
+  overlays). See [CAPABILITIES.md](CAPABILITIES.md).
+- **Annotations never change the PDF.** Annotate **Highlight** / Note /
+  freeText / underline / ink are kept in
+  `.lumiere/pdf-annotations/<sha256>.json` in the PDF's workspace folder
+  (`~/.lumiere/…` for a PDF outside every folder), named by the PDF's
+  SHA-256. `lumiere.pdf.annotations.folder` puts them elsewhere: another
+  workspace-relative folder, `~/…`, or an absolute path. The PDF's bytes, and so the hash a vault records for an immutable
+  source, stay as they are. The same PDF anywhere (in `inbox/`, then
+  captured into `.raw/`) shows the same annotations, and a renamed or moved
+  copy keeps them. Del deletes them.
+  - **PDF: Save Annotations into This PDF** writes them into the file after
+    you confirm (its SHA-256 changes). It refuses PDFs in
+    `lumiere.pdf.annotations.protectedFolders` (default `[".raw"]`).
+  - **PDF: Export Annotated Copy…** writes a new PDF with them, for sharing.
+  - Annotations a PDF already holds show as usual; a change to one is kept
+    only by saving into the PDF, and Lumia says so the first time.
 - **PDF Outline in the Explorer.** The PDF's bookmarks appear as a native
   tree view; click an entry to open its page. The title bar offers **Expand All**
   and **Collapse All**. **Follow Cursor** (on by default; toggle it in the **…**

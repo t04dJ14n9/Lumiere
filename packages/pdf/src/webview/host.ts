@@ -65,7 +65,11 @@ export function connectToHost(onLoad: (data: ArrayBuffer) => void): void {
       if (message.type === "load") {
         inbox.beginLoad();
         outbox.loaded(message.load);
-        rememberAnnotationLoad(message.load, message.sha256);
+        rememberAnnotationLoad(
+          message.load,
+          message.sha256,
+          message.annotations,
+        );
         prepareReadingPosition(message.settings, message.position);
         receiveBytes(message);
       } else {

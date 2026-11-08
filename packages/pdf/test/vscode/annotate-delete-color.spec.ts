@@ -1,9 +1,16 @@
 import { createHash } from "node:crypto";
-import { mkdirSync, readFileSync, writeFileSync } from "node:fs";
+import {
+  existsSync,
+  mkdirSync,
+  readFileSync,
+  rmSync,
+  writeFileSync,
+} from "node:fs";
 import path from "node:path";
 import type { Frame, Page } from "@playwright/test";
 import { paths } from "./state";
 import {
+  closeAllEditors,
   drag,
   expect,
   fitPage,
@@ -15,12 +22,15 @@ import {
 } from "./workbench";
 
 /**
- * Host GUI: Annotate Highlight burns into the PDF; Delete removes the embedded
- * mark. Synthetic fixtures only.
+ * Host GUI: an Annotate highlight is kept in the workspace's annotation file
+ * for the PDF's hash, never in the PDF (a vault records that hash); it comes
+ * back when the PDF is opened again, and Delete removes it from that file.
+ * Synthetic fixtures only.
  */
 const PDF = "docs/outline.pdf";
 const TEXT_MIDLINE = 94;
 const SHOT_DIR = path.join(paths.repository, "test-results", "host-gui-pr482");
+const STORE = path.join(paths.workspace, ".lumiere");
 
 test.setTimeout(180_000);
 
@@ -32,65 +42,81 @@ function statusBarButton(page: Page, id: string) {
   return page.locator(`.part.statusbar [id$="lumiere.pdf.${id}"]`);
 }
 
-async function highlightAcross(
-  page: Page,
-  viewer: Frame,
-  x0: number,
-  x1: number,
-): Promise<void> {
-  const at = await pagePoint(viewer, 1);
-  await drag(page, at(x0, TEXT_MIDLINE), at(x1, TEXT_MIDLINE));
+/** EmbedPDF highlight marks use multiply blend rectangles inside the page. */
+function highlightMarks(viewer: Frame): Promise<number> {
+  return viewer.evaluate(
+    () =>
+      document.querySelectorAll(
+        '.page [style*="mix-blend-mode: multiply"], .page [style*="mix-blend-mode:multiply"]',
+      ).length,
+  );
 }
 
-test("Annotate highlight burns in, Delete mutates PDF", async ({
-  workbench: page,
-}) => {
-  mkdirSync(SHOT_DIR, { recursive: true });
-  const pdfPath = path.join(paths.workspace, PDF);
-  const evidence: string[] = [`pdf=${PDF}`, `host=cursor`];
-
+async function openAnnotating(page: Page): Promise<Frame> {
   await openFile(page, PDF);
   const viewer = await pdfViewer(page);
   await fitPage(page, viewer);
   await showPage(page, viewer, 1);
-  await page.screenshot({
-    path: path.join(SHOT_DIR, "01-pdf-open.png"),
-    fullPage: true,
-  });
+  return viewer;
+}
 
-  const beforeHash = sha256(pdfPath);
-  evidence.push(`sha256_before_create=${beforeHash}`);
+test("an Annotate highlight is kept beside the PDF, comes back on reopen, and Delete removes it", async ({
+  workbench: page,
+}) => {
+  mkdirSync(SHOT_DIR, { recursive: true });
+  rmSync(STORE, { recursive: true, force: true });
+  const pdfPath = path.join(paths.workspace, PDF);
+  const pdfHash = sha256(pdfPath);
+  const kept = path.join(STORE, "pdf-annotations", `${pdfHash}.json`);
+  const evidence: string[] = [`pdf=${PDF}`, `sha256=${pdfHash}`];
+  try {
+    let viewer = await openAnnotating(page);
+    const baseline = await highlightMarks(viewer);
+    await statusBarButton(page, "annotate").click();
+    await expect(statusBarButton(page, "annotate")).toContainText(
+      /Annotating/u,
+    );
+    const at = await pagePoint(viewer, 1);
+    await drag(page, at(74, TEXT_MIDLINE), at(205, TEXT_MIDLINE));
+    await expect.poll(() => existsSync(kept), { timeout: 20_000 }).toBe(true);
+    const file = JSON.parse(readFileSync(kept, "utf8")) as {
+      annotations: { annotation: { type: number } }[];
+    };
+    expect(file.annotations.map((item) => item.annotation.type)).toEqual([9]);
+    expect(sha256(pdfPath)).toBe(pdfHash);
+    evidence.push(`kept=${path.relative(paths.workspace, kept)}`);
+    await page.screenshot({
+      path: path.join(SHOT_DIR, "02-highlight-kept.png"),
+      fullPage: true,
+    });
 
-  await statusBarButton(page, "annotate").click();
-  await expect(statusBarButton(page, "annotate")).toContainText(/Annotating/u);
-  await expect(statusBarButton(page, "annotationTool")).toBeVisible();
+    // Opened again, the PDF shows the highlight from the annotation file.
+    await closeAllEditors(page);
+    viewer = await openAnnotating(page);
+    await expect.poll(() => highlightMarks(viewer)).toBeGreaterThan(baseline);
 
-  await highlightAcross(page, viewer, 74, 205);
-  await expect
-    .poll(() => sha256(pdfPath), { timeout: 20_000 })
-    .not.toBe(beforeHash);
-  const afterCreateHash = sha256(pdfPath);
-  evidence.push(`sha256_after_create=${afterCreateHash}`);
-  await page.screenshot({
-    path: path.join(SHOT_DIR, "02-highlight-burn-in.png"),
-    fullPage: true,
-  });
-
-  // New marks auto-select; Delete removes the embedded annot (PDF bytes change).
-  const at = await pagePoint(viewer, 1);
-  await page.mouse.click(...at(100, TEXT_MIDLINE).screen);
-  await page.waitForTimeout(300);
-  await page.keyboard.press("Delete");
-  await expect
-    .poll(() => sha256(pdfPath), { timeout: 20_000 })
-    .not.toBe(afterCreateHash);
-  evidence.push(`sha256_after_delete=${sha256(pdfPath)}`, `result=PASS`);
-  await page.screenshot({
-    path: path.join(SHOT_DIR, "03-after-delete.png"),
-    fullPage: true,
-  });
-  writeFileSync(
-    path.join(SHOT_DIR, "evidence.txt"),
-    evidence.join("\n") + "\n",
-  );
+    // Delete takes it out of the file; the PDF is still as it was.
+    await statusBarButton(page, "annotate").click();
+    await expect(statusBarButton(page, "annotate")).toContainText(
+      /Annotating/u,
+    );
+    const again = await pagePoint(viewer, 1);
+    await page.mouse.click(...again(100, TEXT_MIDLINE).screen);
+    await page.waitForTimeout(300);
+    await page.keyboard.press("Delete");
+    await expect.poll(() => existsSync(kept), { timeout: 20_000 }).toBe(false);
+    expect(sha256(pdfPath)).toBe(pdfHash);
+    evidence.push("result=PASS");
+    await page.screenshot({
+      path: path.join(SHOT_DIR, "03-after-delete.png"),
+      fullPage: true,
+    });
+  } finally {
+    writeFileSync(
+      path.join(SHOT_DIR, "evidence.txt"),
+      evidence.join("\n") + "\n",
+    );
+    await closeAllEditors(page);
+    rmSync(STORE, { recursive: true, force: true });
+  }
 });

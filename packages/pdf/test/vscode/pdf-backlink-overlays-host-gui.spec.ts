@@ -494,20 +494,24 @@ test("Host GUI: PDF backlink overlays checklist (Chrome)", async ({
       { timeout: 10_000 },
     );
     const beforeHash = sha256(pdfPath);
+    // Annotations are kept in the workspace's file for the PDF's hash; the
+    // PDF itself is never written.
+    const kept = path.join(
+      paths.workspace,
+      ".lumiere",
+      "pdf-annotations",
+      `${beforeHash}.json`,
+    );
     // Second line (~110pt) avoids the backlink overlay on "Synthetic page 1".
     const atDel = await pagePoint(viewer, 1);
     await drag(page, atDel(74, 110), atDel(180, 110));
-    await expect
-      .poll(() => sha256(pdfPath), { timeout: 20_000 })
-      .not.toBe(beforeHash);
-    const afterCreate = sha256(pdfPath);
-    evidence.push(`sha256_after_highlight=${afterCreate}`);
+    await expect.poll(() => existsSync(kept), { timeout: 20_000 }).toBe(true);
+    evidence.push(`annotation_file_after_highlight=${existsSync(kept)}`);
     await page.mouse.click(...atDel(100, 110).screen);
     await page.waitForTimeout(200);
     await page.keyboard.press("Delete");
-    await expect
-      .poll(() => sha256(pdfPath), { timeout: 20_000 })
-      .not.toBe(afterCreate);
+    await expect.poll(() => existsSync(kept), { timeout: 20_000 }).toBe(false);
+    expect(sha256(pdfPath)).toBe(beforeHash);
     delEmbeddedOk = true;
   } catch (error) {
     evidence.push(`del_split_error=${String(error)}`);

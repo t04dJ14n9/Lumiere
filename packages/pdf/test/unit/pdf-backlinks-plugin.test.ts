@@ -4,6 +4,8 @@
  */
 import assert from "node:assert/strict";
 import crypto from "node:crypto";
+import os from "node:os";
+import * as annotationStore from "../../src/shared/annotation-store";
 import path from "node:path";
 import { test } from "node:test";
 import * as backlinkNoteUri from "../../src/shared/backlink-note-uri";
@@ -121,8 +123,10 @@ function launch(options: {
     {
       vscode,
       "node:crypto": crypto,
+      "node:os": os,
       "node:path": path,
       "../../../host/atomic-write": { writeAtomicFile: async () => undefined },
+      "../../../shared/annotation-store": annotationStore,
     },
   );
   const { pdfBacklinksPlugin } = loadModule(

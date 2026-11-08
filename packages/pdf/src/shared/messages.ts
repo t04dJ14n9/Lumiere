@@ -22,10 +22,9 @@
  *    │  zen { on } ─────────────►         zen mode is on or off (command-only while it lasts)
     │  pageColors { effective } ►         normal | dark paper (host resolved Follow)
  *    │  ◄──────────── zen                 Exit zen pressed, or full-screen zen ended
- *    │  ◄──────────── annotationSave       committed annotation bytes to overwrite the open PDF
- *    │  annotationSaveResult ──────►       host wrote (or conflict/error)
- *    │  annotationRetry ───────────►       re-run saveAsCopy after a failed save
- *    │  ◄──────────── annotationSaveFailed webview could not produce save bytes
+ *    │  ◄──────────── annotation*         Lumia's annotations kept outside the PDF,
+ *    │  annotation* ──────────►            and the PDF written with them on request
+ *    │                                    (see annotation-messages.ts)
  *    │  ◄──────────── lookUp              the word under a force click (open),
  *    │                                    or under a right click (to look up
  *    │                                    from the context menu)
@@ -52,6 +51,11 @@
  * The viewer runs untrusted PDF content, so the host validates what it
  * receives with `parseViewerMessage`.
  */
+import {
+  ANNOTATION_VIEWER_PARSERS,
+  type AnnotationHostMessage,
+  type AnnotationViewerMessage,
+} from "./annotation-messages";
 import { isLookUpWord } from "./look-up";
 import {
   parseOpenBacklinkNote,
@@ -138,13 +142,7 @@ export type ViewerMessage =
   /** Zen mode: `exit` the reader pressed Exit zen; otherwise the window left full-screen zen by itself. */
   | { type: "zen"; exit: boolean }
   | { type: "error"; message: string }
-  | {
-      type: "annotationSave";
-      load: number;
-      baseSha256: string;
-      data: ArrayBuffer;
-    }
-  | { type: "annotationSaveFailed"; load: number; message: string }
+  | AnnotationViewerMessage
   | OpenBacklinkNoteMessage;
 
 /**
@@ -164,6 +162,8 @@ export type HostMessage =
       /** SHA-256 of the bytes being delivered; annotation saves compare against it. */
       sha256: string;
       position?: ReadingPosition;
+      /** The text of the annotation file kept for these bytes (`annotation-store`), if any. */
+      annotations?: string;
     } & PdfDelivery)
   /** `top`: with no box, show the page from this many points below its top. */
   | {
@@ -193,15 +193,7 @@ export type HostMessage =
   | { type: "viewSettings"; settings: ViewSettings }
   /** Host-resolved page colors; webview must not re-derive theme kind. */
   | { type: "pageColors"; effective: "normal" | "dark" }
-  | { type: "annotationSaveResult"; load: number; ok: true; sha256: string }
-  | {
-      type: "annotationSaveResult";
-      load: number;
-      ok: false;
-      reason: "conflict" | "error";
-      message: string;
-    }
-  | { type: "annotationRetry"; load: number }
+  | AnnotationHostMessage
   | PdfBacklinksHostMessage;
 
 const MAX_OUTLINE_ITEMS = 10_000;
@@ -267,54 +259,8 @@ const VIEWER_PARSERS: Readonly<
     typeof message.message === "string"
       ? { type: "error", message: message.message.slice(0, 1_000) }
       : undefined,
-  annotationSave: parseAnnotationSave,
-  annotationSaveFailed: (message) =>
-    validHistoryNumber(message.load, 1) &&
-    typeof message.message === "string" &&
-    message.message.length <= 2000
-      ? {
-          type: "annotationSaveFailed",
-          load: message.load,
-          message: message.message,
-        }
-      : undefined,
+  ...ANNOTATION_VIEWER_PARSERS,
 };
-
-const MAX_ANNOTATION_SAVE_BYTES = 512_000_000;
-
-function parseAnnotationSave(message: Fields): ViewerMessage | undefined {
-  if (
-    !validHistoryNumber(message.load, 1) ||
-    typeof message.baseSha256 !== "string" ||
-    message.baseSha256.length < 1 ||
-    message.baseSha256.length > 128
-  ) {
-    return undefined;
-  }
-  const data = asStandaloneArrayBuffer(message.data);
-  if (!data || data.byteLength > MAX_ANNOTATION_SAVE_BYTES) {
-    return undefined;
-  }
-  return {
-    type: "annotationSave",
-    load: message.load,
-    baseSha256: message.baseSha256,
-    data,
-  };
-}
-
-function asStandaloneArrayBuffer(value: unknown): ArrayBuffer | undefined {
-  if (value instanceof ArrayBuffer) {
-    return value;
-  }
-  if (!ArrayBuffer.isView(value)) {
-    return undefined;
-  }
-  return value.buffer.slice(
-    value.byteOffset,
-    value.byteOffset + value.byteLength,
-  ) as ArrayBuffer;
-}
 
 function parseHistoryJump(message: Fields): ViewerMessage | undefined {
   const from = parseReadingPosition(message.from);
