@@ -1,7 +1,12 @@
-import { createHash } from "node:crypto";
+import { createHash, randomBytes } from "node:crypto";
+import * as os from "node:os";
 import * as path from "node:path";
 import * as vscode from "vscode";
 import type { PdfFiles } from "../../../shared/host";
+import {
+  annotationFolder,
+  annotationStoreName,
+} from "../../../shared/annotation-store";
 import type { PdfFile } from "../../../shared/pdf-backlink-index";
 import { writeAtomicFile } from "../../../host/atomic-write";
 
@@ -22,7 +27,87 @@ export const vscodePdfFiles: PdfFiles = {
     }
     return writeAtomicFile(parsed.fsPath, bytes);
   },
+  annotations: {
+    read: async (uri, sha256) => {
+      const file = annotationFile(vscode.Uri.parse(uri), sha256);
+      return file ? readText(file) : undefined;
+    },
+    write: async (uri, sha256, text) => {
+      const file = annotationFile(vscode.Uri.parse(uri), sha256);
+      if (!file) {
+        throw new Error("There is no folder to keep this PDF's annotations in");
+      }
+      if (text === undefined) {
+        await vscode.workspace.fs
+          .delete(file)
+          .then(undefined, (error: unknown) => {
+            if (!isNotFound(error)) {
+              throw error;
+            }
+          });
+        return;
+      }
+      // Saving after every change: leave the file alone when nothing changed.
+      if ((await readText(file)) === text) {
+        return;
+      }
+      const folder = vscode.Uri.joinPath(file, "..");
+      await vscode.workspace.fs.createDirectory(folder);
+      const temp = vscode.Uri.joinPath(
+        folder,
+        `.${path.posix.basename(file.path)}.${randomBytes(8).toString("hex")}.tmp`,
+      );
+      await vscode.workspace.fs.writeFile(temp, new TextEncoder().encode(text));
+      await vscode.workspace.fs.rename(temp, file, { overwrite: true });
+    },
+  },
 };
+
+/**
+ * Where the annotations of a PDF with this hash are kept, as
+ * `lumiere.pdf.annotations.folder` says: by default under the PDF's
+ * workspace folder, else (a local file outside every folder) the home
+ * folder. Never beside the PDF, which may sit among sources that must not
+ * change.
+ */
+function annotationFile(
+  pdf: vscode.Uri,
+  sha256: string,
+): vscode.Uri | undefined {
+  const name = annotationStoreName(sha256);
+  const folder = annotationFolder(
+    vscode.workspace
+      .getConfiguration("lumiere.pdf.annotations", pdf)
+      .get<unknown>("folder"),
+  );
+  if (folder.from === "absolute") {
+    return vscode.Uri.joinPath(vscode.Uri.file(folder.path), name);
+  }
+  const home =
+    pdf.scheme === "file" ? vscode.Uri.file(os.homedir()) : undefined;
+  const root =
+    folder.from === "home"
+      ? home
+      : (vscode.workspace.getWorkspaceFolder(pdf)?.uri ?? home);
+  return root ? vscode.Uri.joinPath(root, ...folder.segments, name) : undefined;
+}
+
+async function readText(file: vscode.Uri): Promise<string | undefined> {
+  try {
+    return new TextDecoder().decode(await vscode.workspace.fs.readFile(file));
+  } catch (error) {
+    if (isNotFound(error)) {
+      return undefined;
+    }
+    throw error;
+  }
+}
+
+function isNotFound(error: unknown): boolean {
+  return (
+    error instanceof vscode.FileSystemError && error.code === "FileNotFound"
+  );
+}
 
 function watchFile(uri: vscode.Uri, onChange: () => void): () => void {
   if (uri.scheme !== "file") {

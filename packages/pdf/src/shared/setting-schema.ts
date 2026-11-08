@@ -16,6 +16,8 @@ export interface SchemaProperty {
   description?: string;
   markdownDescription?: string;
   anyOf?: unknown[];
+  /** For an array: the schema of each item. */
+  items?: SchemaProperty;
 }
 
 /**
@@ -174,6 +176,13 @@ export function schemaProblem(
   if (!fits) {
     return "Not a value of the setting's type.";
   }
+  if (Array.isArray(value) && property.items) {
+    const items = property.items;
+    const problem = value
+      .map((item) => schemaProblem(items, item))
+      .find((itemProblem) => itemProblem !== undefined);
+    return problem && `An item: ${problem}`;
+  }
   return typeof value === "number" ? rangeProblem(property, value) : undefined;
 }
 
@@ -198,6 +207,7 @@ const TYPE_CHECKS: Readonly<Record<string, (value: unknown) => boolean>> = {
   string: (value) => typeof value === "string",
   number: (value) => typeof value === "number" && Number.isFinite(value),
   integer: (value) => typeof value === "number" && Number.isInteger(value),
+  array: (value) => Array.isArray(value),
 };
 
 function rangeProblem(

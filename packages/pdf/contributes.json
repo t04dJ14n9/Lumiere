@@ -268,6 +268,18 @@
       "enablement": "lumiere.pdf.pdfActive"
     },
     {
+      "command": "lumiere.pdf.saveAnnotationsIntoPdf",
+      "title": "Save Annotations into This PDF",
+      "category": "PDF",
+      "enablement": "lumiere.pdf.pdfActive"
+    },
+    {
+      "command": "lumiere.pdf.exportAnnotatedCopy",
+      "title": "Export Annotated Copy…",
+      "category": "PDF",
+      "enablement": "lumiere.pdf.pdfActive"
+    },
+    {
       "command": "lumiere.pdf.deleteAnnotation",
       "title": "Delete Annotation",
       "category": "PDF",
@@ -656,6 +668,14 @@
         "when": "activeCustomEditorId == 'lumiere.pdf.viewer'"
       },
       {
+        "command": "lumiere.pdf.saveAnnotationsIntoPdf",
+        "when": "activeCustomEditorId == 'lumiere.pdf.viewer'"
+      },
+      {
+        "command": "lumiere.pdf.exportAnnotatedCopy",
+        "when": "activeCustomEditorId == 'lumiere.pdf.viewer'"
+      },
+      {
         "command": "lumiere.pdf.selectToolbarMode"
       },
       {
@@ -949,6 +969,23 @@
         "type": "boolean",
         "default": true,
         "markdownDescription": "macOS only: look up the word under the pointer with a force click (hard press on the trackpad) or a three-finger tap, which shows the Dictionary popover, or with **Look Up** in the right-click menu of a PDF, which opens the Dictionary app. Has no effect on other systems."
+      },
+      "lumiere.pdf.annotations.folder": {
+        "type": "string",
+        "default": ".lumiere/pdf-annotations",
+        "scope": "resource",
+        "markdownDescription": "Where PDF annotations are kept, one file per PDF named by its SHA-256, so annotating never changes the PDF. A relative path is inside the PDF's workspace folder (the home folder for a PDF outside every folder); `~/…` is inside the home folder; an absolute path is used as it is. Changing it does not move existing files."
+      },
+      "lumiere.pdf.annotations.protectedFolders": {
+        "type": "array",
+        "items": {
+          "type": "string"
+        },
+        "default": [
+          ".raw"
+        ],
+        "scope": "resource",
+        "markdownDescription": "Workspace folders whose PDFs **Save Annotations into This PDF** never writes, such as a vault's immutable sources. Annotations are always kept in `#lumiere.pdf.annotations.folder#`, named by the PDF's SHA-256, so the PDF itself never changes unless you save into it."
       },
       "lumiere.pdf.keyboardShortcuts": {
         "type": "boolean",

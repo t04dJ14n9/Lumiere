@@ -19,18 +19,16 @@ async function highlightMarkCount(page: Page) {
   );
 }
 
-/** What the viewer asked the host to write into the PDF file, decoded. */
-const pdfSaves = (page: Page) =>
-  page.evaluate(() =>
-    (
-      window as unknown as {
-        __messages: { type: string; data?: ArrayBuffer }[];
-      }
-    ).__messages
-      .filter((message) => message.type === "annotationSave")
-      .map((message) =>
-        new TextDecoder("latin1").decode(new Uint8Array(message.data!)),
-      ),
+/** The messages the viewer sent of one type. */
+const sent = (page: Page, type: string) =>
+  page.evaluate(
+    (type) =>
+      (
+        window as unknown as {
+          __messages: { type: string; text?: string | null }[];
+        }
+      ).__messages.filter((message) => message.type === type),
+    type,
   );
 
 test("Annotate mode has no viewer bar and Escape returns to text", async ({
@@ -80,11 +78,16 @@ test("highlight tool can mark text", async ({ page }) => {
   await page.mouse.move(...at(205, TEXT_MIDLINE), { steps: 10 });
   await page.mouse.up();
   await expect.poll(() => highlightMarkCount(page)).toBeGreaterThan(baseline);
-  // The mark is burnt into the PDF file itself.
+  // The mark is kept in Lumia's annotation file, not written into the PDF:
+  // its bytes (and their hash, which a vault records) stay as they were.
   await expect
-    .poll(async () => (await pdfSaves(page)).length)
+    .poll(async () => (await sent(page, "annotationStoreSave")).length)
     .toBeGreaterThan(0);
-  expect((await pdfSaves(page)).at(-1)!).toMatch(/\/Highlight/);
+  const kept = JSON.parse(
+    (await sent(page, "annotationStoreSave")).at(-1)!.text!,
+  ) as { annotations: { annotation: { type: number } }[] };
+  expect(kept.annotations.map((item) => item.annotation.type)).toContain(9);
+  expect(await sent(page, "annotationSave")).toHaveLength(0);
 });
 
 test("annotation undo clears an in-session highlight", async ({ page }) => {

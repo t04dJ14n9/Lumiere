@@ -29,6 +29,8 @@ export interface HostMessageHandlers {
   setChoices: React.Dispatch<React.SetStateAction<ViewChoices>>;
   setPageColors: (effective: "normal" | "dark") => void;
   retryAnnotationSave?: () => void;
+  /** Save into This PDF or Export Annotated Copy: send the PDF with its annotations. */
+  writeAnnotations?: (to: "pdf" | "copy") => void;
 }
 
 /** What the extension asks of this viewer: history, actions and settings. */
@@ -96,7 +98,7 @@ function handleHostMessage(
   }
 }
 
-/** The messages about the reader's marks: saves into the PDF, and backlink overlays. */
+/** The messages about the reader's marks: annotation saves, and backlink overlays. */
 function handleMarksMessage(
   message: Exclude<HostMessage, { type: "load" }>,
   handlers: HostMessageHandlers,
@@ -107,6 +109,11 @@ function handleMarksMessage(
       return;
     case "annotationRetry":
       handlers.retryAnnotationSave?.();
+      return;
+    case "annotationWrite":
+      if (message.load === annotationLoadState()?.load) {
+        handlers.writeAnnotations?.(message.to);
+      }
       return;
     case "pdfBacklinks": {
       const hits = parsePdfBacklinkHits(message.hits);

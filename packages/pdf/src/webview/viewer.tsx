@@ -148,6 +148,7 @@ function useViewerState(pdf: PdfDocumentObject) {
     setChoices,
     setPageColors: rememberPageColors,
     retryAnnotationSave: tools.annotationSave.retry,
+    writeAnnotations: tools.annotationSave.write,
   });
   return {
     choices,
