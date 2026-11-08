@@ -1,4 +1,4 @@
-import type { GlyphBox } from "../../../src/shared/sidecar-reattach";
+import type { GlyphBox } from "../../../src/shared/line-rects";
 
 /** Width and line height of the glyph boxes `layOut` draws, in points. */
 export const GLYPH_WIDTH = 8;

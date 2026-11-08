@@ -60,7 +60,6 @@ export function viewerPlugins(buffer: ArrayBuffer) {
     createPluginRegistration(HistoryPluginPackage),
     createPluginRegistration(AnnotationPluginPackage, {
       // Highlight burns into the PDF again; vault Markdown is the highlight store.
-      // Legacy *.pdf.lumiere.md files stay readable for #hl- open only.
       annotationAuthor: "Lumia",
       autoCommit: true,
       selectAfterCreate: true,

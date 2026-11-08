@@ -7,9 +7,9 @@
  *     > [attention.pdf · p.3](papers/attention.pdf#page=3#:~:text=Scaled%20dot%2Dproduct%20attention)
  *
  * Href is `path#page=N` plus optional `#:~:text=…` (Chrome), or
- * `path#page=N&viewrect=…` when regions are enabled. Never `#hl-`, never
- * PDF++ `selection=`, never RFC `search=`. No Source: prefix, no file hash,
- * no cite instruction, no Markdown escapes in the label.
+ * `path#page=N&viewrect=…` when regions are enabled. Never PDF++
+ * `selection=`, never RFC `search=`. No Source: prefix, no file hash, no cite
+ * instruction, no Markdown escapes in the label.
  *
  * A region uses the same Quote shape when it has readable text; viewrect is
  * emitted only when `regionsEnabled` is true. Region image paths are not

@@ -70,8 +70,8 @@ test("Copy Link for Agent is the only agent command; Copy for Agent and Ask Agen
       (entry) => entry.command === "lumiere.pdf.copyForAgent",
     ),
   );
-  // Ask Agent was renamed Copy Link for Agent, then Copy link to this (the
-  // sidecar highlights design); no leftover id, title or setting.
+  // Ask Agent was renamed Copy Link for Agent, then Copy link to this; no
+  // leftover id, title or setting.
   assert.deepEqual(
     contributes.commands
       .filter((entry) => /agent/iu.test(entry.command))

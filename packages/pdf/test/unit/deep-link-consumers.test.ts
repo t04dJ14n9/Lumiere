@@ -159,7 +159,6 @@ function loadNativeLinks() {
   );
   const panel = {};
   (exports.registerNativeLinks as (panels: unknown) => unknown)({
-    fragmentHandlerFor: () => undefined,
     waitFor: async () => panel,
   });
   return { options: captured.options!, delivered, opened };
@@ -214,7 +213,6 @@ test("a PDF opened through VS Code with a Copy link fragment goes to its page", 
     {
       viewerToolbar: () => undefined,
       add: () => undefined,
-      fragmentHandlerFor: () => undefined,
     },
     { settings: () => ({}), position: () => undefined, save: () => undefined },
   );

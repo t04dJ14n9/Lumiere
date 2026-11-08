@@ -7,10 +7,8 @@ import { DOCUMENT_ID } from "./plugins";
 
 /**
  * The marks selected in Annotate mode: EmbedPDF embedded annotations only.
- * Sidecar create/delete UI is torn down; legacy `#hl-` open flashes via host
- * `goTo` without painting sidecar overlays. Vault backlink overlays never
- * enter this path (no hasAnnotationSelection), so Delete/Backspace leave them
- * alone.
+ * Vault backlink overlays never enter this path (no hasAnnotationSelection),
+ * so Delete/Backspace leave them alone.
  */
 export function useMarkSelection(
   pdf: PdfDocumentObject,

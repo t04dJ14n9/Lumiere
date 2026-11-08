@@ -25,9 +25,9 @@ test("formatPdfDeepLink without text is page only", () => {
   );
 });
 
-test("formatPdfDeepLink never emits hl-/selection=/search=", () => {
+test("formatPdfDeepLink never emits selection=/search=", () => {
   const href = formatPdfDeepLink("p.pdf", { page: 1, text: "x" });
-  assert.doesNotMatch(href, /#hl-|selection=|search=/u);
+  assert.doesNotMatch(href, /selection=|search=/u);
 });
 
 test("parsePdfDeepLinkFragment reads page and text across double hash", () => {

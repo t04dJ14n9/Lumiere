@@ -4,7 +4,6 @@
  * only through `parseSelection`.
  */
 import { isPageRect, type PageRect } from "./geometry";
-import { isHighlightId } from "./sidecar-format";
 
 /** Highlighted text, possibly spanning pages; one rectangle per text line. */
 export interface TextSelection {
@@ -20,10 +19,8 @@ export interface RegionSelection {
   rect: PageRect;
   /** The text inside the box, line by line, once read; missing when it has none. */
   text?: string;
-  /** A sidecar highlight selected in Annotate mode: its link is `#hl-<id>`. */
-  highlightId?: string;
   /**
-   * True when this region is an Annotate-mode mark (EmbedPDF or sidecar).
+   * True when this region is an Annotate-mode mark (an EmbedPDF annotation).
    * Host / menu Delete uses this so a plain text or marquee selection does
    * not enable a no-op Delete Annotation.
    */
@@ -66,9 +63,6 @@ function parseRegionSelection(
     page: value.page,
     rect: value.rect,
     ...(text ? { text } : {}),
-    ...(isHighlightId(value.highlightId)
-      ? { highlightId: value.highlightId }
-      : {}),
     ...(value.mark === true ? { mark: true } : {}),
   };
 }

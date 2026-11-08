@@ -8,8 +8,7 @@
  */
 import { findQuoteAtPageEdge } from "./pdf-backlink-page-edge";
 import { foldText, rawRangeOf, type TextRange } from "./page-text-fold";
-import type { SegmentRect } from "./sidecar-format";
-import { lineRects, type GlyphBox } from "./sidecar-reattach";
+import { lineRects, type GlyphBox, type SegmentRect } from "./line-rects";
 
 /** What a link's `#:~:text=` names: `[prefix-,]textStart[,textEnd][,-suffix]`. */
 export interface TextFragmentQuery {

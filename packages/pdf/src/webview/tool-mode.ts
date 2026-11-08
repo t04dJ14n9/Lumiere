@@ -53,7 +53,7 @@ export function useToolMode(
       if (tool === "annotate") {
         selection?.forDocument(documentId).clear();
         scope.activateDefaultMode();
-        // Override EmbedPDF stock #FFCD45@1 so built-in matches sidecar light yellow.
+        // Override EmbedPDF stock #FFCD45@1 with the paper-aware light yellow.
         annots?.setToolDefaults(
           DEFAULT_ANNOTATION_TOOL,
           highlightToolDefaults(currentPageColors()) as never,

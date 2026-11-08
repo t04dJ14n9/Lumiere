@@ -19,6 +19,20 @@ async function highlightMarkCount(page: Page) {
   );
 }
 
+/** What the viewer asked the host to write into the PDF file, decoded. */
+const pdfSaves = (page: Page) =>
+  page.evaluate(() =>
+    (
+      window as unknown as {
+        __messages: { type: string; data?: ArrayBuffer }[];
+      }
+    ).__messages
+      .filter((message) => message.type === "annotationSave")
+      .map((message) =>
+        new TextDecoder("latin1").decode(new Uint8Array(message.data!)),
+      ),
+  );
+
 test("Annotate mode has no viewer bar and Escape returns to text", async ({
   page,
 }) => {
@@ -66,6 +80,11 @@ test("highlight tool can mark text", async ({ page }) => {
   await page.mouse.move(...at(205, TEXT_MIDLINE), { steps: 10 });
   await page.mouse.up();
   await expect.poll(() => highlightMarkCount(page)).toBeGreaterThan(baseline);
+  // The mark is burnt into the PDF file itself.
+  await expect
+    .poll(async () => (await pdfSaves(page)).length)
+    .toBeGreaterThan(0);
+  expect((await pdfSaves(page)).at(-1)!).toMatch(/\/Highlight/);
 });
 
 test("annotation undo clears an in-session highlight", async ({ page }) => {

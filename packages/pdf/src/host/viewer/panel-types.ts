@@ -16,7 +16,6 @@ export type PluginMessage = Extract<
       | "zen"
       | "historyJump"
       | "historyTraverse"
-      | "sidecarWrite"
       | "openBacklinkNote";
   }
 >;

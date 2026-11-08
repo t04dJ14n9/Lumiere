@@ -162,8 +162,8 @@ Extension root (src/extension.ts) ─ createRoot()
 │  provides: extensionContext, outputChannel, noteSelections, pdfOutlines
 │
 ├─ PDF plugins (startPdf): pdf (pdfPanels hub), pdfToolbar, pdfOutline, pdfHistory,
-│     pdfBacklinks, pdfSidecar, pdfRegions, pdfAnnotations, pdfLookUp, pdfZen,
-│     pdfSettings, agentBridge, ideContext
+│     pdfBacklinks, pdfRegions, pdfAnnotations, pdfLookUp, pdfZen, pdfSettings,
+│     agentBridge, ideContext
 │
 └─ Markdown (startMarkdown → host/bootstrap.ts)
    ├─ host services (VS Code adapters), vaults (vaultsHost)
@@ -416,13 +416,12 @@ extension host                                   webview (React, EmbedPDF + PDFi
   pdf plugin (pdfPanels hub) ── messages.ts ──►    viewer.tsx, pages, selection, search,
   pdfToolbar, pdfOutline, pdfHistory, …            outline, backlink overlays, annotations
   pdfBacklinks (scans notes, matches quotes)
-  pdfSidecar (paper.pdf.lumiere.md)
   outlines/ (PDFium in Node, on demand)
 src/host (no vscode): portable viewer logic, reused by host-node
 ```
 
-- The extension plugins are VS Code-only: 47 of 78 production files import
-  `vscode`, and 11 of 13 plugins inject the `pdfPanels` hub.
+- The extension plugins are VS Code-only: 43 of 73 production files import
+  `vscode`, and 10 of 12 plugins inject the `pdfPanels` hub.
   `packages/pdf/src/host` (no `vscode` imports) holds the portable part,
   already reused by host-node's PDF pages.
 - Links into PDFs are plain fragments (`#page=N`, `#:~:text=`), so Obsidian

@@ -9,13 +9,16 @@ test("extractPdfBacklinks finds page+text links and ignores non-pdf", () => {
   const md = [
     "See [x](papers/a.pdf#page=3#:~:text=hello)",
     "and [y](notes/other.md#page=1)",
-    "legacy [z](papers/a.pdf#hl-deadbeef)",
+    "and [z](papers/a.pdf#some-heading)",
   ].join("\n");
   const hits = extractPdfBacklinks(md, "notes/n.md", "file:///notes/n.md");
-  assert.equal(hits.length, 2);
+  assert.equal(
+    hits.length,
+    1,
+    "no hit for a non-PDF or a fragment without a page",
+  );
   assert.equal(hits[0]!.page, 3);
   assert.equal(hits[0]!.textFragment?.textStart, "hello");
-  assert.equal(hits[1]!.highlightId, "hl-deadbeef");
 });
 
 test("extractPdfBacklinks skips what is not a link: code, comments, escapes", () => {

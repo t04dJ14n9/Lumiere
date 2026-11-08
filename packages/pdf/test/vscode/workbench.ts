@@ -48,12 +48,12 @@ export const test = base.extend<{ workbench: Page }>({
 
 /**
  * Put back the files specs change. The workspace is made once for the whole
- * run, so without this a spec sees what earlier ones left: a sidecar, a
- * highlight burnt into the PDF, or a note whose link to the PDF paints a
- * backlink overlay over the text a later spec selects. Editors are closed
- * first. notes.md is left alone: VS Code may still hold a model of it, and a
- * write here races the one `pastedClipboard` makes, which then fails to save;
- * `pastedClipboard` empties it itself instead.
+ * run, so without this a spec sees what earlier ones left: a highlight burnt
+ * into the PDF, or a note whose link to the PDF paints a backlink overlay
+ * over the text a later spec selects. Editors are closed first. notes.md is
+ * left alone: VS Code may still hold a model of it, and a write here races the
+ * one `pastedClipboard` makes, which then fails to save; `pastedClipboard`
+ * empties it itself instead.
  */
 function resetWorkspaceFiles(): void {
   const docs = path.join(paths.workspace, "docs");
@@ -61,7 +61,6 @@ function resetWorkspaceFiles(): void {
     path.join(paths.fixtures, "outline.pdf"),
     path.join(docs, "outline.pdf"),
   );
-  rmSync(path.join(docs, "outline.pdf.lumiere.md"), { force: true });
   for (const note of ["NativeLinks.md", "vault-backlink.md"]) {
     rmSync(path.join(paths.workspace, note), { force: true });
   }
