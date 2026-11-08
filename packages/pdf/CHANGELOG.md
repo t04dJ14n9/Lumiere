@@ -27,6 +27,10 @@
   authored and with PDFium's colour scheme, to find the pictures) and a pixel
   pass, about twice the work of a normal page. See
   `docs/embedpdf-page-colors-patch.md`.
+- Zooming no longer flickers on a busy machine. A zoom step used to scroll
+  to its new position a frame before the pages were laid out at the new
+  size, so one frame could show another page, or nothing, in a long
+  document. The new layout now lands in the same frame as the scroll.
 - PDF Outline no longer flashes shut and open when the reading position
   moves into a bookmark that has children: it collapses the tree only when
   an open branch must close.
