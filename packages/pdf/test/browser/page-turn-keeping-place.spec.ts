@@ -3,7 +3,9 @@ import { act, lastView, openView } from "./view-controls-support";
 
 // Option+Arrow (Ctrl+Alt+Arrow elsewhere) turns the page keeping the zoom and
 // the place in the page, as macOS Preview does. The keybindings call these
-// actions; plain arrows still go to the top of the next page.
+// actions; the plain Next Page goes to the top of the next page. With
+// `lumiere.pdf.view.arrowsKeepPlace` (the default) plain Left/Right take the
+// keep-place turn in the viewer itself and the Left/Right keybindings step aside.
 
 const viewport = (page: Page) => page.locator(".viewport");
 

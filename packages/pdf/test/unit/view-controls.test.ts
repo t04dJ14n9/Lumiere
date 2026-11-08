@@ -106,6 +106,7 @@ test("view settings parse defaults, percentages and malformed configuration with
     defaultZoom: "fitWidth",
     smoothScrolling: null,
     regionsEnabled: false,
+    arrowsKeepPlace: true,
   });
   const settings = {
     defaultZoom: "actual",
@@ -114,6 +115,7 @@ test("view settings parse defaults, percentages and malformed configuration with
     scrollDirection: "horizontal",
     smoothScrolling: false,
     regionsEnabled: true,
+    arrowsKeepPlace: false,
   };
   assert.deepEqual(parseViewSettings(settings), settings);
   assert.equal(

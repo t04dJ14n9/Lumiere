@@ -48,6 +48,7 @@ export class PdfViewPreferences {
       scrollMode: view("scrollMode"),
       scrollDirection: view("scrollDirection"),
       smoothScrolling: view("smoothScrolling"),
+      arrowsKeepPlace: view("arrowsKeepPlace"),
       regionsEnabled: this.configuration.get(REGIONS_SETTING, uri) === true,
     });
     settings.smoothScrolling = resolveSmoothScrolling(

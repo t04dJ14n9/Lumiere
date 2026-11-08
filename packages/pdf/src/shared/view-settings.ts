@@ -18,6 +18,8 @@ export interface ViewSettings extends ViewChoices {
   smoothScrolling: boolean | null;
   /** Empty-page / Select Region; owned by pdfRegions (`lumiere.pdf.regions.enabled`). */
   regionsEnabled: boolean;
+  /** Plain Left/Right turn the page keeping the place; ⌥ gives them their usual meaning. */
+  arrowsKeepPlace: boolean;
 }
 
 export const DEFAULT_VIEW_CHOICES: ViewChoices = {
@@ -77,6 +79,7 @@ export function parseViewSettings(value: unknown): ViewSettings {
         ? settings.smoothScrolling
         : null,
     regionsEnabled: settings.regionsEnabled === true,
+    arrowsKeepPlace: settings.arrowsKeepPlace !== false,
   };
 }
 

@@ -44,6 +44,7 @@ test("every view choice has a PDF command, scoped menus and a contributed defaul
     scrollMode: "continuous",
     scrollDirection: "vertical",
     smoothScrolling: null,
+    arrowsKeepPlace: true,
   })) {
     assert.equal(
       contributes.configuration.properties[`lumiere.pdf.view.${name}`]?.default,

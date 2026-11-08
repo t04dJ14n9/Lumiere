@@ -1,5 +1,6 @@
 import { useEffect, useRef, type RefObject } from "react";
-import { keyMove } from "../shared/paging-keys";
+import { keyMove, swappedArrow } from "../shared/paging-keys";
+import { currentViewSettings } from "./reading-position";
 import { pageAxisState } from "../shared/page-window";
 import { EdgeTurn } from "../shared/smooth-motion";
 import type { ScrollDirection, ScrollMode } from "../shared/view-settings";
@@ -13,15 +14,18 @@ export interface PagingInput {
   mode: ScrollMode;
   direction: ScrollDirection;
   bounds: ScrollBounds;
-  /** Turn to the next (1) or previous (-1) page or spread. */
-  step: (delta: 1 | -1) => void;
+  /** Turn to the next (1) or previous (-1) page or spread; with `keepPlace`, at the same place in it. */
+  step: (delta: 1 | -1, keepPlace?: boolean) => void;
 }
+
+const MAC = /Mac|iPhone|iPad/u.test(navigator.userAgent);
 
 /**
  * Arrow and Page keys, wherever focus is in the viewer (right after opening,
  * after a click on a page, or after a toolbar button or the View picker took
  * it): pan while there is room, else turn the page; see `keyMove`. Keys with a
- * modifier stay with VS Code and the extension's own shortcuts.
+ * modifier stay with VS Code and the extension's own shortcuts, except that
+ * `arrowsKeepPlace` swaps plain and ⌥ Left/Right (see `swappedArrow`).
  */
 export function usePagingKeys(
   container: RefObject<HTMLElement | null>,
@@ -33,11 +37,8 @@ export function usePagingKeys(
     const onKeyDown = (event: KeyboardEvent): void => {
       if (
         event.defaultPrevented ||
-        event.altKey ||
-        event.ctrlKey ||
-        event.metaKey ||
-        event.shiftKey ||
-        (event.target instanceof Element && event.target.closest(OWN_KEYS))
+        (event.target instanceof Element && event.target.closest(OWN_KEYS)) ||
+        handledBeforePanning(event, latest.current.step)
       ) {
         return;
       }
@@ -83,6 +84,29 @@ export function usePagingKeys(
     document.addEventListener("keydown", onKeyDown);
     return () => document.removeEventListener("keydown", onKeyDown);
   }, [container]);
+}
+
+/**
+ * Whether a key is done with before panning: with `arrowsKeepPlace` a plain
+ * Left/Right turns the page keeping the place here, and other modified keys
+ * belong to VS Code (a swapped ⌥Left/Right goes on to pan like a plain one).
+ */
+function handledBeforePanning(
+  event: KeyboardEvent,
+  step: PagingInput["step"],
+): boolean {
+  const swapped = currentViewSettings().arrowsKeepPlace
+    ? swappedArrow(event.key, event, MAC)
+    : undefined;
+  if (swapped?.type === "keepPlace") {
+    event.preventDefault();
+    step(swapped.delta, true);
+    return true;
+  }
+  return (
+    !swapped &&
+    (event.altKey || event.ctrlKey || event.metaKey || event.shiftKey)
+  );
 }
 
 /**

@@ -31,6 +31,7 @@ const VIEW_SETTINGS: ViewSettings = {
   defaultZoom: "fitWidth",
   smoothScrolling: true,
   regionsEnabled: false,
+  arrowsKeepPlace: true,
 };
 const TOOLBAR = { mode: "slim", dock: DEFAULT_FLOATING_DOCK } as const;
 

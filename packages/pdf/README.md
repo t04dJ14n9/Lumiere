@@ -104,7 +104,7 @@ editor has focus (not in a text field, the side bar or the panel):
 | Action                 | Windows / Linux           | macOS               |
 | ---------------------- | ------------------------- | ------------------- |
 | Previous / next page   | Alt+PageUp / Alt+PageDown | ⌥PageUp / ⌥PageDown |
-| Previous / next page, keeping the zoom and the place in the page | Ctrl+Alt+←/↑ and Ctrl+Alt+→/↓ | ⌥←/↑ and ⌥→/↓ |
+| Previous / next page, keeping the zoom and the place in the page | ←/→, and Ctrl+Alt+↑/↓ | ←/→, and ⌥↑/↓ |
 | Go to page…            | Ctrl+G                    | ⌃G                  |
 | Zoom in / out          | Ctrl+= / Ctrl+-           | ⌘= / ⌘-             |
 | Pick a zoom…           | click the status bar zoom |                     |
@@ -116,7 +116,9 @@ editor has focus (not in a text field, the side bar or the panel):
 | Select Text tool       | Ctrl+Alt+T                | ⌃⌘T                 |
 | Select Region tool (when regions enabled) | Ctrl+Alt+R                | ⌃⌘R                 |
 
-⌥Arrow on macOS is what Preview does to turn pages keeping the zoom (confirmed by the user, not by Apple documentation). Plain Alt+←/→ stay VS Code's Go Back / Forward, which is why Windows and Linux use Ctrl+Alt+Arrow. The plain arrow keys pan a zoomed page and turn it at its edge; they go to the top of the next page.
+⌥Arrow on macOS is what Preview does to turn pages keeping the zoom (confirmed by the user, not by Apple documentation). Plain Alt+←/→ stay VS Code's Go Back / Forward, which is why Windows and Linux use Ctrl+Alt+Arrow.
+
+By default (`lumiere.pdf.view.arrowsKeepPlace`) plain ←/→ turn the page keeping the zoom and the place in it, and ⌥←/→ (Ctrl+Alt+←/→ on Windows and Linux) take the arrows' other meaning: pan a zoomed page and turn it at its edge, to the top of the next page. Turn the setting off to swap them back. ↑/↓ always pan, and ⌥↑/↓ always keep the place.
 
 While a PDF has focus, these take over the editor-wide meanings of the same
 keys (Ctrl+G is Go to Line elsewhere, Ctrl+0 focuses the side bar, Ctrl+= zooms

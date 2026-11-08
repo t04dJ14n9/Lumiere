@@ -1,6 +1,11 @@
 import assert from "node:assert/strict";
 import { test } from "node:test";
-import { keyMove, type KeyContext } from "../../src/shared/paging-keys";
+import {
+  keyMove,
+  swappedArrow,
+  type KeyContext,
+  type Modifiers,
+} from "../../src/shared/paging-keys";
 import { pageAxisState } from "../../src/shared/page-window";
 
 const view = (
@@ -151,4 +156,58 @@ test("zoomed page panning retains real room and starts inside its bounds", () =>
   assert.equal(overshoot.position + (move?.type === "pan" ? move.y : 0), 1560);
   const undershoot = pageAxisState(988, bounds);
   assert.deepEqual(undershoot, { position: 1000, before: 0, after: 600 });
+});
+
+const keys = (modifiers: Partial<Modifiers> = {}): Modifiers => ({
+  altKey: false,
+  ctrlKey: false,
+  metaKey: false,
+  shiftKey: false,
+  ...modifiers,
+});
+
+test("with arrowsKeepPlace, plain Left/Right turn the page keeping the place", () => {
+  for (const mac of [true, false]) {
+    assert.deepEqual(swappedArrow("ArrowLeft", keys(), mac), {
+      type: "keepPlace",
+      delta: -1,
+    });
+    assert.deepEqual(swappedArrow("ArrowRight", keys(), mac), {
+      type: "keepPlace",
+      delta: 1,
+    });
+  }
+});
+
+test("with arrowsKeepPlace, ⌥Left/Right (Ctrl+Alt off macOS) do what the plain keys do by default", () => {
+  assert.deepEqual(swappedArrow("ArrowRight", keys({ altKey: true }), true), {
+    type: "usual",
+  });
+  assert.deepEqual(
+    swappedArrow("ArrowLeft", keys({ altKey: true, ctrlKey: true }), false),
+    { type: "usual" },
+  );
+  // Plain Alt+Left/Right stay VS Code's Go Back / Forward off macOS.
+  assert.equal(
+    swappedArrow("ArrowLeft", keys({ altKey: true }), false),
+    undefined,
+  );
+  assert.equal(
+    swappedArrow("ArrowLeft", keys({ altKey: true, ctrlKey: true }), true),
+    undefined,
+  );
+});
+
+test("arrowsKeepPlace leaves Up/Down, Page keys and other modifiers alone", () => {
+  for (const key of ["ArrowUp", "ArrowDown", "PageDown", "Home"]) {
+    assert.equal(swappedArrow(key, keys(), true), undefined);
+  }
+  for (const modifiers of [
+    { shiftKey: true },
+    { metaKey: true },
+    { ctrlKey: true },
+    { altKey: true, shiftKey: true },
+  ]) {
+    assert.equal(swappedArrow("ArrowRight", keys(modifiers), true), undefined);
+  }
 });

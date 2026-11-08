@@ -2,6 +2,12 @@
 
 ## Unreleased
 
+- **←/→ turn the page and keep your place.** Plain ←/→ now turn the page
+  keeping the zoom and the place in it, as ⌥←/→ did. ⌥←/→ (Ctrl+Alt+←/→ on
+  Windows and Linux) take the old meaning: pan a zoomed page, then turn to
+  the top of the next. `lumiere.pdf.view.arrowsKeepPlace` (on by default)
+  swaps them back when off.
+
 - **Section links from notes.** Lumia reads a PDF's bookmarks with Lumia
   PDF's PDFium (`dist/pdf/outline-engine.js`, loaded on first use) to suggest
   them after `[[paper.pdf#`.

@@ -212,9 +212,13 @@ test("zoomed in, the arrows pan; wheel and two-finger flicks travel across pages
     )
     .toBe(true);
   await viewer.locator(".viewport").evaluate((v) => v.scrollTo({ left: 0 }));
-  await press(page, viewer, "ArrowRight");
+  // Plain Left/Right turn the page keeping the place by default
+  // (lumiere.pdf.view.arrowsKeepPlace); ⌥Left/Right, Ctrl+Alt off macOS, pan.
+  // VS Code's own ⌥Left/Right keybindings step aside so the viewer gets them.
+  const alt = process.platform === "darwin" ? "Alt" : "Control+Alt";
+  await press(page, viewer, `${alt}+ArrowRight`);
   await expect.poll(left).toBe(40);
-  await press(page, viewer, "ArrowLeft");
+  await press(page, viewer, `${alt}+ArrowLeft`);
   await expect.poll(left).toBe(0);
 
   await command(page, "PDF: Single Page");
