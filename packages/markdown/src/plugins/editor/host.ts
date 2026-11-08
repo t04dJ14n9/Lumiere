@@ -10,6 +10,7 @@ import type { PanelShell } from "../../shared/host";
 import type { RootContext, Context, Plugin } from "@workshop/core";
 import type {} from "../document/api";
 import type {} from "../vault/api";
+import type {} from "../../shared/pdf-outlines";
 import type { EditorPanel, Editors } from "./api";
 import { createPanel } from "./panel";
 import { protocol } from "./protocol";
@@ -33,7 +34,7 @@ export const editorHost: Plugin<EditorHostConfig> = {
       "documents",
       "activeEditor",
     ],
-    optional: ["vaults"],
+    optional: ["vaults", "pdfOutlines"],
   },
   provides: ["editors", "selections", "editorActions"],
   apply(ctx, config) {
@@ -70,6 +71,9 @@ export const editorHost: Plugin<EditorHostConfig> = {
             // Panel kernels are isolated; share the window-level registry explicitly.
             if (ctx.vaults) {
               context.provide("vaults", ctx.vaults);
+            }
+            if (ctx.pdfOutlines) {
+              context.provide("pdfOutlines", ctx.pdfOutlines);
             }
             config.configure(context, panel);
           },

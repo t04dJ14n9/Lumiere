@@ -57,6 +57,12 @@ is opt-in (`lumiere.pdf.regions.enabled`, default off).
   Opening a Lumia PDF editor hides VS Code's native **Outline** and shows
   **PDF Outline**; leaving restores the native Outline after a short debounce,
   skipped if Lumia already owns the active tab.
+- **Section links from notes.** In a Markdown note in Lumia, typing
+  `[[paper.pdf#` lists the PDF's bookmarks; typing more filters them, and
+  picking one inserts `[[paper.pdf#page=5|Methods]]` (or
+  `[Methods](paper.pdf#page=5)` with wikilinks off). The extension reads the
+  bookmarks with its own PDFium, started on the first request, from PDFs up to
+  200 MB, and rereads a PDF only when it changes.
 - **Copy link to this.** Right-click the PDF (or run **PDF: Copy link to
   this**). With text selected, the clipboard gets a Quote:
 
@@ -252,6 +258,7 @@ src/
 │   ├── note-reference.ts the @note#lines text the agent bridge returns
 │   │                     (shared format: packages/agents/docs/agent-handoff-format.md)
 │   ├── region-text.ts    the text inside a region, line by line
+│   ├── outline-sections.ts  a PDF's bookmarks as a flat list of pages and titles
 │   ├── zoom-steps.ts     the zoom levels the buttons and wheel step through
 │   ├── view-state.ts     page and zoom reported by the viewer; view actions
 │   ├── toolbar-settings.ts  toolbar modes; old floating-bar values still parse
@@ -259,6 +266,10 @@ src/
 ├── bridge-stdio/  the stdio shim Claude Code and Codex run to reach the bridge
 ├── extension/   the VS Code side
 │   ├── extension.ts            activation: builds the plugin runtime, nothing else
+│   ├── outlines/               the bookmarks of PDFs, for `[[paper.pdf#` in Lumia:
+│   │                           a cached reader, and engine.ts, a separate lazily
+│   │                           loaded bundle (outline-engine.js) of PDFium that
+│   │                           loads the viewer's pdfium.wasm
 │   ├── runtime/                plugin manifests and the runtime: dependency order,
 │   │                           transactional start (a failed plugin rolls back what
 │   │                           it registered), teardown in reverse order

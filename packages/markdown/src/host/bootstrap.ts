@@ -1,4 +1,5 @@
 import { nativeLinksHost } from "../plugins/links/native-host";
+import { nativeSuggestHost } from "../plugins/suggest/native-host";
 import { features, pluginRank, workbenchFeatures } from "../plugins/catalog";
 import { hostFeatures } from "./features";
 import { createRoot } from "@workshop/core";
@@ -154,6 +155,7 @@ function startWindowFeatures(
 ): void {
   const plugins = [
     nativeLinksHost,
+    nativeSuggestHost,
     backlinksHost,
     outgoingLinksHost,
     outlineHost,

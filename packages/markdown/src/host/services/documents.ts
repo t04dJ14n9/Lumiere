@@ -5,6 +5,7 @@ import { MARKDOWN_EDITOR } from "../../shared/editor-provider";
 import type { FileTextEdits, HostDocuments } from "../../shared/host";
 import { renameFile } from "../file-rename";
 import { applyLineColEdits, cleanEditedUris, renamesKey } from "../rename-save";
+import { registerTextCompletions } from "../text-completions";
 import type { NativeDocuments } from "./native-documents";
 
 /** VS Code's text documents, wrapped as `HostDocument`s by `documents`. */
@@ -62,6 +63,8 @@ export function createHostDocuments(documents: NativeDocuments): HostDocuments {
         .find((document) => document.uri.toString() === uri)
         ?.getText(),
     onWillRename,
+    registerCompletions: (provider) =>
+      toDisposer(registerTextCompletions(provider)),
   };
 }
 

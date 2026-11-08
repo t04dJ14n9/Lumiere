@@ -14,6 +14,7 @@ export type {
   NoteSelection,
   NoteSelections,
 } from "./plugins/agentBridge/note-selections";
+export { createPdfOutlines } from "./outlines/vscode";
 
 /** Start Lumia PDF's plugins in the extension's plugin tree. */
 export function startPdf(root: RootContext): void {

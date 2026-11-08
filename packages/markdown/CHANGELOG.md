@@ -2,6 +2,15 @@
 
 ## 0.1.0 (unreleased)
 
+- Typing `[[` in VS Code's own text editor now suggests links, as the Lumia
+  editor does: `[[Note` lists notes (with aliases), `[[Note#` the note's
+  headings, `[[Note#^` its blocks that already have an id, and `[[Note|` keeps
+  the note offered while an alias is typed. It uses the same index, ranking and
+  insertion text, so the two agree, including with Use Wikilinks off; picking
+  an entry finishes the link with `]]`. This is for vaults whose notes open as
+  text (`"workbench.editorAssociations": {"*.md": "default"}`). Blocks without
+  an id and tags are not suggested there.
+
 - Page preview on hover needs Mod (Cmd or Ctrl) for links rendered in
   tables, callouts and embeds too, as it already did for Live Preview
   wikilinks and as Obsidian's editor does. A plain hover over those links
