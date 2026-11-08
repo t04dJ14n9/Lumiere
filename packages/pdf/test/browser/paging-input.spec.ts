@@ -44,6 +44,7 @@ for (const scrollMode of ["continuous", "paged"] as const) {
           page,
         }) => {
           await openView(page, {
+            arrowsKeepPlace: false,
             defaultZoom,
             pageLayout,
             scrollMode,
@@ -114,7 +115,11 @@ for (const scrollMode of ["continuous", "paged"] as const) {
 test("keys work after clicking a page, after a toolbar button and after the View picker took focus", async ({
   page,
 }) => {
-  await openView(page, { defaultZoom: "fitPage", scrollMode: "paged" });
+  await openView(page, {
+    arrowsKeepPlace: false,
+    defaultZoom: "fitPage",
+    scrollMode: "paged",
+  });
   await settled(page);
   expect(await pageIndexes(page)).toEqual([0]);
   await page.keyboard.press("ArrowRight");
@@ -183,7 +188,11 @@ test("keys work after clicking a page, after a toolbar button and after the View
 });
 
 test("page keys, modifiers and text fields", async ({ page }) => {
-  await openView(page, { defaultZoom: "fitPage", scrollMode: "paged" });
+  await openView(page, {
+    arrowsKeepPlace: false,
+    defaultZoom: "fitPage",
+    scrollMode: "paged",
+  });
   await settled(page);
   await page.keyboard.press("PageDown");
   await expect.poll(() => pageIndexes(page)).toEqual([1]);
@@ -205,7 +214,11 @@ test("page keys, modifiers and text fields", async ({ page }) => {
 test("a long page is read with the arrows and PageDown before the next page turns", async ({
   page,
 }) => {
-  await openView(page, { defaultZoom: 400, scrollMode: "paged" });
+  await openView(page, {
+    arrowsKeepPlace: false,
+    defaultZoom: 400,
+    scrollMode: "paged",
+  });
   await settled(page);
   const top = () =>
     page.locator(".viewport").evaluate((viewport) => viewport.scrollTop);

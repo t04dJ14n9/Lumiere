@@ -61,6 +61,38 @@ export function keyMove(key: string, view: KeyContext): KeyMove | undefined {
   return undefined;
 }
 
+export interface Modifiers {
+  altKey: boolean;
+  ctrlKey: boolean;
+  metaKey: boolean;
+  shiftKey: boolean;
+}
+
+/**
+ * Left/Right with `lumiere.pdf.view.arrowsKeepPlace` on, which swaps them with
+ * the keep-place shortcut: the plain key turns the page keeping the zoom and
+ * the place in it (as ⌥Arrow does by default), and ⌥Arrow (Ctrl+Alt+Arrow off
+ * macOS) does what the plain key does by default. Undefined for other keys.
+ */
+export function swappedArrow(
+  key: string,
+  modifiers: Modifiers,
+  mac: boolean,
+): { type: "keepPlace"; delta: 1 | -1 } | { type: "usual" } | undefined {
+  if (key !== "ArrowLeft" && key !== "ArrowRight") {
+    return undefined;
+  }
+  const { altKey, ctrlKey, metaKey, shiftKey } = modifiers;
+  if (metaKey || shiftKey) {
+    return undefined;
+  }
+  if (!altKey && !ctrlKey) {
+    return { type: "keepPlace", delta: key === "ArrowLeft" ? -1 : 1 };
+  }
+  const swapKey = mac ? altKey && !ctrlKey : altKey && ctrlKey;
+  return swapKey ? { type: "usual" } : undefined;
+}
+
 function arrowMove(arrow: Arrow, view: KeyContext): KeyMove | undefined {
   const room = view.room[arrow.side];
   if (room > 1) {

@@ -1400,7 +1400,7 @@
         "command": "lumiere.pdf.previousPageKeepingPlace",
         "key": "ctrl+alt+left",
         "mac": "alt+left",
-        "when": "activeCustomEditorId == 'lumiere.pdf.viewer' && !inputFocus && !sideBarFocus && !panelFocus && !auxiliaryBarFocus && config.lumiere.pdf.keyboardShortcuts"
+        "when": "activeCustomEditorId == 'lumiere.pdf.viewer' && !inputFocus && !sideBarFocus && !panelFocus && !auxiliaryBarFocus && config.lumiere.pdf.keyboardShortcuts && !config.lumiere.pdf.view.arrowsKeepPlace"
       },
       {
         "command": "lumiere.pdf.previousPageKeepingPlace",
@@ -1412,7 +1412,7 @@
         "command": "lumiere.pdf.nextPageKeepingPlace",
         "key": "ctrl+alt+right",
         "mac": "alt+right",
-        "when": "activeCustomEditorId == 'lumiere.pdf.viewer' && !inputFocus && !sideBarFocus && !panelFocus && !auxiliaryBarFocus && config.lumiere.pdf.keyboardShortcuts"
+        "when": "activeCustomEditorId == 'lumiere.pdf.viewer' && !inputFocus && !sideBarFocus && !panelFocus && !auxiliaryBarFocus && config.lumiere.pdf.keyboardShortcuts && !config.lumiere.pdf.view.arrowsKeepPlace"
       },
       {
         "command": "lumiere.pdf.nextPageKeepingPlace",
@@ -3789,6 +3789,11 @@
             ],
             "default": null,
             "markdownDescription": "Animate discrete mouse-wheel scrolling, page jumps and displayed zoom changes. `null` follows `#editor.smoothScrolling#`; `false` disables motion. Always disabled when the system prefers reduced motion."
+          },
+          "lumiere.pdf.view.arrowsKeepPlace": {
+            "type": "boolean",
+            "default": true,
+            "markdownDescription": "Plain ←/→ turn the page keeping the zoom and the place in the page. ⌥←/→ (Ctrl+Alt+←/→ on Windows and Linux) then pan a zoomed page and turn it at its edge, going to the top of the next page. Turn this off to swap them back."
           },
           "lumiere.pdf.pageColors": {
             "type": "string",

@@ -86,6 +86,7 @@ for (const pageLayout of ["single", "spread", "spreadCover"] as const) {
     }) => {
       await page.setViewportSize({ width: 1000, height: 700 });
       await openView(page, {
+        arrowsKeepPlace: false,
         defaultZoom: "fitPage",
         scrollMode: "paged",
         pageLayout,
@@ -117,6 +118,7 @@ for (const key of ["ArrowRight", "ArrowDown", "PageDown"]) {
   }) => {
     await page.setViewportSize({ width: 800, height: 600 });
     await openView(page, {
+      arrowsKeepPlace: false,
       defaultZoom: 300,
       scrollMode: "paged",
       pageLayout: "single",
