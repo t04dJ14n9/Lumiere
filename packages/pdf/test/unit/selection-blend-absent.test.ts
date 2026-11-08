@@ -6,7 +6,7 @@ import { test } from "node:test";
  * Negative lock for PR #503 / revert of #490: EmbedPDF SelectionLayer must
  * keep shipped multiply + isolation. Do not reintroduce the #490 overrides
  * that forced normal blend, group opacity, or scaleY descender pad on the
- * isolation wrappers. Sidecar/backlink may still use mix-blend-mode:normal
+ * isolation wrappers. Backlink overlays may still use mix-blend-mode:normal
  * and opacity:0.45 — asserts anchor on the isolation attribute selector so
  * those unrelated rules cannot satisfy (or break) this lock.
  */

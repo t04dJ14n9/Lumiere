@@ -13,7 +13,7 @@ import React, {
 import type { PdfBacklinkHit } from "../shared/pdf-backlink-index";
 import { alignGlyphText } from "../shared/page-glyph-text";
 import { resolveTextToLineRects } from "../shared/pdf-backlink-resolve";
-import { type GlyphBox } from "../shared/sidecar-reattach";
+import { type GlyphBox } from "../shared/line-rects";
 import { BacklinkOverlay, type ResolvedOverlay } from "./backlink-overlay";
 import { backlinkState, onBacklinkChange } from "./backlink-store";
 

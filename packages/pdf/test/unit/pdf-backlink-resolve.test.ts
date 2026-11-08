@@ -4,7 +4,7 @@ import path from "node:path";
 import { fileURLToPath } from "node:url";
 import { test } from "node:test";
 import { shouldDeleteAnnotationOnKey } from "../../src/shared/annotation-delete-keys";
-import type { GlyphBox } from "../../src/shared/sidecar-reattach";
+import type { GlyphBox } from "../../src/shared/line-rects";
 import { resolveTextToLineRects } from "../../src/shared/pdf-backlink-resolve";
 
 const root = path.join(path.dirname(fileURLToPath(import.meta.url)), "../..");

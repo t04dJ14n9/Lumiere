@@ -6,7 +6,7 @@
  * read in one piece is then shorter than its glyph list, and every box after
  * the first marker belongs to the character before the one it is paired with.
  */
-import type { GlyphBox } from "./sidecar-reattach";
+import type { GlyphBox } from "./line-rects";
 
 /**
  * Stands in for a glyph whose text was stripped. A soft hyphen is one of the

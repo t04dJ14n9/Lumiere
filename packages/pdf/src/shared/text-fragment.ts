@@ -4,7 +4,6 @@ import {
   splitFragmentDirective,
 } from "./pdf-location";
 import type { ViewRect } from "./geometry";
-import { highlightIdOfFragment } from "./sidecar-format";
 
 /**
  * Encode one textStart value per WICG Text Fragments: `-` (the prefix and
@@ -97,16 +96,13 @@ export function parsePdfDeepLinkFragment(fragment: string): {
   page?: number;
   viewRect?: ViewRect;
   textFragment?: ReturnType<typeof decodeTextFragment>;
-  highlightId?: string;
 } {
   const { location: pdfHalf, directive } = splitFragmentDirective(fragment);
   const location = parseLocationFragment(pdfHalf);
-  const highlightId = highlightIdOfFragment(pdfHalf);
   const textFragment = directive ? decodeTextFragment(directive) : undefined;
   return {
     ...(location?.page ? { page: location.page } : {}),
     ...(location?.viewRect ? { viewRect: location.viewRect } : {}),
     ...(textFragment ? { textFragment } : {}),
-    ...(highlightId ? { highlightId } : {}),
   };
 }

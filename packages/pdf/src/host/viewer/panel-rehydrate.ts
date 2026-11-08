@@ -1,6 +1,5 @@
 import type { HostMessage } from "../../shared/messages";
 import type { EffectivePageColors } from "../../shared/page-colors";
-import type { SidecarHighlight } from "../../shared/sidecar-format";
 import type { ToolbarSettings } from "../../shared/toolbar-settings";
 import type { PdfBacklinkOutlet } from "./pdf-backlinks";
 
@@ -11,7 +10,6 @@ export function rehydrateViewerChrome(args: {
   pageColorsMode: EffectivePageColors;
   historyState: { back: boolean; forward: boolean };
   lookUp: boolean;
-  sidecarHighlights: SidecarHighlight[] | null;
   backlinks: PdfBacklinkOutlet;
   zen: boolean;
 }): void {
@@ -21,9 +19,6 @@ export function rehydrateViewerChrome(args: {
   post({ type: "historyState", ...args.historyState });
   if (args.lookUp) {
     post({ type: "lookUp", enabled: true });
-  }
-  if (args.sidecarHighlights) {
-    post({ type: "sidecar", highlights: args.sidecarHighlights });
   }
   args.backlinks.rehydrate();
   if (args.zen) {

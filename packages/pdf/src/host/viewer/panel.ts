@@ -26,7 +26,6 @@ import { PdfSelectionState, type SelectionSnapshot } from "./selection";
 import { AnnotationSave } from "./annotation-save";
 import { PdfSource } from "./source";
 import { createPdfViewId } from "./view-id";
-import type { SidecarHighlight } from "../../shared/sidecar-format";
 import { PdfBacklinkOutlet } from "./pdf-backlinks";
 import { rehydrateViewerChrome } from "./panel-rehydrate";
 import type { ViewerPanelHost, ViewerPanelOptions } from "./panel-types";
@@ -83,7 +82,6 @@ export class PdfViewerPanel {
   private readonly navigation: PdfNavigation;
   private readonly disposables: Subscription[] = [];
   private lookUp = false;
-  private sidecarHighlights: SidecarHighlight[] | null = null;
   /** Vault Markdown → PDF backlink overlays for this pane. */
   readonly backlinks = new PdfBacklinkOutlet(
     (m) => this.post(m),
@@ -290,15 +288,6 @@ export class PdfViewerPanel {
     this.post({ type: "lookUp", enabled });
   }
 
-  /**
-   * The sidecar highlights shown over the pages (plugin `pdfSidecar`), kept
-   * for the viewer's next load; null takes them away.
-   */
-  setSidecar(highlights: SidecarHighlight[] | null): void {
-    this.sidecarHighlights = highlights;
-    this.post({ type: "sidecar", highlights });
-  }
-
   /** Zen mode is on or off: status bar is hidden by VS Code; controls are command-only. */
   setZen(on: boolean): void {
     this.zen = on;
@@ -362,7 +351,6 @@ export class PdfViewerPanel {
         await this.onHistoryJump(message);
         break;
       case "historyTraverse":
-      case "sidecarWrite":
         if (this.isCurrentLoad(message.load)) {
           await this.options.route(message);
         }
@@ -484,7 +472,6 @@ export class PdfViewerPanel {
       pageColorsMode: this.pageColorsMode,
       historyState: this.historyState,
       lookUp: this.lookUp,
-      sidecarHighlights: this.sidecarHighlights,
       backlinks: this.backlinks,
       zen: this.zen,
     });

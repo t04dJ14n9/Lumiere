@@ -101,7 +101,7 @@ test("Copy link to this is clipboard Quote / page link; no agent chat", async ({
   expect(withoutSpaces(pageOnly)).toContain(
     withoutSpaces(`[outline.pdf · p.3](${PDF}#page=3)`),
   );
-  expect(pageOnly).not.toMatch(/viewrect=|#hl-|#:~:text=/u);
+  expect(pageOnly).not.toMatch(/viewrect=|#:~:text=/u);
 
   await page
     .locator(".tabs-container .tab", { hasText: "outline.pdf" })
@@ -124,7 +124,7 @@ test("Copy link to this is clipboard Quote / page link; no agent chat", async ({
     withoutSpaces(`[outline.pdf · p.3](${PDF}#page=3#:~:text=`),
   );
   expect(quote).toMatch(/Synthetic%20page%203|Synthetic page 3/u);
-  expect(quote).not.toMatch(/viewrect=|#hl-|selection=|search=/u);
+  expect(quote).not.toMatch(/viewrect=|selection=|search=/u);
 
   // Regions default off: empty-page drag creates no region.
   await page

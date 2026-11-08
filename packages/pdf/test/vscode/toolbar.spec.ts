@@ -201,7 +201,7 @@ test("editor title actions zoom, fit and switch the selection tool", async ({
   expect(withoutSpaces(quote)).toContain(
     withoutSpaces(`[outline.pdf · p.1](${PDF}#page=1#:~:text=`),
   );
-  expect(quote).not.toMatch(/viewrect=|#hl-/u);
+  expect(quote).not.toMatch(/viewrect=/u);
 });
 
 test("keyboard shortcuts page, zoom, fit, find and pick the tool while the PDF has focus", async ({

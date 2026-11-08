@@ -206,13 +206,11 @@ function viewKeys(view: ViewState): typeof NO_VIEW {
   };
 }
 
-/** Annotate-mode mark (sidecar `#hl-` or embedded `mark: true`), not plain text/marquee. */
+/** Annotate-mode mark (embedded `mark: true`), not plain text/marquee. */
 function isAnnotationMarkSelection(
   selection: PdfViewerPanel["selection"] | undefined,
 ): boolean {
   return Boolean(
-    selection &&
-    selection.kind === "region" &&
-    (selection.highlightId !== undefined || selection.mark === true),
+    selection && selection.kind === "region" && selection.mark === true,
   );
 }

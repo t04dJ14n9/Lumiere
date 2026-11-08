@@ -8,7 +8,7 @@ import {
   type Timers,
 } from "../shared/backlink-click";
 import type { PdfBacklinkHit } from "../shared/pdf-backlink-index";
-import type { SegmentRect } from "../shared/sidecar-format";
+import type { SegmentRect } from "../shared/line-rects";
 import { postToHost } from "./host";
 import { DOCUMENT_ID } from "./plugins";
 

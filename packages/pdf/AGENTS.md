@@ -13,7 +13,7 @@ are specific to the PDF code. Read README.md for the layout and CAPABILITIES.md 
   be open twice.
 - Keep the Copy link clipboard Quote-first: blockquote then
   `basename · p.N` with Chrome `#page=` / `#:~:text=` (and `viewrect=` only when
-  regions are enabled; never `#hl-`) — see `packages/agents/docs/agent-handoff-format.md`.
+  regions are enabled) — see `packages/agents/docs/agent-handoff-format.md`.
   Clipboard only (no `openAgentChat`); with no selection, copy a page-only link
   for the reading page. UI entry is webview context menu (enabled whenever the
   PDF is active). The structured selection envelope is a separate contract

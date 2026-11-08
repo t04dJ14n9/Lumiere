@@ -41,10 +41,8 @@ is opt-in (`lumiere.pdf.regions.enabled`, default off).
   selected). Paste into any note; the viewer paints **backlink overlays**
   from those links (hover preview, click opens the note; Del ignores
   overlays). Annotate **Highlight** / Note / freeText / underline burn into
-  the PDF; Del deletes those embedded marks. Old `*.pdf.lumiere.md` sidecars
-  are not auto-deleted; legacy `#hl-` links still open best-effort when the
-  file is present. See [CAPABILITIES.md](CAPABILITIES.md) and
-  [docs/sidecar-highlights.md](docs/sidecar-highlights.md).
+  the PDF; Del deletes those embedded marks. See
+  [CAPABILITIES.md](CAPABILITIES.md).
 - **PDF Outline in the Explorer.** The PDF's bookmarks appear as a native
   tree view; click an entry to open its page. The title bar offers **Expand All**
   and **Collapse All**. **Follow Cursor** (on by default; toggle it in the **…**
@@ -177,7 +175,7 @@ folder.
 
 Paste into any note; **PDF: Open Location…** and clicking a Markdown link
 open that page (and resolve `#:~:text=` to an overlay when possible). Legacy
-`#page=N&viewrect=…` and `#hl-` links still open best-effort.
+`#page=N&viewrect=…` links still open best-effort.
 
 When **regions are enabled**, a region Copy link may include RFC 8118
 `viewrect=left,top,width,height` (PDF points from the page's top-left). MCP

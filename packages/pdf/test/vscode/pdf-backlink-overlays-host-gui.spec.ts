@@ -37,7 +37,6 @@ import {
  * focus.
  */
 const PDF = "docs/outline.pdf";
-const SIDECAR = `${PDF}.lumiere.md`;
 const NOTE = "vault-backlink.md";
 const TEXT_MIDLINE = 94;
 const SHOT_DIR = path.join(
@@ -64,30 +63,6 @@ function sha256(file: string): string {
 
 function statusBarButton(page: Page, id: string) {
   return page.locator(`.part.statusbar [id$="lumiere.pdf.${id}"]`);
-}
-
-function stockSidecarMarkdown(): string {
-  return `---
-lumiere-pdf-sidecar: 1
-source: "outline.pdf"
----
-
-<!-- lumiere-highlight
-id: hl-0badf00d
-page: 1
-subtype: highlight
-color: "#FFCD45"
-opacity: 1
-segmentRects:
-  - { x: 72, y: 88, w: 120, h: 14 }
-  - { x: 72, y: 104, w: 90, h: 14 }
-quote: "Synthetic page 1"
-contextBefore: ""
-contextAfter: " Second line 1"
-created: "2026-11-03T00:00:00.000Z"
-modified: "2026-11-03T00:00:00.000Z"
--->
-`;
 }
 
 function vaultNoteMarkdown(): string {
@@ -151,7 +126,6 @@ function flushEvidence(
       "02-regions-off.png",
       "03-overlays.png",
       "04-Del-split.png",
-      "05-legacy-hl-open.png",
     ].map((name) => {
       const abs = path.join(SHOT_DIR, name);
       return `- \`${abs}\`${existsSync(abs) ? "" : " (missing)"}`;
@@ -255,7 +229,6 @@ test("Host GUI: PDF backlink overlays checklist (Chrome)", async ({
   mkdirSync(SHOT_COPY_DIR, { recursive: true });
   mkdirSync(EVIDENCE_DIR, { recursive: true });
 
-  const sidecarPath = path.join(paths.workspace, SIDECAR);
   const notePath = path.join(paths.workspace, NOTE);
   const results: Array<{
     item: number;
@@ -268,9 +241,6 @@ test("Host GUI: PDF backlink overlays checklist (Chrome)", async ({
     `host=cursor`,
     `when=${new Date().toISOString()}`,
   ];
-
-  writeFileSync(sidecarPath, stockSidecarMarkdown());
-  evidence.push(`preloaded_sidecar=true`);
 
   await openFile(page, PDF);
   let viewer = await pdfViewer(page);
@@ -287,7 +257,7 @@ test("Host GUI: PDF backlink overlays checklist (Chrome)", async ({
   const pageOnlyOk =
     withoutSpaces(pageOnly).includes(
       withoutSpaces(`[outline.pdf · p.1](${PDF}#page=1)`),
-    ) && !/#:~:text=|viewrect=|#hl-/u.test(pageOnly);
+    ) && !/#:~:text=|viewrect=/u.test(pageOnly);
   results.push({
     item: 2,
     title: "No selection → Copy link → #page=N only",
@@ -347,7 +317,7 @@ test("Host GUI: PDF backlink overlays checklist (Chrome)", async ({
       withoutSpaces(`[outline.pdf · p.1](${PDF}#page=1#:~:text=`),
     ) &&
     /Synthetic(%20| )page(%20| )1/u.test(quote) &&
-    !/viewrect=|#hl-|selection=|search=/u.test(quote);
+    !/viewrect=|selection=|search=/u.test(quote);
   const hasDashEncoding = /%2D/u.test(quote);
   results.push({
     item: 1,
@@ -432,7 +402,7 @@ test("Host GUI: PDF backlink overlays checklist (Chrome)", async ({
   await fitPage(page, viewer);
   await showPage(page, viewer, 1);
   // Poll for overlays: index push + glyph resolve can lag after save.
-  // Soft wait so a miss still reaches Del / legacy shots for evidence.
+  // Soft wait so a miss still reaches the Del shot for evidence.
   for (
     let i = 0;
     i < 40 &&
@@ -577,45 +547,6 @@ test("Host GUI: PDF backlink overlays checklist (Chrome)", async ({
     // ignore
   }
 
-  let legacyOk = false;
-  try {
-    await command(page, "PDF: Open Location…");
-    const input = page.locator(".quick-input-widget input:visible");
-    await input.fill(`[legacy](${PDF}#hl-0badf00d)`);
-    await input.press("Enter");
-    viewer = await pdfViewer(page);
-    await expect(
-      viewer.locator('.page[data-page-index="0"] .location-highlight'),
-    ).toBeVisible({ timeout: 20_000 });
-    legacyOk = true;
-  } catch (error) {
-    evidence.push(`legacy_hl_error=${String(error)}`);
-  }
-  await shot(page, "05-legacy-hl-open.png", evidence);
-  results.push({
-    item: 6,
-    title: "Legacy #hl- open/flash when sidecar present",
-    status: legacyOk ? "PASS" : "FAIL",
-    notes: legacyOk
-      ? "Open Location #hl-0badf00d flashed .location-highlight"
-      : "location-highlight not observed",
-  });
-  flushEvidence(results, evidence, pageOnly, quote);
-
-  const sidecarStill = existsSync(sidecarPath);
-  evidence.push(
-    `sidecar_after=${sidecarStill}`,
-    `sidecar_sha256=${sidecarStill ? sha256(sidecarPath) : "missing"}`,
-  );
-  results.push({
-    item: 7,
-    title: "No auto-delete of *.pdf.lumiere.md",
-    status: sidecarStill ? "PASS" : "FAIL",
-    notes: sidecarStill
-      ? "sidecar still on disk after Copy link / Annotate / Open Location"
-      : "sidecar missing",
-  });
-
   const lines: string[] = [
     "# Host GUI evidence — PDF backlink overlays (Chrome)",
     "",
@@ -644,7 +575,6 @@ test("Host GUI: PDF backlink overlays checklist (Chrome)", async ({
       "02-regions-off.png",
       "03-overlays.png",
       "04-Del-split.png",
-      "05-legacy-hl-open.png",
     ].map((name) => {
       const abs = path.join(SHOT_DIR, name);
       const copy = path.join(SHOT_COPY_DIR, name);

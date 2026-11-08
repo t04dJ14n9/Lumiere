@@ -13,7 +13,7 @@ export interface PdfFiles {
   hash?(uri: string): Promise<string>;
   /**
    * Atomically replace the file. Hosts that cannot (non-`file` schemes) omit this;
-   * annotation saves then fail with a clear error (no sidecar fallback).
+   * annotation saves then fail with a clear error.
    */
   writeAtomic?(uri: string, bytes: Uint8Array): Promise<{ sha256: string }>;
 }

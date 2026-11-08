@@ -17,9 +17,6 @@ PR bot / Host GUI pass must capture evidence for:
    deletes.
 5. **Regions off (default):** empty-page drag does nothing; **Select Region**
    absent from menus / slim toolbar / shortcut.
-6. **Legacy `#hl-`:** from an old `*.pdf.lumiere.md` still opens / flashes when
-   the file is present.
-7. **No auto deletion** of `*.pdf.lumiere.md` after Annotate or Copy link.
 
 Suggested shot labels for the PR body: `Copy link Quote`, `overlays`,
-`Del split`, `regions off`, `legacy hl-open`.
+`Del split`, `regions off`.

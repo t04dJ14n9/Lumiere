@@ -21,7 +21,7 @@ test("text selection Quote puts blockquote before the deep link", () => {
       "> [attention_v2.pdf · p.3](papers/attention_v2.pdf#page=3#:~:text=Scaled%20dot%2Dproduct%20attention)",
     ].join("\n"),
   );
-  assert.doesNotMatch(text, /#hl-|viewrect=|selection=|search=/u);
+  assert.doesNotMatch(text, /viewrect=|selection=|search=/u);
 });
 
 test("pageLinkText is page only", () => {
@@ -29,22 +29,6 @@ test("pageLinkText is page only", () => {
     pageLinkText(source, 3),
     "[attention_v2.pdf · p.3](papers/attention_v2.pdf#page=3)",
   );
-});
-
-test("selected sidecar highlightId is ignored for new Copy link", () => {
-  const text = agentText(
-    {
-      kind: "region",
-      page: 3,
-      rect: [72, 410, 292, 436],
-      text: "scaled",
-      highlightId: "hl-a1b2c3d4",
-    },
-    source,
-    { regionsEnabled: true },
-  );
-  assert.doesNotMatch(text, /#hl-/u);
-  assert.match(text, /viewrect=/u);
 });
 
 test("region without regionsEnabled omits viewrect and uses text fragment when text present", () => {
@@ -118,7 +102,7 @@ test("a region with text quotes it when regions enabled; no image path", () => {
       "> [attention_v2.pdf · p.9](papers/attention_v2.pdf#page=9&viewrect=92,126,428,261)",
     ].join("\n"),
   );
-  assert.doesNotMatch(text, /Region image|SHA-256|Source:|#hl-|#:~:text=/u);
+  assert.doesNotMatch(text, /Region image|SHA-256|Source:|#:~:text=/u);
 });
 
 test("file names and folders containing # or ? keep the full basename in the label", () => {

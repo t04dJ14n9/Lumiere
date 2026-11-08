@@ -29,7 +29,6 @@
  *    │  ◄──────────── lookUp              the word under a force click (open),
  *    │                                    or under a right click (to look up
  *    │                                    from the context menu)
- *    │  sidecar / ◄── sidecarWrite        sidecar highlights (sidecar-messages.ts)
  *    │  pdfBacklinks { load, hits } ►     vault Markdown PDF backlink overlays
  *    │  ◄──────────── openBacklinkNote   click a backlink overlay → open note
  *
@@ -54,11 +53,6 @@
  * receives with `parseViewerMessage`.
  */
 import { isLookUpWord } from "./look-up";
-import {
-  parseSidecarWrite,
-  type SidecarHostMessage,
-  type SidecarWrite,
-} from "./sidecar-messages";
 import {
   parseOpenBacklinkNote,
   type OpenBacklinkNoteMessage,
@@ -151,8 +145,7 @@ export type ViewerMessage =
       data: ArrayBuffer;
     }
   | { type: "annotationSaveFailed"; load: number; message: string }
-  | OpenBacklinkNoteMessage
-  | SidecarWrite;
+  | OpenBacklinkNoteMessage;
 
 /**
  * How one load's bytes reach the viewer: transferred in the message (VS
@@ -209,8 +202,7 @@ export type HostMessage =
       message: string;
     }
   | { type: "annotationRetry"; load: number }
-  | PdfBacklinksHostMessage
-  | SidecarHostMessage;
+  | PdfBacklinksHostMessage;
 
 const MAX_OUTLINE_ITEMS = 10_000;
 const MAX_OUTLINE_DEPTH = 32;
@@ -250,7 +242,6 @@ const VIEWER_PARSERS: Readonly<
   historyCaptured: parseHistoryReport,
   historyRestored: parseHistoryReport,
   ready: () => ({ type: "ready" }),
-  sidecarWrite: parseSidecarWrite,
   copyLinkForAgent: () => ({ type: "copyLinkForAgent" }),
   toggleOutline: () => ({ type: "toggleOutline" }),
   patch: (message) => parsePatchMessage(message),

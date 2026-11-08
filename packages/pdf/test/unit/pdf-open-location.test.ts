@@ -147,7 +147,6 @@ function harness(isFile: (file: string) => boolean = () => true) {
   const register = module.exports.registerOpenLocation as (
     panels: unknown,
   ) => Disposable;
-  const revealed: { file: string; fragment: string }[] = [];
   const registration = register({
     waitFor: async (file: Uri) => ({
       file,
@@ -155,21 +154,10 @@ function harness(isFile: (file: string) => boolean = () => true) {
         jumps.push({ file: file.path, page: location.page });
       },
     }),
-    // As plugin pdfSidecar does for a highlight's `#hl-…`.
-    fragmentHandlerFor: (fragment: string) =>
-      /(^|&)hl-/.test(fragment)
-        ? {
-            accepts: () => true,
-            open: async (panel: { file: Uri }, opened: string) => {
-              revealed.push({ file: panel.file.path, fragment: opened });
-            },
-          }
-        : undefined,
   });
   return {
     opened,
     jumps,
-    revealed,
     warnings,
     registration,
     invoke: (file: string, page = 2) => invoke!(file, { page }),
@@ -266,16 +254,8 @@ test("a durable locator with # in the filename round-trips through openLocation"
   state.registration.dispose();
 });
 
-test("a highlight's #hl- link opens the PDF and hands the fragment to the plugin that keeps highlights", async () => {
+test("a fragment that names no location is refused with a warning", async () => {
   const state = harness();
-  const done = state.invokeLink("file:///work/paper.pdf#page=2&hl-a1b2c3d4");
-  await microtasks();
-  state.opened[0]!.resolve();
-  assert.equal(await done, true);
-  assert.deepEqual(state.jumps, [], "the highlight wins over page=");
-  assert.deepEqual(state.revealed, [
-    { file: "/work/paper.pdf", fragment: "page=2&hl-a1b2c3d4" },
-  ]);
   assert.equal(await state.invokeLink("file:///work/paper.pdf#nothing"), false);
   assert.match(state.warnings.at(-1) ?? "", /location is invalid/);
   state.registration.dispose();

@@ -1,5 +1,5 @@
 import { createHash } from "node:crypto";
-import { existsSync, mkdirSync, readFileSync, writeFileSync } from "node:fs";
+import { mkdirSync, readFileSync, writeFileSync } from "node:fs";
 import path from "node:path";
 import type { Frame, Page } from "@playwright/test";
 import { paths } from "./state";
@@ -15,11 +15,10 @@ import {
 } from "./workbench";
 
 /**
- * Host GUI: Annotate Highlight burns into the PDF (no sidecar); Delete removes
- * the embedded mark. Synthetic fixtures only.
+ * Host GUI: Annotate Highlight burns into the PDF; Delete removes the embedded
+ * mark. Synthetic fixtures only.
  */
 const PDF = "docs/outline.pdf";
-const SIDECAR = `${PDF}.lumiere.md`;
 const TEXT_MIDLINE = 94;
 const SHOT_DIR = path.join(paths.repository, "test-results", "host-gui-pr482");
 
@@ -43,12 +42,11 @@ async function highlightAcross(
   await drag(page, at(x0, TEXT_MIDLINE), at(x1, TEXT_MIDLINE));
 }
 
-test("Annotate highlight burns in, creates no sidecar, Delete mutates PDF", async ({
+test("Annotate highlight burns in, Delete mutates PDF", async ({
   workbench: page,
 }) => {
   mkdirSync(SHOT_DIR, { recursive: true });
   const pdfPath = path.join(paths.workspace, PDF);
-  const sidecarPath = path.join(paths.workspace, SIDECAR);
   const evidence: string[] = [`pdf=${PDF}`, `host=cursor`];
 
   await openFile(page, PDF);
@@ -68,16 +66,11 @@ test("Annotate highlight burns in, creates no sidecar, Delete mutates PDF", asyn
   await expect(statusBarButton(page, "annotationTool")).toBeVisible();
 
   await highlightAcross(page, viewer, 74, 205);
-  await expect(viewer.locator(".sidecar-highlight")).toHaveCount(0);
   await expect
     .poll(() => sha256(pdfPath), { timeout: 20_000 })
     .not.toBe(beforeHash);
-  expect(existsSync(sidecarPath)).toBe(false);
   const afterCreateHash = sha256(pdfPath);
-  evidence.push(
-    `sha256_after_create=${afterCreateHash}`,
-    `sidecar_created=false`,
-  );
+  evidence.push(`sha256_after_create=${afterCreateHash}`);
   await page.screenshot({
     path: path.join(SHOT_DIR, "02-highlight-burn-in.png"),
     fullPage: true,
@@ -91,11 +84,7 @@ test("Annotate highlight burns in, creates no sidecar, Delete mutates PDF", asyn
   await expect
     .poll(() => sha256(pdfPath), { timeout: 20_000 })
     .not.toBe(afterCreateHash);
-  evidence.push(
-    `sha256_after_delete=${sha256(pdfPath)}`,
-    `sidecar_after=${existsSync(sidecarPath)}`,
-    `result=PASS`,
-  );
+  evidence.push(`sha256_after_delete=${sha256(pdfPath)}`, `result=PASS`);
   await page.screenshot({
     path: path.join(SHOT_DIR, "03-after-delete.png"),
     fullPage: true,

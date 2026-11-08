@@ -23,7 +23,6 @@ export interface PdfBacklinkHit {
   page: number;
   textFragment?: { textStart: string };
   viewRect?: ViewRect;
-  highlightId?: string;
 }
 
 /** A hit with the other PDFs its path may name; the viewer never sees `keys`. */
@@ -43,7 +42,7 @@ const MD_LINK_START = /\[[^\]]*\]\(\s*/gu;
 
 /**
  * Collect PDF deep-link hits from one note's Markdown text.
- * Non-PDF targets are ignored; legacy `#hl-…` fragments are kept for open.
+ * Non-PDF targets and links that name no page are ignored.
  */
 export function extractPdfBacklinks(
   noteText: string,
@@ -108,7 +107,7 @@ function hitFromTarget(
   const parsed = fragment
     ? parsePdfDeepLinkFragment(fragment)
     : ({} as ReturnType<typeof parsePdfDeepLinkFragment>);
-  if (!parsed.page && !parsed.highlightId) {
+  if (!parsed.page) {
     return undefined;
   }
   const hit: PdfBacklinkHit = {
@@ -121,7 +120,6 @@ function hitFromTarget(
       ? { textFragment: { textStart: parsed.textFragment.textStart } }
       : {}),
     ...(parsed.viewRect ? { viewRect: parsed.viewRect } : {}),
-    ...(parsed.highlightId ? { highlightId: parsed.highlightId } : {}),
   };
   return { hit, keys };
 }
@@ -298,9 +296,7 @@ function parsePdfBacklinkHit(value: unknown): PdfBacklinkHit | undefined {
 
 function parseRequiredHitFields(
   fields: Record<string, unknown>,
-):
-  | Omit<PdfBacklinkHit, "textFragment" | "viewRect" | "highlightId">
-  | undefined {
+): Omit<PdfBacklinkHit, "textFragment" | "viewRect"> | undefined {
   if (
     !isBoundedString(fields.noteUri) ||
     !isBoundedString(fields.notePath) ||
@@ -325,11 +321,8 @@ function parseRequiredHitFields(
 
 function parseOptionalHitFields(
   fields: Record<string, unknown>,
-):
-  | Pick<PdfBacklinkHit, "textFragment" | "viewRect" | "highlightId">
-  | undefined {
-  const out: Pick<PdfBacklinkHit, "textFragment" | "viewRect" | "highlightId"> =
-    {};
+): Pick<PdfBacklinkHit, "textFragment" | "viewRect"> | undefined {
+  const out: Pick<PdfBacklinkHit, "textFragment" | "viewRect"> = {};
   if (fields.textFragment !== undefined) {
     const textStart = parseTextFragmentStart(fields.textFragment);
     if (textStart === undefined) {
@@ -343,12 +336,6 @@ function parseOptionalHitFields(
       return undefined;
     }
     out.viewRect = viewRect;
-  }
-  if (fields.highlightId !== undefined) {
-    if (!isBoundedString(fields.highlightId)) {
-      return undefined;
-    }
-    out.highlightId = fields.highlightId;
   }
   return out;
 }

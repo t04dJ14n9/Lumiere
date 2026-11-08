@@ -2,6 +2,12 @@
 
 ## Unreleased
 
+- **Legacy PDF sidecars are gone.** Existing `*.pdf.lumiere.md` highlight files
+  are no longer read, and `lumiere.pdf.sidecar.location` and
+  `lumiere.pdf.sidecar.directory` are removed (delete them from your settings;
+  your files are left on disk). A `#hl-` link now just opens the PDF, like any
+  other fragment that names no page.
+
 - **←/→ turn the page and keep your place.** Plain ←/→ now turn the page
   keeping the zoom and the place in it, as ⌥←/→ did. ⌥←/→ (Ctrl+Alt+←/→ on
   Windows and Linux) take the old meaning: pan a zoomed page, then turn to
