@@ -9,6 +9,7 @@ import { WheelGesture } from "../shared/smooth-motion";
 import { nextZoomStep } from "../shared/zoom-steps";
 import { setCommittingPinch } from "./zoom-gesture";
 import { DOCUMENT_ID } from "./plugins";
+import { requestZoomWithLayout } from "./zoom-request";
 
 /** Wheel movement, in pixels, per zoom step: one notch of a mouse wheel. */
 const PIXELS_PER_STEP = 50;
@@ -159,7 +160,7 @@ class WheelZoom {
     this.pending = 0;
     // Step from the level just requested, so quick notches add up.
     this.level.current = nextZoomStep(this.level.current, delta < 0 ? 1 : -1);
-    this.zoom.requestZoom(this.level.current, at);
+    requestZoomWithLayout(this.zoom, this.level.current, at);
   }
 
   /** A pinch follows the fingers on a CSS preview until it settles. */
@@ -229,7 +230,7 @@ class WheelZoom {
     setCommittingPinch(true);
     this.level.current = target;
     this.commit(pinch, target);
-    this.zoom.requestZoom(target, pinch.at);
+    requestZoomWithLayout(this.zoom, target, pinch.at);
   };
 
   /**

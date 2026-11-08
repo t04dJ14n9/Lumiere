@@ -15,6 +15,7 @@ import { nextZoomStep } from "../shared/zoom-steps";
 import { reportToHost } from "./host";
 import type { Navigation } from "./navigation";
 import { DOCUMENT_ID, PAGE_GAP, ZOOM_RANGE } from "./plugins";
+import { requestZoomWithLayout } from "./zoom-request";
 
 /**
  * Keep the extension's controls (status bar, editor title actions) in step
@@ -265,11 +266,15 @@ function runViewAction(
         ZOOM_RANGE.max,
         Math.max(ZOOM_RANGE.min, next),
       );
-      zoom?.requestZoom(requested.current);
+      if (zoom) {
+        requestZoomWithLayout(zoom, requested.current);
+      }
     },
     fit: (mode) => {
       requested.current = undefined;
-      zoom?.requestZoom(mode);
+      if (zoom) {
+        requestZoomWithLayout(zoom, mode);
+      }
     },
     latest: () => current.navigation,
   };

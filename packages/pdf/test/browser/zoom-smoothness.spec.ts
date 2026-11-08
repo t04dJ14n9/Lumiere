@@ -289,3 +289,90 @@ test("a jump to a page right after a zoom step is not undone by the zoom's scrol
   });
   expect(Math.abs(offset)).toBeLessThan(16);
 });
+
+/**
+ * EmbedPDF applies the scroll that keeps a zoom step's anchor in a
+ * requestAnimationFrame, while React lays the pages out at the new scale in a
+ * task of its own. On a busy main thread (dark pages, a large display, a slow
+ * machine) a frame is painted between the two: the old pages at the new scroll
+ * offset, which in a long document is a blank viewport or another page. The
+ * test makes that frame certain by delaying React's scheduler (it posts its
+ * work through a MessageChannel) by more than a frame.
+ */
+test("a zoom step never paints the old pages at the new scroll offset, however late React lays them out", async ({
+  page,
+}) => {
+  await page.addInitScript(() => {
+    const NativeChannel = window.MessageChannel;
+    window.MessageChannel = class extends NativeChannel {
+      constructor() {
+        super();
+        const post = this.port2.postMessage.bind(this.port2);
+        this.port2.postMessage = (message: unknown) => {
+          const delay =
+            (window as unknown as { __schedulerDelay?: number })
+              .__schedulerDelay ?? 0;
+          setTimeout(() => post(message), delay);
+        };
+      }
+    };
+  });
+  await page.setViewportSize({ width: 800, height: 600 });
+  await openView(
+    page,
+    { defaultZoom: 100, smoothScrolling: false },
+    "slim",
+    "&pdf=large.pdf",
+  );
+  await act(page, { action: "goToPage", page: 300 });
+  await page.waitForTimeout(800);
+  const painted = await page.evaluate(async () => {
+    (window as unknown as { __schedulerDelay: number }).__schedulerDelay = 40;
+    const viewport = document.querySelector<HTMLElement>(".viewport")!;
+    const frame = viewport.getBoundingClientRect();
+    const centre = frame.top + frame.height / 2;
+    const pageAtCentre = () =>
+      Array.from(
+        document.querySelectorAll<HTMLElement>(".page[data-page-index]"),
+      ).find((element) => {
+        const rect = element.getBoundingClientRect();
+        return rect.top <= centre && rect.bottom >= centre;
+      });
+    // Sample what is about to be painted: a ResizeObserver created inside this
+    // frame's rAF is delivered after the others, just before paint.
+    const pages: (string | undefined)[] = [];
+    let observer: ResizeObserver | undefined;
+    const probe = document.createElement("div");
+    probe.style.cssText =
+      "position:fixed;top:0;left:0;width:1px;height:1px;opacity:0";
+    document.body.append(probe);
+    let live = true;
+    let wide = false;
+    const tick = (): void => {
+      observer?.disconnect();
+      observer = new ResizeObserver(() =>
+        pages.push(pageAtCentre()?.dataset.pageIndex),
+      );
+      observer.observe(probe);
+      wide = !wide;
+      probe.style.width = wide ? "2px" : "1px";
+      if (live) {
+        requestAnimationFrame(tick);
+      }
+    };
+    requestAnimationFrame(tick);
+    const hostSend = (window as unknown as { hostSend(message: unknown): void })
+      .hostSend;
+    for (const action of ["zoomIn", "zoomIn", "zoomOut", "zoomOut"]) {
+      hostSend({ type: "action", action: { action } });
+      await new Promise((resolve) => setTimeout(resolve, 400));
+    }
+    live = false;
+    observer?.disconnect();
+    probe.remove();
+    return pages;
+  });
+  expect(painted.length).toBeGreaterThan(20);
+  // Zooming about the viewer's centre keeps the same page there, in every frame.
+  expect(new Set(painted)).toEqual(new Set(["299"]));
+});
