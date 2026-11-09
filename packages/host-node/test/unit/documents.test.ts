@@ -340,3 +340,51 @@ test("a save that fails when the last panel closes is reported, and the text sta
   await documents.dispose().catch(() => {});
   assert.equal(watchClosed, true);
 });
+
+test("a note reopened and released again while its first save writes is not forgotten when the second save fails", async (t) => {
+  const { file, uri, cleanup } = await note("start");
+  t.after(cleanup);
+  let finishFirstWrite: (() => void) | undefined;
+  let writes = 0;
+  const documents = new NoteDocuments(
+    {
+      ...NODE_NOTES,
+      save: async (target, text) => {
+        writes += 1;
+        if (writes === 1) {
+          await new Promise<void>((resolve) => {
+            finishFirstWrite = resolve;
+          });
+          await NODE_NOTES.save(target, text);
+          return;
+        }
+        throw new Error("The disk is full");
+      },
+    },
+    60_000,
+  );
+  const failed: string[] = [];
+  documents.onSaveFailed((_target, error) =>
+    failed.push((error as Error).message),
+  );
+
+  const first = await documents.open(uri);
+  documents.retain(uri);
+  await documents.apply(first, [{ from: 0, to: 5, insert: "B" }]);
+  const firstRelease = documents.release(uri);
+  await until(() => finishFirstWrite !== undefined);
+
+  // The note is still in memory, so opening it again hands back the same one.
+  const reopened = await documents.open(uri);
+  documents.retain(uri);
+  await documents.apply(reopened, [{ from: 0, to: 1, insert: "C" }]);
+  const secondRelease = documents.release(uri);
+
+  finishFirstWrite!();
+  await Promise.all([firstRelease, secondRelease]);
+
+  assert.deepEqual(failed, ["The disk is full"]);
+  assert.equal(await readFile(file, "utf8"), "B");
+  assert.equal(documents.text(uri), "C");
+  await documents.dispose().catch(() => {});
+});
