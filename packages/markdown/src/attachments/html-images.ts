@@ -52,17 +52,43 @@ export async function rewriteRemoteImages(
   });
 }
 
-/** Decode a data URI into bytes and a file extension hint. */
+/**
+ * The bytes of a data URI payload without `;base64`: each `%XX` is one byte,
+ * any other text, a stray `%` included, is taken as typed in UTF-8.
+ */
+function percentDecode(payload: string): Uint8Array {
+  const encoder = new TextEncoder();
+  const parts = payload
+    .split(/(%[0-9a-f]{2})/i)
+    .map((part, index) =>
+      index % 2 === 1
+        ? Uint8Array.of(parseInt(part.slice(1), 16))
+        : encoder.encode(part),
+    );
+  const bytes = new Uint8Array(
+    parts.reduce((sum, part) => sum + part.length, 0),
+  );
+  let offset = 0;
+  for (const part of parts) {
+    bytes.set(part, offset);
+    offset += part.length;
+  }
+  return bytes;
+}
+
+/** Decode a data URI, base64 or percent-encoded, into bytes and a file extension hint. */
 export function decodeDataUri(
   src: string,
 ): { bytes: Uint8Array; ext: string } | undefined {
-  const match = /^data:([^;,]+)?(?:;[^,]*)?;base64,(.+)$/i.exec(src);
+  const match = /^data:([^;,]+)?((?:;[^,]*)?),(.+)$/i.exec(src);
   if (!match) {
     return undefined;
   }
   const mime = (match[1] ?? "application/octet-stream").toLowerCase();
   const ext = extensionForMime(mime);
-  const bytes = decodeBase64(match[2]!);
+  const bytes = /;base64$/i.test(match[2]!)
+    ? decodeBase64(match[3]!)
+    : percentDecode(match[3]!);
   return bytes ? { bytes, ext } : undefined;
 }
 

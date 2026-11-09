@@ -135,6 +135,25 @@ test("decodeDataUri reads png bytes", () => {
   assert.equal(decoded!.bytes[0], 0x89);
 });
 
+test("decodeDataUri reads a percent-encoded SVG with or without a charset", () => {
+  const svg = '<svg xmlns="http://www.w3.org/2000/svg">é 50%</svg>';
+  for (const header of [
+    "data:image/svg+xml",
+    "data:image/svg+xml;charset=utf-8",
+  ]) {
+    const decoded = decodeDataUri(`${header},${encodeURIComponent(svg)}`);
+    assert.ok(decoded, header);
+    assert.equal(decoded.ext, "svg");
+    assert.equal(new TextDecoder().decode(decoded.bytes), svg);
+  }
+});
+
+test("decodeDataUri keeps a percent sign that does not start an escape", () => {
+  const decoded = decodeDataUri('data:image/svg+xml,<svg a="50%"/>%3E');
+  assert.ok(decoded);
+  assert.equal(new TextDecoder().decode(decoded.bytes), '<svg a="50%"/>>');
+});
+
 test("saveAttachment writes under files.attachmentFolder with timestamp name", async () => {
   const written = new Map<string, Uint8Array | string>();
   const files: Pick<

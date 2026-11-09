@@ -168,6 +168,15 @@ test("a data URI that is not an image is not saved", async (t) => {
   ]);
 });
 
+test("a percent-encoded SVG data URI is saved as an svg file", async (t) => {
+  const note =
+    "![logo](data:image/svg+xml,%3Csvg%20xmlns%3D%22http%3A%2F%2Fwww.w3.org%2F2000%2Fsvg%22%2F%3E)";
+  const result = await run(t, "Download", {}, { note });
+  assert.deepEqual(result.written, [uriOf("Image.svg")]);
+  assert.equal(result.text, "![[Image.svg|logo]]");
+  assert.deepEqual(result.told, ["Downloaded 1 attachment."]);
+});
+
 test("when the note cannot be edited, the files are kept and the reader is told it is unchanged", async (t) => {
   const result = await run(t, "Download", {}, { applies: false });
   assert.deepEqual(result.written, [uriOf("cat 1.png"), uriOf("Image.gif")]);
