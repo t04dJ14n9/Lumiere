@@ -353,3 +353,93 @@ test("annotationSave survives create+change watcher pair after self-write", asyn
     "paired watcher events must not reload after acceptWrite",
   );
 });
+
+/** Wait until the viewer has been sent `count` loads. */
+async function untilLoads(posted: HostMessage[], count: number) {
+  for (let i = 0; i < 200; i++) {
+    if (posted.filter((m) => m.type === "load").length >= count) {
+      return;
+    }
+    await new Promise((resolve) => setTimeout(resolve, 10));
+  }
+  assert.fail(`the viewer never got load ${count}`);
+}
+
+test("a save whose disk check outlasts a reload does not overwrite the file the viewer reloaded", async () => {
+  let disk = INITIAL;
+  let writes = 0;
+  let release: (() => void) | undefined;
+  let stalled = false;
+  const { posted, receive, panel, triggerWatch } = open({
+    read: async () => disk,
+    hash: async () => {
+      if (!stalled) {
+        stalled = true;
+        // The check reads the file only after another program replaced it.
+        await new Promise<void>((resolve) => {
+          release = resolve;
+        });
+      }
+      return createHash("sha256").update(disk).digest("hex");
+    },
+    writeAtomic: async (_uri, bytes) => {
+      writes += 1;
+      disk = new Uint8Array(bytes);
+      return { sha256: createHash("sha256").update(disk).digest("hex") };
+    },
+  });
+  const conflicts: unknown[] = [];
+  panel.onAnnotationConflict((payload) => conflicts.push(payload));
+  await receive({ type: "ready" });
+  const load = posted.find((m) => m.type === "load");
+  assert.ok(load && load.type === "load");
+  const saving = receive(save(load.load, INITIAL_SHA, bytesOf(1)));
+  disk = bytesOf(9);
+  triggerWatch();
+  await untilLoads(posted, 2);
+  release?.();
+  await saving;
+  assert.equal(writes, 0);
+  assert.deepEqual([...disk], [...bytesOf(9)]);
+  assert.equal(conflicts.length, 0);
+});
+
+test("a save whose disk check read the old file before a reload does not overwrite the reloaded file", async () => {
+  let disk = INITIAL;
+  let writes = 0;
+  let release: (() => void) | undefined;
+  let stalled = false;
+  const { posted, receive, triggerWatch } = open({
+    read: async () => disk,
+    hash: async () => {
+      const hash = createHash("sha256").update(disk).digest("hex");
+      if (!stalled) {
+        stalled = true;
+        await new Promise<void>((resolve) => {
+          release = resolve;
+        });
+      }
+      return hash;
+    },
+    writeAtomic: async (_uri, bytes) => {
+      writes += 1;
+      disk = new Uint8Array(bytes);
+      return { sha256: createHash("sha256").update(disk).digest("hex") };
+    },
+  });
+  await receive({ type: "ready" });
+  const load = posted.find((m) => m.type === "load");
+  assert.ok(load && load.type === "load");
+  const saving = receive(save(load.load, INITIAL_SHA, bytesOf(1)));
+  // Another program replaces the file once the check has read the old one.
+  while (!stalled) {
+    await new Promise((resolve) => setTimeout(resolve, 1));
+  }
+  disk = bytesOf(9);
+  triggerWatch();
+  await untilLoads(posted, 2);
+  release?.();
+  await saving;
+  assert.equal(writes, 0);
+  assert.deepEqual([...disk], [...bytesOf(9)]);
+});
