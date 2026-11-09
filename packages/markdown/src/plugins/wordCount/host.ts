@@ -53,7 +53,8 @@ export const wordCountHost: Plugin = {
  * Counts for the active note. Prefer host/panel document text so a cold
  * webview (blank for seconds on first open) cannot leave the previous note's
  * counts on the status bar. Selection is a best-effort refinement with a
- * short timeout.
+ * short timeout. A text editor on the note wins over a Lumia editor that is
+ * not the active one (another group): the reader is looking at the text editor.
  */
 async function activeText(
   activeEditor: ActiveEditor,
@@ -63,31 +64,18 @@ async function activeText(
   if (!uri) {
     return undefined;
   }
-  const panel = panelFor(editors, uri);
-  if (panel) {
-    return panelCounts(panel);
+  const active = editors?.active();
+  if (active?.document.uri === uri) {
+    return panelCounts(active);
   }
   const editor = activeEditor.textEditor(uri);
-  if (!editor) {
-    return undefined;
+  if (editor) {
+    return editor.selection
+      ? countText(editor.selection, false)
+      : countText(editor.text);
   }
-  return editor.selection
-    ? countText(editor.selection, false)
-    : countText(editor.text);
-}
-
-function panelFor(
-  editors: Editors | undefined,
-  uri: string,
-): EditorPanel | undefined {
-  if (!editors) {
-    return undefined;
-  }
-  const active = editors.active();
-  if (active?.document.uri === uri) {
-    return active;
-  }
-  return editors.all().find((panel) => panel.document.uri === uri);
+  const panel = editors?.all().find((item) => item.document.uri === uri);
+  return panel ? panelCounts(panel) : undefined;
 }
 
 async function panelCounts(panel: EditorPanel) {
