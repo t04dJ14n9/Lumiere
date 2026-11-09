@@ -65,7 +65,10 @@ export function Page({
         region={region}
       />
       <AnnotationLayer />
-      <SelectionLayer />
+      {/* EmbedPDF fills the selection solid; the wrapper blends it with the page (page.css). */}
+      <div className="text-selection">
+        <SelectionLayer />
+      </div>
       <RegionMarquee />
       <BacklinkLayer annotate={annotate} />
     </div>

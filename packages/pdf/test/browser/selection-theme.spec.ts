@@ -171,3 +171,69 @@ test("a page with no picture yet shows the paper of the page colors", async ({
   await send(page, { type: "pageColors", effective: "normal" });
   await expect.poll(paper).toBe("rgb(255, 255, 255)");
 });
+
+/**
+ * How far apart the lightest and darkest pixels of the selected line are, from
+ * 0 (one flat colour) to 1: the text under the selection must still show.
+ */
+async function textShowsThrough(
+  page: Page,
+  box: { x: number; y: number; width: number; height: number },
+): Promise<number> {
+  const png = (await page.screenshot({ clip: box })).toString("base64");
+  return page.evaluate(async (png) => {
+    const image = new Image();
+    image.src = `data:image/png;base64,${png}`;
+    await image.decode();
+    const canvas = Object.assign(document.createElement("canvas"), {
+      width: image.width,
+      height: image.height,
+    });
+    const context = canvas.getContext("2d")!;
+    context.drawImage(image, 0, 0);
+    const { data } = context.getImageData(0, 0, image.width, image.height);
+    let lightest = 0;
+    let darkest = 1;
+    for (let i = 0; i < data.length; i += 4) {
+      const l =
+        (0.2126 * data[i]! + 0.7152 * data[i + 1]! + 0.0722 * data[i + 2]!) /
+        255;
+      lightest = Math.max(lightest, l);
+      darkest = Math.min(darkest, l);
+    }
+    return lightest - darkest;
+  }, png);
+}
+
+for (const colors of ["normal", "dark"] as const) {
+  test(`selected text stays readable through the selection on ${colors} paper`, async ({
+    page,
+  }) => {
+    await open(page);
+    if (colors === "dark") {
+      await send(page, { type: "pageColors", effective: "dark" });
+    }
+    await expect
+      .poll(() =>
+        page.evaluate(() =>
+          [...document.querySelectorAll<HTMLImageElement>(".page img")].some(
+            (image) => image.naturalWidth > 0,
+          ),
+        ),
+      )
+      .toBe(true);
+    const at = await pagePoint(page, 1);
+    await selectText(page, at(74, TEXT_MIDLINE), at(205, TEXT_MIDLINE));
+    const line = page.locator('polygon[style*="epdf-text-selection"]').first();
+    await expect(line).toBeVisible();
+    const box = (await line.boundingBox())!;
+    // Inside the selected line only: glyphs and the fill must both show.
+    const inside = {
+      x: box.x + 2,
+      y: box.y + 2,
+      width: box.width - 4,
+      height: box.height - 4,
+    };
+    expect(await textShowsThrough(page, inside)).toBeGreaterThan(0.35);
+  });
+}
