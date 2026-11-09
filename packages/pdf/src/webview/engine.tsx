@@ -6,6 +6,7 @@ import type {
 } from "@embedpdf/core";
 import { DocumentGate, EmbedPDF } from "@embedpdf/react/runtime";
 import React, { useCallback, useEffect, useState } from "react";
+import type { PaneSize } from "../shared/page-picture-width";
 import type { ViewerEngine } from "./browser-render-environment";
 import {
   EngineHostDisposedError,
@@ -109,6 +110,14 @@ function useHostEngine(
   return state;
 }
 
+/** The pane this viewer opens in, for the pictures it will draw. */
+function currentPane(): PaneSize {
+  return {
+    cssWidth: window.innerWidth,
+    pixelRatio: window.devicePixelRatio,
+  };
+}
+
 function EngineSession({
   host,
   mode,
@@ -123,7 +132,7 @@ function EngineSession({
   const worker = mode === "worker";
   const { engine, error } = useHostEngine(host, mode);
   // EmbedPDF reads both only when it mounts: they must not change identity.
-  const [plugins] = useState(viewerPlugins);
+  const [plugins] = useState(() => viewerPlugins(currentPane()));
   const [documents] = useState(() => [
     { source: () => bytesToOpen(bytes), name: "document.pdf" },
   ]);

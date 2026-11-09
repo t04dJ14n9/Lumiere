@@ -11,8 +11,11 @@ type Registered = {
   settings?: { registered?: Record<string, unknown> };
 };
 
-function plugin(id: string): Registered {
-  const found = (viewerPlugins() as Registered[]).find(
+function plugin(
+  id: string,
+  pane?: Parameters<typeof viewerPlugins>[0],
+): Registered {
+  const found = (viewerPlugins(pane) as Registered[]).find(
     (candidate) => candidate.id === id,
   );
   assert.ok(found, `${id} is registered`);
@@ -75,6 +78,18 @@ test("a new annotation is selected and its tool stays on; Lumiere's own tools jo
       (tool) => tool.id === "lineArrow",
     ),
   );
+});
+
+test("the whole-page picture is as wide as the pane's pixels, so fit width needs no tiles", () => {
+  const maxWidth = (pane: Parameters<typeof viewerPlugins>[0]): unknown =>
+    (
+      plugin("render", pane).settings?.registered?.["fullPage"] as {
+        maxWidth: number;
+      }
+    ).maxWidth;
+  assert.equal(maxWidth({ cssWidth: 1200, pixelRatio: 2 }), 2400);
+  assert.equal(maxWidth({ cssWidth: 1000, pixelRatio: 1 }), 1280);
+  assert.equal(maxWidth(undefined), 1280);
 });
 
 test("the interaction hub starts on the pointer tool", () => {
