@@ -386,22 +386,62 @@ test("MCP setup snippets quote paths with spaces or apostrophes for POSIX shells
   );
 });
 
-test("MCP setup snippets quote Windows paths for the shell and escape backslashes in TOML", () => {
+test("MCP setup snippets quote Windows paths for each shell and escape backslashes in TOML", () => {
   const winShim =
     "C:\\Users\\Alice Smith\\AppData\\Roaming\\Code\\User\\globalStorage\\lumia\\bridge-stdio.js";
   const byLabel = new Map(
     mcpSetupOptions(winShim, "win32").map((item) => [item.label, item.detail]),
   );
   assert.equal(
-    byLabel.get("Claude Code"),
+    byLabel.get("Claude Code (PowerShell)"),
+    `claude mcp add --scope user agent-pdf-viewer -- node '${winShim}'`,
+  );
+  assert.equal(
+    byLabel.get("Codex (PowerShell)"),
+    `codex mcp add agent-pdf-viewer -- node '${winShim}'`,
+  );
+  assert.equal(
+    byLabel.get("Claude Code (cmd)"),
     `claude mcp add --scope user agent-pdf-viewer -- node "${winShim}"`,
   );
   assert.equal(
-    byLabel.get("Codex"),
+    byLabel.get("Codex (cmd)"),
     `codex mcp add agent-pdf-viewer -- node "${winShim}"`,
   );
   assert.equal(
     byLabel.get("Codex (config.toml)"),
     `[mcp_servers.agent-pdf-viewer]\ncommand = "node"\nargs = [${JSON.stringify(winShim)}]`,
+  );
+});
+
+test("MCP setup commands for Windows leave no path character to the shell", () => {
+  // PowerShell expands `$` and the backtick inside double quotes, and reads the
+  // typographic single quotes as quotes; cmd.exe expands `%NAME%` in them.
+  const shim = "C:\\Users\\Jo$hn `x` O'Br\u2019ien\\bridge-stdio.js";
+  const byLabel = new Map(
+    mcpSetupOptions(shim, "win32").map((item) => [item.label, item.detail]),
+  );
+  assert.equal(
+    byLabel.get("Claude Code (PowerShell)"),
+    "claude mcp add --scope user agent-pdf-viewer -- node 'C:\\Users\\Jo$hn `x` O''Br\u2019\u2019ien\\bridge-stdio.js'",
+  );
+  const percent = new Map(
+    mcpSetupOptions("C:\\Users\\%USERNAME%\\bridge-stdio.js", "win32").map(
+      (item) => [item.label, item.detail],
+    ),
+  );
+  assert.ok(percent.has("Claude Code (PowerShell)"));
+  assert.ok(percent.has("Codex (config.toml)"));
+  assert.equal(percent.has("Claude Code (cmd)"), false);
+  assert.equal(percent.has("Codex (cmd)"), false);
+});
+
+test("the Codex config.toml snippet escapes DEL, which a TOML basic string may not hold", () => {
+  const toml = mcpSetupOptions("/tmp/a\u007fb/bridge-stdio.js", "linux").find(
+    (item) => item.label === "Codex (config.toml)",
+  )?.detail;
+  assert.equal(
+    toml,
+    '[mcp_servers.agent-pdf-viewer]\ncommand = "node"\nargs = ["/tmp/a\\u007fb/bridge-stdio.js"]',
   );
 });
