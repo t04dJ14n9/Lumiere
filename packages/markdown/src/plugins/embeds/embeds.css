@@ -84,7 +84,7 @@
   margin: 8px 16px;
 }
 /* Obsidian image-embed host + embed-actions frosted bar (REA app.css). */
-/* Wide-block: host capped to pane; img natural width; overflow-x scrolls. */
+/* Host capped to the line; the image shrinks to fit it (below). */
 .image-embed {
   position: relative;
   display: inline-block;
@@ -93,8 +93,13 @@
   width: fit-content;
   vertical-align: bottom;
 }
+/*
+ * A wide image shrinks to the line's width, as Obsidian's editor does
+ * (.markdown-source-view.mod-cm6 img { max-width: 100% }), instead of
+ * keeping its natural width and being cut off at the pane's edge.
+ */
 .image-embed img {
-  max-width: none;
+  max-width: 100%;
 }
 .image-embed .embed-actions {
   position: absolute;
@@ -241,7 +246,7 @@ img.md-image-selected {
 
 /* Obsidian image-embed host + resize-corner chevron (app.css ~11969–12070).
    VS Code theme tokens; pointer-events none — resize stays on +/- keys. */
-/* Wide-block: host capped to pane; overflow-x scrolls. */
+/* Host capped to the line; the image inside shrinks to fit it. */
 .image-embed {
   position: relative;
   display: inline-block;

@@ -13,9 +13,17 @@ test("Live Preview image-embed allows overflow-x for wide images", () => {
   assert.match(css, /\.image-embed[^{]*\{[^}]*overflow-x\s*:\s*auto/s);
 });
 
-test("Live Preview image img is not shrink-clamped (max-width none)", () => {
-  // Host may use max-width:100% as the scrollport; the img must not shrink.
-  assert.match(css, /\.image-embed\s+img\s*\{[^}]*max-width\s*:\s*none/s);
+test("Live Preview image shrinks to the line's width, as in Obsidian", () => {
+  // The owner chose shrink-to-fit on 2026-11-09, replacing #446's natural
+  // width + sideways scroll for images: Obsidian's editor caps images at the
+  // line (.markdown-source-view.mod-cm6 img { max-width: 100% }), so a wide
+  // flowchart is seen whole instead of cut off at the pane's edge.
+  // Mermaid diagrams still keep their size and scroll, as in Obsidian.
+  assert.match(css, /\.image-embed\s+img\s*\{[^}]*max-width\s*:\s*100%/s);
+  assert.doesNotMatch(
+    css,
+    /\.image-embed\s+img\s*\{[^}]*max-width\s*:\s*none/s,
+  );
 });
 
 test("Live Preview image-embed is pane-constrained so overflow-x can scroll", () => {
