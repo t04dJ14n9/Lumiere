@@ -101,6 +101,11 @@ export class PdfOutlineReader {
     }
     try {
       const bytes = await this.options.files.read(uri);
+      // `dispose()` runs while the first read is in progress, before any
+      // engine exists for it to stop; one started now would never be stopped.
+      if (this.disposed) {
+        return [];
+      }
       this.engine ??= this.options.engine();
       return await (await this.engine).sections(bytes);
     } catch (error) {
