@@ -9,7 +9,7 @@
  * Href is `path#page=N` plus optional `#:~:text=…` (Chrome), or
  * `path#page=N&viewrect=…` when regions are enabled. Never PDF++
  * `selection=`, never RFC `search=`. No Source: prefix, no file hash, no cite
- * instruction, no Markdown escapes in the label.
+ * instruction. The label escapes only what would end it: `[` and `]`.
  *
  * A region uses the same Quote shape when it has readable text; viewrect is
  * emitted only when `regionsEnabled` is true. Region image paths are not
@@ -37,9 +37,22 @@ function fileBasename(path: string): string {
   return slash >= 0 ? cleaned.slice(slash + 1) : cleaned;
 }
 
+/**
+ * A page link's label, `basename · p.N`. A `]` would end it early, and a line
+ * break would leave the quote block, so the name's `[` and `]` are
+ * backslash-escaped and its line breaks become spaces. A backslash cannot
+ * occur: it is a path separator here.
+ */
+function pageLabel(path: string, page: number): string {
+  const name = fileBasename(path)
+    .replace(/\r\n?|\n/gu, " ")
+    .replace(/[[\]]/gu, "\\$&");
+  return `${name} · p.${page}`;
+}
+
 export function pageLinkText(source: PdfSource, page: number): string {
-  const name = fileBasename(source.path);
-  return `[${name} · p.${page}](${formatPdfDeepLink(source.path, { page })})`;
+  const label = pageLabel(source.path, page);
+  return `[${label}](${formatPdfDeepLink(source.path, { page })})`;
 }
 
 export function agentText(
@@ -48,11 +61,10 @@ export function agentText(
   options: { regionsEnabled?: boolean } = {},
 ): string {
   const regionsEnabled = options.regionsEnabled === true;
-  const name = fileBasename(source.path);
   const pages = selectedPages(selection);
   const quote = selection.text?.trim() ?? "";
   const links = pages.map(({ page, rects }) => {
-    const label = `${name} · p.${page}`;
+    const label = pageLabel(source.path, page);
     if (quote && selection.kind === "text") {
       return `[${label}](${formatPdfDeepLink(source.path, { page, text: quote })})`;
     }

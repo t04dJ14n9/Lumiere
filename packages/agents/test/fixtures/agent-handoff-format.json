@@ -56,6 +56,29 @@
         "path": "papers/attention.pdf"
       },
       "text": "> Scaled dot-product attention\n>\n> [attention.pdf · p.3](papers/attention.pdf#page=3#:~:text=Scaled%20dot%2Dproduct%20attention)"
+    },
+    {
+      "selection": {
+        "kind": "text",
+        "text": "Scaled dot-product attention",
+        "pages": [
+          {
+            "page": 3,
+            "rects": [
+              [
+                72,
+                83,
+                206,
+                104
+              ]
+            ]
+          }
+        ]
+      },
+      "source": {
+        "path": "papers/[Smith] Title.pdf"
+      },
+      "text": "> Scaled dot-product attention\n>\n> [\\[Smith\\] Title.pdf · p.3](papers/[Smith]%20Title.pdf#page=3#:~:text=Scaled%20dot%2Dproduct%20attention)"
     }
   ]
 }

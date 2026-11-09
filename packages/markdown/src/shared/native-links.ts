@@ -21,7 +21,7 @@ export function nativeLinks(text: string): NativeLink[] {
 
 function inlineLinks(line: string, offset: number): NativeLink[] {
   const result: NativeLink[] = [];
-  const labels = /(?<!!)\[[^\]\n[]*\]\(\s*/g;
+  const labels = /(?<!!)\[(?:[^\]\n[\\]|\\.)*\]\(\s*/g;
   for (const match of line.matchAll(labels)) {
     if (escaped(line, match.index)) {
       continue;
