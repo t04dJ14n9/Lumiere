@@ -1,5 +1,8 @@
 import { loadYaml } from "../../markdown/properties/load-yaml";
-import { plainDocumentDates } from "../../markdown/properties/values";
+import {
+  hasCollidingJsKeys,
+  plainDocumentDates,
+} from "../../markdown/properties/values";
 
 /** Menu paste uses the injected plain clipboard; keyboard paste keeps its MIME payload. */
 export function clipboardProperties(
@@ -10,7 +13,8 @@ export function clipboardProperties(
   }
   try {
     const document = loadYaml().parseDocument(text, { uniqueKeys: true });
-    if (document.errors.length) {
+    // Two keys that read as one name would lose the earlier entry.
+    if (document.errors.length || hasCollidingJsKeys(document.contents)) {
       return undefined;
     }
     // Timestamps become the wall-clock text the sheet shows, not a UTC Date.

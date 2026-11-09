@@ -1,6 +1,10 @@
 import test from "node:test";
 import assert from "node:assert/strict";
-import { frontmatter, propertyChanges } from "../../../src/markdown/properties";
+import {
+  frontmatter,
+  propertyChanges,
+  propertyYamlInput,
+} from "../../../src/markdown/properties";
 import { clipboardProperties } from "../../../src/plugins/properties/clipboard-values";
 
 function apply(
@@ -48,5 +52,26 @@ test("pasted YAML timestamps keep their wall-clock text", () => {
       "created: !!timestamp 2026-10-15\nat: !!timestamp 2026-10-15 01:00:00 +08:00\n",
     ),
     { created: "2026-10-15", at: "2026-10-15T01:00" },
+  );
+});
+
+const TIMESTAMP_KEY_CLASH =
+  '? !!timestamp 2026-10-15\n: from_timestamp\n"2026-10-15": from_string\n';
+
+test("a pasted timestamp key that reads like another key is refused, not merged into it", () => {
+  assert.equal(clipboardProperties(TIMESTAMP_KEY_CLASH), undefined);
+  assert.deepEqual(
+    clipboardProperties("? !!timestamp 2026-10-15\n: from_timestamp\n"),
+    { "2026-10-15": "from_timestamp" },
+  );
+});
+
+test("a YAML draft with a timestamp key that reads like another key is refused", () => {
+  assert.equal(propertyYamlInput(TIMESTAMP_KEY_CLASH), undefined);
+  assert.equal(
+    propertyYamlInput(
+      `a:\n  ${TIMESTAMP_KEY_CLASH.replace(/\n(?!$)/g, "\n  ")}`,
+    ),
+    undefined,
   );
 });
