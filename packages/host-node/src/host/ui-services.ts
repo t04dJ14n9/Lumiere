@@ -24,8 +24,20 @@ export function createDialogs(
   log: (message: string) => void,
 ): Dialogs {
   const id = questionId;
+  // A note's last page closes before its save runs, so a failed save has no
+  // page to tell: the next page that opens shows it.
+  const unseenErrors: string[] = [];
+  panels.onOpened((panel) => {
+    for (const message of unseenErrors.splice(0)) {
+      panel.tell({ type: "toast", kind: "error", message });
+    }
+  });
   return {
-    error: (message) => toast(panels, log, "error", message),
+    error: (message) => {
+      if (!toast(panels, log, "error", message)) {
+        unseenErrors.push(message);
+      }
+    },
     inform: (message) => toast(panels, log, "info", message),
     async ask(message, actions) {
       const panel = presentingPanel(panels);
@@ -44,14 +56,17 @@ export function createDialogs(
   };
 }
 
+/** Whether a page was there to show the toast. */
 function toast(
   panels: PanelHub,
   log: (message: string) => void,
   kind: "info" | "error",
   message: string,
-): void {
+): boolean {
   log(message);
-  presentingPanel(panels)?.tell({ type: "toast", kind, message });
+  const panel = presentingPanel(panels);
+  panel?.tell({ type: "toast", kind, message });
+  return panel !== undefined;
 }
 
 async function pick<T>(

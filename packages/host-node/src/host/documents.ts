@@ -192,7 +192,9 @@ export class NoteDocuments implements HostDocuments {
         this.reportSaveFailed(uri, error);
         return false;
       });
-      if (!saved) {
+      // Typing that arrived during the write is unsaved: a later release or
+      // autosave owns it, and closing now would drop it if that save fails.
+      if (!saved || note.isDirty) {
         return;
       }
     }
