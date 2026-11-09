@@ -183,6 +183,17 @@ test("a bare destination encodes the parentheses that have no partner", () => {
   }
 });
 
+test("a # in a new name is written %23, so the link reads back to that file", () => {
+  const text = "[a](Old.md) [b](Old.md#Part) [c](<Old.md#Part>)";
+  const ctx = context({ ...vault, "A.md": text }, { "Old.md": "a#b.md" });
+  const result = apply(text, rewriteLinks(text, "A.md", ctx));
+  assert.equal(result, "[a](a%23b.md) [b](a%23b.md#Part) [c](<a%23b.md#Part>)");
+  const { index } = memoryVaults({ "A.md": result, "a#b.md": "" });
+  assert.deepEqual(Object.fromEntries(index.resolvedLinks("A.md")), {
+    "a#b.md": 3,
+  });
+});
+
 // Obsidian 1.15.0's rule for link text on rename, read from its link
 // updater with REA (2026-11-07).
 test("text showing the renamed file's name follows it; the writer's own text stays", () => {

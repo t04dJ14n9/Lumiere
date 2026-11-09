@@ -61,8 +61,9 @@ export function formatLinkSource(
   if (source.opening.endsWith("[[")) {
     return `${source.opening}${path}${subpath}${source.closing}`;
   }
+  // A `#` in the path is written `%23`: a literal one starts the subpath.
   const destination = source.isAngled
-    ? `<${path}${subpath}>`
+    ? `<${path.replace(/#/gu, "%23")}${subpath}>`
     : encodeDestination(path) + subpath;
   return `${source.opening}${destination}${source.closing}`;
 }
@@ -71,7 +72,8 @@ export function formatLinkSource(
  * Percent-encode what would end or escape a bare destination: spaces,
  * backslashes and control characters, as Obsidian writes them, and the
  * parentheses that have no partner, which Obsidian leaves and the parser
- * reads as the link's end. Balanced pairs stay as they are.
+ * reads as the link's end. Balanced pairs stay as they are. A `#` is
+ * encoded too: the parser reads a literal one as the start of the subpath.
  */
 export function encodeDestination(text: string): string {
   const unpaired = unpairedParentheses(text);
@@ -79,7 +81,10 @@ export function encodeDestination(text: string): string {
     if (unpaired.has(index)) {
       return unit === "(" ? "%28" : "%29";
     }
-    return unit === " " || unit === "\\" || unit.charCodeAt(0) < 0x20
+    return unit === " " ||
+      unit === "\\" ||
+      unit === "#" ||
+      unit.charCodeAt(0) < 0x20
       ? encodeURIComponent(unit)
       : unit;
   }).join("");
