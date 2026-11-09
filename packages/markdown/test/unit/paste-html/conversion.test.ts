@@ -171,3 +171,12 @@ test("HTML img data:image stays as markdown so attachments can save it", () => {
     "safe",
   );
 });
+
+test("a pasted table cell keeps its line breaks as <br>, as Obsidian writes them", () => {
+  assert.equal(
+    markdownFromHtml(
+      "<table><tr><th>A</th><th>B</th></tr><tr><td>one<br>two</td><td><p>p1</p><p>p2</p></td></tr></table>",
+    ),
+    "|A|B|\n|---|---|\n|one<br>two|p1<br><br>p2|",
+  );
+});
