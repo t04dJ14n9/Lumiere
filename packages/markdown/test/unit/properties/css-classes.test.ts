@@ -10,7 +10,7 @@ import {
 import { noteCssClassesExtension } from "../../../src/plugins/properties/css-classes";
 import { loadVaultCssSnippets } from "../../../src/plugins/properties/snippets";
 import { applyCustomCalloutStyles } from "../../../src/plugins/callouts/webview";
-import { resolveCalloutIcon } from "../../../src/webview/ui/icons";
+import { calloutIcon, resolveCalloutIcon } from "../../../src/webview/ui/icons";
 
 test("frontmatterCssClasses and noteCssClasses extract sanitized tokens from cssclasses and legacy cssclass", () => {
   assert.deepEqual(
@@ -118,6 +118,13 @@ test("loadVaultCssSnippets loads only the snippets appearance.json enables", asy
   assert.deepEqual(await loadVaultCssSnippets(workspace, "file:///vault"), []);
   files.delete("file:///vault/.obsidian/appearance.json");
   assert.deepEqual(await loadVaultCssSnippets(workspace, "file:///vault"), []);
+});
+
+test("a callout or icon name that matches an Object.prototype member gets the default icon or none", () => {
+  for (const name of ["constructor", "__proto__"]) {
+    assert.equal(calloutIcon(name), calloutIcon("unknown-type"));
+    assert.equal(resolveCalloutIcon(name), undefined);
+  }
 });
 
 test("resolveCalloutIcon and applyCustomCalloutStyles resolve custom --callout-icon and normalize --callout-color", (t) => {

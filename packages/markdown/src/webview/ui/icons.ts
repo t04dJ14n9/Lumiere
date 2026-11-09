@@ -120,8 +120,15 @@ function iconHTML(node: IconNode, cls: string): string {
       .join("");
   return `<svg${attributes(svgAttributes)} class="${cls}" aria-hidden="true">${node.map(([tag, attrs]) => `<${tag}${attributes(attrs)}/>`).join("")}</svg>`;
 }
+/** A table's own entry; `constructor` and `__proto__` are not icon names. */
+function ownIcon(
+  table: Record<string, IconNode>,
+  name: string,
+): IconNode | undefined {
+  return Object.hasOwn(table, name) ? table[name] : undefined;
+}
 export function calloutIcon(kind: string): string {
-  return iconHTML(calloutIcons[kind] ?? Pencil, "callout-icon");
+  return iconHTML(ownIcon(calloutIcons, kind) ?? Pencil, "callout-icon");
 }
 export function resolveCalloutIcon(rawName: string): string | undefined {
   const normalized = rawName
@@ -133,7 +140,9 @@ export function resolveCalloutIcon(rawName: string): string | undefined {
   if (!normalized) {
     return undefined;
   }
-  const node = customCalloutIcons[normalized] ?? calloutIcons[normalized];
+  const node =
+    ownIcon(customCalloutIcons, normalized) ??
+    ownIcon(calloutIcons, normalized);
   if (!node) {
     return undefined;
   }

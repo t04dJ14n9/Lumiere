@@ -65,7 +65,9 @@ function transformCallout(
   if (paragraph?.type !== "paragraph_open" || inline?.type !== "inline") {
     return;
   }
-  const match = /^\[!([^\]\n]+)\]([+-])?(?:[ \t]+([^\n]*))?(?:\n|$)/.exec(
+  // `[^\S\n]` is any space but the newline: Obsidian's `\s` after the type
+  // takes a non-breaking or ideographic space too, as `isCallout` does.
+  const match = /^\[!([^\]\n]+)\]([+-])?(?:[^\S\n]+([^\n]*))?(?:\n|$)/.exec(
     inline.content,
   );
   if (!match) {
@@ -115,7 +117,10 @@ function defaultTitle(type: string): string {
 function calloutData(match: RegExpExecArray): Callout {
   const [type = "", ...metadata] = match[1]!.split("|");
   const raw = type.trim().toLowerCase().replace(/\s+/g, "-");
-  const canonical = calloutAliases[raw] ?? raw;
+  // Own keys only: `constructor` and `__proto__` are types, not inherited members.
+  const canonical = Object.hasOwn(calloutAliases, raw)
+    ? calloutAliases[raw]!
+    : raw;
   const fold = match[2];
   return {
     kind: canonical,
