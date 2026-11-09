@@ -75,3 +75,22 @@ test("a numeric key in a flow mapping is removed too", () => {
     "---\n{ 1: a }\n---\nBody\n",
   );
 });
+
+test("removing a property named null keeps a null key, which the sheet names empty", () => {
+  for (const nullKey of ["null", "~"]) {
+    assert.equal(
+      apply(`---\n${nullKey}: keep\n"null": drop\nother: retain\n---\nBody\n`, {
+        type: "remove",
+        keys: ["null"],
+      }),
+      `---\n${nullKey}: keep\nother: retain\n---\nBody\n`,
+    );
+  }
+  assert.equal(
+    apply('---\n"null": drop\n~: keep\n---\nBody\n', {
+      type: "remove",
+      keys: ["null"],
+    }),
+    "---\n~: keep\n---\nBody\n",
+  );
+});

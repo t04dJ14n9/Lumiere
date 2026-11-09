@@ -1,6 +1,7 @@
 import { propertyTransaction } from "./edit-transaction";
 import type { EditorView } from "@codemirror/view";
 import { frontmatter, type PropertyEdit } from "../../markdown/properties";
+import { headerParts } from "../../markdown/properties/header-parts";
 import { editGroup } from "../document/api";
 import type { PropertyContext, Action } from "./context";
 import {
@@ -152,12 +153,12 @@ export class PropertyEditing {
   /** Obsidian's "Clear file properties": the whole properties block goes. */
   clear(): boolean {
     const view = this.options.view();
-    const header = view && frontmatter(view.state.doc.toString());
+    const header = view && headerParts(view.state.doc.toString());
     if (!view || !header) {
       return false;
     }
     view.dispatch({
-      changes: { from: 0, to: header.end },
+      changes: { from: header.start, to: header.end },
       annotations: editGroup.of(`property-${++this.sequence}`),
     });
     return true;

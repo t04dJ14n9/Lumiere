@@ -20,6 +20,8 @@ export function headerParts(source: string) {
   const end = offset + closing.index + closing[0].length;
   return {
     body,
+    // Where the header's text starts: after the byte order mark, if any.
+    start: opening[0].startsWith("﻿") ? 1 : 0,
     offset,
     end,
     raw: source.slice(0, end),

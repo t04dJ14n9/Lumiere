@@ -30,9 +30,13 @@ export const yamlValue = (value: unknown): string =>
         })
         .trimEnd();
 
-/** A block list item: quoted only where YAML needs it (a comma does not). */
+/**
+ * A block list item: quoted only where YAML needs it (a comma does not). A
+ * line break is quoted too: yaml writes it as a block scalar whose lines start
+ * at column 0, which an indented `- ` item cannot hold.
+ */
 const blockItem = (value: unknown): string =>
-  markerLike(value)
+  markerLike(value) || (typeof value === "string" && /[\r\n]/.test(value))
     ? JSON.stringify(value)
     : loadYaml().stringify(value, { lineWidth: 0 }).trimEnd();
 
@@ -162,6 +166,27 @@ export function valueStart(
   return at >= 0 ? at : start;
 }
 
+/**
+ * Where the comment on a line begins before `pos`, when it follows a colon or
+ * starts the line, or -1. Quotes are not tracked: a plain key may hold one
+ * (`owner's list: # keep`), which `commentStart` would read as a quoted scalar.
+ */
+function commentAfterColon(
+  body: string,
+  lineStart: number,
+  pos: number,
+): number {
+  for (let i = lineStart; i < pos; i++) {
+    if (body[i] === "#" && (i === lineStart || /[ \t]/.test(body[i - 1]!))) {
+      const before = body.slice(lineStart, i).trimEnd();
+      if (before === "" || before.endsWith(":")) {
+        return i;
+      }
+    }
+  }
+  return -1;
+}
+
 /** `afterColon`, stepping back over comments between the colon and `start`. */
 function afterColonPastComments(
   body: string,
@@ -177,7 +202,11 @@ function afterColonPastComments(
     if (end === 0) {
       return undefined;
     }
-    const hash = commentStart(body, body.lastIndexOf("\n", end - 1) + 1, end);
+    const hash = commentAfterColon(
+      body,
+      body.lastIndexOf("\n", end - 1) + 1,
+      end,
+    );
     if (hash < 0) {
       return undefined;
     }

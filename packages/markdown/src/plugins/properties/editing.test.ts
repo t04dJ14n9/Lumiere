@@ -59,6 +59,31 @@ test("property edits reject stale headers and combine displayed ordering with on
   assert.ok(state.doc.toString().endsWith("Body"));
 });
 
+test("clearing the file properties keeps a byte order mark before the fence", () => {
+  let state = EditorState.create({ doc: "\uFEFF---\na: 1\n---\nBody" });
+  const view = {
+    get state() {
+      return state;
+    },
+    dispatch(spec: TransactionSpec) {
+      state = state.update(spec).state;
+    },
+  } as unknown as EditorView;
+  const editing = new PropertyEditing({
+    view: () => view,
+    setStatus: () => {},
+    action: () => {},
+    refresh: () => {},
+    setType: () => {},
+    show: () => {},
+    focusTitle: () => {},
+    pageHeading: () => {},
+    signal: new AbortController().signal,
+  });
+  assert.equal(editing.clear(), true);
+  assert.equal(state.doc.toString(), "\uFEFFBody");
+});
+
 test("chip editing tracks duplicate occurrences through concurrent list additions and removals", () => {
   assert.equal(itemOccurrence(["a", "b", "a"], ["x", "a", "b", "a"], 2), 3);
   assert.equal(itemOccurrence(["a", "b", "a"], ["a", "b"], 2), -1);

@@ -43,7 +43,7 @@ export function propertyInput(
 }
 
 /** True when distinct YAML keys would collapse to one JS property name. */
-function hasCollidingJsKeys(node: unknown): boolean {
+export function hasCollidingJsKeys(node: unknown): boolean {
   const { isSeq, isMap, isScalar } = loadYaml();
   if (isSeq(node)) {
     return node.items.some((item) => hasCollidingJsKeys(item));
@@ -60,7 +60,9 @@ function hasCollidingJsKeys(node: unknown): boolean {
     ) {
       return true;
     }
-    const jsKey = String(pair.key.toJSON());
+    // A !!timestamp key is named by its wall-clock text, as plainDocumentDates
+    // writes it, so it can be the same name as a string key.
+    const jsKey = timestampText(pair.key) ?? String(pair.key.toJSON());
     if (seen.has(jsKey)) {
       return true;
     }
@@ -253,21 +255,32 @@ export function propertyDateText(value: Date, source?: string): string {
   return iso.endsWith(":00.000Z") ? iso.slice(0, 16) : iso.slice(0, 19);
 }
 
+/** A valid !!timestamp scalar's wall-clock text, from its YAML source. */
+function timestampText(node: {
+  value: unknown;
+  source?: string;
+}): string | undefined {
+  return node.value instanceof Date && Number.isFinite(node.value.valueOf())
+    ? propertyDateText(
+        node.value,
+        typeof node.source === "string" ? node.source : undefined,
+      )
+    : undefined;
+}
+
 /**
  * Replace !!timestamp Dates using each scalar's YAML source (wall-clock),
  * then toJS. Restores Date values afterward so the document stays editable.
  */
 export function plainDocumentDates(document: Document): unknown {
   const { visit } = loadYaml();
-  const restored: { node: { value: unknown }; prior: Date }[] = [];
+  const restored: { node: { value: unknown }; prior: unknown }[] = [];
   visit(document, {
     Scalar(_key, node) {
-      if (node.value instanceof Date && Number.isFinite(node.value.valueOf())) {
+      const text = timestampText(node);
+      if (text !== undefined) {
         restored.push({ node, prior: node.value });
-        node.value = propertyDateText(
-          node.value,
-          typeof node.source === "string" ? node.source : undefined,
-        );
+        node.value = text;
       }
     },
   });
