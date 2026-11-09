@@ -49,6 +49,38 @@ test("with Look Up on, a force click on a word asks the host to look it up", asy
     .toEqual({ type: "lookUp", word: "page", open: true });
 });
 
+test("with Look Up on, scrolling does not message the host for every wheel event", async ({
+  page,
+}) => {
+  await open(page);
+  await send(page, { type: "lookUp", enabled: true });
+  const box = (await page.locator(".viewport").boundingBox())!;
+  await page.mouse.move(box.x + box.width / 2, box.y + box.height / 2);
+  await page.waitForTimeout(300);
+  const patches = () =>
+    page.evaluate(
+      () =>
+        (
+          window as unknown as { __messages: { type: string }[] }
+        ).__messages.filter((message) => message.type === "patch").length,
+    );
+  const lookUpsBefore = (await lookUps(page)).length;
+  const before = await patches();
+  const started = Date.now();
+  for (let event = 0; event < 40; event++) {
+    await page.mouse.wheel(0, 25);
+  }
+  const seconds = (Date.now() - started) / 1000;
+  await page.waitForTimeout(250);
+  // The pages moving under the pointer say nothing to the host each time: the
+  // word the pointer rests on once they stop is the one message.
+  expect((await lookUps(page)).length).toBeLessThanOrEqual(lookUpsBefore + 1);
+  // The view reports go out at most ten times a second (and once more at each end).
+  expect((await patches()) - before).toBeLessThanOrEqual(
+    Math.ceil(seconds * 10) + 3,
+  );
+});
+
 test("the context menu reports the word under the pointer, and nothing when there is none", async ({
   page,
 }) => {
