@@ -42,7 +42,7 @@ async function editorFrame(page: Page): Promise<Frame> {
       return frame;
     }
   }
-  throw new Error("No Lumia frame");
+  throw new Error("No Lumiere frame");
 }
 
 const scenarios: Record<string, Record<string, unknown>> = {

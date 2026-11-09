@@ -1,5 +1,5 @@
 // Unit tests of every package, each run from its own directory: the core,
-// the agent formats, then Lumia, Lumia PDF, the Node host, the web host,
+// the agent formats, then Lumiere, Lumiere PDF, the Node host, the web host,
 // DSH, the app, ink, the iPad app and the web app.
 // Root scripts are tested too.
 import { readdirSync } from "node:fs";

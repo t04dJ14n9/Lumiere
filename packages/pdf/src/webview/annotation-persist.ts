@@ -11,7 +11,7 @@ import {
   serializeAnnotations,
 } from "../shared/annotation-store";
 
-/** What bringing back Lumia's annotations from the store file did. */
+/** What bringing back Lumiere's annotations from the store file did. */
 export type Restored =
   | { kind: "unreadable" }
   | {
@@ -50,7 +50,7 @@ export async function restoreStoredAnnotations(
   };
 }
 
-/** Lumia's annotations as the store file's text, or null when there are none. */
+/** Lumiere's annotations as the store file's text, or null when there are none. */
 export async function exportStoreText(
   annotation: AnnotationCapability,
   ownership: AnnotationOwnership,
@@ -61,7 +61,7 @@ export async function exportStoreText(
 }
 
 /**
- * The PDF with every annotation shown, Lumia's and its own. Incremental
+ * The PDF with every annotation shown, Lumiere's and its own. Incremental
  * (EmbedPDF's default): the original bytes stay as they were and the changes
  * are appended, so a signed PDF stays valid.
  */

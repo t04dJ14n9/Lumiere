@@ -111,7 +111,7 @@ forbids this package from importing `vscode` or any embedder.
   (the vault graph) yet: `inert.ts` answers for them as VS Code does when
   they are unavailable.
 - No text editor of its own, so `HostDocuments.registerCompletions` is left
-  out: typing `[[` suggests notes in the Lumia editor only.
+  out: typing `[[` suggests notes in the Lumiere editor only.
 - No command palette or keybindings: commands run from clicks, links and the
   editor's own menus.
 - `TreeHandle.clearSelection` emits `deselect` (the Outline when the reader is

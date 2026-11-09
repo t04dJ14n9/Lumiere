@@ -1,5 +1,5 @@
 /**
- * Host ↔ viewer messages about annotations: Lumia's own kept in a file
+ * Host ↔ viewer messages about annotations: Lumiere's own kept in a file
  * beside the PDF (`annotation-store`), and the PDF written with them only
  * when the reader asks. Validation lives here so messages.ts stays under
  * the file size limit.
@@ -14,7 +14,7 @@ export type AnnotationViewerMessage =
       data: ArrayBuffer;
     }
   | { type: "annotationSaveFailed"; load: number; message: string }
-  /** Lumia's own annotations as the store file's text; null when there are none. */
+  /** Lumiere's own annotations as the store file's text; null when there are none. */
   | { type: "annotationStoreSave"; load: number; text: string | null }
   /** The PDF with its annotations, for a new file (Export Annotated Copy). */
   | { type: "annotationExport"; load: number; data: ArrayBuffer }

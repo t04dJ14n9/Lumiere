@@ -7,14 +7,14 @@ export const config = Schema.object({
   /** Reopen notes Cursor's Preview | Markdown switch sends to the text editor. */
   reclaimTextEditor: Schema.union(["auto", "on", "off"]).default("auto"),
   /**
-   * Reclaim when a tool replaces a Lumia tab in place with the text editor
+   * Reclaim when a tool replaces a Lumiere tab in place with the text editor
    * (Claude chat open_file / showTextDocument). Off by default so mainline
    * in-place workbench→text stays native unless the reader opts in.
    */
   reclaimInPlaceTextEditor: Schema.boolean()
     .default(false)
     .description(
-      "Reclaim when a tool replaces a Lumia tab in place with the text editor (Claude chat open_file). Off by default.",
+      "Reclaim when a tool replaces a Lumiere tab in place with the text editor (Claude chat open_file). Off by default.",
     ),
   /** Open TextDocuments early so Cursor can resolve our custom editor for agent-edited notes. */
   warmTextDocument: Schema.union(["auto", "on", "off"]).default("auto"),
@@ -82,7 +82,7 @@ export default defineManifest({
       { id: "selectionActions", title: "Selection Actions" },
       {
         id: "useForMarkdownInWorkspace",
-        title: "Use Lumia for Markdown in This Workspace",
+        title: "Use Lumiere for Markdown in This Workspace",
         scope: "workbench",
       },
       {
@@ -106,14 +106,14 @@ export default defineManifest({
         mac: "ctrl+g",
         scope: "editor",
       },
-      // Lumia focused: Ctrl/Cmd+E → default text editor.
+      // Lumiere focused: Ctrl/Cmd+E → default text editor.
       {
         id: "toggleTextEditor",
         key: "ctrl+e",
         mac: "cmd+e",
         scope: "editor",
       },
-      // Built-in Markdown text editor focused: Ctrl/Cmd+E → Lumia.
+      // Built-in Markdown text editor focused: Ctrl/Cmd+E → Lumiere.
       // workbench scope so the binding is not gated on activeCustomEditorId /
       // editorFocus (those keys are false while the text editor has focus).
       {

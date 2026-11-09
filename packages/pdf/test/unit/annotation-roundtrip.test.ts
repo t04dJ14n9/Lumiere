@@ -43,7 +43,7 @@ async function withEngine<T>(
     return await run((bytes) =>
       engine.open(
         { kind: "bytes", bytes },
-        { identity: { displayName: "Lumia" } },
+        { identity: { displayName: "Lumiere" } },
       ),
     );
   } finally {
@@ -82,7 +82,7 @@ test("highlight annotation survives download → atomic write → reopen", async
   });
 });
 
-test("Lumia's annotation file brings a highlight back on the same PDF, once, without touching its bytes", async () => {
+test("Lumiere's annotation file brings a highlight back on the same PDF, once, without touching its bytes", async () => {
   const bytes = await shortPdf();
   await withEngine(async (open) => {
     const doc = await open(bytes);
@@ -111,7 +111,7 @@ test("Lumia's annotation file brings a highlight back on the same PDF, once, wit
     const [restored] = annotations;
     assert.equal(restored?.subtype, "highlight");
     assert.equal(restored?.contents, "kept outside");
-    assert.equal(restored?.author, "Lumia");
+    assert.equal(restored?.author, "Lumiere");
     assert.deepEqual((restored as { quadPoints: unknown }).quadPoints, [line]);
 
     // Importing again changes nothing: the names are taken.

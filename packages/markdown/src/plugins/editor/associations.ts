@@ -10,7 +10,7 @@ const { viewType, filenamePatterns: markdownPatterns } = MARKDOWN_EDITOR;
 const NATIVE_TEXT_EDITOR = "default";
 
 /**
- * Open Markdown in Lumia directly, so VS Code hands a note to Lumia without
+ * Open Markdown in Lumiere directly, so VS Code hands a note to Lumiere without
  * first opening it in its text editor (about 75 ms of a cold open). Other
  * patterns are kept.
  */
@@ -45,7 +45,7 @@ function opensMarkdownHere(
   );
 }
 
-/** Lumia's earlier route (#458): Markdown through the text editor, then reclaimed. */
+/** Lumiere's earlier route (#458): Markdown through the text editor, then reclaimed. */
 function opensThroughText(
   existing: unknown,
   storage: HostServices["storage"],
@@ -92,14 +92,14 @@ export async function useForMarkdownInWorkspace(
   }
   if (opensMarkdownHere(existing, host.storage)) {
     host.dialogs.inform(
-      "Markdown files in this workspace already open in Lumia.",
+      "Markdown files in this workspace already open in Lumiere.",
     );
     return;
   }
   await host.storage.update(MARKDOWN_WORKSPACE_EDITOR_KEY, true);
   await associations.write(withMarkdownWorkshop(existing));
   host.dialogs.inform(
-    "Markdown files in this workspace now open in Lumia. Use Open as Text or Reopen Editor With… for the text editor.",
+    "Markdown files in this workspace now open in Lumiere. Use Open as Text or Reopen Editor With… for the text editor.",
   );
 }
 

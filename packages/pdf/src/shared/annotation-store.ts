@@ -1,5 +1,5 @@
 /**
- * Lumia's own annotations on a PDF, kept outside the PDF so its bytes (and
+ * Lumiere's own annotations on a PDF, kept outside the PDF so its bytes (and
  * so its SHA-256, which vaults record for immutable sources) never change.
  * One JSON file per PDF content hash: the same PDF in `inbox/` and in
  * `.raw/` shows the same annotations, and a moved or renamed copy keeps them.
@@ -7,7 +7,7 @@
  * The file holds an EmbedPDF annotation bundle (`annotation.export()` gives
  * it, `annotation.import()` takes it), as `AnnotationTransfer` writes it:
  * one JSON document with each stamp's drawing in base64. Version 2 wraps it,
- * `{ version: 2, bundle }`, so the file says which generation of Lumia wrote
+ * `{ version: 2, bundle }`, so the file says which generation of Lumiere wrote
  * it and a later bundle format does not collide with version 1, which held
  * EmbedPDF 2's transfer items (`annotation-legacy`, still read).
  */
@@ -123,7 +123,7 @@ async function parseLegacyAnnotations(
 }
 
 /**
- * The bundle with only the annotations Lumia owns: what the file keeps.
+ * The bundle with only the annotations Lumiere owns: what the file keeps.
  * A reply or popup goes with the annotation it belongs to, and the drawings
  * no kept annotation names are left out (a bundle that names none is refused).
  */

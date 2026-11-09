@@ -11,7 +11,7 @@ export interface NoteSelection {
 }
 
 /**
- * What the agent bridge needs from the Markdown editor (Lumia,
+ * What the agent bridge needs from the Markdown editor (Lumiere,
  * in the same extension); the composition root provides it.
  */
 export interface NoteSelections {

@@ -10,7 +10,7 @@ const box = (x: number, y: number, width: number, height: number) => ({
 const date = (iso: string) => ({ $date: iso });
 const PNG_BYTES = [137, 80, 78, 71, 13, 10, 26, 10];
 
-/** What the version 1 file held for each tool Lumia offered, as EmbedPDF 2 exported it. */
+/** What the version 1 file held for each tool Lumiere offered, as EmbedPDF 2 exported it. */
 const OLD_ANNOTATIONS = [
   {
     id: "h",
@@ -22,7 +22,7 @@ const OLD_ANNOTATIONS = [
     color: "#FFE566",
     opacity: 0.3,
     blendMode: 1,
-    author: "Lumia",
+    author: "Lumiere",
     contents: "why",
     created: date("2026-11-08T10:00:00.000Z"),
     modified: date("2026-11-08T10:05:00.000Z"),
@@ -225,7 +225,7 @@ test("a highlight keeps its lines, colour, blend, text, author and dates", async
   assert.equal(highlight.opacity, 0.3);
   assert.equal(highlight.blendMode, "multiply");
   assert.equal(highlight.contents, "why");
-  assert.equal(highlight.author, "Lumia");
+  assert.equal(highlight.author, "Lumiere");
   assert.equal(highlight.createdAt, "2026-11-08T10:00:00.000Z");
   assert.equal(highlight.modifiedAt, "2026-11-08T10:05:00.000Z");
   // The old id stays the annotation's name, so it keeps its identity.

@@ -12,26 +12,26 @@ jumps, fit modes and saved views.
 
 Made against the installed EmbedPDF **3.0.0** declarations and implementation
 (`webview/plugins.ts`, `stage-layout.ts`, `stage-position.ts`, `navigation.ts`,
-`reading-position.ts`). Lumia's choices keep their own names; `stage-layout.ts`
+`reading-position.ts`). Lumiere's choices keep their own names; `stage-layout.ts`
 maps them to the Stage's settings, once for registration and once for every
 live change.
 
 | Area           | EmbedPDF 3 support                                                                                                                              | Decision                                                                                                                                                                                      |
 | -------------- | ----------------------------------------------------------------------------------------------------------------------------------------------- | --------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
 | Toolbar        | Not EmbedPDF's concern.                                                                                                                         | Slim and floating share `ToolbarControls`; chrome uses commands, editor title actions and page/zoom status entries. There is also a hidden `none` mode.                                       |
-| Zoom           | `ZoomSpec`: `fit-width`, `fit-page`, or a level. `stage.zoomTo` takes any of them; fit modes measure whole spreads and stay live while resized. | `viewUnitsPerPoint: 1`, so 100% is one pixel per point. Actual size is level **1**; custom percentages keep the 25–400% range. Buttons and keys walk Lumia's ladder (`shared/zoom-steps.ts`). |
+| Zoom           | `ZoomSpec`: `fit-width`, `fit-page`, or a level. `stage.zoomTo` takes any of them; fit modes measure whole spreads and stay live while resized. | `viewUnitsPerPoint: 1`, so 100% is one pixel per point. Actual size is level **1**; custom percentages keep the 25–400% range. Buttons and keys walk Lumiere's ladder (`shared/zoom-steps.ts`). |
 | Spreads        | `spread: 'none' \| 'odd' \| 'even'` in the Stage settings.                                                                                       | Map `single` to `none`, `spread` to `odd`, and `spreadCover` to `even`; one `updateSettings` for a combined change.                                                                           |
 | Direction      | `layout: 'vertical' \| 'horizontal'`. Next/previous move by the shown item, a page or a spread.                                                  | Reuse it for both directions and spread stepping.                                                                                                                                             |
-| Page-by-page   | `flow: 'paged'` shows one item at a time and turns at its edge with wheel or trackpad.                                                          | Use it; Lumia adds the arrow and Page keys (`shared/paging-keys.ts`) on top of Stage verbs, with `lumiere.pdf.view.arrowsKeepPlace` for ←/→.                                                  |
+| Page-by-page   | `flow: 'paged'` shows one item at a time and turns at its edge with wheel or trackpad.                                                          | Use it; Lumiere adds the arrow and Page keys (`shared/paging-keys.ts`) on top of Stage verbs, with `lumiere.pdf.view.arrowsKeepPlace` for ←/→.                                                  |
 | Page jumps     | `goToPage`, `reveal` and `scrollTo` take `behavior: 'smooth'`.                                                                                  | Smooth jumps when enabled in continuous flow; restoration and page-by-page changes are instant.                                                                                               |
-| Wheel          | Ctrl/⌘+wheel and pinch zoom around the pointer; a notch zooms by 1.2.                                                                           | Adopt it. Plain wheel notches in continuous flow are animated by Lumia (`webview/smooth-scrolling.ts`); other pixel deltas pass through.                                                      |
-| Zoom animation | The camera moves on each pinch or wheel event; pages are rescaled, then re-rendered sharp when it rests.                                        | No Lumia animation. Zoom from the buttons, keys and menu is a single step.                                                                                                                    |
+| Wheel          | Ctrl/⌘+wheel and pinch zoom around the pointer; a notch zooms by 1.2.                                                                           | Adopt it. Plain wheel notches in continuous flow are animated by Lumiere (`webview/smooth-scrolling.ts`); other pixel deltas pass through.                                                      |
+| Zoom animation | The camera moves on each pinch or wheel event; pages are rescaled, then re-rendered sharp when it rests.                                        | No Lumiere animation. Zoom from the buttons, keys and menu is a single step.                                                                                                                    |
 | Persistence    | The registered settings and zoom decide the first layout.                                                                                       | Reading position and zoom survive a file rebuild in a module outside React; the last validated report is saved on panel disposal for reopen. Open panels keep independent state.              |
 
 ## Controls
 
 The Stage centres content and keeps the zoom focus. There is no scroll
-element: Lumia reads and moves the view with Stage verbs, and the pages
+element: Lumiere reads and moves the view with Stage verbs, and the pages
 shorter than the viewer cannot reach its top (the Stage clamps the end of the
 document, as a scrolling page would).
 

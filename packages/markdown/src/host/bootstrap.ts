@@ -62,7 +62,7 @@ export interface BootstrapOptions {
 }
 
 /**
- * Start Lumia's plugins in `root` (the extension's plugin tree;
+ * Start Lumiere's plugins in `root` (the extension's plugin tree;
  * tests get a fresh one). Nothing here may import `vscode`: other editors
  * start the same plugins over their own host services.
  */
@@ -121,7 +121,7 @@ export async function bootstrap(
 
 // Window features that wait for editor/ready so activation settles fast.
 // The ones left out are needed before the first panel's settings.prepare /
-// link open path, or serve a command that must work with no Lumia editor
+// link open path, or serve a command that must work with no Lumiere editor
 // open yet: VS Code activates the extension for a contributed command and
 // then looks the handler up, so a handler registered only after the first
 // panel is "not found" in a fresh window (dailyNotes: Open Today's Daily

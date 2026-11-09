@@ -8,7 +8,7 @@ import type { PdfBacklinkIndex } from "../../shared/pdf-backlink-index";
 
 /**
  * The services PDF plugins share. The extension's composition root provides
- * `extensionContext` and `outputChannel` (shared with Lumia);
+ * `extensionContext` and `outputChannel` (shared with Lumiere);
  * each other service is provided by the plugin named beside it.
  */
 declare module "@workshop/core" {

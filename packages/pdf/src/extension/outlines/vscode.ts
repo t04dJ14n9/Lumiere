@@ -26,7 +26,7 @@ const workspaceFiles: OutlineFiles = {
 };
 
 /**
- * The reader of PDF bookmarks that Lumia offers to notes (`[[paper.pdf#`).
+ * The reader of PDF bookmarks that Lumiere offers to notes (`[[paper.pdf#`).
  * PDFium is the viewer's: the engine bundle is built beside the viewer and
  * loads the viewer's embedpdf.wasm, both from dist/pdf/ in the extension.
  */

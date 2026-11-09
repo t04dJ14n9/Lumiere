@@ -1,4 +1,4 @@
-# Lumia architecture
+# Lumiere architecture
 
 How the whole repository fits together: the two products, the plugin core,
 the plugin trees, the hosts and the contracts between them, and how a note
@@ -44,15 +44,15 @@ Read this first, then the detailed documents it points to:
 
 ## 1. The products
 
-One VS Code and Cursor extension, "Lumia: Markdown Editor and PDF Reader",
+One VS Code and Cursor extension, "Lumiere: Markdown Editor and PDF Reader",
 ships two products that share one plugin tree:
 
-- **Lumia (Markdown).** Obsidian's editing experience on a VS Code custom
+- **Lumiere (Markdown).** Obsidian's editing experience on a VS Code custom
   editor: Live Preview that reveals syntax at the caret, wikilinks resolved
   as Obsidian resolves them, embeds, callouts, properties, tables, math,
   diagrams, tasks, tags, backlinks, outline and graph. VS Code keeps the
   text, saving and undo.
-- **Lumia PDF.** A PDF viewer on EmbedPDF 3 (PDFium compiled to WebAssembly).
+- **Lumiere PDF.** A PDF viewer on EmbedPDF 3 (PDFium compiled to WebAssembly).
   Its signature feature is **Copy link to this**: a quote with a deep link
   (`paper.pdf#page=3#:~:text=…`) that notes can paste, and that paints
   backlink overlays back onto the PDF.
@@ -63,7 +63,7 @@ The Markdown product also runs outside VS Code, on the same plugins:
 | --- | --- | --- |
 | VS Code, Cursor | `packages/markdown/src/host` | the extension host (Node) plus one webview per editor |
 | DeepSeek Harness | `packages/dsh` on `packages/host-node` | DSH's server and preview sidebar |
-| Lumia's own server and window | `packages/app` on `packages/host-node` | a local server and a browser page |
+| Lumiere's own server and window | `packages/app` on `packages/host-node` | a local server and a browser page |
 | Desktop app | `apps/desktop` (Tauri) around `packages/app` | a native window |
 | Web app | `apps/web` on `packages/host-web` | a static, offline site |
 | iPad | `apps/ipad` (Capacitor) on `packages/host-web` | a native app with no server |
@@ -82,7 +82,7 @@ packages/pdf           the PDF plugins (VS Code only), its portable host code an
 packages/host-node     host services outside VS Code; the shared host core has no Node
 packages/host-web      the shared host on a browser's or the iPad's folders
 packages/dsh           DSH embedder
-packages/app           Lumia's server and window
+packages/app           Lumiere's server and window
 apps/desktop, web, ipad
 src/extension.ts       the composition root of the VS Code extension
 ```
@@ -370,7 +370,7 @@ use; `vaults.locate(uri)` gives the vault and the vault path.
   register a resolution policy (`vaults.registerLinkPolicy`) without the
   vault importing them.
 
-Known difference: when a name matches in several folders, Lumia ranks by
+Known difference: when a name matches in several folders, Lumiere ranks by
 folder distance then alphabetically; Obsidian ranks by path length. See
 [section 18.3](#183-wikilinks).
 
@@ -398,7 +398,7 @@ folder distance then alphabetically; Obsidian ranks by path length. See
 | Render in Live Preview, dim unresolved | `plugins/links/webview.ts`, `livePreview/inline.ts` |
 | Follow (click, Mod+Enter), navigate to heading or block | `plugins/links` (webview → RPC → host `navigation`) |
 | Open in the host: note, PDF page, external URL (with scheme policy), create a missing note | `host/navigation.ts`, `host-node` equivalent |
-| Suggest while typing in Lumia's editor | `plugins/suggest` (`SuggestionIndex`, Obsidian's fuzzy ranking) via `links/suggestions.ts` |
+| Suggest while typing in Lumiere's editor | `plugins/suggest` (`SuggestionIndex`, Obsidian's fuzzy ranking) via `links/suggestions.ts` |
 | Suggest while typing in VS Code's own text editor | `suggest/native-host.ts` → `hostDocuments.registerCompletions` → `host/text-completions.ts` |
 | Suggest a PDF's sections after `[[paper.pdf#` | `pdfOutlines` → `SuggestionIndex.prepare`; inserts `[[paper.pdf#page=N\|Title]]` |
 | Update links on rename | `plugins/linkUpdates` |
@@ -425,7 +425,7 @@ src/host (no vscode): portable viewer logic, reused by host-node
   `packages/pdf/src/host` (no `vscode` imports) holds the portable part,
   already reused by host-node's PDF pages.
 - Links into PDFs are plain fragments (`#page=N`, `#:~:text=`), so Obsidian
-  and browsers open them too. Lumia's own links add a text fragment for the
+  and browsers open them too. Lumiere's own links add a text fragment for the
   quote; the backlink index matches it against the page text (folding case,
   whitespace and hyphenated line breaks, across page edges) and paints an
   overlay that opens the note.
@@ -437,11 +437,11 @@ src/host (no vscode): portable viewer logic, reused by host-node
   scrolls and zooms the pages, in single, spread, paged and horizontal
   flows), `render` (a quick picture of each page, then sharp tiles),
   `interaction` (the active tool), `selection`, `search`, `history`,
-  `annotation`, `link` and `outline`, plus Lumia's own `lumia-text`, which
+  `annotation`, `link` and `outline`, plus Lumiere's own `lumia-text`, which
   gives the other layers each page's text and glyph boxes. Pages are laid out
   by the Stage, so the webview never reads a scroll offset: it moves and
   reads the view with Stage verbs (`webview/stage-*.ts`). Zoom is the Stage's
-  (a wheel notch is ×1.2; the buttons and keys walk Lumia's ladder).
+  (a wheel notch is ×1.2; the buttons and keys walk Lumiere's ladder).
 - **One engine per viewer page** (`webview/engine-host.ts`): PDFium runs in a
   web worker, with the main thread as a fallback when the worker fails or
   does not boot in 15 s. A reload of the file keeps the engine; the page
@@ -474,9 +474,9 @@ The path from "open `Note.md`" to an editable note:
 
 1. VS Code activates the extension (once per window, at window start through
    `workspaceContains:**/*.md`; about 15–20 ms of our own time) and resolves
-   the custom editor. **Use Lumia for Markdown in This Workspace** associates
+   the custom editor. **Use Lumiere for Markdown in This Workspace** associates
    `*.md` and `*.markdown` with `lumiere.markdown.editor` itself, so VS Code
-   hands the note straight to Lumia. A workspace set up the old way
+   hands the note straight to Lumiere. A workspace set up the old way
    (`"default"`, then take over the text tab) is migrated on activation;
    the takeover (`host/reclaim.ts`) remains for text tabs opened another
    way, and waits 40 ms after the text editor reports.
@@ -517,7 +517,7 @@ Findings:
 
 - **Most of a cold open is now VS Code's.** Creating the webview's iframe
   and inner document takes about 195 ms cold, which the extension cannot
-  shorten. Lumia's host side is about 10 ms.
+  shorten. Lumiere's host side is about 10 ms.
 - **Vault size does not slow opening.** With 3,000 notes, `forDocument`
   takes 7–23 ms because opening does not wait for indexing.
 - **Frontmatter was quadratic** and is fixed: each document flush asked
@@ -539,7 +539,7 @@ Not done:
   (`pdfOutline/focus.ts`).
 - `test/vscode/perf.spec.ts` starts its clock after Reopen With, so it
   misses VS Code's own wait, and it reads a log file name that no longer
-  exists (`Workshop.log`, now `Lumia.log`).
+  exists (`Workshop.log`, now `Lumiere.log`).
 
 ## 16. Security boundaries
 

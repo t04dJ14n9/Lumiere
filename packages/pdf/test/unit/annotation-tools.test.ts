@@ -11,7 +11,7 @@ import {
   toolColorDefaults,
 } from "../../src/shared/annotation-tools";
 
-test("Lumia's tool ids map to EmbedPDF 3's at the boundary and back", () => {
+test("Lumiere's tool ids map to EmbedPDF 3's at the boundary and back", () => {
   assert.equal(toV3ToolId("textComment"), "note");
   assert.equal(toV3ToolId("freeText"), "free-text");
   for (const id of [

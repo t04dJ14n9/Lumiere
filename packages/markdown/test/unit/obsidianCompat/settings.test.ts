@@ -191,7 +191,7 @@ test("templates.json and daily-notes.json seed only usable values", () => {
       "dailyNotes.template": "Templates/Daily",
     },
   );
-  // A Moment format Lumia cannot write would name notes differently.
+  // A Moment format Lumiere cannot write would name notes differently.
   assert.deepEqual(
     mapDailyNotesSettings({
       folder: "",

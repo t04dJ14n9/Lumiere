@@ -15,7 +15,7 @@ test("isAttachableExplorerPath accepts common media and rejects notes/code", () 
   assert.equal(isAttachableExplorerPath("/vault/readme"), false);
 });
 
-test("shouldReclaimExplorerOpen requires pinned media over a prior Lumia note", () => {
+test("shouldReclaimExplorerOpen requires pinned media over a prior Lumiere note", () => {
   // Workbench EditorDropTarget opens Explorer tree drops with pinned:true
   // (isPreview false). Single-click Explorer opens are preview tabs.
   assert.equal(
@@ -46,7 +46,7 @@ test("shouldReclaimExplorerOpen requires pinned media over a prior Lumia note", 
       priorActiveWasLumiere: false,
     }),
     false,
-    "do not steal opens when Lumia was not the prior active editor",
+    "do not steal opens when Lumiere was not the prior active editor",
   );
   assert.equal(
     shouldReclaimExplorerOpen({

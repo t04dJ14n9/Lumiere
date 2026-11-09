@@ -3,7 +3,7 @@ import type { ViewerMessage } from "../../shared/messages";
 import type { PdfSource } from "./source";
 
 /**
- * The file of Lumia's own annotations for the open PDF, named by the hash of
+ * The file of Lumiere's own annotations for the open PDF, named by the hash of
  * the bytes the viewer has (`annotation-store`), so annotating never writes
  * the PDF. Saves run one at a time, in the order they came.
  */

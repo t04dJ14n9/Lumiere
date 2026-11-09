@@ -1,7 +1,7 @@
 /**
  * macOS Look Up for notes: which word the reader means, and how it reaches
  * the Dictionary app. Pure helpers: the webview finds the text under the
- * pointer (pointer-word.ts), the host opens the URL (host.ts). Lumia PDF
+ * pointer (pointer-word.ts), the host opens the URL (host.ts). Lumiere PDF
  * keeps its own copy (packages/pdf/src/shared/look-up.ts), since one
  * product never imports the other's internals.
  */

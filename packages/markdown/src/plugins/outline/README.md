@@ -59,22 +59,22 @@ Above the first heading (frontmatter or a preamble) no section is current, and
 Obsidian clears the highlight; the view does the same through the tree's
 optional `clearSelection`, leaving the open rows as they are.
 
-Ctrl+Shift+O (Command+Shift+O on macOS), or **Lumia: Go to
+Ctrl+Shift+O (Command+Shift+O on macOS), or **Lumiere: Go to
 Heading…** in the command palette, opens a searchable heading picker. It reads
 the active panel's authoritative text, shows heading levels and parent titles,
 and navigates through the same path as the tree. Dismissed or stale picks
 (edited document, changed panel or stopped plugin) do not navigate.
 
 Ctrl+Alt+O (Control+Command+O on macOS) toggles Markdown Outline while the Workshop
-editor is active (editor-scoped keybinding, so Lumia PDF keeps the same keys).
+editor is active (editor-scoped keybinding, so Lumiere PDF keeps the same keys).
 The command palette entry is workbench/config-gated like Quick Switcher. Hiding
 targets the view itself, including after moving it to the secondary sidebar or
 panel; showing restores and focuses it in its current location.
 
-When a Lumia editor is active, **Markdown Outline** stands in for VS Code's
+When a Lumiere editor is active, **Markdown Outline** stands in for VS Code's
 native **Outline**: the native one is hidden as soon as Markdown Outline is on
 screen, and comes back when the last Workshop editor is left (after a short
-debounce, skipped if Lumia PDF or another Workshop editor already owns the
+debounce, skipped if Lumiere PDF or another Workshop editor already owns the
 active tab), but only if this plugin hid it. Opening a note never changes which
 sidebar container is shown: a note opened from Search or Quick Open leaves the
 Search view in place, because focusing the view (`lumiere.markdown.outline.focus`)

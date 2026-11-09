@@ -1,5 +1,5 @@
 /**
- * Lumia API v1, returned by the extension's `activate`:
+ * Lumiere API v1, returned by the extension's `activate`:
  *
  * ```ts
  * const api = await vscode.extensions
@@ -30,7 +30,7 @@ export interface DocumentState {
   readonly isDirty: boolean;
   readonly isUntitled: boolean;
 }
-/** One Lumia editor panel and the note it shows. */
+/** One Lumiere editor panel and the note it shows. */
 export interface EditorSnapshot extends DocumentState {
   readonly editorId: EditorId;
   readonly viewColumn?: ViewColumn;
@@ -118,7 +118,7 @@ export interface MarkdownWorkshopApi {
   // Editors and documents
   getEditors(): readonly EditorSnapshot[];
   getActiveEditor(): EditorSnapshot | undefined;
-  /** Open a note in Lumia and resolve when its editor is ready. */
+  /** Open a note in Lumiere and resolve when its editor is ready. */
   open(uri: Uri, options?: OpenOptions): Promise<EditorSnapshot>;
   reveal(
     editorId: EditorId,
@@ -154,7 +154,7 @@ export interface MarkdownWorkshopApi {
     id: string,
     scope: ConfigurationScope,
   ): Promise<PluginChangeResult>;
-  /** Open Settings at Lumia's plugin switches. */
+  /** Open Settings at Lumiere's plugin switches. */
   openPluginSettings(resource?: Uri): Promise<void>;
   /** Run an external host plugin (API.md, "External plugins"). */
   plugin(definition: ExternalPlugin): PluginHandle;
@@ -163,7 +163,7 @@ export interface MarkdownWorkshopApi {
   readonly onDidOpenEditor: Event<EditorSnapshot>;
   readonly onDidCloseEditor: Event<{ readonly editorId: EditorId }>;
   readonly onDidChangeActiveEditor: Event<EditorSnapshot | undefined>;
-  /** A note open in a Lumia editor changed or was saved. */
+  /** A note open in a Lumiere editor changed or was saved. */
   readonly onDidChangeDocument: Event<DocumentState>;
   readonly onDidChangeSelection: Event<{
     readonly editorId: EditorId;

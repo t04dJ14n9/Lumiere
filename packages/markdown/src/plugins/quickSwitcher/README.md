@@ -1,6 +1,6 @@
 # Quick switcher
 
-**Lumia: Quick Switcher** finds a note by name, alias or path and
+**Lumiere: Quick Switcher** finds a note by name, alias or path and
 opens it, or creates it when no note has that name. This is Obsidian's
 **Quick switcher** core plugin.
 

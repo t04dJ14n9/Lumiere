@@ -125,7 +125,7 @@ function LinkAnchor(
 
 /**
  * The page's links, with adjacent fragments of one cite merged. A link with
- * no target Lumia can follow (another file, a script) is left out.
+ * no target Lumiere can follow (another file, a script) is left out.
  */
 function usePageLinks(page: PageRef): PageLinkCluster[] {
   const link = useOptionalCapability(LinkToken);

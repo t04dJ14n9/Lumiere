@@ -430,5 +430,5 @@ test("daily-notes.json and templates.json seed their settings; explicit layers w
   await f.change(`${ROOT_A}/.obsidian/daily-notes.json`, undefined);
   assert.equal(get("dailyNotes.template"), "");
   assert.equal(get("templates.folder"), "Templates");
-  assert.equal(f.writes.length, 0, "Lumia never writes Obsidian files");
+  assert.equal(f.writes.length, 0, "Lumiere never writes Obsidian files");
 });

@@ -153,7 +153,7 @@ test("selections and flashed boxes stand out on the page in every theme", async 
 
 // While a page waits for its picture (a fast scroll outruns the renderer), its
 // box is all that shows: it must be the paper of the current page colors, not
-// white on dark paper. The Stage paints that box, around Lumia's `.page`.
+// white on dark paper. The Stage paints that box, around Lumiere's `.page`.
 test("a page with no picture yet shows the paper of the page colors", async ({
   page,
 }) => {

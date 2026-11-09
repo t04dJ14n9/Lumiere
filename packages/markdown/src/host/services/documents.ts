@@ -80,7 +80,7 @@ const onWillRename: HostDocuments["onWillRename"] = (listener) =>
           // unchanged and not dirty. Capture expected text now; after rename
           // apply+save every note ourselves (Obsidian writes to disk). Still
           // return closed-note edits for Preview listing / OK undo grouping;
-          // Lumia-open tabs stay out of waitUntil so a failed custom-editor
+          // Lumiere-open tabs stay out of waitUntil so a failed custom-editor
           // apply cannot abort the whole batch.
           const lumiere = lumiereOpenUris();
           await scheduleLinkUpdatesAfterRename(files, renames);
@@ -108,7 +108,7 @@ function renamePairs(
  */
 const pendingLinkUpdates = new Map<string, vscode.Disposable>();
 
-/** URIs that currently have a Lumia custom editor tab. */
+/** URIs that currently have a Lumiere custom editor tab. */
 function lumiereOpenUris(): Set<string> {
   const uris = new Set<string>();
   for (const group of vscode.window.tabGroups.all) {

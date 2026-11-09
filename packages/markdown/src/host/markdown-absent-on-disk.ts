@@ -1,6 +1,6 @@
 /**
  * Detect missing workspace Markdown `file:` paths so reclaim can leave the
- * built-in Text Editor alone (product lock 2026-11-04: no Lumia openWith /
+ * built-in Text Editor alone (product lock 2026-11-04: no Lumiere openWith /
  * untitled bridge for absent notes).
  */
 

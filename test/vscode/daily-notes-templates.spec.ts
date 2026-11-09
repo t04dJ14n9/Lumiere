@@ -68,7 +68,7 @@ test.afterAll(() => {
   }
 });
 
-/** The Markdown editor of whichever Lumia webview is showing. */
+/** The Markdown editor of whichever Lumiere webview is showing. */
 async function lumiaEditor(page: Page): Promise<Locator> {
   let found: Locator | undefined;
   await expect
@@ -91,10 +91,10 @@ async function lumiaEditor(page: Page): Promise<Locator> {
   return found!;
 }
 
-// Lumia starts the commands of a window when VS Code activates the extension;
-// the daily notes ones used to wait for the first Lumia panel, so in a window
+// Lumiere starts the commands of a window when VS Code activates the extension;
+// the daily notes ones used to wait for the first Lumiere panel, so in a window
 // where no note had been opened yet VS Code reported them as not found.
-test("Open Today's Daily Note creates and opens the note before any Lumia editor exists", async () => {
+test("Open Today's Daily Note creates and opens the note before any Lumiere editor exists", async () => {
   const browser = await chromium.connectOverCDP(readState().webSocket);
   try {
     let page = workbenchPage(browser);
@@ -111,7 +111,7 @@ test("Open Today's Daily Note creates and opens the note before any Lumia editor
 
     const note = path.join(journal, `${today()}.md`);
     expect(existsSync(note)).toBe(false);
-    await command(page, "Lumia: Open Today's Daily Note");
+    await command(page, "Lumiere: Open Today's Daily Note");
 
     await expect.poll(() => existsSync(note), { timeout: 20000 }).toBe(true);
     expect(readFileSync(note, "utf8")).toBe(
@@ -130,7 +130,7 @@ test("Open Today's Daily Note creates and opens the note before any Lumia editor
     });
 
     // The second run opens the note that is there and leaves it as it is.
-    await command(page, "Lumia: Open Today's Daily Note");
+    await command(page, "Lumiere: Open Today's Daily Note");
     await page.waitForTimeout(1000);
     expect(readFileSync(note, "utf8")).toBe(
       `# ${today()}\n\nOpened on ${today().slice(0, 4)}\n`,
@@ -156,7 +156,7 @@ test("Insert Template replaces the selection and leaves the caret after the text
       await page.keyboard.press("Shift+ArrowRight");
     }
 
-    await command(page, "Lumia: Insert Template");
+    await command(page, "Lumiere: Insert Template");
     await page.locator(QUICK_INPUT).fill("Inline");
     await expect(
       page

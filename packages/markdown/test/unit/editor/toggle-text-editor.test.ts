@@ -64,14 +64,14 @@ function panelHarness(uri = "file:///note.md") {
   };
 }
 
-test("from Lumia, Ctrl/Cmd+E opens the same URI with the default text editor", async () => {
+test("from Lumiere, Ctrl/Cmd+E opens the same URI with the default text editor", async () => {
   const h = panelHarness("file:///a.md");
   await toggleTextEditor(h.host);
   assert.deepEqual(h.calls, [["vscode.openWith", "file:///a.md", "default"]]);
   assert.deepEqual(h.closed, [["file:///a.md", "text"]]);
 });
 
-test("from Lumia, losing focus before openWith fails like Open as Text", async () => {
+test("from Lumiere, losing focus before openWith fails like Open as Text", async () => {
   const h = panelHarness();
   h.blur();
   await assert.rejects(
@@ -82,7 +82,7 @@ test("from Lumia, losing focus before openWith fails like Open as Text", async (
   assert.deepEqual(h.closed, []);
 });
 
-test("from the built-in text editor, Ctrl/Cmd+E opens Lumia for that URI", async () => {
+test("from the built-in text editor, Ctrl/Cmd+E opens Lumiere for that URI", async () => {
   const calls: unknown[][] = [];
   const closed: [string, "text" | "lumiere"][] = [];
   const host = fakeHost({
@@ -122,7 +122,7 @@ test("from the built-in text editor, Ctrl/Cmd+E opens Lumia for that URI", async
   assert.deepEqual(closed, [["file:///b.md", "lumiere"]]);
 });
 
-test("with no Lumia panel and no text editor for the note, the toggle is a no-op", async () => {
+test("with no Lumiere panel and no text editor for the note, the toggle is a no-op", async () => {
   const calls: unknown[][] = [];
   const host = fakeHost({
     activeEditor: {
@@ -249,7 +249,7 @@ test("toggleTextEditor with unbound Context.serial fails like Host GUI", async (
   await root.dispose();
 });
 
-test("registerToggleTextEditor keeps serial bound through the Lumia panel path", async () => {
+test("registerToggleTextEditor keeps serial bound through the Lumiere panel path", async () => {
   let toggle: (() => Promise<void>) | undefined;
   const calls: unknown[][] = [];
   const root = createRoot();

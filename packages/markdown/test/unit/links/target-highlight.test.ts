@@ -99,7 +99,7 @@ test("resolveNavigationTarget selects full lines for #L Cursor-style fragments",
     selectTo: line3.to,
   });
   assert.deepEqual(resolveNavigationTarget(state, "L19-L19"), undefined);
-  // Bare digits are not forced line selection in-Lumia (may be headingId).
+  // Bare digits are not forced line selection in-Lumiere (may be headingId).
   assert.equal(resolveNavigationTarget(state, "3"), undefined);
 });
 

@@ -1,5 +1,5 @@
 /**
- * Lumia: Markdown Editor and PDF Reader. The composition root of the extension: one
+ * Lumiere: Markdown Editor and PDF Reader. The composition root of the extension: one
  * plugin tree (see @workshop/core) for both products, its output channel,
  * and the services every plugin may inject from the root. Each product adds
  * its own plugins; deactivation stops them all, last started first.
@@ -21,7 +21,7 @@ export async function activate(
   context: ExtensionContext,
 ): Promise<MarkdownWorkshopApi> {
   const started = performance.now();
-  const channel = window.createOutputChannel("Lumia", { log: true });
+  const channel = window.createOutputChannel("Lumiere", { log: true });
   context.subscriptions.push(channel);
   const debugLogging = () =>
     workspace.getConfiguration("lumiere.markdown").get("debug.logging", false);
@@ -32,14 +32,14 @@ export async function activate(
   root.provide("extensionContext", context);
   root.provide("outputChannel", channel);
   // Provided before PDF starts, so its agent bridge does not restart when
-  // Lumia's API arrives.
+  // Lumiere's API arrives.
   const markdown: { api?: MarkdownWorkshopApi } = {};
   root.provide(
     "noteSelections",
     markdownNoteSelections(() => markdown.api),
   );
-  // Lumia reads PDF bookmarks, for `[[paper.pdf#`, with the viewer's PDFium.
-  // Provided before Lumia starts, so its editor host does not restart when it
+  // Lumiere reads PDF bookmarks, for `[[paper.pdf#`, with the viewer's PDFium.
+  // Provided before Lumiere starts, so its editor host does not restart when it
   // arrives.
   const outlines = createPdfOutlines(context, channel);
   context.subscriptions.push({ dispose: () => outlines.dispose() });

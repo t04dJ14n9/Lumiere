@@ -2,7 +2,7 @@
   "customEditors": [
     {
       "viewType": "lumiere.pdf.viewer",
-      "displayName": "Lumia PDF",
+      "displayName": "Lumiere PDF",
       "selector": [
         {
           "filenamePattern": "*.pdf"
@@ -385,12 +385,12 @@
     {
       "command": "lumiere.pdf.ideContext.copy",
       "title": "Copy IDE Context",
-      "category": "Lumia PDF"
+      "category": "Lumiere PDF"
     },
     {
       "command": "lumiere.pdf.ideContext.send",
       "title": "Send IDE Context to Agent\u2026",
-      "category": "Lumia PDF"
+      "category": "Lumiere PDF"
     }
   ],
   "menus": {
@@ -833,7 +833,7 @@
     ]
   },
   "configuration": {
-    "title": "Lumia PDF",
+    "title": "Lumiere PDF",
     "properties": {
       "lumiere.pdf.outline.followCursor": {
         "type": "boolean",
@@ -1179,7 +1179,7 @@
   "mcpServerDefinitionProviders": [
     {
       "id": "lumiere.pdf.agentBridge",
-      "label": "Lumia PDF"
+      "label": "Lumiere PDF"
     }
   ]
 }

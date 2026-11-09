@@ -6,7 +6,7 @@ Templates core plugin.
 
 ## How it works
 
-The command reads the active Lumia editor's vault and its
+The command reads the active Lumiere editor's vault and its
 `templates.*` settings (seeded from the vault's `.obsidian/templates.json`
 by `obsidianCompat`), lists the Markdown files under the folder from the
 vault index, and asks for one. It expands the chosen text with the shared
@@ -41,6 +41,6 @@ Bases date formatter.
 - Only Moment's `YYYY`, `MM`, `DD`, `HH`, `mm` and `ss` are understood; other
   letters (`ddd`, `Do`, `[text]`) are written as they are. An Obsidian
   format with other tokens is not carried over from `templates.json`.
-- Works in Lumia's editor only, not in VS Code's plain text editor.
+- Works in Lumiere's editor only, not in VS Code's plain text editor.
 - Inserting into a note with unsaved changes ends its current undo group,
   like other edits made by commands.

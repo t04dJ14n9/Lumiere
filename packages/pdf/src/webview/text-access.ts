@@ -36,7 +36,7 @@ export function useTextAccess(): TextAccess | null {
 }
 
 /**
- * Lumia only ever adds annotations, which change neither the characters nor
+ * Lumiere only ever adds annotations, which change neither the characters nor
  * their boxes, so what is read once per page is kept for the document's life.
  * A read that fails (copy forbidden, page gone) is forgotten, so a later
  * ask tries again.

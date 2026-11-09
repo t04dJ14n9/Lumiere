@@ -1,5 +1,5 @@
 /**
- * What another editor needs to run Lumia's Markdown plugins over its own
+ * What another editor needs to run Lumiere's Markdown plugins over its own
  * host services: the bootstrap, the contracts those services implement, and
  * the helpers the VS Code adapter is built from that need no VS Code.
  * Nothing this module imports may reach `vscode` (see test/unit/layers.test.ts).

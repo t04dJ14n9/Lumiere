@@ -35,7 +35,7 @@ async function editorFrame(page: Page): Promise<Frame> {
       return frame;
     }
   }
-  throw new Error("No Lumia frame");
+  throw new Error("No Lumiere frame");
 }
 
 async function geometry(frame: Frame, title: string) {

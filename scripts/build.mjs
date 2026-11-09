@@ -1,7 +1,7 @@
 // Builds the extension into dist/:
 //   dist/extension.js   the extension host (src/extension.ts, both products)
-//   dist/markdown/      Lumia's webviews, workers and API types
-//   dist/pdf/           Lumia PDF's viewer, PDF engine and agent bridge
+//   dist/markdown/      Lumiere's webviews, workers and API types
+//   dist/pdf/           Lumiere PDF's viewer, PDF engine and agent bridge
 // Each product builds its own assets (its scripts/build.mjs); this script
 // bundles the host and copies those assets into place.
 //

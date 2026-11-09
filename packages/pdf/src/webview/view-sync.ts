@@ -145,7 +145,7 @@ const ACTIONS: Handlers = {
   nextPageKeepingPlace: (_, { navigation }) => navigation.step(1, true),
   goToPage: ({ page }, { navigation }) => navigation.goToPage(page),
   // The Stage's zoom is synchronous, so a quick repeat steps from the level
-  // the last one reached; the steps are Lumia's own, not the Stage's.
+  // the last one reached; the steps are Lumiere's own, not the Stage's.
   zoomIn: (_, { stage }) => stepZoom(stage, 1),
   zoomOut: (_, { stage }) => stepZoom(stage, -1),
   setZoom: ({ percent }, { stage }) => stage.zoomTo(percent / 100),

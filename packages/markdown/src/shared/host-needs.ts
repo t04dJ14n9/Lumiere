@@ -1,5 +1,5 @@
 /**
- * Which of Lumia's settings mean something in a given host. A plugin, or
+ * Which of Lumiere's settings mean something in a given host. A plugin, or
  * one of its settings, that needs more than the host offers (Manifest
  * `needs`, `settingNeeds`) could do nothing there, so a host's settings page
  * leaves it out: in the desktop app there is no Cursor chat to send to and no
@@ -13,7 +13,7 @@ import { contributionId } from "./setting-schema";
 const WINDOW_SETTING_NEEDS: Readonly<Record<string, readonly HostNeed[]>> = {
   // Which agent chat to open: there are chats to choose only in VS Code and Cursor.
   "copyLinkForAgent.target": ["workbench"],
-  // The Lumia output channel.
+  // The Lumiere output channel.
   "debug.logging": ["workbench"],
   // Plugins that other VS Code extensions register.
   "plugins.external": ["workbench"],

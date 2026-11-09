@@ -2,7 +2,7 @@
   "name": "@workshop/pdf",
   "version": "0.0.0",
   "private": true,
-  "description": "Lumia PDF: an EmbedPDF-based viewer that copies selections with exact page-and-box locations.",
+  "description": "Lumiere PDF: an EmbedPDF-based viewer that copies selections with exact page-and-box locations.",
   "exports": {
     "./host": "./src/extension/extension.ts",
     "./portable": "./src/host/portable.ts",

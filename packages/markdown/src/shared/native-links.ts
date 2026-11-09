@@ -115,7 +115,7 @@ export function localFragment(
 
 /**
  * VS Code line/column fragments (`#L19`, `#L19-L21`, `#20:2-30:4`).
- * Lumia owns markdown `#L` clicks so the range can select in the custom
+ * Lumiere owns markdown `#L` clicks so the range can select in the custom
  * editor; Search and other host opens still use the text→reclaim route.
  */
 export function nativeLineFragment(fragment: string): boolean {

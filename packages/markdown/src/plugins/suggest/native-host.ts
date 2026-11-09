@@ -8,7 +8,7 @@ import { SuggestionIndex } from "./sources";
 
 /**
  * Window half: the suggestions of `[[` in VS Code's text editor, from the
- * index, ranking and insertion text the Lumia editor uses.
+ * index, ranking and insertion text the Lumiere editor uses.
  */
 export const nativeSuggestHost: Plugin = {
   name: "suggest",
@@ -85,7 +85,7 @@ function suggestionIndexes(ctx: Context) {
 }
 
 /**
- * Accepting works as in the Lumia editor: the link is finished with `]]`,
+ * Accepting works as in the Lumiere editor: the link is finished with `]]`,
  * reusing one that follows the caret; an alias being typed stays and only
  * the link is finished; a Markdown link replaces the whole `[[…`.
  */

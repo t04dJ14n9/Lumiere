@@ -1,7 +1,7 @@
 {
   "name": "tickets",
-  "displayName": "Lumia Sample: Tickets",
-  "description": "A sample external plugin for Lumia: TODO badges, ticket: links and tickets code blocks.",
+  "displayName": "Lumiere Sample: Tickets",
+  "description": "A sample external plugin for Lumiere: TODO badges, ticket: links and tickets code blocks.",
   "version": "0.0.1",
   "publisher": "mwsample",
   "license": "MIT",

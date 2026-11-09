@@ -4,7 +4,7 @@ Builds a versioned JSON envelope for the current selection: who the source is, h
 
 ## How it works
 
-The active Lumia selection becomes an envelope (`producer: markdown`). A saved file gets a durable `@path#lines` locator and a whole-source hash. A dirty or untitled note keeps the selection hash and a temporary view id, and omits the whole-source hash. When this editor has no selection, the plugin calls `vscodeEmbedPdf.bridge.envelope` only if that command is registered. A missing PDF extension returns nothing and does not throw. Other extensions can call the hidden command `lumiere.markdown.bridge.envelope`. The contract is `docs/bridge-envelope.md`.
+The active Lumiere selection becomes an envelope (`producer: markdown`). A saved file gets a durable `@path#lines` locator and a whole-source hash. A dirty or untitled note keeps the selection hash and a temporary view id, and omits the whole-source hash. When this editor has no selection, the plugin calls `vscodeEmbedPdf.bridge.envelope` only if that command is registered. A missing PDF extension returns nothing and does not throw. Other extensions can call the hidden command `lumiere.markdown.bridge.envelope`. The contract is `docs/bridge-envelope.md`.
 
 ## Files
 
@@ -23,5 +23,5 @@ The active Lumia selection becomes an envelope (`producer: markdown`). A saved f
 ## Limits and differences from Obsidian
 
 - This is not an Obsidian feature. The envelope is a workbench protocol, not wiki metadata.
-- The plugin does not start an agent and does not share navigation history with Lumia PDF or a browser.
+- The plugin does not start an agent and does not share navigation history with Lumiere PDF or a browser.
 - Clipboard text for Copy Link for Agent stays the LLM Wiki `@path#lines` wording. The JSON envelope is a second command.

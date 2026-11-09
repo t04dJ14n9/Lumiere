@@ -220,7 +220,7 @@ function actions(stage: unknown) {
   return { run, calls };
 }
 
-test("zoom buttons step Lumia's own ladder from the level shown, so quick repeats add up", () => {
+test("zoom buttons step Lumiere's own ladder from the level shown, so quick repeats add up", () => {
   const { stage, calls: zoom } = fakeStage({ level: 1 });
   const { run } = actions(stage);
   run({ action: "zoomIn" });

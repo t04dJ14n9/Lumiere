@@ -4,7 +4,7 @@ import { isToggleLeaveBehind } from "../../../src/host/toggle-sibling-tabs";
 
 const uri = "file:///Math.md";
 
-test("keep text: closes a clean Lumia tab for the same URI", () => {
+test("keep text: closes a clean Lumiere tab for the same URI", () => {
   assert.equal(
     isToggleLeaveBehind({ uri, kind: "lumiere", isDirty: false }, uri, "text"),
     true,
@@ -33,7 +33,7 @@ test("keep lumiere: closes a clean text tab for the same URI", () => {
   );
 });
 
-test("keep lumiere: leaves Lumia and dirty text tabs alone", () => {
+test("keep lumiere: leaves Lumiere and dirty text tabs alone", () => {
   assert.equal(
     isToggleLeaveBehind(
       { uri, kind: "lumiere", isDirty: false },
@@ -48,7 +48,7 @@ test("keep lumiere: leaves Lumia and dirty text tabs alone", () => {
   );
 });
 
-test("dirty Lumia leave-behind is kept when switching to text", () => {
+test("dirty Lumiere leave-behind is kept when switching to text", () => {
   assert.equal(
     isToggleLeaveBehind({ uri, kind: "lumiere", isDirty: true }, uri, "text"),
     false,
