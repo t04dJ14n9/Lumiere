@@ -342,10 +342,10 @@ test("copyMcpSetup quotes a globalStorage path containing spaces", async () => {
   });
   try {
     await runCommand!();
-    const quote = process.platform === "win32" ? '"' : "'";
-    const claude = pickedOptions.find(
-      (item) => item.label === "Claude Code",
-    )?.detail;
+    const windows = process.platform === "win32";
+    const quote = windows ? '"' : "'";
+    const label = windows ? "Claude Code (cmd)" : "Claude Code";
+    const claude = pickedOptions.find((item) => item.label === label)?.detail;
     assert.equal(
       claude,
       `claude mcp add --scope user agent-pdf-viewer -- node ${quote}${storage}/bridge-stdio.js${quote}`,
