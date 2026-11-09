@@ -230,6 +230,34 @@ test("link text written from a new name escapes brackets and backslashes", () =>
   );
 });
 
+test("link text escaped by one rename follows the next rename", () => {
+  const text = "[Old](Old.md) [sub/Deep](sub/Deep.md)";
+  const firstRenames = {
+    "Old.md": "a[b]\\c.md",
+    "sub/Deep.md": "lib/De]ep.md",
+  };
+  const escaped = apply(
+    text,
+    rewriteLinks(
+      text,
+      "A.md",
+      context({ ...vault, "A.md": text }, firstRenames, "absolute"),
+    ),
+  );
+  const notes = { "a[b]\\c.md": "", "lib/De]ep.md": "", "A.md": escaped };
+  const secondRenames = {
+    "a[b]\\c.md": "Final.md",
+    "lib/De]ep.md": "lib/Last.md",
+  };
+  assert.equal(
+    apply(
+      escaped,
+      rewriteLinks(escaped, "A.md", context(notes, secondRenames, "absolute")),
+    ),
+    "[Final](Final.md) [lib/Last](lib/Last.md)",
+  );
+});
+
 test("a bare destination may hold a literal quote, as the parser reads it", () => {
   const text = '[a](Old"note.md) [b](Old"note.md "Title")';
   const notes = { 'Old"note.md': "", "A.md": text };

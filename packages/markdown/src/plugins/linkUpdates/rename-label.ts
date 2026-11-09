@@ -45,7 +45,9 @@ function renamedText(
   if (!opening) {
     return source;
   }
-  const text = opening[2]!.replace(/\u00A0|\u202F/gu, " ").trim();
+  const text = unescapeLabel(
+    opening[2]!.replace(/\u00A0|\u202F/gu, " ").trim(),
+  );
   let renamed: string | undefined;
   if (text === shownName(oldPath)) {
     renamed = shownName(newPath);
@@ -63,6 +65,11 @@ function renamedText(
 /** A file name written as link text must not end it or escape its end. */
 function escapeLabel(text: string): string {
   return text.replace(/[\\[\]]/gu, "\\$&");
+}
+
+/** The text a label shows: its escaped `\`, `[` and `]` taken literally. */
+function unescapeLabel(text: string): string {
+  return text.replace(/\\([\\[\]])/gu, "$1");
 }
 
 /** A note's name without `.md`; any other file's name with its extension. */
