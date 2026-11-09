@@ -8,7 +8,6 @@ import {
   TEXT_MIDLINE,
 } from "./viewer-support";
 import { send } from "./view-controls-support";
-import { PAGE_COLORS_ENGINE_AVAILABLE } from "../../src/shared/page-colors-engine";
 
 const THEMES = {
   "Light Modern": {
@@ -167,13 +166,8 @@ test("a page with no picture yet shows the paper of the page colors", async ({
       return box ? getComputedStyle(box).backgroundColor : undefined;
     });
   expect(await paper()).toBe("rgb(255, 255, 255)");
-  // EmbedPDF 3 cannot draw dark paper yet: the page colors stay normal.
   await send(page, { type: "pageColors", effective: "dark" });
-  await expect
-    .poll(paper)
-    .toBe(
-      PAGE_COLORS_ENGINE_AVAILABLE ? "rgb(30, 30, 30)" : "rgb(255, 255, 255)",
-    );
+  await expect.poll(paper).toBe("rgb(30, 30, 30)");
   await send(page, { type: "pageColors", effective: "normal" });
   await expect.poll(paper).toBe("rgb(255, 255, 255)");
 });

@@ -7,6 +7,7 @@ import { createOutbox, type OutgoingMessage } from "./outbox";
 import { prepareReadingPosition } from "./reading-position";
 import { HostInbox } from "../shared/host-inbox";
 import { rememberAnnotationLoad } from "./annotation-load-state";
+import { rememberPageColors } from "./page-colors";
 import { createLoadReceiver, fetchPdfBytes } from "./load";
 
 declare function acquireVsCodeApi(): { postMessage(message: unknown): void };
@@ -73,6 +74,11 @@ export function connectToHost(onLoad: (data: ArrayBuffer) => void): void {
         prepareReadingPosition(message.settings, message.position);
         receiveBytes(message);
       } else {
+        if (message.type === "pageColors") {
+          // The engine draws its first pictures in these colours, before the
+          // viewer is there to hear the message from the inbox.
+          rememberPageColors(message.effective);
+        }
         inbox.receive(message);
       }
     },

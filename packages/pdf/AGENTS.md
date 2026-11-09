@@ -33,12 +33,16 @@ are specific to the PDF code. Read README.md for the layout and CAPABILITIES.md 
 - Annotations are kept outside the PDF as `{ version: 2, bundle }`
   (`shared/annotation-store.ts`); raise the version, and keep reading the old
   one, when the format changes.
-- Dark paper is off while `PAGE_COLORS_ENGINE_AVAILABLE` is false
-  (`docs/embedpdf-page-colors-patch.md`): do not draw it by CSS invert.
+- Dark paper is drawn by the engine, never by CSS invert: the viewer runs
+  EmbedPDF's host with Lumiere's page reader (`src/engine-worker`, bundled by
+  `scripts/engine-worker.mjs`; `docs/embedpdf-page-colors-patch.md`).
+  `PAGE_COLORS_ENGINE_AVAILABLE` is its one switch. An EmbedPDF bump must pass
+  `test/unit/dark-page-engine.test.ts`, which reads private members of
+  EmbedPDF's `WorkerHost`.
 - The viewer bundle stubs EmbedPDF's bundled fallback fonts, its
-  `import.meta.url` wasm path and, where no worker starts, its worker source
-  (`scripts/embedpdf-stubs.mjs`); a new EmbedPDF import that reaches those
-  must still build under that plugin.
+  `import.meta.url` wasm path, its worker source and its in-thread transport
+  (`scripts/embedpdf-stubs.mjs`; Lumiere starts its own); a new EmbedPDF import
+  that reaches those must still build under that plugin.
 
 Run the checks from the repository root (`pnpm check`, then
 `pnpm test:browser` and `pnpm test:vscode`).

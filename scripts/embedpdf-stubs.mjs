@@ -16,15 +16,23 @@
  * @typedef {object} EmbedPdfStubOptions
  * @property {boolean} [workerSource] Stub the engine's worker, a 1.6 MB
  *   string that `worker: "inline"` turns into a blob worker. Only a bundle
- *   that runs the engine in its own thread (`createLocalEngine`) can do
- *   without it.
+ *   that runs the engine in its own thread (`createLocalEngine`), or hands
+ *   `localEngine` a worker of its own, can do without it.
+ * @property {boolean} [inlineTransport] Stub the engine's in-thread
+ *   transport (`#inline-transport`, 1.6 MB, which `createLocalEngine` always
+ *   starts and `localEngine` where there is no worker). Only a bundle that
+ *   starts neither can do without it: the viewer runs its own host in the
+ *   page's thread.
  */
 
 /**
  * @param {EmbedPdfStubOptions} [options]
  * @returns {import('esbuild').Plugin}
  */
-export function embedPdfStubs({ workerSource = false } = {}) {
+export function embedPdfStubs({
+  workerSource = false,
+  inlineTransport = false,
+} = {}) {
   /** @type {Array<{ filter: RegExp, contents: string }>} */
   const stubs = [
     {
@@ -54,6 +62,14 @@ export function embedPdfStubs({ workerSource = false } = {}) {
       filter: /(^|\/)embedpdf-worker\.source-[\w-]+\.js$/,
       contents:
         "throw new Error('This bundle runs the engine in its own thread and has no worker');",
+    });
+  }
+  if (inlineTransport) {
+    stubs.push({
+      // The module `startInlineTransport` imports; calling it is the error.
+      filter: /^#inline-transport$/,
+      contents:
+        "export function createInlineTransport() { throw new Error('This bundle runs the engine in its own transport'); }",
     });
   }
   return {

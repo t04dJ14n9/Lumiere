@@ -15,6 +15,7 @@ export const FIGURE: {
     readonly green: FigureArea;
   };
   readonly picture: FigureArea;
+  readonly pictureBounds: FigureArea;
   readonly paper: FigureArea;
 };
 

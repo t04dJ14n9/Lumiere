@@ -3,7 +3,7 @@
 Obsidian-style Live Preview for Markdown notes and a fast PDF reader, in VS
 Code and Cursor, with links your AI agent can follow.
 
-Lumiere was briefly called Lumia. The extension id (`t04dJ14n9.lumiere`),
+Lumiere was briefly called Lumiere. The extension id (`t04dJ14n9.lumiere`),
 its commands and its `lumiere.*` settings never changed, so an installed copy
 updates in place and keeps its settings.
 

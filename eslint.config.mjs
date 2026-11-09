@@ -226,6 +226,7 @@ export default tseslint.config(
           "./packages/pdf/src/host/tsconfig.json",
           "./packages/pdf/src/extension/tsconfig.json",
           "./packages/pdf/src/webview/tsconfig.json",
+          "./packages/pdf/src/engine-worker/tsconfig.json",
           "./packages/pdf/src/bridge-stdio/tsconfig.json",
           "./packages/host-node/src/host/tsconfig.json",
           "./packages/host-web/tsconfig.json",

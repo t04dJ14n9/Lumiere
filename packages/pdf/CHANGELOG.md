@@ -21,11 +21,12 @@
     format at the next change, after which earlier versions cannot read them.
     The extension is bigger: the PDF engine file is 7.9 MB instead of 4.6 MB
     and ships twice (the viewer and the Markdown editor's PDF embeds), and
-    the viewer script is 4.7 MB instead of about 3 MB.
-  - *Off for now:* **dark paper**. EmbedPDF 3 cannot draw a page in a colour
-    scheme yet, so `lumiere.pdf.pageColors` and **PDF: Cycle Page Colors**
-    keep their values but every page is drawn on white paper until it can.
-    See `docs/embedpdf-page-colors-patch.md`.
+    the viewer script is 4.2 MB instead of about 3 MB.
+  - *Kept:* **dark paper** (`lumiere.pdf.pageColors`, **PDF: Cycle Page
+    Colors**) draws as before. EmbedPDF 3 has no colour-scheme option, so the
+    viewer runs EmbedPDF's engine host with Lumiere's own page reader, in the
+    engine worker and in the main-thread fallback, instead of a patch of
+    EmbedPDF's packages. See `docs/embedpdf-page-colors-patch.md`.
 
 - **Annotations no longer change the PDF.** Highlights, notes, underlines,
   free text and ink are kept in `.lumiere/pdf-annotations/<sha256>.json` in
