@@ -2,7 +2,7 @@ import { isSupportedDateFormat } from "../../markdown/templates";
 import type { ObsidianOverrides } from "./api";
 import { isRecord } from "./app-settings";
 
-/** Lumia settings seeded from Obsidian's Templates and Daily notes files. */
+/** Lumiere settings seeded from Obsidian's Templates and Daily notes files. */
 export const CORE_PLUGIN_OVERRIDE_KEYS = [
   "templates.folder",
   "templates.dateFormat",
@@ -49,7 +49,7 @@ function text(value: unknown): string | undefined {
   return typeof value === "string" && value.trim() !== "" ? value : undefined;
 }
 /**
- * Moment formats Lumia cannot write would name daily notes differently from
+ * Moment formats Lumiere cannot write would name daily notes differently from
  * the vault's existing ones, so only formats of supported tokens carry over.
  */
 function dateFormat(value: unknown): string | undefined {

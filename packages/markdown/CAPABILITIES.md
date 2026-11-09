@@ -1,6 +1,6 @@
 # Capabilities
 
-What Lumia does, plugin by plugin, and where it differs from
+What Lumiere does, plugin by plugin, and where it differs from
 Obsidian. Each plugin's README (`src/plugins/<id>/README.md`) has the
 details. "Default" is the `obsidian` preset; the `minimal` preset loads only
 the core plugins. No row here is an Obsidian parity claim until the owner
@@ -27,7 +27,7 @@ records it in `docs/PARITY.md`.
 | properties | The properties sheet: every type, chips, type menu, sort, drag, structured copy and paste | Type choices are stored per vault by this extension |
 | inlineTitle | Off by default. The file name above the note; edit it to rename | Off so line 1 starts at the top, as in VS Code (Obsidian shows it by default). Only saved local files can be renamed |
 | links | Click to follow, Mod-click in source, open to side, create missing notes, unresolved links dimmed | Wikilinks and Markdown links dimmed when unresolved, in Live Preview, source mode and inside embeds |
-| embeds | Notes, sections, blocks, images (with an inspector), audio, video, PDFs | A PDF embed draws one page inline (`#page=`, `#height=`) with page buttons and an Open button for Lumia PDF, not Obsidian's full PDF viewer; remote media needs a trusted workspace |
+| embeds | Notes, sections, blocks, images (with an inspector), audio, video, PDFs | A PDF embed draws one page inline (`#page=`, `#height=`) with page buttons and an Open button for Lumiere PDF, not Obsidian's full PDF viewer; remote media needs a trusted workspace |
 | onlineVideos | YouTube (watch, youtu.be, Shorts) and Bilibili (BV, av, `?p=`) links written as images show as cards with a button that opens the browser; in trusted workspaces the title, author, length and cover (Bilibili via its public API, YouTube via oEmbed, looked up by the extension host) | Not in Obsidian. No player by default: YouTube refuses to play in VS Code webviews (error 153) and Bilibili's player does not buffer there (`onlineVideos.bilibiliPlayer` brings back **Play here**); nothing is fetched in an untrusted workspace |
 | pagePreview | Mod-hover preview of notes, headings, blocks and attachments | External links are not previewed |
 | tables | Spreadsheet-style table editing, selection, TSV clipboard, row and column commands and dragging | — |
@@ -66,7 +66,7 @@ records it in `docs/PARITY.md`.
 | wiki | Reads `.wiki/layout.json` and the registry, reports pages inside the bundle, and copies a wiki reference or envelope | Does not run an agent, scaffold folders, or ingest inbox. A broken layout is not treated as legacy. Wikilinks are reported, not rewritten |
 | attachments | Drop, paste, or HTML-paste images into `files.attachmentFolder` with Obsidian-style timestamp names and embeds | Shares folder/embed rules with sketches. Import Asset / `assets.path` removed |
 | scratch | **New Scratch Note** writes a temporary note outside the bundle. **Promote Scratch Note** files it as a Concept, Source Summary, Entity or Raw Source | No automatic ingest. Marp decks are not promoted. Collection indexes are not rewritten |
-| templates | **Insert Template** inserts a note from `templates.folder` at the caret, expanding `{{title}}`, `{{date}}`, `{{time}}` and `{{date:FORMAT}}` | Formats know `YYYY MM DD HH mm ss` only; Lumia's editor only |
+| templates | **Insert Template** inserts a note from `templates.folder` at the caret, expanding `{{title}}`, `{{date}}`, `{{time}}` and `{{date:FORMAT}}` | Formats know `YYYY MM DD HH mm ss` only; Lumiere's editor only |
 | dailyNotes | **Open Today's Daily Note** opens or creates `folder/format(today).md` from a template; **Open Previous/Next Daily Note** step through existing ones | Same format tokens; no startup open or calendar; date properties do not link to daily notes |
 | marp | Detects `marp: true` and bridges to VS Code preview and Marp export. **Move Marp Deck Outside Bundle** keeps the deck's frontmatter | Slide widgets and Marp themes are not drawn here. A deck inside the bundle is not given a page contract |
 | markers | Badges and actions that other extensions place on source ranges | Plain text only; at most 1,000 per plugin per editor |
@@ -75,9 +75,9 @@ records it in `docs/PARITY.md`.
 
 ## Workshop
 
-- **Manage Plugins**, **Show Plugin Status** and **Use Lumia
+- **Manage Plugins**, **Show Plugin Status** and **Use Lumiere
   for Markdown in This Workspace**.
-- A **Lumia** log output channel;
+- A **Lumiere** log output channel;
   `lumiere.markdown.debug.logging` adds debug lines from host and webview.
 - Untrusted workspaces: no remote images, media or frames, and no external
   code block processors.

@@ -78,7 +78,7 @@ test("highlight tool can mark text", async ({ page }) => {
   await page.mouse.move(...at(205, TEXT_MIDLINE), { steps: 10 });
   await page.mouse.up();
   await expect.poll(() => highlightMarkCount(page)).toBeGreaterThan(baseline);
-  // The mark is kept in Lumia's annotation file, not written into the PDF:
+  // The mark is kept in Lumiere's annotation file, not written into the PDF:
   // its bytes (and their hash, which a vault records) stay as they were.
   await expect
     .poll(async () => (await sent(page, "annotationStoreSave")).length)

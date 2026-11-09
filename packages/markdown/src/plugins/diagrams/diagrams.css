@@ -39,7 +39,7 @@ pre[data-fence="mermaid"] svg {
  * Obsidian app.css: .theme-dark .mermaid > svg {
  *   filter: invert(100%) hue-rotate(180deg) saturate(1.25);
  * }
- * Lumia webview: light = vscode-light | vscode-high-contrast-light.
+ * Lumiere webview: light = vscode-light | vscode-high-contrast-light.
  */
 body:not(.vscode-light):not(.vscode-high-contrast-light)
   pre[data-fence="mermaid"]

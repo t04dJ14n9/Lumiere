@@ -10,12 +10,12 @@ for that day; `PAGE_COLORS_ENGINE_AVAILABLE` in
 
 ## History
 
-Lumia dark paper on EmbedPDF 2.15.1 needed a `pnpm patch` of
+Lumiere dark paper on EmbedPDF 2.15.1 needed a `pnpm patch` of
 `@embedpdf/engines` (and a small `@embedpdf/models` types patch). The patch
 let the PDFium colour-scheme render
 (`FPDF_RenderPageBitmapWithColorScheme_Start`) be asked for, upstream
 [embedpdf/embed-pdf-viewer#679](https://github.com/embedpdf/embed-pdf-viewer/issues/679).
-Lumia rendered each dark page twice, as authored and with the colour scheme on
+Lumiere rendered each dark page twice, as authored and with the colour scheme on
 a transparent background (to find the pictures), and `darkenPage` inverted the
 lightness of everything else while keeping its hue.
 
@@ -29,7 +29,7 @@ colour-scheme render, but nothing public reaches it.
 ## Bringing it back
 
 1. Find a v3 render that takes a colour scheme: an upstream option, or the
-   runtime's colour-scheme render reached from a Lumia render path.
+   runtime's colour-scheme render reached from a Lumiere render path.
 2. It must keep what the old path guaranteed: ink and fills with different
    colours stay different, a label on a box stays readable, and pictures stay
    as authored (the colour-scheme render with alpha 1 on a transparent

@@ -10,7 +10,7 @@ import { MARKDOWN_WORKSPACE_EDITOR_KEY } from "../../../src/shared/editor-provid
 import { provideHostServices } from "../../../src/shared/host";
 import { fakeHost } from "../../support/vscode-fake";
 
-test("Markdown patterns open in Lumia directly; other associations stay", () => {
+test("Markdown patterns open in Lumiere directly; other associations stay", () => {
   assert.deepEqual(
     withMarkdownWorkshop({ "*.pdf": "pdf.preview", "*.md": "default" }),
     {
@@ -58,7 +58,7 @@ function harness(initial: unknown) {
   return { host, writes, messages, errors, storage };
 }
 
-test("the workspace command records Lumia and opens Markdown in it directly", async () => {
+test("the workspace command records Lumiere and opens Markdown in it directly", async () => {
   const h = harness({ "*.pdf": "pdf.preview" });
   await useForMarkdownInWorkspace(h.host);
   assert.deepEqual(h.writes, [
@@ -98,7 +98,7 @@ function activate(t: test.TestContext, h: ReturnType<typeof harness>) {
   return root.settled();
 }
 
-test("activation moves Lumia's text-editor route to the direct association", async (t) => {
+test("activation moves Lumiere's text-editor route to the direct association", async (t) => {
   const h = harness({
     "*.pdf": "pdf.preview",
     "*.md": "default",
@@ -128,7 +128,7 @@ test("activation migrates a workspace that only routes *.md through text", async
   ]);
 });
 
-test("activation leaves a text association Lumia did not write", async (t) => {
+test("activation leaves a text association Lumiere did not write", async (t) => {
   for (const initial of [
     { "*.md": "default" },
     { "*.md": "lumiere.markdown.editor" },

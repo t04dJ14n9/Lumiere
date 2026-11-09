@@ -147,7 +147,7 @@ test("partitionLinkUpdateFiles keeps closed notes for waitUntil disk save", () =
   );
 });
 
-test("a textDocument that is not a Lumia tab stays on the closed disk path", () => {
+test("a textDocument that is not a Lumiere tab stays on the closed disk path", () => {
   const files = [
     {
       uri: "file:///warmed.md",
@@ -160,7 +160,7 @@ test("a textDocument that is not a Lumia tab stays on the closed disk path", () 
       ],
     },
   ];
-  // Warmed / leftover TextDocument text exists, but no Lumia tab → closed.
+  // Warmed / leftover TextDocument text exists, but no Lumiere tab → closed.
   const { open, closed } = partitionLinkUpdateFiles(
     files,
     new Set(),

@@ -3,15 +3,15 @@ export const NATIVE_OUTLINE_ID = "outline";
 
 export const PDF_OUTLINE_VIEW_ID = "lumiere.pdf.outline";
 
-/** Lumia PDF custom editor view type. */
+/** Lumiere PDF custom editor view type. */
 export const PDF_WORKSHOP_EDITOR = "lumiere.pdf.viewer";
 
-/** Lumia custom editor view type (peer product). */
+/** Lumiere custom editor view type (peer product). */
 export const MARKDOWN_WORKSHOP_EDITOR = "lumiere.markdown.editor";
 
 /**
- * Delay before restoring the native Outline after leaving a Lumia PDF
- * editor. Lets a Lumia tab take over without flashing Outline.
+ * Delay before restoring the native Outline after leaving a Lumiere PDF
+ * editor. Lets a Lumiere tab take over without flashing Outline.
  */
 export const LEAVE_RESTORE_MS = 120;
 
@@ -27,10 +27,10 @@ export type OutlineFocusOptions = {
   focusEditor: () => Thenable<unknown>;
   /**
    * Active tab's custom editor viewType, if any. Used to abort native Outline
-   * restore when Markdown or Lumia PDF already owns the sidebar swap.
+   * restore when Markdown or Lumiere PDF already owns the sidebar swap.
    */
   activeCustomEditorViewType?: () => string | undefined;
-  /** This product's custom editor id (defaults to Lumia PDF). */
+  /** This product's custom editor id (defaults to Lumiere PDF). */
   ownEditorViewType?: string;
   outlineViewId?: string;
   leaveDelayMs?: number;
@@ -62,7 +62,7 @@ type ResolvedFocus = {
 };
 
 /**
- * One-shot sidebar swap while a Lumia PDF custom editor is active: hide the
+ * One-shot sidebar swap while a Lumiere PDF custom editor is active: hide the
  * native Outline, show PDF Outline, then restore native Outline on leave
  * (debounced for Workshop↔Markdown handoffs).
  */

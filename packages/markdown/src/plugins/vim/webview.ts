@@ -266,7 +266,7 @@ function vimExtensions(ctx: Context, status: boolean) {
   ];
 }
 
-/** BH-046: map za/zc/zo/zM/zR onto Lumia fold commands (gutter/Toggle Fold already work). */
+/** BH-046: map za/zc/zo/zM/zR onto Lumiere fold commands (gutter/Toggle Fold already work). */
 function installVimFoldKeys(ctx: Context): void {
   ctx.effect(() => {
     const run = (id: string) => {

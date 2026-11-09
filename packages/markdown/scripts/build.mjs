@@ -1,7 +1,7 @@
 import { prismPlugin } from "./prism.mjs";
 import { featureChunks } from "./feature-chunks.mjs";
 import { mergeEntryGraph } from "./merge-entry-graph.mjs";
-// Builds Lumia's assets into this package's dist/: the editor,
+// Builds Lumiere's assets into this package's dist/: the editor,
 // diff and graph webviews, the vault and search workers, and the public API
 // declarations. The extension host is bundled by the repository root
 // (scripts/build.mjs there), which copies this dist/ into dist/markdown/.

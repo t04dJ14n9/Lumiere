@@ -56,7 +56,7 @@ function own(
 ): ContributedSetting {
   const setting = settings.find((item) => item.key === `${PREFIX}${key}`);
   if (!setting) {
-    throw new Error(`${PREFIX}${key} is not a Lumia setting.`);
+    throw new Error(`${PREFIX}${key} is not a Lumiere setting.`);
   }
   return setting;
 }

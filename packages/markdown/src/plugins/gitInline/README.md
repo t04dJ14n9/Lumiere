@@ -3,7 +3,7 @@
 Track changes in the rendered note, over the hunks of the Git change bars
 (`gitGutter`): removed words struck through, added words and lines tinted, and
 the old version of a changed table, code block or frontmatter shown above it.
-Off by default; **Lumia: Toggle Inline Git Changes** flips
+Off by default; **Lumiere: Toggle Inline Git Changes** flips
 `lumiere.markdown.plugins.gitInline.enabled`.
 
 ## How it works

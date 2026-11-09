@@ -1,6 +1,6 @@
 {
   "version": 2,
-  "about": "Agent handoff text shared by Lumia and Lumia PDF (docs/agent-handoff-format.md). PDF clipboard is Quote-first + Chrome #page= / #:~:text= (no Source:/SHA/cite/#hl-).",
+  "about": "Agent handoff text shared by Lumiere and Lumiere PDF (docs/agent-handoff-format.md). PDF clipboard is Quote-first + Chrome #page= / #:~:text= (no Source:/SHA/cite/#hl-).",
   "noteReferences": [
     {
       "path": "notes/a.md",

@@ -8,6 +8,11 @@
 
 ## Unreleased
 
+- **Lumia is now Lumiere.** The Extensions view, the Marketplace listing
+  (**Lumiere: Obsidian-style Notes and PDF Reader**), **Reopen Editor With…**,
+  the Command Palette (**Lumiere: …**), the Settings UI and messages say
+  Lumiere. The extension id, commands and `lumiere.*` settings are unchanged.
+
 - Lumia: `[[paper.pdf#` suggests the PDF's bookmarks, and picking one
   inserts `[[paper.pdf#page=5|Methods]]` (`[Methods](paper.pdf#page=5)` with
   wikilinks off), which opens that page.

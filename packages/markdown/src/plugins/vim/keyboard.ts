@@ -78,7 +78,7 @@ export function shiftedVimLineKey(
 
 /**
  * Under an IME, letter and digit keydowns often arrive as `Process` /
- * `Unidentified`. codemirror-vim then waits for a text input, but Lumia's
+ * `Unidentified`. codemirror-vim then waits for a text input, but Lumiere's
  * normal-mode beforeinput guard suppresses that path, so `gg`, counts and
  * motions never run. Map the physical code back to a Latin command key.
  */

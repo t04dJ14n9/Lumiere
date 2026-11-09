@@ -1,8 +1,8 @@
-# Lumia PDF
+# Lumiere PDF
 
 [![CI](https://github.com/t04dJ14n9/vscode-embedPDF/actions/workflows/ci.yml/badge.svg)](https://github.com/t04dJ14n9/vscode-embedPDF/actions/workflows/ci.yml)
 
-A Lumia PDF viewer for VS Code and Cursor, built on [EmbedPDF](https://www.embedpdf.com/)
+A Lumiere PDF viewer for VS Code and Cursor, built on [EmbedPDF](https://www.embedpdf.com/)
 3 and its PDFium engine. Select text and choose **Copy link to this**: the
 clipboard gets a Quote with a Chrome-aligned deep link (`#page=` +
 `#:~:text=`), ready to paste into any note. Opening the PDF paints
@@ -51,7 +51,7 @@ is opt-in (`lumiere.pdf.regions.enabled`, default off).
   workspace-relative folder, `~/…`, or an absolute path. The PDF's bytes, and so the hash a vault records for an immutable
   source, stay as they are. The same PDF anywhere (in `inbox/`, then
   captured into `.raw/`) shows the same annotations, and a renamed or moved
-  copy keeps them. Del deletes them. The file is Lumia's own format
+  copy keeps them. Del deletes them. The file is Lumiere's own format
   (`{"version": 2, "bundle": …}`, EmbedPDF 3's annotation transfer); files
   from earlier versions are converted when read and saved in the new format on
   the next change, after which earlier versions cannot read them.
@@ -60,7 +60,7 @@ is opt-in (`lumiere.pdf.regions.enabled`, default off).
     `lumiere.pdf.annotations.protectedFolders` (default `[".raw"]`).
   - **PDF: Export Annotated Copy…** writes a new PDF with them, for sharing.
   - Annotations a PDF already holds show as usual; a change to one is kept
-    only by saving into the PDF, and Lumia says so the first time.
+    only by saving into the PDF, and Lumiere says so the first time.
 - **PDF Outline in the Explorer.** The PDF's bookmarks appear as a native
   tree view; click an entry to open its page. The title bar offers **Expand All**
   and **Collapse All**. **Follow Cursor** (on by default; toggle it in the **…**
@@ -70,10 +70,10 @@ is opt-in (`lumiere.pdf.regions.enabled`, default off).
   branch is closed. A click on a bookmark leaves the tree as it is, so a
   double-click's second click hits the same row. This choice is saved as
   `lumiere.pdf.outline.followCursor`.
-  Opening a Lumia PDF editor hides VS Code's native **Outline** and shows
+  Opening a Lumiere PDF editor hides VS Code's native **Outline** and shows
   **PDF Outline**; leaving restores the native Outline after a short debounce,
-  skipped if Lumia already owns the active tab.
-- **Section links from notes.** In a Markdown note in Lumia, typing
+  skipped if Lumiere already owns the active tab.
+- **Section links from notes.** In a Markdown note in Lumiere, typing
   `[[paper.pdf#` lists the PDF's bookmarks; typing more filters them, and
   picking one inserts `[[paper.pdf#page=5|Methods]]` (or
   `[Methods](paper.pdf#page=5)` with wikilinks off). The extension reads the
@@ -213,7 +213,7 @@ for Claude Code / Codex…**, which offers to) and the extension starts a local
 | ---------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
 | `get_current_pdf_selection`  | The text or region selected in the PDF you last looked at: the same text Copy link to this copies, and for a region its PNG snapshot.                                         |
 | `open_pdf_location`          | Opens a `path#page=N&viewrect=…` link in the viewer.                                                                                                                            |
-| `get_current_note_selection` | The selection in Lumia (the same extension), as `@path#lines` and the quoted text (the same text as its Copy link to this; see `packages/agents/docs/agent-handoff-format.md`). |
+| `get_current_note_selection` | The selection in Lumiere (the same extension), as `@path#lines` and the quoted text (the same text as its Copy link to this; see `packages/agents/docs/agent-handoff-format.md`). |
 
 The server is off by default because it opens a port. When on, it listens on
 `127.0.0.1` only, on a random port, requires a random bearer token, and
@@ -240,7 +240,7 @@ clipboard. `vscodeEmbedPdf.bridge.envelope` returns a Workbench v1 envelope
 (`producer` `"pdf"`) for the PDF you last looked at: the same shape Markdown
 Workshop's `parseBridgeEnvelope` already consumes (`capturedAt`,
 `source.identity` / `kind` / `media`, `locator`, `view`, `selection`,
-`revision`). Lumia is the aggregator and may call this command;
+`revision`). Lumiere is the aggregator and may call this command;
 this command does not call Workshop back. Copy link to this still copies
 the same source-link text. See [docs/bridge-envelope.md](docs/bridge-envelope.md).
 
@@ -284,7 +284,7 @@ src/
 ├── bridge-stdio/  the stdio shim Claude Code and Codex run to reach the bridge
 ├── extension/   the VS Code side
 │   ├── extension.ts            activation: builds the plugin runtime, nothing else
-│   ├── outlines/               the bookmarks of PDFs, for `[[paper.pdf#` in Lumia:
+│   ├── outlines/               the bookmarks of PDFs, for `[[paper.pdf#` in Lumiere:
 │   │                           a cached reader, and engine.ts, a separate lazily
 │   │                           loaded bundle (outline-engine.js) of PDFium that
 │   │                           loads the viewer's embedpdf.wasm

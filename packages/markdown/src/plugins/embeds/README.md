@@ -66,5 +66,5 @@ workspace trust from Render. YouTube/Bilibili image links share the EmbedBlock h
 Cycles and ancestry depth of twelve are refused. Local files remain host-contained;
 remote media requires a trusted workspace. A PDF embed draws one page (`#page=`,
 `#height=`) with page buttons rather than Obsidian's full PDF viewer; its Open
-button opens the PDF in Lumia PDF at that page. WebM recovery supports VP8/VP9 and Opus/Vorbis when the host
+button opens the PDF in Lumiere PDF at that page. WebM recovery supports VP8/VP9 and Opus/Vorbis when the host
 MediaSource supports them. Visual and playback parity await owner comparison. Image embeds use Obsidian's `.embed-actions` frosted bar (inspect control; VS Code tokens).

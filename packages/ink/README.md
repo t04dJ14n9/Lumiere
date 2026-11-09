@@ -1,6 +1,6 @@
 # @workshop/ink
 
-Lumia's ink: the sketch file format, the outlines that draw it, the
+Lumiere's ink: the sketch file format, the outlines that draw it, the
 `ink` host service a canvas provides, and the web canvas that provides it
 in a browser. It knows nothing of Markdown or of any host. The iPad app
 (`apps/ipad`) provides the service on PencilKit; the desktop and web apps
@@ -10,7 +10,7 @@ on the web canvas; the `sketch` Markdown plugin uses it. See
 ## The sketch file
 
 A sketch is one file, `*.sketch.svg`, that shows as drawn in any SVG viewer
-(Obsidian, GitHub, VS Code, a browser) and edits in Lumia.
+(Obsidian, GitHub, VS Code, a browser) and edits in Lumiere.
 
 - **The SVG** draws each stroke as a filled outline whose width follows the
   width stored at each of its points, so pressure shows everywhere. A stroke

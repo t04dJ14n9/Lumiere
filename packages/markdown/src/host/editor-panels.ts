@@ -68,7 +68,7 @@ function revealNativeSelection(
   }
   const intent = navigation.begin();
   void navigation.revealPanel(panel.id, selection, intent).catch((error) => {
-    console.error("Lumia editor selection reveal failed", error);
+    console.error("Lumiere editor selection reveal failed", error);
   });
 }
 
@@ -287,8 +287,8 @@ function resolveEditorPanel(
 
 /**
  * A missing note (`code test.md`) opens in the built-in text editor, whose
- * buffer the user saves to create it (product lock 2026-11-04). With Lumia
- * associated directly VS Code asks Lumia first, so hand the tab back.
+ * buffer the user saves to create it (product lock 2026-11-04). With Lumiere
+ * associated directly VS Code asks Lumiere first, so hand the tab back.
  */
 function openMissingNoteAsText(
   document: vscode.TextDocument,
@@ -304,7 +304,7 @@ function openMissingNoteAsText(
     .then(
       () => panel.dispose(),
       (error: unknown) => {
-        console.error("Lumia could not open a missing note as text", error);
+        console.error("Lumiere could not open a missing note as text", error);
         panel.dispose();
       },
     );

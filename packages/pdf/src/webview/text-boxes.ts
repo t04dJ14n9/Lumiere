@@ -5,7 +5,7 @@ import {
 } from "@embedpdf/engine";
 import type { PageRect } from "../shared/geometry";
 
-/** A box in page space as `[left, top, right, bottom]`, Lumia's `PageRect`. */
+/** A box in page space as `[left, top, right, bottom]`, Lumiere's `PageRect`. */
 export type Bounds = PageRect;
 
 /** The box of the character at `index` of `run`, hugging its shape. */

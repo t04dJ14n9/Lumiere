@@ -112,7 +112,7 @@ test("navigation superseded during document warming does not open the old note",
   ]);
 });
 
-test("a link to a PDF opens it in Lumia PDF at its page, beside when asked", async (t) => {
+test("a link to a PDF opens it in Lumiere PDF at its page, beside when asked", async (t) => {
   const directory = await mkdtemp(join(tmpdir(), "mw-navigation-unit-"));
   t.after(() => rm(directory, { recursive: true, force: true }));
   const root = pathToFileURL(directory).href;
@@ -144,7 +144,7 @@ test("a link to a PDF opens it in Lumia PDF at its page, beside when asked", asy
   await navigation.open(root, pdf, "page=5&viewrect=1,2,3,4", "side");
   // Not a PDF location (a heading, say): open the PDF where it was left.
   await navigation.open(root, pdf, "Introduction", "here");
-  // Lumia PDF's Copy link: `paper.pdf#page=3#:~:text=…` (a Chrome text fragment).
+  // Lumiere PDF's Copy link: `paper.pdf#page=3#:~:text=…` (a Chrome text fragment).
   await navigation.open(
     root,
     pdf,

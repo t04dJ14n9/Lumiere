@@ -26,7 +26,7 @@ import {
 
 const IS_CURSOR_HOST = contributionId("isCursorHost");
 const DISMISS_EDIT_MIRROR = contributionId("cursorBridge.dismissEditMirror");
-const DISMISS_STATUS_TEXT = "$(markdown) Return to Lumia";
+const DISMISS_STATUS_TEXT = "$(markdown) Return to Lumiere";
 const DISMISS_STATUS_TOOLTIP =
   "Close the Edit mirror and return to Live Preview";
 
@@ -248,7 +248,7 @@ async function runEdit(
       return;
     }
     // Use the focused editor and selection from show. overrideUri forces a
-    // reload through editorAssociations, which can reopen Lumia instead.
+    // reload through editorAssociations, which can reopen Lumiere instead.
     const edited = await openCursorEdit(ctx.hostCommands.execute, commands);
     if (edited) {
       prepared.lease.promote();

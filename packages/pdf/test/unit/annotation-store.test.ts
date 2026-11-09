@@ -71,7 +71,7 @@ test("a damaged bundle is an error the viewer can report, not an empty file", as
   );
 });
 
-test("keepOwned keeps Lumia's annotations, what belongs to them, and only the drawings they name", () => {
+test("keepOwned keeps Lumiere's annotations, what belongs to them, and only the drawings they name", () => {
   const drawing = new Uint8Array([9, 9]);
   const other = new Uint8Array([8]);
   const all = bundle([

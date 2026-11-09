@@ -1,7 +1,7 @@
 # Obsidian Compatibility
 
 Uses a vault's Obsidian property types, eight Files & Links/editor policies and
-its Templates and Daily notes options in Lumia, like Obsidian's vault configuration. This is a host-only
+its Templates and Daily notes options in Lumiere, like Obsidian's vault configuration. This is a host-only
 feature, enabled by default in the Obsidian preset.
 
 ## How it works
@@ -49,7 +49,7 @@ Settings: `lumiere.markdown.plugins.obsidianCompat.enabled` (true) and
 `lumiere.markdown.obsidianCompat.configFolder` (`.obsidian`). Core plugins keep
 owning their settings. Supported `app.json` mappings, in rank order:
 
-| Obsidian | Lumia |
+| Obsidian | Lumiere |
 | --- | --- |
 | `useMarkdownLinks` | `links.useWikilinks` (inverse) |
 | `newLinkFormat` | `links.newLinkFormat` |
@@ -62,9 +62,9 @@ owning their settings. Supported `app.json` mappings, in rank order:
 
 `templates.json` and `daily-notes.json` seed the Templates and Daily Notes
 plugins' settings the same way. A date format is carried over only when it
-uses Lumia's tokens (`YYYY MM DD HH mm ss`); empty strings contribute nothing.
+uses Lumiere's tokens (`YYYY MM DD HH mm ss`); empty strings contribute nothing.
 
-| Obsidian | Lumia |
+| Obsidian | Lumiere |
 | --- | --- |
 | `templates.json` `folder`, `dateFormat`, `timeFormat` | `templates.folder`, `templates.dateFormat`, `templates.timeFormat` |
 | `daily-notes.json` `folder`, `format`, `template` | `dailyNotes.folder`, `dailyNotes.dateFormat`, `dailyNotes.template` |
@@ -89,7 +89,7 @@ rejects without writing; a last-minute content comparison alone is insufficient.
 The registry still detects stale bases with `TypesRegistryConflict` and keeps
 its snapshot when an adapter rejects. Profile changes join the previous queue
 before replacing watchers. Filename selection is scoped to the vault, not notes.
-Ignored-file prefixes and globs use Lumia's existing exclusion semantics; Obsidian
+Ignored-file prefixes and globs use Lumiere's existing exclusion semantics; Obsidian
 regular-expression filters are not translated. Changes to `editor.defaultMode`
 affect new editor views, preserving an existing view's current mode.
 

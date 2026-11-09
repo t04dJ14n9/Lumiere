@@ -6,7 +6,7 @@ import { baseName } from "../../shared/workspace-path";
 import { insertAtSelection } from "./insert";
 import { templateFiles, templateFolder, templatePickItems } from "./list";
 
-/** **Lumia: Templates**: insert a template note at the caret. */
+/** **Lumiere: Templates**: insert a template note at the caret. */
 export const templatesHost: Plugin = {
   name: "templates",
   inject: {
@@ -35,7 +35,7 @@ export const templatesHost: Plugin = {
 async function insert(ctx: Context): Promise<void> {
   const panel = ctx.editors.active();
   if (!panel) {
-    ctx.dialogs.error("Open a note in Lumia to insert a template.");
+    ctx.dialogs.error("Open a note in Lumiere to insert a template.");
     return;
   }
   const uri = panel.document.uri;

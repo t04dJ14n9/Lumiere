@@ -2,7 +2,7 @@ import type { AnnotationToolInput } from "@embedpdf/plugin-annotation";
 import type { EffectivePageColors } from "./page-colors";
 import { highlightToolDefaults } from "./highlight-style";
 
-/** Lumia's tool ids exposed in Annotate mode (spec v1 toolkit); EmbedPDF's own ids are `toV3ToolId`. */
+/** Lumiere's tool ids exposed in Annotate mode (spec v1 toolkit); EmbedPDF's own ids are `toV3ToolId`. */
 export const ANNOTATION_TOOL_IDS = [
   "highlight",
   "underline",
@@ -75,7 +75,7 @@ export function isAnnotationToolId(value: unknown): value is AnnotationToolId {
 }
 
 /**
- * Lumia's id for a tool where EmbedPDF 3 names it differently. `lineArrow`
+ * Lumiere's id for a tool where EmbedPDF 3 names it differently. `lineArrow`
  * has no EmbedPDF tool: `LUMIA_ANNOTATION_TOOLS` registers it under its own id.
  */
 const V3_TOOL_IDS: Partial<Record<AnnotationToolId, string>> = {
@@ -88,7 +88,7 @@ export function toV3ToolId(tool: AnnotationToolId): string {
   return V3_TOOL_IDS[tool] ?? tool;
 }
 
-/** Lumia's tool for an interaction tool id, or null for `pointer`, the read tool and the rest. */
+/** Lumiere's tool for an interaction tool id, or null for `pointer`, the read tool and the rest. */
 export function fromV3ToolId(
   id: string | null | undefined,
 ): AnnotationToolId | null {

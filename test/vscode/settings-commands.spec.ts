@@ -38,7 +38,7 @@ async function askFontSize(page: Page) {
   await expect(page.locator(".quick-input-widget")).toBeHidden();
   await openPalette(page);
   const input = page.locator(QUICK_INPUT);
-  await input.fill(">Lumia: Set Note Font Size");
+  await input.fill(">Lumiere: Set Note Font Size");
   await page
     .locator(".quick-input-list .monaco-list-row")
     .filter({ hasText: "Set Note Font Size" })
@@ -72,7 +72,7 @@ async function editorFrame(page: Page): Promise<Frame> {
       return frame;
     }
   }
-  throw new Error("No Lumia frame");
+  throw new Error("No Lumiere frame");
 }
 
 test("Open Settings, and the commands for common settings read and write the Settings UI's own keys, live", async () => {
@@ -102,7 +102,7 @@ test("Open Settings, and the commands for common settings read and write the Set
       ).toBe(1);
 
     // Open Settings: the Settings UI, searching for this extension.
-    await command(page, "Lumia: Open Settings");
+    await command(page, "Lumiere: Open Settings");
     const search = page.locator(".settings-editor .suggest-input-container");
     await expect(search).toBeVisible();
     await expect(search).toContainText("@ext:t04dj14n9.lumiere");
@@ -125,12 +125,12 @@ test("Open Settings, and the commands for common settings read and write the Set
     const readable = () =>
       frame.locator(".cm-editor.is-readable-line-width").count();
     expect(await readable()).toBe(0);
-    await command(page, "Lumia: Toggle Readable Line Width");
+    await command(page, "Lumiere: Toggle Readable Line Width");
     await expect
       .poll(() => userKeys()[key("editor.readableLineLength")])
       .toBe(true);
     await expect.poll(readable).toBe(1);
-    await command(page, "Lumia: Toggle Readable Line Width");
+    await command(page, "Lumiere: Toggle Readable Line Width");
     await expect
       .poll(() => userKeys()[key("editor.readableLineLength")])
       .toBe(false);
@@ -142,7 +142,7 @@ test("Open Settings, and the commands for common settings read and write the Set
       JSON.stringify({ [key("editor.readableLineLength")]: true }),
     );
     await expect.poll(readable).toBe(1);
-    await command(page, "Lumia: Toggle Readable Line Width");
+    await command(page, "Lumiere: Toggle Readable Line Width");
     await expect
       .poll(() => folderKeys()[key("editor.readableLineLength")])
       .toBe(false);
@@ -154,7 +154,7 @@ test("Open Settings, and the commands for common settings read and write the Set
       JSON.stringify({ [key("editor.readableLineLength")]: true }),
     );
     await expect.poll(readable).toBe(1);
-    await command(page, "Lumia: Toggle Readable Line Width");
+    await command(page, "Lumiere: Toggle Readable Line Width");
     await expect
       .poll(() => folderKeys()[key("editor.readableLineLength")])
       .toBe(false);
@@ -163,12 +163,12 @@ test("Open Settings, and the commands for common settings read and write the Set
     // Line numbers.
     const gutter = () => frame.locator(".cm-lineNumbers").count();
     await expect.poll(gutter).toBeGreaterThan(0);
-    await command(page, "Lumia: Toggle Line Numbers");
+    await command(page, "Lumiere: Toggle Line Numbers");
     await expect
       .poll(() => userKeys()[key("plugins.lineNumbers.enabled")])
       .toBe(false);
     await expect.poll(gutter).toBe(0);
-    await command(page, "Lumia: Toggle Line Numbers");
+    await command(page, "Lumiere: Toggle Line Numbers");
     await expect
       .poll(() => userKeys()[key("plugins.lineNumbers.enabled")])
       .toBe(true);
@@ -177,12 +177,12 @@ test("Open Settings, and the commands for common settings read and write the Set
     // Inline title.
     const title = () => frame.locator(".file-title").count();
     expect(await title()).toBe(0);
-    await command(page, "Lumia: Toggle Inline Title");
+    await command(page, "Lumiere: Toggle Inline Title");
     await expect
       .poll(() => userKeys()[key("plugins.inlineTitle.enabled")])
       .toBe(true);
     await expect.poll(title).toBeGreaterThan(0);
-    await command(page, "Lumia: Toggle Inline Title");
+    await command(page, "Lumiere: Toggle Inline Title");
     await expect
       .poll(() => userKeys()[key("plugins.inlineTitle.enabled")])
       .toBe(false);
@@ -193,12 +193,12 @@ test("Open Settings, and the commands for common settings read and write the Set
     await frame.getByRole("textbox", { name: "Markdown content" }).click();
     await page.keyboard.press("ControlOrMeta+End");
     await expect.poll(diagram, { timeout: 20000 }).toBeGreaterThan(0);
-    await command(page, "Lumia: Toggle Mermaid Diagrams");
+    await command(page, "Lumiere: Toggle Mermaid Diagrams");
     await expect
       .poll(() => userKeys()[key("plugins.diagrams.enabled")])
       .toBe(false);
     await expect.poll(diagram).toBe(0);
-    await command(page, "Lumia: Toggle Mermaid Diagrams");
+    await command(page, "Lumiere: Toggle Mermaid Diagrams");
     await expect
       .poll(() => userKeys()[key("plugins.diagrams.enabled")])
       .toBe(true);
@@ -207,10 +207,10 @@ test("Open Settings, and the commands for common settings read and write the Set
     // Vim.
     const vim = () => frame.locator(".cm-vim-panel, .cm-fat-cursor").count();
     expect(await vim()).toBe(0);
-    await command(page, "Lumia: Toggle Vim Mode");
+    await command(page, "Lumiere: Toggle Vim Mode");
     await expect.poll(() => userKeys()[key("plugins.vim.enabled")]).toBe(true);
     await expect.poll(vim).toBeGreaterThan(0);
-    await command(page, "Lumia: Toggle Vim Mode");
+    await command(page, "Lumiere: Toggle Vim Mode");
     await expect.poll(() => userKeys()[key("plugins.vim.enabled")]).toBe(false);
     await expect.poll(vim).toBe(0);
 
@@ -261,13 +261,16 @@ async function changeSetting(page: Page, query: string, row: string) {
   await expect(page.locator(".quick-input-widget")).toBeHidden();
   await openPalette(page);
   const input = page.locator(QUICK_INPUT);
-  await input.fill(">Lumia: Change Setting");
+  await input.fill(">Lumiere: Change Setting");
   await page
     .locator(".quick-input-list .monaco-list-row")
     .filter({ hasText: "Change Setting" })
     .first()
     .click();
-  await expect(input).toHaveAttribute("placeholder", /Change a Lumia setting/);
+  await expect(input).toHaveAttribute(
+    "placeholder",
+    /Change a Lumiere setting/,
+  );
   await input.fill(query);
   const first = page.locator(".quick-input-list .monaco-list-row").first();
   await expect(first).toContainText(row);
@@ -288,7 +291,7 @@ test("Change Setting… lists every setting by plugin and edits the picked one b
     // The whole list, grouped by plugin, each row with its value and description.
     await expect(page.locator(".quick-input-widget")).toBeHidden();
     await openPalette(page);
-    await page.locator(QUICK_INPUT).fill(">Lumia: Change Setting");
+    await page.locator(QUICK_INPUT).fill(">Lumiere: Change Setting");
     await page
       .locator(".quick-input-list .monaco-list-row")
       .filter({ hasText: "Change Setting" })

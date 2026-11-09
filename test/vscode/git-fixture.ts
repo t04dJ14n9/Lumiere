@@ -130,7 +130,7 @@ export async function useTheme(
   );
 }
 
-/** The frame holding the Lumia editor that shows `selector`. */
+/** The frame holding the Lumiere editor that shows `selector`. */
 export async function frameWith(
   page: Page,
   selector: string,

@@ -13,7 +13,7 @@ import {
 import type { OutgoingMessage } from "./outbox";
 
 /**
- * The write that brings back Lumia's annotations. Its events carry this id as
+ * The write that brings back Lumiere's annotations. Its events carry this id as
  * `origin.transaction.id`, which tells the file's annotations from new ones.
  */
 export const RESTORE_OP_ID = "lumia-restore-annotations";
@@ -29,7 +29,7 @@ type Change = "create" | "update" | "delete";
 
 /**
  * What the save session of one open document knows: which annotations are
- * Lumia's, and the work in flight. Writes to the host run one at a time, in
+ * Lumiere's, and the work in flight. Writes to the host run one at a time, in
  * the order they were asked for, and none starts before the file's own
  * annotations are back, or it would save a file without them.
  */
@@ -94,7 +94,7 @@ export class StoreSession {
     );
   }
 
-  /** A change EmbedPDF has saved: Lumia's go to the file, a PDF's own are reported. */
+  /** A change EmbedPDF has saved: Lumiere's go to the file, a PDF's own are reported. */
   committed(
     type: Change,
     refs: readonly AnnotationRef[],
@@ -115,14 +115,14 @@ export class StoreSession {
     }
   }
 
-  /** Annotations were read again: an Undo or Redo may have brought Lumia's back. */
+  /** Annotations were read again: an Undo or Redo may have brought Lumiere's back. */
   resynced(): void {
     if (this.started) {
       this.saveStore();
     }
   }
 
-  /** Save Lumia's annotations; changes that come while a save is queued share it. */
+  /** Save Lumiere's annotations; changes that come while a save is queued share it. */
   saveStore(): void {
     if (this.saveQueued || this.fileLeftAlone) {
       return;

@@ -74,7 +74,7 @@ test("tables in the real editor: a projected short or empty cell keeps its row h
     await page.keyboard.press("ControlOrMeta+s");
     const frame = await tableFrame(() => page.frames());
     const table = frame.locator(".hybrid-table");
-    await command(page, "Lumia: Toggle Vim Mode");
+    await command(page, "Lumiere: Toggle Vim Mode");
     await expect
       .poll(() => frame.locator(".cm-vim-panel, .cm-fat-cursor").count())
       .toBeGreaterThan(0);
@@ -98,7 +98,7 @@ test("tables in the real editor: a projected short or empty cell keeps its row h
       ).toBeLessThanOrEqual(1);
     }
 
-    await command(page, "Lumia: Toggle Vim Mode");
+    await command(page, "Lumiere: Toggle Vim Mode");
   } finally {
     await closeBrowser(browser);
   }

@@ -1,7 +1,7 @@
 /**
  * Writes (or with --check, verifies) the extension's `contributes` in
- * package.json: Lumia's, generated from its plugin manifests,
- * followed by Lumia PDF's, kept in packages/pdf/contributes.json.
+ * package.json: Lumiere's, generated from its plugin manifests,
+ * followed by Lumiere PDF's, kept in packages/pdf/contributes.json.
  * Each product keeps its own settings section.
  */
 import { readFileSync, writeFileSync } from "node:fs";

@@ -26,7 +26,7 @@ async function processLetter(page: Page, code: string, letter: string) {
           cancelable: true,
         }),
       );
-      // Some IMEs then deliver the letter via beforeinput/input; Lumia's
+      // Some IMEs then deliver the letter via beforeinput/input; Lumiere's
       // normal-mode beforeinput guard suppresses that path.
       target?.dispatchEvent(
         new InputEvent("beforeinput", {

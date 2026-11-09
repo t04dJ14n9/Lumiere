@@ -569,7 +569,7 @@ test("default: workbench→text without bypass ends with its last text tab", asy
   tabsChanged.fire({ opened: [], changed: [], closed: [text] });
   assert.deepEqual(state.values.get("lumiere.reclaim.readerText"), []);
 
-  // A chat link then opens the note as text in a new tab: back to Lumia.
+  // A chat link then opens the note as text in a new tab: back to Lumiere.
   const link = cursorTab();
   link.input = new TabInputText(Uri.parse(note));
   tabsChanged.fire({ opened: [link], changed: [], closed: [] });
@@ -730,7 +730,7 @@ test("keeping a note as text ends with its last text tab", async (t) => {
   tabsChanged.fire({ opened: [], changed: [], closed: [text] });
   assert.deepEqual(state.values.get("lumiere.reclaim.readerText"), []);
 
-  // A chat link then opens the note as text in a new tab: back to Lumia.
+  // A chat link then opens the note as text in a new tab: back to Lumiere.
   const link = cursorTab();
   link.input = new TabInputText(Uri.parse(note));
   tabsChanged.fire({ opened: [link], changed: [], closed: [] });
@@ -1142,7 +1142,7 @@ test("Cursor handoff surface forces language markdown on open and show", async (
   );
 });
 
-test("dismiss reopens Lumia when only the mirror tab remains", async () => {
+test("dismiss reopens Lumiere when only the mirror tab remains", async () => {
   const surface = host.cursorHandoff.createCursorHandoffSurface();
   const mirror = cursorTab();
   mirror.input = new TabInputText(Uri.parse(note));
@@ -1311,7 +1311,7 @@ test("dismiss closes the mirror tab by identity while another tab is active", as
   ]);
 });
 
-test("dismiss does not reopen Lumia when a Live Preview sibling remains", async () => {
+test("dismiss does not reopen Lumiere when a Live Preview sibling remains", async () => {
   const surface = host.cursorHandoff.createCursorHandoffSurface();
   workshopTab();
   const mirror = cursorTab();
@@ -1326,7 +1326,7 @@ test("dismiss does not reopen Lumia when a Live Preview sibling remains", async 
   assert.deepEqual(commands, []);
 });
 
-test("dismiss→Lumia preserves selection and exact top visible line", async () => {
+test("dismiss→Lumiere preserves selection and exact top visible line", async () => {
   const { nativeOpeningSelection } =
     await import("../../../src/host/native-selection-open");
   const surface = host.cursorHandoff.createCursorHandoffSurface();
@@ -2276,7 +2276,7 @@ test("a caret at the start does not reclaim before Search applies its range", as
 
 test("a plain open reclaims one settle after the text editor reports, not after the full wait", async (t) => {
   // Quick Open, the Explorer and links apply no range: waiting the whole
-  // report timeout for one only delays the note's Lumia tab.
+  // report timeout for one only delays the note's Lumiere tab.
   t.mock.timers.enable({ apis: ["setTimeout"] });
   const state = memento();
   await state.update(MARKDOWN_WORKSPACE_EDITOR_KEY, true);
@@ -2368,8 +2368,8 @@ test("a text tab whose editor never reports waits the full report timeout", asyn
   assert.equal(commands[0]?.[0], "vscode.openWith");
 });
 
-test("with Lumia associated directly, a text tab is not held for a Search range", async (t) => {
-  // Use Lumia for Markdown associates Lumia itself: the flag stays set, but a
+test("with Lumiere associated directly, a text tab is not held for a Search range", async (t) => {
+  // Use Lumiere for Markdown associates Lumiere itself: the flag stays set, but a
   // text tab is one someone chose, so the Search selection wait must not run.
   t.mock.timers.enable({ apis: ["setTimeout"] });
   const state = memento();
@@ -3633,8 +3633,8 @@ test("moveCustomTextEditor aborts if cancelled during viewState capture and disc
 
 test("reclaim skips missing Markdown paths (leaves built-in Text Editor)", async (t) => {
   // Product lock 2026-11-04: opening a missing .md (e.g. code test.md) may use
-  // the built-in Text Editor dirty buffer until Save. Do not openWith Lumia,
-  // untitled bridge, or FileNotFound UI from Lumia.
+  // the built-in Text Editor dirty buffer until Save. Do not openWith Lumiere,
+  // untitled bridge, or FileNotFound UI from Lumiere.
   const missing = `file:///vault/missing-open/test.md`;
   note = missing;
   host.markdownAbsent.setMarkdownAbsentOnDiskForTests((uri) => uri === missing);
@@ -3657,7 +3657,7 @@ test("reclaim skips missing Markdown paths (leaves built-in Text Editor)", async
   assert.equal(
     commands.some((entry) => entry[0] === "vscode.openWith"),
     false,
-    "missing path must not openWith Lumia (or any view)",
+    "missing path must not openWith Lumiere (or any view)",
   );
   assert.equal(
     commands.some(
@@ -3677,8 +3677,8 @@ test("reclaim skips missing Markdown paths (leaves built-in Text Editor)", async
   );
 });
 
-test("a missing note opened in Lumia directly goes back to the built-in Text Editor", async (t) => {
-  // With *.md associated to Lumia, VS Code resolves Lumia's editor even for
+test("a missing note opened in Lumiere directly goes back to the built-in Text Editor", async (t) => {
+  // With *.md associated to Lumiere, VS Code resolves Lumiere's editor even for
   // a path that does not exist yet; the 2026-11-04 lock keeps it as text.
   const missing = `file:///vault/missing-open/direct.md`;
   host.markdownAbsent.setMarkdownAbsentOnDiskForTests((uri) => uri === missing);
@@ -3711,14 +3711,14 @@ test("a missing note opened in Lumia directly goes back to the built-in Text Edi
   provider.resolveCustomTextEditor(createFakeDoc(missing, [""]), panel);
   await tick();
 
-  assert.equal(opened.length, 0, "no Lumia panel for a missing note");
+  assert.equal(opened.length, 0, "no Lumiere panel for a missing note");
   const openWith = commands.find((entry) => entry[0] === "vscode.openWith");
   assert.equal(String(openWith?.[1]), missing);
   assert.equal(openWith?.[2], "default");
   assert.equal(panel.disposed, true);
 });
 
-test("reclaim still openWith Lumia for an existing Markdown path", async (t) => {
+test("reclaim still openWith Lumiere for an existing Markdown path", async (t) => {
   const existing = `file:///vault/missing-open/Welcome.md`;
   note = existing;
   // Present on disk (default beforeEach forces false; keep explicit).
@@ -3746,13 +3746,13 @@ test("reclaim still openWith Lumia for an existing Markdown path", async (t) => 
         entry[1] === existing &&
         entry[2] === viewType,
     ),
-    "existing Markdown path must openWith Lumia",
+    "existing Markdown path must openWith Lumiere",
   );
 });
 
-test("after Save makes a missing path exist, a later open reclaims to Lumia", async (t) => {
+test("after Save makes a missing path exist, a later open reclaims to Lumiere", async (t) => {
   // Product path: skip while absent; once the file exists, a later none→text
-  // open (close/reopen after Save) must openWith Lumia.
+  // open (close/reopen after Save) must openWith Lumiere.
   const pathUri = `file:///vault/missing-open/save-then-reclaim.md`;
   note = pathUri;
   let absent = true;
@@ -3803,6 +3803,6 @@ test("after Save makes a missing path exist, a later open reclaims to Lumia", as
         entry[1] === pathUri &&
         entry[2] === viewType,
     ),
-    "after Save, a later open of the now-existing path must openWith Lumia",
+    "after Save, a later open of the now-existing path must openWith Lumiere",
   );
 });

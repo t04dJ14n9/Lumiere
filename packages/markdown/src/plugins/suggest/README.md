@@ -27,7 +27,7 @@ there has not changed).
 `[[paper.pdf#` offers the PDF's bookmarks, as Obsidian offers a note's
 headings. Picking one writes the page and its title:
 `[[paper.pdf#page=5|Methods]]`, or `[Methods](paper.pdf#page=5)` with
-`links.useWikilinks` off. Lumia and Lumia PDF already open `paper.pdf#page=5`
+`links.useWikilinks` off. Lumiere and Lumiere PDF already open `paper.pdf#page=5`
 at that page. The bookmarks come from the injected `pdfOutlines` service;
 before a bookmark list is ranked, `prepare()` asks for it, as it reads a note
 for `[[Note#^`.
@@ -81,7 +81,7 @@ nothing typed, notes come most recently changed first.
 Provides `suggest.register`; webview injects `editor` and `rpc`, host injects
 `rpc`, `vault` and the host service `settings`, and optionally `vaults`,
 `hostDocuments` and `pdfOutlines` (`src/shared/pdf-outlines.ts`: the
-extension's root provides it from Lumia PDF; the editor host hands it to each
+extension's root provides it from Lumiere PDF; the editor host hands it to each
 panel). The window half injects `vaults`, the host services `settings` and
 `hostDocuments`, and optionally `pdfOutlines`, and does nothing where
 `hostDocuments` has no `registerCompletions` (outside VS Code). Emits the
@@ -102,7 +102,7 @@ PDF bookmarks are listed flat, in document order, without their nesting, and
 only those that open a page of the PDF itself. They exist only where a PDF
 engine does: in VS Code and Cursor. Elsewhere (the web app, the iPad, DSH)
 `[[paper.pdf#` offers nothing. Obsidian offers no PDF bookmarks; the
-`#page=N|title` form is Lumia's.
+`#page=N|title` form is Lumiere's.
 
 With `links.useWikilinks` off, accepting a link/head/block completion replaces
 the entire partial wiki token with a Markdown link. Existing `]]` are consumed.
@@ -117,9 +117,9 @@ those regions.
 In VS Code's text editor only links are suggested (no tags or highlight
 colours), and a block without an id is not offered, since picking it would
 write an id into another file. It reads only the line before the caret, so
-unlike the Lumia editor it does not skip `[[` inside code or frontmatter. Notes
+unlike the Lumiere editor it does not skip `[[` inside code or frontmatter. Notes
 outside a workspace folder get nothing, and the Links and Suggestions switches
-apply as in the Lumia editor. VS Code closes its list when nothing matches and
+apply as in the Lumiere editor. VS Code closes its list when nothing matches and
 opens it again at the next separator (`[`, `#`, `^`, `|`, a space, …) or on
 Ctrl+Space. Tab accepts like Enter, which finishes the link with `]]`, taking a
 `]]` after the caret, or the `]` of it.

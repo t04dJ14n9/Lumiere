@@ -31,7 +31,7 @@ const PARENTHESES: Record<string, string> = { "(": "%28", ")": "%29" };
  * angle brackets, packages/agents/docs/agent-handoff-format.md). A space ends
  * a CommonMark destination, and `(`/`)` end it for readers that stop at the
  * first `)`; `#` would start the fragment. `%` is encoded so that the one
- * decode every Lumia link reader does gives the path back; `<`, `>` and `|`
+ * decode every Lumiere link reader does gives the path back; `<`, `>` and `|`
  * are syntax to the Markdown editor's link parser.
  */
 export function encodeLinkPath(path: string): string {

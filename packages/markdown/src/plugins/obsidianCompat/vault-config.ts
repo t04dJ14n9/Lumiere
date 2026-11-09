@@ -14,7 +14,7 @@ export interface VaultConfigOptions {
   warn(message: string, error: unknown): void;
 }
 
-/** The files that seed Lumia settings, each mapped on its own. */
+/** The files that seed Lumiere settings, each mapped on its own. */
 const SETTINGS_FILES: readonly {
   file: ConfigFile;
   map(value: unknown): ObsidianOverrides;

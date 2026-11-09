@@ -87,7 +87,7 @@ function attach(panel: PdfPanel): vscode.Disposable {
       toldAboutPdfAnnotations = true;
       const save = "Save into This PDF";
       const choice = await vscode.window.showInformationMessage(
-        "That annotation is part of the PDF file. Lumia keeps changes to it only if you save them into the PDF.",
+        "That annotation is part of the PDF file. Lumiere keeps changes to it only if you save them into the PDF.",
         save,
       );
       if (choice === save) {
@@ -103,7 +103,7 @@ async function saveIntoPdf(panel: PdfPanel): Promise<void> {
   if (isProtected(panel.uri)) {
     const exportCopy = "Export Annotated Copy…";
     const choice = await vscode.window.showWarningMessage(
-      `${relative} is in a protected folder (${PROTECTED_FOLDERS}), so Lumia does not write it. Its annotations stay in .lumiere/pdf-annotations.`,
+      `${relative} is in a protected folder (${PROTECTED_FOLDERS}), so Lumiere does not write it. Its annotations stay in .lumiere/pdf-annotations.`,
       exportCopy,
     );
     if (choice === exportCopy) {

@@ -1,6 +1,6 @@
 /**
  * What the text typed after `[[` asks the suggestion list for: notes, a
- * note's headings, or its blocks. Pure, so the Lumia editor (a CodeMirror
+ * note's headings, or its blocks. Pure, so the Lumiere editor (a CodeMirror
  * line) and VS Code's text editor (a line of the document) read a trigger
  * the same way.
  */

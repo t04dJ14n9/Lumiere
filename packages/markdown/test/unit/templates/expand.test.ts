@@ -88,7 +88,7 @@ test("only formats made of supported tokens are supported", () => {
 
 // Moment reads a run of one letter as a single token, so MMMM is the month's
 // name, not MM twice. The formatter would write "1111" for it.
-test("a token Lumia cannot write is unsupported even when it is made of supported ones", () => {
+test("a token Lumiere cannot write is unsupported even when it is made of supported ones", () => {
   assert.equal(formatLocalDate(NOW, "MMMM DD, YYYY"), "1111 05, 2026");
   for (const format of [
     "MMMM DD, YYYY",

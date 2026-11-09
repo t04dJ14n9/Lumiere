@@ -1,5 +1,5 @@
 /**
- * Lumia PDF's viewer for hosts other than VS Code (`@workshop/pdf/portable`):
+ * Lumiere PDF's viewer for hosts other than VS Code (`@workshop/pdf/portable`):
  * the viewer core, the contracts a host implements for it, and the settings
  * it opens with. Nothing here may reach `vscode`: this folder's tsconfig maps
  * it to a file that does not compile.

@@ -67,7 +67,7 @@ export async function createDailyNote(
 }
 
 /**
- * The index can lag a file created outside Lumia, and `readText` hides read
+ * The index can lag a file created outside Lumiere, and `readText` hides read
  * errors, so a file the index has not seen is looked up in its folder.
  */
 async function exists(io: DailyNoteFiles, path: string): Promise<boolean> {

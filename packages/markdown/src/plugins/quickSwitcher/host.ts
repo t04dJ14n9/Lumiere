@@ -5,7 +5,7 @@ import { switcherItems } from "./ranking";
 import type { SwitcherTarget } from "./ranking";
 import { readRecent, rememberOpen } from "./recent";
 
-/** **Lumia: Quick Switcher**: open or create a note by name. */
+/** **Lumiere: Quick Switcher**: open or create a note by name. */
 export const quickSwitcherHost: Plugin = {
   name: "quickSwitcher",
   inject: {

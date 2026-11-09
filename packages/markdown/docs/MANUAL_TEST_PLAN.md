@@ -28,10 +28,10 @@ never open a real vault.
 
    For Cursor use `cursor` with the same flags. Delete `/tmp/mdwb-manual`
    and `/tmp/mdwb-vault` afterwards.
-4. Run **Lumia: Use Lumia for Markdown in This
+4. Run **Lumiere: Use Lumiere for Markdown in This
    Workspace** once, so `.md` files open in Workshop (see Editor below).
 5. Turn on `lumiere.markdown.debug.logging` while testing and keep the
-   **Lumia** output channel open; note any error lines in the
+   **Lumiere** output channel open; note any error lines in the
    result.
 
 Change settings at workspace scope (or folder scope in a multi-root
@@ -99,11 +99,11 @@ Owns the text, saving and history; VS Code's TextDocument is the authority.
 The CodeMirror view in a webview panel, its commands and view state.
 
 Cursor Remote SSH handoff regression (use the disposable vault): associate
-`*.md` with Lumia and leave both `editor.warmTextDocument` and
+`*.md` with Lumiere and leave both `editor.warmTextDocument` and
 `editor.reclaimTextEditor` at `auto`. Have an agent edit a note on disk, open
 it with Cursor's built-in Markdown editor, and make an unsaved edit there.
-Let Cursor auto-transfer the note into Lumia, then repeat with
-**Reopen Editor With… → Lumia**. The custom editor opens without
+Let Cursor auto-transfer the note into Lumiere, then repeat with
+**Reopen Editor With… → Lumiere**. The custom editor opens without
 the `Argument is 'undefined' or 'null.'` assertion, the unsaved text survives,
 and native undo still restores the edit. Repeat with a `.markdown` note and
 the matching association, and after reloading with the dirty note already
@@ -142,7 +142,7 @@ do not install a VSIX or use the owner's profile.
    editor: the exact source is copied.
 2. Give two panels different selections, scroll positions and modes; reload
    the window: each panel restores its own state.
-3. Run **Use Lumia for Markdown in This Workspace**: the
+3. Run **Use Lumiere for Markdown in This Workspace**: the
    workspace `settings.json` gets `workbench.editorAssociations` entries for
    `*.md` and `*.markdown`, other associations stay, and running it again
    changes nothing. The entries name `lumiere.markdown.editor` (not
@@ -156,7 +156,7 @@ do not install a VSIX or use the owner's profile.
    and `lumiere.markdown.editor.tabSize` with the note open: the editor
    updates without reopening and keeps text, folds and selection.
    `lumiere.markdown.editor.defaultMode` applies to newly opened panels.
-6. With `lumiere.markdown.debug.logging` on, the **Lumia**
+6. With `lumiere.markdown.debug.logging` on, the **Lumiere**
    output channel shows debug lines from the host and the webview; with it
    off, only warnings and errors.
 7. Right-click a selection that spans hidden syntax (bold, a link): the
@@ -940,7 +940,7 @@ in VS Code and in Cursor.
    (System Settings › Trackpad), force-click a word in each place of step 1;
    then set it to Tap with three fingers and tap each. macOS shows the
    Dictionary popover for that word. If it does not, record the place, the
-   editor (VS Code or Cursor) and its version: Lumia cannot answer that
+   editor (VS Code or Cursor) and its version: Lumiere cannot answer that
    gesture itself, only keep the word in the page's text
    (`test/browser/look-up.spec.ts` guards that).
 5. Turn `lumiere.markdown.plugins.lookUp.enabled` off: the item leaves the
@@ -950,8 +950,8 @@ in VS Code and in Cursor.
 
 In **Cursor** only: select text in Live Preview, press Cmd/Ctrl+L (Chat) and
 Cmd/Ctrl+K (Edit). Edit should open Cursor’s native bar; Accept updates the note
-in Lumia without a custom apply-back. After a verified Edit, a left status-bar
-item (`Return to Lumia`) appears; click it (or run
+in Lumiere without a custom apply-back. After a verified Edit, a left status-bar
+item (`Return to Lumiere`) appears; click it (or run
 `lumiere.markdown.cursorBridge.dismissEditMirror`) to abandon the mirror and
 return to Live Preview. With no selection, both Chat and Edit no-op with a short
 notice. Disable `lumiere.markdown.plugins.cursorBridge.enabled`
@@ -962,7 +962,7 @@ Cmd/Ctrl+K. Leave `agentBridge` behaviour unchanged.
 ### openCopiedAgentReference
 
 1. Copy `@Core.md#2-3` and run **Open Copied Agent Reference**, with no note
-   open. Confirm the prefilled reference: Lumia opens and
+   open. Confirm the prefilled reference: Lumiere opens and
    selects those complete source lines. Repeat with a quoted reference and
    a one-line `#2` reference. A copied agent payload prefills only its first
    line; unrelated clipboard content leaves the prompt empty.
@@ -1124,7 +1124,7 @@ Use a disposable vault with `Templates/Meeting.md` containing
    **Open Next Daily Note** skip the gap, and say so at either end.
 4. In a vault whose `.obsidian/daily-notes.json` sets `folder` and `format`
    and whose `templates.json` sets `folder`, the commands use those values
-   until the matching Lumia setting is set explicitly. A `format` such as
+   until the matching Lumiere setting is set explicitly. A `format` such as
    `YYYY-MM-DD dddd` is not carried over. No `.obsidian` file changes.
 5. In host-node (the app or DSH), repeat steps 1 and 2 from its Command
    Palette.
@@ -1187,12 +1187,12 @@ Use the disposable fixture vault from Setup. These rows enumerate every generate
 | `lumiere.markdown.openAsText` — Open as Text | unbound | On a disposable fixture, run Open as Text; confirm its named action using the plugin scenarios above, then undo where applicable. Repeat after disable/re-enable and switching panes. |
 | `lumiere.markdown.cursorBridge.chat` — Cursor Chat with Selection | ctrl+l (Mac cmd+l) | On a disposable fixture, run Cursor Chat with Selection; confirm its named action using the plugin scenarios above, then undo where applicable. Repeat after disable/re-enable and switching panes. |
 | `lumiere.markdown.cursorBridge.edit` — Cursor Edit Selection | ctrl+k (Mac cmd+k) | On a disposable fixture, run Cursor Edit Selection; confirm its named action using the plugin scenarios above, then undo where applicable. Repeat after disable/re-enable and switching panes. |
-| `lumiere.markdown.cursorBridge.dismissEditMirror` — Return to Lumia | unbound | On a disposable fixture, run Return to Lumia; confirm its named action using the plugin scenarios above, then undo where applicable. Repeat after disable/re-enable and switching panes. |
+| `lumiere.markdown.cursorBridge.dismissEditMirror` — Return to Lumiere | unbound | On a disposable fixture, run Return to Lumiere; confirm its named action using the plugin scenarios above, then undo where applicable. Repeat after disable/re-enable and switching panes. |
 | `lumiere.markdown.jumpBack` — Go Back in Note | unbound | On a disposable fixture, run Go Back in Note; confirm its named action using the plugin scenarios above, then undo where applicable. Repeat after disable/re-enable and switching panes. |
 | `lumiere.markdown.jumpForward` — Go Forward in Note | unbound | On a disposable fixture, run Go Forward in Note; confirm its named action using the plugin scenarios above, then undo where applicable. Repeat after disable/re-enable and switching panes. |
 | `lumiere.markdown.titleActions` — Note Actions | unbound | On a disposable fixture, run Note Actions; confirm its named action using the plugin scenarios above, then undo where applicable. Repeat after disable/re-enable and switching panes. |
 | `lumiere.markdown.selectionActions` — Selection Actions | unbound | On a disposable fixture, run Selection Actions; confirm its named action using the plugin scenarios above, then undo where applicable. Repeat after disable/re-enable and switching panes. |
-| `lumiere.markdown.useForMarkdownInWorkspace` — Use Lumia for Markdown in This Workspace | unbound | On a disposable fixture, run Use Lumia for Markdown in This Workspace; confirm its named action using the plugin scenarios above, then undo where applicable. Repeat after disable/re-enable and switching panes. |
+| `lumiere.markdown.useForMarkdownInWorkspace` — Use Lumiere for Markdown in This Workspace | unbound | On a disposable fixture, run Use Lumiere for Markdown in This Workspace; confirm its named action using the plugin scenarios above, then undo where applicable. Repeat after disable/re-enable and switching panes. |
 | `lumiere.markdown.toggleTextEditor` — Toggle Text Editor | ctrl+e (Mac cmd+e); ctrl+e (Mac cmd+e) | On a disposable fixture, run Toggle Text Editor; confirm its named action using the plugin scenarios above, then undo where applicable. Repeat after disable/re-enable and switching panes. |
 | `lumiere.markdown.goToLine` — Go to Line… | ctrl+g (Mac ctrl+g) | On a disposable fixture, run Go to Line…; confirm its named action using the plugin scenarios above, then undo where applicable. Repeat after disable/re-enable and switching panes. |
 | `lumiere.markdown.insertEmbed` — Insert Embed | unbound | On a disposable fixture, run Insert Embed; confirm its named action using the plugin scenarios above, then undo where applicable. Repeat after disable/re-enable and switching panes. |

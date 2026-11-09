@@ -100,7 +100,7 @@ function open(
   };
 }
 
-test("the file's annotations come back as Lumia's and are saved with new ones, not the PDF's", async () => {
+test("the file's annotations come back as Lumiere's and are saved with new ones, not the PDF's", async () => {
   const stored = serializeAnnotations(
     bundle([{ ref: refOn(1) }, { ref: refOn(2) }]),
   )!;

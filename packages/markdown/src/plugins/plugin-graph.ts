@@ -22,7 +22,7 @@ export const ROOT_SERVICES: readonly ServiceName[] = [
   "pluginStates",
   // Only some hosts have a canvas (BootstrapOptions.ink).
   "ink",
-  // Only the extension has a PDF engine (Lumia PDF's, provided by its root).
+  // Only the extension has a PDF engine (Lumiere PDF's, provided by its root).
   "pdfOutlines",
 ];
 

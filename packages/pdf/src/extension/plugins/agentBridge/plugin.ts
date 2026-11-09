@@ -15,7 +15,7 @@ import { registerAgentBridge } from "./mcp/controller";
  * default).
  *
  * Naming: the plugin is `agentBridge`, its service is `AgentHandoff`, and its
- * clipboard command is `copyLinkForAgent`; Lumia uses the same
+ * clipboard command is `copyLinkForAgent`; Lumiere uses the same
  * names. `vscodeEmbedPdf.bridge.envelope` is the Workbench v1 selection
  * envelope (docs/bridge-envelope.md), separate from that clipboard text.
  */

@@ -4,7 +4,7 @@ import { onRegionDragChange, regionDrag } from "./region-drag";
 
 /**
  * The box of a region being dragged, on the page it began on. EmbedPDF's
- * selection layer drew it in v2; a region is Lumia's own gesture now.
+ * selection layer drew it in v2; a region is Lumiere's own gesture now.
  */
 export function RegionMarquee(): React.JSX.Element | null {
   const page = usePage();

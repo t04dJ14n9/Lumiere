@@ -8,7 +8,7 @@ import { openRange, withNativeSelectionOpen } from "./native-selection-open";
 import type { NativeNavigation } from "./navigation";
 
 /**
- * Open a markdown `#L…` target in Lumia with the same line selection
+ * Open a markdown `#L…` target in Lumiere with the same line selection
  * Open Copied Agent Reference applies via `startLine`/`endLine` reveal.
  * Caller must already authorize containment (source-links `authorize`).
  */

@@ -136,7 +136,7 @@ async function toggleActive(ctx: Context): Promise<void> {
 async function keepActive(ctx: Context): Promise<void> {
   const note = activeNote(ctx);
   if (!note) {
-    ctx.dialogs.error("Open a Marp deck to keep it in Lumia.");
+    ctx.dialogs.error("Open a Marp deck to keep it in Lumiere.");
     return;
   }
   await keepDeck(actions(ctx), note.uri);

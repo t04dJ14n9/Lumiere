@@ -1,6 +1,6 @@
 # Agent handoff format
 
-Lumia and Lumia PDF both hand a selection to an agent with
+Lumiere and Lumiere PDF both hand a selection to an agent with
 **Copy Link for Agent**, and agents (and skills written for them) should read
 one format. This file and `test/fixtures/agent-handoff-format.json` define it
 once, for both products; each product's unit tests check its formatter
@@ -28,12 +28,12 @@ raw links, never a chat-specific mention syntax.
 - After a blank line comes the selection, every line quoted with `> `
   (an empty line is a bare `>`), line endings normalised to `\n` and
   trailing newlines dropped.
-- Lumia saves the note first, so the lines are those on disk.
-  Lumia PDF's MCP tool `get_current_note_selection` returns the same text for a
-  note open in Lumia; for an unsaved note, which has no stable
+- Lumiere saves the note first, so the lines are those on disk.
+  Lumiere PDF's MCP tool `get_current_note_selection` returns the same text for a
+  note open in Lumiere; for an unsaved note, which has no stable
   line numbers, its reference reads `notes/a.md (unsaved, lines 12-18)`.
 
-## PDF selections (Lumia PDF)
+## PDF selections (Lumiere PDF)
 
 ```text
 > Scaled dot-product attention

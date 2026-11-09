@@ -30,7 +30,7 @@ a pinned tab (`EditorDropTarget` forces `pinned: true`) instead of delivering
 webview; the VS Code adapter watches pinned media tab opens instead (see
 `src/host/attachments-explorer-reclaim.ts`, wired through
 `customEditors.registerExplorerAttachmentReclaim`): when the prior active
-editor in that column was a Lumia note that is still open, it asks
+editor in that column was a Lumiere note that is still open, it asks
 "Add image.png to note.md as an attachment?" and leaves the media tab open.
 Only **Add to Note** closes the tab, copies the file into
 `files.attachmentFolder` under a timestamp name, and inserts the embed. Such an
@@ -70,7 +70,7 @@ dialog says the note was not changed.
 
 Injects `editors`, `vaults`, `workspace`, `settings`, `dialogs`,
 `hostDocuments` and `hostCommands`; optionally `customEditors`. Command:
-`lumiere.markdown.downloadAttachments`, in a Lumia note.
+`lumiere.markdown.downloadAttachments`, in a Lumiere note.
 
 Folder: `files.attachmentFolder` (Links). Links: `links.useWikilinks` and
 `links.newLinkFormat`. No filename-template setting in v1.
@@ -80,7 +80,7 @@ Folder: `files.attachmentFolder` (Links). Links: `links.useWikilinks` and
 A failed save leaves that item unchanged and shows a short error; no broken
 vault link is inserted. Other items in a multi-drop may still succeed.
 
-Single-click preview media while a Lumia note is focused is left alone
+Single-click preview media while a Lumiere note is focused is left alone
 (preview tabs are not offered). Any other pinned open of media in the note's
 group (a double-click, Quick Open, `code image.png`, Explorer drop without
 Shift) opens normally and shows the question; ignoring it keeps the image

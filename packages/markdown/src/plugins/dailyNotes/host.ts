@@ -11,7 +11,7 @@ import {
   type DailyNoteSettings,
 } from "./names";
 
-/** **Lumia: Daily Notes**: open or create the note for a day. */
+/** **Lumiere: Daily Notes**: open or create the note for a day. */
 export const dailyNotesHost: Plugin = {
   name: "dailyNotes",
   inject: {

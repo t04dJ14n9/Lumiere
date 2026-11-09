@@ -3,7 +3,7 @@
  * from anywhere (another device, another app, a sync conflict), and its
  * colours are written back into SVG markup, so nothing is trusted: the shape
  * is checked, colours must be hex, numbers finite, and sizes bounded. Values
- * a newer Lumia may add (a new ink, a new paper) fall back to one this
+ * a newer Lumiere may add (a new ink, a new paper) fall back to one this
  * version knows, so the sketch still shows.
  */
 import {
