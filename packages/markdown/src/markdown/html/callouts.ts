@@ -65,7 +65,9 @@ function transformCallout(
   if (paragraph?.type !== "paragraph_open" || inline?.type !== "inline") {
     return;
   }
-  const match = /^\[!([^\]\n]+)\]([+-])?(?:[ \t]+([^\n]*))?(?:\n|$)/.exec(
+  // `[^\S\n]` is any space but the newline: Obsidian's `\s` after the type
+  // takes a non-breaking or ideographic space too, as `isCallout` does.
+  const match = /^\[!([^\]\n]+)\]([+-])?(?:[^\S\n]+([^\n]*))?(?:\n|$)/.exec(
     inline.content,
   );
   if (!match) {

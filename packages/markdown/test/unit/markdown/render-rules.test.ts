@@ -57,6 +57,21 @@ test("a callout type that names an Object.prototype member is written as typed",
   );
 });
 
+test("a callout whose type is followed by any Unicode space still opens, as in Obsidian", () => {
+  assert.match(
+    renderMarkdown("> [!note]\u00a0Title\n> Body"),
+    /<aside class="callout" data-callout="note"><div class="callout-title"><span class="callout-title-text">Title<\/span>/,
+  );
+  assert.match(
+    renderMarkdown("> [!note]\u3000Title\n> Body"),
+    /<aside class="callout" data-callout="note"><div class="callout-title"><span class="callout-title-text">Title<\/span>/,
+  );
+  assert.match(
+    renderMarkdown("> [!note]\u00a0\n> Body"),
+    /<aside class="callout" data-callout="note"><div class="callout-title"><span class="callout-title-text">Note<\/span>/,
+  );
+});
+
 test("an untitled callout of a hyphenated type reads as words, as in Obsidian", () => {
   assert.match(
     renderMarkdown("> [!unknown-type]\n> Body"),
