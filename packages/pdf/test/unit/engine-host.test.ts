@@ -133,6 +133,44 @@ test("an engine given up on while it starts is stopped on arrival, never handed 
   assert.deepEqual(created, ["worker", "main-thread"]);
 });
 
+test("the next engine waits for the stop of one that arrived after it was given up on", async () => {
+  const { env, finishStart, finishStop, created, settle } = environment();
+  const host = new EngineHost(env);
+  const worker = host.engine("worker");
+  const rejected = assert.rejects(worker, EngineHostDisposedError);
+  await settle();
+  const main = host.engine("main-thread");
+  const late = await finishStart();
+  await rejected;
+  await settle();
+  assert.deepEqual(created, ["worker"], "the late engine is still stopping");
+  assert.equal(late.destroyed, false);
+  await finishStop();
+  assert.equal(late.destroyed, true);
+  const started = await finishStart();
+  assert.equal(await main, started);
+  assert.deepEqual(created, ["worker", "main-thread"]);
+});
+
+test("dispose while the engine starts resolves once it has arrived and stopped", async () => {
+  const { env, finishStart, finishStop, settle } = environment();
+  const host = new EngineHost(env);
+  const worker = host.engine("worker");
+  const rejected = assert.rejects(worker, EngineHostDisposedError);
+  await settle();
+  let done = false;
+  const disposed = host.dispose().then(() => {
+    done = true;
+  });
+  const late = await finishStart();
+  await rejected;
+  await settle();
+  assert.equal(done, false, "waits for the late engine to stop");
+  await finishStop();
+  await disposed;
+  assert.equal(late.destroyed, true);
+});
+
 test("an engine asked for and given up before its turn is never made", async () => {
   const { env, finishStart, finishStop, created } = environment();
   const host = new EngineHost(env);

@@ -20,12 +20,14 @@ function setup(pdfs: Record<string, Stamp>) {
     stat: 0,
     read: [] as string[],
     engines: 0,
+    disposed: 0,
     opened: [] as string[],
     log: [] as string[],
   };
   let running = 0;
   let overlap = false;
   const gate = { wait: Promise.resolve() as Promise<unknown> };
+  const readGate = { wait: Promise.resolve() as Promise<unknown> };
   const files: OutlineFiles = {
     async stat(uri) {
       calls.stat++;
@@ -33,6 +35,7 @@ function setup(pdfs: Record<string, Stamp>) {
     },
     async read(uri) {
       calls.read.push(uri);
+      await readGate.wait;
       return new TextEncoder().encode(uri);
     },
   };
@@ -50,7 +53,9 @@ function setup(pdfs: Record<string, Stamp>) {
         }
         return [{ title: `Title of ${uri}`, page: 1, depth: 0 }];
       },
-      async dispose() {},
+      async dispose() {
+        calls.disposed++;
+      },
     };
   };
   const reader = new PdfOutlineReader({
@@ -58,7 +63,7 @@ function setup(pdfs: Record<string, Stamp>) {
     engine,
     log: (message) => calls.log.push(message),
   });
-  return { reader, stamps, calls, gate, overlapped: () => overlap };
+  return { reader, stamps, calls, gate, readGate, overlapped: () => overlap };
 }
 
 const titles = (sections: readonly OutlineSection[]) =>
@@ -166,4 +171,20 @@ test("after dispose nothing is read", async () => {
   reader.dispose();
   assert.deepEqual(await reader.sections("file:///a.pdf"), []);
   assert.equal(calls.read.length, 1);
+});
+
+test("disposing while the first PDF is being read leaves no PDFium running", async () => {
+  const { reader, calls, readGate } = setup({
+    "file:///a.pdf": { mtime: 1, size: 10 },
+  });
+  let release!: () => void;
+  readGate.wait = new Promise<void>((resolve) => (release = resolve));
+  const pending = reader.sections("file:///a.pdf");
+  await new Promise((resolve) => setTimeout(resolve, 10));
+  assert.deepEqual(calls.read, ["file:///a.pdf"]);
+  reader.dispose();
+  release();
+  await pending;
+  await new Promise((resolve) => setTimeout(resolve, 10));
+  assert.equal(calls.disposed, calls.engines);
 });

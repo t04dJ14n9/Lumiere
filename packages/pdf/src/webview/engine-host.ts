@@ -47,6 +47,8 @@ export class EngineHostDisposedError extends Error {
 interface Entry<Engine> {
   readonly mode: EngineMode;
   readonly engine: Promise<Engine>;
+  /** The stop of the engine that arrived after this entry was given up on. */
+  lateStop?: Promise<void>;
 }
 
 export class EngineHost<Engine> {
@@ -105,20 +107,21 @@ export class EngineHost<Engine> {
       }
       throw error;
     }
-    // Given up while starting.
+    // Given up while starting. The entry's own stop (`stop()`) waits for this
+    // one, so neither `dispose()` nor the next engine gets ahead of it.
     if (this.current !== entry) {
-      this.track(this.destroy(engine));
+      entry.lateStop = this.destroy(engine);
       throw new EngineHostDisposedError();
     }
     return engine;
   }
 
-  /** Stop an entry's engine once it exists (an entry given up on rejects, and has none). */
+  /** Stop an entry's engine once it exists, or the one that arrived after it was given up on. */
   private stop(entry: Entry<Engine>): void {
     this.track(
       entry.engine.then(
         (engine) => this.destroy(engine),
-        () => undefined,
+        () => entry.lateStop,
       ),
     );
   }
