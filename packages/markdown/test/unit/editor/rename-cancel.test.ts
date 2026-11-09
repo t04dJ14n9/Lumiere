@@ -9,6 +9,9 @@ class FakeUri {
     return new FakeUri(value);
   }
   constructor(private readonly value: string) {}
+  get path() {
+    return this.value.replace("file://", "");
+  }
   toString() {
     return this.value;
   }
@@ -78,6 +81,7 @@ function setup(notes: Record<string, string>) {
   let willListener: ((event: WillRenameEvent) => void) | undefined;
   const applied: string[] = [];
   const failures: ((uri: string) => boolean)[] = [];
+  const warnings: string[] = [];
 
   const fakeVscode = {
     Uri: FakeUri,
@@ -85,7 +89,12 @@ function setup(notes: Record<string, string>) {
     Range: FakeRange,
     WorkspaceEdit: FakeWorkspaceEdit,
     TabInputCustom: FakeTabInputCustom,
-    window: { tabGroups: { all: [] } },
+    window: {
+      tabGroups: { all: [] },
+      showWarningMessage(message: string) {
+        warnings.push(message);
+      },
+    },
     workspace: {
       textDocuments: docs,
       onWillRenameFiles(listener: typeof willListener) {
@@ -152,6 +161,7 @@ function setup(notes: Record<string, string>) {
     docs,
     applied,
     failures,
+    warnings,
     didListeners,
     doc: (uri: string) => docs.find((d) => d.uri.toString() === uri)!,
     onWillRename: hostDocuments.onWillRename,
@@ -306,4 +316,48 @@ test("a retry does not overwrite what the user typed into a note already updated
 
   assert.equal(world.doc(first).text, "typed meanwhile\n");
   assert.equal(world.doc(second).text, "[[New]]\n");
+});
+
+test("a note typed into after the plan is made keeps its text, and the user is told", async () => {
+  const world = setup({ [LINKER]: "See [[Old]].\n" });
+  world.onWillRename(async () => [
+    { uri: LINKER, edits: relinkOld(world.doc(LINKER).text, "New") },
+  ]);
+
+  await world.willRename([[OLD, NEW]]);
+  world.doc(LINKER).text = "Typed meanwhile.\nSee [[Old]].\n";
+  world.doc(LINKER).isDirty = true;
+  await world.didRename([[OLD, NEW]]);
+
+  assert.equal(world.doc(LINKER).text, "Typed meanwhile.\nSee [[Old]].\n");
+  assert.equal(world.doc(LINKER).saved, 0);
+  assert.deepEqual(world.applied, []);
+  assert.deepEqual(world.warnings, [
+    "Links in Linker.md were not updated. Check them after the rename.",
+  ]);
+});
+
+test("a retry after a failed apply does not overwrite what the user typed meanwhile", async () => {
+  const world = setup({ [LINKER]: "See [[Old]].\n" });
+  world.onWillRename(async () => [
+    { uri: LINKER, edits: relinkOld(world.doc(LINKER).text, "New") },
+  ]);
+  // The first apply fails, and the user types before the settle loop tries again.
+  let failed = false;
+  world.failures.push(() => {
+    if (failed) {
+      return false;
+    }
+    failed = true;
+    world.doc(LINKER).text = "Typed meanwhile.\nSee [[Old]].\n";
+    return true;
+  });
+
+  await world.willRename([[OLD, NEW]]);
+  await world.didRename([[OLD, NEW]]);
+  await new Promise((resolve) => setTimeout(resolve, 400));
+
+  assert.equal(world.doc(LINKER).text, "Typed meanwhile.\nSee [[Old]].\n");
+  assert.equal(world.doc(LINKER).saved, 0);
+  assert.equal(world.warnings.length, 1);
 });

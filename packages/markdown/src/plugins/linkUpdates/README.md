@@ -24,6 +24,10 @@ from the notes' current text), and builds the edits once, after the
 answer, so text typed while the dialog is open is what gets rewritten. The edits are applied together
 with the rename, so one undo reverts them.
 
+When the rename finishes, each note is brought to the text planned for it and
+saved if it had no unsaved changes. A note edited after the plan was made is
+left as it is, and a message names the notes whose links were not updated.
+
 ## Rename Heading
 
 Rename Heading… renames the heading at the caret and updates the links to
