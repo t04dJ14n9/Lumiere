@@ -205,7 +205,11 @@ function postRenameUri(
   return uri;
 }
 
-/** Open buffer text, or the file on disk without stamping a TextDocument version. */
+/**
+ * Open buffer text, or the file on disk without stamping a TextDocument
+ * version. Disk bytes are decoded as the vault decodes them, which drops a
+ * BOM as VS Code does, so both read as a document's text would.
+ */
 async function noteTextForLinkUpdate(uri: string): Promise<string> {
   const open = vscode.workspace.textDocuments.find(
     (document) => document.uri.toString() === uri,
@@ -214,7 +218,7 @@ async function noteTextForLinkUpdate(uri: string): Promise<string> {
     return open.getText();
   }
   const bytes = await vscode.workspace.fs.readFile(vscode.Uri.parse(uri));
-  return Buffer.from(bytes).toString("utf8");
+  return new TextDecoder().decode(bytes);
 }
 
 // Preview → Apply can lag well after onDidRenameFiles; keep trying so a slow
@@ -303,8 +307,8 @@ async function ensureNoteUpdated(
 ): Promise<NoteOutcome> {
   const target = vscode.Uri.parse(uri);
   let document = await vscode.workspace.openTextDocument(target);
-  if (document.getText() !== note.after) {
-    if (document.getText() !== note.before) {
+  if (!isSameText(document.getText(), note.after)) {
+    if (!isSameText(document.getText(), note.before)) {
       return "changed";
     }
     // Full-document replace: line/col from onWill stay valid only against the
@@ -320,7 +324,7 @@ async function ensureNoteUpdated(
       return "retry";
     }
     document = await vscode.workspace.openTextDocument(target);
-    if (document.getText() !== note.after) {
+    if (!isSameText(document.getText(), note.after)) {
       return "retry";
     }
   }
@@ -328,6 +332,15 @@ async function ensureNoteUpdated(
     return "retry";
   }
   return "updated";
+}
+
+/**
+ * Whether two texts of one note are the same. VS Code keeps a document in one
+ * line-ending style, so a note read from a file with mixed endings differs
+ * from its document only in them.
+ */
+function isSameText(a: string, b: string): boolean {
+  return a.replace(/\r\n?/g, "\n") === b.replace(/\r\n?/g, "\n");
 }
 
 /** Tells the user which notes kept their old links. */
