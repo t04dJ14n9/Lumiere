@@ -46,16 +46,7 @@ export function tableMarkdown(
   convert: (node: HTMLElement) => string,
 ): string {
   const rows = Array.from(node.querySelectorAll("tr"))
-    .map((row) =>
-      Array.from(row.children)
-        .filter((cell) => /^(TD|TH)$/.test(cell.nodeName))
-        .map((cell) =>
-          convert(cell as HTMLElement)
-            .trim()
-            .replace(/\n+/g, " ")
-            .replace(/\|/g, "\\|"),
-        ),
-    )
+    .map(rowSlots)
     .filter((row) => row.length);
   const columns = Math.max(0, ...rows.map((row) => row.length));
   if (!columns) {
@@ -63,13 +54,47 @@ export function tableMarkdown(
   }
   // Compact, with each column's alignment and short rows left short, as
   // Obsidian writes a pasted table.
-  const lines = rows.map((row) => `|${row.join("|")}|`);
-  const header = node.querySelector("tr");
+  const lines = rows.map(
+    (row) =>
+      `|${row.map((cell) => (cell ? cellMarkdown(cell, convert) : "")).join("|")}|`,
+  );
+  const header = rows[0]!;
   const rule = Array.from({ length: columns }, (_, index) =>
-    alignmentRule(header?.children[index] as HTMLElement | undefined),
+    alignmentRule(header[index]),
   );
   lines.splice(1, 0, `|${rule.join("|")}|`);
   return `\n\n${lines.join("\n")}\n\n`;
+}
+
+/**
+ * A row's cells, one slot per column. Markdown tables cannot merge cells, so
+ * a cell spanning columns is followed by empty slots for the columns it
+ * covers (as Obsidian pastes it), and the cells after it keep their columns.
+ * Row spans are left alone, as Obsidian leaves them.
+ */
+function rowSlots(row: Element): (HTMLElement | undefined)[] {
+  return Array.from(row.children)
+    .filter((cell) => /^(TD|TH)$/.test(cell.nodeName))
+    .flatMap((cell) => {
+      const span = Number.parseInt(cell.getAttribute("colspan") ?? "", 10);
+      const extra = Number.isFinite(span) ? Math.max(0, span - 1) : 0;
+      return [cell as HTMLElement, ...Array<undefined>(extra).fill(undefined)];
+    });
+}
+
+/**
+ * A cell on its one Markdown line: a line break inside it becomes `<br>`, as
+ * Obsidian writes it (Shift+Enter in a table cell stores the same), and `|`
+ * is escaped.
+ */
+function cellMarkdown(
+  cell: HTMLElement,
+  convert: (node: HTMLElement) => string,
+): string {
+  return convert(cell)
+    .trim()
+    .replace(/[ \t]*\r?\n[ \t]*/g, "<br>")
+    .replace(/\|/g, "\\|");
 }
 
 /** A column's delimiter row cell: `:--`, `--:`, `:-:` or `---`. */
