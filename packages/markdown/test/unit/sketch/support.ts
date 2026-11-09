@@ -59,7 +59,12 @@ export function memoryFiles(
   const folders = new Set<string>([ROOT]);
   const api: Pick<
     WorkspaceFiles,
-    "readText" | "writeText" | "writeBytes" | "list" | "mkdir"
+    | "readText"
+    | "writeText"
+    | "writeBytes"
+    | "list"
+    | "mkdir"
+    | "isSymbolicLink"
   > = {
     readText: async (uri) => files.get(uri),
     writeText: async (uri, text) => {
@@ -81,6 +86,7 @@ export function memoryFiles(
     mkdir: async (uri) => {
       folders.add(uri);
     },
+    isSymbolicLink: async () => false,
   };
   return { files, folders, api };
 }

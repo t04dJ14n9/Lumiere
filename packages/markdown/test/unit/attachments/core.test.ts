@@ -158,7 +158,7 @@ test("saveAttachment writes under files.attachmentFolder with timestamp name", a
   const written = new Map<string, Uint8Array | string>();
   const files: Pick<
     WorkspaceFiles,
-    "list" | "mkdir" | "writeText" | "writeBytes"
+    "list" | "mkdir" | "writeText" | "writeBytes" | "isSymbolicLink"
   > = {
     list: async () => [],
     mkdir: async () => {},
@@ -168,6 +168,7 @@ test("saveAttachment writes under files.attachmentFolder with timestamp name", a
     writeBytes: async (uri, data) => {
       written.set(uri, data);
     },
+    isSymbolicLink: async () => false,
   };
   const date = new Date(2026, 9, 30, 14, 52);
   const saved = await saveAttachment({
@@ -189,6 +190,65 @@ test("saveAttachment writes under files.attachmentFolder with timestamp name", a
     written.has("file:///vault/assets/2026-10-30%2014.52.png") ||
       [...written.keys()].some((k) => k.includes("14.52")),
   );
+});
+
+test("saveAttachment writes nothing where a symbolic link is on the way", async () => {
+  const cases = [
+    { name: "the attachment folder", folder: "assets", links: ["assets"] },
+    {
+      name: "a folder above it",
+      folder: "Media/assets",
+      links: ["Media"],
+    },
+    {
+      name: "the new file",
+      folder: "assets",
+      links: ["assets/2026-10-30 14.52.png"],
+    },
+  ];
+  for (const { name, folder, links } of cases) {
+    const touched: string[] = [];
+    const linked = new Set(
+      links.map((link) => `file:///vault/${encodeURI(link)}`),
+    );
+    const files: Pick<
+      WorkspaceFiles,
+      "list" | "mkdir" | "writeText" | "writeBytes" | "isSymbolicLink"
+    > = {
+      // The folder reads as missing, so a write would create it first.
+      list: async () => undefined,
+      mkdir: async (uri) => {
+        touched.push(uri);
+      },
+      writeText: async (uri) => {
+        touched.push(uri);
+      },
+      writeBytes: async (uri) => {
+        touched.push(uri);
+      },
+      isSymbolicLink: async (uri) => linked.has(uri),
+    };
+    const saved = await saveAttachment({
+      files,
+      root: "file:///vault",
+      notePath: "Notes/A.md",
+      attachmentFolder: folder,
+      useWikilinks: true,
+      format: "shortest",
+      ext: "png",
+      bytes: new Uint8Array([1, 2, 3]),
+      now: new Date(2026, 9, 30, 14, 52),
+      vaultPaths: [],
+    });
+    assert.equal(saved, undefined, name);
+    assert.deepEqual(
+      touched.filter((uri) =>
+        [...linked].some((link) => uri === link || uri.startsWith(`${link}/`)),
+      ),
+      [],
+      name,
+    );
+  }
 });
 
 test("sketch and attachments share the same folder resolution", () => {

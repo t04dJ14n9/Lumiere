@@ -4,7 +4,7 @@
  * the returned embed matches sketch / Obsidian rules.
  */
 import { lookupKey } from "../shared/vault-path";
-import { joinContained } from "../shared/workspace-path";
+import { joinContained, walksSymbolicLink } from "../shared/workspace-path";
 import type { WorkspaceFiles } from "../shared/workspace-files";
 import { embedFor, type EmbedLink } from "./embed";
 import { resolveAttachmentDir } from "./folder";
@@ -13,7 +13,7 @@ import { uniqueName, uniqueTimestampName } from "./naming";
 export interface SaveAttachmentInput {
   readonly files: Pick<
     WorkspaceFiles,
-    "list" | "mkdir" | "writeText" | "writeBytes"
+    "list" | "mkdir" | "writeText" | "writeBytes" | "isSymbolicLink"
   >;
   /** The vault's root URI. */
   readonly root: string;
@@ -45,13 +45,16 @@ export interface SavedAttachment {
   readonly isNameUnique: boolean;
 }
 
-/** Write one attachment; undefined when the folder or write fails containment. */
+/**
+ * Write one attachment; undefined when the folder or write fails containment,
+ * or when a symbolic link is on the way: it could lead out of the vault.
+ */
 export async function saveAttachment(
   input: SaveAttachmentInput,
 ): Promise<SavedAttachment | undefined> {
   const folder = resolveAttachmentDir(input.attachmentFolder, input.notePath);
   const folderUri = folder ? joinContained(input.root, folder) : input.root;
-  if (!folderUri) {
+  if (!folderUri || (folder && (await followsLink(input, folder)))) {
     return undefined;
   }
   const existing = await input.files.list(folderUri);
@@ -64,7 +67,7 @@ export async function saveAttachment(
       : uniqueName(input.stem, input.ext.replace(/^\./u, ""), existing ?? []);
   const path = folder ? `${folder}/${name}` : name;
   const uri = joinContained(input.root, path);
-  if (!uri) {
+  if (!uri || (await followsLink(input, path))) {
     return undefined;
   }
   if (input.bytes) {
@@ -90,4 +93,11 @@ export async function saveAttachment(
       isNameUnique,
     }),
   };
+}
+
+function followsLink(
+  { files, root }: SaveAttachmentInput,
+  relative: string,
+): Promise<boolean> {
+  return walksSymbolicLink(relative, root, (uri) => files.isSymbolicLink(uri));
 }

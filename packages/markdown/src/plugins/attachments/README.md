@@ -79,7 +79,9 @@ Folder: `files.attachmentFolder` (Links). Links: `links.useWikilinks` and
 ## Limits
 
 A failed save leaves that item unchanged and shows a short error; no broken
-vault link is inserted. Other items in a multi-drop may still succeed.
+vault link is inserted. Other items in a multi-drop may still succeed. An
+attachment folder that is a symbolic link, or sits behind one, is not written
+to: a link could lead out of the vault, so that save fails the same way.
 
 Single-click preview media while a Lumiere note is focused is left alone
 (preview tabs are not offered). Any other pinned open of media in the note's
