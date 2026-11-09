@@ -111,6 +111,13 @@ button {
   padding: calc(var(--file-margin-top) + var(--lumiere-inset-top, 0px))
     var(--file-margins) 40vh;
   caret-color: var(--vscode-editorCursor-foreground, currentColor);
+  /*
+   * .cm-content is a flex item of .cm-scroller, so with min-width: auto one
+   * wide block (a large image, an HTML <pre>) sets the width of the whole
+   * note, and every paragraph wraps past the pane's right edge. At 0 the
+   * note keeps the pane's width and the wide block scrolls on its own.
+   */
+  min-width: 0;
 }
 #app .cm-line {
   padding: 0 2px;
