@@ -22,6 +22,8 @@ export class PanelAnnotations implements Subscription {
   readonly embeddedEdit = new Emitter<void>();
   private readonly save: AnnotationSave;
   private readonly store: AnnotationStore;
+  /** Where the save that failed last was going: Retry repeats that one. */
+  private failure: "file" | "pdf" = "file";
 
   constructor(
     fileUri: string,
@@ -37,12 +39,15 @@ export class PanelAnnotations implements Subscription {
       post: deps.post,
       error: (message) => host.error(message),
       conflict: (payload) => this.conflict.fire(payload),
-      failed: (message) => this.failed.fire(message),
+      failed: (message) => this.fail("pdf", message),
+      saved: () => {
+        this.failure = "file";
+      },
     });
     this.store = new AnnotationStore(fileUri, host.files, source, {
       isCurrentLoad: deps.isCurrentLoad,
       error: (message) => host.error(message),
-      failed: (message) => this.failed.fire(message),
+      failed: (message) => this.fail("file", message),
     });
   }
 
@@ -53,6 +58,11 @@ export class PanelAnnotations implements Subscription {
 
   keepMine(data: ArrayBuffer, load: number): Promise<void> {
     return this.save.keepMine(data, load);
+  }
+
+  /** Whether the save that failed last wrote the PDF, so Retry must write it again. */
+  get retryWritesPdf(): boolean {
+    return this.failure === "pdf";
   }
 
   /** Apply an annotation message from the viewer. */
@@ -68,7 +78,7 @@ export class PanelAnnotations implements Subscription {
         if (this.deps.isCurrentLoad(message.load)) {
           this.save.markFailed();
           this.host.error(`Could not save PDF annotations: ${message.message}`);
-          this.failed.fire(message.message);
+          this.fail("file", message.message);
         }
         return;
       case "annotationExport":
@@ -82,6 +92,11 @@ export class PanelAnnotations implements Subscription {
         }
         return;
     }
+  }
+
+  private fail(failure: "file" | "pdf", message: string): void {
+    this.failure = failure;
+    this.failed.fire(message);
   }
 
   dispose(): void {

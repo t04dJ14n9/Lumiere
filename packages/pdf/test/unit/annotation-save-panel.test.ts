@@ -179,6 +179,83 @@ test("Keep mine that cannot write reports the failure as a save does", async () 
   assert.ok(result && result.type === "annotationSaveResult" && !result.ok);
 });
 
+test("Retry after a failed write into the PDF asks for the PDF write again", async () => {
+  const { posted, receive, panel } = open({
+    writeAtomic: async () => {
+      throw new Error("EACCES: permission denied");
+    },
+  });
+  await receive({ type: "ready" });
+  const load = posted.find((m) => m.type === "load");
+  assert.ok(load && load.type === "load");
+  await receive(save(load.load, INITIAL_SHA, bytesOf(1)));
+  panel.postAnnotationRetry();
+  assert.deepEqual(posted.at(-1), {
+    type: "annotationWrite",
+    load: load.load,
+    to: "pdf",
+  });
+});
+
+test("Retry after a failed Keep mine asks for the PDF write again", async () => {
+  const { posted, receive, panel } = open({
+    writeAtomic: async () => {
+      throw new Error("EACCES: permission denied");
+    },
+  });
+  await receive({ type: "ready" });
+  const load = posted.find((m) => m.type === "load");
+  assert.ok(load && load.type === "load");
+  await panel.keepMine(new ArrayBuffer(4), load.load);
+  panel.postAnnotationRetry();
+  assert.deepEqual(posted.at(-1), {
+    type: "annotationWrite",
+    load: load.load,
+    to: "pdf",
+  });
+});
+
+test("Retry goes back to the annotation file once the PDF is saved", async () => {
+  let failing = true;
+  const { posted, receive, panel } = open({
+    writeAtomic: async (_uri, bytes) => {
+      if (failing) {
+        throw new Error("EACCES: permission denied");
+      }
+      return { sha256: createHash("sha256").update(bytes).digest("hex") };
+    },
+  });
+  await receive({ type: "ready" });
+  const load = posted.find((m) => m.type === "load");
+  assert.ok(load && load.type === "load");
+  await receive(save(load.load, INITIAL_SHA, bytesOf(1)));
+  failing = false;
+  await receive(save(load.load, INITIAL_SHA, bytesOf(1)));
+  panel.postAnnotationRetry();
+  assert.deepEqual(posted.at(-1), { type: "annotationRetry", load: load.load });
+});
+
+test("Retry repeats the annotation file save when that failed after the PDF write", async () => {
+  const { posted, receive, panel } = open({
+    writeAtomic: async () => {
+      throw new Error("EACCES: permission denied");
+    },
+    annotations: {
+      read: async () => undefined,
+      write: async () => {
+        throw new Error("disk full");
+      },
+    },
+  });
+  await receive({ type: "ready" });
+  const load = posted.find((m) => m.type === "load");
+  assert.ok(load && load.type === "load");
+  await receive(save(load.load, INITIAL_SHA, bytesOf(1)));
+  await receive({ type: "annotationStoreSave", load: load.load, text: "A" });
+  panel.postAnnotationRetry();
+  assert.deepEqual(posted.at(-1), { type: "annotationRetry", load: load.load });
+});
+
 test("annotationSave conflicts when disk hash diverges", async () => {
   let writes = 0;
   const { posted, receive, panel } = open({
