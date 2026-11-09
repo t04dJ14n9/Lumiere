@@ -317,7 +317,12 @@ export class PdfViewerPanel {
     await this.annotations.keepMine(data, load);
   }
 
+  /** Repeat the save that failed: into the PDF (the viewer exports it again) or into the annotation file. */
   postAnnotationRetry(): void {
+    if (this.annotations.retryWritesPdf) {
+      this.writeAnnotations("pdf");
+      return;
+    }
     this.post({ type: "annotationRetry", load: this.loads });
   }
 

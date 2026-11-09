@@ -51,11 +51,14 @@ export class PdfSource {
   }
 
   async diskMatchesBase(): Promise<boolean> {
-    if (!this.sha256 || !this.files.hash) {
+    // Taken before the read: a reload that lands meanwhile replaces `sha256`,
+    // and a file another program changed would then match itself.
+    const base = this.sha256;
+    if (!base || !this.files.hash) {
       return true;
     }
     try {
-      return (await this.files.hash(this.uri)) === this.sha256;
+      return (await this.files.hash(this.uri)) === base;
     } catch {
       return false;
     }

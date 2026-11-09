@@ -28,6 +28,7 @@ export class AnnotationSave {
       error: (message: string) => void;
       conflict: (payload: { data: ArrayBuffer; load: number }) => void;
       failed: (message: string) => void;
+      saved: () => void;
     },
   ) {}
 
@@ -100,7 +101,13 @@ export class AnnotationSave {
       });
       return;
     }
-    if (!(await this.source.diskMatchesBase())) {
+    const diskMatches = await this.source.diskMatchesBase();
+    // A reload during the check gave the viewer other bytes than these; a
+    // conflict could no longer be settled with Keep mine.
+    if (!this.deps.isCurrentLoad(message.load)) {
+      return;
+    }
+    if (!diskMatches) {
       this.reportConflict(message, "The PDF was modified on disk.");
       return;
     }
@@ -123,6 +130,7 @@ export class AnnotationSave {
       const written = await writeAtomic(this.fileUri, bytes);
       this.wrote(load, written.sha256);
       this.dirty = "clean";
+      this.deps.saved();
       this.deps.post({
         type: "annotationSaveResult",
         load,
