@@ -285,6 +285,25 @@ test("a title with escaped quotes survives a rename", () => {
   );
 });
 
+test("a parenthesized title with an escaped parenthesis survives a rename", () => {
+  const text = [
+    "[a](Old.md (a\\)b))",
+    "[b](Old.md (a\\(b))",
+    "[c](Old.md (ab))",
+    "[d](<Old.md> (a\\)b))",
+  ].join("\n");
+  const ctx = context({ ...vault, "A.md": text }, { "Old.md": "New.md" });
+  assert.equal(
+    apply(text, rewriteLinks(text, "A.md", ctx)),
+    [
+      "[a](New.md (a\\)b))",
+      "[b](New.md (a\\(b))",
+      "[c](New.md (ab))",
+      "[d](<New.md> (a\\)b))",
+    ].join("\n"),
+  );
+});
+
 test("a moved note's own links keep their text", () => {
   const text = "[sub/Deep](sub/Deep.md)";
   const ctx = context(
