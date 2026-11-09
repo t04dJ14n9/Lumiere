@@ -122,6 +122,28 @@ export function decodeLinkPath(link: string): string {
 }
 
 /**
+ * The path a link's text names. A Markdown link's path arrives split from
+ * its `#subpath` and decoded, so a `#` in it is part of a file name; a
+ * wikilink's text still holds its subpath.
+ */
+export function linkpathOfText(linktext: string, syntax: LinkSyntax): string {
+  return syntax === "markdown" ? linktext.trim() : splitLinktext(linktext).path;
+}
+
+/**
+ * A Markdown link destination split at its first literal `#`, then decoded
+ * part by part: an encoded `%23` stays in the path as the `#` of a file
+ * name, and only a literal `#` starts the subpath.
+ */
+export function splitMarkdownDestination(destination: string): Linkpath {
+  const { path, subpath } = splitLinktext(destination);
+  return {
+    path: decodeLinkPath(path).trim(),
+    subpath: decodeLinkPath(subpath),
+  };
+}
+
+/**
  * A link path without a note's `.md`, as Obsidian names an unresolved link:
  * `[[Note.md]]` and `[[Note]]` are the same missing note.
  */

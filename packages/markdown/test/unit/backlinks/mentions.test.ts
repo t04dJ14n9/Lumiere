@@ -28,6 +28,18 @@ test("linked lines give one trimmed context line per link to the target", () => 
   );
 });
 
+test("linked lines tell the target check which syntax wrote each link", () => {
+  const seen: [string, string][] = [];
+  linkedLines("[[Note]] [m](chapter%231.md)", (linkpath, syntax) => {
+    seen.push([linkpath, syntax]);
+    return false;
+  });
+  assert.deepEqual(seen, [
+    ["Note", "wikilink"],
+    ["chapter#1.md", "markdown"],
+  ]);
+});
+
 test("unlinked mentions match whole words, any case, outside links and properties", () => {
   const text = [
     "---",

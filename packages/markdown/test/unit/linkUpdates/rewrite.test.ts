@@ -1,5 +1,10 @@
 import test from "node:test";
 import assert from "node:assert/strict";
+import { metadata } from "../../../src/markdown/metadata";
+import {
+  linkpathOf,
+  vaultLinks,
+} from "../../../src/markdown/metadata/linkpaths";
 import { rewriteLinks } from "../../../src/plugins/linkUpdates/rewrite";
 import type { RewriteContext } from "../../../src/plugins/linkUpdates/rewrite";
 import { memoryVaults } from "../views/fakes";
@@ -30,7 +35,8 @@ function context(
   const map = new Map(Object.entries(renames));
   return {
     renames: map,
-    resolve: (linkpath, source) => index.resolveLink(linkpath, source)?.path,
+    resolve: (linkpath, source, syntax) =>
+      index.resolveLink(linkpath, source, syntax)?.path,
     pathsAfter: index.files().map((file) => map.get(file.path) ?? file.path),
     format,
   };
@@ -160,6 +166,34 @@ test("a bare destination encodes backslashes as well as spaces", () => {
   );
 });
 
+test("a bare destination encodes the parentheses that have no partner", () => {
+  const text = "[a](Old.md)";
+  const written = {
+    "New).md": "[a](New%29.md)",
+    "New(.md": "[a](New%28.md)",
+    "a (1) b).md": "[a](a%20(1)%20b%29.md)",
+    ")a(.md": "[a](%29a%28.md)",
+  };
+  for (const [name, link] of Object.entries(written)) {
+    const ctx = context({ ...vault, "A.md": text }, { "Old.md": name });
+    const result = apply(text, rewriteLinks(text, "A.md", ctx));
+    assert.equal(result, link);
+    // The parser reads the written link back as a link to the new name.
+    assert.deepEqual(vaultLinks(metadata(result)).map(linkpathOf), [name]);
+  }
+});
+
+test("a # in a new name is written %23, so the link reads back to that file", () => {
+  const text = "[a](Old.md) [b](Old.md#Part) [c](<Old.md#Part>)";
+  const ctx = context({ ...vault, "A.md": text }, { "Old.md": "a#b.md" });
+  const result = apply(text, rewriteLinks(text, "A.md", ctx));
+  assert.equal(result, "[a](a%23b.md) [b](a%23b.md#Part) [c](<a%23b.md#Part>)");
+  const { index } = memoryVaults({ "A.md": result, "a#b.md": "" });
+  assert.deepEqual(Object.fromEntries(index.resolvedLinks("A.md")), {
+    "a#b.md": 3,
+  });
+});
+
 // Obsidian 1.15.0's rule for link text on rename, read from its link
 // updater with REA (2026-11-07).
 test("text showing the renamed file's name follows it; the writer's own text stays", () => {
@@ -230,6 +264,34 @@ test("link text written from a new name escapes brackets and backslashes", () =>
   );
 });
 
+test("link text escaped by one rename follows the next rename", () => {
+  const text = "[Old](Old.md) [sub/Deep](sub/Deep.md)";
+  const firstRenames = {
+    "Old.md": "a[b]\\c.md",
+    "sub/Deep.md": "lib/De]ep.md",
+  };
+  const escaped = apply(
+    text,
+    rewriteLinks(
+      text,
+      "A.md",
+      context({ ...vault, "A.md": text }, firstRenames, "absolute"),
+    ),
+  );
+  const notes = { "a[b]\\c.md": "", "lib/De]ep.md": "", "A.md": escaped };
+  const secondRenames = {
+    "a[b]\\c.md": "Final.md",
+    "lib/De]ep.md": "lib/Last.md",
+  };
+  assert.equal(
+    apply(
+      escaped,
+      rewriteLinks(escaped, "A.md", context(notes, secondRenames, "absolute")),
+    ),
+    "[Final](Final.md) [lib/Last](lib/Last.md)",
+  );
+});
+
 test("a bare destination may hold a literal quote, as the parser reads it", () => {
   const text = '[a](Old"note.md) [b](Old"note.md "Title")';
   const notes = { 'Old"note.md': "", "A.md": text };
@@ -254,6 +316,56 @@ test("a title with escaped quotes survives a rename", () => {
       "[b](New%20(1).md 'it\\'s')",
       '[c](<New (1).md> "Say \\"hello\\"")',
     ].join("\n"),
+  );
+});
+
+test("a parenthesized title with an escaped parenthesis survives a rename", () => {
+  const text = [
+    "[a](Old.md (a\\)b))",
+    "[b](Old.md (a\\(b))",
+    "[c](Old.md (ab))",
+    "[d](<Old.md> (a\\)b))",
+  ].join("\n");
+  const ctx = context({ ...vault, "A.md": text }, { "Old.md": "New.md" });
+  assert.equal(
+    apply(text, rewriteLinks(text, "A.md", ctx)),
+    [
+      "[a](New.md (a\\)b))",
+      "[b](New.md (a\\(b))",
+      "[c](New.md (ab))",
+      "[d](<New.md> (a\\)b))",
+    ].join("\n"),
+  );
+});
+
+test("a link to a file with # in its name follows that file, not the name before the #", () => {
+  const text = "See [ch](chapter%231.md) and [x](chapter.md)";
+  const notes = {
+    "Index.md": text,
+    "chapter.md": "",
+    "chapter#1.md": "",
+  };
+  assert.equal(
+    apply(
+      text,
+      rewriteLinks(
+        text,
+        "Index.md",
+        context(notes, { "chapter.md": "renamed.md" }),
+      ),
+    ),
+    "See [ch](chapter%231.md) and [x](renamed.md)",
+  );
+  assert.equal(
+    apply(
+      text,
+      rewriteLinks(
+        text,
+        "Index.md",
+        context(notes, { "chapter#1.md": "second.md" }),
+      ),
+    ),
+    "See [ch](second.md) and [x](chapter.md)",
   );
 });
 

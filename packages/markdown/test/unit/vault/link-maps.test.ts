@@ -46,6 +46,23 @@ test("markdown link destinations are decoded before resolving", () => {
   assert.deepEqual(counts(index.resolvedLinks("A.md")), { "My Note.md": 1 });
 });
 
+test("an encoded # in a Markdown destination belongs to the file name", () => {
+  const index = vault({
+    "A.md": "[ch](chapter%231.md) [x](chapter.md) [g](gone%231.md#Part)",
+    "chapter.md": "",
+    "chapter#1.md": "",
+    "gone.md": "",
+  });
+  assert.deepEqual(counts(index.resolvedLinks("A.md")), {
+    "chapter#1.md": 1,
+    "chapter.md": 1,
+  });
+  assert.deepEqual(counts(index.unresolvedLinks("A.md")), { "gone#1": 1 });
+  assert.deepEqual(index.backlinks("chapter#1.md"), [
+    { path: "A.md", count: 1 },
+  ]);
+});
+
 test("backlinks invert resolved links and exclude the note itself", () => {
   const index = vault({
     "A.md": "[[C]] [[C]]",

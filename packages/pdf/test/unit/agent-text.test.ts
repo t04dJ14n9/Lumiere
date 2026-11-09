@@ -130,3 +130,37 @@ test("file names and folders containing # or ? keep the full basename in the lab
     ].join("\n"),
   );
 });
+
+test("a file name with brackets is escaped in the label", () => {
+  assert.equal(
+    pageLinkText({ path: "papers/a]b.pdf" }, 3),
+    "[a\\]b.pdf · p.3](papers/a]b.pdf#page=3)",
+  );
+  assert.equal(
+    pageLinkText({ path: "papers/[Smith] Title [2020].pdf" }, 3),
+    "[\\[Smith\\] Title \\[2020\\].pdf · p.3](papers/[Smith]%20Title%20[2020].pdf#page=3)",
+  );
+});
+
+test("a file name with a line break keeps the whole quote block quoted", () => {
+  const text = agentText(
+    {
+      kind: "text",
+      text: "Scaled dot-product attention",
+      pages: [{ page: 3, rects: [[72, 83, 150, 95]] }],
+    },
+    { path: "papers/a\nb.pdf" },
+  );
+  assert.equal(
+    text,
+    [
+      "> Scaled dot-product attention",
+      ">",
+      "> [a b.pdf · p.3](papers/a%0Ab.pdf#page=3#:~:text=Scaled%20dot%2Dproduct%20attention)",
+    ].join("\n"),
+  );
+  assert.equal(
+    pageLinkText({ path: "papers/a\r\nb.pdf" }, 3),
+    "[a b.pdf · p.3](papers/a%0D%0Ab.pdf#page=3)",
+  );
+});

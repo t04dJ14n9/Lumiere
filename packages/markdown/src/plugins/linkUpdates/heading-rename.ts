@@ -3,9 +3,9 @@ import { noteFragment } from "../../markdown/metadata/fragments";
 import { linkSyntax } from "../../markdown/metadata/linkpaths";
 import type { TextEdit } from "../../shared/host";
 import {
-  decodeLinkPath,
   isExternalLink,
   splitLinktext,
+  splitMarkdownDestination,
   type LinkSyntax,
 } from "../../shared/vault-path";
 import { linkSource, type LinkSource } from "./link-source";
@@ -80,9 +80,10 @@ export function headingLinkEdits(
       continue;
     }
     const syntax = linkSyntax(link);
-    const { path, subpath } = splitLinktext(
-      syntax === "wikilink" ? link.link : decodeLinkPath(link.link),
-    );
+    const { path, subpath } =
+      syntax === "wikilink"
+        ? splitLinktext(link.link)
+        : splitMarkdownDestination(link.link);
     const target = path ? resolve(path, sourcePath, syntax) : sourcePath;
     const fragment = subpath.slice(1);
     if (

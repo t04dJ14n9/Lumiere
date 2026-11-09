@@ -45,7 +45,10 @@ raw links, never a chat-specific mention syntax.
   payloads), then a blank quoted line (`>`), then one Markdown link per
   selected page as a quoted line. A page-only or empty-region copy is
   link-only (no quote block).
-- Label is `basename · p.N` (no escapes). Href is Chrome-aligned:
+- Label is `basename · p.N`. A `[` or `]` in the name is backslash-escaped
+  (`[\[Smith\] Title.pdf · p.3](…)`) and a line break becomes a space, so the
+  label stays one link text on one quoted line; nothing else is escaped.
+  Href is Chrome-aligned:
   `path#page=N` alone, or `path#page=N#:~:text=…` when there is selected
   text, or `path#page=N&viewrect=x,y,w,h` when regions are enabled (no
   angle brackets around the href). Never `#hl-`, never PDF++ `selection=`,

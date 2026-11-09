@@ -13,8 +13,8 @@ import {
 } from "@workshop/ink/format";
 import type { WorkspaceFiles } from "../../shared/workspace-files";
 import {
-  decodeLinkPath,
   nameOf,
+  splitMarkdownDestination,
   type LinkSyntax,
 } from "../../shared/vault-path";
 import type { Vaults } from "../vault/api";
@@ -44,7 +44,9 @@ export async function editSketch(
   const located = await host.vaults.locate(noteUri);
   // As embeds resolve it: a Markdown destination is percent-encoded.
   const target =
-    link.syntax === "markdown" ? decodeLinkPath(link.target) : link.target;
+    link.syntax === "markdown"
+      ? splitMarkdownDestination(link.target).path
+      : link.target;
   const file = located?.vault.index.resolveLink(
     target,
     located.path,

@@ -1,4 +1,4 @@
-import { folderOf, stemOf } from "../../shared/vault-path";
+import { folderOf, stemOf, type LinkSyntax } from "../../shared/vault-path";
 import type { TreeNode, TreeSource } from "../../shared/host";
 import type { Vault, Vaults } from "../vault/api";
 import { linkedLines, unlinkedLines } from "../../markdown/mentions";
@@ -133,8 +133,9 @@ export class BacklinksTree implements TreeSource {
   private async linkedFiles(): Promise<string[]> {
     const note = this.note!;
     const { index } = note.vault;
-    const isTarget = (source: string) => (linkpath: string) =>
-      index.resolveLink(linkpath, source)?.path === note.path;
+    const isTarget =
+      (source: string) => (linkpath: string, syntax: LinkSyntax) =>
+        index.resolveLink(linkpath, source, syntax)?.path === note.path;
     const paths = index.backlinks(note.path).map((link) => link.path);
     const options = { extraContext: this.extraContext() };
     for (const path of paths) {

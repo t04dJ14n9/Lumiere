@@ -48,6 +48,14 @@ test("balanced parentheses, escaped punctuation and titles do not enlarge href r
   assert.equal(nativeLinks(String.raw`[x](a\(b\).md#h)`)[0]?.href, "a(b).md#h");
 });
 
+test("a label with escaped brackets still finds its link", () => {
+  const source = String.raw`[\[Smith\] Title.pdf · p.3](papers/[Smith]%20Title.pdf#page=3) [a\]b](a.md#h)`;
+  assert.deepEqual(
+    nativeLinks(source).map((link) => link.href),
+    ["papers/[Smith]%20Title.pdf#page=3", "a.md#h"],
+  );
+});
+
 test("external, command, UNC, malformed encoding and control paths are never intercepted", () => {
   for (const href of [
     "https://example.com/a.md#h",

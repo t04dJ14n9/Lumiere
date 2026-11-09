@@ -2,7 +2,7 @@ import {
   extensionOf,
   folderOf,
   joinVaultPath,
-  splitLinktext,
+  linkpathOfText,
   type LinkSyntax,
 } from "../../shared/vault-path";
 import { isInsideBundle } from "./paths";
@@ -42,7 +42,7 @@ export function resolveOkfLink(query: OkfLinkQuery): OkfLinkAction {
   if (bundleRoot === undefined) {
     return { action: "passthrough" };
   }
-  const { path } = splitLinktext(query.linktext);
+  const path = linkpathOfText(query.linktext, query.syntax);
   if (path === "") {
     return { action: "passthrough" };
   }

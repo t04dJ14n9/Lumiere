@@ -22,10 +22,10 @@ const WIKILINK = /^(!?\[\[)(.*?)((?:\\?\|.*)?\]\])$/su;
  * `[text](destination "title")`, the destination bare or in `<…>`. Anchored
  * at both ends, so a bare destination may hold balanced parentheses and
  * quotes: only whitespace ends it, and `Old"note.md` is a valid file name.
- * A quoted title may hold its own delimiter backslash-escaped.
+ * A title may hold its own closing delimiter backslash-escaped.
  */
 const MARKDOWN_LINK =
-  /^(!?\[.*?\]\(\s*)(<[^>\n]*>|\S+?)((?:\s+(?:"(?:[^"\\]|\\.)*"|'(?:[^'\\]|\\.)*'|\([^)]*\)))?\s*\))$/su;
+  /^(!?\[.*?\]\(\s*)(<[^>\n]*>|\S+?)((?:\s+(?:"(?:[^"\\]|\\.)*"|'(?:[^'\\]|\\.)*'|\((?:[^)\\]|\\.)*\)))?\s*\))$/su;
 
 /** The parts of a wikilink or inline Markdown link, or `undefined`. */
 export function linkSource(original: string): LinkSource | undefined {
@@ -61,20 +61,48 @@ export function formatLinkSource(
   if (source.opening.endsWith("[[")) {
     return `${source.opening}${path}${subpath}${source.closing}`;
   }
+  // A `#` in the path is written `%23`: a literal one starts the subpath.
   const destination = source.isAngled
-    ? `<${path}${subpath}>`
+    ? `<${path.replace(/#/gu, "%23")}${subpath}>`
     : encodeDestination(path) + subpath;
   return `${source.opening}${destination}${source.closing}`;
 }
 
 /**
  * Percent-encode what would end or escape a bare destination: spaces,
- * backslashes and control characters, as Obsidian writes them.
+ * backslashes and control characters, as Obsidian writes them, and the
+ * parentheses that have no partner, which Obsidian leaves and the parser
+ * reads as the link's end. Balanced pairs stay as they are. A `#` is
+ * encoded too: the parser reads a literal one as the start of the subpath.
  */
 export function encodeDestination(text: string): string {
-  return Array.from(text, (unit) =>
-    unit === " " || unit === "\\" || unit.charCodeAt(0) < 0x20
+  const unpaired = unpairedParentheses(text);
+  return Array.from(text, (unit, index) => {
+    if (unpaired.has(index)) {
+      return unit === "(" ? "%28" : "%29";
+    }
+    return unit === " " ||
+      unit === "\\" ||
+      unit === "#" ||
+      unit.charCodeAt(0) < 0x20
       ? encodeURIComponent(unit)
-      : unit,
-  ).join("");
+      : unit;
+  }).join("");
+}
+
+/** The indexes, in code points, of the `(` and `)` that no other one pairs. */
+function unpairedParentheses(text: string): Set<number> {
+  const unpaired = new Set<number>();
+  const open: number[] = [];
+  for (const [index, unit] of Array.from(text).entries()) {
+    if (unit === "(") {
+      open.push(index);
+    } else if (unit === ")" && open.pop() === undefined) {
+      unpaired.add(index);
+    }
+  }
+  for (const index of open) {
+    unpaired.add(index);
+  }
+  return unpaired;
 }

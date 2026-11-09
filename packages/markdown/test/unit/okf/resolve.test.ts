@@ -150,3 +150,17 @@ test("a wikilink in a bundle prefers the bundle's own note among the vault's mat
     "a bundle at the vault root holds every note",
   );
 });
+
+test("a Markdown path keeps its # as part of a file name", () => {
+  const hit = resolveOkfLink({
+    linktext: "chapter#1.md",
+    sourcePath: "bundle/notes/source.md",
+    bundleRoot: "bundle",
+    syntax: "markdown",
+    find: (path) => (path === "bundle/notes/chapter#1.md" ? path : undefined),
+  });
+  assert.deepEqual(hit, {
+    action: "resolved",
+    path: "bundle/notes/chapter#1.md",
+  });
+});
