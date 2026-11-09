@@ -3,6 +3,7 @@ import path from "node:path";
 import { pathToFileURL } from "node:url";
 import * as vscode from "vscode";
 import type * as EngineModule from "./engine";
+import { insideFolders } from "./inside-folders";
 import { PdfOutlineReader, type OutlineFiles } from "./reader";
 
 /**
@@ -36,7 +37,7 @@ export function createPdfOutlines(
 ): PdfOutlineReader {
   const assets = path.join(context.extensionPath, "dist", "pdf");
   return new PdfOutlineReader({
-    files: workspaceFiles,
+    files: insideFolders(workspaceFiles, localWorkspaceFolders),
     engine: async () => {
       // A file URL, which `import` needs for an absolute path on Windows.
       const { createOutlineEngine } = (await import(
@@ -48,4 +49,11 @@ export function createPdfOutlines(
     },
     log: (message) => log.warn(message),
   });
+}
+
+/** The paths of the workspace's folders on this machine's disk. */
+function localWorkspaceFolders(): string[] {
+  return (vscode.workspace.workspaceFolders ?? [])
+    .filter((folder) => folder.uri.scheme === "file")
+    .map((folder) => folder.uri.fsPath);
 }

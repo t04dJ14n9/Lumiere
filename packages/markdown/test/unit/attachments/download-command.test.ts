@@ -58,6 +58,7 @@ async function run(
           result.written.push(uri);
         },
         writeText: async () => {},
+        isSymbolicLink: async () => false,
       },
     },
     dialogs: {

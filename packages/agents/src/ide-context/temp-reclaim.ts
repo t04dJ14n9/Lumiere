@@ -138,6 +138,11 @@ async function reclaimPayloads(
   }
   eligible.sort((a, b) => a.mtimeMs - b.mtimeMs);
   for (const e of eligible) {
+    // The owner may have renewed the lease since the decision above; ask
+    // again right before deleting.
+    if (!(await isReclaimablePayload(fs, dir, e.name, now))) {
+      continue;
+    }
     try {
       await fs.unlink(join(dir, e.name));
     } catch {

@@ -139,6 +139,43 @@ test("concurrent renewal vs sibling reclaim on payload older than 60s: never rec
   assert.ok(Date.parse(lease.leaseUntil) > 100_000);
 });
 
+test("a payload whose lease is renewed while the sweep runs is kept", async () => {
+  const fs = new MemoryTempFs();
+  fs.nowMs = 0;
+  await fs.mkdir(DIR, { recursive: true });
+  const first = `${DIR}/ide-context-first.json`;
+  const second = `${DIR}/ide-context-second.json`;
+  for (const [file, mtimeMs] of [
+    [first, 0],
+    [second, 1],
+  ] as const) {
+    await fs.writeFile(file, Buffer.from("{}"));
+    fs.setMtime(file, mtimeMs);
+    await writeLeaseAtomic(fs, leasePathFor(file), {
+      leaseUntil: new Date(100).toISOString(),
+      owner: "markdownWorkshop",
+      sessionId: "expired",
+    });
+  }
+  // Both are expired when the sweep decides; the second's owner renews while
+  // the sweep is deleting the first.
+  const unlink = fs.unlink.bind(fs);
+  fs.unlink = async (path: string) => {
+    await unlink(path);
+    if (path === first) {
+      await renewLeaseAtomic(fs, leasePathFor(second), {
+        leaseUntil: new Date(300_000).toISOString(),
+        owner: "markdownWorkshop",
+        sessionId: "renewed",
+      });
+    }
+  };
+  await reclaimEligible(fs, DIR, () => 1_000, caps);
+  assert.equal(fs.exists("ide-context-first.json"), false);
+  assert.equal(fs.exists("ide-context-second.json"), true);
+  assert.equal(fs.exists("ide-context-second.json.lease"), true);
+});
+
 test("leftover *.lease.staging-* older than grace is unlinked", async () => {
   const fs = new MemoryTempFs();
   fs.nowMs = 1_000_000;
