@@ -119,6 +119,7 @@ plugin registrations and widget lifetimes end when the plugin stops.
 - `navigation.test.ts`: keyboard routing, append, exit and re-entry unit tests.
 - `vim-source.test.ts`: source-column ownership, delimiter entry, transaction/mode guards and deferred-entry cancellation unit tests.
 - `src/markdown/tables/model.ts`: pure table parsing, serialization and source-position mapping.
+- `src/markdown/tables/tab-separated.ts`: pure splitting of pasted tab-separated text into cells, honouring spreadsheet quotes.
 - `clipboard.test.ts`: cell/grid clipboard, selection and stale-paste unit tests.
 - `webview.test.ts`: persistent widget, entry and insertion unit tests.
 - `test/unit/features/table-wheel.test.ts`: vertical table wheel cancels saved-view restore through plugin wiring; pans and zooms do not.
@@ -163,7 +164,8 @@ table reaches its side, the rest of that gesture stays latched to the table,
 as for any nested scroller.
 
 HTML paste in a focused cell uses the outer editor capture pipeline; the table
-clipboard ignores already-handled events. Rectangular paste keeps TSV semantics.
+clipboard ignores already-handled events. Rectangular paste keeps TSV semantics:
+a cell a spreadsheet wraps in quotes may hold tabs, line breaks (stored as `<br>`) and `""` for a quote.
 Copy publishes TSV as `text/plain` (spreadsheets), Markdown and HTML table flavors, and an `obsidian/table` JSON payload of rows that a table paste reads back cell for cell, the same four flavors Obsidian offers.
 Menu paste reads plain text through the host. Shift+Enter stores `<br>`, as measured in Obsidian. Rectangular selections and
 keyboard menus on grips are additional capabilities. Generic block insertion and

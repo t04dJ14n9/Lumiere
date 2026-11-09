@@ -7,6 +7,7 @@ import {
   copyCellsMarkdown,
   copyCellsObsidian,
   parseTable,
+  pastedCells,
   pastedMarkdownCells,
   serializeTable,
   writeCells,
@@ -221,4 +222,44 @@ test("pastedMarkdownCells keeps dash-only body rows and rows without a pipe", ()
     ["x", "y"],
     ["z", ""],
   ]);
+});
+
+test("pastedCells keeps tabs and line breaks inside a quoted spreadsheet cell", () => {
+  assert.deepEqual(
+    pastedCells('name\tnote\nA\t"line1\nline2"\nB\t"x\ty"\r\n'),
+    [
+      ["name", "note"],
+      ["A", "line1\nline2"],
+      ["B", "x\ty"],
+    ],
+  );
+  assert.deepEqual(pastedCells('"say ""hi"""\t""\n"a""b"\tc'), [
+    ['say "hi"', ""],
+    ['a"b', "c"],
+  ]);
+});
+
+test("pastedCells leaves quotes that do not wrap a whole cell as typed", () => {
+  assert.deepEqual(pastedCells('5" pipe\tsaid "hi"\n"open\tb\n"x"y\tz'), [
+    ['5" pipe', 'said "hi"'],
+    ['"open', "b"],
+    ['"x"y', "z"],
+  ]);
+});
+
+test("a pasted quoted spreadsheet cell becomes one table cell with <br> and escaped pipes", () => {
+  const table = parseTable("| a | b |\n| --- | --- |\n| 1 | 2 |")!;
+  const origin = { row: 1, column: 0 };
+  const next = writeCells(
+    table,
+    { anchor: origin, head: origin },
+    pastedCells('A\t"x|y\nz"'),
+  );
+  assert.deepEqual(
+    parseTable(next)!.rows.map((row) => row.map((cell) => cell.text)),
+    [
+      ["a", "b"],
+      ["A", "x\\|y<br>z"],
+    ],
+  );
 });

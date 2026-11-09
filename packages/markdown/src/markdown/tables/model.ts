@@ -1,3 +1,5 @@
+import { splitTabSeparated } from "./tab-separated";
+
 export interface Cell {
   text: string;
   from: number;
@@ -304,11 +306,7 @@ export function pastedMarkdownCells(text: string): string[][] {
 
 /** Split tab-separated clipboard text into rows of cell values. */
 export function pastedCells(text: string): string[][] {
-  return text
-    .replace(/\r\n?/g, "\n")
-    .replace(/\n$/, "")
-    .split("\n")
-    .map((row) => row.split("\t"));
+  return splitTabSeparated(text);
 }
 
 /** Wrap a cell in an inline marker, or unwrap it if already wrapped. */
