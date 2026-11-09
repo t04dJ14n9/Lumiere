@@ -25,5 +25,6 @@ New Scratch Note asks for a title and writes `YYYY-MM-DD-title.md` in the layout
 
 - There is no daily note and no automatic filing.
 - Promotion does not update indexes, backlinks or the Obsidian graph.
+- A note typed into while it is being promoted is left as it is, with the new text: the page is written from the text at the pick, and a message names it.
 - Untitled notes must be saved into the project before they can be promoted.
 - Marp decks stay where they are. Move a deck outside the bundle from the Marp commands.

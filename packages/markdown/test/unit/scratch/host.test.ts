@@ -65,8 +65,9 @@ test("promoting uses the note text as it is after the picker closes", async (t) 
         list: async () => undefined,
         mkdir: async () => {},
         isSymbolicLink: async () => false,
-        writeText: async (uri: string, text: string) => {
+        createText: async (uri: string, text: string) => {
           written.set(uri, text);
+          return true;
         },
       } as never,
     },
@@ -96,5 +97,8 @@ test("promoting uses the note text as it is after the picker closes", async (t) 
   assert.match(page, /Initial body/);
   assert.match(page, /Written while the picker was open/);
   assert.equal(applied.length, 1);
-  assert.match(applied[0]?.edits[0]?.insert ?? "", /Promoted to \[Draft\]/);
+  assert.match(
+    applied[0]?.edits[0]?.insert ?? "",
+    /Promoted to \[Draft\]\(\.\.\/knowledge\/concepts\/draft\.md\)\./,
+  );
 });
