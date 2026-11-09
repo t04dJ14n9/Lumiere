@@ -120,8 +120,8 @@ it yet.
 - `host.ts`: panel registry, editor service and active-context registrations.
 - `panel.ts`: per-panel context, session connection and RPC lifetimes.
 - `logging.ts`: webview log forwarding over RPC and its host-side receiver.
-- `associations.ts`: **Use Lumia for Markdown in This Workspace**.
-- `toggle-text-editor.ts`: **Toggle Text Editor** (Ctrl/Cmd+E) between Lumia
+- `associations.ts`: **Use Lumiere for Markdown in This Workspace**.
+- `toggle-text-editor.ts`: **Toggle Text Editor** (Ctrl/Cmd+E) between Lumiere
   and the host default text editor. Capture-phase Mod+E ownership (BH-003) lives
   in `commands/toggle-text-editor-keys.ts`.
 - `webview-html.ts`: CSP, scripts and native webview HTML, with
@@ -178,12 +178,12 @@ keys for the active panel. Core settings include `editor.useTabs` (true),
 under `lumiere.markdown`.
 
 Each panel kernel logs through the window's logger, tagged with the panel ID,
-to the **Lumia** output channel. The webview forwards its logs over
+to the **Lumiere** output channel. The webview forwards its logs over
 the editor channel (`log`) at warn and above, and at debug too while
 `lumiere.markdown.debug.logging` (default false) is on; the host re-checks that
 setting before writing a forwarded debug line.
 
-**Use Lumia for Markdown in This Workspace** writes `*.md` and
+**Use Lumiere for Markdown in This Workspace** writes `*.md` and
 `*.markdown` into the workspace's `workbench.editorAssociations`, keeping its
 other entries. The editor is otherwise only an option for Markdown (DESIGN
 §25.2), so it does not take over every README; this makes a workspace behave
@@ -203,12 +203,12 @@ until its last text tab closes; the kept notes are saved in workspace state,
 so a reload keeps them too. With the in-place option on, a first Reopen With
 Text without bypass may reclaim (Open as Text / Toggle remain the supported
 stay-native paths).
-**Toggle Text Editor** (Ctrl/Cmd+E) switches the active note between Lumia
+**Toggle Text Editor** (Ctrl/Cmd+E) switches the active note between Lumiere
 and the host's default text editor via `vscode.openWith` (`default` ↔
 `lumiere.markdown.editor`). Opening as text sets the reclaim bypass, and the
 text tab it opens is then kept as the reader's. After `openWith`, the previous
 view's tab for the same URI is closed in the active group (clean tabs only),
-so the toggle leaves one tab rather than Lumia + Text Editor side by side
+so the toggle leaves one tab rather than Lumiere + Text Editor side by side
 (BH-011 / BH-003). This is **not** Obsidian's Ctrl/Cmd+E (Live Preview ↔
 Source); Source mode stays on the unbound **Toggle Live Preview/Source Mode**
 command. Selection and caret are not restored across the switch
@@ -227,7 +227,7 @@ the initial selection even while `openWith` is in flight. Delivery waits for tha
 link-navigation readiness and uses its existing focus, centered scroll and
 caret path. A newer navigation or provider disposal cancels pending delivery;
 Cursor Edit handoff leases and explicit text bypasses suppress the bridge.
-A direct custom-editor open (the `*.md` association is Lumia itself) has no text
+A direct custom-editor open (the `*.md` association is Lumiere itself) has no text
 tab to transfer from. VS Code 1.144 still calls `resolveCustomTextEditorNavigation`
 for a Search result about 100 ms after `resolveCustomTextEditor`, and its
 `revealRange` reaches the panel through the same reveal path (`navigation.revealPanel`,
@@ -243,7 +243,7 @@ custom-editor handoff assertion before `resolveCustomTextEditor` runs.
 
 ## Limits and differences from Obsidian
 
-Ctrl/Cmd+E toggles Lumia ↔ the host text editor, not Live Preview ↔ Source
+Ctrl/Cmd+E toggles Lumiere ↔ the host text editor, not Live Preview ↔ Source
 (an intentional diverge from Obsidian for host integration). Caret and
 selection are not preserved across that switch.
 

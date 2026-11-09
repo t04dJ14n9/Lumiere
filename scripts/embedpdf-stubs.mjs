@@ -6,7 +6,7 @@
 // pieces it may need with dynamic imports, each its own lazy chunk. A bundle
 // without splitting (the viewer is one IIFE script) inlines every one, and
 // the editor's lazy chunks are counted by scripts/bundle-size.mjs. These
-// pieces are never used here, because Lumia hands the engine its wasm bytes
+// pieces are never used here, because Lumiere hands the engine its wasm bytes
 // and its fonts itself, so they are replaced by stubs.
 //
 // Used by packages/pdf/scripts/{viewer,build}.mjs and
@@ -34,12 +34,12 @@ export function embedPdfStubs({ workerSource = false } = {}) {
       filter: /^@embedpdf\/default-fallback-fonts\/library$/,
       contents:
         "export const DEFAULT_FALLBACK_FONTS = [];" +
-        "export async function loadFallbackFont() { throw new Error('Lumia ships no default fallback fonts'); }",
+        "export async function loadFallbackFont() { throw new Error('Lumiere ships no default fallback fonts'); }",
     },
     {
       // `new URL("./lib/embedpdf.wasm", import.meta.url)`, which a bundler
       // for the web turns into an asset and esbuild's IIFE output cannot
-      // evaluate. Lumia serves embedpdf.wasm itself and gives the engine its
+      // evaluate. Lumiere serves embedpdf.wasm itself and gives the engine its
       // bytes or its URL; an empty string reads to the engine as "no sibling
       // file".
       filter: /^@embedpdf\/engine-runtime-wasm32\/wasm-url$/,

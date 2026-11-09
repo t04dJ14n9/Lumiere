@@ -139,7 +139,7 @@ test("a restored or primary Cursor Markdown tab is reclaimed when its label name
   // adoptOpenTabs and a first open classify as none→other. labelUri only
   // resolves when exactly one open textDocument matches the tab label, and
   // the file must be one Cursor's Markdown editor takes (not a plan file; see
-  // the tests below). Reclaiming none→other restores Lumia menus (Copy link /
+  // the tests below). Reclaiming none→other restores Lumiere menus (Copy link /
   // Format) on the Preview | Markdown repro path.
   assert.equal(shouldReclaim(swap("none", "other"), context), true);
   assert.equal(
@@ -207,7 +207,7 @@ test("an in-place switch into an input-less tab is identified by the note tab it
   );
 });
 
-test("readerText sticks text only; Cursor Markdown still reclaims to Lumia", () => {
+test("readerText sticks text only; Cursor Markdown still reclaims to Lumiere", () => {
   const stay = { bypass: false, handoff: false, readerText: true };
   assert.equal(nativeStayBlocks("text", stay), true);
   assert.equal(nativeStayBlocks("other", stay), false);
@@ -267,7 +267,7 @@ test("the handoff from Cursor Markdown into Workshop is left in place", () => {
   assert.equal(shouldReclaim(swap("workbench", "workbench"), context), false);
 });
 
-test("only notes the workspace routes to Lumia are reclaimed", () => {
+test("only notes the workspace routes to Lumiere are reclaimed", () => {
   const associations = { "*.md": "lumiere.markdown.editor" };
   const viewType = "lumiere.markdown.editor";
   assert.equal(associatedWith(associations, note, viewType), true);
@@ -654,7 +654,7 @@ test("a held swap stays held when its session ends some other way", () => {
 
 test("tabs open before reclaim starts are judged: the shown one now, the rest when first activated", () => {
   // A restored window: a note shown as text, another note behind it, and a
-  // note already in Lumia.
+  // note already in Lumiere.
   const group: FakeGroup = { tabs: [], activeTab: undefined };
   const shown: FakeTab = { uri: note, kind: "text", group };
   const behind: FakeTab = {
@@ -691,7 +691,7 @@ test("tabs open before reclaim starts are judged: the shown one now, the rest wh
     swaps.next({ opened: [], changed: [behind] }, new Set()),
     [],
   );
-  // A tab already in Lumia is never reclaimed.
+  // A tab already in Lumiere is never reclaimed.
   group.activeTab = workshop;
   const kept = swaps.next({ opened: [], changed: [workshop] }, new Set());
   assert.equal(shouldReclaim(kept[0]!.swap, context), false);
@@ -952,7 +952,7 @@ test("a missing note kept in the text editor stays there on command selection af
   absent = false;
 
   // Closing the kept text tab forgets it; reopening the now-existing note
-  // reclaims to Lumia per the 2026-11-04 lock.
+  // reclaims to Lumiere per the 2026-11-04 lock.
   group.tabs = [];
   group.activeTab = undefined;
   tabsChanged.fire({ opened: [], changed: [], closed: [first] });
@@ -979,6 +979,6 @@ test("a missing note kept in the text editor stays there on command selection af
         entry[2] === MARKDOWN_EDITOR.viewType,
     ),
     true,
-    "reopening the saved note must reclaim to Lumia",
+    "reopening the saved note must reclaim to Lumiere",
   );
 });

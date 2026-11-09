@@ -16,7 +16,7 @@ const runtimeCommands = new Set(RUNTIME_COMMAND_IDS);
 // Public peer API retains its original id across the product rename.
 const compatibilityCommand = [retiredPrefix, "bridge.envelope"].join(".");
 
-test("constants match locked Lumia PDF identity", () => {
+test("constants match locked Lumiere PDF identity", () => {
   assert.equal(SETTING_PREFIX, "lumiere.pdf.");
   assert.equal(VIEW_TYPE, "lumiere.pdf.viewer");
 });

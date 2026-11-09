@@ -1,10 +1,10 @@
 /**
- * Versioned selection envelope shared with Lumia.
+ * Versioned selection envelope shared with Lumiere.
  *
  * The clipboard text of Copy Link for Agent is unchanged (see
  * `packages/agents/docs/agent-handoff-format.md`). This object is what
  * `vscodeEmbedPdf.bridge.envelope` returns. It matches the Workbench v1
- * `BridgeEnvelope` contract that Lumia's `parseBridgeEnvelope`
+ * `BridgeEnvelope` contract that Lumiere's `parseBridgeEnvelope`
  * already consumes (see that extension's `docs/bridge-envelope.md`):
  *
  * - `source.identity` / `kind` / `media` name the file. `revision.sourceSha256`
@@ -18,7 +18,7 @@
  * - `selection.sha256` hashes the selection alone (`selectionCanonical`), not
  *   the file.
  *
- * `producer` is `"pdf"`. Lumia uses the same version and
+ * `producer` is `"pdf"`. Lumiere uses the same version and
  * `producer: "markdown"`. Workshop is the aggregator: it returns a Markdown
  * selection when it has one, otherwise it calls this command. This command
  * does not call Workshop back, so the two cannot recurse. See
@@ -34,7 +34,7 @@ export const PDF_BRIDGE_PRODUCER = "pdf" as const;
 
 export const PDF_BRIDGE_ENVELOPE_COMMAND = "vscodeEmbedPdf.bridge.envelope";
 
-/** Soft peer command. Renamed with Lumia; absent when it is not installed. */
+/** Soft peer command. Renamed with Lumiere; absent when it is not installed. */
 export const MARKDOWN_BRIDGE_ENVELOPE_COMMAND =
   "lumiere.markdown.bridge.envelope";
 
@@ -48,7 +48,7 @@ export interface BridgeViewRect {
 
 /**
  * Workbench v1 bridge envelope (`producer: "pdf"`). Field names must stay
- * aligned with Lumia's `parseBridgeEnvelope`.
+ * aligned with Lumiere's `parseBridgeEnvelope`.
  */
 export interface PdfBridgeEnvelope {
   readonly version: typeof BRIDGE_ENVELOPE_VERSION;

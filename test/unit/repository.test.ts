@@ -34,7 +34,7 @@ test("no two tracked paths differ only by letter case", () => {
   assert.deepEqual(collisions, []);
 });
 
-test("Lumia opens PDF links with Lumia PDF's Open Location command", async () => {
+test("Lumiere opens PDF links with Lumiere PDF's Open Location command", async () => {
   const { OPEN_LOCATION_COMMAND_ID } =
     await import("../../packages/pdf/src/shared/command-ids");
   const navigation = readFileSync(

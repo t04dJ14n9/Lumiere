@@ -78,7 +78,7 @@ test("a text selection envelope keeps source identity, durable locators, and the
   assert.equal(envelope.revision.sourceSha256, sourceHash);
 });
 
-test("PDF envelopes parse as Workbench v1 (Lumia field names)", () => {
+test("PDF envelopes parse as Workbench v1 (Lumiere field names)", () => {
   const envelope = pdfBridgeEnvelope({
     capturedAt: "2026-10-11T12:00:00.000Z",
     identity: "papers/attention_v2.pdf",

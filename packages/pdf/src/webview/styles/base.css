@@ -67,7 +67,7 @@ input {
    */
   --paper: #fff;
   /*
-   * EmbedPDF's own marks take Lumia's colours: selected text is the fill
+   * EmbedPDF's own marks take Lumiere's colours: selected text is the fill
    * above, and the scrollbar thumb is the editor's.
    */
   --epdf-text-selection: var(--selection-fill);

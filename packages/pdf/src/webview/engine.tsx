@@ -20,7 +20,7 @@ import { Viewer } from "./viewer";
 const WORKER_TIMEOUT_MS = 15_000;
 
 /** Who the author of a mark made in the viewer is. */
-const AUTHOR: Identity = { displayName: "Lumia" };
+const AUTHOR: Identity = { displayName: "Lumiere" };
 
 /**
  * What the reader may do in any PDF: everything. EmbedPDF 3 by default holds a

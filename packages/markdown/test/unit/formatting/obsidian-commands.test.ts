@@ -251,7 +251,7 @@ test("several tasks are checked together while any is open, then opened together
 });
 
 test("lines without a box catch up with the selection's tasks, which keep theirs", () => {
-  // Obsidian drops the tasks' boxes here; Lumia keeps them.
+  // Obsidian drops the tasks' boxes here; Lumiere keeps them.
   assert.equal(
     edit("‹a\n- [x] b›", (s) => checklistEdit(s, false)),
     "- [ ] ‹a\n- [x] b›",

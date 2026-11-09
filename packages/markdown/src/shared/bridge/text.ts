@@ -1,6 +1,6 @@
 /**
  * Clipboard text for a bridge envelope. Markdown matches the LLM Wiki
- * `@path#start-end` wording; PDF matches Lumia PDF's Quote-first clipboard
+ * `@path#start-end` wording; PDF matches Lumiere PDF's Quote-first clipboard
  * (Chrome `#page=` / `#:~:text=`). The structured envelope is separate and
  * is not appended here.
  */
@@ -22,7 +22,7 @@ export interface PdfHandoffInput {
   readonly text: string;
 }
 
-/** Quote-first one-page link, the form Lumia PDF copies. */
+/** Quote-first one-page link, the form Lumiere PDF copies. */
 export function pdfHandoffText(input: PdfHandoffInput): string {
   const body = input.text.replace(/\r\n?/gu, "\n").replace(/\n+$/u, "");
   const slash = Math.max(

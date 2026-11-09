@@ -109,7 +109,7 @@ test("a PDF with no annotations kept loads without any", async () => {
   assert.equal("annotations" in load(), false);
 });
 
-test("Lumia's annotations are saved by the hash of the bytes shown, and the PDF is not written", async () => {
+test("Lumiere's annotations are saved by the hash of the bytes shown, and the PDF is not written", async () => {
   const { kept, calls, store } = memoryStore();
   const { receive, load, pdfWrites } = open(store);
   await receive({ type: "ready" });
@@ -210,7 +210,7 @@ test("annotation messages from the viewer are checked field by field", () => {
   }
 });
 
-test("Lumia owns what it imported or made; changes to the PDF's own are the PDF's", () => {
+test("Lumiere owns what it imported or made; changes to the PDF's own are the PDF's", () => {
   const owned = new AnnotationOwnership();
   owned.imported(["obj:10"]);
   assert.equal(owned.change("update", "obj:10"), "store");
@@ -218,7 +218,7 @@ test("Lumia owns what it imported or made; changes to the PDF's own are the PDF'
   assert.equal(owned.isOwn("obj:20"), true);
   assert.equal(owned.change("update", "obj:5"), "pdf");
   assert.equal(owned.change("delete", "obj:5"), "pdf");
-  // Deleting one of Lumia's does not disown it: Undo restores the same key.
+  // Deleting one of Lumiere's does not disown it: Undo restores the same key.
   assert.equal(owned.change("delete", "obj:20"), "store");
   assert.equal(owned.isOwn("obj:20"), true);
   assert.equal(owned.change("update", "obj:20"), "store");

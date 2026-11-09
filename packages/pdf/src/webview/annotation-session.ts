@@ -16,7 +16,7 @@ import { postToHost } from "./host";
 const savedIntoPdf = new Set<() => void>();
 
 /**
- * Lumia's own annotations live in a file outside the PDF, named by its hash
+ * Lumiere's own annotations live in a file outside the PDF, named by its hash
  * (`annotation-store`), never in the PDF: a vault records the hash of the
  * sources it keeps. On open they are imported over the PDF's own; on each
  * committed change they are exported and sent to the host. Writing the PDF
@@ -67,7 +67,7 @@ export function useAnnotationSaveSession(): {
   return { retry, write };
 }
 
-/** Each committed change: save Lumia's annotations, or say a PDF's own changed. */
+/** Each committed change: save Lumiere's annotations, or say a PDF's own changed. */
 function useCommittedChanges(session: StoreSession | undefined): void {
   useAnnotationEvent(
     (a) => a.onCreated,

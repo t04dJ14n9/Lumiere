@@ -42,5 +42,5 @@ void bootstrap(
 ).catch((error) => {
   logging.logger.error("Editor bootstrap failed", error);
   document.getElementById("app")!.textContent =
-    `Lumia could not open: ${String(error)}`;
+    `Lumiere could not open: ${String(error)}`;
 });

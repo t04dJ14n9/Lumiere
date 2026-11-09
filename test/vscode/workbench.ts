@@ -33,7 +33,7 @@ export async function closeEditorGroups(page: Page) {
   }).toPass({ timeout: 10000 });
 }
 /**
- * Opens a note (Note.md by default) in Lumia and returns its
+ * Opens a note (Note.md by default) in Lumiere and returns its
  * editable content. `timing` receives the clock at the choice of the editor
  * and when its content is on screen, for load-time measurements.
  */
@@ -91,11 +91,11 @@ export async function openWorkbench(
   await page
     .locator(".quick-input-widget")
     .locator(".monaco-list-row")
-    .filter({ hasText: "Lumia" })
+    .filter({ hasText: "Lumiere" })
     .first()
     .click();
   timing.start = Date.now();
-  console.log("Native: waiting for Lumia webview");
+  console.log("Native: waiting for Lumiere webview");
   let frame: Frame | undefined;
   await expect
     .poll(() => {

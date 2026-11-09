@@ -333,7 +333,7 @@ test("Vim carets match the built-in editor's block, line and underline in the re
       );
     }
 
-    await reopenWith(page, "Lumia");
+    await reopenWith(page, "Lumiere");
     const frame = await workbenchFrame(page);
     const editor = frame.getByRole("textbox", { name: "Markdown content" });
     await editor.click();

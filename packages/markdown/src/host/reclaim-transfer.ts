@@ -62,7 +62,7 @@ export function createReclaimTransfer(
       }
       // Missing file: leave built-in Text Editor (dirty buffer until Save)
       // and keep it as the reader's text editor until that tab closes.
-      // Do not openWith Lumia or untitled-bridge (product lock 2026-11-04).
+      // Do not openWith Lumiere or untitled-bridge (product lock 2026-11-04).
       if (isMarkdownAbsentOnDisk(uri)) {
         if (kindOf(shown) === "text") {
           readerText.keep(uri);
@@ -120,7 +120,7 @@ function startPendingReclaim(options: {
   pending.set(key, next);
   void reopen(uri, next, navigation)
     .catch((error) => {
-      console.error("Lumia editor transfer failed", error);
+      console.error("Lumiere editor transfer failed", error);
     })
     .finally(() => {
       if (pending.get(key) === next) {

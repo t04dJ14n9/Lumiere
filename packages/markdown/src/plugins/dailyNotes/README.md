@@ -41,7 +41,7 @@ note, or from today when the open note is not one. Nothing opens on startup.
 
 - Formats understand `YYYY`, `MM`, `DD`, `HH`, `mm` and `ss` only. An
   Obsidian format with other tokens (`dddd`, `Do`, `[W]ww`) is not carried
-  over, since Lumia would name notes differently from the vault's.
+  over, since Lumiere would name notes differently from the vault's.
 - No "open daily note on startup", no ribbon button and no calendar.
 - A date property does not link to its daily note.
 - A missing template creates an empty note with a message, rather than no note.

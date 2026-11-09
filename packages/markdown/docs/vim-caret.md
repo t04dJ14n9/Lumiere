@@ -9,7 +9,7 @@ Recovered from `/workspace/obsidian-rea/recovered/application/{app.js,app.css}`:
 - Theme injects `.cm-fat-cursor` with focused `background: var(--interactive-accent)` and `color: var(--text-on-accent)`; unfocused glyph transparent.
 - `.cm-animate-fat-cursor` blinks with `animation: blink 1.06s steps(1) infinite` (hard on/off).
 - Fat cursor drawn while not in insert (overwrite / normal / visual use the fat layer).
-- Lumia maps accent → `--vscode-button-background` / on-accent → `--vscode-button-foreground` under the `obsidian` profile.
+- Lumiere maps accent → `--vscode-button-background` / on-accent → `--vscode-button-foreground` under the `obsidian` profile.
 
 ---
 

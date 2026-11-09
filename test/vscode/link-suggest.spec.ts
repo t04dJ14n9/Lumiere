@@ -18,7 +18,7 @@ async function editorFrame(page: Page): Promise<Frame> {
       return frame;
     }
   }
-  throw new Error("No Lumia frame");
+  throw new Error("No Lumiere frame");
 }
 
 for (const vim of [false, true]) {

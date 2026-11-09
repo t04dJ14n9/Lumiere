@@ -165,7 +165,7 @@ function publishingHandoff(
   return { envelope: async () => envelope } as unknown as AgentHandoff;
 }
 
-test("the envelope command returns the pdf envelope and does not call Lumia", async () => {
+test("the envelope command returns the pdf envelope and does not call Lumiere", async () => {
   const calls: string[] = [];
   const originalExecute = vscode.commands.executeCommand;
   vscode.commands.executeCommand = async (command: string) => {

@@ -78,7 +78,7 @@ async function start(
   };
 }
 
-test("[[ offers the notes the Lumia editor offers, ranked and written the same way", async () => {
+test("[[ offers the notes the Lumiere editor offers, ranked and written the same way", async () => {
   const { root, index, complete } = await start();
   const before = "See [[Targ";
   const items = await complete(before);

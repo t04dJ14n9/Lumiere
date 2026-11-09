@@ -54,7 +54,7 @@ type ZoomReads = Pick<StageCapability, "getZoomMode" | "getZoomLevel">;
 /**
  * The zoom as a reading position keeps it: a fit mode while the viewer
  * follows one, else the exact level in percent. The Stage's other modes
- * (automatic, fit all) are not choices Lumia offers, so they read as the
+ * (automatic, fit all) are not choices Lumiere offers, so they read as the
  * level they resolved to.
  */
 export function zoomChoice(stage: ZoomReads): ZoomChoice {

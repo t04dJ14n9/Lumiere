@@ -53,7 +53,7 @@ function releaseLeaseWithoutTextTab(tab: vscode.Tab): string | undefined {
 }
 
 /**
- * Reclaim native text / Cursor Markdown tabs into Lumia when enabled.
+ * Reclaim native text / Cursor Markdown tabs into Lumiere when enabled.
  * Opt-in `reclaimInPlaceTextEditor` also reclaims in-place workbench→text /
  * other→text (Claude); off by default. Open as Text / Toggle / handoff stay.
  */

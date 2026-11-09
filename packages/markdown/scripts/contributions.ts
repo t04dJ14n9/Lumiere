@@ -16,7 +16,7 @@ const pluginsDirectory = fileURLToPath(
   new URL("../src/plugins", import.meta.url),
 );
 
-/** Lumia's `contributes`, generated from its plugin manifests. */
+/** Lumiere's `contributes`, generated from its plugin manifests. */
 export async function contributions() {
   const manifests: Manifest[] = [];
   for (const directory of readdirSync(pluginsDirectory, {
@@ -35,7 +35,7 @@ export async function contributions() {
     (manifest.contributes?.commands ?? []).map((command) => ({
       command: contributionId(command.id),
       title: command.title,
-      category: "Lumia",
+      category: "Lumiere",
       ...(command.icon ? { icon: command.icon } : {}),
       ...(command.shortTitle ? { shortTitle: command.shortTitle } : {}),
     })),
@@ -111,7 +111,7 @@ export async function contributions() {
       ],
     },
     configuration: {
-      title: "Lumia",
+      title: "Lumiere",
       properties: {
         ...Object.fromEntries(
           manifests
@@ -165,7 +165,7 @@ export async function contributions() {
           default: false,
           scope: "window",
           description:
-            "Log plugin load/stop timings and debug messages in the Lumia output channel.",
+            "Log plugin load/stop timings and debug messages in the Lumiere output channel.",
         },
         [contributionId("plugins.external")]: {
           type: "object",

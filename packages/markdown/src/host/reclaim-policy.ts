@@ -35,7 +35,7 @@ export interface TabSwap {
 
 /**
  * Whether an associated note arriving in the text or Cursor Markdown editor
- * should go back to Lumia: a switch into Cursor's own Markdown editor; a
+ * should go back to Lumiere: a switch into Cursor's own Markdown editor; a
  * new text tab (chat link, review card); and — when `reclaimInPlace` is on —
  * an in-place workbench→text / other→text open from tools such as Claude Code
  * `showTextDocument`, which bypasses `workbench.editorAssociations`. Explicit
@@ -115,7 +115,7 @@ export function cursorMarkdownEditorTakes(uri: string): boolean {
 /**
  * Whether a native opt-out should skip reclaim for this arrival. Open as Text /
  * Claude in-place `readerText` keeps the **text** editor only. Cursor Markdown
- * (`other`, Preview|Markdown) has no Lumia webview menus — reclaim it unless a
+ * (`other`, Preview|Markdown) has no Lumiere webview menus — reclaim it unless a
  * short textBypass window or Cursor Edit handoff lease still applies.
  */
 export function nativeStayBlocks(

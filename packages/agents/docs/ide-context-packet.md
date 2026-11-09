@@ -1,6 +1,6 @@
 # IDE context packet (v1)
 
-The packet both Lumia and Lumia PDF build (`src/ide-context`).
+The packet both Lumiere and Lumiere PDF build (`src/ide-context`).
 
 ## Discriminant
 

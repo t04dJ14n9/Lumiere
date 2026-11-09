@@ -136,7 +136,7 @@ export function checkWrite(
   const full = typeof key === "string" ? `${SETTING_PREFIX}${key}` : "";
   const setting = contributed.find((item) => item.key === full);
   if (!setting) {
-    return { problem: `${String(key)} is not a Lumia setting.` };
+    return { problem: `${String(key)} is not a Lumiere setting.` };
   }
   const problem = validateValue(setting.schema, value);
   return problem ? { problem } : { setting };

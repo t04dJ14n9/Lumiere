@@ -1,6 +1,6 @@
-# Agent instructions: Lumia PDF
+# Agent instructions: Lumiere PDF
 
-Lumia PDF is one half of the "Lumia: Markdown Editor and PDF Reader" extension: a
+Lumiere PDF is one half of the "Lumiere: Markdown Editor and PDF Reader" extension: a
 PDF viewer built on EmbedPDF 3 that copies selections with exact page-and-box
 locations. The repository's [AGENTS.md](../../AGENTS.md) applies; these rules
 are specific to the PDF code. Read README.md for the layout and CAPABILITIES.md for the plugin table.
@@ -28,7 +28,7 @@ are specific to the PDF code. Read README.md for the layout and CAPABILITIES.md 
   there is no scroll element to read `scrollTop` from. Move and read the view
   with Stage verbs (`goToPage`, `reveal`, `scrollTo`, `zoomTo`, reached with
   `useStageApi()`), never by DOM scrolling; page layers read their page with
-  `usePage()`. Lumia's shared types keep 1-based page numbers; convert to
+  `usePage()`. Lumiere's shared types keep 1-based page numbers; convert to
   EmbedPDF's 0-based indexes and `PageRef`s only inside the webview.
 - Annotations are kept outside the PDF as `{ version: 2, bundle }`
   (`shared/annotation-store.ts`); raise the version, and keep reading the old

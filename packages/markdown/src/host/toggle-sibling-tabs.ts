@@ -12,7 +12,7 @@ export interface ToggleTabFacts {
 }
 
 /**
- * After `vscode.openWith` switches Lumia ↔ text, VS Code leaves the previous
+ * After `vscode.openWith` switches Lumiere ↔ text, VS Code leaves the previous
  * view as a second tab of the same URI (BH-011 / BH-003). Close clean siblings
  * of the other kind in the active group, matching reclaim's leave-behind close.
  * Dirty tabs stay so unsaved text is not discarded.

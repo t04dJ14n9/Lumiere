@@ -4,7 +4,7 @@
  * 1. The native gesture. A force click (hard press on the trackpad) or a
  *    three-finger tap never reaches the page: Chromium itself reads the word
  *    under the pointer from the DOM (Blink's AttributedWordAtPoint) and shows
- *    the Dictionary popover. Lumia can only keep that word readable: real
+ *    the Dictionary popover. Lumiere can only keep that word readable: real
  *    text under the pointer, not covered, and not `user-select: none`, the
  *    cause of the same bug in VS Code's own editor (microsoft/vscode#85632).
  *    A force click starts as a press, so it must also hold while the button

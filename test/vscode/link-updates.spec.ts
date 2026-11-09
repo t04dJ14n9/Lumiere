@@ -35,7 +35,7 @@ async function renameInExplorer(page: Page, from: string, to: string) {
 
 /**
  * VS Code's own prompt for edits an extension makes with a file move; it
- * follows Lumia's question and is not Lumia's.
+ * follows Lumiere's question and is not Lumiere's.
  */
 async function acceptRefactoring(page: Page) {
   const prompt = page
@@ -84,7 +84,7 @@ test("Always Update in the rename dialog updates the links, saves the mode, and 
       )
       .toBe("always");
 
-    // VS Code's prompt is the first dialog this rename shows: Lumia did not ask.
+    // VS Code's prompt is the first dialog this rename shows: Lumiere did not ask.
     await renameInExplorer(page, "Rename Goal.md", "Rename Target.md");
     await acceptRefactoring(page);
     await expect(dialog.filter({ hasText: "Update links in" })).toHaveCount(0);

@@ -12,7 +12,7 @@ export const config = Schema.object({
 export default defineManifest({
   id: "obsidianCompat",
   title: "Obsidian Compatibility",
-  description: "Use Obsidian property types and vault settings in Lumia.",
+  description: "Use Obsidian property types and vault settings in Lumiere.",
   kind: "feature",
   defaultEnabled: true,
   surfaces: ["host"],

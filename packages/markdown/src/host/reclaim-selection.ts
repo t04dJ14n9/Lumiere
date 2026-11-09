@@ -56,7 +56,7 @@ const EDITOR_REPORT_TIMEOUT_MS = 250;
  * Wait after the text editor reports without a range. Search puts its range
  * in the editor's first snapshot or in a selection event right after it. An
  * open from Quick Open, the Explorer or a link never has one, and would
- * otherwise sit out the full timeout with its Lumia tab not yet requested.
+ * otherwise sit out the full timeout with its Lumiere tab not yet requested.
  */
 const RANGE_SETTLE_MS = 40;
 

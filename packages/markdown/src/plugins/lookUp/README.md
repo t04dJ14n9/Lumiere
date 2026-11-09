@@ -1,7 +1,7 @@
 # Look Up (plugin id `lookUp`; command Look Up)
 
 On macOS, **Look Up** in a note's right-click menu opens the word you
-right-clicked in the Dictionary app, as the same item does in Lumia PDF.
+right-clicked in the Dictionary app, as the same item does in Lumiere PDF.
 In Obsidian, as in other Chromium-based apps, the equivalent is macOS's own
 gesture (a force click or a three-finger tap on a word), which this plugin
 does not replace.
@@ -9,7 +9,7 @@ does not replace.
 ## How it works
 
 macOS's gesture never reaches the page: Chromium reads the word under the
-pointer from the DOM itself, so all Lumia can do for it is keep notes'
+pointer from the DOM itself, so all Lumiere can do for it is keep notes'
 text real, uncovered and selectable (`test/browser/look-up.spec.ts` guards
 that). The menu item is the path that does not depend on the system setting
 or on VS Code. When the menu opens, the webview half records the word: the

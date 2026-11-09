@@ -17,7 +17,7 @@ export interface ToggleTextEditorHost {
 }
 
 /**
- * Toggle the active Markdown note between Lumia and the host's default
+ * Toggle the active Markdown note between Lumiere and the host's default
  * text editor (`vscode.openWith` with `"default"` or our viewType).
  *
  * Obsidian's Ctrl/Cmd+E toggles Live Preview ↔ Source; this intentionally

@@ -1,8 +1,8 @@
 /**
- * The bookmarks of a PDF, which Lumia offers after `[[paper.pdf#`. The
- * extension's composition root provides this service from Lumia PDF
+ * The bookmarks of a PDF, which Lumiere offers after `[[paper.pdf#`. The
+ * extension's composition root provides this service from Lumiere PDF
  * (`createPdfOutlines`), so a host without a PDF engine simply lacks it.
- * Lumia owns the interface and Lumia PDF's reader satisfies it, as
+ * Lumiere owns the interface and Lumiere PDF's reader satisfies it, as
  * `NoteSelections` does the other way round.
  */
 export interface PdfSection {

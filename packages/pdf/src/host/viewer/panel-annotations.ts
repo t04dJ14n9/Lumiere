@@ -7,7 +7,7 @@ import type { ViewerPanelHost } from "./panel-types";
 import type { PdfSource } from "./source";
 
 /**
- * One editor's annotations on the host: Lumia's own kept in a file outside
+ * One editor's annotations on the host: Lumiere's own kept in a file outside
  * the PDF (`AnnotationStore`), and the PDF overwritten with them only when
  * the reader asks (`AnnotationSave`), with the events the extension shows.
  */

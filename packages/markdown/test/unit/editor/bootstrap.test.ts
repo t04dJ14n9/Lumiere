@@ -114,9 +114,9 @@ test("the editor provider registers once, so an editor opened during activation 
 });
 
 // VS Code runs a contributed command by activating the extension, so a
-// command whose handler waits for the first Lumia panel (editor/ready) is
+// command whose handler waits for the first Lumiere panel (editor/ready) is
 // "not found" in a window where no note has been opened yet.
-test("Open Today's Daily Note works before any Lumia editor opens", async () => {
+test("Open Today's Daily Note works before any Lumiere editor opens", async () => {
   const commands = new Set<string>();
   const host = fakeHost({
     hostCommands: {

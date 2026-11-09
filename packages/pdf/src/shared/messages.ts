@@ -22,7 +22,7 @@
  *    │  zen { on } ─────────────►         zen mode is on or off (command-only while it lasts)
     │  pageColors { effective } ►         normal | dark paper (host resolved Follow)
  *    │  ◄──────────── zen                 Exit zen pressed, or full-screen zen ended
- *    │  ◄──────────── annotation*         Lumia's annotations kept outside the PDF,
+ *    │  ◄──────────── annotation*         Lumiere's annotations kept outside the PDF,
  *    │  annotation* ──────────►            and the PDF written with them on request
  *    │                                    (see annotation-messages.ts)
  *    │  ◄──────────── lookUp              the word under a force click (open),

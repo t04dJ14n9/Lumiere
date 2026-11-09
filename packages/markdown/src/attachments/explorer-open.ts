@@ -27,15 +27,15 @@ export interface ExplorerOpenFacts {
    * pinned (`isPreview: false`) via EditorDropTarget.
    */
   readonly isPreview: boolean;
-  /** The editor group still has a Lumia markdown custom editor. */
+  /** The editor group still has a Lumiere markdown custom editor. */
   readonly groupHadLumiereNote: boolean;
-  /** Before this open, that group's active editor was the Lumia note. */
+  /** Before this open, that group's active editor was the Lumiere note. */
   readonly priorActiveWasLumiere: boolean;
 }
 
 /**
  * True when an opened tab is almost certainly Explorer drop-without-Shift onto
- * a Lumia note (webview never saw the drop). Preview (single-click) opens
+ * a Lumiere note (webview never saw the drop). Preview (single-click) opens
  * and non-media files are left alone.
  */
 export function shouldReclaimExplorerOpen(facts: ExplorerOpenFacts): boolean {

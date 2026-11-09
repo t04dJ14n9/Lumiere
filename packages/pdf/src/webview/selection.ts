@@ -159,7 +159,7 @@ export class SelectionTracker {
       next && this.source ? this.readDetails(this.source, next) : undefined;
   }
 
-  /** Follow EmbedPDF's selection events and Lumia's region gestures; returns how to stop. */
+  /** Follow EmbedPDF's selection events and Lumiere's region gestures; returns how to stop. */
   follow(selection: SelectionCapability, source: SelectionSource): () => void {
     this.source = source;
     if (!selection.hasSelection()) {
