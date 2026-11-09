@@ -1,7 +1,21 @@
 import assert from "node:assert/strict";
+import {
+  mkdir,
+  mkdtemp,
+  readFile,
+  realpath,
+  rm,
+  stat,
+  symlink,
+  writeFile,
+} from "node:fs/promises";
+import { tmpdir } from "node:os";
+import path from "node:path";
 import { test } from "node:test";
+import { pathToFileURL } from "node:url";
 import type { OutlineSection } from "../../src/shared/outline-sections";
 import type { OutlineEngine } from "../../src/extension/outlines/engine";
+import { insideFolders } from "../../src/extension/outlines/inside-folders";
 import {
   MAX_OUTLINE_PDF_BYTES,
   PdfOutlineReader,
@@ -187,4 +201,76 @@ test("disposing while the first PDF is being read leaves no PDFium running", asy
   await pending;
   await new Promise((resolve) => setTimeout(resolve, 10));
   assert.equal(calls.disposed, calls.engines);
+});
+
+test("a PDF has bookmarks only when its real path is inside the workspace", async (t) => {
+  const root = await realpath(await mkdtemp(path.join(tmpdir(), "outline-")));
+  const outside = await realpath(
+    await mkdtemp(path.join(tmpdir(), "outline-outside-")),
+  );
+  t.after(() =>
+    Promise.all([root, outside].map((dir) => rm(dir, { recursive: true }))),
+  );
+  await writeFile(path.join(root, "paper.pdf"), "inside");
+  await writeFile(path.join(outside, "other.pdf"), "outside");
+  await symlink(path.join(root, "paper.pdf"), path.join(root, "inner.pdf"));
+  await symlink(path.join(outside, "other.pdf"), path.join(root, "link.pdf"));
+  await symlink(outside, path.join(root, "linked-folder"));
+  await mkdir(path.join(root, "sub"));
+  const reads: string[] = [];
+  const disk: OutlineFiles = {
+    async stat(uri) {
+      const { mtimeMs, size } = await stat(new URL(uri));
+      return { mtime: mtimeMs, size };
+    },
+    async read(uri) {
+      reads.push(uri);
+      return readFile(new URL(uri));
+    },
+  };
+  const reader = new PdfOutlineReader({
+    files: insideFolders(disk, () => [root]),
+    engine: async () => ({
+      sections: async (bytes) => [
+        { title: new TextDecoder().decode(bytes), page: 1, depth: 0 },
+      ],
+      dispose: async () => {},
+    }),
+    log: () => {},
+  });
+  const bookmarks = async (...parts: string[]) =>
+    titles(await reader.sections(pathToFileURL(path.join(...parts)).href));
+
+  assert.deepEqual(await bookmarks(root, "paper.pdf"), ["inside"]);
+  // A link that stays inside the workspace is still its own file.
+  assert.deepEqual(await bookmarks(root, "inner.pdf"), ["inside"]);
+  assert.deepEqual(await bookmarks(root, "link.pdf"), []);
+  assert.deepEqual(await bookmarks(root, "linked-folder", "other.pdf"), []);
+  assert.deepEqual(await bookmarks(root, "sub", "missing.pdf"), []);
+  assert.equal(
+    reads.some((uri) => uri.includes("other.pdf") || uri.includes("link")),
+    false,
+  );
+  // Where files have no real path, the editor's own file system decides.
+  assert.deepEqual(
+    titles(
+      await new PdfOutlineReader({
+        files: insideFolders(
+          {
+            stat: async () => ({ mtime: 1, size: 1 }),
+            read: async () => new TextEncoder().encode("remote"),
+          },
+          () => [root],
+        ),
+        engine: async () => ({
+          sections: async (bytes) => [
+            { title: new TextDecoder().decode(bytes), page: 1, depth: 0 },
+          ],
+          dispose: async () => {},
+        }),
+        log: () => {},
+      }).sections("vscode-vfs://github/repo/paper.pdf"),
+    ),
+    ["remote"],
+  );
 });

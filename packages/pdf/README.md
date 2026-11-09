@@ -287,9 +287,11 @@ src/
 ├── extension/   the VS Code side
 │   ├── extension.ts            activation: builds the plugin runtime, nothing else
 │   ├── outlines/               the bookmarks of PDFs, for `[[paper.pdf#` in Lumiere:
-│   │                           a cached reader, and engine.ts, a separate lazily
-│   │                           loaded bundle (outline-engine.js) of PDFium that
-│   │                           loads the viewer's embedpdf.wasm
+│   │                           a cached reader, inside-folders.ts, which reads no
+│   │                           PDF whose real path leaves the workspace, and
+│   │                           engine.ts, a separate lazily loaded bundle
+│   │                           (outline-engine.js) of PDFium that loads the
+│   │                           viewer's embedpdf.wasm
 │   ├── runtime/                plugin manifests and the runtime: dependency order,
 │   │                           transactional start (a failed plugin rolls back what
 │   │                           it registered), teardown in reverse order
