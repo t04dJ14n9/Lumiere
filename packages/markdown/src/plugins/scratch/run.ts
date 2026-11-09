@@ -105,6 +105,14 @@ export async function promoteScratchNote(
     return;
   }
   const { relative } = created;
+  // The note may have been typed into while the page was written; the stub
+  // would replace that text too. Nothing awaits between this check and the edit.
+  if (input.document && changedSince(input.document, input.text)) {
+    io.error(
+      `The wiki page was written to ${relative}, but the scratch note changed while it was being promoted, so it was left as it is.`,
+    );
+    return;
+  }
   const path = encodeLinkPath(relativePosix(input.scratchRelative, relative));
   const replaced = await replaceScratch(
     io,
@@ -192,6 +200,11 @@ async function blocked(io: ScratchIO, relative: string): Promise<boolean> {
     io.error("That path follows a symbolic link. Nothing was written.");
   }
   return linked;
+}
+
+/** True when the note no longer holds the text the page was written from. */
+function changedSince(document: HostDocument, text: string): boolean {
+  return typeof document.getText === "function" && document.getText() !== text;
 }
 
 async function replaceScratch(

@@ -162,3 +162,44 @@ test("two new scratch notes with the same title keep both notes", async () => {
   ]);
   assert.equal(written.size, 2);
 });
+
+test("promoting leaves a note that changed during the write as it is", async () => {
+  const snapshot = "---\ntitle: Draft\n---\nInitial body.\n";
+  let current = snapshot;
+  const written = new Map<string, string>();
+  const applied: TextEdit[][] = [];
+  const errors: string[] = [];
+  let release!: () => void;
+  const held = new Promise<void>((resolve) => {
+    release = resolve;
+  });
+  const files = memoryFiles(written);
+  const io: ScratchIO = {
+    ...scratchIO(written, applied),
+    files: {
+      ...files,
+      async createText(uri, text) {
+        await held;
+        return files.createText(uri, text);
+      },
+    },
+    error: (message) => errors.push(message),
+  };
+  const promoting = promoteScratchNote(io, {
+    target: CONCEPT,
+    title: "Draft",
+    text: snapshot,
+    at: "2026-10-11T01:00:00.000Z",
+    scratchRelative: SCRATCH,
+    document: { ...scratchDocument(snapshot), getText: () => current },
+  });
+  // The page is still being written: the user keeps typing in the note.
+  current = `${current}Typed meanwhile.\n`;
+  release();
+  await promoting;
+  assert.match([...written.values()][0] ?? "", /Initial body\./);
+  assert.deepEqual(applied, []);
+  assert.equal(errors.length, 1);
+  assert.match(errors[0] ?? "", /knowledge\/concepts\/draft\.md/);
+  assert.match(errors[0] ?? "", /changed/);
+});

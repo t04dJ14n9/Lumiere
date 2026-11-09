@@ -136,11 +136,12 @@ test("create stays outside the bundle and promote does not write an index", asyn
   assert.equal(frontmatter(scratch)?.values?.type, undefined);
   assert.equal(opened.length, 1);
   written.clear();
+  const text =
+    scratchNote("Loose end", "2026-10-11T00:00:00.000Z") + "A definition.\n";
   await promoteScratchNote(io, {
     target: { type: "Concept", logical: "concepts" },
     title: "Loose end",
-    text:
-      scratchNote("Loose end", "2026-10-11T00:00:00.000Z") + "A definition.\n",
+    text,
     at: "2026-10-11T01:00:00.000Z",
     scratchRelative: "scratch/2026-10-11-loose-end.md",
     document: {
@@ -150,7 +151,7 @@ test("create stays outside the bundle and promote does not write an index", asyn
       isDirty: false,
       isUntitled: false,
       eol: "\n",
-      getText: () => "scratch",
+      getText: () => text,
       save: async () => true,
     },
   });
