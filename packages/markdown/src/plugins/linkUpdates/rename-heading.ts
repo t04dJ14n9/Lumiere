@@ -3,7 +3,7 @@ import { SourceCoordinates } from "../../shared/document/coordinates";
 import type { Dialogs, HostDocument, HostDocuments } from "../../shared/host";
 import type { Editors } from "../editor/api";
 import { protocol as editorProtocol } from "../editor/protocol";
-import type { Vaults } from "../vault/api";
+import type { VaultFile, Vaults } from "../vault/api";
 import {
   headingAt,
   headingLinkEdits,
@@ -110,7 +110,11 @@ function resolver(vault: Vault) {
     vault.index.resolveLink(linkpath, source, syntax)?.path;
 }
 
-/** Update the links to the heading in every other note that links here. */
+/**
+ * Update the links to the heading in every other note that links here. One
+ * note failing does not stop the notes after it; the failures are reported
+ * together at the end.
+ */
 async function updateLinks(
   ctx: Services,
   vault: Vault,
@@ -120,21 +124,53 @@ async function updateLinks(
     vault.index.backlinks(renamed.path).map((link) => link.path),
   );
   sources.delete(renamed.path);
+  const failed: string[] = [];
   for (const source of sources) {
     const file = vault.index.file(source);
     if (file?.extension !== "md") {
       continue;
     }
+    if (!(await updateLinksIn(ctx, vault, renamed, file))) {
+      failed.push(source);
+    }
+  }
+  if (failed.length > 0) {
+    ctx.dialogs.error(
+      `The heading was renamed, but its links could not be updated in ${failed.join(", ")}.`,
+    );
+  }
+}
+
+/** Update the links in one note; false when it could not be updated. */
+async function updateLinksIn(
+  ctx: Services,
+  vault: Vault,
+  renamed: RenamedHeading,
+  file: VaultFile,
+): Promise<boolean> {
+  try {
     const text = editorText(
       await sourceText(ctx.vaults, ctx.hostDocuments, file.uri),
     );
-    const edits = headingLinkEdits(text, source, renamed, resolver(vault));
-    if (edits.length > 0) {
-      await ctx.hostDocuments.apply(
-        await ctx.hostDocuments.open(file.uri),
-        edits,
-      );
+    if (
+      headingLinkEdits(text, file.path, renamed, resolver(vault)).length === 0
+    ) {
+      return true;
     }
+    const document = await ctx.hostDocuments.open(file.uri);
+    // The note can change while it is read and opened, so the offsets come
+    // from the text the document has now, with no await before they apply.
+    const edits = headingLinkEdits(
+      editorText(document.getText()),
+      file.path,
+      renamed,
+      resolver(vault),
+    );
+    return (
+      edits.length === 0 || (await ctx.hostDocuments.apply(document, edits))
+    );
+  } catch {
+    return false;
   }
 }
 

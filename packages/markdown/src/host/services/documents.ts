@@ -1,4 +1,5 @@
 import { createHash } from "node:crypto";
+import path from "node:path";
 import * as vscode from "vscode";
 import { SourceCoordinates } from "../../shared/document/coordinates";
 import { MARKDOWN_EDITOR } from "../../shared/editor-provider";
@@ -68,27 +69,34 @@ export function createHostDocuments(documents: NativeDocuments): HostDocuments {
   };
 }
 
-const onWillRename: HostDocuments["onWillRename"] = (listener) =>
-  toDisposer(
-    vscode.workspace.onWillRenameFiles((event) => {
-      const renames = renamePairs(event.files);
-      event.waitUntil(
-        listener(renames).then(async (files) => {
-          // BH-014: VS Code applies onWill edits in a participant that may
-          // Show Preview. onDidRenameFiles often fires before Apply, and
-          // Preview Apply can drop the edit (stale version) — leaving disk
-          // unchanged and not dirty. Capture expected text now; after rename
-          // apply+save every note ourselves (Obsidian writes to disk). Still
-          // return closed-note edits for Preview listing / OK undo grouping;
-          // Lumiere-open tabs stay out of waitUntil so a failed custom-editor
-          // apply cannot abort the whole batch.
-          const lumiere = lumiereOpenUris();
-          await scheduleLinkUpdatesAfterRename(files, renames);
-          return workspaceEdit(files.filter((file) => !lumiere.has(file.uri)));
-        }),
-      );
-    }),
-  );
+const onWillRename: HostDocuments["onWillRename"] = (listener) => {
+  const pending: PendingLinkUpdates = new Map();
+  const subscription = vscode.workspace.onWillRenameFiles((event) => {
+    const renames = renamePairs(event.files);
+    event.waitUntil(
+      listener(renames).then(async (files) => {
+        // BH-014: VS Code applies onWill edits in a participant that may
+        // Show Preview. onDidRenameFiles often fires before Apply, and
+        // Preview Apply can drop the edit (stale version) — leaving disk
+        // unchanged and not dirty. Capture expected text now; after rename
+        // apply+save every note ourselves (Obsidian writes to disk). Still
+        // return closed-note edits for Preview listing / OK undo grouping;
+        // Lumiere-open tabs stay out of waitUntil so a failed custom-editor
+        // apply cannot abort the whole batch.
+        const lumiere = lumiereOpenUris();
+        await scheduleLinkUpdatesAfterRename(files, renames, pending);
+        return workspaceEdit(files.filter((file) => !lumiere.has(file.uri)));
+      }),
+    );
+  });
+  return () => {
+    subscription.dispose();
+    for (const plan of pending.values()) {
+      plan.dispose();
+    }
+    pending.clear();
+  };
+};
 
 /** A rename event's files as URI strings, the form the host services use. */
 function renamePairs(
@@ -104,9 +112,10 @@ function renamePairs(
  * Link updates planned for renames that have not finished yet, by
  * `renamesKey`. VS Code has no "rename cancelled" event, so a rename dropped
  * in Refactor Preview leaves its plan here: only a did-rename for the same
- * files may run it, and planning that rename again replaces it.
+ * files may run it, planning that rename again replaces it, and stopping the
+ * listener that planned it drops it. Each listener keeps its own plans.
  */
-const pendingLinkUpdates = new Map<string, vscode.Disposable>();
+type PendingLinkUpdates = Map<string, vscode.Disposable>;
 
 /** URIs that currently have a Lumiere custom editor tab. */
 function lumiereOpenUris(): Set<string> {
@@ -125,6 +134,12 @@ function lumiereOpenUris(): Set<string> {
   return uris;
 }
 
+/** A note a rename's link updates change: its text before and after them. */
+interface PlannedNote {
+  before: string;
+  after: string;
+}
+
 /**
  * Plan post-rename apply+save for every note the link update touches.
  * Expected text is captured here (open buffer or on-disk bytes) so a delayed
@@ -134,10 +149,11 @@ function lumiereOpenUris(): Set<string> {
 async function scheduleLinkUpdatesAfterRename(
   files: readonly FileTextEdits[],
   renames: readonly { oldUri: string; newUri: string }[],
+  pending: PendingLinkUpdates,
 ): Promise<void> {
   const key = renamesKey(renames);
-  pendingLinkUpdates.get(key)?.dispose();
-  pendingLinkUpdates.delete(key);
+  pending.get(key)?.dispose();
+  pending.delete(key);
   const targets = files.filter((file) => file.edits.length > 0);
   if (targets.length === 0) {
     return;
@@ -149,23 +165,23 @@ async function scheduleLinkUpdatesAfterRename(
       ),
     ).map((uri) => postRenameUri(uri, renames)),
   );
-  const expected = new Map<string, string>();
-  const postTargets: FileTextEdits[] = [];
+  const planned = new Map<string, PlannedNote>();
   for (const file of targets) {
-    const text = await noteTextForLinkUpdate(file.uri);
-    const uri = postRenameUri(file.uri, renames);
-    expected.set(uri, applyLineColEdits(text, file.edits));
-    postTargets.push({ uri, edits: file.edits });
+    const before = await noteTextForLinkUpdate(file.uri);
+    planned.set(postRenameUri(file.uri, renames), {
+      before,
+      after: applyLineColEdits(before, file.edits),
+    });
   }
   const done = vscode.workspace.onDidRenameFiles((event) => {
     if (renamesKey(renamePairs(event.files)) !== key) {
       return;
     }
     done.dispose();
-    pendingLinkUpdates.delete(key);
-    void settleLinkUpdates(postTargets, expected, clean);
+    pending.delete(key);
+    void settleLinkUpdates(planned, clean);
   });
-  pendingLinkUpdates.set(key, done);
+  pending.set(key, done);
 }
 
 /**
@@ -189,7 +205,11 @@ function postRenameUri(
   return uri;
 }
 
-/** Open buffer text, or the file on disk without stamping a TextDocument version. */
+/**
+ * Open buffer text, or the file on disk without stamping a TextDocument
+ * version. Disk bytes are decoded as the vault decodes them, which drops a
+ * BOM as VS Code does, so both read as a document's text would.
+ */
 async function noteTextForLinkUpdate(uri: string): Promise<string> {
   const open = vscode.workspace.textDocuments.find(
     (document) => document.uri.toString() === uri,
@@ -198,7 +218,7 @@ async function noteTextForLinkUpdate(uri: string): Promise<string> {
     return open.getText();
   }
   const bytes = await vscode.workspace.fs.readFile(vscode.Uri.parse(uri));
-  return Buffer.from(bytes).toString("utf8");
+  return new TextDecoder().decode(bytes);
 }
 
 // Preview → Apply can lag well after onDidRenameFiles; keep trying so a slow
@@ -209,69 +229,131 @@ const SETTLE_GAP_MS = 100;
 /**
  * After the rename: if the note does not yet match the planned text (waitUntil
  * OK path not run, or Preview Apply still pending/dropped), apply the edits
- * ourselves and save clean notes to disk.
+ * ourselves and save clean notes to disk. Notes that could not be updated are
+ * named in one warning at the end.
  */
 async function settleLinkUpdates(
-  files: readonly FileTextEdits[],
-  expected: ReadonlyMap<string, string>,
+  planned: ReadonlyMap<string, PlannedNote>,
   clean: ReadonlySet<string>,
 ): Promise<void> {
   const settled = new Set<string>();
-  for (let attempt = 0; attempt < SETTLE_ATTEMPTS; attempt++) {
+  const changed = new Set<string>();
+  const ensure = () => ensureLinkUpdates(planned, clean, settled, changed);
+  let isDone = false;
+  for (let attempt = 0; attempt < SETTLE_ATTEMPTS && !isDone; attempt++) {
     if (attempt > 0) {
       await wait(SETTLE_GAP_MS);
     }
-    if (await ensureLinkUpdates(files, expected, clean, settled)) {
-      return;
-    }
+    isDone = await ensure();
   }
-  await ensureLinkUpdates(files, expected, clean, settled);
+  if (!isDone) {
+    await ensure();
+  }
+  warnLinksNotUpdated(
+    [...planned.keys()].filter((uri) => changed.has(uri) || !settled.has(uri)),
+  );
 }
 
 /**
- * @returns true when every target matches expected and clean notes are saved.
- * A note added to `settled` is left alone on later attempts, so what the user
- * types into it while another note is still retried is not overwritten.
+ * @returns true when every planned note matches its planned text and clean
+ * notes are saved. A note added to `settled` is left alone on later attempts,
+ * so what the user types into it while another note is still retried is not
+ * overwritten. `changed` collects the notes left alone because their text
+ * changed after the plan was made. A note whose open, edit or save throws is
+ * retried like one whose edit is refused, so the notes after it still settle.
  */
 async function ensureLinkUpdates(
-  files: readonly FileTextEdits[],
-  expected: ReadonlyMap<string, string>,
+  planned: ReadonlyMap<string, PlannedNote>,
   clean: ReadonlySet<string>,
   settled: Set<string>,
+  changed: Set<string>,
 ): Promise<boolean> {
   let done = true;
-  for (const file of files) {
-    const want = expected.get(file.uri);
-    if (want === undefined || settled.has(file.uri)) {
+  for (const [uri, note] of planned) {
+    if (settled.has(uri)) {
       continue;
     }
-    const uri = vscode.Uri.parse(file.uri);
-    let document = await vscode.workspace.openTextDocument(uri);
-    if (document.getText() !== want) {
-      // Full-document replace: line/col from onWill stay valid only against the
-      // pre-rename snapshot. Preview may have mutated the buffer first.
-      const edit = new vscode.WorkspaceEdit();
-      const end = document.positionAt(document.getText().length);
-      edit.replace(uri, new vscode.Range(new vscode.Position(0, 0), end), want);
-      if (!(await vscode.workspace.applyEdit(edit))) {
-        done = false;
-        continue;
-      }
-      document = await vscode.workspace.openTextDocument(uri);
-    }
-    if (document.getText() !== want) {
+    const outcome = await ensureNoteUpdated(uri, note, clean.has(uri)).catch(
+      (): NoteOutcome => "retry",
+    );
+    if (outcome === "retry") {
       done = false;
       continue;
     }
-    if (clean.has(file.uri) && document.isDirty) {
-      if (!(await document.save())) {
-        done = false;
-        continue;
-      }
+    settled.add(uri);
+    if (outcome === "changed") {
+      changed.add(uri);
     }
-    settled.add(file.uri);
   }
   return done;
+}
+
+/**
+ * How a note ended: `changed` when its text differs from the plan since it was
+ * made, `retry` when it could not be brought to the planned text yet.
+ */
+type NoteOutcome = "updated" | "changed" | "retry";
+
+/**
+ * Brings one note to its planned text and saves it when it was clean. Only a
+ * note that still reads as it did when planned is replaced as a whole: any
+ * other text was written since (typing, another extension), and replacing it
+ * would discard that.
+ */
+async function ensureNoteUpdated(
+  uri: string,
+  note: PlannedNote,
+  isClean: boolean,
+): Promise<NoteOutcome> {
+  const target = vscode.Uri.parse(uri);
+  let document = await vscode.workspace.openTextDocument(target);
+  if (!isSameText(document.getText(), note.after)) {
+    if (!isSameText(document.getText(), note.before)) {
+      return "changed";
+    }
+    // Full-document replace: line/col from onWill stay valid only against the
+    // pre-rename snapshot.
+    const edit = new vscode.WorkspaceEdit();
+    const end = document.positionAt(document.getText().length);
+    edit.replace(
+      target,
+      new vscode.Range(new vscode.Position(0, 0), end),
+      note.after,
+    );
+    if (!(await vscode.workspace.applyEdit(edit))) {
+      return "retry";
+    }
+    document = await vscode.workspace.openTextDocument(target);
+    if (!isSameText(document.getText(), note.after)) {
+      return "retry";
+    }
+  }
+  if (isClean && document.isDirty && !(await document.save())) {
+    return "retry";
+  }
+  return "updated";
+}
+
+/**
+ * Whether two texts of one note are the same. VS Code keeps a document in one
+ * line-ending style, so a note read from a file with mixed endings differs
+ * from its document only in them.
+ */
+function isSameText(a: string, b: string): boolean {
+  return a.replace(/\r\n?/g, "\n") === b.replace(/\r\n?/g, "\n");
+}
+
+/** Tells the user which notes kept their old links. */
+function warnLinksNotUpdated(uris: readonly string[]): void {
+  if (uris.length === 0) {
+    return;
+  }
+  const names = uris.map((uri) =>
+    path.posix.basename(vscode.Uri.parse(uri).path),
+  );
+  void vscode.window.showWarningMessage(
+    `Links in ${names.join(", ")} were not updated. Check them after the rename.`,
+  );
 }
 
 function wait(ms: number): Promise<void> {
