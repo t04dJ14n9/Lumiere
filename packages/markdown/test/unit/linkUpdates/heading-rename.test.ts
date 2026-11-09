@@ -103,3 +103,20 @@ test("a renamed heading's link keeps a title with escaped quotes", () => {
     '[a](probe.md#New%20Name "Say \\"hello\\"")',
   );
 });
+
+test("a renamed heading's link to a file with # in its name is read from its encoded path", () => {
+  const text = "# Old Name\n";
+  const renamed: RenamedHeading = {
+    path: "probe#1.md",
+    text,
+    heading: headingAt(text, 2)!,
+    name: "New Name",
+  };
+  const resolveByPath = (linkpath: string) =>
+    ["probe.md", "probe#1.md"].find((path) => path === linkpath);
+  const links = "[a](probe%231.md#Old%20Name) [b](probe.md#Old%20Name)";
+  assert.equal(
+    apply(links, headingLinkEdits(links, "other.md", renamed, resolveByPath)),
+    "[a](probe%231.md#New%20Name) [b](probe.md#Old%20Name)",
+  );
+});

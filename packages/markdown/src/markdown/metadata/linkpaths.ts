@@ -1,7 +1,7 @@
 import {
-  decodeLinkPath,
   isExternalLink,
   splitLinktext,
+  splitMarkdownDestination,
   type LinkSyntax,
 } from "../../shared/vault-path";
 import type { LinkMetadata, NoteMetadata } from "./types";
@@ -14,16 +14,17 @@ export function linkSyntax(link: Pick<LinkMetadata, "original">): LinkSyntax {
 /**
  * The vault path a link names, as written and without its `#subpath`, or
  * `undefined` for external URLs and in-note links (`#Heading`). Markdown link
- * destinations are percent-decoded; wikilinks are taken as they are.
+ * destinations are percent-decoded after the split, so `a%23b.md` names the
+ * file `a#b.md`; wikilinks are taken as they are.
  */
 export function linkpathOf(link: LinkMetadata): string | undefined {
   if (isExternalLink(link.link)) {
     return undefined;
   }
   const isWikilink = /^!?\[\[/.test(link.original);
-  const { path } = splitLinktext(
-    isWikilink ? link.link : decodeLinkPath(link.link),
-  );
+  const { path } = isWikilink
+    ? splitLinktext(link.link)
+    : splitMarkdownDestination(link.link);
   return path || undefined;
 }
 

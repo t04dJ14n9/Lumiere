@@ -3,7 +3,6 @@ import {
   folderOf,
   joinVaultPath,
   linkLookupKey,
-  splitLinktext,
 } from "../../shared/vault-path";
 import type { VaultFile } from "./api";
 import type { FileTable } from "./file-table";
@@ -14,16 +13,16 @@ export interface ResolveOptions {
 }
 
 /**
- * Obsidian's `getLinkpathDest` (DESIGN §12.3). Returns every candidate in
- * preference order; the first one is the link's destination.
+ * Obsidian's `getLinkpathDest` (DESIGN §12.3), for a link's path without its
+ * `#subpath`. Returns every candidate in preference order; the first one is
+ * the link's destination.
  */
 export function resolveCandidates(
   files: FileTable,
-  linktext: string,
+  written: string,
   sourcePath: string,
   options: ResolveOptions,
 ): readonly VaultFile[] {
-  const { path: written } = splitLinktext(linktext);
   if (written === "") {
     const source = files.get(sourcePath);
     return source ? [source] : [];

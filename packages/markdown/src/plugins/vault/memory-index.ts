@@ -1,6 +1,7 @@
 import type { Disposer } from "@workshop/core";
 import type { NoteMetadata } from "../../markdown/metadata";
 import {
+  linkpathOfText,
   lookupKey,
   nameOf,
   folderOf,
@@ -85,7 +86,12 @@ export class MemoryVaultIndex implements VaultIndex {
       const file = this.table.get(decided.path);
       return file ? [file] : [];
     }
-    return resolveCandidates(this.table, linktext, sourcePath, this.options);
+    return resolveCandidates(
+      this.table,
+      linkpathOfText(linktext, syntax),
+      sourcePath,
+      this.options,
+    );
   }
 
   classifyLink(
@@ -303,9 +309,12 @@ export class MemoryVaultIndex implements VaultIndex {
       syntax,
       find: (path: string) => this.table.find(path)?.path,
       candidates: () =>
-        resolveCandidates(this.table, linktext, sourcePath, this.options).map(
-          (file) => file.path,
-        ),
+        resolveCandidates(
+          this.table,
+          linkpathOfText(linktext, syntax),
+          sourcePath,
+          this.options,
+        ).map((file) => file.path),
     };
     for (const policy of this.policies) {
       const decision = policy.resolve(query);

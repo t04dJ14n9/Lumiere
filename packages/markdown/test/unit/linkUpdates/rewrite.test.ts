@@ -35,7 +35,8 @@ function context(
   const map = new Map(Object.entries(renames));
   return {
     renames: map,
-    resolve: (linkpath, source) => index.resolveLink(linkpath, source)?.path,
+    resolve: (linkpath, source, syntax) =>
+      index.resolveLink(linkpath, source, syntax)?.path,
     pathsAfter: index.files().map((file) => map.get(file.path) ?? file.path),
     format,
   };
@@ -323,6 +324,37 @@ test("a parenthesized title with an escaped parenthesis survives a rename", () =
       "[c](New.md (ab))",
       "[d](<New.md> (a\\)b))",
     ].join("\n"),
+  );
+});
+
+test("a link to a file with # in its name follows that file, not the name before the #", () => {
+  const text = "See [ch](chapter%231.md) and [x](chapter.md)";
+  const notes = {
+    "Index.md": text,
+    "chapter.md": "",
+    "chapter#1.md": "",
+  };
+  assert.equal(
+    apply(
+      text,
+      rewriteLinks(
+        text,
+        "Index.md",
+        context(notes, { "chapter.md": "renamed.md" }),
+      ),
+    ),
+    "See [ch](chapter%231.md) and [x](renamed.md)",
+  );
+  assert.equal(
+    apply(
+      text,
+      rewriteLinks(
+        text,
+        "Index.md",
+        context(notes, { "chapter#1.md": "second.md" }),
+      ),
+    ),
+    "See [ch](second.md) and [x](chapter.md)",
   );
 });
 

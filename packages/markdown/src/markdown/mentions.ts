@@ -1,6 +1,7 @@
 import { metadata } from "./metadata";
-import { linkpathOf, vaultLinks } from "./metadata/linkpaths";
+import { linkpathOf, linkSyntax, vaultLinks } from "./metadata/linkpaths";
 import type { Position } from "./metadata";
+import type { LinkSyntax } from "../shared/vault-path";
 
 /** One line of context for a mention, shown under its note. */
 export interface MentionLine {
@@ -25,12 +26,12 @@ const CONTEXT_LENGTH = 200;
 /** Lines of `text` whose links resolve to the target, one per link. */
 export function linkedLines(
   text: string,
-  isTarget: (linkpath: string) => boolean,
+  isTarget: (linkpath: string, syntax: LinkSyntax) => boolean,
   options: MentionOptions = {},
 ): MentionLine[] {
   const lines = text.split("\n");
   return vaultLinks(metadata(text))
-    .filter((link) => isTarget(linkpathOf(link)!))
+    .filter((link) => isTarget(linkpathOf(link)!, linkSyntax(link)))
     .map((link) => contextLine(lines, link.position, options.extraContext))
     .sort((a, b) => a.offset - b.offset);
 }
