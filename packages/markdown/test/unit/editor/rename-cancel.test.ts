@@ -227,6 +227,23 @@ test("a rename cancelled in Refactor Preview does not rewrite notes on the next 
   assert.deepEqual(world.applied, []);
 });
 
+test("turning link updates off drops a plan for a rename that never finished", async () => {
+  const world = setup({ [LINKER]: "See [[Old]].\n" });
+  const stop = world.onWillRename(async () => [
+    { uri: LINKER, edits: relinkOld(world.doc(LINKER).text, "New") },
+  ]);
+
+  // The user cancels the preview, then turns the feature off.
+  await world.willRename([[OLD, NEW]]);
+  stop();
+  world.doc(LINKER).text = "My own edits.\n";
+  await world.didRename([[OLD, NEW]]);
+
+  assert.equal(world.doc(LINKER).text, "My own edits.\n");
+  assert.deepEqual(world.applied, []);
+  assert.equal(world.didListeners.size, 0);
+});
+
 test("planning the same rename again replaces the earlier plan", async () => {
   const world = setup({ [LINKER]: "See [[Old]].\n" });
   world.onWillRename(async () => [

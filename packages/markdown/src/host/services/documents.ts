@@ -68,27 +68,34 @@ export function createHostDocuments(documents: NativeDocuments): HostDocuments {
   };
 }
 
-const onWillRename: HostDocuments["onWillRename"] = (listener) =>
-  toDisposer(
-    vscode.workspace.onWillRenameFiles((event) => {
-      const renames = renamePairs(event.files);
-      event.waitUntil(
-        listener(renames).then(async (files) => {
-          // BH-014: VS Code applies onWill edits in a participant that may
-          // Show Preview. onDidRenameFiles often fires before Apply, and
-          // Preview Apply can drop the edit (stale version) — leaving disk
-          // unchanged and not dirty. Capture expected text now; after rename
-          // apply+save every note ourselves (Obsidian writes to disk). Still
-          // return closed-note edits for Preview listing / OK undo grouping;
-          // Lumiere-open tabs stay out of waitUntil so a failed custom-editor
-          // apply cannot abort the whole batch.
-          const lumiere = lumiereOpenUris();
-          await scheduleLinkUpdatesAfterRename(files, renames);
-          return workspaceEdit(files.filter((file) => !lumiere.has(file.uri)));
-        }),
-      );
-    }),
-  );
+const onWillRename: HostDocuments["onWillRename"] = (listener) => {
+  const pending: PendingLinkUpdates = new Map();
+  const subscription = vscode.workspace.onWillRenameFiles((event) => {
+    const renames = renamePairs(event.files);
+    event.waitUntil(
+      listener(renames).then(async (files) => {
+        // BH-014: VS Code applies onWill edits in a participant that may
+        // Show Preview. onDidRenameFiles often fires before Apply, and
+        // Preview Apply can drop the edit (stale version) — leaving disk
+        // unchanged and not dirty. Capture expected text now; after rename
+        // apply+save every note ourselves (Obsidian writes to disk). Still
+        // return closed-note edits for Preview listing / OK undo grouping;
+        // Lumiere-open tabs stay out of waitUntil so a failed custom-editor
+        // apply cannot abort the whole batch.
+        const lumiere = lumiereOpenUris();
+        await scheduleLinkUpdatesAfterRename(files, renames, pending);
+        return workspaceEdit(files.filter((file) => !lumiere.has(file.uri)));
+      }),
+    );
+  });
+  return () => {
+    subscription.dispose();
+    for (const plan of pending.values()) {
+      plan.dispose();
+    }
+    pending.clear();
+  };
+};
 
 /** A rename event's files as URI strings, the form the host services use. */
 function renamePairs(
@@ -104,9 +111,10 @@ function renamePairs(
  * Link updates planned for renames that have not finished yet, by
  * `renamesKey`. VS Code has no "rename cancelled" event, so a rename dropped
  * in Refactor Preview leaves its plan here: only a did-rename for the same
- * files may run it, and planning that rename again replaces it.
+ * files may run it, planning that rename again replaces it, and stopping the
+ * listener that planned it drops it. Each listener keeps its own plans.
  */
-const pendingLinkUpdates = new Map<string, vscode.Disposable>();
+type PendingLinkUpdates = Map<string, vscode.Disposable>;
 
 /** URIs that currently have a Lumiere custom editor tab. */
 function lumiereOpenUris(): Set<string> {
@@ -134,10 +142,11 @@ function lumiereOpenUris(): Set<string> {
 async function scheduleLinkUpdatesAfterRename(
   files: readonly FileTextEdits[],
   renames: readonly { oldUri: string; newUri: string }[],
+  pending: PendingLinkUpdates,
 ): Promise<void> {
   const key = renamesKey(renames);
-  pendingLinkUpdates.get(key)?.dispose();
-  pendingLinkUpdates.delete(key);
+  pending.get(key)?.dispose();
+  pending.delete(key);
   const targets = files.filter((file) => file.edits.length > 0);
   if (targets.length === 0) {
     return;
@@ -162,10 +171,10 @@ async function scheduleLinkUpdatesAfterRename(
       return;
     }
     done.dispose();
-    pendingLinkUpdates.delete(key);
+    pending.delete(key);
     void settleLinkUpdates(postTargets, expected, clean);
   });
-  pendingLinkUpdates.set(key, done);
+  pending.set(key, done);
 }
 
 /**
