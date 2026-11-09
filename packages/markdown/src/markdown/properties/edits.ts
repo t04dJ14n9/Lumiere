@@ -289,14 +289,19 @@ function entryEnd(body: string, item: Pair, keyEnd: number): number {
   return lineEnd < 0 ? body.length : lineEnd;
 }
 
-/** The property name a plain scalar key reads back as: `1: a` is "1". */
+/**
+ * The property name a plain scalar key reads back as: `1: a` is "1", and a null
+ * key is "", as the sheet names it, so it is not the string key "null".
+ */
 function keyName(key: unknown): string | undefined {
   if (!loadYaml().isScalar(key)) {
     return undefined;
   }
   const { value } = key;
-  return value === null ||
-    ["string", "number", "boolean"].includes(typeof value)
+  if (value === null) {
+    return "";
+  }
+  return ["string", "number", "boolean"].includes(typeof value)
     ? String(value)
     : undefined;
 }
