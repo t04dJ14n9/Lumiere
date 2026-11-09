@@ -370,9 +370,10 @@ use; `vaults.locate(uri)` gives the vault and the vault path.
   register a resolution policy (`vaults.registerLinkPolicy`) without the
   vault importing them.
 
-Known difference: when a name matches in several folders, Lumiere ranks by
-folder distance then alphabetically; Obsidian ranks by path length. See
-[section 18.3](#183-wikilinks).
+When a name matches in several folders, the candidates under the source
+note's folder come first, then the rest, each group shortest path first, as in
+Obsidian; ties go by path. A note inside an OKF bundle (`okfCore`) takes the
+first candidate in its own bundle instead, when the vault would pick another.
 
 ## 11. Parsing and rendering
 
@@ -616,7 +617,6 @@ the graph. Gaps, most important first:
 | VS Code's own text editor has `[[` suggestions but no wikilink following, hover or unresolved marks | Cmd+click on `[[Note]]` does nothing there | M |
 | `%` in a wikilink (`[[100% Done]]`, `#50% done`) is URI-decoded | following throws or reports "heading not found" | S |
 | Links to PDFs and images are styled as unresolved | resolved links look broken | S |
-| Same name in several folders ranks by distance, not path length | can open a different note than Obsidian | S |
 | `\|` escaped pipe in raw source | Mod+Enter fails; a rename drops the backslash and breaks the table | S |
 | `[[Note#Heading]]` displays `Note#Heading`; Obsidian shows `Note > Heading` | cosmetic | S–M |
 | Nested heading paths that skip a level; block ids are case-sensitive | some valid links miss | S |
@@ -631,7 +631,7 @@ Ranked by value for effort. S, M and L are rough sizes.
 | # | Change | Size | Why |
 | --- | --- | --- | --- |
 | 0 | Stop the Properties sheet's quadratic re-renders on open (section 15) and add frontmatter budgets | S | notes with large frontmatter take seconds, or never settle |
-| 1 | Fix the small wikilink bugs: `%` decoding, PDF/image unresolved styling, path-length ranking, escaped pipes | S | silent wrong behaviour for users coming from Obsidian |
+| 1 | Fix the small wikilink bugs: `%` decoding, PDF/image unresolved styling, escaped pipes | S | silent wrong behaviour for users coming from Obsidian |
 | 2 | One `isEnabled(manifest, settings)` helper replacing the eight sites | S | removes a class of "on here, off there" bugs |
 | 3 | Rename PDF's `agentBridge` and `ideContext`; fix rc.11 references | S | clean ranks, ledger and logs |
 | 4 | Wikilink document links, hover and unresolved diagnostics in VS Code's text editor | M | completes the text-editor story that `[[` suggestions began |
