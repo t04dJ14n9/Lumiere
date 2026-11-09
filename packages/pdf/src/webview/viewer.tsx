@@ -85,6 +85,7 @@ export function Viewer(): React.JSX.Element {
           navigation={navigation}
           selection={view.selection}
           annotate={tool === "annotate"}
+          searching={search.isOpen}
         />
       </div>
     </div>
@@ -314,11 +315,13 @@ function DocumentPages({
   navigation,
   selection,
   annotate,
+  searching,
 }: {
   choices: ViewChoices;
   navigation: ReturnType<typeof withHistory>;
   selection: Selection;
   annotate: boolean;
+  searching: boolean;
 }): React.JSX.Element {
   const paged = choices.scrollMode === "paged";
   return (
@@ -343,6 +346,7 @@ function DocumentPages({
             highlight={navigation.highlight}
             region={selection.region}
             annotate={annotate}
+            searching={searching}
             paged={paged}
             onOpenPage={(target, top) => navigation.goToPage(target, top)}
           />

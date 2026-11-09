@@ -9,6 +9,7 @@ import type {
 } from "../shared/view-state";
 import type { ViewChoices } from "../shared/view-settings";
 import { positionFromView } from "../shared/reading-position";
+import { Throttle, type ThrottleClock } from "../shared/throttle";
 import { rememberPosition } from "./reading-position";
 import { nextZoomStep } from "../shared/zoom-steps";
 import { reportToHost } from "./host";
@@ -42,10 +43,25 @@ type ViewStage = Pick<
 >;
 
 /**
+ * How often a pan reports where the reader is. The Stage moves its camera on
+ * every wheel event, up to the display's refresh rate, and each report is a
+ * message the extension host answers by updating its status bar and views,
+ * across the network when the window is a remote one: a tenth of a second
+ * keeps them in step with a scroll without that work.
+ */
+export const PAN_REPORT_MS = 100;
+
+const BROWSER_CLOCK: ThrottleClock = {
+  now: () => performance.now(),
+  after: (ms, run) => setTimeout(run, ms),
+  cancel: (handle) => clearTimeout(handle as ReturnType<typeof setTimeout>),
+};
+
+/**
  * Keep the extension's controls (status bar, editor title actions) in step
  * with the viewer: report the page, zoom and tool after each change.
  * A pan changes the place in the page without re-rendering the viewer, so
- * the Stage's camera is listened to as well.
+ * the Stage's camera is listened to as well, at the pace of `PAN_REPORT_MS`.
  */
 export function useViewReporting(
   navigation: Navigation,
@@ -74,7 +90,14 @@ export function useViewReporting(
     }
   }, []);
   useEffect(report);
-  useStageEvent((stage) => stage.onCameraChanged, report);
+  const pan = useRef<Throttle>(undefined);
+  pan.current ??= new Throttle(report, PAN_REPORT_MS, BROWSER_CLOCK);
+  useStageEvent(
+    (stage) => stage.onCameraChanged,
+    () => pan.current?.call(),
+  );
+  // A viewer that goes away still says where the reader got to.
+  useEffect(() => () => pan.current?.flush(), []);
 }
 
 /** The view to report, once the Stage has laid out a page; undefined before. */

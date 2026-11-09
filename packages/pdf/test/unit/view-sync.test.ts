@@ -3,6 +3,7 @@ import { test } from "node:test";
 import { positionFromView } from "../../src/shared/reading-position";
 import type { ViewerAction } from "../../src/shared/view-state";
 import { nextZoomStep } from "../../src/shared/zoom-steps";
+import { Throttle } from "../../src/shared/throttle";
 import { readingPlace } from "../../src/webview/stage-position";
 import { fakeReact } from "./support/fake-react";
 import { loadHook } from "./support/load-hook";
@@ -75,29 +76,62 @@ function load(stage: unknown) {
   const reports: Report[] = [];
   const remembered: unknown[] = [];
   let cameraMoved: () => void = () => undefined;
-  const module = loadHook("view-sync.ts", {
-    react: hooks.react,
-    "@embedpdf/react/stage": {
-      useStageEvent: (_select: unknown, handler: () => void) => {
-        cameraMoved = handler;
+  // Time the test moves: the viewer reports a pan at most every PAN_REPORT_MS.
+  let now = 0;
+  const timers = new Map<number, { at: number; run: () => void }>();
+  let nextTimer = 0;
+  const advance = (ms: number): void => {
+    const until = now + ms;
+    for (;;) {
+      const due = [...timers.entries()]
+        .filter(([, timer]) => timer.at <= until)
+        .sort((a, b) => a[1].at - b[1].at)[0];
+      if (!due) {
+        break;
+      }
+      timers.delete(due[0]);
+      now = Math.max(now, due[1].at);
+      due[1].run();
+    }
+    now = until;
+  };
+  const module = loadHook(
+    "view-sync.ts",
+    {
+      react: hooks.react,
+      "@embedpdf/react/stage": {
+        useStageEvent: (_select: unknown, handler: () => void) => {
+          cameraMoved = handler;
+        },
       },
+      "../shared/reading-position": { positionFromView },
+      "../shared/throttle": { Throttle },
+      "../shared/zoom-steps": { nextZoomStep },
+      "./reading-position": {
+        rememberPosition: (position: unknown) => remembered.push(position),
+      },
+      "./host": { reportToHost: (report: Report) => reports.push(report) },
+      "./stage-capability": { useStageApi: () => stage },
+      "./stage-position": { readingPlace },
     },
-    "../shared/reading-position": { positionFromView },
-    "../shared/zoom-steps": { nextZoomStep },
-    "./reading-position": {
-      rememberPosition: (position: unknown) => remembered.push(position),
+    {
+      performance: { now: () => now },
+      setTimeout: (run: () => void, ms: number) => {
+        timers.set(++nextTimer, { at: now + ms, run });
+        return nextTimer;
+      },
+      clearTimeout: (handle: number) => timers.delete(handle),
     },
-    "./host": { reportToHost: (report: Report) => reports.push(report) },
-    "./stage-capability": { useStageApi: () => stage },
-    "./stage-position": { readingPlace },
-  }) as {
+  ) as {
     currentView(input: unknown): Record<string, unknown> | undefined;
     fitMode(mode: string): string | null;
     useViewReporting(...args: unknown[]): void;
     useViewActions(...args: unknown[]): (action: ViewerAction) => void;
+    PAN_REPORT_MS: number;
   };
   return {
     ...module,
+    advance,
     hooks,
     reports,
     remembered,
@@ -187,8 +221,32 @@ test("each distinct view is reported once, on a render and on a camera move", ()
   // A pan moves the place without a render: the camera event reports it.
   stage.viewportToPage = () => ({ x: 12, y: 500 });
   view.cameraMoved();
+  view.advance(view.PAN_REPORT_MS);
   assert.equal(view.reports.length, 2);
   assert.equal(view.reports[1]!.view.top, 500);
+});
+
+test("a pan reports at once, then once every PAN_REPORT_MS, and ends where the reader stopped", () => {
+  const { stage } = fakeStage();
+  const view = load(stage);
+  view.hooks.render(() => view.useViewReporting(navigation, "text", choices));
+  assert.equal(view.reports.length, 1);
+  // A trackpad flick: a camera event every 8 ms (120 Hz) for 320 ms.
+  let top = 340;
+  for (let event = 0; event < 40; event++) {
+    top += 10;
+    stage.viewportToPage = () => ({ x: 12, y: top });
+    view.cameraMoved();
+    view.advance(8);
+  }
+  view.advance(view.PAN_REPORT_MS);
+  const sent = view.reports.length - 1;
+  assert.ok(
+    sent >= 3 && sent <= 5,
+    `40 camera events were reported ${sent} times`,
+  );
+  assert.equal(view.reports.at(-1)!.view.top, top);
+  assert.equal(view.remembered.length, view.reports.length);
 });
 
 /** The hook with the pieces a zoom action needs; `show` and `step` record what they are asked. */

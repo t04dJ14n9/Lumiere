@@ -61,6 +61,24 @@
   }
 }
 
+/*
+ * Selected text. EmbedPDF 3 fills one polygon per line in a solid colour and
+ * blends nothing, which hides the text under it. Blending the whole layer as
+ * one group lays the colour on the page like a highlighter, and overlapping
+ * line boxes still tint once: multiply keeps dark text on white paper,
+ * screen keeps light text on dark paper.
+ */
+.text-selection {
+  position: absolute;
+  inset: 0;
+  pointer-events: none;
+  mix-blend-mode: multiply;
+}
+
+#root[data-page-colors="dark"] .text-selection {
+  mix-blend-mode: screen;
+}
+
 .region-selection,
 .region-marquee {
   position: absolute;

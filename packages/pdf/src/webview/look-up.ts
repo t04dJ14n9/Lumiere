@@ -144,6 +144,8 @@ class LookUpBinding {
   /** Where the pointer last rested, to find its word again after the pages move. */
   private pointer: { x: number; y: number } | undefined;
   private shown: LookUpTarget | undefined;
+  /** The host was last told a word: a camera move or a click retracts it, once. */
+  private reported = false;
   /**
    * A button is down. The hidden word may be what was pressed: keep it in
    * the page until the press ends, as the drag that follows is read from
@@ -206,9 +208,14 @@ class LookUpBinding {
     void this.words.at(x, y).then((found) => {
       if (this.live && request === this.generation) {
         this.show(found?.target);
-        postToHost({ type: "lookUp", word: found?.word ?? null, open });
+        this.tellHost(found?.word ?? null, open);
       }
     });
+  }
+
+  private tellHost(word: string | null, open: boolean): void {
+    this.reported = word !== null;
+    postToHost({ type: "lookUp", word, open });
   }
 
   private show(target: LookUpTarget | undefined): void {
@@ -232,12 +239,23 @@ class LookUpBinding {
     }, HOVER_MS);
   }
 
+  /**
+   * Forget the word under a click or a menu, and tell the host it is gone.
+   * The Stage's camera event calls this for every wheel event, so the host
+   * is told only when there was a word to forget: a message to the extension
+   * host per frame of scrolling, each one flushing the view report that
+   * waits to go out with the frame's others, is what a scroll cost on macOS.
+   */
   private clearTarget(): void {
+    const hadWord =
+      this.menuTarget || this.clicked !== undefined || this.reported;
     this.menuTarget = false;
     this.clicked = undefined;
     this.generation++;
     clearTimeout(this.timer);
-    postToHost({ type: "lookUp", word: null, open: false });
+    if (hadWord) {
+      this.tellHost(null, false);
+    }
   }
 
   /**

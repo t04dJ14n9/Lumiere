@@ -13,7 +13,8 @@ const pagePath = path.join(
 function layerOrder(): string[] {
   const source = readFileSync(pagePath, "utf8");
   const page = source.slice(source.indexOf("export function Page("));
-  const stack = page.slice(0, page.indexOf("</div>"));
+  // To the end of the function: the text-selection wrapper closes a div early.
+  const stack = page.slice(0, page.indexOf("\n}\n"));
   return [...stack.matchAll(/<([A-Z]\w+)/g)].map((match) => match[1]!);
 }
 
@@ -43,4 +44,9 @@ test("a page stacks its picture, search, links, marks, annotations, selection an
     order.filter((layer) => wanted.includes(layer)),
     wanted,
   );
+});
+
+test("the search layer is drawn only while the search bar is open: its hooks cost every wheel event", () => {
+  const source = readFileSync(pagePath, "utf8");
+  assert.match(source, /searching && <SearchLayer \/>/);
 });

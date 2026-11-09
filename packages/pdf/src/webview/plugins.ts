@@ -9,6 +9,7 @@ import { searchPlugin } from "@embedpdf/react/search";
 import { selectionPlugin } from "@embedpdf/react/selection";
 import { stagePlugin } from "@embedpdf/react/stage";
 import { LUMIA_ANNOTATION_TOOLS } from "../shared/annotation-tools";
+import { pagePictureWidth, type PaneSize } from "../shared/page-picture-width";
 import { MAX_ZOOM, MIN_ZOOM } from "../shared/zoom-steps";
 import { nativeZoom, rememberedPosition } from "./reading-position";
 import { layoutSettings } from "./stage-layout";
@@ -24,9 +25,12 @@ export const PAGE_GAP = 12;
  * The EmbedPDF plugins the viewer is built from. The view starts as the
  * remembered position left it: layout, scrolling and zoom are registered
  * here, so the first layout is already the right one. The list is built once
- * per mounted viewer (EmbedPDF reads it only on mount).
+ * per mounted viewer (EmbedPDF reads it only on mount), for the pane it
+ * opens in.
  */
-export function viewerPlugins(): AnyPlugin[] {
+export function viewerPlugins(
+  pane: PaneSize = { cssWidth: 0, pixelRatio: 1 },
+): AnyPlugin[] {
   const position = rememberedPosition();
   return [
     stagePlugin({
@@ -47,12 +51,13 @@ export function viewerPlugins(): AnyPlugin[] {
       viewUnitsPerPoint: 1,
     }),
     // The whole-page picture is the instant backdrop and, where it covers the
-    // view's pixels, all there is: tiles only sharpen what it cannot. With
-    // EmbedPDF's default of 640 px, a pane wider than that (most, on a 1x
-    // screen) rests soft until the tiles arrive: about 100 ms of soft frames
-    // over ten scroll notches. At 1280 px (9 MB a page; the 2048 px that is
-    // sharp at fit width on a 2x screen would be 22 MB) a 1x pane needs none.
-    renderPlugin({ fullPage: { maxWidth: 1280 } }),
+    // view's pixels, all there is: tiles only sharpen what it cannot. Drawn
+    // as wide as the pane's own pixels (shared/page-picture-width.ts), a page
+    // at fit width wants no tiles, which also keeps every wheel event from
+    // planning them again. With EmbedPDF's default of 640 px, a pane wider
+    // than that rested soft until the tiles arrived: about 100 ms of soft
+    // frames over ten scroll notches.
+    renderPlugin({ fullPage: { maxWidth: pagePictureWidth(pane) } }),
     interactionPlugin({ defaultTool: "pointer" }),
     selectionPlugin(),
     searchPlugin(),
