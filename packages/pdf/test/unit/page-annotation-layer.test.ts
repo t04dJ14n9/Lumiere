@@ -13,7 +13,8 @@ const pagePath = path.join(
 function layerOrder(): string[] {
   const source = readFileSync(pagePath, "utf8");
   const page = source.slice(source.indexOf("export function Page("));
-  const stack = page.slice(0, page.indexOf("</div>"));
+  // To the end of the function: the text-selection wrapper closes a div early.
+  const stack = page.slice(0, page.indexOf("\n}\n"));
   return [...stack.matchAll(/<([A-Z]\w+)/g)].map((match) => match[1]!);
 }
 
