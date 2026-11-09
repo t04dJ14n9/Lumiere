@@ -66,12 +66,19 @@ export function tableMarkdown(
   return `\n\n${lines.join("\n")}\n\n`;
 }
 
-/** A row's cells, one slot per column. */
+/**
+ * A row's cells, one slot per column. Markdown tables cannot merge cells, so
+ * a cell spanning columns is followed by empty slots for the columns it
+ * covers (as Obsidian pastes it), and the cells after it keep their columns.
+ * Row spans are left alone, as Obsidian leaves them.
+ */
 function rowSlots(row: Element): (HTMLElement | undefined)[] {
   return Array.from(row.children)
     .filter((cell) => /^(TD|TH)$/.test(cell.nodeName))
     .flatMap((cell) => {
-      return [cell as HTMLElement];
+      const span = Number.parseInt(cell.getAttribute("colspan") ?? "", 10);
+      const extra = Number.isFinite(span) ? Math.max(0, span - 1) : 0;
+      return [cell as HTMLElement, ...Array<undefined>(extra).fill(undefined)];
     });
 }
 
