@@ -45,3 +45,8 @@ test("a page stacks its picture, search, links, marks, annotations, selection an
     wanted,
   );
 });
+
+test("the search layer is drawn only while the search bar is open: its hooks cost every wheel event", () => {
+  const source = readFileSync(pagePath, "utf8");
+  assert.match(source, /searching && <SearchLayer \/>/);
+});

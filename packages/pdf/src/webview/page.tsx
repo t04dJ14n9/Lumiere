@@ -19,6 +19,8 @@ export interface PageProps {
   region: RegionSelection | undefined;
   /** True in Annotate mode, where the marks take the pointer for hit-test and select. */
   annotate: boolean;
+  /** The search bar is open: only then are there matches to draw. */
+  searching: boolean;
   /** Paged scrolling: a page turned to fades in (styles/view-controls.css). */
   paged: boolean;
   /** Open a page, from `top` points below its top when given. */
@@ -43,6 +45,7 @@ export function Page({
   highlight,
   region,
   annotate,
+  searching,
   paged,
   onOpenPage,
 }: PageProps): React.JSX.Element {
@@ -56,7 +59,8 @@ export function Page({
       <RenderLayer />
       <FirstPictureMark />
       <LookUpWord />
-      <SearchLayer />
+      {/* Closing the search bar clears its matches; the layer is a hook-heavy draw on every wheel event. */}
+      {searching && <SearchLayer />}
       <PageLinks onOpenPage={onOpenPage} />
       <PageMarks
         page={page.pageIndex + 1}
