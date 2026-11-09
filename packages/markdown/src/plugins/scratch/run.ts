@@ -1,10 +1,11 @@
-import { portableMarkdownLink } from "../../shared/markdown-link";
 import { replaceAllEdit } from "../../shared/text-edit";
 import type { HostDocument, TextEdit } from "../../shared/host";
 import { asStrings } from "../../shared/values";
 import type { WorkspaceFiles } from "../../shared/workspace-files";
 import {
+  encodeLinkPath,
   joinContained,
+  relativePosix,
   safeRelative,
   walksSymbolicLink,
 } from "../../shared/workspace-path";
@@ -111,11 +112,11 @@ export async function promoteScratchNote(
       at: input.at,
     }),
   );
-  const link = portableMarkdownLink(input.scratchRelative, relative);
+  const path = encodeLinkPath(relativePosix(input.scratchRelative, relative));
   const replaced = await replaceScratch(
     io,
     input.document,
-    promotedStub(input.title, link, input.at),
+    promotedStub(input.title, path, input.at),
   );
   if (!replaced) {
     io.error(
