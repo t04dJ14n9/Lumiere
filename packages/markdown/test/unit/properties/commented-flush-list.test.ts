@@ -57,3 +57,50 @@ test("a flush list under a commented key keeps CRLF line ends", () => {
     "---\r\ntags: # keep\r\n  - a\r\n  - b\r\n---\r\n",
   );
 });
+
+test("a list item with a line break is written as a quoted string", () => {
+  assert.equal(
+    apply("---\ncustom: # keep\n  - a\nnext: 1\n---\nBody\n", {
+      type: "set",
+      key: "custom",
+      value: ["a", "one\ntwo"],
+    }),
+    '---\ncustom: # keep\n  - a\n  - "one\\ntwo"\nnext: 1\n---\nBody\n',
+  );
+  assert.equal(
+    apply("---\ncustom:\n  - a\n---\nBody\n", {
+      type: "set",
+      key: "custom",
+      value: ["a", "one\ntwo"],
+    }),
+    '---\ncustom:\n  - a\n  - "one\\ntwo"\n---\nBody\n',
+  );
+  assert.equal(
+    apply("---\ncustom: [a]\n---\nBody\n", {
+      type: "set",
+      key: "custom",
+      value: ["a", "one\r\ntwo"],
+    }),
+    '---\ncustom:\n  - a\n  - "one\\r\\ntwo"\n---\nBody\n',
+  );
+});
+
+test("a list that already holds a line break in an item keeps being editable", () => {
+  const next = apply('---\ncustom:\n  - "a\\nb"\n---\nBody\n', {
+    type: "set",
+    key: "custom",
+    value: ["a\nb", "c"],
+  });
+  assert.equal(next, '---\ncustom:\n  - "a\\nb"\n  - c\n---\nBody\n');
+  assert.deepEqual(frontmatter(next)?.values, { custom: ["a\nb", "c"] });
+});
+
+test("pasting a list with a line break in an item merges it", () => {
+  assert.equal(
+    apply("---\ncustom:\n  - a\n---\nBody\n", {
+      type: "merge",
+      values: { custom: ["one\ntwo"] },
+    }),
+    '---\ncustom:\n  - a\n  - "one\\ntwo"\n---\nBody\n',
+  );
+});

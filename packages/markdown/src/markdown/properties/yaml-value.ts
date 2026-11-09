@@ -30,9 +30,13 @@ export const yamlValue = (value: unknown): string =>
         })
         .trimEnd();
 
-/** A block list item: quoted only where YAML needs it (a comma does not). */
+/**
+ * A block list item: quoted only where YAML needs it (a comma does not). A
+ * line break is quoted too: yaml writes it as a block scalar whose lines start
+ * at column 0, which an indented `- ` item cannot hold.
+ */
 const blockItem = (value: unknown): string =>
-  markerLike(value)
+  markerLike(value) || (typeof value === "string" && /[\r\n]/.test(value))
     ? JSON.stringify(value)
     : loadYaml().stringify(value, { lineWidth: 0 }).trimEnd();
 
