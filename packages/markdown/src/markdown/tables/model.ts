@@ -287,30 +287,19 @@ export function copyCellsObsidian(
   };
 }
 
-/** Parse a markdown table fragment into cell rows (skips the alignment line). */
+/**
+ * Parse a markdown table fragment into cell rows (skips the alignment line).
+ * Rows are read as the editor reads them: escaped pipes stay in their cell,
+ * short rows are padded, and only a blank line ends the table.
+ */
 export function pastedMarkdownCells(text: string): string[][] {
-  const lines = text
-    .replace(/\r\n?/g, "\n")
-    .replace(/^\n+|\n+$/g, "")
-    .split("\n")
-    .filter((line) => line.includes("|"));
-  const rows: string[][] = [];
-  for (const line of lines) {
-    const trimmed = line.trim();
-    // Alignment / divider row: only pipes, colons, dashes and spaces.
-    if (/^\|?[\s:-]+\|?[\s|:-]*$/.test(trimmed) && /-/.test(trimmed)) {
-      continue;
-    }
-    let body = trimmed;
-    if (body.startsWith("|")) {
-      body = body.slice(1);
-    }
-    if (body.endsWith("|")) {
-      body = body.slice(0, -1);
-    }
-    rows.push(body.split("|").map((cell) => cell.trim().replace(/\\\|/g, "|")));
+  const table = parseTable(text.replace(/\r\n?/g, "\n").trim());
+  if (!table) {
+    return [[text]];
   }
-  return rows.length > 0 ? rows : [[text]];
+  return table.rows.map((row) =>
+    row.map((cell) => cell.text.replace(/\\\|/g, "|")),
+  );
 }
 
 /** Split tab-separated clipboard text into rows of cell values. */

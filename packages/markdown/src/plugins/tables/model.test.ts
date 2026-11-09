@@ -192,3 +192,33 @@ test("pastedMarkdownCells skips the alignment row", () => {
     ],
   );
 });
+
+test("pastedMarkdownCells keeps escaped pipes inside their cell", () => {
+  assert.deepEqual(pastedMarkdownCells("| h | q |\n| - | - |\n| a\\|b | c |"), [
+    ["h", "q"],
+    ["a|b", "c"],
+  ]);
+});
+
+test("pastedMarkdownCells keeps dash-only body rows and rows without a pipe", () => {
+  assert.deepEqual(
+    pastedMarkdownCells(
+      "| k | v |\n| --- | --- |\n| a | 1 |\n| - | - |\n| b | 2 |",
+    ),
+    [
+      ["k", "v"],
+      ["a", "1"],
+      ["-", "-"],
+      ["b", "2"],
+    ],
+  );
+  assert.deepEqual(pastedMarkdownCells("| h |\n| --- |\n| - |"), [
+    ["h"],
+    ["-"],
+  ]);
+  assert.deepEqual(pastedMarkdownCells("| h | j |\n| - | - |\n| x | y |\nz"), [
+    ["h", "j"],
+    ["x", "y"],
+    ["z", ""],
+  ]);
+});
