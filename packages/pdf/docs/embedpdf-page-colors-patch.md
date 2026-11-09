@@ -1,48 +1,124 @@
 # Dark paper and EmbedPDF 3
 
-**Dark paper is off.** EmbedPDF 3 has no page colour-scheme render, so every
-page is drawn on white paper whatever `lumiere.pdf.pageColors` says, until a
-render path that honours a colour scheme is back. The setting, its editor
-theme follow and `shared/dark-page.ts` (the pure lightness inversion) are kept
-for that day; `PAGE_COLORS_ENGINE_AVAILABLE` in
-`src/shared/page-colors-engine.ts` is the one switch, and
-`renderablePageColors()` returns "normal" while it is false.
+Dark paper (`lumiere.pdf.pageColors` dark, or Follow on a dark theme) is drawn
+by the PDF engine, as it was on EmbedPDF 2.15.1. The file keeps its old name,
+but nothing is patched any more: EmbedPDF 3 has no page colour-scheme option,
+so Lumiere runs the engine's host with its own page reader
+(`src/engine-worker`) and leaves `node_modules` alone.
+
+## How a dark page is drawn
+
+Lumiere renders each dark page twice, at the same size, and
+`darkenPage` (`src/shared/dark-page.ts`, pure) turns the two into one picture:
+
+- **As authored**: EmbedPDF's own `PageRenderReader`, on white paper.
+- **With PDFium's colour scheme**, on a transparent background and with ink
+  that is all but transparent (`FORCED_PAGE_COLORS`). The scheme recolours
+  vectors and text but leaves embedded pictures and shadings alone, so what is
+  opaque in this render is a picture. Only its alpha is used.
+
+`darkenPage` inverts the lightness of every pixel that is not a picture,
+keeping its hue (black ink becomes light, a light box dark, red stays red),
+and leaves picture pixels as authored. PDFium's colour scheme alone would
+paint every filled shape and all text one colour each, and a label on a box
+would vanish; the two renders are why it does not.
+
+## Where it runs
+
+```
+viewer (page)                         engine worker (blob worker)
+-------------                         ---------------------------
+rememberPageColors(mode)  --post-->   worker-boot.ts   { kind: "lumiere.pageColors", mode }
+render.invalidate()                   dark-host.ts     host.handlePagesRender
+ RenderLayer asks for pictures  -->     mode normal: EmbedPDF's handler, unchanged
+                                        mode dark:   that, then the colour-scheme render,
+                                                     darkenPage, and one raster back
+```
+
+- `src/engine-worker/worker-entry.ts` is the worker's script. EmbedPDF's own
+  (`@embedpdf/engine/worker-entry`) boots a `WorkerHost` and hands it every
+  request; `worker-boot.ts` does the same handshake (`init`, `ready`,
+  `init-error`) with the host from `dark-host.ts`.
+- `dark-host.ts` creates EmbedPDF's `WorkerHost` and replaces its
+  `handlePagesRender` (every page and tile the render plugin asks for goes
+  through it). The mode is the host's state, set by the viewer's
+  `{ kind: "lumiere.pageColors", mode }` message: EmbedPDF's render plugin
+  forwards no option it does not know, so it cannot be a field of the request.
+  In normal mode the answer is EmbedPDF's, untouched.
+- `color-scheme-runtime.ts` is the colour-scheme render. It gives a second
+  `PageRenderReader` a runtime whose `EPDF_RenderPageBitmapWithMatrix_Start`,
+  `EPDF_RenderPage_Continue` and `FPDF_RenderPage_Close` answer with
+  `FPDF_RenderPageBitmapWithColorScheme_Start`, `FPDF_RenderPage_Continue` and
+  the same `Close`. The reader still allocates the bitmap, works out the area
+  of a page or a tile, slices the render and reads the pixels, so a tile of a
+  dark page is the part of the dark page it shows. The scheme call wants the
+  rectangle the whole page lands on and the quarter turn, where the reader
+  has a matrix: `placementOf` turns one into the other. The pause callback
+  stops PDFium once the slice's budget is spent, so an abort is heard as soon
+  as for a normal page.
+- In the page, `page-colors.ts` tells the engine the new mode first and then
+  its listeners; `page-colors-render.ts` (`useRepaintOnPageColors`) calls
+  `render.invalidate()`, so every picture is asked for again and drawn in the
+  new mode. `host.ts` applies the host's `pageColors` message when it
+  arrives, before the viewer mounts, so the first pictures of a dark editor
+  are already dark.
+
+## Build
+
+`scripts/engine-worker.mjs` is an esbuild plugin: `import "lumiere:engine-worker"`
+is `worker-entry.ts` built as an IIFE (the recipe of EmbedPDF's
+`scripts/build-workers.mjs`: ES2020, `import.meta.url` as `self.location.href`)
+and exported as a string, which `browser-render-environment.ts` starts as a
+blob worker. `scripts/viewer.mjs` (so the extension, the web app and the iPad
+app) uses it, and stubs EmbedPDF's own worker and in-thread transport
+(`scripts/embedpdf-stubs.mjs`), which Lumiere no longer starts.
+
+The main-thread fallback (a worker that cannot start) runs the same host:
+`inline-transport.ts` is the transport of an engine in the page's own thread,
+and draws dark paper the way the worker does.
+
+## What is pinned
+
+`dark-host.ts` reads three private members of EmbedPDF's `WorkerHost`
+(`handlePagesRender`, `requireSession`, `slices`). They exist in the pinned
+`@embedpdf/engine-services@3.0.0`, and the host refuses to start without them
+rather than leave dark pages quietly white. The struct layouts in
+`color-scheme-runtime.ts` (`FPDF_COLORSCHEME`, and `IFSDK_PAUSE` on wasm32) are
+PDFium's.
+
+When bumping EmbedPDF:
+
+1. `test/unit/dark-page-engine.test.ts` renders `figure.pdf` through the real
+   runtime and host: readable text and labels, bars that keep their hue, the
+   picture as authored down to its edges, tiles equal to the page they cut,
+   every render turn and `/Rotate` pages. It fails if the colour-scheme render
+   stops leaving pictures opaque, or if the host's shape changes.
+2. `test/unit/engine-worker-boot.test.ts` covers the worker handshake the
+   engine waits for; `test/browser/dark-paper.spec.ts` the page the viewer
+   shows.
+3. Compare `src/engine-worker/worker-boot.ts` with `bootstrap.ts` of the new
+   `@embedpdf/engine`.
+
+## Limits
+
+- A dark page costs a second render and a pixel pass over the page: a plain
+  text page of 2.2 MP took 13 ms against 2 ms (PDFium's WASM in Node, the
+  pass being about 4 ms per megapixel). It runs in the engine worker, so it
+  does not block scrolling, but a dark page arrives later than a white one.
+- Embedded pictures, scanned pages and shadings stay as authored (often
+  bright), and vector content drawn over a picture keeps its colours there.
+- A tile or page is placed by whole pixels: the colour-scheme render is up to
+  half a pixel from the render as authored at a fractional scale, which only
+  matters at a picture's edge.
+- The setting, the editor theme follow and `PAGE_COLORS_ENGINE_AVAILABLE`
+  (`src/shared/page-colors-engine.ts`, the one switch that turns dark paper
+  off, with `renderablePageColors()`) are unchanged.
 
 ## History
 
-Lumia dark paper on EmbedPDF 2.15.1 needed a `pnpm patch` of
-`@embedpdf/engines` (and a small `@embedpdf/models` types patch). The patch
-let the PDFium colour-scheme render
-(`FPDF_RenderPageBitmapWithColorScheme_Start`) be asked for, upstream
+On EmbedPDF 2.15.1 dark paper needed a `pnpm patch` of `@embedpdf/engines`
+(and a types patch of `@embedpdf/models`) so that PDFium's colour-scheme render
+(`FPDF_RenderPageBitmapWithColorScheme_Start`) could be asked for, upstream
 [embedpdf/embed-pdf-viewer#679](https://github.com/embedpdf/embed-pdf-viewer/issues/679).
-Lumia rendered each dark page twice, as authored and with the colour scheme on
-a transparent background (to find the pictures), and `darkenPage` inverted the
-lightness of everything else while keeping its hue.
-
-EmbedPDF 3 replaced those packages (`@embedpdf/engine`,
-`@embedpdf/engine-runtime-wasm32`), so the patches, `patchedDependencies`, the
-page bitmaps (`page-bitmaps.tsx`, `dark-render.ts`) and the VSIX marker check
-for the patch are deleted. EmbedPDF's render options now end at size,
-rotation, background and the layers drawn. The runtime still exports PDFium's
-colour-scheme render, but nothing public reaches it.
-
-## Bringing it back
-
-1. Find a v3 render that takes a colour scheme: an upstream option, or the
-   runtime's colour-scheme render reached from a Lumia render path.
-2. It must keep what the old path guaranteed: ink and fills with different
-   colours stay different, a label on a box stays readable, and pictures stay
-   as authored (the colour-scheme render with alpha 1 on a transparent
-   background marks them). `test/support/dark-figure.ts` checks a figure
-   (`figure.pdf`: a label on a light box, coloured bars, thin marks and a
-   picture) on page pictures.
-3. Flip `PAGE_COLORS_ENGINE_AVAILABLE`, restore the dark-paper browser spec
-   (`test/browser/dark-paper.spec.ts`) and the unit test with the real
-   engine, and restore the wording of the setting in `contributes.json`.
-
-## Limits of the old approach
-
-- A dark page cost two renders and a pixel pass (about 7 ms per 1.3 MP page
-  on the main thread), so about twice a normal page's render time.
-- Embedded pictures, scanned pages and shadings stay as authored (often
-  bright), and vector content drawn over a picture keeps its colours there.
+EmbedPDF 3 replaced those packages, so the patches went with them, and dark
+paper was off until this host brought it back with no patch.

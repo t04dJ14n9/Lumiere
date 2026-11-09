@@ -454,8 +454,10 @@ src/host (no vscode): portable viewer logic, reused by host-node
   `scripts/embedpdf-stubs.mjs`, which leaves out what they never use.
 - **Annotations stay outside the PDF**, as `{ "version": 2, "bundle": … }`
   files named by the PDF's SHA-256 (`shared/annotation-store.ts`); version 1
-  files are converted when read. **Dark paper is off**: EmbedPDF 3 has no
-  page colour-scheme render (`packages/pdf/docs/embedpdf-page-colors-patch.md`).
+  files are converted when read. **Dark paper** is drawn by the engine:
+  EmbedPDF 3 has no page colour-scheme option, so the viewer runs EmbedPDF's
+  engine host with Lumiere's own page reader in its worker and in the
+  main-thread fallback (`packages/pdf/docs/embedpdf-page-colors-patch.md`).
 
 ## 14. Agent handoff
 

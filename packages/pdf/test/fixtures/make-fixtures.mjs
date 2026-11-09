@@ -181,6 +181,8 @@ export const FIGURE = {
   bars: { red: [44, 190, 66, 250], blue: [94, 210, 116, 250], green: [144, 170, 166, 250] },
   /** A raster picture (a colour ramp with a dot grid), without its edges. */
   picture: [306, 144, 392, 194],
+  /** The same picture with its edges: the `cm` of its `Do` in the page's content. */
+  pictureBounds: [300, 138.3, 397.3, 200],
   /** Bare paper. */
   paper: [200, 10, 280, 50],
 };

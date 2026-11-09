@@ -1,15 +1,13 @@
 /**
- * Dark paper in the viewer, for when it returns (docs/embedpdf-page-colors-patch.md:
- * EmbedPDF 3 has no page colour-scheme render, so the spec is skipped while
- * PAGE_COLORS_ENGINE_AVAILABLE is false). Checks the picture the viewer
- * shows once the host switches page colors: a diagram and a chart readable on
- * dark paper, pictures as authored.
+ * Dark paper in the viewer (docs/embedpdf-page-colors-patch.md: the engine's
+ * worker draws it). Checks the picture the viewer shows once the host
+ * switches page colors: a diagram and a chart readable on dark paper,
+ * pictures as authored.
  */
 import path from "node:path";
 import { pathToFileURL } from "node:url";
 import { expect, test, type Page } from "@playwright/test";
 import { DARK_PALETTE } from "../../src/shared/dark-page";
-import { PAGE_COLORS_ENGINE_AVAILABLE } from "../../src/shared/page-colors-engine";
 import {
   darkFigureProblems,
   paperOf,
@@ -92,10 +90,6 @@ async function pictureOnPaper(
 test("dark paper keeps a diagram and a chart readable and leaves pictures as authored", async ({
   page,
 }) => {
-  test.skip(
-    !PAGE_COLORS_ENGINE_AVAILABLE,
-    "the EmbedPDF pageColors patch is off (src/shared/page-colors-engine.ts)",
-  );
   const figure = await loadFigure();
   await page.setViewportSize({ width: 1100, height: 800 });
   await openView(page, {}, "slim", "&pdf=figure.pdf");

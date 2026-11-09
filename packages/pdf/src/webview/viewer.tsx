@@ -24,6 +24,7 @@ import { shouldDeleteAnnotationOnKey } from "../shared/annotation-delete-keys";
 import { useToolMode } from "./tool-mode";
 import { currentToolbarSettings } from "./toolbar-settings";
 import { rememberPageColors } from "./page-colors";
+import { useRepaintOnPageColors } from "./page-colors-render";
 import { Toolbar } from "./toolbar";
 import { useViewActions, useViewReporting } from "./view-sync";
 import { useHostMessages } from "./host-messages";
@@ -103,6 +104,7 @@ function useViewerState() {
   const navigation = withHistory(rawNavigation, history);
   const search = useSearch();
   useOutlinePublishing();
+  useRepaintOnPageColors();
   const documentArea = useRef<HTMLDivElement>(null);
   useDocumentInput(documentArea, { choices, navigation, smooth });
   const [lookUp, setLookUp] = useState(false);

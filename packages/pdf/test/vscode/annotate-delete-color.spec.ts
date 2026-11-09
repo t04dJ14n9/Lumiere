@@ -42,13 +42,14 @@ function statusBarButton(page: Page, id: string) {
   return page.locator(`.part.statusbar [id$="lumiere.pdf.${id}"]`);
 }
 
-/** EmbedPDF highlight marks use multiply blend rectangles inside the page. */
+/**
+ * An EmbedPDF highlight is a polygon inside the page. On white paper it is
+ * multiplied into the page; on dark paper (this window's dark theme follows
+ * to it) it has no blend mode, so the blend cannot be what finds it.
+ */
 function highlightMarks(viewer: Frame): Promise<number> {
   return viewer.evaluate(
-    () =>
-      document.querySelectorAll(
-        '.page [style*="mix-blend-mode: multiply"], .page [style*="mix-blend-mode:multiply"]',
-      ).length,
+    () => document.querySelectorAll(".page polygon").length,
   );
 }
 

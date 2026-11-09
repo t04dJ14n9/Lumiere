@@ -1,12 +1,13 @@
-// The PDF viewer page's files, built into `out`: viewer.js and viewer.css
-// (with the codicon font beside it) and embedpdf.wasm, the engine the viewer
-// loads at runtime. Built into dist/webview for the extension
-// (scripts/build.mjs), and into pdf/ for the web and iPad apps
-// (packages/host-web/scripts/bundle.mjs).
+// The PDF viewer page's files, built into `out`: viewer.js (with the engine's
+// worker inside it) and viewer.css (with the codicon font beside it) and
+// embedpdf.wasm, the engine the viewer loads at runtime. Built into
+// dist/webview for the extension (scripts/build.mjs), and into pdf/ for the
+// web and iPad apps (packages/host-web/scripts/bundle.mjs).
 import { copyFile, mkdir } from "node:fs/promises";
 import { createRequire } from "node:module";
 import path from "node:path";
 import { embedPdfStubs } from "../../../scripts/embedpdf-stubs.mjs";
+import { engineWorkerSource } from "./engine-worker.mjs";
 
 const require = createRequire(import.meta.url);
 const root = path.dirname(path.dirname(new URL(import.meta.url).pathname));
@@ -32,11 +33,16 @@ export function viewerBuild({ out, production }) {
     // The codicon font, next to viewer.css, which refers to it relatively.
     loader: { ".ttf": "file" },
     assetNames: "[name]",
-    // The engine's worker is a string in viewer.js that becomes a blob worker,
-    // and its wasm is the bytes the viewer fetches from the URL the host
-    // provides: only the pieces of the engine that would look for their own
-    // files need a stub.
-    plugins: [embedPdfStubs()],
+    // The engine's worker is Lumiere's own (src/engine-worker), a string in
+    // viewer.js that becomes a blob worker, and so is its host in the page's
+    // thread: EmbedPDF's own worker and in-thread transport are stubbed. Its
+    // wasm is the bytes the viewer fetches from the URL the host provides:
+    // only the pieces of the engine that would look for their own files need
+    // a stub.
+    plugins: [
+      embedPdfStubs({ workerSource: true, inlineTransport: true }),
+      engineWorkerSource({ production }),
+    ],
     define: {
       "process.env.NODE_ENV": JSON.stringify(
         production ? "production" : "development",

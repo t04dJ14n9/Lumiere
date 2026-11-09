@@ -378,7 +378,13 @@ importers:
       '@embedpdf/engine-core':
         specifier: 3.0.0
         version: 3.0.0
+      '@embedpdf/engine-runtime':
+        specifier: 3.0.0
+        version: 3.0.0
       '@embedpdf/engine-runtime-wasm32':
+        specifier: 3.0.0
+        version: 3.0.0
+      '@embedpdf/engine-services':
         specifier: 3.0.0
         version: 3.0.0
       '@embedpdf/plugin-annotation':
