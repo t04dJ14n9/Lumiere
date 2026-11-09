@@ -65,8 +65,9 @@ test("promoting uses the note text as it is after the picker closes", async (t) 
         list: async () => undefined,
         mkdir: async () => {},
         isSymbolicLink: async () => false,
-        writeText: async (uri: string, text: string) => {
+        createText: async (uri: string, text: string) => {
           written.set(uri, text);
+          return true;
         },
       } as never,
     },

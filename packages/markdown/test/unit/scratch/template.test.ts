@@ -94,7 +94,8 @@ test("create stays outside the bundle and promote does not write an index", asyn
     async writeText(uri, text) {
       written.set(uri, text);
     },
-    async createText() {
+    async createText(uri, text) {
+      written.set(uri, text);
       return true;
     },
     async writeBytes() {},

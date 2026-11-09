@@ -54,19 +54,16 @@ export async function createScratchNote(
   if (await blocked(io, folder)) {
     return;
   }
-  const names = await directoryNames(io, folder);
-  const relative = `${folder}/${scratchFileName(input.title, input.at, names)}`;
-  if (await blocked(io, relative)) {
+  const created = await createUnderFreeName(io, {
+    directory: folder,
+    name: (existing) => scratchFileName(input.title, input.at, existing),
+    text: scratchNote(input.title, input.at),
+    outside: "The scratch folder must stay inside the project.",
+  });
+  if (!created) {
     return;
   }
-  await ensureDirectory(io, folder);
-  const uri = joinContained(io.rootUri, relative);
-  if (!uri) {
-    io.error("The scratch folder must stay inside the project.");
-    return;
-  }
-  await io.files.writeText(uri, scratchNote(input.title, input.at));
-  await io.execute("vscode.open", uri);
+  await io.execute("vscode.open", created.uri);
   io.inform(
     "Created a scratch note outside the wiki. It stays out until you promote it. No agent was started.",
   );
@@ -93,25 +90,21 @@ export async function promoteScratchNote(
     return;
   }
   const directory = destinationDirectory(io.layout, input.target.logical);
-  const relative = `${directory}/${promotedFileName(input.title, await directoryNames(io, directory))}`;
-  if (await blocked(io, relative)) {
-    return;
-  }
-  const pageUri = joinContained(io.rootUri, relative);
-  if (!pageUri) {
-    io.error("The wiki folder must stay inside the project.");
-    return;
-  }
-  await ensureDirectory(io, directory);
-  await io.files.writeText(
-    pageUri,
-    promotePage({
+  const created = await createUnderFreeName(io, {
+    directory,
+    name: (existing) => promotedFileName(input.title, existing),
+    text: promotePage({
       title: input.title,
       type: input.target.type,
       body: scratchBody(input.text),
       at: input.at,
     }),
-  );
+    outside: "The wiki folder must stay inside the project.",
+  });
+  if (!created) {
+    return;
+  }
+  const { relative } = created;
   const path = encodeLinkPath(relativePosix(input.scratchRelative, relative));
   const replaced = await replaceScratch(
     io,
@@ -143,6 +136,41 @@ async function directoryNames(
     return [];
   }
   return asStrings(await io.files.list(uri));
+}
+
+/**
+ * Creates a file under the first name `input.name` finds free in the folder.
+ * The create claims the name: when another writer took it since the listing,
+ * the next name is tried, and that writer's file is never overwritten.
+ */
+async function createUnderFreeName(
+  io: ScratchIO,
+  input: {
+    readonly directory: string;
+    readonly name: (existing: readonly string[]) => string;
+    readonly text: string;
+    readonly outside: string;
+  },
+): Promise<{ relative: string; uri: string } | undefined> {
+  const lost: string[] = [];
+  for (;;) {
+    const listed = await directoryNames(io, input.directory);
+    const name = input.name([...listed, ...lost]);
+    const relative = `${input.directory}/${name}`;
+    if (await blocked(io, relative)) {
+      return undefined;
+    }
+    const uri = joinContained(io.rootUri, relative);
+    if (!uri) {
+      io.error(input.outside);
+      return undefined;
+    }
+    await ensureDirectory(io, input.directory);
+    if (await io.files.createText(uri, input.text)) {
+      return { relative, uri };
+    }
+    lost.push(name);
+  }
 }
 
 async function ensureDirectory(io: ScratchIO, folder: string): Promise<void> {
