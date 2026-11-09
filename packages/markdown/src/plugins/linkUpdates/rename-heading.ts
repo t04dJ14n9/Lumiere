@@ -128,12 +128,20 @@ async function updateLinks(
     const text = editorText(
       await sourceText(ctx.vaults, ctx.hostDocuments, file.uri),
     );
-    const edits = headingLinkEdits(text, source, renamed, resolver(vault));
+    if (headingLinkEdits(text, source, renamed, resolver(vault)).length === 0) {
+      continue;
+    }
+    const document = await ctx.hostDocuments.open(file.uri);
+    // The note can change while it is read and opened, so the offsets come
+    // from the text the document has now, with no await before they apply.
+    const edits = headingLinkEdits(
+      editorText(document.getText()),
+      source,
+      renamed,
+      resolver(vault),
+    );
     if (edits.length > 0) {
-      await ctx.hostDocuments.apply(
-        await ctx.hostDocuments.open(file.uri),
-        edits,
-      );
+      await ctx.hostDocuments.apply(document, edits);
     }
   }
 }

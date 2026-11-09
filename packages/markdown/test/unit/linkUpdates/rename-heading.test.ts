@@ -24,12 +24,16 @@ function applyEditorEdits(source: string, edits: readonly TextEdit[]): string {
     );
 }
 
-/** Renames the heading holding `caretAt` in `Note.md`; `input` is the prompt. */
+/**
+ * Renames the heading holding `caretAt` in `Note.md`; `input` is the prompt,
+ * and `whileOpening` runs as a linking note is being opened.
+ */
 async function rename(
   notes: Record<string, string>,
   caretAt: string,
   input: (docs: Map<string, string>) => string,
   isApplied = true,
+  whileOpening: (docs: Map<string, string>) => void = () => undefined,
 ) {
   const docs = new Map(
     Object.entries(notes).map(([path, text]) => [uriOf(path), text]),
@@ -44,7 +48,10 @@ async function rename(
     },
     hostDocuments: {
       text: (uri) => docs.get(uri),
-      open: async (uri) => document(uri),
+      open: async (uri) => {
+        whileOpening(docs);
+        return document(uri);
+      },
       apply: async (target, edits) => {
         // Only the note being renamed can refuse its edit.
         if (!isApplied && target.uri === uriOf("Note.md")) {
@@ -122,4 +129,16 @@ test("when the note itself cannot be edited, the notes linking to it are left al
     false,
   );
   assert.equal(text("Other.md"), "See [[Note#Old]].\n");
+});
+
+test("a note linking to the heading that changes while it is opened is updated at its new offsets", async () => {
+  const { text } = await rename(
+    { "Note.md": "# Old\n", "Other.md": "See [[Note#Old]] here\n" },
+    "# Old",
+    () => "New",
+    true,
+    (docs) =>
+      docs.set(uriOf("Other.md"), `Typed ${docs.get(uriOf("Other.md"))}`),
+  );
+  assert.equal(text("Other.md"), "Typed See [[Note#New]] here\n");
 });
