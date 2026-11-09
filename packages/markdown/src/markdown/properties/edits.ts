@@ -301,9 +301,9 @@ function keyName(key: unknown): string | undefined {
     : undefined;
 }
 
-/** Remove the opening fence, body and closing fence (always at offset 0). */
+/** Remove the opening fence, body and closing fence, leaving a byte order mark. */
 function dropFrontmatterFence(header: Header): PropertyChange[] {
-  return [{ from: 0, to: header.end, insert: "" }];
+  return [{ from: header.start, to: header.end, insert: "" }];
 }
 
 function newPropertyLine(

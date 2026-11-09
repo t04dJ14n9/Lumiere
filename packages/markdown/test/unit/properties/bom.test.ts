@@ -73,6 +73,20 @@ test("editing other properties of a note with a byte order mark keeps the mark",
   );
 });
 
+test("removing the last property of a note with a byte order mark keeps the mark", () => {
+  assert.equal(
+    apply(`${BOM}---\na: 1\n---\nBody\n`, { type: "remove", keys: ["a"] }),
+    `${BOM}Body\n`,
+  );
+  assert.equal(
+    apply(`${BOM}---\r\na: 1\r\n---\r\nBody\r\n`, {
+      type: "remove",
+      keys: ["a"],
+    }),
+    `${BOM}Body\r\n`,
+  );
+});
+
 test("the Markdown dialect and the caret guard see a header behind a byte order mark", () => {
   const source = `${BOM}---\ntitle: Hello\n---\nBody\n`;
   const nodes: string[] = [];
