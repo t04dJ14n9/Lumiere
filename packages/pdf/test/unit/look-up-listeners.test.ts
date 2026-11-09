@@ -217,6 +217,40 @@ test("newer clicks win out of order and disposed listeners never publish", async
   assert.equal(h.messages.length, count);
 });
 
+test("scrolling tells the host nothing: a camera event for every wheel event is no message each", async () => {
+  const h = harness();
+  for (let move = 0; move < 30; move++) {
+    h.emit("scroll");
+  }
+  assert.equal(
+    h.messages.length,
+    0,
+    "no word was reported, so none is retracted",
+  );
+  h.emit("pointermove");
+  h.hover();
+  await tick();
+  assert.equal(h.messages.at(-1)?.word, "alpha");
+  const reported = h.messages.length;
+  h.emit("scroll");
+  assert.equal(
+    h.messages.length,
+    reported + 1,
+    "the first move retracts the word",
+  );
+  assert.equal(h.messages.at(-1)?.word, null);
+  assert.equal(h.messages.at(-1)?.open, false);
+  for (let move = 0; move < 30; move++) {
+    h.emit("scroll");
+  }
+  assert.equal(
+    h.messages.length,
+    reported + 1,
+    "and the moves after it say nothing",
+  );
+  h.dispose();
+});
+
 test("the native command resolves the saved click, not a later hover point", async () => {
   const h = harness();
   h.emit("contextmenu", 12);
