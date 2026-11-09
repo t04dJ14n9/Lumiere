@@ -26,7 +26,9 @@ with the rename, so one undo reverts them.
 
 When the rename finishes, each note is brought to the text planned for it and
 saved if it had no unsaved changes. A note edited after the plan was made is
-left as it is, and a message names the notes whose links were not updated.
+left as it is; one that cannot be opened, edited or saved is retried for 30
+seconds. A message names the notes whose links were not updated, and one
+failing note does not stop the others.
 
 ## Rename Heading
 
@@ -36,7 +38,8 @@ names the heading (as links resolve, so case does not matter), in the note
 and in every note linking to it, keeping its path, form and alias
 (`heading-rename.ts`, `rename-heading.ts`). The note itself is edited first;
 if it changed while the name was being asked for, nothing is renamed and the
-command says so.
+command says so. A linking note that cannot be updated does not stop the
+others; a message names it.
 
 ## Files
 

@@ -225,7 +225,8 @@ const SETTLE_GAP_MS = 100;
 /**
  * After the rename: if the note does not yet match the planned text (waitUntil
  * OK path not run, or Preview Apply still pending/dropped), apply the edits
- * ourselves and save clean notes to disk.
+ * ourselves and save clean notes to disk. Notes that could not be updated are
+ * named in one warning at the end.
  */
 async function settleLinkUpdates(
   planned: ReadonlyMap<string, PlannedNote>,
@@ -244,7 +245,9 @@ async function settleLinkUpdates(
   if (!isDone) {
     await ensure();
   }
-  warnLinksNotUpdated(changed);
+  warnLinksNotUpdated(
+    [...planned.keys()].filter((uri) => changed.has(uri) || !settled.has(uri)),
+  );
 }
 
 /**
@@ -252,7 +255,8 @@ async function settleLinkUpdates(
  * notes are saved. A note added to `settled` is left alone on later attempts,
  * so what the user types into it while another note is still retried is not
  * overwritten. `changed` collects the notes left alone because their text
- * changed after the plan was made.
+ * changed after the plan was made. A note whose open, edit or save throws is
+ * retried like one whose edit is refused, so the notes after it still settle.
  */
 async function ensureLinkUpdates(
   planned: ReadonlyMap<string, PlannedNote>,
@@ -265,7 +269,9 @@ async function ensureLinkUpdates(
     if (settled.has(uri)) {
       continue;
     }
-    const outcome = await ensureNoteUpdated(uri, note, clean.has(uri));
+    const outcome = await ensureNoteUpdated(uri, note, clean.has(uri)).catch(
+      (): NoteOutcome => "retry",
+    );
     if (outcome === "retry") {
       done = false;
       continue;
@@ -279,6 +285,12 @@ async function ensureLinkUpdates(
 }
 
 /**
+ * How a note ended: `changed` when its text differs from the plan since it was
+ * made, `retry` when it could not be brought to the planned text yet.
+ */
+type NoteOutcome = "updated" | "changed" | "retry";
+
+/**
  * Brings one note to its planned text and saves it when it was clean. Only a
  * note that still reads as it did when planned is replaced as a whole: any
  * other text was written since (typing, another extension), and replacing it
@@ -288,7 +300,7 @@ async function ensureNoteUpdated(
   uri: string,
   note: PlannedNote,
   isClean: boolean,
-): Promise<"updated" | "changed" | "retry"> {
+): Promise<NoteOutcome> {
   const target = vscode.Uri.parse(uri);
   let document = await vscode.workspace.openTextDocument(target);
   if (document.getText() !== note.after) {
@@ -319,11 +331,11 @@ async function ensureNoteUpdated(
 }
 
 /** Tells the user which notes kept their old links. */
-function warnLinksNotUpdated(uris: ReadonlySet<string>): void {
-  if (uris.size === 0) {
+function warnLinksNotUpdated(uris: readonly string[]): void {
+  if (uris.length === 0) {
     return;
   }
-  const names = [...uris].map((uri) =>
+  const names = uris.map((uri) =>
     path.posix.basename(vscode.Uri.parse(uri).path),
   );
   void vscode.window.showWarningMessage(

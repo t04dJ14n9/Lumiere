@@ -361,3 +361,62 @@ test("a retry after a failed apply does not overwrite what the user typed meanwh
   assert.equal(world.doc(LINKER).saved, 0);
   assert.equal(world.warnings.length, 1);
 });
+
+/** Runs the settle loop out: 300 attempts, 100 ms apart. */
+async function runOutRetries(tick: (ms: number) => void): Promise<void> {
+  for (let attempt = 0; attempt < 300; attempt++) {
+    tick(100);
+    await new Promise((resolve) => setImmediate(resolve));
+  }
+}
+
+test("a note that cannot be opened does not stop the notes after it, and the user is told", async (t) => {
+  t.mock.timers.enable({ apis: ["setTimeout"] });
+  const first = "file:///vault/First.md";
+  const second = "file:///vault/Second.md";
+  const world = setup({ [first]: "[[Old]]\n", [second]: "[[Old]]\n" });
+  world.onWillRename(async () =>
+    [first, second].map((uri) => ({
+      uri,
+      edits: relinkOld(world.doc(uri).text, "New"),
+    })),
+  );
+
+  await world.willRename([[OLD, NEW]]);
+  // The first note is deleted before the rename finishes.
+  world.docs.splice(world.docs.indexOf(world.doc(first)), 1);
+  await world.didRename([[OLD, NEW]]);
+
+  assert.equal(world.doc(second).text, "[[New]]\n");
+  assert.equal(world.doc(second).saved, 1);
+  await runOutRetries((ms) => t.mock.timers.tick(ms));
+  assert.deepEqual(world.warnings, [
+    "Links in First.md were not updated. Check them after the rename.",
+  ]);
+});
+
+test("a note that cannot be saved does not stop the notes after it, and the user is told", async (t) => {
+  t.mock.timers.enable({ apis: ["setTimeout"] });
+  const first = "file:///vault/First.md";
+  const second = "file:///vault/Second.md";
+  const world = setup({ [first]: "[[Old]]\n", [second]: "[[Old]]\n" });
+  world.doc(first).save = async () => {
+    throw new Error("EACCES: permission denied");
+  };
+  world.onWillRename(async () =>
+    [first, second].map((uri) => ({
+      uri,
+      edits: relinkOld(world.doc(uri).text, "New"),
+    })),
+  );
+
+  await world.willRename([[OLD, NEW]]);
+  await world.didRename([[OLD, NEW]]);
+
+  assert.equal(world.doc(second).text, "[[New]]\n");
+  assert.equal(world.doc(second).saved, 1);
+  await runOutRetries((ms) => t.mock.timers.tick(ms));
+  assert.deepEqual(world.warnings, [
+    "Links in First.md were not updated. Check them after the rename.",
+  ]);
+});
