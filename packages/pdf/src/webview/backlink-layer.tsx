@@ -1,9 +1,4 @@
-import { useRegistry } from "@embedpdf/core/react";
-import type {
-  PdfDocumentObject,
-  PdfEngine,
-  PdfGlyphObject,
-} from "@embedpdf/models";
+import { usePage, type PageRef } from "@embedpdf/react/runtime";
 import React, {
   useEffect,
   useMemo,
@@ -11,48 +6,44 @@ import React, {
   useSyncExternalStore,
 } from "react";
 import type { PdfBacklinkHit } from "../shared/pdf-backlink-index";
-import { alignGlyphText } from "../shared/page-glyph-text";
-import { resolveTextToLineRects } from "../shared/pdf-backlink-resolve";
-import { type GlyphBox } from "../shared/line-rects";
+import { backlinkRects } from "./backlink-rects";
 import { BacklinkOverlay, type ResolvedOverlay } from "./backlink-overlay";
 import { backlinkState, onBacklinkChange } from "./backlink-store";
+import { useTextAccess, type TextAccess } from "./text-access";
 
 /**
- * Vault backlink overlays on one page: resolve `#:~:text=` to glyph line
- * boxes, paint above hard-written annotations, hover shows the note path,
- * click opens that note at the link. Overlays never enter mark selection,
- * and in Annotate mode they let pointer events through to the annotations.
+ * Vault backlink overlays on one page: resolve `#:~:text=` to the page's
+ * line boxes, paint above hard-written annotations, hover shows the note
+ * path, click opens that note at the link. Overlays never enter mark
+ * selection, and in Annotate mode they let pointer events through to the
+ * annotations.
  */
 export function BacklinkLayer({
-  pdf,
-  pageIndex,
-  scale,
   annotate,
 }: {
-  pdf: PdfDocumentObject;
-  pageIndex: number;
-  scale: number;
   /** The Annotate tool is active. */
   annotate: boolean;
 }): React.JSX.Element | null {
+  const page = usePage();
+  const text = useTextAccess();
   const { hits } = useSyncExternalStore(onBacklinkChange, backlinkState);
-  const { registry } = useRegistry();
   const [overlays, setOverlays] = useState<ResolvedOverlay[]>([]);
-  const page = pageIndex + 1;
+  const pageNumber = page.pageIndex + 1;
   const pageHits = useMemo(
     () =>
-      hits.filter((hit) => hit.page === page && hit.textFragment?.textStart),
-    [hits, page],
+      hits.filter(
+        (hit) => hit.page === pageNumber && hit.textFragment?.textStart,
+      ),
+    [hits, pageNumber],
   );
 
   useEffect(() => {
-    const engine = registry?.getEngine();
-    if (!engine || pageHits.length === 0) {
+    if (!text || pageHits.length === 0) {
       setOverlays([]);
       return;
     }
     let live = true;
-    void resolvePage(engine, pdf, pageIndex, pageHits).then((next) => {
+    void resolvePage(text, page.ref, pageHits).then((next) => {
       if (live) {
         setOverlays(next);
       }
@@ -60,7 +51,7 @@ export function BacklinkLayer({
     return () => {
       live = false;
     };
-  }, [registry, pdf, pageIndex, pageHits]);
+  }, [text, page.ref, pageHits]);
 
   if (overlays.length === 0) {
     return null;
@@ -71,7 +62,7 @@ export function BacklinkLayer({
         <BacklinkOverlay
           key={overlay.key}
           overlay={overlay}
-          scale={scale}
+          scale={page.transform.viewScale}
           isPassive={annotate}
         />
       ))}
@@ -79,82 +70,27 @@ export function BacklinkLayer({
   );
 }
 
+/** The overlays of a page's hits; none where its text cannot be read. */
 async function resolvePage(
-  engine: PdfEngine,
-  pdf: PdfDocumentObject,
-  pageIndex: number,
+  text: TextAccess,
+  page: PageRef,
   hits: readonly PdfBacklinkHit[],
 ): Promise<ResolvedOverlay[]> {
-  const page = pdf.pages[pageIndex];
-  if (!page) {
-    return [];
-  }
-  const text = await readPage(engine, pdf, page);
-  if (!text) {
-    return [];
-  }
-  const overlays: ResolvedOverlay[] = [];
-  for (const hit of hits) {
-    if (!hit.textFragment) {
-      continue;
-    }
-    const rects = resolveTextToLineRects(
-      text.text,
-      text.boxes,
-      hit.textFragment,
-    );
-    if (!rects) {
-      continue;
-    }
-    overlays.push({
-      key: `${hit.noteUri}#${hit.linkOffset}`,
-      hit,
-      rects,
-    });
-  }
-  return overlays;
-}
-
-/** A page's text and the box of each of its UTF-16 units (none for spaces). */
-async function readPage(
-  engine: PdfEngine,
-  pdf: PdfDocumentObject,
-  page: PdfDocumentObject["pages"][number],
-): Promise<{ text: string; boxes: (GlyphBox | undefined)[] } | undefined> {
   try {
-    const glyphs = await engine.getPageGlyphs(pdf, page).toPromise();
-    const boxes = Array.from(glyphs, glyphBox);
-    const [text = ""] = await engine
-      .getTextSlices(pdf, [
-        { pageIndex: page.index, charIndex: 0, charCount: glyphs.length },
-      ])
-      .toPromise();
-    if (text.length === glyphs.length) {
-      return { text, boxes };
-    }
-    // EmbedPDF drops markers from the text (a hyphen at a line end), so its
-    // characters no longer line up with the glyphs: read them one by one.
-    const perGlyph = await engine
-      .getTextSlices(
-        pdf,
-        Array.from({ length: glyphs.length }, (_, charIndex) => ({
-          pageIndex: page.index,
-          charIndex,
-          charCount: 1,
-        })),
-      )
-      .toPromise();
-    return alignGlyphText(perGlyph, boxes);
+    const [snapshot, layout] = await Promise.all([
+      text.textOf(page),
+      text.layoutOf(page),
+    ]);
+    return hits.flatMap((hit) => {
+      const rects = hit.textFragment
+        ? backlinkRects(snapshot, layout, hit.textFragment)
+        : undefined;
+      return rects
+        ? [{ key: `${hit.noteUri}#${hit.linkOffset}`, hit, rects }]
+        : [];
+    });
   } catch {
-    return undefined;
+    // Copy or select forbidden by the PDF, or the page gone: nothing to paint.
+    return [];
   }
-}
-
-function glyphBox(glyph: PdfGlyphObject | undefined): GlyphBox | undefined {
-  if (!glyph || glyph.isSpace) {
-    return undefined;
-  }
-  const { x, y } = glyph.origin;
-  const { width, height } = glyph.size;
-  return width > 0 && height > 0 ? [x, y, x + width, y + height] : undefined;
 }

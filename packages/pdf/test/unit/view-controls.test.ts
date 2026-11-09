@@ -7,7 +7,6 @@ import {
 } from "../../src/shared/reading-position";
 import {
   isDiscreteWheel,
-  motionProgress,
   wheelPixels,
   wheelTarget,
 } from "../../src/shared/smooth-motion";
@@ -18,7 +17,6 @@ import {
   resolveSmoothScrolling,
 } from "../../src/shared/view-settings";
 import { parseViewerAction, parseViewState } from "../../src/shared/view-state";
-import { pageAxisBounds } from "../../src/shared/page-window";
 
 const view = {
   ...DEFAULT_VIEW_CHOICES,
@@ -216,35 +214,8 @@ test("discrete wheel detection leaves fractional, small and diagonal trackpad pi
   assert.equal(wheelPixels(2.5, 0, 600), 2.5);
 });
 
-test("wheel animation accumulates, reverses promptly, clamps edges and finishes without overshoot", () => {
+test("wheel animation accumulates, reverses promptly and clamps edges", () => {
   assert.equal(wheelTarget(20, 100, 100, { min: 0, max: 500 }), 200);
   assert.equal(wheelTarget(20, 100, -100, { min: 0, max: 500 }), 0);
   assert.equal(wheelTarget(400, 490, 100, { min: 0, max: 500 }), 500);
-  assert.equal(motionProgress(-5), 0);
-  assert.equal(motionProgress(0), 0);
-  assert.equal(motionProgress(70), 0.875);
-  assert.equal(motionProgress(140), 1);
-  assert.equal(motionProgress(400), 1);
-  let previous = 0;
-  for (let elapsed = 0; elapsed <= 140; elapsed++) {
-    const progress = motionProgress(elapsed);
-    assert.ok(progress >= previous && progress <= 1);
-    previous = progress;
-  }
-});
-
-test("page-by-page panning stays inside a native item, including at document edges", () => {
-  assert.deepEqual(pageAxisBounds(1000, 1600, 600, 5000), {
-    min: 1000,
-    max: 2000,
-  });
-  assert.deepEqual(pageAxisBounds(1000, 400, 600, 5000), {
-    min: 1000,
-    max: 1000,
-  });
-  assert.deepEqual(pageAxisBounds(4600, 400, 600, 5000), {
-    min: 4400,
-    max: 4400,
-  });
-  assert.deepEqual(pageAxisBounds(0, 400, 600, 400), { min: 0, max: 0 });
 });

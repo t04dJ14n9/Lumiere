@@ -1,7 +1,7 @@
 # Agent instructions: Lumia PDF
 
 Lumia PDF is one half of the "Lumia: Markdown Editor and PDF Reader" extension: a
-PDF viewer built on EmbedPDF that copies selections with exact page-and-box
+PDF viewer built on EmbedPDF 3 that copies selections with exact page-and-box
 locations. The repository's [AGENTS.md](../../AGENTS.md) applies; these rules
 are specific to the PDF code. Read README.md for the layout and CAPABILITIES.md for the plugin table.
 
@@ -24,6 +24,21 @@ are specific to the PDF code. Read README.md for the layout and CAPABILITIES.md 
   fails otherwise. Names: plugin `agentBridge`, service `AgentHandoff`,
   command `copyLinkForAgent`.
 - Prefer EmbedPDF's components and events over re-implementing them.
+- The pages live in EmbedPDF's Stage: it lays out, scrolls and zooms them, and
+  there is no scroll element to read `scrollTop` from. Move and read the view
+  with Stage verbs (`goToPage`, `reveal`, `scrollTo`, `zoomTo`, reached with
+  `useStageApi()`), never by DOM scrolling; page layers read their page with
+  `usePage()`. Lumia's shared types keep 1-based page numbers; convert to
+  EmbedPDF's 0-based indexes and `PageRef`s only inside the webview.
+- Annotations are kept outside the PDF as `{ version: 2, bundle }`
+  (`shared/annotation-store.ts`); raise the version, and keep reading the old
+  one, when the format changes.
+- Dark paper is off while `PAGE_COLORS_ENGINE_AVAILABLE` is false
+  (`docs/embedpdf-page-colors-patch.md`): do not draw it by CSS invert.
+- The viewer bundle stubs EmbedPDF's bundled fallback fonts, its
+  `import.meta.url` wasm path and, where no worker starts, its worker source
+  (`scripts/embedpdf-stubs.mjs`); a new EmbedPDF import that reaches those
+  must still build under that plugin.
 
 Run the checks from the repository root (`pnpm check`, then
 `pnpm test:browser` and `pnpm test:vscode`).

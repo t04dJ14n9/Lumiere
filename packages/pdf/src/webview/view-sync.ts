@@ -1,5 +1,4 @@
-import { useScrollState } from "./scroll-state";
-import { ZoomMode, useZoom } from "@embedpdf/plugin-zoom/react";
+import { useStageEvent, type StageCapability } from "@embedpdf/react/stage";
 import { useCallback, useEffect, useRef } from "react";
 import type { AnnotationToolId } from "../shared/annotation-tools";
 import type {
@@ -14,78 +13,84 @@ import { rememberPosition } from "./reading-position";
 import { nextZoomStep } from "../shared/zoom-steps";
 import { reportToHost } from "./host";
 import type { Navigation } from "./navigation";
-import { DOCUMENT_ID, PAGE_GAP, ZOOM_RANGE } from "./plugins";
-import { requestZoomWithLayout } from "./zoom-request";
+import { useStageApi, type StageApi } from "./stage-capability";
+import { readingPlace } from "./stage-position";
+
+type Annotation = {
+  annotationTool: AnnotationToolId | null;
+  canUndo: boolean;
+  canRedo: boolean;
+};
+
+/** What a view report is made of. */
+interface ViewInput {
+  navigation: Navigation;
+  tool: ToolMode;
+  choices: ViewChoices;
+  stage: ViewStage;
+  annotation?: Annotation;
+}
+
+/** What a report reads from the Stage. */
+type ViewStage = Pick<
+  StageCapability,
+  | "getCurrentDestination"
+  | "getZoomLevel"
+  | "getZoomMode"
+  | "listVisiblePages"
+  | "viewportToPage"
+>;
 
 /**
  * Keep the extension's controls (status bar, editor title actions) in step
  * with the viewer: report the page, zoom and tool after each change.
+ * A pan changes the place in the page without re-rendering the viewer, so
+ * the Stage's camera is listened to as well.
  */
 export function useViewReporting(
   navigation: Navigation,
   tool: ToolMode,
   choices: ViewChoices,
-  annotation?: {
-    annotationTool: AnnotationToolId | null;
-    canUndo: boolean;
-    canRedo: boolean;
-  },
+  annotation?: Annotation,
 ): void {
-  const { state: scroll } = useScrollState();
-  const { state: zoom } = useZoom(DOCUMENT_ID);
-  const view = currentView({
+  const stage = useStageApi();
+  const latest = useRef<ViewInput>({ navigation, tool, choices, stage });
+  latest.current = {
     navigation,
     tool,
     choices,
-    scroll,
-    zoom,
+    stage,
     ...(annotation ? { annotation } : {}),
-  });
-  const latest = useRef(view);
-  latest.current = view;
+  };
   // Report each distinct view once.
-  const key = view && JSON.stringify(view);
-  useEffect(() => {
-    const view = latest.current;
-    if (view) {
+  const reported = useRef<string | undefined>(undefined);
+  const report = useCallback((): void => {
+    const view = currentView(latest.current);
+    const key = view && JSON.stringify(view);
+    if (view && key !== reported.current) {
+      reported.current = key;
       rememberPosition(positionFromView(view));
       reportToHost({ view });
     }
-  }, [key]);
+  }, []);
+  useEffect(report);
+  useStageEvent((stage) => stage.onCameraChanged, report);
 }
 
-/** The view to report, once the layout has a page; undefined before. */
-function currentView(state: {
-  navigation: Navigation;
-  tool: ToolMode;
-  choices: ViewChoices;
-  scroll: ReturnType<typeof useScrollState>["state"];
-  zoom: ReturnType<typeof useZoom>["state"];
-  annotation?: {
-    annotationTool: AnnotationToolId | null;
-    canUndo: boolean;
-    canRedo: boolean;
-  };
-}): ViewState | undefined {
-  const { navigation, tool, choices, scroll, zoom, annotation } = state;
+/** The view to report, once the Stage has laid out a page; undefined before. */
+export function currentView(state: ViewInput): ViewState | undefined {
+  const { navigation, tool, choices, stage, annotation } = state;
   const { currentPage: page, pageCount, canGoBack, canGoForward } = navigation;
-  const zoomPercent = Math.round(zoom.currentZoomLevel * 100);
-  if (
-    !scroll.virtualItems.length ||
-    pageCount < 1 ||
-    page < 1 ||
-    zoomPercent <= 0
-  ) {
+  const place = readingPlace(stage);
+  if (!place || pageCount < 1 || page < 1) {
     return undefined;
   }
-  const fit = fitMode(zoom.zoomLevel);
-  const metric =
-    choices.scrollMode === "paged"
-      ? scroll.pageVisibilityMetrics.find(
-          (metric) => metric.pageNumber === page,
-        )
-      : scroll.pageVisibilityMetrics[0];
-  const inset = PAGE_GAP / zoom.currentZoomLevel;
+  const level = stage.getZoomLevel();
+  const zoomPercent = Math.round(level * 100);
+  if (zoomPercent <= 0) {
+    return undefined;
+  }
+  const fit = fitMode(stage.getZoomMode());
   return {
     page,
     pageCount,
@@ -97,10 +102,10 @@ function currentView(state: {
     scrollDirection: choices.scrollDirection,
     canGoBack,
     canGoForward,
-    readingPage: metric?.pageNumber ?? page,
-    zoom: fit ? FIT_CHOICES[fit] : zoom.currentZoomLevel * 100,
-    top: Math.max(0, (metric?.original.pageY ?? 0) - inset),
-    left: Math.max(0, (metric?.original.pageX ?? 0) - inset),
+    readingPage: place.page,
+    zoom: fit ? FIT_CHOICES[fit] : level * 100,
+    top: place.top,
+    left: place.left,
     ...(tool === "annotate" && annotation
       ? {
           annotationTool: annotation.annotationTool,
@@ -114,6 +119,7 @@ function currentView(state: {
 /** What an action works with. */
 interface ActionContext {
   navigation: Navigation;
+  stage: StageApi;
   openSearch: () => void;
   setTool: (tool: ToolMode) => void;
   setAnnotationTool: (tool: AnnotationToolId | null) => void;
@@ -122,16 +128,6 @@ interface ActionContext {
   annotationRedo: () => void;
   deleteSelectedAnnotations: () => void;
   setChoices: (choices: Partial<ViewChoices>) => void;
-  /** Zoom to a level, within the viewer's range. */
-  zoomTo: (level: number) => void;
-  /** Zoom to a fit mode. */
-  fit: (mode: ZoomMode) => void;
-  /** The level zoom steps go from: the one asked for last, else the shown one. */
-  from: number;
-  /** The navigation generation this action started. */
-  generation: number;
-  /** The latest navigation, after this action's own updates. */
-  latest: () => Navigation;
 }
 
 type Handlers = {
@@ -148,27 +144,21 @@ const ACTIONS: Handlers = {
   previousPageKeepingPlace: (_, { navigation }) => navigation.step(-1, true),
   nextPageKeepingPlace: (_, { navigation }) => navigation.step(1, true),
   goToPage: ({ page }, { navigation }) => navigation.goToPage(page),
-  zoomIn: (_, { zoomTo, from }) => zoomTo(nextZoomStep(from, 1)),
-  zoomOut: (_, { zoomTo, from }) => zoomTo(nextZoomStep(from, -1)),
-  setZoom: ({ percent }, { zoomTo }) => zoomTo(percent / 100),
-  actualSize: (_, { zoomTo }) => zoomTo(1),
-  fitWidth: (_, { fit }) => fit(ZoomMode.FitWidth),
-  fitPage: (_, { navigation, fit, generation, latest }) => {
+  // The Stage's zoom is synchronous, so a quick repeat steps from the level
+  // the last one reached; the steps are Lumia's own, not the Stage's.
+  zoomIn: (_, { stage }) => stepZoom(stage, 1),
+  zoomOut: (_, { stage }) => stepZoom(stage, -1),
+  setZoom: ({ percent }, { stage }) => stage.zoomTo(percent / 100),
+  actualSize: (_, { stage }) => stage.zoomTo(1),
+  fitWidth: (_, { stage }) => stage.fitWidth(),
+  fitPage: (_, { navigation, stage }) => {
     // Fitting a page keeps the reader on it: the zoom change alone would
     // keep the old vertical centre, which can land on a later page.
-    const page = navigation.currentPage;
-    fit(ZoomMode.FitPage);
-    requestAnimationFrame(() => {
-      if (navigation.intent.owns(generation)) {
-        latest().show({ page });
-      }
-    });
+    stage.fitPage();
+    navigation.show({ page: navigation.currentPage }, undefined, 0, true);
   },
   setPageLayout: ({ pageLayout }, { setChoices }) => setChoices({ pageLayout }),
-  setScrollMode: ({ scrollMode }, { navigation, setChoices }) => {
-    navigation.show({ page: navigation.currentPage });
-    setChoices({ scrollMode });
-  },
+  setScrollMode: ({ scrollMode }, { setChoices }) => setChoices({ scrollMode }),
   setScrollDirection: ({ scrollDirection }, { setChoices }) =>
     setChoices({ scrollDirection }),
   find: (_, { openSearch }) => openSearch(),
@@ -182,6 +172,10 @@ const ACTIONS: Handlers = {
   deleteSelectedAnnotations: (_, { deleteSelectedAnnotations }) =>
     deleteSelectedAnnotations(),
 };
+
+function stepZoom(stage: StageApi, direction: 1 | -1): void {
+  stage.zoomTo(nextZoomStep(stage.getZoomLevel(), direction));
+}
 
 /**
  * Carry out what the extension's commands ask: page, zoom, find or tool.
@@ -202,38 +196,10 @@ export function useViewActions(
   setTool: (tool: ToolMode) => void,
   options: ViewActionOptions,
 ): (action: ViewerAction) => void {
-  const { provides: zoom, state } = useZoom(DOCUMENT_ID);
-  const current = viewActionBag({
+  const stage = useStageApi();
+  const current: ActionContext = {
     navigation,
-    openSearch,
-    setTool,
-    options,
-    zoom,
-    level: state.currentZoomLevel,
-  });
-  const latest = useRef(current);
-  latest.current = current;
-  // Quick zoom repeats add up before React receives the native state change.
-  const requested = useRef<number | undefined>(undefined);
-  useEffect(() => {
-    requested.current = undefined;
-  }, [state.currentZoomLevel]);
-  return useCallback((action: ViewerAction): void => {
-    runViewAction(action, latest.current, requested);
-  }, []);
-}
-
-function viewActionBag(input: {
-  navigation: Navigation;
-  openSearch: () => void;
-  setTool: (tool: ToolMode) => void;
-  options: ViewActionOptions;
-  zoom: ReturnType<typeof useZoom>["provides"];
-  level: number;
-}) {
-  const { navigation, openSearch, setTool, options, zoom, level } = input;
-  return {
-    navigation,
+    stage,
     openSearch,
     setTool,
     setAnnotationTool: options.setAnnotationTool,
@@ -242,56 +208,32 @@ function viewActionBag(input: {
     annotationRedo: options.redo,
     deleteSelectedAnnotations: options.deleteSelectedAnnotations,
     setChoices: options.setChoices,
-    zoom,
-    level,
   };
+  const latest = useRef(current);
+  latest.current = current;
+  return useCallback((action: ViewerAction): void => {
+    runViewAction(action, latest.current);
+  }, []);
 }
 
-function runViewAction(
-  action: ViewerAction,
-  current: ReturnType<typeof viewActionBag>,
-  requested: { current: number | undefined },
-): void {
-  const { navigation, zoom, level } = current;
-  const generation =
-    action.action === "find"
-      ? navigation.intent.advance()
-      : navigation.intent.interrupt();
-  const context: ActionContext = {
-    ...current,
-    generation,
-    from: requested.current ?? zoom?.getState().currentZoomLevel ?? level,
-    zoomTo: (next) => {
-      requested.current = Math.min(
-        ZOOM_RANGE.max,
-        Math.max(ZOOM_RANGE.min, next),
-      );
-      if (zoom) {
-        requestZoomWithLayout(zoom, requested.current);
-      }
-    },
-    fit: (mode) => {
-      requested.current = undefined;
-      if (zoom) {
-        requestZoomWithLayout(zoom, mode);
-      }
-    },
-    latest: () => current.navigation,
-  };
+function runViewAction(action: ViewerAction, context: ActionContext): void {
+  if (action.action === "find") {
+    context.navigation.intent.advance();
+  } else {
+    context.navigation.intent.interrupt();
+  }
   (ACTIONS[action.action] as (a: ViewerAction, c: ActionContext) => void)(
     action,
     context,
   );
 }
 
-export function fitMode(level: unknown): FitMode | null {
-  if (level === ZoomMode.FitWidth) {
+/** The fit mode a Stage zoom mode is, for the controls that show it; null for a level. */
+export function fitMode(zoomMode: string): FitMode | null {
+  if (zoomMode === "fit-width") {
     return "width";
   }
-  if (level === ZoomMode.FitPage) {
-    return "page";
-  }
-  return null;
+  return zoomMode === "fit-page" ? "page" : null;
 }
 
 /** The zoom choice for each fit mode. */

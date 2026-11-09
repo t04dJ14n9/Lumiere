@@ -1,140 +1,92 @@
-import type { PdfDocumentObject } from "@embedpdf/models";
-import { PagePointerProvider } from "@embedpdf/plugin-interaction-manager/react";
-import { SearchLayer } from "@embedpdf/plugin-search/react";
-import { AnnotationLayer } from "@embedpdf/plugin-annotation/react";
-import { SelectionLayer } from "@embedpdf/plugin-selection/react";
-import React from "react";
+import { AnnotationLayer } from "@embedpdf/react/annotation";
+import { RenderLayer, usePictureState } from "@embedpdf/react/render";
+import type { PageContextValue } from "@embedpdf/react/runtime";
+import { SearchLayer } from "@embedpdf/react/search";
+import { SelectionLayer } from "@embedpdf/react/selection";
+import React, { useEffect } from "react";
 import type { PageRect } from "../shared/geometry";
 import type { RegionSelection } from "../shared/selection";
 import type { Highlight } from "./navigation";
 import { PageLinks } from "./page-links";
-import { DOCUMENT_ID } from "./plugins";
-import { PageImage } from "./page-bitmaps";
 import { LookUpWord } from "./look-up-word";
 import { BacklinkLayer } from "./backlink-layer";
-import { renderPixelRatio } from "./render-resolution";
+import { RegionMarquee } from "./region-marquee";
 
 export interface PageProps {
-  pdf: PdfDocumentObject;
-  pageIndex: number;
-  /** Size on screen, in CSS pixels. */
-  width: number;
-  height: number;
-  devicePixelRatio: number;
+  /** The page the Stage is drawing: its index, and how its points map to pixels. */
+  page: PageContextValue;
   highlight: Highlight | undefined;
   region: RegionSelection | undefined;
-  /** When true, AnnotationLayer receives pointer events for hit-test/select. */
+  /** True in Annotate mode, where the marks take the pointer for hit-test and select. */
   annotate: boolean;
+  /** Paged scrolling: a page turned to fades in (styles/view-controls.css). */
+  paged: boolean;
   /** Open a page, from `top` points below its top when given. */
   onOpenPage: (page: number, top?: number) => void;
 }
 
 /**
- * One page, as layers from bottom to top: the rendered image, the hidden
+ * One page, as layers from bottom to top: the rendered picture, the hidden
  * word for macOS Look Up, search hits, clickable links, a highlighted
- * location, the selected region, annotations (absolute overlay;
- * pointer-events auto only in Annotate mode so View text/region drags stay
- * unblocked), EmbedPDF's text selection (which also draws the region being
- * dragged), and vault backlink overlays above embedded annots.
+ * location, the selected region, annotations, the text selection, the box of
+ * a region being dragged, and vault backlink overlays above the annotations.
+ * `LookUpWord` stays on every page, Look Up on or off: it also tells Look Up
+ * where the page is.
+ *
+ * The Stage draws the page's paper and shadow, and turns the whole page for
+ * its own /Rotate; the layers draw on the unrotated page, in points scaled
+ * by `page.transform.viewScale`. This wrapper is the page's box, which the
+ * tests and the position reports find by `.page[data-page-index]`.
  */
 export function Page({
-  pdf,
-  pageIndex,
-  width,
-  height,
-  devicePixelRatio,
+  page,
   highlight,
   region,
   annotate,
+  paged,
   onOpenPage,
 }: PageProps): React.JSX.Element {
-  const scale = width / Math.max(1, pdf.pages[pageIndex]?.size.width ?? width);
-  const rotation = pageRotation(pdf, pageIndex);
-  const layers = (
-    <PageLayers
-      pdf={pdf}
-      pageIndex={pageIndex}
-      width={width}
-      height={height}
-      scale={scale}
-      rotation={rotation}
-      devicePixelRatio={devicePixelRatio}
-      highlight={highlight}
-      region={region}
-      annotate={annotate}
-      onOpenPage={onOpenPage}
-    />
-  );
-  if (rotation === 0) {
-    return layers;
-  }
+  const scale = page.transform.viewScale;
   return (
-    <RotatedPage
-      pageIndex={pageIndex}
-      scale={scale}
-      size={{ width, height }}
-      rotation={rotation}
+    <div
+      className={paged ? "page paged-page" : "page"}
+      data-page-index={page.pageIndex}
+      data-scale={scale}
     >
-      {layers}
-    </RotatedPage>
-  );
-}
-
-function PageLayers({
-  pdf,
-  pageIndex,
-  width,
-  height,
-  scale,
-  rotation,
-  devicePixelRatio,
-  highlight,
-  region,
-  annotate,
-  onOpenPage,
-}: PageProps & { scale: number; rotation: number }): React.JSX.Element {
-  const page = pageIndex + 1;
-  const layer = { pageIndex, scale };
-  return (
-    <PagePointerProvider
-      documentId={DOCUMENT_ID}
-      {...layer}
-      {...(rotation === 0
-        ? {
-            className: "page",
-            "data-page-index": pageIndex,
-            "data-scale": scale,
-          }
-        : {})}
-      style={{ width, height }}
-    >
-      <PageImage
-        {...layer}
-        dpr={renderPixelRatio(scale, devicePixelRatio, width, height)}
-      />
-      <LookUpWord {...layer} />
-      <SearchLayer documentId={DOCUMENT_ID} {...layer} />
-      <PageLinks pdf={pdf} {...layer} onOpenPage={onOpenPage} />
+      <RenderLayer />
+      <FirstPictureMark />
+      <LookUpWord />
+      <SearchLayer />
+      <PageLinks onOpenPage={onOpenPage} />
       <PageMarks
-        page={page}
+        page={page.pageIndex + 1}
         scale={scale}
         highlight={highlight}
         region={region}
       />
-      <AnnotationLayer
-        documentId={DOCUMENT_ID}
-        pageIndex={pageIndex}
-        scale={scale}
-        style={{
-          position: "absolute",
-          inset: 0,
-          pointerEvents: annotate ? "auto" : "none",
-        }}
-      />
-      <TextSelection {...layer} />
-      <BacklinkLayer pdf={pdf} {...layer} annotate={annotate} />
-    </PagePointerProvider>
+      <AnnotationLayer />
+      <SelectionLayer />
+      <RegionMarquee />
+      <BacklinkLayer annotate={annotate} />
+    </div>
   );
+}
+
+/**
+ * Marks `pdf:first-page` (test/vscode/perf.spec.ts) when the first picture is
+ * on screen, once however many pages come after it.
+ */
+function FirstPictureMark(): null {
+  const { status } = usePictureState();
+  useEffect(() => {
+    if (
+      status === "ready" &&
+      performance.getEntriesByName("pdf:first-page").length === 0
+    ) {
+      performance.mark("pdf:first-page");
+    }
+  }, [status]);
+  return null;
 }
 
 /** A page's marks: a location's flashed box, and the selected region. */
@@ -165,84 +117,6 @@ function PageMarks({
     </>
   );
 }
-
-/** EmbedPDF's text selection, which also draws the region being dragged. */
-function TextSelection({
-  pageIndex,
-  scale,
-}: {
-  pageIndex: number;
-  scale: number;
-}): React.JSX.Element {
-  return (
-    <SelectionLayer
-      documentId={DOCUMENT_ID}
-      pageIndex={pageIndex}
-      scale={scale}
-      textStyle={{ background: "var(--selection-fill)" }}
-      marqueeStyle={{
-        background: "var(--selection-soft)",
-        borderColor: "var(--selection-edge)",
-        borderStyle: "solid",
-      }}
-      marqueeClassName="region-marquee"
-    />
-  );
-}
-
-/**
- * The page's own /Rotate: PDFium draws it, and every position EmbedPDF
- * reports (text, search hits, links), unrotated; the layers are turned as one.
- */
-function RotatedPage({
-  pageIndex,
-  scale,
-  size: { width, height },
-  rotation,
-  children,
-}: {
-  pageIndex: number;
-  scale: number;
-  size: { width: number; height: number };
-  rotation: number;
-  children: React.ReactNode;
-}): React.JSX.Element {
-  const [boxWidth, boxHeight] =
-    rotation % 2 === 1 ? [height, width] : [width, height];
-  return (
-    <div
-      className="page"
-      data-page-index={pageIndex}
-      data-scale={scale}
-      style={{ width: boxWidth, height: boxHeight }}
-    >
-      <div
-        className="page-rotor"
-        style={{
-          width,
-          height,
-          transform: ROTOR[rotation]?.(boxWidth, boxHeight),
-        }}
-      >
-        {children}
-      </div>
-    </div>
-  );
-}
-
-/** The page's /Rotate in quarter turns clockwise (0 to 3). */
-function pageRotation(pdf: PdfDocumentObject, pageIndex: number): number {
-  const turns = pdf.pages[pageIndex]?.rotation ?? 0;
-  return Number.isInteger(turns) ? ((turns % 4) + 4) % 4 : 0;
-}
-
-/** Turn an unrotated page about its corner so it fills the rotated box. */
-const ROTOR: Record<number, (boxWidth: number, boxHeight: number) => string> = {
-  1: (boxWidth) => `translateX(${boxWidth}px) rotate(90deg)`,
-  2: (boxWidth, boxHeight) =>
-    `translate(${boxWidth}px, ${boxHeight}px) rotate(180deg)`,
-  3: (_, boxHeight) => `translateY(${boxHeight}px) rotate(270deg)`,
-};
 
 function Box({
   rect,

@@ -1,4 +1,4 @@
-import { useZoom } from "@embedpdf/plugin-zoom/react";
+import { useStageState } from "@embedpdf/react/stage";
 import React, { useId, useRef } from "react";
 import {
   PAGE_LAYOUTS,
@@ -7,8 +7,8 @@ import {
 } from "../shared/view-options";
 import type { ViewChoices } from "../shared/view-settings";
 import { parseViewerAction, type ViewerAction } from "../shared/view-state";
+import { MAX_ZOOM, MIN_ZOOM } from "../shared/zoom-steps";
 import { NumberField } from "./number-field";
-import { DOCUMENT_ID, ZOOM_RANGE } from "./plugins";
 import { fitMode } from "./view-sync";
 
 /** A native popover stays visible over every floating-toolbar dock and supports light dismissal. */
@@ -100,8 +100,8 @@ function ZoomControls({
   act: (value: unknown) => void;
   run: (action: ViewerAction) => void;
 }): React.JSX.Element {
-  const { state: zoom } = useZoom(DOCUMENT_ID);
-  const mode = zoomMode(fitMode(zoom.zoomLevel), zoom.currentZoomLevel);
+  const { zoomLevel, zoomMode: stageZoomMode } = useStageState();
+  const mode = zoomEntry(fitMode(stageZoomMode), zoomLevel);
   return (
     <>
       <label>
@@ -127,12 +127,12 @@ function ZoomControls({
         Percentage
         <NumberField
           label="Custom zoom"
-          value={Math.round(zoom.currentZoomLevel * 100)}
+          value={Math.round(zoomLevel * 100)}
           suffix="%"
           onCommit={(percent) => {
             const target = Math.min(
-              ZOOM_RANGE.max * 100,
-              Math.max(ZOOM_RANGE.min * 100, percent),
+              MAX_ZOOM * 100,
+              Math.max(MIN_ZOOM * 100, percent),
             );
             run({ action: "setZoom", percent: target });
             return target;
@@ -171,7 +171,7 @@ function ChoiceSelect(props: {
 }
 
 /** Which of the View menu's zoom entries the current zoom is. */
-function zoomMode(
+function zoomEntry(
   fit: ReturnType<typeof fitMode>,
   level: number,
 ): "fitWidth" | "fitPage" | "actualSize" | "custom" {

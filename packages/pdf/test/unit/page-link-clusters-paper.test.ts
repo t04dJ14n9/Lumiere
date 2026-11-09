@@ -1,22 +1,17 @@
 import assert from "node:assert/strict";
-import { createServer } from "node:http";
 import { existsSync, readFileSync } from "node:fs";
-import path from "node:path";
-import { fileURLToPath } from "node:url";
+import { createRequire } from "node:module";
 import { test } from "node:test";
-import { createPdfiumEngine } from "@embedpdf/engines/pdfium-direct-engine";
-import { PdfAnnotationSubtype } from "@embedpdf/models";
+import { annotationKey, createLocalEngine } from "@embedpdf/engine";
 import { clusterPageLinks } from "../../src/shared/page-link-clusters";
 import {
   targetPage,
   targetTop,
   targetUrl,
-} from "../../src/webview/pdf-targets";
+} from "../../src/shared/pdf-link-target";
 
-const root = path.join(path.dirname(fileURLToPath(import.meta.url)), "../..");
-const wasmPath = path.join(
-  root,
-  "node_modules/@embedpdf/pdfium/dist/pdfium.wasm",
+const wasmPath = createRequire(import.meta.url).resolve(
+  "@embedpdf/engine-runtime-wasm32/embedpdf.wasm",
 );
 const paperPath = "/tmp/paper.pdf";
 
@@ -25,39 +20,39 @@ test("arXiv 2503.20783 page 2: adjacent cite fragments cluster; far repeats do n
     t.skip("Missing /tmp/paper.pdf (arXiv 2503.20783)");
     return;
   }
-  const wasm = readFileSync(wasmPath);
-  const server = createServer((_req, res) => {
-    res.setHeader("content-type", "application/wasm");
-    res.end(wasm);
+  const engine = createLocalEngine({
+    runtime: { prefer: "wasm", wasmBinary: readFileSync(wasmPath) },
   });
-  await new Promise<void>((resolve) => server.listen(0, "127.0.0.1", resolve));
-  const { port } = server.address() as { port: number };
   try {
-    const engine = await createPdfiumEngine(
-      `http://127.0.0.1:${port}/pdfium.wasm`,
-      { fontFallback: null },
-    );
-    const bytes = readFileSync(paperPath);
-    const content = bytes.buffer.slice(
-      bytes.byteOffset,
-      bytes.byteOffset + bytes.byteLength,
-    );
-    const doc = await engine
-      .openDocumentBuffer({ id: "paper", content })
-      .toPromise();
-    const page = doc.pages[1]!;
-    const annotations = await engine.getPageAnnotations(doc, page).toPromise();
+    const doc = await engine.open({
+      kind: "bytes",
+      bytes: readFileSync(paperPath),
+    });
+    const { pages } = await doc.pages.list();
+    const pageNumberOf = (ref: { objectNumber: number }) => {
+      const index = pages.findIndex(
+        (page) => page.ref.objectNumber === ref.objectNumber,
+      );
+      return index < 0 ? undefined : index + 1;
+    };
+    const { annotations } = await doc.page(pages[1]!.ref).annotations.list();
     const fragments = annotations.flatMap((annotation) => {
-      if (annotation.type !== PdfAnnotationSubtype.LINK) {
+      if (annotation.subtype !== "link") {
         return [];
       }
       const target = {
-        page: targetPage(annotation.target),
-        top: targetTop(annotation.target, doc),
+        page: targetPage(annotation.target, pageNumberOf),
+        top: targetTop(annotation.target),
         url: targetUrl(annotation.target),
       };
       return target.page || target.url
-        ? [{ id: annotation.id, rect: annotation.rect, ...target }]
+        ? [
+            {
+              id: annotationKey(annotation.ref),
+              rect: annotation.rect,
+              ...target,
+            },
+          ]
         : [];
     });
     assert.ok(
@@ -99,14 +94,14 @@ test("arXiv 2503.20783 page 2: adjacent cite fragments cluster; far repeats do n
     const wrapped = clusters.find(
       (cluster) =>
         cluster.segments.length === 2 &&
-        cluster.segments[0]!.origin.x > 400 &&
-        cluster.segments[1]!.origin.x < 150 &&
-        cluster.segments[0]!.origin.y > 290 &&
-        cluster.segments[0]!.origin.y < 310,
+        cluster.segments[0]!.x > 400 &&
+        cluster.segments[1]!.x < 150 &&
+        cluster.segments[0]!.y > 290 &&
+        cluster.segments[0]!.y < 310,
     );
     assert.ok(wrapped, "expected a line-wrapped cite cluster on page 2");
-    await engine.closeDocument(doc).toPromise();
+    await doc.close();
   } finally {
-    server.close();
+    await engine.destroy();
   }
 });

@@ -212,19 +212,18 @@ test("annotation messages from the viewer are checked field by field", () => {
 
 test("Lumia owns what it imported or made; changes to the PDF's own are the PDF's", () => {
   const owned = new AnnotationOwnership();
-  owned.imported(["kept"]);
-  assert.equal(owned.change("update", "kept"), "store");
-  assert.equal(owned.change("create", "new"), "store");
-  assert.equal(owned.isOwn("new"), true);
-  assert.equal(owned.change("update", "in-pdf"), "pdf");
-  assert.equal(owned.change("delete", "new"), "store");
-  assert.equal(owned.isOwn("new"), false);
-  // Undo of deleting the PDF's own annotation brings it back as a create.
-  assert.equal(owned.change("delete", "in-pdf"), "pdf");
-  assert.equal(owned.change("create", "in-pdf"), "pdf");
-  assert.equal(owned.isOwn("in-pdf"), false);
+  owned.imported(["obj:10"]);
+  assert.equal(owned.change("update", "obj:10"), "store");
+  assert.equal(owned.change("create", "obj:20"), "store");
+  assert.equal(owned.isOwn("obj:20"), true);
+  assert.equal(owned.change("update", "obj:5"), "pdf");
+  assert.equal(owned.change("delete", "obj:5"), "pdf");
+  // Deleting one of Lumia's does not disown it: Undo restores the same key.
+  assert.equal(owned.change("delete", "obj:20"), "store");
+  assert.equal(owned.isOwn("obj:20"), true);
+  assert.equal(owned.change("update", "obj:20"), "store");
   // After Save into This PDF every annotation is the PDF's.
   owned.savedIntoPdf();
-  assert.equal(owned.isOwn("kept"), false);
-  assert.equal(owned.change("update", "kept"), "pdf");
+  assert.equal(owned.isOwn("obj:10"), false);
+  assert.equal(owned.change("update", "obj:10"), "pdf");
 });

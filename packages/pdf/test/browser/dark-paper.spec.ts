@@ -1,8 +1,9 @@
 /**
- * Dark paper in the viewer. test/unit/dark-page-engine.test.ts checks the
- * dark page PDFium and `darkenPage` make; this checks the picture the viewer
- * shows once the host switches page colors: the two renders combined, encoded
- * and swapped in for the white page (src/webview/dark-render.ts).
+ * Dark paper in the viewer, for when it returns (docs/embedpdf-page-colors-patch.md:
+ * EmbedPDF 3 has no page colour-scheme render, so the spec is skipped while
+ * PAGE_COLORS_ENGINE_AVAILABLE is false). Checks the picture the viewer
+ * shows once the host switches page colors: a diagram and a chart readable on
+ * dark paper, pictures as authored.
  */
 import path from "node:path";
 import { pathToFileURL } from "node:url";
@@ -17,15 +18,10 @@ import {
 } from "../support/dark-figure";
 import { openView, send } from "./view-controls-support";
 
-/**
- * The page's full picture (not the low-quality one shown first) as RGBA, or
- * null while there is none.
- */
+/** The page's whole-page picture as RGBA, or null while there is none. */
 async function shownPicture(page: Page): Promise<Picture | null> {
   const shown = await page.evaluate(() => {
-    const image = document.querySelector<HTMLImageElement>(
-      ".page img.page-image:not(.page-image-low)",
-    );
+    const image = document.querySelector<HTMLImageElement>(".page > img");
     if (!image?.complete || image.naturalWidth === 0) {
       return null;
     }

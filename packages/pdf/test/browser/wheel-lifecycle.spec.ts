@@ -1,8 +1,8 @@
 import { expect, test, type Page } from "@playwright/test";
-import { pinchFactor } from "../../src/shared/pinch-zoom";
+import { scrollMetrics, scrollTo } from "./stage-support";
 import { lastView, openView } from "./view-controls-support";
 
-/** Dispatch wheel events at the viewport's centre; resolves to each event's `defaultPrevented`. */
+/** Dispatch wheel events at the viewport's centre (or `clientX`, `clientY`); resolves to each event's `defaultPrevented`. */
 function wheel(
   page: Page,
   events: {
@@ -11,6 +11,8 @@ function wheel(
     ctrlKey?: boolean;
     metaKey?: boolean;
     deltaMode?: number;
+    clientX?: number;
+    clientY?: number;
   }[],
 ): Promise<boolean[]> {
   return page.evaluate((events) => {
@@ -32,21 +34,23 @@ function wheel(
   }, events);
 }
 
-const transform = (page: Page) =>
-  page.evaluate(
-    () =>
-      (document.querySelector("[data-pdf-scroller]") as HTMLElement).style
-        .transform,
-  );
 const zoom = async (page: Page) => (await lastView(page))!.zoomPercent;
+const scrollOffsets = async (page: Page) => {
+  const { scrollLeft, scrollTop } = await scrollMetrics(page);
+  return { left: scrollLeft, top: scrollTop };
+};
 
-test("only Ctrl/Cmd+wheel (and pinch) is taken from the browser: plain trackpad scrolling and horizontal pans keep their native default", async ({
+/** What one pinch event multiplies the zoom by: the same curve a trackpad's fingers follow. */
+const pinchFactor = (deltaY: number) => Math.exp(-deltaY / 100);
+
+test("Ctrl/Cmd+wheel and pinch never zoom the browser's window, and plain wheel input pans the view itself", async ({
   page,
 }) => {
   await page.setViewportSize({ width: 700, height: 600 });
   await openView(page, { defaultZoom: 300 });
   await page.waitForTimeout(400);
-  // Two-finger scrolling: small continuous pixel deltas, vertical and horizontal.
+  // The Stage has no scrolling element, so it takes every wheel event and pans its camera with it.
+  const before = await scrollOffsets(page);
   expect(
     await wheel(page, [
       { deltaY: 3 },
@@ -54,7 +58,13 @@ test("only Ctrl/Cmd+wheel (and pinch) is taken from the browser: plain trackpad 
       { deltaX: 5 },
       { deltaX: 4, deltaY: 1 },
     ]),
-  ).toEqual([false, false, false, false]);
+  ).toEqual([true, true, true, true]);
+  await expect
+    .poll(async () => {
+      const now = await scrollOffsets(page);
+      return [now.top - before.top, now.left - before.left];
+    })
+    .toEqual([11, 9]);
   // Pinch and Ctrl/Cmd+wheel: the page must not zoom the whole window.
   expect(
     await wheel(page, [
@@ -65,7 +75,7 @@ test("only Ctrl/Cmd+wheel (and pinch) is taken from the browser: plain trackpad 
   ).toEqual([true, true, true]);
 });
 
-test("a pinch always ends: the preview transform is cleared and the layout has the scale the preview showed", async ({
+test("a pinch is laid out as it goes: the zoom follows the deltas, one after another, and the page box is its layout box", async ({
   page,
 }) => {
   await page.setViewportSize({ width: 700, height: 600 });
@@ -77,13 +87,11 @@ test("a pinch always ends: the preview transform is cleared and the layout has t
     await wheel(page, [{ deltaY, ctrlKey: true }]);
   }
   const expected =
-    before *
-    deltas.reduce((scale, deltaY) => scale * pinchFactor(deltaY, 0), 1);
-  await expect.poll(() => transform(page), { timeout: 5_000 }).toBe("");
+    before * deltas.reduce((scale, deltaY) => scale * pinchFactor(deltaY), 1);
   await expect
     .poll(async () => Math.abs((await zoom(page)) / expected - 1))
     .toBeLessThan(0.02);
-  // Nothing of the preview is left on screen: the page's box is its layout box.
+  // Nothing is scaled by a transform on top of the layout: the page's box is its layout box.
   const { shown, laid } = await page.evaluate(() => {
     const page0 = document.querySelector<HTMLElement>(".page")!;
     return {
@@ -94,7 +102,7 @@ test("a pinch always ends: the preview transform is cleared and the layout has t
   expect(Math.abs(shown - laid)).toBeLessThan(1.5);
 });
 
-test("a pinch that starts while the last one is still being laid out carries on from what is on screen", async ({
+test("a pinch that starts after a pause carries on from the zoom on screen", async ({
   page,
 }) => {
   await page.setViewportSize({ width: 700, height: 600 });
@@ -106,16 +114,14 @@ test("a pinch that starts while the last one is still being laid out carries on 
   for (const deltaY of first) {
     await wheel(page, [{ deltaY, ctrlKey: true }]);
   }
-  // The first gesture settles after its pause; the second starts right after.
   await page.waitForTimeout(190);
   for (const deltaY of second) {
     await wheel(page, [{ deltaY, ctrlKey: true }]);
   }
   const scale = [...first, ...second].reduce(
-    (product, deltaY) => product * pinchFactor(deltaY, 0),
+    (product, deltaY) => product * pinchFactor(deltaY),
     1,
   );
-  await expect.poll(() => transform(page), { timeout: 5_000 }).toBe("");
   await expect
     .poll(async () => Math.abs((await zoom(page)) / (before * scale) - 1), {
       timeout: 5_000,
@@ -123,19 +129,18 @@ test("a pinch that starts while the last one is still being laid out carries on 
     .toBeLessThan(0.03);
 });
 
-test("losing the window's focus or hiding the page commits a pinch at once", async ({
+test("a pinch is on screen in the frame after its events, with no wait for it to end", async ({
   page,
 }) => {
   await page.setViewportSize({ width: 700, height: 600 });
   await openView(page, { defaultZoom: 200 });
   await page.waitForTimeout(500);
   const before = await zoom(page);
-  // In one task, so the timing is the page's: pinch, lose focus, and see how long the layout takes.
+  // In one task, so the timing is the page's: pinch, then see how long the layout takes to grow.
   const grewAfterMs = await page.evaluate(async () => {
     const viewport = document.querySelector(".viewport")!;
     const box = viewport.getBoundingClientRect();
-    const page0 = document.querySelector<HTMLElement>(".page")!;
-    const wide = page0.offsetWidth;
+    const wide = document.querySelector<HTMLElement>(".page")!.offsetWidth;
     for (const deltaY of [-8, -8]) {
       document.elementFromPoint(box.left + 100, box.top + 100)!.dispatchEvent(
         new WheelEvent("wheel", {
@@ -148,7 +153,6 @@ test("losing the window's focus or hiding the page commits a pinch at once", asy
         }),
       );
     }
-    window.dispatchEvent(new Event("blur"));
     const start = performance.now();
     while (performance.now() - start < 1_000) {
       await new Promise((resolve) => setTimeout(resolve, 5));
@@ -161,8 +165,30 @@ test("losing the window's focus or hiding the page commits a pinch at once", asy
     }
     return Infinity;
   });
-  // Well before the 140 ms pause that would settle the pinch anyway.
+  // Well before the 140 ms pause that settled a pinch in the viewer EmbedPDF 2 drove.
   expect(grewAfterMs).toBeLessThan(110);
   await expect.poll(async () => (await zoom(page)) > before * 1.1).toBe(true);
-  await expect.poll(() => transform(page), { timeout: 5_000 }).toBe("");
+});
+
+test("a Ctrl+wheel notch only zooms, by EmbedPDF's step around the pointer, even with smooth scrolling on", async ({
+  page,
+}) => {
+  await page.setViewportSize({ width: 700, height: 600 });
+  await openView(page, { defaultZoom: 100, smoothScrolling: true });
+  await page.waitForTimeout(400);
+  await scrollTo(page, { top: 3_000 });
+  const before = await zoom(page);
+  const scrolled = (await scrollOffsets(page)).top;
+  // At the viewport's own top edge the page point there stays where it is, so
+  // the offset only grows with the zoom (it counts the 12 px of padding
+  // above the first page): any scroll on top of it would be the smooth wheel.
+  const box = (await page.locator(".viewport").boundingBox())!;
+  await wheel(page, [
+    { deltaY: -100, ctrlKey: true, clientX: box.x + 100, clientY: box.y },
+  ]);
+  await expect.poll(() => zoom(page)).toBe(Math.round(before * 1.2));
+  await page.waitForTimeout(500);
+  const PADDING = 12;
+  const expected = (scrolled - PADDING) * 1.2 + PADDING;
+  expect(Math.abs((await scrollOffsets(page)).top - expected)).toBeLessThan(2);
 });

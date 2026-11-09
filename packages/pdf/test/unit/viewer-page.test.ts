@@ -22,7 +22,7 @@ test("the viewer page loads its files with the nonce, and nothing else runs", ()
   );
   assert.match(
     html,
-    /data-pdfium-wasm="https:\/\/files\.example\/pdf\/pdfium\.wasm"/,
+    /data-pdfium-wasm="https:\/\/files\.example\/pdf\/embedpdf\.wasm"/,
   );
   assert.match(html, /data-toolbar="chrome" data-dock="bottom"/);
   assert.equal(html.match(/<script/g)?.length, 1);

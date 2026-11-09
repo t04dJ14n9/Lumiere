@@ -1,48 +1,11 @@
 import assert from "node:assert/strict";
-import { readFileSync } from "node:fs";
 import { test } from "node:test";
-import { runInNewContext } from "node:vm";
-import ts from "typescript";
 import { NavigationIntent } from "../../src/shared/navigation-intent";
-import { restoredZoomReady } from "../../src/shared/restored-zoom";
 import { samePosition } from "../../src/shared/pdf-history";
 import type { ReadingPosition } from "../../src/shared/reading-position";
-
-/** Exercise the production hooks with controlled IPC and RAF, without React or a browser. */
-function loadHook(
-  file: string,
-  modules: Record<string, unknown>,
-  globals: Record<string, unknown>,
-): Record<string, unknown> {
-  const source = readFileSync(
-    new URL(`../../src/webview/${file}`, import.meta.url),
-    "utf8",
-  );
-  const output = ts.transpileModule(source, {
-    compilerOptions: {
-      module: ts.ModuleKind.CommonJS,
-      target: ts.ScriptTarget.ES2022,
-    },
-  }).outputText;
-  const module = { exports: {} as Record<string, unknown> };
-  const evaluate = runInNewContext(
-    `(function(require, module, exports) { ${output}\n})`,
-    globals,
-  ) as (
-    require: (id: string) => unknown,
-    module: { exports: Record<string, unknown> },
-    exports: Record<string, unknown>,
-  ) => void;
-  evaluate(
-    (id) => {
-      assert.ok(id in modules, `Unexpected runtime dependency: ${id}`);
-      return modules[id];
-    },
-    module,
-    module.exports,
-  );
-  return module.exports;
-}
+import { layoutApplied } from "../../src/webview/stage-layout";
+import { readingPlace, zoomChoice } from "../../src/webview/stage-position";
+import { loadHook } from "./support/load-hook";
 
 function animationFrames() {
   let next = 0;
@@ -99,19 +62,21 @@ function historyHarness(
     left: 0,
     zoom: initialZoom,
   };
-  let zoomLevel: string | number = initialZoom;
+  // The Stage's zoom, as the viewer reads it: a fit mode, or "custom" at a level.
+  let zoomMode = initialZoom === "fitWidth" ? "fit-width" : "fit-page";
   let zoomFactor = initialFactor;
   const messages: Record<string, unknown>[] = [];
   const mutations: string[] = [];
-  const zoom = {
-    getState: () => ({ zoomLevel, currentZoomLevel: zoomFactor }),
-    requestZoom: (level: string | number) => {
-      mutations.push("zoom");
-      zoomLevel = level;
-      if (typeof level === "number") {
-        zoomFactor = level;
-      }
-    },
+  const stage = {
+    getCurrentDestination: () => null,
+    listVisiblePages: () => [],
+    getSettings: () => ({
+      flow: "continuous",
+      layout: "vertical",
+      spread: "none",
+    }),
+    getZoomMode: () => zoomMode,
+    getZoomLevel: () => zoomFactor,
   };
   const modules = {
     react: {
@@ -120,30 +85,18 @@ function historyHarness(
       useState: (initial: unknown) => [initial, () => undefined],
       useEffect: () => undefined,
     },
-    "@embedpdf/plugin-zoom/react": {
-      useZoom: () => ({ provides: zoom }),
-      ZoomMode: { FitWidth: "fitWidth", FitPage: "fitPage" },
-    },
     "../shared/pdf-history": { samePosition },
-    "../shared/restored-zoom": { restoredZoomReady },
     "./host": {
       postToHost: (message: Record<string, unknown>) => messages.push(message),
     },
-    "./plugins": { DOCUMENT_ID: "pdf" },
     "./reading-position": {
       rememberedPosition: () => ({ ...position }),
-      nativeZoom: (value: ReadingPosition["zoom"]) =>
-        value === "actual"
-          ? 1
-          : typeof value === "number"
-            ? value / 100
-            : value,
     },
+    "./stage-capability": { useStageApi: () => stage },
+    "./stage-layout": { layoutApplied },
+    "./stage-position": { readingPlace, zoomChoice },
   };
-  const hooks = loadHook("jump-history.ts", modules, {
-    ...frames.globals,
-    document: { querySelector: () => null },
-  });
+  const hooks = loadHook("jump-history.ts", modules, frames.globals);
   const use = hooks.useJumpHistory as (
     navigation: unknown,
     choices: unknown,
@@ -155,9 +108,16 @@ function historyHarness(
       isReady: () => true,
       pageCount: 10,
       restore: (next: ReadingPosition) => {
-        intent.advance(); // The production navigation.restore also retires zoom-anchor corrections.
+        intent.advance(); // The production navigation.restore also supersedes moves in flight.
         mutations.push(`restore:${next.page}`);
         position = { ...next };
+        // The restore carries the zoom: a number is a level, a fit mode stays.
+        if (typeof next.zoom === "number") {
+          zoomMode = "custom";
+          zoomFactor = next.zoom / 100;
+        } else {
+          zoomMode = next.zoom === "fitPage" ? "fit-page" : "fit-width";
+        }
       },
     },
     choices,
@@ -192,7 +152,7 @@ function historyHarness(
     capture,
     restore,
     setPosition,
-    zoomState: zoom.getState,
+    stage,
   };
 }
 
@@ -311,88 +271,6 @@ test("stale restore and timeout messages do not erase a newer search preview ori
   assert.deepEqual(jumpPages(harness.messages), [[3, 8]]);
 });
 
-test("real navigation input distinguishes reader movement from search controls", () => {
-  class Element {
-    private readonly region: "viewport" | "input" | "button";
-    constructor(region: "viewport" | "input" | "button") {
-      this.region = region;
-    }
-    closest(selector: string): Element | null {
-      return (
-        selector === ".viewport"
-          ? this.region === "viewport"
-          : this.region === "input"
-      )
-        ? this
-        : null;
-    }
-  }
-  class KeyboardEvent {
-    readonly altKey = false;
-    readonly ctrlKey = false;
-    readonly metaKey = false;
-    readonly shiftKey = false;
-    readonly key: string;
-    readonly target: Element;
-    constructor(key: string, target: Element) {
-      this.key = key;
-      this.target = target;
-    }
-  }
-  const listeners = new Map<string, (event: unknown) => void>();
-  const hooks = loadHook(
-    "navigation.ts",
-    {
-      react: {
-        useCallback: (callback: unknown) => callback,
-        useRef: (current: unknown) => ({ current }),
-        useState: (initial?: unknown) => [
-          typeof initial === "function" ? initial() : initial,
-          () => undefined,
-        ],
-        useEffect: (effect: () => unknown) => effect(),
-      },
-      "./scroll-state": {
-        useScrollState: () => ({
-          state: { currentPage: 3, totalPages: 10, virtualItems: [] },
-        }),
-      },
-      "@embedpdf/plugin-scroll/react": { useScrollCapability: () => ({}) },
-      "../shared/geometry": { fromViewRect: (rect: unknown) => rect },
-      "../shared/navigation-intent": { NavigationIntent },
-      "./reading-position": { rememberedPosition: () => ({ page: 3 }) },
-    },
-    {
-      Element,
-      KeyboardEvent,
-      document: {
-        addEventListener: (name: string, listener: (event: unknown) => void) =>
-          listeners.set(name, listener),
-      },
-    },
-  );
-  const use = hooks.useNavigation as (
-    id: string,
-    mode: string,
-    smooth: boolean,
-  ) => { intent: NavigationIntent };
-  const { intent } = use("pdf", "continuous", false);
-  const emit = (name: string, event: unknown): void => {
-    listeners.get(name)!(event);
-  };
-  assert.equal(intent.readerRevision(), 0);
-  emit("pointerdown", { target: new Element("button") });
-  emit("keydown", new KeyboardEvent("ArrowRight", new Element("input")));
-  assert.equal(intent.current(), 2);
-  assert.equal(intent.readerRevision(), 0);
-  emit("wheel", { target: new Element("viewport") });
-  emit("pointerdown", { target: new Element("viewport") });
-  emit("touchstart", { target: new Element("viewport") });
-  emit("keydown", new KeyboardEvent("PageDown", new Element("button")));
-  assert.equal(intent.current(), 6);
-  assert.equal(intent.readerRevision(), 4);
-});
-
 test("history capture -> user input -> restore IPC rejects stale work before any mutation", () => {
   const harness = historyHarness();
   const captured = harness.capture();
@@ -418,21 +296,18 @@ for (const [mode, scale, percent] of [
   ["fitWidth", 1, 100],
   ["fitPage", 2, 200],
 ] as const) {
-  test(`history replay changes ${mode} at scale ${scale} to numeric ${percent} before acknowledging arrival`, () => {
+  test(`history replay changes ${mode} at scale ${scale} to numeric ${percent} in its one move, then acknowledges the arrival`, () => {
     const harness = historyHarness(mode, scale);
     harness.restore(2, harness.capture(), percent);
     harness.frames.run(1);
-    assert.deepEqual(harness.mutations, ["choices", "zoom"]);
-    assert.deepEqual(harness.zoomState(), {
-      zoomLevel: scale,
-      currentZoomLevel: scale,
-    });
+    assert.deepEqual(harness.mutations, ["choices", "restore:1"]);
     assert.equal(
       harness.messages.some((message) => message.type === "historyRestored"),
       false,
+      "not acknowledged until it holds still",
     );
     harness.frames.run();
-    assert.deepEqual(harness.mutations, ["choices", "zoom", "restore:1"]);
+    assert.deepEqual(harness.mutations, ["choices", "restore:1"]);
     const arrival = harness.messages.at(-1)!;
     assert.equal(arrival.type, "historyRestored");
     assert.equal(arrival.ok, true);
@@ -441,17 +316,30 @@ for (const [mode, scale, percent] of [
   });
 }
 
-test("new input while replay zoom settles prevents its deferred position mutation", () => {
+test("new input before the replay's first frame prevents its position mutation", () => {
   const harness = historyHarness();
   harness.restore(2, harness.capture(), 200);
-  harness.frames.run(1);
-  assert.deepEqual(harness.mutations, ["choices", "zoom"]);
   harness.intent.advance();
   harness.frames.run();
-  assert.deepEqual(harness.mutations, ["choices", "zoom"]);
+  assert.deepEqual(harness.mutations, ["choices"]);
   assert.equal(harness.messages.at(-1)?.ok, false);
   harness.capture();
   assert.equal(harness.messages.at(-1)?.startedToken, 2);
+});
+
+test("a replay waits for the Stage to have the replayed layout before it moves", () => {
+  const harness = historyHarness();
+  let applied = false;
+  const settings = harness.stage.getSettings;
+  harness.stage.getSettings = () =>
+    applied ? settings() : { ...settings(), spread: "odd" };
+  harness.restore(2, harness.capture());
+  harness.frames.run(5);
+  assert.deepEqual(harness.mutations, ["choices"]);
+  applied = true;
+  harness.frames.run();
+  assert.deepEqual(harness.mutations, ["choices", "restore:1"]);
+  assert.equal(harness.messages.at(-1)?.ok, true);
 });
 
 test("a token-scoped timeout cancels a replay whose animation frames were paused", () => {
@@ -485,53 +373,6 @@ test("a newer link cancels a queued replay before it can move the viewport", () 
       (message) => message.type === "historyRestored" && message.ok === false,
     ),
   );
-});
-
-test("zoom anchor correction checks navigation ownership even before its first frame", () => {
-  const frames = animationFrames();
-  const intent = new NavigationIntent();
-  let onZoom:
-    | ((event: { desiredScrollLeft: number; desiredScrollTop: number }) => void)
-    | undefined;
-  const scrolls: unknown[] = [];
-  const viewport = {
-    scrollLeft: 0,
-    scrollTop: 900,
-    scrollWidth: 2000,
-    scrollHeight: 2000,
-    clientWidth: 500,
-    clientHeight: 500,
-    scrollTo: (value: unknown) => scrolls.push(value),
-  };
-  const hooks = loadHook(
-    "zoom-scroll.ts",
-    {
-      react: { useEffect: (effect: () => unknown) => effect() },
-      "./plugins": { DOCUMENT_ID: "pdf" },
-      "@embedpdf/plugin-zoom/react": {
-        useZoomCapability: () => ({
-          provides: {
-            forDocument: () => ({
-              onZoomChange: (callback: typeof onZoom) => {
-                onZoom = callback;
-                return () => undefined;
-              },
-            }),
-          },
-        }),
-      },
-    },
-    frames.globals,
-  );
-  const use = hooks.useZoomScrollSettle as (
-    container: unknown,
-    intent: NavigationIntent,
-  ) => void;
-  use({ current: { querySelector: () => viewport } }, intent);
-  onZoom!({ desiredScrollLeft: 20, desiredScrollTop: 100 });
-  intent.advance(); // A newer link or wheel action already owns scrollTop=900.
-  frames.run();
-  assert.deepEqual(scrolls, []);
 });
 
 test("native precise delivery rejects reader input between capture and delivery", () => {

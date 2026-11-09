@@ -1,52 +1,6 @@
 import assert from "node:assert/strict";
 import { test } from "node:test";
-import {
-  findTextFragment,
-  resolveTextToLineRects,
-} from "../../src/shared/pdf-backlink-resolve";
-import { GLYPH_WIDTH, layOut, LINE_HEIGHT } from "./support/page-text";
-
-// PDFium puts "\r\n" between the lines of a page; the quote a link carries was
-// joined with single spaces when it was copied (webview/selection.ts).
-const WRAPPED =
-  "The attention mechanism for\r\ninformation retrieval works\r\nwell in practice.";
-
-test("a quote that wraps a line still resolves, one rect per line", () => {
-  const rects = resolveTextToLineRects(
-    WRAPPED,
-    layOut(WRAPPED),
-    "attention mechanism for information retrieval",
-  );
-  assert.ok(rects);
-  assert.equal(rects.length, 2);
-  // "attention" starts at column 4 of the first line and "for" ends at 26.
-  assert.deepEqual(rects[0], {
-    x: 4 * GLYPH_WIDTH,
-    y: 0,
-    w: 26 * GLYPH_WIDTH + GLYPH_WIDTH - 1 - 4 * GLYPH_WIDTH,
-    h: LINE_HEIGHT - 2,
-  });
-  // "information retrieval" is the first 21 columns of the second line.
-  assert.deepEqual(rects[1], {
-    x: 0,
-    y: LINE_HEIGHT,
-    w: 20 * GLYPH_WIDTH + GLYPH_WIDTH - 1,
-    h: LINE_HEIGHT - 2,
-  });
-});
-
-test("a bare LF between lines resolves like CR LF", () => {
-  const page = WRAPPED.replace(/\r\n/gu, "\n");
-  const rects = resolveTextToLineRects(
-    page,
-    layOut(page),
-    "mechanism for information",
-  );
-  assert.ok(rects);
-  assert.equal(rects.length, 2);
-  assert.equal(rects[0]!.y, 0);
-  assert.equal(rects[1]!.y, LINE_HEIGHT);
-});
+import { findTextFragment } from "../../src/shared/pdf-backlink-resolve";
 
 test("matching ignores case and runs of whitespace of every kind", () => {
   const page = "Scaled\t\tdot    PRODUCT\r\n\r\n  Attention";
@@ -92,17 +46,6 @@ test("the range is traced back to raw offsets past case and surrogate quirks", (
     start: 2,
     end: emoji.length,
   });
-});
-
-test("textStart,textEnd spans from the start of one to the end of the other", () => {
-  const rects = resolveTextToLineRects(WRAPPED, layOut(WRAPPED), {
-    textStart: "attention",
-    textEnd: "RETRIEVAL",
-  });
-  assert.ok(rects);
-  assert.equal(rects.length, 2);
-  assert.equal(rects[0]!.x, 4 * GLYPH_WIDTH);
-  assert.equal(rects[1]!.w, 21 * GLYPH_WIDTH - 1);
 });
 
 test("textEnd must come after textStart", () => {
@@ -172,17 +115,5 @@ test("textEnd with a suffix takes the first end the suffix allows", () => {
   assert.deepEqual(
     findTextFragment(page, { textStart: "from", textEnd: "to c" }),
     { start: 0, end: page.length },
-  );
-});
-
-test("an overlay is only drawn when some matched glyph has a box", () => {
-  const page = "boxless text";
-  assert.equal(
-    resolveTextToLineRects(
-      page,
-      page.split("").map(() => undefined),
-      "text",
-    ),
-    undefined,
   );
 });

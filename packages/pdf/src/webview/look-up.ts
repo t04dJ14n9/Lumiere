@@ -1,21 +1,19 @@
-import { useRegistry } from "@embedpdf/core/react";
-import type {
-  PdfDocumentObject,
-  PdfEngine,
-  PdfGlyphObject,
-} from "@embedpdf/models";
+import type { TextLayout } from "@embedpdf/engine";
+import { StageToken } from "@embedpdf/plugin-stage/contract";
+import { useOptionalCapability } from "@embedpdf/react/runtime";
 import { useCallback, useEffect, useRef } from "react";
-import {
-  coreWord,
-  glyphRangeBox,
-  wordGlyphRange,
-  type WordGlyph,
-} from "../shared/look-up";
+import { coreWord } from "../shared/look-up";
 import { postToHost } from "./host";
+import { lookUpPageAt } from "./look-up-pages";
 import { setLookUpTarget, type LookUpTarget } from "./look-up-target";
+import { charBox, unionBounds } from "./text-boxes";
+import { useTextAccess, type TextAccess } from "./text-access";
 
 /** How often the word under the pointer is looked for while it moves. */
 const HOVER_MS = 120;
+
+/** How far outside a glyph's box (points) the pointer still counts as on it. */
+const GLYPH_SLACK = 0.5;
 
 /**
  * macOS Look Up. The page text is drawn as images, so the system's own Look
@@ -33,36 +31,27 @@ const HOVER_MS = 120;
  *
  * Off until the extension says it is on (`lookUp` host message).
  */
-export function useLookUp(
-  pdf: PdfDocumentObject,
-  enabled: boolean,
-): () => void {
-  const { registry } = useRegistry();
-  const engine = useRef<PdfEngine | null>(null);
-  engine.current = registry?.getEngine() ?? null;
+export function useLookUp(enabled: boolean): () => void {
+  const text = useTextAccess();
+  const stage = useOptionalCapability(StageToken);
   const command = useRef<(() => void) | undefined>(undefined);
   useEffect(() => {
-    if (!enabled) {
+    if (!enabled || !text) {
       return;
     }
-    const binding = attach(() => engine.current, pdf);
+    const binding = new LookUpBinding(new PageWords(text));
     command.current = binding.open;
+    // The pages move under a still pointer with the camera, not by scrolling:
+    // the Stage's viewport never scrolls natively.
+    const stopCamera = stage?.onCameraChanged(binding.moved);
     return () => {
       command.current = undefined;
+      stopCamera?.();
       binding.dispose();
     };
-  }, [enabled, pdf]);
+  }, [enabled, text, stage]);
   return useCallback(() => command.current?.(), []);
 }
-
-function attach(
-  engine: () => PdfEngine | null,
-  pdf: PdfDocumentObject,
-): { dispose(): void; open(): void } {
-  return new LookUpBinding(new PageWords(engine, pdf));
-}
-
-type Glyphs = readonly (WordGlyph | undefined)[];
 
 /** A word found under the pointer: the word itself, and where it is drawn. */
 interface FoundWord {
@@ -72,69 +61,41 @@ interface FoundWord {
 
 /** The words on the pages of one PDF, found under window points. */
 class PageWords {
-  private readonly glyphs = new Map<number, Promise<Glyphs | undefined>>();
-
-  constructor(
-    private readonly engine: () => PdfEngine | null,
-    private readonly pdf: PdfDocumentObject,
-  ) {}
+  constructor(private readonly text: TextAccess) {}
 
   /** The word under a window point, if the pointer is still on it. */
   async at(x: number, y: number): Promise<FoundWord | undefined> {
-    const target = pageAt(this.pdf, x, y);
-    const engine = this.engine();
-    if (!target || !engine) {
+    const here = lookUpPageAt(x, y);
+    if (!here) {
       return undefined;
     }
-    const { page, point } = target;
-    const list = await this.glyphsOf(engine, page);
-    const index =
-      list?.findIndex(
-        (glyph) =>
-          glyph?.box !== undefined &&
-          !glyph.isSpace &&
-          point.x >= glyph.box[0] - 0.5 &&
-          point.x <= glyph.box[2] + 0.5 &&
-          point.y >= glyph.box[1] - 0.5 &&
-          point.y <= glyph.box[3] + 0.5,
-      ) ?? -1;
-    const range = index < 0 ? undefined : wordGlyphRange(list!, index);
-    if (!range) {
-      return undefined;
-    }
-    const texts = await engine
-      .getTextSlices(this.pdf, [
-        {
-          pageIndex: page.index,
-          charIndex: range[0],
-          charCount: range[1] - range[0],
-        },
-      ])
-      .toPromise()
-      .catch(() => undefined);
+    const { page, point } = here;
+    const found = await this.wordAt(page.ref, point);
     // The page may have scrolled or zoomed under the pointer meanwhile.
-    const current = pageAt(this.pdf, x, y);
+    const current = lookUpPageAt(x, y);
     if (
+      !found ||
       !current ||
-      current.page.index !== page.index ||
+      current.page.pageIndex !== page.pageIndex ||
       Math.abs(current.point.x - point.x) > 0.1 ||
       Math.abs(current.point.y - point.y) > 0.1
     ) {
       return undefined;
     }
-    const text = texts?.[0] ?? "";
-    const word = coreWord(text);
-    const box = glyphRangeBox(list!, range);
-    if (!word || !box) {
+    const word = coreWord(found.text);
+    if (!word) {
       return undefined;
     }
-    return { word, target: { pageIndex: page.index, box, text } };
+    return {
+      word,
+      target: { pageIndex: page.pageIndex, box: found.box, text: found.text },
+    };
   }
 
   /** Whether `target` is the word drawn under a window point. */
   covers(target: LookUpTarget | undefined, x: number, y: number): boolean {
-    const here = pageAt(this.pdf, x, y);
-    if (!target || here?.page.index !== target.pageIndex) {
+    const here = lookUpPageAt(x, y);
+    if (!target || here?.page.pageIndex !== target.pageIndex) {
       return false;
     }
     const [left, top, right, bottom] = target.box;
@@ -144,22 +105,29 @@ class PageWords {
     );
   }
 
-  private glyphsOf(
-    engine: PdfEngine,
-    page: PdfDocumentObject["pages"][number],
-  ): Promise<Glyphs | undefined> {
-    let glyphs = this.glyphs.get(page.index);
-    if (!glyphs) {
-      glyphs = engine
-        .getPageGlyphs(this.pdf, page)
-        .toPromise()
-        .then(
-          (list) => Array.from(list, toWordGlyph),
-          () => undefined,
-        );
-      this.glyphs.set(page.index, glyphs);
+  /** The word on the glyph at a page point, with its text and box. */
+  private async wordAt(
+    page: Parameters<TextAccess["layoutOf"]>[0],
+    point: { x: number; y: number },
+  ): Promise<{ text: string; box: LookUpTarget["box"] } | undefined> {
+    try {
+      const layout = await this.text.layoutOf(page);
+      const index = layout.charAt(point);
+      // `charAt` forgives a near miss, so hovering beside a word would find
+      // it; Look Up wants the pointer on the word itself.
+      if (index === null || !isOnGlyph(layout, index, point)) {
+        return undefined;
+      }
+      const range = layout.wordAt(index);
+      const box =
+        range && unionBounds(layout.segments(range).map((s) => s.rect));
+      return range && box
+        ? { text: await this.text.slice(page, range), box }
+        : undefined;
+    } catch {
+      // Selecting or copying is forbidden by the PDF, or the page is gone.
+      return undefined;
     }
-    return glyphs;
   }
 }
 
@@ -173,12 +141,13 @@ class LookUpBinding {
   /** A context menu is open over a word: hovering no longer moves it. */
   private menuTarget = false;
   private clicked: { x: number; y: number } | undefined;
-  /** Where the pointer last rested, to find its word again after a scroll. */
+  /** Where the pointer last rested, to find its word again after the pages move. */
   private pointer: { x: number; y: number } | undefined;
   private shown: LookUpTarget | undefined;
   /**
-   * A button is down. EmbedPDF captures the pointer on the element pressed,
-   * which may be the hidden word: removing it mid-drag would end the capture.
+   * A button is down. The hidden word may be what was pressed: keep it in
+   * the page until the press ends, as the drag that follows is read from
+   * where it began.
    */
   private pressed = false;
   private timer: ReturnType<typeof setTimeout> | undefined;
@@ -199,7 +168,6 @@ class LookUpBinding {
       }) as EventListener,
       true,
     ],
-    ["scroll", this.onScroll.bind(this), true],
     ["pointermove", this.onMove.bind(this) as EventListener, { passive: true }],
     ["contextmenu", this.onContextMenu.bind(this) as EventListener, true],
     // The hidden word must stay selectable for the system to read it, but a
@@ -291,8 +259,11 @@ class LookUpBinding {
     });
   }
 
-  /** The pages move under a still pointer: find its word once they stop. */
-  private onScroll(): void {
+  /**
+   * The pages move under a still pointer (the camera moved: a scroll, a zoom):
+   * find its word once they stop. Bound: the Stage's camera event is handed it.
+   */
+  readonly moved = (): void => {
     this.clearTarget();
     if (this.pressed) {
       return;
@@ -306,7 +277,7 @@ class LookUpBinding {
       this.timer = undefined;
       this.report(pointer.x, pointer.y, false);
     }, HOVER_MS);
-  }
+  };
 
   // Always resolve the clicked point. A nearby pointer or cached pre-scroll
   // word is not evidence for the word under this context menu.
@@ -334,50 +305,18 @@ function preventInLookUpWord(event: Event): void {
   }
 }
 
-/** The page under a window point, and the point in the page's own points. */
-function pageAt(
-  pdf: PdfDocumentObject,
-  x: number,
-  y: number,
-):
-  | {
-      page: PdfDocumentObject["pages"][number];
-      point: { x: number; y: number };
-    }
-  | undefined {
-  const element = document
-    .elementsFromPoint(x, y)
-    .find((candidate) => candidate.hasAttribute("data-page-index"));
-  const page = pdf.pages[Number(element?.getAttribute("data-page-index"))];
-  // Pages stored sideways (/Rotate) are not looked up: their boxes are turned.
-  if (!element || !page || page.rotation) {
-    return undefined;
-  }
-  const rect = element.getBoundingClientRect();
-  const scale = rect.width / Math.max(1, page.size.width);
-  return {
-    page,
-    point: { x: (x - rect.left) / scale, y: (y - rect.top) / scale },
-  };
-}
-
-function toWordGlyph(glyph: PdfGlyphObject | undefined): WordGlyph | undefined {
-  if (!glyph) {
-    return undefined;
-  }
-  const { x, y } = glyph.tightOrigin ?? glyph.origin;
-  const { width, height } = glyph.tightSize ?? glyph.size;
-  return {
-    isSpace: Boolean(glyph.isSpace),
-    ...(width > 0 && height > 0
-      ? {
-          box: [x, y, x + width, y + height] as [
-            number,
-            number,
-            number,
-            number,
-          ],
-        }
-      : {}),
-  };
+/** Whether a page point is on the character's own box, around its shape. */
+function isOnGlyph(
+  layout: TextLayout,
+  index: number,
+  point: { x: number; y: number },
+): boolean {
+  const box = charBox(layout, index);
+  return (
+    box !== undefined &&
+    point.x >= box[0] - GLYPH_SLACK &&
+    point.x <= box[2] + GLYPH_SLACK &&
+    point.y >= box[1] - GLYPH_SLACK &&
+    point.y <= box[3] + GLYPH_SLACK
+  );
 }

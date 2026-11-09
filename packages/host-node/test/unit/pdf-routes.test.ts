@@ -114,7 +114,10 @@ test("a PDF's page runs the viewer with the shim, and its bytes are served by lo
       html.indexOf("/lumiere/pdf/viewer/viewer.js"),
     "the shim runs before the viewer",
   );
-  assert.match(html, /data-pdfium-wasm="\/lumiere\/m\/webview\/pdfium.wasm"/);
+  assert.match(
+    html,
+    /data-pdfium-wasm="\/lumiere\/m\/webview\/embedpdf\.wasm"/,
+  );
   assert.match(html, /connect-src 'self' ws:\/\/127\.0\.0\.1:\d+/);
   assert.match(html, /data-toolbar="slim"/);
 

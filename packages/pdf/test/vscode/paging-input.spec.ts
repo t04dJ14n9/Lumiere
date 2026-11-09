@@ -3,11 +3,16 @@ import {
   closeAllEditors,
   command,
   expect,
+  focusViewer,
   openFile,
+  pageLayout,
+  pageLeft,
   pdfViewer,
   quickInputTitled,
+  scrolledDown,
   statusBarEntry,
   test,
+  widthBeyondViewer,
 } from "./workbench";
 
 // Arrow keys and trackpad/wheel scrolling in the real editor, with the focus
@@ -61,31 +66,18 @@ async function press(page: Page, viewer: Frame, key: string): Promise<void> {
 
 // A key pressed during a page-turn animation starts from an intermediate place.
 async function waitForScrollToStop(viewer: Frame): Promise<void> {
-  const position = () =>
-    viewer
-      .locator(".viewport")
-      .evaluate((v) => `${v.scrollLeft},${v.scrollTop}`);
   // The first sample cannot establish rest; compare across a polling interval.
   let last: string | undefined;
   await expect
     .poll(
       async () => {
-        const now = await position();
+        const now = await pageLayout(viewer);
         const still = now === last;
         last = now;
         return still;
       },
       { intervals: [250] },
     )
-    .toBe(true);
-}
-
-/** The webview has the keyboard: a click on empty space beside the pages. */
-async function focusViewer(page: Page, viewer: Frame): Promise<void> {
-  const box = (await viewer.locator(".viewport").boundingBox())!;
-  await page.mouse.click(box.x + 6, box.y + box.height / 2);
-  await expect
-    .poll(() => viewer.evaluate(() => document.hasFocus()))
     .toBe(true);
 }
 
@@ -106,7 +98,7 @@ test("ArrowRight and ArrowLeft move between pages in the default view, right aft
   await press(page, viewer, "ArrowRight");
   await expect(pageEntry(page, 2)).toBeVisible();
   await waitForScrollToStop(viewer);
-  const top = () => viewer.locator(".viewport").evaluate((v) => v.scrollTop);
+  const top = () => scrolledDown(viewer);
   const beforePageDown = await top();
   await press(page, viewer, "PageDown");
   // PageDown pans a screen: which page is current depends on the window height.
@@ -180,8 +172,7 @@ test("zoomed in, the arrows pan; wheel and two-finger flicks travel across pages
   const viewer = await openFresh(page);
   await command(page, "PDF: Actual Size (100%)");
   await focusViewer(page, viewer);
-  const left = () => viewer.locator(".viewport").evaluate((v) => v.scrollLeft);
-  const top = () => viewer.locator(".viewport").evaluate((v) => v.scrollTop);
+  const top = () => scrolledDown(viewer);
   // Two pages side by side are wider than the editor even at the top zoom.
   await command(page, "PDF: Two Pages (1–2, 3–4)");
   await focusViewer(page, viewer);
@@ -189,21 +180,13 @@ test("zoomed in, the arrows pan; wheel and two-finger flicks travel across pages
     await page.keyboard.press("ControlOrMeta+Equal");
     await page.waitForTimeout(150);
   }
-  await expect
-    .poll(() =>
-      viewer
-        .locator(".viewport")
-        .evaluate((v) => v.scrollWidth - v.clientWidth),
-    )
-    .toBeGreaterThan(100);
-  // The last zoom step has settled: the scrollable width no longer changes.
-  const width = () =>
-    viewer.locator(".viewport").evaluate((v) => v.scrollWidth);
-  let settled = await width();
+  await expect.poll(() => widthBeyondViewer(viewer)).toBeGreaterThan(100);
+  // The last zoom step has settled: the pages no longer change.
+  let settled = await pageLayout(viewer);
   await expect
     .poll(
       async () => {
-        const now = await width();
+        const now = await pageLayout(viewer);
         const same = now === settled;
         settled = now;
         return same;
@@ -211,21 +194,27 @@ test("zoomed in, the arrows pan; wheel and two-finger flicks travel across pages
       { intervals: [400] },
     )
     .toBe(true);
-  await viewer.locator(".viewport").evaluate((v) => v.scrollTo({ left: 0 }));
+  // Pan to the left edge, as a reader would.
+  const box = (await viewer.locator(".viewport").boundingBox())!;
+  await page.mouse.move(box.x + box.width / 2, box.y + box.height / 2);
+  await page.mouse.wheel(-5000, 0);
+  await waitForScrollToStop(viewer);
+  const edge = await pageLeft(viewer, 0);
   // Plain Left/Right turn the page keeping the place by default
   // (lumiere.pdf.view.arrowsKeepPlace); ⌥Left/Right, Ctrl+Alt off macOS, pan.
   // VS Code's own ⌥Left/Right keybindings step aside so the viewer gets them.
+  // The pages move the other way by the 40 pixels the view pans.
   const alt = process.platform === "darwin" ? "Alt" : "Control+Alt";
   await press(page, viewer, `${alt}+ArrowRight`);
-  await expect.poll(left).toBe(40);
+  await expect.poll(() => pageLeft(viewer, 0)).toBe(edge - 40);
   await press(page, viewer, `${alt}+ArrowLeft`);
-  await expect.poll(left).toBe(0);
+  await expect.poll(() => pageLeft(viewer, 0)).toBe(edge);
 
   await command(page, "PDF: Single Page");
 
   // Continuous: a thousand-pixel notch and a multi-page flick carry on across pages.
   await command(page, "PDF: Actual Size (100%)");
-  const box = (await viewer.locator(".viewport").boundingBox())!;
+  await waitForScrollToStop(viewer);
   await page.mouse.move(box.x + box.width / 2, box.y + box.height / 2);
   const start = await top();
   await page.mouse.wheel(0, 1000);

@@ -80,9 +80,11 @@ test("an Annotate highlight is kept beside the PDF, comes back on reopen, and De
     await drag(page, at(74, TEXT_MIDLINE), at(205, TEXT_MIDLINE));
     await expect.poll(() => existsSync(kept), { timeout: 20_000 }).toBe(true);
     const file = JSON.parse(readFileSync(kept, "utf8")) as {
-      annotations: { annotation: { type: number } }[];
+      bundle: { items: { data: { subtype: string } }[] };
     };
-    expect(file.annotations.map((item) => item.annotation.type)).toEqual([9]);
+    expect(file.bundle.items.map((item) => item.data.subtype)).toEqual([
+      "highlight",
+    ]);
     expect(sha256(pdfPath)).toBe(pdfHash);
     evidence.push(`kept=${path.relative(paths.workspace, kept)}`);
     await page.screenshot({

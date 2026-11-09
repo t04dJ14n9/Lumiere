@@ -26,3 +26,4 @@ in [README.md](README.md). Highlight **store** is vault Markdown (Chrome
 - New Copy link: Quote with `#page=N#:~:text=…` when text is selected; page-only `#page=N` otherwise. Never PDF++ `selection=`, never RFC `search=`. `viewrect=` only when regions are enabled.
 - Passage highlights = Markdown links in notes; overlays ignore Del/Backspace.
 - Annotate marks are kept outside the PDF, by its SHA-256; the PDF's bytes never change unless the reader runs Save Annotations into This PDF (refused in protected folders). Del deletes Lumia's marks.
+- The engine is EmbedPDF 3 (one Stage lays out, scrolls and zooms the pages). The annotation file is `{ "version": 2, "bundle": … }`; version 1 files are converted when read. Dark paper (`pageColors` dark) is off until EmbedPDF 3 can draw a colour scheme: pages stay white (`docs/embedpdf-page-colors-patch.md`).

@@ -46,6 +46,27 @@ test("shouldDeleteAnnotationOnKey only in annotate with selection, not editable"
     }),
     false,
   );
+  // Typing in a free-text box: the key edits its text.
+  assert.equal(
+    shouldDeleteAnnotationOnKey({
+      key: "Backspace",
+      annotate: true,
+      hasAnnotationSelection: true,
+      editable: false,
+      editingText: true,
+    }),
+    false,
+  );
+  assert.equal(
+    shouldDeleteAnnotationOnKey({
+      key: "Delete",
+      annotate: true,
+      hasAnnotationSelection: true,
+      editable: false,
+      editingText: false,
+    }),
+    true,
+  );
   assert.equal(
     shouldDeleteAnnotationOnKey({
       key: "Delete",

@@ -1,20 +1,20 @@
-import { restoredZoomReady } from "../shared/restored-zoom";
 import { useEffect, useRef, useState } from "react";
-import { useZoom, ZoomMode } from "@embedpdf/plugin-zoom/react";
 import type { HostMessage } from "../shared/messages";
 import type { ReadingPosition } from "../shared/reading-position";
 import { samePosition } from "../shared/pdf-history";
 import type { ViewChoices } from "../shared/view-settings";
 import { postToHost } from "./host";
 import type { Navigation } from "./navigation";
-import { DOCUMENT_ID } from "./plugins";
-import { nativeZoom, rememberedPosition } from "./reading-position";
+import { rememberedPosition } from "./reading-position";
+import { useStageApi } from "./stage-capability";
+import { layoutApplied } from "./stage-layout";
+import { readingPlace, zoomChoice } from "./stage-position";
 
 import type {
   Dependencies,
+  HistoryStage,
   PendingJump,
   Replay,
-  Zoom,
 } from "./jump-history-types";
 
 /** Frames a jump or replay may take before it is given up. */
@@ -28,12 +28,12 @@ export function useJumpHistory(
   choices: ViewChoices,
   setChoices: (choices: ViewChoices) => void,
 ) {
-  const { provides: zoom } = useZoom(DOCUMENT_ID);
+  const stage = useStageApi();
   const [state, setState] = useState({ back: false, forward: false });
   const controller = useRef<JumpHistoryController | undefined>(undefined);
   controller.current ??= new JumpHistoryController(setState);
   const history = controller.current;
-  history.dependencies = { navigation, choices, setChoices, zoom };
+  history.dependencies = { navigation, choices, setChoices, stage };
   useEffect(() => () => history.dispose(), [history]);
   return {
     jump: history.jump,
@@ -75,7 +75,7 @@ class JumpHistoryController {
 
   /** Where the reader is now. */
   readonly snapshot = (): ReadingPosition =>
-    readingSnapshot(this.dependencies.choices, this.dependencies.zoom);
+    readingSnapshot(this.dependencies.choices, this.dependencies.stage);
 
   /** A search result shown before it is accepted: Back returns to before it. */
   readonly preview = (run: () => void): void => {
@@ -271,48 +271,45 @@ class JumpHistoryController {
   }
 
   /**
-   * One frame of a replay: zoom first, then the layout, then the position;
-   * done once it holds still. Returns whether to run another frame.
+   * One frame of a replay: wait for the layout, then move to the position
+   * (zoom included); done once it holds still. Returns whether to run another
+   * frame.
    */
   private replayStep(replay: Replay): boolean {
     if (!this.intent.owns(replay.generation) || ++replay.frames > MAX_FRAMES) {
       this.cancelReplay();
       return false;
     }
-    const { navigation, zoom } = this.dependencies;
-    if (!navigation.isReady() || !zoom || navigation.pageCount < 1) {
+    const { navigation, stage } = this.dependencies;
+    if (!navigation.isReady() || navigation.pageCount < 1) {
       return true;
     }
-    const position = {
-      ...replay.requested,
-      page: Math.min(replay.requested.page, navigation.pageCount),
-    };
-    const native = nativeZoom(position.zoom);
-    if (!zoomReady(zoom, native, navigation.isReady())) {
-      // Check ownership immediately before every deferred viewport mutation.
-      if (this.intent.owns(replay.generation)) {
-        zoom.requestZoom(native);
-      }
-      replay.steady = 0;
-    } else if (!replay.positioned) {
-      this.positionReplay(replay, position);
+    if (!replay.positioned) {
+      this.positionReplay(replay, stage, {
+        ...replay.requested,
+        page: Math.min(replay.requested.page, navigation.pageCount),
+      });
     } else if (this.replaySettled(replay)) {
       return false;
     }
     return true;
   }
 
-  /** Move to the replayed position once the layout matches and zoom held. */
-  private positionReplay(replay: Replay, position: ReadingPosition): void {
-    if (
-      !sameChoices(this.dependencies.choices, position) ||
-      replay.frames < 3
-    ) {
+  /**
+   * Move to the replayed position once the Stage has the replayed layout (the
+   * view choices reach it from a render's effect). The move carries the zoom.
+   */
+  private positionReplay(
+    replay: Replay,
+    stage: HistoryStage,
+    position: ReadingPosition,
+  ): void {
+    if (!layoutApplied(stage.getSettings(), position)) {
       return;
     }
     if (this.intent.owns(replay.generation)) {
       this.dependencies.navigation.restore(position);
-      // Position restoration supersedes zoom's deferred anchor correction.
+      // The position supersedes any move still in flight.
       replay.generation = this.intent.current();
     }
     replay.positioned = true;
@@ -369,75 +366,18 @@ class JumpHistoryController {
   }
 }
 
-function zoomReady(
-  zoom: NonNullable<Zoom>,
-  native: ReturnType<typeof nativeZoom>,
-  ready: boolean,
-): boolean {
-  const current = zoom.getState();
-  return typeof native === "number"
-    ? restoredZoomReady(
-        ready,
-        current.zoomLevel,
-        current.currentZoomLevel,
-        native,
-      )
-    : current.zoomLevel === native;
-}
-
-function sameChoices(choices: ViewChoices, position: ReadingPosition): boolean {
-  return (
-    choices.pageLayout === position.pageLayout &&
-    choices.scrollMode === position.scrollMode &&
-    choices.scrollDirection === position.scrollDirection
-  );
-}
-
-/** The reading position: the remembered choices, the zoom and the first page on screen. */
-function readingSnapshot(choices: ViewChoices, zoom: Zoom): ReadingPosition {
+/** The reading position: the remembered choices, the zoom and the place at the corner of the view. */
+function readingSnapshot(
+  choices: ViewChoices,
+  stage: HistoryStage,
+): ReadingPosition {
   const result = { ...rememberedPosition(), ...choices };
-  const zoomState = zoom?.getState();
-  if (zoomState) {
-    result.zoom = zoomChoice(zoomState);
-  }
-  const viewport = document.querySelector(".viewport")?.getBoundingClientRect();
-  const page = viewport && firstVisiblePage(viewport);
-  if (page && viewport) {
-    const box = page.getBoundingClientRect();
-    const scale = Number(page.dataset.scale);
-    result.page = Number(page.dataset.pageIndex) + 1;
-    result.top = Math.max(0, viewport.top - box.top) / scale;
-    result.left = Math.max(0, viewport.left - box.left) / scale;
+  result.zoom = zoomChoice(stage);
+  const place = readingPlace(stage);
+  if (place) {
+    result.page = place.page;
+    result.top = place.top;
+    result.left = place.left;
   }
   return result;
-}
-
-function zoomChoice(state: {
-  zoomLevel: unknown;
-  currentZoomLevel: number;
-}): ReadingPosition["zoom"] {
-  if (state.zoomLevel === ZoomMode.FitWidth) {
-    return "fitWidth";
-  }
-  return state.zoomLevel === ZoomMode.FitPage
-    ? "fitPage"
-    : state.currentZoomLevel * 100;
-}
-
-/** The first rendered page that shows in the viewport. */
-function firstVisiblePage(viewport: DOMRect): HTMLElement | undefined {
-  for (const page of document.querySelectorAll<HTMLElement>(
-    ".page[data-page-index]",
-  )) {
-    const box = page.getBoundingClientRect();
-    const visible =
-      box.bottom > viewport.top &&
-      box.top < viewport.bottom &&
-      box.right > viewport.left &&
-      box.left < viewport.right;
-    if (visible && Number(page.dataset.scale) > 0) {
-      return page;
-    }
-  }
-  return undefined;
 }

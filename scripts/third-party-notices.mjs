@@ -61,6 +61,38 @@ function section({ dir, manifest }) {
   return lines.join("\n");
 }
 
+/**
+ * embedpdf.wasm is EmbedPDF Runtime, EmbedPDF's fork of PDFium. esbuild sees
+ * only the wasm package's JavaScript glue, and the package ships only the
+ * Apache-2.0 license of EmbedPDF's own code. PDFium's notice is carried by
+ * @embedpdf/core-fonts, which holds the fonts taken from PDFium; its file
+ * opens with a sentence about those fonts, and the notice starts at its
+ * copyright line. Fails when core-fonts is not bundled: the notice would
+ * silently go missing.
+ */
+function pdfiumSection(packages) {
+  const fonts = packages.find(
+    ({ manifest }) => manifest.name === "@embedpdf/core-fonts",
+  );
+  const file = fonts && join(fonts.dir, "THIRD_PARTY_NOTICES");
+  if (!file || !existsSync(file)) {
+    throw new Error(
+      "@embedpdf/core-fonts is not bundled, or carries no THIRD_PARTY_NOTICES: where does PDFium's notice come from now?",
+    );
+  }
+  const text = readFileSync(file, "utf8").trim();
+  return [
+    "## PDFium, compiled into embedpdf.wasm",
+    "",
+    "Source: https://pdfium.googlesource.com/pdfium/",
+    "",
+    "```text",
+    text.slice(text.indexOf("Copyright")).replaceAll("```", "'''"),
+    "```",
+    "",
+  ].join("\n");
+}
+
 const packages = bundledPackages();
 const notices = [
   "# Third-party notices",
@@ -70,6 +102,7 @@ const notices = [
   "`scripts/third-party-notices.mjs` from the build's bundle inputs.",
   "",
   ...packages.map(section),
+  pdfiumSection(packages),
 ].join("\n");
 
 if (process.argv.includes("--check")) {

@@ -1,17 +1,15 @@
-import { useViewportPlugin } from "@embedpdf/plugin-viewport/react";
 import { useEffect, useState, type RefObject } from "react";
 import {
   WheelGesture,
-  motionProgress,
   wheelPixels,
   wheelTarget,
 } from "../shared/smooth-motion";
 import {
   resolveSmoothScrolling,
   type ScrollDirection,
+  type ScrollMode,
 } from "../shared/view-settings";
-import type { ScrollBounds } from "./paged-scroll";
-import { DOCUMENT_ID } from "./plugins";
+import { useStageApi, type StageApi } from "./stage-capability";
 
 export function useSmoothMotion(enabled: boolean | null): boolean {
   const [reduced, setReduced] = useState(
@@ -26,23 +24,29 @@ export function useSmoothMotion(enabled: boolean | null): boolean {
   return resolveSmoothScrolling(enabled, false, reduced);
 }
 
-/** Animate discrete wheels only. Native pixel scrolling interrupts any pending wheel animation. */
+/**
+ * Animate discrete wheels only, and turn them sideways in horizontal reading
+ * (or with Shift). The Stage scrolls pixel input (a trackpad) as it comes,
+ * and in paged scrolling it also turns the page when a push meets the edge,
+ * so those are left to it.
+ *
+ * The listener sits on the viewer around the Stage and takes the events it
+ * handles first (capture phase), so the Stage's own wheel handler never sees
+ * them.
+ */
 export function useSmoothWheel(
   container: RefObject<HTMLElement | null>,
   smooth: boolean,
   direction: ScrollDirection,
-  bounds: ScrollBounds,
+  mode: ScrollMode,
 ): void {
-  const { plugin } = useViewportPlugin();
+  const stage = useStageApi();
   useEffect(() => {
     const element = container.current;
-    const viewport = element?.querySelector<HTMLElement>(".viewport");
-    if (!element || !viewport) {
+    if (!element || mode === "paged") {
       return;
     }
-    const wheel = new SmoothWheel(viewport, { smooth, direction, bounds });
-    // Native page/zoom requests supersede a wheel animation.
-    const unsubscribe = plugin?.onScrollRequest(DOCUMENT_ID, wheel.cancel);
+    const wheel = new SmoothWheel(stage, { smooth, direction });
     element.addEventListener("wheel", wheel.onWheel, {
       passive: false,
       capture: true,
@@ -50,50 +54,45 @@ export function useSmoothWheel(
     for (const type of INTERRUPTING_INPUT) {
       element.addEventListener(type, wheel.interrupt, { capture: true });
     }
+    const stopListening = stage.onMotionEnded(wheel.settled);
     return () => {
       wheel.interrupt();
-      unsubscribe?.();
+      stopListening();
       element.removeEventListener("wheel", wheel.onWheel, { capture: true });
       for (const type of INTERRUPTING_INPUT) {
         element.removeEventListener(type, wheel.interrupt, { capture: true });
       }
     };
-  }, [container, smooth, direction, bounds, plugin]);
+  }, [container, stage, smooth, direction, mode]);
 }
 
 /** Input that stops a wheel animation where it is. */
 const INTERRUPTING_INPUT = ["pointerdown", "touchstart", "keydown"];
 
-/** A mouse wheel's notches over one viewport, animated or stepped. */
+/** A mouse wheel's notches over one Stage, animated or stepped. */
 class SmoothWheel {
   private readonly gesture = new WheelGesture();
-  private frame = 0;
+  /** Where the animation in progress is headed, along `horizontal`'s axis. */
   private target = 0;
-  private axis: "scrollTop" | "scrollLeft" = "scrollTop";
+  private horizontal = false;
+  private animating = false;
 
   constructor(
-    private readonly viewport: HTMLElement,
-    private readonly options: {
-      smooth: boolean;
-      direction: ScrollDirection;
-      bounds: ScrollBounds;
-    },
+    private readonly stage: StageApi,
+    private readonly options: { smooth: boolean; direction: ScrollDirection },
   ) {}
 
-  readonly cancel = (): void => {
-    cancelAnimationFrame(this.frame);
-    this.frame = 0;
+  /** The Stage's animation ended where it was going. */
+  readonly settled = (): void => {
+    this.animating = false;
   };
 
-  /** Stop where the viewport is now. */
+  /** Stop an animation of this wheel's where it is. */
   readonly interrupt = (): void => {
-    this.cancel();
-    const { viewport } = this;
-    viewport.scrollTo({
-      left: viewport.scrollLeft,
-      top: viewport.scrollTop,
-      behavior: "instant",
-    });
+    if (this.animating) {
+      this.animating = false;
+      this.stage.stopMotion();
+    }
   };
 
   readonly onWheel = (event: WheelEvent): void => {
@@ -110,49 +109,41 @@ class SmoothWheel {
       !event.ctrlKey &&
       !event.metaKey;
     if (!discrete || (!smooth && !horizontal)) {
-      this.interrupt();
+      this.animating = false;
       return;
     }
     event.preventDefault();
+    event.stopPropagation();
     this.step(event, horizontal);
   };
 
   /** Move one notch further along the axis, adding to a move in progress. */
   private step(event: WheelEvent, horizontal: boolean): void {
-    const { viewport } = this;
-    const nextAxis = horizontal ? "scrollLeft" : "scrollTop";
-    if (nextAxis !== this.axis) {
-      this.cancel();
-    }
-    this.axis = nextAxis;
-    const from = viewport[this.axis];
-    const previous = this.frame ? this.target : from;
-    this.interrupt();
-    const limits = this.options.bounds(viewport);
+    const { stage } = this;
+    const view = stage.getScrollMetrics();
+    const from = horizontal ? view.scrollLeft : view.scrollTop;
+    const room = horizontal
+      ? view.scrollWidth - view.clientWidth
+      : view.scrollHeight - view.clientHeight;
+    const continuing =
+      this.animating && this.horizontal === horizontal && stage.isMoving();
+    this.horizontal = horizontal;
     this.target = wheelTarget(
       from,
-      previous,
+      continuing ? this.target : from,
       wheelPixels(
         event.deltaY,
         event.deltaMode,
-        horizontal ? viewport.clientWidth : viewport.clientHeight,
+        horizontal ? view.clientWidth : view.clientHeight,
       ),
-      horizontal ? limits.x : limits.y,
+      { min: 0, max: Math.max(0, room) },
     );
-    if (this.options.smooth) {
-      this.animate(from, this.axis);
-    } else {
-      viewport[this.axis] = this.target;
-    }
-  }
-
-  private animate(from: number, axis: "scrollTop" | "scrollLeft"): void {
-    const start = performance.now();
-    const tick = (now: number): void => {
-      const progress = motionProgress(now - start);
-      this.viewport[axis] = from + (this.target - from) * progress;
-      this.frame = progress < 1 ? requestAnimationFrame(tick) : 0;
-    };
-    this.frame = requestAnimationFrame(tick);
+    const behavior = this.options.smooth ? "smooth" : "instant";
+    this.animating = this.options.smooth;
+    stage.scrollTo(
+      horizontal
+        ? { left: this.target, behavior }
+        : { top: this.target, behavior },
+    );
   }
 }

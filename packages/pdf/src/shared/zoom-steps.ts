@@ -1,7 +1,8 @@
 /**
- * The zoom levels the zoom buttons and Ctrl/Cmd+wheel step through, as
- * browsers and other PDF viewers do: small steps near 100%, larger ones
- * further away. The first and last are the viewer's zoom limits.
+ * The zoom levels the zoom buttons and commands step through, as browsers and
+ * other PDF viewers do: small steps near 100%, larger ones further away. The
+ * first and last are the viewer's zoom limits. (Ctrl/Cmd+wheel and pinch are
+ * EmbedPDF's own, and not on these steps.)
  */
 export const ZOOM_STEPS = [
   0.25, 0.33, 0.5, 0.67, 0.75, 0.8, 0.9, 1, 1.1, 1.25, 1.5, 1.75, 2, 2.5, 3, 4,

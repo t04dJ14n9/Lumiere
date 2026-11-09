@@ -10,6 +10,7 @@ import { createRequire } from "node:module";
 import { copyFile, mkdir, rm, writeFile } from "node:fs/promises";
 import path from "node:path";
 import * as esbuild from "esbuild";
+import { embedPdfStubs } from "../../../scripts/embedpdf-stubs.mjs";
 const require = createRequire(import.meta.url);
 const watch = process.argv.includes("--watch");
 const shared = {
@@ -22,8 +23,8 @@ const shared = {
 await rm("dist", { recursive: true, force: true });
 await mkdir("dist/webview", { recursive: true });
 await copyFile(
-  path.join(path.dirname(require.resolve("@embedpdf/pdfium")), "pdfium.wasm"),
-  "dist/webview/pdfium.wasm",
+  require.resolve("@embedpdf/engine-runtime-wasm32/embedpdf.wasm"),
+  "dist/webview/embedpdf.wasm",
 );
 execFileSync(
   process.execPath,
@@ -39,7 +40,9 @@ const webview = {
   format: "esm",
   splitting: true,
   target: "chrome120",
-  plugins: [prismPlugin],
+  // The PDF embeds run the engine in the editor's own thread (its page allows
+  // no workers), so the engine's worker is left out of the lazy chunks.
+  plugins: [prismPlugin, embedPdfStubs({ workerSource: true })],
 };
 const builds = [
   { ...webview, entryPoints: { editor: "src/webview/main.ts" } },

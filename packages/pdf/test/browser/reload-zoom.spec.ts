@@ -1,13 +1,14 @@
-import { expect, test } from "@playwright/test";
+import { expect, test, type Page } from "@playwright/test";
+import { scrollBy } from "./stage-support";
 import { open, pageOffset } from "./viewer-support";
 
-test("each reload stops the previous PDF's engine and its workers", async ({
+test("reloads keep the one engine, and closing the page stops it and its workers", async ({
   page,
 }) => {
   await open(page);
-  // The PDFium worker and its image encoder.
-  await expect.poll(() => page.workers().length).toBeGreaterThan(0);
-  const workers = page.workers().length;
+  // The PDFium worker and its image encoders, which the first renders start.
+  const workers = await settledWorkerCount(page);
+  expect(workers).toBeGreaterThan(0);
   for (let reload = 1; reload <= 3; reload++) {
     await page.evaluate(async (reload) => {
       document
@@ -26,9 +27,31 @@ test("each reload stops the previous PDF's engine and its workers", async ({
       ),
     ).toBeVisible();
   }
-  // PdfRenderSession.dispose() destroyed each old engine, ending its workers.
-  await expect.poll(() => page.workers().length).toBe(workers);
+  // The engine of the page (engine-host.ts) opened each new document: no
+  // worker was added, and none was left behind.
+  expect(await settledWorkerCount(page)).toBe(workers);
+  // The page going away stops the engine, ending its workers.
+  await page.evaluate(() => window.dispatchEvent(new Event("pagehide")));
+  await expect.poll(() => page.workers().length).toBe(0);
 });
+
+/** The number of workers once it has stopped changing. */
+async function settledWorkerCount(page: Page): Promise<number> {
+  let last = -1;
+  let steady = 0;
+  await expect
+    .poll(
+      () => {
+        const count = page.workers().length;
+        steady = count === last ? steady + 1 : 0;
+        last = count;
+        return steady;
+      },
+      { intervals: [100] },
+    )
+    .toBeGreaterThanOrEqual(5);
+  return last;
+}
 
 test("a reloaded file reopens at the same place and zoom", async ({ page }) => {
   await open(page);
@@ -43,9 +66,7 @@ test("a reloaded file reopens at the same place and zoom", async ({ page }) => {
     .poll(async () => Math.abs((await pageOffset(page, 7))!))
     .toBeLessThan(16);
   // Partway down page 7.
-  await page
-    .locator(".viewport")
-    .evaluate((viewport) => viewport.scrollBy(0, 200));
+  await scrollBy(page, { top: 200 });
   await expect(field).toHaveValue("7");
   // The viewer remembers the place from its scroll events; let them arrive
   // before the reload.
@@ -103,26 +124,31 @@ test("each Ctrl+wheel notch zooms one step, and small trackpad movements zoom in
   await expect(zoom).toHaveValue("100");
   const box = (await page.locator(".viewport").boundingBox())!;
   await page.mouse.move(box.x + box.width / 2, box.y + box.height / 2);
-  const notch = async (deltaY: number, expected: string): Promise<void> => {
+  // The viewer leaves Ctrl+wheel to EmbedPDF's zoom, which steps a mouse notch
+  // by a factor of 1.2 around the pointer (not by the zoom buttons' ladder).
+  let level = 100;
+  const notch = async (deltaY: number): Promise<void> => {
+    level *= deltaY < 0 ? 1.2 : 1 / 1.2;
     await page.keyboard.down("Control");
     await page.mouse.wheel(0, deltaY);
     await page.keyboard.up("Control");
-    await expect(zoom).toHaveValue(expected);
+    await expect(zoom).toHaveValue(String(Math.round(level)));
   };
-  await notch(-100, "110");
-  await notch(-100, "125");
-  await notch(100, "110");
-  await notch(100, "100");
-  await notch(100, "90");
+  await notch(-100);
+  await notch(-100);
+  await notch(100);
+  await notch(100);
+  await notch(100);
 
-  // Small deltas are a pinch: the zoom follows exp(total / 100), here 90% x e^0.4.
+  // Small deltas are a pinch: the zoom follows exp(total / 100), here e^0.4 x the level.
   await page.keyboard.down("Control");
   for (let i = 0; i < 4; i++) {
     await page.mouse.wheel(0, -10);
   }
   await page.keyboard.up("Control");
+  const pinched = level * Math.exp(0.4);
   await expect
     .poll(async () => Number(await zoom.inputValue()), { timeout: 10_000 })
-    .toBeGreaterThan(130);
-  expect(Number(await zoom.inputValue())).toBeLessThan(138);
+    .toBeGreaterThan(pinched - 2);
+  expect(Number(await zoom.inputValue())).toBeLessThan(pinched + 2);
 });

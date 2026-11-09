@@ -1,4 +1,5 @@
-import { useSelectionCapability } from "@embedpdf/plugin-selection/react";
+import { SelectionToken } from "@embedpdf/plugin-selection/contract";
+import { useOptionalCapability } from "@embedpdf/react/runtime";
 import React, { useCallback, useEffect, useRef } from "react";
 import {
   createDeferredOpen,
@@ -10,7 +11,6 @@ import {
 import type { PdfBacklinkHit } from "../shared/pdf-backlink-index";
 import type { SegmentRect } from "../shared/line-rects";
 import { postToHost } from "./host";
-import { DOCUMENT_ID } from "./plugins";
 
 export interface ResolvedOverlay {
   key: string;
@@ -117,9 +117,6 @@ function useOverlayClicks(
 
 /** Whether EmbedPDF holds a text selection now (read when asked). */
 function useHasTextSelection(): () => boolean {
-  const { provides: selection } = useSelectionCapability();
-  return useCallback(
-    () => Boolean(selection?.forDocument(DOCUMENT_ID).getState().selection),
-    [selection],
-  );
+  const selection = useOptionalCapability(SelectionToken);
+  return useCallback(() => selection?.hasSelection() ?? false, [selection]);
 }

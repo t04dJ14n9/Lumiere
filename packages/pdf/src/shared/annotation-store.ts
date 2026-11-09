@@ -4,12 +4,21 @@
  * One JSON file per PDF content hash: the same PDF in `inbox/` and in
  * `.raw/` shows the same annotations, and a moved or renamed copy keeps them.
  *
- * The file holds EmbedPDF's portable annotation items (`exportAnnotations`
- * gives them, `importAnnotations` takes them). JSON has no dates or bytes,
- * so `created`/`modified` dates and a stamp's image bytes are tagged.
+ * The file holds an EmbedPDF annotation bundle (`annotation.export()` gives
+ * it, `annotation.import()` takes it), as `AnnotationTransfer` writes it:
+ * one JSON document with each stamp's drawing in base64. Version 2 wraps it,
+ * `{ version: 2, bundle }`, so the file says which generation of Lumia wrote
+ * it and a later bundle format does not collide with version 1, which held
+ * EmbedPDF 2's transfer items (`annotation-legacy`, still read).
  */
+import { AnnotationTransfer } from "@embedpdf/engine-core/public";
+import type {
+  AnnotationBundle,
+  AnnotationRef,
+} from "@embedpdf/engine-core/public";
+import { legacyToBundle, type LegacyAnnotation } from "./annotation-legacy";
 
-export const ANNOTATION_STORE_VERSION = 1;
+export const ANNOTATION_STORE_VERSION = 2;
 
 /** The default folder of the annotation files, relative to the PDF's workspace folder. */
 export const ANNOTATION_STORE_FOLDER = ".lumiere/pdf-annotations";
@@ -37,15 +46,6 @@ export function annotationFolder(setting: unknown): AnnotationFolder {
   return { from: "workspace", segments: segments(text) };
 }
 
-/** An annotation as EmbedPDF transfers it; the viewer gives it its own type. */
-export interface StoredAnnotation {
-  annotation: { id: string; pageIndex: number; type: number } & Record<
-    string,
-    unknown
-  >;
-  ctx?: unknown;
-}
-
 const SHA256 = /^[0-9a-f]{64}$/u;
 
 /** The annotation file's name for a PDF with this content hash. */
@@ -58,60 +58,91 @@ export function annotationStoreName(sha256: string): string {
 
 /** The file's text, or undefined when there is nothing to keep (no file). */
 export function serializeAnnotations(
-  items: readonly StoredAnnotation[],
+  bundle: AnnotationBundle,
 ): string | undefined {
-  if (items.length === 0) {
+  if (bundle.items.length === 0) {
     return undefined;
   }
-  const sorted = [...items].sort(
-    (a, b) =>
-      a.annotation.pageIndex - b.annotation.pageIndex ||
-      a.annotation.id.localeCompare(b.annotation.id),
-  );
-  return `${JSON.stringify(
-    encode({ version: ANNOTATION_STORE_VERSION, annotations: sorted }),
-    null,
-    2,
-  )}\n`;
+  const file = {
+    version: ANNOTATION_STORE_VERSION,
+    bundle: JSON.parse(AnnotationTransfer.stringify(bundle)) as unknown,
+  };
+  return `${JSON.stringify(file, null, 2)}\n`;
 }
 
-/** The value with dates and bytes tagged, as plain JSON data. */
-function encode(value: unknown): unknown {
-  if (value instanceof Date) {
-    return { $date: value.toISOString() };
-  }
-  if (value instanceof ArrayBuffer || ArrayBuffer.isView(value)) {
-    return { $bytes: toBase64(bytesOf(value)) };
-  }
-  if (Array.isArray(value)) {
-    return value.map(encode);
-  }
-  if (typeof value === "object" && value !== null) {
-    return Object.fromEntries(
-      Object.entries(value).map(([key, entry]) => [key, encode(entry)]),
-    );
-  }
-  return value;
+/** What a file holds, and how the import maps its pages onto the PDF's. */
+export interface StoredAnnotations {
+  bundle: AnnotationBundle;
+  /**
+   * `same`: the bundle names the PDF's own pages (the file is keyed by the
+   * PDF's hash). `by-position`: an old file, which knew only page numbers.
+   */
+  pages: "same" | "by-position";
+  /** Annotations of an old file that could not be converted. */
+  skipped: number;
 }
 
-/** The annotations in a file's text; undefined when it is not one. */
-export function parseAnnotations(text: string): StoredAnnotation[] | undefined {
-  let parsed: unknown;
+/**
+ * The annotations in a file's text; undefined when it is not one. Rejects
+ * with the engine's error for a bundle that is damaged (a drawing that does
+ * not match its hash) or too large, which `undefined` would hide.
+ */
+export async function parseAnnotations(
+  text: string,
+): Promise<StoredAnnotations | undefined> {
+  let file: unknown;
   try {
-    parsed = JSON.parse(text, (_key, value: unknown) => revive(value));
+    file = JSON.parse(text);
   } catch {
     return undefined;
   }
-  if (
-    typeof parsed !== "object" ||
-    parsed === null ||
-    (parsed as { version?: unknown }).version !== ANNOTATION_STORE_VERSION ||
-    !Array.isArray((parsed as { annotations?: unknown }).annotations)
-  ) {
+  if (!isRecord(file)) {
     return undefined;
   }
-  const items = (parsed as { annotations: unknown[] }).annotations;
-  return items.every(isStoredAnnotation) ? items : undefined;
+  if (file.version === ANNOTATION_STORE_VERSION && isRecord(file.bundle)) {
+    const bundle = await AnnotationTransfer.parse(JSON.stringify(file.bundle));
+    return { bundle, pages: "same", skipped: 0 };
+  }
+  if (file.version === 1 && Array.isArray(file.annotations)) {
+    return parseLegacyAnnotations(text);
+  }
+  return undefined;
+}
+
+async function parseLegacyAnnotations(
+  text: string,
+): Promise<StoredAnnotations | undefined> {
+  const file = JSON.parse(text, (_key, value: unknown) => revive(value)) as {
+    annotations: unknown[];
+  };
+  if (!file.annotations.every(isLegacyAnnotation)) {
+    return undefined;
+  }
+  const { bundle, skipped } = await legacyToBundle(file.annotations);
+  return { bundle, pages: "by-position", skipped };
+}
+
+/**
+ * The bundle with only the annotations Lumia owns: what the file keeps.
+ * A reply or popup goes with the annotation it belongs to, and the drawings
+ * no kept annotation names are left out (a bundle that names none is refused).
+ */
+export function keepOwned(
+  bundle: AnnotationBundle,
+  isOwn: (ref: AnnotationRef) => boolean,
+): AnnotationBundle {
+  const items = bundle.items.filter(({ data }) => {
+    const owner =
+      data.subtype === "popup" ? data.parent : (data.reply?.to ?? null);
+    return isOwn(data.ref) || (owner !== null && isOwn(owner));
+  });
+  const named = new Set<string>(
+    items.flatMap((item) => Object.values(item.resources)),
+  );
+  const resources = Object.fromEntries(
+    Object.entries(bundle.resources).filter(([id]) => named.has(id)),
+  );
+  return { ...bundle, items, resources } as AnnotationBundle;
 }
 
 /**
@@ -140,6 +171,7 @@ function segments(path: string): string[] {
     .filter((part) => part !== "" && part !== ".");
 }
 
+/** An old file tagged its dates and bytes, which JSON has no types for. */
 function revive(value: unknown): unknown {
   if (typeof value !== "object" || value === null) {
     return value;
@@ -156,7 +188,11 @@ function revive(value: unknown): unknown {
   return value;
 }
 
-function isStoredAnnotation(item: unknown): item is StoredAnnotation {
+function isRecord(value: unknown): value is Record<string, unknown> {
+  return typeof value === "object" && value !== null && !Array.isArray(value);
+}
+
+function isLegacyAnnotation(item: unknown): item is LegacyAnnotation {
   const annotation = (item as { annotation?: unknown } | null)?.annotation as
     { id?: unknown; pageIndex?: unknown; type?: unknown } | undefined;
   return (
@@ -167,20 +203,6 @@ function isStoredAnnotation(item: unknown): item is StoredAnnotation {
     (annotation.pageIndex as number) >= 0 &&
     typeof annotation.type === "number"
   );
-}
-
-function bytesOf(value: ArrayBuffer | ArrayBufferView): Uint8Array {
-  return value instanceof ArrayBuffer
-    ? new Uint8Array(value)
-    : new Uint8Array(value.buffer, value.byteOffset, value.byteLength);
-}
-
-function toBase64(bytes: Uint8Array): string {
-  let binary = "";
-  for (const byte of bytes) {
-    binary += String.fromCharCode(byte);
-  }
-  return btoa(binary);
 }
 
 function fromBase64(text: string): Uint8Array {

@@ -25,7 +25,7 @@
     <title>PDF viewer test harness</title>
   </head>
   <body>
-    <div id="root" data-pdfium-wasm="/dist/webview/pdfium.wasm"></div>
+    <div id="root" data-pdfium-wasm="/dist/webview/embedpdf.wasm"></div>
     <script>
       // Stand in for VS Code: record what the viewer sends and answer `ready`
       // with the PDF named in ?pdf= (and, with ?goto=, a location right away).
@@ -46,6 +46,9 @@
           JSON.parse(localStorage.getItem("pdf-view") ?? "null") ??
           savedPosition;
       window.__messages = [];
+      // Let the specs read the Stage (src/webview/test-hook.ts): it has no
+      // scrolling element to measure.
+      window.__exposeStage = true;
       // Like the extension, number each load sent to the viewer.
       let loads = 0;
       window.hostSend = (message) =>

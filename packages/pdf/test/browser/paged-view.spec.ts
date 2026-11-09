@@ -13,22 +13,17 @@ import {
   selectText,
   TEXT_MIDLINE,
 } from "./viewer-support";
+import { scrollLeft, scrollTo, scrollTop } from "./stage-support";
 
 test("page-by-page bounds wheel/keyboard panning and follows page, outline and internal-link destinations", async ({
   page,
 }) => {
   await openView(page, { defaultZoom: 400, scrollMode: "paged" });
   await expect.poll(() => pageIndexes(page)).toEqual([0]);
-  await page.locator(".viewport").evaluate((viewport) => {
-    viewport.scrollTop = 1_000_000;
-  });
+  await scrollTo(page, { top: 1_000_000 });
   await expect.poll(() => lastView(page)).toMatchObject({ page: 1 });
   await expect.poll(() => pageIndexes(page)).toEqual([0]);
-  await expect
-    .poll(() =>
-      page.locator(".viewport").evaluate((viewport) => viewport.scrollTop),
-    )
-    .toBeLessThan(500);
+  await expect.poll(() => scrollTop(page)).toBeLessThan(500);
   await act(page, { action: "nextPage" });
   await expect.poll(() => pageIndexes(page)).toEqual([1]);
   await act(page, { action: "goToPage", page: 7 });
@@ -80,21 +75,11 @@ for (const scrollDirection of ["vertical", "horizontal"] as const) {
       scrollDirection,
     });
     await expect.poll(() => pageIndexes(page)).toEqual([0, 1]);
-    await page.locator(".viewport").evaluate((viewport) => {
-      viewport.scrollTo({ left: 1_000_000, top: 1_000_000 });
-    });
+    await scrollTo(page, { left: 1_000_000, top: 1_000_000 });
     await expect.poll(() => pageIndexes(page)).toEqual([0, 1]);
     await expect.poll(() => lastView(page)).toMatchObject({ page: 1 });
-    await expect
-      .poll(() =>
-        page.locator(".viewport").evaluate((viewport) => viewport.scrollTop),
-      )
-      .toBeLessThan(500);
-    await expect
-      .poll(() =>
-        page.locator(".viewport").evaluate((viewport) => viewport.scrollLeft),
-      )
-      .toBeLessThan(1500);
+    await expect.poll(() => scrollTop(page)).toBeLessThan(500);
+    await expect.poll(() => scrollLeft(page)).toBeLessThan(1500);
     await send(page, {
       type: "goTo",
       location: {

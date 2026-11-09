@@ -1,19 +1,18 @@
-import { useAnnotationCapability } from "@embedpdf/plugin-annotation/react";
-import { useRegistry } from "@embedpdf/core/react";
-import type { PdfDocumentObject, PdfEngine } from "@embedpdf/models";
-import type { TrackedAnnotation } from "@embedpdf/plugin-annotation";
-import { useCallback, useEffect, useRef, useState } from "react";
 import {
-  annotationDeleteTargets,
+  AnnotationToken,
+  useAnnotationState,
+  type Annotation,
+} from "@embedpdf/react/annotation";
+import { useDocuments, useOptionalCapability } from "@embedpdf/react/runtime";
+import { useCallback, useEffect, useRef } from "react";
+import {
   annotationQuoteText,
   selectionFromAnnotation,
 } from "../shared/annotation-handoff";
 import type { RegionSelection } from "../shared/selection";
+import { postToHost } from "./host";
 
-export type SetAnnotationRegion = (
-  next: RegionSelection | undefined,
-  enrich?: { engine: PdfEngine; pdf: PdfDocumentObject },
-) => void;
+export type SetAnnotationRegion = (next: RegionSelection | undefined) => void;
 
 /**
  * While Annotate mode is on, mirror EmbedPDF's selected annotations into the
@@ -21,65 +20,62 @@ export type SetAnnotationRegion = (
  * Link for Agent / ensureSelection stay consistent, and expose delete.
  */
 export function useAnnotationSelection(
-  documentId: string,
-  pdf: PdfDocumentObject,
   annotate: boolean,
   setAnnotationRegion: SetAnnotationRegion,
 ): {
   hasAnnotationSelection: boolean;
   deleteSelected: () => void;
+  /** Someone is typing in a free-text box: Delete and Backspace edit its text. */
+  editingText: boolean;
 } {
-  const { provides: annots } = useAnnotationCapability();
-  const { registry } = useRegistry();
-  const [selected, setSelected] = useState<TrackedAnnotation[]>([]);
+  const annotation = useOptionalCapability(AnnotationToken);
+  const documents = useDocuments();
+  const selected = useAnnotationState((state) => state.selected);
+  const editingText = useAnnotationState((state) => state.editing !== null);
   const owned = useRef(false);
   const setRegion = useRef(setAnnotationRegion);
   setRegion.current = setAnnotationRegion;
 
   useEffect(() => {
     if (!annotate) {
-      annots?.forDocument(documentId).deselectAnnotation();
-      setSelected([]);
-      return;
+      annotation?.selection.clear();
     }
-    if (!annots) {
-      setSelected([]);
-      return;
-    }
-    const scope = annots.forDocument(documentId);
-    const refresh = (): void => setSelected(scope.getSelectedAnnotations());
-    refresh();
-    return scope.onStateChange(() => refresh());
-  }, [annots, documentId, annotate]);
+  }, [annotation, annotate]);
 
+  const visible = annotate ? selected : NONE;
+  const primary = visible[0];
+  const primaryPage =
+    primary === undefined ? -1 : documents.getPageIndex(primary.page);
   useEffect(() => {
-    if (!annotate || selected.length === 0) {
+    if (primary === undefined || primaryPage < 0) {
       clearOwnedAnnotationRegion(owned, setRegion.current);
       return;
     }
-    applyAnnotationRegion({
-      primary: selected[0]!,
-      pdf,
-      engine: registry?.getEngine(),
-      owned,
-      setAnnotationRegion: setRegion.current,
-    });
-  }, [annotate, selected, pdf, registry]);
+    applyAnnotationRegion(primary, primaryPage, owned, setRegion.current);
+  }, [primary, primaryPage]);
 
   const deleteSelected = useCallback((): void => {
-    if (!annots || !annotate || selected.length === 0) {
+    if (!annotation || !annotate || selected.length === 0) {
       return;
     }
-    annots
-      .forDocument(documentId)
-      .deleteAnnotations(annotationDeleteTargets(selected));
-  }, [annots, annotate, documentId, selected]);
+    annotation.selection.delete().catch((error: unknown) => {
+      postToHost({
+        type: "error",
+        message: `Could not delete the annotation: ${
+          error instanceof Error ? error.message : String(error)
+        }`,
+      });
+    });
+  }, [annotation, annotate, selected]);
 
   return {
-    hasAnnotationSelection: annotate && selected.length > 0,
+    hasAnnotationSelection: visible.length > 0,
     deleteSelected,
+    editingText,
   };
 }
+
+const NONE: readonly Annotation[] = [];
 
 function clearOwnedAnnotationRegion(
   owned: { current: boolean },
@@ -92,26 +88,22 @@ function clearOwnedAnnotationRegion(
   setAnnotationRegion(undefined);
 }
 
-function applyAnnotationRegion(args: {
-  primary: TrackedAnnotation;
-  pdf: PdfDocumentObject;
-  engine: PdfEngine | undefined;
-  owned: { current: boolean };
-  setAnnotationRegion: SetAnnotationRegion;
-}): void {
-  const { primary, pdf, engine, owned, setAnnotationRegion } = args;
-  const contents =
-    typeof primary.object.contents === "string"
-      ? primary.object.contents
-      : undefined;
-  const immediateQuote = annotationQuoteText(
-    contents === undefined ? {} : { contents },
+function applyAnnotationRegion(
+  primary: Annotation,
+  pageIndex: number,
+  owned: { current: boolean },
+  setAnnotationRegion: SetAnnotationRegion,
+): void {
+  const quote = annotationQuoteText(
+    typeof primary.contents === "string" ? { contents: primary.contents } : {},
   );
-  const immediate = selectionFromAnnotation({
-    pageIndex: primary.object.pageIndex,
-    rect: primary.object.rect,
-    ...(immediateQuote ? { text: immediateQuote } : {}),
-  });
+  const { x, y, width, height } = primary.rect;
   owned.current = true;
-  setAnnotationRegion(immediate, engine ? { engine, pdf } : undefined);
+  setAnnotationRegion(
+    selectionFromAnnotation({
+      pageIndex,
+      rect: { origin: { x, y }, size: { width, height } },
+      ...(quote ? { text: quote } : {}),
+    }),
+  );
 }

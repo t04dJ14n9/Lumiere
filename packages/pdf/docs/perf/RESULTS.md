@@ -1,5 +1,7 @@
 # PDF load time (real VS Code 1.141, Linux Xvfb, shared noisy box)
 
+These numbers were measured on EmbedPDF 2.15.1. See "EmbedPDF 3" at the end.
+
 `PERF=1 pnpm exec playwright test -c test/vscode/playwright.config.ts test/vscode/perf.spec.ts`
 writes the numbers (`before.json` is the baseline on `main`, `after.json` this branch).
 Times are ms after choosing the file; run-to-run noise on this box is about ±150 ms
@@ -47,8 +49,9 @@ Cause: EmbedPDF's zoom plugin re-fits an automatic zoom 150 ms after a
 viewport resize (a debounce for window drags). The viewport first gets its
 size when the viewer mounts, after the document loaded, so the first fit,
 and every page (the viewport is gated until the zoom is known), waited out
-that debounce. `webview/first-fit.ts` requests the same automatic zoom on the
-first size, at once. It takes the zoom capability, not `useZoom`: that hook's
+that debounce. `webview/first-fit.ts` (removed since: EmbedPDF 3's Stage has
+no such debounce and fits at the first size) requested the same automatic zoom
+on the first size, at once. It takes the zoom capability, not `useZoom`: that hook's
 `provides` is a new object on every render, so an effect depending on it
 fits again after every render, and undid every jump (the first version did,
 and the browser suite caught it).
@@ -67,3 +70,19 @@ VS Code (no gain beyond the box's noise):
 
 Note: `pnpm build` is a development build (React's development mode); its
 timings overstate the production ones and can hide gaps such as this one.
+
+## EmbedPDF 3, 2026-11-08
+
+Not timed in real VS Code yet. What the move changed in size (production
+build, `node scripts/build.mjs --production`, `dist/pdf/webview`):
+
+| | EmbedPDF 2.15.1 | EmbedPDF 3.0.0 |
+|---|---|---|
+| `viewer.js` | 3.1 MB | 4.7 MB |
+| engine `.wasm` | `pdfium.wasm` 4.6 MB | `embedpdf.wasm` 7.9 MB |
+
+The viewer starts the worker engine before the bytes arrive, as above
+(`warmWasm`), so the larger wasm is fetched and compiled off the critical
+path, but its compile time is not measured. The Markdown editor carries the
+same `embedpdf.wasm` for PDF embeds (the VSIX holds it twice) and about 1.8 MB
+of lazy engine chunks.

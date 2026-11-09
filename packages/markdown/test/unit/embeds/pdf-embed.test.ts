@@ -58,15 +58,15 @@ test("formatPdfOpenTarget and pdfFilename format viewer open targets and display
   );
 });
 
-test("renderPdfPageFromBytes renders PDF pages via @embedpdf/pdfium WASM", async () => {
-  const pdfiumEntry = require.resolve("@embedpdf/pdfium");
-  const wasmBuffer = readFileSync(
-    path.join(path.dirname(pdfiumEntry), "pdfium.wasm"),
-  );
-  const wasmArrayBuffer = wasmBuffer.buffer.slice(
-    wasmBuffer.byteOffset,
-    wasmBuffer.byteOffset + wasmBuffer.byteLength,
-  );
+const wasmBuffer = readFileSync(
+  require.resolve("@embedpdf/engine-runtime-wasm32/embedpdf.wasm"),
+);
+const wasmArrayBuffer = wasmBuffer.buffer.slice(
+  wasmBuffer.byteOffset,
+  wasmBuffer.byteOffset + wasmBuffer.byteLength,
+);
+
+test("renderPdfPageFromBytes renders PDF pages via EmbedPDF's engine", async () => {
   const samplePdf = new Uint8Array(
     readFileSync(path.resolve("test/fixtures/vault/attachments/sample.pdf")),
   );
@@ -90,4 +90,59 @@ test("renderPdfPageFromBytes renders PDF pages via @embedpdf/pdfium WASM", async
     wasmArrayBuffer,
   );
   assert.equal(clamped.page, 1);
+});
+
+/** A one-page PDF of `width` x `height` points that the file turns by `rotate` degrees. */
+function turnedPdf(width: number, height: number, rotate: number): Uint8Array {
+  const objects = [
+    "<< /Type /Catalog /Pages 2 0 R >>",
+    "<< /Type /Pages /Kids [3 0 R] /Count 1 >>",
+    `<< /Type /Page /Parent 2 0 R /MediaBox [0 0 ${width} ${height}] /Rotate ${rotate} >>`,
+  ];
+  let out = "%PDF-1.4\n";
+  const offsets = objects.map((body, index) => {
+    const offset = out.length;
+    out += `${index + 1} 0 obj\n${body}\nendobj\n`;
+    return offset;
+  });
+  const xref = out.length;
+  const entries = offsets.map(
+    (offset) => `${String(offset).padStart(10, "0")} 00000 n \n`,
+  );
+  out += `xref\n0 4\n0000000000 65535 f \n${entries.join("")}`;
+  out += `trailer\n<< /Size 4 /Root 1 0 R >>\nstartxref\n${xref}\n%%EOF\n`;
+  return Buffer.from(out, "latin1");
+}
+
+test("renderPdfPageFromBytes draws a turned page the way a viewer shows it", async () => {
+  // 300 x 400 points, turned a quarter: it shows 400 wide and 300 tall.
+  const turned = await renderPdfPageFromBytes(
+    turnedPdf(300, 400, 90),
+    1,
+    400,
+    wasmArrayBuffer,
+  );
+  assert.equal(turned.width, 400);
+  assert.equal(turned.height, 300);
+  const upright = await renderPdfPageFromBytes(
+    turnedPdf(300, 400, 0),
+    1,
+    600,
+    wasmArrayBuffer,
+  );
+  assert.equal(upright.width, 600);
+  assert.equal(upright.height, 800);
+});
+
+test("renderPdfPageFromBytes rejects bytes that are not a PDF, and keeps working", async () => {
+  await assert.rejects(
+    renderPdfPageFromBytes(new Uint8Array([1, 2, 3]), 1, 600, wasmArrayBuffer),
+  );
+  const rendered = await renderPdfPageFromBytes(
+    turnedPdf(300, 400, 0),
+    1,
+    300,
+    wasmArrayBuffer,
+  );
+  assert.equal(rendered.width, 300);
 });

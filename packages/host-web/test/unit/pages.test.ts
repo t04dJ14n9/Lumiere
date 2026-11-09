@@ -171,7 +171,7 @@ test("a PDF's page is Lumière's viewer, with its host's stand-in first and the 
   assert.ok(shim > 0 && viewer > shim, "the stand-in runs before the viewer");
   assert.match(
     html,
-    /data-pdfium-wasm="https:\/\/lumiere\.example\/app\/pdf\/pdfium\.wasm"/,
+    /data-pdfium-wasm="https:\/\/lumiere\.example\/app\/pdf\/embedpdf\.wasm"/,
   );
   assert.match(html, /data-toolbar="slim"/);
   const pdf = /<meta name="lumiere-pdf" content="(blob:[^"]+)">/.exec(

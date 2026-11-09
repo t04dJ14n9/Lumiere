@@ -52,7 +52,7 @@ ships two products that share one plugin tree:
   as Obsidian resolves them, embeds, callouts, properties, tables, math,
   diagrams, tasks, tags, backlinks, outline and graph. VS Code keeps the
   text, saving and undo.
-- **Lumia PDF.** A PDF viewer on EmbedPDF (PDFium compiled to WebAssembly).
+- **Lumia PDF.** A PDF viewer on EmbedPDF 3 (PDFium compiled to WebAssembly).
   Its signature feature is **Copy link to this**: a quote with a deep link
   (`paper.pdf#page=3#:~:text=…`) that notes can paste, and that paints
   backlink overlays back onto the PDF.
@@ -412,7 +412,7 @@ write the same text.
 ## 13. The PDF product
 
 ```text
-extension host                                   webview (React, EmbedPDF + PDFium wasm)
+extension host                                   webview (React, EmbedPDF 3 + PDFium wasm)
   pdf plugin (pdfPanels hub) ── messages.ts ──►    viewer.tsx, pages, selection, search,
   pdfToolbar, pdfOutline, pdfHistory, …            outline, backlink overlays, annotations
   pdfBacklinks (scans notes, matches quotes)
@@ -432,6 +432,30 @@ src/host (no vscode): portable viewer logic, reused by host-node
 - Bookmarks are read in the webview for the viewer's outline, and in the
   extension host by the `pdfOutlines` reader (one PDFium instance, started
   on first use, cached per file by mtime and size, PDFs over 200 MB skipped).
+- **EmbedPDF 3.0.0** (`@embedpdf/*`, pinned exactly) runs the viewer. The
+  plugins in `webview/plugins.ts` are `stage` (one surface that lays out,
+  scrolls and zooms the pages, in single, spread, paged and horizontal
+  flows), `render` (a quick picture of each page, then sharp tiles),
+  `interaction` (the active tool), `selection`, `search`, `history`,
+  `annotation`, `link` and `outline`, plus Lumia's own `lumia-text`, which
+  gives the other layers each page's text and glyph boxes. Pages are laid out
+  by the Stage, so the webview never reads a scroll offset: it moves and
+  reads the view with Stage verbs (`webview/stage-*.ts`). Zoom is the Stage's
+  (a wheel notch is ×1.2; the buttons and keys walk Lumia's ladder).
+- **One engine per viewer page** (`webview/engine-host.ts`): PDFium runs in a
+  web worker, with the main thread as a fallback when the worker fails or
+  does not boot in 15 s. A reload of the file keeps the engine; the page
+  leaving stops it. `embedpdf.wasm` (7.9 MB) is fetched while the host sends
+  the bytes, and the page names it in `data-pdfium-wasm`. The extension host's
+  bookmark reader runs the same engine in Node
+  (`dist/pdf/outline-engine.js`), and Markdown's PDF embeds run it in the
+  editor webview's thread (that page's CSP allows no worker), so a rotated
+  page embeds the way it reads. Both bundle the engine through
+  `scripts/embedpdf-stubs.mjs`, which leaves out what they never use.
+- **Annotations stay outside the PDF**, as `{ "version": 2, "bundle": … }`
+  files named by the PDF's SHA-256 (`shared/annotation-store.ts`); version 1
+  files are converted when read. **Dark paper is off**: EmbedPDF 3 has no
+  page colour-scheme render (`packages/pdf/docs/embedpdf-page-colors-patch.md`).
 
 ## 14. Agent handoff
 

@@ -31,15 +31,22 @@ test("status-bar yellow preset matches light-paper highlight", () => {
 });
 
 test("highlightToolDefaults and highlightStyleForPaper follow paper mode", () => {
+  // Light paper multiplies the mark into the page; dark paper needs `normal`,
+  // which EmbedPDF 3 stores in the annotation.
   assert.deepEqual(highlightToolDefaults("normal"), {
-    strokeColor: "#FFE566",
     color: "#FFE566",
     opacity: 0.3,
+    blendMode: "multiply",
   });
   assert.deepEqual(highlightToolDefaults("dark"), {
-    strokeColor: "#FFF59D",
     color: "#FFF59D",
     opacity: 0.4,
+    blendMode: "normal",
+  });
+  assert.deepEqual(highlightToolDefaults("dark", "#4DABF7"), {
+    color: "#4DABF7",
+    opacity: 0.4,
+    blendMode: "normal",
   });
   assert.deepEqual(highlightStyleForPaper("dark"), HIGHLIGHT_BY_PAPER.dark);
 });

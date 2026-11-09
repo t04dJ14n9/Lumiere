@@ -1,8 +1,8 @@
 /**
  * Page text folded for matching, the way Chrome matches a text fragment:
- * case and whitespace differences do not matter. PDFium puts "\r\n" between
- * the lines of a page, while the quote a link carries was joined with single
- * spaces when it was copied, so neither side can be compared as it is.
+ * case and whitespace differences do not matter. A page's text has a line
+ * break between its lines, while the quote a link carries was joined with
+ * single spaces when it was copied, so neither side can be compared as it is.
  */
 
 /** Characters that carry no text: they vanish from the folded text. */

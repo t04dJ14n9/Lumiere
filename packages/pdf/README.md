@@ -3,7 +3,7 @@
 [![CI](https://github.com/t04dJ14n9/vscode-embedPDF/actions/workflows/ci.yml/badge.svg)](https://github.com/t04dJ14n9/vscode-embedPDF/actions/workflows/ci.yml)
 
 A Lumia PDF viewer for VS Code and Cursor, built on [EmbedPDF](https://www.embedpdf.com/)
-and its PDFium engine. Select text and choose **Copy link to this**: the
+3 and its PDFium engine. Select text and choose **Copy link to this**: the
 clipboard gets a Quote with a Chrome-aligned deep link (`#page=` +
 `#:~:text=`), ready to paste into any note. Opening the PDF paints
 **backlink overlays** from those vault Markdown links. Annotate tools
@@ -16,7 +16,8 @@ is opt-in (`lumiere.pdf.regions.enabled`, default off).
 - **Viewer.** Single pages or two-page spreads (1–2, 3–4, or a cover alone
   followed by 2–3, 4–5), continuous or page-by-page scrolling, vertical and
   horizontal reading, page and zoom controls, fit width, fit page and actual size (100%),
-  Ctrl/⌘+wheel and pinch zoom, find in PDF (⌘F / Ctrl+F), internal links and web links.
+  Ctrl/⌘+wheel and pinch zoom around the pointer (a wheel notch zooms by 1.2),
+  find in PDF (⌘F / Ctrl+F), internal links and web links.
   When the file changes on disk (a rebuilt paper), the viewer reloads at the
   same page and zoom.
 - **View controls.** A View picker in the editor title/status bar, and a
@@ -50,7 +51,10 @@ is opt-in (`lumiere.pdf.regions.enabled`, default off).
   workspace-relative folder, `~/…`, or an absolute path. The PDF's bytes, and so the hash a vault records for an immutable
   source, stay as they are. The same PDF anywhere (in `inbox/`, then
   captured into `.raw/`) shows the same annotations, and a renamed or moved
-  copy keeps them. Del deletes them.
+  copy keeps them. Del deletes them. The file is Lumia's own format
+  (`{"version": 2, "bundle": …}`, EmbedPDF 3's annotation transfer); files
+  from earlier versions are converted when read and saved in the new format on
+  the next change, after which earlier versions cannot read them.
   - **PDF: Save Annotations into This PDF** writes them into the file after
     you confirm (its SHA-256 changes). It refuses PDFs in
     `lumiere.pdf.annotations.protectedFolders` (default `[".raw"]`).
@@ -273,7 +277,7 @@ src/
 │   │                     (shared format: packages/agents/docs/agent-handoff-format.md)
 │   ├── region-text.ts    the text inside a region, line by line
 │   ├── outline-sections.ts  a PDF's bookmarks as a flat list of pages and titles
-│   ├── zoom-steps.ts     the zoom levels the buttons and wheel step through
+│   ├── zoom-steps.ts     the zoom levels the buttons and keys step through
 │   ├── view-state.ts     page and zoom reported by the viewer; view actions
 │   ├── toolbar-settings.ts  toolbar modes; old floating-bar values still parse
 │   └── geometry.ts       page rectangles
@@ -283,7 +287,7 @@ src/
 │   ├── outlines/               the bookmarks of PDFs, for `[[paper.pdf#` in Lumia:
 │   │                           a cached reader, and engine.ts, a separate lazily
 │   │                           loaded bundle (outline-engine.js) of PDFium that
-│   │                           loads the viewer's pdfium.wasm
+│   │                           loads the viewer's embedpdf.wasm
 │   ├── runtime/                plugin manifests and the runtime: dependency order,
 │   │                           transactional start (a failed plugin rolls back what
 │   │                           it registered), teardown in reverse order
@@ -300,17 +304,22 @@ src/
 └── webview/     the viewer (React + EmbedPDF), one module per concern
     ├── main.tsx, host.ts       entry and messages to the extension
     ├── outbox.ts               state reports batched into versioned patches
-    ├── render-session.ts       owns one PDF's engines; disposed on reload
-    ├── engine.tsx, plugins.ts  PDFium in a worker (main-thread fallback)
-    ├── viewer.tsx              toolbar, search, pages
+    ├── engine-host.ts          the page's one engine, kept across reloads
+    ├── engine.tsx, plugins.ts  PDFium in a worker (main-thread fallback);
+    │                           the plugins EmbedPDF 3 runs (stage, render, …)
+    ├── viewer.tsx              toolbar, search, the Stage and its pages
     ├── toolbar.tsx             the slim bar's controls
     ├── floating-toolbar.tsx    the removed floating bar, no longer shown
     ├── view-sync.ts            page and zoom to the extension, its actions back
     ├── tool-mode.ts            the Select Text and Select Region tools
-    ├── page.tsx, page-links.tsx
-    ├── navigation.ts           pages, locations, highlights
+    ├── page.tsx, page-links.tsx  one page's layers in the Stage
+    ├── navigation.ts           pages, locations, highlights (Stage verbs)
+    ├── stage-layout.ts, stage-position.ts  layout choices and the reading
+    │                           place, to and from the Stage
     ├── reading-position.ts     the place and zoom kept across reloads
-    ├── wheel-zoom.ts           Ctrl/⌘+wheel zoom, one step per notch
+    ├── smooth-scrolling.ts     animated wheel notches in continuous reading
+    ├── text-access.ts          the page text and its glyph boxes, as a plugin
+    ├── annotation-store-session.ts  marks to and from their file
     ├── selection.ts            reporting text and region selections
     ├── region-details.ts       a region's text and PNG snapshot
     ├── drag-release.ts         ending drags released outside the viewer

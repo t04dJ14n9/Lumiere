@@ -7,13 +7,15 @@
  * page stay separate clusters — only spatial adjacency merges.
  */
 
-/** Device/top-left rectangle, same shape as EmbedPDF `Rect`. */
+/** Page-space rectangle from the page's top-left, same shape as EmbedPDF's `Rect`. */
 export interface PageLinkRect {
-  origin: { x: number; y: number };
-  size: { width: number; height: number };
+  x: number;
+  y: number;
+  width: number;
+  height: number;
 }
 
-/** One EmbedPDF LINK annotation reduced to geometry + open target. */
+/** One EmbedPDF link reduced to geometry + open target. */
 export interface PageLinkInput {
   id: string;
   rect: PageLinkRect;
@@ -67,11 +69,11 @@ function inReadingOrder(links: readonly PageLinkInput[]): PageLinkInput[] {
 }
 
 function compareReadingOrder(a: PageLinkInput, b: PageLinkInput): number {
-  const dy = a.rect.origin.y - b.rect.origin.y;
+  const dy = a.rect.y - b.rect.y;
   if (dy !== 0) {
     return dy;
   }
-  return a.rect.origin.x - b.rect.origin.x;
+  return a.rect.x - b.rect.x;
 }
 
 /** Union-find over ordered links: merge only adjacent same-destination pairs. */
@@ -177,15 +179,15 @@ function hasSameLineSameDestPartner(
 }
 
 function areOnSameLine(a: PageLinkRect, b: PageLinkRect): boolean {
-  const maxHeight = Math.max(a.size.height, b.size.height);
-  const aCenter = a.origin.y + a.size.height / 2;
-  const bCenter = b.origin.y + b.size.height / 2;
+  const maxHeight = Math.max(a.height, b.height);
+  const aCenter = a.y + a.height / 2;
+  const bCenter = b.y + b.height / 2;
   if (Math.abs(aCenter - bCenter) > maxHeight * 0.6) {
     return false;
   }
-  const left = a.origin.x <= b.origin.x ? a : b;
-  const right = a.origin.x <= b.origin.x ? b : a;
-  const gap = right.origin.x - (left.origin.x + left.size.width);
+  const left = a.x <= b.x ? a : b;
+  const right = a.x <= b.x ? b : a;
+  const gap = right.x - (left.x + left.width);
   return gap >= -1 && gap <= MAX_SAME_LINE_GAP;
 }
 
@@ -194,12 +196,12 @@ function areOnSameLine(a: PageLinkRect, b: PageLinkRect): boolean {
  * fragment starts further left, with at most about one line of vertical gap.
  */
 function areLineWrap(a: PageLinkRect, b: PageLinkRect): boolean {
-  const upper = a.origin.y <= b.origin.y ? a : b;
-  const lower = a.origin.y <= b.origin.y ? b : a;
-  if (lower.origin.x >= upper.origin.x) {
+  const upper = a.y <= b.y ? a : b;
+  const lower = a.y <= b.y ? b : a;
+  if (lower.x >= upper.x) {
     return false;
   }
-  const maxHeight = Math.max(upper.size.height, lower.size.height);
-  const gap = lower.origin.y - (upper.origin.y + upper.size.height);
+  const maxHeight = Math.max(upper.height, lower.height);
+  const gap = lower.y - (upper.y + upper.height);
   return gap >= -maxHeight * 0.5 && gap <= maxHeight * 1.25;
 }

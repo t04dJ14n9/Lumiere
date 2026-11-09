@@ -62,10 +62,23 @@ input {
   /*
    * The paper under a page's picture. It is all that shows of a page whose
    * picture is still being drawn (a fast scroll outruns the renderer), so it
-   * matches the background the pictures are drawn on (renderOptions in
-   * page-bitmaps.tsx).
+   * matches the background the pictures are drawn on. The Stage paints it
+   * (engine.tsx hands it to EmbedPDF as the page background).
    */
   --paper: #fff;
+  /*
+   * EmbedPDF's own marks take Lumia's colours: selected text is the fill
+   * above, and the scrollbar thumb is the editor's.
+   */
+  --epdf-text-selection: var(--selection-fill);
+  /* Search hits: the yellow and amber of EmbedPDF 2, laid on the paper as a highlighter does. */
+  --epdf-search-highlight: #ffff00;
+  --epdf-search-highlight-active: #ffbf00;
+  --epdf-search-blend-mode: multiply;
+  --epdf-scrollbar-thumb: var(
+    --vscode-scrollbarSlider-background,
+    rgb(121 121 121 / 0.4)
+  );
 
   display: grid;
   /* minmax(0, …) keeps the pages from widening the column they fit to. */
@@ -103,11 +116,19 @@ input {
   min-height: 0;
 }
 
+/*
+ * EmbedPDF's Stage: it has no scrolling element (it moves the pages itself,
+ * and clips them), so no overflow here.
+ */
 .viewport {
   box-sizing: border-box;
   width: 100%;
   height: 100%;
-  overflow: auto;
   outline: none;
   background: var(--vscode-editorWidget-background, #252526);
+}
+
+/* The scrollbars lie over the pages: above their links and flashed boxes (page.css). */
+.viewport [data-embedpdf-scrollbar] {
+  z-index: 4;
 }

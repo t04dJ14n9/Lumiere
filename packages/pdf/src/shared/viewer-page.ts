@@ -14,7 +14,7 @@ export const PAGE_TOOLBAR: ToolbarSettings = {
 
 /** What a viewer page is made of where it runs. */
 export interface ViewerPageParts {
-  /** The URL of one of the viewer's built files: viewer.js, viewer.css, pdfium.wasm. */
+  /** The URL of one of the viewer's built files: viewer.js, viewer.css, embedpdf.wasm. */
   asset(name: string): string;
   /** Where the page's files come from, for its policy. */
   readonly cspSource: string;
@@ -33,6 +33,8 @@ export interface ViewerPageParts {
  * Scripts load only with the nonce; the PDF engine needs `wasm-unsafe-eval`,
  * and its worker starts from a blob URL. The toolbar setting is in the page,
  * so the first paint has the right layout; later changes arrive as messages.
+ * The engine's file is `embedpdf.wasm` (PDFium's build); its attribute keeps
+ * the name it had, which the hosts' pages and tests match.
  */
 export function viewerPageHtml(parts: ViewerPageParts): string {
   const { asset, cspSource, nonce, toolbar } = parts;
@@ -67,7 +69,7 @@ export function viewerPageHtml(parts: ViewerPageParts): string {
   <title>PDF</title>${before}
 </head>
 <body>
-  <div id="root" data-pdfium-wasm="${asset("pdfium.wasm")}" data-toolbar="${toolbar.mode}" data-dock="${toolbar.dock}"></div>
+  <div id="root" data-pdfium-wasm="${asset("embedpdf.wasm")}" data-toolbar="${toolbar.mode}" data-dock="${toolbar.dock}"></div>
   <script nonce="${nonce}" src="${asset("viewer.js")}"></script>
 </body>
 </html>`;

@@ -1,3 +1,5 @@
+import type { PageRect } from "../shared/geometry";
+
 /**
  * The word under the pointer, laid out where it is drawn in its page, while
  * Look Up is on (see look-up.ts). The page shows it as hidden text
@@ -6,7 +8,7 @@
 export interface LookUpTarget {
   pageIndex: number;
   /** Left, top, right, bottom in points. */
-  box: [number, number, number, number];
+  box: PageRect;
   /** The text of the word's glyphs, as the PDF has it. */
   text: string;
 }

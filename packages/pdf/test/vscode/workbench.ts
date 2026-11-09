@@ -17,7 +17,12 @@ import { command } from "../../../../test/vscode/palette";
 import { pageAtTop, pageFit, type Point } from "./pdf-geometry";
 import { chooseNativeItem, labels, nativeContextMenu } from "./native-menu";
 export {
+  focusViewer,
   pageAtTop,
+  pageLayout,
+  pageLeft,
+  scrolledDown,
+  widthBeyondViewer,
   pointAtTop,
   pagePoint,
   drag,
@@ -199,9 +204,12 @@ export async function pastedClipboard(page: Page): Promise<string> {
   await page.locator(".editor-instance .monaco-editor").first().click();
   await page.keyboard.press("ControlOrMeta+a");
   await page.keyboard.press("ControlOrMeta+v");
-  await page.keyboard.press("ControlOrMeta+s");
+  // Save until the file has the text: a save pressed before the editor has
+  // applied the paste saves nothing and leaves the note dirty, which later
+  // blocks closing the editors.
   await expect
-    .poll(() => {
+    .poll(async () => {
+      await page.keyboard.press("ControlOrMeta+s");
       try {
         return readFileSync(notes, "utf8");
       } catch {
@@ -424,7 +432,9 @@ export async function showPage(
   await goToPage(page, viewer, number, () =>
     statusBarEntry(page, PAGE_STATUS).click(),
   );
+  // The page's pictures are `img` children of the page box (several once tiles
+  // arrive); the first one is the base picture.
   await expect(
-    viewer.locator(`.page[data-page-index="${number - 1}"] img.page-image`),
+    viewer.locator(`.page[data-page-index="${number - 1}"] > img`).first(),
   ).toBeVisible();
 }

@@ -1,44 +1,34 @@
-import { useScrollState } from "./scroll-state";
-import { ScrollStrategy } from "@embedpdf/plugin-scroll/react";
-import { useSpreadCapability } from "@embedpdf/plugin-spread/react";
-import { useEffect, useMemo } from "react";
+import { useEffect } from "react";
 import type { ViewChoices } from "../shared/view-settings";
-import type { Navigation } from "./navigation";
-import { DOCUMENT_ID } from "./plugins";
-import { nativeSpread } from "./spread-mode";
+import { layoutApplied, layoutSettings } from "./stage-layout";
+import { useStageApi } from "./stage-capability";
 
-/** Apply native pairing and direction, then keep the selected page in view. */
-export function useViewLayout(
-  choices: ViewChoices,
-  navigation: Navigation,
-): void {
-  const { provides: scroll, state } = useScrollState();
-  const { provides } = useSpreadCapability();
-  const spread = useMemo(
-    () => provides?.forDocument(DOCUMENT_ID) ?? null,
-    [provides],
-  );
-  const spreadMode = nativeSpread(choices.pageLayout);
-  const strategy =
-    choices.scrollDirection === "horizontal"
-      ? ScrollStrategy.Horizontal
-      : ScrollStrategy.Vertical;
-  const { currentPage, show } = navigation;
+/**
+ * Give the Stage the reader's page layout, scrolling and direction, and keep
+ * them on their page, at its top. A change of flow, layout or spread is one
+ * Stage update that keeps the page but leaves the view wherever the corner
+ * held, so the page is gone to again. The Stage is registered with the saved
+ * choices, so opening changes nothing.
+ */
+export function useViewLayout(choices: ViewChoices, smooth: boolean): void {
+  const stage = useStageApi();
+  const { scrollMode, scrollDirection, pageLayout } = choices;
   useEffect(() => {
-    if (!scroll || !spread) {
+    const wanted = { scrollMode, scrollDirection, pageLayout };
+    if (layoutApplied(stage.getSettings(), wanted)) {
       return;
     }
-    const pairingChanged = spread.getSpreadMode() !== spreadMode;
-    const directionChanged = state.strategy !== strategy;
-    if (!pairingChanged && !directionChanged) {
-      return;
+    const page = stage.getCurrentPageIndex();
+    stage.updateSettings(layoutSettings(wanted));
+    stage.goToPage(page, { behavior: "instant" });
+  }, [stage, scrollMode, scrollDirection, pageLayout]);
+  // Navigation animates in continuous scrolling only: in paged scrolling a
+  // tween would slide between two pages' own cameras.
+  const scrollBehavior =
+    smooth && scrollMode === "continuous" ? "smooth" : "instant";
+  useEffect(() => {
+    if (stage.getSettings().scrollBehavior !== scrollBehavior) {
+      stage.updateSettings({ scrollBehavior });
     }
-    if (pairingChanged) {
-      spread.setSpreadMode(spreadMode);
-    }
-    if (directionChanged) {
-      scroll.setScrollStrategy(strategy);
-    }
-    show({ page: currentPage }, undefined, 0, true);
-  }, [scroll, spread, spreadMode, state.strategy, strategy, currentPage, show]);
+  }, [stage, scrollBehavior]);
 }

@@ -1,7 +1,7 @@
 // What every embedder of host-node ships beside its own code, built into `out`:
 //   markdown/          the built editor and its workers (packages/markdown/dist)
 //   pdf/               the PDF viewer page (packages/pdf/dist/webview), whose
-//                      PDF engine is the editor's markdown/webview/pdfium.wasm
+//                      PDF engine is the editor's markdown/webview/embedpdf.wasm
 //   page/shim.js       the page's stand-in for VS Code's webview API (src/page)
 //   contributed.json   Lumière's settings and defaults, from package.json
 //   menus.json         Lumière's right-click menu items, with their titles (menus.mjs)
@@ -99,7 +99,8 @@ export const nodeHostBuild = {
 
 /**
  * The PDF viewer page. Its engine is not copied: the editor ships the same
- * one (both packages pin one @embedpdf/pdfium), and pdf-routes.ts serves it.
+ * one (both packages pin one @embedpdf/engine-runtime-wasm32), and
+ * pdf-routes.ts serves it.
  *
  * @param {{ out: string, production: boolean }} options
  */
@@ -115,7 +116,7 @@ async function buildPdfViewer({ out, production }) {
     {
       recursive: true,
       filter: (source) =>
-        !source.endsWith("pdfium.wasm") &&
+        !source.endsWith("embedpdf.wasm") &&
         (production ? !source.endsWith(".map") : true),
     },
   );

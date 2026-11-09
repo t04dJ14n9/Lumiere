@@ -3825,9 +3825,9 @@
             "enumDescriptions": [
               "Match the editor color theme kind: dark themes get dark paper; light themes stay normal.",
               "White paper (classic PDF rendering).",
-              "Dark paper with recolored text and vectors; embedded images stay as-is. Scanned pages stay largely bright."
+              "Dark paper with recolored text and vectors; embedded images stay as-is. Scanned pages stay largely bright. Off for now: pages stay white."
             ],
-            "markdownDescription": "PDF page surface colors. **Follow** tracks `#window.activeColorTheme#` kind. Dark paper uses a patched EmbedPDF engines path (`FPDF_RenderPageBitmapWithColorScheme_Start`; see embedpdf#679). Scanned and image-only pages stay largely bright. No CSS invert."
+            "markdownDescription": "PDF page surface colors. **Dark paper is off for now:** the PDF engine (EmbedPDF 3) cannot draw a page in a colour scheme yet, so every page is drawn on white paper whatever this says. When it returns, **Follow** tracks `#window.activeColorTheme#` kind, and scanned and image-only pages stay largely bright. No CSS invert."
           }
         }
       }

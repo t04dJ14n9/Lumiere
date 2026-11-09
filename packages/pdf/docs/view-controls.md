@@ -1,36 +1,39 @@
 # PDF view controls
 
-Single-page and two-page layouts use `@embedpdf/plugin-spread@2.15.1`.
-`SpreadMode.None` displays individual pages; `SpreadMode.Odd` pairs 1–2,
-3–4; `SpreadMode.Even` leaves the cover alone and pairs 2–3, 4–5. Both
-spread layouts support vertical and horizontal reading, continuous and
-page-by-page scrolling, page jumps, fit modes and saved views.
+Single-page and two-page layouts are the `spread` setting of EmbedPDF 3's
+Stage (`@embedpdf/plugin-stage` 3.0.0), which also owns the flow (continuous
+or paged), the layout (vertical or horizontal), the zoom and the scrolling.
+`SpreadMode` `none` displays individual pages; `odd` pairs 1–2, 3–4; `even`
+leaves the cover alone and pairs 2–3, 4–5. Both spread layouts support
+vertical and horizontal reading, continuous and page-by-page scrolling, page
+jumps, fit modes and saved views.
 
-## Investigation and implementation decisions
+## Implementation decisions
 
-Inspected the installed EmbedPDF **2.15.1** declarations and implementation
-before implementing these controls, together with `toolbar.tsx`,
-`floating-toolbar.tsx`, `plugins.ts`, `navigation.ts`, and `reading-position.ts`.
+Made against the installed EmbedPDF **3.0.0** declarations and implementation
+(`webview/plugins.ts`, `stage-layout.ts`, `stage-position.ts`, `navigation.ts`,
+`reading-position.ts`). Lumia's choices keep their own names; `stage-layout.ts`
+maps them to the Stage's settings, once for registration and once for every
+live change.
 
-| Area           | Existing support                                                                                                                                                                                                                 | Decision                                                                                                                                                                                                                                                                              |
-| -------------- | -------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| Toolbar        | Slim and floating share `ToolbarControls`. Chrome uses commands, editor title actions and page/zoom status entries. There is also a hidden `none` mode.                                                                          | Add a compact View group to the shared controls and a View picker in chrome's status bar/title actions. Keep slim's existing location and floating's docking.                                                                                                                         |
-| Zoom           | `ZoomScope.requestZoom` accepts `ZoomMode.FitWidth`, `ZoomMode.FitPage`, or a numeric scale. Fit calculation already measures whole spreads.                                                                                     | Reuse it for every zoom choice. Actual size is numeric scale **1**; custom percentages keep the existing 25–400% range.                                                                                                                                                               |
-| Spreads        | The installed spread plugin exports `SpreadPluginPackage`, `SpreadMode` and document-scoped capabilities through its React entrypoint. Scroll and zoom consume its grouped page geometry and change events. | Register it before scroll and zoom, with the saved layout as `defaultSpreadMode`. Map `single` to `None`, `spread` to `Odd`, and `spreadCover` to `Even`; apply changes with `SpreadScope.setSpreadMode`. |
-| Direction      | `ScrollScope.setScrollStrategy` supports vertical and horizontal. Native next/previous operations navigate virtual items, which are pages or spreads.                                                                            | Reuse the strategies and layout for both directions and spread stepping.                                                                                                                                                                                                              |
-| Page-by-page   | Scroll has no non-continuous strategy or component.                                                                                                                                                                              | Keep the native Scroller/Viewport and their coordinates; render only the selected native layout item and constrain panning to it. Next/previous and page links select another item. Hide the document-length scrollbar in this mode; wheel/trackpad/keyboard still pan a zoomed page. |
-| Page jumps     | `scrollToPage` accepts `behavior: 'smooth'`; Viewport forwards it to browser scrolling. Current navigation forces `instant`.                                                                                                     | Use native smooth jumps when enabled. Restoration remains instant. Page-by-page changes use a brief reveal transition, since intervening pages are not displayed.                                                                                                                     |
-| Wheel          | Native browser scrolling preserves trackpad deltas. The existing Ctrl/⌘ wheel handler already provides stepped zoom.                                                                                                             | Animate only recognisable large discrete wheel steps, with a short cancellable animation. Preserve other pixel deltas. Wheel devices do not identify themselves: integral 100/120-pixel notches are a conservative heuristic.                                                         |
-| Zoom animation | Zoom emits old/new scales and the focus point, but has no animation option.                                                                                                                                                      | Animate the displayed native scroller briefly from its old scale to the new one, leaving fit modes and final coordinates to EmbedPDF. Cancel on interaction or a new transition.                                                                                                      |
-| Persistence    | Reading position and zoom survive a file rebuild in a module outside React; closing/reopening has no durable view persistence. Panels are individually tracked.                                                                  | Extend reading position to include layout/modes and offsets. Retain it across rebuilds and save the last validated report on panel disposal in extension storage for reopen. Open panels keep independent state.                                                                      |
+| Area           | EmbedPDF 3 support                                                                                                                              | Decision                                                                                                                                                                                      |
+| -------------- | ----------------------------------------------------------------------------------------------------------------------------------------------- | --------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| Toolbar        | Not EmbedPDF's concern.                                                                                                                         | Slim and floating share `ToolbarControls`; chrome uses commands, editor title actions and page/zoom status entries. There is also a hidden `none` mode.                                       |
+| Zoom           | `ZoomSpec`: `fit-width`, `fit-page`, or a level. `stage.zoomTo` takes any of them; fit modes measure whole spreads and stay live while resized. | `viewUnitsPerPoint: 1`, so 100% is one pixel per point. Actual size is level **1**; custom percentages keep the 25–400% range. Buttons and keys walk Lumia's ladder (`shared/zoom-steps.ts`). |
+| Spreads        | `spread: 'none' \| 'odd' \| 'even'` in the Stage settings.                                                                                       | Map `single` to `none`, `spread` to `odd`, and `spreadCover` to `even`; one `updateSettings` for a combined change.                                                                           |
+| Direction      | `layout: 'vertical' \| 'horizontal'`. Next/previous move by the shown item, a page or a spread.                                                  | Reuse it for both directions and spread stepping.                                                                                                                                             |
+| Page-by-page   | `flow: 'paged'` shows one item at a time and turns at its edge with wheel or trackpad.                                                          | Use it; Lumia adds the arrow and Page keys (`shared/paging-keys.ts`) on top of Stage verbs, with `lumiere.pdf.view.arrowsKeepPlace` for ←/→.                                                  |
+| Page jumps     | `goToPage`, `reveal` and `scrollTo` take `behavior: 'smooth'`.                                                                                  | Smooth jumps when enabled in continuous flow; restoration and page-by-page changes are instant.                                                                                               |
+| Wheel          | Ctrl/⌘+wheel and pinch zoom around the pointer; a notch zooms by 1.2.                                                                           | Adopt it. Plain wheel notches in continuous flow are animated by Lumia (`webview/smooth-scrolling.ts`); other pixel deltas pass through.                                                      |
+| Zoom animation | The camera moves on each pinch or wheel event; pages are rescaled, then re-rendered sharp when it rests.                                        | No Lumia animation. Zoom from the buttons, keys and menu is a single step.                                                                                                                    |
+| Persistence    | The registered settings and zoom decide the first layout.                                                                                       | Reading position and zoom survive a file rebuild in a module outside React; the last validated report is saved on panel disposal for reopen. Open panels keep independent state.              |
 
 ## Controls
 
-The viewport centers content using native layout sizes, matching EmbedPDF's
-zoom focus calculation. Page-by-page mode adds end padding so the last page
-can reach the same position as earlier pages. During the brief visual zoom
-transition, a press settles the display before a new page drag starts, keeping
-selection coordinates tied to the native final scale.
+The Stage centres content and keeps the zoom focus. There is no scroll
+element: Lumia reads and moves the view with Stage verbs, and the pages
+shorter than the viewer cannot reach its top (the Stage clamps the end of the
+document, as a scrolling page would).
 
 **View** exposes zoom mode, page layout, scrolling mode and direction in slim
 and floating toolbars, and through a status bar picker and editor action in
@@ -51,9 +54,9 @@ menu, including when the toolbar is hidden.
   page or spread at a time; use next/previous or go to page to change it.
   At larger zooms, pan within that page/spread with wheel, trackpad or keys.
 - **Vertical** and **Horizontal** choose the continuous reading direction.
-- Smooth motion applies to discrete wheel scrolling, page/outline/internal
-  link jumps and displayed zoom changes. Native trackpad scrolling is retained.
-  Motion is always disabled with `prefers-reduced-motion: reduce`.
+- Smooth motion applies to discrete wheel scrolling and page/outline/internal
+  link jumps. Native trackpad scrolling is retained, and zoom changes are not
+  animated. Motion is always disabled with `prefers-reduced-motion: reduce`.
 
 ## Settings
 
@@ -84,8 +87,8 @@ remain the controls for zoom and navigation. New view choices use
 
 ## Verification
 
-Unit coverage exercises native spread mapping and registration order, settings, view/action validation, saved positions,
-wheel animation arithmetic and reduced-motion resolution. Additional unit
+Unit coverage exercises native spread mapping, settings, view/action validation, saved positions,
+wheel animation arithmetic and reduced-motion resolution, and drives the navigation hooks against EmbedPDF's real Stage. Additional unit
 coverage verifies independent same-file panels and exact saved zoom/offsets.
 Browser specs cover controls, native spread pairing in both directions, spread
 navigation and fit modes, panning bounds, motion and restoration; one VS Code
