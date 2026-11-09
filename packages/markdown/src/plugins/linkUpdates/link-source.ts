@@ -69,12 +69,35 @@ export function formatLinkSource(
 
 /**
  * Percent-encode what would end or escape a bare destination: spaces,
- * backslashes and control characters, as Obsidian writes them.
+ * backslashes and control characters, as Obsidian writes them, and the
+ * parentheses that have no partner, which Obsidian leaves and the parser
+ * reads as the link's end. Balanced pairs stay as they are.
  */
 export function encodeDestination(text: string): string {
-  return Array.from(text, (unit) =>
-    unit === " " || unit === "\\" || unit.charCodeAt(0) < 0x20
+  const unpaired = unpairedParentheses(text);
+  return Array.from(text, (unit, index) => {
+    if (unpaired.has(index)) {
+      return unit === "(" ? "%28" : "%29";
+    }
+    return unit === " " || unit === "\\" || unit.charCodeAt(0) < 0x20
       ? encodeURIComponent(unit)
-      : unit,
-  ).join("");
+      : unit;
+  }).join("");
+}
+
+/** The indexes, in code points, of the `(` and `)` that no other one pairs. */
+function unpairedParentheses(text: string): Set<number> {
+  const unpaired = new Set<number>();
+  const open: number[] = [];
+  for (const [index, unit] of Array.from(text).entries()) {
+    if (unit === "(") {
+      open.push(index);
+    } else if (unit === ")" && open.pop() === undefined) {
+      unpaired.add(index);
+    }
+  }
+  for (const index of open) {
+    unpaired.add(index);
+  }
+  return unpaired;
 }

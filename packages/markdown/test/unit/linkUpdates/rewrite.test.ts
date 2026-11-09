@@ -1,5 +1,10 @@
 import test from "node:test";
 import assert from "node:assert/strict";
+import { metadata } from "../../../src/markdown/metadata";
+import {
+  linkpathOf,
+  vaultLinks,
+} from "../../../src/markdown/metadata/linkpaths";
 import { rewriteLinks } from "../../../src/plugins/linkUpdates/rewrite";
 import type { RewriteContext } from "../../../src/plugins/linkUpdates/rewrite";
 import { memoryVaults } from "../views/fakes";
@@ -158,6 +163,23 @@ test("a bare destination encodes backslashes as well as spaces", () => {
     apply(text, rewriteLinks(text, "A.md", ctx)),
     "[a](a%5Cb%20c.md)",
   );
+});
+
+test("a bare destination encodes the parentheses that have no partner", () => {
+  const text = "[a](Old.md)";
+  const written = {
+    "New).md": "[a](New%29.md)",
+    "New(.md": "[a](New%28.md)",
+    "a (1) b).md": "[a](a%20(1)%20b%29.md)",
+    ")a(.md": "[a](%29a%28.md)",
+  };
+  for (const [name, link] of Object.entries(written)) {
+    const ctx = context({ ...vault, "A.md": text }, { "Old.md": name });
+    const result = apply(text, rewriteLinks(text, "A.md", ctx));
+    assert.equal(result, link);
+    // The parser reads the written link back as a link to the new name.
+    assert.deepEqual(vaultLinks(metadata(result)).map(linkpathOf), [name]);
+  }
 });
 
 // Obsidian 1.15.0's rule for link text on rename, read from its link
