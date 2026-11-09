@@ -51,8 +51,9 @@ name at the end of its URL (`cat.png`, then `cat 1.png` when taken; `Image`
 for a data URI or a URL without a file name). Each image becomes an embed in
 the Links format that keeps its alt text (`![[cat.png|A cat]]`), found again
 in the note as it is after the downloads, in one edit. Only what is served or
-named as an image is saved, and a data URI only when it says `image/…`: a
-note's links can point anywhere.
+named as an image is saved, and a data URI only when it says `image/…`, in
+base64 or percent-encoded (`image/svg+xml,%3Csvg…`): a note's links can point
+anywhere.
 If the note was closed before that edit, the files stay in the vault and the
 dialog says the note was not changed.
 

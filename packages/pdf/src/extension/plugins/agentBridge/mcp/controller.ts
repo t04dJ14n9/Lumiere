@@ -185,17 +185,43 @@ export interface McpSetupOption {
   detail: string;
 }
 
+type Shell = "posix" | "powershell" | "cmd";
+
 /**
- * Quote a filesystem path for the user's shell: POSIX single quotes on
- * macOS/Linux (where VS Code's globalStorage lives under 'Application Support'
- * and double quotes would still expand `$` and `\`), and double quotes on
- * Windows (where `cmd.exe` does not treat single quotes as quoting).
+ * Quote a filesystem path so the shell passes it on as written. Single quotes
+ * are literal in POSIX shells (VS Code's globalStorage lives under
+ * 'Application Support', and double quotes would still expand `$` and `\`) and
+ * in PowerShell (double quotes expand `$` and the backtick). `cmd.exe` does
+ * not treat single quotes as quoting; inside double quotes it expands only
+ * `%NAME%`, which it cannot escape.
  */
-function quoteShellPath(path: string, platform: NodeJS.Platform): string {
-  if (platform === "win32") {
+function quoteShellPath(path: string, shell: Shell): string {
+  if (shell === "cmd") {
     return `"${path.replace(/"/gu, '\\"')}"`;
   }
+  if (shell === "powershell") {
+    // PowerShell reads U+2018 to U+201B as single quotes too; doubling one keeps it.
+    return `'${path.replace(/['\u2018-\u201b]/gu, "$&$&")}'`;
+  }
   return `'${path.replace(/'/gu, "'\\''")}'`;
+}
+
+/** The `claude` and `codex` commands with the shim path quoted for one shell. */
+function cliOptions(shim: string, shell: Shell): McpSetupOption[] {
+  const quotedShim = quoteShellPath(shim, shell);
+  const suffix = { posix: "", powershell: " (PowerShell)", cmd: " (cmd)" }[
+    shell
+  ];
+  return [
+    {
+      label: `Claude Code${suffix}`,
+      detail: `claude mcp add --scope user ${SERVER_NAME} -- node ${quotedShim}`,
+    },
+    {
+      label: `Codex${suffix}`,
+      detail: `codex mcp add ${SERVER_NAME} -- node ${quotedShim}`,
+    },
+  ];
 }
 
 /** Build the CLI commands and config snippets that wire MCP clients to the shim. */
@@ -204,18 +230,20 @@ export function mcpSetupOptions(
   platform: NodeJS.Platform = process.platform,
 ): McpSetupOption[] {
   const node = "node";
-  const quotedShim = quoteShellPath(shim, platform);
-  // JSON.stringify produces a valid TOML basic string with `\` and `"` escaped.
-  const tomlShim = JSON.stringify(shim);
+  // Windows has two shells and no quoting that is literal in both. cmd.exe
+  // cannot be given a path with `%NAME%` unexpanded, so it is not offered one.
+  const commands =
+    platform === "win32"
+      ? [
+          ...cliOptions(shim, "powershell"),
+          ...(shim.includes("%") ? [] : cliOptions(shim, "cmd")),
+        ]
+      : cliOptions(shim, "posix");
+  // JSON.stringify escapes `\` and `"` and every control character below DEL,
+  // but a TOML basic string needs DEL escaped as well.
+  const tomlShim = JSON.stringify(shim).replace(/\u007f/gu, "\\u007f");
   return [
-    {
-      label: "Claude Code",
-      detail: `claude mcp add --scope user ${SERVER_NAME} -- ${node} ${quotedShim}`,
-    },
-    {
-      label: "Codex",
-      detail: `codex mcp add ${SERVER_NAME} -- ${node} ${quotedShim}`,
-    },
+    ...commands,
     {
       label: "Codex (config.toml)",
       detail: `[mcp_servers.${SERVER_NAME}]\ncommand = "${node}"\nargs = [${tomlShim}]`,

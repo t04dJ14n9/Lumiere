@@ -223,7 +223,9 @@ it at once; no reload is needed.
 - **VS Code** (chat agent mode) and **Cursor** find it by themselves.
 - **Claude Code** and **Codex** connect through a small stdio shim: **PDF: Copy
   MCP Setup for Claude Code / Codex…** copies the `claude mcp add …` or
-  `codex mcp add …` command (or a config snippet) to run once. The shim picks
+  `codex mcp add …` command (or a config snippet) to run once; on Windows each
+  command comes in a PowerShell and a cmd form, and the cmd form is left out
+  when the shim's path contains `%`, which cmd would expand. The shim picks
   the window whose workspace contains the agent's folder (the most specific
   one when workspaces nest), from the files each running bridge writes to
   `~/.agent-pdf-viewer/bridges/`. If no window matches, or two match
