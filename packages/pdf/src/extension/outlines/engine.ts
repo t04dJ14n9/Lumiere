@@ -1,16 +1,12 @@
 /**
  * The extension host's own PDFium, for reading bookmarks. Built as its own
- * bundle (dist/pdf/outline-engine.js) and loaded by `PdfOutlineReader` when
- * the first outline is asked for, so notes that never link to a PDF section
- * do not pay for the engine.
+ * bundle (dist/outline-engine.js) and loaded by `PdfOutlineReader` when the
+ * first outline is asked for, so notes that never link to a PDF section do
+ * not pay for the engine.
  */
-import { init } from "@embedpdf/pdfium";
-import { PdfiumNative } from "@embedpdf/engines/pdfium";
-import type { PdfBookmarkObject } from "@embedpdf/models";
-import {
-  outlineSections,
-  type OutlineSection,
-} from "../../shared/outline-sections";
+import { createLocalEngine } from "@embedpdf/engine";
+import type { OutlineSection } from "../../shared/outline-sections";
+import { sectionsOfOutline } from "./outline-items";
 
 export interface OutlineEngine {
   /** The sections of the PDF whose bytes these are; rejects when PDFium cannot open it. */
@@ -18,33 +14,37 @@ export interface OutlineEngine {
   dispose(): Promise<void>;
 }
 
-/** @param wasm The contents of pdfium.wasm. */
+/** @param wasm The contents of embedpdf.wasm. */
 export async function createOutlineEngine(
   wasm: Uint8Array,
 ): Promise<OutlineEngine> {
-  const pdfium = await init({ wasmBinary: wasm });
-  const engine = new PdfiumNative(pdfium);
-  let opened = 0;
+  // Wasm, never the native addon the runtime would prefer in Node: the addon
+  // is a per-platform package that one VSIX cannot carry, and esbuild cannot
+  // bundle a `.node` file. The engine runs in this thread and boots on the
+  // first open.
+  const engine = createLocalEngine({
+    runtime: { prefer: "wasm", wasmBinary: wasm },
+  });
   return {
     async sections(bytes) {
-      const content = bytes.buffer.slice(
-        bytes.byteOffset,
-        bytes.byteOffset + bytes.byteLength,
-      ) as ArrayBuffer;
-      const document = await engine
-        .openDocumentBuffer({ id: `outline-${opened++}`, content })
-        .toPromise();
+      const document = await engine.open({ kind: "bytes", bytes });
       try {
-        const { bookmarks } = (await engine
-          .getBookmarks(document)
-          .toPromise()) as { bookmarks: PdfBookmarkObject[] };
-        return outlineSections(bookmarks);
+        // A PDF that needs a password opens locked, and everything that
+        // reads it then rejects; the reader treats it as having no sections.
+        if (document.security.passwordPrompt.state === "required") {
+          return [];
+        }
+        const [{ pages }, { items }] = await Promise.all([
+          document.pages.list(),
+          document.outline.get(),
+        ]);
+        return sectionsOfOutline(items, pages);
       } finally {
-        await engine.closeDocument(document).toPromise();
+        await document.close();
       }
     },
     async dispose() {
-      await engine.destroy().toPromise();
+      await engine.destroy();
     },
   };
 }

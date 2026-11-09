@@ -76,7 +76,6 @@ const allowed = [
   "packages/pdf/src/extension/plugins/agentBridge/mcp/server.ts: preserve-caught-error",
   "packages/pdf/src/shared/look-up.ts: no-control-regex",
   "packages/pdf/src/webview/engine.tsx: react-hooks/exhaustive-deps",
-  "packages/pdf/src/webview/reading-position.ts: react-hooks/exhaustive-deps",
   "packages/pdf/test/unit/identity/contribution-parity.test.ts: @typescript-eslint/no-explicit-any",
   "packages/pdf/test/vscode/workbench.ts: no-empty-pattern",
 ];

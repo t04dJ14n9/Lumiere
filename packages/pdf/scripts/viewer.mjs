@@ -1,11 +1,12 @@
 // The PDF viewer page's files, built into `out`: viewer.js and viewer.css
-// (with the codicon font beside it) and pdfium.wasm, the engine the viewer
+// (with the codicon font beside it) and embedpdf.wasm, the engine the viewer
 // loads at runtime. Built into dist/webview for the extension
 // (scripts/build.mjs), and into pdf/ for the web and iPad apps
 // (packages/host-web/scripts/bundle.mjs).
 import { copyFile, mkdir } from "node:fs/promises";
 import { createRequire } from "node:module";
 import path from "node:path";
+import { embedPdfStubs } from "../../../scripts/embedpdf-stubs.mjs";
 
 const require = createRequire(import.meta.url);
 const root = path.dirname(path.dirname(new URL(import.meta.url).pathname));
@@ -31,8 +32,11 @@ export function viewerBuild({ out, production }) {
     // The codicon font, next to viewer.css, which refers to it relatively.
     loader: { ".ttf": "file" },
     assetNames: "[name]",
-    // EmbedPDF's engine loads its worker from an inline blob and its WASM from
-    // the URL the host provides, so neither needs special handling here.
+    // The engine's worker is a string in viewer.js that becomes a blob worker,
+    // and its wasm is the bytes the viewer fetches from the URL the host
+    // provides: only the pieces of the engine that would look for their own
+    // files need a stub.
+    plugins: [embedPdfStubs()],
     define: {
       "process.env.NODE_ENV": JSON.stringify(
         production ? "production" : "development",
@@ -41,10 +45,11 @@ export function viewerBuild({ out, production }) {
   };
 }
 
-/** Copy the PDF engine (pdfium.wasm) into `out`. */
+/** Copy the PDF engine (embedpdf.wasm) into `out`. */
 export async function copyEngine(out) {
-  const pdfiumEntry = require.resolve("@embedpdf/pdfium");
-  const wasm = path.join(path.dirname(pdfiumEntry), "pdfium.wasm");
   await mkdir(out, { recursive: true });
-  await copyFile(wasm, path.join(out, "pdfium.wasm"));
+  await copyFile(
+    require.resolve("@embedpdf/engine-runtime-wasm32/embedpdf.wasm"),
+    path.join(out, "embedpdf.wasm"),
+  );
 }

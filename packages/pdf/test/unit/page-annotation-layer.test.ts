@@ -9,24 +9,38 @@ const pagePath = path.join(
   "../../src/webview/page.tsx",
 );
 
-test("Page mounts AnnotationLayer before SelectionLayer", () => {
+/** The layers of `Page`, in the order its JSX stacks them (first is bottom). */
+function layerOrder(): string[] {
   const source = readFileSync(pagePath, "utf8");
-  assert.match(source, /AnnotationLayer/);
-  const ann = source.indexOf("<AnnotationLayer");
-  const sel = source.indexOf("<SelectionLayer");
+  const page = source.slice(source.indexOf("export function Page("));
+  const stack = page.slice(0, page.indexOf("</div>"));
+  return [...stack.matchAll(/<([A-Z]\w+)/g)].map((match) => match[1]!);
+}
+
+test("Page mounts AnnotationLayer before SelectionLayer", () => {
+  const order = layerOrder();
+  const annotation = order.indexOf("AnnotationLayer");
+  assert.ok(annotation >= 0, "AnnotationLayer is on the page");
   assert.ok(
-    ann > 0 && sel > ann,
+    order.indexOf("SelectionLayer") > annotation,
     "AnnotationLayer must precede SelectionLayer in JSX",
   );
 });
 
-test("AnnotationLayer hit-tests only in Annotate mode", () => {
-  const source = readFileSync(pagePath, "utf8");
-  assert.match(source, /annotate:\s*boolean/);
-  const block = source.slice(
-    source.indexOf("<AnnotationLayer"),
-    source.indexOf("/>", source.indexOf("<AnnotationLayer")) + 2,
+test("a page stacks its picture, search, links, marks, annotations, selection and backlinks, bottom to top", () => {
+  const order = layerOrder();
+  const wanted = [
+    "RenderLayer",
+    "LookUpWord",
+    "SearchLayer",
+    "PageLinks",
+    "PageMarks",
+    "AnnotationLayer",
+    "SelectionLayer",
+    "BacklinkLayer",
+  ];
+  assert.deepEqual(
+    order.filter((layer) => wanted.includes(layer)),
+    wanted,
   );
-  assert.match(block, /position:\s*"absolute"/);
-  assert.match(block, /pointerEvents:\s*annotate\s*\?\s*"auto"\s*:\s*"none"/);
 });

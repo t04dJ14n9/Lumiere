@@ -2,6 +2,31 @@
 
 ## Unreleased
 
+- **Lumia PDF moves to EmbedPDF 3.** The viewer's engine and page surface are
+  rebuilt on EmbedPDF 3.0.0.
+  - *Better:* text selection, search hits, Look Up, links and backlink overlays
+    follow the text with exact (fractional) page geometry. The pages, their
+    zoom and their scrolling are one surface (the Stage), so a zoom step
+    can no longer scroll a frame before the pages are laid out at the new
+    size, and a saved place comes back before the first page is drawn. Pages
+    stored with a `/Rotate` entry also embed turned the way the PDF says in
+    Markdown (`![[paper.pdf#page=3]]`), not sideways.
+  - *Changed:* Ctrl/⌘+wheel and pinch zoom are EmbedPDF's: a wheel notch zooms
+    by 1.2 around the pointer (it used to step through 25, 33, 50 … 400%) and
+    a pinch rescales the pages, which sharpen when it rests. The zoom
+    buttons, keys and menu still step through those levels, but jump to the
+    next one without the animation. Annotation files
+    (`.lumiere/pdf-annotations/<sha256>.json`) are in a new format, version 2;
+    files from earlier versions are converted when read and saved in the new
+    format at the next change, after which earlier versions cannot read them.
+    The extension is bigger: the PDF engine file is 7.9 MB instead of 4.6 MB
+    and ships twice (the viewer and the Markdown editor's PDF embeds), and
+    the viewer script is 4.7 MB instead of about 3 MB.
+  - *Off for now:* **dark paper**. EmbedPDF 3 cannot draw a page in a colour
+    scheme yet, so `lumiere.pdf.pageColors` and **PDF: Cycle Page Colors**
+    keep their values but every page is drawn on white paper until it can.
+    See `docs/embedpdf-page-colors-patch.md`.
+
 - **Annotations no longer change the PDF.** Highlights, notes, underlines,
   free text and ink are kept in `.lumiere/pdf-annotations/<sha256>.json` in
   the workspace folder, named by the PDF's SHA-256, and come back when the
@@ -42,14 +67,6 @@
   opens agent chat. With no selection it copies a page-only `#page=N` link for
   the reading page.
 
-- Dark page colors now invert each colour's lightness and keep its hue,
-  instead of painting every fill and all text one colour. In diagrams the
-  labels of boxes are readable (they were the same colour as the box), the
-  bars of a chart keep different colours, and rules and arrowheads show.
-  Embedded pictures stay as authored. A dark page is now two renders (as
-  authored and with PDFium's colour scheme, to find the pictures) and a pixel
-  pass, about twice the work of a normal page. See
-  `docs/embedpdf-page-colors-patch.md`.
 - Zooming no longer flickers on a busy machine. A zoom step used to scroll
   to its new position a frame before the pages were laid out at the new
   size, so one frame could show another page, or nothing, in a long
@@ -73,8 +90,6 @@
 - macOS Look Up: a hard press (or a three-finger tap) on a word shows the
   system's Dictionary popover, as in Preview. The viewer puts the word under
   the pointer into the page as invisible text for the system to find.
-- With dark page colors, a page still being drawn during a fast scroll
-  shows dark paper instead of a white sheet.
 - The text selection no longer shows darker stripes where selected lines
   overlap (tightly set lines, or a line with a larger word).
 - The extension was renamed from Agent PDF Viewer (EmbedPDF) to PDF Workshop (package `vscode-pdf-workshop`).
@@ -98,12 +113,9 @@
   and `pdfWorkshop.copyLinkForAgent.target` are ignored until the folder is trusted.
 - Open Location safely handles malformed percent escapes and drops invalid or non-finite
   page rectangles supplied by links or other extensions.
-- Turning pages no longer shows blank pages. Like macOS Preview, the viewer renders the pages around the one being read
-  as cheap low-resolution bitmaps (half size, one page at a time once the pages on screen are drawn), so a turn shows a
-  picture at once; the full-resolution bitmap at the current zoom is swapped in when it has been decoded, with the low
-  one visible until then. A render nobody wants any more (the next turn, a zoom step) is cancelled. Memory is bounded:
-  four pages either side, one low bitmap per page, and six full bitmaps of pages not on screen. The picture cache is
-  `src/shared/bitmap-cache.ts`, wired in `src/webview/page-bitmaps.tsx`.
+- Turning pages no longer shows blank pages. Like macOS Preview, the viewer draws a page at once as a
+  low-resolution picture and sharpens it in tiles as they are decoded (EmbedPDF 3's render layer; Lumia's own
+  bitmap cache of the neighbouring pages is gone).
 - Settings from the Command Palette: `PDF: Open Settings`, `PDF: Change Setting…` (every contributed setting, edited by
   type, generated from package.json), toggles for smooth scrolling and keyboard shortcuts, default zoom / layout /
   scrolling pickers, and `Settings…` in the View picker. Same keys as the Settings editor, workspace if set there
@@ -133,11 +145,6 @@
   the right-click menu, and a force click, open the word under the pointer in
   the Dictionary app. Native three-finger-tap Look Up is not possible on
   image-drawn pages; see docs/look-up.md.
-- Smooth zoom: a trackpad pinch (Ctrl+wheel with small deltas) scales
-  continuously about the pointer with a live preview and one crisp render when
-  it settles; zoom buttons, keys and wheel notches animate from the first frame
-  and carry on from the picture on screen when pressed again mid-animation.
-
 - Review fixes (round 1), internal: the extension is a set of plugins
   (`pdf`, `pdfToolbar`, `pdfOutline`, `pdfRegions`, `pdfLookUp`, `agentBridge`) started by
   a runtime that rolls back a plugin that fails to start and stops plugins

@@ -1,7 +1,6 @@
 import assert from "node:assert/strict";
 import { test } from "node:test";
 import {
-  annotationDeleteTargets,
   annotationQuoteText,
   selectionFromAnnotation,
 } from "../../src/shared/annotation-handoff";
@@ -50,18 +49,4 @@ test("annotationQuoteText prefers page text, then contents, else undefined", () 
   );
   assert.equal(annotationQuoteText({ contents: "" }), undefined);
   assert.equal(annotationQuoteText({}), undefined);
-});
-
-test("annotationDeleteTargets collects pageIndex and id for deleteAnnotations", () => {
-  assert.deepEqual(
-    annotationDeleteTargets([
-      { object: { pageIndex: 0, id: "a" } },
-      { object: { pageIndex: 4, id: "b" } },
-    ]),
-    [
-      { pageIndex: 0, id: "a" },
-      { pageIndex: 4, id: "b" },
-    ],
-  );
-  assert.deepEqual(annotationDeleteTargets([]), []);
 });

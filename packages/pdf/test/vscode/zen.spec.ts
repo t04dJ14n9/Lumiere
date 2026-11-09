@@ -3,6 +3,7 @@ import {
   PAGE_STATUS,
   command,
   expect as baseExpect,
+  focusViewer,
   goToPage,
   openFile,
   pageAtTop,
@@ -27,14 +28,6 @@ const modifier = process.platform === "darwin" ? "Control+Meta" : "Control+Alt";
 const statusBar = (page: Page) => page.locator(".part.statusbar");
 const viewerBar = (viewer: Frame) =>
   viewer.getByRole("toolbar", { name: "PDF toolbar" });
-
-/** Give the viewer the keyboard focus, so shortcuts reach it as a reader's would. */
-async function focusViewer(viewer: Frame): Promise<void> {
-  await viewer.locator(".viewport").focus();
-  await expect
-    .poll(() => viewer.evaluate(() => document.hasFocus()))
-    .toBe(true);
-}
 
 /**
  * Leave zen if a failed step left it on, so the next tests find the status
@@ -62,7 +55,7 @@ async function goToPageInZen(
 ): Promise<void> {
   await expect(async () => {
     // Focusing the viewer also closes a Go to Page box a failed try left open.
-    await focusViewer(viewer);
+    await focusViewer(page, viewer);
     await goToPage(page, viewer, number, () =>
       page.keyboard.press("Control+g"),
     );
@@ -109,18 +102,18 @@ test("Ctrl+Alt+Z (Ctrl+Cmd+Z on macOS) enters zen from the PDF and leaves it; so
   await expect(viewer.locator(".page img").first()).toBeVisible();
   await expect(statusBarEntry(page, PAGE_STATUS)).toBeVisible();
   try {
-    await focusViewer(viewer);
+    await focusViewer(page, viewer);
     await page.keyboard.press(`${modifier}+z`);
     await expect(statusBar(page)).toBeHidden();
-    await focusViewer(viewer);
+    await focusViewer(page, viewer);
     await page.keyboard.press(`${modifier}+z`);
     await expect(statusBar(page)).toBeVisible();
     await expect(statusBarEntry(page, PAGE_STATUS)).toBeVisible();
 
-    await focusViewer(viewer);
+    await focusViewer(page, viewer);
     await page.keyboard.press(`${modifier}+z`);
     await expect(statusBar(page)).toBeHidden();
-    await focusViewer(viewer);
+    await focusViewer(page, viewer);
     await page.keyboard.press("Escape");
     await page.keyboard.press("Escape");
     await expect(statusBar(page)).toBeVisible();

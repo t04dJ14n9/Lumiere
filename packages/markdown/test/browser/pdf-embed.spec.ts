@@ -1,7 +1,7 @@
 import { expect, test } from "@playwright/test";
 import { open } from "./harness";
 
-test("renders inline PDF embeds with @embedpdf/pdfium, supports #page=N and #height=H, and passes #page=N on Open", async ({
+test("renders inline PDF embeds with EmbedPDF's engine, supports #page=N and #height=H, and passes #page=N on Open", async ({
   page,
 }) => {
   await page.setViewportSize({ width: 1100, height: 800 });

@@ -54,14 +54,7 @@
   font: inherit;
 }
 
-.viewport.paged {
-  scrollbar-width: none;
-}
-
-.viewport.paged::-webkit-scrollbar {
-  display: none;
-}
-
+/* A page turned to in paged scrolling mounts anew, and fades in. */
 .smooth-motion .paged-page {
   animation: page-reveal 140ms ease-out;
 }

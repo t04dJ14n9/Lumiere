@@ -1,4 +1,5 @@
 import { expect, test, type Page } from "@playwright/test";
+import { scrollBy } from "./stage-support";
 import { act, lastView, openView } from "./view-controls-support";
 
 // Like Preview, zoom from the buttons, keys and menu keeps what is at the centre
@@ -58,11 +59,7 @@ for (const [name, settings] of [
     await page.setViewportSize({ width: 800, height: 600 });
     await openView(page, { defaultZoom: 200, ...settings });
     await page.waitForTimeout(500);
-    await page
-      .locator(".viewport")
-      .evaluate((v) =>
-        v.scrollBy({ left: 150, top: 330, behavior: "instant" }),
-      );
+    await scrollBy(page, { left: 150, top: 330 });
     await page.waitForTimeout(300);
     const point = await centrePoint(page);
     expect(point).toBeDefined();
@@ -72,8 +69,8 @@ for (const [name, settings] of [
       await expect
         .poll(async () => (await lastView(page))!.zoomPercent)
         .not.toBe(before);
-      await page.waitForTimeout(600); // the zoom animation and the re-render
-      // The scroll that keeps the centre lands with the re-render.
+      await page.waitForTimeout(600); // the re-render
+      // The Stage keeps the centre in the same write that zooms.
       await expect
         .poll(
           async () => {

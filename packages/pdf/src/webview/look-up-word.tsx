@@ -1,4 +1,11 @@
-import React, { useLayoutEffect, useRef, useSyncExternalStore } from "react";
+import { usePage } from "@embedpdf/react/runtime";
+import React, {
+  useEffect,
+  useLayoutEffect,
+  useRef,
+  useSyncExternalStore,
+} from "react";
+import { registerLookUpPage } from "./look-up-pages";
 import {
   lookUpTarget,
   onLookUpTargetChange,
@@ -17,19 +24,39 @@ import {
  *
  * It sits just above the picture and below the links and the annotation
  * layer, so those keep their clicks; the pointer events it takes bubble to the
- * page, where EmbedPDF reads positions against the page box. look-up.ts keeps
- * the browser from starting a text selection in it.
+ * Stage, which reads positions against the page, not the element pressed.
+ * look-up.ts keeps the browser from starting a text selection in it.
+ *
+ * Each page layer also says where its page is, which is how look-up.ts finds
+ * the page under the pointer.
  */
-export function LookUpWord({
-  pageIndex,
-  scale,
-}: {
-  pageIndex: number;
-  scale: number;
-}): React.JSX.Element | null {
+export function LookUpWord(): React.JSX.Element | null {
+  const page = usePage();
+  const scale = page.transform.viewScale;
   const target = useSyncExternalStore(onLookUpTargetChange, lookUpTarget);
-  const shown = target?.pageIndex === pageIndex ? target : undefined;
+  const shown = target?.pageIndex === page.pageIndex ? target : undefined;
   const span = useRef<HTMLSpanElement>(null);
+  // The page's transform changes with every zoom: the registered page reads
+  // the latest one, so a zoom does not register it again.
+  const latest = useRef(page);
+  latest.current = page;
+  useEffect(
+    () =>
+      registerLookUpPage({
+        pageIndex: page.pageIndex,
+        ref: page.ref,
+        get size() {
+          const { contentWidth, contentHeight, viewScale } =
+            latest.current.transform;
+          return {
+            width: contentWidth / viewScale,
+            height: contentHeight / viewScale,
+          };
+        },
+        toPagePoint: (x, y) => latest.current.toPagePoint(x, y),
+      }),
+    [page.pageIndex, page.ref],
+  );
   useLayoutEffect(() => {
     if (span.current && shown) {
       fitToBox(span.current, shown.box, scale);

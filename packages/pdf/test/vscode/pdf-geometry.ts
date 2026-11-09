@@ -3,6 +3,75 @@ import { expect, type Frame, type Page } from "@playwright/test";
 export const PAGE_WIDTH = 300;
 const FIT_MARGIN = 48;
 
+/**
+ * Where every page box is and how big, as one string: it changes while the
+ * view scrolls, zooms or turns, and not otherwise. The Stage has no scrolling
+ * element to read, so a spec sees the view as the reader does, by its pages.
+ */
+export function pageLayout(viewer: Frame): Promise<string> {
+  return viewer.evaluate(() =>
+    Array.from(document.querySelectorAll(".page[data-page-index]"))
+      .map((element) => {
+        const box = element.getBoundingClientRect();
+        return `${box.x}:${box.y}:${box.width}:${box.height}`;
+      })
+      .join(","),
+  );
+}
+
+/**
+ * How far down the document the viewer has been scrolled, in pixels (what a
+ * scroller's `scrollTop` was), for pages of one size in a single column, as
+ * the sample PDF's are. Pages come and go as the view moves, so it is the
+ * place of the first mounted page from the top of the document, counted by
+ * the distance between two mounted pages. Needs two pages mounted.
+ */
+export function scrolledDown(viewer: Frame): Promise<number> {
+  return viewer.evaluate(() => {
+    const view = document.querySelector(".viewport")!.getBoundingClientRect();
+    const pages = Array.from(
+      document.querySelectorAll<HTMLElement>(".page[data-page-index]"),
+    )
+      .map((element) => ({
+        index: Number(element.dataset.pageIndex),
+        top: element.getBoundingClientRect().top,
+      }))
+      .sort((a, b) => a.index - b.index);
+    const [first, second] = pages;
+    if (!first || !second) {
+      return Number.NaN;
+    }
+    const step = (second.top - first.top) / (second.index - first.index);
+    return first.index * step - (first.top - view.top);
+  });
+}
+
+/**
+ * How far the pages on screen reach past the viewer's width, in pixels (what
+ * `scrollWidth - clientWidth` was, less the room around the pages): how far
+ * the view can pan sideways.
+ */
+export function widthBeyondViewer(viewer: Frame): Promise<number> {
+  return viewer.evaluate(() => {
+    const view = document.querySelector(".viewport")!;
+    const boxes = Array.from(
+      document.querySelectorAll(".page[data-page-index]"),
+    ).map((element) => element.getBoundingClientRect());
+    const left = Math.min(...boxes.map((box) => box.left));
+    const right = Math.max(...boxes.map((box) => box.right));
+    return right - left - view.clientWidth;
+  });
+}
+
+/** How far the page box of 0-based `index` starts from the viewer's left edge (negative once panned past it). */
+export function pageLeft(viewer: Frame, index: number): Promise<number> {
+  return viewer.evaluate((index) => {
+    const view = document.querySelector(".viewport")!.getBoundingClientRect();
+    const page = document.querySelector(`.page[data-page-index="${index}"]`)!;
+    return page.getBoundingClientRect().left - view.left;
+  }, index);
+}
+
 /** Whether 1-based page `number` starts at the top of the viewer. */
 export function pageAtTop(viewer: Frame, number: number): Promise<boolean> {
   return viewer.evaluate((index) => {
@@ -80,6 +149,19 @@ export async function pagePoint(viewer: Frame, number: number) {
     ],
     frame: [inFrame.x + x * scale, inFrame.y + y * scale] as [number, number],
   });
+}
+
+/**
+ * Give the webview the keyboard: a click on empty space beside the pages. The
+ * viewer's own element cannot be focused (the Stage has no scroller, which a
+ * browser would make a tab stop), so `focus()` on it does nothing.
+ */
+export async function focusViewer(page: Page, viewer: Frame): Promise<void> {
+  const box = (await viewer.locator(".viewport").boundingBox())!;
+  await page.mouse.click(box.x + 6, box.y + box.height / 2);
+  await expect
+    .poll(() => viewer.evaluate(() => document.hasFocus()))
+    .toBe(true);
 }
 
 export type Point = { screen: [number, number]; frame: [number, number] };

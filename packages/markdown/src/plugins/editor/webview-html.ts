@@ -39,7 +39,7 @@ export function webviewHTML(panel: PanelShell, snapshot = ""): string {
   const script = snapshot
     ? `<script nonce="${nonce}">${importEditor(entry)}</script>`
     : `<script type="module" nonce="${nonce}" src="${escape(entry)}"></script>`;
-  return `<!doctype html><html><head><meta charset="UTF-8"><meta http-equiv="Content-Security-Policy" content="${escape(policy)}"><meta name="viewport" content="width=device-width,initial-scale=1"><link rel="stylesheet" href="${escape(panel.asset("webview/editor.css"))}">${preloads(panel)}<style>html,body,#app{height:100%;margin:0;background:var(--vscode-editor-background,transparent)}</style></head><body><main id="app" data-pdfium-wasm="${escape(panel.asset("webview/pdfium.wasm"))}">${snapshot}</main>${script}</body></html>`;
+  return `<!doctype html><html><head><meta charset="UTF-8"><meta http-equiv="Content-Security-Policy" content="${escape(policy)}"><meta name="viewport" content="width=device-width,initial-scale=1"><link rel="stylesheet" href="${escape(panel.asset("webview/editor.css"))}">${preloads(panel)}<style>html,body,#app{height:100%;margin:0;background:var(--vscode-editor-background,transparent)}</style></head><body><main id="app" data-pdfium-wasm="${escape(panel.asset("webview/embedpdf.wasm"))}">${snapshot}</main>${script}</body></html>`;
 }
 
 /**

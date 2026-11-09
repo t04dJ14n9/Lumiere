@@ -1,4 +1,5 @@
 import { expect, test, type Page } from "@playwright/test";
+import { scrollMetrics, scrollTo } from "./stage-support";
 import { act, lastView, openView } from "./view-controls-support";
 
 /**
@@ -25,9 +26,8 @@ async function measure(
   return page.evaluate(
     async ({ events, x, y, settleMs }) => {
       // Sample two frames after the input, once painted: a rAF callback runs
-      // before the frame's layout and resize observers, and reading the layout
-      // between a commit and the frame that applies the animation would show
-      // the new layout bare, a state that is never on screen.
+      // before the frame's layout and resize observers, so reading the layout
+      // there could show a state that is never on screen.
       const painted = () =>
         new Promise<void>((resolve) =>
           requestAnimationFrame(() =>
@@ -173,13 +173,11 @@ test("pinching in is as smooth as pinching out", async ({ page }) => {
   await page.setViewportSize({ width: 500, height: 1200 });
   await openView(page, { defaultZoom: 400, smoothScrolling: true });
   // From the middle of the document, so no edge clamps the point.
-  await page.locator(".viewport").evaluate((v) =>
-    v.scrollTo({
-      left: (v.scrollWidth - v.clientWidth) / 2,
-      top: 3000,
-      behavior: "instant",
-    }),
-  );
+  const metrics = await scrollMetrics(page);
+  await scrollTo(page, {
+    left: (metrics.scrollWidth - metrics.clientWidth) / 2,
+    top: 3000,
+  });
   await page.waitForTimeout(200);
   const frames = await measure(page, pinchOut(20, 2.5));
   console.log(
@@ -201,13 +199,11 @@ test("Ctrl+wheel notches, zoom buttons and keys step through the zoom levels wit
 }) => {
   await page.setViewportSize({ width: 500, height: 1200 });
   await openView(page, { defaultZoom: 200, smoothScrolling: true });
-  await page.locator(".viewport").evaluate((v) =>
-    v.scrollTo({
-      left: (v.scrollWidth - v.clientWidth) / 2,
-      top: 3000,
-      behavior: "instant",
-    }),
-  );
+  const metrics = await scrollMetrics(page);
+  await scrollTo(page, {
+    left: (metrics.scrollWidth - metrics.clientWidth) / 2,
+    top: 3000,
+  });
   await page.waitForTimeout(200);
   const notch = await measure(page, [{ deltaY: -100 }, { deltaY: -100 }], 600);
   console.log(
@@ -219,10 +215,9 @@ test("Ctrl+wheel notches, zoom buttons and keys step through the zoom levels wit
       settledBlankMs: notch.settledBlankMs,
     }),
   );
-  // Samples are two frames apart, and a slow runner can miss most of an animation:
-  // a notch is a step of 1.25 to 1.33, so this only rules out a jump of more than one.
+  // A notch is one step of 1.2 about the pointer, so this only rules out a jump of more than one.
   expect(biggestStep(notch.scales)).toBeLessThan(1.4);
-  // Looser than a pinch: a loaded machine can sample the animation a frame late.
+  // Looser than a pinch: a loaded machine can sample a frame late.
   expect(notch.drift).toBeLessThan(24);
   expect(notch.settledBlankMs).toBeLessThan(250);
   const button = await page.evaluate(async () => {
@@ -235,8 +230,7 @@ test("Ctrl+wheel notches, zoom buttons and keys step through the zoom levels wit
         'button[aria-label="Zoom in"]',
       ) as HTMLButtonElement | null
     )?.click();
-    // Sample once a frame is painted: reading the layout earlier would force
-    // it before the animation has been applied to it.
+    // Sample once a frame is painted.
     for (let i = 0; i < 30; i++) {
       await new Promise((resolve) =>
         requestAnimationFrame(() =>
@@ -260,7 +254,7 @@ test("Ctrl+wheel notches, zoom buttons and keys step through the zoom levels wit
   await act(page, { action: "zoomOut" });
 });
 
-test("reduced motion removes the animation, not the zoom", async ({ page }) => {
+test("a pinch zooms as usual with reduced motion", async ({ page }) => {
   await page.emulateMedia({ reducedMotion: "reduce" });
   await openView(page, { defaultZoom: "actual", smoothScrolling: true });
   const frames = await measure(page, pinchOut(20), 500);
@@ -268,7 +262,7 @@ test("reduced motion removes the animation, not the zoom", async ({ page }) => {
   expect(frames.drift).toBeLessThan(6);
 });
 
-test("a jump to a page right after a zoom step is not undone by the zoom's scroll settling", async ({
+test("a jump to a page right after a zoom step lands on that page", async ({
   page,
 }) => {
   await page.setViewportSize({ width: 700, height: 600 });
@@ -291,13 +285,15 @@ test("a jump to a page right after a zoom step is not undone by the zoom's scrol
 });
 
 /**
- * EmbedPDF applies the scroll that keeps a zoom step's anchor in a
- * requestAnimationFrame, while React lays the pages out at the new scale in a
- * task of its own. On a busy main thread (dark pages, a large display, a slow
- * machine) a frame is painted between the two: the old pages at the new scroll
- * offset, which in a long document is a blank viewport or another page. The
- * test makes that frame certain by delaying React's scheduler (it posts its
- * work through a MessageChannel) by more than a frame.
+ * The Stage writes a zoom step's camera and the pages' layout in one state
+ * change, so no frame can show the old pages at the new scroll offset. (With
+ * EmbedPDF 2 the scroll that keeps the step's anchor was applied in a
+ * requestAnimationFrame while React laid the pages out in a task of its own,
+ * and a busy main thread painted a frame between the two: in a long document
+ * a blank viewport or another page.) The test keeps that guard: it delays
+ * React's scheduler (it posts its work through a MessageChannel) by more than
+ * a frame, and the page at the viewer's centre must stay the same in every
+ * painted frame.
  */
 test("a zoom step never paints the old pages at the new scroll offset, however late React lays them out", async ({
   page,

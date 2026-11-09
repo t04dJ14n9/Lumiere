@@ -9,7 +9,7 @@ import type { HostMessage, PdfDelivery } from "../messages";
 export interface PdfWebview {
   /** The page's own origin, for its content security policy. */
   readonly cspSource: string;
-  /** The URL of a built viewer file (`viewer.js`, `viewer.css`, `pdfium.wasm`). */
+  /** The URL of a built viewer file (`viewer.js`, `viewer.css`, `embedpdf.wasm`). */
   asset(name: string): string;
   setHTML(html: string): void;
   post(message: HostMessage): void;

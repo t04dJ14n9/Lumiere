@@ -12,6 +12,7 @@
   inserts `[[paper.pdf#page=5|Methods]]` (`[Methods](paper.pdf#page=5)` with
   wikilinks off), which opens that page.
 - Lumia PDF: Chrome-aligned Copy link Quotes and vault Markdown backlink overlays; sidecar highlight create removed (legacy `#hl-` open kept). Regions / `viewrect=` opt-in (`lumiere.pdf.regions.enabled`, default off). Details in `packages/pdf/CHANGELOG.md`.
+- Lumia PDF is rebuilt on EmbedPDF 3: more exact text geometry, no zoom flicker, rotated pages in Markdown PDF embeds. Wheel and pinch zoom are EmbedPDF's (a notch zooms by 1.2), annotation files are version 2 (older ones are converted when read), dark paper is off for now, and the extension is larger (a 7.9 MB PDF engine). Details in `packages/pdf/CHANGELOG.md`.
 - **Lumière is now Lumia.** Its name in the Extensions view, **Reopen
   Editor With…**, the Command Palette (**Lumia: …**), the Settings UI and
   its messages says Lumia, and so does Lumia PDF. The extension id

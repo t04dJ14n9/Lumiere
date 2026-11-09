@@ -1,17 +1,26 @@
 /** The state the jump history controller (jump-history.ts) works with. */
-import type { useZoom } from "@embedpdf/plugin-zoom/react";
+import type { StageCapability } from "@embedpdf/react/stage";
 import type { ReadingPosition } from "../shared/reading-position";
 import type { ViewChoices } from "../shared/view-settings";
 import type { Navigation } from "./navigation";
 
-export type Zoom = ReturnType<typeof useZoom>["provides"];
+/** What the controller reads from the Stage to say where the reader is. */
+export type HistoryStage = Pick<
+  StageCapability,
+  | "getCurrentDestination"
+  | "getSettings"
+  | "getZoomLevel"
+  | "getZoomMode"
+  | "listVisiblePages"
+  | "viewportToPage"
+>;
 
 /** What the controller reads from the latest render. */
 export interface Dependencies {
   navigation: Navigation;
   choices: ViewChoices;
   setChoices: (choices: ViewChoices) => void;
-  zoom: Zoom;
+  stage: HistoryStage;
 }
 
 /** A deliberate jump, recorded once the viewport has settled. */

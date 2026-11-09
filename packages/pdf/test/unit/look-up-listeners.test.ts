@@ -4,6 +4,36 @@ import { test } from "node:test";
 import { runInNewContext } from "node:vm";
 import ts from "typescript";
 import * as words from "../../src/shared/look-up";
+import * as boxes from "../../src/webview/text-boxes";
+
+/** A glyph cell, the way EmbedPDF reads a page's text geometry. */
+const cell = (x: number, width: number) => ({
+  loose: { x, y: 0, width, height: 10 },
+  tight: { x, y: 0, width, height: 10 },
+});
+
+/** "alpha" at x 0 to 8, a space, "beta" at x 10 to 18: one character each. */
+const layout = {
+  charCount: 3,
+  runs: [
+    {
+      start: 0,
+      rect: { x: 0, y: 0, width: 18, height: 10 },
+      glyphs: [
+        cell(0, 8),
+        { ...cell(8, 2), space: true as const },
+        cell(10, 8),
+      ],
+    },
+  ],
+  // Like EmbedPDF's, it forgives a near miss: the nearest glyph within reach.
+  charAt: (point: { x: number; y: number }) =>
+    point.y < -5 || point.y > 15 ? null : point.x < 9 ? 0 : 2,
+  wordAt: (at: number) => ({ start: at, count: 1 }),
+  segments: (range: { start: number }) => [
+    { rect: { x: range.start === 0 ? 0 : 10, y: 0, width: 8, height: 10 } },
+  ],
+};
 
 function harness() {
   const listeners = new Map<
@@ -16,35 +46,26 @@ function harness() {
   let dispose = () => {};
   let top = 0;
   let pending: (() => void)[] | undefined;
-  const element = {
-    hasAttribute: () => true,
-    getAttribute: () => "0",
-    getBoundingClientRect: () => ({ left: 0, top, width: 100 }),
+  let camera: (() => void) | undefined;
+  const text = {
+    layoutOf: async () => layout,
+    slice: (_page: unknown, range: { start: number }) =>
+      new Promise<string>((resolve) => {
+        const complete = () => resolve(range.start === 0 ? "alpha" : "beta");
+        if (pending) {
+          pending.push(complete);
+        } else {
+          complete();
+        }
+      }),
   };
-  const engine = {
-    getPageGlyphs: () => ({
-      toPromise: async () => [
-        { origin: { x: 0, y: 0 }, size: { width: 8, height: 10 } },
-        {
-          isSpace: true,
-          origin: { x: 8, y: 0 },
-          size: { width: 2, height: 10 },
-        },
-        { origin: { x: 10, y: 0 }, size: { width: 8, height: 10 } },
-      ],
-    }),
-    getTextSlices: (_pdf: unknown, ranges: { charIndex: number }[]) => ({
-      toPromise: () =>
-        new Promise<string[]>((resolve) => {
-          const complete = () =>
-            resolve([ranges[0]!.charIndex === 0 ? "alpha" : "beta"]);
-          if (pending) {
-            pending.push(complete);
-          } else {
-            complete();
-          }
-        }),
-    }),
+  const stage = {
+    onCameraChanged: (listener: () => void) => {
+      camera = listener;
+      return () => {
+        camera = undefined;
+      };
+    },
   };
   const modules: Record<string, unknown> = {
     react: {
@@ -54,8 +75,16 @@ function harness() {
         dispose = effect();
       },
     },
-    "@embedpdf/core/react": {
-      useRegistry: () => ({ registry: { getEngine: () => engine } }),
+    "@embedpdf/react/runtime": { useOptionalCapability: () => stage },
+    "@embedpdf/plugin-stage/contract": { StageToken: {} },
+    "./text-access": { useTextAccess: () => text },
+    "./text-boxes": boxes,
+    // One page, 100 points wide, at one pixel per point.
+    "./look-up-pages": {
+      lookUpPageAt: (x: number, y: number) => ({
+        page: { pageIndex: 0, ref: { kind: "objectNumber", objectNumber: 3 } },
+        point: { x, y: y - top },
+      }),
     },
     "../shared/look-up": words,
     "./look-up-target": {
@@ -78,13 +107,12 @@ function harness() {
     },
   }).outputText;
   const module = {
-    exports: {} as { useLookUp(pdf: unknown, enabled: boolean): () => void },
+    exports: {} as { useLookUp(enabled: boolean): () => void },
   };
   const evaluate = runInNewContext(
     `(function(require,module,exports){${output}\n})`,
     {
       document: {
-        elementsFromPoint: () => [element],
         addEventListener: (
           name: string,
           fn: (event: { clientX: number; clientY: number }) => void,
@@ -112,17 +140,20 @@ function harness() {
     module,
     module.exports,
   );
-  const open = module.exports.useLookUp(
-    { pages: [{ index: 0, size: { width: 100 }, rotation: 0 }] },
-    true,
-  );
+  const open = module.exports.useLookUp(true);
   return {
     open,
     messages,
     /** The hidden word's text after each change, or undefined when none. */
     shown: () => targets.at(-1)?.text,
-    emit: (name: string, x = 2, buttons = 0) =>
-      listeners.get(name)?.({ clientX: x, clientY: 5, buttons } as never),
+    emit: (name: string, x = 2, buttons = 0) => {
+      if (name === "scroll") {
+        // The pages move with the Stage's camera, not by scrolling.
+        camera?.();
+        return;
+      }
+      listeners.get(name)?.({ clientX: x, clientY: 5, buttons } as never);
+    },
     hover: () => {
       const run = timer;
       timer = undefined;
@@ -243,5 +274,19 @@ test("a press keeps the hidden word, or places it at once, and a drag does not m
     "alpha",
     "and it is found again where the pointer rests",
   );
+  h.dispose();
+});
+
+test("beside a word, where EmbedPDF's hit test still forgives, there is no word", async () => {
+  const h = harness();
+  h.emit("pointermove", 8.4);
+  h.hover();
+  await tick();
+  assert.equal(h.messages.at(-1)?.word, "alpha", "half a point off: on it");
+  h.emit("pointermove", 8.8);
+  h.hover();
+  await tick();
+  assert.equal(h.messages.at(-1)?.word, null, "the gap after it: on none");
+  assert.equal(h.shown(), undefined);
   h.dispose();
 });

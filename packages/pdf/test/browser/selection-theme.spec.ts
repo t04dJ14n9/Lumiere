@@ -8,6 +8,7 @@ import {
   TEXT_MIDLINE,
 } from "./viewer-support";
 import { send } from "./view-controls-support";
+import { PAGE_COLORS_ENGINE_AVAILABLE } from "../../src/shared/page-colors-engine";
 
 const THEMES = {
   "Light Modern": {
@@ -60,7 +61,7 @@ async function useTheme(
 function contrastOnPaper(
   page: Page,
   selector: string,
-  property: "backgroundColor" | "borderTopColor",
+  property: "backgroundColor" | "borderTopColor" | "fill",
 ): Promise<number> {
   return page.evaluate(
     ([selector, property]) => {
@@ -98,10 +99,12 @@ test("selections and flashed boxes stand out on the page in every theme", async 
   const fills: Record<string, number> = {};
   for (const [name, colours] of Object.entries(THEMES)) {
     await useTheme(page, colours);
+    // EmbedPDF draws the selection as polygons filled with its own variable,
+    // which base.css sets to the viewer's `--selection-fill`.
     fills[name] = await contrastOnPaper(
       page,
-      '[style*="selection-fill"]',
-      "backgroundColor",
+      'polygon[style*="epdf-text-selection"]',
+      "fill",
     );
   }
 
@@ -151,19 +154,26 @@ test("selections and flashed boxes stand out on the page in every theme", async 
 
 // While a page waits for its picture (a fast scroll outruns the renderer), its
 // box is all that shows: it must be the paper of the current page colors, not
-// white on dark paper.
+// white on dark paper. The Stage paints that box, around Lumia's `.page`.
 test("a page with no picture yet shows the paper of the page colors", async ({
   page,
 }) => {
   await open(page);
   const paper = () =>
     page.evaluate(() => {
-      const box = document.querySelector<HTMLElement>(".page[data-page-index]");
+      const box = document.querySelector<HTMLElement>(
+        ".page[data-page-index]",
+      )?.parentElement;
       return box ? getComputedStyle(box).backgroundColor : undefined;
     });
   expect(await paper()).toBe("rgb(255, 255, 255)");
+  // EmbedPDF 3 cannot draw dark paper yet: the page colors stay normal.
   await send(page, { type: "pageColors", effective: "dark" });
-  await expect.poll(paper).toBe("rgb(30, 30, 30)");
+  await expect
+    .poll(paper)
+    .toBe(
+      PAGE_COLORS_ENGINE_AVAILABLE ? "rgb(30, 30, 30)" : "rgb(255, 255, 255)",
+    );
   await send(page, { type: "pageColors", effective: "normal" });
   await expect.poll(paper).toBe("rgb(255, 255, 255)");
 });

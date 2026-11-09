@@ -126,7 +126,7 @@ test("load time: a small and a 600-page PDF", async ({ workbench: page }) => {
     bundles: {
       extensionJs: size("extension.js"),
       viewerJs: size("pdf/webview/viewer.js"),
-      pdfiumWasm: size("pdf/webview/pdfium.wasm"),
+      pdfiumWasm: size("pdf/webview/embedpdf.wasm"),
       viewerCss: size("pdf/webview/viewer.css"),
     },
     results,

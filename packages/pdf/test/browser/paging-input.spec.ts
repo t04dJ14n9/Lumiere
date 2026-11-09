@@ -6,17 +6,19 @@ import {
   pageIndexes,
   viewMenu,
 } from "./view-controls-support";
+import { scrollMetrics, scrollTop } from "./stage-support";
 
 /** Where the viewer is: scroll offsets and the first page in view. */
 async function where(page: Page) {
-  const scroll = await page.locator(".viewport").evaluate((viewport) => ({
-    left: Math.round(viewport.scrollLeft),
-    top: Math.round(viewport.scrollTop),
+  const metrics = await scrollMetrics(page);
+  const scroll = {
+    left: Math.round(metrics.scrollLeft),
+    top: Math.round(metrics.scrollTop),
     room: Math.round(
-      viewport.scrollWidth - viewport.clientWidth - viewport.scrollLeft,
+      metrics.scrollWidth - metrics.clientWidth - metrics.scrollLeft,
     ),
-    overflowsX: viewport.scrollWidth > viewport.clientWidth + 1,
-  }));
+    overflowsX: metrics.scrollWidth > metrics.clientWidth + 1,
+  };
   const view = await lastView(page);
   return { ...scroll, page: view?.readingPage, shown: await pageIndexes(page) };
 }
@@ -220,8 +222,7 @@ test("a long page is read with the arrows and PageDown before the next page turn
     scrollMode: "paged",
   });
   await settled(page);
-  const top = () =>
-    page.locator(".viewport").evaluate((viewport) => viewport.scrollTop);
+  const top = () => scrollTop(page);
   const start = await top();
   await page.keyboard.press("ArrowDown");
   await expect.poll(top).toBe(start + 40);

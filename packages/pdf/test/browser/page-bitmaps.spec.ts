@@ -2,17 +2,20 @@ import { expect, test, type Page } from "@playwright/test";
 import { act, openView } from "./view-controls-support";
 
 /**
- * Pages turn without a blank: the pages around the one being read have a
- * low-quality bitmap already, shown at once when a page turns, and the full
- * bitmap replaces it when it is ready.
+ * Pages show a picture promptly and keep it: a page that comes into view (a
+ * turn, a jump, scrolling) has its picture within a bound, never goes blank
+ * again once it has one (a zoom step keeps the old picture until the sharper
+ * one replaces it), and rests sharp. EmbedPDF draws the picture (a base plane
+ * for the whole page and tiles over it where the view wants more pixels), and
+ * only the pages of the view are mounted.
  */
 interface Frame {
   at: number;
   shown: string;
-  /** Pages on screen without a loaded picture. */
+  /** Pages in view without a loaded picture. */
   blank: number;
-  low: number;
-  full: number;
+  /** The indexes of those pages. */
+  blankPages: string[];
 }
 
 /** The pages on screen now. */
@@ -23,7 +26,7 @@ const shownNow = (page: Page): Promise<string> =>
       .join(","),
   );
 
-/** Sample every animation frame for `ms`, while `during` runs in the page. */
+/** Sample every animation frame for `ms`; the caller starts the gesture right after. */
 function sample(page: Page, ms: number): Promise<Frame[]> {
   return page.evaluate(
     (ms) =>
@@ -34,20 +37,31 @@ function sample(page: Page, ms: number): Promise<Frame[]> {
           const pages = Array.from(
             document.querySelectorAll<HTMLElement>(".page[data-page-index]"),
           );
-          const images = pages.map((p) =>
-            p.querySelector<HTMLImageElement>("img.page-image"),
-          );
+          // Only pages in view can be seen blank: the ones mounted just outside
+          // it are for the next scroll, and may be redrawn at a step.
+          const view = document
+            .querySelector(".viewport")!
+            .getBoundingClientRect();
+          const blankPages = pages
+            .filter((element) => {
+              const box = element.getBoundingClientRect();
+              return box.bottom > view.top && box.top < view.bottom;
+            })
+            .filter((element) => {
+              // The whole-page picture is the page box's first child. A new
+              // picture loads beside the old one, which stays on screen (and
+              // keeps its width) until the new one is decoded: blank is no
+              // picture at all.
+              const image =
+                element.querySelector<HTMLImageElement>(":scope > img");
+              return !image || image.naturalWidth === 0;
+            })
+            .map((element) => element.dataset.pageIndex!);
           frames.push({
             at: performance.now() - start,
             shown: pages.map((p) => p.dataset.pageIndex).join(","),
-            blank: images.filter(
-              (i) => !i || !i.complete || i.naturalWidth === 0,
-            ).length,
-            low: images.filter((i) => i?.classList.contains("page-image-low"))
-              .length,
-            full: images.filter(
-              (i) => i && !i.classList.contains("page-image-low"),
-            ).length,
+            blank: blankPages.length,
+            blankPages,
           });
           if (performance.now() - start < ms) {
             requestAnimationFrame(tick);
@@ -65,7 +79,7 @@ function sample(page: Page, ms: number): Promise<Frame[]> {
 function painted(page: Page): Promise<boolean> {
   return page.evaluate(() =>
     Array.from(
-      document.querySelectorAll<HTMLImageElement>(".page img.page-image"),
+      document.querySelectorAll<HTMLImageElement>(".page > img"),
     ).every((image) => {
       const canvas = document.createElement("canvas");
       canvas.width = 120;
@@ -83,20 +97,55 @@ function painted(page: Page): Promise<boolean> {
   );
 }
 
+/**
+ * How many pages in view rest soft: neither the whole-page picture nor the
+ * tiles over it have as many pixels as the screen shows (a tolerance of 5%
+ * for rounding). Pages mounted just outside the view only need their picture.
+ */
+function softPages(page: Page): Promise<number> {
+  return page.evaluate(() => {
+    const dpr = window.devicePixelRatio;
+    const view = document.querySelector(".viewport")!.getBoundingClientRect();
+    return Array.from(
+      document.querySelectorAll<HTMLElement>(".page[data-page-index]"),
+    ).filter((element) => {
+      const box = element.getBoundingClientRect();
+      if (box.bottom <= view.top || box.top >= view.bottom) {
+        return false;
+      }
+      const base = element.querySelector<HTMLImageElement>(":scope > img");
+      if (base && base.naturalWidth >= box.width * dpr * 0.95) {
+        return false;
+      }
+      const tiles = Array.from(
+        element.querySelectorAll<HTMLImageElement>("img"),
+      ).filter((image) => image !== base && image.naturalWidth > 0);
+      return !(
+        tiles.length > 0 &&
+        tiles.every(
+          (tile) =>
+            tile.naturalWidth / tile.getBoundingClientRect().width >=
+            dpr * 0.95,
+        )
+      );
+    }).length;
+  });
+}
+
 async function open(page: Page, view: object): Promise<void> {
   await page.setViewportSize({ width: 1100, height: 700 });
   await openView(page, view);
-  // Fully drawn, and the prefetch has had its time.
-  await expect
-    .poll(() => page.locator(".page img.page-image-low").count())
-    .toBe(0);
-  await page.waitForTimeout(1200);
-  // Keys go to the viewer, however busy the machine was when it opened.
-  await page.locator(".viewport").focus();
+  await expect.poll(() => painted(page)).toBe(true);
+  await expect.poll(() => softPages(page)).toBe(0);
+}
+
+/** The first frame at or after `from` with every page on screen painted. */
+function firstPainted(frames: Frame[], from: number): Frame | undefined {
+  return frames.slice(from).find((frame) => frame.blank === 0);
 }
 
 for (const pageLayout of ["single", "spread"] as const) {
-  test(`${pageLayout}, page-by-page: a turn shows a picture at once and the full one replaces it, with no blank frame`, async ({
+  test(`${pageLayout}, page-by-page: a turn shows the new page's picture within a few frames and keeps it`, async ({
     page,
   }) => {
     await open(page, {
@@ -108,19 +157,21 @@ for (const pageLayout of ["single", "spread"] as const) {
     const frames = sample(page, 1_500);
     await page.keyboard.press("PageDown");
     const seen = await frames;
-    const turned = seen.filter((frame) => frame.shown !== before);
-    expect(turned.length, "the turn happened").toBeGreaterThan(5);
-    // Not a single frame of the new pages is blank.
-    expect(turned.filter((frame) => frame.blank > 0).length).toBe(0);
-    // A low picture is what shows first, and the full one comes later.
-    expect(turned[0]!.low).toBeGreaterThan(0);
-    expect(turned.at(-1)!.low).toBe(0);
-    expect(turned.at(-1)!.full).toBeGreaterThan(0);
+    const turned = seen.findIndex((frame) => frame.shown !== before);
+    expect(turned, "the turn happened").toBeGreaterThan(-1);
+    const first = firstPainted(seen, turned)!;
+    expect(first, "a picture appeared").toBeTruthy();
+    expect(first.at - seen[turned]!.at).toBeLessThan(400);
+    // Once the pictures are there, no later frame is blank.
+    expect(
+      seen.filter((frame) => frame.at > first.at && frame.blank > 0).length,
+    ).toBe(0);
     expect(await painted(page)).toBe(true);
+    await expect.poll(() => softPages(page)).toBe(0);
   });
 }
 
-test("rapid turns, forward and back, never show a blank page and end with full pictures", async ({
+test("rapid turns, forward and back, end on the right pages with their pictures", async ({
   page,
 }) => {
   await open(page, {
@@ -128,7 +179,7 @@ test("rapid turns, forward and back, never show a blank page and end with full p
     pageLayout: "spread",
     defaultZoom: "fitPage",
   });
-  const frames = sample(page, 2_500);
+  const start = await shownNow(page);
   for (const key of [
     "PageDown",
     "PageDown",
@@ -142,21 +193,16 @@ test("rapid turns, forward and back, never show a blank page and end with full p
     await page.keyboard.press(key);
     await page.waitForTimeout(40);
   }
-  const seen = await frames;
-  // Turned faster than the prefetch can follow (four spreads in a fifth of a second), a page may be reached
-  // before it has any picture; the cheap low one comes within a few frames (60 frames is one second).
-  expect(seen.filter((frame) => frame.blank > 0).length).toBeLessThanOrEqual(
-    12,
-  );
-  await expect
-    .poll(() => page.locator(".page img.page-image-low").count())
-    .toBe(0);
-  expect(await painted(page)).toBe(true);
+  // Four more turns forward than back: from the spread of pages 0 and 1 to the one of 8 and 9.
+  expect(start).toBe("0,1");
+  await expect.poll(() => shownNow(page)).toBe("8,9");
+  await expect.poll(() => painted(page)).toBe(true);
+  await expect.poll(() => softPages(page)).toBe(0);
+  const settled = await sample(page, 500);
+  expect(settled.filter((frame) => frame.blank > 0).length).toBe(0);
 });
 
-test("a jump to a page far away paints within a bound, low picture first", async ({
-  page,
-}) => {
+test("a jump to a page far away paints within a bound", async ({ page }) => {
   await open(page, {
     scrollMode: "paged",
     pageLayout: "single",
@@ -165,18 +211,15 @@ test("a jump to a page far away paints within a bound, low picture first", async
   const frames = sample(page, 2_000);
   await act(page, { action: "goToPage", page: 11 });
   const seen = await frames;
-  const jumped = seen.filter((frame) => frame.shown === "10");
-  expect(jumped.length).toBeGreaterThan(0);
-  const firstPainted = jumped.find((frame) => frame.blank === 0)!;
-  expect(firstPainted, "a picture appeared").toBeTruthy();
-  expect(firstPainted.at - jumped[0]!.at).toBeLessThan(800);
-  await expect
-    .poll(() => page.locator(".page img.page-image-low").count())
-    .toBe(0);
+  const jumped = seen.findIndex((frame) => frame.shown === "10");
+  expect(jumped).toBeGreaterThan(-1);
+  const first = firstPainted(seen, jumped)!;
+  expect(first, "a picture appeared").toBeTruthy();
+  expect(first.at - seen[jumped]!.at).toBeLessThan(800);
   expect(await painted(page)).toBe(true);
 });
 
-test("zoomed to 300%, a turn keeps showing a picture while the full one renders", async ({
+test("zoomed to 300%, turns that keep the place paint the new pages and rest sharp", async ({
   page,
 }) => {
   await open(page, {
@@ -186,19 +229,19 @@ test("zoomed to 300%, a turn keeps showing a picture while the full one renders"
   });
   const before = await shownNow(page);
   const frames = sample(page, 2_500);
+  // Zoomed past a spread, a turn goes page by page: the second one reaches the next spread.
+  await act(page, { action: "nextPageKeepingPlace" });
   await act(page, { action: "nextPageKeepingPlace" });
   const seen = await frames;
-  const turned = seen.filter((frame) => frame.shown !== before);
-  expect(turned.length).toBeGreaterThan(5);
-  expect(turned.filter((frame) => frame.blank > 0).length).toBeLessThanOrEqual(
-    1,
-  );
-  await expect
-    .poll(() => page.locator(".page img.page-image-low").count())
-    .toBe(0);
+  const turned = seen.findIndex((frame) => frame.shown !== before);
+  expect(turned).toBeGreaterThan(-1);
+  const first = firstPainted(seen, turned)!;
+  expect(first, "a picture appeared").toBeTruthy();
+  expect(first.at - seen[turned]!.at).toBeLessThan(800);
+  await expect.poll(() => softPages(page)).toBe(0);
 });
 
-test("continuous scrolling: the pages that come into view have a picture and the full one follows", async ({
+test("a zoom step never shows a page without its picture, and the pictures come out sharp at the new zoom", async ({
   page,
 }) => {
   await open(page, {
@@ -206,20 +249,45 @@ test("continuous scrolling: the pages that come into view have a picture and the
     pageLayout: "single",
     defaultZoom: "fitWidth",
   });
+  for (const action of ["zoomIn", "zoomIn", "zoomOut"] as const) {
+    const had = new Set((await shownNow(page)).split(","));
+    const frames = sample(page, 1_200);
+    await act(page, { action });
+    const seen = await frames;
+    // A page that comes into view as the pages shrink may wait for its picture; one that had it keeps it.
+    expect(
+      seen.filter((frame) => frame.blankPages.some((index) => had.has(index)))
+        .length,
+      action,
+    ).toBe(0);
+    await expect.poll(() => softPages(page), { timeout: 5_000 }).toBe(0);
+    expect(await painted(page)).toBe(true);
+  }
+});
+
+test("continuous scrolling: the pages that come into view have a picture within a bound and rest sharp", async ({
+  page,
+}) => {
+  await open(page, {
+    scrollMode: "continuous",
+    pageLayout: "single",
+    defaultZoom: "fitWidth",
+  });
+  await page.mouse.move(550, 350);
   const frames = sample(page, 2_000);
   for (let i = 0; i < 6; i++) {
     await page.mouse.wheel(0, 300);
     await page.waitForTimeout(60);
   }
   const seen = await frames;
-  expect(seen.filter((frame) => frame.blank > 0).length).toBeLessThanOrEqual(4);
-  await expect
-    .poll(() => page.locator(".page img.page-image-low").count())
-    .toBe(0);
-  expect(await painted(page)).toBe(true);
+  // A page scrolled to may wait for its picture a few frames (60 frames is one second), never long.
+  const blankMs = seen.filter((frame) => frame.blank > 0).length * (1000 / 60);
+  expect(blankMs).toBeLessThan(500);
+  await expect.poll(() => painted(page)).toBe(true);
+  await expect.poll(() => softPages(page)).toBe(0);
 });
 
-test("memory stays bounded: only pages near the one being read keep a picture cached", async ({
+test("memory stays bounded: only the pages of the view are mounted, however far the reader has gone", async ({
   page,
 }) => {
   await open(page, {
@@ -231,5 +299,23 @@ test("memory stays bounded: only pages near the one being read keep a picture ca
     await page.keyboard.press("PageDown");
     await page.waitForTimeout(150);
   }
-  await expect.poll(() => page.locator(".page img.page-image").count()).toBe(1);
+  await expect.poll(() => shownNow(page)).toBe("11");
+  await expect.poll(() => page.locator(".page > img").count()).toBe(1);
+});
+
+test.describe("on a 2x screen", () => {
+  test.use({ deviceScaleFactor: 2 });
+
+  test("pages rest sharp at fit width and after a zoom step: the tiles bring the pixels the whole-page picture lacks", async ({
+    page,
+  }) => {
+    await open(page, {
+      scrollMode: "continuous",
+      pageLayout: "single",
+      defaultZoom: "fitWidth",
+    });
+    await act(page, { action: "zoomIn" });
+    await expect.poll(() => softPages(page), { timeout: 5_000 }).toBe(0);
+    expect(await painted(page)).toBe(true);
+  });
 });

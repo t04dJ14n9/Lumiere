@@ -1,19 +1,23 @@
 // Builds Lumia PDF's assets into this package's dist/ (the repository root
 // bundles the extension host and copies this dist/ into dist/pdf/):
 //   dist/agent-bridge-server.js  the agent bridge's MCP server, loaded by the
-//                             host only when the bridge starts (it carries the
-//                             MCP SDK and zod, which the host never loads otherwise)
-//   dist/bridge-stdio.js      the stdio shim MCP clients run (see Copy MCP Setup)
-//   dist/outline-engine.js    the extension host's PDFium for reading bookmarks
-//                             (note suggestions); loaded on first use, with
-//                             the viewer's pdfium.wasm
-//   dist/webview/viewer.js    the PDF viewer page (browser), plus viewer.css
-//   dist/webview/pdfium.wasm  the PDF engine, loaded by the viewer at runtime
+//                                host only when the bridge starts (it carries
+//                                the MCP SDK and zod, which the host never
+//                                loads otherwise)
+//   dist/bridge-stdio.js         the stdio shim MCP clients run (see Copy MCP
+//                                Setup)
+//   dist/outline-engine.js       the extension host's PDFium for reading
+//                                bookmarks (note suggestions); loaded on first
+//                                use, with the viewer's embedpdf.wasm
+//   dist/webview/viewer.js       the PDF viewer page (browser), plus viewer.css
+//   dist/webview/embedpdf.wasm   the PDF engine, loaded by the viewer at
+//                                runtime
 //
 // Usage: node scripts/build.mjs [--watch] [--production]
 import { mkdir, rm, writeFile } from "node:fs/promises";
 import path from "node:path";
 import * as esbuild from "esbuild";
+import { embedPdfStubs } from "../../../scripts/embedpdf-stubs.mjs";
 import { copyEngine, viewerBuild } from "./viewer.mjs";
 
 const watch = process.argv.includes("--watch");
@@ -54,24 +58,6 @@ const bridgeStdio = {
   target: "node20",
 };
 
-/**
- * `@embedpdf/engines/pdfium` also imports the tables of CDN font URLs behind
- * its font fallback, seven packages, which the outline engine never turns on.
- * They stay out of the bundle and its notices.
- */
-const withoutFontFallbackTables = {
-  name: "without-font-fallback-tables",
-  setup(build) {
-    build.onResolve({ filter: /^@embedpdf\/fonts-/ }, (args) => ({
-      path: args.path,
-      namespace: "no-fonts",
-    }));
-    build.onLoad({ filter: /.*/, namespace: "no-fonts" }, () => ({
-      contents: "export const fonts = [];",
-    }));
-  },
-};
-
 const outlineEngine = {
   ...shared,
   entryPoints: [path.join(root, "src/extension/outlines/engine.ts")],
@@ -79,12 +65,15 @@ const outlineEngine = {
   platform: "node",
   format: "cjs",
   target: "node20",
-  // PDFium's loader reads `import.meta.url`, which a CommonJS bundle lacks.
+  // The runtime's loaders read `import.meta.url`, which a CommonJS bundle lacks.
   define: { "import.meta.url": "__importMetaUrl" },
   banner: {
     js: 'const __importMetaUrl = require("node:url").pathToFileURL(__filename).href;',
   },
-  plugins: [withoutFontFallbackTables],
+  // `createLocalEngine` uses none of the pieces the stubs replace, but esbuild
+  // still lists their packages as inputs, which the repository's third-party
+  // notices read: the fallback fonts, with their own licenses, stay out.
+  plugins: [embedPdfStubs({ workerSource: true })],
 };
 
 const webview = viewerBuild({

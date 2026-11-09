@@ -1,4 +1,5 @@
 import { expect, test, type Page } from "@playwright/test";
+import { scrollTop, scrollTopPerFrame } from "./stage-support";
 import { act, lastView, openView, send } from "./view-controls-support";
 
 /** Synthetic deltas expose interception directly; native trackpad scrolling is checked separately. */
@@ -13,7 +14,16 @@ function wheel(
       cancelable: true,
     });
     viewport.dispatchEvent(event);
-    return { prevented: event.defaultPrevented, position: viewport.scrollTop };
+    // In the same task: where the view is as the event leaves it.
+    const stage = (
+      window as unknown as {
+        __stage: { getScrollMetrics(): { scrollTop: number } };
+      }
+    ).__stage;
+    return {
+      prevented: event.defaultPrevented,
+      position: stage.getScrollMetrics().scrollTop,
+    };
   }, deltaY);
 }
 
@@ -25,81 +35,49 @@ test("large wheel notches animate, reverse promptly, and native pixel deltas int
     "data-smooth-scrolling",
     "true",
   );
-  const start = await page
-    .locator(".viewport")
-    .evaluate((viewport) => viewport.scrollTop);
+  const start = await scrollTop(page);
   const first = await wheel(page, 100);
   expect(first).toEqual({ prevented: true, position: start });
   await expect
-    .poll(
-      () =>
-        page.locator(".viewport").evaluate((viewport) => viewport.scrollTop),
-      { intervals: [10] },
-    )
+    .poll(() => scrollTop(page), { intervals: [10] })
     .toBeGreaterThan(start);
-  await expect
-    .poll(() =>
-      page.locator(".viewport").evaluate((viewport) => viewport.scrollTop),
-    )
-    .toBe(start + 100);
+  await expect.poll(() => scrollTop(page)).toBe(start + 100);
   await wheel(page, 120);
   const pixel = await wheel(page, 2.5);
-  expect(pixel.prevented).toBe(false);
+  // The Stage takes pixel deltas itself and moves the view by them at once, which ends the animation.
+  expect(pixel.prevented).toBe(true);
   await page.waitForTimeout(180);
-  expect(
-    await page.locator(".viewport").evaluate((viewport) => viewport.scrollTop),
-  ).toBe(pixel.position);
-  // Real trackpad-style native pixels still scroll normally.
+  expect(await scrollTop(page)).toBe(pixel.position);
+  // Real trackpad-style pixels scroll as they come.
   await page.locator(".viewport").hover();
   await page.mouse.wheel(0, 24);
-  await expect
-    .poll(() =>
-      page.locator(".viewport").evaluate((viewport) => viewport.scrollTop),
-    )
-    .toBeGreaterThan(pixel.position);
+  await expect.poll(() => scrollTop(page)).toBeGreaterThan(pixel.position);
 });
 
-test("smooth page/outline jumps and displayed zoom animate; explicit false and reduced motion disable them", async ({
+test("smooth page/outline jumps animate (a zoom step lands at once); explicit false and reduced motion disable the animation", async ({
   page,
 }) => {
   await openView(page, { defaultZoom: "actual", smoothScrolling: true });
   await send(page, { type: "goTo", location: { page: 8 } });
-  const positions = await page
-    .locator(".viewport")
-    .evaluate(async (viewport) => {
-      const samples: number[] = [];
-      for (let i = 0; i < 12; i++) {
-        await new Promise(requestAnimationFrame);
-        samples.push(viewport.scrollTop);
-      }
-      return samples;
-    });
+  const positions = await scrollTopPerFrame(page, 12);
   expect(new Set(positions).size).toBeGreaterThan(2);
   await expect.poll(() => lastView(page)).toMatchObject({ page: 8 });
+  // The zoom buttons and commands zoom at once (EmbedPDF's Stage does not animate them).
   await act(page, { action: "setZoom", percent: 150 });
-  await expect
-    .poll(
-      () =>
-        page
-          .locator("[data-pdf-scroller]")
-          .evaluate((element) => element.getAnimations().length),
-      { intervals: [10] },
-    )
-    .toBeGreaterThan(0);
   await expect.poll(() => lastView(page)).toMatchObject({ zoomPercent: 150 });
   await page.emulateMedia({ reducedMotion: "reduce" });
   await expect(page.locator(".viewer")).toHaveAttribute(
     "data-smooth-scrolling",
     "false",
   );
-  expect((await wheel(page, 100)).prevented).toBe(false);
+  // The Stage takes every wheel event; without smooth motion a notch moves the view at once.
+  const instant = await scrollTop(page);
+  expect(await wheel(page, 100)).toEqual({
+    prevented: true,
+    position: instant + 100,
+  });
   await act(page, { action: "actualSize" });
   await expect.poll(() => lastView(page)).toMatchObject({ zoomPercent: 100 });
-  expect(
-    await page
-      .locator("[data-pdf-scroller]")
-      .evaluate((element) => element.getAnimations().length),
-  ).toBe(0);
   await page.emulateMedia({ reducedMotion: "no-preference" });
   await send(page, {
     type: "viewSettings",
@@ -117,7 +95,11 @@ test("smooth page/outline jumps and displayed zoom animate; explicit false and r
     "data-smooth-scrolling",
     "false",
   );
-  expect((await wheel(page, 100)).prevented).toBe(false);
+  const resting = await scrollTop(page);
+  expect(await wheel(page, 100)).toEqual({
+    prevented: true,
+    position: resting + 100,
+  });
 });
 
 /** Distinct scroll positions seen over the frames while `run` triggers a page jump. */
@@ -125,14 +107,7 @@ async function positionsDuring(
   page: Page,
   run: () => Promise<unknown>,
 ): Promise<number[]> {
-  const sampling = page.locator(".viewport").evaluate(async (viewport) => {
-    const samples: number[] = [];
-    for (let i = 0; i < 25; i++) {
-      await new Promise(requestAnimationFrame);
-      samples.push(viewport.scrollTop);
-    }
-    return samples;
-  });
+  const sampling = scrollTopPerFrame(page, 25);
   await run();
   return [...new Set(await sampling)];
 }
@@ -177,10 +152,5 @@ for (const [name, setup] of [
       // A jump lands at once: the position before and the position after, no frames between.
       expect(positions.length, JSON.stringify(action)).toBeLessThanOrEqual(2);
     }
-    expect(
-      await page
-        .locator("[data-pdf-scroller]")
-        .evaluate((element) => element.getAnimations().length),
-    ).toBe(0);
   });
 }

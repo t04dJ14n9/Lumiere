@@ -1,212 +1,132 @@
 import assert from "node:assert/strict";
-import { readFileSync } from "node:fs";
 import { test } from "node:test";
-import { runInNewContext } from "node:vm";
-import ts from "typescript";
 import type { RegionSelection } from "../../src/shared/selection";
+import { loadModule } from "./support/load-module";
+
+type RegionEnd =
+  { kind: "drawn"; page: unknown; rect: number[] } | { kind: "click" };
+
+/** Page k of the test document is the page dictionary with object number 9 + k. */
+const page = (number: number) => ({
+  kind: "objectNumber",
+  objectNumber: 9 + number,
+});
 
 /**
  * Load SelectionTracker with a fake host so we can assert report patches
- * without acquireVsCodeApi.
+ * without acquireVsCodeApi, and with the region gestures driven by hand.
  */
 function loadSelectionTracker(reports: unknown[]) {
-  const source = readFileSync(
+  const regionListeners = new Set<(end: RegionEnd) => void>();
+  const exports = loadModule(
     new URL("../../src/webview/selection.ts", import.meta.url),
-    "utf8",
-  );
-  const output = ts.transpileModule(source, {
-    compilerOptions: {
-      module: ts.ModuleKind.CommonJS,
-      target: ts.ScriptTarget.ES2022,
+    {
+      react: {
+        useCallback: (fn: unknown) => fn,
+        useEffect: () => undefined,
+        useMemo: (fn: () => unknown) => fn(),
+        useRef: (value: unknown) => ({ current: value }),
+        useState: (value: unknown) => [value, () => undefined],
+      },
+      "@embedpdf/react/runtime": {
+        useDocuments: () => ({}),
+        useOptionalCapability: () => null,
+      },
+      "@embedpdf/plugin-render/contract": { RenderToken: {} },
+      "@embedpdf/plugin-selection/contract": { SelectionToken: {} },
+      "./editable-target": { isEditableTarget: () => false },
+      "./host": {
+        postToHost: () => undefined,
+        reportToHost: (patch: unknown) => reports.push(patch),
+      },
+      "./menu-context": { followMenuContext: () => () => undefined },
+      "./region-details": {
+        readRegionDetails: () => Promise.resolve({ text: "from page" }),
+      },
+      "./region-drag": {
+        onRegionEnd: (listener: (end: RegionEnd) => void) => {
+          regionListeners.add(listener);
+          return () => regionListeners.delete(listener);
+        },
+      },
+      "./text-access": { useTextAccess: () => null },
     },
-  }).outputText;
-  const module = { exports: {} as Record<string, unknown> };
-  const evaluate = runInNewContext(
-    `(function(require, module, exports) { ${output}\n})`,
-    { console },
-  ) as (
-    require: (id: string) => unknown,
-    module: { exports: Record<string, unknown> },
-    exports: Record<string, unknown>,
-  ) => void;
-  evaluate(
-    (id) => {
-      if (id === "react") {
-        return {
-          useCallback: (fn: unknown) => fn,
-          useEffect: () => undefined,
-          useRef: (value: unknown) => ({ current: value }),
-          useState: (value: unknown) => [value, () => undefined],
-        };
-      }
-      if (id === "@embedpdf/core/react") {
-        return { useRegistry: () => ({ registry: undefined }) };
-      }
-      if (id === "@embedpdf/plugin-selection/react") {
-        return { useSelectionCapability: () => ({ provides: undefined }) };
-      }
-      if (id === "./editable-target") {
-        return { isEditableTarget: () => false };
-      }
-      if (id === "./host") {
-        return {
-          postToHost: () => undefined,
-          reportToHost: (patch: unknown) => reports.push(patch),
-        };
-      }
-      if (id === "./menu-context") {
-        return { followMenuContext: () => () => undefined };
-      }
-      if (id === "./region-details") {
-        return {
-          readRegionDetails: () =>
-            Promise.resolve({ text: "from page", image: undefined }),
-        };
-      }
-      if (id === "./reading-position") {
-        return {
-          currentViewSettings: () => ({ regionsEnabled: false }),
-        };
-      }
-      throw new Error(`Unexpected runtime dependency: ${id}`);
-    },
-    module,
-    module.exports,
   );
-  const SelectionTracker = module.exports.SelectionTracker as new (
+  const SelectionTracker = exports.SelectionTracker as new (
     setRegion: (region: RegionSelection | undefined) => void,
   ) => {
     region: RegionSelection | undefined;
     selectedText: string | undefined;
     changeRegion(next: RegionSelection | undefined): void;
-    setAnnotationRegion(
-      next: RegionSelection | undefined,
-      enrich?: { engine: unknown; pdf: unknown },
-    ): void;
-    reportSelection(scope: unknown): Promise<void>;
-    follow(
-      scope: unknown,
-      source: { engine: () => unknown; pdf: unknown },
-      options?: { regionsEnabled?: () => boolean },
-    ): () => void;
+    setAnnotationRegion(next: RegionSelection | undefined): void;
+    reportSelection(selection: unknown): Promise<void>;
+    follow(selection: unknown, source: unknown): () => void;
   };
   assert.equal(
     typeof SelectionTracker,
     "function",
     "SelectionTracker must be exported for annotation region wiring",
   );
-  return SelectionTracker;
-}
-
-function mockSelectionScope() {
-  let onSelectionChange: ((range: unknown) => void) | undefined;
-  let onEmptySpaceClick: (() => void) | undefined;
-  let onMarqueeChange: ((event: { rect: unknown }) => void) | undefined;
-  let onMarqueeEnd:
-    | ((event: {
-        pageIndex: number;
-        rect: {
-          origin: { x: number; y: number };
-          size: { width: number; height: number };
-        };
-      }) => void)
-    | undefined;
   return {
-    scope: {
-      onEndSelection: () => () => undefined,
-      onSelectionChange: (listener: (range: unknown) => void) => {
-        onSelectionChange = listener;
-        return () => undefined;
-      },
-      onMarqueeChange: (listener: (event: { rect: unknown }) => void) => {
-        onMarqueeChange = listener;
-        return () => undefined;
-      },
-      onMarqueeEnd: (
-        listener: (event: {
-          pageIndex: number;
-          rect: {
-            origin: { x: number; y: number };
-            size: { width: number; height: number };
-          };
-        }) => void,
-      ) => {
-        onMarqueeEnd = listener;
-        return () => undefined;
-      },
-      onEmptySpaceClick: (listener: () => void) => {
-        onEmptySpaceClick = listener;
-        return () => undefined;
-      },
-      getState: () => ({ selection: undefined }),
-      clear: () => undefined,
-    },
-    /** Simulate EmbedPDF clearing text selection. */
-    clearText: () => onSelectionChange?.(null),
-    /** Simulate a click on empty page space. */
-    emptySpaceClick: () => onEmptySpaceClick?.(),
-    /**
-     * Simulate Select Region marquee cancel (rect cleared without a prior
-     * onMarqueeEnd).
-     */
-    marqueeCancel: () => onMarqueeChange?.({ rect: null }),
-    /** Simulate finishing a marquee drag that draws a region. */
-    marqueeEnd: (pageIndex = 0) =>
-      onMarqueeEnd?.({
-        pageIndex,
-        rect: {
-          origin: { x: 10, y: 20 },
-          size: { width: 40, height: 30 },
-        },
-      }),
+    SelectionTracker,
+    /** A region gesture ends, as the Select Region tool or an empty-space drag ends it. */
+    endRegion: (end: RegionEnd) => regionListeners.forEach((l) => l(end)),
   };
 }
 
-/**
- * A scope whose text selections are made, cleared and read by hand; each
- * read of the selected text waits until the test finishes it.
- */
-function mockTextScope() {
-  const base = mockSelectionScope();
-  let endSelection: (() => void) | undefined;
-  let selectionChange: ((range: unknown) => void) | undefined;
-  let selection: object | null = null;
-  const reads: Array<(lines: string[]) => void> = [];
+/** The open document, with the page text its regions read. */
+const source = {
+  pageNumberOf: (ref: { objectNumber: number }) => ref.objectNumber - 9,
+  readDetails: () => Promise.resolve({ text: "from page" }),
+};
+
+/** A selection capability whose text selections are made, cleared and read by hand. */
+function mockSelection() {
+  let committed: (() => void) | undefined;
+  let cleared: (() => void) | undefined;
+  let range: object | null = null;
+  const reads: Array<{
+    resolve: (text: string) => void;
+    reject: (error: Error) => void;
+  }> = [];
   return {
-    scope: {
-      ...base.scope,
-      onEndSelection: (listener: () => void) => {
-        endSelection = listener;
+    selection: {
+      onCommitted: (listener: () => void) => {
+        committed = listener;
         return () => undefined;
       },
-      onSelectionChange: (listener: (range: unknown) => void) => {
-        selectionChange = listener;
+      onCleared: (listener: () => void) => {
+        cleared = listener;
         return () => undefined;
       },
-      getState: () => ({ selection }),
-      getSelectedText: () => ({
-        wait: (done: (lines: string[]) => void) => {
-          reads.push(done);
-        },
+      hasSelection: () => range !== null,
+      getRange: () => range,
+      getSnapshot: () => ({
+        pages: [
+          {
+            page: page(1),
+            segments: [{ rect: { x: 1, y: 2, width: 3, height: 4 } }],
+          },
+        ],
       }),
-      getFormattedSelection: () => [
-        {
-          pageIndex: 0,
-          segmentRects: [
-            { origin: { x: 1, y: 2 }, size: { width: 3, height: 4 } },
-          ],
-        },
-      ],
+      readText: () =>
+        new Promise<string>((resolve, reject) => {
+          reads.push({ resolve, reject });
+        }),
+      clear: () => undefined,
     },
-    /** A drag that selects text ends. */
-    select(): void {
-      selection = {};
-      endSelection?.();
+    /** A drag that selects text ends; each selection has its own characters. */
+    select(first = 0): void {
+      range = {
+        start: { page: page(1), index: first },
+        end: { page: page(1), index: first + 5 },
+      };
+      committed?.();
     },
     /** A click clears the selection. */
     clear(): void {
-      selection = null;
-      selectionChange?.(null);
+      range = null;
+      cleared?.();
     },
     reads,
   };
@@ -225,34 +145,92 @@ const textReport = (text: string) => ({
   },
 });
 
+const tick = () => new Promise<void>((resolve) => setImmediate(resolve));
+
 test("a text read that ends after the selection is cleared reports nothing", async () => {
   const reports: unknown[] = [];
-  const SelectionTracker = loadSelectionTracker(reports);
+  const { SelectionTracker } = loadSelectionTracker(reports);
   const tracker = new SelectionTracker(() => undefined);
-  const text = mockTextScope();
-  tracker.follow(text.scope, { engine: () => undefined, pdf: {} });
+  const text = mockSelection();
+  tracker.follow(text.selection, source);
+  reports.length = 0;
   text.select();
   text.clear();
-  text.reads[0]!(["old text"]);
-  await Promise.resolve();
+  text.reads[0]!.resolve("old text");
+  await tick();
   assert.deepEqual(plain(reports), [{ selection: { selection: null } }]);
   assert.equal(tracker.selectedText, undefined);
 });
 
 test("an older text read never replaces a newer selection's text", async () => {
   const reports: unknown[] = [];
-  const SelectionTracker = loadSelectionTracker(reports);
+  const { SelectionTracker } = loadSelectionTracker(reports);
   const tracker = new SelectionTracker(() => undefined);
-  const text = mockTextScope();
-  tracker.follow(text.scope, { engine: () => undefined, pdf: {} });
-  text.select();
+  const text = mockSelection();
+  tracker.follow(text.selection, source);
+  text.select(0);
   text.clear();
-  text.select();
-  text.reads[1]!(["new text"]);
-  text.reads[0]!(["old text"]);
-  await Promise.resolve();
+  text.select(10);
+  text.reads[1]!.resolve("new text");
+  text.reads[0]!.resolve("old text");
+  await tick();
   assert.deepEqual(plain(reports.at(-1)), textReport("new text"));
   assert.equal(tracker.selectedText, "new text");
+});
+
+test("text is reported on one line, with a box per line of the selection", async () => {
+  const reports: unknown[] = [];
+  const { SelectionTracker } = loadSelectionTracker(reports);
+  const tracker = new SelectionTracker(() => undefined);
+  const text = mockSelection();
+  tracker.follow(text.selection, source);
+  text.select();
+  text.reads[0]!.resolve("  Scaled dot-product\n  attention  ");
+  await tick();
+  assert.deepEqual(
+    plain(reports.at(-1)),
+    textReport("Scaled dot-product attention"),
+  );
+});
+
+test("a PDF that forbids copying reports no text and keeps the last copy", async () => {
+  const reports: unknown[] = [];
+  const { SelectionTracker } = loadSelectionTracker(reports);
+  const tracker = new SelectionTracker(() => undefined);
+  const text = mockSelection();
+  tracker.follow(text.selection, source);
+  reports.length = 0;
+  text.select();
+  text.reads[0]!.reject(new Error("permission-denied"));
+  await tick();
+  assert.deepEqual(plain(reports), []);
+  assert.equal(tracker.selectedText, undefined);
+});
+
+test("following a document tells the extension nothing is selected", () => {
+  const reports: unknown[] = [];
+  const { SelectionTracker } = loadSelectionTracker(reports);
+  const tracker = new SelectionTracker(() => undefined);
+  tracker.follow(mockSelection().selection, source);
+  assert.deepEqual(plain(reports), [{ selection: { selection: null } }]);
+});
+
+test("following again while text or a region is selected reports nothing", () => {
+  const reports: unknown[] = [];
+  const { SelectionTracker } = loadSelectionTracker(reports);
+  const tracker = new SelectionTracker(() => undefined);
+  const text = mockSelection();
+  tracker.follow(text.selection, source);
+  text.select();
+  reports.length = 0;
+  // The source changes (the text layer arrives): the effect follows again.
+  tracker.follow(text.selection, source);
+  assert.deepEqual(reports, []);
+  text.clear();
+  tracker.setAnnotationRegion({ kind: "region", page: 1, rect: [1, 2, 3, 4] });
+  reports.length = 0;
+  tracker.follow(text.selection, source);
+  assert.deepEqual(reports, []);
 });
 
 const annotationRegion: RegionSelection = {
@@ -264,20 +242,15 @@ const annotationRegion: RegionSelection = {
 
 test("annotation region survives a later textCleared (no null wipe)", () => {
   const reports: unknown[] = [];
-  const SelectionTracker = loadSelectionTracker(reports);
-  const regions: Array<RegionSelection | undefined> = [];
-  const tracker = new SelectionTracker((region) => regions.push(region));
-  const { scope, clearText } = mockSelectionScope();
-  tracker.follow(
-    scope,
-    { engine: () => undefined, pdf: {} },
-    { regionsEnabled: () => true },
-  );
+  const { SelectionTracker } = loadSelectionTracker(reports);
+  const tracker = new SelectionTracker(() => undefined);
+  const { selection, clear } = mockSelection();
+  tracker.follow(selection, source);
 
   tracker.setAnnotationRegion(annotationRegion);
   assert.deepEqual(tracker.region, annotationRegion);
   const before = reports.length;
-  clearText();
+  clear();
   assert.deepEqual(tracker.region, annotationRegion);
   assert.equal(
     reports.length,
@@ -290,16 +263,12 @@ test("annotation region survives a later textCleared (no null wipe)", () => {
 
 test("reportSelection with no text selection awaits active annotation region", async () => {
   const reports: unknown[] = [];
-  const SelectionTracker = loadSelectionTracker(reports);
+  const { SelectionTracker } = loadSelectionTracker(reports);
   const tracker = new SelectionTracker(() => undefined);
-  tracker.setAnnotationRegion(annotationRegion, {
-    engine: {},
-    pdf: { id: "doc" },
-  });
+  tracker.follow(mockSelection().selection, source);
+  tracker.setAnnotationRegion(annotationRegion);
   assert.deepEqual(tracker.region, annotationRegion);
-  await tracker.reportSelection({
-    getState: () => ({ selection: undefined }),
-  });
+  await tracker.reportSelection(mockSelection().selection);
   assert.ok(tracker.region);
   assert.equal(tracker.region?.kind, "region");
   // After enrich, quote should prefer page text from readRegionDetails.
@@ -308,7 +277,7 @@ test("reportSelection with no text selection awaits active annotation region", a
 
 test("clearing annotation region reports null through the tracker path", () => {
   const reports: unknown[] = [];
-  const SelectionTracker = loadSelectionTracker(reports);
+  const { SelectionTracker } = loadSelectionTracker(reports);
   const tracker = new SelectionTracker(() => undefined);
   tracker.setAnnotationRegion(annotationRegion);
   tracker.setAnnotationRegion(undefined);
@@ -317,108 +286,86 @@ test("clearing annotation region reports null through the tracker path", () => {
   assert.equal(tracker.region, undefined);
 });
 
-test("empty-space click does not clear an annotation-owned region", () => {
+test("a click does not clear an annotation-owned region", () => {
   const reports: unknown[] = [];
-  const SelectionTracker = loadSelectionTracker(reports);
+  const { SelectionTracker, endRegion } = loadSelectionTracker(reports);
   const tracker = new SelectionTracker(() => undefined);
-  const { scope, emptySpaceClick } = mockSelectionScope();
-  tracker.follow(
-    scope,
-    { engine: () => undefined, pdf: {} },
-    { regionsEnabled: () => true },
-  );
+  tracker.follow(mockSelection().selection, source);
 
   tracker.setAnnotationRegion(annotationRegion);
   const before = reports.length;
-  emptySpaceClick();
+  endRegion({ kind: "click" });
   assert.deepEqual(tracker.region, annotationRegion);
   assert.equal(
     reports.length,
     before,
-    "empty-space click must not wipe annotation region / host snapshot",
+    "a click must not wipe annotation region / host snapshot",
   );
 });
 
-test("marquee-cancel does not clear an annotation-owned region", () => {
+test("a drawn region is reported at once, then again with its text", async () => {
   const reports: unknown[] = [];
-  const SelectionTracker = loadSelectionTracker(reports);
+  const { SelectionTracker, endRegion } = loadSelectionTracker(reports);
   const tracker = new SelectionTracker(() => undefined);
-  const { scope, marqueeCancel } = mockSelectionScope();
-  tracker.follow(
-    scope,
-    { engine: () => undefined, pdf: {} },
-    { regionsEnabled: () => true },
-  );
+  tracker.follow(mockSelection().selection, source);
+  reports.length = 0;
 
-  tracker.setAnnotationRegion(annotationRegion);
-  const before = reports.length;
-  marqueeCancel();
-  assert.deepEqual(tracker.region, annotationRegion);
-  assert.equal(
-    reports.length,
-    before,
-    "marquee-cancel must not wipe annotation region / host snapshot",
-  );
+  endRegion({ kind: "drawn", page: page(2), rect: [10, 20, 50, 60] });
+  assert.deepEqual(plain(tracker.region), {
+    kind: "region",
+    page: 2,
+    rect: [10, 20, 50, 60],
+  });
+  assert.equal(reports.length, 1);
+  await tracker.reportSelection(mockSelection().selection);
+  assert.deepEqual(plain(reports.at(-1)), {
+    selection: {
+      selection: {
+        kind: "region",
+        page: 2,
+        rect: [10, 20, 50, 60],
+        text: "from page",
+      },
+    },
+  });
 });
 
-test("empty-space click still clears a marquee (non-annotation) region", () => {
+test("a click still clears a dragged region", () => {
   const reports: unknown[] = [];
-  const SelectionTracker = loadSelectionTracker(reports);
+  const { SelectionTracker, endRegion } = loadSelectionTracker(reports);
   const tracker = new SelectionTracker(() => undefined);
-  const { scope, emptySpaceClick, marqueeEnd } = mockSelectionScope();
-  tracker.follow(
-    scope,
-    { engine: () => undefined, pdf: {} },
-    { regionsEnabled: () => true },
-  );
+  tracker.follow(mockSelection().selection, source);
 
-  marqueeEnd(0);
-  assert.ok(tracker.region);
+  endRegion({ kind: "drawn", page: page(1), rect: [10, 20, 50, 60] });
   assert.equal(tracker.region?.kind, "region");
-  emptySpaceClick();
+  endRegion({ kind: "click" });
   assert.equal(tracker.region, undefined);
   const last = reports.at(-1) as { selection?: { selection?: unknown } };
   assert.equal(last?.selection?.selection, null);
 });
 
-test("marquee-cancel still clears a marquee (non-annotation) region", () => {
+test("a region on a page the document lacks is ignored", () => {
   const reports: unknown[] = [];
-  const SelectionTracker = loadSelectionTracker(reports);
+  const { SelectionTracker, endRegion } = loadSelectionTracker(reports);
   const tracker = new SelectionTracker(() => undefined);
-  const { scope, marqueeCancel, marqueeEnd } = mockSelectionScope();
-  tracker.follow(
-    scope,
-    { engine: () => undefined, pdf: {} },
-    { regionsEnabled: () => true },
-  );
-
-  marqueeEnd(0);
-  assert.ok(tracker.region);
-  // After marqueeEnd, EmbedPDF also clears marquee rect; that must not
-  // immediately wipe the region we just set (marqueeEnded guard).
-  marqueeCancel();
-  assert.ok(tracker.region, "post-end marquee clear is ignored once");
-  // A later cancel without a new end (e.g. Select Region tool click) clears.
-  marqueeCancel();
-  assert.equal(tracker.region, undefined);
-  const last = reports.at(-1) as { selection?: { selection?: unknown } };
-  assert.equal(last?.selection?.selection, null);
-});
-
-test("marquee end is ignored when regions are disabled", () => {
-  const reports: unknown[] = [];
-  const SelectionTracker = loadSelectionTracker(reports);
-  const tracker = new SelectionTracker(() => undefined);
-  const { scope, marqueeEnd } = mockSelectionScope();
-  tracker.follow(
-    scope,
-    { engine: () => undefined, pdf: {} },
-    { regionsEnabled: () => false },
-  );
-
-  marqueeEnd(0);
+  tracker.follow(mockSelection().selection, {
+    ...source,
+    pageNumberOf: () => undefined,
+  });
+  reports.length = 0;
+  endRegion({ kind: "drawn", page: page(1), rect: [10, 20, 50, 60] });
   assert.equal(tracker.region, undefined);
   assert.equal(reports.length, 0);
+});
+
+test("a stopped tracker no longer hears region gestures", () => {
+  const reports: unknown[] = [];
+  const { SelectionTracker, endRegion } = loadSelectionTracker(reports);
+  const tracker = new SelectionTracker(() => undefined);
+  const stop = tracker.follow(mockSelection().selection, source);
+  stop();
+  endRegion({ kind: "drawn", page: page(1), rect: [10, 20, 50, 60] });
+  assert.equal(tracker.region, undefined);
 });
 
 // Copy link to this asks the viewer for its selection and waits for the
@@ -427,12 +374,10 @@ test("marquee end is ignored when regions are disabled", () => {
 // times out, and a paste in the meantime gets the old clipboard.
 test("reportSelection with nothing selected reports none at once", async () => {
   const reports: unknown[] = [];
-  const SelectionTracker = loadSelectionTracker(reports);
+  const { SelectionTracker } = loadSelectionTracker(reports);
   const tracker = new SelectionTracker(() => undefined);
-  await tracker.reportSelection({
-    getState: () => ({ selection: undefined }),
-  });
-  // No scope at all: the viewer's selection is missing for this document.
+  await tracker.reportSelection(mockSelection().selection);
+  // No selection capability at all: the viewer's selection is missing.
   await tracker.reportSelection(undefined);
   assert.equal(reports.length, 2);
   for (const report of reports) {

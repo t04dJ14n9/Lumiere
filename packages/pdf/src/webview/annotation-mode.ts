@@ -1,17 +1,30 @@
-import { useAnnotationCapability } from "@embedpdf/plugin-annotation/react";
-import { useHistoryCapability } from "@embedpdf/plugin-history/react";
-import { useCallback, useEffect, useState } from "react";
 import {
+  AnnotationToken,
+  useFilePickerProvider,
+  type AnnotationCapability,
+} from "@embedpdf/react/annotation";
+import { HistoryToken, useHistoryState } from "@embedpdf/react/history";
+import { useInteractionState } from "@embedpdf/react/interaction";
+import { useOptionalCapability } from "@embedpdf/react/runtime";
+import {
+  InteractionToken,
+  type InteractionHostCapability,
+} from "@embedpdf/plugin-interaction/contract/host";
+import { useCallback, useEffect } from "react";
+import {
+  ANNOTATE_IDLE_TOOL_ID,
   DEFAULT_ANNOTATION_TOOL,
+  READ_TOOL_ID,
   type AnnotationToolId,
-  isAnnotationToolId,
+  fromV3ToolId,
+  isAnnotateModeTool,
+  toV3ToolId,
+  toolColorDefaults,
 } from "../shared/annotation-tools";
 import { highlightToolDefaults } from "../shared/highlight-style";
 import { currentPageColors, onPageColorsChange } from "./page-colors";
 
-const HISTORY_TOPIC = "annotations";
-
-/** Active EmbedPDF annotation tool + History undo/redo for one document. */
+/** Active EmbedPDF annotation tool + History undo/redo for the open document. */
 export type AnnotationMode = {
   annotationTool: AnnotationToolId | null;
   setAnnotationTool: (tool: AnnotationToolId | null) => void;
@@ -22,54 +35,43 @@ export type AnnotationMode = {
   canRedo: boolean;
 };
 
-export function useAnnotationMode(documentId: string): AnnotationMode {
-  const { provides: annots } = useAnnotationCapability();
-  const { provides: history } = useHistoryCapability();
-  const [annotationTool, setAnnotationToolState] =
-    useState<AnnotationToolId | null>(null);
-  const { canUndo, canRedo } = useAnnotationHistory(documentId, history);
-  useHighlightPaperDefaults(annots);
-
-  useEffect(() => {
-    if (!annots) {
-      return;
-    }
-    return annots.onActiveToolChange(({ documentId: id, tool }) => {
-      if (id !== documentId) {
-        return;
-      }
-      const next = tool?.id;
-      setAnnotationToolState(isAnnotationToolId(next) ? next : null);
-    });
-  }, [annots, documentId]);
+/**
+ * The drawing tool, its colour and undo/redo. Call it once: it also lets the
+ * Stamp tool open a file dialog (`useFilePickerProvider` is one per document).
+ */
+export function useAnnotationMode(): AnnotationMode {
+  const annotation = useOptionalCapability(AnnotationToken);
+  const interaction = useOptionalCapability(InteractionToken);
+  const history = useOptionalCapability(HistoryToken);
+  const activeToolId = useInteractionState((state) => state.activeToolId);
+  const canUndo = useHistoryState((state) => state.canUndo);
+  const canRedo = useHistoryState((state) => state.canRedo);
+  useFilePickerProvider();
+  useHighlightPaperDefaults(annotation);
+  const annotationTool = fromV3ToolId(activeToolId);
 
   const setAnnotationTool = useCallback(
     (tool: AnnotationToolId | null) => {
-      annots?.forDocument(documentId).setActiveTool(tool);
-      setAnnotationToolState(tool);
+      interaction?.activateTool(
+        tool ? toV3ToolId(tool) : ANNOTATE_IDLE_TOOL_ID,
+      );
     },
-    [annots, documentId],
+    [interaction],
   );
 
   const setColor = useCallback(
     (color: string) => {
-      const id = annotationTool ?? DEFAULT_ANNOTATION_TOOL;
-      annots?.setToolDefaults(
-        id,
-        highlightToolDefaults(currentPageColors(), color) as never,
-      );
+      const tool = annotationTool ?? DEFAULT_ANNOTATION_TOOL;
+      const defaults = toolColorDefaults(tool, color, currentPageColors());
+      if (Object.keys(defaults).length > 0) {
+        annotation?.tools.updateDefaults(toV3ToolId(tool), defaults);
+      }
     },
-    [annots, annotationTool],
+    [annotation, annotationTool],
   );
 
-  const undo = useCallback(
-    () => runAnnotationHistory(history, documentId, "undo"),
-    [history, documentId],
-  );
-  const redo = useCallback(
-    () => runAnnotationHistory(history, documentId, "redo"),
-    [history, documentId],
-  );
+  const undo = useCallback(() => history?.undo(), [history]);
+  const redo = useCallback(() => history?.redo(), [history]);
 
   return {
     annotationTool,
@@ -82,68 +84,83 @@ export function useAnnotationMode(documentId: string): AnnotationMode {
   };
 }
 
+/**
+ * Whether Annotate mode is on, and the way in and out of it. Call it once
+ * (it registers View mode's tool). The mode is the interaction hub's active
+ * tool, so it follows `setAnnotationTool` and the Esc/exit paths with no state
+ * of its own.
+ */
+export function useAnnotateSwitch(): {
+  annotate: boolean;
+  enterAnnotate: () => void;
+  leaveAnnotate: () => void;
+} {
+  const interaction = useOptionalCapability(InteractionToken);
+  const annotation = useOptionalCapability(AnnotationToken);
+  const activeToolId = useInteractionState((state) => state.activeToolId);
+  const hasReadTool = useInteractionState((state) =>
+    state.tools.some((tool) => tool.id === READ_TOOL_ID),
+  );
+  useReadTool(interaction);
+
+  // `pointer` is Annotate's resting tool, but until View's tool is registered
+  // it is also what a document opens on.
+  const annotate = hasReadTool && isAnnotateModeTool(activeToolId);
+
+  // A markup tool picked while text is selected marks that text at once, so
+  // the caller clears the text selection first.
+  const enterAnnotate = useCallback(() => {
+    interaction?.activateTool(toV3ToolId(DEFAULT_ANNOTATION_TOOL));
+  }, [interaction]);
+  // Switching tool also drops a drawing in progress and the armed stamp.
+  const leaveAnnotate = useCallback(() => {
+    annotation?.selection.clear();
+    interaction?.activateTool(READ_TOOL_ID);
+  }, [annotation, interaction]);
+
+  return { annotate, enterAnnotate, leaveAnnotate };
+}
+
+/**
+ * View mode: select text and follow links, but leave annotations alone. The
+ * resting `pointer` tool also selects, moves and deletes them, which would
+ * let a reader change what came with the PDF. The public tool type has no
+ * behaviour tags, so it is registered through the host token.
+ */
+function useReadTool(interaction: InteractionHostCapability | null): void {
+  useEffect(() => {
+    if (!interaction) {
+      return;
+    }
+    const remove = interaction.hasTool(READ_TOOL_ID)
+      ? undefined
+      : interaction.registerTool({
+          id: READ_TOOL_ID,
+          cursor: "default",
+          enables: new Set(["text-select", "link-nav"]),
+        });
+    if (interaction.getActiveToolId() === ANNOTATE_IDLE_TOOL_ID) {
+      interaction.activateTool(READ_TOOL_ID);
+    }
+    return remove;
+  }, [interaction]);
+}
+
 /** Keep highlight tool defaults aligned with effective paper (Follow/Normal/Dark). */
 function useHighlightPaperDefaults(
-  annots: ReturnType<typeof useAnnotationCapability>["provides"],
+  annotation: AnnotationCapability | null,
 ): void {
   useEffect(() => {
-    if (!annots) {
+    if (!annotation) {
       return;
     }
     const sync = (): void => {
-      annots.setToolDefaults(
-        DEFAULT_ANNOTATION_TOOL,
-        highlightToolDefaults(currentPageColors()) as never,
+      annotation.tools.updateDefaults(
+        toV3ToolId(DEFAULT_ANNOTATION_TOOL),
+        highlightToolDefaults(currentPageColors()),
       );
     };
     sync();
     return onPageColorsChange(sync);
-  }, [annots]);
-}
-
-function runAnnotationHistory(
-  history: ReturnType<typeof useHistoryCapability>["provides"],
-  documentId: string,
-  direction: "undo" | "redo",
-): void {
-  const scope = history?.forDocument(documentId);
-  if (!scope) {
-    return;
-  }
-  // Prefer the annotations topic; fall back to global if topic is empty
-  // (e.g. after a partial history rebuild) so Host GUI Undo still works.
-  if (direction === "undo") {
-    if (scope.canUndo(HISTORY_TOPIC)) {
-      scope.undo(HISTORY_TOPIC);
-    } else if (scope.canUndo()) {
-      scope.undo();
-    }
-    return;
-  }
-  if (scope.canRedo(HISTORY_TOPIC)) {
-    scope.redo(HISTORY_TOPIC);
-  } else if (scope.canRedo()) {
-    scope.redo();
-  }
-}
-
-function useAnnotationHistory(
-  documentId: string,
-  history: ReturnType<typeof useHistoryCapability>["provides"],
-): { canUndo: boolean; canRedo: boolean } {
-  const [canUndo, setCanUndo] = useState(false);
-  const [canRedo, setCanRedo] = useState(false);
-  useEffect(() => {
-    if (!history) {
-      return;
-    }
-    const scope = history.forDocument(documentId);
-    const refresh = (): void => {
-      setCanUndo(scope.canUndo(HISTORY_TOPIC) || scope.canUndo());
-      setCanRedo(scope.canRedo(HISTORY_TOPIC) || scope.canRedo());
-    };
-    refresh();
-    return scope.onHistoryChange(() => refresh());
-  }, [history, documentId]);
-  return { canUndo, canRedo };
+  }, [annotation]);
 }

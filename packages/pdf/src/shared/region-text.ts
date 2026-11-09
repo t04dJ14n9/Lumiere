@@ -6,7 +6,7 @@
  */
 import type { PageRect } from "./geometry";
 
-/** A character's box; missing for characters PDFium adds, such as line breaks. */
+/** A character's box; missing for characters that have none, such as spaces and line breaks. */
 export type CharBox = PageRect | undefined;
 
 /** Consecutive characters on one line, all inside the region. */
@@ -30,7 +30,7 @@ export function regionRuns(
    */
   let band: [number, number] = [0, 0];
   chars.forEach((box, index) => {
-    // A character without a box (a space or line break PDFium added) joins
+    // A character without a box (a space or a line break) joins
     // its neighbours only if the run carries on after it.
     if (!box) {
       return;

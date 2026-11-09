@@ -12,7 +12,7 @@ import type {} from "./fake-host";
  * the snapshot drew must sit where the editor then puts it.
  */
 const PAGE =
-  '<!doctype html><html><head><link rel="stylesheet" href="/dist/webview/editor.css"></head><body><main id="app" data-pdfium-wasm="/dist/webview/pdfium.wasm"></main><script src="/artifacts/fake-host.js"></script></body></html>';
+  '<!doctype html><html><head><link rel="stylesheet" href="/dist/webview/editor.css"></head><body><main id="app" data-pdfium-wasm="/dist/webview/embedpdf.wasm"></main><script src="/artifacts/fake-host.js"></script></body></html>';
 
 const LONG = `${"A long paragraph that wraps over several lines when the window is narrow, with a [[Wiki link]] and **bold words** in it. ".repeat(5)}`;
 

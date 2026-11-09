@@ -1,23 +1,24 @@
 /**
- * The real PdfRenderSession environment: EmbedPDF's PDFium engines, fetch and
- * blob URLs. Kept apart from render-session.ts so that file has no browser or
- * EmbedPDF imports and can be unit-tested under Node.
+ * The real EngineHost environment: EmbedPDF's local engine, in a worker or on
+ * the main thread, and the fetch of its WASM. Kept apart from engine-host.ts
+ * so that file has no browser or EmbedPDF imports and can be unit-tested
+ * under Node.
  */
-import type { PdfEngine } from "@embedpdf/models";
-import { stopEngine } from "./engine-destruction";
-import type { EngineMode, RenderSessionEnvironment } from "./render-session";
+import {
+  createLocalEngine,
+  localEngine,
+  type LocalEngine,
+} from "@embedpdf/engine";
+import type { EngineEnvironment, EngineMode } from "./engine-host";
 
-/** How long an engine gets to close its documents before it is destroyed anyway. */
-const ENGINE_STOP_DEADLINE_MS = 2000;
-
-export type ViewerEngine = PdfEngine<Blob>;
+export type ViewerEngine = LocalEngine;
 
 /**
  * The WASM blob, fetched once. `warmWasm` starts the fetch while the host is
  * still sending the PDF, so the engine need not wait for it; a failed fetch
  * is forgotten so the next attempt tries again.
  *
- * Lifetime: a webview has one PDFium URL, so only the latest URL is kept (a
+ * Lifetime: a webview has one engine URL, so only the latest URL is kept (a
  * different URL replaces the old blob, nothing accumulates), and the cache is
  * module state that goes with the webview when its panel closes.
  */
@@ -28,7 +29,7 @@ export function warmWasm(url: string): Promise<Blob> {
   }
   const blob = fetch(url).then((response) => {
     if (!response.ok) {
-      throw new Error(`PDFium request failed (${response.status})`);
+      throw new Error(`PDF engine request failed (${response.status})`);
     }
     return response.blob();
   });
@@ -42,22 +43,43 @@ export function warmWasm(url: string): Promise<Blob> {
   return blob;
 }
 
-export const browserRenderEnvironment: RenderSessionEnvironment<ViewerEngine> =
-  {
-    async createEngine(mode: EngineMode, wasmUrl: string) {
-      const worker = mode === "worker";
-      const { createPdfiumEngine } = worker
-        ? await import("@embedpdf/engines/pdfium-worker-engine")
-        : await import("@embedpdf/engines/pdfium-direct-engine");
-      return createPdfiumEngine(wasmUrl, {
-        encoderPoolSize: worker ? 1 : 0,
-        // Never fetch fallback fonts from the network; the viewer works offline.
-        fontFallback: null,
-      });
+/**
+ * The engine in a worker, which keeps rendering off the thread that scrolls.
+ * The worker starts from a blob URL and cannot fetch the extension's resource
+ * URL itself, so the page fetches the WASM (it is allowed to) and hands the
+ * engine the bytes. Nothing is booted until the first document or `warmup()`.
+ */
+function workerEngine(wasmUrl: string): ViewerEngine {
+  return localEngine({
+    worker: "inline",
+    encoderWorker: "inline",
+    wasmLoader: async () => (await warmWasm(wasmUrl)).arrayBuffer(),
+    // Never load the Hebrew and Arabic fallback fonts; the viewer works offline
+    // and ships without them.
+    defaultFallbackFonts: false,
+  });
+}
+
+/** The engine on the main thread, for a worker that cannot start. */
+async function mainThreadEngine(wasmUrl: string): Promise<ViewerEngine> {
+  return createLocalEngine({
+    runtime: {
+      prefer: "wasm",
+      wasmBinary: await (await warmWasm(wasmUrl)).arrayBuffer(),
     },
-    destroyEngine: (engine) => stopEngine(engine, ENGINE_STOP_DEADLINE_MS),
+  });
+}
+
+/** The engines of the viewer page, whose WASM is at `wasmUrl`. */
+export function browserEngineEnvironment(
+  wasmUrl: string,
+): EngineEnvironment<ViewerEngine> {
+  return {
+    create: async (mode: EngineMode) =>
+      mode === "worker" ? workerEngine(wasmUrl) : mainThreadEngine(wasmUrl),
+    // v3 closes what is still queued, asks the worker to stop and terminates
+    // it within 50 ms, so no deadline of ours is needed.
+    destroy: (engine) => engine.destroy(),
     reportError: (message, error) => console.warn(message, error),
-    fetchWasm: warmWasm,
-    createObjectUrl: (blob) => URL.createObjectURL(blob),
-    revokeObjectUrl: (url) => URL.revokeObjectURL(url),
   };
+}

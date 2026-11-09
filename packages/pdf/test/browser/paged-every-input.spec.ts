@@ -1,5 +1,6 @@
 import { expect, test, type Page } from "@playwright/test";
 import { openView, pageIndexes } from "./view-controls-support";
+import { scrollMetrics } from "./stage-support";
 
 // Page-by-page mode: every way of going forward or back turns the page (the
 // spread, in two-page layouts), and a page zoomed beyond the viewer is panned to
@@ -124,8 +125,10 @@ for (const key of ["ArrowRight", "ArrowDown", "PageDown"]) {
       pageLayout: "single",
     });
     await settled(page);
-    const viewport = page.locator(".viewport");
-    const position = () => viewport.evaluate((v) => v.scrollLeft + v.scrollTop);
+    const position = async () => {
+      const { scrollLeft, scrollTop } = await scrollMetrics(page);
+      return scrollLeft + scrollTop;
+    };
     const start = await shown(page);
     const before = await position();
     await page.keyboard.press(key);

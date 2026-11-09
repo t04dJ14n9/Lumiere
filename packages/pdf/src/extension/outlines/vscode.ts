@@ -28,7 +28,7 @@ const workspaceFiles: OutlineFiles = {
 /**
  * The reader of PDF bookmarks that Lumia offers to notes (`[[paper.pdf#`).
  * PDFium is the viewer's: the engine bundle is built beside the viewer and
- * loads the viewer's pdfium.wasm, both from dist/pdf/ in the extension.
+ * loads the viewer's embedpdf.wasm, both from dist/pdf/ in the extension.
  */
 export function createPdfOutlines(
   context: vscode.ExtensionContext,
@@ -43,7 +43,7 @@ export function createPdfOutlines(
         pathToFileURL(path.join(assets, "outline-engine.js")).href
       )) as typeof EngineModule;
       return createOutlineEngine(
-        await readFile(path.join(assets, "webview", "pdfium.wasm")),
+        await readFile(path.join(assets, "webview", "embedpdf.wasm")),
       );
     },
     log: (message) => log.warn(message),

@@ -10,6 +10,7 @@ import {
   inCursor,
   openFile,
   pageAtTop,
+  pageLayout,
   pagePoint,
   pastedClipboard,
   pdfViewer,
@@ -59,11 +60,7 @@ async function focusViewer(
  * can start a moment after the zoom is reported.
  */
 async function scrollSettled(viewer: Frame): Promise<void> {
-  const layout = () =>
-    viewer.evaluate(() => {
-      const viewport = document.querySelector(".viewport")!;
-      return `${viewport.scrollTop}:${viewport.scrollHeight}`;
-    });
+  const layout = () => pageLayout(viewer);
   let last = await layout();
   let stillFor = 0;
   await expect
@@ -137,10 +134,10 @@ test("the status bar shows the page and zoom, and opens a page or a zoom when cl
     .first()
     .click();
   await expect(zoomStatus(page)).toHaveText(/^Fit Page \(\d+%\)$/u);
-  // Scrolling the viewer updates the page.
-  await viewer
-    .locator(".viewport")
-    .evaluate((viewport) => viewport.scrollBy(0, viewport.clientHeight * 3));
+  // Scrolling the viewer updates the page: a wheel over it, as a reader's.
+  const area = (await viewer.locator(".viewport").boundingBox())!;
+  await page.mouse.move(area.x + area.width / 2, area.y + area.height / 2);
+  await page.mouse.wheel(0, area.height * 3);
   await expect(
     statusBarEntry(page, /^Page (9|10|11|12) \/ 12$/u),
   ).toBeVisible();

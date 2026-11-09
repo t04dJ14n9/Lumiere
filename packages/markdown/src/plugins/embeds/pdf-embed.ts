@@ -1,6 +1,4 @@
-import type { WrappedPdfiumModule } from "@embedpdf/pdfium";
-
-type PdfiumRuntime = WrappedPdfiumModule["pdfium"] & { HEAPU8: Uint8Array };
+import type { LocalEngine } from "@embedpdf/engine";
 
 export interface PdfEmbedParams {
   readonly page: number;
@@ -75,8 +73,9 @@ export function pdfFilename(target: string): string {
   }
 }
 
-let pdfiumPromise: Promise<WrappedPdfiumModule> | undefined;
+let enginePromise: Promise<LocalEngine> | undefined;
 
+/** The page names the engine's file in `data-pdfium-wasm`, as the PDF viewer's page does. */
 function resolveWasmUrl(): string {
   if (typeof document !== "undefined") {
     const configured = document.getElementById("app")?.dataset["pdfiumWasm"];
@@ -84,75 +83,59 @@ function resolveWasmUrl(): string {
       return configured;
     }
   }
-  return "/dist/webview/pdfium.wasm";
+  return "/dist/webview/embedpdf.wasm";
 }
 
-async function loadPdfium(
+/**
+ * One engine for every embed of the editor. It runs in this thread because
+ * the editor's page allows no workers (webview-html.ts has no `worker-src`);
+ * the wasm is fetched here, from the URL the page names, and handed over as
+ * bytes.
+ */
+async function loadEngine(
   wasmBinaryOverride?: ArrayBuffer,
-): Promise<WrappedPdfiumModule> {
-  if (!pdfiumPromise) {
-    pdfiumPromise = (async () => {
-      const { init } = await import("@embedpdf/pdfium");
+): Promise<LocalEngine> {
+  if (!enginePromise) {
+    enginePromise = (async () => {
+      const { createLocalEngine } = await import("@embedpdf/engine");
       const wasmBinary =
         wasmBinaryOverride ??
         (await (await fetch(resolveWasmUrl())).arrayBuffer());
-      const wasmUrl = resolveWasmUrl();
-      const instance = await init({ wasmBinary, locateFile: () => wasmUrl });
-      instance.PDFiumExt_Init();
-      return instance;
+      return createLocalEngine({ runtime: { prefer: "wasm", wasmBinary } });
     })().catch((error: unknown) => {
-      pdfiumPromise = undefined;
+      enginePromise = undefined;
       throw error;
     });
   }
-  return pdfiumPromise;
+  return enginePromise;
 }
 
-function rasterizePageHandle(
-  pdfium: WrappedPdfiumModule,
-  pageHandle: number,
-  targetWidth: number,
-): { width: number; height: number; rgba: Uint8ClampedArray } {
-  const pageWidth = Math.max(1, pdfium.FPDF_GetPageWidthF(pageHandle));
-  const pageHeight = Math.max(1, pdfium.FPDF_GetPageHeightF(pageHandle));
-  const scale = Math.max(1, Math.min(2.5, targetWidth / pageWidth));
-  const width = Math.max(1, Math.round(pageWidth * scale));
-  const height = Math.max(1, Math.round(pageHeight * scale));
-  const bitmap = pdfium.FPDFBitmap_Create(width, height, 0);
-  if (!bitmap) {
-    throw new Error("Could not allocate PDF bitmap");
-  }
+/**
+ * Open a PDF in the shared engine. The engine starts PDFium on its first
+ * job, so a failure to start shows up here, and leaves an engine that
+ * rejects every job from then on: it is dropped, and the next embed starts
+ * a new one.
+ */
+async function openDocument(
+  bytes: Uint8Array,
+  wasmBinaryOverride?: ArrayBuffer,
+) {
+  const engine = await loadEngine(wasmBinaryOverride);
   try {
-    pdfium.FPDFBitmap_FillRect(bitmap, 0, 0, width, height, 0xffffffff);
-    // FPDF_ANNOT (0x01) | FPDF_REVERSE_BYTE_ORDER (0x10) = 17 (RGBA output)
-    pdfium.FPDF_RenderPageBitmap(
-      bitmap,
-      pageHandle,
-      0,
-      0,
-      width,
-      height,
-      0,
-      17,
-    );
-    const bufPtr = pdfium.FPDFBitmap_GetBuffer(bitmap);
-    const stride = pdfium.FPDFBitmap_GetStride(bitmap);
-    const rgba = new Uint8ClampedArray(width * height * 4);
-    const heap = (pdfium.pdfium as PdfiumRuntime).HEAPU8;
-    const rowBytes = width * 4;
-    for (let row = 0; row < height; row += 1) {
-      const srcOffset = bufPtr + row * stride;
-      rgba.set(heap.subarray(srcOffset, srcOffset + rowBytes), row * rowBytes);
+    return await engine.open({ kind: "bytes", bytes });
+  } catch (error) {
+    const { EngineError, EngineErrorCode } = await import("@embedpdf/engine");
+    if (EngineError.is(error, EngineErrorCode.RuntimeUnavailable)) {
+      enginePromise = undefined;
+      void engine.destroy().catch(() => undefined);
     }
-    return { width, height, rgba };
-  } finally {
-    pdfium.FPDFBitmap_Destroy(bitmap);
+    throw error;
   }
 }
 
 /**
  * Render a 1-indexed page from a PDF byte buffer into an RGBA pixel buffer
- * using `@embedpdf/pdfium` (PDFium WASM).
+ * using EmbedPDF's engine (PDFium WASM).
  */
 export async function renderPdfPageFromBytes(
   bytes: Uint8Array,
@@ -160,40 +143,43 @@ export async function renderPdfPageFromBytes(
   targetWidth = 760,
   wasmBinaryOverride?: ArrayBuffer,
 ): Promise<RenderedPdfPage> {
-  const pdfium = await loadPdfium(wasmBinaryOverride);
-  const wasm = pdfium.pdfium as PdfiumRuntime;
-  const ptr = wasm.wasmExports.malloc(bytes.length);
-  if (!ptr) {
-    throw new Error("Could not allocate WASM memory for PDF");
-  }
-  wasm.HEAPU8.set(bytes, ptr);
-  const doc = pdfium.FPDF_LoadMemDocument(ptr, bytes.length, "");
-  if (!doc) {
-    wasm.wasmExports.free(ptr);
-    throw new Error("Could not load PDF document");
-  }
+  const pdf = await openDocument(bytes, wasmBinaryOverride);
   try {
-    const pageCount = pdfium.FPDF_GetPageCount(doc);
-    if (pageCount <= 0) {
+    const { pages } = await pdf.pages.list();
+    if (pages.length === 0) {
       throw new Error("PDF document has no pages");
     }
     const page = Math.min(
       Math.max(1, Math.floor(requestedPage || 1)),
-      pageCount,
+      pages.length,
     );
-    const pageHandle = pdfium.FPDF_LoadPage(doc, page - 1);
-    if (!pageHandle) {
-      throw new Error(`Could not load PDF page ${page}`);
-    }
-    try {
-      const raster = rasterizePageHandle(pdfium, pageHandle, targetWidth);
-      return { pageCount, page, ...raster };
-    } finally {
-      pdfium.FPDF_ClosePage(pageHandle);
-    }
+    const layout = pages[page - 1]!;
+    // `size` is the page unrotated, and so is its picture unless asked
+    // otherwise: the page's own rotation draws it the way a viewer shows it,
+    // and a page turned by 90 or 270 degrees is as wide as it was tall.
+    const turned = layout.rotation === 90 || layout.rotation === 270;
+    const pageWidth = Math.max(
+      1,
+      turned ? layout.size.height : layout.size.width,
+    );
+    const scale = Math.max(1, Math.min(2.5, targetWidth / pageWidth));
+    const raster = await pdf.page(layout.ref).render.raw({
+      viewport: {
+        kind: "width",
+        width: Math.max(1, Math.round(pageWidth * scale)),
+      },
+      rotation: layout.rotation,
+      includeAnnotations: true,
+    });
+    return {
+      pageCount: pages.length,
+      page,
+      width: raster.width,
+      height: raster.height,
+      rgba: new Uint8ClampedArray(raster.data),
+    };
   } finally {
-    pdfium.FPDF_CloseDocument(doc);
-    wasm.wasmExports.free(ptr);
+    await pdf.close();
   }
 }
 
@@ -361,7 +347,7 @@ function bindPdfToolbarEvents(
 
 /**
  * Mount an Obsidian-compatible inline `.pdf-embed` viewer inside `node`
- * powered by `@embedpdf/pdfium`.
+ * powered by EmbedPDF's engine (`@embedpdf/engine`).
  */
 export function mountPdfEmbed(options: MountPdfEmbedOptions): void {
   const { node, target, url, signal, measure } = options;

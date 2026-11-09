@@ -1,10 +1,8 @@
-import { useEffect, useRef, type RefObject } from "react";
-import { keyMove, swappedArrow } from "../shared/paging-keys";
+import { useEffect, useRef } from "react";
+import { keyMove, swappedArrow, type KeyContext } from "../shared/paging-keys";
 import { currentViewSettings } from "./reading-position";
-import { pageAxisState } from "../shared/page-window";
-import { EdgeTurn } from "../shared/smooth-motion";
 import type { ScrollDirection, ScrollMode } from "../shared/view-settings";
-import type { ScrollBounds } from "./paged-scroll";
+import { useStageApi, type StageApi } from "./stage-capability";
 
 /** Elements that keep the arrow keys for themselves (text, numbers, menus, the toolbar grip). */
 const OWN_KEYS =
@@ -13,7 +11,6 @@ const OWN_KEYS =
 export interface PagingInput {
   mode: ScrollMode;
   direction: ScrollDirection;
-  bounds: ScrollBounds;
   /** Turn to the next (1) or previous (-1) page or spread; with `keepPlace`, at the same place in it. */
   step: (delta: 1 | -1, keepPlace?: boolean) => void;
 }
@@ -26,64 +23,56 @@ const MAC = /Mac|iPhone|iPad/u.test(navigator.userAgent);
  * it): pan while there is room, else turn the page; see `keyMove`. Keys with a
  * modifier stay with VS Code and the extension's own shortcuts, except that
  * `arrowsKeepPlace` swaps plain and ⌥ Left/Right (see `swappedArrow`).
+ *
+ * The Stage has no keyboard scrolling of its own, so this pans it by the
+ * room its scroll metrics report.
  */
-export function usePagingKeys(
-  container: RefObject<HTMLElement | null>,
-  input: PagingInput,
-): void {
-  const latest = useRef(input);
-  latest.current = input;
+export function usePagingKeys(input: PagingInput): void {
+  const stage = useStageApi();
+  const latest = useRef({ input, stage });
+  latest.current = { input, stage };
   useEffect(() => {
     const onKeyDown = (event: KeyboardEvent): void => {
+      const { input, stage } = latest.current;
       if (
         event.defaultPrevented ||
         (event.target instanceof Element && event.target.closest(OWN_KEYS)) ||
-        handledBeforePanning(event, latest.current.step)
+        handledBeforePanning(event, input.step)
       ) {
         return;
       }
-      const viewport =
-        container.current?.querySelector<HTMLElement>(".viewport");
-      if (!viewport) {
-        return;
-      }
-      const { mode, direction, bounds, step } = latest.current;
-      const limits = bounds(viewport);
-      // Native page requests run in rAF; their padding offset can briefly be
-      // outside these bounds until the scroll event constrains it. A rapid
-      // reverse key must not mistake that transient offset for room to pan.
-      const x = pageAxisState(viewport.scrollLeft, limits.x);
-      const y = pageAxisState(viewport.scrollTop, limits.y);
-      const move = keyMove(event.key, {
-        mode,
-        direction,
-        width: viewport.clientWidth,
-        height: viewport.clientHeight,
-        room: {
-          left: x.before,
-          right: x.after,
-          up: y.before,
-          down: y.after,
-        },
-        overflowsX: viewport.scrollWidth > viewport.clientWidth + 1,
-      });
+      const move = keyMove(event.key, keyContext(stage, input));
       if (!move) {
         return;
       }
       event.preventDefault();
       if (move.type === "page") {
-        step(move.delta);
+        input.step(move.delta);
       } else {
-        viewport.scrollTo({
-          left: x.position + move.x,
-          top: y.position + move.y,
-          behavior: "instant",
-        });
+        stage.scrollBy({ left: move.x, top: move.y, behavior: "instant" });
       }
     };
     document.addEventListener("keydown", onKeyDown);
     return () => document.removeEventListener("keydown", onKeyDown);
-  }, [container]);
+  }, []);
+}
+
+/** What the viewer can do from where it stands: the room it has to scroll each way. */
+function keyContext(stage: StageApi, input: PagingInput): KeyContext {
+  const view = stage.getScrollMetrics();
+  return {
+    mode: input.mode,
+    direction: input.direction,
+    width: view.clientWidth,
+    height: view.clientHeight,
+    room: {
+      left: view.scrollLeft,
+      right: view.scrollWidth - view.clientWidth - view.scrollLeft,
+      up: view.scrollTop,
+      down: view.scrollHeight - view.clientHeight - view.scrollTop,
+    },
+    overflowsX: view.scrollableX,
+  };
 }
 
 /**
@@ -107,76 +96,4 @@ function handledBeforePanning(
     !swapped &&
     (event.altKey || event.ctrlKey || event.metaKey || event.shiftKey)
   );
-}
-
-/**
- * In paged mode the viewport is held to the page, so a long wheel or
- * two-finger gesture would stop at its edge. Pushing against the edge turns
- * the page instead, once per gesture (see `EdgeTurn`).
- */
-export function usePagedWheel(
-  container: RefObject<HTMLElement | null>,
-  input: PagingInput,
-): void {
-  const latest = useRef(input);
-  latest.current = input;
-  useEffect(() => {
-    const element = container.current;
-    if (!element || input.mode !== "paged") {
-      return;
-    }
-    const turn = new EdgeTurn();
-    const onWheel = (event: WheelEvent): void => {
-      const viewport = element.querySelector<HTMLElement>(".viewport");
-      if (
-        !viewport ||
-        event.ctrlKey ||
-        event.metaKey ||
-        event.shiftKey ||
-        !(event.target instanceof Element) ||
-        !event.target.closest(".viewport")
-      ) {
-        return;
-      }
-      const { direction, bounds, step } = latest.current;
-      const pixels = wheelAlong(event, direction, viewport.clientHeight);
-      const alongX = direction === "horizontal";
-      const limit = alongX ? bounds(viewport).x : bounds(viewport).y;
-      const at = alongX ? viewport.scrollLeft : viewport.scrollTop;
-      const atEdge = pixels > 0 ? at >= limit.max - 1 : at <= limit.min + 1;
-      const result = turn.push(pixels, atEdge, event.timeStamp);
-      if (atEdge && pixels !== 0) {
-        event.preventDefault();
-      }
-      if (result !== 0) {
-        step(result);
-      }
-    };
-    element.addEventListener("wheel", onWheel, {
-      passive: false,
-      capture: true,
-    });
-    return () =>
-      element.removeEventListener("wheel", onWheel, { capture: true });
-  }, [container, input.mode]);
-}
-
-/**
- * The wheel's movement along the reading direction, in pixels: in horizontal
- * reading a sideways swipe counts sideways, a vertical one vertically. Page
- * and line deltas count as screens and lines.
- */
-function wheelAlong(
-  event: WheelEvent,
-  direction: ScrollDirection,
-  screen: number,
-): number {
-  const sideways =
-    direction === "horizontal" &&
-    Math.abs(event.deltaX) > Math.abs(event.deltaY);
-  const delta = sideways ? event.deltaX : event.deltaY;
-  if (event.deltaMode === 1) {
-    return delta * 40;
-  }
-  return event.deltaMode === 2 ? delta * screen : delta;
 }

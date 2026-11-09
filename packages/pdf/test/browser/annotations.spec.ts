@@ -85,8 +85,11 @@ test("highlight tool can mark text", async ({ page }) => {
     .toBeGreaterThan(0);
   const kept = JSON.parse(
     (await sent(page, "annotationStoreSave")).at(-1)!.text!,
-  ) as { annotations: { annotation: { type: number } }[] };
-  expect(kept.annotations.map((item) => item.annotation.type)).toContain(9);
+  ) as { version: number; bundle: { items: { data: { subtype: string } }[] } };
+  expect(kept.version).toBe(2);
+  expect(kept.bundle.items.map((item) => item.data.subtype)).toContain(
+    "highlight",
+  );
   expect(await sent(page, "annotationSave")).toHaveLength(0);
 });
 
@@ -214,31 +217,50 @@ test("click-to-select mark reports region and survives reportSelection", async (
   });
 });
 
-test("AnnotationLayer is hit-testable only in Annotate mode", async ({
+// EmbedPDF 3 decides this by the active tool, not by a pointer-events style on
+// the layer: the reading tool lacks the annotation-edit ability, so a mark
+// under the pointer is not there to select, move or delete in View mode.
+test("a mark can be selected and deleted only in Annotate mode", async ({
   page,
 }) => {
   await open(page, "?toolbar=chrome");
-  const pointerEvents = async () =>
-    page.evaluate(() => {
-      // Prefer the EmbedPDF annotation layer node by absolute inset style.
-      const nodes = [...document.querySelectorAll(".page *")] as HTMLElement[];
-      const ann = nodes.find(
-        (el) =>
-          el.style.position === "absolute" &&
-          el.style.inset === "0px" &&
-          (el.style.pointerEvents === "none" ||
-            el.style.pointerEvents === "auto"),
-      );
-      return ann?.style.pointerEvents ?? null;
-    });
-  await expect.poll(pointerEvents).toBe("none");
   await sendAction(page, { action: "setTool", tool: "annotate" });
-  await expect.poll(pointerEvents).toBe("auto");
-  await sendAction(page, { action: "setTool", tool: "text" });
-  await expect.poll(pointerEvents).toBe("none");
+  await sendAction(page, { action: "setAnnotationTool", tool: "highlight" });
+  const baseline = await highlightMarkCount(page);
+  const at = await pagePoint(page, 1);
+  const mid = at(140, TEXT_MIDLINE);
+  await page.mouse.move(...at(74, TEXT_MIDLINE));
+  await page.mouse.down();
+  await page.mouse.move(...at(205, TEXT_MIDLINE), { steps: 10 });
+  await page.mouse.up();
+  await expect.poll(() => highlightMarkCount(page)).toBeGreaterThan(baseline);
+
+  await page.keyboard.press("Escape");
+  await expect.poll(() => lastView(page)).toMatchObject({ tool: "text" });
+  await expect.poll(() => lastSelection(page)).toBeNull();
+  const marked = await highlightMarkCount(page);
+  await page.mouse.click(...mid);
+  await page.keyboard.press("Delete");
+  // Nothing reacts to a click: wait a few frames before saying so.
+  await page.evaluate(
+    () =>
+      new Promise((resolve) =>
+        requestAnimationFrame(() => requestAnimationFrame(resolve)),
+      ),
+  );
+  expect(await lastSelection(page)).toBeNull();
+  expect(await highlightMarkCount(page)).toBe(marked);
+
+  await sendAction(page, { action: "setTool", tool: "annotate" });
+  await page.mouse.click(...mid);
+  await expect
+    .poll(async () => (await lastSelection(page)) as { kind?: string } | null)
+    .toMatchObject({ kind: "region" });
+  await page.keyboard.press("Delete");
+  await expect.poll(() => highlightMarkCount(page)).toBe(baseline);
 });
 
-test("text tool still selects text while AnnotationLayer is non-hit", async ({
+test("text tool still selects text with marks on the page", async ({
   page,
 }) => {
   await open(page, "?toolbar=chrome");

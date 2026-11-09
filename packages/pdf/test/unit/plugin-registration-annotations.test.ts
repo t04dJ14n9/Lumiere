@@ -1,36 +1,85 @@
 import assert from "node:assert/strict";
 import { test } from "node:test";
-import { readFileSync } from "node:fs";
-import { fileURLToPath } from "node:url";
-import path from "node:path";
+import { PAGE_GAP, viewerPlugins } from "../../src/webview/plugins";
+import { prepareReadingPosition } from "../../src/webview/reading-position";
 
-const pluginsPath = path.join(
-  path.dirname(fileURLToPath(import.meta.url)),
-  "../../src/webview/plugins.ts",
-);
+// The initial model a plugin starts its document with: for the Stage, the
+// settings it was registered with.
+type Registered = {
+  id: string;
+  state?: () => Record<string, unknown>;
+  settings?: { registered?: Record<string, unknown> };
+};
 
-test("viewerPlugins registers History then Annotation after Selection", () => {
-  const source = readFileSync(pluginsPath, "utf8");
-  assert.match(source, /@embedpdf\/plugin-history\/react/);
-  assert.match(source, /@embedpdf\/plugin-annotation\/react/);
-  assert.match(source, /HistoryPluginPackage/);
-  assert.match(source, /AnnotationPluginPackage/);
-  // Registration order in viewerPlugins (ignore import lines).
-  const body = source.slice(source.indexOf("export function viewerPlugins"));
-  const selection = body.indexOf("SelectionPluginPackage");
-  const history = body.indexOf("HistoryPluginPackage");
-  const annotation = body.indexOf("AnnotationPluginPackage");
-  assert.ok(selection > 0 && history > selection && annotation > history);
-  assert.match(source, /annotationAuthor:\s*["']Lumia["']/);
-  assert.match(source, /autoCommit:\s*true/);
+function plugin(id: string): Registered {
+  const found = (viewerPlugins() as Registered[]).find(
+    (candidate) => candidate.id === id,
+  );
+  assert.ok(found, `${id} is registered`);
+  return found;
+}
+
+test("viewerPlugins registers every plugin the viewer is built from", () => {
+  const ids = (viewerPlugins() as Registered[]).map(({ id }) => id).sort();
+  assert.deepEqual(
+    ids,
+    [
+      "annotation",
+      "history",
+      "interaction",
+      "link",
+      "lumia-text",
+      "outline",
+      "render",
+      "search",
+      "selection",
+      "stage",
+    ].sort(),
+  );
 });
 
-test("SelectionPluginPackage starts marquee from regionsEnabled (default off)", () => {
-  const source = readFileSync(pluginsPath, "utf8");
-  const body = source.slice(source.indexOf("export function viewerPlugins"));
-  assert.match(
-    body,
-    /createPluginRegistration\(\s*SelectionPluginPackage\s*,\s*\{[\s\S]*?marquee:\s*\{\s*enabled:\s*regionsEnabled/,
+// Before any position is remembered (the module remembers one for good).
+test("with nothing saved the Stage starts in fit width", () => {
+  assert.deepEqual(plugin("stage").state?.()["zoom"], { mode: "fit-width" });
+});
+
+test("the Stage keeps one point to a pixel, the room around pages and the saved layout", () => {
+  prepareReadingPosition(undefined, {
+    page: 3,
+    top: 10,
+    left: 0,
+    zoom: 150,
+    pageLayout: "spreadCover",
+    scrollMode: "paged",
+    scrollDirection: "horizontal",
+  });
+  const stage = plugin("stage").state?.();
+  assert.equal(stage?.["viewUnitsPerPoint"], 1, "saved zoom percentages hold");
+  assert.equal(stage?.["padding"], PAGE_GAP);
+  assert.equal(stage?.["gap"], PAGE_GAP);
+  assert.equal(stage?.["flow"], "paged");
+  assert.equal(stage?.["layout"], "horizontal");
+  assert.equal(stage?.["spread"], "even");
+  assert.deepEqual(stage?.["zoom"], { level: 1.5 });
+});
+
+test("a new annotation is selected and its tool stays on; Lumia's own tools join the hub", () => {
+  const registered = plugin("annotation").settings?.registered;
+  assert.deepEqual(registered?.["afterCreate"], {
+    select: true,
+    tool: "stay",
+    editText: true,
+  });
+  assert.ok(
+    (registered?.["tools"] as { id: string }[]).some(
+      (tool) => tool.id === "lineArrow",
+    ),
   );
-  assert.match(body, /currentViewSettings\(\)\.regionsEnabled/);
+});
+
+test("the interaction hub starts on the pointer tool", () => {
+  assert.equal(
+    plugin("interaction").settings?.registered?.["defaultTool"],
+    "pointer",
+  );
 });

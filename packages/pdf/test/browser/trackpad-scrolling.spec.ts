@@ -1,10 +1,13 @@
 import { expect, test, type Page } from "@playwright/test";
+import {
+  maxScrollLeft,
+  maxScrollTop,
+  scrollLeft,
+  scrollMetrics,
+  scrollTo,
+  scrollTop,
+} from "./stage-support";
 import { lastView, openView, pageIndexes } from "./view-controls-support";
-
-const scrollTop = (page: Page) =>
-  page.locator(".viewport").evaluate((viewport) => viewport.scrollTop);
-const scrollLeft = (page: Page) =>
-  page.locator(".viewport").evaluate((viewport) => viewport.scrollLeft);
 
 /** Real (trusted) wheel input, as a mouse or a trackpad produces it. */
 async function over(page: Page): Promise<void> {
@@ -37,14 +40,10 @@ async function swipe(page: Page, deltas: number[], axis: "y" | "x" = "y") {
 const sum = (values: number[]) => values.reduce((a, b) => a + b, 0);
 const PAGE_PX = 400; // actual size: a 400 pt page, plus gaps
 
-const maxTop = (page: Page) =>
-  page.locator(".viewport").evaluate((v) => v.scrollHeight - v.clientHeight);
 // Let a smooth wheel animation that has just arrived stop before the test moves the viewport under it.
 const toTop = async (page: Page, top: number) => {
   await page.waitForTimeout(400);
-  await page
-    .locator(".viewport")
-    .evaluate((v, top) => v.scrollTo({ top, behavior: "instant" }), top);
+  await scrollTo(page, { top });
 };
 
 for (const pageLayout of ["single", "spread"] as const) {
@@ -60,7 +59,7 @@ for (const pageLayout of ["single", "spread"] as const) {
       });
       await over(page);
       const base = await scrollTop(page);
-      const max = (await maxTop(page)) - base;
+      const max = (await maxScrollTop(page)) - base;
       // One mouse notch of a thousand pixels, as a fast flick reports it.
       await page.mouse.wheel(0, 1000);
       await expect.poll(() => scrollTop(page)).toBe(base + Math.min(1000, max));
@@ -96,14 +95,7 @@ test("a two-finger swipe pans sideways when zoomed, and Ctrl+wheel and pinch sti
   const travelled = sum(sideways);
   await expect
     .poll(() => scrollLeft(page))
-    .toBe(
-      Math.min(
-        start + travelled,
-        await page
-          .locator(".viewport")
-          .evaluate((v) => v.scrollWidth - v.clientWidth),
-      ),
-    );
+    .toBe(Math.min(start + travelled, await maxScrollLeft(page)));
   const zoom = async () => (await lastView(page))!.zoomPercent;
   const before = await zoom();
   await page.keyboard.down("Control");
@@ -140,7 +132,7 @@ test("paged: a long swipe turns one page and momentum does not turn another; the
   }
 });
 
-test("paged and zoomed: a swipe pans down the page, and a long one turns exactly one page", async ({
+test("paged and zoomed: a swipe pans down the page and stops at its end; the next swipe turns exactly one page", async ({
   page,
 }) => {
   await openView(page, { defaultZoom: 400, scrollMode: "paged" });
@@ -150,7 +142,17 @@ test("paged and zoomed: a swipe pans down the page, and a long one turns exactly
   await swipe(page, [100, 100, 100]);
   await expect.poll(() => scrollTop(page)).toBe(start + 300);
   expect(await pageIndexes(page)).toEqual([0]);
-  // Enough to reach the page's end and keep going: one turn, however long the momentum.
+  // A swipe that began inside the page reads down to its end and stops there, however long: EmbedPDF turns
+  // the page only for a push that began at the edge, so reading is never cut short by a turn.
+  await page.waitForTimeout(300);
+  await swipe(page, flick(250, 70));
+  await page.waitForTimeout(300);
+  expect(await pageIndexes(page)).toEqual([0]);
+  expect(await scrollTop(page)).toBe(
+    (await scrollMetrics(page)).scrollHeight -
+      (await scrollMetrics(page)).clientHeight,
+  );
+  // From the end, one more turns one page, however long the momentum.
   await swipe(page, flick(250, 70));
   await page.waitForTimeout(300);
   expect(await pageIndexes(page)).toEqual([1]);

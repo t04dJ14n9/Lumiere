@@ -1,97 +1,101 @@
 import assert from "node:assert/strict";
 import { test } from "node:test";
 import {
+  ANNOTATION_STORE_VERSION,
   annotationFolder,
   annotationStoreName,
   inProtectedFolder,
+  keepOwned,
   parseAnnotations,
   serializeAnnotations,
-  type StoredAnnotation,
 } from "../../src/shared/annotation-store";
+import { bundle, refOn } from "./support/bundle";
 
-const highlight = (id: string, pageIndex: number): StoredAnnotation => ({
-  annotation: {
-    id,
-    pageIndex,
-    type: 9,
-    rect: { origin: { x: 10, y: 20 }, size: { width: 30, height: 12 } },
-    color: "#FFCD45",
-    created: new Date("2026-11-08T10:00:00.000Z"),
-    modified: new Date("2026-11-08T10:05:00.000Z"),
-  },
+test("annotations round-trip as a bundle inside a version 2 file, with a stamp's drawing", async () => {
+  const drawing = new Uint8Array([0, 1, 254, 255]);
+  const kept = bundle([
+    { ref: refOn(7), contents: "hello", createdAt: "2026-11-08T10:00:00.000Z" },
+    { ref: refOn(8), subtype: "stamp", drawing },
+  ]);
+  const text = serializeAnnotations(kept)!;
+  assert.equal(ANNOTATION_STORE_VERSION, 2);
+  assert.equal(JSON.parse(text).version, 2);
+  assert.equal(JSON.parse(text).bundle.format, "embedpdf/annotations");
+  assert.ok(text.endsWith("}\n"));
+  const stored = (await parseAnnotations(text))!;
+  assert.equal(stored.pages, "same");
+  assert.equal(stored.skipped, 0);
+  assert.deepEqual(stored.bundle, kept);
+  assert.ok(Object.values(stored.bundle.resources)[0] instanceof Uint8Array);
 });
 
-test("annotations round-trip with their dates and a stamp's bytes", () => {
-  const stamp: StoredAnnotation = {
-    annotation: { id: "s", pageIndex: 0, type: 13 },
-    ctx: {
-      data: new Uint8Array([0, 1, 254, 255]).buffer,
-      mimeType: "image/png",
-    },
-  };
-  const text = serializeAnnotations([highlight("h", 2), stamp])!;
-  const items = parseAnnotations(text)!;
-  assert.equal(items.length, 2);
-  const [first, second] = items;
-  assert.equal(first!.annotation.id, "s");
-  const ctx = first!.ctx as { data: ArrayBuffer; mimeType: string };
-  assert.ok(ctx.data instanceof ArrayBuffer);
-  assert.deepEqual([...new Uint8Array(ctx.data)], [0, 1, 254, 255]);
-  assert.equal(ctx.mimeType, "image/png");
-  assert.ok(second!.annotation.created instanceof Date);
-  assert.equal(
-    (second!.annotation.modified as Date).toISOString(),
-    "2026-11-08T10:05:00.000Z",
-  );
-  assert.deepEqual(second!.annotation.rect, {
-    origin: { x: 10, y: 20 },
-    size: { width: 30, height: 12 },
-  });
-});
-
-test("the file is the same text for the same annotations, whatever their order", () => {
-  const a = serializeAnnotations([
-    highlight("b", 1),
-    highlight("a", 1),
-    highlight("c", 0),
-  ]);
-  const b = serializeAnnotations([
-    highlight("c", 0),
-    highlight("a", 1),
-    highlight("b", 1),
-  ]);
-  assert.equal(a, b);
-  assert.ok(a!.endsWith("}\n"));
+test("the same annotations make the same file", () => {
+  const make = () => serializeAnnotations(bundle([{ ref: refOn(7) }]));
+  assert.equal(make(), make());
 });
 
 test("no annotations means no file", () => {
-  assert.equal(serializeAnnotations([]), undefined);
+  assert.equal(serializeAnnotations(bundle([])), undefined);
 });
 
-test("a file that is not an annotation store is rejected, not half-read", () => {
+test("a file that is not an annotation store is rejected, not half-read", async () => {
   for (const text of [
     "",
     "not json",
     "[]",
-    '{"version":2,"annotations":[]}',
+    '{"version":3,"bundle":{}}',
+    '{"version":2}',
+    '{"version":2,"bundle":[]}',
     '{"version":1}',
     '{"version":1,"annotations":[{"annotation":{"id":"x","pageIndex":-1,"type":9}}]}',
     '{"version":1,"annotations":[{"annotation":{"pageIndex":0,"type":9}}]}',
     '{"version":1,"annotations":[{"annotation":{"id":"x","pageIndex":0,"type":9}},5]}',
   ]) {
-    assert.equal(parseAnnotations(text), undefined, text);
+    assert.equal(await parseAnnotations(text), undefined, text);
   }
-  assert.deepEqual(parseAnnotations('{"version":1,"annotations":[]}'), []);
+  const empty = await parseAnnotations('{"version":1,"annotations":[]}');
+  assert.equal(empty?.bundle.items.length, 0);
 });
 
-test("a tag-like object with other keys stays an object", () => {
-  const items = parseAnnotations(
-    '{"version":1,"annotations":[{"annotation":{"id":"x","pageIndex":0,"type":9,"custom":{"$date":"2026-01-01T00:00:00Z","note":"keep"}}}]}',
+test("a damaged bundle is an error the viewer can report, not an empty file", async () => {
+  const text = serializeAnnotations(
+    bundle([{ ref: refOn(8), subtype: "stamp", drawing: new Uint8Array([1]) }]),
   )!;
-  assert.deepEqual(items[0]!.annotation.custom, {
-    $date: "2026-01-01T00:00:00Z",
-    note: "keep",
-  });
+  const damaged = JSON.parse(text);
+  for (const id of Object.keys(damaged.bundle.resources)) {
+    damaged.bundle.resources[id] = "AAAA";
+  }
+  await assert.rejects(parseAnnotations(JSON.stringify(damaged)), /match/u);
+  await assert.rejects(
+    parseAnnotations('{"version":2,"bundle":{"format":"other"}}'),
+  );
+});
+
+test("keepOwned keeps Lumia's annotations, what belongs to them, and only the drawings they name", () => {
+  const drawing = new Uint8Array([9, 9]);
+  const other = new Uint8Array([8]);
+  const all = bundle([
+    { ref: refOn(1), subtype: "stamp", drawing },
+    { ref: refOn(2), subtype: "stamp", drawing: other },
+    { ref: refOn(3) },
+    { ref: refOn(4), subtype: "popup", parent: refOn(1) },
+    { ref: refOn(5), subtype: "popup", parent: refOn(2) },
+  ]);
+  const own = new Set([1, 3]);
+  const kept = keepOwned(
+    all,
+    (ref) => ref.kind === "objectNumber" && own.has(ref.objectNumber),
+  );
+  assert.deepEqual(
+    kept.items.map(
+      ({ data }) => (data.ref as { objectNumber: number }).objectNumber,
+    ),
+    [1, 3, 4],
+  );
+  assert.equal(Object.keys(kept.resources).length, 1);
+  assert.deepEqual(Object.values(kept.resources)[0], drawing);
+  // What is kept is still a bundle EmbedPDF writes and reads.
+  assert.ok(serializeAnnotations(kept));
 });
 
 test("annotation files are named by the PDF's SHA-256 and nothing else", () => {

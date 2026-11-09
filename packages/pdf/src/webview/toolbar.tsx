@@ -1,10 +1,10 @@
-import { useZoom } from "@embedpdf/plugin-zoom/react";
+import { useStageState } from "@embedpdf/react/stage";
 import React from "react";
 import type { ToolMode, ViewerAction } from "../shared/view-state";
 import { postToHost } from "./host";
 import type { Navigation } from "./navigation";
+import { MAX_ZOOM, MIN_ZOOM } from "../shared/zoom-steps";
 import { NumberField } from "./number-field";
-import { DOCUMENT_ID, ZOOM_RANGE } from "./plugins";
 import { fitMode } from "./view-sync";
 import type { ViewChoices } from "../shared/view-settings";
 import { ViewControls } from "./view-controls";
@@ -177,8 +177,8 @@ function PageGroup({
 }
 
 function ZoomGroup({ run }: { run: Run }): React.JSX.Element {
-  const { state } = useZoom(DOCUMENT_ID);
-  const fit = fitMode(state.zoomLevel);
+  const { zoomLevel, zoomMode } = useStageState();
+  const fit = fitMode(zoomMode);
   return (
     <span className="toolbar-group">
       <IconButton
@@ -189,13 +189,10 @@ function ZoomGroup({ run }: { run: Run }): React.JSX.Element {
       />
       <NumberField
         label="Zoom"
-        value={Math.round(state.currentZoomLevel * 100)}
+        value={Math.round(zoomLevel * 100)}
         suffix="%"
         onCommit={(percent) => {
-          const level = Math.min(
-            ZOOM_RANGE.max,
-            Math.max(ZOOM_RANGE.min, percent / 100),
-          );
+          const level = Math.min(MAX_ZOOM, Math.max(MIN_ZOOM, percent / 100));
           run({ action: "setZoom", percent: level * 100 });
           return Math.round(level * 100);
         }}

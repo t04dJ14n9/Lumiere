@@ -1,10 +1,15 @@
-import { useRegistry } from "@embedpdf/core/react";
-import type { PdfDocumentObject, Rect } from "@embedpdf/models";
-import type { SelectionScope } from "@embedpdf/plugin-selection";
-import { useSelectionCapability } from "@embedpdf/plugin-selection/react";
+import type { PageRef } from "@embedpdf/engine";
+import { RenderToken } from "@embedpdf/plugin-render/contract";
+import {
+  SelectionToken,
+  type SelectionCapability,
+  type TextRange,
+} from "@embedpdf/plugin-selection/contract";
+import { useDocuments, useOptionalCapability } from "@embedpdf/react/runtime";
 import {
   useCallback,
   useEffect,
+  useMemo,
   useRef,
   useState,
   type MutableRefObject,
@@ -14,13 +19,20 @@ import type { RegionSelection } from "../shared/selection";
 import { isEditableTarget } from "./editable-target";
 import { postToHost, reportToHost } from "./host";
 import { followMenuContext } from "./menu-context";
-import { currentViewSettings } from "./reading-position";
 import { readRegionDetails } from "./region-details";
+import { onRegionEnd, type RegionEnd } from "./region-drag";
+import { useTextAccess } from "./text-access";
 
-type Engine = Parameters<typeof readRegionDetails>[0];
-
-/** Drags smaller than this (in points) are clicks, not regions. */
-const MIN_REGION_SIZE = 2;
+/** What the tracker needs from the open document. */
+export interface SelectionSource {
+  /** The 1-based page a page identity is at; undefined for a page the document lacks. */
+  pageNumberOf(page: PageRef): number | undefined;
+  /** The text inside a region of a 1-based page, and a snapshot of it. */
+  readDetails(
+    page: number,
+    rect: PageRect,
+  ): ReturnType<typeof readRegionDetails>;
+}
 
 /**
  * Keep the extension informed of what is selected: text, selected with
@@ -29,42 +41,46 @@ const MIN_REGION_SIZE = 2;
  * PNG snapshot once they are read. Copy Link for Agent then hands over whatever was
  * reported last, waiting for a region's details if they are still coming.
  */
-export function useSelectionReporting(
-  documentId: string,
-  pdf: PdfDocumentObject,
-  extraHasSelection?: () => boolean,
-) {
-  const { provides: selection } = useSelectionCapability();
-  const { registry } = useRegistry();
+export function useSelectionReporting(extraHasSelection?: () => boolean) {
+  const selection = useOptionalCapability(SelectionToken);
+  const render = useOptionalCapability(RenderToken);
+  const text = useTextAccess();
+  const documents = useDocuments();
   const [region, setRegion] = useState<RegionSelection>();
   const tracker = useRef<SelectionTracker | undefined>(undefined);
   tracker.current ??= new SelectionTracker(setRegion);
   const state = tracker.current;
   const extra = useRef(extraHasSelection);
   extra.current = extraHasSelection;
-  useEffect(() => {
-    if (!selection) {
-      return;
-    }
-    return state.follow(
-      selection.forDocument(documentId),
-      {
-        engine: () => registry?.getEngine(),
-        pdf,
+  const source = useMemo<SelectionSource>(
+    () => ({
+      pageNumberOf: (page) => {
+        const index = documents.getPageIndex(page);
+        return index < 0 ? undefined : index + 1;
       },
-      { regionsEnabled: () => currentViewSettings().regionsEnabled === true },
-    );
-  }, [state, documentId, pdf, registry, selection]);
+      readDetails: (page, rect) => {
+        const ref = documents.getPage(page - 1)?.ref;
+        return ref
+          ? readRegionDetails({ text, render }, ref, rect)
+          : Promise.resolve({ text: "" });
+      },
+    }),
+    [documents, text, render],
+  );
+  useEffect(
+    () => (selection ? state.follow(selection, source) : undefined),
+    [state, selection, source],
+  );
   useCopiedText(state);
-  useSelectionMenuContext(state, documentId, selection, extra);
+  useSelectionMenuContext(state, selection, extra);
   /** Report the selection now: the extension asks before Copy Link for Agent. */
   const reportNow = useCallback((): void => {
-    void state.reportSelection(selection?.forDocument(documentId));
-  }, [state, documentId, selection]);
+    void state.reportSelection(selection);
+  }, [state, selection]);
   const copyLinkForAgent = useCallback(async (): Promise<void> => {
-    await state.reportSelection(selection?.forDocument(documentId));
+    await state.reportSelection(selection);
     postToHost({ type: "copyLinkForAgent" });
-  }, [state, documentId, selection]);
+  }, [state, selection]);
   /** Clear whatever is selected, text or region (Escape). */
   const clear = useCallback((): void => {
     if (state.region) {
@@ -73,14 +89,11 @@ export function useSelectionReporting(
       state.changeRegion(undefined);
     }
     // Reported to the extension by the selection change handler.
-    selection?.forDocument(documentId).clear();
-  }, [state, documentId, selection]);
+    selection?.clear();
+  }, [state, selection]);
   const setAnnotationRegion = useCallback(
-    (
-      next: RegionSelection | undefined,
-      enrich?: { engine: Engine; pdf: PdfDocumentObject },
-    ): void => {
-      state.setAnnotationRegion(next, enrich);
+    (next: RegionSelection | undefined): void => {
+      state.setAnnotationRegion(next);
     },
     [state],
   );
@@ -89,8 +102,7 @@ export function useSelectionReporting(
 
 function useSelectionMenuContext(
   state: SelectionTracker,
-  documentId: string,
-  selection: ReturnType<typeof useSelectionCapability>["provides"],
+  selection: SelectionCapability | null,
   extra: MutableRefObject<(() => boolean) | undefined>,
 ): void {
   useEffect(
@@ -99,11 +111,11 @@ function useSelectionMenuContext(
         const hasAnnotationSelection = Boolean(extra.current?.());
         const hasSelection =
           Boolean(state.region) ||
-          Boolean(selection?.forDocument(documentId).getState().selection) ||
+          Boolean(selection?.hasSelection()) ||
           hasAnnotationSelection;
         return { hasSelection, hasAnnotationSelection };
       }),
-    [state, documentId, selection, extra],
+    [state, selection, extra],
   );
 }
 
@@ -114,10 +126,12 @@ export class SelectionTracker {
   selectedText: string | undefined;
   /** The region's details being read, if any. */
   private regionDetails: Promise<void> | undefined;
+  /** The open document, while `follow` is on. */
+  private source: SelectionSource | undefined;
   /**
    * True while `region` came from annotation selection (`setAnnotationRegion`).
-   * Empty-space / marquee-cancel must not clear those; annotation clears stay
-   * owned by useAnnotationSelection / EmbedPDF selection changes.
+   * An empty click or a cancelled region must not clear those; annotation
+   * clears stay owned by useAnnotationSelection.
    */
   private annotationOwned = false;
 
@@ -135,66 +149,35 @@ export class SelectionTracker {
   }
 
   /**
-   * Annotation selection uses the same region channel as marquee regions so
+   * Annotation selection uses the same region channel as dragged regions so
    * textCleared / reportSelection / ensureSelection stay consistent.
    */
-  setAnnotationRegion(
-    next: RegionSelection | undefined,
-    enrich?: { engine: Engine; pdf: PdfDocumentObject },
-  ): void {
+  setAnnotationRegion(next: RegionSelection | undefined): void {
     this.annotationOwned = next !== undefined;
     this.changeRegion(next);
-    if (next && enrich?.engine) {
-      this.regionDetails = this.readDetails(enrich.engine, enrich.pdf, next);
-    } else {
-      this.regionDetails = undefined;
-    }
+    this.regionDetails =
+      next && this.source ? this.readDetails(this.source, next) : undefined;
   }
 
-  /** Follow EmbedPDF's selection events; returns how to stop. */
-  follow(
-    scope: SelectionScope,
-    source: { engine: () => Engine | undefined; pdf: PdfDocumentObject },
-    options: { regionsEnabled?: () => boolean } = {},
-  ): () => void {
-    const regionsEnabled =
-      options.regionsEnabled ??
-      (() => currentViewSettings().regionsEnabled === true);
-    /** Whether the marquee that just ended drew a region (else it was a click). */
-    let marqueeEnded = false;
+  /** Follow EmbedPDF's selection events and Lumia's region gestures; returns how to stop. */
+  follow(selection: SelectionCapability, source: SelectionSource): () => void {
+    this.source = source;
+    if (!selection.hasSelection()) {
+      // Each document starts with nothing selected, which the extension is
+      // told (it may still hold the last document's selection). EmbedPDF 2
+      // said so itself, with a selection change as the document opened.
+      this.textCleared();
+    }
     const stops = [
-      scope.onEndSelection(() => this.textSelected(scope)),
-      scope.onSelectionChange((range) => {
-        if (!range) {
-          this.textCleared();
-        }
-      }),
-      // A click with the Select Region tool, which has no empty-space clicks:
-      // the marquee is cancelled without ending.
-      scope.onMarqueeChange(({ rect }) => {
-        if (rect) {
-          return;
-        }
-        if (marqueeEnded) {
-          marqueeEnded = false;
-        } else if (this.region && !this.annotationOwned) {
-          this.changeRegion(undefined);
-        }
-      }),
-      scope.onMarqueeEnd((event) => {
-        if (!regionsEnabled()) {
-          return;
-        }
-        marqueeEnded = true;
-        this.regionDrawn(event, source);
-      }),
-      scope.onEmptySpaceClick(() => {
-        if (this.region && !this.annotationOwned) {
-          this.changeRegion(undefined);
-        }
-      }),
+      // A gesture that ends with a selection: never a programmatic one.
+      selection.onCommitted(() => this.textSelected(selection)),
+      selection.onCleared(() => this.textCleared()),
+      onRegionEnd((end) => this.regionEnded(end)),
     ];
-    return () => stops.forEach((stop) => stop());
+    return () => {
+      this.source = undefined;
+      stops.forEach((stop) => stop());
+    };
   }
 
   /**
@@ -205,9 +188,11 @@ export class SelectionTracker {
    * Nothing selected is reported too: the extension waits for an answer
    * before copying a page-only link. Messages arrive in order.
    */
-  async reportSelection(scope: SelectionScope | undefined): Promise<void> {
-    if (scope?.getState().selection) {
-      await reportText(scope);
+  async reportSelection(
+    selection: SelectionCapability | null | undefined,
+  ): Promise<void> {
+    if (selection?.hasSelection()) {
+      await reportText(selection, this.source);
     } else if (this.region) {
       await this.regionDetails;
     } else {
@@ -215,17 +200,17 @@ export class SelectionTracker {
     }
   }
 
-  private textSelected(scope: SelectionScope): void {
-    const selected = scope.getState().selection;
+  private textSelected(selection: SelectionCapability): void {
+    const selected = rangeKey(selection.getRange());
     if (!selected) {
       return;
     }
     this.annotationOwned = false;
     this.region = undefined;
     this.setRegion(undefined);
-    void reportText(scope).then((text) => {
+    void reportText(selection, this.source).then((text) => {
       // A newer selection's read may have finished first.
-      if (scope.getState().selection === selected) {
+      if (rangeKey(selection.getRange()) === selected) {
         this.selectedText = text;
       }
     });
@@ -238,36 +223,30 @@ export class SelectionTracker {
     }
   }
 
-  private regionDrawn(
-    { pageIndex, rect }: { pageIndex: number; rect: Rect },
-    source: { engine: () => Engine | undefined; pdf: PdfDocumentObject },
-  ): void {
-    if (
-      rect.size.width < MIN_REGION_SIZE ||
-      rect.size.height < MIN_REGION_SIZE
-    ) {
+  private regionEnded(end: RegionEnd): void {
+    if (end.kind === "click") {
+      // A click clears a dragged region, as it did without the tool.
+      if (this.region && !this.annotationOwned) {
+        this.changeRegion(undefined);
+      }
       return;
     }
-    const region: RegionSelection = {
-      kind: "region",
-      page: pageIndex + 1,
-      rect: toPageRect(rect),
-    };
+    const page = this.source?.pageNumberOf(end.page);
+    if (!this.source || page === undefined) {
+      return;
+    }
+    const region: RegionSelection = { kind: "region", page, rect: end.rect };
     this.annotationOwned = false;
     this.changeRegion(region);
-    const engine = source.engine();
-    if (engine) {
-      this.regionDetails = this.readDetails(engine, source.pdf, region);
-    }
+    this.regionDetails = this.readDetails(this.source, region);
   }
 
   /** Report the region again with its text and snapshot, unless replaced meanwhile. */
   private readDetails(
-    engine: Engine,
-    pdf: PdfDocumentObject,
+    source: SelectionSource,
     region: RegionSelection,
   ): Promise<void> {
-    return readRegionDetails(engine, pdf, region.page, region.rect).then(
+    return source.readDetails(region.page, region.rect).then(
       ({ text, image }) => {
         if (this.region !== region) {
           return;
@@ -309,41 +288,57 @@ function useCopiedText(state: SelectionTracker): void {
 export type SelectionReporting = ReturnType<typeof useSelectionReporting>;
 
 /**
- * Read the selected text and its line boxes, report them, and return the
- * text. The engine reads asynchronously, slowly while it renders pages, so
- * a selection cleared or replaced meanwhile is not reported.
+ * Which selection this is: its first and last character. The selection's
+ * objects are made again whenever a page's geometry arrives, so they say
+ * nothing about whether the selection itself changed.
  */
-function reportText(scope: SelectionScope): Promise<string | undefined> {
-  const selected = scope.getState().selection;
-  return new Promise((resolve) => {
-    scope.getSelectedText().wait(
-      (lines) => {
-        if (scope.getState().selection !== selected) {
-          resolve(undefined);
-          return;
-        }
-        const text = lines.join(" ").replace(/\s+/gu, " ").trim();
-        const pages = scope.getFormattedSelection().map((page) => ({
-          page: page.pageIndex + 1,
-          rects: page.segmentRects.map(toPageRect),
-        }));
-        if (text && pages.length > 0) {
-          reportToHost({
-            selection: { selection: { kind: "text", text, pages } },
-          });
-        }
-        resolve(text || undefined);
-      },
-      () => resolve(undefined),
-    );
-  });
+function rangeKey(range: TextRange | null): string | undefined {
+  return range
+    ? `${range.start.page.objectNumber}:${range.start.index}-${range.end.page.objectNumber}:${range.end.index}`
+    : undefined;
 }
 
-function toPageRect(rect: Rect): PageRect {
-  return [
-    rect.origin.x,
-    rect.origin.y,
-    rect.origin.x + rect.size.width,
-    rect.origin.y + rect.size.height,
-  ];
+/**
+ * Read the selected text and its line boxes, report them, and return the
+ * text. The engine reads asynchronously, slowly while it renders pages, so
+ * a selection cleared or replaced meanwhile is not reported. A PDF that
+ * forbids copying has no text to report.
+ */
+async function reportText(
+  selection: SelectionCapability,
+  source: SelectionSource | undefined,
+): Promise<string | undefined> {
+  const selected = rangeKey(selection.getRange());
+  if (!selected || !source) {
+    return undefined;
+  }
+  let lines: string;
+  try {
+    lines = await selection.readText();
+  } catch {
+    return undefined;
+  }
+  if (rangeKey(selection.getRange()) !== selected) {
+    return undefined;
+  }
+  const text = lines.replace(/\s+/gu, " ").trim();
+  const pages = selection.getSnapshot().pages.flatMap(({ page, segments }) => {
+    const number = source.pageNumberOf(page);
+    return number === undefined || segments.length === 0
+      ? []
+      : [{ page: number, rects: segments.map(({ rect }) => toPageRect(rect)) }];
+  });
+  if (text && pages.length > 0) {
+    reportToHost({ selection: { selection: { kind: "text", text, pages } } });
+  }
+  return text || undefined;
+}
+
+function toPageRect(rect: {
+  x: number;
+  y: number;
+  width: number;
+  height: number;
+}): PageRect {
+  return [rect.x, rect.y, rect.x + rect.width, rect.y + rect.height];
 }

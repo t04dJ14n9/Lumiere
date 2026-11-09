@@ -9,7 +9,7 @@ Every setting of this extension can be changed without opening a settings file.
 | **PDF: Toggle Smooth Scrolling** | Flips `view.smoothScrolling` (from what is in effect now, also when it followed the editor). |
 | **PDF: Toggle Keyboard Shortcuts** | Flips `keyboardShortcuts`. |
 | **PDF: Choose Toolbar Location…** | `toolbar.mode` (`chrome` status bar or `none`). |
-| **PDF: Cycle Page Colors** | `pageColors` (Follow → Normal → Dark). |
+| **PDF: Cycle Page Colors** | `pageColors` (Follow → Normal → Dark). Dark paper is off on EmbedPDF 3 for now: pages stay white (see `embedpdf-page-colors-patch.md`). |
 | **PDF: Set Default Zoom… / Page Layout… / Scrolling…** | `view.defaultZoom`, `view.pageLayout`, `view.scrollMode`. |
 
 ![PDF: Change Setting… in the Command Palette](images/change-setting.png)

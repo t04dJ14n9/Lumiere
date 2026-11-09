@@ -1,10 +1,11 @@
 /**
  * The PDF viewer page. It asks the extension for the PDF, then starts the
- * engine and the viewer. A new `load` (the file changed) restarts both.
+ * engine and the viewer. A new `load` (the file changed) restarts the viewer
+ * and keeps the engine.
  *
  *   host.ts              messages to and from the extension
- *   render-session.ts    what one loaded PDF holds (bytes, engines, blob
- *                        URLs), disposed when the next one arrives
+ *   engine-host.ts       the page's PDF engine, kept across reloads and
+ *                        stopped when the page goes
  *   engine.tsx           PDFium startup (worker, with a main-thread fallback)
  *   viewer.tsx           toolbar, search and pages
  */
@@ -12,13 +13,12 @@ import React from "react";
 import { flushSync } from "react-dom";
 import { createRoot } from "react-dom/client";
 import {
-  browserRenderEnvironment,
-  warmWasm,
+  browserEngineEnvironment,
   type ViewerEngine,
 } from "./browser-render-environment";
 import { PdfEngine, Status } from "./engine";
+import { EngineHost } from "./engine-host";
 import { connectToHost } from "./host";
-import { PdfRenderSession, replaceSession } from "./render-session";
 import "@vscode/codicons/dist/codicon.css";
 import "./styles/base.css";
 import "./styles/toolbar.css";
@@ -30,20 +30,8 @@ const container = document.getElementById("root");
 if (!container) {
   throw new Error("The viewer page has no #root element");
 }
+// The attribute keeps its name: PDFium is still what the file holds.
 const wasmUrl = container.dataset.pdfiumWasm;
-// Load-time marks (see test/vscode/perf.spec.ts): the first rendered page image.
-container.addEventListener(
-  "load",
-  (event) => {
-    if (
-      event.target instanceof Element &&
-      event.target.classList.contains("page-image")
-    ) {
-      performance.mark("pdf:first-page");
-    }
-  },
-  { capture: true, once: false },
-);
 const root = createRoot(container);
 
 if (!wasmUrl) {
@@ -51,26 +39,30 @@ if (!wasmUrl) {
     <Status text="The PDF engine is missing from this installation." />,
   );
 } else {
-  // The engine's WASM downloads while the host sends the PDF.
-  warmWasm(wasmUrl).catch(() => undefined);
+  const host = new EngineHost<ViewerEngine>(browserEngineEnvironment(wasmUrl));
+  // The engine's worker starts, and its WASM downloads and compiles, while
+  // the host sends the PDF. A failure here surfaces when the PDF is opened.
+  host.engine("worker").then(
+    (engine) => engine.warmup(),
+    () => undefined,
+  );
   let generation = 0;
-  let session: PdfRenderSession<ViewerEngine> | undefined;
   root.render(<Status text="Loading the PDF…" />);
   connectToHost((buffer) => {
     performance.mark("pdf:buffer");
-    session = replaceSession(
-      session,
-      (after) =>
-        new PdfRenderSession(buffer, wasmUrl, browserRenderEnvironment, after),
-      // Replace the old viewer first (flushSync unmounts it now), so nothing
-      // still on screen uses the engines the old session is about to stop.
-      (next) =>
-        flushSync(() =>
-          root.render(<PdfEngine key={++generation} session={next} />),
-        ),
+    // Replace the old viewer first (flushSync unmounts it now), so nothing
+    // still on screen is open when the new document is.
+    flushSync(() =>
+      root.render(
+        <PdfEngine
+          key={++generation}
+          host={host}
+          bytes={{ current: buffer }}
+        />,
+      ),
     );
   });
   window.addEventListener("pagehide", () => {
-    void session?.dispose();
+    void host.dispose();
   });
 }

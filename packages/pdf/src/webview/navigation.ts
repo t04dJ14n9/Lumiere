@@ -1,13 +1,16 @@
-import { useScrollState } from "./scroll-state";
-import { useScrollCapability } from "@embedpdf/plugin-scroll/react";
-import type React from "react";
+import {
+  useStageState,
+  type RevealOptions,
+  type ScrollBehaviorKind,
+} from "@embedpdf/react/stage";
 import { useCallback, useEffect, useRef, useState } from "react";
 import { fromViewRect, type PageRect } from "../shared/geometry";
 import type { PdfLocation } from "../shared/pdf-location";
 import type { ReadingPosition } from "../shared/reading-position";
 import type { ScrollMode } from "../shared/view-settings";
-import { rememberedPosition } from "./reading-position";
+import { nativeZoom } from "./reading-position";
 import { NavigationIntent } from "../shared/navigation-intent";
+import { useStageApi, type StageApi } from "./stage-capability";
 
 /** A box flashed on a page after opening a location. */
 export interface Highlight {
@@ -21,263 +24,184 @@ export interface Highlight {
 const BOX_POSITION_PERCENT = 20;
 
 /**
- * Where the reader is (current page) and how to move: to a page, to a
- * location with a box, or one page forward/back.
- *
- * When the layout is first ready, EmbedPDF scrolls to its own saved position,
- * overriding any earlier scroll. A location requested before then (a link
- * opened together with the PDF) is held and applied at that moment.
+ * The viewer's own top-left corner. A bare `start` alignment leaves the
+ * Stage's `padding` between the corner and the point, so a place revealed
+ * there would sit `padding` further in than the saved offsets and links say;
+ * the Stage reads a fraction as that fraction of the whole viewer.
  */
-export function useNavigation(
-  documentId: string,
-  scrollMode: ScrollMode,
-  smooth: boolean,
-) {
-  const intent = useRef(new NavigationIntent()).current;
-  const { provides: scroll, state } = useScrollState();
-  const {
-    page: pagedPage,
-    requested: requestedPage,
-    request: requestPage,
-  } = usePagedPage(scrollMode, state.currentPage);
-  const layoutReady = useRef(false);
-  const heldLocation = useRef<HeldLocation | undefined>(undefined);
-  const animate = smooth && scrollMode === "continuous";
-  const { show, highlight } = useShowLocation({
-    scroll,
-    intent,
-    layoutReady,
-    heldLocation,
-    animate,
-    requestPage,
-  });
-  const showRef = useRef(show);
-  showRef.current = show;
-  useHeldLocation({
-    documentId,
-    scroll,
-    intent,
-    layoutReady,
-    heldLocation,
-    show,
-  });
-  useNavigationInterrupts(intent, heldLocation);
-  const reveal = useRevealBox(scroll, animate, requestPage);
-  const restore = useCallback(
-    (position: ReadingPosition): void => {
-      intent.advance();
-      showRef.current(
-        { page: position.page },
-        position.top,
-        position.left,
-        true,
-      );
-    },
-    [intent],
-  );
-  return {
-    intent,
-    isReady: () => layoutReady.current && Boolean(scroll),
-    ...pageStatus(state, scrollMode, pagedPage),
-    highlight,
-    show,
-    restore,
-    reveal,
-    goToPage: (page: number, top?: number) => show({ page }, top),
-    step: (delta: 1 | -1, keepPlace = false): void =>
-      step(scroll, requestedPage.current, show, { delta, keepPlace }),
-  };
+const CORNER = { x: 0, y: 0 } as const;
+
+/** A point on a page, as the zero-sized box `reveal` takes. */
+function pointOn(
+  left: number,
+  top: number,
+): NonNullable<RevealOptions["rect"]> {
+  return { x: left, y: top, width: 0, height: 0 };
 }
 
 /**
- * Show a location: its box near the top of the viewer, flashed; without a
- * box, the page from `top` points below its top (where a link or outline
- * entry points), or from its top. Before the layout is ready, the location
- * is held (`useHeldLocation` applies it).
+ * Where the reader is (current page) and how to move: to a page, to a
+ * location with a box, or one page forward/back.
+ *
+ * The Stage queues a move requested before its first layout and applies it in
+ * that layout, so a location opened together with the PDF needs no waiting.
  */
-function useShowLocation(options: {
-  scroll: Scroll | null;
-  intent: NavigationIntent;
-  layoutReady: React.RefObject<boolean>;
-  heldLocation: React.RefObject<HeldLocation | undefined>;
-  animate: boolean;
-  requestPage: (page: number) => void;
-}) {
-  const { scroll, intent, layoutReady, heldLocation, animate, requestPage } =
-    options;
+export function useNavigation(scrollMode: ScrollMode, smooth: boolean) {
+  const intent = useRef(new NavigationIntent()).current;
+  const stage = useStageApi();
+  // Renders again when the page or the zoom changes: the status reads the Stage.
+  const { pageCount } = useStageState();
+  const behavior: ScrollBehaviorKind =
+    smooth && scrollMode === "continuous" ? "smooth" : "instant";
   const [highlight, setHighlight] = useState<Highlight>();
   const show = useCallback(
     (location: PdfLocation, top?: number, left = 0, instant = false): void => {
-      if (!scroll || !layoutReady.current) {
-        const generation = intent.current();
-        heldLocation.current = { location, top, left, instant, generation };
-        return;
-      }
-      const page = Math.min(Math.max(1, location.page), scroll.getTotalPages());
-      requestPage(page);
-      scroll.scrollToPage({
-        ...scrollTarget(scroll, { ...location, page }, top, left),
-        behavior: animate && !instant ? "smooth" : "instant",
-      });
+      const page = Math.min(Math.max(1, location.page), stage.getPageCount());
+      const target = { location, page, top, left };
+      moveTo(stage, target, instant ? "instant" : behavior);
       if (location.viewRect) {
         const rect = fromViewRect(location.viewRect);
         setHighlight({ page, rect, key: Date.now() });
       }
     },
-    [scroll, animate, intent, requestPage, layoutReady, heldLocation],
+    [stage, behavior],
   );
-  return { show, highlight };
-}
-
-/** Scroll a box (a search match) to the middle of the viewer, without flashing it. */
-function useRevealBox(
-  scroll: Scroll | null,
-  animate: boolean,
-  requestPage: (page: number) => void,
-) {
-  return useCallback(
-    (page: number, rect: PageRect, _deliberate = true): void => {
-      requestPage(page);
-      const [left, top, right, bottom] = rect;
-      scroll?.scrollToPage({
-        pageNumber: page,
-        behavior: animate ? "smooth" : "instant",
-        pageCoordinates: { x: (left + right) / 2, y: (top + bottom) / 2 },
-        alignX: 50,
-        alignY: 50,
-      });
+  useNavigationInterrupts(intent);
+  const restore = useCallback(
+    (position: ReadingPosition): void => {
+      intent.advance();
+      restoreView(stage, position);
     },
-    [scroll, animate, requestPage],
-  );
-}
-
-/**
- * The page paged mode shows, and the one last asked for (a quick second step
- * counts from it, before the first has landed). In continuous mode both
- * follow the page the scroll reports.
- */
-function usePagedPage(scrollMode: ScrollMode, current: number) {
-  const [page, setPage] = useState(() => rememberedPosition().page);
-  const requested = useRef(page);
-  useEffect(() => {
-    if (scrollMode === "continuous") {
-      requested.current = current;
-      setPage(current);
-    }
-  }, [current, scrollMode]);
-  const request = useCallback((next: number): void => {
-    requested.current = next;
-    setPage(next);
-  }, []);
-  return { page, requested, request };
-}
-
-/** The page shown, and whether there are pages (or spreads) before and after it. */
-function pageStatus(
-  state: ReturnType<typeof useScrollState>["state"],
-  scrollMode: ScrollMode,
-  pagedPage: number,
-) {
-  const currentPage = scrollMode === "paged" ? pagedPage : state.currentPage;
-  const item = state.virtualItems.find((item) =>
-    item.pageNumbers.includes(currentPage),
+    [intent, stage],
   );
   return {
-    currentPage,
-    pageCount: state.totalPages,
-    canGoBack: Boolean(item && item !== state.virtualItems[0]),
-    canGoForward: Boolean(item && item !== state.virtualItems.at(-1)),
-    activePages:
-      scrollMode === "paged" ? (item?.pageNumbers ?? [currentPage]) : undefined,
+    intent,
+    isReady: () => stage.listVisiblePages().length > 0,
+    ...pageStatus(stage, pageCount),
+    highlight,
+    show,
+    restore,
+    reveal: (page: number, rect: PageRect, _deliberate = true): void =>
+      revealBox(stage, page, rect, behavior),
+    goToPage: (page: number, top?: number) => show({ page }, top),
+    step: (delta: 1 | -1, keepPlace = false): void =>
+      stepPage(stage, { delta, keepPlace, behavior }),
   };
 }
 
-type Scroll = NonNullable<ReturnType<typeof useScrollState>["provides"]>;
-type Show = (
-  location: PdfLocation,
-  top?: number,
-  left?: number,
-  instant?: boolean,
-) => void;
-
-/** A location asked for before the layout was ready. */
-interface HeldLocation {
-  location: PdfLocation;
-  top?: number | undefined;
-  left: number;
-  instant: boolean;
-  generation: number;
+/** The page shown, and whether there are pages (or spreads) before and after it. */
+function pageStatus(stage: StageApi, pageCount: number) {
+  // The page the reader went to, not the first of its spread: going to page
+  // 4 in a spread of 3 and 4 shows 4.
+  return {
+    currentPage: stage.getCurrentPageIndex() + 1,
+    pageCount,
+    canGoBack: stage.canGoPrevious(),
+    canGoForward: stage.canGoNext(),
+  };
 }
 
-/** Where `scrollToPage` takes a location, apart from how it moves there. */
-function scrollTarget(
-  scroll: Scroll,
-  location: PdfLocation,
-  top: number | undefined,
-  left: number,
-) {
-  const { page, viewRect: box } = location;
+/**
+ * Take a location to the Stage: its box near the top of the viewer, the page
+ * from `top` points below its top (where a link or outline entry points), or
+ * the page itself.
+ */
+function moveTo(
+  api: StageApi,
+  target: {
+    location: PdfLocation;
+    page: number;
+    top: number | undefined;
+    left: number;
+  },
+  behavior: ScrollBehaviorKind,
+): void {
+  const { page, top, left } = target;
+  const box = target.location.viewRect;
   if (box) {
-    return {
-      pageNumber: page,
-      pageCoordinates: { x: box.left, y: box.top },
-      alignX: 0,
-      alignY: BOX_POSITION_PERCENT,
-    };
+    api.reveal(page - 1, {
+      rect: pointOn(box.left, box.top),
+      align: { x: "start", y: BOX_POSITION_PERCENT / 100 },
+      zoom: "keep",
+      behavior,
+    });
+  } else if (top !== undefined || left !== 0) {
+    api.reveal(page - 1, {
+      rect: pointOn(left, top ?? 0),
+      align: CORNER,
+      zoom: "keep",
+      behavior,
+    });
+  } else {
+    api.goToPage(page - 1, { behavior });
   }
-  if (top !== undefined || left !== 0) {
-    return {
-      pageNumber: page,
-      pageCoordinates: { x: left, y: top ?? 0 },
-      alignX: 0,
-      alignY: 0,
-    };
-  }
-  // A page-only jump shows its whole native spread, including when the
-  // requested page is on the right. Coordinate destinations keep that page.
-  const item = scroll
-    .getLayout()
-    .virtualItems.find((item) => item.pageNumbers.includes(page));
-  return { pageNumber: item?.pageNumbers[0] ?? page };
 }
 
-/** Show a location held until the layout (and the scroll capability) is ready. */
-function useHeldLocation(options: {
-  documentId: string;
-  scroll: Scroll | null | undefined;
-  intent: NavigationIntent;
-  layoutReady: React.MutableRefObject<boolean>;
-  heldLocation: React.MutableRefObject<HeldLocation | undefined>;
-  show: Show;
-}): void {
-  const { documentId, scroll, intent, layoutReady, heldLocation, show } =
-    options;
-  const { provides: scrollPlugin } = useScrollCapability();
-  const showRef = useRef(show);
-  showRef.current = show;
-  const applyHeld = useCallback(() => {
-    const held = heldLocation.current;
-    heldLocation.current = undefined;
-    if (held && intent.owns(held.generation)) {
-      showRef.current(held.location, held.top, held.left, held.instant);
-    }
-  }, [heldLocation, intent]);
-  useEffect(
-    () =>
-      scrollPlugin?.onLayoutReady((event) => {
-        if (event.documentId === documentId) {
-          layoutReady.current = true;
-          applyHeld();
-        }
-      }),
-    [documentId, scrollPlugin, layoutReady, applyHeld],
-  );
-  // The scroll capability can arrive after the layout; apply what was held.
-  useEffect(() => {
-    if (scroll && layoutReady.current && heldLocation.current) {
-      applyHeld();
-    }
-  }, [scroll, show, layoutReady, heldLocation, applyHeld]);
+/**
+ * Put a saved reading position back: the page and the point of it at the
+ * corner, at the saved zoom. A number zoom goes in the same move; a fit mode
+ * is switched to first, once the Stage has laid out (before that it is the
+ * mode the Stage was registered with).
+ */
+function restoreView(api: StageApi, position: ReadingPosition): void {
+  const zoom = nativeZoom(position.zoom);
+  const laidOut = api.listVisiblePages().length > 0;
+  if ("mode" in zoom && laidOut && api.getZoomMode() !== zoom.mode) {
+    api.zoomTo(zoom);
+  }
+  api.reveal(Math.min(Math.max(1, position.page), api.getPageCount()) - 1, {
+    rect: pointOn(position.left, position.top),
+    align: CORNER,
+    zoom: "level" in zoom ? { level: zoom.level } : "keep",
+    behavior: "instant",
+  });
+}
+
+/** Scroll a box (a search match) to the middle of the viewer, without flashing it. */
+function revealBox(
+  stage: StageApi,
+  page: number,
+  [left, top, right, bottom]: PageRect,
+  behavior: ScrollBehaviorKind,
+): void {
+  stage.reveal(page - 1, {
+    rect: { x: left, y: top, width: right - left, height: bottom - top },
+    align: { x: "center", y: "center" },
+    zoom: "keep",
+    behavior,
+  });
+}
+
+/**
+ * One page (or spread) forward or back; with `keepPlace`, at the same place
+ * in it: the point of the page at the viewer's corner is revealed at the
+ * corner of the page turned to, at the same zoom.
+ */
+function stepPage(
+  stage: StageApi,
+  move: { delta: 1 | -1; keepPlace: boolean; behavior: ScrollBehaviorKind },
+): void {
+  const { delta, keepPlace, behavior } = move;
+  if (!(delta > 0 ? stage.canGoNext() : stage.canGoPrevious())) {
+    return;
+  }
+  const here = keepPlace ? stage.getCurrentDestination() : null;
+  // Keeping the place moves the camera once, to the place: a turn that
+  // animates first would then be cut short by the reveal.
+  const how: ScrollBehaviorKind = keepPlace ? "instant" : behavior;
+  if (delta > 0) {
+    stage.nextPage({ behavior: how });
+  } else {
+    stage.previousPage({ behavior: how });
+  }
+  if (here?.kind === "xyz" && (here.x || here.y)) {
+    stage.reveal(stage.getCurrentPageIndex(), {
+      rect: pointOn(here.x ?? 0, here.y ?? 0),
+      align: { x: "start", y: "start" },
+      zoom: "keep",
+      behavior: "instant",
+    });
+  }
 }
 
 /** Keys that move the reader through the PDF; other keys do not interrupt. */
@@ -304,10 +228,7 @@ const INTERRUPTING_EVENTS = ["wheel", "pointerdown", "touchstart", "keydown"];
  * input (scrolling the pages, arrow keys) interrupts it as reader movement,
  * anything else (the toolbar, the search field) just supersedes it.
  */
-function useNavigationInterrupts(
-  intent: NavigationIntent,
-  heldLocation: React.MutableRefObject<HeldLocation | undefined>,
-): void {
+function useNavigationInterrupts(intent: NavigationIntent): void {
   useEffect(() => {
     const interrupt = (event: Event): void => {
       if (
@@ -321,7 +242,6 @@ function useNavigationInterrupts(
       } else {
         intent.advance();
       }
-      heldLocation.current = undefined;
     };
     for (const name of INTERRUPTING_EVENTS) {
       document.addEventListener(name, interrupt, {
@@ -335,7 +255,7 @@ function useNavigationInterrupts(
         document.removeEventListener(name, interrupt, true);
       }
     };
-  }, [intent, heldLocation]);
+  }, [intent]);
 }
 
 function isReadingInput(event: Event): boolean {
@@ -346,58 +266,6 @@ function isReadingInput(event: Event): boolean {
   const modified =
     event.altKey || event.ctrlKey || event.metaKey || event.shiftKey;
   return event.key !== "Escape" && !modified && !target?.closest(OWN_KEYS);
-}
-
-/** One page (or spread) forward or back; with `keepPlace`, at the same place in it. */
-function step(
-  scroll: Scroll | null | undefined,
-  from: number,
-  show: Show,
-  move: { delta: 1 | -1; keepPlace: boolean },
-): void {
-  if (!scroll) {
-    return;
-  }
-  // Native virtual items define both single-page and spread navigation.
-  const items = scroll.getLayout().virtualItems;
-  // Quick repeats add up: from the page requested last, until scrolling reports another.
-  const index = items.findIndex((item) => item.pageNumbers.includes(from));
-  const item =
-    items[Math.min(Math.max(0, index + move.delta), items.length - 1)];
-  if (!item) {
-    return;
-  }
-  const place = move.keepPlace
-    ? placeInPage(items[index]?.pageNumbers[0])
-    : undefined;
-  if (place) {
-    show({ page: item.pageNumbers[0]! }, place.top, place.left);
-  } else {
-    show({ page: item.pageNumbers[0]! });
-  }
-}
-
-/**
- * How far into a page the viewer's top-left corner is, in points: turning
- * the page with this keeps the zoom and the place in the page, as Preview's
- * Option+Arrow does. Nothing when the page's top is still below the corner.
- */
-function placeInPage(
-  page: number | undefined,
-): { top: number; left: number } | undefined {
-  const viewport = document.querySelector(".viewport");
-  const element = document.querySelector<HTMLElement>(
-    `.page[data-page-index="${(page ?? 1) - 1}"]`,
-  );
-  const scale = Number(element?.dataset.scale);
-  if (!viewport || !element || !(scale > 0)) {
-    return undefined;
-  }
-  const view = viewport.getBoundingClientRect();
-  const box = element.getBoundingClientRect();
-  const top = Math.max(0, view.top - box.top) / scale;
-  const left = Math.max(0, view.left - box.left) / scale;
-  return top || left ? { top, left } : undefined;
 }
 
 export type Navigation = ReturnType<typeof useNavigation>;

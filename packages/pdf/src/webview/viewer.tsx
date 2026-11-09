@@ -1,26 +1,17 @@
-import type { PdfDocumentObject } from "@embedpdf/models";
-import { Scroller } from "@embedpdf/plugin-scroll/react";
-import { CopyToClipboard } from "@embedpdf/plugin-selection/react";
-import { Viewport } from "@embedpdf/plugin-viewport/react";
-import { ZoomGestureWrapper } from "@embedpdf/plugin-zoom/react";
+import { Scrollbar, Stage } from "@embedpdf/react/stage";
 import React, { useEffect, useRef, useState } from "react";
 import { useEndDragsReleasedOutside } from "./drag-release";
 import { useNavigation } from "./navigation";
 import { useOutlinePublishing } from "./outline";
 import { Page } from "./page";
-import { PageBitmaps } from "./page-bitmaps";
-import { DOCUMENT_ID } from "./plugins";
 import { currentViewSettings, useRestorePosition } from "./reading-position";
 import type { ViewChoices } from "../shared/view-settings";
-import { usePagedScroll } from "./paged-scroll";
-import { usePagedWheel, usePagingKeys } from "./paging-input";
+import { usePagingKeys } from "./paging-input";
 import { useSmoothMotion, useSmoothWheel } from "./smooth-scrolling";
-import { useZoomScrollSettle } from "./zoom-scroll";
 import { zenToolbarMode } from "../shared/zen";
 import { useZen } from "./zen";
-import { useZoomTransition } from "./zoom-transition";
 import { useViewLayout } from "./view-layout";
-import { PagedPadding } from "./paged-padding";
+import { useExposeStageForTests } from "./test-hook";
 import { SearchBar } from "./search-bar";
 import { useIgnoreSecondaryButtons } from "./secondary-buttons";
 import { useLookUp } from "./look-up";
@@ -36,9 +27,7 @@ import { rememberPageColors } from "./page-colors";
 import { Toolbar } from "./toolbar";
 import { useViewActions, useViewReporting } from "./view-sync";
 import { useHostMessages } from "./host-messages";
-import { useWheelZoom } from "./wheel-zoom";
 import { useJumpHistory } from "./jump-history";
-import { useFirstFitNow } from "./first-fit";
 import {
   rememberedChoices,
   useRegionsEnabled,
@@ -48,13 +37,11 @@ import {
 /**
  * The open PDF: an optional search bar and the scrolling pages. Controls
  * live on the VS Code status bar (or commands when toolbar.mode is none).
+ * Mounted once the document is ready, inside EmbedPDF (engine.tsx).
  */
-export function Viewer({
-  document: pdf,
-}: {
-  document: PdfDocumentObject;
-}): React.JSX.Element {
-  const view = useViewerState(pdf);
+export function Viewer(): React.JSX.Element {
+  useExposeStageForTests();
+  const view = useViewerState();
   const {
     choices,
     smooth,
@@ -73,7 +60,6 @@ export function Viewer({
       data-page-layout={choices.pageLayout}
       data-scroll-direction={choices.scrollDirection}
     >
-      <CopyToClipboard />
       {toolbar.mode === "slim" && (
         <Toolbar
           navigation={navigation}
@@ -94,8 +80,6 @@ export function Viewer({
           />
         )}
         <DocumentPages
-          pdf={pdf}
-          scroller={view.documentArea}
           choices={choices}
           navigation={navigation}
           selection={view.selection}
@@ -107,27 +91,25 @@ export function Viewer({
 }
 
 /** Everything the viewer tracks and listens to, for one open PDF. */
-function useViewerState(pdf: PdfDocumentObject) {
+function useViewerState() {
   const [choices, setChoices] = useState<ViewChoices>(rememberedChoices);
   const [motionSetting, setMotionSetting] = useState(
     () => currentViewSettings().smoothScrolling,
   );
   const [regionsEnabled, setRegionsEnabled] = useRegionsEnabled();
   const smooth = useSmoothMotion(motionSetting);
-  const rawNavigation = useNavigation(DOCUMENT_ID, choices.scrollMode, smooth);
+  const rawNavigation = useNavigation(choices.scrollMode, smooth);
   const history = useJumpHistory(rawNavigation, choices, setChoices);
   const navigation = withHistory(rawNavigation, history);
   const search = useSearch();
-  useOutlinePublishing(DOCUMENT_ID, pdf);
-  useFirstFitNow(DOCUMENT_ID);
+  useOutlinePublishing();
   const documentArea = useRef<HTMLDivElement>(null);
   useDocumentInput(documentArea, { choices, navigation, smooth });
   const [lookUp, setLookUp] = useState(false);
-  const requestLookUp = useLookUp(pdf, lookUp);
-  useRestorePosition(navigation, pdf.pages.length);
+  const requestLookUp = useLookUp(lookUp);
   const [setting, setToolbar] = useState(currentToolbarSettings);
   const [zen, setZen] = useZen();
-  const tools = useViewerTools(pdf, {
+  const tools = useViewerTools({
     navigation,
     search,
     choices,
@@ -177,17 +159,16 @@ type ViewerToolsDeps = {
 };
 
 /** Tool mode, annotations, selection reporting, view actions and keys. */
-function useViewerTools(pdf: PdfDocumentObject, deps: ViewerToolsDeps) {
+function useViewerTools(deps: ViewerToolsDeps) {
   const { navigation, search, choices, setChoices, regionsEnabled } = deps;
-  const { tool, setTool } = useToolMode(DOCUMENT_ID, regionsEnabled);
-  const annotation = useAnnotationMode(DOCUMENT_ID);
-  const annotationSave = useAnnotationSaveSession(pdf);
+  const { tool, setTool } = useToolMode(regionsEnabled);
+  const annotation = useAnnotationMode();
+  const annotationSave = useAnnotationSaveSession();
   const annotationSelected = useRef(false);
-  const selection = useSelectionReporting(DOCUMENT_ID, pdf, () =>
+  const selection = useSelectionReporting(() =>
     Boolean(annotationSelected.current),
   );
   const annotationSelection = useMarkSelection(
-    pdf,
     tool === "annotate",
     selection.setAnnotationRegion,
   );
@@ -207,6 +188,7 @@ function useViewerTools(pdf: PdfDocumentObject, deps: ViewerToolsDeps) {
     tool,
     setTool,
     hasAnnotationSelection: annotationSelection.hasAnnotationSelection,
+    editingAnnotationText: annotationSelection.editingText,
     deleteSelectedAnnotations: annotationSelection.deleteSelected,
   });
   return {
@@ -247,24 +229,18 @@ function useDocumentInput(
   },
 ): void {
   const { choices, navigation, smooth } = view;
-  useWheelZoom(documentArea);
-  const bounds = usePagedScroll(
+  useSmoothWheel(
     documentArea,
-    navigation.currentPage,
+    smooth,
+    choices.scrollDirection,
     choices.scrollMode,
   );
-  useSmoothWheel(documentArea, smooth, choices.scrollDirection, bounds);
-  const paging = {
+  usePagingKeys({
     mode: choices.scrollMode,
     direction: choices.scrollDirection,
-    bounds,
     step: navigation.step,
-  };
-  usePagingKeys(documentArea, paging);
-  usePagedWheel(documentArea, paging);
-  useZoomTransition(documentArea, smooth);
-  useZoomScrollSettle(documentArea, navigation.intent);
-  useViewLayout(choices, navigation);
+  });
+  useViewLayout(choices, smooth);
   useEndDragsReleasedOutside();
   useIgnoreSecondaryButtons(documentArea);
 }
@@ -276,6 +252,8 @@ function useViewerKeys(state: {
   tool: string;
   setTool: (tool: "text" | "region" | "annotate") => void;
   hasAnnotationSelection: boolean;
+  /** Someone is typing in a free-text box: Delete and Backspace edit its text. */
+  editingAnnotationText: boolean;
   deleteSelectedAnnotations: () => void;
 }): void {
   const latest = useRef(state);
@@ -292,6 +270,7 @@ function useViewerKeys(state: {
           key: event.key,
           annotate: latest.current.tool === "annotate",
           hasAnnotationSelection: latest.current.hasAnnotationSelection,
+          editingText: latest.current.editingAnnotationText,
           editable: isEditableTarget(event.target),
         })
       ) {
@@ -327,74 +306,60 @@ function onEscape(state: {
   }
 }
 
-/** The pages, rendered by EmbedPDF inside the viewport, with their bitmaps. */
+/** The pages, drawn by EmbedPDF's Stage, which scrolls and zooms them itself. */
 function DocumentPages({
-  pdf,
-  scroller,
   choices,
   navigation,
   selection,
   annotate,
 }: {
-  pdf: PdfDocumentObject;
-  scroller: React.RefObject<HTMLDivElement | null>;
   choices: ViewChoices;
   navigation: ReturnType<typeof withHistory>;
   selection: Selection;
   annotate: boolean;
 }): React.JSX.Element {
-  const devicePixelRatio = useDevicePixelRatio();
   const paged = choices.scrollMode === "paged";
   return (
-    <PageBitmaps pdf={pdf} scroller={scroller}>
-      <Viewport
-        documentId={DOCUMENT_ID}
-        className={`viewport${paged ? " paged" : ""}`}
-        tabIndex={0}
-        style={{ display: "flex" }}
+    <>
+      <RestorePosition restore={navigation.restore} />
+      <Stage
+        className="viewport"
+        // The Stage has no scrolling element, so no native scrollbars: its own
+        // are drawn over it, except where a page is turned, not scrolled.
+        overlay={
+          paged ? undefined : (
+            <>
+              <Scrollbar axis="y" />
+              <Scrollbar axis="x" />
+            </>
+          )
+        }
       >
-        <ZoomGestureWrapper
-          documentId={DOCUMENT_ID}
-          enableWheel={false}
-          style={{ position: "relative", margin: "auto" }}
-        >
-          <Scroller
-            documentId={DOCUMENT_ID}
-            data-pdf-scroller
-            renderPage={({ pageIndex, width, height }) =>
-              navigation.activePages &&
-              !navigation.activePages.includes(pageIndex + 1) ? null : (
-                <div className={paged ? "paged-page" : undefined}>
-                  <Page
-                    pdf={pdf}
-                    pageIndex={pageIndex}
-                    width={width}
-                    height={height}
-                    devicePixelRatio={devicePixelRatio}
-                    highlight={navigation.highlight}
-                    region={selection.region}
-                    annotate={annotate}
-                    onOpenPage={(page, top) => navigation.goToPage(page, top)}
-                  />
-                </div>
-              )
-            }
+        {(page) => (
+          <Page
+            page={page}
+            highlight={navigation.highlight}
+            region={selection.region}
+            annotate={annotate}
+            paged={paged}
+            onOpenPage={(target, top) => navigation.goToPage(target, top)}
           />
-          {paged && <PagedPadding direction={choices.scrollDirection} />}
-        </ZoomGestureWrapper>
-      </Viewport>
-    </PageBitmaps>
+        )}
+      </Stage>
+    </>
   );
 }
 
-/** The screen's pixel ratio, updated when the window moves to another display. */
-function useDevicePixelRatio(): number {
-  const [ratio, setRatio] = useState(() => window.devicePixelRatio || 1);
-  useEffect(() => {
-    const query = window.matchMedia(`(resolution: ${ratio}dppx)`);
-    const update = (): void => setRatio(window.devicePixelRatio || 1);
-    query.addEventListener("change", update);
-    return () => query.removeEventListener("change", update);
-  }, [ratio]);
-  return ratio;
+/**
+ * Puts the reader back where they were. A sibling before the Stage: its
+ * layout effect runs before the Stage's, so the restored position is what
+ * the Stage lays out first (see `useRestorePosition`).
+ */
+function RestorePosition({
+  restore,
+}: {
+  restore: Parameters<typeof useRestorePosition>[0];
+}): null {
+  useRestorePosition(restore);
+  return null;
 }

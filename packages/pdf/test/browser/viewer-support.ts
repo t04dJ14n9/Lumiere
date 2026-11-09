@@ -9,7 +9,10 @@ export type Message = { type: string; [key: string]: unknown };
 
 export async function open(page: Page, query = ""): Promise<void> {
   await page.goto(`/${query}`);
-  await expect(page.locator('.page[data-page-index="0"] img')).toBeVisible();
+  // Once the sharp tiles arrive a page holds several images: any one will do.
+  await expect(
+    page.locator('.page[data-page-index="0"] img').first(),
+  ).toBeVisible();
 }
 
 /** Open the harness with empty-page / Select Region enabled (opt-in setting). */

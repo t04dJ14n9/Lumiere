@@ -30,7 +30,7 @@ export interface EditorPageUrls {
   servePage?(html: string): ServedPage | undefined;
   /** A PDF's page (`openPdfPage`), as absolute URLs. */
   readonly pdf: {
-    /** The folder of the built viewer: viewer.js, viewer.css, pdfium.wasm. */
+    /** The folder of the built viewer: viewer.js, viewer.css, embedpdf.wasm. */
     readonly viewer: string;
     /** The built stand-in for its host (host-node's src/page/pdf-shim.ts). */
     readonly shim: string;

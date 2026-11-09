@@ -1,4 +1,5 @@
 import { expect, test, type Page } from "@playwright/test";
+import { scrollBy } from "./stage-support";
 import { act, lastView, openView } from "./view-controls-support";
 
 // Option+Arrow (Ctrl+Alt+Arrow elsewhere) turns the page keeping the zoom and
@@ -6,8 +7,6 @@ import { act, lastView, openView } from "./view-controls-support";
 // actions; the plain Next Page goes to the top of the next page. With
 // `lumiere.pdf.view.arrowsKeepPlace` (the default) plain Left/Right take the
 // keep-place turn in the viewer itself and the Left/Right keybindings step aside.
-
-const viewport = (page: Page) => page.locator(".viewport");
 
 /** How far the viewer's top-left corner is into the page with this index, in pixels. */
 const into = (page: Page, index: number) =>
@@ -36,9 +35,7 @@ for (const [name, settings] of [
     await page.waitForTimeout(400);
     const zoom = (await lastView(page))!.zoomPercent;
     // Somewhere inside the first page or spread.
-    await viewport(page).evaluate((v) =>
-      v.scrollBy({ left: 120, top: 260, behavior: "instant" }),
-    );
+    await scrollBy(page, { left: 120, top: 260 });
     await page.waitForTimeout(300);
     const reading = async () => ((await lastView(page))?.readingPage ?? 1) - 1;
     const first = await reading();
@@ -66,9 +63,7 @@ test("the plain next page still goes to the top of the page", async ({
 }) => {
   await page.setViewportSize({ width: 700, height: 600 });
   await openView(page, { defaultZoom: 300 });
-  await viewport(page).evaluate((v) =>
-    v.scrollBy({ top: 260, behavior: "instant" }),
-  );
+  await scrollBy(page, { top: 260 });
   await page.waitForTimeout(300);
   await act(page, { action: "nextPage" });
   await expect.poll(async () => (await lastView(page))?.readingPage).toBe(2);

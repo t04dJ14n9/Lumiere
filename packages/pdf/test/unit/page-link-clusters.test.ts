@@ -11,7 +11,7 @@ function rect(
   width: number,
   height: number,
 ): PageLinkInput["rect"] {
-  return { origin: { x, y }, size: { width, height } };
+  return { x, y, width, height };
 }
 
 function goto(

@@ -52,17 +52,3 @@ export function annotationQuoteText(options: {
   const contents = options.contents?.trim();
   return contents || undefined;
 }
-
-export interface AnnotationDeleteRef {
-  object: { pageIndex: number; id: string };
-}
-
-/** Targets for EmbedPDF `deleteAnnotations`. */
-export function annotationDeleteTargets(
-  selected: readonly AnnotationDeleteRef[],
-): Array<{ pageIndex: number; id: string }> {
-  return selected.map(({ object }) => ({
-    pageIndex: object.pageIndex,
-    id: object.id,
-  }));
-}

@@ -1,24 +1,36 @@
-import type { PdfDocumentObject } from "@embedpdf/models";
-import { useBookmarkCapability } from "@embedpdf/plugin-bookmark/react";
+import { OutlineToken } from "@embedpdf/plugin-outline/contract";
+import { useDocuments, useOptionalCapability } from "@embedpdf/react/runtime";
 import { useEffect } from "react";
 import { reportToHost } from "./host";
 import { toOutline } from "./pdf-targets";
 
 /** Read the PDF's bookmarks once and send them to the extension's outline view. */
-export function useOutlinePublishing(
-  documentId: string,
-  pdf: PdfDocumentObject,
-): void {
-  const { provides: bookmarks } = useBookmarkCapability();
+export function useOutlinePublishing(): void {
+  const outline = useOptionalCapability(OutlineToken);
+  const documents = useDocuments();
   useEffect(() => {
-    if (!bookmarks) {
+    if (!outline) {
       return;
     }
-    const task = bookmarks.forDocument(documentId).getBookmarks();
-    task.wait(
-      (result) => reportToHost({ outline: toOutline(result.bookmarks, pdf) }),
-      () => reportToHost({ outline: [] }),
-    );
-    return () => task.abort({ code: 1, message: "The viewer closed" });
-  }, [bookmarks, documentId, pdf]);
+    const controller = new AbortController();
+    const publish = (): void =>
+      reportToHost({
+        outline: toOutline(outline.list(), (page) => {
+          const index = documents.getPageIndex(page);
+          return index < 0 ? undefined : index + 1;
+        }),
+      });
+    // Nothing reads the outline when a document opens: ask for it, and
+    // publish whenever it has been read (it fires for the first read too).
+    const stop = outline.onResynced(publish);
+    outline.ensureLoaded({ signal: controller.signal }).catch(() => {
+      if (!controller.signal.aborted) {
+        reportToHost({ outline: [] });
+      }
+    });
+    return () => {
+      controller.abort();
+      stop();
+    };
+  }, [outline, documents]);
 }

@@ -67,7 +67,7 @@ test("the page's files come from the host's asset URLs", () => {
   assert.match(html(), /src="\/lumiere\/pdf\/viewer\/viewer\.js"/);
   assert.match(
     html(),
-    /data-pdfium-wasm="\/lumiere\/pdf\/viewer\/pdfium\.wasm"/,
+    /data-pdfium-wasm="\/lumiere\/pdf\/viewer\/embedpdf\.wasm"/,
   );
   assert.match(html(), /data-toolbar="chrome"/);
 });
