@@ -1,0 +1,79 @@
+Lumiere Host GUI — diagram toolbar overlap (generic fixtures only)
+
+OVERALL: PASS for installed Lumiere Live Preview (title-bar Markdown
+custom editor) on exact product SHA 5f3aa31d. This is not a blanket
+full-suite green. Official pnpm test:vscode remains red, and the PDF
+browser suite did not finish clean in one shot; both remain merge
+blockers.
+
+When: 2026-11-10, Asia/Shanghai (UTC+8)
+  Baseline BEFORE still: 19:21
+  AFTER stills: 19:36–19:40 (final-window mtime 19:40)
+
+Product SHA: 5f3aa31d1b790b488b396b1b4d67d617589fd3d1
+Base origin/main: f1c153d51df481ec493800ca491544d56b7df66b
+AFTER VSIX SHA-256: 323f823c8fe8b5232936a461d1309594bc76acc2626a1bc6335ffac52f513d54
+AFTER editor.css SHA-256: f0bebd87c9f00c3dfa9e37754143cf2dc27151515bd22bab0e2ab0f8164a0271
+  (contains --diagram-toolbar-lane; hash-checked on the installed extension)
+BEFORE VSIX SHA-256: 0fca9cab4fd97316566014c1aba4f1c1b782994cc220b49a1b00f2f3522adf39
+Generic fixture diagram-toolbar.md SHA-256:
+  24d5090fc5cb733a12422b0bd1d674a042c8abb51938bea08cee3e9db25aead6
+  Title: "Diagram toolbar" / "Generic fixtures for Inspect / Copy / Edit overlap checks."
+  Not a user or business diagram.
+
+Path under test: Lumiere Live Preview, title-bar Markdown
+(custom editor lumiere.markdown.editor). Not Cursor native Preview.
+
+Result:
+  BEFORE wide scrolled end: Inspect / Copy / Edit overlap the final
+  "Done" node (original bug reproduced on unfixed main).
+  AFTER: clear chrome/node separation on wide dark start/mid/end,
+  narrow dark, wide light, narrow light, short and consecutive diagrams,
+  and the final-window still.
+  Copy / Inspect / Edit keyboard actions were previously observed on the
+  same SHA and were not recaptured in the 19:36–19:40 stills.
+
+Stills in this folder (1280x800 PNG):
+
+  lp-before-wide-scrolled-end.png
+    sha256 ad0b9aae4c1f4801b0f1210665716081a0dd3045a10fb9e1db8de1d4dfb86f04
+  lp-after-clean-wide-dark-start.png
+    sha256 b3775b9af11a7b6c127d7a3667abb4d0ed6985e91b5d2732142a15aa9c0df6d4
+  lp-after-clean-wide-dark-mid.png
+    sha256 774d3d48d8017e24cb5c1b88599f538e5891a2e6a5527143ce62fb913ca00e3b
+  lp-after-clean-wide-dark-end.png
+    sha256 017bcddb9814680fecbb8f4397e49e1f2c605588bc7fe35c3d687fb25957f7da
+  lp-after-clean-narrow-dark.png
+    sha256 62f1609e4b4cb523f5253dfd5768956467d225c330288d88a1b61664d1b782d3
+  lp-after-clean-narrow-dark-short.png
+    sha256 b3551f26e843371aa548dc8e48419565a00bfa0b7afaf1f56bdb756e0b6afdca
+  lp-after-clean-narrow-dark-consecutive.png
+    sha256 a103a5a442719917de5f48d7effc10db8cc7e1fa4b9c18c70644595a59bdc584
+  lp-after-clean-wide-light-start.png
+    sha256 d647dd2055a5534caba7fc987dff28ced9d64ee1d5733fcd6cc061b2d87f0c62
+  lp-after-clean-wide-light-mid.png
+    sha256 84d00be7a836d6080fa8bd328662882d49e84c2817a1244eacb8bce132408fd5
+  lp-after-clean-wide-light.png
+    sha256 49b3d8cd1a45340b755b46f42d3a6dedbb9a485532a61059763360a3a7daa52e
+  lp-after-clean-narrow-light.png
+    sha256 76aa73df35f717ec21c3b7ad3503b736c0b33c8009f2bd2c20925ecf3f967712
+  lp-after-clean-narrow-light-short.png
+    sha256 dc238f3c546f64046e8908ce787c222ba125517a2e0904f56e9f3257d315bdba
+  lp-after-clean-narrow-light-consecutive.png
+    sha256 7a68e722710b523dbe1f0a6e9e6480f48eecc7cef7f6abe636c700de2b6d2072
+  lp-after-clean-short-hover.png
+    sha256 4e7ef0d0530e912423203e8c12bb7d11c7b14bd6d823756fb93f110a6be421d9
+  lp-after-clean-final-window.png
+    sha256 3d7b6b7b43906e59fa3f12ae1d96634906a8ca8f5828adb745c559d73ca7f856
+
+Cursor native Preview stills and service-worker failure stills are not
+included and are not final evidence for this change. Private or business
+diagrams are not included.
+
+Independent review (R1) was comments-only and private. No Important
+findings. Two nonblocking limitations: RTL is not covered (logical
+inline-end lane vs physical right chrome; no supported RTL surface was
+found), and one new lane-geometry assertion is effectively tautological
+(the clipped-node overlap checks remain useful). Other tests and
+installed Host GUI cover LTR. Official test:vscode red and PDF browser
+one-shot flakes remain merge blockers.
