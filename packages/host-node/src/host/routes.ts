@@ -271,12 +271,22 @@ async function containedResource(
   if (!root) {
     return undefined;
   }
+  const target = fileUriToPath(uri);
+  if (!target) {
+    return undefined;
+  }
+  // The registered root is a realpath'd file: URI, but a caller may name the
+  // same file through a symlinked ancestor (/tmp and /var are links on macOS).
+  // Compare canonical forms, or a contained file is refused with 403.
+  const canonical = await realpath(target).catch(() => undefined);
+  if (!canonical) {
+    return undefined;
+  }
   try {
     // After URL parsing (which resolves `..`, also as `%2e%2e`) and through symlinks.
-    await assertContained(root, uri);
+    await assertContained(root, pathToFileURL(canonical).toString());
   } catch {
     return undefined;
   }
-  const target = fileUriToPath(uri);
-  return target ? realpath(target).catch(() => undefined) : undefined;
+  return canonical;
 }
