@@ -9,6 +9,7 @@
     "**/manifest.ts",
     "**/protocol.ts",
     "**/api.ts",
+    "**/dirty-merge.ts",
     "plugin-graph.ts"
   ]
 }
