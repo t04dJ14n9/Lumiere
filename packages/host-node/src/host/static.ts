@@ -1,5 +1,5 @@
 /** Files served as they are: the built editor, the page shim, a note's images. */
-import { open, stat } from "node:fs/promises";
+import { open, realpath, stat } from "node:fs/promises";
 import type { ServerResponse } from "node:http";
 import * as path from "node:path";
 import { pipeline } from "node:stream/promises";
@@ -46,7 +46,27 @@ export async function serveStatic(
     res.writeHead(403).end();
     return;
   }
-  await serveFile(res, file);
+  // A symlink inside the tree can still name a file outside it. Resolve both
+  // sides before serving and serve the canonical path, so swapping the link
+  // after the check cannot reopen the escape.
+  const rootReal = await realpath(root).catch(() => undefined);
+  const fileReal = await realpath(file).catch(() => undefined);
+  if (!rootReal) {
+    res.writeHead(403).end();
+    return;
+  }
+  if (fileReal) {
+    const relative = path.relative(rootReal, fileReal);
+    if (
+      relative === ".." ||
+      relative.startsWith(`..${path.sep}`) ||
+      path.isAbsolute(relative)
+    ) {
+      res.writeHead(403).end();
+      return;
+    }
+  }
+  await serveFile(res, fileReal ?? file);
 }
 
 export async function serveFile(
