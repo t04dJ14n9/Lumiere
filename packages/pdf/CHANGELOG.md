@@ -3,8 +3,9 @@
 ## Unreleased
 
 - **Empty-page drag pans and turns pages.** With region selection off (the
-  default), dragging blank page space pans the view. In page-by-page
-  scrolling, a drag that meets the edge turns the page. Text selection,
+  default), dragging blank page space pans the view in continuous scrolling.
+  In page-by-page scrolling, a blank-page drag that travels far enough turns
+  the page (it does not only pan inside a Fit Width page). Text selection,
   citation link clicks, wheel and keyboard navigation, and zoom are
   unchanged. Turning on `lumiere.pdf.regions.enabled` still uses empty-page
   drag to draw a region.

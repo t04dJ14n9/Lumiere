@@ -14,7 +14,7 @@ test("View mode pans empty page space without enabling annotation edits", () => 
   );
   assert.ok(
     tool.enables.has("scroll"),
-    "empty-page drag is Stage pan (and a paged turn at the edge)",
+    "empty-page drag is Stage pan in continuous scrolling",
   );
   assert.ok(
     !tool.enables.has("annotation-edit"),

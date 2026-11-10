@@ -127,8 +127,8 @@ export function useAnnotateSwitch(): {
  * annotations, which would let a reader change what came with the PDF. The
  * public tool type has no behaviour tags, so this is registered through the
  * host token. `scroll` lets Stage's pan handler take a press that text
- * selection declined (blank area), and in page-by-page scrolling a drag that
- * meets the edge turns the page (`turnGestures`).
+ * selection declined (blank area) in continuous scrolling. Page-by-page
+ * turns from a blank-area drag are handled separately (`paged-drag-navigate`).
  */
 export function readTool(): {
   id: string;

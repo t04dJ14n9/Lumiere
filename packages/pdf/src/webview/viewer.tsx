@@ -1,6 +1,7 @@
 import { Scrollbar, Stage } from "@embedpdf/react/stage";
 import React, { useEffect, useRef, useState } from "react";
 import { useEndDragsReleasedOutside } from "./drag-release";
+import { usePagedDragNavigate } from "./paged-drag-navigate";
 import { useNavigation } from "./navigation";
 import { useOutlinePublishing } from "./outline";
 import { Page } from "./page";
@@ -239,6 +240,11 @@ function useDocumentInput(
     choices.scrollMode,
   );
   usePagingKeys({
+    mode: choices.scrollMode,
+    direction: choices.scrollDirection,
+    step: navigation.step,
+  });
+  usePagedDragNavigate({
     mode: choices.scrollMode,
     direction: choices.scrollDirection,
     step: navigation.step,
