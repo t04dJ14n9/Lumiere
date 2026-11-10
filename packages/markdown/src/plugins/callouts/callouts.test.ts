@@ -26,6 +26,19 @@ test("Insert Callout quotes the selected lines, apart from the text around, with
   assert.equal(isCallout("> [!warning]- Custom"), true);
 });
 
+// Obsidian 1.15.0 inserts an empty callout ABOVE the line when the caret is
+// at column 0 of a non-empty line, instead of wrapping that line (#691).
+test("Insert Callout inserts an empty callout above a non-empty line at column 0", () => {
+  const state = EditorState.create({
+    doc: "one\ntwo",
+    selection: { anchor: 0 },
+  });
+  const next = state.update(insertCallout(state)).state;
+  const { from, to } = next.selection.main;
+  assert.equal(next.doc.toString(), "> [!NOTE]\n> \none\ntwo");
+  assert.equal(next.sliceDoc(from, to), "NOTE");
+});
+
 // Obsidian 1.15.0's callout syntax, read from its app.js with REA
 // (2026-11-07): the type is any text but `]`, a `|` starts metadata, and a
 // space or the line's end follows the `]` and fold sign.

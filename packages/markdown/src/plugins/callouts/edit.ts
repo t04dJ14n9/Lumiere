@@ -7,14 +7,25 @@ export function isCallout(source: string): boolean {
   return /^\s*>\s*\[![^\]\n]+\][+-]?(?:\s|$)/.test(source);
 }
 /**
- * Insert Callout, as in Obsidian: the selected lines go into a note callout,
- * with a blank line between it and any text above or below; on an empty
- * line, a callout with a title and contents to replace. Its type is selected.
- * A selection ending at column zero does not include that line.
+ * Insert Callout, as in Obsidian: with the caret at column 0 of a non-empty
+ * line, insert an empty `> [!NOTE]\n> ` callout ABOVE that line (the line is
+ * left untouched below it); on an empty line, insert a callout with a title
+ * and contents to replace; otherwise wrap the selected lines in a note
+ * callout with a blank line between it and any text above or below. The
+ * callout's type is selected. A selection ending at column zero does not
+ * include that line.
  */
 export function insertCallout(state: EditorState): TransactionSpec {
   const { from, to, empty } = state.selection.main;
   const first = state.doc.lineAt(from);
+
+  // Obsidian inserts an empty callout above the line rather than wrapping
+  // that line when the caret sits at its start (Obsidian 1.15.0 parity,
+  // issue #691).
+  if (empty && from === first.from && first.text.trim() !== "") {
+    return insertEmptyCalloutAbove(first.from);
+  }
+
   const last = state.doc.lineAt(empty ? to : Math.max(from, to - 1));
   const text = state.sliceDoc(first.from, last.to);
   const touches = (n: number) =>
@@ -32,6 +43,16 @@ export function insertCallout(state: EditorState): TransactionSpec {
   const type = first.from + before.length + "> [!".length;
   return {
     changes: { from: first.from, to: last.to, insert: before + body + after },
+    selection: { anchor: type, head: type + "NOTE".length },
+    userEvent: "input.callout",
+  };
+}
+
+/** Insert an empty note callout above a line, leaving the line's text below. */
+function insertEmptyCalloutAbove(lineFrom: number): TransactionSpec {
+  const type = lineFrom + "> [!".length;
+  return {
+    changes: { from: lineFrom, to: lineFrom, insert: "> [!NOTE]\n> \n" },
     selection: { anchor: type, head: type + "NOTE".length },
     userEvent: "input.callout",
   };
