@@ -3415,6 +3415,12 @@
             "default": true,
             "scope": "resource"
           },
+          "lumiere.markdown.links.focusNewTab": {
+            "type": "boolean",
+            "default": true,
+            "description": "Obsidian's Always focus new tabs: when a link opens in a new tab, switch to that tab immediately. On by default, as in Obsidian 1.15.0.",
+            "scope": "resource"
+          },
           "lumiere.markdown.links.folderNote": {
             "type": "string",
             "default": "",
@@ -3588,6 +3594,12 @@
             },
             "default": [],
             "description": "Obsidian's Excluded files: path prefixes such as `Archive/`, or globs such as `**/*.excalidraw.md`. Excluded files stay linkable but are left out of the quick switcher, suggestions, search and unlinked mentions.",
+            "scope": "resource"
+          },
+          "lumiere.markdown.vault.showUnsupportedFiles": {
+            "type": "boolean",
+            "default": false,
+            "description": "Obsidian's Show all file types: index files with any extension so they can be linked and seen in the Quick Switcher, even when Lumia cannot open them. Off by default; Markdown and attachments are always indexed.",
             "scope": "resource"
           },
           "lumiere.markdown.vim.caretStyle": {

@@ -5,6 +5,11 @@ export const config = Schema.object({
     "shortest",
   ),
   useWikilinks: Schema.boolean().default(true),
+  focusNewTab: Schema.boolean()
+    .default(true)
+    .description(
+      "Obsidian's Always focus new tabs: when a link opens in a new tab, switch to that tab immediately. On by default, as in Obsidian 1.15.0.",
+    ),
   folderNote: Schema.string().default(""),
   newNoteFolder: Schema.string()
     .default("")

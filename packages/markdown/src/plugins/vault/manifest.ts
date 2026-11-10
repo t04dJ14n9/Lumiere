@@ -11,6 +11,11 @@ export const config = Schema.object({
     .description(
       "Obsidian's Excluded files: path prefixes such as `Archive/`, or globs such as `**/*.excalidraw.md`. Excluded files stay linkable but are left out of the quick switcher, suggestions, search and unlinked mentions.",
     ),
+  showUnsupportedFiles: Schema.boolean()
+    .default(false)
+    .description(
+      "Obsidian's Show all file types: index files with any extension so they can be linked and seen in the Quick Switcher, even when Lumia cannot open them. Off by default; Markdown and attachments are always indexed.",
+    ),
 });
 export default defineManifest({
   id: "vault",
