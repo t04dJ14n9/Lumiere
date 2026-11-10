@@ -85,6 +85,19 @@ export function createEditorRoutes(
         return false;
       }
       const rest = url.pathname.slice(BASE.length);
+      // Only the JSON routes take POST. A write to a read-only route must not
+      // open a panel, register a workspace or serve a file as a side effect.
+      const readOnly =
+        rest === "/editor" ||
+        rest === "/page/shim.js" ||
+        rest === "/file" ||
+        rest === "/pdf" ||
+        rest.startsWith("/m/") ||
+        rest.startsWith("/pdf/");
+      if (readOnly && req.method !== "GET" && req.method !== "HEAD") {
+        res.writeHead(405, { allow: "GET, HEAD" }).end();
+        return true;
+      }
       if (rest === "/editor") {
         await servePage({ req, res, url, host, roots });
       } else if (rest.startsWith("/m/")) {
