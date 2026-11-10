@@ -2,6 +2,13 @@
 
 ## Unreleased
 
+- **Empty-page drag pans and turns pages.** With region selection off (the
+  default), dragging blank page space pans the view. In page-by-page
+  scrolling, a drag that meets the edge turns the page. Text selection,
+  citation link clicks, wheel and keyboard navigation, and zoom are
+  unchanged. Turning on `lumiere.pdf.regions.enabled` still uses empty-page
+  drag to draw a region.
+
 - **Lumia PDF moves to EmbedPDF 3.** The viewer's engine and page surface are
   rebuilt on EmbedPDF 3.0.0.
   - *Better:* text selection, search hits, Look Up, links and backlink overlays

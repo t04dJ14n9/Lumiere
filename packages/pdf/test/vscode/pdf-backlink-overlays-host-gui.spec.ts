@@ -353,7 +353,8 @@ test("Host GUI: PDF backlink overlays checklist (Chrome)", async ({
   const regionsOk = regionCount === 0 && selectRegionRows === 0;
   results.push({
     item: 5,
-    title: "Regions off default: empty-page drag noop; Select Region absent",
+    title:
+      "Regions off default: empty-page drag pans, creates no region; Select Region absent",
     status: regionsOk ? "PASS" : "FAIL",
     notes: `region_selection=${regionCount} select_region_rows=${selectRegionRows}`,
   });
