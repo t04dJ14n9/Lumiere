@@ -1409,7 +1409,7 @@ Use the disposable fixture vault from Setup. These rows enumerate every generate
 | `lumiere.markdown.graph.defaultMode` | `"global"` | global / local; change at workspace-folder scope, verify the owning plugin scenario, then reset the override. |
 | `lumiere.markdown.graph.localDepth` | `2` | number; change at workspace-folder scope, verify the owning plugin scenario, then reset the override. |
 | `lumiere.markdown.graph.colorBy` | `"type"` | type / folder / tag; change at workspace-folder scope, verify the owning plugin scenario, then reset the override. |
-| `lumiere.markdown.linkUpdates.mode` | `"prompt"` | prompt / always / never; change at workspace-folder scope, verify the owning plugin scenario, then reset the override. |
+| `lumiere.markdown.linkUpdates.mode` | `"never"` | prompt / always / never; change at workspace-folder scope, verify the owning plugin scenario, then reset the override. |
 | `lumiere.markdown.links.newLinkFormat` | `"shortest"` | shortest / relative / absolute; change at workspace-folder scope, verify the owning plugin scenario, then reset the override. |
 | `lumiere.markdown.links.useWikilinks` | `true` | boolean; change at workspace-folder scope, verify the owning plugin scenario, then reset the override. |
 | `lumiere.markdown.links.folderNote` | `""` | string; change at workspace-folder scope, verify the owning plugin scenario, then reset the override. |
