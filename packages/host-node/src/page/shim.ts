@@ -56,10 +56,13 @@ function listenToEmbedder(send: (frame: PageFrame) => void): void {
     if (!isEmbeddingMessage(event.data)) {
       return;
     }
-    event.stopImmediatePropagation();
+    // Check the sender BEFORE stopping propagation: a foreign-origin message
+    // that merely carries a `lumiere` key must not suppress the editor's RPC
+    // listener for that event.
     if (event.source !== window.parent || event.origin !== location.origin) {
       return;
     }
+    event.stopImmediatePropagation();
     const theme = parseThemeMessage(event.data);
     if (theme) {
       stopFollowingSystem();
