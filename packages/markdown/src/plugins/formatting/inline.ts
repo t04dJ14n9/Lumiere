@@ -28,6 +28,14 @@ export function clearInlineFormatting(source: string): string {
           { from: node.from, to: node.from + 2 },
           { from: node.to - 2, to: node.to },
         );
+      } else if (node.name === "Link" || node.name === "Image") {
+        // Obsidian's Clear Formatting strips a link's marker characters but
+        // keeps both the label and the URL as text: `[l](u)` becomes `lu`.
+        // Only these nodes' own marks are removed: a bare `<url>` autolink and
+        // the `:` in a `[ref]: url` definition are also LinkMarks elsewhere.
+        for (const mark of node.node.getChildren("LinkMark")) {
+          removed.push({ from: mark.from, to: mark.to });
+        }
       }
     },
   });

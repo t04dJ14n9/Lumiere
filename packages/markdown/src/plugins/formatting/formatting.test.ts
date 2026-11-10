@@ -94,13 +94,25 @@ test("toggle comment wraps the selection or the word in %% … %%, as in Obsidia
   assert.equal(comment("a %%wo|rd%% b"), "a wo|rd b");
 });
 
-test("clearing inline formatting retains comment contents, links and escaped literals", () => {
+test("clearing inline formatting retains comment contents and escaped literals", () => {
   assert.equal(
     clearInlineFormatting(
       "**Bold** *soft* ~~old~~ ==marked== %%kept%% `code` $x$ [Link](target) \\*literal\\*",
     ),
-    "Bold soft old marked kept code x [Link](target) \\*literal\\*",
+    "Bold soft old marked kept code x Linktarget \\*literal\\*",
   );
+});
+
+test("clearing inline formatting strips link markers, keeping label and URL text", () => {
+  assert.equal(clearInlineFormatting("[label](url)"), "labelurl");
+  assert.equal(clearInlineFormatting("[l](u)"), "lu");
+  assert.equal(
+    clearInlineFormatting("see [label](url) for details"),
+    "see labelurl for details",
+  );
+  assert.equal(clearInlineFormatting("![alt](url)"), "alturl");
+  // Emphasis inside the label is still cleared, as before.
+  assert.equal(clearInlineFormatting("[**bold**](url)"), "boldurl");
 });
 
 test("caret formatting unwraps enclosing syntax and wraps a plain word", () => {
