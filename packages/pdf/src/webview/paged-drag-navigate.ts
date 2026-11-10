@@ -46,6 +46,7 @@ export function pagedDragHandler(options: {
       if (!sample.page) {
         return false;
       }
+      // viewport = container CSS px, not page.point / PDF units.
       start = { x: sample.viewport.x, y: sample.viewport.y };
       return true;
     },

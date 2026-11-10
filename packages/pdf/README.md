@@ -37,7 +37,7 @@ is opt-in (`lumiere.pdf.regions.enabled`, default off).
 - **Select Region tool (opt-in).** Off by default. Turn on
   `lumiere.pdf.regions.enabled` to draw a region even over text (a paragraph
   with its equation, a table with its caption); Escape puts the tool down.
-  When off, empty-page drag pans the view in continuous scrolling. In page-by-page scrolling, a blank-page drag that travels far enough turns the page. Select Region is hidden.
+  When off, empty-page drag pans the view in continuous scrolling. In page-by-page scrolling, a blank-page drag that travels 60 CSS pixels of the viewer (Stage viewport / EmbedPDF screen px, not PDF points; the same at every zoom) turns the page. Select Region is hidden.
 - **Passage highlights = vault Markdown.** **Copy link to this** copies a
   Quote with `#page=N#:~:text=…` (or a page-only `#page=N` link with nothing
   selected). Paste into any note; the viewer paints **backlink overlays**
