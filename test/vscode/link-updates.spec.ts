@@ -47,6 +47,18 @@ async function acceptRefactoring(page: Page) {
 
 test("Always Update in the rename dialog updates the links, saves the mode, and the next rename does not ask", async () => {
   const originalUserSettings = readFileSync(userFile, "utf8");
+  // Issue #690 defaults linkUpdates.mode to `never`, which skips the dialog.
+  // This spec tests the dialog, so it states the mode it needs; the original
+  // settings are restored in the finally block below.
+  const settings = JSON.parse(originalUserSettings) as Record<string, unknown>;
+  writeFileSync(
+    userFile,
+    JSON.stringify(
+      { ...settings, "lumiere.markdown.linkUpdates.mode": "prompt" },
+      null,
+      2,
+    ),
+  );
   writeFileSync(inWorkspace("Rename Target.md"), "# Target\n");
   writeFileSync(inWorkspace("Rename Linker.md"), "See [[Rename Target]].\n");
   const browser = await chromium.connectOverCDP(readState().webSocket);
