@@ -9,6 +9,7 @@
     "**/manifest.ts",
     "**/protocol.ts",
     "**/api.ts",
+    "**/download-response.ts",
     "plugin-graph.ts"
   ]
 }
