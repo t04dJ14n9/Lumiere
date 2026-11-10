@@ -20,6 +20,25 @@ import { addCursor } from "./cursors";
 import { linkPasteHandler } from "./paste-link";
 import { keepFormatKeys } from "./format-keys";
 import { selectAllOccurrences } from "./select-occurrences";
+import { isInTableCell } from "./table-cell";
+
+/** Commands Obsidian refuses inside a table cell (`if (!a.inTableCell)`). */
+const REFUSE_IN_TABLE_CELL = new Set([
+  "editor:toggle-bullet-list",
+  "editor:toggle-numbered-list",
+  "editor:toggle-blockquote",
+  "editor:insert-codeblock",
+]);
+
+/** Obsidian leaves these block commands unavailable while in a table cell. */
+function refuseInTableCell(run: Command): Command {
+  return (view) => {
+    if (isInTableCell(view.state)) {
+      return false;
+    }
+    return run(view);
+  };
+}
 
 export const formattingWebview: Plugin = {
   name: "formatting",
@@ -39,7 +58,7 @@ export const formattingWebview: Plugin = {
   },
 };
 
-function formattingCommands(): Map<string, Command> {
+export function formattingCommands(): Map<string, Command> {
   const commands = new Map<string, Command>();
   for (const [id, marker] of [
     ["bold", "**"],
@@ -81,6 +100,12 @@ function formattingCommands(): Map<string, Command> {
   commands.set("editor:swap-line-up", moveLineUp);
   commands.set("editor:swap-line-down", moveLineDown);
   addEditingCommands(commands);
+  for (const id of REFUSE_IN_TABLE_CELL) {
+    const run = commands.get(id);
+    if (run) {
+      commands.set(id, refuseInTableCell(run));
+    }
+  }
   return commands;
 }
 
@@ -165,9 +190,16 @@ function registerFormattingCommands(
 ): void {
   for (const [id, run] of commands) {
     ctx.effect(() =>
-      ctx.commands.register(id, () =>
-        run(ctx.bail("editor/activeView") ?? ctx.editor.view),
-      ),
+      ctx.commands.register(id, () => {
+        // A projected table cell edits through an inner view whose text has no
+        // `|` markers. These block commands refuse in a cell anyway, so give
+        // them the document view: its caret stays in the table source and the
+        // guard can see it. Other commands keep the active cell view.
+        if (REFUSE_IN_TABLE_CELL.has(id)) {
+          return run(ctx.editor.view);
+        }
+        return run(ctx.bail("editor/activeView") ?? ctx.editor.view);
+      }),
     );
   }
 }
