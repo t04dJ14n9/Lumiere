@@ -4,13 +4,16 @@ import { READ_TOOL_ID } from "../../src/shared/annotation-tools";
 import { pagedDragPageDelta } from "../../src/shared/paged-drag-navigate";
 import { readTool } from "../../src/webview/annotation-mode";
 import { pagedDragHandler } from "../../src/webview/paged-drag-navigate";
+import type { PointerSample } from "@embedpdf/plugin-interaction/contract/host";
 
 const page = { kind: "objectNumber" as const, objectNumber: 1 };
 
-function sample(x: number, y: number, onPage = true) {
+function sample(x: number, y: number, onPage = true): PointerSample {
   return {
+    phase: "down",
     viewport: { x, y },
-    page: onPage ? { ref: page, point: { x, y } } : undefined,
+    ...(onPage ? { page: { ref: page, point: { x, y } } } : {}),
+    modifiers: { shift: false, alt: false, ctrl: false, meta: false },
   };
 }
 
@@ -29,7 +32,13 @@ test("an upward blank drag in page-by-page mode turns to the next page", () => {
   assert.ok(handler.priority > 10, "above Stage's pan handler");
   assert.ok(handler.priority < 56, "below text selection and the region tool");
   assert.ok(handler.enabledFor(readTool()));
-  assert.ok(!handler.enabledFor({ id: "pointer", enables: new Set() }));
+  assert.ok(
+    !handler.enabledFor({
+      id: "pointer",
+      cursor: "default",
+      enables: new Set(),
+    }),
+  );
   assert.equal(handler.onPointerDown(sample(900, 620)), true);
   handler.onPointerMove?.(sample(900, 180));
   handler.onPointerUp?.(sample(900, 180));
