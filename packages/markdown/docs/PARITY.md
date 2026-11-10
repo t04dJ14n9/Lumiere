@@ -1,6 +1,16 @@
 # Obsidian parity observations
 
-Reference: Obsidian 1.13.7, to be compared by the owner in a disposable vault. Never use the owner's vault. Record date, method, observed result and any issue link in each row. Automated checks do not establish visual or behavioral parity. All rows start not observed.
+Reference: Obsidian 1.15.0 (installed app, REA 2026-11-10), to be compared by the owner in a disposable vault. Never use the owner's vault. Record date, method, observed result and any issue link in each row. Automated checks do not establish visual or behavioral parity. All rows start not observed.
+
+**Re-baseline note (2026-11-10).** Rows whose observation column names
+1.13.7 or 1.14.4 were measured against older installs; the installed app is
+1.15.0. Rows naming 1.15.0 are static shipped-code reads, not live
+observations. Re-measure the 1.14.4 rows before treating them as matches —
+1.15.0 adds 128 CSS custom properties (`--bases-kanban-*`,
+`--highlight-background-*`, `--mermaid-*`) and command IDs
+`app:migrate-frontmatter`, `app:increase-font-size`,
+`app:decrease-font-size`, `app:open-file`. Evidence: REA
+`ev_6656f973c52d9c8d523b697ac6a77957170ffcda27c58103a519f55c9b517b1a`.
 
 | Action or behavior (DESIGN §13–§15) | Obsidian observation: date and method | Workshop result | How checked | Status |
 | --- | --- | --- | --- | --- |
