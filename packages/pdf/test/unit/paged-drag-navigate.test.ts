@@ -1,6 +1,14 @@
 import assert from "node:assert/strict";
 import { test } from "node:test";
-import type { PointerSample } from "@embedpdf/plugin-interaction/contract/host";
+import { createEventHook } from "@embedpdf/core";
+import {
+  INTERACTION_DEFAULTS,
+  interactionPlugin,
+} from "@embedpdf/plugin-interaction";
+import type {
+  InteractionHostCapability,
+  PointerSample,
+} from "@embedpdf/plugin-interaction/contract/host";
 import { READ_TOOL_ID } from "../../src/shared/annotation-tools";
 import { pagedDragPageDelta } from "../../src/shared/paged-drag-navigate";
 import { readTool } from "../../src/webview/annotation-mode";
@@ -64,6 +72,7 @@ function pagedHandler(direction: "vertical" | "horizontal" = "vertical") {
     isPaged: () => true,
     direction: () => direction,
     step: (delta) => steps.push(delta),
+    selection: () => null,
   });
   return { handler, steps };
 }
@@ -119,6 +128,7 @@ test("continuous scrolling does not capture a blank drag (Stage pan keeps it)", 
     step: () => {
       throw new Error("must not step");
     },
+    selection: () => null,
   });
   assert.equal(handler.enabledFor(readTool()), false);
 });
@@ -130,6 +140,7 @@ test("a press off the page is left to Stage gap pan", () => {
     step: () => {
       throw new Error("must not step");
     },
+    selection: () => null,
   });
   assert.equal(
     handler.onPointerDown(nativeSample({ x: 900, y: 620 }, { onPage: false })),
@@ -265,4 +276,157 @@ test("a horizontal drag turns along the reading direction at Fit Page scale", ()
 test("the read tool still enables pan so continuous blank-area drag can scroll", () => {
   assert.ok(readTool().enables.has("scroll"));
   assert.equal(readTool().id, READ_TOOL_ID);
+});
+
+/**
+ * The real EmbedPDF interaction controller (`interactionPlugin().create`),
+ * not a reimplementation of `wouldClaimTouch`.
+ */
+function bootHub(): InteractionHostCapability {
+  let model: {
+    activeToolId: string;
+    toolStack: string[];
+    cursor: string;
+  } = { activeToolId: "pointer", toolStack: [], cursor: "default" };
+  const listeners = new Set<
+    (change: { previous: typeof model; next: typeof model }) => void
+  >();
+  const created = interactionPlugin().create({
+    settings: () => ({
+      get: () => ({ ...INTERACTION_DEFAULTS }),
+      api: {
+        getSettings: () => ({ ...INTERACTION_DEFAULTS }),
+        updateSettings() {},
+        resetSettings() {},
+        onSettingsChanged: () => () => {},
+      },
+    }),
+    events: { source: () => createEventHook() },
+    state: {
+      get: () => model,
+      update: (
+        fn: (state: typeof model, ...args: unknown[]) => typeof model,
+        ...args: unknown[]
+      ) => {
+        const previous = model;
+        const next = fn(model, ...args);
+        if (next !== previous) {
+          model = next;
+          for (const listener of listeners) {
+            listener({ previous, next });
+          }
+        }
+      },
+      onChange: (
+        listener: (change: {
+          previous: typeof model;
+          next: typeof model;
+        }) => void,
+      ) => {
+        listeners.add(listener);
+        return () => listeners.delete(listener);
+      },
+    },
+    notify: () => {},
+  } as never);
+  return created.api;
+}
+
+function touchSample(
+  options: {
+    onPage?: boolean;
+    pointerType?: PointerSample["pointerType"];
+  } = {},
+): PointerSample {
+  return {
+    ...nativeSample(
+      { x: 200, y: 300 },
+      {
+        ...(options.onPage === undefined ? {} : { onPage: options.onPage }),
+        scale: 2.53,
+      },
+    ),
+    pointerType: options.pointerType ?? "touch",
+  };
+}
+
+function selectionStub(state: { loaded: boolean; overText: boolean }) {
+  return {
+    isLoaded: () => state.loaded,
+    isOverText: () => state.overText,
+  };
+}
+
+function hubWithPagedDrag(options: {
+  isPaged?: boolean;
+  loaded?: boolean;
+  overText?: boolean;
+  missingSelection?: boolean;
+}): InteractionHostCapability {
+  const hub = bootHub();
+  hub.registerTool(readTool());
+  hub.activateTool(READ_TOOL_ID);
+  hub.registerHandler(
+    pagedDragHandler({
+      isPaged: () => options.isPaged ?? true,
+      direction: () => "vertical",
+      step: () => {
+        throw new Error("must not step during wouldClaimTouch");
+      },
+      selection: () =>
+        options.missingSelection
+          ? null
+          : selectionStub({
+              loaded: options.loaded ?? true,
+              overText: options.overText ?? false,
+            }),
+    }),
+  );
+  return hub;
+}
+
+test("the real hub wouldClaimTouch a loaded blank touch in page-by-page mode", () => {
+  const hub = hubWithPagedDrag({ loaded: true, overText: false });
+  assert.equal(hub.wouldClaimTouch(touchSample()), true);
+});
+
+test("the real hub does not wouldClaimTouch text, unloaded geometry, off-page, missing selection, or continuous mode", () => {
+  assert.equal(
+    hubWithPagedDrag({ overText: true }).wouldClaimTouch(touchSample()),
+    false,
+  );
+  assert.equal(
+    hubWithPagedDrag({ loaded: false }).wouldClaimTouch(touchSample()),
+    false,
+  );
+  assert.equal(
+    hubWithPagedDrag({}).wouldClaimTouch(touchSample({ onPage: false })),
+    false,
+  );
+  assert.equal(
+    hubWithPagedDrag({ missingSelection: true }).wouldClaimTouch(touchSample()),
+    false,
+  );
+  assert.equal(
+    hubWithPagedDrag({ isPaged: false }).wouldClaimTouch(touchSample()),
+    false,
+    "enabledFor is false in continuous, so the hub never asks claimsTouch",
+  );
+});
+
+test("a cancelled paged blank drag is the handler side of a two-finger pinch", () => {
+  // Source: @embedpdf/web createStageGestureController, mode "tool" + a
+  // second finger calls sink.cancel then enterPinch. Device pinch is not
+  // exercised here.
+  const { handler, steps } = pagedHandler();
+  assert.equal(
+    handler.onPointerDown(
+      nativeSample({ x: 900, y: 520 }, { scale: 2.53, phase: "down" }),
+    ),
+    true,
+  );
+  handler.onPointerCancel?.(
+    nativeSample({ x: 900, y: 520 }, { scale: 2.53, phase: "cancel" }),
+  );
+  assert.deepEqual(steps, []);
 });

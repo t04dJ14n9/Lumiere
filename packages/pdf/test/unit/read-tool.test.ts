@@ -21,4 +21,9 @@ test("View mode pans empty page space without enabling annotation edits", () => 
     "reading must not select, move or delete marks",
   );
   assert.ok(!tool.enables.has("annotation-marquee"));
+  assert.equal(
+    (tool as { touch?: string }).touch,
+    undefined,
+    "View mode keeps EmbedPDF touch default (tap), not draw",
+  );
 });

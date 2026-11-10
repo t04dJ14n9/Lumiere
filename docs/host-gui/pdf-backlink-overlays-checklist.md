@@ -15,8 +15,8 @@ PR bot / Host GUI pass must capture evidence for:
    click opens the note.
 4. **Del split:** Del on overlay is a no-op; Del on Note / freeText (embedded)
    deletes.
-5. **Regions off (default):** empty-page drag does nothing; **Select Region**
-   absent from menus / slim toolbar / shortcut.
+5. **Regions off (default):** empty-page drag pans (page counter stays put) and
+   creates no region; **Select Region** absent from menus / slim toolbar / shortcut.
 
 Suggested shot labels for the PR body: `Copy link Quote`, `overlays`,
 `Del split`, `regions off`.

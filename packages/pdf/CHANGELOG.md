@@ -7,7 +7,11 @@
   In page-by-page scrolling, a blank-page drag that travels 60 CSS pixels
   of the viewer (Stage viewport / EmbedPDF screen px, not PDF points; the
   same at every zoom) turns the page. It does not only pan inside a Fit
-  Width page. Text selection,
+  Width page. Mouse and pen always reach that handler; a one-finger
+  touch does only on loaded blank space (`claimsTouch` via
+  `selection.isLoaded` and `!isOverText` — never `touch: "draw"`). A
+  page whose text geometry is not ready keeps native pan. Device touch
+  has not been GUI-verified. Text selection,
   citation link clicks, wheel and keyboard navigation, and zoom are
   unchanged. Turning on `lumiere.pdf.regions.enabled` still uses empty-page
   drag to draw a region.
