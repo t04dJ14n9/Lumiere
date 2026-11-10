@@ -124,71 +124,69 @@ test("Open Settings, and the commands for common settings read and write the Set
     // Readable line width: the user's settings, then the folder's once it sets it.
     const readable = () =>
       frame.locator(".cm-editor.is-readable-line-width").count();
-    expect(await readable()).toBe(1);
+    expect(await readable()).toBe(0);
+    await command(page, "Lumiere: Toggle Readable Line Width");
+    await expect
+      .poll(() => userKeys()[key("editor.readableLineLength")])
+      .toBe(true);
+    await expect.poll(readable).toBe(1);
     await command(page, "Lumiere: Toggle Readable Line Width");
     await expect
       .poll(() => userKeys()[key("editor.readableLineLength")])
       .toBe(false);
     await expect.poll(readable).toBe(0);
-    await command(page, "Lumiere: Toggle Readable Line Width");
-    await expect
-      .poll(() => userKeys()[key("editor.readableLineLength")])
-      .toBe(true);
-    await expect.poll(readable).toBe(1);
     // A value set in the folder is the one changed, and the user's stays.
-    // Write the opposite of the current value so the poll waits for VS Code to
-    // read settings.json before the toggle picks its write scope.
     mkdirSync(path.dirname(folderFile), { recursive: true });
     writeFileSync(
       folderFile,
-      JSON.stringify({ [key("editor.readableLineLength")]: false }),
+      JSON.stringify({ [key("editor.readableLineLength")]: true }),
     );
-    await expect.poll(readable).toBe(0);
+    await expect.poll(readable).toBe(1);
     await command(page, "Lumiere: Toggle Readable Line Width");
     await expect
       .poll(() => folderKeys()[key("editor.readableLineLength")])
-      .toBe(true);
-    expect(userKeys()[key("editor.readableLineLength")]).toBe(true);
-    await expect.poll(readable).toBe(1);
+      .toBe(false);
+    expect(userKeys()[key("editor.readableLineLength")]).toBe(false);
+    await expect.poll(readable).toBe(0);
     // An edit in settings.json is what the next run reads (no state of its own).
     writeFileSync(
       folderFile,
-      JSON.stringify({ [key("editor.readableLineLength")]: false }),
+      JSON.stringify({ [key("editor.readableLineLength")]: true }),
     );
-    await expect.poll(readable).toBe(0);
+    await expect.poll(readable).toBe(1);
     await command(page, "Lumiere: Toggle Readable Line Width");
     await expect
       .poll(() => folderKeys()[key("editor.readableLineLength")])
-      .toBe(true);
+      .toBe(false);
     resetFolder();
 
     // Line numbers.
     const gutter = () => frame.locator(".cm-lineNumbers").count();
-    await expect.poll(gutter).toBe(0);
-    await command(page, "Lumiere: Toggle Line Numbers");
-    await expect
-      .poll(() => userKeys()[key("plugins.lineNumbers.enabled")])
-      .toBe(true);
     await expect.poll(gutter).toBeGreaterThan(0);
     await command(page, "Lumiere: Toggle Line Numbers");
     await expect
       .poll(() => userKeys()[key("plugins.lineNumbers.enabled")])
       .toBe(false);
     await expect.poll(gutter).toBe(0);
+    await command(page, "Lumiere: Toggle Line Numbers");
+    await expect
+      .poll(() => userKeys()[key("plugins.lineNumbers.enabled")])
+      .toBe(true);
+    await expect.poll(gutter).toBeGreaterThan(0);
 
     // Inline title.
     const title = () => frame.locator(".file-title").count();
-    expect(await title()).toBeGreaterThan(0);
-    await command(page, "Lumiere: Toggle Inline Title");
-    await expect
-      .poll(() => userKeys()[key("plugins.inlineTitle.enabled")])
-      .toBe(false);
-    await expect.poll(title).toBe(0);
+    expect(await title()).toBe(0);
     await command(page, "Lumiere: Toggle Inline Title");
     await expect
       .poll(() => userKeys()[key("plugins.inlineTitle.enabled")])
       .toBe(true);
     await expect.poll(title).toBeGreaterThan(0);
+    await command(page, "Lumiere: Toggle Inline Title");
+    await expect
+      .poll(() => userKeys()[key("plugins.inlineTitle.enabled")])
+      .toBe(false);
+    await expect.poll(title).toBe(0);
 
     // Mermaid: the block renders as a diagram, and as source when off.
     const diagram = () => frame.locator(".cm-content svg").count();
@@ -314,25 +312,25 @@ test("Change Setting… lists every setting by plugin and edits the picked one b
     await changeSetting(page, "readable line", "Readable line length");
     await expect
       .poll(() => userKeys()[key("editor.readableLineLength")])
-      .toBe(false);
+      .toBe(true);
     await expect(
       frame.locator(".cm-editor.is-readable-line-width"),
-    ).toHaveCount(0, { timeout: 15000 });
+    ).toHaveCount(1, { timeout: 15000 });
     // Set in the folder: that is where the next change goes.
     mkdirSync(path.dirname(folderFile), { recursive: true });
     writeFileSync(
       folderFile,
-      JSON.stringify({ [key("editor.readableLineLength")]: true }),
+      JSON.stringify({ [key("editor.readableLineLength")]: false }),
     );
-    // The folder's true overrides the user's false once VS Code has read it.
+    // The folder's false overrides the user's true once VS Code has read it.
     await expect(
       frame.locator(".cm-editor.is-readable-line-width"),
-    ).toHaveCount(1, { timeout: 15000 });
+    ).toHaveCount(0, { timeout: 15000 });
     await changeSetting(page, "readable line", "Readable line length");
     await expect
       .poll(() => read(folderFile)[key("editor.readableLineLength")])
-      .toBe(false);
-    expect(userKeys()[key("editor.readableLineLength")]).toBe(false);
+      .toBe(true);
+    expect(userKeys()[key("editor.readableLineLength")]).toBe(true);
     resetFolder();
 
     // Enum: a pick list of the values, the current one marked.

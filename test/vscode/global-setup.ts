@@ -55,6 +55,14 @@ export default async function globalSetup(): Promise<void> {
         // Dialogs drawn by VS Code itself, which the tests can click (macOS draws native ones).
         "window.dialogStyle": "custom",
         "files.simpleDialog.enable": true,
+        // The real-editor suites measure gutter alignment, caret columns and the
+        // three chrome toggles. Issue #689 aligned those defaults with Obsidian,
+        // so state the chrome the suite was written against instead of
+        // inheriting product defaults; the browser suite covers the shipped
+        // Obsidian defaults separately (useDefaults in test/browser/harness).
+        "lumiere.markdown.editor.readableLineLength": false,
+        "lumiere.markdown.plugins.inlineTitle.enabled": false,
+        "lumiere.markdown.plugins.lineNumbers.enabled": true,
         // Extra settings for this throwaway profile only, as JSON (for diagnostics).
         ...(JSON.parse(
           process.env.MARKDOWN_WORKBENCH_TEST_SETTINGS ?? "{}",
