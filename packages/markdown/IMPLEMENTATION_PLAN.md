@@ -7019,3 +7019,50 @@ scroll position only in Reading view; Lumia keeps following the scroll too
   does not implement it and the row stays highlighted there. The caret from
   before an outline click, reported above the first heading, is held like any
   other so it cannot clear the clicked row.
+
+## Remaining P1/P2 Obsidian editor contracts — 2026-11-10
+
+Issue #698. Source of truth for the contracts:
+`~/Code/obsidian-re/docs/implementation-plan.md` ("Fifty editor gaps from
+`docs/editor-contracts.md`"), derived from REA reads of the shipped Obsidian
+bundle. This phase records the seven gaps that are still relevant to the
+editor, with the acceptance criterion and the unit test each one needs. Item
+numbers below are the backlog's.
+
+Status against `origin/main` at the time of writing, to be re-verified before
+each item is implemented (the file is 85 commits ahead of older checkouts):
+
+- [ ] **12 — Source mode in the same editor.** Obsidian's Ctrl/Cmd+E toggles
+  Live Preview ↔ Source in place, keeping caret, selection and folds. Lumia's
+  `editor/toggle-text-editor.ts` swaps to the host text editor and
+  `toggleSourceMode` is unbound. Acceptance: one command toggles the
+  live-preview compartment in the same webview, with the view state carried
+  over. Tests: `src/plugins/editor/source-mode.test.ts`.
+- [ ] **14 — Folds stored per file.** `folding/view-state.ts` keeps folds per
+  panel; Obsidian persists them per file. Acceptance: two panels of one note
+  share folds, and reopening a file restores them. Tests:
+  `src/plugins/folding/view-state.test.ts`.
+- [x] **24 — Unresolved Markdown links and links inside embeds.** Already on
+  `origin/main`: `CAPABILITIES.md` records Wikilinks and Markdown links dimmed
+  when unresolved in Live Preview, source mode and inside embeds. No work in
+  this phase; keep the `links/` unit tests as the guard.
+- [ ] **15 — Callout disclosure follows the note.** Acceptance: a folded
+  callout stays folded when its note is scrolled, remounted or opened in a
+  second panel. Tests: `src/plugins/callouts/fold-state.test.ts`.
+- [ ] **23 — Display math keeps the formula while editing.** Acceptance:
+  clicking a rendered `$$` block reveals its source with the formula intact,
+  without a MathJax re-typeset flash. Tests:
+  `src/plugins/livePreview/math-reveal.test.ts`.
+- [ ] **25 — Block IDs on demand.** Acceptance: a block reference `^id` is
+  generated without rewriting unrelated lines, and existing IDs are kept.
+  Tests: `src/plugins/livePreview/block-id.test.ts`.
+- [ ] **13 — Selection continues past the webview.** Acceptance: a mouse drag
+  that leaves the webview keeps selecting in the note and ends cleanly on
+  release. Tests: `src/plugins/editor/selection-continuation.test.ts`.
+
+Working order: 24 (verify only), 12, 14, 15, 23, 25, 13. Each item is its own
+commit with a unit test, per the testing policy above. Items 16–19 (Templates,
+Daily notes, Note composer, Reading view) belong to the feature roadmap in
+issue #699, not this phase. `pnpm check`, `pnpm test:browser` and
+`pnpm test:quality` gate each commit; `pnpm test:vscode` gates the editor
+integration changes (items 12 and 13).
