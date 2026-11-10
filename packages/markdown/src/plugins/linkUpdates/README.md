@@ -16,9 +16,11 @@ the new-link format. As in Obsidian, text that only showed the renamed file's
 name follows it: a Markdown link's text equal to the note's name
 (`[Old](Old.md)`) or to its path when that has folders, and a wikilink alias
 equal to the name when the link has folders (`[[f/Old|Old]]`). A moved note's own path-style links are
-rewritten too. Folder renames cover every file inside. By default it asks
-first (Update Links, Always Update, which sets the mode to `always`, or
-Don't Update), counting the notes from the index's parsed links so that
+rewritten too. Folder renames cover every file inside. The default `never`
+leaves links untouched, matching Obsidian's `alwaysUpdateLinks: false`.
+Setting `prompt` asks first (Update Links, Always Update, which sets the
+mode to `always` for the resource, or Don't Update), counting the notes from
+the index's parsed links so that
 asking reads and rewrites nothing (unless a note is still unparsed, then
 from the notes' current text), and builds the edits once, after the
 answer, so text typed while the dialog is open is what gets rewritten. The edits are applied together
