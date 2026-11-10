@@ -56,6 +56,7 @@ export async function open(
       features,
       editor,
       useDefaults,
+      testChrome,
       videoDetails,
       notes,
       gitBaseline,
@@ -64,7 +65,7 @@ export async function open(
       window.harness.trusted = trusted;
       window.harness.features = useDefaults
         ? features
-        : { ...TEST_CHROME, ...features };
+        : { ...testChrome, ...features };
       window.harness.editorSettings = useDefaults
         ? editor
         : { readableLineLength: false, ...editor };
@@ -80,6 +81,7 @@ export async function open(
       features,
       editor,
       useDefaults,
+      testChrome: TEST_CHROME,
       videoDetails,
       notes,
       gitBaseline,
