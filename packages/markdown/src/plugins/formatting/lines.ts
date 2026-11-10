@@ -53,7 +53,7 @@ export function lineEdit(state: EditorState, prefix: string): TransactionSpec {
   const lines = selectedLines(state);
   const all = lines.every((line) => isKind(line.text, prefix));
   const changes = state.changes(
-    lines.map((line, index) => lineChange(line, prefix, { all, index })),
+    lines.map((line) => lineChange(line, prefix, { all })),
   );
   return {
     changes,
@@ -78,7 +78,7 @@ function selectedLines(state: EditorState): Line[] {
 function lineChange(
   line: Line,
   prefix: string,
-  { all, index }: { all: boolean; index: number },
+  { all }: { all: boolean },
 ): LineChange {
   if (/^#{0,6} ?$/u.test(prefix)) {
     const [, lead = "", old = ""] = HEADING.exec(line.text)!;
@@ -94,8 +94,9 @@ function lineChange(
   }
   const [, lead = "", marker = ""] = LIST_ITEM.exec(line.text)!;
   const from = line.from + lead.length;
-  const insert = prefix === "1. " ? `${index + 1}. ` : prefix;
-  return { from, to: from + marker.length, insert: all ? "" : insert };
+  // Obsidian writes the literal "1. " on every line and lets the renderer
+  // number them; do not renumber the markers here.
+  return { from, to: from + marker.length, insert: all ? "" : prefix };
 }
 /**
  * Insert Link, as in Obsidian: the selection becomes the label and the caret
