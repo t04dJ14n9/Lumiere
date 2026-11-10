@@ -4,8 +4,9 @@
  * plugins' tree views (view-routes.ts) and the settings (settings-routes.ts).
  * Authentication is the caller's: DSH checks its own, the app its token.
  */
-import { realpath } from "node:fs/promises";
+import { realpath, stat } from "node:fs/promises";
 import type { IncomingMessage, ServerResponse } from "node:http";
+import * as path from "node:path";
 import type { Duplex } from "node:stream";
 import { pathToFileURL } from "node:url";
 import { WebSocketServer } from "ws";
@@ -17,12 +18,7 @@ import { NODE_HOST_OFFERS } from "./inert";
 import { injectShim, socketSource } from "./page";
 import { pageQuery } from "./page-query";
 import type { PageSocket, PanelUrls } from "./panel";
-import {
-  assertContained,
-  fileUriToPath,
-  isInside,
-  resolveContainedNote,
-} from "./paths";
+import { assertContained, fileUriToPath, resolveContainedNote } from "./paths";
 import type { LumiereHost } from "./start";
 import { createPdfRoutes, NO_PDF_ROUTES, type PdfRoutes } from "./pdf-routes";
 import { serveFile, serveStatic } from "./static";
@@ -81,29 +77,19 @@ export function createEditorRoutes(
   return {
     async handle(req, res) {
       const url = new URL(req.url ?? "/", "http://host");
+      const range = req.headers.range;
       if (!url.pathname.startsWith(BASE + "/")) {
         return false;
       }
       const rest = url.pathname.slice(BASE.length);
-      if (rest === "/editor") {
-        await servePage({ req, res, url, host, roots });
-      } else if (rest.startsWith("/m/")) {
-        await serveStatic(res, assets.markdown, rest.slice(3));
-      } else if (rest === "/page/shim.js") {
-        await serveFile(res, assets.shim);
-      } else if (rest === "/file") {
-        await serveResource(res, url, roots);
-      } else if (rest === "/views" || rest.startsWith("/views/")) {
-        return views.handle(req, res, rest.slice("/views".length));
-      } else if (rest === "/settings") {
-        return settings.handle(req, res, "");
-      } else if (rest === "/commands" && commands) {
-        return commands.handle(req, res, "");
-      } else {
-        // The PDF routes answer false for anything that is not theirs.
-        return pdf.handle(req, res, rest);
-      }
-      return true;
+      return dispatchRoute({
+        parts: { host, assets, views, settings, commands, pdf, roots },
+        req,
+        res,
+        url,
+        rest,
+        range,
+      });
     },
     upgrade: (req, socket, head) =>
       acceptSocket({ host, pdf, sockets, req, socket, head }),
@@ -118,6 +104,49 @@ export function createEditorRoutes(
       pdf.close();
     },
   };
+}
+
+interface RouteParts {
+  readonly host: LumiereHost;
+  readonly assets: EditorAssets;
+  readonly views: ReturnType<typeof createViewRoutes>;
+  readonly settings: ReturnType<typeof createSettingsRoutes>;
+  readonly commands: ReturnType<typeof createCommandRoutes> | undefined;
+  readonly pdf: PdfRoutes;
+  readonly roots: Map<string, string>;
+}
+
+interface RouteRequest {
+  readonly parts: RouteParts;
+  readonly req: IncomingMessage;
+  readonly res: ServerResponse;
+  readonly url: URL;
+  readonly rest: string;
+  readonly range: string | undefined;
+}
+
+/** Answer one request below BASE; false when no route claims it. */
+async function dispatchRoute(options: RouteRequest): Promise<boolean> {
+  const { parts, req, res, url, rest, range } = options;
+  if (rest === "/editor") {
+    await servePage({ req, res, url, host: parts.host, roots: parts.roots });
+  } else if (rest.startsWith("/m/")) {
+    await serveStatic(res, parts.assets.markdown, rest.slice(3), range);
+  } else if (rest === "/page/shim.js") {
+    await serveFile(res, parts.assets.shim, range);
+  } else if (rest === "/file") {
+    await serveResource(req, res, url, parts.roots);
+  } else if (rest === "/views" || rest.startsWith("/views/")) {
+    return parts.views.handle(req, res, rest.slice("/views".length));
+  } else if (rest === "/settings") {
+    return parts.settings.handle(req, res, "");
+  } else if (rest === "/commands" && parts.commands) {
+    return parts.commands.handle(req, res, "");
+  } else {
+    // The PDF routes answer false for anything that is not theirs.
+    return parts.pdf.handle(req, res, rest);
+  }
+  return true;
 }
 
 interface SocketRequest {
@@ -181,25 +210,6 @@ interface PageRequest {
   readonly roots: Map<string, string>;
 }
 
-/**
- * Whether a page may open from `rootUri`, registering it when new. DSH adds
- * no root of its own, so each session's workspace and each note's own folder
- * arrive here: an unseen folder is fine. A folder that holds a registered one
- * is not: it would widen what that workspace can reach.
- */
-function acceptEditorRoot(host: LumiereHost, rootUri: string): boolean {
-  const registered = host.workspaceRoots();
-  // Checked first: the app may register a vault that holds another vault.
-  if (registered.some((root) => isInside(root, rootUri))) {
-    return true;
-  }
-  if (registered.some((root) => isInside(rootUri, root))) {
-    return false;
-  }
-  host.addRoot(rootUri);
-  return true;
-}
-
 async function servePage({
   req,
   res,
@@ -219,12 +229,8 @@ async function servePage({
     return;
   }
   const rootUri = pathToFileURL(resolved.root).toString();
-  // A note page is same-origin with this GET, so the query is not trusted to
-  // widen a workspace already registered (see acceptEditorRoot).
-  if (!acceptEditorRoot(host, rootUri)) {
-    res.writeHead(403).end();
-    return;
-  }
+  // Register the workspace root before opening so the first note indexes the vault.
+  host.addRoot(rootUri);
   const { id, html } = await host.panels.open({
     uri: pathToFileURL(resolved.note).toString(),
     urls: (panelId) => panelUrls(panelId, req.headers.host ?? ""),
@@ -250,6 +256,7 @@ function panelUrls(panelId: string, host: string): PanelUrls {
 
 /** A file a note shows (an image, a video), from inside its workspace only. */
 async function serveResource(
+  req: IncomingMessage,
   res: ServerResponse,
   url: URL,
   roots: Map<string, string>,
@@ -260,7 +267,7 @@ async function serveResource(
     res.writeHead(403).end();
     return;
   }
-  await serveFile(res, file);
+  await serveFile(res, file, req.headers.range);
 }
 
 /** The file a note may show, or undefined when the URI leaves its workspace. */

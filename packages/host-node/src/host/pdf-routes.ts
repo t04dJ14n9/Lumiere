@@ -50,6 +50,7 @@ export function createPdfRoutes(options: PdfRouteOptions): PdfRoutes {
           res,
           options.viewer,
           rest.slice("/pdf/viewer/".length),
+          req.headers.range,
         );
       } else if (rest === "/pdf/bytes") {
         serveBytes(res, url, pages);
@@ -94,11 +95,10 @@ async function servePdfPage({
     uri: pathToFileURL(resolved.note).toString(),
     root: pathToFileURL(resolved.root).toString(),
     cspSource: socketSource(req.headers.host ?? ""),
-    // The editor ships the same PDF engine (both pin one
-    // @embedpdf/engine-runtime-wasm32).
+    // The editor ships the same PDF engine (both pin one @embedpdf/pdfium).
     asset: (name) =>
-      name === "embedpdf.wasm"
-        ? `${base}/m/webview/embedpdf.wasm`
+      name === "pdfium.wasm"
+        ? `${base}/m/webview/pdfium.wasm`
         : `${base}/pdf/viewer/${name}`,
     bytesUrl: (id, load) =>
       `${base}/pdf/bytes?page=${encodeURIComponent(id)}&load=${load}`,
