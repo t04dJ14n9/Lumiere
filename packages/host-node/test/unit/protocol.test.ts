@@ -20,21 +20,32 @@ test("external links keep http, https and mailto, and drop schemes that run code
   }
 });
 
-test("a host frame is rpc or ui, and anything else is ignored", () => {
+test("a host frame is rpc or a well-formed ui request, and anything else is ignored", () => {
   assert.deepEqual(parseHostFrame('{"ch":"rpc","data":{"n":1}}'), {
     ch: "rpc",
     data: { n: 1 },
   });
-  assert.deepEqual(parseHostFrame('{"ch":"ui","data":{"type":"toast"}}'), {
-    ch: "ui",
-    data: { type: "toast" },
-  });
+  assert.deepEqual(
+    parseHostFrame(
+      '{"ch":"ui","data":{"type":"toast","kind":"info","message":"hi"}}',
+    ),
+    { ch: "ui", data: { type: "toast", kind: "info", message: "hi" } },
+  );
+  assert.deepEqual(
+    parseHostFrame(
+      '{"ch":"ui","data":{"type":"open","path":"a.md","fragment":""}}',
+    ),
+    { ch: "ui", data: { type: "open", path: "a.md", fragment: "" } },
+  );
   for (const text of [
     "{",
     "null",
     "[]",
     '{"ch":"ui"}',
     '{"ch":"nope","data":{}}',
+    '{"ch":"ui","data":{"type":"toast"}}',
+    '{"ch":"ui","data":{"type":"menu","id":1}}',
+    '{"ch":"ui","data":{"type":"nope"}}',
   ]) {
     assert.equal(parseHostFrame(text), undefined, text);
   }

@@ -100,12 +100,9 @@ export function parseHostFrame(text: string): HostFrame | undefined {
   if (value.ch === "rpc" && "data" in value) {
     return { ch: "rpc", data: value.data };
   }
-  if (
-    value.ch === "ui" &&
-    isRecord(value.data) &&
-    typeof value.data.type === "string"
-  ) {
-    return { ch: "ui", data: value.data as UiRequest };
+  if (value.ch === "ui") {
+    const request = parseUiRequest(value.data);
+    return request ? { ch: "ui", data: request } : undefined;
   }
   return undefined;
 }
@@ -129,6 +126,121 @@ export function parsePageFrame(text: string): PageFrame | undefined {
     return event ? { ch: "ui", data: event } : undefined;
   }
   return undefined;
+}
+
+const MAX_ROWS = 256;
+
+function isRows(value: unknown): value is PickRow[] {
+  return (
+    Array.isArray(value) &&
+    value.length <= MAX_ROWS &&
+    value.every(
+      (row) =>
+        isRecord(row) &&
+        typeof row.label === "string" &&
+        row.label.length <= MAX_TEXT &&
+        (row.description === undefined ||
+          typeof row.description === "string") &&
+        (row.detail === undefined || typeof row.detail === "string"),
+    )
+  );
+}
+
+function isMenuGroups(value: unknown): value is MenuRow[][] {
+  return (
+    Array.isArray(value) &&
+    value.length <= MAX_ROWS &&
+    value.every(
+      (group) =>
+        Array.isArray(group) &&
+        group.length <= MAX_ROWS &&
+        group.every(
+          (row) =>
+            isRecord(row) &&
+            typeof row.label === "string" &&
+            (row.submenu === undefined || isMenuGroups(row.submenu)),
+        ),
+    )
+  );
+}
+
+type RequestParser = (value: Record<string, unknown>) => UiRequest | undefined;
+
+/** One parser per request type keeps each validation short and total. */
+const REQUEST_PARSERS: Readonly<Record<string, RequestParser>> = {
+  toast: (value) =>
+    (value.kind === "info" || value.kind === "error") && isText(value.message)
+      ? { type: "toast", kind: value.kind, message: value.message }
+      : undefined,
+  clipboard: (value) =>
+    isText(value.text) ? { type: "clipboard", text: value.text } : undefined,
+  ask: (value) =>
+    isId(value.id) &&
+    isText(value.message) &&
+    Array.isArray(value.actions) &&
+    value.actions.every(isText)
+      ? {
+          type: "ask",
+          id: value.id,
+          message: value.message,
+          actions: value.actions,
+        }
+      : undefined,
+  pick: (value) =>
+    isId(value.id) && isText(value.placeholder) && isRows(value.items)
+      ? {
+          type: "pick",
+          id: value.id,
+          placeholder: value.placeholder,
+          items: value.items,
+        }
+      : undefined,
+  pickItems: (value) =>
+    isId(value.id) && isRows(value.items)
+      ? { type: "pickItems", id: value.id, items: value.items }
+      : undefined,
+  input: (value) =>
+    isId(value.id) &&
+    isText(value.prompt) &&
+    isText(value.value) &&
+    (value.error === undefined || isText(value.error))
+      ? {
+          type: "input",
+          id: value.id,
+          prompt: value.prompt,
+          value: value.value,
+          ...(typeof value.error === "string" ? { error: value.error } : {}),
+        }
+      : undefined,
+  menu: (value) =>
+    isId(value.id) &&
+    typeof value.x === "number" &&
+    Number.isFinite(value.x) &&
+    typeof value.y === "number" &&
+    Number.isFinite(value.y) &&
+    isMenuGroups(value.groups)
+      ? {
+          type: "menu",
+          id: value.id,
+          x: value.x,
+          y: value.y,
+          groups: value.groups,
+        }
+      : undefined,
+  open: (value) =>
+    isText(value.path) && isText(value.fragment)
+      ? { type: "open", path: value.path, fragment: value.fragment }
+      : undefined,
+  external: (value) =>
+    isText(value.href) ? { type: "external", href: value.href } : undefined,
+};
+
+/** Only well-formed requests reach the page; a malformed one is dropped. */
+function parseUiRequest(value: unknown): UiRequest | undefined {
+  if (!isRecord(value) || typeof value.type !== "string") {
+    return undefined;
+  }
+  return REQUEST_PARSERS[value.type]?.(value);
 }
 
 function parseUiEvent(value: unknown): UiEvent | undefined {
