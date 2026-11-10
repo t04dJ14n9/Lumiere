@@ -177,8 +177,8 @@ export function noteBody(React: ReactLike, open: (address: string) => void) {
       src,
       title: "Lumière",
       allow: "clipboard-read; clipboard-write",
-      onLoad: () =>
-        handleFrameLoad(frame.current, hasLoaded, props, file?.version),
+      onLoad: (event: { currentTarget: HTMLIFrameElement | null }) =>
+        handleFrameLoad(event.currentTarget, hasLoaded, props, file?.version),
       onError: () => props.content.failed?.(),
       style: { border: 0, width: "100%", height: "100%", display: "block" },
     });
@@ -191,7 +191,13 @@ function handleFrameLoad(
   props: BodyProps,
   version: string | undefined,
 ): void {
-  if (!isEditorDocument(element?.contentDocument)) {
+  const doc = element?.contentDocument;
+  // An iframe fires an extra load for its initial about:blank document. That
+  // is not a failed editor page, so do not report it to DSH.
+  if (doc?.URL === "about:blank") {
+    return;
+  }
+  if (!isEditorDocument(doc)) {
     hasLoaded.current = false;
     props.content.failed?.();
     return;
