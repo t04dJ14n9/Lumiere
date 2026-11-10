@@ -27,8 +27,8 @@ export function upgradeRejection(status: number): string {
   );
 }
 
-/** Only the JSON routes take POST; a write must not open a panel or serve a file. */
-function rejectsWrite(
+/** GET/HEAD for pages and files; POST only for the JSON routes; 405 otherwise. */
+function rejectsMethod(
   req: IncomingMessage,
   res: {
     writeHead(
@@ -38,8 +38,21 @@ function rejectsWrite(
   },
   rest: string,
 ): boolean {
-  if (req.method === "GET" || req.method === "HEAD") {
+  const method = req.method ?? "GET";
+  if (method === "GET" || method === "HEAD") {
     return false;
+  }
+  const jsonRoute =
+    rest === "/views" ||
+    rest.startsWith("/views/") ||
+    rest === "/settings" ||
+    rest === "/commands";
+  if (jsonRoute) {
+    if (method === "POST") {
+      return false;
+    }
+    res.writeHead(405, { allow: "GET, POST, HEAD" }).end();
+    return true;
   }
   const readOnly =
     rest === "/editor" ||
@@ -75,7 +88,7 @@ export function registerRoutes(
         const rest = new URL(req.url ?? "/", "http://host").pathname.slice(
           BASE.length,
         );
-        if (rejectsWrite(req, res, rest)) {
+        if (rejectsMethod(req, res, rest)) {
           return;
         }
         const handled = await routes
