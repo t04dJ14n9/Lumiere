@@ -37,7 +37,7 @@ last. Properties focus uses typed events rather than another plugin's DOM intern
 Webview injects `editor` and `rpc`; host injects `editors` and the host services `hostDocuments`, `hostCommands`, `dialogs` and `settings`.
 Provides no service. Listens to `editor/focusTitle`, `editor/opened`,
 `editor/closed` and `editor/ready`; queries `editor/focusProperties` with bail
-semantics. `lumiere.markdown.plugins.inlineTitle.enabled` defaults to false.
+semantics. `lumiere.markdown.plugins.inlineTitle.enabled` defaults to true, as in Obsidian 1.15.0.
 The title is out of the Tab order, so a stray Tab or Shift+Tab in the note never
 lands in it; click it or press Up on the first line. Enter/Tab commit to body,
 Escape cancels, Down moves to Properties and Alt+Down

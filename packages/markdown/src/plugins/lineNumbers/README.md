@@ -44,7 +44,7 @@ Catalog rank places line numbers before folding.
 ## Services, events and settings
 
 Injects `editor`; provides no service and listens to/emits no kernel events.
-`lumiere.markdown.plugins.lineNumbers.enabled` defaults to true;
+`lumiere.markdown.plugins.lineNumbers.enabled` defaults to false, as in Obsidian 1.15.0;
 `editor.lineNumbers` (VS Code's setting) picks the style. No commands or
 keybindings.
 

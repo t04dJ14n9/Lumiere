@@ -5,9 +5,10 @@ import { webviewSnapshot } from "../../../src/plugins/editor/snapshot";
 import { snapshotLayout } from "../../../src/plugins/editor/snapshot-layout";
 import { snapshotMatches } from "../../../src/webview/snapshot";
 import type { NoteSettings } from "../../../src/shared/host";
+import { snapshotFeatures, snapshotNote } from "../../support/snapshot-note";
 
 type Note = Pick<NoteSettings, "preset" | "mode" | "editor" | "features">;
-const NOTE: Note = { preset: "obsidian", mode: "livePreview" };
+const NOTE: Note = snapshotNote();
 const snapshot = (source: string, note: Note = NOTE) =>
   webviewSnapshot(source, note, "mac");
 
@@ -108,7 +109,7 @@ test("tags are drawn as tags while the tags plugin is on, else stay text", () =>
   );
   const off: Note = {
     ...NOTE,
-    features: { tags: { enabled: false, config: {} } },
+    features: { ...snapshotFeatures, tags: { enabled: false, config: {} } },
   };
   assert.match(snapshot(source, off), /See #project\/alpha and #todo here\./);
   assert.doesNotMatch(snapshot(source, off), /md-tag/);
@@ -271,7 +272,7 @@ test("frontmatter that Properties does not draw gives no snapshot", () => {
   const source = "---\ntitle: A\n---\n\n# Body\n";
   const properties = (config: Record<string, unknown>, enabled = true) => ({
     ...NOTE,
-    features: { properties: { enabled, config } },
+    features: { ...snapshotFeatures, properties: { enabled, config } },
   });
   assert.notEqual(snapshot(source, properties({ display: "visible" })), "");
   assert.equal(snapshot(source, properties({ display: "hidden" })), "");
@@ -290,7 +291,7 @@ test("the snapshot is skipped for settings it does not draw", () => {
   assert.notEqual(snapshot("# A\n"), "");
   const off = (editor: Record<string, unknown>): Note => ({
     ...NOTE,
-    editor: editorConfig.parse(editor),
+    editor: editorConfig.parse({ readableLineLength: false, ...editor }),
   });
   assert.equal(snapshot("# A\n", off({ firstPaintSnapshot: false })), "");
   assert.equal(snapshot("# A\n", off({ readableLineLength: true })), "");
@@ -299,7 +300,7 @@ test("the snapshot is skipped for settings it does not draw", () => {
   assert.equal(snapshot("# A\n", { ...NOTE, preset: "minimal" }), "");
   const feature = (id: string, enabled: boolean, config = {}): Note => ({
     ...NOTE,
-    features: { [id]: { enabled, config } },
+    features: { ...snapshotFeatures, [id]: { enabled, config } },
   });
   assert.equal(snapshot("# A\n", feature("inlineTitle", true)), "");
   assert.equal(snapshot("# A\n", feature("lineNumbers", false)), "");
@@ -317,10 +318,21 @@ test("the snapshot is skipped for settings it does not draw", () => {
   );
 });
 
+test("Obsidian's default chrome uses the no-snapshot HTML path", () => {
+  // Issue #689 aligns three defaults with Obsidian: a centred page, an inline
+  // title and hidden line numbers. The snapshot cannot draw any of them, so
+  // the host sets the ordinary module-script page instead. This is deliberate;
+  // the snapshot suites above opt into a drawable layout explicitly.
+  const defaults: Note = { preset: "obsidian", mode: "livePreview" };
+  assert.equal(snapshotLayout(defaults, "mac"), undefined);
+  assert.equal(webviewSnapshot("# A\n", defaults, "mac"), "");
+});
+
 test("the note's font and tab settings are carried to the snapshot", () => {
   const html = snapshot("# A\n", {
     ...NOTE,
     editor: editorConfig.parse({
+      readableLineLength: false,
       fontSize: 20,
       lineHeight: 1.8,
       tabSize: 2,
@@ -340,7 +352,7 @@ test("the note's font and tab settings are carried to the snapshot", () => {
 test("the editor keeps the snapshot only for the layout it was built for", () => {
   const layout = snapshotLayout(NOTE, "mac")!;
   const element = { dataset: { layout: layout.key } } as unknown as HTMLElement;
-  const init = { ...NOTE, editor: editorConfig.parse({}) };
+  const init: Note = { ...NOTE };
   assert.equal(snapshotMatches(element, init), true);
   const opening = (selection: {
     anchor: number;
@@ -357,7 +369,7 @@ test("the editor keeps the snapshot only for the layout it was built for", () =>
   assert.equal(
     snapshotMatches(element, {
       ...init,
-      editor: editorConfig.parse({ fontSize: 18 }),
+      editor: editorConfig.parse({ readableLineLength: false, fontSize: 18 }),
     }),
     false,
   );

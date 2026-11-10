@@ -7,6 +7,7 @@ import { webviewSnapshot } from "../../src/plugins/editor/snapshot";
 import { servePage } from "../browser/page-server";
 import { mermaidNote } from "../support/mermaid-note";
 import { note as blocksNote } from "../support/perf-note";
+import { snapshotNote } from "../support/snapshot-note";
 import { budgets, record } from "./budgets";
 import { browserFactor, openNote } from "./page";
 
@@ -42,11 +43,7 @@ for (const [name, source] of Object.entries(notes) as [
 test("a note's first screen is on screen before the editor starts", async ({
   page,
 }) => {
-  const html = webviewSnapshot(
-    blocksNote(24),
-    { preset: "obsidian", mode: "livePreview" },
-    "mac",
-  );
+  const html = webviewSnapshot(blocksNote(24), snapshotNote(), "mac");
   expect(html).not.toBe("");
   await servePage(
     page,

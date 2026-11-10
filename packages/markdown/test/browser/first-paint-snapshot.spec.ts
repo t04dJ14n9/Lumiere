@@ -1,8 +1,8 @@
 import { expect, test } from "@playwright/test";
 import type { Page } from "@playwright/test";
-import { config as editorConfig } from "../../src/plugins/editor/manifest";
 import { webviewSnapshot } from "../../src/plugins/editor/snapshot";
 import { servePage } from "./page-server";
+import { snapshotNote } from "../support/snapshot-note";
 import type {} from "./fake-host";
 
 /**
@@ -112,18 +112,11 @@ async function openUnderSnapshot(
     content:
       "#app > section.panel { flex: 1; min-height: 0; display: flex; flex-direction: column; }",
   });
-  const html = webviewSnapshot(
-    source,
-    {
-      preset: "obsidian",
-      mode: "livePreview",
-      editor: editorConfig.parse(host),
-    },
-    "mac",
-  );
+  const layout = snapshotNote(host);
+  const html = webviewSnapshot(source, layout, "mac");
   expect(html).not.toBe("");
   return page.evaluate(
-    async ({ source, html, editor }) => {
+    async ({ source, html, editor, layoutFeatures }) => {
       const boxes = (root: Element, selector: string): Box[] =>
         [...root.querySelectorAll(selector)].map((line) => {
           const rect = line.getBoundingClientRect();
@@ -145,10 +138,10 @@ async function openUnderSnapshot(
         ".mw-snapshot-text > .cm-line",
       );
       window.harness = new window.BrowserHost(source);
-      window.harness.features = {};
+      window.harness.features = layoutFeatures;
       window.harness.videoDetails = {};
       window.harness.notes = {};
-      window.harness.editorSettings = editor;
+      window.harness.editorSettings = { ...editor, readableLineLength: false };
       await window.harness.open("obsidian");
       const wasDropped = !document.querySelector(".mw-snapshot");
       for (let wait = 0; document.querySelector(".mw-snapshot"); wait++) {
@@ -170,7 +163,12 @@ async function openUnderSnapshot(
         featuresLoaded: performance.getEntriesByName("mw:features").length > 0,
       };
     },
-    { source, html, editor },
+    {
+      source,
+      html,
+      editor,
+      layoutFeatures: layout.features ?? {},
+    },
   );
 }
 

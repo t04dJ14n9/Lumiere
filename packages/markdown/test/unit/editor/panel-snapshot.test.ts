@@ -8,9 +8,10 @@ import type {
   DocumentSession,
 } from "../../../src/plugins/document/api";
 import { fakeDocument, fakeHost } from "../../support/vscode-fake";
+import { snapshotNote } from "../../support/snapshot-note";
 
 const TEXT = "# Title\n\nFirst paragraph.\n";
-const NOTE: NoteSettings = { preset: "obsidian", mode: "livePreview" };
+const NOTE: NoteSettings = snapshotNote();
 
 /** The HTML the host sets for a note opened with these settings. */
 async function pageFor(
