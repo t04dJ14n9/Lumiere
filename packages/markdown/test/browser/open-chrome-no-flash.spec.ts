@@ -1,5 +1,6 @@
 import { test, expect } from "@playwright/test";
 import { servePage } from "./page-server";
+import { TEST_CHROME } from "./harness";
 import type {} from "./fake-host";
 
 /**
@@ -15,12 +16,13 @@ test("mw:properties frame already has Properties sheet and lineNumbers gutter", 
     page,
     '<!doctype html><html><head><link rel="stylesheet" href="/dist/webview/editor.css"></head><body><main id="app"></main><script src="/artifacts/fake-host.js"></script></body></html>',
   );
-  const atProperties = await page.evaluate(async () => {
+  const atProperties = await page.evaluate(async (chrome) => {
     window.harness = new window.BrowserHost(
       "---\ntitle: hi\nstatus: open\n---\n\n# Heading\n\nbody\n",
     );
     window.harness.trusted = false;
-    window.harness.features = {};
+    window.harness.features = chrome;
+    window.harness.editorSettings = { readableLineLength: false };
     window.harness.videoDetails = {};
     window.harness.notes = {};
     const opening = window.harness.open("obsidian");
@@ -42,7 +44,7 @@ test("mw:properties frame already has Properties sheet and lineNumbers gutter", 
     };
     await opening;
     return snapshot;
-  });
+  }, TEST_CHROME);
   expect(atProperties.properties).toBe(true);
   expect(atProperties.lineNumbers).toBe(true);
 });

@@ -16,7 +16,7 @@ async function firstLine(page: Page) {
   });
 }
 
-test("by default no inline title is shown and line 1 starts at the top", async ({
+test("with the measured chrome, no inline title is shown and line 1 starts at the top", async ({
   page,
 }) => {
   await open(page, "First line\n\nSecond");
@@ -38,4 +38,17 @@ test("turning the inline title on shows the file name above line 1", async ({
   const line = await firstLine(page);
   expect(line.first).toBe(false);
   expect(line.top).toBeGreaterThan(line.padding);
+});
+
+test("the shipped Obsidian defaults show the inline title and hide line numbers", async ({
+  page,
+}) => {
+  await open(page, "First line\n\nSecond", "obsidian", {
+    useDefaults: true,
+  });
+  await expect(page.locator(".file-title")).toHaveCount(1);
+  await expect(page.locator(".cm-lineNumbers")).toHaveCount(0);
+  await expect(page.locator(".cm-editor.is-readable-line-width")).toHaveCount(
+    1,
+  );
 });
