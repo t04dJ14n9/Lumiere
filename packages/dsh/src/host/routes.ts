@@ -27,6 +27,34 @@ export function upgradeRejection(status: number): string {
   );
 }
 
+/** Only the JSON routes take POST; a write must not open a panel or serve a file. */
+function rejectsWrite(
+  req: IncomingMessage,
+  res: {
+    writeHead(
+      status: number,
+      headers?: Record<string, string>,
+    ): { end(): void };
+  },
+  rest: string,
+): boolean {
+  if (req.method === "GET" || req.method === "HEAD") {
+    return false;
+  }
+  const readOnly =
+    rest === "/editor" ||
+    rest === "/page/shim.js" ||
+    rest === "/file" ||
+    rest === "/pdf" ||
+    rest.startsWith("/m/") ||
+    rest.startsWith("/pdf/");
+  if (!readOnly) {
+    return false;
+  }
+  res.writeHead(405, { allow: "GET, HEAD" }).end();
+  return true;
+}
+
 export function registerRoutes(
   ctx: DshContext,
   host: LumiereHost,
@@ -42,6 +70,12 @@ export function registerRoutes(
         const status = reject(req);
         if (status) {
           res.writeHead(status).end();
+          return;
+        }
+        const rest = new URL(req.url ?? "/", "http://host").pathname.slice(
+          BASE.length,
+        );
+        if (rejectsWrite(req, res, rest)) {
           return;
         }
         const handled = await routes
