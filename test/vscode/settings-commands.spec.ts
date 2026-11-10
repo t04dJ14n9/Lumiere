@@ -136,28 +136,30 @@ test("Open Settings, and the commands for common settings read and write the Set
       .toBe(true);
     await expect.poll(readable).toBe(1);
     // A value set in the folder is the one changed, and the user's stays.
+    // Write the opposite of the current value so the poll waits for VS Code to
+    // read settings.json before the toggle picks its write scope.
     mkdirSync(path.dirname(folderFile), { recursive: true });
     writeFileSync(
       folderFile,
-      JSON.stringify({ [key("editor.readableLineLength")]: true }),
+      JSON.stringify({ [key("editor.readableLineLength")]: false }),
     );
-    await expect.poll(readable).toBe(1);
+    await expect.poll(readable).toBe(0);
     await command(page, "Lumiere: Toggle Readable Line Width");
     await expect
       .poll(() => folderKeys()[key("editor.readableLineLength")])
-      .toBe(false);
+      .toBe(true);
     expect(userKeys()[key("editor.readableLineLength")]).toBe(true);
-    await expect.poll(readable).toBe(0);
+    await expect.poll(readable).toBe(1);
     // An edit in settings.json is what the next run reads (no state of its own).
     writeFileSync(
       folderFile,
-      JSON.stringify({ [key("editor.readableLineLength")]: true }),
+      JSON.stringify({ [key("editor.readableLineLength")]: false }),
     );
-    await expect.poll(readable).toBe(1);
+    await expect.poll(readable).toBe(0);
     await command(page, "Lumiere: Toggle Readable Line Width");
     await expect
       .poll(() => folderKeys()[key("editor.readableLineLength")])
-      .toBe(false);
+      .toBe(true);
     resetFolder();
 
     // Line numbers.
