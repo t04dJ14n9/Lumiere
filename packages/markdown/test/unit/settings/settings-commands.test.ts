@@ -41,7 +41,7 @@ test("each toggle flips the setting the Settings UI shows, in the workspace when
     await command(toggle.command)();
     assert.equal(store.workspace.get(toggle.key), true, toggle.key);
   }
-  assert.match(informed[0]!, /^Line numbers: off \(user settings\)$/);
+  assert.match(informed[0]!, /^Line numbers: on \(user settings\)$/);
   assert.match(informed[1]!, /\(workspace settings\)$/);
   await root.dispose();
 });
@@ -69,7 +69,11 @@ test("a toggle on a setting whose current value is not a boolean starts from the
   store.workspace.set("plugins.lineNumbers.enabled", "yes");
   const { command, errors, root } = await run(store);
   await command("toggleLineNumbers")();
-  assert.equal(store.workspace.get("plugins.lineNumbers.enabled"), false);
+  // Starting from the schema default (now off) and flipping turns it on.
+  assert.equal(
+    store.workspace.get("plugins.lineNumbers.enabled"),
+    !contributedSetting("plugins.lineNumbers.enabled").schema.default,
+  );
   assert.deepEqual(errors, []);
   await root.dispose();
 });

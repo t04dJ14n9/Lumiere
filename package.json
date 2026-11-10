@@ -3008,13 +3008,13 @@
           },
           "lumiere.markdown.plugins.inlineTitle.enabled": {
             "type": "boolean",
-            "default": false,
+            "default": true,
             "scope": "resource",
             "description": "Show and rename the note title above its Markdown content."
           },
           "lumiere.markdown.plugins.lineNumbers.enabled": {
             "type": "boolean",
-            "default": true,
+            "default": false,
             "scope": "resource",
             "description": "Line numbers in the Markdown editor, laid out like VS Code's text editor and following editor.lineNumbers."
           },
@@ -3241,7 +3241,7 @@
           },
           "lumiere.markdown.editor.readableLineLength": {
             "type": "boolean",
-            "default": false,
+            "default": true,
             "scope": "resource"
           },
           "lumiere.markdown.editor.reclaimTextEditor": {

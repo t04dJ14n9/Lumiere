@@ -3,7 +3,7 @@ import { fontFields, fontNativeKeys, fontSize, lineHeight } from "./font";
 import { caretFields, caretNativeKeys } from "./caret-settings";
 export const config = Schema.object({
   defaultMode: Schema.union(["livePreview", "source"]).default("livePreview"),
-  readableLineLength: Schema.boolean().default(false),
+  readableLineLength: Schema.boolean().default(true),
   /** Reopen notes Cursor's Preview | Markdown switch sends to the text editor. */
   reclaimTextEditor: Schema.union(["auto", "on", "off"]).default("auto"),
   /**

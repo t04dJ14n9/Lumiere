@@ -4,8 +4,8 @@ export default defineManifest({
   title: "Inline title",
   description: "Show and rename the note title above its Markdown content.",
   kind: "feature",
-  // Off by default (owner decision): line 1 starts at the top, as in VS Code.
-  defaultEnabled: false,
+  // On by default, matching Obsidian 1.15.0's "Show inline title".
+  defaultEnabled: true,
   surfaces: ["host", "webview"],
   capabilities: ["rendering", "fileWrites"],
 });

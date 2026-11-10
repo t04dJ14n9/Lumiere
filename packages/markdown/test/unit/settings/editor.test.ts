@@ -30,8 +30,8 @@ function fontDeclarations(extensions: Extension): Record<string, string> {
 test("editor settings have application defaults and reconfigure without changing text or selection", () => {
   assert.deepEqual(config.parse({}), {
     defaultMode: "livePreview",
-    // Off by default: text fills the editor like VS Code's text editor.
-    readableLineLength: false,
+    // On by default, as in Obsidian: the note is centred to a readable measure.
+    readableLineLength: true,
     // Auto: reclaims Cursor's text-editor switch only when running in Cursor.
     reclaimTextEditor: "auto",
     // Off: in-place workbench→text (Claude) stays native unless opted in.
@@ -78,14 +78,15 @@ test("editor settings have application defaults and reconfigure without changing
   });
   assert.deepEqual(state.facet(EditorView.editorAttributes).at(-1), {
     dir: "ltr",
+    class: "is-readable-line-width",
   });
   assert.deepEqual(
     EditorState.create({
-      extensions: settingsExtensions({ readableLineLength: true }),
+      extensions: settingsExtensions({ readableLineLength: false }),
     })
       .facet(EditorView.editorAttributes)
       .at(-1),
-    { dir: "ltr", class: "is-readable-line-width" },
+    { dir: "ltr" },
   );
   const previous = state;
   state = state.update({
@@ -168,8 +169,8 @@ test("resource settings use manifest aliases and validate all editor fields", ()
   assert.equal(result.editor?.rightToLeft, true);
   assert.equal(result.editor?.dragScrollSpeed, 2.5);
   assert.equal(result.mode, "source");
-  assert.equal(result.features?.lineNumbers?.enabled, true);
-  assert.equal(result.features?.inlineTitle?.enabled, false);
+  assert.equal(result.features?.lineNumbers?.enabled, false);
+  assert.equal(result.features?.inlineTitle?.enabled, true);
   assert.equal(result.features?.lineNumbers?.config.style, "on");
   values["editor.rightToLeft"] = "yes";
   assert.throws(() => readSettings(reader));
@@ -190,16 +191,16 @@ test("required settings, title actions, native context menus and unbound verify 
     { default: unknown; scope: string }
   >;
   for (const [key, value] of Object.entries({
-    "editor.readableLineLength": false,
+    "editor.readableLineLength": true,
     "editor.strictLineBreaks": false,
     "editor.rightToLeft": false,
     "editor.dragScrollSpeed": 4,
     "files.attachmentFolder": "",
     "files.newNoteFolder": "",
     "links.useWikilinks": true,
-    "plugins.lineNumbers.enabled": true,
-    // Off by default: line 1 starts at the top, as in the text editor.
-    "plugins.inlineTitle.enabled": false,
+    "plugins.lineNumbers.enabled": false,
+    // Obsidian 1.15.0 defaults: inline title on, line numbers off.
+    "plugins.inlineTitle.enabled": true,
     "plugins.diagrams.enabled": true,
     "plugins.vim.enabled": false,
   })) {

@@ -10,7 +10,8 @@ export default defineManifest({
   description:
     "Line numbers in the Markdown editor, laid out like VS Code's text editor and following editor.lineNumbers.",
   kind: "feature",
-  defaultEnabled: true,
+  // Off by default, matching Obsidian 1.15.0's hidden line numbers.
+  defaultEnabled: false,
   surfaces: ["webview"],
   capabilities: ["editorChrome"],
   config,

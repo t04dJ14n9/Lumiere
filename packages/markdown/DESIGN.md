@@ -991,7 +991,7 @@ corresponds to. "Source" names the module on the source branch.
 | ID | Obsidian | Default | Injects | Source |
 | --- | --- | --- | --- | --- |
 | `properties` | Properties view; *Properties in document* | on | render, livePreview, markdown | `editor/properties/*`, `markdown/properties.ts`, `property-order.ts`, `host/property-types.ts` |
-| `inlineTitle` | *Show inline title*; rename from title | off (owner decision, 2026-10-09) | editor, documents | `editor/file-title.ts`, `markdown/rename-note.ts` |
+| `inlineTitle` | *Show inline title*; rename from title | on | editor, documents | `editor/file-title.ts`, `markdown/rename-note.ts` |
 | `links` | internal links, link following, unresolved styling | on | vault, livePreview, editors | `hybrid-inline.ts` (links), `app.ts` `listenForLinks`, `session.openLink` |
 | `embeds` | `![[ ]]` transclusion, attachments, media | on | resources, render | `render/embeds.ts`, `media/*` |
 | `tables` | Live Preview table editor | on | livePreview, render, menu | `table/*` |
@@ -1009,7 +1009,7 @@ corresponds to. "Source" names the module on the source branch.
 | `outgoingLinks` | Outgoing links | off | vault, editors, workbench | new |
 | `search` | embedded `query` blocks | on | vault, render | `search/*`, `host/query-session.ts` |
 | `folding` | *Fold heading*, *Fold indent* | on | editor | `outline.ts` (folding parts), presentation folds |
-| `lineNumbers` | *Show line numbers* | on | editor | `lineNumbers()` |
+| `lineNumbers` | *Show line numbers* | off | editor | `lineNumbers()` |
 | `indentGuides` | *Show indentation guides* | on | editor | new |
 | `vim` | *Vim key bindings* | off | editor, commands | `editor/vim.ts` |
 | `autoPair` | *Auto pair brackets*, *Auto pair Markdown syntax* | on | editor | `editor/markdown.ts` `autoPairing` |
@@ -1146,20 +1146,21 @@ Rules:
 
 ### 15.1 Editor settings (Obsidian → Lumiere)
 
-Defaults are Obsidian's application defaults, except where the owner decided
-otherwise (2026-10-09): line numbers on, readable line length off, Mermaid on.
-Vim stays off; the owner's Vim profile is a test profile, not the product
-default (§25).
+Defaults follow Obsidian 1.15.0's application defaults. Readable line length,
+the inline title and line numbers had been inverted as owner decisions
+(2026-10-09); they are aligned back to Obsidian's on, on and off (2026-11-10,
+issue #689). Mermaid stays on. Vim stays off; the owner's Vim profile is a test
+profile, not the product default (§25).
 
 | Obsidian setting | Setting or plugin | Default |
 | --- | --- | --- |
 | Default editing mode | `lumiere.markdown.editor.defaultMode` (`livePreview` \| `source`) | `livePreview` |
-| Readable line length | `lumiere.markdown.editor.readableLineLength` | `false` (owner decision; `true` gives the default theme's 700 px measure) |
+| Readable line length | `lumiere.markdown.editor.readableLineLength` | `true` (Obsidian 1.15.0 default; gives the default theme's 700 px measure) |
 | Strict line breaks | `lumiere.markdown.editor.strictLineBreaks` | `false` |
 | Properties in document | `lumiere.markdown.properties.display` | `visible` |
-| Show inline title | plugin `inlineTitle` | off (owner decision, 2026-10-09) |
+| Show inline title | plugin `inlineTitle` | on (Obsidian 1.15.0 default) |
 | Fold heading, Fold indent | `lumiere.markdown.folding.heading`, `.indent` | `true`, `true` |
-| Show line numbers | plugin `lineNumbers` | on (owner decision), following `editor.lineNumbers` |
+| Show line numbers | plugin `lineNumbers` | off (Obsidian 1.15.0 default), following `editor.lineNumbers` |
 | Show indentation guides | plugin `indentGuides` | on |
 | (no built-in equivalent) Sticky headings | plugin `stickyScroll`; `lumiere.markdown.stickyScroll.maxLines` | on; 5 rows |
 | Right-to-left | `lumiere.markdown.editor.rightToLeft` | `false` |
