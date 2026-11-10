@@ -38,6 +38,7 @@ import {
   verticalBlock,
   moveTo,
   renderedWidgets,
+  revealedSourceBlocks,
   foldedRanges,
 } from "./motion";
 import { sourceVisibleAt } from "./source-visibility";
@@ -88,6 +89,7 @@ function registerEngine(
     visiblePosition,
     verticalPosition: verticalBlock,
     renderedWidgets,
+    revealedSourceBlocks,
     foldedRanges,
     sourceVisibleAt,
     block(renderer: Parameters<typeof blockRenderers.of>[0]) {

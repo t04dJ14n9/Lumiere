@@ -103,12 +103,12 @@ function tableSourcePosition(
     doc.lines - 1,
     Math.max(motion.start.line, motion.result.line),
   );
-  const widgets =
-    preview.renderedWidgets?.(
-      view.state,
-      doc.line(fromLine + 1).from,
-      doc.line(toLine + 1).to,
-    ) ?? [];
+  const rangeFrom = doc.line(fromLine + 1).from;
+  const rangeTo = doc.line(toLine + 1).to;
+  const widgets = [
+    ...(preview.renderedWidgets?.(view.state, rangeFrom, rangeTo) ?? []),
+    ...(preview.revealedSourceBlocks?.(view.state, rangeFrom, rangeTo) ?? []),
+  ];
   return tableMotionPosition({
     ...motion,
     lastLine: doc.lines - 1,

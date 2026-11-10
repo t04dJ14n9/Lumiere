@@ -171,3 +171,31 @@ test("Mermaid, HTML and other widgets keep native motion; a table outside the mo
     undefined,
   );
 });
+
+test("a revealed Mermaid or HTML overshoot from the closing fence returns the previous source line", () => {
+  for (const kind of ["diagram", "Mermaid", "HTMLBlock"]) {
+    assert.deepEqual(
+      tableMotionPosition({
+        ...base,
+        start: { line: 6, ch: 0 },
+        amount: -1,
+        result: { line: 3, ch: 0 },
+        widgets: [{ kind, from: 3, to: 6 }],
+      }),
+      { line: 5, ch: 3 },
+    );
+  }
+});
+
+test("a revealed block overshoot from the opening fence returns the next source line", () => {
+  assert.deepEqual(
+    tableMotionPosition({
+      ...base,
+      start: { line: 3, ch: 0 },
+      amount: 1,
+      result: { line: 6, ch: 0 },
+      widgets: [{ kind: "diagram", from: 3, to: 6 }],
+    }),
+    { line: 4, ch: 3 },
+  );
+});
