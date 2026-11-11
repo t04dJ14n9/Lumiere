@@ -50,3 +50,23 @@ test("a host frame is rpc or a well-formed ui request, and anything else is igno
     assert.equal(parseHostFrame(text), undefined, text);
   }
 });
+
+test("inherited object-prototype names as ui request types are dropped", () => {
+  for (const type of [
+    "constructor",
+    "toString",
+    "toLocaleString",
+    "valueOf",
+    "hasOwnProperty",
+    "isPrototypeOf",
+    "propertyIsEnumerable",
+    "__proto__",
+    "__defineGetter__",
+    "__defineSetter__",
+    "__lookupGetter__",
+    "__lookupSetter__",
+  ]) {
+    const text = JSON.stringify({ ch: "ui", data: { type } });
+    assert.equal(parseHostFrame(text), undefined, type);
+  }
+});

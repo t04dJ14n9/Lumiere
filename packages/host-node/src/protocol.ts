@@ -240,6 +240,9 @@ function parseUiRequest(value: unknown): UiRequest | undefined {
   if (!isRecord(value) || typeof value.type !== "string") {
     return undefined;
   }
+  if (!Object.hasOwn(REQUEST_PARSERS, value.type)) {
+    return undefined;
+  }
   return REQUEST_PARSERS[value.type]?.(value);
 }
 
