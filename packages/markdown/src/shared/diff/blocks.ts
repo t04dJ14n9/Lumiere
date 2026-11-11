@@ -6,6 +6,7 @@ import { splitLines, wordDiff } from "./lines";
 import type { WordBudget } from "./lines";
 import { overlaps, protectedRanges } from "./protect";
 import { codeSpans } from "./spans";
+import { pairBlocks } from "./pair";
 import type { Segment } from "./lines";
 
 export type BlockKind =
@@ -103,10 +104,50 @@ const LIST_ITEM = /^ {0,3}(?:[-+*]|\d{1,9}[.)])(?:[ \t]|$)/;
 
 export interface SplitOptions {
   /**
-   * Keep a list together across blank lines: an indented paragraph or a
-   * further item after a list joins its block, so it renders inside it.
+   * Split lists into items, as the rendered diff aligns them: each item is a
+   * block, and an indented paragraph after a blank line joins its item's
+   * block, so it renders inside it.
    */
   readonly containers?: boolean;
+}
+
+/** The indent of a list item's marker, or -1 for a line that is not one. */
+function itemIndent(line: string): number {
+  return LIST_ITEM.test(line) ? line.length - line.trimStart().length : -1;
+}
+
+/** Whether `line` is an item at or left of `indent` (a sibling, not nested). */
+const startsSibling = (line: string, indent: number) =>
+  itemIndent(line) >= 0 && itemIndent(line) <= indent;
+
+/** A list item that may interrupt a paragraph (CommonMark): bullet or 1. */
+const INTERRUPTS = /^ {0,3}(?:[-+*]|1[.)])[ \t]+\S/;
+
+/** Whether an indented `line` continues the item that opens at `from`. */
+function continuesItem(lines: readonly string[], from: number, line: string) {
+  const indent = itemIndent(lines[from]!);
+  return indent >= 0 && /^[ \t]+\S/.test(line) && !startsSibling(line, indent);
+}
+
+/**
+ * Where a text block from `from` (scanned on from `at`) ends when lists split
+ * into items: before the next sibling item, or before a list that
+ * interrupts a paragraph.
+ */
+function itemEnd(
+  lines: readonly string[],
+  from: number,
+  at: number,
+  end: number,
+) {
+  const indent = itemIndent(lines[from]!);
+  for (let j = at + 1; j < end; j++) {
+    const line = lines[j]!;
+    if (indent >= 0 ? startsSibling(line, indent) : INTERRUPTS.test(line)) {
+      return j;
+    }
+  }
+  return end;
 }
 
 /** Split Markdown into blocks; blank lines separate blocks and belong to none. */
@@ -124,21 +165,20 @@ export function splitBlocks(text: string, options: SplitOptions = {}): Block[] {
       i++;
       continue;
     }
-    const [kind, end] = blockAt(lines, i);
-    const to = Math.min(Math.max(end, i + 1), lines.length);
+    const [kind, scanned] = blockAt(lines, i);
+    const items = options.containers && kind === "text";
     const last = blocks[blocks.length - 1];
-    if (
-      options.containers &&
-      kind === "text" &&
+    const joins =
+      items &&
       last?.kind === "text" &&
-      LIST_ITEM.test(lines[last.from]!) &&
-      (/^[ \t]+\S/.test(lines[i]!) || LIST_ITEM.test(lines[i]!))
-    ) {
+      continuesItem(lines, last.from, lines[i]!);
+    const from = joins ? last.from : i;
+    const end = items ? itemEnd(lines, from, i, scanned) : scanned;
+    const to = Math.min(Math.max(end, i + 1), lines.length);
+    if (joins) {
       blocks.pop();
-      add("text", last.from, to);
-    } else {
-      add(kind, i, to);
     }
+    add(kind, from, to);
     i = to;
   }
   return blocks;
@@ -151,7 +191,7 @@ export interface BlockRow {
   readonly after?: Block;
 }
 
-/** Align the blocks of two texts; replaced runs pair up in order when kinds match. */
+/** Align the blocks of two texts; replaced runs pair alike blocks (./pair). */
 export function alignBlocks(
   before: string,
   after: string,
@@ -185,29 +225,7 @@ export function alignBlocks(
       }
       r++;
     }
-    rows.push(...pair(removed, added));
-  }
-  return rows;
-}
-
-function pair(removed: readonly Block[], added: readonly Block[]): BlockRow[] {
-  const rows: BlockRow[] = [];
-  let i = 0;
-  let j = 0;
-  while (i < removed.length || j < added.length) {
-    const x = removed[i];
-    const y = added[j];
-    if (x && y && x.kind === y.kind) {
-      rows.push({ kind: "modified", before: x, after: y });
-      i++;
-      j++;
-    } else if (x && (!y || removed.length - i >= added.length - j)) {
-      rows.push({ kind: "deleted", before: x });
-      i++;
-    } else {
-      rows.push({ kind: "added", after: y! });
-      j++;
-    }
+    rows.push(...pairBlocks(removed, added));
   }
   return rows;
 }

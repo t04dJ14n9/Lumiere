@@ -136,6 +136,70 @@ test("alignBlocks: pairs changed blocks of a kind and keeps deletions in place",
   );
 });
 
+test("alignBlocks: an edited block sits beside its old version, not a new neighbour", () => {
+  const rows = alignBlocks(
+    "P1 hello world.\n\nP2 foo bar.\n",
+    "P0 brand new.\n\nP1 hello world!\n\nP2 foo bar.\n",
+  );
+  assert.deepEqual(
+    rows.map((r) => [r.kind, r.before?.text, r.after?.text]),
+    [
+      ["added", undefined, "P0 brand new."],
+      ["modified", "P1 hello world.", "P1 hello world!"],
+      ["equal", "P2 foo bar.", "P2 foo bar."],
+    ],
+  );
+});
+
+test("alignBlocks: a removed block before an edited one stays on its own row", () => {
+  const rows = alignBlocks(
+    "Alpha one two.\n\nBeta three four five.\n",
+    "Beta three four five six.\n",
+  );
+  assert.deepEqual(
+    rows.map((r) => [r.kind, r.before?.text, r.after?.text]),
+    [
+      ["deleted", "Alpha one two.", undefined],
+      ["modified", "Beta three four five.", "Beta three four five six."],
+    ],
+  );
+});
+
+test("alignBlocks with containers: list items align one by one", () => {
+  const kinds = (before: string, after: string) =>
+    alignBlocks(before, after, { containers: true }).map((r) => [
+      r.kind,
+      r.before?.text,
+      r.after?.text,
+    ]);
+  assert.deepEqual(kinds("- a\n- b\n- c\n", "- a\n- new\n- b\n- c\n"), [
+    ["equal", "- a", "- a"],
+    ["added", undefined, "- new"],
+    ["equal", "- b", "- b"],
+    ["equal", "- c", "- c"],
+  ]);
+  // Renumbered items pair with their own text, not with their old number.
+  assert.deepEqual(kinds("1. a\n2. b\n3. c\n", "1. a\n2. new\n3. b\n4. c\n"), [
+    ["equal", "1. a", "1. a"],
+    ["added", undefined, "2. new"],
+    ["modified", "2. b", "3. b"],
+    ["modified", "3. c", "4. c"],
+  ]);
+  // A list after a paragraph line, nested items and later paragraphs stay put.
+  assert.deepEqual(
+    kinds(
+      "Tasks:\n- x\n  - x1\n\n    more\n- y\n",
+      "Tasks:\n- x\n  - x1\n\n    more\n- w\n- y\n",
+    ),
+    [
+      ["equal", "Tasks:", "Tasks:"],
+      ["equal", "- x\n  - x1\n\n    more", "- x\n  - x1\n\n    more"],
+      ["added", undefined, "- w"],
+      ["equal", "- y", "- y"],
+    ],
+  );
+});
+
 test("rowMarkdown: code blocks diff by line as an HTML block on one line", () => {
   const [row] = alignBlocks("```\na\nb\n```", "```\na\nc\n```");
   const md = rowMarkdown(row!);
