@@ -9,9 +9,13 @@ Obsidian 1.15.0 exposes and Lumia did not
 - `lumiere.markdown.vault.showUnsupportedFiles` (boolean, default `false`) —
   Obsidian's "Show all file types" (`app.pretty.js:150487`).
 
-The declarations are verified by `test/unit/settings/contributed-defaults.test.ts`.
-They are **not yet read by the plugins** — wiring is a later change.
-`package.json` Settings contributions are withheld until that wiring lands.
+The reserved schemas live in `reservedConfig` on the links and vault
+manifests, outside active `manifest.config`, so the contributions generator
+does not emit Settings toggles. Defaults and generator/package.json absence
+are verified by `test/unit/settings/contributed-defaults.test.ts`.
+They are **not yet read by the plugins** — wiring is a later change, at
+which point each field moves into active `manifest.config` and can be
+contributed.
 
 ## Remaining wiring
 

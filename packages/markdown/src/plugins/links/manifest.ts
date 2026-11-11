@@ -1,15 +1,18 @@
 import { Schema } from "@workshop/core";
 import { defineManifest } from "../../shared/manifest";
-export const config = Schema.object({
-  newLinkFormat: Schema.union(["shortest", "relative", "absolute"]).default(
-    "shortest",
-  ),
-  useWikilinks: Schema.boolean().default(true),
+/** Preparatory schema for #701. Not part of active manifest.config until a plugin reads it. */
+export const reservedConfig = Schema.object({
   focusNewTab: Schema.boolean()
     .default(true)
     .description(
       "Reserved schema for Obsidian's Always focus new tabs (default true). Not read yet; not a live setting.",
     ),
+});
+export const config = Schema.object({
+  newLinkFormat: Schema.union(["shortest", "relative", "absolute"]).default(
+    "shortest",
+  ),
+  useWikilinks: Schema.boolean().default(true),
   folderNote: Schema.string().default(""),
   newNoteFolder: Schema.string()
     .default("")

@@ -1,8 +1,15 @@
 import assert from "node:assert/strict";
 import { readFileSync } from "node:fs";
 import test from "node:test";
-import { config as linksConfig } from "../../../src/plugins/links/manifest";
-import { config as vaultConfig } from "../../../src/plugins/vault/manifest";
+import { contributions } from "../../../scripts/contributions";
+import {
+  config as linksConfig,
+  reservedConfig as linksReserved,
+} from "../../../src/plugins/links/manifest";
+import {
+  config as vaultConfig,
+  reservedConfig as vaultReserved,
+} from "../../../src/plugins/vault/manifest";
 
 interface ContributedProperty {
   type?: string;
@@ -30,9 +37,11 @@ function contributed(): Map<string, ContributedProperty> {
   );
 }
 
-test("the two new Obsidian settings are declared with their schema defaults", () => {
-  assert.equal(linksConfig.parse({}).focusNewTab, true);
-  assert.equal(vaultConfig.parse({}).showUnsupportedFiles, false);
+test("the two reserved Obsidian settings are declared with their schema defaults", () => {
+  assert.equal(linksReserved.parse({}).focusNewTab, true);
+  assert.equal(vaultReserved.parse({}).showUnsupportedFiles, false);
+  assert.equal("focusNewTab" in linksConfig.parse({}), false);
+  assert.equal("showUnsupportedFiles" in vaultConfig.parse({}), false);
 });
 
 test("the unread settings are not contributed as Settings toggles", () => {
@@ -46,5 +55,20 @@ test("the unread settings are not contributed as Settings toggles", () => {
     props.has("lumiere.markdown.vault.showUnsupportedFiles"),
     false,
     "vault.showUnsupportedFiles must not be contributed until a plugin reads it",
+  );
+});
+
+test("generated contributions omit the unread reserved settings", async () => {
+  const generated = await contributions();
+  const props = generated.configuration.properties;
+  assert.equal(
+    Object.hasOwn(props, "lumiere.markdown.links.focusNewTab"),
+    false,
+    "links.focusNewTab must not be generated until it is in active manifest.config",
+  );
+  assert.equal(
+    Object.hasOwn(props, "lumiere.markdown.vault.showUnsupportedFiles"),
+    false,
+    "vault.showUnsupportedFiles must not be generated until it is in active manifest.config",
   );
 });
