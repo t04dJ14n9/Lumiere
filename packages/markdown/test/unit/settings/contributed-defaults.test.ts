@@ -30,21 +30,21 @@ function contributed(): Map<string, ContributedProperty> {
   );
 }
 
-test("the two new Obsidian settings are declared with their shipped defaults", () => {
+test("the two new Obsidian settings are declared with their schema defaults", () => {
   assert.equal(linksConfig.parse({}).focusNewTab, true);
   assert.equal(vaultConfig.parse({}).showUnsupportedFiles, false);
 });
 
-test("the contributed settings match the manifest defaults and types", () => {
+test("the unread settings are not contributed as Settings toggles", () => {
   const props = contributed();
-  const focusNewTab = props.get("lumiere.markdown.links.focusNewTab");
-  const showUnsupportedFiles = props.get(
-    "lumiere.markdown.vault.showUnsupportedFiles",
+  assert.equal(
+    props.has("lumiere.markdown.links.focusNewTab"),
+    false,
+    "links.focusNewTab must not be contributed until a plugin reads it",
   );
-  assert.ok(focusNewTab, "links.focusNewTab is contributed");
-  assert.equal(focusNewTab.type, "boolean");
-  assert.equal(focusNewTab.default, true);
-  assert.ok(showUnsupportedFiles, "vault.showUnsupportedFiles is contributed");
-  assert.equal(showUnsupportedFiles.type, "boolean");
-  assert.equal(showUnsupportedFiles.default, false);
+  assert.equal(
+    props.has("lumiere.markdown.vault.showUnsupportedFiles"),
+    false,
+    "vault.showUnsupportedFiles must not be contributed until a plugin reads it",
+  );
 });

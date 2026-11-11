@@ -8,7 +8,7 @@ export const config = Schema.object({
   focusNewTab: Schema.boolean()
     .default(true)
     .description(
-      "Obsidian's Always focus new tabs: when a link opens in a new tab, switch to that tab immediately. On by default, as in Obsidian 1.15.0.",
+      "Reserved schema for Obsidian's Always focus new tabs (default true). Not read yet; not a live setting.",
     ),
   folderNote: Schema.string().default(""),
   newNoteFolder: Schema.string()

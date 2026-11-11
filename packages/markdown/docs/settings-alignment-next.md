@@ -1,8 +1,8 @@
 # Settings alignment — next steps for issue #701
 
-This commit contributes the first two of the five settings that Obsidian 1.15.0
-exposes and Lumia did not (`/tmp/obsidian-115/SETTINGS-ALIGNMENT.md`, issue
-#701):
+This commit reserves schema keys for the first two of the five settings that
+Obsidian 1.15.0 exposes and Lumia did not
+(`/tmp/obsidian-115/SETTINGS-ALIGNMENT.md`, issue #701):
 
 - `lumiere.markdown.links.focusNewTab` (boolean, default `true`) — Obsidian's
   "Always focus new tabs" (`app.pretty.js:150360`).
@@ -10,7 +10,8 @@ exposes and Lumia did not (`/tmp/obsidian-115/SETTINGS-ALIGNMENT.md`, issue
   Obsidian's "Show all file types" (`app.pretty.js:150487`).
 
 The declarations are verified by `test/unit/settings/contributed-defaults.test.ts`.
-They are **not yet read by the plugins** — wiring is the next commit.
+They are **not yet read by the plugins** — wiring is a later change.
+`package.json` Settings contributions are withheld until that wiring lands.
 
 ## Remaining wiring
 
@@ -21,11 +22,12 @@ They are **not yet read by the plugins** — wiring is the next commit.
    this needs a typed contract change on both sides (`shared/host` Navigation
    and its VS Code / host-node adapters) plus a unit test with a fake
    navigation service.
-2. `vault.showUnsupportedFiles` — `plugins/vault/registry.ts` (VaultRegistry)
-   filters file enumeration. Read the setting through `vaultSystem`'s settings
-   or the injected `settings` service and widen the extension filter when true;
-   keep Markdown and attachments always indexed. Add a registry unit test with
-   a fake `vaultSystem` listing a `.txt` file.
+2. `vault.showUnsupportedFiles` — Quick Switcher membership is
+   `ranking.ts` `noteCandidates` (Markdown plus a hardcoded attachments
+   list), not a `VaultRegistry` extension filter to widen. When this key is
+   wired, read it from settings and include other extensions in that
+   candidate list; keep Markdown and attachments always indexed. Add a unit
+   test with a fake listing that includes a `.txt` file.
 
 ## Remaining three settings
 

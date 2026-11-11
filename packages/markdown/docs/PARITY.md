@@ -302,7 +302,6 @@ Reference: Obsidian 1.13.7, to be compared by the owner in a disposable vault. N
 | Setting: lumiere.markdown.links.newLinkFormat | not observed | not manually observed | Manual scenario pending; automated evidence is in phase records | not observed |
 | Setting: lumiere.markdown.links.useWikilinks | not observed | not manually observed | Manual scenario pending; automated evidence is in phase records | not observed |
 | Setting: lumiere.markdown.links.folderNote | not observed | not manually observed | Manual scenario pending; automated evidence is in phase records | not observed |
-| Setting: lumiere.markdown.links.focusNewTab | not observed | not manually observed | Manual scenario pending; automated evidence is in phase records | not observed |
 | Setting: lumiere.markdown.files.newNoteFolder | not observed | not manually observed | Manual scenario pending; automated evidence is in phase records | not observed |
 | Setting: lumiere.markdown.files.attachmentFolder | not observed | not manually observed | Manual scenario pending; automated evidence is in phase records | not observed |
 | Setting: lumiere.markdown.properties.display | not observed | not manually observed | Manual scenario pending; automated evidence is in phase records | not observed |
@@ -316,7 +315,6 @@ Reference: Obsidian 1.13.7, to be compared by the owner in a disposable vault. N
 | Command: lumiere.markdown.tags.disableNested | not observed | not manually observed | Manual scenario pending; automated evidence is in phase records | not observed |
 | Setting: lumiere.markdown.vault.rootMarkers | not observed | not manually observed | Manual scenario pending; automated evidence is in phase records | not observed |
 | Setting: lumiere.markdown.vault.excludedFiles | not observed | not manually observed | Manual scenario pending; automated evidence is in phase records | not observed |
-| Setting: lumiere.markdown.vault.showUnsupportedFiles | not observed | not manually observed | Manual scenario pending; automated evidence is in phase records | not observed |
 | Setting: lumiere.markdown.preset | not observed | not manually observed | Manual scenario pending; automated evidence is in phase records | not observed |
 | Add File Property and Open as Text title actions | not observed | not manually observed | Manual scenario pending; automated evidence is in phase records | not observed |
 | Native static context menu; contextual table/property menus | not observed | not manually observed | Manual scenario pending; automated evidence is in phase records | not observed |

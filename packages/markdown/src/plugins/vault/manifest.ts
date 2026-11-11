@@ -14,7 +14,7 @@ export const config = Schema.object({
   showUnsupportedFiles: Schema.boolean()
     .default(false)
     .description(
-      "Obsidian's Show all file types: index files with any extension so they can be linked and seen in the Quick Switcher, even when Lumia cannot open them. Off by default; Markdown and attachments are always indexed.",
+      "Reserved schema for Obsidian's Show all file types (default false). Not read yet; not a live setting.",
     ),
 });
 export default defineManifest({

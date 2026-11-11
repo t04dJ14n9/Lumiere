@@ -1413,7 +1413,6 @@ Use the disposable fixture vault from Setup. These rows enumerate every generate
 | `lumiere.markdown.links.newLinkFormat` | `"shortest"` | shortest / relative / absolute; change at workspace-folder scope, verify the owning plugin scenario, then reset the override. |
 | `lumiere.markdown.links.useWikilinks` | `true` | boolean; change at workspace-folder scope, verify the owning plugin scenario, then reset the override. |
 | `lumiere.markdown.links.folderNote` | `""` | string; change at workspace-folder scope, verify the owning plugin scenario, then reset the override. |
-| `lumiere.markdown.links.focusNewTab` | `true` | boolean; change at workspace-folder scope, verify the owning plugin scenario, then reset the override. |
 | `lumiere.markdown.files.newNoteFolder` | `""` | string; change at workspace-folder scope, verify the owning plugin scenario, then reset the override. |
 | `lumiere.markdown.files.attachmentFolder` | `""` | string; change at workspace-folder scope, verify the owning plugin scenario, then reset the override. |
 | `lumiere.markdown.marp.open` | `"workbench"` | workbench / textEditor; change at workspace-folder scope, verify the owning plugin scenario, then reset the override. |
@@ -1441,7 +1440,6 @@ Use the disposable fixture vault from Setup. These rows enumerate every generate
 | `lumiere.markdown.tags.viewNested` | `true` | boolean; change at workspace-folder scope, verify the owning plugin scenario, then reset the override. |
 | `lumiere.markdown.vault.rootMarkers` | `[".obsidian"]` | array; change at workspace-folder scope, verify the owning plugin scenario, then reset the override. |
 | `lumiere.markdown.vault.excludedFiles` | `[]` | array; change at workspace-folder scope, verify the owning plugin scenario, then reset the override. |
-| `lumiere.markdown.vault.showUnsupportedFiles` | `false` | boolean; change at workspace-folder scope, verify the owning plugin scenario, then reset the override. |
 | `lumiere.markdown.vim.caretStyle` | `"obsidian"` | obsidian / vscodevim / codemirror; change at workspace-folder scope, verify the owning plugin scenario, then reset the override. |
 | `lumiere.markdown.copyLinkForAgent.target` | `"auto"` | auto / cursor / chat / claudeCode / codex / clipboard; change at workspace-folder scope, verify the owning plugin scenario, then reset the override. |
 | `lumiere.markdown.debug.logging` | `false` | boolean; change at workspace-folder scope, verify the owning plugin scenario, then reset the override. |
