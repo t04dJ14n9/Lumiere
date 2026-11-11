@@ -1,5 +1,5 @@
 import { test, expect, chromium } from "@playwright/test";
-import type { Page } from "@playwright/test";
+import type { Browser, Page } from "@playwright/test";
 import { existsSync, readFileSync, rmSync, writeFileSync } from "node:fs";
 import path from "node:path";
 import { paths, readState } from "./state";
@@ -51,18 +51,19 @@ test("Always Update in the rename dialog updates the links, saves the mode, and 
   // This spec tests the dialog, so it states the mode it needs; the original
   // settings are restored in the finally block below.
   const settings = JSON.parse(originalUserSettings) as Record<string, unknown>;
-  writeFileSync(
-    userFile,
-    JSON.stringify(
-      { ...settings, "lumiere.markdown.linkUpdates.mode": "prompt" },
-      null,
-      2,
-    ),
-  );
-  writeFileSync(inWorkspace("Rename Target.md"), "# Target\n");
-  writeFileSync(inWorkspace("Rename Linker.md"), "See [[Rename Target]].\n");
-  const browser = await chromium.connectOverCDP(readState().webSocket);
+  let browser: Browser | undefined;
   try {
+    writeFileSync(
+      userFile,
+      JSON.stringify(
+        { ...settings, "lumiere.markdown.linkUpdates.mode": "prompt" },
+        null,
+        2,
+      ),
+    );
+    writeFileSync(inWorkspace("Rename Target.md"), "# Target\n");
+    writeFileSync(inWorkspace("Rename Linker.md"), "See [[Rename Target]].\n");
+    browser = await chromium.connectOverCDP(readState().webSocket);
     const page = workbenchPage(browser);
     // Opening a note activates the extension, as it is for any real session.
     await openWorkbench(page);
@@ -106,11 +107,16 @@ test("Always Update in the rename dialog updates the links, saves the mode, and 
       })
       .toBe("See [[Rename Target]].\n");
   } finally {
-    await closeBrowser(browser);
-    writeFileSync(userFile, originalUserSettings);
-    rmSync(inWorkspace("Rename Target.md"), { force: true });
-    rmSync(inWorkspace("Rename Goal.md"), { force: true });
-    rmSync(inWorkspace("Rename Linker.md"), { force: true });
+    try {
+      if (browser) {
+        await closeBrowser(browser);
+      }
+    } finally {
+      writeFileSync(userFile, originalUserSettings);
+      rmSync(inWorkspace("Rename Target.md"), { force: true });
+      rmSync(inWorkspace("Rename Goal.md"), { force: true });
+      rmSync(inWorkspace("Rename Linker.md"), { force: true });
+    }
   }
 });
 
@@ -125,10 +131,14 @@ test("an unset linkUpdates.mode uses the never default: a rename does not ask an
       "lumiere.markdown.linkUpdates.mode is already set in User/settings.json; this spec tests the unset contribution default and must run without that key.",
     );
   }
-  writeFileSync(inWorkspace("Default Target.md"), "# Target\n");
-  writeFileSync(inWorkspace("Default Linker.md"), "See [[Default Target]].\n");
-  const browser = await chromium.connectOverCDP(readState().webSocket);
+  let browser: Browser | undefined;
   try {
+    writeFileSync(inWorkspace("Default Target.md"), "# Target\n");
+    writeFileSync(
+      inWorkspace("Default Linker.md"),
+      "See [[Default Target]].\n",
+    );
+    browser = await chromium.connectOverCDP(readState().webSocket);
     const page = workbenchPage(browser);
     await openWorkbench(page);
     await closeEditorGroups(page);
@@ -153,10 +163,15 @@ test("an unset linkUpdates.mode uses the never default: a rename does not ask an
       ],
     ).toBeUndefined();
   } finally {
-    await closeBrowser(browser);
-    writeFileSync(userFile, originalUserSettings);
-    rmSync(inWorkspace("Default Target.md"), { force: true });
-    rmSync(inWorkspace("Default Goal.md"), { force: true });
-    rmSync(inWorkspace("Default Linker.md"), { force: true });
+    try {
+      if (browser) {
+        await closeBrowser(browser);
+      }
+    } finally {
+      writeFileSync(userFile, originalUserSettings);
+      rmSync(inWorkspace("Default Target.md"), { force: true });
+      rmSync(inWorkspace("Default Goal.md"), { force: true });
+      rmSync(inWorkspace("Default Linker.md"), { force: true });
+    }
   }
 });
