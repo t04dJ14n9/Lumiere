@@ -5,7 +5,7 @@
 // DSH_URL defaults to http://127.0.0.1:61440. When DSH_COOKIE is absent the
 // script reads the local desktop profile's loopback cookies (macOS only), so
 // it can run unattended on the owner's machine. Every check is independent;
-// the script prints PASS/FAIL per scenario and exits non-zero on any failure.
+// the script prints PASS/FAIL/SKIP per scenario and exits non-zero on any failure (skips are counted separately from passes).
 import { execFileSync } from "node:child_process";
 import { createRequire } from "node:module";
 import {
@@ -18,17 +18,50 @@ import {
 } from "node:fs";
 import { tmpdir } from "node:os";
 import path from "node:path";
-import { pathToFileURL } from "node:url";
+import { fileURLToPath, pathToFileURL } from "node:url";
 
-const require = createRequire(path.resolve("packages/host-node/package.json"));
-const WebSocket = require("ws");
-const { chromium } = require("@playwright/test");
+export const results = [];
+let base;
+let origin;
+let cookie;
+let scratch;
+let WebSocket;
+let chromium;
 
-const base = process.env.DSH_URL ?? "http://127.0.0.1:61440";
-const origin = new URL(base).origin;
-const cookie = readCookie();
-const scratch = mkdtempSync(path.join(tmpdir(), "lumiere-e2e-"));
-const results = [];
+export class Skip extends Error {
+  constructor(detail) {
+    super(detail);
+    this.name = "Skip";
+  }
+}
+
+export function skip(detail) {
+  throw new Skip(detail);
+}
+
+export function resetResults() {
+  results.length = 0;
+}
+
+export function summarize(list = results) {
+  const passed = list.filter((result) => result.ok === true);
+  const skipped = list.filter((result) => result.ok === "skipped");
+  const failed = list.filter((result) => result.ok === false);
+  const line =
+    `\n${passed.length} passed, ${skipped.length} skipped, ${failed.length} failed (${list.length} checks)` +
+    (failed.length
+      ? `; FAILED: ${failed.map((result) => result.name).join(" | ")}`
+      : "");
+  return { passed, skipped, failed, line, exitCode: failed.length ? 1 : 0 };
+}
+
+export const UNSUPPORTED_SYMLINK_CODES = new Set([
+  "EPERM",
+  "EACCES",
+  "ENOSYS",
+  "ENOTSUP",
+  "EOPNOTSUPP",
+]);
 
 function readCookie() {
   if (process.env.DSH_COOKIE) {
@@ -55,12 +88,17 @@ function pairs() {
   });
 }
 
-async function check(name, run) {
+export async function check(name, run) {
   try {
     const detail = await run();
     results.push({ name, ok: true, detail });
     console.log(`PASS  ${name}${detail ? ` — ${detail}` : ""}`);
   } catch (error) {
+    if (error instanceof Skip) {
+      results.push({ name, ok: "skipped", detail: error.message });
+      console.log(`SKIP  ${name} — ${error.message}`);
+      return;
+    }
     results.push({ name, ok: false, detail: String(error) });
     console.log(`FAIL  ${name} — ${String(error).slice(0, 300)}`);
   }
@@ -69,6 +107,53 @@ async function check(name, run) {
 function assert(condition, message) {
   if (!condition) {
     throw new Error(message);
+  }
+}
+
+export async function staticTraversalRefused({ base, get, assert }) {
+  const probe = `${base}/lumiere/m/..%2fetc/passwd`;
+  const outbound = new URL(probe);
+  assert(
+    outbound.pathname.startsWith("/lumiere/m/"),
+    `pathname left /lumiere/m/: ${outbound.pathname}`,
+  );
+  const response = await get(probe);
+  assert(response.status === 403, `expected 403, got ${response.status}`);
+  return String(response.status);
+}
+
+export async function symlinkEscapeRefused({
+  base,
+  scratch,
+  path,
+  pathToFileURL,
+  symlinkSync,
+  openPanel,
+  get,
+  skip,
+  assert,
+  md,
+}) {
+  const link = path.join(scratch, "escape.md");
+  try {
+    symlinkSync("/etc/hosts", link);
+  } catch (error) {
+    const code = error?.code;
+    if (UNSUPPORTED_SYMLINK_CODES.has(code)) {
+      skip(`symlink unsupported (${code})`);
+    }
+    throw error;
+  }
+  const panel = await openPanel(md);
+  try {
+    const uri = pathToFileURL(link).href;
+    const response = await get(
+      `${base}/lumiere/file?panel=${panel.panel}&uri=${encodeURIComponent(uri)}`,
+    );
+    assert(response.status === 403, `expected 403, got ${response.status}`);
+    return String(response.status);
+  } finally {
+    panel.socket.close();
   }
 }
 
@@ -146,11 +231,21 @@ async function openPanel(file, root) {
   return { socket, panel };
 }
 
-let browser;
-let context;
-let page;
+async function main() {
+  const require = createRequire(path.resolve("packages/host-node/package.json"));
+  WebSocket = require("ws");
+  ({ chromium } = require("@playwright/test"));
 
-try {
+  base = process.env.DSH_URL ?? "http://127.0.0.1:61440";
+  origin = new URL(base).origin;
+  cookie = readCookie();
+  scratch = mkdtempSync(path.join(tmpdir(), "lumiere-e2e-"));
+
+  let browser;
+  let context;
+  let page;
+
+  try {
   const md = note("plain.md");
   const markdown = note("long.markdown");
   const upper = note("UPPER.MD");
@@ -287,11 +382,9 @@ try {
     }
     return "200 for js and css";
   });
-  await check("static path traversal refused", async () => {
-    const response = await get(`${base}/lumiere/m/../../../../etc/passwd`);
-    assert(response.status !== 200, `got ${response.status}`);
-    return String(response.status);
-  });
+  await check("static path traversal refused", () =>
+    staticTraversalRefused({ base, get, assert }),
+  );
   await check("unknown route → 404", () =>
     expectStatus(`${base}/lumiere/does-not-exist`, 404).then(() => "404"),
   );
@@ -512,26 +605,19 @@ try {
     }
     return "200 JSON for all three";
   });
-  await check(
-    "file route: symlink escaping the workspace refused",
-    async () => {
-      const link = path.join(scratch, "escape.md");
-      try {
-        symlinkSync("/etc/hosts", link);
-      } catch {
-        return "skipped (symlink exists)";
-      }
-      const panel = await openPanel(md);
-      const response = await get(
-        `${base}/lumiere/file?panel=${panel.panel}&uri=${encodeURIComponent(pathToFileURL(realpathSync(scratch) + "/escape.md").toString())}`,
-      );
-      panel.socket.close();
-      assert(
-        response.status !== 200,
-        `symlink escape served (${response.status})`,
-      );
-      return String(response.status);
-    },
+  await check("file route: symlink escaping the workspace refused", () =>
+    symlinkEscapeRefused({
+      base,
+      scratch,
+      path,
+      pathToFileURL,
+      symlinkSync,
+      openPanel,
+      get,
+      skip,
+      assert,
+      md,
+    }),
   );
   await check("editor page: path containing ? and #", async () => {
     const odd = note("why?what#now.md");
@@ -701,9 +787,19 @@ try {
   rmSync(scratch, { recursive: true, force: true });
 }
 
-const failed = results.filter((result) => !result.ok);
-console.log(
-  `\n${results.length - failed.length}/${results.length} scenarios passed` +
-    (failed.length ? `; FAILED: ${failed.map((f) => f.name).join(" | ")}` : ""),
-);
-process.exitCode = failed.length ? 1 : 0;
+  const { line, exitCode } = summarize(results);
+  console.log(line);
+  process.exitCode = exitCode;
+}
+
+function launchedAsMain() {
+  const entry = process.argv[1];
+  if (!entry) {
+    return false;
+  }
+  return path.resolve(entry) === fileURLToPath(import.meta.url);
+}
+
+if (launchedAsMain()) {
+  await main();
+}
