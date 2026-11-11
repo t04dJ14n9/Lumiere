@@ -20,10 +20,12 @@ branch and calls `this.groups.clear()`, dropping the unsaved text.
 2. In `changed()`, when the buffer is dirty and the host text differs from the
    current authority, replace `this.groups.clear()` with
    `mergeExternalChange({ lastSaved: this.lastSaved, authority: this.text, hostText: newText })`
-   and apply the merged text to the authority (`prepare` + `publish`), keeping
-   the existing echo / own-save guards ahead of it.
-3. Update `lastSaved` to the merged host text afterwards so a second rewrite
-   rebases from the new baseline.
+   and apply the merged result through the existing host-document path and
+   `Authority.record` (use `prepare` only if a collab rebase is required).
+   `Authority` has no `publish` method. Keep the existing echo / own-save
+   guards ahead of this.
+3. Then set `lastSaved` to the disk `hostText` just observed (the new common
+   ancestor for a later rewrite), not to the merge-result string.
 4. Add `Session`-level unit tests with `fakeDocument()` / `fakeHost()` for the
    six cases the backlog names (item 1 of
    `~/Code/obsidian-re/docs/implementation-plan.md`), including the
