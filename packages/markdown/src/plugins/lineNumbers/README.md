@@ -1,8 +1,9 @@
 # Line numbers
 
 Shows a source line-number gutter laid out like VS Code's text editor, so a note
-looks the same in Lumiere and in **Open With > Text Editor**. It is on
-by default and follows `editor.lineNumbers` for Markdown files.
+looks the same in Lumiere and in **Open With > Text Editor**. It is off
+by default, matching Obsidian 1.15.0, and follows `editor.lineNumbers` for
+Markdown files when the plugin is enabled.
 
 ## How it works
 
@@ -31,7 +32,7 @@ Catalog rank places line numbers before folding.
 
 ## Files
 
-- `manifest.ts`: default-on enablement; `style` is read from `editor.lineNumbers`
+- `manifest.ts`: default-off enablement; `style` is read from `editor.lineNumbers`
   (`nativeConfigKeys`), so no extra setting is contributed.
 - `webview.ts`: owned gutter registration and reconfiguration.
 - `gutter.ts`: labels per style, one number per rendered block, the gutter.

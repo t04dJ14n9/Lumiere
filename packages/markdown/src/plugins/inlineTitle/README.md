@@ -1,10 +1,10 @@
 # Inline title
 
 Shows the note's filename above its content and lets you rename it there, like
-Obsidian's Show inline title setting. Off by default (owner decision,
-2026-10-09), so line 1 starts at the top as in VS Code's text editor; turn on
-`lumiere.markdown.plugins.inlineTitle.enabled`. When on, the title remains
-visible in Source mode.
+Obsidian's Show inline title setting. On by default, matching Obsidian 1.15.0;
+turn off `lumiere.markdown.plugins.inlineTitle.enabled` to start line 1 at the
+top as in VS Code's text editor. When on, the title remains visible in Source
+mode.
 
 ## How it works
 
