@@ -20,9 +20,27 @@ test("importing the suite module does not start the live harness", async () => {
   assert.ok(Date.now() - started < 5000, "import blocked as if the live suite started");
 });
 
+function liveRunBody(source) {
+  const start = source.search(/async function main\s*\(/);
+  assert.ok(start >= 0, "live main() is missing");
+  const end = source.indexOf("\nfunction launchedAsMain(", start);
+  assert.ok(end > start, "live main() body could not be isolated from helper declarations");
+  const body = source.slice(start, end);
+  assert.doesNotMatch(body, /function\s+staticTraversalRefused\s*\(/);
+  assert.doesNotMatch(body, /function\s+symlinkEscapeRefused\s*\(/);
+  return body;
+}
+
 test("the live suite calls the shared traversal and symlink helpers", () => {
-  assert.match(suiteSource, /staticTraversalRefused\s*\(/);
-  assert.match(suiteSource, /symlinkEscapeRefused\s*\(/);
+  const live = liveRunBody(suiteSource);
+  assert.match(
+    live,
+    /check\(\s*"static path traversal refused",\s*\(\)\s*=>\s*staticTraversalRefused\s*\(/,
+  );
+  assert.match(
+    live,
+    /check\(\s*"file route: symlink escaping the workspace refused",\s*\(\)\s*=>\s*symlinkEscapeRefused\s*\(/,
+  );
   assert.doesNotMatch(
     suiteSource,
     /\/lumiere\/m\/\.\.\/\.\.\/\.\.\/\.\.\/etc\/passwd/,
