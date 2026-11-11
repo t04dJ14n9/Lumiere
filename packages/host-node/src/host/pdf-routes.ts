@@ -95,10 +95,11 @@ async function servePdfPage({
     uri: pathToFileURL(resolved.note).toString(),
     root: pathToFileURL(resolved.root).toString(),
     cspSource: socketSource(req.headers.host ?? ""),
-    // The editor ships the same PDF engine (both pin one @embedpdf/pdfium).
+    // The editor ships the same PDF engine (both pin one
+    // @embedpdf/engine-runtime-wasm32).
     asset: (name) =>
-      name === "pdfium.wasm"
-        ? `${base}/m/webview/pdfium.wasm`
+      name === "embedpdf.wasm"
+        ? `${base}/m/webview/embedpdf.wasm`
         : `${base}/pdf/viewer/${name}`,
     bytesUrl: (id, load) =>
       `${base}/pdf/bytes?page=${encodeURIComponent(id)}&load=${load}`,

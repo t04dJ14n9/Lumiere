@@ -4,9 +4,8 @@
  * plugins' tree views (view-routes.ts) and the settings (settings-routes.ts).
  * Authentication is the caller's: DSH checks its own, the app its token.
  */
-import { realpath, stat } from "node:fs/promises";
+import { realpath } from "node:fs/promises";
 import type { IncomingMessage, ServerResponse } from "node:http";
-import * as path from "node:path";
 import type { Duplex } from "node:stream";
 import { pathToFileURL } from "node:url";
 import { WebSocketServer } from "ws";
@@ -18,7 +17,12 @@ import { NODE_HOST_OFFERS } from "./inert";
 import { injectShim, socketSource } from "./page";
 import { pageQuery } from "./page-query";
 import type { PageSocket, PanelUrls } from "./panel";
-import { assertContained, fileUriToPath, resolveContainedNote } from "./paths";
+import {
+  assertContained,
+  fileUriToPath,
+  isInside,
+  resolveContainedNote,
+} from "./paths";
 import type { LumiereHost } from "./start";
 import { createPdfRoutes, NO_PDF_ROUTES, type PdfRoutes } from "./pdf-routes";
 import { serveFile, serveStatic } from "./static";
@@ -210,6 +214,25 @@ interface PageRequest {
   readonly roots: Map<string, string>;
 }
 
+/**
+ * Whether a page may open from `rootUri`, registering it when new. DSH adds
+ * no root of its own, so each session's workspace and each note's own folder
+ * arrive here: an unseen folder is fine. A folder that holds a registered one
+ * is not: it would widen what that workspace can reach.
+ */
+function acceptEditorRoot(host: LumiereHost, rootUri: string): boolean {
+  const registered = host.workspaceRoots();
+  // Checked first: the app may register a vault that holds another vault.
+  if (registered.some((root) => isInside(root, rootUri))) {
+    return true;
+  }
+  if (registered.some((root) => isInside(rootUri, root))) {
+    return false;
+  }
+  host.addRoot(rootUri);
+  return true;
+}
+
 async function servePage({
   req,
   res,
@@ -229,8 +252,12 @@ async function servePage({
     return;
   }
   const rootUri = pathToFileURL(resolved.root).toString();
-  // Register the workspace root before opening so the first note indexes the vault.
-  host.addRoot(rootUri);
+  // A note page is same-origin with this GET, so the query is not trusted to
+  // widen a workspace already registered (see acceptEditorRoot).
+  if (!acceptEditorRoot(host, rootUri)) {
+    res.writeHead(403).end();
+    return;
+  }
   const { id, html } = await host.panels.open({
     uri: pathToFileURL(resolved.note).toString(),
     urls: (panelId) => panelUrls(panelId, req.headers.host ?? ""),
