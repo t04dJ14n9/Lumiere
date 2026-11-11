@@ -20,7 +20,7 @@ boundary and belongs in its own commit with a unit test in
 | Reading view | `DESIGN.md` §25.8 | One command switches the same panel to fully rendered, read-only HTML; caret and scroll position survive |
 | Search matches reveal source | §11.3 | A hit shows its source syntax; wire `revealRangesWithMatches()` |
 | Hotkeys / command palette | `DESIGN.md` §13 | Every Lumia command has a bindable key; no hardcoded Ctrl/Cmd+E conflict |
-| MathJax user macros (`\newcommand`) | `CAPABILITIES.md:35` | `lumiere.markdown.math.macros` is honoured by the MathJax loader (setting exists, wiring outstanding) |
+| MathJax user macros (`\newcommand`) | already wired (`manifest.ts` `config.macros`; `mathjax.ts` `setUserMacros`) | Not remaining implementation. `CAPABILITIES.md:35` (“No user macros”) is stale and can be corrected in a separate docs change. |
 | Outline drag moves a section | backlog item 33 | Dragging an outline row reorders the section and updates headings |
 | Page preview of external links | `DESIGN.md` §13 | Mod-hover over an external URL shows a preview card |
 | PDF inline embed | `CAPABILITIES.md` embeds row | A PDF embed renders more than one page with its own controls |
