@@ -59,6 +59,15 @@ test("a semicolon or an escaped quote inside a quoted filename stays", () => {
   );
 });
 
+test("filename* still wins after a quoted filename that contains an escaped quote", () => {
+  assert.equal(
+    contentDispositionFilename(
+      'attachment; filename="a\\"b.png"; filename*=UTF-8\'\'preferred.png',
+    ),
+    "preferred.png",
+  );
+});
+
 test("only the last path segment of a suggested name is kept", () => {
   assert.equal(
     contentDispositionFilename('attachment; filename="../../etc/passwd.png"'),

@@ -59,13 +59,21 @@ function parameter(header: string, name: string): string | undefined {
   return undefined;
 }
 
-/** Split on `;` but keep a quoted `;`, which is legal inside a filename. */
+/** Split on `;` but keep a quoted `;` or quoted-pair, which are legal inside a filename. */
 function splitParameters(header: string): string[] {
   const parts: string[] = [];
   let part = "";
   let quoted = false;
-  for (const char of header) {
-    if (char === '"') {
+  for (let i = 0; i < header.length; i += 1) {
+    const char = header[i];
+    if (quoted && char === "\\") {
+      part += char;
+      const next = header[i + 1];
+      if (next !== undefined) {
+        part += next;
+        i += 1;
+      }
+    } else if (char === '"') {
       quoted = !quoted;
       part += char;
     } else if (char === ";" && !quoted) {
