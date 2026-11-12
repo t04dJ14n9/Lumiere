@@ -1,0 +1,29 @@
+{
+  "redacted_files": [
+    "dsh-bundle-build.log",
+    "dsh-bundle-hashes.json",
+    "dsh-orchestration.json",
+    "dsh-plugin-install.log",
+    "dsh-profile-config.txt",
+    "dsh-scenarios.json",
+    "dsh-scenarios.log",
+    "dsh-unit-routes.log",
+    "dsh-web.log",
+    "evidence-index.json",
+    "final-diff.patch",
+    "gates-round1.txt",
+    "gates-round2.txt",
+    "install.log",
+    "redaction-manifest.json",
+    "round1-browser.log",
+    "round1-check.log",
+    "round1-quality.log",
+    "round1-vscode.log",
+    "round2-browser.log",
+    "round2-check.log",
+    "round2-quality.log",
+    "round2-vscode.log",
+    "source-metadata.txt"
+  ],
+  "redaction": "absolute paths, user names, DSH launch tokens, DSH cookies and local URLs are placeholders"
+}

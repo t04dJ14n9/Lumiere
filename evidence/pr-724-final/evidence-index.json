@@ -1,0 +1,158 @@
+{
+  "kind": "local-redacted-evidence",
+  "source": {
+    "branch": "local/pr-724-final",
+    "head": "9e84ef01b1e0aa521dada6c28b6f583bd5d00a4f",
+    "parent": "c3edca64a39259f46ff02d0a91da63b565ba36bb",
+    "originMain": "f1c153d51df481ec493800ca491544d56b7df66b",
+    "commits": [
+      {
+        "sha": "4764b0e901238bf2eaeaae089f28a9df1ddd2e50",
+        "subject": "fix(dsh): reject writes to read-only Lumi\u00e8re routes",
+        "coAuthoredBy": "Claude Code <noreply@anthropic.com>"
+      },
+      {
+        "sha": "9e84ef01b1e0aa521dada6c28b6f583bd5d00a4f",
+        "subject": "test(dsh): pin read-only route method gate",
+        "coAuthoredBy": "Claude Code <noreply@anthropic.com>"
+      }
+    ],
+    "diff": {
+      "files": 2,
+      "insertions": 221,
+      "deletions": 0,
+      "paths": [
+        "packages/dsh/src/host/routes.ts",
+        "packages/dsh/test/unit/routes.test.ts"
+      ]
+    }
+  },
+  "environment": {
+    "install": "pnpm install --frozen-lockfile: pass",
+    "concurrency": {
+      "MARKDOWN_WORKBENCH_TEST_CONCURRENCY": "1",
+      "WORKSHOP_TEST_CONCURRENCY": "1"
+    },
+    "profiles": "disposable harness VS Code profiles",
+    "vscodeMockKeychain": true,
+    "CI": true,
+    "browserPort": "<private-browser-port>"
+  },
+  "gates": {
+    "round1": {
+      "check": "pass",
+      "browser": "failed before PDF specs: <shared-browser-port> owned by unrelated PR-738 lane",
+      "quality": "pass",
+      "vscode": "pass",
+      "classification": "port contention, not a test flake",
+      "ownerAction": "identified; not killed or reused"
+    },
+    "round2": {
+      "check": {
+        "result": "pass",
+        "file": "round2-check.log"
+      },
+      "browser": {
+        "result": "pass",
+        "markdownSpecs": 462,
+        "pdfSpecs": 195,
+        "file": "round2-browser.log"
+      },
+      "quality": {
+        "result": "pass",
+        "playwrightSpecs": 9,
+        "unitBudgetSpecs": 1,
+        "file": "round2-quality.log"
+      },
+      "vscode": {
+        "result": "pass",
+        "markdownSpecs": 30,
+        "pdfSpecs": 26,
+        "pdfSkipped": 2,
+        "file": "round2-vscode.log"
+      },
+      "flakyRetries": 0,
+      "summaryFile": "gates-round2.txt"
+    },
+    "focusedDshUnit": {
+      "command": "tsx --test test/unit/routes.test.ts",
+      "result": "pass",
+      "file": "dsh-unit-routes.log"
+    }
+  },
+  "dsh": {
+    "runtimeVersion": "0.2.2-rc.1",
+    "bundle": "built from exact source head into <repo>/packages/dsh/dist/bundle",
+    "isolation": {
+      "dshHome": "<throwaway-dsh-home>",
+      "workspace": "<throwaway-workspace>",
+      "url": "<explicit-loopback-url>",
+      "cookie": "<explicit-isolated-cookie>",
+      "fallbacksUsed": false
+    },
+    "scenarios": {
+      "cookieAuthenticatesIndex": 200,
+      "rejectedWriteRequests": 28,
+      "rejectedWriteMethods": [
+        "POST",
+        "PUT",
+        "DELETE",
+        "OPTIONS"
+      ],
+      "rejectedWriteRoutes": [
+        "/lumiere/editor",
+        "/lumiere/m/webview/editor.js",
+        "/lumiere/page/shim.js",
+        "/lumiere/file",
+        "/lumiere/pdf",
+        "/lumiere/pdf/viewer/viewer.js",
+        "/lumiere/pdf/bytes"
+      ],
+      "writeStatus": 405,
+      "allowHeader": "GET, HEAD",
+      "writeBodies": "empty",
+      "stateBeforeCount": 0,
+      "stateAfterCount": 0,
+      "stateUnchanged": true,
+      "rootWideningOracle": "rejected narrow-root POST did not prevent GET containing wide root (200)",
+      "unitSideEffectOracle": "no addRoot or panels.open calls",
+      "jsonPost": {
+        "settingsReset": 200,
+        "viewVisibility": 200,
+        "invalidCommand": 400
+      },
+      "getHead": {
+        "editor": 200,
+        "editorStatic": 200,
+        "shim": 200,
+        "file": 200
+      },
+      "pdfGetHeadNote": "This source head does not pass EditorAssets.pdf; PDF GET/HEAD is not served, but PDF writes are gated."
+    },
+    "logs": [
+      "dsh-bundle-build.log",
+      "dsh-plugin-install.log",
+      "dsh-profile-config.txt",
+      "dsh-web.log",
+      "dsh-scenarios.log",
+      "dsh-scenarios.json",
+      "dsh-orchestration.json",
+      "dsh-bundle-hashes.json"
+    ]
+  },
+  "redaction": {
+    "absolutePaths": "placeholders",
+    "launchTokens": "redacted",
+    "cookies": "redacted",
+    "localUrls": "placeholders",
+    "manifest": "redaction-manifest.json"
+  },
+  "notPerformed": [
+    "push",
+    "GitHub edit",
+    "ready marking",
+    "retarget",
+    "merge",
+    "close"
+  ]
+}

@@ -1,0 +1,6 @@
+PASS isolated DSH cookie authenticates the index — GET / -> 200
+PASS writes to editor, static, file and PDF routes are rejected — 28 requests: 405 + Allow: GET, HEAD + empty body
+PASS rejected writes leave DSH Lumiere state unchanged — 0 state entries unchanged
+PASS rejected editor write registers no narrow root or panel — POST narrow root was 405; GET containing wide root is 200
+PASS JSON POST settings, views and commands remain handled — settings reset 200; view visibility 200; invalid command 400 (not 405)
+PASS GET and HEAD remain valid on editor and static routes — GET/HEAD editor + static + file -> 200

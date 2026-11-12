@@ -1,0 +1,274 @@
+{
+  "ok": true,
+  "checks": [
+    {
+      "name": "isolated DSH cookie authenticates the index",
+      "ok": true,
+      "detail": "GET / -> 200"
+    },
+    {
+      "name": "writes to editor, static, file and PDF routes are rejected",
+      "ok": true,
+      "detail": "28 requests: 405 + Allow: GET, HEAD + empty body"
+    },
+    {
+      "name": "rejected writes leave DSH Lumiere state unchanged",
+      "ok": true,
+      "detail": "0 state entries unchanged"
+    },
+    {
+      "name": "rejected editor write registers no narrow root or panel",
+      "ok": true,
+      "detail": "POST narrow root was 405; GET containing wide root is 200"
+    },
+    {
+      "name": "JSON POST settings, views and commands remain handled",
+      "ok": true,
+      "detail": "settings reset 200; view visibility 200; invalid command 400 (not 405)"
+    },
+    {
+      "name": "GET and HEAD remain valid on editor and static routes",
+      "ok": true,
+      "detail": "GET/HEAD editor + static + file -> 200"
+    }
+  ],
+  "writes": [
+    {
+      "method": "POST",
+      "route": "/lumiere/editor",
+      "query": "<present>",
+      "status": 405,
+      "allow": "GET, HEAD",
+      "bodyEmpty": true
+    },
+    {
+      "method": "PUT",
+      "route": "/lumiere/editor",
+      "query": "<present>",
+      "status": 405,
+      "allow": "GET, HEAD",
+      "bodyEmpty": true
+    },
+    {
+      "method": "DELETE",
+      "route": "/lumiere/editor",
+      "query": "<present>",
+      "status": 405,
+      "allow": "GET, HEAD",
+      "bodyEmpty": true
+    },
+    {
+      "method": "OPTIONS",
+      "route": "/lumiere/editor",
+      "query": "<present>",
+      "status": 405,
+      "allow": "GET, HEAD",
+      "bodyEmpty": true
+    },
+    {
+      "method": "POST",
+      "route": "/lumiere/m/webview/editor.js",
+      "query": "",
+      "status": 405,
+      "allow": "GET, HEAD",
+      "bodyEmpty": true
+    },
+    {
+      "method": "PUT",
+      "route": "/lumiere/m/webview/editor.js",
+      "query": "",
+      "status": 405,
+      "allow": "GET, HEAD",
+      "bodyEmpty": true
+    },
+    {
+      "method": "DELETE",
+      "route": "/lumiere/m/webview/editor.js",
+      "query": "",
+      "status": 405,
+      "allow": "GET, HEAD",
+      "bodyEmpty": true
+    },
+    {
+      "method": "OPTIONS",
+      "route": "/lumiere/m/webview/editor.js",
+      "query": "",
+      "status": 405,
+      "allow": "GET, HEAD",
+      "bodyEmpty": true
+    },
+    {
+      "method": "POST",
+      "route": "/lumiere/page/shim.js",
+      "query": "",
+      "status": 405,
+      "allow": "GET, HEAD",
+      "bodyEmpty": true
+    },
+    {
+      "method": "PUT",
+      "route": "/lumiere/page/shim.js",
+      "query": "",
+      "status": 405,
+      "allow": "GET, HEAD",
+      "bodyEmpty": true
+    },
+    {
+      "method": "DELETE",
+      "route": "/lumiere/page/shim.js",
+      "query": "",
+      "status": 405,
+      "allow": "GET, HEAD",
+      "bodyEmpty": true
+    },
+    {
+      "method": "OPTIONS",
+      "route": "/lumiere/page/shim.js",
+      "query": "",
+      "status": 405,
+      "allow": "GET, HEAD",
+      "bodyEmpty": true
+    },
+    {
+      "method": "POST",
+      "route": "/lumiere/file",
+      "query": "<present>",
+      "status": 405,
+      "allow": "GET, HEAD",
+      "bodyEmpty": true
+    },
+    {
+      "method": "PUT",
+      "route": "/lumiere/file",
+      "query": "<present>",
+      "status": 405,
+      "allow": "GET, HEAD",
+      "bodyEmpty": true
+    },
+    {
+      "method": "DELETE",
+      "route": "/lumiere/file",
+      "query": "<present>",
+      "status": 405,
+      "allow": "GET, HEAD",
+      "bodyEmpty": true
+    },
+    {
+      "method": "OPTIONS",
+      "route": "/lumiere/file",
+      "query": "<present>",
+      "status": 405,
+      "allow": "GET, HEAD",
+      "bodyEmpty": true
+    },
+    {
+      "method": "POST",
+      "route": "/lumiere/pdf",
+      "query": "<present>",
+      "status": 405,
+      "allow": "GET, HEAD",
+      "bodyEmpty": true
+    },
+    {
+      "method": "PUT",
+      "route": "/lumiere/pdf",
+      "query": "<present>",
+      "status": 405,
+      "allow": "GET, HEAD",
+      "bodyEmpty": true
+    },
+    {
+      "method": "DELETE",
+      "route": "/lumiere/pdf",
+      "query": "<present>",
+      "status": 405,
+      "allow": "GET, HEAD",
+      "bodyEmpty": true
+    },
+    {
+      "method": "OPTIONS",
+      "route": "/lumiere/pdf",
+      "query": "<present>",
+      "status": 405,
+      "allow": "GET, HEAD",
+      "bodyEmpty": true
+    },
+    {
+      "method": "POST",
+      "route": "/lumiere/pdf/viewer/viewer.js",
+      "query": "",
+      "status": 405,
+      "allow": "GET, HEAD",
+      "bodyEmpty": true
+    },
+    {
+      "method": "PUT",
+      "route": "/lumiere/pdf/viewer/viewer.js",
+      "query": "",
+      "status": 405,
+      "allow": "GET, HEAD",
+      "bodyEmpty": true
+    },
+    {
+      "method": "DELETE",
+      "route": "/lumiere/pdf/viewer/viewer.js",
+      "query": "",
+      "status": 405,
+      "allow": "GET, HEAD",
+      "bodyEmpty": true
+    },
+    {
+      "method": "OPTIONS",
+      "route": "/lumiere/pdf/viewer/viewer.js",
+      "query": "",
+      "status": 405,
+      "allow": "GET, HEAD",
+      "bodyEmpty": true
+    },
+    {
+      "method": "POST",
+      "route": "/lumiere/pdf/bytes",
+      "query": "<present>",
+      "status": 405,
+      "allow": "GET, HEAD",
+      "bodyEmpty": true
+    },
+    {
+      "method": "PUT",
+      "route": "/lumiere/pdf/bytes",
+      "query": "<present>",
+      "status": 405,
+      "allow": "GET, HEAD",
+      "bodyEmpty": true
+    },
+    {
+      "method": "DELETE",
+      "route": "/lumiere/pdf/bytes",
+      "query": "<present>",
+      "status": 405,
+      "allow": "GET, HEAD",
+      "bodyEmpty": true
+    },
+    {
+      "method": "OPTIONS",
+      "route": "/lumiere/pdf/bytes",
+      "query": "<present>",
+      "status": 405,
+      "allow": "GET, HEAD",
+      "bodyEmpty": true
+    }
+  ],
+  "state": {
+    "beforeCount": 0,
+    "afterWritesCount": 0,
+    "unchanged": true,
+    "before": [],
+    "afterWrites": []
+  },
+  "notes": [
+    "Rejected write responses carry no panel id and no body.",
+    "A 200 GET for the containing wide root proves the rejected narrow-root POST did not register a narrower workspace root.",
+    "The exact-head DSH unit test separately asserts addRoot and panels.open are not called.",
+    "This source head does not pass EditorAssets.pdf, so PDF GET/HEAD is not a served route; PDF write paths are still gated."
+  ]
+}

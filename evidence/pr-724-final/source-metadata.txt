@@ -1,0 +1,13 @@
+source branch: local/pr-724-final
+source SHA: 9e84ef01b1e0aa521dada6c28b6f583bd5d00a4f
+parent SHA: c3edca64a39259f46ff02d0a91da63b565ba36bb
+base branch: origin/review/dsh-upgrade-status
+origin/main SHA: f1c153d51df481ec493800ca491544d56b7df66b
+remote PR head: 1ca7c9c1676a5ad8919de206f29c4ae4a4b683fc
+commits:
+4764b0e901238bf2eaeaae089f28a9df1ddd2e50 fix(dsh): reject writes to read-only Lumière routes
+9e84ef01b1e0aa521dada6c28b6f583bd5d00a4f test(dsh): pin read-only route method gate
+diff stat:
+ packages/dsh/src/host/routes.ts       |  34 +++++++
+ packages/dsh/test/unit/routes.test.ts | 187 ++++++++++++++++++++++++++++++++++
+ 2 files changed, 221 insertions(+)

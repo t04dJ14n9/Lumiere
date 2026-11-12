@@ -1,0 +1,13 @@
+{
+  "ok": true,
+  "sourceSha": "9e84ef01b1e0aa521dada6c28b6f583bd5d00a4f",
+  "parentSha": "c3edca64a39259f46ff02d0a91da63b565ba36bb",
+  "dshRuntimeVersion": "0.2.2-rc.1",
+  "dshHome": "<throwaway-dsh-home>",
+  "workspace": "<throwaway-workspace>",
+  "dshUrl": "<explicit-loopback-url>",
+  "dshCookie": "<explicit-isolated-cookie>",
+  "cookieNamePrefix": "dsh-auth-",
+  "bundlePath": "<repo>/packages/dsh/dist/bundle",
+  "scenarioScript": "<evidence>/dsh-scenarios.mjs"
+}

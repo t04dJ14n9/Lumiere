@@ -1,0 +1,15 @@
+
+dependencies:
++ @lumiere/dsh link:<repo>/packages/dsh/dist/bundle
+
+Already up to date
+Done in 193ms using pnpm v10.28.2
+
+   ╭──────────────────────────────────────────╮
+   │                                          │
+   │   Update available! 10.28.2 → 12.18.0.   │
+   │   Changelog: https://pnpm.io/v/12.18.0   │
+   │     To update, run: pnpm add -g pnpm     │
+   │                                          │
+   ╰──────────────────────────────────────────╯
+
