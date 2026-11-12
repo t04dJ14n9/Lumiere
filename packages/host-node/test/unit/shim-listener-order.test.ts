@@ -215,18 +215,32 @@ channel.port2.onmessage = (event) => {
 };
 channel.port1.start();
 channel.port2.start();
-page.window.dispatchEvent(
-  new PageMessageEvent("message", {
-    data: { lumiere: "port", panel: "p1" },
-    origin: page.origin,
-    source: page.parent,
-    ports: [channel.port1],
-  }),
-);
+
+const foreignFrames: string[] = [];
+const foreignPort = new MessageChannel();
+foreignPort.port2.onmessage = (event) => {
+  foreignFrames.push(String(event.data));
+};
+foreignPort.port1.start();
+foreignPort.port2.start();
+
+/** The embedder's answer to the shim's connect request. */
+function connectPort(): boolean {
+  return dispatchAndWatch(
+    new PageMessageEvent("message", {
+      data: { lumiere: "port", panel: "p1" },
+      origin: page.origin,
+      source: page.parent,
+      ports: [channel.port1],
+    }),
+  );
+}
 
 function closePorts() {
   channel.port1.close();
   channel.port2.close();
+  foreignPort.port1.close();
+  foreignPort.port2.close();
 }
 
 function resetTheme() {
@@ -248,6 +262,20 @@ function dispatchAndWatch(event: PageMessageEvent) {
   page.window.removeEventListener("message", onLater);
   return later;
 }
+
+let foreignPortLater = false;
+let trustedPortLater = false;
+test.before(() => {
+  foreignPortLater = dispatchAndWatch(
+    new PageMessageEvent("message", {
+      data: { lumiere: "port", panel: "p1" },
+      origin: "https://evil.example",
+      source: page.parent,
+      ports: [foreignPort.port1],
+    }),
+  );
+  trustedPortLater = connectPort();
+});
 
 function assertThemeNotApplied() {
   assert.equal(page.classes.has("vscode-dark"), false);
@@ -301,6 +329,26 @@ test("a parent lumiere message from a foreign origin is not stopped", () => {
   const later = dispatchAndWatch(event);
   assert.equal(later, true);
   assertThemeNotApplied();
+});
+
+test("a foreign-origin parent port message is neither stopped nor accepted", async () => {
+  resetTheme();
+  assert.equal(foreignPortLater, true);
+  assert.equal(trustedPortLater, false);
+  const later = dispatchAndWatch(
+    new PageMessageEvent("message", {
+      data: SHOWN,
+      origin: page.origin,
+      source: page.parent,
+    }),
+  );
+  assert.equal(later, false);
+  await nextPortFrame();
+  assert.deepEqual(
+    portFrames.map((text) => JSON.parse(text)),
+    [{ ch: "ui", data: { type: "focus" } }],
+  );
+  assert.deepEqual(foreignFrames, []);
 });
 
 test("a trusted parent theme message is applied and stops later listeners", () => {
