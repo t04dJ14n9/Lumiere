@@ -181,9 +181,11 @@ pre[data-fence="mermaid"] svg .internal-link tspan {
 /*
  * Inspect, Copy and Edit are position:absolute against .hybrid-block, so they
  * stay pinned to the visible top-right while the fence scrolls. Inset the
- * mermaid scrollport by a right-hand chrome lane so nodes never sit under
- * those buttons at any scrollLeft. The fence itself keeps padding: 0
- * (Obsidian live-preview alignment).
+ * mermaid scrollport by a physical right-hand chrome lane so nodes never sit
+ * under those buttons at any scrollLeft. The buttons use physical `right`
+ * offsets even when editor.rightToLeft sets dir=rtl, so a logical
+ * margin-inline-end would reserve the wrong side in RTL. The fence itself
+ * keeps padding: 0 (Obsidian live-preview alignment).
  * 104px is .inspect-diagram's (and the language label's) `right`. The
  * "mermaid" label is wider than the inspect icon, so 3.5em clears that
  * wider control and leaves a small gap.
@@ -193,5 +195,5 @@ pre[data-fence="mermaid"] svg .internal-link tspan {
 }
 
 .hybrid-block.hybrid-diagram pre[data-fence="mermaid"]:has(> svg) {
-  margin-inline-end: var(--diagram-toolbar-lane);
+  margin-right: var(--diagram-toolbar-lane);
 }

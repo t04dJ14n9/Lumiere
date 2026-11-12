@@ -52,9 +52,7 @@ ${SECOND_WIDE}
 \`\`\`
 `;
 
-const SHOT_DIR =
-  process.env.DIAGRAM_TOOLBAR_SHOTS ??
-  "/workspace/lumia-diagram-toolbar-20261110/generic-shots";
+const SHOT_DIR = process.env.DIAGRAM_TOOLBAR_SHOTS;
 
 const SHOT_LABEL = process.env.DIAGRAM_TOOLBAR_SHOT_LABEL ?? "current";
 
@@ -83,7 +81,7 @@ interface ChromeFit {
   preClientWidth: number;
   preScrollWidth: number;
   preRight: number;
-  laneRight: number;
+  laneLeft: number;
   scrollerClientWidth: number;
   scrollerScrollWidth: number;
   scrollLeft: number;
@@ -124,7 +122,7 @@ async function chromeAt(
         preClientWidth: 0,
         preScrollWidth: 0,
         preRight: 0,
-        laneRight: 0,
+        laneLeft: 0,
         scrollerClientWidth: 0,
         scrollerScrollWidth: 0,
         scrollLeft: 0,
@@ -205,10 +203,14 @@ async function chromeAt(
         }
       }
       const inspect = shell.querySelector(".inspect-diagram");
-      let laneRight = hostBox.right;
+      let laneLeft = hostBox.right;
       for (const button of buttons) {
-        if (button.right > laneRight) {
-          laneRight = button.right;
+        if (
+          button.width >= 1 &&
+          button.height >= 1 &&
+          button.left < laneLeft
+        ) {
+          laneLeft = button.left;
         }
       }
       return {
@@ -221,7 +223,7 @@ async function chromeAt(
         preClientWidth: pre.clientWidth,
         preScrollWidth: pre.scrollWidth,
         preRight: hostBox.right,
-        laneRight,
+        laneLeft,
         scrollerClientWidth: scroller.clientWidth,
         scrollerScrollWidth: scroller.scrollWidth,
         scrollLeft: pre.scrollLeft,
@@ -252,13 +254,16 @@ async function assertNoOverlap(
     if (overflowing) {
       expect(fit.preScrollWidth).toBeGreaterThan(fit.preClientWidth + 80);
     }
-    // The scrollport ends at or before the chrome lane, so content cannot
-    // slide under the buttons at this (or any) scroll position.
-    expect(fit.preRight).toBeLessThanOrEqual(fit.laneRight + 1);
+    // The scrollport ends at or before the leftmost chrome control, so
+    // content cannot slide under the buttons at any scroll position.
+    expect(fit.preRight).toBeLessThanOrEqual(fit.laneLeft + 1);
   }
 }
 
 async function shoot(page: Page, name: string) {
+  if (!SHOT_DIR) {
+    return;
+  }
   mkdirSync(SHOT_DIR, { recursive: true });
   await page.screenshot({
     path: join(SHOT_DIR, `${SHOT_LABEL}-${name}.png`),
