@@ -12,8 +12,10 @@ import type { ScrollDirection, ScrollMode } from "../shared/view-settings";
 
 /**
  * Above Stage's pan handler (10) and below text selection (~60) and the
- * empty-space region tool (56), so a paged blank-area drag turns the page
- * instead of only panning inside it.
+ * empty-space region tool (56), so a paged mouse/pen blank-area drag turns
+ * the page instead of only panning inside it. Touch contacts stay with
+ * Stage's native navigation: `claimsTouch` would claim a whole contact from
+ * its first pixel and suppress pan, fling, double-tap and pinch arbitration.
  */
 const PAGED_DRAG_PRIORITY = 12;
 
@@ -24,7 +26,7 @@ export interface PagedDragNavigate {
 }
 
 /**
- * The slice of EmbedPDF's selection capability `claimsTouch` may read.
+ * The slice of EmbedPDF's selection capability the handler may read.
  * Pure: no `ensureLoaded`. Unloaded geometry must not be treated as blank.
  */
 export type PagedDragSelection = {
@@ -39,12 +41,32 @@ export function pagedDragHandler(options: {
   selection: () => PagedDragSelection | null;
 }): InteractionHandler {
   let start: { x: number; y: number } | undefined;
+  /**
+   * A press on text with cold geometry looks blank to text selection, but
+   * must not turn a page before geometry has loaded. Touch is not claimed
+   * here; Stage's native pan and pinch own those contacts.
+   */
+  const isLoadedBlank = (sample: PointerSample): boolean => {
+    const page = sample.page;
+    if (!page) {
+      return false;
+    }
+    const selection = options.selection();
+    return Boolean(
+      selection &&
+        selection.isLoaded(page.ref) &&
+        !selection.isOverText(page.ref, page.point),
+    );
+  };
   const finish = (sample?: PointerSample): void => {
     if (!start) {
       return;
     }
     const end = sample?.viewport ?? start;
-    const delta = pagedDragPageDelta(start, end, options.direction());
+    // A view-mode change mid-drag must not turn a page that is now continuous.
+    const delta = options.isPaged()
+      ? pagedDragPageDelta(start, end, options.direction())
+      : 0;
     start = undefined;
     if (delta !== 0) {
       options.step(delta);
@@ -54,25 +76,8 @@ export function pagedDragHandler(options: {
     id: "lumia-paged-drag",
     priority: PAGED_DRAG_PRIORITY,
     enabledFor: (tool) => options.isPaged() && tool.enables.has("scroll"),
-    /**
-     * Second rung of StageSurface touch consent (`wouldClaimTouch`). Claim
-     * only a loaded blank; never `!!sample.page`, and never set the read
-     * tool's `touch` to `"draw"` (that would turn finger text drags into
-     * selections). Off-page, missing selection, or geometry that is not
-     * ready stay with native pan.
-     */
-    claimsTouch: (sample) => {
-      if (!sample.page) {
-        return false;
-      }
-      const selection = options.selection();
-      if (!selection || !selection.isLoaded(sample.page.ref)) {
-        return false;
-      }
-      return !selection.isOverText(sample.page.ref, sample.page.point);
-    },
     onPointerDown: (sample) => {
-      if (!sample.page) {
+      if (!isLoadedBlank(sample)) {
         return false;
       }
       // viewport = container CSS px, not page.point / PDF units.
@@ -86,7 +91,10 @@ export function pagedDragHandler(options: {
   };
 }
 
-/** Page-by-page blank-area drags turn the page; continuous mode is unchanged. */
+/**
+ * Page-by-page mouse/pen blank-area drags turn the page; continuous and
+ * touch stay with Stage.
+ */
 export function usePagedDragNavigate(input: PagedDragNavigate): void {
   const interaction = useOptionalCapability(InteractionToken);
   const selection = useOptionalCapability(SelectionToken);

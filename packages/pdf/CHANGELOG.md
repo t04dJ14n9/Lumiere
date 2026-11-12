@@ -7,14 +7,13 @@
   In page-by-page scrolling, a blank-page drag that travels 60 CSS pixels
   of the viewer (Stage viewport / EmbedPDF screen px, not PDF points; the
   same at every zoom) turns the page. It does not only pan inside a Fit
-  Width page. Mouse and pen always reach that handler; a one-finger
-  touch does only on loaded blank space (`claimsTouch` via
-  `selection.isLoaded` and `!isOverText` — never `touch: "draw"`). A
-  page whose text geometry is not ready keeps native pan. Device touch
-  has not been GUI-verified. Text selection,
-  citation link clicks, wheel and keyboard navigation, and zoom are
-  unchanged. Turning on `lumiere.pdf.regions.enabled` still uses empty-page
-  drag to draw a region.
+  Width page. Mouse and pen reach that handler only on loaded blank space:
+  a drag over text or a page whose text geometry is not ready stays with
+  text selection or Stage pan. Touch keeps EmbedPDF's native navigation and
+  pinch; the handler does not claim touch contacts. Device touch has not
+  been GUI-verified. Text selection, citation link clicks, wheel and
+  keyboard navigation, and zoom are unchanged. Turning on
+  `lumiere.pdf.regions.enabled` still uses empty-page drag to draw a region.
 
 - **Lumia PDF moves to EmbedPDF 3.** The viewer's engine and page surface are
   rebuilt on EmbedPDF 3.0.0.

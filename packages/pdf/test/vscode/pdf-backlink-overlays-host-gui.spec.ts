@@ -340,7 +340,7 @@ test("Host GUI: PDF backlink overlays checklist (Chrome)", async ({
   await command(page, "PDF: Fit Width");
   await expect
     .poll(() => pageFit(viewer))
-    .toMatchObject({ fitsWidth: true, fills: true });
+    .toMatchObject({ fitsWidth: true, fitsHeight: false, fills: true });
   await expect(statusBarEntry(page, /^Page 1 \/ 12$/u)).toBeVisible();
   const pageTop = () =>
     viewer.evaluate(

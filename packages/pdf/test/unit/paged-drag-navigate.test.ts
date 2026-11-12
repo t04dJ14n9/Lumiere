@@ -12,7 +12,10 @@ import type {
 import { READ_TOOL_ID } from "../../src/shared/annotation-tools";
 import { pagedDragPageDelta } from "../../src/shared/paged-drag-navigate";
 import { readTool } from "../../src/webview/annotation-mode";
-import { pagedDragHandler } from "../../src/webview/paged-drag-navigate";
+import {
+  pagedDragHandler,
+  type PagedDragSelection,
+} from "../../src/webview/paged-drag-navigate";
 
 const page = { kind: "objectNumber" as const, objectNumber: 1 };
 
@@ -66,13 +69,29 @@ function sampleWithSpaces(
   };
 }
 
-function pagedHandler(direction: "vertical" | "horizontal" = "vertical") {
+function selectionStub(state: { loaded: boolean; overText: boolean }) {
+  return {
+    isLoaded: () => state.loaded,
+    isOverText: () => state.overText,
+  };
+}
+
+const loadedBlank = (): PagedDragSelection =>
+  selectionStub({ loaded: true, overText: false });
+
+function pagedHandler(
+  direction: "vertical" | "horizontal" = "vertical",
+  options: {
+    isPaged?: () => boolean;
+    selection?: () => PagedDragSelection | null;
+  } = {},
+) {
   const steps: Array<1 | -1> = [];
   const handler = pagedDragHandler({
-    isPaged: () => true,
+    isPaged: options.isPaged ?? (() => true),
     direction: () => direction,
     step: (delta) => steps.push(delta),
-    selection: () => null,
+    selection: options.selection ?? loadedBlank,
   });
   return { handler, steps };
 }
@@ -128,7 +147,7 @@ test("continuous scrolling does not capture a blank drag (Stage pan keeps it)", 
     step: () => {
       throw new Error("must not step");
     },
-    selection: () => null,
+    selection: loadedBlank,
   });
   assert.equal(handler.enabledFor(readTool()), false);
 });
@@ -140,7 +159,7 @@ test("a press off the page is left to Stage gap pan", () => {
     step: () => {
       throw new Error("must not step");
     },
-    selection: () => null,
+    selection: loadedBlank,
   });
   assert.equal(
     handler.onPointerDown(nativeSample({ x: 900, y: 620 }, { onPage: false })),
@@ -350,74 +369,102 @@ function touchSample(
   };
 }
 
-function selectionStub(state: { loaded: boolean; overText: boolean }) {
-  return {
-    isLoaded: () => state.loaded,
-    isOverText: () => state.overText,
-  };
-}
-
-function hubWithPagedDrag(options: {
-  isPaged?: boolean;
-  loaded?: boolean;
-  overText?: boolean;
-  missingSelection?: boolean;
-}): InteractionHostCapability {
+function hubWithPagedDrag(): InteractionHostCapability {
   const hub = bootHub();
   hub.registerTool(readTool());
   hub.activateTool(READ_TOOL_ID);
   hub.registerHandler(
     pagedDragHandler({
-      isPaged: () => options.isPaged ?? true,
+      isPaged: () => true,
       direction: () => "vertical",
       step: () => {
         throw new Error("must not step during wouldClaimTouch");
       },
-      selection: () =>
-        options.missingSelection
-          ? null
-          : selectionStub({
-              loaded: options.loaded ?? true,
-              overText: options.overText ?? false,
-            }),
+      selection: loadedBlank,
     }),
   );
   return hub;
 }
 
-test("the real hub wouldClaimTouch a loaded blank touch in page-by-page mode", () => {
-  const hub = hubWithPagedDrag({ loaded: true, overText: false });
-  assert.equal(hub.wouldClaimTouch(touchSample()), true);
+test("loaded blank touches do not enter the hub, so Stage keeps native navigation", () => {
+  // StageSurface asks wouldClaimTouch before classifying a touch. A claim
+  // would route the whole contact to the hub and suppress native pan, fling,
+  // double-tap and pinch arbitration.
+  const hub = hubWithPagedDrag();
+  assert.equal(hub.wouldClaimTouch(touchSample()), false);
+  assert.equal(hub.wouldClaimTouch(touchSample({ onPage: false })), false);
+  assert.equal(pagedHandler().handler.claimsTouch, undefined);
 });
 
-test("the real hub does not wouldClaimTouch text, unloaded geometry, off-page, missing selection, or continuous mode", () => {
-  assert.equal(
-    hubWithPagedDrag({ overText: true }).wouldClaimTouch(touchSample()),
-    false,
-  );
-  assert.equal(
-    hubWithPagedDrag({ loaded: false }).wouldClaimTouch(touchSample()),
-    false,
-  );
-  assert.equal(
-    hubWithPagedDrag({}).wouldClaimTouch(touchSample({ onPage: false })),
-    false,
-  );
-  assert.equal(
-    hubWithPagedDrag({ missingSelection: true }).wouldClaimTouch(touchSample()),
-    false,
-  );
-  assert.equal(
-    hubWithPagedDrag({ isPaged: false }).wouldClaimTouch(touchSample()),
-    false,
-    "enabledFor is false in continuous, so the hub never asks claimsTouch",
-  );
+test("loaded text, unloaded geometry, and missing selection stay with Stage pan", () => {
+  const cases: Array<{
+    name: string;
+    selection: () => PagedDragSelection | null;
+  }> = [
+    {
+      name: "loaded text",
+      selection: () => selectionStub({ loaded: true, overText: true }),
+    },
+    {
+      name: "unloaded geometry",
+      selection: () => selectionStub({ loaded: false, overText: false }),
+    },
+    { name: "missing selection", selection: () => null },
+  ];
+  for (const { name, selection } of cases) {
+    const { handler, steps } = pagedHandler("vertical", { selection });
+    assert.equal(
+      handler.onPointerDown(nativeSample({ x: 900, y: 520 }, { scale: 4 })),
+      false,
+      name,
+    );
+    handler.onPointerUp?.(
+      nativeSample({ x: 900, y: 100 }, { scale: 4, phase: "up" }),
+    );
+    assert.deepEqual(steps, [], name);
+  }
 });
 
-test("a cancelled paged blank drag is the handler side of a two-finger pinch", () => {
-  // Source: @embedpdf/web createStageGestureController, mode "tool" + a
-  // second finger calls sink.cancel then enterPinch. Device pinch is not
-  // exercised here.
+test("switching to continuous scrolling mid-drag drops the page turn", () => {
+  let paged = true;
+  const { handler, steps } = pagedHandler("vertical", {
+    isPaged: () => paged,
+  });
+  assert.equal(
+    handler.onPointerDown(nativeSample({ x: 900, y: 520 }, { scale: 4 })),
+    true,
+  );
+  paged = false;
+  handler.onPointerUp?.(
+    nativeSample({ x: 900, y: 100 }, { scale: 4, phase: "up" }),
+  );
+  assert.deepEqual(steps, []);
+});
+
+test("unregistering the viewer's handler mid-drag drops the unfinished gesture", () => {
+  const hub = bootHub();
+  hub.registerTool(readTool());
+  hub.activateTool(READ_TOOL_ID);
+  const steps: Array<1 | -1> = [];
+  const remove = hub.registerHandler(
+    pagedDragHandler({
+      isPaged: () => true,
+      direction: () => "vertical",
+      step: (delta) => steps.push(delta),
+      selection: loadedBlank,
+    }),
+  );
+  hub.dispatchPointer(nativeSample({ x: 900, y: 520 }, { scale: 2.53 }));
+  remove();
+  hub.dispatchPointer(
+    nativeSample({ x: 900, y: 100 }, { scale: 2.53, phase: "up" }),
+  );
+  assert.deepEqual(steps, []);
+});
+
+test("a cancelled paged blank drag does not turn", () => {
+  // The hub routes a system or Stage cancel to onPointerCancel; no device
+  // pinch is exercised here.
   const { handler, steps } = pagedHandler();
   assert.equal(
     handler.onPointerDown(
@@ -427,6 +474,9 @@ test("a cancelled paged blank drag is the handler side of a two-finger pinch", (
   );
   handler.onPointerCancel?.(
     nativeSample({ x: 900, y: 520 }, { scale: 2.53, phase: "cancel" }),
+  );
+  handler.onPointerUp?.(
+    nativeSample({ x: 900, y: 100 }, { scale: 2.53, phase: "up" }),
   );
   assert.deepEqual(steps, []);
 });
