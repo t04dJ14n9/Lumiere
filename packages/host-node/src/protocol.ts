@@ -59,6 +59,8 @@ export type PageFrame =
   { ch: "rpc"; data: unknown } | { ch: "ui"; data: UiEvent };
 
 const MAX_TEXT = 64 * 1024;
+/** The editor's `clipboardWrite` RPC allows this much text; it is relayed as a request. */
+const MAX_CLIPBOARD_TEXT = 4_000_000;
 
 /** Schemes the page must not open. The host refuses them too; this is the sink. */
 const UNSAFE_EXTERNAL = new Set([
@@ -137,17 +139,19 @@ function isRows(value: unknown): value is PickRow[] {
     value.every(
       (row) =>
         isRecord(row) &&
-        typeof row.label === "string" &&
-        row.label.length <= MAX_TEXT &&
-        (row.description === undefined ||
-          typeof row.description === "string") &&
-        (row.detail === undefined || typeof row.detail === "string"),
+        isText(row.label) &&
+        (row.description === undefined || isText(row.description)) &&
+        (row.detail === undefined || isText(row.detail)),
     )
   );
 }
 
-function isMenuGroups(value: unknown): value is MenuRow[][] {
+/** The host's menus are at most four submenus deep; cap a frame's recursion too. */
+const MAX_MENU_DEPTH = 4;
+
+function isMenuGroups(value: unknown, nesting = 0): value is MenuRow[][] {
   return (
+    nesting <= MAX_MENU_DEPTH &&
     Array.isArray(value) &&
     value.length <= MAX_ROWS &&
     value.every(
@@ -157,8 +161,9 @@ function isMenuGroups(value: unknown): value is MenuRow[][] {
         group.every(
           (row) =>
             isRecord(row) &&
-            typeof row.label === "string" &&
-            (row.submenu === undefined || isMenuGroups(row.submenu)),
+            isText(row.label) &&
+            (row.submenu === undefined ||
+              isMenuGroups(row.submenu, nesting + 1)),
         ),
     )
   );
@@ -173,11 +178,14 @@ const REQUEST_PARSERS: Readonly<Record<string, RequestParser>> = {
       ? { type: "toast", kind: value.kind, message: value.message }
       : undefined,
   clipboard: (value) =>
-    isText(value.text) ? { type: "clipboard", text: value.text } : undefined,
+    isClipboardText(value.text)
+      ? { type: "clipboard", text: value.text }
+      : undefined,
   ask: (value) =>
     isId(value.id) &&
     isText(value.message) &&
     Array.isArray(value.actions) &&
+    value.actions.length <= MAX_ROWS &&
     value.actions.every(isText)
       ? {
           type: "ask",
@@ -310,6 +318,10 @@ function isId(value: unknown): value is number {
 
 function isText(value: unknown): value is string {
   return typeof value === "string" && value.length <= MAX_TEXT;
+}
+
+function isClipboardText(value: unknown): value is string {
+  return typeof value === "string" && value.length <= MAX_CLIPBOARD_TEXT;
 }
 
 function isAnswer(value: unknown): value is string | number | null {
