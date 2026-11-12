@@ -1,0 +1,19 @@
+{
+  "pr": 738,
+  "head": "9685a029582d46a07646a8b02d98cfa9df042d5f",
+  "base": "origin/main f1c153d51df481ec493800ca491544d56b7df66b",
+  "integrationBranch": "review/integration-editor-2026-11-12",
+  "integrationHead": "20f82e0e3709c5aa054258de72a1c1692e10c24c",
+  "integrationEvidence": "review/pr-integration-editor-evidence-20f82e0e/evidence/pr-integration-editor",
+  "verification": {
+    "install": "pass",
+    "check": "pass (format, lint, typecheck, all unit tests, contributions)",
+    "browser": "473 Markdown + 195 PDF specs passed",
+    "quality": "9 Playwright budgets + 1 large-vault unit passed",
+    "vscode": "30 root + 26 PDF specs passed, 2 skipped"
+  },
+  "notes": [
+    "GUI evidence in gui/ was captured at c759e379; the later commit 9685a029 is a Prettier-only reformat of the spec."
+  ],
+  "redaction": "No cookies, tokens, panel ids, or personal data. Only local worktree paths appear in logs."
+}
