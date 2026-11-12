@@ -68,7 +68,12 @@ export function registerRoutes(
         const status = reject(req);
         if (status || !routes.upgrade(req, socket, head)) {
           // A raw upgrade socket receives no HTTP status unless we write one;
-          // otherwise the browser reports an opaque connection failure.
+          // otherwise the browser reports an opaque connection failure. It is
+          // no longer owned by node:http, so destroy it after the response
+          // flushes even if the peer ignores Connection: close.
+          socket.once("finish", () => {
+            socket.destroy();
+          });
           socket.end(upgradeRejection(status ?? 404));
         }
       },
