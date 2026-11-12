@@ -114,7 +114,10 @@ test("clearing inline formatting strips link markers, keeping label and URL text
   assert.equal(clearInlineFormatting("![alt](url)"), "alturl");
   // Emphasis inside the label is still cleared, as before.
   assert.equal(clearInlineFormatting("[**bold**](url)"), "boldurl");
-  assert.equal(clearInlineFormatting('[label](url "title")'), 'labelurl "title"');
+  assert.equal(
+    clearInlineFormatting('[label](url "title")'),
+    'labelurl "title"',
+  );
 });
 
 test("clearing inline formatting strips reference, autolink, and wiki syntax", () => {
