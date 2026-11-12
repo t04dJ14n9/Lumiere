@@ -90,6 +90,21 @@ function rejectsMethod(
   return true;
 }
 
+/** A route failure is logged; the browser never sees the message. */
+export function sendInternalError(
+  ctx: DshContext,
+  res: ServerResponse,
+  error: unknown,
+): true {
+  ctx.logger?.("lumiere").error("Lumière route failed", error);
+  if (!res.headersSent) {
+    res.writeHead(500, { "content-type": "text/plain" });
+  }
+  // The message can name a filesystem path. The log has it; the browser does not.
+  res.end("Internal error");
+  return true;
+}
+
 export function registerRoutes(
   ctx: DshContext,
   host: LumiereHost,
@@ -120,15 +135,7 @@ export function registerRoutes(
           rest !== "/views/events";
         const handled = await routes
           .handle(jsonHead ? headAsGet(req) : req, res)
-          .catch((error: unknown) => {
-            ctx.logger?.("lumiere").error("Lumière route failed", error);
-            if (!res.headersSent) {
-              res.writeHead(500, { "content-type": "text/plain" });
-            }
-            // The message can name a filesystem path. The log has it; the browser does not.
-            res.end("Internal error");
-            return true;
-          });
+          .catch((error: unknown) => sendInternalError(ctx, res, error));
         if (!handled) {
           res.writeHead(404).end();
         }
