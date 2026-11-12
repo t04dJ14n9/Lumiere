@@ -29,12 +29,18 @@ async function startHost(settings: Record<string, unknown> = {}) {
   return { root, fake, host };
 }
 
-test("linkUpdates.mode defaults to never, as Obsidian's alwaysUpdateLinks: false", () => {
-  assert.equal(linkUpdatesConfig.parse({}).mode, "never");
+test("linkUpdates.mode defaults to prompt, as Obsidian's alwaysUpdateLinks: false", () => {
+  assert.equal(linkUpdatesConfig.parse({}).mode, "prompt");
   const properties = linkUpdatesConfig.toJSONSchema().properties as {
     mode: { default?: unknown };
   };
-  assert.equal(properties.mode.default, "never");
+  assert.equal(properties.mode.default, "prompt");
+});
+
+test("explicit linkUpdates modes survive a default change", () => {
+  for (const mode of ["prompt", "always", "never"] as const) {
+    assert.equal(linkUpdatesConfig.parse({ mode }).mode, mode);
+  }
 });
 
 test("Always Update persists always and skips future dialogs", async () => {
@@ -56,5 +62,27 @@ test("Always Update persists always and skips future dialogs", async () => {
   // The persisted choice makes the next rename of this note skip the dialog.
   assert.equal((await fake.rename(rename)).length, 2);
   assert.deepEqual(fake.prompts, ["Update links in 2 files?"]);
+  await root.dispose();
+});
+
+test("declining or cancelling the dialog does not persist never", async () => {
+  const { root, fake, host } = await startHost({
+    "linkUpdates.mode": "prompt",
+  });
+  const writes: unknown[][] = [];
+  host.settings.access.update = async (key, value, resource) => {
+    writes.push([key, value, resource]);
+    return "user";
+  };
+  fake.answerWith(undefined);
+  assert.deepEqual(await fake.rename(rename), []);
+  fake.answerWith("Don't Update");
+  assert.deepEqual(await fake.rename(rename), []);
+  assert.deepEqual(writes, []);
+  assert.deepEqual(fake.prompts, [
+    "Update links in 2 files?",
+    "Update links in 2 files?",
+  ]);
+  assert.equal(fake.settings["linkUpdates.mode"], "prompt");
   await root.dispose();
 });

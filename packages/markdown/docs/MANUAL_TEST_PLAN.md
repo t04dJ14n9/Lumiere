@@ -1409,7 +1409,7 @@ Use the disposable fixture vault from Setup. These rows enumerate every generate
 | `lumiere.markdown.graph.defaultMode` | `"global"` | global / local; change at workspace-folder scope, verify the owning plugin scenario, then reset the override. |
 | `lumiere.markdown.graph.localDepth` | `2` | number; change at workspace-folder scope, verify the owning plugin scenario, then reset the override. |
 | `lumiere.markdown.graph.colorBy` | `"type"` | type / folder / tag; change at workspace-folder scope, verify the owning plugin scenario, then reset the override. |
-| `lumiere.markdown.linkUpdates.mode` | `"never"` | prompt / always / never; change at workspace-folder scope, verify the owning plugin scenario, then reset the override. |
+| `lumiere.markdown.linkUpdates.mode` | `"prompt"` | prompt / always / never; change at workspace-folder scope, verify the owning plugin scenario, then reset the override. |
 | `lumiere.markdown.links.newLinkFormat` | `"shortest"` | shortest / relative / absolute; change at workspace-folder scope, verify the owning plugin scenario, then reset the override. |
 | `lumiere.markdown.links.useWikilinks` | `true` | boolean; change at workspace-folder scope, verify the owning plugin scenario, then reset the override. |
 | `lumiere.markdown.links.folderNote` | `""` | string; change at workspace-folder scope, verify the owning plugin scenario, then reset the override. |
@@ -1501,7 +1501,7 @@ owner's vault for these checks.
 3. Give the second vault different app policies; open both and split one note
    into two panels. Each panel and command uses its originating vault. Switching
    focus during a new-note or rename action must not select another vault's
-   policy. `alwaysUpdateLinks: false` restores MW's default prompt.
+   policy. `alwaysUpdateLinks: false` maps to MW's `prompt` mode.
 4. Externally edit and delete `app.json`; effective settings refresh or return to
    package defaults. Temporarily write invalid JSON: the last good policies stay
    in use and the output channel logs the read failure once. Fix the JSON to

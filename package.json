@@ -3397,8 +3397,8 @@
               "always",
               "never"
             ],
-            "default": "never",
-            "description": "Obsidian's Automatically update internal links: `never` (the default, matching `alwaysUpdateLinks: false`) leaves links untouched on rename, `always` rewrites them without asking, and `prompt` asks first — its Always Update button then sets this to `always` for the resource.",
+            "default": "prompt",
+            "description": "Obsidian's Automatically update internal links: `prompt` (the default, matching `alwaysUpdateLinks: false`) asks before rewriting links in other notes when a file is renamed or moved; its Always Update button sets this to `always`, `always` rewrites without asking, and `never` leaves links untouched.",
             "scope": "resource"
           },
           "lumiere.markdown.links.newLinkFormat": {

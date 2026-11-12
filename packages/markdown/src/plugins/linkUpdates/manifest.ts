@@ -2,9 +2,9 @@ import { Schema } from "@workshop/core";
 import { defineManifest } from "../../shared/manifest";
 export const config = Schema.object({
   mode: Schema.union(["prompt", "always", "never"])
-    .default("never")
+    .default("prompt")
     .description(
-      "Obsidian's Automatically update internal links: `never` (the default, matching `alwaysUpdateLinks: false`) leaves links untouched on rename, `always` rewrites them without asking, and `prompt` asks first — its Always Update button then sets this to `always` for the resource.",
+      "Obsidian's Automatically update internal links: `prompt` (the default, matching `alwaysUpdateLinks: false`) asks before rewriting links in other notes when a file is renamed or moved; its Always Update button sets this to `always`, `always` rewrites without asking, and `never` leaves links untouched.",
     ),
 });
 export default defineManifest({

@@ -1019,7 +1019,7 @@ corresponds to. "Source" names the module on the source branch.
 | `formatting` | `editor:toggle-*`, `editor:set-heading-*` and similar | on | editor, commands | `editor/markdown.ts` `wrapSelection`, main branch `obsidianLikeCommands` |
 | `agentBridge` | none (from LLM Wiki) | on | editors, documents, workbench | `selectionHandoff.ts`, `agentClipboard.ts` (Markdown part) |
 | `lookUp` | none (macOS's own Look Up gesture) | on, macOS | editor, commands, navigation | new; matches Lumiere PDF's Look Up |
-| `linkUpdates` | *Automatically update internal links* | on (never) | vault, workbench | new |
+| `linkUpdates` | *Automatically update internal links* | on (prompt) | vault, workbench | new |
 | `quickSwitcher` | Quick switcher | on | vault, workbench | new |
 | `wordCount` | Word count (status bar) | on | editors, workbench | new |
 
@@ -1060,10 +1060,10 @@ Short specifications, beyond the source's tested behaviour:
 - **linkUpdates**: on `files/willRename` (from
   `workspace.onWillRenameFiles`), rewrite incoming links and embeds through
   `vault.backlinks`, keeping aliases, subpaths and the link style. The default
-  `never` leaves links untouched, matching Obsidian; `prompt` shows a
+  `prompt` matches Obsidian's `alwaysUpdateLinks: false` and shows the
   **Update links in N files?** dialog (with a persistent **Always Update** that
-  sets `always` for the resource), and `always` rewrites without asking.
-  Heading renames are a later enhancement.
+  sets `always`); `always` rewrites without asking and `never` leaves links
+  untouched. Heading renames are a later enhancement.
 - **quickSwitcher**: **Lumiere: Quick Switcher** opens a quick pick
   over notes, aliases and unresolved links, with Obsidian's scoring. Enter
   opens; an unresolved or new name creates the note in the configured
@@ -1179,7 +1179,7 @@ default (§25).
 | --- | --- | --- |
 | New link format | `lumiere.markdown.links.newLinkFormat` (`shortest` \| `relative` \| `absolute`) | `shortest` |
 | Use [[Wikilinks]] | `lumiere.markdown.links.useWikilinks` | `true` |
-| Automatically update internal links | `lumiere.markdown.linkUpdates.mode` (`prompt` \| `always` \| `never`) | `never` (Obsidian's `alwaysUpdateLinks: false`) |
+| Automatically update internal links | `lumiere.markdown.linkUpdates.mode` (`prompt` \| `always` \| `never`) | `prompt` (Obsidian's `alwaysUpdateLinks: false`) |
 | Default location for new notes | `lumiere.markdown.files.newNoteFolder` (empty = vault root, `.` = current folder, or a path) | empty |
 | Default location for new attachments | `lumiere.markdown.files.attachmentFolder` (same forms, plus `./sub`) | empty |
 | Excluded files | `lumiere.markdown.vault.excludedFiles` (globs) | `[]` |
@@ -1604,8 +1604,8 @@ of `dist/` outputs and the docs.
 4. **Outline.** **Native view only**, or also keep the in-editor panel.
 5. **Where Backlinks, Outgoing links and Tags appear.** **Explorer sections**
    (like PDF Outline), or a Lumiere activity-bar container.
-6. **Link updates on rename.** **`never`** (Obsidian's default), `prompt`, or
-   Obsidian's always-update behaviour.
+6. **Link updates on rename.** **`prompt`** (Obsidian's `alwaysUpdateLinks:
+   false`), `always`, or `never`.
 7. **Kernel.** **In-house (decided; Cordis is a reference only, §5.9)**, or depend on the
    `cordis` npm package.
 8. **Reading view.** **Not in v1**, or add a read-only rendered mode.

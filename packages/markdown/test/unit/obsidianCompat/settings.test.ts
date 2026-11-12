@@ -110,7 +110,6 @@ test("app.json handles new-note locations, attachments and both editing/link boo
       "editor.defaultMode": "livePreview",
     },
   );
-  assert.deepEqual(mapAppSettings({ alwaysUpdateLinks: false }), {});
   assert.deepEqual(mapAppSettings({}), {});
   assert.deepEqual(
     mapAppSettings({
@@ -125,6 +124,16 @@ test("app.json handles new-note locations, attachments and both editing/link boo
     {},
   );
   assert.throws(() => mapAppSettings([]), /object/);
+});
+
+test("Obsidian 1.15's alwaysUpdateLinks false asks and true updates automatically", () => {
+  assert.deepEqual(mapAppSettings({ alwaysUpdateLinks: false }), {
+    "linkUpdates.mode": "prompt",
+  });
+  assert.deepEqual(mapAppSettings({ alwaysUpdateLinks: true }), {
+    "linkUpdates.mode": "always",
+  });
+  assert.deepEqual(mapAppSettings({ alwaysUpdateLinks: "false" }), {});
 });
 
 test("B3: .git discovers the vault but .obsidian independently selects config", async () => {
