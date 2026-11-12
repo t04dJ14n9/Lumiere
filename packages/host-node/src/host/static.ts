@@ -76,42 +76,36 @@ export async function serveStatic(
   await serveFile(res, fileReal, range);
 }
 
-/** A single byte range, or undefined when the header is absent or unsatisfiable. */
+/**
+ * The one byte range `header` asks for in a file of `size` bytes; undefined
+ * when the header is ignored, "unsatisfiable" when it is 416. A server MUST
+ * ignore an unknown range unit and MAY ignore a malformed or multiple range;
+ * only a valid, unsatisfiable `bytes=` range is 416 (RFC 9110 14.2).
+ */
 export function byteRange(
   header: string,
   size: number,
-): { start: number; end: number } | undefined {
+): { start: number; end: number } | "unsatisfiable" | undefined {
   const match = /^bytes=(\d*)-(\d*)$/.exec(header.trim());
-  if (size === 0 || !match) {
+  if (!match || (!match[1] && !match[2])) {
     return undefined;
   }
   const [, first, last] = match;
-  if (first === "" && last === "") {
-    return undefined;
+  // Decimal numerals may exceed a safe integer: Number gives Infinity, which
+  // the comparisons and Math.min/Math.max clamp. Rejecting those as malformed
+  // would be the integer-overflow parse error RFC 9110 14.1.2 forbids.
+  if (!first) {
+    const length = Number(last);
+    return length === 0 || size === 0
+      ? "unsatisfiable"
+      : { start: Math.max(0, size - length), end: size - 1 };
   }
-  let start: number;
-  let end: number;
-  if (first === "") {
-    const suffix = Number(last);
-    if (!Number.isSafeInteger(suffix) || suffix <= 0) {
-      return undefined;
-    }
-    start = Math.max(0, size - suffix);
-    end = size - 1;
-  } else {
-    start = Number(first);
-    end = last === "" ? size - 1 : Number(last);
-    if (
-      !Number.isSafeInteger(start) ||
-      !Number.isSafeInteger(end) ||
-      start > end ||
-      start >= size
-    ) {
-      return undefined;
-    }
-    end = Math.min(end, size - 1);
+  const start = Number(first);
+  const end = last ? Number(last) : size - 1;
+  if (start >= size || end < start) {
+    return "unsatisfiable";
   }
-  return { start, end };
+  return { start, end: Math.min(end, size - 1) };
 }
 
 export async function serveFile(
@@ -137,8 +131,8 @@ export async function serveFile(
     "x-content-type-options": "nosniff",
     "accept-ranges": "bytes",
   };
-  const range = rangeHeader ? byteRange(rangeHeader, info.size) : undefined;
-  if (rangeHeader && !range) {
+  const range = byteRange(rangeHeader ?? "", info.size);
+  if (range === "unsatisfiable") {
     await handle.close().catch(() => undefined);
     res
       .writeHead(416, {

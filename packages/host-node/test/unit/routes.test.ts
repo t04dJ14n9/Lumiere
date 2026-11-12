@@ -412,3 +412,71 @@ test("an editor page still cannot name a folder that holds a registered workspac
   assert.equal(await status(top, vault), 200);
   assert.equal(await status(deep, scratch), 403);
 });
+
+test("note media and the built editor both answer one byte range", async (t) => {
+  const dir = await realpath(
+    await mkdtemp(path.join(tmpdir(), "lumiere-range-")),
+  );
+  t.after(() => rm(dir, { recursive: true, force: true }));
+  const note = path.join(dir, "Note.md");
+  const media = path.join(dir, "clip.mp4");
+  const asset = path.join(dir, "editor.js");
+  await writeFile(note, "# Note");
+  await writeFile(media, "0123456789");
+  await writeFile(asset, "abcdefghij");
+
+  const host = {
+    panels: {
+      open: async () => ({
+        id: "p1",
+        html: '<!doctype html><html><head><meta charset="UTF-8"></head><body><script type="module" nonce="n" src="/e.js"></script></body></html>',
+      }),
+      get: () => undefined,
+      attach: () => false,
+    },
+    trees: new TreeHub({ execute: async () => undefined }),
+    addRoot: () => {},
+    workspaceRoots: () => [],
+    stop: async () => {},
+  } as unknown as LumiereHost;
+  const routes = createEditorRoutes(host, { markdown: dir, shim: asset });
+  const server = createServer((req, res) => {
+    void routes.handle(req, res).then((handled) => {
+      if (!handled) {
+        res.writeHead(404).end();
+      }
+    });
+  });
+  await new Promise<void>((resolve) => server.listen(0, "127.0.0.1", resolve));
+  t.after(() => {
+    routes.close();
+    server.close();
+  });
+  const { port } = server.address() as { port: number };
+  const base = `http://127.0.0.1:${port}`;
+  const page = await fetch(
+    `${base}/lumiere/editor?path=${encodeURIComponent(note)}&root=${encodeURIComponent(dir)}`,
+  );
+  assert.equal(page.status, 200);
+  await page.text();
+
+  const urls = [
+    `${base}/lumiere/file?panel=p1&uri=${encodeURIComponent(pathToFileURL(media).toString())}`,
+    `${base}/lumiere/m/editor.js`,
+  ];
+  for (const url of urls) {
+    const part = await fetch(url, { headers: { range: "bytes=2-4" } });
+    assert.equal(part.status, 206, url);
+    assert.equal(part.headers.get("content-range"), "bytes 2-4/10");
+    assert.equal((await part.text()).length, 3);
+
+    const ignored = await fetch(url, { headers: { range: "items=0-2" } });
+    assert.equal(ignored.status, 200, url);
+    assert.equal((await ignored.text()).length, 10);
+
+    const past = await fetch(url, { headers: { range: "bytes=99-" } });
+    assert.equal(past.status, 416, url);
+    assert.equal(past.headers.get("content-range"), "bytes */10");
+    await past.text();
+  }
+});
