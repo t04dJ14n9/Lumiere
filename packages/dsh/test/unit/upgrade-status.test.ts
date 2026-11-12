@@ -124,7 +124,7 @@ function rawUpgrade(port: number, pathAndQuery: string): Promise<string> {
       socket.write(upgradeRequest(port, pathAndQuery));
     });
     socket.on("data", (chunk) => {
-      chunks.push(chunk);
+      chunks.push(Buffer.isBuffer(chunk) ? chunk : Buffer.from(chunk));
       if (Buffer.concat(chunks).includes("\r\n\r\n")) {
         finish();
       }
@@ -175,7 +175,7 @@ function heldRejection(
       socket.write(upgradeRequest(port, pathAndQuery));
     });
     socket.on("data", (chunk) => {
-      chunks.push(chunk);
+      chunks.push(Buffer.isBuffer(chunk) ? chunk : Buffer.from(chunk));
     });
     socket.on("end", finish);
     socket.on("close", finish);
