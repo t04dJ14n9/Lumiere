@@ -1,0 +1,51 @@
+Scope: all 13 workspace projects
+Lockfile is up to date, resolution step is skipped
+Progress: resolved 1, reused 0, downloaded 0, added 0
+Packages: +679
+++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
+
+   ╭──────────────────────────────────────────╮
+   │                                          │
+   │   Update available! 10.28.2 → 12.18.0.   │
+   │   Changelog: https://pnpm.io/v/12.18.0   │
+   │     To update, run: pnpm self-update     │
+   │                                          │
+   ╰──────────────────────────────────────────╯
+
+Progress: resolved 679, reused 679, downloaded 0, added 258
+Progress: resolved 679, reused 679, downloaded 0, added 611
+Progress: resolved 679, reused 679, downloaded 0, added 679, done
+ WARN  Failed to create bin at /Users/t04dj14n9/Code/Lumia/.claude/worktrees/pr-722/apps/web/node_modules/.bin/lumiere-server. ENOENT: no such file or directory, open '/Users/t04dj14n9/Code/Lumia/.claude/worktrees/pr-722/packages/app/dist/app/server.js'
+ WARN  Failed to create bin at /Users/t04dj14n9/Code/Lumia/.claude/worktrees/pr-722/apps/ipad/node_modules/.bin/lumiere-server. ENOENT: no such file or directory, open '/Users/t04dj14n9/Code/Lumia/.claude/worktrees/pr-722/packages/app/dist/app/server.js'
+
+dependencies:
++ @workshop/agents 0.0.0 <- packages/agents
++ @workshop/core 0.0.0 <- packages/core
++ @workshop/markdown 0.0.0 <- packages/markdown
++ @workshop/pdf 0.0.0 <- packages/pdf
+
+devDependencies:
++ @eslint/js 10.0.1
++ @playwright/test 1.64.1
++ @types/node 26.6.6
++ @types/vscode 1.125.0
++ @vscode/test-electron 3.1.0
++ @vscode/vsce 4.1.0
++ esbuild 0.28.2
++ eslint 10.13.0
++ eslint-plugin-react-hooks 7.1.1
++ prettier 3.9.10
++ tsx 4.23.15
++ typescript 6.0.3
++ typescript-eslint 8.72.1
+
+ WARN  Failed to create bin at /Users/t04dj14n9/Code/Lumia/.claude/worktrees/pr-722/apps/web/node_modules/.bin/lumiere-server. ENOENT: no such file or directory, open '/Users/t04dj14n9/Code/Lumia/.claude/worktrees/pr-722/apps/web/node_modules/@workshop/app/dist/app/server.js'
+ WARN  Failed to create bin at /Users/t04dj14n9/Code/Lumia/.claude/worktrees/pr-722/apps/ipad/node_modules/.bin/lumiere-server. ENOENT: no such file or directory, open '/Users/t04dj14n9/Code/Lumia/.claude/worktrees/pr-722/apps/ipad/node_modules/@workshop/app/dist/app/server.js'
+╭ Warning ─────────────────────────────────────────────────────────────────────╮
+│                                                                              │
+│   Ignored build scripts: @vscode/vsce-sign@2.1.0.                            │
+│   Run "pnpm approve-builds" to pick which dependencies should be allowed     │
+│   to run scripts.                                                            │
+│                                                                              │
+╰──────────────────────────────────────────────────────────────────────────────╯
+Done in 3.5s using pnpm v10.28.2

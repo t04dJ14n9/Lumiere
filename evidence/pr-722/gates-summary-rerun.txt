@@ -1,0 +1,11 @@
+START check 2026-11-12T07:10:41Z
+END check 2026-11-12T07:14:15Z status=0
+START test-browser 2026-11-12T07:14:15Z
+END test-browser 2026-11-12T07:18:56Z status=0
+START test-quality 2026-11-12T07:18:56Z
+END test-quality 2026-11-12T07:19:39Z status=0
+START prepare-pdf-fixtures 2026-11-12T07:19:39Z
+END prepare-pdf-fixtures 2026-11-12T07:19:39Z status=0
+START test-vscode 2026-11-12T07:19:39Z
+END test-vscode 2026-11-12T07:27:31Z status=1
+AGGREGATE_STATUS=1

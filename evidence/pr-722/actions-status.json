@@ -1,0 +1,35 @@
+{
+  "publishedHead": "b8c4acb1d716e757774d966f13686b98e8dbcdb0",
+  "workflowRun": {
+    "id": 43187386316,
+    "name": "CI",
+    "status": "completed",
+    "conclusion": "failure",
+    "createdAt": "2026-11-12T08:58:41Z",
+    "startedAt": "2026-11-12T08:58:41Z",
+    "updatedAt": "2026-11-12T08:58:46Z",
+    "url": "https://github.com/t04dJ14n9/Lumiere/actions/runs/43187386316"
+  },
+  "checkRuns": [
+    { "name": "check", "conclusion": "failure", "runnerId": 0, "steps": [], "startedAt": "2026-11-12T08:58:42Z", "completedAt": "2026-11-12T08:58:45Z" },
+    { "name": "browser", "conclusion": "failure", "runnerId": 0, "steps": [], "startedAt": "2026-11-12T08:58:42Z", "completedAt": "2026-11-12T08:58:45Z" },
+    { "name": "quality", "conclusion": "failure", "runnerId": 0, "steps": [], "startedAt": "2026-11-12T08:58:42Z", "completedAt": "2026-11-12T08:58:45Z" },
+    { "name": "package", "conclusion": "failure", "runnerId": 0, "steps": [], "startedAt": "2026-11-12T08:58:42Z", "completedAt": "2026-11-12T08:58:45Z" },
+    { "name": "secret-scan", "conclusion": "failure", "runnerId": 0, "steps": [], "startedAt": "2026-11-12T08:58:42Z", "completedAt": "2026-11-12T08:58:45Z" },
+    { "name": "audit (advisory)", "conclusion": "failure", "runnerId": 0, "steps": [], "startedAt": "2026-11-12T08:58:42Z", "completedAt": "2026-11-12T08:58:46Z" }
+  ],
+  "sampleJobLog": {
+    "jobId": 131077864980,
+    "httpStatus": 404,
+    "errorCode": "BlobNotFound"
+  },
+  "originalHeadRun": {
+    "head": "4ebfd280ac40c9b256348299309194d77b01f68f",
+    "id": 42781146761,
+    "conclusion": "failure",
+    "runnerId": 0,
+    "steps": [],
+    "log": "HTTP 404 BlobNotFound"
+  },
+  "cause": "UNKNOWN; empty-runner failure, not a demonstrated test regression. Local exact-head gates were run sequentially per AGENTS.md."
+}

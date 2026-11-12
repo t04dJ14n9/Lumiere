@@ -1,0 +1,16 @@
+dsh: initialized profile web at /tmp/pr722-verify-XFk7xD/dsh-home/profiles/web
+
+dependencies:
++ @lumiere/dsh link:/Users/t04dj14n9/Code/Lumia/.claude/worktrees/pr-722/packages/dsh/dist/bundle
+
+Already up to date
+Done in 176ms using pnpm v10.28.2
+
+   ╭──────────────────────────────────────────╮
+   │                                          │
+   │   Update available! 10.28.2 → 12.18.0.   │
+   │   Changelog: https://pnpm.io/v/12.18.0   │
+   │     To update, run: pnpm self-update     │
+   │                                          │
+   ╰──────────────────────────────────────────╯
+

@@ -1,0 +1,91 @@
+{
+  "pr": 722,
+  "exactLocalHead": "b8c4acb1d716e757774d966f13686b98e8dbcdb0",
+  "publishedSourceBranch": "review/dsh-file-canonical",
+  "evidenceBranch": "review/pr-722-evidence-b8c4acb1",
+  "base": "f1c153d51df481ec493800ca491544d56b7df66b",
+  "regressionCommit": {
+    "sha": "b8c4acb1d716e757774d966f13686b98e8dbcdb0",
+    "subject": "test(host-node): prove symlinked workspace file containment",
+    "file": "packages/host-node/test/unit/file-route-symlink.test.ts",
+    "focusedResult": "2 passed, 0 failed"
+  },
+  "install": {
+    "command": "pnpm install --frozen-lockfile",
+    "result": "pass",
+    "warnings": [
+      "missing packages/app/dist/app/server.js bin targets before build",
+      "ignored @vscode/vsce-sign build script"
+    ]
+  },
+  "environment": {
+    "MARKDOWN_WORKBENCH_TEST_CONCURRENCY": "1",
+    "WORKSHOP_TEST_CONCURRENCY": "1",
+    "playwrightBrowserCache": "/Users/t04dj14n9/Library/Caches/ms-playwright",
+    "profiles": "disposable HOME, TMPDIR, XDG directories, and VS Code profiles"
+  },
+  "gates": {
+    "pnpm check": "pass",
+    "pnpm test:browser": "pass: 462 markdown + 195 PDF specs",
+    "pnpm test:quality": "pass: 9 quality specs + 1 large-vault unit",
+    "pnpm --filter @workshop/pdf fixtures": "pass prerequisite",
+    "pnpm test:vscode clean rerun": "pass: 30 markdown native + 26 PDF native passed, 2 skipped"
+  },
+  "vscodeFlake": {
+    "firstSequentialRun": "1 failed PDF settings-commands View picker Settings editor timeout; 1 flaky paging-input focus retry",
+    "cleanRerun": "status 0, 30 + 26 passed, 2 skipped",
+    "sourceFix": "none; unrelated to PR #722"
+  },
+  "actions": {
+    "exactHeadRun": "https://github.com/t04dJ14n9/Lumiere/actions/runs/43187386316",
+    "originalHeadRun": "https://github.com/t04dJ14n9/Lumiere/actions/runs/42781146761",
+    "status": "six jobs failure, empty steps, runner_id 0, job log HTTP 404 BlobNotFound",
+    "cause": "UNKNOWN; not a demonstrated test regression"
+  },
+  "dshEvidence": {
+    "version": "0.2.2-rc.1",
+    "dshHome": "/tmp/pr722-verify-XFk7xD/dsh-home",
+    "workspace": "/private/tmp/pr722-verify-XFk7xD/workspace",
+    "alias": "/tmp/pr722-verify-XFk7xD/workspace-alias",
+    "dshUrl": "http://127.0.0.1:54325",
+    "cookieName": "redacted in evidence.json; value never persisted",
+    "tokenExchangeStatus": 303,
+    "bundleIndexSha256": "a4e19b143f42ae0f06e225f52fbf54ee365201ff1f12a973b66a461e3d5b7c04",
+    "bundleClientSha256": "699a1f890df8a28aa4915e37fb738517e4b78ee0b5619286f67f30bd2b9b2970",
+    "editorStatus": 200,
+    "aliasSvgStatus": 200,
+    "canonicalSvgStatus": 200,
+    "escapeSvgStatus": 403,
+    "escapeLeaked": false,
+    "gui": "DSH UI 200, dismissed Get started, opened Default workspace, expanded file tree; Lumiere editor rendered note with no console errors",
+    "noteClick": "Note.md not found in fresh no-account DSH file tree; direct Host GUI editor route used"
+  },
+  "evidenceFiles": [
+    "actions-status.json",
+    "verification.json",
+    "evidence.json",
+    "gates-summary-rerun.txt",
+    "gates-summary-vscode-rerun.txt",
+    "focused-symlink-test.log",
+    "install.log",
+    "check-rerun.log",
+    "test-browser-rerun.log",
+    "test-quality-rerun.log",
+    "test-vscode-rerun.log",
+    "test-vscode-rerun2.log",
+    "dsh-build.log",
+    "dsh-plugin-add.log",
+    "dsh-config-after-install.log",
+    "dsh-evidence-final2.log",
+    "dsh-server-redacted.log",
+    "dsh-home.png",
+    "dsh-after-dismiss.png",
+    "dsh-workspace.png",
+    "dsh-file-tree.png",
+    "lumiere-editor.png",
+    "alias-file-200.png",
+    "escape-file-403.png"
+  ],
+  "secrets": "no raw DSH token or cookie value persisted",
+  "githubState": "published source head; evidence branch separate; PR merged by owner-approved admin squash"
+}
