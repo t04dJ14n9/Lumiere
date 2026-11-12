@@ -28,7 +28,26 @@ theme tokens become the `--vscode-*` variables the editor's styles read.
 
 Following a link to a note that is not open asks DSH to open it in a new
 tab (`ctx.sidebarRight.openResource`); the host reveals the heading or block
-once the new page connects.
+once the new page connects. If the page's first `ready` handshake fails (for
+example, HMR restarts the Host while it is connecting), the body recreates the
+iframe once so the retry runs against the live Host.
+
+### Manifest
+
+The built `dist/bundle` is a DSH plugin bundle by virtue of its
+`package.json`, which `scripts/build.mjs` writes inline (there is no
+`scripts/manifest.json` template). `dsh.bundle.patch` points at
+`cordis.patch.yml`, which inserts the Host row `lumiere` ->
+`@lumiere/dsh` into DSH's plugin tree. The Node half's `webServer` and
+`connection` inject list is declared in `src/host/index.ts`, not in that
+package file.
+
+`dsh.client` is `{ platform: "web" }` only; it does not set `immediately`
+or a client `inject` list. The `./client` export exposes `client.js`;
+`./locale/*.json` exports the locale metadata. A top-level `icon` field
+names `./icon.png`, which the builder copies from `media/icon.png`. Preview
+and sidebar registration live in the client source, not the package
+manifest. The generated package.json has no `files` list.
 
 ## Files
 
@@ -42,22 +61,27 @@ What is DSH's:
 - `src/client/index.ts`: the browser half: the document preview and following links.
 - `src/client/address.ts`: DSH's file addresses.
 - `src/client/theme.ts`: DSH's theme tokens as host-node's palette.
-- `scripts/build.mjs`: builds the installable bundle into `dist/bundle`.
+- `bundle/`: `cordis.patch.yml`, the locale metadata and the bundle's README.
+- `scripts/build.mjs`: writes the bundle `package.json` and builds `dist/bundle`.
 
 ## Services, routes and settings
 
 The host half injects DSH's `webServer` and `connection`; the browser half
 `documentPreviews`, `slots` and `sidebarRight`. Routes, all behind DSH's
 authentication: `/lumiere/editor` (a note's page), `/lumiere/m/*` (the
-editor), `/lumiere/page/shim.js` (the shim), `/lumiere/file` (a note's images, inside
-its workspace only — `..` and a symbolic link that leaves the workspace are
-refused) and the `/lumiere/socket` upgrade. The JSON routes
+editor), `/lumiere/page/shim.js` (the shim), `/lumiere/file` (a note's images,
+inside its workspace only — `..` and a symbolic link that leaves the workspace
+are refused), `/lumiere/pdf` (a PDF's viewer page), `/lumiere/pdf/viewer/*`
+(the viewer's files), `/lumiere/pdf/bytes` (that page's PDF) and the
+`/lumiere/socket` upgrade. The JSON routes
 (`/lumiere/settings`, `/lumiere/commands` and `/lumiere/views/*`) answer a
 method none of them uses with 405 and a family-level
 `Allow: GET, POST, HEAD`. host-node's `createEditorRoutes` and its
 `settings-routes.ts`, `command-routes.ts` and `view-routes.ts` handlers own each
 resource's exact method dispatch; a method the family advertises can still be
-a 404 on one subpath. DSH does not copy that table here.
+a 404 on one subpath. DSH does not copy that table here. The PDF page, its
+viewer files and its bytes use real-path containment: a symlink that resolves
+outside the PDF's workspace or the viewer's folder is refused.
 
 Settings use the `lumiere.markdown.*` keys and defaults of the VS Code extension
 and are kept in `$DSH_HOME/lumiere/settings.json` (`~/.dsh` by default), beside
@@ -67,16 +91,35 @@ the vault snapshots and editor state.
 
 ```sh
 pnpm --filter @workshop/dsh build          # dist/bundle
-dsh plugin --profile web add link:$PWD/packages/dsh/dist/bundle
+dsh plugin --profile "${DSH_PROFILE:-web}" add link:$PWD/packages/dsh/dist/bundle
 dsh web
 ```
 
-Needs DeepSeek Harness 0.2.1 or later, whose document previews accept
-plugins. Restart DSH after rebuilding.
+`web` is the usual profile for `dsh web`; a Desktop-launched Harness uses
+`desktop` instead. `$DSH_PROFILE` is set in a shell launched by either, and
+the `${DSH_PROFILE:-web}` fallback covers a plain terminal.
+
+Or install the built directory with DSH's plugin manager: call
+`plugin_manager` with action `install_bundle` and `target` set to the absolute
+path of `packages/dsh/dist/bundle`. The manager writes the profile's
+`package.json` and `cordis.patch.yml` itself and enables the bundle.
+
+Verified against DeepSeek Harness 0.2.2-rc.1; needs 0.2.1 or later, whose
+document previews accept plugins. A new bundle can activate through HMR, but
+after rebuilding the Host JavaScript you must restart DSH, and reload the
+browser page to pick up a rebuilt `client.js`. HMR does not remount a preview
+body that is already open: one still showing a failed first handshake needs a
+page reload, or disabling and re-enabling the `lumiere` plugin row. A body
+opened afterwards starts clean; if its `ready` call times out (an HMR restart
+of the Host mid-handshake), it recreates the iframe once, and DSH's Reload and
+"Read the file again" controls also recreate a failed iframe.
 
 ## Limits and differences from VS Code
 
-- Markdown only: PDFs still open in DSH's own viewer.
+- Markdown and PDF notes open in Lumière; DSH's own PDF viewer stays in the
+  viewer menu. The engine file the editor ships is `embedpdf.wasm`, not
+  `pdfium.wasm`. Host routing of that file remains an inherited #733 issue
+  and is not fixed here.
 - Git blame and the change gutter work for notes in a repository, through
   the `git` on DSH's PATH; the rendered diff does not.
 - No graph panel and no status bar: DSH has no counterpart yet.

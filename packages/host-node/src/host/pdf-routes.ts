@@ -53,7 +53,7 @@ export function createPdfRoutes(options: PdfRouteOptions): PdfRoutes {
           req.headers.range,
         );
       } else if (rest === "/pdf/bytes") {
-        serveBytes(res, url, pages);
+        await serveBytes(res, url, pages);
       } else {
         return false;
       }
@@ -113,11 +113,21 @@ async function servePdfPage({
 }
 
 /** The bytes of the load a page asked for, while it is that page's newest. */
-function serveBytes(res: ServerResponse, url: URL, pages: PdfPages): void {
+async function serveBytes(
+  res: ServerResponse,
+  url: URL,
+  pages: PdfPages,
+): Promise<void> {
   const page = pages.get(url.searchParams.get("page") ?? "");
   const bytes = page?.bytesOf(Number(url.searchParams.get("load")));
-  if (!bytes) {
+  if (!page || !bytes) {
     res.writeHead(404).end();
+    return;
+  }
+  // A symlink planted after the page opened must not turn cached bytes into a
+  // response for a file outside the workspace root.
+  if (!(await page.contained())) {
+    res.writeHead(403).end();
     return;
   }
   res.writeHead(200, {

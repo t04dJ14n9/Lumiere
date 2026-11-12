@@ -21,7 +21,7 @@ import {
   type ViewSettings,
 } from "@workshop/pdf/portable";
 import type { PageSocket } from "./panel";
-import { fileUriToPath, pathInsideRoots } from "./paths";
+import { assertContained, fileUriToPath, pathInsideRoots } from "./paths";
 import { parsePageFrame } from "../protocol";
 import { watchFile } from "./watch";
 
@@ -122,6 +122,19 @@ export class PdfPage implements PdfWebview {
   deliver(bytes: ArrayBuffer, load: number): PdfDelivery {
     this.bytes = { load, data: bytes };
     return { url: this.setup.bytesUrl(this.id, load) };
+  }
+
+  /** Re-check the PDF's canonical path against its workspace root. */
+  async contained(): Promise<boolean> {
+    if (!fileUriToPath(this.setup.uri) || !fileUriToPath(this.setup.root)) {
+      return false;
+    }
+    try {
+      await assertContained(this.setup.root, this.setup.uri);
+      return true;
+    } catch {
+      return false;
+    }
   }
 
   /** The bytes of `load`, while it is the newest. */

@@ -2,7 +2,14 @@ import test from "node:test";
 import assert from "node:assert/strict";
 import { createServer, type Server } from "node:http";
 import type { AddressInfo } from "node:net";
-import { mkdir, mkdtemp, realpath, rm, writeFile } from "node:fs/promises";
+import {
+  mkdir,
+  mkdtemp,
+  realpath,
+  rm,
+  symlink,
+  writeFile,
+} from "node:fs/promises";
 import { tmpdir } from "node:os";
 import * as path from "node:path";
 import { createPdfRoutes, type PdfRoutes } from "../../src/host/pdf-routes";
@@ -12,7 +19,9 @@ const PDF = "%PDF-1.4\n% a stand-in: the viewer, not the host, reads PDFs\n";
 
 interface Fixture {
   readonly origin: string;
+  readonly dir: string;
   readonly vault: string;
+  readonly viewer: string;
   readonly outside: string;
   readonly routes: PdfRoutes;
 }
@@ -49,7 +58,9 @@ async function fixture(t: test.TestContext): Promise<Fixture> {
   });
   return {
     origin: `http://127.0.0.1:${port}`,
+    dir,
     vault,
+    viewer,
     outside: path.join(dir, "outside.pdf"),
     routes,
   };
@@ -58,6 +69,29 @@ async function fixture(t: test.TestContext): Promise<Fixture> {
 function pageUrl(origin: string, file: string, root: string): string {
   const query = new URLSearchParams({ path: file, root });
   return `${origin}/lumiere/pdf?${query.toString()}`;
+}
+
+/** Symlink containment is meaningless on a host that cannot create links. */
+async function linkOrSkip(
+  t: test.TestContext,
+  target: string,
+  link: string,
+): Promise<boolean> {
+  try {
+    await symlink(target, link);
+    return true;
+  } catch (error) {
+    const code = (error as NodeJS.ErrnoException).code;
+    if (
+      process.platform === "win32" ||
+      code === "EPERM" ||
+      code === "ENOTSUP"
+    ) {
+      t.skip("creating symlinks is not supported on this platform");
+      return false;
+    }
+    throw error;
+  }
 }
 
 /** The page's end of its socket, as the shim would hold it. */
@@ -169,4 +203,64 @@ test("the viewer's files are served from its folder only", async (t) => {
     `${origin}/lumiere/pdf/viewer/..%2F..%2Fvault%2FNote.md`,
   );
   assert.notEqual(escape.status, 200);
+});
+
+test("a PDF page refuses a symlink that leaves the workspace", async (t) => {
+  const { origin, vault, outside } = await fixture(t);
+  const link = path.join(vault, "papers", "escape.pdf");
+  if (!(await linkOrSkip(t, outside, link))) {
+    return;
+  }
+  const response = await fetch(pageUrl(origin, link, vault));
+  assert.equal(response.status, 403);
+  assert.equal(await response.text(), "");
+});
+
+test("a viewer file that symlinks outside its folder is refused", async (t) => {
+  const { origin, viewer, outside } = await fixture(t);
+  const link = path.join(viewer, "escape.js");
+  if (!(await linkOrSkip(t, outside, link))) {
+    return;
+  }
+  const response = await fetch(`${origin}/lumiere/pdf/viewer/escape.js`);
+  assert.equal(response.status, 403);
+  assert.equal(await response.text(), "");
+});
+
+test("PDF bytes re-check real-path containment after the file changes", async (t) => {
+  const { origin, vault, outside, routes } = await fixture(t);
+  const pdf = path.join(vault, "papers", "A.pdf");
+  const opened = await fetch(pageUrl(origin, pdf, vault));
+  assert.equal(opened.status, 200);
+  const html = await opened.text();
+  const id = /name="lumiere-panel" content="([^"]+)"/.exec(html)?.[1];
+  assert.ok(id, "the page names its panel for the shim");
+  const page = routes.page(id);
+  assert.ok(page);
+  const socket = fakeSocket();
+  page.attach(socket.socket);
+  try {
+    socket.fromPage({ type: "ready" });
+    const load = await until(
+      () =>
+        socket.received.find(
+          (frame) =>
+            (frame as { data?: { type?: string } }).data?.type === "load",
+        ) as { ch: string; data: { load: number; url: string } } | undefined,
+    );
+    const bytesUrl = origin + load.data.url;
+    const first = await fetch(bytesUrl);
+    assert.equal(first.status, 200);
+    assert.equal(await first.text(), PDF);
+
+    await rm(pdf);
+    if (!(await linkOrSkip(t, outside, pdf))) {
+      return;
+    }
+    const escaped = await fetch(bytesUrl);
+    assert.equal(escaped.status, 403);
+    assert.equal(await escaped.text(), "");
+  } finally {
+    socket.close();
+  }
 });
