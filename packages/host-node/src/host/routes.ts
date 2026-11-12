@@ -4,8 +4,9 @@
  * plugins' tree views (view-routes.ts) and the settings (settings-routes.ts).
  * Authentication is the caller's: DSH checks its own, the app its token.
  */
-import { realpath } from "node:fs/promises";
+import { realpath, stat } from "node:fs/promises";
 import type { IncomingMessage, ServerResponse } from "node:http";
+import * as path from "node:path";
 import type { Duplex } from "node:stream";
 import { pathToFileURL } from "node:url";
 import { WebSocketServer } from "ws";
@@ -326,38 +327,76 @@ async function serveResource(
   roots: Map<string, string>,
 ): Promise<void> {
   const root = roots.get(url.searchParams.get("panel") ?? "");
-  const file = await containedResource(root, url.searchParams.get("uri") ?? "");
-  if (!file) {
-    res.writeHead(403).end();
+  const resource = await containedResource(
+    root,
+    url.searchParams.get("uri") ?? "",
+  );
+  if (resource.status !== 200 || !resource.file) {
+    res.writeHead(resource.status).end();
     return;
   }
-  await serveFile(res, file, req.headers.range);
+  await serveFile(res, resource.file, req.headers.range);
 }
 
-/** The file a note may show, or undefined when the URI leaves its workspace. */
-async function containedResource(
+interface ContainedResource {
+  /** 403 leaves the workspace or cannot be trusted, 404 is contained but absent. */
+  readonly status: 200 | 403 | 404;
+  readonly file?: string;
+}
+
+/** Resolve the request to a contained file, distinguishing absent from outside. */
+export async function containedResource(
   root: string | undefined,
   uri: string,
-): Promise<string | undefined> {
+): Promise<ContainedResource> {
   if (!root) {
-    return undefined;
+    return { status: 403 };
   }
   const target = fileUriToPath(uri);
   if (!target) {
-    return undefined;
+    return { status: 403 };
   }
-  // The registered root is a realpath'd file: URI, but a caller may name the
-  // same file through a symlinked ancestor (/tmp and /var are links on macOS).
-  // Compare canonical forms, or a contained file is refused with 403.
-  const canonical = await realpath(target).catch(() => undefined);
+  // Existing files use the fully resolved path, including a final symlink,
+  // so serveFile opens the filename that was checked. Absent resources are
+  // classified through their nearest existing ancestor, which may itself be
+  // named through a symlink; containment still refuses an escaping or dangling
+  // link before a missing file can be reported.
+  const resolved = await realpath(target).catch(() => undefined);
+  if (resolved) {
+    try {
+      await assertContained(root, pathToFileURL(resolved).toString());
+    } catch {
+      return { status: 403 };
+    }
+    const info = await stat(resolved).catch(() => undefined);
+    return info?.isFile() ? { status: 200, file: resolved } : { status: 404 };
+  }
+  const canonical = await canonicalAbsentTarget(target);
   if (!canonical) {
-    return undefined;
+    return { status: 403 };
   }
   try {
-    // After URL parsing (which resolves `..`, also as `%2e%2e`) and through symlinks.
     await assertContained(root, pathToFileURL(canonical).toString());
   } catch {
-    return undefined;
+    return { status: 403 };
   }
-  return canonical;
+  return { status: 404 };
+}
+
+/** Resolve the nearest existing ancestor of an absent target, keeping its suffix. */
+async function canonicalAbsentTarget(
+  target: string,
+): Promise<string | undefined> {
+  let ancestor = path.dirname(target);
+  while (true) {
+    const resolved = await realpath(ancestor).catch(() => undefined);
+    if (resolved) {
+      return path.join(resolved, path.relative(ancestor, target));
+    }
+    const parent = path.dirname(ancestor);
+    if (parent === ancestor) {
+      return undefined;
+    }
+    ancestor = parent;
+  }
 }
