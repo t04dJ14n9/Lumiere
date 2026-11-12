@@ -1,7 +1,7 @@
 # DSH end-to-end suite
 
 `dsh-e2e.mjs` exercises a built Lumière DSH bundle installed into a **running**
-DeepSeek Harness instance. It runs 56 checks (46 distinct names): the HTTP
+DeepSeek Harness instance. It runs 56 checks (55 distinct names): the HTTP
 routes and their validation, authentication, method handling, static-file
 containment, the WebSocket handshake and RPC, the editor in a real browser
 (rendering, saving, themes, images, embedder messages, special paths), settings
