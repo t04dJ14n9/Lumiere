@@ -142,17 +142,21 @@ async function readJson(
 ): Promise<Record<string, unknown> | undefined> {
   const chunks: Buffer[] = [];
   let size = 0;
-  try {
-    for await (const chunk of req) {
-      size += (chunk as Buffer).length;
-      if (size > MAX_BODY) {
-        return undefined;
-      }
-      chunks.push(chunk as Buffer);
+  for await (const chunk of req) {
+    size += (chunk as Buffer).length;
+    if (size > MAX_BODY) {
+      // Drain the request: returning here destroys its socket before the
+      // caller can send the 400.
+      chunks.length = 0;
+      continue;
     }
-    const body: unknown = JSON.parse(
-      Buffer.concat(chunks).toString("utf8") || "{}",
-    );
+    chunks.push(chunk as Buffer);
+  }
+  if (size > MAX_BODY) {
+    return undefined;
+  }
+  try {
+    const body: unknown = JSON.parse(Buffer.concat(chunks).toString("utf8"));
     return typeof body === "object" && body !== null && !Array.isArray(body)
       ? (body as Record<string, unknown>)
       : undefined;

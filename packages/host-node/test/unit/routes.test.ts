@@ -1,14 +1,20 @@
 import test from "node:test";
 import assert from "node:assert/strict";
 import { mkdir, mkdtemp, realpath, rm, writeFile } from "node:fs/promises";
-import { createServer } from "node:http";
+import {
+  createServer,
+  type IncomingMessage,
+  type ServerResponse,
+} from "node:http";
 import { tmpdir } from "node:os";
 import * as path from "node:path";
+import { Readable } from "node:stream";
 import { pathToFileURL } from "node:url";
 import { WebSocket } from "ws";
 import { createEditorRoutes, SOCKET_PATH } from "../../src/host/routes";
 import type { LumiereHost } from "../../src/host/start";
 import { TreeHub } from "../../src/host/trees";
+import { createViewRoutes } from "../../src/host/view-routes";
 
 /** A host with one panel, "p", whose page socket goes nowhere. */
 function fakeHost(): LumiereHost {
@@ -122,6 +128,12 @@ test("tree views are served as snapshots, clicks and visibility", async (t) => {
   );
   const post = (path: string, body: unknown) =>
     fetch(`${base}${path}`, { method: "POST", body: JSON.stringify(body) });
+  const postRaw = (path: string, body: string) =>
+    fetch(`${base}${path}`, {
+      method: "POST",
+      headers: { "content-type": "application/json" },
+      body,
+    });
   assert.equal(
     (await post("/lumiere.markdown.outline/run", { id: "h1" })).status,
     200,
@@ -143,7 +155,46 @@ test("tree views are served as snapshots, clicks and visibility", async (t) => {
     400,
   );
   assert.deepEqual(heard, [true]);
+  for (const body of [
+    "{",
+    "[]",
+    "null",
+    '"text"',
+    "42",
+    "",
+    JSON.stringify({ id: "x".repeat(4 * 1024) }),
+  ]) {
+    const response = await postRaw("/lumiere.markdown.outline/run", body);
+    assert.equal(response.status, 400, body.slice(0, 32));
+    assert.match(
+      response.headers.get("content-type") ?? "",
+      /^application\/json/,
+    );
+    assert.deepEqual(await response.json(), { error: "Invalid request body" });
+  }
+  const badViewId = await postRaw("/%C3%28/run", '{"id":"h1"}');
+  assert.equal(badViewId.status, 400);
+  assert.deepEqual(await badViewId.json(), { error: "Invalid view id" });
+  assert.deepEqual(ran, [["open", 3]]);
   assert.equal((await fetch(`${base}/unknown.view`)).status, 404);
+});
+
+test("a tree command failure is not reported as a bad body", async (t) => {
+  const trees = {
+    onEvent: () => () => {},
+    run: async () => {
+      throw new Error("command failed");
+    },
+  } as unknown as TreeHub;
+  const routes = createViewRoutes(trees);
+  t.after(() => routes.close());
+  const req = Object.assign(Readable.from([Buffer.from('{"id":"h1"}')]), {
+    method: "POST",
+  }) as unknown as IncomingMessage;
+  await assert.rejects(
+    routes.handle(req, {} as ServerResponse, "/view/run"),
+    /command failed/,
+  );
 });
 
 test("serving an editor page registers the workspace root before opening the panel", async (t) => {
