@@ -222,6 +222,7 @@ function post(body: string): RequestInit {
 test("DSH rejects writes to read-only routes before handling them", async (t) => {
   const { origin, editorQuery, opened, added } = await fixture(t);
   const readOnly = [
+    "",
     `/editor?${editorQuery}`,
     "/m/editor.js",
     "/page/shim.js",
