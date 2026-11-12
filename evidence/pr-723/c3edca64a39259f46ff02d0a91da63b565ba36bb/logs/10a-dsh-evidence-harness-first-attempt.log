@@ -1,0 +1,7 @@
+token exchange status=303; cookies=1; DSH_COOKIE passed directly to evidence consumer
+DSH_URL=http://127.0.0.1:64923
+DSH_COOKIE=<redacted> explicit environment value>
+PASS editor panel opened: panel=<redacted> workspace=<throwaway>
+Warning: Detected unsettled top-level await at file://<tmp>/lumia-pr723-final-45e97abc/dsh-upgrade-evidence.mjs:158
+const unauthenticated = await rejectedUpgrade(
+                        ^

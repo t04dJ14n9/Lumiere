@@ -1,0 +1,403 @@
+
+> lumiere@0.1.11 test:vscode <home>/Code/Lumia/.claude/worktrees/pr-723
+> pnpm build && playwright test -c test/vscode/playwright.config.ts && playwright test -c packages/pdf/test/vscode/playwright.config.ts
+
+
+> lumiere@0.1.11 build <home>/Code/Lumia/.claude/worktrees/pr-723
+> node scripts/build.mjs
+
+
+  dist/webview/elk-QONTBCTQ-RSAUS3IO.js                     3.3mb ⚠️
+  dist/webview/inline-transport-XJ7CZNEL.js                 1.8mb ⚠️
+  dist/webview/chunk-H2RCND4X.js                            1.1mb ⚠️
+  dist/webview/chunk-NWH65RPO.js                            1.1mb ⚠️
+  dist/webview/greek-7UUQHTSU.js                            1.0mb ⚠️
+  dist/webview/mathjax-ACB6IN6D.js                       1003.0kb
+  dist/webview/chunk-WCVSWSSS.js                          939.5kb
+  dist/webview/cyrillic-BILO6S7K.js                       701.2kb
+  dist/webview/monospace-ex-XGE2KUQA.js                   632.1kb
+  dist/webview/greek-ss-3J3JMWZS.js                       552.8kb
+  dist/webview/sans-serif-ex-66UIBC7J.js                  519.9kb
+  dist/webview/latin-i-TB2XKD2F.js                        491.6kb
+  dist/webview/katex-VCKP5YDG.js                          480.7kb
+  dist/webview/chunk-RBC4YO4F.js                          467.4kb
+  dist/webview/latin-bi-HLUGKNTJ.js                       457.1kb
+  dist/webview/architectureDiagram-ZHVYKT53-DDNVPFKI.js   417.6kb
+  dist/webview/monospace-l-R2JR3UWZ.js                    390.9kb
+  dist/webview/usecaseDiagram-WPOLBNNX-OGQFKXGZ.js        371.8kb
+  dist/webview/PUA-Y25RZA2M.js                            366.2kb
+  dist/webview/latin-EBNY6N3M.js                          362.6kb
+  ...and 1762 more output files...
+
+⚡ Done in 724ms
+
+  dist/webview/diff.js       466.1kb
+  dist/webview/diff.css        2.7kb
+  dist/webview/diff.js.map     1.1mb
+  dist/webview/diff.css.map    5.2kb
+
+⚡ Done in 21ms
+
+  dist/webview/graph.js             874.7kb
+  dist/webview/graph-layout.js        2.6kb
+  dist/webview/graph.css              1.2kb
+  dist/webview/graph.js.map           1.6mb
+  dist/webview/graph-layout.js.map    5.8kb
+  dist/webview/graph.css.map          2.0kb
+
+⚡ Done in 20ms
+
+  dist/workers/search.cjs      576.0kb
+  dist/workers/vault.cjs       548.8kb
+  dist/workers/search.cjs.map    1.1mb
+  dist/workers/vault.cjs.map     1.1mb
+
+⚡ Done in 21ms
+
+  dist/yaml-runtime.cjs      262.7kb
+  dist/yaml-runtime.cjs.map  452.5kb
+
+⚡ Done in 9ms
+
+  dist/bridge-stdio.js      329.6kb
+  dist/bridge-stdio.js.map  625.2kb
+
+⚡ Done in 99ms
+
+  dist/agent-bridge-server.js      1.4mb ⚠️
+  dist/agent-bridge-server.js.map  2.4mb
+
+⚡ Done in 132ms
+
+  dist/outline-engine.js      2.8mb ⚠️
+  dist/outline-engine.js.map  5.5mb
+
+⚡ Done in 168ms
+
+  dist/webview/viewer.js         7.9mb ⚠️
+  dist/webview/codicon.ttf     122.9kb
+  dist/webview/viewer.css       46.0kb
+  dist/webview/viewer.js.map    14.0mb
+  dist/webview/viewer.css.map   80.6kb
+
+⚡ Done in 217ms
+
+  dist/extension.js      1.6mb ⚠️
+  dist/extension.js.map  3.6mb
+
+⚡ Done in 63ms
+ WARNING  This extension consists of 867 files, out of which 845 are JavaScript files. For performance reasons, you should bundle your extension: https://aka.ms/vscode-bundle-extension. You should also exclude unnecessary files by adding them to your .vscodeignore: https://aka.ms/vscode-vscodeignore.
+
+ INFO  Files included in the VSIX:
+extension.vsix
+├─ [Content_Types].xml
+├─ extension.vsixmanifest
+└─ extension/
+   ├─ LICENSE.txt [1.04 KB]
+   ├─ THIRD_PARTY_NOTICES.md [554.92 KB]
+   ├─ changelog.md [6.27 KB]
+   ├─ package.json [147.06 KB]
+   ├─ readme.md [6.73 KB]
+   ├─ dist/
+   │  ├─ extension.js [1.55 MB]
+   │  ├─ markdown/
+   │  │  ├─ yaml-runtime.cjs [262.74 KB]
+   │  │  ├─ api/ (3 files) [13.94 KB]
+   │  │  ├─ webview/ (845 files) [38.86 MB]
+   │  │  └─ workers/ (2 files) [1.1 MB]
+   │  └─ pdf/
+   │     ├─ agent-bridge-server.js [1.4 MB]
+   │     ├─ bridge-stdio.js [329.55 KB]
+   │     ├─ outline-engine.js [2.78 MB]
+   │     └─ webview/ (4 files) [15.54 MB]
+   └─ media/
+      └─ icon.png [18.9 KB]
+
+=> Run vsce ls --tree to see all included files.
+
+ DONE  Packaged: /tmp/markdown-workshop-e2e-28c3bd32/extension.vsix (867 files, 17.87 MB)
+Testing Code 1.144.0 (/Applications/Visual Studio Code.app/Contents/MacOS/Code) with profile /tmp/markdown-workshop-e2e-28c3bd32
+
+Running 30 tests using 1 worker
+
+Native: closing all editors
+Native: opening fixture
+Native: waiting for Lumiere webview
+  ✓   1 test/vscode/core.spec.ts:9:5 › isolated installed editor types, saves and performs native document undo (3.1s)
+Native: closing all editors
+Native: opening fixture
+Native: waiting for Lumiere webview
+  ✓   2 test/vscode/core.spec.ts:31:5 › Ctrl/Cmd+A selects the whole note, so typing replaces it (2.0s)
+Native: closing all editors
+  ✓   3 test/vscode/daily-notes-templates.spec.ts:97:5 › Open Today's Daily Note creates and opens the note before any Lumiere editor exists (5.6s)
+Native: closing all editors
+Native: opening fixture
+Native: waiting for Lumiere webview
+  ✓   4 test/vscode/daily-notes-templates.spec.ts:143:5 › Insert Template replaces the selection and leaves the caret after the text (1.9s)
+Native: closing all editors
+Native: opening fixture
+Native: waiting for Lumiere webview
+  ✓   5 test/vscode/font-size.spec.ts:32:5 › lumiere.markdown.editor.fontSize sets the note's body size (16px by default, never editor.fontSize) and everything scales with it, live (2.8s)
+Native: closing all editors
+Native: opening fixture
+Native: waiting for Lumiere webview
+  ✓   6 test/vscode/font-stack.spec.ts:83:7 › note preserves explicit font settings and uses proportional defaults: none (5.4s)
+Native: closing all editors
+Native: opening fixture
+Native: waiting for Lumiere webview
+  ✓   7 test/vscode/font-stack.spec.ts:83:7 › note preserves explicit font settings and uses proportional defaults: global (5.6s)
+Native: closing all editors
+Native: opening fixture
+Native: waiting for Lumiere webview
+  ✓   8 test/vscode/font-stack.spec.ts:83:7 › note preserves explicit font settings and uses proportional defaults: markdown (5.5s)
+Native: closing all editors
+Native: opening fixture
+Native: waiting for Lumiere webview
+  ✓   9 test/vscode/font.spec.ts:84:5 › note text uses the same font settings as the built-in text editor for Markdown, except the size and line height (1.6s)
+Native: closing all editors
+Native: opening fixture
+Native: waiting for Lumiere webview
+  ✓  10 test/vscode/font.spec.ts:180:5 › the note's lines are the line height setting times the size (1.5 by default), and line numbers stay level (5.5s)
+Native: closing all editors
+Native: opening fixture
+Native: waiting for Lumiere webview
+Native: closing all editors
+Native: closing all editors
+Native: opening fixture
+Native: waiting for Lumiere webview
+Native: closing all editors
+  ✓  11 test/vscode/git-diff-editor.spec.ts:37:5 › rendered git diff: HEAD against the note, Source Control takeover, off (6.6s)
+Native: closing all editors
+Native: opening fixture
+Native: waiting for Lumiere webview
+Native: closing all editors
+  ✓  12 test/vscode/git-gutter.spec.ts:38:5 › git change bars: HEAD diff, rendered peek, revert, stage, commit, off (8.8s)
+Native: closing all editors
+Native: opening fixture
+Native: waiting for Lumiere webview
+Native: closing all editors
+  ✓  13 test/vscode/git-inline.spec.ts:25:5 › inline git changes: toggle, track changes, restore, waits for the bars (5.3s)
+Native: closing all editors
+Native: opening fixture
+Native: waiting for Lumiere webview
+  ✓  14 test/vscode/link-suggest.spec.ts:25:7 › typing [[ offers notes, and [[Note# offers its headings, Vim false (2.2s)
+Native: closing all editors
+Native: opening fixture
+Native: waiting for Lumiere webview
+  ✓  15 test/vscode/link-suggest.spec.ts:25:7 › typing [[ offers notes, and [[Note# offers its headings, Vim true (2.3s)
+Native: closing all editors
+Native: opening fixture
+Native: waiting for Lumiere webview
+  ✓  16 test/vscode/link-suggest.spec.ts:68:5 › typing [[ in VS Code's text editor offers notes and headings, and Enter writes the link (2.8s)
+Native: closing all editors
+Native: opening fixture
+Native: waiting for Lumiere webview
+Native: closing all editors
+  ✓  17 test/vscode/link-updates.spec.ts:48:5 › Always Update in the rename dialog updates the links, saves the mode, and the next rename does not ask (3.9s)
+Native: closing all editors
+  ✓  18 test/vscode/native-links.spec.ts:12:5 › built-in Cmd-click preserves heading fragments and native source caret on new and reused panes (2.3s)
+Native: closing all editors
+Native: opening fixture
+Native: waiting for Lumiere webview
+  ✓  19 test/vscode/outline-jump-top.spec.ts:88:5 › clicking a heading in the Markdown Outline puts it at the top of the editor, clamping at both ends of the note (2.4s)
+Native: closing all editors
+Native: opening fixture
+Native: waiting for Lumiere webview
+Native: closing all editors
+Native: opening fixture
+Native: waiting for Lumiere webview
+PERF {
+ "activation": "n/a",
+ "bundles": {
+  "extensionJs": 1627562,
+  "webviewEntryJs": 1652063,
+  "webviewAllJs": 32784422,
+  "webviewCss": 93424
+ },
+ "results": {
+  "small, cold": {
+   "firstPaintMs": 112,
+   "scriptStartMs": 67,
+   "readyMs": 95,
+   "pluginsMs": 108,
+   "keyMs": 191,
+   "heapMb": 30,
+   "domNodes": 565,
+   "scripts": [
+    {
+     "name": "editor.js",
+     "kb": 1613,
+     "ms": 24
+    },
+    {
+     "name": "chunk-SVKGCABD.js",
+     "kb": 272,
+     "ms": 11
+    },
+    {
+     "name": "webview-WOV5PR2O.js",
+     "kb": 131,
+     "ms": 18
+    },
+    {
+     "name": "webview-PY6A4CLF.js",
+     "kb": 130,
+     "ms": 17
+    },
+    {
+     "name": "webview-5JLOGRHC.js",
+     "kb": 124,
+     "ms": 9
+    },
+    {
+     "name": "code-highlight-V64OXAOA.js",
+     "kb": 84,
+     "ms": 17
+    },
+    {
+     "name": "dist-7HHHPENL.js",
+     "kb": 79,
+     "ms": 24
+    },
+    {
+     "name": "chunk-DX3TUNHU.js",
+     "kb": 55,
+     "ms": 5
+    }
+   ]
+  },
+  "16000 blocks": {
+   "firstPaintMs": 309,
+   "scriptStartMs": 240,
+   "readyMs": 288,
+   "pluginsMs": 305,
+   "keyMs": 113,
+   "heapMb": 49,
+   "domNodes": 647,
+   "scripts": [
+    {
+     "name": "editor.js",
+     "kb": 1613,
+     "ms": 31
+    },
+    {
+     "name": "chunk-SVKGCABD.js",
+     "kb": 272,
+     "ms": 11
+    },
+    {
+     "name": "webview-WOV5PR2O.js",
+     "kb": 131,
+     "ms": 22
+    },
+    {
+     "name": "webview-PY6A4CLF.js",
+     "kb": 130,
+     "ms": 11
+    },
+    {
+     "name": "webview-5JLOGRHC.js",
+     "kb": 124,
+     "ms": 10
+    },
+    {
+     "name": "code-highlight-V64OXAOA.js",
+     "kb": 84,
+     "ms": 10
+    },
+    {
+     "name": "dist-7HHHPENL.js",
+     "kb": 79,
+     "ms": 11
+    },
+    {
+     "name": "chunk-DX3TUNHU.js",
+     "kb": 55,
+     "ms": 18
+    }
+   ]
+  }
+ }
+}
+  ✓  20 test/vscode/perf.spec.ts:138:5 › load time: small and 16,000-block notes (3.4s)
+Native: closing all editors
+Native: opening fixture
+Native: waiting for Lumiere webview
+  ✓  21 test/vscode/properties-caret.spec.ts:49:5 › the caret never enters the Properties block in the real editor (as in Obsidian 1.14.4) (2.1s)
+Native: closing all editors
+Native: opening fixture
+Native: waiting for Lumiere webview
+Native: closing all editors
+  ✓  22 test/vscode/settings-commands.spec.ts:78:5 › Open Settings, and the commands for common settings read and write the Settings UI's own keys, live (14.2s)
+Native: closing all editors
+Native: opening fixture
+Native: waiting for Lumiere webview
+Native: closing all editors
+  ✘  23 test/vscode/settings-commands.spec.ts:280:5 › Change Setting… lists every setting by plugin and edits the picked one by its type, with the Settings UI's keys (10.8s)
+Native: closing all editors
+Native: opening fixture
+Native: waiting for Lumiere webview
+  ✓  24 test/vscode/tables.spec.ts:64:5 › tables in the real editor: a projected short or empty cell keeps its row height (2.9s)
+Native: closing all editors
+Native: opening fixture
+Native: waiting for Lumiere webview
+  ✓  25 test/vscode/tables.spec.ts:107:5 › tables in the real editor: typing, Tab, edge buttons, native undo and external edits (4.3s)
+Native: closing all editors
+Native: opening fixture
+Native: waiting for Lumiere webview
+  ✓  26 test/vscode/tables.spec.ts:169:5 › tables in the real editor: the add-row strip below and the add-column strip beside both exist, show under the pointer and work (2.1s)
+Native: closing all editors
+Native: opening fixture
+Native: waiting for Lumiere webview
+  ✓  27 test/vscode/tables.spec.ts:245:5 › line numbers in the real editor: a table gets one number level with its header, and the next number follows it directly (1.4s)
+Native: closing all editors
+Native: opening fixture
+Native: waiting for Lumiere webview
+  ✓  28 test/vscode/tables.spec.ts:274:5 › column handle copy reaches the native clipboard and pastes TSV into prose (1.6s)
+Native: closing all editors
+Native: opening fixture
+Native: waiting for Lumiere webview
+  ✓  29 test/vscode/vim-caret-vscodevim.spec.ts:98:5 › our Vim carets sit where VSCodeVim's do: same whole-pixel offset and size in every mode (5.9s)
+Native: closing all editors
+Native: opening fixture
+Native: waiting for Lumiere webview
+normal: built-in {"width":7,"height":24,"glyphPixels":63} (line 24) ours {"width":8,"height":24,"glyphPixels":27} (line 24) 188,190,191 96,95,96
+visual: built-in {"width":7,"height":24,"glyphPixels":63} (line 24) ours {"width":7,"height":24,"glyphPixels":25} (line 24) 188,190,191 105,112,117
+insert: built-in {"width":2,"height":24,"glyphPixels":44} (line 24) ours {"width":2,"height":24,"glyphPixels":0} (line 24) 188,190,191 188,190,191
+replace: built-in {"width":10,"height":2,"glyphPixels":0} (line 24) ours {"width":10,"height":2,"glyphPixels":0} (line 24) 188,190,191 188,190,191
+  ✓  30 test/vscode/vim-caret.spec.ts:277:5 › Vim carets match the built-in editor's block, line and underline in the real editor (3.5s)
+
+
+  1) test/vscode/settings-commands.spec.ts:280:5 › Change Setting… lists every setting by plugin and edits the picked one by its type, with the Settings UI's keys
+
+    Error: expect(received).toBe(expected) // Object.is equality
+
+    Expected: "Inbox"
+    Received: ""
+
+    Call Log:
+    - Timeout 5000ms exceeded while waiting on the predicate
+
+      378 |     await expect
+      379 |       .poll(() => userKeys()[key("files.newNoteFolder")])
+    > 380 |       .toBe("Inbox");
+          |        ^
+      381 |
+      382 |     // A list opens the Settings UI on that key; nothing is written.
+      383 |     await expect(page.locator(".quick-input-widget")).toBeHidden();
+        at <home>/Code/Lumia/.claude/worktrees/pr-723/test/vscode/settings-commands.spec.ts:380:8
+
+    Error Context: test-results/settings-commands-Change-S-e12e9-with-the-Settings-UI-s-keys/error-context.md
+
+    attachment #2: trace (application/zip) ─────────────────────────────────────────────────────────
+    test-results/settings-commands-Change-S-e12e9-with-the-Settings-UI-s-keys/trace.zip
+    Usage:
+
+        pnpm exec playwright show-trace test-results/settings-commands-Change-S-e12e9-with-the-Settings-UI-s-keys/trace.zip
+
+    ────────────────────────────────────────────────────────────────────────────────────────────────
+
+  1 failed
+    test/vscode/settings-commands.spec.ts:280:5 › Change Setting… lists every setting by plugin and edits the picked one by its type, with the Settings UI's keys
+  29 passed (2.3m)
+ ELIFECYCLE  Command failed with exit code 1.

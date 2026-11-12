@@ -1,0 +1,55 @@
+{
+  "run_id": 42974792511,
+  "head_sha": "23c05eab9a542c7320916ddcc15198e592bd2406",
+  "total_count": 6,
+  "jobs": [
+    {
+      "name": "browser",
+      "conclusion": "failure",
+      "started_at": "2026-11-11T06:46:34Z",
+      "completed_at": "2026-11-11T06:46:37Z",
+      "runner_id": 0,
+      "steps": 0
+    },
+    {
+      "name": "check",
+      "conclusion": "failure",
+      "started_at": "2026-11-11T06:46:34Z",
+      "completed_at": "2026-11-11T06:46:37Z",
+      "runner_id": 0,
+      "steps": 0
+    },
+    {
+      "name": "quality",
+      "conclusion": "failure",
+      "started_at": "2026-11-11T06:46:34Z",
+      "completed_at": "2026-11-11T06:46:37Z",
+      "runner_id": 0,
+      "steps": 0
+    },
+    {
+      "name": "package",
+      "conclusion": "failure",
+      "started_at": "2026-11-11T06:46:34Z",
+      "completed_at": "2026-11-11T06:46:37Z",
+      "runner_id": 0,
+      "steps": 0
+    },
+    {
+      "name": "secret-scan",
+      "conclusion": "failure",
+      "started_at": "2026-11-11T06:46:34Z",
+      "completed_at": "2026-11-11T06:46:37Z",
+      "runner_id": 0,
+      "steps": 0
+    },
+    {
+      "name": "audit (advisory)",
+      "conclusion": "failure",
+      "started_at": "2026-11-11T06:46:35Z",
+      "completed_at": "2026-11-11T06:46:37Z",
+      "runner_id": 0,
+      "steps": 0
+    }
+  ]
+}

@@ -1,0 +1,41 @@
+ WARNING  This extension consists of 867 files, out of which 845 are JavaScript files. For performance reasons, you should bundle your extension: https://aka.ms/vscode-bundle-extension. You should also exclude unnecessary files by adding them to your .vscodeignore: https://aka.ms/vscode-vscodeignore.
+
+ INFO  Files included in the VSIX:
+extension.vsix
+├─ [Content_Types].xml
+├─ extension.vsixmanifest
+└─ extension/
+   ├─ LICENSE.txt [1.04 KB]
+   ├─ THIRD_PARTY_NOTICES.md [554.92 KB]
+   ├─ changelog.md [6.27 KB]
+   ├─ package.json [147.06 KB]
+   ├─ readme.md [6.73 KB]
+   ├─ dist/
+   │  ├─ extension.js [1.55 MB]
+   │  ├─ markdown/
+   │  │  ├─ yaml-runtime.cjs [262.74 KB]
+   │  │  ├─ api/ (3 files) [13.94 KB]
+   │  │  ├─ webview/ (845 files) [38.86 MB]
+   │  │  └─ workers/ (2 files) [1.1 MB]
+   │  └─ pdf/
+   │     ├─ agent-bridge-server.js [1.4 MB]
+   │     ├─ bridge-stdio.js [329.55 KB]
+   │     ├─ outline-engine.js [2.78 MB]
+   │     └─ webview/ (4 files) [15.54 MB]
+   └─ media/
+      └─ icon.png [18.9 KB]
+
+=> Run vsce ls --tree to see all included files.
+
+ DONE  Packaged: /tmp/markdown-workshop-e2e-28c3bd32/extension.vsix (867 files, 17.87 MB)
+Testing Code 1.144.0 (/Applications/Visual Studio Code.app/Contents/MacOS/Code) with profile /tmp/markdown-workshop-e2e-28c3bd32
+
+Running 1 test using 1 worker
+
+Native: closing all editors
+Native: opening fixture
+Native: waiting for Lumiere webview
+Native: closing all editors
+  ✓  1 test/vscode/settings-commands.spec.ts:280:5 › Change Setting… lists every setting by plugin and edits the picked one by its type, with the Settings UI's keys (7.8s)
+
+  1 passed (17.2s)

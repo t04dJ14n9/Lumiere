@@ -1,0 +1,117 @@
+{
+  "pr": 723,
+  "source_head": "c3edca64a39259f46ff02d0a91da63b565ba36bb",
+  "source_local_branch": "local/pr-723-c3edca64",
+  "base_head": "b8c4acb1d716e757774d966f13686b98e8dbcdb0",
+  "evidence_branch": "review/pr-723-evidence-c3edca64",
+  "evidence_branch_base": "f1c153d51df481ec493800ca491544d56b7df66b",
+  "publication": "local-only; no push or PR ready action in this run",
+  "diff_files": [
+    "packages/dsh/src/host/routes.ts",
+    "packages/dsh/test/unit/upgrade-status.test.ts"
+  ],
+  "commits": [
+    "9572fcc0 fix(dsh): answer rejected WebSocket upgrades with an HTTP status",
+    "c8b97d83 test(dsh): pin rejected WebSocket upgrades to an HTTP status line",
+    "45e97abc fix(dsh): close rejected upgrade sockets after the HTTP status",
+    "c3edca64 fix(dsh): type raw upgrade test chunks for Node 26"
+  ],
+  "install": {
+    "command": "pnpm install --frozen-lockfile",
+    "result": "pass",
+    "warnings": [
+      "two app bin links pointed at packages/app/dist/app/server.js before that file was built",
+      "pnpm ignored the @vscode/vsce-sign build script"
+    ]
+  },
+  "gates": {
+    "environment": [
+      "MARKDOWN_WORKBENCH_TEST_CONCURRENCY=1",
+      "WORKSHOP_TEST_CONCURRENCY=1"
+    ],
+    "pnpm_check": {
+      "result": "pass after final source change",
+      "initial_failure": "Node 26 net.Socket data chunk type in DSH test; fixed in c3edca64",
+      "log": "logs/02-pnpm-check-after-fix.log"
+    },
+    "pnpm_test_browser": {
+      "result": "pass",
+      "markdown_specs_passed": 462,
+      "pdf_specs_passed": 195,
+      "failed": 0,
+      "flaky": 0,
+      "log": "logs/03-pnpm-test-browser.log"
+    },
+    "pnpm_test_quality": {
+      "result": "pass",
+      "playwright_specs_passed": 9,
+      "large_vault_unit_passed": 1,
+      "log": "logs/04-pnpm-test-quality.log"
+    },
+    "pnpm_test_vscode": {
+      "result": "pass on full rerun",
+      "markdown_specs_passed": 30,
+      "pdf_specs_passed": 26,
+      "pdf_specs_skipped": 2,
+      "initial_failure": "settings-commands.spec.ts timeout; isolated rerun passed 1/1; full rerun green",
+      "log": "logs/07-pnpm-test-vscode-rerun.log"
+    },
+    "order_after_final_source_change": [
+      "pnpm check",
+      "pnpm test:browser",
+      "pnpm test:quality",
+      "pnpm test:vscode"
+    ]
+  },
+  "dsh": {
+    "version": "0.2.1-rc.2",
+    "bundle_build": "pnpm --filter @workshop/dsh build",
+    "home": "<throwaway DSH_HOME; deleted after server stop>",
+    "workspace": "<throwaway workspace; deleted after server stop>",
+    "url": "http://127.0.0.1:54129",
+    "cookie": "<redacted; explicit DSH_COOKIE passed in memory to the evidence consumer>",
+    "checks_passed": 5,
+    "results": [
+      "editor panel opened",
+      "401 Unauthorized with Content-Length: 0, server FIN and no DSH socket",
+      "403 Forbidden with Content-Length: 0, server FIN and no DSH socket",
+      "404 Not Found with Content-Length: 0, server FIN and no DSH socket",
+      "101 Switching Protocols with no DSH 404 and DSH socket stayed open"
+    ],
+    "log": "logs/10-dsh-upgrade-evidence.log"
+  },
+  "actions": {
+    "exact_final_head_runs": 0,
+    "reason": "publication local-only",
+    "previous_empty_runner_run": 42974792511,
+    "previous_head": "23c05eab9a542c7320916ddcc15198e592bd2406",
+    "job_count": 6,
+    "conclusion": "all failure",
+    "runner_id": 0,
+    "steps": 0,
+    "details": "actions-empty-runner.json"
+  },
+  "redaction": [
+    "local user paths replaced with <home>/",
+    "startup tokens, cookies, Set-Cookie/Cookie values and panel ids redacted",
+    "throwaway DSH profile deleted",
+    "redacted log hashes in log-sha256.txt"
+  ],
+  "evidence_files": [
+    "git-log.txt",
+    "bundle-sha256.txt",
+    "actions-empty-runner.json",
+    "log-sha256.txt",
+    "logs/01-pnpm-check.log",
+    "logs/02-pnpm-check-after-fix.log",
+    "logs/03-pnpm-test-browser.log",
+    "logs/04-pnpm-test-quality.log",
+    "logs/05-pnpm-test-vscode.log",
+    "logs/06-vscode-settings-flake-rerun.log",
+    "logs/07-pnpm-test-vscode-rerun.log",
+    "logs/08-dsh-bundle-build.log",
+    "logs/09-dsh-web.log",
+    "logs/10a-dsh-evidence-harness-first-attempt.log",
+    "logs/10-dsh-upgrade-evidence.log"
+  ]
+}

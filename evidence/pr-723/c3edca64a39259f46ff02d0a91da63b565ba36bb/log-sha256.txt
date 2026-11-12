@@ -1,0 +1,11 @@
+a51fbc05a0dc867184af719e6e54e3e141f501f32c0de788d07ff34e44eeb0c7  logs/01-pnpm-check.log
+d381e826819c2b59f890e9d337b456e09e81332b83dae6e1013f08a8b983c225  logs/02-pnpm-check-after-fix.log
+347b03645811a92e66d4a1eb71860ab2275fdbbd8c0c86988a42811925efc7e6  logs/03-pnpm-test-browser.log
+072c844da799e2f2df40f4f5aa5a9374fa37076914fd5a08ed278fa8afd81e68  logs/04-pnpm-test-quality.log
+378dc44980f5cb4df71df26f03080c59cd59b070b8f712b275501594bdb1f393  logs/05-pnpm-test-vscode.log
+5a75303cbbbf323af59b1d713c054dbffa993c203d0b8ebf0e7c0fc4dcce7ceb  logs/06-vscode-settings-flake-rerun.log
+e722bda252c257841360d48d865160e08559faeb8a1d8c384fd737dff0480f14  logs/07-pnpm-test-vscode-rerun.log
+c48516704d85afaf7ae0c2eecfeab77ea1f34a66d1f3fe4d41bc65953ff3321c  logs/08-dsh-bundle-build.log
+08cc31a524de5bb03499e327470c7fcb24ae68b46188bc8fea2dc59d8200dd18  logs/09-dsh-web.log
+c66f7492caf1ade95e2d7c244deeae77661b9477399522753b3a1b33e92ff6b9  logs/10a-dsh-evidence-harness-first-attempt.log
+869299898ba2616228137d9b18b1ebe3add8fedfeb39c15ec8b39bf4da79e338  logs/10-dsh-upgrade-evidence.log

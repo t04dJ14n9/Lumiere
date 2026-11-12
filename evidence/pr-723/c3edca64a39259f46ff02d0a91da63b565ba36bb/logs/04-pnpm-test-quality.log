@@ -1,0 +1,83 @@
+
+> lumiere@0.1.11 test:quality <home>/Code/Lumia/.claude/worktrees/pr-723
+> pnpm --filter @workshop/markdown test:quality
+
+
+> @workshop/markdown@0.0.0 test:quality <home>/Code/Lumia/.claude/worktrees/pr-723/packages/markdown
+> node scripts/build.mjs && playwright test -c test/quality/playwright.config.ts && tsx --test test/quality/large-vault.test.ts
+
+
+  dist/webview/elk-QONTBCTQ-RSAUS3IO.js                     3.3mb ⚠️
+  dist/webview/inline-transport-XJ7CZNEL.js                 1.8mb ⚠️
+  dist/webview/chunk-H2RCND4X.js                            1.1mb ⚠️
+  dist/webview/chunk-NWH65RPO.js                            1.1mb ⚠️
+  dist/webview/greek-7UUQHTSU.js                            1.0mb ⚠️
+  dist/webview/mathjax-ACB6IN6D.js                       1003.0kb
+  dist/webview/chunk-WCVSWSSS.js                          939.5kb
+  dist/webview/cyrillic-BILO6S7K.js                       701.2kb
+  dist/webview/monospace-ex-XGE2KUQA.js                   632.1kb
+  dist/webview/greek-ss-3J3JMWZS.js                       552.8kb
+  dist/webview/sans-serif-ex-66UIBC7J.js                  519.9kb
+  dist/webview/latin-i-TB2XKD2F.js                        491.6kb
+  dist/webview/katex-VCKP5YDG.js                          480.7kb
+  dist/webview/chunk-RBC4YO4F.js                          467.4kb
+  dist/webview/latin-bi-HLUGKNTJ.js                       457.1kb
+  dist/webview/architectureDiagram-ZHVYKT53-DDNVPFKI.js   417.6kb
+  dist/webview/monospace-l-R2JR3UWZ.js                    390.9kb
+  dist/webview/usecaseDiagram-WPOLBNNX-OGQFKXGZ.js        371.8kb
+  dist/webview/PUA-Y25RZA2M.js                            366.2kb
+  dist/webview/latin-EBNY6N3M.js                          362.6kb
+  ...and 1762 more output files...
+
+⚡ Done in 754ms
+
+  dist/webview/diff.js       466.1kb
+  dist/webview/diff.css        2.7kb
+  dist/webview/diff.js.map     1.1mb
+  dist/webview/diff.css.map    5.2kb
+
+⚡ Done in 21ms
+
+  dist/webview/graph.js             874.7kb
+  dist/webview/graph-layout.js        2.6kb
+  dist/webview/graph.css              1.2kb
+  dist/webview/graph.js.map           1.6mb
+  dist/webview/graph-layout.js.map    5.8kb
+  dist/webview/graph.css.map          2.0kb
+
+⚡ Done in 22ms
+
+  dist/workers/search.cjs      576.0kb
+  dist/workers/vault.cjs       548.8kb
+  dist/workers/search.cjs.map    1.1mb
+  dist/workers/vault.cjs.map     1.1mb
+
+⚡ Done in 43ms
+
+  dist/yaml-runtime.cjs      262.7kb
+  dist/yaml-runtime.cjs.map  452.5kb
+
+⚡ Done in 12ms
+
+Running 9 tests using 1 worker
+
+  ✓  1 test/quality/open.quality.ts:23:7 › a small note paints soon after it opens (1.0s)
+  ✓  2 test/quality/open.quality.ts:23:7 › a large note paints soon after it opens (1.0s)
+  ✓  3 test/quality/open.quality.ts:23:7 › a diagrams note paints soon after it opens (1.2s)
+  ✓  4 test/quality/open.quality.ts:42:5 › a note's first screen is on screen before the editor starts (968ms)
+  ✓  5 test/quality/open.quality.ts:118:5 › a note with 100 properties loads its features and flushes quickly (1.2s)
+  ✓  6 test/quality/scroll.quality.ts:95:5 › no wheel or touch listener makes scrolling wait for the page (1.8s)
+  ✓  7 test/quality/scroll.quality.ts:107:5 › text holds still while diagrams, formulas and tables render (20.9s)
+  ✓  8 test/quality/scroll.quality.ts:163:5 › a flick straight after opening keeps frames short (6.1s)
+  ✓  9 test/quality/scroll.quality.ts:192:5 › scrolling through a 1 MB note runs no long task (3.5s)
+
+  9 passed (38.6s)
+✔ a large vault: notes open quickly, and vault changes stay cheap (658.068292ms)
+ℹ tests 1
+ℹ suites 0
+ℹ pass 1
+ℹ fail 0
+ℹ cancelled 0
+ℹ skipped 0
+ℹ todo 0
+ℹ duration_ms 1056.490541

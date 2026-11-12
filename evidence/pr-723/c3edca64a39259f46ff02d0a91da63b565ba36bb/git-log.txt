@@ -1,0 +1,4 @@
+c3edca64a39259f46ff02d0a91da63b565ba36bb fix(dsh): type raw upgrade test chunks for Node 26
+45e97abcb113a644c0cff2af9e529cf177cda075 fix(dsh): close rejected upgrade sockets after the HTTP status
+c8b97d837aa1c617c048d862a015b93e51968135 test(dsh): pin rejected WebSocket upgrades to an HTTP status line
+9572fcc0b6693158aeedffd812758acb40e74318 fix(dsh): answer rejected WebSocket upgrades with an HTTP status

@@ -1,0 +1,9 @@
+token exchange status=303; cookies=1; DSH_COOKIE passed directly to evidence consumer
+DSH_URL=http://127.0.0.1:54129
+DSH_COOKIE=<redacted> explicit environment value>
+PASS editor panel opened: panel=<redacted> workspace=<throwaway>
+PASS 401 rejection: HTTP/1.1 401 Unauthorized; Content-Length: 0; server FIN and no DSH socket
+PASS 403 rejection: HTTP/1.1 403 Forbidden; Content-Length: 0; server FIN and no DSH socket
+PASS 404 rejection: HTTP/1.1 404 Not Found; Content-Length: 0; server FIN and no DSH socket
+PASS 101 accepted: HTTP/1.1 101 Switching Protocols; no DSH 404; DSH socket stayed open
+DSH evidence: 5 checks passed; DSH_COOKIE=<redacted>

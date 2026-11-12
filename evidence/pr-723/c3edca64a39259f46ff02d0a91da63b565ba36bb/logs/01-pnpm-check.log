@@ -1,0 +1,47 @@
+
+> lumiere@0.1.11 check <home>/Code/Lumia/.claude/worktrees/pr-723
+> pnpm format:check && pnpm lint && pnpm typecheck && pnpm test && pnpm contributions --check
+
+
+> lumiere@0.1.11 format:check <home>/Code/Lumia/.claude/worktrees/pr-723
+> prettier --check .
+
+Checking formatting...
+All matched files use Prettier code style!
+
+> lumiere@0.1.11 lint <home>/Code/Lumia/.claude/worktrees/pr-723
+> eslint . --max-warnings=0
+
+
+> lumiere@0.1.11 typecheck <home>/Code/Lumia/.claude/worktrees/pr-723
+> tsc -p tsconfig.json && tsc -p test && tsc -p packages/core && tsc -p packages/agents && tsc -p packages/agents/test && pnpm --filter @workshop/markdown typecheck && pnpm --filter @workshop/pdf typecheck && pnpm --filter @workshop/host-node typecheck && pnpm --filter @workshop/host-web typecheck && pnpm --filter @workshop/dsh typecheck && pnpm --filter @workshop/app typecheck && pnpm --filter @workshop/web typecheck && pnpm --filter @workshop/ink typecheck && pnpm --filter @workshop/ipad typecheck
+
+
+> @workshop/markdown@0.0.0 typecheck <home>/Code/Lumia/.claude/worktrees/pr-723/packages/markdown
+> tsc -p tsconfig.json && tsc -p src/host && tsc -p src/webview && tsc -p src/plugins/tsconfig.host.json && tsc -p src/plugins/tsconfig.webview.json && tsc -p src/workers && tsc -p src/workers/tsconfig.web.json && tsc -p test
+
+
+> @workshop/pdf@0.0.0 typecheck <home>/Code/Lumia/.claude/worktrees/pr-723/packages/pdf
+> tsc -p tsconfig.json && tsc -p src/host && tsc -p src/extension && tsc -p src/bridge-stdio && tsc -p src/webview && tsc -p src/engine-worker && tsc -p test
+
+
+> @workshop/host-node@0.0.0 typecheck <home>/Code/Lumia/.claude/worktrees/pr-723/packages/host-node
+> tsc -p src/host && tsc -p src/page && tsc -p test
+
+
+> @workshop/host-web@0.0.0 typecheck <home>/Code/Lumia/.claude/worktrees/pr-723/packages/host-web
+> tsc -p tsconfig.json && tsc -p test
+
+
+> @workshop/dsh@0.0.0 typecheck <home>/Code/Lumia/.claude/worktrees/pr-723/packages/dsh
+> tsc -p src/host && tsc -p src/client && tsc -p test
+
+test/unit/upgrade-status.test.ts(127,19): error TS2345: Argument of type 'string | NonSharedBuffer' is not assignable to parameter of type 'Buffer<ArrayBufferLike>'.
+  Type 'string' is not assignable to type 'Buffer<ArrayBufferLike>'.
+test/unit/upgrade-status.test.ts(178,19): error TS2345: Argument of type 'string | NonSharedBuffer' is not assignable to parameter of type 'Buffer<ArrayBufferLike>'.
+  Type 'string' is not assignable to type 'Buffer<ArrayBufferLike>'.
+<home>/Code/Lumia/.claude/worktrees/pr-723/packages/dsh:
+ ERR_PNPM_RECURSIVE_RUN_FIRST_FAIL  @workshop/dsh@0.0.0 typecheck: `tsc -p src/host && tsc -p src/client && tsc -p test`
+Exit status 2
+ ELIFECYCLE  Command failed with exit code 2.
+ ELIFECYCLE  Command failed with exit code 2.
