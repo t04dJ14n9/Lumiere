@@ -31,6 +31,8 @@ async function servingStatic(t: test.TestContext, base: string): Promise<string>
 
 type BundleFixture = {
   bundle: string;
+  rootLink: string;
+  secret: string;
   missingRoot: string;
   symlinkOk: boolean;
 };
@@ -40,18 +42,30 @@ async function bundleFixture(t: test.TestContext): Promise<BundleFixture> {
   t.after(() => rm(dir, { recursive: true, force: true }));
   const bundle = path.join(dir, "bundle");
   const outside = path.join(dir, "outside");
+  const prefixOutside = path.join(dir, "bundle-outside");
+  const secret = path.join(outside, "secret.js");
+  const rootLink = path.join(dir, "root-link");
   await mkdir(bundle);
   await mkdir(outside);
+  await mkdir(prefixOutside);
   await writeFile(path.join(bundle, "inside.js"), INSIDE_BODY);
-  await writeFile(path.join(outside, "secret.js"), OUTSIDE_MARKER);
+  await writeFile(secret, OUTSIDE_MARKER);
+  await writeFile(path.join(prefixOutside, "secret.js"), OUTSIDE_MARKER);
   let symlinkOk = true;
   try {
     await symlink("inside.js", path.join(bundle, "alias.js"));
-    await symlink(path.join(outside, "secret.js"), path.join(bundle, "escape.js"));
+    await symlink(secret, path.join(bundle, "escape.js"));
+    await symlink(
+      path.join(prefixOutside, "secret.js"),
+      path.join(bundle, "prefix.js"),
+    );
     await symlink(
       path.join(outside, "missing.js"),
       path.join(bundle, "dangling.js"),
     );
+    if (process.platform !== "win32") {
+      await symlink(path.parse(dir).root, rootLink);
+    }
   } catch (error) {
     const code = (error as NodeJS.ErrnoException).code;
     if (code === "ENOTSUP" || code === "EPERM") {
@@ -60,7 +74,13 @@ async function bundleFixture(t: test.TestContext): Promise<BundleFixture> {
       throw error;
     }
   }
-  return { bundle, missingRoot: path.join(dir, "no-such-root"), symlinkOk };
+  return {
+    bundle,
+    rootLink,
+    secret,
+    missingRoot: path.join(dir, "no-such-root"),
+    symlinkOk,
+  };
 }
 
 test("a file is served whole with its content type", async (t) => {
@@ -120,6 +140,51 @@ test("serveStatic refuses a durable outside symlink without leaking bytes", asyn
   const body = await response.text();
   assert.equal(response.status, 403);
   assert.equal(body.includes(OUTSIDE_MARKER), false);
+});
+
+test("serveStatic refuses a symlink into a sibling with the root's prefix", async (t) => {
+  const { bundle, symlinkOk } = await bundleFixture(t);
+  if (!symlinkOk) {
+    t.skip("creating symlinks is not supported on this platform");
+    return;
+  }
+  const response = await fetch(`${await servingStatic(t, bundle)}prefix.js`);
+  const body = await response.text();
+  assert.equal(response.status, 403);
+  assert.equal(body.includes(OUTSIDE_MARKER), false);
+});
+
+test("serveStatic refuses a missing path that becomes an outside symlink", async (t) => {
+  const { bundle, secret, symlinkOk } = await bundleFixture(t);
+  if (!symlinkOk) {
+    t.skip("creating symlinks is not supported on this platform");
+    return;
+  }
+  const url = await servingStatic(t, bundle);
+  const missing = await fetch(`${url}late.js`);
+  assert.equal(missing.status, 404);
+  await missing.text();
+  await symlink(secret, path.join(bundle, "late.js"));
+  const response = await fetch(`${url}late.js`);
+  const body = await response.text();
+  assert.equal(response.status, 403);
+  assert.equal(body.includes(OUTSIDE_MARKER), false);
+});
+
+test("serveStatic refuses a root that resolves to the filesystem root", async (t) => {
+  if (process.platform === "win32") {
+    t.skip("a junction to a drive root needs privileges on Windows");
+    return;
+  }
+  const { rootLink, symlinkOk } = await bundleFixture(t);
+  if (!symlinkOk) {
+    t.skip("creating symlinks is not supported on this platform");
+    return;
+  }
+  const response = await fetch(`${await servingStatic(t, rootLink)}etc/hosts`);
+  const body = await response.text();
+  assert.equal(response.status, 403);
+  assert.equal(body, "");
 });
 
 test("serveStatic returns 404 for a missing contained path", async (t) => {
