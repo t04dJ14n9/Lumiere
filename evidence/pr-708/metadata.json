@@ -1,0 +1,17 @@
+{
+  "pr": 708,
+  "head": "138526f268e073427a61d06f79f916d2f5eab782",
+  "base": "origin/main f1c153d51df481ec493800ca491544d56b7df66b",
+  "integrationBranch": "review/integration-editor-2026-11-12",
+  "integrationHead": "20f82e0e3709c5aa054258de72a1c1692e10c24c",
+  "integrationEvidence": "review/pr-integration-editor-evidence-20f82e0e/evidence/pr-integration-editor",
+  "verification": {
+    "install": "pass",
+    "check": "pass (format, lint, typecheck, all unit tests, contributions)",
+    "browser": "473 Markdown + 195 PDF specs passed",
+    "quality": "9 Playwright budgets + 1 large-vault unit passed",
+    "vscode": "30 root + 26 PDF specs passed, 2 skipped"
+  },
+  "notes": [],
+  "redaction": "No cookies, tokens, panel ids, or personal data. Only local worktree paths appear in logs."
+}
