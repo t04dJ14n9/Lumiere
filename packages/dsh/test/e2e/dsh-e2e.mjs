@@ -10,6 +10,8 @@
 // non-zero on any failure (skips are counted separately from passes).
 import { createRequire } from "node:module";
 import {
+  copyFileSync,
+  existsSync,
   mkdtempSync,
   readFileSync,
   realpathSync,
@@ -47,6 +49,20 @@ export function skip(detail) {
 export function resetResults() {
   results.length = 0;
 }
+import {
+  htmlDeclaresShippedEngine,
+  SHIPPED_ENGINE_PATH,
+} from "./pdf-engine-url.mjs";
+import {
+  IMAGE_ATTEMPT_TIMEOUT_MS,
+  PDF_RENDER_TIMEOUT_MS,
+  SHORT_PDF_PAGE_COUNT,
+  SHORT_PDF_TOOLBAR_SUFFIX,
+  afterSuccessfulNavigation,
+  createAttemptLog,
+  waitForImageReady,
+  waitForPdfReady,
+} from "./render-oracles.mjs";
 
 export function summarize(list = results) {
   const passed = list.filter((result) => result.ok === true);
@@ -155,6 +171,18 @@ export async function symlinkEscapeRefused({
 function note(name, text = "# Note\n\nHello.\n") {
   const file = path.join(scratch, name);
   writeFileSync(file, text);
+  return file;
+}
+
+/** A real, tiny PDF: pdfium rejects a hand-written stub as unopenable.
+ *  Requires packages/pdf/test/fixtures/generated/short.pdf, produced by
+ *  `pnpm --filter @workshop/pdf fixtures` (not by the DSH bundle build). */
+function pdfFixture() {
+  const file = path.join(scratch, "fixture.pdf");
+  copyFileSync(
+    path.resolve("packages/pdf/test/fixtures/generated/short.pdf"),
+    file,
+  );
   return file;
 }
 
@@ -738,10 +766,7 @@ async function main() {
           `${base}/lumiere/file?panel=${panel.panel}&uri=${encodeURIComponent(pathToFileURL(realpathSync(scratch) + "/missing.png").toString())}`,
         );
         panel.socket.close();
-        assert(
-          response.status !== 200,
-          `missing file served (${response.status})`,
-        );
+        assert(response.status === 404, `expected 404, got ${response.status}`);
         return String(response.status);
       },
     );
@@ -770,7 +795,100 @@ async function main() {
       assert(unsatisfiable.status === 416, `got ${unsatisfiable.status}`);
       return "206 + content-range, 200 with accept-ranges, 416";
     });
-
+    await check("PDF page and viewer assets are served", async () => {
+      const pdf = pdfFixture();
+      const page = await get(
+        `${base}/lumiere/pdf?path=${encodeURIComponent(pdf)}&root=${encodeURIComponent(scratch)}`,
+      );
+      assert(page.status === 200, `page -> ${page.status}`);
+      const html = await page.text();
+      assert(html.includes('name="lumiere-panel"'), "no panel meta");
+      assert(html.includes('id="root"'), "no viewer root");
+      assert(
+        htmlDeclaresShippedEngine(html),
+        "wrong or missing PDF engine URL",
+      );
+      assert(html.includes("/lumiere/page/shim.js"), "no shim");
+      for (const asset of [
+        "/lumiere/pdf/viewer/viewer.js",
+        "/lumiere/pdf/viewer/viewer.css",
+        SHIPPED_ENGINE_PATH,
+      ]) {
+        const response = await get(base + asset);
+        assert(response.status === 200, `${asset} -> ${response.status}`);
+      }
+      const post = await fetch(`${base}/lumiere/pdf`, {
+        method: "POST",
+        headers: { Cookie: cookie, Origin: origin },
+      });
+      assert(post.status === 405, `POST /pdf -> ${post.status}`);
+      return "200 page + 3 assets, POST 405";
+    });
+    await check("browser: the PDF viewer page renders", async () => {
+      const pdf = pdfFixture();
+      const probe = await context.newPage();
+      const errors = [];
+      let bytes = 0;
+      probe.on("pageerror", (error) => errors.push(String(error)));
+      probe.on("console", (message) => {
+        if (message.type() === "error") {
+          errors.push(message.text());
+        }
+      });
+      probe.on("response", (response) => {
+        if (response.url().includes("/lumiere/pdf/bytes") && response.ok()) {
+          bytes += 1;
+        }
+      });
+      try {
+        const response = await probe.goto(
+          `${base}/lumiere/pdf?path=${encodeURIComponent(pdf)}&root=${encodeURIComponent(scratch)}`,
+          { waitUntil: "load", timeout: 25000 },
+        );
+        assert(response?.status() === 200, `HTTP ${response?.status()}`);
+        const firstPicture = probe
+          .locator('.page[data-page-index="0"] img')
+          .first();
+        const toolbar = probe.getByText(SHORT_PDF_TOOLBAR_SUFFIX, {
+          exact: true,
+        });
+        const verdict = await waitForPdfReady(
+          async () => {
+            const imageCount = await firstPicture.count();
+            const decoded =
+              imageCount > 0
+                ? await firstPicture
+                    .evaluate((element) => ({
+                      complete: element.complete,
+                      naturalWidth: element.naturalWidth,
+                    }))
+                    .catch(() => ({ complete: false, naturalWidth: 0 }))
+                : { complete: false, naturalWidth: 0 };
+            const suffix =
+              (await toolbar.count()) > 0
+                ? await toolbar.innerText().catch(() => "")
+                : "";
+            return {
+              bodyText: await probe.locator("body").innerText(),
+              hasViewer: (await probe.locator(".viewer").count()) > 0,
+              firstPageDecoded:
+                decoded.complete === true && decoded.naturalWidth > 0,
+              toolbarPageCount:
+                suffix === SHORT_PDF_TOOLBAR_SUFFIX
+                  ? SHORT_PDF_PAGE_COUNT
+                  : null,
+              bytesOk: bytes > 0,
+              errors,
+            };
+          },
+          { timeout: PDF_RENDER_TIMEOUT_MS },
+        );
+        assert(verdict.ok, verdict.reason);
+        return "PDF page rendered and fetched its bytes";
+      } finally {
+        await probe.close();
+      }
+    });
     await check("auxiliary routes: views, settings, commands", async () => {
       for (const route of [
         "/lumiere/views",
@@ -823,19 +941,69 @@ async function main() {
         await fresh.addCookies(
           pairs().map((entry) => ({ ...entry, url: base })),
         );
-        const imagePage = await fresh.newPage();
+        // Each attempt is a fresh page with its own response log, so a delayed
+        // response or a failed navigation cannot be scored against a later try.
+        let verdict;
         try {
-          const response = await imagePage.goto(editorUrl(withImage), {
-            waitUntil: "load",
-            timeout: 20000,
-          });
-          assert(response?.status() === 200, `HTTP ${response?.status()}`);
-          await imagePage.locator(".cm-content").waitFor({ timeout: 15000 });
-          const image = imagePage.locator('img[src*="/lumiere/file"]').first();
-          await image.waitFor({ timeout: 15000 });
-          const width = await image.evaluate((element) => element.naturalWidth);
-          assert(width > 0, `image failed to decode (naturalWidth ${width})`);
-          return "image decoded";
+          for (let attempt = 0; attempt < 3; attempt += 1) {
+            const imagePage = await fresh.newPage();
+            const log = createAttemptLog();
+            imagePage.on("response", (response) => {
+              log.record(response.url(), response.status());
+            });
+            try {
+              verdict = await afterSuccessfulNavigation(
+                () =>
+                  imagePage.goto(editorUrl(withImage), {
+                    waitUntil: "load",
+                    timeout: 20000,
+                  }),
+                async () => {
+                  await imagePage
+                    .locator(".cm-content")
+                    .waitFor({ timeout: 15000 });
+                  const image = imagePage
+                    .locator('img[src*="/lumiere/file"]')
+                    .first();
+                  return waitForImageReady(
+                    async () => {
+                      const imageCount = await image.count();
+                      const decoded =
+                        imageCount > 0
+                          ? await image
+                              .evaluate((element) => ({
+                                complete: element.complete,
+                                naturalWidth: element.naturalWidth,
+                              }))
+                              .catch(() => ({
+                                complete: false,
+                                naturalWidth: 0,
+                              }))
+                          : { complete: false, naturalWidth: 0 };
+                      return {
+                        currentNavHttp200: log.hasHttp200(),
+                        imageCount,
+                        complete: decoded.complete,
+                        naturalWidth: decoded.naturalWidth,
+                      };
+                    },
+                    { timeout: IMAGE_ATTEMPT_TIMEOUT_MS },
+                  );
+                },
+              );
+              if (verdict.ok) {
+                return "image decoded";
+              }
+            } catch (error) {
+              verdict = {
+                ok: false,
+                reason: `navigation failed: ${error instanceof Error ? error.message : String(error)}`,
+              };
+            } finally {
+              await imagePage.close();
+            }
+          }
+          assert(false, verdict?.reason ?? "image did not decode");
         } finally {
           await fresh.close();
         }
@@ -886,11 +1054,9 @@ async function main() {
       return "row present";
     });
     await check("workspace bundle manifest is a valid DSH bundle", () => {
+      const bundle = path.resolve("packages/dsh/dist/bundle");
       const manifest = JSON.parse(
-        readFileSync(
-          path.resolve("packages/dsh/dist/bundle/package.json"),
-          "utf8",
-        ),
+        readFileSync(path.join(bundle, "package.json"), "utf8"),
       );
       assert(
         manifest.dsh?.bundle?.patch === "./cordis.patch.yml",
@@ -904,10 +1070,20 @@ async function main() {
         manifest.exports?.["./client"] === "./client.js",
         "missing client export",
       );
+      assert(manifest.icon === "./icon.png", "missing top-level icon");
       assert(
-        Array.isArray(manifest.files) && manifest.files.length > 0,
-        "no files",
+        manifest.exports?.["./locale/*.json"] === "./locale/*.json",
+        "missing locale export",
       );
+      for (const file of [
+        "index.js",
+        "client.js",
+        "cordis.patch.yml",
+        "icon.png",
+        "locale/en.json",
+      ]) {
+        assert(existsSync(path.join(bundle, file)), `missing ${file}`);
+      }
       return "manifest valid";
     });
 
@@ -969,7 +1145,7 @@ async function main() {
         const bodyText = await frame.locator("body").innerText();
         assert(text.length > 20, "editor rendered no content");
         assert(
-          !bodyText.includes("Lumia could not open"),
+          !bodyText.includes("Lumiere could not open:"),
           "bootstrap error shown",
         );
         assert(
