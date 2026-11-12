@@ -1,0 +1,35 @@
+{
+  "integrationBranch": "review/integration-editor-2026-11-12",
+  "integrationHead": "20f82e0e3709c5aa054258de72a1c1692e10c24c",
+  "base": "origin/main f1c153d51df481ec493800ca491544d56b7df66b",
+  "purpose": "Full serial gate vehicle for ten independently reviewed editor/markdown PRs. Each PR branch remains separate; this branch proves the combined tree passes the whole suite.",
+  "includedHeads": {
+    "678": "0af9fe6bf370d60a1753cbe862b93e884afa21bd",
+    "702": "6378d68131bbbde000b7b83ce1bf74343739e321",
+    "706": "113eda8b74dc0e0462d2902a8161465141ef2489",
+    "708": "138526f268e073427a61d06f79f916d2f5eab782",
+    "709": "6b8fb1a2950f9c4946080bec6799504836eba71e",
+    "710": "e4937e3a8bc7cb1ee5db03bdff4db6b40b6b19a9",
+    "711": "cc06dc4e0ffef0be05c79299cde4836948299d35",
+    "738": "9685a029582d46a07646a8b02d98cfa9df042d5f",
+    "739": "888915305ced00621c55aa5db2fc0dff6059afd0",
+    "740": "a0b5ae8723d9d1b07333148244061bae09d5a7c7"
+  },
+  "environment": {
+    "MARKDOWN_WORKBENCH_TEST_CONCURRENCY": "1",
+    "WORKSHOP_TEST_CONCURRENCY": "1",
+    "PORT": "19090",
+    "profiles": "disposable VS Code profiles recreated by global setup"
+  },
+  "gates": {
+    "install": "pass",
+    "check": "pass",
+    "browser": "473 Markdown + 195 PDF specs passed",
+    "quality": "9 Playwright budgets + 1 large-vault unit passed",
+    "vscode": "30 root + 26 PDF specs passed, 2 skipped"
+  },
+  "notes": [
+    "Two defects were found and fixed before this run: PR 702's new selection expectation was contradicted by Obsidian's toggleNumberList and CodeMirror mapping; four files were left unformatted by the PRs and a Prettier-only commit fixed them.",
+    "Redacted: no cookies, tokens, panel ids or personal paths in the logs beyond local worktree paths."
+  ]
+}

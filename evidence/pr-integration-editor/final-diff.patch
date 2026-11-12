@@ -1,0 +1,3260 @@
+diff --git a/CHANGELOG.md b/CHANGELOG.md
+index 84e9c69f..5105384a 100644
+--- a/CHANGELOG.md
++++ b/CHANGELOG.md
+@@ -8,6 +8,8 @@
+ 
+ ## Unreleased
+ 
++- Fixed: Vim `j`/`k` could skip several source lines inside a revealed Mermaid diagram or other source-visible Live Preview block.
++
+ - **Lumia is now Lumiere.** The Extensions view, the Marketplace listing
+   (**Lumiere: Obsidian-style Notes and PDF Reader**), **Reopen Editor With…**,
+   the Command Palette (**Lumiere: …**), the Settings UI and messages say
+diff --git a/docs/host-gui/pdf-backlink-overlays-checklist.md b/docs/host-gui/pdf-backlink-overlays-checklist.md
+index 881e43f3..eb60bf3f 100644
+--- a/docs/host-gui/pdf-backlink-overlays-checklist.md
++++ b/docs/host-gui/pdf-backlink-overlays-checklist.md
+@@ -15,8 +15,9 @@ PR bot / Host GUI pass must capture evidence for:
+    click opens the note.
+ 4. **Del split:** Del on overlay is a no-op; Del on Note / freeText (embedded)
+    deletes.
+-5. **Regions off (default):** empty-page drag does nothing; **Select Region**
+-   absent from menus / slim toolbar / shortcut.
++5. **Regions off (default):** at Fit Width with the page taller than the
++   viewer, empty-page drag pans (page counter stays put) and creates no
++   region; **Select Region** absent from menus / slim toolbar / shortcut.
+ 
+ Suggested shot labels for the PR body: `Copy link Quote`, `overlays`,
+ `Del split`, `regions off`.
+diff --git a/package.json b/package.json
+index e8e055a0..1b57e98a 100644
+--- a/package.json
++++ b/package.json
+@@ -3398,7 +3398,7 @@
+               "never"
+             ],
+             "default": "prompt",
+-            "description": "Obsidian's Automatically update internal links: `prompt` asks before rewriting links in other notes when a file is renamed or moved; its Always Update button sets this to `always`.",
++            "description": "Obsidian's Automatically update internal links: `prompt` (the default, matching `alwaysUpdateLinks: false`) asks before rewriting links in other notes when a file is renamed or moved; its Always Update button sets this to `always`, `always` rewrites without asking, and `never` leaves links untouched.",
+             "scope": "resource"
+           },
+           "lumiere.markdown.links.newLinkFormat": {
+diff --git a/packages/markdown/CAPABILITIES.md b/packages/markdown/CAPABILITIES.md
+index 25730f45..8533e799 100644
+--- a/packages/markdown/CAPABILITIES.md
++++ b/packages/markdown/CAPABILITIES.md
+@@ -32,7 +32,7 @@ records it in `docs/PARITY.md`.
+ | pagePreview | Mod-hover preview of notes, headings, blocks and attachments | External links are not previewed |
+ | tables | Spreadsheet-style table editing, selection, TSV clipboard, row and column commands and dragging | — |
+ | callouts | All callout types, nesting, folding with per-panel memory | Colours follow the VS Code theme |
+-| math | MathJax inline and block math | No user macros |
++| math | MathJax inline and block math | `lumiere.markdown.math.macros` supplies user macros (name → replacement); empty by default |
+ | diagrams | Mermaid | Theme follows VS Code light or dark; HTML labels off |
+ | codeBlocks | Prism highlighting and a Copy button | Languages without a loaded grammar stay plain |
+ | footnotes | References as superscript numbers in LaTeX paper style (an intentional departure from Obsidian), kept under selections, faint source only at the caret, hover previews, click to the definition, inline footnotes, Insert Footnote | Definitions stay editable text led by their number; no Reading view footnotes section |
+@@ -45,7 +45,7 @@ records it in `docs/PARITY.md`.
+ | outgoingLinks | Explorer **Outgoing Links** | Off by default; no unlinked mentions section |
+ | quickSwitcher | **Quick Switcher** over notes, aliases and unresolved links | No key binding (Mod+O is VS Code's Open File); an empty query lists recently opened notes, then recently modified ones never opened here |
+ | wordCount | Words and characters in the status bar | Counting rules are this extension's reading of Obsidian's |
+-| linkUpdates | Updates links when notes or folders are renamed in VS Code | Asks first by default (`prompt`, with Always Update); **Rename Heading…** updates links to a heading |
++| linkUpdates | Updates links when notes or folders are renamed in VS Code | Asks first by default (`prompt`, matching Obsidian's `alwaysUpdateLinks: false`), with a persistent **Always Update**; `always` rewrites without asking, `never` leaves links untouched; **Rename Heading…** updates links to a heading |
+ | folding | Heading and list folding, restored on reload | — |
+ | lineNumbers | Line numbers laid out like VS Code's gutter, following `editor.lineNumbers`; rendered blocks list all their source lines' numbers | On by default |
+ | gitGutter | Git change bars (added, modified, deleted) beside the line numbers against HEAD or the index, through VS Code's git extension; click a bar for a rendered peek with Revert and Stage File; Alt+F5 / Shift+Alt+F5 move between changes | On by default |
+diff --git a/packages/markdown/DESIGN.md b/packages/markdown/DESIGN.md
+index 63635bbf..0e7bae2f 100644
+--- a/packages/markdown/DESIGN.md
++++ b/packages/markdown/DESIGN.md
+@@ -20,7 +20,7 @@ plugin**.
+ | Identity | Display name **Lumiere**, one half of the extension **Lumiere: Markdown Editor and PDF Reader** (package `lumiere`, publisher `t04dj14n9`, extension ID `t04dj14n9.lumiere`); editor view type `lumiere.markdown.editor`; settings, commands and context keys under `lumiere.markdown.` |
+ | Source to extract | `claude/markdown-integration` at `ff3a902ef4ec50a136455c0cf2ccaff698682a06` in `~/Code/human-learning`. Not `main`, whose 4,900-line `webview-src/markdown-editor.ts` it supersedes |
+ | Architecture | `@workshop/core` (on Cordis) runs in the extension host, in each webview and in unit tests. Every capability, the core ones included, is a plugin that injects services, provides services, owns effects and extends others through typed events |
+-| Behaviour reference | Obsidian 1.13.7 as observed, plus the 1.12.7 source study. Implement behaviour independently; never copy Obsidian code |
++| Behaviour reference | Obsidian 1.13.7 as observed, plus the 1.12.7 source study. Implement behaviour independently; never copy Obsidian code. The installed app is **Obsidian 1.15.0** (static shipped-artifact REA, 2026-11-10); `docs/PARITY.md` flags older measurements that still need live re-baselining |
+ | Document authority | The VS Code `TextDocument` is the only source of text, saving and undo. Webviews are synchronized views (`@codemirror/collab`) |
+ | Markdown dialect | Obsidian Flavored Markdown is one fixed dialect, parsed identically everywhere. Plugins change presentation and interaction, never parsing (as in Obsidian) |
+ | Vault model | One host-side vault index (Obsidian's MetadataCache) replaces the three link resolvers and four whole-workspace scans in the source |
+@@ -74,7 +74,7 @@ Non-goals for v1:
+ | Native tests | `packages/vscode-extension/test/vscode-e2e/{markdown,properties,file-title,rename-state,obsidian-commands}.spec.ts`, `fixtures/test-vault/` | Installed-extension scenarios to port |
+ | Status and evidence | `docs/markdown-integration.md`, `docs/markdown-integration-handover.md` on the branch | Tested behaviour, known flakes, open acceptance items |
+ | Obsidian study | `~/Code/human-learning/docs/obsidian-1.12-source-study.md` (untracked, main checkout) | Architecture of MetadataCache, link resolution, Live Preview engine, fuzzy scoring |
+-| Obsidian reference | Obsidian 1.13.7 in `/Applications`; extracted bundle in `~/Code/obsidian-re/` | Behaviour reference only. Proprietary: never copy code or assets |
++| Obsidian reference | Obsidian 1.15.0 installed in `/Applications`; its shipped ASAR was extracted for static reads. Older 1.12.7 / 1.13.7 source-study bundles are in `~/Code/obsidian-re/` | Behaviour reference only; static reads are not live parity observations. Proprietary: never copy code or assets |
+ | Template | `~/Code/vscode-embedPDF` | Repository shape, catalogue-generated settings, API style, test tiers |
+ | Plugin model | DeepSeek Harness and Cordis (links above) | Context, inject, services, effects, events, fibers |
+ 
+@@ -1059,9 +1059,11 @@ Short specifications, beyond the source's tested behaviour:
+   Tag search uses the index, not a full read of the workspace.
+ - **linkUpdates**: on `files/willRename` (from
+   `workspace.onWillRenameFiles`), rewrite incoming links and embeds through
+-  `vault.backlinks`, keeping aliases, subpaths and the link style. The default,
+-  `prompt`, shows a **Update links in N files?** dialog; `always` and `never`
+-  skip it. Heading renames are a later enhancement.
++  `vault.backlinks`, keeping aliases, subpaths and the link style. The default
++  `prompt` matches Obsidian's `alwaysUpdateLinks: false` and shows the
++  **Update links in N files?** dialog (with a persistent **Always Update** that
++  sets `always`); `always` rewrites without asking and `never` leaves links
++  untouched. Heading renames are a later enhancement.
+ - **quickSwitcher**: **Lumiere: Quick Switcher** opens a quick pick
+   over notes, aliases and unresolved links, with Obsidian's scoring. Enter
+   opens; an unresolved or new name creates the note in the configured
+@@ -1120,8 +1122,8 @@ the active editor. They work in the command palette, keybindings and menus.
+ 
+ Rules:
+ 
+-- Rows marked "verify" use a default to be confirmed in Obsidian 1.13.7
+-  (Settings → Hotkeys) before it is bound. Record the observation (§21.4).
++- Rows marked "verify" use a default to be confirmed in the installed Obsidian
++  1.15.0 (Settings → Hotkeys) before it is bound. Record the observation (§21.4).
+ - Host shortcuts that collide with editor keys while the editor has focus
+   (Vim's Ctrl-O, Ctrl-B and others) are consumed only while the `vim` plugin is
+   active (`lumiere.markdown.plugin.vim` context key), as the source's
+@@ -1177,7 +1179,7 @@ default (§25).
+ | --- | --- | --- |
+ | New link format | `lumiere.markdown.links.newLinkFormat` (`shortest` \| `relative` \| `absolute`) | `shortest` |
+ | Use [[Wikilinks]] | `lumiere.markdown.links.useWikilinks` | `true` |
+-| Automatically update internal links | `lumiere.markdown.linkUpdates.mode` (`prompt` \| `always` \| `never`) | `prompt` |
++| Automatically update internal links | `lumiere.markdown.linkUpdates.mode` (`prompt` \| `always` \| `never`) | `prompt` (Obsidian's `alwaysUpdateLinks: false`) |
+ | Default location for new notes | `lumiere.markdown.files.newNoteFolder` (empty = vault root, `.` = current folder, or a path) | empty |
+ | Default location for new attachments | `lumiere.markdown.files.attachmentFolder` (same forms, plus `./sub`) | empty |
+ | Excluded files | `lumiere.markdown.vault.excludedFiles` (globs) | `[]` |
+@@ -1509,10 +1511,12 @@ API through a sample external plugin.
+ 
+ ### 21.4 Obsidian parity
+ 
+-`docs/PARITY.md` holds one row per behaviour in §13–§15: the action, the
+-Obsidian 1.13.7 observation (date, how observed), our result and how it was
+-checked. Use a disposable vault (never the owner's). Rows stay "not observed"
+-until the owner's computer-use pass compares them with the live reference.
++`docs/PARITY.md` holds one row per behaviour in §13–§15: the action, an
++Obsidian observation (version, date, method, or `not observed`), our result
++and how it was checked. Use a disposable vault (never the owner's). Static
++shipped-code reads are not live observations; unobserved rows stay "not
++observed" until the owner's computer-use pass compares them with the live
++reference.
+ 
+ ## 22. Build and toolchain
+ 
+@@ -1602,8 +1606,8 @@ of `dist/` outputs and the docs.
+ 4. **Outline.** **Native view only**, or also keep the in-editor panel.
+ 5. **Where Backlinks, Outgoing links and Tags appear.** **Explorer sections**
+    (like PDF Outline), or a Lumiere activity-bar container.
+-6. **Link updates on rename.** **`prompt`**, or Obsidian's always-update
+-   behaviour.
++6. **Link updates on rename.** **`prompt`** (Obsidian's `alwaysUpdateLinks:
++   false`), `always`, or `never`.
+ 7. **Kernel.** **In-house (decided; Cordis is a reference only, §5.9)**, or depend on the
+    `cordis` npm package.
+ 8. **Reading view.** **Not in v1**, or add a read-only rendered mode.
+diff --git a/packages/markdown/IMPLEMENTATION_PLAN.md b/packages/markdown/IMPLEMENTATION_PLAN.md
+index 156815ce..ce968063 100644
+--- a/packages/markdown/IMPLEMENTATION_PLAN.md
++++ b/packages/markdown/IMPLEMENTATION_PLAN.md
+@@ -7019,3 +7019,49 @@ scroll position only in Reading view; Lumia keeps following the scroll too
+   does not implement it and the row stays highlighted there. The caret from
+   before an outline click, reported above the first heading, is held like any
+   other so it cannot clear the clicked row.
++
++## Toggle Numbered List's literal marker (#692, #702; 2026-11-12)
++
++A static read of Obsidian 1.15.0's `toggleNumberList()` (behaviour only,
++nothing copied) shows that it writes `1. ` on every nonblank selected line and
++counts a numbered task's box as part of the marker, so a selection of numbered
++tasks toggles off. `lineEdit` now does both; parity units cover existing
++markers, quotes, indentation, blank lines, toggle-off and numbered tasks.
++`toggleNumberList()` sends only `{changes}`, so the selection comes from
++CodeMirror's default mapping: a position at the start of a *replaced* marker
++stays at column 0, while an *inserted* marker maps to the right of itself.
++The regression expectations follow that difference, read from Obsidian's
++command and from `@codemirror/state`'s transaction mapping.
++Validation: `obsidian-commands.test.ts` passes (20 tests); full gates run
++separately. Table-cell refusal is not part of this command.
++
++## PR #740 revealed-fence Vim review fixes (2026-11-12, worktree)
++
++The production correction is unchanged: Live Preview's optional
++`revealedSourceBlocks` query returns `editing: "reveal"` blocks whose source is
++visible; Vim's existing arithmetic correction applies them only when the motion
++head starts inside the block. No fold filter was added to the query. A folded
++block whose source is visible to a selection can be returned, but a caret
++outside it cannot be pulled into it; the query and pure-motion regressions now
++pin that boundary. The service and motion comments state the source-visible
++and fold-policy contracts. The misleading selection-only assertions were
++removed from `core.test.ts`.
++
++The self-reported R1 notes are closed with focused unit coverage: a
++`Vim.handleKey` path with a mocked `revealedSourceBlocks` service, `2k`, `dk`,
++`Vk`, `gk`, source-mode bypass, a long HTML source block, and a Mermaid fence
++under a fold. The Edit/source/render lifecycle is covered by the PR's
++`rendered-after-edit.webp` Host GUI frame; source-mode typing does not use the
++patched `findPosV` hook. `CHANGELOG.md` records the user-visible fix. No new
++browser regression was added without owner approval.
++
++GitHub has no public reviews or comments on #740; the R1 summary and its
++`da1da0a2` SHA are self-reported in the PR body and are not a resolvable
++commit. All six CI check runs failed before any step executed. No tests or
++builds were run in this parallel phase: `pnpm check`, `pnpm test:browser` and
++`pnpm test:quality` remain for the serialized full gate. The Host GUI
++152 → 151 → 152 frames show the visible caret; the opening-fence frame shows
++revealed source without a visible caret, and the install frame proves version
++0.1.11 and a VSIX source but not the claimed head SHA or package hash. No
++Obsidian code, CSS or assets were copied; `~/Code/human-learning` was not
++modified.
+diff --git a/packages/markdown/docs/MANUAL_TEST_PLAN.md b/packages/markdown/docs/MANUAL_TEST_PLAN.md
+index a34f8d67..2074b5a9 100644
+--- a/packages/markdown/docs/MANUAL_TEST_PLAN.md
++++ b/packages/markdown/docs/MANUAL_TEST_PLAN.md
+@@ -521,7 +521,10 @@ title, then set `lumiere.markdown.plugins.inlineTitle.enabled` to true.
+    Obsidian. Click a foldable title to toggle; reload: each panel keeps its
+    own state. Clicking the link in a title follows it without folding.
+ 2. With the caret inside, the source shows and edits normally.
+-3. **Insert Callout** wraps the selected lines; one undo removes it.
++3. **Insert Callout** wraps the selected lines; at column 0 of a non-empty
++   line it inserts a Title/Contents callout template above the line, and on
++   an empty line it inserts that template with blank lines around it. Check
++   that `NOTE` is selected and one undo removes the insertion.
+ 
+ ### math
+ 
+@@ -1501,7 +1504,7 @@ owner's vault for these checks.
+ 3. Give the second vault different app policies; open both and split one note
+    into two panels. Each panel and command uses its originating vault. Switching
+    focus during a new-note or rename action must not select another vault's
+-   policy. `alwaysUpdateLinks: false` restores MW's default prompt.
++   policy. `alwaysUpdateLinks: false` maps to MW's `prompt` mode.
+ 4. Externally edit and delete `app.json`; effective settings refresh or return to
+    package defaults. Temporarily write invalid JSON: the last good policies stay
+    in use and the output channel logs the read failure once. Fix the JSON to
+diff --git a/packages/markdown/docs/OBSIDIAN_KEYS.md b/packages/markdown/docs/OBSIDIAN_KEYS.md
+index 32488157..7f5a86db 100644
+--- a/packages/markdown/docs/OBSIDIAN_KEYS.md
++++ b/packages/markdown/docs/OBSIDIAN_KEYS.md
+@@ -68,7 +68,7 @@ definition.
+ | Open link under cursor in new tab | | a tab VS Code keeps, as Cmd-click |
+ | Insert code block | `te\|xt` | ` ```\nte\|xt\n``` `: around the selected lines |
+ | Insert tag | `a ‹word› b` | `a #\|word b` |
+-| Clear formatting | `a **‹b›** c` | `a ‹b› c`; a caret alone changes nothing; links keep their syntax |
++| Clear formatting | `a **‹b›** c` | `a ‹b› c`; a caret alone changes nothing; a complete `[l](u)` becomes `lu` (unit-tested for inline, image, reference, autolink and plain-wikilink forms; wiki embeds stay; no live 1.15.0 re-measure) |
+ | Delete paragraph | `one\ntw\|o\nthree` | `one\nth\|ree` (unbound: Cmd+D is VS Code's) |
+ | Add cursor above, below | `one\nth\|ree` | carets on both lines, the new one main (Cmd+Alt+Up and Down, as in VS Code) |
+ 
+diff --git a/packages/markdown/docs/PARITY.md b/packages/markdown/docs/PARITY.md
+index 745c9b59..b80c2d97 100644
+--- a/packages/markdown/docs/PARITY.md
++++ b/packages/markdown/docs/PARITY.md
+@@ -1,6 +1,16 @@
+ # Obsidian parity observations
+ 
+-Reference: Obsidian 1.13.7, to be compared by the owner in a disposable vault. Never use the owner's vault. Record date, method, observed result and any issue link in each row. Automated checks do not establish visual or behavioral parity. All rows start not observed.
++Reference: Obsidian 1.15.0 (installed app; static shipped-artifact REA, 2026-11-10), to be compared by the owner in a disposable vault. Never use the owner's vault. Record date, method, observed result and any issue link in each row. Automated checks do not establish visual or behavioral parity. New rows start not observed; see the re-baseline note for older measurements and static reads.
++
++**Re-baseline note (2026-11-10).** Rows naming a version below 1.15.0 are
++older-version evidence; the installed app is 1.15.0. Rows naming
++1.15.0 are static shipped-code reads, not live observations. Re-measure the
++1.14.4 rows before treating them as 1.15.0 matches. Relative to 1.13.7, the
++1.15.0 catalog has 128 net more CSS custom properties (including
++`--bases-kanban-*`, `--highlight-background-*`, `--mermaid-*`) and new
++`app:` command IDs `app:migrate-frontmatter`, `app:increase-font-size`,
++`app:decrease-font-size`, `app:open-file`. Evidence: static REA
++`ev_6656f973c52d9c8d523b697ac6a77957170ffcda27c58103a519f55c9b517b1a`.
+ 
+ | Action or behavior (DESIGN §13–§15) | Obsidian observation: date and method | Workshop result | How checked | Status |
+ | --- | --- | --- | --- | --- |
+@@ -50,7 +60,7 @@ Reference: Obsidian 1.13.7, to be compared by the owner in a disposable vault. N
+ | `lookUp` | not observed | not manually observed | macOS only; manual scenario pending; automated evidence is in the 2026-11-01 record | not observed |
+ | `linkUpdates` | not observed | not manually observed | Manual scenario pending; automated evidence is in phase records | not observed |
+ | `settings` | not observed | not manually observed | Manual scenario pending; automated evidence is in phase records | not observed |
+-| `quickSwitcher` | 2026-10-17, read from Obsidian 1.14.4's switcher and checked with its public fuzzy search | Same scoring as suggestions: name, then path a point lower, attachments listed, excluded files 10 lower; an empty query lists recently modified rather than recently opened notes (src/plugins/quickSwitcher/README.md) | Unit tests pin each rule | behaviour measured; visual parity not observed |
++| `quickSwitcher` | 2026-10-17, read from Obsidian 1.14.4's switcher and checked with its public fuzzy search | Same scoring as suggestions: name, then path a point lower, attachments listed, excluded files 10 lower; an empty query lists recently opened notes, then recently modified ones never opened here (`src/plugins/quickSwitcher/ranking.ts`) | Unit tests pin each rule | behaviour measured; visual parity not observed |
+ | `wordCount` | 2026-10-17, measured by reading Obsidian 1.14.4's status bar for the same 76 texts in a throwaway vault over the DevTools protocol: punctuation, numbers, hyphens, apostrophes, Markdown, Han, kana, Korean, Hindi, Tamil, Thai, emoji, properties, line breaks | Matches all 76 (src/plugins/wordCount/README.md) | Differential probe (Obsidian's counts and Workshop's over the same texts); unit tests pin each rule | behaviour measured; visual parity not observed |
+ | `toggleBold` | 2026-10-17, behaviour measured over the DevTools protocol in a throwaway vault: caret, word, selection and unwrap | Matches the measured behaviour (docs/OBSIDIAN_KEYS.md) | Differential probe (Obsidian and the browser harness, same keys); unit tests pin each rule | behaviour measured; visual parity not observed |
+ | `toggleItalics` | 2026-10-17, behaviour measured over the DevTools protocol in a throwaway vault: caret, word, selection and unwrap | Matches the measured behaviour (docs/OBSIDIAN_KEYS.md) | Differential probe (Obsidian and the browser harness, same keys); unit tests pin each rule | behaviour measured; visual parity not observed |
+@@ -70,7 +80,7 @@ Reference: Obsidian 1.13.7, to be compared by the owner in a disposable vault. N
+ | `setHeading0`…`setHeading6` | not observed | not manually observed | Manual scenario pending; automated evidence is in phase records | not observed |
+ | `toggleChecklist` | 2026-10-17, behaviour measured over the DevTools protocol in a throwaway vault: text, bullet, number, quote and empty line | Matches the measured behaviour (docs/OBSIDIAN_KEYS.md) | Differential probe (Obsidian and the browser harness, same keys); unit tests pin each rule | behaviour measured; visual parity not observed |
+ | `cycleListChecklist` | not observed | not manually observed | Manual scenario pending; automated evidence is in phase records | not observed |
+-| `toggleBulletList`, `toggleNumberedList`, `toggleBlockquote` | not observed | not manually observed | Manual scenario pending; automated evidence is in phase records | not observed |
++| `toggleBulletList`, `toggleNumberedList`, `toggleBlockquote` | 2026-11-10, static read of Obsidian 1.15.0's line commands (app.js, REA; #692), not observed running | Matches the read rules: literal `1. ` on every nonblank selected line, quotes/indentation and blank lines kept, numbered tasks toggle off; table-cell refusal belongs to the formatting commands that check `inTableCell` | Unit regressions (test/unit/formatting/obsidian-commands.test.ts; not run in this review pass) | code read; not observed running |
+ | `swapLineUp`, `swapLineDown` | not observed | not manually observed | Manual scenario pending; automated evidence is in phase records | not observed |
+ | `followLink` | not observed | not manually observed | Manual scenario pending; automated evidence is in phase records | not observed |
+ | `openLinkToSide` | not observed | not manually observed | Manual scenario pending; automated evidence is in phase records | not observed |
+@@ -123,8 +133,8 @@ Reference: Obsidian 1.13.7, to be compared by the owner in a disposable vault. N
+ | **tags**: the **Tags** view is hierarchical (`a/b/c` counts toward `a/b` and   `a`), merges case and keeps the most frequent casing, and searches on click | not observed | not manually observed | Manual scenario pending; automated evidence is in phase records | not observed |
+ | Tag search uses the index, not a full read of the workspace. | not observed | not manually observed | Manual scenario pending; automated evidence is in phase records | not observed |
+ | **linkUpdates**: on `files/willRename` (from   `workspace.onWillRenameFiles`), rewrite incoming links and embeds through   `vault.backlinks`, keeping aliases, subpaths and the link style | not observed | not manually observed | Manual scenario pending; automated evidence is in phase records | not observed |
+-| The default,   `prompt`, shows a **Update links in N files?** dialog | not observed | not manually observed | Manual scenario pending; automated evidence is in phase records | not observed |
+-| `always` and `never`   skip it | not observed | not manually observed | Manual scenario pending; automated evidence is in phase records | not observed |
++| The default,   `prompt`, matches Obsidian's `alwaysUpdateLinks: false`: it shows the **Update links in N files?** dialog | not observed | not manually observed | Manual scenario pending; automated evidence is in phase records | not observed |
++| `always` rewrites without asking; `never`   leaves links untouched | not observed | not manually observed | Manual scenario pending; automated evidence is in phase records | not observed |
+ | Heading renames are a later enhancement. | not observed | not manually observed | Manual scenario pending; automated evidence is in phase records | not observed |
+ | **quickSwitcher**: **Lumiere: Quick Switcher** opens a quick pick   over notes, aliases and unresolved links, with Obsidian's scoring | not observed | not manually observed | Manual scenario pending; automated evidence is in phase records | not observed |
+ | Enter   opens | not observed | not manually observed | Manual scenario pending; automated evidence is in phase records | not observed |
+@@ -170,7 +180,7 @@ Reference: Obsidian 1.13.7, to be compared by the owner in a disposable vault. N
+ | Command: lumiere.markdown.insertHorizontalRule | not observed | not manually observed | Manual scenario pending; automated evidence is in phase records | not observed |
+ | Command: lumiere.markdown.insertCodeBlock | 2026-10-17, measured against Obsidian's command of the same name in a throwaway vault | Matches: fences around the selected lines | Differential probe; unit tests | behaviour measured |
+ | Command: lumiere.markdown.insertTag | 2026-10-17, measured against Obsidian's command of the same name in a throwaway vault | Matches: `#` before the selection | Differential probe; unit tests | behaviour measured |
+-| Command: lumiere.markdown.clearFormatting | 2026-10-17, measured against Obsidian's command of the same name in a throwaway vault | Matches, except links keep their syntax (Obsidian turns `[l](u)` into `lu`) | Differential probe; unit tests | behaviour measured |
++| Command: lumiere.markdown.clearFormatting | 2026-10-17, measured against Obsidian's command of the same name in a throwaway vault (then: Lumiere kept link syntax). Shipped 1.15.0 formatting-token code read on this change; no live 1.15.0 re-measure. | Unit tests: complete inline, image, reference, autolink, link-definition and plain-wikilink markers are stripped while label, URL and reference text remain (`[l](u)` → `lu`, not label only). Escapes, code text, bare URLs and wiki embeds stay. | Differential probe; static code read; unit tests | unit-tested |
+ | Command: lumiere.markdown.deleteParagraph | 2026-10-17, measured against Obsidian's command of the same name in a throwaway vault | Matches: CodeMirror's delete line, as Obsidian's; unbound (Cmd+D is VS Code's) | Differential probe; unit tests | behaviour measured |
+ | Command: lumiere.markdown.addCursorAbove | 2026-10-17, measured against Obsidian's command of the same name in a throwaway vault | Matches; bound to Cmd+Alt+Up as in VS Code (Obsidian binds no key) | Differential probe; unit tests | behaviour measured |
+ | Command: lumiere.markdown.addCursorBelow | 2026-10-17, measured against Obsidian's command of the same name in a throwaway vault | Matches; bound to Cmd+Alt+Down as in VS Code (Obsidian binds no key) | Differential probe; unit tests | behaviour measured |
+@@ -324,7 +334,7 @@ Reference: Obsidian 1.13.7, to be compared by the owner in a disposable vault. N
+ | VS Code owns save, undo/redo, hot exit and settings | not observed | not manually observed | Manual scenario pending; automated evidence is in phase records | not observed |
+ | Note line height is Obsidian's 1.5 times the note's own font size; family, weight, spacing and ligatures follow VS Code's editor settings for Markdown | Obsidian 1.14.4: body 1.5 (24px at 16px, 36px at 24px), headings 1.2/1.2/1.3/1.4/1.5/1.5, code and footnotes 1.5, table cells 1.3 (`docs/obsidian-measurements/font-size-results-16.json`, `-24.json`) | Owner decision, 2026-10-10: `lumiere.markdown.editor.lineHeight` (default 1.5, a multiple) replaces following `editor.lineHeight` and VS Code's 1.35 rule; table cells keep the note's ratio, not Obsidian's 1.3 | Browser `font-size.spec.ts`, `stable-blocks.spec.ts`; real VS Code `font-size.spec.ts`, `font.spec.ts` | not observed |
+ | Theme follows VS Code colors | not observed | not manually observed | Manual scenario pending; automated evidence is in phase records | not observed |
+-| Rename link updates prompt by default | not observed | not manually observed | Manual scenario pending; automated evidence is in phase records | not observed |
++| Rename link updates ask by default (Obsidian's `alwaysUpdateLinks: false`) | not observed | not manually observed | Manual scenario pending; automated evidence is in phase records | not observed |
+ | Native outline/backlinks/tags views | not observed | not manually observed | Manual scenario pending; automated evidence is in phase records | not observed |
+ | Webview CSP (DESIGN §19): `default-src 'none'`, nonce scripts, `connect-src ${cspSource} blob:`, no remote content in untrusted workspaces | not applicable | not manually observed | Manual scenario pending; `test/unit/editor/webview-html.test.ts` | not observed |
+ | External application schemes prompt; own application scheme opens directly | not observed | not manually observed | Manual scenario pending; automated evidence is in phase records | not observed |
+diff --git a/packages/markdown/src/plugins/callouts/README.md b/packages/markdown/src/plugins/callouts/README.md
+index 46885ef3..9c97f27b 100644
+--- a/packages/markdown/src/plugins/callouts/README.md
++++ b/packages/markdown/src/plugins/callouts/README.md
+@@ -1,15 +1,21 @@
+ # Callouts
+ 
+ Displays Obsidian-style callouts, including nested and foldable callouts, in Live
+-Preview. Insert Callout quotes selected lines; the caret reveals callout source.
+-As in Obsidian, a type is any text but `]` (`[!笔记]`, `[!my type]` as
+-`my-type`), and what follows a `|` is metadata that CSS snippets select with
+-`data-callout-metadata` (`[!note|wide]`).
++Preview. Insert Callout wraps selected lines, inserts a Title/Contents callout
++template above a non-empty line at column 0, and replaces an empty line with
++that template; the caret reveals callout source. As in Obsidian, a type is any
++text but `]` (`[!笔记]`, `[!my type]` as `my-type`), and what follows a `|` is
++metadata that CSS snippets select with `data-callout-metadata` (`[!note|wide]`).
+ 
+ ## How it works
+ 
+ A block renderer recognizes callout blockquotes and uses the shared sanitized
+-render service. The post-processor binds disclosures to panel-local memory.
++render service. `edit.ts` wraps selected lines with blank lines around adjacent
++text; a collapsed caret at column 0 of a non-empty line inserts
++`\n> [!NOTE] Title\n> Contents\n` at the caret and leaves the line below. An
++empty or whitespace-only line is replaced by the same template. The `NOTE` type
++is selected and one editor transaction makes the insertion one undo step.
++The post-processor binds disclosures to panel-local memory.
+ That memory is a `folds` view-state contribution, restored on registration and
+ mapped across renamed source identities. Each pass owns its event listeners and
+ bindings; plugin disposal removes registrations and remaining pass handlers.
+@@ -44,4 +50,5 @@ Colors follow VS Code's theme rather than Obsidian assets. Live Preview zeros th
+ outer callout margin (as Obsidian CM6) and keeps nested callouts at `1em` vertical
+ margin; titles use `flex-start` and a 4px icon gap (`--size-4-1`). Disclosure state
+ belongs to each panel, while text and undo belong to VS Code. Exact colour parity
+-awaits the owner's manual comparison.
++awaits the owner's manual comparison. The column-0 insertion follows Obsidian
++1.15.0's shipped code read; live 1.15.0 vault remeasure is still pending.
+diff --git a/packages/markdown/src/plugins/callouts/callouts.test.ts b/packages/markdown/src/plugins/callouts/callouts.test.ts
+index 558e2f33..e57130d8 100644
+--- a/packages/markdown/src/plugins/callouts/callouts.test.ts
++++ b/packages/markdown/src/plugins/callouts/callouts.test.ts
+@@ -1,12 +1,18 @@
+ import test from "node:test";
+ import assert from "node:assert/strict";
+-import { EditorState } from "@codemirror/state";
++import { history, undo } from "@codemirror/commands";
++import { EditorState, type Transaction } from "@codemirror/state";
+ import { insertCallout, isCallout } from "./edit";
++
++const applyInsertCallout = (doc: string, anchor: number, head = anchor) => {
++  const state = EditorState.create({ doc, selection: { anchor, head } });
++  return state.update(insertCallout(state)).state;
++};
++
+ // Expected notes are Obsidian's, measured in a throwaway vault (2026-10-17).
+ test("Insert Callout quotes the selected lines, apart from the text around, with its type selected", () => {
+   const insert = (doc: string, anchor: number, head = anchor) => {
+-    const state = EditorState.create({ doc, selection: { anchor, head } });
+-    const next = state.update(insertCallout(state)).state;
++    const next = applyInsertCallout(doc, anchor, head);
+     const { from, to } = next.selection.main;
+     return `${next.doc.toString()} [${next.sliceDoc(from, to)}]`;
+   };
+@@ -26,6 +32,73 @@ test("Insert Callout quotes the selected lines, apart from the text around, with
+   assert.equal(isCallout("> [!warning]- Custom"), true);
+ });
+ 
++// Obsidian 1.15.0's shipped collapsed-caret branch inserts the
++// Title/Contents template at the caret (issue #691). Its leading newline
++// leaves the line below it untouched.
++test("Insert Callout inserts the Title/Contents template above a non-empty line at column 0", () => {
++  const first = applyInsertCallout("one\ntwo", 0);
++  assert.equal(first.doc.toString(), "\n> [!NOTE] Title\n> Contents\none\ntwo");
++  assert.equal(first.selection.main.anchor, "\n> [!".length);
++  assert.equal(first.selection.main.head, "\n> [!NOTE".length);
++  assert.equal(
++    first.sliceDoc(first.selection.main.from, first.selection.main.to),
++    "NOTE",
++  );
++  assert.equal(
++    applyInsertCallout("above\none\ntwo", 6).doc.toString(),
++    "above\n\n> [!NOTE] Title\n> Contents\none\ntwo",
++  );
++});
++
++test("Insert Callout keeps a selection ending at column zero on the previous line", () => {
++  const next = applyInsertCallout("one\ntwo\nbelow", 0, 4);
++  const { from, to } = next.selection.main;
++  assert.equal(next.doc.toString(), "> [!NOTE]\n> one\n\ntwo\nbelow");
++  assert.equal(next.sliceDoc(from, to), "NOTE");
++});
++
++test("Insert Callout inserts the template above an existing callout", () => {
++  const doc = "> [!NOTE]\n> body\nafter";
++  const atTitle = applyInsertCallout(doc, 0);
++  assert.equal(atTitle.doc.toString(), "\n> [!NOTE] Title\n> Contents\n" + doc);
++  assert.equal(
++    atTitle.sliceDoc(atTitle.selection.main.from, atTitle.selection.main.to),
++    "NOTE",
++  );
++
++  // The one trailing newline leaves an adjacent `>` line in the same
++  // blockquote, as the shipped insertion does. Rendering is out of scope here.
++  const atBody = applyInsertCallout(doc, doc.indexOf("> body"));
++  assert.equal(
++    atBody.doc.toString(),
++    "> [!NOTE]\n\n> [!NOTE] Title\n> Contents\n> body\nafter",
++  );
++  assert.equal(
++    atBody.sliceDoc(atBody.selection.main.from, atBody.selection.main.to),
++    "NOTE",
++  );
++});
++
++test("one undo removes the column-0 callout template", () => {
++  let state = EditorState.create({
++    doc: "one\ntwo",
++    selection: { anchor: 0 },
++    extensions: [history()],
++  });
++  const target = {
++    get state() {
++      return state;
++    },
++    dispatch(transaction: Transaction) {
++      state = transaction.state;
++    },
++  };
++  target.dispatch(state.update(insertCallout(state)));
++  assert.equal(state.doc.toString(), "\n> [!NOTE] Title\n> Contents\none\ntwo");
++  assert.equal(undo(target), true);
++  assert.equal(state.doc.toString(), "one\ntwo");
++});
++
+ // Obsidian 1.15.0's callout syntax, read from its app.js with REA
+ // (2026-11-07): the type is any text but `]`, a `|` starts metadata, and a
+ // space or the line's end follows the `]` and fold sign.
+diff --git a/packages/markdown/src/plugins/callouts/edit.ts b/packages/markdown/src/plugins/callouts/edit.ts
+index d5f5503c..81a2ccf7 100644
+--- a/packages/markdown/src/plugins/callouts/edit.ts
++++ b/packages/markdown/src/plugins/callouts/edit.ts
+@@ -7,14 +7,23 @@ export function isCallout(source: string): boolean {
+   return /^\s*>\s*\[![^\]\n]+\][+-]?(?:\s|$)/.test(source);
+ }
+ /**
+- * Insert Callout, as in Obsidian: the selected lines go into a note callout,
+- * with a blank line between it and any text above or below; on an empty
+- * line, a callout with a title and contents to replace. Its type is selected.
+- * A selection ending at column zero does not include that line.
++ * Insert Callout, as in Obsidian: with the caret at column 0 of a non-empty
++ * line, insert `\n> [!NOTE] Title\n> Contents\n` above that line; on an empty
++ * line, insert a callout with a title and contents to replace; otherwise wrap
++ * the selected lines in a note callout with a blank line between it and any
++ * text above or below. The callout's type is selected. A selection ending at
++ * column zero does not include that line.
+  */
+ export function insertCallout(state: EditorState): TransactionSpec {
+   const { from, to, empty } = state.selection.main;
+   const first = state.doc.lineAt(from);
++
++  // Obsidian 1.15.0's collapsed-caret branch inserts the Title/Contents
++  // template at the caret. Its leading newline leaves the line below it.
++  if (empty && from === first.from && first.text.trim() !== "") {
++    return insertTemplateAbove(first.from);
++  }
++
+   const last = state.doc.lineAt(empty ? to : Math.max(from, to - 1));
+   const text = state.sliceDoc(first.from, last.to);
+   const touches = (n: number) =>
+@@ -36,3 +45,14 @@ export function insertCallout(state: EditorState): TransactionSpec {
+     userEvent: "input.callout",
+   };
+ }
++
++/** Insert Obsidian's Title/Contents template above a line, leaving the line. */
++function insertTemplateAbove(lineFrom: number): TransactionSpec {
++  const template = "\n> [!NOTE] Title\n> Contents\n";
++  const type = lineFrom + "\n> [!".length;
++  return {
++    changes: { from: lineFrom, to: lineFrom, insert: template },
++    selection: { anchor: type, head: type + "NOTE".length },
++    userEvent: "input.callout",
++  };
++}
+diff --git a/packages/markdown/src/plugins/diagrams/diagram-dialog.ts b/packages/markdown/src/plugins/diagrams/diagram-dialog.ts
+index 06fbf988..2b19dedc 100644
+--- a/packages/markdown/src/plugins/diagrams/diagram-dialog.ts
++++ b/packages/markdown/src/plugins/diagrams/diagram-dialog.ts
+@@ -45,7 +45,9 @@ export function bindDiagramInspector(
+   inspect.textContent = "⤢";
+   inspect.setAttribute("aria-label", "Inspect diagram");
+   inspect.setAttribute("title", "View in larger window");
+-  host.append(inspect);
++  // Place Inspect with Copy and Edit on the shell, not in the scrolling fence.
++  const chrome = host.closest(".hybrid-block") ?? host;
++  chrome.append(inspect);
+   const inspector = new DiagramInspector(inspect, svg);
+   inspect.addEventListener("click", (event) => inspector.show(event), {
+     signal,
+diff --git a/packages/markdown/src/plugins/diagrams/diagrams.css b/packages/markdown/src/plugins/diagrams/diagrams.css
+index dee1d239..334c5348 100644
+--- a/packages/markdown/src/plugins/diagrams/diagrams.css
++++ b/packages/markdown/src/plugins/diagrams/diagrams.css
+@@ -177,3 +177,23 @@ pre[data-fence="mermaid"] svg .internal-link tspan {
+   color: var(--vscode-editor-foreground);
+   background: var(--hover);
+ }
++
++/*
++ * Inspect, Copy and Edit are position:absolute against .hybrid-block, so they
++ * stay pinned to the visible top-right while the fence scrolls. Inset the
++ * mermaid scrollport by a physical right-hand chrome lane so nodes never sit
++ * under those buttons at any scrollLeft. The buttons use physical `right`
++ * offsets even when editor.rightToLeft sets dir=rtl, so a logical
++ * margin-inline-end would reserve the wrong side in RTL. The fence itself
++ * keeps padding: 0 (Obsidian live-preview alignment).
++ * 104px is .inspect-diagram's (and the language label's) `right`. The
++ * "mermaid" label is wider than the inspect icon, so 3.5em clears that
++ * wider control and leaves a small gap.
++ */
++.hybrid-block.hybrid-diagram {
++  --diagram-toolbar-lane: calc(104px + 3.5em);
++}
++
++.hybrid-block.hybrid-diagram pre[data-fence="mermaid"]:has(> svg) {
++  margin-right: var(--diagram-toolbar-lane);
++}
+diff --git a/packages/markdown/src/plugins/diagrams/diagrams.test.ts b/packages/markdown/src/plugins/diagrams/diagrams.test.ts
+index 35bfb8b4..a058f1ac 100644
+--- a/packages/markdown/src/plugins/diagrams/diagrams.test.ts
++++ b/packages/markdown/src/plugins/diagrams/diagrams.test.ts
+@@ -115,3 +115,19 @@ test("mermaid guarded chrome matches Obsidian radius and UI font sizes", () => {
+   assert.match(css, /\.mermaid-guard-title\s*\{[^}]*font-size:\s*13px;/);
+   assert.match(css, /\.mermaid-guard-description\s*\{[^}]*font-size:\s*12px;/);
+ });
++
++test("diagram chrome reserves a physical right lane for RTL editors", () => {
++  const laneRule =
++    /\.hybrid-block\.hybrid-diagram\s+pre\[data-fence="mermaid"\]:has\(> svg\)\s*\{[^}]*\}/;
++  const lane = css.match(laneRule)?.[0];
++  assert.ok(lane, "expected diagram lane rule");
++  // editor.rightToLeft sets dir=rtl, but the chrome uses physical right.
++  assert.match(css, /--diagram-toolbar-lane\s*:/);
++  assert.match(lane, /margin-right\s*:\s*var\(--diagram-toolbar-lane\)/);
++  assert.doesNotMatch(lane, /margin-inline-end\s*:/);
++  // The scrollport is inset; padding stays 0 so Obsidian LP alignment holds.
++  assert.match(
++    css,
++    /pre\[data-fence="mermaid"\]:has\(> svg\)\s*\{[^}]*padding:\s*0;/,
++  );
++});
+diff --git a/packages/markdown/src/plugins/formatting/README.md b/packages/markdown/src/plugins/formatting/README.md
+index 2c4dc3ea..5d17bd00 100644
+--- a/packages/markdown/src/plugins/formatting/README.md
++++ b/packages/markdown/src/plugins/formatting/README.md
+@@ -9,6 +9,11 @@ Inline toggling uses the shared dialect to locate enclosing syntax at the caret;
+ otherwise it wraps the word or selection, or removes selected delimiters. As
+ in Obsidian 1.14, a selection anywhere inside a span unwraps the whole span,
+ and one over or around spans merges them into one (`spans.ts`).
++Clear Formatting strips the syntax markers of inline, image, reference,
++autolink, link-definition and plain-wikilink forms, keeping label, URL and
++reference text; escaped literals, code text, bare URLs and wiki embeds stay.
++It acts on the selected source, so a label-only selection does not remove
++syntax outside it.
+ 
+ Highlights take Obsidian 1.14's colours, an emoji right after `==`
+ (`==🔵text==`): **Toggle Red Highlight** and the five other colours wrap the
+@@ -20,8 +25,10 @@ Default and the six colours; taking one wraps an immediately following word,
+ reuses its closing `==` if present, or opens an empty pair, with the caret
+ inside after the colour (`highlight-suggest.ts`); Tab takes nothing, as in
+ Obsidian. Line commands edit each selected line, excluding a final column-zero line. Registered
+-commands target the active projected editor (including table cells), and owned
+-keymaps provide bold, italic, link and comment shortcuts. As in Obsidian,
++commands target the active projected editor (including table cells), except the
++list, quote and code-block commands: they check the outer document for a parsed
++table at the caret or selection start and return false there. Owned keymaps
++provide bold, italic, link and comment shortcuts. As in Obsidian,
+ Insert Link leaves the caret in the empty URL after a selected label (else in
+ the empty label), and Toggle Comment wraps the selection or the word at the
+ caret in `%%…%%` (no spaces, as in 1.14) with it selected, or inserts an empty comment
+@@ -49,12 +56,15 @@ Insert (link), where host-node labels each by its short title (Bold).
+ - `highlight-colour.ts`: the coloured highlight commands.
+ - `highlight-suggest.ts`: the colour list after `==`.
+ - `lines.ts`: heading/list/quote edits and link insertion.
++- `table-cell.ts`: parsed-table predicate for the refused block commands.
+ - `formatting.test.ts`: pure editor-state command units.
++- `test/unit/formatting/table-cell.test.ts`: refusal and parser boundary units.
+ 
+ ## Services, events and settings
+ 
+ Injects `editor` and `commands`; provides `formatting` with wrap and clear
+-operations. Queries the `editor/activeView` bail event for palette commands.
++operations. Most palette commands query the `editor/activeView` bail event;
++the four guarded block commands use the outer view to check table syntax.
+ `lumiere.markdown.plugins.formatting.enabled` defaults to true. Bold, italics
+ Insert Link and Toggle Comment use Mod+B, Mod+I, Mod+K and Mod+/.
+ 
+@@ -67,5 +77,10 @@ does not copy. Coloured highlight toggles appear on the editor context menu
+ (and in the command palette), matching Obsidian's colour set.
+ 
+ VS Code owns saves and undo. Formatting changes source directly, including table
+-cell projections. No live-reference keybinding or visual-parity observation is
+-claimed; remaining shortcuts await the owner's verification.
++cell projections. Obsidian's command check callback hides the four guarded
++commands from its command list and disables the cell's block submenus; Lumia
++leaves them in the command palette as no-ops. The guard treats any parsed `Table` position as a cell, including separator
++rows, raw table source in Source mode and tables the widget cannot draw;
++callout and checklist commands are still unguarded. No live-reference
++keybinding or visual-parity observation is claimed; remaining shortcuts await
++the owner's verification.
+diff --git a/packages/markdown/src/plugins/formatting/formatting.test.ts b/packages/markdown/src/plugins/formatting/formatting.test.ts
+index 752754fd..dccff9cd 100644
+--- a/packages/markdown/src/plugins/formatting/formatting.test.ts
++++ b/packages/markdown/src/plugins/formatting/formatting.test.ts
+@@ -7,6 +7,7 @@ import { clearInlineFormatting, wrapSelection } from "./inline";
+ import { lineEdit, linkEdit } from "./lines";
+ import { toggleComment } from "./comment";
+ import { linkPaste } from "./paste-link";
++import { formattingCommands } from "./webview";
+ 
+ test("formatting toggles exact markers while retaining selection and obeying read-only", () => {
+   let state = EditorState.create({
+@@ -44,7 +45,8 @@ test("line commands exclude a final column-zero line and numbered lists toggle a
+     selection: { anchor: 0, head: 11 },
+   });
+   state = state.update(lineEdit(state, "1. ")).state;
+-  assert.equal(state.doc.toString(), "1. alpha\n2. beta\ngamma");
++  // Obsidian writes "1. " on every line; the renderer numbers them (1., 2.).
++  assert.equal(state.doc.toString(), "1. alpha\n1. beta\ngamma");
+   state = state.update(lineEdit(state, "1. ")).state;
+   assert.equal(state.doc.toString(), "alpha\nbeta\ngamma");
+   state = state.update(lineEdit(state, "## ")).state;
+@@ -94,15 +96,80 @@ test("toggle comment wraps the selection or the word in %% … %%, as in Obsidia
+   assert.equal(comment("a %%wo|rd%% b"), "a wo|rd b");
+ });
+ 
+-test("clearing inline formatting retains comment contents, links and escaped literals", () => {
++test("clearing inline formatting retains comment contents and escaped literals", () => {
+   assert.equal(
+     clearInlineFormatting(
+       "**Bold** *soft* ~~old~~ ==marked== %%kept%% `code` $x$ [Link](target) \\*literal\\*",
+     ),
+-    "Bold soft old marked kept code x [Link](target) \\*literal\\*",
++    "Bold soft old marked kept code x Linktarget \\*literal\\*",
+   );
+ });
+ 
++test("clearing inline formatting strips link markers, keeping label and URL text", () => {
++  assert.equal(clearInlineFormatting("[label](url)"), "labelurl");
++  assert.equal(clearInlineFormatting("[l](u)"), "lu");
++  assert.equal(
++    clearInlineFormatting("see [label](url) for details"),
++    "see labelurl for details",
++  );
++  assert.equal(clearInlineFormatting("![alt](url)"), "alturl");
++  // Emphasis inside the label is still cleared, as before.
++  assert.equal(clearInlineFormatting("[**bold**](url)"), "boldurl");
++  assert.equal(
++    clearInlineFormatting('[label](url "title")'),
++    'labelurl "title"',
++  );
++});
++
++test("clearing inline formatting strips reference, autolink, and wiki syntax", () => {
++  assert.equal(clearInlineFormatting("[label][ref]"), "labelref");
++  assert.equal(clearInlineFormatting("[label][]"), "label");
++  assert.equal(clearInlineFormatting("[label]"), "label");
++  assert.equal(
++    clearInlineFormatting("[ref]: https://x.io"),
++    "ref https://x.io",
++  );
++  assert.equal(clearInlineFormatting("<https://x.io>"), "https://x.io");
++  assert.equal(clearInlineFormatting("[[Page|Alias]]"), "Page|Alias");
++  // Bare URLs and wiki embeds are not formatting tokens to remove.
++  assert.equal(clearInlineFormatting("https://x.io"), "https://x.io");
++  assert.equal(clearInlineFormatting("![[Page]]"), "![[Page]]");
++});
++
++test("clearing inline formatting keeps escaped literals and code text", () => {
++  assert.equal(clearInlineFormatting("\\[label\\](url)"), "\\[label\\](url)");
++  assert.equal(clearInlineFormatting("`[label](url)`"), "[label](url)");
++});
++
++test("clear-formatting command edits selected link syntax, not syntax outside the selection", () => {
++  const command = formattingCommands().get("editor:clear-formatting");
++  assert.ok(command);
++  const clear = (doc: string, from: number, to: number) => {
++    let state = EditorState.create({
++      doc,
++      selection: { anchor: from, head: to },
++      extensions: [markdownLanguageSupport()],
++    });
++    const view = {
++      get state() {
++        return state;
++      },
++      dispatch(spec: Parameters<EditorState["update"]>[0]) {
++        state = state.update(spec).state;
++      },
++    } as EditorView;
++    assert.equal(command(view), true);
++    return [
++      state.doc.toString(),
++      state.selection.main.from,
++      state.selection.main.to,
++    ];
++  };
++  assert.deepEqual(clear("[label](url)", 0, 12), ["labelurl", 0, 8]);
++  assert.deepEqual(clear("[label](url)", 1, 6), ["[label](url)", 1, 6]);
++  assert.deepEqual(clear("**[label](url)**", 2, 14), ["labelurl", 0, 8]);
++});
++
+ test("caret formatting unwraps enclosing syntax and wraps a plain word", () => {
+   for (const [doc, position, expected, caret] of [
+     ["**hello**", 4, "hello", 2],
+diff --git a/packages/markdown/src/plugins/formatting/inline.ts b/packages/markdown/src/plugins/formatting/inline.ts
+index e6d046e4..ea72cf99 100644
+--- a/packages/markdown/src/plugins/formatting/inline.ts
++++ b/packages/markdown/src/plugins/formatting/inline.ts
+@@ -28,6 +28,27 @@ export function clearInlineFormatting(source: string): string {
+           { from: node.from, to: node.from + 2 },
+           { from: node.to - 2, to: node.to },
+         );
++      } else if (
++        ["Link", "Image", "Autolink", "LinkReference"].includes(node.name)
++      ) {
++        // Clear Formatting removes link syntax tokens but keeps the label,
++        // destination and reference text: `[l](u)` becomes `lu`. A LinkLabel
++        // holds `[ref]`, whose brackets are syntax too.
++        for (const mark of node.node.getChildren("LinkMark")) {
++          removed.push({ from: mark.from, to: mark.to });
++        }
++        for (const label of node.node.getChildren("LinkLabel")) {
++          removed.push(
++            { from: label.from, to: label.from + 1 },
++            { from: label.to - 1, to: label.to },
++          );
++        }
++      } else if (node.name === "WikiLink") {
++        // A plain wikilink's brackets are formatting; `![[…]]` embeds stay.
++        removed.push(
++          { from: node.from, to: node.from + 2 },
++          { from: node.to - 2, to: node.to },
++        );
+       }
+     },
+   });
+diff --git a/packages/markdown/src/plugins/formatting/lines.ts b/packages/markdown/src/plugins/formatting/lines.ts
+index 964c7e16..be2c635d 100644
+--- a/packages/markdown/src/plugins/formatting/lines.ts
++++ b/packages/markdown/src/plugins/formatting/lines.ts
+@@ -34,8 +34,10 @@ function isKind(text: string, prefix: string): boolean {
+     return quoteLength(text) !== undefined;
+   }
+   const marker = LIST_ITEM.exec(text)![2] ?? "";
++  // Obsidian's numeric guard sees through a task box; its bullet guard does
++  // not, so the two prefixes deliberately differ.
+   return prefix === "1. "
+-    ? /^\d+[.)] $/u.test(marker)
++    ? /^\d+[.)] (?:\[.\] )?$/u.test(marker)
+     : /^[-*+] $/u.test(marker);
+ }
+ 
+@@ -53,7 +55,7 @@ export function lineEdit(state: EditorState, prefix: string): TransactionSpec {
+   const lines = selectedLines(state);
+   const all = lines.every((line) => isKind(line.text, prefix));
+   const changes = state.changes(
+-    lines.map((line, index) => lineChange(line, prefix, { all, index })),
++    lines.map((line) => lineChange(line, prefix, { all })),
+   );
+   return {
+     changes,
+@@ -78,7 +80,7 @@ function selectedLines(state: EditorState): Line[] {
+ function lineChange(
+   line: Line,
+   prefix: string,
+-  { all, index }: { all: boolean; index: number },
++  { all }: { all: boolean },
+ ): LineChange {
+   if (/^#{0,6} ?$/u.test(prefix)) {
+     const [, lead = "", old = ""] = HEADING.exec(line.text)!;
+@@ -94,8 +96,9 @@ function lineChange(
+   }
+   const [, lead = "", marker = ""] = LIST_ITEM.exec(line.text)!;
+   const from = line.from + lead.length;
+-  const insert = prefix === "1. " ? `${index + 1}. ` : prefix;
+-  return { from, to: from + marker.length, insert: all ? "" : insert };
++  // Obsidian writes the literal "1. " on every line and lets the renderer
++  // number them; do not renumber the markers here.
++  return { from, to: from + marker.length, insert: all ? "" : prefix };
+ }
+ /**
+  * Insert Link, as in Obsidian: the selection becomes the label and the caret
+diff --git a/packages/markdown/src/plugins/formatting/table-cell.ts b/packages/markdown/src/plugins/formatting/table-cell.ts
+new file mode 100644
+index 00000000..e74c58da
+--- /dev/null
++++ b/packages/markdown/src/plugins/formatting/table-cell.ts
+@@ -0,0 +1,25 @@
++import type { EditorState } from "@codemirror/state";
++import type { SyntaxNode } from "@lezer/common";
++import { markdownParser } from "../../markdown/dialect";
++
++/**
++ * Whether `pos` lies within a parsed Markdown table. Obsidian's
++ * `inTableCell` check leaves list, quote, callout and code-block commands
++ * unavailable while a projected cell editor is active. Lumia keeps one
++ * document, so any position in a `Table` node (a cell, its pipes or its
++ * separator row) approximates that check for the formatting commands.
++ */
++export function isInTableCell(
++  state: EditorState,
++  pos: number = state.selection.main.head,
++): boolean {
++  const tree = markdownParser.parse(state.doc.toString());
++  let node: SyntaxNode | null = tree.resolveInner(pos, 1);
++  while (node) {
++    if (node.name === "Table") {
++      return true;
++    }
++    node = node.parent;
++  }
++  return false;
++}
+diff --git a/packages/markdown/src/plugins/formatting/webview.ts b/packages/markdown/src/plugins/formatting/webview.ts
+index d30705a4..bbaf0e74 100644
+--- a/packages/markdown/src/plugins/formatting/webview.ts
++++ b/packages/markdown/src/plugins/formatting/webview.ts
+@@ -20,6 +20,29 @@ import { addCursor } from "./cursors";
+ import { linkPasteHandler } from "./paste-link";
+ import { keepFormatKeys } from "./format-keys";
+ import { selectAllOccurrences } from "./select-occurrences";
++import { isInTableCell } from "./table-cell";
++
++/** Commands whose Obsidian registrations check `inTableCell`. */
++const REFUSE_IN_TABLE_CELL = new Set([
++  "editor:toggle-bullet-list",
++  "editor:toggle-numbered-list",
++  "editor:toggle-blockquote",
++  "editor:insert-codeblock",
++]);
++
++/** A block command must not edit a table row, whichever way the selection runs. */
++function refuseInTableCell(run: Command): Command {
++  return (view) => {
++    const { main } = view.state.selection;
++    if (
++      isInTableCell(view.state) ||
++      (main.from !== main.head && isInTableCell(view.state, main.from))
++    ) {
++      return false;
++    }
++    return run(view);
++  };
++}
+ 
+ export const formattingWebview: Plugin = {
+   name: "formatting",
+@@ -39,7 +62,7 @@ export const formattingWebview: Plugin = {
+   },
+ };
+ 
+-function formattingCommands(): Map<string, Command> {
++export function formattingCommands(): Map<string, Command> {
+   const commands = new Map<string, Command>();
+   for (const [id, marker] of [
+     ["bold", "**"],
+@@ -81,6 +104,12 @@ function formattingCommands(): Map<string, Command> {
+   commands.set("editor:swap-line-up", moveLineUp);
+   commands.set("editor:swap-line-down", moveLineDown);
+   addEditingCommands(commands);
++  for (const id of REFUSE_IN_TABLE_CELL) {
++    const run = commands.get(id);
++    if (run) {
++      commands.set(id, refuseInTableCell(run));
++    }
++  }
+   return commands;
+ }
+ 
+@@ -165,9 +194,17 @@ function registerFormattingCommands(
+ ): void {
+   for (const [id, run] of commands) {
+     ctx.effect(() =>
+-      ctx.commands.register(id, () =>
+-        run(ctx.bail("editor/activeView") ?? ctx.editor.view),
+-      ),
++      ctx.commands.register(id, () => {
++        // A projected table cell edits through an inner view whose text has no
++        // `|` markers. These block commands return false in a cell anyway, so
++        // give them the document view: its caret and selection stay in the
++        // table source and the guard can see them. Other commands keep the
++        // active cell view.
++        if (REFUSE_IN_TABLE_CELL.has(id)) {
++          return run(ctx.editor.view);
++        }
++        return run(ctx.bail("editor/activeView") ?? ctx.editor.view);
++      }),
+     );
+   }
+ }
+diff --git a/packages/markdown/src/plugins/linkUpdates/README.md b/packages/markdown/src/plugins/linkUpdates/README.md
+index 3e2d067c..e42c6ade 100644
+--- a/packages/markdown/src/plugins/linkUpdates/README.md
++++ b/packages/markdown/src/plugins/linkUpdates/README.md
+@@ -17,12 +17,14 @@ name follows it: a Markdown link's text equal to the note's name
+ (`[Old](Old.md)`) or to its path when that has folders, and a wikilink alias
+ equal to the name when the link has folders (`[[f/Old|Old]]`). A moved note's own path-style links are
+ rewritten too. Folder renames cover every file inside. By default it asks
+-first (Update Links, Always Update, which sets the mode to `always`, or
+-Don't Update), counting the notes from the index's parsed links so that
+-asking reads and rewrites nothing (unless a note is still unparsed, then
+-from the notes' current text), and builds the edits once, after the
+-answer, so text typed while the dialog is open is what gets rewritten. The edits are applied together
+-with the rename, so one undo reverts them.
++first, matching Obsidian's `alwaysUpdateLinks: false` (Update Links, Always
++Update, which persistently sets the mode to `always`, or Don't Update).
++`always` rewrites without asking and `never` leaves links untouched. It counts
++the notes from the index's parsed links so that asking reads and rewrites
++nothing (unless a note is still unparsed, then from the notes' current text),
++and builds the edits once, after the answer, so text typed while the dialog is
++open is what gets rewritten. The edits are applied together with the rename, so
++one undo reverts them.
+ 
+ When the rename finishes, each note is brought to the text planned for it and
+ saved if it had no unsaved changes. A note edited after the plan was made is
+diff --git a/packages/markdown/src/plugins/linkUpdates/manifest.ts b/packages/markdown/src/plugins/linkUpdates/manifest.ts
+index c373ad73..9e6460cd 100644
+--- a/packages/markdown/src/plugins/linkUpdates/manifest.ts
++++ b/packages/markdown/src/plugins/linkUpdates/manifest.ts
+@@ -4,7 +4,7 @@ export const config = Schema.object({
+   mode: Schema.union(["prompt", "always", "never"])
+     .default("prompt")
+     .description(
+-      "Obsidian's Automatically update internal links: `prompt` asks before rewriting links in other notes when a file is renamed or moved; its Always Update button sets this to `always`.",
++      "Obsidian's Automatically update internal links: `prompt` (the default, matching `alwaysUpdateLinks: false`) asks before rewriting links in other notes when a file is renamed or moved; its Always Update button sets this to `always`, `always` rewrites without asking, and `never` leaves links untouched.",
+     ),
+ });
+ export default defineManifest({
+diff --git a/packages/markdown/src/plugins/livePreview/api.ts b/packages/markdown/src/plugins/livePreview/api.ts
+index 541e0dcb..e4b5cddb 100644
+--- a/packages/markdown/src/plugins/livePreview/api.ts
++++ b/packages/markdown/src/plugins/livePreview/api.ts
+@@ -69,6 +69,12 @@ export interface LivePreview {
+     from: number,
+     to: number,
+   ): readonly RenderBlock[];
++  /** `editing: "reveal"` blocks whose source is visible in the range. */
++  revealedSourceBlocks?(
++    state: EditorState,
++    from: number,
++    to: number,
++  ): readonly RenderBlock[];
+   /** Disjoint folded spans in source order, for source-line motion policy. */
+   foldedRanges?(state: EditorState): readonly { from: number; to: number }[];
+   verticalPosition?(state: EditorState, direction: -1 | 1): number | undefined;
+diff --git a/packages/markdown/src/plugins/livePreview/motion.ts b/packages/markdown/src/plugins/livePreview/motion.ts
+index 51bbb4ce..00f1fe78 100644
+--- a/packages/markdown/src/plugins/livePreview/motion.ts
++++ b/packages/markdown/src/plugins/livePreview/motion.ts
+@@ -25,6 +25,27 @@ export function renderedWidgets(
+   );
+ }
+ 
++export function revealedSourceBlocks(
++  state: EditorState,
++  from: number,
++  to: number,
++): readonly RenderBlock[] {
++  // Fold filtering belongs to the caller's source-line policy: a motion head
++  // outside a folded block cannot be inside its source, so it is not pulled in.
++  return (
++    state
++      .field(blockIndex, false)
++      ?.filter(
++        (block) =>
++          block.from <= to &&
++          block.to >= from &&
++          block.renderer.editing === "reveal" &&
++          (Boolean(block.renderer.showSource?.(state, block)) ||
++            revealed(state, block.from, block.to)),
++      ) ?? []
++  );
++}
++
+ export function foldedRanges(state: EditorState) {
+   const ranges: { from: number; to: number }[] = [];
+   languageFoldedRanges(state).between(0, state.doc.length, (from, to) => {
+diff --git a/packages/markdown/src/plugins/livePreview/webview.ts b/packages/markdown/src/plugins/livePreview/webview.ts
+index bb0b1aef..21c7d765 100644
+--- a/packages/markdown/src/plugins/livePreview/webview.ts
++++ b/packages/markdown/src/plugins/livePreview/webview.ts
+@@ -38,6 +38,7 @@ import {
+   verticalBlock,
+   moveTo,
+   renderedWidgets,
++  revealedSourceBlocks,
+   foldedRanges,
+ } from "./motion";
+ import { sourceVisibleAt } from "./source-visibility";
+@@ -88,6 +89,7 @@ function registerEngine(
+     visiblePosition,
+     verticalPosition: verticalBlock,
+     renderedWidgets,
++    revealedSourceBlocks,
+     foldedRanges,
+     sourceVisibleAt,
+     block(renderer: Parameters<typeof blockRenderers.of>[0]) {
+diff --git a/packages/markdown/src/plugins/livePreview/widget-motion.test.ts b/packages/markdown/src/plugins/livePreview/widget-motion.test.ts
+index 04d463b4..81cac403 100644
+--- a/packages/markdown/src/plugins/livePreview/widget-motion.test.ts
++++ b/packages/markdown/src/plugins/livePreview/widget-motion.test.ts
+@@ -5,7 +5,12 @@ import { foldEffect, foldState } from "@codemirror/language";
+ import { blockIndex } from "./blocks";
+ import { blockRenderers } from "./registry";
+ import { documentTree } from "./document-tree";
+-import { renderedWidgets, foldedRanges, verticalBlock } from "./motion";
++import {
++  renderedWidgets,
++  revealedSourceBlocks,
++  foldedRanges,
++  verticalBlock,
++} from "./motion";
+ 
+ test("widget motion queries exclude reveal renderers and source overrides but retain tables under visual selections", () => {
+   const source =
+@@ -48,6 +53,62 @@ test("widget motion queries exclude reveal renderers and source overrides but re
+   );
+ });
+ 
++test("revealed source queries include a fence only while its source is showing", () => {
++  const source = "before\n\n```mermaid\nflowchart LR\nA --> B\n```\n\nafter";
++  const state = (anchor: number) =>
++    EditorState.create({
++      doc: source,
++      selection: { anchor },
++      extensions: [
++        documentTree,
++        blockIndex,
++        blockRenderers.of({
++          kind: "diagram",
++          editing: "reveal",
++          match: (node) => node.name === "FencedCode",
++          widget: () => {
++            throw new Error("Not mounted");
++          },
++        }),
++      ],
++    });
++  assert.deepEqual(revealedSourceBlocks(state(0), 0, source.length), []);
++  const shown = state(source.lastIndexOf("```"));
++  assert.deepEqual(
++    revealedSourceBlocks(shown, 0, source.length).map((block) => block.kind),
++    ["diagram"],
++  );
++  assert.deepEqual(renderedWidgets(shown, 0, source.length), []);
++});
++
++test("a folded reveal block stays in the source query because the motion gate owns folds", () => {
++  const source = "# Folded\n```mermaid\nflowchart LR\nA --> B\n```\n\n# After";
++  const state = EditorState.create({
++    doc: source,
++    selection: { anchor: 0, head: source.length },
++    extensions: [
++      documentTree,
++      blockIndex,
++      foldState,
++      blockRenderers.of({
++        kind: "diagram",
++        editing: "reveal",
++        match: (node) => node.name === "FencedCode",
++        widget: () => {
++          throw new Error("Not mounted");
++        },
++      }),
++    ],
++  });
++  const folded = state.update({
++    effects: foldEffect.of({ from: 8, to: source.indexOf("\n\n# After") }),
++  }).state;
++  assert.deepEqual(
++    revealedSourceBlocks(folded, 0, source.length).map((block) => block.kind),
++    ["diagram"],
++  );
++});
++
+ test("a table hidden inside a collapsed heading is absent from the widget motion query", () => {
+   const source = "# Folded\n| a | b |\n|---|---|\n| c | d |\n\n# After";
+   const state = EditorState.create({
+diff --git a/packages/markdown/src/plugins/obsidianCompat/README.md b/packages/markdown/src/plugins/obsidianCompat/README.md
+index 26eebcd3..c4c75a46 100644
+--- a/packages/markdown/src/plugins/obsidianCompat/README.md
++++ b/packages/markdown/src/plugins/obsidianCompat/README.md
+@@ -58,7 +58,7 @@ owning their settings. Supported `app.json` mappings, in rank order:
+ | `userIgnoreFilters` | `vault.excludedFiles` |
+ | `propertiesInDocument` | `properties.display` |
+ | `livePreview` | `editor.defaultMode` (true → livePreview, false → source) |
+-| `alwaysUpdateLinks === true` | `linkUpdates.mode` → always (false contributes nothing) |
++| `alwaysUpdateLinks` | `linkUpdates.mode` → always when true, prompt when false (invalid contributes nothing) |
+ 
+ `templates.json` and `daily-notes.json` seed the Templates and Daily Notes
+ plugins' settings the same way. A date format is carried over only when it
+diff --git a/packages/markdown/src/plugins/obsidianCompat/app-settings.ts b/packages/markdown/src/plugins/obsidianCompat/app-settings.ts
+index c2227f8c..4aa7b87d 100644
+--- a/packages/markdown/src/plugins/obsidianCompat/app-settings.ts
++++ b/packages/markdown/src/plugins/obsidianCompat/app-settings.ts
+@@ -30,10 +30,7 @@ export function mapAppSettings(value: unknown): ObsidianOverrides {
+       member(value.propertiesInDocument, ["visible", "hidden", "source"]),
+     ],
+     ["editor.defaultMode", editingMode(value.livePreview)],
+-    [
+-      "linkUpdates.mode",
+-      value.alwaysUpdateLinks === true ? "always" : undefined,
+-    ],
++    ["linkUpdates.mode", linkUpdateMode(value.alwaysUpdateLinks)],
+   ];
+   return Object.freeze(
+     Object.fromEntries(entries.filter(([, item]) => item !== undefined)),
+@@ -79,6 +76,13 @@ function editingMode(value: unknown): string | undefined {
+   }
+   return value ? "livePreview" : "source";
+ }
++/** Obsidian's false asks on each rename; true updates without asking. */
++function linkUpdateMode(value: unknown): "always" | "prompt" | undefined {
++  if (typeof value !== "boolean") {
++    return undefined;
++  }
++  return value ? "always" : "prompt";
++}
+ function ignoreFilters(value: unknown): readonly string[] | undefined {
+   if (
+     !Array.isArray(value) ||
+diff --git a/packages/markdown/src/plugins/vim/motion.test.ts b/packages/markdown/src/plugins/vim/motion.test.ts
+index a6220a28..6eefa2da 100644
+--- a/packages/markdown/src/plugins/vim/motion.test.ts
++++ b/packages/markdown/src/plugins/vim/motion.test.ts
+@@ -50,9 +50,14 @@ function motionFixture(start = 0, target = 5) {
+   cm.scrollTo = () => {};
+   cm.setCursor(start, 2);
+   const original = cm.findPosV;
++  let previewMode: "source" | "livePreview" = "livePreview";
+   const preview: LivePreview = {
+-    mode: "livePreview",
+-    setMode() {},
++    get mode() {
++      return previewMode;
++    },
++    setMode(next) {
++      previewMode = next;
++    },
+     block: () => () => {},
+     inline: () => () => {},
+     renderedWidgets: () => [
+@@ -68,6 +73,21 @@ function motionFixture(start = 0, target = 5) {
+   return { view, cm, mode, calls, original, installed, preview };
+ }
+ 
++function revealedSourceMotionFixture(start: number, target: number) {
++  const f = motionFixture(start, target);
++  f.preview.renderedWidgets = () => [];
++  f.preview.revealedSourceBlocks = () => [
++    {
++      kind: "diagram",
++      from: f.view.state.doc.line(2).from,
++      to: f.view.state.doc.line(4).to,
++      source: "",
++    },
++  ];
++  f.mode.lastHPos = 2;
++  return f;
++}
++
+ test("horizontal movement then gj/gk keeps the refreshed pixel goal and adapter column across tables", () => {
+   for (const [start, target, expected, key] of [
+     [0, 5, 1, "j"],
+@@ -202,3 +222,55 @@ test("page calls bypass correction and disposal restores the adapter and input-s
+     undefined,
+   );
+ });
++
++test("Vim.handleKey clamps revealed-source j/k, counts, display and visual motions", () => {
++  for (const [keys, start, target, line, amount] of [
++    [["k"], 3, 0, 2, -1],
++    [["j"], 1, 5, 2, 1],
++    [["2", "k"], 3, 0, 1, -2],
++    [["g", "k"], 3, 0, 2, -1],
++    [["V", "k"], 3, 0, 2, -1],
++  ] as const) {
++    const f = revealedSourceMotionFixture(start, target);
++    try {
++      for (const key of keys) {
++        Vim.handleKey(f.cm, key, "api");
++      }
++      assert.equal(f.calls[0]?.amount, amount);
++      assert.equal(f.cm.getCursor().line, line);
++    } finally {
++      Vim.handleKey(f.cm, "<Esc>", "api");
++      f.installed.destroy();
++    }
++  }
++});
++
++test("dk over a revealed source block deletes only the intended source lines", () => {
++  const f = revealedSourceMotionFixture(3, 0);
++  try {
++    Vim.handleKey(f.cm, "d", "api");
++    Vim.handleKey(f.cm, "k", "api");
++    const expected = [
++      "before text",
++      "| alpha | beta |",
++      "below text",
++      "after text",
++    ].join("\n");
++    assert.equal(f.calls[0]?.amount, -1);
++    assert.equal(f.view.state.doc.toString(), expected);
++  } finally {
++    f.installed.destroy();
++  }
++});
++
++test("source mode keeps the adapter's overshoot inside a revealed source block", () => {
++  const f = revealedSourceMotionFixture(3, 0);
++  try {
++    f.preview.setMode("source");
++    Vim.handleKey(f.cm, "k", "api");
++    assert.equal(f.calls[0]?.amount, -1);
++    assert.equal(f.cm.getCursor().line, 0);
++  } finally {
++    f.installed.destroy();
++  }
++});
+diff --git a/packages/markdown/src/plugins/vim/motion.ts b/packages/markdown/src/plugins/vim/motion.ts
+index a9c61adf..e63e5a5c 100644
+--- a/packages/markdown/src/plugins/vim/motion.ts
++++ b/packages/markdown/src/plugins/vim/motion.ts
+@@ -103,12 +103,12 @@ function tableSourcePosition(
+     doc.lines - 1,
+     Math.max(motion.start.line, motion.result.line),
+   );
+-  const widgets =
+-    preview.renderedWidgets?.(
+-      view.state,
+-      doc.line(fromLine + 1).from,
+-      doc.line(toLine + 1).to,
+-    ) ?? [];
++  const rangeFrom = doc.line(fromLine + 1).from;
++  const rangeTo = doc.line(toLine + 1).to;
++  const widgets = [
++    ...(preview.renderedWidgets?.(view.state, rangeFrom, rangeTo) ?? []),
++    ...(preview.revealedSourceBlocks?.(view.state, rangeFrom, rangeTo) ?? []),
++  ];
+   return tableMotionPosition({
+     ...motion,
+     lastLine: doc.lines - 1,
+diff --git a/packages/markdown/src/plugins/vim/source-motion.test.ts b/packages/markdown/src/plugins/vim/source-motion.test.ts
+index 495aaa38..a364579e 100644
+--- a/packages/markdown/src/plugins/vim/source-motion.test.ts
++++ b/packages/markdown/src/plugins/vim/source-motion.test.ts
+@@ -171,3 +171,60 @@ test("Mermaid, HTML and other widgets keep native motion; a table outside the mo
+     undefined,
+   );
+ });
++
++test("a revealed Mermaid or HTML overshoot from the closing fence returns the previous source line", () => {
++  for (const kind of ["diagram", "Mermaid", "HTMLBlock"]) {
++    assert.deepEqual(
++      tableMotionPosition({
++        ...base,
++        start: { line: 6, ch: 0 },
++        amount: -1,
++        result: { line: 3, ch: 0 },
++        widgets: [{ kind, from: 3, to: 6 }],
++      }),
++      { line: 5, ch: 3 },
++    );
++  }
++});
++
++test("a revealed block overshoot from the opening fence returns the next source line", () => {
++  assert.deepEqual(
++    tableMotionPosition({
++      ...base,
++      start: { line: 3, ch: 0 },
++      amount: 1,
++      result: { line: 6, ch: 0 },
++      widgets: [{ kind: "diagram", from: 3, to: 6 }],
++    }),
++    { line: 4, ch: 3 },
++  );
++});
++
++test("a folded revealed fence outside the caret cannot pull a folded motion", () => {
++  assert.equal(
++    tableMotionPosition({
++      ...base,
++      start: { line: 0, ch: 0 },
++      amount: 1,
++      result: { line: 8, ch: 0 },
++      lastLine: 20,
++      folds: [{ from: 0, to: 6 }],
++      widgets: [{ kind: "diagram", from: 3, to: 6 }],
++    }),
++    undefined,
++  );
++});
++
++test("a long HTML reveal block overshoot from its closing tag returns the previous source line", () => {
++  assert.deepEqual(
++    tableMotionPosition({
++      ...base,
++      start: { line: 146, ch: 0 },
++      amount: -1,
++      result: { line: 140, ch: 0 },
++      lastLine: 160,
++      widgets: [{ kind: "HTMLBlock", from: 140, to: 146 }],
++    }),
++    { line: 145, ch: 3 },
++  );
++});
+diff --git a/packages/markdown/src/plugins/vim/source-motion.ts b/packages/markdown/src/plugins/vim/source-motion.ts
+index 351cd0b3..ddff91fd 100644
+--- a/packages/markdown/src/plugins/vim/source-motion.ts
++++ b/packages/markdown/src/plugins/vim/source-motion.ts
+@@ -23,8 +23,9 @@ interface SourceMotion {
+ }
+ 
+ /**
+- * CM's vertical layout can skip a table replacement. Vim's source motions
+- * must ignore that overshoot, including operators and visual selections.
++ * CM's vertical layout can skip a table replacement or overshoot a revealed
++ * source block. Vim's source motions must ignore that overshoot, including
++ * operators and visual selections.
+  */
+ export function tableMotionPosition(
+   motion: SourceMotion,
+@@ -48,17 +49,19 @@ export function tableMotionPosition(
+   if (
+     motion.policy === "display-entry" &&
+     (Math.abs(amount) !== 1 ||
+-      !widgets.some(
+-        (widget) =>
+-          widget.kind === "Table" && widget.from <= line && widget.to >= line,
++      !widgets.some((widget) =>
++        motionApplies(
++          widget,
++          start.line,
++          widget.from <= line && widget.to >= line,
++        ),
+       ))
+   ) {
+     return undefined;
+   }
+   if (
+-    !widgets.some(
+-      (widget) =>
+-        widget.kind === "Table" && widget.from <= to && widget.to >= from,
++    !widgets.some((widget) =>
++      motionApplies(widget, start.line, widget.from <= to && widget.to >= from),
+     )
+   ) {
+     return undefined;
+@@ -71,6 +74,21 @@ export function tableMotionPosition(
+   };
+ }
+ 
++function motionApplies(
++  widget: WidgetLines,
++  start: number,
++  overlaps: boolean,
++): boolean {
++  if (!overlaps) {
++    return false;
++  }
++  // Tables stay replaced, so any crossing motion is corrected. Source-visible
++  // reveal blocks only correct once the caret is already inside their source.
++  return (
++    widget.kind === "Table" || (widget.from <= start && widget.to >= start)
++  );
++}
++
+ function foldedSourceLine(
+   start: number,
+   amount: number,
+diff --git a/packages/markdown/test/browser/mermaid-toolbar-overlap.spec.ts b/packages/markdown/test/browser/mermaid-toolbar-overlap.spec.ts
+new file mode 100644
+index 00000000..8864f41d
+--- /dev/null
++++ b/packages/markdown/test/browser/mermaid-toolbar-overlap.spec.ts
+@@ -0,0 +1,350 @@
++/**
++ * Inspect, Copy and Edit are pinned to the visible top-right of a rendered
++ * diagram. They must have a reserved lane and never cover Mermaid node text
++ * or hit targets, at any horizontal scroll position.
++ *
++ * Fixtures are generic (Start → Intake → …). Do not use real user diagrams.
++ */
++import { expect, test, type Page } from "@playwright/test";
++import { mkdirSync } from "node:fs";
++import { join } from "node:path";
++import { open } from "./harness";
++
++const WIDE_FLOW = `flowchart LR
++  start([Start]) --> intake[Intake request]
++  intake --> review[Review the draft]
++  review --> approve[Approve the change]
++  approve --> publish[Publish the note]
++  publish --> archive[Archive the source]
++  archive --> notify[Notify the readers]
++  notify --> done([Done])`;
++
++const NORMAL_FLOW = `flowchart LR
++  start([Start]) --> done([Done])`;
++
++const SECOND_WIDE = `flowchart LR
++  alpha([Alpha]) --> bravo[Bravo step]
++  bravo --> charlie[Charlie step]
++  charlie --> delta[Delta step]
++  delta --> echo[Echo step]
++  echo --> foxtrot[Foxtrot step]
++  foxtrot --> golf[Golf step]
++  golf --> hotel([Hotel])`;
++
++const NOTE = `# Diagram toolbar
++
++A short diagram:
++
++\`\`\`mermaid
++${NORMAL_FLOW}
++\`\`\`
++
++A wide pipeline:
++
++\`\`\`mermaid
++${WIDE_FLOW}
++\`\`\`
++
++A second wide pipeline, consecutively:
++
++\`\`\`mermaid
++${SECOND_WIDE}
++\`\`\`
++`;
++
++const SHOT_DIR = process.env.DIAGRAM_TOOLBAR_SHOTS;
++
++const SHOT_LABEL = process.env.DIAGRAM_TOOLBAR_SHOT_LABEL ?? "current";
++
++interface ButtonBox {
++  name: string;
++  left: number;
++  right: number;
++  top: number;
++  bottom: number;
++  width: number;
++  height: number;
++}
++
++interface OverlapHit {
++  button: string;
++  node: string;
++}
++
++interface ChromeFit {
++  ready: boolean;
++  inspectInsidePre: boolean;
++  buttonCount: number;
++  buttons: ButtonBox[];
++  nodeCount: number;
++  overlaps: OverlapHit[];
++  preClientWidth: number;
++  preScrollWidth: number;
++  preRight: number;
++  laneLeft: number;
++  scrollerClientWidth: number;
++  scrollerScrollWidth: number;
++  scrollLeft: number;
++}
++
++const SCROLLS = [0, 0.25, 0.5, 0.75, 1] as const;
++
++function mermaidNote(source: string): string {
++  return `\`\`\`mermaid\n${source}\n\`\`\`\n\nafter\n`;
++}
++
++async function reveal(page: Page, needle: string) {
++  await page.evaluate((needle) => {
++    window.harness.reveal(window.harness.text.indexOf(needle));
++  }, needle);
++}
++
++async function waitForDiagram(page: Page, needle: string) {
++  await expect
++    .poll(async () => (await chromeAt(page, needle)).ready, { timeout: 15000 })
++    .toBe(true);
++}
++
++async function chromeAt(
++  page: Page,
++  needle: string,
++  scrollFraction?: number,
++): Promise<ChromeFit> {
++  return page.evaluate(
++    ({ needle, scrollFraction }) => {
++      const empty = (): ChromeFit => ({
++        ready: false,
++        inspectInsidePre: false,
++        buttonCount: 0,
++        buttons: [],
++        nodeCount: 0,
++        overlaps: [],
++        preClientWidth: 0,
++        preScrollWidth: 0,
++        preRight: 0,
++        laneLeft: 0,
++        scrollerClientWidth: 0,
++        scrollerScrollWidth: 0,
++        scrollLeft: 0,
++      });
++      const pre = [
++        ...document.querySelectorAll('pre[data-fence="mermaid"]'),
++      ].find((item) =>
++        decodeURIComponent(item.getAttribute("data-source") || "").includes(
++          needle,
++        ),
++      );
++      const svg = pre?.querySelector("svg");
++      const scroller = document.querySelector(".cm-scroller");
++      const shell = pre?.closest(".hybrid-block");
++      if (!pre || !svg || !scroller || !shell || !svg.querySelector(".node")) {
++        return empty();
++      }
++      if (scrollFraction !== undefined) {
++        const max = Math.max(0, pre.scrollWidth - pre.clientWidth);
++        pre.scrollLeft = max * scrollFraction;
++      }
++      const buttons = [
++        ...shell.querySelectorAll<HTMLElement>(
++          ".inspect-diagram, .copy-code, .edit-block, .code-language",
++        ),
++      ].map((button) => {
++        const box = button.getBoundingClientRect();
++        return {
++          name:
++            button.getAttribute("aria-label") ||
++            button.textContent?.trim() ||
++            button.className,
++          left: box.left,
++          right: box.right,
++          top: box.top,
++          bottom: box.bottom,
++          width: box.width,
++          height: box.height,
++        };
++      });
++      const hostBox = pre.getBoundingClientRect();
++      const slop = 0.5;
++      // Only the part still inside the scrollport can be seen or clicked;
++      // overflowed layout boxes extend under the reserved lane.
++      const nodes = [...svg.querySelectorAll(".node")].flatMap((node) => {
++        const box = node.getBoundingClientRect();
++        const left = Math.max(box.left, hostBox.left);
++        const right = Math.min(box.right, hostBox.right);
++        const top = Math.max(box.top, hostBox.top);
++        const bottom = Math.min(box.bottom, hostBox.bottom);
++        if (right - left <= slop || bottom - top <= slop) {
++          return [];
++        }
++        return [
++          {
++            label: (node.textContent || "").replace(/\s+/g, " ").trim(),
++            left,
++            right,
++            top,
++            bottom,
++          },
++        ];
++      });
++      const overlaps: OverlapHit[] = [];
++      for (const button of buttons) {
++        if (button.width < 1 || button.height < 1) {
++          continue;
++        }
++        for (const node of nodes) {
++          if (
++            button.right > node.left + slop &&
++            button.left < node.right - slop &&
++            button.bottom > node.top + slop &&
++            button.top < node.bottom - slop
++          ) {
++            overlaps.push({ button: button.name, node: node.label });
++          }
++        }
++      }
++      const inspect = shell.querySelector(".inspect-diagram");
++      let laneLeft = hostBox.right;
++      for (const button of buttons) {
++        if (button.width >= 1 && button.height >= 1 && button.left < laneLeft) {
++          laneLeft = button.left;
++        }
++      }
++      return {
++        ready: true,
++        inspectInsidePre: Boolean(inspect && pre.contains(inspect)),
++        buttonCount: buttons.length,
++        buttons,
++        nodeCount: nodes.length,
++        overlaps,
++        preClientWidth: pre.clientWidth,
++        preScrollWidth: pre.scrollWidth,
++        preRight: hostBox.right,
++        laneLeft,
++        scrollerClientWidth: scroller.clientWidth,
++        scrollerScrollWidth: scroller.scrollWidth,
++        scrollLeft: pre.scrollLeft,
++      };
++    },
++    { needle, scrollFraction },
++  );
++}
++
++async function assertNoOverlap(
++  page: Page,
++  needle: string,
++  overflowing: boolean,
++) {
++  for (const fraction of SCROLLS) {
++    const fit = await chromeAt(page, needle, fraction);
++    expect(fit.ready, needle).toBe(true);
++    expect(fit.buttonCount, JSON.stringify(fit)).toBeGreaterThanOrEqual(3);
++    expect(fit.nodeCount, JSON.stringify(fit)).toBeGreaterThan(0);
++    expect(
++      fit.overlaps,
++      `overlap at scroll ${fraction} of ${needle}: ${JSON.stringify(fit.overlaps)}`,
++    ).toEqual([]);
++    expect(fit.inspectInsidePre, "inspect stays outside the scrollport").toBe(
++      false,
++    );
++    expect(fit.scrollerScrollWidth).toBeLessThan(fit.scrollerClientWidth + 48);
++    if (overflowing) {
++      expect(fit.preScrollWidth).toBeGreaterThan(fit.preClientWidth + 80);
++    }
++    // The scrollport ends at or before the leftmost chrome control, so
++    // content cannot slide under the buttons at any scroll position.
++    expect(fit.preRight).toBeLessThanOrEqual(fit.laneLeft + 1);
++  }
++}
++
++async function shoot(page: Page, name: string) {
++  if (!SHOT_DIR) {
++    return;
++  }
++  mkdirSync(SHOT_DIR, { recursive: true });
++  await page.screenshot({
++    path: join(SHOT_DIR, `${SHOT_LABEL}-${name}.png`),
++    fullPage: false,
++  });
++}
++
++async function showChrome(page: Page) {
++  await page.addStyleTag({
++    content: `.hybrid-block .inspect-diagram, .hybrid-block .copy-code, .hybrid-block .edit-block { opacity: 1 !important; }`,
++  });
++}
++
++test("wide mermaid chrome never covers nodes at any horizontal scroll", async ({
++  page,
++}) => {
++  await page.setViewportSize({ width: 1100, height: 800 });
++  await open(page, mermaidNote(WIDE_FLOW));
++  await reveal(page, "after");
++  await waitForDiagram(page, "Intake request");
++  await showChrome(page);
++  await chromeAt(page, "Intake request", 0);
++  await shoot(page, "wide-1100-start");
++  await chromeAt(page, "Intake request", 1);
++  await shoot(page, "wide-1100-scrolled-end");
++  await assertNoOverlap(page, "Intake request", true);
++});
++
++test("narrow viewports still reserve a non-overlapping chrome lane", async ({
++  page,
++}) => {
++  await page.setViewportSize({ width: 480, height: 720 });
++  await open(page, mermaidNote(WIDE_FLOW));
++  await reveal(page, "after");
++  await waitForDiagram(page, "Intake request");
++  await showChrome(page);
++  await chromeAt(page, "Intake request", 1);
++  await shoot(page, "wide-480-scrolled-end");
++  await assertNoOverlap(page, "Intake request", true);
++});
++
++test("a short mermaid diagram keeps its buttons off the nodes", async ({
++  page,
++}) => {
++  await page.setViewportSize({ width: 1100, height: 800 });
++  await open(page, mermaidNote(NORMAL_FLOW));
++  await reveal(page, "after");
++  await waitForDiagram(page, "Start");
++  await showChrome(page);
++  await shoot(page, "normal-1100");
++  await assertNoOverlap(page, "Start", false);
++});
++
++test("consecutive diagrams each keep a clear chrome lane", async ({ page }) => {
++  await page.setViewportSize({ width: 1100, height: 800 });
++  await open(page, NOTE);
++  await reveal(page, "A wide pipeline");
++  await waitForDiagram(page, "Intake request");
++  await waitForDiagram(page, "Bravo step");
++  await showChrome(page);
++  await assertNoOverlap(page, "Start", false);
++  await assertNoOverlap(page, "Intake request", true);
++  await chromeAt(page, "Bravo step", 1);
++  await shoot(page, "consecutive-second-scrolled-end");
++  await assertNoOverlap(page, "Bravo step", true);
++});
++
++test("diagram actions stay keyboard-reachable without covering nodes", async ({
++  page,
++}) => {
++  await page.setViewportSize({ width: 1100, height: 800 });
++  await open(page, mermaidNote(WIDE_FLOW));
++  await reveal(page, "after");
++  await waitForDiagram(page, "Intake request");
++  await chromeAt(page, "Intake request", 1);
++  const labels = [
++    "Inspect diagram",
++    "Copy code",
++    "Edit diagram source",
++  ] as const;
++  for (const name of labels) {
++    const button = page.getByRole("button", { name });
++    await expect(button).toBeAttached();
++    await button.focus();
++    await expect(button).toBeFocused();
++  }
++  await assertNoOverlap(page, "Intake request", true);
++});
+diff --git a/packages/markdown/test/browser/vim-block-motion.spec.ts b/packages/markdown/test/browser/vim-block-motion.spec.ts
+index 399b6662..ccd2cc98 100644
+--- a/packages/markdown/test/browser/vim-block-motion.spec.ts
++++ b/packages/markdown/test/browser/vim-block-motion.spec.ts
+@@ -69,3 +69,110 @@ test("ordinary Vim counts, operators, visual selection and source mode remain na
+     )
+     .toBe(6);
+ });
++
++const mermaid = [
++  "```mermaid",
++  "flowchart LR",
++  "A --> B",
++  "B --> C",
++  "C --> D",
++  "D --> E",
++  "```",
++].join("\n");
++
++const html = ["<div>", "alpha", "bravo", "charlie", "</div>"].join("\n");
++
++async function caretHead(page: Parameters<typeof open>[0]) {
++  return page.evaluate(async () => (await window.harness.viewState()).head);
++}
++
++for (const [label, block, lastBody, firstBody] of [
++  ["Mermaid", mermaid, "D --> E", "flowchart LR"],
++  ["HTML", html, "charlie", "alpha"],
++] as const) {
++  test(`k from a revealed ${label} close fence moves one source line up`, async ({
++    page,
++  }) => {
++    const source = `Intro\n\n${block}\n\nOutro`;
++    await open(page, source, "obsidian", {
++      features: { vim: { enabled: true, config: {} } },
++    });
++    const close = source.lastIndexOf(block.split("\n").at(-1)!);
++    const previous = source.lastIndexOf(lastBody);
++    const opening = source.indexOf(block);
++    const after = source.indexOf("\n\nOutro") + 1;
++    await page.evaluate((at) => window.harness.reveal(at), after);
++    await page.keyboard.press("k");
++    await expect.poll(() => caretHead(page)).toBe(close);
++    await expect(
++      page.locator(".cm-line").filter({ hasText: firstBody }),
++    ).toBeVisible();
++    await page.keyboard.press("k");
++    await expect.poll(() => caretHead(page)).toBe(previous);
++    expect(await caretHead(page)).not.toBe(opening);
++  });
++
++  test(`j from a revealed ${label} open fence moves one source line down`, async ({
++    page,
++  }) => {
++    const source = `Intro\n\n${block}\n\nOutro`;
++    await open(page, source, "obsidian", {
++      features: { vim: { enabled: true, config: {} } },
++    });
++    const opening = source.indexOf(block);
++    const next = source.indexOf(firstBody);
++    const close = source.lastIndexOf(block.split("\n").at(-1)!);
++    await page.evaluate((at) => window.harness.reveal(at), 6);
++    await page.keyboard.press("j");
++    await expect.poll(() => caretHead(page)).toBe(opening);
++    await page.keyboard.press("j");
++    await expect.poll(() => caretHead(page)).toBe(next);
++    expect(await caretHead(page)).not.toBe(close);
++  });
++}
++
++test("Mermaid source-edit k after Edit keeps one-line motion and the diagram control", async ({
++  page,
++}) => {
++  const source = `Intro\n\n${mermaid}\n\nOutro`;
++  await open(page, source, "obsidian", {
++    features: { vim: { enabled: true, config: {} } },
++  });
++  const close = source.lastIndexOf("```");
++  const previous = source.lastIndexOf("D --> E");
++  const opening = source.indexOf("```mermaid");
++  await expect(
++    page.getByRole("button", { name: "Edit diagram source" }),
++  ).toBeVisible();
++  await page.getByRole("button", { name: "Edit diagram source" }).click();
++  await expect(
++    page.locator(".cm-line").filter({ hasText: "flowchart LR" }),
++  ).toBeVisible();
++  await page.keyboard.press("Escape");
++  await page.evaluate((at) => window.harness.reveal(at), close);
++  await expect.poll(() => caretHead(page)).toBe(close);
++  await page.keyboard.press("k");
++  await expect.poll(() => caretHead(page)).toBe(previous);
++  expect(await caretHead(page)).not.toBe(opening);
++});
++
++test("k from a revealed Mermaid close fence in a longer note moves one source line up", async ({
++  page,
++}) => {
++  const prefix = Array.from(
++    { length: 145 },
++    (_, index) => `line ${index + 1}`,
++  ).join("\n");
++  const source = `${prefix}\n${mermaid}\n\nOutro`;
++  await open(page, source, "obsidian", {
++    features: { vim: { enabled: true, config: {} } },
++  });
++  const close = source.lastIndexOf("```");
++  const previous = source.lastIndexOf("D --> E");
++  const opening = source.indexOf("```mermaid");
++  await page.evaluate((at) => window.harness.reveal(at), close);
++  await expect.poll(() => caretHead(page)).toBe(close);
++  await page.keyboard.press("k");
++  await expect.poll(() => caretHead(page)).toBe(previous);
++  expect(await caretHead(page)).not.toBe(opening);
++});
+diff --git a/packages/markdown/test/unit/formatting/obsidian-commands.test.ts b/packages/markdown/test/unit/formatting/obsidian-commands.test.ts
+index ab8e956a..24ddce1f 100644
+--- a/packages/markdown/test/unit/formatting/obsidian-commands.test.ts
++++ b/packages/markdown/test/unit/formatting/obsidian-commands.test.ts
+@@ -142,6 +142,58 @@ test("a list marker replaces another list's, checkbox and all, and a second pres
+   );
+ });
+ 
++// Obsidian 1.15.0's Toggle Numbered List writes the literal "1. " on every
++// selected line; the renderer numbers them. Lumia used to renumber 1, 2, 3.
++test("Toggle Numbered List writes '1. ' on every line, not 1, 2, 3", () => {
++  assert.equal(
++    edit("‹one\ntwo\nthree›", (s) => lineEdit(s, "1. ")),
++    "1. ‹one\n1. two\n1. three›",
++  );
++  assert.equal(
++    edit("‹> a\n> b›", (s) => lineEdit(s, "1. ")),
++    "‹> 1. a\n> 1. b›",
++  );
++});
++
++test("Toggle Numbered List keeps line structure and toggles every numbered marker off", () => {
++  // A replaced marker leaves the selection start at column 0: Obsidian sends
++  // only `{changes}`, and CodeMirror maps a position at the start of a
++  // replaced range to that start. An inserted marker maps to the right of
++  // itself (see the test above), which is why the two shapes differ.
++  assert.equal(
++    edit("‹- a\n2) b›", (s) => lineEdit(s, "1. ")),
++    "‹1. a\n1. b›",
++  );
++  assert.equal(
++    edit("‹a\n\nb›", (s) => lineEdit(s, "1. ")),
++    "1. ‹a\n\n1. b›",
++  );
++  assert.equal(
++    edit("‹> 1. a\n> 2. b›", (s) => lineEdit(s, "1. ")),
++    "‹> a\n> b›",
++  );
++  assert.equal(
++    edit("  1. nes|ted", (s) => lineEdit(s, "1. ")),
++    "  nes|ted",
++  );
++  assert.equal(
++    edit("‹1. a\n\n1. b›", (s) => lineEdit(s, "1. ")),
++    "‹a\n\nb›",
++  );
++  assert.equal(
++    edit("‹1. a\n2. b\n3. c›", (s) => lineEdit(s, "1. ")),
++    "‹a\nb\nc›",
++  );
++  assert.equal(
++    edit("1. [ ] it|em", (s) => lineEdit(s, "1. ")),
++    "it|em",
++  );
++  assert.equal(
++    edit("‹1. [ ] a\n2. b›", (s) => lineEdit(s, "1. ")),
++    "‹a\nb›",
++  );
++});
++
+ // Obsidian 1.15.0's line commands, read from its app.js with REA
+ // (2026-11-07): markers go after a line's `>` and indentation, and blank
+ // lines in a selection of several are skipped.
+@@ -164,7 +216,7 @@ test("inside a quote or callout, headings and list markers go after the `>`", ()
+   );
+   assert.equal(
+     edit("‹> a\n> b›", (s) => lineEdit(s, "1. ")),
+-    "‹> 1. a\n> 2. b›",
++    "‹> 1. a\n> 1. b›",
+   );
+   assert.equal(
+     edit("  - nes|ted", (s) => lineEdit(s, "1. ")),
+diff --git a/packages/markdown/test/unit/formatting/table-cell.test.ts b/packages/markdown/test/unit/formatting/table-cell.test.ts
+new file mode 100644
+index 00000000..03a419f0
+--- /dev/null
++++ b/packages/markdown/test/unit/formatting/table-cell.test.ts
+@@ -0,0 +1,122 @@
++import test from "node:test";
++import assert from "node:assert/strict";
++import { EditorState } from "@codemirror/state";
++import type { EditorView } from "@codemirror/view";
++import { isInTableCell } from "../../../src/plugins/formatting/table-cell";
++import { formattingCommands } from "../../../src/plugins/formatting/webview";
++
++const TABLE = "| a | b |\n| --- | --- |\n| c | d |";
++const WITH_TEXT = `${TABLE}\n\nafter text`;
++
++// Obsidian's inTableCell check covers these block commands. The formatting
++// layer owns the list, quote and code-block ones; the checklist and callout
++// commands live in the tasks and callouts plugins.
++const REFUSED = [
++  "editor:toggle-bullet-list",
++  "editor:toggle-numbered-list",
++  "editor:toggle-blockquote",
++  "editor:insert-codeblock",
++];
++
++function state(
++  doc: string,
++  anchor: number,
++  head: number = anchor,
++): EditorState {
++  return EditorState.create({ doc, selection: { anchor, head } });
++}
++
++/** A view that just records whether a command dispatched an edit. */
++function fakeView(initial: EditorState): {
++  view: EditorView;
++  dispatched: () => boolean;
++} {
++  let current = initial;
++  let didDispatch = false;
++  const view = {
++    get state() {
++      return current;
++    },
++    dispatch(spec: Parameters<EditorState["update"]>[0]) {
++      didDispatch = true;
++      current = current.update(spec).state;
++    },
++  } as unknown as EditorView;
++  return { view, dispatched: () => didDispatch };
++}
++
++test("isInTableCell is true anywhere on a table row and false outside it", () => {
++  // A header cell, a body cell and the separator row are all table positions.
++  assert.equal(isInTableCell(state(TABLE, TABLE.indexOf("a"))), true);
++  assert.equal(isInTableCell(state(TABLE, TABLE.indexOf("c"))), true);
++  assert.equal(isInTableCell(state(TABLE, TABLE.indexOf("---"))), true);
++  // A caret in a paragraph after the table and in plain text are not.
++  assert.equal(
++    isInTableCell(state(WITH_TEXT, WITH_TEXT.indexOf("after"))),
++    false,
++  );
++  assert.equal(isInTableCell(state("hello world", 3)), false);
++  assert.equal(isInTableCell(state("", 0)), false);
++});
++
++test("isInTableCell accepts an explicit position overriding the caret", () => {
++  const outside = state(WITH_TEXT, WITH_TEXT.indexOf("after"));
++  assert.equal(isInTableCell(outside), false);
++  assert.equal(isInTableCell(outside, TABLE.indexOf("c")), true);
++});
++
++test("the list, quote and code-block commands refuse inside a table cell", () => {
++  const commands = formattingCommands();
++  const caret = TABLE.indexOf("c");
++  for (const id of REFUSED) {
++    const { view, dispatched } = fakeView(state(TABLE, caret));
++    assert.equal(commands.get(id)!(view), false, `${id} returns false`);
++    assert.equal(dispatched(), false, `${id} dispatches no edit`);
++  }
++});
++
++test("the same commands still run outside a table cell", () => {
++  const commands = formattingCommands();
++  for (const id of REFUSED) {
++    const { view, dispatched } = fakeView(state("hello", 3));
++    assert.equal(commands.get(id)!(view), true, `${id} returns true`);
++    assert.equal(dispatched(), true, `${id} dispatches its edit`);
++  }
++});
++
++test("the predicate follows the parser through code fences and table variants", () => {
++  const fence = "```md\n| a | b |\n| - | - |\n| c | d |\n```";
++  assert.equal(isInTableCell(state(fence, fence.indexOf("c"))), false);
++  const bare = "a | b\n--- | ---\nc | d";
++  assert.equal(isInTableCell(state(bare, bare.indexOf("d"))), true);
++  const list = "- item\n\n  | a | b |\n  | - | - |\n  | c | d |";
++  assert.equal(isInTableCell(state(list, list.indexOf("d"))), true);
++  const cell = "| a | b |\n| --- | --- |\n| one<br>two | `x\\|y` |";
++  assert.equal(isInTableCell(state(cell, cell.indexOf("two"))), true);
++  assert.equal(isInTableCell(state(cell, cell.indexOf("y"))), true);
++  const ended = "| a | b |\n| - | - |\n| c | d |\nbelow";
++  assert.equal(isInTableCell(state(ended, ended.indexOf("below"))), false);
++});
++
++test("a selection with one end in a table cell refuses the commands either way", () => {
++  const commands = formattingCommands();
++  const inside = WITH_TEXT.indexOf("c");
++  const outside = WITH_TEXT.indexOf("after");
++  for (const { anchor, head } of [
++    { anchor: inside, head: outside },
++    { anchor: outside, head: inside },
++  ]) {
++    for (const id of REFUSED) {
++      const { view, dispatched } = fakeView(state(WITH_TEXT, anchor, head));
++      assert.equal(commands.get(id)!(view), false, `${id} returns false`);
++      assert.equal(dispatched(), false, `${id} dispatches no edit`);
++    }
++  }
++});
++
++test("the guard matches Obsidian's list: headings are not refused", () => {
++  const commands = formattingCommands();
++  const { view, dispatched } = fakeView(state(TABLE, TABLE.indexOf("c")));
++  assert.notEqual(commands.get("editor:set-heading-2")!(view), false);
++  assert.equal(dispatched(), true);
++});
+diff --git a/packages/markdown/test/unit/linkUpdates/default.test.ts b/packages/markdown/test/unit/linkUpdates/default.test.ts
+new file mode 100644
+index 00000000..0b4b2616
+--- /dev/null
++++ b/packages/markdown/test/unit/linkUpdates/default.test.ts
+@@ -0,0 +1,88 @@
++import { provideHostServices } from "../../../src/shared/host";
++import test from "node:test";
++import assert from "node:assert/strict";
++import { createRoot } from "@workshop/core";
++import { linkUpdatesHost } from "../../../src/plugins/linkUpdates/host";
++import { config as linkUpdatesConfig } from "../../../src/plugins/linkUpdates/manifest";
++import { fakeViews, memoryVaults, uriOf, hostWith } from "../views/fakes";
++
++const notes = {
++  "Topic/Old.md": "",
++  "A.md": "See [[Old|the old note]] and [[Old#Part]].",
++  "B.md": "Embed ![[Old]]",
++};
++
++const rename = [
++  { oldUri: uriOf("Topic/Old.md"), newUri: uriOf("Topic/New.md") },
++];
++
++/** Starts the rename host over an in-memory vault, as the other host tests do. */
++async function startHost(settings: Record<string, unknown> = {}) {
++  const { vaults } = memoryVaults(notes);
++  const fake = fakeViews(settings);
++  const root = createRoot();
++  root.provide("vaults", vaults);
++  const host = hostWith(fake);
++  provideHostServices(root, host);
++  root.plugin(linkUpdatesHost);
++  await root.settled();
++  return { root, fake, host };
++}
++
++test("linkUpdates.mode defaults to prompt, as Obsidian's alwaysUpdateLinks: false", () => {
++  assert.equal(linkUpdatesConfig.parse({}).mode, "prompt");
++  const properties = linkUpdatesConfig.toJSONSchema().properties as {
++    mode: { default?: unknown };
++  };
++  assert.equal(properties.mode.default, "prompt");
++});
++
++test("explicit linkUpdates modes survive a default change", () => {
++  for (const mode of ["prompt", "always", "never"] as const) {
++    assert.equal(linkUpdatesConfig.parse({ mode }).mode, mode);
++  }
++});
++
++test("Always Update persists always and skips future dialogs", async () => {
++  const { root, fake, host } = await startHost({
++    "linkUpdates.mode": "prompt",
++  });
++  const writes: unknown[][] = [];
++  host.settings.access.update = async (key, value, resource) => {
++    writes.push([key, value, resource]);
++    // Mirror the real host: the settings write is read back by the next rename.
++    fake.settings[key] = value;
++    return "user";
++  };
++  fake.answerWith("Always Update");
++  assert.equal((await fake.rename(rename)).length, 2);
++  assert.deepEqual(writes, [
++    ["linkUpdates.mode", "always", uriOf("Topic/Old.md")],
++  ]);
++  // The persisted choice makes the next rename of this note skip the dialog.
++  assert.equal((await fake.rename(rename)).length, 2);
++  assert.deepEqual(fake.prompts, ["Update links in 2 files?"]);
++  await root.dispose();
++});
++
++test("declining or cancelling the dialog does not persist never", async () => {
++  const { root, fake, host } = await startHost({
++    "linkUpdates.mode": "prompt",
++  });
++  const writes: unknown[][] = [];
++  host.settings.access.update = async (key, value, resource) => {
++    writes.push([key, value, resource]);
++    return "user";
++  };
++  fake.answerWith(undefined);
++  assert.deepEqual(await fake.rename(rename), []);
++  fake.answerWith("Don't Update");
++  assert.deepEqual(await fake.rename(rename), []);
++  assert.deepEqual(writes, []);
++  assert.deepEqual(fake.prompts, [
++    "Update links in 2 files?",
++    "Update links in 2 files?",
++  ]);
++  assert.equal(fake.settings["linkUpdates.mode"], "prompt");
++  await root.dispose();
++});
+diff --git a/packages/markdown/test/unit/obsidianCompat/host.test.ts b/packages/markdown/test/unit/obsidianCompat/host.test.ts
+index 6739124d..d0df32fb 100644
+--- a/packages/markdown/test/unit/obsidianCompat/host.test.ts
++++ b/packages/markdown/test/unit/obsidianCompat/host.test.ts
+@@ -60,6 +60,17 @@ test("B4: scoped snapshots, rejected edits and override caches keep two vaults i
+   );
+ });
+ 
++test("Obsidian app.json's alwaysUpdateLinks: false asks through effective settings", async (t) => {
++  const f = await compatFixture();
++  t.after(() => f.root.dispose());
++  await f.change(`${ROOT_A}/.obsidian/app.json`, '{"alwaysUpdateLinks":false}');
++  await f.configuration.prepare(NOTE_A);
++  assert.equal(
++    f.workbench.settings.get("linkUpdates.mode", "never", NOTE_A),
++    "prompt",
++  );
++});
++
+ test("B4: an async edit attempt retains its originating vault while focus changes", async (t) => {
+   const f = await compatFixture();
+   t.after(() => f.root.dispose());
+diff --git a/packages/markdown/test/unit/obsidianCompat/settings.test.ts b/packages/markdown/test/unit/obsidianCompat/settings.test.ts
+index 09db937b..18ffeba7 100644
+--- a/packages/markdown/test/unit/obsidianCompat/settings.test.ts
++++ b/packages/markdown/test/unit/obsidianCompat/settings.test.ts
+@@ -110,7 +110,6 @@ test("app.json handles new-note locations, attachments and both editing/link boo
+       "editor.defaultMode": "livePreview",
+     },
+   );
+-  assert.deepEqual(mapAppSettings({ alwaysUpdateLinks: false }), {});
+   assert.deepEqual(mapAppSettings({}), {});
+   assert.deepEqual(
+     mapAppSettings({
+@@ -127,6 +126,16 @@ test("app.json handles new-note locations, attachments and both editing/link boo
+   assert.throws(() => mapAppSettings([]), /object/);
+ });
+ 
++test("Obsidian 1.15's alwaysUpdateLinks false asks and true updates automatically", () => {
++  assert.deepEqual(mapAppSettings({ alwaysUpdateLinks: false }), {
++    "linkUpdates.mode": "prompt",
++  });
++  assert.deepEqual(mapAppSettings({ alwaysUpdateLinks: true }), {
++    "linkUpdates.mode": "always",
++  });
++  assert.deepEqual(mapAppSettings({ alwaysUpdateLinks: "false" }), {});
++});
++
+ test("B3: .git discovers the vault but .obsidian independently selects config", async () => {
+   const root = "file:///workspace/vault";
+   const entries = new Set([`${root}/.git`, `${root}/.obsidian`]);
+diff --git a/packages/pdf/CHANGELOG.md b/packages/pdf/CHANGELOG.md
+index 42f6a128..2784d00d 100644
+--- a/packages/pdf/CHANGELOG.md
++++ b/packages/pdf/CHANGELOG.md
+@@ -2,6 +2,19 @@
+ 
+ ## Unreleased
+ 
++- **Empty-page drag pans and turns pages.** With region selection off (the
++  default), dragging blank page space pans the view in continuous scrolling.
++  In page-by-page scrolling, a blank-page drag that travels 60 CSS pixels
++  of the viewer (Stage viewport / EmbedPDF screen px, not PDF points; the
++  same at every zoom) turns the page. It does not only pan inside a Fit
++  Width page. Mouse and pen reach that handler only on loaded blank space:
++  a drag over text or a page whose text geometry is not ready stays with
++  text selection or Stage pan. Touch keeps EmbedPDF's native navigation and
++  pinch; the handler does not claim touch contacts. Device touch has not
++  been GUI-verified. Text selection, citation link clicks, wheel and
++  keyboard navigation, and zoom are unchanged. Turning on
++  `lumiere.pdf.regions.enabled` still uses empty-page drag to draw a region.
++
+ - **Lumia PDF moves to EmbedPDF 3.** The viewer's engine and page surface are
+   rebuilt on EmbedPDF 3.0.0.
+   - *Better:* text selection, search hits, Look Up, links and backlink overlays
+diff --git a/packages/pdf/README.md b/packages/pdf/README.md
+index a12f092e..5bf2a5b7 100644
+--- a/packages/pdf/README.md
++++ b/packages/pdf/README.md
+@@ -37,7 +37,14 @@ is opt-in (`lumiere.pdf.regions.enabled`, default off).
+ - **Select Region tool (opt-in).** Off by default. Turn on
+   `lumiere.pdf.regions.enabled` to draw a region even over text (a paragraph
+   with its equation, a table with its caption); Escape puts the tool down.
+-  When off, empty-page drag does nothing and Select Region is hidden.
++  When off, empty-page drag pans the view in continuous scrolling. In
++  page-by-page scrolling, a mouse or pen blank-page drag that travels 60 CSS
++  pixels of the viewer (Stage viewport / EmbedPDF screen px, not PDF points;
++  the same at every zoom) turns the page. Touch keeps the Stage's native
++  one-finger pan, fling, double-tap and pinch: this handler does not claim
++  touch contacts. A drag over text or a page whose text geometry is not ready
++  stays with text selection or Stage pan. Device touch is not GUI-verified
++  here. Select Region is hidden.
+ - **Passage highlights = vault Markdown.** **Copy link to this** copies a
+   Quote with `#page=N#:~:text=…` (or a page-only `#page=N` link with nothing
+   selected). Paste into any note; the viewer paints **backlink overlays**
+diff --git a/packages/pdf/src/engine-worker/color-scheme-runtime.ts b/packages/pdf/src/engine-worker/color-scheme-runtime.ts
+index 83e2858f..09dbc97a 100644
+--- a/packages/pdf/src/engine-worker/color-scheme-runtime.ts
++++ b/packages/pdf/src/engine-worker/color-scheme-runtime.ts
+@@ -187,8 +187,11 @@ class SchemeRender {
+   }
+ 
+   close(page: Ptr): void {
+-    this.runtime.fn.FPDF_RenderPage_Close(page);
+-    this.end();
++    try {
++      this.runtime.fn.FPDF_RenderPage_Close(page);
++    } finally {
++      this.end();
++    }
+   }
+ 
+   private end(): void {
+diff --git a/packages/pdf/src/shared/annotation-tools.ts b/packages/pdf/src/shared/annotation-tools.ts
+index bf1694d4..685fbbcf 100644
+--- a/packages/pdf/src/shared/annotation-tools.ts
++++ b/packages/pdf/src/shared/annotation-tools.ts
+@@ -99,9 +99,10 @@ export function fromV3ToolId(
+ }
+ 
+ /**
+- * View mode's tool: text selection and links, but no annotation editing, so
+- * a PDF's own annotations cannot be selected, moved or deleted while reading
+- * (EmbedPDF's resting `pointer` tool enables all of that).
++ * View mode's tool: text selection, links, and empty-page pan (`scroll` on
++ * the interaction hub), but no annotation editing, so a PDF's own annotations
++ * cannot be selected, moved or deleted while reading (EmbedPDF's resting
++ * `pointer` tool enables all of that).
+  */
+ export const READ_TOOL_ID = "lumia.read";
+ 
+diff --git a/packages/pdf/src/shared/paged-drag-navigate.ts b/packages/pdf/src/shared/paged-drag-navigate.ts
+new file mode 100644
+index 00000000..fd0e1878
+--- /dev/null
++++ b/packages/pdf/src/shared/paged-drag-navigate.ts
+@@ -0,0 +1,43 @@
++import type { ScrollDirection } from "./view-settings";
++
++/**
++ * How far a blank-page drag in page-by-page scrolling must travel before it
++ * turns the page, in CSS pixels of the Stage container — the same units as
++ * `PointerSample.viewport` (`clientX - getBoundingClientRect().left` in
++ * `@embedpdf/web` `createStageSurface`) and as EmbedPDF's paged-wheel push
++ * (`TURN_PUSH`, documented "in screen px: about one wheel notch").
++ *
++ * These are not PDF page points and not `page.point`. PDF zoom
++ * (`page.scale`, Fit Width 400%, Fit Page, Actual size) does not rescale
++ * them: 50 CSS px is 50 CSS px at every zoom. They are also not multiplied
++ * by `devicePixelRatio` (Stage reports DPR separately). A screenshot or
++ * computer-use coordinate must be converted into this CSS space if the
++ * capture is scaled relative to the display.
++ */
++export const PAGED_DRAG_TURN_PX = 60;
++
++/**
++ * Which way a finished blank-page drag should turn in page-by-page
++ * scrolling. `start` and `end` are Stage viewport CSS pixels (see
++ * `PAGED_DRAG_TURN_PX`). Dragging up (or left, when reading horizontally)
++ * goes to the next page, matching grab-to-pan toward later content. A
++ * shorter move is a click and turns nothing.
++ *
++ * Stage's own turn stream only turns at an edge the gesture *began* at, so
++ * a Fit Width page (taller than the viewer) can pan for the whole drag and
++ * never call nextPage. This decision uses the drag's CSS travel instead.
++ */
++export function pagedDragPageDelta(
++  start: { x: number; y: number },
++  end: { x: number; y: number },
++  direction: ScrollDirection,
++): 1 | -1 | 0 {
++  const along = direction === "horizontal" ? start.x - end.x : start.y - end.y;
++  if (along >= PAGED_DRAG_TURN_PX) {
++    return 1;
++  }
++  if (along <= -PAGED_DRAG_TURN_PX) {
++    return -1;
++  }
++  return 0;
++}
+diff --git a/packages/pdf/src/webview/annotation-mode.ts b/packages/pdf/src/webview/annotation-mode.ts
+index c9441e5c..155312ed 100644
+--- a/packages/pdf/src/webview/annotation-mode.ts
++++ b/packages/pdf/src/webview/annotation-mode.ts
+@@ -122,11 +122,26 @@ export function useAnnotateSwitch(): {
+ }
+ 
+ /**
+- * View mode: select text and follow links, but leave annotations alone. The
+- * resting `pointer` tool also selects, moves and deletes them, which would
+- * let a reader change what came with the PDF. The public tool type has no
+- * behaviour tags, so it is registered through the host token.
++ * View mode's interaction tool: text selection, links, and Stage pan on empty
++ * page space (`scroll`). EmbedPDF's built-in `pointer` tool also edits
++ * annotations, which would let a reader change what came with the PDF. The
++ * public tool type has no behaviour tags, so this is registered through the
++ * host token. `scroll` lets Stage's pan handler take a press that text
++ * selection declined (blank area) in continuous scrolling. Page-by-page
++ * turns from a blank-area drag are handled separately (`paged-drag-navigate`).
+  */
++export function readTool(): {
++  id: string;
++  cursor: "default";
++  enables: Set<string>;
++} {
++  return {
++    id: READ_TOOL_ID,
++    cursor: "default",
++    enables: new Set(["text-select", "link-nav", "scroll"]),
++  };
++}
++
+ function useReadTool(interaction: InteractionHostCapability | null): void {
+   useEffect(() => {
+     if (!interaction) {
+@@ -134,11 +149,7 @@ function useReadTool(interaction: InteractionHostCapability | null): void {
+     }
+     const remove = interaction.hasTool(READ_TOOL_ID)
+       ? undefined
+-      : interaction.registerTool({
+-          id: READ_TOOL_ID,
+-          cursor: "default",
+-          enables: new Set(["text-select", "link-nav"]),
+-        });
++      : interaction.registerTool(readTool());
+     if (interaction.getActiveToolId() === ANNOTATE_IDLE_TOOL_ID) {
+       interaction.activateTool(READ_TOOL_ID);
+     }
+diff --git a/packages/pdf/src/webview/paged-drag-navigate.ts b/packages/pdf/src/webview/paged-drag-navigate.ts
+new file mode 100644
+index 00000000..6e3de92d
+--- /dev/null
++++ b/packages/pdf/src/webview/paged-drag-navigate.ts
+@@ -0,0 +1,116 @@
++import {
++  InteractionToken,
++  type InteractionHandler,
++  type PointerSample,
++} from "@embedpdf/plugin-interaction/contract/host";
++import type { PageRef } from "@embedpdf/engine";
++import { SelectionToken } from "@embedpdf/plugin-selection/contract/host";
++import { useOptionalCapability } from "@embedpdf/react/runtime";
++import { useEffect, useRef } from "react";
++import { pagedDragPageDelta } from "../shared/paged-drag-navigate";
++import type { ScrollDirection, ScrollMode } from "../shared/view-settings";
++
++/**
++ * Above Stage's pan handler (10) and below text selection (~60) and the
++ * empty-space region tool (56), so a paged mouse/pen blank-area drag turns
++ * the page instead of only panning inside it. Touch contacts stay with
++ * Stage's native navigation: `claimsTouch` would claim a whole contact from
++ * its first pixel and suppress pan, fling, double-tap and pinch arbitration.
++ */
++const PAGED_DRAG_PRIORITY = 12;
++
++export interface PagedDragNavigate {
++  mode: ScrollMode;
++  direction: ScrollDirection;
++  step: (delta: 1 | -1) => void;
++}
++
++/**
++ * The slice of EmbedPDF's selection capability the handler may read.
++ * Pure: no `ensureLoaded`. Unloaded geometry must not be treated as blank.
++ */
++export type PagedDragSelection = {
++  isLoaded: (page: PageRef) => boolean;
++  isOverText: (page: PageRef, point: { x: number; y: number }) => boolean;
++};
++
++export function pagedDragHandler(options: {
++  isPaged: () => boolean;
++  direction: () => ScrollDirection;
++  step: (delta: 1 | -1) => void;
++  selection: () => PagedDragSelection | null;
++}): InteractionHandler {
++  let start: { x: number; y: number } | undefined;
++  /**
++   * A press on text with cold geometry looks blank to text selection, but
++   * must not turn a page before geometry has loaded. Touch is not claimed
++   * here; Stage's native pan and pinch own those contacts.
++   */
++  const isLoadedBlank = (sample: PointerSample): boolean => {
++    const page = sample.page;
++    if (!page) {
++      return false;
++    }
++    const selection = options.selection();
++    return Boolean(
++      selection &&
++      selection.isLoaded(page.ref) &&
++      !selection.isOverText(page.ref, page.point),
++    );
++  };
++  const finish = (sample?: PointerSample): void => {
++    if (!start) {
++      return;
++    }
++    const end = sample?.viewport ?? start;
++    // A view-mode change mid-drag must not turn a page that is now continuous.
++    const delta = options.isPaged()
++      ? pagedDragPageDelta(start, end, options.direction())
++      : 0;
++    start = undefined;
++    if (delta !== 0) {
++      options.step(delta);
++    }
++  };
++  return {
++    id: "lumia-paged-drag",
++    priority: PAGED_DRAG_PRIORITY,
++    enabledFor: (tool) => options.isPaged() && tool.enables.has("scroll"),
++    onPointerDown: (sample) => {
++      if (!isLoadedBlank(sample)) {
++        return false;
++      }
++      // viewport = container CSS px, not page.point / PDF units.
++      start = { x: sample.viewport.x, y: sample.viewport.y };
++      return true;
++    },
++    onPointerUp: (sample) => finish(sample),
++    onPointerCancel: () => {
++      start = undefined;
++    },
++  };
++}
++
++/**
++ * Page-by-page mouse/pen blank-area drags turn the page; continuous and
++ * touch stay with Stage.
++ */
++export function usePagedDragNavigate(input: PagedDragNavigate): void {
++  const interaction = useOptionalCapability(InteractionToken);
++  const selection = useOptionalCapability(SelectionToken);
++  const latest = useRef({ input, selection });
++  latest.current = { input, selection };
++  useEffect(() => {
++    if (!interaction) {
++      return;
++    }
++    return interaction.registerHandler(
++      pagedDragHandler({
++        isPaged: () => latest.current.input.mode === "paged",
++        direction: () => latest.current.input.direction,
++        step: (delta) => latest.current.input.step(delta),
++        selection: () => latest.current.selection,
++      }),
++    );
++  }, [interaction]);
++}
+diff --git a/packages/pdf/src/webview/viewer.tsx b/packages/pdf/src/webview/viewer.tsx
+index 612a682b..60cde002 100644
+--- a/packages/pdf/src/webview/viewer.tsx
++++ b/packages/pdf/src/webview/viewer.tsx
+@@ -1,6 +1,7 @@
+ import { Scrollbar, Stage } from "@embedpdf/react/stage";
+ import React, { useEffect, useRef, useState } from "react";
+ import { useEndDragsReleasedOutside } from "./drag-release";
++import { usePagedDragNavigate } from "./paged-drag-navigate";
+ import { useNavigation } from "./navigation";
+ import { useOutlinePublishing } from "./outline";
+ import { Page } from "./page";
+@@ -243,6 +244,11 @@ function useDocumentInput(
+     direction: choices.scrollDirection,
+     step: navigation.step,
+   });
++  usePagedDragNavigate({
++    mode: choices.scrollMode,
++    direction: choices.scrollDirection,
++    step: navigation.step,
++  });
+   useViewLayout(choices, smooth);
+   useEndDragsReleasedOutside();
+   useIgnoreSecondaryButtons(documentArea);
+diff --git a/packages/pdf/test/unit/color-scheme-runtime.test.ts b/packages/pdf/test/unit/color-scheme-runtime.test.ts
+new file mode 100644
+index 00000000..195f5fbd
+--- /dev/null
++++ b/packages/pdf/test/unit/color-scheme-runtime.test.ts
+@@ -0,0 +1,84 @@
++/**
++ * The colour-scheme render's structs (src/engine-worker/color-scheme-runtime.ts)
++ * live from a render's start to its close, whatever the close does.
++ */
++import assert from "node:assert/strict";
++import { test } from "node:test";
++import type { PdfRuntimeModule, Ptr } from "@embedpdf/engine-runtime";
++import { withColorScheme } from "../../src/engine-worker/color-scheme-runtime";
++
++const INK = {
++  pathFill: "#01000000",
++  pathStroke: "#01000000",
++  textFill: "#01000000",
++  textStroke: "#01000000",
++};
++
++/** A runtime that counts what is allocated and freed, and whose close throws. */
++function createLeakCountingRuntime(closeError = new Error("close failed")) {
++  const live = { memory: 0, callbacks: 0 };
++  const calls = { frees: 0, disposals: 0 };
++  const runtime = {
++    mem: {
++      alloc: () => {
++        live.memory++;
++        return 8;
++      },
++      free: () => {
++        live.memory--;
++        calls.frees++;
++      },
++      poke: () => {},
++      peek: () => 0,
++    },
++    cb: {
++      register: () => {
++        live.callbacks++;
++        return 1;
++      },
++      dispose: () => {
++        live.callbacks--;
++        calls.disposals++;
++      },
++    },
++    fn: {
++      FPDF_GetPageWidthF: () => 612,
++      FPDF_GetPageHeightF: () => 792,
++      FPDF_RenderPageBitmapWithColorScheme_Start: () => 1,
++      FPDF_RenderPage_Continue: () => 1,
++      FPDF_RenderPage_Close: () => {
++        throw closeError;
++      },
++    },
++  } as unknown as PdfRuntimeModule;
++  return { runtime, live, calls };
++}
++
++test("a throwing close frees its structs and leaves the next render ready", () => {
++  const closeError = new Error("close failed");
++  const { runtime, live, calls } = createLeakCountingRuntime(closeError);
++  const scheme = withColorScheme(runtime, INK);
++  const ptr = (at: number) => at as unknown as Ptr;
++  const start = () =>
++    scheme.fn.EPDF_RenderPageBitmapWithMatrix_Start(
++      ptr(2),
++      ptr(3),
++      ptr(4),
++      ptr(0),
++      0,
++      16,
++    );
++  const close = () => scheme.fn.FPDF_RenderPage_Close(ptr(3));
++  start();
++  assert.deepEqual(live, { memory: 2, callbacks: 1 });
++  assert.throws(close, (error: unknown) => error === closeError);
++  assert.deepEqual(live, { memory: 0, callbacks: 0 });
++  assert.deepEqual(calls, { frees: 2, disposals: 1 });
++
++  // The next render owns fresh structs: the failed close left none behind.
++  start();
++  assert.deepEqual(live, { memory: 2, callbacks: 1 });
++  assert.throws(close, (error: unknown) => error === closeError);
++  assert.deepEqual(live, { memory: 0, callbacks: 0 });
++  assert.deepEqual(calls, { frees: 4, disposals: 2 });
++});
+diff --git a/packages/pdf/test/unit/paged-drag-navigate.test.ts b/packages/pdf/test/unit/paged-drag-navigate.test.ts
+new file mode 100644
+index 00000000..8557b2a7
+--- /dev/null
++++ b/packages/pdf/test/unit/paged-drag-navigate.test.ts
+@@ -0,0 +1,482 @@
++import assert from "node:assert/strict";
++import { test } from "node:test";
++import { createEventHook } from "@embedpdf/core";
++import {
++  INTERACTION_DEFAULTS,
++  interactionPlugin,
++} from "@embedpdf/plugin-interaction";
++import type {
++  InteractionHostCapability,
++  PointerSample,
++} from "@embedpdf/plugin-interaction/contract/host";
++import { READ_TOOL_ID } from "../../src/shared/annotation-tools";
++import { pagedDragPageDelta } from "../../src/shared/paged-drag-navigate";
++import { readTool } from "../../src/webview/annotation-mode";
++import {
++  pagedDragHandler,
++  type PagedDragSelection,
++} from "../../src/webview/paged-drag-navigate";
++
++const page = { kind: "objectNumber" as const, objectNumber: 1 };
++
++/**
++ * How `@embedpdf/web` `createStageSurface` builds a sample: viewport is CSS
++ * px of the Stage container (`clientX - rect.left`). `page.scale` is CSS px
++ * per PDF page unit; `page.point` is that viewport divided by scale.
++ */
++function nativeSample(
++  client: { x: number; y: number },
++  options: {
++    rect?: { left: number; top: number };
++    onPage?: boolean;
++    scale?: number;
++    zoom?: number;
++    phase?: PointerSample["phase"];
++  } = {},
++): PointerSample {
++  const rect = options.rect ?? { left: 0, top: 0 };
++  const scale = options.scale ?? 1;
++  const viewport = { x: client.x - rect.left, y: client.y - rect.top };
++  return {
++    phase: options.phase ?? "down",
++    viewport,
++    ...(options.onPage === false
++      ? {}
++      : {
++          page: {
++            ref: page,
++            point: { x: viewport.x / scale, y: viewport.y / scale },
++            scale,
++            zoom: options.zoom ?? scale,
++          },
++        }),
++    modifiers: { shift: false, alt: false, ctrl: false, meta: false },
++  };
++}
++
++/** A sample whose page-space point is not viewport/scale (a unit leak). */
++function sampleWithSpaces(
++  viewport: { x: number; y: number },
++  pagePoint: { x: number; y: number },
++  scale: number,
++  phase: PointerSample["phase"] = "down",
++): PointerSample {
++  return {
++    phase,
++    viewport,
++    page: { ref: page, point: pagePoint, scale, zoom: scale },
++    modifiers: { shift: false, alt: false, ctrl: false, meta: false },
++  };
++}
++
++function selectionStub(state: { loaded: boolean; overText: boolean }) {
++  return {
++    isLoaded: () => state.loaded,
++    isOverText: () => state.overText,
++  };
++}
++
++const loadedBlank = (): PagedDragSelection =>
++  selectionStub({ loaded: true, overText: false });
++
++function pagedHandler(
++  direction: "vertical" | "horizontal" = "vertical",
++  options: {
++    isPaged?: () => boolean;
++    selection?: () => PagedDragSelection | null;
++  } = {},
++) {
++  const steps: Array<1 | -1> = [];
++  const handler = pagedDragHandler({
++    isPaged: options.isPaged ?? (() => true),
++    direction: () => direction,
++    step: (delta) => steps.push(delta),
++    selection: options.selection ?? loadedBlank,
++  });
++  return { handler, steps };
++}
++
++test("an upward blank drag in page-by-page mode turns to the next page", () => {
++  // Matches the failed Host GUI swipe: (900, 620) -> (900, 180) stayed on page 1.
++  const { handler, steps } = pagedHandler();
++  assert.ok(handler.priority > 10, "above Stage's pan handler");
++  assert.ok(handler.priority < 56, "below text selection and the region tool");
++  assert.ok(handler.enabledFor(readTool()));
++  assert.ok(
++    !handler.enabledFor({
++      id: "pointer",
++      cursor: "default",
++      enables: new Set(),
++    }),
++  );
++  const start = nativeSample({ x: 900, y: 620 }, { scale: 4, zoom: 4 });
++  const end = nativeSample(
++    { x: 900, y: 180 },
++    { scale: 4, zoom: 4, phase: "up" },
++  );
++  assert.equal(handler.onPointerDown(start), true);
++  handler.onPointerMove?.(
++    nativeSample({ x: 900, y: 180 }, { scale: 4, zoom: 4, phase: "move" }),
++  );
++  handler.onPointerUp?.(end);
++  assert.deepEqual(steps, [1]);
++});
++
++test("an edge-to-edge upward drag also turns, even when it could have panned first", () => {
++  const { handler, steps } = pagedHandler();
++  handler.onPointerDown(nativeSample({ x: 900, y: 730 }, { scale: 4 }));
++  handler.onPointerUp?.(
++    nativeSample({ x: 900, y: 80 }, { scale: 4, phase: "up" }),
++  );
++  assert.deepEqual(steps, [1]);
++});
++
++test("a downward drag turns to the previous page", () => {
++  const { handler, steps } = pagedHandler();
++  handler.onPointerDown(nativeSample({ x: 900, y: 180 }, { scale: 4 }));
++  handler.onPointerUp?.(
++    nativeSample({ x: 900, y: 620 }, { scale: 4, phase: "up" }),
++  );
++  assert.deepEqual(steps, [-1]);
++});
++
++test("continuous scrolling does not capture a blank drag (Stage pan keeps it)", () => {
++  const handler = pagedDragHandler({
++    isPaged: () => false,
++    direction: () => "vertical",
++    step: () => {
++      throw new Error("must not step");
++    },
++    selection: loadedBlank,
++  });
++  assert.equal(handler.enabledFor(readTool()), false);
++});
++
++test("a press off the page is left to Stage gap pan", () => {
++  const handler = pagedDragHandler({
++    isPaged: () => true,
++    direction: () => "vertical",
++    step: () => {
++      throw new Error("must not step");
++    },
++    selection: loadedBlank,
++  });
++  assert.equal(
++    handler.onPointerDown(nativeSample({ x: 900, y: 620 }, { onPage: false })),
++    false,
++  );
++});
++
++test("a cancelled gesture does not turn, even if the pointer later moves far", () => {
++  const { handler, steps } = pagedHandler();
++  assert.equal(
++    handler.onPointerDown(nativeSample({ x: 900, y: 520 }, { scale: 2.53 })),
++    true,
++  );
++  handler.onPointerCancel?.(
++    nativeSample({ x: 900, y: 100 }, { scale: 2.53, phase: "cancel" }),
++  );
++  handler.onPointerUp?.(
++    nativeSample({ x: 900, y: 100 }, { scale: 2.53, phase: "up" }),
++  );
++  assert.deepEqual(steps, []);
++});
++
++test("travel is Stage viewport CSS px, not PDF page units", () => {
++  // page.point moved 80 units (above 60) while viewport moved 50 CSS px.
++  const missed = pagedHandler();
++  missed.handler.onPointerDown(
++    sampleWithSpaces({ x: 900, y: 520 }, { x: 225, y: 130 }, 4),
++  );
++  missed.handler.onPointerUp?.(
++    sampleWithSpaces({ x: 900, y: 470 }, { x: 225, y: 50 }, 4, "up"),
++  );
++  assert.deepEqual(
++    missed.steps,
++    [],
++    "50 CSS px must not turn just because page.point moved 80",
++  );
++
++  // viewport moved 60 CSS px while page.point moved only 15 (below 60).
++  const reached = pagedHandler();
++  reached.handler.onPointerDown(
++    sampleWithSpaces({ x: 900, y: 520 }, { x: 225, y: 130 }, 4),
++  );
++  reached.handler.onPointerUp?.(
++    sampleWithSpaces({ x: 900, y: 460 }, { x: 225, y: 115 }, 4, "up"),
++  );
++  assert.deepEqual(
++    reached.steps,
++    [1],
++    "60 CSS px must turn even when page.point moved only 15",
++  );
++});
++
++test("the 60 CSS px threshold does not change with PDF zoom", () => {
++  for (const scale of [1, 2.53, 4]) {
++    const short = pagedHandler();
++    short.handler.onPointerDown(
++      nativeSample({ x: 900, y: 520 }, { scale, zoom: scale }),
++    );
++    short.handler.onPointerUp?.(
++      nativeSample({ x: 900, y: 470 }, { scale, zoom: scale, phase: "up" }),
++    );
++    assert.deepEqual(
++      short.steps,
++      [],
++      `50 CSS px must not turn at scale ${scale}`,
++    );
++
++    const edge = pagedHandler();
++    edge.handler.onPointerDown(
++      nativeSample({ x: 900, y: 520 }, { scale, zoom: scale }),
++    );
++    edge.handler.onPointerUp?.(
++      nativeSample({ x: 900, y: 461 }, { scale, zoom: scale, phase: "up" }),
++    );
++    assert.deepEqual(
++      edge.steps,
++      [],
++      `59 CSS px must not turn at scale ${scale}`,
++    );
++
++    const turn = pagedHandler();
++    turn.handler.onPointerDown(
++      nativeSample({ x: 900, y: 520 }, { scale, zoom: scale }),
++    );
++    turn.handler.onPointerUp?.(
++      nativeSample({ x: 900, y: 460 }, { scale, zoom: scale, phase: "up" }),
++    );
++    assert.deepEqual(turn.steps, [1], `60 CSS px must turn at scale ${scale}`);
++  }
++});
++
++test("a 50 px screenshot drag on a 1.5× capture is 75 CSS px and does turn", () => {
++  // Host GUI (900,520)->(900,470) was 50 px on 1280x800 screenshots of a
++  // 1920x1200 display. Stage viewport is CSS = X11 px, not screenshot px.
++  const screenshotPx = 50;
++  const cssPx = screenshotPx * (1920 / 1280);
++  assert.equal(cssPx, 75);
++  const { handler, steps } = pagedHandler();
++  handler.onPointerDown(nativeSample({ x: 900, y: 520 }, { scale: 4 }));
++  handler.onPointerUp?.(
++    nativeSample({ x: 900, y: 520 - cssPx }, { scale: 4, phase: "up" }),
++  );
++  assert.deepEqual(steps, [1]);
++  assert.equal(
++    pagedDragPageDelta({ x: 900, y: 520 }, { x: 900, y: 470 }, "vertical"),
++    0,
++  );
++});
++
++test("a horizontal drag turns along the reading direction at Fit Page scale", () => {
++  const { handler, steps } = pagedHandler("horizontal");
++  handler.onPointerDown(nativeSample({ x: 700, y: 400 }, { scale: 2.53 }));
++  handler.onPointerUp?.(
++    nativeSample({ x: 640, y: 400 }, { scale: 2.53, phase: "up" }),
++  );
++  assert.deepEqual(steps, [1]);
++  const back = pagedHandler("horizontal");
++  back.handler.onPointerDown(nativeSample({ x: 200, y: 400 }, { scale: 2.53 }));
++  back.handler.onPointerUp?.(
++    nativeSample({ x: 260, y: 400 }, { scale: 2.53, phase: "up" }),
++  );
++  assert.deepEqual(back.steps, [-1]);
++  const short = pagedHandler("horizontal");
++  short.handler.onPointerDown(
++    nativeSample({ x: 700, y: 400 }, { scale: 2.53 }),
++  );
++  short.handler.onPointerUp?.(
++    nativeSample({ x: 650, y: 400 }, { scale: 2.53, phase: "up" }),
++  );
++  assert.deepEqual(short.steps, []);
++});
++
++test("the read tool still enables pan so continuous blank-area drag can scroll", () => {
++  assert.ok(readTool().enables.has("scroll"));
++  assert.equal(readTool().id, READ_TOOL_ID);
++});
++
++/**
++ * The real EmbedPDF interaction controller (`interactionPlugin().create`),
++ * not a reimplementation of `wouldClaimTouch`.
++ */
++function bootHub(): InteractionHostCapability {
++  let model: {
++    activeToolId: string;
++    toolStack: string[];
++    cursor: string;
++  } = { activeToolId: "pointer", toolStack: [], cursor: "default" };
++  const listeners = new Set<
++    (change: { previous: typeof model; next: typeof model }) => void
++  >();
++  const created = interactionPlugin().create({
++    settings: () => ({
++      get: () => ({ ...INTERACTION_DEFAULTS }),
++      api: {
++        getSettings: () => ({ ...INTERACTION_DEFAULTS }),
++        updateSettings() {},
++        resetSettings() {},
++        onSettingsChanged: () => () => {},
++      },
++    }),
++    events: { source: () => createEventHook() },
++    state: {
++      get: () => model,
++      update: (
++        fn: (state: typeof model, ...args: unknown[]) => typeof model,
++        ...args: unknown[]
++      ) => {
++        const previous = model;
++        const next = fn(model, ...args);
++        if (next !== previous) {
++          model = next;
++          for (const listener of listeners) {
++            listener({ previous, next });
++          }
++        }
++      },
++      onChange: (
++        listener: (change: {
++          previous: typeof model;
++          next: typeof model;
++        }) => void,
++      ) => {
++        listeners.add(listener);
++        return () => listeners.delete(listener);
++      },
++    },
++    notify: () => {},
++  } as never);
++  return created.api;
++}
++
++function touchSample(
++  options: {
++    onPage?: boolean;
++    pointerType?: PointerSample["pointerType"];
++  } = {},
++): PointerSample {
++  return {
++    ...nativeSample(
++      { x: 200, y: 300 },
++      {
++        ...(options.onPage === undefined ? {} : { onPage: options.onPage }),
++        scale: 2.53,
++      },
++    ),
++    pointerType: options.pointerType ?? "touch",
++  };
++}
++
++function hubWithPagedDrag(): InteractionHostCapability {
++  const hub = bootHub();
++  hub.registerTool(readTool());
++  hub.activateTool(READ_TOOL_ID);
++  hub.registerHandler(
++    pagedDragHandler({
++      isPaged: () => true,
++      direction: () => "vertical",
++      step: () => {
++        throw new Error("must not step during wouldClaimTouch");
++      },
++      selection: loadedBlank,
++    }),
++  );
++  return hub;
++}
++
++test("loaded blank touches do not enter the hub, so Stage keeps native navigation", () => {
++  // StageSurface asks wouldClaimTouch before classifying a touch. A claim
++  // would route the whole contact to the hub and suppress native pan, fling,
++  // double-tap and pinch arbitration.
++  const hub = hubWithPagedDrag();
++  assert.equal(hub.wouldClaimTouch(touchSample()), false);
++  assert.equal(hub.wouldClaimTouch(touchSample({ onPage: false })), false);
++  assert.equal(pagedHandler().handler.claimsTouch, undefined);
++});
++
++test("loaded text, unloaded geometry, and missing selection stay with Stage pan", () => {
++  const cases: Array<{
++    name: string;
++    selection: () => PagedDragSelection | null;
++  }> = [
++    {
++      name: "loaded text",
++      selection: () => selectionStub({ loaded: true, overText: true }),
++    },
++    {
++      name: "unloaded geometry",
++      selection: () => selectionStub({ loaded: false, overText: false }),
++    },
++    { name: "missing selection", selection: () => null },
++  ];
++  for (const { name, selection } of cases) {
++    const { handler, steps } = pagedHandler("vertical", { selection });
++    assert.equal(
++      handler.onPointerDown(nativeSample({ x: 900, y: 520 }, { scale: 4 })),
++      false,
++      name,
++    );
++    handler.onPointerUp?.(
++      nativeSample({ x: 900, y: 100 }, { scale: 4, phase: "up" }),
++    );
++    assert.deepEqual(steps, [], name);
++  }
++});
++
++test("switching to continuous scrolling mid-drag drops the page turn", () => {
++  let paged = true;
++  const { handler, steps } = pagedHandler("vertical", {
++    isPaged: () => paged,
++  });
++  assert.equal(
++    handler.onPointerDown(nativeSample({ x: 900, y: 520 }, { scale: 4 })),
++    true,
++  );
++  paged = false;
++  handler.onPointerUp?.(
++    nativeSample({ x: 900, y: 100 }, { scale: 4, phase: "up" }),
++  );
++  assert.deepEqual(steps, []);
++});
++
++test("unregistering the viewer's handler mid-drag drops the unfinished gesture", () => {
++  const hub = bootHub();
++  hub.registerTool(readTool());
++  hub.activateTool(READ_TOOL_ID);
++  const steps: Array<1 | -1> = [];
++  const remove = hub.registerHandler(
++    pagedDragHandler({
++      isPaged: () => true,
++      direction: () => "vertical",
++      step: (delta) => steps.push(delta),
++      selection: loadedBlank,
++    }),
++  );
++  hub.dispatchPointer(nativeSample({ x: 900, y: 520 }, { scale: 2.53 }));
++  remove();
++  hub.dispatchPointer(
++    nativeSample({ x: 900, y: 100 }, { scale: 2.53, phase: "up" }),
++  );
++  assert.deepEqual(steps, []);
++});
++
++test("a cancelled paged blank drag does not turn", () => {
++  // The hub routes a system or Stage cancel to onPointerCancel; no device
++  // pinch is exercised here.
++  const { handler, steps } = pagedHandler();
++  assert.equal(
++    handler.onPointerDown(
++      nativeSample({ x: 900, y: 520 }, { scale: 2.53, phase: "down" }),
++    ),
++    true,
++  );
++  handler.onPointerCancel?.(
++    nativeSample({ x: 900, y: 520 }, { scale: 2.53, phase: "cancel" }),
++  );
++  handler.onPointerUp?.(
++    nativeSample({ x: 900, y: 100 }, { scale: 2.53, phase: "up" }),
++  );
++  assert.deepEqual(steps, []);
++});
+diff --git a/packages/pdf/test/unit/read-tool.test.ts b/packages/pdf/test/unit/read-tool.test.ts
+new file mode 100644
+index 00000000..08e93a6c
+--- /dev/null
++++ b/packages/pdf/test/unit/read-tool.test.ts
+@@ -0,0 +1,29 @@
++import assert from "node:assert/strict";
++import { test } from "node:test";
++import { READ_TOOL_ID } from "../../src/shared/annotation-tools";
++import { readTool } from "../../src/webview/annotation-mode";
++
++test("View mode pans empty page space without enabling annotation edits", () => {
++  const tool = readTool();
++  assert.equal(tool.id, READ_TOOL_ID);
++  assert.equal(tool.cursor, "default");
++  assert.ok(tool.enables.has("text-select"), "dragging text still selects");
++  assert.ok(
++    tool.enables.has("link-nav"),
++    "citation and page links stay clickable",
++  );
++  assert.ok(
++    tool.enables.has("scroll"),
++    "empty-page drag is Stage pan in continuous scrolling",
++  );
++  assert.ok(
++    !tool.enables.has("annotation-edit"),
++    "reading must not select, move or delete marks",
++  );
++  assert.ok(!tool.enables.has("annotation-marquee"));
++  assert.equal(
++    (tool as { touch?: string }).touch,
++    undefined,
++    "View mode keeps EmbedPDF touch default (tap), not draw",
++  );
++});
+diff --git a/packages/pdf/test/vscode/pdf-backlink-overlays-host-gui.spec.ts b/packages/pdf/test/vscode/pdf-backlink-overlays-host-gui.spec.ts
+index 3303e0e4..a5682b5e 100644
+--- a/packages/pdf/test/vscode/pdf-backlink-overlays-host-gui.spec.ts
++++ b/packages/pdf/test/vscode/pdf-backlink-overlays-host-gui.spec.ts
+@@ -337,8 +337,27 @@ test("Host GUI: PDF backlink overlays checklist (Chrome)", async ({
+   await expect
+     .poll(() => pageFit(viewer))
+     .toEqual({ fitsWidth: true, fitsHeight: true, fills: true });
++  await command(page, "PDF: Fit Width");
++  await expect
++    .poll(() => pageFit(viewer))
++    .toMatchObject({ fitsWidth: true, fitsHeight: false, fills: true });
++  await expect(statusBarEntry(page, /^Page 1 \/ 12$/u)).toBeVisible();
++  const pageTop = () =>
++    viewer.evaluate(
++      () =>
++        document
++          .querySelector('.page[data-page-index="0"]')!
++          .getBoundingClientRect().top,
++    );
++  const topBefore = await pageTop();
+   const atRegion = await pagePoint(viewer, 1);
+   await drag(page, atRegion(150, 150), atRegion(250, 250));
++  const topAfter = await pageTop();
++  const pageUnchanged = await statusBarEntry(
++    page,
++    /^Page 1 \/ 12$/u,
++  ).isVisible();
++  const panned = Math.abs(topAfter - topBefore) > 2;
+   const regionCount = await viewer.locator(".region-selection").count();
+   await page.keyboard.press("F1");
+   await page
+@@ -350,12 +369,14 @@ test("Host GUI: PDF backlink overlays checklist (Chrome)", async ({
+     })
+     .count();
+   await page.keyboard.press("Escape");
+-  const regionsOk = regionCount === 0 && selectRegionRows === 0;
++  const regionsOk =
++    regionCount === 0 && selectRegionRows === 0 && pageUnchanged && panned;
+   results.push({
+     item: 5,
+-    title: "Regions off default: empty-page drag noop; Select Region absent",
++    title:
++      "Regions off default: empty-page drag pans and stays on page 1; no region; Select Region absent",
+     status: regionsOk ? "PASS" : "FAIL",
+-    notes: `region_selection=${regionCount} select_region_rows=${selectRegionRows}`,
++    notes: `region_selection=${regionCount} select_region_rows=${selectRegionRows} page_unchanged=${pageUnchanged} panned=${panned} top=${topBefore.toFixed(1)}->${topAfter.toFixed(1)}`,
+   });
+   await shot(page, "02-regions-off.png", evidence);
+   flushEvidence(results, evidence, pageOnly, quote);
+diff --git a/test/vscode/link-updates.spec.ts b/test/vscode/link-updates.spec.ts
+index ea6ead10..c134f379 100644
+--- a/test/vscode/link-updates.spec.ts
++++ b/test/vscode/link-updates.spec.ts
+@@ -1,5 +1,5 @@
+ import { test, expect, chromium } from "@playwright/test";
+-import type { Page } from "@playwright/test";
++import type { Browser, Page } from "@playwright/test";
+ import { readFileSync, rmSync, writeFileSync } from "node:fs";
+ import path from "node:path";
+ import { paths, readState } from "./state";
+@@ -47,10 +47,19 @@ async function acceptRefactoring(page: Page) {
+ 
+ test("Always Update in the rename dialog updates the links, saves the mode, and the next rename does not ask", async () => {
+   const originalUserSettings = readFileSync(userFile, "utf8");
+-  writeFileSync(inWorkspace("Rename Target.md"), "# Target\n");
+-  writeFileSync(inWorkspace("Rename Linker.md"), "See [[Rename Target]].\n");
+-  const browser = await chromium.connectOverCDP(readState().webSocket);
++  const settings = JSON.parse(originalUserSettings) as Record<string, unknown>;
++  // The unset contribution default is prompt, as in Obsidian when
++  // alwaysUpdateLinks is false. Fail clearly if setup already pinned the key.
++  if ("lumiere.markdown.linkUpdates.mode" in settings) {
++    throw new Error(
++      "lumiere.markdown.linkUpdates.mode is already set in User/settings.json; this spec tests the unset contribution default and must run without that key.",
++    );
++  }
++  let browser: Browser | undefined;
+   try {
++    writeFileSync(inWorkspace("Rename Target.md"), "# Target\n");
++    writeFileSync(inWorkspace("Rename Linker.md"), "See [[Rename Target]].\n");
++    browser = await chromium.connectOverCDP(readState().webSocket);
+     const page = workbenchPage(browser);
+     // Opening a note activates the extension, as it is for any real session.
+     await openWorkbench(page);
+@@ -71,7 +80,7 @@ test("Always Update in the rename dialog updates the links, saves the mode, and
+         timeout: 20_000,
+       })
+       .toBe("See [[Rename Goal]].\n");
+-    // Not set anywhere yet, so Always Update writes the user's settings.
++    // Always Update writes always to the user's settings, which started unset.
+     await expect
+       .poll(
+         () =>
+@@ -94,10 +103,15 @@ test("Always Update in the rename dialog updates the links, saves the mode, and
+       })
+       .toBe("See [[Rename Target]].\n");
+   } finally {
+-    await closeBrowser(browser);
+-    writeFileSync(userFile, originalUserSettings);
+-    rmSync(inWorkspace("Rename Target.md"), { force: true });
+-    rmSync(inWorkspace("Rename Goal.md"), { force: true });
+-    rmSync(inWorkspace("Rename Linker.md"), { force: true });
++    try {
++      if (browser) {
++        await closeBrowser(browser);
++      }
++    } finally {
++      writeFileSync(userFile, originalUserSettings);
++      rmSync(inWorkspace("Rename Target.md"), { force: true });
++      rmSync(inWorkspace("Rename Goal.md"), { force: true });
++      rmSync(inWorkspace("Rename Linker.md"), { force: true });
++    }
+   }
+ });
