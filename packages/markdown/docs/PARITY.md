@@ -1,15 +1,15 @@
 # Obsidian parity observations
 
-Reference: Obsidian 1.15.0 (installed app, REA 2026-11-10), to be compared by the owner in a disposable vault. Never use the owner's vault. Record date, method, observed result and any issue link in each row. Automated checks do not establish visual or behavioral parity. All rows start not observed.
+Reference: Obsidian 1.15.0 (installed app; static shipped-artifact REA, 2026-11-10), to be compared by the owner in a disposable vault. Never use the owner's vault. Record date, method, observed result and any issue link in each row. Automated checks do not establish visual or behavioral parity. New rows start not observed; see the re-baseline note for older measurements and static reads.
 
-**Re-baseline note (2026-11-10).** Rows whose observation column names
-1.13.7 or 1.14.4 were measured against older installs; the installed app is
-1.15.0. Rows naming 1.15.0 are static shipped-code reads, not live
-observations. Re-measure the 1.14.4 rows before treating them as matches —
-1.15.0 adds 128 CSS custom properties (`--bases-kanban-*`,
-`--highlight-background-*`, `--mermaid-*`) and command IDs
-`app:migrate-frontmatter`, `app:increase-font-size`,
-`app:decrease-font-size`, `app:open-file`. Evidence: REA
+**Re-baseline note (2026-11-10).** Rows naming a version below 1.15.0 are
+older-version evidence; the installed app is 1.15.0. Rows naming
+1.15.0 are static shipped-code reads, not live observations. Re-measure the
+1.14.4 rows before treating them as 1.15.0 matches. Relative to 1.13.7, the
+1.15.0 catalog has 128 net more CSS custom properties (including
+`--bases-kanban-*`, `--highlight-background-*`, `--mermaid-*`) and new
+`app:` command IDs `app:migrate-frontmatter`, `app:increase-font-size`,
+`app:decrease-font-size`, `app:open-file`. Evidence: static REA
 `ev_6656f973c52d9c8d523b697ac6a77957170ffcda27c58103a519f55c9b517b1a`.
 
 | Action or behavior (DESIGN §13–§15) | Obsidian observation: date and method | Workshop result | How checked | Status |

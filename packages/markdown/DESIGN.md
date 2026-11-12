@@ -20,7 +20,7 @@ plugin**.
 | Identity | Display name **Lumiere**, one half of the extension **Lumiere: Markdown Editor and PDF Reader** (package `lumiere`, publisher `t04dj14n9`, extension ID `t04dj14n9.lumiere`); editor view type `lumiere.markdown.editor`; settings, commands and context keys under `lumiere.markdown.` |
 | Source to extract | `claude/markdown-integration` at `ff3a902ef4ec50a136455c0cf2ccaff698682a06` in `~/Code/human-learning`. Not `main`, whose 4,900-line `webview-src/markdown-editor.ts` it supersedes |
 | Architecture | `@workshop/core` (on Cordis) runs in the extension host, in each webview and in unit tests. Every capability, the core ones included, is a plugin that injects services, provides services, owns effects and extends others through typed events |
-| Behaviour reference | Obsidian 1.13.7 as observed, plus the 1.12.7 source study. Implement behaviour independently; never copy Obsidian code. The installed app is **Obsidian 1.15.0** (REA, 2026-11-10); `docs/PARITY.md` records which rows were measured against older versions and need re-baselining |
+| Behaviour reference | Obsidian 1.13.7 as observed, plus the 1.12.7 source study. Implement behaviour independently; never copy Obsidian code. The installed app is **Obsidian 1.15.0** (static shipped-artifact REA, 2026-11-10); `docs/PARITY.md` flags older measurements that still need live re-baselining |
 | Document authority | The VS Code `TextDocument` is the only source of text, saving and undo. Webviews are synchronized views (`@codemirror/collab`) |
 | Markdown dialect | Obsidian Flavored Markdown is one fixed dialect, parsed identically everywhere. Plugins change presentation and interaction, never parsing (as in Obsidian) |
 | Vault model | One host-side vault index (Obsidian's MetadataCache) replaces the three link resolvers and four whole-workspace scans in the source |
@@ -74,7 +74,7 @@ Non-goals for v1:
 | Native tests | `packages/vscode-extension/test/vscode-e2e/{markdown,properties,file-title,rename-state,obsidian-commands}.spec.ts`, `fixtures/test-vault/` | Installed-extension scenarios to port |
 | Status and evidence | `docs/markdown-integration.md`, `docs/markdown-integration-handover.md` on the branch | Tested behaviour, known flakes, open acceptance items |
 | Obsidian study | `~/Code/human-learning/docs/obsidian-1.12-source-study.md` (untracked, main checkout) | Architecture of MetadataCache, link resolution, Live Preview engine, fuzzy scoring |
-| Obsidian reference | Obsidian 1.15.0 installed in `/Applications`; extracted bundle in `~/Code/obsidian-re/` | Behaviour reference only. Proprietary: never copy code or assets |
+| Obsidian reference | Obsidian 1.15.0 installed in `/Applications`; its shipped ASAR was extracted for static reads. Older 1.12.7 / 1.13.7 source-study bundles are in `~/Code/obsidian-re/` | Behaviour reference only; static reads are not live parity observations. Proprietary: never copy code or assets |
 | Template | `~/Code/vscode-embedPDF` | Repository shape, catalogue-generated settings, API style, test tiers |
 | Plugin model | DeepSeek Harness and Cordis (links above) | Context, inject, services, effects, events, fibers |
 
@@ -1509,10 +1509,12 @@ API through a sample external plugin.
 
 ### 21.4 Obsidian parity
 
-`docs/PARITY.md` holds one row per behaviour in §13–§15: the action, the
-Obsidian 1.15.0 observation (date, how observed), our result and how it was
-checked. Use a disposable vault (never the owner's). Rows stay "not observed"
-until the owner's computer-use pass compares them with the live reference.
+`docs/PARITY.md` holds one row per behaviour in §13–§15: the action, an
+Obsidian observation (version, date, method, or `not observed`), our result
+and how it was checked. Use a disposable vault (never the owner's). Static
+shipped-code reads are not live observations; unobserved rows stay "not
+observed" until the owner's computer-use pass compares them with the live
+reference.
 
 ## 22. Build and toolchain
 
