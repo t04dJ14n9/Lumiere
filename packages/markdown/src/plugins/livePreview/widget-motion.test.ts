@@ -82,8 +82,7 @@ test("revealed source queries include a fence only while its source is showing",
 });
 
 test("a folded reveal block stays in the source query because the motion gate owns folds", () => {
-  const source =
-    "# Folded\n```mermaid\nflowchart LR\nA --> B\n```\n\n# After";
+  const source = "# Folded\n```mermaid\nflowchart LR\nA --> B\n```\n\n# After";
   const state = EditorState.create({
     doc: source,
     selection: { anchor: 0, head: source.length },
