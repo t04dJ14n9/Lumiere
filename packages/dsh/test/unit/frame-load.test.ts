@@ -193,6 +193,35 @@ test("onLoad reports a rendered editor page and re-announces it when DSH bumps t
   assert.deepEqual(spy.loaded, ["1", "1"]);
 });
 
+test("a re-render detach and re-attach does not retire the live frame", () => {
+  const spy = bodyProps();
+  const iframe = noteBody(fakeReact(), () => {})(spy.props) as IframeProps;
+  const frame = frameWith(frameDocument("about:blank"));
+  iframe.ref(frame);
+  // React calls the callback ref with null, then with the same element, when
+  // the inline ref's identity changes between renders.
+  iframe.ref(null);
+  iframe.ref(frame);
+  setDocument(frame, frameDocument("http://dsh/note", true));
+  iframe.onLoad({ currentTarget: frame });
+  assert.deepEqual(spy.failed, []);
+  assert.deepEqual(spy.loaded, ["1"]);
+});
+
+test("the mount effect keeps the initial blank document the ref captured", () => {
+  const spy = bodyProps();
+  const react = fakeReact();
+  const iframe = noteBody(react, () => {})(spy.props) as IframeProps;
+  const blank = frameDocument("about:blank");
+  const frame = frameWith(blank);
+  iframe.ref(frame);
+  // Effects run after the ref attaches in a real render.
+  react.effects[0]?.();
+  iframe.onLoad({ currentTarget: frame });
+  assert.deepEqual(spy.failed, []);
+  assert.deepEqual(spy.loaded, []);
+});
+
 test("onLoad reports a later about:blank load from the same frame", () => {
   const spy = bodyProps();
   const react = fakeReact();
@@ -239,32 +268,25 @@ test("onLoad inspects the live iframe's document", () => {
 });
 
 test("onLoad and onError from an iframe DSH replaced are ignored", () => {
-  const old = bodyProps();
-  const oldReact = fakeReact();
-  const oldIframe = noteBody(oldReact, () => {})(old.props) as IframeProps;
+  const spy = bodyProps();
+  const react = fakeReact();
+  const iframe = noteBody(react, () => {})(spy.props) as IframeProps;
   const stale = frameWith(frameDocument("http://dsh/note"));
-  oldIframe.ref(stale);
-  oldIframe.ref(null);
-
-  const next = bodyProps();
-  const nextReact = fakeReact();
-  const nextIframe = noteBody(nextReact, () => {})(next.props) as IframeProps;
+  iframe.ref(stale);
+  // A new attempt (key change) attaches a different element.
   const live = frameWith(frameDocument("http://dsh/note", true));
-  nextIframe.ref(live);
+  iframe.ref(live);
 
-  oldIframe.onLoad({ currentTarget: stale });
-  oldIframe.onError({ currentTarget: stale });
+  iframe.onLoad({ currentTarget: stale });
+  iframe.onError({ currentTarget: stale });
   setDocument(stale, frameDocument("http://dsh/note", true));
-  oldIframe.onLoad({ currentTarget: stale });
-  signalRevision(oldReact);
-  signalRevision(nextReact);
-  assert.deepEqual(old.failed, []);
-  assert.deepEqual(old.loaded, []);
-  assert.deepEqual(next.failed, []);
-  assert.deepEqual(next.loaded, []);
+  iframe.onLoad({ currentTarget: stale });
+  signalRevision(react);
+  assert.deepEqual(spy.failed, []);
+  assert.deepEqual(spy.loaded, []);
 
-  nextIframe.onLoad({ currentTarget: live });
-  assert.deepEqual(next.loaded, ["1"]);
+  iframe.onLoad({ currentTarget: live });
+  assert.deepEqual(spy.loaded, ["1"]);
 });
 
 test("onError reports a failure and stops re-announcing a loaded page", () => {

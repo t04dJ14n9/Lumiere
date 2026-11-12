@@ -113,7 +113,6 @@ function LumiereNote(
   );
   React.useEffect(() => {
     load.current.hasLoaded = false;
-    load.current.initialBlank = null;
     if (absolute && !isMarkdown) {
       props.content.failed?.();
     }
@@ -171,13 +170,19 @@ function editorFrame(
   return React.createElement("iframe", {
     key: `${src}#${attempt}`,
     ref: (element: HTMLIFrameElement | null) => {
+      // React detaches a callback ref with null and re-attaches the same
+      // element on every re-render whose identity changed (and on unmount).
+      // Keep the live element: its own load/error must still settle the
+      // preview. A genuinely replaced element is retired when its successor
+      // attaches.
+      if (element === null) {
+        return;
+      }
       const previous = frame.current;
       if (previous && previous !== element) {
         state.retired.add(previous);
       }
-      if (element) {
-        state.attached.add(element);
-      }
+      state.attached.add(element);
       frame.current = element;
       state.initialBlank = initialBlankDocument(element);
       props.scrollportRef?.(element);
