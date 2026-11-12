@@ -54,7 +54,7 @@ function fakeReact() {
   };
 }
 
-/** noteBody's last effect re-announces a loaded page on a DSH revision. */
+/** Re-run noteBody's last effect, as a DSH revision bump would. */
 function signalRevision(react: ReturnType<typeof fakeReact>): void {
   react.effects.at(-1)?.();
 }
@@ -101,7 +101,7 @@ test("onLoad reports a real about:blank document that loads first", () => {
   assert.deepEqual(spy.loaded, []);
 });
 
-test("onLoad reports a rendered editor page and re-announces it on revision", () => {
+test("onLoad reports a rendered editor page and re-announces it when DSH bumps the revision", () => {
   const spy = bodyProps();
   const react = fakeReact();
   const iframe = noteBody(react, () => {})(spy.props) as IframeProps;
@@ -110,6 +110,7 @@ test("onLoad reports a rendered editor page and re-announces it on revision", ()
   iframe.onLoad({ currentTarget: frame });
   assert.deepEqual(spy.failed, []);
   assert.deepEqual(spy.loaded, ["1"]);
+  spy.props.content.revision = 1;
   signalRevision(react);
   assert.deepEqual(spy.loaded, ["1", "1"]);
 });
