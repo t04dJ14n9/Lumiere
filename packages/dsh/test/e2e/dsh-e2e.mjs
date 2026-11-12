@@ -319,6 +319,7 @@ async function main() {
     });
     await check("write to a read-only route is rejected with 405", async () => {
       for (const route of [
+        `${base}/lumiere`,
         `/lumiere/editor?path=${encodeURIComponent(md)}&root=${encodeURIComponent(scratch)}`,
         `${base}/lumiere/page/shim.js`,
         `${base}/lumiere/file?uri=${encodeURIComponent(`file://${md}`)}`,
@@ -337,7 +338,7 @@ async function main() {
           "missing Allow header",
         );
       }
-      return "405 + Allow on all four";
+      return "405 + Allow on all five";
     });
     await check("wrong method on a JSON route returns 405", async () => {
       for (const route of [
@@ -660,8 +661,27 @@ async function main() {
         });
         assert(head.status === 200, `HEAD -> ${head.status}`);
         const exact = await get(`${base}/lumiere`);
-        assert(exact.status === 404, `exact -> ${exact.status}`);
-        return "HEAD 200, /lumiere 404";
+        assert(exact.status === 200, `exact -> ${exact.status}`);
+        const type = exact.headers.get("content-type") ?? "";
+        assert(type.includes("application/json"), `content-type ${type}`);
+        const index = await exact.json();
+        assert(index.name === "lumiere", `name -> ${index.name}`);
+        const expectedRoutes = [
+          "/lumiere/editor",
+          "/lumiere/m/",
+          "/lumiere/page/shim.js",
+          "/lumiere/file",
+          "/lumiere/views",
+          "/lumiere/settings",
+          "/lumiere/commands",
+          "/lumiere/pdf",
+          "/lumiere/socket",
+        ];
+        assert(
+          JSON.stringify(index.routes) === JSON.stringify(expectedRoutes),
+          `routes -> ${JSON.stringify(index.routes)}`,
+        );
+        return "HEAD 200, /lumiere 200 index";
       },
     );
     await check("invalid setting and command changes are 400", async () => {
