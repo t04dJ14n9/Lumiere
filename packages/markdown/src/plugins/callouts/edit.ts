@@ -8,22 +8,20 @@ export function isCallout(source: string): boolean {
 }
 /**
  * Insert Callout, as in Obsidian: with the caret at column 0 of a non-empty
- * line, insert an empty `> [!NOTE]\n> ` callout ABOVE that line (the line is
- * left untouched below it); on an empty line, insert a callout with a title
- * and contents to replace; otherwise wrap the selected lines in a note
- * callout with a blank line between it and any text above or below. The
- * callout's type is selected. A selection ending at column zero does not
- * include that line.
+ * line, insert `\n> [!NOTE] Title\n> Contents\n` above that line; on an empty
+ * line, insert a callout with a title and contents to replace; otherwise wrap
+ * the selected lines in a note callout with a blank line between it and any
+ * text above or below. The callout's type is selected. A selection ending at
+ * column zero does not include that line.
  */
 export function insertCallout(state: EditorState): TransactionSpec {
   const { from, to, empty } = state.selection.main;
   const first = state.doc.lineAt(from);
 
-  // Obsidian inserts an empty callout above the line rather than wrapping
-  // that line when the caret sits at its start (Obsidian 1.15.0 parity,
-  // issue #691).
+  // Obsidian 1.15.0's collapsed-caret branch inserts the Title/Contents
+  // template at the caret. Its leading newline leaves the line below it.
   if (empty && from === first.from && first.text.trim() !== "") {
-    return insertEmptyCalloutAbove(first.from);
+    return insertTemplateAbove(first.from);
   }
 
   const last = state.doc.lineAt(empty ? to : Math.max(from, to - 1));
@@ -48,11 +46,12 @@ export function insertCallout(state: EditorState): TransactionSpec {
   };
 }
 
-/** Insert an empty note callout above a line, leaving the line's text below. */
-function insertEmptyCalloutAbove(lineFrom: number): TransactionSpec {
-  const type = lineFrom + "> [!".length;
+/** Insert Obsidian's Title/Contents template above a line, leaving the line. */
+function insertTemplateAbove(lineFrom: number): TransactionSpec {
+  const template = "\n> [!NOTE] Title\n> Contents\n";
+  const type = lineFrom + "\n> [!".length;
   return {
-    changes: { from: lineFrom, to: lineFrom, insert: "> [!NOTE]\n> \n" },
+    changes: { from: lineFrom, to: lineFrom, insert: template },
     selection: { anchor: type, head: type + "NOTE".length },
     userEvent: "input.callout",
   };
