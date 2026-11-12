@@ -2,7 +2,14 @@ import test from "node:test";
 import assert from "node:assert/strict";
 import { createServer } from "node:http";
 import type { AddressInfo } from "node:net";
-import { chmod, mkdir, mkdtemp, rm, symlink, writeFile } from "node:fs/promises";
+import {
+  chmod,
+  mkdir,
+  mkdtemp,
+  rm,
+  symlink,
+  writeFile,
+} from "node:fs/promises";
 import { tmpdir } from "node:os";
 import * as path from "node:path";
 import { serveFile, serveStatic } from "../../src/host/static";
@@ -19,7 +26,10 @@ async function serving(t: test.TestContext, file: string): Promise<string> {
   return `http://127.0.0.1:${(server.address() as AddressInfo).port}/`;
 }
 
-async function servingStatic(t: test.TestContext, base: string): Promise<string> {
+async function servingStatic(
+  t: test.TestContext,
+  base: string,
+): Promise<string> {
   const server = createServer((req, res) => {
     const relative = (req.url ?? "/").replace(/^\//, "").split("?")[0] ?? "";
     void serveStatic(res, base, relative);
@@ -207,6 +217,8 @@ test("serveStatic returns 404 for a dangling symlink", async (t) => {
 
 test("serveStatic returns 403 when the bundle root cannot be resolved", async (t) => {
   const { missingRoot } = await bundleFixture(t);
-  const response = await fetch(`${await servingStatic(t, missingRoot)}inside.js`);
+  const response = await fetch(
+    `${await servingStatic(t, missingRoot)}inside.js`,
+  );
   assert.equal(response.status, 403);
 });
