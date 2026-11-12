@@ -7,6 +7,7 @@ import { clearInlineFormatting, wrapSelection } from "./inline";
 import { lineEdit, linkEdit } from "./lines";
 import { toggleComment } from "./comment";
 import { linkPaste } from "./paste-link";
+import { formattingCommands } from "./webview";
 
 test("formatting toggles exact markers while retaining selection and obeying read-only", () => {
   let state = EditorState.create({
@@ -113,6 +114,56 @@ test("clearing inline formatting strips link markers, keeping label and URL text
   assert.equal(clearInlineFormatting("![alt](url)"), "alturl");
   // Emphasis inside the label is still cleared, as before.
   assert.equal(clearInlineFormatting("[**bold**](url)"), "boldurl");
+  assert.equal(clearInlineFormatting('[label](url "title")'), 'labelurl "title"');
+});
+
+test("clearing inline formatting strips reference, autolink, and wiki syntax", () => {
+  assert.equal(clearInlineFormatting("[label][ref]"), "labelref");
+  assert.equal(clearInlineFormatting("[label][]"), "label");
+  assert.equal(clearInlineFormatting("[label]"), "label");
+  assert.equal(
+    clearInlineFormatting("[ref]: https://x.io"),
+    "ref https://x.io",
+  );
+  assert.equal(clearInlineFormatting("<https://x.io>"), "https://x.io");
+  assert.equal(clearInlineFormatting("[[Page|Alias]]"), "Page|Alias");
+  // Bare URLs and wiki embeds are not formatting tokens to remove.
+  assert.equal(clearInlineFormatting("https://x.io"), "https://x.io");
+  assert.equal(clearInlineFormatting("![[Page]]"), "![[Page]]");
+});
+
+test("clearing inline formatting keeps escaped literals and code text", () => {
+  assert.equal(clearInlineFormatting("\\[label\\](url)"), "\\[label\\](url)");
+  assert.equal(clearInlineFormatting("`[label](url)`"), "[label](url)");
+});
+
+test("clear-formatting command edits selected link syntax, not syntax outside the selection", () => {
+  const command = formattingCommands().get("editor:clear-formatting");
+  assert.ok(command);
+  const clear = (doc: string, from: number, to: number) => {
+    let state = EditorState.create({
+      doc,
+      selection: { anchor: from, head: to },
+      extensions: [markdownLanguageSupport()],
+    });
+    const view = {
+      get state() {
+        return state;
+      },
+      dispatch(spec: Parameters<EditorState["update"]>[0]) {
+        state = state.update(spec).state;
+      },
+    } as EditorView;
+    assert.equal(command(view), true);
+    return [
+      state.doc.toString(),
+      state.selection.main.from,
+      state.selection.main.to,
+    ];
+  };
+  assert.deepEqual(clear("[label](url)", 0, 12), ["labelurl", 0, 8]);
+  assert.deepEqual(clear("[label](url)", 1, 6), ["[label](url)", 1, 6]);
+  assert.deepEqual(clear("**[label](url)**", 2, 14), ["labelurl", 0, 8]);
 });
 
 test("caret formatting unwraps enclosing syntax and wraps a plain word", () => {

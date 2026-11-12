@@ -28,14 +28,27 @@ export function clearInlineFormatting(source: string): string {
           { from: node.from, to: node.from + 2 },
           { from: node.to - 2, to: node.to },
         );
-      } else if (node.name === "Link" || node.name === "Image") {
-        // Obsidian's Clear Formatting strips a link's marker characters but
-        // keeps both the label and the URL as text: `[l](u)` becomes `lu`.
-        // Only these nodes' own marks are removed: a bare `<url>` autolink and
-        // the `:` in a `[ref]: url` definition are also LinkMarks elsewhere.
+      } else if (
+        ["Link", "Image", "Autolink", "LinkReference"].includes(node.name)
+      ) {
+        // Clear Formatting removes link syntax tokens but keeps the label,
+        // destination and reference text: `[l](u)` becomes `lu`. A LinkLabel
+        // holds `[ref]`, whose brackets are syntax too.
         for (const mark of node.node.getChildren("LinkMark")) {
           removed.push({ from: mark.from, to: mark.to });
         }
+        for (const label of node.node.getChildren("LinkLabel")) {
+          removed.push(
+            { from: label.from, to: label.from + 1 },
+            { from: label.to - 1, to: label.to },
+          );
+        }
+      } else if (node.name === "WikiLink") {
+        // A plain wikilink's brackets are formatting; `![[…]]` embeds stay.
+        removed.push(
+          { from: node.from, to: node.from + 2 },
+          { from: node.to - 2, to: node.to },
+        );
       }
     },
   });

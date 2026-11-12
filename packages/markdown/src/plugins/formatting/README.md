@@ -9,6 +9,11 @@ Inline toggling uses the shared dialect to locate enclosing syntax at the caret;
 otherwise it wraps the word or selection, or removes selected delimiters. As
 in Obsidian 1.14, a selection anywhere inside a span unwraps the whole span,
 and one over or around spans merges them into one (`spans.ts`).
+Clear Formatting strips the syntax markers of inline, image, reference,
+autolink, link-definition and plain-wikilink forms, keeping label, URL and
+reference text; escaped literals, code text, bare URLs and wiki embeds stay.
+It acts on the selected source, so a label-only selection does not remove
+syntax outside it.
 
 Highlights take Obsidian 1.14's colours, an emoji right after `==`
 (`==🔵text==`): **Toggle Red Highlight** and the five other colours wrap the

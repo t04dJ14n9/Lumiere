@@ -39,7 +39,7 @@ export const formattingWebview: Plugin = {
   },
 };
 
-function formattingCommands(): Map<string, Command> {
+export function formattingCommands(): Map<string, Command> {
   const commands = new Map<string, Command>();
   for (const [id, marker] of [
     ["bold", "**"],
