@@ -7027,5 +7027,10 @@ nothing copied) shows that it writes `1. ` on every nonblank selected line and
 counts a numbered task's box as part of the marker, so a selection of numbered
 tasks toggles off. `lineEdit` now does both; parity units cover existing
 markers, quotes, indentation, blank lines, toggle-off and numbered tasks.
-Validation: regressions added; no tests, builds or live-vault comparison run
-in this review pass.
+`toggleNumberList()` sends only `{changes}`, so the selection comes from
+CodeMirror's default mapping: a position at the start of a *replaced* marker
+stays at column 0, while an *inserted* marker maps to the right of itself.
+The regression expectations follow that difference, read from Obsidian's
+command and from `@codemirror/state`'s transaction mapping.
+Validation: `obsidian-commands.test.ts` passes (20 tests); full gates run
+separately. Table-cell refusal is not part of this command.

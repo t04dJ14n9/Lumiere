@@ -156,9 +156,13 @@ test("Toggle Numbered List writes '1. ' on every line, not 1, 2, 3", () => {
 });
 
 test("Toggle Numbered List keeps line structure and toggles every numbered marker off", () => {
+  // A replaced marker leaves the selection start at column 0: Obsidian sends
+  // only `{changes}`, and CodeMirror maps a position at the start of a
+  // replaced range to that start. An inserted marker maps to the right of
+  // itself (see the test above), which is why the two shapes differ.
   assert.equal(
     edit("‹- a\n2) b›", (s) => lineEdit(s, "1. ")),
-    "1. ‹a\n1. b›",
+    "‹1. a\n1. b›",
   );
   assert.equal(
     edit("‹a\n\nb›", (s) => lineEdit(s, "1. ")),
