@@ -1,0 +1,19 @@
+{
+  "pr": 702,
+  "head": "6378d68131bbbde000b7b83ce1bf74343739e321",
+  "base": "origin/main f1c153d51df481ec493800ca491544d56b7df66b",
+  "integrationBranch": "review/integration-editor-2026-11-12",
+  "integrationHead": "20f82e0e3709c5aa054258de72a1c1692e10c24c",
+  "integrationEvidence": "review/pr-integration-editor-evidence-20f82e0e/evidence/pr-integration-editor",
+  "verification": {
+    "install": "pass",
+    "check": "pass (format, lint, typecheck, all unit tests, contributions)",
+    "browser": "473 Markdown + 195 PDF specs passed",
+    "quality": "9 Playwright budgets + 1 large-vault unit passed",
+    "vscode": "30 root + 26 PDF specs passed, 2 skipped"
+  },
+  "notes": [
+    "A defect was found and fixed at this head: the new mixed-marker selection expectation was wrong. Obsidian sends only {changes}; CodeMirror maps a position at the start of a replaced marker to that start, while an inserted marker maps to its right. Fixed in 6378d681; full Markdown unit suite 3308/3308."
+  ],
+  "redaction": "No cookies, tokens, panel ids, or personal data. Only local worktree paths appear in logs."
+}
