@@ -17,7 +17,10 @@ test("importing the suite module does not start the live harness", async () => {
   assert.equal(typeof mod.symlinkEscapeRefused, "function");
   assert.equal(typeof mod.summarize, "function");
   assert.ok(Array.isArray(mod.results));
-  assert.ok(Date.now() - started < 5000, "import blocked as if the live suite started");
+  assert.ok(
+    Date.now() - started < 5000,
+    "import blocked as if the live suite started",
+  );
 });
 
 test("the runner requires an explicit cookie from an isolated harness", async () => {
@@ -43,7 +46,10 @@ function liveRunBody(source) {
   const start = source.search(/async function main\s*\(/);
   assert.ok(start >= 0, "live main() is missing");
   const end = source.indexOf("\nfunction launchedAsMain(", start);
-  assert.ok(end > start, "live main() body could not be isolated from helper declarations");
+  assert.ok(
+    end > start,
+    "live main() body could not be isolated from helper declarations",
+  );
   const body = source.slice(start, end);
   assert.doesNotMatch(body, /function\s+staticTraversalRefused\s*\(/);
   assert.doesNotMatch(body, /function\s+symlinkEscapeRefused\s*\(/);
@@ -74,7 +80,9 @@ test("the live suite calls the shared traversal and symlink helpers", () => {
 });
 
 test("check() records a normal return as PASS", async () => {
-  const { check, results, resetResults, summarize } = await import(suiteUrl.href);
+  const { check, results, resetResults, summarize } = await import(
+    suiteUrl.href
+  );
   resetResults();
   await check("ok path", async () => "detail");
   const summary = summarize(results);
@@ -105,7 +113,9 @@ test("skip() is recorded as SKIP and is excluded from the pass count", async () 
 });
 
 test("returning a skip-like string is not a substitute for skip()", async () => {
-  const { check, results, resetResults, summarize } = await import(suiteUrl.href);
+  const { check, results, resetResults, summarize } = await import(
+    suiteUrl.href
+  );
   resetResults();
   await check("old skip", async () => "skipped (symlink exists)");
   const summary = summarize(results);
@@ -118,7 +128,9 @@ test("returning a skip-like string is not a substitute for skip()", async () => 
 });
 
 test("unexpected errors are FAIL and trip a non-zero exit", async () => {
-  const { check, results, resetResults, summarize } = await import(suiteUrl.href);
+  const { check, results, resetResults, summarize } = await import(
+    suiteUrl.href
+  );
   resetResults();
   await check("boom", async () => {
     const error = new Error("EEXIST: file already exists");
@@ -177,8 +189,14 @@ test("staticTraversalRefused fails when the host returns 404", async () => {
 });
 
 test("symlinkEscapeRefused skips only documented unsupported codes, outside the pass count", async () => {
-  const { symlinkEscapeRefused, check, skip, results, resetResults, summarize } =
-    await import(suiteUrl.href);
+  const {
+    symlinkEscapeRefused,
+    check,
+    skip,
+    results,
+    resetResults,
+    summarize,
+  } = await import(suiteUrl.href);
   const scratch = mkdtempSync(path.join(tmpdir(), "lumiere-e2e-contract-"));
   try {
     resetResults();
@@ -216,8 +234,14 @@ test("symlinkEscapeRefused skips only documented unsupported codes, outside the 
 });
 
 test("symlinkEscapeRefused fails on EEXIST and other unexpected symlink errors", async () => {
-  const { symlinkEscapeRefused, check, skip, results, resetResults, summarize } =
-    await import(suiteUrl.href);
+  const {
+    symlinkEscapeRefused,
+    check,
+    skip,
+    results,
+    resetResults,
+    summarize,
+  } = await import(suiteUrl.href);
   const scratch = mkdtempSync(path.join(tmpdir(), "lumiere-e2e-contract-"));
   try {
     resetResults();
@@ -254,8 +278,14 @@ test("symlinkEscapeRefused fails on EEXIST and other unexpected symlink errors",
 });
 
 test("symlinkEscapeRefused requires 403 when the link exists and names the symlink in the URI", async () => {
-  const { symlinkEscapeRefused, check, skip, results, resetResults, summarize } =
-    await import(suiteUrl.href);
+  const {
+    symlinkEscapeRefused,
+    check,
+    skip,
+    results,
+    resetResults,
+    summarize,
+  } = await import(suiteUrl.href);
   const scratch = mkdtempSync(path.join(tmpdir(), "lumiere-e2e-contract-"));
   try {
     const seen = [];
