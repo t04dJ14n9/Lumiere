@@ -8,6 +8,8 @@
 
 ## Unreleased
 
+- Fixed: Vim `j`/`k` could skip several source lines inside a revealed Mermaid diagram or other source-visible Live Preview block.
+
 - **Lumia is now Lumiere.** The Extensions view, the Marketplace listing
   (**Lumiere: Obsidian-style Notes and PDF Reader**), **Reopen Editor With…**,
   the Command Palette (**Lumiere: …**), the Settings UI and messages say

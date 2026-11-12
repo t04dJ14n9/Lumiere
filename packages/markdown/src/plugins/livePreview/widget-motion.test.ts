@@ -81,6 +81,35 @@ test("revealed source queries include a fence only while its source is showing",
   assert.deepEqual(renderedWidgets(shown, 0, source.length), []);
 });
 
+test("a folded reveal block stays in the source query because the motion gate owns folds", () => {
+  const source =
+    "# Folded\n```mermaid\nflowchart LR\nA --> B\n```\n\n# After";
+  const state = EditorState.create({
+    doc: source,
+    selection: { anchor: 0, head: source.length },
+    extensions: [
+      documentTree,
+      blockIndex,
+      foldState,
+      blockRenderers.of({
+        kind: "diagram",
+        editing: "reveal",
+        match: (node) => node.name === "FencedCode",
+        widget: () => {
+          throw new Error("Not mounted");
+        },
+      }),
+    ],
+  });
+  const folded = state.update({
+    effects: foldEffect.of({ from: 8, to: source.indexOf("\n\n# After") }),
+  }).state;
+  assert.deepEqual(
+    revealedSourceBlocks(folded, 0, source.length).map((block) => block.kind),
+    ["diagram"],
+  );
+});
+
 test("a table hidden inside a collapsed heading is absent from the widget motion query", () => {
   const source = "# Folded\n| a | b |\n|---|---|\n| c | d |\n\n# After";
   const state = EditorState.create({

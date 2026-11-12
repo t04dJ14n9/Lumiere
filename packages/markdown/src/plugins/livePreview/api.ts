@@ -69,7 +69,7 @@ export interface LivePreview {
     from: number,
     to: number,
   ): readonly RenderBlock[];
-  /** Revealed `editing: "reveal"` blocks intersecting the source range. */
+  /** `editing: "reveal"` blocks whose source is visible in the range. */
   revealedSourceBlocks?(
     state: EditorState,
     from: number,

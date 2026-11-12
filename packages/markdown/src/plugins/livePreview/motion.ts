@@ -30,6 +30,8 @@ export function revealedSourceBlocks(
   from: number,
   to: number,
 ): readonly RenderBlock[] {
+  // Fold filtering belongs to the caller's source-line policy: a motion head
+  // outside a folded block cannot be inside its source, so it is not pulled in.
   return (
     state
       .field(blockIndex, false)

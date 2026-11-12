@@ -23,8 +23,9 @@ interface SourceMotion {
 }
 
 /**
- * CM's vertical layout can skip a table replacement. Vim's source motions
- * must ignore that overshoot, including operators and visual selections.
+ * CM's vertical layout can skip a table replacement or overshoot a revealed
+ * source block. Vim's source motions must ignore that overshoot, including
+ * operators and visual selections.
  */
 export function tableMotionPosition(
   motion: SourceMotion,
@@ -81,8 +82,8 @@ function motionApplies(
   if (!overlaps) {
     return false;
   }
-  // Tables stay replaced, so any crossing motion is corrected. Revealed
-  // fences only correct once the caret is already inside their source.
+  // Tables stay replaced, so any crossing motion is corrected. Source-visible
+  // reveal blocks only correct once the caret is already inside their source.
   return (
     widget.kind === "Table" || (widget.from <= start && widget.to >= start)
   );

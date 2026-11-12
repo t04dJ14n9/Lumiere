@@ -199,3 +199,32 @@ test("a revealed block overshoot from the opening fence returns the next source 
     { line: 4, ch: 3 },
   );
 });
+
+test("a folded revealed fence outside the caret cannot pull a folded motion", () => {
+  assert.equal(
+    tableMotionPosition({
+      ...base,
+      start: { line: 0, ch: 0 },
+      amount: 1,
+      result: { line: 8, ch: 0 },
+      lastLine: 20,
+      folds: [{ from: 0, to: 6 }],
+      widgets: [{ kind: "diagram", from: 3, to: 6 }],
+    }),
+    undefined,
+  );
+});
+
+test("a long HTML reveal block overshoot from its closing tag returns the previous source line", () => {
+  assert.deepEqual(
+    tableMotionPosition({
+      ...base,
+      start: { line: 146, ch: 0 },
+      amount: -1,
+      result: { line: 140, ch: 0 },
+      lastLine: 160,
+      widgets: [{ kind: "HTMLBlock", from: 140, to: 146 }],
+    }),
+    { line: 145, ch: 3 },
+  );
+});

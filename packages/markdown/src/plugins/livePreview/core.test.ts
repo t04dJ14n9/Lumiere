@@ -345,28 +345,3 @@ test("Mermaid vertical entry reveals source at either fence without changing tex
     assert.equal(next.doc.toString(), doc);
   }
 });
-
-test("vertical motion inside a revealed Mermaid fence does not retarget either fence", () => {
-  const doc =
-    "before\n\n```mermaid\nflowchart LR\nA --> B\nB --> C\n```\n\nafter";
-  const close = doc.lastIndexOf("```");
-  const opening = doc.indexOf("```mermaid");
-  const lastBody = doc.indexOf("B --> C");
-  const firstBody = doc.indexOf("flowchart LR");
-  const revealedClose = sourceState(doc, close);
-  const revealedOpen = sourceState(doc, opening);
-  const block = revealedClose.field(blockIndex)[0]!;
-  assert.equal(revealed(revealedClose, block.from, block.to), true);
-  assert.equal(verticalBlock(revealedClose, -1), undefined);
-  assert.equal(verticalBlock(revealedOpen, 1), undefined);
-  assert.equal(
-    revealedClose.update({ selection: { anchor: lastBody } }).state.selection
-      .main.head,
-    lastBody,
-  );
-  assert.equal(
-    revealedOpen.update({ selection: { anchor: firstBody } }).state.selection
-      .main.head,
-    firstBody,
-  );
-});

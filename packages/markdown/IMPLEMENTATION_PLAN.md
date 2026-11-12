@@ -7019,3 +7019,34 @@ scroll position only in Reading view; Lumia keeps following the scroll too
   does not implement it and the row stays highlighted there. The caret from
   before an outline click, reported above the first heading, is held like any
   other so it cannot clear the clicked row.
+
+## PR #740 revealed-fence Vim review fixes (2026-11-12, worktree)
+
+The production correction is unchanged: Live Preview's optional
+`revealedSourceBlocks` query returns `editing: "reveal"` blocks whose source is
+visible; Vim's existing arithmetic correction applies them only when the motion
+head starts inside the block. No fold filter was added to the query. A folded
+block whose source is visible to a selection can be returned, but a caret
+outside it cannot be pulled into it; the query and pure-motion regressions now
+pin that boundary. The service and motion comments state the source-visible
+and fold-policy contracts. The misleading selection-only assertions were
+removed from `core.test.ts`.
+
+The self-reported R1 notes are closed with focused unit coverage: a
+`Vim.handleKey` path with a mocked `revealedSourceBlocks` service, `2k`, `dk`,
+`Vk`, `gk`, source-mode bypass, a long HTML source block, and a Mermaid fence
+under a fold. The Edit/source/render lifecycle is covered by the PR's
+`rendered-after-edit.webp` Host GUI frame; source-mode typing does not use the
+patched `findPosV` hook. `CHANGELOG.md` records the user-visible fix. No new
+browser regression was added without owner approval.
+
+GitHub has no public reviews or comments on #740; the R1 summary and its
+`da1da0a2` SHA are self-reported in the PR body and are not a resolvable
+commit. All six CI check runs failed before any step executed. No tests or
+builds were run in this parallel phase: `pnpm check`, `pnpm test:browser` and
+`pnpm test:quality` remain for the serialized full gate. The Host GUI
+152 → 151 → 152 frames show the visible caret; the opening-fence frame shows
+revealed source without a visible caret, and the install frame proves version
+0.1.11 and a VSIX source but not the claimed head SHA or package hash. No
+Obsidian code, CSS or assets were copied; `~/Code/human-learning` was not
+modified.
