@@ -205,11 +205,7 @@ async function chromeAt(
       const inspect = shell.querySelector(".inspect-diagram");
       let laneLeft = hostBox.right;
       for (const button of buttons) {
-        if (
-          button.width >= 1 &&
-          button.height >= 1 &&
-          button.left < laneLeft
-        ) {
+        if (button.width >= 1 && button.height >= 1 && button.left < laneLeft) {
           laneLeft = button.left;
         }
       }
