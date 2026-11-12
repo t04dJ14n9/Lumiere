@@ -64,6 +64,7 @@ function frameDocument(url: string, editor = false): Document {
     URL: url,
     querySelector: (selector: string) =>
       editor && selector === 'meta[name="lumiere-panel"]' ? {} : null,
+    getElementById: () => null,
   } as unknown as Document;
 }
 
