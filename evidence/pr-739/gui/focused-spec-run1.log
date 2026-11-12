@@ -1,0 +1,43 @@
+
+Running 7 tests using 1 worker
+
+  ✓  1 ../../../../../../../private/tmp/pr739-gui-evidence/spec/pr739-pointers.spec.ts:296:7 › PR #739 exact-head pointer evidence › S1 mouse blank drag turns forward and back; short drag does not (2.9s)
+  ✓  2 ../../../../../../../private/tmp/pr739-gui-evidence/spec/pr739-pointers.spec.ts:329:7 › PR #739 exact-head pointer evidence › S2 mouse drag from text selects text and does not turn (1.8s)
+  ✓  3 ../../../../../../../private/tmp/pr739-gui-evidence/spec/pr739-pointers.spec.ts:358:7 › PR #739 exact-head pointer evidence › S3 trusted pen pointer events turn a blank page forward and back (2.0s)
+  ✓  4 ../../../../../../../private/tmp/pr739-gui-evidence/spec/pr739-pointers.spec.ts:389:9 › PR #739 exact-head pointer evidence › touch (hasTouch context) › S4a native pan and pinch are not suppressed, touch is not claimed (2.5s)
+  ✓  5 ../../../../../../../private/tmp/pr739-gui-evidence/spec/pr739-pointers.spec.ts:475:9 › PR #739 exact-head pointer evidence › touch (hasTouch context) › S4b a blank-area touch drag still pages through native Stage navigation (1.6s)
+  ✓  6 ../../../../../../../private/tmp/pr739-gui-evidence/spec/pr739-pointers.spec.ts:514:7 › PR #739 exact-head pointer evidence › S5 mid-drag switch to continuous drops the turn; switching back still turns (2.6s)
+  ✘  7 ../../../../../../../private/tmp/pr739-gui-evidence/spec/pr739-pointers.spec.ts:570:7 › PR #739 exact-head pointer evidence › S6 loaded geometry is required: a cold blank drag is ignored (2.2s)
+
+
+  1) ../../../../../../../private/tmp/pr739-gui-evidence/spec/pr739-pointers.spec.ts:570:7 › PR #739 exact-head pointer evidence › S6 loaded geometry is required: a cold blank drag is ignored 
+
+    Error: expect(received).toBe(expected) // Object.is equality
+
+    Expected: false
+    Received: true
+
+      646 |     await shot(page, "S6-warm-turn-page3");
+      647 |     expect(pageOneLoaded).toBe(true);
+    > 648 |     expect(cold.isLoaded).toBe(false);
+          |                           ^
+      649 |     expect(cold.isOverText).toBe(false);
+      650 |     expect(downChecks[0].isLoaded).toBe(false);
+      651 |     expect(afterCold.page).toBe(before.page);
+        at /private/tmp/pr739-gui-evidence/spec/pr739-pointers.spec.ts:648:27
+
+    Error Context: test-results/pr739-pointers-PR-739-exac-d2abc--cold-blank-drag-is-ignored/error-context.md
+
+    Error Context: test-results/pr739-pointers-PR-739-exac-d2abc--cold-blank-drag-is-ignored/error-context.md
+
+    attachment #3: trace (application/zip) ─────────────────────────────────────────────────────────
+    test-results/pr739-pointers-PR-739-exac-d2abc--cold-blank-drag-is-ignored/trace.zip
+    Usage:
+
+        npx playwright show-trace test-results/pr739-pointers-PR-739-exac-d2abc--cold-blank-drag-is-ignored/trace.zip
+
+    ────────────────────────────────────────────────────────────────────────────────────────────────
+
+  1 failed
+    ../../../../../../../private/tmp/pr739-gui-evidence/spec/pr739-pointers.spec.ts:570:7 › PR #739 exact-head pointer evidence › S6 loaded geometry is required: a cold blank drag is ignored 
+  6 passed (16.2s)

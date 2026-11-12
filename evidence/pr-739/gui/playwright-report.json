@@ -1,0 +1,407 @@
+{
+  "config": {
+    "argv": [
+      "/opt/homebrew/Cellar/node/26.5.0/bin/node",
+      "/Users/t04dj14n9/Code/Lumia/.claude/worktrees/pr-739/node_modules/@playwright/test/cli.js",
+      "test",
+      "--config",
+      "/tmp/pr739-gui-evidence/playwright.config.mjs"
+    ],
+    "configFile": "/tmp/pr739-gui-evidence/playwright.config.mjs",
+    "rootDir": "/tmp/pr739-gui-evidence/spec",
+    "failOnFlakyTests": false,
+    "forbidOnly": false,
+    "fullyParallel": false,
+    "globalSetup": null,
+    "globalTeardown": null,
+    "globalTimeout": 0,
+    "grep": {},
+    "grepInvert": null,
+    "maxFailures": 0,
+    "metadata": {
+      "actualWorkers": 1
+    },
+    "preserveOutput": "always",
+    "projects": [
+      {
+        "outputDir": "/Users/t04dj14n9/Code/Lumia/.claude/worktrees/pr-739/test-results",
+        "repeatEach": 1,
+        "retries": 0,
+        "metadata": {
+          "actualWorkers": 1
+        },
+        "id": "",
+        "name": "",
+        "testDir": "/tmp/pr739-gui-evidence/spec",
+        "testIgnore": [],
+        "testMatch": [
+          "**/*.@(spec|test).?(c|m)[jt]s?(x)"
+        ],
+        "timeout": 90000
+      }
+    ],
+    "filteredProjects": [
+      {
+        "grep": {},
+        "grepInvert": null,
+        "outputDir": "/Users/t04dj14n9/Code/Lumia/.claude/worktrees/pr-739/test-results",
+        "repeatEach": 1,
+        "retries": 0,
+        "metadata": {
+          "actualWorkers": 1
+        },
+        "name": "",
+        "testDir": "/tmp/pr739-gui-evidence/spec",
+        "snapshotDir": "/tmp/pr739-gui-evidence/spec",
+        "testIgnore": [],
+        "testMatch": "**/*.@(spec|test).?(c|m)[jt]s?(x)",
+        "timeout": 90000,
+        "use": {
+          "baseURL": "http://127.0.0.1:19239",
+          "viewport": {
+            "width": 1000,
+            "height": 700
+          },
+          "trace": "retain-on-failure"
+        },
+        "dependencies": [],
+        "ignoreSnapshots": false,
+        "__projectId": ""
+      }
+    ],
+    "quiet": false,
+    "reporter": [
+      [
+        "list",
+        null
+      ],
+      [
+        "json",
+        {
+          "outputFile": "/tmp/pr739-gui-evidence/playwright-report.json"
+        }
+      ]
+    ],
+    "reportSlowTests": {
+      "max": 5,
+      "threshold": 300000
+    },
+    "shard": null,
+    "tags": [],
+    "updateSnapshots": "default",
+    "updateSourceMethod": "patch",
+    "version": "1.64.1",
+    "workers": 1,
+    "webServer": null
+  },
+  "suites": [
+    {
+      "title": "pr739-pointers.spec.ts",
+      "file": "pr739-pointers.spec.ts",
+      "column": 0,
+      "line": 0,
+      "specs": [],
+      "suites": [
+        {
+          "title": "PR #739 exact-head pointer evidence",
+          "file": "../../../private/tmp/pr739-gui-evidence/spec/pr739-pointers.spec.ts",
+          "line": 346,
+          "column": 6,
+          "specs": [
+            {
+              "title": "S1 mouse blank drag turns forward and back; short drag does not",
+              "ok": true,
+              "tags": [],
+              "tests": [
+                {
+                  "timeout": 90000,
+                  "annotations": [],
+                  "expectedStatus": "passed",
+                  "projectId": "",
+                  "projectName": "",
+                  "results": [
+                    {
+                      "workerIndex": 0,
+                      "parallelIndex": 0,
+                      "status": "passed",
+                      "duration": 2895,
+                      "errors": [],
+                      "stdout": [],
+                      "stderr": [],
+                      "retry": 0,
+                      "startTime": "2026-11-12T15:58:20.169Z",
+                      "annotations": [],
+                      "attachments": []
+                    }
+                  ],
+                  "status": "expected"
+                }
+              ],
+              "id": "27ec8c2a9d9e08d66eab-00861f76b7e329c9d889",
+              "file": "../../../private/tmp/pr739-gui-evidence/spec/pr739-pointers.spec.ts",
+              "line": 351,
+              "column": 7
+            },
+            {
+              "title": "S2 mouse drag from text selects text and does not turn",
+              "ok": true,
+              "tags": [],
+              "tests": [
+                {
+                  "timeout": 90000,
+                  "annotations": [],
+                  "expectedStatus": "passed",
+                  "projectId": "",
+                  "projectName": "",
+                  "results": [
+                    {
+                      "workerIndex": 0,
+                      "parallelIndex": 0,
+                      "status": "passed",
+                      "duration": 1741,
+                      "errors": [],
+                      "stdout": [],
+                      "stderr": [],
+                      "retry": 0,
+                      "startTime": "2026-11-12T15:58:23.394Z",
+                      "annotations": [],
+                      "attachments": []
+                    }
+                  ],
+                  "status": "expected"
+                }
+              ],
+              "id": "27ec8c2a9d9e08d66eab-82a2aae1d778f7f8f804",
+              "file": "../../../private/tmp/pr739-gui-evidence/spec/pr739-pointers.spec.ts",
+              "line": 384,
+              "column": 7
+            },
+            {
+              "title": "S3 trusted pen pointer events turn a blank page forward and back",
+              "ok": true,
+              "tags": [],
+              "tests": [
+                {
+                  "timeout": 90000,
+                  "annotations": [],
+                  "expectedStatus": "passed",
+                  "projectId": "",
+                  "projectName": "",
+                  "results": [
+                    {
+                      "workerIndex": 0,
+                      "parallelIndex": 0,
+                      "status": "passed",
+                      "duration": 1954,
+                      "errors": [],
+                      "stdout": [],
+                      "stderr": [],
+                      "retry": 0,
+                      "startTime": "2026-11-12T15:58:25.143Z",
+                      "annotations": [],
+                      "attachments": []
+                    }
+                  ],
+                  "status": "expected"
+                }
+              ],
+              "id": "27ec8c2a9d9e08d66eab-42a8adf559a37afbc65b",
+              "file": "../../../private/tmp/pr739-gui-evidence/spec/pr739-pointers.spec.ts",
+              "line": 413,
+              "column": 7
+            },
+            {
+              "title": "S5 mid-drag switch to continuous drops the turn; switching back still turns",
+              "ok": true,
+              "tags": [],
+              "tests": [
+                {
+                  "timeout": 90000,
+                  "annotations": [],
+                  "expectedStatus": "passed",
+                  "projectId": "",
+                  "projectName": "",
+                  "results": [
+                    {
+                      "workerIndex": 0,
+                      "parallelIndex": 0,
+                      "status": "passed",
+                      "duration": 2567,
+                      "errors": [],
+                      "stdout": [],
+                      "stderr": [],
+                      "retry": 0,
+                      "startTime": "2026-11-12T15:58:31.295Z",
+                      "annotations": [],
+                      "attachments": []
+                    }
+                  ],
+                  "status": "expected"
+                }
+              ],
+              "id": "27ec8c2a9d9e08d66eab-c9ebf5657fce6155ec1c",
+              "file": "../../../private/tmp/pr739-gui-evidence/spec/pr739-pointers.spec.ts",
+              "line": 573,
+              "column": 7
+            },
+            {
+              "title": "S6 loaded geometry required: cold blank drag pans, warm blank drag turns",
+              "ok": true,
+              "tags": [],
+              "tests": [
+                {
+                  "timeout": 90000,
+                  "annotations": [],
+                  "expectedStatus": "passed",
+                  "projectId": "",
+                  "projectName": "",
+                  "results": [
+                    {
+                      "workerIndex": 0,
+                      "parallelIndex": 0,
+                      "status": "passed",
+                      "duration": 2057,
+                      "errors": [],
+                      "stdout": [],
+                      "stderr": [],
+                      "retry": 0,
+                      "startTime": "2026-11-12T15:58:33.872Z",
+                      "annotations": [],
+                      "attachments": []
+                    }
+                  ],
+                  "status": "expected"
+                }
+              ],
+              "id": "27ec8c2a9d9e08d66eab-d6cc008399a4a6b89a91",
+              "file": "../../../private/tmp/pr739-gui-evidence/spec/pr739-pointers.spec.ts",
+              "line": 629,
+              "column": 7
+            },
+            {
+              "title": "S6b genuine cold geometry: a press before text layout is ready is ignored by the handler",
+              "ok": true,
+              "tags": [],
+              "tests": [
+                {
+                  "timeout": 90000,
+                  "annotations": [],
+                  "expectedStatus": "passed",
+                  "projectId": "",
+                  "projectName": "",
+                  "results": [
+                    {
+                      "workerIndex": 0,
+                      "parallelIndex": 0,
+                      "status": "passed",
+                      "duration": 1430,
+                      "errors": [],
+                      "stdout": [],
+                      "stderr": [],
+                      "retry": 0,
+                      "startTime": "2026-11-12T15:58:35.936Z",
+                      "annotations": [],
+                      "attachments": []
+                    }
+                  ],
+                  "status": "expected"
+                }
+              ],
+              "id": "27ec8c2a9d9e08d66eab-fca173084d2d71acb21b",
+              "file": "../../../private/tmp/pr739-gui-evidence/spec/pr739-pointers.spec.ts",
+              "line": 694,
+              "column": 7
+            }
+          ],
+          "suites": [
+            {
+              "title": "touch (hasTouch context)",
+              "file": "../../../private/tmp/pr739-gui-evidence/spec/pr739-pointers.spec.ts",
+              "line": 441,
+              "column": 8,
+              "specs": [
+                {
+                  "title": "S4a native pan and pinch are not suppressed, touch is not claimed",
+                  "ok": true,
+                  "tags": [],
+                  "tests": [
+                    {
+                      "timeout": 90000,
+                      "annotations": [],
+                      "expectedStatus": "passed",
+                      "projectId": "",
+                      "projectName": "",
+                      "results": [
+                        {
+                          "workerIndex": 0,
+                          "parallelIndex": 0,
+                          "status": "passed",
+                          "duration": 2564,
+                          "errors": [],
+                          "stdout": [],
+                          "stderr": [],
+                          "retry": 0,
+                          "startTime": "2026-11-12T15:58:27.104Z",
+                          "annotations": [],
+                          "attachments": []
+                        }
+                      ],
+                      "status": "expected"
+                    }
+                  ],
+                  "id": "27ec8c2a9d9e08d66eab-3370cf51576aba5e22ed",
+                  "file": "../../../private/tmp/pr739-gui-evidence/spec/pr739-pointers.spec.ts",
+                  "line": 444,
+                  "column": 9
+                },
+                {
+                  "title": "S4b a blank-area touch drag still pages through native Stage navigation",
+                  "ok": true,
+                  "tags": [],
+                  "tests": [
+                    {
+                      "timeout": 90000,
+                      "annotations": [],
+                      "expectedStatus": "passed",
+                      "projectId": "",
+                      "projectName": "",
+                      "results": [
+                        {
+                          "workerIndex": 0,
+                          "parallelIndex": 0,
+                          "status": "passed",
+                          "duration": 1616,
+                          "errors": [],
+                          "stdout": [],
+                          "stderr": [],
+                          "retry": 0,
+                          "startTime": "2026-11-12T15:58:29.674Z",
+                          "annotations": [],
+                          "attachments": []
+                        }
+                      ],
+                      "status": "expected"
+                    }
+                  ],
+                  "id": "27ec8c2a9d9e08d66eab-ece913f0ef02f33de106",
+                  "file": "../../../private/tmp/pr739-gui-evidence/spec/pr739-pointers.spec.ts",
+                  "line": 532,
+                  "column": 9
+                }
+              ]
+            }
+          ]
+        }
+      ]
+    }
+  ],
+  "errors": [],
+  "stats": {
+    "startTime": "2026-11-12T15:58:19.818Z",
+    "duration": 17612.122,
+    "expected": 8,
+    "skipped": 0,
+    "unexpected": 0,
+    "flaky": 0
+  }
+}

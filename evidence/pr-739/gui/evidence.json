@@ -1,0 +1,397 @@
+{
+  "artifact": "PR #739 exact-head pointer/GUI evidence",
+  "generatedAtUtc": "2026-11-12T16:01:25.278327+00:00",
+  "headSha": "c89734d6875e7141378ed0d99e713955d52dd0e6",
+  "headCommitTitle": "fix(pdf): keep paged blank drags off native touch navigation",
+  "worktree": "/Users/t04dj14n9/Code/Lumia/.claude/worktrees/pr-739",
+  "gitStatus": "clean (no source modifications; only gitignored node_modules, dist, generated fixtures, artifacts, test-results)",
+  "port": 19239,
+  "portOwnership": {
+    "preLaunchLsof": "no listener on 19239 (lsof exit 1; nc connect refused)",
+    "postLaunchLsof": "node PID 70954, TCP *:19239 (LISTEN), IPv6",
+    "serverPid": 70954,
+    "serverCommand": "PORT=19239 node test/browser/server.mjs (cwd packages/pdf, detached, log /tmp/pr739-gui-evidence/server.log)",
+    "serverLog": "Viewer test server on http://localhost:19239",
+    "verifiedAssetHttpCodes": {
+      "harness /": 200,
+      "/dist/webview/viewer.js": 200,
+      "/fixtures/outline.pdf": 200
+    },
+    "otherServersUntouched": "port 8990 was owned by another node process (PID 2795) and was neither killed nor reused; no other server was killed"
+  },
+  "commands": [
+    {
+      "cmd": "git rev-parse HEAD && git log -1 --oneline && git status --short",
+      "cwd": "<worktree>",
+      "result": "c89734d6, clean"
+    },
+    {
+      "cmd": "lsof -nP -iTCP:19239 -sTCP:LISTEN ; nc -z 127.0.0.1 19239",
+      "cwd": "-",
+      "result": "port free before launch"
+    },
+    {
+      "cmd": "pnpm install --offline --frozen-lockfile",
+      "cwd": "<worktree>",
+      "result": "exit 0 (3.1s)"
+    },
+    {
+      "cmd": "node scripts/build.mjs",
+      "cwd": "<worktree>/packages/pdf",
+      "result": "exit 0; built dist/webview/viewer.js, viewer.css, embedpdf.wasm"
+    },
+    {
+      "cmd": "node test/fixtures/make-fixtures.mjs",
+      "cwd": "<worktree>/packages/pdf",
+      "result": "exit 0; generated 8 fixture PDFs"
+    },
+    {
+      "cmd": "PORT=19239 node test/browser/server.mjs & (PID 70954)",
+      "cwd": "<worktree>/packages/pdf",
+      "result": "listening on 19239, lsof verified"
+    },
+    {
+      "cmd": "PORT=19239 ./node_modules/.bin/playwright test --config /tmp/pr739-gui-evidence/playwright.config.mjs",
+      "cwd": "<worktree>",
+      "result": "run1: 6/8 pass (draft S6 cold-state race failed); run2: 8/8 pass; run3: 8/8 pass"
+    },
+    {
+      "cmd": "PORT=19239 ./node_modules/.bin/playwright test --config packages/pdf/test/browser/playwright.config.ts --project=parallel --workers=2 <4 specs>",
+      "cwd": "<worktree>",
+      "result": "run1: 35/35 pass; run2: 35/35 pass"
+    },
+    {
+      "cmd": "gh pr view 739 --json number,title,headRefOid,body",
+      "cwd": "<worktree>",
+      "result": "read-only; headRefOid ebebd9c0 (stale PR body)"
+    }
+  ],
+  "assets": {
+    "viewer_js_sha256": "1edfa846ebadbe5887526b28af1dec7a7917b908cf3003afd435b3e8848e6fe5",
+    "outline_pdf_sha256": "ad3f5412ccbb90e0023ae6ab4b66df9b63b431739f6ff73c72d0c2190cfa5819",
+    "large_pdf_sha256": "6da852f3dd18595f7dc41cbcc8d0c593406098ae08c254c72a1178ab90a40fd8"
+  },
+  "staticChecks": {
+    "handlerSource": "packages/pdf/src/webview/paged-drag-navigate.ts (exact head)",
+    "claimsTouchInHandlerSource": "only in an explanatory comment (line 17); no claimsTouch property on lumia-paged-drag",
+    "claimsTouchOccurrencesInBuiltViewer": 4,
+    "claimsTouchNote": "all 4 are EmbedPDF core interaction-hub internals (wouldClaimTouch/claimsTouch plumbing), not Lumia's handler",
+    "handlerIdsInBuiltViewer": 1,
+    "headAddsBrowserSpec": false,
+    "headCoverage": "new regressions are packages/pdf/test/unit/paged-drag-navigate.test.ts (unit) and packages/pdf/test/vscode/pdf-backlink-overlays-host-gui.spec.ts (VS Code host GUI); no new Playwright browser spec at this head"
+  },
+  "tempFocusedSpec": {
+    "path": "/tmp/pr739-gui-evidence/spec/pr739-pointers.spec.ts",
+    "config": "/tmp/pr739-gui-evidence/playwright.config.mjs",
+    "assertions": [
+      "S1: loaded-geometry mouse blank drag 120 CSS px turns 1->2 and back 2->1; 30 px drag does not turn",
+      "S2: mouse drag from a text glyph selects 'Synthetic page 1' and does not turn",
+      "S3: trusted CDP pen PointerEvents turn 1->2 and back; pointerdown pointerType is 'pen'",
+      "S4a: wouldClaimTouch false, active tool has no touch:'draw', .viewport touch-action is EmbedPDF's 'none' baseline, no touch event preventDefault, one-finger pan moves scrollTop 12->592, two-finger pinch zooms 3.25->4 (page width 976->1200), no hub gesture owns the touch",
+      "S4b: paged blank-area touch fling still turns 1->2 via EmbedPDF native navigation, with wouldClaimTouch false",
+      "S5: setScrollMode continuous mid-drag drops the turn (readingPage stays 1, scrollMode continuous, no region, no text selection); switching back to paged and dragging still turns 1->2",
+      "S6: at Fit Width, cold geometry (runtime stub on the handler's own selection capability, identity-verified) yields zero handler step calls, no page turn and a 12->132 Stage pan; restoring loaded geometry yields one handler step and a 1->2 turn",
+      "S6b: genuinely cold text layout on large.pdf (isLoaded false at pointerdown) yields zero handler step calls; native Stage pan/turn remains"
+    ],
+    "runs": [
+      {
+        "log": "focused-spec-run1.log",
+        "result": "6 passed, 1 draft S6 failed (cold-state race in the spec, not a product failure)"
+      },
+      {
+        "log": "focused-spec-run2.log",
+        "result": "8 passed, 0 failed, 0 flaky"
+      },
+      {
+        "log": "focused-spec-run3.log",
+        "result": "8 passed, 0 failed, 0 flaky"
+      }
+    ],
+    "jsonReporterStats": {
+      "startTime": "2026-11-12T15:58:19.818Z",
+      "duration": 17612.122,
+      "expected": 8,
+      "skipped": 0,
+      "unexpected": 0,
+      "flaky": 0
+    },
+    "flake": "none across the two final runs"
+  },
+  "closestExistingBrowserSpecs": {
+    "explicitPort": 19239,
+    "specs": [
+      "packages/pdf/test/browser/region-selection.spec.ts",
+      "packages/pdf/test/browser/paged-every-input.spec.ts",
+      "packages/pdf/test/browser/paged-view.spec.ts",
+      "packages/pdf/test/browser/text-selection.spec.ts"
+    ],
+    "runs": [
+      {
+        "log": "existing-specs-run1.log",
+        "result": "35 passed, 0 failed, 0 flaky (29.0s)"
+      },
+      {
+        "log": "existing-specs-run2.log",
+        "result": "35 passed, 0 failed, 0 flaky (27.9s)"
+      }
+    ],
+    "flake": "none across two runs",
+    "fullGates": "NOT run (pnpm check, pnpm test:browser, pnpm test:quality, pnpm test:vscode are owned by another lane)"
+  },
+  "scenarioResults": {
+    "S1_mouse_blank_drag_forward_back": {
+      "result": "PASS",
+      "before": 1,
+      "forward": 2,
+      "back": 1,
+      "shortDragStays": 1
+    },
+    "S2_mouse_text_selection_no_turn": {
+      "result": "PASS",
+      "page": 1,
+      "selection": "Synthetic page 1"
+    },
+    "S3_pen_pointer_events": {
+      "result": "PASS",
+      "forward": 2,
+      "back": 1,
+      "pointerTypes": [
+        "pen"
+      ]
+    },
+    "S4a_touch_native_pan_pinch": {
+      "result": "PASS",
+      "wouldClaimTouch": false,
+      "activeToolTouch": null,
+      "touchActionViewport": "none (EmbedPDF baseline)",
+      "panScrollTop": {
+        "before": 12,
+        "after": 592.26
+      },
+      "pinchZoom": {
+        "before": 3.2533,
+        "after": 4.0
+      },
+      "pageWidth": {
+        "before": 976,
+        "after": 1200
+      },
+      "hubTouchGestures": 0,
+      "preventedTouchEvents": 0
+    },
+    "S4b_touch_blank_drag_pages": {
+      "result": "PASS",
+      "wouldClaimTouch": false,
+      "pageBefore": 1,
+      "pageAfter": 2,
+      "source": "EmbedPDF native paged fling, not lumia-paged-drag"
+    },
+    "S5_mode_switch_mid_drag": {
+      "result": "PASS",
+      "pageAfterContinuousSwitch": 1,
+      "scrollMode": "continuous",
+      "regions": 0,
+      "selection": null,
+      "controlBackToPaged": 2
+    },
+    "S6_loaded_geometry_required": {
+      "result": "PASS",
+      "cold": {
+        "readingPage": 1,
+        "scrollTop": 132.0,
+        "handlerSteps": 0
+      },
+      "warm": {
+        "readingPage": 2,
+        "scrollTop": 0,
+        "handlerSteps": [
+          1
+        ]
+      },
+      "coldState": "runtime stub, identity-verified"
+    },
+    "S6b_genuine_cold_geometry": {
+      "result": "PASS",
+      "isLoadedAtDown": false,
+      "isOverTextAtDown": false,
+      "handlerSteps": 0,
+      "nativePageMovement": "readingPage 3 via Stage turn stream (documented, not handler)"
+    },
+    "pageErrors": "none in any scenario"
+  },
+  "scenarioDetailFile": "scenarios.json",
+  "screenshots": [
+    {
+      "file": "screenshots/S1-back-page1.png",
+      "bytes": 17107,
+      "sha256": "1c951c78949c5f0cb218f0fa1bf94dccd0d08047d42d34043fc49a1c316be29f"
+    },
+    {
+      "file": "screenshots/S1-before-page1.png",
+      "bytes": 17107,
+      "sha256": "1c951c78949c5f0cb218f0fa1bf94dccd0d08047d42d34043fc49a1c316be29f"
+    },
+    {
+      "file": "screenshots/S1-forward-page2.png",
+      "bytes": 17810,
+      "sha256": "124eebc2255ba15240be9a37b9cc18797abc4d86f61557ffc5f8fde6bef32571"
+    },
+    {
+      "file": "screenshots/S2-text-selection-no-turn.png",
+      "bytes": 17750,
+      "sha256": "89dab41a9ed34c71a5762c57656cdf8081467e5fd51f48e2f3e981fe228c2baf"
+    },
+    {
+      "file": "screenshots/S3-pen-forward-page2.png",
+      "bytes": 17810,
+      "sha256": "124eebc2255ba15240be9a37b9cc18797abc4d86f61557ffc5f8fde6bef32571"
+    },
+    {
+      "file": "screenshots/S4a-after-native-pan.png",
+      "bytes": 8552,
+      "sha256": "d7c3748eac776d05662295ac1bead3048e48e8e0f4a23c32c452ae0820c7bdc5"
+    },
+    {
+      "file": "screenshots/S4a-after-native-pinch-zoom.png",
+      "bytes": 8405,
+      "sha256": "f0789f1ce849e803104498f51b600a98cb3571dd20e26af93f8d8042065409ca"
+    },
+    {
+      "file": "screenshots/S4a-before-pan.png",
+      "bytes": 24798,
+      "sha256": "a00d8b101f1ba16202aceb4862f7110ca3e64f9476bff9dab32674cdc096c742"
+    },
+    {
+      "file": "screenshots/S4b-before-page1.png",
+      "bytes": 17107,
+      "sha256": "1c951c78949c5f0cb218f0fa1bf94dccd0d08047d42d34043fc49a1c316be29f"
+    },
+    {
+      "file": "screenshots/S4b-native-fling-page2.png",
+      "bytes": 17810,
+      "sha256": "124eebc2255ba15240be9a37b9cc18797abc4d86f61557ffc5f8fde6bef32571"
+    },
+    {
+      "file": "screenshots/S5-back-to-paged-turns.png",
+      "bytes": 17810,
+      "sha256": "124eebc2255ba15240be9a37b9cc18797abc4d86f61557ffc5f8fde6bef32571"
+    },
+    {
+      "file": "screenshots/S5-before-drag-page1.png",
+      "bytes": 17107,
+      "sha256": "1c951c78949c5f0cb218f0fa1bf94dccd0d08047d42d34043fc49a1c316be29f"
+    },
+    {
+      "file": "screenshots/S5-continuous-no-turn.png",
+      "bytes": 17224,
+      "sha256": "0663fbc630928e9c06759f25dd3ac2d654dd86e6c8537c5ce98a7e17c818338f"
+    },
+    {
+      "file": "screenshots/S6-before-page1-fitwidth.png",
+      "bytes": 24647,
+      "sha256": "957a29dd5d75fbe58cc85d149e3774522adc3682a0e3cbdbc44e3071782f9083"
+    },
+    {
+      "file": "screenshots/S6-cold-pan-no-turn.png",
+      "bytes": 24613,
+      "sha256": "760ae0ab03891cf4d8be10c96d329d9ef394be7117087914ede786af20083481"
+    },
+    {
+      "file": "screenshots/S6-warm-turn-page2.png",
+      "bytes": 26119,
+      "sha256": "985a39b3727c138554e93b3246b37087c4bff2dc2eb76f14f6ab362aabb1a575"
+    },
+    {
+      "file": "screenshots/S6b-genuine-cold-press.png",
+      "bytes": 181480,
+      "sha256": "49cd934364336598798c950bce5f31bc460f95c21e1f19cfa0c733186edff786"
+    }
+  ],
+  "evidenceFiles": [
+    {
+      "file": "evidence.json",
+      "bytes": 14964
+    },
+    {
+      "file": "scenarios.json",
+      "bytes": 10692
+    },
+    {
+      "file": "playwright-report.json",
+      "bytes": 13566
+    },
+    {
+      "file": "playwright.config.mjs",
+      "bytes": 600
+    },
+    {
+      "file": "spec/pr739-pointers.spec.ts",
+      "bytes": 31830
+    },
+    {
+      "file": "server.log",
+      "bytes": 45
+    },
+    {
+      "file": "server.pid",
+      "bytes": 6
+    },
+    {
+      "file": "focused-spec-run1.log",
+      "bytes": 3501
+    },
+    {
+      "file": "focused-spec-run2.log",
+      "bytes": 1839
+    },
+    {
+      "file": "focused-spec-run3.log",
+      "bytes": 1839
+    },
+    {
+      "file": "existing-specs-run1.log",
+      "bytes": 5974
+    },
+    {
+      "file": "existing-specs-run2.log",
+      "bytes": 5976
+    },
+    {
+      "file": "probes/ (24 diagnostic .mjs scripts)",
+      "bytes": 95104
+    }
+  ],
+  "findings": [
+    {
+      "severity": "documentation",
+      "type": "stale PR body",
+      "detail": "GitHub PR #739 (draft) body still cites exact head ebebd9c025021cfbf650cc061c29e256397402dd and says 'paged touch is claimed only when selection geometry is already loaded'. The exact head c89734d6 REMOVES claimsTouch; README and CHANGELOG at this head correctly describe native touch navigation. The PR body was not updated for the new head."
+    },
+    {
+      "severity": "observation",
+      "type": "cold-geometry nuance",
+      "detail": "A cold blank press is ignored by lumia-paged-drag (zero step calls). At Fit Width it stays on the page and Stage pans (12 -> 132 CSS px). With no pan room (Fit Page), EmbedPDF's own Stage turn stream can still advance the page (S6b reached readingPage 3). This matches the head's documented intent ('stays with text selection or Stage pan'), but 'drag before load is ignored' means ignored by this handler, not a guaranteed visual no-op."
+    },
+    {
+      "severity": "observation",
+      "type": "touch-action",
+      "detail": "getComputedStyle(.viewport).touchAction is 'none' from EmbedPDF's Stage inline style, unchanged by this PR. Native pan/pinch here means EmbedPDF's own synthesized gesture controller (one-finger pan/fling, two-finger pinch), both verified working. touchstart/touchmove were never defaultPrevented and the hub recorded zero touch gestures."
+    },
+    {
+      "severity": "observation",
+      "type": "no new browser regression",
+      "detail": "This head adds no Playwright browser spec. The temporary /tmp spec is behavioral proof only; persistent regressions are unit tests plus the VS Code host-GUI spec (not run here by instruction)."
+    },
+    {
+      "severity": "none",
+      "type": "product defects",
+      "detail": "No product defect found in the 8 pointer scenarios; all pageErrors arrays were empty."
+    }
+  ],
+  "redaction": {
+    "note": "No credentials, tokens, cookies, API keys, personal notes or vault contents were collected. GitHub access was read-only (gh pr view) and no GitHub edits/pushes were made. Absolute local paths are retained because they identify the exact worktree/evidence; no environment variables or user identity values beyond the local username embedded in those paths are stored. No sensitive value required redaction.",
+    "gitHubWrites": 0,
+    "pushes": 0,
+    "sourceEdits": 0
+  }
+}

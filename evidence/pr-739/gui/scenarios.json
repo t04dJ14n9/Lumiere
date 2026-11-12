@@ -1,0 +1,517 @@
+{
+  "S1": {
+    "result": "pass",
+    "before": {
+      "indexes": [
+        0
+      ],
+      "page": 1
+    },
+    "forward": {
+      "indexes": [
+        1
+      ],
+      "page": 2
+    },
+    "back": {
+      "indexes": [
+        0
+      ],
+      "page": 1
+    },
+    "short": {
+      "indexes": [
+        0
+      ],
+      "page": 1
+    },
+    "dragCssPx": 120,
+    "shortDragCssPx": 30,
+    "thresholdCssPx": 60,
+    "geometryLoadedBeforeDrag": true,
+    "pageErrors": [],
+    "screenshots": [
+      "S1-before-page1",
+      "S1-forward-page2",
+      "S1-back-page1"
+    ]
+  },
+  "S2": {
+    "result": "pass",
+    "before": 1,
+    "after": 1,
+    "selectionKind": "text",
+    "selectedText": "Synthetic page 1",
+    "pageErrors": [],
+    "screenshots": [
+      "S2-text-selection-no-turn"
+    ]
+  },
+  "S3": {
+    "result": "pass",
+    "before": 1,
+    "forward": {
+      "indexes": [
+        1
+      ],
+      "page": 2
+    },
+    "back": {
+      "indexes": [
+        0
+      ],
+      "page": 1
+    },
+    "pointerDownTypes": [
+      "pen",
+      "pen",
+      "pen",
+      "pen"
+    ],
+    "pageErrors": [],
+    "screenshots": [
+      "S3-pen-forward-page2"
+    ]
+  },
+  "S4a": {
+    "result": "pass",
+    "touchAction": {
+      "viewport": "none",
+      "page": "auto",
+      "inline": "position: relative; overflow: hidden; touch-action: none; cursor: default;",
+      "maxTouchPoints": 1
+    },
+    "touchConsent": {
+      "wouldClaimTouch": false,
+      "activeToolId": "lumia.read",
+      "activeToolTouch": null,
+      "activeToolEnables": [
+        "text-select",
+        "link-nav",
+        "scroll"
+      ],
+      "isLoaded": true,
+      "isOverText": false
+    },
+    "before": {
+      "scrollTop": 12,
+      "zoom": 3.2533333333333334,
+      "pageWidth": 976
+    },
+    "during": [
+      {
+        "scrollTop": 72,
+        "zoom": 3.2533333333333334,
+        "pageWidth": 976
+      },
+      {
+        "scrollTop": 172.0000152587891,
+        "zoom": 3.2533333333333334,
+        "pageWidth": 976
+      }
+    ],
+    "afterPan": {
+      "scrollTop": 592.2585394897781,
+      "zoom": 3.2533333333333334,
+      "pageWidth": 976
+    },
+    "afterPinch": {
+      "scrollTop": 812.6024909299458,
+      "zoom": 4,
+      "pageWidth": 1200
+    },
+    "touchEvents": [
+      {
+        "type": "touchstart",
+        "pointerType": null,
+        "prevented": false
+      },
+      {
+        "type": "touchmove",
+        "pointerType": null,
+        "prevented": false
+      },
+      {
+        "type": "touchmove",
+        "pointerType": null,
+        "prevented": false
+      },
+      {
+        "type": "touchmove",
+        "pointerType": null,
+        "prevented": false
+      },
+      {
+        "type": "touchmove",
+        "pointerType": null,
+        "prevented": false
+      },
+      {
+        "type": "touchmove",
+        "pointerType": null,
+        "prevented": false
+      },
+      {
+        "type": "touchmove",
+        "pointerType": null,
+        "prevented": false
+      },
+      {
+        "type": "touchmove",
+        "pointerType": null,
+        "prevented": false
+      },
+      {
+        "type": "touchmove",
+        "pointerType": null,
+        "prevented": false
+      },
+      {
+        "type": "touchmove",
+        "pointerType": null,
+        "prevented": false
+      },
+      {
+        "type": "touchmove",
+        "pointerType": null,
+        "prevented": false
+      },
+      {
+        "type": "touchend",
+        "pointerType": null,
+        "prevented": false
+      },
+      {
+        "type": "touchstart",
+        "pointerType": null,
+        "prevented": false
+      },
+      {
+        "type": "touchstart",
+        "pointerType": null,
+        "prevented": false
+      },
+      {
+        "type": "touchmove",
+        "pointerType": null,
+        "prevented": false
+      },
+      {
+        "type": "touchmove",
+        "pointerType": null,
+        "prevented": false
+      },
+      {
+        "type": "touchmove",
+        "pointerType": null,
+        "prevented": false
+      },
+      {
+        "type": "touchmove",
+        "pointerType": null,
+        "prevented": false
+      },
+      {
+        "type": "touchmove",
+        "pointerType": null,
+        "prevented": false
+      },
+      {
+        "type": "touchmove",
+        "pointerType": null,
+        "prevented": false
+      },
+      {
+        "type": "touchmove",
+        "pointerType": null,
+        "prevented": false
+      },
+      {
+        "type": "touchmove",
+        "pointerType": null,
+        "prevented": false
+      },
+      {
+        "type": "touchmove",
+        "pointerType": null,
+        "prevented": false
+      },
+      {
+        "type": "touchmove",
+        "pointerType": null,
+        "prevented": false
+      },
+      {
+        "type": "touchend",
+        "pointerType": null,
+        "prevented": false
+      },
+      {
+        "type": "touchend",
+        "pointerType": null,
+        "prevented": false
+      }
+    ],
+    "pointerDownTypes": [
+      "touch",
+      "touch",
+      "touch",
+      "touch",
+      "touch",
+      "touch"
+    ],
+    "registeredTouchListeners": [
+      {
+        "type": "touchstart",
+        "target": "window",
+        "passive": false
+      },
+      {
+        "type": "touchmove",
+        "target": "window",
+        "passive": false
+      },
+      {
+        "type": "touchend",
+        "target": "window",
+        "passive": false
+      },
+      {
+        "type": "touchcancel",
+        "target": "",
+        "passive": false
+      },
+      {
+        "type": "touchcancel",
+        "target": "",
+        "passive": false
+      },
+      {
+        "type": "touchend",
+        "target": "",
+        "passive": false
+      },
+      {
+        "type": "touchend",
+        "target": "",
+        "passive": false
+      },
+      {
+        "type": "touchstart",
+        "target": "",
+        "passive": true
+      },
+      {
+        "type": "touchstart",
+        "target": "",
+        "passive": true
+      },
+      {
+        "type": "touchmove",
+        "target": "",
+        "passive": true
+      },
+      {
+        "type": "touchmove",
+        "target": "",
+        "passive": true
+      },
+      {
+        "type": "touchstart",
+        "target": "document",
+        "passive": true
+      },
+      {
+        "type": "touchstart",
+        "target": "document",
+        "passive": false
+      },
+      {
+        "type": "touchstart",
+        "target": "window",
+        "passive": false
+      },
+      {
+        "type": "touchend",
+        "target": "window",
+        "passive": false
+      },
+      {
+        "type": "touchcancel",
+        "target": "window",
+        "passive": false
+      }
+    ],
+    "hubGestures": [],
+    "pageErrors": [],
+    "screenshots": [
+      "S4a-before-pan",
+      "S4a-after-native-pan",
+      "S4a-after-native-pinch-zoom"
+    ]
+  },
+  "S4b": {
+    "result": "pass",
+    "touchConsent": {
+      "wouldClaimTouch": false,
+      "activeToolId": "lumia.read",
+      "activeToolTouch": null,
+      "activeToolEnables": [
+        "text-select",
+        "link-nav",
+        "scroll"
+      ],
+      "isLoaded": true,
+      "isOverText": false
+    },
+    "before": {
+      "indexes": [
+        0
+      ],
+      "page": 1
+    },
+    "after": {
+      "indexes": [
+        1
+      ],
+      "page": 2
+    },
+    "interpretation": "This head does not claim touch contacts; the turn comes from EmbedPDF's native paged fling/drag turn stream, not lumia-paged-drag.",
+    "touchEvents": [
+      {
+        "type": "touchstart",
+        "pointerType": null,
+        "prevented": false
+      },
+      {
+        "type": "touchmove",
+        "pointerType": null,
+        "prevented": false
+      },
+      {
+        "type": "touchmove",
+        "pointerType": null,
+        "prevented": false
+      },
+      {
+        "type": "touchmove",
+        "pointerType": null,
+        "prevented": false
+      },
+      {
+        "type": "touchmove",
+        "pointerType": null,
+        "prevented": false
+      },
+      {
+        "type": "touchmove",
+        "pointerType": null,
+        "prevented": false
+      },
+      {
+        "type": "touchmove",
+        "pointerType": null,
+        "prevented": false
+      }
+    ],
+    "pageErrors": [],
+    "screenshots": [
+      "S4b-before-page1",
+      "S4b-native-fling-page2"
+    ]
+  },
+  "S5": {
+    "result": "pass",
+    "before": {
+      "indexes": [
+        0
+      ],
+      "page": 1
+    },
+    "after": {
+      "indexes": [
+        0,
+        1,
+        2
+      ],
+      "page": 1,
+      "scrollMode": "continuous",
+      "dataScrollMode": "continuous",
+      "regionCount": 0,
+      "selection": {
+        "type": "selection",
+        "selection": null
+      }
+    },
+    "control": {
+      "indexes": [
+        1
+      ],
+      "page": 2
+    },
+    "pageErrors": [],
+    "screenshots": [
+      "S5-before-drag-page1",
+      "S5-continuous-no-turn",
+      "S5-back-to-paged-turns"
+    ]
+  },
+  "S6": {
+    "result": "pass",
+    "fixture": "outline.pdf, paged Fit Width (page taller than viewer, pan room)",
+    "coldState": "simulated by stubbing selection.isLoaded to false at runtime",
+    "identityVerified": true,
+    "before": {
+      "readingPage": 1,
+      "scrollTop": 12,
+      "steps": []
+    },
+    "cold": {
+      "readingPage": 1,
+      "scrollTop": 132.00001525878906,
+      "steps": []
+    },
+    "geometryRestored": true,
+    "warm": {
+      "readingPage": 2,
+      "scrollTop": 0,
+      "steps": [
+        1
+      ]
+    },
+    "dragCssPx": 120,
+    "interpretation": "Cold press: lumia-paged-drag made zero step calls, page counter stayed put, Stage panned. Warm press: one handler step turned the page.",
+    "pageErrors": [],
+    "screenshots": [
+      "S6-before-page1-fitwidth",
+      "S6-cold-pan-no-turn",
+      "S6-warm-turn-page2"
+    ]
+  },
+  "S6b": {
+    "result": "pass",
+    "fixture": "large.pdf (600 pages): text geometry warms per mounted page",
+    "coldWindowNote": "Measured ~5 ms between page 2 mounting and geometry ready; the in-page MutationObserver press lands inside that window (untrusted DOM PointerEvents; all other scenarios use trusted CDP/Playwright input).",
+    "after": {
+      "down": {
+        "ref": {
+          "kind": "objectNumber",
+          "objectNumber": 7
+        },
+        "isLoaded": false,
+        "isOverText": false,
+        "readingPageAtDown": 1
+      },
+      "steps": [],
+      "indexes": [
+        2
+      ],
+      "readingPage": 3
+    },
+    "interpretation": "At a genuinely cold pointerdown the handler made zero step calls. Any subsequent page movement is EmbedPDF's own Stage pan/turn stream, which this head deliberately leaves in place.",
+    "pageErrors": [],
+    "screenshots": [
+      "S6b-genuine-cold-press"
+    ]
+  }
+}
