@@ -11,6 +11,7 @@ import { existsSync, readFileSync } from "node:fs";
 import { fileURLToPath } from "node:url";
 import { dirname, join } from "node:path";
 import { SHOWN } from "../../src/embedding";
+import type * as TypeScript from "typescript";
 
 const here = dirname(fileURLToPath(import.meta.url));
 const transportPath = join(here, "../../../markdown/src/webview/transport.ts");
@@ -61,7 +62,7 @@ function extractExportedFunction(source: string, name: string): string {
   throw new Error(`unclosed ${name} in ${transportPath}`);
 }
 
-function loadTypescript(): typeof import("typescript") {
+function loadTypescript(): typeof TypeScript {
   const roots = [
     join(here, "../../../../"),
     join(process.cwd(), "../"),
@@ -70,7 +71,7 @@ function loadTypescript(): typeof import("typescript") {
   for (const root of roots) {
     const pkg = join(root, "node_modules/typescript/package.json");
     if (existsSync(pkg)) {
-      return createRequire(pkg)("typescript") as typeof import("typescript");
+      return createRequire(pkg)("typescript") as typeof TypeScript;
     }
   }
   throw new Error(
@@ -130,10 +131,14 @@ function installPageGlobals() {
   const body = {
     classList: {
       add(...names: string[]) {
-        for (const name of names) classes.add(name);
+        for (const name of names) {
+          classes.add(name);
+        }
       },
       remove(...names: string[]) {
-        for (const name of names) classes.delete(name);
+        for (const name of names) {
+          classes.delete(name);
+        }
       },
       contains(name: string) {
         return classes.has(name);
