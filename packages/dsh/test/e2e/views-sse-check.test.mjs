@@ -2,6 +2,7 @@
  * Harness-free contract tests for the views snapshot + SSE check.
  * Uses only Node builtins (node:test, node:http, fetch).
  */
+/* global setTimeout, TextEncoder, ReadableStream */
 import assert from "node:assert/strict";
 import http from "node:http";
 import { test } from "node:test";

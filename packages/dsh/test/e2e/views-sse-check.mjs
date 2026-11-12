@@ -2,6 +2,7 @@
  * Fail-closed views list + snapshot + SSE preamble checks for dsh-e2e.mjs.
  * Extracted so a harness-free node:test can prove the contract.
  */
+/* global TextDecoder */
 import http from "node:http";
 
 const TREE_EVENT_TYPES = new Set([
