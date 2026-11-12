@@ -54,8 +54,8 @@ export function pagedDragHandler(options: {
     const selection = options.selection();
     return Boolean(
       selection &&
-        selection.isLoaded(page.ref) &&
-        !selection.isOverText(page.ref, page.point),
+      selection.isLoaded(page.ref) &&
+      !selection.isOverText(page.ref, page.point),
     );
   };
   const finish = (sample?: PointerSample): void => {
