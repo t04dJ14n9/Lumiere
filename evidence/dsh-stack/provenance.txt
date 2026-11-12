@@ -1,0 +1,4 @@
+head: 9a10d469a6f10e12b254485b88b9c27bf1f0c3bb
+status:
+captured: 2026-11-12T19:21:12Z
+commit: 2026-11-13 02:15:37 +0800 test(dsh): extend the end-to-end suite onto the rebased stack

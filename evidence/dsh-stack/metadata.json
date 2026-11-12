@@ -1,0 +1,29 @@
+{
+  "stack": "PR 726-737, linear chain based on published #725 9c5f6ae5",
+  "verifiedHead": "9a10d469a6f10e12b254485b88b9c27bf1f0c3bb",
+  "publishedHead": "a54c3e024064b5728493a7a8ec45686f0fd6b850",
+  "publishedHeadNote": "a54c3e02 is 9a10d469 plus #736's README-only sentence 46a8151a; no code or test changed after the gate.",
+  "base": "origin/main f1c153d51df481ec493800ca491544d56b7df66b",
+  "gate": {
+    "install": "pass",
+    "check": "pass: 12 Node test suites, 4635 tests, 0 failures, 1 skipped; Prettier, ESLint --max-warnings=0, every typecheck project and contributions --check clean",
+    "browser": "462 Markdown + 195 PDF specs passed",
+    "quality": "9 Playwright budgets + 1 large-vault unit passed",
+    "vscode": "root run 1: 29/30 (properties-caret failed); native-links and properties-caret both pass in isolation; full rerun 30/30; PDF project 26 passed, 2 skipped. The failing spec varies between full runs (native-links at 9a10d469's parent), so the suite is flaky under load, not code-specific.",
+    "provenance": "provenance.txt captures git rev-parse HEAD and a clean status after the run; commit time 2026-11-13 02:15:37 +0800 matches the gate start 18:15:55Z."
+  },
+  "evidence": {
+    "http": "28/28 wire checks and the 58-check E2E runner passed at 9a10d469; bundle tree SHA-256 f64320bc...; DSH 0.2.2-rc.1. A fresh throwaway home scored 56/58 once because DSH showed its first-run workspace chooser; the warmed rerun passed 58/58, both logs retained.",
+    "pdf": "11/11 checks at 9a10d469 with DSH 0.2.1-rc.2: Lumière viewer in the Lumière frame, theme, in-place revision reload, paging, failure messages, containment, and a parent re-render during a held 9 s load that fired loaded exactly once.",
+    "react": "Real React 19.3.1 / react-dom 19.3.1 in headless Chromium: the re-render-during-load case now reports loaded [\"1\"] and posts theme+SHOWN, while the same harness built from the pre-fix commit c7016eb3 reports loaded [] and no messages; replacement scenarios behave correctly. Two identical runs."
+  },
+  "redaction": "Only redacted http/, pdf/ and react/ artifacts are published. Root files holding a live-format cookie (dsh.env, dsh-cookies.txt, dsh-exchange.headers) and the throwaway DSH home's credentials are excluded. A scan of the bundle for dsh-auth-*, Set-Cookie, DSH_COOKIE= and token= finds only the README's ellipsis placeholder.",
+  "knownGaps": [
+    "No GitHub Actions run executes any step on these branches (runner_id null), so the local gates are the record.",
+    "PDF GUI evidence ran on DSH 0.2.1-rc.2 (cached npx); the wire/E2E lane ran the README-pinned 0.2.2-rc.1.",
+    "A contained-but-missing PDF page answers 403 with an empty body, so no failure message is shown for a deleted file.",
+    "pdfBody has no live/stale-frame guard like noteBody's loadingFrame; stale PDF-frame reporting is untested.",
+    "The viewer-menu behavior of DSH's own PDF renderer is not directly observed; the evidence shows no native PDF renderer is used for notes.",
+    "The 11-second ready retry has unit coverage for its helper only."
+  ]
+}

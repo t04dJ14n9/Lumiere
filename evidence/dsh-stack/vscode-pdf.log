@@ -1,0 +1,77 @@
+ WARNING  This extension consists of 867 files, out of which 845 are JavaScript files. For performance reasons, you should bundle your extension: https://aka.ms/vscode-bundle-extension. You should also exclude unnecessary files by adding them to your .vscodeignore: https://aka.ms/vscode-vscodeignore.
+
+ INFO  Files included in the VSIX:
+extension-0.vsix
+├─ [Content_Types].xml 
+├─ extension.vsixmanifest 
+└─ extension/
+   ├─ LICENSE.txt [1.04 KB]
+   ├─ THIRD_PARTY_NOTICES.md [554.92 KB]
+   ├─ changelog.md [6.27 KB]
+   ├─ package.json [147.06 KB]
+   ├─ readme.md [6.73 KB]
+   ├─ dist/
+   │  ├─ extension.js [1.55 MB]
+   │  ├─ markdown/
+   │  │  ├─ yaml-runtime.cjs [262.74 KB]
+   │  │  ├─ api/ (3 files) [13.94 KB]
+   │  │  ├─ webview/ (845 files) [38.86 MB]
+   │  │  └─ workers/ (2 files) [1.1 MB]
+   │  └─ pdf/
+   │     ├─ agent-bridge-server.js [1.4 MB]
+   │     ├─ bridge-stdio.js [329.55 KB]
+   │     ├─ outline-engine.js [2.78 MB]
+   │     └─ webview/ (4 files) [15.54 MB]
+   └─ media/
+      └─ icon.png [18.9 KB]
+
+=> Run vsce ls --tree to see all included files.
+
+ DONE  Packaged: /tmp/vscode-pdf-workshop-e2e-1d8160c6/extension-0.vsix (867 files, 17.87 MB)
+ WARNING  Neither a .vscodeignore file nor a "files" property in package.json was found. To ensure only necessary files are included in your extension, add a .vscodeignore file or specify the "files" property in package.json. More info: https://aka.ms/vscode-vscodeignore
+
+ INFO  Files included in the VSIX:
+extension-1.vsix
+├─ [Content_Types].xml 
+├─ extension.vsixmanifest 
+└─ extension/
+   ├─ package.json [0.49 KB]
+   └─ readme.md [6.73 KB]
+
+The file extension/readme.md is large (6.73 KB)
+
+ DONE  Packaged: /tmp/vscode-pdf-workshop-e2e-1d8160c6/extension-1.vsix (4 files, 1.71 KB)
+
+Running 28 tests using 1 worker
+
+  ✓   1 packages/pdf/test/vscode/annotate-delete-color.spec.ts:64:5 › an Annotate highlight is kept beside the PDF, comes back on reopen, and Delete removes it (6.8s)
+  ✓   2 packages/pdf/test/vscode/jump-history.spec.ts:11:5 › PDF local history returns through deliberate jumps and truncates forward after a new jump (5.2s)
+  ✓   3 packages/pdf/test/vscode/native-links.spec.ts:6:5 › built-in Cmd-click delivers PDF page and region and native Back restores source caret (2.8s)
+  ✓   4 packages/pdf/test/vscode/page-bitmaps.spec.ts:86:5 › turning pages in two-page page-by-page mode shows each page's picture soon, even turned quickly, and keeps it (9.5s)
+  ✓   5 packages/pdf/test/vscode/paging-input.spec.ts:84:5 › ArrowRight and ArrowLeft move between pages in the default view, right after opening and after a click (8.5s)
+  ✓   6 packages/pdf/test/vscode/paging-input.spec.ts:116:5 › the arrows turn pages in page-by-page single, two-page and cover layouts, and keep working after the View picker (12.0s)
+  ✓   7 packages/pdf/test/vscode/paging-input.spec.ts:169:5 › zoomed in, the arrows pan; wheel and two-finger flicks travel across pages and turn one page in page-by-page mode (13.0s)
+  -   8 packages/pdf/test/vscode/pdf-backlink-overlays-host-gui.spec.ts:225:5 › Host GUI: PDF backlink overlays checklist (Chrome)
+  ✓   9 packages/pdf/test/vscode/pdf.spec.ts:49:5 › a PDF opens with its outline in the Explorer, shown only while the PDF is active (2.9s)
+  ✓  10 packages/pdf/test/vscode/pdf.spec.ts:85:5 › Copy link to this is clipboard Quote / page link; no agent chat (4.7s)
+  ✓  11 packages/pdf/test/vscode/pdf.spec.ts:163:5 › PDF: Open Location opens a pasted link at its page and flashes its box (1.7s)
+  ✓  12 packages/pdf/test/vscode/pdf.spec.ts:178:5 › the viewer reloads when the PDF changes on disk (2.8s)
+  ✓  13 packages/pdf/test/vscode/pdf.spec.ts:196:5 › the agent bridge is off by default, and its setting starts and stops it (2.5s)
+  -  14 packages/pdf/test/vscode/perf.spec.ts:58:5 › load time: a small and a 600-page PDF
+  ✓  15 packages/pdf/test/vscode/section-links.spec.ts:29:5 › typing [[docs/outline.pdf#Sec lists the PDF's bookmarks, and Enter links the bookmark's page (2.7s)
+  ✓  16 packages/pdf/test/vscode/settings-commands.spec.ts:101:5 › PDF: Open Settings opens the Settings editor on this extension's settings (10.9s)
+  ✓  17 packages/pdf/test/vscode/settings-commands.spec.ts:121:5 › a command saves to the workspace when the workspace sets the setting, else to the user settings (14.4s)
+  ✓  18 packages/pdf/test/vscode/settings-commands.spec.ts:146:5 › the default layout and scrolling pickers write the setting, and open viewers follow (11.7s)
+  ✓  19 packages/pdf/test/vscode/settings-commands.spec.ts:177:5 › the View picker has a Settings… entry that opens the Settings editor (12.9s)
+  ✓  20 packages/pdf/test/vscode/settings-commands.spec.ts:197:5 › PDF: Change Setting… lists every setting, grouped with its value, and edits each by its type (12.7s)
+  ✓  21 packages/pdf/test/vscode/settings-commands.spec.ts:274:5 › a setting changed in the Settings editor shows in Change Setting… and the other way round (11.6s)
+  ✓  22 packages/pdf/test/vscode/toolbar.spec.ts:98:5 › the status bar shows the page and zoom, and opens a page or a zoom when clicked (1.4s)
+  ✓  23 packages/pdf/test/vscode/toolbar.spec.ts:146:5 › editor title actions zoom, fit and switch the selection tool (42.9s)
+  ✓  24 packages/pdf/test/vscode/toolbar.spec.ts:204:5 › keyboard shortcuts page, zoom, fit, find and pick the tool while the PDF has focus (2.6s)
+  ✓  25 packages/pdf/test/vscode/toolbar.spec.ts:255:5 › the toolbar setting takes the controls off the status bar and back, live (2.7s)
+  ✓  26 packages/pdf/test/vscode/view-controls.spec.ts:22:5 › PDF view commands change the active panel and its choices survive closing and reopening (16.4s)
+  ✓  27 packages/pdf/test/vscode/zen.spec.ts:67:5 › Enter and Exit Zen Mode from the palette: the status bar goes and comes back, and the keyboard still drives the PDF in between (4.4s)
+  ✓  28 packages/pdf/test/vscode/zen.spec.ts:96:5 › Ctrl+Alt+Z (Ctrl+Cmd+Z on macOS) enters zen from the PDF and leaves it; so does Escape Escape (2.1s)
+
+  2 skipped
+  26 passed (3.9m)

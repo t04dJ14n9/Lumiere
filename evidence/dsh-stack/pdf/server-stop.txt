@@ -1,0 +1,5 @@
+stoppedAt=2026-11-12T19:03:32Z
+pid=53219
+process=stopped
+$ lsof -nP -iTCP:19262 -sTCP:LISTEN
+portFree=true

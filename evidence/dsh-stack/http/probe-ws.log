@@ -1,0 +1,12 @@
+WS OPEN ws://127.0.0.1:19261/api/remote.mux
+SENT {"type":"open","streamId":"d93cfc9d-33cd-443c-aabc-c83021635081","endpoint":"remoteAccess/follow","payload":{"args":{}}}
+SENT {"type":"open","streamId":"9a6f7c2c-25ca-4c2b-a67f-f14cb32da2f9","endpoint":"account/watch","payload":{"args":{}}}
+SENT {"type":"open","streamId":"c6a77bb3-7b42-4dab-8130-ab5ec6afa0c9","endpoint":"workspace/follow","payload":{"args":{}}}
+SENT {"type":"open","streamId":"8026e8c4-b513-4e2f-97be-ab21ad3e8708","endpoint":"$events","payload":{"args":{}}}
+RECV {"type":"item","streamId":"d93cfc9d-33cd-443c-aabc-c83021635081","value":{"type":"baseline","owner":true}}
+RECV {"type":"item","streamId":"9a6f7c2c-25ca-4c2b-a67f-f14cb32da2f9","value":{"status":"signed-out","attempt":null,"links":{"usageUrl":"https://platform.deepseek.com/usage","topUpUrl":"https://platform.deepseek.com/top_up"}}}
+RECV {"type":"item","streamId":"c6a77bb3-7b42-4dab-8130-ab5ec6afa0c9","value":{"type":"baseline","value":{"items":[],"archivedSessionIds":[],"pinnedSessionIds":[]}}}
+RECV {"type":"item","streamId":"8026e8c4-b513-4e2f-97be-ab21ad3e8708","value":{"type":"ready","clientId":"f1e1cfc6-5ca4-4221-bc23-394554a12ac1","host":{"home":"/Users/t04dj14n9"}}}
+SENT {"type":"open","streamId":"1de20af8-a71d-42e9-b814-0423b5c19fa8","endpoint":"session/control","payload":{"args":{}}}
+RECV {"type":"item","streamId":"1de20af8-a71d-42e9-b814-0423b5c19fa8","value":{"type":"baseline","value":{"projections":{}}}}
+--- clicking choose workspace ---

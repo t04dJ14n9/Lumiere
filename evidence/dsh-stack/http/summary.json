@@ -1,0 +1,348 @@
+{
+  "generatedAt": "2026-11-12T18:46:40.440Z",
+  "head": "9a10d469a6f10e12b254485b88b9c27bf1f0c3bb",
+  "worktree": "/Users/t04dj14n9/Code/Lumia/.claude/worktrees/pr-737",
+  "instance": "http://127.0.0.1:19261",
+  "dshVersion": "0.2.2-rc.1",
+  "wire": {
+    "passed": 28,
+    "failed": 0,
+    "total": 28,
+    "checks": [
+      {
+        "name": "1a rejected upgrade: missing auth -> 401 + Connection: close + Content-Length: 0 + closed",
+        "ok": true,
+        "detail": "401, headers {\"connection\":\"close\",\"content-length\":\"0\"}, server FIN after 1ms",
+        "evidence": null
+      },
+      {
+        "name": "1b rejected upgrade: untrusted Origin -> 403 + Connection: close + Content-Length: 0 + closed",
+        "ok": true,
+        "detail": "403, headers {\"connection\":\"close\",\"content-length\":\"0\"}, server FIN after 2ms",
+        "evidence": null
+      },
+      {
+        "name": "1c rejected upgrade: authenticated unknown panel -> 404 + Connection: close + Content-Length: 0 + closed",
+        "ok": true,
+        "detail": "404, headers {\"connection\":\"close\",\"content-length\":\"0\"}, server FIN after 3ms",
+        "evidence": null
+      },
+      {
+        "name": "1d accepted known panel -> 101 and stays open",
+        "ok": true,
+        "detail": "101, stayed open 800ms, upgrade headers {\"upgrade\":\"websocket\",\"connection\":\"Upgrade\",\"sec-websocket-accept\":\"t0LUo+y3qkMZ9aUwdgoYPVnd5rw=\"}",
+        "evidence": null
+      },
+      {
+        "name": "2a read-only routes: PUT/POST/DELETE -> 405 Allow: GET, HEAD, empty body",
+        "ok": true,
+        "detail": "PUT editor -> 405 allow=GET, HEAD body=0 | POST editor -> 405 allow=GET, HEAD body=0 | DELETE editor -> 405 allow=GET, HEAD body=0 | PUT m/* -> 405 allow=GET, HEAD body=0 | POST m/* -> 405 allow=GET, HEAD body=0 | DELETE m/* -> 405 allow=GET, HEAD body=0 | PUT page/shim.js -> 405 allow=GET, HEAD body=0 | POST page/shim.js -> 405 allow=GET, HEAD body=0 | DELETE page/shim.js -> 405 allow=GET, HEAD body=0 | PUT file -> 405 allow=GET, HEAD body=0 | POST file -> 405 allow=GET, HEAD body=0 | DELETE file -> 405 allow=GET, HEAD body=0 | PUT pdf page -> 405 allow=GET, HEAD body=0 | POST pdf page -> 405 allow=GET, HEAD body=0 | DELETE pdf page -> 405 allow=GET, HEAD body=0 | PUT pdf/* -> 405 allow=GET, HEAD body=0 | POST pdf/* -> 405 allow=GET, HEAD body=0 | DELETE pdf/* -> 405 allow=GET, HEAD body=0 | PUT pdf/bytes -> 405 allow=GET, HEAD body=0 | POST pdf/bytes -> 405 allow=GET, HEAD body=0 | DELETE pdf/bytes -> 405 allow=GET, HEAD body=0",
+        "evidence": null
+      },
+      {
+        "name": "2b /views/<id>/run: non-POST methods hit the JSON family gate (405 + Allow: GET, POST, HEAD); POST non-JSON body -> 400",
+        "ok": true,
+        "detail": "PUT -> 405 allow=GET, POST, HEAD body={\"error\":\"Method Not Allowed\"}; DELETE -> 405 allow=GET, POST, HEAD; POST text/plain -> 400 {\"error\":\"Invalid request body\"}",
+        "evidence": null
+      },
+      {
+        "name": "2c gated editor write registers no root/panel (later parent-root page still accepted)",
+        "ok": true,
+        "detail": "POST -> 405; follow-up parent-root GET -> 200, panel meta present",
+        "evidence": null
+      },
+      {
+        "name": "3a malformed/empty/array/null/string/number bodies -> JSON 400 Invalid request body + no-store on one keep-alive socket (settings and views/run)",
+        "ok": true,
+        "detail": "malformed settings -> 400 Invalid request body no-store=no-store reused=false | malformed views/run -> 400 Invalid request body no-store=no-store reused=true | empty settings -> 400 Invalid request body no-store=no-store reused=true | empty views/run -> 400 Invalid request body no-store=no-store reused=true | array settings -> 400 Invalid request body no-store=no-store reused=true | array views/run -> 400 Invalid request body no-store=no-store reused=true | null settings -> 400 Invalid request body no-store=no-store reused=true | null views/run -> 400 Invalid request body no-store=no-store reused=true | string settings -> 400 Invalid request body no-store=no-store reused=true | string views/run -> 400 Invalid request body no-store=no-store reused=true | number settings -> 400 Invalid request body no-store=no-store reused=true | number views/run -> 400 Invalid request body no-store=no-store reused=true",
+        "evidence": null
+      },
+      {
+        "name": "3b oversized >64KiB body -> JSON 400 on a keep-alive socket that still serves a follow-up GET",
+        "ok": true,
+        "detail": "POST 70022 bytes -> 400 {\"error\":\"Invalid request body\"}, no-store=no-store; GET -> 200, same socket=true",
+        "evidence": null
+      },
+      {
+        "name": "3c oversized >64KiB body on views/run -> JSON 400, socket still serves a follow-up GET",
+        "ok": true,
+        "detail": "POST -> 400 {\"error\":\"Invalid request body\"}; GET /views -> 200, same socket=true",
+        "evidence": null
+      },
+      {
+        "name": "3d valid settings POST -> 200 and persists",
+        "ok": true,
+        "detail": "POST -> 200; GET value=false; /tmp/chain-evidence-final/dsh-home/lumiere/settings.json has lumiere.markdown.plugins.agentBridge.enabled=false",
+        "evidence": null
+      },
+      {
+        "name": "3e valid /visible POST -> 200",
+        "ok": true,
+        "detail": "200 {\"ok\":true}",
+        "evidence": null
+      },
+      {
+        "name": "3f invalid command -> 400",
+        "ok": true,
+        "detail": "400 {\"error\":\"Unavailable command: definitely-not-a-command\"}",
+        "evidence": null
+      },
+      {
+        "name": "3g forced settings persistence failure -> 500 text/plain (not a mislabeled 400)",
+        "ok": true,
+        "detail": "500 content-type=text/plain body=Internal error; value after failure=true",
+        "evidence": null
+      },
+      {
+        "name": "4a wrong method on settings/commands/views/* -> 405 with JSON envelope",
+        "ok": true,
+        "detail": "settings, commands, views/<id>, views/<id>/visible: 405 {error:\"Method Not Allowed\"}, Allow: GET, POST, HEAD",
+        "evidence": null
+      },
+      {
+        "name": "4b HEAD on JSON reads -> bodyless GET",
+        "ok": true,
+        "detail": "HEAD settings/commands/views/views-id: 200 JSON, zero-length body",
+        "evidence": null
+      },
+      {
+        "name": "4c HEAD /views/events does not open an SSE stream",
+        "ok": true,
+        "detail": "404 content-type=(none) body=0 (expected 404, no text/event-stream)",
+        "evidence": null
+      },
+      {
+        "name": "5 byte ranges: static and /lumiere/file valid/unknown-unit/malformed/multi/enormous",
+        "ok": true,
+        "detail": "static bytes=2-4: 206 content-range=bytes 2-4/1652063 content-length=3 bodyMatches=true | file bytes=2-4: 206 content-range=bytes 2-4/10 content-length=3 bodyMatches=true | static items=0-2: 200 content-range=(none) content-length=1652063 bodyMatches=true | file items=0-2: 200 content-range=(none) content-length=10 bodyMatches=true | static bytes=abc-2: 200 content-range=(none) content-length=1652063 bodyMatches=true | file bytes=abc-2: 200 content-range=(none) content-length=10 bodyMatches=true | static bytes=0-2, 4-6: 200 content-range=(none) content-length=1652063 bodyMatches=true | file bytes=0-2, 4-6: 200 content-range=(none) content-length=10 bodyMatches=true | static bytes=999999999999999999999999-: 416 content-range=bytes */1652063 content-length=(none) bodyMatches=true | file bytes=999999999999999999999999-: 416 content-range=bytes */10 content-length=(none) bodyMatches=true",
+        "evidence": [
+          "static bytes=2-4: 206 content-range=bytes 2-4/1652063 content-length=3 bodyMatches=true",
+          "file bytes=2-4: 206 content-range=bytes 2-4/10 content-length=3 bodyMatches=true",
+          "static items=0-2: 200 content-range=(none) content-length=1652063 bodyMatches=true",
+          "file items=0-2: 200 content-range=(none) content-length=10 bodyMatches=true",
+          "static bytes=abc-2: 200 content-range=(none) content-length=1652063 bodyMatches=true",
+          "file bytes=abc-2: 200 content-range=(none) content-length=10 bodyMatches=true",
+          "static bytes=0-2, 4-6: 200 content-range=(none) content-length=1652063 bodyMatches=true",
+          "file bytes=0-2, 4-6: 200 content-range=(none) content-length=10 bodyMatches=true",
+          "static bytes=999999999999999999999999-: 416 content-range=bytes */1652063 content-length=(none) bodyMatches=true",
+          "file bytes=999999999999999999999999-: 416 content-range=bytes */10 content-length=(none) bodyMatches=true"
+        ]
+      },
+      {
+        "name": "6a GET /lumiere -> route index",
+        "ok": true,
+        "detail": "200 application/json no-store=no-store body={\"name\":\"lumiere\",\"routes\":[\"/lumiere/editor\",\"/lumiere/m/\",\"/lumiere/page/shim.js\",\"/lumiere/file\",\"/lumiere/views\",\"/lumiere/settings\",\"/lumiere/commands\",\"/lumiere/pdf\",\"/lumiere/socket\"]}",
+        "evidence": null
+      },
+      {
+        "name": "6b PUT /lumiere -> 405 Allow: GET, HEAD, empty body",
+        "ok": true,
+        "detail": "405 allow=GET, HEAD body=0",
+        "evidence": null
+      },
+      {
+        "name": "6c query string on /lumiere behaves as the index",
+        "ok": true,
+        "detail": "200 {\"name\":\"lumiere\",\"routes\":[\"/lumiere/editor\",\"/lumiere/m/\",\"/lumiere/page/shim.js\",\"/lumiere/file\",\"/lumiere/views\",\"/lumiere/settings\",\"/lumiere/commands\",\"/lumiere/pdf\",\"/lumiere/socket\"]}",
+        "evidence": null
+      },
+      {
+        "name": "6d /lumiere/ trailing slash -> 404, not the JSON index",
+        "ok": true,
+        "detail": "404 content-type=(none)",
+        "evidence": null
+      },
+      {
+        "name": "6e HEAD /lumiere -> 200 JSON, bodyless",
+        "ok": true,
+        "detail": "200 application/json body=0",
+        "evidence": null
+      },
+      {
+        "name": "6f /lumierex -> 404 (exact base only)",
+        "ok": true,
+        "detail": "404",
+        "evidence": null
+      },
+      {
+        "name": "7a contained-but-missing file -> 404",
+        "ok": true,
+        "detail": "404 body=0",
+        "evidence": null
+      },
+      {
+        "name": "7b symlinks escaping the workspace -> 403 with no outside bytes",
+        "ok": true,
+        "detail": "escape.md -> ../outside/secret.txt: 403, 0 bytes, outside marker=false | escape-hosts.md -> /etc/hosts: 403, 0 bytes, outside marker=false",
+        "evidence": null
+      },
+      {
+        "name": "7c unresolved static path -> 404",
+        "ok": true,
+        "detail": "404",
+        "evidence": null
+      },
+      {
+        "name": "7d filesystem-root document root fails closed",
+        "ok": true,
+        "detail": "editor root=/ -> 400; pdf root=/ -> 400; panel meta present=false",
+        "evidence": null
+      }
+    ]
+  },
+  "e2e": {
+    "passed": 58,
+    "skipped": 0,
+    "failed": 0,
+    "total": 58,
+    "failedCheckNames": [],
+    "skippedCheckNames": [],
+    "summaryLine": "58 passed, 0 skipped, 0 failed (58 checks)",
+    "checkLines": [
+      "PASS editor page: valid note \u2014 200 with nonce, shim, module, no-store",
+      "PASS editor page: .markdown extension \u2014 200",
+      "PASS editor page: uppercase .MD \u2014 200",
+      "PASS editor page: spaces, # and parentheses in path \u2014 200",
+      "PASS editor page: unicode path \u2014 200",
+      "PASS editor page: large note \u2014 200",
+      "PASS editor page: missing params \u2014 400",
+      "PASS editor page: relative path \u2014 400",
+      "PASS editor page: non-markdown path \u2014 400",
+      "PASS editor page: note outside root \u2014 400",
+      "PASS editor page: filesystem root refused \u2014 400",
+      "PASS editor page: .. traversal refused \u2014 400",
+      "PASS write to a read-only route is rejected with 405 \u2014 405 + Allow on all five",
+      "PASS wrong method on a JSON route returns 405 \u2014 405 + Allow on all three",
+      "PASS static route: a symlink out of the bundle is refused \u2014 403",
+      "PASS malformed JSON bodies return 400, not 500 \u2014 400 for all three",
+      "PASS editor page: unauthenticated refused \u2014 401",
+      "PASS shim.js served \u2014 200",
+      "PASS editor.js and css served \u2014 200 for js and css",
+      "PASS static path traversal refused \u2014 403",
+      "PASS unknown route \u2192 404 \u2014 404",
+      "PASS file route: no panel refused \u2014 403",
+      "PASS socket: ready RPC returns note text \u2014 response with note text",
+      "PASS socket: file route serves note inside workspace \u2014 200",
+      "PASS file route: non-canonical workspace path is still inside the root \u2014 200",
+      "PASS file route: outside workspace refused \u2014 403",
+      "PASS file route: no panel refused \u2014 403",
+      "PASS socket: unauthenticated upgrade answered with HTTP 401 \u2014 http 401",
+      "PASS socket: unknown panel refused \u2014 http 404",
+      "PASS socket: same file in two independent panels \u2014 both panels answered",
+      "PASS socket: malformed frame does not break the panel \u2014 still responsive",
+      "PASS browser: markdown note renders \u2014 CodeMirror rendered",
+      "PASS browser: .markdown renders \u2014 rendered",
+      "PASS browser: uppercase .MD renders \u2014 rendered",
+      "PASS browser: special-character path renders \u2014 rendered",
+      "PASS browser: unicode path and content render \u2014 unicode intact",
+      "PASS browser: 2000-line note renders \u2014 rendered",
+      "PASS browser: typing auto-saves to disk \u2014 edit persisted",
+      "PASS browser: parent theme/SHOWN/inset messages are harmless \u2014 rendered with no errors",
+      "PASS HEAD on the editor and an exact /lumiere request \u2014 HEAD 200, /lumiere 200 index",
+      "PASS invalid setting and command changes are 400 \u2014 400 for both",
+      "PASS SSE events and a view snapshot are reachable \u2014 views list, snapshot and SSE ok",
+      "PASS view snapshot negatives and events method/auth gates \u2014 unknown 404, invalid 400, PUT 405, unauthenticated 401",
+      "PASS file route: one panel cannot read another workspace \u2014 403",
+      "PASS file route: a missing file inside the root is refused \u2014 404",
+      "PASS static file: a byte range is served as 206 \u2014 206 + content-range, 200 with accept-ranges, 416",
+      "PASS PDF page and viewer assets are served \u2014 200 page + 3 assets, POST 405",
+      "PASS browser: the PDF viewer page renders \u2014 PDF page rendered and fetched its bytes",
+      "PASS auxiliary routes: views, settings, commands \u2014 200 JSON for all three",
+      "PASS file route: symlink escaping the workspace refused \u2014 403",
+      "PASS editor page: path containing ? and # \u2014 200",
+      "PASS browser: image in a note loads through /lumiere/file \u2014 image decoded",
+      "PASS browser: dark theme message applies to the page \u2014 vscode-dark + variable set",
+      "PASS browser: no console errors across scenarios \u2014 clean",
+      "PASS boot graph contains the Lumi\u00e8re client module \u2014 row present",
+      "PASS workspace bundle manifest is a valid DSH bundle \u2014 manifest valid",
+      "PASS DSH app: non-markdown file does not use Lumi\u00e8re \u2014 DSH's own renderer used",
+      "PASS DSH app: file-tree preview opens in Lumi\u00e8re \u2014 Lumi\u00e8re iframe rendered the note"
+    ]
+  },
+  "handshake": {
+    "kind": "shim embedder-message origin handshake",
+    "testFile": "packages/host-node/test/unit/shim-listener-order.test.ts",
+    "command": "pnpm exec tsx --test packages/host-node/test/unit/shim-listener-order.test.ts",
+    "tests": 7,
+    "passed": 7,
+    "failed": 0,
+    "covers": "an untrusted-origin lumiere message is not delivered (theme/SHOWN not applied, foreign port receives nothing) and the genuine later listener still runs"
+  },
+  "requirementMap": {
+    "1_upgrade_rejections": [
+      "1a",
+      "1b",
+      "1c",
+      "1d"
+    ],
+    "2_read_only_method_gate": [
+      "2a",
+      "2b",
+      "2c"
+    ],
+    "3_json_bodies": [
+      "3a",
+      "3b",
+      "3c",
+      "3d",
+      "3e",
+      "3f",
+      "3g"
+    ],
+    "4_json_methods": [
+      "4a",
+      "4b",
+      "4c"
+    ],
+    "5_ranges": [
+      "5"
+    ],
+    "6_exact_base": [
+      "6a",
+      "6b",
+      "6c",
+      "6d",
+      "6e",
+      "6f"
+    ],
+    "7_paths": [
+      "7a",
+      "7b",
+      "7c",
+      "7d"
+    ],
+    "8_handshake": [
+      "shim-listener-order.test.ts"
+    ],
+    "9_e2e": [
+      "e2e.log"
+    ]
+  },
+  "runs": [
+    {
+      "note": "First full E2E attempt on a brand-new throwaway DSH home: the two real-DSH-app checks could not find the workspace file tree because the app was still on its first-run 'Choose a workspace' screen.",
+      "result": "56 passed, 0 skipped, 2 failed (58 checks)",
+      "failed": [
+        "DSH app: non-markdown file does not use Lumi\u00e8re",
+        "DSH app: file-tree preview opens in Lumi\u00e8re"
+      ],
+      "log": "e2e-first-run.log"
+    },
+    {
+      "note": "After restarting the same throwaway DSH (which loaded the workspace store written during the first-run page load), full E2E passed.",
+      "result": "58 passed, 0 skipped, 0 failed (58 checks)",
+      "log": "e2e.log"
+    }
+  ],
+  "artifactsDirectory": "/tmp/chain-evidence-final/http",
+  "provenanceFile": "/tmp/chain-evidence-final/http/provenance.json",
+  "commands": {
+    "build": "pnpm --filter @workshop/dsh build",
+    "install": "DSH_HOME=<throwaway> dsh plugin --profile web add link:<worktree>/packages/dsh/dist/bundle",
+    "start": "DSH_HOME=<throwaway> DEEPSEEK_API_KEY=<dummy, not a real credential> ELECTRON_RUN_AS_NODE=1 <DeepSeek Harness.app> <app.asar>/dsh/node_modules/@deepseek-ai/dsh/lib/bin.js --profile web --host 127.0.0.1 --port 19261 --no-open",
+    "cookieExchange": "GET http://127.0.0.1:19261/?token=<redacted> -> 303 Set-Cookie dsh-auth-* (this throwaway profile only)",
+    "wire": "node /tmp/chain-evidence-final/scripts/wire.mjs",
+    "e2e": "DSH_URL=http://127.0.0.1:19261 DSH_COOKIE=<redacted> node packages/dsh/test/e2e/dsh-e2e.mjs",
+    "handshake": "pnpm exec tsx --test packages/host-node/test/unit/shim-listener-order.test.ts"
+  }
+}

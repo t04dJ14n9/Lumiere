@@ -1,0 +1,2240 @@
+{
+  "generatedAt": "2026-11-12T18:43:22.031Z",
+  "worktree": "/Users/t04dj14n9/Code/Lumia/.claude/worktrees/pr-737",
+  "head": "9a10d469a6f10e12b254485b88b9c27bf1f0c3bb",
+  "headMatchesBuild": true,
+  "sourceClean": true,
+  "port": 19263,
+  "browser": {
+    "name": "chromium",
+    "version": "156.0.8078.4",
+    "headless": true
+  },
+  "react": {
+    "version": "19.3.1",
+    "entry": "/Users/t04dj14n9/Code/Lumia/.claude/worktrees/pr-737/node_modules/.pnpm/react@19.3.1/node_modules/react/index.js"
+  },
+  "reactDom": {
+    "version": "19.3.1",
+    "entry": "/Users/t04dj14n9/Code/Lumia/.claude/worktrees/pr-737/node_modules/.pnpm/react-dom@19.3.1_react@19.3.1/node_modules/react-dom/client.js"
+  },
+  "esbuild": "0.28.2",
+  "bundles": {
+    "current": {
+      "bytes": 1252270,
+      "sha256": "1ed732692c0f81f2ff8d73b0badba619eafe7cb723d529d576e256c19dbf4a57"
+    },
+    "prefix": {
+      "bytes": 1252071,
+      "sha256": "cf159f1816a9cd30571ee51fd46d77ec63708a95d32085bf22babeb4f9c84d5b"
+    }
+  },
+  "prefixSourceCommit": "c7016eb38056604e61d4f4ce4df02206e6c4f34f",
+  "runs": [
+    {
+      "bundle": "current",
+      "scenario": "single",
+      "url": "http://127.0.0.1:19263/?scenario=single&bundle=current",
+      "settled": true,
+      "evidence": {
+        "startedAt": 38,
+        "loaded": [
+          "1"
+        ],
+        "failed": [],
+        "loadedTimeline": [
+          {
+            "version": "1",
+            "t": 552.7000000476837
+          }
+        ],
+        "failedTimeline": [],
+        "actions": [],
+        "nativeLoads": [
+          {
+            "t": 552.7000000476837,
+            "url": "http://127.0.0.1:19263/lumiere/editor?path=%2Fv%2FA.md&root=%2Fv"
+          }
+        ],
+        "parentRenders": 1,
+        "bodyRenders": 1
+      },
+      "frameIdentity": [
+        false
+      ],
+      "frames": [
+        {
+          "index": 0,
+          "isConnected": true,
+          "src": "/lumiere/editor?path=%2Fv%2FA.md&root=%2Fv",
+          "messages": [
+            {
+              "data": {
+                "lumiere": "theme",
+                "dark": true,
+                "variables": {
+                  "--vscode-badge-foreground": "#f5f5f5",
+                  "--vscode-button-secondaryForeground": "#f5f5f5",
+                  "--vscode-editor-background": "#0b0b0b",
+                  "--vscode-editor-foreground": "#f5f5f5",
+                  "--vscode-editorCursor-foreground": "#f5f5f5",
+                  "--vscode-editorHoverWidget-foreground": "#f5f5f5",
+                  "--vscode-editorSuggestWidget-foreground": "#f5f5f5",
+                  "--vscode-editorSuggestWidget-selectedForeground": "#f5f5f5",
+                  "--vscode-editorWidget-foreground": "#f5f5f5",
+                  "--vscode-focusBorder": "#4c9aff",
+                  "--vscode-foreground": "#f5f5f5",
+                  "--vscode-input-foreground": "#f5f5f5",
+                  "--vscode-inputOption-activeForeground": "#f5f5f5",
+                  "--vscode-list-activeSelectionForeground": "#f5f5f5",
+                  "--vscode-menu-foreground": "#f5f5f5",
+                  "--vscode-menu-selectionForeground": "#f5f5f5",
+                  "--vscode-textLink-activeForeground": "#4c9aff",
+                  "--vscode-textLink-foreground": "#4c9aff",
+                  "--vscode-textPreformat-foreground": "#f5f5f5",
+                  "--vscode-charts-blue": "#3794ff",
+                  "--vscode-charts-green": "#89d185",
+                  "--vscode-charts-orange": "#d18616",
+                  "--vscode-charts-purple": "#b180d7",
+                  "--vscode-charts-red": "#f14c4c",
+                  "--vscode-charts-yellow": "#cca700",
+                  "--vscode-debugTokenExpression-number": "#b5cea8",
+                  "--vscode-debugTokenExpression-string": "#ce9178",
+                  "--vscode-editor-findMatchBackground": "#515c6a",
+                  "--vscode-editor-findMatchHighlightBackground": "#ea5c0055",
+                  "--vscode-gitlens-trailingLineForegroundColor": "#99999959",
+                  "--vscode-scrollbarSlider-background": "#79797966",
+                  "--vscode-scrollbarSlider-hoverBackground": "#646464b3",
+                  "--vscode-symbolIcon-functionForeground": "#b180d7",
+                  "--vscode-symbolIcon-keywordForeground": "#cccccc",
+                  "--vscode-symbolIcon-propertyForeground": "#cccccc",
+                  "--vscode-symbolIcon-variableForeground": "#75beff",
+                  "--vscode-font-family": "Times",
+                  "--vscode-editor-font-family": "ui-monospace, \"SF Mono\", Menlo, Consolas, \"Liberation Mono\", monospace",
+                  "--vscode-font-size": "13px",
+                  "--vscode-editor-font-size": "14px"
+                }
+              },
+              "origin": "http://127.0.0.1:19263",
+              "t": 512.2999999523163
+            },
+            {
+              "data": {
+                "lumiere": "shown"
+              },
+              "origin": "http://127.0.0.1:19263",
+              "t": 512.2999999523163
+            }
+          ],
+          "contentDocumentURL": "http://127.0.0.1:19263/lumiere/editor?path=%2Fv%2FA.md&root=%2Fv",
+          "appText": "editor ready (note)",
+          "panelMeta": true
+        }
+      ],
+      "domFrames": [
+        {
+          "src": "/lumiere/editor?path=%2Fv%2FA.md&root=%2Fv",
+          "isConnected": true,
+          "messages": [
+            {
+              "data": {
+                "lumiere": "theme",
+                "dark": true,
+                "variables": {
+                  "--vscode-badge-foreground": "#f5f5f5",
+                  "--vscode-button-secondaryForeground": "#f5f5f5",
+                  "--vscode-editor-background": "#0b0b0b",
+                  "--vscode-editor-foreground": "#f5f5f5",
+                  "--vscode-editorCursor-foreground": "#f5f5f5",
+                  "--vscode-editorHoverWidget-foreground": "#f5f5f5",
+                  "--vscode-editorSuggestWidget-foreground": "#f5f5f5",
+                  "--vscode-editorSuggestWidget-selectedForeground": "#f5f5f5",
+                  "--vscode-editorWidget-foreground": "#f5f5f5",
+                  "--vscode-focusBorder": "#4c9aff",
+                  "--vscode-foreground": "#f5f5f5",
+                  "--vscode-input-foreground": "#f5f5f5",
+                  "--vscode-inputOption-activeForeground": "#f5f5f5",
+                  "--vscode-list-activeSelectionForeground": "#f5f5f5",
+                  "--vscode-menu-foreground": "#f5f5f5",
+                  "--vscode-menu-selectionForeground": "#f5f5f5",
+                  "--vscode-textLink-activeForeground": "#4c9aff",
+                  "--vscode-textLink-foreground": "#4c9aff",
+                  "--vscode-textPreformat-foreground": "#f5f5f5",
+                  "--vscode-charts-blue": "#3794ff",
+                  "--vscode-charts-green": "#89d185",
+                  "--vscode-charts-orange": "#d18616",
+                  "--vscode-charts-purple": "#b180d7",
+                  "--vscode-charts-red": "#f14c4c",
+                  "--vscode-charts-yellow": "#cca700",
+                  "--vscode-debugTokenExpression-number": "#b5cea8",
+                  "--vscode-debugTokenExpression-string": "#ce9178",
+                  "--vscode-editor-findMatchBackground": "#515c6a",
+                  "--vscode-editor-findMatchHighlightBackground": "#ea5c0055",
+                  "--vscode-gitlens-trailingLineForegroundColor": "#99999959",
+                  "--vscode-scrollbarSlider-background": "#79797966",
+                  "--vscode-scrollbarSlider-hoverBackground": "#646464b3",
+                  "--vscode-symbolIcon-functionForeground": "#b180d7",
+                  "--vscode-symbolIcon-keywordForeground": "#cccccc",
+                  "--vscode-symbolIcon-propertyForeground": "#cccccc",
+                  "--vscode-symbolIcon-variableForeground": "#75beff",
+                  "--vscode-font-family": "Times",
+                  "--vscode-editor-font-family": "ui-monospace, \"SF Mono\", Menlo, Consolas, \"Liberation Mono\", monospace",
+                  "--vscode-font-size": "13px",
+                  "--vscode-editor-font-size": "14px"
+                }
+              },
+              "origin": "http://127.0.0.1:19263",
+              "t": 512.2999999523163
+            },
+            {
+              "data": {
+                "lumiere": "shown"
+              },
+              "origin": "http://127.0.0.1:19263",
+              "t": 512.2999999523163
+            }
+          ],
+          "contentDocumentURL": "http://127.0.0.1:19263/lumiere/editor?path=%2Fv%2FA.md&root=%2Fv",
+          "appText": "editor ready (note)",
+          "panelMeta": true
+        }
+      ],
+      "replacement": null,
+      "consoleErrors": [],
+      "pageErrors": [],
+      "screenshot": "/tmp/chain-evidence-final/react/screenshots/current-single.png",
+      "requests": [
+        {
+          "at": 304.547125,
+          "method": "GET",
+          "url": "/?scenario=single&bundle=current",
+          "pathname": "/",
+          "scenario": "single",
+          "bundle": "current",
+          "finished": true,
+          "aborted": false,
+          "status": 200
+        },
+        {
+          "at": 347.304083,
+          "method": "GET",
+          "url": "/lumiere/editor?path=%2Fv%2FA.md&root=%2Fv",
+          "pathname": "/lumiere/editor",
+          "scenario": "single",
+          "bundle": "current",
+          "finished": true,
+          "aborted": false,
+          "editorRequest": 1,
+          "delayMs": 500,
+          "bodyKind": "editor",
+          "status": 200
+        }
+      ]
+    },
+    {
+      "bundle": "current",
+      "scenario": "rerender",
+      "url": "http://127.0.0.1:19263/?scenario=rerender&bundle=current",
+      "settled": true,
+      "evidence": {
+        "startedAt": 35.299999952316284,
+        "loaded": [
+          "1"
+        ],
+        "failed": [],
+        "loadedTimeline": [
+          {
+            "version": "1",
+            "t": 547.4000000953674
+          }
+        ],
+        "failedTimeline": [],
+        "actions": [
+          {
+            "action": "parent-rerender",
+            "t": 94.40000009536743
+          }
+        ],
+        "nativeLoads": [
+          {
+            "t": 547.5,
+            "url": "http://127.0.0.1:19263/lumiere/editor?path=%2Fv%2FA.md&root=%2Fv"
+          }
+        ],
+        "parentRenders": 2,
+        "bodyRenders": 2
+      },
+      "frameIdentity": [
+        false,
+        true
+      ],
+      "frames": [
+        {
+          "index": 0,
+          "isConnected": true,
+          "src": "/lumiere/editor?path=%2Fv%2FA.md&root=%2Fv",
+          "messages": [
+            {
+              "data": {
+                "lumiere": "theme",
+                "dark": true,
+                "variables": {
+                  "--vscode-badge-foreground": "#f5f5f5",
+                  "--vscode-button-secondaryForeground": "#f5f5f5",
+                  "--vscode-editor-background": "#0b0b0b",
+                  "--vscode-editor-foreground": "#f5f5f5",
+                  "--vscode-editorCursor-foreground": "#f5f5f5",
+                  "--vscode-editorHoverWidget-foreground": "#f5f5f5",
+                  "--vscode-editorSuggestWidget-foreground": "#f5f5f5",
+                  "--vscode-editorSuggestWidget-selectedForeground": "#f5f5f5",
+                  "--vscode-editorWidget-foreground": "#f5f5f5",
+                  "--vscode-focusBorder": "#4c9aff",
+                  "--vscode-foreground": "#f5f5f5",
+                  "--vscode-input-foreground": "#f5f5f5",
+                  "--vscode-inputOption-activeForeground": "#f5f5f5",
+                  "--vscode-list-activeSelectionForeground": "#f5f5f5",
+                  "--vscode-menu-foreground": "#f5f5f5",
+                  "--vscode-menu-selectionForeground": "#f5f5f5",
+                  "--vscode-textLink-activeForeground": "#4c9aff",
+                  "--vscode-textLink-foreground": "#4c9aff",
+                  "--vscode-textPreformat-foreground": "#f5f5f5",
+                  "--vscode-charts-blue": "#3794ff",
+                  "--vscode-charts-green": "#89d185",
+                  "--vscode-charts-orange": "#d18616",
+                  "--vscode-charts-purple": "#b180d7",
+                  "--vscode-charts-red": "#f14c4c",
+                  "--vscode-charts-yellow": "#cca700",
+                  "--vscode-debugTokenExpression-number": "#b5cea8",
+                  "--vscode-debugTokenExpression-string": "#ce9178",
+                  "--vscode-editor-findMatchBackground": "#515c6a",
+                  "--vscode-editor-findMatchHighlightBackground": "#ea5c0055",
+                  "--vscode-gitlens-trailingLineForegroundColor": "#99999959",
+                  "--vscode-scrollbarSlider-background": "#79797966",
+                  "--vscode-scrollbarSlider-hoverBackground": "#646464b3",
+                  "--vscode-symbolIcon-functionForeground": "#b180d7",
+                  "--vscode-symbolIcon-keywordForeground": "#cccccc",
+                  "--vscode-symbolIcon-propertyForeground": "#cccccc",
+                  "--vscode-symbolIcon-variableForeground": "#75beff",
+                  "--vscode-font-family": "Times",
+                  "--vscode-editor-font-family": "ui-monospace, \"SF Mono\", Menlo, Consolas, \"Liberation Mono\", monospace",
+                  "--vscode-font-size": "13px",
+                  "--vscode-editor-font-size": "14px"
+                }
+              },
+              "origin": "http://127.0.0.1:19263",
+              "t": 510.89999985694885
+            },
+            {
+              "data": {
+                "lumiere": "shown"
+              },
+              "origin": "http://127.0.0.1:19263",
+              "t": 510.89999985694885
+            }
+          ],
+          "contentDocumentURL": "http://127.0.0.1:19263/lumiere/editor?path=%2Fv%2FA.md&root=%2Fv",
+          "appText": "editor ready (note)",
+          "panelMeta": true
+        },
+        {
+          "index": 1,
+          "isConnected": true,
+          "src": "/lumiere/editor?path=%2Fv%2FA.md&root=%2Fv",
+          "messages": [
+            {
+              "data": {
+                "lumiere": "theme",
+                "dark": true,
+                "variables": {
+                  "--vscode-badge-foreground": "#f5f5f5",
+                  "--vscode-button-secondaryForeground": "#f5f5f5",
+                  "--vscode-editor-background": "#0b0b0b",
+                  "--vscode-editor-foreground": "#f5f5f5",
+                  "--vscode-editorCursor-foreground": "#f5f5f5",
+                  "--vscode-editorHoverWidget-foreground": "#f5f5f5",
+                  "--vscode-editorSuggestWidget-foreground": "#f5f5f5",
+                  "--vscode-editorSuggestWidget-selectedForeground": "#f5f5f5",
+                  "--vscode-editorWidget-foreground": "#f5f5f5",
+                  "--vscode-focusBorder": "#4c9aff",
+                  "--vscode-foreground": "#f5f5f5",
+                  "--vscode-input-foreground": "#f5f5f5",
+                  "--vscode-inputOption-activeForeground": "#f5f5f5",
+                  "--vscode-list-activeSelectionForeground": "#f5f5f5",
+                  "--vscode-menu-foreground": "#f5f5f5",
+                  "--vscode-menu-selectionForeground": "#f5f5f5",
+                  "--vscode-textLink-activeForeground": "#4c9aff",
+                  "--vscode-textLink-foreground": "#4c9aff",
+                  "--vscode-textPreformat-foreground": "#f5f5f5",
+                  "--vscode-charts-blue": "#3794ff",
+                  "--vscode-charts-green": "#89d185",
+                  "--vscode-charts-orange": "#d18616",
+                  "--vscode-charts-purple": "#b180d7",
+                  "--vscode-charts-red": "#f14c4c",
+                  "--vscode-charts-yellow": "#cca700",
+                  "--vscode-debugTokenExpression-number": "#b5cea8",
+                  "--vscode-debugTokenExpression-string": "#ce9178",
+                  "--vscode-editor-findMatchBackground": "#515c6a",
+                  "--vscode-editor-findMatchHighlightBackground": "#ea5c0055",
+                  "--vscode-gitlens-trailingLineForegroundColor": "#99999959",
+                  "--vscode-scrollbarSlider-background": "#79797966",
+                  "--vscode-scrollbarSlider-hoverBackground": "#646464b3",
+                  "--vscode-symbolIcon-functionForeground": "#b180d7",
+                  "--vscode-symbolIcon-keywordForeground": "#cccccc",
+                  "--vscode-symbolIcon-propertyForeground": "#cccccc",
+                  "--vscode-symbolIcon-variableForeground": "#75beff",
+                  "--vscode-font-family": "Times",
+                  "--vscode-editor-font-family": "ui-monospace, \"SF Mono\", Menlo, Consolas, \"Liberation Mono\", monospace",
+                  "--vscode-font-size": "13px",
+                  "--vscode-editor-font-size": "14px"
+                }
+              },
+              "origin": "http://127.0.0.1:19263",
+              "t": 510.89999985694885
+            },
+            {
+              "data": {
+                "lumiere": "shown"
+              },
+              "origin": "http://127.0.0.1:19263",
+              "t": 510.89999985694885
+            }
+          ],
+          "contentDocumentURL": "http://127.0.0.1:19263/lumiere/editor?path=%2Fv%2FA.md&root=%2Fv",
+          "appText": "editor ready (note)",
+          "panelMeta": true
+        }
+      ],
+      "domFrames": [
+        {
+          "src": "/lumiere/editor?path=%2Fv%2FA.md&root=%2Fv",
+          "isConnected": true,
+          "messages": [
+            {
+              "data": {
+                "lumiere": "theme",
+                "dark": true,
+                "variables": {
+                  "--vscode-badge-foreground": "#f5f5f5",
+                  "--vscode-button-secondaryForeground": "#f5f5f5",
+                  "--vscode-editor-background": "#0b0b0b",
+                  "--vscode-editor-foreground": "#f5f5f5",
+                  "--vscode-editorCursor-foreground": "#f5f5f5",
+                  "--vscode-editorHoverWidget-foreground": "#f5f5f5",
+                  "--vscode-editorSuggestWidget-foreground": "#f5f5f5",
+                  "--vscode-editorSuggestWidget-selectedForeground": "#f5f5f5",
+                  "--vscode-editorWidget-foreground": "#f5f5f5",
+                  "--vscode-focusBorder": "#4c9aff",
+                  "--vscode-foreground": "#f5f5f5",
+                  "--vscode-input-foreground": "#f5f5f5",
+                  "--vscode-inputOption-activeForeground": "#f5f5f5",
+                  "--vscode-list-activeSelectionForeground": "#f5f5f5",
+                  "--vscode-menu-foreground": "#f5f5f5",
+                  "--vscode-menu-selectionForeground": "#f5f5f5",
+                  "--vscode-textLink-activeForeground": "#4c9aff",
+                  "--vscode-textLink-foreground": "#4c9aff",
+                  "--vscode-textPreformat-foreground": "#f5f5f5",
+                  "--vscode-charts-blue": "#3794ff",
+                  "--vscode-charts-green": "#89d185",
+                  "--vscode-charts-orange": "#d18616",
+                  "--vscode-charts-purple": "#b180d7",
+                  "--vscode-charts-red": "#f14c4c",
+                  "--vscode-charts-yellow": "#cca700",
+                  "--vscode-debugTokenExpression-number": "#b5cea8",
+                  "--vscode-debugTokenExpression-string": "#ce9178",
+                  "--vscode-editor-findMatchBackground": "#515c6a",
+                  "--vscode-editor-findMatchHighlightBackground": "#ea5c0055",
+                  "--vscode-gitlens-trailingLineForegroundColor": "#99999959",
+                  "--vscode-scrollbarSlider-background": "#79797966",
+                  "--vscode-scrollbarSlider-hoverBackground": "#646464b3",
+                  "--vscode-symbolIcon-functionForeground": "#b180d7",
+                  "--vscode-symbolIcon-keywordForeground": "#cccccc",
+                  "--vscode-symbolIcon-propertyForeground": "#cccccc",
+                  "--vscode-symbolIcon-variableForeground": "#75beff",
+                  "--vscode-font-family": "Times",
+                  "--vscode-editor-font-family": "ui-monospace, \"SF Mono\", Menlo, Consolas, \"Liberation Mono\", monospace",
+                  "--vscode-font-size": "13px",
+                  "--vscode-editor-font-size": "14px"
+                }
+              },
+              "origin": "http://127.0.0.1:19263",
+              "t": 510.89999985694885
+            },
+            {
+              "data": {
+                "lumiere": "shown"
+              },
+              "origin": "http://127.0.0.1:19263",
+              "t": 510.89999985694885
+            }
+          ],
+          "contentDocumentURL": "http://127.0.0.1:19263/lumiere/editor?path=%2Fv%2FA.md&root=%2Fv",
+          "appText": "editor ready (note)",
+          "panelMeta": true
+        }
+      ],
+      "replacement": null,
+      "consoleErrors": [],
+      "pageErrors": [],
+      "screenshot": "/tmp/chain-evidence-final/react/screenshots/current-rerender.png",
+      "requests": [
+        {
+          "at": 2441.974833,
+          "method": "GET",
+          "url": "/?scenario=rerender&bundle=current",
+          "pathname": "/",
+          "scenario": "rerender",
+          "bundle": "current",
+          "finished": true,
+          "aborted": false,
+          "status": 200
+        },
+        {
+          "at": 2482.691958,
+          "method": "GET",
+          "url": "/lumiere/editor?path=%2Fv%2FA.md&root=%2Fv",
+          "pathname": "/lumiere/editor",
+          "scenario": "rerender",
+          "bundle": "current",
+          "finished": true,
+          "aborted": false,
+          "editorRequest": 1,
+          "delayMs": 500,
+          "bodyKind": "editor",
+          "status": 200
+        }
+      ]
+    },
+    {
+      "bundle": "current",
+      "scenario": "attempt",
+      "url": "http://127.0.0.1:19263/?scenario=attempt&bundle=current",
+      "settled": true,
+      "evidence": {
+        "startedAt": 36.39999985694885,
+        "loaded": [
+          "1"
+        ],
+        "failed": [
+          "failed"
+        ],
+        "loadedTimeline": [
+          {
+            "version": "1",
+            "t": 817.7000000476837
+          }
+        ],
+        "failedTimeline": [
+          {
+            "mark": "failed",
+            "t": 87.79999995231628
+          }
+        ],
+        "actions": [
+          {
+            "action": "content-revision-bump",
+            "t": 496.7999999523163
+          }
+        ],
+        "nativeLoads": [
+          {
+            "t": 87.79999995231628,
+            "url": "http://127.0.0.1:19263/lumiere/editor?path=%2Fv%2FA.md&root=%2Fv"
+          },
+          {
+            "t": 817.7000000476837,
+            "url": "http://127.0.0.1:19263/lumiere/editor?path=%2Fv%2FA.md&root=%2Fv"
+          }
+        ],
+        "parentRenders": 2,
+        "bodyRenders": 3
+      },
+      "frameIdentity": [
+        false,
+        true,
+        false
+      ],
+      "frames": [
+        {
+          "index": 0,
+          "isConnected": false,
+          "src": "/lumiere/editor?path=%2Fv%2FA.md&root=%2Fv",
+          "messages": null,
+          "contentDocumentURL": null,
+          "appText": null,
+          "panelMeta": false
+        },
+        {
+          "index": 1,
+          "isConnected": false,
+          "src": "/lumiere/editor?path=%2Fv%2FA.md&root=%2Fv",
+          "messages": null,
+          "contentDocumentURL": null,
+          "appText": null,
+          "panelMeta": false
+        },
+        {
+          "index": 2,
+          "isConnected": true,
+          "src": "/lumiere/editor?path=%2Fv%2FA.md&root=%2Fv",
+          "messages": [
+            {
+              "data": {
+                "lumiere": "theme",
+                "dark": true,
+                "variables": {
+                  "--vscode-badge-foreground": "#f5f5f5",
+                  "--vscode-button-secondaryForeground": "#f5f5f5",
+                  "--vscode-editor-background": "#0b0b0b",
+                  "--vscode-editor-foreground": "#f5f5f5",
+                  "--vscode-editorCursor-foreground": "#f5f5f5",
+                  "--vscode-editorHoverWidget-foreground": "#f5f5f5",
+                  "--vscode-editorSuggestWidget-foreground": "#f5f5f5",
+                  "--vscode-editorSuggestWidget-selectedForeground": "#f5f5f5",
+                  "--vscode-editorWidget-foreground": "#f5f5f5",
+                  "--vscode-focusBorder": "#4c9aff",
+                  "--vscode-foreground": "#f5f5f5",
+                  "--vscode-input-foreground": "#f5f5f5",
+                  "--vscode-inputOption-activeForeground": "#f5f5f5",
+                  "--vscode-list-activeSelectionForeground": "#f5f5f5",
+                  "--vscode-menu-foreground": "#f5f5f5",
+                  "--vscode-menu-selectionForeground": "#f5f5f5",
+                  "--vscode-textLink-activeForeground": "#4c9aff",
+                  "--vscode-textLink-foreground": "#4c9aff",
+                  "--vscode-textPreformat-foreground": "#f5f5f5",
+                  "--vscode-charts-blue": "#3794ff",
+                  "--vscode-charts-green": "#89d185",
+                  "--vscode-charts-orange": "#d18616",
+                  "--vscode-charts-purple": "#b180d7",
+                  "--vscode-charts-red": "#f14c4c",
+                  "--vscode-charts-yellow": "#cca700",
+                  "--vscode-debugTokenExpression-number": "#b5cea8",
+                  "--vscode-debugTokenExpression-string": "#ce9178",
+                  "--vscode-editor-findMatchBackground": "#515c6a",
+                  "--vscode-editor-findMatchHighlightBackground": "#ea5c0055",
+                  "--vscode-gitlens-trailingLineForegroundColor": "#99999959",
+                  "--vscode-scrollbarSlider-background": "#79797966",
+                  "--vscode-scrollbarSlider-hoverBackground": "#646464b3",
+                  "--vscode-symbolIcon-functionForeground": "#b180d7",
+                  "--vscode-symbolIcon-keywordForeground": "#cccccc",
+                  "--vscode-symbolIcon-propertyForeground": "#cccccc",
+                  "--vscode-symbolIcon-variableForeground": "#75beff",
+                  "--vscode-font-family": "Times",
+                  "--vscode-editor-font-family": "ui-monospace, \"SF Mono\", Menlo, Consolas, \"Liberation Mono\", monospace",
+                  "--vscode-font-size": "13px",
+                  "--vscode-editor-font-size": "14px"
+                }
+              },
+              "origin": "http://127.0.0.1:19263",
+              "t": 312.09999990463257
+            },
+            {
+              "data": {
+                "lumiere": "shown"
+              },
+              "origin": "http://127.0.0.1:19263",
+              "t": 312.2000000476837
+            }
+          ],
+          "contentDocumentURL": "http://127.0.0.1:19263/lumiere/editor?path=%2Fv%2FA.md&root=%2Fv",
+          "appText": "editor ready (retry)",
+          "panelMeta": true
+        }
+      ],
+      "domFrames": [
+        {
+          "src": "/lumiere/editor?path=%2Fv%2FA.md&root=%2Fv",
+          "isConnected": true,
+          "messages": [
+            {
+              "data": {
+                "lumiere": "theme",
+                "dark": true,
+                "variables": {
+                  "--vscode-badge-foreground": "#f5f5f5",
+                  "--vscode-button-secondaryForeground": "#f5f5f5",
+                  "--vscode-editor-background": "#0b0b0b",
+                  "--vscode-editor-foreground": "#f5f5f5",
+                  "--vscode-editorCursor-foreground": "#f5f5f5",
+                  "--vscode-editorHoverWidget-foreground": "#f5f5f5",
+                  "--vscode-editorSuggestWidget-foreground": "#f5f5f5",
+                  "--vscode-editorSuggestWidget-selectedForeground": "#f5f5f5",
+                  "--vscode-editorWidget-foreground": "#f5f5f5",
+                  "--vscode-focusBorder": "#4c9aff",
+                  "--vscode-foreground": "#f5f5f5",
+                  "--vscode-input-foreground": "#f5f5f5",
+                  "--vscode-inputOption-activeForeground": "#f5f5f5",
+                  "--vscode-list-activeSelectionForeground": "#f5f5f5",
+                  "--vscode-menu-foreground": "#f5f5f5",
+                  "--vscode-menu-selectionForeground": "#f5f5f5",
+                  "--vscode-textLink-activeForeground": "#4c9aff",
+                  "--vscode-textLink-foreground": "#4c9aff",
+                  "--vscode-textPreformat-foreground": "#f5f5f5",
+                  "--vscode-charts-blue": "#3794ff",
+                  "--vscode-charts-green": "#89d185",
+                  "--vscode-charts-orange": "#d18616",
+                  "--vscode-charts-purple": "#b180d7",
+                  "--vscode-charts-red": "#f14c4c",
+                  "--vscode-charts-yellow": "#cca700",
+                  "--vscode-debugTokenExpression-number": "#b5cea8",
+                  "--vscode-debugTokenExpression-string": "#ce9178",
+                  "--vscode-editor-findMatchBackground": "#515c6a",
+                  "--vscode-editor-findMatchHighlightBackground": "#ea5c0055",
+                  "--vscode-gitlens-trailingLineForegroundColor": "#99999959",
+                  "--vscode-scrollbarSlider-background": "#79797966",
+                  "--vscode-scrollbarSlider-hoverBackground": "#646464b3",
+                  "--vscode-symbolIcon-functionForeground": "#b180d7",
+                  "--vscode-symbolIcon-keywordForeground": "#cccccc",
+                  "--vscode-symbolIcon-propertyForeground": "#cccccc",
+                  "--vscode-symbolIcon-variableForeground": "#75beff",
+                  "--vscode-font-family": "Times",
+                  "--vscode-editor-font-family": "ui-monospace, \"SF Mono\", Menlo, Consolas, \"Liberation Mono\", monospace",
+                  "--vscode-font-size": "13px",
+                  "--vscode-editor-font-size": "14px"
+                }
+              },
+              "origin": "http://127.0.0.1:19263",
+              "t": 312.09999990463257
+            },
+            {
+              "data": {
+                "lumiere": "shown"
+              },
+              "origin": "http://127.0.0.1:19263",
+              "t": 312.2000000476837
+            }
+          ],
+          "contentDocumentURL": "http://127.0.0.1:19263/lumiere/editor?path=%2Fv%2FA.md&root=%2Fv",
+          "appText": "editor ready (retry)",
+          "panelMeta": true
+        }
+      ],
+      "replacement": {
+        "staleIndex": 0,
+        "liveIndex": 2,
+        "staleInfo": {
+          "isConnected": false,
+          "contentDocumentURL": null
+        },
+        "liveInfo": {
+          "isConnected": true,
+          "contentDocumentURL": "http://127.0.0.1:19263/lumiere/editor?path=%2Fv%2FA.md&root=%2Fv"
+        },
+        "before": {
+          "loaded": [
+            "1"
+          ],
+          "failed": [
+            "failed"
+          ]
+        },
+        "afterStale": {
+          "loaded": [
+            "1"
+          ],
+          "failed": [
+            "failed"
+          ]
+        },
+        "afterLive": {
+          "loaded": [
+            "1",
+            "1"
+          ],
+          "failed": [
+            "failed"
+          ]
+        },
+        "staleError": null,
+        "liveError": null
+      },
+      "consoleErrors": [],
+      "pageErrors": [],
+      "screenshot": "/tmp/chain-evidence-final/react/screenshots/current-attempt.png",
+      "requests": [
+        {
+          "at": 4575.695666,
+          "method": "GET",
+          "url": "/?scenario=attempt&bundle=current",
+          "pathname": "/",
+          "scenario": "attempt",
+          "bundle": "current",
+          "finished": true,
+          "aborted": false,
+          "status": 200
+        },
+        {
+          "at": 4617.755375,
+          "method": "GET",
+          "url": "/lumiere/editor?path=%2Fv%2FA.md&root=%2Fv",
+          "pathname": "/lumiere/editor",
+          "scenario": "attempt",
+          "bundle": "current",
+          "finished": true,
+          "aborted": false,
+          "editorRequest": 1,
+          "delayMs": 40,
+          "bodyKind": "failure",
+          "status": 200
+        },
+        {
+          "at": 5087.081375,
+          "method": "GET",
+          "url": "/lumiere/editor?path=%2Fv%2FA.md&root=%2Fv",
+          "pathname": "/lumiere/editor",
+          "scenario": "attempt",
+          "bundle": "current",
+          "finished": true,
+          "aborted": false,
+          "editorRequest": 2,
+          "delayMs": 300,
+          "bodyKind": "editor",
+          "status": 200
+        }
+      ]
+    },
+    {
+      "bundle": "current",
+      "scenario": "replace",
+      "url": "http://127.0.0.1:19263/?scenario=replace&bundle=current",
+      "settled": true,
+      "evidence": {
+        "startedAt": 36,
+        "loaded": [
+          "2"
+        ],
+        "failed": [],
+        "loadedTimeline": [
+          {
+            "version": "2",
+            "t": 337.90000009536743
+          }
+        ],
+        "failedTimeline": [],
+        "actions": [
+          {
+            "action": "resource-switch-A-to-B",
+            "t": 124.90000009536743
+          }
+        ],
+        "nativeLoads": [
+          {
+            "t": 338,
+            "url": "http://127.0.0.1:19263/lumiere/editor?path=%2Fv%2FB.md&root=%2Fv"
+          }
+        ],
+        "parentRenders": 2,
+        "bodyRenders": 2
+      },
+      "frameIdentity": [
+        false,
+        false
+      ],
+      "frames": [
+        {
+          "index": 0,
+          "isConnected": false,
+          "src": "/lumiere/editor?path=%2Fv%2FA.md&root=%2Fv",
+          "messages": null,
+          "contentDocumentURL": null,
+          "appText": null,
+          "panelMeta": false
+        },
+        {
+          "index": 1,
+          "isConnected": true,
+          "src": "/lumiere/editor?path=%2Fv%2FB.md&root=%2Fv",
+          "messages": [
+            {
+              "data": {
+                "lumiere": "theme",
+                "dark": true,
+                "variables": {
+                  "--vscode-badge-foreground": "#f5f5f5",
+                  "--vscode-button-secondaryForeground": "#f5f5f5",
+                  "--vscode-editor-background": "#0b0b0b",
+                  "--vscode-editor-foreground": "#f5f5f5",
+                  "--vscode-editorCursor-foreground": "#f5f5f5",
+                  "--vscode-editorHoverWidget-foreground": "#f5f5f5",
+                  "--vscode-editorSuggestWidget-foreground": "#f5f5f5",
+                  "--vscode-editorSuggestWidget-selectedForeground": "#f5f5f5",
+                  "--vscode-editorWidget-foreground": "#f5f5f5",
+                  "--vscode-focusBorder": "#4c9aff",
+                  "--vscode-foreground": "#f5f5f5",
+                  "--vscode-input-foreground": "#f5f5f5",
+                  "--vscode-inputOption-activeForeground": "#f5f5f5",
+                  "--vscode-list-activeSelectionForeground": "#f5f5f5",
+                  "--vscode-menu-foreground": "#f5f5f5",
+                  "--vscode-menu-selectionForeground": "#f5f5f5",
+                  "--vscode-textLink-activeForeground": "#4c9aff",
+                  "--vscode-textLink-foreground": "#4c9aff",
+                  "--vscode-textPreformat-foreground": "#f5f5f5",
+                  "--vscode-charts-blue": "#3794ff",
+                  "--vscode-charts-green": "#89d185",
+                  "--vscode-charts-orange": "#d18616",
+                  "--vscode-charts-purple": "#b180d7",
+                  "--vscode-charts-red": "#f14c4c",
+                  "--vscode-charts-yellow": "#cca700",
+                  "--vscode-debugTokenExpression-number": "#b5cea8",
+                  "--vscode-debugTokenExpression-string": "#ce9178",
+                  "--vscode-editor-findMatchBackground": "#515c6a",
+                  "--vscode-editor-findMatchHighlightBackground": "#ea5c0055",
+                  "--vscode-gitlens-trailingLineForegroundColor": "#99999959",
+                  "--vscode-scrollbarSlider-background": "#79797966",
+                  "--vscode-scrollbarSlider-hoverBackground": "#646464b3",
+                  "--vscode-symbolIcon-functionForeground": "#b180d7",
+                  "--vscode-symbolIcon-keywordForeground": "#cccccc",
+                  "--vscode-symbolIcon-propertyForeground": "#cccccc",
+                  "--vscode-symbolIcon-variableForeground": "#75beff",
+                  "--vscode-font-family": "Times",
+                  "--vscode-editor-font-family": "ui-monospace, \"SF Mono\", Menlo, Consolas, \"Liberation Mono\", monospace",
+                  "--vscode-font-size": "13px",
+                  "--vscode-editor-font-size": "14px"
+                }
+              },
+              "origin": "http://127.0.0.1:19263",
+              "t": 218.39999985694885
+            },
+            {
+              "data": {
+                "lumiere": "shown"
+              },
+              "origin": "http://127.0.0.1:19263",
+              "t": 218.39999985694885
+            }
+          ],
+          "contentDocumentURL": "http://127.0.0.1:19263/lumiere/editor?path=%2Fv%2FB.md&root=%2Fv",
+          "appText": "editor ready (B)",
+          "panelMeta": true
+        }
+      ],
+      "domFrames": [
+        {
+          "src": "/lumiere/editor?path=%2Fv%2FB.md&root=%2Fv",
+          "isConnected": true,
+          "messages": [
+            {
+              "data": {
+                "lumiere": "theme",
+                "dark": true,
+                "variables": {
+                  "--vscode-badge-foreground": "#f5f5f5",
+                  "--vscode-button-secondaryForeground": "#f5f5f5",
+                  "--vscode-editor-background": "#0b0b0b",
+                  "--vscode-editor-foreground": "#f5f5f5",
+                  "--vscode-editorCursor-foreground": "#f5f5f5",
+                  "--vscode-editorHoverWidget-foreground": "#f5f5f5",
+                  "--vscode-editorSuggestWidget-foreground": "#f5f5f5",
+                  "--vscode-editorSuggestWidget-selectedForeground": "#f5f5f5",
+                  "--vscode-editorWidget-foreground": "#f5f5f5",
+                  "--vscode-focusBorder": "#4c9aff",
+                  "--vscode-foreground": "#f5f5f5",
+                  "--vscode-input-foreground": "#f5f5f5",
+                  "--vscode-inputOption-activeForeground": "#f5f5f5",
+                  "--vscode-list-activeSelectionForeground": "#f5f5f5",
+                  "--vscode-menu-foreground": "#f5f5f5",
+                  "--vscode-menu-selectionForeground": "#f5f5f5",
+                  "--vscode-textLink-activeForeground": "#4c9aff",
+                  "--vscode-textLink-foreground": "#4c9aff",
+                  "--vscode-textPreformat-foreground": "#f5f5f5",
+                  "--vscode-charts-blue": "#3794ff",
+                  "--vscode-charts-green": "#89d185",
+                  "--vscode-charts-orange": "#d18616",
+                  "--vscode-charts-purple": "#b180d7",
+                  "--vscode-charts-red": "#f14c4c",
+                  "--vscode-charts-yellow": "#cca700",
+                  "--vscode-debugTokenExpression-number": "#b5cea8",
+                  "--vscode-debugTokenExpression-string": "#ce9178",
+                  "--vscode-editor-findMatchBackground": "#515c6a",
+                  "--vscode-editor-findMatchHighlightBackground": "#ea5c0055",
+                  "--vscode-gitlens-trailingLineForegroundColor": "#99999959",
+                  "--vscode-scrollbarSlider-background": "#79797966",
+                  "--vscode-scrollbarSlider-hoverBackground": "#646464b3",
+                  "--vscode-symbolIcon-functionForeground": "#b180d7",
+                  "--vscode-symbolIcon-keywordForeground": "#cccccc",
+                  "--vscode-symbolIcon-propertyForeground": "#cccccc",
+                  "--vscode-symbolIcon-variableForeground": "#75beff",
+                  "--vscode-font-family": "Times",
+                  "--vscode-editor-font-family": "ui-monospace, \"SF Mono\", Menlo, Consolas, \"Liberation Mono\", monospace",
+                  "--vscode-font-size": "13px",
+                  "--vscode-editor-font-size": "14px"
+                }
+              },
+              "origin": "http://127.0.0.1:19263",
+              "t": 218.39999985694885
+            },
+            {
+              "data": {
+                "lumiere": "shown"
+              },
+              "origin": "http://127.0.0.1:19263",
+              "t": 218.39999985694885
+            }
+          ],
+          "contentDocumentURL": "http://127.0.0.1:19263/lumiere/editor?path=%2Fv%2FB.md&root=%2Fv",
+          "appText": "editor ready (B)",
+          "panelMeta": true
+        }
+      ],
+      "replacement": {
+        "staleIndex": 0,
+        "liveIndex": 1,
+        "staleInfo": {
+          "isConnected": false,
+          "contentDocumentURL": null
+        },
+        "liveInfo": {
+          "isConnected": true,
+          "contentDocumentURL": "http://127.0.0.1:19263/lumiere/editor?path=%2Fv%2FB.md&root=%2Fv"
+        },
+        "before": {
+          "loaded": [
+            "2"
+          ],
+          "failed": []
+        },
+        "afterStale": {
+          "loaded": [
+            "2"
+          ],
+          "failed": []
+        },
+        "afterLive": {
+          "loaded": [
+            "2",
+            "2"
+          ],
+          "failed": []
+        },
+        "staleError": null,
+        "liveError": null
+      },
+      "consoleErrors": [],
+      "pageErrors": [],
+      "screenshot": "/tmp/chain-evidence-final/react/screenshots/current-replace.png",
+      "requests": [
+        {
+          "at": 6243.307416,
+          "method": "GET",
+          "url": "/?scenario=replace&bundle=current",
+          "pathname": "/",
+          "scenario": "replace",
+          "bundle": "current",
+          "finished": true,
+          "aborted": false,
+          "status": 200
+        },
+        {
+          "at": 6285.038625,
+          "method": "GET",
+          "url": "/lumiere/editor?path=%2Fv%2FA.md&root=%2Fv",
+          "pathname": "/lumiere/editor",
+          "scenario": "replace",
+          "bundle": "current",
+          "finished": false,
+          "aborted": true,
+          "editorRequest": 1,
+          "delayMs": 800,
+          "bodyKind": "editor-A"
+        },
+        {
+          "at": 6370.793875,
+          "method": "GET",
+          "url": "/lumiere/editor?path=%2Fv%2FB.md&root=%2Fv",
+          "pathname": "/lumiere/editor",
+          "scenario": "replace",
+          "bundle": "current",
+          "finished": true,
+          "aborted": false,
+          "editorRequest": 1,
+          "delayMs": 200,
+          "bodyKind": "editor-B",
+          "status": 200
+        }
+      ]
+    },
+    {
+      "bundle": "prefix",
+      "scenario": "single",
+      "url": "http://127.0.0.1:19263/?scenario=single&bundle=prefix",
+      "settled": true,
+      "evidence": {
+        "startedAt": 36.39999985694885,
+        "loaded": [
+          "1"
+        ],
+        "failed": [],
+        "loadedTimeline": [
+          {
+            "version": "1",
+            "t": 549.7000000476837
+          }
+        ],
+        "failedTimeline": [],
+        "actions": [],
+        "nativeLoads": [
+          {
+            "t": 549.7000000476837,
+            "url": "http://127.0.0.1:19263/lumiere/editor?path=%2Fv%2FA.md&root=%2Fv"
+          }
+        ],
+        "parentRenders": 1,
+        "bodyRenders": 1
+      },
+      "frameIdentity": [
+        false
+      ],
+      "frames": [
+        {
+          "index": 0,
+          "isConnected": true,
+          "src": "/lumiere/editor?path=%2Fv%2FA.md&root=%2Fv",
+          "messages": [
+            {
+              "data": {
+                "lumiere": "theme",
+                "dark": true,
+                "variables": {
+                  "--vscode-badge-foreground": "#f5f5f5",
+                  "--vscode-button-secondaryForeground": "#f5f5f5",
+                  "--vscode-editor-background": "#0b0b0b",
+                  "--vscode-editor-foreground": "#f5f5f5",
+                  "--vscode-editorCursor-foreground": "#f5f5f5",
+                  "--vscode-editorHoverWidget-foreground": "#f5f5f5",
+                  "--vscode-editorSuggestWidget-foreground": "#f5f5f5",
+                  "--vscode-editorSuggestWidget-selectedForeground": "#f5f5f5",
+                  "--vscode-editorWidget-foreground": "#f5f5f5",
+                  "--vscode-focusBorder": "#4c9aff",
+                  "--vscode-foreground": "#f5f5f5",
+                  "--vscode-input-foreground": "#f5f5f5",
+                  "--vscode-inputOption-activeForeground": "#f5f5f5",
+                  "--vscode-list-activeSelectionForeground": "#f5f5f5",
+                  "--vscode-menu-foreground": "#f5f5f5",
+                  "--vscode-menu-selectionForeground": "#f5f5f5",
+                  "--vscode-textLink-activeForeground": "#4c9aff",
+                  "--vscode-textLink-foreground": "#4c9aff",
+                  "--vscode-textPreformat-foreground": "#f5f5f5",
+                  "--vscode-charts-blue": "#3794ff",
+                  "--vscode-charts-green": "#89d185",
+                  "--vscode-charts-orange": "#d18616",
+                  "--vscode-charts-purple": "#b180d7",
+                  "--vscode-charts-red": "#f14c4c",
+                  "--vscode-charts-yellow": "#cca700",
+                  "--vscode-debugTokenExpression-number": "#b5cea8",
+                  "--vscode-debugTokenExpression-string": "#ce9178",
+                  "--vscode-editor-findMatchBackground": "#515c6a",
+                  "--vscode-editor-findMatchHighlightBackground": "#ea5c0055",
+                  "--vscode-gitlens-trailingLineForegroundColor": "#99999959",
+                  "--vscode-scrollbarSlider-background": "#79797966",
+                  "--vscode-scrollbarSlider-hoverBackground": "#646464b3",
+                  "--vscode-symbolIcon-functionForeground": "#b180d7",
+                  "--vscode-symbolIcon-keywordForeground": "#cccccc",
+                  "--vscode-symbolIcon-propertyForeground": "#cccccc",
+                  "--vscode-symbolIcon-variableForeground": "#75beff",
+                  "--vscode-font-family": "Times",
+                  "--vscode-editor-font-family": "ui-monospace, \"SF Mono\", Menlo, Consolas, \"Liberation Mono\", monospace",
+                  "--vscode-font-size": "13px",
+                  "--vscode-editor-font-size": "14px"
+                }
+              },
+              "origin": "http://127.0.0.1:19263",
+              "t": 512.0999999046326
+            },
+            {
+              "data": {
+                "lumiere": "shown"
+              },
+              "origin": "http://127.0.0.1:19263",
+              "t": 512.1999998092651
+            }
+          ],
+          "contentDocumentURL": "http://127.0.0.1:19263/lumiere/editor?path=%2Fv%2FA.md&root=%2Fv",
+          "appText": "editor ready (note)",
+          "panelMeta": true
+        }
+      ],
+      "domFrames": [
+        {
+          "src": "/lumiere/editor?path=%2Fv%2FA.md&root=%2Fv",
+          "isConnected": true,
+          "messages": [
+            {
+              "data": {
+                "lumiere": "theme",
+                "dark": true,
+                "variables": {
+                  "--vscode-badge-foreground": "#f5f5f5",
+                  "--vscode-button-secondaryForeground": "#f5f5f5",
+                  "--vscode-editor-background": "#0b0b0b",
+                  "--vscode-editor-foreground": "#f5f5f5",
+                  "--vscode-editorCursor-foreground": "#f5f5f5",
+                  "--vscode-editorHoverWidget-foreground": "#f5f5f5",
+                  "--vscode-editorSuggestWidget-foreground": "#f5f5f5",
+                  "--vscode-editorSuggestWidget-selectedForeground": "#f5f5f5",
+                  "--vscode-editorWidget-foreground": "#f5f5f5",
+                  "--vscode-focusBorder": "#4c9aff",
+                  "--vscode-foreground": "#f5f5f5",
+                  "--vscode-input-foreground": "#f5f5f5",
+                  "--vscode-inputOption-activeForeground": "#f5f5f5",
+                  "--vscode-list-activeSelectionForeground": "#f5f5f5",
+                  "--vscode-menu-foreground": "#f5f5f5",
+                  "--vscode-menu-selectionForeground": "#f5f5f5",
+                  "--vscode-textLink-activeForeground": "#4c9aff",
+                  "--vscode-textLink-foreground": "#4c9aff",
+                  "--vscode-textPreformat-foreground": "#f5f5f5",
+                  "--vscode-charts-blue": "#3794ff",
+                  "--vscode-charts-green": "#89d185",
+                  "--vscode-charts-orange": "#d18616",
+                  "--vscode-charts-purple": "#b180d7",
+                  "--vscode-charts-red": "#f14c4c",
+                  "--vscode-charts-yellow": "#cca700",
+                  "--vscode-debugTokenExpression-number": "#b5cea8",
+                  "--vscode-debugTokenExpression-string": "#ce9178",
+                  "--vscode-editor-findMatchBackground": "#515c6a",
+                  "--vscode-editor-findMatchHighlightBackground": "#ea5c0055",
+                  "--vscode-gitlens-trailingLineForegroundColor": "#99999959",
+                  "--vscode-scrollbarSlider-background": "#79797966",
+                  "--vscode-scrollbarSlider-hoverBackground": "#646464b3",
+                  "--vscode-symbolIcon-functionForeground": "#b180d7",
+                  "--vscode-symbolIcon-keywordForeground": "#cccccc",
+                  "--vscode-symbolIcon-propertyForeground": "#cccccc",
+                  "--vscode-symbolIcon-variableForeground": "#75beff",
+                  "--vscode-font-family": "Times",
+                  "--vscode-editor-font-family": "ui-monospace, \"SF Mono\", Menlo, Consolas, \"Liberation Mono\", monospace",
+                  "--vscode-font-size": "13px",
+                  "--vscode-editor-font-size": "14px"
+                }
+              },
+              "origin": "http://127.0.0.1:19263",
+              "t": 512.0999999046326
+            },
+            {
+              "data": {
+                "lumiere": "shown"
+              },
+              "origin": "http://127.0.0.1:19263",
+              "t": 512.1999998092651
+            }
+          ],
+          "contentDocumentURL": "http://127.0.0.1:19263/lumiere/editor?path=%2Fv%2FA.md&root=%2Fv",
+          "appText": "editor ready (note)",
+          "panelMeta": true
+        }
+      ],
+      "replacement": null,
+      "consoleErrors": [],
+      "pageErrors": [],
+      "screenshot": "/tmp/chain-evidence-final/react/screenshots/prefix-single.png",
+      "requests": [
+        {
+          "at": 8165.90525,
+          "method": "GET",
+          "url": "/?scenario=single&bundle=prefix",
+          "pathname": "/",
+          "scenario": "single",
+          "bundle": "prefix",
+          "finished": true,
+          "aborted": false,
+          "status": 200
+        },
+        {
+          "at": 8207.52675,
+          "method": "GET",
+          "url": "/lumiere/editor?path=%2Fv%2FA.md&root=%2Fv",
+          "pathname": "/lumiere/editor",
+          "scenario": "single",
+          "bundle": "prefix",
+          "finished": true,
+          "aborted": false,
+          "editorRequest": 1,
+          "delayMs": 500,
+          "bodyKind": "editor",
+          "status": 200
+        }
+      ]
+    },
+    {
+      "bundle": "prefix",
+      "scenario": "rerender",
+      "url": "http://127.0.0.1:19263/?scenario=rerender&bundle=prefix",
+      "settled": false,
+      "evidence": {
+        "startedAt": 37.80000019073486,
+        "loaded": [],
+        "failed": [],
+        "loadedTimeline": [],
+        "failedTimeline": [],
+        "actions": [
+          {
+            "action": "parent-rerender",
+            "t": 98.30000019073486
+          }
+        ],
+        "nativeLoads": [
+          {
+            "t": 550.6000001430511,
+            "url": "http://127.0.0.1:19263/lumiere/editor?path=%2Fv%2FA.md&root=%2Fv"
+          }
+        ],
+        "parentRenders": 2,
+        "bodyRenders": 2
+      },
+      "frameIdentity": [
+        false,
+        true
+      ],
+      "frames": [
+        {
+          "index": 0,
+          "isConnected": true,
+          "src": "/lumiere/editor?path=%2Fv%2FA.md&root=%2Fv",
+          "messages": [],
+          "contentDocumentURL": "http://127.0.0.1:19263/lumiere/editor?path=%2Fv%2FA.md&root=%2Fv",
+          "appText": "editor ready (note)",
+          "panelMeta": true
+        },
+        {
+          "index": 1,
+          "isConnected": true,
+          "src": "/lumiere/editor?path=%2Fv%2FA.md&root=%2Fv",
+          "messages": [],
+          "contentDocumentURL": "http://127.0.0.1:19263/lumiere/editor?path=%2Fv%2FA.md&root=%2Fv",
+          "appText": "editor ready (note)",
+          "panelMeta": true
+        }
+      ],
+      "domFrames": [
+        {
+          "src": "/lumiere/editor?path=%2Fv%2FA.md&root=%2Fv",
+          "isConnected": true,
+          "messages": [],
+          "contentDocumentURL": "http://127.0.0.1:19263/lumiere/editor?path=%2Fv%2FA.md&root=%2Fv",
+          "appText": "editor ready (note)",
+          "panelMeta": true
+        }
+      ],
+      "replacement": null,
+      "consoleErrors": [],
+      "pageErrors": [],
+      "screenshot": "/tmp/chain-evidence-final/react/screenshots/prefix-rerender.png",
+      "requests": [
+        {
+          "at": 10282.92475,
+          "method": "GET",
+          "url": "/?scenario=rerender&bundle=prefix",
+          "pathname": "/",
+          "scenario": "rerender",
+          "bundle": "prefix",
+          "finished": true,
+          "aborted": false,
+          "status": 200
+        },
+        {
+          "at": 10326.984583,
+          "method": "GET",
+          "url": "/lumiere/editor?path=%2Fv%2FA.md&root=%2Fv",
+          "pathname": "/lumiere/editor",
+          "scenario": "rerender",
+          "bundle": "prefix",
+          "finished": true,
+          "aborted": false,
+          "editorRequest": 1,
+          "delayMs": 500,
+          "bodyKind": "editor",
+          "status": 200
+        }
+      ]
+    },
+    {
+      "bundle": "prefix",
+      "scenario": "attempt",
+      "url": "http://127.0.0.1:19263/?scenario=attempt&bundle=prefix",
+      "settled": true,
+      "evidence": {
+        "startedAt": 34.19999980926514,
+        "loaded": [
+          "1"
+        ],
+        "failed": [
+          "failed"
+        ],
+        "loadedTimeline": [
+          {
+            "version": "1",
+            "t": 808.5999999046326
+          }
+        ],
+        "failedTimeline": [
+          {
+            "mark": "failed",
+            "t": 84.29999995231628
+          }
+        ],
+        "actions": [
+          {
+            "action": "content-revision-bump",
+            "t": 494.19999980926514
+          }
+        ],
+        "nativeLoads": [
+          {
+            "t": 84.29999995231628,
+            "url": "http://127.0.0.1:19263/lumiere/editor?path=%2Fv%2FA.md&root=%2Fv"
+          },
+          {
+            "t": 808.5999999046326,
+            "url": "http://127.0.0.1:19263/lumiere/editor?path=%2Fv%2FA.md&root=%2Fv"
+          }
+        ],
+        "parentRenders": 2,
+        "bodyRenders": 3
+      },
+      "frameIdentity": [
+        false,
+        true,
+        false
+      ],
+      "frames": [
+        {
+          "index": 0,
+          "isConnected": false,
+          "src": "/lumiere/editor?path=%2Fv%2FA.md&root=%2Fv",
+          "messages": null,
+          "contentDocumentURL": null,
+          "appText": null,
+          "panelMeta": false
+        },
+        {
+          "index": 1,
+          "isConnected": false,
+          "src": "/lumiere/editor?path=%2Fv%2FA.md&root=%2Fv",
+          "messages": null,
+          "contentDocumentURL": null,
+          "appText": null,
+          "panelMeta": false
+        },
+        {
+          "index": 2,
+          "isConnected": true,
+          "src": "/lumiere/editor?path=%2Fv%2FA.md&root=%2Fv",
+          "messages": [
+            {
+              "data": {
+                "lumiere": "theme",
+                "dark": true,
+                "variables": {
+                  "--vscode-badge-foreground": "#f5f5f5",
+                  "--vscode-button-secondaryForeground": "#f5f5f5",
+                  "--vscode-editor-background": "#0b0b0b",
+                  "--vscode-editor-foreground": "#f5f5f5",
+                  "--vscode-editorCursor-foreground": "#f5f5f5",
+                  "--vscode-editorHoverWidget-foreground": "#f5f5f5",
+                  "--vscode-editorSuggestWidget-foreground": "#f5f5f5",
+                  "--vscode-editorSuggestWidget-selectedForeground": "#f5f5f5",
+                  "--vscode-editorWidget-foreground": "#f5f5f5",
+                  "--vscode-focusBorder": "#4c9aff",
+                  "--vscode-foreground": "#f5f5f5",
+                  "--vscode-input-foreground": "#f5f5f5",
+                  "--vscode-inputOption-activeForeground": "#f5f5f5",
+                  "--vscode-list-activeSelectionForeground": "#f5f5f5",
+                  "--vscode-menu-foreground": "#f5f5f5",
+                  "--vscode-menu-selectionForeground": "#f5f5f5",
+                  "--vscode-textLink-activeForeground": "#4c9aff",
+                  "--vscode-textLink-foreground": "#4c9aff",
+                  "--vscode-textPreformat-foreground": "#f5f5f5",
+                  "--vscode-charts-blue": "#3794ff",
+                  "--vscode-charts-green": "#89d185",
+                  "--vscode-charts-orange": "#d18616",
+                  "--vscode-charts-purple": "#b180d7",
+                  "--vscode-charts-red": "#f14c4c",
+                  "--vscode-charts-yellow": "#cca700",
+                  "--vscode-debugTokenExpression-number": "#b5cea8",
+                  "--vscode-debugTokenExpression-string": "#ce9178",
+                  "--vscode-editor-findMatchBackground": "#515c6a",
+                  "--vscode-editor-findMatchHighlightBackground": "#ea5c0055",
+                  "--vscode-gitlens-trailingLineForegroundColor": "#99999959",
+                  "--vscode-scrollbarSlider-background": "#79797966",
+                  "--vscode-scrollbarSlider-hoverBackground": "#646464b3",
+                  "--vscode-symbolIcon-functionForeground": "#b180d7",
+                  "--vscode-symbolIcon-keywordForeground": "#cccccc",
+                  "--vscode-symbolIcon-propertyForeground": "#cccccc",
+                  "--vscode-symbolIcon-variableForeground": "#75beff",
+                  "--vscode-font-family": "Times",
+                  "--vscode-editor-font-family": "ui-monospace, \"SF Mono\", Menlo, Consolas, \"Liberation Mono\", monospace",
+                  "--vscode-font-size": "13px",
+                  "--vscode-editor-font-size": "14px"
+                }
+              },
+              "origin": "http://127.0.0.1:19263",
+              "t": 312.59999990463257
+            },
+            {
+              "data": {
+                "lumiere": "shown"
+              },
+              "origin": "http://127.0.0.1:19263",
+              "t": 312.59999990463257
+            }
+          ],
+          "contentDocumentURL": "http://127.0.0.1:19263/lumiere/editor?path=%2Fv%2FA.md&root=%2Fv",
+          "appText": "editor ready (retry)",
+          "panelMeta": true
+        }
+      ],
+      "domFrames": [
+        {
+          "src": "/lumiere/editor?path=%2Fv%2FA.md&root=%2Fv",
+          "isConnected": true,
+          "messages": [
+            {
+              "data": {
+                "lumiere": "theme",
+                "dark": true,
+                "variables": {
+                  "--vscode-badge-foreground": "#f5f5f5",
+                  "--vscode-button-secondaryForeground": "#f5f5f5",
+                  "--vscode-editor-background": "#0b0b0b",
+                  "--vscode-editor-foreground": "#f5f5f5",
+                  "--vscode-editorCursor-foreground": "#f5f5f5",
+                  "--vscode-editorHoverWidget-foreground": "#f5f5f5",
+                  "--vscode-editorSuggestWidget-foreground": "#f5f5f5",
+                  "--vscode-editorSuggestWidget-selectedForeground": "#f5f5f5",
+                  "--vscode-editorWidget-foreground": "#f5f5f5",
+                  "--vscode-focusBorder": "#4c9aff",
+                  "--vscode-foreground": "#f5f5f5",
+                  "--vscode-input-foreground": "#f5f5f5",
+                  "--vscode-inputOption-activeForeground": "#f5f5f5",
+                  "--vscode-list-activeSelectionForeground": "#f5f5f5",
+                  "--vscode-menu-foreground": "#f5f5f5",
+                  "--vscode-menu-selectionForeground": "#f5f5f5",
+                  "--vscode-textLink-activeForeground": "#4c9aff",
+                  "--vscode-textLink-foreground": "#4c9aff",
+                  "--vscode-textPreformat-foreground": "#f5f5f5",
+                  "--vscode-charts-blue": "#3794ff",
+                  "--vscode-charts-green": "#89d185",
+                  "--vscode-charts-orange": "#d18616",
+                  "--vscode-charts-purple": "#b180d7",
+                  "--vscode-charts-red": "#f14c4c",
+                  "--vscode-charts-yellow": "#cca700",
+                  "--vscode-debugTokenExpression-number": "#b5cea8",
+                  "--vscode-debugTokenExpression-string": "#ce9178",
+                  "--vscode-editor-findMatchBackground": "#515c6a",
+                  "--vscode-editor-findMatchHighlightBackground": "#ea5c0055",
+                  "--vscode-gitlens-trailingLineForegroundColor": "#99999959",
+                  "--vscode-scrollbarSlider-background": "#79797966",
+                  "--vscode-scrollbarSlider-hoverBackground": "#646464b3",
+                  "--vscode-symbolIcon-functionForeground": "#b180d7",
+                  "--vscode-symbolIcon-keywordForeground": "#cccccc",
+                  "--vscode-symbolIcon-propertyForeground": "#cccccc",
+                  "--vscode-symbolIcon-variableForeground": "#75beff",
+                  "--vscode-font-family": "Times",
+                  "--vscode-editor-font-family": "ui-monospace, \"SF Mono\", Menlo, Consolas, \"Liberation Mono\", monospace",
+                  "--vscode-font-size": "13px",
+                  "--vscode-editor-font-size": "14px"
+                }
+              },
+              "origin": "http://127.0.0.1:19263",
+              "t": 312.59999990463257
+            },
+            {
+              "data": {
+                "lumiere": "shown"
+              },
+              "origin": "http://127.0.0.1:19263",
+              "t": 312.59999990463257
+            }
+          ],
+          "contentDocumentURL": "http://127.0.0.1:19263/lumiere/editor?path=%2Fv%2FA.md&root=%2Fv",
+          "appText": "editor ready (retry)",
+          "panelMeta": true
+        }
+      ],
+      "replacement": {
+        "staleIndex": 0,
+        "liveIndex": 2,
+        "staleInfo": {
+          "isConnected": false,
+          "contentDocumentURL": null
+        },
+        "liveInfo": {
+          "isConnected": true,
+          "contentDocumentURL": "http://127.0.0.1:19263/lumiere/editor?path=%2Fv%2FA.md&root=%2Fv"
+        },
+        "before": {
+          "loaded": [
+            "1"
+          ],
+          "failed": [
+            "failed"
+          ]
+        },
+        "afterStale": {
+          "loaded": [
+            "1"
+          ],
+          "failed": [
+            "failed"
+          ]
+        },
+        "afterLive": {
+          "loaded": [
+            "1",
+            "1"
+          ],
+          "failed": [
+            "failed"
+          ]
+        },
+        "staleError": null,
+        "liveError": null
+      },
+      "consoleErrors": [],
+      "pageErrors": [],
+      "screenshot": "/tmp/chain-evidence-final/react/screenshots/prefix-attempt.png",
+      "requests": [
+        {
+          "at": 41895.226916,
+          "method": "GET",
+          "url": "/?scenario=attempt&bundle=prefix",
+          "pathname": "/",
+          "scenario": "attempt",
+          "bundle": "prefix",
+          "finished": true,
+          "aborted": false,
+          "status": 200
+        },
+        {
+          "at": 41935.092791,
+          "method": "GET",
+          "url": "/lumiere/editor?path=%2Fv%2FA.md&root=%2Fv",
+          "pathname": "/lumiere/editor",
+          "scenario": "attempt",
+          "bundle": "prefix",
+          "finished": true,
+          "aborted": false,
+          "editorRequest": 1,
+          "delayMs": 40,
+          "bodyKind": "failure",
+          "status": 200
+        },
+        {
+          "at": 42391.974458,
+          "method": "GET",
+          "url": "/lumiere/editor?path=%2Fv%2FA.md&root=%2Fv",
+          "pathname": "/lumiere/editor",
+          "scenario": "attempt",
+          "bundle": "prefix",
+          "finished": true,
+          "aborted": false,
+          "editorRequest": 2,
+          "delayMs": 300,
+          "bodyKind": "editor",
+          "status": 200
+        }
+      ]
+    },
+    {
+      "bundle": "prefix",
+      "scenario": "replace",
+      "url": "http://127.0.0.1:19263/?scenario=replace&bundle=prefix",
+      "settled": true,
+      "evidence": {
+        "startedAt": 37.60000014305115,
+        "loaded": [
+          "2"
+        ],
+        "failed": [],
+        "loadedTimeline": [
+          {
+            "version": "2",
+            "t": 337.2000000476837
+          }
+        ],
+        "failedTimeline": [],
+        "actions": [
+          {
+            "action": "resource-switch-A-to-B",
+            "t": 128.30000019073486
+          }
+        ],
+        "nativeLoads": [
+          {
+            "t": 337.2000000476837,
+            "url": "http://127.0.0.1:19263/lumiere/editor?path=%2Fv%2FB.md&root=%2Fv"
+          }
+        ],
+        "parentRenders": 2,
+        "bodyRenders": 2
+      },
+      "frameIdentity": [
+        false,
+        false
+      ],
+      "frames": [
+        {
+          "index": 0,
+          "isConnected": false,
+          "src": "/lumiere/editor?path=%2Fv%2FA.md&root=%2Fv",
+          "messages": null,
+          "contentDocumentURL": null,
+          "appText": null,
+          "panelMeta": false
+        },
+        {
+          "index": 1,
+          "isConnected": true,
+          "src": "/lumiere/editor?path=%2Fv%2FB.md&root=%2Fv",
+          "messages": [
+            {
+              "data": {
+                "lumiere": "theme",
+                "dark": true,
+                "variables": {
+                  "--vscode-badge-foreground": "#f5f5f5",
+                  "--vscode-button-secondaryForeground": "#f5f5f5",
+                  "--vscode-editor-background": "#0b0b0b",
+                  "--vscode-editor-foreground": "#f5f5f5",
+                  "--vscode-editorCursor-foreground": "#f5f5f5",
+                  "--vscode-editorHoverWidget-foreground": "#f5f5f5",
+                  "--vscode-editorSuggestWidget-foreground": "#f5f5f5",
+                  "--vscode-editorSuggestWidget-selectedForeground": "#f5f5f5",
+                  "--vscode-editorWidget-foreground": "#f5f5f5",
+                  "--vscode-focusBorder": "#4c9aff",
+                  "--vscode-foreground": "#f5f5f5",
+                  "--vscode-input-foreground": "#f5f5f5",
+                  "--vscode-inputOption-activeForeground": "#f5f5f5",
+                  "--vscode-list-activeSelectionForeground": "#f5f5f5",
+                  "--vscode-menu-foreground": "#f5f5f5",
+                  "--vscode-menu-selectionForeground": "#f5f5f5",
+                  "--vscode-textLink-activeForeground": "#4c9aff",
+                  "--vscode-textLink-foreground": "#4c9aff",
+                  "--vscode-textPreformat-foreground": "#f5f5f5",
+                  "--vscode-charts-blue": "#3794ff",
+                  "--vscode-charts-green": "#89d185",
+                  "--vscode-charts-orange": "#d18616",
+                  "--vscode-charts-purple": "#b180d7",
+                  "--vscode-charts-red": "#f14c4c",
+                  "--vscode-charts-yellow": "#cca700",
+                  "--vscode-debugTokenExpression-number": "#b5cea8",
+                  "--vscode-debugTokenExpression-string": "#ce9178",
+                  "--vscode-editor-findMatchBackground": "#515c6a",
+                  "--vscode-editor-findMatchHighlightBackground": "#ea5c0055",
+                  "--vscode-gitlens-trailingLineForegroundColor": "#99999959",
+                  "--vscode-scrollbarSlider-background": "#79797966",
+                  "--vscode-scrollbarSlider-hoverBackground": "#646464b3",
+                  "--vscode-symbolIcon-functionForeground": "#b180d7",
+                  "--vscode-symbolIcon-keywordForeground": "#cccccc",
+                  "--vscode-symbolIcon-propertyForeground": "#cccccc",
+                  "--vscode-symbolIcon-variableForeground": "#75beff",
+                  "--vscode-font-family": "Times",
+                  "--vscode-editor-font-family": "ui-monospace, \"SF Mono\", Menlo, Consolas, \"Liberation Mono\", monospace",
+                  "--vscode-font-size": "13px",
+                  "--vscode-editor-font-size": "14px"
+                }
+              },
+              "origin": "http://127.0.0.1:19263",
+              "t": 210.39999985694885
+            },
+            {
+              "data": {
+                "lumiere": "shown"
+              },
+              "origin": "http://127.0.0.1:19263",
+              "t": 210.39999985694885
+            }
+          ],
+          "contentDocumentURL": "http://127.0.0.1:19263/lumiere/editor?path=%2Fv%2FB.md&root=%2Fv",
+          "appText": "editor ready (B)",
+          "panelMeta": true
+        }
+      ],
+      "domFrames": [
+        {
+          "src": "/lumiere/editor?path=%2Fv%2FB.md&root=%2Fv",
+          "isConnected": true,
+          "messages": [
+            {
+              "data": {
+                "lumiere": "theme",
+                "dark": true,
+                "variables": {
+                  "--vscode-badge-foreground": "#f5f5f5",
+                  "--vscode-button-secondaryForeground": "#f5f5f5",
+                  "--vscode-editor-background": "#0b0b0b",
+                  "--vscode-editor-foreground": "#f5f5f5",
+                  "--vscode-editorCursor-foreground": "#f5f5f5",
+                  "--vscode-editorHoverWidget-foreground": "#f5f5f5",
+                  "--vscode-editorSuggestWidget-foreground": "#f5f5f5",
+                  "--vscode-editorSuggestWidget-selectedForeground": "#f5f5f5",
+                  "--vscode-editorWidget-foreground": "#f5f5f5",
+                  "--vscode-focusBorder": "#4c9aff",
+                  "--vscode-foreground": "#f5f5f5",
+                  "--vscode-input-foreground": "#f5f5f5",
+                  "--vscode-inputOption-activeForeground": "#f5f5f5",
+                  "--vscode-list-activeSelectionForeground": "#f5f5f5",
+                  "--vscode-menu-foreground": "#f5f5f5",
+                  "--vscode-menu-selectionForeground": "#f5f5f5",
+                  "--vscode-textLink-activeForeground": "#4c9aff",
+                  "--vscode-textLink-foreground": "#4c9aff",
+                  "--vscode-textPreformat-foreground": "#f5f5f5",
+                  "--vscode-charts-blue": "#3794ff",
+                  "--vscode-charts-green": "#89d185",
+                  "--vscode-charts-orange": "#d18616",
+                  "--vscode-charts-purple": "#b180d7",
+                  "--vscode-charts-red": "#f14c4c",
+                  "--vscode-charts-yellow": "#cca700",
+                  "--vscode-debugTokenExpression-number": "#b5cea8",
+                  "--vscode-debugTokenExpression-string": "#ce9178",
+                  "--vscode-editor-findMatchBackground": "#515c6a",
+                  "--vscode-editor-findMatchHighlightBackground": "#ea5c0055",
+                  "--vscode-gitlens-trailingLineForegroundColor": "#99999959",
+                  "--vscode-scrollbarSlider-background": "#79797966",
+                  "--vscode-scrollbarSlider-hoverBackground": "#646464b3",
+                  "--vscode-symbolIcon-functionForeground": "#b180d7",
+                  "--vscode-symbolIcon-keywordForeground": "#cccccc",
+                  "--vscode-symbolIcon-propertyForeground": "#cccccc",
+                  "--vscode-symbolIcon-variableForeground": "#75beff",
+                  "--vscode-font-family": "Times",
+                  "--vscode-editor-font-family": "ui-monospace, \"SF Mono\", Menlo, Consolas, \"Liberation Mono\", monospace",
+                  "--vscode-font-size": "13px",
+                  "--vscode-editor-font-size": "14px"
+                }
+              },
+              "origin": "http://127.0.0.1:19263",
+              "t": 210.39999985694885
+            },
+            {
+              "data": {
+                "lumiere": "shown"
+              },
+              "origin": "http://127.0.0.1:19263",
+              "t": 210.39999985694885
+            }
+          ],
+          "contentDocumentURL": "http://127.0.0.1:19263/lumiere/editor?path=%2Fv%2FB.md&root=%2Fv",
+          "appText": "editor ready (B)",
+          "panelMeta": true
+        }
+      ],
+      "replacement": {
+        "staleIndex": 0,
+        "liveIndex": 1,
+        "staleInfo": {
+          "isConnected": false,
+          "contentDocumentURL": null
+        },
+        "liveInfo": {
+          "isConnected": true,
+          "contentDocumentURL": "http://127.0.0.1:19263/lumiere/editor?path=%2Fv%2FB.md&root=%2Fv"
+        },
+        "before": {
+          "loaded": [
+            "2"
+          ],
+          "failed": []
+        },
+        "afterStale": {
+          "loaded": [
+            "2"
+          ],
+          "failed": []
+        },
+        "afterLive": {
+          "loaded": [
+            "2",
+            "2"
+          ],
+          "failed": []
+        },
+        "staleError": null,
+        "liveError": null
+      },
+      "consoleErrors": [],
+      "pageErrors": [],
+      "screenshot": "/tmp/chain-evidence-final/react/screenshots/prefix-replace.png",
+      "requests": [
+        {
+          "at": 43566.46125,
+          "method": "GET",
+          "url": "/?scenario=replace&bundle=prefix",
+          "pathname": "/",
+          "scenario": "replace",
+          "bundle": "prefix",
+          "finished": true,
+          "aborted": false,
+          "status": 200
+        },
+        {
+          "at": 43611.212416,
+          "method": "GET",
+          "url": "/lumiere/editor?path=%2Fv%2FA.md&root=%2Fv",
+          "pathname": "/lumiere/editor",
+          "scenario": "replace",
+          "bundle": "prefix",
+          "finished": false,
+          "aborted": true,
+          "editorRequest": 1,
+          "delayMs": 800,
+          "bodyKind": "editor-A"
+        },
+        {
+          "at": 43696.846708,
+          "method": "GET",
+          "url": "/lumiere/editor?path=%2Fv%2FB.md&root=%2Fv",
+          "pathname": "/lumiere/editor",
+          "scenario": "replace",
+          "bundle": "prefix",
+          "finished": true,
+          "aborted": false,
+          "editorRequest": 1,
+          "delayMs": 200,
+          "bodyKind": "editor-B",
+          "status": 200
+        }
+      ]
+    }
+  ],
+  "requests": [
+    {
+      "at": 304.547125,
+      "method": "GET",
+      "url": "/?scenario=single&bundle=current",
+      "pathname": "/",
+      "scenario": "single",
+      "bundle": "current",
+      "finished": true,
+      "aborted": false,
+      "status": 200
+    },
+    {
+      "at": 309.681583,
+      "method": "GET",
+      "url": "/bundle-current.js",
+      "pathname": "/bundle-current.js",
+      "scenario": "single",
+      "bundle": "current",
+      "finished": true,
+      "aborted": false,
+      "status": 200
+    },
+    {
+      "at": 347.304083,
+      "method": "GET",
+      "url": "/lumiere/editor?path=%2Fv%2FA.md&root=%2Fv",
+      "pathname": "/lumiere/editor",
+      "scenario": "single",
+      "bundle": "current",
+      "finished": true,
+      "aborted": false,
+      "editorRequest": 1,
+      "delayMs": 500,
+      "bodyKind": "editor",
+      "status": 200
+    },
+    {
+      "at": 2441.974833,
+      "method": "GET",
+      "url": "/?scenario=rerender&bundle=current",
+      "pathname": "/",
+      "scenario": "rerender",
+      "bundle": "current",
+      "finished": true,
+      "aborted": false,
+      "status": 200
+    },
+    {
+      "at": 2446.066791,
+      "method": "GET",
+      "url": "/bundle-current.js",
+      "pathname": "/bundle-current.js",
+      "scenario": "rerender",
+      "bundle": "current",
+      "finished": true,
+      "aborted": false,
+      "status": 200
+    },
+    {
+      "at": 2482.691958,
+      "method": "GET",
+      "url": "/lumiere/editor?path=%2Fv%2FA.md&root=%2Fv",
+      "pathname": "/lumiere/editor",
+      "scenario": "rerender",
+      "bundle": "current",
+      "finished": true,
+      "aborted": false,
+      "editorRequest": 1,
+      "delayMs": 500,
+      "bodyKind": "editor",
+      "status": 200
+    },
+    {
+      "at": 4575.695666,
+      "method": "GET",
+      "url": "/?scenario=attempt&bundle=current",
+      "pathname": "/",
+      "scenario": "attempt",
+      "bundle": "current",
+      "finished": true,
+      "aborted": false,
+      "status": 200
+    },
+    {
+      "at": 4579.782375,
+      "method": "GET",
+      "url": "/bundle-current.js",
+      "pathname": "/bundle-current.js",
+      "scenario": "attempt",
+      "bundle": "current",
+      "finished": true,
+      "aborted": false,
+      "status": 200
+    },
+    {
+      "at": 4617.755375,
+      "method": "GET",
+      "url": "/lumiere/editor?path=%2Fv%2FA.md&root=%2Fv",
+      "pathname": "/lumiere/editor",
+      "scenario": "attempt",
+      "bundle": "current",
+      "finished": true,
+      "aborted": false,
+      "editorRequest": 1,
+      "delayMs": 40,
+      "bodyKind": "failure",
+      "status": 200
+    },
+    {
+      "at": 5087.081375,
+      "method": "GET",
+      "url": "/lumiere/editor?path=%2Fv%2FA.md&root=%2Fv",
+      "pathname": "/lumiere/editor",
+      "scenario": "attempt",
+      "bundle": "current",
+      "finished": true,
+      "aborted": false,
+      "editorRequest": 2,
+      "delayMs": 300,
+      "bodyKind": "editor",
+      "status": 200
+    },
+    {
+      "at": 6243.307416,
+      "method": "GET",
+      "url": "/?scenario=replace&bundle=current",
+      "pathname": "/",
+      "scenario": "replace",
+      "bundle": "current",
+      "finished": true,
+      "aborted": false,
+      "status": 200
+    },
+    {
+      "at": 6247.28075,
+      "method": "GET",
+      "url": "/bundle-current.js",
+      "pathname": "/bundle-current.js",
+      "scenario": "replace",
+      "bundle": "current",
+      "finished": true,
+      "aborted": false,
+      "status": 200
+    },
+    {
+      "at": 6285.038625,
+      "method": "GET",
+      "url": "/lumiere/editor?path=%2Fv%2FA.md&root=%2Fv",
+      "pathname": "/lumiere/editor",
+      "scenario": "replace",
+      "bundle": "current",
+      "finished": false,
+      "aborted": true,
+      "editorRequest": 1,
+      "delayMs": 800,
+      "bodyKind": "editor-A"
+    },
+    {
+      "at": 6370.793875,
+      "method": "GET",
+      "url": "/lumiere/editor?path=%2Fv%2FB.md&root=%2Fv",
+      "pathname": "/lumiere/editor",
+      "scenario": "replace",
+      "bundle": "current",
+      "finished": true,
+      "aborted": false,
+      "editorRequest": 1,
+      "delayMs": 200,
+      "bodyKind": "editor-B",
+      "status": 200
+    },
+    {
+      "at": 8165.90525,
+      "method": "GET",
+      "url": "/?scenario=single&bundle=prefix",
+      "pathname": "/",
+      "scenario": "single",
+      "bundle": "prefix",
+      "finished": true,
+      "aborted": false,
+      "status": 200
+    },
+    {
+      "at": 8170.231666,
+      "method": "GET",
+      "url": "/bundle-prefix.js",
+      "pathname": "/bundle-prefix.js",
+      "scenario": "single",
+      "bundle": "prefix",
+      "finished": true,
+      "aborted": false,
+      "status": 200
+    },
+    {
+      "at": 8207.52675,
+      "method": "GET",
+      "url": "/lumiere/editor?path=%2Fv%2FA.md&root=%2Fv",
+      "pathname": "/lumiere/editor",
+      "scenario": "single",
+      "bundle": "prefix",
+      "finished": true,
+      "aborted": false,
+      "editorRequest": 1,
+      "delayMs": 500,
+      "bodyKind": "editor",
+      "status": 200
+    },
+    {
+      "at": 10282.92475,
+      "method": "GET",
+      "url": "/?scenario=rerender&bundle=prefix",
+      "pathname": "/",
+      "scenario": "rerender",
+      "bundle": "prefix",
+      "finished": true,
+      "aborted": false,
+      "status": 200
+    },
+    {
+      "at": 10286.838166,
+      "method": "GET",
+      "url": "/bundle-prefix.js",
+      "pathname": "/bundle-prefix.js",
+      "scenario": "rerender",
+      "bundle": "prefix",
+      "finished": true,
+      "aborted": false,
+      "status": 200
+    },
+    {
+      "at": 10326.984583,
+      "method": "GET",
+      "url": "/lumiere/editor?path=%2Fv%2FA.md&root=%2Fv",
+      "pathname": "/lumiere/editor",
+      "scenario": "rerender",
+      "bundle": "prefix",
+      "finished": true,
+      "aborted": false,
+      "editorRequest": 1,
+      "delayMs": 500,
+      "bodyKind": "editor",
+      "status": 200
+    },
+    {
+      "at": 41895.226916,
+      "method": "GET",
+      "url": "/?scenario=attempt&bundle=prefix",
+      "pathname": "/",
+      "scenario": "attempt",
+      "bundle": "prefix",
+      "finished": true,
+      "aborted": false,
+      "status": 200
+    },
+    {
+      "at": 41899.062166,
+      "method": "GET",
+      "url": "/bundle-prefix.js",
+      "pathname": "/bundle-prefix.js",
+      "scenario": "attempt",
+      "bundle": "prefix",
+      "finished": true,
+      "aborted": false,
+      "status": 200
+    },
+    {
+      "at": 41935.092791,
+      "method": "GET",
+      "url": "/lumiere/editor?path=%2Fv%2FA.md&root=%2Fv",
+      "pathname": "/lumiere/editor",
+      "scenario": "attempt",
+      "bundle": "prefix",
+      "finished": true,
+      "aborted": false,
+      "editorRequest": 1,
+      "delayMs": 40,
+      "bodyKind": "failure",
+      "status": 200
+    },
+    {
+      "at": 42391.974458,
+      "method": "GET",
+      "url": "/lumiere/editor?path=%2Fv%2FA.md&root=%2Fv",
+      "pathname": "/lumiere/editor",
+      "scenario": "attempt",
+      "bundle": "prefix",
+      "finished": true,
+      "aborted": false,
+      "editorRequest": 2,
+      "delayMs": 300,
+      "bodyKind": "editor",
+      "status": 200
+    },
+    {
+      "at": 43566.46125,
+      "method": "GET",
+      "url": "/?scenario=replace&bundle=prefix",
+      "pathname": "/",
+      "scenario": "replace",
+      "bundle": "prefix",
+      "finished": true,
+      "aborted": false,
+      "status": 200
+    },
+    {
+      "at": 43571.126125,
+      "method": "GET",
+      "url": "/bundle-prefix.js",
+      "pathname": "/bundle-prefix.js",
+      "scenario": "replace",
+      "bundle": "prefix",
+      "finished": true,
+      "aborted": false,
+      "status": 200
+    },
+    {
+      "at": 43611.212416,
+      "method": "GET",
+      "url": "/lumiere/editor?path=%2Fv%2FA.md&root=%2Fv",
+      "pathname": "/lumiere/editor",
+      "scenario": "replace",
+      "bundle": "prefix",
+      "finished": false,
+      "aborted": true,
+      "editorRequest": 1,
+      "delayMs": 800,
+      "bodyKind": "editor-A"
+    },
+    {
+      "at": 43696.846708,
+      "method": "GET",
+      "url": "/lumiere/editor?path=%2Fv%2FB.md&root=%2Fv",
+      "pathname": "/lumiere/editor",
+      "scenario": "replace",
+      "bundle": "prefix",
+      "finished": true,
+      "aborted": false,
+      "editorRequest": 1,
+      "delayMs": 200,
+      "bodyKind": "editor-B",
+      "status": 200
+    }
+  ]
+}

@@ -1,0 +1,95 @@
+
+> @workshop/dsh@0.0.0 build /Users/t04dj14n9/Code/Lumia/.claude/worktrees/pr-737/packages/dsh
+> node scripts/build.mjs
+
+
+  dist/webview/elk-QONTBCTQ-RSAUS3IO.js                     3.3mb ⚠️
+  dist/webview/inline-transport-XJ7CZNEL.js                 1.8mb ⚠️
+  dist/webview/chunk-H2RCND4X.js                            1.1mb ⚠️
+  dist/webview/chunk-NWH65RPO.js                            1.1mb ⚠️
+  dist/webview/greek-7UUQHTSU.js                            1.0mb ⚠️
+  dist/webview/mathjax-ACB6IN6D.js                       1003.0kb
+  dist/webview/chunk-WCVSWSSS.js                          939.5kb
+  dist/webview/cyrillic-BILO6S7K.js                       701.2kb
+  dist/webview/monospace-ex-XGE2KUQA.js                   632.1kb
+  dist/webview/greek-ss-3J3JMWZS.js                       552.8kb
+  dist/webview/sans-serif-ex-66UIBC7J.js                  519.9kb
+  dist/webview/latin-i-TB2XKD2F.js                        491.6kb
+  dist/webview/katex-VCKP5YDG.js                          480.7kb
+  dist/webview/chunk-RBC4YO4F.js                          467.4kb
+  dist/webview/latin-bi-HLUGKNTJ.js                       457.1kb
+  dist/webview/architectureDiagram-ZHVYKT53-DDNVPFKI.js   417.6kb
+  dist/webview/monospace-l-R2JR3UWZ.js                    390.9kb
+  dist/webview/usecaseDiagram-WPOLBNNX-OGQFKXGZ.js        371.8kb
+  dist/webview/PUA-Y25RZA2M.js                            366.2kb
+  dist/webview/latin-EBNY6N3M.js                          362.6kb
+  ...and 1762 more output files...
+
+⚡ Done in 1120ms
+
+  dist/webview/diff.js       466.1kb
+  dist/webview/diff.css        2.7kb
+  dist/webview/diff.js.map     1.1mb
+  dist/webview/diff.css.map    5.2kb
+
+⚡ Done in 23ms
+
+  dist/webview/graph.js             874.7kb
+  dist/webview/graph-layout.js        2.6kb
+  dist/webview/graph.css              1.2kb
+  dist/webview/graph.js.map           1.6mb
+  dist/webview/graph-layout.js.map    5.8kb
+  dist/webview/graph.css.map          2.0kb
+
+⚡ Done in 26ms
+
+  dist/workers/search.cjs      576.0kb
+  dist/workers/vault.cjs       548.8kb
+  dist/workers/search.cjs.map    1.1mb
+  dist/workers/vault.cjs.map     1.1mb
+
+⚡ Done in 22ms
+
+  dist/yaml-runtime.cjs      262.7kb
+  dist/yaml-runtime.cjs.map  452.5kb
+
+⚡ Done in 10ms
+
+  dist/bridge-stdio.js      329.6kb
+  dist/bridge-stdio.js.map  625.2kb
+
+⚡ Done in 89ms
+
+  dist/agent-bridge-server.js      1.4mb ⚠️
+  dist/agent-bridge-server.js.map  2.4mb
+
+⚡ Done in 152ms
+
+  dist/outline-engine.js      2.8mb ⚠️
+  dist/outline-engine.js.map  5.5mb
+
+⚡ Done in 177ms
+
+  dist/webview/viewer.js         7.9mb ⚠️
+  dist/webview/codicon.ttf     122.9kb
+  dist/webview/viewer.css       46.0kb
+  dist/webview/viewer.js.map    14.0mb
+  dist/webview/viewer.css.map   80.6kb
+
+⚡ Done in 266ms
+
+  dist/bundle/page/shim.js      32.5kb
+  dist/bundle/page/shim.js.map  77.1kb
+
+⚡ Done in 7ms
+
+  dist/bundle/index.js      1.7mb ⚠️
+  dist/bundle/index.js.map  3.6mb
+
+⚡ Done in 64ms
+
+  dist/bundle/client.js      19.9kb
+  dist/bundle/client.js.map  49.1kb
+
+⚡ Done in 5ms
+Built packages/dsh/dist/bundle

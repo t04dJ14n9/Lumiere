@@ -1,0 +1,15 @@
+✔ an untrusted lumiere message is not stopped, so a later listener still runs (0.322917ms)
+✔ a same-origin lumiere message from a foreign source is not stopped (0.087834ms)
+✔ a parent lumiere message from a foreign origin is not stopped (0.062334ms)
+✔ a foreign-origin parent port message is neither stopped nor accepted (9.484458ms)
+✔ a trusted parent theme message is applied and stops later listeners (0.228125ms)
+✔ a trusted parent SHOWN message is handled and stops later listeners (0.361834ms)
+✔ a null-source same-origin host RPC event is accepted and not stopped (0.080833ms)
+ℹ tests 7
+ℹ suites 0
+ℹ pass 7
+ℹ fail 0
+ℹ cancelled 0
+ℹ skipped 0
+ℹ todo 0
+ℹ duration_ms 288.642208

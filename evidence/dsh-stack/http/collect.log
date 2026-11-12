@@ -1,0 +1,20 @@
+{
+  "head": "9a10d469a6f10e12b254485b88b9c27bf1f0c3bb",
+  "wire": [
+    28,
+    0
+  ],
+  "e2e": [
+    58,
+    0,
+    0
+  ],
+  "shim": [
+    7,
+    0
+  ],
+  "bundleTree": "f64320bc7c14ed4c3e5419be02e10cb818a384a6407b13ab059f944ebbabaf7c",
+  "dshVersion": "0.2.2-rc.1",
+  "nodeRunner": "v26.5.0",
+  "nodeDsh": "24.21.0"
+}

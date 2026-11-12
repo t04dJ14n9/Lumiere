@@ -1,0 +1,162 @@
+{
+  "generatedAt": "2026-11-12T18:44:25.855Z",
+  "head": "9a10d469a6f10e12b254485b88b9c27bf1f0c3bb",
+  "headMatchesBuild": true,
+  "sourceClean": true,
+  "react": {
+    "version": "19.3.1",
+    "entry": "/Users/t04dj14n9/Code/Lumia/.claude/worktrees/pr-737/node_modules/.pnpm/react@19.3.1/node_modules/react/index.js"
+  },
+  "reactDom": {
+    "version": "19.3.1",
+    "entry": "/Users/t04dj14n9/Code/Lumia/.claude/worktrees/pr-737/node_modules/.pnpm/react-dom@19.3.1_react@19.3.1/node_modules/react-dom/client.js"
+  },
+  "browser": {
+    "name": "chromium",
+    "version": "156.0.8078.4",
+    "headless": true
+  },
+  "bundles": {
+    "current": {
+      "bytes": 1252270,
+      "sha256": "1ed732692c0f81f2ff8d73b0badba619eafe7cb723d529d576e256c19dbf4a57"
+    },
+    "prefix": {
+      "bytes": 1252071,
+      "sha256": "cf159f1816a9cd30571ee51fd46d77ec63708a95d32085bf22babeb4f9c84d5b"
+    }
+  },
+  "prefixSourceCommit": "c7016eb38056604e61d4f4ce4df02206e6c4f34f",
+  "scenarios": {
+    "a_single_render": {
+      "expected": "loaded fires once",
+      "observed": {
+        "loaded": [
+          "1"
+        ],
+        "failed": [],
+        "messages": [
+          "theme",
+          "shown"
+        ]
+      },
+      "pass": true
+    },
+    "b_parent_rerender_at_50ms_while_load_pending": {
+      "expected": "loaded still fires and theme/SHOWN still post",
+      "reRenderBeforeNativeLoad": true,
+      "observed": {
+        "loaded": [
+          "1"
+        ],
+        "failed": [],
+        "messages": [
+          "theme",
+          "shown"
+        ]
+      },
+      "pass": true,
+      "regressionControlAtC7016eb3": {
+        "sameHarness": true,
+        "reRenderBeforeNativeLoad": true,
+        "observed": {
+          "loaded": [],
+          "failed": [],
+          "messages": []
+        }
+      }
+    },
+    "c_real_frame_replacement": {
+      "attemptKeyChange": {
+        "expected": "stale frame load ignored; new frame load settles",
+        "observed": {
+          "failedFromFirstAttempt": [
+            "failed"
+          ],
+          "loadedFromRetry": [
+            "1"
+          ],
+          "messagesFromRetry": [
+            "theme",
+            "shown"
+          ],
+          "frameIdentity": [
+            false,
+            true,
+            false
+          ],
+          "staleBefore": {
+            "loaded": [
+              "1"
+            ],
+            "failed": [
+              "failed"
+            ]
+          },
+          "staleAfterLoadAndErrorDispatch": {
+            "loaded": [
+              "1"
+            ],
+            "failed": [
+              "failed"
+            ]
+          },
+          "liveAfterLoadDispatchControl": {
+            "loaded": [
+              "1",
+              "1"
+            ],
+            "failed": [
+              "failed"
+            ]
+          },
+          "staleIsConnected": false
+        },
+        "pass": true
+      },
+      "sourceKeyChange": {
+        "expected": "stale frame load ignored; new frame load settles",
+        "observed": {
+          "loaded": [
+            "2"
+          ],
+          "failed": [],
+          "messages": [
+            "theme",
+            "shown"
+          ],
+          "frameIdentity": [
+            false,
+            false
+          ],
+          "staleBefore": {
+            "loaded": [
+              "2"
+            ],
+            "failed": []
+          },
+          "staleAfterLoadAndErrorDispatch": {
+            "loaded": [
+              "2"
+            ],
+            "failed": []
+          },
+          "liveAfterLoadDispatchControl": {
+            "loaded": [
+              "2",
+              "2"
+            ],
+            "failed": []
+          },
+          "staleIsConnected": false
+        },
+        "pass": true
+      }
+    }
+  },
+  "determinism": {
+    "runs": 2,
+    "allScenariosIdenticalAcrossRuns": true
+  },
+  "pass": true
+}

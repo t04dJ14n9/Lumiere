@@ -1,0 +1,6 @@
+dsh web: http://127.0.0.1:19261/?token=<redacted>
+[llm-deepseek-api-key] model listing from https://api.deepseek.com/models failed (LlmError: https://api.deepseek.com/models answered HTTP 401); using the bundled catalog
+(node:65903) Warning: Closing file descriptor 21 on garbage collection
+(Use `DeepSeek Harness --trace-warnings ...` to show where the warning was created)
+(node:65903) [DEP0137] DeprecationWarning: Closing a FileHandle object on garbage collection is deprecated. Please close FileHandle objects explicitly using FileHandle.prototype.close(). In the future, an error will be thrown if a file descriptor is closed during garbage collection.
+(node:65903) Warning: Closing file descriptor 27 on garbage collection

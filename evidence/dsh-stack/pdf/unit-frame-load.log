@@ -1,0 +1,21 @@
+✔ onLoad ignores the iframe's initial about:blank document (0.93175ms)
+✔ onLoad reports a real about:blank document that loads first (0.172375ms)
+✔ onLoad reports a rendered editor page and re-announces it when DSH bumps the revision (0.100167ms)
+✔ a re-render detach and re-attach does not retire the live frame (0.082792ms)
+✔ the mount effect keeps the initial blank document the ref captured (0.084ms)
+✔ onLoad reports a later about:blank load from the same frame (0.093125ms)
+✔ onLoad reports a reload to about:blank after a rendered editor page (0.092833ms)
+✔ onLoad inspects the live iframe's document (0.0815ms)
+✔ onLoad and onError from an iframe DSH replaced are ignored (0.114125ms)
+✔ onError reports a failure and stops re-announcing a loaded page (0.130084ms)
+✔ editorFailed recognizes the webview's bootstrap error (0.080333ms)
+✔ PDF body reports only a Lumière page as loaded and sends DSH's theme (0.377042ms)
+✔ PDF body recreates its iframe when DSH reloads the content (0.101625ms)
+ℹ tests 13
+ℹ suites 0
+ℹ pass 13
+ℹ fail 0
+ℹ cancelled 0
+ℹ skipped 0
+ℹ todo 0
+ℹ duration_ms 81.873208

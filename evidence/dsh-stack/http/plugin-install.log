@@ -1,0 +1,7 @@
+dsh: initialized profile web at /tmp/chain-evidence-final/dsh-home/profiles/web
+
+dependencies:
++ @lumiere/dsh link:/Users/t04dj14n9/Code/Lumia/.claude/worktrees/pr-737/packages/dsh/dist/bundle
+
+Already up to date
+Done in 158ms using pnpm v10.28.2

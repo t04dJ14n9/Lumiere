@@ -1,0 +1,46 @@
+# #736 React 19.3.1 browser harness
+head 9a10d469a6f10e12b254485b88b9c27bf1f0c3bb (clean=true)
+react 19.3.1, react-dom 19.3.1, chromium 156.0.8078.4
+
+current single   loaded=["1"] failed=[] actions=[] renders=1/1 frameIdentity=[false] nativeLoads=["511ms:http://127.0.0.1:19263/lumiere/editor?path=%2Fv%2FA.md&root=%2Fv"] loadedAt=["1@511ms"] failedAt=[] domFrames=1 iframeMessages=[{"url":"http://127.0.0.1:19263/lumiere/editor?path=%2Fv%2FA.md&root=%2Fv","messages":["theme","shown"]}]
+current rerender loaded=["1"] failed=[] actions=["parent-rerender@59ms"] renders=2/2 frameIdentity=[false,true] nativeLoads=["517ms:http://127.0.0.1:19263/lumiere/editor?path=%2Fv%2FA.md&root=%2Fv"] loadedAt=["1@517ms"] failedAt=[] domFrames=1 iframeMessages=[{"url":"http://127.0.0.1:19263/lumiere/editor?path=%2Fv%2FA.md&root=%2Fv","messages":["theme","shown"]}]
+current attempt  loaded=["1"] failed=["failed"] actions=["content-revision-bump@460ms"] renders=2/3 frameIdentity=[false,true,false] nativeLoads=["51ms:http://127.0.0.1:19263/lumiere/editor?path=%2Fv%2FA.md&root=%2Fv","782ms:http://127.0.0.1:19263/lumiere/editor?path=%2Fv%2FA.md&root=%2Fv"] loadedAt=["1@782ms"] failedAt=["failed@51ms"] domFrames=1 iframeMessages=[{"url":"http://127.0.0.1:19263/lumiere/editor?path=%2Fv%2FA.md&root=%2Fv","messages":["theme","shown"]}]
+        stale: connected=false before={"loaded":["1"],"failed":["failed"]} afterStaleLoad+Error={"loaded":["1"],"failed":["failed"]} afterLiveLoad={"loaded":["1","1"],"failed":["failed"]}
+current replace  loaded=["2"] failed=[] actions=["resource-switch-A-to-B@89ms"] renders=2/2 frameIdentity=[false,false] nativeLoads=["307ms:http://127.0.0.1:19263/lumiere/editor?path=%2Fv%2FB.md&root=%2Fv"] loadedAt=["2@307ms"] failedAt=[] domFrames=1 iframeMessages=[{"url":"http://127.0.0.1:19263/lumiere/editor?path=%2Fv%2FB.md&root=%2Fv","messages":["theme","shown"]}]
+        stale: connected=false before={"loaded":["2"],"failed":[]} afterStaleLoad+Error={"loaded":["2"],"failed":[]} afterLiveLoad={"loaded":["2","2"],"failed":[]}
+prefix  single   loaded=["1"] failed=[] actions=[] renders=1/1 frameIdentity=[false] nativeLoads=["521ms:http://127.0.0.1:19263/lumiere/editor?path=%2Fv%2FA.md&root=%2Fv"] loadedAt=["1@521ms"] failedAt=[] domFrames=1 iframeMessages=[{"url":"http://127.0.0.1:19263/lumiere/editor?path=%2Fv%2FA.md&root=%2Fv","messages":["theme","shown"]}]
+prefix  rerender loaded=[] failed=[] actions=["parent-rerender@59ms"] renders=2/2 frameIdentity=[false,true] nativeLoads=["515ms:http://127.0.0.1:19263/lumiere/editor?path=%2Fv%2FA.md&root=%2Fv"] loadedAt=[] failedAt=[] domFrames=1 iframeMessages=[{"url":"http://127.0.0.1:19263/lumiere/editor?path=%2Fv%2FA.md&root=%2Fv","messages":[]}]
+prefix  attempt  loaded=["1"] failed=["failed"] actions=["content-revision-bump@460ms"] renders=2/3 frameIdentity=[false,true,false] nativeLoads=["51ms:http://127.0.0.1:19263/lumiere/editor?path=%2Fv%2FA.md&root=%2Fv","778ms:http://127.0.0.1:19263/lumiere/editor?path=%2Fv%2FA.md&root=%2Fv"] loadedAt=["1@778ms"] failedAt=["failed@51ms"] domFrames=1 iframeMessages=[{"url":"http://127.0.0.1:19263/lumiere/editor?path=%2Fv%2FA.md&root=%2Fv","messages":["theme","shown"]}]
+        stale: connected=false before={"loaded":["1"],"failed":["failed"]} afterStaleLoad+Error={"loaded":["1"],"failed":["failed"]} afterLiveLoad={"loaded":["1","1"],"failed":["failed"]}
+prefix  replace  loaded=["2"] failed=[] actions=["resource-switch-A-to-B@87ms"] renders=2/2 frameIdentity=[false,false] nativeLoads=["302ms:http://127.0.0.1:19263/lumiere/editor?path=%2Fv%2FB.md&root=%2Fv"] loadedAt=["2@302ms"] failedAt=[] domFrames=1 iframeMessages=[{"url":"http://127.0.0.1:19263/lumiere/editor?path=%2Fv%2FB.md&root=%2Fv","messages":["theme","shown"]}]
+        stale: connected=false before={"loaded":["2"],"failed":[]} afterStaleLoad+Error={"loaded":["2"],"failed":[]} afterLiveLoad={"loaded":["2","2"],"failed":[]}
+
+requests: 28 total
+  single/current / editorRequest=- kind=- delay=-ms finished=true aborted=false
+  single/current /bundle-current.js editorRequest=- kind=- delay=-ms finished=true aborted=false
+  single/current /lumiere/editor editorRequest=1 kind=editor delay=500ms finished=true aborted=false
+  rerender/current / editorRequest=- kind=- delay=-ms finished=true aborted=false
+  rerender/current /bundle-current.js editorRequest=- kind=- delay=-ms finished=true aborted=false
+  rerender/current /lumiere/editor editorRequest=1 kind=editor delay=500ms finished=true aborted=false
+  attempt/current / editorRequest=- kind=- delay=-ms finished=true aborted=false
+  attempt/current /bundle-current.js editorRequest=- kind=- delay=-ms finished=true aborted=false
+  attempt/current /lumiere/editor editorRequest=1 kind=failure delay=40ms finished=true aborted=false
+  attempt/current /lumiere/editor editorRequest=2 kind=editor delay=300ms finished=true aborted=false
+  replace/current / editorRequest=- kind=- delay=-ms finished=true aborted=false
+  replace/current /bundle-current.js editorRequest=- kind=- delay=-ms finished=true aborted=false
+  replace/current /lumiere/editor editorRequest=1 kind=editor-A delay=800ms finished=false aborted=true
+  replace/current /lumiere/editor editorRequest=1 kind=editor-B delay=200ms finished=true aborted=false
+  single/prefix / editorRequest=- kind=- delay=-ms finished=true aborted=false
+  single/prefix /bundle-prefix.js editorRequest=- kind=- delay=-ms finished=true aborted=false
+  single/prefix /lumiere/editor editorRequest=1 kind=editor delay=500ms finished=true aborted=false
+  rerender/prefix / editorRequest=- kind=- delay=-ms finished=true aborted=false
+  rerender/prefix /bundle-prefix.js editorRequest=- kind=- delay=-ms finished=true aborted=false
+  rerender/prefix /lumiere/editor editorRequest=1 kind=editor delay=500ms finished=true aborted=false
+  attempt/prefix / editorRequest=- kind=- delay=-ms finished=true aborted=false
+  attempt/prefix /bundle-prefix.js editorRequest=- kind=- delay=-ms finished=true aborted=false
+  attempt/prefix /lumiere/editor editorRequest=1 kind=failure delay=40ms finished=true aborted=false
+  attempt/prefix /lumiere/editor editorRequest=2 kind=editor delay=300ms finished=true aborted=false
+  replace/prefix / editorRequest=- kind=- delay=-ms finished=true aborted=false
+  replace/prefix /bundle-prefix.js editorRequest=- kind=- delay=-ms finished=true aborted=false
+  replace/prefix /lumiere/editor editorRequest=1 kind=editor-A delay=800ms finished=false aborted=true
+  replace/prefix /lumiere/editor editorRequest=1 kind=editor-B delay=200ms finished=true aborted=false

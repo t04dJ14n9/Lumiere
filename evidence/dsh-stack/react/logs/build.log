@@ -1,0 +1,78 @@
+
+  ../../../../../tmp/chain-evidence-final/react/bundle-current.js      1.2mb ⚠️
+  ../../../../../tmp/chain-evidence-final/react/bundle-current.js.map  1.8mb
+
+⚡ Done in 50ms
+
+  ../../../../../tmp/chain-evidence-final/react/bundle-prefix.js      1.2mb ⚠️
+  ../../../../../tmp/chain-evidence-final/react/bundle-prefix.js.map  1.8mb
+
+⚡ Done in 40ms
+{
+  "generatedAt": "2026-11-12T18:42:36.455Z",
+  "worktree": "/Users/t04dj14n9/Code/Lumia/.claude/worktrees/pr-737",
+  "head": "9a10d469a6f10e12b254485b88b9c27bf1f0c3bb",
+  "headSubject": "test(dsh): extend the end-to-end suite onto the rebased stack",
+  "gitStatusPorcelain": "",
+  "prefixSourceCommit": "c7016eb38056604e61d4f4ce4df02206e6c4f34f",
+  "node": "v26.5.0",
+  "esbuild": "0.28.2",
+  "react": {
+    "version": "19.3.1",
+    "entry": "/Users/t04dj14n9/Code/Lumia/.claude/worktrees/pr-737/node_modules/.pnpm/react@19.3.1/node_modules/react/index.js"
+  },
+  "reactDom": {
+    "version": "19.3.1",
+    "entry": "/Users/t04dj14n9/Code/Lumia/.claude/worktrees/pr-737/node_modules/.pnpm/react-dom@19.3.1_react@19.3.1/node_modules/react-dom/client.js"
+  },
+  "bundles": {
+    "current": {
+      "entry": "/tmp/chain-evidence-final/react/harness/entry-current.ts",
+      "outfile": "/tmp/chain-evidence-final/react/bundle-current.js",
+      "sha256": "1ed732692c0f81f2ff8d73b0badba619eafe7cb723d529d576e256c19dbf4a57",
+      "bytes": 1252270,
+      "inputs": [
+        "../../../../../Users/t04dj14n9/Code/Lumia/.claude/worktrees/pr-737/packages/dsh/src/client/address.ts",
+        "../../../../../Users/t04dj14n9/Code/Lumia/.claude/worktrees/pr-737/packages/host-node/src/embedding.ts",
+        "../../../../../Users/t04dj14n9/Code/Lumia/.claude/worktrees/pr-737/packages/host-node/src/palette.ts",
+        "../../../../../Users/t04dj14n9/Code/Lumia/.claude/worktrees/pr-737/packages/dsh/src/client/theme.ts",
+        "../../../../../Users/t04dj14n9/Code/Lumia/.claude/worktrees/pr-737/packages/dsh/src/client/note-frame.ts",
+        "../../../../../Users/t04dj14n9/Code/Lumia/.claude/worktrees/pr-737/packages/dsh/src/client/index.ts",
+        "../../../../../Users/t04dj14n9/Code/Lumia/.claude/worktrees/pr-737/node_modules/.pnpm/react@19.3.1/node_modules/react/cjs/react.development.js",
+        "../../../../../Users/t04dj14n9/Code/Lumia/.claude/worktrees/pr-737/node_modules/.pnpm/react@19.3.1/node_modules/react/index.js",
+        "../../../../../Users/t04dj14n9/Code/Lumia/.claude/worktrees/pr-737/node_modules/.pnpm/scheduler@0.28.0/node_modules/scheduler/cjs/scheduler.development.js",
+        "../../../../../Users/t04dj14n9/Code/Lumia/.claude/worktrees/pr-737/node_modules/.pnpm/scheduler@0.28.0/node_modules/scheduler/index.js",
+        "../../../../../Users/t04dj14n9/Code/Lumia/.claude/worktrees/pr-737/node_modules/.pnpm/react-dom@19.3.1_react@19.3.1/node_modules/react-dom/cjs/react-dom.development.js",
+        "../../../../../Users/t04dj14n9/Code/Lumia/.claude/worktrees/pr-737/node_modules/.pnpm/react-dom@19.3.1_react@19.3.1/node_modules/react-dom/index.js",
+        "../../../../../Users/t04dj14n9/Code/Lumia/.claude/worktrees/pr-737/node_modules/.pnpm/react-dom@19.3.1_react@19.3.1/node_modules/react-dom/cjs/react-dom-client.development.js",
+        "../../../../../Users/t04dj14n9/Code/Lumia/.claude/worktrees/pr-737/node_modules/.pnpm/react-dom@19.3.1_react@19.3.1/node_modules/react-dom/client.js",
+        "app.ts",
+        "entry-current.ts"
+      ]
+    },
+    "prefix": {
+      "entry": "/tmp/chain-evidence-final/react/harness/entry-prefix.ts",
+      "outfile": "/tmp/chain-evidence-final/react/bundle-prefix.js",
+      "sha256": "cf159f1816a9cd30571ee51fd46d77ec63708a95d32085bf22babeb4f9c84d5b",
+      "bytes": 1252071,
+      "inputs": [
+        "../prefix-src/packages/dsh/src/client/address.ts",
+        "../../../../../Users/t04dj14n9/Code/Lumia/.claude/worktrees/pr-737/packages/host-node/src/embedding.ts",
+        "../../../../../Users/t04dj14n9/Code/Lumia/.claude/worktrees/pr-737/packages/host-node/src/palette.ts",
+        "../prefix-src/packages/dsh/src/client/theme.ts",
+        "../prefix-src/packages/dsh/src/client/note-frame.ts",
+        "../prefix-src/packages/dsh/src/client/index.ts",
+        "../../../../../Users/t04dj14n9/Code/Lumia/.claude/worktrees/pr-737/node_modules/.pnpm/react@19.3.1/node_modules/react/cjs/react.development.js",
+        "../../../../../Users/t04dj14n9/Code/Lumia/.claude/worktrees/pr-737/node_modules/.pnpm/react@19.3.1/node_modules/react/index.js",
+        "../../../../../Users/t04dj14n9/Code/Lumia/.claude/worktrees/pr-737/node_modules/.pnpm/scheduler@0.28.0/node_modules/scheduler/cjs/scheduler.development.js",
+        "../../../../../Users/t04dj14n9/Code/Lumia/.claude/worktrees/pr-737/node_modules/.pnpm/scheduler@0.28.0/node_modules/scheduler/index.js",
+        "../../../../../Users/t04dj14n9/Code/Lumia/.claude/worktrees/pr-737/node_modules/.pnpm/react-dom@19.3.1_react@19.3.1/node_modules/react-dom/cjs/react-dom.development.js",
+        "../../../../../Users/t04dj14n9/Code/Lumia/.claude/worktrees/pr-737/node_modules/.pnpm/react-dom@19.3.1_react@19.3.1/node_modules/react-dom/index.js",
+        "../../../../../Users/t04dj14n9/Code/Lumia/.claude/worktrees/pr-737/node_modules/.pnpm/react-dom@19.3.1_react@19.3.1/node_modules/react-dom/cjs/react-dom-client.development.js",
+        "../../../../../Users/t04dj14n9/Code/Lumia/.claude/worktrees/pr-737/node_modules/.pnpm/react-dom@19.3.1_react@19.3.1/node_modules/react-dom/client.js",
+        "app.ts",
+        "entry-prefix.ts"
+      ]
+    }
+  }
+}

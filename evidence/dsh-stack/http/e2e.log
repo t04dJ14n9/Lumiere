@@ -1,0 +1,60 @@
+PASS  editor page: valid note — 200 with nonce, shim, module, no-store
+PASS  editor page: .markdown extension — 200
+PASS  editor page: uppercase .MD — 200
+PASS  editor page: spaces, # and parentheses in path — 200
+PASS  editor page: unicode path — 200
+PASS  editor page: large note — 200
+PASS  editor page: missing params — 400
+PASS  editor page: relative path — 400
+PASS  editor page: non-markdown path — 400
+PASS  editor page: note outside root — 400
+PASS  editor page: filesystem root refused — 400
+PASS  editor page: .. traversal refused — 400
+PASS  write to a read-only route is rejected with 405 — 405 + Allow on all five
+PASS  wrong method on a JSON route returns 405 — 405 + Allow on all three
+PASS  static route: a symlink out of the bundle is refused — 403
+PASS  malformed JSON bodies return 400, not 500 — 400 for all three
+PASS  editor page: unauthenticated refused — 401
+PASS  shim.js served — 200
+PASS  editor.js and css served — 200 for js and css
+PASS  static path traversal refused — 403
+PASS  unknown route → 404 — 404
+PASS  file route: no panel refused — 403
+PASS  socket: ready RPC returns note text — response with note text
+PASS  socket: file route serves note inside workspace — 200
+PASS  file route: non-canonical workspace path is still inside the root — 200
+PASS  file route: outside workspace refused — 403
+PASS  file route: no panel refused — 403
+PASS  socket: unauthenticated upgrade answered with HTTP 401 — http 401
+PASS  socket: unknown panel refused — http 404
+PASS  socket: same file in two independent panels — both panels answered
+PASS  socket: malformed frame does not break the panel — still responsive
+PASS  browser: markdown note renders — CodeMirror rendered
+PASS  browser: .markdown renders — rendered
+PASS  browser: uppercase .MD renders — rendered
+PASS  browser: special-character path renders — rendered
+PASS  browser: unicode path and content render — unicode intact
+PASS  browser: 2000-line note renders — rendered
+PASS  browser: typing auto-saves to disk — edit persisted
+PASS  browser: parent theme/SHOWN/inset messages are harmless — rendered with no errors
+PASS  HEAD on the editor and an exact /lumiere request — HEAD 200, /lumiere 200 index
+PASS  invalid setting and command changes are 400 — 400 for both
+PASS  SSE events and a view snapshot are reachable — views list, snapshot and SSE ok
+PASS  view snapshot negatives and events method/auth gates — unknown 404, invalid 400, PUT 405, unauthenticated 401
+PASS  file route: one panel cannot read another workspace — 403
+PASS  file route: a missing file inside the root is refused — 404
+PASS  static file: a byte range is served as 206 — 206 + content-range, 200 with accept-ranges, 416
+PASS  PDF page and viewer assets are served — 200 page + 3 assets, POST 405
+PASS  browser: the PDF viewer page renders — PDF page rendered and fetched its bytes
+PASS  auxiliary routes: views, settings, commands — 200 JSON for all three
+PASS  file route: symlink escaping the workspace refused — 403
+PASS  editor page: path containing ? and # — 200
+PASS  browser: image in a note loads through /lumiere/file — image decoded
+PASS  browser: dark theme message applies to the page — vscode-dark + variable set
+PASS  browser: no console errors across scenarios — clean
+PASS  boot graph contains the Lumière client module — row present
+PASS  workspace bundle manifest is a valid DSH bundle — manifest valid
+PASS  DSH app: non-markdown file does not use Lumière — DSH's own renderer used
+PASS  DSH app: file-tree preview opens in Lumière — Lumière iframe rendered the note
+
+58 passed, 0 skipped, 0 failed (58 checks)

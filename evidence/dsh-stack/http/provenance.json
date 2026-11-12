@@ -1,0 +1,110 @@
+{
+  "generatedAt": "2026-11-12T18:46:40.441Z",
+  "worktree": "/Users/t04dj14n9/Code/Lumia/.claude/worktrees/pr-737",
+  "head": "9a10d469a6f10e12b254485b88b9c27bf1f0c3bb",
+  "headCapturedAtStart": "9a10d469a6f10e12b254485b88b9c27bf1f0c3bb",
+  "headMatches": true,
+  "sourceModified": false,
+  "gitStatusPorcelainBytes": 0,
+  "bundle": {
+    "path": "/Users/t04dj14n9/Code/Lumia/.claude/worktrees/pr-737/packages/dsh/dist/bundle",
+    "packageName": "@lumiere/dsh",
+    "packageVersion": "0.1.11",
+    "fileCount": 1718,
+    "treeSha256": "f64320bc7c14ed4c3e5419be02e10cb818a384a6407b13ab059f944ebbabaf7c",
+    "filesSha256": {
+      "index.js": "59495fb67125bf6890f6a94ec25a2a2af73a7ebcfaf472f0d6e0d6cd239c7a4d",
+      "client.js": "3f7fc3de57387b829ef4322ecd82909d69877b10962887e73af156e78fb13fb4",
+      "package.json": "234221445874c97281f9f8df5d7f1f0d5cabc514f2ef09158bfa193aa1d88ffe",
+      "cordis.patch.yml": "e6f321415bf22c8e6743c2f37f5154bc17593f3d2daf9775f7e941910db53908",
+      "page/shim.js": "f1f38c3d171851dc20f233e46c4a77e4136334aa6e2c217f4f417ab758f66bb7"
+    }
+  },
+  "dsh": {
+    "version": "0.2.2-rc.1",
+    "cli": "ELECTRON_RUN_AS_NODE=1 \"/Applications/DeepSeek Harness.app/Contents/MacOS/DeepSeek Harness\" \"/Applications/DeepSeek Harness.app/Contents/Resources/app.asar/dsh/node_modules/@deepseek-ai/dsh/lib/bin.js\"",
+    "invokedAs": "ELECTRON_RUN_AS_NODE=1 <DeepSeek Harness.app Electron> <app.asar>/dsh/node_modules/@deepseek-ai/dsh/lib/bin.js --profile web --host 127.0.0.1 --port 19261 --no-open",
+    "runtimeNode": "24.21.0",
+    "install": "DSH_HOME=<throwaway> dsh plugin --profile web add link:<worktree>/packages/dsh/dist/bundle (pnpm 10.28.2)",
+    "profile": "web"
+  },
+  "node": {
+    "evidenceRunner": "v26.5.0",
+    "dshRuntime": "24.21.0"
+  },
+  "port": 19261,
+  "portWasFreeBeforeStart": true,
+  "dshHome": "/tmp/chain-evidence-final/dsh-home",
+  "workspaceRoot": "/tmp/chain-evidence-final/dsh-docs/deepseek-harness/default-workspace",
+  "credentials": {
+    "source": "throwaway profile's own exchange: GET /?token=<redacted> -> 303 Set-Cookie dsh-auth-*",
+    "handling": "cookie and launch-token values redacted in every artifact under http/; no owner desktop profile, cookie database, or demo profile used"
+  },
+  "buildCommand": "pnpm --filter @workshop/dsh build",
+  "buildLog": "/tmp/chain-evidence-final/http/build.log",
+  "installLog": "/tmp/chain-evidence-final/http/plugin-install.log",
+  "serverLog": "/tmp/chain-evidence-final/http/server.log",
+  "serverFirstStartLog": "/tmp/chain-evidence-final/http/server-first-start.log",
+  "artifacts": [
+    "build.log",
+    "plugin-install.log",
+    "server.log",
+    "server-first-start.log",
+    "cookie-exchange.headers",
+    "cookie-exchange-2.headers",
+    "dsh-version.txt",
+    "node-version.txt",
+    "dsh-runtime-node-version.txt",
+    "bundle-files.sha256",
+    "bundle-tree-sha256.txt",
+    "wire.log",
+    "wire-summary.json",
+    "e2e.log",
+    "e2e-first-run.log",
+    "shim-listener-order.log",
+    "summary.json",
+    "provenance.json",
+    "head.txt",
+    "git-status.txt",
+    "bundle-sha256.txt",
+    "smoke-index.json"
+  ],
+  "e2e": {
+    "passed": 58,
+    "skipped": 0,
+    "failed": 0,
+    "total": 58,
+    "failedCheckNames": [],
+    "summaryLine": "58 passed, 0 skipped, 0 failed (58 checks)"
+  },
+  "wire": {
+    "passed": 28,
+    "failed": 0,
+    "total": 28
+  },
+  "handshake": {
+    "tests": 7,
+    "passed": 7,
+    "failed": 0
+  },
+  "lifecycle": {
+    "serverStartedByThisRun": true,
+    "serverPidAtCapture": 65903,
+    "serverStoppedAfterEvidence": true,
+    "portFreeAfterStop": true,
+    "cookieFileRemovedAfterEvidence": true,
+    "restartNote": "The throwaway server was restarted once with the same DSH_HOME so DSH loaded the workspace store written by its first-run page load. All wire and E2E counts in summary.json are from the final instance."
+  },
+  "environment": {
+    "sharedEvidenceRoot": "/tmp/chain-evidence-final is also used by concurrent evidence agents (pdf/, react/, workspace/ subdirectories belong to them and were not used as source)",
+    "ownPathsUsed": [
+      "/tmp/chain-evidence-final/http (all artifacts in this directory)",
+      "/tmp/chain-evidence-final/scripts (wire/collect/probe scripts written by this run)",
+      "/tmp/chain-evidence-final/dsh-home (throwaway DSH home)",
+      "/tmp/chain-evidence-final/dsh-docs (disposable DSH workspace root)",
+      "/tmp/chain-evidence-final/work (wire fixture tree)"
+    ],
+    "workspaceNote": "The disposable DSH workspace is shared with concurrent agents; its README.md content was authored by another agent before this run's final E2E pass. The E2E app checks only require that README.md and .gitignore open through DSH's file tree, which they did (58/58).",
+    "serverIsolation": "Port 19261: verified free, server started by this run, pid recorded, stopped by this run. Port 19262 belongs to another agent and was never touched. Port 8990 was never touched."
+  }
+}

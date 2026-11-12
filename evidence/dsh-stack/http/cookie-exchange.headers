@@ -1,0 +1,10 @@
+HTTP/1.1 303 See Other
+cache-control: no-store
+location: ./
+referrer-policy: no-referrer
+set-cookie: <redacted>; Max-Age=2592000; Path=/; Expires=Sat, 12 Dec 2026 18:37:16 GMT; HttpOnly; SameSite=Strict
+Date: Thu, 12 Nov 2026 18:37:16 GMT
+Connection: keep-alive
+Keep-Alive: timeout=5
+Transfer-Encoding: chunked
+

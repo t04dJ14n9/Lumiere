@@ -1,0 +1,343 @@
+{
+  "identical": true,
+  "run1": [
+    {
+      "key": "current/single",
+      "loaded": [
+        "1"
+      ],
+      "failed": [],
+      "actions": [],
+      "nativeLoadCount": 1,
+      "frameIdentity": [
+        false
+      ],
+      "messages": [
+        "theme",
+        "shown"
+      ],
+      "staleDelta": null
+    },
+    {
+      "key": "current/rerender",
+      "loaded": [
+        "1"
+      ],
+      "failed": [],
+      "actions": [
+        "parent-rerender"
+      ],
+      "nativeLoadCount": 1,
+      "frameIdentity": [
+        false,
+        true
+      ],
+      "messages": [
+        "theme",
+        "shown"
+      ],
+      "staleDelta": null
+    },
+    {
+      "key": "current/attempt",
+      "loaded": [
+        "1"
+      ],
+      "failed": [
+        "failed"
+      ],
+      "actions": [
+        "content-revision-bump"
+      ],
+      "nativeLoadCount": 2,
+      "frameIdentity": [
+        false,
+        true,
+        false
+      ],
+      "messages": [
+        "theme",
+        "shown"
+      ],
+      "staleDelta": {
+        "staleChanged": false,
+        "liveChanged": true
+      }
+    },
+    {
+      "key": "current/replace",
+      "loaded": [
+        "2"
+      ],
+      "failed": [],
+      "actions": [
+        "resource-switch-A-to-B"
+      ],
+      "nativeLoadCount": 1,
+      "frameIdentity": [
+        false,
+        false
+      ],
+      "messages": [
+        "theme",
+        "shown"
+      ],
+      "staleDelta": {
+        "staleChanged": false,
+        "liveChanged": true
+      }
+    },
+    {
+      "key": "prefix/single",
+      "loaded": [
+        "1"
+      ],
+      "failed": [],
+      "actions": [],
+      "nativeLoadCount": 1,
+      "frameIdentity": [
+        false
+      ],
+      "messages": [
+        "theme",
+        "shown"
+      ],
+      "staleDelta": null
+    },
+    {
+      "key": "prefix/rerender",
+      "loaded": [],
+      "failed": [],
+      "actions": [
+        "parent-rerender"
+      ],
+      "nativeLoadCount": 1,
+      "frameIdentity": [
+        false,
+        true
+      ],
+      "messages": [],
+      "staleDelta": null
+    },
+    {
+      "key": "prefix/attempt",
+      "loaded": [
+        "1"
+      ],
+      "failed": [
+        "failed"
+      ],
+      "actions": [
+        "content-revision-bump"
+      ],
+      "nativeLoadCount": 2,
+      "frameIdentity": [
+        false,
+        true,
+        false
+      ],
+      "messages": [
+        "theme",
+        "shown"
+      ],
+      "staleDelta": {
+        "staleChanged": false,
+        "liveChanged": true
+      }
+    },
+    {
+      "key": "prefix/replace",
+      "loaded": [
+        "2"
+      ],
+      "failed": [],
+      "actions": [
+        "resource-switch-A-to-B"
+      ],
+      "nativeLoadCount": 1,
+      "frameIdentity": [
+        false,
+        false
+      ],
+      "messages": [
+        "theme",
+        "shown"
+      ],
+      "staleDelta": {
+        "staleChanged": false,
+        "liveChanged": true
+      }
+    }
+  ],
+  "run2": [
+    {
+      "key": "current/single",
+      "loaded": [
+        "1"
+      ],
+      "failed": [],
+      "actions": [],
+      "nativeLoadCount": 1,
+      "frameIdentity": [
+        false
+      ],
+      "messages": [
+        "theme",
+        "shown"
+      ],
+      "staleDelta": null
+    },
+    {
+      "key": "current/rerender",
+      "loaded": [
+        "1"
+      ],
+      "failed": [],
+      "actions": [
+        "parent-rerender"
+      ],
+      "nativeLoadCount": 1,
+      "frameIdentity": [
+        false,
+        true
+      ],
+      "messages": [
+        "theme",
+        "shown"
+      ],
+      "staleDelta": null
+    },
+    {
+      "key": "current/attempt",
+      "loaded": [
+        "1"
+      ],
+      "failed": [
+        "failed"
+      ],
+      "actions": [
+        "content-revision-bump"
+      ],
+      "nativeLoadCount": 2,
+      "frameIdentity": [
+        false,
+        true,
+        false
+      ],
+      "messages": [
+        "theme",
+        "shown"
+      ],
+      "staleDelta": {
+        "staleChanged": false,
+        "liveChanged": true
+      }
+    },
+    {
+      "key": "current/replace",
+      "loaded": [
+        "2"
+      ],
+      "failed": [],
+      "actions": [
+        "resource-switch-A-to-B"
+      ],
+      "nativeLoadCount": 1,
+      "frameIdentity": [
+        false,
+        false
+      ],
+      "messages": [
+        "theme",
+        "shown"
+      ],
+      "staleDelta": {
+        "staleChanged": false,
+        "liveChanged": true
+      }
+    },
+    {
+      "key": "prefix/single",
+      "loaded": [
+        "1"
+      ],
+      "failed": [],
+      "actions": [],
+      "nativeLoadCount": 1,
+      "frameIdentity": [
+        false
+      ],
+      "messages": [
+        "theme",
+        "shown"
+      ],
+      "staleDelta": null
+    },
+    {
+      "key": "prefix/rerender",
+      "loaded": [],
+      "failed": [],
+      "actions": [
+        "parent-rerender"
+      ],
+      "nativeLoadCount": 1,
+      "frameIdentity": [
+        false,
+        true
+      ],
+      "messages": [],
+      "staleDelta": null
+    },
+    {
+      "key": "prefix/attempt",
+      "loaded": [
+        "1"
+      ],
+      "failed": [
+        "failed"
+      ],
+      "actions": [
+        "content-revision-bump"
+      ],
+      "nativeLoadCount": 2,
+      "frameIdentity": [
+        false,
+        true,
+        false
+      ],
+      "messages": [
+        "theme",
+        "shown"
+      ],
+      "staleDelta": {
+        "staleChanged": false,
+        "liveChanged": true
+      }
+    },
+    {
+      "key": "prefix/replace",
+      "loaded": [
+        "2"
+      ],
+      "failed": [],
+      "actions": [
+        "resource-switch-A-to-B"
+      ],
+      "nativeLoadCount": 1,
+      "frameIdentity": [
+        false,
+        false
+      ],
+      "messages": [
+        "theme",
+        "shown"
+      ],
+      "staleDelta": {
+        "staleChanged": false,
+        "liveChanged": true
+      }
+    }
+  ],
+  "head": "9a10d469a6f10e12b254485b88b9c27bf1f0c3bb",
+  "generatedAt": "2026-11-12T18:44:25.855Z"
+}

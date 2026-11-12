@@ -1,0 +1,30 @@
+{
+  "symlinkPage": {
+    "status": 403,
+    "bodyBytes": 0
+  },
+  "symlinkBytes": {
+    "status": 403,
+    "bodyBytes": 0
+  },
+  "missingViewerAsset": 404,
+  "staleBytesLoad": 404,
+  "missingPdfPage": 403,
+  "assets": {
+    "/lumiere/pdf/viewer/viewer.js": {
+      "status": 200,
+      "contentType": "text/javascript; charset=utf-8",
+      "bytes": 8247775
+    },
+    "/lumiere/pdf/viewer/viewer.css": {
+      "status": 200,
+      "contentType": "text/css; charset=utf-8",
+      "bytes": 47091
+    },
+    "/lumiere/m/webview/embedpdf.wasm": {
+      "status": 200,
+      "contentType": "application/wasm",
+      "bytes": 7871530
+    }
+  }
+}
