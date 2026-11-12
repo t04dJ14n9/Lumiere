@@ -116,8 +116,8 @@ of the Host mid-handshake), it recreates the iframe once, and DSH's Reload and
 
 ## Limits and differences from VS Code
 
-- Markdown and PDF notes open in Lumière; DSH's own PDF viewer stays in the
-  viewer menu. The engine file the editor ships is `embedpdf.wasm`, not
+- Markdown and PDF notes open in Lumière; DSH's own PDF renderer is not used
+  for them. The engine file the editor ships is `embedpdf.wasm`, not
   `pdfium.wasm`; the host routes that name to the editor's own webview
   directory.
 - Git blame and the change gutter work for notes in a repository, through
