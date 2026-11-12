@@ -1,0 +1,1035 @@
+
+> lumiere@0.1.11 test:vscode [worktree]
+> pnpm build && playwright test -c test/vscode/playwright.config.ts && playwright test -c packages/pdf/test/vscode/playwright.config.ts
+
+
+> lumiere@0.1.11 build [worktree]
+> node scripts/build.mjs
+
+
+  dist/webview/elk-QONTBCTQ-RSAUS3IO.js                     3.3mb ⚠️
+  dist/webview/inline-transport-XJ7CZNEL.js                 1.8mb ⚠️
+  dist/webview/chunk-H2RCND4X.js                            1.1mb ⚠️
+  dist/webview/chunk-NWH65RPO.js                            1.1mb ⚠️
+  dist/webview/greek-7UUQHTSU.js                            1.0mb ⚠️
+  dist/webview/mathjax-ACB6IN6D.js                       1003.0kb
+  dist/webview/chunk-WCVSWSSS.js                          939.5kb
+  dist/webview/cyrillic-BILO6S7K.js                       701.2kb
+  dist/webview/monospace-ex-XGE2KUQA.js                   632.1kb
+  dist/webview/greek-ss-3J3JMWZS.js                       552.8kb
+  dist/webview/sans-serif-ex-66UIBC7J.js                  519.9kb
+  dist/webview/latin-i-TB2XKD2F.js                        491.6kb
+  dist/webview/katex-VCKP5YDG.js                          480.7kb
+  dist/webview/chunk-RBC4YO4F.js                          467.4kb
+  dist/webview/latin-bi-HLUGKNTJ.js                       457.1kb
+  dist/webview/architectureDiagram-ZHVYKT53-DDNVPFKI.js   417.6kb
+  dist/webview/monospace-l-R2JR3UWZ.js                    390.9kb
+  dist/webview/usecaseDiagram-WPOLBNNX-OGQFKXGZ.js        371.8kb
+  dist/webview/PUA-Y25RZA2M.js                            366.2kb
+  dist/webview/latin-EBNY6N3M.js                          362.6kb
+  ...and 1762 more output files...
+
+⚡ Done in 758ms
+
+  dist/webview/diff.js       466.1kb
+  dist/webview/diff.css        2.7kb
+  dist/webview/diff.js.map     1.1mb
+  dist/webview/diff.css.map    5.2kb
+
+⚡ Done in 23ms
+
+  dist/webview/graph.js             874.7kb
+  dist/webview/graph-layout.js        2.6kb
+  dist/webview/graph.css              1.2kb
+  dist/webview/graph.js.map           1.6mb
+  dist/webview/graph-layout.js.map    5.8kb
+  dist/webview/graph.css.map          2.0kb
+
+⚡ Done in 21ms
+
+  dist/workers/search.cjs      576.0kb
+  dist/workers/vault.cjs       548.8kb
+  dist/workers/search.cjs.map    1.1mb
+  dist/workers/vault.cjs.map     1.1mb
+
+⚡ Done in 20ms
+
+  dist/yaml-runtime.cjs      262.7kb
+  dist/yaml-runtime.cjs.map  452.5kb
+
+⚡ Done in 9ms
+
+  dist/bridge-stdio.js      329.6kb
+  dist/bridge-stdio.js.map  625.2kb
+
+⚡ Done in 120ms
+
+  dist/agent-bridge-server.js      1.4mb ⚠️
+  dist/agent-bridge-server.js.map  2.4mb
+
+⚡ Done in 173ms
+
+  dist/outline-engine.js      2.8mb ⚠️
+  dist/outline-engine.js.map  5.5mb
+
+⚡ Done in 188ms
+
+  dist/webview/viewer.js         7.9mb ⚠️
+  dist/webview/codicon.ttf     122.9kb
+  dist/webview/viewer.css       46.0kb
+  dist/webview/viewer.js.map    14.0mb
+  dist/webview/viewer.css.map   80.6kb
+
+⚡ Done in 250ms
+
+  dist/extension.js      1.6mb ⚠️
+  dist/extension.js.map  3.6mb
+
+⚡ Done in 71ms
+ WARNING  This extension consists of 867 files, out of which 845 are JavaScript files. For performance reasons, you should bundle your extension: https://aka.ms/vscode-bundle-extension. You should also exclude unnecessary files by adding them to your .vscodeignore: https://aka.ms/vscode-vscodeignore.
+
+ INFO  Files included in the VSIX:
+extension.vsix
+├─ [Content_Types].xml 
+├─ extension.vsixmanifest 
+└─ extension/
+   ├─ LICENSE.txt [1.04 KB]
+   ├─ THIRD_PARTY_NOTICES.md [554.92 KB]
+   ├─ changelog.md [6.27 KB]
+   ├─ package.json [147.06 KB]
+   ├─ readme.md [6.73 KB]
+   ├─ dist/
+   │  ├─ extension.js [1.55 MB]
+   │  ├─ markdown/
+   │  │  ├─ yaml-runtime.cjs [262.74 KB]
+   │  │  ├─ api/ (3 files) [13.94 KB]
+   │  │  ├─ webview/ (845 files) [38.86 MB]
+   │  │  └─ workers/ (2 files) [1.1 MB]
+   │  └─ pdf/
+   │     ├─ agent-bridge-server.js [1.4 MB]
+   │     ├─ bridge-stdio.js [329.55 KB]
+   │     ├─ outline-engine.js [2.78 MB]
+   │     └─ webview/ (4 files) [15.54 MB]
+   └─ media/
+      └─ icon.png [18.9 KB]
+
+=> Run vsce ls --tree to see all included files.
+
+ DONE  Packaged: [vscode-profile] (867 files, 17.87 MB)
+Testing Code 1.144.0 (/Applications/Visual Studio Code.app/Contents/MacOS/Code) with profile [vscode-profile]
+
+Running 30 tests using 1 worker
+
+Native: closing all editors
+Native: opening fixture
+Native: waiting for Lumiere webview
+  ✓   1 test/vscode/core.spec.ts:9:5 › isolated installed editor types, saves and performs native document undo (3.2s)
+Native: closing all editors
+Native: opening fixture
+Native: waiting for Lumiere webview
+  ✓   2 test/vscode/core.spec.ts:31:5 › Ctrl/Cmd+A selects the whole note, so typing replaces it (2.0s)
+Native: closing all editors
+  ✓   3 test/vscode/daily-notes-templates.spec.ts:97:5 › Open Today's Daily Note creates and opens the note before any Lumiere editor exists (5.9s)
+Native: closing all editors
+Native: opening fixture
+Native: waiting for Lumiere webview
+  ✓   4 test/vscode/daily-notes-templates.spec.ts:143:5 › Insert Template replaces the selection and leaves the caret after the text (1.9s)
+Native: closing all editors
+Native: opening fixture
+Native: waiting for Lumiere webview
+  ✓   5 test/vscode/font-size.spec.ts:32:5 › lumiere.markdown.editor.fontSize sets the note's body size (16px by default, never editor.fontSize) and everything scales with it, live (2.9s)
+Native: closing all editors
+Native: opening fixture
+Native: waiting for Lumiere webview
+  ✓   6 test/vscode/font-stack.spec.ts:83:7 › note preserves explicit font settings and uses proportional defaults: none (5.6s)
+Native: closing all editors
+Native: opening fixture
+Native: waiting for Lumiere webview
+  ✓   7 test/vscode/font-stack.spec.ts:83:7 › note preserves explicit font settings and uses proportional defaults: global (5.7s)
+Native: closing all editors
+Native: opening fixture
+Native: waiting for Lumiere webview
+  ✓   8 test/vscode/font-stack.spec.ts:83:7 › note preserves explicit font settings and uses proportional defaults: markdown (5.7s)
+Native: closing all editors
+Native: opening fixture
+Native: waiting for Lumiere webview
+  ✓   9 test/vscode/font.spec.ts:84:5 › note text uses the same font settings as the built-in text editor for Markdown, except the size and line height (1.7s)
+Native: closing all editors
+Native: opening fixture
+Native: waiting for Lumiere webview
+  ✓  10 test/vscode/font.spec.ts:180:5 › the note's lines are the line height setting times the size (1.5 by default), and line numbers stay level (5.5s)
+Native: closing all editors
+Native: opening fixture
+Native: waiting for Lumiere webview
+Native: closing all editors
+Native: closing all editors
+Native: opening fixture
+Native: waiting for Lumiere webview
+Native: closing all editors
+  ✓  11 test/vscode/git-diff-editor.spec.ts:37:5 › rendered git diff: HEAD against the note, Source Control takeover, off (10.0s)
+Native: closing all editors
+Native: opening fixture
+Native: waiting for Lumiere webview
+Native: closing all editors
+  ✘  12 test/vscode/git-gutter.spec.ts:38:5 › git change bars: HEAD diff, rendered peek, revert, stage, commit, off (18.0s)
+Native: closing all editors
+  ✘  13 test/vscode/git-inline.spec.ts:25:5 › inline git changes: toggle, track changes, restore, waits for the bars (10.9s)
+Native: closing all editors
+  ✘  14 test/vscode/link-suggest.spec.ts:25:7 › typing [[ offers notes, and [[Note# offers its headings, Vim false (9.9s)
+Native: closing all editors
+  ✘  15 test/vscode/link-suggest.spec.ts:25:7 › typing [[ offers notes, and [[Note# offers its headings, Vim true (9.9s)
+Native: closing all editors
+  ✘  16 test/vscode/link-suggest.spec.ts:68:5 › typing [[ in VS Code's text editor offers notes and headings, and Enter writes the link (9.8s)
+Native: closing all editors
+  ✘  17 test/vscode/link-updates.spec.ts:48:5 › Always Update in the rename dialog updates the links, saves the mode, and the next rename does not ask (9.9s)
+Native: closing all editors
+  ✘  18 test/vscode/native-links.spec.ts:12:5 › built-in Cmd-click preserves heading fragments and native source caret on new and reused panes (10.0s)
+Native: closing all editors
+  ✘  19 test/vscode/outline-jump-top.spec.ts:88:5 › clicking a heading in the Markdown Outline puts it at the top of the editor, clamping at both ends of the note (9.9s)
+Native: closing all editors
+  ✘  20 test/vscode/perf.spec.ts:138:5 › load time: small and 16,000-block notes (9.9s)
+Native: closing all editors
+  ✘  21 test/vscode/properties-caret.spec.ts:49:5 › the caret never enters the Properties block in the real editor (as in Obsidian 1.14.4) (9.9s)
+Native: closing all editors
+Native: closing all editors
+  ✘  22 test/vscode/settings-commands.spec.ts:78:5 › Open Settings, and the commands for common settings read and write the Settings UI's own keys, live (21.6s)
+Native: closing all editors
+Native: closing all editors
+  ✘  23 test/vscode/settings-commands.spec.ts:280:5 › Change Setting… lists every setting by plugin and edits the picked one by its type, with the Settings UI's keys (22.5s)
+Native: closing all editors
+  ✘  24 test/vscode/tables.spec.ts:64:5 › tables in the real editor: a projected short or empty cell keeps its row height (9.8s)
+Native: closing all editors
+  ✘  25 test/vscode/tables.spec.ts:107:5 › tables in the real editor: typing, Tab, edge buttons, native undo and external edits (9.8s)
+Native: closing all editors
+  ✘  26 test/vscode/tables.spec.ts:169:5 › tables in the real editor: the add-row strip below and the add-column strip beside both exist, show under the pointer and work (9.8s)
+Native: closing all editors
+  ✘  27 test/vscode/tables.spec.ts:245:5 › line numbers in the real editor: a table gets one number level with its header, and the next number follows it directly (10.8s)
+Native: closing all editors
+  ✘  28 test/vscode/tables.spec.ts:274:5 › column handle copy reaches the native clipboard and pastes TSV into prose (9.8s)
+Native: closing all editors
+  ✘  29 test/vscode/vim-caret-vscodevim.spec.ts:98:5 › our Vim carets sit where VSCodeVim's do: same whole-pixel offset and size in every mode (10.9s)
+Native: closing all editors
+  ✘  30 test/vscode/vim-caret.spec.ts:277:5 › Vim carets match the built-in editor's block, line and underline in the real editor (9.9s)
+
+
+  1) test/vscode/git-gutter.spec.ts:38:5 › git change bars: HEAD diff, rendered peek, revert, stage, commit, off 
+
+    Error: expect(locator).toHaveCount(expected) failed
+
+    Locator:  locator('.tabs-container .tab')
+    Expected: 0
+    Received: 1
+    Timeout:  500ms
+
+    Call log:
+      - Expect "toHaveCount" locator('.tabs-container .tab') with timeout 500ms
+      - waiting for locator('.tabs-container .tab')
+        7 × locator resolved to 1 element
+          - unexpected value "1"
+
+
+    Call Log:
+    - Timeout 10000ms exceeded while waiting on the predicate
+
+       at workbench.ts:33
+
+      31 |       timeout: 500,
+      32 |     });
+    > 33 |   }).toPass({ timeout: 10000 });
+         |      ^
+      34 | }
+      35 | /**
+      36 |  * Opens a note (Note.md by default) in Lumiere and returns its
+        at closeEditorGroups ([worktree]/test/vscode/workbench.ts:33:6)
+        at [worktree]/test/vscode/git-gutter.spec.ts:115:5
+
+    Error Context: test-results/git-gutter-git-change-bars-45c64-eek-revert-stage-commit-off/error-context.md
+
+    attachment #2: trace (application/zip) ─────────────────────────────────────────────────────────
+    test-results/git-gutter-git-change-bars-45c64-eek-revert-stage-commit-off/trace.zip
+    Usage:
+
+        pnpm exec playwright show-trace test-results/git-gutter-git-change-bars-45c64-eek-revert-stage-commit-off/trace.zip
+
+    ────────────────────────────────────────────────────────────────────────────────────────────────
+
+  2) test/vscode/git-inline.spec.ts:25:5 › inline git changes: toggle, track changes, restore, waits for the bars 
+
+    Error: expect(locator).toHaveCount(expected) failed
+
+    Locator:  locator('.tabs-container .tab')
+    Expected: 0
+    Received: 1
+    Timeout:  500ms
+
+    Call log:
+      - Expect "toHaveCount" locator('.tabs-container .tab') with timeout 500ms
+      - waiting for locator('.tabs-container .tab')
+        6 × locator resolved to 1 element
+          - unexpected value "1"
+
+
+    Call Log:
+    - Timeout 10000ms exceeded while waiting on the predicate
+
+       at workbench.ts:33
+
+      31 |       timeout: 500,
+      32 |     });
+    > 33 |   }).toPass({ timeout: 10000 });
+         |      ^
+      34 | }
+      35 | /**
+      36 |  * Opens a note (Note.md by default) in Lumiere and returns its
+        at closeEditorGroups ([worktree]/test/vscode/workbench.ts:33:6)
+        at openWorkbench ([worktree]/test/vscode/workbench.ts:47:3)
+        at [worktree]/test/vscode/git-inline.spec.ts:31:5
+
+    Error Context: test-results/git-inline-inline-git-chan-f7d8f--restore-waits-for-the-bars/error-context.md
+
+    attachment #2: trace (application/zip) ─────────────────────────────────────────────────────────
+    test-results/git-inline-inline-git-chan-f7d8f--restore-waits-for-the-bars/trace.zip
+    Usage:
+
+        pnpm exec playwright show-trace test-results/git-inline-inline-git-chan-f7d8f--restore-waits-for-the-bars/trace.zip
+
+    ────────────────────────────────────────────────────────────────────────────────────────────────
+
+  3) test/vscode/link-suggest.spec.ts:25:7 › typing [[ offers notes, and [[Note# offers its headings, Vim false 
+
+    Error: expect(locator).toHaveCount(expected) failed
+
+    Locator:  locator('.tabs-container .tab')
+    Expected: 0
+    Received: 1
+    Timeout:  500ms
+
+    Call log:
+      - Expect "toHaveCount" locator('.tabs-container .tab') with timeout 500ms
+      - waiting for locator('.tabs-container .tab')
+        7 × locator resolved to 1 element
+          - unexpected value "1"
+
+
+    Call Log:
+    - Timeout 10000ms exceeded while waiting on the predicate
+
+       at workbench.ts:33
+
+      31 |       timeout: 500,
+      32 |     });
+    > 33 |   }).toPass({ timeout: 10000 });
+         |      ^
+      34 | }
+      35 | /**
+      36 |  * Opens a note (Note.md by default) in Lumiere and returns its
+        at closeEditorGroups ([worktree]/test/vscode/workbench.ts:33:6)
+        at openWorkbench ([worktree]/test/vscode/workbench.ts:47:3)
+        at [worktree]/test/vscode/link-suggest.spec.ts:43:7
+
+    Error Context: test-results/link-suggest-typing-offers-43ef1-fers-its-headings-Vim-false/error-context.md
+
+    attachment #2: trace (application/zip) ─────────────────────────────────────────────────────────
+    test-results/link-suggest-typing-offers-43ef1-fers-its-headings-Vim-false/trace.zip
+    Usage:
+
+        pnpm exec playwright show-trace test-results/link-suggest-typing-offers-43ef1-fers-its-headings-Vim-false/trace.zip
+
+    ────────────────────────────────────────────────────────────────────────────────────────────────
+
+  4) test/vscode/link-suggest.spec.ts:25:7 › typing [[ offers notes, and [[Note# offers its headings, Vim true 
+
+    Error: expect(locator).toHaveCount(expected) failed
+
+    Locator:  locator('.tabs-container .tab')
+    Expected: 0
+    Received: 1
+    Timeout:  500ms
+
+    Call log:
+      - Expect "toHaveCount" locator('.tabs-container .tab') with timeout 500ms
+      - waiting for locator('.tabs-container .tab')
+        6 × locator resolved to 1 element
+          - unexpected value "1"
+
+
+    Call Log:
+    - Timeout 10000ms exceeded while waiting on the predicate
+
+       at workbench.ts:33
+
+      31 |       timeout: 500,
+      32 |     });
+    > 33 |   }).toPass({ timeout: 10000 });
+         |      ^
+      34 | }
+      35 | /**
+      36 |  * Opens a note (Note.md by default) in Lumiere and returns its
+        at closeEditorGroups ([worktree]/test/vscode/workbench.ts:33:6)
+        at openWorkbench ([worktree]/test/vscode/workbench.ts:47:3)
+        at [worktree]/test/vscode/link-suggest.spec.ts:43:7
+
+    Error Context: test-results/link-suggest-typing-offers-3009e-ffers-its-headings-Vim-true/error-context.md
+
+    attachment #2: trace (application/zip) ─────────────────────────────────────────────────────────
+    test-results/link-suggest-typing-offers-3009e-ffers-its-headings-Vim-true/trace.zip
+    Usage:
+
+        pnpm exec playwright show-trace test-results/link-suggest-typing-offers-3009e-ffers-its-headings-Vim-true/trace.zip
+
+    ────────────────────────────────────────────────────────────────────────────────────────────────
+
+  5) test/vscode/link-suggest.spec.ts:68:5 › typing [[ in VS Code's text editor offers notes and headings, and Enter writes the link 
+
+    Error: expect(locator).toHaveCount(expected) failed
+
+    Locator:  locator('.tabs-container .tab')
+    Expected: 0
+    Received: 1
+    Timeout:  500ms
+
+    Call log:
+      - Expect "toHaveCount" locator('.tabs-container .tab') with timeout 500ms
+      - waiting for locator('.tabs-container .tab')
+        7 × locator resolved to 1 element
+          - unexpected value "1"
+
+
+    Call Log:
+    - Timeout 10000ms exceeded while waiting on the predicate
+
+       at workbench.ts:33
+
+      31 |       timeout: 500,
+      32 |     });
+    > 33 |   }).toPass({ timeout: 10000 });
+         |      ^
+      34 | }
+      35 | /**
+      36 |  * Opens a note (Note.md by default) in Lumiere and returns its
+        at closeEditorGroups ([worktree]/test/vscode/workbench.ts:33:6)
+        at openWorkbench ([worktree]/test/vscode/workbench.ts:47:3)
+        at [worktree]/test/vscode/link-suggest.spec.ts:77:5
+
+    Error Context: test-results/link-suggest-typing-in-VS--be899-s-and-Enter-writes-the-link/error-context.md
+
+    attachment #2: trace (application/zip) ─────────────────────────────────────────────────────────
+    test-results/link-suggest-typing-in-VS--be899-s-and-Enter-writes-the-link/trace.zip
+    Usage:
+
+        pnpm exec playwright show-trace test-results/link-suggest-typing-in-VS--be899-s-and-Enter-writes-the-link/trace.zip
+
+    ────────────────────────────────────────────────────────────────────────────────────────────────
+
+  6) test/vscode/link-updates.spec.ts:48:5 › Always Update in the rename dialog updates the links, saves the mode, and the next rename does not ask 
+
+    Error: expect(locator).toHaveCount(expected) failed
+
+    Locator:  locator('.tabs-container .tab')
+    Expected: 0
+    Received: 1
+    Timeout:  500ms
+
+    Call log:
+      - Expect "toHaveCount" locator('.tabs-container .tab') with timeout 500ms
+      - waiting for locator('.tabs-container .tab')
+        6 × locator resolved to 1 element
+          - unexpected value "1"
+
+
+    Call Log:
+    - Timeout 10000ms exceeded while waiting on the predicate
+
+       at workbench.ts:33
+
+      31 |       timeout: 500,
+      32 |     });
+    > 33 |   }).toPass({ timeout: 10000 });
+         |      ^
+      34 | }
+      35 | /**
+      36 |  * Opens a note (Note.md by default) in Lumiere and returns its
+        at closeEditorGroups ([worktree]/test/vscode/workbench.ts:33:6)
+        at openWorkbench ([worktree]/test/vscode/workbench.ts:47:3)
+        at [worktree]/test/vscode/link-updates.spec.ts:56:5
+
+    Error Context: test-results/link-updates-Always-Update-8149f-he-next-rename-does-not-ask/error-context.md
+
+    attachment #2: trace (application/zip) ─────────────────────────────────────────────────────────
+    test-results/link-updates-Always-Update-8149f-he-next-rename-does-not-ask/trace.zip
+    Usage:
+
+        pnpm exec playwright show-trace test-results/link-updates-Always-Update-8149f-he-next-rename-does-not-ask/trace.zip
+
+    ────────────────────────────────────────────────────────────────────────────────────────────────
+
+  7) test/vscode/native-links.spec.ts:12:5 › built-in Cmd-click preserves heading fragments and native source caret on new and reused panes 
+
+    Error: expect(locator).toHaveCount(expected) failed
+
+    Locator:  locator('.tabs-container .tab')
+    Expected: 0
+    Received: 1
+    Timeout:  500ms
+
+    Call log:
+      - Expect "toHaveCount" locator('.tabs-container .tab') with timeout 500ms
+      - waiting for locator('.tabs-container .tab')
+        6 × locator resolved to 1 element
+          - unexpected value "1"
+
+
+    Call Log:
+    - Timeout 10000ms exceeded while waiting on the predicate
+
+       at workbench.ts:33
+
+      31 |       timeout: 500,
+      32 |     });
+    > 33 |   }).toPass({ timeout: 10000 });
+         |      ^
+      34 | }
+      35 | /**
+      36 |  * Opens a note (Note.md by default) in Lumiere and returns its
+        at closeEditorGroups ([worktree]/test/vscode/workbench.ts:33:6)
+        at [worktree]/test/vscode/native-links.spec.ts:29:5
+
+    Error Context: test-results/native-links-built-in-Cmd--26e73-ret-on-new-and-reused-panes/error-context.md
+
+    attachment #3: trace (application/zip) ─────────────────────────────────────────────────────────
+    test-results/native-links-built-in-Cmd--26e73-ret-on-new-and-reused-panes/trace.zip
+    Usage:
+
+        pnpm exec playwright show-trace test-results/native-links-built-in-Cmd--26e73-ret-on-new-and-reused-panes/trace.zip
+
+    ────────────────────────────────────────────────────────────────────────────────────────────────
+
+  8) test/vscode/outline-jump-top.spec.ts:88:5 › clicking a heading in the Markdown Outline puts it at the top of the editor, clamping at both ends of the note 
+
+    Error: expect(locator).toHaveCount(expected) failed
+
+    Locator:  locator('.tabs-container .tab')
+    Expected: 0
+    Received: 1
+    Timeout:  500ms
+
+    Call log:
+      - Expect "toHaveCount" locator('.tabs-container .tab') with timeout 500ms
+      - waiting for locator('.tabs-container .tab')
+        6 × locator resolved to 1 element
+          - unexpected value "1"
+
+
+    Call Log:
+    - Timeout 10000ms exceeded while waiting on the predicate
+
+       at workbench.ts:33
+
+      31 |       timeout: 500,
+      32 |     });
+    > 33 |   }).toPass({ timeout: 10000 });
+         |      ^
+      34 | }
+      35 | /**
+      36 |  * Opens a note (Note.md by default) in Lumiere and returns its
+        at closeEditorGroups ([worktree]/test/vscode/workbench.ts:33:6)
+        at openWorkbench ([worktree]/test/vscode/workbench.ts:47:3)
+        at [worktree]/test/vscode/outline-jump-top.spec.ts:95:5
+
+    Error Context: test-results/outline-jump-top-clicking--1ce3a-ng-at-both-ends-of-the-note/error-context.md
+
+    attachment #2: trace (application/zip) ─────────────────────────────────────────────────────────
+    test-results/outline-jump-top-clicking--1ce3a-ng-at-both-ends-of-the-note/trace.zip
+    Usage:
+
+        pnpm exec playwright show-trace test-results/outline-jump-top-clicking--1ce3a-ng-at-both-ends-of-the-note/trace.zip
+
+    ────────────────────────────────────────────────────────────────────────────────────────────────
+
+  9) test/vscode/perf.spec.ts:138:5 › load time: small and 16,000-block notes ──────────────────────
+
+    Error: expect(locator).toHaveCount(expected) failed
+
+    Locator:  locator('.tabs-container .tab')
+    Expected: 0
+    Received: 1
+    Timeout:  500ms
+
+    Call log:
+      - Expect "toHaveCount" locator('.tabs-container .tab') with timeout 500ms
+      - waiting for locator('.tabs-container .tab')
+        6 × locator resolved to 1 element
+          - unexpected value "1"
+
+
+    Call Log:
+    - Timeout 10000ms exceeded while waiting on the predicate
+
+       at workbench.ts:33
+
+      31 |       timeout: 500,
+      32 |     });
+    > 33 |   }).toPass({ timeout: 10000 });
+         |      ^
+      34 | }
+      35 | /**
+      36 |  * Opens a note (Note.md by default) in Lumiere and returns its
+        at closeEditorGroups ([worktree]/test/vscode/workbench.ts:33:6)
+        at openWorkbench ([worktree]/test/vscode/workbench.ts:47:3)
+        at sample ([worktree]/test/vscode/perf.spec.ts:38:19)
+        at [worktree]/test/vscode/perf.spec.ts:147:30
+
+    Error Context: test-results/perf-load-time-small-and-16-000-block-notes/error-context.md
+
+    attachment #2: trace (application/zip) ─────────────────────────────────────────────────────────
+    test-results/perf-load-time-small-and-16-000-block-notes/trace.zip
+    Usage:
+
+        pnpm exec playwright show-trace test-results/perf-load-time-small-and-16-000-block-notes/trace.zip
+
+    ────────────────────────────────────────────────────────────────────────────────────────────────
+
+  10) test/vscode/properties-caret.spec.ts:49:5 › the caret never enters the Properties block in the real editor (as in Obsidian 1.14.4) 
+
+    Error: expect(locator).toHaveCount(expected) failed
+
+    Locator:  locator('.tabs-container .tab')
+    Expected: 0
+    Received: 1
+    Timeout:  500ms
+
+    Call log:
+      - Expect "toHaveCount" locator('.tabs-container .tab') with timeout 500ms
+      - waiting for locator('.tabs-container .tab')
+        6 × locator resolved to 1 element
+          - unexpected value "1"
+
+
+    Call Log:
+    - Timeout 10000ms exceeded while waiting on the predicate
+
+       at workbench.ts:33
+
+      31 |       timeout: 500,
+      32 |     });
+    > 33 |   }).toPass({ timeout: 10000 });
+         |      ^
+      34 | }
+      35 | /**
+      36 |  * Opens a note (Note.md by default) in Lumiere and returns its
+        at closeEditorGroups ([worktree]/test/vscode/workbench.ts:33:6)
+        at openWorkbench ([worktree]/test/vscode/workbench.ts:47:3)
+        at [worktree]/test/vscode/properties-caret.spec.ts:55:20
+
+    Error Context: test-results/properties-caret-the-caret-a639e-itor-as-in-Obsidian-1-14-4-/error-context.md
+
+    attachment #2: trace (application/zip) ─────────────────────────────────────────────────────────
+    test-results/properties-caret-the-caret-a639e-itor-as-in-Obsidian-1-14-4-/trace.zip
+    Usage:
+
+        pnpm exec playwright show-trace test-results/properties-caret-the-caret-a639e-itor-as-in-Obsidian-1-14-4-/trace.zip
+
+    ────────────────────────────────────────────────────────────────────────────────────────────────
+
+  11) test/vscode/settings-commands.spec.ts:78:5 › Open Settings, and the commands for common settings read and write the Settings UI's own keys, live 
+
+    Error: expect(locator).toHaveCount(expected) failed
+
+    Locator:  locator('.tabs-container .tab')
+    Expected: 0
+    Received: 1
+    Timeout:  500ms
+
+    Call log:
+      - Expect "toHaveCount" locator('.tabs-container .tab') with timeout 500ms
+      - waiting for locator('.tabs-container .tab')
+        6 × locator resolved to 1 element
+          - unexpected value "1"
+
+
+    Call Log:
+    - Timeout 10000ms exceeded while waiting on the predicate
+
+       at workbench.ts:33
+
+      31 |       timeout: 500,
+      32 |     });
+    > 33 |   }).toPass({ timeout: 10000 });
+         |      ^
+      34 | }
+      35 | /**
+      36 |  * Opens a note (Note.md by default) in Lumiere and returns its
+        at closeEditorGroups ([worktree]/test/vscode/workbench.ts:33:6)
+        at openWorkbench ([worktree]/test/vscode/workbench.ts:47:3)
+        at [worktree]/test/vscode/settings-commands.spec.ts:91:5
+
+    Error Context: test-results/settings-commands-Open-Set-8b399-Settings-UI-s-own-keys-live/error-context.md
+
+    attachment #2: trace (application/zip) ─────────────────────────────────────────────────────────
+    test-results/settings-commands-Open-Set-8b399-Settings-UI-s-own-keys-live/trace.zip
+    Usage:
+
+        pnpm exec playwright show-trace test-results/settings-commands-Open-Set-8b399-Settings-UI-s-own-keys-live/trace.zip
+
+    ────────────────────────────────────────────────────────────────────────────────────────────────
+
+  12) test/vscode/settings-commands.spec.ts:280:5 › Change Setting… lists every setting by plugin and edits the picked one by its type, with the Settings UI's keys 
+
+    Error: expect(locator).toHaveCount(expected) failed
+
+    Locator:  locator('.tabs-container .tab')
+    Expected: 0
+    Received: 1
+    Timeout:  500ms
+
+    Call log:
+      - Expect "toHaveCount" locator('.tabs-container .tab') with timeout 500ms
+      - waiting for locator('.tabs-container .tab')
+        7 × locator resolved to 1 element
+          - unexpected value "1"
+
+
+    Call Log:
+    - Timeout 10000ms exceeded while waiting on the predicate
+
+       at workbench.ts:33
+
+      31 |       timeout: 500,
+      32 |     });
+    > 33 |   }).toPass({ timeout: 10000 });
+         |      ^
+      34 | }
+      35 | /**
+      36 |  * Opens a note (Note.md by default) in Lumiere and returns its
+        at closeEditorGroups ([worktree]/test/vscode/workbench.ts:33:6)
+        at openWorkbench ([worktree]/test/vscode/workbench.ts:47:3)
+        at [worktree]/test/vscode/settings-commands.spec.ts:288:5
+
+    Error Context: test-results/settings-commands-Change-S-e12e9-with-the-Settings-UI-s-keys/error-context.md
+
+    attachment #2: trace (application/zip) ─────────────────────────────────────────────────────────
+    test-results/settings-commands-Change-S-e12e9-with-the-Settings-UI-s-keys/trace.zip
+    Usage:
+
+        pnpm exec playwright show-trace test-results/settings-commands-Change-S-e12e9-with-the-Settings-UI-s-keys/trace.zip
+
+    ────────────────────────────────────────────────────────────────────────────────────────────────
+
+  13) test/vscode/tables.spec.ts:64:5 › tables in the real editor: a projected short or empty cell keeps its row height 
+
+    Error: expect(locator).toHaveCount(expected) failed
+
+    Locator:  locator('.tabs-container .tab')
+    Expected: 0
+    Received: 1
+    Timeout:  500ms
+
+    Call log:
+      - Expect "toHaveCount" locator('.tabs-container .tab') with timeout 500ms
+      - waiting for locator('.tabs-container .tab')
+        7 × locator resolved to 1 element
+          - unexpected value "1"
+
+
+    Call Log:
+    - Timeout 10000ms exceeded while waiting on the predicate
+
+       at workbench.ts:33
+
+      31 |       timeout: 500,
+      32 |     });
+    > 33 |   }).toPass({ timeout: 10000 });
+         |      ^
+      34 | }
+      35 | /**
+      36 |  * Opens a note (Note.md by default) in Lumiere and returns its
+        at closeEditorGroups ([worktree]/test/vscode/workbench.ts:33:6)
+        at openWorkbench ([worktree]/test/vscode/workbench.ts:47:3)
+        at [worktree]/test/vscode/tables.spec.ts:68:20
+
+    Error Context: test-results/tables-tables-in-the-real--3c581-y-cell-keeps-its-row-height/error-context.md
+
+    attachment #2: trace (application/zip) ─────────────────────────────────────────────────────────
+    test-results/tables-tables-in-the-real--3c581-y-cell-keeps-its-row-height/trace.zip
+    Usage:
+
+        pnpm exec playwright show-trace test-results/tables-tables-in-the-real--3c581-y-cell-keeps-its-row-height/trace.zip
+
+    ────────────────────────────────────────────────────────────────────────────────────────────────
+
+  14) test/vscode/tables.spec.ts:107:5 › tables in the real editor: typing, Tab, edge buttons, native undo and external edits 
+
+    Error: expect(locator).toHaveCount(expected) failed
+
+    Locator:  locator('.tabs-container .tab')
+    Expected: 0
+    Received: 1
+    Timeout:  500ms
+
+    Call log:
+      - Expect "toHaveCount" locator('.tabs-container .tab') with timeout 500ms
+      - waiting for locator('.tabs-container .tab')
+        6 × locator resolved to 1 element
+          - unexpected value "1"
+
+
+    Call Log:
+    - Timeout 10000ms exceeded while waiting on the predicate
+
+       at workbench.ts:33
+
+      31 |       timeout: 500,
+      32 |     });
+    > 33 |   }).toPass({ timeout: 10000 });
+         |      ^
+      34 | }
+      35 | /**
+      36 |  * Opens a note (Note.md by default) in Lumiere and returns its
+        at closeEditorGroups ([worktree]/test/vscode/workbench.ts:33:6)
+        at openWorkbench ([worktree]/test/vscode/workbench.ts:47:3)
+        at [worktree]/test/vscode/tables.spec.ts:111:20
+
+    Error Context: test-results/tables-tables-in-the-real--156fa-ive-undo-and-external-edits/error-context.md
+
+    attachment #2: trace (application/zip) ─────────────────────────────────────────────────────────
+    test-results/tables-tables-in-the-real--156fa-ive-undo-and-external-edits/trace.zip
+    Usage:
+
+        pnpm exec playwright show-trace test-results/tables-tables-in-the-real--156fa-ive-undo-and-external-edits/trace.zip
+
+    ────────────────────────────────────────────────────────────────────────────────────────────────
+
+  15) test/vscode/tables.spec.ts:169:5 › tables in the real editor: the add-row strip below and the add-column strip beside both exist, show under the pointer and work 
+
+    Error: expect(locator).toHaveCount(expected) failed
+
+    Locator:  locator('.tabs-container .tab')
+    Expected: 0
+    Received: 1
+    Timeout:  500ms
+
+    Call log:
+      - Expect "toHaveCount" locator('.tabs-container .tab') with timeout 500ms
+      - waiting for locator('.tabs-container .tab')
+        7 × locator resolved to 1 element
+          - unexpected value "1"
+
+
+    Call Log:
+    - Timeout 10000ms exceeded while waiting on the predicate
+
+       at workbench.ts:33
+
+      31 |       timeout: 500,
+      32 |     });
+    > 33 |   }).toPass({ timeout: 10000 });
+         |      ^
+      34 | }
+      35 | /**
+      36 |  * Opens a note (Note.md by default) in Lumiere and returns its
+        at closeEditorGroups ([worktree]/test/vscode/workbench.ts:33:6)
+        at openWorkbench ([worktree]/test/vscode/workbench.ts:47:3)
+        at [worktree]/test/vscode/tables.spec.ts:173:20
+
+    Error Context: test-results/tables-tables-in-the-real--d91c2--under-the-pointer-and-work/error-context.md
+
+    attachment #2: trace (application/zip) ─────────────────────────────────────────────────────────
+    test-results/tables-tables-in-the-real--d91c2--under-the-pointer-and-work/trace.zip
+    Usage:
+
+        pnpm exec playwright show-trace test-results/tables-tables-in-the-real--d91c2--under-the-pointer-and-work/trace.zip
+
+    ────────────────────────────────────────────────────────────────────────────────────────────────
+
+  16) test/vscode/tables.spec.ts:245:5 › line numbers in the real editor: a table gets one number level with its header, and the next number follows it directly 
+
+    Error: expect(locator).toHaveCount(expected) failed
+
+    Locator:  locator('.tabs-container .tab')
+    Expected: 0
+    Received: 1
+    Timeout:  500ms
+
+    Call log:
+      - Expect "toHaveCount" locator('.tabs-container .tab') with timeout 500ms
+      - waiting for locator('.tabs-container .tab')
+        6 × locator resolved to 1 element
+          - unexpected value "1"
+
+
+    Call Log:
+    - Timeout 10000ms exceeded while waiting on the predicate
+
+       at workbench.ts:33
+
+      31 |       timeout: 500,
+      32 |     });
+    > 33 |   }).toPass({ timeout: 10000 });
+         |      ^
+      34 | }
+      35 | /**
+      36 |  * Opens a note (Note.md by default) in Lumiere and returns its
+        at closeEditorGroups ([worktree]/test/vscode/workbench.ts:33:6)
+        at openWorkbench ([worktree]/test/vscode/workbench.ts:47:3)
+        at [worktree]/test/vscode/tables.spec.ts:249:20
+
+    Error Context: test-results/tables-line-numbers-in-the-8f8a2--number-follows-it-directly/error-context.md
+
+    attachment #2: trace (application/zip) ─────────────────────────────────────────────────────────
+    test-results/tables-line-numbers-in-the-8f8a2--number-follows-it-directly/trace.zip
+    Usage:
+
+        pnpm exec playwright show-trace test-results/tables-line-numbers-in-the-8f8a2--number-follows-it-directly/trace.zip
+
+    ────────────────────────────────────────────────────────────────────────────────────────────────
+
+  17) test/vscode/tables.spec.ts:274:5 › column handle copy reaches the native clipboard and pastes TSV into prose 
+
+    Error: expect(locator).toHaveCount(expected) failed
+
+    Locator:  locator('.tabs-container .tab')
+    Expected: 0
+    Received: 1
+    Timeout:  500ms
+
+    Call log:
+      - Expect "toHaveCount" locator('.tabs-container .tab') with timeout 500ms
+      - waiting for locator('.tabs-container .tab')
+        7 × locator resolved to 1 element
+          - unexpected value "1"
+
+
+    Call Log:
+    - Timeout 10000ms exceeded while waiting on the predicate
+
+       at workbench.ts:33
+
+      31 |       timeout: 500,
+      32 |     });
+    > 33 |   }).toPass({ timeout: 10000 });
+         |      ^
+      34 | }
+      35 | /**
+      36 |  * Opens a note (Note.md by default) in Lumiere and returns its
+        at closeEditorGroups ([worktree]/test/vscode/workbench.ts:33:6)
+        at openWorkbench ([worktree]/test/vscode/workbench.ts:47:3)
+        at [worktree]/test/vscode/tables.spec.ts:278:20
+
+    Error Context: test-results/tables-column-handle-copy--8dd30-d-and-pastes-TSV-into-prose/error-context.md
+
+    attachment #2: trace (application/zip) ─────────────────────────────────────────────────────────
+    test-results/tables-column-handle-copy--8dd30-d-and-pastes-TSV-into-prose/trace.zip
+    Usage:
+
+        pnpm exec playwright show-trace test-results/tables-column-handle-copy--8dd30-d-and-pastes-TSV-into-prose/trace.zip
+
+    ────────────────────────────────────────────────────────────────────────────────────────────────
+
+  18) test/vscode/vim-caret-vscodevim.spec.ts:98:5 › our Vim carets sit where VSCodeVim's do: same whole-pixel offset and size in every mode 
+
+    Error: expect(locator).toHaveCount(expected) failed
+
+    Locator:  locator('.tabs-container .tab')
+    Expected: 0
+    Received: 1
+    Timeout:  500ms
+
+    Call log:
+      - Expect "toHaveCount" locator('.tabs-container .tab') with timeout 500ms
+      - waiting for locator('.tabs-container .tab')
+        7 × locator resolved to 1 element
+          - unexpected value "1"
+
+
+    Call Log:
+    - Timeout 10000ms exceeded while waiting on the predicate
+
+       at workbench.ts:33
+
+      31 |       timeout: 500,
+      32 |     });
+    > 33 |   }).toPass({ timeout: 10000 });
+         |      ^
+      34 | }
+      35 | /**
+      36 |  * Opens a note (Note.md by default) in Lumiere and returns its
+        at closeEditorGroups ([worktree]/test/vscode/workbench.ts:33:6)
+        at openWorkbench ([worktree]/test/vscode/workbench.ts:47:3)
+        at [worktree]/test/vscode/vim-caret-vscodevim.spec.ts:128:5
+
+    Error Context: test-results/vim-caret-vscodevim-our-Vi-f8a1f-fset-and-size-in-every-mode/error-context.md
+
+    attachment #2: trace (application/zip) ─────────────────────────────────────────────────────────
+    test-results/vim-caret-vscodevim-our-Vi-f8a1f-fset-and-size-in-every-mode/trace.zip
+    Usage:
+
+        pnpm exec playwright show-trace test-results/vim-caret-vscodevim-our-Vi-f8a1f-fset-and-size-in-every-mode/trace.zip
+
+    ────────────────────────────────────────────────────────────────────────────────────────────────
+
+  19) test/vscode/vim-caret.spec.ts:277:5 › Vim carets match the built-in editor's block, line and underline in the real editor 
+
+    Error: expect(locator).toHaveCount(expected) failed
+
+    Locator:  locator('.tabs-container .tab')
+    Expected: 0
+    Received: 1
+    Timeout:  500ms
+
+    Call log:
+      - Expect "toHaveCount" locator('.tabs-container .tab') with timeout 500ms
+      - waiting for locator('.tabs-container .tab')
+        7 × locator resolved to 1 element
+          - unexpected value "1"
+
+
+    Call Log:
+    - Timeout 10000ms exceeded while waiting on the predicate
+
+       at workbench.ts:33
+
+      31 |       timeout: 500,
+      32 |     });
+    > 33 |   }).toPass({ timeout: 10000 });
+         |      ^
+      34 | }
+      35 | /**
+      36 |  * Opens a note (Note.md by default) in Lumiere and returns its
+        at closeEditorGroups ([worktree]/test/vscode/workbench.ts:33:6)
+        at openWorkbench ([worktree]/test/vscode/workbench.ts:47:3)
+        at [worktree]/test/vscode/vim-caret.spec.ts:303:5
+
+    Error Context: test-results/vim-caret-Vim-carets-match-ecaff-nderline-in-the-real-editor/error-context.md
+
+    attachment #2: trace (application/zip) ─────────────────────────────────────────────────────────
+    test-results/vim-caret-Vim-carets-match-ecaff-nderline-in-the-real-editor/trace.zip
+    Usage:
+
+        pnpm exec playwright show-trace test-results/vim-caret-Vim-carets-match-ecaff-nderline-in-the-real-editor/trace.zip
+
+    ────────────────────────────────────────────────────────────────────────────────────────────────
+
+  19 failed
+    test/vscode/git-gutter.spec.ts:38:5 › git change bars: HEAD diff, rendered peek, revert, stage, commit, off 
+    test/vscode/git-inline.spec.ts:25:5 › inline git changes: toggle, track changes, restore, waits for the bars 
+    test/vscode/link-suggest.spec.ts:25:7 › typing [[ offers notes, and [[Note# offers its headings, Vim false 
+    test/vscode/link-suggest.spec.ts:25:7 › typing [[ offers notes, and [[Note# offers its headings, Vim true 
+    test/vscode/link-suggest.spec.ts:68:5 › typing [[ in VS Code's text editor offers notes and headings, and Enter writes the link 
+    test/vscode/link-updates.spec.ts:48:5 › Always Update in the rename dialog updates the links, saves the mode, and the next rename does not ask 
+    test/vscode/native-links.spec.ts:12:5 › built-in Cmd-click preserves heading fragments and native source caret on new and reused panes 
+    test/vscode/outline-jump-top.spec.ts:88:5 › clicking a heading in the Markdown Outline puts it at the top of the editor, clamping at both ends of the note 
+    test/vscode/perf.spec.ts:138:5 › load time: small and 16,000-block notes ───────────────────────
+    test/vscode/properties-caret.spec.ts:49:5 › the caret never enters the Properties block in the real editor (as in Obsidian 1.14.4) 
+    test/vscode/settings-commands.spec.ts:78:5 › Open Settings, and the commands for common settings read and write the Settings UI's own keys, live 
+    test/vscode/settings-commands.spec.ts:280:5 › Change Setting… lists every setting by plugin and edits the picked one by its type, with the Settings UI's keys 
+    test/vscode/tables.spec.ts:64:5 › tables in the real editor: a projected short or empty cell keeps its row height 
+    test/vscode/tables.spec.ts:107:5 › tables in the real editor: typing, Tab, edge buttons, native undo and external edits 
+    test/vscode/tables.spec.ts:169:5 › tables in the real editor: the add-row strip below and the add-column strip beside both exist, show under the pointer and work 
+    test/vscode/tables.spec.ts:245:5 › line numbers in the real editor: a table gets one number level with its header, and the next number follows it directly 
+    test/vscode/tables.spec.ts:274:5 › column handle copy reaches the native clipboard and pastes TSV into prose 
+    test/vscode/vim-caret-vscodevim.spec.ts:98:5 › our Vim carets sit where VSCodeVim's do: same whole-pixel offset and size in every mode 
+    test/vscode/vim-caret.spec.ts:277:5 › Vim carets match the built-in editor's block, line and underline in the real editor 
+  11 passed (4.8m)
+ ELIFECYCLE  Command failed with exit code 1.
+
+PNPM_TEST_VSCODE_EXIT=1

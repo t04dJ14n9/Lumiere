@@ -1,0 +1,5 @@
+ packages/host-node/src/host/settings-routes.ts     | 31 +++++++---
+ packages/host-node/src/host/view-routes.ts         | 67 +++++++++++++++-------
+ packages/host-node/test/unit/routes.test.ts        | 53 ++++++++++++++++-
+ .../host-node/test/unit/settings-routes.test.ts    | 61 ++++++++++++++++++--
+ 4 files changed, 176 insertions(+), 36 deletions(-)

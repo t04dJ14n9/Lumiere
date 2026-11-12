@@ -1,0 +1,336 @@
+diff --git a/packages/host-node/src/host/settings-routes.ts b/packages/host-node/src/host/settings-routes.ts
+index d87821f9..40a5f112 100644
+--- a/packages/host-node/src/host/settings-routes.ts
++++ b/packages/host-node/src/host/settings-routes.ts
+@@ -40,7 +40,11 @@ export function createSettingsRoutes(
+       if (req.method !== "POST") {
+         return false;
+       }
+-      const result = await service.change(await readJson(req));
++      const body = await readJson(req);
++      if (!body) {
++        return json(res, 400, { error: "Invalid request body" });
++      }
++      const result = await service.change(body);
+       return "problem" in result
+         ? json(res, 400, { error: result.problem })
+         : json(res, 200, result.item);
+@@ -57,22 +61,31 @@ function json(res: ServerResponse, status: number, body: unknown): true {
+   return true;
+ }
+ 
++/** A bad or oversized body is a client error, not a server failure. */
+ async function readJson(
+   req: IncomingMessage,
+-): Promise<Record<string, unknown>> {
++): Promise<Record<string, unknown> | undefined> {
+   const chunks: Buffer[] = [];
+   let size = 0;
+   for await (const chunk of req) {
+     size += (chunk as Buffer).length;
+     if (size > MAX_BODY) {
+-      throw new Error("Request body too large");
++      // Drain the request: returning here destroys its socket before the
++      // caller can send the 400.
++      chunks.length = 0;
++      continue;
+     }
+     chunks.push(chunk as Buffer);
+   }
+-  const body: unknown = JSON.parse(
+-    Buffer.concat(chunks).toString("utf8") || "{}",
+-  );
+-  return typeof body === "object" && body !== null && !Array.isArray(body)
+-    ? (body as Record<string, unknown>)
+-    : {};
++  if (size > MAX_BODY) {
++    return undefined;
++  }
++  try {
++    const body: unknown = JSON.parse(Buffer.concat(chunks).toString("utf8"));
++    return typeof body === "object" && body !== null && !Array.isArray(body)
++      ? (body as Record<string, unknown>)
++      : undefined;
++  } catch {
++    return undefined;
++  }
+ }
+diff --git a/packages/host-node/src/host/view-routes.ts b/packages/host-node/src/host/view-routes.ts
+index 60e6d14b..efa425b4 100644
+--- a/packages/host-node/src/host/view-routes.ts
++++ b/packages/host-node/src/host/view-routes.ts
+@@ -42,15 +42,22 @@ export function createViewRoutes(trees: TreeHub): ViewRoutes {
+         return true;
+       }
+       const match = /^\/([^/]+)(\/run|\/visible)?$/.exec(rest);
+-      return match?.[1]
+-        ? handleTree({
+-            req,
+-            res,
+-            trees,
+-            viewId: decodeURIComponent(match[1]),
+-            action: match[2],
+-          })
+-        : false;
++      if (!match?.[1]) {
++        return false;
++      }
++      let viewId: string;
++      try {
++        viewId = decodeURIComponent(match[1]);
++      } catch {
++        return json(res, 400, { error: "Invalid view id" });
++      }
++      return handleTree({
++        req,
++        res,
++        trees,
++        viewId,
++        action: match[2],
++      });
+     },
+     close() {
+       stopListening();
+@@ -86,16 +93,23 @@ async function handleTree({
+       : json(res, 404, { error: "No such view" });
+   }
+   if (action === "/run" && method === "POST") {
+-    const { id } = await readJson(req);
+-    const ran = typeof id === "string" && (await trees.run(viewId, id));
++    const body = await readJson(req);
++    if (!body) {
++      return json(res, 400, { error: "Invalid request body" });
++    }
++    const ran =
++      typeof body.id === "string" && (await trees.run(viewId, body.id));
+     return json(res, ran ? 200 : 404, { ok: ran });
+   }
+   if (action === "/visible" && method === "POST") {
+-    const { visible } = await readJson(req);
+-    if (typeof visible !== "boolean") {
++    const body = await readJson(req);
++    if (!body) {
++      return json(res, 400, { error: "Invalid request body" });
++    }
++    if (typeof body.visible !== "boolean") {
+       return json(res, 400, { error: 'Expected {"visible": true|false}' });
+     }
+-    trees.setVisible(viewId, visible);
++    trees.setVisible(viewId, body.visible);
+     return json(res, 200, { ok: true });
+   }
+   return false;
+@@ -122,22 +136,31 @@ function json(res: ServerResponse, status: number, body: unknown): true {
+   return true;
+ }
+ 
++/** A bad or oversized body is a client error, not a server failure. */
+ async function readJson(
+   req: IncomingMessage,
+-): Promise<Record<string, unknown>> {
++): Promise<Record<string, unknown> | undefined> {
+   const chunks: Buffer[] = [];
+   let size = 0;
+   for await (const chunk of req) {
+     size += (chunk as Buffer).length;
+     if (size > MAX_BODY) {
+-      throw new Error("Request body too large");
++      // Drain the request: returning here destroys its socket before the
++      // caller can send the 400.
++      chunks.length = 0;
++      continue;
+     }
+     chunks.push(chunk as Buffer);
+   }
+-  const body: unknown = JSON.parse(
+-    Buffer.concat(chunks).toString("utf8") || "{}",
+-  );
+-  return typeof body === "object" && body !== null
+-    ? (body as Record<string, unknown>)
+-    : {};
++  if (size > MAX_BODY) {
++    return undefined;
++  }
++  try {
++    const body: unknown = JSON.parse(Buffer.concat(chunks).toString("utf8"));
++    return typeof body === "object" && body !== null && !Array.isArray(body)
++      ? (body as Record<string, unknown>)
++      : undefined;
++  } catch {
++    return undefined;
++  }
+ }
+diff --git a/packages/host-node/test/unit/routes.test.ts b/packages/host-node/test/unit/routes.test.ts
+index c67fbafa..3c801d6d 100644
+--- a/packages/host-node/test/unit/routes.test.ts
++++ b/packages/host-node/test/unit/routes.test.ts
+@@ -1,14 +1,20 @@
+ import test from "node:test";
+ import assert from "node:assert/strict";
+ import { mkdir, mkdtemp, realpath, rm, writeFile } from "node:fs/promises";
+-import { createServer } from "node:http";
++import {
++  createServer,
++  type IncomingMessage,
++  type ServerResponse,
++} from "node:http";
+ import { tmpdir } from "node:os";
+ import * as path from "node:path";
++import { Readable } from "node:stream";
+ import { pathToFileURL } from "node:url";
+ import { WebSocket } from "ws";
+ import { createEditorRoutes, SOCKET_PATH } from "../../src/host/routes";
+ import type { LumiereHost } from "../../src/host/start";
+ import { TreeHub } from "../../src/host/trees";
++import { createViewRoutes } from "../../src/host/view-routes";
+ 
+ /** A host with one panel, "p", whose page socket goes nowhere. */
+ function fakeHost(): LumiereHost {
+@@ -122,6 +128,12 @@ test("tree views are served as snapshots, clicks and visibility", async (t) => {
+   );
+   const post = (path: string, body: unknown) =>
+     fetch(`${base}${path}`, { method: "POST", body: JSON.stringify(body) });
++  const postRaw = (path: string, body: string) =>
++    fetch(`${base}${path}`, {
++      method: "POST",
++      headers: { "content-type": "application/json" },
++      body,
++    });
+   assert.equal(
+     (await post("/lumiere.markdown.outline/run", { id: "h1" })).status,
+     200,
+@@ -143,9 +155,48 @@ test("tree views are served as snapshots, clicks and visibility", async (t) => {
+     400,
+   );
+   assert.deepEqual(heard, [true]);
++  for (const body of [
++    "{",
++    "[]",
++    "null",
++    '"text"',
++    "42",
++    "",
++    JSON.stringify({ id: "x".repeat(4 * 1024) }),
++  ]) {
++    const response = await postRaw("/lumiere.markdown.outline/run", body);
++    assert.equal(response.status, 400, body.slice(0, 32));
++    assert.match(
++      response.headers.get("content-type") ?? "",
++      /^application\/json/,
++    );
++    assert.deepEqual(await response.json(), { error: "Invalid request body" });
++  }
++  const badViewId = await postRaw("/%C3%28/run", '{"id":"h1"}');
++  assert.equal(badViewId.status, 400);
++  assert.deepEqual(await badViewId.json(), { error: "Invalid view id" });
++  assert.deepEqual(ran, [["open", 3]]);
+   assert.equal((await fetch(`${base}/unknown.view`)).status, 404);
+ });
+ 
++test("a tree command failure is not reported as a bad body", async (t) => {
++  const trees = {
++    onEvent: () => () => {},
++    run: async () => {
++      throw new Error("command failed");
++    },
++  } as unknown as TreeHub;
++  const routes = createViewRoutes(trees);
++  t.after(() => routes.close());
++  const req = Object.assign(Readable.from([Buffer.from('{"id":"h1"}')]), {
++    method: "POST",
++  }) as unknown as IncomingMessage;
++  await assert.rejects(
++    routes.handle(req, {} as ServerResponse, "/view/run"),
++    /command failed/,
++  );
++});
++
+ test("serving an editor page registers the workspace root before opening the panel", async (t) => {
+   // macOS's temporary folder is behind a symlink; the route resolves it.
+   const dir = await realpath(
+diff --git a/packages/host-node/test/unit/settings-routes.test.ts b/packages/host-node/test/unit/settings-routes.test.ts
+index 5af9dc34..a0c84e76 100644
+--- a/packages/host-node/test/unit/settings-routes.test.ts
++++ b/packages/host-node/test/unit/settings-routes.test.ts
+@@ -102,9 +102,18 @@ async function serve(t: test.TestContext) {
+     new Set(["lumiere.markdown.plugins.cursorBridge.enabled"]),
+   );
+   const server = createServer((req, res) => {
+-    void routes
+-      .handle(req, res, "")
+-      .then((handled) => handled || res.writeHead(404).end());
++    void routes.handle(req, res, "").then(
++      (handled) => {
++        if (!handled) {
++          res.writeHead(404).end();
++        }
++      },
++      () => {
++        if (!res.headersSent) {
++          res.writeHead(500).end();
++        }
++      },
++    );
+   });
+   await new Promise<void>((resolve) => server.listen(0, "127.0.0.1", resolve));
+   t.after(async () => {
+@@ -115,7 +124,13 @@ async function serve(t: test.TestContext) {
+   const url = `http://127.0.0.1:${port}/`;
+   const post = (body: unknown) =>
+     fetch(url, { method: "POST", body: JSON.stringify(body) });
+-  return { settings, file, url, post };
++  const postRaw = (body: string) =>
++    fetch(url, {
++      method: "POST",
++      headers: { "content-type": "application/json" },
++      body,
++    });
++  return { settings, file, url, post, postRaw };
+ }
+ 
+ test("the page lists every setting with its value, and a change reaches the plugins", async (t) => {
+@@ -186,6 +201,44 @@ test("a value the schema refuses, or a key that is not Lumière's, is not writte
+   assert.equal(settings.get("editor.fontSize", 0), 16);
+ });
+ 
++test("a bad, non-object, empty or oversized settings body is a JSON 400", async (t) => {
++  const { settings, postRaw } = await serve(t);
++  const bodies = [
++    "{",
++    "[]",
++    "null",
++    '"text"',
++    "42",
++    "",
++    JSON.stringify({
++      key: "lumiere.markdown.editor.fontSize",
++      value: "x".repeat(64 * 1024),
++    }),
++  ];
++  for (const body of bodies) {
++    const response = await postRaw(body);
++    assert.equal(response.status, 400, body.slice(0, 32));
++    assert.match(
++      response.headers.get("content-type") ?? "",
++      /^application\/json/,
++    );
++    assert.deepEqual(await response.json(), { error: "Invalid request body" });
++  }
++  assert.equal(settings.get("editor.fontSize", 0), 16);
++});
++
++test("a settings write that fails is not reported as a bad body", async (t) => {
++  const { settings, post } = await serve(t);
++  settings.access.update = async () => {
++    throw new Error("write failed");
++  };
++  const response = await post({
++    key: "lumiere.markdown.editor.fontSize",
++    value: 20,
++  });
++  assert.equal(response.status, 500);
++});
++
+ test("search matches every word, and @modified keeps changed settings", () => {
+   const item: SettingItem = {
+     key: "lumiere.markdown.editor.fontSize",

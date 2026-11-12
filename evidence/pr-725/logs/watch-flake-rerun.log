@@ -1,0 +1,15 @@
+✔ a file in folders that do not exist yet is heard when it appears (317.404959ms)
+✔ other files in the folder are not heard; a stopped watch hears nothing (912.485875ms)
+✔ watching under a path that cannot exist neither throws nor hears (2.253292ms)
+✔ folders created and removed at once under a watched tree throw nothing, and files are still heard (612.906041ms)
+✔ a stopped tree watch hears nothing more (206.324708ms)
+ℹ tests 5
+ℹ suites 0
+ℹ pass 5
+ℹ fail 0
+ℹ cancelled 0
+ℹ skipped 0
+ℹ todo 0
+ℹ duration_ms 2134.820917
+
+WATCH_RERUN_EXIT=0

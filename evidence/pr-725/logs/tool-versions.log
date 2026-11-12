@@ -1,0 +1,4 @@
+node: v26.5.0
+pnpm: 10.28.2
+homebrew dsh CLI: 0.1.0-rc.6
+bundled dsh CLI: 0.2.2-rc.1

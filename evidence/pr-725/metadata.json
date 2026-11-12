@@ -1,0 +1,137 @@
+{
+  "pr": 725,
+  "generatedAt": "2026-11-13",
+  "redacted": true,
+  "evidenceBranch": "local/pr-725-final-evidence",
+  "evidenceBranchBase": "origin/main",
+  "evidenceBaseSha": "f1c153d51df481ec493800ca491544d56b7df66b",
+  "sourceBranch": "review/dsh-json-body-400",
+  "sourceSha": "9c5f6ae5a6092c12f7683c2c7231b2dac90a18a5",
+  "publishedParentHead": "9e84ef01b1e0aa521dada6c28b6f583bd5d00a4f",
+  "sourceCommitsAfterParent": [
+    "fa1f33ec88832e776c42da5bb1a1a95a95e35815 fix(host-node): malformed JSON bodies are a 400, not a 500",
+    "9c5f6ae5a6092c12f7683c2c7231b2dac90a18a5 fix(host-node): drain oversized JSON bodies before answering 400"
+  ],
+  "finalDiff": {
+    "files": [
+      "packages/host-node/src/host/settings-routes.ts",
+      "packages/host-node/src/host/view-routes.ts",
+      "packages/host-node/test/unit/routes.test.ts",
+      "packages/host-node/test/unit/settings-routes.test.ts"
+    ],
+    "insertions": 176,
+    "deletions": 36
+  },
+  "environment": {
+    "node": "v26.5.0",
+    "pnpm": "10.28.2",
+    "homebrewDshCli": "0.1.0-rc.6",
+    "bundledDshCliUsedForEvidence": "0.2.2-rc.1",
+    "gateEnv": {
+      "MARKDOWN_WORKBENCH_TEST_CONCURRENCY": "1",
+      "WORKSHOP_TEST_CONCURRENCY": "1",
+      "VSCODE_TEST_MOCK_KEYCHAIN": "1"
+    },
+    "profiles": "disposable; VS Code global setup removed and recreated its isolated profile, DSH used a fresh throwaway DSH_HOME/workspace and SSH_TTY plus --no-open"
+  },
+  "install": {
+    "command": "pnpm install --frozen-lockfile",
+    "exit": 0,
+    "warnings": [
+      "missing built app server bin links in apps/web and apps/ipad before build",
+      "ignored build script @vscode/vsce-sign@2.1.0"
+    ]
+  },
+  "gates": {
+    "sequential": true,
+    "pnpm check": {
+      "firstRunExit": 1,
+      "firstRunFlake": "host-node/test/unit/watch.test.ts: a file in folders that do not exist yet is heard when it appears (135/136 passed)",
+      "isolatedFlakeRerun": "5/5 passed, exit 0",
+      "finalRerunExit": 0
+    },
+    "pnpm test:browser": {
+      "exit": 0,
+      "markdownPassed": 462,
+      "pdfPassed": 195
+    },
+    "pnpm test:quality": {
+      "exit": 0,
+      "playwrightPassed": 9,
+      "unitPassed": 1
+    },
+    "pnpm test:vscode": {
+      "firstRunExit": 1,
+      "firstRunRootSuite": "11 passed, 19 failed after closeEditorGroups left a tab; PDF suite not reached",
+      "rerunExit": 0,
+      "rerunRootSuite": "30 passed",
+      "rerunPdfSuite": "26 passed, 2 skipped"
+    },
+    "sourceChangesAfterGates": false,
+    "allFourRerunAfterSourceChanges": "not applicable; final source SHA was fixed before the four sequential gates"
+  },
+  "dshWireEvidence": {
+    "sourceSha": "9c5f6ae5a6092c12f7683c2c7231b2dac90a18a5",
+    "dshBundleIndexSha256": "93eccc03f34a01218e4dbeaed7758c35add8dda7f1318b8a0ea4edf58192b340",
+    "base": "http://127.0.0.1:61441",
+    "authentication": "explicit DSH_URL and DSH_COOKIE only; cookie redacted; no cookie database, port probing, or owner profile",
+    "dshHome": "[throwaway]",
+    "workspace": "[throwaway]",
+    "runnerExit": 0,
+    "checks": 24,
+    "passed": 24,
+    "failed": 0,
+    "invalidBodyChecks": "18/18 delivered application/json 400 {error: Invalid request body} with cache-control no-store across settings, views run and views visible endpoints for malformed, empty, array, null, string and number bodies",
+    "oversizedSettings": "71733 request bytes: delivered complete JSON 400, keep-alive socket reused, connection=keep-alive",
+    "oversizedViews": "5149 request bytes: delivered complete JSON 400, keep-alive socket reused, connection=keep-alive",
+    "validPosts": "settings POST 200 with value 20 persisted; views visible POST 200 {ok:true}",
+    "badViewId": "400 application/json {error: Invalid view id}",
+    "downstreamFailure": "forced settings persistence failure returned 500 text/plain Internal error, not 400"
+  },
+  "redactionScan": {
+    "filesScanned": 23,
+    "ownerPaths": 0,
+    "launchTokens": 0,
+    "cookiePayloads": 0,
+    "rawCookieHeaders": 0,
+    "throwawayAbsolutePaths": 0
+  },
+  "worktreeState": {
+    "clean": true,
+    "attachedSourceBranch": true,
+    "localBranchAheadOfOldRemoteHead": 9,
+    "localBranchBehindOldRemoteHead": 3,
+    "evidenceBranchLocalOnly": true,
+    "pushed": false,
+    "githubEdited": false,
+    "markedReady": false,
+    "merged": false,
+    "retargeted": false
+  },
+  "readiness": "Local verification passed at the final source SHA. PR remains a draft; main must publish the rewritten source branch, refresh remote CI, obtain human review and owner evidence review, then decide readiness.",
+  "logs": [
+    "logs/pnpm-install.log",
+    "logs/pnpm-check.log",
+    "logs/watch-flake-rerun.log",
+    "logs/pnpm-check-rerun.log",
+    "logs/pnpm-test-browser.log",
+    "logs/pnpm-test-quality.log",
+    "logs/pnpm-test-vscode.log",
+    "logs/pnpm-test-vscode-rerun.log",
+    "logs/dsh-build.log",
+    "logs/dsh-plugin-add.log",
+    "logs/dsh-dump-config.log",
+    "logs/dsh-startup.log",
+    "logs/dsh-wire.log",
+    "logs/dsh-runner.log",
+    "logs/dsh-wire-runner.txt",
+    "logs/tool-versions.log",
+    "logs/bundle-hash.txt",
+    "logs/source-sha.txt",
+    "logs/evidence-base-sha.txt",
+    "logs/source-commits.txt",
+    "logs/source-worktree-state.txt",
+    "logs/final-diff-stat.txt",
+    "logs/final-diff.patch"
+  ]
+}
