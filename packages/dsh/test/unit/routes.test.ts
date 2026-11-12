@@ -215,7 +215,7 @@ async function serve(t: test.TestContext) {
   };
 }
 
-function jsonPost(body: string): RequestInit {
+function post(body: string): RequestInit {
   return {
     method: "POST",
     headers: { "content-type": "application/json" },
@@ -271,7 +271,7 @@ test("DSH rejects writes to read-only routes before handling them", async (t) =>
   assert.equal(shim.status, 200);
   assert.equal(await shim.text(), "/* shim */");
 
-  const post = async (rest: string, body: unknown) => {
+  const postJson = async (rest: string, body: unknown) => {
     const response = await fetch(`${origin}${BASE}${rest}`, {
       method: "POST",
       headers: { "content-type": "application/json" },
@@ -280,10 +280,10 @@ test("DSH rejects writes to read-only routes before handling them", async (t) =>
     await response.arrayBuffer();
     return response.status;
   };
-  assert.equal(await post("/views/tree/run", { id: "n" }), 200);
-  assert.equal(await post("/views/tree/visible", { visible: true }), 200);
-  assert.equal(await post("/commands", { command: "test" }), 200);
-  assert.equal(await post("/settings", {}), 400, "settings checked the body");
+  assert.equal(await postJson("/views/tree/run", { id: "n" }), 200);
+  assert.equal(await postJson("/views/tree/visible", { visible: true }), 200);
+  assert.equal(await postJson("/commands", { command: "test" }), 200);
+  assert.equal(await postJson("/settings", {}), 400, "settings checked the body");
 
   const editor = await fetch(`${origin}${BASE}/editor?${editorQuery}`);
   assert.equal(editor.status, 200, "GET still opens an editor page");
@@ -327,15 +327,15 @@ test("HEAD is a bodyless GET and POST still reaches the JSON handlers", async (t
   assert.match(head.headers.get("content-type") ?? "", /^application\/json/);
   assert.equal(await head.text(), "");
 
-  const bad = await fetch(url("/settings"), jsonPost("{not json"));
+  const bad = await fetch(url("/settings"), post("{not json"));
   assert.equal(bad.status, 400);
   assert.deepEqual(await bad.json(), { error: "Invalid request body" });
 
-  const command = await fetch(url("/commands"), jsonPost('{"command":"x"}'));
+  const command = await fetch(url("/commands"), post('{"command":"x"}'));
   assert.equal(command.status, 200);
   assert.deepEqual(await command.json(), { ok: true });
 
-  const view = await fetch(url("/views/outline/run"), jsonPost('{"id":"h1"}'));
+  const view = await fetch(url("/views/outline/run"), post('{"id":"h1"}'));
   assert.equal(view.status, 200);
   assert.deepEqual(await view.json(), { ok: true });
   assert.deepEqual(writes, ["commands.run", "views.run"]);
@@ -350,5 +350,36 @@ test("read-only 405s and unknown paths are unchanged", async (t) => {
 
   const unknown = await fetch(url("/not-a-route"), { method: "PUT" });
   assert.equal(unknown.status, 404);
+  assert.deepEqual(writes, []);
+});
+
+test("the DSH gate's family-level Allow is not a per-resource method contract", async (t) => {
+  const { url, writes } = await serve(t);
+  // host-node's settings, command and view handlers own exact method dispatch:
+  // when they return false, DSH answers 404. Copying their table here would
+  // drift and change those 404s.
+  const getAction = await fetch(url("/views/outline/run"));
+  assert.equal(getAction.status, 404);
+  const postEvents = await fetch(url("/views/events"), post("{}"));
+  assert.equal(postEvents.status, 404);
+
+  const refused = await fetch(url("/views/outline"), { method: "PUT" });
+  assert.equal(refused.status, 405);
+  assert.equal(refused.headers.get("allow"), "GET, POST, HEAD");
+  assert.deepEqual(await refused.json(), { error: "Method Not Allowed" });
+  assert.deepEqual(writes, []);
+});
+
+test("HEAD does not open the event stream or run a tree action", async (t) => {
+  const { url, writes } = await serve(t);
+  for (const path of [
+    "/views/events",
+    "/views/outline/run",
+    "/views/outline/visible",
+  ]) {
+    const response = await fetch(url(path), { method: "HEAD" });
+    assert.equal(response.status, 404, path);
+    assert.equal(await response.text(), "", path);
+  }
   assert.deepEqual(writes, []);
 });

@@ -51,10 +51,17 @@ The host half injects DSH's `webServer` and `connection`; the browser half
 authentication: `/lumiere/editor` (a note's page), `/lumiere/m/*` (the
 editor), `/lumiere/page/shim.js` (the shim), `/lumiere/file` (a note's images, inside
 its workspace only — `..` and a symbolic link that leaves the workspace are
-refused) and the `/lumiere/socket` upgrade. Settings use the
-`lumiere.markdown.*` keys and defaults of the VS Code extension and are kept
-in `$DSH_HOME/lumiere/settings.json` (`~/.dsh` by default), beside the vault
-snapshots and editor state.
+refused) and the `/lumiere/socket` upgrade. The JSON routes
+(`/lumiere/settings`, `/lumiere/commands` and `/lumiere/views/*`) answer a
+method none of them uses with 405 and a family-level
+`Allow: GET, POST, HEAD`. host-node's `createEditorRoutes` and its
+`settings-routes.ts`, `command-routes.ts` and `view-routes.ts` handlers own each
+resource's exact method dispatch; a method the family advertises can still be
+a 404 on one subpath. DSH does not copy that table here.
+
+Settings use the `lumiere.markdown.*` keys and defaults of the VS Code extension
+and are kept in `$DSH_HOME/lumiere/settings.json` (`~/.dsh` by default), beside
+the vault snapshots and editor state.
 
 ## Build and install
 

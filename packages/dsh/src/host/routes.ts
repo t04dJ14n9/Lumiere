@@ -27,7 +27,12 @@ export function upgradeRejection(status: number): string {
   );
 }
 
-/** The JSON routes are the only ones that take POST. */
+/**
+ * The DSH gate answers a method none of the JSON routes uses with a
+ * family-level Allow; host-node's settings, command and view handlers own each
+ * resource's exact methods. Copying their table here would drift and change
+ * their 404s.
+ */
 function isJsonRoute(rest: string): boolean {
   return (
     rest === "/views" ||
