@@ -20,8 +20,10 @@ Default and the six colours; taking one wraps an immediately following word,
 reuses its closing `==` if present, or opens an empty pair, with the caret
 inside after the colour (`highlight-suggest.ts`); Tab takes nothing, as in
 Obsidian. Line commands edit each selected line, excluding a final column-zero line. Registered
-commands target the active projected editor (including table cells), and owned
-keymaps provide bold, italic, link and comment shortcuts. As in Obsidian,
+commands target the active projected editor (including table cells), except the
+list, quote and code-block commands: they check the outer document for a parsed
+table at the caret or selection start and return false there. Owned keymaps
+provide bold, italic, link and comment shortcuts. As in Obsidian,
 Insert Link leaves the caret in the empty URL after a selected label (else in
 the empty label), and Toggle Comment wraps the selection or the word at the
 caret in `%%…%%` (no spaces, as in 1.14) with it selected, or inserts an empty comment
@@ -49,12 +51,15 @@ Insert (link), where host-node labels each by its short title (Bold).
 - `highlight-colour.ts`: the coloured highlight commands.
 - `highlight-suggest.ts`: the colour list after `==`.
 - `lines.ts`: heading/list/quote edits and link insertion.
+- `table-cell.ts`: parsed-table predicate for the refused block commands.
 - `formatting.test.ts`: pure editor-state command units.
+- `test/unit/formatting/table-cell.test.ts`: refusal and parser boundary units.
 
 ## Services, events and settings
 
 Injects `editor` and `commands`; provides `formatting` with wrap and clear
-operations. Queries the `editor/activeView` bail event for palette commands.
+operations. Most palette commands query the `editor/activeView` bail event;
+the four guarded block commands use the outer view to check table syntax.
 `lumiere.markdown.plugins.formatting.enabled` defaults to true. Bold, italics
 Insert Link and Toggle Comment use Mod+B, Mod+I, Mod+K and Mod+/.
 
@@ -67,5 +72,10 @@ does not copy. Coloured highlight toggles appear on the editor context menu
 (and in the command palette), matching Obsidian's colour set.
 
 VS Code owns saves and undo. Formatting changes source directly, including table
-cell projections. No live-reference keybinding or visual-parity observation is
-claimed; remaining shortcuts await the owner's verification.
+cell projections. Obsidian's command check callback hides the four guarded
+commands from its command list and disables the cell's block submenus; Lumia
+leaves them in the command palette as no-ops. The guard treats any parsed `Table` position as a cell, including separator
+rows, raw table source in Source mode and tables the widget cannot draw;
+callout and checklist commands are still unguarded. No live-reference
+keybinding or visual-parity observation is claimed; remaining shortcuts await
+the owner's verification.

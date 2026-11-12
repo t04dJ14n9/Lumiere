@@ -8,9 +8,9 @@ import { formattingCommands } from "../../../src/plugins/formatting/webview";
 const TABLE = "| a | b |\n| --- | --- |\n| c | d |";
 const WITH_TEXT = `${TABLE}\n\nafter text`;
 
-// Obsidian refuses exactly these block commands inside a table cell. The
-// formatting layer owns the list, quote and code-block ones; the checklist and
-// callout commands live in the tasks and callouts plugins.
+// Obsidian's inTableCell check covers these block commands. The formatting
+// layer owns the list, quote and code-block ones; the checklist and callout
+// commands live in the tasks and callouts plugins.
 const REFUSED = [
   "editor:toggle-bullet-list",
   "editor:toggle-numbered-list",
@@ -18,8 +18,12 @@ const REFUSED = [
   "editor:insert-codeblock",
 ];
 
-function state(doc: string, caret: number): EditorState {
-  return EditorState.create({ doc, selection: { anchor: caret } });
+function state(
+  doc: string,
+  anchor: number,
+  head: number = anchor,
+): EditorState {
+  return EditorState.create({ doc, selection: { anchor, head } });
 }
 
 /** A view that just records whether a command dispatched an edit. */
@@ -77,6 +81,36 @@ test("the same commands still run outside a table cell", () => {
     const { view, dispatched } = fakeView(state("hello", 3));
     assert.equal(commands.get(id)!(view), true, `${id} returns true`);
     assert.equal(dispatched(), true, `${id} dispatches its edit`);
+  }
+});
+
+test("the predicate follows the parser through code fences and table variants", () => {
+  const fence = "```md\n| a | b |\n| - | - |\n| c | d |\n```";
+  assert.equal(isInTableCell(state(fence, fence.indexOf("c"))), false);
+  const bare = "a | b\n--- | ---\nc | d";
+  assert.equal(isInTableCell(state(bare, bare.indexOf("d"))), true);
+  const list = "- item\n\n  | a | b |\n  | - | - |\n  | c | d |";
+  assert.equal(isInTableCell(state(list, list.indexOf("d"))), true);
+  const cell = "| a | b |\n| --- | --- |\n| one<br>two | `x\\|y` |";
+  assert.equal(isInTableCell(state(cell, cell.indexOf("two"))), true);
+  assert.equal(isInTableCell(state(cell, cell.indexOf("y"))), true);
+  const ended = "| a | b |\n| - | - |\n| c | d |\nbelow";
+  assert.equal(isInTableCell(state(ended, ended.indexOf("below"))), false);
+});
+
+test("a selection with one end in a table cell refuses the commands either way", () => {
+  const commands = formattingCommands();
+  const inside = WITH_TEXT.indexOf("c");
+  const outside = WITH_TEXT.indexOf("after");
+  for (const { anchor, head } of [
+    { anchor: inside, head: outside },
+    { anchor: outside, head: inside },
+  ]) {
+    for (const id of REFUSED) {
+      const { view, dispatched } = fakeView(state(WITH_TEXT, anchor, head));
+      assert.equal(commands.get(id)!(view), false, `${id} returns false`);
+      assert.equal(dispatched(), false, `${id} dispatches no edit`);
+    }
   }
 });
 
