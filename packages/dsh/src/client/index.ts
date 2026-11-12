@@ -23,6 +23,15 @@ interface ReactLike {
   useRef<T>(value: T): { current: T };
 }
 
+interface FrameEvent {
+  readonly currentTarget: HTMLIFrameElement | null;
+}
+
+interface FrameLoadState {
+  hasLoaded: boolean;
+  initialBlank: Document | null;
+}
+
 /** What DSH hands a document body (`sidebar.right.tab.document`). */
 export interface BodyProps {
   readonly resourceAddress: string;
@@ -136,7 +145,10 @@ function resolveEditorTarget(
 export function noteBody(React: ReactLike, open: (address: string) => void) {
   return function LumiereNote(props: BodyProps): unknown {
     const frame = React.useRef<HTMLIFrameElement | null>(null);
-    const hasLoaded = React.useRef(false);
+    const load = React.useRef<FrameLoadState>({
+      hasLoaded: false,
+      initialBlank: null,
+    });
     const file = props.useResource(props.resourceAddress)?.value;
     const absolute = file?.absolutePath;
     const { isMarkdown, root, containmentRoot, src } = resolveEditorTarget(
@@ -144,7 +156,7 @@ export function noteBody(React: ReactLike, open: (address: string) => void) {
       absolute,
     );
     React.useEffect(() => {
-      hasLoaded.current = false;
+      load.current.hasLoaded = false;
       if (absolute && !isMarkdown) {
         props.content.failed?.();
       }
@@ -161,7 +173,7 @@ export function noteBody(React: ReactLike, open: (address: string) => void) {
     );
     React.useEffect(() => onDshThemeChange(() => sendTheme(frame.current)), []);
     React.useEffect(() => {
-      if (hasLoaded.current) {
+      if (load.current.hasLoaded) {
         props.content.loaded?.(file?.version ?? "lumiere");
       }
     }, [props.content.revision]);
@@ -172,39 +184,83 @@ export function noteBody(React: ReactLike, open: (address: string) => void) {
       key: src,
       ref: (element: HTMLIFrameElement | null) => {
         frame.current = element;
+        load.current.initialBlank = initialBlankDocument(element);
         props.scrollportRef?.(element);
       },
       src,
       title: "Lumière",
       allow: "clipboard-read; clipboard-write",
-      onLoad: (event: { currentTarget: HTMLIFrameElement | null }) =>
-        handleFrameLoad(event.currentTarget, hasLoaded, props, file?.version),
-      onError: () => props.content.failed?.(),
+      ...frameHandlers(frame, load.current, props, file?.version),
       style: { border: 0, width: "100%", height: "100%", display: "block" },
     });
   };
 }
 
-function handleFrameLoad(
+function frameHandlers(
+  frame: { current: HTMLIFrameElement | null },
+  state: FrameLoadState,
+  props: BodyProps,
+  version: string | undefined,
+): {
+  onLoad(event: FrameEvent): void;
+  onError(event: FrameEvent): void;
+} {
+  return {
+    onLoad: (event) => {
+      const element = loadingFrame(event.currentTarget, frame.current);
+      if (element) {
+        handleFrameLoad(element, state, props, version);
+      }
+    },
+    onError: (event) => {
+      if (loadingFrame(event.currentTarget, frame.current)) {
+        state.hasLoaded = false;
+        props.content.failed?.();
+      }
+    },
+  };
+}
+
+/** A load/error from an iframe DSH replaced must not settle its replacement. */
+function loadingFrame(
   element: HTMLIFrameElement | null,
-  hasLoaded: { current: boolean },
+  live: HTMLIFrameElement | null,
+): HTMLIFrameElement | null {
+  return element && element === live ? element : null;
+}
+
+/** The iframe's own empty document, before its editor page navigation. */
+function initialBlankDocument(
+  element: HTMLIFrameElement | null,
+): Document | null {
+  const doc = element?.contentDocument;
+  return doc && doc.URL === "about:blank" ? doc : null;
+}
+
+function handleFrameLoad(
+  element: HTMLIFrameElement,
+  state: FrameLoadState,
   props: BodyProps,
   version: string | undefined,
 ): void {
-  const doc = element?.contentDocument;
-  // An iframe fires an extra load for its initial about:blank document. That
-  // is not a failed editor page, so do not report it to DSH.
-  if (doc?.URL === "about:blank") {
+  const doc = element.contentDocument;
+  // Only the iframe's initial about:blank document is not an editor page.
+  // A later blank document is a real navigation or reload and must fail.
+  if (
+    doc?.URL === "about:blank" &&
+    !state.hasLoaded &&
+    doc === state.initialBlank
+  ) {
     return;
   }
   if (!isEditorDocument(doc)) {
-    hasLoaded.current = false;
+    state.hasLoaded = false;
     props.content.failed?.();
     return;
   }
-  hasLoaded.current = true;
+  state.hasLoaded = true;
   sendTheme(element);
-  element?.contentWindow?.postMessage(SHOWN, location.origin);
+  element.contentWindow?.postMessage(SHOWN, location.origin);
   props.content.loaded?.(version ?? "lumiere");
 }
 

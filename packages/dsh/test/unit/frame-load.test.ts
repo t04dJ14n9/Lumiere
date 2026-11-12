@@ -2,8 +2,13 @@ import test from "node:test";
 import assert from "node:assert/strict";
 import { noteBody } from "../../src/client/index";
 
+interface FrameEvent {
+  readonly currentTarget: HTMLIFrameElement | null;
+}
+
 interface IframeProps {
-  onLoad(event: { currentTarget: HTMLIFrameElement | null }): void;
+  onLoad(event: FrameEvent): void;
+  onError(event: FrameEvent): void;
   ref(element: HTMLIFrameElement | null): void;
 }
 
@@ -33,43 +38,166 @@ function bodyProps() {
 }
 
 function fakeReact() {
+  const effects: Array<() => void | (() => void)> = [];
   return {
-    createElement: (_type: string, props: Record<string, unknown>) => props,
-    useEffect: () => {},
+    createElement: (_type: string, props?: Record<string, unknown> | null) =>
+      props ?? {},
+    useEffect: (
+      effect: () => void | (() => void),
+      _dependencies?: unknown[],
+    ) => {
+      effects.push(effect);
+    },
     useRef: <T>(value: T) => ({ current: value }),
     useState: <T>(value: T): [T, (next: T) => void] => [value, () => {}],
+    effects,
   };
 }
 
-function frameWith(document: Document) {
-  return { contentDocument: document } as unknown as HTMLIFrameElement;
+/** noteBody's last effect re-announces a loaded page on a DSH revision. */
+function signalRevision(react: ReturnType<typeof fakeReact>): void {
+  react.effects.at(-1)?.();
+}
+
+function frameDocument(url: string, editor = false): Document {
+  return {
+    URL: url,
+    querySelector: (selector: string) =>
+      editor && selector === 'meta[name="lumiere-panel"]' ? {} : null,
+  } as unknown as Document;
+}
+
+function frameWith(nextDocument: Document): HTMLIFrameElement {
+  return { contentDocument: nextDocument } as unknown as HTMLIFrameElement;
+}
+
+function setDocument(frame: HTMLIFrameElement, nextDocument: Document): void {
+  (frame as unknown as { contentDocument: Document }).contentDocument =
+    nextDocument;
 }
 
 test("onLoad ignores the iframe's initial about:blank document", () => {
   const spy = bodyProps();
-  const iframe = noteBody(fakeReact(), () => {})(spy.props) as IframeProps;
-  iframe.onLoad({
-    currentTarget: frameWith({
-      URL: "about:blank",
-    } as unknown as Document),
-  });
+  const react = fakeReact();
+  const iframe = noteBody(react, () => {})(spy.props) as IframeProps;
+  const frame = frameWith(frameDocument("about:blank"));
+  iframe.ref(frame);
+  iframe.onLoad({ currentTarget: frame });
+  iframe.onLoad({ currentTarget: frame });
   assert.deepEqual(spy.failed, []);
+  assert.deepEqual(spy.loaded, []);
+  signalRevision(react);
   assert.deepEqual(spy.loaded, []);
 });
 
-test("onLoad inspects the iframe that fired, not the live ref", () => {
+test("onLoad reports a real about:blank document that loads first", () => {
   const spy = bodyProps();
   const iframe = noteBody(fakeReact(), () => {})(spy.props) as IframeProps;
-  const editorDocument = {
-    URL: "http://dsh/note",
-    querySelector: (selector: string) =>
-      selector === 'meta[name="lumiere-panel"]' ? {} : null,
-  } as unknown as Document;
-  const otherDocument = {
-    URL: "http://dsh/note",
-    querySelector: () => null,
-  } as unknown as Document;
-  iframe.ref(frameWith(editorDocument));
-  iframe.onLoad({ currentTarget: frameWith(otherDocument) });
+  const frame = frameWith(frameDocument("about:blank"));
+  iframe.ref(frame);
+  setDocument(frame, frameDocument("about:blank"));
+  iframe.onLoad({ currentTarget: frame });
   assert.deepEqual(spy.failed, ["failed"]);
+  assert.deepEqual(spy.loaded, []);
+});
+
+test("onLoad reports a rendered editor page and re-announces it on revision", () => {
+  const spy = bodyProps();
+  const react = fakeReact();
+  const iframe = noteBody(react, () => {})(spy.props) as IframeProps;
+  const frame = frameWith(frameDocument("http://dsh/note", true));
+  iframe.ref(frame);
+  iframe.onLoad({ currentTarget: frame });
+  assert.deepEqual(spy.failed, []);
+  assert.deepEqual(spy.loaded, ["1"]);
+  signalRevision(react);
+  assert.deepEqual(spy.loaded, ["1", "1"]);
+});
+
+test("onLoad reports a later about:blank load from the same frame", () => {
+  const spy = bodyProps();
+  const react = fakeReact();
+  const iframe = noteBody(react, () => {})(spy.props) as IframeProps;
+  const frame = frameWith(frameDocument("about:blank"));
+  iframe.ref(frame);
+  iframe.onLoad({ currentTarget: frame });
+  setDocument(frame, frameDocument("about:blank"));
+  iframe.onLoad({ currentTarget: frame });
+  assert.deepEqual(spy.failed, ["failed"]);
+  assert.deepEqual(spy.loaded, []);
+  signalRevision(react);
+  assert.deepEqual(spy.loaded, []);
+  setDocument(frame, frameDocument("http://dsh/note", true));
+  iframe.onLoad({ currentTarget: frame });
+  assert.deepEqual(spy.loaded, ["1"]);
+});
+
+test("onLoad reports a reload to about:blank after a rendered editor page", () => {
+  const spy = bodyProps();
+  const react = fakeReact();
+  const iframe = noteBody(react, () => {})(spy.props) as IframeProps;
+  const frame = frameWith(frameDocument("about:blank"));
+  iframe.ref(frame);
+  iframe.onLoad({ currentTarget: frame });
+  setDocument(frame, frameDocument("http://dsh/note", true));
+  iframe.onLoad({ currentTarget: frame });
+  setDocument(frame, frameDocument("about:blank"));
+  iframe.onLoad({ currentTarget: frame });
+  assert.deepEqual(spy.failed, ["failed"]);
+  assert.deepEqual(spy.loaded, ["1"]);
+  signalRevision(react);
+  assert.deepEqual(spy.loaded, ["1"]);
+});
+
+test("onLoad inspects the live iframe's document", () => {
+  const spy = bodyProps();
+  const iframe = noteBody(fakeReact(), () => {})(spy.props) as IframeProps;
+  const frame = frameWith(frameDocument("http://dsh/note"));
+  iframe.ref(frame);
+  iframe.onLoad({ currentTarget: frame });
+  assert.deepEqual(spy.failed, ["failed"]);
+  assert.deepEqual(spy.loaded, []);
+});
+
+test("onLoad and onError from an iframe DSH replaced are ignored", () => {
+  const old = bodyProps();
+  const oldReact = fakeReact();
+  const oldIframe = noteBody(oldReact, () => {})(old.props) as IframeProps;
+  const stale = frameWith(frameDocument("http://dsh/note"));
+  oldIframe.ref(stale);
+  oldIframe.ref(null);
+
+  const next = bodyProps();
+  const nextReact = fakeReact();
+  const nextIframe = noteBody(nextReact, () => {})(next.props) as IframeProps;
+  const live = frameWith(frameDocument("http://dsh/note", true));
+  nextIframe.ref(live);
+
+  oldIframe.onLoad({ currentTarget: stale });
+  oldIframe.onError({ currentTarget: stale });
+  setDocument(stale, frameDocument("http://dsh/note", true));
+  oldIframe.onLoad({ currentTarget: stale });
+  signalRevision(oldReact);
+  signalRevision(nextReact);
+  assert.deepEqual(old.failed, []);
+  assert.deepEqual(old.loaded, []);
+  assert.deepEqual(next.failed, []);
+  assert.deepEqual(next.loaded, []);
+
+  nextIframe.onLoad({ currentTarget: live });
+  assert.deepEqual(next.loaded, ["1"]);
+});
+
+test("onError reports a failure and stops re-announcing a loaded page", () => {
+  const spy = bodyProps();
+  const react = fakeReact();
+  const iframe = noteBody(react, () => {})(spy.props) as IframeProps;
+  const frame = frameWith(frameDocument("http://dsh/note", true));
+  iframe.ref(frame);
+  iframe.onLoad({ currentTarget: frame });
+  iframe.onError({ currentTarget: frame });
+  assert.deepEqual(spy.failed, ["failed"]);
+  assert.deepEqual(spy.loaded, ["1"]);
+  signalRevision(react);
+  assert.deepEqual(spy.loaded, ["1"]);
 });
