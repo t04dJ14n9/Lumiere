@@ -1,12 +1,13 @@
 // End-to-end checks for the Lumière DSH bundle against a RUNNING harness.
 //
+//   DSH_URL=http://127.0.0.1:61440 \
 //   DSH_COOKIE='name=value; ...' node packages/dsh/test/e2e/dsh-e2e.mjs
 //
-// DSH_URL defaults to http://127.0.0.1:61440. When DSH_COOKIE is absent the
-// script reads the local desktop profile's loopback cookies (macOS only), so
-// it can run unattended on the owner's machine. Every check is independent;
-// the script prints PASS/FAIL/SKIP per scenario and exits non-zero on any failure (skips are counted separately from passes).
-import { execFileSync } from "node:child_process";
+// Both values must come from a pinned DSH started with a throwaway DSH_HOME
+// and a disposable workspace. The runner never reads the owner's desktop
+// profile or a demo profile. Checks run sequentially and share panel, browser
+// and console state; the script prints PASS/FAIL/SKIP per check and exits
+// non-zero on any failure (skips are counted separately from passes).
 import { createRequire } from "node:module";
 import {
   mkdtempSync,
@@ -63,22 +64,12 @@ export const UNSUPPORTED_SYMLINK_CODES = new Set([
   "EOPNOTSUPP",
 ]);
 
-function readCookie() {
-  if (process.env.DSH_COOKIE) {
-    return process.env.DSH_COOKIE;
+export function readCookie() {
+  const value = process.env.DSH_COOKIE;
+  if (!value) {
+    throw new Error("Set DSH_COOKIE from the throwaway DSH_HOME profile");
   }
-  const db = path.join(
-    process.env.HOME ?? "",
-    "Library/Application Support/@deepseek-ai/dsh-desktop/Cookies",
-  );
-  return execFileSync(
-    "sqlite3",
-    ["-separator", "=", db, "select name||'='||value from cookies;"],
-    { encoding: "utf8" },
-  )
-    .trim()
-    .split("\n")
-    .join("; ");
+  return value;
 }
 
 function pairs() {
@@ -236,7 +227,10 @@ async function main() {
   WebSocket = require("ws");
   ({ chromium } = require("@playwright/test"));
 
-  base = process.env.DSH_URL ?? "http://127.0.0.1:61440";
+  base = process.env.DSH_URL;
+  if (!base) {
+    throw new Error("Set DSH_URL for the pinned throwaway harness");
+  }
   origin = new URL(base).origin;
   cookie = readCookie();
   scratch = mkdtempSync(path.join(tmpdir(), "lumiere-e2e-"));
@@ -307,8 +301,9 @@ async function main() {
   });
   await check("editor page: .. traversal refused", async () => {
     const sub = path.join(scratch, "sub");
+    const traversal = `${sub}${path.sep}..${path.sep}plain.md`;
     const response = await get(
-      `${base}/lumiere/editor?path=${encodeURIComponent(path.join(sub, "..", "plain.md"))}&root=${encodeURIComponent(sub)}`,
+      `${base}/lumiere/editor?path=${encodeURIComponent(traversal)}&root=${encodeURIComponent(sub)}`,
     );
     assert([400, 403].includes(response.status), `got ${response.status}`);
     return String(response.status);
@@ -687,7 +682,7 @@ async function main() {
     assert(html.includes("__DSH_BOOT__"), "boot graph missing");
     return "row present";
   });
-  await check("installed bundle manifest is a valid DSH bundle", () => {
+  await check("workspace bundle manifest is a valid DSH bundle", () => {
     const manifest = JSON.parse(
       readFileSync(
         path.resolve("packages/dsh/dist/bundle/package.json"),

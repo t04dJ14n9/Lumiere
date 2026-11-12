@@ -20,6 +20,25 @@ test("importing the suite module does not start the live harness", async () => {
   assert.ok(Date.now() - started < 5000, "import blocked as if the live suite started");
 });
 
+test("the runner requires an explicit cookie from an isolated harness", async () => {
+  const { readCookie } = await import(suiteUrl.href);
+  const previous = process.env.DSH_COOKIE;
+  try {
+    delete process.env.DSH_COOKIE;
+    assert.throws(() => readCookie(), /DSH_COOKIE/);
+    process.env.DSH_COOKIE = "dsh-auth=test";
+    assert.equal(readCookie(), "dsh-auth=test");
+  } finally {
+    if (previous === undefined) {
+      delete process.env.DSH_COOKIE;
+    } else {
+      process.env.DSH_COOKIE = previous;
+    }
+  }
+  assert.doesNotMatch(suiteSource, /dsh-desktop\/Cookies/);
+  assert.doesNotMatch(suiteSource, /process\.env\.DSH_URL \?\?/);
+});
+
 function liveRunBody(source) {
   const start = source.search(/async function main\s*\(/);
   assert.ok(start >= 0, "live main() is missing");
@@ -30,6 +49,12 @@ function liveRunBody(source) {
   assert.doesNotMatch(body, /function\s+symlinkEscapeRefused\s*\(/);
   return body;
 }
+
+test("the live editor traversal check keeps a raw dot path", () => {
+  const live = liveRunBody(suiteSource);
+  assert.match(live, /\$\{sub\}\$\{path\.sep\}\.\.\$\{path\.sep\}plain\.md/);
+  assert.doesNotMatch(live, /path\.join\(sub, "\.\.", "plain\.md"\)/);
+});
 
 test("the live suite calls the shared traversal and symlink helpers", () => {
   const live = liveRunBody(suiteSource);
