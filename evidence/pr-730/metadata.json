@@ -1,0 +1,17 @@
+{
+  "pr": 730,
+  "head": "2c8774e82a47c5a74275da9167ad3fe77b738b91",
+  "chainHead": "9a10d469a6f10e12b254485b88b9c27bf1f0c3bb",
+  "publishedChainHead": "a54c3e024064b5728493a7a8ec45686f0fd6b850",
+  "base": "origin/main f1c153d51df481ec493800ca491544d56b7df66b",
+  "chainEvidence": "review/dsh-stack-evidence-a54c3e02/evidence/dsh-stack",
+  "gate": {
+    "install": "pass",
+    "check": "pass (12 suites, 4635 tests, 0 failures, 1 skipped)",
+    "browser": "462 Markdown + 195 PDF specs passed",
+    "quality": "9 Playwright budgets + 1 large-vault unit passed",
+    "vscode": "root 30/30 on the full rerun (run 1 failed one spec; the failing spec varies), PDF 26 passed + 2 skipped"
+  },
+  "note": "This branch is an ancestor of the gated chain head; the full gate ran once at the chain top, where every change here is present.",
+  "redaction": "Only redacted evidence lives on the chain evidence branch; credential files from the throwaway DSH home were excluded."
+}
