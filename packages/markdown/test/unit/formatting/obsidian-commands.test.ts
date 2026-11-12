@@ -155,6 +155,41 @@ test("Toggle Numbered List writes '1. ' on every line, not 1, 2, 3", () => {
   );
 });
 
+test("Toggle Numbered List keeps line structure and toggles every numbered marker off", () => {
+  assert.equal(
+    edit("‹- a\n2) b›", (s) => lineEdit(s, "1. ")),
+    "1. ‹a\n1. b›",
+  );
+  assert.equal(
+    edit("‹a\n\nb›", (s) => lineEdit(s, "1. ")),
+    "1. ‹a\n\n1. b›",
+  );
+  assert.equal(
+    edit("‹> 1. a\n> 2. b›", (s) => lineEdit(s, "1. ")),
+    "‹> a\n> b›",
+  );
+  assert.equal(
+    edit("  1. nes|ted", (s) => lineEdit(s, "1. ")),
+    "  nes|ted",
+  );
+  assert.equal(
+    edit("‹1. a\n\n1. b›", (s) => lineEdit(s, "1. ")),
+    "‹a\n\nb›",
+  );
+  assert.equal(
+    edit("‹1. a\n2. b\n3. c›", (s) => lineEdit(s, "1. ")),
+    "‹a\nb\nc›",
+  );
+  assert.equal(
+    edit("1. [ ] it|em", (s) => lineEdit(s, "1. ")),
+    "it|em",
+  );
+  assert.equal(
+    edit("‹1. [ ] a\n2. b›", (s) => lineEdit(s, "1. ")),
+    "‹a\nb›",
+  );
+});
+
 // Obsidian 1.15.0's line commands, read from its app.js with REA
 // (2026-11-07): markers go after a line's `>` and indentation, and blank
 // lines in a selection of several are skipped.

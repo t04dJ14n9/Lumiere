@@ -7019,3 +7019,13 @@ scroll position only in Reading view; Lumia keeps following the scroll too
   does not implement it and the row stays highlighted there. The caret from
   before an outline click, reported above the first heading, is held like any
   other so it cannot clear the clicked row.
+
+## Toggle Numbered List's literal marker (#692, #702; 2026-11-12)
+
+A static read of Obsidian 1.15.0's `toggleNumberList()` (behaviour only,
+nothing copied) shows that it writes `1. ` on every nonblank selected line and
+counts a numbered task's box as part of the marker, so a selection of numbered
+tasks toggles off. `lineEdit` now does both; parity units cover existing
+markers, quotes, indentation, blank lines, toggle-off and numbered tasks.
+Validation: regressions added; no tests, builds or live-vault comparison run
+in this review pass.

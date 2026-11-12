@@ -34,8 +34,10 @@ function isKind(text: string, prefix: string): boolean {
     return quoteLength(text) !== undefined;
   }
   const marker = LIST_ITEM.exec(text)![2] ?? "";
+  // Obsidian's numeric guard sees through a task box; its bullet guard does
+  // not, so the two prefixes deliberately differ.
   return prefix === "1. "
-    ? /^\d+[.)] $/u.test(marker)
+    ? /^\d+[.)] (?:\[.\] )?$/u.test(marker)
     : /^[-*+] $/u.test(marker);
 }
 
