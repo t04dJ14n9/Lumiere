@@ -8,11 +8,7 @@ import {
 } from "node:http";
 import { tmpdir } from "node:os";
 import * as path from "node:path";
-import {
-  BASE,
-  type EditorAssets,
-  type LumiereHost,
-} from "@workshop/host-node";
+import { BASE, type EditorAssets, type LumiereHost } from "@workshop/host-node";
 import type { DshContext, DshWebRoute } from "../../src/host/dsh";
 import { registerRoutes } from "../../src/host/routes";
 
@@ -283,7 +279,11 @@ test("DSH rejects writes to read-only routes before handling them", async (t) =>
   assert.equal(await postJson("/views/tree/run", { id: "n" }), 200);
   assert.equal(await postJson("/views/tree/visible", { visible: true }), 200);
   assert.equal(await postJson("/commands", { command: "test" }), 200);
-  assert.equal(await postJson("/settings", {}), 400, "settings checked the body");
+  assert.equal(
+    await postJson("/settings", {}),
+    400,
+    "settings checked the body",
+  );
 
   const editor = await fetch(`${origin}${BASE}/editor?${editorQuery}`);
   assert.equal(editor.status, 200, "GET still opens an editor page");
