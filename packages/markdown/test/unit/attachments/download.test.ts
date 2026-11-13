@@ -4,9 +4,12 @@ import {
   downloadFileName,
   downloadStem,
   embedFor,
+  propertyImageUrls,
+  propertyLinkFor,
   remoteImages,
   uniqueName,
   withDownloadedImages,
+  withDownloadedPropertyImages,
 } from "../../../src/attachments";
 
 // Obsidian 1.15.0's Download attachments for current file, read from its
@@ -147,4 +150,70 @@ test("a served name is cleaned as a URL's is, or ignored when nothing is left", 
       fileName,
     );
   }
+});
+
+const PROPERTIES = [
+  "---",
+  "cover: https://ex.com/c.PNG?w=2",
+  "site: https://ex.com/page",
+  "text: see https://ex.com/a.png now",
+  "photos:",
+  "  - https://ex.com/p1.jpg # first",
+  "  - https://ex.com/doc.pdf",
+  "  - data:image/png;base64,AAAA",
+  "  - 'HTTP://EX.COM/p2.webp'",
+  "local: ./x.png",
+  "nested:",
+  "  deep: https://ex.com/deep.png",
+  "---",
+  "![a](https://ex.com/body.png)",
+].join("\n");
+
+test("property images are the string values and list items that are web URLs of images", () => {
+  assert.deepEqual(propertyImageUrls(PROPERTIES), [
+    "https://ex.com/c.PNG?w=2",
+    "https://ex.com/p1.jpg",
+    "HTTP://EX.COM/p2.webp",
+  ]);
+  assert.deepEqual(propertyImageUrls("![a](https://ex.com/body.png)"), []);
+});
+
+test("property images are replaced in place by links to the saved files", () => {
+  const saved = new Map([
+    ["https://ex.com/c.PNG?w=2", "[[cover.png]]"],
+    ["https://ex.com/p1.jpg", "[[p1 1.jpg]]"],
+  ]);
+  const edits = withDownloadedPropertyImages(PROPERTIES, (url) =>
+    saved.get(url),
+  );
+  let text = PROPERTIES;
+  for (const edit of [...edits].sort((a, b) => b.from - a.from)) {
+    text = text.slice(0, edit.from) + edit.insert + text.slice(edit.to);
+  }
+  assert.equal(
+    text,
+    PROPERTIES.replace("https://ex.com/c.PNG?w=2", '"[[cover.png]]"').replace(
+      "https://ex.com/p1.jpg",
+      '"[[p1 1.jpg]]"',
+    ),
+  );
+});
+
+test("a property link is always a wikilink, as Obsidian writes one", () => {
+  const link = {
+    path: "assets/photo.png",
+    notePath: "notes/Note.md",
+    format: "shortest" as const,
+    isNameUnique: true,
+    useWikilinks: false,
+  };
+  assert.equal(propertyLinkFor(link), "[[photo.png]]");
+  assert.equal(
+    propertyLinkFor({ ...link, isNameUnique: false }),
+    "[[assets/photo.png]]",
+  );
+  assert.equal(
+    propertyLinkFor({ ...link, format: "relative" }),
+    "[[../assets/photo.png]]",
+  );
 });

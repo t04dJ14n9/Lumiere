@@ -5,7 +5,11 @@
  * with REA (2026-11-07).
  */
 import { metadata } from "../markdown/metadata";
-import { mediaExtensions } from "../shared/media-kinds";
+import {
+  mapPropertyStrings,
+  type PropertyChange,
+} from "../markdown/properties";
+import { mediaExtensions, mediaKind } from "../shared/media-kinds";
 
 /** A Markdown image whose source is on the web or in a data URI. */
 export interface RemoteImage {
@@ -118,4 +122,46 @@ export function withDownloadedImages(
     }
   }
   return edits;
+}
+
+/** Whether a property's text is one web URL that names an image file. */
+function isImageUrl(value: string): boolean {
+  if (!/^https?:\/\/\S+$/iu.test(value)) {
+    return false;
+  }
+  try {
+    return mediaKind(new URL(value).pathname) === "image";
+  } catch {
+    return false;
+  }
+}
+
+/**
+ * The image URLs the note's properties hold, as a value or as a list item,
+ * in reading order. As in Obsidian, a URL counts when its path ends in an
+ * image extension; nothing is fetched to find out.
+ */
+export function propertyImageUrls(text: string): string[] {
+  const urls: string[] = [];
+  mapPropertyStrings(text, (value) => {
+    if (isImageUrl(value)) {
+      urls.push(value);
+    }
+    return undefined;
+  });
+  return urls;
+}
+
+/**
+ * Edits replacing each downloaded property image's URL with `linkFor(url)`,
+ * where it stands in the header; undefined leaves that URL. Like
+ * `withDownloadedImages`, it reads `text` as it is now.
+ */
+export function withDownloadedPropertyImages(
+  text: string,
+  linkFor: (url: string) => string | undefined,
+): PropertyChange[] {
+  return mapPropertyStrings(text, (value) =>
+    isImageUrl(value) ? linkFor(value) : undefined,
+  );
 }

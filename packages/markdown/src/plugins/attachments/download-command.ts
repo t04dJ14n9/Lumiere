@@ -4,9 +4,12 @@ import {
   downloadFileName,
   embedFor,
   loadAttachmentOutcome,
+  propertyImageUrls,
+  propertyLinkFor,
   remoteImages,
   saveAttachment,
   withDownloadedImages,
+  withDownloadedPropertyImages,
   type SavedAttachment,
   type SourceOutcome,
 } from "../../attachments";
@@ -28,7 +31,8 @@ export function registerDownloadAttachments(ctx: Context): void {
 /**
  * Obsidian's Download attachments for current file: save the images the
  * active note shows from the web (and data URIs) into its attachment folder,
- * and replace each with an embed that keeps its alt text.
+ * and replace each with an embed that keeps its alt text. An image URL in a
+ * property is saved too, and becomes a link to the file.
  */
 export async function downloadAttachments(ctx: Context): Promise<void> {
   const panel = ctx.editors.active();
@@ -36,9 +40,7 @@ export async function downloadAttachments(ctx: Context): Promise<void> {
     ctx.dialogs.inform("Open a note to download its attachments.");
     return;
   }
-  const urls = [
-    ...new Set(remoteImages(editorText(panel.document)).map(({ url }) => url)),
-  ];
+  const urls = imageUrls(editorText(panel.document));
   if (urls.length === 0) {
     ctx.dialogs.inform("This note shows no images from the web.");
     return;
@@ -57,10 +59,7 @@ export async function downloadAttachments(ctx: Context): Promise<void> {
     return;
   }
   const { saved, skipped } = await saveAll(target, urls);
-  const edits = withDownloadedImages(editorText(panel.document), (url, alt) => {
-    const file = saved.get(url);
-    return file && embedFor({ ...target, ...file, alt });
-  });
+  const edits = downloadEdits(editorText(panel.document), target, saved);
   // The host refuses the edit when the note was closed during the downloads;
   // the files are saved by then, so say the note still shows the web images.
   const edited =
@@ -77,6 +76,33 @@ export async function downloadAttachments(ctx: Context): Promise<void> {
   } else {
     ctx.dialogs.error(message);
   }
+}
+
+/** The web and data-URI images the note shows, each once: its properties' first, then its text's. */
+function imageUrls(text: string): string[] {
+  return [
+    ...new Set([
+      ...propertyImageUrls(text),
+      ...remoteImages(text).map(({ url }) => url),
+    ]),
+  ];
+}
+
+/** The edits that point the note at the files saved, found where its images are now. */
+function downloadEdits(
+  text: string,
+  target: AttachmentTarget,
+  saved: ReadonlyMap<string, SavedAttachment>,
+) {
+  const properties = withDownloadedPropertyImages(text, (url) => {
+    const file = saved.get(url);
+    return file && propertyLinkFor({ ...target, ...file });
+  });
+  const body = withDownloadedImages(text, (url, alt) => {
+    const file = saved.get(url);
+    return file && embedFor({ ...target, ...file, alt });
+  });
+  return [...properties, ...body];
 }
 
 /**

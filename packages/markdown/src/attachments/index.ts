@@ -3,11 +3,13 @@ export { timestampStem, uniqueName, uniqueTimestampName } from "./naming";
 export {
   downloadFileName,
   downloadStem,
+  propertyImageUrls,
   remoteImages,
   withDownloadedImages,
+  withDownloadedPropertyImages,
   type RemoteImage,
 } from "./download";
-export { embedFor, type EmbedLink } from "./embed";
+export { embedFor, propertyLinkFor, type EmbedLink } from "./embed";
 export { insertEmbed } from "./insert";
 export {
   saveAttachment,

@@ -295,3 +295,83 @@ test("an unusable Content-Disposition leaves the URL's own name", async (t) => {
   const result = await run(t, "Download", {}, { note, serve });
   assert.deepEqual(result.written, [uriOf("photo.png"), uriOf("Image.png")]);
 });
+
+const FRONT_NOTE = [
+  "---",
+  "title: Trip",
+  "cover: https://ex.com/img/cover.png # hero",
+  "site: https://ex.com/page",
+  "photos:",
+  "  - https://ex.com/img/dog.png",
+  "  - 'https://ex.com/img/cat.png'",
+  "  - https://ex.com/notes.pdf",
+  "---",
+  "![A dog](https://ex.com/img/dog.png)",
+].join("\n");
+
+test("image URLs in properties are downloaded once with the body's and rewritten in place", async (t) => {
+  const result = await run(t, "Download", {}, { note: FRONT_NOTE });
+  assert.deepEqual(result.asked, [
+    "Download the 3 images this note shows from the web into the vault?",
+  ]);
+  assert.deepEqual(result.written, [
+    uriOf("cover.png"),
+    uriOf("dog.png"),
+    uriOf("cat 1.png"),
+  ]);
+  assert.equal(
+    result.text,
+    [
+      "---",
+      "title: Trip",
+      'cover: "[[cover.png]]" # hero',
+      "site: https://ex.com/page",
+      "photos:",
+      '  - "[[dog.png]]"',
+      "  - '[[cat 1.png]]'",
+      "  - https://ex.com/notes.pdf",
+      "---",
+      "![[dog.png|A dog]]",
+    ].join("\n"),
+  );
+  assert.deepEqual(result.told, ["Downloaded 3 attachments."]);
+});
+
+test("a property URL that serves no image stays, and is named in the summary", async (t) => {
+  const note = "---\ncover: https://ex.com/login.png\n---\nbody";
+  const serve: Serve = () => ({ type: "text/html" });
+  const result = await run(t, "Download", {}, { note, serve });
+  assert.equal(result.text, note);
+  assert.deepEqual(result.told, [
+    "Downloaded 0 attachments. 1 skipped, not an image: https://ex.com/login.png.",
+  ]);
+});
+
+test("a note with CRLF line breaks and properties is edited in both places", async (t) => {
+  const note = [
+    "---",
+    "cover: https://ex.com/img/cover.png",
+    "---",
+    "![](https://ex.com/img/cover.png)",
+    "",
+  ].join("\r\n");
+  const result = await run(t, "Download", {}, { note });
+  assert.equal(
+    result.text,
+    ["---", 'cover: "[[cover.png]]"', "---", "![[cover.png]]", ""].join("\r\n"),
+  );
+});
+
+test("a property link is a wikilink even when the note's links are Markdown", async (t) => {
+  const note = "---\ncover: https://ex.com/img/cover.png\n---\n";
+  const result = await run(t, "Download", { useWikilinks: false }, { note });
+  assert.equal(result.text, '---\ncover: "[[cover.png]]"\n---\n');
+});
+
+test("a note with only property images offers them", async (t) => {
+  const note = "---\ncover: https://ex.com/img/cover.png\n---\ntext";
+  const result = await run(t, "Download", {}, { note });
+  assert.deepEqual(result.asked, [
+    "Download the 1 image this note shows from the web into the vault?",
+  ]);
+});

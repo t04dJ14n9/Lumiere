@@ -45,7 +45,8 @@ share one folder and link story.
 
 Obsidian's command of the same name. It finds the note's Markdown images
 whose source is `http(s):` or a `data:` URI (`src/attachments/download.ts`;
-images in code and wikilink embeds are skipped), asks once, then downloads
+images in code and wikilink embeds are skipped) and the image URLs in its
+properties, asks once, then downloads
 each URL once on the host and saves it in `files.attachmentFolder` under the
 file name the server gives in `Content-Disposition` (`filename*=` first, then
 `filename=`), else the name at the end of its URL (`cat.png`, then `cat 1.png`
@@ -62,6 +63,14 @@ the first bytes decide (PNG, JPEG, GIF, WebP, AVIF, BMP, SVG). A data URI is
 saved only when it says `image/…`, in base64 or percent-encoded
 (`image/svg+xml,%3Csvg…`): a note's links can point anywhere. The closing
 message counts the skipped URLs and names the first three.
+A property counts when its value, or an item of its list, is one `http(s):` URL
+whose path ends in an image extension (nothing is fetched to find out, as in
+Obsidian). It is rewritten where it stands, through the properties module's
+YAML edits (`mapPropertyStrings`), as a `[[…]]` link in the value's own quoting;
+comments, other values and the list's style stay as they were. Obsidian writes a
+wikilink here whatever the Links settings say, and so do we. A value YAML cannot
+rewrite in place (block scalar, anchor, alias, tag, or nested below the top
+level) is left alone.
 If the note was closed before that edit, the files stay in the vault and the
 dialog says the note was not changed.
 
@@ -98,5 +107,5 @@ Shift) opens normally and shows the question; ignoring it keeps the image
 open and the note unchanged. Open-to-the-side is left alone.
 
 Download Attachments differs from Obsidian's: it asks once for all the images
-(Obsidian shows a gallery to untick some); it does not download image URLs
-in properties (Obsidian turns those into `[[…]]`).
+(Obsidian shows a gallery to untick some). It reads list items of properties
+too, where Obsidian reads string values only.
