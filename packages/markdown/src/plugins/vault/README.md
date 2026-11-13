@@ -45,8 +45,10 @@ The VS Code adapter is `src/host/vault-system.ts`; the worker is
   removing a policy re-resolves links.
 - Emits `vault/changed (root, change)` and `vault/resolved (root)`.
 - Settings: `lumiere.markdown.vault.rootMarkers` (default `[".obsidian"]`),
-  `lumiere.markdown.vault.excludedFiles`, and from `links`: `folderNote` and
-  `newLinkFormat`.
+  `lumiere.markdown.vault.excludedFiles`,
+  `lumiere.markdown.vault.showUnsupportedFiles` (default `false`; the vault
+  indexes every file either way, and only the quick switcher reads it), and
+  from `links`: `folderNote` and `newLinkFormat`.
 
 ## Limits and differences from Obsidian
 

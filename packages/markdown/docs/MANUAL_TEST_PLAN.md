@@ -1448,6 +1448,7 @@ Use the disposable fixture vault from Setup. These rows enumerate every generate
 | `lumiere.markdown.tags.viewNested` | `true` | boolean; change at workspace-folder scope, verify the owning plugin scenario, then reset the override. |
 | `lumiere.markdown.vault.rootMarkers` | `[".obsidian"]` | array; change at workspace-folder scope, verify the owning plugin scenario, then reset the override. |
 | `lumiere.markdown.vault.excludedFiles` | `[]` | array; change at workspace-folder scope, verify the owning plugin scenario, then reset the override. |
+| `lumiere.markdown.vault.showUnsupportedFiles` | `false` | boolean; in a vault with a `.csv` or `.zip` file, confirm the Quick Switcher finds it only when on; then reset the override. |
 | `lumiere.markdown.vim.caretStyle` | `"obsidian"` | obsidian / vscodevim / codemirror; change at workspace-folder scope, verify the owning plugin scenario, then reset the override. |
 | `lumiere.markdown.copyLinkForAgent.target` | `"auto"` | auto / cursor / chat / claudeCode / codex / clipboard; change at workspace-folder scope, verify the owning plugin scenario, then reset the override. |
 | `lumiere.markdown.debug.logging` | `false` | boolean; change at workspace-folder scope, verify the owning plugin scenario, then reset the override. |

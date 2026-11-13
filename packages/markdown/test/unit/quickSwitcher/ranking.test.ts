@@ -43,14 +43,13 @@ test("an empty query prefers recently opened notes over mtime", () => {
     .find((file) => file.path === "notes/Planning.md")!;
   const daily = index.files().find((file) => file.path === "Daily.md")!;
   assert.deepEqual(
-    labels(switcherItems(index, "", 50, [planning.uri, daily.uri])),
+    labels(switcherItems(index, "", { recent: [planning.uri, daily.uri] })),
     ["Planning", "Daily", "Project Plan"],
   );
-  assert.deepEqual(labels(switcherItems(index, "", 50, [planning.path])), [
-    "Planning",
-    "Daily",
-    "Project Plan",
-  ]);
+  assert.deepEqual(
+    labels(switcherItems(index, "", { recent: [planning.path] })),
+    ["Planning", "Daily", "Project Plan"],
+  );
 });
 
 test("prefix matches rank first, names above paths; aliases, not-created links and attachments are found; excluded files rank 10 lower", () => {
@@ -87,4 +86,32 @@ test("no create item when a note already has that name", () => {
   assert.deepEqual(labels(switcherItems(vault(), "zzz")), [
     "$(new-file) Create “zzz”",
   ]);
+});
+
+test("files Obsidian cannot open are listed only when showUnsupportedFiles is on", () => {
+  const { index } = memoryVaults({
+    "Note.md": "",
+    "data.csv": "",
+    "photo.png": "",
+    "docs/spec.docx": "",
+  });
+  const create = (name: string) => `$(new-file) Create “${name}”`;
+  assert.deepEqual(labels(switcherItems(index, "data")), [create("data")]);
+  assert.deepEqual(labels(switcherItems(index, "spec")), [create("spec")]);
+  // Off is Obsidian's default: notes and the attachments it opens.
+  assert.deepEqual(labels(switcherItems(index, "photo")), [
+    "photo.png",
+    create("photo"),
+  ]);
+  const shown = { showUnsupportedFiles: true };
+  assert.deepEqual(labels(switcherItems(index, "data", shown)), [
+    "data.csv",
+    create("data"),
+  ]);
+  assert.deepEqual(labels(switcherItems(index, "spec", shown)), [
+    "spec.docx",
+    create("spec"),
+  ]);
+  // An empty query still lists notes only, as it does for attachments.
+  assert.deepEqual(labels(switcherItems(index, "", shown)), ["Note"]);
 });

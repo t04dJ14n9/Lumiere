@@ -34,21 +34,32 @@ const ATTACHMENTS = new Set([
   ...["mp4", "webm", "ogv", "mov", "mkv", "pdf", "canvas", "base"],
 ]);
 
+export interface SwitcherOptions {
+  limit?: number;
+  /** Recently opened note URIs, newest first. */
+  recent?: readonly string[];
+  /** Also list files of types Obsidian cannot open (`vault.showUnsupportedFiles`). */
+  showUnsupportedFiles?: boolean;
+}
+
 /**
  * Quick switcher items for a query, as Obsidian's switcher: notes and
  * attachments by name, then by path, notes' aliases, and links whose note
  * does not exist yet, best match first (excluded files 10 points lower). An
  * empty query lists recently **opened** notes (`recent`), falling back to
  * mtime for notes never opened in this workspace. A query that names no note
- * offers to create it.
+ * offers to create it. With `showUnsupportedFiles` every file of the vault is
+ * found, not only the types Obsidian can open.
  */
 export function switcherItems(
   index: VaultIndex,
   query: string,
-  limit = 50,
-  recent: readonly string[] = [],
+  { limit = 50, recent = [], showUnsupportedFiles }: SwitcherOptions = {},
 ): PickItem<SwitcherTarget>[] {
-  const candidates = [...noteCandidates(index), ...unresolvedCandidates(index)];
+  const candidates = [
+    ...noteCandidates(index, showUnsupportedFiles === true),
+    ...unresolvedCandidates(index),
+  ];
   const trimmed = query.trim();
   if (!trimmed) {
     const order = recentRank(recent);
@@ -88,11 +99,15 @@ export function switcherItems(
     : [...ranked, createItem(trimmed)];
 }
 
-function noteCandidates(index: VaultIndex): Candidate[] {
+function noteCandidates(
+  index: VaultIndex,
+  showUnsupportedFiles: boolean,
+): Candidate[] {
   return index
     .files()
     .filter(
       (file) =>
+        showUnsupportedFiles ||
         file.extension === "md" ||
         ATTACHMENTS.has(file.extension.toLowerCase()),
     )
