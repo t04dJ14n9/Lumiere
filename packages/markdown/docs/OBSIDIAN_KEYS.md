@@ -68,7 +68,7 @@ definition.
 | Open link under cursor in new tab | | a tab VS Code keeps, as Cmd-click |
 | Insert code block | `te\|xt` | ` ```\nte\|xt\n``` `: around the selected lines |
 | Insert tag | `a ‹word› b` | `a #\|word b` |
-| Clear formatting | `a **‹b›** c` | `a ‹b› c`; a caret alone changes nothing; a complete `[l](u)` becomes `lu` (unit-tested for inline, image, reference, autolink and plain-wikilink forms; wiki embeds stay; no live 1.15.0 re-measure) |
+| Clear formatting | `a **‹b›** c` | `a ‹b› c`; a caret alone changes nothing; a complete `[l](u)` becomes `lu` (unit-tested for inline, image, reference and autolink forms; wikilinks and wiki embeds stay; no live 1.15.0 re-measure) |
 | Delete paragraph | `one\ntw\|o\nthree` | `one\nth\|ree` (unbound: Cmd+D is VS Code's) |
 | Add cursor above, below | `one\nth\|ree` | carets on both lines, the new one main (Cmd+Alt+Up and Down, as in VS Code) |
 

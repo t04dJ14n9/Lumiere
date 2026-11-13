@@ -121,7 +121,7 @@ test("clearing inline formatting strips link markers, keeping label and URL text
   );
 });
 
-test("clearing inline formatting strips reference, autolink, and wiki syntax", () => {
+test("clearing inline formatting strips reference and autolink syntax", () => {
   assert.equal(clearInlineFormatting("[label][ref]"), "labelref");
   assert.equal(clearInlineFormatting("[label][]"), "label");
   assert.equal(clearInlineFormatting("[label]"), "label");
@@ -130,10 +130,22 @@ test("clearing inline formatting strips reference, autolink, and wiki syntax", (
     "ref https://x.io",
   );
   assert.equal(clearInlineFormatting("<https://x.io>"), "https://x.io");
-  assert.equal(clearInlineFormatting("[[Page|Alias]]"), "Page|Alias");
-  // Bare URLs and wiki embeds are not formatting tokens to remove.
+  // Bare URLs are not formatting tokens to remove.
   assert.equal(clearInlineFormatting("https://x.io"), "https://x.io");
+});
+
+// Obsidian 1.15.0 clears only tokens whose class set holds `formatting`; its
+// wikilink and embed brackets are `formatting-link` (+ `-start`/`-end`,
+// `formatting-embed`), never bare `formatting` (issue #694, static read).
+test("clearing inline formatting keeps wikilink and embed brackets", () => {
+  assert.equal(clearInlineFormatting("[[Page]]"), "[[Page]]");
+  assert.equal(clearInlineFormatting("[[Page|Alias]]"), "[[Page|Alias]]");
+  assert.equal(clearInlineFormatting("[[Page#Heading]]"), "[[Page#Heading]]");
   assert.equal(clearInlineFormatting("![[Page]]"), "![[Page]]");
+  assert.equal(
+    clearInlineFormatting("see [[Page]] and **bold**"),
+    "see [[Page]] and bold",
+  );
 });
 
 test("clearing inline formatting keeps escaped literals and code text", () => {

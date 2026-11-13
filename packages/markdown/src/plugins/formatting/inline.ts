@@ -33,7 +33,8 @@ export function clearInlineFormatting(source: string): string {
       ) {
         // Clear Formatting removes link syntax tokens but keeps the label,
         // destination and reference text: `[l](u)` becomes `lu`. A LinkLabel
-        // holds `[ref]`, whose brackets are syntax too.
+        // holds `[ref]`, whose brackets are syntax too. Wikilink and embed
+        // brackets stay: Obsidian does not class them as formatting.
         for (const mark of node.node.getChildren("LinkMark")) {
           removed.push({ from: mark.from, to: mark.to });
         }
@@ -43,12 +44,6 @@ export function clearInlineFormatting(source: string): string {
             { from: label.to - 1, to: label.to },
           );
         }
-      } else if (node.name === "WikiLink") {
-        // A plain wikilink's brackets are formatting; `![[…]]` embeds stay.
-        removed.push(
-          { from: node.from, to: node.from + 2 },
-          { from: node.to - 2, to: node.to },
-        );
       }
     },
   });

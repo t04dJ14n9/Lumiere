@@ -10,8 +10,10 @@ otherwise it wraps the word or selection, or removes selected delimiters. As
 in Obsidian 1.14, a selection anywhere inside a span unwraps the whole span,
 and one over or around spans merges them into one (`spans.ts`).
 Clear Formatting strips the syntax markers of inline, image, reference,
-autolink, link-definition and plain-wikilink forms, keeping label, URL and
-reference text; escaped literals, code text, bare URLs and wiki embeds stay.
+autolink and link-definition forms, keeping label, URL and reference text
+(`[l](u)` becomes `lu`, as in Obsidian); escaped literals, code text, bare URLs,
+wikilinks and wiki embeds stay, since Obsidian does not class their brackets
+as formatting.
 It acts on the selected source, so a label-only selection does not remove
 syntax outside it.
 
