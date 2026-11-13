@@ -77,6 +77,7 @@ function rejectsMethod(
     return true;
   }
   const readOnly =
+    rest === "" ||
     rest === "/editor" ||
     rest === "/page/shim.js" ||
     rest === "/file" ||

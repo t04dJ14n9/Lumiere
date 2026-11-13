@@ -11,7 +11,7 @@ import * as path from "node:path";
 import { Readable } from "node:stream";
 import { pathToFileURL } from "node:url";
 import { WebSocket } from "ws";
-import { createEditorRoutes, SOCKET_PATH } from "../../src/host/routes";
+import { BASE, createEditorRoutes, SOCKET_PATH } from "../../src/host/routes";
 import type { LumiereHost } from "../../src/host/start";
 import { TreeHub } from "../../src/host/trees";
 import { createViewRoutes } from "../../src/host/view-routes";
@@ -411,6 +411,92 @@ test("an editor page still cannot name a folder that holds a registered workspac
   host.addRoot(pathToFileURL(vault).toString());
   assert.equal(await status(top, vault), 200);
   assert.equal(await status(deep, scratch), 403);
+});
+
+const ROUTE_INDEX = {
+  name: "lumiere",
+  routes: [
+    `${BASE}/editor`,
+    `${BASE}/m/`,
+    `${BASE}/page/shim.js`,
+    `${BASE}/file`,
+    `${BASE}/views`,
+    `${BASE}/settings`,
+    SOCKET_PATH,
+  ],
+} as const;
+
+test("the exact /lumiere base returns a JSON route index", async (t) => {
+  const routes = createEditorRoutes(fakeHost(), {
+    markdown: "/none",
+    shim: "/none",
+  });
+  const server = createServer((req, res) => {
+    void routes.handle(req, res).then((handled) => {
+      if (!handled) {
+        res.writeHead(404).end();
+      }
+    });
+  });
+  await new Promise<void>((resolve) => server.listen(0, "127.0.0.1", resolve));
+  t.after(() => {
+    routes.close();
+    server.close();
+  });
+  const { port } = server.address() as { port: number };
+  const origin = `http://127.0.0.1:${port}`;
+
+  const exact = await fetch(`${origin}${BASE}`);
+  assert.equal(exact.status, 200);
+  assert.match(exact.headers.get("content-type") ?? "", /application\/json/);
+  assert.equal(exact.headers.get("cache-control"), "no-store");
+  assert.deepEqual(await exact.json(), ROUTE_INDEX);
+
+  const withQuery = await fetch(`${origin}${BASE}?probe=1`);
+  assert.equal(withQuery.status, 200);
+  assert.deepEqual(await withQuery.json(), ROUTE_INDEX);
+
+  const head = await fetch(`${origin}${BASE}`, { method: "HEAD" });
+  assert.equal(head.status, 200);
+  assert.match(head.headers.get("content-type") ?? "", /application\/json/);
+  assert.equal(await head.text(), "");
+
+  // Exact pathname only: a trailing slash is not this index.
+  const trailing = await fetch(`${origin}${BASE}/`);
+  assert.equal(trailing.status, 404);
+  assert.doesNotMatch(
+    trailing.headers.get("content-type") ?? "",
+    /application\/json/,
+  );
+  assert.equal((await fetch(`${origin}${BASE}x`)).status, 404);
+});
+
+test("the route index lists commands and PDF only when the host serves them", async (t) => {
+  const routes = createEditorRoutes(
+    { ...fakeHost(), commands: {} } as unknown as LumiereHost,
+    { markdown: "/none", shim: "/none", pdf: "/none" },
+  );
+  const server = createServer((req, res) => {
+    void routes.handle(req, res).then((handled) => {
+      if (!handled) {
+        res.writeHead(404).end();
+      }
+    });
+  });
+  await new Promise<void>((resolve) => server.listen(0, "127.0.0.1", resolve));
+  t.after(() => {
+    routes.close();
+    server.close();
+  });
+  const { port } = server.address() as { port: number };
+  const index = (await (
+    await fetch(`http://127.0.0.1:${port}${BASE}`)
+  ).json()) as { routes: string[] };
+  assert.deepEqual(index.routes.slice(-3), [
+    `${BASE}/commands`,
+    `${BASE}/pdf`,
+    SOCKET_PATH,
+  ]);
 });
 
 test("note media and the built editor both answer one byte range", async (t) => {
