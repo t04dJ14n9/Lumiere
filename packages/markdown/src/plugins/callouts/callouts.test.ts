@@ -2,7 +2,8 @@ import test from "node:test";
 import assert from "node:assert/strict";
 import { history, undo } from "@codemirror/commands";
 import { EditorState, type Transaction } from "@codemirror/state";
-import { insertCallout, isCallout } from "./edit";
+import type { EditorView } from "@codemirror/view";
+import { insertCallout, insertCalloutCommand, isCallout } from "./edit";
 
 const applyInsertCallout = (doc: string, anchor: number, head = anchor) => {
   const state = EditorState.create({ doc, selection: { anchor, head } });
@@ -108,4 +109,34 @@ test("a callout's type is any text but ], as in Obsidian", () => {
   assert.equal(isCallout("> [!my type]- Folded"), true);
   assert.equal(isCallout("> [!note]text"), false);
   assert.equal(isCallout("> [!info](https://example.com)"), false);
+});
+
+/** A view that records whether the command dispatched an edit. */
+function fakeView(doc: string, anchor: number) {
+  let state = EditorState.create({ doc, selection: { anchor } });
+  let dispatched = false;
+  const view = {
+    get state() {
+      return state;
+    },
+    dispatch(spec: Parameters<EditorState["update"]>[0]) {
+      dispatched = true;
+      state = state.update(spec).state;
+    },
+  } as unknown as EditorView;
+  return { view, didDispatch: () => dispatched };
+}
+
+// Obsidian 1.15.0 registers Insert Callout behind `if (!a.inTableCell)`
+// (issue #693).
+test("Insert Callout is refused inside a table cell and runs outside one", () => {
+  const table = "| a | b |\n| --- | --- |\n| c | d |";
+  const refused = fakeView(table, table.indexOf("c"));
+  assert.equal(insertCalloutCommand(refused.view), false);
+  assert.equal(refused.didDispatch(), false);
+  assert.equal(refused.view.state.doc.toString(), table);
+
+  const allowed = fakeView(`${table}\n\nafter`, `${table}\n\nafter`.length);
+  assert.equal(insertCalloutCommand(allowed.view), true);
+  assert.equal(allowed.didDispatch(), true);
 });

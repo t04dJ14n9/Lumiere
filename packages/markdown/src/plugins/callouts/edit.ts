@@ -1,4 +1,6 @@
 import type { EditorState, TransactionSpec } from "@codemirror/state";
+import type { EditorView } from "@codemirror/view";
+import { selectionTouchesTableCell } from "../../markdown/table-cell";
 /**
  * Whether a quote opens with a callout's `[!type]`, as Obsidian reads it: any
  * type but `]` (`[!note|wide]`, `[!笔记]`), then a space or the line's end.
@@ -44,6 +46,18 @@ export function insertCallout(state: EditorState): TransactionSpec {
     selection: { anchor: type, head: type + "NOTE".length },
     userEvent: "input.callout",
   };
+}
+
+/**
+ * Run Insert Callout as an editor command. Obsidian's check callback refuses
+ * it in a table cell, so nothing is edited there.
+ */
+export function insertCalloutCommand(view: EditorView): boolean {
+  if (selectionTouchesTableCell(view.state)) {
+    return false;
+  }
+  view.dispatch(insertCallout(view.state));
+  return true;
 }
 
 /** Insert Obsidian's Title/Contents template above a line, leaving the line. */

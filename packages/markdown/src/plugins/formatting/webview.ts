@@ -20,7 +20,7 @@ import { addCursor } from "./cursors";
 import { linkPasteHandler } from "./paste-link";
 import { keepFormatKeys } from "./format-keys";
 import { selectAllOccurrences } from "./select-occurrences";
-import { isInTableCell } from "./table-cell";
+import { selectionTouchesTableCell } from "../../markdown/table-cell";
 
 /** Commands whose Obsidian registrations check `inTableCell`. */
 const REFUSE_IN_TABLE_CELL = new Set([
@@ -33,11 +33,7 @@ const REFUSE_IN_TABLE_CELL = new Set([
 /** A block command must not edit a table row, whichever way the selection runs. */
 function refuseInTableCell(run: Command): Command {
   return (view) => {
-    const { main } = view.state.selection;
-    if (
-      isInTableCell(view.state) ||
-      (main.from !== main.head && isInTableCell(view.state, main.from))
-    ) {
+    if (selectionTouchesTableCell(view.state)) {
       return false;
     }
     return run(view);

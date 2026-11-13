@@ -7,7 +7,7 @@ import type {} from "../render/api";
 import type {} from "../livePreview/api";
 import { resolveCalloutIcon } from "../../webview/ui/icons";
 import { MarkdownBlock } from "../../webview/ui/markdown-widget";
-import { insertCallout, isCallout } from "./edit";
+import { insertCalloutCommand, isCallout } from "./edit";
 const disclosureChanged = StateEffect.define<null>();
 export const calloutsWebview: Plugin = {
   name: "callouts",
@@ -150,10 +150,9 @@ function registerDisclosures(
 
 function registerInsertion(ctx: Context): void {
   ctx.effect(() =>
-    ctx.commands.register("editor:insert-callout", () => {
-      ctx.editor.view.dispatch(insertCallout(ctx.editor.view.state));
-      return true;
-    }),
+    ctx.commands.register("editor:insert-callout", () =>
+      insertCalloutCommand(ctx.editor.view),
+    ),
   );
 }
 

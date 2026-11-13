@@ -6,7 +6,8 @@ Mod+L toggles the status, Obsidian's default (in Cursor, where Cmd/Ctrl+L
 opens the chat, the Cursor bridge keeps that key). A line without a list
 gets `- [ ] ` after its quotes and indentation. Selected lines move together,
 as in Obsidian: every task is checked while any is open, and blank lines in
-the selection are left alone.
+the selection are left alone. As in Obsidian, both commands are refused (no
+edit) with the caret or selection in a table cell.
 
 ## How it works
 
@@ -33,7 +34,7 @@ replaces the widget. Toggle edits do not request selection or scrolling changes.
 - `webview.ts`: inline renderer and checklist command registrations.
 - `widget.ts`: inline checkbox widget and event lifetime.
 - `post-process.ts`: rendered checkbox binding, local and embedded edit routing.
-- `edits.ts`: pure expected-line edits and checklist commands.
+- `edits.ts`: pure expected-line edits and the table-cell-guarded checklist command.
 - `status.ts`: a task line's class and `data-task` attribute.
 - `../../../test/unit/tasks/status.test.ts`: checked styling for every status
   and `data-task` output.

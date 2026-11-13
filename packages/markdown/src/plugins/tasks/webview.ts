@@ -5,7 +5,7 @@ import type {} from "../commands/api";
 import type { InlineRenderer } from "../livePreview/api";
 import type {} from "../render/api";
 import { TaskBox } from "./widget";
-import { checklistEdit } from "./edits";
+import { runChecklist } from "./edits";
 import { taskLine } from "./status";
 import { bindRenderedTasks } from "./post-process";
 export const tasksWebview: Plugin = {
@@ -70,10 +70,7 @@ function registerChecklistCommands(ctx: Context): void {
     ["editor:cycle-list-checklist", true],
   ] as const) {
     ctx.effect(() =>
-      ctx.commands.register(id, () => {
-        ctx.editor.view.dispatch(checklistEdit(ctx.editor.view.state, cycle));
-        return true;
-      }),
+      ctx.commands.register(id, () => runChecklist(ctx.editor.view, cycle)),
     );
   }
   // Obsidian's default key for Toggle checkbox status. In Cursor, where
@@ -83,13 +80,7 @@ function registerChecklistCommands(ctx: Context): void {
       keymap.of([
         {
           key: "Mod-l",
-          run: (view) => {
-            if (view.state.readOnly) {
-              return false;
-            }
-            view.dispatch(checklistEdit(view.state, false));
-            return true;
-          },
+          run: (view) => !view.state.readOnly && runChecklist(view, false),
           stopPropagation: true,
         },
       ]),

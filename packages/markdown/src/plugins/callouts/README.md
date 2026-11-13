@@ -14,7 +14,8 @@ render service. `edit.ts` wraps selected lines with blank lines around adjacent
 text; a collapsed caret at column 0 of a non-empty line inserts
 `\n> [!NOTE] Title\n> Contents\n` at the caret and leaves the line below. An
 empty or whitespace-only line is replaced by the same template. The `NOTE` type
-is selected and one editor transaction makes the insertion one undo step.
+is selected and one editor transaction makes the insertion one undo step. As in Obsidian, the
+command is refused (no edit) with the caret or selection in a table cell.
 The post-processor binds disclosures to panel-local memory.
 That memory is a `folds` view-state contribution, restored on registration and
 mapped across renamed source identities. Each pass owns its event listeners and
@@ -29,7 +30,7 @@ a caret.
 
 - `manifest.ts`: enablement and Insert Callout contribution.
 - `webview.ts`: renderer, disclosure and command registrations.
-- `edit.ts`: callout detection and pure insertion edits.
+- `edit.ts`: callout detection, pure insertion edits and the table-cell-guarded command.
 - `view-state.ts`: disclosure memory, live bindings and source remapping.
 - `callouts.test.ts`: recognition and insertion units.
 - `view-state.test.ts`: persistence, restore and source-remapping units.
