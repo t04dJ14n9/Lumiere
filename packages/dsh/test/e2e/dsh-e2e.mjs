@@ -20,6 +20,10 @@ import {
 import { tmpdir } from "node:os";
 import path from "node:path";
 import { fileURLToPath, pathToFileURL } from "node:url";
+import {
+  assertViewsSnapshotAndSse,
+  assertViewsSseNegatives,
+} from "./views-sse-check.mjs";
 
 export const results = [];
 let base;
@@ -335,6 +339,45 @@ async function main() {
       }
       return "405 + Allow on all four";
     });
+    await check("wrong method on a JSON route returns 405", async () => {
+      for (const route of [
+        "/lumiere/settings",
+        "/lumiere/commands",
+        "/lumiere/views/outline",
+      ]) {
+        const response = await fetch(base + route, {
+          method: "PUT",
+          headers: { Cookie: cookie, Origin: origin },
+        });
+        assert(response.status === 405, `${route} -> ${response.status}`);
+        assert(
+          response.headers.get("allow") === "GET, POST, HEAD",
+          `${route} missing Allow`,
+        );
+      }
+      return "405 + Allow on all three";
+    });
+    await check(
+      "static route: a symlink out of the bundle is refused",
+      async () => {
+        const link = path.resolve(
+          "packages/dsh/dist/bundle/markdown/webview/__e2e_escape.js",
+        );
+        rmSync(link, { force: true });
+        symlinkSync("/etc/hosts", link);
+        try {
+          const response = await get(
+            `${base}/lumiere/m/webview/__e2e_escape.js`,
+          );
+          const body = await response.text();
+          assert(response.status === 403, `got ${response.status}`);
+          assert(!body.includes("Host Database"), "escaped content was served");
+          return "403";
+        } finally {
+          rmSync(link, { force: true });
+        }
+      },
+    );
     await check("malformed JSON bodies return 400, not 500", async () => {
       for (const route of [
         "/lumiere/settings",
@@ -594,9 +637,106 @@ async function main() {
           text.includes("# Note"),
           "editor did not render under embedder messages",
         );
+        const inset = await probe
+          .frameLocator("#f")
+          .locator("body")
+          .evaluate((element) =>
+            element.ownerDocument.documentElement.style.getPropertyValue(
+              "--lumiere-inset-top",
+            ),
+          );
+        assert(inset === "12px", `inset variable not applied: ${inset}`);
         assert(errors.length === 0, `page errors: ${errors.join(", ")}`);
         await probe.close();
         return "rendered with no errors";
+      },
+    );
+    await check(
+      "HEAD on the editor and an exact /lumiere request",
+      async () => {
+        const head = await fetch(editorUrl(md), {
+          method: "HEAD",
+          headers: { Cookie: cookie, Origin: origin },
+        });
+        assert(head.status === 200, `HEAD -> ${head.status}`);
+        const exact = await get(`${base}/lumiere`);
+        assert(exact.status === 404, `exact -> ${exact.status}`);
+        return "HEAD 200, /lumiere 404";
+      },
+    );
+    await check("invalid setting and command changes are 400", async () => {
+      for (const [route, body] of [
+        ["/lumiere/settings", '{"key":"nope","value":1}'],
+        ["/lumiere/commands", '{"command":"nope"}'],
+      ]) {
+        const response = await fetch(base + route, {
+          method: "POST",
+          headers: {
+            Cookie: cookie,
+            Origin: origin,
+            "content-type": "application/json",
+          },
+          body,
+        });
+        assert(response.status === 400, `${route} -> ${response.status}`);
+      }
+      return "400 for both";
+    });
+    await check("SSE events and a view snapshot are reachable", () =>
+      assertViewsSnapshotAndSse({ base, get, cookie, origin }),
+    );
+    await check("view snapshot negatives and events method/auth gates", () =>
+      assertViewsSseNegatives({ base, get, cookie, origin }),
+    );
+    await check(
+      "file route: one panel cannot read another workspace",
+      async () => {
+        const other = mkdtempSync(path.join(tmpdir(), "lumiere-other-"));
+        const otherNote = path.join(other, "other.md");
+        writeFileSync(otherNote, "# Other\n");
+        try {
+          const panel = await openPanel(md);
+          const response = await get(
+            `${base}/lumiere/file?panel=${panel.panel}&uri=${encodeURIComponent(pathToFileURL(realpathSync(otherNote)).toString())}`,
+          );
+          panel.socket.close();
+          assert(
+            response.status === 403,
+            `cross-workspace read -> ${response.status}`,
+          );
+          return "403";
+        } finally {
+          rmSync(other, { recursive: true, force: true });
+        }
+      },
+    );
+    await check(
+      "file route: a missing file inside the root is refused",
+      async () => {
+        const panel = await openPanel(md);
+        const response = await get(
+          `${base}/lumiere/file?panel=${panel.panel}&uri=${encodeURIComponent(pathToFileURL(realpathSync(scratch) + "/missing.png").toString())}`,
+        );
+        panel.socket.close();
+        assert(
+          response.status !== 200,
+          `missing file served (${response.status})`,
+        );
+        return String(response.status);
+      },
+    );
+    await check(
+      "static file: an ignored Range still returns the full body",
+      async () => {
+        const response = await fetch(`${base}/lumiere/m/webview/editor.js`, {
+          headers: { Cookie: cookie, Origin: origin, Range: "bytes=0-2" },
+        });
+        assert(response.status === 200, `got ${response.status}`);
+        assert(
+          (await response.text()).length > 100,
+          "Range truncated the body",
+        );
+        return "200 full body (Range ignored, RFC 9110 permits this)";
       },
     );
     await check("auxiliary routes: views, settings, commands", async () => {
@@ -645,12 +785,28 @@ async function main() {
         );
         writeFileSync(path.join(scratch, "pixel.png"), png);
         const withImage = note("image.md", "# Image\n\n![pixel](pixel.png)\n");
-        await render(withImage);
-        const image = page.locator('img[src*="/lumiere/file"]').first();
-        await image.waitFor({ timeout: 15000 });
-        const width = await image.evaluate((element) => element.naturalWidth);
-        assert(width > 0, `image failed to decode (naturalWidth ${width})`);
-        return "image decoded";
+        // A fresh context: an editor's image widget belongs to a fresh preview
+        // page, not one that has already navigated between several notes.
+        const fresh = await browser.newContext();
+        await fresh.addCookies(
+          pairs().map((entry) => ({ ...entry, url: base })),
+        );
+        const imagePage = await fresh.newPage();
+        try {
+          const response = await imagePage.goto(editorUrl(withImage), {
+            waitUntil: "load",
+            timeout: 20000,
+          });
+          assert(response?.status() === 200, `HTTP ${response?.status()}`);
+          await imagePage.locator(".cm-content").waitFor({ timeout: 15000 });
+          const image = imagePage.locator('img[src*="/lumiere/file"]').first();
+          await image.waitFor({ timeout: 15000 });
+          const width = await image.evaluate((element) => element.naturalWidth);
+          assert(width > 0, `image failed to decode (naturalWidth ${width})`);
+          return "image decoded";
+        } finally {
+          await fresh.close();
+        }
       },
     );
     await check("browser: dark theme message applies to the page", async () => {
