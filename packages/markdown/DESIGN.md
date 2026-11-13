@@ -1184,6 +1184,8 @@ default (§25).
 | Default location for new attachments | `lumiere.markdown.files.attachmentFolder` (same forms, plus `./sub`) | empty |
 | Excluded files | `lumiere.markdown.vault.excludedFiles` (globs) | `[]` |
 | Delete attachments when deleting files | `lumiere.markdown.attachments.deleteUnlinkedAttachments` (`ask` \| `always` \| `never`) for notes deleted in VS Code; attachments only they linked, to the trash per `files.enableTrash` | `ask` |
+| Spellcheck languages (`spellcheckLanguages`) | none: the host owns them (§15.3) | n/a |
+| Quick font size adjustment (`baseFontSizeAction`) | none: `lumiere.markdown.editor.fontSize` and **Set Note Font Size** (§15.3) | n/a |
 | Show all file types | `lumiere.markdown.vault.showUnsupportedFiles` (on: the quick switcher also finds files Obsidian cannot open; the Explorer is VS Code's and link suggestions list every file already) | `false` |
 | Always focus new tabs | `lumiere.markdown.links.focusNewTab` (off: a link opened in a new tab or beside keeps the keyboard focus, VS Code's `preserveFocus`) | `true` |
 | (no equivalent) | `lumiere.markdown.vault.rootMarkers` | `[".obsidian"]` |
@@ -1221,6 +1223,26 @@ available for a later consumer. See [the plugin contract](src/plugins/obsidianCo
 - External application links (`obsidian://`, `zotero://` and similar) need
   confirmation (Obsidian also asks); links in VS Code's own scheme
   (`vscode://`, `cursor://`) open directly.
+- `spellcheckLanguages` (the languages Obsidian's spellchecker uses) has no
+  Lumiere setting. Spellcheck here is the `spellcheck` attribute of the note's
+  contenteditable (plugin `spellcheck`), and Chromium takes its dictionaries
+  from the application's spellchecker languages, which only the main process
+  sets, not from page markup. Obsidian does it through Electron's session
+  (`availableSpellCheckerLanguages`, `setSpellCheckerLanguages`) in its desktop
+  app, and on macOS only says that the system detects the language. Neither
+  VS Code's API nor an extension webview can change them, so a setting would
+  do nothing. The equivalent is the host's own: the operating system's
+  languages, or a spelling extension for the text editor.
+- `baseFontSizeAction` (Ctrl/Cmd+scroll or pinch changes the text size) has no
+  setting. VS Code's `editor.mouseWheelZoom` zooms `editor.fontSize`, which
+  notes ignore (they have `lumiere.markdown.editor.fontSize`), and VS Code's
+  zoom is temporary and window-wide where Obsidian stores the size. Honouring
+  it would mean a new wheel and pinch gesture in the webview that changes a
+  transient size, or writes the setting on every scroll, and that cannot be
+  checked without a live VS Code window. The size stays a setting:
+  `lumiere.markdown.editor.fontSize` (8 to 48, default 16), changed with **Set
+  Note Font Size**; `window.zoomLevel` and Ctrl/Cmd +/- still scale the whole
+  window.
 
 ## 16. Opening links
 
