@@ -71,7 +71,7 @@ export class AgentHandoff {
     if (panel.document.isDirty || panel.document.isUntitled) {
       const choice = await this.options.host.dialogs.ask(
         "This note has unsaved changes. Save it so the reference matches the file?",
-        ["Save and Copy", "Copy Text Only", "Cancel"],
+        ["Save and Copy", "Copy Text Only"],
       );
       this.assertActive(panel, token);
       if (choice === "Copy Text Only") {

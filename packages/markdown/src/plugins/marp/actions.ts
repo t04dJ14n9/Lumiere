@@ -161,7 +161,6 @@ export async function moveDeckOutside(
 async function offerMarpInstall(actions: MarpActions): Promise<void> {
   const answer = await actions.ask("Export needs Marp for VS Code.", [
     "Install Marp for VS Code",
-    "Cancel",
   ]);
   if (answer === "Install Marp for VS Code") {
     await actions.execute("workbench.extensions.search", MARP_EXTENSION);

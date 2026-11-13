@@ -55,8 +55,9 @@ function recorder(): { actions: MarpActions; calls: string[] } {
     async apply() {
       return true;
     },
-    async ask() {
-      return "Cancel";
+    async ask(_message, buttons) {
+      calls.push(`ask:${buttons.join("|")}`);
+      return undefined;
     },
     async clipboardWrite() {},
     inform() {},
@@ -87,6 +88,7 @@ test("export refuses an untrusted workspace and a missing Marp extension", async
   missing.actions.marpInstalled = () => false;
   await exportDeck(missing.actions, "file:///proj/deck.md");
   assert.equal(missing.calls.includes("markdown.marp.export"), false);
+  assert.deepEqual(missing.calls, ["ask:Install Marp for VS Code"]);
 });
 
 test("moving a deck outside does not add page-contract frontmatter", async () => {
