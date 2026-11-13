@@ -26,12 +26,20 @@ export function createDialogs(): Dialogs {
     inform(message) {
       void vscode.window.showInformationMessage(message);
     },
-    ask: async (message, actions) =>
-      vscode.window.showInformationMessage(
+    // A modal message gets an automatic Cancel unless one item is the close
+    // affordance. A string "Cancel" is not that item, so passing it would
+    // show two Cancel buttons.
+    ask: async (message, actions) => {
+      const choice = await vscode.window.showInformationMessage(
         message,
         { modal: true },
-        ...actions,
-      ),
+        ...actions.map((title) => ({
+          title,
+          ...(title === "Cancel" ? { isCloseAffordance: true } : {}),
+        })),
+      );
+      return choice?.title;
+    },
     pick,
     input: async (options) =>
       vscode.window.showInputBox({
