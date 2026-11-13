@@ -44,7 +44,8 @@ test("line commands exclude a final column-zero line and numbered lists toggle a
     selection: { anchor: 0, head: 11 },
   });
   state = state.update(lineEdit(state, "1. ")).state;
-  assert.equal(state.doc.toString(), "1. alpha\n2. beta\ngamma");
+  // Obsidian writes "1. " on every line; the renderer numbers them (1., 2.).
+  assert.equal(state.doc.toString(), "1. alpha\n1. beta\ngamma");
   state = state.update(lineEdit(state, "1. ")).state;
   assert.equal(state.doc.toString(), "alpha\nbeta\ngamma");
   state = state.update(lineEdit(state, "## ")).state;
