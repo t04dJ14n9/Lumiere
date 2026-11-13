@@ -14,11 +14,12 @@ export function fixture() {
     to: 8,
     closed: false,
     enabled: true,
-    choice: "Cancel",
+    choice: undefined as string | undefined,
     forged: false,
   };
   const pair = rpcPair();
   const copied: string[] = [];
+  const asked: string[][] = [];
   let changed = () => {};
   let beforeCapture = () => {};
   let beforeSave = () => {};
@@ -39,7 +40,12 @@ export function fixture() {
     },
   };
   const host = fakeHost({
-    dialogs: { ask: async () => state.choice },
+    dialogs: {
+      ask: async (_message: string, actions: readonly string[]) => {
+        asked.push([...actions]);
+        return state.choice;
+      },
+    },
     workspace: { folders: () => ["file:///vault"] },
     clipboard: {
       read: async () => "",
@@ -102,6 +108,7 @@ export function fixture() {
   return {
     state,
     copied,
+    asked,
     pair,
     panel,
     editors,

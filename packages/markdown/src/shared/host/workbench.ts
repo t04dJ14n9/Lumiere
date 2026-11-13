@@ -24,7 +24,11 @@ export interface PickItem<T> {
 export interface Dialogs {
   error(message: string): void;
   inform(message: string): void;
-  /** Ask with buttons; resolves to the chosen button, or undefined. */
+  /**
+   * Ask with buttons; resolves to the chosen button, or undefined. Every host
+   * adds its own Cancel, so callers never pass one: Cancel and dismissing both
+   * resolve to undefined.
+   */
   ask(message: string, actions: readonly string[]): Promise<string | undefined>;
   /** A quick pick whose items are recomputed as the user types. */
   pick<T>(options: {

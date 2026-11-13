@@ -99,7 +99,7 @@ test("references use the workspace-relative path in one local folder, else the f
 test("Copy Link for Agent on an unsaved note: cancel, copy text only, or save and recapture", async () => {
   const f = fixture();
   f.state.dirty = true;
-  f.state.choice = "Cancel";
+  f.state.choice = undefined;
   const commands: unknown[] = [];
   const execute = f.host.hostCommands.execute;
   f.host.hostCommands.execute = async (id, ...args) => {
@@ -115,6 +115,7 @@ test("Copy Link for Agent on an unsaved note: cancel, copy text only, or save an
   assert.equal(saved, false);
   assert.deepEqual(f.copied, []);
   assert.deepEqual(commands, []);
+  assert.deepEqual(f.asked, [["Save and Copy", "Copy Text Only"]]);
   f.state.choice = "Copy Text Only";
   assert.equal(await f.agent.copy("panel"), true);
   assert.equal(f.copied.pop(), "one\ntwo\n");
