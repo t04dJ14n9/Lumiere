@@ -359,3 +359,40 @@ test("PDF body recreates its iframe when DSH reloads the content", () => {
   const second = pdfBody(fakeReact())(pdfBodyProps(1).props) as PdfIframeProps;
   assert.notEqual(first.key, second.key);
 });
+
+test("a note's and a PDF's page name the session whose address opened them", () => {
+  const search = (element: unknown) =>
+    new URL((element as { src: string }).src, "http://dsh").searchParams;
+
+  const note = search(noteBody(fakeReact(), () => {})(bodyProps().props));
+  assert.equal(note.get("session"), "s");
+  assert.equal(note.get("root"), "/Users/t04dj14n9/Code/Lumia");
+  assert.equal(
+    note.get("path"),
+    "/Users/t04dj14n9/Code/Lumia/packages/dsh/README.md",
+  );
+
+  const pdf = search(pdfBody(fakeReact())(pdfBodyProps().props));
+  assert.equal(pdf.get("session"), "s");
+  assert.equal(pdf.get("root"), "/Users/t04dj14n9/Code/Lumia");
+
+  // An absolute address names the session too: DSH reads the workspace from it.
+  const outside = bodyProps();
+  outside.props.resourceAddress =
+    "dsh-resource://file/session/s//v/notes/Start.md";
+  outside.props.useResource = () => ({
+    value: { absolutePath: "/v/notes/Start.md", version: "1" },
+  });
+  const elsewhere = search(noteBody(fakeReact(), () => {})(outside.props));
+  assert.equal(elsewhere.get("session"), "s");
+  assert.equal(elsewhere.get("root"), "/v/notes");
+
+  // An address that names no session names none.
+  const bare = bodyProps();
+  bare.props.resourceAddress = "dsh-resource://file/absolute/v/notes/Start.md";
+  bare.props.useResource = outside.props.useResource;
+  assert.equal(
+    search(noteBody(fakeReact(), () => {})(bare.props)).get("session"),
+    null,
+  );
+});

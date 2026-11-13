@@ -8,6 +8,7 @@ import {
   addressFragment,
   insideWorkspace,
   parentFolder,
+  parseSessionAddress,
   sessionAddress,
   workspaceRoot,
 } from "./address";
@@ -66,6 +67,25 @@ export function isEditorDocument(
   return Boolean(doc.querySelector('meta[name="lumiere-panel"]'));
 }
 
+/**
+ * A page's query: the file, the folder it is shown from, and the session that
+ * authorized the file's address. The host reads that session's workspace from
+ * DSH and refuses a folder outside it (`host/workspace.ts`); `root` only
+ * narrows.
+ */
+export function pageSearchParams(
+  resourceAddress: string,
+  absolute: string,
+  root: string | undefined,
+): URLSearchParams {
+  const session = parseSessionAddress(resourceAddress)?.sessionId;
+  return new URLSearchParams({
+    path: absolute,
+    ...(root ? { root } : {}),
+    ...(session ? { session } : {}),
+  });
+}
+
 function resolveEditorTarget(
   resourceAddress: string,
   absolute: string | undefined,
@@ -79,10 +99,7 @@ function resolveEditorTarget(
     root ?? (absolute && isMarkdown ? parentFolder(absolute) : undefined);
   const query =
     absolute && isMarkdown
-      ? new URLSearchParams({
-          path: absolute,
-          ...(containmentRoot ? { root: containmentRoot } : {}),
-        })
+      ? pageSearchParams(resourceAddress, absolute, containmentRoot)
       : undefined;
   const src = query
     ? `/lumiere/editor?${query.toString()}${addressFragment(resourceAddress)}`
