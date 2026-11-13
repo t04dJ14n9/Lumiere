@@ -10,8 +10,18 @@ const NOTE = [
   "![page](https://ex.com/page.html) ![dot](data:image/gif;base64,R0lG)",
 ].join("\n");
 
+interface Offered {
+  label: string;
+  description?: string;
+  detail?: string;
+  value: string;
+}
+
 interface Run {
+  /** The pick list's placeholder each time it was shown. */
   asked: string[];
+  /** The rows of the last pick list. */
+  offered: Offered[];
   told: string[];
   written: string[];
   text: string;
@@ -31,11 +41,23 @@ async function run(
   t: test.TestContext,
   answer: string | undefined,
   settings: Record<string, unknown> = {},
-  options: { note?: string; applies?: boolean; serve?: Serve } = {},
+  options: {
+    note?: string;
+    applies?: boolean;
+    serve?: Serve;
+    /** URLs the reader unticks in the list. */
+    unticked?: string[];
+  } = {},
 ): Promise<Run> {
   const note = options.note ?? NOTE;
   const { vaults } = memoryVaults({ "Note.md": note, "cat.png": "" });
-  const result: Run = { asked: [], told: [], written: [], text: note };
+  const result: Run = {
+    asked: [],
+    offered: [],
+    told: [],
+    written: [],
+    text: note,
+  };
   const document = { uri: uriOf("Note.md"), getText: () => result.text };
   const original = globalThis.fetch;
   const serve: Serve =
@@ -87,9 +109,18 @@ async function run(
       },
     },
     dialogs: {
-      ask: async (message: string) => {
-        result.asked.push(message);
-        return answer;
+      // "Download" accepts the list as shown; anything else dismisses it.
+      pickMany: async (pick: {
+        placeholder: string;
+        items: readonly Offered[];
+      }) => {
+        result.asked.push(pick.placeholder);
+        result.offered = [...pick.items];
+        return answer === "Download"
+          ? pick.items
+              .map((item) => item.value)
+              .filter((url) => !options.unticked?.includes(url))
+          : undefined;
       },
       inform: (message: string) => result.told.push(message),
       error: (message: string) => result.told.push(message),
@@ -129,7 +160,7 @@ test("each web image is downloaded once, saved under its own name, and embedded 
     attachmentFolder: "assets",
   });
   assert.deepEqual(result.asked, [
-    "Download the 3 images this note shows from the web into the vault?",
+    "Download 3 images into the vault? Untick any to leave out.",
   ]);
   assert.deepEqual(result.written, [
     uriOf("assets/cat.png"),
@@ -312,7 +343,7 @@ const FRONT_NOTE = [
 test("image URLs in properties are downloaded once with the body's and rewritten in place", async (t) => {
   const result = await run(t, "Download", {}, { note: FRONT_NOTE });
   assert.deepEqual(result.asked, [
-    "Download the 3 images this note shows from the web into the vault?",
+    "Download 3 images into the vault? Untick any to leave out.",
   ]);
   assert.deepEqual(result.written, [
     uriOf("cover.png"),
@@ -372,6 +403,85 @@ test("a note with only property images offers them", async (t) => {
   const note = "---\ncover: https://ex.com/img/cover.png\n---\ntext";
   const result = await run(t, "Download", {}, { note });
   assert.deepEqual(result.asked, [
-    "Download the 1 image this note shows from the web into the vault?",
+    "Download 1 image into the vault? Untick any to leave out.",
   ]);
+});
+
+test("the list names each image, where it is from, and its URL", async (t) => {
+  const long = `data:image/png;base64,${"A".repeat(200)}`;
+  const note = [
+    "![a](https://ex.com/img/my%20cat.png?w=2) ![b](https://ex.com/avatar)",
+    `![c](${long}) ![d](https://ex.com/)`,
+  ].join("\n");
+  const result = await run(t, undefined, {}, { note });
+  assert.deepEqual(result.offered, [
+    {
+      label: "my cat.png",
+      description: "ex.com",
+      detail: "https://ex.com/img/my%20cat.png?w=2",
+      value: "https://ex.com/img/my%20cat.png?w=2",
+    },
+    {
+      label: "avatar",
+      description: "ex.com",
+      detail: "https://ex.com/avatar",
+      value: "https://ex.com/avatar",
+    },
+    {
+      label: "Embedded image",
+      description: "image/png",
+      detail: `${long.slice(0, 60)}…`,
+      value: long,
+    },
+    {
+      label: "ex.com",
+      description: "ex.com",
+      detail: "https://ex.com/",
+      value: "https://ex.com/",
+    },
+  ]);
+});
+
+test("unticked images are not downloaded and their links stay, in the text and in properties", async (t) => {
+  const result = await run(
+    t,
+    "Download",
+    {},
+    {
+      note: FRONT_NOTE,
+      unticked: ["https://ex.com/img/cover.png", "https://ex.com/img/cat.png"],
+    },
+  );
+  assert.deepEqual(result.written, [uriOf("dog.png")]);
+  assert.equal(
+    result.text,
+    [
+      "---",
+      "title: Trip",
+      "cover: https://ex.com/img/cover.png # hero",
+      "site: https://ex.com/page",
+      "photos:",
+      '  - "[[dog.png]]"',
+      "  - 'https://ex.com/img/cat.png'",
+      "  - https://ex.com/notes.pdf",
+      "---",
+      "![[dog.png|A dog]]",
+    ].join("\n"),
+  );
+  assert.deepEqual(result.told, ["Downloaded 1 attachment."]);
+});
+
+test("accepting the list with every image unticked downloads nothing", async (t) => {
+  const result = await run(
+    t,
+    "Download",
+    {},
+    {
+      note: "![](https://ex.com/img/dog.png)",
+      unticked: ["https://ex.com/img/dog.png"],
+    },
+  );
+  assert.deepEqual(result.written, []);
+  assert.deepEqual(result.told, []);
+  assert.equal(result.text, "![](https://ex.com/img/dog.png)");
 });

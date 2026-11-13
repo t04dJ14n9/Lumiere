@@ -3,6 +3,7 @@ import {
   decodeDataUri,
   downloadFileName,
   embedFor,
+  imageChoice,
   loadAttachmentOutcome,
   propertyImageUrls,
   propertyLinkFor,
@@ -51,14 +52,14 @@ export async function downloadAttachments(ctx: Context): Promise<void> {
     return;
   }
   const images = urls.length === 1 ? "1 image" : `${urls.length} images`;
-  const answer = await ctx.dialogs.ask(
-    `Download the ${images} this note shows from the web into the vault?`,
-    ["Download"],
-  );
-  if (answer !== "Download") {
+  const chosen = await ctx.dialogs.pickMany({
+    placeholder: `Download ${images} into the vault? Untick any to leave out.`,
+    items: urls.map((url) => ({ ...imageChoice(url), value: url })),
+  });
+  if (!chosen?.length) {
     return;
   }
-  const { saved, skipped } = await saveAll(target, urls);
+  const { saved, skipped } = await saveAll(target, chosen);
   const edits = downloadEdits(editorText(panel.document), target, saved);
   // The host refuses the edit when the note was closed during the downloads;
   // the files are saved by then, so say the note still shows the web images.
@@ -67,7 +68,7 @@ export async function downloadAttachments(ctx: Context): Promise<void> {
     (await ctx.hostDocuments.apply(panel.document, edits));
   const message = summary({
     downloaded: saved.size,
-    failed: urls.length - saved.size - skipped.length,
+    failed: chosen.length - saved.size - skipped.length,
     skipped,
     edited,
   });

@@ -46,8 +46,9 @@ share one folder and link story.
 Obsidian's command of the same name. It finds the note's Markdown images
 whose source is `http(s):` or a `data:` URI (`src/attachments/download.ts`;
 images in code and wikilink embeds are skipped) and the image URLs in its
-properties, asks once, then downloads
-each URL once on the host and saves it in `files.attachmentFolder` under the
+properties, lists them in a checklist with every row ticked (`dialogs.pickMany`;
+each row shows the file name, the host and the URL) for the reader to untick
+some, then downloads each ticked URL once on the host and saves it in `files.attachmentFolder` under the
 file name the server gives in `Content-Disposition` (`filename*=` first, then
 `filename=`), else the name at the end of its URL (`cat.png`, then `cat 1.png`
 when taken; `Image` for a data URI or a URL without a file name). A served name
@@ -106,6 +107,9 @@ group (a double-click, Quick Open, `code image.png`, Explorer drop without
 Shift) opens normally and shows the question; ignoring it keeps the image
 open and the note unchanged. Open-to-the-side is left alone.
 
-Download Attachments differs from Obsidian's: it asks once for all the images
-(Obsidian shows a gallery to untick some). It reads list items of properties
-too, where Obsidian reads string values only.
+Download Attachments differs from Obsidian's: Obsidian shows a gallery of
+thumbnails to untick; we show a checklist of file names, hosts and URLs, because
+the host services draw no images (VS Code's multi-select quick pick; outside VS
+Code, a checkbox list in the page). A host may show only the first 256 rows, so
+a note with more than that offers the first 256 only. It reads list items of
+properties too, where Obsidian reads string values only.

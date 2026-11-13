@@ -33,6 +33,7 @@ export function createDialogs(): Dialogs {
         ...actions,
       ),
     pick,
+    pickMany,
     input: async (options) =>
       vscode.window.showInputBox({
         prompt: options.prompt,
@@ -284,6 +285,41 @@ const pick: Dialogs["pick"] = (options) => {
     quickPick.onDidAccept(() => {
       const item = items[quickPick.selectedItems[0]?.index ?? -1];
       resolve({ ...(item && { item }), query: quickPick.value });
+      quickPick.hide();
+    });
+    quickPick.onDidHide(() => {
+      resolve(undefined);
+      quickPick.dispose();
+    });
+    quickPick.show();
+  });
+};
+
+const pickMany: Dialogs["pickMany"] = (options) => {
+  const quickPick = vscode.window.createQuickPick<
+    vscode.QuickPickItem & { index: number }
+  >();
+  quickPick.placeholder = options.placeholder;
+  quickPick.canSelectMany = true;
+  const rows = options.items.map((item, index) => ({
+    label: item.label,
+    ...(item.description === undefined
+      ? {}
+      : { description: item.description }),
+    ...(item.detail === undefined ? {} : { detail: item.detail }),
+    index,
+  }));
+  quickPick.items = rows;
+  quickPick.selectedItems = rows;
+  return new Promise((resolve) => {
+    quickPick.onDidAccept(() => {
+      // VS Code lists the selection in the order it was ticked.
+      const ticked = quickPick.selectedItems.map(({ index }) => index);
+      resolve(
+        ticked
+          .sort((a, b) => a - b)
+          .map((index) => options.items[index]!.value),
+      );
       quickPick.hide();
     });
     quickPick.onDidHide(() => {

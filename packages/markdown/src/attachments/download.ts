@@ -165,3 +165,41 @@ export function withDownloadedPropertyImages(
     isImageUrl(value) ? linkFor(value) : undefined,
   );
 }
+
+const cut = (text: string, length: number): string =>
+  text.length > length ? `${text.slice(0, length)}…` : text;
+
+/**
+ * What a checklist of downloads shows for an image URL: its name, where it
+ * is from, and the URL itself. Cut short, since a data URI can be megabytes
+ * and a host may refuse to show a row that long.
+ */
+export function imageChoice(url: string): {
+  label: string;
+  description: string;
+  detail: string;
+} {
+  const data = /^data:([^;,]*)/iu.exec(url);
+  if (data) {
+    return {
+      label: "Embedded image",
+      description: data[1]!.toLowerCase(),
+      detail: cut(url, 60),
+    };
+  }
+  let host = "";
+  let name = "";
+  try {
+    const parsed = new URL(url);
+    host = parsed.host;
+    const last = parsed.pathname.split("/").filter(Boolean).at(-1) ?? "";
+    name = decodeURIComponent(last);
+  } catch {
+    // An address that is not a URL, or an escape that is not UTF-8, keeps what it has.
+  }
+  return {
+    label: cut(name || host || url, 80),
+    description: host,
+    detail: cut(url, 200),
+  };
+}

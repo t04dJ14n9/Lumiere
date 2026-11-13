@@ -3,6 +3,7 @@ export { timestampStem, uniqueName, uniqueTimestampName } from "./naming";
 export {
   downloadFileName,
   downloadStem,
+  imageChoice,
   propertyImageUrls,
   remoteImages,
   withDownloadedImages,
