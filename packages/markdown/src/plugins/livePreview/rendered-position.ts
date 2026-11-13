@@ -1,7 +1,7 @@
 import type { SyntaxNodeRef } from "@lezer/common";
 import { markdownParser as inlineParser } from "../../markdown/dialect";
 
-import { decodeMarkdownText } from "../../markdown/html";
+import { decodeMarkdownText } from "../../markdown/html/helpers";
 
 /** Visible inline text and its original Markdown offsets, before DOM layout. */
 export function inlineSourceMap(source: string): {

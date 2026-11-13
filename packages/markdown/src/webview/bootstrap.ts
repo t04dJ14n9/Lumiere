@@ -3,6 +3,7 @@ import { pluginRank } from "../plugins/catalog";
 import { pluginReporting } from "./plugin-reporting";
 import { preloadChromeFeatures, preloadPaintFeatures } from "./features";
 import { runFeaturePhases } from "./feature-phases";
+import { headerParts } from "../markdown/properties/header-parts";
 import { registerEditorSettings } from "./editor-settings";
 import { settleSnapshot } from "./snapshot";
 import { createRoot, type RootContext } from "@workshop/core";
@@ -32,8 +33,6 @@ export async function bootstrap(
   } = {},
   logging = webviewLogging((record) => rpc.notify(protocol, "log", record)),
 ) {
-  // Overlap Properties/Sources chunk fetch with the host ready round-trip.
-  const earlyChrome = preloadChromeFeatures();
   const init = await rpc.call(protocol, "ready", {});
   performance.mark("mw:ready");
   logging.configure(init.debugLogging);
@@ -61,11 +60,11 @@ export async function bootstrap(
   registerEditorSettings(root, rpc, editor);
   const configure = pluginReporting(root, rpc);
   // Chrome (Properties + lineNumbers) must not share the settle-window wire
-  // with tables/callouts. Start chrome preload as soon as we know the
-  // Obsidian preset; paint structure starts only at first-paint rAF (wave
-  // 13 — not the closed #288 wait-for-chrome-resolve serialize).
-  const chromeChunks =
-    init.preset === "obsidian" ? earlyChrome : Promise.resolve();
+  // with tables/callouts (wave 13, not the closed #288). Only a note with a
+  // frontmatter fence needs the sheet graph (~490 KB of YAML and markdown-it)
+  // that early; other notes fetch Properties after `mw:first-paint`, so those
+  // chunks cannot compete with the entry's static graph for the loader.
+  const chromeChunks = preloadChrome(init);
   const startPaint =
     init.preset === "obsidian"
       ? () => preloadPaintFeatures(init.features, true)
@@ -87,6 +86,13 @@ export async function bootstrap(
   settleSnapshot(parent, init, featuresLoaded);
   rpc.notify(protocol, "initialized", {});
   return root;
+}
+
+/** The settle window's chrome chunks; Properties only for a note with frontmatter. */
+function preloadChrome(init: { preset: string; text: string }): Promise<void> {
+  return init.preset !== "obsidian"
+    ? Promise.resolve()
+    : preloadChromeFeatures(headerParts(init.text) !== undefined);
 }
 
 /**

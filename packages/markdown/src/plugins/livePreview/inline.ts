@@ -6,7 +6,7 @@ import type {
   ViewUpdate,
   WidgetType,
 } from "@codemirror/view";
-import { linkDestination } from "../../markdown/html";
+import { linkDestination } from "../../markdown/html/helpers";
 import { documentTree } from "./document-tree";
 import { renderRevision } from "./blocks";
 import {

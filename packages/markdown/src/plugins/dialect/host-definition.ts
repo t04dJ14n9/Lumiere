@@ -20,6 +20,7 @@ export function dialectHostPlugin(): Plugin {
         },
         metadata,
         renderer: {
+          ready: () => Promise.resolve(),
           renderMarkdown: () => "",
           renderInline: () => "",
         },
