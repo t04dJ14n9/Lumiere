@@ -190,6 +190,8 @@ test("required settings, title actions, native context menus and unbound verify 
     { default: unknown; scope: string }
   >;
   for (const [key, value] of Object.entries({
+    // Deliberately not Obsidian 1.15.0's defaults (readable line length on,
+    // inline title on, line numbers off): DESIGN §15.3, owner decision #689.
     "editor.readableLineLength": false,
     "editor.strictLineBreaks": false,
     "editor.rightToLeft": false,

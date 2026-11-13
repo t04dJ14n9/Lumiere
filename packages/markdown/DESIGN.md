@@ -1149,7 +1149,8 @@ Rules:
 ### 15.1 Editor settings (Obsidian → Lumiere)
 
 Defaults are Obsidian's application defaults, except where the owner decided
-otherwise (2026-10-09): line numbers on, readable line length off, Mermaid on.
+otherwise (2026-10-09): line numbers on, readable line length off, inline
+title off, Mermaid on (the first three are listed with their reasons in §15.3).
 Vim stays off; the owner's Vim profile is a test profile, not the product
 default (§25).
 
@@ -1223,6 +1224,18 @@ available for a later consumer. See [the plugin contract](src/plugins/obsidianCo
 - External application links (`obsidian://`, `zotero://` and similar) need
   confirmation (Obsidian also asks); links in VS Code's own scheme
   (`vscode://`, `cursor://`) open directly.
+- Three editor defaults are the inverse of Obsidian 1.15.0's application
+  defaults (`readableLineLength: true`, `showInlineTitle: true`,
+  `showLineNumber: false`) and stay so on purpose (owner decision, issue #689):
+  readable line length is **off**, so text fills the pane as in VS Code's text
+  editor; the inline title is **off**, so line 1 starts at the top and the
+  name stays in the tab; line numbers are **on**, following
+  `editor.lineNumbers`. A reader who wants Obsidian's look turns
+  `lumiere.markdown.editor.readableLineLength` and
+  `lumiere.markdown.plugins.inlineTitle.enabled` on and `editor.lineNumbers`
+  off. The three contributed defaults are pinned in
+  `test/unit/settings/editor.test.ts`, so changing one means changing this
+  decision.
 - `spellcheckLanguages` (the languages Obsidian's spellchecker uses) has no
   Lumiere setting. Spellcheck here is the `spellcheck` attribute of the note's
   contenteditable (plugin `spellcheck`), and Chromium takes its dictionaries
