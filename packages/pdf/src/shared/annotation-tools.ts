@@ -99,9 +99,10 @@ export function fromV3ToolId(
 }
 
 /**
- * View mode's tool: text selection and links, but no annotation editing, so
- * a PDF's own annotations cannot be selected, moved or deleted while reading
- * (EmbedPDF's resting `pointer` tool enables all of that).
+ * View mode's tool: text selection, links, and empty-page pan (`scroll` on
+ * the interaction hub), but no annotation editing, so a PDF's own annotations
+ * cannot be selected, moved or deleted while reading (EmbedPDF's resting
+ * `pointer` tool enables all of that).
  */
 export const READ_TOOL_ID = "lumia.read";
 
