@@ -1,6 +1,6 @@
 /**
  * Inspect, Copy and Edit are pinned to the visible top-right of a rendered
- * diagram. They must have a reserved lane and never cover Mermaid node text
+ * diagram. They sit in a row above it and never cover Mermaid node text
  * or hit targets, at any horizontal scroll position.
  *
  * Fixtures are generic (Start → Intake → …). Do not use real user diagrams.
@@ -80,8 +80,10 @@ interface ChromeFit {
   overlaps: OverlapHit[];
   preClientWidth: number;
   preScrollWidth: number;
+  preTop: number;
   preRight: number;
-  laneLeft: number;
+  shellRight: number;
+  rowBottom: number;
   scrollerClientWidth: number;
   scrollerScrollWidth: number;
   scrollLeft: number;
@@ -121,8 +123,10 @@ async function chromeAt(
         overlaps: [],
         preClientWidth: 0,
         preScrollWidth: 0,
+        preTop: 0,
         preRight: 0,
-        laneLeft: 0,
+        shellRight: 0,
+        rowBottom: 0,
         scrollerClientWidth: 0,
         scrollerScrollWidth: 0,
         scrollLeft: 0,
@@ -166,7 +170,7 @@ async function chromeAt(
       const hostBox = pre.getBoundingClientRect();
       const slop = 0.5;
       // Only the part still inside the scrollport can be seen or clicked;
-      // overflowed layout boxes extend under the reserved lane.
+      // overflowed layout boxes extend past the scrollport.
       const nodes = [...svg.querySelectorAll(".node")].flatMap((node) => {
         const box = node.getBoundingClientRect();
         const left = Math.max(box.left, hostBox.left);
@@ -203,10 +207,10 @@ async function chromeAt(
         }
       }
       const inspect = shell.querySelector(".inspect-diagram");
-      let laneLeft = hostBox.right;
+      let rowBottom = 0;
       for (const button of buttons) {
-        if (button.width >= 1 && button.height >= 1 && button.left < laneLeft) {
-          laneLeft = button.left;
+        if (button.width >= 1 && button.height >= 1) {
+          rowBottom = Math.max(rowBottom, button.bottom);
         }
       }
       return {
@@ -218,8 +222,10 @@ async function chromeAt(
         overlaps,
         preClientWidth: pre.clientWidth,
         preScrollWidth: pre.scrollWidth,
+        preTop: hostBox.top,
         preRight: hostBox.right,
-        laneLeft,
+        shellRight: shell.getBoundingClientRect().right,
+        rowBottom,
         scrollerClientWidth: scroller.clientWidth,
         scrollerScrollWidth: scroller.scrollWidth,
         scrollLeft: pre.scrollLeft,
@@ -250,9 +256,11 @@ async function assertNoOverlap(
     if (overflowing) {
       expect(fit.preScrollWidth).toBeGreaterThan(fit.preClientWidth + 80);
     }
-    // The scrollport ends at or before the leftmost chrome control, so
-    // content cannot slide under the buttons at any scroll position.
-    expect(fit.preRight).toBeLessThanOrEqual(fit.laneLeft + 1);
+    // The buttons sit in a row above the scrollport, so content cannot slide
+    // under them at any scroll position, and the diagram keeps the full
+    // width: nothing insets it from the right.
+    expect(fit.preTop).toBeGreaterThanOrEqual(fit.rowBottom - 1);
+    expect(fit.preRight).toBeGreaterThanOrEqual(fit.shellRight - 1);
   }
 }
 
@@ -288,7 +296,7 @@ test("wide mermaid chrome never covers nodes at any horizontal scroll", async ({
   await assertNoOverlap(page, "Intake request", true);
 });
 
-test("narrow viewports still reserve a non-overlapping chrome lane", async ({
+test("narrow viewports still keep the chrome row clear of the nodes", async ({
   page,
 }) => {
   await page.setViewportSize({ width: 480, height: 720 });
@@ -313,7 +321,7 @@ test("a short mermaid diagram keeps its buttons off the nodes", async ({
   await assertNoOverlap(page, "Start", false);
 });
 
-test("consecutive diagrams each keep a clear chrome lane", async ({ page }) => {
+test("consecutive diagrams each keep a clear chrome row", async ({ page }) => {
   await page.setViewportSize({ width: 1100, height: 800 });
   await open(page, NOTE);
   await reveal(page, "A wide pipeline");
