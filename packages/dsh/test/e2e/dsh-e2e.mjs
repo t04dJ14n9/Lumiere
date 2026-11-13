@@ -725,20 +725,32 @@ async function main() {
         return String(response.status);
       },
     );
-    await check(
-      "static file: an ignored Range still returns the full body",
-      async () => {
-        const response = await fetch(`${base}/lumiere/m/webview/editor.js`, {
-          headers: { Cookie: cookie, Origin: origin, Range: "bytes=0-2" },
-        });
-        assert(response.status === 200, `got ${response.status}`);
-        assert(
-          (await response.text()).length > 100,
-          "Range truncated the body",
-        );
-        return "200 full body (Range ignored, RFC 9110 permits this)";
-      },
-    );
+    await check("static file: a byte range is served as 206", async () => {
+      const url = `${base}/lumiere/m/webview/editor.js`;
+      const partial = await fetch(url, {
+        headers: { Cookie: cookie, Origin: origin, Range: "bytes=0-2" },
+      });
+      assert(partial.status === 206, `got ${partial.status}`);
+      assert(
+        partial.headers.get("content-range")?.startsWith("bytes 0-2/"),
+        `bad content-range: ${partial.headers.get("content-range")}`,
+      );
+      assert((await partial.text()).length === 3, "range was not 3 bytes");
+      const whole = await fetch(url, {
+        headers: { Cookie: cookie, Origin: origin },
+      });
+      assert(whole.status === 200, `full -> ${whole.status}`);
+      assert(
+        whole.headers.get("accept-ranges") === "bytes",
+        "missing accept-ranges",
+      );
+      const unsatisfiable = await fetch(url, {
+        headers: { Cookie: cookie, Origin: origin, Range: "bytes=99999999-" },
+      });
+      assert(unsatisfiable.status === 416, `got ${unsatisfiable.status}`);
+      return "206 + content-range, 200 with accept-ranges, 416";
+    });
+
     await check("auxiliary routes: views, settings, commands", async () => {
       for (const route of [
         "/lumiere/views",

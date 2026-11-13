@@ -81,29 +81,19 @@ export function createEditorRoutes(
   return {
     async handle(req, res) {
       const url = new URL(req.url ?? "/", "http://host");
+      const range = req.headers.range;
       if (!url.pathname.startsWith(BASE + "/")) {
         return false;
       }
       const rest = url.pathname.slice(BASE.length);
-      if (rest === "/editor") {
-        await servePage({ req, res, url, host, roots });
-      } else if (rest.startsWith("/m/")) {
-        await serveStatic(res, assets.markdown, rest.slice(3));
-      } else if (rest === "/page/shim.js") {
-        await serveFile(res, assets.shim);
-      } else if (rest === "/file") {
-        await serveResource(res, url, roots);
-      } else if (rest === "/views" || rest.startsWith("/views/")) {
-        return views.handle(req, res, rest.slice("/views".length));
-      } else if (rest === "/settings") {
-        return settings.handle(req, res, "");
-      } else if (rest === "/commands" && commands) {
-        return commands.handle(req, res, "");
-      } else {
-        // The PDF routes answer false for anything that is not theirs.
-        return pdf.handle(req, res, rest);
-      }
-      return true;
+      return dispatchRoute({
+        parts: { host, assets, views, settings, commands, pdf, roots },
+        req,
+        res,
+        url,
+        rest,
+        range,
+      });
     },
     upgrade: (req, socket, head) =>
       acceptSocket({ host, pdf, sockets, req, socket, head }),
@@ -118,6 +108,49 @@ export function createEditorRoutes(
       pdf.close();
     },
   };
+}
+
+interface RouteParts {
+  readonly host: LumiereHost;
+  readonly assets: EditorAssets;
+  readonly views: ReturnType<typeof createViewRoutes>;
+  readonly settings: ReturnType<typeof createSettingsRoutes>;
+  readonly commands: ReturnType<typeof createCommandRoutes> | undefined;
+  readonly pdf: PdfRoutes;
+  readonly roots: Map<string, string>;
+}
+
+interface RouteRequest {
+  readonly parts: RouteParts;
+  readonly req: IncomingMessage;
+  readonly res: ServerResponse;
+  readonly url: URL;
+  readonly rest: string;
+  readonly range: string | undefined;
+}
+
+/** Answer one request below BASE; false when no route claims it. */
+async function dispatchRoute(options: RouteRequest): Promise<boolean> {
+  const { parts, req, res, url, rest, range } = options;
+  if (rest === "/editor") {
+    await servePage({ req, res, url, host: parts.host, roots: parts.roots });
+  } else if (rest.startsWith("/m/")) {
+    await serveStatic(res, parts.assets.markdown, rest.slice(3), range);
+  } else if (rest === "/page/shim.js") {
+    await serveFile(res, parts.assets.shim, range);
+  } else if (rest === "/file") {
+    await serveResource(req, res, url, parts.roots);
+  } else if (rest === "/views" || rest.startsWith("/views/")) {
+    return parts.views.handle(req, res, rest.slice("/views".length));
+  } else if (rest === "/settings") {
+    return parts.settings.handle(req, res, "");
+  } else if (rest === "/commands" && parts.commands) {
+    return parts.commands.handle(req, res, "");
+  } else {
+    // The PDF routes answer false for anything that is not theirs.
+    return parts.pdf.handle(req, res, rest);
+  }
+  return true;
 }
 
 interface SocketRequest {
@@ -250,6 +283,7 @@ function panelUrls(panelId: string, host: string): PanelUrls {
 
 /** A file a note shows (an image, a video), from inside its workspace only. */
 async function serveResource(
+  req: IncomingMessage,
   res: ServerResponse,
   url: URL,
   roots: Map<string, string>,
@@ -260,7 +294,7 @@ async function serveResource(
     res.writeHead(403).end();
     return;
   }
-  await serveFile(res, file);
+  await serveFile(res, file, req.headers.range);
 }
 
 /** The file a note may show, or undefined when the URI leaves its workspace. */

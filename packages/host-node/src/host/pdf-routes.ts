@@ -50,6 +50,7 @@ export function createPdfRoutes(options: PdfRouteOptions): PdfRoutes {
           res,
           options.viewer,
           rest.slice("/pdf/viewer/".length),
+          req.headers.range,
         );
       } else if (rest === "/pdf/bytes") {
         serveBytes(res, url, pages);
