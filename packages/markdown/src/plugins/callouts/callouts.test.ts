@@ -51,6 +51,41 @@ test("Insert Callout inserts the Title/Contents template above a non-empty line 
   );
 });
 
+// Obsidian's condition for the template branch is a collapsed selection with
+// only whitespace before the caret (`!sameCursor(from, to) ||
+// line.substring(0, ch).trim()` takes the wrapping branch), so the template
+// goes in at the caret, not at the line start, and a whitespace-only line
+// keeps its whitespace.
+test("Insert Callout inserts the template at a caret that only whitespace precedes", () => {
+  const template = "\n> [!NOTE] Title\n> Contents\n";
+  const indented = applyInsertCallout("  one", 2);
+  assert.equal(indented.doc.toString(), `  ${template}one`);
+  assert.equal(
+    indented.sliceDoc(indented.selection.main.from, indented.selection.main.to),
+    "NOTE",
+  );
+  assert.equal(indented.selection.main.from, 2 + "\n> [!".length);
+
+  const blank = applyInsertCallout("  \nafter", 2);
+  assert.equal(blank.doc.toString(), `  ${template}\nafter`);
+  assert.equal(
+    blank.sliceDoc(blank.selection.main.from, blank.selection.main.to),
+    "NOTE",
+  );
+});
+
+test("Insert Callout wraps when text precedes the caret or the selection is not empty", () => {
+  assert.equal(applyInsertCallout("one", 3).doc.toString(), "> [!NOTE]\n> one");
+  assert.equal(
+    applyInsertCallout("  one", 3).doc.toString(),
+    "> [!NOTE]\n>   one",
+  );
+  assert.equal(
+    applyInsertCallout("one", 0, 1).doc.toString(),
+    "> [!NOTE]\n> one",
+  );
+});
+
 test("Insert Callout keeps a selection ending at column zero on the previous line", () => {
   const next = applyInsertCallout("one\ntwo\nbelow", 0, 4);
   const { from, to } = next.selection.main;

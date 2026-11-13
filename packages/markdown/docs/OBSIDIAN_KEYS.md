@@ -59,7 +59,7 @@ definition.
 | Bullet list, numbered list, quote, heading | `\|` | `- \|`: the caret after the marker |
 | Numbered list | `- it\|em` | `1. it\|em`; again `it\|em`; a task's box goes too |
 | Cycle list/checklist | `te\|xt` | `- te\|xt`, `- [ ] te\|xt`, `- [x] te\|xt`, `- te\|xt` |
-| Insert callout | `te\|xt` | `> [!‹NOTE›]\n> text`; on an empty line `> [!‹NOTE›] Title\n> Contents`; a blank line from text around |
+| Insert callout | `te\|xt` | `> [!‹NOTE›]\n> text`; with the caret at line start, in indentation or on an empty line, `\n> [!‹NOTE›] Title\n> Contents\n` at the caret; a blank line from text around |
 | Insert math block | `te\|xt` | `$$\nte\|xt\n$$`: around the selected lines |
 | Insert table | `te\|xt` | `text\n\n\|\|     \|     \|\n\| --- \| --- \|\n\|     \|     \|\n`: after the line |
 | Insert horizontal rule | `te\|xt` | `te\n\n---\n\|xt` |
