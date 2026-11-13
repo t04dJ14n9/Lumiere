@@ -187,8 +187,11 @@ class SchemeRender {
   }
 
   close(page: Ptr): void {
-    this.runtime.fn.FPDF_RenderPage_Close(page);
-    this.end();
+    try {
+      this.runtime.fn.FPDF_RenderPage_Close(page);
+    } finally {
+      this.end();
+    }
   }
 
   private end(): void {
