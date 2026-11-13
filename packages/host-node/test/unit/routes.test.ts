@@ -422,8 +422,6 @@ const ROUTE_INDEX = {
     `${BASE}/file`,
     `${BASE}/views`,
     `${BASE}/settings`,
-    `${BASE}/commands`,
-    `${BASE}/pdf`,
     SOCKET_PATH,
   ],
 } as const;
@@ -471,6 +469,34 @@ test("the exact /lumiere base returns a JSON route index", async (t) => {
     /application\/json/,
   );
   assert.equal((await fetch(`${origin}${BASE}x`)).status, 404);
+});
+
+test("the route index lists commands and PDF only when the host serves them", async (t) => {
+  const routes = createEditorRoutes(
+    { ...fakeHost(), commands: {} } as unknown as LumiereHost,
+    { markdown: "/none", shim: "/none", pdf: "/none" },
+  );
+  const server = createServer((req, res) => {
+    void routes.handle(req, res).then((handled) => {
+      if (!handled) {
+        res.writeHead(404).end();
+      }
+    });
+  });
+  await new Promise<void>((resolve) => server.listen(0, "127.0.0.1", resolve));
+  t.after(() => {
+    routes.close();
+    server.close();
+  });
+  const { port } = server.address() as { port: number };
+  const index = (await (
+    await fetch(`http://127.0.0.1:${port}${BASE}`)
+  ).json()) as { routes: string[] };
+  assert.deepEqual(index.routes.slice(-3), [
+    `${BASE}/commands`,
+    `${BASE}/pdf`,
+    SOCKET_PATH,
+  ]);
 });
 
 test("note media and the built editor both answer one byte range", async (t) => {

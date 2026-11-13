@@ -83,7 +83,10 @@ export function createEditorRoutes(
       const url = new URL(req.url ?? "/", "http://host");
       const range = req.headers.range;
       if (url.pathname === BASE) {
-        return serveIndex(res);
+        return serveIndex(res, {
+          pdf: Boolean(assets.pdf),
+          commands: !!commands,
+        });
       }
       if (!url.pathname.startsWith(BASE + "/")) {
         return false;
@@ -284,8 +287,14 @@ function panelUrls(panelId: string, host: string): PanelUrls {
   };
 }
 
-/** The exact base path names the routes; an empty 404 told a client nothing. */
-function serveIndex(res: ServerResponse): true {
+/**
+ * The exact base path names the routes; an empty 404 told a client nothing.
+ * Commands and PDF are listed only when this host serves them.
+ */
+function serveIndex(
+  res: ServerResponse,
+  offers: { readonly pdf: boolean; readonly commands: boolean },
+): true {
   res.writeHead(200, {
     "content-type": "application/json",
     "cache-control": "no-store",
@@ -300,8 +309,8 @@ function serveIndex(res: ServerResponse): true {
         `${BASE}/file`,
         `${BASE}/views`,
         `${BASE}/settings`,
-        `${BASE}/commands`,
-        `${BASE}/pdf`,
+        ...(offers.commands ? [`${BASE}/commands`] : []),
+        ...(offers.pdf ? [`${BASE}/pdf`] : []),
         SOCKET_PATH,
       ],
     }),
