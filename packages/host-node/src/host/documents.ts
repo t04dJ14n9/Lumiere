@@ -5,6 +5,7 @@
  */
 import type { Disposer } from "@workshop/core";
 import {
+  mergeDiskChange,
   SourceCoordinates,
   type HostDocument,
   type HostDocuments,
@@ -85,20 +86,19 @@ export function noteFiles(platform: HostPlatform): NoteFiles {
 }
 
 /**
- * Whether a disk read should replace the open note. A read that started
- * before a save finished is stale: applying it would undo that save.
+ * Whether a disk read is another program's change to the open note. A read
+ * that started before a save finished is stale: applying it would undo that
+ * save. One that equals what we last read or wrote is our own write coming back.
  */
-export function diskReadReplacesNote(state: {
+export function diskReadChangesNote(state: {
   text: string;
   diskText: string;
-  dirty: boolean;
   open: boolean;
   writesAtStart: number;
   writesNow: number;
 }): boolean {
   return (
     state.open &&
-    !state.dirty &&
     state.writesAtStart === state.writesNow &&
     state.text !== state.diskText
   );
@@ -320,9 +320,9 @@ export class NoteDocuments implements HostDocuments {
   }
 
   /**
-   * Another program changed the file: take its text unless ours is unsaved.
-   * (Platforms watch a file's folder: editors that save by renaming a new
-   * file over the old one would end a watch on the file itself.)
+   * Another program changed the file: take its text, merged with ours if ours
+   * is unsaved. (Platforms watch a file's folder: editors that save by
+   * renaming a new file over the old one would end a watch on the file itself.)
    */
   private watchFile(note: NoteDocument): () => void {
     return this.files.watch(note.uri, () => void this.reload(note));
@@ -336,13 +336,12 @@ export class NoteDocuments implements HostDocuments {
     } catch {
       return;
     }
-    // Our own writes come back here; and unsaved typing wins over the disk.
-    // A read that overlapped a save is dropped: it can still hold the old bytes.
+    // Our own writes come back here. A read that overlapped a save is dropped:
+    // it can still hold the old bytes.
     if (
-      !diskReadReplacesNote({
+      !diskReadChangesNote({
         text,
         diskText: note.diskText,
-        dirty: note.isDirty,
         open: this.notes.get(note.uri) === note,
         writesAtStart,
         writesNow: this.settledWrites.get(note.uri) ?? 0,
@@ -350,10 +349,30 @@ export class NoteDocuments implements HostDocuments {
     ) {
       return;
     }
-    const change = { from: 0, to: note.getText().length, insert: text };
+    // Unsaved typing is merged into the outside text: neither side is dropped
+    // for the other, and the next autosave cannot overwrite the outside change.
+    // (VS Code leaves a note with unsaved changes as it is and reports a
+    // conflict when it is saved; here nobody is asked, the save is automatic.)
+    // A clean note's text is diskText, so for it the merge is the outside text.
+    const merged = mergeDiskChange({
+      saved: note.diskText,
+      buffer: note.getText(),
+      disk: text,
+    });
     note.diskText = text;
-    note.replace([change]);
-    this.emitChange(note, [change]);
+    if (merged !== note.getText()) {
+      const change = { from: 0, to: note.getText().length, insert: merged };
+      note.replace([change]);
+      this.emitChange(note, [change]);
+    } else {
+      note.isDirty = merged !== text;
+    }
+    // What still differs from the file reaches it after a pause, as typing does.
+    if (note.isDirty) {
+      this.scheduleSave(note);
+    } else {
+      this.cancelSave(note.uri);
+    }
   }
 
   private close(uri: string): void {

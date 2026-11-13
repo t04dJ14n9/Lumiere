@@ -5,7 +5,7 @@ import { tmpdir } from "node:os";
 import * as path from "node:path";
 import { pathToFileURL } from "node:url";
 import {
-  diskReadReplacesNote,
+  diskReadChangesNote,
   NoteDocuments,
   noteFiles,
 } from "../../src/host/documents";
@@ -83,7 +83,7 @@ test("pending edits flush before a save writes, and save listeners hear it", asy
   assert.deepEqual(saved, ["one two"]);
 });
 
-test("another program's change reloads a clean note but never unsaved typing", async (t) => {
+test("another program's change reloads a clean note, and where both changed the same line unsaved typing stays", async (t) => {
   const { file, uri, cleanup } = await note("start");
   const documents = new NoteDocuments(NODE_NOTES, 60_000);
   t.after(() => documents.dispose());
@@ -97,6 +97,20 @@ test("another program's change reloads a clean note but never unsaved typing", a
   await writeFile(file, "outside again");
   await new Promise((resolve) => setTimeout(resolve, 200));
   assert.equal(document.getText(), "mine: from outside");
+});
+
+test("another program's change on a file watched from disk merges into unsaved typing and is not written over", async (t) => {
+  const { file, uri, cleanup } = await note("a\nb\nc");
+  const documents = new NoteDocuments(NODE_NOTES, 60_000);
+  t.after(() => documents.dispose());
+  t.after(cleanup);
+  const document = await documents.open(uri);
+  await documents.apply(document, [{ from: 0, to: 1, insert: "A" }]);
+  await writeFile(file, "a\nb\nC");
+  await until(() => document.getText() === "A\nb\nC");
+  assert.equal(document.isDirty, true);
+  assert.equal(await document.save(), true);
+  assert.equal(await readFile(file, "utf8"), "A\nb\nC");
 });
 
 test("the last panel to let go writes unsaved text and closes the note", async (t) => {
@@ -131,10 +145,9 @@ test("a failed write still closes every watch, so the host can exit", async (t) 
 
 test("a disk read that overlapped a save does not undo it", () => {
   assert.equal(
-    diskReadReplacesNote({
+    diskReadChangesNote({
       text: "stale",
       diskText: "edited",
-      dirty: false,
       open: true,
       writesAtStart: 0,
       writesNow: 1,
@@ -142,10 +155,9 @@ test("a disk read that overlapped a save does not undo it", () => {
     false,
   );
   assert.equal(
-    diskReadReplacesNote({
+    diskReadChangesNote({
       text: "from outside",
       diskText: "saved",
-      dirty: false,
       open: true,
       writesAtStart: 1,
       writesNow: 1,

@@ -81,7 +81,7 @@ forbids this package from importing `vscode` or any embedder.
 
 - `src/host/start.ts`: starts the plugins over the services below.
 - `src/host/services.ts`: every host service the plugins inject.
-- `src/host/documents.ts`: notes on disk, edited in memory, saved after a pause.
+- `src/host/documents.ts`: notes on disk, edited in memory, saved after a pause; a change another program makes to the file is merged into unsaved text.
 - `src/host/panels.ts`, `src/host/panel.ts`: editor pages as panels, and their sockets.
 - `src/host/routes.ts`, `src/host/page.ts`, `src/host/static.ts`: the routes above.
 - `src/host/pdf-pages.ts`, `src/host/pdf-routes.ts`: PDF tabs, on Lumière PDF's viewer core (`@workshop/pdf/portable`) and the same page shim and socket as notes.

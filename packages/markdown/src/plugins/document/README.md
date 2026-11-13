@@ -51,3 +51,11 @@ update is checked against native authority rather than overwriting the document.
 
 `document/changed` also carries optional original-source native edits so marker
 providers can preserve ranges between disjoint changes, including CRLF offsets.
+
+A note with unsaved text whose file another program rewrites is not reloaded by
+VS Code: it keeps the unsaved text and reports a conflict when saving. Hosts
+that own the files merge instead, as Obsidian does: host-node's `NoteDocuments`
+applies the outside change onto the unsaved text with `mergeDiskChange`
+(`shared/document/merge.ts`), a line-based three-way merge. Where both changed
+the same lines the unsaved lines stay, and no notice says so. The session only
+records the merged text as the document's.
