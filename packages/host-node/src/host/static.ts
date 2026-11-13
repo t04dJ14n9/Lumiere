@@ -1,8 +1,9 @@
 /** Files served as they are: the built editor, the page shim, a note's images. */
-import { open, stat } from "node:fs/promises";
+import { open, realpath, stat } from "node:fs/promises";
 import type { ServerResponse } from "node:http";
 import * as path from "node:path";
 import { pipeline } from "node:stream/promises";
+import { isFilesystemRoot } from "./paths";
 
 const CONTENT_TYPES: Readonly<Record<string, string>> = {
   ".html": "text/html; charset=utf-8",
@@ -46,7 +47,32 @@ export async function serveStatic(
     res.writeHead(403).end();
     return;
   }
-  await serveFile(res, file);
+  // A symlink inside the tree can still name a file outside it. Resolve both
+  // sides and open only the canonical path, so the requested link cannot be
+  // swapped after the check. A path that does not resolve is refused here:
+  // opening its lexical name could follow a link planted after `realpath`.
+  // A bundle root that resolves to the filesystem root makes every file look
+  // contained.
+  const rootReal = await realpath(root).catch(() => undefined);
+  if (!rootReal || isFilesystemRoot(rootReal)) {
+    res.writeHead(403).end();
+    return;
+  }
+  const fileReal = await realpath(file).catch(() => undefined);
+  if (!fileReal) {
+    res.writeHead(404).end();
+    return;
+  }
+  const relativeReal = path.relative(rootReal, fileReal);
+  if (
+    relativeReal === ".." ||
+    relativeReal.startsWith(`..${path.sep}`) ||
+    path.isAbsolute(relativeReal)
+  ) {
+    res.writeHead(403).end();
+    return;
+  }
+  await serveFile(res, fileReal);
 }
 
 export async function serveFile(
