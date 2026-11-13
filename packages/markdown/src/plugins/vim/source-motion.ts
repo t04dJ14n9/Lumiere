@@ -7,6 +7,8 @@ interface WidgetLines {
   kind: string;
   from: number;
   to: number;
+  /** Live Preview shows this block's source (revealSourceBlocks), not a widget. */
+  revealed?: boolean;
 }
 
 interface SourceMotion {
@@ -85,7 +87,8 @@ function motionApplies(
   // Tables stay replaced, so any crossing motion is corrected. Source-visible
   // reveal blocks only correct once the caret is already inside their source.
   return (
-    widget.kind === "Table" || (widget.from <= start && widget.to >= start)
+    widget.kind === "Table" ||
+    (widget.revealed === true && widget.from <= start && widget.to >= start)
   );
 }
 
