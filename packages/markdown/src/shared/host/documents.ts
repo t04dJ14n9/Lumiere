@@ -64,7 +64,10 @@ export interface TextCompletionProvider {
   ): Promise<readonly TextCompletion[]>;
 }
 
-/** VS Code's text documents: edits, saves and renames. */
+/** What to do once the files that were about to be deleted are gone. */
+export type AfterDelete = () => void | Promise<void>;
+
+/** VS Code's text documents: edits, saves, renames and deletions. */
 export interface HostDocuments {
   /** A stable hash of a text, to tell whether a document changed. */
   fingerprint(text: string): string;
@@ -85,6 +88,17 @@ export interface HostDocuments {
     listener: (
       renames: readonly { oldUri: string; newUri: string }[],
     ) => Promise<readonly FileTextEdits[]>,
+  ): Disposer;
+  /**
+   * Before files are deleted in VS Code, from the Explorer or by a workspace
+   * edit (not by another program, which only the file watchers see). The
+   * listener sees the files while they still exist and may return what to do
+   * once they are gone. Hosts that report no deletions never call it.
+   */
+  onWillDelete(
+    listener: (
+      uris: readonly string[],
+    ) => AfterDelete | undefined | Promise<AfterDelete | undefined>,
   ): Disposer;
   /**
    * VS Code's suggest list for Markdown notes opened as text. Hosts without

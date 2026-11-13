@@ -229,6 +229,11 @@ export class NoteDocuments implements HostDocuments {
     return () => {};
   }
 
+  /** Nor deletions, so there are no attachments to offer to delete. */
+  onWillDelete(): Disposer {
+    return () => {};
+  }
+
   onClosed(listener: (uri: string) => void): Disposer {
     return subscribe(this.closeListeners, listener);
   }

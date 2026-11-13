@@ -3186,6 +3186,16 @@
             "scope": "resource",
             "description": "Word and character count of the active note, or of the selection, in the status bar."
           },
+          "lumiere.markdown.attachments.deleteUnlinkedAttachments": {
+            "enum": [
+              "ask",
+              "always",
+              "never"
+            ],
+            "default": "ask",
+            "description": "Obsidian's Delete attachments when deleting files: when notes are deleted in VS Code, `ask` offers to delete the attachments only they linked, `always` deletes them (to the trash while files.enableTrash is on), and `never` leaves them. Deleting a folder does not offer; neither does a deletion made outside VS Code.",
+            "scope": "resource"
+          },
           "lumiere.markdown.autoPair.brackets": {
             "type": "boolean",
             "default": true,

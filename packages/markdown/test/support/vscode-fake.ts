@@ -51,6 +51,7 @@ function defaultHost(): HostServices {
       rename: async () => {},
       text: () => undefined,
       onWillRename: none,
+      onWillDelete: none,
     },
     hostCommands: { register: none, execute: async () => undefined },
     clipboard: { read: async () => "", write: async () => {} },
