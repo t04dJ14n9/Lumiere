@@ -49,6 +49,20 @@ function contributed(packageJSON: unknown): readonly ContributedSetting[] {
     }));
 }
 
+/**
+ * The narrowest layer a write for `resource` can reach: its workspace folder,
+ * else the workspace, else the user's settings (no folder is open). A write
+ * to a folder layer for a file outside every folder would be refused by VS
+ * Code, so it falls back instead.
+ */
+function narrowestTarget(resource: string | undefined): SettingTarget {
+  const uri = resource ? vscode.Uri.parse(resource) : undefined;
+  if (uri && vscode.workspace.getWorkspaceFolder(uri)) {
+    return "workspaceFolder";
+  }
+  return vscode.workspace.workspaceFolders?.length ? "workspace" : "user";
+}
+
 /** The contributed setting for a relative key; anything else is refused. */
 function own(
   settings: readonly ContributedSetting[],
@@ -97,15 +111,18 @@ export function createSettingsAccess(extension: {
       const { target, value } = locate(key, resource);
       return { target, value };
     },
-    async update(key, value, resource) {
+    async update(key, value, resource, scope) {
       const checked = checkWrite(settings(), key, value);
       if ("problem" in checked) {
         throw new Error(
           `Not writing ${PREFIX}${String(key)}: ${checked.problem}`,
         );
       }
-      const { config, target } = locate(key, resource);
-      await config.update(key, value, targets[target]);
+      const target =
+        scope === "narrowest"
+          ? narrowestTarget(resource)
+          : locate(key, resource).target;
+      await configuration(resource).update(key, value, targets[target]);
       return target;
     },
     contributed: settings,
