@@ -7037,16 +7037,13 @@ The self-reported R1 notes are closed with focused unit coverage: a
 `Vk`, `gk`, source-mode bypass, a long HTML source block, and a Mermaid fence
 under a fold. The Edit/source/render lifecycle is covered by the PR's
 `rendered-after-edit.webp` Host GUI frame; source-mode typing does not use the
-patched `findPosV` hook. `CHANGELOG.md` records the user-visible fix. No new
-browser regression was added without owner approval.
+patched `findPosV` hook. `CHANGELOG.md` records the user-visible fix. Four
+browser cases were added to `test/browser/vim-block-motion.spec.ts`; the owner
+approved them on 2026-11-13.
 
-GitHub has no public reviews or comments on #740; the R1 summary and its
-`da1da0a2` SHA are self-reported in the PR body and are not a resolvable
-commit. All six CI check runs failed before any step executed. No tests or
-builds were run in this parallel phase: `pnpm check`, `pnpm test:browser` and
-`pnpm test:quality` remain for the serialized full gate. The Host GUI
-152 → 151 → 152 frames show the visible caret; the opening-fence frame shows
-revealed source without a visible caret, and the install frame proves version
-0.1.11 and a VSIX source but not the claimed head SHA or package hash. No
-Obsidian code, CSS or assets were copied; `~/Code/human-learning` was not
-modified.
+Review fix (2026-11-13): `motion.ts` passed rendered widgets and revealed
+blocks to the correction in one list, so a caret starting on a rendered widget
+(an image embed, Properties) could be pulled into hidden source below. Revealed
+blocks are now tagged and only they (and tables) correct from inside; a
+source-motion unit pins a start on a rendered widget. No Obsidian code, CSS or
+assets were copied.
