@@ -1,5 +1,5 @@
 import { test, expect, chromium } from "@playwright/test";
-import type { Page } from "@playwright/test";
+import type { Browser, Page } from "@playwright/test";
 import { readFileSync, rmSync, writeFileSync } from "node:fs";
 import path from "node:path";
 import { paths, readState } from "./state";
@@ -47,10 +47,19 @@ async function acceptRefactoring(page: Page) {
 
 test("Always Update in the rename dialog updates the links, saves the mode, and the next rename does not ask", async () => {
   const originalUserSettings = readFileSync(userFile, "utf8");
-  writeFileSync(inWorkspace("Rename Target.md"), "# Target\n");
-  writeFileSync(inWorkspace("Rename Linker.md"), "See [[Rename Target]].\n");
-  const browser = await chromium.connectOverCDP(readState().webSocket);
+  const settings = JSON.parse(originalUserSettings) as Record<string, unknown>;
+  // The unset contribution default is prompt, as in Obsidian when
+  // alwaysUpdateLinks is false. Fail clearly if setup already pinned the key.
+  if ("lumiere.markdown.linkUpdates.mode" in settings) {
+    throw new Error(
+      "lumiere.markdown.linkUpdates.mode is already set in User/settings.json; this spec tests the unset contribution default and must run without that key.",
+    );
+  }
+  let browser: Browser | undefined;
   try {
+    writeFileSync(inWorkspace("Rename Target.md"), "# Target\n");
+    writeFileSync(inWorkspace("Rename Linker.md"), "See [[Rename Target]].\n");
+    browser = await chromium.connectOverCDP(readState().webSocket);
     const page = workbenchPage(browser);
     // Opening a note activates the extension, as it is for any real session.
     await openWorkbench(page);
@@ -71,7 +80,7 @@ test("Always Update in the rename dialog updates the links, saves the mode, and 
         timeout: 20_000,
       })
       .toBe("See [[Rename Goal]].\n");
-    // Not set anywhere yet, so Always Update writes the user's settings.
+    // Always Update writes always to the user's settings, which started unset.
     await expect
       .poll(
         () =>
@@ -94,10 +103,15 @@ test("Always Update in the rename dialog updates the links, saves the mode, and 
       })
       .toBe("See [[Rename Target]].\n");
   } finally {
-    await closeBrowser(browser);
-    writeFileSync(userFile, originalUserSettings);
-    rmSync(inWorkspace("Rename Target.md"), { force: true });
-    rmSync(inWorkspace("Rename Goal.md"), { force: true });
-    rmSync(inWorkspace("Rename Linker.md"), { force: true });
+    try {
+      if (browser) {
+        await closeBrowser(browser);
+      }
+    } finally {
+      writeFileSync(userFile, originalUserSettings);
+      rmSync(inWorkspace("Rename Target.md"), { force: true });
+      rmSync(inWorkspace("Rename Goal.md"), { force: true });
+      rmSync(inWorkspace("Rename Linker.md"), { force: true });
+    }
   }
 });

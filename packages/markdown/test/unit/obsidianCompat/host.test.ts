@@ -60,6 +60,17 @@ test("B4: scoped snapshots, rejected edits and override caches keep two vaults i
   );
 });
 
+test("Obsidian app.json's alwaysUpdateLinks: false asks through effective settings", async (t) => {
+  const f = await compatFixture();
+  t.after(() => f.root.dispose());
+  await f.change(`${ROOT_A}/.obsidian/app.json`, '{"alwaysUpdateLinks":false}');
+  await f.configuration.prepare(NOTE_A);
+  assert.equal(
+    f.workbench.settings.get("linkUpdates.mode", "never", NOTE_A),
+    "prompt",
+  );
+});
+
 test("B4: an async edit attempt retains its originating vault while focus changes", async (t) => {
   const f = await compatFixture();
   t.after(() => f.root.dispose());
