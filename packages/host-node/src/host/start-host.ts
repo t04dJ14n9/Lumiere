@@ -65,7 +65,12 @@ export interface LumiereHost {
   readonly settings: HostSettings;
   /** Lumière's Command Palette commands, filtered by active editor and settings. */
   readonly commands?: CommandPalette;
-  /** A workspace a note was opened from; vaults are found inside these. */
+  /**
+   * Trust a workspace: vaults are found inside it, and the pages of
+   * `createEditorRoutes` open only from a folder inside one. The embedder
+   * registers it, by its real path, before a page from it is requested; a page
+   * cannot (docs/HOSTS_PLAN.md section 4).
+   */
   addRoot(root: string): void;
   /** Workspace roots already registered with `addRoot`. */
   workspaceRoots(): readonly string[];

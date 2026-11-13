@@ -197,126 +197,27 @@ test("a tree command failure is not reported as a bad body", async (t) => {
   );
 });
 
-test("serving an editor page registers the workspace root before opening the panel", async (t) => {
-  // macOS's temporary folder is behind a symlink; the route resolves it.
-  const dir = await realpath(
-    await mkdtemp(path.join(tmpdir(), "lumiere-route-")),
-  );
-  t.after(() => rm(dir, { recursive: true, force: true }));
-  const notePath = path.join(dir, "First.md");
-  await writeFile(notePath, "# First");
-
-  const order: string[] = [];
-  const registered: string[] = [];
-  const host = {
-    panels: {
-      open: async () => {
-        order.push("open");
-        return {
-          id: "p1",
-          html: '<!doctype html><html><head><meta charset="UTF-8"></head><body><script type="module" nonce="abc123" src="/e.js"></script></body></html>',
-        };
-      },
-      get: () => undefined,
-      attach: () => false,
-    },
-    trees: new TreeHub({ execute: async () => undefined }),
-    addRoot: (uri: string) => {
-      registered.push(uri);
-      order.push(`addRoot:${uri}`);
-    },
-    workspaceRoots: () => registered,
-    stop: async () => {},
-  } as unknown as LumiereHost;
-
-  const routes = createEditorRoutes(host, { markdown: "/none", shim: "/none" });
-  const server = createServer((req, res) => {
-    void routes.handle(req, res).then((handled) => {
-      if (!handled) {
-        res.writeHead(404).end();
-      }
-    });
-  });
-  await new Promise<void>((resolve) => server.listen(0, "127.0.0.1", resolve));
-  t.after(() => {
-    routes.close();
-    server.close();
-  });
-  const { port } = server.address() as { port: number };
-  const response = await fetch(
-    `http://127.0.0.1:${port}/lumiere/editor?path=${encodeURIComponent(notePath)}&root=${encodeURIComponent(dir)}`,
-  );
-  assert.equal(response.status, 200);
-  assert.deepEqual(order, [`addRoot:${pathToFileURL(dir).toString()}`, "open"]);
-});
-
-test("an editor page cannot widen the workspace root to a parent folder", async (t) => {
-  const scratch = await realpath(
-    await mkdtemp(path.join(tmpdir(), "lumiere-widen-")),
-  );
-  t.after(() => rm(scratch, { recursive: true, force: true }));
-  const vault = path.join(scratch, "vault");
-  await mkdir(vault);
-  const notePath = path.join(vault, "Note.md");
-  await writeFile(notePath, "# Note");
-  await writeFile(path.join(scratch, "secret.md"), "secret");
-
-  const added: string[] = [];
-  const host = {
-    panels: {
-      open: async () => ({
-        id: "p1",
-        html: '<!doctype html><html><head><meta charset="UTF-8"></head><body><script type="module" nonce="n" src="/e.js"></script></body></html>',
-      }),
-      get: () => undefined,
-      attach: () => false,
-    },
-    trees: new TreeHub({ execute: async () => undefined }),
-    addRoot: (uri: string) => {
-      added.push(uri);
-    },
-    workspaceRoots: () => added,
-    stop: async () => {},
-  } as unknown as LumiereHost;
-
-  const routes = createEditorRoutes(host, { markdown: "/none", shim: "/none" });
-  const server = createServer((req, res) => {
-    void routes.handle(req, res).then((handled) => {
-      if (!handled) {
-        res.writeHead(404).end();
-      }
-    });
-  });
-  await new Promise<void>((resolve) => server.listen(0, "127.0.0.1", resolve));
-  t.after(() => {
-    routes.close();
-    server.close();
-  });
-  const { port } = server.address() as { port: number };
-  const editor = (note: string, root: string) =>
-    `http://127.0.0.1:${port}/lumiere/editor?path=${encodeURIComponent(note)}&root=${encodeURIComponent(root)}`;
-  assert.equal((await fetch(editor(notePath, vault))).status, 200);
-  assert.deepEqual(added, [pathToFileURL(vault).toString()]);
-  assert.equal((await fetch(editor(notePath, scratch))).status, 403);
-  assert.deepEqual(added, [pathToFileURL(vault).toString()]);
-});
-
 /**
  * Editor pages over a real server and a host that keeps roots as `startHost`
- * does (a set, trailing slash dropped). Returns the page URL for a note and
- * the workspace it names, and what the routes registered.
+ * does (a set, trailing slash dropped). `status` asks for the page of a note
+ * from a workspace; `register` is the embedder registering one, as the app does
+ * for a vault and DSH for a session's workspace. `added` is every `addRoot`.
  */
 async function serveEditorPages(t: {
   after(callback: () => void | Promise<void>): void;
 }) {
   const roots = new Set<string>();
   const added: string[] = [];
+  const opened: string[] = [];
   const host = {
     panels: {
-      open: async () => ({
-        id: "p1",
-        html: '<!doctype html><html><head><meta charset="UTF-8"></head><body><script type="module" nonce="n" src="/e.js"></script></body></html>',
-      }),
+      open: async () => {
+        opened.push("p1");
+        return {
+          id: "p1",
+          html: '<!doctype html><html><head><meta charset="UTF-8"></head><body><script type="module" nonce="n" src="/e.js"></script></body></html>',
+        };
+      },
       get: () => undefined,
       attach: () => false,
     },
@@ -348,69 +249,100 @@ async function serveEditorPages(t: {
         `http://127.0.0.1:${port}/lumiere/editor?path=${encodeURIComponent(note)}&root=${encodeURIComponent(root)}`,
       )
     ).status;
-  return { host, added, status };
+  const register = (folder: string) =>
+    host.addRoot(pathToFileURL(folder).toString());
+  return { host, added, opened, status, register };
 }
 
-test("DSH opens a second session's workspace and a note's own folder after the first", async (t) => {
-  // DSH registers no root itself: every session's workspace, and the folder of
-  // a note named by an absolute address, reach the host through this route.
+/** Real notes under a scratch folder, which is removed when the test ends. */
+async function notes(
+  t: { after(callback: () => void | Promise<void>): void },
+  files: readonly string[],
+): Promise<{ scratch: string; at: (...parts: string[]) => string }> {
+  // macOS's temporary folder is behind a symlink; the route resolves it.
   const scratch = await realpath(
-    await mkdtemp(path.join(tmpdir(), "lumiere-sessions-")),
+    await mkdtemp(path.join(tmpdir(), "lumiere-roots-")),
   );
   t.after(() => rm(scratch, { recursive: true, force: true }));
-  const note = async (...parts: string[]) => {
-    const file = path.join(scratch, ...parts);
-    await mkdir(path.dirname(file), { recursive: true });
-    await writeFile(file, "# Note");
-    return file;
-  };
-  const first = await note("projA", "Note.md");
-  const second = await note("projB", "Note.md");
-  const loose = await note("loose", "Idea.md");
-  const inside = await note("projA", "docs", "Deep.md");
+  for (const file of files) {
+    await mkdir(path.dirname(path.join(scratch, file)), { recursive: true });
+    await writeFile(path.join(scratch, file), "# Note");
+  }
+  return { scratch, at: (...parts) => path.join(scratch, ...parts) };
+}
 
-  const { added, status } = await serveEditorPages(t);
-  const folder = (file: string) => path.dirname(file);
-  assert.equal(await status(first, folder(first)), 200, "first session");
-  assert.equal(await status(second, folder(second)), 200, "second session");
-  assert.equal(await status(loose, folder(loose)), 200, "a note's own folder");
-  assert.equal(await status(inside, folder(first)), 200, "inside the first");
-  assert.deepEqual(
-    added,
-    [first, second, loose].map((file) =>
-      pathToFileURL(folder(file)).toString(),
-    ),
+test("an editor page opens from a workspace the embedder registered, and registers none itself", async (t) => {
+  const { at } = await notes(t, ["vault/Note.md", "vault/docs/Deep.md"]);
+  const { added, opened, status, register } = await serveEditorPages(t);
+  register(at("vault"));
+  assert.deepEqual(added, [pathToFileURL(at("vault")).toString()]);
+
+  assert.equal(await status(at("vault", "Note.md"), at("vault")), 200);
+  // A folder inside the workspace only narrows what the page can reach.
+  assert.equal(
+    await status(at("vault", "docs", "Deep.md"), at("vault", "docs")),
+    200,
   );
+  assert.deepEqual(opened, ["p1", "p1"]);
+  assert.deepEqual(added, [pathToFileURL(at("vault")).toString()]);
 });
 
-test("an editor page still cannot name a folder that holds a registered workspace", async (t) => {
-  const scratch = await realpath(
-    await mkdtemp(path.join(tmpdir(), "lumiere-holds-")),
-  );
-  t.after(() => rm(scratch, { recursive: true, force: true }));
-  const vault = path.join(scratch, "vault");
-  const docs = path.join(vault, "docs");
-  await mkdir(docs, { recursive: true });
-  const deep = path.join(docs, "Deep.md");
-  const top = path.join(vault, "Top.md");
-  await writeFile(deep, "# Deep");
-  await writeFile(top, "# Top");
-
-  const { host, added, status } = await serveEditorPages(t);
-  assert.equal(await status(deep, docs), 200);
+test("an editor page cannot make the host trust a folder it names", async (t) => {
+  // #628: ?path=<note in a private folder>&root=<that folder>.
+  const { at } = await notes(t, ["vault/Note.md", "private/Secret.md"]);
+  const { added, opened, status, register } = await serveEditorPages(t);
   assert.equal(
-    await status(top, vault),
+    await status(at("private", "Secret.md"), at("private")),
     403,
-    "the vault holds the docs folder",
+    "nothing is registered yet",
   );
-  assert.equal(await status(deep, scratch), 403, "so does its parent");
-  assert.deepEqual(added, [pathToFileURL(docs).toString()]);
+  register(at("vault"));
+  assert.equal(
+    await status(at("private", "Secret.md"), at("private")),
+    403,
+    "a registered vault does not make its sibling trusted",
+  );
+  assert.equal(await status(at("vault", "Note.md"), at("vault")), 200);
+  assert.deepEqual(added, [pathToFileURL(at("vault")).toString()]);
+  assert.deepEqual(opened, ["p1"]);
 
-  // A folder the embedder itself registered, as the app does for a vault, is
-  // not a widening even when it holds another registered folder.
-  host.addRoot(pathToFileURL(vault).toString());
-  assert.equal(await status(top, vault), 200);
-  assert.equal(await status(deep, scratch), 403);
+  // Only the embedder's registration opens it.
+  register(at("private"));
+  assert.equal(await status(at("private", "Secret.md"), at("private")), 200);
+});
+
+test("an editor page cannot name a folder that holds a registered workspace", async (t) => {
+  const { scratch, at } = await notes(t, [
+    "vault/Top.md",
+    "vault/docs/Deep.md",
+  ]);
+  const { added, status, register } = await serveEditorPages(t);
+  register(at("vault", "docs"));
+  assert.equal(
+    await status(at("vault", "docs", "Deep.md"), at("vault", "docs")),
+    200,
+  );
+  assert.equal(await status(at("vault", "Top.md"), at("vault")), 403);
+  assert.equal(
+    await status(at("vault", "docs", "Deep.md"), scratch),
+    403,
+    "nor its parent",
+  );
+  assert.deepEqual(added, [pathToFileURL(at("vault", "docs")).toString()]);
+
+  // A folder the embedder itself registers, as the app does for a vault that
+  // holds another vault, is a workspace like any other.
+  register(at("vault"));
+  assert.equal(await status(at("vault", "Top.md"), at("vault")), 200);
+  assert.equal(await status(at("vault", "docs", "Deep.md"), scratch), 403);
+});
+
+test("a registered filesystem root authorizes no folder", async (t) => {
+  const { at } = await notes(t, ["vault/Note.md"]);
+  const { host, status } = await serveEditorPages(t);
+  // How an embedder's mistake would look, with its trailing slash dropped.
+  host.addRoot("file:///");
+  assert.equal(await status(at("vault", "Note.md"), at("vault")), 403);
 });
 
 const ROUTE_INDEX = {
@@ -522,7 +454,7 @@ test("note media and the built editor both answer one byte range", async (t) => 
     },
     trees: new TreeHub({ execute: async () => undefined }),
     addRoot: () => {},
-    workspaceRoots: () => [],
+    workspaceRoots: () => [pathToFileURL(dir).toString()],
     stop: async () => {},
   } as unknown as LumiereHost;
   const routes = createEditorRoutes(host, { markdown: dir, shim: asset });

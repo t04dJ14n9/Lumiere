@@ -19,10 +19,10 @@ import type { LumiereHost } from "../../src/host/start";
 import { TreeHub } from "../../src/host/trees";
 
 /**
- * `/lumiere/file` over a real server. Opening the editor registers the
- * panel root the way `startHost` does, so file requests can be checked
- * against the containment contract: 403 leaves the workspace, 404 is
- * contained but not there.
+ * `/lumiere/file` over a real server. Opening the editor first registers its
+ * root, as the embedder does, so file requests can be checked against the
+ * containment contract: 403 leaves the workspace, 404 is contained but not
+ * there.
  */
 async function serveFileRoute(t: {
   after(callback: () => void | Promise<void>): void;
@@ -58,12 +58,14 @@ async function serveFileRoute(t: {
     server.close();
   });
   const { port } = server.address() as { port: number };
-  const openEditor = async (note: string, root: string) =>
-    (
+  const openEditor = async (note: string, root: string) => {
+    host.addRoot(pathToFileURL(root).toString());
+    return (
       await fetch(
         `http://127.0.0.1:${port}/lumiere/editor?path=${encodeURIComponent(note)}&root=${encodeURIComponent(root)}`,
       )
     ).status;
+  };
   const fileStatus = async (panel: string, uri: string) =>
     (
       await fetch(

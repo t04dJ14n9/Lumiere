@@ -27,7 +27,7 @@ const UNSUPPORTED_SYMLINKS = new Set([
   "ERROR_PRIVILEGE_NOT_HELD",
 ]);
 
-/** `/lumiere/file` over a real server, with the panel root registered by its page. */
+/** `/lumiere/file` over a real server, with the panel root registered by the embedder first. */
 async function serveFileRoute(t: test.TestContext) {
   const roots = new Set<string>();
   const host = {
@@ -62,10 +62,12 @@ async function serveFileRoute(t: test.TestContext) {
   const { port } = server.address() as { port: number };
   const base = `http://127.0.0.1:${port}/lumiere`;
   return {
-    openEditor: (note: string, root: string) =>
-      fetch(
+    openEditor: (note: string, root: string) => {
+      host.addRoot(pathToFileURL(root).toString());
+      return fetch(
         `${base}/editor?path=${encodeURIComponent(note)}&root=${encodeURIComponent(root)}`,
-      ),
+      );
+    },
     getFile: (uri: string) =>
       fetch(`${base}/file?panel=p1&uri=${encodeURIComponent(uri)}`),
   };
