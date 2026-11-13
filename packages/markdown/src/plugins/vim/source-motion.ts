@@ -7,6 +7,8 @@ interface WidgetLines {
   kind: string;
   from: number;
   to: number;
+  /** Live Preview shows this block's source (revealSourceBlocks), not a widget. */
+  revealed?: boolean;
 }
 
 interface SourceMotion {
@@ -23,8 +25,9 @@ interface SourceMotion {
 }
 
 /**
- * CM's vertical layout can skip a table replacement. Vim's source motions
- * must ignore that overshoot, including operators and visual selections.
+ * CM's vertical layout can skip a table replacement or overshoot a revealed
+ * source block. Vim's source motions must ignore that overshoot, including
+ * operators and visual selections.
  */
 export function tableMotionPosition(
   motion: SourceMotion,
@@ -48,17 +51,19 @@ export function tableMotionPosition(
   if (
     motion.policy === "display-entry" &&
     (Math.abs(amount) !== 1 ||
-      !widgets.some(
-        (widget) =>
-          widget.kind === "Table" && widget.from <= line && widget.to >= line,
+      !widgets.some((widget) =>
+        motionApplies(
+          widget,
+          start.line,
+          widget.from <= line && widget.to >= line,
+        ),
       ))
   ) {
     return undefined;
   }
   if (
-    !widgets.some(
-      (widget) =>
-        widget.kind === "Table" && widget.from <= to && widget.to >= from,
+    !widgets.some((widget) =>
+      motionApplies(widget, start.line, widget.from <= to && widget.to >= from),
     )
   ) {
     return undefined;
@@ -69,6 +74,22 @@ export function tableMotionPosition(
     line,
     ch: Math.max(0, Math.min(motion.lineLength(line), motion.goalColumn)),
   };
+}
+
+function motionApplies(
+  widget: WidgetLines,
+  start: number,
+  overlaps: boolean,
+): boolean {
+  if (!overlaps) {
+    return false;
+  }
+  // Tables stay replaced, so any crossing motion is corrected. Source-visible
+  // reveal blocks only correct once the caret is already inside their source.
+  return (
+    widget.kind === "Table" ||
+    (widget.revealed === true && widget.from <= start && widget.to >= start)
+  );
 }
 
 function foldedSourceLine(

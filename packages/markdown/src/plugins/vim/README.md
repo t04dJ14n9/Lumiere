@@ -26,7 +26,8 @@ special keys and separately recorded macro insert changes. The real cell state
 stays available to its teardown hooks.
 Live Preview identifies persistent widgets through an optional service query.
 The Vim adapter corrects vertical table overshoots to source-line arithmetic,
-including counts, operators and visual selections. Tables then map normal-mode
+including counts, operators and visual selections, and does the same from inside
+a block whose source Live Preview reveals (Mermaid, HTML, callouts, queries). Tables then map normal-mode
 source landings into their cell editors.
 Its editor extension uses the override slot; host shortcut consumption is active
 only with the plugin. Native undo/redo/save hooks route through Commands and are
@@ -64,7 +65,7 @@ Keyboard-created visual selections keep Vim's text-object behavior.
 - `test/unit/vim-key-routing.test.ts`: cross-buffer sequences, unaffected adapters and hook disposal.
 - `webview.ts`: service, host action, Ex and editor extension registrations.
 - `motion.ts`: per-editor table motion correction and single-step entry into revealable blocks.
-- `source-motion.ts`: pure source-line target decision for rendered table overshoots.
+- `source-motion.ts`: pure source-line target decision for table and revealed-source overshoots.
 - `source-motion.test.ts`: counted, clamped, folded and other-widget target regression units.
 - `motion-context.ts`: per-editor resolved motion policy captured before Vim executes it.
 - `motion.test.ts`: source/display goals, folds, mappings, macro replay and disposal units.
@@ -112,8 +113,11 @@ layout overshoots with fold-aware source arithmetic, including counts,
 operators and visual selections. Single-step `gj`/`gk` can enter an adjacent
 table using the adapter's resolved column. Display counts, wrapped movement
 and half-page scrolling retain the dependency's layout behavior and pixel
-goal. Fold-hidden tables do not contribute to correction. Other widget kinds
-keep the dependency's existing behavior.
+goal. Fold-hidden tables do not contribute to correction. Inside a block whose
+source is revealed (Live Preview's `revealedSourceBlocks`), `j`/`k` move one
+source line at a time; a caret outside it keeps native motion and enters it
+through the single-step reveal above. Rendered widgets, including one the caret
+starts on, keep the dependency's existing behavior.
 
 Inside a table cell, normal-mode vertical boundary hops ignore counts and the
 `g` prefix and move one row. Operators and visual selections inside cells keep

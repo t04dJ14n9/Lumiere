@@ -50,9 +50,14 @@ function motionFixture(start = 0, target = 5) {
   cm.scrollTo = () => {};
   cm.setCursor(start, 2);
   const original = cm.findPosV;
+  let previewMode: "source" | "livePreview" = "livePreview";
   const preview: LivePreview = {
-    mode: "livePreview",
-    setMode() {},
+    get mode() {
+      return previewMode;
+    },
+    setMode(next) {
+      previewMode = next;
+    },
     block: () => () => {},
     inline: () => () => {},
     renderedWidgets: () => [
@@ -66,6 +71,21 @@ function motionFixture(start = 0, target = 5) {
   };
   const installed = installBlockMotion(view, cm, preview);
   return { view, cm, mode, calls, original, installed, preview };
+}
+
+function revealedSourceMotionFixture(start: number, target: number) {
+  const f = motionFixture(start, target);
+  f.preview.renderedWidgets = () => [];
+  f.preview.revealedSourceBlocks = () => [
+    {
+      kind: "diagram",
+      from: f.view.state.doc.line(2).from,
+      to: f.view.state.doc.line(4).to,
+      source: "",
+    },
+  ];
+  f.mode.lastHPos = 2;
+  return f;
 }
 
 test("horizontal movement then gj/gk keeps the refreshed pixel goal and adapter column across tables", () => {
@@ -201,4 +221,56 @@ test("page calls bypass correction and disposal restores the adapter and input-s
     Object.getOwnPropertyDescriptor(f.mode, "inputState")?.get,
     undefined,
   );
+});
+
+test("Vim.handleKey clamps revealed-source j/k, counts, display and visual motions", () => {
+  for (const [keys, start, target, line, amount] of [
+    [["k"], 3, 0, 2, -1],
+    [["j"], 1, 5, 2, 1],
+    [["2", "k"], 3, 0, 1, -2],
+    [["g", "k"], 3, 0, 2, -1],
+    [["V", "k"], 3, 0, 2, -1],
+  ] as const) {
+    const f = revealedSourceMotionFixture(start, target);
+    try {
+      for (const key of keys) {
+        Vim.handleKey(f.cm, key, "api");
+      }
+      assert.equal(f.calls[0]?.amount, amount);
+      assert.equal(f.cm.getCursor().line, line);
+    } finally {
+      Vim.handleKey(f.cm, "<Esc>", "api");
+      f.installed.destroy();
+    }
+  }
+});
+
+test("dk over a revealed source block deletes only the intended source lines", () => {
+  const f = revealedSourceMotionFixture(3, 0);
+  try {
+    Vim.handleKey(f.cm, "d", "api");
+    Vim.handleKey(f.cm, "k", "api");
+    const expected = [
+      "before text",
+      "| alpha | beta |",
+      "below text",
+      "after text",
+    ].join("\n");
+    assert.equal(f.calls[0]?.amount, -1);
+    assert.equal(f.view.state.doc.toString(), expected);
+  } finally {
+    f.installed.destroy();
+  }
+});
+
+test("source mode keeps the adapter's overshoot inside a revealed source block", () => {
+  const f = revealedSourceMotionFixture(3, 0);
+  try {
+    f.preview.setMode("source");
+    Vim.handleKey(f.cm, "k", "api");
+    assert.equal(f.calls[0]?.amount, -1);
+    assert.equal(f.cm.getCursor().line, 0);
+  } finally {
+    f.installed.destroy();
+  }
 });

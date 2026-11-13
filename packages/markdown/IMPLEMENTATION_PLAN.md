@@ -7020,6 +7020,34 @@ scroll position only in Reading view; Lumia keeps following the scroll too
   before an outline click, reported above the first heading, is held like any
   other so it cannot clear the clicked row.
 
+## PR #740 revealed-fence Vim review fixes (2026-11-12, worktree)
+
+The production correction is unchanged: Live Preview's optional
+`revealedSourceBlocks` query returns `editing: "reveal"` blocks whose source is
+visible; Vim's existing arithmetic correction applies them only when the motion
+head starts inside the block. No fold filter was added to the query. A folded
+block whose source is visible to a selection can be returned, but a caret
+outside it cannot be pulled into it; the query and pure-motion regressions now
+pin that boundary. The service and motion comments state the source-visible
+and fold-policy contracts. The misleading selection-only assertions were
+removed from `core.test.ts`.
+
+The self-reported R1 notes are closed with focused unit coverage: a
+`Vim.handleKey` path with a mocked `revealedSourceBlocks` service, `2k`, `dk`,
+`Vk`, `gk`, source-mode bypass, a long HTML source block, and a Mermaid fence
+under a fold. The Edit/source/render lifecycle is covered by the PR's
+`rendered-after-edit.webp` Host GUI frame; source-mode typing does not use the
+patched `findPosV` hook. `CHANGELOG.md` records the user-visible fix. Four
+browser cases were added to `test/browser/vim-block-motion.spec.ts`; the owner
+approved them on 2026-11-13.
+
+Review fix (2026-11-13): `motion.ts` passed rendered widgets and revealed
+blocks to the correction in one list, so a caret starting on a rendered widget
+(an image embed, Properties) could be pulled into hidden source below. Revealed
+blocks are now tagged and only they (and tables) correct from inside; a
+source-motion unit pins a start on a rendered widget. No Obsidian code, CSS or
+assets were copied.
+
 ## Toggle Numbered List's literal marker (#692, #702; 2026-11-12)
 
 A static read of Obsidian 1.15.0's `toggleNumberList()` (behaviour only,

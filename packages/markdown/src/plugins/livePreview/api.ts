@@ -69,6 +69,12 @@ export interface LivePreview {
     from: number,
     to: number,
   ): readonly RenderBlock[];
+  /** `editing: "reveal"` blocks whose source is visible in the range. */
+  revealedSourceBlocks?(
+    state: EditorState,
+    from: number,
+    to: number,
+  ): readonly RenderBlock[];
   /** Disjoint folded spans in source order, for source-line motion policy. */
   foldedRanges?(state: EditorState): readonly { from: number; to: number }[];
   verticalPosition?(state: EditorState, direction: -1 | 1): number | undefined;

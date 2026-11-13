@@ -25,6 +25,27 @@ export function renderedWidgets(
   );
 }
 
+export function revealedSourceBlocks(
+  state: EditorState,
+  from: number,
+  to: number,
+): readonly RenderBlock[] {
+  // Fold filtering belongs to the caller's source-line policy: a motion head
+  // outside a folded block cannot be inside its source, so it is not pulled in.
+  return (
+    state
+      .field(blockIndex, false)
+      ?.filter(
+        (block) =>
+          block.from <= to &&
+          block.to >= from &&
+          block.renderer.editing === "reveal" &&
+          (Boolean(block.renderer.showSource?.(state, block)) ||
+            revealed(state, block.from, block.to)),
+      ) ?? []
+  );
+}
+
 export function foldedRanges(state: EditorState) {
   const ranges: { from: number; to: number }[] = [];
   languageFoldedRanges(state).between(0, state.doc.length, (from, to) => {

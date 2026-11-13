@@ -171,3 +171,80 @@ test("Mermaid, HTML and other widgets keep native motion; a table outside the mo
     undefined,
   );
 });
+
+test("a rendered widget the caret starts on keeps native motion", () => {
+  // An image embed or properties line is a rendered widget, not revealed
+  // source: starting on it must not pull a count into hidden source below.
+  for (const kind of ["embed", "properties", "Mermaid"]) {
+    assert.equal(
+      tableMotionPosition({
+        ...base,
+        start: { line: 3, ch: 0 },
+        amount: 3,
+        result: { line: 9, ch: 0 },
+        widgets: [
+          { kind, from: 3, to: 3 },
+          { kind: "Mermaid", from: 4, to: 8 },
+        ],
+      }),
+      undefined,
+    );
+  }
+});
+
+test("a revealed Mermaid or HTML overshoot from the closing fence returns the previous source line", () => {
+  for (const kind of ["diagram", "Mermaid", "HTMLBlock"]) {
+    assert.deepEqual(
+      tableMotionPosition({
+        ...base,
+        start: { line: 6, ch: 0 },
+        amount: -1,
+        result: { line: 3, ch: 0 },
+        widgets: [{ kind, from: 3, to: 6, revealed: true }],
+      }),
+      { line: 5, ch: 3 },
+    );
+  }
+});
+
+test("a revealed block overshoot from the opening fence returns the next source line", () => {
+  assert.deepEqual(
+    tableMotionPosition({
+      ...base,
+      start: { line: 3, ch: 0 },
+      amount: 1,
+      result: { line: 6, ch: 0 },
+      widgets: [{ kind: "diagram", from: 3, to: 6, revealed: true }],
+    }),
+    { line: 4, ch: 3 },
+  );
+});
+
+test("a folded revealed fence outside the caret cannot pull a folded motion", () => {
+  assert.equal(
+    tableMotionPosition({
+      ...base,
+      start: { line: 0, ch: 0 },
+      amount: 1,
+      result: { line: 8, ch: 0 },
+      lastLine: 20,
+      folds: [{ from: 0, to: 6 }],
+      widgets: [{ kind: "diagram", from: 3, to: 6, revealed: true }],
+    }),
+    undefined,
+  );
+});
+
+test("a long HTML reveal block overshoot from its closing tag returns the previous source line", () => {
+  assert.deepEqual(
+    tableMotionPosition({
+      ...base,
+      start: { line: 146, ch: 0 },
+      amount: -1,
+      result: { line: 140, ch: 0 },
+      lastLine: 160,
+      widgets: [{ kind: "HTMLBlock", from: 140, to: 146, revealed: true }],
+    }),
+    { line: 145, ch: 3 },
+  );
+});

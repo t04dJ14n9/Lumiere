@@ -103,12 +103,16 @@ function tableSourcePosition(
     doc.lines - 1,
     Math.max(motion.start.line, motion.result.line),
   );
-  const widgets =
-    preview.renderedWidgets?.(
-      view.state,
-      doc.line(fromLine + 1).from,
-      doc.line(toLine + 1).to,
-    ) ?? [];
+  const rangeFrom = doc.line(fromLine + 1).from;
+  const rangeTo = doc.line(toLine + 1).to;
+  const widgets = [
+    ...(preview.renderedWidgets?.(view.state, rangeFrom, rangeTo) ?? []).map(
+      (block) => ({ ...block, revealed: false }),
+    ),
+    ...(
+      preview.revealedSourceBlocks?.(view.state, rangeFrom, rangeTo) ?? []
+    ).map((block) => ({ ...block, revealed: true })),
+  ];
   return tableMotionPosition({
     ...motion,
     lastLine: doc.lines - 1,
@@ -117,6 +121,7 @@ function tableSourcePosition(
       kind: block.kind,
       from: doc.lineAt(block.from).number - 1,
       to: doc.lineAt(block.to).number - 1,
+      revealed: block.revealed,
     })),
     folds: (preview.foldedRanges?.(view.state) ?? []).map((range) => ({
       from: doc.lineAt(range.from).number - 1,
