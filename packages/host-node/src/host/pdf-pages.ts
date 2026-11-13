@@ -7,7 +7,7 @@
  * only in VS Code for now, so their messages are dropped here.
  */
 import { randomUUID } from "node:crypto";
-import { readFile } from "node:fs/promises";
+import { readFile, realpath } from "node:fs/promises";
 import * as path from "node:path";
 import {
   DEFAULT_FLOATING_DOCK,
@@ -21,7 +21,12 @@ import {
   type ViewSettings,
 } from "@workshop/pdf/portable";
 import type { PageSocket } from "./panel";
-import { assertContained, fileUriToPath, pathInsideRoots } from "./paths";
+import {
+  assertContained,
+  fileUriToPath,
+  OutsideWorkspace,
+  pathInsideRoots,
+} from "./paths";
 import { parsePageFrame } from "../protocol";
 import { watchFile } from "./watch";
 
@@ -215,7 +220,20 @@ export class PdfPages {
 function containedFiles(root: string): PdfFiles {
   const rootPath = fileUriToPath(root) ?? "";
   return {
-    read: async (uri) => readFile(await pathInsideRoots([root], uri)),
+    // Read the canonical file once it is inside the canonical root, so a link
+    // swapped in after the containment check cannot redirect the read.
+    read: async (uri) => {
+      const real = await realpath(await pathInsideRoots([root], uri));
+      const relative = path.relative(await realpath(rootPath), real);
+      if (
+        relative === ".." ||
+        relative.startsWith(`..${path.sep}`) ||
+        path.isAbsolute(relative)
+      ) {
+        throw new OutsideWorkspace();
+      }
+      return readFile(real);
+    },
     watch(uri, onChange) {
       const file = fileUriToPath(uri);
       return file ? watchFile(file, onChange) : () => {};

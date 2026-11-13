@@ -20,8 +20,6 @@ const ID = "@lumiere/dsh";
 const BODY_ID = `${ID}/markdown`;
 const PDF_BODY_ID = `${ID}/pdf`;
 
-/** What DSH hands a document body (`sidebar.right.tab.document`). */
-
 interface ClientContext {
   readonly documentPreviews: { register(definition: unknown): () => void };
   readonly slots: {
@@ -42,8 +40,6 @@ declare global {
     };
   }
 }
-
-/** Whether an iframe's document is a rendered Lumière editor page rather than an HTTP error body. */
 
 if (typeof window !== "undefined" && window.__ModuleLoader__) {
   window.__ModuleLoader__.load({
@@ -97,15 +93,6 @@ if (typeof window !== "undefined" && window.__ModuleLoader__) {
   });
 }
 
-/**
- * A frame DSH replaced is retired when its ref changes; its queued events must
- * not settle the replacement. A frame not attached yet still reports its own
- * document, so a load from the iframe that fired is never confused with the
- * live ref's document.
- */
-
-/** The iframe's own empty document, before its editor page navigation. */
-
 /** PDFs open in Lumière's viewer page, served by the host's PDF routes. */
 export function pdfBody(React: ReactLike) {
   return (props: BodyProps): unknown => {
@@ -140,28 +127,3 @@ export function pdfBody(React: ReactLike) {
     });
   };
 }
-
-/**
- * DSH's Reload and "Read the file again" bump `content.revision`. Ordinary
- * revisions only report the loaded version; one that arrives while the page is
- * stuck on its bootstrap error also recreates the iframe, so those controls
- * can actually recover a preview that failed its first `ready` handshake.
- */
-
-/**
- * HMR can restart the Host while the first page is connecting, so that page's
- * `ready` call times out. Recreate the iframe once to rerun the handshake
- * against the live Host instead of stranding the error in the preview.
- */
-
-/** Same-origin, so the failed bootstrap text is readable from the embedder. */
-
-/** Only the iframe's initial blank document is not an editor page. */
-
-/** An iframe's loaded document, or undefined for its initial about:blank load. */
-
-/** A PDF page carries the same panel meta as an editor page. */
-
-/** The page takes DSH's theme from a theme message (embedding.ts). */
-
-/** The page asks to open another note (a link to it): open it in a DSH tab. */

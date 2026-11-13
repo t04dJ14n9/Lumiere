@@ -58,7 +58,8 @@ What is DSH's:
 - `src/host/index.ts`: the DSH plugin: starts Lumière and mounts its routes.
 - `src/host/routes.ts`: host-node's routes on DSH's web server, behind DSH's authentication.
 - `src/host/dsh.ts`: the parts of DSH's plugin context used here.
-- `src/client/index.ts`: the browser half: the document preview and following links.
+- `src/client/index.ts`: the browser half: registers the Markdown and PDF document previews.
+- `src/client/note-frame.ts`: the editor iframe: load and ready handling, one retry after a failed handshake, theme and following links.
 - `src/client/address.ts`: DSH's file addresses.
 - `src/client/theme.ts`: DSH's theme tokens as host-node's palette.
 - `bundle/`: `cordis.patch.yml`, the locale metadata and the bundle's README.

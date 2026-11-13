@@ -124,8 +124,8 @@ async function serveBytes(
     res.writeHead(404).end();
     return;
   }
-  // A symlink planted after the page opened must not turn cached bytes into a
-  // response for a file outside the workspace root.
+  // The bytes were read inside the root. Once the PDF no longer resolves
+  // inside it (moved or relinked), stop serving them.
   if (!(await page.contained())) {
     res.writeHead(403).end();
     return;

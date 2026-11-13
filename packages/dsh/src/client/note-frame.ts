@@ -35,6 +35,7 @@ interface FrameLoadState {
   retired: Set<HTMLIFrameElement>;
 }
 
+/** What DSH hands a document body (`sidebar.right.tab.document`). */
 export interface BodyProps {
   readonly resourceAddress: string;
   readonly sessionId?: string;
@@ -55,6 +56,7 @@ export interface BodyProps {
     | undefined;
 }
 
+/** Whether an iframe's document is a rendered Lumière editor page rather than an HTTP error body. */
 export function isEditorDocument(
   doc: { querySelector?: (selector: string) => unknown } | null | undefined,
 ): boolean {
@@ -220,6 +222,12 @@ function frameHandlers(
   };
 }
 
+/**
+ * A frame DSH replaced is retired when its ref changes; its queued events must
+ * not settle the replacement. A frame not attached yet still reports its own
+ * document, so a load from the iframe that fired is never confused with the
+ * live ref's document.
+ */
 function loadingFrame(
   element: HTMLIFrameElement | null,
   live: HTMLIFrameElement | null,
@@ -231,6 +239,7 @@ function loadingFrame(
   return state.attached.has(element) && element !== live ? null : element;
 }
 
+/** The iframe's own empty document, before its editor page navigation. */
 function initialBlankDocument(
   element: HTMLIFrameElement | null,
 ): Document | null {
@@ -238,6 +247,12 @@ function initialBlankDocument(
   return doc && doc.URL === "about:blank" ? doc : null;
 }
 
+/**
+ * DSH's Reload and "Read the file again" bump `content.revision`. Ordinary
+ * revisions only report the loaded version; one that arrives while the page is
+ * stuck on its bootstrap error also recreates the iframe, so those controls
+ * can actually recover a preview that failed its first `ready` handshake.
+ */
 function watchReload(
   React: ReactLike,
   options: {
@@ -264,6 +279,11 @@ function watchReload(
   }, [options.content.revision, options.attempt]);
 }
 
+/**
+ * HMR can restart the Host while the first page is connecting, so that page's
+ * `ready` call times out. Recreate the iframe once to rerun the handshake
+ * against the live Host instead of stranding the error in the preview.
+ */
 function watchReady(
   React: ReactLike,
   options: {
@@ -286,6 +306,7 @@ function watchReady(
   }, [options.src, options.attempt]);
 }
 
+/** Same-origin, so the failed bootstrap text is readable from the embedder. */
 export function editorFailed(
   element: { contentDocument?: Document | null } | null | undefined,
 ): boolean {
@@ -293,6 +314,7 @@ export function editorFailed(
   return Boolean(text && text.startsWith(FAILED_PREFIX));
 }
 
+/** Only the iframe's initial blank document is not an editor page. */
 function isInitialBlank(state: FrameLoadState, doc: Document | null): boolean {
   if (doc?.URL !== "about:blank" || state.hasLoaded) {
     return false;
@@ -323,6 +345,7 @@ function handleFrameLoad(
   props.content.loaded?.(version ?? "lumiere");
 }
 
+/** An iframe's loaded document, or undefined for its initial about:blank load. */
 function loadedDocument(
   element: HTMLIFrameElement | null,
 ): Document | null | undefined {
@@ -333,6 +356,7 @@ function loadedDocument(
   return doc ?? null;
 }
 
+/** A PDF page carries the same panel meta as an editor page. */
 export function handlePdfFrameLoad(
   element: HTMLIFrameElement | null,
   props: BodyProps,
@@ -350,10 +374,12 @@ export function handlePdfFrameLoad(
   props.content.loaded?.(version ?? "lumiere-pdf");
 }
 
+/** The page takes DSH's theme from a theme message (embedding.ts). */
 export function sendTheme(frame: HTMLIFrameElement | null): void {
   frame?.contentWindow?.postMessage(readDshTheme(), location.origin);
 }
 
+/** The page asks to open another note (a link to it): open it in a DSH tab. */
 export function followOpens(
   frame: { current: HTMLIFrameElement | null },
   target: {

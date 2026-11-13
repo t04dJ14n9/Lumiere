@@ -205,6 +205,37 @@ test("the viewer's files are served from its folder only", async (t) => {
   assert.notEqual(escape.status, 200);
 });
 
+test("a PDF in a workspace reached through a symlink still reads its bytes", async (t) => {
+  const { origin, dir, vault, routes } = await fixture(t);
+  const linked = path.join(dir, "linked-vault");
+  if (!(await linkOrSkip(t, vault, linked))) {
+    return;
+  }
+  const response = await fetch(
+    pageUrl(origin, path.join(linked, "papers", "A.pdf"), linked),
+  );
+  assert.equal(response.status, 200);
+  const id = /name="lumiere-panel" content="([^"]+)"/.exec(
+    await response.text(),
+  )?.[1];
+  const page = id ? routes.page(id) : undefined;
+  assert.ok(page);
+  const socket = fakeSocket();
+  page.attach(socket.socket);
+  socket.fromPage({ type: "ready" });
+  const load = await until(
+    () =>
+      socket.received.find(
+        (frame) =>
+          (frame as { data?: { type?: string } }).data?.type === "load",
+      ) as { data: { url: string } } | undefined,
+  );
+  const bytes = await fetch(origin + load.data.url);
+  assert.equal(bytes.status, 200);
+  assert.equal(await bytes.text(), PDF);
+  socket.close();
+});
+
 test("a PDF page refuses a symlink that leaves the workspace", async (t) => {
   const { origin, vault, outside } = await fixture(t);
   const link = path.join(vault, "papers", "escape.pdf");
