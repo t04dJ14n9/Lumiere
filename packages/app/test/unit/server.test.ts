@@ -9,6 +9,7 @@ import { tmpdir } from "node:os";
 import * as path from "node:path";
 import { startServer, type RunningServer } from "../../src/server/server";
 import { TOKEN_COOKIE } from "../../src/server/auth";
+import { SHELL_KEY_HEADER, SHELL_KEY_META } from "../../src/shared/shell-key";
 
 const TOKEN = "test-token-0123456789";
 const quiet = { debug() {}, warn() {}, error() {} };
@@ -58,9 +59,12 @@ function send(
   });
 }
 
-async function fixture(
-  t: test.TestContext,
-): Promise<{ server: RunningServer; vault: string; cookie: string }> {
+async function fixture(t: test.TestContext): Promise<{
+  server: RunningServer;
+  dir: string;
+  vault: string;
+  cookie: string;
+}> {
   const dir = await realpath(
     await mkdtemp(path.join(tmpdir(), "lumiere-server-")),
   );
@@ -71,7 +75,7 @@ async function fixture(
   await mkdir(path.join(vault, "daily"), { recursive: true });
   await writeFile(
     path.join(assets, "shell", "index.html"),
-    "<!doctype html><title>Lumière</title>",
+    `<!doctype html><meta name="${SHELL_KEY_META}" content="" /><title>Lumière</title>`,
   );
   await writeFile(path.join(dir, "secret.txt"), "not for pages");
   await writeFile(path.join(vault, "daily", "today.md"), "# Today");
@@ -89,7 +93,7 @@ async function fixture(
     await server.close();
     await rm(dir, { recursive: true, force: true });
   });
-  return { server, vault, cookie: `${TOKEN_COOKIE}=${TOKEN}` };
+  return { server, dir, vault, cookie: `${TOKEN_COOKIE}=${TOKEN}` };
 }
 
 test("the launch URL logs the window in once, then the cookie carries it", async (t) => {
@@ -400,4 +404,109 @@ test("the API closes open vaults, refuses non-note opens, and serves the command
   });
   assert.equal(closed.status, 200);
   assert.deepEqual((JSON.parse(closed.body) as { open: string[] }).open, []);
+});
+
+/** The key the window's own page was given, read as its script would. */
+async function windowKey(
+  port: number,
+  cookie: string,
+  metadata: Record<string, string> = { "sec-fetch-dest": "document" },
+): Promise<string> {
+  const page = await send(port, "/", { headers: { cookie, ...metadata } });
+  assert.equal(page.status, 200);
+  assert.equal(page.headers["cache-control"], "no-store");
+  return (
+    new RegExp(`name="${SHELL_KEY_META}" content="([^"]*)"`).exec(
+      page.body,
+    )?.[1] ?? ""
+  );
+}
+
+test("only the window's own page is given the key that adds a folder", async (t) => {
+  const { server, cookie } = await fixture(t);
+  const key = await windowKey(server.port, cookie);
+  assert.match(key, /^[A-Za-z0-9_-]{20,}$/);
+  assert.notEqual(key, TOKEN);
+  // A load of the page the script cannot tell from the window's: an old browser
+  // sends no fetch metadata. A fetch or a frame does, and gets no key.
+  assert.equal(await windowKey(server.port, cookie, {}), key);
+  for (const dest of ["empty", "iframe", "script", "object"]) {
+    assert.equal(
+      await windowKey(server.port, cookie, { "sec-fetch-dest": dest }),
+      "",
+      dest,
+    );
+  }
+});
+
+test("a page in the window cannot make the server trust a folder it names", async (t) => {
+  // #628: any same-origin page could POST /api/vaults or /api/open.
+  const { server, dir, vault, cookie } = await fixture(t);
+  const secret = path.join(dir, "private");
+  await mkdir(secret);
+  await writeFile(path.join(secret, "x.md"), "# x");
+  const key = await windowKey(server.port, cookie);
+  const page = {
+    cookie,
+    "content-type": "application/json",
+    origin: `http://127.0.0.1:${server.port}`,
+    "sec-fetch-site": "same-origin",
+    "sec-fetch-dest": "empty",
+  };
+  const post = (route: string, body: unknown, headers: object) =>
+    send(server.port, route, {
+      method: "POST",
+      headers: { ...page, ...headers },
+      body: JSON.stringify(body),
+    });
+  const open = async () =>
+    (
+      JSON.parse(
+        (await send(server.port, "/api/vaults", { headers: { cookie } })).body,
+      ) as { open: string[] }
+    ).open;
+
+  for (const headers of [{}, { [SHELL_KEY_HEADER]: "not-the-key" }]) {
+    assert.equal(
+      (await post("/api/vaults", { path: secret }, headers)).status,
+      403,
+    );
+    assert.equal(
+      (await post("/api/open", { path: path.join(secret, "x.md") }, headers))
+        .status,
+      403,
+    );
+  }
+  assert.deepEqual(await open(), [vault], "nothing was registered");
+
+  // The window, with the key it was given, can; so can the process that holds
+  // the launch token and is no page (the desktop app's open request).
+  const own = { [SHELL_KEY_HEADER]: key };
+  assert.equal((await post("/api/vaults", { path: secret }, own)).status, 200);
+  assert.deepEqual(await open(), [vault, secret]);
+});
+
+test("a process that holds the launch token and is no page may still open a folder", async (t) => {
+  const { server, dir, vault, cookie } = await fixture(t);
+  const other = path.join(dir, "other");
+  await mkdir(other);
+  await writeFile(path.join(other, "y.md"), "# y");
+  const headers = { cookie, "content-type": "application/json" };
+  const added = await send(server.port, "/api/vaults", {
+    method: "POST",
+    headers,
+    body: JSON.stringify({ path: other }),
+  });
+  assert.equal(added.status, 200);
+  const opened = await send(server.port, "/api/open", {
+    method: "POST",
+    headers,
+    body: JSON.stringify({ path: path.join(other, "y.md") }),
+  });
+  assert.equal(opened.status, 200);
+  const list = await send(server.port, "/api/vaults", { headers: { cookie } });
+  assert.deepEqual((JSON.parse(list.body) as { open: string[] }).open, [
+    vault,
+    other,
+  ]);
 });
