@@ -29,6 +29,7 @@ export {
 } from "../shared/link-location";
 export { RevealRouter, chooseRevealPanel } from "./reveal-router";
 export { SourceCoordinates } from "../shared/document/coordinates";
+export { mergeDiskChange, type DiskChange } from "../shared/document/merge";
 export type * from "../shared/host";
 export type {
   FileEvent,
