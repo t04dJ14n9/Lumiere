@@ -35,19 +35,18 @@ iframe once so the retry runs against the live Host.
 ### Manifest
 
 The built `dist/bundle` is a DSH plugin bundle by virtue of its
-`package.json`, which `scripts/build.mjs` writes inline (there is no
-`scripts/manifest.json` template). `dsh.bundle.patch` points at
-`cordis.patch.yml`, which inserts the Host row `lumiere` ->
-`@lumiere/dsh` into DSH's plugin tree. The Node half's `webServer` and
-`connection` inject list is declared in `src/host/index.ts`, not in that
-package file.
+`package.json`, generated from `scripts/manifest.json`. `dsh.bundle.patch`
+points at `cordis.patch.yml`, which inserts the Host row `lumiere` ->
+`@lumiere/dsh` into DSH's plugin tree; that row is what injects `webServer`
+and `connection` into the Node half.
 
-`dsh.client` is `{ platform: "web" }` only; it does not set `immediately`
-or a client `inject` list. The `./client` export exposes `client.js`;
-`./locale/*.json` exports the locale metadata. A top-level `icon` field
-names `./icon.png`, which the builder copies from `media/icon.png`. Preview
-and sidebar registration live in the client source, not the package
-manifest. The generated package.json has no `files` list.
+`dsh.client` marks the browser half `platform: "web"`, loads it
+`immediately`, and lists DSH's document-preview and right-sidebar client UI
+under `inject`. The `./client` export exposes `client.js` in DSH's
+`__ModuleLoader__` format; `./locale/*.json` and `./icon` export the locale
+metadata and `icon.png` (also named by the top-level `icon`) that Plugin
+Manager uses for its display name, description and icon. A `files` list names
+what is shipped.
 
 ## Files
 
@@ -62,7 +61,9 @@ What is DSH's:
 - `src/client/note-frame.ts`: the editor iframe: load and ready handling, one retry after a failed handshake, theme and following links.
 - `src/client/address.ts`: DSH's file addresses.
 - `src/client/theme.ts`: DSH's theme tokens as host-node's palette.
+- `scripts/manifest.json`: the bundle's `package.json` template (the DSH contract).
 - `bundle/`: `cordis.patch.yml`, the locale metadata and the bundle's README.
+- `test/unit/manifest.test.ts`: checks the manifest, locales, icon and patch.
 - `scripts/build.mjs`: writes the bundle `package.json` and builds `dist/bundle`.
 
 ## Services, routes and settings
