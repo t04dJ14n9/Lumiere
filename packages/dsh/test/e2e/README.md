@@ -5,8 +5,8 @@ DeepSeek Harness instance. It runs 58 checks (57 distinct names): the HTTP route
 their validation, authentication, method handling, byte ranges, static-file
 containment, PDF pages and viewer assets, the WebSocket handshake and RPC,
 the editor in a real browser (rendering, saving, themes, images, embedder
-messages, special paths), settings and view endpoints, per-panel workspace
-isolation, the workspace bundle manifest and the running install's boot
+messages, special paths), settings and view endpoints, containment to each panel's
+own workspace, the workspace bundle manifest and the running install's boot
 graph, and opening files through DSH's own file tree.
 ## Run
 

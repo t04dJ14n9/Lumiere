@@ -737,7 +737,7 @@ async function main() {
       assertViewsSseNegatives({ base, get, cookie, origin }),
     );
     await check(
-      "file route: one panel cannot read another workspace",
+      "file route: a file outside the panel's own workspace is refused",
       async () => {
         const other = mkdtempSync(path.join(tmpdir(), "lumiere-other-"));
         const otherNote = path.join(other, "other.md");
@@ -750,7 +750,7 @@ async function main() {
           panel.socket.close();
           assert(
             response.status === 403,
-            `cross-workspace read -> ${response.status}`,
+            `outside-workspace read -> ${response.status}`,
           );
           return "403";
         } finally {
