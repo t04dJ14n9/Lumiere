@@ -18,6 +18,16 @@ missed), it asks the host for the revision log from its own version (`catchUp`)
 and applies it like any other update. Unsent local edits are rebased over it,
 and edits the host already took are confirmed, never dropped or applied twice.
 
+While a panel has a note open and the note is dirty, the host saves it 2 s
+after the last edit, as Obsidian does (`autosave.ts`). The countdown lives with
+the session's registry entry, which `release` drops with the last panel, so
+closing cancels it; each edit restarts it. When it ends the host reads the settings again and saves
+through `Session.save`, the same path as the commands, so VS Code still does the
+write, runs the save participants and owns conflicts. A failed save is not
+retried: VS Code reports it (a file changed on disk becomes its conflict dialog)
+and the next edit starts a new countdown. A countdown that ends while a save is
+running waits for it and then saves what came after.
+
 ## Files
 
 - `manifest.ts`: core plugin identity and runtime surfaces.
@@ -26,6 +36,7 @@ and edits the host already took are confirmed, never dropped or applied twice.
 - `host.ts`: shared session references and native change/save subscriptions.
 - `session.ts`: authority, edit queues, broadcasting and native history actions.
 - `save.ts`: native save completion and overlapping-save handling.
+- `autosave.ts`: the 2 s save countdown of an open, dirty note.
 - `undo-groups.ts`: logical groups over native history fingerprints.
 - `webview.ts`: connection service and update/flush registrations.
 - `view-connection.ts`: buffered attachment, strict flush and synchronizer lifetime.
@@ -37,11 +48,16 @@ and edits the host already took are confirmed, never dropped or applied twice.
 
 ## Services, events and settings
 
-Host injects the host services `hostDocuments` and `hostCommands`, plus provides `documents`; webview injects `rpc` and
+Host injects the host services `hostDocuments`, `hostCommands` and `settings`, plus provides `documents`; webview injects `rpc` and
 provides `document`. Host listens to `document/willSave`, emits
 `document/changed` and serially dispatches `document/willSave` for native saves.
 Webview emits `document/syncStatus`. This core plugin has no enablement switch
-or separate settings.
+and no settings of its own; it reads two through `settings.forNote`:
+`lumiere.markdown.editor.autosave` (default `true`; declared with the editor
+plugin's settings and shown only where there is a workbench) and VS Code's
+`files.autoSave` for Markdown files. Autosave runs only when the first is on and
+the second is `off`; any other `files.autoSave` mode means VS Code saves the
+note itself, and a second saver would only race it.
 
 ## Limits and differences from Obsidian
 
@@ -51,6 +67,11 @@ update is checked against native authority rather than overwriting the document.
 
 `document/changed` also carries optional original-source native edits so marker
 providers can preserve ranges between disjoint changes, including CRLF offsets.
+
+Only a note with a panel open is autosaved, and an untitled note never is,
+since saving it asks where to put it. Hosts that own their files (host-node)
+already write a note 800 ms after typing pauses, so there the 2 s countdown
+finds the note saved.
 
 A note with unsaved text whose file another program rewrites is not reloaded by
 VS Code: it keeps the unsaved text and reports a conflict when saving. Hosts

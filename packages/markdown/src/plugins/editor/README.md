@@ -174,8 +174,9 @@ pending saved-position restore), calls `editor/projectSelection`, and emits
 host through the editor channel; the host keeps the
 `lumiere.markdown.hasSelection` and `lumiere.markdown.editorFocus` context
 keys for the active panel. Core settings include `editor.useTabs` (true),
-`editor.tabSize` (4, integer 1–16) and `editor.dragScrollSpeed` (4, number 1–10),
-under `lumiere.markdown`.
+`editor.tabSize` (4, integer 1–16), `editor.dragScrollSpeed` (4, number 1–10)
+and `editor.autosave` (true; read by the document plugin), under
+`lumiere.markdown`.
 
 Each panel kernel logs through the window's logger, tagged with the panel ID,
 to the **Lumiere** output channel. The webview forwards its logs over

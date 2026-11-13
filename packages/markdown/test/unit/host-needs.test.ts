@@ -26,6 +26,8 @@ test("outside VS Code and Cursor, their settings are not offered", () => {
     "lumiere.markdown.editor.reclaimTextEditor",
     "lumiere.markdown.editor.reclaimInPlaceTextEditor",
     "lumiere.markdown.editor.warmTextDocument",
+    // Outside VS Code the host saves notes itself.
+    "lumiere.markdown.editor.autosave",
     "lumiere.markdown.copyLinkForAgent.target",
     "lumiere.markdown.plugins.external",
     "lumiere.markdown.plugins.gitGutter.enabled",

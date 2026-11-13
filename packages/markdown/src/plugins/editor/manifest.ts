@@ -1,6 +1,7 @@
 import { Schema } from "@workshop/core";
 import { fontFields, fontNativeKeys, fontSize, lineHeight } from "./font";
 import { caretFields, caretNativeKeys } from "./caret-settings";
+import { autosaveNativeKeys, filesAutoSave } from "./autosave-settings";
 export const config = Schema.object({
   defaultMode: Schema.union(["livePreview", "source"]).default("livePreview"),
   readableLineLength: Schema.boolean().default(false),
@@ -32,6 +33,11 @@ export const config = Schema.object({
     .description(
       "Speed multiplier for text-selection auto-scroll near the editor edges (1–10). Default: 4; 1 restores CodeMirror's original speed. Applies immediately in Live Preview and Source mode.",
     ),
+  autosave: Schema.boolean()
+    .default(true)
+    .description(
+      "Save a note 2 seconds after its last edit while it is open in Lumiere, as Obsidian does. Turn it off to save only with Save. When VS Code's files.autoSave is on it saves the note instead, and a note that has no file yet (untitled) is never saved this way.",
+    ),
   useTabs: Schema.boolean().default(true),
   tabSize: new Schema<number>(
     (value) => {
@@ -52,6 +58,8 @@ export const config = Schema.object({
   // VS Code's font and caret settings for Markdown files (native, not ours).
   ...fontFields,
   ...caretFields,
+  // VS Code's own autosave: when it is on, the document plugin leaves saving to it.
+  filesAutoSave,
 });
 import { defineManifest } from "../../shared/manifest";
 export default defineManifest({
@@ -60,7 +68,11 @@ export default defineManifest({
   description: "Editor core service.",
   kind: "core",
   config,
-  nativeConfigKeys: { ...fontNativeKeys, ...caretNativeKeys },
+  nativeConfigKeys: {
+    ...fontNativeKeys,
+    ...caretNativeKeys,
+    ...autosaveNativeKeys,
+  },
   defaultEnabled: true,
   surfaces: ["host", "webview"],
   capabilities: ["editorProvider", "commands", "keybindings", "navigation"],
@@ -69,6 +81,8 @@ export default defineManifest({
     reclaimTextEditor: ["workbench"],
     reclaimInPlaceTextEditor: ["workbench"],
     warmTextDocument: ["workbench"],
+    // Outside VS Code the host saves notes itself, a moment after typing pauses.
+    autosave: ["workbench"],
   },
   contributes: {
     commands: [
