@@ -89,7 +89,7 @@ test("every well-formed host-to-page request keeps its fields", () => {
   const groups = nestedGroups(4);
   const cases: Array<[string, unknown]> = [
     ["toast", { type: "toast", kind: "info", message: "hi" }],
-    ["clipboard", { type: "clipboard", text: "x".repeat(70_000) }],
+    ["clipboard", { type: "clipboard", text: "x".repeat(4_000_001) }],
     ["ask", { type: "ask", id: 1, message: "m", actions }],
     ["pick", { type: "pick", id: 1, placeholder: "p", items }],
     ["pickItems", { type: "pickItems", id: 1, items }],
@@ -107,7 +107,6 @@ test("unbounded host-to-page fields are dropped", () => {
   const long = "x".repeat(64 * 1024 + 1);
   const many = Array.from({ length: 257 }, () => "Yes");
   const rows = Array.from({ length: 257 }, () => ({ label: "a" }));
-  const clipboard = (text: string) => uiFrame({ type: "clipboard", text });
   const ask = (actions: unknown) =>
     uiFrame({ type: "ask", id: 1, message: "m", actions });
   const pick = (items: unknown) =>
@@ -115,7 +114,7 @@ test("unbounded host-to-page fields are dropped", () => {
   const menu = (groups: unknown) =>
     uiFrame({ type: "menu", id: 1, x: 0, y: 0, groups });
   const rejects: Array<[string, string]> = [
-    ["clipboard text", clipboard("x".repeat(4_000_001))],
+    ["clipboard text", uiFrame({ type: "clipboard", text: 42 })],
     ["ask actions", ask(many)],
     ["ask action", ask([long])],
     ["pick description", pick([{ label: "a", description: long }])],

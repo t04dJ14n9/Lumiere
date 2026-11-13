@@ -59,8 +59,6 @@ export type PageFrame =
   { ch: "rpc"; data: unknown } | { ch: "ui"; data: UiEvent };
 
 const MAX_TEXT = 64 * 1024;
-/** The editor's `clipboardWrite` RPC allows this much text; it is relayed as a request. */
-const MAX_CLIPBOARD_TEXT = 4_000_000;
 
 /** Schemes the page must not open. The host refuses them too; this is the sink. */
 const UNSAFE_EXTERNAL = new Set([
@@ -320,8 +318,10 @@ function isText(value: unknown): value is string {
   return typeof value === "string" && value.length <= MAX_TEXT;
 }
 
+// Not capped: the host already wrote this text and told the user it copied,
+// and many host callers (bridge envelopes, wiki copies) have no size limit.
 function isClipboardText(value: unknown): value is string {
-  return typeof value === "string" && value.length <= MAX_CLIPBOARD_TEXT;
+  return typeof value === "string";
 }
 
 function isAnswer(value: unknown): value is string | number | null {
