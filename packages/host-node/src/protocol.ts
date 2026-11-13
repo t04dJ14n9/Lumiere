@@ -100,12 +100,9 @@ export function parseHostFrame(text: string): HostFrame | undefined {
   if (value.ch === "rpc" && "data" in value) {
     return { ch: "rpc", data: value.data };
   }
-  if (
-    value.ch === "ui" &&
-    isRecord(value.data) &&
-    typeof value.data.type === "string"
-  ) {
-    return { ch: "ui", data: value.data as UiRequest };
+  if (value.ch === "ui") {
+    const request = parseUiRequest(value.data);
+    return request ? { ch: "ui", data: request } : undefined;
   }
   return undefined;
 }
@@ -129,6 +126,130 @@ export function parsePageFrame(text: string): PageFrame | undefined {
     return event ? { ch: "ui", data: event } : undefined;
   }
   return undefined;
+}
+
+const MAX_ROWS = 256;
+
+function isRows(value: unknown): value is PickRow[] {
+  return (
+    Array.isArray(value) &&
+    value.length <= MAX_ROWS &&
+    value.every(
+      (row) =>
+        isRecord(row) &&
+        isText(row.label) &&
+        (row.description === undefined || isText(row.description)) &&
+        (row.detail === undefined || isText(row.detail)),
+    )
+  );
+}
+
+/** The host's menus are at most four submenus deep; cap a frame's recursion too. */
+const MAX_MENU_DEPTH = 4;
+
+function isMenuGroups(value: unknown, nesting = 0): value is MenuRow[][] {
+  return (
+    nesting <= MAX_MENU_DEPTH &&
+    Array.isArray(value) &&
+    value.length <= MAX_ROWS &&
+    value.every(
+      (group) =>
+        Array.isArray(group) &&
+        group.length <= MAX_ROWS &&
+        group.every(
+          (row) =>
+            isRecord(row) &&
+            isText(row.label) &&
+            (row.submenu === undefined ||
+              isMenuGroups(row.submenu, nesting + 1)),
+        ),
+    )
+  );
+}
+
+type RequestParser = (value: Record<string, unknown>) => UiRequest | undefined;
+
+/** One parser per request type keeps each validation short and total. */
+const REQUEST_PARSERS: Readonly<Record<string, RequestParser>> = {
+  toast: (value) =>
+    (value.kind === "info" || value.kind === "error") && isText(value.message)
+      ? { type: "toast", kind: value.kind, message: value.message }
+      : undefined,
+  clipboard: (value) =>
+    isClipboardText(value.text)
+      ? { type: "clipboard", text: value.text }
+      : undefined,
+  ask: (value) =>
+    isId(value.id) &&
+    isText(value.message) &&
+    Array.isArray(value.actions) &&
+    value.actions.length <= MAX_ROWS &&
+    value.actions.every(isText)
+      ? {
+          type: "ask",
+          id: value.id,
+          message: value.message,
+          actions: value.actions,
+        }
+      : undefined,
+  pick: (value) =>
+    isId(value.id) && isText(value.placeholder) && isRows(value.items)
+      ? {
+          type: "pick",
+          id: value.id,
+          placeholder: value.placeholder,
+          items: value.items,
+        }
+      : undefined,
+  pickItems: (value) =>
+    isId(value.id) && isRows(value.items)
+      ? { type: "pickItems", id: value.id, items: value.items }
+      : undefined,
+  input: (value) =>
+    isId(value.id) &&
+    isText(value.prompt) &&
+    isText(value.value) &&
+    (value.error === undefined || isText(value.error))
+      ? {
+          type: "input",
+          id: value.id,
+          prompt: value.prompt,
+          value: value.value,
+          ...(typeof value.error === "string" ? { error: value.error } : {}),
+        }
+      : undefined,
+  menu: (value) =>
+    isId(value.id) &&
+    typeof value.x === "number" &&
+    Number.isFinite(value.x) &&
+    typeof value.y === "number" &&
+    Number.isFinite(value.y) &&
+    isMenuGroups(value.groups)
+      ? {
+          type: "menu",
+          id: value.id,
+          x: value.x,
+          y: value.y,
+          groups: value.groups,
+        }
+      : undefined,
+  open: (value) =>
+    isText(value.path) && isText(value.fragment)
+      ? { type: "open", path: value.path, fragment: value.fragment }
+      : undefined,
+  external: (value) =>
+    isText(value.href) ? { type: "external", href: value.href } : undefined,
+};
+
+/** Only well-formed requests reach the page; a malformed one is dropped. */
+function parseUiRequest(value: unknown): UiRequest | undefined {
+  if (!isRecord(value) || typeof value.type !== "string") {
+    return undefined;
+  }
+  if (!Object.hasOwn(REQUEST_PARSERS, value.type)) {
+    return undefined;
+  }
+  return REQUEST_PARSERS[value.type]?.(value);
 }
 
 function parseUiEvent(value: unknown): UiEvent | undefined {
@@ -195,6 +316,12 @@ function isId(value: unknown): value is number {
 
 function isText(value: unknown): value is string {
   return typeof value === "string" && value.length <= MAX_TEXT;
+}
+
+// Not capped: the host already wrote this text and told the user it copied,
+// and many host callers (bridge envelopes, wiki copies) have no size limit.
+function isClipboardText(value: unknown): value is string {
+  return typeof value === "string";
 }
 
 function isAnswer(value: unknown): value is string | number | null {
