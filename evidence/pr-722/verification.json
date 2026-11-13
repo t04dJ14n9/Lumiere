@@ -87,5 +87,5 @@
     "escape-file-403.png"
   ],
   "secrets": "no raw DSH token or cookie value persisted",
-  "githubState": "published source head; evidence branch separate; PR merged by owner-approved admin squash"
+  "githubState": "published source head; evidence branch separate; PR still open and unmerged as of 2026-11-13 (the as-published line 'PR merged by owner-approved admin squash' was false)"
 }
