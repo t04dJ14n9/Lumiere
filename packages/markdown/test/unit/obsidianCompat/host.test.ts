@@ -71,6 +71,22 @@ test("Obsidian app.json's alwaysUpdateLinks: false asks through effective settin
   );
 });
 
+test("Always Update's saved mode wins over app.json's alwaysUpdateLinks: false", async (t) => {
+  const f = await compatFixture();
+  t.after(() => f.root.dispose());
+  await f.change(`${ROOT_A}/.obsidian/app.json`, '{"alwaysUpdateLinks":false}');
+  await f.configuration.prepare(NOTE_A);
+  const mode = () =>
+    f.workbench.settings.get("linkUpdates.mode", "prompt", NOTE_A);
+  assert.equal(mode(), "prompt");
+  // Always Update saves `always` for the file's folder; app.json is never written.
+  f.inspections.set(`${NOTE_A}|linkUpdates.mode`, {
+    workspaceFolderValue: "always",
+  });
+  assert.equal(mode(), "always");
+  assert.equal(f.writes.length, 0);
+});
+
 test("B4: an async edit attempt retains its originating vault while focus changes", async (t) => {
   const f = await compatFixture();
   t.after(() => f.root.dispose());

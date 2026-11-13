@@ -18,8 +18,15 @@ name follows it: a Markdown link's text equal to the note's name
 equal to the name when the link has folders (`[[f/Old|Old]]`). A moved note's own path-style links are
 rewritten too. Folder renames cover every file inside. By default it asks
 first, matching Obsidian's `alwaysUpdateLinks: false` (Update Links, Always
-Update, which persistently sets the mode to `always`, or Don't Update).
-`always` rewrites without asking and `never` leaves links untouched. It counts
+Update or Don't Update). `always` rewrites without asking and `never` leaves
+links untouched. Always Update updates the links now and saves `always` at the
+narrowest scope the renamed file has (its workspace folder, else the
+workspace, else the user's settings only when no folder is open), so later
+renames there do not ask and other workspaces still do. If the save fails
+(a settings file with errors), the links are still updated and an error says
+why. An explicit value there wins over `.obsidian/app.json`'s
+`alwaysUpdateLinks`, which the Obsidian compatibility plugin reads (false is
+`prompt`, true is `always`) and Lumiere never writes. It counts
 the notes from the index's parsed links so that asking reads and rewrites
 nothing (unless a note is still unparsed, then from the notes' current text),
 and builds the edits once, after the answer, so text typed while the dialog is
@@ -61,6 +68,11 @@ others; a message names it.
 
 - Only renames made in VS Code (Explorer, refactoring) are seen; a rename in
   another program looks like a delete and a create.
+- The default is Obsidian's: with `alwaysUpdateLinks: false` Obsidian asks
+  too. The question is VS Code's dialog, with Update Links, Always Update and
+  Don't Update where Obsidian has Always update, Just once and Do not update.
+  Always Update is saved per workspace folder in VS Code's settings, where
+  Obsidian's `alwaysUpdateLinks` is one vault setting in `.obsidian/app.json`.
 - Rename Heading asks for the new name in a prompt; Obsidian renames in
   its own prompt too. Nested subpaths (`#Parent#Heading`) are left, as in
   Obsidian.

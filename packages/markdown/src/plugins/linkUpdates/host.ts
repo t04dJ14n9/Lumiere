@@ -70,7 +70,7 @@ async function renameEdits(
   return linkEdits(host.vaults, host, renames);
 }
 
-/** Asks unless nothing would change; "Always" also stops asking for this resource. */
+/** Asks unless nothing would change; "Always Update" also stops asking for this folder. */
 async function askToUpdate(
   host: RenameHost,
   renames: Renames,
@@ -87,9 +87,34 @@ async function askToUpdate(
     [update, always, "Don't Update"],
   );
   if (answer === always) {
-    await host.settings.access.update("linkUpdates.mode", "always", resource);
+    await rememberAlwaysUpdate(host, resource);
   }
   return answer === update || answer === always;
+}
+
+/**
+ * Saves `always` for the renamed file's own folder, not the user's settings:
+ * the answer is about this vault. An explicit value there wins over
+ * `.obsidian/app.json` (never written). A save that fails (a settings file
+ * with errors) is reported, and the links are still updated as asked.
+ */
+async function rememberAlwaysUpdate(
+  host: Pick<RenameHost, "settings" | "dialogs">,
+  resource: string | undefined,
+): Promise<void> {
+  try {
+    await host.settings.access.update(
+      "linkUpdates.mode",
+      "always",
+      resource,
+      "narrowest",
+    );
+  } catch (error) {
+    const reason = error instanceof Error ? error.message : String(error);
+    host.dialogs.error(
+      `Lumiere could not save "Always Update" (${reason}). The links are updated this time.`,
+    );
+  }
 }
 
 /**

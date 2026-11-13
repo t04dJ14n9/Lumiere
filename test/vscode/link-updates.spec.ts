@@ -1,6 +1,12 @@
 import { test, expect, chromium } from "@playwright/test";
 import type { Browser, Page } from "@playwright/test";
-import { readFileSync, rmSync, writeFileSync } from "node:fs";
+import {
+  existsSync,
+  mkdirSync,
+  readFileSync,
+  rmSync,
+  writeFileSync,
+} from "node:fs";
 import path from "node:path";
 import { paths, readState } from "./state";
 import {
@@ -13,6 +19,7 @@ import {
 } from "./workbench";
 
 const userFile = path.join(paths.userData, "User", "settings.json");
+const folderFile = path.join(paths.workspace, ".vscode", "settings.json");
 const inWorkspace = (name: string) => path.join(paths.workspace, name);
 
 /** Renames a file from the Explorer, as a user does: Rename in its menu, type, Enter. */
@@ -45,8 +52,13 @@ async function acceptRefactoring(page: Page) {
   await prompt.getByRole("button", { name: "OK" }).click();
 }
 
-test("Always Update in the rename dialog updates the links, saves the mode, and the next rename does not ask", async () => {
+test("Always Update in the rename dialog updates the links, saves the mode for the folder, and the next rename does not ask", async () => {
   const originalUserSettings = readFileSync(userFile, "utf8");
+  // The folder's settings file stays in place and is only rewritten: VS Code's
+  // watcher follows edits to it, but can miss one deleted and created again.
+  const originalFolderSettings = existsSync(folderFile)
+    ? readFileSync(folderFile, "utf8")
+    : undefined;
   const settings = JSON.parse(originalUserSettings) as Record<string, unknown>;
   // The unset contribution default is prompt, as in Obsidian when
   // alwaysUpdateLinks is false. Fail clearly if setup already pinned the key.
@@ -57,6 +69,8 @@ test("Always Update in the rename dialog updates the links, saves the mode, and 
   }
   let browser: Browser | undefined;
   try {
+    mkdirSync(path.dirname(folderFile), { recursive: true });
+    writeFileSync(folderFile, "{}");
     writeFileSync(inWorkspace("Rename Target.md"), "# Target\n");
     writeFileSync(inWorkspace("Rename Linker.md"), "See [[Rename Target]].\n");
     browser = await chromium.connectOverCDP(readState().webSocket);
@@ -80,18 +94,14 @@ test("Always Update in the rename dialog updates the links, saves the mode, and 
         timeout: 20_000,
       })
       .toBe("See [[Rename Goal]].\n");
-    // Always Update writes always to the user's settings, which started unset.
-    await expect
-      .poll(
-        () =>
-          (
-            JSON.parse(readFileSync(userFile, "utf8")) as Record<
-              string,
-              unknown
-            >
-          )["lumiere.markdown.linkUpdates.mode"],
-      )
-      .toBe("always");
+    // Always Update is about this folder's notes: it writes the workspace
+    // folder's settings, and the user's settings, which started unset, stay so.
+    const modeIn = (file: string) =>
+      (JSON.parse(readFileSync(file, "utf8")) as Record<string, unknown>)[
+        "lumiere.markdown.linkUpdates.mode"
+      ];
+    await expect.poll(() => modeIn(folderFile)).toBe("always");
+    expect(modeIn(userFile)).toBeUndefined();
 
     // VS Code's prompt is the first dialog this rename shows: Lumiere did not ask.
     await renameInExplorer(page, "Rename Goal.md", "Rename Target.md");
@@ -109,6 +119,7 @@ test("Always Update in the rename dialog updates the links, saves the mode, and 
       }
     } finally {
       writeFileSync(userFile, originalUserSettings);
+      writeFileSync(folderFile, originalFolderSettings ?? "{}");
       rmSync(inWorkspace("Rename Target.md"), { force: true });
       rmSync(inWorkspace("Rename Goal.md"), { force: true });
       rmSync(inWorkspace("Rename Linker.md"), { force: true });

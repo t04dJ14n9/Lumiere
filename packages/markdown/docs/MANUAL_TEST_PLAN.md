@@ -708,8 +708,11 @@ Both are off by default (owner decision). Turn on
 1. Rename `Target.md` to `Goal.md` in the Explorer: a dialog asks to update
    links in the notes that link to it. Accept: links (with aliases,
    headings and blocks) now point at `Goal`. Decline: nothing changes.
-   **Always Update** updates them and sets `linkUpdates.mode` to `always`,
-   so the next rename does not ask.
+   **Always Update** updates them and sets `linkUpdates.mode` to `always`
+   in the folder's `.vscode/settings.json` (not the user's settings), so the
+   next rename does not ask. In a vault whose `.obsidian/app.json` has
+   `alwaysUpdateLinks: false` the dialog shows the same way, and the saved
+   `always` then wins over it.
 2. `lumiere.markdown.linkUpdates.mode`: `always` skips the dialog,
    `never` changes nothing.
 

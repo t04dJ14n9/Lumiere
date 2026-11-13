@@ -32,10 +32,12 @@
 
 - The rename dialog offers **Always Update**, as Obsidian's does: it
   updates the links and sets `lumiere.markdown.linkUpdates.mode` to
-  `always`. The edits are now built after the answer, so a note edited
-  while the dialog is open is rewritten as it is then. The dialog counts
-  the notes from the vault index instead of rewriting every one of them
-  first, so asking does not eat into VS Code's rename-participant timeout.
+  `always` for the renamed file's workspace folder (not the user's
+  settings, so other workspaces still ask). The edits are now built after
+  the answer, so a note edited while the dialog is open is rewritten as it
+  is then. The dialog counts the notes from the vault index instead of
+  rewriting every one of them first, so asking does not eat into VS Code's
+  rename-participant timeout.
 
 - Renaming a note waits (up to five seconds) for the vault index to finish
   parsing queued notes before it looks for links to update, so a link

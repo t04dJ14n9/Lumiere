@@ -58,7 +58,7 @@ owning their settings. Supported `app.json` mappings, in rank order:
 | `userIgnoreFilters` | `vault.excludedFiles` |
 | `propertiesInDocument` | `properties.display` |
 | `livePreview` | `editor.defaultMode` (true → livePreview, false → source) |
-| `alwaysUpdateLinks` | `linkUpdates.mode` → always when true, prompt when false (invalid contributes nothing) |
+| `alwaysUpdateLinks` | `linkUpdates.mode` → always when true, prompt when false (invalid contributes nothing); the rename dialog's Always Update saves an explicit `always` in VS Code's settings, which wins, and `app.json` is not written |
 
 `templates.json` and `daily-notes.json` seed the Templates and Daily Notes
 plugins' settings the same way. A date format is carried over only when it
