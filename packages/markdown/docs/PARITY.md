@@ -1,6 +1,16 @@
 # Obsidian parity observations
 
-Reference: Obsidian 1.13.7, to be compared by the owner in a disposable vault. Never use the owner's vault. Record date, method, observed result and any issue link in each row. Automated checks do not establish visual or behavioral parity. All rows start not observed.
+Reference: Obsidian 1.15.0 (installed app; static shipped-artifact REA, 2026-11-10), to be compared by the owner in a disposable vault. Never use the owner's vault. Record date, method, observed result and any issue link in each row. Automated checks do not establish visual or behavioral parity. New rows start not observed; see the re-baseline note for older measurements and static reads.
+
+**Re-baseline note (2026-11-10).** Rows naming a version below 1.15.0 are
+older-version evidence; the installed app is 1.15.0. Rows naming
+1.15.0 are static shipped-code reads, not live observations. Re-measure the
+1.14.4 rows before treating them as 1.15.0 matches. Relative to 1.13.7, the
+1.15.0 catalog has 128 net more CSS custom properties (including
+`--bases-kanban-*`, `--highlight-background-*`, `--mermaid-*`) and new
+`app:` command IDs `app:migrate-frontmatter`, `app:increase-font-size`,
+`app:decrease-font-size`, `app:open-file`. Evidence: static REA
+`ev_6656f973c52d9c8d523b697ac6a77957170ffcda27c58103a519f55c9b517b1a`.
 
 | Action or behavior (DESIGN §13–§15) | Obsidian observation: date and method | Workshop result | How checked | Status |
 | --- | --- | --- | --- | --- |
@@ -50,7 +60,7 @@ Reference: Obsidian 1.13.7, to be compared by the owner in a disposable vault. N
 | `lookUp` | not observed | not manually observed | macOS only; manual scenario pending; automated evidence is in the 2026-11-01 record | not observed |
 | `linkUpdates` | not observed | not manually observed | Manual scenario pending; automated evidence is in phase records | not observed |
 | `settings` | not observed | not manually observed | Manual scenario pending; automated evidence is in phase records | not observed |
-| `quickSwitcher` | 2026-10-17, read from Obsidian 1.14.4's switcher and checked with its public fuzzy search | Same scoring as suggestions: name, then path a point lower, attachments listed, excluded files 10 lower; an empty query lists recently modified rather than recently opened notes (src/plugins/quickSwitcher/README.md) | Unit tests pin each rule | behaviour measured; visual parity not observed |
+| `quickSwitcher` | 2026-10-17, read from Obsidian 1.14.4's switcher and checked with its public fuzzy search | Same scoring as suggestions: name, then path a point lower, attachments listed, excluded files 10 lower; an empty query lists recently opened notes, then recently modified ones never opened here (`src/plugins/quickSwitcher/ranking.ts`) | Unit tests pin each rule | behaviour measured; visual parity not observed |
 | `wordCount` | 2026-10-17, measured by reading Obsidian 1.14.4's status bar for the same 76 texts in a throwaway vault over the DevTools protocol: punctuation, numbers, hyphens, apostrophes, Markdown, Han, kana, Korean, Hindi, Tamil, Thai, emoji, properties, line breaks | Matches all 76 (src/plugins/wordCount/README.md) | Differential probe (Obsidian's counts and Workshop's over the same texts); unit tests pin each rule | behaviour measured; visual parity not observed |
 | `toggleBold` | 2026-10-17, behaviour measured over the DevTools protocol in a throwaway vault: caret, word, selection and unwrap | Matches the measured behaviour (docs/OBSIDIAN_KEYS.md) | Differential probe (Obsidian and the browser harness, same keys); unit tests pin each rule | behaviour measured; visual parity not observed |
 | `toggleItalics` | 2026-10-17, behaviour measured over the DevTools protocol in a throwaway vault: caret, word, selection and unwrap | Matches the measured behaviour (docs/OBSIDIAN_KEYS.md) | Differential probe (Obsidian and the browser harness, same keys); unit tests pin each rule | behaviour measured; visual parity not observed |
