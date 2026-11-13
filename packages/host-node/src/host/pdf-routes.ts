@@ -8,7 +8,7 @@ import { pathToFileURL } from "node:url";
 import { injectShim, socketSource } from "./page";
 import { pdfQuery } from "./page-query";
 import { PdfPages, type PdfPage } from "./pdf-pages";
-import { resolveContainedNote } from "./paths";
+import { isInsideRegisteredRoot, resolveContainedNote } from "./paths";
 import { serveStatic } from "./static";
 
 export interface PdfRouteOptions {
@@ -16,6 +16,8 @@ export interface PdfRouteOptions {
   readonly base: string;
   /** The built viewer (`packages/pdf/dist/webview`). */
   readonly viewer: string;
+  /** The workspaces the embedder registered (`LumiereHost.workspaceRoots`). */
+  readonly roots: () => readonly string[];
   readonly log: (message: string) => void;
 }
 
@@ -90,10 +92,17 @@ async function servePdfPage({
     res.writeHead(403).end();
     return;
   }
+  // As for a note's page: the query names a workspace, the embedder decides
+  // which folders are one.
+  const root = pathToFileURL(resolved.root).toString();
+  if (!isInsideRegisteredRoot(options.roots(), root)) {
+    res.writeHead(403).end();
+    return;
+  }
   const { base } = options;
   const page = pages.open({
     uri: pathToFileURL(resolved.note).toString(),
-    root: pathToFileURL(resolved.root).toString(),
+    root,
     cspSource: socketSource(req.headers.host ?? ""),
     // The editor ships the same PDF engine (both pin one
     // @embedpdf/engine-runtime-wasm32).

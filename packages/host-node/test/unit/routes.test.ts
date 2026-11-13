@@ -229,7 +229,11 @@ async function serveEditorPages(t: {
     workspaceRoots: () => [...roots],
     stop: async () => {},
   } as unknown as LumiereHost;
-  const routes = createEditorRoutes(host, { markdown: "/none", shim: "/none" });
+  const routes = createEditorRoutes(host, {
+    markdown: "/none",
+    shim: "/none",
+    pdf: "/none",
+  });
   const server = createServer((req, res) => {
     void routes.handle(req, res).then((handled) => {
       if (!handled) {
@@ -246,7 +250,7 @@ async function serveEditorPages(t: {
   const status = async (note: string, root: string) =>
     (
       await fetch(
-        `http://127.0.0.1:${port}/lumiere/editor?path=${encodeURIComponent(note)}&root=${encodeURIComponent(root)}`,
+        `http://127.0.0.1:${port}/lumiere/${/\.pdf$/i.test(note) ? "pdf" : "editor"}?path=${encodeURIComponent(note)}&root=${encodeURIComponent(root)}`,
       )
     ).status;
   const register = (folder: string) =>
@@ -335,6 +339,16 @@ test("an editor page cannot name a folder that holds a registered workspace", as
   register(at("vault"));
   assert.equal(await status(at("vault", "Top.md"), at("vault")), 200);
   assert.equal(await status(at("vault", "docs", "Deep.md"), scratch), 403);
+});
+
+test("a PDF's page is held to the same registered workspaces", async (t) => {
+  const { at } = await notes(t, ["vault/Doc.pdf", "private/Secret.pdf"]);
+  const { added, status, register } = await serveEditorPages(t);
+  assert.equal(await status(at("private", "Secret.pdf"), at("private")), 403);
+  register(at("vault"));
+  assert.equal(await status(at("vault", "Doc.pdf"), at("vault")), 200);
+  assert.equal(await status(at("private", "Secret.pdf"), at("private")), 403);
+  assert.deepEqual(added, [pathToFileURL(at("vault")).toString()]);
 });
 
 test("a registered filesystem root authorizes no folder", async (t) => {

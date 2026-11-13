@@ -68,6 +68,7 @@ export function createEditorRoutes(
     ? createPdfRoutes({
         base: BASE,
         viewer: assets.pdf,
+        roots: () => host.workspaceRoots(),
         log: assets.log ?? (() => {}),
       })
     : NO_PDF_ROUTES;
