@@ -31,6 +31,15 @@ export interface NavigationIntent {
  */
 export type OpenPlace = "here" | "tab" | "side";
 
+/**
+ * How the destination takes the reader's attention. `preserveFocus` opens it
+ * without moving the keyboard focus to it (VS Code's own option of that name);
+ * hosts with no tabs of their own ignore it.
+ */
+export interface OpenOptions {
+  preserveFocus?: boolean;
+}
+
 /** Opening notes, links and locations in VS Code. */
 export interface Navigation {
   begin?(): NavigationIntent;
@@ -56,5 +65,6 @@ export interface Navigation {
     place: OpenPlace,
     at?: number,
     intent?: NavigationIntent,
+    options?: OpenOptions,
   ): Promise<void>;
 }

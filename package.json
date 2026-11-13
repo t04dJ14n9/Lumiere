@@ -3420,6 +3420,12 @@
             "default": "",
             "scope": "resource"
           },
+          "lumiere.markdown.links.focusNewTab": {
+            "type": "boolean",
+            "default": true,
+            "description": "Obsidian's Always focus new tabs: when a link opens in a new tab or beside, the new tab takes the keyboard focus. Off keeps the focus where it was (VS Code's preserveFocus); PDFs always take it.",
+            "scope": "resource"
+          },
           "lumiere.markdown.files.newNoteFolder": {
             "type": "string",
             "default": "",

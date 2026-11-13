@@ -1183,6 +1183,7 @@ default (§25).
 | Default location for new notes | `lumiere.markdown.files.newNoteFolder` (empty = vault root, `.` = current folder, or a path) | empty |
 | Default location for new attachments | `lumiere.markdown.files.attachmentFolder` (same forms, plus `./sub`) | empty |
 | Excluded files | `lumiere.markdown.vault.excludedFiles` (globs) | `[]` |
+| Always focus new tabs | `lumiere.markdown.links.focusNewTab` (off: a link opened in a new tab or beside keeps the keyboard focus, VS Code's `preserveFocus`) | `true` |
 | (no equivalent) | `lumiere.markdown.vault.rootMarkers` | `[".obsidian"]` |
 | (no equivalent) | `lumiere.markdown.links.folderNote` | `""` |
 

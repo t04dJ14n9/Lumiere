@@ -6,6 +6,11 @@ export const config = Schema.object({
   ),
   useWikilinks: Schema.boolean().default(true),
   folderNote: Schema.string().default(""),
+  focusNewTab: Schema.boolean()
+    .default(true)
+    .description(
+      "Obsidian's Always focus new tabs: when a link opens in a new tab or beside, the new tab takes the keyboard focus. Off keeps the focus where it was (VS Code's preserveFocus); PDFs always take it.",
+    ),
   newNoteFolder: Schema.string()
     .default("")
     .description(
@@ -30,6 +35,8 @@ export default defineManifest({
     newNoteFolder: "files.newNoteFolder",
     attachmentFolder: "files.attachmentFolder",
   },
+  // Only VS Code and Cursor open links in tabs of their own.
+  settingNeeds: { focusNewTab: ["workbench"] },
   contributes: {
     commands: [
       {

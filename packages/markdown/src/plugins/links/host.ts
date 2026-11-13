@@ -199,15 +199,27 @@ async function openInternal(
   if (!uri || !liveIntent(ctx, intent)) {
     return false;
   }
-  await navigation.open(
-    root,
-    uri,
-    fragment,
-    placeOf(request),
-    request.at,
-    intent,
-  );
+  const place = placeOf(request);
+  await navigation.open(root, uri, fragment, place, request.at, intent, {
+    preserveFocus: keepsFocus(ctx, panel, place),
+  });
   return true;
+}
+
+/**
+ * A new tab or split opens without taking the focus when `focusNewTab` is off;
+ * the current tab is the one the reader is already in.
+ */
+function keepsFocus(
+  ctx: Context,
+  panel: PanelShell,
+  place: OpenPlace,
+): boolean {
+  return (
+    place !== "here" &&
+    ctx.settings.forNote(panel.document).features?.links?.config.focusNewTab ===
+      false
+  );
 }
 
 /** Beside, in a tab of its own (Cmd-click), or in the current group. */

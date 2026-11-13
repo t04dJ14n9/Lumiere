@@ -312,6 +312,7 @@ older-version evidence; the installed app is 1.15.0. Rows naming
 | Setting: lumiere.markdown.links.newLinkFormat | not observed | not manually observed | Manual scenario pending; automated evidence is in phase records | not observed |
 | Setting: lumiere.markdown.links.useWikilinks | not observed | not manually observed | Manual scenario pending; automated evidence is in phase records | not observed |
 | Setting: lumiere.markdown.links.folderNote | not observed | not manually observed | Manual scenario pending; automated evidence is in phase records | not observed |
+| Setting: lumiere.markdown.links.focusNewTab | not observed | not manually observed | Manual scenario pending; automated evidence is in phase records | not observed |
 | Setting: lumiere.markdown.files.newNoteFolder | not observed | not manually observed | Manual scenario pending; automated evidence is in phase records | not observed |
 | Setting: lumiere.markdown.files.attachmentFolder | not observed | not manually observed | Manual scenario pending; automated evidence is in phase records | not observed |
 | Setting: lumiere.markdown.properties.display | not observed | not manually observed | Manual scenario pending; automated evidence is in phase records | not observed |

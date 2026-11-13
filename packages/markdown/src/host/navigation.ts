@@ -94,7 +94,7 @@ export function createNavigation(
       });
     },
     open: (
-      ...[root, target, fragment, place, at, intent]: Parameters<
+      ...[root, target, fragment, place, at, intent, options]: Parameters<
         Navigation["open"]
       >
     ) =>
@@ -107,6 +107,7 @@ export function createNavigation(
         panels,
         reveals,
         intent: intent ?? reveals.begin(),
+        ...(options?.preserveFocus ? { preserveFocus: true } : {}),
       }),
     registerNativeLinks() {
       const links = registerNativeLinks(navigation);
@@ -271,6 +272,21 @@ interface OpenNavigation {
   panels: () => readonly PanelShell[];
   reveals: RevealRouter;
   intent: NavigationIntent;
+  /** Show the destination without moving the keyboard focus to it. */
+  preserveFocus?: boolean;
+}
+
+/** A bare column, or options where the tab must be kept or must not take the focus. */
+function showOptions(
+  options: Pick<OpenNavigation, "place" | "preserveFocus">,
+  column: vscode.ViewColumn,
+): vscode.ViewColumn | vscode.TextDocumentShowOptions {
+  const keep = options.preserveFocus ? { preserveFocus: true } : {};
+  // A tab of its own is one VS Code keeps, not the preview the next link replaces.
+  const pinned = options.place === "tab" ? { preview: false } : {};
+  return options.preserveFocus || options.place === "tab"
+    ? { viewColumn: column, ...pinned, ...keep }
+    : column;
 }
 
 async function openNavigation(options: OpenNavigation): Promise<void> {
@@ -283,9 +299,7 @@ async function openNavigation(options: OpenNavigation): Promise<void> {
   const activeColumn =
     intent.column ?? vscode.window.tabGroups.activeTabGroup.viewColumn;
   const column = place === "side" ? vscode.ViewColumn.Beside : activeColumn;
-  // A tab of its own is one VS Code keeps, not the preview the next link replaces.
-  const show =
-    place === "tab" ? { viewColumn: column, preview: false } : column;
+  const show = showOptions(options, column);
   const before = new Set(panels().map((panel) => panel.id));
   if (/\.(md|markdown)$/i.test(uri.path)) {
     await warmMarkdownDocument(uri);
@@ -346,6 +360,8 @@ async function revealOpenedNote(
   const destination: NavigationTarget = {
     fragment,
     ...(at === undefined ? {} : { at }),
+    // The page scrolls to the target without taking the focus the tab kept off.
+    ...(options.preserveFocus ? { preserveFocus: true } : {}),
   };
   const panel = chooseRevealPanel(panels(), before, {
     uri: vscode.Uri.parse(target).toString(),
