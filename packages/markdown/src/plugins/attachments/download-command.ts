@@ -3,12 +3,12 @@ import {
   decodeDataUri,
   downloadStem,
   embedFor,
-  loadAttachmentSource,
+  loadAttachmentOutcome,
   remoteImages,
   saveAttachment,
   withDownloadedImages,
   type SavedAttachment,
-  type SourceBytes,
+  type SourceOutcome,
 } from "../../attachments";
 import { SourceCoordinates } from "../../shared/document/coordinates";
 import { contributionId } from "../../shared/setting-schema";
@@ -56,7 +56,7 @@ export async function downloadAttachments(ctx: Context): Promise<void> {
   if (answer !== "Download") {
     return;
   }
-  const saved = await saveAll(target, urls);
+  const { saved, skipped } = await saveAll(target, urls);
   const edits = withDownloadedImages(editorText(panel.document), (url, alt) => {
     const file = saved.get(url);
     return file && embedFor({ ...target, ...file, alt });
@@ -66,7 +66,12 @@ export async function downloadAttachments(ctx: Context): Promise<void> {
   const edited =
     edits.length === 0 ||
     (await ctx.hostDocuments.apply(panel.document, edits));
-  const message = summary(saved.size, urls.length - saved.size, edited);
+  const message = summary({
+    downloaded: saved.size,
+    failed: urls.length - saved.size - skipped.length,
+    skipped,
+    edited,
+  });
   if (edited) {
     ctx.dialogs.inform(message);
   } else {
@@ -83,19 +88,29 @@ function editorText(document: { getText(): string }): string {
   return new SourceCoordinates(document.getText()).editor.toString();
 }
 
+/** What the downloads came to: the files saved, and the URLs that served no image. */
+interface Downloads {
+  readonly saved: Map<string, SavedAttachment>;
+  readonly skipped: string[];
+}
+
 /** Download and save each URL in turn; the ones that fail are left out. */
 async function saveAll(
   target: AttachmentTarget,
   urls: readonly string[],
-): Promise<Map<string, SavedAttachment>> {
+): Promise<Downloads> {
   const saved = new Map<string, SavedAttachment>();
+  const skipped: string[] = [];
   for (const url of urls) {
-    const source = await loadImage(url);
+    const outcome = await loadImage(url);
+    if (outcome.kind === "notImage") {
+      skipped.push(url);
+    }
     const file =
-      source &&
+      outcome.kind === "loaded" &&
       (await saveAttachment({
         ...target,
-        ...source,
+        ...outcome.source,
         stem: downloadStem(url),
         // An image saved a moment ago shares the vault's names too.
         vaultPaths: [
@@ -107,28 +122,52 @@ async function saveAll(
       saved.set(url, file);
     }
   }
-  return saved;
+  return { saved, skipped };
 }
 
-function loadImage(url: string): Promise<SourceBytes | undefined> {
+async function loadImage(url: string): Promise<SourceOutcome> {
   if (/^data:/iu.test(url)) {
     // decodeDataUri names any payload `.png`; a note's data URI must say it is an image.
-    return Promise.resolve(
-      /^data:image\/[^;,]+[;,]/iu.test(url) ? decodeDataUri(url) : undefined,
-    );
+    const source = /^data:image\/[^;,]+[;,]/iu.test(url)
+      ? decodeDataUri(url)
+      : undefined;
+    return source ? { kind: "loaded", source } : { kind: "failed" };
   }
   // A note can come from anywhere: keep only what is served or named as an image.
-  return loadAttachmentSource(url, {
+  return loadAttachmentOutcome(url, {
     imagesOnly: true,
     fetch: (address) => fetch(address),
     readFile: async () => undefined,
   });
 }
 
-function summary(downloaded: number, failed: number, edited: boolean): string {
+interface SummaryFacts {
+  readonly downloaded: number;
+  readonly failed: number;
+  /** The URLs that served no image, left as they were. */
+  readonly skipped: readonly string[];
+  readonly edited: boolean;
+}
+
+function summary({
+  downloaded,
+  failed,
+  skipped,
+  edited,
+}: SummaryFacts): string {
   const count = downloaded === 1 ? "1 attachment" : `${downloaded} attachments`;
-  const done = edited
-    ? `Downloaded ${count}.`
-    : `Saved ${count} in the vault, but the note was not changed.`;
-  return failed > 0 ? `${done} ${failed} could not be downloaded.` : done;
+  const parts = [
+    edited
+      ? `Downloaded ${count}.`
+      : `Saved ${count} in the vault, but the note was not changed.`,
+  ];
+  if (failed > 0) {
+    parts.push(`${failed} could not be downloaded.`);
+  }
+  if (skipped.length > 0) {
+    const named = skipped.slice(0, 3).join(", ");
+    const more = skipped.length > 3 ? ` and ${skipped.length - 3} more` : "";
+    parts.push(`${skipped.length} skipped, not an image: ${named}${more}.`);
+  }
+  return parts.join(" ");
 }

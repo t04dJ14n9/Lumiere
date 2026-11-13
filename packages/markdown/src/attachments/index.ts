@@ -31,9 +31,11 @@ export {
 } from "./drop";
 export {
   isHostSourceUrl,
+  loadAttachmentOutcome,
   loadAttachmentSource,
   type SourceBytes,
   type SourceFetch,
+  type SourceOutcome,
   type SourceRead,
 } from "./source";
 export {

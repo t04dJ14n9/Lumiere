@@ -17,29 +17,35 @@ interface Run {
   text: string;
 }
 
+/** What a URL answers: its Content-Type (null for none) and body. */
+type Serve = (url: string) => { type: string | null; bytes?: number[] };
+
+const PNG = [0x89, 0x50, 0x4e, 0x47, 0x0d, 0x0a, 0x1a, 0x0a, 0, 0];
+
 async function run(
   t: test.TestContext,
   answer: string | undefined,
   settings: Record<string, unknown> = {},
-  options: { note?: string; applies?: boolean } = {},
+  options: { note?: string; applies?: boolean; serve?: Serve } = {},
 ): Promise<Run> {
   const note = options.note ?? NOTE;
   const { vaults } = memoryVaults({ "Note.md": note, "cat.png": "" });
   const result: Run = { asked: [], told: [], written: [], text: note };
   const document = { uri: uriOf("Note.md"), getText: () => result.text };
   const original = globalThis.fetch;
-  globalThis.fetch = (async (url: string) => ({
-    ok: true,
-    headers: {
-      get: (name: string) =>
-        name === "content-type"
-          ? url.endsWith(".png")
-            ? "image/png"
-            : "text/html"
-          : null,
-    },
-    arrayBuffer: async () => new Uint8Array([1, 2]).buffer,
-  })) as unknown as typeof fetch;
+  const serve: Serve =
+    options.serve ??
+    ((url) => ({ type: url.endsWith(".png") ? "image/png" : "text/html" }));
+  globalThis.fetch = (async (url: string) => {
+    const { type, bytes = [1, 2] } = serve(url);
+    return {
+      ok: true,
+      headers: {
+        get: (name: string) => (name === "content-type" ? type : null),
+      },
+      arrayBuffer: async () => new Uint8Array(bytes).buffer,
+    };
+  }) as unknown as typeof fetch;
   t.after(() => {
     globalThis.fetch = original;
   });
@@ -120,7 +126,7 @@ test("each web image is downloaded once, saved under its own name, and embedded 
     ].join("\n"),
   );
   assert.deepEqual(result.told, [
-    "Downloaded 2 attachments. 1 could not be downloaded.",
+    "Downloaded 2 attachments. 1 skipped, not an image: https://ex.com/page.html.",
   ]);
 });
 
@@ -183,6 +189,45 @@ test("when the note cannot be edited, the files are kept and the reader is told 
   assert.deepEqual(result.written, [uriOf("cat 1.png"), uriOf("Image.gif")]);
   assert.equal(result.text, NOTE);
   assert.deepEqual(result.told, [
-    "Saved 2 attachments in the vault, but the note was not changed. 1 could not be downloaded.",
+    "Saved 2 attachments in the vault, but the note was not changed. 1 skipped, not an image: https://ex.com/page.html.",
+  ]);
+});
+
+test("a URL serving no image is skipped and its link stays, whatever its name", async (t) => {
+  const note = [
+    "![login](https://ex.com/cat.png) ![api](https://ex.com/data.json)",
+    "![raw](https://ex.com/raw) ![blob](https://ex.com/blob)",
+  ].join("\n");
+  const serve: Serve = (url) => {
+    if (url.endsWith("/raw")) {
+      return { type: "application/octet-stream", bytes: PNG };
+    }
+    if (url.endsWith("/blob")) {
+      return { type: null, bytes: [1, 2, 3] };
+    }
+    return { type: url.endsWith(".json") ? "application/json" : "text/html" };
+  };
+  const result = await run(t, "Download", {}, { note, serve });
+  assert.deepEqual(result.written, [uriOf("Image.png")]);
+  assert.equal(
+    result.text,
+    [
+      "![login](https://ex.com/cat.png) ![api](https://ex.com/data.json)",
+      "![[Image.png|raw]] ![blob](https://ex.com/blob)",
+    ].join("\n"),
+  );
+  assert.deepEqual(result.told, [
+    "Downloaded 1 attachment. 3 skipped, not an image: https://ex.com/cat.png, https://ex.com/data.json, https://ex.com/blob.",
+  ]);
+});
+
+test("the summary names a few skipped URLs and counts the rest", async (t) => {
+  const note = [1, 2, 3, 4, 5]
+    .map((index) => `![](https://ex.com/p${index}.html)`)
+    .join(" ");
+  const result = await run(t, "Download", {}, { note });
+  assert.deepEqual(result.written, []);
+  assert.deepEqual(result.told, [
+    "Downloaded 0 attachments. 5 skipped, not an image: https://ex.com/p1.html, https://ex.com/p2.html, https://ex.com/p3.html and 2 more.",
   ]);
 });

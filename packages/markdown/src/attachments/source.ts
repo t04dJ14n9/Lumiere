@@ -5,6 +5,7 @@
 
 import { mediaKind } from "../shared/media-kinds";
 import { extensionForMime, extensionFromUrl } from "./html-images";
+import { sniffImageExtension } from "./image-sniff";
 
 export interface SourceBytes {
   readonly bytes: Uint8Array;
@@ -36,63 +37,102 @@ export interface SourceOptions {
   readonly imagesOnly?: boolean;
 }
 
+/** What loading a source came to: bytes, a response that is no image, or nothing. */
+export type SourceOutcome =
+  | { readonly kind: "loaded"; readonly source: SourceBytes }
+  | { readonly kind: "notImage" }
+  | { readonly kind: "failed" };
+
+const FAILED: SourceOutcome = { kind: "failed" };
+const NOT_IMAGE: SourceOutcome = { kind: "notImage" };
+
 /**
- * Download http(s) or read file:// into bytes + extension. Undefined on failure.
+ * Download http(s) or read file:// into bytes + extension. Undefined on
+ * failure, and, with `imagesOnly`, when what comes back is no image.
  */
 export async function loadAttachmentSource(
   url: string,
   options: SourceOptions,
 ): Promise<SourceBytes | undefined> {
+  const outcome = await loadAttachmentOutcome(url, options);
+  return outcome.kind === "loaded" ? outcome.source : undefined;
+}
+
+/**
+ * Like `loadAttachmentSource`, but tells a response that is no image (a
+ * page, JSON) from one that could not be fetched, so a caller can say which.
+ */
+export async function loadAttachmentOutcome(
+  url: string,
+  options: SourceOptions,
+): Promise<SourceOutcome> {
   const trimmed = url.trim();
   if (!isHostSourceUrl(trimmed)) {
-    return undefined;
+    return FAILED;
   }
   try {
     return /^file:/i.test(trimmed)
       ? await readLocal(trimmed, options)
       : await download(trimmed, options);
   } catch {
-    return undefined;
+    return FAILED;
   }
 }
 
 async function readLocal(
   url: string,
   options: SourceOptions,
-): Promise<SourceBytes | undefined> {
+): Promise<SourceOutcome> {
   const ext = extensionFromUrl(url);
   if (options.imagesOnly && !isImageUrl(url)) {
-    return undefined;
+    return NOT_IMAGE;
   }
   const bytes = await options.readFile(url);
-  return bytes && bytes.length > 0 ? { bytes, ext } : undefined;
+  return bytes && bytes.length > 0
+    ? { kind: "loaded", source: { bytes, ext } }
+    : FAILED;
 }
+
+/** Types a server sends for "I do not know": the bytes say what it is. */
+const UNKNOWN_TYPES = new Set([
+  "",
+  "application/octet-stream",
+  "binary/octet-stream",
+  "application/x-octet-stream",
+]);
 
 async function download(
   url: string,
   options: SourceOptions,
-): Promise<SourceBytes | undefined> {
+): Promise<SourceOutcome> {
   const response = await options.fetch(url);
   if (!response.ok) {
-    return undefined;
+    return FAILED;
   }
   const mime = (response.headers.get("content-type") ?? "")
     .split(";")[0]!
     .trim()
     .toLowerCase();
-  if (options.imagesOnly && !mime.startsWith("image/") && !isImageUrl(url)) {
-    return undefined;
+  const isImageType = mime.startsWith("image/");
+  if (options.imagesOnly && !isImageType && !UNKNOWN_TYPES.has(mime)) {
+    return NOT_IMAGE;
   }
   const bytes = new Uint8Array(await response.arrayBuffer());
   if (bytes.length === 0) {
-    return undefined;
+    return FAILED;
+  }
+  if (!options.imagesOnly) {
+    return { kind: "loaded", source: { bytes, ext: extensionFromUrl(url) } };
+  }
+  const sniffed = isImageType ? undefined : sniffImageExtension(bytes);
+  if (!isImageType && !sniffed) {
+    return NOT_IMAGE;
   }
   // An image served from `/avatar.php` is kept as an image, not a `.php` file.
-  const ext =
-    options.imagesOnly && !isImageUrl(url)
-      ? extensionForMime(mime)
-      : extensionFromUrl(url);
-  return { bytes, ext };
+  const ext = isImageUrl(url)
+    ? extensionFromUrl(url)
+    : (sniffed ?? extensionForMime(mime));
+  return { kind: "loaded", source: { bytes, ext } };
 }
 
 /** Whether the URL's path names an image file by its extension. */
