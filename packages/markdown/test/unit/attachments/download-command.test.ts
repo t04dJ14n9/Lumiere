@@ -18,7 +18,12 @@ interface Run {
 }
 
 /** What a URL answers: its Content-Type (null for none) and body. */
-type Serve = (url: string) => { type: string | null; bytes?: number[] };
+type Serve = (url: string) => {
+  type: string | null;
+  bytes?: number[];
+  /** A Content-Disposition header. */
+  disposition?: string;
+};
 
 const PNG = [0x89, 0x50, 0x4e, 0x47, 0x0d, 0x0a, 0x1a, 0x0a, 0, 0];
 
@@ -37,11 +42,16 @@ async function run(
     options.serve ??
     ((url) => ({ type: url.endsWith(".png") ? "image/png" : "text/html" }));
   globalThis.fetch = (async (url: string) => {
-    const { type, bytes = [1, 2] } = serve(url);
+    const { type, bytes = [1, 2], disposition = null } = serve(url);
     return {
       ok: true,
       headers: {
-        get: (name: string) => (name === "content-type" ? type : null),
+        get: (name: string) =>
+          name === "content-type"
+            ? type
+            : name === "content-disposition"
+              ? disposition
+              : null,
       },
       arrayBuffer: async () => new Uint8Array(bytes).buffer,
     };
@@ -57,8 +67,17 @@ async function run(
     },
     workspace: {
       files: {
-        list: async (uri: string) =>
-          uri.replace(/\/$/u, "") === ROOT ? ["Note.md", "cat.png"] : [],
+        // What is in the folder now, the files written to it included.
+        list: async (uri: string) => {
+          const folder = uri.replace(/\/$/u, "");
+          const written = result.written
+            .filter((file) => file.slice(0, file.lastIndexOf("/")) === folder)
+            .map((file) => decodeURIComponent(file.slice(folder.length + 1)));
+          return [
+            ...(folder === ROOT ? ["Note.md", "cat.png"] : []),
+            ...written,
+          ];
+        },
         mkdir: async () => {},
         writeBytes: async (uri: string) => {
           result.written.push(uri);
@@ -230,4 +249,49 @@ test("the summary names a few skipped URLs and counts the rest", async (t) => {
   assert.deepEqual(result.told, [
     "Downloaded 0 attachments. 5 skipped, not an image: https://ex.com/p1.html, https://ex.com/p2.html, https://ex.com/p3.html and 2 more.",
   ]);
+});
+
+test("a Content-Disposition name is the file's name, taken names get a number", async (t) => {
+  const note = [
+    "![a](https://ex.com/dl?id=1) ![b](https://ex.com/dl?id=2)",
+    "![c](https://ex.com/dl?id=3) ![d](https://ex.com/photo.png?id=4)",
+    "![e](https://ex.com/dl?id=5)",
+  ].join("\n");
+  const names: Record<string, string> = {
+    "1": 'attachment; filename="Sunset.jpg"',
+    "2": 'attachment; filename="sunset.JPG"',
+    "3": "attachment; filename*=UTF-8''Caf%C3%A9%20au%20lait.png; filename=\"x.png\"",
+    "4": 'inline; filename="../../Renamed.gif"',
+    "5": 'attachment; filename="download"',
+  };
+  const serve: Serve = (url) => ({
+    type: "image/png",
+    disposition: names[url.slice(-1)]!,
+  });
+  const result = await run(t, "Download", {}, { note, serve });
+  assert.deepEqual(result.written, [
+    uriOf("Sunset.jpg"),
+    uriOf("sunset 1.jpg"),
+    uriOf("Café au lait.png"),
+    uriOf("Renamed.gif"),
+    uriOf("download.png"),
+  ]);
+  assert.equal(
+    result.text,
+    [
+      "![[Sunset.jpg|a]] ![[sunset 1.jpg|b]]",
+      "![[Café au lait.png|c]] ![[Renamed.gif|d]]",
+      "![[download.png|e]]",
+    ].join("\n"),
+  );
+});
+
+test("an unusable Content-Disposition leaves the URL's own name", async (t) => {
+  const note = "![a](https://ex.com/photo.png) ![b](https://ex.com/dl)";
+  const serve: Serve = () => ({
+    type: "image/png",
+    disposition: 'attachment; filename=".."',
+  });
+  const result = await run(t, "Download", {}, { note, serve });
+  assert.deepEqual(result.written, [uriOf("photo.png"), uriOf("Image.png")]);
 });

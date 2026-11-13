@@ -4,12 +4,15 @@
  */
 
 import { mediaKind } from "../shared/media-kinds";
+import { servedFileName } from "./content-disposition";
 import { extensionForMime, extensionFromUrl } from "./html-images";
 import { sniffImageExtension } from "./image-sniff";
 
 export interface SourceBytes {
   readonly bytes: Uint8Array;
   readonly ext: string;
+  /** The base name the server gave in `Content-Disposition`, if usable. */
+  readonly fileName?: string;
 }
 
 export type SourceFetch = (url: string) => Promise<{
@@ -132,7 +135,11 @@ async function download(
   const ext = isImageUrl(url)
     ? extensionFromUrl(url)
     : (sniffed ?? extensionForMime(mime));
-  return { kind: "loaded", source: { bytes, ext } };
+  const fileName = servedFileName(response.headers.get("content-disposition"));
+  return {
+    kind: "loaded",
+    source: { bytes, ext, ...(fileName === undefined ? {} : { fileName }) },
+  };
 }
 
 /** Whether the URL's path names an image file by its extension. */

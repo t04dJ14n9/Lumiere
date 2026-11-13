@@ -1,6 +1,7 @@
 import test from "node:test";
 import assert from "node:assert/strict";
 import {
+  downloadFileName,
   downloadStem,
   embedFor,
   remoteImages,
@@ -95,4 +96,55 @@ test("images are replaced where they are now, after edits made while downloading
   assert.deepEqual(edits, [
     { from: 9, to: 9 + before.length, insert: "![[a.png|x]]" },
   ]);
+});
+
+test("a served file name gives the stem, and its image extension is kept", () => {
+  const source = { ext: "png" };
+  assert.deepEqual(downloadFileName("https://ex.com/x", source), {
+    stem: "Image",
+    ext: "png",
+  });
+  assert.deepEqual(
+    downloadFileName("https://ex.com/a/photo.png", { ext: "png" }),
+    { stem: "photo", ext: "png" },
+  );
+  assert.deepEqual(
+    downloadFileName("https://ex.com/dl?id=1", {
+      ext: "png",
+      fileName: "Cat Photo.JPEG",
+    }),
+    { stem: "Cat Photo", ext: "jpeg" },
+  );
+});
+
+test("a served name without an image extension keeps the download's own", () => {
+  assert.deepEqual(
+    downloadFileName("https://ex.com/dl", {
+      ext: "webp",
+      fileName: "download",
+    }),
+    { stem: "download", ext: "webp" },
+  );
+  assert.deepEqual(
+    downloadFileName("https://ex.com/dl", { ext: "png", fileName: "run.php" }),
+    { stem: "run.php", ext: "png" },
+    "a server cannot pick a script extension",
+  );
+});
+
+test("a served name is cleaned as a URL's is, or ignored when nothing is left", () => {
+  assert.deepEqual(
+    downloadFileName("https://ex.com/a/photo.png", {
+      ext: "png",
+      fileName: "a:b#c[[d]].png",
+    }),
+    { stem: "a b c d", ext: "png" },
+  );
+  for (const fileName of [".png", "...", "::.png"]) {
+    assert.deepEqual(
+      downloadFileName("https://ex.com/a/photo.png", { ext: "png", fileName }),
+      { stem: "photo", ext: "png" },
+      fileName,
+    );
+  }
 });

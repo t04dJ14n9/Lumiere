@@ -47,10 +47,15 @@ Obsidian's command of the same name. It finds the note's Markdown images
 whose source is `http(s):` or a `data:` URI (`src/attachments/download.ts`;
 images in code and wikilink embeds are skipped), asks once, then downloads
 each URL once on the host and saves it in `files.attachmentFolder` under the
-name at the end of its URL (`cat.png`, then `cat 1.png` when taken; `Image`
-for a data URI or a URL without a file name). Each image becomes an embed in
-the Links format that keeps its alt text (`![[cat.png|A cat]]`), found again
-in the note as it is after the downloads, in one edit. Only what is served as
+file name the server gives in `Content-Disposition` (`filename*=` first, then
+`filename=`), else the name at the end of its URL (`cat.png`, then `cat 1.png`
+when taken; `Image` for a data URI or a URL without a file name). A served name
+is cut to its base name, loses control characters and what breaks a link, and
+keeps its extension only when that is an image's; anything else is saved under
+the extension the response implies, so a server cannot choose a `.php`. Each
+image becomes an embed in the Links format that keeps its alt text
+(`![[cat.png|A cat]]`), found again in the note as it is after the downloads,
+in one edit. Only what is served as
 an image is saved: a response whose `Content-Type` is not `image/*` is skipped
 and its link stays, and when the type is missing or `application/octet-stream`
 the first bytes decide (PNG, JPEG, GIF, WebP, AVIF, BMP, SVG). A data URI is
@@ -94,5 +99,4 @@ open and the note unchanged. Open-to-the-side is left alone.
 
 Download Attachments differs from Obsidian's: it asks once for all the images
 (Obsidian shows a gallery to untick some); it does not download image URLs
-in properties (Obsidian turns those into `[[…]]`) nor read a
-`Content-Disposition` file name.
+in properties (Obsidian turns those into `[[…]]`).

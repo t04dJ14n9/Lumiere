@@ -5,6 +5,7 @@
  * with REA (2026-11-07).
  */
 import { metadata } from "../markdown/metadata";
+import { mediaExtensions } from "../shared/media-kinds";
 
 /** A Markdown image whose source is on the web or in a data URI. */
 export interface RemoteImage {
@@ -42,6 +43,15 @@ export function remoteImages(text: string): RemoteImage[] {
 /** What Obsidian takes out of a name, and what Windows refuses in one. */
 const UNSAFE_NAME = /[:#|^\\\r\n/*?"<>]|%%|\[\[|\]\]/gu;
 
+/** A stem without what breaks a link or a Windows name, in one line. */
+function cleanStem(stem: string): string {
+  return stem
+    .replace(UNSAFE_NAME, " ")
+    .replace(/\s+/gu, " ")
+    .trim()
+    .slice(0, 250);
+}
+
 /**
  * The stem a downloaded image is saved under: the file name at the end of
  * its URL when that has an extension (`photo.png` gives `photo`), otherwise
@@ -62,13 +72,32 @@ export function downloadStem(url: string): string {
   if (dot <= 0 || !/^[a-z0-9]+$/iu.test(name.slice(dot + 1))) {
     return "Image";
   }
-  const stem = name
-    .slice(0, dot)
-    .replace(UNSAFE_NAME, " ")
-    .replace(/\s+/gu, " ")
-    .trim()
-    .slice(0, 250);
-  return stem || "Image";
+  return cleanStem(name.slice(0, dot)) || "Image";
+}
+
+/**
+ * What a downloaded image is saved as. A name the server gave
+ * (`Content-Disposition`) wins over the URL's: its image extension is kept,
+ * and any other leaves the whole name as the stem under the download's own
+ * extension, so a server cannot make us save a `.php`. A name with nothing
+ * left after cleaning is ignored.
+ */
+export function downloadFileName(
+  url: string,
+  source: { readonly ext: string; readonly fileName?: string },
+): { stem: string; ext: string } {
+  const served = source.fileName ?? "";
+  const dot = served.lastIndexOf(".");
+  const ext = served.slice(dot + 1).toLowerCase();
+  const hasImageExtension =
+    dot >= 0 && (mediaExtensions.image as readonly string[]).includes(ext);
+  const stem = cleanStem(hasImageExtension ? served.slice(0, dot) : served)
+    // A name of dots has no stem, and Windows drops a trailing dot.
+    .replace(/^[\s.]+|[\s.]+$/gu, "");
+  if (!stem) {
+    return { stem: downloadStem(url), ext: source.ext };
+  }
+  return { stem, ext: hasImageExtension ? ext : source.ext };
 }
 
 /**

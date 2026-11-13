@@ -1,6 +1,7 @@
 export { resolveAttachmentDir } from "./folder";
 export { timestampStem, uniqueName, uniqueTimestampName } from "./naming";
 export {
+  downloadFileName,
   downloadStem,
   remoteImages,
   withDownloadedImages,

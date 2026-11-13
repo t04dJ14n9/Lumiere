@@ -1,7 +1,7 @@
 import type { Context } from "@workshop/core";
 import {
   decodeDataUri,
-  downloadStem,
+  downloadFileName,
   embedFor,
   loadAttachmentOutcome,
   remoteImages,
@@ -110,8 +110,8 @@ async function saveAll(
       outcome.kind === "loaded" &&
       (await saveAttachment({
         ...target,
-        ...outcome.source,
-        stem: downloadStem(url),
+        bytes: outcome.source.bytes,
+        ...downloadFileName(url, outcome.source),
         // An image saved a moment ago shares the vault's names too.
         vaultPaths: [
           ...(target.vaultPaths ?? []),
