@@ -1,6 +1,6 @@
 import { Facet, StateField, type Transaction } from "@codemirror/state";
 import { revealRanges } from "../../webview/ui/pointer-selection";
-import type { EditorState } from "@codemirror/state";
+import type { EditorState, SelectionRange } from "@codemirror/state";
 import type { SyntaxNode, Tree } from "@lezer/common";
 import { documentTree } from "./document-tree";
 import { inlineHtmlEnd } from "./inline-html";
@@ -19,13 +19,32 @@ export const inlineRenderers = Facet.define<
 >({
   combine: (values) => values,
 });
+/**
+ * Reveal ranges are a pure function of an immutable EditorState. The opening
+ * frame asks `revealed()` once per block and inline element, so compute them
+ * once per state instead of mapping the selection into a fresh array on every
+ * call. This also shaves every redecoration and scroll frame.
+ */
+const revealRangesCache = new WeakMap<EditorState, readonly SelectionRange[]>();
+
+export function cachedRevealRanges(
+  state: EditorState,
+): readonly SelectionRange[] {
+  let ranges = revealRangesCache.get(state);
+  if (!ranges) {
+    ranges = revealRanges(state);
+    revealRangesCache.set(state, ranges);
+  }
+  return ranges;
+}
+
 /** Inclusive endpoints keep source visible at a block's last character. */
 export function revealed(
   state: EditorState,
   from: number,
   to: number,
 ): boolean {
-  return revealRanges(state).some(
+  return cachedRevealRanges(state).some(
     (range) => range.from <= to && range.to >= from,
   );
 }

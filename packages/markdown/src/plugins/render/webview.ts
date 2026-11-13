@@ -1,5 +1,4 @@
 import type {} from "../editor/api";
-import createDOMPurify from "dompurify";
 import { sanitizerOptions } from "./sanitizer-options";
 import type { Context, Plugin } from "@workshop/core";
 import type {} from "../dialect/api";
@@ -40,11 +39,18 @@ function renderService({
   trusted: boolean;
   passes: Set<RenderPass>;
 }): RenderService {
-  const purifier = createDOMPurify(window);
-  // Once: options passed with every call are parsed again on every call,
-  // about half of what sanitizing a table cell costs.
-  purifier.setConfig(sanitizerOptions(trusted));
-  const sanitize = (html: string) => purifier.sanitize(html);
+  // DOMPurify is ~70 KB and no rendered block needs it before first paint:
+  // render.into already gates every block on the round-1 lazy renderer. Start
+  // the import at apply so the chunk downloads in the settle window, but keep
+  // it off the entry's static graph. executeRenderPass awaits it beside
+  // renderer.ready().
+  const sanitizer = import("dompurify").then(({ default: createDOMPurify }) => {
+    const purifier = createDOMPurify(window);
+    // Once: options passed with every call are parsed again on every call,
+    // about half of what sanitizing a table cell costs.
+    purifier.setConfig(sanitizerOptions(trusted));
+    return (html: string): string => purifier.sanitize(html);
+  });
   return {
     trusted,
     into(container, source, context = {}) {
@@ -53,7 +59,7 @@ function renderService({
       if (context.documentUri) {
         container.dataset.noteSource = context.documentUri;
       }
-      return executeRenderPass({ ctx, trusted, sanitize, pass, context });
+      return executeRenderPass({ ctx, trusted, sanitizer, pass, context });
     },
   };
 }
@@ -61,13 +67,13 @@ function renderService({
 function executeRenderPass({
   ctx,
   trusted,
-  sanitize,
+  sanitizer,
   pass,
   context,
 }: {
   ctx: Context;
   trusted: boolean;
-  sanitize: (html: string) => string;
+  sanitizer: Promise<(html: string) => string>;
   pass: RenderPass;
   context: NonNullable<Parameters<RenderService["into"]>[2]>;
 }): Promise<RenderPass> {
@@ -90,7 +96,17 @@ function executeRenderPass({
       return pass;
     });
   };
-  const finishBody = (): Promise<RenderPass> => {
+  const finishBody = async (): Promise<RenderPass> => {
+    if (context.signal?.aborted) {
+      return pass.dispose().then(() => pass);
+    }
+    // The renderer (round 1, 221 KB) and DOMPurify (69 KB) are both lazy
+    // chunks fetched in the settle window; DOMPurify is smaller, so awaiting
+    // it in parallel cannot delay the first rendered block or the first frame.
+    const [sanitize] = await Promise.all([
+      sanitizer,
+      ctx.markdown.renderer.ready(),
+    ]);
     if (context.signal?.aborted) {
       return pass.dispose().then(() => pass);
     }

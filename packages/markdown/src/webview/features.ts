@@ -141,10 +141,28 @@ const PAINT_MANAGED_IDS = WEBVIEW_FEATURE_IDS.filter((id) =>
 
 export type FeaturePhase = "chrome" | "paint" | "all";
 
-/** Chrome chunks (Properties sheet + line-number gutter). */
-export function preloadChromeFeatures(): Promise<void> {
+/**
+ * Ids whose chunks are worth fetching during the settle window. Without a
+ * frontmatter fence the Properties sheet is left out: it drags in the YAML
+ * runtime and markdown-it, and there is no sheet to paint on the first frame.
+ */
+export function chromePreloadIds(withProperties: boolean): readonly string[] {
+  return withProperties
+    ? [...CHROME_FEATURE_IDS]
+    : [...CHROME_FEATURE_IDS].filter((id) => id !== "properties");
+}
+
+/**
+ * Chrome chunks for the settle window. The line-number gutter is small
+ * geometry needed on the first frame. The Properties sheet pulls the YAML
+ * runtime and markdown-it (~490 KB) with it; only a note with a frontmatter
+ * fence needs that graph before first paint. For every other note the chrome
+ * configure fetches Properties after `mw:first-paint`, so those chunks cannot
+ * compete with the entry's static graph for the resource loader.
+ */
+export function preloadChromeFeatures(withProperties: boolean): Promise<void> {
   return Promise.all(
-    [...CHROME_FEATURE_IDS].map((id) => loadWebviewPlugin(id)),
+    chromePreloadIds(withProperties).map((id) => loadWebviewPlugin(id)),
   ).then(() => undefined);
 }
 
