@@ -4,54 +4,21 @@
  * DSH's read-only Markdown preview, which stays in the viewer menu. Written
  * against DSH's plugin module format: React comes from DSH's module table.
  */
-import { parseOpenMessage, SHOWN } from "@workshop/host-node/embedding";
-import {
-  addressFragment,
-  insideWorkspace,
-  parentFolder,
-  sessionAddress,
-  workspaceRoot,
-} from "./address";
-import { onDshThemeChange, readDshTheme } from "./theme";
+import { addressFragment, parentFolder, workspaceRoot } from "./address";
+import { handlePdfFrameLoad, noteBody, sendTheme } from "./note-frame";
+import { onDshThemeChange } from "./theme";
+import type { BodyProps, ReactLike } from "./note-frame";
+
+export {
+  editorFailed,
+  followOpens,
+  isEditorDocument,
+  noteBody,
+} from "./note-frame";
 
 const ID = "@lumiere/dsh";
 const BODY_ID = `${ID}/markdown`;
-
-interface ReactLike {
-  createElement(type: string, props?: Record<string, unknown> | null): unknown;
-  useEffect(effect: () => void | (() => void), dependencies?: unknown[]): void;
-  useRef<T>(value: T): { current: T };
-}
-
-interface FrameEvent {
-  readonly currentTarget: HTMLIFrameElement | null;
-}
-
-interface FrameLoadState {
-  hasLoaded: boolean;
-  initialBlank: Document | null;
-}
-
-/** What DSH hands a document body (`sidebar.right.tab.document`). */
-export interface BodyProps {
-  readonly resourceAddress: string;
-  readonly sessionId?: string;
-  readonly content: {
-    readonly kind: string;
-    readonly revision?: number;
-    loaded?(version: string): void;
-    failed?(): void;
-  };
-  scrollportRef?(element: HTMLElement | null): void;
-  useResource(address: string):
-    | {
-        readonly value?: {
-          readonly absolutePath?: string;
-          readonly version?: string;
-        };
-      }
-    | undefined;
-}
+const PDF_BODY_ID = `${ID}/pdf`;
 
 interface ClientContext {
   readonly documentPreviews: { register(definition: unknown): () => void };
@@ -72,16 +39,6 @@ declare global {
       }): void;
     };
   }
-}
-
-/** Whether an iframe's document is a rendered Lumière editor page rather than an HTTP error body. */
-export function isEditorDocument(
-  doc: { querySelector?: (selector: string) => unknown } | null | undefined,
-): boolean {
-  if (!doc || typeof doc.querySelector !== "function") {
-    return false;
-  }
-  return Boolean(doc.querySelector('meta[name="lumiere-panel"]'));
 }
 
 if (typeof window !== "undefined" && window.__ModuleLoader__) {
@@ -112,196 +69,61 @@ if (typeof window !== "undefined" && window.__ModuleLoader__) {
               ),
             ),
           );
+          ctx.effect(() =>
+            ctx.documentPreviews.register({
+              id: PDF_BODY_ID,
+              extensions: ["pdf"],
+              binaryExtensions: ["pdf"],
+              priority: "extension",
+              title: () => "Lumière PDF",
+              loading: "renderer",
+            }),
+          );
+          ctx.effect(() =>
+            ctx.slots.inject("sidebar.right.tab.document", () =>
+              ctx.slots.register(
+                { name: "sidebar.right.tab.document", key: PDF_BODY_ID },
+                pdfBody(React),
+              ),
+            ),
+          );
         },
       };
     },
   });
 }
 
-function resolveEditorTarget(
-  resourceAddress: string,
-  absolute: string | undefined,
-) {
-  const isMarkdown = Boolean(absolute && /\.(?:md|markdown)$/i.test(absolute));
-  const root =
-    absolute && isMarkdown
-      ? workspaceRoot(resourceAddress, absolute)
-      : undefined;
-  const containmentRoot =
-    root ?? (absolute && isMarkdown ? parentFolder(absolute) : undefined);
-  const query =
-    absolute && isMarkdown
-      ? new URLSearchParams({
-          path: absolute,
-          ...(containmentRoot ? { root: containmentRoot } : {}),
-        })
-      : undefined;
-  const src = query
-    ? `/lumiere/editor?${query.toString()}${addressFragment(resourceAddress)}`
-    : undefined;
-  return { isMarkdown, root, containmentRoot, src };
-}
-
-export function noteBody(React: ReactLike, open: (address: string) => void) {
-  return function LumiereNote(props: BodyProps): unknown {
+/** PDFs open in Lumière's viewer page, served by the host's PDF routes. */
+export function pdfBody(React: ReactLike) {
+  return (props: BodyProps): unknown => {
     const frame = React.useRef<HTMLIFrameElement | null>(null);
-    const load = React.useRef<FrameLoadState>({
-      hasLoaded: false,
-      initialBlank: null,
-    });
+    React.useEffect(() => onDshThemeChange(() => sendTheme(frame.current)), []);
     const file = props.useResource(props.resourceAddress)?.value;
     const absolute = file?.absolutePath;
-    const { isMarkdown, root, containmentRoot, src } = resolveEditorTarget(
-      props.resourceAddress,
-      absolute,
-    );
-    React.useEffect(() => {
-      load.current.hasLoaded = false;
-      if (absolute && !isMarkdown) {
-        props.content.failed?.();
-      }
-    }, [src, absolute, isMarkdown]);
-    React.useEffect(
-      () =>
-        followOpens(frame, {
-          sessionId: props.sessionId,
-          root,
-          containmentRoot,
-          open,
-        }),
-      [props.sessionId, root, containmentRoot],
-    );
-    React.useEffect(() => onDshThemeChange(() => sendTheme(frame.current)), []);
-    React.useEffect(() => {
-      if (load.current.hasLoaded) {
-        props.content.loaded?.(file?.version ?? "lumiere");
-      }
-    }, [props.content.revision]);
-    if (!absolute || !src) {
+    if (!absolute || !/\.pdf$/i.test(absolute)) {
       return null;
     }
+    const root =
+      workspaceRoot(props.resourceAddress, absolute) ?? parentFolder(absolute);
+    const query = new URLSearchParams({
+      path: absolute,
+      ...(root ? { root } : {}),
+    });
+    const src = `/lumiere/pdf?${query.toString()}${addressFragment(props.resourceAddress)}`;
     return React.createElement("iframe", {
-      key: src,
+      // DSH's reload bumps content.revision; a new iframe asks the host for
+      // the PDF again and reports the new revision through its load event.
+      key: `${src}#${props.content.revision ?? 0}`,
       ref: (element: HTMLIFrameElement | null) => {
         frame.current = element;
-        load.current.initialBlank = initialBlankDocument(element);
         props.scrollportRef?.(element);
       },
       src,
-      title: "Lumière",
-      allow: "clipboard-read; clipboard-write",
-      ...frameHandlers(frame, load.current, props, file?.version),
+      title: "Lumière PDF",
+      onLoad: (event: { currentTarget: HTMLIFrameElement | null }) =>
+        handlePdfFrameLoad(event.currentTarget, props, file?.version),
+      onError: () => props.content.failed?.(),
       style: { border: 0, width: "100%", height: "100%", display: "block" },
     });
   };
-}
-
-function frameHandlers(
-  frame: { current: HTMLIFrameElement | null },
-  state: FrameLoadState,
-  props: BodyProps,
-  version: string | undefined,
-): {
-  onLoad(event: FrameEvent): void;
-  onError(event: FrameEvent): void;
-} {
-  return {
-    onLoad: (event) => {
-      const element = loadingFrame(event.currentTarget, frame.current);
-      if (element) {
-        handleFrameLoad(element, state, props, version);
-      }
-    },
-    onError: (event) => {
-      if (loadingFrame(event.currentTarget, frame.current)) {
-        state.hasLoaded = false;
-        props.content.failed?.();
-      }
-    },
-  };
-}
-
-/** A load/error from an iframe DSH replaced must not settle its replacement. */
-function loadingFrame(
-  element: HTMLIFrameElement | null,
-  live: HTMLIFrameElement | null,
-): HTMLIFrameElement | null {
-  return element && element === live ? element : null;
-}
-
-/** The iframe's own empty document, before its editor page navigation. */
-function initialBlankDocument(
-  element: HTMLIFrameElement | null,
-): Document | null {
-  const doc = element?.contentDocument;
-  return doc && doc.URL === "about:blank" ? doc : null;
-}
-
-function handleFrameLoad(
-  element: HTMLIFrameElement,
-  state: FrameLoadState,
-  props: BodyProps,
-  version: string | undefined,
-): void {
-  const doc = element.contentDocument;
-  // Only the iframe's initial about:blank document is not an editor page.
-  // A later blank document is a real navigation or reload and must fail.
-  if (
-    doc?.URL === "about:blank" &&
-    !state.hasLoaded &&
-    doc === state.initialBlank
-  ) {
-    return;
-  }
-  if (!isEditorDocument(doc)) {
-    state.hasLoaded = false;
-    props.content.failed?.();
-    return;
-  }
-  state.hasLoaded = true;
-  sendTheme(element);
-  element.contentWindow?.postMessage(SHOWN, location.origin);
-  props.content.loaded?.(version ?? "lumiere");
-}
-
-/** The page takes DSH's theme from a theme message (embedding.ts). */
-function sendTheme(frame: HTMLIFrameElement | null): void {
-  frame?.contentWindow?.postMessage(readDshTheme(), location.origin);
-}
-
-/** The page asks to open another note (a link to it): open it in a DSH tab. */
-export function followOpens(
-  frame: { current: HTMLIFrameElement | null },
-  target: {
-    sessionId: string | undefined;
-    root: string | undefined;
-    containmentRoot?: string | undefined;
-    open(address: string): void;
-  },
-): () => void {
-  const listener = (event: MessageEvent) => {
-    const request =
-      event.origin === location.origin &&
-      event.source === frame.current?.contentWindow
-        ? parseOpenMessage(event.data)
-        : undefined;
-    const allowedRoot = target.containmentRoot ?? target.root;
-    if (
-      request &&
-      target.sessionId &&
-      // A page may only open notes in its own workspace (never when root is unknown).
-      insideWorkspace(allowedRoot, request.path)
-    ) {
-      target.open(
-        sessionAddress(
-          target.sessionId,
-          target.root,
-          request.path,
-          request.fragment,
-        ),
-      );
-    }
-  };
-  window.addEventListener("message", listener);
-  return () => window.removeEventListener("message", listener);
 }

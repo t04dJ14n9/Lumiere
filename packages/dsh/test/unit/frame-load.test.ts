@@ -1,6 +1,6 @@
 import test from "node:test";
 import assert from "node:assert/strict";
-import { noteBody } from "../../src/client/index";
+import { editorFailed, noteBody, pdfBody } from "../../src/client/index";
 
 interface FrameEvent {
   readonly currentTarget: HTMLIFrameElement | null;
@@ -10,6 +10,11 @@ interface IframeProps {
   onLoad(event: FrameEvent): void;
   onError(event: FrameEvent): void;
   ref(element: HTMLIFrameElement | null): void;
+}
+
+interface PdfIframeProps extends IframeProps {
+  readonly key: string;
+  onError(): void;
 }
 
 function bodyProps() {
@@ -34,6 +39,34 @@ function bodyProps() {
     },
     failed,
     loaded,
+  };
+}
+
+function pdfBodyProps(revision = 0) {
+  const failed: string[] = [];
+  const loaded: string[] = [];
+  const scrollports: (HTMLElement | null)[] = [];
+  return {
+    props: {
+      resourceAddress: "dsh-resource://file/session/s/papers/A.pdf",
+      sessionId: "s",
+      content: {
+        kind: "renderer",
+        revision,
+        loaded: (version: string) => loaded.push(version),
+        failed: () => failed.push("failed"),
+      },
+      scrollportRef: (element: HTMLElement | null) => scrollports.push(element),
+      useResource: () => ({
+        value: {
+          absolutePath: "/Users/t04dj14n9/Code/Lumia/papers/A.pdf",
+          version: "1",
+        },
+      }),
+    },
+    failed,
+    loaded,
+    scrollports,
   };
 }
 
@@ -77,6 +110,50 @@ function setDocument(frame: HTMLIFrameElement, nextDocument: Document): void {
     nextDocument;
 }
 
+function pdfFrame(
+  document: Document,
+  post: (message: unknown) => void,
+): HTMLIFrameElement {
+  return {
+    contentDocument: document,
+    contentWindow: { postMessage: post },
+  } as unknown as HTMLIFrameElement;
+}
+
+/** The few DOM values sendTheme reads, and the postMessage origin it uses. */
+function withDshDom(run: () => void): void {
+  const previousDocument = globalThis.document;
+  const previousGetComputedStyle = globalThis.getComputedStyle;
+  const previousLocation = Object.getOwnPropertyDescriptor(
+    globalThis,
+    "location",
+  );
+  globalThis.document = {
+    body: { hasAttribute: () => false },
+    documentElement: { hasAttribute: () => false },
+  } as unknown as Document;
+  globalThis.getComputedStyle = (() => ({
+    fontFamily: "system-ui, sans-serif",
+    getPropertyValue: () => "",
+  })) as unknown as typeof getComputedStyle;
+  Object.defineProperty(globalThis, "location", {
+    configurable: true,
+    writable: true,
+    value: { origin: "http://dsh" },
+  });
+  try {
+    run();
+  } finally {
+    globalThis.document = previousDocument;
+    globalThis.getComputedStyle = previousGetComputedStyle;
+    if (previousLocation) {
+      Object.defineProperty(globalThis, "location", previousLocation);
+    } else {
+      Reflect.deleteProperty(globalThis, "location");
+    }
+  }
+}
+
 test("onLoad ignores the iframe's initial about:blank document", () => {
   const spy = bodyProps();
   const react = fakeReact();
@@ -114,6 +191,35 @@ test("onLoad reports a rendered editor page and re-announces it when DSH bumps t
   spy.props.content.revision = 1;
   signalRevision(react);
   assert.deepEqual(spy.loaded, ["1", "1"]);
+});
+
+test("a re-render detach and re-attach does not retire the live frame", () => {
+  const spy = bodyProps();
+  const iframe = noteBody(fakeReact(), () => {})(spy.props) as IframeProps;
+  const frame = frameWith(frameDocument("about:blank"));
+  iframe.ref(frame);
+  // React calls the callback ref with null, then with the same element, when
+  // the inline ref's identity changes between renders.
+  iframe.ref(null);
+  iframe.ref(frame);
+  setDocument(frame, frameDocument("http://dsh/note", true));
+  iframe.onLoad({ currentTarget: frame });
+  assert.deepEqual(spy.failed, []);
+  assert.deepEqual(spy.loaded, ["1"]);
+});
+
+test("the mount effect keeps the initial blank document the ref captured", () => {
+  const spy = bodyProps();
+  const react = fakeReact();
+  const iframe = noteBody(react, () => {})(spy.props) as IframeProps;
+  const blank = frameDocument("about:blank");
+  const frame = frameWith(blank);
+  iframe.ref(frame);
+  // Effects run after the ref attaches in a real render.
+  react.effects[0]?.();
+  iframe.onLoad({ currentTarget: frame });
+  assert.deepEqual(spy.failed, []);
+  assert.deepEqual(spy.loaded, []);
 });
 
 test("onLoad reports a later about:blank load from the same frame", () => {
@@ -162,32 +268,25 @@ test("onLoad inspects the live iframe's document", () => {
 });
 
 test("onLoad and onError from an iframe DSH replaced are ignored", () => {
-  const old = bodyProps();
-  const oldReact = fakeReact();
-  const oldIframe = noteBody(oldReact, () => {})(old.props) as IframeProps;
+  const spy = bodyProps();
+  const react = fakeReact();
+  const iframe = noteBody(react, () => {})(spy.props) as IframeProps;
   const stale = frameWith(frameDocument("http://dsh/note"));
-  oldIframe.ref(stale);
-  oldIframe.ref(null);
-
-  const next = bodyProps();
-  const nextReact = fakeReact();
-  const nextIframe = noteBody(nextReact, () => {})(next.props) as IframeProps;
+  iframe.ref(stale);
+  // A new attempt (key change) attaches a different element.
   const live = frameWith(frameDocument("http://dsh/note", true));
-  nextIframe.ref(live);
+  iframe.ref(live);
 
-  oldIframe.onLoad({ currentTarget: stale });
-  oldIframe.onError({ currentTarget: stale });
+  iframe.onLoad({ currentTarget: stale });
+  iframe.onError({ currentTarget: stale });
   setDocument(stale, frameDocument("http://dsh/note", true));
-  oldIframe.onLoad({ currentTarget: stale });
-  signalRevision(oldReact);
-  signalRevision(nextReact);
-  assert.deepEqual(old.failed, []);
-  assert.deepEqual(old.loaded, []);
-  assert.deepEqual(next.failed, []);
-  assert.deepEqual(next.loaded, []);
+  iframe.onLoad({ currentTarget: stale });
+  signalRevision(react);
+  assert.deepEqual(spy.failed, []);
+  assert.deepEqual(spy.loaded, []);
 
-  nextIframe.onLoad({ currentTarget: live });
-  assert.deepEqual(next.loaded, ["1"]);
+  iframe.onLoad({ currentTarget: live });
+  assert.deepEqual(spy.loaded, ["1"]);
 });
 
 test("onError reports a failure and stops re-announcing a loaded page", () => {
@@ -202,4 +301,61 @@ test("onError reports a failure and stops re-announcing a loaded page", () => {
   assert.deepEqual(spy.loaded, ["1"]);
   signalRevision(react);
   assert.deepEqual(spy.loaded, ["1"]);
+});
+
+test("editorFailed recognizes the webview's bootstrap error", () => {
+  const frame = (text: string) =>
+    ({
+      contentDocument: {
+        getElementById: (id: string) =>
+          id === "app" ? { textContent: text } : null,
+      },
+    }) as unknown as HTMLIFrameElement;
+  assert.equal(
+    editorFailed(frame("Lumiere could not open: no host")),
+    true,
+    "the prefix written by packages/markdown/src/webview/main.ts",
+  );
+  assert.equal(editorFailed(frame("Lumia could not open: no host")), false);
+  assert.equal(editorFailed(null), false);
+});
+
+test("PDF body reports only a Lumière page as loaded and sends DSH's theme", () => {
+  withDshDom(() => {
+    const spy = pdfBodyProps();
+    const iframe = pdfBody(fakeReact())(spy.props) as PdfIframeProps;
+    const posted: unknown[] = [];
+    const errorDocument = {
+      URL: "http://dsh/error",
+      querySelector: () => null,
+    } as unknown as Document;
+    const pageDocument = {
+      URL: "http://dsh/pdf",
+      querySelector: (selector: string) =>
+        selector === 'meta[name="lumiere-panel"]' ? {} : null,
+    } as unknown as Document;
+    const page = pdfFrame(pageDocument, (message) => posted.push(message));
+    iframe.ref(page);
+    iframe.onLoad({
+      currentTarget: frameWith({
+        URL: "about:blank",
+      } as unknown as Document),
+    });
+    iframe.onLoad({ currentTarget: pdfFrame(errorDocument, () => {}) });
+    assert.deepEqual(spy.failed, ["failed"], "an HTTP error is not loaded");
+    assert.deepEqual(spy.loaded, []);
+
+    iframe.onLoad({ currentTarget: page });
+    assert.deepEqual(spy.failed, ["failed"]);
+    assert.deepEqual(spy.loaded, ["1"]);
+    assert.deepEqual(spy.scrollports, [page]);
+    assert.equal(posted.length, 1);
+    assert.equal((posted[0] as { lumiere?: string }).lumiere, "theme");
+  });
+});
+
+test("PDF body recreates its iframe when DSH reloads the content", () => {
+  const first = pdfBody(fakeReact())(pdfBodyProps(0).props) as PdfIframeProps;
+  const second = pdfBody(fakeReact())(pdfBodyProps(1).props) as PdfIframeProps;
+  assert.notEqual(first.key, second.key);
 });

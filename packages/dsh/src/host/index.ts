@@ -30,6 +30,7 @@ export async function apply(ctx: DshContext): Promise<void> {
   registerRoutes(ctx, host, {
     markdown,
     shim: path.join(bundle, "page", "shim.js"),
+    pdf: path.join(bundle, "pdf"),
   });
 }
 
