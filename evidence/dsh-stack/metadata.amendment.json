@@ -1,0 +1,28 @@
+{
+  "amendmentDate": "2026-11-13",
+  "timezone": "Asia/Shanghai (UTC+8)",
+  "targetBranch": "review/dsh-stack-evidence-a54c3e02",
+  "targetPath": "evidence/dsh-stack/metadata.json",
+  "originalPreserved": true,
+  "instruction": "Add this file beside metadata.json. Do not delete or overwrite the as-published metadata.json or any raw logs (gates, vscode, http, pdf, react). Do not commit or push in this step.",
+  "asPublishedClaimsLeftInPlace": {
+    "verifiedHead": "9a10d469a6f10e12b254485b88b9c27bf1f0c3bb",
+    "publishedHead": "a54c3e024064b5728493a7a8ec45686f0fd6b850",
+    "publishedHeadNote": "a54c3e02 is 9a10d469 plus #736's README-only sentence 46a8151a; no code or test changed after the gate."
+  },
+  "corrections": {
+    "publishedParentOfTip": "46a8151a24a870e41c4d3e188af63c9bdf612afd",
+    "publishedParentTree": "6c1be6a7b722df9939d0a54419a33fa5c0517175",
+    "publishedTip": "a54c3e024064b5728493a7a8ec45686f0fd6b850",
+    "publishedTipTree": "3b934b2aade4d484b066aa42d0221b27af161192",
+    "claimedWorktreeHead": "9a10d469a6f10e12b254485b88b9c27bf1f0c3bb",
+    "claimedWorktreeHeadIsPublishedCommit": false,
+    "claimedWorktreeHeadIsPublishedParentOfTip": false,
+    "testedTreeEqualityWithPublishedTipTree": "unknown",
+    "publishedHeadNoteCorrection": "False as published: 'a54c3e02 is 9a10d469 plus #736's README-only sentence 46a8151a; no code or test changed after the gate.' The published parent of a54c3e02 is 46a8151a (README-only vs 0b02f7fd). 9a10d469 is not a published commit and is not the published parent. Tree equality between the tested 9a10d469 worktree and published tip tree 3b934b2aade4d484b066aa42d0221b27af161192 is unknown.",
+    "actionsRunnerId": "0, not null. Job logs 404 / not stored. Cause UNKNOWN. Not a demonstrated test regression and not a proven billing block.",
+    "vscodeProvenance": "Published logs show first root run failed properties-caret (29/30), isolation 2/2, rerun 30/30. The metadata claim that 'the failing spec varies between full runs (native-links at 9a10d469's parent), so the suite is flaky under load, not code-specific' is not independently proven here: no origin/main control log is in this evidence branch. Do not treat this as a proven main-control flake.",
+    "gateTimeNote": "provenance.txt assigns commit time 2026-11-13 02:15:37 +0800 and the subject 'test(dsh): extend the end-to-end suite onto the rebased stack' to head 9a10d469. That timestamp is the committer time of published 0b02f7fdf73cbf23d3bae2419d5df76b25e906ce; the matching subject is published a54c3e024064b5728493a7a8ec45686f0fd6b850.",
+    "ownComputerHostGui": "These are Mac-run 9a10 worktree logs. They do not satisfy the installed own-computer Host GUI + screenshots requirement."
+  }
+}

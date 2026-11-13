@@ -1,0 +1,20 @@
+AMENDMENT 2026-11-13 Asia/Shanghai (UTC+8)
+Immutable original left unchanged: evidence/dsh-stack/provenance.txt
+(copy also saved at originals/evidence/dsh-stack/provenance.txt).
+
+As published:
+head: 9a10d469a6f10e12b254485b88b9c27bf1f0c3bb
+status:
+captured: 2026-11-12T19:21:12Z
+commit: 2026-11-13 02:15:37 +0800 test(dsh): extend the end-to-end suite onto the rebased stack
+Corrections (do not delete the raw record):
+- The `head:` value 9a10d469a6f10e12b254485b88b9c27bf1f0c3bb is not a published GitHub commit and is not the published parent of the tip.
+- Published tip is a54c3e024064b5728493a7a8ec45686f0fd6b850 (tree 3b934b2aade4d484b066aa42d0221b27af161192).
+- Published parent of the tip is 46a8151a24a870e41c4d3e188af63c9bdf612afd (tree 6c1be6a7b722df9939d0a54419a33fa5c0517175).
+- Tested-tree equality between the claimed worktree HEAD and the published tip tree is unknown.
+- The line `commit: 2026-11-13 02:15:37 +0800 test(dsh): extend the end-to-end suite onto the rebased stack`
+  uses the committer timestamp of published 0b02f7fdf73cbf23d3bae2419d5df76b25e906ce
+  (2026-11-12T18:15:37Z = 2026-11-13 02:15:37 Asia/Shanghai UTC+8). The matching subject is published
+  a54c3e024064b5728493a7a8ec45686f0fd6b850, not a recovered 9a10d469 object.
+- captured: 2026-11-12T19:21:12Z remains as in the original record.
+- status: remains empty as in the original record.
