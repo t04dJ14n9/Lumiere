@@ -66,12 +66,12 @@ saved only when it says `image/…`, in base64 or percent-encoded
 (`image/svg+xml,%3Csvg…`): a note's links can point anywhere. The closing
 message counts the skipped URLs and names the first three.
 A property counts when its value, or an item of its list, is one `http(s):` URL
-whose path ends in an image extension (nothing is fetched to find out, as in
-Obsidian). It is rewritten where it stands, through the properties module's
-YAML edits (`mapPropertyStrings`), as a `[[…]]` link in the value's own quoting;
-comments, other values and the list's style stay as they were. Obsidian writes a
-wikilink here whatever the Links settings say, and so do we. A value YAML cannot
-rewrite in place (block scalar, anchor, alias, tag, or nested below the top
+whose path ends in an image extension (nothing is fetched to find out). It is
+rewritten where it stands, through the properties module's YAML edits
+(`mapPropertyStrings`), as a `[[…]]` link in the value's own quoting; comments,
+other values and the list's style stay as they were. Obsidian writes a wikilink
+here whatever the Links settings say, and so do we. A value YAML cannot rewrite
+in place (block scalar, anchor, alias, tag, or nested below the top
 level) is left alone.
 Every web download is limited (`src/attachments/guarded-download.ts`): 30
 seconds in all, 50 MB (a stream is cancelled where it crosses the limit), and at
@@ -139,5 +139,15 @@ Download Attachments differs from Obsidian's: Obsidian shows a gallery of
 thumbnails to untick; we show a checklist of file names, hosts and URLs, because
 the host services draw no images (VS Code's multi-select quick pick; outside VS
 Code, a checkbox list in the page). A host may show only the first 256 rows, so
-a note with more than that offers the first 256 only. It reads list items of
-properties too, where Obsidian reads string values only.
+a note with more than that offers the first 256 only. Read from Obsidian
+1.15.0's code, the other differences are:
+
+- A URL that serves no image is skipped here and named in the summary;
+  Obsidian saves the answer as `Image.jpg`.
+- A `Content-Disposition` name is read from `filename*=` too and from an
+  `inline` disposition; Obsidian reads `filename=` of an `attachment` only.
+- A property is taken when its path ends in an image extension and when it is
+  a list item; Obsidian takes a string value whose whole URL ends in the
+  extension (`cat.png?w=2` is not taken there) and no list items.
+- A download stops at 30 seconds or 50 MB and never reaches a private address;
+  Obsidian has no such limits.

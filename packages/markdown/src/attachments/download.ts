@@ -138,8 +138,9 @@ function isImageUrl(value: string): boolean {
 
 /**
  * The image URLs the note's properties hold, as a value or as a list item,
- * in reading order. As in Obsidian, a URL counts when its path ends in an
- * image extension; nothing is fetched to find out.
+ * in reading order. A URL counts when its path ends in an image extension;
+ * nothing is fetched to find out. (Obsidian asks more: the whole URL must end
+ * in the extension, so `cat.png?w=2` is not taken there.)
  */
 export function propertyImageUrls(text: string): string[] {
   const urls: string[] = [];
