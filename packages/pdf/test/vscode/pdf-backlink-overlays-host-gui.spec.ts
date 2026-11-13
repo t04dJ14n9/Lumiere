@@ -337,8 +337,27 @@ test("Host GUI: PDF backlink overlays checklist (Chrome)", async ({
   await expect
     .poll(() => pageFit(viewer))
     .toEqual({ fitsWidth: true, fitsHeight: true, fills: true });
+  await command(page, "PDF: Fit Width");
+  await expect
+    .poll(() => pageFit(viewer))
+    .toMatchObject({ fitsWidth: true, fitsHeight: false, fills: true });
+  await expect(statusBarEntry(page, /^Page 1 \/ 12$/u)).toBeVisible();
+  const pageTop = () =>
+    viewer.evaluate(
+      () =>
+        document
+          .querySelector('.page[data-page-index="0"]')!
+          .getBoundingClientRect().top,
+    );
+  const topBefore = await pageTop();
   const atRegion = await pagePoint(viewer, 1);
   await drag(page, atRegion(150, 150), atRegion(250, 250));
+  const topAfter = await pageTop();
+  const pageUnchanged = await statusBarEntry(
+    page,
+    /^Page 1 \/ 12$/u,
+  ).isVisible();
+  const panned = Math.abs(topAfter - topBefore) > 2;
   const regionCount = await viewer.locator(".region-selection").count();
   await page.keyboard.press("F1");
   await page
@@ -350,12 +369,14 @@ test("Host GUI: PDF backlink overlays checklist (Chrome)", async ({
     })
     .count();
   await page.keyboard.press("Escape");
-  const regionsOk = regionCount === 0 && selectRegionRows === 0;
+  const regionsOk =
+    regionCount === 0 && selectRegionRows === 0 && pageUnchanged && panned;
   results.push({
     item: 5,
-    title: "Regions off default: empty-page drag noop; Select Region absent",
+    title:
+      "Regions off default: empty-page drag pans and stays on page 1; no region; Select Region absent",
     status: regionsOk ? "PASS" : "FAIL",
-    notes: `region_selection=${regionCount} select_region_rows=${selectRegionRows}`,
+    notes: `region_selection=${regionCount} select_region_rows=${selectRegionRows} page_unchanged=${pageUnchanged} panned=${panned} top=${topBefore.toFixed(1)}->${topAfter.toFixed(1)}`,
   });
   await shot(page, "02-regions-off.png", evidence);
   flushEvidence(results, evidence, pageOnly, quote);

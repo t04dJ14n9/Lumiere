@@ -142,6 +142,58 @@ test("a list marker replaces another list's, checkbox and all, and a second pres
   );
 });
 
+// Obsidian 1.15.0's Toggle Numbered List writes the literal "1. " on every
+// selected line; the renderer numbers them. Lumia used to renumber 1, 2, 3.
+test("Toggle Numbered List writes '1. ' on every line, not 1, 2, 3", () => {
+  assert.equal(
+    edit("‹one\ntwo\nthree›", (s) => lineEdit(s, "1. ")),
+    "1. ‹one\n1. two\n1. three›",
+  );
+  assert.equal(
+    edit("‹> a\n> b›", (s) => lineEdit(s, "1. ")),
+    "‹> 1. a\n> 1. b›",
+  );
+});
+
+test("Toggle Numbered List keeps line structure and toggles every numbered marker off", () => {
+  // A replaced marker leaves the selection start at column 0: Obsidian sends
+  // only `{changes}`, and CodeMirror maps a position at the start of a
+  // replaced range to that start. An inserted marker maps to the right of
+  // itself (see the test above), which is why the two shapes differ.
+  assert.equal(
+    edit("‹- a\n2) b›", (s) => lineEdit(s, "1. ")),
+    "‹1. a\n1. b›",
+  );
+  assert.equal(
+    edit("‹a\n\nb›", (s) => lineEdit(s, "1. ")),
+    "1. ‹a\n\n1. b›",
+  );
+  assert.equal(
+    edit("‹> 1. a\n> 2. b›", (s) => lineEdit(s, "1. ")),
+    "‹> a\n> b›",
+  );
+  assert.equal(
+    edit("  1. nes|ted", (s) => lineEdit(s, "1. ")),
+    "  nes|ted",
+  );
+  assert.equal(
+    edit("‹1. a\n\n1. b›", (s) => lineEdit(s, "1. ")),
+    "‹a\n\nb›",
+  );
+  assert.equal(
+    edit("‹1. a\n2. b\n3. c›", (s) => lineEdit(s, "1. ")),
+    "‹a\nb\nc›",
+  );
+  assert.equal(
+    edit("1. [ ] it|em", (s) => lineEdit(s, "1. ")),
+    "it|em",
+  );
+  assert.equal(
+    edit("‹1. [ ] a\n2. b›", (s) => lineEdit(s, "1. ")),
+    "‹a\nb›",
+  );
+});
+
 // Obsidian 1.15.0's line commands, read from its app.js with REA
 // (2026-11-07): markers go after a line's `>` and indentation, and blank
 // lines in a selection of several are skipped.
@@ -164,7 +216,7 @@ test("inside a quote or callout, headings and list markers go after the `>`", ()
   );
   assert.equal(
     edit("‹> a\n> b›", (s) => lineEdit(s, "1. ")),
-    "‹> 1. a\n> 2. b›",
+    "‹> 1. a\n> 1. b›",
   );
   assert.equal(
     edit("  - nes|ted", (s) => lineEdit(s, "1. ")),

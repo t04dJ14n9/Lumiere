@@ -30,10 +30,7 @@ export function mapAppSettings(value: unknown): ObsidianOverrides {
       member(value.propertiesInDocument, ["visible", "hidden", "source"]),
     ],
     ["editor.defaultMode", editingMode(value.livePreview)],
-    [
-      "linkUpdates.mode",
-      value.alwaysUpdateLinks === true ? "always" : undefined,
-    ],
+    ["linkUpdates.mode", linkUpdateMode(value.alwaysUpdateLinks)],
   ];
   return Object.freeze(
     Object.fromEntries(entries.filter(([, item]) => item !== undefined)),
@@ -78,6 +75,13 @@ function editingMode(value: unknown): string | undefined {
     return undefined;
   }
   return value ? "livePreview" : "source";
+}
+/** Obsidian's false asks on each rename; true updates without asking. */
+function linkUpdateMode(value: unknown): "always" | "prompt" | undefined {
+  if (typeof value !== "boolean") {
+    return undefined;
+  }
+  return value ? "always" : "prompt";
 }
 function ignoreFilters(value: unknown): readonly string[] | undefined {
   if (

@@ -7047,3 +7047,18 @@ blocks to the correction in one list, so a caret starting on a rendered widget
 blocks are now tagged and only they (and tables) correct from inside; a
 source-motion unit pins a start on a rendered widget. No Obsidian code, CSS or
 assets were copied.
+
+## Toggle Numbered List's literal marker (#692, #702; 2026-11-12)
+
+A static read of Obsidian 1.15.0's `toggleNumberList()` (behaviour only,
+nothing copied) shows that it writes `1. ` on every nonblank selected line and
+counts a numbered task's box as part of the marker, so a selection of numbered
+tasks toggles off. `lineEdit` now does both; parity units cover existing
+markers, quotes, indentation, blank lines, toggle-off and numbered tasks.
+`toggleNumberList()` sends only `{changes}`, so the selection comes from
+CodeMirror's default mapping: a position at the start of a *replaced* marker
+stays at column 0, while an *inserted* marker maps to the right of itself.
+The regression expectations follow that difference, read from Obsidian's
+command and from `@codemirror/state`'s transaction mapping.
+Validation: `obsidian-commands.test.ts` passes (20 tests); full gates run
+separately. Table-cell refusal is not part of this command.

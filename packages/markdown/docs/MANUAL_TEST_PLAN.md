@@ -521,7 +521,10 @@ title, then set `lumiere.markdown.plugins.inlineTitle.enabled` to true.
    Obsidian. Click a foldable title to toggle; reload: each panel keeps its
    own state. Clicking the link in a title follows it without folding.
 2. With the caret inside, the source shows and edits normally.
-3. **Insert Callout** wraps the selected lines; one undo removes it.
+3. **Insert Callout** wraps the selected lines; at column 0 of a non-empty
+   line it inserts a Title/Contents callout template above the line, and on
+   an empty line it inserts that template with blank lines around it. Check
+   that `NOTE` is selected and one undo removes the insertion.
 
 ### math
 
@@ -1501,7 +1504,7 @@ owner's vault for these checks.
 3. Give the second vault different app policies; open both and split one note
    into two panels. Each panel and command uses its originating vault. Switching
    focus during a new-note or rename action must not select another vault's
-   policy. `alwaysUpdateLinks: false` restores MW's default prompt.
+   policy. `alwaysUpdateLinks: false` maps to MW's `prompt` mode.
 4. Externally edit and delete `app.json`; effective settings refresh or return to
    package defaults. Temporarily write invalid JSON: the last good policies stay
    in use and the output channel logs the read failure once. Fix the JSON to

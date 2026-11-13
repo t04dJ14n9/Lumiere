@@ -32,7 +32,7 @@ records it in `docs/PARITY.md`.
 | pagePreview | Mod-hover preview of notes, headings, blocks and attachments | External links are not previewed |
 | tables | Spreadsheet-style table editing, selection, TSV clipboard, row and column commands and dragging | — |
 | callouts | All callout types, nesting, folding with per-panel memory | Colours follow the VS Code theme |
-| math | MathJax inline and block math | No user macros |
+| math | MathJax inline and block math | `lumiere.markdown.math.macros` supplies user macros (name → replacement); empty by default |
 | diagrams | Mermaid | Theme follows VS Code light or dark; HTML labels off |
 | codeBlocks | Prism highlighting and a Copy button | Languages without a loaded grammar stay plain |
 | footnotes | References as superscript numbers in LaTeX paper style (an intentional departure from Obsidian), kept under selections, faint source only at the caret, hover previews, click to the definition, inline footnotes, Insert Footnote | Definitions stay editable text led by their number; no Reading view footnotes section |
@@ -45,7 +45,7 @@ records it in `docs/PARITY.md`.
 | outgoingLinks | Explorer **Outgoing Links** | Off by default; no unlinked mentions section |
 | quickSwitcher | **Quick Switcher** over notes, aliases and unresolved links | No key binding (Mod+O is VS Code's Open File); an empty query lists recently opened notes, then recently modified ones never opened here |
 | wordCount | Words and characters in the status bar | Counting rules are this extension's reading of Obsidian's |
-| linkUpdates | Updates links when notes or folders are renamed in VS Code | Asks first by default (`prompt`, with Always Update); **Rename Heading…** updates links to a heading |
+| linkUpdates | Updates links when notes or folders are renamed in VS Code | Asks first by default (`prompt`, matching Obsidian's `alwaysUpdateLinks: false`), with a persistent **Always Update**; `always` rewrites without asking, `never` leaves links untouched; **Rename Heading…** updates links to a heading |
 | folding | Heading and list folding, restored on reload | — |
 | lineNumbers | Line numbers laid out like VS Code's gutter, following `editor.lineNumbers`; rendered blocks list all their source lines' numbers | On by default |
 | gitGutter | Git change bars (added, modified, deleted) beside the line numbers against HEAD or the index, through VS Code's git extension; click a bar for a rendered peek with Revert and Stage File; Alt+F5 / Shift+Alt+F5 move between changes | On by default |

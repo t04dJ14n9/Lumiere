@@ -115,3 +115,19 @@ test("mermaid guarded chrome matches Obsidian radius and UI font sizes", () => {
   assert.match(css, /\.mermaid-guard-title\s*\{[^}]*font-size:\s*13px;/);
   assert.match(css, /\.mermaid-guard-description\s*\{[^}]*font-size:\s*12px;/);
 });
+
+test("diagram chrome reserves a physical right lane for RTL editors", () => {
+  const laneRule =
+    /\.hybrid-block\.hybrid-diagram\s+pre\[data-fence="mermaid"\]:has\(> svg\)\s*\{[^}]*\}/;
+  const lane = css.match(laneRule)?.[0];
+  assert.ok(lane, "expected diagram lane rule");
+  // editor.rightToLeft sets dir=rtl, but the chrome uses physical right.
+  assert.match(css, /--diagram-toolbar-lane\s*:/);
+  assert.match(lane, /margin-right\s*:\s*var\(--diagram-toolbar-lane\)/);
+  assert.doesNotMatch(lane, /margin-inline-end\s*:/);
+  // The scrollport is inset; padding stays 0 so Obsidian LP alignment holds.
+  assert.match(
+    css,
+    /pre\[data-fence="mermaid"\]:has\(> svg\)\s*\{[^}]*padding:\s*0;/,
+  );
+});

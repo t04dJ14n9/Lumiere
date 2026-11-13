@@ -1,6 +1,16 @@
 # Obsidian parity observations
 
-Reference: Obsidian 1.13.7, to be compared by the owner in a disposable vault. Never use the owner's vault. Record date, method, observed result and any issue link in each row. Automated checks do not establish visual or behavioral parity. All rows start not observed.
+Reference: Obsidian 1.15.0 (installed app; static shipped-artifact REA, 2026-11-10), to be compared by the owner in a disposable vault. Never use the owner's vault. Record date, method, observed result and any issue link in each row. Automated checks do not establish visual or behavioral parity. New rows start not observed; see the re-baseline note for older measurements and static reads.
+
+**Re-baseline note (2026-11-10).** Rows naming a version below 1.15.0 are
+older-version evidence; the installed app is 1.15.0. Rows naming
+1.15.0 are static shipped-code reads, not live observations. Re-measure the
+1.14.4 rows before treating them as 1.15.0 matches. Relative to 1.13.7, the
+1.15.0 catalog has 128 net more CSS custom properties (including
+`--bases-kanban-*`, `--highlight-background-*`, `--mermaid-*`) and new
+`app:` command IDs `app:migrate-frontmatter`, `app:increase-font-size`,
+`app:decrease-font-size`, `app:open-file`. Evidence: static REA
+`ev_6656f973c52d9c8d523b697ac6a77957170ffcda27c58103a519f55c9b517b1a`.
 
 | Action or behavior (DESIGN §13–§15) | Obsidian observation: date and method | Workshop result | How checked | Status |
 | --- | --- | --- | --- | --- |
@@ -50,7 +60,7 @@ Reference: Obsidian 1.13.7, to be compared by the owner in a disposable vault. N
 | `lookUp` | not observed | not manually observed | macOS only; manual scenario pending; automated evidence is in the 2026-11-01 record | not observed |
 | `linkUpdates` | not observed | not manually observed | Manual scenario pending; automated evidence is in phase records | not observed |
 | `settings` | not observed | not manually observed | Manual scenario pending; automated evidence is in phase records | not observed |
-| `quickSwitcher` | 2026-10-17, read from Obsidian 1.14.4's switcher and checked with its public fuzzy search | Same scoring as suggestions: name, then path a point lower, attachments listed, excluded files 10 lower; an empty query lists recently modified rather than recently opened notes (src/plugins/quickSwitcher/README.md) | Unit tests pin each rule | behaviour measured; visual parity not observed |
+| `quickSwitcher` | 2026-10-17, read from Obsidian 1.14.4's switcher and checked with its public fuzzy search | Same scoring as suggestions: name, then path a point lower, attachments listed, excluded files 10 lower; an empty query lists recently opened notes, then recently modified ones never opened here (`src/plugins/quickSwitcher/ranking.ts`) | Unit tests pin each rule | behaviour measured; visual parity not observed |
 | `wordCount` | 2026-10-17, measured by reading Obsidian 1.14.4's status bar for the same 76 texts in a throwaway vault over the DevTools protocol: punctuation, numbers, hyphens, apostrophes, Markdown, Han, kana, Korean, Hindi, Tamil, Thai, emoji, properties, line breaks | Matches all 76 (src/plugins/wordCount/README.md) | Differential probe (Obsidian's counts and Workshop's over the same texts); unit tests pin each rule | behaviour measured; visual parity not observed |
 | `toggleBold` | 2026-10-17, behaviour measured over the DevTools protocol in a throwaway vault: caret, word, selection and unwrap | Matches the measured behaviour (docs/OBSIDIAN_KEYS.md) | Differential probe (Obsidian and the browser harness, same keys); unit tests pin each rule | behaviour measured; visual parity not observed |
 | `toggleItalics` | 2026-10-17, behaviour measured over the DevTools protocol in a throwaway vault: caret, word, selection and unwrap | Matches the measured behaviour (docs/OBSIDIAN_KEYS.md) | Differential probe (Obsidian and the browser harness, same keys); unit tests pin each rule | behaviour measured; visual parity not observed |
@@ -70,7 +80,7 @@ Reference: Obsidian 1.13.7, to be compared by the owner in a disposable vault. N
 | `setHeading0`…`setHeading6` | not observed | not manually observed | Manual scenario pending; automated evidence is in phase records | not observed |
 | `toggleChecklist` | 2026-10-17, behaviour measured over the DevTools protocol in a throwaway vault: text, bullet, number, quote and empty line | Matches the measured behaviour (docs/OBSIDIAN_KEYS.md) | Differential probe (Obsidian and the browser harness, same keys); unit tests pin each rule | behaviour measured; visual parity not observed |
 | `cycleListChecklist` | not observed | not manually observed | Manual scenario pending; automated evidence is in phase records | not observed |
-| `toggleBulletList`, `toggleNumberedList`, `toggleBlockquote` | not observed | not manually observed | Manual scenario pending; automated evidence is in phase records | not observed |
+| `toggleBulletList`, `toggleNumberedList`, `toggleBlockquote` | 2026-11-10, static read of Obsidian 1.15.0's line commands (app.js, REA; #692), not observed running | Matches the read rules: literal `1. ` on every nonblank selected line, quotes/indentation and blank lines kept, numbered tasks toggle off; table-cell refusal belongs to the formatting commands that check `inTableCell` | Unit regressions (test/unit/formatting/obsidian-commands.test.ts; not run in this review pass) | code read; not observed running |
 | `swapLineUp`, `swapLineDown` | not observed | not manually observed | Manual scenario pending; automated evidence is in phase records | not observed |
 | `followLink` | not observed | not manually observed | Manual scenario pending; automated evidence is in phase records | not observed |
 | `openLinkToSide` | not observed | not manually observed | Manual scenario pending; automated evidence is in phase records | not observed |
@@ -123,8 +133,8 @@ Reference: Obsidian 1.13.7, to be compared by the owner in a disposable vault. N
 | **tags**: the **Tags** view is hierarchical (`a/b/c` counts toward `a/b` and   `a`), merges case and keeps the most frequent casing, and searches on click | not observed | not manually observed | Manual scenario pending; automated evidence is in phase records | not observed |
 | Tag search uses the index, not a full read of the workspace. | not observed | not manually observed | Manual scenario pending; automated evidence is in phase records | not observed |
 | **linkUpdates**: on `files/willRename` (from   `workspace.onWillRenameFiles`), rewrite incoming links and embeds through   `vault.backlinks`, keeping aliases, subpaths and the link style | not observed | not manually observed | Manual scenario pending; automated evidence is in phase records | not observed |
-| The default,   `prompt`, shows a **Update links in N files?** dialog | not observed | not manually observed | Manual scenario pending; automated evidence is in phase records | not observed |
-| `always` and `never`   skip it | not observed | not manually observed | Manual scenario pending; automated evidence is in phase records | not observed |
+| The default,   `prompt`, matches Obsidian's `alwaysUpdateLinks: false`: it shows the **Update links in N files?** dialog | not observed | not manually observed | Manual scenario pending; automated evidence is in phase records | not observed |
+| `always` rewrites without asking; `never`   leaves links untouched | not observed | not manually observed | Manual scenario pending; automated evidence is in phase records | not observed |
 | Heading renames are a later enhancement. | not observed | not manually observed | Manual scenario pending; automated evidence is in phase records | not observed |
 | **quickSwitcher**: **Lumiere: Quick Switcher** opens a quick pick   over notes, aliases and unresolved links, with Obsidian's scoring | not observed | not manually observed | Manual scenario pending; automated evidence is in phase records | not observed |
 | Enter   opens | not observed | not manually observed | Manual scenario pending; automated evidence is in phase records | not observed |
@@ -170,7 +180,7 @@ Reference: Obsidian 1.13.7, to be compared by the owner in a disposable vault. N
 | Command: lumiere.markdown.insertHorizontalRule | not observed | not manually observed | Manual scenario pending; automated evidence is in phase records | not observed |
 | Command: lumiere.markdown.insertCodeBlock | 2026-10-17, measured against Obsidian's command of the same name in a throwaway vault | Matches: fences around the selected lines | Differential probe; unit tests | behaviour measured |
 | Command: lumiere.markdown.insertTag | 2026-10-17, measured against Obsidian's command of the same name in a throwaway vault | Matches: `#` before the selection | Differential probe; unit tests | behaviour measured |
-| Command: lumiere.markdown.clearFormatting | 2026-10-17, measured against Obsidian's command of the same name in a throwaway vault | Matches, except links keep their syntax (Obsidian turns `[l](u)` into `lu`) | Differential probe; unit tests | behaviour measured |
+| Command: lumiere.markdown.clearFormatting | 2026-10-17, measured against Obsidian's command of the same name in a throwaway vault (then: Lumiere kept link syntax). Shipped 1.15.0 formatting-token code read on this change; no live 1.15.0 re-measure. | Unit tests: complete inline, image, reference, autolink, link-definition and plain-wikilink markers are stripped while label, URL and reference text remain (`[l](u)` → `lu`, not label only). Escapes, code text, bare URLs and wiki embeds stay. | Differential probe; static code read; unit tests | unit-tested |
 | Command: lumiere.markdown.deleteParagraph | 2026-10-17, measured against Obsidian's command of the same name in a throwaway vault | Matches: CodeMirror's delete line, as Obsidian's; unbound (Cmd+D is VS Code's) | Differential probe; unit tests | behaviour measured |
 | Command: lumiere.markdown.addCursorAbove | 2026-10-17, measured against Obsidian's command of the same name in a throwaway vault | Matches; bound to Cmd+Alt+Up as in VS Code (Obsidian binds no key) | Differential probe; unit tests | behaviour measured |
 | Command: lumiere.markdown.addCursorBelow | 2026-10-17, measured against Obsidian's command of the same name in a throwaway vault | Matches; bound to Cmd+Alt+Down as in VS Code (Obsidian binds no key) | Differential probe; unit tests | behaviour measured |
@@ -324,7 +334,7 @@ Reference: Obsidian 1.13.7, to be compared by the owner in a disposable vault. N
 | VS Code owns save, undo/redo, hot exit and settings | not observed | not manually observed | Manual scenario pending; automated evidence is in phase records | not observed |
 | Note line height is Obsidian's 1.5 times the note's own font size; family, weight, spacing and ligatures follow VS Code's editor settings for Markdown | Obsidian 1.14.4: body 1.5 (24px at 16px, 36px at 24px), headings 1.2/1.2/1.3/1.4/1.5/1.5, code and footnotes 1.5, table cells 1.3 (`docs/obsidian-measurements/font-size-results-16.json`, `-24.json`) | Owner decision, 2026-10-10: `lumiere.markdown.editor.lineHeight` (default 1.5, a multiple) replaces following `editor.lineHeight` and VS Code's 1.35 rule; table cells keep the note's ratio, not Obsidian's 1.3 | Browser `font-size.spec.ts`, `stable-blocks.spec.ts`; real VS Code `font-size.spec.ts`, `font.spec.ts` | not observed |
 | Theme follows VS Code colors | not observed | not manually observed | Manual scenario pending; automated evidence is in phase records | not observed |
-| Rename link updates prompt by default | not observed | not manually observed | Manual scenario pending; automated evidence is in phase records | not observed |
+| Rename link updates ask by default (Obsidian's `alwaysUpdateLinks: false`) | not observed | not manually observed | Manual scenario pending; automated evidence is in phase records | not observed |
 | Native outline/backlinks/tags views | not observed | not manually observed | Manual scenario pending; automated evidence is in phase records | not observed |
 | Webview CSP (DESIGN §19): `default-src 'none'`, nonce scripts, `connect-src ${cspSource} blob:`, no remote content in untrusted workspaces | not applicable | not manually observed | Manual scenario pending; `test/unit/editor/webview-html.test.ts` | not observed |
 | External application schemes prompt; own application scheme opens directly | not observed | not manually observed | Manual scenario pending; automated evidence is in phase records | not observed |

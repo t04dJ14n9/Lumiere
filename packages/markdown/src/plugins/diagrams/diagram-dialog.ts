@@ -45,7 +45,9 @@ export function bindDiagramInspector(
   inspect.textContent = "⤢";
   inspect.setAttribute("aria-label", "Inspect diagram");
   inspect.setAttribute("title", "View in larger window");
-  host.append(inspect);
+  // Place Inspect with Copy and Edit on the shell, not in the scrolling fence.
+  const chrome = host.closest(".hybrid-block") ?? host;
+  chrome.append(inspect);
   const inspector = new DiagramInspector(inspect, svg);
   inspect.addEventListener("click", (event) => inspector.show(event), {
     signal,
