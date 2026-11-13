@@ -56,10 +56,13 @@ function listenToEmbedder(send: (frame: PageFrame) => void): void {
     if (!isEmbeddingMessage(event.data)) {
       return;
     }
-    event.stopImmediatePropagation();
+    // Check the sender BEFORE stopping propagation: a foreign-origin message
+    // that merely carries a `lumiere` key must not suppress the editor's RPC
+    // listener for that event.
     if (event.source !== window.parent || event.origin !== location.origin) {
       return;
     }
+    event.stopImmediatePropagation();
     const theme = parseThemeMessage(event.data);
     if (theme) {
       stopFollowingSystem();
@@ -121,10 +124,13 @@ function connectChannel(panel: string): (frame: PageFrame) => void {
   const waiting: string[] = [];
   let port: MessagePort | undefined;
   const receive = receiver((frame) => send(frame));
+  // The port is the page's channel to its host: a foreign-origin parent is
+  // not this page's embedder, and its message must not stop other listeners.
   window.addEventListener("message", (event) => {
     if (
       port ||
       event.source !== window.parent ||
+      event.origin !== location.origin ||
       !isPortMessage(event.data, panel) ||
       !event.ports[0]
     ) {
