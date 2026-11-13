@@ -105,3 +105,46 @@ test("a modal ask returns the chosen action title and leaves dismiss as undefine
     undefined,
   );
 });
+
+test("a modal ask does not mark a close affordance when a real caller passes no Cancel", async () => {
+  // packages/markdown/src/plugins/attachments/download-command.ts
+  const downloadActions = ["Download"];
+  const download = loadDialogs({ title: "Download" });
+  assert.equal(
+    await download.dialogs.ask(
+      "Download the 1 image this note shows from the web into the vault?",
+      downloadActions,
+    ),
+    "Download",
+  );
+  const downloadItems = download.calls[0]!.slice(2);
+  assert.deepEqual(titles(downloadItems), downloadActions);
+  assert.equal(
+    downloadItems.filter(
+      (item) =>
+        typeof item === "object" &&
+        item !== null &&
+        (item as MessageItem).isCloseAffordance === true,
+    ).length,
+    0,
+  );
+
+  // packages/markdown/src/plugins/linkUpdates/host.ts
+  const updateActions = ["Update Links", "Always Update", "Don't Update"];
+  const updates = loadDialogs({ title: "Don't Update" });
+  assert.equal(
+    await updates.dialogs.ask("Update links in 1 file?", updateActions),
+    "Don't Update",
+  );
+  const updateItems = updates.calls[0]!.slice(2);
+  assert.deepEqual(titles(updateItems), updateActions);
+  assert.equal(
+    updateItems.filter(
+      (item) =>
+        typeof item === "object" &&
+        item !== null &&
+        (item as MessageItem).isCloseAffordance === true,
+    ).length,
+    0,
+  );
+});
