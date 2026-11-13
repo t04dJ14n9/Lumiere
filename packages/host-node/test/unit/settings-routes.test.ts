@@ -102,9 +102,18 @@ async function serve(t: test.TestContext) {
     new Set(["lumiere.markdown.plugins.cursorBridge.enabled"]),
   );
   const server = createServer((req, res) => {
-    void routes
-      .handle(req, res, "")
-      .then((handled) => handled || res.writeHead(404).end());
+    void routes.handle(req, res, "").then(
+      (handled) => {
+        if (!handled) {
+          res.writeHead(404).end();
+        }
+      },
+      () => {
+        if (!res.headersSent) {
+          res.writeHead(500).end();
+        }
+      },
+    );
   });
   await new Promise<void>((resolve) => server.listen(0, "127.0.0.1", resolve));
   t.after(async () => {
@@ -115,7 +124,13 @@ async function serve(t: test.TestContext) {
   const url = `http://127.0.0.1:${port}/`;
   const post = (body: unknown) =>
     fetch(url, { method: "POST", body: JSON.stringify(body) });
-  return { settings, file, url, post };
+  const postRaw = (body: string) =>
+    fetch(url, {
+      method: "POST",
+      headers: { "content-type": "application/json" },
+      body,
+    });
+  return { settings, file, url, post, postRaw };
 }
 
 test("the page lists every setting with its value, and a change reaches the plugins", async (t) => {
@@ -184,6 +199,44 @@ test("a value the schema refuses, or a key that is not Lumière's, is not writte
     400,
   );
   assert.equal(settings.get("editor.fontSize", 0), 16);
+});
+
+test("a bad, non-object, empty or oversized settings body is a JSON 400", async (t) => {
+  const { settings, postRaw } = await serve(t);
+  const bodies = [
+    "{",
+    "[]",
+    "null",
+    '"text"',
+    "42",
+    "",
+    JSON.stringify({
+      key: "lumiere.markdown.editor.fontSize",
+      value: "x".repeat(64 * 1024),
+    }),
+  ];
+  for (const body of bodies) {
+    const response = await postRaw(body);
+    assert.equal(response.status, 400, body.slice(0, 32));
+    assert.match(
+      response.headers.get("content-type") ?? "",
+      /^application\/json/,
+    );
+    assert.deepEqual(await response.json(), { error: "Invalid request body" });
+  }
+  assert.equal(settings.get("editor.fontSize", 0), 16);
+});
+
+test("a settings write that fails is not reported as a bad body", async (t) => {
+  const { settings, post } = await serve(t);
+  settings.access.update = async () => {
+    throw new Error("write failed");
+  };
+  const response = await post({
+    key: "lumiere.markdown.editor.fontSize",
+    value: 20,
+  });
+  assert.equal(response.status, 500);
 });
 
 test("search matches every word, and @modified keeps changed settings", () => {

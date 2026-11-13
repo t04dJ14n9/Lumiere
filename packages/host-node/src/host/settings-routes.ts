@@ -40,7 +40,11 @@ export function createSettingsRoutes(
       if (req.method !== "POST") {
         return false;
       }
-      const result = await service.change(await readJson(req));
+      const body = await readJson(req);
+      if (!body) {
+        return json(res, 400, { error: "Invalid request body" });
+      }
+      const result = await service.change(body);
       return "problem" in result
         ? json(res, 400, { error: result.problem })
         : json(res, 200, result.item);
@@ -57,22 +61,31 @@ function json(res: ServerResponse, status: number, body: unknown): true {
   return true;
 }
 
+/** A bad or oversized body is a client error, not a server failure. */
 async function readJson(
   req: IncomingMessage,
-): Promise<Record<string, unknown>> {
+): Promise<Record<string, unknown> | undefined> {
   const chunks: Buffer[] = [];
   let size = 0;
   for await (const chunk of req) {
     size += (chunk as Buffer).length;
     if (size > MAX_BODY) {
-      throw new Error("Request body too large");
+      // Drain the request: returning here destroys its socket before the
+      // caller can send the 400.
+      chunks.length = 0;
+      continue;
     }
     chunks.push(chunk as Buffer);
   }
-  const body: unknown = JSON.parse(
-    Buffer.concat(chunks).toString("utf8") || "{}",
-  );
-  return typeof body === "object" && body !== null && !Array.isArray(body)
-    ? (body as Record<string, unknown>)
-    : {};
+  if (size > MAX_BODY) {
+    return undefined;
+  }
+  try {
+    const body: unknown = JSON.parse(Buffer.concat(chunks).toString("utf8"));
+    return typeof body === "object" && body !== null && !Array.isArray(body)
+      ? (body as Record<string, unknown>)
+      : undefined;
+  } catch {
+    return undefined;
+  }
 }

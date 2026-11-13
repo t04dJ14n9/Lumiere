@@ -42,15 +42,22 @@ export function createViewRoutes(trees: TreeHub): ViewRoutes {
         return true;
       }
       const match = /^\/([^/]+)(\/run|\/visible)?$/.exec(rest);
-      return match?.[1]
-        ? handleTree({
-            req,
-            res,
-            trees,
-            viewId: decodeURIComponent(match[1]),
-            action: match[2],
-          })
-        : false;
+      if (!match?.[1]) {
+        return false;
+      }
+      let viewId: string;
+      try {
+        viewId = decodeURIComponent(match[1]);
+      } catch {
+        return json(res, 400, { error: "Invalid view id" });
+      }
+      return handleTree({
+        req,
+        res,
+        trees,
+        viewId,
+        action: match[2],
+      });
     },
     close() {
       stopListening();
@@ -86,16 +93,23 @@ async function handleTree({
       : json(res, 404, { error: "No such view" });
   }
   if (action === "/run" && method === "POST") {
-    const { id } = await readJson(req);
-    const ran = typeof id === "string" && (await trees.run(viewId, id));
+    const body = await readJson(req);
+    if (!body) {
+      return json(res, 400, { error: "Invalid request body" });
+    }
+    const ran =
+      typeof body.id === "string" && (await trees.run(viewId, body.id));
     return json(res, ran ? 200 : 404, { ok: ran });
   }
   if (action === "/visible" && method === "POST") {
-    const { visible } = await readJson(req);
-    if (typeof visible !== "boolean") {
+    const body = await readJson(req);
+    if (!body) {
+      return json(res, 400, { error: "Invalid request body" });
+    }
+    if (typeof body.visible !== "boolean") {
       return json(res, 400, { error: 'Expected {"visible": true|false}' });
     }
-    trees.setVisible(viewId, visible);
+    trees.setVisible(viewId, body.visible);
     return json(res, 200, { ok: true });
   }
   return false;
@@ -122,22 +136,31 @@ function json(res: ServerResponse, status: number, body: unknown): true {
   return true;
 }
 
+/** A bad or oversized body is a client error, not a server failure. */
 async function readJson(
   req: IncomingMessage,
-): Promise<Record<string, unknown>> {
+): Promise<Record<string, unknown> | undefined> {
   const chunks: Buffer[] = [];
   let size = 0;
   for await (const chunk of req) {
     size += (chunk as Buffer).length;
     if (size > MAX_BODY) {
-      throw new Error("Request body too large");
+      // Drain the request: returning here destroys its socket before the
+      // caller can send the 400.
+      chunks.length = 0;
+      continue;
     }
     chunks.push(chunk as Buffer);
   }
-  const body: unknown = JSON.parse(
-    Buffer.concat(chunks).toString("utf8") || "{}",
-  );
-  return typeof body === "object" && body !== null
-    ? (body as Record<string, unknown>)
-    : {};
+  if (size > MAX_BODY) {
+    return undefined;
+  }
+  try {
+    const body: unknown = JSON.parse(Buffer.concat(chunks).toString("utf8"));
+    return typeof body === "object" && body !== null && !Array.isArray(body)
+      ? (body as Record<string, unknown>)
+      : undefined;
+  } catch {
+    return undefined;
+  }
 }
