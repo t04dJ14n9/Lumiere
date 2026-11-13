@@ -32,10 +32,7 @@ export function createHostWorkspace({
     folders: roots,
     // The host runs only what its owner installed and opened.
     isTrusted: () => true,
-    read: async (uri) => {
-      await inside(uri);
-      return files.readBytes(uri);
-    },
+    read: async (uri) => files.readBytes(uri, await inside(uri)),
     stat: async (uri) => {
       await inside(uri);
       const info = await files.linkStat(uri);
@@ -81,13 +78,12 @@ export function createWorkspaceFiles(
 
 function workspaceFileReads(
   files: HostFiles,
-  inside: (uri: string) => Promise<void>,
+  inside: (uri: string) => Promise<string>,
 ): Pick<WorkspaceFiles, "readText" | "list" | "isSymbolicLink"> {
   return {
     readText: async (uri) => {
       try {
-        await inside(uri);
-        return await files.readText(uri);
+        return await files.readText(uri, await inside(uri));
       } catch {
         return undefined;
       }
@@ -113,7 +109,7 @@ function workspaceFileReads(
 
 function workspaceFileWrites(
   files: HostFiles,
-  inside: (uri: string) => Promise<void>,
+  inside: (uri: string) => Promise<string>,
 ): Pick<
   WorkspaceFiles,
   | "writeText"
@@ -124,30 +120,38 @@ function workspaceFileWrites(
   | "move"
   | "remove"
 > {
+  // The parent folders, then the check again: a folder swapped for a link
+  // after the first check would have had them made outside. It returns the
+  // root, which the writes pass on so they verify the file they open.
+  const prepareParent = async (uri: string) => {
+    const root = await inside(uri);
+    await files.mkdir(parentUri(files, uri));
+    await inside(uri);
+    return root;
+  };
   // `save` / `saveBytes` only replace; `create` leaves an existing file as-is.
   const prepareWrite = async (uri: string) => {
-    await inside(uri);
-    await files.mkdir(parentUri(files, uri));
-    await files.create(uri);
+    const root = await prepareParent(uri);
+    await files.create(uri, root);
+    return root;
   };
   return {
     writeText: async (uri, text) => {
-      await prepareWrite(uri);
-      await files.save(uri, text);
+      const root = await prepareWrite(uri);
+      await files.save(uri, text, root);
     },
     createText: async (uri, text) => {
-      await inside(uri);
-      await files.mkdir(parentUri(files, uri));
+      const root = await prepareParent(uri);
       // Only the writer that made the file fills it.
-      if (!(await files.create(uri))) {
+      if (!(await files.create(uri, root))) {
         return false;
       }
-      await files.save(uri, text);
+      await files.save(uri, text, root);
       return true;
     },
     writeBytes: async (uri, data) => {
-      await prepareWrite(uri);
-      await files.saveBytes(uri, data);
+      const root = await prepareWrite(uri);
+      await files.saveBytes(uri, data, root);
     },
     mkdir: async (uri) => {
       await inside(uri);
@@ -198,7 +202,7 @@ export function createWorkspaceStorage(
 
 /** Watch a file only after it is known to sit inside a workspace. */
 function watchContained(
-  inside: (uri: string) => Promise<void>,
+  inside: (uri: string) => Promise<unknown>,
   files: HostFiles,
   uri: string,
   listener: () => void,

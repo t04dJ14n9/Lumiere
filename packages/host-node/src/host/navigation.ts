@@ -149,7 +149,7 @@ async function createNote(
     return undefined;
   }
   // An existing file, or a symlink planted in its place, is not written.
-  await files.create(target);
+  await files.create(target, root);
   return target;
 }
 
