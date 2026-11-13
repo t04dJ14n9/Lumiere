@@ -5,8 +5,18 @@
 
 import { mediaKind } from "../shared/media-kinds";
 import { servedFileName } from "./content-disposition";
+import {
+  DOWNLOAD_LIMITS,
+  fetchFollowing,
+  readCapped,
+  withinTimeLimit,
+  type DownloadLimits,
+  type SourceFetch,
+} from "./guarded-download";
 import { extensionForMime, extensionFromUrl } from "./html-images";
 import { sniffImageExtension } from "./image-sniff";
+
+export type { SourceFetch } from "./guarded-download";
 
 export interface SourceBytes {
   readonly bytes: Uint8Array;
@@ -14,12 +24,6 @@ export interface SourceBytes {
   /** The base name the server gave in `Content-Disposition`, if usable. */
   readonly fileName?: string;
 }
-
-export type SourceFetch = (url: string) => Promise<{
-  ok: boolean;
-  headers: { get(name: string): string | null };
-  arrayBuffer(): Promise<ArrayBuffer>;
-}>;
 
 export type SourceRead = (uri: string) => Promise<Uint8Array | undefined>;
 
@@ -38,6 +42,8 @@ export interface SourceOptions {
    * server's answer into the vault.
    */
   readonly imagesOnly?: boolean;
+  /** Replaces the time, size and redirect limits (`DOWNLOAD_LIMITS`). */
+  readonly limits?: Partial<DownloadLimits>;
 }
 
 /** What loading a source came to: bytes, a response that is no image, or nothing. */
@@ -91,7 +97,8 @@ async function readLocal(
     return NOT_IMAGE;
   }
   const bytes = await options.readFile(url);
-  return bytes && bytes.length > 0
+  const { maxBytes } = { ...DOWNLOAD_LIMITS, ...options.limits };
+  return bytes && bytes.length > 0 && bytes.length <= maxBytes
     ? { kind: "loaded", source: { bytes, ext } }
     : FAILED;
 }
@@ -108,34 +115,57 @@ async function download(
   url: string,
   options: SourceOptions,
 ): Promise<SourceOutcome> {
-  const response = await options.fetch(url);
-  if (!response.ok) {
-    return FAILED;
-  }
-  const mime = (response.headers.get("content-type") ?? "")
-    .split(";")[0]!
-    .trim()
-    .toLowerCase();
-  const isImageType = mime.startsWith("image/");
-  if (options.imagesOnly && !isImageType && !UNKNOWN_TYPES.has(mime)) {
-    return NOT_IMAGE;
-  }
-  const bytes = new Uint8Array(await response.arrayBuffer());
-  if (bytes.length === 0) {
-    return FAILED;
-  }
-  if (!options.imagesOnly) {
+  const limits = { ...DOWNLOAD_LIMITS, ...options.limits };
+  return withinTimeLimit(limits.timeoutMs, async (signal) => {
+    const response = await fetchFollowing(url, options.fetch, {
+      signal,
+      maxRedirects: limits.maxRedirects,
+    });
+    if (!response.ok) {
+      return FAILED;
+    }
+    const mime = (response.headers.get("content-type") ?? "")
+      .split(";")[0]!
+      .trim()
+      .toLowerCase();
+    if (options.imagesOnly && !isImageType(mime) && !UNKNOWN_TYPES.has(mime)) {
+      return NOT_IMAGE;
+    }
+    const bytes = await readCapped(response, limits.maxBytes);
+    return bytes.length === 0
+      ? FAILED
+      : served({
+          url,
+          mime,
+          bytes,
+          fileName: servedFileName(response.headers.get("content-disposition")),
+          imagesOnly: options.imagesOnly === true,
+        });
+  });
+}
+
+const isImageType = (mime: string): boolean => mime.startsWith("image/");
+
+/** The download as a source: what it is named, and with `imagesOnly` whether it is an image. */
+function served(download: {
+  url: string;
+  mime: string;
+  bytes: Uint8Array;
+  fileName: string | undefined;
+  imagesOnly: boolean;
+}): SourceOutcome {
+  const { url, mime, bytes, fileName, imagesOnly } = download;
+  if (!imagesOnly) {
     return { kind: "loaded", source: { bytes, ext: extensionFromUrl(url) } };
   }
-  const sniffed = isImageType ? undefined : sniffImageExtension(bytes);
-  if (!isImageType && !sniffed) {
+  const sniffed = isImageType(mime) ? undefined : sniffImageExtension(bytes);
+  if (!isImageType(mime) && !sniffed) {
     return NOT_IMAGE;
   }
   // An image served from `/avatar.php` is kept as an image, not a `.php` file.
   const ext = isImageUrl(url)
     ? extensionFromUrl(url)
     : (sniffed ?? extensionForMime(mime));
-  const fileName = servedFileName(response.headers.get("content-disposition"));
   return {
     kind: "loaded",
     source: { bytes, ext, ...(fileName === undefined ? {} : { fileName }) },

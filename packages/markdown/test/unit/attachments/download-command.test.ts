@@ -22,6 +22,8 @@ interface Run {
   asked: string[];
   /** The rows of the last pick list. */
   offered: Offered[];
+  /** What was fetched, and whether redirects were left to the caller. */
+  fetched: { url: string; redirect: string | undefined; hasSignal: boolean }[];
   told: string[];
   written: string[];
   text: string;
@@ -54,6 +56,7 @@ async function run(
   const result: Run = {
     asked: [],
     offered: [],
+    fetched: [],
     told: [],
     written: [],
     text: note,
@@ -63,7 +66,12 @@ async function run(
   const serve: Serve =
     options.serve ??
     ((url) => ({ type: url.endsWith(".png") ? "image/png" : "text/html" }));
-  globalThis.fetch = (async (url: string) => {
+  globalThis.fetch = (async (url: string, init?: RequestInit) => {
+    result.fetched.push({
+      url,
+      redirect: init?.redirect,
+      hasSignal: init?.signal instanceof AbortSignal,
+    });
     const { type, bytes = [1, 2], disposition = null } = serve(url);
     return {
       ok: true,
@@ -484,4 +492,37 @@ test("accepting the list with every image unticked downloads nothing", async (t)
   assert.deepEqual(result.written, []);
   assert.deepEqual(result.told, []);
   assert.equal(result.text, "![](https://ex.com/img/dog.png)");
+});
+
+test("downloads are fetched with redirects checked by hand and a time limit", async (t) => {
+  const note = "![](https://ex.com/img/dog.png)";
+  const result = await run(t, "Download", {}, { note });
+  assert.deepEqual(result.fetched, [
+    { url: "https://ex.com/img/dog.png", redirect: "manual", hasSignal: true },
+  ]);
+});
+
+test("a link to this machine or a private network is never fetched", async (t) => {
+  const note = [
+    "![a](http://127.0.0.1:8080/admin.png) ![b](http://localhost/b.png)",
+    "![c](http://169.254.169.254/latest/meta-data/c.png)",
+    "![d](https://ex.com/img/dog.png)",
+  ].join("\n");
+  const result = await run(t, "Download", {}, { note });
+  assert.deepEqual(
+    result.fetched.map(({ url }) => url),
+    ["https://ex.com/img/dog.png"],
+  );
+  assert.deepEqual(result.written, [uriOf("dog.png")]);
+  assert.equal(
+    result.text,
+    [
+      "![a](http://127.0.0.1:8080/admin.png) ![b](http://localhost/b.png)",
+      "![c](http://169.254.169.254/latest/meta-data/c.png)",
+      "![[dog.png|d]]",
+    ].join("\n"),
+  );
+  assert.deepEqual(result.told, [
+    "Downloaded 1 attachment. 3 could not be downloaded.",
+  ]);
 });

@@ -9,9 +9,10 @@ relative Markdown or WikiLink embed from the Links settings.
 
 Shared helpers in `src/attachments/` resolve the folder, pick a unique
 timestamp name, write bytes, and build the embed. The host half answers each
-note page's `save` (bytes) and `importUrl` (http(s) / file://) RPCs. The
-webview half handles drag-and-drop, binary image paste, and rewrites remote /
-data-URI images after HTML→Markdown paste.
+note page's `save` (bytes) and `importUrl` (http(s) / file://) RPCs; a
+`file://` source is read only from inside a workspace folder or the note's
+vault (`local-source.ts`). The webview half handles drag-and-drop, binary image
+paste, and rewrites remote / data-URI images after HTML→Markdown paste.
 
 Drag-and-drop listens on the webview document (capture) and always
 `preventDefault`s file / uri-list drags so VS Code does not open the drop as a
@@ -72,6 +73,16 @@ comments, other values and the list's style stay as they were. Obsidian writes a
 wikilink here whatever the Links settings say, and so do we. A value YAML cannot
 rewrite in place (block scalar, anchor, alias, tag, or nested below the top
 level) is left alone.
+Every web download is limited (`src/attachments/guarded-download.ts`): 30
+seconds in all, 50 MB (a stream is cancelled where it crosses the limit), and at
+most five redirects, followed by hand so that the first address and every hop
+are checked before they are requested. Loopback, link-local, private-network
+and other non-routable addresses are refused (`localhost`, `127.0.0.0/8`,
+`10/8`, `172.16/12`, `192.168/16`, `169.254/16`, `100.64/10`, IPv6 `::1`,
+`fc00::/7`, `fe80::/10`, IPv4-mapped forms, and the `.local`, `.internal` and
+`.home.arpa` names), as is a redirect to anything but `http(s)`. A refused or
+oversized download counts as one that could not be downloaded. The same limits
+apply to a remote image in pasted HTML.
 If the note was closed before that edit, the files stay in the vault and the
 dialog says the note was not changed.
 
@@ -83,6 +94,9 @@ dialog says the note was not changed.
   reclaim when the adapter offers it (no `vscode` import).
 - `target.ts`: a note's attachment folder and link settings.
 - `download-command.ts`: Download Attachments for Current File.
+- `host-fetch.ts`: the host's `fetch`, handed to the downloader.
+- `local-source.ts`: reads a `file:` source the page named, inside the
+  workspace only.
 - `webview.ts`: DnD, clipboard image paste, HTML image rewrite.
 
 ## Services, commands and settings
@@ -100,6 +114,20 @@ A failed save leaves that item unchanged and shows a short error; no broken
 vault link is inserted. Other items in a multi-drop may still succeed. An
 attachment folder that is a symbolic link, or sits behind one, is not written
 to: a link could lead out of the vault, so that save fails the same way.
+
+A name that resolves to a private address is not caught: only the address as
+written, and each redirect's, is checked, since there is no DNS answer to look
+at (`http://127.0.0.1.nip.io/` passes), and a name could change address between
+the check and the request. Where a browser hides a redirect from `fetch` (the
+web and iPad apps), the URL is fetched once more for the browser to follow, and
+only the address it ended at is checked, after the request; the browser's CORS
+and private-network rules stand in for the rest.
+
+An image in pasted HTML whose `src` is a `file://` path outside the workspace
+(Word and Pages paste such temporary files) is not imported: the page asking
+for it is untrusted, and the path could name any image on the disk. An Explorer
+or `code image.png` open that the reader confirms with Add to Note is
+unaffected.
 
 Single-click preview media while a Lumiere note is focused is left alone
 (preview tabs are not offered). Any other pinned open of media in the note's

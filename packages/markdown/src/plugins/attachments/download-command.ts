@@ -16,6 +16,7 @@ import {
 } from "../../attachments";
 import { SourceCoordinates } from "../../shared/document/coordinates";
 import { contributionId } from "../../shared/setting-schema";
+import { hostFetch } from "./host-fetch";
 import { attachmentTarget, type AttachmentTarget } from "./target";
 
 export const NO_VAULT = "Attachments need a vault: open this note from one.";
@@ -163,7 +164,7 @@ async function loadImage(url: string): Promise<SourceOutcome> {
   // A note can come from anywhere: keep only what is served or named as an image.
   return loadAttachmentOutcome(url, {
     imagesOnly: true,
-    fetch: (address) => fetch(address),
+    fetch: hostFetch,
     readFile: async () => undefined,
   });
 }
