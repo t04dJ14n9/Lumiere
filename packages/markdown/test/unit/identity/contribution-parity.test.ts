@@ -14,7 +14,6 @@ import {
   type PluginHandle,
   type RootContext,
 } from "@workshop/core";
-import type { Okf } from "../../../src/plugins/okfCore/api";
 import type { Editors } from "../../../src/plugins/editor/api";
 import type { Vaults } from "../../../src/plugins/vault/api";
 import { commandsHost } from "../../../src/plugins/commands/host";
@@ -317,7 +316,6 @@ async function captureRegisteredCommands(): Promise<{
   });
   root.provide("selections", selections);
   root.provide("vaults", {} as Vaults);
-  root.provide("okf", {} as Okf);
   // A host with a canvas (the iPad's), where Insert Sketch registers.
   root.provide("ink", {
     capabilities: async () => ({
@@ -405,8 +403,6 @@ function idleVaults(): Vaults {
     },
     async open() {},
     all: () => [],
-    registerLinkPolicy: () => () => {},
-    invalidateLinkResolution() {},
   };
 }
 

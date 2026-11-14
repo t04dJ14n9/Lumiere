@@ -94,8 +94,6 @@ export async function compatFixture() {
     },
     text: async (uri) => data.get(uri) ?? "",
     open: async () => {},
-    registerLinkPolicy: () => () => {},
-    invalidateLinkResolution() {},
   };
   const workbench = fakeHost({
     settings: {

@@ -440,18 +440,6 @@
   color: inherit;
   padding: 4px 8px; /* match --metadata-input-padding */
 }
-/* OKF generated / verified: YAML that reads like any other text value. It
- * grows with its lines (field-sizing; rows where that is not supported). */
-.metadata-input-yaml.mod-inline {
-  field-sizing: content;
-  min-height: 0;
-  max-height: none;
-  font: inherit;
-  line-height: inherit;
-  resize: none;
-  border-color: transparent;
-}
-
 /* Obsidian unknown nested maps: JSON.stringify, single-line ellipsis;
  * padding matches --metadata-input-padding (REA app.css). */
 .metadata-property-value .mod-unknown {

@@ -6,7 +6,7 @@ import { contributionId } from "../../shared/setting-schema";
 import type { Vault } from "../vault/api";
 import { resolveScope } from "./choose";
 import type { HeldScope } from "./choose";
-import { collectBundle } from "./collect";
+import { collectNotes } from "./collect";
 import { emptyFilters } from "./filters";
 import type { GraphFilters } from "./filters";
 import { graphPanelHtml } from "./html";
@@ -55,7 +55,7 @@ const clock: Clock = {
   },
 };
 
-/** One graph panel. Scope stays on the bundle chosen at open until the user picks again. */
+/** One graph panel. Scope stays on the vault chosen at open until the user picks again. */
 export function createGraphSession(ctx: Context): GraphSession {
   const settings = readGraphSettings(ctx.settings);
   const state: SessionState = {
@@ -96,9 +96,7 @@ async function openPanel(
     return;
   }
   state.scope = chosen;
-  state.panel?.setTitle(
-    chosen ? `Graph: ${chosen.bundle.name}` : "Vault Graph",
-  );
+  state.panel?.setTitle(chosen ? `Graph: ${chosen.scope.name}` : "Vault Graph");
   await publish(state);
 }
 
@@ -206,7 +204,6 @@ function copyFilters(filters: ViewParams["filters"]): GraphFilters {
     folders: filters.folders,
     text: filters.text,
     showOrphans: filters.showOrphans,
-    conformantOnly: filters.conformantOnly,
   };
 }
 
@@ -241,10 +238,10 @@ async function buildSnapshot(
   if (ticket !== state.ticket) {
     return undefined;
   }
-  const collected = collectBundle(scope.vault, scope.bundle.root);
+  const collected = collectNotes(scope.vault);
   const settings = readGraphSettings(state.ctx.settings);
   return presentSnapshot({
-    bundle: scope.bundle,
+    scope: scope.scope,
     notes: collected.notes,
     resolve: (linktext, sourcePath, syntax) =>
       resolve(scope.vault, linktext, sourcePath, syntax),
@@ -293,7 +290,7 @@ async function openNode(
   params: OpenParams,
 ): Promise<boolean> {
   const scope = state.scope;
-  if (!scope || params.scopeId !== scope.bundle.id) {
+  if (!scope || params.scopeId !== scope.scope.id) {
     return false;
   }
   if (params.generation !== state.generation) {

@@ -64,7 +64,6 @@ import templates from "./templates/manifest";
 import dailyNotes from "./dailyNotes/manifest";
 import gitDiffEditor from "./gitDiffEditor/manifest";
 import marp from "./marp/manifest";
-import okfCore from "./okfCore/manifest";
 import obsidianCompat from "./obsidianCompat/manifest";
 import graph from "./graph/manifest";
 /**
@@ -132,7 +131,6 @@ export const workbenchFeatures: readonly Manifest[] = inPluginOrder(
     dailyNotes,
     wiki,
     wordCount,
-    okfCore,
     obsidianCompat,
     graph,
   ],

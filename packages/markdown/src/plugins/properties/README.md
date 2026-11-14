@@ -10,7 +10,7 @@ retaining focused draft inputs. Edits use the pure YAML operations and become on
 outer-document transaction. List and chip drafts resolve the selected occurrence
 against current values before committing, so a stale render cannot replace a
 concurrently edited list. Save participants commit drafts and reject invalid
-input. Nested non-OKF maps render as Obsidian Unknown (`JSON.stringify`). OKF `generated`/`verified` show their YAML in a text field that reads like any other value (no border or code font, as tall as its lines); a commit keeps the map. `sources` is a plain text property, the same control as any other string, without the three-line clamp: it shows up to 300px and scrolls past that, focused or not. Lists show every item, as in Obsidian; `properties.listPreviewCount` (default 0, off) caps them behind a disclosure. Unsupported/tagged YAML prefers Source mode. If a settable value's slice cannot
+input. Nested maps render as Obsidian Unknown (`JSON.stringify`). `sources` is a plain text property, the same control as any other string, without the three-line clamp: it shows up to 300px and scrolls past that, focused or not. Lists show every item, as in Obsidian; `properties.listPreviewCount` (default 0, off) caps them behind a disclosure. Unsupported/tagged YAML prefers Source mode. If a settable value's slice cannot
 parse independently, a serialized copy keeps it editable. Blank row/value space
 focuses the value editor; native field, pill and link clicks keep their own actions.
 Replaced anchors materialize their external aliases with exact integers.

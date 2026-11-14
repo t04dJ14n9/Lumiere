@@ -479,8 +479,8 @@
         "category": "Lumiere"
       },
       {
-        "command": "lumiere.markdown.graph.chooseBundle",
-        "title": "Choose Vault Graph Scope",
+        "command": "lumiere.markdown.graph.chooseVault",
+        "title": "Choose Vault for Graph",
         "category": "Lumiere"
       },
       {
@@ -1906,7 +1906,7 @@
           "when": "config.lumiere.markdown.preset != 'minimal' && config.lumiere.markdown.plugins.graph.enabled"
         },
         {
-          "command": "lumiere.markdown.graph.chooseBundle",
+          "command": "lumiere.markdown.graph.chooseVault",
           "when": "config.lumiere.markdown.preset != 'minimal' && config.lumiere.markdown.plugins.graph.enabled"
         },
         {
@@ -2992,7 +2992,7 @@
             "type": "boolean",
             "default": true,
             "scope": "resource",
-            "description": "Draw notes as a directed graph (OKF bundle or whole vault) in a panel of its own."
+            "description": "Draw a vault's notes as a directed graph in a panel of its own."
           },
           "lumiere.markdown.plugins.ideContext.enabled": {
             "type": "boolean",
@@ -3053,12 +3053,6 @@
             "default": true,
             "scope": "resource",
             "description": "Use Obsidian property types and vault settings in Lumiere."
-          },
-          "lumiere.markdown.plugins.okfCore.enabled": {
-            "type": "boolean",
-            "default": true,
-            "scope": "resource",
-            "description": "Shared Open Knowledge Format bundles, link resolution and resource checks."
           },
           "lumiere.markdown.plugins.onlineVideos.enabled": {
             "type": "boolean",
@@ -3455,17 +3449,6 @@
             "type": "string",
             "default": ".obsidian",
             "description": "Obsidian configuration folder relative to the vault root, such as .obsidian-awesome. Root markers discover the vault; they do not select this folder.",
-            "scope": "resource"
-          },
-          "lumiere.markdown.okfCore.bundles": {
-            "type": "array",
-            "items": {
-              "type": "string",
-              "maxLength": 1024
-            },
-            "maxItems": 200,
-            "default": [],
-            "description": "Extra OKF bundle roots, relative to the vault. A folder is also a bundle when it contains index.md and a typed concept.",
             "scope": "resource"
           },
           "lumiere.markdown.onlineVideos.bilibiliPlayer": {

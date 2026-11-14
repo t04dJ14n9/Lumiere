@@ -1,10 +1,9 @@
 import test from "node:test";
 import assert from "node:assert/strict";
-import { metadata } from "../../../src/markdown/metadata";
 import { embedIsWiki } from "../../../src/plugins/embeds/post-process";
-import { okfLinkPolicy } from "../../../src/plugins/okfCore/policy";
 import { openedVaultTarget } from "../../../src/plugins/links/target";
 import { MemoryVaultIndex } from "../../../src/plugins/vault/memory-index";
+import { linkLocation } from "../../../src/shared/link-location";
 
 test("Open image file for a Markdown embed resolves the sibling, not the vault-root twin", () => {
   const root = "file:///vault";
@@ -14,40 +13,27 @@ test("Open image file for a Markdown embed resolves the sibling, not the vault-r
     linkFormat: "shortest",
   });
   vault.replaceFiles(
-    [
-      "image.png",
-      "bundle/index.md",
-      "bundle/notes/source.md",
-      "bundle/notes/image.png",
-    ].map((path) => ({
+    ["image.png", "notes/source.md", "notes/image.png"].map((path) => ({
       uri: `${root}/${path}`,
       path,
       mtime: 1,
       size: 1,
     })),
   );
-  vault.setMetadata("bundle/notes/source.md", metadata("![](image.png)"));
-  vault.setLinkPolicies([okfLinkPolicy(() => ["bundle"])]);
 
   // Markdown image markup has no data-wiki → wiki:false for Open.
   assert.equal(embedIsWiki({ dataset: {} }), false);
 
-  // Wikilink open (the pre-fix hardcoded wiki:true) prefers the vault root.
-  const wiki = openedVaultTarget(
-    vault,
-    "image.png",
-    "bundle/notes/source.md",
-    true,
+  // Wikilink open uses the vault index, which prefers the vault root.
+  assert.equal(
+    openedVaultTarget(vault, "image.png", "notes/source.md", true),
+    `${root}/image.png`,
   );
-  assert.equal(wiki.uri, `${root}/image.png`);
 
-  // Markdown open keeps the displayed sibling.
-  const markdown = openedVaultTarget(
-    vault,
-    "image.png",
-    "bundle/notes/source.md",
-    false,
+  // Markdown open is left to navigation, which looks beside the source note.
+  assert.equal(
+    openedVaultTarget(vault, "image.png", "notes/source.md", false),
+    undefined,
   );
-  assert.equal(markdown.uri, `${root}/bundle/notes/image.png`);
-  assert.equal(markdown.passthrough, false);
+  assert.deepEqual(linkLocation("image.png", false).folders, ["source"]);
 });

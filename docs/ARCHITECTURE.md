@@ -173,7 +173,7 @@ Extension root (src/extension.ts) ─ createRoot()
    │     (17 of them deferred until the first editor is ready)
    │
    └─ one panel root per open editor (editor/panel.ts → createRoot)
-        re-provided: host services, vaults, okf facade, pdfOutlines
+        re-provided: host services, vaults, pdfOutlines
         vaultHost (this note's vault), resourcesHost
         critical hosts:  links, tasks, properties, tags, cursorBridgePanel
         deferred hosts:  gitGutter, gitBlame, suggest, search, onlineVideos, lookUp
@@ -366,14 +366,11 @@ use; `vaults.locate(uri)` gives the vault and the vault path.
   follows Obsidian's `getLinkpathDest`: case-insensitive, `.md` optional,
   `./` and `../` from the note's folder, a leading `/` from the vault root,
   other foldered paths from the root then the note's folder, attachments
-  included. Aliases are not destinations, as in Obsidian. Plugins can
-  register a resolution policy (`vaults.registerLinkPolicy`) without the
-  vault importing them.
+  included. Aliases are not destinations, as in Obsidian.
 
 When a name matches in several folders, the candidates under the source
 note's folder come first, then the rest, each group shortest path first, as in
-Obsidian; ties go by path. A note inside an OKF bundle (`okfCore`) takes the
-first candidate in its own bundle instead, when the vault would pick another.
+Obsidian; ties go by path.
 
 ## 11. Parsing and rendering
 

@@ -39,7 +39,6 @@ export { lookUpHost } from "./lookUp/host";
 export { markersHost } from "./markers/host";
 export { codeBlocksHost } from "./codeBlocks/host";
 
-export { okfCoreHost } from "./okfCore/host";
 export { obsidianCompatHost } from "./obsidianCompat/host";
 export { graphHost } from "./graph/host";
 export { publicApiHost } from "./publicApi/host";

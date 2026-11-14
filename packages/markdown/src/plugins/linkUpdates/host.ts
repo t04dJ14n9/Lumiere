@@ -212,8 +212,6 @@ async function linkEdits(
       .files()
       .map((file) => paths.get(file.path) ?? file.path),
     format,
-    preferredText: (target: string, source: string) =>
-      vault.index.describeLink(target, source),
   };
   const result: FileTextEdits[] = [];
   for (const file of candidateNotes(vault, paths)) {

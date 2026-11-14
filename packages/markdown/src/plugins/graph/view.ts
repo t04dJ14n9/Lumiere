@@ -1,7 +1,7 @@
 import { admit } from "./admission";
 import { filterGraph, localGraph } from "./filters";
 import type { GraphFilters } from "./filters";
-import type { ConceptGraph } from "./project";
+import type { NoteGraph } from "./project";
 
 const PALETTE = [
   "#4e79a7",
@@ -34,7 +34,8 @@ export interface DrawnNode {
   type?: string;
   folder: string;
   tags: readonly string[];
-  classification: "conformant" | "nonconformant" | "indexing";
+  /** Its metadata is not parsed yet. */
+  indexing: boolean;
   degree: number;
   orphan: boolean;
   unresolved: number;
@@ -44,9 +45,8 @@ export interface DrawnNode {
 
 export interface DrawnGraph {
   nodes: DrawnNode[];
-  edges: ConceptGraph["edges"];
+  edges: NoteGraph["edges"];
   focusExcluded: boolean;
-  omittedConformant: number;
   accepted: boolean;
   nodeCount: number;
   edgeCount: number;
@@ -56,14 +56,14 @@ export interface DrawnGraph {
 
 /** Filter, take the local neighbourhood, then refuse anything over the hard caps. */
 export function drawGraph(
-  graph: ConceptGraph,
+  graph: NoteGraph,
   request: GraphViewRequest,
 ): DrawnGraph {
   const filtered = filterGraph(graph, request.filters);
   const local =
     request.mode === "local"
-      ? localGraph(filtered.graph, request.focusId, clampDepth(request.depth))
-      : { graph: filtered.graph, focusExcluded: false };
+      ? localGraph(filtered, request.focusId, clampDepth(request.depth))
+      : { graph: filtered, focusExcluded: false };
   const admission = admit(local.graph.nodes, local.graph.edges, request);
   const drawn = admission.accepted
     ? colorNodes(local.graph, request.colorBy)
@@ -72,7 +72,6 @@ export function drawGraph(
     nodes: drawn,
     edges: admission.accepted ? local.graph.edges : [],
     focusExcluded: local.focusExcluded,
-    omittedConformant: filtered.omittedConformant,
     accepted: admission.accepted,
     nodeCount: admission.nodeCount,
     edgeCount: admission.edgeCount,
@@ -82,7 +81,7 @@ export function drawGraph(
 }
 
 function colorNodes(
-  graph: ConceptGraph,
+  graph: NoteGraph,
   colorBy: GraphViewRequest["colorBy"],
 ): DrawnNode[] {
   return graph.nodes.map((node) => {
@@ -97,7 +96,7 @@ function colorNodes(
       ...(type ? { type } : {}),
       folder: node.folder,
       tags: node.tags,
-      classification: node.classification,
+      indexing: node.indexing,
       degree: node.degree,
       orphan: node.orphan,
       unresolved: node.unresolved,
@@ -108,7 +107,7 @@ function colorNodes(
 }
 
 function keyFor(
-  node: ConceptGraph["nodes"][number],
+  node: NoteGraph["nodes"][number],
   colorBy: GraphViewRequest["colorBy"],
 ): string {
   if (colorBy === "folder") {

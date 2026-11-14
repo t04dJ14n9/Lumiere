@@ -177,9 +177,8 @@ async function openInternal(
   const { path, fragment } = linkParts(request.href);
   const root = ctx.vault.root;
   const source = notePath(root, sourceUri);
-  const located = openedVaultTarget(ctx.vault, path, source, request.wiki);
-  let uri = located.uri;
-  if (!uri && located.passthrough) {
+  let uri = openedVaultTarget(ctx.vault, path, source, request.wiki);
+  if (!uri) {
     uri = await navigation.resolve({
       root,
       ...(intent ? { intent } : {}),

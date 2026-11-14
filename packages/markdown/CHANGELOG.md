@@ -2,6 +2,16 @@
 
 ## 0.1.0 (unreleased)
 
+- OKF support is removed. A folder with an `index.md` and typed notes is no
+  longer an OKF bundle, so a Markdown link starting with `/` resolves from
+  the vault root everywhere, as in Obsidian: `[x](/wiki/notes/x.md)` from a
+  note under `wiki/` opened nothing before. Renaming a note no longer writes
+  bundle-absolute links. The graph draws a whole vault (**Choose Vault for
+  Graph** replaces the bundle picker), keeps `index.md` and `log.md`, and
+  drops the **Conformant only** filter and `sources` edges. `generated` and
+  `verified` maps show as Obsidian's Unknown type. The
+  `lumiere.markdown.okfCore.bundles` setting is gone.
+
 - Typing `[[` in VS Code's own text editor now suggests links, as the Lumia
   editor does: `[[Note` lists notes (with aliases), `[[Note#` the note's
   headings, `[[Note#^` its blocks that already have an id, and `[[Note|` keeps

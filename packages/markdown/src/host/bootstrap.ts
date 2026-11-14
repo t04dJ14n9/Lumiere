@@ -39,14 +39,12 @@ import {
   marpHost,
   tagsViewHost,
   settingsHost,
-  okfCoreHost,
   obsidianCompatHost,
   graphHost,
   diffResourcesHost,
   sketchHost,
 } from "../plugins/host";
 import { workbenchFeatures as startWorkbenchFeatures } from "./workshop-features";
-import { createOkfFacade } from "../plugins/okfCore/facade";
 import type { CursorBridgeConfig } from "../plugins/cursorBridge/host";
 import type { InkService } from "@workshop/ink/service";
 
@@ -87,14 +85,11 @@ export async function bootstrap(
   // arriving after it started would restart it, unregistering the editor
   // provider and closing any editor VS Code was already opening.
   await root.settled();
-  const okf = createOkfFacade();
   root.plugin(editorHost, {
     features,
     configure(context, panel) {
       // Panel trees are isolated: hand them the host services explicitly.
       provideHostServices(context, host);
-      // The facade stays put while okfCore binds it.
-      context.provide("okf", okf);
       context.on("links/open", (request) =>
         root.bail("links/open", { ...request, editorId: panel.id }),
       );
@@ -114,7 +109,7 @@ export async function bootstrap(
   root.plugin(commandsHost, { features });
   root.plugin(settingsHost);
   root.plugin(livePreviewHost);
-  startWindowFeatures(root, host, okf);
+  startWindowFeatures(root, host);
   await root.settled();
   return root;
 }
@@ -142,17 +137,12 @@ const DEFERRED_WINDOW_FEATURES = [
   "marp",
   "tags",
   "sketch",
-  "okfCore",
   "graph",
   "linkUpdates",
 ];
 
 /** Window plugins, including the Tags view, which shares an editor-feature manifest. */
-function startWindowFeatures(
-  root: BaseContext,
-  host: HostServices,
-  okf: ReturnType<typeof createOkfFacade>,
-): void {
+function startWindowFeatures(root: BaseContext, host: HostServices): void {
   const plugins = [
     nativeLinksHost,
     nativeSuggestHost,
@@ -173,7 +163,6 @@ function startWindowFeatures(
     marpHost,
     tagsViewHost,
     sketchHost,
-    okfCoreHost,
     obsidianCompatHost,
     graphHost,
   ];
@@ -184,7 +173,6 @@ function startWindowFeatures(
     plugins.map((plugin) => ({
       manifest: manifests.find((item) => item.id === plugin.name)!,
       plugin: plugin as Plugin,
-      ...(plugin.name === "okfCore" ? { config: { facade: okf } } : {}),
     })),
     {
       defer: DEFERRED_WINDOW_FEATURES,

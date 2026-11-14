@@ -397,15 +397,13 @@ older-version evidence; the installed app is 1.15.0. Rows naming
 | Setting: lumiere.markdown.outline.followCursor | not observed | not manually observed | Manual scenario pending | not observed |
 | Setting: lumiere.markdown.outline.expandMode | No Obsidian core equivalent | Default accordion; all expands every parent | Unit accordion follow tests; manual scenario pending | Intentional extension |
 | Command: lumiere.markdown.graph.open | not observed | not manually observed | Manual scenario pending | not observed |
-| Command: lumiere.markdown.graph.chooseBundle | not observed | not manually observed | Manual scenario pending | not observed |
+| Command: lumiere.markdown.graph.chooseVault | not observed | not manually observed | Manual scenario pending | not observed |
 | Setting: lumiere.markdown.plugins.graph.enabled | not observed | not manually observed | Manual scenario pending | not observed |
-| Setting: lumiere.markdown.plugins.okfCore.enabled | not observed | not manually observed | Manual scenario pending | not observed |
 | Setting: lumiere.markdown.graph.maxNodes | not observed | not manually observed | Manual scenario pending | not observed |
 | Setting: lumiere.markdown.graph.maxEdges | not observed | not manually observed | Manual scenario pending | not observed |
 | Setting: lumiere.markdown.graph.defaultMode | not observed | not manually observed | Manual scenario pending | not observed |
 | Setting: lumiere.markdown.graph.localDepth | not observed | not manually observed | Manual scenario pending | not observed |
 | Setting: lumiere.markdown.graph.colorBy | not observed | not manually observed | Manual scenario pending | not observed |
-| Setting: lumiere.markdown.okfCore.bundles | not observed | not manually observed | Manual scenario pending | not observed |
 | Setting: lumiere.markdown.plugins.obsidianCompat.enabled | not observed | not manually observed | Manual scenario pending | not observed |
 | Setting: lumiere.markdown.obsidianCompat.configFolder | not observed | not manually observed | Manual scenario pending | not observed |
 | Command: lumiere.markdown.foldMore | 2026-10-17, measured against Obsidian's command of the same name in a throwaway vault | Matches the measured behaviour | Differential fold probe; unit tests | behaviour measured |

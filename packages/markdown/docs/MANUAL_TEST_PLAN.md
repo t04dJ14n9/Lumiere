@@ -1022,15 +1022,15 @@ and dark themes.
 **Open Vault Graph** (`lumiere.markdown.graph.open`). One panel per window; running
 the command again reveals it. The panel is not tied to a Markdown document.
 
-1. With the active note inside one OKF bundle, the toolbar shows that bundle's
-   name and path. Notes are directed: a link from A to B is not the same edge
-   as B to A. `index.md` and `log.md` are not nodes. A note with no `type` is
-   still drawn. Clicking a node opens that note.
-2. Open a note that sits in no bundle, or in a workspace with several bundles,
-   and the command asks which bundle to use. Cancel leaves the previous scope.
-   It does not pick the first workspace folder. Switching notes does not move
-   the graph to the new note. **Choose Vault Graph Bundle**
-   (`lumiere.markdown.graph.chooseBundle`) asks again.
+1. With a note active, the toolbar shows its vault's name and path, and every
+   note in the vault is drawn, `index.md` and `log.md` included. Notes are
+   directed: a link from A to B is not the same edge as B to A. A note with no
+   `type` is still drawn. Clicking a node opens that note.
+2. With no note active and several vaults open, the command asks which vault
+   to draw. Cancel leaves the previous scope. It does not pick the first
+   workspace folder. Switching notes does not move the graph to the new note.
+   **Choose Vault for Graph** (`lumiere.markdown.graph.chooseVault`) asks
+   again.
 3. Local mode draws the neighbourhood of the note that was active at open, or
    of the last node you clicked. Depth is 1–3. If filters hide that note, the
    panel says **Focus excluded by filters**. **Clear filters** brings it back
@@ -1047,10 +1047,9 @@ the command again reveals it. The panel is not tied to a Markdown document.
    while it is hidden. Close the panel. The worker stops. Repeat in light and
    dark themes. The graph does not request remote images or URLs.
 6. Settings, all off in a minimal preset:    `lumiere.markdown.plugins.graph.enabled`,
-   `lumiere.markdown.plugins.okfCore.enabled`,
    `lumiere.markdown.graph.maxNodes`, `lumiere.markdown.graph.maxEdges`,
    `lumiere.markdown.graph.defaultMode`, `lumiere.markdown.graph.localDepth`,
-   `lumiere.markdown.graph.colorBy`, `lumiere.markdown.okfCore.bundles`.
+   `lumiere.markdown.graph.colorBy`.
 
 ## External plugins
 
@@ -1242,7 +1241,7 @@ Use the disposable fixture vault from Setup. These rows enumerate every generate
 | `lumiere.markdown.gitGutter.previousChange` — Go to Previous Git Change | shift+alt+f5 | On a disposable fixture, run Go to Previous Git Change; confirm its named action using the plugin scenarios above, then undo where applicable. Repeat after disable/re-enable and switching panes. |
 | `lumiere.markdown.gitGutter.showChange` — Show Git Change | alt+f3 | On a disposable fixture, run Show Git Change; confirm its named action using the plugin scenarios above, then undo where applicable. Repeat after disable/re-enable and switching panes. |
 | `lumiere.markdown.graph.open` — Open Vault Graph | unbound | On a disposable fixture, run Open Vault Graph; confirm its named action using the plugin scenarios above, then undo where applicable. Repeat after disable/re-enable and switching panes. |
-| `lumiere.markdown.graph.chooseBundle` — Choose Vault Graph Scope | unbound | On a disposable fixture, run Choose Vault Graph Scope; confirm its named action using the plugin scenarios above, then undo where applicable. Repeat after disable/re-enable and switching panes. |
+| `lumiere.markdown.graph.chooseVault` — Choose Vault for Graph | unbound | On a disposable fixture, run Choose Vault for Graph; confirm its named action using the plugin scenarios above, then undo where applicable. Repeat after disable/re-enable and switching panes. |
 | `lumiere.markdown.ideContext.copy` — Copy IDE Context | unbound | On a disposable fixture, run Copy IDE Context; confirm its named action using the plugin scenarios above, then undo where applicable. Repeat after disable/re-enable and switching panes. |
 | `lumiere.markdown.ideContext.send` — Send IDE Context to Agent… | unbound | On a disposable fixture, run Send IDE Context to Agent…; confirm its named action using the plugin scenarios above, then undo where applicable. Repeat after disable/re-enable and switching panes. |
 | `lumiere.markdown.downloadAttachments` — Download Attachments for Current File | unbound | On a disposable fixture with `![A cat](https://…/cat.png)` twice, a web page link written as an image and a `data:` image: run the command and choose Download; confirm one `cat.png` (or `cat 1.png`) and one `Image.*` in the attachment folder, embeds that keep the alt text, the page link left as it was, and that one undo restores the note. Choosing nothing changes nothing. |
@@ -1365,7 +1364,6 @@ Use the disposable fixture vault from Setup. These rows enumerate every generate
 | `lumiere.markdown.plugins.marp.enabled` | `true` | boolean; change at workspace-folder scope, verify the owning plugin scenario, then reset the override. |
 | `lumiere.markdown.plugins.math.enabled` | `true` | boolean; change at workspace-folder scope, verify the owning plugin scenario, then reset the override. |
 | `lumiere.markdown.plugins.obsidianCompat.enabled` | `true` | boolean; change at workspace-folder scope, verify the owning plugin scenario, then reset the override. |
-| `lumiere.markdown.plugins.okfCore.enabled` | `true` | boolean; change at workspace-folder scope, verify the owning plugin scenario, then reset the override. |
 | `lumiere.markdown.plugins.onlineVideos.enabled` | `true` | boolean; change at workspace-folder scope, verify the owning plugin scenario, then reset the override. |
 | `lumiere.markdown.plugins.outgoingLinks.enabled` | `false` | boolean; change at workspace-folder scope, verify the owning plugin scenario, then reset the override. |
 | `lumiere.markdown.plugins.outline.enabled` | `true` | boolean; change at workspace-folder scope, verify the owning plugin scenario, then reset the override. |
@@ -1421,7 +1419,6 @@ Use the disposable fixture vault from Setup. These rows enumerate every generate
 | `lumiere.markdown.marp.open` | `"workbench"` | workbench / textEditor; change at workspace-folder scope, verify the owning plugin scenario, then reset the override. |
 | `lumiere.markdown.math.macros` | `{}` | object; change at workspace-folder scope, verify the owning plugin scenario, then reset the override. |
 | `lumiere.markdown.obsidianCompat.configFolder` | `".obsidian"` | string; change at workspace-folder scope, verify the owning plugin scenario, then reset the override. |
-| `lumiere.markdown.okfCore.bundles` | `[]` | array; change at workspace-folder scope, verify the owning plugin scenario, then reset the override. |
 | `lumiere.markdown.onlineVideos.bilibiliPlayer` | `false` | boolean; change at workspace-folder scope, verify the owning plugin scenario, then reset the override. |
 | `lumiere.markdown.outgoingLinks.sortOrder` | `"alphabetical"` | alphabetical / alphabeticalReverse / byModifiedTime / byModifiedTimeReverse; change at workspace-folder scope, verify the owning plugin scenario, then reset the override. |
 | `lumiere.markdown.outgoingLinks.extraContext` | `false` | boolean; change at workspace-folder scope, verify the owning plugin scenario, then reset the override. |
