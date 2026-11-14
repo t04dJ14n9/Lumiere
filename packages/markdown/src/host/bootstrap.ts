@@ -42,6 +42,7 @@ import {
   graphHost,
   diffResourcesHost,
   sketchHost,
+  vimHost,
 } from "../plugins/host";
 import { workbenchFeatures as startWorkbenchFeatures } from "./workshop-features";
 import type { CursorBridgeConfig } from "../plugins/cursorBridge/host";
@@ -162,6 +163,7 @@ function startWindowFeatures(root: BaseContext, host: HostServices): void {
     sketchHost,
     obsidianCompatHost,
     graphHost,
+    vimHost,
   ];
   const manifests = [...workbenchFeatures, ...features];
   startWorkbenchFeatures(

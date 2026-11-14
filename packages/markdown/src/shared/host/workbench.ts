@@ -123,6 +123,8 @@ export interface WorkshopPanel {
 
 /** Native views: trees, status bar entries and standalone webview panels. */
 export interface WorkbenchViews {
+  /** True where `status` entries are visible; absent where they do nothing. */
+  readonly statusBar?: boolean;
   tree(
     viewId: string,
     source: TreeSource,

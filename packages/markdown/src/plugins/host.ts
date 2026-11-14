@@ -34,6 +34,7 @@ export { agentBridgeHost } from "./agentBridge/host";
 export { ideContextHost } from "./ideContext/host";
 export { cursorBridgeHost } from "./cursorBridge/host";
 export { cursorBridgePanelHost } from "./cursorBridge/panel-host";
+export { vimHost, vimPanelHost } from "./vim/host";
 export { lookUpHost } from "./lookUp/host";
 export { markersHost } from "./markers/host";
 export { codeBlocksHost } from "./codeBlocks/host";

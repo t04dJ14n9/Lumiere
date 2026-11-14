@@ -21,6 +21,8 @@ import { installExAddressLeadingSpaceFix } from "./ex-address-space";
 import { shareOuterStatusForCellDialogs } from "./cell-ex-status";
 import { vimLineKeyboard } from "./keyboard";
 import { insertIntoClickedSource } from "./click-insert";
+import { protocol } from "./protocol";
+import { HOST_STATUS_CLASS, vimStatusReporter, vimStatusText } from "./status";
 import {
   getVimListContinueHandler,
   setVimInsertCtrlWHandler,
@@ -33,12 +35,15 @@ const caretProfiles = new WeakMap<
   { profile: Infer<typeof config>["caretStyle"] }
 >();
 
+/** Whether the host's status bar shows the mode, per webview. */
+const hostStatus = new WeakMap<Context, { shown: boolean }>();
+
 /** Each webview has one editor; restore the library hooks when its fiber stops. */
 export const vimWebview: Plugin<Infer<typeof config>> = {
   name: "vim",
   inject: {
     required: ["editor", "commands"],
-    optional: ["livePreview", "document"],
+    optional: ["livePreview", "document", "rpc"],
   },
   provides: ["vim"],
   config,
@@ -65,6 +70,7 @@ export const vimWebview: Plugin<Infer<typeof config>> = {
     // Real Vim accepts `: 123`; vim-core does not — eat spaces after `:`.
     ctx.effect(() => installExAddressLeadingSpaceFix());
     registerVimExtension(ctx);
+    registerHostStatus(ctx);
     // BH-021: default <C-p>→k steals Quick Open and races suggest Ctrl+P.
     releaseQuickOpenFromVim(ctx);
     // BH-029: default <C-a> increment steals Select All.
@@ -200,6 +206,10 @@ function registerVimExtension(ctx: Context): void {
     ctx.editor.extend(
       [
         vimExtensions(ctx, true),
+        // CodeMirror owns the editor's classes; a hand-added one would not last.
+        EditorView.editorAttributes.of(() =>
+          hostStatus.get(ctx)?.shown ? { class: HOST_STATUS_CLASS } : null,
+        ),
         EditorView.domEventHandlers({
           beforeinput(event, view) {
             const mode = getCM(view)?.state.vim;
@@ -223,9 +233,54 @@ function registerVimExtension(ctx: Context): void {
   );
 }
 
+/**
+ * Ask whether the host shows Vim's mode in its status bar. If it does, hide
+ * the mode line of the note's Vim panel (status.css) and report the mode.
+ */
+function registerHostStatus(ctx: Context): void {
+  const { rpc } = ctx;
+  if (!rpc) {
+    return;
+  }
+  const state = { shown: false };
+  hostStatus.set(ctx, state);
+  ctx.effect(() => {
+    let live = true;
+    const view = ctx.editor.view;
+    void rpc.call(protocol, "statusBar", {}).then(
+      (shown) => {
+        if (!live || !shown) {
+          return;
+        }
+        state.shown = true;
+        view.dispatch({});
+        const cm = getCM(view);
+        rpc.notify(
+          protocol,
+          "status",
+          { text: vimStatusText(cm?.state.vim ?? undefined) },
+          { coalesce: true },
+        );
+      },
+      // An older or status-less host keeps Vim's own panel.
+      () => {},
+    );
+    return () => {
+      live = false;
+      hostStatus.delete(ctx);
+      state.shown = false;
+    };
+  });
+}
+
 function vimExtensions(ctx: Context, status: boolean) {
   return [
     vim({ status }),
+    vimStatusReporter((_view, text) => {
+      if (hostStatus.get(ctx)?.shown) {
+        ctx.rpc?.notify(protocol, "status", { text }, { coalesce: true });
+      }
+    }),
     // Nested cells keep status:false chrome; share the note statusbar so
     // : / ? dialogs mount there instead of a tiny in-cell panel (H1).
     ...(status ? [] : [shareOuterStatusForCellDialogs(ctx.editor.view)]),

@@ -12,6 +12,10 @@
   `verified` maps show as Obsidian's Unknown type. The
   `lumiere.markdown.okfCore.bundles` setting is gone.
 
+- With Vim on, the mode (`-- NORMAL --`, `-- INSERT --`, …) shows in the
+  VS Code or Cursor status bar instead of a line under the note. That line now
+  opens only for a `:`, `/` or `?` prompt or a Vim message.
+
 - A heading link starting with `/` in VS Code's own text editor
   (`[x](/wiki/notes/x.md#flags)`) now opens from the vault root, the
   nearest folder with `.obsidian`, as in Obsidian and in the Lumiere view.

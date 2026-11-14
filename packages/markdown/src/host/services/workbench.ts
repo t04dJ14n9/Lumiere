@@ -45,6 +45,7 @@ export function createDialogs(): Dialogs {
 export function createWorkbenchViews(extensionUri: vscode.Uri): WorkbenchViews {
   return {
     tree: createTree,
+    statusBar: true,
     status: createStatus,
     panel: createWorkshopPanel(extensionUri),
   };
