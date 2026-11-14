@@ -12,6 +12,12 @@
   `verified` maps show as Obsidian's Unknown type. The
   `lumiere.markdown.okfCore.bundles` setting is gone.
 
+- A heading link starting with `/` in VS Code's own text editor
+  (`[x](/wiki/notes/x.md#flags)`) now opens from the vault root, the
+  nearest folder with `.obsidian`, as in Obsidian and in the Lumiere view.
+  It used to start at the workspace folder, which missed the note when
+  that folder is above the vault.
+
 - The Wiki plugin is removed: no more `.wiki/layout.json` reading, wiki
   page diagnostics, **Copy Wiki Reference for Agent**, **Copy Wiki Bridge
   Envelope**, **Show Wiki Layout** or **Refresh Wiki Diagnostics**. With it
