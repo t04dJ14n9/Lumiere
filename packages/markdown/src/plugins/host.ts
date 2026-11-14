@@ -17,7 +17,6 @@ export { quickSwitcherHost } from "./quickSwitcher/host";
 export { wordCountHost } from "./wordCount/host";
 export { linkUpdatesHost } from "./linkUpdates/host";
 export { bridgeHost } from "./bridge/host";
-export { wikiHost } from "./wiki/host";
 export { attachmentsHost } from "./attachments/host";
 export { scratchHost } from "./scratch/host";
 export { templatesHost } from "./templates/host";

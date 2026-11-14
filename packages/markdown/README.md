@@ -49,8 +49,7 @@ profile as described in [docs/MANUAL_TEST_PLAN.md](docs/MANUAL_TEST_PLAN.md#buil
   when the editor's own chat is the only agent, or when
   `lumiere.markdown.copyLinkForAgent.target` picks one. Plain Ctrl/Cmd+C
   copies text.
-- **Copy Wiki Reference for Agent** copies that same wording for a wiki
-  note and does not open a chat. **Copy Bridge Envelope** copies the
+- **Copy Bridge Envelope** copies the
   versioned JSON selection (`docs/bridge-envelope.md`). Agent PDF Viewer
   is optional.
 - **Attachments** save dropped, pasted, and HTML-paste images into

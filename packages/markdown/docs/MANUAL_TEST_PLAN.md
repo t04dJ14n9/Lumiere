@@ -1131,38 +1131,24 @@ Use a disposable vault with `Templates/Meeting.md` containing
 5. In host-node (the app or DSH), repeat steps 1 and 2 from its Command
    Palette.
 
-### wiki, scratch and Marp
+### scratch and Marp
 
-Use a disposable folder, never a personal vault. Add the slim
-`.wiki/layout.json` from `docs/bridge-envelope.md` if you want collection
-paths; a missing layout is the legacy preset.
+Use a disposable folder, never a personal vault.
 
 1. **Copy Bridge Envelope** on a saved selection: the clipboard is JSON with
    `version: 1`, a durable `@path#lines` locator, a different `view.id`,
    `capturedAt`, and distinct `selection.sha256` and `revision.sourceSha256`.
    No chat opens. Repeat while the note is dirty: the durable path remains,
    `revision.isDirty` is true, and `revision.sourceSha256` is absent.
-2. **Copy Wiki Reference for Agent** copies `@path#lines` and the quoted
-   passage and says that no agent was started. With the Bridge plugin off,
-   it tells you to turn Bridge on.
-3. Put `[[Other]]` in a page under the bundle: the Problems panel reports a
-   portable Markdown link. The same text in a fence, in frontmatter, or
-   outside the bundle does not. A bundle page with no `type` is reported.
-   `knowledge/index.md` and `knowledge/log.md` are not.
-4. **New Scratch Note** writes under `scratch/` (or the layout's scratch
-   path) with `title` and `captured` and no `type`. **Promote Scratch Note**
-   to Concept writes `## Definition` and the other fixed sections, replaces
-   the scratch note with a Markdown link, and does not change `index.md`.
-   A scratch note with `marp: true` is refused and left in place.
-5. A note with `marp: true` offers **Open Marp Preview to the Side**.
+2. **New Scratch Note** writes under `scratch/` (or
+   `lumiere.markdown.scratch.folder`) with `title` and `captured` and no
+   `type`.
+3. A note with `marp: true` offers **Open Marp Preview to the Side**.
    **Export Marp Slide Deck** in an untrusted workspace is refused. With
    Marp for VS Code installed and the workspace trusted, the text editor
    opens and Marp's export follows. **Toggle Marp** flips only the `marp`
    flag. Set `lumiere.markdown.marp.open` to `textEditor`: the deck opens
    in the text editor; **Keep Marp Deck in Workshop** brings it back.
-   A deck saved inside the bundle without `type` and `generated` is
-   reported and is not rewritten. **Move Marp Deck Outside Bundle** moves
-   it under `exports/` and copies a Markdown link; the deck text is unchanged.
 
 <!-- command-setting-inventory:start -->
 ## Complete command and setting acceptance inventory
@@ -1255,7 +1241,6 @@ Use the disposable fixture vault from Setup. These rows enumerate every generate
 | `lumiere.markdown.marp.preview` — Open Marp Preview to the Side | unbound | On a disposable fixture, run Open Marp Preview to the Side; confirm its named action using the plugin scenarios above, then undo where applicable. Repeat after disable/re-enable and switching panes. |
 | `lumiere.markdown.marp.export` — Export Marp Slide Deck | unbound | On a disposable fixture, run Export Marp Slide Deck; confirm its named action using the plugin scenarios above, then undo where applicable. Repeat after disable/re-enable and switching panes. |
 | `lumiere.markdown.marp.toggle` — Toggle Marp | unbound | On a disposable fixture, run Toggle Marp; confirm its named action using the plugin scenarios above, then undo where applicable. Repeat after disable/re-enable and switching panes. |
-| `lumiere.markdown.marp.moveOutside` — Move Marp Deck Outside Bundle | unbound | On a disposable fixture, run Move Marp Deck Outside Bundle; confirm its named action using the plugin scenarios above, then undo where applicable. Repeat after disable/re-enable and switching panes. |
 | `lumiere.markdown.marp.keepInWorkshop` — Keep Marp Deck in Workshop | unbound | On a disposable fixture, run Keep Marp Deck in Workshop; confirm its named action using the plugin scenarios above, then undo where applicable. Repeat after disable/re-enable and switching panes. |
 | `lumiere.markdown.toggleInlineMath` — Toggle Inline Math | unbound | On a disposable fixture, run Toggle Inline Math; confirm its named action using the plugin scenarios above, then undo where applicable. Repeat after disable/re-enable and switching panes. |
 | `lumiere.markdown.insertMathBlock` — Insert Math Block | unbound | On a disposable fixture, run Insert Math Block; confirm its named action using the plugin scenarios above, then undo where applicable. Repeat after disable/re-enable and switching panes. |
@@ -1279,7 +1264,6 @@ Use the disposable fixture vault from Setup. These rows enumerate every generate
 | `lumiere.markdown.showPluginStatus` — Show Plugin Status | unbound | On a disposable fixture, run Show Plugin Status; confirm its named action using the plugin scenarios above, then undo where applicable. Repeat after disable/re-enable and switching panes. |
 | `lumiere.markdown.quickSwitcher` — Quick Switcher | unbound | On a disposable fixture, run Quick Switcher; confirm its named action using the plugin scenarios above, then undo where applicable. Repeat after disable/re-enable and switching panes. |
 | `lumiere.markdown.scratch.new` — New Scratch Note | unbound | On a disposable fixture, run New Scratch Note; confirm its named action using the plugin scenarios above, then undo where applicable. Repeat after disable/re-enable and switching panes. |
-| `lumiere.markdown.scratch.promote` — Promote Scratch Note | unbound | On a disposable fixture, run Promote Scratch Note; confirm its named action using the plugin scenarios above, then undo where applicable. Repeat after disable/re-enable and switching panes. |
 | `lumiere.markdown.templates.insert` — Insert Template | unbound | On a disposable fixture, run Insert Template; confirm its named action using the plugin scenarios above, then undo where applicable. Repeat after disable/re-enable and switching panes. |
 | `lumiere.markdown.dailyNotes.openToday` — Open Today's Daily Note | unbound | On a disposable fixture, run Open Today's Daily Note; confirm its named action using the plugin scenarios above, then undo where applicable. Repeat after disable/re-enable and switching panes. |
 | `lumiere.markdown.dailyNotes.openPrevious` — Open Previous Daily Note | unbound | On a disposable fixture, run Open Previous Daily Note; confirm its named action using the plugin scenarios above, then undo where applicable. Repeat after disable/re-enable and switching panes. |
@@ -1323,10 +1307,6 @@ Use the disposable fixture vault from Setup. These rows enumerate every generate
 | `lumiere.markdown.cycleListChecklist` — Cycle List Checklist | unbound | On a disposable fixture, run Cycle List Checklist; confirm its named action using the plugin scenarios above, then undo where applicable. Repeat after disable/re-enable and switching panes. |
 | `lumiere.markdown.consumeVimHostShortcut` — Consume Vim Host Shortcut | ctrl+o (Mac ctrl+o); ctrl+b (Mac ctrl+b); ctrl+i (Mac ctrl+i); ctrl+k (Mac ctrl+k) | Enable Vim and press the listed keys; host commands must not steal them. This helper stays hidden from the palette. |
 | `lumiere.markdown.handleVimCtrlN` — Vim Ctrl+N | ctrl+n (Mac ctrl+n) | Enable Vim in Live Preview and press Ctrl+N; must not open Untitled and must move like j (<C-n>). Disable Vim: Ctrl+N opens Untitled. Hidden from the palette. |
-| `lumiere.markdown.wiki.copyForAgent` — Copy Wiki Reference for Agent | unbound | On a disposable fixture, run Copy Wiki Reference for Agent; confirm its named action using the plugin scenarios above, then undo where applicable. Repeat after disable/re-enable and switching panes. |
-| `lumiere.markdown.wiki.copyEnvelope` — Copy Wiki Bridge Envelope | unbound | On a disposable fixture, run Copy Wiki Bridge Envelope; confirm its named action using the plugin scenarios above, then undo where applicable. Repeat after disable/re-enable and switching panes. |
-| `lumiere.markdown.wiki.showLayout` — Show Wiki Layout | unbound | On a disposable fixture, run Show Wiki Layout; confirm its named action using the plugin scenarios above, then undo where applicable. Repeat after disable/re-enable and switching panes. |
-| `lumiere.markdown.wiki.refresh` — Refresh Wiki Diagnostics | unbound | On a disposable fixture, run Refresh Wiki Diagnostics; confirm its named action using the plugin scenarios above, then undo where applicable. Repeat after disable/re-enable and switching panes. |
 
 | Submenu of the note's menu | Items | Procedure and expected outcome |
 | --- | --- | --- |
@@ -1382,7 +1362,6 @@ Use the disposable fixture vault from Setup. These rows enumerate every generate
 | `lumiere.markdown.plugins.tags.enabled` | `true` | boolean; change at workspace-folder scope, verify the owning plugin scenario, then reset the override. |
 | `lumiere.markdown.plugins.tasks.enabled` | `true` | boolean; change at workspace-folder scope, verify the owning plugin scenario, then reset the override. |
 | `lumiere.markdown.plugins.vim.enabled` | `false` | boolean; change at workspace-folder scope, verify the owning plugin scenario, then reset the override. |
-| `lumiere.markdown.plugins.wiki.enabled` | `true` | boolean; change at workspace-folder scope, verify the owning plugin scenario, then reset the override. |
 | `lumiere.markdown.plugins.wordCount.enabled` | `true` | boolean; change at workspace-folder scope, verify the owning plugin scenario, then reset the override. |
 | `lumiere.markdown.autoPair.brackets` | `true` | boolean; change at workspace-folder scope, verify the owning plugin scenario, then reset the override. |
 | `lumiere.markdown.autoPair.markdown` | `true` | boolean; change at workspace-folder scope, verify the owning plugin scenario, then reset the override. |

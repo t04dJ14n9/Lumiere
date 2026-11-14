@@ -12,6 +12,14 @@
   `verified` maps show as Obsidian's Unknown type. The
   `lumiere.markdown.okfCore.bundles` setting is gone.
 
+- The Wiki plugin is removed: no more `.wiki/layout.json` reading, wiki
+  page diagnostics, **Copy Wiki Reference for Agent**, **Copy Wiki Bridge
+  Envelope**, **Show Wiki Layout** or **Refresh Wiki Diagnostics**. With it
+  go **Promote Scratch Note** and **Move Marp Deck Outside Bundle**; **New
+  Scratch Note** always uses `lumiere.markdown.scratch.folder`. The bridge
+  envelope no longer has a `wiki` field. **Copy link to this** and **Copy
+  Bridge Envelope** are unchanged.
+
 - Typing `[[` in VS Code's own text editor now suggests links, as the Lumia
   editor does: `[[Note` lists notes (with aliases), `[[Note#` the note's
   headings, `[[Note#^` its blocks that already have an id, and `[[Note|` keeps

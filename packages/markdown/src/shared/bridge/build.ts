@@ -32,7 +32,6 @@ export function buildMarkdownEnvelope(
     ...viewField(input.viewId),
     selection: selectionField(input.text, input.selectionSha256),
     revision: revisionFields(input),
-    ...wikiField(input.wiki),
   });
 }
 
@@ -155,8 +154,4 @@ function lineField(startLine?: number, endLine?: number) {
 
 function viewField(viewId?: string) {
   return viewId ? { view: { id: viewId } } : {};
-}
-
-function wikiField(wiki: MarkdownEnvelopeInput["wiki"]) {
-  return wiki ? { wiki } : {};
 }

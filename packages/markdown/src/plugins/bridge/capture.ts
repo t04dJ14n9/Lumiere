@@ -3,14 +3,12 @@ import {
   buildMarkdownEnvelope,
   parseBridgeEnvelope,
   type BridgeEnvelope,
-  type BridgeWikiContext,
 } from "../../shared/bridge/envelope";
 import {
   durableMarkdownLocator,
   noteIdentity,
 } from "../../shared/bridge/identity";
 import { markdownHandoffText } from "../../shared/bridge/text";
-import { publicationTime } from "../../shared/wiki-page";
 import type { SourceSelection } from "../editor/api";
 import type { MarkdownHandoff } from "./api";
 
@@ -22,7 +20,29 @@ export interface CaptureInput {
   readonly roots: readonly string[];
   readonly capturedAt: string;
   readonly fingerprint: (text: string) => string;
-  readonly wiki?: BridgeWikiContext;
+}
+
+const PUBLICATION_KEYS = [
+  "published",
+  "date",
+  "captured",
+  "last_modified",
+] as const;
+
+/**
+ * When the source itself was published or captured, from frontmatter. This
+ * is not the selection's capture time.
+ */
+export function publicationTime(
+  values: Record<string, unknown> | undefined,
+): string | undefined {
+  for (const key of PUBLICATION_KEYS) {
+    const value = values?.[key];
+    if (typeof value === "string" && value.trim() !== "") {
+      return value.trim();
+    }
+  }
+  return undefined;
 }
 
 /** Builds the envelope for one captured selection. Throws on a bad hash. */
@@ -59,7 +79,6 @@ export function handoffFromSelection(input: CaptureInput): MarkdownHandoff {
     documentVersion: input.selection.version,
     ...(sourceSha256 ? { sourceSha256 } : {}),
     isDirty: input.selection.isDirty || identity.kind === "untitled",
-    ...(input.wiki ? { wiki: input.wiki } : {}),
   });
   return {
     envelope,

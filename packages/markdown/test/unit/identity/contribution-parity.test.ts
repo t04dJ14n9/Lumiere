@@ -52,7 +52,6 @@ import { templatesHost } from "../../../src/plugins/templates/host";
 import { dailyNotesHost } from "../../../src/plugins/dailyNotes/host";
 import { settingsHost } from "../../../src/plugins/settings/host";
 import { sketchHost } from "../../../src/plugins/sketch/host";
-import { wikiHost } from "../../../src/plugins/wiki/host";
 import { registerPluginManagement } from "../../../src/host/api/management";
 import { registerOpenReference } from "../../../src/host/api/open-reference";
 import { MARKDOWN_EDITOR } from "../../../src/shared/editor-provider";
@@ -278,7 +277,6 @@ function installHosts(
   root.plugin(ideContextHost);
   root.plugin(graphHost);
   root.plugin(bridgeHost);
-  root.plugin(wikiHost);
   root.plugin(scratchHost);
   root.plugin(templatesHost);
   root.plugin(dailyNotesHost);

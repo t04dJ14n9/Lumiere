@@ -2,7 +2,7 @@ import { contributionId } from "../setting-schema";
 
 /**
  * Versioned selection envelope shared by Lumiere and PDF
- * Workshop. This is a workbench protocol, not OKF
+ * Workshop. This is a workbench protocol, not note
  * metadata. Version 1 carries one locator.
  *
  * `locator.durable` reopens the spot after the view is gone.
@@ -30,15 +30,7 @@ export const BRIDGE_KEYS = new Set([
   "view",
   "selection",
   "revision",
-  "wiki",
 ]);
-
-export interface BridgeWikiContext {
-  readonly preset?: string;
-  readonly bundle?: string;
-  readonly collection?: string;
-  readonly type?: string;
-}
 
 export interface BridgeViewRect {
   readonly x: number;
@@ -76,7 +68,6 @@ export interface BridgeEnvelope {
     readonly sourceSha256?: string;
     readonly isDirty: boolean;
   };
-  readonly wiki?: BridgeWikiContext;
   /** Unknown top-level fields, preserved so either extension can round-trip. */
   readonly extra?: Readonly<Record<string, unknown>>;
 }
@@ -96,7 +87,6 @@ export interface MarkdownEnvelopeInput {
   readonly documentVersion?: number;
   readonly sourceSha256?: string;
   readonly isDirty: boolean;
-  readonly wiki?: BridgeWikiContext;
 }
 
 export interface PdfEnvelopeInput {

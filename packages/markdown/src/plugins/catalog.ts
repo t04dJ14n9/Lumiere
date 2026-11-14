@@ -57,7 +57,6 @@ import quickSwitcher from "./quickSwitcher/manifest";
 import wordCount from "./wordCount/manifest";
 import linkUpdates from "./linkUpdates/manifest";
 import bridge from "./bridge/manifest";
-import wiki from "./wiki/manifest";
 import attachments from "./attachments/manifest";
 import scratch from "./scratch/manifest";
 import templates from "./templates/manifest";
@@ -129,7 +128,6 @@ export const workbenchFeatures: readonly Manifest[] = inPluginOrder(
     scratch,
     templates,
     dailyNotes,
-    wiki,
     wordCount,
     obsidianCompat,
     graph,
