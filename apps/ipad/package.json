@@ -21,6 +21,6 @@
     "@workshop/markdown": "workspace:*"
   },
   "devDependencies": {
-    "@capacitor/cli": "8.6.0"
+    "@capacitor/cli": "8.6.2"
   }
 }
