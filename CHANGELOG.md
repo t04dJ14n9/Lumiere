@@ -8,6 +8,8 @@
 
 ## Unreleased
 
+- Mermaid diagrams: Inspect, Copy and Edit are now three equal buttons, evenly spaced and flush with the right edge (Inspect shows its name instead of a small ⤢). The `mermaid` label sits in that corner and gives way to them on hover or keyboard focus.
+
 - Fixed: Vim `j`/`k` could skip several source lines inside a revealed Mermaid diagram or other source-visible Live Preview block.
 
 - **Lumia is now Lumiere.** The Extensions view, the Marketplace listing
