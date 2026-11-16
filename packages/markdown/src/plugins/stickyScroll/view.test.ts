@@ -379,7 +379,7 @@ test("a scroll during the same measuring, such as CodeMirror's anchoring, redraw
   );
   f.view.visibleFrom = f.view.state.doc.toString().indexOf("root body");
   f.view.scrollDOM.scrollTop -= 700;
-  await Promise.resolve();
+  await microtasks();
   assert.deepEqual(
     pinRows(f.dom).map((row) => row.label),
     ["Root"],
@@ -396,7 +396,7 @@ test("a scroll during the same measuring, such as CodeMirror's anchoring, redraw
   f.chrome.schedule();
   f.flush();
   const afterMeasure = probed;
-  await Promise.resolve();
+  await microtasks();
   assert.equal(probed, afterMeasure);
 });
 
@@ -417,10 +417,46 @@ test("the redraw after an anchoring scroll reads only what CodeMirror has measur
   };
   f.view.visibleFrom = f.view.state.doc.toString().indexOf("root body");
   f.view.scrollDOM.scrollTop -= 700;
-  await Promise.resolve();
+  await microtasks();
   assert.equal(flushing, 0);
   assert.deepEqual(
     pinRows(f.dom).map((row) => row.label),
     ["Root"],
   );
 });
+
+test("an anchoring scroll the held jump puts back before the redraw leaves the bar as measured", async () => {
+  const f = fixture();
+  const at = (text: string) => f.view.state.doc.toString().indexOf(text);
+  f.scrollTo("root body");
+  f.chrome.schedule();
+  f.flush();
+  assert.deepEqual(
+    pinRows(f.dom).map((row) => row.label),
+    ["Root"],
+  );
+  // CodeMirror anchors the view into "Child"'s section in the same
+  // measuring; the held jump, a plugin after this one, puts it back in a
+  // microtask of its own.
+  const measured = f.view.scrollDOM.scrollTop;
+  f.view.visibleFrom = at("child body");
+  f.view.scrollDOM.scrollTop = measured + 700;
+  queueMicrotask(() => {
+    f.view.visibleFrom = at("root body");
+    f.view.scrollDOM.scrollTop = measured;
+  });
+  for (let i = 0; i < 4; i++) {
+    await microtasks();
+  }
+  assert.deepEqual(
+    pinRows(f.dom).map((row) => row.label),
+    ["Root"],
+    "not left drawn for where the view only passed through",
+  );
+});
+
+/** The redraw runs two microtasks after a measuring writes, still before paint. */
+async function microtasks(): Promise<void> {
+  await Promise.resolve();
+  await Promise.resolve();
+}
