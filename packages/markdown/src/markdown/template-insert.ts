@@ -1,3 +1,4 @@
+import { hasInexactInteger } from "./properties/exact-numbers";
 import { frontmatter, headerParts } from "./properties/frontmatter";
 import { mergeProperties } from "./properties/merge";
 
@@ -56,6 +57,10 @@ export function templateInsertion(
     return atSelection(selection, body, [{ from: 0, to: 0, insert: block }]);
   }
   const target = belowHeader(note, noteHeader, selection);
+  if (hasInexactInteger(templateHeader.body)) {
+    // Merged, its long integers would be written rounded.
+    return { ...atSelection(target, body, []), invalidProperties: "template" };
+  }
   const changes = Object.keys(incoming).length
     ? mergeProperties(note, incoming, { keepExisting: true })
     : [];

@@ -218,3 +218,33 @@ test("joining lists keeps .inf, -.inf, .nan and null apart", () => {
   assert.deepEqual(values.slice(0, 3), [Infinity, -Infinity, NaN]);
   assert.deepEqual(values.slice(3), [null, "new"]);
 });
+
+test("a long integer is never rounded by merging a template's properties", () => {
+  const note = "---\nids: [18446744073709551615]\n---\nBody\n";
+  // In the template: its properties are not merged rather than rounded.
+  const fromTemplate = inserted(
+    note,
+    "---\nserial: 18446744073709551615\n---\nText\n",
+    { from: note.length, to: note.length },
+  );
+  assert.equal(fromTemplate.invalidProperties, "template");
+  assert.ok(!fromTemplate.text.includes("18446744073709552000"));
+  // In the note: a list that holds one is not rewritten.
+  const intoNote = inserted(note, "---\nids: [7]\n---\nText\n", {
+    from: note.length,
+    to: note.length,
+  });
+  assert.ok(intoNote.text.includes("18446744073709551615"), intoNote.text);
+  assert.ok(!intoNote.text.includes("18446744073709552000"));
+});
+
+test("an empty property in the note takes the template's value", () => {
+  const note = "---\ntags:\n---\nBody\n";
+  const { text, invalidProperties } = inserted(
+    note,
+    "---\ntags: [meeting]\n---\nText\n",
+    { from: note.length, to: note.length },
+  );
+  assert.equal(invalidProperties, undefined);
+  assert.deepEqual(frontmatter(text)?.values?.tags, ["meeting"]);
+});
