@@ -12,7 +12,13 @@
   renames to names with quotes, relative links name the right note, Insert
   Template merges properties, **Always Update** is kept per vault, and
   renames update `.canvas` files and notes the index has not read yet.
-  Details in `packages/markdown/CHANGELOG.md`.
+  After review: a note that cannot be read no longer stops a rename, notes
+  typed in during a rename are not edited at stale positions, `%%`
+  comments end where Obsidian ends them, child tasks tick through block
+  embeds, and templates keep the note's properties valid. Known
+  limitations: **Always Update** is kept per workspace folder (vaults
+  sharing a folder share it), and a user-level `always` from an earlier
+  version is not migrated. Details in `packages/markdown/CHANGELOG.md`.
 
 - Daily Notes is removed from Lumiere's Markdown editor, with its three
   commands and four settings; VS Code ignores the settings now that nothing
