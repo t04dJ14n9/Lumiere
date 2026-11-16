@@ -3,7 +3,8 @@ export interface InlineParser {
   parseInline(
     text: string,
     offset: number,
-  ): readonly { from: number; to: number }[];
+  ): readonly { type: number; from: number; to: number }[];
+  readonly nodeSet: { readonly types: readonly { readonly name: string }[] };
 }
 
 /**
@@ -12,16 +13,20 @@ export interface InlineParser {
  * reading view's, which both pass the editor's inline parser, so they agree
  * on where a paragraph ends.
  *
- * A `%%` the inline parser made part of something (a comment it closes,
- * code, math, a tag, a link, an escape: `\%%` is a `%` and a `%`) is not an
- * opener; one left over is, since a closed comment would be an element.
+ * Asked of the parser itself: one more `%%` at the end closes a comment
+ * exactly when one is open. So a `%%` in code, math, a tag or after an
+ * escape stays text, and one in emphasis or a link label still opens.
  */
 export function hasOpenComment(text: string, parser: InlineParser): boolean {
-  const elements = parser.parseInline(text, 0);
-  for (let at = text.indexOf("%%"); at >= 0; at = text.indexOf("%%", at + 2)) {
-    if (!elements.some((element) => element.from <= at && at < element.to)) {
-      return true;
-    }
+  if (!text.includes("%%")) {
+    return false;
   }
-  return false;
+  const end = text.length + 2;
+  return parser
+    .parseInline(`${text}%%`, 0)
+    .some(
+      (element) =>
+        element.to === end &&
+        parser.nodeSet.types[element.type]?.name === "ObsidianComment",
+    );
 }
