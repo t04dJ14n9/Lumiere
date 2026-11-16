@@ -72,7 +72,15 @@
     Markdown (embeds, previews, exports), dimmed in Live Preview, and its
     headings no longer appear in the Outline, heading suggestions or
     heading links. Links and tags inside stay indexed, as Obsidian indexes
-    them. A `%%` line that nothing closes comments out the rest of the note.
+    them. A `%%` line that nothing closes comments out the rest of the note,
+    or of the quote, callout or list item it is in (in the editor too, which
+    used to run on past the quote). A `%%` line right below a paragraph
+    line starts the comment instead of joining the paragraph, so a closed
+    comment there no longer hides the rest of the note; it still closes a
+    `%%` the paragraph opened. Text after a comment's closing `%%` on its
+    line is shown and its links, tags and block ids are indexed. A `%%` line
+    under a nested list item is a comment in the editor as it is in reading
+    view.
   - Properties read the vault's `.obsidian/types.json`: a property Obsidian
     types as Text shows as text even when its value is `123`. Lumiere does
     not write `types.json`: a type you change in Lumiere is stored in

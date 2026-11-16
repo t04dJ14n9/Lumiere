@@ -84,6 +84,20 @@ Offsets are relative to the element's start; "touch" means `caret >= from && car
 | HTML block `<div>` | | whole block when the caret is inside | mix.md |
 | `%% … %%` comment block | | `%%` always visible; inner formatting per element (Lumiere: the block, blank lines included, is one dimmed comment and its inner Markdown is not formatted, so a heading inside is not a heading) | mix.md |
 
+How Lumiere bounds a `%%` comment block, in the editor and the reading view
+alike (`dialect/comments.ts`, `html/comments.ts`): a line starting with `%%`
+(indented less than code, counted from its quote or list item) that does not
+close on it opens the block, and ends a paragraph above it unless that
+paragraph has a `%%` of its own still open (then the line closes it). The
+block ends at the next `%%`; text after it on that line is parsed as a new
+block, so its links, tags and `^id`s count. **Unmeasured:** a `%%` that
+nothing closes runs to the end of the note, or of the quote or list item it
+is in. mix.md and b3.md close every comment, so how Obsidian ends an
+unclosed one has not been measured. Also unmeasured, and different in
+Lumiere: a `%%` opened mid-line in a paragraph stays open only within that
+paragraph, while Obsidian is believed to carry it over blank lines to the
+next `%%`.
+
 ## Differences found in our editor (before this change)
 
 Our rule was "an element is revealed when a selection range touches its own node", which matches rule 1 and 4, but:
