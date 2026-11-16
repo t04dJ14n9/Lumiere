@@ -8,9 +8,6 @@ importers:
 
   .:
     dependencies:
-      '@workshop/agents':
-        specifier: workspace:*
-        version: link:packages/agents
       '@workshop/core':
         specifier: workspace:*
         version: link:packages/core
@@ -78,9 +75,6 @@ importers:
       '@workshop/app':
         specifier: workspace:*
         version: link:../../packages/app
-      '@workshop/core':
-        specifier: workspace:*
-        version: link:../../packages/core
       '@workshop/host-node':
         specifier: workspace:*
         version: link:../../packages/host-node
@@ -103,9 +97,6 @@ importers:
       '@workshop/app':
         specifier: workspace:*
         version: link:../../packages/app
-      '@workshop/core':
-        specifier: workspace:*
-        version: link:../../packages/core
       '@workshop/host-node':
         specifier: workspace:*
         version: link:../../packages/host-node
@@ -166,9 +157,6 @@ importers:
       '@workshop/host-node':
         specifier: workspace:*
         version: link:../host-node
-      '@workshop/markdown':
-        specifier: workspace:*
-        version: link:../markdown
 
   packages/host-node:
     dependencies:
