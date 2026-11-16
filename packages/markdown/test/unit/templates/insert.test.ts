@@ -124,3 +124,47 @@ test("a refused edit reports false and does not move the caret", async () => {
   );
   assert.ok(!calls.some((call) => call.method === "reveal"));
 });
+
+test("Insert Template merges properties into a CRLF note and inserts the body at the caret", async () => {
+  const { insertTemplate } =
+    await import("../../../src/plugins/templates/insert");
+  const text = "---\r\nstatus: done\r\n---\r\nBody";
+  // Editor offsets: "---\nstatus: done\n---\nBody" with the caret at the end.
+  const { panel, calls } = panelWith({
+    text,
+    eol: "\r\n",
+    selection: { from: 25, to: 25, version: 1 },
+  });
+  let result = text;
+  const outcome = await insertTemplate(
+    {
+      apply: async (_document, edits) => {
+        const coordinates = new SourceCoordinates(result);
+        for (const edit of [...edits].reverse()) {
+          result =
+            result.slice(0, coordinates.toSource(edit.from)) +
+            edit.insert +
+            result.slice(coordinates.toSource(edit.to));
+        }
+        return true;
+      },
+    },
+    panel,
+    "---\nstatus: draft\ntags: [a]\n---\n\nNew",
+  );
+  assert.deepEqual(outcome, { isInserted: true, isMerged: true });
+  assert.equal(
+    result,
+    "---\r\nstatus: done\r\ntags:\r\n  - a\r\n---\r\nBody\r\nNew",
+  );
+  const editorText = result.replace(/\r\n/g, "\n");
+  assert.deepEqual(calls.at(-1), {
+    method: "reveal",
+    params: {
+      from: editorText.length,
+      to: editorText.length,
+      focus: true,
+      version: 1,
+    },
+  });
+});

@@ -3,7 +3,7 @@ import { expandTemplate } from "../../markdown/templates";
 import { registerReportedCommands } from "../../shared/reported-command";
 import { contributionId } from "../../shared/setting-schema";
 import { baseName } from "../../shared/workspace-path";
-import { insertAtSelection } from "./insert";
+import { insertTemplate } from "./insert";
 import { templateFiles, templateFolder, templatePickItems } from "./list";
 
 /** **Lumiere: Templates**: insert a template note at the caret. */
@@ -75,7 +75,16 @@ async function insert(ctx: Context): Promise<void> {
     dateFormat: get("dateFormat", ""),
     timeFormat: get("timeFormat", ""),
   });
-  if (!(await insertAtSelection(ctx.hostDocuments, panel, text))) {
+  const { isInserted, isMerged } = await insertTemplate(
+    ctx.hostDocuments,
+    panel,
+    text,
+  );
+  if (!isInserted) {
     ctx.dialogs.error("The template could not be inserted.");
+  } else if (!isMerged) {
+    ctx.dialogs.error(
+      "The template's properties were not added: this note's properties are not valid YAML.",
+    );
   }
 }
