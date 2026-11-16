@@ -157,7 +157,13 @@ export class StoreSession {
           return;
         }
         try {
-          const text = await exportStoreText(this.annotation, this.ownership);
+          // Whose they are as of the hash this save is filed under: a save
+          // into the PDF confirmed during the export makes some the PDF's
+          // for the new hash only, and the old hash's file must keep them.
+          const own = new Set(this.ownership.keys());
+          const text = await exportStoreText(this.annotation, {
+            isOwn: (key) => own.has(key),
+          });
           this.host.post({
             type: "annotationStoreSave",
             load: state.load,

@@ -371,3 +371,25 @@ test("a deleted annotation brought back by Undo while, or after, the PDF is writ
     [],
   );
 });
+
+test("a save for the old hash keeps what it owned there, though Save into This PDF is confirmed during it", async () => {
+  const options: Parameters<typeof open>[0] = { stored: stored101() };
+  const { session, present, saves, write } = writing(options);
+  session.restore(true);
+  const written = await write();
+  // A new highlight's save takes the old hash, then its export is held.
+  let release!: () => void;
+  options.gate = new Promise<void>((resolve) => {
+    release = resolve;
+  });
+  present.set(300, "highlight");
+  session.committed("create", [refOn(300)], {});
+  await new Promise((resolve) => setTimeout(resolve, 10));
+  session.savedIntoPdf(written);
+  release();
+  await until(() => saves().length >= 1);
+  const old = saves()[0] as { sha256: string; text: string };
+  assert.equal(old.sha256, SHA);
+  // The original PDF (and every copy of it) still has 101 in its file.
+  assert.deepEqual((await kept(old.text)).sort(), [101, 300]);
+});
