@@ -15,6 +15,15 @@ document action, flushes the webview, captures its selection, maps it to
 source offsets and replaces it through `hostDocuments.apply`. The caret is
 then moved after the inserted text.
 
+A template with properties is merged as in Obsidian
+(`src/markdown/template-insert.ts`): its properties join the note's, keeping
+the note's values, adding missing keys and joining lists without
+duplicates, through the YAML-safe property merge; only the body goes in at
+the caret (below the properties when the caret is inside or above them).
+A note without properties gets the template's block at its top. When the
+note's properties are not valid YAML, only the body is inserted and a
+message says so.
+
 Tokens: `{{title}}` (the destination note's basename), `{{date}}`,
 `{{time}}`, and `{{date:FORMAT}}` / `{{time:FORMAT}}`. Formats use the
 tokens `YYYY`, `MM`, `DD`, `HH`, `mm` and `ss`, in local time, through the
@@ -25,7 +34,7 @@ Bases date formatter.
 - `manifest.ts`: the command and the three settings.
 - `host.ts`: the Insert Template command.
 - `list.ts`: the folder setting, the template files and the picker rows.
-- `insert.ts`: replaces the panel's selection with the expanded text.
+- `insert.ts`: applies the template's edits at the panel's selection.
 
 ## Services, events and settings
 
