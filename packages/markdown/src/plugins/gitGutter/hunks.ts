@@ -123,8 +123,3 @@ export function hunkAt(
   }
   return removal;
 }
-
-/** The text a hunk covers now. */
-export function currentText(state: EditorState, hunk: DocHunk): string {
-  return hunk.kind === "deleted" ? "" : state.sliceDoc(hunk.from, hunk.to);
-}

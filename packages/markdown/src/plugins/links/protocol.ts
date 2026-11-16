@@ -1,12 +1,6 @@
 import { offset } from "../editor/protocol";
 import { Schema } from "@workshop/core";
 import { defineProtocol } from "../../shared/rpc/protocol";
-export const navigationTarget = Schema.object({
-  fragment: Schema.string().max(8192),
-  at: offset.optional(),
-  to: offset.optional(),
-  preserveFocus: Schema.boolean().optional(),
-});
 export const request = Schema.object({
   at: offset.optional(),
   source: Schema.string().max(8192).optional(),
