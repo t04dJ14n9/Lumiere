@@ -87,26 +87,34 @@ export class StickyScrollView {
    * measuring and before paint: draw the bar again there if it moved.
    */
   private redrawIfScrolled(measuredScrollTop: number): void {
-    queueMicrotask(() => {
-      if (
-        this.isDestroyed ||
-        this.view.scrollDOM.scrollTop === measuredScrollTop
-      ) {
-        return;
-      }
-      // Only what CodeMirror has measured: lineBlockAtHeight would run its
-      // pending measuring now, which can record an anchoring scroll before a
-      // held jump has settled it, and the jump would let go. Outside those
-      // lines, the next measuring draws the bar.
-      const layout = this.measure((height) =>
-        this.view.viewportLineBlocks.find(
-          (block) => block.top <= height && height <= block.bottom,
-        ),
-      );
-      if (layout) {
-        this.draw(layout);
-      }
-    });
+    // A second microtask: plugins after this one (a held jump) settle the
+    // scroll in microtasks queued after this write. One that puts the
+    // anchoring back must have done so first, or the bar would be drawn for
+    // where the view only passed through.
+    queueMicrotask(() =>
+      queueMicrotask(() => this.redrawFor(measuredScrollTop)),
+    );
+  }
+
+  private redrawFor(measuredScrollTop: number): void {
+    if (
+      this.isDestroyed ||
+      this.view.scrollDOM.scrollTop === measuredScrollTop
+    ) {
+      return;
+    }
+    // Only what CodeMirror has measured: lineBlockAtHeight would run its
+    // pending measuring now, which can record an anchoring scroll before a
+    // held jump has settled it, and the jump would let go. Outside those
+    // lines, the next measuring draws the bar.
+    const layout = this.measure((height) =>
+      this.view.viewportLineBlocks.find(
+        (block) => block.top <= height && height <= block.bottom,
+      ),
+    );
+    if (layout) {
+      this.draw(layout);
+    }
   }
 
   /** `lineAt` finds the line at a height; undefined when it cannot say. */
