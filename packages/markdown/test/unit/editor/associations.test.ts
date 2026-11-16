@@ -4,7 +4,7 @@ import { createRoot } from "@workshop/core";
 import {
   registerMarkdownAssociation,
   useForMarkdownInWorkspace,
-  withMarkdownWorkshop,
+  withMarkdownLumiere,
 } from "../../../src/plugins/editor/associations";
 import { MARKDOWN_WORKSPACE_EDITOR_KEY } from "../../../src/shared/editor-provider";
 import { provideHostServices } from "../../../src/shared/host";
@@ -12,7 +12,7 @@ import { fakeHost } from "../../support/vscode-fake";
 
 test("Markdown patterns open in Lumiere directly; other associations stay", () => {
   assert.deepEqual(
-    withMarkdownWorkshop({ "*.pdf": "pdf.preview", "*.md": "default" }),
+    withMarkdownLumiere({ "*.pdf": "pdf.preview", "*.md": "default" }),
     {
       "*.pdf": "pdf.preview",
       "*.md": "lumiere.markdown.editor",
@@ -20,7 +20,7 @@ test("Markdown patterns open in Lumiere directly; other associations stay", () =
     },
   );
   for (const malformed of [undefined, null, [], "x", { "*.txt": 3 }]) {
-    assert.deepEqual(withMarkdownWorkshop(malformed), {
+    assert.deepEqual(withMarkdownLumiere(malformed), {
       "*.md": "lumiere.markdown.editor",
       "*.markdown": "lumiere.markdown.editor",
     });

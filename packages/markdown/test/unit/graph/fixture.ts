@@ -4,7 +4,7 @@ import { graphHost } from "../../../src/plugins/graph/host";
 import { protocol } from "../../../src/plugins/graph/protocol";
 import type { GraphSnapshot } from "../../../src/plugins/graph/snapshot";
 import { provideHostServices } from "../../../src/shared/host";
-import type { WorkshopPanel } from "../../../src/shared/host";
+import type { LumierePanel } from "../../../src/shared/host";
 import { contributionId } from "../../../src/shared/setting-schema";
 import { Endpoint } from "../../../src/shared/rpc/endpoint";
 import type { Clock, Transport } from "../../../src/shared/rpc/endpoint";
@@ -47,7 +47,7 @@ export function fakeGraphPanel() {
       }
     });
   let disposed = false;
-  const panel: WorkshopPanel = {
+  const panel: LumierePanel = {
     reveal() {},
     setTitle() {},
     visible: true,

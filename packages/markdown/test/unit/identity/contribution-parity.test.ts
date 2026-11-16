@@ -94,7 +94,7 @@ test("customEditors viewType matches MARKDOWN_EDITOR (runtime registration id)",
   assert.equal(MARKDOWN_EDITOR.viewType, contributionId("editor"));
 });
 
-test("every contributed command id equals contributionId(local) and uses Workshop prefix", () => {
+test("every contributed command id equals contributionId(local) and uses Lumiere prefix", () => {
   for (const command of contributes.commands) {
     assert.match(command.command, /^lumiere\.markdown\./);
     assert.doesNotMatch(command.command, /markdownWorkbench/);

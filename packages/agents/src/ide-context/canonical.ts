@@ -23,7 +23,7 @@ function normalizeUri(uri: string): string {
 }
 
 /**
- * Invoking workshop surface owns active; host activeTextEditor augments only on URI match.
+ * Invoking Lumiere surface owns active; host activeTextEditor augments only on URI match.
  */
 export function resolveCanonicalActive(
   productSlice: ProductCanonicalSlice,
