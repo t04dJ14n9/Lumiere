@@ -184,28 +184,23 @@ test("templates.json seeds only usable values", () => {
       "templates.timeFormat": "HH:mm:ss",
     },
   );
-  // A Moment format Lumiere cannot write would expand {{date}} differently.
+  // Any Moment format carries over; Insert Template names the tokens it
+  // cannot write instead of the format being dropped silently.
   assert.deepEqual(
     mapTemplatesSettings({
       folder: "",
       dateFormat: "YYYY-MM-DD dddd",
       timeFormat: 3,
     }),
-    {},
-  );
-  assert.deepEqual(mapTemplatesSettings({ dateFormat: "Do MMMM" }), {});
-  // MMMM and DDDD are one Moment token each, not MM or DD twice.
-  assert.deepEqual(
-    mapTemplatesSettings({ folder: "Templates", dateFormat: "MMMM DD, YYYY" }),
-    { "templates.folder": "Templates" },
+    { "templates.dateFormat": "YYYY-MM-DD dddd" },
   );
   assert.deepEqual(
     mapTemplatesSettings({
       folder: "Templates",
-      dateFormat: "DDDD",
-      timeFormat: "HH:mm:sss",
+      dateFormat: "gggg-[W]ww",
+      timeFormat: " ",
     }),
-    { "templates.folder": "Templates" },
+    { "templates.folder": "Templates", "templates.dateFormat": "gggg-[W]ww" },
   );
   assert.throws(() => mapTemplatesSettings([]), /templates.json/);
 });

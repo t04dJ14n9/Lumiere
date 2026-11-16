@@ -8,6 +8,7 @@ import {
   toStringVal,
   type RuntimeVal,
 } from "./values";
+import { formatMoment, utcFields } from "../moment-format";
 
 export function evalStringMethod(
   str: string,
@@ -243,17 +244,9 @@ export function evalDateMethod(
   return NULL_VAL;
 }
 
-/** Formats the UTC fields of `ms` with the tokens YYYY, MM, DD, HH, mm and ss. */
+/** Formats the UTC fields of `ms` with a Moment.js pattern. */
 export function formatWithPattern(ms: number, pattern: string): string {
-  const d = new Date(ms);
-  const pad = (n: number) => String(n).padStart(2, "0");
-  return pattern
-    .replace(/YYYY/g, String(d.getUTCFullYear()))
-    .replace(/MM/g, pad(d.getUTCMonth() + 1))
-    .replace(/DD/g, pad(d.getUTCDate()))
-    .replace(/HH/g, pad(d.getUTCHours()))
-    .replace(/mm/g, pad(d.getUTCMinutes()))
-    .replace(/ss/g, pad(d.getUTCSeconds()));
+  return formatMoment(utcFields(ms), pattern).text;
 }
 
 export function evalCoreGlobalFunction(
