@@ -82,7 +82,7 @@ Offsets are relative to the element's start; "touch" means `caret >= from && car
 | footnote definition | `[^1]: text` | `[^1]:` on the caret line | fn.md |
 | `$$` block | | whole block when the caret is inside | mix.md |
 | HTML block `<div>` | | whole block when the caret is inside | mix.md |
-| `%% … %%` comment block | | `%%` always visible; inner formatting per element | mix.md |
+| `%% … %%` comment block | | `%%` always visible; inner formatting per element (Lumiere: the block, blank lines included, is one dimmed comment and its inner Markdown is not formatted, so a heading inside is not a heading) | mix.md |
 
 ## Differences found in our editor (before this change)
 

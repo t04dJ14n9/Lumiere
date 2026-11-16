@@ -45,6 +45,12 @@
     a heading embeds that heading instead of the whole note, and an id
     inside a quote or callout embeds the whole quote instead of a mangled
     piece of it.
+  - A `%%` comment block that spans blank lines or holds headings, lists or
+    tables is one comment, as in Obsidian: it is hidden in rendered
+    Markdown (embeds, previews, exports), dimmed in Live Preview, and its
+    headings no longer appear in the Outline, heading suggestions or
+    heading links. Links and tags inside stay indexed, as Obsidian indexes
+    them. A `%%` line that nothing closes comments out the rest of the note.
 
 - Daily Notes is removed: **Open Today's Daily Note**, **Open Previous
   Daily Note** and **Open Next Daily Note** are gone, with the

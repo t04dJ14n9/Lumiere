@@ -91,3 +91,12 @@ test("math delimiters and paragraph block IDs retain literal boundary behavior",
   );
   assert.equal(renderMarkdown("^standalone").trim(), "");
 });
+
+test("a %% block comment over blank lines and block syntax renders nothing", () => {
+  assert.equal(
+    renderMarkdown("%%\n# Hidden\n\n- item\n\npara\n%%\nShown\n"),
+    "<p>Shown</p>\n",
+  );
+  assert.equal(renderMarkdown("Before\n\n%%\n# Draft\n"), "<p>Before</p>\n");
+  assert.equal(renderMarkdown("A %%hidden%% B\n"), "<p>A  B</p>\n");
+});
