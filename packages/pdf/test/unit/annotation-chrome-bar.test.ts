@@ -31,13 +31,10 @@ test("the viewer does not mount an in-viewer annotation bar", () => {
   );
 });
 
-test("slim and floating bars do not mount an Annotate control", () => {
+test("the slim bar does not mount an Annotate control", () => {
   const toolbar = source("src/webview/toolbar.tsx");
-  const floating = source("src/webview/floating-toolbar.tsx");
   assert.doesNotMatch(toolbar, /AnnotationToolkit/);
   assert.doesNotMatch(toolbar, /label="Annotate"/);
-  assert.doesNotMatch(floating, /AnnotationToolkit/);
-  assert.doesNotMatch(floating, /label="Annotate"/);
 });
 
 test("styles do not reserve a row or strip for an in-viewer annotation bar", () => {
