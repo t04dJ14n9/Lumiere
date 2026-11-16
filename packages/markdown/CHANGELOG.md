@@ -2,6 +2,12 @@
 
 ## 0.1.0 (unreleased)
 
+- With Vim on and the mode in the VS Code or Cursor status bar, dragging to
+  select text no longer scrolls the note on every mouse move, and `gg` and
+  `G` keep the caret in view. The closed Vim line under the note was only
+  hidden, and the editor still made room for it as if it covered the whole
+  note; it is now removed until a prompt or message opens it.
+
 - Fixed (review 2026-11-15):
   - Editing a table no longer deletes cells past the header's column count
     on rows you did not edit.
