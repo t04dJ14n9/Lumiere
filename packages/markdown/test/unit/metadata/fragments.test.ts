@@ -4,6 +4,7 @@ import {
   githubSlug,
   noteFragment,
 } from "../../../src/markdown/metadata/fragments";
+import { metadata } from "../../../src/markdown/metadata";
 
 const headingAt = (source: string, fragment: string) => {
   const range = noteFragment(source, fragment);
@@ -137,4 +138,36 @@ test("a block id on a heading names the heading, not the whole note", () => {
 test("an id on its own line still names the block before it", () => {
   const source = "- a\n- b\n\n^list\n\nPara\n";
   assert.equal(noteFragment(source, "^list")?.text, "- a\n- b");
+});
+
+test("a nested item indented with tabs and spaces keeps its children nested", () => {
+  // `- nested` starts at column 2; its child's tab reaches column 4.
+  const source = ["- top", "  - nested ^mix", "\t- child", "- next"].join("\n");
+  assert.equal(noteFragment(source, "^mix")?.text, "- nested\n  - child");
+  // A tab that crosses the item's column leaves the rest as spaces.
+  const deeper = ["- top", "  - nested ^tab", "\t\t- child"].join("\n");
+  assert.equal(noteFragment(deeper, "^tab")?.text, "- nested\n      - child");
+});
+
+test("a child task ticked through an embed of its parent item changes the source line", async () => {
+  const { taskEdit } = await import("../../../src/plugins/tasks/edits");
+  const source = ["- top", "  - [ ] parent ^p", "    - [ ] child", ""].join(
+    "\n",
+  );
+  const block = metadata(source).blocks.p!;
+  const embedded = block.text.split("\n");
+  assert.equal(embedded[1], "  - [ ] child");
+  // What the embed's checkbox sends: the block's first source line plus
+  // the line within the embed, and the embedded line's text.
+  const edit = taskEdit(
+    source,
+    block.position.start.line + 1,
+    embedded[1]!,
+    true,
+  );
+  assert.ok(edit, "the child's toggle maps back to its source line");
+  assert.equal(
+    source.slice(0, edit.from) + edit.insert + source.slice(edit.to),
+    ["- top", "  - [ ] parent ^p", "    - [x] child", ""].join("\n"),
+  );
 });
