@@ -61,6 +61,48 @@ export function applyLineColEdits(
 }
 
 /**
+ * Whether two texts of one note are the same. VS Code keeps a document in one
+ * line-ending style, so a note read from a file with mixed endings differs
+ * from its document only in them.
+ */
+export function isSameText(a: string, b: string): boolean {
+  return a.replace(/\r\n?/g, "\n") === b.replace(/\r\n?/g, "\n");
+}
+
+/** A note a rename's link updates change: its text before and after them. */
+export interface PlannedNote {
+  before: string;
+  after: string;
+}
+
+/**
+ * The text each note will have after its link updates, from its text now.
+ * The edits are line and column positions in the text they were computed
+ * from (`source`); a note that changed since (the user typing in it while
+ * the rename was prompting) is left out and listed as `stale`, because those
+ * positions no longer point at its links.
+ */
+export async function planLinkUpdates(
+  files: readonly FileTextEdits[],
+  currentText: (uri: string) => Promise<string>,
+): Promise<{ planned: Map<string, PlannedNote>; stale: FileTextEdits[] }> {
+  const planned = new Map<string, PlannedNote>();
+  const stale: FileTextEdits[] = [];
+  for (const file of files) {
+    const before = await currentText(file.uri);
+    if (file.source !== undefined && !isSameText(before, file.source)) {
+      stale.push(file);
+      continue;
+    }
+    planned.set(file.uri, {
+      before,
+      after: applyLineColEdits(before, file.edits),
+    });
+  }
+  return { planned, stale };
+}
+
+/**
  * Planned final text for notes open in a Lumiere custom editor. Used after
  * the rename to apply link updates that VS Code's onWill WorkspaceEdit does
  * not land on CustomTextEditor buffers (BH-014).

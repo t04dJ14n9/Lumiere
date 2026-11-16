@@ -63,16 +63,42 @@ async function renameEdits(
   if (mode === "never") {
     return [];
   }
-  if (mode === "prompt" && !(await askToUpdate(host, renames, resource))) {
+  const plan = await planRename(host.vaults, renames);
+  if (!plan) {
     return [];
+  }
+  const scan = newScan();
+  if (mode === "prompt") {
+    const count = await affectedNoteCount(host, plan, renames, scan);
+    if (count.files === 0) {
+      // Nothing to ask about, but the notes it could not read may still
+      // link to the renamed file.
+      reportUnchecked(host, count.unchecked);
+      return [];
+    }
+    if (!(await askToUpdate(host, count.files, resource))) {
+      return [];
+    }
   }
   // Built after the answer: a note edited while the dialog was open is
   // rewritten as it is now, not as it was when the rename started.
-  const { edits, unchecked } = await linkEdits(host.vaults, host, renames);
+  const candidates = candidateNotes(plan.vault, plan.paths);
+  const { edits, unchecked } = await textEdits(host, plan, {
+    files: candidates,
+    renames,
+    scan,
+  });
+  reportUnchecked(host, unchecked);
+  return edits;
+}
+
+function reportUnchecked(
+  host: Pick<RenameHost, "dialogs">,
+  unchecked: readonly string[],
+): void {
   if (unchecked.length > 0) {
     host.dialogs.error(uncheckedMessage(unchecked));
   }
-  return edits;
 }
 
 /** Names what a rename could not check, so the user can fix those links. */
@@ -81,21 +107,17 @@ function uncheckedMessage(unchecked: readonly string[]): string {
   const more = unchecked.length > 5 ? ` and ${unchecked.length - 5} more` : "";
   return (
     `Links were not checked in ${unchecked.length} ` +
-    `note${unchecked.length === 1 ? "" : "s"} the vault was still ` +
-    `indexing: ${shown}${more}. Check them for links to the renamed file.`
+    `file${unchecked.length === 1 ? "" : "s"} still being indexed or ` +
+    `unreadable: ${shown}${more}. Check them for links to the renamed file.`
   );
 }
 
-/** Asks unless nothing would change; "Always" also stops asking for this resource. */
+/** Asks the user; "Always" also stops asking for this resource. */
 async function askToUpdate(
   host: RenameHost,
-  renames: Renames,
+  files: number,
   resource: string | undefined,
 ): Promise<boolean> {
-  const files = await affectedNoteCount(host, renames);
-  if (files === 0) {
-    return false;
-  }
   const update = "Update Links";
   const always = "Always Update";
   const answer = await host.dialogs.ask(
@@ -202,20 +224,19 @@ function needsText(vault: Vault, file: VaultFile): boolean {
 }
 
 /**
- * How many notes the rename would change. Parsed notes are counted from the
- * links the index already has, so the prompt costs a lookup per link, not a
- * read and rewrite of each note. A note the index has not parsed (its parse
- * was still queued when the settle gave up) and a canvas are read, so the
- * prompt still asks when they have links to change.
+ * How many notes the rename would change, and the files it could not read
+ * to tell. Parsed notes are counted from the links the index already has,
+ * so the prompt costs a lookup per link, not a read and rewrite of each
+ * note. A note the index has not parsed (its parse was still queued when
+ * the settle gave up) and a canvas are read, so the prompt still asks when
+ * they have links to change.
  */
 async function affectedNoteCount(
   host: Pick<RenameHost, "settings" | "hostDocuments" | "vaults">,
+  plan: RenamePlan,
   renames: Renames,
-): Promise<number> {
-  const plan = await planRename(host.vaults, renames);
-  if (!plan) {
-    return 0;
-  }
+  scan: RenameScan,
+): Promise<{ files: number; unchecked: string[] }> {
   const { vault, paths } = plan;
   const candidates = candidateNotes(vault, paths);
   const context = { renames: paths, resolve: resolverOf(vault) };
@@ -230,51 +251,55 @@ async function affectedNoteCount(
   }).length;
   const read = candidates.filter((file) => needsText(vault, file));
   if (read.length === 0) {
-    return indexed;
+    return { files: indexed, unchecked: [] };
   }
-  const { edits } = await textEdits(host, plan, read, renames);
-  return indexed + edits.length;
+  const { edits, unchecked } = await textEdits(host, plan, {
+    files: read,
+    renames,
+    scan,
+  });
+  return { files: indexed + edits.length, unchecked };
 }
 
 /**
- * How long reading notes the index has not parsed may take, so the rename
- * stays inside VS Code's participant timeout (60 s) with the prompt. Notes
- * left when it runs out are reported as unchecked.
+ * How long reading the files the index cannot answer for (unparsed notes
+ * and canvases) may take, in total for the prompt's count and the rewrite,
+ * so the rename stays inside VS Code's participant timeout (60 s) with the
+ * settle and the prompt. Files left when it runs out are reported as
+ * unchecked.
  */
 const UNPARSED_SCAN_LIMIT_MS = 20_000;
 
-interface LinkEditResult {
-  edits: FileTextEdits[];
-  /** Vault paths of unparsed notes not read in time. */
-  unchecked: string[];
+/** What reading files for one rename shares between the count and the rewrite. */
+interface RenameScan {
+  deadline: number;
+  /**
+   * Texts of closed files read for the count, by vault path. The rewrite
+   * reuses them rather than reading each file again; an open note is
+   * always read from its document, which is cheap and may have changed.
+   */
+  texts: Map<string, string>;
 }
 
-/** Edits for every note and canvas in the renamed files' vault that links to them. */
-async function linkEdits(
-  vaults: Vaults,
-  host: Pick<HostServices, "settings" | "hostDocuments">,
-  renames: Renames,
-): Promise<LinkEditResult> {
-  const plan = await planRename(vaults, renames);
-  if (!plan) {
-    return { edits: [], unchecked: [] };
-  }
-  // Named one by one: the plugin context's services are getters, which a
-  // spread would not copy.
-  return textEdits(
-    { settings: host.settings, hostDocuments: host.hostDocuments, vaults },
-    plan,
-    candidateNotes(plan.vault, plan.paths),
-    renames,
-  );
+function newScan(): RenameScan {
+  return { deadline: Date.now() + UNPARSED_SCAN_LIMIT_MS, texts: new Map() };
+}
+
+interface LinkEditResult {
+  edits: FileTextEdits[];
+  /** Vault paths of files not read in time, or that failed to read or parse. */
+  unchecked: string[];
 }
 
 /** Reads each file's current text and rewrites its links. */
 async function textEdits(
   host: Pick<RenameHost, "settings" | "hostDocuments" | "vaults">,
   { vault, paths }: RenamePlan,
-  files: readonly VaultFile[],
-  renames: Renames,
+  {
+    files,
+    renames,
+    scan,
+  }: { files: readonly VaultFile[]; renames: Renames; scan: RenameScan },
 ): Promise<LinkEditResult> {
   const context: RewriteContext = {
     renames: paths,
@@ -289,19 +314,53 @@ async function textEdits(
     ),
   };
   const result: LinkEditResult = { edits: [], unchecked: [] };
-  const deadline = Date.now() + UNPARSED_SCAN_LIMIT_MS;
   for (const file of files) {
-    if (isUnparsedNote(vault, file) && Date.now() > deadline) {
+    try {
+      const text = await scannedText(host, vault, file, scan);
+      if (text === undefined) {
+        result.unchecked.push(file.path);
+        continue;
+      }
+      const edits = fileEdits(text, file, context);
+      if (edits.length > 0) {
+        result.edits.push({ uri: file.uri, edits, source: text });
+      }
+    } catch {
+      // One file that cannot be read or parsed must not fail the whole
+      // rename, which would leave every link unchanged without a word.
       result.unchecked.push(file.path);
-      continue;
-    }
-    const text = await sourceText(host.vaults, host.hostDocuments, file.uri);
-    const edits = fileEdits(text, file, context);
-    if (edits.length > 0) {
-      result.edits.push({ uri: file.uri, edits });
     }
   }
   return result;
+}
+
+/**
+ * A file's text for the rewrite, or `undefined` when the scan's time ran
+ * out before a file only its text can answer for was read.
+ */
+async function scannedText(
+  host: Pick<RenameHost, "hostDocuments" | "vaults">,
+  vault: Vault,
+  file: VaultFile,
+  scan: RenameScan,
+): Promise<string | undefined> {
+  const open = host.hostDocuments.text(file.uri);
+  if (open !== undefined) {
+    return open;
+  }
+  if (!needsText(vault, file)) {
+    return host.vaults.text(file.uri);
+  }
+  const read = scan.texts.get(file.path);
+  if (read !== undefined) {
+    return read;
+  }
+  if (Date.now() > scan.deadline) {
+    return undefined;
+  }
+  const text = await host.vaults.text(file.uri);
+  scan.texts.set(file.path, text);
+  return text;
 }
 
 function fileEdits(
