@@ -70,3 +70,15 @@ test("a %% line indented under a nested list item is a comment in both parsers, 
   assert.doesNotMatch(html, /%%/);
   assert.match(html, /<h1 [^>]*>H<\/h1>/);
 });
+
+test("a literal %% in inline code or escaped does not open a comment that hides what follows", () => {
+  for (const literal of ["`%%` is a marker", "\\%% is a marker"]) {
+    const note = `${literal}\n%%\nhidden\n\n%%\n# Public\n\nPublic body`;
+    assert.ok(!editorVisible(note).includes("hidden"), literal);
+    assert.ok(editorVisible(note).includes("Public body"), literal);
+    assert.deepEqual(headings(note), ["Public"], literal);
+    const html = renderMarkdown(note);
+    assert.ok(!html.includes("hidden"), literal);
+    assert.ok(html.includes("Public body"), literal);
+  }
+});
