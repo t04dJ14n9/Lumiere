@@ -8,6 +8,25 @@
 
 ## Unreleased
 
+- Fixed (review 2026-11-15), in DSH, the app and the plugin core:
+  - Opening a note by absolute path in DSH no longer locks its session's
+    workspace out until DSH restarts.
+  - When a note changed on disk while you were typing, your text is saved
+    and the other version is kept beside it as `Note (conflict).md`, instead
+    of being overwritten silently.
+  - A note no longer shows up, or gets saved, empty when a file watcher fires
+    in the middle of Lumiere's own save.
+  - HTML, SVG and script files in a vault can no longer run on DSH's or the
+    app's origin.
+  - A listener failing while the host handles a file change or a closed note
+    is logged instead of becoming an unhandled rejection.
+  - Shutting down no longer briefly restarts a plugin whose optional service
+    stops first, optional settings with a minimum, maximum or pattern may be
+    left unset, and a setting's default can no longer be changed by mutating
+    a parsed value.
+  - Markdown and PDF fixes are listed in `packages/markdown/CHANGELOG.md` and
+    `packages/pdf/CHANGELOG.md`.
+
 - Mermaid diagrams: Inspect, Copy and Edit are now three equal buttons, evenly spaced and flush with the right edge (Inspect shows its name instead of a small ⤢). The `mermaid` label sits in that corner and gives way to them on hover or keyboard focus.
 
 - Fixed: Vim `j`/`k` could skip several source lines inside a revealed Mermaid diagram or other source-visible Live Preview block.
