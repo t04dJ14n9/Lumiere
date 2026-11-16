@@ -234,7 +234,9 @@ async function buildSnapshot(
   state: SessionState,
   ticket: number,
 ): Promise<GraphSnapshot | undefined> {
-  const generation = ++state.generation;
+  // Numbered now, counted when sent (`remember`): the drawing on screen stays
+  // current, and clickable, while this one waits for the vault.
+  const generation = state.generation + 1;
   const scope = state.scope;
   if (!scope) {
     return emptySnapshot(generation);
@@ -287,6 +289,7 @@ function resolve(
 }
 
 function remember(state: SessionState, snapshot: GraphSnapshot): void {
+  state.generation = snapshot.generation;
   state.admitted = new Set(snapshot.nodes.map((node) => node.id));
 }
 
