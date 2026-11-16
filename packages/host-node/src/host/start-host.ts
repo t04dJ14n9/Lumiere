@@ -204,11 +204,20 @@ async function readSaved(platform: HostPlatform) {
   return { settings, state };
 }
 
-/** Tell the reader when a note could not be written: its text stays open. */
+/**
+ * Tell the reader when a note could not be written (its text stays open),
+ * and when their typing was written over another program's change (that
+ * version is in a copy beside the note).
+ */
 function reportSaveFailures(
   documents: NoteDocuments,
-  dialogs: Pick<HostServices["dialogs"], "error">,
+  dialogs: Pick<HostServices["dialogs"], "error" | "inform">,
 ): void {
+  documents.onConflict((uri, copy) =>
+    dialogs.inform(
+      `${uriName(uri)} changed on disk while you were typing. Your text was saved; the other version is in ${uriName(copy)}.`,
+    ),
+  );
   documents.onSaveFailed((uri, error) =>
     dialogs.error(
       `Lumière could not save ${uriName(uri)}: ${

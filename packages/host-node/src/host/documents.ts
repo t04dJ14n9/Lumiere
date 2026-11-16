@@ -11,6 +11,7 @@ import {
   type SourceEdit,
   type TextEdit,
 } from "@workshop/markdown/portable";
+import { writeConflictCopy } from "./conflict-copy";
 import type { HostFiles, HostPlatform } from "./platform";
 
 /** How long typing must pause before a note is written to disk. */
@@ -68,7 +69,7 @@ export class NoteDocument implements HostDocument {
 /** What notes need from the platform: their files, and a hash of their text. */
 export interface NoteFiles extends Pick<
   HostFiles,
-  "readText" | "save" | "watch"
+  "readText" | "save" | "watch" | "create"
 > {
   sha256(text: string): string;
 }
@@ -80,6 +81,7 @@ export function noteFiles(platform: HostPlatform): NoteFiles {
     readText: (uri) => files.readText(uri),
     save: (uri, text) => files.save(uri, text),
     watch: (uri, listener) => files.watch(uri, listener),
+    create: (uri) => files.create(uri),
     sha256: (text) => platform.sha256(text),
   };
 }
@@ -117,6 +119,9 @@ export class NoteDocuments implements HostDocuments {
   private readonly closeListeners = new Set<(uri: string) => void>();
   private readonly saveFailedListeners = new Set<
     (uri: string, error: unknown) => void
+  >();
+  private readonly conflictListeners = new Set<
+    (uri: string, copy: string) => void
   >();
   /** Saves that have reached disk. A reload captures this before it reads. */
   private readonly settledWrites = new Map<string, number>();
@@ -242,6 +247,14 @@ export class NoteDocuments implements HostDocuments {
   }
 
   /**
+   * Unsaved typing was written over another program's change to the note:
+   * that version was kept in `copy`, beside it, and the reader must be told.
+   */
+  onConflict(listener: (uri: string, copy: string) => void): Disposer {
+    return subscribe(this.conflictListeners, listener);
+  }
+
+  /**
    * Write every note with unsaved text, then stop watching files. Watches
    * close even when a write fails: an open watch keeps the host process alive.
    */
@@ -274,6 +287,9 @@ export class NoteDocuments implements HostDocuments {
     this.cancelSave(note.uri);
     await Promise.all([...this.willSave].map((listener) => listener(note)));
     const text = note.getText();
+    if (await this.tookOutsideChange(note, text)) {
+      return true;
+    }
     await this.files.save(note.uri, text);
     // Count the save before publishing diskText, so a reload that resumes
     // in between still sees that its read is older than this write.
@@ -287,6 +303,34 @@ export class NoteDocuments implements HostDocuments {
       listener(note);
     }
     return true;
+  }
+
+  /**
+   * Another program may have changed the file since we last read or wrote
+   * it: a reload skips a note with unsaved typing, so its change would be
+   * written over unseen. Unsaved typing still wins the note's file; the
+   * other version is kept in a copy beside it. With nothing unsaved, the
+   * change is taken instead, as a reload would. True when nothing is left
+   * to write. (A change landing between this read and the write is not
+   * seen; the window is one read long.)
+   */
+  private async tookOutsideChange(
+    note: NoteDocument,
+    text: string,
+  ): Promise<boolean> {
+    const disk = await this.readNote(note.uri).catch(() => undefined);
+    if (disk === undefined || disk === note.diskText) {
+      return false;
+    }
+    if (text === note.diskText) {
+      this.takeDiskText(note, disk);
+      return true;
+    }
+    const copy = await writeConflictCopy(this.files, note.uri, disk);
+    for (const listener of this.conflictListeners) {
+      listener(note.uri, copy);
+    }
+    return false;
   }
 
   private scheduleSave(note: NoteDocument): void {
@@ -350,6 +394,10 @@ export class NoteDocuments implements HostDocuments {
     ) {
       return;
     }
+    this.takeDiskText(note, text);
+  }
+
+  private takeDiskText(note: NoteDocument, text: string): void {
     const change = { from: 0, to: note.getText().length, insert: text };
     note.diskText = text;
     note.replace([change]);

@@ -161,8 +161,10 @@ test("a disk read in flight during a save is dropped when it resumes", async (t)
   const documents = new NoteDocuments(
     {
       ...NODE_NOTES,
+      // Only the reload's read is held; the save's own read of the disk
+      // (whether another program changed it) goes through.
       readText: (target) => {
-        if (!opened) {
+        if (!opened || pending.length > 0) {
           opened = true;
           return NODE_NOTES.readText(target);
         }
@@ -387,4 +389,50 @@ test("a note reopened and released again while its first save writes is not forg
   assert.equal(await readFile(file, "utf8"), "B");
   assert.equal(documents.text(uri), "C");
   await documents.dispose().catch(() => {});
+});
+
+test("unsaved typing saved over another program's change keeps that change beside the note", async (t) => {
+  const { file, uri, cleanup } = await note("start");
+  const documents = new NoteDocuments(NODE_NOTES, 60_000);
+  t.after(cleanup);
+  t.after(() => documents.dispose());
+  const conflicts: [string, string][] = [];
+  documents.onConflict((target, copy) => conflicts.push([target, copy]));
+  const document = await documents.open(uri);
+  await documents.apply(document, [{ from: 0, to: 0, insert: "mine: " }]);
+  // While the note is dirty the reload skips this; the save must not lose it.
+  await writeFile(file, "theirs");
+
+  assert.equal(await document.save(), true);
+  assert.equal(await readFile(file, "utf8"), "mine: start");
+  const copy = path.join(path.dirname(file), "Note (conflict).md");
+  assert.equal(await readFile(copy, "utf8"), "theirs");
+  assert.deepEqual(conflicts, [[uri, pathToFileURL(copy).toString()]]);
+  assert.equal(document.isDirty, false);
+
+  // The next save is of text that knows the disk: no second copy.
+  await documents.apply(document, [{ from: 0, to: 0, insert: "more " }]);
+  assert.equal(await document.save(), true);
+  assert.equal(conflicts.length, 1);
+});
+
+test("a save with nothing unsaved takes another program's change instead of writing over it", async (t) => {
+  const { file, uri, cleanup } = await note("start");
+  // No watch: the save finds the change before any reload would.
+  const documents = new NoteDocuments(
+    { ...NODE_NOTES, watch: () => () => {} },
+    60_000,
+  );
+  t.after(cleanup);
+  t.after(() => documents.dispose());
+  const document = await documents.open(uri);
+  await documents.apply(document, [{ from: 0, to: 0, insert: "x" }]);
+  await documents.apply(document, [{ from: 0, to: 1, insert: "" }]);
+  assert.equal(document.isDirty, false);
+  await writeFile(file, "theirs");
+
+  assert.equal(await document.save(), true);
+  assert.equal(await readFile(file, "utf8"), "theirs");
+  assert.equal(document.getText(), "theirs");
+  assert.equal(document.isDirty, false);
 });
