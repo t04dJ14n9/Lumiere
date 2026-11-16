@@ -12,10 +12,11 @@ export interface TemplateInsertion {
   /** Where the caret goes afterwards: the end of the inserted body. */
   caret: number;
   /**
-   * False when the template has properties the note's could not take (the
-   * note's frontmatter is not valid YAML); only the body is inserted then.
+   * Whose properties are not valid YAML when the template's could not be
+   * merged; only the body is inserted then. `undefined` when they merged
+   * (or the template has none).
    */
-  isMerged: boolean;
+  invalidProperties?: "note" | "template";
 }
 
 /**
@@ -31,54 +32,77 @@ export function templateInsertion(
   selection: { from: number; to: number },
 ): TemplateInsertion {
   const templateHeader = headerParts(template);
-  const incoming = templateHeader && frontmatter(template)?.values;
-  if (!templateHeader || !incoming) {
-    return atSelection(selection, template, [], true);
+  const noteHeader = headerParts(note);
+  if (!templateHeader) {
+    return atSelection(belowHeader(note, noteHeader, selection), template, []);
   }
   const body = template.slice(templateHeader.end);
-  const noteHeader = headerParts(note);
+  const incoming = frontmatter(template)?.values;
+  if (!incoming) {
+    // Pasting the block would put a `---` line and broken YAML in the body.
+    return {
+      ...atSelection(belowHeader(note, noteHeader, selection), body, []),
+      invalidProperties: "template",
+    };
+  }
   if (!noteHeader) {
     const block = withFinalBreak(
       template.slice(templateHeader.start, templateHeader.end),
     );
     if (selection.from === 0) {
       // One edit: two insertions at the same offset have no defined order.
-      return atSelection(selection, block + body, [], true);
+      return atSelection(selection, block + body, []);
     }
-    return atSelection(
-      selection,
-      body,
-      [{ from: 0, to: 0, insert: block }],
-      true,
-    );
+    return atSelection(selection, body, [{ from: 0, to: 0, insert: block }]);
   }
-  // A caret inside the note's properties puts the body just below them.
-  const target =
-    selection.from < noteHeader.end
-      ? { from: noteHeader.end, to: Math.max(selection.to, noteHeader.end) }
-      : selection;
+  const target = belowHeader(note, noteHeader, selection);
   const changes = Object.keys(incoming).length
     ? mergeProperties(note, incoming, { keepExisting: true })
     : [];
   if (!changes) {
-    return atSelection(target, body, [], false);
+    return {
+      ...atSelection(target, body, []),
+      invalidProperties: "note",
+    };
   }
-  return atSelection(target, body, changes, true);
+  return atSelection(target, body, changes);
+}
+
+/**
+ * Where the body goes: a caret inside the note's properties puts it just
+ * below them, and the closing `---` of a note that ends there gets a line
+ * break first, so the body does not run on from it.
+ */
+function belowHeader(
+  note: string,
+  header: ReturnType<typeof headerParts>,
+  selection: { from: number; to: number },
+): { from: number; to: number; prefix?: string } {
+  if (!header || selection.from > header.end) {
+    return selection;
+  }
+  const target =
+    selection.from < header.end
+      ? { from: header.end, to: Math.max(selection.to, header.end) }
+      : selection;
+  return note.slice(0, header.end).endsWith("\n")
+    ? target
+    : { ...target, prefix: "\n" };
 }
 
 function atSelection(
-  selection: { from: number; to: number },
+  selection: { from: number; to: number; prefix?: string },
   body: string,
   before: readonly TemplateEdit[],
-  isMerged: boolean,
 ): TemplateInsertion {
+  const { prefix = "", ...range } = selection;
+  const insert = prefix + body;
   const shift = before
-    .filter((edit) => edit.to <= selection.from)
+    .filter((edit) => edit.to <= range.from)
     .reduce((sum, edit) => sum + edit.insert.length - (edit.to - edit.from), 0);
   return {
-    edits: [...before, { ...selection, insert: body }],
-    caret: selection.from + shift + body.length,
-    isMerged,
+    edits: [...before, { ...range, insert }],
+    caret: range.from + shift + insert.length,
   };
 }
 

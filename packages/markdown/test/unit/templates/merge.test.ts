@@ -43,13 +43,13 @@ test("a template's properties join the note's: values kept, keys added, lists jo
   const caret = note.length;
   const {
     text,
-    isMerged,
+    invalidProperties,
     caret: after,
   } = inserted(note, template, {
     from: caret,
     to: caret,
   });
-  assert.equal(isMerged, true);
+  assert.equal(invalidProperties, undefined);
   assert.deepEqual(frontmatter(text)?.values, {
     tags: ["work", "meeting"],
     status: "done",
@@ -108,6 +108,31 @@ test("a note whose properties are not valid YAML gets only the body", () => {
   const note = ["---", "a: [", "---", "x"].join("\n");
   const caret = note.length;
   const result = inserted(note, template, { from: caret, to: caret });
-  assert.equal(result.isMerged, false);
+  assert.equal(result.invalidProperties, "note");
   assert.equal(result.text, `${note}## Agenda\n`);
+});
+
+test("a note that ends at its closing --- keeps it a line of its own", () => {
+  const note = ["---", "a: 1", "---"].join("\n");
+  const caret = note.length;
+  const merged = inserted(note, "---\nb: 2\n---\nHello", {
+    from: caret,
+    to: caret,
+  });
+  assert.equal(merged.text, ["---", "a: 1", "b: 2", "---", "Hello"].join("\n"));
+  assert.deepEqual(frontmatter(merged.text)?.values, { a: 1, b: 2 });
+  assert.equal(merged.caret, merged.text.length);
+  const plain = inserted(note, "Hello", { from: caret, to: caret });
+  assert.equal(plain.text, ["---", "a: 1", "---", "Hello"].join("\n"));
+});
+
+test("a template whose properties are not valid YAML gets only its body in, never its fences", () => {
+  const note = "Intro\n";
+  const caret = note.length;
+  const result = inserted(note, "---\ntitle: [draft] plan\n---\nHello", {
+    from: caret,
+    to: caret,
+  });
+  assert.equal(result.invalidProperties, "template");
+  assert.equal(result.text, "Intro\nHello");
 });

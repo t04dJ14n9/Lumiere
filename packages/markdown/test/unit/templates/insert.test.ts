@@ -152,7 +152,7 @@ test("Insert Template merges properties into a CRLF note and inserts the body at
     panel,
     "---\nstatus: draft\ntags: [a]\n---\n\nNew",
   );
-  assert.deepEqual(outcome, { isInserted: true, isMerged: true });
+  assert.deepEqual(outcome, { isInserted: true });
   assert.equal(
     result,
     "---\r\nstatus: done\r\ntags:\r\n  - a\r\n---\r\nBody\r\nNew",

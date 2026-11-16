@@ -7,6 +7,7 @@ import {
   localFields,
   unsupportedMomentTokens,
 } from "./moment-format";
+import { expandWithProperties } from "./template-header";
 
 export const DEFAULT_DATE_FORMAT = "YYYY-MM-DD";
 const DEFAULT_TIME_FORMAT = "HH:mm";
@@ -40,24 +41,26 @@ export function expandTemplateWithReport(
   context: TemplateContext,
 ): { text: string; unsupported: string[] } {
   const unsupported = new Set<string>();
-  const expanded = text.replace(
-    TOKEN,
-    (_match, kind: string | undefined, format: string | undefined) => {
-      if (!kind) {
-        return context.title;
-      }
-      const configured =
-        kind === "date"
-          ? context.dateFormat || DEFAULT_DATE_FORMAT
-          : context.timeFormat || DEFAULT_TIME_FORMAT;
-      const formatted = formatMoment(
-        localFields(context.now),
-        format ?? configured,
-      );
-      formatted.unsupported.forEach((token) => unsupported.add(token));
-      return formatted.text;
-    },
-  );
+  const expand = (part: string) =>
+    part.replace(
+      TOKEN,
+      (_match, kind: string | undefined, format: string | undefined) => {
+        if (!kind) {
+          return context.title;
+        }
+        const configured =
+          kind === "date"
+            ? context.dateFormat || DEFAULT_DATE_FORMAT
+            : context.timeFormat || DEFAULT_TIME_FORMAT;
+        const formatted = formatMoment(
+          localFields(context.now),
+          format ?? configured,
+        );
+        formatted.unsupported.forEach((token) => unsupported.add(token));
+        return formatted.text;
+      },
+    );
+  const expanded = expandWithProperties(text, TOKEN, expand);
   return { text: expanded, unsupported: [...unsupported] };
 }
 

@@ -22,7 +22,12 @@ duplicates, through the YAML-safe property merge; only the body goes in at
 the caret (below the properties when the caret is inside or above them).
 A note without properties gets the template's block at its top. When the
 note's properties are not valid YAML, only the body is inserted and a
-message says so.
+message names the note. Variables in the template's properties are filled
+in as written when the YAML stays valid; otherwise each value holding one
+is written quoted (`src/markdown/template-header.ts`). A template whose
+properties are still not valid YAML gets only its body inserted, never its
+`---` block, and the message names the template. A body inserted right
+after a closing `---` with no line break gets one first.
 
 Tokens: `{{title}}` (the destination note's basename), `{{date}}`,
 `{{time}}`, and `{{date:FORMAT}}` / `{{time:FORMAT}}`. Formats are Moment.js
