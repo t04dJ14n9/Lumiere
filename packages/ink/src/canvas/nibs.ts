@@ -20,13 +20,12 @@ export const DRAWING_TOOLS: readonly DrawingTool[] = [
 export type CanvasTool = DrawingTool | "eraser";
 
 /** Three widths per ink, in the sketch's points, at the pressure of a resting mouse. */
-export const WIDTHS: Readonly<
-  Record<DrawingTool, readonly [number, number, number]>
-> = {
-  pen: [1.5, 3, 6],
-  pencil: [1.5, 3, 6],
-  marker: [8, 15, 26],
-};
+const WIDTHS: Readonly<Record<DrawingTool, readonly [number, number, number]>> =
+  {
+    pen: [1.5, 3, 6],
+    pencil: [1.5, 3, 6],
+    marker: [8, 15, 26],
+  };
 
 /** Colours as drawn on light paper. */
 export const COLORS = [
