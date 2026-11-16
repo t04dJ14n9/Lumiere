@@ -203,3 +203,31 @@ for (const outcome of ["resolves", "rejects"] as const) {
     );
   });
 }
+
+test("shutting the tree down does not restart a plugin whose optional service stops first", async () => {
+  const root = createRoot();
+  const log: string[] = [];
+  root.plugin({
+    name: "consumer",
+    inject: { required: ["teardown.first"], optional: ["teardown.second"] },
+    apply(ctx) {
+      log.push(`apply second=${ctx["teardown.second"] !== undefined}`);
+      ctx.effect(() => () => void log.push("stop"));
+    },
+  });
+  for (const name of ["teardown.first", "teardown.second"] as const) {
+    root.plugin({
+      name,
+      provides: [name],
+      apply(ctx) {
+        ctx.provide(name, { read: () => name });
+      },
+    });
+  }
+  await root.settled();
+  assert.equal(log.at(-1), "apply second=true");
+  log.length = 0;
+  // Last started stops first: the optional provider, then the required one.
+  await root.dispose();
+  assert.deepEqual(log, ["stop"]);
+});
