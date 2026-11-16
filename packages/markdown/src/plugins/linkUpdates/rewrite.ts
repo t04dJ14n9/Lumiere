@@ -8,6 +8,7 @@ import {
 import type { FileTextEdits } from "../../shared/host";
 import { formatLinkSource, linkSource } from "./link-source";
 import { withRenamedLabel } from "./rename-label";
+import { linkRewriteEdits, pointAt } from "./yaml-safe-edits";
 import {
   folderOf,
   isMarkdownPath,
@@ -94,16 +95,21 @@ export function rewriteLinks(
   context: RewriteContext,
 ): Edit[] {
   const newSource = context.renames.get(sourcePath) ?? sourcePath;
-  return changedLinks(vaultLinks(metadata(text)), sourcePath, context).map(
-    ({ link, newTarget, oldPath }) => ({
-      start: link.position.start,
-      end: link.position.end,
-      text: rewritten(link, targetText(newTarget, newSource, context), {
+  const changes = changedLinks(vaultLinks(metadata(text)), sourcePath, context);
+  const rewrites = changes.map(({ link, newTarget, oldPath }) => ({
+    from: link.position.start.offset,
+    to: link.position.end.offset,
+    rewrite: (original: string) =>
+      rewritten(original, targetText(newTarget, newSource, context), {
         target: newTarget,
         oldPath,
       }),
-    }),
-  );
+  }));
+  return linkRewriteEdits(text, rewrites).map((edit) => ({
+    start: pointAt(text, edit.from),
+    end: pointAt(text, edit.to),
+    text: edit.insert,
+  }));
 }
 
 /** The new path text for a link, without the `.md` of notes. */
@@ -131,13 +137,13 @@ function targetText(
  * that showed the renamed file's name (`oldPath`) following it.
  */
 function rewritten(
-  link: LinkMetadata,
+  original: string,
   path: string,
   { target, oldPath }: { target: string; oldPath: string | undefined },
 ): string {
-  const source = linkSource(link.original);
+  const source = linkSource(original);
   if (!source) {
-    return link.original;
+    return original;
   }
   const isWikilink = source.opening.endsWith("[[");
   const extension = !isWikilink && isMarkdownPath(target) ? ".md" : "";
