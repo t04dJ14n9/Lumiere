@@ -231,3 +231,49 @@ test("shutting the tree down does not restart a plugin whose optional service st
   await root.dispose();
   assert.deepEqual(log, ["stop"]);
 });
+
+test("a replacement whose old fiber is still stopping when the tree shuts down does not restart the plugin", async () => {
+  const root = createRoot();
+  const log: string[] = [];
+  // Stops go straight through until the stop under test is held.
+  const consumerStop = { until: Promise.resolve() };
+  const stall = gate();
+  const rootStop = gate();
+  root.plugin({
+    name: "consumer",
+    inject: { optional: ["teardown.second"] },
+    apply(ctx) {
+      log.push(`apply second=${ctx["teardown.second"] !== undefined}`);
+      ctx.effect(() => async () => {
+        await consumerStop.until;
+        log.push("stop");
+      });
+    },
+  });
+  const provider = root.plugin({
+    name: "teardown.second",
+    provides: ["teardown.second"],
+    apply(ctx) {
+      ctx.provide("teardown.second", { read: () => "second" });
+    },
+  });
+  // Stops first, and holds the shutdown open past the consumer's stop.
+  root.effect(() => () => rootStop.opened);
+  await root.settled();
+  assert.equal(log.at(-1), "apply second=true");
+  log.length = 0;
+
+  // The optional service goes: the consumer starts replacing its fiber, and
+  // its stop stalls. The tree starts shutting down meanwhile.
+  consumerStop.until = stall.opened;
+  const providerGone = provider.dispose();
+  await new Promise<void>((resolve) => setImmediate(resolve));
+  const disposed = root.dispose();
+  await new Promise<void>((resolve) => setImmediate(resolve));
+  stall.open();
+  await providerGone;
+  await new Promise<void>((resolve) => setImmediate(resolve));
+  rootStop.open();
+  await disposed;
+  assert.deepEqual(log, ["stop"]);
+});

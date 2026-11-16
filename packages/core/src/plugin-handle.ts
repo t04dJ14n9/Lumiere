@@ -248,7 +248,8 @@ export class PluginHandleImpl<C> implements PluginHandle<C>, Settling {
       }
       this.activation?.cancel();
       await this.fiber?.dispose();
-      if (!this.isDisposed) {
+      // The owner may have begun stopping while the old fiber stopped.
+      if (!this.isStopping) {
         this.plug();
       }
     });
