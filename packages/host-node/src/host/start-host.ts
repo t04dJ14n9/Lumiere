@@ -25,8 +25,8 @@ import {
   registerContextMenus,
   type MenuContribution,
 } from "./context-menu";
-import { NoteDocuments, noteFiles } from "./documents";
-import { PanelHub } from "./panels";
+import { AUTOSAVE_DELAY_MS, NoteDocuments, noteFiles } from "./documents";
+import { CONNECT_TIMEOUT_MS, PanelHub } from "./panels";
 import type { HostPlatform } from "./platform";
 import {
   createHostCommands,
@@ -82,9 +82,13 @@ export async function startHost(
   options: HostStartOptions,
 ): Promise<LumiereHost> {
   const roots = new Set<string>();
-  const documents = new NoteDocuments(noteFiles(platform));
-  const panels = new PanelHub(documents);
   const log = (message: string) => options.logger.warn(message);
+  const documents = new NoteDocuments(
+    noteFiles(platform),
+    AUTOSAVE_DELAY_MS,
+    log,
+  );
+  const panels = new PanelHub(documents, CONNECT_TIMEOUT_MS, log);
   const keys = new ContextKeys();
   const commands = createHostCommands(log, keys);
   const trees = new TreeHub(commands);

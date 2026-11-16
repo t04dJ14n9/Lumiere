@@ -139,6 +139,9 @@ export class NoteDocuments implements HostDocuments {
   constructor(
     private readonly files: NoteFiles,
     private readonly delay = AUTOSAVE_DELAY_MS,
+    /** Where a reload that failed goes: no one awaits one. */
+    private readonly log: (message: string) => void = (message) =>
+      console.warn(message),
   ) {}
 
   fingerprint(text: string): string {
@@ -320,7 +323,7 @@ export class NoteDocuments implements HostDocuments {
     // Another program may have written while we did; its watch event fell
     // inside our write and was dropped.
     if (this.rereadAfterWrite.delete(note.uri)) {
-      void this.reload(note);
+      this.reloadUnawaited(note);
     }
     return true;
   }
@@ -389,7 +392,14 @@ export class NoteDocuments implements HostDocuments {
    * file over the old one would end a watch on the file itself.)
    */
   private watchFile(note: NoteDocument): () => void {
-    return this.files.watch(note.uri, () => void this.reload(note));
+    return this.files.watch(note.uri, () => this.reloadUnawaited(note));
+  }
+
+  /** A reload started by a file event: a listener that throws is logged. */
+  private reloadUnawaited(note: NoteDocument): void {
+    this.reload(note).catch((error: unknown) =>
+      this.log(`Lumière could not reload ${note.uri}: ${errorText(error)}`),
+    );
   }
 
   private async reload(note: NoteDocument): Promise<void> {
@@ -447,6 +457,10 @@ export class NoteDocuments implements HostDocuments {
   private readNote(uri: string): Promise<string> {
     return this.files.readText(uri);
   }
+}
+
+export function errorText(error: unknown): string {
+  return error instanceof Error ? error.message : String(error);
 }
 
 function subscribe<T>(listeners: Set<T>, listener: T): Disposer {
