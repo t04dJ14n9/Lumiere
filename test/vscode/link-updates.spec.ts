@@ -38,14 +38,38 @@ async function renameInExplorer(page: Page, from: string, to: string) {
   const rename = page.getByRole("menuitem", { name: /^Rename/ });
   const input = page.locator(".explorer-folders-view .monaco-inputbox input");
   // VS Code's own menu on Linux can drop a click made just as it opens: it
-  // stays open with nothing renamed. Click again until the box is there.
+  // stays open with nothing renamed. On macOS the context menu can be the
+  // system's, outside the page, so after a right-click shows no Rename item
+  // the row is selected and renamed with the key VS Code binds there (Enter
+  // on macOS, F2 elsewhere). Try again until the box is there.
   await expect(async () => {
     if (!(await input.isVisible())) {
       if (!(await rename.isVisible())) {
-        // A click would open the file and move the focus into its editor.
+        // A left click would open the file and move the focus into its editor.
         await row.click({ button: "right" });
       }
-      await rename.click({ timeout: 2_000 });
+      const isMenuShown = await rename
+        .waitFor({ state: "visible", timeout: 1_000 })
+        .then(
+          () => true,
+          () => false,
+        );
+      if (isMenuShown) {
+        await rename.click({ timeout: 2_000 });
+      } else {
+        await page.keyboard.press("Escape");
+        // The row's path tooltip, shown while the pointer rests on it, takes
+        // the click: move away until it closes.
+        await page.mouse.move(0, 0);
+        await page
+          .locator(".context-view .hover-contents")
+          .waitFor({ state: "hidden", timeout: 2_000 })
+          .catch(() => {});
+        await row.click({ position: { x: 4, y: 4 } });
+        await page.keyboard.press(
+          process.platform === "darwin" ? "Enter" : "F2",
+        );
+      }
     }
     await expect(input).toBeVisible({ timeout: 2_000 });
   }).toPass({ timeout: 20_000 });
