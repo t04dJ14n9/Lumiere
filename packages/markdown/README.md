@@ -142,8 +142,8 @@ pnpm package        # VSIX; checks THIRD_PARTY_NOTICES.md is current
 
 **Before every push run `pnpm check` and `pnpm test:browser`. Before merging a
 pull request, and before pushing a change to editor integration, run the full
-local check, `pnpm check:full`** (on headless Linux:
-`xvfb-run -a pnpm check:full`), which adds `pnpm test:vscode`. GitHub Actions
+local check, `pnpm check:full`**, which adds `pnpm test:vscode` (on Linux it
+opens VS Code on a private Xvfb display of its own; see AGENTS.md). GitHub Actions
 does not run the real-VS Code specs (`test/vscode`): they were flaky under
 load. AGENTS.md says what counts as editor integration.
 
@@ -169,7 +169,7 @@ request and on pushes to `main`. Each job, and how to run it locally:
 The real-VS Code specs (`pnpm test:vscode`) are not a CI job: run them locally
 before merging (see Develop). Cursor cannot run in CI either, so test it by
 hand with
-`VSCODE_EXECUTABLE=<cursor executable> xvfb-run -a pnpm test:vscode`. CI never
+`VSCODE_EXECUTABLE=<cursor executable> pnpm test:vscode`. CI never
 uses API keys or other secrets. Dependabot proposes grouped npm and
 GitHub Actions updates weekly.
 
