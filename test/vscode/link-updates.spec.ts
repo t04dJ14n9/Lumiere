@@ -66,9 +66,22 @@ async function renameInExplorer(page: Page, from: string, to: string) {
           .waitFor({ state: "hidden", timeout: 2_000 })
           .catch(() => {});
         await row.click({ position: { x: 4, y: 4 } });
-        await page.keyboard.press(
-          process.platform === "darwin" ? "Enter" : "F2",
+        // The click opens the file, and its editor (a webview) can take the
+        // focus: Enter there would type a line break into the note. Give the
+        // focus back to the Explorer's list, whose focused row is the one
+        // clicked, and press the key only when the Explorer has it.
+        await page
+          .locator(".explorer-folders-view .monaco-list")
+          .first()
+          .focus();
+        const isExplorerFocused = await page.evaluate(() =>
+          Boolean(document.activeElement?.closest(".explorer-folders-view")),
         );
+        if (isExplorerFocused) {
+          await page.keyboard.press(
+            process.platform === "darwin" ? "Enter" : "F2",
+          );
+        }
       }
     }
     await expect(input).toBeVisible({ timeout: 2_000 });
