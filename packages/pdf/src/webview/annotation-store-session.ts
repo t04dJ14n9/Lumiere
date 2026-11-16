@@ -10,6 +10,12 @@ import {
   exportStoreText,
   restoreStoredAnnotations,
 } from "./annotation-persist";
+
+/**
+ * Numbers the PDF writes of every session on this page, so a result for a
+ * write of an earlier load can never settle a later one's.
+ */
+let lastPdfWrite = 0;
 import type { OutgoingMessage } from "./outbox";
 
 /**
@@ -38,8 +44,6 @@ export class StoreSession {
   private chain: Promise<void> = Promise.resolve();
   private started = false;
   private saveQueued = false;
-  /** Numbers the PDF writes, so each result settles its own. */
-  private writes = 0;
   /**
    * Writes of the PDF over the file that the host has not confirmed, by
    * number: Lumiere's annotations as they were when the PDF was taken, and
@@ -129,6 +133,12 @@ export class StoreSession {
 
   /** Annotations were read again: an Undo or Redo may have brought Lumiere's back. */
   resynced(): void {
+    // Which changed is not known: any a pending PDF write took may have.
+    for (const { sent, changedSince } of this.pdfWrites.values()) {
+      for (const key of sent) {
+        changedSince.add(key);
+      }
+    }
     if (this.started) {
       this.saveStore();
     }
@@ -193,6 +203,19 @@ export class StoreSession {
     this.pdfWrites.delete(write);
   }
 
+  /**
+   * Lumiere's annotations shown now: a deleted one stays Lumiere's for Undo
+   * but is in no PDF taken now, and Undo after the write must find it so.
+   */
+  private async ownShown(): Promise<Set<string>> {
+    const shown = await this.annotation.export();
+    return new Set(
+      shown.items
+        .map((item) => annotationKey(item.data.ref))
+        .filter((key) => this.ownership.isOwn(key)),
+    );
+  }
+
   private changedWhilePdfWrites(keys: readonly string[]): void {
     for (const { sent, changedSince } of this.pdfWrites.values()) {
       for (const key of keys) {
@@ -205,16 +228,16 @@ export class StoreSession {
 
   writePdf(documents: DocumentsCapability, to: "pdf" | "copy"): void {
     this.run(async (state) => {
-      const write = ++this.writes;
-      if (to === "pdf") {
-        // Taken before the PDF: one made during the download is kept in
-        // both, rather than in neither.
-        this.pdfWrites.set(write, {
-          sent: new Set(this.ownership.keys()),
-          changedSince: new Set(),
-        });
-      }
+      const write = ++lastPdfWrite;
       try {
+        if (to === "pdf") {
+          // Taken before the PDF: one made during the download is kept in
+          // both, rather than in neither.
+          this.pdfWrites.set(write, {
+            sent: await this.ownShown(),
+            changedSince: new Set(),
+          });
+        }
         const data = await downloadPdf(documents);
         this.host.post(
           to === "pdf"
