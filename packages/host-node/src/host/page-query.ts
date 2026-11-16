@@ -6,6 +6,8 @@ import { isFilesystemRoot } from "./paths";
 export interface PageQuery {
   readonly note: string;
   readonly root: string;
+  /** No workspace was named, so the note's folder stands in for one. */
+  readonly isNoteFolder: boolean;
 }
 
 /**
@@ -40,5 +42,5 @@ function fileQuery(url: URL, kind: RegExp): PageQuery | undefined {
   ) {
     return undefined;
   }
-  return { note: normalized, root };
+  return { note: normalized, root, isNoteFolder: !given };
 }

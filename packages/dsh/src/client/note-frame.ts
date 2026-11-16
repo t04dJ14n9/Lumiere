@@ -66,7 +66,7 @@ export function isEditorDocument(
   return Boolean(doc.querySelector('meta[name="lumiere-panel"]'));
 }
 
-function resolveEditorTarget(
+export function resolveEditorTarget(
   resourceAddress: string,
   absolute: string | undefined,
 ) {
@@ -81,7 +81,10 @@ function resolveEditorTarget(
     absolute && isMarkdown
       ? new URLSearchParams({
           path: absolute,
-          ...(containmentRoot ? { root: containmentRoot } : {}),
+          // Only a workspace is named. Without one the host lets the note's
+          // folder stand in, until the session's workspace that holds it
+          // arrives; a named folder would lock that workspace out.
+          ...(root ? { root } : {}),
         })
       : undefined;
   const src = query

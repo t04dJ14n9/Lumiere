@@ -135,7 +135,9 @@ of the Host mid-handshake), it recreates the iframe once, and DSH's Reload and
   policy (scripts by nonce only) is what keeps a note's scripts from running.
   The page can still read DSH's DOM, which is how it follows the theme.
 - A workspace that is the filesystem root is refused. The root otherwise is
-  the directory DSH's preview names for that note; the host re-checks every
-  path against it.
+  the session's workspace DSH's preview names for that note; the host
+  re-checks every path against it. A note DSH names by absolute path has no
+  workspace: its folder stands in, and the session's workspace that holds
+  it still opens later.
 - Copying a file into the vault from outside the workspace is refused.
   DSH has no file picker for that yet.
