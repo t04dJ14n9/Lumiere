@@ -79,27 +79,6 @@ export function parseToolbarSettings(value: unknown): ToolbarSettings {
 }
 
 /**
- * The edge nearest to a point in a box of `width` by `height`. Kept for
- * unit tests of the old floating-dock helper; the floating bar is gone.
- */
-export function nearestDock(
-  x: number,
-  y: number,
-  width: number,
-  height: number,
-): FloatingDock {
-  const distances: [FloatingDock, number][] = [
-    ["top", y],
-    ["bottom", height - y],
-    ["left", x],
-    ["right", width - x],
-  ];
-  return distances.reduce((nearest, next) =>
-    next[1] < nearest[1] ? next : nearest,
-  )[0];
-}
-
-/**
  * Whether the editor title bar keeps extension buttons in its "…" menu
  * rather than showing them, as Cursor's does.
  */

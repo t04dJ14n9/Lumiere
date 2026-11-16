@@ -1,7 +1,6 @@
 import assert from "node:assert/strict";
 import { test } from "node:test";
 import {
-  nearestDock,
   parseToolbarMode,
   parseToolbarSettings,
   parseVsCodeToolbarMode,
@@ -64,14 +63,4 @@ test("toolbar settings from a message fall back to the defaults", () => {
       dock: "bottom",
     });
   }
-});
-
-test("a dropped floating bar docks to the nearest edge", () => {
-  assert.equal(nearestDock(500, 20, 1000, 600), "top");
-  assert.equal(nearestDock(500, 590, 1000, 600), "bottom");
-  assert.equal(nearestDock(10, 300, 1000, 600), "left");
-  assert.equal(nearestDock(980, 300, 1000, 600), "right");
-  assert.equal(nearestDock(400, 280, 1000, 600), "top");
-  assert.equal(nearestDock(400, 320, 1000, 600), "bottom");
-  assert.equal(nearestDock(150, 300, 1000, 600), "left");
 });

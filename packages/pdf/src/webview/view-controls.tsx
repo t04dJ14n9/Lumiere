@@ -11,7 +11,7 @@ import { MAX_ZOOM, MIN_ZOOM } from "../shared/zoom-steps";
 import { NumberField } from "./number-field";
 import { fitMode } from "./view-sync";
 
-/** A native popover stays visible over every floating-toolbar dock and supports light dismissal. */
+/** A native popover stays visible over the page and supports light dismissal. */
 export function ViewControls({
   choices,
   run,
