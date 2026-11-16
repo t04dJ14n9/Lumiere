@@ -299,10 +299,11 @@ export class NoteDocuments implements HostDocuments {
   private async write(note: NoteDocument): Promise<boolean> {
     this.cancelSave(note.uri);
     await Promise.all([...this.willSave].map((listener) => listener(note)));
-    const text = note.getText();
-    if (await this.tookOutsideChange(note, text)) {
+    if (await this.tookOutsideChange(note)) {
       return true;
     }
+    // Taken after the disk check: typing made while it read is saved too.
+    const text = note.getText();
     this.writing.add(note.uri);
     try {
       await this.files.save(note.uri, text);
@@ -335,17 +336,15 @@ export class NoteDocuments implements HostDocuments {
    * other version is kept in a copy beside it. With nothing unsaved, the
    * change is taken instead, as a reload would. True when nothing is left
    * to write. (A change landing between this read and the write is not
-   * seen; the window is one read long.)
+   * seen; the window is one read long.) Whether typing is unsaved is
+   * decided once the read returns: the user may type while it reads.
    */
-  private async tookOutsideChange(
-    note: NoteDocument,
-    text: string,
-  ): Promise<boolean> {
+  private async tookOutsideChange(note: NoteDocument): Promise<boolean> {
     const disk = await this.readNote(note.uri).catch(() => undefined);
     if (disk === undefined || disk === note.diskText) {
       return false;
     }
-    if (text === note.diskText) {
+    if (note.getText() === note.diskText) {
       this.takeDiskText(note, disk);
       return true;
     }
