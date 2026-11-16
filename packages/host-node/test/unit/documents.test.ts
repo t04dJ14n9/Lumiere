@@ -138,6 +138,7 @@ test("a disk read that overlapped a save does not undo it", () => {
       open: true,
       writesAtStart: 0,
       writesNow: 1,
+      writing: false,
     }),
     false,
   );
@@ -149,8 +150,22 @@ test("a disk read that overlapped a save does not undo it", () => {
       open: true,
       writesAtStart: 1,
       writesNow: 1,
+      writing: false,
     }),
     true,
+  );
+  assert.equal(
+    diskReadReplacesNote({
+      text: "",
+      diskText: "saved",
+      dirty: false,
+      open: true,
+      writesAtStart: 1,
+      writesNow: 1,
+      writing: true,
+    }),
+    false,
+    "a read made while a save was writing",
   );
 });
 
@@ -434,5 +449,72 @@ test("a save with nothing unsaved takes another program's change instead of writ
   assert.equal(await document.save(), true);
   assert.equal(await readFile(file, "utf8"), "theirs");
   assert.equal(document.getText(), "theirs");
+  assert.equal(document.isDirty, false);
+});
+
+test("a reload that reads the file while a save has emptied it does not empty the note", async (t) => {
+  // Saves replace the file in place: it is empty between the truncation and
+  // the write, and the truncation alone wakes the watch.
+  let disk = "start";
+  const watchers = new Set<() => void>();
+  const documents = new NoteDocuments(
+    {
+      ...NODE_NOTES,
+      readText: async () => disk,
+      watch: (_uri, listener) => {
+        watchers.add(listener);
+        return () => watchers.delete(listener);
+      },
+      save: async (_uri, text) => {
+        disk = "";
+        for (const listener of watchers) {
+          listener();
+        }
+        await new Promise((resolve) => setTimeout(resolve, 30));
+        disk = text;
+      },
+    },
+    60_000,
+  );
+  t.after(() => documents.dispose());
+  const document = await documents.open("file:///v/Note.md");
+  // Typed and undone before the pause: the autosave writes a clean note.
+  await documents.apply(document, [{ from: 0, to: 0, insert: "x" }]);
+  await documents.apply(document, [{ from: 0, to: 1, insert: "" }]);
+  assert.equal(await document.save(), true);
+  await new Promise((resolve) => setTimeout(resolve, 20));
+  assert.equal(document.getText(), "start");
+  assert.equal(document.isDirty, false);
+  assert.equal(disk, "start");
+});
+
+test("another program's change that lands during a save is read once the save is written", async (t) => {
+  let disk = "start";
+  const watchers = new Set<() => void>();
+  const documents = new NoteDocuments(
+    {
+      ...NODE_NOTES,
+      readText: async () => disk,
+      watch: (_uri, listener) => {
+        watchers.add(listener);
+        return () => watchers.delete(listener);
+      },
+      save: async (_uri, text) => {
+        disk = text;
+        await new Promise((resolve) => setTimeout(resolve, 10));
+        disk = "theirs";
+        for (const listener of watchers) {
+          listener();
+        }
+        await new Promise((resolve) => setTimeout(resolve, 20));
+      },
+    },
+    60_000,
+  );
+  t.after(() => documents.dispose());
+  const document = await documents.open("file:///v/Note.md");
+  await documents.apply(document, [{ from: 5, to: 5, insert: "!" }]);
+  assert.equal(await document.save(), true);
+  await until(() => document.getText() === "theirs");
   assert.equal(document.isDirty, false);
 });
