@@ -2,11 +2,7 @@
  * Template expansion for Templates and any later note creator. Pure: no
  * DOM, VS Code or Node APIs.
  */
-import {
-  formatMoment,
-  localFields,
-  unsupportedMomentTokens,
-} from "./moment-format";
+import { formatMoment, localFields } from "./moment-format";
 import { expandWithProperties } from "./template-header";
 
 export const DEFAULT_DATE_FORMAT = "YYYY-MM-DD";
@@ -67,9 +63,4 @@ export function expandTemplateWithReport(
 /** Formats local wall-clock time with a Moment.js pattern. */
 export function formatLocalDate(date: Date, pattern: string): string {
   return formatMoment(localFields(date), pattern).text;
-}
-
-/** True when Lumiere can write every Moment token of the pattern. */
-export function isSupportedDateFormat(pattern: string): boolean {
-  return pattern.trim() !== "" && unsupportedMomentTokens(pattern).length === 0;
 }
