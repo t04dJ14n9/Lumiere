@@ -40,6 +40,11 @@
     ISO weeks, `L`/`LL` and `[literal]` text work. A `templates.json`
     format is no longer dropped when it has a token Lumiere cannot write;
     Insert Template names that token instead.
+  - Embedding a block (`![[Note#^id]]`) whose id is on a list item shows
+    the item with its bullet and nested items, not only its text. An id on
+    a heading embeds that heading instead of the whole note, and an id
+    inside a quote or callout embeds the whole quote instead of a mangled
+    piece of it.
 
 - Daily Notes is removed: **Open Today's Daily Note**, **Open Previous
   Daily Note** and **Open Next Daily Note** are gone, with the
