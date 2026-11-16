@@ -38,12 +38,17 @@ export class StoreSession {
   private chain: Promise<void> = Promise.resolve();
   private started = false;
   private saveQueued = false;
+  /** Numbers the PDF writes, so each result settles its own. */
+  private writes = 0;
   /**
-   * Lumiere's annotations in a PDF sent to be written over the file and not
-   * yet confirmed written, as they were when the PDF was taken. Ones made or
-   * changed after it are not in that PDF and stay Lumiere's.
+   * Writes of the PDF over the file that the host has not confirmed, by
+   * number: Lumiere's annotations as they were when the PDF was taken, and
+   * those of them changed since, whose change that PDF does not have.
    */
-  private readonly sentInPdf = new Set<string>();
+  private readonly pdfWrites = new Map<
+    number,
+    { sent: ReadonlySet<string>; changedSince: Set<string> }
+  >();
   /** The file could not be read back: saving would replace what is in it with less. */
   private fileLeftAlone = false;
   private markRestored: () => void = () => undefined;
@@ -111,15 +116,8 @@ export class StoreSession {
       this.ownership.imported(keys);
       return;
     }
-    const owners = new Set(
-      keys.map((key) => {
-        const owner = this.ownership.change(type, key);
-        if (owner === "store") {
-          this.sentInPdf.delete(key);
-        }
-        return owner;
-      }),
-    );
+    const owners = new Set(keys.map((key) => this.ownership.change(type, key)));
+    this.changedWhilePdfWrites(keys);
     if (owners.has("store")) {
       this.saveStore();
     }
@@ -168,26 +166,53 @@ export class StoreSession {
   }
 
   /**
-   * The host wrote the PDF over the file, and the viewer now has its hash.
-   * What went into it is the PDF's now; the rest of Lumiere's is saved again,
-   * filed under the new hash: the old one names a file no longer there.
+   * The host wrote PDF write `write` over the file, and the viewer now has
+   * its hash. What went into it is the PDF's now. Lumiere's made since are
+   * saved again, under the new hash: the old one names a file no longer
+   * there. One of those it took changed since, and only saving into the PDF
+   * again keeps that change: the reader is told, as for any PDF annotation.
    */
-  savedIntoPdf(): void {
-    const stillOwn = this.ownership.savedIntoPdf(this.sentInPdf);
-    this.sentInPdf.clear();
+  savedIntoPdf(write: number): void {
+    const settled = this.pdfWrites.get(write);
+    this.pdfWrites.delete(write);
+    if (!settled) {
+      return;
+    }
+    const stillOwn = this.ownership.savedIntoPdf(settled.sent);
+    const load = this.host.loadState()?.load;
+    if (settled.changedSince.size > 0 && load !== undefined) {
+      this.host.post({ type: "annotationEmbeddedEdit", load });
+    }
     if (stillOwn) {
       this.saveStore();
     }
   }
 
+  /** PDF write `write` failed: what it took stays Lumiere's. */
+  pdfWriteFailed(write: number): void {
+    this.pdfWrites.delete(write);
+  }
+
+  private changedWhilePdfWrites(keys: readonly string[]): void {
+    for (const { sent, changedSince } of this.pdfWrites.values()) {
+      for (const key of keys) {
+        if (sent.has(key)) {
+          changedSince.add(key);
+        }
+      }
+    }
+  }
+
   writePdf(documents: DocumentsCapability, to: "pdf" | "copy"): void {
     this.run(async (state) => {
+      const write = ++this.writes;
       if (to === "pdf") {
         // Taken before the PDF: one made during the download is kept in
         // both, rather than in neither.
-        for (const key of this.ownership.keys()) {
-          this.sentInPdf.add(key);
-        }
+        this.pdfWrites.set(write, {
+          sent: new Set(this.ownership.keys()),
+          changedSince: new Set(),
+        });
       }
       try {
         const data = await downloadPdf(documents);
@@ -196,12 +221,14 @@ export class StoreSession {
             ? {
                 type: "annotationSave",
                 load: state.load,
+                write,
                 baseSha256: state.sha256,
                 data,
               }
             : { type: "annotationExport", load: state.load, data },
         );
       } catch (error) {
+        this.pdfWrites.delete(write);
         this.failed(state.load, error);
       }
     });

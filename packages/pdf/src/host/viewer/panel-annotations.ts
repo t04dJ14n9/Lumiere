@@ -1,7 +1,7 @@
 import type { AnnotationViewerMessage } from "../../shared/annotation-messages";
 import type { HostMessage } from "../../shared/messages";
 import { Emitter, type Subscription } from "../events";
-import { AnnotationSave } from "./annotation-save";
+import { AnnotationSave, type PdfWriteConflict } from "./annotation-save";
 import { AnnotationStore } from "./annotation-store";
 import type { ViewerLoads } from "./loads";
 import type { ViewerPanelHost } from "./panel-types";
@@ -14,7 +14,7 @@ import type { PdfSource } from "./source";
  */
 export class PanelAnnotations implements Subscription {
   /** Disk diverged from the editor's base bytes while saving into the PDF. */
-  readonly conflict = new Emitter<{ data: ArrayBuffer; load: number }>();
+  readonly conflict = new Emitter<PdfWriteConflict>();
   /** A save failed (I/O error). */
   readonly failed = new Emitter<string>();
   /** The viewer sent the PDF with its annotations for Export Annotated Copy. */
@@ -70,8 +70,8 @@ export class PanelAnnotations implements Subscription {
     this.save.request(load);
   }
 
-  keepMine(data: ArrayBuffer, load: number): Promise<void> {
-    return this.save.keepMine(data, load);
+  keepMine(conflict: PdfWriteConflict): Promise<void> {
+    return this.save.keepMine(conflict);
   }
 
   /** Whether the save that failed last wrote the PDF, so Retry must write it again. */

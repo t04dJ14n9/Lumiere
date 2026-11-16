@@ -6,6 +6,7 @@ test("parseViewerMessage accepts annotationSave with ArrayBuffer", () => {
   const data = new Uint8Array([1, 2, 3]).buffer;
   const parsed = parseViewerMessage({
     type: "annotationSave",
+    write: 1,
     load: 2,
     baseSha256: "abc",
     data,
@@ -18,10 +19,23 @@ test("parseViewerMessage accepts annotationSave with ArrayBuffer", () => {
   }
 });
 
+test("parseViewerMessage rejects annotationSave without the viewer's write number", () => {
+  assert.equal(
+    parseViewerMessage({
+      type: "annotationSave",
+      load: 1,
+      baseSha256: "abc",
+      data: new ArrayBuffer(1),
+    }),
+    undefined,
+  );
+});
+
 test("parseViewerMessage rejects annotationSave without hash", () => {
   assert.equal(
     parseViewerMessage({
       type: "annotationSave",
+      write: 1,
       load: 1,
       data: new ArrayBuffer(1),
     }),

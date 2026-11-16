@@ -12,8 +12,8 @@ import {
 import { StoreSession } from "./annotation-store-session";
 import { postToHost } from "./host";
 
-/** Told when the open file now holds every annotation (Save into This PDF worked). */
-const savedIntoPdf = new Set<() => void>();
+/** Told how each Save into This PDF ended, by the viewer's number for its write. */
+const pdfWriteResults = new Set<(write: number, ok: boolean) => void>();
 
 /**
  * Lumiere's own annotations live in a file outside the PDF, named by its hash
@@ -52,10 +52,16 @@ export function useAnnotationSaveSession(): {
     if (!session) {
       return;
     }
-    const listener = (): void => session.savedIntoPdf();
-    savedIntoPdf.add(listener);
+    const listener = (write: number, ok: boolean): void => {
+      if (ok) {
+        session.savedIntoPdf(write);
+      } else {
+        session.pdfWriteFailed(write);
+      }
+    };
+    pdfWriteResults.add(listener);
     return () => {
-      savedIntoPdf.delete(listener);
+      pdfWriteResults.delete(listener);
     };
   }, [session]);
 
@@ -94,17 +100,25 @@ function useCommittedChanges(session: StoreSession | undefined): void {
 /** Apply host annotation save replies to the remembered base hash. */
 export function applyAnnotationHostMessage(message: {
   type: string;
+  write?: number;
   ok?: boolean;
   sha256?: string;
+  reason?: string;
 }): void {
-  if (
-    message.type === "annotationSaveResult" &&
-    message.ok === true &&
-    typeof message.sha256 === "string"
-  ) {
+  if (message.type !== "annotationSaveResult" || message.write === undefined) {
+    return;
+  }
+  if (message.ok === true && typeof message.sha256 === "string") {
     acceptAnnotationSave(message.sha256);
-    for (const listener of savedIntoPdf) {
-      listener();
+    for (const listener of pdfWriteResults) {
+      listener(message.write, true);
+    }
+    return;
+  }
+  // A conflict still has Keep mine to come, which answers for the same write.
+  if (message.ok === false && message.reason === "error") {
+    for (const listener of pdfWriteResults) {
+      listener(message.write, false);
     }
   }
 }

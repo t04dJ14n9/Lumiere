@@ -92,6 +92,7 @@ test("annotationSave overwrites and suppresses watcher reload", async () => {
   const before = posted.length;
   await saveAsked({
     type: "annotationSave",
+    write: 7,
     load: load.load,
     baseSha256: INITIAL_SHA,
     data: next.buffer.slice(next.byteOffset, next.byteOffset + next.byteLength),
@@ -101,6 +102,8 @@ test("annotationSave overwrites and suppresses watcher reload", async () => {
     .slice(before)
     .find((m) => m.type === "annotationSaveResult");
   assert.ok(result && result.type === "annotationSaveResult" && result.ok);
+  // The result names the viewer's write, which settles only what it took.
+  assert.equal(result.write, 7);
   const loadsBeforeWatch = posted.filter((m) => m.type === "load").length;
   triggerWatch();
   await new Promise((r) => setTimeout(r, 200));
@@ -115,6 +118,7 @@ const bytesOf = (...values: number[]) =>
   new Uint8Array([37, 80, 68, 70, ...values]);
 const save = (load: number, base: string, data: Uint8Array) => ({
   type: "annotationSave",
+  write: 1,
   load,
   baseSha256: base,
   data: data.buffer.slice(data.byteOffset, data.byteOffset + data.byteLength),
@@ -177,7 +181,9 @@ test("Keep mine that cannot write reports the failure as a save does", async () 
   await receive({ type: "ready" });
   const load = posted.find((m) => m.type === "load");
   assert.ok(load && load.type === "load");
-  await assert.doesNotReject(panel.keepMine(new ArrayBuffer(4), load.load));
+  await assert.doesNotReject(
+    panel.keepMine({ data: new ArrayBuffer(4), load: load.load, write: 1 }),
+  );
   assert.equal(failed.length, 1);
   assert.match(errors.at(-1) ?? "", /EACCES/);
   const result = posted.filter((m) => m.type === "annotationSaveResult").at(-1);
@@ -211,7 +217,7 @@ test("Retry after a failed Keep mine asks for the PDF write again", async () => 
   await receive({ type: "ready" });
   const load = posted.find((m) => m.type === "load");
   assert.ok(load && load.type === "load");
-  await panel.keepMine(new ArrayBuffer(4), load.load);
+  await panel.keepMine({ data: new ArrayBuffer(4), load: load.load, write: 1 });
   panel.postAnnotationRetry();
   assert.deepEqual(posted.at(-1), {
     type: "annotationWrite",
@@ -282,6 +288,7 @@ test("annotationSave conflicts when disk hash diverges", async () => {
   assert.ok(load && load.type === "load");
   await saveAsked({
     type: "annotationSave",
+    write: 1,
     load: load.load,
     baseSha256: load.sha256,
     data: new ArrayBuffer(4),
@@ -326,6 +333,7 @@ test("annotationSave suppresses watcher that fires during writeAtomic", async ()
   const next = new Uint8Array([37, 80, 68, 70, 45, 98]); // %PDF-b
   await saveAsked({
     type: "annotationSave",
+    write: 1,
     load: load.load,
     baseSha256: INITIAL_SHA,
     data: next.buffer.slice(next.byteOffset, next.byteOffset + next.byteLength),
@@ -347,6 +355,7 @@ test("annotationSave survives create+change watcher pair after self-write", asyn
   const next = new Uint8Array([37, 80, 68, 70, 45, 99]); // %PDF-c
   await saveAsked({
     type: "annotationSave",
+    write: 1,
     load: load.load,
     baseSha256: INITIAL_SHA,
     data: next.buffer.slice(next.byteOffset, next.byteOffset + next.byteLength),
