@@ -12,11 +12,7 @@ import {
 } from "../../webview/ui/pointer-selection";
 import type { BlockRenderer, RenderBlock } from "./api";
 import { blockDecoration, blockIndex, redecorate } from "./blocks";
-import {
-  DeferredBlockWidget,
-  expandVisibleRanges,
-  rangesIntersect,
-} from "./deferred-block";
+import { DeferredBlockWidget, rangesIntersect } from "./deferred-block";
 import { changesMetadata } from "./invalidation";
 
 /** Viewport (+ margin) the block decorator treats as live when explicitly set. */
@@ -170,5 +166,3 @@ const blockViewportTracker = ViewPlugin.define(() => ({}));
 
 /** Hot-range field + viewport tracker; install beside `blockDecorations`. */
 export const blockViewportSupport = [blockHotRanges, blockViewportTracker];
-
-export { expandVisibleRanges };
