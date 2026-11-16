@@ -1,4 +1,3 @@
-import { isSupportedDateFormat } from "../../markdown/templates";
 import type { ObsidianOverrides } from "./api";
 import { isRecord } from "./app-settings";
 
@@ -36,11 +35,10 @@ function text(value: unknown): string | undefined {
   return typeof value === "string" && value.trim() !== "" ? value : undefined;
 }
 /**
- * Moment formats Lumiere cannot write would expand `{{date}}` and `{{time}}`
- * differently from Obsidian, so only formats of supported tokens carry over.
+ * Any Moment format carries over: Lumiere writes the common tokens, and
+ * Insert Template names the ones it cannot write instead of this mapping
+ * dropping the whole format silently.
  */
 function dateFormat(value: unknown): string | undefined {
-  return typeof value === "string" && isSupportedDateFormat(value)
-    ? value
-    : undefined;
+  return text(value);
 }

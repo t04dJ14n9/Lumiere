@@ -2,6 +2,7 @@ import assert from "node:assert/strict";
 import test from "node:test";
 import {
   expandTemplate,
+  expandTemplateWithReport,
   formatLocalDate,
   isSupportedDateFormat,
 } from "../../../src/markdown/templates";
@@ -62,53 +63,58 @@ test("formatLocalDate writes local time, not UTC", () => {
   );
 });
 
-test("only formats made of supported tokens are supported", () => {
-  for (const format of [
-    "YYYY-MM-DD",
-    "YYYY/MM/YYYY-MM-DD",
-    "HH:mm",
-    "DD.MM.YYYY",
-    "YYYYMMDD",
-    "YYYY-MM-DD_HHmmss",
-    "YYYY年MM月DD日",
-  ]) {
+test("Moment's common tokens are written as Moment writes them", () => {
+  const cases: [string, string][] = [
+    ["dddd, MMMM Do YYYY", "Thursday, November 5th 2026"],
+    ["ddd MMM D, YY", "Thu Nov 5, 26"],
+    ["h:mm A", "9:07 AM"],
+    ["hh:mm a", "09:07 am"],
+    ["YYYY-MM-DDTHH:mm", "2026-11-05T09:07"],
+    ["[Week] W, GGGG", "Week 45, 2026"],
+    ["DDDD DDD Q E d dd", "309 309 4 4 4 Th"],
+    ["YYYY年MM月DD日", "2026年11月05日"],
+    ["LL", "November 5, 2026"],
+    ["[MMMM] MMMM", "MMMM November"],
+  ];
+  for (const [format, expected] of cases) {
+    assert.equal(formatLocalDate(NOW, format), expected, format);
     assert.equal(isSupportedDateFormat(format), true, format);
   }
-  for (const format of [
-    "",
-    "  ",
-    "YYYY-MM-DD dddd",
-    "Do MMMM",
-    "[Week] W",
-    "YY",
-  ]) {
-    assert.equal(isSupportedDateFormat(format), false, format);
-  }
+  assert.equal(formatLocalDate(new Date(2027, 0, 1), "GGGG-[W]WW"), "2026-W53");
+  assert.deepEqual(
+    [1, 2, 3, 4, 11, 12, 13, 21, 22, 23].map((day) =>
+      formatLocalDate(new Date(2026, 0, day), "Do"),
+    ),
+    [
+      "1st",
+      "2nd",
+      "3rd",
+      "4th",
+      "11th",
+      "12th",
+      "13th",
+      "21st",
+      "22nd",
+      "23rd",
+    ],
+  );
 });
 
-// Moment reads a run of one letter as a single token, so MMMM is the month's
-// name, not MM twice. The formatter would write "1111" for it.
-test("a token Lumiere cannot write is unsupported even when it is made of supported ones", () => {
-  assert.equal(formatLocalDate(NOW, "MMMM DD, YYYY"), "1111 05, 2026");
-  for (const format of [
-    "MMMM DD, YYYY",
-    "MMM",
-    "DDDD",
-    "DDD",
-    "Do",
-    "ddd",
-    "YYYYYY",
-    "YYYYY",
-    "YY",
-    "M/D/YYYY",
-    "HHH:mm",
-    "H:mm",
-    "mmm",
-    "sss",
-    "YYYY-MM-DD hh:mm",
-  ]) {
+test("tokens Lumiere cannot write are reported and written as they are", () => {
+  for (const format of ["", "  ", "gggg-[W]ww", "YYYYYY", "N", "zz"]) {
     assert.equal(isSupportedDateFormat(format), false, format);
   }
+  const { text, unsupported } = expandTemplateWithReport(
+    "{{date:gggg [w]w}} {{time}}",
+    { title: "T", now: NOW },
+  );
+  assert.equal(text, "gggg ww 09:07");
+  assert.deepEqual(unsupported, ["gggg", "w"]);
+  assert.deepEqual(
+    expandTemplateWithReport("{{date:dddd}}", { title: "T", now: NOW })
+      .unsupported,
+    [],
+  );
 });
 
 function file(path: string): VaultFile {
