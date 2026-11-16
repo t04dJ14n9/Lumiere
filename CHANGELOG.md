@@ -8,6 +8,12 @@
 
 ## Unreleased
 
+- Fixed (Obsidian compliance audit, 2026-11-16): property links survive
+  renames to names with quotes, relative links name the right note, Insert
+  Template merges properties, **Always Update** is kept per vault, and
+  renames update `.canvas` files and notes the index has not read yet.
+  Details in `packages/markdown/CHANGELOG.md`.
+
 - Daily Notes is removed from Lumiere's Markdown editor, with its three
   commands and four settings; VS Code ignores the settings now that nothing
   declares them, so no migration is needed. Templates stay. See
