@@ -11,6 +11,9 @@
   - Annotations made while a PDF was reloading were lost or filed under the
     wrong version of the PDF; the viewer now names the hash it saved for.
     Touching or syncing an unchanged PDF no longer reloads it.
+    An annotation made while Save Annotations into This PDF is writing is
+    kept, and filed under the PDF as written, instead of being lost on the
+    next open.
   - The selection handed to Codex is written in a private temporary folder,
     and the agent bridge compares its token in constant time.
 
