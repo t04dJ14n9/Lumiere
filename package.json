@@ -3805,7 +3805,6 @@
     "package:pre-release": "node scripts/build.mjs --production && node scripts/third-party-notices.mjs --check && vsce package --pre-release --no-dependencies --no-rewrite-relative-links"
   },
   "dependencies": {
-    "@workshop/agents": "workspace:*",
     "@workshop/core": "workspace:*",
     "@workshop/markdown": "workspace:*",
     "@workshop/pdf": "workspace:*"
