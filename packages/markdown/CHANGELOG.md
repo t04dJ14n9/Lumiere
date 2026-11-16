@@ -6,9 +6,6 @@
   the Marp and Outline settings' descriptions name Lumiere instead of
   Workshop, the editor's old name. The command id is unchanged.
 
-- A table column you resized keeps its width when you type a longer word
-  into one of its cells; before, the column grew to fit the word.
-
 - With Vim on and the mode in the VS Code or Cursor status bar, dragging to
   select text no longer scrolls the note on every mouse move, and `gg` and
   `G` keep the caret in view. The closed Vim line under the note was only
