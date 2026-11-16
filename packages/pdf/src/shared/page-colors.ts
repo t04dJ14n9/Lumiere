@@ -7,7 +7,7 @@
 export type PageColorsSetting = "follow" | "normal" | "dark";
 export type EffectivePageColors = "normal" | "dark";
 
-export const PAGE_COLORS_SETTINGS: readonly PageColorsSetting[] = [
+const PAGE_COLORS_SETTINGS: readonly PageColorsSetting[] = [
   "follow",
   "normal",
   "dark",

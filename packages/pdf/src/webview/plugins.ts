@@ -17,7 +17,7 @@ import { lumiereTextPlugin } from "./text-access";
 
 /** The viewer shows one document under this id. */
 export const DOCUMENT_ID = "pdf";
-export const ZOOM_RANGE = { min: MIN_ZOOM, max: MAX_ZOOM } as const;
+const ZOOM_RANGE = { min: MIN_ZOOM, max: MAX_ZOOM } as const;
 /** Pixels between pages (and around them). */
 export const PAGE_GAP = 12;
 

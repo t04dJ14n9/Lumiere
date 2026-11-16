@@ -134,10 +134,7 @@ export function durableLocatorBase(uriOrPath: string): string {
 }
 
 /** Primary durable `#page=` / `viewrect` link for a selection (first page). */
-export function pdfSelectionDurable(
-  base: string,
-  selection: PdfSelection,
-): string {
+function pdfSelectionDurable(base: string, selection: PdfSelection): string {
   const pages = selectedPages(selection);
   const first = pages[0]!;
   return pdfLink(durableLocatorBase(base), {
