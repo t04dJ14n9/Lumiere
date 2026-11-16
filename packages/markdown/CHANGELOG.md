@@ -13,11 +13,14 @@
     rename, a suggestion or an inserted link) that a root file of the same
     name would capture gets `./` in front (`[[./X]]`, `[x](./X.md)`), so it
     opens the note in that folder instead of the root one. Markdown link
-    suggestions get the same check.
+    suggestions get the same check, which ignores case as links do.
   - **Insert Template** merges a template's properties into the note's, as
     Obsidian does, instead of pasting its `---` block into the note: the
     note's values stay, missing properties are added and lists are joined.
-    Only the body goes in at the caret. A variable that would make the
+    Only the body goes in at the caret. Joining a list the note writes as
+    a block list (`- a` lines) adds the new items as `- ` lines and keeps
+    its comments, instead of rewriting it as `[a, b]`; an object in both
+    lists is written once. A variable that would make the
     template's properties invalid YAML (`title: {{title}}` for a note named
     `[draft] plan`) is written quoted in its value. A template whose
     properties are still not valid YAML gets only its body inserted, never
@@ -61,7 +64,10 @@
     (it was `1111`), and `MMM`, `dddd`, `ddd`, `Do`, `YY`, `A`/`a`, `h`,
     ISO weeks, `L`/`LL` and `[literal]` text work. A `templates.json`
     format is no longer dropped when it has a token Lumiere cannot write;
-    Insert Template names that token instead.
+    Insert Template names that token instead, and so does a Bases embed
+    whose `format("…")` uses one. `Y`, `YYY`, `GGGGG` and Moment's `\`
+    escape work, and ISO weeks and the day of the year are right for years
+    0 to 99.
   - Embedding a block (`![[Note#^id]]`) whose id is on a list item shows
     the item with its bullet and nested items, not only its text. An id on
     a heading embeds that heading instead of the whole note, and an id

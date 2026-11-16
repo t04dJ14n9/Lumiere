@@ -2,9 +2,9 @@
  * Moment.js `format()` patterns, as Obsidian's templates and settings use
  * them, with English names. Pure: no DOM, VS Code or Node APIs.
  *
- * The pattern is split as Moment splits it: `[text]` is literal, a run such
- * as `MMMM` or `Do` is one token, and any other character is written as it
- * is (`T`, `-`, `,`). Moment tokens this formatter does not write (locale
+ * The pattern is split as Moment splits it: `[text]` is literal, a token
+ * after a backslash is literal (`\\YYYY`), a run such as `MMMM` or `Do` is
+ * one token, and any other character is written as it is (`T`, `-`, `,`). Moment tokens this formatter does not write (locale
  * weeks `w`/`gggg`, eras `N`, time zone names `z`) are written as they are
  * and reported, so a caller can warn instead of inserting a wrong date.
  */
@@ -33,10 +33,9 @@ const WEEKDAYS = [
   "Saturday",
 ];
 
-// Moment's own token expression (moment/src/lib/format/format.js), without
-// its backslash escape, which Obsidian's formats do not use.
+// Moment's own token expression (moment/src/lib/format/format.js).
 const TOKENS =
-  /(\[[^[]*\])|([Hh]mm(?:ss)?|Mo|MM?M?M?|Do|DDDo|DD?D?D?|ddd?d?|do?|w[o|w]?|W[o|W]?|Qo?|N{1,5}|YYYYYY|YYYYY|YYYY|YY|y{2,4}|yo?|gg(?:ggg?)?|GG(?:GGG?)?|e|E|a|A|hh?|HH?|kk?|mm?|ss?|S{1,9}|x|X|zz?|ZZ?|.)/g;
+  /(\[[^[]*\])|(\\)?([Hh]mm(?:ss)?|Mo|MM?M?M?|Do|DDDo|DD?D?D?|ddd?d?|do?|w[o|w]?|W[o|W]?|Qo?|N{1,5}|YYYYYY|YYYYY|YYYY|YY|y{2,4}|yo?|gg(?:ggg?)?|GG(?:GGG?)?|e|E|a|A|hh?|HH?|kk?|mm?|ss?|S{1,9}|x|X|zz?|ZZ?|.)/g;
 
 /** English long date formats, which Moment expands before formatting. */
 const LONG_FORMATS: Record<string, string> = {
@@ -113,15 +112,25 @@ export interface Formatted {
 export function formatMoment(fields: DateFields, pattern: string): Formatted {
   const unsupported: string[] = [];
   const expanded = pattern.replace(
-    /(\[[^[]*\])|(LTS|LT|LL?L?L?|l{1,4})/g,
-    (match, literal: string | undefined) =>
-      literal ?? LONG_FORMATS[match] ?? match,
+    /(\[[^[]*\])|(\\)?(LTS|LT|LL?L?L?|l{1,4})/g,
+    (match, literal: string | undefined, escape: string | undefined) =>
+      literal ?? (escape ? match : (LONG_FORMATS[match] ?? match)),
   );
   const text = expanded.replace(
     TOKENS,
-    (match, literal: string | undefined) => {
+    (
+      match,
+      literal: string | undefined,
+      escape: string | undefined,
+      token: string,
+    ) => {
       if (literal !== undefined) {
         return literal.slice(1, -1);
+      }
+      // As Moment's removeFormattingTokens: an escaped token, and a
+      // backslash with nothing after it, lose the backslash.
+      if (escape !== undefined || match === "\\") {
+        return token.replace(/\\/g, "");
       }
       const written = writeToken(fields, match);
       if (written !== undefined) {
@@ -172,6 +181,9 @@ function writeToken(fields: DateFields, token: string): string | undefined {
 
 function yearToken(fields: DateFields, token: string): string | undefined {
   switch (token) {
+    case "Y":
+      // Moment's `Y`: four digits, or a sign beyond them.
+      return fields.year <= 9999 ? pad(fields.year, 4) : `+${fields.year}`;
     case "YYYY":
       return pad(fields.year, 4);
     case "YY":
@@ -180,6 +192,8 @@ function yearToken(fields: DateFields, token: string): string | undefined {
       return String(Math.floor(fields.month / 3) + 1);
     case "Qo":
       return ordinal(Math.floor(fields.month / 3) + 1);
+    case "GGGGG":
+      return pad(isoWeek(fields).year, 5);
     case "GGGG":
       return pad(isoWeek(fields).year, 4);
     case "GG":
@@ -330,24 +344,30 @@ function zoneToken(fields: DateFields, token: string): string | undefined {
   }
 }
 
+/**
+ * Midnight UTC of a day. `Date.UTC` reads years 0 to 99 as 1900 to 1999;
+ * `setUTCFullYear` takes them as written.
+ */
+function utcDay(year: number, month: number, day: number): Date {
+  const date = new Date(0);
+  date.setUTCFullYear(year, month, day);
+  return date;
+}
+
 function dayOfYear(fields: DateFields): number {
-  const start = Date.UTC(fields.year, 0, 1);
-  return (
-    Math.round(
-      (Date.UTC(fields.year, fields.month, fields.day) - start) / 86_400_000,
-    ) + 1
-  );
+  const start = utcDay(fields.year, 0, 1).getTime();
+  const today = utcDay(fields.year, fields.month, fields.day).getTime();
+  return Math.round((today - start) / 86_400_000) + 1;
 }
 
 /** ISO 8601 week and week-year: weeks start on Monday, week 1 holds January 4. */
 function isoWeek(fields: DateFields): { year: number; week: number } {
-  const date = new Date(Date.UTC(fields.year, fields.month, fields.day));
+  const date = utcDay(fields.year, fields.month, fields.day);
   const weekday = date.getUTCDay() || 7;
   // The Thursday of this week decides the year.
   date.setUTCDate(date.getUTCDate() + 4 - weekday);
   const year = date.getUTCFullYear();
-  const week = Math.ceil(
-    ((date.getTime() - Date.UTC(year, 0, 1)) / 86_400_000 + 1) / 7,
-  );
+  const start = utcDay(year, 0, 1).getTime();
+  const week = Math.ceil(((date.getTime() - start) / 86_400_000 + 1) / 7);
   return { year, week };
 }
