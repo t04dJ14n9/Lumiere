@@ -197,8 +197,12 @@ test("the View picker has a Settings… entry that opens the Settings editor", a
   await openFile(page, "docs/outline.pdf");
   await pdfViewer(page);
   await command(page, "PDF: View…");
-  // The entry is the picker's last: its list draws only the rows on screen,
-  // so filter it down as a reader would, by typing.
+  // The palette can close before the picker replaces it: type into the
+  // picker, once its first entry shows. The entry is the picker's last, and
+  // its list draws only the rows on screen: filter it, as a reader would.
+  await expect(
+    rows(page).filter({ hasText: "Fit width" }).first(),
+  ).toBeVisible();
   await page.locator(".quick-input-widget input:visible").fill("Settings");
   await page
     .locator(".quick-input-list .monaco-list-row")
