@@ -85,6 +85,7 @@ forbids this package from importing `vscode` or any embedder.
 - `src/host/start.ts`: starts the plugins over the services below.
 - `src/host/services.ts`: every host service the plugins inject.
 - `src/host/documents.ts`: notes on disk, edited in memory, saved after a pause.
+- `src/host/conflict-copy.ts`: where another program's version of a note goes when unsaved typing is saved over it.
 - `src/host/panels.ts`, `src/host/panel.ts`: editor pages as panels, and their sockets.
 - `src/host/routes.ts`, `src/host/page.ts`, `src/host/static.ts`: the routes above.
 - `src/host/editor-roots.ts`: which workspace roots an editor page may open from.
@@ -105,6 +106,12 @@ forbids this package from importing `vscode` or any embedder.
 - `scripts/assets.mjs`, `scripts/menus.mjs`: what every embedder ships beside its code (the editor, the shim, the settings, the menu).
 
 ## Limits
+
+- Another program's change reloads a note with nothing unsaved; unsaved
+  typing wins. A save that finds the file changed since it was last read
+  or written keeps the other version beside the note, as `Note
+  (conflict).md` (then `(conflict 2)`, …), writes the typing, and tells the
+  reader. A change made between that check and the write is not seen.
 
 - Git is blame, the change gutter and staging, through the `git` on the
   PATH (`git.ts`), for notes inside the workspace. On macOS, Xcode's

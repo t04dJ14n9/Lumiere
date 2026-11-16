@@ -4,7 +4,9 @@ Opens the Markdown notes of a [DeepSeek Harness](https://www.deepseek.com/en/har
 (DSH) workspace in Lumière's editor, in DSH's preview sidebar, instead of
 DSH's read-only preview: the same Obsidian-style Live Preview, wikilinks,
 embeds, properties, math, Mermaid and callouts as in VS Code and Cursor.
-Notes save as you type. DSH's own preview stays in the viewer menu above a
+Notes save as you type. If another program changed a note while you were
+typing, your text is saved and the other version is kept beside it as
+`Note (conflict).md`. DSH's own preview stays in the viewer menu above a
 note.
 
 ## How it works
