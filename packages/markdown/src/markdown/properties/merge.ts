@@ -137,7 +137,7 @@ export function mergeProperties(
   try {
     const header = headerParts(source);
     const current = frontmatter(source)?.values;
-    if (!header || !current || !validIncoming(incoming)) {
+    if (!header || !current || !canMerge(header.body, incoming)) {
       return undefined;
     }
     const document = loadYaml().parseDocument(header.body, {
@@ -200,11 +200,6 @@ class MergeEdits {
     if (!pair) {
       this.added += `${yamlKey(key)}:${valueAfterKey(value, header.eol)}${header.eol}`;
       return true;
-    }
-    // Written back, a long integer in the value would be rounded.
-    const range = loadYaml().isNode(pair.value) ? pair.value.range : undefined;
-    if (range && hasInexactInteger(header.body.slice(range[0], range[1]))) {
-      return false;
     }
     // Appending in place changes every alias of an anchored list too; the
     // full rewrite below gives those their own copy.
@@ -311,6 +306,16 @@ function verifiesMergedValues(
     (key) =>
       expected.has(key) || valueKey(result[key]) === valueKey(before[key]),
   );
+}
+
+/**
+ * Whether a merge may go ahead: the incoming properties are valid, and the
+ * note's hold no long integer. Values are read as JavaScript numbers, so one
+ * anywhere (through an alias, or in a flow block written whole) could be
+ * written back rounded.
+ */
+function canMerge(body: string, incoming: unknown): boolean {
+  return validIncoming(incoming) && !hasInexactInteger(body);
 }
 
 function validIncoming(incoming: unknown): incoming is Record<string, unknown> {
