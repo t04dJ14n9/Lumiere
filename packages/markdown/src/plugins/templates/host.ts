@@ -1,5 +1,5 @@
 import type { Context, Disposer, Plugin } from "@workshop/core";
-import { expandTemplate } from "../../markdown/templates";
+import { expandTemplateWithReport } from "../../markdown/templates";
 import { registerReportedCommands } from "../../shared/reported-command";
 import { contributionId } from "../../shared/setting-schema";
 import { baseName } from "../../shared/workspace-path";
@@ -69,21 +69,37 @@ async function insert(ctx: Context): Promise<void> {
   if (!file) {
     return;
   }
-  const text = expandTemplate(await ctx.vaults.text(file.uri), {
-    title: baseName(uri).replace(/\.md$/i, ""),
-    now: new Date(),
-    dateFormat: get("dateFormat", ""),
-    timeFormat: get("timeFormat", ""),
-  });
-  const { isInserted, isMerged } = await insertTemplate(
-    ctx.hostDocuments,
-    panel,
-    text,
+  const { text, unsupported } = expandTemplateWithReport(
+    await ctx.vaults.text(file.uri),
+    {
+      title: baseName(uri).replace(/\.md$/i, ""),
+      now: new Date(),
+      dateFormat: get("dateFormat", ""),
+      timeFormat: get("timeFormat", ""),
+    },
   );
-  if (!isInserted) {
-    ctx.dialogs.error("The template could not be inserted.");
-  } else if (!isMerged) {
-    ctx.dialogs.error(
+  const outcome = await insertTemplate(ctx.hostDocuments, panel, text);
+  reportInsertion(ctx.dialogs, { ...outcome, unsupported });
+}
+
+/** Tells the user what the insertion could not do as Obsidian would. */
+function reportInsertion(
+  dialogs: Context["dialogs"],
+  outcome: { isInserted: boolean; isMerged: boolean; unsupported: string[] },
+): void {
+  if (!outcome.isInserted) {
+    dialogs.error("The template could not be inserted.");
+    return;
+  }
+  const { unsupported } = outcome;
+  if (unsupported.length > 0) {
+    const verb = unsupported.length === 1 ? "it was" : "they were";
+    dialogs.error(
+      `The template's date format uses ${unsupported.join(", ")}, which Lumiere cannot format yet; ${verb} inserted as written.`,
+    );
+  }
+  if (!outcome.isMerged) {
+    dialogs.error(
       "The template's properties were not added: this note's properties are not valid YAML.",
     );
   }

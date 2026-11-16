@@ -34,6 +34,12 @@
     its `data-callout` attribute, as Obsidian does, so CSS snippets that
     select `[data-callout="tldr"]` apply. Its icon and colour are still
     those of the main type.
+  - Template dates (`{{date:FORMAT}}`, `templates.json` formats) and Bases'
+    `format()` write Moment's common tokens: `MMMM` is the month's name
+    (it was `1111`), and `MMM`, `dddd`, `ddd`, `Do`, `YY`, `A`/`a`, `h`,
+    ISO weeks, `L`/`LL` and `[literal]` text work. A `templates.json`
+    format is no longer dropped when it has a token Lumiere cannot write;
+    Insert Template names that token instead.
 
 - Daily Notes is removed: **Open Today's Daily Note**, **Open Previous
   Daily Note** and **Open Next Daily Note** are gone, with the

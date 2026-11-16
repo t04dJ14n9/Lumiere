@@ -25,9 +25,13 @@ note's properties are not valid YAML, only the body is inserted and a
 message says so.
 
 Tokens: `{{title}}` (the destination note's basename), `{{date}}`,
-`{{time}}`, and `{{date:FORMAT}}` / `{{time:FORMAT}}`. Formats use the
-tokens `YYYY`, `MM`, `DD`, `HH`, `mm` and `ss`, in local time, through the
-Bases date formatter.
+`{{time}}`, and `{{date:FORMAT}}` / `{{time:FORMAT}}`. Formats are Moment.js
+patterns in local time, written by `src/markdown/moment-format.ts` (shared
+with Bases): years (`YYYY`, `YY`), quarters, months (`M`, `MM`, `MMM`,
+`MMMM`, `Mo`), days (`D`, `DD`, `Do`, `DDD`, `DDDD`), weekdays (`d`, `dd`,
+`ddd`, `dddd`, `E`), ISO weeks (`W`, `WW`, `GGGG`), hours (`H`, `HH`, `h`,
+`hh`, `k`), `mm`, `ss`, fractions, `A`/`a`, offsets (`Z`, `ZZ`), `X`/`x`,
+the English long formats (`L`, `LL`, `LT`, …) and `[literal text]`.
 
 ## Files
 
@@ -47,9 +51,10 @@ Bases date formatter.
 
 ## Limits and differences from Obsidian
 
-- Only Moment's `YYYY`, `MM`, `DD`, `HH`, `mm` and `ss` are understood; other
-  letters (`ddd`, `Do`, `[text]`) are written as they are. An Obsidian
-  format with other tokens is not carried over from `templates.json`.
+- Names are English whatever Obsidian's language. Locale weeks (`w`, `ww`,
+  `gggg`), eras (`N`, `y`), time zone names (`z`) and six-digit years are
+  not written: they are inserted as written and a message names them.
+  `templates.json` formats carry over whatever their tokens.
 - Works in Lumiere's editor only, not in VS Code's plain text editor.
 - Inserting into a note with unsaved changes ends its current undo group,
   like other edits made by commands.
