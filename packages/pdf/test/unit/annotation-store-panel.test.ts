@@ -16,7 +16,10 @@ const PDF = new Uint8Array([37, 80, 68, 70]); // %PDF
 const PDF_SHA = createHash("sha256").update(PDF).digest("hex");
 
 /** A panel on a PDF whose annotation files live in `kept`, keyed by hash. */
-function open(store: PdfAnnotationFiles | undefined) {
+function open(
+  store: PdfAnnotationFiles | undefined,
+  overrides: Partial<PdfFiles> = {},
+) {
   const posted: HostMessage[] = [];
   const errors: string[] = [];
   let receive: ((message: unknown) => unknown) | undefined;
@@ -42,6 +45,7 @@ function open(store: PdfAnnotationFiles | undefined) {
       return { sha256: PDF_SHA };
     },
     ...(store ? { annotations: store } : {}),
+    ...overrides,
   };
   const panel = new PdfViewerPanel(
     "file:///vault/inbox/paper.pdf",
@@ -132,6 +136,26 @@ test("a save about an earlier load is dropped", async () => {
   assert.equal(load().load, 2);
   await receive({ type: "annotationStoreSave", load: 1, text: "old" });
   assert.equal(kept.size, 0);
+});
+
+test("a reload that cannot read the PDF leaves the editor on the bytes it shows", async () => {
+  const { kept, store } = memoryStore();
+  let readable = true;
+  const { panel, receive, load, errors } = open(store, {
+    read: async () => {
+      if (!readable) {
+        throw new Error("EBUSY: resource busy");
+      }
+      return PDF;
+    },
+  });
+  await receive({ type: "ready" });
+  readable = false;
+  await panel.reloadFromDisk();
+  assert.match(errors.at(-1) ?? "", /EBUSY/u);
+  // The viewer still shows load 1; its annotations are still kept.
+  await receive({ type: "annotationStoreSave", load: load().load, text: "A" });
+  assert.equal(kept.get(PDF_SHA), "A");
 });
 
 test("a host with nowhere to keep annotations says so once", async () => {
