@@ -543,3 +543,45 @@ test("a save after a failed reload never writes over bytes another reload read b
   heldStore[0]!();
   await reading;
 });
+
+test("a reload superseded while it reads the annotation store never sends its older bytes", async () => {
+  const V1 = new Uint8Array([37, 80, 68, 70, 45, 49]);
+  const V2 = new Uint8Array([37, 80, 68, 70, 45, 50]);
+  let disk = INITIAL;
+  let holdStore = false;
+  const heldStore: Array<() => void> = [];
+  const { posted, receive, panel } = open({
+    read: async () => disk,
+    hash: async () => createHash("sha256").update(disk).digest("hex"),
+    annotations: {
+      read: async () => {
+        if (holdStore) {
+          await new Promise<void>((resolve) => heldStore.push(resolve));
+        }
+        return undefined;
+      },
+      write: async () => undefined,
+    },
+  });
+  await receive({ type: "ready" });
+  const loads = () => posted.filter((m) => m.type === "load");
+  assert.equal(loads().length, 1);
+
+  disk = V1;
+  holdStore = true;
+  const older = panel.reloadFromDisk();
+  for (let i = 0; i < 50 && heldStore.length === 0; i++) {
+    await new Promise((resolve) => setTimeout(resolve, 2));
+  }
+  holdStore = false;
+  disk = V2;
+  await panel.reloadFromDisk();
+  heldStore[0]!();
+  await older;
+
+  const sent = loads();
+  assert.equal(sent.length, 2);
+  const last = sent.at(-1)!;
+  assert.ok(last.type === "load");
+  assert.equal(last.sha256, createHash("sha256").update(V2).digest("hex"));
+});

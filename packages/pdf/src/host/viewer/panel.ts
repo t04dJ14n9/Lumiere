@@ -90,7 +90,7 @@ export class PdfViewerPanel {
     () => this.loads.current,
   );
   private zen = false;
-  private readonly loads = new ViewerLoads();
+  private readonly loads = new ViewerLoads(() => this.navigation.loadedNow());
   /** The last patch version applied. */
   private patchVersion = 0;
   private position: ReadingPosition | undefined;
@@ -452,16 +452,16 @@ export class PdfViewerPanel {
     this.selectionState.clear();
     this.changed.fire();
     const bytes = await this.source.read();
-    if (!bytes) {
-      // Without this, a failed read left every later message stale for good.
-      if (this.loads.abandon(attempt)) {
-        this.navigation.loadedNow();
-      }
+    const annotations =
+      bytes &&
+      (await this.loads.readStore(() => this.annotations.read(bytes.sha256)));
+    // A failed read must end the load, or every later message stays stale
+    // for good. And a load another began after while it read the annotation
+    // store has older bytes than that one, which may be in the viewer.
+    if (!bytes || !this.loads.isNewest(attempt)) {
+      this.loads.abandon();
       return;
     }
-    this.loads.readingStore();
-    const annotations = await this.annotations.read(bytes.sha256);
-    this.loads.storeRead();
     const load = this.loads.next();
     this.annotations.loaded(load, bytes.sha256);
     this.post({

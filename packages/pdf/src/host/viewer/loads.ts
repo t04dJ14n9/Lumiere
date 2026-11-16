@@ -8,14 +8,17 @@ export class ViewerLoads {
   current = 0;
   /** New bytes are being read for the viewer. */
   loading = false;
-  /** Counts loads begun: only the newest may end the loading state. */
+  /** Counts loads begun: only the newest may send its bytes. */
   private attempts = 0;
   /** Loads begun and not yet sent or abandoned. */
   private inFlight = 0;
   /** Loads reading the annotation store for the bytes they will send. */
   private storeReads = 0;
 
-  /** A load starts reading the file; returns its attempt for `abandon`. */
+  /** `resumed`: the viewer goes on with the bytes it has, as `abandon` decides. */
+  constructor(private readonly resumed: () => void = () => undefined) {}
+
+  /** A load starts reading the file; returns its attempt for `isNewest`. */
   begin(): number {
     this.loading = true;
     this.inFlight++;
@@ -34,28 +37,38 @@ export class ViewerLoads {
   }
 
   /**
-   * The read of `attempt` gave no bytes. A newer load ends the loading
-   * itself; a failed read sent nothing, so the viewer still has the current
-   * load's bytes and goes on with them. Returns whether it does. Not while
-   * an older load that did read is still on its way: the file is already
-   * that load's, not the bytes the viewer shows.
+   * Whether no load began after `attempt`. One that did read newer bytes,
+   * or will: the older one must not send its own after them.
    */
-  abandon(attempt: number): boolean {
+  isNewest(attempt: number): boolean {
+    return attempt === this.attempts;
+  }
+
+  /**
+   * A load ends without sending bytes: its read failed, or a newer load
+   * superseded it. Once no load is left on its way, the viewer goes on with
+   * the bytes it has, the current load's. Returns whether it does: not while
+   * another load is still on its way (whichever began first), nor before
+   * any bytes were ever sent.
+   */
+  abandon(): boolean {
     this.inFlight--;
-    if (attempt !== this.attempts || this.current === 0 || this.inFlight > 0) {
+    if (this.current === 0 || this.inFlight > 0) {
       return false;
     }
     this.loading = false;
+    this.resumed();
     return true;
   }
 
-  /** A load reads the annotations kept for its bytes, until `storeRead`. */
-  readingStore(): void {
+  /** A load reads the annotations kept for its bytes with `read`. */
+  async readStore<T>(read: () => Promise<T>): Promise<T> {
     this.storeReads++;
-  }
-
-  storeRead(): void {
-    this.storeReads--;
+    try {
+      return await read();
+    } finally {
+      this.storeReads--;
+    }
   }
 
   /**
