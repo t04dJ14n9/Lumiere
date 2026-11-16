@@ -119,6 +119,7 @@ plugin registrations and widget lifetimes end when the plugin stops.
 - `navigation.test.ts`: keyboard routing, append, exit and re-entry unit tests.
 - `vim-source.test.ts`: source-column ownership, delimiter entry, transaction/mode guards and deferred-entry cancellation unit tests.
 - `src/markdown/tables/model.ts`: pure table parsing, serialization and source-position mapping.
+- `src/markdown/tables/clipboard-formats.ts`: pure copy flavors (TSV, Markdown, HTML, `obsidian/table`) of a cell range and pasted-text parsing.
 - `src/markdown/tables/tab-separated.ts`: pure splitting of pasted tab-separated text into cells, honouring spreadsheet quotes.
 - `clipboard.test.ts`: cell/grid clipboard, selection and stale-paste unit tests.
 - `webview.test.ts`: persistent widget, entry and insertion unit tests.

@@ -2,8 +2,8 @@ import test from "node:test";
 import assert from "node:assert/strict";
 import { EditorState, type TransactionSpec } from "@codemirror/state";
 import { Direction, type EditorView } from "@codemirror/view";
+import { copyCells } from "../../markdown/tables/clipboard-formats";
 import {
-  copyCells,
   parseTable,
   type CellPosition,
   type CellRange,
