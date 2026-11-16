@@ -88,21 +88,6 @@ export function relativeFilePath(
   return relative;
 }
 
-/** Longest workspace folder that contains `uri`, if any. */
-export function containingFolder(
-  uri: string,
-  roots: readonly string[],
-): { root: string; relative: string } | undefined {
-  let best: { root: string; relative: string } | undefined;
-  for (const root of roots) {
-    const relative = relativeFilePath(uri, root);
-    if (relative !== undefined && (!best || root.length > best.root.length)) {
-      best = { root, relative };
-    }
-  }
-  return best;
-}
-
 /** Portable relative link from one project file to another. */
 export function relativePosix(fromFile: string, toFile: string): string {
   const from = fromFile.split("/").slice(0, -1);
