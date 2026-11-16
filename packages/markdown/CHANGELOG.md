@@ -51,6 +51,11 @@
     headings no longer appear in the Outline, heading suggestions or
     heading links. Links and tags inside stay indexed, as Obsidian indexes
     them. A `%%` line that nothing closes comments out the rest of the note.
+  - Properties use the vault's `.obsidian/types.json`: a property Obsidian
+    types as Text shows as text even when its value is `123`, and changing
+    a property's type in Lumiere writes it there, so Obsidian sees it.
+    Vaults without a `types.json` keep the types in Lumiere's own storage,
+    as before.
 
 - Daily Notes is removed: **Open Today's Daily Note**, **Open Previous
   Daily Note** and **Open Next Daily Note** are gone, with the
