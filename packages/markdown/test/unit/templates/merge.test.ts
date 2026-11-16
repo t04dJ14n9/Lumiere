@@ -181,3 +181,40 @@ test("an object in both lists is written once", () => {
     items: [{ name: "a" }, { name: "b" }],
   });
 });
+
+test("joining a template's list into an anchored one leaves the properties that alias it as they were", () => {
+  const note = [
+    "---",
+    "tags: &labels",
+    "  - work",
+    "archive: *labels",
+    "---",
+    "Body",
+    "",
+  ].join("\n");
+  const { text } = inserted(note, "---\ntags: [meeting]\n---\n", {
+    from: note.length,
+    to: note.length,
+  });
+  const values = frontmatter(text)?.values;
+  assert.deepEqual(values?.tags, ["work", "meeting"]);
+  assert.deepEqual(values?.archive, ["work"]);
+});
+
+test("joining lists keeps .inf, -.inf, .nan and null apart", () => {
+  const note = [
+    "---",
+    "values: [.inf, -.inf, .nan, null]",
+    "---",
+    "Body",
+    "",
+  ].join("\n");
+  const { text } = inserted(note, "---\nvalues: [new]\n---\n", {
+    from: note.length,
+    to: note.length,
+  });
+  const values = frontmatter(text)?.values?.values as unknown[];
+  assert.equal(values.length, 5);
+  assert.deepEqual(values.slice(0, 3), [Infinity, -Infinity, NaN]);
+  assert.deepEqual(values.slice(3), [null, "new"]);
+});

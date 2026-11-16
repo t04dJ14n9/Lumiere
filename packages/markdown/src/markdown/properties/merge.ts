@@ -49,7 +49,11 @@ function joinedLists(current: unknown[], incoming: unknown[]): unknown[] {
   });
 }
 
-/** A text equal for equal values: keys sorted, types kept apart (`1`, `"1"`). */
+/**
+ * A text equal for equal values: keys sorted, types kept apart (`1`, `"1"`;
+ * `.nan`, `.inf`, `-.inf` and `null`, which JSON writes alike; a date and its
+ * text).
+ */
 function valueKey(value: unknown): string {
   if (Array.isArray(value)) {
     return `[${value.map(valueKey).join(",")}]`;
@@ -59,6 +63,12 @@ function valueKey(value: unknown): string {
       .sort()
       .map((key) => `${JSON.stringify(key)}:${valueKey(value[key])}`);
     return `{${entries.join(",")}}`;
+  }
+  if (typeof value === "number" && !Number.isFinite(value)) {
+    return `number:${String(value)}`;
+  }
+  if (value instanceof Date) {
+    return `date:${value.toISOString()}`;
   }
   return value === undefined ? "undefined" : JSON.stringify(value);
 }
@@ -148,7 +158,7 @@ export function mergeProperties(
       expected.set(key, value);
       if (
         Object.hasOwn(current, key) &&
-        JSON.stringify(current[key]) === JSON.stringify(value)
+        valueKey(current[key]) === valueKey(value)
       ) {
         continue;
       }
@@ -157,7 +167,7 @@ export function mergeProperties(
       }
     }
     const changes = edits.finish();
-    return verifiesMergedValues(source, changes, expected)
+    return verifiesMergedValues(source, changes, expected, current)
       ? changes
       : undefined;
   } catch {
@@ -190,13 +200,17 @@ class MergeEdits {
       this.added += `${yamlKey(key)}:${valueAfterKey(value, header.eol)}${header.eol}`;
       return true;
     }
-    const appended = appendedListItems({
-      source,
-      header,
-      key,
-      node: pair.value,
-      value,
-    });
+    // Appending in place changes every alias of an anchored list too; the
+    // full rewrite below gives those their own copy.
+    const appended =
+      !anchored(pair.value) &&
+      appendedListItems({
+        source,
+        header,
+        key,
+        node: pair.value,
+        value,
+      });
     if (appended) {
       this.changes.push(appended);
       return true;
@@ -249,10 +263,21 @@ class MergeEdits {
   }
 }
 
+/** Whether `node` carries a YAML anchor (`&name`) that aliases may point at. */
+function anchored(node: unknown): boolean {
+  return loadYaml().isNode(node) && Boolean(node.anchor);
+}
+
+/**
+ * Whether the merged note has the expected values, and every property the
+ * merge was not given still has the value it had: an edit to one key must
+ * not reach another (through an alias, say).
+ */
 function verifiesMergedValues(
   source: string,
   changes: PropertyChange[],
   expected: Map<string, unknown>,
+  before: Record<string, unknown>,
 ): boolean {
   let candidate = source;
   for (const change of [...changes].sort((a, b) => b.from - a.from)) {
@@ -268,7 +293,10 @@ function verifiesMergedValues(
   ) {
     return false;
   }
-  return true;
+  return Object.keys(before).every(
+    (key) =>
+      expected.has(key) || valueKey(result[key]) === valueKey(before[key]),
+  );
 }
 
 function validIncoming(incoming: unknown): incoming is Record<string, unknown> {
