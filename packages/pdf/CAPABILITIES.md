@@ -16,7 +16,7 @@ in [README.md](README.md). Highlight **store** is vault Markdown (Chrome
 | pdfRegions | Empty-page / Select Region + optional `viewrect=` in Copy link | **Off by default** (`lumiere.pdf.regions.enabled`) |
 | pdfOutline | Explorer PDF Outline + Follow Cursor | Accordion like Markdown Outline |
 | pdfHistory | In-memory Back / Forward for deliberate jumps | |
-| pdfToolbar | Chrome / slim / floating controls | |
+| pdfToolbar | Chrome / slim controls | |
 | pdfSettings | PDF: Open Settings / Change Setting… | |
 | pdfZen | Enter / Exit Zen Mode | |
 | pdfLookUp | macOS Look Up (force-click / three-finger) | |

@@ -325,7 +325,6 @@ src/
     │                           the plugins EmbedPDF 3 runs (stage, render, …)
     ├── viewer.tsx              toolbar, search, the Stage and its pages
     ├── toolbar.tsx             the slim bar's controls
-    ├── floating-toolbar.tsx    the removed floating bar, no longer shown
     ├── view-sync.ts            page and zoom to the extension, its actions back
     ├── tool-mode.ts            the Select Text and Select Region tools
     ├── page.tsx, page-links.tsx  one page's layers in the Stage

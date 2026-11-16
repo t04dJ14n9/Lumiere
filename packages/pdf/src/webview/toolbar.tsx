@@ -68,23 +68,19 @@ function IconButton({
  * The page, zoom, fit, tool, outline and find controls, in groups. The
  * buttons run the same actions as the extension's commands.
  */
-export function ToolbarControls({
+function ToolbarControls({
   navigation,
   tool,
   regionsEnabled,
   choices,
   run,
   history,
-  compact = false,
-}: ToolbarProps & {
-  /** Shorter page suffix ("/ 12"), for the floating bar. */
-  compact?: boolean;
-}): React.JSX.Element {
+}: ToolbarProps): React.JSX.Element {
   return (
     <>
       <HistoryGroup history={history} />
       <span className="separator" />
-      <PageGroup navigation={navigation} run={run} compact={compact} />
+      <PageGroup navigation={navigation} run={run} />
       <span className="separator" />
       <ZoomGroup run={run} />
       <span className="separator" />
@@ -136,11 +132,9 @@ function HistoryGroup({
 function PageGroup({
   navigation,
   run,
-  compact,
 }: {
   navigation: Navigation;
   run: Run;
-  compact: boolean;
 }): React.JSX.Element {
   const { currentPage, pageCount } = navigation;
   return (
@@ -155,7 +149,7 @@ function PageGroup({
       <NumberField
         label="Page"
         value={currentPage}
-        suffix={compact ? `/ ${pageCount}` : `of ${pageCount}`}
+        suffix={`of ${pageCount}`}
         onCommit={(page) => {
           if (!Number.isInteger(page)) {
             return false;
