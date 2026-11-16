@@ -152,3 +152,29 @@ test("Copy Link for Agent host removes disabled handlers and restores them on en
   });
   await f.pair.dispose();
 });
+test("Copy Link for Agent stops repeating the Codex attachment once the plugin stops", async (t) => {
+  t.mock.timers.enable({ apis: ["setTimeout"] });
+  const f = fixture();
+  const commands = ["chatgpt.openSidebar", "chatgpt.addFileToThread"];
+  const ran: string[] = [];
+  f.host.agentHost.environment = async () => ({
+    target: "codex",
+    agentExtensions: new Set(),
+    commands: new Set(commands),
+    hasChatParticipant: false,
+    chatDisabled: false,
+  });
+  f.host.hostCommands.execute = async (id) => {
+    ran.push(id);
+    return undefined;
+  };
+  assert.equal(await f.agent.copy("panel"), true);
+  assert.deepEqual(ran, commands);
+  f.agent.dispose();
+  for (let i = 0; i < 4; i++) {
+    t.mock.timers.tick(5000);
+    await new Promise((resolve) => setImmediate(resolve));
+  }
+  assert.deepEqual(ran, commands, "no attachment after the plugin stopped");
+  await f.pair.dispose();
+});

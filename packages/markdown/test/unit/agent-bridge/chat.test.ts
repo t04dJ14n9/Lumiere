@@ -249,3 +249,26 @@ test("the Codex attachment names the note's file, since it lives outside the wor
     "@notes/a.md#5-6\n\n> x\n\nNote file: file:///w/notes/a.md (lines 5-6)\n",
   );
 });
+
+test("a chat that opens but refuses the passage still gets it on the clipboard", async () => {
+  const copied: string[] = [];
+  const execute = async (id: string, ...args: unknown[]) => {
+    if (id !== "workbench.action.chat.open") {
+      throw new Error(`command '${id}' not found`);
+    }
+    if (args.length > 0) {
+      throw new Error("chat could not take the query");
+    }
+  };
+  assert.equal(
+    await openAgentChat(
+      execute,
+      async (text) => {
+        copied.push(text);
+      },
+      "p",
+    ),
+    "chatWithClipboard",
+  );
+  assert.deepEqual(copied, ["p"]);
+});
