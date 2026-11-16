@@ -85,6 +85,7 @@ export interface PlannedNote {
 export async function planLinkUpdates(
   files: readonly FileTextEdits[],
   currentText: (uri: string) => Promise<string>,
+  openText: (uri: string) => string | undefined = () => undefined,
 ): Promise<{ planned: Map<string, PlannedNote>; stale: FileTextEdits[] }> {
   const planned = new Map<string, PlannedNote>();
   const stale: FileTextEdits[] = [];
@@ -98,6 +99,17 @@ export async function planLinkUpdates(
       before,
       after: applyLineColEdits(before, file.edits),
     });
+  }
+  // Checked again once every read is done, with nothing awaited before the
+  // edits go out: a note typed into while a later one was read (a whole
+  // canvas is replaced) would otherwise get its older text back.
+  for (const file of files) {
+    const note = planned.get(file.uri);
+    const now = openText(file.uri);
+    if (note && now !== undefined && !isSameText(now, note.before)) {
+      planned.delete(file.uri);
+      stale.push(file);
+    }
   }
   return { planned, stale };
 }

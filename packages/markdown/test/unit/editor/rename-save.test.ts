@@ -494,3 +494,41 @@ test("a note whose text differs only in line endings is not stale", async () => 
   assert.deepEqual(stale, []);
   assert.equal(planned.get("file:///a.md")?.after, "x\r\n[[New]]");
 });
+
+test("a note edited while later notes are read is stale, not replaced with its older text", async () => {
+  const canvas = '{"nodes":[{"id":"1","type":"text","text":"draft"}]}';
+  const open: Record<string, string> = { "file:///board.canvas": canvas };
+  const files = [
+    {
+      uri: "file:///board.canvas",
+      source: canvas,
+      edits: [
+        { start: { line: 0, col: 0 }, end: { line: 0, col: 1 }, text: "{" },
+      ],
+    },
+    {
+      uri: "file:///later.md",
+      source: "See [[Old]]",
+      edits: [
+        { start: { line: 0, col: 6 }, end: { line: 0, col: 9 }, text: "New" },
+      ],
+    },
+  ];
+  const { planned, stale } = await planLinkUpdates(
+    files,
+    async (uri) => {
+      if (uri === "file:///later.md") {
+        // The reader types into the canvas while this note is read.
+        open["file:///board.canvas"] = canvas.replace("draft", "final");
+        return "See [[Old]]";
+      }
+      return open[uri]!;
+    },
+    (uri) => open[uri],
+  );
+  assert.deepEqual([...planned.keys()], ["file:///later.md"]);
+  assert.deepEqual(
+    stale.map((file) => file.uri),
+    ["file:///board.canvas"],
+  );
+});
