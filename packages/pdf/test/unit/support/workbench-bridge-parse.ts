@@ -18,7 +18,6 @@ const BRIDGE_KEYS = new Set([
   "view",
   "selection",
   "revision",
-  "wiki",
 ]);
 
 export type WorkbenchParse =
