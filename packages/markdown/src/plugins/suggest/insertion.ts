@@ -1,4 +1,4 @@
-import type { VaultIndex } from "../vault/api";
+import type { VaultFile, VaultIndex } from "../vault/api";
 import type { Candidate, Value } from "./candidates";
 import type { Suggestion } from "./protocol";
 import { folderOf, relativeLinkPath } from "../../shared/vault-path";
@@ -76,16 +76,39 @@ function markdownLink(
   if (value.kind === "literal") {
     path = /\.[^/]+$/.test(value.text) ? value.text : `${value.text}.md`;
   } else {
-    path = relativeLinkPath(
-      folderOf(source),
-      value.target.path,
-      (candidate) => vault.file(candidate) !== undefined,
+    path = relativeLinkPath(folderOf(source), value.target.path, (candidate) =>
+      hasFileIgnoringCase(vault, candidate),
     );
   }
   const destination =
     path.split("/").map(encodeDestination).join("/") + fragment(value);
   const label = entry.label.replace(/([\\[\]])/g, "\\$1");
   return `[${label}](${destination})`;
+}
+/**
+ * Whether the vault has a file at `path` in any case: links resolve without
+ * case, so a root `x.md` captures `X.md` as surely as a root `X.md` does.
+ */
+function hasFileIgnoringCase(vault: VaultIndex, path: string): boolean {
+  return (
+    vault.file(path) !== undefined ||
+    lowerCasePaths(vault.files()).has(path.toLowerCase())
+  );
+}
+
+const lowerCaseSets = new WeakMap<readonly VaultFile[], Set<string>>();
+
+/**
+ * The vault's paths lower-cased, built once per file list: the index hands
+ * out the same array until a file is added or removed.
+ */
+function lowerCasePaths(files: readonly VaultFile[]): Set<string> {
+  let set = lowerCaseSets.get(files);
+  if (!set) {
+    set = new Set(files.map((file) => file.path.toLowerCase()));
+    lowerCaseSets.set(files, set);
+  }
+  return set;
 }
 function fragment(value: Value): string {
   if (value.kind === "heading") {
