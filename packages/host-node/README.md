@@ -23,7 +23,10 @@ over Node, then starts the plugins with the same `bootstrap` VS Code uses
 `createEditorRoutes()` serves everything a page needs, below `/lumiere`, on
 any Node web server:
 
-- `/lumiere/editor?path=&root=`: a note's page;
+- `/lumiere/editor?path=&root=`: a note's page. Its workspace `root` is
+  registered unless it holds a workspace already registered, which it would
+  widen (`editor-roots.ts`). Without `root` the note's folder stands in, and
+  gives way when a workspace that holds it arrives;
 - `/lumiere/pdf?path=&root=`: a PDF's page, Lumière PDF's viewer
   (`/lumiere/pdf/viewer/*`), which fetches the PDF from `/lumiere/pdf/bytes`.
   It runs only when the embedder passes the built viewer (`EditorAssets.pdf`);
@@ -84,6 +87,7 @@ forbids this package from importing `vscode` or any embedder.
 - `src/host/documents.ts`: notes on disk, edited in memory, saved after a pause.
 - `src/host/panels.ts`, `src/host/panel.ts`: editor pages as panels, and their sockets.
 - `src/host/routes.ts`, `src/host/page.ts`, `src/host/static.ts`: the routes above.
+- `src/host/editor-roots.ts`: which workspace roots an editor page may open from.
 - `src/host/pdf-pages.ts`, `src/host/pdf-routes.ts`: PDF tabs, on Lumière PDF's viewer core (`@workshop/pdf/portable`) and the same page shim and socket as notes.
 - `src/host/trees.ts`, `src/host/view-routes.ts`: the plugins' tree views and their routes.
 - `src/host/settings-routes.ts`: the settings for a settings page, and changes to them.

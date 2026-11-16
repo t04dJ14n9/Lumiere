@@ -14,16 +14,12 @@ import {
   pluginTitles,
   settingsUnavailableIn,
 } from "@workshop/markdown/portable";
+import { editorRoots, type AcceptEditorRoot } from "./editor-roots";
 import { NODE_HOST_OFFERS } from "./inert";
 import { injectShim, socketSource } from "./page";
 import { pageQuery } from "./page-query";
 import type { PageSocket, PanelUrls } from "./panel";
-import {
-  assertContained,
-  fileUriToPath,
-  isInside,
-  resolveContainedNote,
-} from "./paths";
+import { assertContained, fileUriToPath, resolveContainedNote } from "./paths";
 import type { LumiereHost } from "./start";
 import { createPdfRoutes, NO_PDF_ROUTES, type PdfRoutes } from "./pdf-routes";
 import { serveFile, serveStatic } from "./static";
@@ -60,25 +56,9 @@ export function createEditorRoutes(
   host: LumiereHost,
   assets: EditorAssets,
 ): EditorRoutes {
-  // Each panel's workspace root: what its page may read files from.
-  const roots = new Map<string, string>();
+  const parts = routeParts(host, assets);
+  const { views, pdf, commands } = parts;
   const sockets = new WebSocketServer({ noServer: true });
-  const views = createViewRoutes(host.trees);
-  const pdf = assets.pdf
-    ? createPdfRoutes({
-        base: BASE,
-        viewer: assets.pdf,
-        log: assets.log ?? (() => {}),
-      })
-    : NO_PDF_ROUTES;
-  const settings = createSettingsRoutes(
-    host.settings,
-    pluginTitles(),
-    settingsUnavailableIn(NODE_HOST_OFFERS),
-  );
-  const commands = host.commands
-    ? createCommandRoutes(host.commands)
-    : undefined;
   return {
     async handle(req, res) {
       const url = new URL(req.url ?? "/", "http://host");
@@ -94,7 +74,7 @@ export function createEditorRoutes(
       }
       const rest = url.pathname.slice(BASE.length);
       return dispatchRoute({
-        parts: { host, assets, views, settings, commands, pdf, roots },
+        parts,
         req,
         res,
         url,
@@ -117,6 +97,31 @@ export function createEditorRoutes(
   };
 }
 
+/** What the routes share: the host, its route families and the pages' roots. */
+function routeParts(host: LumiereHost, assets: EditorAssets): RouteParts {
+  return {
+    host,
+    assets,
+    views: createViewRoutes(host.trees),
+    settings: createSettingsRoutes(
+      host.settings,
+      pluginTitles(),
+      settingsUnavailableIn(NODE_HOST_OFFERS),
+    ),
+    commands: host.commands ? createCommandRoutes(host.commands) : undefined,
+    pdf: assets.pdf
+      ? createPdfRoutes({
+          base: BASE,
+          viewer: assets.pdf,
+          log: assets.log ?? (() => {}),
+        })
+      : NO_PDF_ROUTES,
+    // Each panel's workspace root: what its page may read files from.
+    roots: new Map<string, string>(),
+    acceptRoot: editorRoots(host),
+  };
+}
+
 interface RouteParts {
   readonly host: LumiereHost;
   readonly assets: EditorAssets;
@@ -125,6 +130,7 @@ interface RouteParts {
   readonly commands: ReturnType<typeof createCommandRoutes> | undefined;
   readonly pdf: PdfRoutes;
   readonly roots: Map<string, string>;
+  readonly acceptRoot: AcceptEditorRoot;
 }
 
 interface RouteRequest {
@@ -140,7 +146,7 @@ interface RouteRequest {
 async function dispatchRoute(options: RouteRequest): Promise<boolean> {
   const { parts, req, res, url, rest, range } = options;
   if (rest === "/editor") {
-    await servePage({ req, res, url, host: parts.host, roots: parts.roots });
+    await servePage({ req, res, url, parts });
   } else if (rest.startsWith("/m/")) {
     await serveStatic(res, parts.assets.markdown, rest.slice(3), range);
   } else if (rest === "/page/shim.js") {
@@ -217,36 +223,11 @@ interface PageRequest {
   readonly req: IncomingMessage;
   readonly res: ServerResponse;
   readonly url: URL;
-  readonly host: LumiereHost;
-  readonly roots: Map<string, string>;
+  readonly parts: Pick<RouteParts, "host" | "roots" | "acceptRoot">;
 }
 
-/**
- * Whether a page may open from `rootUri`, registering it when new. DSH adds
- * no root of its own, so each session's workspace and each note's own folder
- * arrive here: an unseen folder is fine. A folder that holds a registered one
- * is not: it would widen what that workspace can reach.
- */
-function acceptEditorRoot(host: LumiereHost, rootUri: string): boolean {
-  const registered = host.workspaceRoots();
-  // Checked first: the app may register a vault that holds another vault.
-  if (registered.some((root) => isInside(root, rootUri))) {
-    return true;
-  }
-  if (registered.some((root) => isInside(rootUri, root))) {
-    return false;
-  }
-  host.addRoot(rootUri);
-  return true;
-}
-
-async function servePage({
-  req,
-  res,
-  url,
-  host,
-  roots,
-}: PageRequest): Promise<void> {
+async function servePage({ req, res, url, parts }: PageRequest): Promise<void> {
+  const { host, roots } = parts;
   const query = pageQuery(url);
   if (!query) {
     res.writeHead(400, { "content-type": "text/plain" }).end("Not a note");
@@ -260,8 +241,8 @@ async function servePage({
   }
   const rootUri = pathToFileURL(resolved.root).toString();
   // A note page is same-origin with this GET, so the query is not trusted to
-  // widen a workspace already registered (see acceptEditorRoot).
-  if (!acceptEditorRoot(host, rootUri)) {
+  // widen a workspace already registered (editor-roots.ts).
+  if (!parts.acceptRoot({ uri: rootUri, isNoteFolder: query.isNoteFolder })) {
     res.writeHead(403).end();
     return;
   }
