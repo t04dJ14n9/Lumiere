@@ -316,7 +316,7 @@ async function serveResource(
     res.writeHead(resource.status).end();
     return;
   }
-  await serveFile(res, resource.file, req.headers.range);
+  await serveFile(res, resource.file, req.headers.range, "vault");
 }
 
 interface ContainedResource {

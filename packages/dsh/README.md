@@ -135,7 +135,10 @@ of the Host mid-handshake), it recreates the iframe once, and DSH's Reload and
 - Renaming a note from its inline title is not available.
 - The editor page is same-origin with DSH, so its strict content security
   policy (scripts by nonce only) is what keeps a note's scripts from running.
-  The page can still read DSH's DOM, which is how it follows the theme.
+  The page can still read DSH's DOM, which is how it follows the theme. A
+  vault's own files (`/lumiere/file`) are sandboxed and its scripts served
+  as text, so an HTML page or SVG opened from a vault does not run on DSH's
+  origin.
 - A workspace that is the filesystem root is refused. The root otherwise is
   the session's workspace DSH's preview names for that note; the host
   re-checks every path against it. A note DSH names by absolute path has no

@@ -32,7 +32,10 @@ any Node web server:
   It runs only when the embedder passes the built viewer (`EditorAssets.pdf`);
 - `/lumiere/m/*`: the built editor;
 - `/lumiere/page/shim.js`: the page shim;
-- `/lumiere/file`: a note's images;
+- `/lumiere/file`: a note's images. A vault's file is someone else's content
+  on the embedder's origin: it is served with `Content-Security-Policy:
+  sandbox` (a PDF excepted) and `nosniff`, and a script as text, so it never
+  runs as a page or a script there;
 - `/lumiere/socket`: the page's socket;
 - `/lumiere/views`: the tree views;
 - `/lumiere/settings`: Lumière's settings, for a settings page. A plugin
