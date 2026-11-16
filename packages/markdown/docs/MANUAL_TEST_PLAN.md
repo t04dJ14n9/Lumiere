@@ -1148,7 +1148,7 @@ Use a disposable folder, never a personal vault.
    Marp for VS Code installed and the workspace trusted, the text editor
    opens and Marp's export follows. **Toggle Marp** flips only the `marp`
    flag. Set `lumiere.markdown.marp.open` to `textEditor`: the deck opens
-   in the text editor; **Keep Marp Deck in Workshop** brings it back.
+   in the text editor; **Keep Marp Deck in Lumiere** brings it back.
 
 <!-- command-setting-inventory:start -->
 ## Complete command and setting acceptance inventory
@@ -1241,7 +1241,7 @@ Use the disposable fixture vault from Setup. These rows enumerate every generate
 | `lumiere.markdown.marp.preview` — Open Marp Preview to the Side | unbound | On a disposable fixture, run Open Marp Preview to the Side; confirm its named action using the plugin scenarios above, then undo where applicable. Repeat after disable/re-enable and switching panes. |
 | `lumiere.markdown.marp.export` — Export Marp Slide Deck | unbound | On a disposable fixture, run Export Marp Slide Deck; confirm its named action using the plugin scenarios above, then undo where applicable. Repeat after disable/re-enable and switching panes. |
 | `lumiere.markdown.marp.toggle` — Toggle Marp | unbound | On a disposable fixture, run Toggle Marp; confirm its named action using the plugin scenarios above, then undo where applicable. Repeat after disable/re-enable and switching panes. |
-| `lumiere.markdown.marp.keepInWorkshop` — Keep Marp Deck in Workshop | unbound | On a disposable fixture, run Keep Marp Deck in Workshop; confirm its named action using the plugin scenarios above, then undo where applicable. Repeat after disable/re-enable and switching panes. |
+| `lumiere.markdown.marp.keepInWorkshop` — Keep Marp Deck in Lumiere | unbound | On a disposable fixture, run Keep Marp Deck in Workshop; confirm its named action using the plugin scenarios above, then undo where applicable. Repeat after disable/re-enable and switching panes. |
 | `lumiere.markdown.toggleInlineMath` — Toggle Inline Math | unbound | On a disposable fixture, run Toggle Inline Math; confirm its named action using the plugin scenarios above, then undo where applicable. Repeat after disable/re-enable and switching panes. |
 | `lumiere.markdown.insertMathBlock` — Insert Math Block | unbound | On a disposable fixture, run Insert Math Block; confirm its named action using the plugin scenarios above, then undo where applicable. Repeat after disable/re-enable and switching panes. |
 | `lumiere.markdown.outgoingLinks.sortByAlphabetical` — ✓ File name (A to Z) | unbound | On a disposable fixture, run ✓ File name (A to Z); confirm its named action using the plugin scenarios above, then undo where applicable. Repeat after disable/re-enable and switching panes. |

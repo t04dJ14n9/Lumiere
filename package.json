@@ -547,7 +547,7 @@
       },
       {
         "command": "lumiere.markdown.marp.keepInWorkshop",
-        "title": "Keep Marp Deck in Workshop",
+        "title": "Keep Marp Deck in Lumiere",
         "category": "Lumiere"
       },
       {
@@ -3016,7 +3016,7 @@
             "type": "boolean",
             "default": true,
             "scope": "resource",
-            "description": "Markdown Outline with expansion actions and optional cursor following. Go to Heading (Ctrl+Shift+O) searches the active Workshop note's headings."
+            "description": "Markdown Outline with expansion actions and optional cursor following. Go to Heading (Ctrl+Shift+O) searches the active Lumiere note's headings."
           },
           "lumiere.markdown.plugins.pagePreview.enabled": {
             "type": "boolean",
@@ -3372,7 +3372,7 @@
               "textEditor"
             ],
             "default": "workbench",
-            "description": "Where a Marp deck opens. textEditor sends it to VS Code's text editor, where Marp's own preview and export run. Keep in Workshop remembers a deck.",
+            "description": "Where a Marp deck opens. textEditor sends it to VS Code's text editor, where Marp's own preview and export run. Keep Marp Deck in Lumiere remembers a deck.",
             "scope": "resource"
           },
           "lumiere.markdown.math.macros": {
