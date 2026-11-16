@@ -471,3 +471,22 @@ test("a relative link to a note beside a root note of the same name keeps ./ and
     "[[X]] [o](X.md)",
   );
 });
+
+test("a CRLF note's property link is rewritten once, with its body link", () => {
+  const text = '---\r\nup: "[[Old]]"\r\n---\r\n[[Old]]';
+  const ctx = context({ ...vault, "A.md": text }, { "Old.md": "New.md" });
+  assert.equal(
+    apply(text, rewriteLinks(text, "A.md", ctx)),
+    '---\r\nup: "[[New]]"\r\n---\r\n[[New]]',
+  );
+});
+
+test("a link listed twice is rewritten once", async () => {
+  const { linkRewriteEdits } =
+    await import("../../../src/plugins/linkUpdates/yaml-safe-edits");
+  const text = '---\nup: "[[Old]]"\n---\n';
+  const rewrite = { from: 9, to: 16, rewrite: () => "[[New]]" };
+  assert.deepEqual(linkRewriteEdits(text, [rewrite, rewrite]), [
+    { from: 9, to: 16, insert: "[[New]]" },
+  ]);
+});

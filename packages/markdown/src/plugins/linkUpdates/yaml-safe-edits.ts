@@ -48,7 +48,7 @@ export function linkRewriteEdits(
   const scalars = frontmatterScalars(text);
   const edits: OffsetEdit[] = [];
   const byScalar = new Map<FrontmatterScalar, LinkRewrite[]>();
-  for (const rewrite of rewrites) {
+  for (const rewrite of uniqueRanges(rewrites)) {
     const scalar = scalars.find(
       (candidate) =>
         candidate.from <= rewrite.from && rewrite.to <= candidate.to,
@@ -69,6 +69,23 @@ export function linkRewriteEdits(
     edits.push(...scalarEdits(text, scalar, group));
   }
   return edits;
+}
+
+/**
+ * One rewrite per range. A link reported twice (the property and the body
+ * both listing it) would otherwise give a value two overlapping changes,
+ * which it cannot place, and lose the rewrite.
+ */
+function uniqueRanges(rewrites: readonly LinkRewrite[]): LinkRewrite[] {
+  const seen = new Set<string>();
+  return rewrites.filter((rewrite) => {
+    const key = `${rewrite.from}:${rewrite.to}`;
+    if (seen.has(key)) {
+      return false;
+    }
+    seen.add(key);
+    return true;
+  });
 }
 
 function scalarEdits(

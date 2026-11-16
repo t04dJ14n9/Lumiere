@@ -360,6 +360,125 @@ test("notes left unread when the scan runs out of time are named to the user", a
     [uriOf("A.md"), uriOf("B.md")],
   );
   assert.equal(errors.length, 1);
-  assert.match(errors[0]!, /not checked in 2 notes .*D\.md, E\.md/);
+  assert.match(errors[0]!, /not checked in 2 files .*D\.md, E\.md/);
+  await root.dispose();
+});
+
+test("a note that cannot be read is reported and the other notes still update", async () => {
+  const { root, fake, host, index, vaults } = await start(
+    { "linkUpdates.mode": "always" },
+    { "D.md": "Unreadable" },
+  );
+  // Its parse failed for good, so the index has no metadata for it.
+  index.setMetadata("D.md", undefined);
+  const read = vaults.text;
+  vaults.text = async (uri) => {
+    if (uri === uriOf("D.md")) {
+      throw new Error("EACCES");
+    }
+    return read(uri);
+  };
+  const errors: string[] = [];
+  host.dialogs.error = (message) => {
+    errors.push(message);
+  };
+  const edits = await fake.rename(rename);
+  assert.deepEqual(
+    edits.map((file) => file.uri),
+    [uriOf("A.md"), uriOf("B.md")],
+  );
+  assert.equal(errors.length, 1);
+  assert.match(errors[0]!, /not checked in 1 file .*D\.md/);
+  await root.dispose();
+});
+
+test("the prompt skipped for want of changes still names the notes it could not read", async (t) => {
+  const { root, fake, host, index } = await start(
+    {},
+    { "D.md": "Unindexed [[Old]]" },
+  );
+  index.setMetadata("D.md", undefined);
+  const errors: string[] = [];
+  host.dialogs.error = (message) => {
+    errors.push(message);
+  };
+  let now = 0;
+  t.mock.method(Date, "now", () => (now += 60_000));
+  fake.answerWith("Update Links");
+  // Nothing indexed links to C.md, and D.md was not read in time.
+  const edits = await fake.rename([
+    { oldUri: uriOf("C.md"), newUri: uriOf("Topic/C.md") },
+  ]);
+  assert.deepEqual(fake.prompts, []);
+  assert.deepEqual(edits, []);
+  assert.equal(errors.length, 1);
+  assert.match(errors[0]!, /D\.md/);
+  await root.dispose();
+});
+
+test("the count and the rewrite share one settle and one read of each unparsed note", async (t) => {
+  const { root, fake, host, index, vaults } = await start(
+    {},
+    { "D.md": "Unindexed [[Old]]" },
+  );
+  index.setMetadata("D.md", undefined);
+  const located = await vaults.locate(uriOf("D.md"));
+  let settles = 0;
+  located!.vault.settled = async () => {
+    settles += 1;
+  };
+  const reads: string[] = [];
+  const read = vaults.text;
+  vaults.text = async (uri) => {
+    reads.push(uri);
+    return read(uri);
+  };
+  let now = 0;
+  t.mock.method(Date, "now", () => now);
+  host.dialogs.ask = async () => {
+    // The user answers after the scan's whole budget has passed.
+    now += 60_000;
+    return "Update Links";
+  };
+  const edits = await fake.rename(rename);
+  assert.equal(settles, 1);
+  assert.equal(reads.filter((uri) => uri === uriOf("D.md")).length, 1);
+  assert.deepEqual(
+    edits.map((file) => file.uri),
+    [uriOf("A.md"), uriOf("B.md"), uriOf("D.md")],
+  );
+  await root.dispose();
+});
+
+test("canvases are read within the scan's time like unparsed notes", async (t) => {
+  const canvas = JSON.stringify({
+    nodes: [{ id: "1", type: "file", file: "Topic/Old.md" }],
+  });
+  const { root, fake, host } = await start(
+    { "linkUpdates.mode": "always" },
+    { "Board.canvas": canvas },
+  );
+  const errors: string[] = [];
+  host.dialogs.error = (message) => {
+    errors.push(message);
+  };
+  let now = 0;
+  t.mock.method(Date, "now", () => (now += 60_000));
+  const edits = await fake.rename(rename);
+  assert.deepEqual(
+    edits.map((file) => file.uri),
+    [uriOf("A.md"), uriOf("B.md")],
+  );
+  assert.match(errors[0] ?? "", /Board\.canvas/);
+  await root.dispose();
+});
+
+test("each file's edits carry the text they were computed from", async () => {
+  const { root, fake } = await start({ "linkUpdates.mode": "always" });
+  const edits = await fake.rename(rename);
+  assert.equal(
+    edits.find((file) => file.uri === uriOf("B.md"))?.source,
+    "Embed ![[Old]]",
+  );
   await root.dispose();
 });

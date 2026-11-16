@@ -10,9 +10,12 @@ Before VS Code renames files, the plugin waits (up to five seconds) for the
 vault index to parse what is queued, finds every note that links to them
 (through the vault index's backlinks), re-reads each note's current text and
 rewrites only the path of each link. A note the index has still not parsed
-when the wait ends has no backlinks yet, so its text is read too (for up to
-20 seconds, to stay inside VS Code's rename timeout); a message names any
-left unread. Every `.canvas` file in the vault is read as well: a file
+when the wait ends has no backlinks yet, so its text is read too. Every
+`.canvas` file in the vault is read as well. Reading those files has one
+20-second budget, shared by the prompt's count and the rewrite (which reuses
+the count's reads), to stay inside VS Code's rename timeout; a message names
+any file left unread, or that failed to read or parse, also when the prompt
+is skipped because nothing else changes. In a canvas, a file
 node's path follows the renamed file and a text node's Markdown links are
 rewritten as a note's, from the canvas's path, and the canvas is written
 back as Obsidian writes it (`JSON.stringify` with its own indentation). In
@@ -37,6 +40,11 @@ nothing (unless a note is still unparsed, then from the notes' current text),
 and builds the edits once, after the answer, so text typed while the dialog is
 open is what gets rewritten. The edits are applied together with the rename, so
 one undo reverts them.
+
+Each file's edits carry the text they were computed from. When VS Code
+runs the rename, a note whose text has changed since (typed in while the
+prompt or the scan ran) gets no edits: line and column positions from the
+old text would land in the wrong place. A warning names it.
 
 When the rename finishes, each note is brought to the text planned for it and
 saved if it had no unsaved changes. A note edited after the plan was made is
