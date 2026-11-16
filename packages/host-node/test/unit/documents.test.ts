@@ -518,3 +518,42 @@ test("another program's change that lands during a save is read once the save is
   await until(() => document.getText() === "theirs");
   assert.equal(document.isDirty, false);
 });
+
+test("typing during a save's disk read is kept when another program changed the note", async (t) => {
+  const { file, uri, cleanup } = await note("start");
+  let holdReads = false;
+  const held: Array<() => void> = [];
+  const documents = new NoteDocuments(
+    {
+      ...NODE_NOTES,
+      watch: () => () => {},
+      readText: async (target) => {
+        if (holdReads) {
+          await new Promise<void>((resolve) => held.push(resolve));
+        }
+        return NODE_NOTES.readText(target);
+      },
+    },
+    60_000,
+  );
+  t.after(cleanup);
+  t.after(() => documents.dispose());
+  const conflicts: string[] = [];
+  documents.onConflict((_target, copy) => conflicts.push(copy));
+  const document = await documents.open(uri);
+  await writeFile(file, "external");
+
+  holdReads = true;
+  const saved = document.save();
+  await until(() => held.length === 1);
+  holdReads = false;
+  await documents.apply(document, [{ from: 0, to: 0, insert: "typed " }]);
+  held[0]!();
+
+  assert.equal(await saved, true);
+  assert.equal(document.getText(), "typed start");
+  assert.equal(await readFile(file, "utf8"), "typed start");
+  assert.equal(conflicts.length, 1);
+  const copy = path.join(path.dirname(file), "Note (conflict).md");
+  assert.equal(await readFile(copy, "utf8"), "external");
+});
