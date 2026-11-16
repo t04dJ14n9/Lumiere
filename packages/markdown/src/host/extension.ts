@@ -27,6 +27,7 @@ export async function startMarkdown(
     context.extension,
     context.workspaceState,
     configuration,
+    root.logger,
   );
   context.subscriptions.push(registerDocumentWarm());
   await bootstrap(host, createVaultSystem(context, configuration), root, {
