@@ -197,6 +197,9 @@ test("the View picker has a Settings… entry that opens the Settings editor", a
   await openFile(page, "docs/outline.pdf");
   await pdfViewer(page);
   await command(page, "PDF: View…");
+  // The entry is the picker's last: its list draws only the rows on screen,
+  // so filter it down as a reader would, by typing.
+  await page.locator(".quick-input-widget input:visible").fill("Settings");
   await page
     .locator(".quick-input-list .monaco-list-row")
     .filter({ hasText: "Settings…" })

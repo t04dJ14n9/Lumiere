@@ -245,10 +245,16 @@ export async function contextMenu(
     await chooseNativeItem(page, label);
     return;
   }
-  await rightClick();
   const item = page
     .locator(".monaco-menu")
     .getByRole("menuitem", { name: label });
+  // A right-click right after another menu closed can open nothing: again.
+  await expect(async () => {
+    if (!(await item.isVisible())) {
+      await rightClick();
+    }
+    await expect(item).toBeVisible({ timeout: 2_000 });
+  }).toPass({ timeout: 15_000 });
   await item.hover();
   await item.click();
 }
