@@ -56,6 +56,11 @@ export class PanelAnnotations implements Subscription {
     return this.store.read(sha256);
   }
 
+  /** The reader asked the viewer of `load` for the PDF to write over the file. */
+  requestPdfWrite(load: number): void {
+    this.save.request(load);
+  }
+
   keepMine(data: ArrayBuffer, load: number): Promise<void> {
     return this.save.keepMine(data, load);
   }
