@@ -4,8 +4,8 @@ import { noteSlug } from "./template";
 
 /**
  * `YYYY-MM-DD-title.md`, dated by the local day of the capture instant `at`
- * (an ISO time, in UTC), as daily notes are: a note made in the evening west
- * of Greenwich, or the morning east of it, is filed under today.
+ * (an ISO time, in UTC): a note made in the evening west of Greenwich, or the
+ * morning east of it, is filed under today.
  */
 export function scratchFileName(
   title: string,

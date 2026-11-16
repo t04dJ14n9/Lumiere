@@ -33,7 +33,6 @@ import {
   attachmentsHost,
   scratchHost,
   templatesHost,
-  dailyNotesHost,
   gitDiffEditorHost,
   marpHost,
   tagsViewHost,
@@ -119,8 +118,8 @@ export async function bootstrap(
 // link open path, or serve a command that must work with no Lumiere editor
 // open yet: VS Code activates the extension for a contributed command and
 // then looks the handler up, so a handler registered only after the first
-// panel is "not found" in a fresh window (dailyNotes: Open Today's Daily
-// Note). Insert Template needs an open panel anyway, so it can wait.
+// panel is "not found" in a fresh window. Insert Template needs an open
+// panel anyway, so it can wait.
 const DEFERRED_WINDOW_FEATURES = [
   "backlinks",
   "outgoingLinks",
@@ -156,7 +155,6 @@ function startWindowFeatures(root: BaseContext, host: HostServices): void {
     attachmentsHost,
     scratchHost,
     templatesHost,
-    dailyNotesHost,
     gitDiffEditorHost,
     marpHost,
     tagsViewHost,

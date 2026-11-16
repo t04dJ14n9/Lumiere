@@ -357,22 +357,15 @@ older-version evidence; the installed app is 1.15.0. Rows naming
 | Command: lumiere.markdown.marp.keepInWorkshop | not observed | not manually observed | Manual scenario pending | not observed |
 | Command: lumiere.markdown.scratch.new | not observed | not manually observed | Manual scenario pending | not observed |
 | Command: lumiere.markdown.templates.insert | not observed | not manually observed | Manual scenario pending; automated evidence is in phase records | not observed |
-| Command: lumiere.markdown.dailyNotes.openToday | not observed | not manually observed | Manual scenario pending; automated evidence is in phase records | not observed |
-| Command: lumiere.markdown.dailyNotes.openPrevious | not observed | not manually observed | Manual scenario pending; automated evidence is in phase records | not observed |
-| Command: lumiere.markdown.dailyNotes.openNext | not observed | not manually observed | Manual scenario pending; automated evidence is in phase records | not observed |
 | Setting: lumiere.markdown.plugins.bridge.enabled | not observed | not manually observed | Manual scenario pending | not observed |
 | Setting: lumiere.markdown.plugins.marp.enabled | not observed | not manually observed | Manual scenario pending | not observed |
 | Setting: lumiere.markdown.plugins.scratch.enabled | not observed | not manually observed | Manual scenario pending | not observed |
 | Setting: lumiere.markdown.marp.open | not observed | not manually observed | Manual scenario pending | not observed |
 | Setting: lumiere.markdown.scratch.folder | not observed | not manually observed | Manual scenario pending | not observed |
 | Setting: lumiere.markdown.plugins.templates.enabled | not observed | not manually observed | Manual scenario pending; automated evidence is in phase records | not observed |
-| Setting: lumiere.markdown.plugins.dailyNotes.enabled | not observed | not manually observed | Manual scenario pending; automated evidence is in phase records | not observed |
 | Setting: lumiere.markdown.templates.folder | not observed | not manually observed | Manual scenario pending; automated evidence is in phase records | not observed |
 | Setting: lumiere.markdown.templates.dateFormat | not observed | not manually observed | Manual scenario pending; automated evidence is in phase records | not observed |
 | Setting: lumiere.markdown.templates.timeFormat | not observed | not manually observed | Manual scenario pending; automated evidence is in phase records | not observed |
-| Setting: lumiere.markdown.dailyNotes.folder | not observed | not manually observed | Manual scenario pending; automated evidence is in phase records | not observed |
-| Setting: lumiere.markdown.dailyNotes.dateFormat | not observed | not manually observed | Manual scenario pending; automated evidence is in phase records | not observed |
-| Setting: lumiere.markdown.dailyNotes.template | not observed | not manually observed | Manual scenario pending; automated evidence is in phase records | not observed |
 | Command: lumiere.markdown.backlinks.sortByAlphabetical | not observed | not manually observed | Manual scenario pending | not observed |
 | Command: lumiere.markdown.backlinks.sortByAlphabeticalReverse | not observed | not manually observed | Manual scenario pending | not observed |
 | Command: lumiere.markdown.backlinks.sortByModifiedTime | not observed | not manually observed | Manual scenario pending | not observed |

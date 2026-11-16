@@ -66,7 +66,6 @@ records it in `docs/PARITY.md`.
 | attachments | Drop, paste, or HTML-paste images into `files.attachmentFolder` with Obsidian-style timestamp names and embeds | Shares folder/embed rules with sketches. Import Asset / `assets.path` removed |
 | scratch | **New Scratch Note** writes a temporary note in `scratch.folder` | No automatic filing |
 | templates | **Insert Template** inserts a note from `templates.folder` at the caret, expanding `{{title}}`, `{{date}}`, `{{time}}` and `{{date:FORMAT}}` | Formats know `YYYY MM DD HH mm ss` only; Lumiere's editor only |
-| dailyNotes | **Open Today's Daily Note** opens or creates `folder/format(today).md` from a template; **Open Previous/Next Daily Note** step through existing ones | Same format tokens; no startup open or calendar; date properties do not link to daily notes |
 | marp | Detects `marp: true` and bridges to VS Code preview and Marp export | Slide widgets and Marp themes are not drawn here |
 | markers | Badges and actions that other extensions place on source ranges | Plain text only; at most 1,000 per plugin per editor |
 | graph | **Open Vault Graph**: a vault's notes as a directed graph in a panel, global or local, filtered by type, tag, folder, text and orphans | Hard caps (2000 notes, 20000 links); a larger graph is refused, not sampled; no 3D view |

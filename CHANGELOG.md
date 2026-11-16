@@ -8,6 +8,11 @@
 
 ## Unreleased
 
+- Daily Notes is removed from Lumiere's Markdown editor, with its three
+  commands and four settings; VS Code ignores the settings now that nothing
+  declares them, so no migration is needed. Templates stay. See
+  `packages/markdown/CHANGELOG.md`.
+
 - Fixed (review 2026-11-15), in DSH, the app and the plugin core:
   - Opening a note by absolute path in DSH no longer locks its session's
     workspace out until DSH restarts.
