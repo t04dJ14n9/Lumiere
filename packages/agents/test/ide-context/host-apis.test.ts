@@ -77,7 +77,7 @@ function facade() {
     workspace: { name: "notes", workspaceFolders: [{}] },
   };
 }
-test("tabs include workshop inputs, dedupe and put active group first", () => {
+test("tabs include Lumiere inputs, dedupe and put active group first", () => {
   const tabs = createVsCodeIdeContextHost(facade()).listTabs();
   assert.deepEqual(tabs.open, [
     "file:///other",

@@ -4,10 +4,10 @@ export const NATIVE_OUTLINE_ID = "outline";
 export const PDF_OUTLINE_VIEW_ID = "lumiere.pdf.outline";
 
 /** Lumiere PDF custom editor view type. */
-export const PDF_WORKSHOP_EDITOR = "lumiere.pdf.viewer";
+export const PDF_LUMIERE_EDITOR = "lumiere.pdf.viewer";
 
 /** Lumiere custom editor view type (peer product). */
-export const MARKDOWN_WORKSHOP_EDITOR = "lumiere.markdown.editor";
+export const MARKDOWN_LUMIERE_EDITOR = "lumiere.markdown.editor";
 
 /**
  * Delay before restoring the native Outline after leaving a Lumiere PDF
@@ -37,12 +37,12 @@ export type OutlineFocusOptions = {
   schedule?: OutlineFocusSchedule;
 };
 
-/** True when a Workshop custom editor (MW or PDF) is the active tab. */
-export function workshopEditorOwnsOutline(
+/** True when a Lumiere custom editor (MW or PDF) is the active tab. */
+export function lumiereEditorOwnsOutline(
   viewType: string | undefined,
 ): boolean {
   return (
-    viewType === MARKDOWN_WORKSHOP_EDITOR || viewType === PDF_WORKSHOP_EDITOR
+    viewType === MARKDOWN_LUMIERE_EDITOR || viewType === PDF_LUMIERE_EDITOR
   );
 }
 
@@ -64,7 +64,7 @@ type ResolvedFocus = {
 /**
  * One-shot sidebar swap while a Lumiere PDF custom editor is active: hide the
  * native Outline, show PDF Outline, then restore native Outline on leave
- * (debounced for Workshop↔Markdown handoffs).
+ * (debounced for Lumiere↔Markdown handoffs).
  */
 export function createOutlineFocus(options: OutlineFocusOptions): {
   sync: (pdfActive: boolean) => void;
@@ -104,7 +104,7 @@ function resolveOptions(options: OutlineFocusOptions): ResolvedFocus {
     execute: options.execute,
     focusEditor: options.focusEditor,
     activeViewType: () => options.activeCustomEditorViewType?.(),
-    ownEditorViewType: options.ownEditorViewType ?? PDF_WORKSHOP_EDITOR,
+    ownEditorViewType: options.ownEditorViewType ?? PDF_LUMIERE_EDITOR,
     outlineViewId: options.outlineViewId ?? PDF_OUTLINE_VIEW_ID,
     leaveDelayMs: options.leaveDelayMs ?? LEAVE_RESTORE_MS,
     schedule: options.schedule ?? defaultSchedule,
@@ -154,12 +154,12 @@ async function restoreNativeOutline(
   reason: "leave" | "dispose",
 ): Promise<void> {
   const active = options.activeViewType();
-  if (reason === "leave" && workshopEditorOwnsOutline(active)) {
+  if (reason === "leave" && lumiereEditorOwnsOutline(active)) {
     return;
   }
   if (
     reason === "dispose" &&
-    workshopEditorOwnsOutline(active) &&
+    lumiereEditorOwnsOutline(active) &&
     active !== options.ownEditorViewType
   ) {
     return;

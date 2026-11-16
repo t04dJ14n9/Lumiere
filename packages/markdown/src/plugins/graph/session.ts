@@ -1,7 +1,7 @@
 import type { Context, Disposer, Infer } from "@workshop/core";
 import { Endpoint } from "../../shared/rpc/endpoint";
 import type { Clock, Transport } from "../../shared/rpc/endpoint";
-import type { WorkbenchViews, WorkshopPanel } from "../../shared/host";
+import type { WorkbenchViews, LumierePanel } from "../../shared/host";
 import { contributionId } from "../../shared/setting-schema";
 import type { Vault } from "../vault/api";
 import { resolveScope } from "./choose";
@@ -33,7 +33,7 @@ interface SessionState {
   ctx: Context;
   view: ViewState;
   scope: HeldScope | undefined;
-  panel: WorkshopPanel | undefined;
+  panel: LumierePanel | undefined;
   endpoint: Endpoint | undefined;
   /** Stops what the host listens to on the current panel. */
   release: (() => void) | undefined;
@@ -139,7 +139,7 @@ function ensurePanel(state: SessionState, views: WorkbenchViews): void {
  */
 function registerPanel(
   state: SessionState,
-  panel: WorkshopPanel,
+  panel: LumierePanel,
   endpoint: Endpoint,
 ): void {
   const stops: Disposer[] = [
@@ -175,7 +175,7 @@ function registerPanel(
   };
 }
 
-function panelTransport(panel: WorkshopPanel): Transport {
+function panelTransport(panel: LumierePanel): Transport {
   return {
     send: (message) => panel.webview.post(message),
     listen: (receive) => panel.webview.onMessage(receive),

@@ -44,7 +44,7 @@ import {
   sketchHost,
   vimHost,
 } from "../plugins/host";
-import { workbenchFeatures as startWorkbenchFeatures } from "./workshop-features";
+import { workbenchFeatures as startWorkbenchFeatures } from "./workbench-features";
 import type { CursorBridgeConfig } from "../plugins/cursorBridge/host";
 import type { InkService } from "@workshop/ink/service";
 

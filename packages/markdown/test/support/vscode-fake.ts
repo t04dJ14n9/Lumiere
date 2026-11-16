@@ -94,7 +94,7 @@ function defaultHost(): HostServices {
         inspect: () => ({ value: undefined, target: "user" }),
         update: async () => "user",
         contributed: () => [],
-        searchFilter: "@ext:test.workshop",
+        searchFilter: "@ext:test.lumiere",
         openUi: async () => {},
       },
       editorAssociations: { read: () => undefined, write: async () => {} },

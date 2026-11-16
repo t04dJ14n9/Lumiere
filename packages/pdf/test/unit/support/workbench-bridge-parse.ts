@@ -1,7 +1,7 @@
 /**
  * Minimal mirror of Lumiere's `parseBridgeEnvelope` (Workbench v1).
- * Kept in lockstep with `vscode-markdown-workbench/src/shared/bridge/parse.ts`
- * so PDF unit tests can assert the public command emits a shape Workshop
+ * Kept in lockstep with `packages/markdown/src/shared/bridge/parse.ts`
+ * so PDF unit tests can assert the public command emits a shape Lumiere
  * already accepts. Not a full copy of checks.ts — only what PDF envelopes need.
  */
 

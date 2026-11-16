@@ -261,7 +261,7 @@ test("hasNativeOptOut: readerText alone does not block Cursor Markdown transfer"
   }
 });
 
-test("the handoff from Cursor Markdown into Workshop is left in place", () => {
+test("the handoff from Cursor Markdown into Lumiere is left in place", () => {
   assert.equal(shouldReclaim(swap("other", "workbench"), context), false);
   assert.equal(shouldReclaim(swap("text", "workbench"), context), false);
   assert.equal(shouldReclaim(swap("workbench", "workbench"), context), false);
@@ -584,8 +584,8 @@ test("a new tab is judged once, at its first activation", () => {
 
 test("Cursor's Preview | Markdown switch is classified against the tab it replaces", () => {
   const tabs = workbench();
-  const workshop = tabs.open("workbench");
-  const markdown = tabs.switchTo("other", workshop);
+  const lumiere = tabs.open("workbench");
+  const markdown = tabs.switchTo("other", lumiere);
   tabs.switchTo("text", markdown);
   assert.deepEqual(tabs.judged, [
     swap("none", "workbench"),
@@ -594,14 +594,14 @@ test("Cursor's Preview | Markdown switch is classified against the tab it replac
   ]);
 });
 
-test("closing a Workshop tab beside a Cursor Markdown tab of the same note judges nothing", () => {
+test("closing a Lumiere tab beside a Cursor Markdown tab of the same note judges nothing", () => {
   const tabs = workbench();
   tabs.switchTo("other", tabs.open("workbench"));
   for (let attempt = 0; attempt < 3; attempt++) {
-    // Reclaim's openWith, or the reader, opens the note in Workshop again.
-    const workshop = tabs.open("workbench");
+    // Reclaim's openWith, or the reader, opens the note in Lumiere again.
+    const lumiere = tabs.open("workbench");
     const judged = tabs.judged.length;
-    tabs.close(workshop);
+    tabs.close(lumiere);
     assert.equal(
       tabs.judged.length,
       judged,
@@ -662,12 +662,12 @@ test("tabs open before reclaim starts are judged: the shown one now, the rest wh
     kind: "text",
     group,
   };
-  const workshop: FakeTab = {
+  const lumiere: FakeTab = {
     uri: "file:///vault/Third.md",
     kind: "workbench",
     group,
   };
-  group.tabs.push(shown, behind, workshop);
+  group.tabs.push(shown, behind, lumiere);
   group.activeTab = shown;
   const swaps = new TabSwaps<FakeTab>({
     facts: (tab) => ({ uri: tab.uri, kind: tab.kind }),
@@ -692,8 +692,8 @@ test("tabs open before reclaim starts are judged: the shown one now, the rest wh
     [],
   );
   // A tab already in Lumiere is never reclaimed.
-  group.activeTab = workshop;
-  const kept = swaps.next({ opened: [], changed: [workshop] }, new Set());
+  group.activeTab = lumiere;
+  const kept = swaps.next({ opened: [], changed: [lumiere] }, new Set());
   assert.equal(shouldReclaim(kept[0]!.swap, context), false);
 });
 

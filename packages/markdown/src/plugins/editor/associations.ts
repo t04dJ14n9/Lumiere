@@ -14,9 +14,7 @@ const NATIVE_TEXT_EDITOR = "default";
  * first opening it in its text editor (about 75 ms of a cold open). Other
  * patterns are kept.
  */
-export function withMarkdownWorkshop(
-  existing: unknown,
-): Record<string, string> {
+export function withMarkdownLumiere(existing: unknown): Record<string, string> {
   const associations: Record<string, string> = {};
   if (existing && typeof existing === "object" && !Array.isArray(existing)) {
     for (const [pattern, editor] of Object.entries(existing)) {
@@ -72,7 +70,7 @@ async function migrateTextRoute(
   if (!opensThroughText(existing, host.storage)) {
     return;
   }
-  await host.settings.editorAssociations.write(withMarkdownWorkshop(existing));
+  await host.settings.editorAssociations.write(withMarkdownLumiere(existing));
 }
 
 /**
@@ -97,7 +95,7 @@ export async function useForMarkdownInWorkspace(
     return;
   }
   await host.storage.update(MARKDOWN_WORKSPACE_EDITOR_KEY, true);
-  await associations.write(withMarkdownWorkshop(existing));
+  await associations.write(withMarkdownLumiere(existing));
   host.dialogs.inform(
     "Markdown files in this workspace now open in Lumiere. Use Open as Text or Reopen Editor With… for the text editor.",
   );
