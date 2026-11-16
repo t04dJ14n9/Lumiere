@@ -1,4 +1,4 @@
-import type { Context, Infer } from "@workshop/core";
+import type { Context, Disposer, Infer } from "@workshop/core";
 import { Endpoint } from "../../shared/rpc/endpoint";
 import type { Clock, Transport } from "../../shared/rpc/endpoint";
 import type { WorkbenchViews, WorkshopPanel } from "../../shared/host";
@@ -35,6 +35,8 @@ interface SessionState {
   scope: HeldScope | undefined;
   panel: WorkshopPanel | undefined;
   endpoint: Endpoint | undefined;
+  /** Stops what the host listens to on the current panel. */
+  release: (() => void) | undefined;
   generation: number;
   admitted: Set<string>;
   timer: ReturnType<typeof setTimeout> | undefined;
@@ -69,6 +71,7 @@ export function createGraphSession(ctx: Context): GraphSession {
     scope: undefined,
     panel: undefined,
     endpoint: undefined,
+    release: undefined,
     generation: 0,
     admitted: new Set(),
     timer: undefined,
@@ -128,16 +131,18 @@ function ensurePanel(state: SessionState, views: WorkbenchViews): void {
   );
 }
 
+/**
+ * The panel's handlers and listeners last as long as the panel, not the
+ * plugin: each reopened panel would otherwise leave its closures behind
+ * until the plugin stops. The plugin's own stop disposes the session, which
+ * detaches the current panel the same way.
+ */
 function registerPanel(
   state: SessionState,
   panel: WorkshopPanel,
   endpoint: Endpoint,
 ): void {
-  const ctx = state.ctx;
-  ctx.effect(() => () => {
-    void endpoint.dispose();
-  });
-  ctx.effect(() =>
+  const stops: Disposer[] = [
     endpoint.handle(protocol, "ready", (params) => {
       if (params.saved) {
         applyView(state, params);
@@ -145,20 +150,14 @@ function registerPanel(
       void publish(state);
       return {};
     }),
-  );
-  ctx.effect(() =>
     endpoint.handle(protocol, "view", (params) => {
       applyView(state, params);
       void publish(state);
       return {};
     }),
-  );
-  ctx.effect(() =>
     endpoint.handle(protocol, "open", async (params) => ({
       opened: await openNode(state, params),
     })),
-  );
-  ctx.effect(() =>
     panel.onDidChangeVisibility((visible) => {
       if (!visible) {
         state.endpoint?.notify(protocol, "stopLayout", {});
@@ -166,8 +165,14 @@ function registerPanel(
       }
       void publish(state);
     }),
-  );
-  ctx.effect(() => panel.onDispose(() => detach(state, endpoint)));
+    panel.onDispose(() => detach(state, endpoint)),
+  ];
+  state.release = () => {
+    for (const stop of stops.splice(0)) {
+      void stop();
+    }
+    void endpoint.dispose();
+  };
 }
 
 function panelTransport(panel: WorkshopPanel): Transport {
@@ -335,7 +340,9 @@ function detach(state: SessionState, endpoint: Endpoint | undefined): void {
   if (state.endpoint !== endpoint) {
     return;
   }
+  const release = state.release;
   state.panel = undefined;
   state.endpoint = undefined;
-  void endpoint?.dispose();
+  state.release = undefined;
+  release?.();
 }
