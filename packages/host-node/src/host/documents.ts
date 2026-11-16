@@ -337,11 +337,14 @@ export class NoteDocuments implements HostDocuments {
    * change is taken instead, as a reload would. True when nothing is left
    * to write. (A change landing between this read and the write is not
    * seen; the window is one read long.) Whether typing is unsaved is
-   * decided once the read returns: the user may type while it reads.
+   * decided once the read returns: the user may type while it reads. A
+   * read that fails fails the save: without it we cannot tell whether we
+   * would write over another program's change (and saving replaces an
+   * existing file only, so a missing one could not be written either).
    */
   private async tookOutsideChange(note: NoteDocument): Promise<boolean> {
-    const disk = await this.readNote(note.uri).catch(() => undefined);
-    if (disk === undefined || disk === note.diskText) {
+    const disk = await this.readNote(note.uri);
+    if (disk === note.diskText) {
       return false;
     }
     if (note.getText() === note.diskText) {

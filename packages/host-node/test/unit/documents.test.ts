@@ -557,3 +557,35 @@ test("typing during a save's disk read is kept when another program changed the 
   const copy = path.join(path.dirname(file), "Note (conflict).md");
   assert.equal(await readFile(copy, "utf8"), "external");
 });
+
+test("a save that cannot read the file to check for another program's change does not write", async (t) => {
+  const { file, uri, cleanup } = await note("start");
+  let readable = true;
+  const documents = new NoteDocuments(
+    {
+      ...NODE_NOTES,
+      watch: () => () => {},
+      readText: (target) =>
+        readable
+          ? NODE_NOTES.readText(target)
+          : Promise.reject(
+              Object.assign(new Error("EACCES: permission denied"), {
+                code: "EACCES",
+              }),
+            ),
+    },
+    60_000,
+  );
+  t.after(cleanup);
+  t.after(() => documents.dispose().catch(() => {}));
+  const document = await documents.open(uri);
+  await documents.apply(document, [{ from: 0, to: 0, insert: "mine: " }]);
+  await writeFile(file, "theirs");
+  readable = false;
+
+  await assert.rejects(document.save(), /EACCES/);
+  assert.equal(await readFile(file, "utf8"), "theirs");
+  assert.equal(document.isDirty, true);
+  assert.equal(document.getText(), "mine: start");
+  readable = true;
+});
