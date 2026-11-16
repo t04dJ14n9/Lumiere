@@ -6,6 +6,7 @@ import type {} from "../editor/api";
 import { changedLinks, rewriteLinks } from "./rewrite";
 import { sourceText } from "./source-text";
 import { registerRenameHeading } from "./rename-heading";
+import { rewriteCanvas, wholeTextEdit } from "./canvas";
 
 export { sourceText };
 import type { LinkFormat, RewriteContext } from "./rewrite";
@@ -67,7 +68,22 @@ async function renameEdits(
   }
   // Built after the answer: a note edited while the dialog was open is
   // rewritten as it is now, not as it was when the rename started.
-  return linkEdits(host.vaults, host, renames);
+  const { edits, unchecked } = await linkEdits(host.vaults, host, renames);
+  if (unchecked.length > 0) {
+    host.dialogs.error(uncheckedMessage(unchecked));
+  }
+  return edits;
+}
+
+/** Names what a rename could not check, so the user can fix those links. */
+function uncheckedMessage(unchecked: readonly string[]): string {
+  const shown = unchecked.slice(0, 5).join(", ");
+  const more = unchecked.length > 5 ? ` and ${unchecked.length - 5} more` : "";
+  return (
+    `Links were not checked in ${unchecked.length} ` +
+    `note${unchecked.length === 1 ? "" : "s"} the vault was still ` +
+    `indexing: ${shown}${more}. Check them for links to the renamed file.`
+  );
 }
 
 /** Asks unless nothing would change; "Always" also stops asking for this resource. */
@@ -150,27 +166,47 @@ const resolverOf =
   (linkpath, source, syntax) =>
     vault.index.resolveLink(linkpath, source, syntax)?.path;
 
-/** The notes a rename can change: the renamed ones, for their own links, and those linking to them. */
+/**
+ * The notes a rename can change: the renamed ones, for their own links,
+ * those linking to them, and every note the index has not parsed yet (the
+ * settle gave up first), whose links only its text can tell. Canvases are
+ * never in the index's backlinks, so each one is a candidate.
+ */
 function candidateNotes(vault: Vault, paths: Map<string, string>): VaultFile[] {
   const sources = new Set<string>(paths.keys());
   for (const path of paths.keys()) {
     vault.index.backlinks(path).forEach((link) => sources.add(link.path));
   }
+  for (const file of vault.index.files()) {
+    if (isUnparsedNote(vault, file) || file.extension === "canvas") {
+      sources.add(file.path);
+    }
+  }
   return [...sources]
     .map((source) => vault.index.file(source))
-    .filter((file): file is VaultFile => file?.extension === "md");
+    .filter(
+      (file): file is VaultFile =>
+        file?.extension === "md" || file?.extension === "canvas",
+    );
+}
+
+function isUnparsedNote(vault: Vault, file: VaultFile): boolean {
+  return (
+    file.extension === "md" && vault.index.metadata(file.path) === undefined
+  );
+}
+
+/** Whether only the file's text, not the index, can tell its links. */
+function needsText(vault: Vault, file: VaultFile): boolean {
+  return file.extension === "canvas" || isUnparsedNote(vault, file);
 }
 
 /**
- * How many notes the rename would change, from the links the index already
- * parsed: no note is read or rewritten, so the prompt costs a lookup per
- * link, not a second pass of `linkEdits`.
- *
- * A candidate the index has no links for (its parse was still queued when
- * the settle gave up) would count as unchanged here although its text may
- * link to the renamed notes. Then the index cannot be trusted, and the count
- * comes from `linkEdits` on the live text, so the prompt still asks when
- * edits exist.
+ * How many notes the rename would change. Parsed notes are counted from the
+ * links the index already has, so the prompt costs a lookup per link, not a
+ * read and rewrite of each note. A note the index has not parsed (its parse
+ * was still queued when the settle gave up) and a canvas are read, so the
+ * prompt still asks when they have links to change.
  */
 async function affectedNoteCount(
   host: Pick<RenameHost, "settings" | "hostDocuments" | "vaults">,
@@ -181,57 +217,103 @@ async function affectedNoteCount(
     return 0;
   }
   const { vault, paths } = plan;
-  const candidates = candidateNotes(vault, paths).map((file) => ({
-    file,
-    parsed: vault.index.metadata(file.path),
-  }));
-  if (candidates.some(({ parsed }) => parsed === undefined)) {
-    return (await linkEdits(host.vaults, host, renames)).length;
-  }
+  const candidates = candidateNotes(vault, paths);
   const context = { renames: paths, resolve: resolverOf(vault) };
-  return candidates.filter(
-    ({ file, parsed }) =>
+  const indexed = candidates.filter((file) => {
+    const parsed = needsText(vault, file)
+      ? undefined
+      : vault.index.metadata(file.path);
+    return (
       parsed !== undefined &&
-      changedLinks(vaultLinks(parsed), file.path, context).length > 0,
-  ).length;
+      changedLinks(vaultLinks(parsed), file.path, context).length > 0
+    );
+  }).length;
+  const read = candidates.filter((file) => needsText(vault, file));
+  if (read.length === 0) {
+    return indexed;
+  }
+  const { edits } = await textEdits(host, plan, read, renames);
+  return indexed + edits.length;
 }
 
-/** Edits for every note in the renamed files' vault that links to them. */
+/**
+ * How long reading notes the index has not parsed may take, so the rename
+ * stays inside VS Code's participant timeout (60 s) with the prompt. Notes
+ * left when it runs out are reported as unchecked.
+ */
+const UNPARSED_SCAN_LIMIT_MS = 20_000;
+
+interface LinkEditResult {
+  edits: FileTextEdits[];
+  /** Vault paths of unparsed notes not read in time. */
+  unchecked: string[];
+}
+
+/** Edits for every note and canvas in the renamed files' vault that links to them. */
 async function linkEdits(
   vaults: Vaults,
   host: Pick<HostServices, "settings" | "hostDocuments">,
   renames: Renames,
-): Promise<FileTextEdits[]> {
+): Promise<LinkEditResult> {
   const plan = await planRename(vaults, renames);
   if (!plan) {
-    return [];
+    return { edits: [], unchecked: [] };
   }
-  const { vault, paths } = plan;
-  const format = host.settings.get<LinkFormat>(
-    "links.newLinkFormat",
-    "shortest",
-    renames[0]?.oldUri,
+  // Named one by one: the plugin context's services are getters, which a
+  // spread would not copy.
+  return textEdits(
+    { settings: host.settings, hostDocuments: host.hostDocuments, vaults },
+    plan,
+    candidateNotes(plan.vault, plan.paths),
+    renames,
   );
+}
+
+/** Reads each file's current text and rewrites its links. */
+async function textEdits(
+  host: Pick<RenameHost, "settings" | "hostDocuments" | "vaults">,
+  { vault, paths }: RenamePlan,
+  files: readonly VaultFile[],
+  renames: Renames,
+): Promise<LinkEditResult> {
   const context: RewriteContext = {
     renames: paths,
     resolve: resolverOf(vault),
     pathsAfter: vault.index
       .files()
       .map((file) => paths.get(file.path) ?? file.path),
-    format,
+    format: host.settings.get<LinkFormat>(
+      "links.newLinkFormat",
+      "shortest",
+      renames[0]?.oldUri,
+    ),
   };
-  const result: FileTextEdits[] = [];
-  for (const file of candidateNotes(vault, paths)) {
-    const edits = rewriteLinks(
-      await sourceText(vaults, host.hostDocuments, file.uri),
-      file.path,
-      context,
-    );
+  const result: LinkEditResult = { edits: [], unchecked: [] };
+  const deadline = Date.now() + UNPARSED_SCAN_LIMIT_MS;
+  for (const file of files) {
+    if (isUnparsedNote(vault, file) && Date.now() > deadline) {
+      result.unchecked.push(file.path);
+      continue;
+    }
+    const text = await sourceText(host.vaults, host.hostDocuments, file.uri);
+    const edits = fileEdits(text, file, context);
     if (edits.length > 0) {
-      result.push({ uri: file.uri, edits });
+      result.edits.push({ uri: file.uri, edits });
     }
   }
   return result;
+}
+
+function fileEdits(
+  text: string,
+  file: VaultFile,
+  context: RewriteContext,
+): FileTextEdits["edits"] {
+  if (file.extension !== "canvas") {
+    return rewriteLinks(text, file.path, context);
+  }
+  const next = rewriteCanvas(text, file.path, context);
+  return next === undefined ? [] : [wholeTextEdit(text, next)];
 }
 
 /**

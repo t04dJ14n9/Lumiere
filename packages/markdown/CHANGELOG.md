@@ -25,6 +25,11 @@
     that vault only, as Obsidian keeps `alwaysUpdateLinks` per vault. A
     user-level `always` written by an earlier version stays until you
     remove it.
+  - Renaming or moving a note or attachment now updates `.canvas` files:
+    file nodes follow the file, and links in text nodes are rewritten.
+  - A rename no longer skips notes the vault index has not parsed yet (a
+    large vault's first start): their text is read and rewritten too, and
+    a message names any that could not be read in time.
 
 - Daily Notes is removed: **Open Today's Daily Note**, **Open Previous
   Daily Note** and **Open Next Daily Note** are gone, with the
