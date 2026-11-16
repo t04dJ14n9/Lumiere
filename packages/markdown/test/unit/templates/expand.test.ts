@@ -12,6 +12,7 @@ import {
   templatePickItems,
 } from "../../../src/plugins/templates/list";
 import type { VaultFile } from "../../../src/plugins/vault/api";
+import { frontmatter } from "../../../src/markdown/properties";
 
 // Local wall-clock time: 2026-11-05 09:07:03, whatever the test machine's zone.
 const NOW = new Date(2026, 10, 5, 9, 7, 3);
@@ -158,5 +159,32 @@ test("lists Markdown files under the folder, sorted, named inside it", () => {
   assert.deepEqual(
     templatePickItems(files, "Templates", "WEEK").map((item) => item.label),
     ["Weekly"],
+  );
+});
+
+test("a variable that would break the template's YAML is written quoted in its value", () => {
+  const template = [
+    "---",
+    "title: {{title}}",
+    "aliases:",
+    "  - {{title}} notes",
+    "created: {{date}}",
+    "---",
+    "# {{title}}",
+  ].join("\n");
+  const text = expandTemplate(template, { title: "[draft] plan", now: NOW });
+  assert.deepEqual(frontmatter(text)?.values, {
+    title: "[draft] plan",
+    aliases: ["[draft] plan notes"],
+    created: "2026-11-05",
+  });
+  assert.ok(text.endsWith("---\n# [draft] plan"), text);
+});
+
+test("a template's YAML that stays valid is filled in as written", () => {
+  const template = "---\ntitle: {{title}} # the note\n---\nBody";
+  assert.equal(
+    expandTemplate(template, { title: "Plan", now: NOW }),
+    "---\ntitle: Plan # the note\n---\nBody",
   );
 });

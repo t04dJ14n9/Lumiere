@@ -17,7 +17,14 @@
   - **Insert Template** merges a template's properties into the note's, as
     Obsidian does, instead of pasting its `---` block into the note: the
     note's values stay, missing properties are added and lists are joined.
-    Only the body goes in at the caret.
+    Only the body goes in at the caret. A variable that would make the
+    template's properties invalid YAML (`title: {{title}}` for a note named
+    `[draft] plan`) is written quoted in its value. A template whose
+    properties are still not valid YAML gets only its body inserted, never
+    its `---` block, and the message names the template; the message about
+    a note's invalid properties names the note. Inserting into a note that
+    ends at its closing `---` puts the body on a new line instead of
+    joining it to the `---`.
   - **Always Update** in the link update prompt now writes
     `lumiere.markdown.linkUpdates.mode: always` to the note's workspace
     folder settings (`.vscode/settings.json`, or the workspace's when the
@@ -66,11 +73,11 @@
     headings no longer appear in the Outline, heading suggestions or
     heading links. Links and tags inside stay indexed, as Obsidian indexes
     them. A `%%` line that nothing closes comments out the rest of the note.
-  - Properties use the vault's `.obsidian/types.json`: a property Obsidian
-    types as Text shows as text even when its value is `123`. A type you
-    change in Lumiere is still kept in Lumiere's own storage (it wins over
-    `types.json` for that property); writing it back to `types.json` waits
-    for hosts that can write the file safely.
+  - Properties read the vault's `.obsidian/types.json`: a property Obsidian
+    types as Text shows as text even when its value is `123`. Lumiere does
+    not write `types.json`: a type you change in Lumiere is stored in
+    Lumiere only (it wins over `types.json` for that property), and
+    Obsidian does not see it.
 
 - Daily Notes is removed: **Open Today's Daily Note**, **Open Previous
   Daily Note** and **Open Next Daily Note** are gone, with the
