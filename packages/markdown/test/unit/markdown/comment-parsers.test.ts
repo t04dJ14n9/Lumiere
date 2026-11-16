@@ -93,3 +93,14 @@ test("a %% inside inline math, a tag or a wikilink does not open a comment", () 
     assert.ok(html.includes("Public body"), literal);
   }
 });
+
+test("a %% opened inside emphasis or a link label is still open, and its comment hides what it should", () => {
+  for (const opener of ["*public %%*", "[label %%](note.md)"]) {
+    const note = `${opener}\nprivate content\n%%\n# Public\n\nPublic body`;
+    assert.ok(!editorVisible(note).includes("private"), opener);
+    assert.deepEqual(headings(note), ["Public"], opener);
+    const html = renderMarkdown(note);
+    assert.ok(!html.includes("private content"), opener);
+    assert.ok(html.includes("Public body"), opener);
+  }
+});
