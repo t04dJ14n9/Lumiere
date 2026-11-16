@@ -5,13 +5,15 @@
 **Lumiere:** `packages/markdown/src/plugins/properties/`  
 **Prior docs:** `docs/properties-diff.md`, `/workspace/plans/obsidian-properties-behaviour.md`
 
+**Update 2026-11-16:** G1–G5 and G7–G9 have shipped (`properties.css`, `sheet-html.ts`, `estimated-height.ts`); the "Lumiere today" / "Lumiere" columns below describe the code before them. G18 now matches Obsidian.
+
 Do not copy Obsidian code/CSS/assets. Gaps below are behaviour/layout targets.
 
 Severity: **P0** height/remount or editing broken · **P1** clear visual/interaction mismatch · **P2** polish · **OK** matched or intentional · **N/A** OKF-only
 
 ---
 
-## Shipped (open PRs — do not merge)
+## Shipped
 
 | ID | Gap | PR | Notes |
 | --- | --- | --- | --- |
@@ -24,9 +26,9 @@ Severity: **P0** height/remount or editing broken · **P1** clear visual/interac
 
 | ID | Sev | Obsidian (rea) | Lumiere today | Action |
 | --- | --- | --- | --- | --- |
-| G2 | P1 → PR | `.metadata-container { margin-block-end: 2rem; padding: var(--size-4-2) 0 }` → **8px 0** + **32px** below | `.properties { padding: 4px 0 16px }` — only 16px bottom, no margin-block-end | Match padding top 8px + `margin-block-end: 2rem`; sync `SHEET_PADDING` / `COLLAPSED` in `estimated-height.ts` |
-| G3 | P1 → PR | `--metadata-label-font-size` / `--metadata-input-font-size: var(--font-smaller)` = **0.875em** | `.properties { font-size: var(--text-size) }` — full editor size; rows taller than Obsidian | Set sheet/inputs to `0.875em`; heading already ~0.875 of root — avoid double-shrink; set `TEXT=14` in estimate |
-| G4 | P1 → PR | Row hover: `box-shadow: 0 0 0 1px border-hover`, radius 6px; focus-within: `0 0 0 2px border-focus` | `:focus-visible` outline 1px; no hover ring; radius 3px on selection | Add hover/focus-within rings (VS Code `--vscode-widget-border` / `--vscode-focusBorder`); radius 6px |
+| G2 | P1 → shipped | `.metadata-container { margin-block-end: 2rem; padding: var(--size-4-2) 0 }` → **8px 0** + **32px** below | `.properties { padding: 4px 0 16px }` — only 16px bottom, no margin-block-end | Match padding top 8px + `margin-block-end: 2rem`; sync `SHEET_PADDING` / `COLLAPSED` in `estimated-height.ts` |
+| G3 | P1 → shipped | `--metadata-label-font-size` / `--metadata-input-font-size: var(--font-smaller)` = **0.875em** | `.properties { font-size: var(--text-size) }` — full editor size; rows taller than Obsidian | Set sheet/inputs to `0.875em`; heading already ~0.875 of root — avoid double-shrink; set `TEXT=14` in estimate |
+| G4 | P1 → shipped | Row hover: `box-shadow: 0 0 0 1px border-hover`, radius 6px; focus-within: `0 0 0 2px border-focus` | `:focus-visible` outline 1px; no hover ring; radius 3px on selection | Add hover/focus-within rings (VS Code `--vscode-widget-border` / `--vscode-focusBorder`); radius 6px |
 
 ---
 
@@ -34,11 +36,11 @@ Severity: **P0** height/remount or editing broken · **P1** clear visual/interac
 
 | ID | Sev | Obsidian | Lumiere | Action |
 | --- | --- | --- | --- | --- |
-| G5 | P2 → PR | `--metadata-gap: 3px` flex column on `.metadata-properties` | Rows stacked with `padding: 2px 0` each, no gap | `display:flex; flex-direction:column; gap:3px`; zero row vertical padding; adjust `ROW_PADDING` |
+| G5 | P2 → shipped | `--metadata-gap: 3px` flex column on `.metadata-properties` | Rows stacked with `padding: 2px 0` each, no gap | `display:flex; flex-direction:column; gap:3px`; zero row vertical padding; adjust `ROW_PADDING` |
 | G6 | P2 | `--metadata-label-width: 9em` fixed key column | `minmax(0, min(40%, 18em))` | **Keep** — intentional long-key editability (MW props) |
-| G7 | P2 | `--metadata-input-padding: 4px 8px` on longtext | `padding: 0` on inputs | Add input padding; may affect clamp/estimate slightly |
-| G8 | P2 | Heading title class `metadata-properties-title`; collapse `collapse-indicator collapse-icon` | Bare `<span>Properties</span>`; `metadata-collapse-indicator` | Optional class aliases for theme-ish parity (no Obsidian assets) |
-| G9 | P2 | Add control: `.metadata-add-button.text-icon-button` + lucide-plus | `data-property-add` + fullwidth “＋” glyph | Cosmetic; low priority |
+| G7 | P2 → shipped | `--metadata-input-padding: 4px 8px` on longtext | `padding: 0` on inputs | Add input padding; may affect clamp/estimate slightly |
+| G8 | P2 → shipped | Heading title class `metadata-properties-title`; collapse `collapse-indicator collapse-icon` | Bare `<span>Properties</span>`; `metadata-collapse-indicator` | Optional class aliases for theme-ish parity (no Obsidian assets) |
+| G9 | P2 → shipped | Add control: `.metadata-add-button.text-icon-button` + lucide-plus | `data-property-add` + fullwidth “＋” glyph | Cosmetic; low priority |
 | G10 | P2 | `data-property-count` on container | Removed (properties-diff) | **Reject** — intentional |
 
 ---
@@ -61,7 +63,7 @@ Severity: **P0** height/remount or editing broken · **P1** clear visual/interac
 
 | ID | Sev | Topic | Decision |
 | --- | --- | --- | --- |
-| G18 | N/A | Nested/`unknown` → Obsidian `JSON.stringify` + `lucide-file-question` | Lumiere editable YAML drafts — **keep** (documented enhancement) |
+| G18 | OK | Nested/`unknown` → Obsidian `JSON.stringify` + `lucide-file-question` | Matched: Lumiere shows nested values as read-only `JSON.stringify` text (`mod-unknown`, `sheet-html.ts`) |
 | G19 | N/A | OKF `sources` stacked articles + disclosure + YAML | Removed. `sources` is a plain text property, same control as any other string |
 | G20 | N/A | Sources expand session + remeasure | Widget removed with G19. Tall-sheet tests use plain text rows |
 | G21 | N/A | Sources article chrome vs estimate `ARTICLE_CHROME` | Removed with the Sources widget. `sources` estimates as clamped text |
@@ -81,10 +83,10 @@ Severity: **P0** height/remount or editing broken · **P1** clear visual/interac
 
 ## Fix order for this worker
 
-1. **G2+G3+G4+G5** stacked PR on `#136` (`fuzz/props-obsidian-chrome`) — CSS + `estimated-height` + exact unit asserts.
+1. Done: **G2+G3+G4+G5** stacked PR on `#136` (`fuzz/props-obsidian-chrome`) — CSS + `estimated-height` + exact unit asserts.
 2. Re-check Sources estimate floors after chrome change (G21).
-3. G7 input padding if tests stay green.
-4. Leave G6/G18/G19 alone.
+3. Done: G7 input padding.
+4. Leave G6/G19 alone.
 
 ## References (rea)
 

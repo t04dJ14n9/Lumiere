@@ -43,8 +43,9 @@ source is already shown, so typing replaces the body and preserves delimiters.
 
 Injects `editor`, `commands`, `livePreview` and `render`; provides no services.
 Listens to `render/postProcess`; emits no events. Enabled by
-`lumiere.markdown.plugins.math.enabled` (default true). `lumiere.markdown.plugins.math.macros`
-is a name→replacement map (Obsidian MathJax macros); `#1`…`#9` mark arguments.
+`lumiere.markdown.plugins.math.enabled` (default true). `lumiere.markdown.math.macros`
+is a name→replacement map, like the MathJax macros that Obsidian community plugins
+add (Obsidian core has no macro setting); `#1`…`#9` mark arguments.
 Commands are Toggle Inline Math and Insert Math Block; neither has a default keybinding.
 
 ## Limits and differences from Obsidian
