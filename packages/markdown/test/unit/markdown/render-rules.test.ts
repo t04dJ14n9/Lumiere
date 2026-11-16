@@ -100,3 +100,28 @@ test("a %% block comment over blank lines and block syntax renders nothing", () 
   assert.equal(renderMarkdown("Before\n\n%%\n# Draft\n"), "<p>Before</p>\n");
   assert.equal(renderMarkdown("A %%hidden%% B\n"), "<p>A  B</p>\n");
 });
+
+test("a %% line interrupts a paragraph, and a closed block lets the rest of the note show", () => {
+  assert.equal(
+    renderMarkdown("Intro\n%%\ndraft\n\n%%\n\nVisible\n\n# Visible heading\n"),
+    renderMarkdown("Intro\n\nVisible\n\n# Visible heading\n"),
+  );
+  // Opened mid-line, the `%%` on its own line closes the paragraph's comment.
+  assert.equal(
+    renderMarkdown("Intro %%\ndraft\n%%\n\nVisible\n"),
+    "<p>Intro </p>\n<p>Visible</p>\n",
+  );
+});
+
+test("text after a block comment's closing %% stays on the page", () => {
+  assert.equal(
+    renderMarkdown("%%\nhidden\n%% visible after [[Link]]\n\nnext\n"),
+    renderMarkdown("visible after [[Link]]\n\nnext\n"),
+  );
+});
+
+test("an unclosed %% in a quote ends with the quote", () => {
+  const html = renderMarkdown("> %% c\n> d\n\nafter quote\n\n# H\n");
+  assert.match(html, /^<blockquote><\/blockquote>\n<p>after quote<\/p>\n<h1 /);
+  assert.doesNotMatch(html, /%%|<p>d/);
+});
