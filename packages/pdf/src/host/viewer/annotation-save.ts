@@ -17,6 +17,12 @@ export class AnnotationSave {
    * reaches it still names an earlier one as its base.
    */
   private known = { load: Number.NaN, hashes: new Set<string>() };
+  /**
+   * Writes into the PDF the reader asked for (Save into This PDF, Retry) and
+   * the viewer has not answered yet, for one load. The viewer is untrusted:
+   * a PDF it sends unasked is never written.
+   */
+  private requested = { load: Number.NaN, count: 0 };
 
   constructor(
     private readonly fileUri: string,
@@ -34,6 +40,23 @@ export class AnnotationSave {
 
   markFailed(): void {
     this.dirty = "failed";
+  }
+
+  /** The reader asked the viewer of `load` for the PDF to write over the file. */
+  request(load: number): void {
+    if (this.requested.load !== load) {
+      this.requested = { load, count: 0 };
+    }
+    this.requested.count++;
+  }
+
+  /** Use up one request of `load`; false when there is none. */
+  private takeRequest(load: number): boolean {
+    if (this.requested.load !== load || this.requested.count === 0) {
+      return false;
+    }
+    this.requested.count--;
+    return true;
   }
 
   keepMine(data: ArrayBuffer, load: number): Promise<void> {
@@ -79,6 +102,12 @@ export class AnnotationSave {
     message: Extract<ViewerMessage, { type: "annotationSave" }>,
   ): Promise<void> {
     if (!this.deps.isCurrentLoad(message.load)) {
+      return;
+    }
+    if (!this.takeRequest(message.load)) {
+      this.deps.error(
+        "The PDF viewer sent the PDF to write although it was not asked to; the file is left as it is.",
+      );
       return;
     }
     this.lastBytes = message.data;

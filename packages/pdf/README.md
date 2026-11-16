@@ -64,7 +64,10 @@ is opt-in (`lumiere.pdf.regions.enabled`, default off).
   the next change, after which earlier versions cannot read them.
   - **PDF: Save Annotations into This PDF** writes them into the file after
     you confirm (its SHA-256 changes). It refuses PDFs in
-    `lumiere.pdf.annotations.protectedFolders` (default `[".raw"]`).
+    `lumiere.pdf.annotations.protectedFolders` (default `[".raw"]`). The
+    extension writes the PDF only for a save this command (or its Retry)
+    asked the viewer for, and checks the protected folders again just
+    before writing.
   - **PDF: Export Annotated Copy…** writes a new PDF with them, for sharing.
   - Annotations a PDF already holds show as usual; a change to one is kept
     only by saving into the PDF, and Lumiere says so the first time.

@@ -328,6 +328,9 @@ export class PdfViewerPanel {
 
   /** Ask the viewer for the PDF with its annotations: to save into the open file, or for a copy. */
   writeAnnotations(to: "pdf" | "copy"): void {
+    if (to === "pdf") {
+      this.annotations.requestPdfWrite(this.loads);
+    }
     this.post({ type: "annotationWrite", load: this.loads, to });
   }
 
