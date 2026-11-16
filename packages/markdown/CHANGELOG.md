@@ -11,6 +11,8 @@
 - Fixed (review 2026-11-15):
   - Editing a table no longer deletes cells past the header's column count
     on rows you did not edit.
+    Deleting the header, or moving such a row to the top, widens the table
+    to that row instead of turning the table into plain text.
   - Pasting, dropping or downloading an image, or saving a sketch, never
     overwrites an existing file of the same name; it takes the next free
     name.
