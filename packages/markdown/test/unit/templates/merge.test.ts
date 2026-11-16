@@ -136,3 +136,48 @@ test("a template whose properties are not valid YAML gets only its body in, neve
   assert.equal(result.invalidProperties, "template");
   assert.equal(result.text, "Intro\nHello");
 });
+
+test("joining a block list keeps its style and comments", () => {
+  const note = [
+    "---",
+    "tags: # my tags",
+    "  - work # first",
+    "  - home",
+    "status: done # keep",
+    "---",
+    "Body",
+    "",
+  ].join("\n");
+  const caret = note.length;
+  const { text } = inserted(note, "---\ntags:\n  - meeting\n  - work\n---\n", {
+    from: caret,
+    to: caret,
+  });
+  assert.equal(
+    text,
+    [
+      "---",
+      "tags: # my tags",
+      "  - work # first",
+      "  - home",
+      "  - meeting",
+      "status: done # keep",
+      "---",
+      "Body",
+      "",
+    ].join("\n"),
+  );
+});
+
+test("an object in both lists is written once", () => {
+  const note = "---\nitems:\n  - name: a\n---\n";
+  const caret = note.length;
+  const { text } = inserted(
+    note,
+    "---\nitems:\n  - name: a\n  - name: b\n---\n",
+    { from: caret, to: caret },
+  );
+  assert.deepEqual(frontmatter(text)?.values, {
+    items: [{ name: "a" }, { name: "b" }],
+  });
+});
