@@ -2,7 +2,7 @@ import type { PageRef } from "@embedpdf/engine";
 import type { PageRect } from "../shared/geometry";
 
 /** Drags smaller than this (in points) are clicks, not regions. */
-export const MIN_REGION_SIZE = 2;
+const MIN_REGION_SIZE = 2;
 
 /** A point on a page, in points from its top-left. */
 interface Point {
