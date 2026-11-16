@@ -203,11 +203,20 @@ export function cellPadding(
 /**
  * Structural edits normalize table layout in one outer-document transaction.
  * Cells past the alignments' width are surplus: written after the row, unpadded.
+ * A header with surplus (a wider body row moved to the top) widens the table
+ * instead: a header wider than its delimiter row is not a table.
  */
 export function serializeTable(
   rows: readonly (readonly string[])[],
-  alignments: Table["alignments"],
+  tableAlignments: Table["alignments"],
 ): string {
+  const headerWidth = rows[0]?.length ?? 0;
+  const alignments = [
+    ...tableAlignments,
+    ...Array<null>(Math.max(0, headerWidth - tableAlignments.length)).fill(
+      null,
+    ),
+  ];
   const width = alignments.length;
   const normalized = rows.map((row) =>
     Array.from({ length: width }, (_, column) => cellText(row[column] ?? "")),
