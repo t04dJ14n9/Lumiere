@@ -14,7 +14,7 @@ import {
   isMarkdownPath,
   lookupKey,
   nameOf,
-  relativeVaultPath,
+  relativeLinkPath,
   withoutNoteExtension,
   type LinkSyntax,
 } from "../../shared/vault-path";
@@ -121,7 +121,12 @@ function targetText(
   const withoutNote = (path: string) =>
     isMarkdownPath(path) ? withoutNoteExtension(path) : path;
   if (context.format === "relative") {
-    return withoutNote(relativeVaultPath(folderOf(source), target));
+    const after = lowerCasePaths(context.pathsAfter);
+    return withoutNote(
+      relativeLinkPath(folderOf(source), target, (path) =>
+        after.has(path.toLowerCase()),
+      ),
+    );
   }
   const key = lookupKey(target);
   const isUnique =
@@ -130,6 +135,18 @@ function targetText(
     return withoutNote(nameOf(target));
   }
   return withoutNote(target);
+}
+
+const lowerCaseSets = new WeakMap<readonly string[], Set<string>>();
+
+/** `paths` lower-cased, built once per rename rather than once per link. */
+function lowerCasePaths(paths: readonly string[]): Set<string> {
+  let set = lowerCaseSets.get(paths);
+  if (!set) {
+    set = new Set(paths.map((path) => path.toLowerCase()));
+    lowerCaseSets.set(paths, set);
+  }
+  return set;
 }
 
 /**

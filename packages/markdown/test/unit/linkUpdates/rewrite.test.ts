@@ -442,3 +442,32 @@ test("a plain value that cannot hold the new name is written double-quoted", asy
   assert.equal(result, ["---", 'up: "see [[a #b: c]]"', "---", ""].join("\n"));
   assert.deepEqual(parse(result.split("---")[1]!), { up: "see [[a #b: c]]" });
 });
+
+test("a relative link to a note beside a root note of the same name keeps ./ and reads back", () => {
+  const text = "[[Old]] [o](Old.md)";
+  const notes = { "X.md": "", "notes/Old.md": "", "notes/Src.md": text };
+  const ctx = context(notes, { "notes/Old.md": "notes/X.md" }, "relative");
+  const result = apply(text, rewriteLinks(text, "notes/Src.md", ctx));
+  assert.equal(result, "[[./X]] [o](./X.md)");
+  const { index } = memoryVaults({
+    "X.md": "",
+    "notes/X.md": "",
+    "notes/Src.md": result,
+  });
+  for (const link of vaultLinks(metadata(result))) {
+    assert.equal(
+      index.resolveLink(linkpathOf(link)!, "notes/Src.md")?.path,
+      "notes/X.md",
+    );
+  }
+  // With no root note of that name, the bare name is enough.
+  const alone = context(
+    { "notes/Old.md": "", "notes/Src.md": text },
+    { "notes/Old.md": "notes/X.md" },
+    "relative",
+  );
+  assert.equal(
+    apply(text, rewriteLinks(text, "notes/Src.md", alone)),
+    "[[X]] [o](X.md)",
+  );
+});

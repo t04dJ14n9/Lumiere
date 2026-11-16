@@ -9,6 +9,11 @@
     is written double-quoted. A property link to a name with an apostrophe
     in a single-quoted value (`'[[Bob''s]]'`) now resolves and follows
     renames.
+  - With the relative link format, a link written into a folder (by a
+    rename, a suggestion or an inserted link) that a root file of the same
+    name would capture gets `./` in front (`[[./X]]`, `[x](./X.md)`), so it
+    opens the note in that folder instead of the root one. Markdown link
+    suggestions get the same check.
 
 - Daily Notes is removed: **Open Today's Daily Note**, **Open Previous
   Daily Note** and **Open Next Daily Note** are gone, with the
