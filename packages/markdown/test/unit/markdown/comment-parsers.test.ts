@@ -82,3 +82,14 @@ test("a literal %% in inline code or escaped does not open a comment that hides 
     assert.ok(html.includes("Public body"), literal);
   }
 });
+
+test("a %% inside inline math, a tag or a wikilink does not open a comment", () => {
+  for (const literal of ["$%%$", "<span title='%%'>x</span>", "[[a%%b]]"]) {
+    const note = `${literal}\n%%\nhidden\n%%\n# Public\n\nPublic body`;
+    assert.ok(!editorVisible(note).includes("hidden"), literal);
+    assert.deepEqual(headings(note), ["Public"], literal);
+    const html = renderMarkdown(note);
+    assert.ok(!html.includes("hidden"), literal);
+    assert.ok(html.includes("Public body"), literal);
+  }
+});

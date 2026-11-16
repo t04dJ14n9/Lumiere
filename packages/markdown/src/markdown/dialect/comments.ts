@@ -66,12 +66,8 @@ function continuedDepth(line: Line): number {
  * A `%%` line ends a paragraph, as a `$$` line does, unless the paragraph
  * has a `%%` of its own still open: then the line closes that comment.
  */
-function endsParagraph(
-  _cx: BlockContext,
-  line: Line,
-  leaf: LeafBlock,
-): boolean {
-  return opensCommentBlock(line) && !hasOpenComment(leaf.content);
+function endsParagraph(cx: BlockContext, line: Line, leaf: LeafBlock): boolean {
+  return opensCommentBlock(line) && !hasOpenComment(leaf.content, cx.parser);
 }
 
 export const comments: MarkdownConfig = {

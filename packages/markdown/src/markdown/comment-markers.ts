@@ -1,55 +1,27 @@
+/** What reads a paragraph's inline syntax: the editor's Markdown parser. */
+export interface InlineParser {
+  parseInline(
+    text: string,
+    offset: number,
+  ): readonly { from: number; to: number }[];
+}
+
 /**
- * Whether `text` ends inside an Obsidian `%%` comment: a `%%` opened in it
- * has no closing `%%` after it. Shared by the editor's parser and the
- * reading view's, so they agree on where a paragraph ends.
+ * Whether `text` ends inside an Obsidian `%%` comment: a `%%` in it opens a
+ * comment that does not close in it. Shared by the editor's parser and the
+ * reading view's, which both pass the editor's inline parser, so they agree
+ * on where a paragraph ends.
  *
- * Read as the inline parsers read it: a `%%` inside a code span, or right
- * after a backslash escape (`\%%` is a `%` and a `%`), is text. Inside a
- * comment only the next `%%` counts.
+ * A `%%` the inline parser made part of something (a comment it closes,
+ * code, math, a tag, a link, an escape: `\%%` is a `%` and a `%`) is not an
+ * opener; one left over is, since a closed comment would be an element.
  */
-export function hasOpenComment(text: string): boolean {
-  let at = 0;
-  while (at < text.length) {
-    const char = text[at]!;
-    if (char === "\\" && ESCAPABLE.test(text[at + 1] ?? "")) {
-      at += 2;
-    } else if (char === "`") {
-      at = afterCodeSpan(text, at);
-    } else if (text.startsWith("%%", at)) {
-      const close = text.indexOf("%%", at + 2);
-      if (close < 0) {
-        return true;
-      }
-      at = close + 2;
-    } else {
-      at++;
+export function hasOpenComment(text: string, parser: InlineParser): boolean {
+  const elements = parser.parseInline(text, 0);
+  for (let at = text.indexOf("%%"); at >= 0; at = text.indexOf("%%", at + 2)) {
+    if (!elements.some((element) => element.from <= at && at < element.to)) {
+      return true;
     }
   }
   return false;
-}
-
-/** ASCII punctuation, which a backslash escapes (CommonMark). */
-const ESCAPABLE = /^[!-/:-@[-`{-~]$/;
-
-/**
- * Where scanning goes on after the backtick run at `at`: past its code span
- * when a run of the same length closes it, else past the run, which is text.
- */
-function afterCodeSpan(text: string, at: number): number {
-  let end = at;
-  while (text[end] === "`") {
-    end++;
-  }
-  const run = text.slice(at, end);
-  for (let next = text.indexOf(run, end); next >= 0;) {
-    let after = next + run.length;
-    if (text[after] !== "`") {
-      return after;
-    }
-    while (text[after] === "`") {
-      after++;
-    }
-    next = text.indexOf(run, after);
-  }
-  return end;
 }
