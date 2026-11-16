@@ -4,7 +4,6 @@
  * small persistent state. Every path is checked against the roots first.
  */
 import type {
-  DiagnosticSink,
   Extensions,
   HostWorkspace,
   WorkerLauncher,
@@ -54,16 +53,9 @@ export function createHostWorkspace({
       : {}),
     watch: (uri, listener) => watchContained(inside, files, uri, listener),
     files: createWorkspaceFiles(files, roots),
-    diagnostics: noDiagnostics,
     revealTextEditor: async () => {},
   };
 }
-
-/** No Problems list outside VS Code. */
-const noDiagnostics: DiagnosticSink = {
-  replaceAll: () => {},
-  clear: () => {},
-};
 
 export function createWorkspaceFiles(
   files: HostFiles,
