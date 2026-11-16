@@ -39,6 +39,27 @@ function resetUser(...keys: string[]): void {
 
 const settingsEditor = (page: Page) => page.locator(".settings-editor");
 
+/**
+ * The Settings editor's row for a setting titled `title`. Its list draws
+ * only the rows on screen (and VS Code 1.146 shows the editor as a smaller
+ * overlay), so scroll the list down until the row is drawn.
+ */
+async function settingRow(page: Page, title: string) {
+  const row = settingsEditor(page)
+    .locator(".setting-item")
+    .filter({ hasText: title })
+    .first();
+  const list = settingsEditor(page).locator(".settings-tree-container");
+  await expect(async () => {
+    if (!(await row.isVisible())) {
+      await list.hover();
+      await page.mouse.wheel(0, 300);
+    }
+    await expect(row).toBeVisible({ timeout: 500 });
+  }).toPass({ timeout: 15_000 });
+  return row;
+}
+
 /** The rows of the open quick pick, as text. */
 const rows = (page: Page) => page.locator(".quick-input-list .monaco-list-row");
 
@@ -109,11 +130,7 @@ test("PDF: Open Settings opens the Settings editor on this extension's settings"
       .first(),
   ).toContainText(EXTENSION_QUERY);
   await expect(
-    settingsEditor(page)
-      .locator(".setting-item")
-      .filter({ hasText: "Keyboard Shortcuts" })
-      .first()
-      .getByRole("checkbox"),
+    (await settingRow(page, "Keyboard Shortcuts")).getByRole("checkbox"),
   ).toBeChecked();
   await page.screenshot({ path: "test-results/settings-open.png" });
 });
@@ -186,12 +203,7 @@ test("the View picker has a Settings… entry that opens the Settings editor", a
     .first()
     .click();
   await expect(settingsEditor(page)).toBeVisible();
-  await expect(
-    settingsEditor(page)
-      .locator(".setting-item")
-      .filter({ hasText: "Keyboard Shortcuts" })
-      .first(),
-  ).toBeVisible();
+  await expect(await settingRow(page, "Keyboard Shortcuts")).toBeVisible();
 });
 
 test("PDF: Change Setting… lists every setting, grouped with its value, and edits each by its type", async ({
@@ -285,10 +297,6 @@ test("a setting changed in the Settings editor shows in Change Setting… and th
   await page.keyboard.press("Escape");
   await command(page, "PDF: Open Settings");
   await expect(
-    settingsEditor(page)
-      .locator(".setting-item")
-      .filter({ hasText: "Keyboard Shortcuts" })
-      .first()
-      .getByRole("checkbox"),
+    (await settingRow(page, "Keyboard Shortcuts")).getByRole("checkbox"),
   ).not.toBeChecked();
 });
