@@ -391,11 +391,12 @@ into a throwaway profile and home folder under `/tmp`, and drives the window
 with Playwright. It never touches your own VS Code settings or extensions. Set
 `VSCODE_EXECUTABLE` to test another build, or Cursor (its `cursor` executable,
 for example `…/usr/share/cursor/cursor` in an extracted AppImage). On Linux
-without a display, run it under `xvfb-run -a`.
+it opens the window on a private 1920×1080 Xvfb display of its own;
+`LUMIERE_VSCODE_DISPLAY=inherit` keeps your display instead.
 
 Set `VSCODE_TEST_USE_SOURCE=1` to load the built extension and test fixtures
 through VS Code's extension development paths without installing any VSIX.
-For example, `VSCODE_TEST_USE_SOURCE=1 xvfb-run -a pnpm check:full` runs all
+For example, `VSCODE_TEST_USE_SOURCE=1 pnpm check:full` runs all
 local checks in this mode; `pnpm package` separately verifies packaging.
 
 On macOS, an empty test home can prompt for Keychain access. For credential-free
@@ -414,8 +415,7 @@ the two native suites sequentially; both use the same throwaway test directory.
 
 **Before every push run `pnpm check` and `pnpm test:browser`. Before merging a
 pull request, and before pushing a change to editor integration, run the full
-local check, `pnpm check:full`** (on headless Linux:
-`xvfb-run -a pnpm check:full`). It runs `pnpm check`, `pnpm test:browser` and
+local check, `pnpm check:full`**. It runs `pnpm check`, `pnpm test:browser` and
 `pnpm test:vscode` sequentially, stopping at the first failure. `pnpm check`
 already includes unit tests; no separate unit run is needed. The full local
 check does not include the separate CI packaging/size, secret-scan or advisory
@@ -449,7 +449,7 @@ request and on pushes to `main`. Each job, and how to run it locally:
 The real-VS Code specs (`pnpm test:vscode`) are not a CI job: run them locally
 before merging (see Development). Cursor cannot run in CI either, so test it
 by hand with
-`VSCODE_EXECUTABLE=<cursor executable> xvfb-run -a pnpm test:vscode`. CI never
+`VSCODE_EXECUTABLE=<cursor executable> pnpm test:vscode`. CI never
 uses API keys or other secrets. Dependabot proposes grouped npm and
 GitHub Actions updates weekly.
 
