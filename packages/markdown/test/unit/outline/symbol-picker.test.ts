@@ -152,3 +152,28 @@ test("each picker invocation sees unsaved authoritative heading edits", async (t
     ["Updated", "Added"],
   ]);
 });
+
+test("Go to Heading logs a jump that fails, and says so when Links is off for the note", async (t) => {
+  const fixture = await outlineFixture({ "A.md": "# A\n## B\n" });
+  t.after(() => fixture.root.dispose());
+  fixture.open(fixture.panel("one").panel);
+  fixture.fake.dialogs.pick = async ({ items }) => ({
+    item: items("")[1]!,
+    query: "",
+  });
+  const failure = new Error(
+    "The destination editor was not opened unambiguously",
+  );
+  const open = fixture.vaults.open;
+  fixture.vaults.open = async () => {
+    throw failure;
+  };
+  await fixture.fake.commands.get(GO_TO_HEADING_COMMAND)!();
+  assert.deepEqual(fixture.warnings, [failure]);
+
+  fixture.vaults.open = open;
+  fixture.links.enabled = false;
+  await fixture.fake.commands.get(GO_TO_HEADING_COMMAND)!();
+  assert.deepEqual(fixture.opened, []);
+  assert.equal(fixture.informs.length, 1);
+});
