@@ -11,8 +11,8 @@
     "test": "tsx --test \"test/unit/**/*.test.ts\""
   },
   "dependencies": {
-    "@capacitor/core": "8.6.0",
-    "@capacitor/ios": "8.6.0",
+    "@capacitor/core": "8.6.2",
+    "@capacitor/ios": "8.6.2",
     "@workshop/app": "workspace:*",
     "@workshop/host-node": "workspace:*",
     "@workshop/host-web": "workspace:*",
