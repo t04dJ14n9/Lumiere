@@ -66,7 +66,9 @@
     the item with its bullet and nested items, not only its text. An id on
     a heading embeds that heading instead of the whole note, and an id
     inside a quote or callout embeds the whole quote instead of a mangled
-    piece of it.
+    piece of it. Ticking a child task in such an embed ticks it in the
+    source note, and children indented with a mix of tabs and spaces stay
+    nested.
   - A `%%` comment block that spans blank lines or holds headings, lists or
     tables is one comment, as in Obsidian: it is hidden in rendered
     Markdown (embeds, previews, exports), dimmed in Live Preview, and its
