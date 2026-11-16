@@ -78,7 +78,7 @@ does not copy. Coloured highlight toggles appear on the editor context menu
 
 VS Code owns saves and undo. Formatting changes source directly, including table
 cell projections. Obsidian's command check callback hides the four guarded
-commands from its command list and disables the cell's block submenus; Lumia
+commands from its command list and disables the cell's block submenus; Lumiere
 leaves them in the command palette as no-ops. The guard treats any parsed `Table` position as a cell, including separator
 rows, raw table source in Source mode and tables the widget cannot draw;
 callout and checklist commands are still unguarded. No live-reference

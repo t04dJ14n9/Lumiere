@@ -16,7 +16,7 @@ import type { OutgoingMessage } from "./outbox";
  * The write that brings back Lumiere's annotations. Its events carry this id as
  * `origin.transaction.id`, which tells the file's annotations from new ones.
  */
-export const RESTORE_OP_ID = "lumia-restore-annotations";
+export const RESTORE_OP_ID = "lumiere-restore-annotations";
 
 /** Where a session reads the load it belongs to and sends its messages. */
 export interface SessionHost {

@@ -435,7 +435,7 @@ src/host (no vscode): portable viewer logic, reused by host-node
   scrolls and zooms the pages, in single, spread, paged and horizontal
   flows), `render` (a quick picture of each page, then sharp tiles),
   `interaction` (the active tool), `selection`, `search`, `history`,
-  `annotation`, `link` and `outline`, plus Lumiere's own `lumia-text`, which
+  `annotation`, `link` and `outline`, plus Lumiere's own `lumiere-text`, which
   gives the other layers each page's text and glyph boxes. Pages are laid out
   by the Stage, so the webview never reads a scroll offset: it moves and
   reads the view with Stage verbs (`webview/stage-*.ts`). Zoom is the Stage's

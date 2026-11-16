@@ -8,12 +8,12 @@ import { renderPlugin } from "@embedpdf/react/render";
 import { searchPlugin } from "@embedpdf/react/search";
 import { selectionPlugin } from "@embedpdf/react/selection";
 import { stagePlugin } from "@embedpdf/react/stage";
-import { LUMIA_ANNOTATION_TOOLS } from "../shared/annotation-tools";
+import { LUMIERE_ANNOTATION_TOOLS } from "../shared/annotation-tools";
 import { pagePictureWidth, type PaneSize } from "../shared/page-picture-width";
 import { MAX_ZOOM, MIN_ZOOM } from "../shared/zoom-steps";
 import { nativeZoom, rememberedPosition } from "./reading-position";
 import { layoutSettings } from "./stage-layout";
-import { lumiaTextPlugin } from "./text-access";
+import { lumiereTextPlugin } from "./text-access";
 
 /** The viewer shows one document under this id. */
 export const DOCUMENT_ID = "pdf";
@@ -67,11 +67,11 @@ export function viewerPlugins(
       // author is the viewer's identity (engine.tsx).
       afterCreate: { select: true, tool: "stay", editText: true },
       // Tools EmbedPDF does not ship: they join the hub as the document opens.
-      tools: LUMIA_ANNOTATION_TOOLS,
+      tools: LUMIERE_ANNOTATION_TOOLS,
     }),
     linkPlugin(),
     outlinePlugin(),
     // Text of a page, for look-up, backlink overlays and region text.
-    lumiaTextPlugin(),
+    lumiereTextPlugin(),
   ];
 }

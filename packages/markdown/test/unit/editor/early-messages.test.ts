@@ -8,7 +8,7 @@ function pageWith(queued: unknown[]) {
   let stopped = false;
   const fake = Object.assign(target, {
     location: { origin: "vscode-webview://page" },
-    lumiaEarlyMessages: {
+    lumiereEarlyMessages: {
       queue: queued.map((data) => new MessageEvent("message", { data })),
       stop: () => {
         stopped = true;

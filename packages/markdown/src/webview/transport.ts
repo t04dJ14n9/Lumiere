@@ -17,7 +17,7 @@ interface EarlyMessages {
 }
 declare global {
   interface Window {
-    lumiaEarlyMessages?: EarlyMessages;
+    lumiereEarlyMessages?: EarlyMessages;
   }
 }
 
@@ -34,7 +34,7 @@ export function webviewTransport(api: {
       };
       window.addEventListener("message", listener);
       // Same task as the listener's registration: nothing can interleave.
-      const early = window.lumiaEarlyMessages;
+      const early = window.lumiereEarlyMessages;
       early?.stop();
       early?.queue.forEach(listener);
       return () => window.removeEventListener("message", listener);

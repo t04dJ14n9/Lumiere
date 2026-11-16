@@ -3,7 +3,7 @@ import { test } from "node:test";
 import {
   ANNOTATE_IDLE_TOOL_ID,
   ANNOTATION_TOOL_IDS,
-  LUMIA_ANNOTATION_TOOLS,
+  LUMIERE_ANNOTATION_TOOLS,
   READ_TOOL_ID,
   fromV3ToolId,
   isAnnotateModeTool,
@@ -43,7 +43,9 @@ test("Annotate mode is a drawing tool or the resting tool, never View's read too
 });
 
 test("the arrow is a line tool with an open arrowhead at its end", () => {
-  const arrow = LUMIA_ANNOTATION_TOOLS.find((tool) => tool.id === "lineArrow");
+  const arrow = LUMIERE_ANNOTATION_TOOLS.find(
+    (tool) => tool.id === "lineArrow",
+  );
   assert.equal(arrow?.extends, "line");
   assert.deepEqual(arrow?.defaults.lineEndings, {
     start: "none",

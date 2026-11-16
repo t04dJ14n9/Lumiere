@@ -21,11 +21,14 @@ export interface TextAccess {
   slice(page: PageRef, range: TextRange): Promise<string>;
 }
 
-export const TextAccessToken = createCapabilityToken<TextAccess>("lumia-text", {
-  hint: "add lumiaTextPlugin() to the viewer's plugins",
-  // A stand-in without a document rejects, so a caller's `.catch` sees it.
-  promises: { layoutOf: true, textOf: true, slice: true },
-});
+export const TextAccessToken = createCapabilityToken<TextAccess>(
+  "lumiere-text",
+  {
+    hint: "add lumiereTextPlugin() to the viewer's plugins",
+    // A stand-in without a document rejects, so a caller's `.catch` sees it.
+    promises: { layoutOf: true, textOf: true, slice: true },
+  },
+);
 
 /**
  * The text of the open page, or null until the document is ready (the
@@ -41,9 +44,9 @@ export function useTextAccess(): TextAccess | null {
  * A read that fails (copy forbidden, page gone) is forgotten, so a later
  * ask tries again.
  */
-export const lumiaTextPlugin = () =>
+export const lumiereTextPlugin = () =>
   definePlugin({
-    id: "lumia-text",
+    id: "lumiere-text",
     token: TextAccessToken,
     scope: "document",
     create: (ctx) => {
