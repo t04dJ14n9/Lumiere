@@ -69,7 +69,7 @@ test.afterAll(() => {
 });
 
 /** The Markdown editor of whichever Lumiere webview is showing. */
-async function lumiaEditor(page: Page): Promise<Locator> {
+async function lumiereEditor(page: Page): Promise<Locator> {
   let found: Locator | undefined;
   await expect
     .poll(
@@ -120,7 +120,7 @@ test("Open Today's Daily Note creates and opens the note before any Lumiere edit
     await expect(
       page.locator(".tabs-container .tab").filter({ hasText: `${today()}.md` }),
     ).toBeVisible({ timeout: 20000 });
-    const editor = await lumiaEditor(page);
+    const editor = await lumiereEditor(page);
     await expect(editor).toContainText(`Opened on ${today().slice(0, 4)}`);
     await expect(
       page.locator(".notifications-toasts .notification-list-item"),

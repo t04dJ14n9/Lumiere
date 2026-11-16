@@ -76,7 +76,7 @@ export function isAnnotationToolId(value: unknown): value is AnnotationToolId {
 
 /**
  * Lumiere's id for a tool where EmbedPDF 3 names it differently. `lineArrow`
- * has no EmbedPDF tool: `LUMIA_ANNOTATION_TOOLS` registers it under its own id.
+ * has no EmbedPDF tool: `LUMIERE_ANNOTATION_TOOLS` registers it under its own id.
  */
 const V3_TOOL_IDS: Partial<Record<AnnotationToolId, string>> = {
   textComment: "note",
@@ -104,7 +104,7 @@ export function fromV3ToolId(
  * cannot be selected, moved or deleted while reading (EmbedPDF's resting
  * `pointer` tool enables all of that).
  */
-export const READ_TOOL_ID = "lumia.read";
+export const READ_TOOL_ID = "lumiere.read";
 
 /** Annotate mode with no drawing tool: select, move and delete marks. */
 export const ANNOTATE_IDLE_TOOL_ID = "pointer";
@@ -119,7 +119,7 @@ export function isAnnotateModeTool(id: string | null | undefined): boolean {
  * puts a tool on the interaction hub only when the document opens, so a tool
  * added later by `annotation.tools.register` could not be activated.
  */
-export const LUMIA_ANNOTATION_TOOLS = [
+export const LUMIERE_ANNOTATION_TOOLS = [
   {
     id: "lineArrow",
     extends: "line",
