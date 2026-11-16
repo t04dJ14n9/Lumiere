@@ -250,3 +250,15 @@ test("quoting a variable's value leaves the rest of the template's YAML as writt
   assert.ok(text.includes("serial: 18446744073709551615 # exact\n"), text);
   assert.ok(text.includes("ratio: 0.10000000000000000555\n"), text);
 });
+
+test("quoting a block value at the end of the properties keeps the closing --- on its own line", () => {
+  for (const style of ["|", ">"]) {
+    const template = `---\ntitle: '{{title}}'\ndescription: ${style}\n  {{title}}\n---\nBody`;
+    const text = expandTemplate(template, { title: "Bob's", now: NOW });
+    assert.deepEqual(frontmatter(text)?.values, {
+      title: "Bob's",
+      description: "Bob's\n",
+    });
+    assert.ok(text.endsWith("\n---\nBody"), text);
+  }
+});
