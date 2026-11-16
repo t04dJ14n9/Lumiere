@@ -10,6 +10,8 @@ export class ViewerLoads {
   loading = false;
   /** Counts loads begun: only the newest may end the loading state. */
   private attempts = 0;
+  /** Loads reading the annotation store for the bytes they will send. */
+  private storeReads = 0;
 
   /** A load starts reading the file; returns its attempt for `abandon`. */
   begin(): number {
@@ -38,6 +40,25 @@ export class ViewerLoads {
     }
     this.loading = false;
     return true;
+  }
+
+  /** A load reads the annotations kept for its bytes, until `storeRead`. */
+  readingStore(): void {
+    this.storeReads++;
+  }
+
+  storeRead(): void {
+    this.storeReads--;
+  }
+
+  /**
+   * Whether an annotation store save about `load` may be written. Unlike
+   * other messages it is still taken while new bytes are read: it is filed
+   * under the hash of the bytes it was made on, and dropping it loses the
+   * change. Once a load reads the store, a save would come too late for it.
+   */
+  acceptsStoreSave(load: number): boolean {
+    return load === this.current && this.storeReads === 0;
   }
 
   /** Whether a message is about the bytes the viewer shows now. */

@@ -139,6 +139,7 @@ export class StoreSession {
           this.host.post({
             type: "annotationStoreSave",
             load: state.load,
+            sha256: state.sha256,
             text,
           });
         } catch (error) {

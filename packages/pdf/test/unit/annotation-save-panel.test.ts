@@ -256,7 +256,12 @@ test("Retry repeats the annotation file save when that failed after the PDF writ
   const load = posted.find((m) => m.type === "load");
   assert.ok(load && load.type === "load");
   await saveAsked(save(load.load, INITIAL_SHA, bytesOf(1)));
-  await receive({ type: "annotationStoreSave", load: load.load, text: "A" });
+  await receive({
+    type: "annotationStoreSave",
+    load: load.load,
+    sha256: INITIAL_SHA,
+    text: "A",
+  });
   panel.postAnnotationRetry();
   assert.deepEqual(posted.at(-1), { type: "annotationRetry", load: load.load });
 });

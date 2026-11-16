@@ -14,7 +14,9 @@ export class AnnotationSave {
   /**
    * The file's hashes during the viewer's current load: as loaded, then as
    * this editor wrote it. A viewer that saves again before the last result
-   * reaches it still names an earlier one as its base.
+   * reaches it still names an earlier one as its base. Set by `loaded` when
+   * the bytes are sent, not read from the source later: by then a reload may
+   * have replaced its hash.
    */
   private known = { load: Number.NaN, hashes: new Set<string>() };
   /**
@@ -75,13 +77,14 @@ export class AnnotationSave {
     return next;
   }
 
-  /** Whether `base` is the file as the viewer's load had it at some point. */
-  private isKnownBase(load: number, base: string): boolean {
-    if (this.known.load !== load) {
-      const loaded = this.source.sha256;
-      this.known = { load, hashes: new Set(loaded ? [loaded] : []) };
-    }
-    return this.known.hashes.has(base);
+  /** The viewer was sent the bytes hashing to `sha256` as load `load`. */
+  loaded(load: number, sha256: string): void {
+    this.known = { load, hashes: new Set([sha256]) };
+  }
+
+  /** Whether `sha256` is the file as the viewer's load had it at some point. */
+  knows(load: number, sha256: string): boolean {
+    return this.known.load === load && this.known.hashes.has(sha256);
   }
 
   private wrote(load: number, sha256: string): void {
@@ -111,7 +114,7 @@ export class AnnotationSave {
       return;
     }
     this.lastBytes = message.data;
-    if (!this.isKnownBase(message.load, message.baseSha256)) {
+    if (!this.knows(message.load, message.baseSha256)) {
       this.reportConflict(
         message,
         "The PDF changed since this editor loaded it.",

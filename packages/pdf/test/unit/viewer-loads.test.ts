@@ -25,3 +25,19 @@ test("a failed read keeps the viewer on its load; a superseded one waits for the
   assert.equal(loads.abandon(newer), true);
   assert.equal(loads.isCurrent(1), true);
 });
+
+test("store saves about the shown load are taken until a reload reads the store", () => {
+  const loads = new ViewerLoads();
+  loads.begin();
+  loads.next();
+  loads.finished();
+  loads.begin();
+  assert.equal(loads.isCurrent(1), false);
+  assert.equal(loads.acceptsStoreSave(1), true);
+  loads.readingStore();
+  assert.equal(loads.acceptsStoreSave(1), false);
+  loads.storeRead();
+  loads.next();
+  assert.equal(loads.acceptsStoreSave(1), false);
+  assert.equal(loads.acceptsStoreSave(2), true);
+});
