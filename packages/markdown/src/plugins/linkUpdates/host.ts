@@ -87,7 +87,14 @@ async function askToUpdate(
     [update, always, "Don't Update"],
   );
   if (answer === always) {
-    await host.settings.access.update("linkUpdates.mode", "always", resource);
+    // Per vault, as Obsidian's `alwaysUpdateLinks`: a user-wide value would
+    // rewrite links in every other vault without asking.
+    await host.settings.access.update(
+      "linkUpdates.mode",
+      "always",
+      resource,
+      "workspaceFolder",
+    );
   }
   return answer === update || answer === always;
 }
