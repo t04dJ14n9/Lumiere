@@ -19,7 +19,9 @@ is opt-in (`lumiere.pdf.regions.enabled`, default off).
   Ctrl/⌘+wheel and pinch zoom around the pointer (a wheel notch zooms by 1.2),
   find in PDF (⌘F / Ctrl+F), internal links and web links.
   When the file changes on disk (a rebuilt paper), the viewer reloads at the
-  same page and zoom.
+  same page and zoom; a touch or sync that leaves its bytes as they were
+  reloads nothing. Annotations made while it reloads are kept with the
+  version they were made on.
 - **View controls.** A View picker in the editor title/status bar, and a
   compact **View** menu in the slim toolbar of the web and iPad hosts, selects zoom, layout,
   scrolling mode and direction. Saved choices and reading position return

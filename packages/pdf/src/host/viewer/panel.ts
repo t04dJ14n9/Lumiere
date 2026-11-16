@@ -117,7 +117,7 @@ export class PdfViewerPanel {
       failed: (message) => host.error(message),
     });
     this.annotations = new PanelAnnotations(fileUri, host, this.source, {
-      isCurrentLoad: (load) => this.isCurrentLoad(load),
+      loads: this.loads,
       post: (message) => this.post(message),
     });
     this.onAnnotationConflict = this.annotations.conflict.event;
@@ -364,7 +364,7 @@ export class PdfViewerPanel {
         await this.onHistoryJump(message);
         break;
       case "historyTraverse":
-        if (this.isCurrentLoad(message.load)) {
+        if (this.loads.isCurrent(message.load)) {
           await this.options.route(message);
         }
         break;
@@ -397,18 +397,13 @@ export class PdfViewerPanel {
     this.applyPatch(message.patch);
   }
 
-  /** Whether a message is about the bytes the viewer shows now. */
-  private isCurrentLoad(load: number): boolean {
-    return this.loads.isCurrent(load);
-  }
-
   private onHistoryReport(
     message: Extract<
       ViewerMessage,
       { type: "historyCaptured" | "historyRestored" }
     >,
   ): void {
-    if (this.isCurrentLoad(message.load)) {
+    if (this.loads.isCurrent(message.load)) {
       this.history.answer(message);
     }
   }
@@ -416,7 +411,7 @@ export class PdfViewerPanel {
   private async onHistoryJump(
     message: Extract<ViewerMessage, { type: "historyJump" }>,
   ): Promise<void> {
-    if (!this.isCurrentLoad(message.load) || message.id <= this.lastJump) {
+    if (!this.loads.isCurrent(message.load) || message.id <= this.lastJump) {
       return;
     }
     this.lastJump = message.id;
@@ -463,8 +458,11 @@ export class PdfViewerPanel {
       }
       return;
     }
+    this.loads.readingStore();
     const annotations = await this.annotations.read(bytes.sha256);
+    this.loads.storeRead();
     const load = this.loads.next();
+    this.annotations.loaded(load, bytes.sha256);
     this.post({
       type: "load",
       load,
