@@ -2,6 +2,12 @@
 
 ## 0.1.0 (unreleased)
 
+- Jumping to a heading from the Outline, Go to Heading or a link no longer
+  flashes another part of the note first. When an image above the heading
+  loaded after the jump, one frame showed the note pushed down by the
+  image's height, and the next showed the sticky headings of the section
+  above; both now settle before the frame is drawn.
+
 - Fixed (Obsidian compliance audit, 2026-11-16):
   - Renaming a note to a name with `'` or `"` no longer breaks the
     frontmatter of notes that link to it from a property. The new link is
