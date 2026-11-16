@@ -145,6 +145,9 @@ export async function compatFixture() {
           return true;
         },
         async writeBytes() {},
+        async createBytes() {
+          return true;
+        },
         mkdir: async () => {
           await hooks.beforeMkdir?.();
         },

@@ -22,6 +22,9 @@ function memoryFiles(written: Map<string, string>): WorkspaceFiles {
       return true;
     },
     async writeBytes() {},
+    async createBytes() {
+      return true;
+    },
     async list(uri) {
       const prefix = `${uri}/`;
       return [...written.keys()]
