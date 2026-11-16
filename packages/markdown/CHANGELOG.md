@@ -30,6 +30,10 @@
   - A rename no longer skips notes the vault index has not parsed yet (a
     large vault's first start): their text is read and rewritten too, and
     a message names any that could not be read in time.
+  - A callout written with an alias (`[!tldr]`, `[!faq]`) keeps that type in
+    its `data-callout` attribute, as Obsidian does, so CSS snippets that
+    select `[data-callout="tldr"]` apply. Its icon and colour are still
+    those of the main type.
 
 - Daily Notes is removed: **Open Today's Daily Note**, **Open Previous
   Daily Note** and **Open Next Daily Note** are gone, with the
