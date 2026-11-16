@@ -1,5 +1,6 @@
 import type { MarkdownIt, StateBlock } from "markdown-it";
 import { hasOpenComment } from "../comment-markers";
+import { markdownParser } from "../dialect";
 
 /**
  * `%%comments%%` are hidden, as in Obsidian's reading view: inline within a
@@ -54,7 +55,7 @@ function commentBlock(
       state.bMarks[state.line],
       state.eMarks[startLine - 1],
     );
-    return !hasOpenComment(paragraph);
+    return !hasOpenComment(paragraph, markdownParser);
   }
   const close = closingLine(state, startLine + 1, endLine);
   const token = state.push("obsidian_comment_block", "", 0);
