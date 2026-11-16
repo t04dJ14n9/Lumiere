@@ -7,10 +7,9 @@ test("callout aliases, fallback kinds and fold flags preserve distinct container
   const result = renderMarkdown(
     "> [!tldr]+ Summary\n> Body\n\n> [!unknown]-\n> Other",
   );
-  assert.match(
-    result,
-    /<details class="callout" data-callout="abstract" open>/,
-  );
+  // Obsidian keeps the written alias in data-callout, so snippets that
+  // select [data-callout="tldr"] match; the alias's colours come from CSS.
+  assert.match(result, /<details class="callout" data-callout="tldr" open>/);
   assert.match(
     result,
     /<summary class="callout-title"><span class="callout-title-text">Summary<\/span><button type="button" class="callout-fold" aria-label="Toggle callout">›<\/button><\/summary>/,
