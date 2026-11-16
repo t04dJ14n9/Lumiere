@@ -33,6 +33,11 @@ export class AnnotationSave {
    * a PDF it sends unasked is never written.
    */
   private requested = { load: Number.NaN, count: 0 };
+  /**
+   * The newest write into the PDF this editor made, for one load. Keep mine
+   * for an older write's conflict would put that older PDF back over it.
+   */
+  private newestWritten = { load: Number.NaN, write: 0 };
 
   constructor(
     private readonly fileUri: string,
@@ -110,7 +115,10 @@ export class AnnotationSave {
     return this.known.load === load && this.known.hashes.has(sha256);
   }
 
-  private wrote(load: number, sha256: string): void {
+  private wrote(load: number, write: number, sha256: string): void {
+    if (this.newestWritten.load !== load || write > this.newestWritten.write) {
+      this.newestWritten = { load, write };
+    }
     this.source.acceptWrite(sha256);
     if (this.known.load === load) {
       this.known.hashes.add(sha256);
@@ -119,6 +127,23 @@ export class AnnotationSave {
 
   private async keepMineNow(conflict: PdfWriteConflict): Promise<void> {
     if (!this.deps.isCurrentLoad(conflict.load) || !this.files.writeAtomic) {
+      return;
+    }
+    if (
+      this.newestWritten.load === conflict.load &&
+      conflict.write < this.newestWritten.write
+    ) {
+      const text =
+        "A later Save into This PDF already wrote the file; Keep mine would put this older PDF over it.";
+      this.deps.error(text);
+      this.deps.post({
+        type: "annotationSaveResult",
+        load: conflict.load,
+        write: conflict.write,
+        ok: false,
+        reason: "error",
+        message: text,
+      });
       return;
     }
     await this.write(
@@ -188,7 +213,7 @@ export class AnnotationSave {
     this.dirty = "saving";
     try {
       const written = await writeAtomic(this.fileUri, bytes);
-      this.wrote(load, written.sha256);
+      this.wrote(load, write, written.sha256);
       this.dirty = "clean";
       this.deps.saved();
       this.deps.post({

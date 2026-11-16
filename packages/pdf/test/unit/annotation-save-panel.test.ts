@@ -1,6 +1,7 @@
 import assert from "node:assert/strict";
 import { createHash } from "node:crypto";
 import { test } from "node:test";
+import type { PdfWriteConflict } from "../../src/host/viewer/annotation-save";
 import { PdfViewerPanel } from "../../src/host/viewer/panel";
 import type { PdfFiles, PdfWebview } from "../../src/shared/host";
 import type { HostMessage } from "../../src/shared/messages";
@@ -116,9 +117,9 @@ test("annotationSave overwrites and suppresses watcher reload", async () => {
 
 const bytesOf = (...values: number[]) =>
   new Uint8Array([37, 80, 68, 70, ...values]);
-const save = (load: number, base: string, data: Uint8Array) => ({
+const save = (load: number, base: string, data: Uint8Array, write = 1) => ({
   type: "annotationSave",
-  write: 1,
+  write,
   load,
   baseSha256: base,
   data: data.buffer.slice(data.byteOffset, data.byteOffset + data.byteLength),
@@ -584,4 +585,42 @@ test("a reload superseded while it reads the annotation store never sends its ol
   const last = sent.at(-1)!;
   assert.ok(last.type === "load");
   assert.equal(last.sha256, createHash("sha256").update(V2).digest("hex"));
+});
+
+test("Keep mine for a conflict is refused once a later Save into This PDF has written", async () => {
+  let disk = INITIAL;
+  let hashFails = true;
+  const { posted, receive, panel, saveAsked } = open({
+    read: async () => disk,
+    hash: async () => {
+      if (hashFails) {
+        hashFails = false;
+        throw new Error("EAGAIN");
+      }
+      return createHash("sha256").update(disk).digest("hex");
+    },
+    writeAtomic: async (_uri, bytes) => {
+      disk = new Uint8Array(bytes);
+      return { sha256: createHash("sha256").update(disk).digest("hex") };
+    },
+  });
+  const conflicts: PdfWriteConflict[] = [];
+  panel.onAnnotationConflict((payload) => conflicts.push(payload));
+  await receive({ type: "ready" });
+  const load = posted.find((m) => m.type === "load");
+  assert.ok(load && load.type === "load");
+  const first = bytesOf(1);
+  const second = bytesOf(2);
+  // The first write's disk check fails once: a conflict, Keep mine offered.
+  await saveAsked(save(load.load, INITIAL_SHA, first, 1));
+  assert.equal(conflicts.length, 1);
+  // The second, with an annotation made since, is written.
+  await saveAsked(save(load.load, INITIAL_SHA, second, 2));
+  assert.deepEqual([...disk], [...second]);
+
+  await panel.keepMine(conflicts[0]!);
+  assert.deepEqual([...disk], [...second], "the older PDF was put back");
+  const result = posted.filter((m) => m.type === "annotationSaveResult").at(-1);
+  assert.ok(result && result.type === "annotationSaveResult" && !result.ok);
+  assert.equal(result.write, 1);
 });

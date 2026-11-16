@@ -18,6 +18,10 @@
     that fails no longer loses annotations an earlier one did not take; a
     change made during the write to one it took is reported as a change to
     the PDF's annotations rather than dropped.
+    Save into This PDF never writes over a file the viewer was not sent (a
+    reload, or another program, changed it), and Keep mine for a conflict
+    never puts an older PDF over a later save; overlapping reloads show
+    the newest file.
   - The selection handed to Codex is written in a private temporary folder,
     and the agent bridge compares its token in constant time.
 
