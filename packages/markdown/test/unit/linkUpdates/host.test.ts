@@ -142,14 +142,14 @@ test("settledWithin stops waiting at the limit", async () => {
 test("Always Update rewrites the links and stops asking for that note", async () => {
   const { root, fake, host } = await start();
   const writes: unknown[][] = [];
-  host.settings.access.update = async (key, value, resource) => {
-    writes.push([key, value, resource]);
+  host.settings.access.update = async (key, value, resource, scope) => {
+    writes.push([key, value, resource, scope]);
     return "workspaceFolder";
   };
   fake.answerWith("Always Update");
   assert.equal((await fake.rename(rename)).length, 2);
   assert.deepEqual(writes, [
-    ["linkUpdates.mode", "always", uriOf("Topic/Old.md")],
+    ["linkUpdates.mode", "always", uriOf("Topic/Old.md"), "workspaceFolder"],
   ]);
   await root.dispose();
 });

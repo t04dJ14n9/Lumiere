@@ -21,7 +21,9 @@ name follows it: a Markdown link's text equal to the note's name
 equal to the name when the link has folders (`[[f/Old|Old]]`). A moved note's own path-style links are
 rewritten too. Folder renames cover every file inside. By default it asks
 first, matching Obsidian's `alwaysUpdateLinks: false` (Update Links, Always
-Update, which persistently sets the mode to `always`, or Don't Update).
+Update, which sets the mode to `always` in the note's workspace folder
+settings, so it stays with that vault as Obsidian's `app.json` does, or
+Don't Update).
 `always` rewrites without asking and `never` leaves links untouched. It counts
 the notes from the index's parsed links so that asking reads and rewrites
 nothing (unless a note is still unparsed, then from the notes' current text),
