@@ -90,6 +90,21 @@ export class AnnotationSave {
     this.known = { load, hashes: new Set([sha256]) };
   }
 
+  /**
+   * Whether the file on disk is as the viewer's load had it: as loaded, or
+   * as this editor wrote it since. Not the source's hash: a reload still
+   * reading the annotation store has already replaced that with bytes the
+   * viewer has not been sent.
+   */
+  private async diskIsKnown(load: number): Promise<boolean> {
+    try {
+      const disk = await this.source.diskHash();
+      return disk === undefined || this.knows(load, disk);
+    } catch {
+      return false;
+    }
+  }
+
   /** Whether `sha256` is the file as the viewer's load had it at some point. */
   knows(load: number, sha256: string): boolean {
     return this.known.load === load && this.known.hashes.has(sha256);
@@ -146,7 +161,7 @@ export class AnnotationSave {
       });
       return;
     }
-    const diskMatches = await this.source.diskMatchesBase();
+    const diskMatches = await this.diskIsKnown(message.load);
     // A reload during the check gave the viewer other bytes than these; a
     // conflict could no longer be settled with Keep mine.
     if (!this.deps.isCurrentLoad(message.load)) {
