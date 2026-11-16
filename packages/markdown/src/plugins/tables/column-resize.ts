@@ -199,9 +199,6 @@ export class ColumnResize {
     }
     drag.width = width;
     this.liveCol(drag.column).style.width = `${width}px`;
-    // The table grows or shrinks with it: every other column keeps its width.
-    const others = drag.frozen.reduce((sum, each) => sum + each, 0) - start;
-    this.table.style.width = `${others + width}px`;
     this.placeGuide(drag.edge + width - start);
   }
 
@@ -239,33 +236,26 @@ export class ColumnResize {
     this.showHover();
   }
 
-  /**
-   * Every column gets a width (one added since, the width it has now), and
-   * the table their sum: with its width left `auto`, a browser lays a fixed
-   * table out as an automatic one, where a `<col>` width is only a minimum
-   * and typing a longer word into a cell widens its column.
-   */
   private paint(widths: ColumnWidth[] | undefined): void {
-    const shown = this.measureColumns();
     this.table.querySelector("colgroup")?.remove();
     if (!widths?.some((width) => width !== undefined)) {
       this.table.style.tableLayout = "";
-      this.table.style.width = "";
       return;
     }
-    const count = Math.max(widths.length, shown.length);
-    const full = Array.from(
-      { length: count },
-      (_, index) => widths[index] ?? shown[index] ?? MIN_COLUMN_WIDTH,
-    );
+    this.table.style.tableLayout = "fixed";
     const group = document.createElement("colgroup");
-    for (const width of full) {
+    const count = Math.max(
+      widths.length,
+      this.table.rows[0]?.cells.length ?? 0,
+    );
+    for (let index = 0; index < count; index++) {
       const col = document.createElement("col");
-      col.style.width = `${width}px`;
+      const width = widths[index];
+      if (width !== undefined) {
+        col.style.width = `${width}px`;
+      }
       group.append(col);
     }
-    this.table.style.tableLayout = "fixed";
-    this.table.style.width = `${full.reduce((sum, width) => sum + width, 0)}px`;
     this.table.prepend(group);
   }
 
