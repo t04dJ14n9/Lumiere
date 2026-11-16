@@ -88,3 +88,15 @@ test("a %% block over blank lines hides its headings; its links and tags stay in
     ["Kept"],
   );
 });
+
+test("a CRLF note's frontmatter is not also read as body text", () => {
+  const note = metadata('---\r\nup: "[[Old]]"\r\n---\r\n[[Old]]');
+  assert.deepEqual(
+    note.links.map((link) => link.position.start.offset),
+    [25],
+  );
+  assert.deepEqual(
+    note.frontmatterLinks.map((link) => link.position.start.offset),
+    [10],
+  );
+});

@@ -22,14 +22,29 @@
     `lumiere.markdown.linkUpdates.mode: always` to the note's workspace
     folder settings (`.vscode/settings.json`, or the workspace's when the
     note is in no folder) instead of your user settings, so it applies to
-    that vault only, as Obsidian keeps `alwaysUpdateLinks` per vault. A
-    user-level `always` written by an earlier version stays until you
-    remove it.
+    that vault only, as Obsidian keeps `alwaysUpdateLinks` per vault.
+    Known limitations: the choice is kept per workspace folder, not per
+    vault, so several vaults inside one folder share it; and a user-level
+    `always` written by an earlier version is not migrated, so it stays
+    (and applies to every vault) until you remove it.
   - Renaming or moving a note or attachment now updates `.canvas` files:
     file nodes follow the file, and links in text nodes are rewritten.
   - A rename no longer skips notes the vault index has not parsed yet (a
     large vault's first start): their text is read and rewritten too, and
-    a message names any that could not be read in time.
+    a message names any that could not be read in time. A note or canvas
+    that cannot be read or parsed is named in that message too, instead of
+    making the whole rename fail and leaving every link unchanged, and the
+    message shows even when the prompt is skipped because no other note
+    changes. Unparsed notes and canvases share one 20-second reading
+    budget across the prompt's count and the rewrite (each note is read
+    once), so a rename stays inside VS Code's participant timeout.
+  - A property link in a note with Windows (CRLF) line endings is rewritten
+    by a rename; the note's frontmatter was also read as body text, and the
+    link counted twice was dropped.
+  - A note you type in while the rename runs is no longer edited at
+    positions computed from its earlier text: it is left as it is and
+    named in the "Links … were not updated" warning. Canvases are covered
+    too.
   - A callout written with an alias (`[!tldr]`, `[!faq]`) keeps that type in
     its `data-callout` attribute, as Obsidian does, so CSS snippets that
     select `[data-callout="tldr"]` apply. Its icon and colour are still
