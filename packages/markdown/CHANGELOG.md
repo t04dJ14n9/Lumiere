@@ -18,6 +18,13 @@
     Obsidian does, instead of pasting its `---` block into the note: the
     note's values stay, missing properties are added and lists are joined.
     Only the body goes in at the caret.
+  - **Always Update** in the link update prompt now writes
+    `lumiere.markdown.linkUpdates.mode: always` to the note's workspace
+    folder settings (`.vscode/settings.json`, or the workspace's when the
+    note is in no folder) instead of your user settings, so it applies to
+    that vault only, as Obsidian keeps `alwaysUpdateLinks` per vault. A
+    user-level `always` written by an earlier version stays until you
+    remove it.
 
 - Daily Notes is removed: **Open Today's Daily Note**, **Open Previous
   Daily Note** and **Open Next Daily Note** are gone, with the

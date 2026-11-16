@@ -66,11 +66,19 @@ export interface SettingsAccess {
     key: string,
     resource?: string,
   ): { value: unknown; target: SettingTarget };
-  /** Writes the key where `inspect` says (the workspace if it sets it, else the user's settings). */
+  /**
+   * Writes the key where `inspect` says (the workspace if it sets it, else
+   * the user's settings). With `scope: "workspaceFolder"`, a key the user's
+   * settings would hold goes to `resource`'s workspace folder instead (or
+   * the workspace, when `resource` is in no folder), so the value stays
+   * with that vault, as Obsidian keeps it in the vault's `app.json`. Hosts
+   * with a single settings store ignore `scope`.
+   */
   update(
     key: string,
     value: unknown,
     resource?: string,
+    scope?: "workspaceFolder",
   ): Promise<SettingTarget>;
   /** The extension's contributed settings, straight from its package.json. */
   contributed(): readonly ContributedSetting[];
