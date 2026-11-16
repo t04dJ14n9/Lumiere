@@ -9,7 +9,14 @@ links** setting.
 Before VS Code renames files, the plugin waits (up to five seconds) for the
 vault index to parse what is queued, finds every note that links to them
 (through the vault index's backlinks), re-reads each note's current text and
-rewrites only the path of each link: a wikilink stays a wikilink, a Markdown
+rewrites only the path of each link. A note the index has still not parsed
+when the wait ends has no backlinks yet, so its text is read too (for up to
+20 seconds, to stay inside VS Code's rename timeout); a message names any
+left unread. Every `.canvas` file in the vault is read as well: a file
+node's path follows the renamed file and a text node's Markdown links are
+rewritten as a note's, from the canvas's path, and the canvas is written
+back as Obsidian writes it (`JSON.stringify` with its own indentation). In
+notes, a wikilink stays a wikilink, a Markdown
 link stays a Markdown link, and `#subpaths`, aliases, titles, `<…>`
 destinations and a table row's escaped `\|` are kept. A link in a property
 value is escaped for the value's quoting (`'` doubled in single quotes, `"`
@@ -52,6 +59,8 @@ others; a message names it.
 
 - `host.ts`: the rename hook, the prompt and folder expansion.
 - `rewrite.ts`: the links a rename changes in one note, and their edits.
+- `canvas.ts`: a `.canvas` file's file nodes and text-node links after a
+  rename.
 - `yaml-safe-edits.ts`: link edits escaped for the property value around them.
 - `link-source.ts`: a link's source split around its path, and written back.
 - `rename-label.ts`: the alias or link text that follows a rename.

@@ -278,3 +278,88 @@ test("a moved note the index has not parsed and that links nothing does not ask"
   assert.deepEqual(edits, []);
   await root.dispose();
 });
+
+test("a rename updates the file nodes and Markdown text of a canvas", async () => {
+  const canvas = JSON.stringify(
+    {
+      nodes: [
+        { id: "1", type: "file", file: "Topic/Old.md", x: 0, y: 0 },
+        { id: "2", type: "text", text: "See [[Old]] and [x](Topic/Old.md)" },
+        { id: "3", type: "file", file: "C.md" },
+      ],
+      edges: [],
+    },
+    null,
+    "\t",
+  );
+  const { root, fake } = await start(
+    { "linkUpdates.mode": "always" },
+    { "Board.canvas": canvas },
+  );
+  const edits = await fake.rename(rename);
+  const board = edits.find((file) => file.uri === uriOf("Board.canvas"));
+  assert.ok(board, "the canvas is edited");
+  assert.equal(board.edits.length, 1);
+  const data = JSON.parse(board.edits[0]!.text) as {
+    nodes: { file?: string; text?: string }[];
+  };
+  assert.equal(data.nodes[0]!.file, "Topic/New.md");
+  assert.equal(data.nodes[1]!.text, "See [[New]] and [x](New.md)");
+  assert.equal(data.nodes[2]!.file, "C.md");
+  assert.match(board.edits[0]!.text, /^\{\n\t"nodes"/);
+  await root.dispose();
+});
+
+test("the prompt counts a canvas that links to the renamed note", async () => {
+  const canvas = JSON.stringify({
+    nodes: [{ id: "1", type: "file", file: "Topic/Old.md" }],
+  });
+  const { root, fake } = await start({}, { "Board.canvas": canvas });
+  fake.answerWith("Update Links");
+  await fake.rename(rename);
+  assert.deepEqual(fake.prompts, ["Update links in 3 files?"]);
+  await root.dispose();
+});
+
+test("a note the index has not parsed is read, not skipped, when it links to the renamed note", async () => {
+  const { root, fake, index } = await start(
+    { "linkUpdates.mode": "always" },
+    { "D.md": "Unindexed [[Old]]" },
+  );
+  // The settle gave up before D.md was parsed: no backlink names it.
+  index.setMetadata("D.md", undefined);
+  const edits = await fake.rename(rename);
+  assert.deepEqual(
+    edits.map((file) => [file.uri, file.edits.map((edit) => edit.text)]),
+    [
+      [uriOf("A.md"), ["[[New|the old note]]", "[[New#Part]]"]],
+      [uriOf("B.md"), ["![[New]]"]],
+      [uriOf("D.md"), ["[[New]]"]],
+    ],
+  );
+  await root.dispose();
+});
+
+test("notes left unread when the scan runs out of time are named to the user", async (t) => {
+  const { root, fake, host, index } = await start(
+    { "linkUpdates.mode": "always" },
+    { "D.md": "Unindexed [[Old]]", "E.md": "Unindexed too" },
+  );
+  index.setMetadata("D.md", undefined);
+  index.setMetadata("E.md", undefined);
+  const errors: string[] = [];
+  host.dialogs.error = (message) => {
+    errors.push(message);
+  };
+  // Every clock read is a minute later: the deadline passes at once.
+  let now = 0;
+  t.mock.method(Date, "now", () => (now += 60_000));
+  const edits = await fake.rename(rename);
+  assert.deepEqual(
+    edits.map((file) => file.uri),
+    [uriOf("A.md"), uriOf("B.md")],
+  );
+  assert.equal(errors.length, 1);
+  assert.match(errors[0]!, /not checked in 2 notes .*D\.md, E\.md/);
+  await root.dispose();
+});
