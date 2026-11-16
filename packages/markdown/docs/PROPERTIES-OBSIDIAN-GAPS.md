@@ -72,7 +72,7 @@ Severity: **P0** height/remount or editing broken · **P1** clear visual/interac
 
 | ID | Topic | Why |
 | --- | --- | --- |
-| G22 | Daily note link on date | No daily-note capability |
+| G22 | Daily note link on date | Removed: not planned. Lumiere has no daily notes |
 | G23 | Native date picker chrome | Chromium/OS |
 | G24 | Theme colour exact match | VS Code tokens |
 | G25 | Collapse global across vaults | Obsidian per-note (measured); workspace-scoped storage OK |

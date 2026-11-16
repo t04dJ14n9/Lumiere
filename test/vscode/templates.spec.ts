@@ -1,5 +1,4 @@
 import { test, expect, chromium } from "@playwright/test";
-import type { Locator, Page } from "@playwright/test";
 import {
   existsSync,
   mkdirSync,
@@ -21,10 +20,9 @@ import {
 
 const folderSettings = path.join(paths.workspace, ".vscode", "settings.json");
 const templates = path.join(paths.workspace, "Templates");
-const journal = path.join(paths.workspace, "Journal");
 const target = path.join(paths.workspace, "TemplateTarget.md");
 
-/** Local date as `YYYY-MM-DD`, which the daily note and `{{date}}` both use. */
+/** Local date as `YYYY-MM-DD`, which `{{date}}` uses by default. */
 function today(): string {
   const now = new Date();
   const pad = (value: number) => String(value).padStart(2, "0");
@@ -39,26 +37,18 @@ test.beforeAll(() => {
     : undefined;
   mkdirSync(templates, { recursive: true });
   writeFileSync(
-    path.join(templates, "Daily.md"),
-    "# {{title}}\n\nOpened on {{date:YYYY}}\n",
-  );
-  writeFileSync(
     path.join(templates, "Inline.md"),
     "{{title}} on {{date:YYYY-MM-DD}}",
   );
   mkdirSync(path.dirname(folderSettings), { recursive: true });
   writeFileSync(
     folderSettings,
-    JSON.stringify({
-      "lumiere.markdown.dailyNotes.folder": "Journal",
-      "lumiere.markdown.dailyNotes.template": "Templates/Daily",
-      "lumiere.markdown.templates.folder": "Templates",
-    }),
+    JSON.stringify({ "lumiere.markdown.templates.folder": "Templates" }),
   );
 });
 
 test.afterAll(() => {
-  for (const leftover of [templates, journal, target]) {
+  for (const leftover of [templates, target]) {
     rmSync(leftover, { recursive: true, force: true });
   }
   if (savedSettings === undefined) {
@@ -68,38 +58,15 @@ test.afterAll(() => {
   }
 });
 
-/** The Markdown editor of whichever Lumiere webview is showing. */
-async function lumiereEditor(page: Page): Promise<Locator> {
-  let found: Locator | undefined;
-  await expect
-    .poll(
-      async () => {
-        for (const frame of page.frames()) {
-          const editor = frame.getByRole("textbox", {
-            name: "Markdown content",
-          });
-          if (await editor.count()) {
-            found = editor;
-            return true;
-          }
-        }
-        return false;
-      },
-      { timeout: 15000 },
-    )
-    .toBe(true);
-  return found!;
-}
-
-// Lumiere starts the commands of a window when VS Code activates the extension;
-// the daily notes ones used to wait for the first Lumiere panel, so in a window
-// where no note had been opened yet VS Code reported them as not found.
-test("Open Today's Daily Note creates and opens the note before any Lumiere editor exists", async () => {
+// Templates is a deferred window feature: it starts on the first Lumiere
+// panel's editor/ready. Reloading first gives a window where no panel has
+// existed yet, however many notes earlier specs opened, so the note opened
+// here is the one that must start it.
+test("Insert Template, in a fresh window, replaces the selection and leaves the caret after the text", async () => {
+  writeFileSync(target, "alpha beta gamma");
   const browser = await chromium.connectOverCDP(readState().webSocket);
   try {
     let page = workbenchPage(browser);
-    // Nothing open, then reload: the extension starts again in this window
-    // with no panel, however many notes earlier specs opened.
     await closeEditorGroups(page);
     await command(page, "Developer: Reload Window");
     await page.waitForTimeout(1000);
@@ -109,42 +76,6 @@ test("Open Today's Daily Note creates and opens the note before any Lumiere edit
     });
     await expect(page.locator(".tabs-container .tab")).toHaveCount(0);
 
-    const note = path.join(journal, `${today()}.md`);
-    expect(existsSync(note)).toBe(false);
-    await command(page, "Lumiere: Open Today's Daily Note");
-
-    await expect.poll(() => existsSync(note), { timeout: 20000 }).toBe(true);
-    expect(readFileSync(note, "utf8")).toBe(
-      `# ${today()}\n\nOpened on ${today().slice(0, 4)}\n`,
-    );
-    await expect(
-      page.locator(".tabs-container .tab").filter({ hasText: `${today()}.md` }),
-    ).toBeVisible({ timeout: 20000 });
-    const editor = await lumiereEditor(page);
-    await expect(editor).toContainText(`Opened on ${today().slice(0, 4)}`);
-    await expect(
-      page.locator(".notifications-toasts .notification-list-item"),
-    ).toHaveCount(0);
-    await page.screenshot({
-      path: docScreenshot("daily-notes-open-today.png"),
-    });
-
-    // The second run opens the note that is there and leaves it as it is.
-    await command(page, "Lumiere: Open Today's Daily Note");
-    await page.waitForTimeout(1000);
-    expect(readFileSync(note, "utf8")).toBe(
-      `# ${today()}\n\nOpened on ${today().slice(0, 4)}\n`,
-    );
-  } finally {
-    await closeBrowser(browser);
-  }
-});
-
-test("Insert Template replaces the selection and leaves the caret after the text", async () => {
-  writeFileSync(target, "alpha beta gamma");
-  const browser = await chromium.connectOverCDP(readState().webSocket);
-  try {
-    const page = workbenchPage(browser);
     const editor = await openWorkbench(page, "TemplateTarget.md");
     await editor.click();
     // Select "beta".
