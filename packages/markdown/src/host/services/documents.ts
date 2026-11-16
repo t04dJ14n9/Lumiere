@@ -175,6 +175,10 @@ async function scheduleLinkUpdatesAfterRename(
   const { planned: byUri, stale } = await planLinkUpdates(
     targets,
     noteTextForLinkUpdate,
+    (uri) =>
+      vscode.workspace.textDocuments
+        .find((document) => document.uri.toString() === uri)
+        ?.getText(),
   );
   warnLinksNotUpdated(stale.map((file) => file.uri));
   const planned = new Map<string, PlannedNote>(
