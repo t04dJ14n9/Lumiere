@@ -10,7 +10,9 @@ column beside it; the add strip's new last column has no alignment.
 A table widget wires a rendered grid to a cell projection, selection, keyboard,
 clipboard and toolbar collaborator. The projection reserializes the entire table
 with column-aligned padding on each cell edit, in the existing native input group;
-it never owns undo history. The controller reconciles
+it never owns undo history. Cells past the header's width, which GFM does not
+render, stay in the source: every rewrite writes them back after their row,
+which keeps them through row moves and column edits. The controller reconciles
 incoming snapshots, preserving the active cell editor across structural edits.
 
 The table never cancels wheel input: whether it is hovered, a cell is open
@@ -115,6 +117,7 @@ plugin registrations and widget lifetimes end when the plugin stops.
 - `interactions.test.ts`: source projection, navigation, selection and menu unit tests.
 - `table.test.ts`: cell-source and operation unit tests.
 - `model.test.ts`: exact aligned source and pipe escaping unit tests.
+- `surplus-cells.test.ts`: cells past the header's width survive cell edits, pastes and row/column operations.
 - `operations.test.ts`: row/column and sort unit tests.
 - `navigation.test.ts`: keyboard routing, append, exit and re-entry unit tests.
 - `vim-source.test.ts`: source-column ownership, delimiter entry, transaction/mode guards and deferred-entry cancellation unit tests.

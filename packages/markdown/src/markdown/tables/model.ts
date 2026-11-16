@@ -11,6 +11,11 @@ export interface Table {
   rows: Cell[][];
   alignments: ("left" | "center" | "right" | null)[];
   source: string;
+  /**
+   * The texts of each row's cells past the header's width. GFM does not
+   * render them, but they are the note's text: rewrites carry them along.
+   */
+  surplus: string[][];
 }
 
 export interface CellPosition {
@@ -90,12 +95,14 @@ export function parseTable(source: string): Table | undefined {
     return right ? ("right" as const) : null;
   });
   const rows = [header];
+  const surplus: string[][] = [[]];
   let offset = lines[0]!.length + lines[1]!.length + 2;
   for (const line of lines.slice(2)) {
     if (!line.trim()) {
       break;
     }
-    const row = cells(line, offset).slice(0, header.length);
+    const row = cells(line, offset);
+    surplus.push(row.splice(header.length).map((cell) => cell.text));
     while (row.length < header.length) {
       row.push({
         text: "",
@@ -109,7 +116,27 @@ export function parseTable(source: string): Table | undefined {
     rows.push(row);
     offset += line.length + 1;
   }
-  return { source, rows, alignments };
+  return { source, rows, alignments, surplus };
+}
+
+/** Each row's cell texts followed by its surplus cells, for rewrites that move rows. */
+export function rowTexts(table: Table): string[][] {
+  return table.rows.map((row, index) => [
+    ...row.map((cell) => cell.text),
+    ...(table.surplus[index] ?? []),
+  ]);
+}
+
+/** Rows of `width` cells, each followed by the surplus of the row it came from. */
+export function withSurplus(
+  rows: readonly (readonly string[])[],
+  surplus: readonly (readonly string[])[],
+  width: number,
+): string[][] {
+  return rows.map((row, index) => [
+    ...Array.from({ length: width }, (_, column) => row[column] ?? ""),
+    ...(surplus[index] ?? []),
+  ]);
 }
 
 /** Add only the delimiters needed to represent an omitted trailing cell. */
@@ -173,7 +200,10 @@ export function cellPadding(
   return { before, after: extra - before };
 }
 
-/** Structural edits normalize table layout in one outer-document transaction. */
+/**
+ * Structural edits normalize table layout in one outer-document transaction.
+ * Cells past the alignments' width are surplus: written after the row, unpadded.
+ */
 export function serializeTable(
   rows: readonly (readonly string[])[],
   alignments: Table["alignments"],
@@ -181,6 +211,12 @@ export function serializeTable(
   const width = alignments.length;
   const normalized = rows.map((row) =>
     Array.from({ length: width }, (_, column) => cellText(row[column] ?? "")),
+  );
+  const surplus = rows.map((row) =>
+    row
+      .slice(width)
+      .map((text) => ` ${cellText(text)} |`)
+      .join(""),
   );
   const lengths = Array.from({ length: width }, (_, column) =>
     Math.max(3, ...normalized.map((row) => row[column]!.length)),
@@ -210,9 +246,11 @@ export function serializeTable(
     return "-".repeat(length);
   });
   return [
-    rowText(normalized[0] ?? Array(width).fill("")),
+    rowText(normalized[0] ?? Array(width).fill("")) + (surplus[0] ?? ""),
     rowText(divider),
-    ...normalized.slice(1).map(rowText),
+    ...normalized
+      .slice(1)
+      .map((row, index) => rowText(row) + surplus[index + 1]),
   ].join("\n");
 }
 
@@ -321,11 +359,14 @@ export function writeCells(
       }
     }
   }
-  return serializeTable(rows, alignments);
+  return serializeTable(
+    withSurplus(rows, table.surplus, alignments.length),
+    alignments,
+  );
 }
 
 export function insertRow(table: Table, after: number): string {
-  const rows = table.rows.map((row) => row.map((cell) => cell.text));
+  const rows = rowTexts(table);
   rows.splice(
     Math.max(1, after + 1),
     0,
@@ -341,5 +382,8 @@ export function insertColumn(table: Table, after: number): string {
   for (const row of rows) {
     row.splice(after + 1, 0, "");
   }
-  return serializeTable(rows, alignments);
+  return serializeTable(
+    withSurplus(rows, table.surplus, alignments.length),
+    alignments,
+  );
 }
