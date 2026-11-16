@@ -41,7 +41,8 @@ export function expandWithProperties(
     header.offset + header.body.length,
     header.end,
   );
-  return opening + yaml + closing + body;
+  const quoted = opening + yaml + closing;
+  return (hasValidProperties(quoted) ? quoted : plain) + body;
 }
 
 function hasValidProperties(header: string): boolean {
@@ -81,11 +82,16 @@ function quotedValues(
         node.range &&
         node.value.search(PLACEHOLDER) >= 0
       ) {
-        // A YAML double-quoted scalar reads a JSON string as written.
+        // A YAML double-quoted scalar reads a JSON string as written. A
+        // block scalar's range takes in its line break (and any blank lines
+        // after it): those stay, or the next line would run on from it.
+        const original = marked.slice(node.range[0], node.range[1]);
         ranges.push({
           from: node.range[0],
           to: node.range[1],
-          insert: JSON.stringify(fill(node.value)),
+          insert:
+            JSON.stringify(fill(node.value)) +
+            original.slice(original.trimEnd().length),
         });
       }
     },
