@@ -6,8 +6,9 @@ import {
 import { useDocuments, useOptionalCapability } from "@embedpdf/react/runtime";
 import { useCallback, useEffect, useMemo } from "react";
 import {
-  acceptAnnotationSave,
   annotationLoadState,
+  settlePdfWrite,
+  type SaveResult,
 } from "./annotation-load-state";
 import { StoreSession } from "./annotation-store-session";
 import { postToHost } from "./host";
@@ -98,27 +99,16 @@ function useCommittedChanges(session: StoreSession | undefined): void {
 }
 
 /** Apply host annotation save replies to the remembered base hash. */
-export function applyAnnotationHostMessage(message: {
-  type: string;
-  write?: number;
-  ok?: boolean;
-  sha256?: string;
-  reason?: string;
-}): void {
-  if (message.type !== "annotationSaveResult" || message.write === undefined) {
+export function applyAnnotationHostMessage(
+  message: SaveResult & { type: string },
+): void {
+  if (message.type !== "annotationSaveResult") {
     return;
   }
-  if (message.ok === true && typeof message.sha256 === "string") {
-    acceptAnnotationSave(message.sha256);
+  const settled = settlePdfWrite(message);
+  if (settled) {
     for (const listener of pdfWriteResults) {
-      listener(message.write, true);
-    }
-    return;
-  }
-  // A conflict still has Keep mine to come, which answers for the same write.
-  if (message.ok === false && message.reason === "error") {
-    for (const listener of pdfWriteResults) {
-      listener(message.write, false);
+      listener(settled.write, settled.ok);
     }
   }
 }

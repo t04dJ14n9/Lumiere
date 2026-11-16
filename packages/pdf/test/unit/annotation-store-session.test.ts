@@ -342,3 +342,32 @@ test("a change to an annotation a PDF write took, made during the write, is repo
   assert.equal(session.ownership.isOwn(key(101)), false);
   assert.deepEqual(edits(), [{ type: "annotationEmbeddedEdit", load: 3 }]);
 });
+
+test("a deleted annotation brought back by Undo while, or after, the PDF is written stays Lumiere's", async () => {
+  let sha256 = SHA;
+  const { session, present, saves, posted, write } = writing({
+    stored: stored101(),
+    sha256: () => sha256,
+  });
+  session.restore(true);
+  await until(() => present.has(101));
+  present.delete(101);
+  session.committed("delete", [refOn(101)], {});
+  const written = await write();
+  // Undo brings it back while the write runs: it is in no PDF taken before.
+  present.set(101, "highlight");
+  session.resynced();
+
+  sha256 = "b".repeat(64);
+  const before = saves().length;
+  session.savedIntoPdf(written);
+  assert.equal(session.ownership.isOwn(key(101)), true);
+  await until(() => saves().length > before);
+  const resaved = saves().at(-1) as { sha256: string; text: string };
+  assert.equal(resaved.sha256, sha256);
+  assert.deepEqual(await kept(resaved.text), [101]);
+  assert.deepEqual(
+    posted.filter((message) => message.type === "annotationEmbeddedEdit"),
+    [],
+  );
+});
