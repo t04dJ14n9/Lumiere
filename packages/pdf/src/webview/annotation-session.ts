@@ -52,7 +52,7 @@ export function useAnnotationSaveSession(): {
     if (!session) {
       return;
     }
-    const listener = (): void => session.ownership.savedIntoPdf();
+    const listener = (): void => session.savedIntoPdf();
     savedIntoPdf.add(listener);
     return () => {
       savedIntoPdf.delete(listener);

@@ -38,6 +38,12 @@ export class StoreSession {
   private chain: Promise<void> = Promise.resolve();
   private started = false;
   private saveQueued = false;
+  /**
+   * Lumiere's annotations in a PDF sent to be written over the file and not
+   * yet confirmed written, as they were when the PDF was taken. Ones made or
+   * changed after it are not in that PDF and stay Lumiere's.
+   */
+  private readonly sentInPdf = new Set<string>();
   /** The file could not be read back: saving would replace what is in it with less. */
   private fileLeftAlone = false;
   private markRestored: () => void = () => undefined;
@@ -105,7 +111,15 @@ export class StoreSession {
       this.ownership.imported(keys);
       return;
     }
-    const owners = new Set(keys.map((key) => this.ownership.change(type, key)));
+    const owners = new Set(
+      keys.map((key) => {
+        const owner = this.ownership.change(type, key);
+        if (owner === "store") {
+          this.sentInPdf.delete(key);
+        }
+        return owner;
+      }),
+    );
     if (owners.has("store")) {
       this.saveStore();
     }
@@ -153,8 +167,28 @@ export class StoreSession {
     );
   }
 
+  /**
+   * The host wrote the PDF over the file, and the viewer now has its hash.
+   * What went into it is the PDF's now; the rest of Lumiere's is saved again,
+   * filed under the new hash: the old one names a file no longer there.
+   */
+  savedIntoPdf(): void {
+    const stillOwn = this.ownership.savedIntoPdf(this.sentInPdf);
+    this.sentInPdf.clear();
+    if (stillOwn) {
+      this.saveStore();
+    }
+  }
+
   writePdf(documents: DocumentsCapability, to: "pdf" | "copy"): void {
     this.run(async (state) => {
+      if (to === "pdf") {
+        // Taken before the PDF: one made during the download is kept in
+        // both, rather than in neither.
+        for (const key of this.ownership.keys()) {
+          this.sentInPdf.add(key);
+        }
+      }
       try {
         const data = await downloadPdf(documents);
         this.host.post(
