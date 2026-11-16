@@ -69,8 +69,9 @@ uses Lumiere's tokens (`YYYY MM DD HH mm ss`); empty strings contribute nothing.
 
 ## Limits and differences from Obsidian
 
-The property UI still uses its existing preference storage; it does not yet
-consume this registry. Host consumers can use the scoped service now. Wire types
+The properties plugin reads `types.json` through this service
+(`properties/vault-types.ts`); types chosen in Lumiere that the registry does not
+take stay in its workspace storage. Wire types
 are `text`, `number`, `checkbox`, `date`, `datetime`, `multitext`, `tags`, `aliases`.
 `multitext` maps to the `list` editor; `aliases` and `tags` keep their distinct
 wire/UI kinds. Built-ins are guarded: tags → tags, aliases → aliases,
@@ -92,4 +93,6 @@ regular-expression filters are not translated. Changes to `editor.defaultMode`
 affect new editor views, preserving an existing view's current mode.
 
 CSS snippets, appearance, graph configuration, hotkeys,
-themes, workspace state and community plugins are outside this phase.
+themes, workspace state and community plugins are outside this plugin. The
+properties plugin reads `appearance.json` and the enabled CSS snippets itself
+(`properties/snippets.ts`).

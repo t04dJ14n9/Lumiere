@@ -7,8 +7,9 @@ clicking a tag runs the same search.
 
 ## How it works
 
-An inline renderer replaces unrevealed tags with buttons; a post-processor binds
-tags inside rendered blocks and embeds. A delegated listener also handles shared
+An inline renderer marks tags as styled text, never hidden, so the caret goes
+where a tag is clicked, as in Obsidian; a click on one also searches. A
+post-processor binds tag buttons inside rendered blocks and embeds. A delegated listener also handles shared
 tag placeholders in reconciled property widgets. A validated RPC request
 queries existing vault metadata, including YAML and footnote tags, then opens a
 native quick pick. Matching is case-insensitive and hierarchical; excluded files
@@ -37,8 +38,9 @@ The Tags view is a window-level half (`view.ts`), because a view outlives any
 one editor panel. It takes the active note's vault, or the workspace's when no
 note is open, and builds the tree with the ported tag tree
 (`src/markdown/tags/tree.ts`) from indexed metadata (`tree.ts`). Tags that
-differ only in case are one entry, spelled as first seen. Counts are notes: a
-parent counts a note once however many of its descendants the note uses.
+differ only in case are one entry, spelled the most used way (the first seen
+on a tie). Counts are uses, as in Obsidian's Tags pane: every use of a tag
+counts, and a parent counts each use of its descendants.
 Excluded files are left out, as in search. The view rebuilds 300 ms after the
 vault re-resolves, the active note changes or settings change, and only while
 it is visible. Both halves follow `lumiere.markdown.plugins.tags.enabled`. The Explorer view is limited to `activeCustomEditorId == 'lumiere.markdown.editor'` so Tags hide when another editor is active; Outline's enter/leave focus also reveals Tags while Lumiere is active.
@@ -47,15 +49,14 @@ it is visible. Both halves follow `lumiere.markdown.plugins.tags.enabled`. The E
 
 - `manifest.ts`: default enablement and host/webview declarations.
 - `protocol.ts`: grammar-validated tag search request.
-- `widget.ts`: inline button, callback identity and cleanup.
-- `webview.ts`: renderer, and rendered-button lifetime.
+- `webview.ts`: the inline tag mark, click-to-search, and rendered-button lifetime.
 - `search.ts`: metadata filtering and quick-pick query ranking.
 - `suggestions.ts`: plugin-owned completion trigger through `suggest/trigger`.
 - `host.ts`: RPC, native picker and contained note opening (per panel).
 - `tree.ts`: the Tags view's tree source over the ported tag tree.
 - `view.ts`: the Tags view's window plugin, refresh and click-to-search command.
 - `../../../test/unit/tags/search.test.ts`: indexed search and host lifecycle units.
-- `../../../test/unit/tags/view.test.ts`: note counts, case merging, flat and
+- `../../../test/unit/tags/view.test.ts`: use counts, case merging, flat and
   frequency modes, excluded files, click-to-open and the enabled setting.
 - `../../../test/unit/tags/suggestions.test.ts`: where the tag list opens, as
   measured in Obsidian.
