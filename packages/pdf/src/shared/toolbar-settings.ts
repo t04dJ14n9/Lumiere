@@ -8,14 +8,14 @@
  * Floating was removed. Saved VS Code values of slim/floating migrate to chrome.
  */
 export type ToolbarMode = "chrome" | "slim" | "none";
-export const DEFAULT_TOOLBAR_MODE: ToolbarMode = "chrome";
+const DEFAULT_TOOLBAR_MODE: ToolbarMode = "chrome";
 
 /**
  * Legacy dock edge for the removed floating bar. Kept so old messages and
  * HTML data attributes still parse; new code always uses the default.
  */
 export type FloatingDock = "top" | "bottom" | "left" | "right";
-export const FLOATING_DOCKS: readonly FloatingDock[] = [
+const FLOATING_DOCKS: readonly FloatingDock[] = [
   "top",
   "bottom",
   "left",

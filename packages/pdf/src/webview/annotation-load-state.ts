@@ -21,7 +21,7 @@ export function annotationLoadState():
   return current;
 }
 
-export function acceptAnnotationSave(sha256: string): void {
+function acceptAnnotationSave(sha256: string): void {
   if (current) {
     current = { ...current, sha256 };
   }

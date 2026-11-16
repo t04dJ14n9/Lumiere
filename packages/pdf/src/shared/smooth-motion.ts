@@ -54,7 +54,7 @@ export function wheelTarget(
 }
 
 /** A pause this long (ms) between wheel events ends a gesture. */
-export const WHEEL_GESTURE_GAP = 150;
+const WHEEL_GESTURE_GAP = 150;
 
 /**
  * Tells mouse-wheel notches from trackpad gestures. A trackpad flick can
