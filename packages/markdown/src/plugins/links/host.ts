@@ -85,7 +85,7 @@ function registerUnresolvedLinks(ctx: Context, panel: PanelShell): void {
 }
 
 /** The note's unresolved link paths, lower-cased, sorted and de-duplicated. */
-export function unresolvedPaths(vault: VaultIndex, source: string): string[] {
+function unresolvedPaths(vault: VaultIndex, source: string): string[] {
   const keys = new Set(
     [...vault.unresolvedLinks(source).keys()].map((path) => path.toLowerCase()),
   );

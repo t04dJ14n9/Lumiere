@@ -16,7 +16,7 @@ export function copyCells(table: Table, range: CellRange): string {
 }
 
 /** Plain cell texts for a range (pipes unescaped), as Obsidian `obsidian/table` rows. */
-export function copyCellsRows(table: Table, range: CellRange): string[][] {
+function copyCellsRows(table: Table, range: CellRange): string[][] {
   return rangeTexts(table, range).map((row) =>
     row.map((text) => text.replace(/\\\|/g, "|")),
   );

@@ -24,9 +24,7 @@ export interface TagsViewOptions {
  * The vault's notes and their tags, as the tag tree takes them. Excluded
  * files are left out, as tag search leaves them out.
  */
-export function taggedNotesOf(
-  index: VaultIndex,
-): { id: string; tags: string[] }[] {
+function taggedNotesOf(index: VaultIndex): { id: string; tags: string[] }[] {
   return index
     .files()
     .filter((file) => !file.excluded && isMarkdownPath(file.path))

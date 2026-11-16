@@ -15,7 +15,7 @@ import type {} from "../shared/pdf-outlines";
 type ServiceName = keyof Services;
 
 /** Services the host or webview root provides, not a plugin. */
-export const ROOT_SERVICES: readonly ServiceName[] = [
+const ROOT_SERVICES: readonly ServiceName[] = [
   ...HOST_SERVICE_NAMES,
   "vaultSystem",
   "rpc",

@@ -27,7 +27,7 @@ export interface Batch {
   messages: Extract<Message, { kind: "notify" }>[];
 }
 /** More notifications than this in one batch means a runaway sender. */
-export const MAX_BATCH_MESSAGES = 1024;
+const MAX_BATCH_MESSAGES = 1024;
 const id = Schema.number().min(1).max(Number.MAX_SAFE_INTEGER);
 const channel = Schema.string().min(1).max(128);
 const method = Schema.string().min(1).max(128);

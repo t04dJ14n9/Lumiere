@@ -8,7 +8,7 @@ export interface DailyNoteSettings {
 }
 
 /** The folder as a vault path: "" is the vault root, undefined escapes it. */
-export function dailyFolder(setting: string): string | undefined {
+function dailyFolder(setting: string): string | undefined {
   const trimmed = setting.trim().replace(/^\/+|\/+$/g, "");
   return trimmed === "" ? "" : safeRelative(trimmed);
 }
