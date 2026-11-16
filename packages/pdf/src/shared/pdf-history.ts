@@ -1,4 +1,4 @@
-import { parseReadingPosition, type ReadingPosition } from "./reading-position";
+import type { ReadingPosition } from "./reading-position";
 
 /** Shared envelope; the anchor remains specific to each document kind. */
 export interface PdfHistoryEntry {
@@ -37,10 +37,4 @@ export function sameHistoryEntry(
 
 export function cloneHistoryEntry(entry: PdfHistoryEntry): PdfHistoryEntry {
   return { ...entry, anchor: { ...entry.anchor } };
-}
-
-export function parseHistoryPosition(
-  value: unknown,
-): ReadingPosition | undefined {
-  return parseReadingPosition(value);
 }
