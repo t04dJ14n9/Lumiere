@@ -1,12 +1,6 @@
 # Changelog
 
-## 0.1.1
-
-- Marketplace icon at `media/icon.png`.
-- Get started points at the VS Code Marketplace listing (`t04dJ14n9.lumiere`)
-  and Extensions search, instead of a VSIX-only install.
-
-## Unreleased
+## 0.1.12 (pre-release, 2026-11-16)
 
 - Fixed (Obsidian compliance audit, 2026-11-16): property links survive
   renames to names with quotes, relative links name the right note, Insert
@@ -142,3 +136,9 @@
   in-house kernel, the PDF plugin runtime and its Cordis shim are gone, as is
   the `pdfWorkshop.runtimeImpl` setting.
 - One output channel, "Workshop", for both products.
+
+## 0.1.1
+
+- Marketplace icon at `media/icon.png`.
+- Get started points at the VS Code Marketplace listing (`t04dJ14n9.lumiere`)
+  and Extensions search, instead of a VSIX-only install.
