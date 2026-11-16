@@ -5,6 +5,7 @@ import type {
   AnnotationCapability,
 } from "@embedpdf/react/annotation";
 import type { DocumentsCapability } from "@embedpdf/react/runtime";
+import { annotationKey } from "@embedpdf/engine-core/public";
 import {
   parseAnnotations,
   serializeAnnotations,
@@ -41,7 +42,12 @@ async function until(condition: () => boolean): Promise<void> {
  * resolves); `export` answers with what is present now.
  */
 function open(
-  options: { stored?: string; dropped?: string[]; gate?: Promise<void> } = {},
+  options: {
+    stored?: string;
+    dropped?: string[];
+    gate?: Promise<void>;
+    sha256?: () => string;
+  } = {},
 ) {
   const posted: OutgoingMessage[] = [];
   const present = new Map<number, string>();
@@ -50,7 +56,7 @@ function open(
     post: (message) => posted.push(message),
     loadState: () => ({
       load: 3,
-      sha256: SHA,
+      sha256: options.sha256?.() ?? SHA,
       ...(options.stored === undefined ? {} : { annotations: options.stored }),
     }),
   };
@@ -255,4 +261,35 @@ test("the PDF with its annotations goes to the host as an overwrite or as a copy
     assert.ok(message.data instanceof ArrayBuffer);
     assert.deepEqual([...new Uint8Array(message.data)], [80, 68, 70]);
   }
+});
+
+test("an annotation made while Save into This PDF writes stays Lumiere's and is saved for the new bytes", async () => {
+  const stored = serializeAnnotations(bundle([{ ref: refOn(1) }]))!;
+  let sha256 = SHA;
+  const { session, posted, present, saves } = open({
+    stored,
+    sha256: () => sha256,
+  });
+  session.restore(true);
+  const documents = {
+    download: async () => new Uint8Array([37, 80, 68, 70]),
+  } as unknown as DocumentsCapability;
+  session.writePdf(documents, "pdf");
+  await until(() =>
+    posted.some((message) => message.type === "annotationSave"),
+  );
+  // Drawn after the PDF was taken, before the host says it wrote it.
+  present.set(300, "highlight");
+  session.committed("create", [refOn(300)], {});
+  await until(() => saves().length === 1);
+
+  sha256 = "b".repeat(64);
+  session.savedIntoPdf();
+  await until(() => saves().length === 2);
+  const resaved = saves()[1] as { sha256: string; text: string };
+  assert.equal(resaved.sha256, sha256);
+  // 101, the file's, went into the PDF and is the PDF's now; 300 did not.
+  assert.equal(session.ownership.isOwn(annotationKey(refOn(101))), false);
+  assert.equal(session.ownership.isOwn(annotationKey(refOn(300))), true);
+  assert.deepEqual(await kept(resaved.text), [300]);
 });
