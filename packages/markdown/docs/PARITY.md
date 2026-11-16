@@ -12,7 +12,7 @@ older-version evidence; the installed app is 1.15.0. Rows naming
 `app:decrease-font-size`, `app:open-file`. Evidence: static REA
 `ev_6656f973c52d9c8d523b697ac6a77957170ffcda27c58103a519f55c9b517b1a`.
 
-| Action or behavior (DESIGN §13–§15) | Obsidian observation: date and method | Workshop result | How checked | Status |
+| Action or behavior (DESIGN §13–§15) | Obsidian observation: date and method | Lumiere result | How checked | Status |
 | --- | --- | --- | --- | --- |
 | `document` | not observed | not manually observed | Manual scenario pending; automated evidence is in phase records | not observed |
 | `editor` | 2026-10-17, behaviour measured over the DevTools protocol in a throwaway vault: Tab, Shift+Tab, Home and Cmd+Left measured | Matches the measured behaviour (docs/OBSIDIAN_KEYS.md) | Differential probe (Obsidian and the browser harness, same keys); unit tests pin each rule | behaviour measured; visual parity not observed |

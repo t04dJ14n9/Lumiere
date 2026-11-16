@@ -200,7 +200,7 @@ export async function outlineFixture(
           configure();
           return "user";
         },
-        searchFilter: "@ext:test.workshop",
+        searchFilter: "@ext:test.lumiere",
         contributed: () => [],
         openUi: async () => {},
       },

@@ -1,11 +1,11 @@
 import * as vscode from "vscode";
 import type { Disposer } from "@workshop/core";
-import type { WorkshopPanel } from "../shared/host";
+import type { LumierePanel } from "../shared/host";
 
 /** One webview panel per view type, independent of any Markdown document. */
-export function createWorkshopPanel(
+export function createLumierePanel(
   extensionUri: vscode.Uri,
-): (viewType: string, title: string) => WorkshopPanel {
+): (viewType: string, title: string) => LumierePanel {
   const open = new Map<string, vscode.WebviewPanel>();
   return (viewType, title) => {
     const existing = open.get(viewType);
@@ -34,7 +34,7 @@ export function createWorkshopPanel(
 function wrap(
   panel: vscode.WebviewPanel,
   extensionUri: vscode.Uri,
-): WorkshopPanel {
+): LumierePanel {
   const dist = vscode.Uri.joinPath(extensionUri, "dist", "markdown");
   return {
     reveal: () => panel.reveal(vscode.ViewColumn.Active),

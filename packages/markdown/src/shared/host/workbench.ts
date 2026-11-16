@@ -105,7 +105,7 @@ export interface StatusHandle {
 }
 
 /** A webview panel that is not tied to a text document. */
-export interface WorkshopPanel {
+export interface LumierePanel {
   reveal(): void;
   setTitle(title: string): void;
   readonly visible: boolean;
@@ -143,7 +143,7 @@ export interface WorkbenchViews {
    * A document-independent webview panel. One panel per view type; a second
    * call reveals the existing one.
    */
-  panel(viewType: string, title: string): WorkshopPanel;
+  panel(viewType: string, title: string): LumierePanel;
 }
 
 /** Which note is in front, in this editor or a text editor. */
