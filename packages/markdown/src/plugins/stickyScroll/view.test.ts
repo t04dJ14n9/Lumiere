@@ -355,3 +355,43 @@ test("measurement probes below the sticky chrome height, not the hidden lines un
   // Iterates from height 0 up to the pinned row count * line height (48).
   assert.deepEqual(probed, [0, 48]);
 });
+
+test("a scroll during the same measuring, such as CodeMirror's anchoring, redraws the pins before paint", async () => {
+  const f = fixture();
+  f.scrollTo("root body");
+  assert.deepEqual(
+    pinRows(f.dom).map((row) => row.label),
+    ["Root"],
+  );
+  // An image above grows and has pushed the view into "Child"'s section
+  // when the bar measures; CodeMirror's anchoring then scrolls back up to
+  // "Root"'s body in the same measuring, with no update to say so.
+  f.view.visibleFrom = f.view.state.doc.toString().indexOf("child body");
+  f.chrome.schedule();
+  f.flush();
+  assert.deepEqual(
+    pinRows(f.dom).map((row) => row.label),
+    ["Root", "Child"],
+  );
+  f.view.visibleFrom = f.view.state.doc.toString().indexOf("root body");
+  f.view.scrollDOM.scrollTop -= 700;
+  await Promise.resolve();
+  assert.deepEqual(
+    pinRows(f.dom).map((row) => row.label),
+    ["Root"],
+    "drawn again for where the view is now",
+  );
+
+  // Without a scroll in between, nothing is measured again.
+  let probed = 0;
+  const lineBlockAtHeight = f.view.lineBlockAtHeight.bind(f.view);
+  f.view.lineBlockAtHeight = (height?: number) => {
+    probed++;
+    return lineBlockAtHeight(height);
+  };
+  f.chrome.schedule();
+  f.flush();
+  const afterMeasure = probed;
+  await Promise.resolve();
+  assert.equal(probed, afterMeasure);
+});

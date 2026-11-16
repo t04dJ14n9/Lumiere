@@ -62,12 +62,38 @@ export class StickyScrollView {
   schedule(): void {
     this.view.requestMeasure({
       key: this,
-      read: () => (this.isDestroyed ? undefined : this.measure()),
-      write: (layout) => {
-        if (layout && !this.isDestroyed) {
-          this.draw(layout);
+      read: () =>
+        this.isDestroyed
+          ? undefined
+          : {
+              layout: this.measure(),
+              scrollTop: this.view.scrollDOM.scrollTop,
+            },
+      write: (measured) => {
+        if (measured && !this.isDestroyed) {
+          this.draw(measured.layout);
+          this.redrawIfScrolled(measured.scrollTop);
         }
       },
+    });
+  }
+
+  /**
+   * CodeMirror's scroll anchoring (content growing above the top, such as an
+   * image getting its size) scrolls after this measured, in the same
+   * measuring and without another update, so the bar was painted for a
+   * frame with the headings of where the view had been pushed: after a jump,
+   * those of the section above the target. A microtask runs after that
+   * measuring and before paint: draw the bar again there if it moved.
+   */
+  private redrawIfScrolled(measuredScrollTop: number): void {
+    queueMicrotask(() => {
+      if (
+        !this.isDestroyed &&
+        this.view.scrollDOM.scrollTop !== measuredScrollTop
+      ) {
+        this.draw(this.measure());
+      }
     });
   }
 

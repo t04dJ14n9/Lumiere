@@ -2,6 +2,12 @@
 
 ## 0.1.0 (unreleased)
 
+- Jumping to a heading from the Outline, Go to Heading or a link no longer
+  flashes another part of the note first. When an image above the heading
+  loaded after the jump, one frame showed the note pushed down by the
+  image's height, and the next showed the sticky headings of the section
+  above; both now settle before the frame is drawn.
+
 - **Keep Marp Deck in Workshop** is now **Keep Marp Deck in Lumiere**, and
   the Marp and Outline settings' descriptions name Lumiere instead of
   Workshop, the editor's old name. The command id is unchanged.
