@@ -63,3 +63,28 @@ test("a wikilink starting with | is a link to a note of that name", () => {
     ["|", "|"],
   ]);
 });
+
+test("a %% block over blank lines hides its headings; its links and tags stay indexed", () => {
+  const note = metadata(
+    "%%\n# Hidden\n\n- [[inside]] #secret\n\n| a |\n| - |\n%%\n# Shown\n\nText %%inline%% after\n",
+  );
+  assert.deepEqual(
+    note.headings.map((heading) => heading.heading),
+    ["Shown"],
+  );
+  assert.deepEqual(
+    note.links.map((link) => link.original),
+    ["[[inside]]"],
+  );
+  assert.deepEqual(
+    note.tags.map((tag) => tag.tag),
+    ["secret"],
+  );
+  // Nothing closes it: the rest of the note is the comment, as in Obsidian.
+  assert.deepEqual(metadata("Intro\n\n%%\n# Draft\n").headings, []);
+  // Closed on its own line, it is an inline comment of its paragraph.
+  assert.deepEqual(
+    metadata("%% note %%\n# Kept\n").headings.map((h) => h.heading),
+    ["Kept"],
+  );
+});
