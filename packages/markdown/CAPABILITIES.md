@@ -72,7 +72,7 @@ records it in `docs/PARITY.md`.
 | graph | **Open Vault Graph**: a vault's notes as a directed graph in a panel, global or local, filtered by type, tag, folder, text and orphans | Hard caps (2000 notes, 20000 links); a larger graph is refused, not sampled; no 3D view |
 | settings | Open Settings, Change Setting… (any contributed setting, edited by type), and commands to set the note font size and toggle line numbers, readable line width, Mermaid, inline title and Vim | Same keys as the Settings UI, no state of its own; Obsidian has no such commands |
 
-## Workshop
+## Lumiere
 
 - **Manage Plugins**, **Show Plugin Status** and **Use Lumiere
   for Markdown in This Workspace**.

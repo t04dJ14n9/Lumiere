@@ -78,7 +78,7 @@ hash, because the hash would not match disk. Clipboard `@path` text is
 produced only for a saved file, so the line numbers match disk.
 
 Hashes are SHA-256 of the UTF-8 text when this extension produces them
-(`Workshop.fingerprint`). The shared handoff fixture's PDF prefix
+(`hostDocuments.fingerprint`). The shared handoff fixture's PDF prefix
 `9f86d081884c7d65` is accepted.
 
 ## PDF locator

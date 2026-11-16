@@ -30,14 +30,14 @@ profile as described in [docs/MANUAL_TEST_PLAN.md](docs/MANUAL_TEST_PLAN.md#buil
 ## Use
 
 - Open a note with **Open With… › Lumiere**, or run **Markdown
-  Workshop: Use Lumiere for Markdown in This Workspace** to make
+  Lumiere: Use Lumiere for Markdown in This Workspace** to make
   it the editor for `*.md` in the workspace.
 - A folder containing `.obsidian/` is a vault: links, tags, backlinks and
   search work within it. Without one, each workspace folder is a vault.
 - **Toggle Live Preview/Source Mode** switches modes; **Open as Text** opens
   VS Code's text editor on the same document.
 - **Go to Heading…** (Ctrl+Shift+O; Command+Shift+O on macOS) searches the
-  active Workshop note's headings. **Toggle Markdown Outline** (Ctrl+Alt+O;
+  active Lumiere note's headings. **Toggle Markdown Outline** (Ctrl+Alt+O;
   Control+Command+O on macOS) shows or hides its heading tree, including after
   moving the view to another sidebar or the panel. VS Code's native Outline
   and breadcrumbs remain available in the plain text editor.
@@ -56,7 +56,7 @@ profile as described in [docs/MANUAL_TEST_PLAN.md](docs/MANUAL_TEST_PLAN.md#buil
   `files.attachmentFolder` under `YYYY-MM-DD HH.mm.ext` names with
   Markdown or WikiLink embeds from the Links settings.
 - **Open Copied Agent Reference** opens `@Note.md#30-32` in Markdown
-  Workshop and selects those source lines. It prefills the reference from
+  Lumiere and selects those source lines. It prefills the reference from
   the clipboard for you to confirm or replace; surrounding quotes are fine.
   Relative paths stay inside workspace folders, with a choice if more than
   one folder matches. Full note URIs also work, including remote files.
@@ -84,7 +84,7 @@ profile as described in [docs/MANUAL_TEST_PLAN.md](docs/MANUAL_TEST_PLAN.md#buil
   edits in the Settings UI or `settings.json` and the commands always agree.
 - `lumiere.markdown.preset: "minimal"` loads only the core editor.
 - `lumiere.markdown.debug.logging` writes debug lines to the **Markdown
-  Workshop** output channel.
+  Lumiere** output channel.
 
 ### In Cursor
 
@@ -120,8 +120,7 @@ The native suite runs against Cursor with
 `VSCODE_EXECUTABLE=<cursor install>/cursor pnpm test:vscode`.
 
 [CAPABILITIES.md](CAPABILITIES.md) lists every plugin, its default and how
-it differs from Obsidian. The extension's commands are under **Markdown
-Workshop** in the command palette.
+it differs from Obsidian. The extension's commands are under **Lumiere** in the command palette.
 
 ## Extend
 

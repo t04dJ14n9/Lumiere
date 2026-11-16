@@ -72,7 +72,7 @@ Insert Link and Toggle Comment use Mod+B, Mod+I, Mod+K and Mod+/.
 
 After a highlight colour command the selection stays on the same text;
 Obsidian 1.14 sometimes leaves it elsewhere, and with a selection running past
-a highlight's end it can garble the markers (`==🔴two t==hree`), which Workshop
+a highlight's end it can garble the markers (`==🔴two t==hree`), which Lumiere
 does not copy. Coloured highlight toggles appear on the editor context menu
 (and in the command palette), matching Obsidian's colour set.
 
