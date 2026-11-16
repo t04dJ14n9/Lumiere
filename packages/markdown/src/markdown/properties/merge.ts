@@ -9,6 +9,7 @@ import {
   type PropertyChange,
 } from "./yaml-value";
 import { setPropertyChanges } from "./alias-edits";
+import { appendedListItems } from "./list-append";
 import { validPropertyName } from "./types";
 function propertyObject(value: unknown): value is Record<string, unknown> {
   return value !== null && typeof value === "object" && !Array.isArray(value);
@@ -32,14 +33,42 @@ function clipboardValue(
   return valid;
 }
 
+/**
+ * Both lists' items, each once, in order. Items are compared by value, so
+ * an object (`- name: a`) in both lists is not written twice.
+ */
+function joinedLists(current: unknown[], incoming: unknown[]): unknown[] {
+  const seen = new Set<string>();
+  return [...current, ...incoming].filter((item) => {
+    const key = valueKey(item);
+    if (seen.has(key)) {
+      return false;
+    }
+    seen.add(key);
+    return true;
+  });
+}
+
+/** A text equal for equal values: keys sorted, types kept apart (`1`, `"1"`). */
+function valueKey(value: unknown): string {
+  if (Array.isArray(value)) {
+    return `[${value.map(valueKey).join(",")}]`;
+  }
+  if (propertyObject(value)) {
+    const entries = Object.keys(value)
+      .sort()
+      .map((key) => `${JSON.stringify(key)}:${valueKey(value[key])}`);
+    return `{${entries.join(",")}}`;
+  }
+  return value === undefined ? "undefined" : JSON.stringify(value);
+}
+
 function mergeValue(current: unknown, incoming: unknown): unknown {
   if (!current) {
     return incoming;
   }
   if (Array.isArray(current) && Array.isArray(incoming)) {
-    return [
-      ...new Set([...(current as unknown[]), ...(incoming as unknown[])]),
-    ];
+    return joinedLists(current as unknown[], incoming as unknown[]);
   }
   if (propertyObject(current) && propertyObject(incoming)) {
     const entries = new Map(Object.entries(current));
@@ -61,9 +90,7 @@ function keepExistingValue(current: unknown, incoming: unknown): unknown {
     return incoming;
   }
   if (Array.isArray(current) && Array.isArray(incoming)) {
-    return [
-      ...new Set([...(current as unknown[]), ...(incoming as unknown[])]),
-    ];
+    return joinedLists(current as unknown[], incoming as unknown[]);
   }
   if (propertyObject(current) && propertyObject(incoming)) {
     const entries = new Map(Object.entries(current));
@@ -161,6 +188,17 @@ class MergeEdits {
     );
     if (!pair) {
       this.added += `${yamlKey(key)}:${valueAfterKey(value, header.eol)}${header.eol}`;
+      return true;
+    }
+    const appended = appendedListItems({
+      source,
+      header,
+      key,
+      node: pair.value,
+      value,
+    });
+    if (appended) {
+      this.changes.push(appended);
       return true;
     }
     const changes = setPropertyChanges({
