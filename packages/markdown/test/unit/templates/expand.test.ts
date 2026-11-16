@@ -4,8 +4,12 @@ import {
   expandTemplate,
   expandTemplateWithReport,
   formatLocalDate,
-  isSupportedDateFormat,
 } from "../../../src/markdown/templates";
+import {
+  formatMoment,
+  unsupportedMomentTokens,
+  utcFields,
+} from "../../../src/markdown/moment-format";
 import {
   templateFiles,
   templateFolder,
@@ -79,7 +83,7 @@ test("Moment's common tokens are written as Moment writes them", () => {
   ];
   for (const [format, expected] of cases) {
     assert.equal(formatLocalDate(NOW, format), expected, format);
-    assert.equal(isSupportedDateFormat(format), true, format);
+    assert.deepEqual(unsupportedMomentTokens(format), [], format);
   }
   assert.equal(formatLocalDate(new Date(2027, 0, 1), "GGGG-[W]WW"), "2026-W53");
   assert.deepEqual(
@@ -102,8 +106,8 @@ test("Moment's common tokens are written as Moment writes them", () => {
 });
 
 test("tokens Lumiere cannot write are reported and written as they are", () => {
-  for (const format of ["", "  ", "gggg-[W]ww", "YYYYYY", "N", "zz"]) {
-    assert.equal(isSupportedDateFormat(format), false, format);
+  for (const format of ["gggg-[W]ww", "YYYYYY", "N", "zz"]) {
+    assert.notDeepEqual(unsupportedMomentTokens(format), [], format);
   }
   const { text, unsupported } = expandTemplateWithReport(
     "{{date:gggg [w]w}} {{time}}",
@@ -187,4 +191,47 @@ test("a template's YAML that stays valid is filled in as written", () => {
     expandTemplate(template, { title: "Plan", now: NOW }),
     "---\ntitle: Plan # the note\n---\nBody",
   );
+});
+
+test("Y, YYY and GGGGG are written as Moment writes them", () => {
+  assert.equal(formatLocalDate(NOW, "Y"), "2026");
+  // Moment reads YYY as YY then Y.
+  assert.equal(formatLocalDate(NOW, "YYY"), "262026");
+  assert.equal(formatLocalDate(NOW, "GGGGG"), "02026");
+  assert.deepEqual(unsupportedMomentTokens("Y YYY GGGGG"), []);
+});
+
+test("a backslash makes the token after it literal, as in Moment", () => {
+  assert.equal(formatLocalDate(NOW, "\\YYYY-MM"), "YYYY-11");
+  assert.equal(formatLocalDate(NOW, "\\L LL"), "L November 5, 2026");
+  assert.equal(formatLocalDate(NOW, "D\\"), "5");
+  assert.deepEqual(unsupportedMomentTokens("\\w"), []);
+});
+
+test("ISO weeks and day of year are right for years 0 to 99", () => {
+  // 0050-01-01 was a Saturday (proleptic Gregorian): ISO week 52 of year 49.
+  const date = new Date(0);
+  date.setUTCFullYear(50, 0, 1);
+  const fields = utcFields(date.getTime());
+  assert.equal(formatMoment(fields, "GGGG-[W]WW DDDD").text, "0049-W52 001");
+  date.setUTCFullYear(50, 11, 31);
+  assert.equal(formatMoment(utcFields(date.getTime()), "DDD").text, "365");
+});
+
+test("a base's format() calls name the tokens Lumiere cannot write", async () => {
+  const { parseBaseYaml, unsupportedBaseDateTokens } =
+    await import("../../../src/markdown/bases");
+  const base = parseBaseYaml(
+    [
+      "formulas:",
+      '  week: file.ctime.format("gggg-[W]ww")',
+      '  day: file.mtime.format("YYYY-MM-DD")',
+      "views:",
+      "  - type: table",
+      "    name: All",
+      "    filters:",
+      '      and: [\'file.ctime.format("N") != ""\']',
+    ].join("\n"),
+  );
+  assert.deepEqual(unsupportedBaseDateTokens(base), ["gggg", "ww", "N"]);
 });

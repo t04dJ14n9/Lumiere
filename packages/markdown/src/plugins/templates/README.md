@@ -32,11 +32,13 @@ after a closing `---` with no line break gets one first.
 Tokens: `{{title}}` (the destination note's basename), `{{date}}`,
 `{{time}}`, and `{{date:FORMAT}}` / `{{time:FORMAT}}`. Formats are Moment.js
 patterns in local time, written by `src/markdown/moment-format.ts` (shared
-with Bases): years (`YYYY`, `YY`), quarters, months (`M`, `MM`, `MMM`,
-`MMMM`, `Mo`), days (`D`, `DD`, `Do`, `DDD`, `DDDD`), weekdays (`d`, `dd`,
-`ddd`, `dddd`, `E`), ISO weeks (`W`, `WW`, `GGGG`), hours (`H`, `HH`, `h`,
-`hh`, `k`), `mm`, `ss`, fractions, `A`/`a`, offsets (`Z`, `ZZ`), `X`/`x`,
-the English long formats (`L`, `LL`, `LT`, …) and `[literal text]`.
+with Bases): years (`YYYY`, `YY`, `Y`, and `YYY`, which Moment reads as
+`YY` then `Y`), quarters, months (`M`, `MM`, `MMM`, `MMMM`, `Mo`), days
+(`D`, `DD`, `Do`, `DDD`, `DDDD`), weekdays (`d`, `dd`, `ddd`, `dddd`, `E`),
+ISO weeks (`W`, `WW`, `GGGG`, `GGGGG`), hours (`H`, `HH`, `h`, `hh`, `k`),
+`mm`, `ss`, fractions, `A`/`a`, offsets (`Z`, `ZZ`), `X`/`x`, the English
+long formats (`L`, `LL`, `LT`, …), `[literal text]` and `\` before a token
+to write it literally.
 
 ## Files
 
@@ -58,7 +60,8 @@ the English long formats (`L`, `LL`, `LT`, …) and `[literal text]`.
 
 - Names are English whatever Obsidian's language. Locale weeks (`w`, `ww`,
   `gggg`), eras (`N`, `y`), time zone names (`z`) and six-digit years are
-  not written: they are inserted as written and a message names them.
+  not written: they are inserted as written and a message names them. A
+  Bases embed whose `format("…")` uses one says so above the view.
   `templates.json` formats carry over whatever their tokens.
 - Works in Lumiere's editor only, not in VS Code's plain text editor.
 - Inserting into a note with unsaved changes ends its current undo group,
