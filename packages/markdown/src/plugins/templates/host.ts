@@ -79,28 +79,44 @@ async function insert(ctx: Context): Promise<void> {
     },
   );
   const outcome = await insertTemplate(ctx.hostDocuments, panel, text);
-  reportInsertion(ctx.dialogs, { ...outcome, unsupported });
+  const messages = insertionMessages({
+    ...outcome,
+    unsupported,
+    note: baseName(uri),
+    template: file.path,
+  });
+  messages.forEach((message) => ctx.dialogs.error(message));
 }
 
-/** Tells the user what the insertion could not do as Obsidian would. */
-function reportInsertion(
-  dialogs: Context["dialogs"],
-  outcome: { isInserted: boolean; isMerged: boolean; unsupported: string[] },
-): void {
+/** What the insertion could not do as Obsidian would, for the user. */
+export function insertionMessages(outcome: {
+  isInserted: boolean;
+  invalidProperties?: "note" | "template";
+  unsupported: string[];
+  /** The note's file name and the template's vault path, to name the culprit. */
+  note: string;
+  template: string;
+}): string[] {
   if (!outcome.isInserted) {
-    dialogs.error("The template could not be inserted.");
-    return;
+    return ["The template could not be inserted."];
   }
+  const messages: string[] = [];
   const { unsupported } = outcome;
   if (unsupported.length > 0) {
     const verb = unsupported.length === 1 ? "it was" : "they were";
-    dialogs.error(
+    messages.push(
       `The template's date format uses ${unsupported.join(", ")}, which Lumiere cannot format yet; ${verb} inserted as written.`,
     );
   }
-  if (!outcome.isMerged) {
-    dialogs.error(
-      "The template's properties were not added: this note's properties are not valid YAML.",
+  if (outcome.invalidProperties === "note") {
+    messages.push(
+      `The template's properties were not added: the properties of ${outcome.note} are not valid YAML.`,
     );
   }
+  if (outcome.invalidProperties === "template") {
+    messages.push(
+      `The template's properties were not added: the properties of the template ${outcome.template} are not valid YAML once its variables are filled in. Only its body was inserted.`,
+    );
+  }
+  return messages;
 }

@@ -25,9 +25,9 @@ function wireTypeOf(kind: PropertyKind): WirePropertyType {
  * A vault's property types, as the properties UI uses them: the vault's
  * `.obsidian/types.json` (Obsidian's registry, shared with Obsidian), with
  * the types chosen in Lumiere where the registry cannot hold them on top.
- * A type chosen in Lumiere goes into `types.json` when the vault has one,
- * so Obsidian sees it too; otherwise (no Obsidian registry, or a host that
- * cannot write it) it stays in Lumiere's workspace storage.
+ * A type chosen in Lumiere is offered to `types.json` when the vault has
+ * one; no host writes it today (none can replace the file atomically), so
+ * it stays in Lumiere's workspace storage, which Obsidian does not see.
  */
 export class VaultPropertyTypes {
   constructor(

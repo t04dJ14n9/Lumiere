@@ -27,15 +27,15 @@ export async function insertAtSelection(
 
 /**
  * Inserts an expanded template: its properties join the note's and its body
- * replaces the selection (`templateInsertion`). `isMerged` is false when the
- * note's properties could not take the template's.
+ * replaces the selection (`templateInsertion`). `invalidProperties` names
+ * whose properties were not valid YAML when they could not be merged.
  */
 export async function insertTemplate(
   documents: Pick<HostDocuments, "apply">,
   panel: EditorPanel,
   template: string,
-): Promise<{ isInserted: boolean; isMerged: boolean }> {
-  let isMerged = true;
+): Promise<{ isInserted: boolean; invalidProperties?: "note" | "template" }> {
+  let invalidProperties: "note" | "template" | undefined;
   const isInserted = await applyAtSelection(
     documents,
     panel,
@@ -45,11 +45,11 @@ export async function insertTemplate(
         template.replace(/\r\n?/g, "\n"),
         selection,
       );
-      isMerged = insertion.isMerged;
+      invalidProperties = insertion.invalidProperties;
       return insertion;
     },
   );
-  return { isInserted, isMerged };
+  return invalidProperties ? { isInserted, invalidProperties } : { isInserted };
 }
 
 async function applyAtSelection(
