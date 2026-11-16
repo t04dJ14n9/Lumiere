@@ -387,17 +387,20 @@ test("the diagram buttons are one even row and the language takes the corner", a
 
   await shell.hover();
   await expect(label).toHaveCSS("opacity", "0");
-  const [inspect, copy, edit] = await Promise.all(
-    [".inspect-diagram", ".copy-code", ".edit-block"].map(box),
-  );
+  const [inspect, copy, edit] = await Promise.all([
+    box(".inspect-diagram"),
+    box(".copy-code"),
+    box(".edit-block"),
+  ]);
   expect(edge - edit.right).toBeLessThanOrEqual(10);
   for (const button of [copy, edit]) {
     expect(Math.abs(button.width - inspect.width)).toBeLessThan(0.5);
     expect(Math.abs(button.height - inspect.height)).toBeLessThan(0.5);
     expect(Math.abs(button.top - inspect.top)).toBeLessThan(0.5);
   }
-  const gaps = [copy.left - inspect.right, edit.left - copy.right];
-  expect(gaps[0]).toBeGreaterThan(2);
-  expect(Math.abs(gaps[0] - gaps[1])).toBeLessThan(0.5);
+  const firstGap = copy.left - inspect.right;
+  const secondGap = edit.left - copy.right;
+  expect(firstGap).toBeGreaterThan(2);
+  expect(Math.abs(firstGap - secondGap)).toBeLessThan(0.5);
   await shoot(page, "row-hovered");
 });
