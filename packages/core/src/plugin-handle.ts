@@ -41,6 +41,12 @@ export class PluginHandleImpl<C> implements PluginHandle<C>, Settling {
   context: Context | undefined;
   /** Set by the owner: forgets this plugin once it is disposed. */
   detach?: Disposer;
+  /**
+   * Set by the owner: false once the owner has begun stopping, which stops
+   * this plugin too. The owner stops its plugins last-first, so an optional
+   * service started later can vanish before this plugin's turn comes.
+   */
+  isOwnerLive: () => boolean = () => true;
   private fiber?: Fiber;
   private activation?: Activation;
   /** Service values the current activation started with. */
@@ -215,6 +221,14 @@ export class PluginHandleImpl<C> implements PluginHandle<C>, Settling {
     }
   }
 
+  /**
+   * While stopping, re-plugging for a vanished optional service would run
+   * `apply` once more without it, only to stop it again.
+   */
+  private get isStopping(): boolean {
+    return this.isDisposed || !this.isOwnerLive();
+  }
+
   private hasOptionalChanged(): boolean {
     return this.optional.some(
       (name) => this.runtime.has(name) !== this.presentOptional.includes(name),
@@ -223,13 +237,13 @@ export class PluginHandleImpl<C> implements PluginHandle<C>, Settling {
 
   /** Re-plug with the optional services that exist now. */
   private replaceFiber(): void {
-    if (this.isReplacementQueued) {
+    if (this.isReplacementQueued || this.isStopping) {
       return;
     }
     this.isReplacementQueued = true;
     this.replacing = this.replacing.then(async () => {
       this.isReplacementQueued = false;
-      if (this.isDisposed) {
+      if (this.isStopping) {
         return;
       }
       this.activation?.cancel();
