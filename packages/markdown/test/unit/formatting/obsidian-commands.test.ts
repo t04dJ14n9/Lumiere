@@ -414,3 +414,19 @@ test("an added caret becomes the main one, and carets stay in order", () => {
   );
   assert.equal(above.main.head, 6);
 });
+
+test("an unclosed %% block keeps the note's last characters when its markers are removed", async () => {
+  const { clearInlineFormatting } =
+    await import("../../../src/plugins/formatting/inline");
+  const { toggleComment } =
+    await import("../../../src/plugins/formatting/comment");
+  assert.equal(clearInlineFormatting("%%\ndraft text"), "\ndraft text");
+  assert.equal(clearInlineFormatting("%%\ndraft\n%%"), "\ndraft\n");
+  const state = EditorState.create({
+    doc: "%%\ndraft text",
+    selection: { anchor: 5 },
+    extensions: [markdownLanguageSupport()],
+  });
+  const spec = toggleComment(state);
+  assert.equal(state.update(spec).state.doc.toString(), "\ndraft text");
+});
