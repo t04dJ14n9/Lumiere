@@ -11,6 +11,7 @@ import {
 } from "./actions";
 import { OPEN_COMMAND, VIEW_ID } from "./commands";
 import { createOutlineFocus } from "./focus";
+import { jumpToHeading, type HeadingJumps } from "./jump";
 import { protocol } from "./protocol";
 import { registerSymbolPicker } from "./symbol-picker";
 import { OutlineSource } from "./tree";
@@ -53,15 +54,36 @@ export const outlineHost: Plugin = {
     registerFollowCursor(ctx, view);
     registerSymbolPicker(ctx, ctx.dialogs);
     registerOutlineFocus(ctx, tree);
-    ctx.effect(() =>
-      ctx.hostCommands.register(OPEN_COMMAND, (uri, offset) => {
-        view.jumpedTo(Number(offset));
-        return ctx.vaults.open(String(uri), { offset: Number(offset) });
-      }),
-    );
+    registerHeadingRows(ctx, view);
     view.refresh();
   },
 };
+
+/** A click on a row: its command carries the note's URI and the heading's offset in the file. */
+function registerHeadingRows(ctx: Context, view: OutlineView): void {
+  const jumps: HeadingJumps = {
+    vaults: ctx.vaults,
+    settings: ctx.settings,
+    dialogs: ctx.dialogs,
+    logger: ctx.logger,
+  };
+  ctx.effect(() =>
+    ctx.hostCommands.register(OPEN_COMMAND, (uri, offset) => {
+      const note = String(uri);
+      view.jumpedTo(Number(offset));
+      return jumpToHeading(
+        jumps,
+        {
+          uri: note,
+          document: ctx.editors
+            .all()
+            .find((panel) => panel.document.uri === note)?.document,
+        },
+        Number(offset),
+      );
+    }),
+  );
+}
 
 function registerOutlineUpdates(
   ctx: Context,

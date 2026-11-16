@@ -13,7 +13,10 @@ and selection gestures, and routes commands through a shared opener. Local
 fragments navigate with metadata; other requests cross a validated RPC channel.
 The host authorizes embedded source identities, offers links to host plugins,
 then applies scheme policy or resolves through the vault/native adapter.
-Native opening binds a panel ID before waiting for the links plugin. Each
+Native opening binds a panel ID before waiting for the links plugin, which
+registers each editor's reveal: every jump into a note (links, Outline rows,
+Go to Heading, Backlinks) goes through it, and with Links off for a note those
+jumps open the note without moving in it (Outline says so). Each
 webview registers a fresh session; requests are acknowledged after layout and
 cancelled on newer navigation, reload or disposal. No URI-keyed pending reveal
 survives successful delivery. Missing fragments show a message without moving

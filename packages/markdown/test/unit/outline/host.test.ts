@@ -1281,3 +1281,40 @@ test("after a click on an outline row in a CRLF note, the outline follows the ca
   assert.equal(fixture.collapseAllCount, collapses + 1);
   assert.equal(fixture.reveals.at(-1)?.node.label, "B1a");
 });
+
+test("a click on an outline row whose jump fails logs it instead of rejecting the command", async (t) => {
+  const fixture = await outlineFixture();
+  t.after(() => fixture.root.dispose());
+  const { panel } = fixture.panel("one");
+  fixture.open(panel);
+  await tick();
+  const failure = new Error(
+    "The destination editor was not opened unambiguously",
+  );
+  fixture.vaults.open = async () => {
+    throw failure;
+  };
+  const text = fixture.texts.get("A.md")!;
+  await fixture.fake.commands.get(OPEN_COMMAND)!(
+    uriOf("A.md"),
+    text.indexOf("## Part"),
+  );
+  assert.deepEqual(fixture.warnings, [failure]);
+});
+
+test("with the Links plugin off for the note, an outline jump says so at once", async (t) => {
+  const fixture = await outlineFixture();
+  t.after(() => fixture.root.dispose());
+  const { panel } = fixture.panel("one");
+  fixture.open(panel);
+  await tick();
+  fixture.links.enabled = false;
+  const text = fixture.texts.get("A.md")!;
+  await fixture.fake.commands.get(OPEN_COMMAND)!(
+    uriOf("A.md"),
+    text.indexOf("## Part"),
+  );
+  assert.deepEqual(fixture.opened, []);
+  assert.equal(fixture.informs.length, 1);
+  assert.match(fixture.informs[0]!, /Links/);
+});

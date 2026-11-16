@@ -95,6 +95,8 @@ Markdown Outline so they do not linger beside non-Workshop editors.
   scroll (debounced, only when it changes and the caret did not cause the
   scroll), over `protocol.ts`.
 - `symbol-picker.ts`: searchable headings and guarded navigation for Quick Pick.
+- `jump.ts`: opens a note at a heading for rows and Go to Heading; checks
+  Links and logs a failed jump.
 - `symbols.ts`: nested heading symbols with enclosing section ranges.
 - `tree.ts`: heading nodes, parent lookup and editor-to-source coordinates.
 - `view.ts`: refresh timing, cursor following and expansion traversal.
@@ -108,6 +110,13 @@ Markdown Outline so they do not linger beside non-Workshop editors.
 ## Services, events and settings
 
 - Injects the host services `hostCommands`, `dialogs`, `views` and `settings`, `vaults` (navigation) and `editors`.
+- Depends on the Links plugin of the note's editor for every jump (row
+  clicks and Go to Heading): Links registers the editor's reveal with the
+  `navigation` host service and moves the view. Links runs per note and
+  Outline per window, so this cannot be an `inject`; instead, with Links off
+  for the note, a jump shows a message at once rather than waiting for a
+  reveal that never comes. A jump that fails otherwise is logged as a
+  warning.
 - Listens to `editor/opened`, `editor/closed`, `editor/ready`,
   `editor/activeChanged`, `editor/selectionChanged` and `document/changed`,
   each panel's `outline.readingPosition` notification, plus native
