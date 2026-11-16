@@ -263,33 +263,82 @@ test("the PDF with its annotations goes to the host as an overwrite or as a copy
   }
 });
 
-test("an annotation made while Save into This PDF writes stays Lumiere's and is saved for the new bytes", async () => {
-  const stored = serializeAnnotations(bundle([{ ref: refOn(1) }]))!;
-  let sha256 = SHA;
-  const { session, posted, present, saves } = open({
-    stored,
-    sha256: () => sha256,
-  });
-  session.restore(true);
+/** A document whose PDF downloads at once, and the PDF writes it sent. */
+function writing(options: Parameters<typeof open>[0] = {}) {
+  const opened = open(options);
   const documents = {
     download: async () => new Uint8Array([37, 80, 68, 70]),
   } as unknown as DocumentsCapability;
-  session.writePdf(documents, "pdf");
-  await until(() =>
-    posted.some((message) => message.type === "annotationSave"),
-  );
+  const writes = () =>
+    opened.posted.filter((message) => message.type === "annotationSave") as {
+      write: number;
+    }[];
+  const write = async () => {
+    const before = writes().length;
+    opened.session.writePdf(documents, "pdf");
+    await until(() => writes().length === before + 1);
+    return writes().at(-1)!.write;
+  };
+  return { ...opened, write };
+}
+
+const stored101 = () => serializeAnnotations(bundle([{ ref: refOn(1) }]))!;
+const key = (objectNumber: number) => annotationKey(refOn(objectNumber));
+
+test("an annotation made while Save into This PDF writes stays Lumiere's and is saved for the new bytes", async () => {
+  let sha256 = SHA;
+  const { session, present, saves, write } = writing({
+    stored: stored101(),
+    sha256: () => sha256,
+  });
+  session.restore(true);
+  const written = await write();
   // Drawn after the PDF was taken, before the host says it wrote it.
   present.set(300, "highlight");
   session.committed("create", [refOn(300)], {});
   await until(() => saves().length === 1);
 
   sha256 = "b".repeat(64);
-  session.savedIntoPdf();
+  session.savedIntoPdf(written);
   await until(() => saves().length === 2);
   const resaved = saves()[1] as { sha256: string; text: string };
   assert.equal(resaved.sha256, sha256);
   // 101, the file's, went into the PDF and is the PDF's now; 300 did not.
-  assert.equal(session.ownership.isOwn(annotationKey(refOn(101))), false);
-  assert.equal(session.ownership.isOwn(annotationKey(refOn(300))), true);
+  assert.equal(session.ownership.isOwn(key(101)), false);
+  assert.equal(session.ownership.isOwn(key(300)), true);
   assert.deepEqual(await kept(resaved.text), [300]);
+});
+
+test("each PDF write's result settles only the annotations that write took", async () => {
+  const { session, present, write } = writing({ stored: stored101() });
+  session.restore(true);
+  const first = await write();
+  present.set(300, "highlight");
+  session.committed("create", [refOn(300)], {});
+  const second = await write();
+
+  session.savedIntoPdf(first);
+  assert.equal(session.ownership.isOwn(key(101)), false);
+  assert.equal(session.ownership.isOwn(key(300)), true, "only in the second");
+  session.pdfWriteFailed(second);
+  assert.equal(session.ownership.isOwn(key(300)), true);
+  // A result for a write already settled, or never made, changes nothing.
+  session.savedIntoPdf(second);
+  session.savedIntoPdf(99);
+  assert.equal(session.ownership.isOwn(key(300)), true);
+});
+
+test("a change to an annotation a PDF write took, made during the write, is reported as the PDF's", async () => {
+  const { session, posted, write } = writing({ stored: stored101() });
+  session.restore(true);
+  const written = await write();
+  session.committed("update", [refOn(101)], {});
+  const edits = () =>
+    posted.filter((message) => message.type === "annotationEmbeddedEdit");
+  assert.equal(edits().length, 0, "still Lumiere's while the write runs");
+
+  session.savedIntoPdf(written);
+  // The PDF has it as it was: only saving into the PDF again keeps the change.
+  assert.equal(session.ownership.isOwn(key(101)), false);
+  assert.deepEqual(edits(), [{ type: "annotationEmbeddedEdit", load: 3 }]);
 });

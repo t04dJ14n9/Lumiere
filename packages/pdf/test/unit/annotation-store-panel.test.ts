@@ -261,6 +261,7 @@ test("a store save is filed under the hash the viewer names, when that is its by
   panel.writeAnnotations("pdf");
   await receive({
     type: "annotationSave",
+    write: 1,
     load: load().load,
     baseSha256: PDF_SHA,
     data: new Uint8Array([1]).buffer,
