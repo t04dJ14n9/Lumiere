@@ -64,18 +64,44 @@ function blockOf(node: SyntaxNode): SyntaxNode {
 
 /**
  * A nested item's text with its children's indentation made relative to
- * the item, so an embed renders it as a list, not as code.
+ * the item, so an embed renders it as a list, not as code. Indentation is
+ * counted in columns, a tab reaching the next multiple of four as in
+ * CommonMark, so a child indented with a tab under an item indented with
+ * spaces stays its child.
  */
 function dedented(source: string, from: number, text: string): string {
-  const column = from - (source.lastIndexOf("\n", from - 1) + 1);
+  const lineStart = source.lastIndexOf("\n", from - 1) + 1;
+  const column = columnsOf(source.slice(lineStart, from));
   if (column === 0) {
     return text;
   }
-  const indent = new RegExp(`^[ \\t]{0,${column}}`);
   return text
     .split("\n")
-    .map((line, index) => (index === 0 ? line : line.replace(indent, "")))
+    .map((line, index) => (index === 0 ? line : withoutColumns(line, column)))
     .join("\n");
+}
+
+const TAB_STOP = 4;
+
+/** The column a run of spaces and tabs ends at. */
+function columnsOf(whitespace: string): number {
+  let column = 0;
+  for (const char of whitespace) {
+    column =
+      char === "\t" ? column + TAB_STOP - (column % TAB_STOP) : column + 1;
+  }
+  return column;
+}
+
+/**
+ * `line` with `columns` columns of its indentation removed. What is left of
+ * the indentation is written as spaces, since a tab's width depends on the
+ * column it starts at, which the removal changes.
+ */
+function withoutColumns(line: string, columns: number): string {
+  const indent = /^[ \t]*/.exec(line)![0];
+  const left = Math.max(0, columnsOf(indent) - columns);
+  return " ".repeat(left) + line.slice(indent.length);
 }
 
 function excludedBlock(node: SyntaxNode): boolean {

@@ -17,6 +17,9 @@ A block embed (`![[Note#^id]]`) shows the block as Obsidian scopes it
 item with its bullet and children, an id inside a quote or callout shows the
 whole quote, an id on a heading shows the heading line, and any other id
 shows its paragraph, table or the block just above an id on its own line.
+A nested item's children lose the item's indentation, counted in columns (a
+tab reaches the next multiple of four), so they stay nested; a task ticked
+in such an embed is matched to its source line ignoring that indentation.
 
 As in Obsidian 1.13 and later, an image stays rendered whatever the caret or
 a selection does, and has no Edit button. A click selects it, and so does
