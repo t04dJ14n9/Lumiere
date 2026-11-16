@@ -22,7 +22,8 @@ import { shareOuterStatusForCellDialogs } from "./cell-ex-status";
 import { vimLineKeyboard } from "./keyboard";
 import { insertIntoClickedSource } from "./click-insert";
 import { protocol } from "./protocol";
-import { HOST_STATUS_CLASS, vimStatusReporter, vimStatusText } from "./status";
+import { vimStatusReporter, vimStatusText } from "./status";
+import { setHostShowsMode, vimStatusPanel } from "./status-panel";
 import {
   getVimListContinueHandler,
   setVimInsertCtrlWHandler,
@@ -206,10 +207,6 @@ function registerVimExtension(ctx: Context): void {
     ctx.editor.extend(
       [
         vimExtensions(ctx, true),
-        // CodeMirror owns the editor's classes; a hand-added one would not last.
-        EditorView.editorAttributes.of(() =>
-          hostStatus.get(ctx)?.shown ? { class: HOST_STATUS_CLASS } : null,
-        ),
         EditorView.domEventHandlers({
           beforeinput(event, view) {
             const mode = getCM(view)?.state.vim;
@@ -234,8 +231,8 @@ function registerVimExtension(ctx: Context): void {
 }
 
 /**
- * Ask whether the host shows Vim's mode in its status bar. If it does, hide
- * the mode line of the note's Vim panel (status.css) and report the mode.
+ * Ask whether the host shows Vim's mode in its status bar. If it does, close
+ * the note's Vim panel between prompts (status-panel.ts) and report the mode.
  */
 function registerHostStatus(ctx: Context): void {
   const { rpc } = ctx;
@@ -253,7 +250,7 @@ function registerHostStatus(ctx: Context): void {
           return;
         }
         state.shown = true;
-        view.dispatch({});
+        view.dispatch({ effects: setHostShowsMode.of(true) });
         const cm = getCM(view);
         rpc.notify(
           protocol,
@@ -273,17 +270,19 @@ function registerHostStatus(ctx: Context): void {
   });
 }
 
-function vimExtensions(ctx: Context, status: boolean) {
+/** `isNote`: the note editor, which owns the Vim panel; else a table cell. */
+function vimExtensions(ctx: Context, isNote: boolean) {
   return [
-    vim({ status }),
+    // Neither uses codemirror-vim's always-mounted status panel.
+    vim({ status: false }),
     vimStatusReporter((_view, text) => {
       if (hostStatus.get(ctx)?.shown) {
         ctx.rpc?.notify(protocol, "status", { text }, { coalesce: true });
       }
     }),
-    // Nested cells keep status:false chrome; share the note statusbar so
-    // : / ? dialogs mount there instead of a tiny in-cell panel (H1).
-    ...(status ? [] : [shareOuterStatusForCellDialogs(ctx.editor.view)]),
+    // Cells share the note's panel so : / ? dialogs mount there instead of
+    // in a tiny in-cell panel (H1).
+    isNote ? vimStatusPanel() : shareOuterStatusForCellDialogs(ctx.editor.view),
     vimLineKeyboard,
     insertIntoClickedSource,
     revealBlockMotion(ctx.livePreview),

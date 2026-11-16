@@ -78,7 +78,8 @@ Keyboard-created visual selections keep Vim's text-object behavior.
 - `caret.test.ts`: mode, pending-operator, prompt and stale-state regression units.
 - `visual-reveal.ts`: freeze Live Preview reveal for the duration of visual mode.
 - `visual-reveal.test.ts`: deferred mode transitions, insert commands, selection mapping and cleanup units.
-- `status.ts`, `status.css`: the mode line text, its reporter, and hiding the panel's mode line.
+- `status.ts`: the mode line text and its reporter.
+- `status-panel.ts`: the note's Vim panel, mounted only for prompts and messages while the host's status bar shows the mode.
 - `protocol.ts`: the `statusBar` question and `status` notification.
 - `host.ts`: `vimPanelHost` answers whether the host's status bar shows the mode; `vimHost` shows the active editor's.
 - `status.test.ts`, `../../../test/unit/vim/host-status.test.ts`: status text and status bar units.
