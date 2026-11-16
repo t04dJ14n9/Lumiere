@@ -11,6 +11,7 @@ import {
 import { setPropertyChanges } from "./alias-edits";
 import { appendedListItems } from "./list-append";
 import { validPropertyName } from "./types";
+import { hasInexactInteger } from "./exact-numbers";
 function propertyObject(value: unknown): value is Record<string, unknown> {
   return value !== null && typeof value === "object" && !Array.isArray(value);
 }
@@ -200,6 +201,11 @@ class MergeEdits {
       this.added += `${yamlKey(key)}:${valueAfterKey(value, header.eol)}${header.eol}`;
       return true;
     }
+    // Written back, a long integer in the value would be rounded.
+    const range = loadYaml().isNode(pair.value) ? pair.value.range : undefined;
+    if (range && hasInexactInteger(header.body.slice(range[0], range[1]))) {
+      return false;
+    }
     // Appending in place changes every alias of an anchored list too; the
     // full rewrite below gives those their own copy.
     const appended =
@@ -225,6 +231,15 @@ class MergeEdits {
     if (!changes) {
       return false;
     }
+    this.takeReplacement(changes);
+    return true;
+  }
+
+  /**
+   * A value's full rewrite (`setPropertyChanges`): its own change, and the
+   * copies that keep its aliases' values.
+   */
+  private takeReplacement(changes: PropertyChange[]): void {
     const [primary, ...aliases] = changes;
     // Explicit replacement wins over any overlapping prior alias-preservation.
     for (let index = this.changes.length - 1; index >= 0; index--) {
@@ -244,7 +259,6 @@ class MergeEdits {
       }
       this.changes.push(alias);
     }
-    return true;
   }
 
   finish(): PropertyChange[] {
