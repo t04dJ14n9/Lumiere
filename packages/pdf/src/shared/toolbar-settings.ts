@@ -8,7 +8,6 @@
  * Floating was removed. Saved VS Code values of slim/floating migrate to chrome.
  */
 export type ToolbarMode = "chrome" | "slim" | "none";
-export const TOOLBAR_MODES: readonly ToolbarMode[] = ["chrome", "slim", "none"];
 export const DEFAULT_TOOLBAR_MODE: ToolbarMode = "chrome";
 
 /**
