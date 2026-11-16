@@ -2,6 +2,29 @@
 
 ## 0.1.0 (unreleased)
 
+- Fixed (review 2026-11-15):
+  - Editing a table no longer deletes cells past the header's column count
+    on rows you did not edit.
+  - Pasting, dropping or downloading an image, or saving a sketch, never
+    overwrites an existing file of the same name; it takes the next free
+    name.
+  - Scratch note file names use your local date, as daily notes do, instead
+    of the UTC date.
+  - A formula or code block with a broken character, or a malformed
+    `data-math` / `data-source` in raw HTML, no longer stops the rest of the
+    note from rendering.
+  - Closing the Vault Graph releases the panel's listeners, and clicking a
+    node opens its note even while the graph refreshes.
+  - Copy Link for Agent puts the passage on the clipboard when VS Code's chat
+    opens but refuses it, and stops re-attaching to Codex once the plugin
+    stops.
+  - Clicking a heading in the Markdown Outline of a CRLF note no longer makes
+    the outline ignore the caret for a second.
+  - Notes outside the workspace, or whose path differs in letter case on
+    Windows and macOS, open from Outline, Backlinks and the graph. Outline
+    and Go to Heading say at once when the Links plugin is off for the note,
+    and a jump that goes nowhere is logged instead of failing silently.
+
 - OKF support is removed. A folder with an `index.md` and typed notes is no
   longer an OKF bundle, so a Markdown link starting with `/` resolves from
   the vault root everywhere, as in Obsidian: `[x](/wiki/notes/x.md)` from a
