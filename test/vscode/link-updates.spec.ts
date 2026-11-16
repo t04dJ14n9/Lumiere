@@ -23,11 +23,20 @@ async function renameInExplorer(page: Page, from: string, to: string) {
     .first();
   // The Explorer lists a file written by the spec once the watcher reports it.
   await expect(row).toBeVisible({ timeout: 20_000 });
-  // A click would open the file and move the focus into its editor.
-  await row.click({ button: "right" });
-  await page.getByRole("menuitem", { name: /^Rename/ }).click();
+  const rename = page.getByRole("menuitem", { name: /^Rename/ });
   const input = page.locator(".explorer-folders-view .monaco-inputbox input");
-  await expect(input).toBeVisible();
+  // VS Code's own menu on Linux can drop a click made just as it opens: it
+  // stays open with nothing renamed. Click again until the box is there.
+  await expect(async () => {
+    if (!(await input.isVisible())) {
+      if (!(await rename.isVisible())) {
+        // A click would open the file and move the focus into its editor.
+        await row.click({ button: "right" });
+      }
+      await rename.click({ timeout: 2_000 });
+    }
+    await expect(input).toBeVisible({ timeout: 2_000 });
+  }).toPass({ timeout: 20_000 });
   await page.keyboard.press("ControlOrMeta+a");
   await page.keyboard.insertText(to);
   await page.keyboard.press("Enter");
