@@ -5,7 +5,7 @@ export const config = Schema.object({
   open: Schema.union(["workbench", "textEditor"])
     .default("workbench")
     .description(
-      "Where a Marp deck opens. textEditor sends it to VS Code's text editor, where Marp's own preview and export run. Keep in Workshop remembers a deck.",
+      "Where a Marp deck opens. textEditor sends it to VS Code's text editor, where Marp's own preview and export run. Keep Marp Deck in Lumiere remembers a deck.",
     ),
 });
 
@@ -38,7 +38,7 @@ export default defineManifest({
       },
       {
         id: "marp.keepInWorkshop",
-        title: "Keep Marp Deck in Workshop",
+        title: "Keep Marp Deck in Lumiere",
         scope: "workbench",
       },
     ],

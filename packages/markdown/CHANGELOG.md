@@ -2,6 +2,10 @@
 
 ## 0.1.0 (unreleased)
 
+- **Keep Marp Deck in Workshop** is now **Keep Marp Deck in Lumiere**, and
+  the Marp and Outline settings' descriptions name Lumiere instead of
+  Workshop, the editor's old name. The command id is unchanged.
+
 - A table column you resized keeps its width when you type a longer word
   into one of its cells; before, the column grew to fit the word.
 
