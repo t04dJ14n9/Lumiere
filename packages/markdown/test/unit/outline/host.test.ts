@@ -1247,3 +1247,37 @@ test("scroll reports stop when the panel closes or the outline stops", async (t)
   await fixture.root.dispose();
   assert.equal(second.cursor.listeners, 0);
 });
+
+test("after a click on an outline row in a CRLF note, the outline follows the caret on", async (t) => {
+  const crlf = NESTED.replace(/\n/g, "\r\n");
+  const fixture = await outlineFixture({ "A.md": crlf });
+  t.after(() => fixture.root.dispose());
+  const { panel, cursor } = fixture.panel("one");
+  fixture.open(panel);
+  await tick();
+  // The caret is an editor offset: the editor counts each line break once.
+  const editorText = NESTED;
+  cursor.head = editorText.indexOf("body-a");
+  fixture.root.emit("editor/selectionChanged", panel, false);
+  await tick();
+  const collapses = fixture.collapseAllCount;
+  // The row's command carries the heading's offset in the file.
+  await fixture.fake.commands.get(OPEN_COMMAND)!(
+    uriOf("A.md"),
+    crlf.indexOf("# B"),
+  );
+  cursor.head = editorText.indexOf("# B");
+  fixture.root.emit("editor/selectionChanged", panel, false);
+  await tick();
+  assert.equal(
+    fixture.collapseAllCount,
+    collapses,
+    "the jump landed: no collapse",
+  );
+  // Moving on from the clicked heading ends the click's window at once.
+  cursor.head = editorText.indexOf("body-b");
+  fixture.root.emit("editor/selectionChanged", panel, false);
+  await tick();
+  assert.equal(fixture.collapseAllCount, collapses + 1);
+  assert.equal(fixture.reveals.at(-1)?.node.label, "B1a");
+});
