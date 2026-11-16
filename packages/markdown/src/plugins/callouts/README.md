@@ -6,6 +6,9 @@ template above a non-empty line at column 0, and replaces an empty line with
 that template; the caret reveals callout source. As in Obsidian, a type is any
 text but `]` (`[!笔记]`, `[!my type]` as `my-type`), and what follows a `|` is
 metadata that CSS snippets select with `data-callout-metadata` (`[!note|wide]`).
+An alias keeps its written type in `data-callout` (`[!tldr]` is
+`data-callout="tldr"`, with the icon and colour of `abstract`), so snippets
+that select an alias match, as in Obsidian.
 
 ## How it works
 
