@@ -51,11 +51,51 @@ function mergeValue(current: unknown, incoming: unknown): unknown {
   return incoming === null ? current : incoming;
 }
 
+/**
+ * How a template's properties join a note's: a value the note already has
+ * stays, a missing or empty one is added, and lists (and nested maps) are
+ * joined without duplicates.
+ */
+function keepExistingValue(current: unknown, incoming: unknown): unknown {
+  if (current === undefined || current === null || current === "") {
+    return incoming;
+  }
+  if (Array.isArray(current) && Array.isArray(incoming)) {
+    return [
+      ...new Set([...(current as unknown[]), ...(incoming as unknown[])]),
+    ];
+  }
+  if (propertyObject(current) && propertyObject(incoming)) {
+    const entries = new Map(Object.entries(current));
+    for (const [key, value] of Object.entries(incoming)) {
+      entries.set(key, keepExistingValue(entries.get(key), value));
+    }
+    return Object.fromEntries(entries);
+  }
+  return current;
+}
+
+export interface MergeOptions {
+  /**
+   * Keep the note's values and only add what it lacks (Insert Template);
+   * by default incoming values replace scalars (a property paste).
+   */
+  keepExisting?: boolean;
+}
+
+function mergerFor(
+  options: MergeOptions | undefined,
+): (current: unknown, incoming: unknown) => unknown {
+  return options?.keepExisting ? keepExistingValue : mergeValue;
+}
+
 /** Merge a structured property paste atomically, retaining unrelated YAML bytes. */
 export function mergeProperties(
   source: string,
   incoming: Record<string, unknown>,
+  options?: MergeOptions,
 ): PropertyChange[] | undefined {
+  const merge = mergerFor(options);
   try {
     const header = headerParts(source);
     const current = frontmatter(source)?.values;
@@ -74,7 +114,7 @@ export function mergeProperties(
     const expected = new Map<string, unknown>();
     const edits = new MergeEdits(source, header, document);
     for (const [key, incomingValue] of Object.entries(incoming)) {
-      const value = mergeValue(
+      const value = merge(
         Object.hasOwn(current, key) ? current[key] : undefined,
         incomingValue,
       );

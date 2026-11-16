@@ -14,6 +14,10 @@
     name would capture gets `./` in front (`[[./X]]`, `[x](./X.md)`), so it
     opens the note in that folder instead of the root one. Markdown link
     suggestions get the same check.
+  - **Insert Template** merges a template's properties into the note's, as
+    Obsidian does, instead of pasting its `---` block into the note: the
+    note's values stay, missing properties are added and lists are joined.
+    Only the body goes in at the caret.
 
 - Daily Notes is removed: **Open Today's Daily Note**, **Open Previous
   Daily Note** and **Open Next Daily Note** are gone, with the
