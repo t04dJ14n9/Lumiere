@@ -43,6 +43,8 @@ export interface WorkspaceFiles {
   createText(uri: string, text: string): Promise<boolean>;
   /** Replace or create a file with raw bytes (images, etc.). */
   writeBytes(uri: string, data: Uint8Array): Promise<void>;
+  /** `createText` for raw bytes: false, writing nothing, when `uri` is taken. */
+  createBytes(uri: string, data: Uint8Array): Promise<boolean>;
   list(uri: string): Promise<readonly string[] | undefined>;
   mkdir(uri: string): Promise<void>;
   copy(from: string, to: string): Promise<void>;

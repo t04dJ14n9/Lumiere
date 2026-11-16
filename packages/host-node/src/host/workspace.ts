@@ -119,6 +119,7 @@ function workspaceFileWrites(
   | "writeText"
   | "createText"
   | "writeBytes"
+  | "createBytes"
   | "mkdir"
   | "copy"
   | "move"
@@ -128,27 +129,28 @@ function workspaceFileWrites(
   const prepareWrite = async (uri: string) => {
     await inside(uri);
     await files.mkdir(parentUri(files, uri));
-    await files.create(uri);
+    return files.create(uri);
+  };
+  // Only the writer that made the file fills it.
+  const createFilled = async (uri: string, fill: () => Promise<void>) => {
+    if (!(await prepareWrite(uri))) {
+      return false;
+    }
+    await fill();
+    return true;
   };
   return {
     writeText: async (uri, text) => {
       await prepareWrite(uri);
       await files.save(uri, text);
     },
-    createText: async (uri, text) => {
-      await inside(uri);
-      await files.mkdir(parentUri(files, uri));
-      // Only the writer that made the file fills it.
-      if (!(await files.create(uri))) {
-        return false;
-      }
-      await files.save(uri, text);
-      return true;
-    },
+    createText: (uri, text) => createFilled(uri, () => files.save(uri, text)),
     writeBytes: async (uri, data) => {
       await prepareWrite(uri);
       await files.saveBytes(uri, data);
     },
+    createBytes: (uri, data) =>
+      createFilled(uri, () => files.saveBytes(uri, data)),
     mkdir: async (uri) => {
       await inside(uri);
       await files.mkdir(uri);

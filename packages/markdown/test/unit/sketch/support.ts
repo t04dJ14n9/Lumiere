@@ -61,7 +61,8 @@ export function memoryFiles(
     WorkspaceFiles,
     | "readText"
     | "writeText"
-    | "writeBytes"
+    | "createText"
+    | "createBytes"
     | "list"
     | "mkdir"
     | "isSymbolicLink"
@@ -71,9 +72,21 @@ export function memoryFiles(
       files.set(uri, text);
       onWrite(uri);
     },
-    writeBytes: async (uri, data) => {
+    createText: async (uri, text) => {
+      if (files.has(uri)) {
+        return false;
+      }
+      files.set(uri, text);
+      onWrite(uri);
+      return true;
+    },
+    createBytes: async (uri, data) => {
+      if (files.has(uri)) {
+        return false;
+      }
       files.set(uri, Buffer.from(data).toString("base64"));
       onWrite(uri);
+      return true;
     },
     list: async (uri) => {
       const prefix = `${uri}/`;
