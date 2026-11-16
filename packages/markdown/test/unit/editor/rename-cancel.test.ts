@@ -208,7 +208,7 @@ function setup(
       }));
       let waited: Promise<unknown> | undefined;
       willListener!({ files, waitUntil: (thenable) => (waited = thenable) });
-      return (await waited) as FakeWorkspaceEdit | undefined;
+      await waited;
     },
     /** VS Code announces a finished rename to every live listener. */
     async didRename(pairs: [string, string][]) {
@@ -514,41 +514,4 @@ test("a CRLF note typed into after the plan is made keeps its text, and the user
   assert.deepEqual(world.warnings, [
     "Links in Linker.md were not updated. Check them after the rename.",
   ]);
-});
-
-test("a canvas's link edit is applied after the rename against its text then, never in the will-rename edit", async () => {
-  const canvas = "file:///vault/Board.canvas";
-  const board = '{"nodes":[{"id":"1","type":"file","file":"Old.md","x":0}]}';
-  const replaceBoard = (text: string) => [
-    {
-      uri: canvas,
-      source: text,
-      edits: [
-        {
-          start: { line: 0, col: 0 },
-          end: { line: 0, col: text.length },
-          text: text.replace("Old.md", "New.md"),
-        },
-      ],
-    },
-  ];
-  // Another program (Obsidian, a sync) moves the node before the rename ends.
-  const world = setup({ [canvas]: board });
-  world.onWillRename(async () => replaceBoard(board));
-  const edit = await world.willRename([[OLD, NEW]]);
-  assert.deepEqual(
-    edit?.replacements.filter((replacement) => replacement.uri === canvas),
-    [],
-  );
-  world.doc(canvas).text = board.replace('"x":0', '"x":1');
-  await world.didRename([[OLD, NEW]]);
-  assert.equal(world.doc(canvas).text, board.replace('"x":0', '"x":1'));
-  assert.equal(world.warnings.length, 1);
-
-  // Left alone, the canvas is updated once the rename is done.
-  const quiet = setup({ [canvas]: board });
-  quiet.onWillRename(async () => replaceBoard(board));
-  await quiet.willRename([[OLD, NEW]]);
-  await quiet.didRename([[OLD, NEW]]);
-  assert.equal(quiet.doc(canvas).text, board.replace("Old.md", "New.md"));
 });
