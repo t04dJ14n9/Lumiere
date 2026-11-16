@@ -8,7 +8,7 @@ import { closeAllEditors, expect, openFile, test } from "./workbench";
 const NOTE = "section-links.md";
 
 /** The frame of Lumiere's Markdown editor, once it has opened. */
-async function lumiaEditor(page: Page): Promise<Frame> {
+async function lumiereEditor(page: Page): Promise<Frame> {
   let editor: Frame | undefined;
   await expect
     .poll(async () => {
@@ -34,7 +34,7 @@ test("typing [[docs/outline.pdf#Sec lists the PDF's bookmarks, and Enter links t
   try {
     await openFile(page, NOTE);
     await reopenWith(page, "Lumiere");
-    const frame = await lumiaEditor(page);
+    const frame = await lumiereEditor(page);
     await frame.getByRole("textbox", { name: "Markdown content" }).click();
     await page.keyboard.type("[[docs/outline.pdf#Sec");
 

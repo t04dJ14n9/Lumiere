@@ -9,8 +9,8 @@ import { fakeHost } from "../../support/vscode-fake";
 const NOTE = "file:///vault/Note.md";
 const TEXT = "alpha beta gamma delta";
 
-/** A Lumia editor on the note, whose webview selection is `selection`. */
-function lumiaPanel(selection: string): EditorPanel {
+/** A Lumiere editor on the note, whose webview selection is `selection`. */
+function lumierePanel(selection: string): EditorPanel {
   return {
     document: { uri: NOTE, getText: () => TEXT },
     rpc: { call: async () => ({ text: selection }) },
@@ -52,17 +52,17 @@ async function start(options: {
   return { root, shown };
 }
 
-test("the focused text editor's selection is counted, not that of the note's Lumia editor in another group", async (t) => {
+test("the focused text editor's selection is counted, not that of the note's Lumiere editor in another group", async (t) => {
   const f = await start({
-    panels: [lumiaPanel("alpha")],
+    panels: [lumierePanel("alpha")],
     textEditor: { text: TEXT, selection: "beta gamma" },
   });
   t.after(() => f.root.dispose());
   assert.deepEqual(f.shown, ["2 words 10 characters"]);
 });
 
-test("the active Lumia editor's selection is counted even when a text editor shows the note", async (t) => {
-  const panel = lumiaPanel("alpha");
+test("the active Lumiere editor's selection is counted even when a text editor shows the note", async (t) => {
+  const panel = lumierePanel("alpha");
   const f = await start({
     panels: [panel],
     active: panel,
@@ -72,8 +72,8 @@ test("the active Lumia editor's selection is counted even when a text editor sho
   assert.deepEqual(f.shown, ["1 word 5 characters"]);
 });
 
-test("a Lumia editor on the note is counted when no text editor shows it", async (t) => {
-  const f = await start({ panels: [lumiaPanel("")] });
+test("a Lumiere editor on the note is counted when no text editor shows it", async (t) => {
+  const f = await start({ panels: [lumierePanel("")] });
   t.after(() => f.root.dispose());
   assert.deepEqual(f.shown, ["4 words 22 characters"]);
 });

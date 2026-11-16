@@ -14,7 +14,7 @@ import { currentViewSettings } from "./reading-position";
 
 /**
  * The current tool and a way to change it. The tool is the interaction hub's
- * active one, so nothing here keeps a copy of it: reading is the `lumia.read`
+ * active one, so nothing here keeps a copy of it: reading is the `lumiere.read`
  * tool (annotation-mode.ts registers it), Annotate is a drawing tool, and
  * Select Region is this file's.
  */

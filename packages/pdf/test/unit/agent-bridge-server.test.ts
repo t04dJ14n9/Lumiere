@@ -356,7 +356,7 @@ test("copyMcpSetup quotes a globalStorage path containing spaces", async () => {
     return undefined;
   }) as never;
   const storage =
-    "/Users/alice/Library/Application Support/Code/User/globalStorage/lumia";
+    "/Users/alice/Library/Application Support/Code/User/globalStorage/t04dj14n9.lumiere";
   const controller = registerAgentBridge({
     extensionUri: vscode.Uri.file("/nonexistent-extension") as never,
     globalStorageUri: vscode.Uri.file(storage) as never,
@@ -386,7 +386,7 @@ test("copyMcpSetup quotes a globalStorage path containing spaces", async () => {
 
 test("MCP setup snippets quote paths with spaces or apostrophes for POSIX shells", () => {
   const macShim =
-    "/Users/alice/Library/Application Support/Code/User/globalStorage/lumia/bridge-stdio.js";
+    "/Users/alice/Library/Application Support/Code/User/globalStorage/t04dj14n9.lumiere/bridge-stdio.js";
   const byLabel = new Map(
     mcpSetupOptions(macShim, "darwin").map((item) => [item.label, item.detail]),
   );
@@ -415,7 +415,7 @@ test("MCP setup snippets quote paths with spaces or apostrophes for POSIX shells
 
 test("MCP setup snippets quote Windows paths for each shell and escape backslashes in TOML", () => {
   const winShim =
-    "C:\\Users\\Alice Smith\\AppData\\Roaming\\Code\\User\\globalStorage\\lumia\\bridge-stdio.js";
+    "C:\\Users\\Alice Smith\\AppData\\Roaming\\Code\\User\\globalStorage\\t04dj14n9.lumiere\\bridge-stdio.js";
   const byLabel = new Map(
     mcpSetupOptions(winShim, "win32").map((item) => [item.label, item.detail]),
   );

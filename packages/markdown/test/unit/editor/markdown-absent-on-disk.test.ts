@@ -28,6 +28,6 @@ test("isMarkdownAbsentOnDisk uses the test override without touching disk", () =
 test("isMarkdownAbsentOnDisk default reports a surely-missing file path", () => {
   setMarkdownAbsentOnDiskForTests();
   const missing =
-    "file:///tmp/lumia-definitely-missing-open-bridge-test/nope.md";
+    "file:///tmp/lumiere-definitely-missing-open-bridge-test/nope.md";
   assert.equal(isMarkdownAbsentOnDisk(missing), true);
 });

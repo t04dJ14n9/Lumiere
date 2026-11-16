@@ -31,7 +31,7 @@ test("viewerPlugins registers every plugin the viewer is built from", () => {
       "history",
       "interaction",
       "link",
-      "lumia-text",
+      "lumiere-text",
       "outline",
       "render",
       "search",

@@ -132,8 +132,8 @@ test("an empty-space drag while reading draws a region, below text selection", (
     onPointerUp(sample: unknown): void;
   };
   assert.ok(handler.priority < 60, "the text selection handler goes first");
-  assert.ok(handler.enabledFor({ id: "lumia.read" }));
-  assert.ok(!handler.enabledFor({ id: "lumia.annotate" }));
+  assert.ok(handler.enabledFor({ id: "lumiere.read" }));
+  assert.ok(!handler.enabledFor({ id: "lumiere.annotate" }));
   const sample = (x: number, y: number) => ({
     page: { ref: page, point: { x, y } },
     project: (ref: unknown) => (ref === page ? { x, y } : null),
