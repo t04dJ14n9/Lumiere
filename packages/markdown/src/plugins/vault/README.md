@@ -56,6 +56,11 @@ The VS Code adapter is `src/host/vault-system.ts`; the worker is
 ## Limits and differences from Obsidian
 
 - Links ignore case, as in Obsidian; an exact-case path wins.
+- With the relative link format, a link to a note in the same folder (or a
+  subfolder) is written `./X` when a file at the vault path `X` exists,
+  because a link without `./` is looked up from the vault root first.
+  Otherwise it is written `X`. What Obsidian writes in that case is not
+  measured.
 - Excluded files are indexed and resolvable, as in Obsidian, and flagged
   `excluded` for the features that leave them out. A filter without wildcards
   is a path prefix (Obsidian's form); globs are also accepted.
