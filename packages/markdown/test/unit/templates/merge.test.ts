@@ -248,3 +248,18 @@ test("an empty property in the note takes the template's value", () => {
   assert.equal(invalidProperties, undefined);
   assert.deepEqual(frontmatter(text)?.values?.tags, ["meeting"]);
 });
+
+test("a long integer reached through an alias, or in a flow header, is never rounded", () => {
+  for (const note of [
+    "---\nbase: &ids [18446744073709551615]\nids: *ids\n---\nBody\n",
+    "---\n{ids: [1], serial: 18446744073709551615}\n---\nBody\n",
+  ]) {
+    const { text, invalidProperties } = inserted(
+      note,
+      "---\nids: [7]\n---\nText\n",
+      { from: note.length, to: note.length },
+    );
+    assert.equal(invalidProperties, "note", note);
+    assert.ok(!text.includes("18446744073709552000"), text);
+  }
+});
