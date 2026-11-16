@@ -3,7 +3,7 @@
 Shows the active note's headings beside this editor, with Collapse All,
 Expand All and an optional Follow Cursor toggle. Clicking a heading jumps to
 its section, like Obsidian's **Outline** core plugin. **Go to Heading…** searches
-these headings in a native Quick Pick while the Workshop editor is active.
+these headings in a native Quick Pick while the Lumiere editor is active.
 
 ## How it works
 
@@ -65,7 +65,7 @@ the active panel's authoritative text, shows heading levels and parent titles,
 and navigates through the same path as the tree. Dismissed or stale picks
 (edited document, changed panel or stopped plugin) do not navigate.
 
-Ctrl+Alt+O (Control+Command+O on macOS) toggles Markdown Outline while the Workshop
+Ctrl+Alt+O (Control+Command+O on macOS) toggles Markdown Outline while the Lumiere
 editor is active (editor-scoped keybinding, so Lumiere PDF keeps the same keys).
 The command palette entry is workbench/config-gated like Quick Switcher. Hiding
 targets the view itself, including after moving it to the secondary sidebar or
@@ -73,8 +73,8 @@ panel; showing restores and focuses it in its current location.
 
 When a Lumiere editor is active, **Markdown Outline** stands in for VS Code's
 native **Outline**: the native one is hidden as soon as Markdown Outline is on
-screen, and comes back when the last Workshop editor is left (after a short
-debounce, skipped if Lumiere PDF or another Workshop editor already owns the
+screen, and comes back when the last Lumiere editor is left (after a short
+debounce, skipped if Lumiere PDF or another Lumiere editor already owns the
 active tab), but only if this plugin hid it. Opening a note never changes which
 sidebar container is shown: a note opened from Search or Quick Open leaves the
 Search view in place, because focusing the view (`lumiere.markdown.outline.focus`)
@@ -83,10 +83,10 @@ shows itself where the Explorer is already the container; VS Code lists an
 extension's Explorer views collapsed the first time, so the reader expands it
 once and VS Code remembers that. (Until then the native Outline is left alone.)
 **Tags** and other Explorer subpanels stay collapsed by default
-(`visibility: "collapsed"`). Manual changes to Outline while a Workshop editor
+(`visibility: "collapsed"`). Manual changes to Outline while a Lumiere editor
 stays active are left alone: the native Outline is hidden once per time a note
 becomes active. Tags also use the same `activeCustomEditorId` when-clause as
-Markdown Outline so they do not linger beside non-Workshop editors.
+Markdown Outline so they do not linger beside non-Lumiere editors.
 
 ## Files
 
@@ -102,7 +102,7 @@ Markdown Outline so they do not linger beside non-Workshop editors.
 - `view.ts`: refresh timing, cursor following and expansion traversal.
 - `jump-window.ts`: the second after an outline click, when the tree and scroll follow are left alone.
 - `actions.ts`: commands, configuration reads and the follow context key.
-- `focus.ts`: native Outline ↔ Markdown Outline swap while a Workshop editor is active, without changing the sidebar container (Tags stay collapsed).
+- `focus.ts`: native Outline ↔ Markdown Outline swap while a Lumiere editor is active, without changing the sidebar container (Tags stay collapsed).
 - `commands.ts`: view, command, setting and context identifiers.
 - `headings.ts`: nesting headings and finding the caret's section.
 - `manifest.ts`: view/title actions, the view, keybinding and the follow setting.
@@ -144,7 +144,7 @@ Markdown Outline so they do not linger beside non-Workshop editors.
   the first heading. The app's outline panel (host-node) clears it.
 - No drag-and-drop reordering of sections.
 - VS Code's native Outline and breadcrumbs require an editor integration that
-  the supported CustomTextEditorProvider API does not supply. Workshop uses
+  the supported CustomTextEditorProvider API does not supply. Lumiere uses
   Markdown Outline and Go to Heading. The plain text editor uses VS Code's built-in
   Markdown symbols and Ctrl+Shift+O; this plugin registers no symbol provider,
-  so split editors cannot cache duplicate headings from Workshop.
+  so split editors cannot cache duplicate headings from Lumiere.

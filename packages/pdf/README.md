@@ -251,11 +251,10 @@ only the on/off switch has an end-to-end test.
 
 Other extensions can ask for the current PDF selection as data, without the
 clipboard. `vscodeEmbedPdf.bridge.envelope` returns a Workbench v1 envelope
-(`producer` `"pdf"`) for the PDF you last looked at: the same shape Markdown
-Workshop's `parseBridgeEnvelope` already consumes (`capturedAt`,
+(`producer` `"pdf"`) for the PDF you last looked at: the same shape Lumiere's `parseBridgeEnvelope` already consumes (`capturedAt`,
 `source.identity` / `kind` / `media`, `locator`, `view`, `selection`,
 `revision`). Lumiere is the aggregator and may call this command;
-this command does not call Workshop back. Copy link to this still copies
+this command does not call Lumiere back. Copy link to this still copies
 the same source-link text. See [docs/bridge-envelope.md](docs/bridge-envelope.md).
 
 ## Opening a location from another extension

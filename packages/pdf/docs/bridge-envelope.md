@@ -10,17 +10,17 @@ versioned envelope. This is not the Copy Link for Agent clipboard text
 | `vscodeEmbedPdf.bridge.envelope` | `"pdf"` |
 | `lumiere.markdown.bridge.envelope` | `"markdown"` |
 
-The PDF command keeps its `vscodeEmbedPdf.bridge.envelope` id across the PDF
-Workshop rename so existing peer integrations can discover it.
+The PDF command keeps its `vscodeEmbedPdf.bridge.envelope` id across the product's
+renames so existing peer integrations can discover it.
 
 Version is `1`. The object matches Lumiere's Workbench v1
-`BridgeEnvelope` so Workshop's `parseBridgeEnvelope` accepts a PDF result.
+`BridgeEnvelope` so Lumiere's `parseBridgeEnvelope` accepts a PDF result.
 
-Workshop is the aggregator: it returns a Markdown selection when the active
+Lumiere is the aggregator: it returns a Markdown selection when the active
 editor has one, otherwise it calls this command when the command is
-registered. This command does **not** call Workshop back (and does not
+registered. This command does **not** call Lumiere back (and does not
 accept an `includePeers` flag), so the two cannot recurse. A missing
-command or a failing peer on the Workshop side leaves that call empty.
+command or a failing peer on the Lumiere side leaves that call empty.
 
 No PDF selection returns `undefined`. The command does not write the clipboard.
 
