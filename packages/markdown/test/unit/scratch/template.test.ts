@@ -27,7 +27,7 @@ test("scratch file names are dated, ASCII slugs and unique", () => {
   );
 });
 
-test("scratch file names use the local date, as daily notes do", () => {
+test("scratch file names use the local date", () => {
   // 20:00 UTC on the 10th is 04:00 on the 11th in Shanghai.
   assert.equal(
     scratchFileName("Idea", "2026-10-10T20:00:00.000Z", []),

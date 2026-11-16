@@ -2,6 +2,16 @@
 
 ## 0.1.0 (unreleased)
 
+- Daily Notes is removed: **Open Today's Daily Note**, **Open Previous
+  Daily Note** and **Open Next Daily Note** are gone, with the
+  `lumiere.markdown.plugins.dailyNotes.enabled`,
+  `lumiere.markdown.dailyNotes.folder`, `dailyNotes.dateFormat` and
+  `dailyNotes.template` settings, and Lumiere no longer reads
+  `.obsidian/daily-notes.json`. Your daily notes stay where they are and
+  open like any other note. **Insert Template** and `templates.json` are
+  unchanged. VS Code ignores settings no extension declares, so values you
+  set for the removed ones do nothing and need no migration.
+
 - **Keep Marp Deck in Workshop** is now **Keep Marp Deck in Lumiere**, and
   the Marp and Outline settings' descriptions name Lumiere instead of
   Workshop, the editor's old name. The command id is unchanged.
@@ -23,8 +33,7 @@
   - Pasting, dropping or downloading an image, or saving a sketch, never
     overwrites an existing file of the same name; it takes the next free
     name.
-  - Scratch note file names use your local date, as daily notes do, instead
-    of the UTC date.
+  - Scratch note file names use your local date instead of the UTC date.
   - A formula or code block with a broken character, or a malformed
     `data-math` / `data-source` in raw HTML, no longer stops the rest of the
     note from rendering.

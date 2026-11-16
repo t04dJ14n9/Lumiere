@@ -1,6 +1,6 @@
 /**
- * Template expansion shared by Templates, Daily Notes and later note
- * creators. Pure: no DOM, VS Code or Node APIs.
+ * Template expansion for Templates and any later note creator. Pure: no
+ * DOM, VS Code or Node APIs.
  */
 import { formatWithPattern } from "./bases/value-methods";
 

@@ -352,7 +352,7 @@ test("Ctrl/Cmd+E toggles Lumiere and the host text editor, not Source mode", asy
 
 // The editor host sets `lumiere.markdown.plugin.<id>` for the editor features
 // and the three core ones; outline and ideContext set their own. A window
-// feature (templates, dailyNotes, ...) has no such key, so a command that
+// feature (templates, scratch, ...) has no such key, so a command that
 // waits for it is never in the palette: use scope "workbench" for those.
 test("no contribution waits for a plugin context key that nothing sets", async () => {
   const settable = new Set([

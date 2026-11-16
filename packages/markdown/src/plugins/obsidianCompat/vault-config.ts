@@ -2,10 +2,7 @@ import type { Disposer } from "@workshop/core";
 import type { ConfigFile, ConfigFiles } from "./config-files";
 import type { ObsidianOverrides } from "./api";
 import { mapAppSettings } from "./app-settings";
-import {
-  mapDailyNotesSettings,
-  mapTemplatesSettings,
-} from "./core-plugin-settings";
+import { mapTemplatesSettings } from "./core-plugin-settings";
 import { TypesRegistry } from "./types-registry";
 
 export interface VaultConfigOptions {
@@ -20,7 +17,6 @@ const SETTINGS_FILES: readonly {
   map(value: unknown): ObsidianOverrides;
 }[] = [
   { file: "app.json", map: mapAppSettings },
-  { file: "daily-notes.json", map: mapDailyNotesSettings },
   { file: "templates.json", map: mapTemplatesSettings },
 ];
 

@@ -106,8 +106,8 @@ The Obsidian default comes from each plugin's `defaultOn` in 1.14.4. "Workbench"
 | **Page preview** | on | Hover preview of internal links (needs Ctrl/Cmd in the editor) | **have** `mw.plugins.pagePreview.enabled` (Ctrl/Cmd hover + keyboard) | keep | — | — |
 | Page preview › require Ctrl/Cmd per source (Editing, Reading, Search/Backlinks, Tab header) | editor: on; others: off | Per-surface modifier requirement | partial (the editor always needs the modifier) | port: `mw.pagePreview.requireModifier` (bool) | P3 | S |
 | **Templates** | on | Insert a template from a folder; `{{date}}`, `{{time}}`, `{{title}}` | **missing** | **port**: plugin + `mw.templates.folder`, `mw.templates.dateFormat` (`YYYY-MM-DD`), `mw.templates.timeFormat` (`HH:mm`) | **P1** | M |
-| **Daily notes** | on | Opens or creates today's note | **missing** | **port**: plugin + `mw.dailyNotes.dateFormat` (`YYYY-MM-DD`), `.folder` (`""`), `.template` (`""`). Obsidian's "Open daily note on startup" is a 1.x option; skip it, VS Code owns startup | **P1** | M |
-| Unique note creator (`zk-prefixer`) | off | New note with a timestamp prefix (`YYYYMMDDHHmm`), folder and template | missing | port later (reuses the templates/daily code) | P3 | S |
+| **Daily notes** | on | Opens or creates today's note | **missing** | **removed: not planned**. Ported 2026-11-05, removed 2026-11-16 as not useful enough to keep | — | — |
+| Unique note creator (`zk-prefixer`) | off | New note with a timestamp prefix (`YYYYMMDDHHmm`), folder and template | missing | port later (reuses the templates code) | P3 | S |
 | **Word count** | on | Words and characters in the status bar (CJK aware) | **have** `mw.plugins.wordCount.enabled` (selection aware) | keep. Verify the CJK counting rule | P3 | S |
 | **File recovery** | on | Snapshots every `intervalMinutes`=5, kept `keepDays`=7; browse and restore | partial. VS Code **Local History** does this (`workbench.localHistory.enabled`, `.maxFileEntries`, `.mergeWindow`). The custom editor saves through the TextDocument, so it should be covered | map to VS Code Local History + document how to reach it (Timeline view) | P2 (verify) | S |
 | **Command palette** | on | Fuzzy command list; pinned commands | N/A (VS Code) Command Palette. Pinned commands = VS Code "recently used" | skip | — | — |
@@ -146,8 +146,8 @@ These are in order. Items 1–6 are what an Obsidian user notices in the first h
 
 1. **Text font size** (`mw.appearance.fontSize`, falling back to `editor.fontSize` / `[markdown]`), P1 / S. Text is hard-coded at 16px, and changing `editor.fontSize` does nothing, which surprises VS Code users. This is the cheapest win.
 2. **Text font family** (`mw.appearance.textFont`), P1 / S. Obsidian users pick a reading font, and the prose now uses the VS Code UI font with no way to change it.
-3. **Templates core plugin** (folder + date/time formats + Insert template command), P1 / M. It is one of Obsidian's most-used core plugins and is fully missing. Daily notes and Note composer depend on it.
-4. **Daily notes** (date format, folder, template; Open today's daily note command), P1 / M. It is a central Obsidian workflow, and its `.obsidian/daily-notes.json` keys can be read directly.
+3. **Templates core plugin** (folder + date/time formats + Insert template command), P1 / M. It is one of Obsidian's most-used core plugins and is fully missing. Note composer depends on it.
+4. ~~**Daily notes**~~: removed, not planned. Ported 2026-11-05 and removed 2026-11-16 as not useful enough to keep.
 5. **Obsidian-style default keybindings**, scoped to the workbench editor, P1 / S. Toggle Live Preview/Source (Ctrl/Cmd+E), toggle checklist (Ctrl/Cmd+Enter), Quick switcher (opt-in Ctrl/Cmd+O), and others. Muscle memory matters more than any setting.
 6. **Font size quick adjustment commands** (Increase/Decrease/Reset, optional Ctrl+wheel), P2 / S. VS Code zoom scales the whole window, and these let a reader resize only the note.
 7. **Status bar Live Preview/Source toggle** (Obsidian's `editor-status`), P2 / S. It makes the mode visible and reuses the existing command.

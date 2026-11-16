@@ -20,7 +20,6 @@ export { bridgeHost } from "./bridge/host";
 export { attachmentsHost } from "./attachments/host";
 export { scratchHost } from "./scratch/host";
 export { templatesHost } from "./templates/host";
-export { dailyNotesHost } from "./dailyNotes/host";
 export { gitDiffEditorHost } from "./gitDiffEditor/host";
 export { marpHost } from "./marp/host";
 export { inlineTitleHost } from "./inlineTitle/host";
