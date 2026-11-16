@@ -95,7 +95,15 @@ const onWillRename: HostDocuments["onWillRename"] = (listener) => {
           renames,
           pending,
         );
-        return workspaceEdit(current.filter((file) => !lumiere.has(file.uri)));
+        // A canvas's edit replaces the whole file, and VS Code applies this
+        // edit to a closed file with no check of its text then: another
+        // program's change to it (Obsidian, a sync) would be undone. The
+        // post-rename path checks the text right before it applies.
+        return workspaceEdit(
+          current.filter(
+            (file) => !lumiere.has(file.uri) && !isCanvas(file.uri),
+          ),
+        );
       }),
     );
   });
@@ -107,6 +115,8 @@ const onWillRename: HostDocuments["onWillRename"] = (listener) => {
     pending.clear();
   };
 };
+
+const isCanvas = (uri: string) => uri.toLowerCase().endsWith(".canvas");
 
 /** A rename event's files as URI strings, the form the host services use. */
 function renamePairs(
