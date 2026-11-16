@@ -13,7 +13,7 @@ export const request = Schema.object({
 export const MAX_UNRESOLVED = 10_000;
 export const MAX_KNOWN_NOTES = 150_000;
 /** Lower-cased link paths in the note that name no vault file. */
-export const unresolvedLinkpaths = Schema.array(Schema.string().max(8192)).max(
+const unresolvedLinkpaths = Schema.array(Schema.string().max(8192)).max(
   MAX_UNRESOLVED,
 );
 /** Vault note lookup keys (basename / path / aliases), lower-cased. */

@@ -56,7 +56,7 @@ export function editActionFor(
 }
 
 /** INPUT/TEXTAREA, property fields, and table cell editors keep native clipboard chords. */
-export function leavesNativeEdit(target: EventTarget | null): boolean {
+function leavesNativeEdit(target: EventTarget | null): boolean {
   if (!target || !("tagName" in target)) {
     return isNestedNativeEditor(target);
   }

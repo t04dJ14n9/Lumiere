@@ -62,7 +62,7 @@ export function formatActionFor(
 }
 
 /** INPUT/TEXTAREA and property contenteditables keep native Ctrl+B/I. */
-export function leavesNativeFormat(target: EventTarget | null): boolean {
+function leavesNativeFormat(target: EventTarget | null): boolean {
   if (!target || !("tagName" in target)) {
     return isPropertyNativeEditor(target);
   }

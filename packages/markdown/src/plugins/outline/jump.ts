@@ -2,7 +2,7 @@ import type { Logger } from "@workshop/core";
 import type { Dialogs, HostDocument, HostSettings } from "../../shared/host";
 import type { Vaults } from "../vault/api";
 
-export const LINKS_OFF_MESSAGE =
+const LINKS_OFF_MESSAGE =
   "Markdown Outline jumps to headings through the Links plugin, which is off for this note.";
 
 /** What a jump to a heading needs from the plugin's services. */
