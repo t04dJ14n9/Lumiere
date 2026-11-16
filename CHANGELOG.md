@@ -17,6 +17,8 @@
     Typing done while that save checks the disk is kept too; before, a
     note that was clean when the save started took the other version over
     it.
+    A save that cannot read the file to make that check fails, instead of
+    writing over it.
   - A note no longer shows up, or gets saved, empty when a file watcher fires
     in the middle of Lumiere's own save.
   - HTML, SVG and script files in a vault can no longer run on DSH's or the
