@@ -89,10 +89,6 @@ test("loadVaultCssSnippets loads only the snippets appearance.json enables", asy
     stat: async () => ({ mtime: 1, symbolicLink: false }),
     watch: () => () => {},
     revealTextEditor: async () => {},
-    diagnostics: {
-      replaceAll: () => {},
-      clear: () => {},
-    },
     files: {
       authorize: async () => {},
       readText: async (uri) => files.get(uri),

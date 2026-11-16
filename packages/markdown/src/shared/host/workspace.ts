@@ -1,6 +1,6 @@
 import type { Disposer } from "@workshop/core";
 import type { WorkerLauncher } from "../workers";
-import type { DiagnosticSink, WorkspaceFiles } from "../workspace-files";
+import type { WorkspaceFiles } from "../workspace-files";
 
 /** The workspace: its folders, trust and files. Plugins pass URIs; the host checks them. */
 export interface HostWorkspace {
@@ -21,8 +21,6 @@ export interface HostWorkspace {
   watch(uri: string, listener: () => void): Disposer;
   /** Create, copy and list workspace files. */
   readonly files: WorkspaceFiles;
-  /** Problems panel entries, one owner at a time (a plugin id). */
-  readonly diagnostics: DiagnosticSink;
   /** Show a file in a text editor beside the current one (Marp export). */
   revealTextEditor(uri: string): Promise<void>;
 }

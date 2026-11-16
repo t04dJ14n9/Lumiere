@@ -106,7 +106,6 @@ function defaultHost(): HostServices {
       stat: async () => ({ mtime: 0, symbolicLink: false }),
       watch: none,
       files: unavailableFiles(),
-      diagnostics: { replaceAll() {}, clear() {} },
       revealTextEditor: async () => {},
     },
     storage: { get: (_key, fallback) => fallback, update: async () => {} },
