@@ -7,7 +7,6 @@ import { SKETCH_EXTENSION } from "@workshop/ink/format";
 import {
   embedFor,
   insertEmbed,
-  resolveAttachmentDir,
   timestampStem,
   uniqueTimestampName,
   type EmbedLink,
@@ -15,11 +14,6 @@ import {
 import type { TextEdit } from "../../shared/host";
 
 export type { EmbedLink };
-
-/** @deprecated Prefer resolveAttachmentDir from attachments. */
-export function attachmentFolder(setting: string, notePath: string): string {
-  return resolveAttachmentDir(setting, notePath);
-}
 
 /** A sketch's name from when it was drawn: `2026-10-22 14.03`, local time. */
 export function sketchStem(date: Date): string {

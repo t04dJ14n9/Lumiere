@@ -101,7 +101,3 @@ async function offerMarpInstall(actions: MarpActions): Promise<void> {
     await actions.execute("workbench.extensions.search", MARP_EXTENSION);
   }
 }
-
-export function marpFlag(text: string): boolean {
-  return typeof text === "string" && isMarpDocument(text);
-}

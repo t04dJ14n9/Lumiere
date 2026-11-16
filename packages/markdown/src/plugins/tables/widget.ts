@@ -7,14 +7,6 @@ import { resumeRetainedCell } from "./focus-lifetime";
 import { entersTable } from "./navigation";
 import { activeTables } from "./state";
 
-export {
-  activeEditor,
-  clearTableSelection,
-  tableActions,
-  tableSelection,
-  tableSelectionChanges,
-} from "./state";
-
 const controllers = new WeakMap<HTMLElement, TableController>();
 const tableObservers = new WeakMap<HTMLElement, ResizeObserver>();
 
