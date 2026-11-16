@@ -96,3 +96,45 @@ test("block ids match without case, as in Obsidian", () => {
   assert.equal(noteFragment(source, "^MYBLOCK")?.text, "A paragraph.");
   assert.equal(noteFragment(source, "^other"), undefined);
 });
+
+// Obsidian's block scopes (obsidian.md/help/links#Link to a block in a note):
+// an id on a list item names the item with its children, an id in a quote
+// or callout names the quote, and an id on a heading names that heading.
+test("a block id on a list item names the item with its bullet and children", () => {
+  const source = [
+    "- first",
+    "- second ^item",
+    "  - child",
+    "    - grandchild",
+    "- third",
+    "",
+  ].join("\n");
+  assert.equal(
+    noteFragment(source, "^item")?.text,
+    "- second\n  - child\n    - grandchild",
+  );
+  const nested = ["- top", "  - nested ^deep", "    - below", "- next"].join(
+    "\n",
+  );
+  assert.equal(noteFragment(nested, "^deep")?.text, "- nested\n  - below");
+  const ordered = "1. one\n2. two ^two\n3. three\n";
+  assert.equal(noteFragment(ordered, "^two")?.text, "2. two");
+});
+
+test("a block id inside a quote or callout names the whole quote", () => {
+  const source = "> [!note] Title\n> First line\n> Last line ^quote\n\nAfter\n";
+  assert.equal(
+    noteFragment(source, "^quote")?.text,
+    "> [!note] Title\n> First line\n> Last line",
+  );
+});
+
+test("a block id on a heading names the heading, not the whole note", () => {
+  const source = "Intro\n\n## Heading ^head\n\nBody\n";
+  assert.equal(noteFragment(source, "^head")?.text, "## Heading");
+});
+
+test("an id on its own line still names the block before it", () => {
+  const source = "- a\n- b\n\n^list\n\nPara\n";
+  assert.equal(noteFragment(source, "^list")?.text, "- a\n- b");
+});

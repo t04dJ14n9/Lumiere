@@ -12,6 +12,12 @@ full text and line offsets for links/tasks/footnotes. Media controls, image dial
 recovery streams and nested passes are disposed when the owning pass or plugin
 stops. Original placeholders are restored and late resource results are ignored.
 
+A block embed (`![[Note#^id]]`) shows the block as Obsidian scopes it
+(`src/markdown/metadata/block-extract.ts`): an id on a list item shows that
+item with its bullet and children, an id inside a quote or callout shows the
+whole quote, an id on a heading shows the heading line, and any other id
+shows its paragraph, table or the block just above an id on its own line.
+
 As in Obsidian 1.13 and later, an image stays rendered whatever the caret or
 a selection does, and has no Edit button. A click selects it, and so does
 ArrowRight with the caret just before it or ArrowLeft just after it (the
