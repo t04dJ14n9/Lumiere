@@ -70,7 +70,7 @@ export class StickyScrollView {
               scrollTop: this.view.scrollDOM.scrollTop,
             },
       write: (measured) => {
-        if (measured && !this.isDestroyed) {
+        if (measured?.layout && !this.isDestroyed) {
           this.draw(measured.layout);
           this.redrawIfScrolled(measured.scrollTop);
         }
@@ -89,15 +89,31 @@ export class StickyScrollView {
   private redrawIfScrolled(measuredScrollTop: number): void {
     queueMicrotask(() => {
       if (
-        !this.isDestroyed &&
-        this.view.scrollDOM.scrollTop !== measuredScrollTop
+        this.isDestroyed ||
+        this.view.scrollDOM.scrollTop === measuredScrollTop
       ) {
-        this.draw(this.measure());
+        return;
+      }
+      // Only what CodeMirror has measured: lineBlockAtHeight would run its
+      // pending measuring now, which can record an anchoring scroll before a
+      // held jump has settled it, and the jump would let go. Outside those
+      // lines, the next measuring draws the bar.
+      const layout = this.measure((height) =>
+        this.view.viewportLineBlocks.find(
+          (block) => block.top <= height && height <= block.bottom,
+        ),
+      );
+      if (layout) {
+        this.draw(layout);
       }
     });
   }
 
-  private measure(): StickyLayout {
+  /** `lineAt` finds the line at a height; undefined when it cannot say. */
+  private measure(
+    lineAt: (height: number) => { from: number } | undefined = (height) =>
+      this.view.lineBlockAtHeight(height),
+  ): StickyLayout | undefined {
     const view = this.view;
     const editor = view.dom.getBoundingClientRect();
     const scroll = view.scrollDOM.getBoundingClientRect();
@@ -120,9 +136,10 @@ export class StickyScrollView {
     let height = 0;
     let headings: readonly Heading[] = [];
     for (let step = 0; step < 6; step++) {
-      const block = view.lineBlockAtHeight(
-        Math.max(0, top + height - view.documentTop),
-      );
+      const block = lineAt(Math.max(0, top + height - view.documentTop));
+      if (!block) {
+        return undefined;
+      }
       headings = stickyHeadings(index, block.from, limit);
       const nextHeight = headings.length * rowHeight;
       if (nextHeight === height) {
