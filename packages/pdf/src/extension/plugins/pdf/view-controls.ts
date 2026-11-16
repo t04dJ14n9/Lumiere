@@ -32,12 +32,11 @@ export function registerViewControls(panels: PdfPanels): vscode.Disposable {
 /** The View picker: zoom, page layout, scrolling and direction in one list. */
 async function selectView(panels: PdfPanels): Promise<void> {
   const panel = panels.active;
-  if (!panel) {
+  const view = panel?.view;
+  if (!panel || !view) {
     return;
   }
-  // Before the viewer has reported its view, nothing is marked current; the
-  // choices act all the same.
-  const choice = await vscode.window.showQuickPick(viewChoices(panel.view), {
+  const choice = await vscode.window.showQuickPick(viewChoices(view), {
     title: "PDF View",
     placeHolder: "Choose zoom, layout or scrolling",
   });
@@ -61,7 +60,7 @@ const section = (label: string): Choice => ({
 
 const current = (active: boolean) => (active ? { description: "current" } : {});
 
-function viewChoices(view: Partial<ViewState> = {}): Choice[] {
+function viewChoices(view: ViewState): Choice[] {
   return [
     section("Zoom"),
     {
