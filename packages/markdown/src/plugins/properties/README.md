@@ -17,11 +17,11 @@ Replaced anchors materialize their external aliases with exact integers.
 Types are a vault-wide registry keyed by
 property name, scoped by the injected vault root (`vault-types.ts`): the
 vault's `.obsidian/types.json`, as Obsidian keeps it (`multitext` is List),
-with types chosen in Lumiere that the file cannot hold on top. Changing a
-type writes `types.json` when the vault has one with types in it, so
-Obsidian sees the change; otherwise (no registry, or a host that cannot
-write it) it is kept in Lumiere's workspace storage, and no `.obsidian`
-folder is created. Changing a type changes no YAML; a mismatched value
+with types chosen in Lumiere on top. Changing a type asks `obsidianCompat`
+to write `types.json` when the vault has one with types in it; today every
+host refuses that write (no atomic conditional write), so the type is kept
+in Lumiere's workspace storage and Obsidian does not see it. No `.obsidian`
+folder is ever created. Changing a type changes no YAML; a mismatched value
 retains its warning until edited. Collapse is remembered per note and
 shared by that note's panels. New rows remain drafts until their names are
 accepted.

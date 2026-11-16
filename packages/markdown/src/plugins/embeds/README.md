@@ -46,6 +46,13 @@ it go (`image-selection.ts`, `image-size.ts`). While selected, the caret is hidd
 - `image-size.ts`: an image's written size and the resize steps.
 - `estimated-height.ts`: CodeMirror height-map reserve for off-viewport remounts (inline embeds use `persistent` decorations so the reserve stays outside the viewport).
 - `image-dialog.ts`: inspector dialog, remembered scale and focus lifetime.
+- `image-selection-keys.ts`: maps a key press to a selected image's key (`+`, `-`, `0`, …).
+- `image-resize-corner.ts`: the resize corner drawn on a selected image (visual only; resizing stays on the keys).
+- `embed-actions.ts`: the `.embed-actions` bar around an image's inspect control.
+- `clicks.ts`: what a click on an embed does: a note embed selects its source, an image leaves the caret alone.
+- `pdf-embed.ts`: the inline PDF viewer (`#page=` and `#height=` subpaths, page rendering through EmbedPDF, the Open button).
+- `base-embed.ts`: renders an embedded `.base` file's selected view (table, cards or list).
+- `base-embed-views.ts`: the cards and list views, cell values and note links for base embeds.
 - `webm.ts`: WebM parsing/recovery exports.
 - `webm-stream.ts`: EBML metadata, streaming boundaries and block time ordering.
 - `media-recovery.ts`: recovery fetch, header identification and streaming lifetime.
@@ -53,6 +60,11 @@ it go (`image-selection.ts`, `image-size.ts`). While selected, the caret is hidd
 - `note.test.ts`: fragment, source-offset and circular-embed units.
 - `image.test.ts`: saved-scale validation and legacy state units.
 - `webm.test.ts`: real codec fixtures, stream ordering and invalid/truncated data.
+- `estimated-height.test.ts`: height reserves for sized, unsized and note embeds.
+- `missing.test.ts`: the text shown for missing files, headings and blocks.
+- `image-selection-keys.test.ts`, `image-resize-corner.test.ts`, `embed-actions.test.ts`: selected-image keys and chrome.
+- `open-intent.test.ts`: wiki embeds carry `data-wiki`, Markdown images do not.
+- `wide-block.test.ts`: image width and horizontal scrolling in Live Preview.
 - `embeds.css`: embeds and the image inspector, bundled through
   `src/webview/styles/index.css`.
 
