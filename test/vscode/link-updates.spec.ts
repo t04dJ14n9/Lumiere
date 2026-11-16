@@ -1,6 +1,6 @@
 import { test, expect, chromium } from "@playwright/test";
 import type { Browser, Page } from "@playwright/test";
-import { readFileSync, rmSync, writeFileSync } from "node:fs";
+import { existsSync, readFileSync, rmSync, writeFileSync } from "node:fs";
 import path from "node:path";
 import { paths, readState } from "./state";
 import {
@@ -14,6 +14,18 @@ import {
 
 const userFile = path.join(paths.userData, "User", "settings.json");
 const inWorkspace = (name: string) => path.join(paths.workspace, name);
+const folderFile = inWorkspace(path.join(".vscode", "settings.json"));
+const MODE = "lumiere.markdown.linkUpdates.mode";
+
+/** A settings file's value for the link update mode, if the file has one. */
+function modeIn(file: string): unknown {
+  if (!existsSync(file)) {
+    return undefined;
+  }
+  return (JSON.parse(readFileSync(file, "utf8")) as Record<string, unknown>)[
+    MODE
+  ];
+}
 
 /** Renames a file from the Explorer, as a user does: Rename in its menu, type, Enter. */
 async function renameInExplorer(page: Page, from: string, to: string) {
@@ -42,6 +54,15 @@ async function renameInExplorer(page: Page, from: string, to: string) {
   await page.keyboard.press("Enter");
 }
 
+/** A canvas with one file node, as Obsidian writes it. */
+function board(file: string): string {
+  return JSON.stringify(
+    { nodes: [{ id: "n", type: "file", file, x: 0, y: 0 }], edges: [] },
+    null,
+    "\t",
+  );
+}
+
 /**
  * VS Code's own prompt for edits an extension makes with a file move; it
  * follows Lumiere's question and is not Lumiere's.
@@ -54,7 +75,7 @@ async function acceptRefactoring(page: Page) {
   await prompt.getByRole("button", { name: "OK" }).click();
 }
 
-test("Always Update in the rename dialog updates the links, saves the mode, and the next rename does not ask", async () => {
+test("Always Update in the rename dialog updates the links, saves the mode for the workspace folder, and the next rename does not ask", async () => {
   const originalUserSettings = readFileSync(userFile, "utf8");
   const settings = JSON.parse(originalUserSettings) as Record<string, unknown>;
   // The unset contribution default is prompt, as in Obsidian when
@@ -64,10 +85,23 @@ test("Always Update in the rename dialog updates the links, saves the mode, and 
       "lumiere.markdown.linkUpdates.mode is already set in User/settings.json; this spec tests the unset contribution default and must run without that key.",
     );
   }
+  const originalFolderSettings = existsSync(folderFile)
+    ? readFileSync(folderFile, "utf8")
+    : undefined;
+  if (modeIn(folderFile) !== undefined) {
+    throw new Error(`${MODE} is already set in ${folderFile}.`);
+  }
   let browser: Browser | undefined;
   try {
     writeFileSync(inWorkspace("Rename Target.md"), "# Target\n");
-    writeFileSync(inWorkspace("Rename Linker.md"), "See [[Rename Target]].\n");
+    writeFileSync(
+      inWorkspace("Rename Linker.md"),
+      "---\nup: '[[Rename Target]]'\n---\nSee [[Rename Target]].\n",
+    );
+    writeFileSync(
+      inWorkspace("Rename Board.canvas"),
+      board("Rename Target.md"),
+    );
     browser = await chromium.connectOverCDP(readState().webSocket);
     const page = workbenchPage(browser);
     // Opening a note activates the extension, as it is for any real session.
@@ -77,7 +111,7 @@ test("Always Update in the rename dialog updates the links, saves the mode, and 
     const dialog = page.locator(".monaco-dialog-box");
 
     await renameInExplorer(page, "Rename Target.md", "Rename Goal.md");
-    await expect(dialog).toContainText("Update links in 1 file?");
+    await expect(dialog).toContainText("Update links in 2 files?");
     for (const button of ["Update Links", "Always Update", "Don't Update"]) {
       await expect(dialog.getByRole("button", { name: button })).toBeVisible();
     }
@@ -88,19 +122,14 @@ test("Always Update in the rename dialog updates the links, saves the mode, and 
       .poll(() => readFileSync(inWorkspace("Rename Linker.md"), "utf8"), {
         timeout: 20_000,
       })
-      .toBe("See [[Rename Goal]].\n");
-    // Always Update writes always to the user's settings, which started unset.
+      .toBe("---\nup: '[[Rename Goal]]'\n---\nSee [[Rename Goal]].\n");
     await expect
-      .poll(
-        () =>
-          (
-            JSON.parse(readFileSync(userFile, "utf8")) as Record<
-              string,
-              unknown
-            >
-          )["lumiere.markdown.linkUpdates.mode"],
-      )
-      .toBe("always");
+      .poll(() => readFileSync(inWorkspace("Rename Board.canvas"), "utf8"))
+      .toBe(board("Rename Goal.md"));
+    // Always Update writes always to the workspace folder's settings, as
+    // Obsidian keeps alwaysUpdateLinks per vault; the user's stay unset.
+    await expect.poll(() => modeIn(folderFile)).toBe("always");
+    expect(modeIn(userFile)).toBeUndefined();
 
     // VS Code's prompt is the first dialog this rename shows: Lumiere did not ask.
     await renameInExplorer(page, "Rename Goal.md", "Rename Target.md");
@@ -110,7 +139,10 @@ test("Always Update in the rename dialog updates the links, saves the mode, and 
       .poll(() => readFileSync(inWorkspace("Rename Linker.md"), "utf8"), {
         timeout: 20_000,
       })
-      .toBe("See [[Rename Target]].\n");
+      .toBe("---\nup: '[[Rename Target]]'\n---\nSee [[Rename Target]].\n");
+    await expect
+      .poll(() => readFileSync(inWorkspace("Rename Board.canvas"), "utf8"))
+      .toBe(board("Rename Target.md"));
   } finally {
     try {
       if (browser) {
@@ -118,9 +150,15 @@ test("Always Update in the rename dialog updates the links, saves the mode, and 
       }
     } finally {
       writeFileSync(userFile, originalUserSettings);
+      if (originalFolderSettings === undefined) {
+        rmSync(folderFile, { force: true });
+      } else {
+        writeFileSync(folderFile, originalFolderSettings);
+      }
       rmSync(inWorkspace("Rename Target.md"), { force: true });
       rmSync(inWorkspace("Rename Goal.md"), { force: true });
       rmSync(inWorkspace("Rename Linker.md"), { force: true });
+      rmSync(inWorkspace("Rename Board.canvas"), { force: true });
     }
   }
 });
