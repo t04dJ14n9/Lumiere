@@ -16,7 +16,11 @@ glyphs (`\mathbb`, `\mathfrak`, `\mathscr`, `\mathcal`, `\ell`, AMS relations,
 arrows, accented letters) in separate files that MathJax asks for on first use;
 each is a chunk of the webview bundle, so they load offline and only when
 needed. Each render pass owns its pending result and restoration callback, and
-plugin disposal clears all remaining renders. Editing commands wrap or unwrap
+plugin disposal clears all remaining renders. Each formula travels to the
+post-processor percent-encoded in `data-math`; a value that is not valid
+percent-encoding (raw HTML in the note can write one) is typeset as written,
+and a lone surrogate in the source becomes U+FFFD, so one bad formula never
+stops the rest of the block. Editing commands wrap or unwrap
 the selection through CodeMirror. Rendered clicks synchronize the editor range
 and browser selection, including a second click on a display preview whose
 source is already shown, so typing replaces the body and preserves delimiters.
@@ -32,6 +36,7 @@ source is already shown, so typing replaces the body and preserves delimiters.
 - `fonts.ts`: MathJax's loader for the font's dynamic glyph files.
 - `fonts.test.ts`: every dynamic file is bundled; formulas that need them typeset.
 - `math.test.ts`: selection, delimiter and formula-span unit tests.
+- `test/unit/math/data-values.test.ts`: lone surrogates and malformed `data-math` values do not stop a render.
 - `math.css`: the plugin's styles, bundled through `src/webview/styles/index.css`.
 
 ## Services, events and settings

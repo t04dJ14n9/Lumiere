@@ -3,6 +3,7 @@ import type { EditorService } from "../editor/api";
 import type { RenderPass } from "../render/api";
 import { codePosition } from "./code-selection";
 import { languageLabel } from "./code-label";
+import { decodeDataValue } from "../../markdown/html/helpers";
 
 interface CodePassOptions {
   pass: RenderPass;
@@ -188,7 +189,7 @@ function bindMermaidPre(
   signal: AbortSignal,
   copies: HTMLElement[],
 ): void {
-  const rawSource = decodeURIComponent(pre.dataset.source ?? "");
+  const rawSource = decodeDataValue(pre.dataset.source ?? "");
   const copy = copyButtonForPre(pre, () => rawSource, options, signal);
   copies.push(copy);
   const label = labelForClass(
