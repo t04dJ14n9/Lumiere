@@ -1,4 +1,4 @@
-export const mediaExtensions = {
+const mediaExtensions = {
   image: ["png", "jpg", "jpeg", "gif", "webp", "svg", "bmp", "avif"],
   audio: ["mp3", "wav", "m4a", "ogg", "flac", "aac", "aif", "aiff"],
   video: ["mp4", "webm", "ogv", "mov", "mkv"],

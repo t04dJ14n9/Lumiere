@@ -20,10 +20,7 @@ export function asksForSuggestions(
 }
 
 /** True when `pos` sits inside literal code or YAML frontmatter. */
-export function inLiteralCodeOrFrontmatter(
-  state: EditorState,
-  pos: number,
-): boolean {
+function inLiteralCodeOrFrontmatter(state: EditorState, pos: number): boolean {
   let node = syntaxTree(state).resolveInner(pos, -1);
   for (;;) {
     if (

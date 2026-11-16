@@ -6,12 +6,12 @@ interface Target {
   dispatch: (tr: Transaction) => void;
 }
 
-export function isCalloutOpener(text: string, quotes: string): boolean {
+function isCalloutOpener(text: string, quotes: string): boolean {
   return /^\[![^\]\n]+\][+-]?(?:\s|$)/.test(text.slice(quotes.length));
 }
 
 /** Quote-prefixed line with no list/task marker. */
-export function plainQuoteLine(text: string): boolean {
+function plainQuoteLine(text: string): boolean {
   const { quotes, marker, task } = lineMarkup(text);
   return marker === "" && task === "" && quotes.includes(">");
 }

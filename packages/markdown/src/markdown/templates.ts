@@ -5,7 +5,7 @@
 import { formatWithPattern } from "./bases/value-methods";
 
 export const DEFAULT_DATE_FORMAT = "YYYY-MM-DD";
-export const DEFAULT_TIME_FORMAT = "HH:mm";
+const DEFAULT_TIME_FORMAT = "HH:mm";
 
 export interface TemplateContext {
   /** The destination note's basename, without `.md`. */

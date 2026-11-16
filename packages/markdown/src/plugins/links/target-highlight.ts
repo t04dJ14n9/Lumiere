@@ -10,7 +10,7 @@ import { noteFragment } from "../../markdown/metadata/fragments";
 import { parseNativeLineFragment } from "../../shared/native-links";
 
 /** Transient target-flash range matching Obsidian's 2 s `.is-flashing` highlight. */
-export const FLASH_DURATION_MS = 2000;
+const FLASH_DURATION_MS = 2000;
 
 export interface FlashRange {
   readonly from: number;

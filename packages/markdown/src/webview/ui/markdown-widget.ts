@@ -35,7 +35,7 @@ export interface BlockEditing {
  * The body of a fenced block: its lines between the fences, or, when it has
  * none, the end of the opening line.
  */
-export function fenceBody(source: string): SourceSpan {
+function fenceBody(source: string): SourceSpan {
   const open = source.indexOf("\n");
   if (open < 0) {
     return { from: source.length, to: source.length };

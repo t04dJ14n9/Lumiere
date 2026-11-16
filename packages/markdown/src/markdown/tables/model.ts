@@ -128,7 +128,7 @@ export function rowTexts(table: Table): string[][] {
 }
 
 /** Rows of `width` cells, each followed by the surplus of the row it came from. */
-export function withSurplus(
+function withSurplus(
   rows: readonly (readonly string[])[],
   surplus: readonly (readonly string[])[],
   width: number,
