@@ -235,3 +235,18 @@ test("a base's format() calls name the tokens Lumiere cannot write", async () =>
   );
   assert.deepEqual(unsupportedBaseDateTokens(base), ["gggg", "ww", "N"]);
 });
+
+test("quoting a variable's value leaves the rest of the template's YAML as written", () => {
+  const template = [
+    "---",
+    "title: {{title}}",
+    "serial: 18446744073709551615 # exact",
+    "ratio: 0.10000000000000000555",
+    "---",
+    "Body",
+  ].join("\n");
+  const text = expandTemplate(template, { title: "a: b", now: NOW });
+  assert.equal(frontmatter(text)?.values?.title, "a: b");
+  assert.ok(text.includes("serial: 18446744073709551615 # exact\n"), text);
+  assert.ok(text.includes("ratio: 0.10000000000000000555\n"), text);
+});

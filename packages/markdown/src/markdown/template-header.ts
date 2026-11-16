@@ -49,9 +49,10 @@ function hasValidProperties(header: string): boolean {
 }
 
 /**
- * The YAML with its variables filled in inside the values that hold them,
- * as the YAML library writes those values (quoted when they need it), or
- * `undefined` when the YAML is not valid with the variables left out.
+ * The YAML with its variables filled in, each value that holds one written
+ * quoted, or `undefined` when the YAML is not valid with the variables left
+ * out. Only those values are rewritten, in place: every other byte (a long
+ * integer, a comment, the layout) stays as the template has it.
  */
 function quotedValues(
   yaml: string,
@@ -63,20 +64,40 @@ function quotedValues(
     written.push(variable);
     return `LumiereTemplateVariable${written.length - 1}End`;
   });
+  const fill = (text: string) =>
+    text.replace(PLACEHOLDER, (_match, index: string) =>
+      expand(written[Number(index)]!),
+    );
   const { parseDocument, visit } = loadYaml();
   const document = parseDocument(marked, { uniqueKeys: true });
   if (document.errors.length > 0) {
     return undefined;
   }
+  const ranges: { from: number; to: number; insert: string }[] = [];
   visit(document, {
     Scalar(_key, node) {
-      if (typeof node.value === "string") {
-        node.value = node.value.replace(PLACEHOLDER, (_match, index: string) =>
-          expand(written[Number(index)]!),
-        );
+      if (
+        typeof node.value === "string" &&
+        node.range &&
+        node.value.search(PLACEHOLDER) >= 0
+      ) {
+        // A YAML double-quoted scalar reads a JSON string as written.
+        ranges.push({
+          from: node.range[0],
+          to: node.range[1],
+          insert: JSON.stringify(fill(node.value)),
+        });
       }
     },
   });
-  const result = document.toString({ lineWidth: 0 });
-  return yaml.endsWith("\n") ? result : result.replace(/\n$/, "");
+  let result = marked;
+  for (const range of ranges.sort((a, b) => b.from - a.from)) {
+    result =
+      result.slice(0, range.from) + range.insert + result.slice(range.to);
+  }
+  // What is left (a variable in a comment) is filled in as written.
+  result = fill(result);
+  return parseDocument(result, { uniqueKeys: true }).errors.length > 0
+    ? undefined
+    : result;
 }
