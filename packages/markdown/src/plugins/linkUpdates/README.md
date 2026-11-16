@@ -11,7 +11,10 @@ vault index to parse what is queued, finds every note that links to them
 (through the vault index's backlinks), re-reads each note's current text and
 rewrites only the path of each link: a wikilink stays a wikilink, a Markdown
 link stays a Markdown link, and `#subpaths`, aliases, titles, `<…>`
-destinations and a table row's escaped `\|` are kept. The path is written in
+destinations and a table row's escaped `\|` are kept. A link in a property
+value is escaped for the value's quoting (`'` doubled in single quotes, `"`
+escaped in double quotes); a plain value that cannot hold the new name is
+written double-quoted, so the note's YAML stays valid. The path is written in
 the new-link format. As in Obsidian, text that only showed the renamed file's
 name follows it: a Markdown link's text equal to the note's name
 (`[Old](Old.md)`) or to its path when that has folders, and a wikilink alias
@@ -47,6 +50,7 @@ others; a message names it.
 
 - `host.ts`: the rename hook, the prompt and folder expansion.
 - `rewrite.ts`: the links a rename changes in one note, and their edits.
+- `yaml-safe-edits.ts`: link edits escaped for the property value around them.
 - `link-source.ts`: a link's source split around its path, and written back.
 - `rename-label.ts`: the alias or link text that follows a rename.
 - `manifest.ts`: the plugin's switch and `mode` setting.
