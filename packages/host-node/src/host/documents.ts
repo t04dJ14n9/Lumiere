@@ -88,7 +88,10 @@ export function noteFiles(platform: HostPlatform): NoteFiles {
 
 /**
  * Whether a disk read should replace the open note. A read that started
- * before a save finished is stale: applying it would undo that save.
+ * before a save finished is stale: applying it would undo that save. A read
+ * made while a save was writing may see the file empty: saves replace it in
+ * place (paths.ts `writeThroughFile`), truncating it first, and the
+ * truncation alone wakes the watch.
  */
 export function diskReadReplacesNote(state: {
   text: string;
@@ -97,10 +100,13 @@ export function diskReadReplacesNote(state: {
   open: boolean;
   writesAtStart: number;
   writesNow: number;
+  /** A save was writing the file when the read started or when it ended. */
+  writing: boolean;
 }): boolean {
   return (
     state.open &&
     !state.dirty &&
+    !state.writing &&
     state.writesAtStart === state.writesNow &&
     state.text !== state.diskText
   );
@@ -125,6 +131,10 @@ export class NoteDocuments implements HostDocuments {
   >();
   /** Saves that have reached disk. A reload captures this before it reads. */
   private readonly settledWrites = new Map<string, number>();
+  /** Notes a save is writing to disk now. */
+  private readonly writing = new Set<string>();
+  /** Notes whose reload was dropped during a save, to read again after it. */
+  private readonly rereadAfterWrite = new Set<string>();
 
   constructor(
     private readonly files: NoteFiles,
@@ -290,7 +300,12 @@ export class NoteDocuments implements HostDocuments {
     if (await this.tookOutsideChange(note, text)) {
       return true;
     }
-    await this.files.save(note.uri, text);
+    this.writing.add(note.uri);
+    try {
+      await this.files.save(note.uri, text);
+    } finally {
+      this.writing.delete(note.uri);
+    }
     // Count the save before publishing diskText, so a reload that resumes
     // in between still sees that its read is older than this write.
     this.settledWrites.set(
@@ -301,6 +316,11 @@ export class NoteDocuments implements HostDocuments {
     note.isDirty = note.getText() !== text;
     for (const listener of this.saveListeners) {
       listener(note);
+    }
+    // Another program may have written while we did; its watch event fell
+    // inside our write and was dropped.
+    if (this.rereadAfterWrite.delete(note.uri)) {
+      void this.reload(note);
     }
     return true;
   }
@@ -374,14 +394,20 @@ export class NoteDocuments implements HostDocuments {
 
   private async reload(note: NoteDocument): Promise<void> {
     const writesAtStart = this.settledWrites.get(note.uri) ?? 0;
+    const writingAtStart = this.writing.has(note.uri);
     let text: string;
     try {
       text = await this.readNote(note.uri);
     } catch {
       return;
     }
+    const writing = writingAtStart || this.writing.has(note.uri);
+    if (writing) {
+      this.rereadAfterWrite.add(note.uri);
+    }
     // Our own writes come back here; and unsaved typing wins over the disk.
-    // A read that overlapped a save is dropped: it can still hold the old bytes.
+    // A read that overlapped a save is dropped: it can still hold the old
+    // bytes, or none; one made during the write is made again after it.
     if (
       !diskReadReplacesNote({
         text,
@@ -390,6 +416,7 @@ export class NoteDocuments implements HostDocuments {
         open: this.notes.get(note.uri) === note,
         writesAtStart,
         writesNow: this.settledWrites.get(note.uri) ?? 0,
+        writing,
       })
     ) {
       return;
@@ -409,6 +436,7 @@ export class NoteDocuments implements HostDocuments {
     this.watchers.get(uri)?.();
     this.watchers.delete(uri);
     this.saving.delete(uri);
+    this.rereadAfterWrite.delete(uri);
     if (this.notes.delete(uri)) {
       for (const listener of this.closeListeners) {
         listener(uri);

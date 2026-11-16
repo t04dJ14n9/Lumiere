@@ -112,6 +112,9 @@ forbids this package from importing `vscode` or any embedder.
   or written keeps the other version beside the note, as `Note
   (conflict).md` (then `(conflict 2)`, …), writes the typing, and tells the
   reader. A change made between that check and the write is not seen.
+  Saves write the file in place (keeping its links and permissions), so it
+  is empty for a moment; a reload that reads it then is made again after
+  the write.
 
 - Git is blame, the change gutter and staging, through the `git` on the
   PATH (`git.ts`), for notes inside the workspace. On macOS, Xcode's
