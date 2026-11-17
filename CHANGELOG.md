@@ -1,6 +1,6 @@
 # Changelog
 
-## Unreleased
+## 0.1.13 (pre-release, 2026-11-17)
 
 - Code block Copy buttons now briefly show **Copied** with a success animation
   after the clipboard write succeeds.
