@@ -1,5 +1,10 @@
 # Changelog
 
+## Unreleased
+
+- Code block Copy buttons now briefly show **Copied** with a success animation
+  after the clipboard write succeeds.
+
 ## 0.1.12 (pre-release, 2026-11-16)
 
 - Fixed (Obsidian compliance audit, 2026-11-16): property links survive
