@@ -32,13 +32,16 @@ interface CachedCode {
 /** Use the same lazy highlighter in editable fences and rendered code. */
 export class CodeSource {
   decorations: DecorationSet = Decoration.none;
-  private readonly copy: (text: string) => void;
+  private readonly copy: (text: string, button: HTMLButtonElement) => void;
   private highlighter?: typeof CodeHighlighter;
   private readonly languageLoads = new Map<string, "loading" | "ready">();
   private destroyed = false;
   private cache = new Map<number, CachedCode>();
 
-  constructor(view: EditorView, copy: (text: string) => void) {
+  constructor(
+    view: EditorView,
+    copy: (text: string, button: HTMLButtonElement) => void,
+  ) {
     this.copy = copy;
     this.build(view);
   }
@@ -209,7 +212,9 @@ export class CodeSource {
 }
 
 /** Highlighted fences, with a copy button that writes through `copy`. */
-export const codeSource = (copy: (text: string) => void) =>
+export const codeSource = (
+  copy: (text: string, button: HTMLButtonElement) => void,
+) =>
   ViewPlugin.define((view) => new CodeSource(view, copy), {
     decorations: (plugin) => plugin.decorations,
     eventHandlers: {
