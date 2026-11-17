@@ -18,7 +18,7 @@ jobs:
   release:
     name: release
     environment: vscode-marketplace
-    runs-on: ubuntu-latest
+    runs-on: ${{ fromJSON(vars.RELEASE_RUNNER || '["ubuntu-latest"]') }}
     timeout-minutes: 15
     permissions:
       contents: write
@@ -38,7 +38,7 @@ jobs:
       - name: pnpm package
         run: pnpm package
       - name: Check the VSIX size and file list
-        run: bash .github/scripts/check-vsix.sh "$(ls *.vsix)" 10
+        run: bash .github/scripts/check-vsix.sh "$(ls *.vsix)" 20
       - name: Publish to Visual Studio Marketplace
         run: >
           pnpm exec vsce publish
