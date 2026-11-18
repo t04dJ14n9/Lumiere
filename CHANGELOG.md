@@ -1,5 +1,15 @@
 # Changelog
 
+## 0.1.14 (pre-release, 2026-11-17)
+
+- PDF: the status bar shows the history back/forward, previous/next page,
+  zoom and find buttons in VS Code too, not only in Cursor
+  (`lumiere.pdf.toolbar.statusBarButtons: auto`; `never` hides them).
+- Copy Link for Agent writes an `@` locator, a blank line, the quoted
+  selection and a newline. From a PDF the locator is `@papers/a.pdf#page=3`
+  instead of a Markdown link, so a pasted copy no longer makes a backlink
+  overlay; **PDF: Open Location…** reads the locator.
+
 ## 0.1.13 (pre-release, 2026-11-17)
 
 - Code block Copy buttons now briefly show **Copied** with a success animation
