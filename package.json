@@ -1034,31 +1034,76 @@
         "icon": "$(inspect)"
       },
       {
-        "command": "lumiere.pdf.selectAnnotateTool",
-        "title": "Annotate",
+        "command": "lumiere.pdf.highlightSelection",
+        "title": "Highlight",
         "category": "PDF",
-        "icon": "$(edit)"
+        "enablement": "lumiere.pdf.pdfActive && lumiere.pdf.hasTextSelection"
       },
       {
-        "command": "lumiere.pdf.toggleAnnotateTool",
-        "title": "Toggle Annotate",
+        "command": "lumiere.pdf.addAnnotation",
+        "title": "Add Annotation…",
         "category": "PDF",
-        "icon": "$(edit)",
-        "enablement": "lumiere.pdf.pdfActive"
+        "enablement": "lumiere.pdf.pdfActive && lumiere.pdf.hasTextSelection"
       },
       {
-        "command": "lumiere.pdf.pickAnnotationTool",
-        "title": "Annotation Tool…",
+        "command": "lumiere.pdf.underlineSelection",
+        "title": "Underline",
         "category": "PDF",
-        "icon": "$(paintcan)",
-        "enablement": "lumiere.pdf.pdfActive"
+        "enablement": "lumiere.pdf.pdfActive && lumiere.pdf.hasTextSelection"
       },
       {
-        "command": "lumiere.pdf.pickAnnotationColor",
-        "title": "Annotation Color…",
+        "command": "lumiere.pdf.strikeoutSelection",
+        "title": "Strikeout",
         "category": "PDF",
-        "icon": "$(symbol-color)",
-        "enablement": "lumiere.pdf.pdfActive"
+        "enablement": "lumiere.pdf.pdfActive && lumiere.pdf.hasTextSelection"
+      },
+      {
+        "command": "lumiere.pdf.squigglySelection",
+        "title": "Squiggly",
+        "category": "PDF",
+        "enablement": "lumiere.pdf.pdfActive && lumiere.pdf.hasTextSelection"
+      },
+      {
+        "command": "lumiere.pdf.editAnnotationNote",
+        "title": "Edit Note…",
+        "category": "PDF",
+        "enablement": "lumiere.pdf.pdfActive && lumiere.pdf.hasAnnotationSelection"
+      },
+      {
+        "command": "lumiere.pdf.annotationColor.yellow",
+        "title": "Yellow",
+        "category": "PDF",
+        "enablement": "lumiere.pdf.pdfActive && lumiere.pdf.hasAnnotationSelection"
+      },
+      {
+        "command": "lumiere.pdf.annotationColor.red",
+        "title": "Red",
+        "category": "PDF",
+        "enablement": "lumiere.pdf.pdfActive && lumiere.pdf.hasAnnotationSelection"
+      },
+      {
+        "command": "lumiere.pdf.annotationColor.blue",
+        "title": "Blue",
+        "category": "PDF",
+        "enablement": "lumiere.pdf.pdfActive && lumiere.pdf.hasAnnotationSelection"
+      },
+      {
+        "command": "lumiere.pdf.annotationColor.green",
+        "title": "Green",
+        "category": "PDF",
+        "enablement": "lumiere.pdf.pdfActive && lumiere.pdf.hasAnnotationSelection"
+      },
+      {
+        "command": "lumiere.pdf.annotationColor.purple",
+        "title": "Purple",
+        "category": "PDF",
+        "enablement": "lumiere.pdf.pdfActive && lumiere.pdf.hasAnnotationSelection"
+      },
+      {
+        "command": "lumiere.pdf.annotationColor.black",
+        "title": "Black",
+        "category": "PDF",
+        "enablement": "lumiere.pdf.pdfActive && lumiere.pdf.hasAnnotationSelection"
       },
       {
         "command": "lumiere.pdf.annotationUndo",
@@ -1096,7 +1141,7 @@
         "command": "lumiere.pdf.deleteAnnotation",
         "title": "Delete Annotation",
         "category": "PDF",
-        "enablement": "lumiere.pdf.pdfActive && lumiere.pdf.tool == 'annotate' && lumiere.pdf.hasAnnotationSelection"
+        "enablement": "lumiere.pdf.pdfActive && lumiere.pdf.hasAnnotationSelection"
       },
       {
         "command": "lumiere.pdf.selectToolbarMode",
@@ -1218,6 +1263,14 @@
       {
         "id": "lumiere.markdown.menu.insert",
         "label": "Insert"
+      },
+      {
+        "id": "lumiere.pdf.markText",
+        "label": "Mark Text"
+      },
+      {
+        "id": "lumiere.pdf.annotationColor",
+        "label": "Change Color"
       }
     ],
     "keybindings": [
@@ -1516,10 +1569,22 @@
         "when": "activeCustomEditorId == 'lumiere.pdf.viewer' && !inputFocus && !sideBarFocus && !panelFocus && !auxiliaryBarFocus && config.lumiere.pdf.keyboardShortcuts && config.lumiere.pdf.regions.enabled"
       },
       {
-        "command": "lumiere.pdf.toggleAnnotateTool",
-        "key": "ctrl+alt+a",
-        "mac": "ctrl+cmd+a",
-        "when": "activeCustomEditorId == 'lumiere.pdf.viewer' && !inputFocus && !sideBarFocus && !panelFocus && !auxiliaryBarFocus && config.lumiere.pdf.keyboardShortcuts"
+        "command": "lumiere.pdf.highlightSelection",
+        "key": "ctrl+alt+h",
+        "mac": "ctrl+cmd+h",
+        "when": "activeCustomEditorId == 'lumiere.pdf.viewer' && lumiere.pdf.hasTextSelection && !inputFocus && !sideBarFocus && !panelFocus && !auxiliaryBarFocus && config.lumiere.pdf.keyboardShortcuts"
+      },
+      {
+        "command": "lumiere.pdf.underlineSelection",
+        "key": "ctrl+alt+u",
+        "mac": "ctrl+cmd+u",
+        "when": "activeCustomEditorId == 'lumiere.pdf.viewer' && lumiere.pdf.hasTextSelection && !inputFocus && !sideBarFocus && !panelFocus && !auxiliaryBarFocus && config.lumiere.pdf.keyboardShortcuts"
+      },
+      {
+        "command": "lumiere.pdf.strikeoutSelection",
+        "key": "ctrl+alt+s",
+        "mac": "ctrl+cmd+s",
+        "when": "activeCustomEditorId == 'lumiere.pdf.viewer' && lumiere.pdf.hasTextSelection && !inputFocus && !sideBarFocus && !panelFocus && !auxiliaryBarFocus && config.lumiere.pdf.keyboardShortcuts"
       }
     ],
     "views": {
@@ -2237,20 +2302,52 @@
           "when": "activeCustomEditorId == 'lumiere.pdf.viewer' && config.lumiere.pdf.regions.enabled"
         },
         {
-          "command": "lumiere.pdf.selectAnnotateTool",
-          "when": "activeCustomEditorId == 'lumiere.pdf.viewer'"
+          "command": "lumiere.pdf.highlightSelection",
+          "when": "activeCustomEditorId == 'lumiere.pdf.viewer' && lumiere.pdf.hasTextSelection"
         },
         {
-          "command": "lumiere.pdf.toggleAnnotateTool",
-          "when": "activeCustomEditorId == 'lumiere.pdf.viewer'"
+          "command": "lumiere.pdf.addAnnotation",
+          "when": "activeCustomEditorId == 'lumiere.pdf.viewer' && lumiere.pdf.hasTextSelection"
         },
         {
-          "command": "lumiere.pdf.pickAnnotationTool",
-          "when": "activeCustomEditorId == 'lumiere.pdf.viewer'"
+          "command": "lumiere.pdf.underlineSelection",
+          "when": "activeCustomEditorId == 'lumiere.pdf.viewer' && lumiere.pdf.hasTextSelection"
         },
         {
-          "command": "lumiere.pdf.pickAnnotationColor",
-          "when": "activeCustomEditorId == 'lumiere.pdf.viewer'"
+          "command": "lumiere.pdf.strikeoutSelection",
+          "when": "activeCustomEditorId == 'lumiere.pdf.viewer' && lumiere.pdf.hasTextSelection"
+        },
+        {
+          "command": "lumiere.pdf.squigglySelection",
+          "when": "activeCustomEditorId == 'lumiere.pdf.viewer' && lumiere.pdf.hasTextSelection"
+        },
+        {
+          "command": "lumiere.pdf.editAnnotationNote",
+          "when": "false"
+        },
+        {
+          "command": "lumiere.pdf.annotationColor.yellow",
+          "when": "false"
+        },
+        {
+          "command": "lumiere.pdf.annotationColor.red",
+          "when": "false"
+        },
+        {
+          "command": "lumiere.pdf.annotationColor.blue",
+          "when": "false"
+        },
+        {
+          "command": "lumiere.pdf.annotationColor.green",
+          "when": "false"
+        },
+        {
+          "command": "lumiere.pdf.annotationColor.purple",
+          "when": "false"
+        },
+        {
+          "command": "lumiere.pdf.annotationColor.black",
+          "when": "false"
         },
         {
           "command": "lumiere.pdf.annotationUndo",
@@ -2373,9 +2470,34 @@
           "group": "0_agent@1"
         },
         {
+          "command": "lumiere.pdf.highlightSelection",
+          "when": "webviewId == 'lumiere.pdf.viewer' && lumiere.pdf.hasTextSelection",
+          "group": "0_mark@1"
+        },
+        {
+          "command": "lumiere.pdf.addAnnotation",
+          "when": "webviewId == 'lumiere.pdf.viewer' && lumiere.pdf.hasTextSelection",
+          "group": "0_mark@2"
+        },
+        {
+          "submenu": "lumiere.pdf.markText",
+          "when": "webviewId == 'lumiere.pdf.viewer' && lumiere.pdf.hasTextSelection",
+          "group": "0_mark@3"
+        },
+        {
+          "command": "lumiere.pdf.editAnnotationNote",
+          "when": "webviewId == 'lumiere.pdf.viewer' && lumiere.pdf.hasAnnotationSelection",
+          "group": "0_mark@4"
+        },
+        {
+          "submenu": "lumiere.pdf.annotationColor",
+          "when": "webviewId == 'lumiere.pdf.viewer' && lumiere.pdf.hasAnnotationSelection",
+          "group": "0_mark@5"
+        },
+        {
           "command": "lumiere.pdf.deleteAnnotation",
-          "when": "webviewId == 'lumiere.pdf.viewer' && lumiere.pdf.tool == 'annotate' && lumiere.pdf.hasAnnotationSelection",
-          "group": "0_agent@3"
+          "when": "webviewId == 'lumiere.pdf.viewer' && lumiere.pdf.hasAnnotationSelection",
+          "group": "0_mark@6"
         },
         {
           "command": "lumiere.pdf.goToPage",
@@ -2791,6 +2913,46 @@
           "command": "lumiere.pdf.historyForward",
           "when": "activeCustomEditorId == 'lumiere.pdf.viewer'",
           "group": "1_pdfPage@0.5"
+        }
+      ],
+      "lumiere.pdf.markText": [
+        {
+          "command": "lumiere.pdf.underlineSelection",
+          "group": "0_mark@1"
+        },
+        {
+          "command": "lumiere.pdf.strikeoutSelection",
+          "group": "0_mark@2"
+        },
+        {
+          "command": "lumiere.pdf.squigglySelection",
+          "group": "0_mark@3"
+        }
+      ],
+      "lumiere.pdf.annotationColor": [
+        {
+          "command": "lumiere.pdf.annotationColor.yellow",
+          "group": "0_color@1"
+        },
+        {
+          "command": "lumiere.pdf.annotationColor.red",
+          "group": "0_color@2"
+        },
+        {
+          "command": "lumiere.pdf.annotationColor.blue",
+          "group": "0_color@3"
+        },
+        {
+          "command": "lumiere.pdf.annotationColor.green",
+          "group": "0_color@4"
+        },
+        {
+          "command": "lumiere.pdf.annotationColor.purple",
+          "group": "0_color@5"
+        },
+        {
+          "command": "lumiere.pdf.annotationColor.black",
+          "group": "0_color@6"
         }
       ]
     },

@@ -1,6 +1,6 @@
 import { useStageEvent, type StageCapability } from "@embedpdf/react/stage";
 import { useCallback, useEffect, useRef } from "react";
-import type { AnnotationToolId } from "../shared/annotation-tools";
+import type { MarkToolId } from "../shared/annotation-tools";
 import type {
   FitMode,
   ToolMode,
@@ -17,19 +17,12 @@ import type { Navigation } from "./navigation";
 import { useStageApi, type StageApi } from "./stage-capability";
 import { readingPlace } from "./stage-position";
 
-type Annotation = {
-  annotationTool: AnnotationToolId | null;
-  canUndo: boolean;
-  canRedo: boolean;
-};
-
 /** What a view report is made of. */
 interface ViewInput {
   navigation: Navigation;
   tool: ToolMode;
   choices: ViewChoices;
   stage: ViewStage;
-  annotation?: Annotation;
 }
 
 /** What a report reads from the Stage. */
@@ -67,17 +60,10 @@ export function useViewReporting(
   navigation: Navigation,
   tool: ToolMode,
   choices: ViewChoices,
-  annotation?: Annotation,
 ): void {
   const stage = useStageApi();
   const latest = useRef<ViewInput>({ navigation, tool, choices, stage });
-  latest.current = {
-    navigation,
-    tool,
-    choices,
-    stage,
-    ...(annotation ? { annotation } : {}),
-  };
+  latest.current = { navigation, tool, choices, stage };
   // Report each distinct view once.
   const reported = useRef<string | undefined>(undefined);
   const report = useCallback((): void => {
@@ -102,7 +88,7 @@ export function useViewReporting(
 
 /** The view to report, once the Stage has laid out a page; undefined before. */
 export function currentView(state: ViewInput): ViewState | undefined {
-  const { navigation, tool, choices, stage, annotation } = state;
+  const { navigation, tool, choices, stage } = state;
   const { currentPage: page, pageCount, canGoBack, canGoForward } = navigation;
   const place = readingPlace(stage);
   if (!place || pageCount < 1 || page < 1) {
@@ -129,13 +115,6 @@ export function currentView(state: ViewInput): ViewState | undefined {
     zoom: fit ? FIT_CHOICES[fit] : level * 100,
     top: place.top,
     left: place.left,
-    ...(tool === "annotate" && annotation
-      ? {
-          annotationTool: annotation.annotationTool,
-          canAnnotationUndo: annotation.canUndo,
-          canAnnotationRedo: annotation.canRedo,
-        }
-      : {}),
   };
 }
 
@@ -145,12 +124,18 @@ interface ActionContext {
   stage: StageApi;
   openSearch: () => void;
   setTool: (tool: ToolMode) => void;
-  setAnnotationTool: (tool: AnnotationToolId | null) => void;
-  setAnnotationColor: (color: string) => void;
-  annotationUndo: () => void;
-  annotationRedo: () => void;
-  deleteSelectedAnnotations: () => void;
+  marks: MarkActions;
   setChoices: (choices: Partial<ViewChoices>) => void;
+}
+
+/** What the extension's commands do to marks (`mark-menu.ts`, annotation history). */
+export interface MarkActions {
+  markSelection: (tool: MarkToolId, note?: string) => void;
+  setNote: (note: string) => void;
+  setColor: (color: string) => void;
+  deleteMark: () => void;
+  undo: () => void;
+  redo: () => void;
 }
 
 type Handlers = {
@@ -186,33 +171,28 @@ const ACTIONS: Handlers = {
     setChoices({ scrollDirection }),
   find: (_, { openSearch }) => openSearch(),
   setTool: ({ tool }, { setTool }) => setTool(tool),
-  setAnnotationTool: ({ tool }, { setAnnotationTool }) =>
-    setAnnotationTool(tool),
-  setAnnotationColor: ({ color }, { setAnnotationColor }) =>
-    setAnnotationColor(color),
-  annotationUndo: (_, { annotationUndo }) => annotationUndo(),
-  annotationRedo: (_, { annotationRedo }) => annotationRedo(),
-  deleteSelectedAnnotations: (_, { deleteSelectedAnnotations }) =>
-    deleteSelectedAnnotations(),
+  markSelection: ({ tool, note }, { marks }) => marks.markSelection(tool, note),
+  setMarkNote: ({ note }, { marks }) => marks.setNote(note),
+  setMarkColor: ({ color }, { marks }) => marks.setColor(color),
+  annotationUndo: (_, { marks }) => marks.undo(),
+  annotationRedo: (_, { marks }) => marks.redo(),
+  deleteSelectedAnnotations: (_, { marks }) => marks.deleteMark(),
 };
 
 function stepZoom(stage: StageApi, direction: 1 | -1): void {
   stage.zoomTo(nextZoomStep(stage.getZoomLevel(), direction));
 }
 
-/**
- * Carry out what the extension's commands ask: page, zoom, find or tool.
- * Returns a stable function, so the host listener need not be re-attached.
- */
 type ViewActionOptions = {
   setChoices: (choices: Partial<ViewChoices>) => void;
-  setAnnotationTool: (tool: AnnotationToolId | null) => void;
-  setColor: (color: string) => void;
-  undo: () => void;
-  redo: () => void;
-  deleteSelectedAnnotations: () => void;
+  marks: MarkActions;
 };
 
+/**
+ * Carry out what the extension's commands ask: page, zoom, find, tool or
+ * marks. Returns a stable function, so the host listener need not be
+ * re-attached.
+ */
 export function useViewActions(
   navigation: Navigation,
   openSearch: () => void,
@@ -225,11 +205,7 @@ export function useViewActions(
     stage,
     openSearch,
     setTool,
-    setAnnotationTool: options.setAnnotationTool,
-    setAnnotationColor: options.setColor,
-    annotationUndo: options.undo,
-    annotationRedo: options.redo,
-    deleteSelectedAnnotations: options.deleteSelectedAnnotations,
+    marks: options.marks,
     setChoices: options.setChoices,
   };
   const latest = useRef(current);

@@ -30,6 +30,7 @@ import { ViewerLoads } from "./loads";
 import { createPdfViewId } from "./view-id";
 import { PdfBacklinkOutlet } from "./pdf-backlinks";
 import { rehydrateViewerChrome } from "./panel-rehydrate";
+import { awaitSelectionReport } from "./selection-report";
 import type { ViewerPanelHost, ViewerPanelOptions } from "./panel-types";
 export type {
   PluginMessage,
@@ -261,19 +262,23 @@ export class PdfViewerPanel {
   async ensureSelection(
     timeoutMs = SELECTION_REPORT_TIMEOUT_MS,
   ): Promise<void> {
-    if (this.selection || this.loads.loading) {
-      return;
+    if (!this.selection) {
+      await this.refreshSelection(timeoutMs);
     }
-    await new Promise<void>((resolve) => {
-      const done = (): void => {
-        clearTimeout(timer);
-        subscription.dispose();
-        resolve();
-      };
-      const subscription = this.onDidChangeSelection(done);
-      const timer = setTimeout(done, timeoutMs);
-      this.post({ type: "reportSelection" });
-    });
+  }
+
+  /**
+   * Ask the viewer for its selection as it is now and wait for that report;
+   * unlike `ensureSelection`, an older selection does not count. Resolves
+   * whether a report came (`awaitSelectionReport`).
+   */
+  async refreshSelection(
+    timeoutMs = SELECTION_REPORT_TIMEOUT_MS,
+  ): Promise<boolean> {
+    const ask = (): void => this.post({ type: "reportSelection" });
+    return this.loads.loading
+      ? false
+      : awaitSelectionReport(this.selected.event, ask, timeoutMs);
   }
 
   /** Turn macOS Look Up on or off in the viewer (it is off until the plugin says). */

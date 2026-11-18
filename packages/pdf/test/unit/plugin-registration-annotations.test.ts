@@ -66,18 +66,14 @@ test("the Stage keeps one point to a pixel, the room around pages and the saved 
   assert.deepEqual(stage?.["zoom"], { level: 1.5 });
 });
 
-test("a new annotation is selected and its tool stays on; Lumiere's own tools join the hub", () => {
+test("a mark made from the context menu is left unselected; no drawing tools are added", () => {
   const registered = plugin("annotation").settings?.registered;
   assert.deepEqual(registered?.["afterCreate"], {
-    select: true,
+    select: false,
     tool: "stay",
-    editText: true,
+    editText: false,
   });
-  assert.ok(
-    (registered?.["tools"] as { id: string }[]).some(
-      (tool) => tool.id === "lineArrow",
-    ),
-  );
+  assert.equal(registered?.["tools"], undefined);
 });
 
 test("the whole-page picture is as wide as the pane's pixels, so fit width needs no tiles", () => {
