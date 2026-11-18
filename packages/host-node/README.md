@@ -121,6 +121,15 @@ forbids this package from importing `vscode` or any embedder.
   is empty for a moment; a reload that reads it then is made again after
   the write.
 
+- Containment is checked, then the file is opened, and Node has no `openat`
+  to bind the two. A local process that swaps a folder for a symlink in
+  between is caught afterwards, not prevented: a workspace write or read
+  verifies the descriptor it opened is the file inside the root before it
+  truncates, writes or returns anything (`paths.ts`). Folders made through
+  the link can stay behind, empty. Notes' autosave and their conflict
+  copies, copy, move, remove and the file and PDF routes still trust the
+  path checked just before.
+
 - Git is blame, the change gutter and staging, through the `git` on the
   PATH (`git.ts`), for notes inside the workspace. On macOS, Xcode's
   `/usr/bin/git` stand-in is used only when the command-line tools are

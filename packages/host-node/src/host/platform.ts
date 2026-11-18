@@ -36,19 +36,26 @@ export interface HostFiles {
    * through symbolic links. A missing last part is allowed: a new note.
    */
   contain(root: string, uri: string): Promise<void>;
+  /*
+   * `root`, where a method takes one, is the workspace root (a file URI) the
+   * file must stay in. A platform with symbolic links then checks the file it
+   * opened, not only the path it was given, so that a folder swapped for a
+   * link after `contain` cannot redirect the access (paths.ts). A platform
+   * without links may ignore it.
+   */
   /** Rejects with an error whose `code` is `FileNotFound` (or Node's `ENOENT`) when missing. */
-  readText(uri: string): Promise<string>;
-  readBytes(uri: string): Promise<Uint8Array>;
+  readText(uri: string, root?: string): Promise<string>;
+  readBytes(uri: string, root?: string): Promise<Uint8Array>;
   /** Replace an existing file's text; a symbolic link in its place is not followed. */
-  save(uri: string, text: string): Promise<void>;
+  save(uri: string, text: string, root?: string): Promise<void>;
   /** Replace an existing file's bytes; a symbolic link in its place is not followed. */
-  saveBytes(uri: string, data: Uint8Array): Promise<void>;
+  saveBytes(uri: string, data: Uint8Array, root?: string): Promise<void>;
   /**
    * Write a new, empty file; true when this call made it. An existing file
    * is left as it is (false), and a symbolic link in its place is not
    * followed.
    */
-  create(uri: string): Promise<boolean>;
+  create(uri: string, root?: string): Promise<boolean>;
   /** The file or folder; undefined when there is none. */
   stat(uri: string): Promise<HostFileInfo | undefined>;
   /** `stat` of `uri` itself: a symbolic link's own time, not its target's. */
@@ -103,15 +110,19 @@ export interface HostPlatform {
   writeScratchFile(name: string, text: string): Promise<string>;
 }
 
-/** Rejects unless `uri` is inside one of `roots`, also through symbolic links. */
+/**
+ * Rejects unless `uri` is inside one of `roots`, also through symbolic links.
+ * Resolves to that root, for the `root` of the access that follows.
+ */
 export async function containInRoots(
   files: HostFiles,
   roots: readonly string[],
   uri: string,
-): Promise<void> {
+): Promise<string> {
   const root = roots.find((item) => files.isInside(item, uri));
   if (!root) {
     throw new OutsideWorkspace();
   }
   await files.contain(root, uri);
+  return root;
 }

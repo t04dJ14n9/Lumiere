@@ -12,7 +12,10 @@ import {
   open,
   realpath,
   rename,
+  stat,
+  unlink,
   writeFile,
+  type FileHandle,
 } from "node:fs/promises";
 import * as path from "node:path";
 import { fileURLToPath, pathToFileURL } from "node:url";
@@ -76,14 +79,19 @@ export async function assertContained(
   }
   const root = await realpath(base);
   const resolved = await nearestExisting(target);
+  if (!isWithin(root, resolved)) {
+    throw new OutsideWorkspace();
+  }
+}
+
+/** Whether the real path `resolved` is `root` or below it. */
+function isWithin(root: string, resolved: string): boolean {
   const relative = path.relative(root, resolved);
-  if (
+  return !(
     relative === ".." ||
     relative.startsWith(`..${path.sep}`) ||
     path.isAbsolute(relative)
-  ) {
-    throw new OutsideWorkspace();
-  }
+  );
 }
 
 /** The path to open for `uri` once it is inside one of `roots`. */
@@ -143,36 +151,123 @@ export async function resolveContainedNote(
   return { note: realNote, root: realRoot };
 }
 
+/*
+ * Writes and reads below take the workspace `root` (a `file:` URI) and check
+ * the file they opened, not only the path they were asked for.
+ * `assertContained` resolves a path, and `open` resolves it again later: a
+ * directory swapped for a symlink in between would send the open outside the
+ * workspace, and `O_NOFOLLOW` guards only the last component. Node has no
+ * `openat`, so the ancestors cannot be pinned while the file is opened. What
+ * can be done is to open without truncating, then ask the kernel which file
+ * the descriptor is (`assertOpenedInside`), and only then truncate, write or
+ * read. A swap that sends the open outside is then caught before any byte of
+ * an outside file is changed or returned, and the swap cannot be hidden by
+ * swapping back: the descriptor would still be the outside file, whose
+ * device and inode are not those of the path's file inside.
+ *
+ * Left over: a file created through the swapped directory exists, empty,
+ * until it is removed (best effort), and `mkdir` through it can leave empty
+ * folders outside. Without a `root` nothing is verified.
+ */
+
+/**
+ * Throw `OutsideWorkspace` unless `handle`, opened from `file`, is the file
+ * that `file` names now and that file lies inside `rootUri` once links are
+ * resolved. The device and inode comparison ties the descriptor to the
+ * checked real path; the containment check binds that path to the root.
+ */
+export async function assertOpenedInside(
+  handle: FileHandle,
+  file: string,
+  rootUri: string,
+): Promise<void> {
+  const base = fileUriToPath(rootUri);
+  if (!base) {
+    throw new OutsideWorkspace();
+  }
+  const real = await realpath(file);
+  const [root, opened, named] = await Promise.all([
+    realpath(base),
+    handle.stat({ bigint: true }),
+    stat(real, { bigint: true }),
+  ]);
+  if (
+    !isWithin(root, real) ||
+    opened.dev !== named.dev ||
+    opened.ino !== named.ino
+  ) {
+    throw new OutsideWorkspace();
+  }
+}
+
+/** Open `file`, and with a `root`, close it again unless it is inside it. */
+async function openVerified(
+  file: string,
+  flags: number,
+  root: string | undefined,
+): Promise<FileHandle> {
+  const handle = await open(file, flags);
+  if (root === undefined) {
+    return handle;
+  }
+  try {
+    await assertOpenedInside(handle, file, root);
+  } catch (error) {
+    await handle.close();
+    throw error;
+  }
+  return handle;
+}
+
 /**
  * Replace a file without following a symlink at the final path. `writeFile`
  * would follow one planted after the containment check and write outside.
+ * The open does not truncate: that waits until `root` is verified.
  */
 export async function writeThroughFile(
   file: string,
   text: string,
+  root?: string,
 ): Promise<void> {
-  const handle = await open(
-    file,
-    constants.O_WRONLY | constants.O_TRUNC | noFollow(),
-  );
-  try {
-    await handle.writeFile(text, "utf8");
-  } finally {
-    await handle.close();
-  }
+  await replaceContents(file, text, root);
 }
 
 /** Like `writeThroughFile`, for binary payloads (images). */
 export async function writeThroughBytes(
   file: string,
   data: Uint8Array,
+  root?: string,
 ): Promise<void> {
-  const handle = await open(
+  await replaceContents(file, data, root);
+}
+
+async function replaceContents(
+  file: string,
+  data: string | Uint8Array,
+  root: string | undefined,
+): Promise<void> {
+  const handle = await openVerified(
     file,
-    constants.O_WRONLY | constants.O_TRUNC | noFollow(),
+    constants.O_WRONLY | noFollow(),
+    root,
   );
   try {
+    await handle.truncate(0);
     await handle.writeFile(data);
+  } finally {
+    await handle.close();
+  }
+}
+
+/** The bytes of `file`, read only once the opened file is verified inside `root`. */
+export async function readContainedBytes(
+  file: string,
+  root: string,
+): Promise<Buffer> {
+  // A link is followed here, as `readFile` does: one inside the root is fine.
+  const handle = await openVerified(file, constants.O_RDONLY, root);
+  try {
+    return await handle.readFile();
   } finally {
     await handle.close();
   }
@@ -180,21 +275,50 @@ export async function writeThroughBytes(
 
 /**
  * Create an empty file and say so (true), or leave an existing one untouched
- * (false). `O_EXCL` makes the check and the creation one step.
+ * (false). `O_EXCL` makes the check and the creation one step. With a `root`,
+ * a file that turns out to lie outside it is removed again and refused.
  */
-export async function createEmptyFile(file: string): Promise<boolean> {
+export async function createEmptyFile(
+  file: string,
+  root?: string,
+): Promise<boolean> {
+  let handle: FileHandle;
   try {
-    const handle = await open(
+    handle = await open(
       file,
       constants.O_CREAT | constants.O_EXCL | constants.O_WRONLY | noFollow(),
     );
-    await handle.close();
-    return true;
   } catch (error) {
     if ((error as NodeJS.ErrnoException).code !== "EEXIST") {
       throw error;
     }
     return false;
+  }
+  try {
+    if (root !== undefined) {
+      await assertOpenedInside(handle, file, root);
+    }
+    return true;
+  } catch (error) {
+    await removeCreated(handle, file);
+    throw error;
+  } finally {
+    await handle.close();
+  }
+}
+
+/** Unlink `file` if it still is the file `handle` created; best effort. */
+async function removeCreated(handle: FileHandle, file: string): Promise<void> {
+  try {
+    const [created, named] = await Promise.all([
+      handle.stat({ bigint: true }),
+      lstat(file, { bigint: true }),
+    ]);
+    if (created.dev === named.dev && created.ino === named.ino) {
+      await unlink(file);
+    }
+  } catch {
+    // Gone already, or replaced by something that is not ours to remove.
   }
 }
 
