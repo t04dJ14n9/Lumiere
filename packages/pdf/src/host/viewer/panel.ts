@@ -23,6 +23,7 @@ import { HistoryRequests } from "./history-requests";
 import { PdfNavigation } from "./navigation";
 import { viewerHtml } from "./page";
 import { PdfSelectionState, type SelectionSnapshot } from "./selection";
+import type { PdfWriteConflict } from "./annotation-save";
 import { PanelAnnotations } from "./panel-annotations";
 import { isAnnotationViewerMessage } from "../../shared/annotation-messages";
 import { PdfSource } from "./source";
@@ -318,8 +319,8 @@ export class PdfViewerPanel {
     await this.load();
   }
 
-  async keepMine(data: ArrayBuffer, load: number): Promise<void> {
-    await this.annotations.keepMine(data, load);
+  async keepMine(conflict: PdfWriteConflict): Promise<void> {
+    await this.annotations.keepMine(conflict);
   }
 
   /** Repeat the save that failed: into the PDF (the viewer exports it again) or into the annotation file. */

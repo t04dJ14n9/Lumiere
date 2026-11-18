@@ -41,3 +41,29 @@ test("store saves about the shown load are taken until a reload reads the store"
   assert.equal(loads.acceptsStoreSave(1), false);
   assert.equal(loads.acceptsStoreSave(2), true);
 });
+
+test("a failed newer read does not end the loading while an older load that read is on its way", () => {
+  const loads = new ViewerLoads();
+  loads.begin();
+  loads.next();
+  loads.finished();
+  loads.begin(); // read the new bytes; now reading their annotation store
+  const failed = loads.begin();
+  assert.equal(loads.abandon(failed), false);
+  assert.equal(loads.isCurrent(1), false, "the file is the older load's now");
+  const delivered = loads.next();
+  loads.finished();
+  assert.equal(loads.isCurrent(delivered), true);
+});
+
+test("an older load sent while a newer one reads does not end the loading", () => {
+  const loads = new ViewerLoads();
+  loads.begin();
+  loads.begin();
+  const older = loads.next();
+  loads.finished();
+  assert.equal(loads.isCurrent(older), false, "newer bytes are on their way");
+  const newer = loads.next();
+  loads.finished();
+  assert.equal(loads.isCurrent(newer), true);
+});

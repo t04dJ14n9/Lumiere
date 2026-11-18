@@ -8,14 +8,15 @@ import {
 import { useDocuments, useOptionalCapability } from "@embedpdf/react/runtime";
 import { useCallback, useEffect, useMemo } from "react";
 import {
-  acceptAnnotationSave,
   annotationLoadState,
+  settlePdfWrite,
+  type SaveResult,
 } from "./annotation-load-state";
 import { StoreSession } from "./annotation-store-session";
 import { postToHost } from "./host";
 
-/** Told when the open file now holds every annotation (Save into This PDF worked). */
-const savedIntoPdf = new Set<() => void>();
+/** Told how each Save into This PDF ended, by the viewer's number for its write. */
+const pdfWriteResults = new Set<(write: number, ok: boolean) => void>();
 
 /**
  * Lumiere's own annotations live in a file outside the PDF, named by its hash
@@ -56,10 +57,16 @@ export function useAnnotationSaveSession(): {
     if (!session) {
       return;
     }
-    const listener = (): void => session.ownership.savedIntoPdf();
-    savedIntoPdf.add(listener);
+    const listener = (write: number, ok: boolean): void => {
+      if (ok) {
+        session.savedIntoPdf(write);
+      } else {
+        session.pdfWriteFailed(write);
+      }
+    };
+    pdfWriteResults.add(listener);
     return () => {
-      savedIntoPdf.delete(listener);
+      pdfWriteResults.delete(listener);
     };
   }, [session]);
 
@@ -101,19 +108,16 @@ function useCommittedChanges(session: StoreSession | undefined): void {
 }
 
 /** Apply host annotation save replies to the remembered base hash. */
-export function applyAnnotationHostMessage(message: {
-  type: string;
-  ok?: boolean;
-  sha256?: string;
-}): void {
-  if (
-    message.type === "annotationSaveResult" &&
-    message.ok === true &&
-    typeof message.sha256 === "string"
-  ) {
-    acceptAnnotationSave(message.sha256);
-    for (const listener of savedIntoPdf) {
-      listener();
+export function applyAnnotationHostMessage(
+  message: SaveResult & { type: string },
+): void {
+  if (message.type !== "annotationSaveResult") {
+    return;
+  }
+  const settled = settlePdfWrite(message);
+  if (settled) {
+    for (const listener of pdfWriteResults) {
+      listener(settled.write, settled.ok);
     }
   }
 }

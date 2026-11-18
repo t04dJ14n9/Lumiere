@@ -84,7 +84,7 @@ function attach(panel: PdfPanel): vscode.Disposable {
       if (choice === "Reload") {
         await panel.reloadFromDisk();
       } else if (choice === "Keep mine") {
-        await panel.keepMine(payload.data, payload.load);
+        await panel.keepMine(payload);
       }
     }),
     panel.onAnnotationSaveFailed(async () => {

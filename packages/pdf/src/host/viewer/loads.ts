@@ -10,12 +10,15 @@ export class ViewerLoads {
   loading = false;
   /** Counts loads begun: only the newest may end the loading state. */
   private attempts = 0;
+  /** Loads begun and not yet sent or abandoned. */
+  private inFlight = 0;
   /** Loads reading the annotation store for the bytes they will send. */
   private storeReads = 0;
 
   /** A load starts reading the file; returns its attempt for `abandon`. */
   begin(): number {
     this.loading = true;
+    this.inFlight++;
     return ++this.attempts;
   }
 
@@ -24,18 +27,22 @@ export class ViewerLoads {
     return ++this.current;
   }
 
-  /** The viewer has been sent the new bytes. */
+  /** The viewer has been sent the new bytes; newer ones may still be on their way. */
   finished(): void {
-    this.loading = false;
+    this.inFlight--;
+    this.loading = this.inFlight > 0;
   }
 
   /**
    * The read of `attempt` gave no bytes. A newer load ends the loading
    * itself; a failed read sent nothing, so the viewer still has the current
-   * load's bytes and goes on with them. Returns whether it does.
+   * load's bytes and goes on with them. Returns whether it does. Not while
+   * an older load that did read is still on its way: the file is already
+   * that load's, not the bytes the viewer shows.
    */
   abandon(attempt: number): boolean {
-    if (attempt !== this.attempts || this.current === 0) {
+    this.inFlight--;
+    if (attempt !== this.attempts || this.current === 0 || this.inFlight > 0) {
       return false;
     }
     this.loading = false;

@@ -10,6 +10,8 @@ export type AnnotationViewerMessage =
   | {
       type: "annotationSave";
       load: number;
+      /** The viewer's number for this write; the result names it. */
+      write: number;
       baseSha256: string;
       data: ArrayBuffer;
     }
@@ -30,10 +32,17 @@ export type AnnotationViewerMessage =
   | { type: "annotationEmbeddedEdit"; load: number };
 
 export type AnnotationHostMessage =
-  | { type: "annotationSaveResult"; load: number; ok: true; sha256: string }
   | {
       type: "annotationSaveResult";
       load: number;
+      write: number;
+      ok: true;
+      sha256: string;
+    }
+  | {
+      type: "annotationSaveResult";
+      load: number;
+      write: number;
       ok: false;
       reason: "conflict" | "error";
       message: string;
@@ -95,6 +104,7 @@ function parseAnnotationSave(
 ): AnnotationViewerMessage | undefined {
   if (
     !isLoad(message.load) ||
+    !isLoad(message.write) ||
     typeof message.baseSha256 !== "string" ||
     message.baseSha256.length < 1 ||
     message.baseSha256.length > 128
@@ -108,12 +118,13 @@ function parseAnnotationSave(
   return {
     type: "annotationSave",
     load: message.load,
+    write: message.write,
     baseSha256: message.baseSha256,
     data,
   };
 }
 
-/** A load number: the host numbers loads 1, 2, 3… (see messages.ts). */
+/** A load number: the host numbers loads 1, 2, 3… (see messages.ts); the viewer numbers its PDF writes so too. */
 function isLoad(value: unknown): value is number {
   return typeof value === "number" && Number.isSafeInteger(value) && value >= 1;
 }

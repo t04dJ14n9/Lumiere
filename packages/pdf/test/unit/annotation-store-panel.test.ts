@@ -261,6 +261,7 @@ test("a store save is filed under the hash the viewer names, when that is its by
   panel.writeAnnotations("pdf");
   await receive({
     type: "annotationSave",
+    write: 1,
     load: load().load,
     baseSha256: PDF_SHA,
     data: new Uint8Array([1]).buffer,
@@ -406,8 +407,10 @@ test("Lumiere owns what it imported or made; changes to the PDF's own are the PD
   assert.equal(owned.change("delete", "obj:20"), "store");
   assert.equal(owned.isOwn("obj:20"), true);
   assert.equal(owned.change("update", "obj:20"), "store");
-  // After Save into This PDF every annotation is the PDF's.
-  owned.savedIntoPdf();
+  // After Save into This PDF what went into it is the PDF's.
+  assert.equal(owned.savedIntoPdf(["obj:10"]), true);
   assert.equal(owned.isOwn("obj:10"), false);
+  assert.equal(owned.isOwn("obj:20"), true);
+  assert.equal(owned.savedIntoPdf(owned.keys()), false);
   assert.equal(owned.change("update", "obj:10"), "pdf");
 });

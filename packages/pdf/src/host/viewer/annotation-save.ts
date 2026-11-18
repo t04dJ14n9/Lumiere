@@ -5,6 +5,14 @@ import type { PdfSource } from "./source";
 
 export type AnnotationDirty = "clean" | "saving" | "failed";
 
+/** A PDF write the disk changed under: Keep mine writes `data` anyway. */
+export interface PdfWriteConflict {
+  data: ArrayBuffer;
+  load: number;
+  /** The viewer's number for the write, which its result names. */
+  write: number;
+}
+
 /** Collaborator for in-place annotation overwrite on the open PDF. */
 export class AnnotationSave {
   dirty: AnnotationDirty = "clean";
@@ -34,7 +42,7 @@ export class AnnotationSave {
       isCurrentLoad: (load: number) => boolean;
       post: (message: HostMessage) => void;
       error: (message: string) => void;
-      conflict: (payload: { data: ArrayBuffer; load: number }) => void;
+      conflict: (payload: PdfWriteConflict) => void;
       failed: (message: string) => void;
       saved: () => void;
     },
@@ -61,8 +69,8 @@ export class AnnotationSave {
     return true;
   }
 
-  keepMine(data: ArrayBuffer, load: number): Promise<void> {
-    return this.enqueue(() => this.keepMineNow(data, load));
+  keepMine(conflict: PdfWriteConflict): Promise<void> {
+    return this.enqueue(() => this.keepMineNow(conflict));
   }
 
   save(
@@ -82,6 +90,21 @@ export class AnnotationSave {
     this.known = { load, hashes: new Set([sha256]) };
   }
 
+  /**
+   * Whether the file on disk is as the viewer's load had it: as loaded, or
+   * as this editor wrote it since. Not the source's hash: a reload still
+   * reading the annotation store has already replaced that with bytes the
+   * viewer has not been sent.
+   */
+  private async diskIsKnown(load: number): Promise<boolean> {
+    try {
+      const disk = await this.source.diskHash();
+      return disk === undefined || this.knows(load, disk);
+    } catch {
+      return false;
+    }
+  }
+
   /** Whether `sha256` is the file as the viewer's load had it at some point. */
   knows(load: number, sha256: string): boolean {
     return this.known.load === load && this.known.hashes.has(sha256);
@@ -94,11 +117,15 @@ export class AnnotationSave {
     }
   }
 
-  private async keepMineNow(data: ArrayBuffer, load: number): Promise<void> {
-    if (!this.deps.isCurrentLoad(load) || !this.files.writeAtomic) {
+  private async keepMineNow(conflict: PdfWriteConflict): Promise<void> {
+    if (!this.deps.isCurrentLoad(conflict.load) || !this.files.writeAtomic) {
       return;
     }
-    await this.write(this.files.writeAtomic, load, new Uint8Array(data));
+    await this.write(
+      this.files.writeAtomic,
+      conflict,
+      new Uint8Array(conflict.data),
+    );
   }
 
   private async saveNow(
@@ -127,13 +154,14 @@ export class AnnotationSave {
       this.deps.post({
         type: "annotationSaveResult",
         load: message.load,
+        write: message.write,
         ok: false,
         reason: "error",
         message: "writeAtomic is unavailable",
       });
       return;
     }
-    const diskMatches = await this.source.diskMatchesBase();
+    const diskMatches = await this.diskIsKnown(message.load);
     // A reload during the check gave the viewer other bytes than these; a
     // conflict could no longer be settled with Keep mine.
     if (!this.deps.isCurrentLoad(message.load)) {
@@ -145,7 +173,7 @@ export class AnnotationSave {
     }
     await this.write(
       this.files.writeAtomic,
-      message.load,
+      message,
       new Uint8Array(message.data),
     );
   }
@@ -153,7 +181,7 @@ export class AnnotationSave {
   /** Write `bytes` over the file and tell the viewer whether it worked. */
   private async write(
     writeAtomic: NonNullable<PdfFiles["writeAtomic"]>,
-    load: number,
+    { load, write }: { load: number; write: number },
     bytes: Uint8Array,
   ): Promise<void> {
     this.source.expectWrite(createHash("sha256").update(bytes).digest("hex"));
@@ -166,6 +194,7 @@ export class AnnotationSave {
       this.deps.post({
         type: "annotationSaveResult",
         load,
+        write,
         ok: true,
         sha256: written.sha256,
       });
@@ -177,6 +206,7 @@ export class AnnotationSave {
       this.deps.post({
         type: "annotationSaveResult",
         load,
+        write,
         ok: false,
         reason: "error",
         message: text,
@@ -188,10 +218,15 @@ export class AnnotationSave {
     message: Extract<ViewerMessage, { type: "annotationSave" }>,
     text: string,
   ): void {
-    this.deps.conflict({ data: message.data, load: message.load });
+    this.deps.conflict({
+      data: message.data,
+      load: message.load,
+      write: message.write,
+    });
     this.deps.post({
       type: "annotationSaveResult",
       load: message.load,
+      write: message.write,
       ok: false,
       reason: "conflict",
       message: text,

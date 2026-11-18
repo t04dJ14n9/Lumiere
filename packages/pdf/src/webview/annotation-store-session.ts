@@ -10,6 +10,12 @@ import {
   exportStoreText,
   restoreStoredAnnotations,
 } from "./annotation-persist";
+
+/**
+ * Numbers the PDF writes of every session on this page, so a result for a
+ * write of an earlier load can never settle a later one's.
+ */
+let lastPdfWrite = 0;
 import type { OutgoingMessage } from "./outbox";
 
 /**
@@ -38,6 +44,15 @@ export class StoreSession {
   private chain: Promise<void> = Promise.resolve();
   private started = false;
   private saveQueued = false;
+  /**
+   * Writes of the PDF over the file that the host has not confirmed, by
+   * number: Lumiere's annotations as they were when the PDF was taken, and
+   * those of them changed since, whose change that PDF does not have.
+   */
+  private readonly pdfWrites = new Map<
+    number,
+    { sent: ReadonlySet<string>; changedSince: Set<string> }
+  >();
   /** The file could not be read back: saving would replace what is in it with less. */
   private fileLeftAlone = false;
   private markRestored: () => void = () => undefined;
@@ -106,6 +121,7 @@ export class StoreSession {
       return;
     }
     const owners = new Set(keys.map((key) => this.ownership.change(type, key)));
+    this.changedWhilePdfWrites(keys);
     if (owners.has("store")) {
       this.saveStore();
     }
@@ -117,6 +133,12 @@ export class StoreSession {
 
   /** Annotations were read again: an Undo or Redo may have brought Lumiere's back. */
   resynced(): void {
+    // Which changed is not known: any a pending PDF write took may have.
+    for (const { sent, changedSince } of this.pdfWrites.values()) {
+      for (const key of sent) {
+        changedSince.add(key);
+      }
+    }
     if (this.started) {
       this.saveStore();
     }
@@ -135,7 +157,13 @@ export class StoreSession {
           return;
         }
         try {
-          const text = await exportStoreText(this.annotation, this.ownership);
+          // Whose they are as of the hash this save is filed under: a save
+          // into the PDF confirmed during the export makes some the PDF's
+          // for the new hash only, and the old hash's file must keep them.
+          const own = new Set(this.ownership.keys());
+          const text = await exportStoreText(this.annotation, {
+            isOwn: (key) => own.has(key),
+          });
           this.host.post({
             type: "annotationStoreSave",
             load: state.load,
@@ -153,21 +181,83 @@ export class StoreSession {
     );
   }
 
+  /**
+   * The host wrote PDF write `write` over the file, and the viewer now has
+   * its hash. What went into it is the PDF's now. Lumiere's made since are
+   * saved again, under the new hash: the old one names a file no longer
+   * there. One of those it took changed since, and only saving into the PDF
+   * again keeps that change: the reader is told, as for any PDF annotation.
+   */
+  savedIntoPdf(write: number): void {
+    const settled = this.pdfWrites.get(write);
+    this.pdfWrites.delete(write);
+    if (!settled) {
+      return;
+    }
+    const stillOwn = this.ownership.savedIntoPdf(settled.sent);
+    const load = this.host.loadState()?.load;
+    if (settled.changedSince.size > 0 && load !== undefined) {
+      this.host.post({ type: "annotationEmbeddedEdit", load });
+    }
+    if (stillOwn) {
+      this.saveStore();
+    }
+  }
+
+  /** PDF write `write` failed: what it took stays Lumiere's. */
+  pdfWriteFailed(write: number): void {
+    this.pdfWrites.delete(write);
+  }
+
+  /**
+   * Lumiere's annotations shown now: a deleted one stays Lumiere's for Undo
+   * but is in no PDF taken now, and Undo after the write must find it so.
+   */
+  private async ownShown(): Promise<Set<string>> {
+    const shown = await this.annotation.export();
+    return new Set(
+      shown.items
+        .map((item) => annotationKey(item.data.ref))
+        .filter((key) => this.ownership.isOwn(key)),
+    );
+  }
+
+  private changedWhilePdfWrites(keys: readonly string[]): void {
+    for (const { sent, changedSince } of this.pdfWrites.values()) {
+      for (const key of keys) {
+        if (sent.has(key)) {
+          changedSince.add(key);
+        }
+      }
+    }
+  }
+
   writePdf(documents: DocumentsCapability, to: "pdf" | "copy"): void {
     this.run(async (state) => {
+      const write = ++lastPdfWrite;
       try {
+        if (to === "pdf") {
+          // Taken before the PDF: one made during the download is kept in
+          // both, rather than in neither.
+          this.pdfWrites.set(write, {
+            sent: await this.ownShown(),
+            changedSince: new Set(),
+          });
+        }
         const data = await downloadPdf(documents);
         this.host.post(
           to === "pdf"
             ? {
                 type: "annotationSave",
                 load: state.load,
+                write,
                 baseSha256: state.sha256,
                 data,
               }
             : { type: "annotationExport", load: state.load, data },
         );
       } catch (error) {
+        this.pdfWrites.delete(write);
         this.failed(state.load, error);
       }
     });
