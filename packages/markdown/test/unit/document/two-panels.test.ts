@@ -4,6 +4,7 @@ import { EditorState, Transaction } from "@codemirror/state";
 import type { TransactionSpec } from "@codemirror/state";
 import type { EditorView } from "@codemirror/view";
 import { Session } from "../../../src/plugins/document/session";
+import { mergeDiskChange } from "../../../src/shared/document/merge";
 import { protocol } from "../../../src/plugins/document/protocol";
 import { ViewConnection } from "../../../src/plugins/document/view-connection";
 import { fakeDocument, fakeHost } from "../../support/vscode-fake";
@@ -80,6 +81,63 @@ test("an edit on one panel arrives on the other panel of the same note", async (
   await settle();
   assert.equal(a.view.state.doc.toString(), "rewritten outside");
   assert.equal(b.view.state.doc.toString(), "rewritten outside");
+
+  a.connection.dispose();
+  b.connection.dispose();
+  await a.pair.dispose();
+  await b.pair.dispose();
+});
+
+test("an outside rewrite merged into unsaved text reaches both panels and rebases typing not yet sent", async () => {
+  let text = "a\nb\nc";
+  const doc = fakeDocument({
+    getText: () => text,
+    get isDirty() {
+      return text !== "a\nb\nc";
+    },
+  });
+  const host = fakeHost({
+    hostDocuments: {
+      async apply(_document, edits) {
+        for (const edit of [...edits].sort((a, b) => b.from - a.from)) {
+          text = text.slice(0, edit.from) + edit.insert + text.slice(edit.to);
+        }
+        return true;
+      },
+    },
+  });
+  const session = new Session(doc, host);
+  const a = await openPanel(session, "A");
+  const b = await openPanel(session, "B");
+
+  a.view.dispatch({ changes: { from: 0, to: 1, insert: "A" } });
+  a.connection.pump();
+  await settle();
+  assert.equal(text, "A\nb\nc");
+
+  // Typing on A that the host has not received when the file changes.
+  a.view.dispatch({ changes: { from: 5, insert: "!" } });
+  // What the host does when another program rewrites the file: merge the
+  // unsaved text into it, then report the merged text as the document's.
+  text = mergeDiskChange({
+    saved: "a\nb\nc",
+    buffer: text,
+    disk: "a\nb\nC",
+  });
+  session.changed();
+  await settle();
+
+  // The outside change and A's typing both end up everywhere, once.
+  for (const converged of [
+    text,
+    session.text,
+    a.view.state.doc.toString(),
+    b.view.state.doc.toString(),
+  ]) {
+    assert.equal(converged, "A\nb\nC!");
+  }
+  assert.equal(a.connection.error, undefined);
+  assert.equal(b.connection.error, undefined);
 
   a.connection.dispose();
   b.connection.dispose();

@@ -13,6 +13,7 @@ import {
   type PlannedNote,
 } from "../rename-save";
 import { registerTextCompletions } from "../text-completions";
+import { onWillDelete } from "./deletions";
 import type { NativeDocuments } from "./native-documents";
 
 /** VS Code's text documents, wrapped as `HostDocument`s by `documents`. */
@@ -70,6 +71,7 @@ export function createHostDocuments(documents: NativeDocuments): HostDocuments {
         .find((document) => document.uri.toString() === uri)
         ?.getText(),
     onWillRename,
+    onWillDelete,
     registerCompletions: (provider) =>
       toDisposer(registerTextCompletions(provider)),
   };

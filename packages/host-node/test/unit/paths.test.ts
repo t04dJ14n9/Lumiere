@@ -13,6 +13,7 @@ import * as path from "node:path";
 import { pathToFileURL } from "node:url";
 import {
   createEmptyFile,
+  isInsideRegisteredRoot,
   resolveContainedNote,
   writeThroughFile,
   assertContained,
@@ -95,4 +96,25 @@ test("writing does not follow a symlink, and creating does not truncate", async 
   const fresh = path.join(root, "Fresh.md");
   assert.equal(await createEmptyFile(fresh), true);
   assert.equal(await readFile(fresh, "utf8"), "");
+});
+
+test("a folder is trusted only inside a workspace the embedder registered", () => {
+  const uri = (file: string) => pathToFileURL(file).toString();
+  const roots = [uri("/work/vault"), uri("/work/notes/")];
+  assert.equal(isInsideRegisteredRoot(roots, uri("/work/vault")), true);
+  assert.equal(isInsideRegisteredRoot(roots, uri("/work/vault/docs")), true);
+  assert.equal(isInsideRegisteredRoot(roots, uri("/work/notes/a/b")), true);
+  // Its parent, a sibling that shares the prefix, and a dot-dot escape.
+  assert.equal(isInsideRegisteredRoot(roots, uri("/work")), false);
+  assert.equal(isInsideRegisteredRoot(roots, uri("/work/vault2")), false);
+  assert.equal(
+    isInsideRegisteredRoot(roots, "file:///work/vault/../private"),
+    false,
+  );
+  assert.equal(isInsideRegisteredRoot([], uri("/work/vault")), false);
+  assert.equal(isInsideRegisteredRoot(roots, "https://example.com/"), false);
+  // A filesystem root, however spelled, holds everything and so trusts nothing.
+  for (const root of ["file:///", "file:", "file://"]) {
+    assert.equal(isInsideRegisteredRoot([root], uri("/work/vault")), false);
+  }
 });

@@ -3248,6 +3248,16 @@
             "scope": "resource",
             "description": "Word and character count of the active note, or of the selection, in the status bar."
           },
+          "lumiere.markdown.attachments.deleteUnlinkedAttachments": {
+            "enum": [
+              "ask",
+              "always",
+              "never"
+            ],
+            "default": "ask",
+            "description": "Obsidian's Delete attachments when deleting files: when notes are deleted in VS Code, `ask` offers to delete the attachments only they linked, `always` deletes them (to the trash while files.enableTrash is on), and `never` leaves them. Deleting a folder does not offer; neither does a deletion made outside VS Code.",
+            "scope": "resource"
+          },
           "lumiere.markdown.autoPair.brackets": {
             "type": "boolean",
             "default": true,
@@ -3464,6 +3474,12 @@
             "default": "",
             "scope": "resource"
           },
+          "lumiere.markdown.links.focusNewTab": {
+            "type": "boolean",
+            "default": true,
+            "description": "Obsidian's Always focus new tabs: when a link opens in a new tab or beside, the new tab takes the keyboard focus. Off keeps the focus where it was (VS Code's preserveFocus); PDFs always take it.",
+            "scope": "resource"
+          },
           "lumiere.markdown.files.newNoteFolder": {
             "type": "string",
             "default": "",
@@ -3621,6 +3637,12 @@
             },
             "default": [],
             "description": "Obsidian's Excluded files: path prefixes such as `Archive/`, or globs such as `**/*.excalidraw.md`. Excluded files stay linkable but are left out of the quick switcher, suggestions, search and unlinked mentions.",
+            "scope": "resource"
+          },
+          "lumiere.markdown.vault.showUnsupportedFiles": {
+            "type": "boolean",
+            "default": false,
+            "description": "Obsidian's Show all file types: the quick switcher also finds files Obsidian cannot open (such as .csv or .zip), not only notes and the attachments it opens. Link suggestions already list every file, and the Explorer is VS Code's.",
             "scope": "resource"
           },
           "lumiere.markdown.vim.caretStyle": {
@@ -3921,17 +3943,17 @@
   },
   "devDependencies": {
     "@eslint/js": "^10.0.1",
-    "@playwright/test": "1.64.1",
+    "@playwright/test": "1.65.0",
     "@types/node": "^26.6.6",
     "@types/vscode": "1.125.0",
     "@vscode/test-electron": "^3.1.0",
-    "@vscode/vsce": "^4.1.0",
+    "@vscode/vsce": "^4.1.1",
     "esbuild": "^0.28.2",
-    "eslint": "^10.13.0",
+    "eslint": "^10.14.0",
     "eslint-plugin-react-hooks": "7.1.1",
-    "prettier": "3.9.10",
+    "prettier": "3.10.1",
     "tsx": "^4.23.15",
     "typescript": "6.0.3",
-    "typescript-eslint": "^8.72.1"
+    "typescript-eslint": "^8.72.2"
   }
 }

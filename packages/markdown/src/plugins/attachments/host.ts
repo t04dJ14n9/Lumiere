@@ -19,7 +19,10 @@ import {
 } from "../../attachments";
 import type { EditorPanel } from "../editor/api";
 import type {} from "../vault/api";
+import { registerDeleteUnlinked } from "./delete-unlinked";
 import { NO_VAULT, registerDownloadAttachments } from "./download-command";
+import { hostFetch } from "./host-fetch";
+import { containedReader } from "./local-source";
 import { protocol } from "./protocol";
 import { attachmentTarget } from "./target";
 
@@ -48,6 +51,7 @@ export const attachmentsHost: Plugin = {
     answerNotePages(ctx);
     reclaimExplorerOpens(ctx);
     registerDownloadAttachments(ctx);
+    registerDeleteUnlinked(ctx);
   },
 };
 
@@ -146,14 +150,18 @@ async function importUrlForPanel(
 ): Promise<SaveResult> {
   const loaded = await loadAttachmentSource(url, {
     imagesOnly,
-    fetch: (target) => fetch(target),
-    readFile: async (uri) => {
-      try {
-        return await ctx.workspace.read(uri);
-      } catch {
-        return undefined;
-      }
-    },
+    fetch: hostFetch,
+    // A URL the page named is read only from inside the workspace; one the
+    // reader opened in VS Code (Add to Note) may be anywhere.
+    readFile: imagesOnly
+      ? containedReader(ctx, panel.document.uri)
+      : async (uri) => {
+          try {
+            return await ctx.workspace.read(uri);
+          } catch {
+            return undefined;
+          }
+        },
   });
   if (!loaded) {
     return fail(ctx, "Could not download or read that image.");

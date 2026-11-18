@@ -8,35 +8,48 @@ import {
 } from "node:http";
 import { tmpdir } from "node:os";
 import * as path from "node:path";
+import { pathToFileURL } from "node:url";
 import { BASE, type EditorAssets, type LumiereHost } from "@workshop/host-node";
 import type { DshContext, DshWebRoute } from "../../src/host/dsh";
 import { registerRoutes } from "../../src/host/routes";
+import { dshSessions, type Sessions } from "./fake-sessions";
 
 interface Fixture {
   readonly origin: string;
+  readonly dir: string;
   readonly editorQuery: string;
   readonly opened: string[];
   readonly added: string[];
+  /** `addRoot` and panel opens, in the order they happened. */
+  readonly order: string[];
 }
 
 /** A real HTTP server in front of DSH's registered prefix handler. */
-async function fixture(t: test.TestContext): Promise<Fixture> {
+async function fixture(
+  t: test.TestContext,
+  known?: (dir: string) => Sessions,
+): Promise<Fixture> {
   const dir = await realpath(
     await mkdtemp(path.join(tmpdir(), "lumiere-dsh-methods-")),
   );
   const markdown = path.join(dir, "m");
+  const viewer = path.join(dir, "viewer");
   const note = path.join(dir, "Note.md");
   const shim = path.join(dir, "shim.js");
   await mkdir(markdown);
+  await mkdir(viewer);
   await writeFile(note, "# Note");
+
   await writeFile(path.join(markdown, "editor.js"), "/* editor */");
   await writeFile(shim, "/* shim */");
 
   const opened: string[] = [];
   const added: string[] = [];
+  const order: string[] = [];
   const cleanups: Array<() => void | Promise<void>> = [];
   let handler: DshWebRoute["handler"] | undefined;
   const ctx: DshContext = {
+    ...dshSessions(known ? known(dir) : { live: { s1: dir } }),
     webServer: {
       register(route) {
         handler = route.handler;
@@ -60,6 +73,7 @@ async function fixture(t: test.TestContext): Promise<Fixture> {
     panels: {
       open: async () => {
         opened.push("p1");
+        order.push("open");
         return {
           id: "p1",
           html: '<!doctype html><html><head><meta charset="UTF-8"></head><body><script type="module" nonce="n" src="/e.js"></script></body></html>',
@@ -88,11 +102,12 @@ async function fixture(t: test.TestContext): Promise<Fixture> {
     },
     addRoot: (uri: string) => {
       added.push(uri);
+      order.push(`addRoot:${uri}`);
     },
     workspaceRoots: () => added,
     stop: async () => {},
   } as unknown as LumiereHost;
-  registerRoutes(ctx, host, { markdown, shim });
+  registerRoutes(ctx, host, { markdown, shim, pdf: viewer });
   if (!handler) {
     throw new Error("DSH did not register its prefix handler");
   }
@@ -117,8 +132,19 @@ async function fixture(t: test.TestContext): Promise<Fixture> {
   });
   await new Promise<void>((resolve) => server.listen(0, "127.0.0.1", resolve));
   const { port } = server.address() as { port: number };
-  const editorQuery = new URLSearchParams({ path: note, root: dir }).toString();
-  return { origin: `http://127.0.0.1:${port}`, editorQuery, opened, added };
+  const editorQuery = new URLSearchParams({
+    path: note,
+    root: dir,
+    session: "s1",
+  }).toString();
+  return {
+    origin: `http://127.0.0.1:${port}`,
+    dir,
+    editorQuery,
+    opened,
+    added,
+    order,
+  };
 }
 
 type RouteHandler = (
@@ -383,4 +409,55 @@ test("HEAD does not open the event stream or run a tree action", async (t) => {
     assert.equal(await response.text(), "", path);
   }
   assert.deepEqual(writes, []);
+});
+
+test("a page names its session and DSH registers that session's workspace first", async (t) => {
+  const { origin, dir, opened, added, order } = await fixture(t);
+  const sub = path.join(dir, "sub");
+  await mkdir(sub);
+  await writeFile(path.join(sub, "Deep.md"), "# Deep");
+  await writeFile(path.join(sub, "Deep.pdf"), "%PDF-1.4\n");
+  const page = (rest: string, file: string, session: string) =>
+    fetch(
+      `${origin}${BASE}${rest}?${new URLSearchParams({ path: file, root: sub, session })}`,
+    );
+
+  // The page names a folder inside the workspace; the workspace is DSH's.
+  const editor = await page("/editor", path.join(sub, "Deep.md"), "s1");
+  assert.equal(editor.status, 200);
+  await editor.text();
+  assert.deepEqual(order, [`addRoot:${pathToFileURL(dir)}`, "open"]);
+
+  added.length = 0;
+  const pdf = await page("/pdf", path.join(sub, "Deep.pdf"), "s1");
+  assert.equal(pdf.status, 200);
+  await pdf.text();
+  assert.deepEqual(added, [pathToFileURL(dir).toString()]);
+  assert.deepEqual(opened, ["p1"]);
+});
+
+test("a stored session's workspace is registered too, and an unknown session registers nothing", async (t) => {
+  const { origin, dir, added } = await fixture(t, (workspace) => ({
+    stored: { cold: workspace },
+  }));
+  const sub = path.join(dir, "sub");
+  await mkdir(sub);
+  await writeFile(path.join(sub, "Deep.md"), "# Deep");
+  const editor = (session: string | undefined) =>
+    fetch(
+      `${origin}${BASE}/editor?${new URLSearchParams({
+        path: path.join(sub, "Deep.md"),
+        root: sub,
+        ...(session ? { session } : {}),
+      })}`,
+    ).then((response) => response.arrayBuffer());
+
+  await editor("nope");
+  await editor(undefined);
+  assert.ok(
+    !added.includes(pathToFileURL(dir).toString()),
+    "DSH registered a workspace for a session it does not know",
+  );
+  await editor("cold");
+  assert.ok(added.includes(pathToFileURL(dir).toString()));
 });

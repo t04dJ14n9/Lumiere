@@ -37,8 +37,11 @@ export function questionId(): number {
 }
 
 /** A UI request that waits for the page's answer. */
-type Question = Extract<UiRequest, { type: "ask" | "pick" | "input" | "menu" }>;
-type Answer = string | number | null;
+type Question = Extract<
+  UiRequest,
+  { type: "ask" | "pick" | "pickMany" | "input" | "menu" }
+>;
+type Answer = string | number | number[] | null;
 
 export class LivePanel {
   readonly shell: PanelShell;

@@ -146,7 +146,7 @@ export type FeaturePhase = "chrome" | "paint" | "all";
  * frontmatter fence the Properties sheet is left out: it drags in the YAML
  * runtime and markdown-it, and there is no sheet to paint on the first frame.
  */
-function chromePreloadIds(withProperties: boolean): readonly string[] {
+export function chromePreloadIds(withProperties: boolean): readonly string[] {
   return withProperties
     ? [...CHROME_FEATURE_IDS]
     : [...CHROME_FEATURE_IDS].filter((id) => id !== "properties");

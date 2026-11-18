@@ -35,6 +35,16 @@ export interface Dialogs {
     placeholder: string;
     items(query: string): readonly PickItem<T>[];
   }): Promise<{ item?: PickItem<T>; query: string } | undefined>;
+  /**
+   * A checklist with every row ticked, for the reader to untick some.
+   * Resolves to the ticked rows' values in the order given (an empty list when
+   * none is ticked), or undefined when dismissed. A host may show only the
+   * first 256 rows.
+   */
+  pickMany<T>(options: {
+    placeholder: string;
+    items: readonly PickItem<T>[];
+  }): Promise<T[] | undefined>;
   /** A text prompt with the text preselected; undefined when dismissed. */
   input(options: {
     prompt: string;

@@ -13,6 +13,8 @@ export type UiRequest =
   | { type: "ask"; id: number; message: string; actions: string[] }
   | { type: "pick"; id: number; placeholder: string; items: PickRow[] }
   | { type: "pickItems"; id: number; items: PickRow[] }
+  /** A checklist, every row ticked; answered with the ticked rows' indices. */
+  | { type: "pickMany"; id: number; placeholder: string; items: PickRow[] }
   | { type: "input"; id: number; prompt: string; value: string; error?: string }
   /**
    * The right-click menu at (x, y): Lumière's items in groups. Answered with
@@ -40,8 +42,11 @@ export interface PickRow {
 export type UiEvent =
   | { type: "focus" }
   | { type: "blur" }
-  /** An `ask` action, a `pick` row index or `input` text; null when dismissed. */
-  | { type: "answer"; id: number; value: string | number | null }
+  /**
+   * An `ask` action, a `pick` row index, `input` text or the row indices a
+   * `pickMany` left ticked; null when dismissed.
+   */
+  | { type: "answer"; id: number; value: string | number | number[] | null }
   | { type: "query"; id: number; query: string }
   /**
    * The reader right-clicked at (x, y). `context` is VS Code's webview
@@ -128,7 +133,8 @@ export function parsePageFrame(text: string): PageFrame | undefined {
   return undefined;
 }
 
-const MAX_ROWS = 256;
+/** The most rows a pick or checklist frame may carry. */
+export const MAX_ROWS = 256;
 
 function isRows(value: unknown): value is PickRow[] {
   return (
@@ -196,6 +202,15 @@ const REQUEST_PARSERS: Readonly<Record<string, RequestParser>> = {
     isId(value.id) && isText(value.placeholder) && isRows(value.items)
       ? {
           type: "pick",
+          id: value.id,
+          placeholder: value.placeholder,
+          items: value.items,
+        }
+      : undefined,
+  pickMany: (value) =>
+    isId(value.id) && isText(value.placeholder) && isRows(value.items)
+      ? {
+          type: "pickMany",
           id: value.id,
           placeholder: value.placeholder,
           items: value.items,
@@ -324,10 +339,17 @@ function isClipboardText(value: unknown): value is string {
   return typeof value === "string";
 }
 
-function isAnswer(value: unknown): value is string | number | null {
+function isAnswer(value: unknown): value is string | number | number[] | null {
   return (
     value === null ||
     isText(value) ||
-    (Number.isSafeInteger(value) && (value as number) >= 0)
+    isRowIndex(value) ||
+    (Array.isArray(value) &&
+      value.length <= MAX_ROWS &&
+      value.every(isRowIndex))
   );
+}
+
+function isRowIndex(value: unknown): value is number {
+  return Number.isSafeInteger(value) && (value as number) >= 0;
 }

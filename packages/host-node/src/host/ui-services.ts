@@ -12,7 +12,7 @@ import {
 } from "@workshop/markdown/portable";
 import { questionId, type LivePanel } from "./panel";
 import type { PanelHub } from "./panels";
-import type { PickRow } from "../protocol";
+import { MAX_ROWS, type PickRow } from "../protocol";
 
 /** The page to show something on: the active one, else the newest. */
 export function presentingPanel(panels: PanelHub): LivePanel | undefined {
@@ -52,6 +52,7 @@ export function createDialogs(
         : undefined;
     },
     pick: (options) => pick(panels, id(), options),
+    pickMany: (options) => pickMany(panels, id(), options),
     input: (options) => input(panels, id, options),
   };
 }
@@ -108,8 +109,31 @@ async function pick<T>(
   }
 }
 
-function rows<T>(items: readonly PickItem<T>[]): PickRow[] {
-  return items.slice(0, 200).map((item) => ({
+/** The checklist: the page answers with the row numbers it left ticked. */
+async function pickMany<T>(
+  panels: PanelHub,
+  id: number,
+  options: { placeholder: string; items: readonly PickItem<T>[] },
+): Promise<T[] | undefined> {
+  const items = options.items.slice(0, MAX_ROWS);
+  const answer = await presentingPanel(panels)?.ask({
+    type: "pickMany",
+    id,
+    placeholder: options.placeholder,
+    items: rows(items, MAX_ROWS),
+  });
+  if (!Array.isArray(answer)) {
+    return undefined;
+  }
+  // The page is untrusted: keep only rows that exist, once each, in row order.
+  return [...new Set(answer)]
+    .filter((index) => index < items.length)
+    .sort((a, b) => a - b)
+    .map((index) => items[index]!.value);
+}
+
+function rows<T>(items: readonly PickItem<T>[], limit = 200): PickRow[] {
+  return items.slice(0, limit).map((item) => ({
     label: item.label,
     ...(item.description === undefined
       ? {}

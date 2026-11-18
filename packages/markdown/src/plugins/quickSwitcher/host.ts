@@ -62,9 +62,13 @@ export const quickSwitcherHost: Plugin = {
         const source = active ?? `${vault.index.root}/`;
         await ctx.settings.effective.prepare(source);
         const recent = readRecent(ctx.storage);
+        const showUnsupportedFiles = Boolean(
+          ctx.settings.get("vault.showUnsupportedFiles", false, source),
+        );
         const result = await ctx.dialogs.pick({
           placeholder: "Find or create a note…",
-          items: (query) => switcherItems(vault.index, query, 50, recent),
+          items: (query) =>
+            switcherItems(vault.index, query, { recent, showUnsupportedFiles }),
         });
         if (result?.item) {
           await open(vault, result.item.value, source);

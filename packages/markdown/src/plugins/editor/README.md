@@ -44,7 +44,9 @@ The note has its own size, `lumiere.markdown.editor.fontSize` (8 to 48, default
 `docs/obsidian-measurements/font-size.mjs`), and its own line height,
 `lumiere.markdown.editor.lineHeight` (a multiple of the size, 1 to 3, default
 1.5: Obsidian's 24px at 16px). They replace `editor.fontSize` and
-`editor.lineHeight` for notes, which have no effect on them. The line height is
+`editor.lineHeight` for notes, which have no effect on them. Nor is
+`editor.mouseWheelZoom` read: Lumiere adds no Ctrl/Cmd+scroll zoom, so use
+**Set Note Font Size** (DESIGN §15.3). The line height is
 a unitless ratio, so every line scales with the size; headings keep Obsidian's
 own ratios (1.2, 1.2, 1.3, 1.4, 1.5 and 1.5). Headings are 1.618, 1.462, 1.318,
 1.188, 1.076 and 1 times the body (Obsidian's ratios, em-relative), and tables,

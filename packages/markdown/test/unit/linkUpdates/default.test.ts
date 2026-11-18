@@ -65,6 +65,25 @@ test("Always Update persists always and skips future dialogs", async () => {
   await root.dispose();
 });
 
+test("a mode that cannot be saved does not cost the user the update they asked for", async () => {
+  const { root, fake, host } = await startHost({
+    "linkUpdates.mode": "prompt",
+  });
+  host.settings.access.update = async () => {
+    throw new Error("Unable to write to Folder Settings: the file has errors");
+  };
+  const errors: string[] = [];
+  host.dialogs.error = (message) => {
+    errors.push(message);
+  };
+  fake.answerWith("Always Update");
+  assert.equal((await fake.rename(rename)).length, 2);
+  assert.equal(errors.length, 1);
+  assert.match(errors[0] ?? "", /could not save/i);
+  assert.match(errors[0] ?? "", /the file has errors/);
+  await root.dispose();
+});
+
 test("declining or cancelling the dialog does not persist never", async () => {
   const { root, fake, host } = await startHost({
     "linkUpdates.mode": "prompt",

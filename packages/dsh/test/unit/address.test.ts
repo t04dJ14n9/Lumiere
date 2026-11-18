@@ -155,10 +155,9 @@ test("isEditorDocument distinguishes a Lumière editor page from HTTP 400/403 er
   );
 });
 
-test("an absolute note address names no root: the host lets its workspace in later", () => {
-  // The host registers a note's folder that stands in for a workspace (no
-  // root in the query) so that the session's workspace, which holds it, may
-  // still open; a root in the query would be a named workspace instead.
+test("an absolute note address names no root, only its session", () => {
+  // The note's folder is then the page's root, which the host holds to the
+  // session's workspace that DSH registered (host/workspace.ts).
   const absolute = resolveEditorTarget(
     "dsh-resource://file/session/s1//v/notes/Start.md",
     "/v/notes/Start.md",
@@ -167,6 +166,7 @@ test("an absolute note address names no root: the host lets its workspace in lat
   const query = new URLSearchParams(absolute.src?.split("?")[1]);
   assert.equal(query.get("path"), "/v/notes/Start.md");
   assert.equal(query.has("root"), false);
+  assert.equal(query.get("session"), "s1");
 
   const relative = resolveEditorTarget(
     "dsh-resource://file/session/s1/notes/Start.md",
