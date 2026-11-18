@@ -6,11 +6,10 @@ import { test } from "node:test";
 
 const root = join(dirname(fileURLToPath(import.meta.url)), "../..");
 
-const ANNOTATE_COMMANDS = [
-  "lumiere.pdf.selectAnnotateTool",
-  "lumiere.pdf.toggleAnnotateTool",
-  "lumiere.pdf.pickAnnotationTool",
-  "lumiere.pdf.pickAnnotationColor",
+/** What is left of the annotation commands in the palette: no mode, no pickers. */
+const PALETTE_COMMANDS = [
+  "lumiere.pdf.highlightSelection",
+  "lumiere.pdf.addAnnotation",
   "lumiere.pdf.annotationUndo",
   "lumiere.pdf.annotationRedo",
   "lumiere.pdf.annotationRetrySave",
@@ -31,13 +30,10 @@ test("the viewer does not mount an in-viewer annotation bar", () => {
   );
 });
 
-test("slim and floating bars do not mount an Annotate control", () => {
+test("the slim bar does not mount an Annotate control", () => {
   const toolbar = source("src/webview/toolbar.tsx");
-  const floating = source("src/webview/floating-toolbar.tsx");
   assert.doesNotMatch(toolbar, /AnnotationToolkit/);
   assert.doesNotMatch(toolbar, /label="Annotate"/);
-  assert.doesNotMatch(floating, /AnnotationToolkit/);
-  assert.doesNotMatch(floating, /label="Annotate"/);
 });
 
 test("styles do not reserve a row or strip for an in-viewer annotation bar", () => {
@@ -50,18 +46,15 @@ test("styles do not reserve a row or strip for an in-viewer annotation bar", () 
   assert.doesNotMatch(toolbar, /\.color-chip/);
 });
 
-test("annotate commands stay on the status bar, command palette, and keybinding", () => {
+test("annotations have no status bar entry; the palette and a shortcut mark selected text", () => {
   const bar = source("src/extension/plugins/pdfToolbar/status-bar.ts");
-  for (const id of [
-    "annotate",
-    "annotationTool",
-    "annotationColor",
-    "annotationUndo",
-    "annotationRedo",
-  ]) {
-    assert.match(bar, new RegExp(`id: "${id}"`));
-  }
-  assert.doesNotMatch(bar, /in the viewer/);
+  assert.doesNotMatch(bar, /id: "annotat/u);
+  assert.equal(
+    existsSync(
+      join(root, "src/extension/plugins/pdfToolbar/annotation-picker.ts"),
+    ),
+    false,
+  );
 
   const contributes = JSON.parse(source("contributes.json")) as {
     menus: Record<string, { command: string }[]>;
@@ -73,15 +66,28 @@ test("annotate commands stay on the status bar, command palette, and keybinding"
   const palette = new Set(
     (contributes.menus.commandPalette ?? []).map((entry) => entry.command),
   );
-  for (const id of ANNOTATE_COMMANDS) {
+  for (const id of PALETTE_COMMANDS) {
     assert.equal(title.has(id), false, id);
     assert.equal(palette.has(id), true, id);
   }
-  const binding = contributes.keybindings.find(
-    (entry) => entry.key === "ctrl+alt+a",
+  // As in macOS Preview: ⌃⌘H highlights, ⌃⌘U underlines, ⌃⌘S strikes out.
+  // Plain ⌘H stays the system's Hide.
+  const keys = Object.fromEntries(
+    contributes.keybindings
+      .filter((entry) => /Selection$/u.test(entry.command))
+      .map((entry) => [entry.command, [entry.key, entry.mac]]),
   );
-  assert.equal(binding?.command, "lumiere.pdf.toggleAnnotateTool");
-  assert.equal(binding?.mac, "ctrl+cmd+a");
+  assert.deepEqual(keys, {
+    "lumiere.pdf.highlightSelection": ["ctrl+alt+h", "ctrl+cmd+h"],
+    "lumiere.pdf.underlineSelection": ["ctrl+alt+u", "ctrl+cmd+u"],
+    "lumiere.pdf.strikeoutSelection": ["ctrl+alt+s", "ctrl+cmd+s"],
+  });
+  assert.equal(
+    contributes.keybindings.some(
+      (entry) => entry.key === "ctrl+alt+a" || entry.mac === "cmd+h",
+    ),
+    false,
+  );
   assert.equal(
     contributes.keybindings.some(
       (entry) =>

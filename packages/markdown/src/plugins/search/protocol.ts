@@ -1,6 +1,6 @@
 import { Schema, type Infer } from "@workshop/core";
 import { defineProtocol } from "../../shared/rpc/protocol";
-export const matchLine = Schema.object({
+const matchLine = Schema.object({
   text: Schema.string().max(512),
   offset: Schema.number().min(0),
   mark: Schema.object({

@@ -13,7 +13,7 @@ export function taskEdit(
   }
   const lines = text.split("\n");
   const line = lines[lineNumber];
-  if (line !== expected) {
+  if (line === undefined || !isSameTaskLine(line, expected)) {
     return undefined;
   }
   const marker = taskMarker(line);
@@ -25,6 +25,15 @@ export function taskEdit(
     marker;
   return { from, to: from + 1, insert: checked ? "x" : " " };
 }
+/**
+ * Whether the source line is still the line a checkbox was drawn from. An
+ * embedded list item's children are shown with the item's indentation
+ * removed (`extractBlocks`), so only the indentation may differ.
+ */
+function isSameTaskLine(line: string, expected: string): boolean {
+  return line === expected || line.trimStart() === expected.trimStart();
+}
+
 /**
  * How far along the checklist a line is, in order. Cycling goes text,
  * bullet, open, done, bullet; toggling the status treats text as a bullet,

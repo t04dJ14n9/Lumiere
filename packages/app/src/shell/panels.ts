@@ -13,7 +13,7 @@ import type { UiStateHandle } from "./ui-state";
 export type Panel = "sidebar" | "outline";
 
 /** Narrower than this, the panels float (styles.css, `.floating-panel`). */
-export const NARROW_QUERY = "(max-width: 1199.98px)";
+const NARROW_QUERY = "(max-width: 1199.98px)";
 
 type SavedPanels = Pick<UiState, Panel>;
 

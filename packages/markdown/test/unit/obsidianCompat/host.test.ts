@@ -52,8 +52,8 @@ test("B4: scoped snapshots, rejected edits and override caches keep two vaults i
     await f.service.getObsidianOverrides({ vaultRoot: ROOT_B }),
     { "links.useWikilinks": true },
   );
-  // types.json, app.json, daily-notes.json and templates.json in each vault.
-  assert.equal(f.watchers.size, 8);
+  // types.json, app.json and templates.json in each vault.
+  assert.equal(f.watchers.size, 6);
   await assert.rejects(
     f.service.getPropertyTypes({ vaultRoot: `${ROOT_A}/notes` }),
     /resolved vault root/,
@@ -424,13 +424,9 @@ test("B1: read-only rejections leave the same-vault queue and watchers usable", 
   assert.equal(f.writes.length, 0);
 });
 
-test("daily-notes.json and templates.json seed their settings; explicit layers win", async (t) => {
+test("templates.json seeds its settings; explicit layers win", async (t) => {
   const f = await compatFixture();
   t.after(() => f.root.dispose());
-  await f.change(
-    `${ROOT_A}/.obsidian/daily-notes.json`,
-    '{"folder":"Journal","format":"YYYY/YYYY-MM-DD","template":"Templates/Daily"}',
-  );
   await f.change(
     `${ROOT_A}/.obsidian/templates.json`,
     '{"folder":"Templates","dateFormat":"DD.MM.YYYY"}',
@@ -438,24 +434,22 @@ test("daily-notes.json and templates.json seed their settings; explicit layers w
   await f.change(`${ROOT_A}/.obsidian/app.json`, '{"livePreview":false}');
   await f.configuration.prepare(NOTE_A);
   const get = (key: string) => f.configuration.get(key, "", NOTE_A);
-  assert.equal(get("dailyNotes.folder"), "Journal");
-  assert.equal(get("dailyNotes.dateFormat"), "YYYY/YYYY-MM-DD");
-  assert.equal(get("dailyNotes.template"), "Templates/Daily");
   assert.equal(get("templates.folder"), "Templates");
   assert.equal(get("templates.dateFormat"), "DD.MM.YYYY");
   assert.equal(get("templates.timeFormat"), "");
   assert.equal(get("editor.defaultMode"), "source");
-  assert.equal(f.configuration.get("dailyNotes.folder", "", NOTE_B), "");
-  f.inspections.set(`${NOTE_A}|dailyNotes.folder`, { workspaceValue: "Days" });
-  assert.equal(get("dailyNotes.folder"), "Days");
-  await f.change(`${ROOT_A}/.obsidian/daily-notes.json`, "{");
-  assert.equal(get("dailyNotes.template"), "Templates/Daily");
+  assert.equal(f.configuration.get("templates.folder", "", NOTE_B), "");
+  f.inspections.set(`${NOTE_A}|templates.folder`, { workspaceValue: "Mine" });
+  assert.equal(get("templates.folder"), "Mine");
+  f.inspections.delete(`${NOTE_A}|templates.folder`);
+  await f.change(`${ROOT_A}/.obsidian/templates.json`, "{");
+  assert.equal(get("templates.folder"), "Templates");
   assert.equal(
-    f.warnings.filter((message) => message.includes("daily-notes.json")).length,
+    f.warnings.filter((message) => message.includes("templates.json")).length,
     1,
   );
-  await f.change(`${ROOT_A}/.obsidian/daily-notes.json`, undefined);
-  assert.equal(get("dailyNotes.template"), "");
-  assert.equal(get("templates.folder"), "Templates");
+  await f.change(`${ROOT_A}/.obsidian/templates.json`, undefined);
+  assert.equal(get("templates.folder"), "");
+  assert.equal(get("editor.defaultMode"), "source");
   assert.equal(f.writes.length, 0, "Lumiere never writes Obsidian files");
 });

@@ -59,13 +59,6 @@ export interface ContributedSetting {
   };
 }
 
-/**
- * Which layer `SettingsAccess.update` writes: where `inspect` says (the
- * default), or as narrowly as the resource allows, for a choice that is about
- * one folder's files and should not follow the user to every workspace.
- */
-export type SettingScope = "inspected" | "narrowest";
-
 /** The Settings UI's own keys and scopes, for commands that change settings. */
 export interface SettingsAccess {
   /** A `lumiere.markdown.` key as it is now, and where a write to it goes. */
@@ -74,16 +67,18 @@ export interface SettingsAccess {
     resource?: string,
   ): { value: unknown; target: SettingTarget };
   /**
-   * Writes the key where `inspect` says (the folder or the workspace if it
-   * sets it, else the user's settings). With `scope` `narrowest`, writes the
-   * resource's workspace folder, else the workspace, else the user's
-   * settings; a host with one scope ignores it.
+   * Writes the key where `inspect` says (the workspace if it sets it, else
+   * the user's settings). With `scope: "workspaceFolder"`, a key the user's
+   * settings would hold goes to `resource`'s workspace folder instead (or
+   * the workspace, when `resource` is in no folder), so the value stays
+   * with that vault, as Obsidian keeps it in the vault's `app.json`. Hosts
+   * with a single settings store ignore `scope`.
    */
   update(
     key: string,
     value: unknown,
     resource?: string,
-    scope?: SettingScope,
+    scope?: "workspaceFolder",
   ): Promise<SettingTarget>;
   /** The extension's contributed settings, straight from its package.json. */
   contributed(): readonly ContributedSetting[];

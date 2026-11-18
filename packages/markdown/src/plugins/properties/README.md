@@ -10,15 +10,22 @@ retaining focused draft inputs. Edits use the pure YAML operations and become on
 outer-document transaction. List and chip drafts resolve the selected occurrence
 against current values before committing, so a stale render cannot replace a
 concurrently edited list. Save participants commit drafts and reject invalid
-input. Nested non-OKF maps render as Obsidian Unknown (`JSON.stringify`). OKF `generated`/`verified` show their YAML in a text field that reads like any other value (no border or code font, as tall as its lines); a commit keeps the map. `sources` is a plain text property, the same control as any other string, without the three-line clamp: it shows up to 300px and scrolls past that, focused or not. Lists show every item, as in Obsidian; `properties.listPreviewCount` (default 0, off) caps them behind a disclosure. Unsupported/tagged YAML prefers Source mode. If a settable value's slice cannot
+input. Nested maps render as Obsidian Unknown (`JSON.stringify`). `sources` is a plain text property, the same control as any other string, without the three-line clamp: it shows up to 300px and scrolls past that, focused or not. Lists show every item, as in Obsidian; `properties.listPreviewCount` (default 0, off) caps them behind a disclosure. Unsupported/tagged YAML prefers Source mode. If a settable value's slice cannot
 parse independently, a serialized copy keeps it editable. Blank row/value space
 focuses the value editor; native field, pill and link clicks keep their own actions.
 Replaced anchors materialize their external aliases with exact integers.
 Types are a vault-wide registry keyed by
-property name, scoped by the injected vault root. Changing a type only changes
-that registry; a mismatched YAML value
-retains its warning until edited. Collapse is one persisted workspace preference
-shared by notes and panels. New rows remain drafts until their names are accepted.
+property name, scoped by the injected vault root (`vault-types.ts`): the
+vault's `.obsidian/types.json`, as Obsidian keeps it (`multitext` is List),
+with types chosen in Lumiere on top. Types are only read from
+`types.json`: a type changed in Lumiere is stored in Lumiere's workspace
+storage, and Obsidian does not see it. (`vault-types.ts` asks
+`obsidianCompat` to write the registry when the vault has one, but every
+host refuses that write, having no atomic conditional write, so the change
+always lands in Lumiere's storage.) No `.obsidian` folder is ever created. Changing a type changes no YAML; a mismatched value
+retains its warning until edited. Collapse is remembered per note and
+shared by that note's panels. New rows remain drafts until their names are
+accepted.
 
 ## Files
 
@@ -27,6 +34,7 @@ shared by notes and panels. New rows remain drafts until their names are accepte
 - `protocol.ts`: validated type, vault-name and disclosure RPC.
 - `host.ts`: shared stores and per-panel RPC registrations.
 - `type-store.ts`: vault/name preferences and shared subscriptions.
+- `vault-types.ts`: `types.json` types with Lumiere's preferences on top.
 - `collapse-store.ts`: per-note disclosure persistence (as in Obsidian) and same-note subscriptions.
 - `collapse-store.test.ts`: disclosure propagation, rendering and reopen checks.
 - `property-names.ts`: vault metadata and registered-name suggestions.
@@ -81,7 +89,8 @@ shared by notes and panels. New rows remain drafts until their names are accepte
 
 ## Services, events and settings
 
-The host injects `rpc`, `vault` and the host service `storage`; the webview injects `editor`,
+The host injects `rpc`, `vault` and the host service `storage`, and
+optionally `obsidianCompat` for `types.json`; the webview injects `editor`,
 `document`, `livePreview`, `commands`, `rpc` and `menu`. The webview provides
 `propertyRenderers`, so another feature can replace one property's markup.
 `sources` does not use that hook: it always renders as text.

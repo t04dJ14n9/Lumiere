@@ -17,8 +17,6 @@ export interface PageProps {
   page: PageContextValue;
   highlight: Highlight | undefined;
   region: RegionSelection | undefined;
-  /** True in Annotate mode, where the marks take the pointer for hit-test and select. */
-  annotate: boolean;
   /** The search bar is open: only then are there matches to draw. */
   searching: boolean;
   /** Paged scrolling: a page turned to fades in (styles/view-controls.css). */
@@ -44,7 +42,6 @@ export function Page({
   page,
   highlight,
   region,
-  annotate,
   searching,
   paged,
   onOpenPage,
@@ -74,7 +71,7 @@ export function Page({
         <SelectionLayer />
       </div>
       <RegionMarquee />
-      <BacklinkLayer annotate={annotate} />
+      <BacklinkLayer />
     </div>
   );
 }

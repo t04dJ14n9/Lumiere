@@ -11,7 +11,7 @@ import { SourceCoordinates } from "../../shared/document/coordinates";
 import { contributionId } from "../../shared/setting-schema";
 import type { Editors } from "./api";
 
-export const GO_TO_LINE_COMMAND = contributionId("goToLine");
+const GO_TO_LINE_COMMAND = contributionId("goToLine");
 
 /**
  * A line number typed by the reader ("7", " 7 "), clamped to the document;

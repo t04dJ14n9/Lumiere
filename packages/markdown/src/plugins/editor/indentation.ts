@@ -47,7 +47,7 @@ function width(state: EditorState, text: string): number {
 }
 
 /** The list item on `line` and its nested lines, as a line-number range. */
-export function itemLines(state: EditorState, line: Line): [number, number] {
+function itemLines(state: EditorState, line: Line): [number, number] {
   if (isQuoteListLine(line.text)) {
     return quoteItemLines(state, line);
   }

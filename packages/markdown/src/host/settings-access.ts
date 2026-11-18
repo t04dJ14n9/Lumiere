@@ -49,20 +49,6 @@ function contributed(packageJSON: unknown): readonly ContributedSetting[] {
     }));
 }
 
-/**
- * The narrowest layer a write for `resource` can reach: its workspace folder,
- * else the workspace, else the user's settings (no folder is open). A write
- * to a folder layer for a file outside every folder would be refused by VS
- * Code, so it falls back instead.
- */
-function narrowestTarget(resource: string | undefined): SettingTarget {
-  const uri = resource ? vscode.Uri.parse(resource) : undefined;
-  if (uri && vscode.workspace.getWorkspaceFolder(uri)) {
-    return "workspaceFolder";
-  }
-  return vscode.workspace.workspaceFolders?.length ? "workspace" : "user";
-}
-
 /** The contributed setting for a relative key; anything else is refused. */
 function own(
   settings: readonly ContributedSetting[],
@@ -73,6 +59,20 @@ function own(
     throw new Error(`${PREFIX}${key} is not a Lumiere setting.`);
   }
   return setting;
+}
+
+/**
+ * Where a per-vault write goes: the resource's workspace folder, else the
+ * workspace, else (no folder open) the user's settings.
+ */
+function folderTarget(resource: string | undefined): SettingTarget {
+  const folder = resource
+    ? vscode.workspace.getWorkspaceFolder(vscode.Uri.parse(resource))
+    : undefined;
+  if (folder) {
+    return "workspaceFolder";
+  }
+  return vscode.workspace.workspaceFolders?.length ? "workspace" : "user";
 }
 
 export function createSettingsAccess(extension: {
@@ -118,11 +118,12 @@ export function createSettingsAccess(extension: {
           `Not writing ${PREFIX}${String(key)}: ${checked.problem}`,
         );
       }
+      const located = locate(key, resource);
       const target =
-        scope === "narrowest"
-          ? narrowestTarget(resource)
-          : locate(key, resource).target;
-      await configuration(resource).update(key, value, targets[target]);
+        scope && located.target === "user"
+          ? folderTarget(resource)
+          : located.target;
+      await located.config.update(key, value, targets[target]);
       return target;
     },
     contributed: settings,

@@ -2,10 +2,8 @@ import type { Context, Plugin } from "@workshop/core";
 import {
   MARKDOWN_BRIDGE_COMMAND,
   PDF_BRIDGE_COMMAND,
-  parseWikiContext,
 } from "../../shared/bridge/envelope";
 import { contributionId } from "../../shared/setting-schema";
-import type { BridgeWikiContext } from "../../shared/bridge/envelope";
 import type { HostServices } from "../../shared/host";
 import type { EditorPanel, SourceSelection } from "../editor/api";
 import type { BridgeCapture, MarkdownHandoff } from "./api";
@@ -27,22 +25,19 @@ export const bridgeHost: Plugin = {
   provides: ["bridgeCapture"],
   apply(ctx) {
     const capture: BridgeCapture = {
-      markdownSelection: (wiki) => markdownSelection(ctx, wiki),
-      activeSelection: (wiki) => activeSelection(ctx, wiki),
+      markdownSelection: () => markdownSelection(ctx),
+      activeSelection: () => activeSelection(ctx),
     };
     ctx.provide("bridgeCapture", capture);
     command(ctx, contributionId("bridge.copyEnvelope"), () =>
       copyEnvelope(ctx),
     );
-    command(ctx, MARKDOWN_BRIDGE_COMMAND, (wiki) =>
-      activeSelection(ctx, parseWikiContext(wiki)),
-    );
+    command(ctx, MARKDOWN_BRIDGE_COMMAND, () => activeSelection(ctx));
   },
 };
 
 async function markdownSelection(
   ctx: Context,
-  wiki?: BridgeWikiContext,
 ): Promise<MarkdownHandoff | undefined> {
   const panel = activePanel(ctx);
   if (!panel || !ctx.selections) {
@@ -63,7 +58,6 @@ async function markdownSelection(
       roots: roots(ctx),
       capturedAt: new Date().toISOString(),
       fingerprint: (text) => ctx.hostDocuments.fingerprint(text),
-      ...(wiki ? { wiki } : {}),
     });
   } catch (error) {
     ctx.dialogs.error(
@@ -77,9 +71,8 @@ async function markdownSelection(
 
 async function activeSelection(
   ctx: Context,
-  wiki?: BridgeWikiContext,
 ): Promise<MarkdownHandoff["envelope"] | undefined> {
-  const markdown = await markdownSelection(ctx, wiki);
+  const markdown = await markdownSelection(ctx);
   if (markdown) {
     return markdown.envelope;
   }

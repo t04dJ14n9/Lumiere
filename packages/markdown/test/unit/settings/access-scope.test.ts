@@ -19,6 +19,7 @@ class Uri {
 const ConfigurationTarget = { Global: 1, Workspace: 2, WorkspaceFolder: 3 };
 const state = {
   folders: [FOLDER],
+  inspected: {} as Record<string, unknown>,
   writes: [] as { target: number; scope: string | undefined; value: unknown }[],
 };
 const vscode = {
@@ -36,8 +37,8 @@ const vscode = {
         .map((folder) => ({ uri: new Uri(folder) }))
         .find((folder) => uri.toString().startsWith(`${folder.uri}/`)),
     getConfiguration: (_section: string, scope?: Uri) => ({
-      // Nothing sets the key in any layer, as in a fresh profile.
-      inspect: () => ({}),
+      // A fresh profile sets the key in no layer.
+      inspect: () => state.inspected,
       get: () => undefined,
       update: async (_key: string, value: unknown, target: number) => {
         state.writes.push({ target, scope: scope?.toString(), value });
@@ -81,13 +82,14 @@ const access = createSettingsAccess({
 
 test.beforeEach(() => {
   state.folders = [FOLDER];
+  state.inspected = {};
   state.writes = [];
 });
 
-test("the narrowest scope of a file in a workspace folder is that folder", async () => {
+test("a per-folder write for a file in a workspace folder goes to that folder", async () => {
   const resource = `${FOLDER}/Topic/Old.md`;
   assert.equal(
-    await access.update(KEY, "always", resource, "narrowest"),
+    await access.update(KEY, "always", resource, "workspaceFolder"),
     "workspaceFolder",
   );
   assert.deepEqual(state.writes, [
@@ -101,16 +103,21 @@ test("the narrowest scope of a file in a workspace folder is that folder", async
 
 test("a file outside every folder of an open workspace falls back to the workspace", async () => {
   assert.equal(
-    await access.update(KEY, "always", "file:///elsewhere/Old.md", "narrowest"),
+    await access.update(
+      KEY,
+      "always",
+      "file:///elsewhere/Old.md",
+      "workspaceFolder",
+    ),
     "workspace",
   );
   assert.equal(state.writes[0]?.target, ConfigurationTarget.Workspace);
 });
 
-test("with no workspace the narrowest scope is the user's settings", async () => {
+test("with no workspace a per-folder write goes to the user's settings", async () => {
   state.folders = [];
   assert.equal(
-    await access.update(KEY, "always", undefined, "narrowest"),
+    await access.update(KEY, "always", undefined, "workspaceFolder"),
     "user",
   );
   assert.equal(state.writes[0]?.target, ConfigurationTarget.Global);
@@ -118,15 +125,26 @@ test("with no workspace the narrowest scope is the user's settings", async () =>
 
 test("without a scope the write still goes where the setting is already set", async () => {
   // Nothing sets the key, so the Settings UI's rule picks the user's settings
-  // even for a file in a folder: only a caller that asks narrows it.
+  // even for a file in a folder: only a caller that asks writes the folder.
   assert.equal(await access.update(KEY, "always", `${FOLDER}/Old.md`), "user");
   assert.equal(state.writes[0]?.target, ConfigurationTarget.Global);
 });
 
-test("a narrow write is still gated by the setting's schema", async () => {
+test("a per-folder write is still gated by the setting's schema", async () => {
   await assert.rejects(
-    access.update(KEY, "sometimes", `${FOLDER}/Old.md`, "narrowest"),
+    access.update(KEY, "sometimes", `${FOLDER}/Old.md`, "workspaceFolder"),
     /Not writing/,
   );
   assert.deepEqual(state.writes, []);
+});
+
+test("a per-folder write keeps a workspace value where the workspace sets it", async () => {
+  // Only a key the user's settings would hold is moved to the folder: one the
+  // workspace already sets is changed there, as the Settings UI would.
+  state.inspected = { workspaceValue: "prompt" };
+  assert.equal(
+    await access.update(KEY, "always", `${FOLDER}/Old.md`, "workspaceFolder"),
+    "workspace",
+  );
+  assert.equal(state.writes[0]?.target, ConfigurationTarget.Workspace);
 });

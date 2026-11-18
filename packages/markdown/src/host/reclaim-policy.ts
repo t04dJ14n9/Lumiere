@@ -79,7 +79,7 @@ export function shouldReclaim(
  * nowhere (restored window, primary open) for a file that editor takes. An
  * input-less tab that is neither is left alone.
  */
-export function landsInNativeEditor(
+function landsInNativeEditor(
   { uri, before, after }: TabSwap,
   reclaimInPlace = false,
 ): boolean {

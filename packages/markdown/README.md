@@ -30,14 +30,14 @@ profile as described in [docs/MANUAL_TEST_PLAN.md](docs/MANUAL_TEST_PLAN.md#buil
 ## Use
 
 - Open a note with **Open With… › Lumiere**, or run **Markdown
-  Workshop: Use Lumiere for Markdown in This Workspace** to make
+  Lumiere: Use Lumiere for Markdown in This Workspace** to make
   it the editor for `*.md` in the workspace.
 - A folder containing `.obsidian/` is a vault: links, tags, backlinks and
   search work within it. Without one, each workspace folder is a vault.
 - **Toggle Live Preview/Source Mode** switches modes; **Open as Text** opens
   VS Code's text editor on the same document.
 - **Go to Heading…** (Ctrl+Shift+O; Command+Shift+O on macOS) searches the
-  active Workshop note's headings. **Toggle Markdown Outline** (Ctrl+Alt+O;
+  active Lumiere note's headings. **Toggle Markdown Outline** (Ctrl+Alt+O;
   Control+Command+O on macOS) shows or hides its heading tree, including after
   moving the view to another sidebar or the panel. VS Code's native Outline
   and breadcrumbs remain available in the plain text editor.
@@ -49,15 +49,14 @@ profile as described in [docs/MANUAL_TEST_PLAN.md](docs/MANUAL_TEST_PLAN.md#buil
   when the editor's own chat is the only agent, or when
   `lumiere.markdown.copyLinkForAgent.target` picks one. Plain Ctrl/Cmd+C
   copies text.
-- **Copy Wiki Reference for Agent** copies that same wording for a wiki
-  note and does not open a chat. **Copy Bridge Envelope** copies the
+- **Copy Bridge Envelope** copies the
   versioned JSON selection (`docs/bridge-envelope.md`). Agent PDF Viewer
   is optional.
 - **Attachments** save dropped, pasted, and HTML-paste images into
   `files.attachmentFolder` under `YYYY-MM-DD HH.mm.ext` names with
   Markdown or WikiLink embeds from the Links settings.
 - **Open Copied Agent Reference** opens `@Note.md#30-32` in Markdown
-  Workshop and selects those source lines. It prefills the reference from
+  Lumiere and selects those source lines. It prefills the reference from
   the clipboard for you to confirm or replace; surrounding quotes are fine.
   Relative paths stay inside workspace folders, with a choice if more than
   one folder matches. Full note URIs also work, including remote files.
@@ -85,7 +84,7 @@ profile as described in [docs/MANUAL_TEST_PLAN.md](docs/MANUAL_TEST_PLAN.md#buil
   edits in the Settings UI or `settings.json` and the commands always agree.
 - `lumiere.markdown.preset: "minimal"` loads only the core editor.
 - `lumiere.markdown.debug.logging` writes debug lines to the **Markdown
-  Workshop** output channel.
+  Lumiere** output channel.
 
 ### In Cursor
 
@@ -121,8 +120,7 @@ The native suite runs against Cursor with
 `VSCODE_EXECUTABLE=<cursor install>/cursor pnpm test:vscode`.
 
 [CAPABILITIES.md](CAPABILITIES.md) lists every plugin, its default and how
-it differs from Obsidian. The extension's commands are under **Markdown
-Workshop** in the command palette.
+it differs from Obsidian. The extension's commands are under **Lumiere** in the command palette.
 
 ## Extend
 
@@ -143,8 +141,8 @@ pnpm package        # VSIX; checks THIRD_PARTY_NOTICES.md is current
 
 **Before every push run `pnpm check` and `pnpm test:browser`. Before merging a
 pull request, and before pushing a change to editor integration, run the full
-local check, `pnpm check:full`** (on headless Linux:
-`xvfb-run -a pnpm check:full`), which adds `pnpm test:vscode`. GitHub Actions
+local check, `pnpm check:full`**, which adds `pnpm test:vscode` (on Linux it
+opens VS Code on a private Xvfb display of its own; see AGENTS.md). GitHub Actions
 does not run the real-VS Code specs (`test/vscode`): they were flaky under
 load. AGENTS.md says what counts as editor integration.
 
@@ -163,23 +161,24 @@ request and on pushes to `main`. Each job, and how to run it locally:
 | --- | --- | --- |
 | `check` | Prettier, lint (with the code-norm limits), typecheck, unit tests and generated contributions pass | `pnpm check` |
 | `browser` | The webview suite in Chromium; on failure, `test-results/` is uploaded | `pnpm test:browser` |
-| `package` | `pnpm package` builds the VSIX, leaves committed files unchanged, and the VSIX is under 10 MB with no tests, sources, source maps or secret-shaped strings; the VSIX is uploaded as the `vsix` artifact | `pnpm package && bash .github/scripts/check-vsix.sh *.vsix 10` |
+| `package` | `pnpm package` builds the VSIX, leaves committed files unchanged, and the VSIX is under 20 MB with no tests, sources, source maps or unreviewed secret-shaped strings; the VSIX is uploaded as the `vsix` artifact | `pnpm package && bash .github/scripts/check-vsix.sh *.vsix 20` |
 | `secret-scan` | gitleaks finds no secrets in the git history | `gitleaks git --redact .` |
 | `audit (advisory)` | `pnpm audit --prod`; a warning, never a failure | `pnpm audit --prod` |
 
 The real-VS Code specs (`pnpm test:vscode`) are not a CI job: run them locally
 before merging (see Develop). Cursor cannot run in CI either, so test it by
 hand with
-`VSCODE_EXECUTABLE=<cursor executable> xvfb-run -a pnpm test:vscode`. CI never
+`VSCODE_EXECUTABLE=<cursor executable> pnpm test:vscode`. CI never
 uses API keys or other secrets. Dependabot proposes grouped npm and
 GitHub Actions updates weekly.
 
 Pushing a tag `v<version>` that matches `package.json` runs
 [`release.yml`](.github/workflows/release.yml): `pnpm check`, `pnpm package`,
-and a GitHub Release with the VSIX attached. Publishing stays manual: with a
-Marketplace PAT run `pnpm exec vsce publish --packagePath <file>.vsix`, and
-for Open VSX `pnpm dlx ovsx publish <file>.vsix -p <token>`. Do not store
-these tokens in the repository.
+Marketplace Trusted Publishing, and a GitHub Release with the VSIX attached.
+The job uses `ubuntu-latest` by default. Set the repository variable
+`RELEASE_RUNNER` to a JSON array such as
+`["self-hosted","lumiere-release"]` to use a labelled self-hosted runner when
+hosted Actions minutes are unavailable.
 
 ## License
 

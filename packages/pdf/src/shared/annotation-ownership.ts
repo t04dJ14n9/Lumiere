@@ -36,8 +36,19 @@ export class AnnotationOwnership {
     return this.own.has(key) ? "store" : "pdf";
   }
 
-  /** Every annotation shown is now part of the PDF: it was saved into it. */
-  savedIntoPdf(): void {
-    this.own.clear();
+  /** Lumiere's annotations now. */
+  keys(): string[] {
+    return [...this.own];
+  }
+
+  /**
+   * These were saved into the PDF and are part of it now. True when Lumiere
+   * still owns others: ones made after the PDF was taken for that save.
+   */
+  savedIntoPdf(keys: Iterable<string>): boolean {
+    for (const key of keys) {
+      this.own.delete(key);
+    }
+    return this.own.size > 0;
   }
 }

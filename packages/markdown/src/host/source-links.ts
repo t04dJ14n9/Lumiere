@@ -10,6 +10,8 @@ interface LinkOptions {
   command: string;
   accepts(path: string, fragment: string): boolean;
   authorize(root: vscode.Uri, target: vscode.Uri): Promise<void>;
+  /** Where a leading `/` starts for this note; the workspace folder if absent. */
+  root?(source: vscode.Uri, workspace: vscode.Uri): Promise<vscode.Uri>;
   begin(): LinkRun;
   open(
     target: vscode.Uri,
@@ -92,11 +94,12 @@ class SourceLinks implements vscode.DocumentLinkProvider {
     this.pending?.cancel();
     const run = this.options.begin();
     this.pending = run;
-    const stop = watchSource(run, source, ticket);
+    const resolved: Resolved = {};
+    const stop = watchSource(run, source, ticket, resolved);
     const column =
       source.viewColumn ?? vscode.window.tabGroups.activeTabGroup.viewColumn;
     const task = this.queue.then(() =>
-      follow(this.options, ticket, column, run),
+      follow(this.options, { ticket, column, run, resolved }),
     );
     this.queue = task.then(
       () => {},
@@ -151,27 +154,51 @@ function matches(ticket: Ticket, document: vscode.TextDocument): boolean {
   );
 }
 
+/** The target `follow` settled on, once it knows the note's root. */
+interface Resolved {
+  target?: string;
+}
+
+interface FollowRun {
+  ticket: Ticket;
+  column: number;
+  run: LinkRun;
+  resolved: Resolved;
+}
+
+/** A link's file: a leading `/` from `root`, anything else from the note's folder. */
+function linkTarget(
+  source: vscode.Uri,
+  root: vscode.Uri,
+  path: string,
+): vscode.Uri {
+  return !path
+    ? source
+    : vscode.Uri.joinPath(
+        path.startsWith("/") ? root : vscode.Uri.joinPath(source, ".."),
+        path.replace(/^\//, ""),
+      );
+}
+
 async function follow(
   options: LinkOptions,
-  ticket: Ticket,
-  column: number,
-  run: LinkRun,
+  { ticket, column, run, resolved }: FollowRun,
 ): Promise<boolean> {
   if (!run.current()) {
     return false;
   }
   const source = vscode.Uri.parse(ticket.source);
-  const root = vscode.workspace.getWorkspaceFolder(source)?.uri;
+  const workspace = vscode.workspace.getWorkspaceFolder(source)?.uri;
   const parts = localFragment(ticket.href);
-  if (!root || !parts) {
+  if (!workspace || !parts) {
     return false;
   }
-  const target = !parts.path
-    ? source
-    : vscode.Uri.joinPath(
-        parts.path.startsWith("/") ? root : vscode.Uri.joinPath(source, ".."),
-        parts.path.replace(/^\//, ""),
-      );
+  const root = (await options.root?.(source, workspace)) ?? workspace;
+  if (!run.current()) {
+    return false;
+  }
+  const target = linkTarget(source, root, parts.path);
+  resolved.target = target.toString();
   await options.authorize(root, target);
   const stat = await vscode.workspace.fs.stat(target);
   if (!(stat.type & vscode.FileType.File)) {
@@ -186,7 +213,7 @@ async function follow(
   if (document && !matches(ticket, document)) {
     return false;
   }
-  if (!(await readySourceTab(ticket, column, run))) {
+  if (!(await readySourceTab(ticket, column, run, resolved))) {
     run.cancel();
     return false;
   }
@@ -200,7 +227,7 @@ async function follow(
 }
 
 /** Both VS Code's link and definition gestures may open the expected target. */
-function ownsTab(ticket: Ticket, column: number): boolean {
+function ownsTab(ticket: Ticket, column: number, resolved: Resolved): boolean {
   const group = vscode.window.tabGroups.activeTabGroup;
   if (group.viewColumn !== column) {
     return false;
@@ -219,13 +246,12 @@ function ownsTab(ticket: Ticket, column: number): boolean {
   if (!root || !parts) {
     return false;
   }
-  const target = !parts.path
-    ? source
-    : vscode.Uri.joinPath(
-        parts.path.startsWith("/") ? root : vscode.Uri.joinPath(source, ".."),
-        parts.path.replace(/^\//, ""),
-      );
-  return uri === source.toString() || uri === target.toString();
+  // VS Code's own link resolves `/` from the workspace folder.
+  return (
+    uri === source.toString() ||
+    uri === resolved.target ||
+    uri === linkTarget(source, root, parts.path).toString()
+  );
 }
 
 /** Unrelated reader departure retires preflight; expected native transitions coexist. */
@@ -233,12 +259,13 @@ function watchSource(
   run: LinkRun,
   source: vscode.TextEditor,
   ticket: Ticket,
+  resolved: Resolved,
 ): vscode.Disposable {
   const column =
     source.viewColumn ?? vscode.window.tabGroups.activeTabGroup.viewColumn;
   const ranges = JSON.stringify(source.visibleRanges);
   const stop = vscode.Disposable.from(
-    watchTabOwnership(run, ticket, column),
+    watchTabOwnership(run, ticket, column, resolved),
     vscode.window.onDidChangeTextEditorVisibleRanges((event) => {
       if (
         event.textEditor === source &&
@@ -280,6 +307,7 @@ function watchTabOwnership(
   run: LinkRun,
   ticket: Ticket,
   column: number,
+  resolved: Resolved,
 ): vscode.Disposable {
   let transition: ReturnType<typeof setTimeout> | undefined;
   const clear = () => {
@@ -291,14 +319,14 @@ function watchTabOwnership(
     if (group.viewColumn === column && group.activeTab?.input === undefined) {
       transition ??= setTimeout(() => {
         transition = undefined;
-        if (!ownsTab(ticket, column)) {
+        if (!ownsTab(ticket, column, resolved)) {
           run.cancel();
         }
       }, 250);
       return;
     }
     clear();
-    if (!ownsTab(ticket, column)) {
+    if (!ownsTab(ticket, column, resolved)) {
       run.cancel();
     }
   };
@@ -315,10 +343,11 @@ async function readySourceTab(
   ticket: Ticket,
   column: number,
   run: LinkRun,
+  resolved: Resolved,
 ): Promise<boolean> {
   const deadline = Date.now() + 250;
   while (run.current() && Date.now() < deadline) {
-    if (ownsTab(ticket, column)) {
+    if (ownsTab(ticket, column, resolved)) {
       return true;
     }
     const group = vscode.window.tabGroups.activeTabGroup;

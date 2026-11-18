@@ -3,7 +3,7 @@ import test from "node:test";
 import {
   createOutlineFocus,
   LEAVE_RESTORE_MS,
-  MARKDOWN_WORKSHOP_EDITOR,
+  MARKDOWN_LUMIERE_EDITOR,
   NATIVE_OUTLINE_ID,
   PDF_OUTLINE_VIEW_ID,
 } from "../../src/extension/plugins/pdfOutline/focus";
@@ -99,7 +99,7 @@ test("a quick re-enter cancels the pending native Outline restore", async () => 
   await settle();
 });
 
-test("leave after peer Workshop is active does not restore native Outline", async () => {
+test("leave after peer Lumiere is active does not restore native Outline", async () => {
   const executed: string[] = [];
   let pending: (() => void) | undefined;
   const active = { viewType: undefined as string | undefined };
@@ -124,7 +124,7 @@ test("leave after peer Workshop is active does not restore native Outline", asyn
   await settle();
   executed.length = 0;
   focus.sync(false);
-  active.viewType = MARKDOWN_WORKSHOP_EDITOR;
+  active.viewType = MARKDOWN_LUMIERE_EDITOR;
   pending!();
   await settle();
   assert.deepEqual(
@@ -136,7 +136,7 @@ test("leave after peer Workshop is active does not restore native Outline", asyn
   await settle();
 });
 
-test("dispose restores native Outline unless a peer Workshop owns the tab", async () => {
+test("dispose restores native Outline unless a peer Lumiere owns the tab", async () => {
   const executed: string[] = [];
   const active = { viewType: undefined as string | undefined };
   const focus = createOutlineFocus({
@@ -169,7 +169,7 @@ test("dispose restores native Outline unless a peer Workshop owns the tab", asyn
   peer.sync(true);
   await settle();
   executed.length = 0;
-  active.viewType = MARKDOWN_WORKSHOP_EDITOR;
+  active.viewType = MARKDOWN_LUMIERE_EDITOR;
   peer.dispose();
   await settle();
   assert.deepEqual(executed, [], "peer owns the swap; dispose skips restore");

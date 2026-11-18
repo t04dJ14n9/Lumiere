@@ -21,6 +21,12 @@ function strictFiles() {
       texts.set(uri, "");
       return true;
     },
+    saveBytes: async (uri: string, data: Uint8Array) => {
+      if (!texts.has(uri)) {
+        throw new Error(`${uri} does not exist`);
+      }
+      texts.set(uri, new TextDecoder().decode(data));
+    },
     save: async (uri: string, text: string) => {
       if (!texts.has(uri)) {
         throw Object.assign(new Error(`${uri} does not exist`), {
@@ -74,4 +80,21 @@ test("createText fills a new file and leaves an existing one as it is", async ()
 
   await assert.rejects(workspace.createText("file:///elsewhere/a.md", "x"));
   assert.equal(texts.has("file:///elsewhere/a.md"), false);
+});
+
+test("createBytes fills a new file and leaves an existing one as it is", async () => {
+  const { files, texts } = strictFiles();
+  const workspace = createWorkspaceFiles(files, () => ["file:///vault"]);
+  const image = "file:///vault/assets/image.png";
+  const encode = (text: string) => new TextEncoder().encode(text);
+
+  assert.equal(await workspace.createBytes(image, encode("first")), true);
+  assert.equal(texts.get(image), "first");
+  assert.equal(await workspace.createBytes(image, encode("second")), false);
+  assert.equal(texts.get(image), "first");
+
+  await assert.rejects(
+    workspace.createBytes("file:///elsewhere/a.png", encode("x")),
+  );
+  assert.equal(texts.has("file:///elsewhere/a.png"), false);
 });

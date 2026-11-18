@@ -217,7 +217,7 @@ function firstScreen(
  * The snapshot element for the webview's first HTML, or undefined when
  * nothing can be drawn. `layout` says what it assumes of the settings.
  */
-export function snapshotHTML(
+function snapshotHTML(
   source: string,
   layout: SnapshotLayout,
 ): string | undefined {

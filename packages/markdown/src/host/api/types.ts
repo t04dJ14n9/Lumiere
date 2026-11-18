@@ -3,7 +3,7 @@
  *
  * ```ts
  * const api = await vscode.extensions
- *   .getExtension<MarkdownWorkshopApi>("t04dj14n9.vscode-markdown-workshop")
+ *   .getExtension<MarkdownWorkshopApi>("t04dj14n9.lumiere")
  *   ?.activate();
  * ```
  *

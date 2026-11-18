@@ -1,12 +1,79 @@
 # Changelog
 
-## 0.1.1
+## 0.1.15 (pre-release, 2026-11-18)
 
-- Marketplace icon at `media/icon.png`.
-- Get started points at the VS Code Marketplace listing (`t04dJ14n9.lumiere`)
-  and Extensions search, instead of a VSIX-only install.
+- Markdown: drag across a rendered callout's text to select it, and copy
+  it; the selection no longer collapses into the callout's source.
+- PDF: annotate from the context menu; the Annotate button, mode, tool and
+  colour pickers are gone. Select text and right-click for **Highlight**,
+  **Add Annotation…** (a highlight with a note you type) or **Mark Text** ▸
+  Underline, Strikeout, Squiggly. Right-click one of your marks for **Edit
+  Note…**, **Change Color** ▸ and **Delete Annotation**. As in macOS Preview,
+  ⌃⌘H highlights, ⌃⌘U underlines and ⌃⌘S strikes out the selected text
+  (Ctrl+Alt+H / U / S on Windows and Linux); ⌃⌘A / Ctrl+Alt+A no longer
+  does anything. Ink, shapes, text boxes, notes and stamps can
+  no longer be drawn; ones you made before still show, and their context menu
+  recolours or deletes them.
 
-## Unreleased
+## 0.1.14 (pre-release, 2026-11-17)
+
+- PDF: the status bar shows the history back/forward, previous/next page,
+  zoom and find buttons in VS Code too, not only in Cursor
+  (`lumiere.pdf.toolbar.statusBarButtons: auto`; `never` hides them).
+- Copy Link for Agent writes an `@` locator, a blank line, the quoted
+  selection and a newline. From a PDF the locator is `@papers/a.pdf#page=3`
+  instead of a Markdown link, so a pasted copy no longer makes a backlink
+  overlay; **PDF: Open Location…** reads the locator.
+
+## 0.1.13 (pre-release, 2026-11-17)
+
+- Code block Copy buttons now briefly show **Copied** with a success animation
+  after the clipboard write succeeds.
+
+## 0.1.12 (pre-release, 2026-11-16)
+
+- Fixed (Obsidian compliance audit, 2026-11-16): property links survive
+  renames to names with quotes, relative links name the right note, Insert
+  Template merges properties, **Always Update** is kept per vault, and
+  renames update `.canvas` files and notes the index has not read yet.
+  After review: a note that cannot be read no longer stops a rename, notes
+  typed in during a rename are not edited at stale positions, `%%`
+  comments end where Obsidian ends them, child tasks tick through block
+  embeds, and templates keep the note's properties valid. Known
+  limitations: **Always Update** is kept per workspace folder (vaults
+  sharing a folder share it), and a user-level `always` from an earlier
+  version is not migrated. Details in `packages/markdown/CHANGELOG.md`.
+
+- Daily Notes is removed from Lumiere's Markdown editor, with its three
+  commands and four settings; VS Code ignores the settings now that nothing
+  declares them, so no migration is needed. Templates stay. See
+  `packages/markdown/CHANGELOG.md`.
+
+- Fixed (review 2026-11-15), in DSH, the app and the plugin core:
+  - Opening a note by absolute path in DSH no longer locks its session's
+    workspace out until DSH restarts.
+  - When a note changed on disk while you were typing, your text is saved
+    and the other version is kept beside it as `Note (conflict).md`, instead
+    of being overwritten silently.
+    Typing done while that save checks the disk is kept too; before, a
+    note that was clean when the save started took the other version over
+    it.
+    A save that cannot read the file to make that check fails, instead of
+    writing over it.
+  - A note no longer shows up, or gets saved, empty when a file watcher fires
+    in the middle of Lumiere's own save.
+  - HTML, SVG and script files in a vault can no longer run on DSH's or the
+    app's origin.
+  - A listener failing while the host handles a file change or a closed note
+    is logged instead of becoming an unhandled rejection.
+  - Shutting down no longer briefly restarts a plugin whose optional service
+    stops first, optional settings with a minimum, maximum or pattern may be
+    left unset, and a setting's default can no longer be changed by mutating
+    a parsed value.
+  - Markdown and PDF fixes are listed in `packages/markdown/CHANGELOG.md` and
+    `packages/pdf/CHANGELOG.md`.
+
+- Mermaid diagrams: Inspect, Copy and Edit are now three equal buttons, evenly spaced and flush with the right edge (Inspect shows its name instead of a small ⤢). The `mermaid` label sits in that corner and gives way to them on hover or keyboard focus.
 
 - Fixed: Vim `j`/`k` could skip several source lines inside a revealed Mermaid diagram or other source-visible Live Preview block.
 
@@ -99,3 +166,9 @@
   in-house kernel, the PDF plugin runtime and its Cordis shim are gone, as is
   the `pdfWorkshop.runtimeImpl` setting.
 - One output channel, "Workshop", for both products.
+
+## 0.1.1
+
+- Marketplace icon at `media/icon.png`.
+- Get started points at the VS Code Marketplace listing (`t04dJ14n9.lumiere`)
+  and Extensions search, instead of a VSIX-only install.
