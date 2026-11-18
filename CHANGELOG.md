@@ -2,6 +2,8 @@
 
 ## Unreleased
 
+- Markdown: drag across a rendered callout's text to select it, and copy
+  it; the selection no longer collapses into the callout's source.
 - PDF: annotate from the context menu; the Annotate button, mode, tool and
   colour pickers are gone. Select text and right-click for **Highlight**,
   **Add Annotation…** (a highlight with a note you type) or **Mark Text** ▸
