@@ -24,7 +24,7 @@ export const footnoteCarry = StateField.define<null>({
   },
 });
 
-export function untouchedFootnotes(
+function untouchedFootnotes(
   transaction: Transaction,
   known: Footnotes,
 ): boolean {

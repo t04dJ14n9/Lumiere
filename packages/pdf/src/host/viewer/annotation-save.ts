@@ -14,9 +14,17 @@ export class AnnotationSave {
   /**
    * The file's hashes during the viewer's current load: as loaded, then as
    * this editor wrote it. A viewer that saves again before the last result
-   * reaches it still names an earlier one as its base.
+   * reaches it still names an earlier one as its base. Set by `loaded` when
+   * the bytes are sent, not read from the source later: by then a reload may
+   * have replaced its hash.
    */
   private known = { load: Number.NaN, hashes: new Set<string>() };
+  /**
+   * Writes into the PDF the reader asked for (Save into This PDF, Retry) and
+   * the viewer has not answered yet, for one load. The viewer is untrusted:
+   * a PDF it sends unasked is never written.
+   */
+  private requested = { load: Number.NaN, count: 0 };
 
   constructor(
     private readonly fileUri: string,
@@ -36,6 +44,23 @@ export class AnnotationSave {
     this.dirty = "failed";
   }
 
+  /** The reader asked the viewer of `load` for the PDF to write over the file. */
+  request(load: number): void {
+    if (this.requested.load !== load) {
+      this.requested = { load, count: 0 };
+    }
+    this.requested.count++;
+  }
+
+  /** Use up one request of `load`; false when there is none. */
+  private takeRequest(load: number): boolean {
+    if (this.requested.load !== load || this.requested.count === 0) {
+      return false;
+    }
+    this.requested.count--;
+    return true;
+  }
+
   keepMine(data: ArrayBuffer, load: number): Promise<void> {
     return this.enqueue(() => this.keepMineNow(data, load));
   }
@@ -52,13 +77,14 @@ export class AnnotationSave {
     return next;
   }
 
-  /** Whether `base` is the file as the viewer's load had it at some point. */
-  private isKnownBase(load: number, base: string): boolean {
-    if (this.known.load !== load) {
-      const loaded = this.source.sha256;
-      this.known = { load, hashes: new Set(loaded ? [loaded] : []) };
-    }
-    return this.known.hashes.has(base);
+  /** The viewer was sent the bytes hashing to `sha256` as load `load`. */
+  loaded(load: number, sha256: string): void {
+    this.known = { load, hashes: new Set([sha256]) };
+  }
+
+  /** Whether `sha256` is the file as the viewer's load had it at some point. */
+  knows(load: number, sha256: string): boolean {
+    return this.known.load === load && this.known.hashes.has(sha256);
   }
 
   private wrote(load: number, sha256: string): void {
@@ -81,8 +107,14 @@ export class AnnotationSave {
     if (!this.deps.isCurrentLoad(message.load)) {
       return;
     }
+    if (!this.takeRequest(message.load)) {
+      this.deps.error(
+        "The PDF viewer sent the PDF to write although it was not asked to; the file is left as it is.",
+      );
+      return;
+    }
     this.lastBytes = message.data;
-    if (!this.isKnownBase(message.load, message.baseSha256)) {
+    if (!this.knows(message.load, message.baseSha256)) {
       this.reportConflict(
         message,
         "The PDF changed since this editor loaded it.",

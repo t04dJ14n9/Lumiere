@@ -1,30 +1,26 @@
 # Scratch
 
-Creates temporary notes outside the wiki bundle. A note becomes a wiki page only when you run Promote Scratch Note. Nothing is ingested on its own.
+Creates temporary notes in a scratch folder. Nothing is filed or ingested on its own.
 
 ## How it works
 
-New Scratch Note asks for a title and writes `YYYY-MM-DD-title.md` in the layout's `scratch` path, or in `lumiere.markdown.scratch.folder` when no layout loaded. The folder is created then. The note has `title` and `captured`, and no `type`. A scratch folder inside the bundle is refused. Promote Scratch Note asks for Concept, Source Summary, Entity or Raw Source, writes that page (fixed H2 sections, `generated.by: human:workbench`) and replaces the scratch note with a portable link. Collection `index.md` is left alone. A Marp deck is not promoted and is not wrapped.
+New Scratch Note asks for a title and writes `YYYY-MM-DD-title.md`, dated by the local day, in `lumiere.markdown.scratch.folder` inside the first workspace folder. The folder is created then. The note has `title` and `captured` frontmatter. A path that leaves the project or follows a symbolic link is refused.
 
 ## Files
 
-- `host.ts`: the two commands.
-- `run.ts`: create and promote, including symlink checks.
-- `template.ts`: scratch text, page text, stub and refusals.
+- `host.ts`: the command.
+- `run.ts`: create, including symlink checks.
+- `template.ts`: scratch text and the file-name slug.
 - `names.ts`: file names.
-- `manifest.ts`: commands and `scratch.folder`.
+- `manifest.ts`: the command and `scratch.folder`.
 
 ## Services, events and settings
 
-- Requires the host services `hostDocuments`, `hostCommands`, `dialogs`, `settings` and `workspace`. Optionally uses `editors` and `wikiLayout`.
+- Requires the host services `hostCommands`, `dialogs`, `settings` and `workspace`.
 - Does not provide a service.
-- Setting: `lumiere.markdown.scratch.folder` (default `scratch`; a loaded layout wins).
+- Setting: `lumiere.markdown.scratch.folder` (default `scratch`).
 - Setting: `lumiere.markdown.plugins.scratch.enabled`.
 
 ## Limits and differences from Obsidian
 
-- There is no daily note and no automatic filing.
-- Promotion does not update indexes, backlinks or the Obsidian graph.
-- A note typed into while it is being promoted is left as it is, with the new text: the page is written from the text at the pick, and a message names it.
-- Untitled notes must be saved into the project before they can be promoted.
-- Marp decks stay where they are. Move a deck outside the bundle from the Marp commands.
+- There is no automatic filing.

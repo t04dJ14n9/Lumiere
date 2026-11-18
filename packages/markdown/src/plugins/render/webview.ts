@@ -5,6 +5,7 @@ import type {} from "../dialect/api";
 import type { RenderPass, RenderService } from "./api";
 import { createRenderPass } from "./pass";
 import { constrainRemoteContent } from "./security";
+import { decodeDataValue } from "../../markdown/html/helpers";
 
 export const renderWebview: Plugin<{ trusted: boolean }> = {
   name: "render",
@@ -133,7 +134,7 @@ function renderFences(ctx: Context, pass: RenderPass): void {
       "render/fence",
       {
         language: element.dataset.fence ?? "",
-        source: decodeURIComponent(element.dataset.source ?? ""),
+        source: decodeDataValue(element.dataset.source ?? ""),
         element,
       },
       pass,

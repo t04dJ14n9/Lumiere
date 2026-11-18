@@ -20,7 +20,7 @@ test("Open Settings filters the Settings UI to this extension", async () => {
   const store = layered();
   const { command, root } = await run(store);
   await command("openSettings")();
-  assert.deepEqual(store.opened, ["@ext:test.workshop"]);
+  assert.deepEqual(store.opened, ["@ext:test.lumiere"]);
   await root.dispose();
 });
 

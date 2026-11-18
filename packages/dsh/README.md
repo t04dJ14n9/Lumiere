@@ -4,7 +4,9 @@ Opens the Markdown notes of a [DeepSeek Harness](https://www.deepseek.com/en/har
 (DSH) workspace in Lumière's editor, in DSH's preview sidebar, instead of
 DSH's read-only preview: the same Obsidian-style Live Preview, wikilinks,
 embeds, properties, math, Mermaid and callouts as in VS Code and Cursor.
-Notes save as you type. DSH's own preview stays in the viewer menu above a
+Notes save as you type. If another program changed a note while you were
+typing, your text is saved and the other version is kept beside it as
+`Note (conflict).md`. DSH's own preview stays in the viewer menu above a
 note.
 
 ## How it works
@@ -134,9 +136,14 @@ of the Host mid-handshake), it recreates the iframe once, and DSH's Reload and
 - Renaming a note from its inline title is not available.
 - The editor page is same-origin with DSH, so its strict content security
   policy (scripts by nonce only) is what keeps a note's scripts from running.
-  The page can still read DSH's DOM, which is how it follows the theme.
+  The page can still read DSH's DOM, which is how it follows the theme. A
+  vault's own files (`/lumiere/file`) are sandboxed and its scripts served
+  as text, so an HTML page or SVG opened from a vault does not run on DSH's
+  origin.
 - A workspace that is the filesystem root is refused. The root otherwise is
-  the directory DSH's preview names for that note; the host re-checks every
-  path against it.
+  the session's workspace DSH's preview names for that note; the host
+  re-checks every path against it. A note DSH names by absolute path has no
+  workspace: its folder stands in, and the session's workspace that holds
+  it still opens later.
 - Copying a file into the vault from outside the workspace is refused.
   DSH has no file picker for that yet.

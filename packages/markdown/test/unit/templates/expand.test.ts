@@ -2,15 +2,21 @@ import assert from "node:assert/strict";
 import test from "node:test";
 import {
   expandTemplate,
+  expandTemplateWithReport,
   formatLocalDate,
-  isSupportedDateFormat,
 } from "../../../src/markdown/templates";
+import {
+  formatMoment,
+  unsupportedMomentTokens,
+  utcFields,
+} from "../../../src/markdown/moment-format";
 import {
   templateFiles,
   templateFolder,
   templatePickItems,
 } from "../../../src/plugins/templates/list";
 import type { VaultFile } from "../../../src/plugins/vault/api";
+import { frontmatter } from "../../../src/markdown/properties";
 
 // Local wall-clock time: 2026-11-05 09:07:03, whatever the test machine's zone.
 const NOW = new Date(2026, 10, 5, 9, 7, 3);
@@ -62,53 +68,58 @@ test("formatLocalDate writes local time, not UTC", () => {
   );
 });
 
-test("only formats made of supported tokens are supported", () => {
-  for (const format of [
-    "YYYY-MM-DD",
-    "YYYY/MM/YYYY-MM-DD",
-    "HH:mm",
-    "DD.MM.YYYY",
-    "YYYYMMDD",
-    "YYYY-MM-DD_HHmmss",
-    "YYYY年MM月DD日",
-  ]) {
-    assert.equal(isSupportedDateFormat(format), true, format);
+test("Moment's common tokens are written as Moment writes them", () => {
+  const cases: [string, string][] = [
+    ["dddd, MMMM Do YYYY", "Thursday, November 5th 2026"],
+    ["ddd MMM D, YY", "Thu Nov 5, 26"],
+    ["h:mm A", "9:07 AM"],
+    ["hh:mm a", "09:07 am"],
+    ["YYYY-MM-DDTHH:mm", "2026-11-05T09:07"],
+    ["[Week] W, GGGG", "Week 45, 2026"],
+    ["DDDD DDD Q E d dd", "309 309 4 4 4 Th"],
+    ["YYYY年MM月DD日", "2026年11月05日"],
+    ["LL", "November 5, 2026"],
+    ["[MMMM] MMMM", "MMMM November"],
+  ];
+  for (const [format, expected] of cases) {
+    assert.equal(formatLocalDate(NOW, format), expected, format);
+    assert.deepEqual(unsupportedMomentTokens(format), [], format);
   }
-  for (const format of [
-    "",
-    "  ",
-    "YYYY-MM-DD dddd",
-    "Do MMMM",
-    "[Week] W",
-    "YY",
-  ]) {
-    assert.equal(isSupportedDateFormat(format), false, format);
-  }
+  assert.equal(formatLocalDate(new Date(2027, 0, 1), "GGGG-[W]WW"), "2026-W53");
+  assert.deepEqual(
+    [1, 2, 3, 4, 11, 12, 13, 21, 22, 23].map((day) =>
+      formatLocalDate(new Date(2026, 0, day), "Do"),
+    ),
+    [
+      "1st",
+      "2nd",
+      "3rd",
+      "4th",
+      "11th",
+      "12th",
+      "13th",
+      "21st",
+      "22nd",
+      "23rd",
+    ],
+  );
 });
 
-// Moment reads a run of one letter as a single token, so MMMM is the month's
-// name, not MM twice. The formatter would write "1111" for it.
-test("a token Lumiere cannot write is unsupported even when it is made of supported ones", () => {
-  assert.equal(formatLocalDate(NOW, "MMMM DD, YYYY"), "1111 05, 2026");
-  for (const format of [
-    "MMMM DD, YYYY",
-    "MMM",
-    "DDDD",
-    "DDD",
-    "Do",
-    "ddd",
-    "YYYYYY",
-    "YYYYY",
-    "YY",
-    "M/D/YYYY",
-    "HHH:mm",
-    "H:mm",
-    "mmm",
-    "sss",
-    "YYYY-MM-DD hh:mm",
-  ]) {
-    assert.equal(isSupportedDateFormat(format), false, format);
+test("tokens Lumiere cannot write are reported and written as they are", () => {
+  for (const format of ["gggg-[W]ww", "YYYYYY", "N", "zz"]) {
+    assert.notDeepEqual(unsupportedMomentTokens(format), [], format);
   }
+  const { text, unsupported } = expandTemplateWithReport(
+    "{{date:gggg [w]w}} {{time}}",
+    { title: "T", now: NOW },
+  );
+  assert.equal(text, "gggg ww 09:07");
+  assert.deepEqual(unsupported, ["gggg", "w"]);
+  assert.deepEqual(
+    expandTemplateWithReport("{{date:dddd}}", { title: "T", now: NOW })
+      .unsupported,
+    [],
+  );
 });
 
 function file(path: string): VaultFile {
@@ -153,4 +164,101 @@ test("lists Markdown files under the folder, sorted, named inside it", () => {
     templatePickItems(files, "Templates", "WEEK").map((item) => item.label),
     ["Weekly"],
   );
+});
+
+test("a variable that would break the template's YAML is written quoted in its value", () => {
+  const template = [
+    "---",
+    "title: {{title}}",
+    "aliases:",
+    "  - {{title}} notes",
+    "created: {{date}}",
+    "---",
+    "# {{title}}",
+  ].join("\n");
+  const text = expandTemplate(template, { title: "[draft] plan", now: NOW });
+  assert.deepEqual(frontmatter(text)?.values, {
+    title: "[draft] plan",
+    aliases: ["[draft] plan notes"],
+    created: "2026-11-05",
+  });
+  assert.ok(text.endsWith("---\n# [draft] plan"), text);
+});
+
+test("a template's YAML that stays valid is filled in as written", () => {
+  const template = "---\ntitle: {{title}} # the note\n---\nBody";
+  assert.equal(
+    expandTemplate(template, { title: "Plan", now: NOW }),
+    "---\ntitle: Plan # the note\n---\nBody",
+  );
+});
+
+test("Y, YYY and GGGGG are written as Moment writes them", () => {
+  assert.equal(formatLocalDate(NOW, "Y"), "2026");
+  // Moment reads YYY as YY then Y.
+  assert.equal(formatLocalDate(NOW, "YYY"), "262026");
+  assert.equal(formatLocalDate(NOW, "GGGGG"), "02026");
+  assert.deepEqual(unsupportedMomentTokens("Y YYY GGGGG"), []);
+});
+
+test("a backslash makes the token after it literal, as in Moment", () => {
+  assert.equal(formatLocalDate(NOW, "\\YYYY-MM"), "YYYY-11");
+  assert.equal(formatLocalDate(NOW, "\\L LL"), "L November 5, 2026");
+  assert.equal(formatLocalDate(NOW, "D\\"), "5");
+  assert.deepEqual(unsupportedMomentTokens("\\w"), []);
+});
+
+test("ISO weeks and day of year are right for years 0 to 99", () => {
+  // 0050-01-01 was a Saturday (proleptic Gregorian): ISO week 52 of year 49.
+  const date = new Date(0);
+  date.setUTCFullYear(50, 0, 1);
+  const fields = utcFields(date.getTime());
+  assert.equal(formatMoment(fields, "GGGG-[W]WW DDDD").text, "0049-W52 001");
+  date.setUTCFullYear(50, 11, 31);
+  assert.equal(formatMoment(utcFields(date.getTime()), "DDD").text, "365");
+});
+
+test("a base's format() calls name the tokens Lumiere cannot write", async () => {
+  const { parseBaseYaml, unsupportedBaseDateTokens } =
+    await import("../../../src/markdown/bases");
+  const base = parseBaseYaml(
+    [
+      "formulas:",
+      '  week: file.ctime.format("gggg-[W]ww")',
+      '  day: file.mtime.format("YYYY-MM-DD")',
+      "views:",
+      "  - type: table",
+      "    name: All",
+      "    filters:",
+      '      and: [\'file.ctime.format("N") != ""\']',
+    ].join("\n"),
+  );
+  assert.deepEqual(unsupportedBaseDateTokens(base), ["gggg", "ww", "N"]);
+});
+
+test("quoting a variable's value leaves the rest of the template's YAML as written", () => {
+  const template = [
+    "---",
+    "title: {{title}}",
+    "serial: 18446744073709551615 # exact",
+    "ratio: 0.10000000000000000555",
+    "---",
+    "Body",
+  ].join("\n");
+  const text = expandTemplate(template, { title: "a: b", now: NOW });
+  assert.equal(frontmatter(text)?.values?.title, "a: b");
+  assert.ok(text.includes("serial: 18446744073709551615 # exact\n"), text);
+  assert.ok(text.includes("ratio: 0.10000000000000000555\n"), text);
+});
+
+test("quoting a block value at the end of the properties keeps the closing --- on its own line", () => {
+  for (const style of ["|", ">"]) {
+    const template = `---\ntitle: '{{title}}'\ndescription: ${style}\n  {{title}}\n---\nBody`;
+    const text = expandTemplate(template, { title: "Bob's", now: NOW });
+    assert.deepEqual(frontmatter(text)?.values, {
+      title: "Bob's",
+      description: "Bob's\n",
+    });
+    assert.ok(text.endsWith("\n---\nBody"), text);
+  }
 });

@@ -53,13 +53,13 @@ function refusal(input: {
 }): string | undefined {
   const { nodeCount, edgeCount, payloadBytes, maxNodes, maxEdges } = input;
   if (nodeCount > maxNodes) {
-    return `This graph has ${nodeCount} notes. Narrow the bundle or filters below ${maxNodes}.`;
+    return `This graph has ${nodeCount} notes. Narrow the filters below ${maxNodes}.`;
   }
   if (edgeCount > maxEdges) {
-    return `This graph has ${edgeCount} links. Narrow the bundle or filters below ${maxEdges}.`;
+    return `This graph has ${edgeCount} links. Narrow the filters below ${maxEdges}.`;
   }
   if (payloadBytes > HARD_MAX_PAYLOAD_BYTES) {
-    return "This graph is too large to draw. Narrow the bundle or filters.";
+    return "This graph is too large to draw. Narrow the filters.";
   }
   return undefined;
 }

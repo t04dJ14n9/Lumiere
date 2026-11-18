@@ -2,7 +2,7 @@ import assert from "node:assert/strict";
 import { test } from "node:test";
 import Module from "node:module";
 import path from "node:path";
-import { driver } from "./support/native-links-fake";
+import { driver, Uri } from "./support/native-links-fake";
 const resolver = Module as unknown as {
   _resolveFilename(request: string, ...rest: unknown[]): string;
 };
@@ -215,3 +215,35 @@ for (const destination of ["target.md", "other.md", "unknown"] as const) {
     }
   });
 }
+
+test("a leading slash starts at the note's vault, not the workspace folder", async () => {
+  const { registerSourceLinks } = await import("../../src/host/source-links");
+  driver.reset();
+  driver.text("[RustScan](/wiki/notes/RustScan.md#flags)");
+  const opened: string[] = [];
+  const roots: string[] = [];
+  const registration = registerSourceLinks({
+    command: "native.test",
+    accepts: () => true,
+    authorize: async (root) => {
+      roots.push(root.path);
+    },
+    root: async (_source, workspace) => {
+      // The workspace folder is above the vault, as with a home folder.
+      assert.equal(workspace.path, "/vault");
+      return Uri.joinPath(workspace as unknown as Uri, "personal") as never;
+    },
+    begin: () => ({ current: () => true, cancel() {} }),
+    async open(target) {
+      opened.push(target.path);
+    },
+  });
+  try {
+    const [ticket] = await driver.tickets();
+    assert.equal(await driver.invoke(ticket!), true);
+    assert.deepEqual(roots, ["/vault/personal"]);
+    assert.deepEqual(opened, ["/vault/personal/wiki/notes/RustScan.md"]);
+  } finally {
+    registration.dispose();
+  }
+});

@@ -3,7 +3,7 @@ import type { StateEffect } from "@codemirror/state";
 import type { EditorView } from "@codemirror/view";
 import { Schema } from "@workshop/core";
 
-export const foldedSchema = Schema.array(
+const foldedSchema = Schema.array(
   new Schema<{ from: number; to: number }>(
     (value) => {
       const range = Schema.object({

@@ -5,10 +5,7 @@ import {
   mapAppSettings,
   OVERRIDE_KEYS,
 } from "../../../src/plugins/obsidianCompat/app-settings";
-import {
-  mapDailyNotesSettings,
-  mapTemplatesSettings,
-} from "../../../src/plugins/obsidianCompat/core-plugin-settings";
+import { mapTemplatesSettings } from "../../../src/plugins/obsidianCompat/core-plugin-settings";
 import { resolveConfigDirectory } from "../../../src/plugins/obsidianCompat/config-dir";
 import { findVaultRoot, foldersUpTo } from "../../../src/plugins/vault/roots";
 import { exclusionMatcher } from "../../../src/plugins/vault/exclusion";
@@ -174,7 +171,7 @@ for (const folder of [
   });
 }
 
-test("templates.json and daily-notes.json seed only usable values", () => {
+test("templates.json seeds only usable values", () => {
   assert.deepEqual(
     mapTemplatesSettings({
       folder: "Templates",
@@ -187,48 +184,23 @@ test("templates.json and daily-notes.json seed only usable values", () => {
       "templates.timeFormat": "HH:mm:ss",
     },
   );
+  // Any Moment format carries over; Insert Template names the tokens it
+  // cannot write instead of the format being dropped silently.
   assert.deepEqual(
-    mapDailyNotesSettings({
-      folder: "Journal",
-      format: "YYYY/MM/YYYY-MM-DD",
-      template: "Templates/Daily",
-      autorun: true,
-    }),
-    {
-      "dailyNotes.folder": "Journal",
-      "dailyNotes.dateFormat": "YYYY/MM/YYYY-MM-DD",
-      "dailyNotes.template": "Templates/Daily",
-    },
-  );
-  // A Moment format Lumiere cannot write would name notes differently.
-  assert.deepEqual(
-    mapDailyNotesSettings({
+    mapTemplatesSettings({
       folder: "",
-      format: "YYYY-MM-DD dddd",
-      template: 3,
+      dateFormat: "YYYY-MM-DD dddd",
+      timeFormat: 3,
     }),
-    {},
-  );
-  assert.deepEqual(mapTemplatesSettings({ dateFormat: "Do MMMM" }), {});
-  // MMMM and DDDD are one Moment token each, not MM or DD twice.
-  assert.deepEqual(
-    mapDailyNotesSettings({
-      folder: "Journal",
-      format: "MMMM DD, YYYY",
-      template: "Templates/Daily",
-    }),
-    {
-      "dailyNotes.folder": "Journal",
-      "dailyNotes.template": "Templates/Daily",
-    },
+    { "templates.dateFormat": "YYYY-MM-DD dddd" },
   );
   assert.deepEqual(
     mapTemplatesSettings({
       folder: "Templates",
-      dateFormat: "DDDD",
-      timeFormat: "HH:mm:sss",
+      dateFormat: "gggg-[W]ww",
+      timeFormat: " ",
     }),
-    { "templates.folder": "Templates" },
+    { "templates.folder": "Templates", "templates.dateFormat": "gggg-[W]ww" },
   );
-  assert.throws(() => mapDailyNotesSettings([]), /daily-notes.json/);
+  assert.throws(() => mapTemplatesSettings([]), /templates.json/);
 });

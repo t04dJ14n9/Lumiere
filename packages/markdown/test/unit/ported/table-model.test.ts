@@ -1,14 +1,16 @@
 import { test } from "node:test";
 import assert from "node:assert/strict";
 import {
+  copyCells,
+  pastedCells,
+} from "../../../src/markdown/tables/clipboard-formats";
+import {
   cellAtOffset,
   cellText,
-  copyCells,
   insertColumn,
   insertRow,
   materializeCell,
   parseTable,
-  pastedCells,
   rangeTexts,
   toggleMarker,
   writeCells,

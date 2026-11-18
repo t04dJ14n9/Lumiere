@@ -1,9 +1,9 @@
 import type { Context, Disposer, Plugin } from "@workshop/core";
-import { expandTemplate } from "../../markdown/templates";
+import { expandTemplateWithReport } from "../../markdown/templates";
 import { registerReportedCommands } from "../../shared/reported-command";
 import { contributionId } from "../../shared/setting-schema";
 import { baseName } from "../../shared/workspace-path";
-import { insertAtSelection } from "./insert";
+import { insertTemplate } from "./insert";
 import { templateFiles, templateFolder, templatePickItems } from "./list";
 
 /** **Lumiere: Templates**: insert a template note at the caret. */
@@ -69,13 +69,54 @@ async function insert(ctx: Context): Promise<void> {
   if (!file) {
     return;
   }
-  const text = expandTemplate(await ctx.vaults.text(file.uri), {
-    title: baseName(uri).replace(/\.md$/i, ""),
-    now: new Date(),
-    dateFormat: get("dateFormat", ""),
-    timeFormat: get("timeFormat", ""),
+  const { text, unsupported } = expandTemplateWithReport(
+    await ctx.vaults.text(file.uri),
+    {
+      title: baseName(uri).replace(/\.md$/i, ""),
+      now: new Date(),
+      dateFormat: get("dateFormat", ""),
+      timeFormat: get("timeFormat", ""),
+    },
+  );
+  const outcome = await insertTemplate(ctx.hostDocuments, panel, text);
+  const messages = insertionMessages({
+    ...outcome,
+    unsupported,
+    note: baseName(uri),
+    template: file.path,
   });
-  if (!(await insertAtSelection(ctx.hostDocuments, panel, text))) {
-    ctx.dialogs.error("The template could not be inserted.");
+  messages.forEach((message) => ctx.dialogs.error(message));
+}
+
+/** What the insertion could not do as Obsidian would, for the user. */
+export function insertionMessages(outcome: {
+  isInserted: boolean;
+  invalidProperties?: "note" | "template";
+  unsupported: string[];
+  /** The note's file name and the template's vault path, to name the culprit. */
+  note: string;
+  template: string;
+}): string[] {
+  if (!outcome.isInserted) {
+    return ["The template could not be inserted."];
   }
+  const messages: string[] = [];
+  const { unsupported } = outcome;
+  if (unsupported.length > 0) {
+    const verb = unsupported.length === 1 ? "it was" : "they were";
+    messages.push(
+      `The template's date format uses ${unsupported.join(", ")}, which Lumiere cannot format yet; ${verb} inserted as written.`,
+    );
+  }
+  if (outcome.invalidProperties === "note") {
+    messages.push(
+      `The template's properties were not added: the properties of ${outcome.note} are not valid YAML.`,
+    );
+  }
+  if (outcome.invalidProperties === "template") {
+    messages.push(
+      `The template's properties were not added: the properties of the template ${outcome.template} are not valid YAML once its variables are filled in. Only its body was inserted.`,
+    );
+  }
+  return messages;
 }

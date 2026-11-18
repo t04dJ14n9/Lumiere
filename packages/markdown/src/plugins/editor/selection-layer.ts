@@ -58,7 +58,7 @@ function domRange(view: EditorView, from: number, to: number): Range | null {
 }
 
 /** Marks a subtree that is not document text (a preview, tooltip, popover). */
-export const SELECTION_IGNORE = "data-mw-selection-ignore";
+const SELECTION_IGNORE = "data-mw-selection-ignore";
 
 /** Whether `element` lays out outside the line's text flow. */
 function outOfFlow(element: Element, cache: Map<Element, boolean>): boolean {

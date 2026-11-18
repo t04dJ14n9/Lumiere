@@ -217,7 +217,7 @@ async function reopen(
     return;
   }
   // openWith opens a second tab beside the native one; left open, a Cursor
-  // Markdown tab would sit next to the note's Workshop tab.
+  // Markdown tab would sit next to the note's Lumiere tab.
   const left = currentTab(request);
   if (left && !left.isDirty) {
     await vscode.window.tabGroups.close(left, true);

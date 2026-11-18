@@ -387,3 +387,106 @@ test("links that do not touch a renamed file are left alone", () => {
   const ctx = context({ ...vault, "A.md": text }, { "Old.md": "New.md" });
   assert.deepEqual(rewriteLinks(text, "A.md", ctx), []);
 });
+
+test("a rename to a name with quotes keeps every frontmatter style valid", async () => {
+  const { parseDocument } = await import("yaml");
+  const text = [
+    "---",
+    "single: '[[Old]]'",
+    'double: "[[Old]]"',
+    "plain: see [[Old]] here",
+    "list:",
+    "  - '[[Old]]'",
+    '  - "[[Old|shown]]"',
+    "  - see [[Old]]",
+    "flow: ['[[Old]]', \"[[Old]]\"]",
+    "---",
+    "[[Old]]",
+  ].join("\n");
+  const ctx = context({ ...vault, "A.md": text }, { "Old.md": `It's "q".md` });
+  const result = apply(text, rewriteLinks(text, "A.md", ctx));
+  const yaml = result.split("---")[1]!;
+  const document = parseDocument(yaml);
+  assert.deepEqual(document.errors, []);
+  const link = `[[It's "q"]]`;
+  assert.deepEqual(document.toJS(), {
+    single: link,
+    double: link,
+    plain: `see ${link} here`,
+    list: [link, `[[It's "q"|shown]]`, `see ${link}`],
+    flow: [link, link],
+  });
+  // Quoted values keep their quoting; the body is written as it is.
+  assert.match(result, /^single: '\[\[It''s "q"\]\]'$/m);
+  assert.match(result, /^double: "\[\[It's \\"q\\"\]\]"$/m);
+  assert.match(result, /\n\[\[It's "q"\]\]$/);
+});
+
+test("a link to a name with an apostrophe in a single-quoted value is found and rewritten", () => {
+  const text = ["---", "up: '[[Bob''s]]'", "---", ""].join("\n");
+  const ctx = context(
+    { ...vault, "Bob's.md": "", "A.md": text },
+    { "Bob's.md": "Bob.md" },
+  );
+  assert.equal(
+    apply(text, rewriteLinks(text, "A.md", ctx)),
+    ["---", "up: '[[Bob]]'", "---", ""].join("\n"),
+  );
+});
+
+test("a plain value that cannot hold the new name is written double-quoted", async () => {
+  const { parse } = await import("yaml");
+  const text = ["---", "up: see [[Old]]", "---", ""].join("\n");
+  const ctx = context({ ...vault, "A.md": text }, { "Old.md": "a #b: c.md" });
+  const result = apply(text, rewriteLinks(text, "A.md", ctx));
+  assert.equal(result, ["---", 'up: "see [[a #b: c]]"', "---", ""].join("\n"));
+  assert.deepEqual(parse(result.split("---")[1]!), { up: "see [[a #b: c]]" });
+});
+
+test("a relative link to a note beside a root note of the same name keeps ./ and reads back", () => {
+  const text = "[[Old]] [o](Old.md)";
+  const notes = { "X.md": "", "notes/Old.md": "", "notes/Src.md": text };
+  const ctx = context(notes, { "notes/Old.md": "notes/X.md" }, "relative");
+  const result = apply(text, rewriteLinks(text, "notes/Src.md", ctx));
+  assert.equal(result, "[[./X]] [o](./X.md)");
+  const { index } = memoryVaults({
+    "X.md": "",
+    "notes/X.md": "",
+    "notes/Src.md": result,
+  });
+  for (const link of vaultLinks(metadata(result))) {
+    assert.equal(
+      index.resolveLink(linkpathOf(link)!, "notes/Src.md")?.path,
+      "notes/X.md",
+    );
+  }
+  // With no root note of that name, the bare name is enough.
+  const alone = context(
+    { "notes/Old.md": "", "notes/Src.md": text },
+    { "notes/Old.md": "notes/X.md" },
+    "relative",
+  );
+  assert.equal(
+    apply(text, rewriteLinks(text, "notes/Src.md", alone)),
+    "[[X]] [o](X.md)",
+  );
+});
+
+test("a CRLF note's property link is rewritten once, with its body link", () => {
+  const text = '---\r\nup: "[[Old]]"\r\n---\r\n[[Old]]';
+  const ctx = context({ ...vault, "A.md": text }, { "Old.md": "New.md" });
+  assert.equal(
+    apply(text, rewriteLinks(text, "A.md", ctx)),
+    '---\r\nup: "[[New]]"\r\n---\r\n[[New]]',
+  );
+});
+
+test("a link listed twice is rewritten once", async () => {
+  const { linkRewriteEdits } =
+    await import("../../../src/plugins/linkUpdates/yaml-safe-edits");
+  const text = '---\nup: "[[Old]]"\n---\n';
+  const rewrite = { from: 9, to: 16, rewrite: () => "[[New]]" };
+  assert.deepEqual(linkRewriteEdits(text, [rewrite, rewrite]), [
+    { from: 9, to: 16, insert: "[[New]]" },
+  ]);
+});

@@ -115,8 +115,10 @@ test("the file's annotations come back as Lumiere's and are saved with new ones,
     posted.filter((message) => message.type === "annotationEmbeddedEdit"),
     [],
   );
-  const save = saves()[0] as { load: number; text: string };
+  const save = saves()[0] as { load: number; sha256: string; text: string };
   assert.equal(save.load, 3);
+  // Filed under the bytes the annotations were made on, which the host checks.
+  assert.equal(save.sha256, SHA);
   assert.deepEqual((await kept(save.text)).sort(), [101, 102, 300]);
 });
 

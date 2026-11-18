@@ -42,7 +42,7 @@ export function bindDiagramInspector(
   const inspect = doc.createElement("button");
   inspect.type = "button";
   inspect.className = "inspect-diagram";
-  inspect.textContent = "⤢";
+  inspect.textContent = "Inspect";
   inspect.setAttribute("aria-label", "Inspect diagram");
   inspect.setAttribute("title", "View in larger window");
   // Place Inspect with Copy and Edit on the shell, not in the scrolling fence.

@@ -1,20 +1,10 @@
 import type { NoteMetadata } from "../../markdown/metadata";
 import { linkpathOf, linkSyntax } from "../../markdown/metadata/linkpaths";
 import {
-  conceptClass,
-  conceptDescription,
-  conceptTags,
-  conceptTitle,
-  conceptType,
-  isInsideBundle,
-  isReservedNote,
-  planResourceOpen,
-  sourceRows,
-} from "../../markdown/okf";
-import {
   extensionOf,
   folderOf,
   isMarkdownPath,
+  stemOf,
   type LinkSyntax,
 } from "../../shared/vault-path";
 
@@ -28,7 +18,7 @@ export interface ResolvedTarget {
   path?: string;
 }
 
-export interface ConceptNode {
+export interface NoteNode {
   id: string;
   path: string;
   title: string;
@@ -36,44 +26,42 @@ export interface ConceptNode {
   type?: string;
   folder: string;
   tags: readonly string[];
-  classification: ReturnType<typeof conceptClass>;
+  /** Its metadata is not parsed yet. */
+  indexing: boolean;
   degree: number;
   orphan: boolean;
   unresolved: number;
-  navigation: number;
   assets: number;
   outOfScope: number;
 }
 
-export interface ConceptEdge {
+export interface NoteEdge {
   id: string;
   source: string;
   target: string;
   count: number;
 }
 
-export interface ConceptGraph {
-  nodes: ConceptNode[];
-  edges: ConceptEdge[];
+export interface NoteGraph {
+  nodes: NoteNode[];
+  edges: NoteEdge[];
 }
 
 interface EdgeHit {
-  kind:
-    "concept" | "navigation" | "asset" | "out-of-scope" | "unresolved" | "self";
+  kind: "note" | "asset" | "out-of-scope" | "unresolved" | "self";
   path?: string;
 }
 
-/** Concept graph for one bundle. Reserved notes are omitted. Edges are directed and aggregated. */
-export function buildConceptGraph(input: {
-  bundleRoot: string;
+/** Note graph for one vault. Edges are directed and aggregated. */
+export function buildNoteGraph(input: {
   notes: readonly GraphNote[];
   resolve(
     linktext: string,
     sourcePath: string,
     syntax: LinkSyntax,
   ): ResolvedTarget;
-}): ConceptGraph {
-  const nodes = conceptNodes(input.bundleRoot, input.notes);
+}): NoteGraph {
+  const nodes = noteNodes(input.notes);
   const byPath = new Map(nodes.map((node) => [node.path, node]));
   const counts = new Map<string, number>();
   const neighbours = new Map<string, Set<string>>(
@@ -90,9 +78,6 @@ export function buildConceptGraph(input: {
         recordHit(source, hit, counts, neighbours);
       }
     }
-    for (const hit of sourcesDerivationHits(input.bundleRoot, note, byPath)) {
-      recordHit(source, hit, counts, neighbours);
-    }
   }
   for (const node of nodes) {
     const degree = neighbours.get(node.id)?.size ?? 0;
@@ -102,40 +87,53 @@ export function buildConceptGraph(input: {
   return { nodes, edges: edgesFrom(counts) };
 }
 
-function conceptNodes(
-  bundleRoot: string,
-  notes: readonly GraphNote[],
-): ConceptNode[] {
+function noteNodes(notes: readonly GraphNote[]): NoteNode[] {
   return notes
-    .filter((note) => isConcept(bundleRoot, note.path))
+    .filter((note) => isMarkdownPath(note.path))
     .map((note) => {
       const frontmatter = note.metadata?.frontmatter;
-      const description = conceptDescription(frontmatter);
-      const type = conceptType(frontmatter);
+      const description = frontmatterText(frontmatter, "description");
+      const type = frontmatterText(frontmatter, "type");
       return {
         id: note.path,
         path: note.path,
-        title: conceptTitle(note.path, frontmatter),
+        title: frontmatterText(frontmatter, "title") ?? stemOf(note.path),
         ...(description ? { description } : {}),
         ...(type ? { type } : {}),
         folder: folderOf(note.path),
-        tags: conceptTags(frontmatter),
-        classification: conceptClass(note.metadata),
+        tags: frontmatterTags(frontmatter),
+        indexing: note.metadata === undefined,
         degree: 0,
         orphan: true,
         unresolved: 0,
-        navigation: 0,
         assets: 0,
         outOfScope: 0,
       };
     });
 }
 
-function isConcept(bundleRoot: string, path: string): boolean {
-  return (
-    isMarkdownPath(path) &&
-    isInsideBundle(path, bundleRoot) &&
-    !isReservedNote(path)
+/** A non-empty string property, trimmed. Objects and lists are never labels. */
+function frontmatterText(
+  frontmatter: Record<string, unknown> | undefined,
+  key: string,
+): string | undefined {
+  const value = frontmatter?.[key];
+  return typeof value === "string" && value.trim() ? value.trim() : undefined;
+}
+
+/** Frontmatter tags only: a single string or a list of strings. */
+function frontmatterTags(
+  frontmatter: Record<string, unknown> | undefined,
+): string[] {
+  const tags = frontmatter?.tags;
+  if (typeof tags === "string" && tags.trim()) {
+    return [tags.trim()];
+  }
+  if (!Array.isArray(tags)) {
+    return [];
+  }
+  return tags.flatMap((tag) =>
+    typeof tag === "string" && tag.trim() ? [tag.trim()] : [],
   );
 }
 
@@ -144,40 +142,8 @@ function noteLinks(metadata: NoteMetadata) {
   return [...metadata.links, ...metadata.embeds, ...metadata.frontmatterLinks];
 }
 
-/**
- * OKF `sources` rows whose `resource` is a vault path (not http(s)). Wikilink
- * forms like `[[Note]]` stay on frontmatterLinks; path resources become edges.
- */
-function sourcesDerivationHits(
-  bundleRoot: string,
-  note: GraphNote,
-  nodes: Map<string, ConceptNode>,
-): EdgeHit[] {
-  const frontmatter = note.metadata?.frontmatter;
-  if (!frontmatter || !Object.hasOwn(frontmatter, "sources")) {
-    return [];
-  }
-  const hits: EdgeHit[] = [];
-  for (const row of sourceRows(frontmatter.sources, frontmatter)) {
-    if (!row.navigable) {
-      continue;
-    }
-    const plan = planResourceOpen({
-      resource: row.resource,
-      documentPath: note.path,
-      bundleRoot,
-    });
-    if (plan.action !== "workspace" || !plan.path) {
-      continue;
-    }
-    hits.push(classifyResolvedPath(bundleRoot, note.path, plan.path, nodes));
-  }
-  return hits;
-}
-
 function classifyHit(
   input: {
-    bundleRoot: string;
     resolve(
       linktext: string,
       sourcePath: string,
@@ -186,7 +152,7 @@ function classifyHit(
   },
   sourcePath: string,
   link: ReturnType<typeof noteLinks>[number],
-  nodes: Map<string, ConceptNode>,
+  nodes: Map<string, NoteNode>,
 ): EdgeHit | undefined {
   const linktext = linkpathOf(link);
   if (!linktext) {
@@ -196,23 +162,16 @@ function classifyHit(
   if (target.status === "missing" || !target.path) {
     return { kind: "unresolved" };
   }
-  return classifyResolvedPath(input.bundleRoot, sourcePath, target.path, nodes);
+  return classifyResolvedPath(sourcePath, target.path, nodes);
 }
 
 function classifyResolvedPath(
-  bundleRoot: string,
   sourcePath: string,
   targetPath: string,
-  nodes: Map<string, ConceptNode>,
+  nodes: Map<string, NoteNode>,
 ): EdgeHit {
   if (targetPath === sourcePath) {
     return { kind: "self" };
-  }
-  if (!isInsideBundle(targetPath, bundleRoot)) {
-    return { kind: "out-of-scope", path: targetPath };
-  }
-  if (isReservedNote(targetPath)) {
-    return { kind: "navigation", path: targetPath };
   }
   if (!isMarkdownPath(targetPath) || extensionOf(targetPath) !== "md") {
     return { kind: "asset", path: targetPath };
@@ -220,21 +179,17 @@ function classifyResolvedPath(
   if (!nodes.has(targetPath)) {
     return { kind: "out-of-scope", path: targetPath };
   }
-  return { kind: "concept", path: targetPath };
+  return { kind: "note", path: targetPath };
 }
 
 function recordHit(
-  source: ConceptNode,
+  source: NoteNode,
   hit: EdgeHit,
   counts: Map<string, number>,
   neighbours: Map<string, Set<string>>,
 ): void {
   if (hit.kind === "unresolved") {
     source.unresolved += 1;
-    return;
-  }
-  if (hit.kind === "navigation") {
-    source.navigation += 1;
     return;
   }
   if (hit.kind === "asset") {
@@ -254,7 +209,7 @@ function recordHit(
   neighbours.get(hit.path)?.add(source.id);
 }
 
-function edgesFrom(counts: Map<string, number>): ConceptEdge[] {
+function edgesFrom(counts: Map<string, number>): NoteEdge[] {
   return [...counts].map(([key, count]) => {
     const [source = "", target = ""] = key.split("\0");
     return { id: `${source}->${target}`, source, target, count };

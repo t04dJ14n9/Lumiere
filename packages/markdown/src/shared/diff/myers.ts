@@ -15,12 +15,12 @@ export interface Run extends Span {
 }
 
 /** Above this many edits the middle is reported as one replacement. */
-export const MAX_EDITS = 4000;
+const MAX_EDITS = 4000;
 /**
  * The most Int32 cells the backtracking trace may hold (16 MB). Depth d keeps
  * 2d + 3 cells, so this also ends the search near 2,000 edits.
  */
-export const TRACE_BUDGET = 4_000_000;
+const TRACE_BUDGET = 4_000_000;
 
 type Equal<T> = (x: T, y: T) => boolean;
 

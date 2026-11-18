@@ -1,4 +1,4 @@
-import type { ConceptGraph } from "./project";
+import type { NoteGraph } from "./project";
 
 export interface GraphFacets {
   types: string[];
@@ -7,7 +7,7 @@ export interface GraphFacets {
 }
 
 /** Filter choices from the unfiltered concept graph, capped for the snapshot schema. */
-export function graphFacets(graph: ConceptGraph): GraphFacets {
+export function graphFacets(graph: NoteGraph): GraphFacets {
   const types = new Set<string>();
   const tags = new Set<string>();
   const folders = new Set<string>();

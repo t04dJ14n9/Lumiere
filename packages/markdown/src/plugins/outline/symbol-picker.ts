@@ -4,6 +4,7 @@ import { SourceCoordinates } from "../../shared/document/coordinates";
 import { fuzzyMatch } from "../../shared/fuzzy";
 import type { Dialogs, PickItem } from "../../shared/host";
 import { GO_TO_HEADING_COMMAND } from "./commands";
+import { jumpToHeading, type HeadingJumps } from "./jump";
 import { outlineSymbols, type OutlineSymbolNode } from "./symbols";
 
 /**
@@ -13,7 +14,13 @@ import { outlineSymbols, type OutlineSymbolNode } from "./symbols";
  */
 export function registerSymbolPicker(ctx: Context, dialogs: Dialogs): void {
   const editors = ctx.editors;
-  const vaults = ctx.vaults;
+  // Captured while live, as `editors`: the pick can end after the plugin stops.
+  const jumps: HeadingJumps = {
+    vaults: ctx.vaults,
+    settings: ctx.settings,
+    dialogs,
+    logger: ctx.logger,
+  };
   let disposed = false;
   ctx.effect(() => () => {
     disposed = true;
@@ -43,7 +50,11 @@ export function registerSymbolPicker(ctx: Context, dialogs: Dialogs): void {
       ) {
         return;
       }
-      await vaults.open(document.uri, { offset: result.item.value });
+      await jumpToHeading(
+        jumps,
+        { uri: document.uri, document },
+        result.item.value,
+      );
     }),
   );
 }

@@ -8,8 +8,10 @@ against the fixture.
 
 Names are the same in both extensions: the plugin is `agentBridge`, the
 service that builds and hands over the text is `AgentHandoff`, and the
-command is `copyLinkForAgent`. The text is agent-agnostic: plain text with
-raw links, never a chat-specific mention syntax.
+command is `copyLinkForAgent`. The text is agent-agnostic plain text, in
+the shape a selection takes in an agent chat: an `@` locator, a blank line,
+the selection quoted with `> `, then a newline, so a paste leaves the caret
+on a line of its own.
 
 ## Note selections (Markdown)
 
@@ -19,6 +21,7 @@ raw links, never a chat-specific mention syntax.
 > First selected line
 >
 > Third selected line
+⏎
 ```
 
 - The reference is `@` + path + `#` + line range; one line is `#12`.
@@ -27,7 +30,7 @@ raw links, never a chat-specific mention syntax.
   (`@file:///elsewhere/b.md#1-2`).
 - After a blank line comes the selection, every line quoted with `> `
   (an empty line is a bare `>`), line endings normalised to `\n` and
-  trailing newlines dropped.
+  trailing newlines dropped; the text ends with one `\n` (`⏎` above).
 - Lumiere saves the note first, so the lines are those on disk.
   Lumiere PDF's MCP tool `get_current_note_selection` returns the same text for a
   note open in Lumiere; for an unsaved note, which has no stable
@@ -36,23 +39,23 @@ raw links, never a chat-specific mention syntax.
 ## PDF selections (Lumiere PDF)
 
 ```text
+@papers/attention.pdf#page=3
+
 > Scaled dot-product attention
->
-> [attention.pdf · p.3](papers/attention.pdf#page=3#:~:text=Scaled%20dot%2Dproduct%20attention)
+⏎
 ```
 
-- Quote-first: the selected text is quoted with `> ` (same rules as note
-  payloads), then a blank quoted line (`>`), then one Markdown link per
-  selected page as a quoted line. A page-only or empty-region copy is
-  link-only (no quote block).
-- Label is `basename · p.N`. A `[` or `]` in the name is backslash-escaped
-  (`[\[Smith\] Title.pdf · p.3](…)`) and a line break becomes a space, so the
-  label stays one link text on one quoted line; nothing else is escaped.
-  Href is Chrome-aligned:
-  `path#page=N` alone, or `path#page=N#:~:text=…` when there is selected
-  text, or `path#page=N&viewrect=x,y,w,h` when regions are enabled (no
-  angle brackets around the href). Never `#hl-`, never PDF++ `selection=`,
+- The locator is `@` + path + `#page=N`, one line per selected page; the
+  path is percent-encoded where a raw character would end it (spaces,
+  `#`, parentheses: `@papers/my%20paper.pdf#page=3`). A region adds
+  `&viewrect=x,y,w,h` when regions are enabled. There is no `#:~:text=`:
+  the quote carries the words. Never `#hl-`, never PDF++ `selection=`,
   never RFC `search=`.
+- After a blank line comes the selected text, quoted as in note payloads,
+  then one `\n`. A page-only copy (nothing selected) or a region with no
+  text is the locator alone, then `\n`.
+- The text is not a Markdown link: pasted into a note it is neither
+  clickable nor indexed as a PDF backlink.
 - No `Source:` / `Sources:` prefix, no PDF SHA-256 line, no cite
   instruction, and no region-image path on the clipboard. File revision
   hashing remains on the structured bridge envelope / MCP side when needed.

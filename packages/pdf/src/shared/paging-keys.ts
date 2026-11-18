@@ -1,8 +1,8 @@
 import type { ScrollDirection, ScrollMode } from "./view-settings";
 
 /** Pixels an arrow key pans; a Page key pans this fraction of the viewport. */
-export const ARROW_PIXELS = 40;
-export const PAGE_KEY_FRACTION = 0.875;
+const ARROW_PIXELS = 40;
+const PAGE_KEY_FRACTION = 0.875;
 
 /** What the viewer can do from where it stands, in pixels left to scroll each way. */
 export interface KeyContext {

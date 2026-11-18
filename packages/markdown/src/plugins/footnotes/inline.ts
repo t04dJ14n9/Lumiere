@@ -73,11 +73,7 @@ export function footnoteInline(
  * included so the caret beside a widget can reach its source. A non-empty
  * selection over the range does not count: it keeps the rendering.
  */
-export function hasCaretWithin(
-  state: EditorState,
-  from: number,
-  to: number,
-): boolean {
+function hasCaretWithin(state: EditorState, from: number, to: number): boolean {
   return revealRanges(state).some(
     (range) => range.empty && range.head >= from && range.head <= to,
   );

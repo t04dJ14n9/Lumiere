@@ -26,7 +26,8 @@ export interface SketchHost {
     WorkspaceFiles,
     | "readText"
     | "writeText"
-    | "writeBytes"
+    | "createText"
+    | "createBytes"
     | "list"
     | "mkdir"
     | "isSymbolicLink"

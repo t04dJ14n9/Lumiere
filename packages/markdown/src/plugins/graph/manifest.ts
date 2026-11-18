@@ -29,7 +29,7 @@ export default defineManifest({
   id: "graph",
   title: "Vault Graph",
   description:
-    "Draw notes as a directed graph (OKF bundle or whole vault) in a panel of its own.",
+    "Draw a vault's notes as a directed graph in a panel of its own.",
   kind: "feature",
   defaultEnabled: true,
   surfaces: ["host"],
@@ -44,8 +44,8 @@ export default defineManifest({
         scope: "workbench",
       },
       {
-        id: "graph.chooseBundle",
-        title: "Choose Vault Graph Scope",
+        id: "graph.chooseVault",
+        title: "Choose Vault for Graph",
         scope: "workbench",
       },
     ],

@@ -4,7 +4,7 @@ import { afterEach, beforeEach, test } from "node:test";
 import "./support/install-fake-vscode";
 import * as vscode from "./support/fake-vscode";
 import { AGENT_COMMANDS } from "../../src/shared/agent-target";
-import { pageLinkText } from "../../src/shared/agent-text";
+import { pageReferenceText } from "../../src/shared/agent-text";
 import { AgentHandoff } from "../../src/extension/plugins/agentBridge/handoff";
 import type { PdfPanel } from "../../src/extension/plugins/pdf/panel";
 
@@ -67,7 +67,7 @@ afterEach(() => {
   vscode.env.appName = "Visual Studio Code";
 });
 
-test("copyLinkForAgent with no selection copies pageLinkText for readingPage", async () => {
+test("copyLinkForAgent with no selection copies pageReferenceText for readingPage", async () => {
   const panel = {
     uri: vscode.Uri.file("/work/papers/attention.pdf"),
     selectionSnapshot: () => undefined,
@@ -78,7 +78,7 @@ test("copyLinkForAgent with no selection copies pageLinkText for readingPage", a
   assert.equal(await handoff.copyLinkForAgent(panel), true);
 
   assert.deepEqual(clipboard, [
-    pageLinkText({ path: "papers/attention.pdf" }, 4),
+    pageReferenceText({ path: "papers/attention.pdf" }, 4),
   ]);
   assert.deepEqual(
     executed.filter((id) =>

@@ -1,4 +1,4 @@
-import type { BridgeViewRect, BridgeWikiContext } from "./model";
+import type { BridgeViewRect } from "./model";
 
 const HASH = /^[a-f0-9]{16,64}$/i;
 const TIMESTAMP =
@@ -88,36 +88,6 @@ export function assertRect(value: unknown): BridgeViewRect {
     throw new TypeError("viewRect sizes must be non-negative.");
   }
   return rect;
-}
-
-export function readWikiContext(value: unknown): BridgeWikiContext | undefined {
-  if (value === undefined) {
-    return undefined;
-  }
-  const input = asObject(value, "wiki");
-  const wiki = {
-    preset: optionalText(input.preset, "wiki.preset"),
-    bundle: optionalText(input.bundle, "wiki.bundle"),
-    collection: optionalText(input.collection, "wiki.collection"),
-    type: optionalText(input.type, "wiki.type"),
-  };
-  const present = Object.fromEntries(
-    Object.entries(wiki).filter(([, item]) => item !== undefined),
-  );
-  return Object.keys(present).length === 0
-    ? undefined
-    : (present as BridgeWikiContext);
-}
-
-/** Command arguments are untrusted: a bad context is ignored, not thrown. */
-export function parseWikiContext(
-  value: unknown,
-): BridgeWikiContext | undefined {
-  try {
-    return readWikiContext(value);
-  } catch {
-    return undefined;
-  }
 }
 
 function finite(value: unknown, label: string): number {

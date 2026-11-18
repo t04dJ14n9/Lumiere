@@ -46,12 +46,12 @@ function ownNumber(
 }
 
 /** Obsidian 1.14.4's default body size and line height, measured (docs/obsidian-measurements/font-size.mjs). */
-export const DEFAULT_FONT_SIZE = 16;
-export const MIN_FONT_SIZE = 8;
-export const MAX_FONT_SIZE = 48;
-export const DEFAULT_LINE_HEIGHT = 1.5;
-export const MIN_LINE_HEIGHT = 1;
-export const MAX_LINE_HEIGHT = 3;
+const DEFAULT_FONT_SIZE = 16;
+const MIN_FONT_SIZE = 8;
+const MAX_FONT_SIZE = 48;
+const DEFAULT_LINE_HEIGHT = 1.5;
+const MIN_LINE_HEIGHT = 1;
+const MAX_LINE_HEIGHT = 3;
 
 /**
  * `lumiere.markdown.editor.fontSize`: the note's own body size in pixels, the
@@ -178,7 +178,7 @@ export const defaultFontFamily: Readonly<Record<Platform, string>> = {
  * follows unless the setting is that list. The host reports its default;
  * `defaultFontFamily` only stands in where it does not.
  */
-export function massagedFontFamily(family: string, fallback: string): string {
+function massagedFontFamily(family: string, fallback: string): string {
   const wrapped =
     /[,"']/.test(family) || !/[+ ]/.test(family) ? family : `"${family}"`;
   return family === fallback ? wrapped : `${wrapped}, ${fallback}`;

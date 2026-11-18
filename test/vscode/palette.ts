@@ -48,8 +48,15 @@ export async function focusWorkbench(page: Page) {
 export async function openPalette(page: Page) {
   const input = page.locator(QUICK_INPUT);
   let attempt = 0;
+  // A context menu still open (a spec that failed with it showing) puts a
+  // block over the whole window that takes every click after it.
+  const menu = page.locator(".context-view .monaco-menu");
   await expect(async () => {
     if (!(await input.isVisible())) {
+      if (await menu.isVisible()) {
+        await page.keyboard.press("Escape");
+        await expect(menu).toBeHidden({ timeout: 1000 });
+      }
       await focusWorkbench(page);
       await leaveWebview(page);
       // F1 opens the palette too, when the shortcut is swallowed.

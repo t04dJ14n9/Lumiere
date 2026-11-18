@@ -243,7 +243,7 @@ export const INS_CLASS = "mw-gd-ins";
  * rendering of emphasis, links or table pipes.
  */
 /** Longest side text `markSide` marks; longer sides are returned unmarked. */
-export const MAX_MARK_CHARS = 200_000;
+const MAX_MARK_CHARS = 200_000;
 
 export function markSide(
   segments: readonly Segment[],

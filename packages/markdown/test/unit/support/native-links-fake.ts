@@ -155,6 +155,9 @@ export const driver = {
         JSON.parse(decodeURIComponent(link.target!.query)) as [string, string],
     );
   },
+  text(value: string) {
+    text = value;
+  },
   invoke(ticket: [string, string]) {
     return command(...ticket);
   },

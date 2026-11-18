@@ -58,6 +58,31 @@ function spaceAboveText(view: EditorView, from: number): number {
   return Number.parseFloat(style ? style.paddingTop : "") || 0;
 }
 
+/**
+ * An image is laid out at its size as soon as its header arrives, but its
+ * load event has CodeMirror measure it only in the next frame, so the frame
+ * in between is painted with everything below the image moved down by its
+ * height: a jump to a heading under an image showed another part of the
+ * note, then the pin put the heading back a frame later, with the sticky bar
+ * a frame behind that. A resize observer runs after layout and before paint;
+ * measuring there lets CodeMirror's anchoring, the pin and the sticky bar all
+ * settle in this frame. Only while a pin is held: elsewhere CodeMirror
+ * measures each of its own changes before paint anyway.
+ */
+function measureOnResize(
+  view: EditorView,
+  until: AbortSignal,
+  measure: () => void,
+): void {
+  const content = view.contentDOM as Element | undefined;
+  if (typeof ResizeObserver === "undefined" || !content) {
+    return;
+  }
+  const watcher = new ResizeObserver(measure);
+  watcher.observe(content);
+  until.addEventListener("abort", () => watcher.disconnect());
+}
+
 /** True when something other than the pin moved the scroller since it last wrote. */
 function isScrolledByOthers(scrollTop: number, saved: PendingScroll): boolean {
   return (
@@ -80,7 +105,16 @@ class ViewState {
   private pin(view: EditorView, pending: PendingScroll): void {
     this.pendingScroll.set(view, pending);
     if (!this.readerListeners.has(view)) {
-      this.readerListeners.set(view, this.listenForReader(view));
+      const listening = this.listenForReader(view);
+      this.readerListeners.set(view, listening);
+      measureOnResize(view, listening.signal, () => {
+        if (this.pendingScroll.get(view)?.applied) {
+          // Reading CodeMirror's layout runs a measure it has pending at
+          // once, rather than in the next frame: request one, then read.
+          view.requestMeasure();
+          view.lineBlockAtHeight(0);
+        }
+      });
     }
   }
 

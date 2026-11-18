@@ -18,9 +18,3 @@ export function tableSelection(
 ): { from: number; to: number } | undefined {
   return activeTables.get(view)?.selection();
 }
-export function clearTableSelection(view: EditorView): void {
-  activeTables.delete(view);
-}
-export function activeEditor(view: EditorView): EditorView {
-  return activeTables.get(view)?.editor ?? view;
-}

@@ -8,7 +8,6 @@ export interface GraphViewState {
     folders: string[];
     text: string;
     showOrphans: boolean;
-    conformantOnly: boolean;
   };
 }
 
@@ -29,7 +28,6 @@ export function defaultView(): GraphViewState {
       folders: [],
       text: "",
       showOrphans: true,
-      conformantOnly: false,
     },
   };
 }
@@ -64,7 +62,6 @@ function filtersOf(value: unknown): GraphViewState["filters"] {
     text: typeof value.text === "string" ? value.text.slice(0, 200) : "",
     // A panel saved with the old `orphans` ("only orphans") gets the default.
     showOrphans: value.showOrphans !== false,
-    conformantOnly: value.conformantOnly === true,
   };
 }
 

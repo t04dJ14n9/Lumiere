@@ -1,7 +1,7 @@
 import type { MarkdownIt } from "markdown-it";
 import type { StateInline } from "markdown-it";
 import type { StateBlock } from "markdown-it";
-import { attr, escape } from "./helpers";
+import { attr, encodeDataValue, escape } from "./helpers";
 export function math(md: MarkdownIt): void {
   md.inline.ruler.before("escape", "math", inlineMath);
   md.renderer.rules.math_inline = (tokens, index) =>
@@ -15,7 +15,7 @@ export function math(md: MarkdownIt): void {
 }
 
 const mathHTML = (expression: string, display: boolean): string =>
-  `<span class="math-placeholder${display ? " math-display" : ""}"${attr("data-math", encodeURIComponent(expression))}${attr("data-display", String(display))}>${escape(expression)}</span>`;
+  `<span class="math-placeholder${display ? " math-display" : ""}"${attr("data-math", encodeDataValue(expression))}${attr("data-display", String(display))}>${escape(expression)}</span>`;
 
 function inlineMath(state: StateInline, silent: boolean): boolean {
   if (state.src[state.pos] !== "$") {
