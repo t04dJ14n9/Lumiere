@@ -14,6 +14,8 @@ import {
 
 type Send = (frame: PageFrame) => void;
 type Prompt = Extract<UiRequest, { type: "ask" | "input" | "pick" }>;
+/** What a prompt answers: an action, a row, text, the rows left ticked, or null. */
+type Answer = string | number | number[] | null;
 
 /** The page's styles for what it draws in VS Code's place. */
 export const PAGE_STYLE = `
@@ -31,6 +33,9 @@ export const PAGE_STYLE = `
 .lumiere-page-prompt li{padding:5px 8px;border-radius:4px;cursor:pointer}
 .lumiere-page-prompt li[aria-selected=true]{background:var(--vscode-list-activeSelectionBackground)}
 .lumiere-page-prompt li small{margin-left:8px;color:var(--vscode-descriptionForeground)}
+.lumiere-page-prompt input[type=checkbox]{width:auto;padding:0;margin:0 8px 0 0;flex:none}
+.lumiere-page-prompt li label{display:flex;align-items:baseline;cursor:pointer}
+.lumiere-page-prompt li small.detail{display:block;margin:0 0 0 auto;max-width:55%;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
 .lumiere-page-prompt .actions{display:flex;justify-content:flex-end;gap:6px;margin-top:8px}
 .lumiere-page-prompt button{padding:4px 12px;border-radius:4px;border:1px solid var(--vscode-button-border);font:inherit;cursor:pointer;
   background:var(--vscode-button-secondaryBackground);color:var(--vscode-button-secondaryForeground)}
@@ -79,6 +84,8 @@ export function createUi(send: Send): (request: UiRequest) => void {
       case "pick":
         picker = new Picker(request, send);
         return;
+      case "pickMany":
+        return checklist(request, send);
       case "menu":
         menu?.close();
         menu = new PageMenu(request, send);
@@ -138,12 +145,12 @@ async function copy(text: string): Promise<void> {
 function frame(
   id: number,
   send: Send,
-): { box: HTMLElement; close(value: string | number | null): void } {
+): { box: HTMLElement; close(value: Answer): void } {
   const box = document.createElement("div");
   box.className = "lumiere-page-prompt";
   box.setAttribute("role", "dialog");
   let closed = false;
-  const close = (value: string | number | null) => {
+  const close = (value: Answer) => {
     if (!closed) {
       closed = true;
       box.remove();
@@ -199,13 +206,77 @@ function prompt(request: Exclude<Prompt, { type: "pick" }>, send: Send): void {
   field.select();
 }
 
+/**
+ * A checklist, every row ticked. OK or Enter answers with the indices still
+ * ticked; Cancel and Escape answer null.
+ */
+function checklist(
+  request: Extract<UiRequest, { type: "pickMany" }>,
+  send: Send,
+): void {
+  const { box, close } = frame(request.id, send);
+  const message = document.createElement("p");
+  message.textContent = request.placeholder;
+  const list = document.createElement("ul");
+  const checks = request.items.map((row) => {
+    const check = document.createElement("input");
+    check.type = "checkbox";
+    check.checked = true;
+    list.append(checkRow(row, check));
+    return check;
+  });
+  const accept = () =>
+    close(checks.flatMap((check, index) => (check.checked ? [index] : [])));
+  const actions = document.createElement("div");
+  actions.className = "actions";
+  for (const [text, run] of [
+    ["OK", accept],
+    ["Cancel", () => close(null)],
+  ] as const) {
+    const button = document.createElement("button");
+    button.textContent = text;
+    button.addEventListener("click", run);
+    actions.append(button);
+  }
+  box.addEventListener("keydown", (event) => {
+    if (event.key === "Enter" && !(event.target instanceof HTMLButtonElement)) {
+      event.preventDefault();
+      accept();
+    }
+  });
+  box.append(message, list, actions);
+  checks[0]?.focus();
+}
+
+/** One checklist row: the box, the row's label and description, and its detail under them. */
+function checkRow(row: PickRow, check: HTMLInputElement): HTMLLIElement {
+  const item = document.createElement("li");
+  const label = document.createElement("label");
+  const text = document.createElement("span");
+  text.textContent = row.label;
+  label.append(check, text);
+  for (const [extra, className] of [
+    [row.description, ""],
+    [row.detail, "detail"],
+  ] as const) {
+    if (extra) {
+      const small = document.createElement("small");
+      small.className = className;
+      small.textContent = extra;
+      label.append(small);
+    }
+  }
+  item.append(label);
+  return item;
+}
+
 /** A quick pick: the host filters as the reader types; arrows and Enter choose. */
 class Picker {
   readonly id: number;
   private rows: PickRow[];
   private selected = 0;
   private readonly list = document.createElement("ul");
-  private readonly close: (value: string | number | null) => void;
+  private readonly close: (value: Answer) => void;
 
   constructor(request: Extract<UiRequest, { type: "pick" }>, send: Send) {
     this.id = request.id;

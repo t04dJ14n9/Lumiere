@@ -1,12 +1,16 @@
 export { resolveAttachmentDir } from "./folder";
 export { timestampStem, uniqueName, uniqueTimestampName } from "./naming";
 export {
+  downloadFileName,
   downloadStem,
+  imageChoice,
+  propertyImageUrls,
   remoteImages,
   withDownloadedImages,
+  withDownloadedPropertyImages,
   type RemoteImage,
 } from "./download";
-export { embedFor, type EmbedLink } from "./embed";
+export { embedFor, propertyLinkFor, type EmbedLink } from "./embed";
 export { insertEmbed } from "./insert";
 export {
   saveAttachment,
@@ -31,9 +35,11 @@ export {
 } from "./drop";
 export {
   isHostSourceUrl,
+  loadAttachmentOutcome,
   loadAttachmentSource,
   type SourceBytes,
   type SourceFetch,
+  type SourceOutcome,
   type SourceRead,
 } from "./source";
 export {

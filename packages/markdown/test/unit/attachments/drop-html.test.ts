@@ -214,8 +214,9 @@ test("a URL from the page loads only images, never any file on the disk", async 
     "an image is kept under its type's extension",
   );
   assert.equal(
-    (await loadAttachmentSource("https://ex/a.webp", options("")))?.ext,
-    "webp",
+    await loadAttachmentSource("https://ex/a.webp", options("")),
+    undefined,
+    "without a type, bytes that are no image are not kept at an image's name",
   );
 });
 
