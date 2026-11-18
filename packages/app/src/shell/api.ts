@@ -3,6 +3,7 @@
  * opening, commands, drawings and the event stream (`httpApi`, part of
  * http-backend.ts). Same origin, so the token cookie goes along.
  */
+import { SHELL_KEY_HEADER, SHELL_KEY_META } from "../shared/shell-key";
 
 export interface VaultList {
   readonly open: readonly string[];
@@ -47,17 +48,31 @@ async function request<T>(url: string, init?: RequestInit): Promise<T> {
   return body;
 }
 
-const post = (url: string, body: unknown) =>
+const post = (url: string, body: unknown, headers: object = {}) =>
   request<unknown>(url, {
     method: "POST",
-    headers: { "content-type": "application/json" },
+    headers: { "content-type": "application/json", ...headers },
     body: JSON.stringify(body),
   });
+
+/**
+ * What the server gave this page, the window's own, to prove that a request to
+ * add a folder is the window's and not a page's in it (server/auth.ts). No key
+ * (a page that is not the window's) sends none, and the server refuses it.
+ */
+export function shellKeyHeaders(
+  page: Pick<Document, "querySelector"> = document,
+): Record<string, string> {
+  const key = page.querySelector<HTMLMetaElement>(
+    `meta[name="${SHELL_KEY_META}"]`,
+  )?.content;
+  return key ? { [SHELL_KEY_HEADER]: key } : {};
+}
 
 export const httpApi = {
   vaults: {
     list: () => request<VaultList>("/api/vaults"),
-    add: (path: string) => post("/api/vaults", { path }),
+    add: (path: string) => post("/api/vaults", { path }, shellKeyHeaders()),
     close: (path: string) =>
       request<VaultList>("/api/vaults", {
         method: "DELETE",
@@ -70,7 +85,7 @@ export const httpApi = {
           `/api/files?vault=${encodeURIComponent(vault)}`,
         )
       ).files,
-    open: (path: string) => post("/api/open", { path }),
+    open: (path: string) => post("/api/open", { path }, shellKeyHeaders()),
   },
   commands: {
     list: async () =>

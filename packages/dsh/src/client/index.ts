@@ -5,7 +5,12 @@
  * against DSH's plugin module format: React comes from DSH's module table.
  */
 import { addressFragment, parentFolder, workspaceRoot } from "./address";
-import { handlePdfFrameLoad, noteBody, sendTheme } from "./note-frame";
+import {
+  handlePdfFrameLoad,
+  noteBody,
+  pageSearchParams,
+  sendTheme,
+} from "./note-frame";
 import { onDshThemeChange } from "./theme";
 import type { BodyProps, ReactLike } from "./note-frame";
 
@@ -105,10 +110,7 @@ export function pdfBody(React: ReactLike) {
     }
     const root =
       workspaceRoot(props.resourceAddress, absolute) ?? parentFolder(absolute);
-    const query = new URLSearchParams({
-      path: absolute,
-      ...(root ? { root } : {}),
-    });
+    const query = pageSearchParams(props.resourceAddress, absolute, root);
     const src = `/lumiere/pdf?${query.toString()}${addressFragment(props.resourceAddress)}`;
     return React.createElement("iframe", {
       // DSH's reload bumps content.revision; a new iframe asks the host for

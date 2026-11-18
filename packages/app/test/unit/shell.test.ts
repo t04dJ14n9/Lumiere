@@ -1,6 +1,7 @@
 import test from "node:test";
 import assert from "node:assert/strict";
-import { editorUrl, relativeTo } from "../../src/shell/api";
+import { editorUrl, relativeTo, shellKeyHeaders } from "../../src/shell/api";
+import { SHELL_KEY_HEADER } from "../../src/shared/shell-key";
 import { buildTree, foldersAbove } from "../../src/shell/tree";
 import {
   foldersOf,
@@ -159,4 +160,19 @@ test("only Markdown note and PDF paths (.md, .markdown, .pdf) open in tabs", asy
   assert.equal(isNotePath("/vault/paper.pdf"), true);
   assert.equal(isNotePath("/vault/image.png"), false);
   assert.equal(isNotePath("/vault/data.csv"), false);
+});
+
+test("the window sends the key its page was given when it adds a folder, and none without one", () => {
+  const page = (content: string | undefined) => ({
+    querySelector: (selector: string) =>
+      selector === 'meta[name="lumiere-shell-key"]' && content !== undefined
+        ? { content }
+        : null,
+  });
+  assert.deepEqual(shellKeyHeaders(page("k3y") as unknown as Document), {
+    [SHELL_KEY_HEADER]: "k3y",
+  });
+  // A page the server did not give the key (a frame's) has an empty tag, or none.
+  assert.deepEqual(shellKeyHeaders(page("") as unknown as Document), {});
+  assert.deepEqual(shellKeyHeaders(page(undefined) as unknown as Document), {});
 });

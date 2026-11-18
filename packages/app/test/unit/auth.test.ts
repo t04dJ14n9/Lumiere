@@ -1,7 +1,14 @@
 import test from "node:test";
 import assert from "node:assert/strict";
 import type { IncomingMessage } from "node:http";
-import { admit, newToken, TOKEN_COOKIE } from "../../src/server/auth";
+import {
+  admit,
+  fromShell,
+  mayReceiveShellKey,
+  newToken,
+  TOKEN_COOKIE,
+} from "../../src/server/auth";
+import { SHELL_KEY_HEADER } from "../../src/shared/shell-key";
 
 const token = "secret-token";
 const server = { token, port: 5000 };
@@ -93,4 +100,50 @@ test("tokens are long and different each launch", () => {
   const a = newToken();
   assert.ok(a.length >= 40);
   assert.notEqual(a, newToken());
+});
+
+test("a request to add a folder is the window's when it has the key, or is no page", () => {
+  const key = "shell-key";
+  const page = {
+    origin: "http://127.0.0.1:5000",
+    "sec-fetch-site": "same-origin",
+  };
+  assert.equal(
+    fromShell(request("/", { ...page, [SHELL_KEY_HEADER]: key }), key),
+    true,
+  );
+  assert.equal(fromShell(request("/", page), key), false, "no key");
+  assert.equal(
+    fromShell(request("/", { ...page, [SHELL_KEY_HEADER]: "other" }), key),
+    false,
+  );
+  assert.equal(
+    fromShell(request("/", { ...page, [SHELL_KEY_HEADER]: `${key}x` }), key),
+    false,
+  );
+  // Either header alone says a browser made the request.
+  assert.equal(fromShell(request("/", { origin: page.origin }), key), false);
+  assert.equal(
+    fromShell(request("/", { "sec-fetch-site": "same-origin" }), key),
+    false,
+  );
+  // A process with the launch token and no browser: the desktop app's open.
+  assert.equal(fromShell(request("/"), key), true);
+});
+
+test("only a load of the page itself may be given the key", () => {
+  const given = (dest?: string) =>
+    mayReceiveShellKey(request("/", dest ? { "sec-fetch-dest": dest } : {}));
+  assert.equal(given("document"), true);
+  assert.equal(given(), true, "a browser without fetch metadata");
+  for (const dest of [
+    "empty",
+    "iframe",
+    "frame",
+    "script",
+    "embed",
+    "object",
+  ]) {
+    assert.equal(given(dest), false, dest);
+  }
 });

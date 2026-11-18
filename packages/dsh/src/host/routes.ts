@@ -11,6 +11,7 @@ import {
   type LumiereHost,
 } from "@workshop/host-node";
 import type { DshContext } from "./dsh";
+import { registerSessionWorkspace } from "./workspace";
 
 const REASONS = new Map<number, string>([
   [401, "Unauthorized"],
@@ -106,6 +107,31 @@ function sendInternalError(
   return true;
 }
 
+/**
+ * A note's or PDF's page names the DSH session whose address opened it. That
+ * session's workspace is the folder the page may open from, and DSH, not the
+ * page, says which folder that is: it is registered before host-node sees
+ * the request, which refuses any folder nobody registered.
+ */
+async function registerPageWorkspace(
+  ctx: DshContext,
+  host: LumiereHost,
+  req: IncomingMessage,
+  rest: string,
+): Promise<void> {
+  if (rest !== "/editor" && rest !== "/pdf") {
+    return;
+  }
+  const session = new URL(req.url ?? "/", "http://host").searchParams.get(
+    "session",
+  );
+  if (session) {
+    await registerSessionWorkspace(ctx, host, session).catch((error: unknown) =>
+      ctx.logger?.("lumiere").warn("Lumière could not read a session", error),
+    );
+  }
+}
+
 export function registerRoutes(
   ctx: DshContext,
   host: LumiereHost,
@@ -134,6 +160,7 @@ export function registerRoutes(
           req.method === "HEAD" &&
           isJsonRoute(rest) &&
           rest !== "/views/events";
+        await registerPageWorkspace(ctx, host, req, rest);
         const handled = await routes
           .handle(jsonHead ? headAsGet(req) : req, res)
           .catch((error: unknown) => sendInternalError(ctx, res, error));
