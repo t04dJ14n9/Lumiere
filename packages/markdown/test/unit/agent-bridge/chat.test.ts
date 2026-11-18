@@ -9,7 +9,7 @@ import {
 test("the agent payload links the line range and quotes the exact passage", () => {
   assert.equal(
     agentPayload("@Links.md#11-12", "First line\r\n\r\nsecond line\n"),
-    "@Links.md#11-12\n\n> First line\n>\n> second line",
+    "@Links.md#11-12\n\n> First line\n>\n> second line\n",
   );
 });
 
