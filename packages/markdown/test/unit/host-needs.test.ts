@@ -26,6 +26,8 @@ test("outside VS Code and Cursor, their settings are not offered", () => {
     "lumiere.markdown.editor.reclaimTextEditor",
     "lumiere.markdown.editor.reclaimInPlaceTextEditor",
     "lumiere.markdown.editor.warmTextDocument",
+    "lumiere.markdown.links.focusNewTab",
+    "lumiere.markdown.attachments.deleteUnlinkedAttachments",
     "lumiere.markdown.copyLinkForAgent.target",
     "lumiere.markdown.plugins.external",
     "lumiere.markdown.plugins.gitGutter.enabled",

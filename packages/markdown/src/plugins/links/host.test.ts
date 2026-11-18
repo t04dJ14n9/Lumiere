@@ -118,6 +118,7 @@ test("links host owns handlers, fixes source identity, confirms schemes and rout
     "side",
     undefined,
     undefined,
+    { preserveFocus: false },
   ]);
   assert.equal((opens.at(-2) as { source: string }).source, panel.document.uri);
   // open({ tab }) still supports a kept tab; Mod-click now follows here (BH-020).

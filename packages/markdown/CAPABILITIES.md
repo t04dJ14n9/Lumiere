@@ -6,12 +6,19 @@ details. "Default" is the `obsidian` preset; the `minimal` preset loads only
 the core plugins. No row here is an Obsidian parity claim until the owner
 records it in `docs/PARITY.md`.
 
+Three defaults deliberately differ from Obsidian 1.15.0's, which has readable
+line length **on**, the inline title **on** and line numbers **off**. Here
+readable line length is **off**, the inline title is **off** and line numbers
+are **on** (owner decision, DESIGN §15.3), so a fresh profile shows text
+filling the pane, no title above the note and a line-number gutter. They are
+product choices for VS Code, not parity claims.
+
 ## Core (always on)
 
 | Plugin | What it does | Differences and limits |
 | --- | --- | --- |
 | document | One text shared by every panel and VS Code's text editor; VS Code owns save, EOL and undo | Typing groups for undo like Obsidian; history is VS Code's |
-| editor | Per-pane precise-jump Back/Forward (100 locations, in memory), geometric restoration, and the CodeMirror editor in a webview, view state per panel, settings for mode, readable line length (700 px, off by default), strict line breaks, right-to-left, tabs; note text follows VS Code's `editor.font*`, `letterSpacing` and `lineHeight` for Markdown files | Panels of one note keep separate selections, scroll and folds. At the default `editor.lineHeight` (0) lines are as tall as in the built-in text editor (19px at 14px on Linux and Windows), not Obsidian's 1.5; headings keep Obsidian's sizes |
+| editor | Per-pane precise-jump Back/Forward (100 locations, in memory), geometric restoration, and the CodeMirror editor in a webview, view state per panel, settings for mode, readable line length (700 px; off by default, Obsidian 1.15.0's is on), strict line breaks, right-to-left, tabs; note text follows VS Code's `editor.font*`, `letterSpacing` and `lineHeight` for Markdown files | Panels of one note keep separate selections, scroll and folds. At the default `editor.lineHeight` (0) lines are as tall as in the built-in text editor (19px at 14px on Linux and Windows), not Obsidian's 1.5; headings keep Obsidian's sizes |
 | dialect | Obsidian-flavoured Markdown: wikilinks, embeds, tags, highlights, comments, callouts, footnotes, math, block IDs | Grammar is fixed; plugins cannot change parsing |
 | render | Sanitized HTML for rendered blocks | Scripts, forms, objects, embeds and `srcdoc` are removed; application links (`obsidian:`, `zotero:`) are kept and confirmed before opening |
 | livePreview | Syntax hidden except where the selection is; rendered blocks crossed as one unit | No Reading view (DESIGN §25.8); comments stay visible, faint, as in Obsidian |
@@ -25,7 +32,7 @@ records it in `docs/PARITY.md`.
 | Plugin | What it does | Differences and limits |
 | --- | --- | --- |
 | properties | The properties sheet: every type, chips, type menu, sort, drag, structured copy and paste | Type choices are stored per vault by this extension |
-| inlineTitle | Off by default. The file name above the note; edit it to rename | Off so line 1 starts at the top, as in VS Code (Obsidian shows it by default). Only saved local files can be renamed |
+| inlineTitle | Off by default. The file name above the note; edit it to rename | Off so line 1 starts at the top, as in VS Code; a deliberate difference from Obsidian 1.15.0, which shows it by default. Only saved local files can be renamed |
 | links | Click to follow, Mod-click in source, open to side, create missing notes, unresolved links dimmed | Wikilinks and Markdown links dimmed when unresolved, in Live Preview, source mode and inside embeds |
 | embeds | Notes, sections, blocks, images (with an inspector), audio, video, PDFs | A PDF embed draws one page inline (`#page=`, `#height=`) with page buttons and an Open button for Lumiere PDF, not Obsidian's full PDF viewer; remote media needs a trusted workspace |
 | onlineVideos | YouTube (watch, youtu.be, Shorts) and Bilibili (BV, av, `?p=`) links written as images show as cards with a button that opens the browser; in trusted workspaces the title, author, length and cover (Bilibili via its public API, YouTube via oEmbed, looked up by the extension host) | Not in Obsidian. No player by default: YouTube refuses to play in VS Code webviews (error 153) and Bilibili's player does not buffer there (`onlineVideos.bilibiliPlayer` brings back **Play here**); nothing is fetched in an untrusted workspace |
@@ -47,7 +54,7 @@ records it in `docs/PARITY.md`.
 | wordCount | Words and characters in the status bar | Counting rules are this extension's reading of Obsidian's |
 | linkUpdates | Updates links when notes or folders are renamed in VS Code | Asks first by default (`prompt`, matching Obsidian's `alwaysUpdateLinks: false`), with a persistent **Always Update**; `always` rewrites without asking, `never` leaves links untouched; **Rename Heading…** updates links to a heading |
 | folding | Heading and list folding, restored on reload | — |
-| lineNumbers | Line numbers laid out like VS Code's gutter, following `editor.lineNumbers`; rendered blocks list all their source lines' numbers | On by default |
+| lineNumbers | Line numbers laid out like VS Code's gutter, following `editor.lineNumbers`; rendered blocks list all their source lines' numbers | On by default, a deliberate difference from Obsidian 1.15.0, where they are off |
 | gitGutter | Git change bars (added, modified, deleted) beside the line numbers against HEAD or the index, through VS Code's git extension; click a bar for a rendered peek with Revert and Stage File; Alt+F5 / Shift+Alt+F5 move between changes | On by default |
 | gitBlame | Quiet dim EOL authorship on the caret line in Live Preview (no wrap; hover shows full commit message), against the exact editor snapshot; You for matching Git identity | Off by default; works without change bars; uncommitted/unavailable lines hide |
 | gitInline | Inline track changes over the git change bars' hunks: removed words struck through, added words tinted, a rendered ghost of changed tables, code and frontmatter, removed blocks with Restore; needs gitGutter | Off by default; Toggle Inline Git Changes |

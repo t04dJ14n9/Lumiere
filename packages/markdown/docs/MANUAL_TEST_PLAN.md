@@ -372,7 +372,11 @@ title, then set `lumiere.markdown.plugins.inlineTitle.enabled` to true.
 6. `lumiere.markdown.links.folderNote` sets the note a folder link opens.
    `lumiere.markdown.links.newLinkFormat` and
    `lumiere.markdown.links.useWikilinks` shape links inserted by
-   suggestions and link updates.
+   suggestions and link updates. With
+   `lumiere.markdown.links.focusNewTab` off, **Open Link in New Tab** and
+   **Open Link to Side** show the note but leave the caret in the source note
+   (VS Code's preserveFocus); with it on (the default) the new tab takes the
+   focus.
 
 ### embeds
 
@@ -1381,8 +1385,10 @@ Use the disposable fixture vault from Setup. These rows enumerate every generate
 | `lumiere.markdown.links.newLinkFormat` | `"shortest"` | shortest / relative / absolute; change at workspace-folder scope, verify the owning plugin scenario, then reset the override. |
 | `lumiere.markdown.links.useWikilinks` | `true` | boolean; change at workspace-folder scope, verify the owning plugin scenario, then reset the override. |
 | `lumiere.markdown.links.folderNote` | `""` | string; change at workspace-folder scope, verify the owning plugin scenario, then reset the override. |
+| `lumiere.markdown.links.focusNewTab` | `true` | boolean; change at workspace-folder scope, run Open Link in New Tab and Open Link to Side on a link, and confirm the caret stays in the source note when off and moves to the new tab when on; then reset the override. |
 | `lumiere.markdown.files.newNoteFolder` | `""` | string; change at workspace-folder scope, verify the owning plugin scenario, then reset the override. |
 | `lumiere.markdown.files.attachmentFolder` | `""` | string; change at workspace-folder scope, verify the owning plugin scenario, then reset the override. |
+| `lumiere.markdown.attachments.deleteUnlinkedAttachments` | `"ask"` | ask / always / never; in a disposable vault where `A.md` alone embeds `only-a.png` and `A.md` and `B.md` both embed `shared.png`, delete `A.md` in the Explorer: `ask` offers only `only-a.png` after the note is gone (Delete, Always Delete, Never Delete; Cancel keeps it), `always` moves it to the trash without asking, `never` offers nothing; `shared.png` is never offered while `B.md` stays; then reset the override. |
 | `lumiere.markdown.marp.open` | `"workbench"` | workbench / textEditor; change at workspace-folder scope, verify the owning plugin scenario, then reset the override. |
 | `lumiere.markdown.math.macros` | `{}` | object; change at workspace-folder scope, verify the owning plugin scenario, then reset the override. |
 | `lumiere.markdown.obsidianCompat.configFolder` | `".obsidian"` | string; change at workspace-folder scope, verify the owning plugin scenario, then reset the override. |
@@ -1403,6 +1409,7 @@ Use the disposable fixture vault from Setup. These rows enumerate every generate
 | `lumiere.markdown.tags.viewNested` | `true` | boolean; change at workspace-folder scope, verify the owning plugin scenario, then reset the override. |
 | `lumiere.markdown.vault.rootMarkers` | `[".obsidian"]` | array; change at workspace-folder scope, verify the owning plugin scenario, then reset the override. |
 | `lumiere.markdown.vault.excludedFiles` | `[]` | array; change at workspace-folder scope, verify the owning plugin scenario, then reset the override. |
+| `lumiere.markdown.vault.showUnsupportedFiles` | `false` | boolean; in a vault with a `.csv` or `.zip` file, confirm the Quick Switcher finds it only when on; then reset the override. |
 | `lumiere.markdown.vim.caretStyle` | `"obsidian"` | obsidian / vscodevim / codemirror; change at workspace-folder scope, verify the owning plugin scenario, then reset the override. |
 | `lumiere.markdown.copyLinkForAgent.target` | `"auto"` | auto / cursor / chat / claudeCode / codex / clipboard; change at workspace-folder scope, verify the owning plugin scenario, then reset the override. |
 | `lumiere.markdown.debug.logging` | `false` | boolean; change at workspace-folder scope, verify the owning plugin scenario, then reset the override. |

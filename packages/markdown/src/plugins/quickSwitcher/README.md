@@ -26,10 +26,16 @@ a name no note has, creates it in the new-note folder.
 
 - Injects the host services `hostCommands`, `dialogs`, `activeEditor`, `settings` and `navigation`, plus `vaults`.
 - Settings: `lumiere.markdown.plugins.quickSwitcher.enabled`,
-  `lumiere.markdown.files.newNoteFolder`.
+  `lumiere.markdown.files.newNoteFolder`,
+  `lumiere.markdown.vault.showUnsupportedFiles` (off: notes and the attachments
+  Obsidian opens; on: every file of the vault, such as `.csv` or `.zip`).
 
 ## Limits and differences from Obsidian
 
+- `vault.showUnsupportedFiles` is Obsidian's Show all file types, which also
+  governs its File Explorer and link suggestions. Here it governs only this
+  list: VS Code's Explorer is not Lumiere's to filter (`files.exclude` does it),
+  and link suggestions already list every file, since VS Code opens most of them.
 - The command has no key binding: Cmd/Ctrl+O is VS Code's **Open File**. Bind
   one in Keyboard Shortcuts if you want Obsidian's.
 - An empty query lists recently opened notes (workspace storage), then falls

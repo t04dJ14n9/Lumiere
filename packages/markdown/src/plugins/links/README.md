@@ -78,7 +78,7 @@ the host services `dialogs`, `settings` and `navigation`, `vault` and `resources
 caret following; host provides no service. Queries `link/click`
 and `links/open` with bail semantics. Settings: plugin enabled (true),
 `links.newLinkFormat` (shortest), `links.useWikilinks` (true), `links.folderNote`
-(empty), and native `files.newNoteFolder` for creation. The editor binds Mod+Enter to follow the caret link.
+(empty), `links.focusNewTab` (true), and native `files.newNoteFolder` for creation. The editor binds Mod+Enter to follow the caret link.
 
 ## Limits and differences from Obsidian
 
@@ -97,6 +97,15 @@ File-location fields are validated by this plugin's schema and exposed as
 pipeline consumes the former; the Attachments plugin saves dropped/pasted images using the latter.
 `useWikilinks` controls suggestion acceptance; explicit Insert Wikilink retains
 wiki syntax. New-link format still controls vault link text.
+
+`links.focusNewTab` is Obsidian's Always focus new tabs. Off, a link opened in
+a new tab (Open Link in New Tab) or beside (Open Link to Side) is shown with
+VS Code's `preserveFocus`, and a heading or block it names is scrolled to
+without moving the focus either. The tab is not opened in the background (a
+heading it names needs its page to exist), so it still becomes the visible one
+in its group, unlike Obsidian, where the old tab stays in front; a PDF always takes the focus
+(Lumiere PDF's Open Location command has no such option), and hosts with no tabs
+of their own ignore the setting.
 
 A reused side-open destination must be unambiguous among same-note panes;
 otherwise navigation fails clearly rather than choosing another pane. Ordinary

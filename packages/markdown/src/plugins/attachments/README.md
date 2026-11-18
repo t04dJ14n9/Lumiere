@@ -44,6 +44,24 @@ Portable hosts omit the hook.
 Sketch placement uses the same shared helpers, so sketches and pasted images
 share one folder and link story.
 
+### Delete attachments when deleting files
+
+Obsidian's setting of that name, `attachments.deleteUnlinkedAttachments`
+(`ask`, `always` or `never`; default `ask`). When notes are deleted in VS Code
+(the Explorer, or a workspace edit), the plugin finds the attachments only
+those notes linked (`unlinked.ts`): files they link or embed that are not
+notes, canvases or bases (Obsidian's rule), that no other note links to, and
+that are not being deleted with them. `never` stops there, before the index is
+read. The files are found while the notes still exist, through the host
+service `hostDocuments.onWillDelete`, whose listener returns what to do once
+they are gone (`delete-unlinked.ts`). `always` then moves each attachment to
+the trash, through `workspace.files.remove` with `trash`, which honours VS
+Code's `files.enableTrash`. `ask` first asks "Delete N attachments that no
+other note uses?" listing their paths: Delete, Always Delete and Never Delete
+(the last two also write the setting, as link updates' Always Update does);
+Cancel keeps them and asks again next time. A file that cannot be deleted is
+reported and the rest still go.
+
 ### Download Attachments for Current File
 
 Obsidian's command of the same name. It finds the note's Markdown images
@@ -68,6 +86,8 @@ dialog says the note was not changed.
   reclaim when the adapter offers it (no `vscode` import).
 - `target.ts`: a note's attachment folder and link settings.
 - `download-command.ts`: Download Attachments for Current File.
+- `unlinked.ts`: the attachments only some notes link to (pure, on the index).
+- `delete-unlinked.ts`: the offer to delete them when those notes are deleted.
 - `webview.ts`: DnD, clipboard image paste, HTML image rewrite.
 
 ## Services, commands and settings
@@ -75,6 +95,7 @@ dialog says the note was not changed.
 Injects `editors`, `vaults`, `workspace`, `settings`, `dialogs`,
 `hostDocuments` and `hostCommands`; optionally `customEditors`. Command:
 `lumiere.markdown.downloadAttachments`, in a Lumiere note.
+Setting: `attachments.deleteUnlinkedAttachments` (ask).
 
 Folder: `files.attachmentFolder` (Links). Links: `links.useWikilinks` and
 `links.newLinkFormat`. No filename-template setting in v1.
@@ -85,6 +106,17 @@ A failed save leaves that item unchanged and shows a short error; no broken
 vault link is inserted. Other items in a multi-drop may still succeed. An
 attachment folder that is a symbolic link, or sits behind one, is not written
 to: a link could lead out of the vault, so that save fails the same way.
+
+Delete attachments when deleting files differs from Obsidian's: only VS Code's
+own deletions are seen (a note removed by another program, a Git checkout or
+`workspace.fs` is not), a deleted folder offers nothing (Obsidian offers only
+for a single file as well), a vault Lumiere has not indexed yet, or has not
+finished parsing, offers nothing (an unparsed note could hide a link that still
+uses an attachment), the question is one choice for all the attachments rather
+than Obsidian's list with a checkbox each, and the trash is VS Code's
+(`files.enableTrash`), not Obsidian's trash options. Links from canvases and
+bases are not indexed, so an attachment only a canvas uses may be offered.
+Hosts outside VS Code never report deletions, so the setting is hidden there.
 
 Single-click preview media while a Lumiere note is focused is left alone
 (preview tabs are not offered). Any other pinned open of media in the note's

@@ -26,7 +26,12 @@ export interface WorkspaceFiles {
   mkdir(uri: string): Promise<void>;
   copy(from: string, to: string): Promise<void>;
   move(from: string, to: string): Promise<void>;
-  remove(uri: string): Promise<void>;
+  /**
+   * Delete a file. With `trash`, move it to the system trash where the host's
+   * `files.enableTrash` allows, so a mistake can be undone; a host without a
+   * trash deletes it for good.
+   */
+  remove(uri: string, options?: { trash?: boolean }): Promise<void>;
   /** True when the URI exists and is a symbolic link. Missing is false. */
   isSymbolicLink(uri: string): Promise<boolean>;
   pickFile(title: string): Promise<string | undefined>;

@@ -24,3 +24,6 @@ or keybindings.
 
 Dictionaries and visible underlines come from the host browser/OS. No dictionary
 or language selector is bundled; availability may differ between VS Code hosts.
+Obsidian's Spellcheck languages has no counterpart: Chromium's spellchecker
+languages belong to the application and an extension cannot set them (DESIGN
+§15.3).
