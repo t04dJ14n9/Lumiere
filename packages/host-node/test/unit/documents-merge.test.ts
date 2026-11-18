@@ -78,6 +78,13 @@ async function until(done: () => boolean): Promise<void> {
   await settle();
 }
 
+/**
+ * An autosave delay longer than the steps before a test checks that the note
+ * is still unsaved: with 10 ms, a slow machine (CI) saved first and the check
+ * failed. `until` then waits for the save, however long the machine takes.
+ */
+const AUTOSAVE_MS = 500;
+
 async function openNote(initial: string, delay = 60_000) {
   const file = memoryNote(initial);
   const documents = new NoteDocuments(file.files, delay);
@@ -116,7 +123,10 @@ test("an outside rewrite that equals the unsaved text leaves it and ends the uns
 });
 
 test("an outside rewrite elsewhere merges into unsaved typing, and the merge is saved", async (t) => {
-  const { file, documents, note, changes } = await openNote("a\nb\nc", 10);
+  const { file, documents, note, changes } = await openNote(
+    "a\nb\nc",
+    AUTOSAVE_MS,
+  );
   t.after(() => documents.dispose());
   await type(documents, note, "A\nb\nc");
   await file.writeOutside("a\nb\nC");
@@ -128,7 +138,7 @@ test("an outside rewrite elsewhere merges into unsaved typing, and the merge is 
 });
 
 test("an outside rewrite of the line being typed in keeps the typed line, and the outside version beside it", async (t) => {
-  const { file, documents, note } = await openNote("a\nb\nc", 10);
+  const { file, documents, note } = await openNote("a\nb\nc", AUTOSAVE_MS);
   t.after(() => documents.dispose());
   const conflicts: string[] = [];
   documents.onConflict((_uri, copy) => conflicts.push(copy));
