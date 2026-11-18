@@ -13,7 +13,7 @@ import { uniqueName, uniqueTimestampName } from "./naming";
 export interface SaveAttachmentInput {
   readonly files: Pick<
     WorkspaceFiles,
-    "list" | "mkdir" | "writeText" | "writeBytes" | "isSymbolicLink"
+    "list" | "mkdir" | "createText" | "createBytes" | "isSymbolicLink"
   >;
   /** The vault's root URI. */
   readonly root: string;
@@ -45,6 +45,9 @@ export interface SavedAttachment {
   readonly isNameUnique: boolean;
 }
 
+/** Names tried before giving up when other writers keep taking them. */
+const CREATE_ATTEMPTS = 100;
+
 /**
  * Write one attachment; undefined when the folder or write fails containment,
  * or when a symbolic link is on the way: it could lead out of the vault.
@@ -57,24 +60,15 @@ export async function saveAttachment(
   if (!folderUri || (folder && (await followsLink(input, folder)))) {
     return undefined;
   }
+  if (!input.bytes && typeof input.text !== "string") {
+    return undefined;
+  }
   const existing = await input.files.list(folderUri);
   if (!existing) {
     await input.files.mkdir(folderUri);
   }
-  const name =
-    input.stem === undefined
-      ? uniqueTimestampName(input.ext, existing ?? [], input.now)
-      : uniqueName(input.stem, input.ext.replace(/^\./u, ""), existing ?? []);
-  const path = folder ? `${folder}/${name}` : name;
-  const uri = joinContained(input.root, path);
-  if (!uri || (await followsLink(input, path))) {
-    return undefined;
-  }
-  if (input.bytes) {
-    await input.files.writeBytes(uri, input.bytes);
-  } else if (typeof input.text === "string") {
-    await input.files.writeText(uri, input.text);
-  } else {
+  const path = await createUnique(input, folder, existing ?? []);
+  if (!path) {
     return undefined;
   }
   const key = lookupKey(path);
@@ -93,6 +87,49 @@ export async function saveAttachment(
       isNameUnique,
     }),
   };
+}
+
+/**
+ * Create the attachment under the first free name. The listing is only a
+ * guess: a file made since, or one an unreadable listing left out, is
+ * still there, so the write is create-only and a taken name moves on to
+ * the next one instead of replacing that file.
+ */
+async function createUnique(
+  input: SaveAttachmentInput,
+  folder: string,
+  listed: readonly string[],
+): Promise<string | undefined> {
+  const taken = [...listed];
+  for (let attempt = 0; attempt < CREATE_ATTEMPTS; attempt++) {
+    const name = nextName(input, taken);
+    const path = folder ? `${folder}/${name}` : name;
+    const uri = joinContained(input.root, path);
+    if (!uri || (await followsLink(input, path))) {
+      return undefined;
+    }
+    if (await create(input, uri)) {
+      return path;
+    }
+    taken.push(name);
+  }
+  throw new Error(
+    `Could not find a free name for the attachment in ${folder || "the vault"}.`,
+  );
+}
+
+function nextName(input: SaveAttachmentInput, taken: readonly string[]) {
+  return input.stem === undefined
+    ? uniqueTimestampName(input.ext, taken, input.now)
+    : uniqueName(input.stem, input.ext.replace(/^\./u, ""), taken);
+}
+
+function create(
+  { files, bytes, text }: SaveAttachmentInput,
+  uri: string,
+): Promise<boolean> {
+  // saveAttachment returned before this when there is neither.
+  return bytes ? files.createBytes(uri, bytes) : files.createText(uri, text!);
 }
 
 function followsLink(

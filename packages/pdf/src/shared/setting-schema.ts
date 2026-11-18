@@ -156,7 +156,7 @@ export function numberProblem(
 }
 
 /** Whether `value` is something the schema `property` allows; the reason when it is not. */
-export function schemaProblem(
+function schemaProblem(
   property: SchemaProperty,
   value: unknown,
 ): string | undefined {

@@ -71,7 +71,7 @@ export function paletteFor(theme: ColorTheme, systemIsDark: boolean): Palette {
   return theme === "dark" ? DARK : LIGHT;
 }
 
-export function currentPalette(): Palette {
+function currentPalette(): Palette {
   return paletteFor(preference, system().matches);
 }
 

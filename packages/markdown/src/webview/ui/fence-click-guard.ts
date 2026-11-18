@@ -154,7 +154,7 @@ function clearFenceGuardSelection(view: EditorView): void {
  * Scrollbar / gutter / non-content chrome. Clicks here must not arm the fence
  * restore (and previously must not have been preventDefault'd).
  */
-export function isEditorChromeTarget(
+function isEditorChromeTarget(
   view: {
     dom: HTMLElement;
     scrollDOM: HTMLElement;

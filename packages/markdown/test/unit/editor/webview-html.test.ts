@@ -82,7 +82,7 @@ test("without a snapshot the editor is a module script, as ever", () => {
     html,
     /<main id="app"[^>]*><\/main><script type="module" nonce="[^"]+" src="vscode-resource:\/webview\/editor.js"><\/script>/,
   );
-  assert.equal(html.includes("lumiaEarlyMessages"), false);
+  assert.equal(html.includes("lumiereEarlyMessages"), false);
 });
 
 test("with a snapshot it is in #app and the editor loads by import()", () => {
@@ -97,13 +97,13 @@ test("with a snapshot it is in #app and the editor loads by import()", () => {
   const nonce = /<script nonce="([^"]+)">/.exec(html)![1];
   assert.ok(html.includes(`'nonce-${nonce}'`), "the CSP allows that script");
   assert.match(html, /import\("vscode-resource:\/webview\/editor.js"\)/);
-  assert.match(html, /window\.lumiaEarlyMessages=early/);
+  assert.match(html, /window\.lumiereEarlyMessages=early/);
   // A failed load stops keeping messages nobody will read.
   assert.match(html, /\.catch\(\(error\)=>\{[^}]*early\.stop\(\)/);
   // A restored view opens elsewhere than the top: no snapshot over it.
   assert.match(
     html,
-    /window\.lumiaVsCodeApi=api;if\(api\.getState\(\)!==undefined\)\{document\.querySelector\("\.mw-snapshot"\)\?\.remove\(\)\}/,
+    /window\.lumiereVsCodeApi=api;if\(api\.getState\(\)!==undefined\)\{document\.querySelector\("\.mw-snapshot"\)\?\.remove\(\)\}/,
   );
 });
 

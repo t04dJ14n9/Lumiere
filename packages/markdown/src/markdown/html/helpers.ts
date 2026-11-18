@@ -68,3 +68,28 @@ export const attr = (
   name: string,
   value: string | number | undefined,
 ): string => (value === undefined ? "" : ` ${name}="${escape(String(value))}"`);
+
+/** With the `u` flag a valid pair is one code point: only lone halves match. */
+const LONE_SURROGATE = /[\uD800-\uDFFF]/gu;
+
+/**
+ * Source text for a `data-*` attribute. encodeURIComponent throws on a lone
+ * surrogate, which an editor can hold (half of a pasted emoji); it becomes
+ * U+FFFD here instead of failing the whole note's render.
+ */
+export function encodeDataValue(text: string): string {
+  return encodeURIComponent(text.replace(LONE_SURROGATE, "�"));
+}
+
+/**
+ * The text of an `encodeDataValue` attribute. Raw HTML in a note can carry
+ * the same `data-*` attributes with any value, so a malformed escape is
+ * taken as written rather than thrown: one block must not stop the others.
+ */
+export function decodeDataValue(value: string): string {
+  try {
+    return decodeURIComponent(value);
+  } catch {
+    return value;
+  }
+}

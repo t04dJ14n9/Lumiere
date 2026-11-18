@@ -11,11 +11,6 @@ import {
   showStatusBarButtons,
 } from "../../../shared/toolbar-settings";
 import {
-  ANNOTATION_TOOL_ICONS,
-  ANNOTATION_TOOL_LABELS,
-  DEFAULT_ANNOTATION_TOOL,
-} from "../../../shared/annotation-tools";
-import {
   pageLabel,
   zoomLabel,
   type ViewState,
@@ -42,14 +37,11 @@ type Item = {
   tooltip: string;
   command: string;
   button?: true;
-  /** Only show while Annotate mode is active. */
-  annotateOnly?: true;
 };
 
 /**
  * Status bar entries, in their order from left to right (see
- * `STATUS_BAR_ORDER`): history, find, Annotate (+ tool, color, undo while
- * annotating), View, page colors, "Page 4 / 15", previous/next page, zoom
+ * `STATUS_BAR_ORDER`): history, find, View, page colors, "Page 4 / 15", previous/next page, zoom
  * label and buttons. Optional buttons show only when
  * `toolbar.statusBarButtons` asks for them.
  */
@@ -77,47 +69,6 @@ const ITEMS: Item[] = [
     tooltip: `Find in PDF (${key("Ctrl+F", "⌘F")})`,
     command: VIEW_COMMAND_IDS.find,
     button: true,
-  },
-  {
-    id: "annotate",
-    name: "PDF Annotate",
-    text: "$(edit) Annotate",
-    tooltip: `Annotate PDF (${key("Ctrl+Alt+A", "⌃⌘A")})`,
-    command: VIEW_COMMAND_IDS.toggleAnnotateTool,
-  },
-  {
-    id: "annotationTool",
-    name: "PDF Annotation Tool",
-    text: "",
-    tooltip: "Choose annotation tool",
-    command: VIEW_COMMAND_IDS.pickAnnotationTool,
-    annotateOnly: true,
-  },
-  {
-    id: "annotationColor",
-    name: "PDF Annotation Color",
-    text: "$(symbol-color) Color",
-    tooltip: "Choose annotation color",
-    command: VIEW_COMMAND_IDS.pickAnnotationColor,
-    annotateOnly: true,
-  },
-  {
-    id: "annotationUndo",
-    name: "PDF Undo Annotation",
-    text: "$(discard)",
-    tooltip: "Undo annotation",
-    command: VIEW_COMMAND_IDS.annotationUndo,
-    button: true,
-    annotateOnly: true,
-  },
-  {
-    id: "annotationRedo",
-    name: "PDF Redo Annotation",
-    text: "$(redo)",
-    tooltip: "Redo annotation",
-    command: VIEW_COMMAND_IDS.annotationRedo,
-    button: true,
-    annotateOnly: true,
   },
   {
     id: "view",
@@ -206,24 +157,12 @@ type EntryState = {
   colors: PageColorsSetting;
 };
 
-const ANNOTATE_ENTRY_IDS = new Set<StatusBarEntryId>([
-  "annotate",
-  "annotationTool",
-  "annotationColor",
-  "annotationUndo",
-  "annotationRedo",
-]);
-
 function refreshEntry(
   entry: vscode.StatusBarItem,
   item: Item,
   state: EntryState,
 ): void {
   const { view, panel, colors } = state;
-  if (ANNOTATE_ENTRY_IDS.has(item.id)) {
-    refreshAnnotateEntry(entry, item, view);
-    return;
-  }
   switch (item.id) {
     case "page":
       entry.text = pageLabel(view);
@@ -246,37 +185,6 @@ function refreshEntry(
       return;
     case "historyForward":
       entry.command = panel?.canHistoryForward ? item.command : undefined;
-      return;
-    default:
-      return;
-  }
-}
-
-function refreshAnnotateEntry(
-  entry: vscode.StatusBarItem,
-  item: Item,
-  view: ViewState,
-): void {
-  switch (item.id) {
-    case "annotate": {
-      const on = view.tool === "annotate";
-      entry.text = on ? "$(edit) Annotating" : "$(edit) Annotate";
-      entry.tooltip = on
-        ? "Exit Annotate mode"
-        : `Annotate PDF (${key("Ctrl+Alt+A", "⌃⌘A")})`;
-      return;
-    }
-    case "annotationTool": {
-      const id = view.annotationTool ?? DEFAULT_ANNOTATION_TOOL;
-      entry.text = `$(${ANNOTATION_TOOL_ICONS[id]}) ${ANNOTATION_TOOL_LABELS[id]}`;
-      entry.tooltip = `Annotation tool: ${ANNOTATION_TOOL_LABELS[id]} (click to change)`;
-      return;
-    }
-    case "annotationUndo":
-      entry.command = view.canAnnotationUndo ? item.command : undefined;
-      return;
-    case "annotationRedo":
-      entry.command = view.canAnnotationRedo ? item.command : undefined;
       return;
     default:
       return;
@@ -312,20 +220,11 @@ export class StatusBar implements vscode.Disposable {
       view !== undefined &&
       parseVsCodeToolbarMode(configuration.get("mode")) === "chrome";
     const buttons =
-      shown &&
-      showStatusBarButtons(
-        configuration.get("statusBarButtons"),
-        vscode.env.appName,
-      );
+      shown && showStatusBarButtons(configuration.get("statusBarButtons"));
     const colors = pageColorsSetting();
-    const annotating = view?.tool === "annotate";
     for (const item of ITEMS) {
       const entry = this.items.get(item.id)!;
-      if (
-        !shown ||
-        (item.button && !buttons) ||
-        (item.annotateOnly && !annotating)
-      ) {
+      if (!shown || (item.button && !buttons)) {
         entry.hide();
         continue;
       }

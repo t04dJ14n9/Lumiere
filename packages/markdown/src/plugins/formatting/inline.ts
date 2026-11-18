@@ -24,10 +24,14 @@ export function clearInlineFormatting(source: string): string {
       ) {
         removed.push({ from: node.from, to: node.to });
       } else if (node.name === "ObsidianComment") {
-        removed.push(
-          { from: node.from, to: node.from + 2 },
-          { from: node.to - 2, to: node.to },
-        );
+        removed.push({ from: node.from, to: node.from + 2 });
+        // An unclosed block comment ends at the note's end, not at `%%`.
+        if (
+          node.to - node.from >= 4 &&
+          source.slice(node.to - 2, node.to) === "%%"
+        ) {
+          removed.push({ from: node.to - 2, to: node.to });
+        }
       } else if (
         ["Link", "Image", "Autolink", "LinkReference"].includes(node.name)
       ) {

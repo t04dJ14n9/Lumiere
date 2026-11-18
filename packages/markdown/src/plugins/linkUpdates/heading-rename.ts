@@ -9,6 +9,7 @@ import {
   type LinkSyntax,
 } from "../../shared/vault-path";
 import { linkSource, type LinkSource } from "./link-source";
+import { linkRewriteEdits, type LinkRewrite } from "./yaml-safe-edits";
 
 /** A heading to rename: where it starts, its name and where the name is. */
 export interface HeadingToRename {
@@ -71,7 +72,7 @@ export function headingLinkEdits(
     syntax: LinkSyntax,
   ) => string | undefined,
 ): TextEdit[] {
-  const edits: TextEdit[] = [];
+  const rewrites: LinkRewrite[] = [];
   const note = metadata(text);
   // Links within the note (`[[#Heading]]`) count too: they have no path.
   const links = [...note.links, ...note.embeds, ...note.frontmatterLinks];
@@ -94,13 +95,13 @@ export function headingLinkEdits(
     ) {
       continue;
     }
-    edits.push({
+    rewrites.push({
       from: link.position.start.offset,
       to: link.position.end.offset,
-      insert: withSubpath(link.original, renamed.name),
+      rewrite: (original) => withSubpath(original, renamed.name),
     });
   }
-  return edits;
+  return linkRewriteEdits(text, rewrites);
 }
 
 /** A link's source text with its `#subpath` replaced by `name`. */

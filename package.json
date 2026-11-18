@@ -2,7 +2,7 @@
   "name": "lumiere",
   "displayName": "Lumiere: Obsidian-style Notes and PDF Reader",
   "description": "Obsidian-style Live Preview for Markdown notes and a fast PDF reader, in VS Code and Cursor, with links your AI agent can follow.",
-  "version": "0.1.11",
+  "version": "0.1.15",
   "publisher": "t04dj14n9",
   "license": "MIT",
   "icon": "media/icon.png",
@@ -41,7 +41,6 @@
     "knowledge base",
     "backlinks",
     "vault",
-    "daily notes",
     "callouts",
     "frontmatter",
     "properties",
@@ -190,21 +189,6 @@
       {
         "command": "lumiere.markdown.cursorBridge.dismissEditMirror",
         "title": "Return to Lumiere",
-        "category": "Lumiere"
-      },
-      {
-        "command": "lumiere.markdown.dailyNotes.openToday",
-        "title": "Open Today's Daily Note",
-        "category": "Lumiere"
-      },
-      {
-        "command": "lumiere.markdown.dailyNotes.openPrevious",
-        "title": "Open Previous Daily Note",
-        "category": "Lumiere"
-      },
-      {
-        "command": "lumiere.markdown.dailyNotes.openNext",
-        "title": "Open Next Daily Note",
         "category": "Lumiere"
       },
       {
@@ -479,8 +463,8 @@
         "category": "Lumiere"
       },
       {
-        "command": "lumiere.markdown.graph.chooseBundle",
-        "title": "Choose Vault Graph Scope",
+        "command": "lumiere.markdown.graph.chooseVault",
+        "title": "Choose Vault for Graph",
         "category": "Lumiere"
       },
       {
@@ -546,13 +530,8 @@
         "category": "Lumiere"
       },
       {
-        "command": "lumiere.markdown.marp.moveOutside",
-        "title": "Move Marp Deck Outside Bundle",
-        "category": "Lumiere"
-      },
-      {
         "command": "lumiere.markdown.marp.keepInWorkshop",
-        "title": "Keep Marp Deck in Workshop",
+        "title": "Keep Marp Deck in Lumiere",
         "category": "Lumiere"
       },
       {
@@ -666,11 +645,6 @@
       {
         "command": "lumiere.markdown.scratch.new",
         "title": "New Scratch Note",
-        "category": "Lumiere"
-      },
-      {
-        "command": "lumiere.markdown.scratch.promote",
-        "title": "Promote Scratch Note",
         "category": "Lumiere"
       },
       {
@@ -874,26 +848,6 @@
         "category": "Lumiere"
       },
       {
-        "command": "lumiere.markdown.wiki.copyForAgent",
-        "title": "Copy Wiki Reference for Agent",
-        "category": "Lumiere"
-      },
-      {
-        "command": "lumiere.markdown.wiki.copyEnvelope",
-        "title": "Copy Wiki Bridge Envelope",
-        "category": "Lumiere"
-      },
-      {
-        "command": "lumiere.markdown.wiki.showLayout",
-        "title": "Show Wiki Layout",
-        "category": "Lumiere"
-      },
-      {
-        "command": "lumiere.markdown.wiki.refresh",
-        "title": "Refresh Wiki Diagnostics",
-        "category": "Lumiere"
-      },
-      {
         "command": "lumiere.pdf.lookUp",
         "title": "Look Up",
         "category": "PDF"
@@ -1080,31 +1034,76 @@
         "icon": "$(inspect)"
       },
       {
-        "command": "lumiere.pdf.selectAnnotateTool",
-        "title": "Annotate",
+        "command": "lumiere.pdf.highlightSelection",
+        "title": "Highlight",
         "category": "PDF",
-        "icon": "$(edit)"
+        "enablement": "lumiere.pdf.pdfActive && lumiere.pdf.hasTextSelection"
       },
       {
-        "command": "lumiere.pdf.toggleAnnotateTool",
-        "title": "Toggle Annotate",
+        "command": "lumiere.pdf.addAnnotation",
+        "title": "Add Annotation…",
         "category": "PDF",
-        "icon": "$(edit)",
-        "enablement": "lumiere.pdf.pdfActive"
+        "enablement": "lumiere.pdf.pdfActive && lumiere.pdf.hasTextSelection"
       },
       {
-        "command": "lumiere.pdf.pickAnnotationTool",
-        "title": "Annotation Tool…",
+        "command": "lumiere.pdf.underlineSelection",
+        "title": "Underline",
         "category": "PDF",
-        "icon": "$(paintcan)",
-        "enablement": "lumiere.pdf.pdfActive"
+        "enablement": "lumiere.pdf.pdfActive && lumiere.pdf.hasTextSelection"
       },
       {
-        "command": "lumiere.pdf.pickAnnotationColor",
-        "title": "Annotation Color…",
+        "command": "lumiere.pdf.strikeoutSelection",
+        "title": "Strikeout",
         "category": "PDF",
-        "icon": "$(symbol-color)",
-        "enablement": "lumiere.pdf.pdfActive"
+        "enablement": "lumiere.pdf.pdfActive && lumiere.pdf.hasTextSelection"
+      },
+      {
+        "command": "lumiere.pdf.squigglySelection",
+        "title": "Squiggly",
+        "category": "PDF",
+        "enablement": "lumiere.pdf.pdfActive && lumiere.pdf.hasTextSelection"
+      },
+      {
+        "command": "lumiere.pdf.editAnnotationNote",
+        "title": "Edit Note…",
+        "category": "PDF",
+        "enablement": "lumiere.pdf.pdfActive && lumiere.pdf.hasAnnotationSelection"
+      },
+      {
+        "command": "lumiere.pdf.annotationColor.yellow",
+        "title": "Yellow",
+        "category": "PDF",
+        "enablement": "lumiere.pdf.pdfActive && lumiere.pdf.hasAnnotationSelection"
+      },
+      {
+        "command": "lumiere.pdf.annotationColor.red",
+        "title": "Red",
+        "category": "PDF",
+        "enablement": "lumiere.pdf.pdfActive && lumiere.pdf.hasAnnotationSelection"
+      },
+      {
+        "command": "lumiere.pdf.annotationColor.blue",
+        "title": "Blue",
+        "category": "PDF",
+        "enablement": "lumiere.pdf.pdfActive && lumiere.pdf.hasAnnotationSelection"
+      },
+      {
+        "command": "lumiere.pdf.annotationColor.green",
+        "title": "Green",
+        "category": "PDF",
+        "enablement": "lumiere.pdf.pdfActive && lumiere.pdf.hasAnnotationSelection"
+      },
+      {
+        "command": "lumiere.pdf.annotationColor.purple",
+        "title": "Purple",
+        "category": "PDF",
+        "enablement": "lumiere.pdf.pdfActive && lumiere.pdf.hasAnnotationSelection"
+      },
+      {
+        "command": "lumiere.pdf.annotationColor.black",
+        "title": "Black",
+        "category": "PDF",
+        "enablement": "lumiere.pdf.pdfActive && lumiere.pdf.hasAnnotationSelection"
       },
       {
         "command": "lumiere.pdf.annotationUndo",
@@ -1142,7 +1141,7 @@
         "command": "lumiere.pdf.deleteAnnotation",
         "title": "Delete Annotation",
         "category": "PDF",
-        "enablement": "lumiere.pdf.pdfActive && lumiere.pdf.tool == 'annotate' && lumiere.pdf.hasAnnotationSelection"
+        "enablement": "lumiere.pdf.pdfActive && lumiere.pdf.hasAnnotationSelection"
       },
       {
         "command": "lumiere.pdf.selectToolbarMode",
@@ -1264,6 +1263,14 @@
       {
         "id": "lumiere.markdown.menu.insert",
         "label": "Insert"
+      },
+      {
+        "id": "lumiere.pdf.markText",
+        "label": "Mark Text"
+      },
+      {
+        "id": "lumiere.pdf.annotationColor",
+        "label": "Change Color"
       }
     ],
     "keybindings": [
@@ -1562,10 +1569,22 @@
         "when": "activeCustomEditorId == 'lumiere.pdf.viewer' && !inputFocus && !sideBarFocus && !panelFocus && !auxiliaryBarFocus && config.lumiere.pdf.keyboardShortcuts && config.lumiere.pdf.regions.enabled"
       },
       {
-        "command": "lumiere.pdf.toggleAnnotateTool",
-        "key": "ctrl+alt+a",
-        "mac": "ctrl+cmd+a",
-        "when": "activeCustomEditorId == 'lumiere.pdf.viewer' && !inputFocus && !sideBarFocus && !panelFocus && !auxiliaryBarFocus && config.lumiere.pdf.keyboardShortcuts"
+        "command": "lumiere.pdf.highlightSelection",
+        "key": "ctrl+alt+h",
+        "mac": "ctrl+cmd+h",
+        "when": "activeCustomEditorId == 'lumiere.pdf.viewer' && lumiere.pdf.hasTextSelection && !inputFocus && !sideBarFocus && !panelFocus && !auxiliaryBarFocus && config.lumiere.pdf.keyboardShortcuts"
+      },
+      {
+        "command": "lumiere.pdf.underlineSelection",
+        "key": "ctrl+alt+u",
+        "mac": "ctrl+cmd+u",
+        "when": "activeCustomEditorId == 'lumiere.pdf.viewer' && lumiere.pdf.hasTextSelection && !inputFocus && !sideBarFocus && !panelFocus && !auxiliaryBarFocus && config.lumiere.pdf.keyboardShortcuts"
+      },
+      {
+        "command": "lumiere.pdf.strikeoutSelection",
+        "key": "ctrl+alt+s",
+        "mac": "ctrl+cmd+s",
+        "when": "activeCustomEditorId == 'lumiere.pdf.viewer' && lumiere.pdf.hasTextSelection && !inputFocus && !sideBarFocus && !panelFocus && !auxiliaryBarFocus && config.lumiere.pdf.keyboardShortcuts"
       }
     ],
     "views": {
@@ -1689,18 +1708,6 @@
         {
           "command": "lumiere.markdown.cursorBridge.dismissEditMirror",
           "when": "false"
-        },
-        {
-          "command": "lumiere.markdown.dailyNotes.openToday",
-          "when": "config.lumiere.markdown.preset != 'minimal' && config.lumiere.markdown.plugins.dailyNotes.enabled"
-        },
-        {
-          "command": "lumiere.markdown.dailyNotes.openPrevious",
-          "when": "config.lumiere.markdown.preset != 'minimal' && config.lumiere.markdown.plugins.dailyNotes.enabled"
-        },
-        {
-          "command": "lumiere.markdown.dailyNotes.openNext",
-          "when": "config.lumiere.markdown.preset != 'minimal' && config.lumiere.markdown.plugins.dailyNotes.enabled"
         },
         {
           "command": "lumiere.markdown.jumpBack",
@@ -1906,7 +1913,7 @@
           "when": "config.lumiere.markdown.preset != 'minimal' && config.lumiere.markdown.plugins.graph.enabled"
         },
         {
-          "command": "lumiere.markdown.graph.chooseBundle",
+          "command": "lumiere.markdown.graph.chooseVault",
           "when": "config.lumiere.markdown.preset != 'minimal' && config.lumiere.markdown.plugins.graph.enabled"
         },
         {
@@ -1955,10 +1962,6 @@
         },
         {
           "command": "lumiere.markdown.marp.toggle",
-          "when": "config.lumiere.markdown.preset != 'minimal' && config.lumiere.markdown.plugins.marp.enabled"
-        },
-        {
-          "command": "lumiere.markdown.marp.moveOutside",
           "when": "config.lumiere.markdown.preset != 'minimal' && config.lumiere.markdown.plugins.marp.enabled"
         },
         {
@@ -2048,10 +2051,6 @@
         },
         {
           "command": "lumiere.markdown.scratch.new",
-          "when": "config.lumiere.markdown.preset != 'minimal' && config.lumiere.markdown.plugins.scratch.enabled"
-        },
-        {
-          "command": "lumiere.markdown.scratch.promote",
           "when": "config.lumiere.markdown.preset != 'minimal' && config.lumiere.markdown.plugins.scratch.enabled"
         },
         {
@@ -2203,22 +2202,6 @@
           "when": "false"
         },
         {
-          "command": "lumiere.markdown.wiki.copyForAgent",
-          "when": "config.lumiere.markdown.preset != 'minimal' && config.lumiere.markdown.plugins.wiki.enabled"
-        },
-        {
-          "command": "lumiere.markdown.wiki.copyEnvelope",
-          "when": "config.lumiere.markdown.preset != 'minimal' && config.lumiere.markdown.plugins.wiki.enabled"
-        },
-        {
-          "command": "lumiere.markdown.wiki.showLayout",
-          "when": "config.lumiere.markdown.preset != 'minimal' && config.lumiere.markdown.plugins.wiki.enabled"
-        },
-        {
-          "command": "lumiere.markdown.wiki.refresh",
-          "when": "config.lumiere.markdown.preset != 'minimal' && config.lumiere.markdown.plugins.wiki.enabled"
-        },
-        {
           "command": "vscodeEmbedPdf.bridge.envelope",
           "when": "false"
         },
@@ -2319,20 +2302,52 @@
           "when": "activeCustomEditorId == 'lumiere.pdf.viewer' && config.lumiere.pdf.regions.enabled"
         },
         {
-          "command": "lumiere.pdf.selectAnnotateTool",
-          "when": "activeCustomEditorId == 'lumiere.pdf.viewer'"
+          "command": "lumiere.pdf.highlightSelection",
+          "when": "activeCustomEditorId == 'lumiere.pdf.viewer' && lumiere.pdf.hasTextSelection"
         },
         {
-          "command": "lumiere.pdf.toggleAnnotateTool",
-          "when": "activeCustomEditorId == 'lumiere.pdf.viewer'"
+          "command": "lumiere.pdf.addAnnotation",
+          "when": "activeCustomEditorId == 'lumiere.pdf.viewer' && lumiere.pdf.hasTextSelection"
         },
         {
-          "command": "lumiere.pdf.pickAnnotationTool",
-          "when": "activeCustomEditorId == 'lumiere.pdf.viewer'"
+          "command": "lumiere.pdf.underlineSelection",
+          "when": "activeCustomEditorId == 'lumiere.pdf.viewer' && lumiere.pdf.hasTextSelection"
         },
         {
-          "command": "lumiere.pdf.pickAnnotationColor",
-          "when": "activeCustomEditorId == 'lumiere.pdf.viewer'"
+          "command": "lumiere.pdf.strikeoutSelection",
+          "when": "activeCustomEditorId == 'lumiere.pdf.viewer' && lumiere.pdf.hasTextSelection"
+        },
+        {
+          "command": "lumiere.pdf.squigglySelection",
+          "when": "activeCustomEditorId == 'lumiere.pdf.viewer' && lumiere.pdf.hasTextSelection"
+        },
+        {
+          "command": "lumiere.pdf.editAnnotationNote",
+          "when": "false"
+        },
+        {
+          "command": "lumiere.pdf.annotationColor.yellow",
+          "when": "false"
+        },
+        {
+          "command": "lumiere.pdf.annotationColor.red",
+          "when": "false"
+        },
+        {
+          "command": "lumiere.pdf.annotationColor.blue",
+          "when": "false"
+        },
+        {
+          "command": "lumiere.pdf.annotationColor.green",
+          "when": "false"
+        },
+        {
+          "command": "lumiere.pdf.annotationColor.purple",
+          "when": "false"
+        },
+        {
+          "command": "lumiere.pdf.annotationColor.black",
+          "when": "false"
         },
         {
           "command": "lumiere.pdf.annotationUndo",
@@ -2455,9 +2470,34 @@
           "group": "0_agent@1"
         },
         {
+          "command": "lumiere.pdf.highlightSelection",
+          "when": "webviewId == 'lumiere.pdf.viewer' && lumiere.pdf.hasTextSelection",
+          "group": "0_mark@1"
+        },
+        {
+          "command": "lumiere.pdf.addAnnotation",
+          "when": "webviewId == 'lumiere.pdf.viewer' && lumiere.pdf.hasTextSelection",
+          "group": "0_mark@2"
+        },
+        {
+          "submenu": "lumiere.pdf.markText",
+          "when": "webviewId == 'lumiere.pdf.viewer' && lumiere.pdf.hasTextSelection",
+          "group": "0_mark@3"
+        },
+        {
+          "command": "lumiere.pdf.editAnnotationNote",
+          "when": "webviewId == 'lumiere.pdf.viewer' && lumiere.pdf.hasAnnotationSelection",
+          "group": "0_mark@4"
+        },
+        {
+          "submenu": "lumiere.pdf.annotationColor",
+          "when": "webviewId == 'lumiere.pdf.viewer' && lumiere.pdf.hasAnnotationSelection",
+          "group": "0_mark@5"
+        },
+        {
           "command": "lumiere.pdf.deleteAnnotation",
-          "when": "webviewId == 'lumiere.pdf.viewer' && lumiere.pdf.tool == 'annotate' && lumiere.pdf.hasAnnotationSelection",
-          "group": "0_agent@3"
+          "when": "webviewId == 'lumiere.pdf.viewer' && lumiere.pdf.hasAnnotationSelection",
+          "group": "0_mark@6"
         },
         {
           "command": "lumiere.pdf.goToPage",
@@ -2874,6 +2914,46 @@
           "when": "activeCustomEditorId == 'lumiere.pdf.viewer'",
           "group": "1_pdfPage@0.5"
         }
+      ],
+      "lumiere.pdf.markText": [
+        {
+          "command": "lumiere.pdf.underlineSelection",
+          "group": "0_mark@1"
+        },
+        {
+          "command": "lumiere.pdf.strikeoutSelection",
+          "group": "0_mark@2"
+        },
+        {
+          "command": "lumiere.pdf.squigglySelection",
+          "group": "0_mark@3"
+        }
+      ],
+      "lumiere.pdf.annotationColor": [
+        {
+          "command": "lumiere.pdf.annotationColor.yellow",
+          "group": "0_color@1"
+        },
+        {
+          "command": "lumiere.pdf.annotationColor.red",
+          "group": "0_color@2"
+        },
+        {
+          "command": "lumiere.pdf.annotationColor.blue",
+          "group": "0_color@3"
+        },
+        {
+          "command": "lumiere.pdf.annotationColor.green",
+          "group": "0_color@4"
+        },
+        {
+          "command": "lumiere.pdf.annotationColor.purple",
+          "group": "0_color@5"
+        },
+        {
+          "command": "lumiere.pdf.annotationColor.black",
+          "group": "0_color@6"
+        }
       ]
     },
     "configuration": [
@@ -2927,12 +3007,6 @@
             "default": true,
             "scope": "resource",
             "description": "In Cursor, Cmd/Ctrl+L opens Chat and Cmd/Ctrl+K opens Edit on the Live Preview selection."
-          },
-          "lumiere.markdown.plugins.dailyNotes.enabled": {
-            "type": "boolean",
-            "default": true,
-            "scope": "resource",
-            "description": "Open or create today's note from a template, like Obsidian's Daily notes."
           },
           "lumiere.markdown.plugins.diagrams.enabled": {
             "type": "boolean",
@@ -2992,7 +3066,7 @@
             "type": "boolean",
             "default": true,
             "scope": "resource",
-            "description": "Draw notes as a directed graph (OKF bundle or whole vault) in a panel of its own."
+            "description": "Draw a vault's notes as a directed graph in a panel of its own."
           },
           "lumiere.markdown.plugins.ideContext.enabled": {
             "type": "boolean",
@@ -3040,7 +3114,7 @@
             "type": "boolean",
             "default": true,
             "scope": "resource",
-            "description": "Detect Marp decks and open Marp's preview or export. Decks inside a wiki bundle are not wrapped into pages."
+            "description": "Detect Marp decks and open Marp's preview or export."
           },
           "lumiere.markdown.plugins.math.enabled": {
             "type": "boolean",
@@ -3053,12 +3127,6 @@
             "default": true,
             "scope": "resource",
             "description": "Use Obsidian property types and vault settings in Lumiere."
-          },
-          "lumiere.markdown.plugins.okfCore.enabled": {
-            "type": "boolean",
-            "default": true,
-            "scope": "resource",
-            "description": "Shared Open Knowledge Format bundles, link resolution and resource checks."
           },
           "lumiere.markdown.plugins.onlineVideos.enabled": {
             "type": "boolean",
@@ -3076,7 +3144,7 @@
             "type": "boolean",
             "default": true,
             "scope": "resource",
-            "description": "Markdown Outline with expansion actions and optional cursor following. Go to Heading (Ctrl+Shift+O) searches the active Workshop note's headings."
+            "description": "Markdown Outline with expansion actions and optional cursor following. Go to Heading (Ctrl+Shift+O) searches the active Lumiere note's headings."
           },
           "lumiere.markdown.plugins.pagePreview.enabled": {
             "type": "boolean",
@@ -3106,7 +3174,7 @@
             "type": "boolean",
             "default": true,
             "scope": "resource",
-            "description": "Temporary notes outside the wiki bundle. Promote one into the wiki only when you ask."
+            "description": "Temporary notes in a scratch folder."
           },
           "lumiere.markdown.plugins.search.enabled": {
             "type": "boolean",
@@ -3174,12 +3242,6 @@
             "scope": "resource",
             "description": "Vim in the Markdown editor."
           },
-          "lumiere.markdown.plugins.wiki.enabled": {
-            "type": "boolean",
-            "default": true,
-            "scope": "resource",
-            "description": "Read a project's .wiki layout and copy a reference for an agent. This does not run an agent or create folders."
-          },
           "lumiere.markdown.plugins.wordCount.enabled": {
             "type": "boolean",
             "default": true,
@@ -3211,24 +3273,6 @@
             "type": "boolean",
             "default": false,
             "description": "Show the lines above and below each backlink match (Obsidian “Show more context”). Off by default.",
-            "scope": "resource"
-          },
-          "lumiere.markdown.dailyNotes.folder": {
-            "type": "string",
-            "default": "",
-            "description": "Vault-relative folder for daily notes. Empty puts them at the vault root.",
-            "scope": "resource"
-          },
-          "lumiere.markdown.dailyNotes.dateFormat": {
-            "type": "string",
-            "default": "YYYY-MM-DD",
-            "description": "File name of a daily note. Tokens: YYYY, MM, DD, HH, mm and ss; a / makes subfolders.",
-            "scope": "resource"
-          },
-          "lumiere.markdown.dailyNotes.template": {
-            "type": "string",
-            "default": "",
-            "description": "Vault-relative path of the template for new daily notes, with or without .md. Empty creates an empty note.",
             "scope": "resource"
           },
           "lumiere.markdown.editor.defaultMode": {
@@ -3398,7 +3442,7 @@
               "never"
             ],
             "default": "prompt",
-            "description": "Obsidian's Automatically update internal links: `prompt` (the default, matching `alwaysUpdateLinks: false`) asks before rewriting links in other notes when a file is renamed or moved; its Always Update button sets this to `always`, `always` rewrites without asking, and `never` leaves links untouched.",
+            "description": "Obsidian's Automatically update internal links: `prompt` (the default, matching `alwaysUpdateLinks: false`) asks before rewriting links in other notes when a file is renamed or moved; its Always Update button sets this to `always` for the note's workspace folder, `always` rewrites without asking, and `never` leaves links untouched.",
             "scope": "resource"
           },
           "lumiere.markdown.links.newLinkFormat": {
@@ -3438,7 +3482,7 @@
               "textEditor"
             ],
             "default": "workbench",
-            "description": "Where a Marp deck opens. textEditor sends it to VS Code's text editor, where Marp's own preview and export run. Keep in Workshop remembers a deck.",
+            "description": "Where a Marp deck opens. textEditor sends it to VS Code's text editor, where Marp's own preview and export run. Keep Marp Deck in Lumiere remembers a deck.",
             "scope": "resource"
           },
           "lumiere.markdown.math.macros": {
@@ -3455,17 +3499,6 @@
             "type": "string",
             "default": ".obsidian",
             "description": "Obsidian configuration folder relative to the vault root, such as .obsidian-awesome. Root markers discover the vault; they do not select this folder.",
-            "scope": "resource"
-          },
-          "lumiere.markdown.okfCore.bundles": {
-            "type": "array",
-            "items": {
-              "type": "string",
-              "maxLength": 1024
-            },
-            "maxItems": 200,
-            "default": [],
-            "description": "Extra OKF bundle roots, relative to the vault. A folder is also a bundle when it contains index.md and a typed concept.",
             "scope": "resource"
           },
           "lumiere.markdown.onlineVideos.bilibiliPlayer": {
@@ -3526,7 +3559,7 @@
           "lumiere.markdown.scratch.folder": {
             "type": "string",
             "default": "scratch",
-            "description": "Project-relative folder for scratch notes when the folder has no .wiki/layout.json. A loaded layout uses its scratch path. The folder is created when you create a note.",
+            "description": "Project-relative folder for scratch notes. The folder is created when you create a note.",
             "scope": "resource"
           },
           "lumiere.markdown.stickyScroll.maxLines": {
@@ -3710,7 +3743,7 @@
               "never"
             ],
             "enumDescriptions": [
-              "In Cursor, which keeps extension buttons in the editor title bar's \"…\" menu: yes. In VS Code: no.",
+              "Show the buttons: the editor title bar keeps the PDF actions in its \"…\" menu.",
               "Always show the buttons.",
               "Only the page, zoom and View."
             ],
@@ -3882,7 +3915,6 @@
     "package:pre-release": "node scripts/build.mjs --production && node scripts/third-party-notices.mjs --check && vsce package --pre-release --no-dependencies --no-rewrite-relative-links"
   },
   "dependencies": {
-    "@workshop/agents": "workspace:*",
     "@workshop/core": "workspace:*",
     "@workshop/markdown": "workspace:*",
     "@workshop/pdf": "workspace:*"

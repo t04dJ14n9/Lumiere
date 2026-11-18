@@ -1,7 +1,4 @@
-import type {
-  BridgeEnvelope,
-  BridgeWikiContext,
-} from "../../shared/bridge/envelope";
+import type { BridgeEnvelope } from "../../shared/bridge/envelope";
 
 export interface MarkdownHandoff {
   /** LLM Wiki clipboard text. Present only when the note is saved. */
@@ -15,17 +12,13 @@ export interface BridgeCapture {
    * envelope (`revision.isDirty`, no whole-source hash). `text` is the LLM
    * Wiki clipboard form only when the note has a durable locator and is saved.
    */
-  markdownSelection(
-    wiki?: BridgeWikiContext,
-  ): Promise<MarkdownHandoff | undefined>;
+  markdownSelection(): Promise<MarkdownHandoff | undefined>;
   /**
    * Markdown first. When this editor has no selection, asks Lumiere PDF
    * if `vscodeEmbedPdf.bridge.envelope` is registered. Missing PDF support
    * returns undefined and does not throw.
    */
-  activeSelection(
-    wiki?: BridgeWikiContext,
-  ): Promise<BridgeEnvelope | undefined>;
+  activeSelection(): Promise<BridgeEnvelope | undefined>;
 }
 
 declare module "@workshop/core" {

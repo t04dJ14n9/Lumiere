@@ -13,12 +13,12 @@ declare function acquireVsCodeApi(): VsCodeApi;
 declare global {
   interface Window {
     /** The API the page's inline loader took first (plugins/editor/webview-html.ts). */
-    lumiaVsCodeApi?: VsCodeApi;
+    lumiereVsCodeApi?: VsCodeApi;
   }
 }
 performance.mark("mw:main");
 // The page may call it once only: its loader has, when it has a snapshot.
-const vscode = window.lumiaVsCodeApi ?? acquireVsCodeApi();
+const vscode = window.lumiereVsCodeApi ?? acquireVsCodeApi();
 const logging = webviewLogging((record) => rpc.notify(protocol, "log", record));
 const rpc: Endpoint = new Endpoint(
   webviewTransport(vscode),

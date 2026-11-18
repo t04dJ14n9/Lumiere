@@ -14,7 +14,6 @@ import {
   type PluginHandle,
   type RootContext,
 } from "@workshop/core";
-import type { Okf } from "../../../src/plugins/okfCore/api";
 import type { Editors } from "../../../src/plugins/editor/api";
 import type { Vaults } from "../../../src/plugins/vault/api";
 import { commandsHost } from "../../../src/plugins/commands/host";
@@ -50,10 +49,8 @@ import { tagsViewHost } from "../../../src/plugins/tags/view";
 import { quickSwitcherHost } from "../../../src/plugins/quickSwitcher/host";
 import { scratchHost } from "../../../src/plugins/scratch/host";
 import { templatesHost } from "../../../src/plugins/templates/host";
-import { dailyNotesHost } from "../../../src/plugins/dailyNotes/host";
 import { settingsHost } from "../../../src/plugins/settings/host";
 import { sketchHost } from "../../../src/plugins/sketch/host";
-import { wikiHost } from "../../../src/plugins/wiki/host";
 import { registerPluginManagement } from "../../../src/host/api/management";
 import { registerOpenReference } from "../../../src/host/api/open-reference";
 import { MARKDOWN_EDITOR } from "../../../src/shared/editor-provider";
@@ -96,7 +93,7 @@ test("customEditors viewType matches MARKDOWN_EDITOR (runtime registration id)",
   assert.equal(MARKDOWN_EDITOR.viewType, contributionId("editor"));
 });
 
-test("every contributed command id equals contributionId(local) and uses Workshop prefix", () => {
+test("every contributed command id equals contributionId(local) and uses Lumiere prefix", () => {
   for (const command of contributes.commands) {
     assert.match(command.command, /^lumiere\.markdown\./);
     assert.doesNotMatch(command.command, /markdownWorkbench/);
@@ -279,10 +276,8 @@ function installHosts(
   root.plugin(ideContextHost);
   root.plugin(graphHost);
   root.plugin(bridgeHost);
-  root.plugin(wikiHost);
   root.plugin(scratchHost);
   root.plugin(templatesHost);
-  root.plugin(dailyNotesHost);
   root.plugin(marpHost);
   root.plugin(attachmentsHost);
   root.plugin(gitDiffEditorHost);
@@ -317,7 +312,6 @@ async function captureRegisteredCommands(): Promise<{
   });
   root.provide("selections", selections);
   root.provide("vaults", {} as Vaults);
-  root.provide("okf", {} as Okf);
   // A host with a canvas (the iPad's), where Insert Sketch registers.
   root.provide("ink", {
     capabilities: async () => ({
@@ -405,8 +399,6 @@ function idleVaults(): Vaults {
     },
     async open() {},
     all: () => [],
-    registerLinkPolicy: () => () => {},
-    invalidateLinkResolution() {},
   };
 }
 

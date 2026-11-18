@@ -5,6 +5,7 @@ import type {
   AnnotationCapability,
 } from "@embedpdf/react/annotation";
 import type { DocumentsCapability } from "@embedpdf/react/runtime";
+import { annotationKey } from "@embedpdf/engine-core/public";
 import {
   parseAnnotations,
   serializeAnnotations,
@@ -41,7 +42,12 @@ async function until(condition: () => boolean): Promise<void> {
  * resolves); `export` answers with what is present now.
  */
 function open(
-  options: { stored?: string; dropped?: string[]; gate?: Promise<void> } = {},
+  options: {
+    stored?: string;
+    dropped?: string[];
+    gate?: Promise<void>;
+    sha256?: () => string;
+  } = {},
 ) {
   const posted: OutgoingMessage[] = [];
   const present = new Map<number, string>();
@@ -50,7 +56,7 @@ function open(
     post: (message) => posted.push(message),
     loadState: () => ({
       load: 3,
-      sha256: SHA,
+      sha256: options.sha256?.() ?? SHA,
       ...(options.stored === undefined ? {} : { annotations: options.stored }),
     }),
   };
@@ -115,8 +121,10 @@ test("the file's annotations come back as Lumiere's and are saved with new ones,
     posted.filter((message) => message.type === "annotationEmbeddedEdit"),
     [],
   );
-  const save = saves()[0] as { load: number; text: string };
+  const save = saves()[0] as { load: number; sha256: string; text: string };
   assert.equal(save.load, 3);
+  // Filed under the bytes the annotations were made on, which the host checks.
+  assert.equal(save.sha256, SHA);
   assert.deepEqual((await kept(save.text)).sort(), [101, 102, 300]);
 });
 
@@ -253,4 +261,135 @@ test("the PDF with its annotations goes to the host as an overwrite or as a copy
     assert.ok(message.data instanceof ArrayBuffer);
     assert.deepEqual([...new Uint8Array(message.data)], [80, 68, 70]);
   }
+});
+
+/** A document whose PDF downloads at once, and the PDF writes it sent. */
+function writing(options: Parameters<typeof open>[0] = {}) {
+  const opened = open(options);
+  const documents = {
+    download: async () => new Uint8Array([37, 80, 68, 70]),
+  } as unknown as DocumentsCapability;
+  const writes = () =>
+    opened.posted.filter((message) => message.type === "annotationSave") as {
+      write: number;
+    }[];
+  const write = async () => {
+    const before = writes().length;
+    opened.session.writePdf(documents, "pdf");
+    await until(() => writes().length === before + 1);
+    return writes().at(-1)!.write;
+  };
+  return { ...opened, write };
+}
+
+const stored101 = () => serializeAnnotations(bundle([{ ref: refOn(1) }]))!;
+const key = (objectNumber: number) => annotationKey(refOn(objectNumber));
+
+test("an annotation made while Save into This PDF writes stays Lumiere's and is saved for the new bytes", async () => {
+  let sha256 = SHA;
+  const { session, present, saves, write } = writing({
+    stored: stored101(),
+    sha256: () => sha256,
+  });
+  session.restore(true);
+  const written = await write();
+  // Drawn after the PDF was taken, before the host says it wrote it.
+  present.set(300, "highlight");
+  session.committed("create", [refOn(300)], {});
+  await until(() => saves().length === 1);
+
+  sha256 = "b".repeat(64);
+  session.savedIntoPdf(written);
+  await until(() => saves().length === 2);
+  const resaved = saves()[1] as { sha256: string; text: string };
+  assert.equal(resaved.sha256, sha256);
+  // 101, the file's, went into the PDF and is the PDF's now; 300 did not.
+  assert.equal(session.ownership.isOwn(key(101)), false);
+  assert.equal(session.ownership.isOwn(key(300)), true);
+  assert.deepEqual(await kept(resaved.text), [300]);
+});
+
+test("each PDF write's result settles only the annotations that write took", async () => {
+  const { session, present, write } = writing({ stored: stored101() });
+  session.restore(true);
+  const first = await write();
+  present.set(300, "highlight");
+  session.committed("create", [refOn(300)], {});
+  const second = await write();
+
+  session.savedIntoPdf(first);
+  assert.equal(session.ownership.isOwn(key(101)), false);
+  assert.equal(session.ownership.isOwn(key(300)), true, "only in the second");
+  session.pdfWriteFailed(second);
+  assert.equal(session.ownership.isOwn(key(300)), true);
+  // A result for a write already settled, or never made, changes nothing.
+  session.savedIntoPdf(second);
+  session.savedIntoPdf(99);
+  assert.equal(session.ownership.isOwn(key(300)), true);
+});
+
+test("a change to an annotation a PDF write took, made during the write, is reported as the PDF's", async () => {
+  const { session, posted, write } = writing({ stored: stored101() });
+  session.restore(true);
+  const written = await write();
+  session.committed("update", [refOn(101)], {});
+  const edits = () =>
+    posted.filter((message) => message.type === "annotationEmbeddedEdit");
+  assert.equal(edits().length, 0, "still Lumiere's while the write runs");
+
+  session.savedIntoPdf(written);
+  // The PDF has it as it was: only saving into the PDF again keeps the change.
+  assert.equal(session.ownership.isOwn(key(101)), false);
+  assert.deepEqual(edits(), [{ type: "annotationEmbeddedEdit", load: 3 }]);
+});
+
+test("a deleted annotation brought back by Undo while, or after, the PDF is written stays Lumiere's", async () => {
+  let sha256 = SHA;
+  const { session, present, saves, posted, write } = writing({
+    stored: stored101(),
+    sha256: () => sha256,
+  });
+  session.restore(true);
+  await until(() => present.has(101));
+  present.delete(101);
+  session.committed("delete", [refOn(101)], {});
+  const written = await write();
+  // Undo brings it back while the write runs: it is in no PDF taken before.
+  present.set(101, "highlight");
+  session.resynced();
+
+  sha256 = "b".repeat(64);
+  const before = saves().length;
+  session.savedIntoPdf(written);
+  assert.equal(session.ownership.isOwn(key(101)), true);
+  await until(() => saves().length > before);
+  const resaved = saves().at(-1) as { sha256: string; text: string };
+  assert.equal(resaved.sha256, sha256);
+  assert.deepEqual(await kept(resaved.text), [101]);
+  assert.deepEqual(
+    posted.filter((message) => message.type === "annotationEmbeddedEdit"),
+    [],
+  );
+});
+
+test("a save for the old hash keeps what it owned there, though Save into This PDF is confirmed during it", async () => {
+  const options: Parameters<typeof open>[0] = { stored: stored101() };
+  const { session, present, saves, write } = writing(options);
+  session.restore(true);
+  const written = await write();
+  // A new highlight's save takes the old hash, then its export is held.
+  let release!: () => void;
+  options.gate = new Promise<void>((resolve) => {
+    release = resolve;
+  });
+  present.set(300, "highlight");
+  session.committed("create", [refOn(300)], {});
+  await new Promise((resolve) => setTimeout(resolve, 10));
+  session.savedIntoPdf(written);
+  release();
+  await until(() => saves().length >= 1);
+  const old = saves()[0] as { sha256: string; text: string };
+  assert.equal(old.sha256, SHA);
+  // The original PDF (and every copy of it) still has 101 in its file.
+  assert.deepEqual((await kept(old.text)).sort(), [101, 300]);
 });

@@ -4,7 +4,6 @@ import type {
   HostWorkspace,
   WorkspaceStorage,
 } from "../../shared/host";
-import { createDiagnostics } from "../diagnostics";
 import { nodeWorkerLauncher } from "../node-workers";
 import { workersFolder } from "../running-extension";
 import { realContains } from "../real-contains";
@@ -28,7 +27,6 @@ export function createHostWorkspace(): HostWorkspace {
     realContains,
     watch: watchFile,
     files: createWorkspaceFiles(),
-    diagnostics: createDiagnostics(),
     revealTextEditor,
   };
 }

@@ -1247,3 +1247,74 @@ test("scroll reports stop when the panel closes or the outline stops", async (t)
   await fixture.root.dispose();
   assert.equal(second.cursor.listeners, 0);
 });
+
+test("after a click on an outline row in a CRLF note, the outline follows the caret on", async (t) => {
+  const crlf = NESTED.replace(/\n/g, "\r\n");
+  const fixture = await outlineFixture({ "A.md": crlf });
+  t.after(() => fixture.root.dispose());
+  const { panel, cursor } = fixture.panel("one");
+  fixture.open(panel);
+  await tick();
+  // The caret is an editor offset: the editor counts each line break once.
+  const editorText = NESTED;
+  cursor.head = editorText.indexOf("body-a");
+  fixture.root.emit("editor/selectionChanged", panel, false);
+  await tick();
+  const collapses = fixture.collapseAllCount;
+  // The row's command carries the heading's offset in the file.
+  await fixture.fake.commands.get(OPEN_COMMAND)!(
+    uriOf("A.md"),
+    crlf.indexOf("# B"),
+  );
+  cursor.head = editorText.indexOf("# B");
+  fixture.root.emit("editor/selectionChanged", panel, false);
+  await tick();
+  assert.equal(
+    fixture.collapseAllCount,
+    collapses,
+    "the jump landed: no collapse",
+  );
+  // Moving on from the clicked heading ends the click's window at once.
+  cursor.head = editorText.indexOf("body-b");
+  fixture.root.emit("editor/selectionChanged", panel, false);
+  await tick();
+  assert.equal(fixture.collapseAllCount, collapses + 1);
+  assert.equal(fixture.reveals.at(-1)?.node.label, "B1a");
+});
+
+test("a click on an outline row whose jump fails logs it instead of rejecting the command", async (t) => {
+  const fixture = await outlineFixture();
+  t.after(() => fixture.root.dispose());
+  const { panel } = fixture.panel("one");
+  fixture.open(panel);
+  await tick();
+  const failure = new Error(
+    "The destination editor was not opened unambiguously",
+  );
+  fixture.vaults.open = async () => {
+    throw failure;
+  };
+  const text = fixture.texts.get("A.md")!;
+  await fixture.fake.commands.get(OPEN_COMMAND)!(
+    uriOf("A.md"),
+    text.indexOf("## Part"),
+  );
+  assert.deepEqual(fixture.warnings, [failure]);
+});
+
+test("with the Links plugin off for the note, an outline jump says so at once", async (t) => {
+  const fixture = await outlineFixture();
+  t.after(() => fixture.root.dispose());
+  const { panel } = fixture.panel("one");
+  fixture.open(panel);
+  await tick();
+  fixture.links.enabled = false;
+  const text = fixture.texts.get("A.md")!;
+  await fixture.fake.commands.get(OPEN_COMMAND)!(
+    uriOf("A.md"),
+    text.indexOf("## Part"),
+  );
+  assert.deepEqual(fixture.opened, []);
+  assert.equal(fixture.informs.length, 1);
+  assert.match(fixture.informs[0]!, /Links/);
+});

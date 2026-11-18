@@ -140,8 +140,11 @@ activation, commands, keybindings, menus, settings), also:
 pnpm test:vscode   # both products in a real, isolated VS Code window
 ```
 
-`pnpm check:full` runs all four in that order; on a headless Linux box,
-`xvfb-run -a pnpm check:full`. The real-VS Code specs (`test/vscode`,
+`pnpm check:full` runs all four in that order. On Linux, `pnpm test:vscode`
+opens VS Code on a private 1920×1080 Xvfb display of its own (the specs
+measure layouts a small screen changes; `xvfb-run`'s default is 640×480), so
+a headless box needs no `xvfb-run`; `LUMIERE_VSCODE_DISPLAY=inherit` keeps
+your display instead, to watch the window. The real-VS Code specs (`test/vscode`,
 `packages/pdf/test/vscode`) do **not** run in GitHub Actions: they were flaky
 under load, and Cursor cannot run there.
 

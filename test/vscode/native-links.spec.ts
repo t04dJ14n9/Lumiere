@@ -1,6 +1,7 @@
 import { test, expect, chromium } from "@playwright/test";
 import { writeFileSync } from "node:fs";
 import path from "node:path";
+import { modifierClick, settledCaret } from "./source-links";
 import { paths, readState } from "./state";
 import {
   closeBrowser,
@@ -55,20 +56,8 @@ test("built-in Cmd-click preserves heading fragments and native source caret on 
       await link.click({ force: true });
       const sourceCaret = heading === "last-target" ? "Ln 3," : "Ln 1,";
       await expect(status).toContainText(sourceCaret);
-      const beforeClick = await status.innerText();
-      // VS Code 1.141 re-renders the detected-link span once the caret moves
-      // onto the line, so a held element handle can be detached ("not
-      // visible"); click its on-screen position with the modifier held.
-      await expect(link).toBeVisible();
-      let box = await link.boundingBox();
-      await expect
-        .poll(async () => (box = await link.boundingBox()) !== null)
-        .toBe(true);
-      box = box!;
-      const modifier = process.platform === "darwin" ? "Meta" : "Control";
-      await page.keyboard.down(modifier);
-      await page.mouse.click(box.x + box.width / 2, box.y + box.height / 2);
-      await page.keyboard.up(modifier);
+      const beforeClick = await settledCaret(status);
+      await modifierClick(page, link);
       await expect
         .poll(
           async () => {

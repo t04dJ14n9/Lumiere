@@ -94,8 +94,6 @@ export async function compatFixture() {
     },
     text: async (uri) => data.get(uri) ?? "",
     open: async () => {},
-    registerLinkPolicy: () => () => {},
-    invalidateLinkResolution() {},
   };
   const workbench = fakeHost({
     settings: {
@@ -147,6 +145,9 @@ export async function compatFixture() {
           return true;
         },
         async writeBytes() {},
+        async createBytes() {
+          return true;
+        },
         mkdir: async () => {
           await hooks.beforeMkdir?.();
         },

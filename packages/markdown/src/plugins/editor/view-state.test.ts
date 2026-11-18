@@ -325,6 +325,9 @@ function jumpedPanel(
   const scrollDOM = new FakeScroller(0);
   const measures: ScrollMeasurement[] = [];
   const scrolls: number[] = [];
+  // A measure requested without a request, which reading the layout runs.
+  let measurePending = false;
+  let measured = 0;
   const view = {
     get state() {
       return state;
@@ -352,9 +355,21 @@ function jumpedPanel(
     },
     scaleY: 1,
     scrollDOM,
+    contentDOM: { className: "cm-content" },
     lineBlockAt: () => line,
-    requestMeasure(request: ScrollMeasurement) {
-      measures.push(request);
+    lineBlockAtHeight() {
+      if (measurePending) {
+        measurePending = false;
+        measured++;
+      }
+      return line;
+    },
+    requestMeasure(request?: ScrollMeasurement) {
+      if (request) {
+        measures.push(request);
+      } else {
+        measurePending = true;
+      }
     },
     dispatch(spec: TransactionSpec) {
       state = state.update(spec).state;
@@ -400,6 +415,10 @@ function jumpedPanel(
     /** The row's line is drawn: its text has a place of its own. */
     draw() {
       drawn = true;
+    },
+    /** How often CodeMirror measured at once, rather than in the next frame. */
+    get measured() {
+      return measured;
     },
     /** Where the line's text is on screen, from the top of the viewport. */
     get lineOnScreen() {
@@ -502,6 +521,58 @@ test("the reader's input ends a hold, and it is not put back", async () => {
     await panel.measure();
     assert.equal(panel.lineOnScreen, 605, `${type}: content moves freely`);
   }
+  await root.dispose();
+});
+
+/** Resize observers the code under test makes, which the test triggers. */
+class FakeResizeObserver {
+  static made: FakeResizeObserver[] = [];
+  observed: unknown[] = [];
+  connected = true;
+  constructor(readonly callback: () => void) {
+    FakeResizeObserver.made.push(this);
+  }
+  observe(target: unknown) {
+    this.observed.push(target);
+  }
+  disconnect() {
+    this.connected = false;
+  }
+  /** The browser lays out a resize of what it observes, before painting. */
+  resize() {
+    if (this.connected) {
+      this.callback();
+    }
+  }
+}
+
+test("content resized while a line is held is measured before the frame is painted", async (t) => {
+  const global = globalThis as { ResizeObserver?: unknown };
+  const original = global.ResizeObserver;
+  global.ResizeObserver = FakeResizeObserver;
+  t.after(() => {
+    global.ResizeObserver = original;
+    FakeResizeObserver.made = [];
+  });
+  const root = createRoot();
+  const presentation = createViewState(root);
+  const panel = jumpedPanel(presentation);
+  presentation.holdAtTop(panel.view, 40, 5);
+  const [watcher] = FakeResizeObserver.made;
+  assert.deepEqual(watcher?.observed, [panel.view.contentDOM]);
+  watcher.resize();
+  assert.equal(panel.measured, 0, "not before the jump has scrolled");
+
+  panel.scroll(40);
+  // An image above the line gets its size: the frame must not be painted
+  // with the line pushed down, so CodeMirror measures (and anchors) now.
+  watcher.resize();
+  assert.equal(panel.measured, 1);
+
+  panel.scrollDOM.dispatchEvent(new Event("wheel"));
+  assert.equal(watcher.connected, false, "the reader took over");
+  watcher.resize();
+  assert.equal(panel.measured, 1);
   await root.dispose();
 });
 

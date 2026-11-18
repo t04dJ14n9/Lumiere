@@ -15,17 +15,37 @@ document action, flushes the webview, captures its selection, maps it to
 source offsets and replaces it through `hostDocuments.apply`. The caret is
 then moved after the inserted text.
 
+A template with properties is merged as in Obsidian
+(`src/markdown/template-insert.ts`): its properties join the note's, keeping
+the note's values, adding missing keys and joining lists without
+duplicates, through the YAML-safe property merge; only the body goes in at
+the caret (below the properties when the caret is inside or above them).
+A note without properties gets the template's block at its top. When the
+note's properties are not valid YAML, only the body is inserted and a
+message names the note. Variables in the template's properties are filled
+in as written when the YAML stays valid; otherwise each value holding one
+is written quoted (`src/markdown/template-header.ts`). A template whose
+properties are still not valid YAML gets only its body inserted, never its
+`---` block, and the message names the template. A body inserted right
+after a closing `---` with no line break gets one first.
+
 Tokens: `{{title}}` (the destination note's basename), `{{date}}`,
-`{{time}}`, and `{{date:FORMAT}}` / `{{time:FORMAT}}`. Formats use the
-tokens `YYYY`, `MM`, `DD`, `HH`, `mm` and `ss`, in local time, through the
-Bases date formatter.
+`{{time}}`, and `{{date:FORMAT}}` / `{{time:FORMAT}}`. Formats are Moment.js
+patterns in local time, written by `src/markdown/moment-format.ts` (shared
+with Bases): years (`YYYY`, `YY`, `Y`, and `YYY`, which Moment reads as
+`YY` then `Y`), quarters, months (`M`, `MM`, `MMM`, `MMMM`, `Mo`), days
+(`D`, `DD`, `Do`, `DDD`, `DDDD`), weekdays (`d`, `dd`, `ddd`, `dddd`, `E`),
+ISO weeks (`W`, `WW`, `GGGG`, `GGGGG`), hours (`H`, `HH`, `h`, `hh`, `k`),
+`mm`, `ss`, fractions, `A`/`a`, offsets (`Z`, `ZZ`), `X`/`x`, the English
+long formats (`L`, `LL`, `LT`, …), `[literal text]` and `\` before a token
+to write it literally.
 
 ## Files
 
 - `manifest.ts`: the command and the three settings.
 - `host.ts`: the Insert Template command.
 - `list.ts`: the folder setting, the template files and the picker rows.
-- `insert.ts`: replaces the panel's selection with the expanded text.
+- `insert.ts`: applies the template's edits at the panel's selection.
 
 ## Services, events and settings
 
@@ -38,9 +58,11 @@ Bases date formatter.
 
 ## Limits and differences from Obsidian
 
-- Only Moment's `YYYY`, `MM`, `DD`, `HH`, `mm` and `ss` are understood; other
-  letters (`ddd`, `Do`, `[text]`) are written as they are. An Obsidian
-  format with other tokens is not carried over from `templates.json`.
+- Names are English whatever Obsidian's language. Locale weeks (`w`, `ww`,
+  `gggg`), eras (`N`, `y`), time zone names (`z`) and six-digit years are
+  not written: they are inserted as written and a message names them. A
+  Bases embed whose `format("…")` uses one says so above the view.
+  `templates.json` formats carry over whatever their tokens.
 - Works in Lumiere's editor only, not in VS Code's plain text editor.
 - Inserting into a note with unsaved changes ends its current undo group,
   like other edits made by commands.

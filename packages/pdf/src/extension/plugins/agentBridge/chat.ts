@@ -1,5 +1,5 @@
 import { createHash } from "node:crypto";
-import { mkdir, writeFile } from "node:fs/promises";
+import { mkdtemp, writeFile } from "node:fs/promises";
 import * as os from "node:os";
 import * as path from "node:path";
 import * as vscode from "vscode";
@@ -90,14 +90,17 @@ export async function openAgentChat(
  * Codex takes no prefilled text from an extension (its `?prompt=` link leaves
  * the composer empty in 26.51007), but it attaches files: the selection goes
  * in as a Markdown file outside the workspace, plus a region's snapshot.
+ *
+ * The file goes in a new folder `mkdtemp` makes, which only this user can
+ * enter. A fixed folder in the shared temp folder could already be another
+ * user's, or a link to theirs, and the selection would be written there.
  */
 async function attachToCodex(
   text: string,
   image: vscode.Uri | undefined,
   source: vscode.Uri | undefined,
 ): Promise<void> {
-  const folder = path.join(os.tmpdir(), "agent-pdf-viewer");
-  await mkdir(folder, { recursive: true, mode: 0o700 });
+  const folder = await mkdtemp(path.join(os.tmpdir(), "lumiere-pdf-agent-"));
   const name = source ? path.basename(source.path, ".pdf") : "pdf";
   const file = path.join(
     folder,

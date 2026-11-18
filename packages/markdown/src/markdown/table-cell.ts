@@ -5,7 +5,7 @@ import { markdownParser } from "./dialect";
 /**
  * Whether `pos` lies within a parsed Markdown table. Obsidian's
  * `inTableCell` check leaves list, quote, callout, checklist and code-block
- * commands unavailable while a projected cell editor is active. Lumia keeps
+ * commands unavailable while a projected cell editor is active. Lumiere keeps
  * one document, so any position in a `Table` node (a cell, its pipes or its
  * separator row) approximates that check for those commands.
  */

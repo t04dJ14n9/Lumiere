@@ -9,7 +9,9 @@ import {
   type PropertyChange,
 } from "./yaml-value";
 import { setPropertyChanges } from "./alias-edits";
+import { appendedListItems } from "./list-append";
 import { validPropertyName } from "./types";
+import { hasInexactInteger } from "./exact-numbers";
 function propertyObject(value: unknown): value is Record<string, unknown> {
   return value !== null && typeof value === "object" && !Array.isArray(value);
 }
@@ -32,14 +34,52 @@ function clipboardValue(
   return valid;
 }
 
+/**
+ * Both lists' items, each once, in order. Items are compared by value, so
+ * an object (`- name: a`) in both lists is not written twice.
+ */
+function joinedLists(current: unknown[], incoming: unknown[]): unknown[] {
+  const seen = new Set<string>();
+  return [...current, ...incoming].filter((item) => {
+    const key = valueKey(item);
+    if (seen.has(key)) {
+      return false;
+    }
+    seen.add(key);
+    return true;
+  });
+}
+
+/**
+ * A text equal for equal values: keys sorted, types kept apart (`1`, `"1"`;
+ * `.nan`, `.inf`, `-.inf` and `null`, which JSON writes alike; a date and its
+ * text).
+ */
+function valueKey(value: unknown): string {
+  if (Array.isArray(value)) {
+    return `[${value.map(valueKey).join(",")}]`;
+  }
+  if (propertyObject(value)) {
+    const entries = Object.keys(value)
+      .sort()
+      .map((key) => `${JSON.stringify(key)}:${valueKey(value[key])}`);
+    return `{${entries.join(",")}}`;
+  }
+  if (typeof value === "number" && !Number.isFinite(value)) {
+    return `number:${String(value)}`;
+  }
+  if (value instanceof Date) {
+    return `date:${value.toISOString()}`;
+  }
+  return value === undefined ? "undefined" : JSON.stringify(value);
+}
+
 function mergeValue(current: unknown, incoming: unknown): unknown {
   if (!current) {
     return incoming;
   }
   if (Array.isArray(current) && Array.isArray(incoming)) {
-    return [
-      ...new Set([...(current as unknown[]), ...(incoming as unknown[])]),
-    ];
+    return joinedLists(current as unknown[], incoming as unknown[]);
   }
   if (propertyObject(current) && propertyObject(incoming)) {
     const entries = new Map(Object.entries(current));
@@ -51,15 +91,53 @@ function mergeValue(current: unknown, incoming: unknown): unknown {
   return incoming === null ? current : incoming;
 }
 
+/**
+ * How a template's properties join a note's: a value the note already has
+ * stays, a missing or empty one is added, and lists (and nested maps) are
+ * joined without duplicates.
+ */
+function keepExistingValue(current: unknown, incoming: unknown): unknown {
+  if (current === undefined || current === null || current === "") {
+    return incoming;
+  }
+  if (Array.isArray(current) && Array.isArray(incoming)) {
+    return joinedLists(current as unknown[], incoming as unknown[]);
+  }
+  if (propertyObject(current) && propertyObject(incoming)) {
+    const entries = new Map(Object.entries(current));
+    for (const [key, value] of Object.entries(incoming)) {
+      entries.set(key, keepExistingValue(entries.get(key), value));
+    }
+    return Object.fromEntries(entries);
+  }
+  return current;
+}
+
+export interface MergeOptions {
+  /**
+   * Keep the note's values and only add what it lacks (Insert Template);
+   * by default incoming values replace scalars (a property paste).
+   */
+  keepExisting?: boolean;
+}
+
+function mergerFor(
+  options: MergeOptions | undefined,
+): (current: unknown, incoming: unknown) => unknown {
+  return options?.keepExisting ? keepExistingValue : mergeValue;
+}
+
 /** Merge a structured property paste atomically, retaining unrelated YAML bytes. */
 export function mergeProperties(
   source: string,
   incoming: Record<string, unknown>,
+  options?: MergeOptions,
 ): PropertyChange[] | undefined {
+  const merge = mergerFor(options);
   try {
     const header = headerParts(source);
     const current = frontmatter(source)?.values;
-    if (!header || !current || !validIncoming(incoming)) {
+    if (!header || !current || !canMerge(header.body, incoming)) {
       return undefined;
     }
     const document = loadYaml().parseDocument(header.body, {
@@ -74,14 +152,14 @@ export function mergeProperties(
     const expected = new Map<string, unknown>();
     const edits = new MergeEdits(source, header, document);
     for (const [key, incomingValue] of Object.entries(incoming)) {
-      const value = mergeValue(
+      const value = merge(
         Object.hasOwn(current, key) ? current[key] : undefined,
         incomingValue,
       );
       expected.set(key, value);
       if (
         Object.hasOwn(current, key) &&
-        JSON.stringify(current[key]) === JSON.stringify(value)
+        valueKey(current[key]) === valueKey(value)
       ) {
         continue;
       }
@@ -90,7 +168,7 @@ export function mergeProperties(
       }
     }
     const changes = edits.finish();
-    return verifiesMergedValues(source, changes, expected)
+    return verifiesMergedValues(source, changes, expected, current)
       ? changes
       : undefined;
   } catch {
@@ -123,6 +201,21 @@ class MergeEdits {
       this.added += `${yamlKey(key)}:${valueAfterKey(value, header.eol)}${header.eol}`;
       return true;
     }
+    // Appending in place changes every alias of an anchored list too; the
+    // full rewrite below gives those their own copy.
+    const appended =
+      !anchored(pair.value) &&
+      appendedListItems({
+        source,
+        header,
+        key,
+        node: pair.value,
+        value,
+      });
+    if (appended) {
+      this.changes.push(appended);
+      return true;
+    }
     const changes = setPropertyChanges({
       source,
       header,
@@ -133,6 +226,15 @@ class MergeEdits {
     if (!changes) {
       return false;
     }
+    this.takeReplacement(changes);
+    return true;
+  }
+
+  /**
+   * A value's full rewrite (`setPropertyChanges`): its own change, and the
+   * copies that keep its aliases' values.
+   */
+  private takeReplacement(changes: PropertyChange[]): void {
     const [primary, ...aliases] = changes;
     // Explicit replacement wins over any overlapping prior alias-preservation.
     for (let index = this.changes.length - 1; index >= 0; index--) {
@@ -152,7 +254,6 @@ class MergeEdits {
       }
       this.changes.push(alias);
     }
-    return true;
   }
 
   finish(): PropertyChange[] {
@@ -171,10 +272,21 @@ class MergeEdits {
   }
 }
 
+/** Whether `node` carries a YAML anchor (`&name`) that aliases may point at. */
+function anchored(node: unknown): boolean {
+  return loadYaml().isNode(node) && Boolean(node.anchor);
+}
+
+/**
+ * Whether the merged note has the expected values, and every property the
+ * merge was not given still has the value it had: an edit to one key must
+ * not reach another (through an alias, say).
+ */
 function verifiesMergedValues(
   source: string,
   changes: PropertyChange[],
   expected: Map<string, unknown>,
+  before: Record<string, unknown>,
 ): boolean {
   let candidate = source;
   for (const change of [...changes].sort((a, b) => b.from - a.from)) {
@@ -190,7 +302,20 @@ function verifiesMergedValues(
   ) {
     return false;
   }
-  return true;
+  return Object.keys(before).every(
+    (key) =>
+      expected.has(key) || valueKey(result[key]) === valueKey(before[key]),
+  );
+}
+
+/**
+ * Whether a merge may go ahead: the incoming properties are valid, and the
+ * note's hold no long integer. Values are read as JavaScript numbers, so one
+ * anywhere (through an alias, or in a flow block written whole) could be
+ * written back rounded.
+ */
+function canMerge(body: string, incoming: unknown): boolean {
+  return validIncoming(incoming) && !hasInexactInteger(body);
 }
 
 function validIncoming(incoming: unknown): incoming is Record<string, unknown> {

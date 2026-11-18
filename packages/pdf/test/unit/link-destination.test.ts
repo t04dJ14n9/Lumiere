@@ -6,7 +6,6 @@
  */
 import assert from "node:assert/strict";
 import { test } from "node:test";
-import { agentText } from "../../src/shared/agent-text";
 import { extractPdfBacklinks } from "../../src/shared/pdf-backlink-index";
 import {
   localFragment,
@@ -23,11 +22,9 @@ import {
 const AWKWARD_PATH = "papers/my paper (v2) #1 100%.pdf";
 const QUOTE = "a) first (b), then 'c' - d! *e*";
 
-function copied(path: string, text: string): string {
-  return agentText(
-    { kind: "text", text, pages: [{ page: 3, rects: [[72, 83, 150, 95]] }] },
-    { path },
-  );
+/** A note line linking `path` at page 3 and `text`, as a reader writes it. */
+function linked(path: string, text: string): string {
+  return `> [a.pdf · p.3](${formatPdfDeepLink(path, { page: 3, text })})`;
 }
 
 test("encodeTextFragment encodes the characters that would end a Markdown link or a directive", () => {
@@ -68,7 +65,7 @@ test("encodeLinkPath leaves ordinary paths alone and encodes what breaks a desti
 });
 
 test("a PDF with spaces and parentheses is one Markdown link whose path reads back", () => {
-  const markdown = copied(AWKWARD_PATH, QUOTE);
+  const markdown = linked(AWKWARD_PATH, QUOTE);
   const links = nativeLinks(markdown);
   assert.equal(links.length, 1, markdown);
   const href = links[0]!.href;
@@ -82,9 +79,9 @@ test("a PDF with spaces and parentheses is one Markdown link whose path reads ba
   assert.equal(parsed.textFragment?.textStart, QUOTE);
 });
 
-test("the backlink index finds the PDF, page and quote of an awkward Copy link", () => {
+test("the backlink index finds the PDF, page and quote of an awkward deep link", () => {
   const hits = extractPdfBacklinks(
-    copied(AWKWARD_PATH, QUOTE),
+    linked(AWKWARD_PATH, QUOTE),
     "notes/n.md",
     "file:///notes/n.md",
   );
@@ -96,7 +93,7 @@ test("the backlink index finds the PDF, page and quote of an awkward Copy link",
 
 test("a quote with a closing parenthesis does not end the link early", () => {
   const [hit] = extractPdfBacklinks(
-    copied("papers/a.pdf", "a) first"),
+    linked("papers/a.pdf", "a) first"),
     "n.md",
     "u",
   );

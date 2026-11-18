@@ -1,10 +1,9 @@
 import assert from "node:assert/strict";
 import test from "node:test";
 import { isMarpDocument, setMarpEnabled } from "../../../src/markdown/marp";
-import { exportDeck, moveDeckOutside } from "../../../src/plugins/marp/actions";
+import { exportDeck } from "../../../src/plugins/marp/actions";
 import type { MarpActions } from "../../../src/plugins/marp/actions";
 import { shouldOpenMarpAsText } from "../../../src/plugins/marp/redirect";
-import type { WorkspaceFiles } from "../../../src/shared/workspace-files";
 
 test("Marp detection matches marp-vscode's frontmatter rule", () => {
   assert.equal(isMarpDocument("---\nmarp: true\n---\n"), true);
@@ -89,74 +88,4 @@ test("export refuses an untrusted workspace and a missing Marp extension", async
   await exportDeck(missing.actions, "file:///proj/deck.md");
   assert.equal(missing.calls.includes("markdown.marp.export"), false);
   assert.deepEqual(missing.calls, ["ask:Install Marp for VS Code"]);
-});
-
-test("moving a deck outside does not add page-contract frontmatter", async () => {
-  const written = new Map<string, string>();
-  const files: WorkspaceFiles = {
-    async readText() {
-      return undefined;
-    },
-    async writeText(uri, text) {
-      written.set(uri, text);
-    },
-    async createText() {
-      return true;
-    },
-    async writeBytes() {},
-    async list() {
-      return [];
-    },
-    async mkdir() {},
-    async copy(from, to) {
-      written.set(to, `copy:${from}`);
-    },
-    async move(from, to) {
-      written.set(to, `move:${from}`);
-    },
-    async remove() {},
-    async isSymbolicLink() {
-      return false;
-    },
-    async pickFile() {
-      return undefined;
-    },
-  };
-  const deck = "---\nmarp: true\n---\n\n# Slide\n";
-  const copied: string[] = [];
-  await moveDeckOutside(
-    {
-      files,
-      async execute() {},
-      async apply() {
-        return true;
-      },
-      async ask() {
-        return undefined;
-      },
-      async clipboardWrite(text) {
-        copied.push(text);
-      },
-      inform() {},
-      error(message) {
-        throw new Error(message);
-      },
-      trusted: () => true,
-      marpInstalled: () => false,
-    },
-    {
-      rootUri: "file:///proj",
-      relativePath: "knowledge/slides.md",
-      bundle: "knowledge",
-      exportsPath: "exports",
-      text: deck,
-      sourceUri: "file:///proj/knowledge/slides.md",
-      dirty: false,
-    },
-  );
-  const moved = [...written.values()][0] ?? "";
-  assert.match(moved, /^move:/);
-  assert.equal(moved.includes("type:"), false);
-  assert.match(copied[0] ?? "", /\]\(.*exports\/slides\.md\)/);
-  assert.doesNotMatch(copied[0] ?? "", /\[\[/);
 });

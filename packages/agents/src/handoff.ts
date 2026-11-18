@@ -16,8 +16,11 @@ export function noteReference(
   return isDirty ? `${path} (unsaved, lines ${lines})` : `@${path}#${lines}`;
 }
 
-/** The reference, a blank line, then the selection quoted line by line with `> `. */
+/**
+ * The reference, a blank line, the selection quoted line by line with `> `,
+ * then a newline, so a paste into a chat leaves the caret on a line of its own.
+ */
 export function notePayload(reference: string, text: string): string {
   const lines = text.replace(/\r\n?/gu, "\n").replace(/\n+$/u, "").split("\n");
-  return `${reference}\n\n${lines.map((line) => (line ? `> ${line}` : ">")).join("\n")}`;
+  return `${reference}\n\n${lines.map((line) => (line ? `> ${line}` : ">")).join("\n")}\n`;
 }

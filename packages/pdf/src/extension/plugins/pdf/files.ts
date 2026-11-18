@@ -9,6 +9,7 @@ import {
 } from "../../../shared/annotation-store";
 import type { PdfFile } from "../../../shared/pdf-backlink-index";
 import { writeAtomicFile } from "../../../host/atomic-write";
+import { isProtectedPdf, PROTECTED_FOLDERS } from "../../protected-folders";
 
 /** PDF files through VS Code's file system, so remote and virtual files open too. */
 export const vscodePdfFiles: PdfFiles = {
@@ -24,6 +25,13 @@ export const vscodePdfFiles: PdfFiles = {
     const parsed = vscode.Uri.parse(uri);
     if (parsed.scheme !== "file") {
       throw new Error("In-place annotation save requires a local file URI");
+    }
+    // Checked here as well as in the command: this is the last step before
+    // the disk, whatever asked for the write.
+    if (isProtectedPdf(parsed)) {
+      throw new Error(
+        `${displayPath(parsed)} is in a protected folder (${PROTECTED_FOLDERS}), so Lumiere does not write it`,
+      );
     }
     return writeAtomicFile(parsed.fsPath, bytes);
   },

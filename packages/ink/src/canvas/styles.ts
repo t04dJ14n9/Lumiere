@@ -14,7 +14,7 @@ export function styled<E extends HTMLElement>(element: E, style: Style): E {
 
 export const INK = "#1f2328";
 export const MUTED = "#59636e";
-export const ACCENT = "#0a64d6";
+const ACCENT = "#0a64d6";
 const BAR = "#f6f8fa";
 const BORDER = "#d1d9e0";
 /** Behind the canvas, before its first paint. */

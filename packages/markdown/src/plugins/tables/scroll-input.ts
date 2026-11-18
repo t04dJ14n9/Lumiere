@@ -7,7 +7,7 @@ type WheelInput = Pick<
  * A wheel the note scrolls vertically for: not a zoom, and not a horizontal
  * pan (Chromium turns Shift and a vertical wheel sideways on Windows and Linux).
  */
-export function isVerticalWheel(event: WheelInput): boolean {
+function isVerticalWheel(event: WheelInput): boolean {
   return (
     !event.ctrlKey &&
     !event.metaKey &&

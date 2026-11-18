@@ -35,6 +35,12 @@ export interface FileTextEdits {
     end: { line: number; col: number };
     text: string;
   }[];
+  /**
+   * The file's text the edits were computed from. A host applying them
+   * later compares it with the text then, so edits never land on a note
+   * that changed in between at offsets that no longer fit it.
+   */
+  source?: string;
 }
 
 /** One entry of the suggest list VS Code opens while typing in a text document. */

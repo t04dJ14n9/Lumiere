@@ -1,70 +1,45 @@
 import type { Context } from "@workshop/core";
-import { isInsideBundle } from "../../markdown/okf";
-import type { OkfBundle } from "../okfCore/api";
+import { nameOf } from "../../shared/vault-path";
 import type { Vault } from "../vault/api";
 import { selectScope } from "./scope";
+import type { GraphScope } from "./scope";
 
 export interface HeldScope {
   vault: Vault;
-  bundle: OkfBundle;
+  scope: GraphScope;
   focusPath?: string;
 }
 
-/** Synthetic scope: every markdown note in the vault (`bundle.root === ""`). */
-export function vaultWideBundle(vault: { index: { root: string } }): OkfBundle {
+/** The graph scope for one vault: all of its notes. */
+export function vaultScope(vault: { index: { root: string } }): GraphScope {
+  const root = vault.index.root;
   return {
-    id: `${encodeURIComponent(vault.index.root)}:`,
-    name: "Whole vault",
-    root: "",
-    vaultRoot: vault.index.root,
+    id: encodeURIComponent(root),
+    name: folderName(root),
+    vaultRoot: root,
   };
 }
 
-/**
- * Prepend a Whole-vault choice per vault so Obsidian-style vault graphs work
- * without an OKF bundle. Existing `root: ""` entries are left alone.
- */
-export function withVaultWideChoices(
-  vaults: Iterable<{ index: { root: string } }>,
-  choices: readonly OkfBundle[],
-): OkfBundle[] {
-  const seen = new Set(choices.map((bundle) => scopeKey(bundle)));
-  const wide: OkfBundle[] = [];
-  for (const vault of vaults) {
-    const candidate = vaultWideBundle(vault);
-    const key = scopeKey(candidate);
-    if (!seen.has(key)) {
-      wide.push(candidate);
-      seen.add(key);
-    }
+function folderName(root: string): string {
+  try {
+    return nameOf(decodeURIComponent(new URL(root).pathname)) || root;
+  } catch {
+    return nameOf(root) || root;
   }
-  return [...wide, ...choices];
 }
 
-function scopeKey(bundle: OkfBundle): string {
-  return `${bundle.vaultRoot}\0${bundle.root}`;
-}
-
-/** Resolve the bundle for this open. Dismissing the picker leaves the previous scope. */
+/** Resolve the vault for this open. Dismissing the picker leaves the previous scope. */
 export async function resolveScope(input: {
   ctx: Context;
   explicit: boolean;
   current?: HeldScope;
 }): Promise<HeldScope | undefined | "dismissed"> {
   const located = await locateNote(input.ctx);
-  const reported = located
-    ? input.ctx.okf.scope(located.vault, located.path)
-    : undefined;
-  const choices = withVaultWideChoices(
-    input.ctx.vaults.all(),
-    reported ? reported.choices : allBundles(input.ctx),
-  );
   const decision = selectScope({
     explicit: input.explicit,
     hasCurrent: !input.explicit && input.current !== undefined,
-    ambiguous: reported ? reported.ambiguous : true,
-    ...(reported?.owner ? { owner: reported.owner } : {}),
-    choices,
+    ...(located ? { owner: vaultScope(located.vault) } : {}),
+    choices: input.ctx.vaults.all().map(vaultScope),
   });
   if (decision.kind === "keep") {
     return input.current;
@@ -73,11 +48,11 @@ export async function resolveScope(input: {
     return undefined;
   }
   if (decision.kind === "use") {
-    return hold(input.ctx, decision.bundle, located?.path);
+    return hold(input.ctx, decision.scope, located?.path);
   }
   const picked = await input.ctx.dialogs.pick({
-    placeholder: "Choose a graph scope",
-    items: (query) => bundleItems(decision.choices, query),
+    placeholder: "Choose a vault to graph",
+    items: (query) => scopeItems(decision.choices, query),
   });
   if (!picked?.item) {
     return "dismissed";
@@ -85,21 +60,16 @@ export async function resolveScope(input: {
   return hold(input.ctx, picked.item.value, located?.path);
 }
 
-function bundleItems(choices: readonly OkfBundle[], query: string) {
+function scopeItems(choices: readonly GraphScope[], query: string) {
   const needle = query.trim().toLowerCase();
   return choices
-    .filter((bundle) =>
-      `${bundle.name} ${bundle.root || "(whole vault)"} ${bundle.vaultRoot}`
-        .toLowerCase()
-        .includes(needle),
+    .filter((scope) =>
+      `${scope.name} ${scope.vaultRoot}`.toLowerCase().includes(needle),
     )
-    .map((bundle) => ({
-      label: bundle.name,
-      description:
-        bundle.root === ""
-          ? bundle.vaultRoot || "(vault root)"
-          : bundle.root || bundle.vaultRoot,
-      value: bundle,
+    .map((scope) => ({
+      label: scope.name,
+      description: scope.vaultRoot,
+      value: scope,
     }));
 }
 
@@ -115,32 +85,16 @@ async function locateNote(ctx: Context) {
   return located;
 }
 
-function allBundles(ctx: Context): OkfBundle[] {
-  const bundles: OkfBundle[] = [];
-  for (const vault of ctx.vaults.all()) {
-    const listed = ctx.okf.bundles(vault);
-    if (Array.isArray(listed)) {
-      bundles.push(...listed);
-    }
-  }
-  return bundles;
-}
-
 function hold(
   ctx: Context,
-  bundle: OkfBundle,
+  scope: GraphScope,
   path: string | undefined,
 ): HeldScope | undefined {
-  let vault: Vault | undefined;
-  for (const candidate of ctx.vaults.all()) {
-    if (candidate.index.root === bundle.vaultRoot) {
-      vault = candidate;
-    }
-  }
+  const vault = ctx.vaults
+    .all()
+    .find((candidate) => candidate.index.root === scope.vaultRoot);
   if (!vault) {
     return undefined;
   }
-  const focusPath =
-    path && isInsideBundle(path, bundle.root) ? path : undefined;
-  return { vault, bundle, ...(focusPath ? { focusPath } : {}) };
+  return { vault, scope, ...(path ? { focusPath: path } : {}) };
 }

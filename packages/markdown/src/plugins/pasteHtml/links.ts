@@ -1,4 +1,4 @@
-export function safeDestination(value: string): string | undefined {
+function safeDestination(value: string): string | undefined {
   const compact = Array.from(value.trim())
     .filter((character) => character.charCodeAt(0) > 32)
     .join("");
@@ -12,7 +12,7 @@ export function safeDestination(value: string): string | undefined {
  * Image `src` may be http(s) or a `data:image/…` URI (attachments decode and
  * save those). Other `data:` schemes stay blocked (XSS via data:text/html).
  */
-export function safeImageDestination(value: string): string | undefined {
+function safeImageDestination(value: string): string | undefined {
   const compact = Array.from(value.trim())
     .filter((character) => character.charCodeAt(0) > 32)
     .join("");

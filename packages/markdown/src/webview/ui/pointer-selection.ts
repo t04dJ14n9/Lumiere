@@ -3,6 +3,11 @@ import type { EditorState, Extension, SelectionRange } from "@codemirror/state";
 import { ViewPlugin } from "@codemirror/view";
 import type { EditorView } from "@codemirror/view";
 import { isNativeSelectableLabelTarget } from "./block-pointer";
+import {
+  renderedProseShell,
+  renderedSelectionFilter,
+  renderedTextSelection,
+} from "./rendered-text-selection";
 
 /**
  * Obsidian keeps a note rendered while the mouse button is down and reveals
@@ -233,8 +238,23 @@ export function setPointerSelection(
   return press.of(value);
 }
 
+/**
+ * Mermaid labels and a callout's prose select as text: CodeMirror does not
+ * drive that selection, so a press on them has nothing to freeze.
+ */
+function pressStartsFreeze(event: MouseEvent): boolean {
+  return shouldStartPointerFreeze({
+    button: event.button,
+    nativeSelectableLabel:
+      isNativeSelectableLabelTarget(event.target) ||
+      renderedProseShell(event.target) !== null,
+  });
+}
+
 export const pointerSelectionTracking: Extension = [
   pointerSelection,
+  renderedTextSelection,
+  renderedSelectionFilter,
   ViewPlugin.define((view: EditorView) => {
     const events = new AbortController();
     const doc = view.dom.ownerDocument;
@@ -282,12 +302,7 @@ export const pointerSelectionTracking: Extension = [
     view.dom.addEventListener(
       "mousedown",
       (event) => {
-        if (
-          !shouldStartPointerFreeze({
-            button: event.button,
-            nativeSelectableLabel: isNativeSelectableLabelTarget(event.target),
-          })
-        ) {
+        if (!pressStartsFreeze(event)) {
           return;
         }
         // Invalidate idle buttons-up and deferred thaw from an earlier gesture
