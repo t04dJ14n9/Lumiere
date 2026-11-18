@@ -1,5 +1,6 @@
 import assert from "node:assert/strict";
 import { test } from "node:test";
+import { agentText } from "../../src/shared/agent-text";
 import type { RegionSelection } from "../../src/shared/selection";
 import { loadModule } from "./support/load-module";
 
@@ -384,4 +385,30 @@ test("reportSelection with nothing selected reports none at once", async () => {
     const answer = report as { selection?: { selection?: unknown } };
     assert.equal(answer.selection?.selection, null);
   }
+});
+
+test("a mark over a box with no page text hands its note to Copy Link for Agent", async () => {
+  const reports: unknown[] = [];
+  const { SelectionTracker } = loadSelectionTracker(reports);
+  const tracker = new SelectionTracker(() => undefined);
+  // A figure or scanned page: nothing to read in the mark's box.
+  tracker.follow(mockSelection().selection, {
+    ...source,
+    readDetails: () => Promise.resolve({ text: "" }),
+  });
+  const mark: RegionSelection = {
+    kind: "region",
+    page: 2,
+    rect: [10, 10, 100, 60],
+    text: "Compare with figure 3",
+    mark: true,
+    note: "Compare with figure 3",
+  };
+  tracker.setAnnotationRegion(mark);
+  await tracker.reportSelection(mockSelection().selection);
+  assert.equal(tracker.region?.text, "Compare with figure 3");
+  assert.equal(
+    agentText(tracker.region!, { path: "papers/a.pdf" }),
+    "@papers/a.pdf#page=2\n\n> Compare with figure 3\n",
+  );
 });

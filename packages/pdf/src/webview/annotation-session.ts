@@ -1,7 +1,9 @@
+import { annotationKey } from "@embedpdf/engine-core/public";
 import {
   AnnotationToken,
   useAnnotationEvent,
   useAnnotationState,
+  type AnnotationRef,
 } from "@embedpdf/react/annotation";
 import { useDocuments, useOptionalCapability } from "@embedpdf/react/runtime";
 import { useCallback, useEffect, useMemo } from "react";
@@ -25,6 +27,8 @@ const savedIntoPdf = new Set<() => void>();
 export function useAnnotationSaveSession(): {
   retry: () => void;
   write: (to: "pdf" | "copy") => void;
+  /** Whether an annotation is Lumiere's own, kept in its file, not the PDF's. */
+  isOwn: (ref: AnnotationRef) => boolean;
 } {
   // One session per opened document: the capability is new for each, and
   // annotation keys, unlike a PDF's own, do not survive an open.
@@ -64,7 +68,12 @@ export function useAnnotationSaveSession(): {
     (to: "pdf" | "copy") => session?.writePdf(documents, to),
     [session, documents],
   );
-  return { retry, write };
+  const isOwn = useCallback(
+    (ref: AnnotationRef) =>
+      session?.ownership.isOwn(annotationKey(ref)) ?? false,
+    [session],
+  );
+  return { retry, write, isOwn };
 }
 
 /** Each committed change: save Lumiere's annotations, or say a PDF's own changed. */

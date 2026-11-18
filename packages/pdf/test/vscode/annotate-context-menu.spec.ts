@@ -11,35 +11,40 @@ import type { Frame, Page } from "@playwright/test";
 import { paths } from "./state";
 import {
   closeAllEditors,
-  drag,
+  contextMenu,
+  contextMenuLabels,
   expect,
   fitPage,
   openFile,
   pagePoint,
   pdfViewer,
+  quickInputTitled,
+  selectText,
   showPage,
   test,
 } from "./workbench";
 
 /**
- * Host GUI: an Annotate highlight is kept in the workspace's annotation file
- * for the PDF's hash, never in the PDF (a vault records that hash); it comes
- * back when the PDF is opened again, and Delete removes it from that file.
- * Synthetic fixtures only.
+ * Host GUI: select text, right-click, Add Annotation…, type a note. The
+ * highlight and its note are kept in the workspace's annotation file for the
+ * PDF's hash, never in the PDF (a vault records that hash); they come back
+ * when the PDF is opened again, and the mark's own context menu deletes it
+ * from that file. There is no Annotate button. Synthetic fixtures only.
  */
 const PDF = "docs/outline.pdf";
 const TEXT_MIDLINE = 94;
-const SHOT_DIR = path.join(paths.repository, "test-results", "host-gui-pr482");
+const NOTE = "Synthetic note for the GUI test";
+const SHOT_DIR = path.join(
+  paths.repository,
+  "test-results",
+  "host-gui-annotate-context-menu",
+);
 const STORE = path.join(paths.workspace, ".lumiere");
 
 test.setTimeout(180_000);
 
 function sha256(file: string): string {
   return createHash("sha256").update(readFileSync(file)).digest("hex");
-}
-
-function statusBarButton(page: Page, id: string) {
-  return page.locator(`.part.statusbar [id$="lumiere.pdf.${id}"]`);
 }
 
 /**
@@ -53,7 +58,7 @@ function highlightMarks(viewer: Frame): Promise<number> {
   );
 }
 
-async function openAnnotating(page: Page): Promise<Frame> {
+async function openFirstPage(page: Page): Promise<Frame> {
   await openFile(page, PDF);
   const viewer = await pdfViewer(page);
   await fitPage(page, viewer);
@@ -61,7 +66,11 @@ async function openAnnotating(page: Page): Promise<Frame> {
   return viewer;
 }
 
-test("an Annotate highlight is kept beside the PDF, comes back on reopen, and Delete removes it", async ({
+type Kept = {
+  bundle: { items: { data: { subtype: string; contents?: string } }[] };
+};
+
+test("Add Annotation from the context menu keeps a highlight with its note beside the PDF, and the mark's menu deletes it", async ({
   workbench: page,
 }) => {
   mkdirSync(SHOT_DIR, { recursive: true });
@@ -71,47 +80,63 @@ test("an Annotate highlight is kept beside the PDF, comes back on reopen, and De
   const kept = path.join(STORE, "pdf-annotations", `${pdfHash}.json`);
   const evidence: string[] = [`pdf=${PDF}`, `sha256=${pdfHash}`];
   try {
-    let viewer = await openAnnotating(page);
+    let viewer = await openFirstPage(page);
+    await expect(
+      page.locator('.part.statusbar [id$="lumiere.pdf.annotate"]'),
+    ).toHaveCount(0);
     const baseline = await highlightMarks(viewer);
-    await statusBarButton(page, "annotate").click();
-    await expect(statusBarButton(page, "annotate")).toContainText(
-      /Annotating/u,
-    );
     const at = await pagePoint(viewer, 1);
-    await drag(page, at(74, TEXT_MIDLINE), at(205, TEXT_MIDLINE));
+    await selectText(page, viewer, at(74, TEXT_MIDLINE), at(205, TEXT_MIDLINE));
+    const offered = await contextMenuLabels(page, at(140, TEXT_MIDLINE));
+    expect(offered).toEqual(
+      expect.arrayContaining(["Highlight", "Add Annotation…", "Mark Text"]),
+    );
+    expect(offered).not.toContain("Delete Annotation");
+
+    await contextMenu(page, at(140, TEXT_MIDLINE), "Add Annotation…");
+    const input = quickInputTitled(page, /^Add Annotation$/u);
+    await expect(input).toBeVisible();
+    await input.fill(NOTE);
+    await input.press("Enter");
     await expect.poll(() => existsSync(kept), { timeout: 20_000 }).toBe(true);
-    const file = JSON.parse(readFileSync(kept, "utf8")) as {
-      bundle: { items: { data: { subtype: string } }[] };
-    };
-    expect(file.bundle.items.map((item) => item.data.subtype)).toEqual([
-      "highlight",
-    ]);
+    await expect
+      .poll(
+        () =>
+          (JSON.parse(readFileSync(kept, "utf8")) as Kept).bundle.items.map(
+            (item) => [item.data.subtype, item.data.contents],
+          ),
+        { timeout: 20_000 },
+      )
+      .toEqual([["highlight", NOTE]]);
     expect(sha256(pdfPath)).toBe(pdfHash);
     evidence.push(`kept=${path.relative(paths.workspace, kept)}`);
     await page.screenshot({
-      path: path.join(SHOT_DIR, "02-highlight-kept.png"),
+      path: path.join(SHOT_DIR, "01-annotation-kept.png"),
       fullPage: true,
     });
 
     // Opened again, the PDF shows the highlight from the annotation file.
     await closeAllEditors(page);
-    viewer = await openAnnotating(page);
+    viewer = await openFirstPage(page);
     await expect.poll(() => highlightMarks(viewer)).toBeGreaterThan(baseline);
 
-    // Delete takes it out of the file; the PDF is still as it was.
-    await statusBarButton(page, "annotate").click();
-    await expect(statusBarButton(page, "annotate")).toContainText(
-      /Annotating/u,
-    );
+    // The mark's own menu: its note, colour and Delete, not the text actions.
     const again = await pagePoint(viewer, 1);
-    await page.mouse.click(...again(100, TEXT_MIDLINE).screen);
-    await page.waitForTimeout(300);
-    await page.keyboard.press("Delete");
+    const onMark = await contextMenuLabels(page, again(140, TEXT_MIDLINE));
+    expect(onMark).toEqual(
+      expect.arrayContaining([
+        "Edit Note…",
+        "Change Color",
+        "Delete Annotation",
+      ]),
+    );
+    expect(onMark).not.toContain("Add Annotation…");
+    await contextMenu(page, again(140, TEXT_MIDLINE), "Delete Annotation");
     await expect.poll(() => existsSync(kept), { timeout: 20_000 }).toBe(false);
     expect(sha256(pdfPath)).toBe(pdfHash);
     evidence.push("result=PASS");
     await page.screenshot({
-      path: path.join(SHOT_DIR, "03-after-delete.png"),
+      path: path.join(SHOT_DIR, "02-after-delete.png"),
       fullPage: true,
     });
   } finally {

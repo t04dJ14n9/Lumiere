@@ -12,6 +12,7 @@ import { pageFit, type Point } from "./pdf-geometry";
 import { paths } from "./state";
 import {
   command,
+  contextMenu,
   drag,
   expect,
   fitPage,
@@ -58,10 +59,6 @@ test.setTimeout(480_000);
 
 function sha256(file: string): string {
   return createHash("sha256").update(readFileSync(file)).digest("hex");
-}
-
-function statusBarButton(page: Page, id: string) {
-  return page.locator(`.part.statusbar [id$="lumiere.pdf.${id}"]`);
 }
 
 function vaultNoteMarkdown(): string {
@@ -464,7 +461,7 @@ test("Host GUI: PDF backlink overlays checklist (Chrome)", async ({
   });
   flushEvidence(results, evidence, pageOnly, quote);
 
-  // Return to the PDF before Del / Annotate (click may have opened the note).
+  // Return to the PDF before Del / Highlight (click may have opened the note).
   try {
     await page
       .locator(".tabs-container .tab", { hasText: "outline.pdf" })
@@ -499,11 +496,6 @@ test("Host GUI: PDF backlink overlays checklist (Chrome)", async ({
     delOverlayNoop = afterOverlay === beforeOverlay && beforeOverlay > 0;
     evidence.push(`del_overlay_before=${beforeOverlay} after=${afterOverlay}`);
 
-    await statusBarButton(page, "annotate").click({ timeout: 10_000 });
-    await expect(statusBarButton(page, "annotate")).toContainText(
-      /Annotating/u,
-      { timeout: 10_000 },
-    );
     const beforeHash = sha256(pdfPath);
     // Annotations are kept in the workspace's file for the PDF's hash; the
     // PDF itself is never written.
@@ -514,13 +506,13 @@ test("Host GUI: PDF backlink overlays checklist (Chrome)", async ({
       `${beforeHash}.json`,
     );
     // Second line (~110pt) avoids the backlink overlay on "Synthetic page 1".
+    // Select, right-click, Highlight; then the mark's own menu deletes it.
     const atDel = await pagePoint(viewer, 1);
-    await drag(page, atDel(74, 110), atDel(180, 110));
+    await selectText(page, viewer, atDel(74, 110), atDel(180, 110));
+    await contextMenu(page, atDel(100, 110), "Highlight");
     await expect.poll(() => existsSync(kept), { timeout: 20_000 }).toBe(true);
     evidence.push(`annotation_file_after_highlight=${existsSync(kept)}`);
-    await page.mouse.click(...atDel(100, 110).screen);
-    await page.waitForTimeout(200);
-    await page.keyboard.press("Delete");
+    await contextMenu(page, atDel(100, 110), "Delete Annotation");
     await expect.poll(() => existsSync(kept), { timeout: 20_000 }).toBe(false);
     expect(sha256(pdfPath)).toBe(beforeHash);
     delEmbeddedOk = true;
@@ -541,26 +533,12 @@ test("Host GUI: PDF backlink overlays checklist (Chrome)", async ({
   }
   results.push({
     item: 4,
-    title: "Del on overlay no-op; Del on Note/freeText (embedded) deletes",
+    title:
+      "Del on overlay no-op; a highlight's context menu Delete Annotation deletes it",
     status: delOverlayNoop && delEmbeddedOk ? "PASS" : "FAIL",
-    notes: `overlay_noop=${delOverlayNoop} embedded_highlight_delete=${delEmbeddedOk} (highlight used as embedded proxy for Note/freeText deleteSelected path)`,
+    notes: `overlay_noop=${delOverlayNoop} highlight_menu_delete=${delEmbeddedOk}`,
   });
   flushEvidence(results, evidence, pageOnly, quote);
-
-  try {
-    if (
-      /Annotating/u.test(
-        (await statusBarButton(page, "annotate").innerText()).replace(
-          /\s+/gu,
-          " ",
-        ),
-      )
-    ) {
-      await statusBarButton(page, "annotate").click();
-    }
-  } catch {
-    // ignore
-  }
 
   const lines: string[] = [
     "# Host GUI evidence — PDF backlink overlays (Chrome)",
