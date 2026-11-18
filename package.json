@@ -1040,12 +1040,6 @@
         "enablement": "lumiere.pdf.pdfActive && lumiere.pdf.hasTextSelection"
       },
       {
-        "command": "lumiere.pdf.addAnnotation",
-        "title": "Add Annotation…",
-        "category": "PDF",
-        "enablement": "lumiere.pdf.pdfActive && lumiere.pdf.hasTextSelection"
-      },
-      {
         "command": "lumiere.pdf.underlineSelection",
         "title": "Underline",
         "category": "PDF",
@@ -1263,10 +1257,6 @@
       {
         "id": "lumiere.markdown.menu.insert",
         "label": "Insert"
-      },
-      {
-        "id": "lumiere.pdf.markText",
-        "label": "Mark Text"
       },
       {
         "id": "lumiere.pdf.annotationColor",
@@ -2306,10 +2296,6 @@
           "when": "activeCustomEditorId == 'lumiere.pdf.viewer' && lumiere.pdf.hasTextSelection"
         },
         {
-          "command": "lumiere.pdf.addAnnotation",
-          "when": "activeCustomEditorId == 'lumiere.pdf.viewer' && lumiere.pdf.hasTextSelection"
-        },
-        {
           "command": "lumiere.pdf.underlineSelection",
           "when": "activeCustomEditorId == 'lumiere.pdf.viewer' && lumiere.pdf.hasTextSelection"
         },
@@ -2475,29 +2461,34 @@
           "group": "0_mark@1"
         },
         {
-          "command": "lumiere.pdf.addAnnotation",
+          "command": "lumiere.pdf.underlineSelection",
           "when": "webviewId == 'lumiere.pdf.viewer' && lumiere.pdf.hasTextSelection",
           "group": "0_mark@2"
         },
         {
-          "submenu": "lumiere.pdf.markText",
+          "command": "lumiere.pdf.strikeoutSelection",
           "when": "webviewId == 'lumiere.pdf.viewer' && lumiere.pdf.hasTextSelection",
           "group": "0_mark@3"
         },
         {
-          "command": "lumiere.pdf.editAnnotationNote",
-          "when": "webviewId == 'lumiere.pdf.viewer' && lumiere.pdf.hasAnnotationSelection",
+          "command": "lumiere.pdf.squigglySelection",
+          "when": "webviewId == 'lumiere.pdf.viewer' && lumiere.pdf.hasTextSelection",
           "group": "0_mark@4"
         },
         {
-          "submenu": "lumiere.pdf.annotationColor",
+          "command": "lumiere.pdf.editAnnotationNote",
           "when": "webviewId == 'lumiere.pdf.viewer' && lumiere.pdf.hasAnnotationSelection",
           "group": "0_mark@5"
         },
         {
-          "command": "lumiere.pdf.deleteAnnotation",
+          "submenu": "lumiere.pdf.annotationColor",
           "when": "webviewId == 'lumiere.pdf.viewer' && lumiere.pdf.hasAnnotationSelection",
           "group": "0_mark@6"
+        },
+        {
+          "command": "lumiere.pdf.deleteAnnotation",
+          "when": "webviewId == 'lumiere.pdf.viewer' && lumiere.pdf.hasAnnotationSelection",
+          "group": "0_mark@7"
         },
         {
           "command": "lumiere.pdf.goToPage",
@@ -2913,20 +2904,6 @@
           "command": "lumiere.pdf.historyForward",
           "when": "activeCustomEditorId == 'lumiere.pdf.viewer'",
           "group": "1_pdfPage@0.5"
-        }
-      ],
-      "lumiere.pdf.markText": [
-        {
-          "command": "lumiere.pdf.underlineSelection",
-          "group": "0_mark@1"
-        },
-        {
-          "command": "lumiere.pdf.strikeoutSelection",
-          "group": "0_mark@2"
-        },
-        {
-          "command": "lumiere.pdf.squigglySelection",
-          "group": "0_mark@3"
         }
       ],
       "lumiere.pdf.annotationColor": [

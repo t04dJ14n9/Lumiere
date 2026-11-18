@@ -11,7 +11,7 @@ in [README.md](README.md). Highlight **store** is vault Markdown (Chrome
 | pdf | Custom editor, panels, Open Location, native links | Tracks editors per panel |
 | agentBridge | **Copy link to this** → clipboard `@` locator and quote; MCP bridge (opt-in) | Clipboard only — does not open agent chat |
 | ideContext | IDE Context delivery of a selection | Separate from Copy link |
-| pdfAnnotations | Context menu on selected text: Highlight, Add Annotation… (highlight + note), Mark Text ▸ underline / strikeout / squiggly; on a mark: Edit Note…, Change Color ▸, Delete Annotation. Kept in `<annotations.folder>/<sha256>.json` (default `.lumiere/pdf-annotations`); Save Annotations into This PDF, Export Annotated Copy… | The PDF is written only by Save into This PDF, never under `annotations.protectedFolders` |
+| pdfAnnotations | Context menu on selected text: Highlight, Underline, Strikeout, Squiggly (side by side); on a mark: Edit Note…, Change Color ▸, Delete Annotation. Kept in `<annotations.folder>/<sha256>.json` (default `.lumiere/pdf-annotations`); Save Annotations into This PDF, Export Annotated Copy… | The PDF is written only by Save into This PDF, never under `annotations.protectedFolders` |
 | pdfBacklinks | Vault Markdown index → backlink overlays on open PDF | Derived cache only; refresh on MD save |
 | pdfRegions | Empty-page / Select Region + optional `viewrect=` in the Copy link locator | **Off by default** (`lumiere.pdf.regions.enabled`) |
 | pdfOutline | Explorer PDF Outline + Follow Cursor | Accordion like Markdown Outline |

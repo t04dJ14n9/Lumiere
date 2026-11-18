@@ -2,8 +2,8 @@ import type { EffectivePageColors } from "./page-colors";
 import { highlightToolDefaults } from "./highlight-style";
 
 /**
- * The marks the context menu makes of selected text: Highlight, and the
- * Mark Text submenu's Underline, Strikeout and Squiggly. EmbedPDF's text
+ * The marks the context menu makes of selected text: Highlight, Underline,
+ * Strikeout and Squiggly, side by side. EmbedPDF's text
  * tools have the same ids.
  */
 export const MARK_TOOL_IDS = [

@@ -49,47 +49,11 @@ function setUp(options: {
       "../../../shared/view-state": { MAX_NOTE_LENGTH },
     },
   ) as {
-    addAnnotation: (panels: unknown) => Promise<void>;
     editAnnotationNote: (panels: unknown) => Promise<void>;
   };
   const panels = { active: panel, all: [panel] };
   return { module, panels, prompts, warnings, acts, order };
 }
-
-const text = (words: string) => ({
-  kind: "text",
-  text: words,
-  pages: [{ page: 1, rects: [[0, 0, 10, 10]] }],
-});
-
-test("Add Annotation asks the viewer for its selection before quoting it", async () => {
-  // The extension still holds an older selection; the viewer has a newer one.
-  const view = setUp({
-    selection: text("older words"),
-    fresh: text("newer words"),
-    typed: "a note",
-  });
-  await view.module.addAnnotation(view.panels);
-  assert.deepEqual(view.order, ["refresh", "prompt"]);
-  assert.match(view.prompts[0]!.prompt!, /newer words/u);
-  assert.deepEqual(view.acts, [
-    { action: "markSelection", tool: "highlight", note: "a note" },
-  ]);
-});
-
-test("Add Annotation still works when the viewer's text has not been reported", async () => {
-  const view = setUp({ selection: text("older words"), typed: "" });
-  await view.module.addAnnotation(view.panels);
-  // No stale quote, and an empty note makes a plain highlight.
-  assert.equal(view.prompts[0]!.prompt, "Note for the selected text");
-  assert.deepEqual(view.acts, [{ action: "markSelection", tool: "highlight" }]);
-});
-
-test("Escape in Add Annotation marks nothing", async () => {
-  const view = setUp({ selection: text("words"), fresh: text("words") });
-  await view.module.addAnnotation(view.panels);
-  assert.deepEqual(view.acts, []);
-});
 
 test("Edit Note starts from the mark's note and can empty it", async () => {
   const mark = {

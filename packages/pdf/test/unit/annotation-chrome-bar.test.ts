@@ -9,7 +9,7 @@ const root = join(dirname(fileURLToPath(import.meta.url)), "../..");
 /** What is left of the annotation commands in the palette: no mode, no pickers. */
 const PALETTE_COMMANDS = [
   "lumiere.pdf.highlightSelection",
-  "lumiere.pdf.addAnnotation",
+  "lumiere.pdf.underlineSelection",
   "lumiere.pdf.annotationUndo",
   "lumiere.pdf.annotationRedo",
   "lumiere.pdf.annotationRetrySave",

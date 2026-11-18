@@ -7,7 +7,7 @@ A Lumiere PDF viewer for VS Code and Cursor, built on [EmbedPDF](https://www.emb
 clipboard gets an `@papers/a.pdf#page=3` locator and the quoted text, ready
 to paste into an agent chat. Opening the PDF paints **backlink overlays**
 from vault Markdown links to it (`[label](papers/a.pdf#page=3#:~:text=…)`). Right-click
-selected text to **Highlight** it or **Add Annotation…** with a note; the marks
+selected text to **Highlight**, **Underline**, **Strikeout** or **Squiggly** it; the marks
 never change the PDF: they are kept in the workspace's `.lumiere/pdf-annotations/`. Region / box selection
 is opt-in (`lumiere.pdf.regions.enabled`, default off).
 
@@ -53,9 +53,9 @@ is opt-in (`lumiere.pdf.regions.enabled`, default off).
   note; Del ignores overlays). **Copy link to this** copies an `@` locator
   for agents, not such a link. See [CAPABILITIES.md](CAPABILITIES.md).
 - **Annotate from the context menu.** There is no Annotate mode or button.
-  Select text and right-click: **Highlight**, **Add Annotation…** (a
-  highlight with a note you type), or **Mark Text** ▸ Underline, Strikeout,
-  Squiggly. The keys are Preview's: ⌃⌘H highlights, ⌃⌘U underlines and
+  Select text and right-click: **Highlight**, **Underline**, **Strikeout**
+  or **Squiggly**, side by side; **Copy link to this** hands the text to an
+  agent. The keys are Preview's: ⌃⌘H highlights, ⌃⌘U underlines and
   ⌃⌘S strikes out the selected text (Ctrl+Alt+H / U / S on Windows and
   Linux). Right-click one of your marks
   for **Edit Note…**, **Change Color** ▸ (six colours; new highlights take the

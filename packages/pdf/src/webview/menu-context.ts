@@ -10,7 +10,7 @@ import { SETTING_PREFIX } from "../shared/setting-schema";
  * missing. So the document carries the selection as it is when the menu
  * opens; that per-menu context shadows the global key.
  *
- * `hasTextSelection` shows Highlight, Add Annotation… and Mark Text, which
+ * `hasTextSelection` shows Highlight, Underline, Strikeout and Squiggly, which
  * need selected text (a region has none to mark). `hasAnnotationSelection`
  * shows Edit Note…, Change Color and Delete Annotation: the menu was opened
  * on one of Lumiere's marks (`mark-menu.ts`).
