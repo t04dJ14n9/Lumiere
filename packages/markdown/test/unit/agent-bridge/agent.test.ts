@@ -125,7 +125,7 @@ test("Copy Link for Agent on an unsaved note: cancel, copy text only, or save an
     f.state.to = 7;
   });
   assert.equal(await f.agent.copy("panel"), true);
-  assert.equal(f.copied.pop(), "@Note.md#2\n\n> two");
+  assert.equal(f.copied.pop(), "@Note.md#2\n\n> two\n");
   assert.equal(f.state.dirty, false);
   await f.pair.dispose();
 });

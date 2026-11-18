@@ -1,6 +1,6 @@
 {
-  "version": 2,
-  "about": "Agent handoff text shared by Lumiere and Lumiere PDF (docs/agent-handoff-format.md). PDF clipboard is Quote-first + Chrome #page= / #:~:text= (no Source:/SHA/cite/#hl-).",
+  "version": 3,
+  "about": "Agent handoff text shared by Lumiere and Lumiere PDF (docs/agent-handoff-format.md): an @ locator, a blank line, the selection quoted with '> ', then a newline. PDF locators are @path#page=N (no #:~:text=, Source:, SHA, cite or #hl-).",
   "noteReferences": [
     {
       "path": "notes/a.md",
@@ -25,12 +25,12 @@
     {
       "reference": "@notes/a.md#3-5",
       "selection": "First line\n\nThird line\n",
-      "text": "@notes/a.md#3-5\n\n> First line\n>\n> Third line"
+      "text": "@notes/a.md#3-5\n\n> First line\n>\n> Third line\n"
     },
     {
       "reference": "@notes/a.md#7",
       "selection": "One\r\nTwo",
-      "text": "@notes/a.md#7\n\n> One\n> Two"
+      "text": "@notes/a.md#7\n\n> One\n> Two\n"
     }
   ],
   "pdfTexts": [
@@ -55,7 +55,7 @@
       "source": {
         "path": "papers/attention.pdf"
       },
-      "text": "> Scaled dot-product attention\n>\n> [attention.pdf · p.3](papers/attention.pdf#page=3#:~:text=Scaled%20dot%2Dproduct%20attention)"
+      "text": "@papers/attention.pdf#page=3\n\n> Scaled dot-product attention\n"
     },
     {
       "selection": {
@@ -78,7 +78,7 @@
       "source": {
         "path": "papers/[Smith] Title.pdf"
       },
-      "text": "> Scaled dot-product attention\n>\n> [\\[Smith\\] Title.pdf · p.3](papers/[Smith]%20Title.pdf#page=3#:~:text=Scaled%20dot%2Dproduct%20attention)"
+      "text": "@papers/[Smith]%20Title.pdf#page=3\n\n> Scaled dot-product attention\n"
     }
   ]
 }

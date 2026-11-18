@@ -120,10 +120,10 @@ test("invalid command boxes are dropped without losing a valid page", () => {
   }
 });
 
-test("a pasted link is found in a Copy Link for Agent source line or a Markdown link", () => {
+test("a pasted link is found in a Copy Link for Agent locator or a Markdown link", () => {
   const link = "papers/my paper.pdf#page=3&viewrect=72,83,134,21";
-  // Copy link writes a Markdown destination: the space is percent-encoded.
-  const copiedLink = "papers/my%20paper.pdf#page=3#:~:text=x";
+  // Copy link writes an @ locator: the space is percent-encoded.
+  const copiedLink = "papers/my%20paper.pdf#page=3";
   const copied = agentText(
     {
       kind: "text",

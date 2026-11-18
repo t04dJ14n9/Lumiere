@@ -23,7 +23,6 @@ import {
   showPage,
   statusBarEntry,
   test,
-  withoutSpaces,
 } from "./workbench";
 
 /**
@@ -254,16 +253,13 @@ test("Host GUI: PDF backlink overlays checklist (Chrome)", async ({
 
   const pageOnly = await copyLinkViaDomMenu(page, at1(100, TEXT_MIDLINE));
   evidence.push(`clipboard_no_selection=${JSON.stringify(pageOnly)}`);
-  const pageOnlyOk =
-    withoutSpaces(pageOnly).includes(
-      withoutSpaces(`[outline.pdf · p.1](${PDF}#page=1)`),
-    ) && !/#:~:text=|viewrect=/u.test(pageOnly);
+  const pageOnlyOk = pageOnly.trim() === `@${PDF}#page=1`;
   results.push({
     item: 2,
-    title: "No selection → Copy link → #page=N only",
+    title: "No selection → Copy link → @ locator only",
     status: pageOnlyOk ? "PASS" : "FAIL",
     notes: pageOnlyOk
-      ? "clipboard has #page=1 only (DOM context menu)"
+      ? "clipboard has @…#page=1 only (DOM context menu)"
       : `unexpected clipboard: ${pageOnly}`,
   });
 
@@ -290,7 +286,7 @@ test("Host GUI: PDF backlink overlays checklist (Chrome)", async ({
   await chooseDomCopyLink(page);
   await page.waitForTimeout(750);
   let quote = await pastedClipboard(page);
-  if (!/#:~:text=/u.test(quote)) {
+  if (!/\n> /u.test(quote)) {
     // Retry once: selection can drop if the menu opens off the glyph run.
     await page
       .locator(".tabs-container .tab", { hasText: "outline.pdf" })
@@ -312,21 +308,15 @@ test("Host GUI: PDF backlink overlays checklist (Chrome)", async ({
   }
   evidence.push(`clipboard_quote=${JSON.stringify(quote)}`);
   const hasPageAndText =
-    quote.trimStart().startsWith(">") &&
-    withoutSpaces(quote).includes(
-      withoutSpaces(`[outline.pdf · p.1](${PDF}#page=1#:~:text=`),
-    ) &&
-    /Synthetic(%20| )page(%20| )1/u.test(quote) &&
-    !/viewrect=|selection=|search=/u.test(quote);
-  const hasDashEncoding = /%2D/u.test(quote);
+    quote.startsWith(`@${PDF}#page=1\n\n> `) &&
+    /Synthetic page 1/u.test(quote) &&
+    !/viewrect=|selection=|search=|#:~:text=/u.test(quote);
   results.push({
     item: 1,
-    title: "Text select → Copy link → Quote #page= + #:~:text= (dashes %2D)",
-    status: hasPageAndText ? (hasDashEncoding ? "PASS" : "GAP") : "FAIL",
+    title: "Text select → Copy link → @ locator + quote",
+    status: hasPageAndText ? "PASS" : "FAIL",
     notes: hasPageAndText
-      ? hasDashEncoding
-        ? "quote has page+text and %2D"
-        : "quote has #page= + #:~:text= (spaces %20); fixture text has no hyphen so %2D not observed — unit encodeTextFragment covers %2D"
+      ? "clipboard has @…#page=1, a blank line and the quote"
       : `unexpected clipboard: ${quote}`,
   });
 
