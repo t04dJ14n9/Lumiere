@@ -1371,6 +1371,7 @@ Use the disposable fixture vault from Setup. These rows enumerate every generate
 | `lumiere.markdown.editor.strictLineBreaks` | `false` | boolean; change at workspace-folder scope, verify the owning plugin scenario, then reset the override. |
 | `lumiere.markdown.editor.rightToLeft` | `false` | boolean; change at workspace-folder scope, verify the owning plugin scenario, then reset the override. |
 | `lumiere.markdown.editor.dragScrollSpeed` | `4` | number; change at workspace-folder scope, verify the owning plugin scenario, then reset the override. |
+| `lumiere.markdown.editor.autosave` | `true` | boolean; in VS Code with `files.autoSave` off, type in a note open in Lumiere and stop: about 2 s later the tab's unsaved dot clears without Save, and typing on keeps pushing the save back. With the setting off the dot stays until Save. With `files.autoSave` set to `afterDelay` VS Code saves instead (the setting changes nothing). An untitled note stays unsaved. Change the file on disk under unsaved edits: VS Code's save conflict shows once and does not come back until the next edit. Reset the override. |
 | `lumiere.markdown.editor.useTabs` | `true` | boolean; change at workspace-folder scope, verify the owning plugin scenario, then reset the override. |
 | `lumiere.markdown.editor.tabSize` | `4` | integer; change at workspace-folder scope, verify the owning plugin scenario, then reset the override. |
 | `lumiere.markdown.editor.fontSize` | `16` | number; change at workspace-folder scope, verify the owning plugin scenario, then reset the override. |

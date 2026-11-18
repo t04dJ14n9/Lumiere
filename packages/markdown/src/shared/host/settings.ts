@@ -15,6 +15,10 @@ export interface NoteSettings {
     rightToLeft?: boolean;
     dragScrollSpeed?: number;
     defaultMode?: "livePreview" | "source";
+    /** Save the note 2 s after its last edit (`lumiere.markdown.editor.autosave`). */
+    autosave?: boolean;
+    /** VS Code's `files.autoSave` for Markdown files; only "off" leaves saving to us. */
+    filesAutoSave?: "off" | "afterDelay" | "onFocusChange" | "onWindowChange";
     /** The note's own body size in pixels and line height multiplier. */
     fontSize?: number;
     lineHeight?: number;

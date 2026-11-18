@@ -43,6 +43,8 @@ test("editor settings have application defaults and reconfigure without changing
     strictLineBreaks: false,
     rightToLeft: false,
     dragScrollSpeed: 4,
+    // On: an open note is saved 2 s after its last edit, as in Obsidian.
+    autosave: true,
     useTabs: true,
     tabSize: 4,
     // The note's own size: Obsidian's default body size, not editor.fontSize.
@@ -61,6 +63,8 @@ test("editor settings have application defaults and reconfigure without changing
     cursorBlinking: "blink",
     cursorSmoothCaretAnimation: "off",
     cursorWidth: 0,
+    // VS Code's files.autoSave until the host reads it: off.
+    filesAutoSave: "off",
   });
   // VS Code's defaults: ligatures off, no variations; Obsidian's body size.
   assert.deepEqual(fontDeclarations(settingsExtensions({})), {
@@ -148,6 +152,29 @@ test("caret settings come from native Markdown configuration and survive setting
     assert.ok(!key.startsWith("lumiere.markdown.editor.cursor"), key);
   }
 });
+test("autosave is our setting; files.autoSave is VS Code's, read for Markdown and not contributed again", async () => {
+  const reader: SettingsReader = {
+    get: <T>(key: string, fallback?: T) =>
+      (key === "editor.autosave" ? false : fallback) as T,
+  };
+  const nativeValue = (value: unknown): SettingsReader => ({
+    get: <T>(key: string) =>
+      (key === "files.autoSave" ? value : undefined) as T,
+  });
+  const editor = readSettings(reader, nativeValue("afterDelay")).editor!;
+  assert.equal(editor.autosave, false);
+  assert.equal(editor.filesAutoSave, "afterDelay");
+  assert.equal(readSettings(reader).editor?.filesAutoSave, "off");
+  // A hand-edited value VS Code would ignore does not stop the editor opening.
+  assert.equal(
+    readSettings(reader, nativeValue("sometimes")).editor?.filesAutoSave,
+    "off",
+  );
+  const generated = await contributions();
+  const properties = Object.keys(generated.configuration.properties);
+  assert.ok(properties.includes("lumiere.markdown.editor.autosave"));
+  assert.ok(!properties.some((key) => key.endsWith("filesAutoSave")));
+});
 test("resource settings use manifest aliases and validate all editor fields", () => {
   const values: Record<string, unknown> = {
     "files.newNoteFolder": "notes",
@@ -196,6 +223,7 @@ test("required settings, title actions, native context menus and unbound verify 
     "editor.strictLineBreaks": false,
     "editor.rightToLeft": false,
     "editor.dragScrollSpeed": 4,
+    "editor.autosave": true,
     "files.attachmentFolder": "",
     "files.newNoteFolder": "",
     "links.useWikilinks": true,

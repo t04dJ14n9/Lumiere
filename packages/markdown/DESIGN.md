@@ -1173,6 +1173,7 @@ default (§25).
 | Smart lists | plugin `smartLists` | on |
 | Indent using tabs, Tab indent size | `lumiere.markdown.editor.useTabs`, `.tabSize` | `true`, `4` |
 | (Lumiere-specific) Text-selection edge-scroll speed | `lumiere.markdown.editor.dragScrollSpeed` (multiplier 1–10; 1 restores CodeMirror speed) | `4` |
+| (Obsidian saves every open note about 2 s after its last edit) | `lumiere.markdown.editor.autosave`; VS Code's own `files.autoSave` (any mode but `off`) takes over, and an untitled note is never saved this way | `true` |
 | Auto convert HTML | plugin `pasteHtml` | on |
 | Vim key bindings | plugin `vim` | off |
 

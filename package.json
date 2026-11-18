@@ -3346,6 +3346,12 @@
             "description": "Speed multiplier for text-selection auto-scroll near the editor edges (1–10). Default: 4; 1 restores CodeMirror's original speed. Applies immediately in Live Preview and Source mode.",
             "scope": "resource"
           },
+          "lumiere.markdown.editor.autosave": {
+            "type": "boolean",
+            "default": true,
+            "description": "Save a note 2 seconds after its last edit while it is open in Lumiere, as Obsidian does. Turn it off to save only with Save. When VS Code's files.autoSave is on it saves the note instead, and a note that has no file yet (untitled) is never saved this way.",
+            "scope": "resource"
+          },
           "lumiere.markdown.editor.useTabs": {
             "type": "boolean",
             "default": true,

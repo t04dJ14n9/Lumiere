@@ -10,6 +10,10 @@ import {
   noteFiles,
 } from "../../src/host/documents";
 import { createNodePlatform } from "../../src/host/node-platform";
+import {
+  Autosave,
+  AUTOSAVE_DELAY_MS,
+} from "../../../markdown/src/plugins/document/autosave";
 
 /** Notes on Node's file system, as the Node host keeps them. */
 const NODE_NOTES = noteFiles(
@@ -599,4 +603,51 @@ test("a save that cannot read the file to check for another program's change doe
   assert.equal(document.isDirty, true);
   assert.equal(document.getText(), "mine: start");
   readable = true;
+});
+
+test("the editor's autosave over another program's conflicting change keeps that change beside the note first", async (t) => {
+  const { file, uri, cleanup } = await note("start");
+  // No watch: the autosave's save finds the change, as when its event is late.
+  const documents = new NoteDocuments(
+    { ...NODE_NOTES, watch: () => () => {} },
+    60_000,
+  );
+  t.after(cleanup);
+  t.after(() => documents.dispose());
+  const conflicts: string[] = [];
+  documents.onConflict((_target, copy) => conflicts.push(copy));
+  const document = await documents.open(uri);
+  let saving: Promise<boolean> | undefined;
+  t.mock.timers.enable({ apis: ["setTimeout"] });
+  const autosave = new Autosave({
+    document,
+    settings: {
+      forNote: () => ({
+        preset: "minimal",
+        mode: "source",
+        editor: {
+          useTabs: true,
+          tabSize: 4,
+          autosave: true,
+          filesAutoSave: "off",
+        },
+      }),
+    },
+    save: () => (saving = document.save()),
+    logger: { warn: () => {} } as never,
+  });
+  t.after(() => autosave.dispose());
+
+  await documents.apply(document, [{ from: 0, to: 0, insert: "mine: " }]);
+  autosave.edited();
+  await writeFile(file, "theirs");
+  t.mock.timers.tick(AUTOSAVE_DELAY_MS);
+
+  assert.ok(saving, "the countdown saved the note");
+  assert.equal(await saving, true);
+  const copy = path.join(path.dirname(file), "Note (conflict).md");
+  assert.equal(await readFile(copy, "utf8"), "theirs");
+  assert.equal(await readFile(file, "utf8"), "mine: start");
+  assert.deepEqual(conflicts, [pathToFileURL(copy).toString()]);
+  assert.equal(document.isDirty, false);
 });
