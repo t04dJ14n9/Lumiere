@@ -7,7 +7,7 @@ import type {
   TreeNode,
   WorkbenchViews,
 } from "../../shared/host";
-import { createWorkshopPanel } from "../panel-adapter";
+import { createLumierePanel } from "../panel-adapter";
 import { toDisposer } from "./documents";
 import { closeToggleSiblingTabs } from "../toggle-sibling-tabs";
 
@@ -46,8 +46,9 @@ export function createDialogs(): Dialogs {
 export function createWorkbenchViews(extensionUri: vscode.Uri): WorkbenchViews {
   return {
     tree: createTree,
+    statusBar: true,
     status: createStatus,
-    panel: createWorkshopPanel(extensionUri),
+    panel: createLumierePanel(extensionUri),
   };
 }
 

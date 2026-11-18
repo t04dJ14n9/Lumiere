@@ -20,7 +20,11 @@ import {
 import path from "node:path";
 import { createVSIX } from "@vscode/vsce";
 import { hostExecutable, paths, writeState } from "./state";
+import { startPrivateDisplay } from "./display";
 import { devToolsWebSocket, freePort, resolveVsCode } from "./vscode-host";
+
+/** The private X display the test VS Code opens on (see display.ts). */
+let display: string | undefined;
 
 export default async function globalSetup(): Promise<void> {
   const host = await resolveVsCode({
@@ -32,6 +36,7 @@ export default async function globalSetup(): Promise<void> {
   mkdirSync(paths.home, { recursive: true });
   mkdirSync(paths.extensions, { recursive: true });
   mkdirSync(paths.probe, { recursive: true });
+  display = await startPrivateDisplay(path.join(paths.root, "display.pid"));
   writeFileSync(
     path.join(paths.userData, "User", "settings.json"),
     JSON.stringify(
@@ -160,6 +165,7 @@ function cleanEnvironment(): NodeJS.ProcessEnv {
     ...process.env,
     HOME: paths.home,
     MARKDOWN_WORKBENCH_PROBE_DIR: paths.probe,
+    ...(display === undefined ? {} : { DISPLAY: display }),
   };
   delete environment.ELECTRON_RUN_AS_NODE;
   return environment;

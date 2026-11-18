@@ -8,78 +8,72 @@ import {
   folderMatches,
   localGraph,
 } from "./filters";
-import { buildConceptGraph } from "./project";
+import { buildNoteGraph } from "./project";
 import type { GraphNote, ResolvedTarget } from "./project";
 
-const files = new Map<string, string>([
-  ["bundle/metrics/topic.md", "bundle/metrics/topic.md"],
-  ["metrics/topic.md", "metrics/topic.md"],
-  ["bundle/index.md", "bundle/index.md"],
-  ["bundle/notes/plain.md", "bundle/notes/plain.md"],
-  ["bundle/assets/figure.png", "bundle/assets/figure.png"],
+const files = new Set([
+  "wiki/metrics/topic.md",
+  "wiki/index.md",
+  "wiki/notes/plain.md",
+  "wiki/assets/figure.png",
 ]);
 
+/** A leading `/` is the vault root, as in Obsidian. */
 function resolve(linktext: string): ResolvedTarget {
-  if (linktext.startsWith("/")) {
-    const path = `bundle/${linktext.slice(1)}`.replace(/\.md$/, "");
-    const withMd = path.endsWith(".png") ? path : `${path}.md`;
-    return files.has(withMd)
-      ? { status: "file", path: withMd }
-      : { status: "missing" };
+  if (!linktext.startsWith("/")) {
+    return { status: "missing" };
   }
-  return { status: "missing" };
+  const path = linktext.slice(1);
+  return files.has(path) ? { status: "file", path } : { status: "missing" };
 }
 
 function notes(): GraphNote[] {
   return [
     {
-      path: "bundle/metrics/topic.md",
+      path: "wiki/metrics/topic.md",
       metadata: metadata(
-        "---\ntype: metric\ntitle: Topic\ndescription: A margin\ntags: [alpha]\n---\nSee [index](/index.md), [gone](/missing.md), [self](/metrics/topic.md) and [pic](/assets/figure.png).",
+        "---\ntype: metric\ntitle: Topic\ndescription: A margin\ntags: [alpha]\n---\nSee [index](/wiki/index.md), [gone](/wiki/missing.md), [self](/wiki/metrics/topic.md) and [pic](/wiki/assets/figure.png).",
       ),
     },
     {
-      path: "bundle/notes/plain.md",
+      path: "wiki/notes/plain.md",
       metadata: metadata(
-        "See [topic](/metrics/topic.md) twice [again](/metrics/topic.md).",
+        "See [topic](/wiki/metrics/topic.md) twice [again](/wiki/metrics/topic.md).",
       ),
     },
     {
-      path: "bundle/notes/back.md",
-      metadata: metadata("---\ntype: note\n---\nSee [plain](/notes/plain.md)."),
+      path: "wiki/notes/back.md",
+      metadata: metadata(
+        "---\ntype: note\n---\nSee [plain](/wiki/notes/plain.md).",
+      ),
     },
     {
-      path: "bundle/index.md",
-      metadata: metadata("---\ntype: index\n---\n"),
+      path: "wiki/index.md",
+      metadata: metadata("---\ntype: meta\n---\n"),
     },
     {
-      path: "bundle/log.md",
+      path: "wiki/log.md",
       metadata: metadata("log"),
     },
-    { path: "bundle/notes/alone.md" },
+    { path: "wiki/notes/alone.md" },
   ];
 }
 
-test("the builder keeps nonconformant notes, drops reserved files, and classifies targets", () => {
-  const graph = buildConceptGraph({
-    bundleRoot: "bundle",
-    notes: notes(),
-    resolve: (linktext) => resolve(linktext),
-  });
+const graphOf = () =>
+  buildNoteGraph({ notes: notes(), resolve: (linktext) => resolve(linktext) });
+
+test("every note is a node, and link targets are classified", () => {
+  const graph = graphOf();
   const paths = graph.nodes.map((node) => node.path);
-  assert.ok(paths.includes("bundle/notes/plain.md"));
-  assert.equal(paths.includes("bundle/index.md"), false);
-  assert.equal(paths.includes("bundle/log.md"), false);
-  const plain = graph.nodes.find(
-    (node) => node.path === "bundle/notes/plain.md",
-  );
-  assert.equal(plain?.classification, "nonconformant");
+  assert.ok(paths.includes("wiki/notes/plain.md"));
+  assert.ok(paths.includes("wiki/index.md"));
+  assert.ok(paths.includes("wiki/log.md"));
   const topic = graph.nodes.find(
-    (node) => node.path === "bundle/metrics/topic.md",
+    (node) => node.path === "wiki/metrics/topic.md",
   );
-  assert.equal(topic?.classification, "conformant");
   assert.equal(topic?.title, "Topic");
-  assert.equal(topic?.navigation, 1);
+  assert.equal(topic?.type, "metric");
+  assert.equal(topic?.indexing, false);
   assert.equal(topic?.unresolved, 1);
   assert.equal(topic?.assets, 1);
   assert.equal(
@@ -88,75 +82,55 @@ test("the builder keeps nonconformant notes, drops reserved files, and classifie
     ),
     false,
   );
-  const toPlain = graph.edges.find(
-    (edge) =>
-      edge.source === "bundle/notes/plain.md" &&
-      edge.target === "bundle/metrics/topic.md",
+  assert.ok(
+    graph.edges.some(
+      (edge) =>
+        edge.source === "wiki/metrics/topic.md" &&
+        edge.target === "wiki/index.md",
+    ),
   );
-  assert.equal(toPlain?.count, 2);
-  const back = graph.edges.find(
+  const toTopic = graph.edges.find(
     (edge) =>
-      edge.source === "bundle/notes/back.md" &&
-      edge.target === "bundle/notes/plain.md",
+      edge.source === "wiki/notes/plain.md" &&
+      edge.target === "wiki/metrics/topic.md",
   );
-  assert.ok(back);
-  assert.equal(topic?.degree, 1);
+  assert.equal(toTopic?.count, 2);
+  assert.equal(topic?.degree, 2);
 });
 
 test("orphans are decided before filters, and an excluded focus is not retargeted", () => {
-  const graph = buildConceptGraph({
-    bundleRoot: "bundle",
-    notes: notes(),
-    resolve: (linktext) => resolve(linktext),
-  });
-  const alone = graph.nodes.find((node) => node.id === "bundle/notes/alone.md");
+  const graph = graphOf();
+  const alone = graph.nodes.find((node) => node.id === "wiki/notes/alone.md");
   assert.equal(alone?.orphan, true);
-  assert.equal(alone?.classification, "indexing");
+  assert.equal(alone?.indexing, true);
   const filtered = filterGraph(graph, {
     ...emptyFilters(),
     types: ["metric"],
   });
   assert.deepEqual(
-    filtered.graph.nodes.map((node) => node.id),
-    ["bundle/metrics/topic.md"],
+    filtered.nodes.map((node) => node.id),
+    ["wiki/metrics/topic.md"],
   );
-  const local = localGraph(filtered.graph, "bundle/notes/plain.md", 2);
+  const local = localGraph(filtered, "wiki/notes/plain.md", 2);
   assert.equal(local.focusExcluded, true);
   assert.equal(local.graph.nodes.length, 0);
 });
 
 test("orphans show by default and the toggle hides them, as Obsidian's showOrphans", () => {
-  const graph = buildConceptGraph({
-    bundleRoot: "bundle",
-    notes: notes(),
-    resolve: (linktext) => resolve(linktext),
-  });
+  const graph = graphOf();
   const ids = (showOrphans: boolean) =>
-    filterGraph(graph, { ...emptyFilters(), showOrphans }).graph.nodes.map(
+    filterGraph(graph, { ...emptyFilters(), showOrphans }).nodes.map(
       (node) => node.id,
     );
   assert.equal(emptyFilters().showOrphans, true);
-  assert.ok(ids(true).includes("bundle/notes/alone.md"));
-  assert.ok(!ids(false).includes("bundle/notes/alone.md"));
-  assert.ok(ids(false).includes("bundle/metrics/topic.md"));
+  assert.ok(ids(true).includes("wiki/notes/alone.md"));
+  assert.ok(!ids(false).includes("wiki/notes/alone.md"));
+  assert.ok(ids(false).includes("wiki/metrics/topic.md"));
 });
 
-test("folder prefixes match path segments, and conformant-only reports the omission", () => {
-  assert.equal(folderMatches("bundle/notes", "bundle"), true);
-  assert.equal(folderMatches("bundle-old/notes", "bundle"), false);
-  const graph = buildConceptGraph({
-    bundleRoot: "bundle",
-    notes: notes(),
-    resolve: (linktext) => resolve(linktext),
-  });
-  const filtered = filterGraph(graph, {
-    ...emptyFilters(),
-    conformantOnly: true,
-  });
-  assert.ok(filtered.omittedConformant >= 1);
-  assert.ok(
-    filtered.graph.nodes.every((node) => node.classification === "conformant"),
-  );
+test("folder prefixes match path segments", () => {
+  assert.equal(folderMatches("wiki/notes", "wiki"), true);
+  assert.equal(folderMatches("wiki-old/notes", "wiki"), false);
 });
 
 test("admission refuses over-cap graphs and stale generations are ignored", () => {
@@ -174,118 +148,30 @@ test("admission refuses over-cap graphs and stale generations are ignored", () =
   assert.equal(isCurrentGeneration(4, 5), true);
 });
 
-test("frontmatter wikilinks count as concept edges like Obsidian", () => {
-  const graph = buildConceptGraph({
-    bundleRoot: "bundle",
+test("frontmatter wikilinks count as note edges like Obsidian", () => {
+  const graph = buildNoteGraph({
     notes: [
       {
-        path: "bundle/notes/from.md",
+        path: "notes/from.md",
         metadata: metadata('---\nup: "[[plain]]"\n---\nNo body link.'),
       },
       {
-        path: "bundle/notes/plain.md",
+        path: "notes/plain.md",
         metadata: metadata("plain body"),
       },
     ],
     resolve: (linktext) =>
       linktext === "plain"
-        ? { status: "file", path: "bundle/notes/plain.md" }
+        ? { status: "file", path: "notes/plain.md" }
         : { status: "missing" },
   });
   const edge = graph.edges.find(
     (item) =>
-      item.source === "bundle/notes/from.md" &&
-      item.target === "bundle/notes/plain.md",
+      item.source === "notes/from.md" && item.target === "notes/plain.md",
   );
   assert.ok(edge);
   assert.equal(edge?.count, 1);
-  const from = graph.nodes.find((node) => node.id === "bundle/notes/from.md");
+  const from = graph.nodes.find((node) => node.id === "notes/from.md");
   assert.equal(from?.degree, 1);
   assert.equal(from?.orphan, false);
-});
-
-test("OKF sources path resources count as concept edges", () => {
-  const graph = buildConceptGraph({
-    bundleRoot: "bundle",
-    notes: [
-      {
-        path: "bundle/notes/from.md",
-        metadata: metadata(
-          "---\nsources:\n  - resource: plain.md\n    title: Plain\n  - resource: https://example.com/paper\n---\nNo body link.",
-        ),
-      },
-      {
-        path: "bundle/notes/plain.md",
-        metadata: metadata("plain body"),
-      },
-    ],
-    resolve: () => ({ status: "missing" }),
-  });
-  const edge = graph.edges.find(
-    (item) =>
-      item.source === "bundle/notes/from.md" &&
-      item.target === "bundle/notes/plain.md",
-  );
-  assert.ok(edge);
-  assert.equal(edge?.count, 1);
-  const from = graph.nodes.find((node) => node.id === "bundle/notes/from.md");
-  assert.equal(from?.degree, 1);
-  assert.equal(from?.orphan, false);
-  // http(s) sources are not graph nodes / edges
-  assert.equal(from?.outOfScope ?? 0, 0);
-  assert.equal(from?.unresolved ?? 0, 0);
-});
-
-test("sources wiki resources stay on frontmatterLinks (no double edge)", () => {
-  const graph = buildConceptGraph({
-    bundleRoot: "bundle",
-    notes: [
-      {
-        path: "bundle/notes/from.md",
-        metadata: metadata(
-          '---\nsources:\n  - resource: "[[plain]]"\n---\nNo body link.',
-        ),
-      },
-      {
-        path: "bundle/notes/plain.md",
-        metadata: metadata("plain body"),
-      },
-    ],
-    resolve: (linktext) =>
-      linktext === "plain"
-        ? { status: "file", path: "bundle/notes/plain.md" }
-        : { status: "missing" },
-  });
-  const edges = graph.edges.filter(
-    (item) =>
-      item.source === "bundle/notes/from.md" &&
-      item.target === "bundle/notes/plain.md",
-  );
-  assert.equal(edges.length, 1);
-  assert.equal(edges[0]?.count, 1);
-});
-
-test("sources asset paths count as assets, not concept edges", () => {
-  const graph = buildConceptGraph({
-    bundleRoot: "bundle",
-    notes: [
-      {
-        path: "bundle/notes/from.md",
-        metadata: metadata(
-          "---\nsources:\n  - resource: ../assets/figure.png\n---\n",
-        ),
-      },
-      {
-        path: "bundle/notes/plain.md",
-        metadata: metadata("plain body"),
-      },
-    ],
-    resolve: () => ({ status: "missing" }),
-  });
-  const from = graph.nodes.find((node) => node.id === "bundle/notes/from.md");
-  assert.equal(from?.assets, 1);
-  assert.equal(
-    graph.edges.some((edge) => edge.source === "bundle/notes/from.md"),
-    false,
-  );
 });

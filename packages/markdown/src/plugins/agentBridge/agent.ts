@@ -18,8 +18,11 @@ export interface AgentReference {
 /** Copy Link for Agent: the reference and quoted passage, to the agent chat. */
 export class AgentHandoff {
   private live = true;
+  /** Cancels the Codex attachment repeats still pending when the plugin stops. */
+  private readonly stopped = new AbortController();
   dispose(): void {
     this.live = false;
+    this.stopped.abort();
   }
   constructor(
     private readonly options: {
@@ -102,6 +105,7 @@ export class AgentHandoff {
       (text) => host.clipboard.write(text),
       payload,
       {
+        signal: this.stopped.signal,
         ...(environment && { environment }),
         ...(host.agentHost.writeScratchFile && {
           writeScratchFile: (text: string) =>

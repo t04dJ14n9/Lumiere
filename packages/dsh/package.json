@@ -14,7 +14,6 @@
   },
   "dependencies": {
     "@workshop/core": "workspace:*",
-    "@workshop/host-node": "workspace:*",
-    "@workshop/markdown": "workspace:*"
+    "@workshop/host-node": "workspace:*"
   }
 }

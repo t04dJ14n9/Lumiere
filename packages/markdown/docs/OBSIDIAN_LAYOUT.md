@@ -3,11 +3,11 @@
 Measured on 2026-10-17 in real Obsidian (default theme and settings, 16px
 text) in a throwaway vault and profile, never the owner's, by reading the
 computed styles and text positions of the same note in Obsidian and in
-Workshop's editor (the browser harness). Sizes are matched, not Obsidian's
-CSS: Workshop's stylesheets are its own. Positions are relative to a
+Lumiere's editor (the browser harness). Sizes are matched, not Obsidian's
+CSS: Lumiere's stylesheets are its own. Positions are relative to a
 paragraph's text.
 
-| What | Obsidian | Workshop |
+| What | Obsidian | Lumiere |
 | --- | --- | --- |
 | Space above a heading | one body-text size (16px; 20px at 20px), none below | same (`markdown.css`) |
 | List item line | 26px: 0.075em above and below | same |
@@ -28,7 +28,7 @@ paragraph's text.
 Differences that remain:
 
 - Tables: Obsidian hangs the table's handle strip in the margin, so the table
-  lines up with the text; Workshop's table sits 16px in, because there its
+  lines up with the text; Lumiere's table sits 16px in, because there its
   row grips would fall under the line-number gutter.
 - Inline math can make its line 1–2px taller than Obsidian's.
 - CodeMirror pads every line 2px at the start; all text sits 2px right of

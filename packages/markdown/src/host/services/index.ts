@@ -3,6 +3,7 @@
  * src/shared/host), built over VS Code's API.
  */
 import type * as vscode from "vscode";
+import type { Logger } from "@workshop/core";
 import type { Configuration } from "../../shared/configuration";
 import type { HostServices, PanelShell } from "../../shared/host";
 import { createConfiguration } from "../configuration-access";
@@ -32,6 +33,7 @@ export function createHostServices(
   extension: RunningExtension,
   storage: vscode.Memento,
   configuration: Configuration = createConfiguration(),
+  logger?: Logger,
 ): HostServices {
   const { extensionUri } = extension;
   const documents = new NativeDocuments();
@@ -39,6 +41,7 @@ export function createHostServices(
   const navigation = createNavigation(
     () => [...panels.values()],
     configuration,
+    logger,
   );
   return {
     hostDocuments: createHostDocuments(documents),

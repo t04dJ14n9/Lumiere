@@ -17,8 +17,8 @@ export default defineManifest({
   description: "Vim in the Markdown editor.",
   kind: "feature",
   defaultEnabled: false,
-  surfaces: ["webview"],
-  capabilities: ["editing", "commands", "keybindings"],
+  surfaces: ["host", "webview"],
+  capabilities: ["editing", "commands", "keybindings", "statusBar"],
   config,
   contributes: {
     commands: [

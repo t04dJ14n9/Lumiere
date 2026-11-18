@@ -224,7 +224,7 @@ test("without Look Up there is no hidden word", async ({ page }) => {
   await expect(page.locator(".look-up-word")).toHaveCount(0);
 });
 
-test("with Look Up on, links and Annotate marks keep their clicks", async ({
+test("with Look Up on, links keep their clicks and a mark its right-click", async ({
   page,
 }) => {
   await open(page);
@@ -237,23 +237,20 @@ test("with Look Up on, links and Annotate marks keep their clicks", async ({
   await page.getByRole("textbox", { name: "Page" }).fill("1");
   await page.getByRole("textbox", { name: "Page" }).press("Enter");
 
-  await sendAction(page, { action: "setTool", tool: "annotate" });
-  await sendAction(page, { action: "setAnnotationTool", tool: "highlight" });
   const at = await pagePoint(page, 1);
-  const kind = async () =>
-    ((await lastSelection(page)) as { kind?: string } | null)?.kind;
+  const selected = async () =>
+    (await lastSelection(page)) as { kind?: string; mark?: boolean } | null;
   await page.mouse.move(...at(74, TEXT_MIDLINE));
   await page.waitForTimeout(300);
   await page.mouse.down();
   await page.mouse.move(...at(205, TEXT_MIDLINE), { steps: 10 });
   await page.mouse.up();
-  await expect.poll(kind).toBe("region");
-  await page.keyboard.press("Escape");
-  await expect.poll(kind).toBeUndefined();
-  await sendAction(page, { action: "setTool", tool: "annotate" });
+  await expect.poll(selected).toMatchObject({ kind: "text" });
+  await sendAction(page, { action: "markSelection", tool: "highlight" });
+  await expect.poll(selected).toBeNull();
   const mid = at(140, TEXT_MIDLINE);
   await page.mouse.move(...mid);
   await page.waitForTimeout(300);
-  await page.mouse.click(...mid);
-  await expect.poll(kind).toBe("region");
+  await page.mouse.click(...mid, { button: "right" });
+  await expect.poll(selected).toMatchObject({ kind: "region", mark: true });
 });

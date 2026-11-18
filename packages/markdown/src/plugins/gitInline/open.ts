@@ -18,7 +18,7 @@ export function shouldOpenInlineHunk(input: {
   return !input.interactive;
 }
 
-export function isInteractiveGitTarget(target: EventTarget | null): boolean {
+function isInteractiveGitTarget(target: EventTarget | null): boolean {
   if (!(target instanceof Element)) {
     return false;
   }
@@ -96,7 +96,7 @@ export function lineMarks(
 }
 
 /** A margin control, not a hit target on the highlighted text. */
-export function showDiffRange(
+function showDiffRange(
   hunk: DocHunk,
   diff: GitDiff,
 ): Range<Decoration> | undefined {

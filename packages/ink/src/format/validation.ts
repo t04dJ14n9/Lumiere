@@ -21,7 +21,7 @@ export class SketchFormatError extends Error {
 }
 
 /** Large enough for any page; larger is a damaged or hostile file. */
-export const LIMITS = {
+const LIMITS = {
   side: 100_000,
   strokes: 100_000,
   valuesPerStroke: 2_000_000,

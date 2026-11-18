@@ -1,7 +1,6 @@
 # Lumiere API, version 1
 
-Other VS Code extensions use this API to inspect notes open in Markdown
-Workshop, to read the vault index, and to add **external plugins**: host-side
+Other VS Code extensions use this API to inspect notes open in Lumiere, to read the vault index, and to add **external plugins**: host-side
 plugins that put badges (markers) on note text, claim links, render fenced
 code blocks, add actions and register commands. It plays the role of
 Obsidian's plugin API, with one difference: no outside code runs inside the
@@ -28,16 +27,16 @@ Depend on the extension, then activate it:
 
 ```jsonc
 // package.json
-"extensionDependencies": ["t04dj14n9.vscode-markdown-workshop"],
+"extensionDependencies": ["t04dj14n9.lumiere"],
 "activationEvents": ["onLanguage:markdown", "onCustomEditor:lumiere.markdown.editor"]
 ```
 
 ```ts
 import * as vscode from "vscode";
-import type { MarkdownWorkshopApi } from "./markdown-workshop/types";
+import type { MarkdownWorkshopApi } from "./lumiere/types";
 
 const api = await vscode.extensions
-  .getExtension<MarkdownWorkshopApi>("t04dj14n9.vscode-markdown-workshop")
+  .getExtension<MarkdownWorkshopApi>("t04dj14n9.lumiere")
   ?.activate();
 if (api?.apiVersion !== 1) {
   return; // Not installed, or an API version this code does not know.
@@ -133,7 +132,7 @@ ones: it starts when enabled, stops when disabled, and everything it
 registered through its context is undone when it stops. A failure stays
 inside the plugin; **Show Plugin Status** shows it as failed with the error.
 Authoring guide for a separate consumer extension:
-[AGENT.md](AGENT.md) (complementary to [AGENTS.md](AGENTS.md) for Workshop
+[AGENT.md](AGENT.md) (complementary to [AGENTS.md](AGENTS.md) for Lumiere
 core).
 
 ```ts
@@ -288,7 +287,7 @@ blocks and registers a command. Build it with `pnpm sample`.
   "name": "tickets",
   "publisher": "mwsample",
   "main": "./dist/extension.js",
-  "extensionDependencies": ["t04dj14n9.vscode-markdown-workshop"],
+  "extensionDependencies": ["t04dj14n9.lumiere"],
   "activationEvents": ["onLanguage:markdown", "onCustomEditor:lumiere.markdown.editor"],
   "contributes": {
     "commands": [{ "command": "mwsample.tickets.refresh", "title": "Refresh TODO Badges", "category": "Sample Tickets" }],
@@ -305,12 +304,12 @@ blocks and registers a command. Build it with `pnpm sample`.
 
 ```ts
 import * as vscode from "vscode";
-import type { MarkdownWorkshopApi } from "./markdown-workshop/types";
+import type { MarkdownWorkshopApi } from "./lumiere/types";
 import { ticketsPlugin } from "./plugin";
 
 export async function activate(context: vscode.ExtensionContext) {
   const api = await vscode.extensions
-    .getExtension<MarkdownWorkshopApi>("t04dj14n9.vscode-markdown-workshop")
+    .getExtension<MarkdownWorkshopApi>("t04dj14n9.lumiere")
     ?.activate();
   if (api?.apiVersion !== 1) {
     void vscode.window.showWarningMessage(
@@ -333,7 +332,7 @@ import type {
   ExternalPlugin,
   ProcessorResult,
   SourceMarker,
-} from "./markdown-workshop/types";
+} from "./lumiere/types";
 
 export type VSCode = Pick<typeof vscode, "workspace" | "window" | "env" | "Uri">;
 
@@ -430,7 +429,7 @@ export function ticketsPlugin(code: VSCode): ExternalPlugin {
 ```
 
 In the fixture the type imports point at `src/host/api/types` instead of a
-copied `markdown-workshop/types`.
+copied `lumiere/types`.
 
 ## Bridge envelope
 

@@ -35,7 +35,7 @@ export interface EngineEnvironment<Engine> {
 }
 
 /** How long an engine gets to stop before the next one starts anyway. */
-export const ENGINE_STOP_DEADLINE_MS = 2000;
+const ENGINE_STOP_DEADLINE_MS = 2000;
 
 export class EngineHostDisposedError extends Error {
   constructor() {

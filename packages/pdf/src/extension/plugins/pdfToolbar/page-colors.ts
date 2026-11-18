@@ -21,7 +21,7 @@ function setting(): ReturnType<typeof parsePageColors> {
 }
 
 /** Effective page colors from the setting and (when Follow) the active theme. */
-export function effectivePageColors(): EffectivePageColors {
+function effectivePageColors(): EffectivePageColors {
   return resolveEffective(setting(), themeKind());
 }
 

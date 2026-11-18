@@ -405,6 +405,57 @@ test("suggestion cache invalidates changed metadata and computes link text only 
   await stop();
 });
 
+test("a Markdown link suggested beside a root note of the same name is written with ./", async () => {
+  const { SuggestionIndex } =
+    await import("../../../src/plugins/suggest/sources");
+  const vault = new MemoryVaultIndex({
+    root: "file:///vault",
+    folderNote: "",
+    linkFormat: "relative",
+  });
+  for (const path of ["X.md", "notes/X.md", "notes/Src.md"]) {
+    vault.upsertFile({
+      path,
+      uri: `file:///vault/${path}`,
+      size: 0,
+      mtime: 0,
+      excluded: false,
+    });
+  }
+  const inserts = new SuggestionIndex(vault)
+    .query("notes/Src.md", { kind: "link", query: "X" }, false)
+    .map((suggestion) => suggestion.insert);
+  assert.ok(inserts.includes("[X](./X.md)"), inserts.join(", "));
+  assert.ok(inserts.includes("[X](../X.md)"), inserts.join(", "));
+  const wiki = new SuggestionIndex(vault)
+    .query("notes/Src.md", { kind: "link", query: "X" }, true)
+    .map((suggestion) => suggestion.insert);
+  assert.ok(wiki.includes("./X"), wiki.join(", "));
+});
+
+test("a root note whose name differs only in case also gets a Markdown link ./", async () => {
+  const { SuggestionIndex } =
+    await import("../../../src/plugins/suggest/sources");
+  const vault = new MemoryVaultIndex({
+    root: "file:///vault",
+    folderNote: "",
+    linkFormat: "relative",
+  });
+  for (const path of ["x.md", "notes/X.md", "notes/Src.md"]) {
+    vault.upsertFile({
+      path,
+      uri: `file:///vault/${path}`,
+      size: 0,
+      mtime: 0,
+      excluded: false,
+    });
+  }
+  const inserts = new SuggestionIndex(vault)
+    .query("notes/Src.md", { kind: "link", query: "X" }, false)
+    .map((suggestion) => suggestion.insert);
+  assert.ok(inserts.includes("[X](./X.md)"), inserts.join(", "));
+});
+
 test("Use Wikilinks off materializes Markdown links and replaces the entire partial wiki token", async () => {
   const { SuggestionIndex } =
     await import("../../../src/plugins/suggest/sources");

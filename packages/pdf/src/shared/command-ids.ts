@@ -1,3 +1,4 @@
+import { ANNOTATION_COLORS, type MarkToolId } from "./annotation-tools";
 import { PDF_BRIDGE_ENVELOPE_COMMAND } from "./bridge-envelope";
 
 /**
@@ -18,10 +19,8 @@ export const VIEW_COMMAND_IDS = {
   find: "lumiere.pdf.find",
   selectTextTool: "lumiere.pdf.selectTextTool",
   selectRegionTool: "lumiere.pdf.selectRegionTool",
-  selectAnnotateTool: "lumiere.pdf.selectAnnotateTool",
-  toggleAnnotateTool: "lumiere.pdf.toggleAnnotateTool",
-  pickAnnotationTool: "lumiere.pdf.pickAnnotationTool",
-  pickAnnotationColor: "lumiere.pdf.pickAnnotationColor",
+  addAnnotation: "lumiere.pdf.addAnnotation",
+  editAnnotationNote: "lumiere.pdf.editAnnotationNote",
   annotationUndo: "lumiere.pdf.annotationUndo",
   annotationRedo: "lumiere.pdf.annotationRedo",
   annotationRetrySave: "lumiere.pdf.annotationRetrySave",
@@ -31,6 +30,23 @@ export const VIEW_COMMAND_IDS = {
   goToPage: "lumiere.pdf.goToPage",
   selectZoom: "lumiere.pdf.selectZoom",
 } as const;
+
+/** Mark the selected text: the context menu's Highlight and its Mark Text submenu. */
+export const MARK_COMMAND_IDS: Readonly<Record<MarkToolId, string>> = {
+  highlight: "lumiere.pdf.highlightSelection",
+  underline: "lumiere.pdf.underlineSelection",
+  strikeout: "lumiere.pdf.strikeoutSelection",
+  squiggly: "lumiere.pdf.squigglySelection",
+};
+
+/** The Change Color submenu: one command per colour, `lumiere.pdf.annotationColor.yellow`. */
+export const ANNOTATION_COLOR_COMMAND_IDS: readonly {
+  readonly id: string;
+  readonly color: (typeof ANNOTATION_COLORS)[number];
+}[] = ANNOTATION_COLORS.map((color) => ({
+  id: `lumiere.pdf.annotationColor.${color.id}`,
+  color,
+}));
 
 /** Layout, scrolling and the View picker. Suffixes in `view-options.ts` stay short; the full id is only this map. */
 export const VIEW_CONTROL_COMMAND_IDS = {
@@ -98,6 +114,8 @@ export const AGENT_BRIDGE_COMMAND_IDS = {
 
 export const RUNTIME_COMMAND_IDS: readonly string[] = [
   ...Object.values(VIEW_COMMAND_IDS),
+  ...Object.values(MARK_COMMAND_IDS),
+  ...ANNOTATION_COLOR_COMMAND_IDS.map((command) => command.id),
   ...Object.values(VIEW_CONTROL_COMMAND_IDS),
   OPEN_NATIVE_LINK_COMMAND_ID,
   OPEN_LOCATION_COMMAND_ID,

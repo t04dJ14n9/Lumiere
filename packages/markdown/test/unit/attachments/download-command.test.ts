@@ -109,10 +109,11 @@ async function run(
           ];
         },
         mkdir: async () => {},
-        writeBytes: async (uri: string) => {
+        createBytes: async (uri: string) => {
           result.written.push(uri);
+          return true;
         },
-        writeText: async () => {},
+        createText: async () => true,
         isSymbolicLink: async () => false,
       },
     },

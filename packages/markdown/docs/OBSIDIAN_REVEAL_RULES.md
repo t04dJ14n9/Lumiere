@@ -23,12 +23,12 @@ For every case the caret was moved to every character offset (`editor.setCursor`
    - HTML blocks: widget until the caret is inside, then the whole source.
 7. **Task items**: `- [ ]` is revealed only when the caret touches that range (columns 0 to 5 inclusive, so not after the space); the item text never changes.
 8. **Footnote definitions** `[^1]: text`: the `[^1]:` marker is revealed when the caret is on the line (a rendered number otherwise); inline elements in it follow rule 1.
-9. **Never hidden** (raw always visible): list bullets and numbers (drawn by CSS), tags `#tag`, comments `%%…%%` (the `%%` stay visible), footnote references `[^1]` and `^[inline]` (Obsidian shows them raw).
+9. **Never hidden** (raw always visible): list bullets and numbers (drawn by CSS), tags `#tag`, comments `%%…%%` (the `%%` stay visible), footnote references `[^1]` and `^[inline]` (Obsidian shows them raw; Lumiere does not, see the intentional divergence below).
 10. **Never raw in Live Preview**: tables (a widget; the caret reveals the raw text of the *cell* it is in only) and frontmatter (Properties widget; raw only in Source mode or `propertiesInDocument: source`).
 
 11. **Clicking a rendered block** (measured 2026-10-17 in a throwaway vault, by mouse clicks over the DevTools protocol): display math and callouts reveal on a click, which selects the formula (without the `$$` lines) or the whole callout, with the selection's head at its start. Inline math selects the formula without its `$`. Mermaid and other rendered code blocks stay rendered on a click or double-click; their "Edit this block" button reveals them with the code between the fences selected. The button does the same for math (the formula) and callouts (the whole block).
 
-12. **Clicking links, tags, embeds, images and rules** (measured 2026-10-17 in a throwaway vault, 74 click cases, by clicking the same rendered element in Obsidian and in Workshop's editor and comparing the selection, the note and what was opened):
+12. **Clicking links, tags, embeds, images and rules** (measured 2026-10-17 in a throwaway vault, 74 click cases, by clicking the same rendered element in Obsidian and in Lumiere's editor and comparing the selection, the note and what was opened):
     - Obsidian (measured 2026-10-17): a plain click on a rendered link, wikilink, bare URL or autolink opens it and leaves the caret where it was; Cmd-click opens a note in a new tab, Cmd+Alt-click in a split; Alt-click places the caret in the link's source and Shift-click extends the selection there, without opening;
     - **Lumiere (BH-020 / user 2026-10-22):** plain click reveals the link source and places the caret (does not navigate); Ctrl/Cmd-click follows in the same editor; Ctrl/Cmd+Alt-click opens beside; Shift-click extends without following;
     - an unresolved wikilink opens (Obsidian creates the note);
@@ -45,9 +45,9 @@ For every case the caret was moved to every character offset (`editor.setCursor`
     - a click on a drawn horizontal rule selects its source, the head at its start;
     - checkboxes toggle on a click, in lists, nested lists and callouts.
 
-    Obsidian's Live Preview does not render a list inside a plain quote (`> - [ ] task` stays text), so there is no checkbox there to click. Workshop renders and toggles it, as Obsidian's reading view does: a deliberate difference.
+    Obsidian's Live Preview does not render a list inside a plain quote (`> - [ ] task` stays text), so there is no checkbox there to click. Lumiere renders and toggles it, as Obsidian's reading view does: a deliberate difference.
 
-Decision for our editor: follow all of this, **except** footnote references (ours stay LaTeX-style superscript with raw text when the caret is inside) and **rendered link clicks** (plain reveals / Mod follows — BH-020; the user's preference, diverging from the 2026-10-17 Obsidian measurement above).
+Decision for our editor: follow all of this, **except** footnote references (ours render as numbered superscripts, with the raw text revealed when the caret is inside) and **rendered link clicks** (plain reveals / Mod follows — BH-020; the user's preference, diverging from the 2026-10-17 Obsidian measurement above).
 
 ## Detail
 
@@ -82,7 +82,21 @@ Offsets are relative to the element's start; "touch" means `caret >= from && car
 | footnote definition | `[^1]: text` | `[^1]:` on the caret line | fn.md |
 | `$$` block | | whole block when the caret is inside | mix.md |
 | HTML block `<div>` | | whole block when the caret is inside | mix.md |
-| `%% … %%` comment block | | `%%` always visible; inner formatting per element | mix.md |
+| `%% … %%` comment block | | `%%` always visible; inner formatting per element (Lumiere: the block, blank lines included, is one dimmed comment and its inner Markdown is not formatted, so a heading inside is not a heading) | mix.md |
+
+How Lumiere bounds a `%%` comment block, in the editor and the reading view
+alike (`dialect/comments.ts`, `html/comments.ts`): a line starting with `%%`
+(indented less than code, counted from its quote or list item) that does not
+close on it opens the block, and ends a paragraph above it unless that
+paragraph has a `%%` of its own still open (then the line closes it). The
+block ends at the next `%%`; text after it on that line is parsed as a new
+block, so its links, tags and `^id`s count. **Unmeasured:** a `%%` that
+nothing closes runs to the end of the note, or of the quote or list item it
+is in. mix.md and b3.md close every comment, so how Obsidian ends an
+unclosed one has not been measured. Also unmeasured, and different in
+Lumiere: a `%%` opened mid-line in a paragraph stays open only within that
+paragraph, while Obsidian is believed to carry it over blank lines to the
+next `%%`.
 
 ## Differences found in our editor (before this change)
 
@@ -106,7 +120,8 @@ scripts, update the facts, and then change the contract and its tests.
 
 ## Intentional divergence: footnote references
 
-Obsidian shows a footnote reference as a small superscript widget. Ours renders
-LaTeX-style superscript and reveals the raw `[^id]` text when the caret is
-inside. This is a deliberate product decision, not a measurement gap, and the
+Obsidian's Live Preview leaves a footnote reference raw (rule 9). Ours renders
+each reference as a superscript number, numbered in order of first reference,
+and reveals the raw `[^id]` text when the caret is inside
+(`src/plugins/footnotes/README.md`). This is a deliberate product decision, not a measurement gap, and the
 reveal tests for footnotes pin our rule, not Obsidian's.

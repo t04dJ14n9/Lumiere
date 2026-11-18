@@ -179,21 +179,18 @@ pre[data-fence="mermaid"] svg .internal-link tspan {
 }
 
 /*
- * Inspect, Copy and Edit are position:absolute against .hybrid-block, so they
- * stay pinned to the visible top-right while the fence scrolls. Inset the
- * mermaid scrollport by a physical right-hand chrome lane so nodes never sit
- * under those buttons at any scrollLeft. The buttons use physical `right`
- * offsets even when editor.rightToLeft sets dir=rtl, so a logical
- * margin-inline-end would reserve the wrong side in RTL. The fence itself
- * keeps padding: 0 (Obsidian live-preview alignment).
- * 104px is .inspect-diagram's (and the language label's) `right`. The
- * "mermaid" label is wider than the inspect icon, so 3.5em clears that
- * wider control and leaves a small gap.
+ * Inspect, Copy, Edit and the language label are position:absolute in one row
+ * at the block's top-right (top: 10px; 0.6875em text at line-height 1.6, so
+ * 1.1em of this block's font, plus 1px padding and 1px border each side).
+ * A rendered diagram starts below that row, so the buttons never cover a node
+ * at any horizontal scroll and the diagram keeps the column's full width.
+ * Width is the scarcer resource: a side lane cost every diagram about 150px,
+ * while the row costs a few pixels of height once. Padding on the shell, not
+ * a margin on the fence: a fence margin would collapse through the shell and
+ * move the buttons down with it. The row is reserved from the moment the shell
+ * exists, deferred or failed, not only once the SVG is drawn: reserving it on
+ * render would grow the block under the reader (quality: text holds still).
  */
 .hybrid-block.hybrid-diagram {
-  --diagram-toolbar-lane: calc(104px + 3.5em);
-}
-
-.hybrid-block.hybrid-diagram pre[data-fence="mermaid"]:has(> svg) {
-  margin-right: var(--diagram-toolbar-lane);
+  padding-top: calc(10px + 1.1em + 4px + 4px);
 }

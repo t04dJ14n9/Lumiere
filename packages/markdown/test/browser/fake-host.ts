@@ -19,6 +19,7 @@ import { frontmatter } from "../../src/markdown/properties";
 import type { PropertyTypes } from "../../src/markdown/properties/types";
 import { protocol as videoProtocol } from "../../src/plugins/onlineVideos/protocol";
 import { protocol as resourcesProtocol } from "../../src/plugins/resources/protocol";
+import { protocol as vimProtocol } from "../../src/plugins/vim/protocol";
 import { bootstrap } from "../../src/webview/bootstrap";
 import { setTitle } from "../../src/plugins/inlineTitle/widget";
 import { markdownParser } from "../../src/markdown/dialect";
@@ -61,6 +62,10 @@ export class BrowserHost {
   readonly videoRequests: string[] = [];
   /** The git baseline the change bars compare with; undefined: no repository. */
   gitBaseline: string | undefined;
+  /** Whether the host has a status bar that shows Vim's mode; set before `open`. */
+  vimStatusBar = false;
+  /** Vim status texts the editor reported. */
+  readonly vimStatus: string[] = [];
   /** How many times the editor asked to stage the note. */
   gitStaged = 0;
   private readonly saves = new Set<(doc: HostDocument) => void>();
@@ -236,6 +241,10 @@ export class BrowserHost {
       };
     });
     host.handle(jumpProtocol, "record", () => true);
+    host.handle(vimProtocol, "statusBar", () => this.vimStatusBar);
+    host.on(vimProtocol, "status", ({ text }) => {
+      this.vimStatus.push(text);
+    });
     host.handle(linksProtocol, "ready", ({ session }) => {
       this.navigationSessions.set(id, session);
       return true;

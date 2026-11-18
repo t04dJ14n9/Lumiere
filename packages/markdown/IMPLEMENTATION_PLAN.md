@@ -6686,6 +6686,12 @@ workbench plugins, so they run in VS Code and in host-node through the same
   appeared. Real VS Code: `test/vscode/daily-notes-templates.spec.ts` reloads
   the window with no editor open, runs Open Today's Daily Note, then runs
   Insert Template over a selection.
+- Removed (2026-11-16): the `dailyNotes` plugin, its commands and settings,
+  and `obsidianCompat`'s `daily-notes.json` mapping, as not useful enough to
+  keep. Templates and `src/markdown/templates.ts` stay. The real-VS Code
+  spec is now `test/vscode/templates.spec.ts`: it reloads the window with no
+  editor open, opens a note, and runs Insert Template, which starts with the
+  deferred window features on the first panel.
 
 ## Opening: the first view's chunks in the page, one editor.js (2026-11-05)
 

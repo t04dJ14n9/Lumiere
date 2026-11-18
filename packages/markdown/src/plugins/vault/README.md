@@ -14,6 +14,13 @@ a worker, one at a time) and follows file events. While a note is open, its
 unsaved text replaces the file on disk. Each panel's half provides `vault`,
 the shared index of its note's vault.
 
+`vaults.open` opens a note at an offset or fragment through the `navigation`
+host service, from its vault's root, or its own folder's for a note outside the
+workspace. A note it cannot place, or a host without navigation, is logged as a
+warning rather than ignored. Where the host says file names ignore case
+(`VaultSystem.ignoresCase`: VS Code on Windows and macOS for `file:` URIs), a
+note's URI is inside its workspace folder whatever the case of the folder part.
+
 Link resolution follows Obsidian's `getLinkpathDest` (DESIGN §12.3). When a
 file appears, disappears or is renamed, only notes whose links mention its
 name are resolved again.
@@ -39,10 +46,8 @@ The VS Code adapter is `src/host/vault-system.ts`; the worker is
 
 ## Services, events and settings
 
-- Injects `vaultSystem` (root) and `vaults` (panel). Provides `vaults` and
-  `vault`. `vaults.registerLinkPolicy` lets another plugin override resolution
-  and link text; the vault does not inject that plugin. Registering or
-  removing a policy re-resolves links.
+- Injects `vaultSystem` (root), optionally `navigation` (root), and `vaults`
+  (panel). Provides `vaults` and `vault`.
 - Emits `vault/changed (root, change)` and `vault/resolved (root)`.
 - Settings: `lumiere.markdown.vault.rootMarkers` (default `[".obsidian"]`),
   `lumiere.markdown.vault.excludedFiles`, and from `links`: `folderNote` and
@@ -51,6 +56,11 @@ The VS Code adapter is `src/host/vault-system.ts`; the worker is
 ## Limits and differences from Obsidian
 
 - Links ignore case, as in Obsidian; an exact-case path wins.
+- With the relative link format, a link to a note in the same folder (or a
+  subfolder) is written `./X` when a file at the vault path `X` exists,
+  because a link without `./` is looked up from the vault root first.
+  Otherwise it is written `X`. What Obsidian writes in that case is not
+  measured.
 - Excluded files are indexed and resolvable, as in Obsidian, and flagged
   `excluded` for the features that leave them out. A filter without wildcards
   is a path prefix (Obsidian's form); globs are also accepted.
