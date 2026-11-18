@@ -1,6 +1,6 @@
 # Changelog
 
-## Unreleased
+## 0.1.17 (pre-release, 2026-11-19)
 
 - PDF: the right-click menu on selected text shows **Highlight**,
   **Underline**, **Strikeout** and **Squiggly** side by side; the **Mark
