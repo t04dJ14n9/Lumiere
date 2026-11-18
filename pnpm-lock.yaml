@@ -67,11 +67,11 @@ importers:
   apps/ipad:
     dependencies:
       '@capacitor/core':
-        specifier: 8.6.0
-        version: 8.6.0
+        specifier: 8.6.2
+        version: 8.6.2
       '@capacitor/ios':
-        specifier: 8.6.0
-        version: 8.6.0(@capacitor/core@8.6.0)
+        specifier: 8.6.2
+        version: 8.6.2(@capacitor/core@8.6.2)
       '@workshop/app':
         specifier: workspace:*
         version: link:../../packages/app
@@ -170,8 +170,8 @@ importers:
         specifier: workspace:*
         version: link:../pdf
       ws:
-        specifier: 8.22.0
-        version: 8.22.0
+        specifier: 8.23.0
+        version: 8.23.0
     devDependencies:
       '@types/ws':
         specifier: 8.18.2
@@ -228,17 +228,17 @@ importers:
         specifier: 6.43.15
         version: 6.43.15
       '@embedpdf/engine':
-        specifier: 3.0.0
-        version: 3.0.0
+        specifier: 3.2.0
+        version: 3.2.0
       '@embedpdf/engine-core':
-        specifier: 3.0.0
-        version: 3.0.0
+        specifier: 3.2.0
+        version: 3.2.0
       '@embedpdf/engine-runtime-wasm32':
-        specifier: 3.0.0
-        version: 3.0.0
+        specifier: 3.2.0
+        version: 3.2.0
       '@lezer/common':
-        specifier: 1.5.4
-        version: 1.5.4
+        specifier: 1.5.5
+        version: 1.5.5
       '@lezer/cpp':
         specifier: 1.1.6
         version: 1.1.6
@@ -303,14 +303,14 @@ importers:
         specifier: workspace:*
         version: link:../ink
       dompurify:
-        specifier: 3.4.17
-        version: 3.4.17
+        specifier: 3.4.18
+        version: 3.4.18
       graphology:
         specifier: 0.26.0
         version: 0.26.0(graphology-types@0.24.8)
       lucide:
-        specifier: 1.64.0
-        version: 1.64.0
+        specifier: 1.73.0
+        version: 1.73.0
       markdown-it:
         specifier: 15.0.3
         version: 15.0.3
@@ -321,17 +321,17 @@ importers:
         specifier: 4.0.0
         version: 4.0.0
       mermaid:
-        specifier: 12.2.0
-        version: 12.2.0
+        specifier: 12.3.0
+        version: 12.3.0
       prismjs:
         specifier: 1.30.0
         version: 1.30.0
       sigma:
-        specifier: 4.0.4
-        version: 4.0.4(graphology-types@0.24.8)
+        specifier: 4.0.6
+        version: 4.0.6(graphology-types@0.24.8)
       turndown:
-        specifier: ^7.2.4
-        version: 7.2.4
+        specifier: ^7.2.5
+        version: 7.2.5
       yaml:
         specifier: 2.9.1
         version: 2.9.1
@@ -352,59 +352,59 @@ importers:
   packages/pdf:
     dependencies:
       '@embedpdf/core':
-        specifier: 3.0.0
-        version: 3.0.0
+        specifier: 3.2.0
+        version: 3.2.0
       '@embedpdf/core-annotation':
-        specifier: 3.0.0
-        version: 3.0.0
+        specifier: 3.2.0
+        version: 3.2.0
       '@embedpdf/core-stage':
-        specifier: 3.0.0
-        version: 3.0.0
+        specifier: 3.2.0
+        version: 3.2.0
       '@embedpdf/engine':
-        specifier: 3.0.0
-        version: 3.0.0
+        specifier: 3.2.0
+        version: 3.2.0
       '@embedpdf/engine-core':
-        specifier: 3.0.0
-        version: 3.0.0
+        specifier: 3.2.0
+        version: 3.2.0
       '@embedpdf/engine-runtime':
-        specifier: 3.0.0
-        version: 3.0.0
+        specifier: 3.2.0
+        version: 3.2.0
       '@embedpdf/engine-runtime-wasm32':
-        specifier: 3.0.0
-        version: 3.0.0
+        specifier: 3.2.0
+        version: 3.2.0
       '@embedpdf/engine-services':
-        specifier: 3.0.0
-        version: 3.0.0
+        specifier: 3.2.0
+        version: 3.2.0
       '@embedpdf/plugin-annotation':
-        specifier: 3.0.0
-        version: 3.0.0
+        specifier: 3.2.0
+        version: 3.2.0
       '@embedpdf/plugin-history':
-        specifier: 3.0.0
-        version: 3.0.0
+        specifier: 3.2.0
+        version: 3.2.0
       '@embedpdf/plugin-interaction':
-        specifier: 3.0.0
-        version: 3.0.0
+        specifier: 3.2.0
+        version: 3.2.0
       '@embedpdf/plugin-link':
-        specifier: 3.0.0
-        version: 3.0.0
+        specifier: 3.2.0
+        version: 3.2.0
       '@embedpdf/plugin-outline':
-        specifier: 3.0.0
-        version: 3.0.0
+        specifier: 3.2.0
+        version: 3.2.0
       '@embedpdf/plugin-render':
-        specifier: 3.0.0
-        version: 3.0.0
+        specifier: 3.2.0
+        version: 3.2.0
       '@embedpdf/plugin-search':
-        specifier: 3.0.0
-        version: 3.0.0
+        specifier: 3.2.0
+        version: 3.2.0
       '@embedpdf/plugin-selection':
-        specifier: 3.0.0
-        version: 3.0.0
+        specifier: 3.2.0
+        version: 3.2.0
       '@embedpdf/plugin-stage':
-        specifier: 3.0.0
-        version: 3.0.0
+        specifier: 3.2.0
+        version: 3.2.0
       '@embedpdf/react':
-        specifier: 3.0.0
-        version: 3.0.0(react-dom@19.3.1(react@19.3.1))(react@19.3.1)
+        specifier: 3.2.0
+        version: 3.2.0(react-dom@19.3.1(react@19.3.1))(react@19.3.1)
       '@modelcontextprotocol/sdk':
         specifier: 1.32.2
         version: 1.32.2(zod@4.6.7)
@@ -574,11 +574,11 @@ packages:
     engines: {node: '>=22.0.0'}
     hasBin: true
 
-  '@capacitor/core@8.6.0':
-    resolution: {integrity: sha512-9F2zzuGYTJu+wqmQSEmqnFBfGrhC/njjMCfmxbvg9mq8xJT4wNh5pxbMFZxvW/yDhYJWPEBFQxeqzfo1gKrvxg==}
+  '@capacitor/core@8.6.2':
+    resolution: {integrity: sha512-UEb9crRuqEAe2Iu2eGOEuQ8rLQxpwg7ZZIpl17UJoytEpnV1e4oXXW0K7yYS2NsCOGmJjyLeKjNlgG7tkAoX8g==}
 
-  '@capacitor/ios@8.6.0':
-    resolution: {integrity: sha512-Y2PE4zoBqMrSTWoVMJmX2byBznjn6egmATzoEUJiGVbVubkNpAvkF/tl0SBKDyP67ngyedTx1tQq5IGYIhby1A==}
+  '@capacitor/ios@8.6.2':
+    resolution: {integrity: sha512-YnVm0lRA1mQWK0SKd2bdJIOG+PXRRDDdndZ1+nGqeiob+QmHZmb4wWo5gVpWhoHO37pGi2qzH5w5WGvfKrs+Gg==}
     peerDependencies:
       '@capacitor/core': ^8.6.0
 
@@ -639,178 +639,178 @@ packages:
   '@codemirror/view@6.43.15':
     resolution: {integrity: sha512-HHsfpqFeHyXLs983pSRe38Xajs0vFWZQ2BuX0m7Ki8w3jZ5iD8cuR3lBz2/5/X53Dhf32SBHKh6rtSTB6tKeGw==}
 
-  '@embedpdf/core-acrojs@3.0.0':
-    resolution: {integrity: sha512-Lnam64ebSg0qcXl4JQ3Pap3DfqubMEie+UnQ4s4abTmqzB+9FuOUXgB7kqDYzo39vF87Eoafn15iaArrepj5lQ==}
+  '@embedpdf/core-acrojs@3.2.0':
+    resolution: {integrity: sha512-Hk7c48/HoS+W+sUPgjuWPOrlxnH0cvyv413OLuY5BR6hqK1RN4xojlrf4gICb0KE4GyFxG7TBWWAUQohi7zltA==}
 
-  '@embedpdf/core-annotation@3.0.0':
-    resolution: {integrity: sha512-VHyefU2mELdh9/NhzwvXLQa8nWja95+y2p0FUo8Dh/BK7U4rBSSdIPzRQq73+s6eDiumzUGmU5o2xAcmEVWRZA==}
+  '@embedpdf/core-annotation@3.2.0':
+    resolution: {integrity: sha512-m2SWCn58N44UG9PUuy0fSME9wRhLATD3k0zCVCmXRSn1fIsmc+CdM9Q+sq9fkjMXZMFuRM/tPwDSGm3WM378vg==}
 
-  '@embedpdf/core-fonts@3.0.0':
-    resolution: {integrity: sha512-9kRmgoryezSjZPdHHmfW4avKhEb3yhgQI7BYxBF6ZJqVbxtmtyzl4DEeFzHVGWVopkVOQVKIteW1Qtfgp+G/0A==}
+  '@embedpdf/core-fonts@3.2.0':
+    resolution: {integrity: sha512-gSyX9DksFehXWkzNoe0yKKo1og4fF91iKewZ61kUq2c93gxfMvPGIeKzRe1RYzCjWz4Lukl9qAKVRSaDp3pQCA==}
 
-  '@embedpdf/core-form@3.0.0':
-    resolution: {integrity: sha512-GZhSR2WNxCn8zMQv7/bkbbEqWx1JI6rHomY5h43GyJh8v2tU/2DfImU50Z3YDqeSmH5ZC4f8cFrL346A9XFiGg==}
+  '@embedpdf/core-form@3.2.0':
+    resolution: {integrity: sha512-n1ZaouPVSi2JpDcuimn3y5ovqfL8LGZhf/+rzk33cOW4B+AW3pvNcK0IAPaI5Elx9u83UIzAeCKAxqdAIlBdOA==}
 
-  '@embedpdf/core-geometry@3.0.0':
-    resolution: {integrity: sha512-3BTto7sJGpbew6+LelCOkS4SWi2RQcavWM/dzPKO3vSveerg2nAg+soYMDH4uGKyrTnitzrCzUKqr53pHDuA0g==}
+  '@embedpdf/core-geometry@3.2.0':
+    resolution: {integrity: sha512-fLRQK7XJkkLIovmTvhVf/YBDcTbouCX70Rn92XXruKtbc2iEsgSviuvL7lWgQItWVIqvZHNxvSnwW5sQx9MQ7g==}
 
-  '@embedpdf/core-js-sandbox@3.0.0':
-    resolution: {integrity: sha512-17BJubIUZ8RLBT0AvCGZSxldKQgToCzwjv4JbGxfEDBZsMazPc3Xus+BJry7yi5PcoMld52XT6LkMHhXhXkjfw==}
+  '@embedpdf/core-js-sandbox@3.2.0':
+    resolution: {integrity: sha512-aoOoii+TIjZL4Fz0ghu7aljkoBuJXKjmFDxeVLDOFQbiVOTmpkAsJGnjeQpfMUe70TwqTSv5OHAs51W9aZVGsg==}
 
-  '@embedpdf/core-signature@3.0.0':
-    resolution: {integrity: sha512-bkXIgLhr8cc/nPhtAHLZdNUHHpS0n6Xcdn4+ql9OF0HSbuYgMahp7L8b/76uOtEca0NaCkxB5vPnouzylAFG2w==}
+  '@embedpdf/core-signature@3.2.0':
+    resolution: {integrity: sha512-C9RpjvJesCgNMSL4k2q0Jk+haqMpSevHTKLD9kjrm61pSOARb7t47TQu7dfn8TSg/xeyIV8g8MQlvGVqBqV93A==}
 
-  '@embedpdf/core-stage@3.0.0':
-    resolution: {integrity: sha512-nsSnL04norLSUmuseb/mTE6yOTB2uku8kKtlvl93NfgLoBUWyyDz7TzrFNFZmGGm12jB0avYXTuR35dZm7uPhQ==}
+  '@embedpdf/core-stage@3.2.0':
+    resolution: {integrity: sha512-/F9sm1AHwim8zUyXUKXnC2Nzzu5RHnaznylvjBKmtx6U/0h6SXIQ1u+1DOBc1vHB41OWYhGvdKkZoa6pdLlmvQ==}
 
-  '@embedpdf/core-text@3.0.0':
-    resolution: {integrity: sha512-yU1gErxO3DTVCLz+6nkCmj44MxAyBO4T/OxCvS4DtXfeNKDuw0qru5M2QG4ZfvIXCTjHZQpunCoNeM/xe7CMzQ==}
+  '@embedpdf/core-text@3.2.0':
+    resolution: {integrity: sha512-PNbl4dqlg21pnBUE6I0VfLGcGwLyNORzQUA7M+Hs9mwVSQ4Zjboan5wdqt0aM+vbT9Q3+o1jqKLvAj1iyceIjA==}
 
-  '@embedpdf/core-ui@3.0.0':
-    resolution: {integrity: sha512-xL+HQfE+/alMzNTFOExkU98r/n8mWWzPWg948whIPZqpfThbzrrkDgM+QNOLAHys+WE5qkZe+9v3ut9h9bSATg==}
+  '@embedpdf/core-ui@3.2.0':
+    resolution: {integrity: sha512-4J2octGI4KWlqCHJY68MrVmD736lOZSWmh9czPik0jD6CBLL06h9Mm3nqJxoLEFVyf6jq/AFmaq6a+mOGrDTag==}
 
-  '@embedpdf/core@3.0.0':
-    resolution: {integrity: sha512-6hUZxbJZ/Z6B/UJbVWDfeTORn/eojRjdLO+9qteFFRWxdTwpW75On5Tix31ink0hzUSRz3XvdSAIIQjUyvZTQg==}
+  '@embedpdf/core@3.2.0':
+    resolution: {integrity: sha512-eBQ4SI+7Pp+kOM3iqjKuuBRgNZ6BIFXeFcI4mkQPUXCBVoIYvJ9Y7X+jCB4xaB+VWQWNR4EJoEQQbQSh3Mozdw==}
 
-  '@embedpdf/default-fallback-fonts@1.0.0':
-    resolution: {integrity: sha512-R3REkhJMDzKADmWmFCWxQT5hSyU04YObpKFqyGXQqRvLJ7wxCT68xSKh0361kOTfuOqAIYI7lM2wwC2bRomc7Q==}
+  '@embedpdf/default-fallback-fonts@1.0.1':
+    resolution: {integrity: sha512-Z9qeQ2mfjyhjmhLG4+LtTa/78LepJf8uVsE3d2vs741HKOi4/Ki8jyTEcRM/gPdPeCz98d9dXV6428C81A718Q==}
 
-  '@embedpdf/engine-core@3.0.0':
-    resolution: {integrity: sha512-LG9q8Uh7u1q/4XU5dxGvOZ/vF9WJkl3K6jsJzkszpsxmmK3+hwXQxzerWIGFDXgdF8xlAOXhk3ug1ZIMlkiX7Q==}
+  '@embedpdf/engine-core@3.2.0':
+    resolution: {integrity: sha512-wcV9/Unsm9IFQoaa1xmJ31mFn+BLwGAb0zFg3vUjcwI0SZrJMFD0PzC18oF/I4dxIyeSOX8j7h+G78E677C1FA==}
 
-  '@embedpdf/engine-runtime-darwin-arm64@3.0.0':
-    resolution: {integrity: sha512-q+Wt3inX8rKPCJBcekElzeYfbmjgA2K1QDfTBOot2bntyw3v+FnMBBhoaXwGJErJ06TlcXGRhe17cbHJN4JEtQ==}
+  '@embedpdf/engine-runtime-darwin-arm64@3.2.0':
+    resolution: {integrity: sha512-+DLBBYI+ssTdXc2LMVXEUld01cXOOdaRshl+IKnFkUYSaDqrsMsWy38VqnCDKuQ26QwgZ5xt1uHic/RMsOFZYw==}
     cpu: [arm64]
     os: [darwin]
 
-  '@embedpdf/engine-runtime-darwin-x64@3.0.0':
-    resolution: {integrity: sha512-UyaEwQOHPcTzEYItD5s+5g7CeFvObHg2EmnWqe/KE0rAEQEWK5KUvLLN/VUyHBGd4uHJM1L9z3YEdr2ntg2LFw==}
+  '@embedpdf/engine-runtime-darwin-x64@3.2.0':
+    resolution: {integrity: sha512-LPaTJC7mpWrkvpKHDa5YcoiVOdy0mX7geJ4CHMZS6owyZhzdAtPIJHu0FGyew/IiShHUweTvxsn7onI54UrWAg==}
     cpu: [x64]
     os: [darwin]
 
-  '@embedpdf/engine-runtime-linux-arm64@3.0.0':
-    resolution: {integrity: sha512-IIZevL5a0V3KGBVYkZZM79E0KcBXiLcTuJWkNTTG8fjg8AXBRke7hfFTA7dYtd6KzzyB/IESu5a5Yfi51p8oVg==}
+  '@embedpdf/engine-runtime-linux-arm64@3.2.0':
+    resolution: {integrity: sha512-+aJKYfLj5jRRadMncMQzLiRKoX7upI4ob+LrIDoxfkpJpyw/Im1zseFfaKAwrHnwRXUgBHS0M1p/flDbaiedjg==}
     cpu: [arm64]
     os: [linux]
     libc: [glibc]
 
-  '@embedpdf/engine-runtime-linux-x64@3.0.0':
-    resolution: {integrity: sha512-eAfafchvmdD44hOPqWKyQR/LH+xm2fvRY3BXOHfenQmezGbwPC1VFNuxID4HRUugB5tjzlk0E0tm4eHIC3sE0w==}
+  '@embedpdf/engine-runtime-linux-x64@3.2.0':
+    resolution: {integrity: sha512-hKfbBegUvw/Jp9/l5zTBOevJaSoseBdWejkQGQ45jgLi9y2gIiM/Jt3Nf0rF5aJN0J/sWtxpF72CNc1W+v6fAA==}
     cpu: [x64]
     os: [linux]
     libc: [glibc]
 
-  '@embedpdf/engine-runtime-linuxmusl-arm64@3.0.0':
-    resolution: {integrity: sha512-6RT9Jx66fdEW0Iyt3jfMOUEPK9/PUfsCQonwO4up4HLdd2ZOZAtDMuscGtlSWepmAfs9QfPt8xiZ5RYFkW/IuA==}
+  '@embedpdf/engine-runtime-linuxmusl-arm64@3.2.0':
+    resolution: {integrity: sha512-BGkPa5rByyYSYivTrKvNmHEX9Teb9+G/IPLsydJHHInpN4UgsnWYS+iVDh7YG0+Ksqj5Yy/6x/X+48c+SB14TA==}
     cpu: [arm64]
     os: [linux]
     libc: [musl]
 
-  '@embedpdf/engine-runtime-linuxmusl-x64@3.0.0':
-    resolution: {integrity: sha512-j7vcvyUuTNBVIi/oShJvv1A6m7s8G7XuCR2SURnlqMEfHi5Sv/TNB3rpPMN66kW3dj1fV0zKyrqVgGpNS6MPhQ==}
+  '@embedpdf/engine-runtime-linuxmusl-x64@3.2.0':
+    resolution: {integrity: sha512-mz/rXK9hFhqj6fIdC9MTu1JXRWPfWqcq/MKCufeyA1okRXXKf4Dtbn9PvMGI71x9+AwwxlBnUANJKJ7hD2nGHQ==}
     cpu: [x64]
     os: [linux]
     libc: [musl]
 
-  '@embedpdf/engine-runtime-wasm32@3.0.0':
-    resolution: {integrity: sha512-M1hvzH0i+G9sr2T1NXRsn6S8iRdWgkO4yMhjQfZR1oQN/e7ocAvGlPjlxLCGwibQTA3CzE1wyBZNP4yTpHB4Cg==}
+  '@embedpdf/engine-runtime-wasm32@3.2.0':
+    resolution: {integrity: sha512-7T4D9XCbRWwI8WRvh+bbtDhMdclgUF4yZrpRH6Kx6ZFHsia08QydkdfzmYlqU8qorrgXbzizXCQnOxpPxaKLcg==}
 
-  '@embedpdf/engine-runtime-win32-arm64@3.0.0':
-    resolution: {integrity: sha512-ktNu2F9P6SvIKcL0HtAiJKpBE1K2ayQ9h2j2Suq80V3JXoAThlMHikowl48jpLzvo7J8W12ok/y2Nw7S4KZpig==}
+  '@embedpdf/engine-runtime-win32-arm64@3.2.0':
+    resolution: {integrity: sha512-zfw+F6tew6JcZWEqZprAdzcMrtVFsAAIlPGfb82wkK9k/JQITyhmMwJQYAMZA2HzpAzh1hEiKILRQec1IqjlYA==}
     cpu: [arm64]
     os: [win32]
 
-  '@embedpdf/engine-runtime-win32-x64@3.0.0':
-    resolution: {integrity: sha512-qmmafICbAVvAHZl77u5x6Q4y2mrqf1E2A689LM9M9ewjPT1/tpsB4/erq63bUQSlH0cKPCFkPt0sfhtghCKIdw==}
+  '@embedpdf/engine-runtime-win32-x64@3.2.0':
+    resolution: {integrity: sha512-YsnGtuhneiWB+mvO4Uk76FP8ToCUF5ONn5gSXo5Vo/BM6/lJcFAUC5e7JZzEj8uiUt9MYb4No0ofmdW5qvXuMQ==}
     cpu: [x64]
     os: [win32]
 
-  '@embedpdf/engine-runtime@3.0.0':
-    resolution: {integrity: sha512-fwN8e4WhyqpBiw9ZhYhSSwvEv6WQDbBqo7B6L1WvEmp4jOwWDmf7U4pFnvdZ8r+J5m2NvhpjNdaVU3cCZSsxRw==}
+  '@embedpdf/engine-runtime@3.2.0':
+    resolution: {integrity: sha512-E+OHCDULLdJQZk3Ip2q2Zuj1L0lKEMBJ6PzCRpXCaRrw6KVVv8TaEeAiG8YWjnB/37WeQBt0m4/ZnzNzRrlcjA==}
 
-  '@embedpdf/engine-services@3.0.0':
-    resolution: {integrity: sha512-UOiqk2BNMTkgAFQTFOQ2Y6N2VrRownKStukzoSLDnvm6Od0FhSTLrxIq0yuMRv2q1ffwwL3KdnDbfMYw4sxy4g==}
+  '@embedpdf/engine-services@3.2.0':
+    resolution: {integrity: sha512-xBdJS2q6ex1jMp/CRZPan8nBvC8YLlEEkNYHCwgY39h4Gmt1DUXhQ20+KISGE9humbvmlThmh5X34axaAnj+5A==}
 
-  '@embedpdf/engine@3.0.0':
-    resolution: {integrity: sha512-+GTHSVYl79gGf4VqcR2KBs5R5CR5XaiXH5eHUx3DMHIZvcHo7OiwIMUSXeHS2Y8SXN2UAwOFkAXuJbg+iPKpCg==}
+  '@embedpdf/engine@3.2.0':
+    resolution: {integrity: sha512-rokoQDg8WBfUQ0B8r0o1OownP4t2GEfch4xb3TuRZj38gfNm+ffpjqj4ZYlzqhP19TX9f+wwx3O1Ew5rB0Q6VQ==}
 
-  '@embedpdf/plugin-actions@3.0.0':
-    resolution: {integrity: sha512-d+jAf6NP7I0EACVPjMt0kXHKenjzmFE6yXOqWbcvzuzQDGCcLkXPOvGN6fFB1B09tx3D3EdpuW7Mneo5fJO/dA==}
+  '@embedpdf/plugin-actions@3.2.0':
+    resolution: {integrity: sha512-4oubxdVLCeztWlL12CfwCyCK2ykFu6zO/ZX3oZWxPtoQQCMi891LuLuyzWTPsW0sylIIdsREbpwdfva6hidKpw==}
 
-  '@embedpdf/plugin-annotation@3.0.0':
-    resolution: {integrity: sha512-RJZshPN0ob2OldsCrI69eDXCU4X9uCRdsybddC7ZDHQCZwj80SuznGoXQW2v5Uw2SDI9ssowb9gDx9a8tekqYw==}
+  '@embedpdf/plugin-annotation@3.2.0':
+    resolution: {integrity: sha512-9pYr1d4I3QJFyQ3GeyuqhRwrYfmylgzo7q+/taocHNpBQIZVxE00wQgYPYWsDCCfGwrmKIfqls84k9GlRHDBfg==}
 
-  '@embedpdf/plugin-attachment@3.0.0':
-    resolution: {integrity: sha512-5Bslc2e2vt+Ss9pHKoGFZPqWabsaL7BO4IWt/HGjd06jWENbAiZ73DNHo51elBIYG0D4SHbcY/Ebi0D11J5odw==}
+  '@embedpdf/plugin-attachment@3.2.0':
+    resolution: {integrity: sha512-0rkA3TB/K1qkxuCnBlPT1F08VcXXEoPYc5gP5dez+Sl6DN9ovguG4Hvfge4aRXOU1dC0lUfPsga+TbVjlAOcnQ==}
 
-  '@embedpdf/plugin-commands@3.0.0':
-    resolution: {integrity: sha512-VY897qVgSlZW40v8HwLFBhk9YYlF5/1UePx+j87TgDG5ekm90bm5CeYa6JXSQSDbGZqDEUyQtXWPsMcQCDxG8g==}
+  '@embedpdf/plugin-commands@3.2.0':
+    resolution: {integrity: sha512-U//SvGbwvYzcx0bWAm2ug48SUUIG9XNTBTAJ8A29ZBAxVoNrZJjizG67tEbnijk/BvLEVn50zTjw9gYWLATakA==}
 
-  '@embedpdf/plugin-fonts@3.0.0':
-    resolution: {integrity: sha512-Q82jc0mQgSfWrb3EDI/Kp8jPyeV709YEtFowtwXAZiDBSP6oOCgA7qh2l48ALmdR07uidZF2PoJDB9x102l7Gw==}
+  '@embedpdf/plugin-fonts@3.2.0':
+    resolution: {integrity: sha512-sZLaEB48T4eppewSvHzuzZ54psHC72y58nfBwtJkbzKRUkCw+ZkAhzn8NTiv4OR+voyISIFj4i8J9k8+tjGaqA==}
 
-  '@embedpdf/plugin-form@3.0.0':
-    resolution: {integrity: sha512-hRWDlRlfK9RLfRO4dIDGF2Hhazq7UJZQK2nhd2msS0YbcPOD+hRPqiKUeUN7p364TkdMV8ueJbqTECHhL39DxQ==}
+  '@embedpdf/plugin-form@3.2.0':
+    resolution: {integrity: sha512-MkuW52h32YWyJjHZ+YSivIoYeTOQzrJ+oEk4PRgdmXWnYO63YFHKPlg2jOtqO7TwsRJcWBY3pLHQ0ZUB5Y3FWw==}
 
-  '@embedpdf/plugin-history@3.0.0':
-    resolution: {integrity: sha512-GqIOdruni4xwHHWAibswb4eH9DTe6xVpJ6wkGjZfb8xzlxTUJ95VN9b0e9TJitkyhro6TjDOeWeGtTEsj4O1HA==}
+  '@embedpdf/plugin-history@3.2.0':
+    resolution: {integrity: sha512-mUabevmOu2VevRuxtqTxr1ekKmXUkguRlGHuSHgPT8tmx7jnXYZXdwPgtWaoGkywjXygwgJnVmadGT6xvQAeGw==}
 
-  '@embedpdf/plugin-i18n@3.0.0':
-    resolution: {integrity: sha512-xlOl2ThP1Dud4//y17h4Wm2VooLOMNMnylZL3hPIKEjCmnOLqAhfe/vzV5I8raZ7S90Jx33Qw7ZqlV5qJXvL4Q==}
+  '@embedpdf/plugin-i18n@3.2.0':
+    resolution: {integrity: sha512-6Ero8COUi+ZXv3fzQEUO22+5WbPZA1A2aaJRIsK0AQIJNen7Una/XzhXGLa0wL+dcpFdLyPv2y/ILuLvr0eGTg==}
 
-  '@embedpdf/plugin-interaction@3.0.0':
-    resolution: {integrity: sha512-sThT46WOaXRx3ZyBeaXnkGIZUnom7+mfJDESLtp8YlR1VZ/EfBCTmVsGNbo6fXn5BTHcfdJQBPRWA9Tg4YiSWw==}
+  '@embedpdf/plugin-interaction@3.2.0':
+    resolution: {integrity: sha512-YHQoOAJFyinGEvV5h1se18BNqp2pnsBmqQ1udITdjbJGRN+ZeNtajE0r0NGNNvtCrF4CSJvQIkOPX6WVmWYCUQ==}
 
-  '@embedpdf/plugin-link@3.0.0':
-    resolution: {integrity: sha512-vC6HuOSE5l5TjT6ITEKTaY3cvESvngKob4TPqjvr3pDzeXL96S9vXzVuN5EFez0RqnRtcHkwGqlg2/CxKib/Tw==}
+  '@embedpdf/plugin-link@3.2.0':
+    resolution: {integrity: sha512-st8LvX7UVDH6CHhyTVPqv8vaoCG/DDk1bRi1Bxmmff4jFawArJKxEpBF3k7G6tAIUYc8SQrI+LiG5R6trTX3FA==}
 
-  '@embedpdf/plugin-measurement@3.0.0':
-    resolution: {integrity: sha512-3Ciu7WbKZKfEqhRXG+kriSA6V27jrIxMF9VUrjbTtx6pxZuCkvIVGIRL87NX5kjGfZKzkfNGANHFFlIkr7qSNw==}
+  '@embedpdf/plugin-measurement@3.2.0':
+    resolution: {integrity: sha512-EUat3MjNPWmgAmX/cxC58dKIV2pcAEeQK2n/aurVsg+lK0iMmnvLf6/hn9GjxSoWZ9kijBGTkZA488OqHPDsnA==}
 
-  '@embedpdf/plugin-metadata@3.0.0':
-    resolution: {integrity: sha512-hXBrjZOkQytq9dJojP5MhApgT7twzMvhg0/bpnhqYO2Cudw7oU7CjjKJuN3unj2dKxvjQuwFK8NHu/X4DR5Z2A==}
+  '@embedpdf/plugin-metadata@3.2.0':
+    resolution: {integrity: sha512-FNnrx8gRnUx9a4Tsl67J4IQss0JwfQFzeGsTcnONfVzLUxt+gNSgH9GCzlG3mfyVZ4Pe2dMdpSJT6OwmKSRjaA==}
 
-  '@embedpdf/plugin-outline@3.0.0':
-    resolution: {integrity: sha512-6+6GicD7vYUd1jEA4156J2o9fEAjH1QF7c9hwSdAm4G47eHTh3FeGkJw9Z+7PsCjbM4b9Hd1iDuFmpjvmzQ2SQ==}
+  '@embedpdf/plugin-outline@3.2.0':
+    resolution: {integrity: sha512-qjuCRPu6iZJu2X18QNUPJVe5wTcXy29hcxUlE9CVPoFd2Ud3vY79EziNmC6PCOwj3Nv35CxnmoTTn8cFXLayRg==}
 
-  '@embedpdf/plugin-page-edit@3.0.0':
-    resolution: {integrity: sha512-kGdUSgWMjeVe9S/3GESpiQkxmJGoLaSQnstiJUCSjBdVeJL0YpinJgyOojuxYnuBBHw5NgW+PQ0JlzYWJM5jaw==}
+  '@embedpdf/plugin-page-edit@3.2.0':
+    resolution: {integrity: sha512-iuTMUxS3MtzJj6glLG1MJDk41B34B6QHeotDMlmCc204t/QqCVpr0IP1NLl2l6B96+Y3UgZ7VY/tS1KK7hZ60Q==}
 
-  '@embedpdf/plugin-redaction@3.0.0':
-    resolution: {integrity: sha512-mEKU2kqJfhbqx5L9sclT/la0lwaPKk2UXJ6e0/rk2ROWy2oDA7Sb+61Kqp5Q+gxin3d9uL4psqQ6o8SlEP5tZg==}
+  '@embedpdf/plugin-redaction@3.2.0':
+    resolution: {integrity: sha512-eVHHj6CfPNwrnl5i3OMygK+1ahqd/d9C1U6iyS+AybXIHV65xgPz7NAlbe7x0B0KYSF2GX/fFAvPFZ1U+Jgumg==}
 
-  '@embedpdf/plugin-render@3.0.0':
-    resolution: {integrity: sha512-cl37mIgWWHu2LbhYtDQJ6My01TYoSuVUnOIghKrXJTgcDSo5dV5db0L0mVa7QGFWcc7JIWQ7vZuWi7wh2foOpA==}
+  '@embedpdf/plugin-render@3.2.0':
+    resolution: {integrity: sha512-2a8RECbEyMwIT8uljeOZSU0A3kL3Q762P31kax/hTmxclJdMreoTVKJsAmqaZRRYcaR9/104JUbITomUn8yhXQ==}
 
-  '@embedpdf/plugin-search@3.0.0':
-    resolution: {integrity: sha512-pHXkWqUsuX/9PGdxFdZNKOhYyssoFt+ynxJ1vQs1vka7m5QW/hxCD9YS7Z3d617+awMixdGmr7nexNbvUdJ21w==}
+  '@embedpdf/plugin-search@3.2.0':
+    resolution: {integrity: sha512-JJlBjeZP2CKOqc8lGGk8oDF6KX0tGmKRnPWLDtCrlgLAfBRmxDQfvgGFf05Qwx+90IQyRBt3XeCbJBhjkMSS3A==}
 
-  '@embedpdf/plugin-selection@3.0.0':
-    resolution: {integrity: sha512-7ZawZJSv0waDWL4pmTL8+k9oeDFLvoQAbtcWOoDAMcs6vmrE/3GJX5uAdRikKAZYNouBCdKkY0DJTAIZsGCXNQ==}
+  '@embedpdf/plugin-selection@3.2.0':
+    resolution: {integrity: sha512-uqU9i5Le3DF97Tihu7Wult4xhagmVS/6T3lJVCwr2cA0qIeP0HSky2tppqpY/VEreMY4iGR84JFfAxLC6xOeyQ==}
 
-  '@embedpdf/plugin-shell@3.0.0':
-    resolution: {integrity: sha512-/smQnokArfQhtitY35nz+yNojwxeYpVMQOd+YqNb+q4sAA/721mkIrBtQqoTmCPzS0s/4MM1yMP7kEZARqRJSQ==}
+  '@embedpdf/plugin-shell@3.2.0':
+    resolution: {integrity: sha512-F7GYT9J/Mz/iOPxdFYp0gGtRvCBlcfgZSi03cDliI6QPXVZaXV06cZXZ9W/faSCfYFomsEBjnkY4tcYMyb4J4w==}
 
-  '@embedpdf/plugin-signature@3.0.0':
-    resolution: {integrity: sha512-346lhzh5kOFJ0XwqGrG2hHzXl4hfO6F/1PiXrIbr+a02AilfTDepfEwJqmpekNSJMypHjts1+xq+4x1MWJlvUQ==}
+  '@embedpdf/plugin-signature@3.2.0':
+    resolution: {integrity: sha512-7+WI/bRxr/isapdhZ2tpr02RnGWKrNztgGha6eedGQ7Z8qQLERGVKF+/RCYKOIiyanU7/CegDiZXkjweiVyMOQ==}
 
-  '@embedpdf/plugin-stage@3.0.0':
-    resolution: {integrity: sha512-4MaDxBWlKqf0IjXk3vPrSDqYCaOqT9CMXRQuVnsQzQFjaND7jHwCdUdZzR2cOVUZiFamgNltpRnOvJAiOr5mQg==}
+  '@embedpdf/plugin-stage@3.2.0':
+    resolution: {integrity: sha512-qn8m+2Ok6VetFHeRX9blt/lfyWM6RBLBRPkX+Rpfs9GHD8hOOa6PC7GOPciIAA+mEz7ZOE0USCR/qHmG/Zh14g==}
 
-  '@embedpdf/plugin-stamp@3.0.0':
-    resolution: {integrity: sha512-dKKvZlxejgK1DHvpiBMZ6Rm85upqakt/yiZ4mzDu0I0ERPsvpWZHTVA44g52JfSSn3F212jMhGFdPSZxdg1u3g==}
+  '@embedpdf/plugin-stamp@3.2.0':
+    resolution: {integrity: sha512-W9j44pUal+zjY523ZZBt8p2MILwIK5SFmZ4opecLvWZBElyiBq5IpniA9gOr98qFxc8mkfLxqXubXTAyt1Ai3Q==}
 
-  '@embedpdf/plugin-view-manager@3.0.0':
-    resolution: {integrity: sha512-YSq1o/kLMcgFYPwrfDcsgGeu/0oGSpBHgtVLiOIYBaWLCN8phBVEzdSJzcM7f3v0PXIcnmC50de9UhBCYOak2w==}
+  '@embedpdf/plugin-view-manager@3.2.0':
+    resolution: {integrity: sha512-kq6hzUQqMTYh2rJ/GDT9Q6QGgrwVGLfOB09KTJ7VV6gN1GL/i9x5dLwJRlZNxK8X+o5I2DrVSVpOpaBlXiGAUw==}
 
-  '@embedpdf/react@3.0.0':
-    resolution: {integrity: sha512-KgWzQFsi3lbbBdCe8FzidhECPAK4E+xX0EByyO2zAAboYvpNTd1rdHLCG+GbgWu2pyXuwOIGK4kJE+PSg7NLFg==}
+  '@embedpdf/react@3.2.0':
+    resolution: {integrity: sha512-50XFb4hO4w8dbFoXt5lhVZ3hxzEJOr/Uq0aM3B7QQt5IO+VkRkVHkN23jizE6Km/n8BS2VeKBKe1ERMuhk/Prg==}
     peerDependencies:
       react: '>=18'
       react-dom: '>=18'
 
-  '@embedpdf/web@3.0.0':
-    resolution: {integrity: sha512-oJMscccMdEpGKh1lDAOucj9Qbf0lmA8o19FdbKEjAIv3cEknqo4VsiUU8JvYPFbXINdrEz2D+Z8+OpDRh7DaPg==}
+  '@embedpdf/web@3.2.0':
+    resolution: {integrity: sha512-R8HW3C68x+RCy+LhTmcDBF6TyU/PBpLlWtq5PjX59dfongpMa+uASVgJe4PvhzgJ624a8XF8wqbf86gGd0C1bQ==}
 
   '@esbuild/aix-ppc64@0.28.2':
     resolution: {integrity: sha512-XExcO+dvLKvVtNTibSTBej1NCAbaGhWn9Ww1ZPx80qsahhPFe/8jgWP0IchNe0F3HwkU7n8ejhH8bjonqht8mQ==}
@@ -1112,8 +1112,8 @@ packages:
   '@keyv/serialize@1.1.1':
     resolution: {integrity: sha512-dXn3FZhPv0US+7dtJsIi2R+c7qWYiReoEh5zUntWCf4oSpMNib8FDhSoed6m3QyZdx5hK7iLFkYk3rNxwt8vTA==}
 
-  '@lezer/common@1.5.4':
-    resolution: {integrity: sha512-xt3Q4z64xM+xhg4M7NXqw1N//1O74bUFo5kz6fwMeC4qwxSuRdwkYSmjcqCEEKYkNw5e67f2hcNqBoNERAEU0w==}
+  '@lezer/common@1.5.5':
+    resolution: {integrity: sha512-Pw7PVCndruF1pb3ebCxpSVpkMHSDjwRCLcTRw+RizUKco5QbWylwq2g4lnG/RYN7yTTQDXE9F77MwtkAyphrjg==}
 
   '@lezer/cpp@1.1.6':
     resolution: {integrity: sha512-vh9gWWJOXFVY8HBHK3Twzq8MgwG2iN4GSyzBP9sCGTe37P15x2R14VaBQk0VA0ezTRN1KHYBBsHhvpGZ2Xy/pA==}
@@ -1951,147 +1951,147 @@ packages:
     peerDependencies:
       cytoscape: ^3.2.0
 
-  cytoscape@3.34.3:
-    resolution: {integrity: sha512-yfYGhRcGAntq6YBD583j4n0Eg3jIxvWmZtz/5uz9UYkeIStSlMxuUja+ec5j3iBD8nv1rwaOAYMW09tBdkSeaQ==}
+  cytoscape@3.35.0:
+    resolution: {integrity: sha512-sMvBIXiGMnhkCaWz2R06FwF/27MNlS+Tqvi17foO9UhnUg3XGZccKjxsvEqQFAQYMSSZmN5SxYzUYlQ0DOJJ3g==}
     engines: {node: '>=0.10'}
 
   d3-array@2.12.1:
     resolution: {integrity: sha512-B0ErZK/66mHtEsR1TkPEEkwdy+WDesimkM5gpZr5Dsg54BiTA5RXtYW5qTLIAcekaS9xfZrzBLF/OAkB3Qn1YQ==}
 
-  d3-array@3.2.4:
-    resolution: {integrity: sha512-tdQAmyA18i4J7wprpYq8ClcxZy3SC31QMeByyCFyRt7BVHdREQZ5lpzoe5mFEYZUWe+oq8HBvk9JjpibyEV4Jg==}
+  d3-array@3.2.5:
+    resolution: {integrity: sha512-Th8qGXoBalmWsstpkuhmBuTsBQIFqYOJtjlBvNVvBfJ8E3uYusBUwUR8HU20U0qKKQkgCvKyR1YjiozWadk5QA==}
     engines: {node: '>=12'}
 
-  d3-axis@3.0.0:
-    resolution: {integrity: sha512-IH5tgjV4jE/GhHkRV0HiVYPDtvfjHQlQfJHs0usq7M30XcSBvOotpmH1IgkcXsO/5gEQZD43B//fc7SRT5S+xw==}
+  d3-axis@3.0.1:
+    resolution: {integrity: sha512-E5QCXfaf/uJZEHHiqoWRq+bQEm2PzoVFv2rDC7CZ3wwI0MjfMW3w83J3ubobG4IJj3lShAI5eiPJhOu/8wHofA==}
     engines: {node: '>=12'}
 
-  d3-brush@3.0.0:
-    resolution: {integrity: sha512-ALnjWlVYkXsVIGlOsuWH1+3udkYFI48Ljihfnh8FZPF2QS9o+PzGLBslO0PjzVoHLZ2KCVgAM8NVkXPJB2aNnQ==}
+  d3-brush@3.0.1:
+    resolution: {integrity: sha512-L5Glqa/Gb7LU3ndIOMtA5mDzlJ0aXKp5ELP2X09ctWF23jO7+faIUVDbmaIi+D6k3EemXFWn1F3lkfguExoVhA==}
     engines: {node: '>=12'}
 
-  d3-chord@3.0.1:
-    resolution: {integrity: sha512-VE5S6TNa+j8msksl7HwjxMHDM2yNK3XCkusIlpX5kwauBfXuyLAtNg9jCp/iHH61tgI4sb6R/EIMWCqEIdjT/g==}
+  d3-chord@3.0.2:
+    resolution: {integrity: sha512-cGmADo5M2PTi3ewJZ2lcE32eURd4JmHtQ5JwRIUcas5L1SXqufG9yPyjWp8fW0gRi7aZi9bgbZPFZO1eyZ+1CQ==}
     engines: {node: '>=12'}
 
-  d3-color@3.1.0:
-    resolution: {integrity: sha512-zg/chbXyeBtMQ1LbD/WSoW2DpC3I0mpmPdW+ynRTj/x2DAWYrIY7qeZIHidozwV24m4iavr15lNwIwLxRmOxhA==}
+  d3-color@3.1.1:
+    resolution: {integrity: sha512-lfab8x0Bj0UO7SNsY8dZSbNIA6ipbkE3X0NG9nqjCu6CfCHZseuDnOSJY7hidKrjpP++i1M2qT+FlAdPKYRilA==}
     engines: {node: '>=12'}
 
-  d3-contour@4.0.2:
-    resolution: {integrity: sha512-4EzFTRIikzs47RGmdxbeUvLWtGedDUNkTcmzoeyg4sP/dvCexO47AaQL7VKy/gul85TOxw+IBgA8US2xwbToNA==}
+  d3-contour@4.0.3:
+    resolution: {integrity: sha512-5DYURc8KwXPOhSUBblU0P9rVcArsSPxPOxsfO0Eud0s28oU0sB2e80aRHRL9AZW3usT8ikFKyIHpHHLNWLdRVA==}
     engines: {node: '>=12'}
 
-  d3-delaunay@6.0.4:
-    resolution: {integrity: sha512-mdjtIZ1XLAM8bm/hx3WwjfHt6Sggek7qH043O8KEjDXN40xi3vx/6pYSVTwLjEgiXQTbvaouWKynLBiUZ6SK6A==}
+  d3-delaunay@6.0.6:
+    resolution: {integrity: sha512-DMQIEvSJhZCB6pwedcXaAlQ+MeKU5LlM2XakKtc73b/VM+RBiI1SRXycOEOKg2jsKj4zZ9F0KGYG6nCGwwWu/g==}
     engines: {node: '>=12'}
 
-  d3-dispatch@3.0.1:
-    resolution: {integrity: sha512-rzUyPU/S7rwUflMyLc1ETDeBj0NRuHKKAcvukozwhshr6g6c5d8zh4c2gQjY2bZ0dXeGLWc1PF174P2tVvKhfg==}
+  d3-dispatch@3.0.2:
+    resolution: {integrity: sha512-sAzH4Y4nsLo8eSqw5jKiZt+LU2wZmL/qS+OkxQGjhwazB/D7TY34R/QK1eshfGr7cZEKymKZ/Haem7m+lu98Sg==}
     engines: {node: '>=12'}
 
-  d3-drag@3.0.0:
-    resolution: {integrity: sha512-pWbUJLdETVA8lQNJecMxoXfH6x+mO2UQo8rSmZ+QqxcbyA3hfeprFgIT//HW2nlHChWeIIMwS2Fq+gEARkhTkg==}
+  d3-drag@3.0.1:
+    resolution: {integrity: sha512-OWeoayCq8J69hUIjvL+Mb6Q6Oaj/fyHV5XaXByEUAG+JUjIfTGDnk3qGpcXrD3VmQ3BSV96fcbM6fqq7C0tbPA==}
     engines: {node: '>=12'}
 
-  d3-dsv@3.0.1:
-    resolution: {integrity: sha512-UG6OvdI5afDIFP9w4G0mNq50dSOsXHJaRE8arAS5o9ApWnIElp8GZw1Dun8vP8OyHOZ/QJUKUJwxiiCCnUwm+Q==}
+  d3-dsv@3.0.2:
+    resolution: {integrity: sha512-FUnXhX7I4/AXyRCZzwfZTDGSq8PGZ4oR0tiCBqNGOZMsDrQ+6sIWNQnBzcCGhzJKZ6uCvCezTwflUqI209RRiQ==}
     engines: {node: '>=12'}
     hasBin: true
 
-  d3-ease@3.0.1:
-    resolution: {integrity: sha512-wR/XK3D3XcLIZwpbvQwQ5fK+8Ykds1ip7A2Txe0yxncXSdq1L9skcG7blcedkOX+ZcgxGAmLX1FrRGbADwzi0w==}
+  d3-ease@3.0.2:
+    resolution: {integrity: sha512-B5znKqRmKROAN4oHWQ50W/qisVjA9GXh2WMsVKdFVp4DxWmcrOsweqgUOUVsv5th96kwaZlokU6SlV4J3gak1w==}
     engines: {node: '>=12'}
 
-  d3-fetch@3.0.1:
-    resolution: {integrity: sha512-kpkQIM20n3oLVBKGg6oHrUchHM3xODkTzjMoj7aWQFq5QEM+R6E4WkzT5+tojDY7yjez8KgCBRoj4aEr99Fdqw==}
+  d3-fetch@3.0.2:
+    resolution: {integrity: sha512-1wGF62bgjMRbF6mqbD+6rRWBL2hwWVYQjFO2UP3Wm1nIAvJZKaQxXM5caVY7athoCa8wIq9lCf7g44lPWFk50g==}
     engines: {node: '>=12'}
 
-  d3-force@3.0.0:
-    resolution: {integrity: sha512-zxV/SsA+U4yte8051P4ECydjD/S+qeYtnaIyAs9tgHCqfguma/aAQDjo85A9Z6EKhBirHRJHXIgJUlffT4wdLg==}
+  d3-force@3.0.1:
+    resolution: {integrity: sha512-kAaaHLFebBYwgi5cYBXAI8vKrQFMCD2MEswj2QuPKKbdU1wYLc8WXtS7O8F/b6POCIe3gJjY6hkDstHi1yMETQ==}
     engines: {node: '>=12'}
 
-  d3-format@3.1.2:
-    resolution: {integrity: sha512-AJDdYOdnyRDV5b6ArilzCPPwc1ejkHcoyFarqlPqT7zRYjhavcT3uSrqcMvsgh2CgoPbK3RCwyHaVyxYcP2Arg==}
+  d3-format@3.1.3:
+    resolution: {integrity: sha512-+F+/49swqmGuQJmSKnVMIDH/QkEFV5li9QRj0xm/KhyAUBv099O5PrvpQFxBp24PYph17Mnvt9mjKQV0ii0nMA==}
     engines: {node: '>=12'}
 
-  d3-geo@3.1.1:
-    resolution: {integrity: sha512-637ln3gXKXOwhalDzinUgY83KzNWZRKbYubaG+fGVuc/dxO64RRljtCTnf5ecMyE1RIdtqpkVcq0IbtU2S8j2Q==}
+  d3-geo@3.1.2:
+    resolution: {integrity: sha512-5R8ZgDQorIxmauv7R6gpE/ndz+Z0qAZssigq0aXFdvPHdY41RqtW02jrRUQAL724NdPABYXo1+gQEGBBr7uKNg==}
     engines: {node: '>=12'}
 
-  d3-hierarchy@3.1.2:
-    resolution: {integrity: sha512-FX/9frcub54beBdugHjDCdikxThEqjnR93Qt7PvQTOHxyiNCAlvMrHhclk3cD5VeAaq9fxmfRp+CnWw9rEMBuA==}
+  d3-hierarchy@3.1.3:
+    resolution: {integrity: sha512-GRajN5ZcnEwYFWqqdzhG1qJ3+fDg6WWzk47TJg7ePY7yvYAgRfD2r1mUx+wviBOWuCwamCUzjwMSdato43jbGA==}
     engines: {node: '>=12'}
 
-  d3-interpolate@3.0.1:
-    resolution: {integrity: sha512-3bYs1rOD33uo8aqJfKP3JWPAibgw8Zm2+L9vBKEHJ2Rg+viTR7o5Mmv5mZcieN+FRYaAOWX5SJATX6k1PWz72g==}
+  d3-interpolate@3.0.2:
+    resolution: {integrity: sha512-IRzGU62DtxhvsnSTWMQIdnoZ6gA+BCWwBon1EJI6SjoN595799b6z/QRBzXfFhE8iupUPp3042yBNo0STPqnzQ==}
     engines: {node: '>=12'}
 
   d3-path@1.0.9:
     resolution: {integrity: sha512-VLaYcn81dtHVTjEHd8B+pbe9yHWpXKZUC87PzoFmsFrJqgFwDe/qxfp5MlfsfM1V5E/iVt0MmEbWQ7FVIXh/bg==}
 
-  d3-path@3.1.0:
-    resolution: {integrity: sha512-p3KP5HCf/bvjBSSKuXid6Zqijx7wIfNW+J/maPs+iwR35at5JCbLUT0LzF1cnjbCHWhqzQTIN2Jpe8pRebIEFQ==}
+  d3-path@3.1.1:
+    resolution: {integrity: sha512-jsbgV8zIT38ReB9O7X7gcLndTQRONSqNNd+oGIaTBdUug4r5jFmp0N6RY9R5GWbdUDucn0qoTGyfjapT4tDhcg==}
     engines: {node: '>=12'}
 
-  d3-polygon@3.0.1:
-    resolution: {integrity: sha512-3vbA7vXYwfe1SYhED++fPUQlWSYTTGmFmQiany/gdbiWgU/iEyQzyymwL9SkJjFFuCS4902BSzewVGsHHmHtXg==}
+  d3-polygon@3.0.2:
+    resolution: {integrity: sha512-WAUvPudGU1Dn4mDPfb6+JnnbeVEV53hG/BoT+bxts6AkZsOpTEiV1jHYX+2vtwCICNFG9Wxv8QS+eW1zE/Dwfg==}
     engines: {node: '>=12'}
 
-  d3-quadtree@3.0.1:
-    resolution: {integrity: sha512-04xDrxQTDTCFwP5H6hRhsRcb9xxv2RzkcsygFzmkSIOJy3PeRJP7sNk3VRIbKXcog561P9oU0/rVH6vDROAgUw==}
+  d3-quadtree@3.0.2:
+    resolution: {integrity: sha512-9Lu9mqJKRbIk0d6mKDjpvPURaPdwHVK5CYbcdd0/4vBgz4ldz/7TIOse3kNERsByGNfld58KEco507AztJWyTQ==}
     engines: {node: '>=12'}
 
-  d3-random@3.0.1:
-    resolution: {integrity: sha512-FXMe9GfxTxqd5D6jFsQ+DJ8BJS4E/fT5mqqdjovykEB2oFbTMDVdg1MGFxfQW+FBOGoB++k8swBrgwSHT1cUXQ==}
+  d3-random@3.0.2:
+    resolution: {integrity: sha512-PxJi9LNV+7mulaYO77nd+oGurXGL1fhedXjHnB3pWLUcqDnQtF4VASoqnQGHgoXLByVdv5QJ/2kfwkGn5HTS8g==}
     engines: {node: '>=12'}
 
   d3-sankey@0.12.3:
     resolution: {integrity: sha512-nQhsBRmM19Ax5xEIPLMY9ZmJ/cDvd1BG3UVvt5h3WRxKg5zGRbvnteTyWAbzeSvlh3tW7ZEmq4VwR5mB3tutmQ==}
 
-  d3-scale-chromatic@3.1.0:
-    resolution: {integrity: sha512-A3s5PWiZ9YCXFye1o246KoscMWqf8BsD9eRiJ3He7C9OBaxKhAd5TFCdEx/7VbKtxxTsu//1mMJFrEt572cEyQ==}
+  d3-scale-chromatic@3.1.1:
+    resolution: {integrity: sha512-lA5gfN2yMvmChubmptnDiBfeGpHD7Yb1EbvCz0TZE0WHXhyR6W2allPuhKtzV5ILQRqeOdefF0qYtERReLUBDg==}
     engines: {node: '>=12'}
 
-  d3-scale@4.0.2:
-    resolution: {integrity: sha512-GZW464g1SH7ag3Y7hXjf8RoUuAFIqklOAq3MRl4OaWabTFJY9PN/E1YklhXLh+OQ3fM9yS2nOkCoS+WLZ6kvxQ==}
+  d3-scale@4.0.3:
+    resolution: {integrity: sha512-66cWobCNzcMvlfoaDHCxuIv9TBUWG1BLOWdv9kHHFuCr1JdqAWPvTmsaEYDD5NRMyWZ5+7u0GqiCDfMXMqh3hg==}
     engines: {node: '>=12'}
 
-  d3-selection@3.0.0:
-    resolution: {integrity: sha512-fmTRWbNMmsmWq6xJV8D19U/gw/bwrHfNXxrIN+HfZgnzqTHp9jOmKMhsTUjXOJnZOdZY9Q28y4yebKzqDKlxlQ==}
+  d3-selection@3.0.1:
+    resolution: {integrity: sha512-ODSf35vqCrlCfp7hrm0eZjvOosSXSYLjqvIlhMBV9q9VOx7EBJG6pc+uXBswEZNJgCGJ+qnKYcWutbZDIxe/Xg==}
     engines: {node: '>=12'}
 
   d3-shape@1.3.7:
     resolution: {integrity: sha512-EUkvKjqPFUAZyOlhY5gzCxCeI0Aep04LwIRpsZ/mLFelJiUfnK56jo5JMDSE7yyP2kLSb6LtF+S5chMk7uqPqw==}
 
-  d3-shape@3.2.0:
-    resolution: {integrity: sha512-SaLBuwGm3MOViRq2ABk3eLoxwZELpH6zhl3FbAoJ7Vm1gofKx6El1Ib5z23NUEhF9AsGl7y+dzLe5Cw2AArGTA==}
+  d3-shape@3.2.1:
+    resolution: {integrity: sha512-dm2o+lbKdzg9tY7GEag/dB9hcbodLfwkE/DkvqbELJXaMz0yKzWWhZqhbI7CKubukA7HnRyz0avdtvi7EPxPvw==}
     engines: {node: '>=12'}
 
-  d3-time-format@4.1.0:
-    resolution: {integrity: sha512-dJxPBlzC7NugB2PDLwo9Q8JiTR3M3e4/XANkreKSUxF8vvXKqm1Yfq4Q5dl8budlunRVlUUaDUgFt7eA8D6NLg==}
+  d3-time-format@4.1.1:
+    resolution: {integrity: sha512-22XaqjyCjpqgda20erhsOjGmC3vvYwTNYniKAd45W5UWLDF43moeOuV9qYpRqobIlsnK0UhnKZjUUJm3VgORUA==}
     engines: {node: '>=12'}
 
-  d3-time@3.1.0:
-    resolution: {integrity: sha512-VqKjzBLejbSMT4IgbmVgDjpkYrNWUYJnbCGo874u7MMKIWsILRX+OpX/gTk8MqjpT1A/c6HY2dCA77ZN0lkQ2Q==}
+  d3-time@3.1.1:
+    resolution: {integrity: sha512-Ze7rjrhMzdeulh0/hjcfFj7XLAHOfowtEMfsoG6DU866HPynQNW7Wfen6hzXcqKTv8XzxvF6Hzr5XD6bMHr2ug==}
     engines: {node: '>=12'}
 
-  d3-timer@3.0.1:
-    resolution: {integrity: sha512-ndfJ/JxxMd3nw31uyKoY2naivF+r29V+Lc0svZxe1JvvIRmi8hUsrMvdOwgS1o6uBHmiz91geQ0ylPP0aj1VUA==}
+  d3-timer@3.0.2:
+    resolution: {integrity: sha512-1Il1aliroVSErrv5aulRBxAY+7+DnaoLIWGd1C6SsBTWDeobWiP/V69vwb8vT6abR1kKwaNe1196pmaQ1fK90A==}
     engines: {node: '>=12'}
 
-  d3-transition@3.0.1:
-    resolution: {integrity: sha512-ApKvfjsSR6tg06xrL434C0WydLr7JewBB3V+/39RMHsaXTOG0zmt/OAXeng5M5LBm0ojmxJrpomQVZ1aPvBL4w==}
+  d3-transition@3.0.2:
+    resolution: {integrity: sha512-RcjCsdFgyFoDB+QXLC5m60ZkTN0k9zH+ovoLlTdJnDS1AbfbcuowiM4pCKSTOclNibS4f4J4cbv2m7O7y8NTOQ==}
     engines: {node: '>=12'}
     peerDependencies:
       d3-selection: 2 - 3
 
-  d3-zoom@3.0.0:
-    resolution: {integrity: sha512-b8AmV3kfQaqWAuacbPuNbL6vahnOJflOhexLzMMNLga62+/nh0JzvJ0aO/5a5MVgUFGS7Hu1P9P03o3fJkDCyw==}
+  d3-zoom@3.0.1:
+    resolution: {integrity: sha512-kfjD3BDQu/FOatpZ6JdMSyIoDwTxIpI29ySTI2J5ZlDaH1WbuJGQJ2Q9oJkWTEZEW98j6idezoomSD3Cn2zwiw==}
     engines: {node: '>=12'}
 
-  d3@7.9.0:
-    resolution: {integrity: sha512-e1U46jVP+w7Iut8Jt8ri1YsPOvFpg46k+K8TpCb0P+zjCkjkPnV7WzfDJzMHy1LnA+wj5pLT1wjO901gLXeEhA==}
+  d3@7.9.2:
+    resolution: {integrity: sha512-ZKb/mONPVKzaO5UlcWcwN8bS4ezvQaYu+bsou+XgNABdGC800kwH651ADTbbTxMPHW13UlvbQafdmJQDk1w7Mg==}
     engines: {node: '>=12'}
 
   dagre-d3-es@7.0.14:
@@ -2139,8 +2139,8 @@ packages:
     resolution: {integrity: sha512-Btj2BOOO83o3WyH59e8MgXsxEQVcarkUOpEYrubB0urwnN10yQ364rsiByU11nZlqWYZm05i/of7io4mzihBtQ==}
     engines: {node: '>=8'}
 
-  dompurify@3.4.17:
-    resolution: {integrity: sha512-B/pSlYVHQ58kqISD/yDjuJ1yfzI34m1gF4lAod2bwSRhiN4K5Cl3H8Af7hqB2PmTL911tdEudnnXn5FnhRoz0w==}
+  dompurify@3.4.18:
+    resolution: {integrity: sha512-ofe3wI/uNm68HInABYFJYqQxRw1EaKAjNdrFVKqjUY+UZurvNd2L/HuQe097s/4RivWiZyP6tT7aoT8atjfhwg==}
 
   dunder-proto@1.0.1:
     resolution: {integrity: sha512-KIN/nDJBQRcXw0MLVhZE9iQHmG68qAVIBg9CqmUYjmQIhgij9U5MFvrqkUL5FbtyyzZuOeOt0zdeRe4UY7ct+A==}
@@ -2163,8 +2163,8 @@ packages:
     resolution: {integrity: sha512-wkgGT6kugeQk/P6VZ/f4T+4HB41BVgNBq5CDIZVbQ02nvTVqAiVTbskxxu3eA/X96lMlfYOwnLQpN2v5E1zDEg==}
     engines: {node: '>= 0.4.0'}
 
-  elkjs@0.9.3:
-    resolution: {integrity: sha512-f/ZeWvW/BCXbhGEf1Ujp29EASo/lk1FDnETgNKwJrsVvGZhUWCZyg3xLJjAsxfOmt8KjswHmI5EwCQcPMpOYhQ==}
+  elkjs@0.12.1:
+    resolution: {integrity: sha512-IhMYKHE4S2vtx0QrhBP3lYOIKDeIiJXBrdq9MGYkuB8ZHqhrBnHNfSUndjXFewrX1CPK8chwq+2NA0K0hliYuw==}
 
   emoji-regex@10.6.0:
     resolution: {integrity: sha512-toUI84YS5YmxW219erniWD0CIVOo46xGKColeNQRgOzDorgBi1v4D71/OFzgD9GO2UGKIv1C3Sp8DAn0+j5w7A==}
@@ -2200,8 +2200,8 @@ packages:
     resolution: {integrity: sha512-HWcBoN6NileqtSydK2FqHbS/LoDd2pqrnQHLyJzBj4kOp/ky2MWMN694xOfkK8/SnUsW2DH7EfyVlydKCsm1Zw==}
     engines: {node: '>= 0.4'}
 
-  es-toolkit@1.52.0:
-    resolution: {integrity: sha512-XTNEJQh1tY1ZJVcf6ayP/2n4ZPyaHlW2FWs7xvw5ddPuhUVjLD3olQVQS7kf58JbAB48iL0uL/jerTrjtV3lDA==}
+  es-toolkit@1.53.2:
+    resolution: {integrity: sha512-iUqZ+NlwH4jUgRmXZUxFBsV/9762TQEa1O4IXLFBmDEjVHScBytKuseX23I0+v9ShZ5MYxEx6WKNzm6IPnex8g==}
 
   esbuild@0.28.2:
     resolution: {integrity: sha512-HKVLS8dvII+xoKW9kmqxbRKrnWEXfJJr/FZhhJmiqIB0e053QNYFqOBouTMO/k5sID4MvCiUCvv8b9M4h32wIA==}
@@ -2693,8 +2693,8 @@ packages:
     resolution: {integrity: sha512-Jo6dJ04CmSjuznwJSS3pUeWmd/H0ffTlkXXgwZi+eq1UCmqQwCh+eLsYOYCwY991i2Fah4h1BEMCx4qThGbsiA==}
     engines: {node: '>=10'}
 
-  lucide@1.64.0:
-    resolution: {integrity: sha512-2k481p+2dnI88E5chX8D1niwJzar/0EMFZwS93E/umHVxl+Po5uoDIGuo64Ij3a35YaD1J6EsWulDzKaod5wOw==}
+  lucide@1.73.0:
+    resolution: {integrity: sha512-qiNin5j7qEflnAdLG/9Yb4d5N9qnnP8TOMdn6e66399fgX25Y0eYEPS3PUPWGIPLloOj4X+xLTdF2lk9gSgWpA==}
 
   markdown-it-footnote@4.0.0:
     resolution: {integrity: sha512-WYJ7urf+khJYl3DqofQpYfEYkZKbmXmwxQV8c8mO/hGIhgZ1wOe7R4HLFNwqx7TjILbnC98fuyeSsin19JdFcQ==}
@@ -2731,8 +2731,8 @@ packages:
     resolution: {integrity: sha512-Snk314V5ayFLhp3fkUREub6WtjBfPdCPY1Ln8/8munuLuiYhsABgBVWsozAG+MWMbVEvcdcpbi9R7ww22l9Q3g==}
     engines: {node: '>=18'}
 
-  mermaid@12.2.0:
-    resolution: {integrity: sha512-w7nr/SFrLO7BaVTs3dQTvYSV6nYSBj0Yy9DjBhsIJtAcHqRzXSq4Pg32ujHZ/AdWsAMNEvvhbm5dt9E2tOiHzw==}
+  mermaid@12.3.0:
+    resolution: {integrity: sha512-4113TdXeLAsMruJ79OpFL5O8+LTFXhQqZ260rF3tgUmiNAtRm4Uume04I+65PRN6yZ69J4f8rVYWW8zRk65UYw==}
     engines: {node: '>=22.12.0'}
 
   mhchemparser@4.2.1:
@@ -3110,8 +3110,8 @@ packages:
     resolution: {integrity: sha512-6x6dK6zJdpTzF4sQeNYxwtvBzf6Eg4GtlesS94HOvTudUeyK2WXAaIfmDgsyslYrRBeFIlsi54AYsFGUuhmvrQ==}
     engines: {node: '>= 0.4'}
 
-  sigma@4.0.4:
-    resolution: {integrity: sha512-qVZJ0WHhtOngpIpai7xfopkiTkwb92+Cl7zqcJBJos5juwH6FnkUfOM08mjgZ6Urd5WUAIsSbYNY41SL7BydYw==}
+  sigma@4.0.6:
+    resolution: {integrity: sha512-3yD7On7NLHGMkBcG2fyhIECxkliqZ+lVcTBS1Lfm/qnndQVGMB+Xp2qL1A/co1qUJAM5bKank3cSrNO5L6J9Zw==}
 
   signal-exit@3.0.7:
     resolution: {integrity: sha512-wnD2ZE+l+SPC/uoS0vXeE9L1+0wuaMqKlfz9AMUo38JsyLSBWSFcHR1Rri62LZc12vLr1gb3jl7iwQhgwpAbGQ==}
@@ -3218,9 +3218,6 @@ packages:
     resolution: {integrity: sha512-JfJeIHke7y2egdGGgRAvpCwYFUsHlM2gPcrVOxFkznt/4uzQ7HFmvE63iFHVLBJNDuyDOQgijDK/tXH/f6Msjg==}
     engines: {node: '>=6.10'}
 
-  tslib@2.8.1:
-    resolution: {integrity: sha512-oJFu94HQb+KVduSUQL7wnpmqnfmLsOA/nAh6b6EH0wCEoK0/mPeXU6c3wKDV83MkOuHPRHtSXKKU99IBazS/2w==}
-
   tslib@2.9.1:
     resolution: {integrity: sha512-a4Ux9VKuIMHsOS7ENbEq6hK2ZGYIT27Rtl0E4eD9KqwxhKiQeMZE/9xb3IdYwWaSOyIBQLExhQgXDTYoiCxnWA==}
 
@@ -3233,8 +3230,8 @@ packages:
     resolution: {integrity: sha512-1h/Lnq9yajKY2PEbBadPXj3VxsDDu844OnaAo52UVmIzIvwwtBPIuNvkjuzBlTWpfJyUbG3ez0KSBibQkj4ojg==}
     engines: {node: '>=0.6.11 <=0.7.0 || >=0.7.3'}
 
-  turndown@7.2.4:
-    resolution: {integrity: sha512-I8yFsfRzmzK0WV1pNNOA4A7y4RDfFxPRxb3t+e3ui14qSGOxGtiSP6GjeX+Y6CHb7HYaFj7ECUD7VE5kQMZWGQ==}
+  turndown@7.2.5:
+    resolution: {integrity: sha512-EKZvCCFHh8sWttpAMs10U6niZFJ2cpz8LkCPlylxoG4JcHF50J7EHnnBW3AY1qXtUMu7kDjCp7dnggB1sIbqEQ==}
     engines: {node: '>=18', npm: '>=9'}
 
   type-check@0.4.0:
@@ -3296,10 +3293,6 @@ packages:
   util-deprecate@1.0.2:
     resolution: {integrity: sha512-EPD5q1uXyFxJpCrLnCc1nHnq3gOa6DZBocAIiI2TaSCA7VCJ1UJDMagCzIkXNsUYfD1daK//LTEQ8xiIbrHtcw==}
 
-  uuid@14.0.3:
-    resolution: {integrity: sha512-Sc5u1VVln93y1Xnz4R+CunOZc7R9LUcTmhj7Rc7Eg3HVcf7rVn2FOoa812fe0W8p3jD7xeoGSYbfqCGGH2B6xw==}
-    hasBin: true
-
   vary@1.1.2:
     resolution: {integrity: sha512-BNGbWLfd0eUPabhkXUVm0j8uuvREyTh5ovRa/dyow/BqAbZJyC+5fU+IzQOzmAKzYqYRAISoRhdQr3eIZ/PXqg==}
     engines: {node: '>= 0.8'}
@@ -3330,8 +3323,8 @@ packages:
   wrappy@1.0.2:
     resolution: {integrity: sha512-l4Sp/DRseor9wL6EvV2+TuQn63dMkPjZ/sp9XkghTEbV9KlPS1xUsZ3u7/IQO4wxtcFB4bgpQPRcR3QCvezPcQ==}
 
-  ws@8.22.0:
-    resolution: {integrity: sha512-Ydggc987+RO0AnWtZ/7Wq9FtNvcrL1b/RO0ud9mWjUPgDrsAAwQSF51sm2hm1XofbU/4jkpGEsLFsZZxU+1DOg==}
+  ws@8.23.0:
+    resolution: {integrity: sha512-wCkmX8QMOrKjgO8HW2WyDbTSGeqkocxgDzS9iR79rEAexty6/2qzilx3Ag8Tqf9ykop3irLKle0MtVn5qjVnoQ==}
     engines: {node: '>=10.0.0'}
     peerDependencies:
       bufferutil: ^4.0.1
@@ -3647,13 +3640,13 @@ snapshots:
     transitivePeerDependencies:
       - supports-color
 
-  '@capacitor/core@8.6.0':
+  '@capacitor/core@8.6.2':
     dependencies:
-      tslib: 2.8.1
+      tslib: 2.9.1
 
-  '@capacitor/ios@8.6.0(@capacitor/core@8.6.0)':
+  '@capacitor/ios@8.6.2(@capacitor/core@8.6.2)':
     dependencies:
-      '@capacitor/core': 8.6.0
+      '@capacitor/core': 8.6.2
 
   '@chevrotain/cst-dts-gen@13.2.0':
     dependencies:
@@ -3675,7 +3668,7 @@ snapshots:
       '@codemirror/language': 6.13.1
       '@codemirror/state': 6.7.6
       '@codemirror/view': 6.43.15
-      '@lezer/common': 1.5.4
+      '@lezer/common': 1.5.5
 
   '@codemirror/collab@6.1.1':
     dependencies:
@@ -3686,14 +3679,14 @@ snapshots:
       '@codemirror/language': 6.13.1
       '@codemirror/state': 6.7.6
       '@codemirror/view': 6.43.15
-      '@lezer/common': 1.5.4
+      '@lezer/common': 1.5.5
 
   '@codemirror/lang-css@6.3.1':
     dependencies:
       '@codemirror/autocomplete': 6.20.4
       '@codemirror/language': 6.13.1
       '@codemirror/state': 6.7.6
-      '@lezer/common': 1.5.4
+      '@lezer/common': 1.5.5
       '@lezer/css': 1.3.9
 
   '@codemirror/lang-html@6.4.12':
@@ -3704,7 +3697,7 @@ snapshots:
       '@codemirror/language': 6.13.1
       '@codemirror/state': 6.7.6
       '@codemirror/view': 6.43.15
-      '@lezer/common': 1.5.4
+      '@lezer/common': 1.5.5
       '@lezer/css': 1.3.9
       '@lezer/html': 1.3.13
 
@@ -3715,7 +3708,7 @@ snapshots:
       '@codemirror/lint': 6.9.7
       '@codemirror/state': 6.7.6
       '@codemirror/view': 6.43.15
-      '@lezer/common': 1.5.4
+      '@lezer/common': 1.5.5
       '@lezer/javascript': 1.5.6
 
   '@codemirror/lang-markdown@6.5.2':
@@ -3725,7 +3718,7 @@ snapshots:
       '@codemirror/language': 6.13.1
       '@codemirror/state': 6.7.6
       '@codemirror/view': 6.43.15
-      '@lezer/common': 1.5.4
+      '@lezer/common': 1.5.5
       '@lezer/markdown': 1.8.1
 
   '@codemirror/lang-sql@6.10.0':
@@ -3733,7 +3726,7 @@ snapshots:
       '@codemirror/autocomplete': 6.20.4
       '@codemirror/language': 6.13.1
       '@codemirror/state': 6.7.6
-      '@lezer/common': 1.5.4
+      '@lezer/common': 1.5.5
       '@lezer/highlight': 1.2.5
       '@lezer/lr': 1.4.11
 
@@ -3742,7 +3735,7 @@ snapshots:
       '@codemirror/state': 6.7.6
       '@codemirror/streamparser': 6.0.0
       '@codemirror/view': 6.43.15
-      '@lezer/common': 1.5.4
+      '@lezer/common': 1.5.5
       '@lezer/highlight': 1.2.5
       '@lezer/lr': 1.4.11
       style-mod: 4.1.4
@@ -3772,336 +3765,336 @@ snapshots:
       style-mod: 4.1.4
       w3c-keyname: 2.2.8
 
-  '@embedpdf/core-acrojs@3.0.0':
+  '@embedpdf/core-acrojs@3.2.0':
     dependencies:
-      '@embedpdf/engine-core': 3.0.0
+      '@embedpdf/engine-core': 3.2.0
 
-  '@embedpdf/core-annotation@3.0.0':
+  '@embedpdf/core-annotation@3.2.0':
     dependencies:
-      '@embedpdf/core': 3.0.0
-      '@embedpdf/core-geometry': 3.0.0
-      '@embedpdf/core-text': 3.0.0
-      '@embedpdf/engine-core': 3.0.0
+      '@embedpdf/core': 3.2.0
+      '@embedpdf/core-geometry': 3.2.0
+      '@embedpdf/core-text': 3.2.0
+      '@embedpdf/engine-core': 3.2.0
 
-  '@embedpdf/core-fonts@3.0.0':
+  '@embedpdf/core-fonts@3.2.0':
     dependencies:
-      '@embedpdf/engine-core': 3.0.0
+      '@embedpdf/engine-core': 3.2.0
 
-  '@embedpdf/core-form@3.0.0':
+  '@embedpdf/core-form@3.2.0':
     dependencies:
-      '@embedpdf/core-annotation': 3.0.0
-      '@embedpdf/core-fonts': 3.0.0
-      '@embedpdf/core-text': 3.0.0
-      '@embedpdf/engine-core': 3.0.0
+      '@embedpdf/core-annotation': 3.2.0
+      '@embedpdf/core-fonts': 3.2.0
+      '@embedpdf/core-text': 3.2.0
+      '@embedpdf/engine-core': 3.2.0
 
-  '@embedpdf/core-geometry@3.0.0': {}
+  '@embedpdf/core-geometry@3.2.0': {}
 
-  '@embedpdf/core-js-sandbox@3.0.0':
+  '@embedpdf/core-js-sandbox@3.2.0':
     dependencies:
-      '@embedpdf/core-acrojs': 3.0.0
+      '@embedpdf/core-acrojs': 3.2.0
       '@jitl/quickjs-singlefile-browser-release-sync': 0.31.0
       '@jitl/quickjs-wasmfile-release-sync': 0.31.0
       quickjs-emscripten-core: 0.31.0
 
-  '@embedpdf/core-signature@3.0.0':
+  '@embedpdf/core-signature@3.2.0':
     dependencies:
-      '@embedpdf/engine-core': 3.0.0
+      '@embedpdf/engine-core': 3.2.0
       asn1js: 3.1.0
       pkijs: 3.4.3
 
-  '@embedpdf/core-stage@3.0.0':
+  '@embedpdf/core-stage@3.2.0':
     dependencies:
-      '@embedpdf/core-geometry': 3.0.0
+      '@embedpdf/core-geometry': 3.2.0
 
-  '@embedpdf/core-text@3.0.0':
+  '@embedpdf/core-text@3.2.0':
     dependencies:
-      '@embedpdf/core-fonts': 3.0.0
-      '@embedpdf/engine-core': 3.0.0
+      '@embedpdf/core-fonts': 3.2.0
+      '@embedpdf/engine-core': 3.2.0
       bidi-js: 1.1.0
 
-  '@embedpdf/core-ui@3.0.0': {}
+  '@embedpdf/core-ui@3.2.0': {}
 
-  '@embedpdf/core@3.0.0':
+  '@embedpdf/core@3.2.0':
     dependencies:
-      '@embedpdf/engine-core': 3.0.0
+      '@embedpdf/engine-core': 3.2.0
 
-  '@embedpdf/default-fallback-fonts@1.0.0': {}
+  '@embedpdf/default-fallback-fonts@1.0.1': {}
 
-  '@embedpdf/engine-core@3.0.0':
+  '@embedpdf/engine-core@3.2.0':
     dependencies:
       zod: 3.25.76
 
-  '@embedpdf/engine-runtime-darwin-arm64@3.0.0':
+  '@embedpdf/engine-runtime-darwin-arm64@3.2.0':
     optional: true
 
-  '@embedpdf/engine-runtime-darwin-x64@3.0.0':
+  '@embedpdf/engine-runtime-darwin-x64@3.2.0':
     optional: true
 
-  '@embedpdf/engine-runtime-linux-arm64@3.0.0':
+  '@embedpdf/engine-runtime-linux-arm64@3.2.0':
     optional: true
 
-  '@embedpdf/engine-runtime-linux-x64@3.0.0':
+  '@embedpdf/engine-runtime-linux-x64@3.2.0':
     optional: true
 
-  '@embedpdf/engine-runtime-linuxmusl-arm64@3.0.0':
+  '@embedpdf/engine-runtime-linuxmusl-arm64@3.2.0':
     optional: true
 
-  '@embedpdf/engine-runtime-linuxmusl-x64@3.0.0':
+  '@embedpdf/engine-runtime-linuxmusl-x64@3.2.0':
     optional: true
 
-  '@embedpdf/engine-runtime-wasm32@3.0.0': {}
+  '@embedpdf/engine-runtime-wasm32@3.2.0': {}
 
-  '@embedpdf/engine-runtime-win32-arm64@3.0.0':
+  '@embedpdf/engine-runtime-win32-arm64@3.2.0':
     optional: true
 
-  '@embedpdf/engine-runtime-win32-x64@3.0.0':
+  '@embedpdf/engine-runtime-win32-x64@3.2.0':
     optional: true
 
-  '@embedpdf/engine-runtime@3.0.0':
+  '@embedpdf/engine-runtime@3.2.0':
     dependencies:
       detect-libc: 2.1.2
     optionalDependencies:
-      '@embedpdf/engine-runtime-darwin-arm64': 3.0.0
-      '@embedpdf/engine-runtime-darwin-x64': 3.0.0
-      '@embedpdf/engine-runtime-linux-arm64': 3.0.0
-      '@embedpdf/engine-runtime-linux-x64': 3.0.0
-      '@embedpdf/engine-runtime-linuxmusl-arm64': 3.0.0
-      '@embedpdf/engine-runtime-linuxmusl-x64': 3.0.0
-      '@embedpdf/engine-runtime-wasm32': 3.0.0
-      '@embedpdf/engine-runtime-win32-arm64': 3.0.0
-      '@embedpdf/engine-runtime-win32-x64': 3.0.0
+      '@embedpdf/engine-runtime-darwin-arm64': 3.2.0
+      '@embedpdf/engine-runtime-darwin-x64': 3.2.0
+      '@embedpdf/engine-runtime-linux-arm64': 3.2.0
+      '@embedpdf/engine-runtime-linux-x64': 3.2.0
+      '@embedpdf/engine-runtime-linuxmusl-arm64': 3.2.0
+      '@embedpdf/engine-runtime-linuxmusl-x64': 3.2.0
+      '@embedpdf/engine-runtime-wasm32': 3.2.0
+      '@embedpdf/engine-runtime-win32-arm64': 3.2.0
+      '@embedpdf/engine-runtime-win32-x64': 3.2.0
 
-  '@embedpdf/engine-services@3.0.0':
+  '@embedpdf/engine-services@3.2.0':
     dependencies:
-      '@embedpdf/core-fonts': 3.0.0
-      '@embedpdf/engine-core': 3.0.0
-      '@embedpdf/engine-runtime': 3.0.0
+      '@embedpdf/core-fonts': 3.2.0
+      '@embedpdf/engine-core': 3.2.0
+      '@embedpdf/engine-runtime': 3.2.0
 
-  '@embedpdf/engine@3.0.0':
+  '@embedpdf/engine@3.2.0':
     dependencies:
-      '@embedpdf/core-fonts': 3.0.0
-      '@embedpdf/default-fallback-fonts': 1.0.0
-      '@embedpdf/engine-core': 3.0.0
-      '@embedpdf/engine-runtime': 3.0.0
-      '@embedpdf/engine-runtime-wasm32': 3.0.0
-      '@embedpdf/engine-services': 3.0.0
+      '@embedpdf/core-fonts': 3.2.0
+      '@embedpdf/default-fallback-fonts': 1.0.1
+      '@embedpdf/engine-core': 3.2.0
+      '@embedpdf/engine-runtime': 3.2.0
+      '@embedpdf/engine-runtime-wasm32': 3.2.0
+      '@embedpdf/engine-services': 3.2.0
 
-  '@embedpdf/plugin-actions@3.0.0':
+  '@embedpdf/plugin-actions@3.2.0':
     dependencies:
-      '@embedpdf/core': 3.0.0
-      '@embedpdf/core-acrojs': 3.0.0
-      '@embedpdf/core-js-sandbox': 3.0.0
-      '@embedpdf/engine-core': 3.0.0
+      '@embedpdf/core': 3.2.0
+      '@embedpdf/core-acrojs': 3.2.0
+      '@embedpdf/core-js-sandbox': 3.2.0
+      '@embedpdf/engine-core': 3.2.0
 
-  '@embedpdf/plugin-annotation@3.0.0':
+  '@embedpdf/plugin-annotation@3.2.0':
     dependencies:
-      '@embedpdf/core': 3.0.0
-      '@embedpdf/core-acrojs': 3.0.0
-      '@embedpdf/core-annotation': 3.0.0
-      '@embedpdf/core-fonts': 3.0.0
-      '@embedpdf/core-geometry': 3.0.0
-      '@embedpdf/engine-core': 3.0.0
-      '@embedpdf/plugin-actions': 3.0.0
-      '@embedpdf/plugin-fonts': 3.0.0
-      '@embedpdf/plugin-interaction': 3.0.0
-      '@embedpdf/plugin-render': 3.0.0
-      '@embedpdf/plugin-selection': 3.0.0
+      '@embedpdf/core': 3.2.0
+      '@embedpdf/core-acrojs': 3.2.0
+      '@embedpdf/core-annotation': 3.2.0
+      '@embedpdf/core-fonts': 3.2.0
+      '@embedpdf/core-geometry': 3.2.0
+      '@embedpdf/engine-core': 3.2.0
+      '@embedpdf/plugin-actions': 3.2.0
+      '@embedpdf/plugin-fonts': 3.2.0
+      '@embedpdf/plugin-interaction': 3.2.0
+      '@embedpdf/plugin-render': 3.2.0
+      '@embedpdf/plugin-selection': 3.2.0
 
-  '@embedpdf/plugin-attachment@3.0.0':
+  '@embedpdf/plugin-attachment@3.2.0':
     dependencies:
-      '@embedpdf/core': 3.0.0
-      '@embedpdf/engine-core': 3.0.0
-      '@embedpdf/plugin-annotation': 3.0.0
-      '@embedpdf/plugin-stage': 3.0.0
+      '@embedpdf/core': 3.2.0
+      '@embedpdf/engine-core': 3.2.0
+      '@embedpdf/plugin-annotation': 3.2.0
+      '@embedpdf/plugin-stage': 3.2.0
 
-  '@embedpdf/plugin-commands@3.0.0':
+  '@embedpdf/plugin-commands@3.2.0':
     dependencies:
-      '@embedpdf/core': 3.0.0
-      '@embedpdf/core-ui': 3.0.0
-      '@embedpdf/plugin-annotation': 3.0.0
-      '@embedpdf/plugin-i18n': 3.0.0
-      '@embedpdf/plugin-interaction': 3.0.0
-      '@embedpdf/plugin-render': 3.0.0
-      '@embedpdf/plugin-selection': 3.0.0
-      '@embedpdf/plugin-shell': 3.0.0
-      '@embedpdf/plugin-stage': 3.0.0
+      '@embedpdf/core': 3.2.0
+      '@embedpdf/core-ui': 3.2.0
+      '@embedpdf/plugin-annotation': 3.2.0
+      '@embedpdf/plugin-i18n': 3.2.0
+      '@embedpdf/plugin-interaction': 3.2.0
+      '@embedpdf/plugin-render': 3.2.0
+      '@embedpdf/plugin-selection': 3.2.0
+      '@embedpdf/plugin-shell': 3.2.0
+      '@embedpdf/plugin-stage': 3.2.0
 
-  '@embedpdf/plugin-fonts@3.0.0':
+  '@embedpdf/plugin-fonts@3.2.0':
     dependencies:
-      '@embedpdf/core': 3.0.0
-      '@embedpdf/core-fonts': 3.0.0
-      '@embedpdf/core-text': 3.0.0
-      '@embedpdf/engine-core': 3.0.0
+      '@embedpdf/core': 3.2.0
+      '@embedpdf/core-fonts': 3.2.0
+      '@embedpdf/core-text': 3.2.0
+      '@embedpdf/engine-core': 3.2.0
 
-  '@embedpdf/plugin-form@3.0.0':
+  '@embedpdf/plugin-form@3.2.0':
     dependencies:
-      '@embedpdf/core': 3.0.0
-      '@embedpdf/core-acrojs': 3.0.0
-      '@embedpdf/core-annotation': 3.0.0
-      '@embedpdf/core-fonts': 3.0.0
-      '@embedpdf/core-form': 3.0.0
-      '@embedpdf/core-geometry': 3.0.0
-      '@embedpdf/core-js-sandbox': 3.0.0
-      '@embedpdf/engine-core': 3.0.0
-      '@embedpdf/plugin-actions': 3.0.0
-      '@embedpdf/plugin-annotation': 3.0.0
-      '@embedpdf/plugin-fonts': 3.0.0
-      '@embedpdf/plugin-interaction': 3.0.0
-      '@embedpdf/plugin-render': 3.0.0
-      '@embedpdf/plugin-stage': 3.0.0
+      '@embedpdf/core': 3.2.0
+      '@embedpdf/core-acrojs': 3.2.0
+      '@embedpdf/core-annotation': 3.2.0
+      '@embedpdf/core-fonts': 3.2.0
+      '@embedpdf/core-form': 3.2.0
+      '@embedpdf/core-geometry': 3.2.0
+      '@embedpdf/core-js-sandbox': 3.2.0
+      '@embedpdf/engine-core': 3.2.0
+      '@embedpdf/plugin-actions': 3.2.0
+      '@embedpdf/plugin-annotation': 3.2.0
+      '@embedpdf/plugin-fonts': 3.2.0
+      '@embedpdf/plugin-interaction': 3.2.0
+      '@embedpdf/plugin-render': 3.2.0
+      '@embedpdf/plugin-stage': 3.2.0
 
-  '@embedpdf/plugin-history@3.0.0':
+  '@embedpdf/plugin-history@3.2.0':
     dependencies:
-      '@embedpdf/core': 3.0.0
-      '@embedpdf/engine-core': 3.0.0
+      '@embedpdf/core': 3.2.0
+      '@embedpdf/engine-core': 3.2.0
 
-  '@embedpdf/plugin-i18n@3.0.0':
+  '@embedpdf/plugin-i18n@3.2.0':
     dependencies:
-      '@embedpdf/core': 3.0.0
+      '@embedpdf/core': 3.2.0
 
-  '@embedpdf/plugin-interaction@3.0.0':
+  '@embedpdf/plugin-interaction@3.2.0':
     dependencies:
-      '@embedpdf/core': 3.0.0
-      '@embedpdf/core-geometry': 3.0.0
+      '@embedpdf/core': 3.2.0
+      '@embedpdf/core-geometry': 3.2.0
 
-  '@embedpdf/plugin-link@3.0.0':
+  '@embedpdf/plugin-link@3.2.0':
     dependencies:
-      '@embedpdf/core': 3.0.0
-      '@embedpdf/core-annotation': 3.0.0
-      '@embedpdf/core-geometry': 3.0.0
-      '@embedpdf/engine-core': 3.0.0
-      '@embedpdf/plugin-actions': 3.0.0
-      '@embedpdf/plugin-annotation': 3.0.0
-      '@embedpdf/plugin-interaction': 3.0.0
-      '@embedpdf/plugin-stage': 3.0.0
+      '@embedpdf/core': 3.2.0
+      '@embedpdf/core-annotation': 3.2.0
+      '@embedpdf/core-geometry': 3.2.0
+      '@embedpdf/engine-core': 3.2.0
+      '@embedpdf/plugin-actions': 3.2.0
+      '@embedpdf/plugin-annotation': 3.2.0
+      '@embedpdf/plugin-interaction': 3.2.0
+      '@embedpdf/plugin-stage': 3.2.0
 
-  '@embedpdf/plugin-measurement@3.0.0':
+  '@embedpdf/plugin-measurement@3.2.0':
     dependencies:
-      '@embedpdf/core': 3.0.0
-      '@embedpdf/core-geometry': 3.0.0
-      '@embedpdf/engine-core': 3.0.0
-      '@embedpdf/plugin-annotation': 3.0.0
-      '@embedpdf/plugin-interaction': 3.0.0
+      '@embedpdf/core': 3.2.0
+      '@embedpdf/core-geometry': 3.2.0
+      '@embedpdf/engine-core': 3.2.0
+      '@embedpdf/plugin-annotation': 3.2.0
+      '@embedpdf/plugin-interaction': 3.2.0
 
-  '@embedpdf/plugin-metadata@3.0.0':
+  '@embedpdf/plugin-metadata@3.2.0':
     dependencies:
-      '@embedpdf/core': 3.0.0
+      '@embedpdf/core': 3.2.0
 
-  '@embedpdf/plugin-outline@3.0.0':
+  '@embedpdf/plugin-outline@3.2.0':
     dependencies:
-      '@embedpdf/core': 3.0.0
-      '@embedpdf/engine-core': 3.0.0
-      '@embedpdf/plugin-actions': 3.0.0
-      '@embedpdf/plugin-i18n': 3.0.0
-      '@embedpdf/plugin-link': 3.0.0
-      '@embedpdf/plugin-selection': 3.0.0
-      '@embedpdf/plugin-stage': 3.0.0
+      '@embedpdf/core': 3.2.0
+      '@embedpdf/engine-core': 3.2.0
+      '@embedpdf/plugin-actions': 3.2.0
+      '@embedpdf/plugin-i18n': 3.2.0
+      '@embedpdf/plugin-link': 3.2.0
+      '@embedpdf/plugin-selection': 3.2.0
+      '@embedpdf/plugin-stage': 3.2.0
 
-  '@embedpdf/plugin-page-edit@3.0.0':
+  '@embedpdf/plugin-page-edit@3.2.0':
     dependencies:
-      '@embedpdf/core': 3.0.0
+      '@embedpdf/core': 3.2.0
 
-  '@embedpdf/plugin-redaction@3.0.0':
+  '@embedpdf/plugin-redaction@3.2.0':
     dependencies:
-      '@embedpdf/core': 3.0.0
-      '@embedpdf/core-geometry': 3.0.0
-      '@embedpdf/engine-core': 3.0.0
-      '@embedpdf/plugin-annotation': 3.0.0
-      '@embedpdf/plugin-search': 3.0.0
-      '@embedpdf/plugin-selection': 3.0.0
+      '@embedpdf/core': 3.2.0
+      '@embedpdf/core-geometry': 3.2.0
+      '@embedpdf/engine-core': 3.2.0
+      '@embedpdf/plugin-annotation': 3.2.0
+      '@embedpdf/plugin-search': 3.2.0
+      '@embedpdf/plugin-selection': 3.2.0
 
-  '@embedpdf/plugin-render@3.0.0':
+  '@embedpdf/plugin-render@3.2.0':
     dependencies:
-      '@embedpdf/core': 3.0.0
-      '@embedpdf/core-geometry': 3.0.0
-      '@embedpdf/plugin-interaction': 3.0.0
+      '@embedpdf/core': 3.2.0
+      '@embedpdf/core-geometry': 3.2.0
+      '@embedpdf/plugin-interaction': 3.2.0
 
-  '@embedpdf/plugin-search@3.0.0':
+  '@embedpdf/plugin-search@3.2.0':
     dependencies:
-      '@embedpdf/core': 3.0.0
-      '@embedpdf/core-geometry': 3.0.0
-      '@embedpdf/engine-core': 3.0.0
-      '@embedpdf/plugin-stage': 3.0.0
+      '@embedpdf/core': 3.2.0
+      '@embedpdf/core-geometry': 3.2.0
+      '@embedpdf/engine-core': 3.2.0
+      '@embedpdf/plugin-stage': 3.2.0
 
-  '@embedpdf/plugin-selection@3.0.0':
+  '@embedpdf/plugin-selection@3.2.0':
     dependencies:
-      '@embedpdf/core': 3.0.0
-      '@embedpdf/core-geometry': 3.0.0
-      '@embedpdf/engine-core': 3.0.0
-      '@embedpdf/plugin-interaction': 3.0.0
+      '@embedpdf/core': 3.2.0
+      '@embedpdf/core-geometry': 3.2.0
+      '@embedpdf/engine-core': 3.2.0
+      '@embedpdf/plugin-interaction': 3.2.0
 
-  '@embedpdf/plugin-shell@3.0.0':
+  '@embedpdf/plugin-shell@3.2.0':
     dependencies:
-      '@embedpdf/core': 3.0.0
+      '@embedpdf/core': 3.2.0
 
-  '@embedpdf/plugin-signature@3.0.0':
+  '@embedpdf/plugin-signature@3.2.0':
     dependencies:
-      '@embedpdf/core': 3.0.0
-      '@embedpdf/core-signature': 3.0.0
-      '@embedpdf/engine-core': 3.0.0
-      '@embedpdf/plugin-annotation': 3.0.0
-      '@embedpdf/plugin-form': 3.0.0
-      '@embedpdf/plugin-interaction': 3.0.0
-      '@embedpdf/plugin-stamp': 3.0.0
+      '@embedpdf/core': 3.2.0
+      '@embedpdf/core-signature': 3.2.0
+      '@embedpdf/engine-core': 3.2.0
+      '@embedpdf/plugin-annotation': 3.2.0
+      '@embedpdf/plugin-form': 3.2.0
+      '@embedpdf/plugin-interaction': 3.2.0
+      '@embedpdf/plugin-stamp': 3.2.0
 
-  '@embedpdf/plugin-stage@3.0.0':
+  '@embedpdf/plugin-stage@3.2.0':
     dependencies:
-      '@embedpdf/core': 3.0.0
-      '@embedpdf/core-geometry': 3.0.0
-      '@embedpdf/core-stage': 3.0.0
-      '@embedpdf/plugin-actions': 3.0.0
-      '@embedpdf/plugin-interaction': 3.0.0
+      '@embedpdf/core': 3.2.0
+      '@embedpdf/core-geometry': 3.2.0
+      '@embedpdf/core-stage': 3.2.0
+      '@embedpdf/plugin-actions': 3.2.0
+      '@embedpdf/plugin-interaction': 3.2.0
 
-  '@embedpdf/plugin-stamp@3.0.0':
+  '@embedpdf/plugin-stamp@3.2.0':
     dependencies:
-      '@embedpdf/core': 3.0.0
-      '@embedpdf/core-acrojs': 3.0.0
-      '@embedpdf/core-js-sandbox': 3.0.0
-      '@embedpdf/engine-core': 3.0.0
-      '@embedpdf/plugin-actions': 3.0.0
-      '@embedpdf/plugin-annotation': 3.0.0
-      '@embedpdf/plugin-form': 3.0.0
+      '@embedpdf/core': 3.2.0
+      '@embedpdf/core-acrojs': 3.2.0
+      '@embedpdf/core-js-sandbox': 3.2.0
+      '@embedpdf/engine-core': 3.2.0
+      '@embedpdf/plugin-actions': 3.2.0
+      '@embedpdf/plugin-annotation': 3.2.0
+      '@embedpdf/plugin-form': 3.2.0
 
-  '@embedpdf/plugin-view-manager@3.0.0':
+  '@embedpdf/plugin-view-manager@3.2.0':
     dependencies:
-      '@embedpdf/core': 3.0.0
+      '@embedpdf/core': 3.2.0
 
-  '@embedpdf/react@3.0.0(react-dom@19.3.1(react@19.3.1))(react@19.3.1)':
+  '@embedpdf/react@3.2.0(react-dom@19.3.1(react@19.3.1))(react@19.3.1)':
     dependencies:
-      '@embedpdf/core': 3.0.0
-      '@embedpdf/core-annotation': 3.0.0
-      '@embedpdf/core-geometry': 3.0.0
-      '@embedpdf/core-signature': 3.0.0
-      '@embedpdf/core-stage': 3.0.0
-      '@embedpdf/core-ui': 3.0.0
-      '@embedpdf/plugin-actions': 3.0.0
-      '@embedpdf/plugin-annotation': 3.0.0
-      '@embedpdf/plugin-attachment': 3.0.0
-      '@embedpdf/plugin-commands': 3.0.0
-      '@embedpdf/plugin-fonts': 3.0.0
-      '@embedpdf/plugin-form': 3.0.0
-      '@embedpdf/plugin-history': 3.0.0
-      '@embedpdf/plugin-i18n': 3.0.0
-      '@embedpdf/plugin-interaction': 3.0.0
-      '@embedpdf/plugin-link': 3.0.0
-      '@embedpdf/plugin-measurement': 3.0.0
-      '@embedpdf/plugin-metadata': 3.0.0
-      '@embedpdf/plugin-outline': 3.0.0
-      '@embedpdf/plugin-page-edit': 3.0.0
-      '@embedpdf/plugin-redaction': 3.0.0
-      '@embedpdf/plugin-render': 3.0.0
-      '@embedpdf/plugin-search': 3.0.0
-      '@embedpdf/plugin-selection': 3.0.0
-      '@embedpdf/plugin-shell': 3.0.0
-      '@embedpdf/plugin-signature': 3.0.0
-      '@embedpdf/plugin-stage': 3.0.0
-      '@embedpdf/plugin-stamp': 3.0.0
-      '@embedpdf/plugin-view-manager': 3.0.0
-      '@embedpdf/web': 3.0.0
+      '@embedpdf/core': 3.2.0
+      '@embedpdf/core-annotation': 3.2.0
+      '@embedpdf/core-geometry': 3.2.0
+      '@embedpdf/core-signature': 3.2.0
+      '@embedpdf/core-stage': 3.2.0
+      '@embedpdf/core-ui': 3.2.0
+      '@embedpdf/plugin-actions': 3.2.0
+      '@embedpdf/plugin-annotation': 3.2.0
+      '@embedpdf/plugin-attachment': 3.2.0
+      '@embedpdf/plugin-commands': 3.2.0
+      '@embedpdf/plugin-fonts': 3.2.0
+      '@embedpdf/plugin-form': 3.2.0
+      '@embedpdf/plugin-history': 3.2.0
+      '@embedpdf/plugin-i18n': 3.2.0
+      '@embedpdf/plugin-interaction': 3.2.0
+      '@embedpdf/plugin-link': 3.2.0
+      '@embedpdf/plugin-measurement': 3.2.0
+      '@embedpdf/plugin-metadata': 3.2.0
+      '@embedpdf/plugin-outline': 3.2.0
+      '@embedpdf/plugin-page-edit': 3.2.0
+      '@embedpdf/plugin-redaction': 3.2.0
+      '@embedpdf/plugin-render': 3.2.0
+      '@embedpdf/plugin-search': 3.2.0
+      '@embedpdf/plugin-selection': 3.2.0
+      '@embedpdf/plugin-shell': 3.2.0
+      '@embedpdf/plugin-signature': 3.2.0
+      '@embedpdf/plugin-stage': 3.2.0
+      '@embedpdf/plugin-stamp': 3.2.0
+      '@embedpdf/plugin-view-manager': 3.2.0
+      '@embedpdf/web': 3.2.0
       react: 19.3.1
       react-dom: 19.3.1(react@19.3.1)
 
-  '@embedpdf/web@3.0.0': {}
+  '@embedpdf/web@3.2.0': {}
 
   '@esbuild/aix-ppc64@0.28.2':
     optional: true
@@ -4362,96 +4355,96 @@ snapshots:
 
   '@keyv/serialize@1.1.1': {}
 
-  '@lezer/common@1.5.4': {}
+  '@lezer/common@1.5.5': {}
 
   '@lezer/cpp@1.1.6':
     dependencies:
-      '@lezer/common': 1.5.4
+      '@lezer/common': 1.5.5
       '@lezer/highlight': 1.2.5
       '@lezer/lr': 1.4.11
 
   '@lezer/css@1.3.9':
     dependencies:
-      '@lezer/common': 1.5.4
+      '@lezer/common': 1.5.5
       '@lezer/highlight': 1.2.5
       '@lezer/lr': 1.4.11
 
   '@lezer/go@1.0.1':
     dependencies:
-      '@lezer/common': 1.5.4
+      '@lezer/common': 1.5.5
       '@lezer/highlight': 1.2.5
       '@lezer/lr': 1.4.11
 
   '@lezer/highlight@1.2.5':
     dependencies:
-      '@lezer/common': 1.5.4
+      '@lezer/common': 1.5.5
 
   '@lezer/html@1.3.13':
     dependencies:
-      '@lezer/common': 1.5.4
+      '@lezer/common': 1.5.5
       '@lezer/highlight': 1.2.5
       '@lezer/lr': 1.4.11
 
   '@lezer/java@1.1.5':
     dependencies:
-      '@lezer/common': 1.5.4
+      '@lezer/common': 1.5.5
       '@lezer/highlight': 1.2.5
       '@lezer/lr': 1.4.11
 
   '@lezer/javascript@1.5.6':
     dependencies:
-      '@lezer/common': 1.5.4
+      '@lezer/common': 1.5.5
       '@lezer/highlight': 1.2.5
       '@lezer/lr': 1.4.11
 
   '@lezer/json@1.0.3':
     dependencies:
-      '@lezer/common': 1.5.4
+      '@lezer/common': 1.5.5
       '@lezer/highlight': 1.2.5
       '@lezer/lr': 1.4.11
 
   '@lezer/lr@1.4.11':
     dependencies:
-      '@lezer/common': 1.5.4
+      '@lezer/common': 1.5.5
 
   '@lezer/markdown@1.8.1':
     dependencies:
-      '@lezer/common': 1.5.4
+      '@lezer/common': 1.5.5
       '@lezer/highlight': 1.2.5
 
   '@lezer/php@1.0.6':
     dependencies:
-      '@lezer/common': 1.5.4
+      '@lezer/common': 1.5.5
       '@lezer/highlight': 1.2.5
       '@lezer/lr': 1.4.11
 
   '@lezer/python@1.1.19':
     dependencies:
-      '@lezer/common': 1.5.4
+      '@lezer/common': 1.5.5
       '@lezer/highlight': 1.2.5
       '@lezer/lr': 1.4.11
 
   '@lezer/rust@1.0.3':
     dependencies:
-      '@lezer/common': 1.5.4
+      '@lezer/common': 1.5.5
       '@lezer/highlight': 1.2.5
       '@lezer/lr': 1.4.11
 
   '@lezer/sass@1.1.0':
     dependencies:
-      '@lezer/common': 1.5.4
+      '@lezer/common': 1.5.5
       '@lezer/highlight': 1.2.5
       '@lezer/lr': 1.4.11
 
   '@lezer/xml@1.0.6':
     dependencies:
-      '@lezer/common': 1.5.4
+      '@lezer/common': 1.5.5
       '@lezer/highlight': 1.2.5
       '@lezer/lr': 1.4.11
 
   '@lezer/yaml@1.0.4':
     dependencies:
-      '@lezer/common': 1.5.4
+      '@lezer/common': 1.5.5
       '@lezer/highlight': 1.2.5
       '@lezer/lr': 1.4.11
 
@@ -4912,8 +4905,8 @@ snapshots:
 
   '@upsetjs/venn.js@2.0.0':
     optionalDependencies:
-      d3-selection: 3.0.0
-      d3-transition: 3.0.1(d3-selection@3.0.0)
+      d3-selection: 3.0.1
+      d3-transition: 3.0.2(d3-selection@3.0.1)
 
   '@vscode/codicons@0.0.45': {}
 
@@ -5224,188 +5217,189 @@ snapshots:
 
   csstype@3.2.3: {}
 
-  cytoscape-cose-bilkent@4.1.0(cytoscape@3.34.3):
+  cytoscape-cose-bilkent@4.1.0(cytoscape@3.35.0):
     dependencies:
       cose-base: 1.0.3
-      cytoscape: 3.34.3
+      cytoscape: 3.35.0
 
-  cytoscape-fcose@2.2.0(cytoscape@3.34.3):
+  cytoscape-fcose@2.2.0(cytoscape@3.35.0):
     dependencies:
       cose-base: 2.2.0
-      cytoscape: 3.34.3
+      cytoscape: 3.35.0
 
-  cytoscape@3.34.3: {}
+  cytoscape@3.35.0: {}
 
   d3-array@2.12.1:
     dependencies:
       internmap: 1.0.1
 
-  d3-array@3.2.4:
+  d3-array@3.2.5:
     dependencies:
       internmap: 2.0.3
 
-  d3-axis@3.0.0: {}
+  d3-axis@3.0.1: {}
 
-  d3-brush@3.0.0:
+  d3-brush@3.0.1:
     dependencies:
-      d3-dispatch: 3.0.1
-      d3-drag: 3.0.0
-      d3-interpolate: 3.0.1
-      d3-selection: 3.0.0
-      d3-transition: 3.0.1(d3-selection@3.0.0)
+      d3-dispatch: 3.0.2
+      d3-drag: 3.0.1
+      d3-interpolate: 3.0.2
+      d3-selection: 3.0.1
+      d3-transition: 3.0.2(d3-selection@3.0.1)
 
-  d3-chord@3.0.1:
+  d3-chord@3.0.2:
     dependencies:
-      d3-path: 3.1.0
+      d3-path: 3.1.1
 
-  d3-color@3.1.0: {}
+  d3-color@3.1.1: {}
 
-  d3-contour@4.0.2:
+  d3-contour@4.0.3:
     dependencies:
-      d3-array: 3.2.4
+      d3-array: 3.2.5
 
-  d3-delaunay@6.0.4:
+  d3-delaunay@6.0.6:
     dependencies:
       delaunator: 5.1.0
 
-  d3-dispatch@3.0.1: {}
+  d3-dispatch@3.0.2: {}
 
-  d3-drag@3.0.0:
+  d3-drag@3.0.1:
     dependencies:
-      d3-dispatch: 3.0.1
-      d3-selection: 3.0.0
+      d3-dispatch: 3.0.2
+      d3-selection: 3.0.1
 
-  d3-dsv@3.0.1:
+  d3-dsv@3.0.2:
     dependencies:
       commander: 7.2.0
       iconv-lite: 0.6.3
       rw: 1.3.3
 
-  d3-ease@3.0.1: {}
+  d3-ease@3.0.2: {}
 
-  d3-fetch@3.0.1:
+  d3-fetch@3.0.2:
     dependencies:
-      d3-dsv: 3.0.1
+      d3-dsv: 3.0.2
 
-  d3-force@3.0.0:
+  d3-force@3.0.1:
     dependencies:
-      d3-dispatch: 3.0.1
-      d3-quadtree: 3.0.1
-      d3-timer: 3.0.1
+      d3-dispatch: 3.0.2
+      d3-quadtree: 3.0.2
+      d3-timer: 3.0.2
 
-  d3-format@3.1.2: {}
+  d3-format@3.1.3: {}
 
-  d3-geo@3.1.1:
+  d3-geo@3.1.2:
     dependencies:
-      d3-array: 3.2.4
+      d3-array: 3.2.5
 
-  d3-hierarchy@3.1.2: {}
+  d3-hierarchy@3.1.3: {}
 
-  d3-interpolate@3.0.1:
+  d3-interpolate@3.0.2:
     dependencies:
-      d3-color: 3.1.0
+      d3-color: 3.1.1
 
   d3-path@1.0.9: {}
 
-  d3-path@3.1.0: {}
+  d3-path@3.1.1: {}
 
-  d3-polygon@3.0.1: {}
+  d3-polygon@3.0.2: {}
 
-  d3-quadtree@3.0.1: {}
+  d3-quadtree@3.0.2: {}
 
-  d3-random@3.0.1: {}
+  d3-random@3.0.2: {}
 
   d3-sankey@0.12.3:
     dependencies:
       d3-array: 2.12.1
       d3-shape: 1.3.7
 
-  d3-scale-chromatic@3.1.0:
+  d3-scale-chromatic@3.1.1:
     dependencies:
-      d3-color: 3.1.0
-      d3-interpolate: 3.0.1
+      d3-color: 3.1.1
+      d3-interpolate: 3.0.2
+      d3-scale: 4.0.3
 
-  d3-scale@4.0.2:
+  d3-scale@4.0.3:
     dependencies:
-      d3-array: 3.2.4
-      d3-format: 3.1.2
-      d3-interpolate: 3.0.1
-      d3-time: 3.1.0
-      d3-time-format: 4.1.0
+      d3-array: 3.2.5
+      d3-format: 3.1.3
+      d3-interpolate: 3.0.2
+      d3-time: 3.1.1
+      d3-time-format: 4.1.1
 
-  d3-selection@3.0.0: {}
+  d3-selection@3.0.1: {}
 
   d3-shape@1.3.7:
     dependencies:
       d3-path: 1.0.9
 
-  d3-shape@3.2.0:
+  d3-shape@3.2.1:
     dependencies:
-      d3-path: 3.1.0
+      d3-path: 3.1.1
 
-  d3-time-format@4.1.0:
+  d3-time-format@4.1.1:
     dependencies:
-      d3-time: 3.1.0
+      d3-time: 3.1.1
 
-  d3-time@3.1.0:
+  d3-time@3.1.1:
     dependencies:
-      d3-array: 3.2.4
+      d3-array: 3.2.5
 
-  d3-timer@3.0.1: {}
+  d3-timer@3.0.2: {}
 
-  d3-transition@3.0.1(d3-selection@3.0.0):
+  d3-transition@3.0.2(d3-selection@3.0.1):
     dependencies:
-      d3-color: 3.1.0
-      d3-dispatch: 3.0.1
-      d3-ease: 3.0.1
-      d3-interpolate: 3.0.1
-      d3-selection: 3.0.0
-      d3-timer: 3.0.1
+      d3-color: 3.1.1
+      d3-dispatch: 3.0.2
+      d3-ease: 3.0.2
+      d3-interpolate: 3.0.2
+      d3-selection: 3.0.1
+      d3-timer: 3.0.2
 
-  d3-zoom@3.0.0:
+  d3-zoom@3.0.1:
     dependencies:
-      d3-dispatch: 3.0.1
-      d3-drag: 3.0.0
-      d3-interpolate: 3.0.1
-      d3-selection: 3.0.0
-      d3-transition: 3.0.1(d3-selection@3.0.0)
+      d3-dispatch: 3.0.2
+      d3-drag: 3.0.1
+      d3-interpolate: 3.0.2
+      d3-selection: 3.0.1
+      d3-transition: 3.0.2(d3-selection@3.0.1)
 
-  d3@7.9.0:
+  d3@7.9.2:
     dependencies:
-      d3-array: 3.2.4
-      d3-axis: 3.0.0
-      d3-brush: 3.0.0
-      d3-chord: 3.0.1
-      d3-color: 3.1.0
-      d3-contour: 4.0.2
-      d3-delaunay: 6.0.4
-      d3-dispatch: 3.0.1
-      d3-drag: 3.0.0
-      d3-dsv: 3.0.1
-      d3-ease: 3.0.1
-      d3-fetch: 3.0.1
-      d3-force: 3.0.0
-      d3-format: 3.1.2
-      d3-geo: 3.1.1
-      d3-hierarchy: 3.1.2
-      d3-interpolate: 3.0.1
-      d3-path: 3.1.0
-      d3-polygon: 3.0.1
-      d3-quadtree: 3.0.1
-      d3-random: 3.0.1
-      d3-scale: 4.0.2
-      d3-scale-chromatic: 3.1.0
-      d3-selection: 3.0.0
-      d3-shape: 3.2.0
-      d3-time: 3.1.0
-      d3-time-format: 4.1.0
-      d3-timer: 3.0.1
-      d3-transition: 3.0.1(d3-selection@3.0.0)
-      d3-zoom: 3.0.0
+      d3-array: 3.2.5
+      d3-axis: 3.0.1
+      d3-brush: 3.0.1
+      d3-chord: 3.0.2
+      d3-color: 3.1.1
+      d3-contour: 4.0.3
+      d3-delaunay: 6.0.6
+      d3-dispatch: 3.0.2
+      d3-drag: 3.0.1
+      d3-dsv: 3.0.2
+      d3-ease: 3.0.2
+      d3-fetch: 3.0.2
+      d3-force: 3.0.1
+      d3-format: 3.1.3
+      d3-geo: 3.1.2
+      d3-hierarchy: 3.1.3
+      d3-interpolate: 3.0.2
+      d3-path: 3.1.1
+      d3-polygon: 3.0.2
+      d3-quadtree: 3.0.2
+      d3-random: 3.0.2
+      d3-scale: 4.0.3
+      d3-scale-chromatic: 3.1.1
+      d3-selection: 3.0.1
+      d3-shape: 3.2.1
+      d3-time: 3.1.1
+      d3-time-format: 4.1.1
+      d3-timer: 3.0.2
+      d3-transition: 3.0.2(d3-selection@3.0.1)
+      d3-zoom: 3.0.1
 
   dagre-d3-es@7.0.14:
     dependencies:
-      d3: 7.9.0
+      d3: 7.9.2
       lodash-es: 4.18.1
 
   dayjs@1.11.23: {}
@@ -5435,7 +5429,7 @@ snapshots:
 
   detect-libc@2.1.2: {}
 
-  dompurify@3.4.17:
+  dompurify@3.4.18:
     optionalDependencies:
       '@types/trusted-types': 2.0.7
 
@@ -5461,7 +5455,7 @@ snapshots:
     dependencies:
       sax: 1.1.4
 
-  elkjs@0.9.3: {}
+  elkjs@0.12.1: {}
 
   emoji-regex@10.6.0: {}
 
@@ -5483,7 +5477,7 @@ snapshots:
     dependencies:
       es-errors: 1.3.0
 
-  es-toolkit@1.52.0: {}
+  es-toolkit@1.53.2: {}
 
   esbuild@0.28.2:
     optionalDependencies:
@@ -6022,7 +6016,7 @@ snapshots:
     dependencies:
       yallist: 4.0.0
 
-  lucide@1.64.0: {}
+  lucide@1.73.0: {}
 
   markdown-it-footnote@4.0.0: {}
 
@@ -6049,7 +6043,7 @@ snapshots:
 
   merge-descriptors@2.0.0: {}
 
-  mermaid@12.2.0:
+  mermaid@12.3.0:
     dependencies:
       '@braintree/sanitize-url': 7.1.2
       '@iconify/utils': 3.1.7
@@ -6057,23 +6051,22 @@ snapshots:
       '@types/d3': 7.4.3
       '@upsetjs/venn.js': 2.0.0
       chevrotain: 13.2.0
-      cytoscape: 3.34.3
-      cytoscape-cose-bilkent: 4.1.0(cytoscape@3.34.3)
-      cytoscape-fcose: 2.2.0(cytoscape@3.34.3)
-      d3: 7.9.0
+      cytoscape: 3.35.0
+      cytoscape-cose-bilkent: 4.1.0(cytoscape@3.35.0)
+      cytoscape-fcose: 2.2.0(cytoscape@3.35.0)
+      d3: 7.9.2
       d3-sankey: 0.12.3
       dagre-d3-es: 7.0.14
       dayjs: 1.11.23
-      dompurify: 3.4.17
-      elkjs: 0.9.3
-      es-toolkit: 1.52.0
+      dompurify: 3.4.18
+      elkjs: 0.12.1
+      es-toolkit: 1.53.2
       katex: 0.18.10
       khroma: 2.1.0
       marked: 16.4.2
       roughjs: 4.6.6
       stylis: 4.4.0
       ts-dedent: 2.3.0
-      uuid: 14.0.3
 
   mhchemparser@4.2.1: {}
 
@@ -6460,7 +6453,7 @@ snapshots:
       side-channel-map: 1.0.1
       side-channel-weakmap: 1.0.2
 
-  sigma@4.0.4(graphology-types@0.24.8):
+  sigma@4.0.6(graphology-types@0.24.8):
     dependencies:
       events: 3.3.0
       graphology-utils: 2.5.2(graphology-types@0.24.8)
@@ -6568,8 +6561,6 @@ snapshots:
 
   ts-dedent@2.3.0: {}
 
-  tslib@2.8.1: {}
-
   tslib@2.9.1: {}
 
   tsx@4.23.15:
@@ -6580,7 +6571,7 @@ snapshots:
 
   tunnel@0.0.6: {}
 
-  turndown@7.2.4:
+  turndown@7.2.5:
     dependencies:
       '@mixmark-io/domino': 2.2.0
 
@@ -6639,8 +6630,6 @@ snapshots:
 
   util-deprecate@1.0.2: {}
 
-  uuid@14.0.3: {}
-
   vary@1.1.2: {}
 
   version-range@4.15.0: {}
@@ -6663,7 +6652,7 @@ snapshots:
 
   wrappy@1.0.2: {}
 
-  ws@8.22.0: {}
+  ws@8.23.0: {}
 
   wsl-utils@1.0.1:
     dependencies:
