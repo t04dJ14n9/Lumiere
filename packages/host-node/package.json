@@ -22,7 +22,7 @@
     "@workshop/core": "workspace:*",
     "@workshop/markdown": "workspace:*",
     "@workshop/pdf": "workspace:*",
-    "ws": "8.22.0"
+    "ws": "8.23.0"
   },
   "devDependencies": {
     "@types/ws": "8.18.2"
