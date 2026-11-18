@@ -1060,9 +1060,12 @@ Short specifications, beyond the source's tested behaviour:
   `workspace.onWillRenameFiles`), rewrite incoming links and embeds through
   `vault.backlinks`, keeping aliases, subpaths and the link style. The default
   `prompt` matches Obsidian's `alwaysUpdateLinks: false` and shows the
-  **Update links in N files?** dialog (with a persistent **Always Update** that
-  sets `always`); `always` rewrites without asking and `never` leaves links
-  untouched. Heading renames are a later enhancement.
+  **Update links in N files?** dialog (with a persistent **Always Update**
+  that updates the links and sets `always` for the renamed file's workspace
+  folder, else the workspace; the user's settings only when no folder is
+  open); `always` rewrites without asking and `never` leaves links untouched.
+  The edits are built after the answer, once the vault index has settled
+  again. Heading renames are a later enhancement.
 - **quickSwitcher**: **Lumiere: Quick Switcher** opens a quick pick
   over notes, aliases and unresolved links, with Obsidian's scoring. Enter
   opens; an unresolved or new name creates the note in the configured
@@ -1179,7 +1182,7 @@ default (§25).
 | --- | --- | --- |
 | New link format | `lumiere.markdown.links.newLinkFormat` (`shortest` \| `relative` \| `absolute`) | `shortest` |
 | Use [[Wikilinks]] | `lumiere.markdown.links.useWikilinks` | `true` |
-| Automatically update internal links | `lumiere.markdown.linkUpdates.mode` (`prompt` \| `always` \| `never`) | `prompt` (Obsidian's `alwaysUpdateLinks: false`) |
+| Automatically update internal links | `lumiere.markdown.linkUpdates.mode` (`prompt` \| `always` \| `never`; resource scope, and Always Update saves `always` for the renamed file's workspace folder) | `prompt` (Obsidian's `alwaysUpdateLinks: false`, which also asks; owner decision 2026-11-13: keep it) |
 | Default location for new notes | `lumiere.markdown.files.newNoteFolder` (empty = vault root, `.` = current folder, or a path) | empty |
 | Default location for new attachments | `lumiere.markdown.files.attachmentFolder` (same forms, plus `./sub`) | empty |
 | Excluded files | `lumiere.markdown.vault.excludedFiles` (globs) | `[]` |
@@ -1217,7 +1220,15 @@ available for a later consumer. See [the plugin contract](src/plugins/obsidianCo
   Code's.
 - Theme follows VS Code's colours (headings and spacing follow Obsidian's
   default theme scale, as on the source branch).
-- Link updates on rename ask first by default.
+- Link updates on rename: the default `prompt` is Obsidian's own (its
+  `alwaysUpdateLinks: false` asks, so this is not a divergence, and `never` was
+  rejected as a default on that evidence). What differs is the dialog (VS
+  Code's, with Update Links, Always Update, Don't Update; Obsidian's has Always
+  update, Just once, Do not update) and where Always Update is saved: a
+  `lumiere.markdown.linkUpdates.mode` value in the renamed file's workspace
+  folder settings, not the vault's `.obsidian/app.json`, which is read (false
+  is `prompt`, true is `always`) and never written. An explicit value wins
+  over it.
 - The outline, backlinks, tags and plugin management use native VS Code views
   and Settings, not panes inside the editor.
 - External application links (`obsidian://`, `zotero://` and similar) need
