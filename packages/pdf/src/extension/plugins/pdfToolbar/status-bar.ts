@@ -312,11 +312,7 @@ export class StatusBar implements vscode.Disposable {
       view !== undefined &&
       parseVsCodeToolbarMode(configuration.get("mode")) === "chrome";
     const buttons =
-      shown &&
-      showStatusBarButtons(
-        configuration.get("statusBarButtons"),
-        vscode.env.appName,
-      );
+      shown && showStatusBarButtons(configuration.get("statusBarButtons"));
     const colors = pageColorsSetting();
     const annotating = view?.tool === "annotate";
     for (const item of ITEMS) {

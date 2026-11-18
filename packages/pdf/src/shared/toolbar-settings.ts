@@ -79,28 +79,12 @@ export function parseToolbarSettings(value: unknown): ToolbarSettings {
 }
 
 /**
- * Whether the editor title bar keeps extension buttons in its "…" menu
- * rather than showing them, as Cursor's does.
+ * Whether the status bar shows history, page, zoom and find buttons besides
+ * the page and zoom (setting `lumiere.pdf.toolbar.statusBarButtons`). The
+ * editor title bar keeps every PDF action in its "…" menu, in VS Code as in
+ * Cursor, so the status bar is the only place the buttons are in view:
+ * `auto` shows them.
  */
-export function titleActionsInMenu(appName: string): boolean {
-  return /cursor/iu.test(appName);
-}
-
-/**
- * Whether the status bar shows page and zoom buttons besides the page and
- * zoom (setting `lumiere.pdf.toolbar.statusBarButtons`). `auto` shows
- * them in Cursor, whose editor title bar keeps extension buttons in its
- * "…" menu, so the status bar is the only place they are always in view.
- */
-export function showStatusBarButtons(
-  setting: unknown,
-  appName: string,
-): boolean {
-  if (setting === "always") {
-    return true;
-  }
-  if (setting === "never") {
-    return false;
-  }
-  return titleActionsInMenu(appName);
+export function showStatusBarButtons(setting: unknown): boolean {
+  return setting !== "never";
 }
