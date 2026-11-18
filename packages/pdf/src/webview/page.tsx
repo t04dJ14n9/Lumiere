@@ -3,11 +3,12 @@ import { RenderLayer, usePictureState } from "@embedpdf/react/render";
 import type { PageContextValue } from "@embedpdf/react/runtime";
 import { SearchLayer } from "@embedpdf/react/search";
 import { SelectionLayer } from "@embedpdf/react/selection";
-import React, { useEffect } from "react";
+import React, { useEffect, useLayoutEffect, useRef } from "react";
 import type { PageRect } from "../shared/geometry";
 import type { RegionSelection } from "../shared/selection";
 import type { Highlight } from "./navigation";
 import { PageLinks } from "./page-links";
+import { holdPictureUntilDecoded } from "./page-picture-hold";
 import { LookUpWord } from "./look-up-word";
 import { BacklinkLayer } from "./backlink-layer";
 import { RegionMarquee } from "./region-marquee";
@@ -47,8 +48,11 @@ export function Page({
   onOpenPage,
 }: PageProps): React.JSX.Element {
   const scale = page.transform.viewScale;
+  const box = useRef<HTMLDivElement>(null);
+  useHeldPicture(box);
   return (
     <div
+      ref={box}
       className={paged ? "page paged-page" : "page"}
       data-page-index={page.pageIndex}
       data-scale={scale}
@@ -74,6 +78,21 @@ export function Page({
       <BacklinkLayer />
     </div>
   );
+}
+
+/**
+ * A zoom step keeps the page's picture until the new one is decoded
+ * (page-picture-hold.ts). The picture is `RenderLayer`'s `<img>`, the page
+ * box's first child; this runs after each render of the page, so an element
+ * `RenderLayer` puts there anew is held too, before its first picture.
+ */
+function useHeldPicture(box: React.RefObject<HTMLDivElement | null>): void {
+  useLayoutEffect(() => {
+    const image = box.current?.querySelector<HTMLImageElement>(":scope > img");
+    if (image) {
+      holdPictureUntilDecoded(image);
+    }
+  });
 }
 
 /**
