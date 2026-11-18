@@ -106,8 +106,11 @@ test("the status bar shows the page and zoom, and opens a page or a zoom when cl
   await expect(
     viewer.getByRole("toolbar", { name: "PDF toolbar" }),
   ).toHaveCount(0);
-  // Status bar buttons only where the title bar hides the actions.
-  await expect(statusBarButton(page, "nextPage")).toHaveCount(inCursor ? 1 : 0);
+  // The title bar keeps the PDF actions in its "…" menu in every editor, so
+  // the status bar shows history, page, zoom and find buttons by default.
+  for (const id of ["historyBack", "historyForward", "nextPage", "find"]) {
+    await expect(statusBarButton(page, id)).toHaveCount(1);
+  }
 
   await statusBarEntry(page, PAGE_STATUS).click();
   const input = quickInputTitled(page, /^Go to Page/u);

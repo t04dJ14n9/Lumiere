@@ -154,11 +154,11 @@ the window). Set `lumiere.pdf.keyboardShortcuts` to `false` to leave every key
 to VS Code (the **PDF:** commands remain, unbound, for **Keyboard Shortcuts**).
 Some desktops keep Ctrl+Alt+T for opening a terminal; rebind it there if so.
 
-**In Cursor**, the editor title bar keeps extension buttons in its **…**
-menu, so the viewer leaves its title buttons out (the menu lists every
-action, grouped) and the status bar also shows previous and next page, zoom
-out and in, and find buttons. `lumiere.pdf.toolbar.statusBarButtons`
-(`auto`, `always`, `never`) changes that, in either editor.
+The editor title bar keeps the viewer's actions in its **…** menu (the menu
+lists every action, grouped), so the status bar also shows history back and
+forward, previous and next page, zoom out and in, and find buttons. Set
+`lumiere.pdf.toolbar.statusBarButtons` to `never` to leave only the page,
+zoom and View.
 
 ![Cursor: page, zoom and find in the status bar](docs/images/toolbar-cursor.png)
 

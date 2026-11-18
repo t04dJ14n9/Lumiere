@@ -3581,7 +3581,7 @@
               "never"
             ],
             "enumDescriptions": [
-              "In Cursor, which keeps extension buttons in the editor title bar's \"…\" menu: yes. In VS Code: no.",
+              "Show the buttons: the editor title bar keeps the PDF actions in its \"…\" menu.",
               "Always show the buttons.",
               "Only the page, zoom and View."
             ],
