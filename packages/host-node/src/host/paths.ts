@@ -64,6 +64,21 @@ export function isFilesystemRoot(dir: string): boolean {
 }
 
 /**
+ * Whether `uri` is inside a workspace the embedder registered (`addRoot`).
+ * A registered filesystem root authorizes nothing: every path is inside it, so
+ * it would make any folder a page names acceptable.
+ */
+export function isInsideRegisteredRoot(
+  roots: readonly string[],
+  uri: string,
+): boolean {
+  return roots.some((root) => {
+    const base = fileUriToPath(root);
+    return base !== undefined && !isFilesystemRoot(base) && isInside(root, uri);
+  });
+}
+
+/**
  * Reject `uri` unless it stays inside `root` lexically and, once the nearest
  * existing ancestor is resolved, on disk. A missing final component is allowed
  * so a new note can be created; a symlink that leaves the root is not.

@@ -12,6 +12,7 @@ import {
 } from "node:fs/promises";
 import { tmpdir } from "node:os";
 import * as path from "node:path";
+import { pathToFileURL } from "node:url";
 import { createPdfRoutes, type PdfRoutes } from "../../src/host/pdf-routes";
 import type { PageSocket } from "../../src/host/panel";
 
@@ -24,6 +25,8 @@ interface Fixture {
   readonly viewer: string;
   readonly outside: string;
   readonly routes: PdfRoutes;
+  /** The workspaces the embedder registered; the vault to begin with. */
+  readonly registered: string[];
 }
 
 async function fixture(t: test.TestContext): Promise<Fixture> {
@@ -38,7 +41,13 @@ async function fixture(t: test.TestContext): Promise<Fixture> {
   await writeFile(path.join(vault, "Note.md"), "# Note");
   await writeFile(path.join(dir, "outside.pdf"), PDF);
   await writeFile(path.join(viewer, "viewer.js"), "/* viewer */");
-  const routes = createPdfRoutes({ base: "/lumiere", viewer, log: () => {} });
+  const registered = [pathToFileURL(vault).toString()];
+  const routes = createPdfRoutes({
+    base: "/lumiere",
+    viewer,
+    roots: () => registered,
+    log: () => {},
+  });
   const server: Server = createServer((req, res) => {
     const rest = new URL(req.url ?? "/", "http://x").pathname.slice(
       "/lumiere".length,
@@ -63,6 +72,7 @@ async function fixture(t: test.TestContext): Promise<Fixture> {
     viewer,
     outside: path.join(dir, "outside.pdf"),
     routes,
+    registered,
   };
 }
 
@@ -192,6 +202,40 @@ test("only a PDF inside its workspace opens", async (t) => {
     400,
   );
   assert.equal(await status(path.join(vault, "papers", "Missing.pdf")), 403);
+});
+
+test("a PDF page opens only from a workspace the embedder registered", async (t) => {
+  // #628: ?path=<a readable PDF>&root=<its folder> must not open it.
+  const { origin, dir, vault, outside, registered } = await fixture(t);
+  const status = async (file: string, root: string) =>
+    (await fetch(pageUrl(origin, file, root))).status;
+  assert.equal(await status(outside, dir), 403, "a folder nobody registered");
+  assert.equal(
+    await status(
+      path.join(vault, "papers", "A.pdf"),
+      path.join(vault, "papers"),
+    ),
+    200,
+    "a folder inside the registered vault",
+  );
+
+  registered.length = 0;
+  assert.equal(
+    await status(path.join(vault, "papers", "A.pdf"), vault),
+    403,
+    "nothing registered",
+  );
+  registered.push(pathToFileURL(dir).toString());
+  assert.equal(
+    await status(outside, dir),
+    200,
+    "once the embedder registers it",
+  );
+
+  // A filesystem root holds every folder and so trusts none.
+  registered.length = 0;
+  registered.push("file:///");
+  assert.equal(await status(outside, dir), 403);
 });
 
 test("the viewer's files are served from its folder only", async (t) => {

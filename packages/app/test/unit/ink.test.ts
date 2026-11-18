@@ -59,6 +59,7 @@ async function api(t: test.TestContext) {
     vaults: new Vaults(path.join(dir, "vaults.json")),
     ui: new UiStore(path.join(dir, "window.json")),
     ink,
+    shellKey: "shell-key",
     insertSketch: () => {
       sketchesStarted += 1;
     },

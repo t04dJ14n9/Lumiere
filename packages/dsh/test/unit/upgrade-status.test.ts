@@ -8,6 +8,7 @@ import type { Duplex } from "node:stream";
 import { SOCKET_PATH, type LumiereHost } from "@workshop/host-node";
 import { registerRoutes } from "../../src/host/routes";
 import type { DshContext } from "../../src/host/dsh";
+import { dshSessions } from "./fake-sessions";
 
 function httpError(status: number, reason: string): string {
   return (
@@ -45,6 +46,7 @@ function registerWithRejection(status: number | undefined): {
   let upgrade: UpgradeHandler | undefined;
   const cleanups: Array<() => void | Promise<void>> = [];
   const ctx: DshContext = {
+    ...dshSessions({}),
     webServer: {
       register: () => () => {},
       registerUpgrade: (route) => {

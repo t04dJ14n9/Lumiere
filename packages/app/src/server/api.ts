@@ -6,6 +6,7 @@
  * reach the window.
  */
 import type { IncomingMessage, ServerResponse } from "node:http";
+import { fromShell } from "./auth";
 import type { WindowInk } from "./ink";
 import type { UiStore } from "./ui-state";
 import type { VaultEvent, Vaults } from "./vaults";
@@ -16,6 +17,12 @@ const MAX_BODY = 64 * 1024;
 const MAX_DRAWING_BODY = 64 * 1024 * 1024;
 /** Opens kept for a window that has not connected yet; the newest win. */
 const MAX_WAITING = 16;
+/**
+ * The routes that can add a folder as a vault, and so widen what the editor
+ * pages may read and write. A page of a note is same-origin with the window,
+ * so these answer the window only (auth.ts `fromShell`).
+ */
+const ADDS_A_FOLDER = new Set(["POST /api/vaults", "POST /api/open"]);
 
 export interface Api {
   /** Answer a request under `/api/`; false when its path is not one of these. */
@@ -31,6 +38,8 @@ export interface ApiState {
   readonly vaults: Vaults;
   readonly ui: UiStore;
   readonly ink: WindowInk;
+  /** What the window's page was given to prove it, not a page in it, adds a folder. */
+  readonly shellKey: string;
   /** Start Insert Sketch in the note last focused (the window's pencil). */
   readonly insertSketch: () => void;
   readonly version: string;
@@ -44,6 +53,9 @@ export function createApi(state: ApiState): Api {
     async handle(req, res) {
       const url = new URL(req.url ?? "/", "http://host");
       const route = `${req.method ?? "GET"} ${url.pathname}`;
+      if (refusedFromPage(route, { req, res }, state.shellKey)) {
+        return true;
+      }
       switch (route) {
         case "GET /api/health":
           return json(res, 200, { ok: true, version });
@@ -84,6 +96,18 @@ export function createApi(state: ApiState): Api {
       streams.clear();
     },
   };
+}
+
+/** Answer 403, and say so, for a route that adds a folder when a page, not the window, asks. */
+function refusedFromPage(
+  route: string,
+  { req, res }: { req: IncomingMessage; res: ServerResponse },
+  shellKey: string,
+): boolean {
+  if (!ADDS_A_FOLDER.has(route) || fromShell(req, shellKey)) {
+    return false;
+  }
+  return json(res, 403, { error: "Only the window may open a folder" });
 }
 
 /**

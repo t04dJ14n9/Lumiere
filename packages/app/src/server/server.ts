@@ -24,8 +24,9 @@ import {
 } from "@workshop/host-node";
 import { createApi, type Api } from "./api";
 import { withAppDefaults } from "./defaults";
-import { admit } from "./auth";
+import { admit, newToken } from "./auth";
 import { WindowInk } from "./ink";
+import { serveShellPage } from "./shell-page";
 import { UiStore } from "./ui-state";
 import { Vaults } from "./vaults";
 
@@ -57,10 +58,13 @@ export async function startServer(setup: ServerSetup): Promise<RunningServer> {
   const ink = new WindowInk();
   const { lumiere, editor } = await startEditor(setup, ink);
   const [vaults, ui] = await loadState(setup, lumiere);
+  // Given to the window's page only, to add a folder (auth.ts `fromShell`).
+  const shellKey = newToken();
   const api = createApi({
     vaults,
     ui,
     ink,
+    shellKey,
     insertSketch: () => insertSketch(lumiere, setup.logger),
     version: setup.version,
   });
@@ -69,9 +73,15 @@ export async function startServer(setup: ServerSetup): Promise<RunningServer> {
   const auth = () => ({ token: setup.token, port });
 
   const server = createServer((req, res) => {
-    void respond({ req, res, auth: auth(), api, editor, shell }).catch(
-      (error: unknown) => fail(res, error, setup.logger),
-    );
+    void respond({
+      req,
+      res,
+      auth: auth(),
+      api,
+      editor,
+      shell,
+      shellKey,
+    }).catch((error: unknown) => fail(res, error, setup.logger));
   });
   server.on("upgrade", (req: IncomingMessage, socket: Duplex, head: Buffer) => {
     if (
@@ -163,6 +173,7 @@ interface Request {
   readonly api: Api;
   readonly editor: ReturnType<typeof createEditorRoutes>;
   readonly shell: string;
+  readonly shellKey: string;
 }
 
 async function respond({
@@ -172,6 +183,7 @@ async function respond({
   api,
   editor,
   shell,
+  shellKey,
 }: Request): Promise<void> {
   const admission = admit(req, auth);
   if (admission.kind === "reject") {
@@ -195,12 +207,10 @@ async function respond({
     if (!(await editor.handle(req, res))) {
       res.writeHead(404).end();
     }
+  } else if (pathname === "/") {
+    await serveShellPage(req, res, shell, shellKey);
   } else {
-    await serveStatic(
-      res,
-      shell,
-      pathname === "/" ? "index.html" : pathname.slice(1),
-    );
+    await serveStatic(res, shell, pathname.slice(1));
   }
 }
 

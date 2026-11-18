@@ -59,6 +59,7 @@ What is DSH's:
 - `src/host/index.ts`: the DSH plugin: starts Lumière and mounts its routes.
 - `src/host/routes.ts`: host-node's routes on DSH's web server, behind DSH's authentication.
 - `src/host/dsh.ts`: the parts of DSH's plugin context used here.
+- `src/host/workspace.ts`: a session's workspace, read from DSH, registered with the host.
 - `src/client/index.ts`: the browser half: registers the Markdown and PDF document previews.
 - `src/client/note-frame.ts`: the editor iframe: load and ready handling, one retry after a failed handshake, theme and following links.
 - `src/client/address.ts`: DSH's file addresses.
@@ -70,8 +71,8 @@ What is DSH's:
 
 ## Services, routes and settings
 
-The host half injects DSH's `webServer` and `connection`; the browser half
-`documentPreviews`, `slots` and `sidebarRight`. Routes, all behind DSH's
+The host half injects DSH's `webServer`, `connection` and `sessions`; the
+browser half `documentPreviews`, `slots` and `sidebarRight`. Routes, all behind DSH's
 authentication: `/lumiere/editor` (a note's page), `/lumiere/m/*` (the
 editor), `/lumiere/page/shim.js` (the shim), `/lumiere/file` (a note's images,
 inside its workspace only — `..` and a symbolic link that leaves the workspace
@@ -140,10 +141,17 @@ of the Host mid-handshake), it recreates the iframe once, and DSH's Reload and
   vault's own files (`/lumiere/file`) are sandboxed and its scripts served
   as text, so an HTML page or SVG opened from a vault does not run on DSH's
   origin.
-- A workspace that is the filesystem root is refused. The root otherwise is
-  the session's workspace DSH's preview names for that note; the host
-  re-checks every path against it. A note DSH names by absolute path has no
-  workspace: its folder stands in, and the session's workspace that holds
-  it still opens later.
+- A workspace that is the filesystem root is refused. The workspace is the
+  working directory DSH records for the session whose address opened the note
+  (`?session=` on the page's URL; the host reads it from `ctx.sessions`, or
+  `ctx.sessionPersistence` for a stored session, as DSH's own file service
+  does) and registers it with host-node before the page is served. A page
+  cannot name a folder of its own: host-node refuses any `root` that is not
+  inside a registered one. A note outside its session's workspace (named by an
+  absolute address) is therefore refused: the tab reports that Lumière could
+  not open it, and DSH's own preview, in the viewer menu, still shows it. DSH's
+  file reads are not contained to a workspace, so the server has nothing to
+  check such a folder against. The host re-checks every path against the
+  workspace.
 - Copying a file into the vault from outside the workspace is refused.
   DSH has no file picker for that yet.
