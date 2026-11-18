@@ -19,7 +19,6 @@ import {
   showPage,
   statusBarEntry,
   test,
-  withoutSpaces,
 } from "./workbench";
 
 // The viewer's controls in the editor's own UI (the default `chrome` mode):
@@ -178,7 +177,7 @@ test("editor title actions zoom, fit and switch the selection tool", async ({
   ).toBeFocused();
   await page.keyboard.press("Escape");
 
-  // Regions default off: Select Region is hidden; Copy link is clipboard Quote.
+  // Regions default off: Select Region is hidden; Copy link has no viewrect.
   await editorTitleAction(page, "Fit Page");
   await showPage(page, viewer, 1);
   await page.keyboard.press("F1");
@@ -198,9 +197,7 @@ test("editor title actions zoom, fit and switch the selection tool", async ({
   await selectText(page, viewer, at(74, TEXT_MIDLINE), at(205, TEXT_MIDLINE));
   await contextMenu(page, at(100, TEXT_MIDLINE), "Copy link to this");
   const quote = await pastedClipboard(page);
-  expect(withoutSpaces(quote)).toContain(
-    withoutSpaces(`[outline.pdf · p.1](${PDF}#page=1#:~:text=`),
-  );
+  expect(quote.startsWith(`@${PDF}#page=1\n\n> `)).toBe(true);
   expect(quote).not.toMatch(/viewrect=/u);
 });
 
