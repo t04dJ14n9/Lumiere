@@ -53,7 +53,7 @@ export const wordCountHost: Plugin = {
  * Counts for the active note. Prefer host/panel document text so a cold
  * webview (blank for seconds on first open) cannot leave the previous note's
  * counts on the status bar. Selection is a best-effort refinement with a
- * short timeout. A text editor on the note wins over a Lumia editor that is
+ * short timeout. A text editor on the note wins over a Lumiere editor that is
  * not the active one (another group): the reader is looking at the text editor.
  */
 async function activeText(

@@ -29,7 +29,7 @@ never open a real vault.
    For Cursor use `cursor` with the same flags. Delete `/tmp/mdwb-manual`
    and `/tmp/mdwb-vault` afterwards.
 4. Run **Lumiere: Use Lumiere for Markdown in This
-   Workspace** once, so `.md` files open in Workshop (see Editor below).
+   Workspace** once, so `.md` files open in Lumiere (see Editor below).
 5. Turn on `lumiere.markdown.debug.logging` while testing and keep the
    **Lumiere** output channel open; note any error lines in the
    result.
@@ -85,12 +85,12 @@ Owns the text, saving and history; VS Code's TextDocument is the authority.
    characters are not duplicated, save includes pending edits, and undo/redo
    follow VS Code's history. Typing without pausing undoes as one step;
    moving the caret starts a new one.
-2. Split `Core.md` into two Workshop panels and open it as text in a third
+2. Split `Core.md` into two Lumiere panels and open it as text in a third
    group (**Open as Text**). Edit in each; undo from another. All three show
    one document. Edit the file on disk while it is saved: the editors reload
    it without losing newer text.
 3. Save a copy of `Core.md` with CRLF line endings (text editor status bar).
-   Edit across lines in Workshop, save and undo: the file stays CRLF and
+   Edit across lines in Lumiere, save and undo: the file stays CRLF and
    selections do not drift.
 4. Reload the window with unsaved changes: VS Code's hot exit restores them.
 
@@ -112,10 +112,10 @@ Setting warming to `off` must stop warm calls; record the Cursor result
 separately, since that explicitly disables the workaround.
 
 Claude Code chat reclaim timing (use a disposable vault): associate `*.md`
-with Workshop and leave reclaim/warming at `auto` in Cursor. Click a Markdown
+with Lumiere and leave reclaim/warming at `auto` in Cursor. Click a Markdown
 file link in Claude Code chat with the note closed, already open and dirty,
 and open in two groups. Compare the interval from the native text tab appearing
-to Workshop appearing against the previous build, recording the Cursor version
+to Lumiere appearing against the previous build, recording the Cursor version
 and cold/warm cases. A materialized text tab should transfer without waiting
 for another `openTextDocument`; the native text flash can still occur because
 Claude Code uses `showTextDocument`. Confirm selection handoff and dirty text
@@ -124,7 +124,7 @@ request within 10 seconds stays text. Repeat the Cursor Markdown transfer
 above to confirm its awaited warming still prevents the assertion.
 
 Cursor review hunk navigation (use a disposable note with at least 1,000 lines):
-associate Markdown with Workshop and leave reclaim at `auto`. Include a long
+associate Markdown with Lumiere and leave reclaim at `auto`. Include a long
 rendered table spanning the first target. Ask an agent to edit passages near lines 930 and 948, then click each hunk card's blue file/open
 arrow. Test with the note closed, already open, and open in two groups with
 different caret positions. The requested group must focus, center the hunk start
@@ -147,7 +147,7 @@ do not install a VSIX or use the owner's profile.
    `*.md` and `*.markdown`, other associations stay, and running it again
    changes nothing. The entries name `lumiere.markdown.editor` (not
    `default`). A note opened from the Explorer now opens in the
-   Workshop editor without a text editor tab first. **Open as Text** still
+   Lumiere editor without a text editor tab first. **Open as Text** still
    opens the text editor, and that tab is not reclaimed.
 4. Run **Note Actions** and **Selection Actions** from the palette (with and
    without a selection): a quick pick lists the registered actions.
@@ -218,7 +218,7 @@ The Markdown syntax, the HTML renderer and Live Preview's reveal-at-caret.
    not change the selection, document text or active editor. Release, then check
    wheel scrolling and PageUp/PageDown; keyboard navigation may reveal syntax at
    its new caret. Repeat with Vim on and off and in Cursor; its
-   Preview/Markdown chrome must not be mistaken for Workshop's Source mode.
+   Preview/Markdown chrome must not be mistaken for Lumiere's Source mode.
    Drag a text selection into a new viewport: syntax remains rendered until
    release, then reveals under the selection. Explicit Toggle Live Preview/Source
    still works, and scrolling in Source mode keeps Source mode.
@@ -625,7 +625,7 @@ title, then set `lumiere.markdown.plugins.inlineTitle.enabled` to true.
 
 ### outline
 
-1. With a Workshop note active, the Explorer's **Markdown Outline** lists its
+1. With a Lumiere note active, the Explorer's **Markdown Outline** lists its
    headings collapsed until the caret enters a section. Only that heading's
    ancestor path stays open. Clicking a heading moves the caret there, and
    the current section is selected as the caret moves. Set
@@ -647,16 +647,16 @@ title, then set `lumiere.markdown.plugins.inlineTitle.enabled` to true.
    A selection extending across sections follows its active end. Also check
    a CRLF note and a caret in the preamble before its first heading.
 6. Press **Ctrl+Shift+O** (**Command+Shift+O** on macOS), or run **Markdown
-   Workshop: Go to Heading…**. The Quick Pick shows parsed heading titles,
+   Lumiere: Go to Heading…**. The Quick Pick shows parsed heading titles,
    levels and parent titles in document order. Search a title and accept it:
-   the active Workshop panel navigates to that heading. Escape does not move
+   the active Lumiere panel navigates to that heading. Escape does not move
    the caret. Check duplicate titles, quoted headings, Setext headings,
    unsaved heading edits and a note with no headings. Fenced code and
    frontmatter content do not appear as headings.
 7. Open the same note in a plain text split and switch repeatedly between
-   the two panels without editing. Workshop's shortcut opens Go to Heading;
+   the two panels without editing. Lumiere's shortcut opens Go to Heading;
    the plain text shortcut and native Outline show built-in Markdown symbols
-   once. Workshop uses Markdown Outline; it does not populate the native Outline
+   once. Lumiere uses Markdown Outline; it does not populate the native Outline
    or breadcrumbs. An open heading picker must not jump if the document is
    edited or a different panel becomes active before accepting it.
 8. Press **Ctrl+Alt+O** (**Control+Command+O** on macOS) twice: Markdown Outline
@@ -682,7 +682,7 @@ Both are off by default (owner decision). Turn on
 
 ### settings commands
 
-1. **Open Settings**: Run Open Settings from the palette with no editor open: the Settings UI shows with the search `@ext:t04dj14n9.vscode-markdown-workshop`.
+1. **Open Settings**: Run Open Settings from the palette with no editor open: the Settings UI shows with the search `@ext:t04dj14n9.lumiere`.
 2. **Set Note Font Size**: Run it: the box shows the current `lumiere.markdown.editor.fontSize`; type 20 and Enter, the open note's text, headings and line numbers grow at once and the Settings UI shows 20; 7 or `abc` is refused; Escape changes nothing.
 3. **Toggle Line Numbers**: Run it twice: the gutter hides and shows, and `lumiere.markdown.plugins.lineNumbers.enabled` in the Settings UI follows each run.
 4. **Toggle Readable Line Width**: Run it twice: the note's width limit switches, and `lumiere.markdown.editor.readableLineLength` follows.
@@ -798,7 +798,7 @@ Off by default; needs **gitGutter**. Turn it on with **Toggle Inline Git Changes
 
 On by default.
 
-1. Open `Formatting.md` in Workshop and, beside it, with **Open With >
+1. Open `Formatting.md` in Lumiere and, beside it, with **Open With >
    Text Editor**, in a light and a dark theme: the numbers use the same font
    family, the note's own size (`lumiere.markdown.editor.fontSize`), colours (brighter on the caret line), right alignment and gutter
    width, with fold chevrons between numbers and text on hover. Each number
@@ -1106,7 +1106,7 @@ On by default; VS Code's text diff stays the default until
    rendered panel follows both changes. Close the panel and repeat: no disposed
    panel updates or retained subscriptions should remain.
 
-### templates and daily notes
+### templates
 
 Use a disposable vault with `Templates/Meeting.md` containing
 `# {{title}}`, `{{date}} {{time}}` and `{{date:DD.MM.YYYY}}`.
@@ -1116,20 +1116,11 @@ Use a disposable vault with `Templates/Meeting.md` containing
    in `Notes/Plan.md` inserts `# Plan` and today's date and time at the
    caret, replacing a selection if there is one, with the caret after the
    text. Undo removes it.
-2. **Open Today's Daily Note** with defaults creates `YYYY-MM-DD.md` at the
-   vault root and opens it; running it again opens the same note unchanged.
-   Set `dailyNotes.folder` to `Journal`, `dailyNotes.dateFormat` to
-   `YYYY/MM/YYYY-MM-DD` and `dailyNotes.template` to `Templates/Meeting`:
-   the note is created under `Journal/<year>/<month>/` from the template.
-   A missing template creates an empty note and says so.
-3. Create two older daily notes with a gap: **Open Previous Daily Note** and
-   **Open Next Daily Note** skip the gap, and say so at either end.
-4. In a vault whose `.obsidian/daily-notes.json` sets `folder` and `format`
-   and whose `templates.json` sets `folder`, the commands use those values
-   until the matching Lumiere setting is set explicitly. A `format` such as
+2. In a vault whose `.obsidian/templates.json` sets `folder` and
+   `dateFormat`, **Insert Template** uses those values until the matching
+   Lumiere setting is set explicitly. A `dateFormat` such as
    `YYYY-MM-DD dddd` is not carried over. No `.obsidian` file changes.
-5. In host-node (the app or DSH), repeat steps 1 and 2 from its Command
-   Palette.
+3. In host-node (the app or DSH), repeat step 1 from its Command Palette.
 
 ### scratch and Marp
 
@@ -1148,7 +1139,7 @@ Use a disposable folder, never a personal vault.
    Marp for VS Code installed and the workspace trusted, the text editor
    opens and Marp's export follows. **Toggle Marp** flips only the `marp`
    flag. Set `lumiere.markdown.marp.open` to `textEditor`: the deck opens
-   in the text editor; **Keep Marp Deck in Workshop** brings it back.
+   in the text editor; **Keep Marp Deck in Lumiere** brings it back.
 
 <!-- command-setting-inventory:start -->
 ## Complete command and setting acceptance inventory
@@ -1241,7 +1232,7 @@ Use the disposable fixture vault from Setup. These rows enumerate every generate
 | `lumiere.markdown.marp.preview` — Open Marp Preview to the Side | unbound | On a disposable fixture, run Open Marp Preview to the Side; confirm its named action using the plugin scenarios above, then undo where applicable. Repeat after disable/re-enable and switching panes. |
 | `lumiere.markdown.marp.export` — Export Marp Slide Deck | unbound | On a disposable fixture, run Export Marp Slide Deck; confirm its named action using the plugin scenarios above, then undo where applicable. Repeat after disable/re-enable and switching panes. |
 | `lumiere.markdown.marp.toggle` — Toggle Marp | unbound | On a disposable fixture, run Toggle Marp; confirm its named action using the plugin scenarios above, then undo where applicable. Repeat after disable/re-enable and switching panes. |
-| `lumiere.markdown.marp.keepInWorkshop` — Keep Marp Deck in Workshop | unbound | On a disposable fixture, run Keep Marp Deck in Workshop; confirm its named action using the plugin scenarios above, then undo where applicable. Repeat after disable/re-enable and switching panes. |
+| `lumiere.markdown.marp.keepInWorkshop` — Keep Marp Deck in Lumiere | unbound | On a disposable fixture, run Keep Marp Deck in Lumiere; confirm its named action using the plugin scenarios above, then undo where applicable. Repeat after disable/re-enable and switching panes. |
 | `lumiere.markdown.toggleInlineMath` — Toggle Inline Math | unbound | On a disposable fixture, run Toggle Inline Math; confirm its named action using the plugin scenarios above, then undo where applicable. Repeat after disable/re-enable and switching panes. |
 | `lumiere.markdown.insertMathBlock` — Insert Math Block | unbound | On a disposable fixture, run Insert Math Block; confirm its named action using the plugin scenarios above, then undo where applicable. Repeat after disable/re-enable and switching panes. |
 | `lumiere.markdown.outgoingLinks.sortByAlphabetical` — ✓ File name (A to Z) | unbound | On a disposable fixture, run ✓ File name (A to Z); confirm its named action using the plugin scenarios above, then undo where applicable. Repeat after disable/re-enable and switching panes. |
@@ -1265,9 +1256,6 @@ Use the disposable fixture vault from Setup. These rows enumerate every generate
 | `lumiere.markdown.quickSwitcher` — Quick Switcher | unbound | On a disposable fixture, run Quick Switcher; confirm its named action using the plugin scenarios above, then undo where applicable. Repeat after disable/re-enable and switching panes. |
 | `lumiere.markdown.scratch.new` — New Scratch Note | unbound | On a disposable fixture, run New Scratch Note; confirm its named action using the plugin scenarios above, then undo where applicable. Repeat after disable/re-enable and switching panes. |
 | `lumiere.markdown.templates.insert` — Insert Template | unbound | On a disposable fixture, run Insert Template; confirm its named action using the plugin scenarios above, then undo where applicable. Repeat after disable/re-enable and switching panes. |
-| `lumiere.markdown.dailyNotes.openToday` — Open Today's Daily Note | unbound | On a disposable fixture, run Open Today's Daily Note; confirm its named action using the plugin scenarios above, then undo where applicable. Repeat after disable/re-enable and switching panes. |
-| `lumiere.markdown.dailyNotes.openPrevious` — Open Previous Daily Note | unbound | On a disposable fixture, run Open Previous Daily Note; confirm its named action using the plugin scenarios above, then undo where applicable. Repeat after disable/re-enable and switching panes. |
-| `lumiere.markdown.dailyNotes.openNext` — Open Next Daily Note | unbound | On a disposable fixture, run Open Next Daily Note; confirm its named action using the plugin scenarios above, then undo where applicable. Repeat after disable/re-enable and switching panes. |
 | `lumiere.markdown.openSettings` — Open Settings | unbound | On a disposable fixture, run Open Settings; confirm its named action using the plugin scenarios above, then undo where applicable. Repeat after disable/re-enable and switching panes. |
 | `lumiere.markdown.changeSetting` — Change Setting… | unbound | On a disposable fixture, run Change Setting…; confirm its named action using the plugin scenarios above, then undo where applicable. Repeat after disable/re-enable and switching panes. |
 | `lumiere.markdown.setNoteFontSize` — Set Note Font Size | unbound | On a disposable fixture, run Set Note Font Size; confirm its named action using the plugin scenarios above, then undo where applicable. Repeat after disable/re-enable and switching panes. |
@@ -1407,13 +1395,9 @@ Use the disposable fixture vault from Setup. These rows enumerate every generate
 | `lumiere.markdown.properties.listPreviewCount` | `0` | number; change at workspace-folder scope, verify the owning plugin scenario, then reset the override. |
 | `lumiere.markdown.scratch.folder` | `"scratch"` | string; change at workspace-folder scope, verify the owning plugin scenario, then reset the override. |
 | `lumiere.markdown.plugins.templates.enabled` | `true` | boolean; change at workspace-folder scope, verify the owning plugin scenario, then reset the override. |
-| `lumiere.markdown.plugins.dailyNotes.enabled` | `true` | boolean; change at workspace-folder scope, verify the owning plugin scenario, then reset the override. |
 | `lumiere.markdown.templates.folder` | `""` | string; change at workspace-folder scope, verify the owning plugin scenario, then reset the override. |
 | `lumiere.markdown.templates.dateFormat` | `"YYYY-MM-DD"` | string; change at workspace-folder scope, verify the owning plugin scenario, then reset the override. |
 | `lumiere.markdown.templates.timeFormat` | `"HH:mm"` | string; change at workspace-folder scope, verify the owning plugin scenario, then reset the override. |
-| `lumiere.markdown.dailyNotes.folder` | `""` | string; change at workspace-folder scope, verify the owning plugin scenario, then reset the override. |
-| `lumiere.markdown.dailyNotes.dateFormat` | `"YYYY-MM-DD"` | string; change at workspace-folder scope, verify the owning plugin scenario, then reset the override. |
-| `lumiere.markdown.dailyNotes.template` | `""` | string; change at workspace-folder scope, verify the owning plugin scenario, then reset the override. |
 | `lumiere.markdown.stickyScroll.maxLines` | `5` | number; change at workspace-folder scope, verify the owning plugin scenario, then reset the override. |
 | `lumiere.markdown.tags.viewSort` | `"frequency"` | name / frequency; change at workspace-folder scope, verify the owning plugin scenario, then reset the override. |
 | `lumiere.markdown.tags.viewNested` | `true` | boolean; change at workspace-folder scope, verify the owning plugin scenario, then reset the override. |
@@ -1469,11 +1453,11 @@ owner's vault for these checks.
 1. In one vault's `app.json`, set Markdown links, relative link format, attachment
    folder `/`, new-file location `current`, an `Archive/` ignore filter, hidden
    properties, `livePreview: false` and `alwaysUpdateLinks: true`. Open a fresh
-   Workshop editor. It starts in Source mode; a fresh Live Preview view hides
+   Lumiere editor. It starts in Source mode; a fresh Live Preview view hides
    properties; link insertion uses Markdown/relative text, new notes use the
    originating folder, and archived notes leave switcher/search results but
    remain linkable. Rename a referenced note: links update without a prompt.
-2. Set each corresponding Workshop setting explicitly in user, workspace,
+2. Set each corresponding Lumiere setting explicitly in user, workspace,
    folder and applicable Markdown language settings. That explicit value wins,
    even when it equals the package default. Remove it to restore vault policy.
    Confirm VS Code settings files never change when `app.json` changes.

@@ -9,9 +9,6 @@ export interface VimStatusState {
   status?: string;
 }
 
-/** Added to the note editor while the host's status bar shows the mode. */
-export const HOST_STATUS_CLASS = "lumiere-vim-host-status";
-
 /**
  * The text Vim's own panel shows: the mode (`-- NORMAL --`, `-- VISUAL LINE
  * --`, `-- INSERT (C-O) --`) and the keys typed so far (`d2`).

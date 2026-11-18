@@ -2,6 +2,155 @@
 
 ## 0.1.0 (unreleased)
 
+- Text inside a rendered callout (or HTML block) can be selected by
+  dragging, and copied, as in reading view. A drag used to collapse into a
+  caret at the callout's start, revealing its source, or the selection
+  vanished when the mouse was released. A plain click still opens the
+  callout's source.
+
+- Jumping to a heading from the Outline, Go to Heading or a link no longer
+  flashes another part of the note first. When an image above the heading
+  loaded after the jump, one frame showed the note pushed down by the
+  image's height, and the next showed the sticky headings of the section
+  above; both now settle before the frame is drawn.
+
+- Fixed (Obsidian compliance audit, 2026-11-16):
+  - Renaming a note to a name with `'` or `"` no longer breaks the
+    frontmatter of notes that link to it from a property. The new link is
+    escaped for the value's quoting, and a plain value that cannot hold it
+    is written double-quoted. A property link to a name with an apostrophe
+    in a single-quoted value (`'[[Bob''s]]'`) now resolves and follows
+    renames.
+  - With the relative link format, a link written into a folder (by a
+    rename, a suggestion or an inserted link) that a root file of the same
+    name would capture gets `./` in front (`[[./X]]`, `[x](./X.md)`), so it
+    opens the note in that folder instead of the root one. Markdown link
+    suggestions get the same check, which ignores case as links do.
+  - **Insert Template** merges a template's properties into the note's, as
+    Obsidian does, instead of pasting its `---` block into the note: the
+    note's values stay, missing properties are added and lists are joined.
+    Only the body goes in at the caret. Joining a list the note writes as
+    a block list (`- a` lines) adds the new items as `- ` lines and keeps
+    its comments, instead of rewriting it as `[a, b]`; an object in both
+    lists is written once. A variable that would make the
+    template's properties invalid YAML (`title: {{title}}` for a note named
+    `[draft] plan`) is written quoted in its value. A template whose
+    properties are still not valid YAML gets only its body inserted, never
+    its `---` block, and the message names the template; the message about
+    a note's invalid properties names the note. Inserting into a note that
+    ends at its closing `---` puts the body on a new line instead of
+    joining it to the `---`.
+  - **Always Update** in the link update prompt now writes
+    `lumiere.markdown.linkUpdates.mode: always` to the note's workspace
+    folder settings (`.vscode/settings.json`, or the workspace's when the
+    note is in no folder) instead of your user settings, so it applies to
+    that vault only, as Obsidian keeps `alwaysUpdateLinks` per vault.
+    Known limitations: the choice is kept per workspace folder, not per
+    vault, so several vaults inside one folder share it; and a user-level
+    `always` written by an earlier version is not migrated, so it stays
+    (and applies to every vault) until you remove it.
+  - Renaming or moving a note or attachment now updates `.canvas` files:
+    file nodes follow the file, and links in text nodes are rewritten.
+  - A rename no longer skips notes the vault index has not parsed yet (a
+    large vault's first start): their text is read and rewritten too, and
+    a message names any that could not be read in time. A note or canvas
+    that cannot be read or parsed is named in that message too, instead of
+    making the whole rename fail and leaving every link unchanged, and the
+    message shows even when the prompt is skipped because no other note
+    changes. Unparsed notes and canvases share one 20-second reading
+    budget across the prompt's count and the rewrite (each note is read
+    once), so a rename stays inside VS Code's participant timeout.
+  - A property link in a note with Windows (CRLF) line endings is rewritten
+    by a rename; the note's frontmatter was also read as body text, and the
+    link counted twice was dropped.
+  - A note you type in while the rename runs is no longer edited at
+    positions computed from its earlier text: it is left as it is and
+    named in the "Links … were not updated" warning. Canvases are covered
+    too.
+  - A callout written with an alias (`[!tldr]`, `[!faq]`) keeps that type in
+    its `data-callout` attribute, as Obsidian does, so CSS snippets that
+    select `[data-callout="tldr"]` apply. Its icon and colour are still
+    those of the main type.
+  - Template dates (`{{date:FORMAT}}`, `templates.json` formats) and Bases'
+    `format()` write Moment's common tokens: `MMMM` is the month's name
+    (it was `1111`), and `MMM`, `dddd`, `ddd`, `Do`, `YY`, `A`/`a`, `h`,
+    ISO weeks, `L`/`LL` and `[literal]` text work. A `templates.json`
+    format is no longer dropped when it has a token Lumiere cannot write;
+    Insert Template names that token instead, and so does a Bases embed
+    whose `format("…")` uses one. `Y`, `YYY`, `GGGGG` and Moment's `\`
+    escape work, and ISO weeks and the day of the year are right for years
+    0 to 99.
+  - Embedding a block (`![[Note#^id]]`) whose id is on a list item shows
+    the item with its bullet and nested items, not only its text. An id on
+    a heading embeds that heading instead of the whole note, and an id
+    inside a quote or callout embeds the whole quote instead of a mangled
+    piece of it. Ticking a child task in such an embed ticks it in the
+    source note, and children indented with a mix of tabs and spaces stay
+    nested.
+  - A `%%` comment block that spans blank lines or holds headings, lists or
+    tables is one comment, as in Obsidian: it is hidden in rendered
+    Markdown (embeds, previews, exports), dimmed in Live Preview, and its
+    headings no longer appear in the Outline, heading suggestions or
+    heading links. Links and tags inside stay indexed, as Obsidian indexes
+    them. A `%%` line that nothing closes comments out the rest of the note,
+    or of the quote, callout or list item it is in (in the editor too, which
+    used to run on past the quote). A `%%` line right below a paragraph
+    line starts the comment instead of joining the paragraph, so a closed
+    comment there no longer hides the rest of the note; it still closes a
+    `%%` the paragraph opened. Text after a comment's closing `%%` on its
+    line is shown and its links, tags and block ids are indexed. A `%%` line
+    under a nested list item is a comment in the editor as it is in reading
+    view.
+  - Properties read the vault's `.obsidian/types.json`: a property Obsidian
+    types as Text shows as text even when its value is `123`. Lumiere does
+    not write `types.json`: a type you change in Lumiere is stored in
+    Lumiere only (it wins over `types.json` for that property), and
+    Obsidian does not see it.
+
+- Daily Notes is removed: **Open Today's Daily Note**, **Open Previous
+  Daily Note** and **Open Next Daily Note** are gone, with the
+  `lumiere.markdown.plugins.dailyNotes.enabled`,
+  `lumiere.markdown.dailyNotes.folder`, `dailyNotes.dateFormat` and
+  `dailyNotes.template` settings, and Lumiere no longer reads
+  `.obsidian/daily-notes.json`. Your daily notes stay where they are and
+  open like any other note. **Insert Template** and `templates.json` are
+  unchanged. VS Code ignores settings no extension declares, so values you
+  set for the removed ones do nothing and need no migration.
+
+- **Keep Marp Deck in Workshop** is now **Keep Marp Deck in Lumiere**, and
+  the Marp and Outline settings' descriptions name Lumiere instead of
+  Workshop, the editor's old name. The command id is unchanged.
+
+- With Vim on and the mode in the VS Code or Cursor status bar, dragging to
+  select text no longer scrolls the note on every mouse move, and `gg` and
+  `G` keep the caret in view. The closed Vim line under the note was only
+  hidden, and the editor still made room for it as if it covered the whole
+  note; it is now removed until a prompt or message opens it.
+
+- Fixed (review 2026-11-15):
+  - Editing a table no longer deletes cells past the header's column count
+    on rows you did not edit.
+    Deleting the header, or moving such a row to the top, widens the table
+    to that row instead of turning the table into plain text.
+  - Pasting, dropping or downloading an image, or saving a sketch, never
+    overwrites an existing file of the same name; it takes the next free
+    name.
+  - Scratch note file names use your local date instead of the UTC date.
+  - A formula or code block with a broken character, or a malformed
+    `data-math` / `data-source` in raw HTML, no longer stops the rest of the
+    note from rendering.
+  - Closing the Vault Graph releases the panel's listeners, and clicking a
+    node opens its note even while the graph refreshes.
+  - Copy Link for Agent puts the passage on the clipboard when VS Code's chat
+    opens but refuses it, and stops re-attaching to Codex once the plugin
+    stops.
+  - Clicking a heading in the Markdown Outline of a CRLF note no longer makes
+    the outline ignore the caret for a second.
+  - Notes outside the workspace, or whose path differs in letter case on
+    Windows and macOS, open from Outline, Backlinks and the graph. Outline
+    and Go to Heading say at once when the Links plugin is off for the note,
+    and a jump that goes nowhere is logged instead of failing silently.
+
 - OKF support is removed. A folder with an `index.md` and typed notes is no
   longer an OKF bundle, so a Markdown link starting with `/` resolves from
   the vault root everywhere, as in Obsidian: `[x](/wiki/notes/x.md)` from a

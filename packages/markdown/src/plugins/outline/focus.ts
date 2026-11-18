@@ -10,13 +10,13 @@ export const NATIVE_OUTLINE_ID = "outline";
 export const TAGS_VIEW_ID = contributionId("tags");
 
 /** Lumiere custom editor view type. */
-export const MARKDOWN_WORKSHOP_EDITOR = "lumiere.markdown.editor";
+export const MARKDOWN_LUMIERE_EDITOR = "lumiere.markdown.editor";
 
 /** Lumiere PDF custom editor view type (peer product). */
-export const PDF_WORKSHOP_EDITOR = "lumiere.pdf.viewer";
+export const PDF_LUMIERE_EDITOR = "lumiere.pdf.viewer";
 
 /**
- * Delay before restoring the native Outline after leaving a Workshop editor.
+ * Delay before restoring the native Outline after leaving a Lumiere editor.
  * A short window lets a Lumiere PDF tab take over without flashing Outline.
  */
 export const LEAVE_RESTORE_MS = 120;
@@ -49,12 +49,12 @@ export type OutlineFocusOptions = {
   schedule?: OutlineFocusSchedule;
 };
 
-/** True when a Workshop custom editor (MW or PDF) is the active tab. */
-export function workshopEditorOwnsOutline(
+/** True when a Lumiere custom editor (MW or PDF) is the active tab. */
+export function lumiereEditorOwnsOutline(
   viewType: string | undefined,
 ): boolean {
   return (
-    viewType === MARKDOWN_WORKSHOP_EDITOR || viewType === PDF_WORKSHOP_EDITOR
+    viewType === MARKDOWN_LUMIERE_EDITOR || viewType === PDF_LUMIERE_EDITOR
   );
 }
 
@@ -68,7 +68,7 @@ type FocusState = {
 /**
  * One-shot sidebar swap while a Lumiere custom editor is active: Markdown
  * Outline replaces the native Outline, which comes back on leave (debounced
- * for Workshop↔PDF handoffs). Tags and other Explorer subpanels stay
+ * for Lumiere↔PDF handoffs). Tags and other Explorer subpanels stay
  * collapsed.
  *
  * It never changes which sidebar container is shown. Markdown Outline is a
@@ -83,7 +83,7 @@ type FocusState = {
  * nothing. It is restored only if it was hidden.
  */
 export function createOutlineFocus(options: OutlineFocusOptions): {
-  sync: (workshopActive: boolean) => void;
+  sync: (lumiereActive: boolean) => void;
   /** Markdown Outline has just become visible. */
   outlineShown: () => void;
   dispose: () => void;
@@ -100,8 +100,8 @@ export function createOutlineFocus(options: OutlineFocusOptions): {
   };
 
   return {
-    sync(workshopActive) {
-      if (workshopActive) {
+    sync(lumiereActive) {
+      if (lumiereActive) {
         enterFocus(state, resolved, enqueue);
         return;
       }
@@ -143,7 +143,7 @@ function resolveOptions(options: OutlineFocusOptions): ResolvedFocus {
     focusEditor: options.focusEditor,
     isOutlineShown: () => options.isOutlineShown?.() ?? false,
     activeViewType: () => options.activeCustomEditorViewType?.(),
-    ownEditorViewType: options.ownEditorViewType ?? MARKDOWN_WORKSHOP_EDITOR,
+    ownEditorViewType: options.ownEditorViewType ?? MARKDOWN_LUMIERE_EDITOR,
     leaveDelayMs: options.leaveDelayMs ?? LEAVE_RESTORE_MS,
     schedule: options.schedule ?? defaultSchedule,
   };
@@ -210,16 +210,16 @@ async function restoreNativeOutline(
   reason: "leave" | "dispose",
 ): Promise<void> {
   const active = options.activeViewType();
-  if (reason === "leave" && workshopEditorOwnsOutline(active)) {
+  if (reason === "leave" && lumiereEditorOwnsOutline(active)) {
     // Peer (or this product again) owns the sidebar; do not undo their hide.
     return;
   }
   if (
     reason === "dispose" &&
-    workshopEditorOwnsOutline(active) &&
+    lumiereEditorOwnsOutline(active) &&
     active !== options.ownEditorViewType
   ) {
-    // Peer Workshop owns the swap; leave native Outline to them.
+    // Peer Lumiere owns the swap; leave native Outline to them.
     return;
   }
   try {

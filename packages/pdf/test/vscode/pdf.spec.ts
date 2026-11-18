@@ -26,10 +26,9 @@ import {
   showPage,
   statusBarEntry,
   test,
-  withoutSpaces,
 } from "./workbench";
 
-// Exact Quote text is covered by test/unit/agent-text.test.ts; these tests
+// Exact copied text is covered by test/unit/agent-text.test.ts; these tests
 // check real VS Code menus, clipboard-only Copy link, and Open Location.
 
 const PDF = "docs/outline.pdf";
@@ -82,7 +81,7 @@ test("a PDF opens with its outline in the Explorer, shown only while the PDF is 
   await expect(header).toBeVisible();
 });
 
-test("Copy link to this is clipboard Quote / page link; no agent chat", async ({
+test("Copy link to this is clipboard @ locator and quote; no agent chat", async ({
   workbench: page,
 }) => {
   await openFile(page, PDF);
@@ -98,10 +97,7 @@ test("Copy link to this is clipboard Quote / page link; no agent chat", async ({
 
   await contextMenu(page, at(100, TEXT_MIDLINE), "Copy link to this");
   const pageOnly = await pastedClipboard(page);
-  expect(withoutSpaces(pageOnly)).toContain(
-    withoutSpaces(`[outline.pdf · p.3](${PDF}#page=3)`),
-  );
-  expect(pageOnly).not.toMatch(/viewrect=|#:~:text=/u);
+  expect(pageOnly.trim()).toBe(`@${PDF}#page=3`);
 
   await page
     .locator(".tabs-container .tab", { hasText: "outline.pdf" })
@@ -119,12 +115,9 @@ test("Copy link to this is clipboard Quote / page link; no agent chat", async ({
 
   await contextMenu(page, at(100, TEXT_MIDLINE), "Copy link to this");
   const quote = await pastedClipboard(page);
-  expect(quote).toMatch(/^>/u);
-  expect(withoutSpaces(quote)).toContain(
-    withoutSpaces(`[outline.pdf · p.3](${PDF}#page=3#:~:text=`),
-  );
-  expect(quote).toMatch(/Synthetic%20page%203|Synthetic page 3/u);
-  expect(quote).not.toMatch(/viewrect=|selection=|search=/u);
+  expect(quote.startsWith(`@${PDF}#page=3\n\n> `)).toBe(true);
+  expect(quote).toMatch(/Synthetic page 3/u);
+  expect(quote).not.toMatch(/viewrect=|selection=|search=|#:~:text=/u);
 
   // Regions default off: empty-page drag creates no region.
   await page

@@ -3,6 +3,8 @@ import type { EditorService } from "../editor/api";
 import type { RenderPass } from "../render/api";
 import { codePosition } from "./code-selection";
 import { languageLabel } from "./code-label";
+import { copyWithFeedback } from "./copy-feedback";
+import { decodeDataValue } from "../../markdown/html/helpers";
 
 interface CodePassOptions {
   pass: RenderPass;
@@ -140,9 +142,11 @@ function copyButtonForPre(
   copy.addEventListener(
     "click",
     () => {
-      void editor.clipboard
-        .write(readText())
-        .catch((error) => logger.error("Copy failed", error));
+      void copyWithFeedback({
+        button: copy,
+        write: () => editor.clipboard.write(readText()),
+        onError: (error) => logger.error("Copy failed", error),
+      });
     },
     { signal },
   );
@@ -188,7 +192,7 @@ function bindMermaidPre(
   signal: AbortSignal,
   copies: HTMLElement[],
 ): void {
-  const rawSource = decodeURIComponent(pre.dataset.source ?? "");
+  const rawSource = decodeDataValue(pre.dataset.source ?? "");
   const copy = copyButtonForPre(pre, () => rawSource, options, signal);
   copies.push(copy);
   const label = labelForClass(

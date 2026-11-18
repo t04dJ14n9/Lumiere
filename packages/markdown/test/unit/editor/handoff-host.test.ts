@@ -348,7 +348,7 @@ function cursorTab(uri = note) {
   return tab;
 }
 
-function workshopTab(uri = note) {
+function lumiereTab(uri = note) {
   const tab = cursorTab(uri);
   tab.input = new TabInputCustom(Uri.parse(uri), viewType);
   return tab;
@@ -370,9 +370,9 @@ function switchInPlace(old: Tab, input: unknown): Tab {
   return tab;
 }
 
-/** Cursor's Preview button on a Workshop tab. */
+/** Cursor's Preview button on a Lumiere tab. */
 function switchToCursorMarkdown(uri = note): Tab {
-  return switchInPlace(workshopTab(uri), undefined);
+  return switchInPlace(lumiereTab(uri), undefined);
 }
 
 /**
@@ -528,7 +528,7 @@ function switchToText({ bypass = false } = {}): Tab {
     host.reclaim.textBypass.allow(note);
   }
   documents.push({ uri: Uri.parse(note), isDirty: false });
-  return switchInPlace(workshopTab(), new TabInputText(Uri.parse(note)));
+  return switchInPlace(lumiereTab(), new TabInputText(Uri.parse(note)));
 }
 
 test("default: in-place workbench→text without bypass is not reclaimed", async (t) => {
@@ -586,7 +586,7 @@ test("opt-in reclaimInPlace: workbench→text without bypass is reclaimed (Claud
   assert.equal(commands.length, 1);
   assert.equal(commands[0]?.[0], "vscode.openWith");
   assert.equal(commands[0]?.[2], viewType);
-  // workshopTab starts dirty; dirty native tabs stay after openWith.
+  // lumiereTab starts dirty; dirty native tabs stay after openWith.
   assert.ok(group.tabs.includes(text));
 });
 
@@ -809,24 +809,24 @@ test("an input-less tab with no matching note document is left alone", async (t)
   assert.deepEqual(commands, []);
 });
 
-test("Cursor's Preview switch on a Workshop tab comes back as a single Workshop tab", async (t) => {
+test("Cursor's Preview switch on a Lumiere tab comes back as a single Lumiere tab", async (t) => {
   const stop = host.reclaim.registerReclaim();
   t.after(() => stop.dispose());
   documents.push({ uri: Uri.parse(note), isDirty: false });
-  const workshop = workshopTab();
-  workshop.isDirty = false;
+  const lumiere = lumiereTab();
+  lumiere.isDirty = false;
   let reopened: Tab | undefined;
   afterCommand = () => {
-    // openWith opens the Workshop tab beside the Cursor Markdown tab, and
+    // openWith opens the Lumiere tab beside the Cursor Markdown tab, and
     // Cursor then rebuilds its tab model.
-    reopened = { ...workshop };
+    reopened = { ...lumiere };
     group.tabs.push(reopened);
     group.activeTab = reopened;
     tabsChanged.fire({ opened: [reopened], changed: [], closed: [] });
     rebuildTabModel();
     reopened = group.activeTab;
   };
-  switchInPlace(workshop, undefined);
+  switchInPlace(lumiere, undefined);
   await tick();
   assert.deepEqual(warmed, [note]);
   assert.equal(commands.length, 1);
@@ -845,18 +845,18 @@ test("a tab model rebuilt while warming still transfers the shown native tab", a
   assert.equal(commands.length, 1);
 });
 
-test("closing a Workshop tab beside a Cursor Markdown tab of the same note does not reopen it", async (t) => {
+test("closing a Lumiere tab beside a Cursor Markdown tab of the same note does not reopen it", async (t) => {
   const markdown = cursorTab();
   const stop = host.reclaim.registerReclaim();
   t.after(() => stop.dispose());
   for (let attempt = 0; attempt < 3; attempt++) {
-    const workshop = workshopTab();
-    tabsChanged.fire({ opened: [workshop], changed: [], closed: [] });
+    const lumiere = lumiereTab();
+    tabsChanged.fire({ opened: [lumiere], changed: [], closed: [] });
     // Closing the active tab activates its neighbour first.
     group.activeTab = markdown;
     tabsChanged.fire({ opened: [], changed: [markdown], closed: [] });
-    group.tabs = group.tabs.filter((tab) => tab !== workshop);
-    tabsChanged.fire({ opened: [], changed: [], closed: [workshop] });
+    group.tabs = group.tabs.filter((tab) => tab !== lumiere);
+    tabsChanged.fire({ opened: [], changed: [], closed: [lumiere] });
     await tick();
   }
   assert.deepEqual(warmed, []);
@@ -919,7 +919,7 @@ test("selecting another same-URI editor during warming does not reopen", async (
   assert.deepEqual(commands, [], "same-URI custom tab must keep focus");
 });
 
-test("same-URI Workshop tab events keep the lease until the last text tab closes", async (t) => {
+test("same-URI Lumiere tab events keep the lease until the last text tab closes", async (t) => {
   const workbench = cursorTab();
   workbench.input = new TabInputCustom(Uri.parse(note), viewType);
   const stop = host.reclaim.registerReclaim();
@@ -930,7 +930,7 @@ test("same-URI Workshop tab events keep the lease until the last text tab closes
   const text = cursorTab();
   text.input = new TabInputText(Uri.parse(note));
 
-  // The Workshop tab becomes inactive as the handed-off text tab opens.
+  // The Lumiere tab becomes inactive as the handed-off text tab opens.
   tabsChanged.fire({ opened: [text], changed: [workbench], closed: [] });
   assert.equal(host.reclaim.handoffLease.has(note), true);
 
@@ -1313,7 +1313,7 @@ test("dismiss closes the mirror tab by identity while another tab is active", as
 
 test("dismiss does not reopen Lumiere when a Live Preview sibling remains", async () => {
   const surface = host.cursorHandoff.createCursorHandoffSurface();
-  workshopTab();
+  lumiereTab();
   const mirror = cursorTab();
   mirror.input = new TabInputText(Uri.parse(note));
   mirror.isDirty = false;
@@ -1600,7 +1600,7 @@ test("Search reclaim with a topLine pin keeps that exact line on openingSelectio
 });
 
 function editMirror() {
-  workshopTab();
+  lumiereTab();
   const tab = cursorTab();
   tab.input = new TabInputText(Uri.parse(note));
   const editor: TextEditor = {
@@ -1926,12 +1926,12 @@ test("Cursor handoff surface reads live editor state and checks native editor id
 test("ambiguous basenames, known previews and diffs are not reclaimed", async (t) => {
   const stop = host.reclaim.registerReclaim();
   t.after(() => stop.dispose());
-  const workshop = workshopTab();
+  const lumiere = lumiereTab();
   documents.push({
     uri: Uri.parse(note.replace("/vault/", "/other/")),
     isDirty: true,
   });
-  const markdown = switchInPlace(workshop, undefined);
+  const markdown = switchInPlace(lumiere, undefined);
   const preview = switchInPlace(
     markdown,
     new TabInputCustom(Uri.parse(note), "another.preview"),
@@ -2030,7 +2030,7 @@ for (const route of [
     const open =
       route === "public API"
         ? host.api
-            .nativePlatform("test.workshop")
+            .nativePlatform("test.lumiere")
             .open(uri, { preserveFocus: true })
         : host.commands
             .createHostCommands()

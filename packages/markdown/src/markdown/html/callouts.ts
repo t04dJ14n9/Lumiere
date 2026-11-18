@@ -18,7 +18,13 @@ const calloutAliases: Record<string, string> = {
   cite: "quote",
 };
 interface Callout {
+  /** The main type, for the icon: `abstract` for `tldr`. */
   kind: string;
+  /**
+   * The type as written, lowercased: `data-callout` keeps it, as Obsidian
+   * does, so CSS snippets can select `[data-callout="tldr"]`.
+   */
+  type: string;
   title: string;
   fold?: string;
   /** What follows the type's `|`, for CSS snippets: `[!note|wide]`. */
@@ -38,7 +44,7 @@ export function callouts(
     const title = md.renderInline(data.title, env);
     const heading = `${calloutIcon(data.kind)}<span class="callout-title-text">${title}</span>`;
     const { escapeHtml } = md.utils;
-    const attributes = `class="callout" data-callout="${escapeHtml(data.kind)}"${
+    const attributes = `class="callout" data-callout="${escapeHtml(data.type)}"${
       data.metadata === undefined
         ? ""
         : ` data-callout-metadata="${escapeHtml(data.metadata)}"`
@@ -124,6 +130,7 @@ function calloutData(match: RegExpExecArray): Callout {
   const fold = match[2];
   return {
     kind: canonical,
+    type: raw,
     title: match[3] || defaultTitle(raw),
     ...(fold === undefined ? {} : { fold }),
     ...(metadata.length ? { metadata: metadata.join("|") } : {}),

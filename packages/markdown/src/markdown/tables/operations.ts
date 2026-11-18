@@ -1,4 +1,4 @@
-import { serializeTable, type Table } from "./model";
+import { rowTexts, serializeTable, type Table } from "./model";
 
 export type Axis = "row" | "column";
 export type TableOperation =
@@ -21,7 +21,8 @@ export type TableOperation =
 
 /** Every structural command produces one complete Markdown edit. */
 export function operateTable(table: Table, operation: TableOperation): string {
-  const rows = table.rows.map((row) => row.map((cell) => cell.text));
+  // Rows carry their surplus cells, so row edits move them with the row.
+  const rows = rowTexts(table);
   const alignments = [...table.alignments];
   if (operation.type === "align") {
     for (let column = operation.from; column <= operation.to; column++) {
@@ -57,9 +58,13 @@ export function operateTable(table: Table, operation: TableOperation): string {
       edit(alignments, () =>
         alignAs === undefined ? null : (table.alignments[alignAs] ?? null),
       );
-      for (const row of rows) {
-        edit(row, () => "");
-      }
+      // Column edits apply to the table's columns only; the surplus follows.
+      const width = table.alignments.length;
+      rows.forEach((row, index) => {
+        const columns = row.slice(0, width);
+        edit(columns, () => "");
+        rows[index] = [...columns, ...row.slice(width)];
+      });
     }
   }
   return rows.length && alignments.length

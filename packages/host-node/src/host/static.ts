@@ -28,6 +28,33 @@ const CONTENT_TYPES: Readonly<Record<string, string>> = {
   ".mp3": "audio/mpeg",
 };
 
+/**
+ * Whose file a response carries: the editor's own (its built files, the
+ * shim), or a vault's, which is someone else's content on the embedder's
+ * origin and must never run there.
+ */
+export type FileSource = "editor" | "vault";
+
+/**
+ * A vault's file opened as a page of its own (an HTML page, an SVG) would run
+ * its scripts on the embedder's origin, next to DSH or the app: `sandbox`
+ * gives it an opaque origin and no scripts, and an image or a video still
+ * shows. A PDF is left out: Chrome refuses to show one in a sandboxed
+ * document, and its viewer runs on its own origin anyway. Scripts are served
+ * as text: the editor's page allows same-origin scripts ('self'), and with
+ * nosniff a browser refuses to run a script of any other type.
+ */
+function vaultTypeHeaders(type: string): Record<string, string> {
+  return {
+    "content-type": type.startsWith("text/javascript")
+      ? "text/plain; charset=utf-8"
+      : type,
+    ...(type === "application/pdf"
+      ? {}
+      : { "content-security-policy": "sandbox" }),
+  };
+}
+
 /** A file under `base`, named by a URL path segment; 403 for anything outside it. */
 export async function serveStatic(
   res: ServerResponse,
@@ -112,6 +139,7 @@ export async function serveFile(
   res: ServerResponse,
   file: string | URL,
   rangeHeader?: string,
+  source: FileSource = "editor",
 ): Promise<void> {
   // stat before open: opening a FIFO would block until something writes to it.
   const info = await stat(file).catch(() => undefined);
@@ -123,10 +151,11 @@ export async function serveFile(
     return;
   }
   const name = typeof file === "string" ? file : file.pathname;
+  const type =
+    CONTENT_TYPES[path.extname(name).toLowerCase()] ??
+    "application/octet-stream";
   const headers: Record<string, string | number> = {
-    "content-type":
-      CONTENT_TYPES[path.extname(name).toLowerCase()] ??
-      "application/octet-stream",
+    ...(source === "vault" ? vaultTypeHeaders(type) : { "content-type": type }),
     "cache-control": "no-cache",
     "x-content-type-options": "nosniff",
     "accept-ranges": "bytes",

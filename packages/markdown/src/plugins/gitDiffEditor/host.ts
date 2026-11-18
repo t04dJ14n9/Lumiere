@@ -123,7 +123,7 @@ function report(ctx: Context, what: string, error: unknown): void {
  */
 async function takeOver(ctx: Context, life: Life, diff: OpenedDiff) {
   // Captured while the plugin is live: recovery after disposal must not
-  // look the workshop up again.
+  // look the editor up again.
   const diffViews = ctx.diffViews;
   const logger = ctx.logger;
   const prepared = await prepare(ctx, life, diff);

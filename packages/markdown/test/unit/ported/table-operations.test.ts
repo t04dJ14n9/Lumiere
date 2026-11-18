@@ -39,6 +39,27 @@ test("row operations can exchange or replace the header without losing cell cont
   );
 });
 
+test("a row with cells past the header's width that becomes the header widens the table", () => {
+  const ragged = parseTable(
+    "| a | b |\n| --- | :-: |\n| 1 | 2 | keep me |\n| x | y |",
+  )!;
+  for (const operation of [
+    { type: "delete", axis: "row", from: 0, to: 0 },
+    { type: "move", axis: "row", from: 1, to: 1, destination: 0 },
+  ] as const) {
+    const promoted = parseTable(operateTable(ragged, operation));
+    assert.ok(promoted, `${operation.type} still leaves a table`);
+    assert.deepEqual(
+      promoted.rows[0]!.map((cell) => cell.text),
+      ["1", "2", "keep me"],
+    );
+    assert.deepEqual(promoted.alignments, [null, "center", null]);
+    assert.ok(
+      promoted.rows.some((row) => row.some((cell) => cell.text === "x")),
+    );
+  }
+});
+
 test("column moves and duplication keep alignment with the source values", () => {
   const table = parseTable(source)!;
   const moved = parseTable(

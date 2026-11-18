@@ -25,7 +25,7 @@ const prefixedAtx =
  * markers (BH-063: `- # Title` → `- Title`). Leaves `#Heading` (no space)
  * alone. Keeps quote and list/task prefixes.
  */
-export function unwrapAtxHeading(target: Target): boolean {
+function unwrapAtxHeading(target: Target): boolean {
   const { state } = target;
   const range = state.selection.main;
   if (state.selection.ranges.length > 1 || !range.empty) {

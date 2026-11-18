@@ -40,10 +40,13 @@ export class Schema<T> {
   }
   default(value: T): Schema<T> {
     this.parse(value);
-    return new Schema((v, p) => this.read(v === undefined ? value : v, p), {
-      ...this.json,
-      default: value,
-    });
+    // Parsing copies objects and arrays shallowly at most (`unknown()` not at
+    // all), so each parse needs its own copy, as does the caller's value.
+    const fallback = copied(value);
+    return new Schema(
+      (v, p) => this.read(v === undefined ? copied(fallback) : v, p),
+      { ...this.json, default: fallback },
+    );
   }
   description(value: string): Schema<T> {
     return new Schema(this.read, { ...this.json, description: value });
@@ -59,6 +62,11 @@ export class Schema<T> {
     return new Schema(
       (v, p) => {
         const parsed = this.read(v, p);
+        // Whether a value may be absent is the inner schema's call
+        // (`optional()`); a bound limits only a value that is present.
+        if (parsed === undefined) {
+          return parsed;
+        }
         const size = measuredSize(parsed);
         if (!Number.isFinite(size) || (max ? size > value : size < value)) {
           throw new ValidationError(p, `violates ${key} ${value}`);
@@ -72,6 +80,10 @@ export class Schema<T> {
     return new Schema(
       (v, p) => {
         const parsed = this.read(v, p);
+        // As for bounds: absence was the inner schema's to accept.
+        if (parsed === undefined) {
+          return parsed;
+        }
         if (
           typeof parsed !== "string" ||
           !new RegExp(pattern.source, pattern.flags.replace(/[gy]/g, "")).test(
@@ -201,6 +213,31 @@ export class Schema<T> {
       { type: "object", additionalProperties: item.toJSONSchema() },
     );
   }
+}
+
+/**
+ * A deep copy of plain data: arrays and plain objects, as defaults are (they
+ * are written into the JSON Schema). Not `structuredClone`: this package uses
+ * no host APIs.
+ */
+function copied<T>(value: T): T {
+  if (Array.isArray(value)) {
+    return value.map(copied) as T;
+  }
+  if (!isPlainObject(value)) {
+    return value;
+  }
+  return Object.fromEntries(
+    Object.entries(value).map(([key, item]) => [key, copied(item)]),
+  ) as T;
+}
+
+function isPlainObject(value: unknown): value is Record<string, unknown> {
+  if (typeof value !== "object" || value === null) {
+    return false;
+  }
+  const prototype: unknown = Object.getPrototypeOf(value);
+  return prototype === Object.prototype || prototype === null;
 }
 
 function boundKeyword(type: unknown, maximum: boolean): string {

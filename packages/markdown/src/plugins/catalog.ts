@@ -60,7 +60,6 @@ import bridge from "./bridge/manifest";
 import attachments from "./attachments/manifest";
 import scratch from "./scratch/manifest";
 import templates from "./templates/manifest";
-import dailyNotes from "./dailyNotes/manifest";
 import gitDiffEditor from "./gitDiffEditor/manifest";
 import marp from "./marp/manifest";
 import obsidianCompat from "./obsidianCompat/manifest";
@@ -127,7 +126,6 @@ export const workbenchFeatures: readonly Manifest[] = inPluginOrder(
     quickSwitcher,
     scratch,
     templates,
-    dailyNotes,
     wordCount,
     obsidianCompat,
     graph,

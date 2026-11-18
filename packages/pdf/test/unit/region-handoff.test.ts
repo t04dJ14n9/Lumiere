@@ -86,7 +86,7 @@ async function folderContents(): Promise<Record<string, string>> {
   );
 }
 
-test("Copy link with a region copies Quote text only and does not touch the region image cache", async () => {
+test("Copy link with a region copies its locator and quote only and does not touch the region image cache", async () => {
   const images = new RegionImages(folder, () => CAP);
   // Two snapshots already in the cache, together near the cap.
   await images.save("/work/papers/attention.pdf", 1, png(1, 400));
@@ -105,14 +105,7 @@ test("Copy link with a region copies Quote text only and does not touch the regi
 
   assert.equal(clipboard.length, 1);
   const text = clipboard[0]!;
-  assert.equal(
-    text,
-    [
-      "> base 6 512 2048",
-      ">",
-      "> [attention.pdf · p.9](papers/attention.pdf#page=9#:~:text=base%206%20512%202048)",
-    ].join("\n"),
-  );
+  assert.equal(text, "@papers/attention.pdf#page=9\n\n> base 6 512 2048\n");
   assert.doesNotMatch(
     text,
     /Source:|SHA-256|Selected PDF region|Region image|viewrect=/u,
@@ -120,14 +113,14 @@ test("Copy link with a region copies Quote text only and does not touch the regi
   assert.deepEqual(warnings, []);
 });
 
-test("the MCP snapshot of an over-cap region has the same link and text, without a warning", async () => {
+test("the MCP snapshot of an over-cap region has the same locator and text, without a warning", async () => {
   const images = new RegionImages(folder, () => CAP);
   const handoff = new AgentHandoff(() => new RegionSnapshots(images));
   const snapshot = await handoff.snapshot(regionPanel(png(3, CAP + 1)));
   assert.ok(snapshot);
   assert.equal(snapshot.regionImage, undefined);
   assert.equal("regionImage" in snapshot, false);
-  assert.match(snapshot.agentText, /#page=9#:~:text=base%206%20512%202048\)/u);
+  assert.match(snapshot.agentText, /^@papers\/attention\.pdf#page=9\n/u);
   assert.match(snapshot.agentText, /base 6 512 2048/u);
   assert.deepEqual(warnings, []);
   await assert.rejects(readdir(folder), { code: "ENOENT" });

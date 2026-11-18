@@ -44,12 +44,13 @@ export class OutlineView {
   constructor(private readonly options: OutlineViewOptions) {}
 
   /**
-   * A click on the outline row of the heading at `offset` opened it. Until
-   * the caret moves on from there, the tree is not laid out again (see
-   * `OutlineJumpWindow`).
+   * A click on the outline row of the heading at `sourceOffset` opened it.
+   * Until the caret moves on from there, the tree is not laid out again (see
+   * `OutlineJumpWindow`). The offset is the file's, as the row's command
+   * carries it, not the editor's: in a CRLF file they differ by a line count.
    */
-  jumpedTo(offset: number): void {
-    this.jumpWindow.start(this.options.source.activeNode(offset)?.id);
+  jumpedTo(sourceOffset: number): void {
+    this.jumpWindow.start(this.options.source.nodeAtSource(sourceOffset)?.id);
   }
 
   schedule(): void {

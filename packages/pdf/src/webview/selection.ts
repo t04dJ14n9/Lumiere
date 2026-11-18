@@ -23,6 +23,9 @@ import { readRegionDetails } from "./region-details";
 import { onRegionEnd, type RegionEnd } from "./region-drag";
 import { useTextAccess } from "./text-access";
 
+/** Report a mark as the selection, or `undefined` to drop it. */
+export type SetAnnotationRegion = (next: RegionSelection | undefined) => void;
+
 /** What the tracker needs from the open document. */
 export interface SelectionSource {
   /** The 1-based page a page identity is at; undefined for a page the document lacks. */
@@ -41,7 +44,10 @@ export interface SelectionSource {
  * PNG snapshot once they are read. Copy Link for Agent then hands over whatever was
  * reported last, waiting for a region's details if they are still coming.
  */
-export function useSelectionReporting(extraHasSelection?: () => boolean) {
+export function useSelectionReporting(
+  /** A context menu opens: whether it is on a mark (`mark-menu.ts`). */
+  menuOnMark?: (event: MouseEvent) => boolean,
+) {
   const selection = useOptionalCapability(SelectionToken);
   const render = useOptionalCapability(RenderToken);
   const text = useTextAccess();
@@ -50,8 +56,8 @@ export function useSelectionReporting(extraHasSelection?: () => boolean) {
   const tracker = useRef<SelectionTracker | undefined>(undefined);
   tracker.current ??= new SelectionTracker(setRegion);
   const state = tracker.current;
-  const extra = useRef(extraHasSelection);
-  extra.current = extraHasSelection;
+  const extra = useRef(menuOnMark);
+  extra.current = menuOnMark;
   const source = useMemo<SelectionSource>(
     () => ({
       pageNumberOf: (page) => {
@@ -85,7 +91,7 @@ export function useSelectionReporting(extraHasSelection?: () => boolean) {
   const clear = useCallback((): void => {
     if (state.region) {
       // Escape always clears the host region (user asked to clear), including
-      // annotation-owned ones; annotate mode exit / EmbedPDF may re-report.
+      // the mark a context menu was opened on.
       state.changeRegion(undefined);
     }
     // Reported to the extension by the selection change handler.
@@ -103,17 +109,18 @@ export function useSelectionReporting(extraHasSelection?: () => boolean) {
 function useSelectionMenuContext(
   state: SelectionTracker,
   selection: SelectionCapability | null,
-  extra: MutableRefObject<(() => boolean) | undefined>,
+  extra: MutableRefObject<((event: MouseEvent) => boolean) | undefined>,
 ): void {
   useEffect(
     () =>
-      followMenuContext(document, () => {
-        const hasAnnotationSelection = Boolean(extra.current?.());
+      followMenuContext(document, (event) => {
+        const hasTextSelection = Boolean(selection?.hasSelection());
+        // Selected text wins: the menu marks it, wherever it was opened.
+        const hasAnnotationSelection =
+          !hasTextSelection && Boolean(extra.current?.(event));
         const hasSelection =
-          Boolean(state.region) ||
-          Boolean(selection?.hasSelection()) ||
-          hasAnnotationSelection;
-        return { hasSelection, hasAnnotationSelection };
+          Boolean(state.region) || hasTextSelection || hasAnnotationSelection;
+        return { hasSelection, hasTextSelection, hasAnnotationSelection };
       }),
     [state, selection, extra],
   );
@@ -129,9 +136,9 @@ export class SelectionTracker {
   /** The open document, while `follow` is on. */
   private source: SelectionSource | undefined;
   /**
-   * True while `region` came from annotation selection (`setAnnotationRegion`).
-   * An empty click or a cancelled region must not clear those; annotation
-   * clears stay owned by useAnnotationSelection.
+   * True while `region` is the mark a context menu was opened on
+   * (`setAnnotationRegion`). An empty click or a cancelled region must not
+   * clear it; `mark-menu.ts` clears it.
    */
   private annotationOwned = false;
 
@@ -149,8 +156,9 @@ export class SelectionTracker {
   }
 
   /**
-   * Annotation selection uses the same region channel as dragged regions so
-   * textCleared / reportSelection / ensureSelection stay consistent.
+   * The mark a context menu was opened on uses the same region channel as
+   * dragged regions, so Copy Link for Agent hands it over and textCleared /
+   * reportSelection / ensureSelection stay consistent.
    */
   setAnnotationRegion(next: RegionSelection | undefined): void {
     this.annotationOwned = next !== undefined;

@@ -94,3 +94,17 @@ test("createText fails when VS Code refuses and there is no file to blame", asyn
   Object.assign(state, { edits: [], isApplied: false, exists: false });
   await assert.rejects(files.createText(NOTE, "# Today"), /Could not create/);
 });
+
+test("createBytes creates an attachment the same way, bytes as given", async () => {
+  Object.assign(state, { edits: [], isApplied: true, exists: false });
+  const image = "file:///vault/assets/image.png";
+  const bytes = new Uint8Array([137, 80, 78, 71]);
+  assert.equal(await files.createBytes(image, bytes), true);
+  const create = state.edits[0]?.creates[0];
+  assert.equal(create?.uri, image);
+  assert.equal(create?.options.overwrite, false);
+  assert.deepEqual([...(create?.options.contents ?? [])], [...bytes]);
+
+  Object.assign(state, { edits: [], isApplied: false, exists: true });
+  assert.equal(await files.createBytes(image, bytes), false);
+});

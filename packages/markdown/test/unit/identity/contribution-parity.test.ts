@@ -49,7 +49,6 @@ import { tagsViewHost } from "../../../src/plugins/tags/view";
 import { quickSwitcherHost } from "../../../src/plugins/quickSwitcher/host";
 import { scratchHost } from "../../../src/plugins/scratch/host";
 import { templatesHost } from "../../../src/plugins/templates/host";
-import { dailyNotesHost } from "../../../src/plugins/dailyNotes/host";
 import { settingsHost } from "../../../src/plugins/settings/host";
 import { sketchHost } from "../../../src/plugins/sketch/host";
 import { registerPluginManagement } from "../../../src/host/api/management";
@@ -94,7 +93,7 @@ test("customEditors viewType matches MARKDOWN_EDITOR (runtime registration id)",
   assert.equal(MARKDOWN_EDITOR.viewType, contributionId("editor"));
 });
 
-test("every contributed command id equals contributionId(local) and uses Workshop prefix", () => {
+test("every contributed command id equals contributionId(local) and uses Lumiere prefix", () => {
   for (const command of contributes.commands) {
     assert.match(command.command, /^lumiere\.markdown\./);
     assert.doesNotMatch(command.command, /markdownWorkbench/);
@@ -279,7 +278,6 @@ function installHosts(
   root.plugin(bridgeHost);
   root.plugin(scratchHost);
   root.plugin(templatesHost);
-  root.plugin(dailyNotesHost);
   root.plugin(marpHost);
   root.plugin(attachmentsHost);
   root.plugin(gitDiffEditorHost);

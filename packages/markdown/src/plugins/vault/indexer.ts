@@ -17,7 +17,7 @@ import type {
 } from "./api";
 
 /** Obsidian's limit is higher; past this the index says it is partial. */
-export const FILE_LIMIT = 50_000;
+const FILE_LIMIT = 50_000;
 /** At most one snapshot write per interval (DESIGN §12.2). */
 const SAVE_DELAY_MS = 2_000;
 /**

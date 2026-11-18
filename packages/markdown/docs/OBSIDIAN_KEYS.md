@@ -3,7 +3,7 @@
 Measured on 2026-10-17 in real Obsidian (default settings) in a throwaway
 vault and profile, never the owner's, driven over the Chrome DevTools
 protocol: each case set a note and a selection, pressed or typed keys, and
-read the note and the selection back. The same cases ran in Workshop's editor
+read the note and the selection back. The same cases ran in Lumiere's editor
 (the browser harness, Obsidian preset); 172 of 182 now give the same note and
 selection. The probe was throwaway and is not committed.
 
@@ -11,7 +11,7 @@ Notation: `|` is the caret, `‹…›` a selection.
 
 ## Lists and quotes (smartLists, editor)
 
-| Keys | Before | Obsidian and Workshop |
+| Keys | Before | Obsidian and Lumiere |
 | --- | --- | --- |
 | Enter | `- a\|` | `- a`, `- \|` (also `*`, `1.`, `2)`, tasks start `[ ] `) |
 | Enter | `- a`, `- \|` | `- a`, `\|` (an empty item leaves the list) |
@@ -32,7 +32,7 @@ Notation: `|` is the caret, `‹…›` a selection.
 
 ## Pairing and formatting (autoPair, formatting, tasks)
 
-| Keys | Before | Obsidian and Workshop |
+| Keys | Before | Obsidian and Lumiere |
 | --- | --- | --- |
 | `(` `[` `{` `"` `` ` `` `*` `_` | `a \|` | pair, with the caret inside |
 | `=` `~` `$` `%` | `a ‹w› b` | `a =‹w›= b` (wrap); alone they type as they are |
@@ -46,7 +46,7 @@ Notation: `|` is the caret, `‹…›` a selection.
 ## Editor commands (formatting, math, callouts, tables, tasks, footnotes)
 
 Each command was run on the same note and selection in Obsidian and in
-Workshop (an empty line, a caret in a word, a selected word, two selected
+Lumiere (an empty line, a caret in a word, a selected word, two selected
 lines, a list item, a heading); 150 of 150 cases match. Insert Footnote keeps
 the caret after the reference and edits the definition in a popover (1.14);
 an EOF caret with trailing blanks still gets a blank line before the
@@ -78,7 +78,7 @@ Code.
 
 ## Deliberate differences
 
-- Cmd+D: Obsidian deletes the line; Workshop selects the next match, as VS
+- Cmd+D: Obsidian deletes the line; Lumiere selects the next match, as VS
   Code does (Delete Paragraph is in the Command Palette).
 - Alt+Up and Alt+Down move the line, as in VS Code; Obsidian moves the caret.
 - Cmd+Enter inserts a line below, as in VS Code; Obsidian follows a link.

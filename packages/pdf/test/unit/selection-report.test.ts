@@ -84,10 +84,49 @@ test("with no reply it gives up after the timeout; with a selection it asks noth
   panel.dispose();
 });
 
+test("refreshSelection asks again even with an older selection, and waits for the new one", async () => {
+  const { panel, messages, receive } = open();
+  await receive({ type: "ready" });
+  await receive({
+    type: "patch",
+    version: 1,
+    load: 1,
+    patch: { selection: { selection: text } },
+  });
+  const asked = messages.filter((m) => m.type === "reportSelection").length;
+  const refreshed = panel.refreshSelection(5_000);
+  assert.equal(
+    messages.filter((m) => m.type === "reportSelection").length,
+    asked + 1,
+  );
+  // The viewer's newer selection, read slowly, arrives later.
+  const newer = { ...text, text: "Multi-head attention" };
+  await receive({
+    type: "patch",
+    version: 2,
+    load: 1,
+    patch: { selection: { selection: newer } },
+  });
+  assert.equal(await refreshed, true);
+  const now = selectionOf(panel);
+  assert.equal(
+    now?.kind === "text" ? now.text : undefined,
+    "Multi-head attention",
+  );
+
+  // No report (a PDF that forbids copying): it says so after the timeout.
+  assert.equal(await panel.refreshSelection(30), false);
+  panel.dispose();
+});
+
 test("the context menu carries the viewer's selection as it is when the menu opens", () => {
   assert.equal(
-    menuContext({ hasSelection: true, hasAnnotationSelection: false }),
-    '{"lumiere.pdf.hasSelection":true,"lumiere.pdf.hasAnnotationSelection":false}',
+    menuContext({
+      hasSelection: true,
+      hasTextSelection: true,
+      hasAnnotationSelection: false,
+    }),
+    '{"lumiere.pdf.hasSelection":true,"lumiere.pdf.hasTextSelection":true,"lumiere.pdf.hasAnnotationSelection":false}',
   );
   const attributes: Record<string, string> = {};
   const listeners: { type: string; listener: () => void; capture: unknown }[] =
@@ -107,23 +146,35 @@ test("the context menu carries the viewer's selection as it is when the menu ope
       listeners.splice(index, 1);
     },
   };
-  let state = { hasSelection: false, hasAnnotationSelection: false };
+  let state = {
+    hasSelection: false,
+    hasTextSelection: false,
+    hasAnnotationSelection: false,
+  };
   const stop = followMenuContext(doc as never, () => state);
   assert.deepEqual(
     listeners.map(({ type, capture }) => [type, capture]),
     [["contextmenu", true]],
   );
-  state = { hasSelection: true, hasAnnotationSelection: false };
+  state = {
+    hasSelection: true,
+    hasTextSelection: true,
+    hasAnnotationSelection: false,
+  };
   listeners[0]!.listener();
   assert.equal(
     attributes["data-vscode-context"],
-    '{"lumiere.pdf.hasSelection":true,"lumiere.pdf.hasAnnotationSelection":false}',
+    '{"lumiere.pdf.hasSelection":true,"lumiere.pdf.hasTextSelection":true,"lumiere.pdf.hasAnnotationSelection":false}',
   );
-  state = { hasSelection: false, hasAnnotationSelection: false };
+  state = {
+    hasSelection: false,
+    hasTextSelection: false,
+    hasAnnotationSelection: false,
+  };
   listeners[0]!.listener();
   assert.equal(
     attributes["data-vscode-context"],
-    '{"lumiere.pdf.hasSelection":false,"lumiere.pdf.hasAnnotationSelection":false}',
+    '{"lumiere.pdf.hasSelection":false,"lumiere.pdf.hasTextSelection":false,"lumiere.pdf.hasAnnotationSelection":false}',
   );
   stop();
   assert.equal(listeners.length, 0);

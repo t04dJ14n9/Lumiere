@@ -1,9 +1,11 @@
 import assert from "node:assert/strict";
 import { mkdtemp, readdir, rm, writeFile } from "node:fs/promises";
+import type * as NodeCrypto from "node:crypto";
+import { createRequire } from "node:module";
 import * as net from "node:net";
 import { tmpdir } from "node:os";
 import * as path from "node:path";
-import { afterEach, beforeEach, test } from "node:test";
+import { afterEach, beforeEach, mock, test } from "node:test";
 // First: everything below imports 'vscode', which this points at the fake.
 import "./support/install-fake-vscode";
 import * as vscode from "./support/fake-vscode";
@@ -143,6 +145,31 @@ test("no rejection path writes the token or the Authorization value to the log",
   );
   assert.ok(!logged.includes(token), logged);
   assert.ok(!logged.includes("Bearer"), logged);
+});
+
+test("the token is compared in constant time, in the header and in the path", async () => {
+  // The module object server.ts calls into, not an import's copy of it.
+  const crypto: typeof NodeCrypto = createRequire(import.meta.url)(
+    "node:crypto",
+  );
+  const bridge = await startAgentBridge(options());
+  const { token } = bridge.info;
+  const port = portOf(bridge.info.url);
+  const compare = mock.method(crypto, "timingSafeEqual");
+  try {
+    const statuses = [
+      await request(port, "GET", "/other", {
+        Authorization: `Bearer ${token}`,
+      }),
+      await request(port, "GET", `/mcp/${token.slice(0, -1)}x`),
+      await request(port, "GET", "/mcp", { Authorization: "Bearer é" }),
+    ];
+    assert.deepEqual(statuses, [404, 401, 401]);
+    assert.ok(compare.mock.callCount() >= 2, "timingSafeEqual was used");
+  } finally {
+    compare.mock.restore();
+    await bridge.dispose();
+  }
 });
 
 test("dispose resolves only once the listener is closed, a stalled connection cut and the discovery file removed", async () => {
@@ -329,7 +356,7 @@ test("copyMcpSetup quotes a globalStorage path containing spaces", async () => {
     return undefined;
   }) as never;
   const storage =
-    "/Users/alice/Library/Application Support/Code/User/globalStorage/lumia";
+    "/Users/alice/Library/Application Support/Code/User/globalStorage/t04dj14n9.lumiere";
   const controller = registerAgentBridge({
     extensionUri: vscode.Uri.file("/nonexistent-extension") as never,
     globalStorageUri: vscode.Uri.file(storage) as never,
@@ -359,7 +386,7 @@ test("copyMcpSetup quotes a globalStorage path containing spaces", async () => {
 
 test("MCP setup snippets quote paths with spaces or apostrophes for POSIX shells", () => {
   const macShim =
-    "/Users/alice/Library/Application Support/Code/User/globalStorage/lumia/bridge-stdio.js";
+    "/Users/alice/Library/Application Support/Code/User/globalStorage/t04dj14n9.lumiere/bridge-stdio.js";
   const byLabel = new Map(
     mcpSetupOptions(macShim, "darwin").map((item) => [item.label, item.detail]),
   );
@@ -388,7 +415,7 @@ test("MCP setup snippets quote paths with spaces or apostrophes for POSIX shells
 
 test("MCP setup snippets quote Windows paths for each shell and escape backslashes in TOML", () => {
   const winShim =
-    "C:\\Users\\Alice Smith\\AppData\\Roaming\\Code\\User\\globalStorage\\lumia\\bridge-stdio.js";
+    "C:\\Users\\Alice Smith\\AppData\\Roaming\\Code\\User\\globalStorage\\t04dj14n9.lumiere\\bridge-stdio.js";
   const byLabel = new Map(
     mcpSetupOptions(winShim, "win32").map((item) => [item.label, item.detail]),
   );

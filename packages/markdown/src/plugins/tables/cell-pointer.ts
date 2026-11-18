@@ -9,15 +9,6 @@
  * `cm.posAtCoords(head)` when opening a cell from a click or intra-cell drag.
  */
 
-export type CellPointerSelection =
-  | number
-  | "all"
-  | { anchor: number; head: number }
-  | {
-      anchor: number | { x: number; y: number };
-      head: number | { x: number; y: number };
-    };
-
 /** Closer horizontal edge of the rendered text; empty cells stay at 0. */
 export function nearestCellTextOffset(
   textLength: number,

@@ -4,7 +4,7 @@ Creates temporary notes in a scratch folder. Nothing is filed or ingested on its
 
 ## How it works
 
-New Scratch Note asks for a title and writes `YYYY-MM-DD-title.md` in `lumiere.markdown.scratch.folder` inside the first workspace folder. The folder is created then. The note has `title` and `captured` frontmatter. A path that leaves the project or follows a symbolic link is refused.
+New Scratch Note asks for a title and writes `YYYY-MM-DD-title.md`, dated by the local day, in `lumiere.markdown.scratch.folder` inside the first workspace folder. The folder is created then. The note has `title` and `captured` frontmatter. A path that leaves the project or follows a symbolic link is refused.
 
 ## Files
 
@@ -23,4 +23,4 @@ New Scratch Note asks for a title and writes `YYYY-MM-DD-title.md` in `lumiere.m
 
 ## Limits and differences from Obsidian
 
-- There is no daily note and no automatic filing.
+- There is no automatic filing.

@@ -94,7 +94,13 @@ export class MetadataCollector {
     map: (offset: number) => number,
   ): void {
     const from = node.from + 2;
-    const inner = text.slice(from, Math.max(from, node.to - 2));
+    // A block comment nothing closes runs to the end without a `%%`.
+    const isClosed =
+      node.to - node.from >= 4 && text.slice(node.to - 2, node.to) === "%%";
+    const inner = text.slice(
+      from,
+      Math.max(from, node.to - (isClosed ? 2 : 0)),
+    );
     this.collect({
       text: inner,
       syntax: markdownParser.parse(inner),

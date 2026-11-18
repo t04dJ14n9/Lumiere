@@ -16,7 +16,7 @@ import {
   VIEW_ID as outgoingLinksViewId,
 } from "../../../src/plugins/outgoingLinks/tree";
 import outgoingLinks from "../../../src/plugins/outgoingLinks/manifest";
-import { workbenchFeatures } from "../../../src/host/workshop-features";
+import { workbenchFeatures } from "../../../src/host/workbench-features";
 import {
   fakeViews,
   memoryVaults,

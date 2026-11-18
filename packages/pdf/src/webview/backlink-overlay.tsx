@@ -25,25 +25,20 @@ const BROWSER_TIMERS: Timers = {
 
 /**
  * One note's highlighted lines. A click opens the note (see `isOpenClick`
- * for which clicks count). While the Annotate tool is active the lines are
- * `is-passive`, painted but letting every pointer event through to the
- * annotations under them.
+ * for which clicks count). A right-click on a line still reaches a mark
+ * beneath it: the context menu finds marks by where it opened (mark-menu.ts).
  */
 export function BacklinkOverlay({
   overlay,
   scale,
-  isPassive,
 }: {
   overlay: ResolvedOverlay;
   scale: number;
-  isPassive: boolean;
 }): React.JSX.Element {
   const clicks = useOverlayClicks(overlay.hit);
   return (
     <div
-      className={
-        isPassive ? "pdf-backlink-overlay is-passive" : "pdf-backlink-overlay"
-      }
+      className="pdf-backlink-overlay"
       title={overlay.hit.notePath}
       data-note-path={overlay.hit.notePath}
       data-note-uri={overlay.hit.noteUri}

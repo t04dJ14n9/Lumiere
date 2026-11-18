@@ -26,9 +26,11 @@ import { PdfSelectionState, type SelectionSnapshot } from "./selection";
 import { PanelAnnotations } from "./panel-annotations";
 import { isAnnotationViewerMessage } from "../../shared/annotation-messages";
 import { PdfSource } from "./source";
+import { ViewerLoads } from "./loads";
 import { createPdfViewId } from "./view-id";
 import { PdfBacklinkOutlet } from "./pdf-backlinks";
 import { rehydrateViewerChrome } from "./panel-rehydrate";
+import { awaitSelectionReport } from "./selection-report";
 import type { ViewerPanelHost, ViewerPanelOptions } from "./panel-types";
 export type {
   PluginMessage,
@@ -85,13 +87,12 @@ export class PdfViewerPanel {
   /** Vault Markdown → PDF backlink overlays for this pane. */
   readonly backlinks = new PdfBacklinkOutlet(
     (m) => this.post(m),
-    () => this.loads,
+    () => this.loads.current,
   );
   private zen = false;
-  /** The number of the last `load` sent, and the last patch version applied. */
-  private loads = 0;
+  private readonly loads = new ViewerLoads();
+  /** The last patch version applied. */
   private patchVersion = 0;
-  private loading = false;
   private position: ReadingPosition | undefined;
   private settings: ViewSettings;
   private toolbar: ToolbarSettings;
@@ -117,7 +118,7 @@ export class PdfViewerPanel {
       failed: (message) => host.error(message),
     });
     this.annotations = new PanelAnnotations(fileUri, host, this.source, {
-      isCurrentLoad: (load) => this.isCurrentLoad(load),
+      loads: this.loads,
       post: (message) => this.post(message),
     });
     this.onAnnotationConflict = this.annotations.conflict.event;
@@ -217,7 +218,7 @@ export class PdfViewerPanel {
   prepareLocation():
     | { requestId: number; done: Promise<HistorySnapshot | undefined> }
     | undefined {
-    if (this.loading || !this.view) {
+    if (this.loads.loading || !this.view) {
       return undefined;
     }
     const requestId = this.history.latest + 1;
@@ -229,7 +230,7 @@ export class PdfViewerPanel {
     position: ReadingPosition,
     expectedIntent: number,
   ): Promise<ReadingPosition | undefined> {
-    if (this.loading || !this.view) {
+    if (this.loads.loading || !this.view) {
       return undefined;
     }
     return (
@@ -261,24 +262,28 @@ export class PdfViewerPanel {
   async ensureSelection(
     timeoutMs = SELECTION_REPORT_TIMEOUT_MS,
   ): Promise<void> {
-    if (this.selection || this.loading) {
-      return;
+    if (!this.selection) {
+      await this.refreshSelection(timeoutMs);
     }
-    await new Promise<void>((resolve) => {
-      const done = (): void => {
-        clearTimeout(timer);
-        subscription.dispose();
-        resolve();
-      };
-      const subscription = this.onDidChangeSelection(done);
-      const timer = setTimeout(done, timeoutMs);
-      this.post({ type: "reportSelection" });
-    });
+  }
+
+  /**
+   * Ask the viewer for its selection as it is now and wait for that report;
+   * unlike `ensureSelection`, an older selection does not count. Resolves
+   * whether a report came (`awaitSelectionReport`).
+   */
+  async refreshSelection(
+    timeoutMs = SELECTION_REPORT_TIMEOUT_MS,
+  ): Promise<boolean> {
+    const ask = (): void => this.post({ type: "reportSelection" });
+    return this.loads.loading
+      ? false
+      : awaitSelectionReport(this.selected.event, ask, timeoutMs);
   }
 
   /** Turn macOS Look Up on or off in the viewer (it is off until the plugin says). */
   requestLookUp(): void {
-    if (this.lookUp && !this.loading) {
+    if (this.lookUp && !this.loads.loading) {
       this.post({ type: "lookUpRequest" });
     }
   }
@@ -323,12 +328,15 @@ export class PdfViewerPanel {
       this.writeAnnotations("pdf");
       return;
     }
-    this.post({ type: "annotationRetry", load: this.loads });
+    this.post({ type: "annotationRetry", load: this.loads.current });
   }
 
   /** Ask the viewer for the PDF with its annotations: to save into the open file, or for a copy. */
   writeAnnotations(to: "pdf" | "copy"): void {
-    this.post({ type: "annotationWrite", load: this.loads, to });
+    if (to === "pdf") {
+      this.annotations.requestPdfWrite(this.loads.current);
+    }
+    this.post({ type: "annotationWrite", load: this.loads.current, to });
   }
 
   private async receive(raw: unknown): Promise<void> {
@@ -361,7 +369,7 @@ export class PdfViewerPanel {
         await this.onHistoryJump(message);
         break;
       case "historyTraverse":
-        if (this.isCurrentLoad(message.load)) {
+        if (this.loads.isCurrent(message.load)) {
           await this.options.route(message);
         }
         break;
@@ -385,18 +393,13 @@ export class PdfViewerPanel {
   /** Stale (an older version) or about the previous bytes: see shared/messages.ts. */
   private onPatch(message: Extract<ViewerMessage, { type: "patch" }>): void {
     if (
-      this.loading ||
-      !isCurrentPatch(message, this.patchVersion, this.loads)
+      this.loads.loading ||
+      !isCurrentPatch(message, this.patchVersion, this.loads.current)
     ) {
       return;
     }
     this.patchVersion = message.version;
     this.applyPatch(message.patch);
-  }
-
-  /** Whether a message is about the bytes the viewer shows now. */
-  private isCurrentLoad(load: number): boolean {
-    return !this.loading && load === this.loads;
   }
 
   private onHistoryReport(
@@ -405,7 +408,7 @@ export class PdfViewerPanel {
       { type: "historyCaptured" | "historyRestored" }
     >,
   ): void {
-    if (this.isCurrentLoad(message.load)) {
+    if (this.loads.isCurrent(message.load)) {
       this.history.answer(message);
     }
   }
@@ -413,7 +416,7 @@ export class PdfViewerPanel {
   private async onHistoryJump(
     message: Extract<ViewerMessage, { type: "historyJump" }>,
   ): Promise<void> {
-    if (!this.isCurrentLoad(message.load) || message.id <= this.lastJump) {
+    if (!this.loads.isCurrent(message.load) || message.id <= this.lastJump) {
       return;
     }
     this.lastJump = message.id;
@@ -443,7 +446,7 @@ export class PdfViewerPanel {
 
   /** Send the file to the viewer, which (re)opens it. */
   private async load(): Promise<void> {
-    this.loading = true;
+    const attempt = this.loads.begin();
     this.history.cancelAll();
     this.lastJump = 0;
     this.navigation.unload();
@@ -454,21 +457,28 @@ export class PdfViewerPanel {
     this.changed.fire();
     const bytes = await this.source.read();
     if (!bytes) {
+      // Without this, a failed read left every later message stale for good.
+      if (this.loads.abandon(attempt)) {
+        this.navigation.loadedNow();
+      }
       return;
     }
+    this.loads.readingStore();
     const annotations = await this.annotations.read(bytes.sha256);
-    this.loads++;
+    this.loads.storeRead();
+    const load = this.loads.next();
+    this.annotations.loaded(load, bytes.sha256);
     this.post({
       type: "load",
-      load: this.loads,
-      ...this.webview.deliver(bytes.data, this.loads),
+      load,
+      ...this.webview.deliver(bytes.data, load),
       settings: this.settings,
       sha256: bytes.sha256,
       ...(this.position ? { position: this.position } : {}),
       ...(annotations === undefined ? {} : { annotations }),
     });
     this.history.newViewer();
-    this.loading = false;
+    this.loads.finished();
     this.navigation.loadedNow();
     // A rebuilt page starts from the original HTML attributes. Rehydrate
     // changes made since the panel opened, after load retires its old inbox.

@@ -127,6 +127,7 @@ function launch(options: {
       "node:path": path,
       "../../../host/atomic-write": { writeAtomicFile: async () => undefined },
       "../../../shared/annotation-store": annotationStore,
+      "../../protected-folders": { isProtectedPdf: () => false },
     },
   );
   const { pdfBacklinksPlugin } = loadModule(

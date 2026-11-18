@@ -6,6 +6,9 @@ template above a non-empty line at column 0, and replaces an empty line with
 that template; the caret reveals callout source. As in Obsidian, a type is any
 text but `]` (`[!笔记]`, `[!my type]` as `my-type`), and what follows a `|` is
 metadata that CSS snippets select with `data-callout-metadata` (`[!note|wide]`).
+An alias keeps its written type in `data-callout` (`[!tldr]` is
+`data-callout="tldr"`, with the icon and colour of `abstract`), so snippets
+that select an alias match, as in Obsidian.
 
 ## How it works
 
@@ -21,7 +24,9 @@ mapped across renamed source identities. Each pass owns its event listeners and
 bindings; plugin disposal removes registrations and remaining pass handlers.
 Foldable titles (and the fold button) toggle disclosure; a `-` callout starts
 closed. Clicking the body or padding reveals and selects the whole callout
-source, as does its Edit button. Typing replaces that visible selection. Links
+source, as does its Edit button. Dragging across the body selects its
+rendered text instead, as in reading view, and Copy copies that text
+(`src/webview/ui/rendered-text-selection.ts`). Typing replaces that visible selection. Links
 and controls keep their own clicks; keyboard navigation can reveal source with
 a caret.
 

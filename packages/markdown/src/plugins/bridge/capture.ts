@@ -33,7 +33,7 @@ const PUBLICATION_KEYS = [
  * When the source itself was published or captured, from frontmatter. This
  * is not the selection's capture time.
  */
-export function publicationTime(
+function publicationTime(
   values: Record<string, unknown> | undefined,
 ): string | undefined {
   for (const key of PUBLICATION_KEYS) {

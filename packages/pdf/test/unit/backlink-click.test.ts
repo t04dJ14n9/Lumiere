@@ -164,7 +164,7 @@ test("a double-click: the first click waits, the second press cancels it", () =>
   assert.equal(opened, 0);
 });
 
-test("the overlay opens through the click gate and goes passive in Annotate", () => {
+test("the overlay opens through the click gate", () => {
   const overlay = readFileSync(
     path.join(root, "src/webview/backlink-overlay.tsx"),
     "utf8",
@@ -173,17 +173,6 @@ test("the overlay opens through the click gate and goes passive in Annotate", ()
   // The only place a note is opened from is behind that gate and its wait.
   assert.equal(overlay.match(/openBacklinkNote/gu)?.length, 1);
   assert.match(overlay, /pending\.schedule\(/u);
-  assert.match(overlay, /is-passive/u);
-
-  const page = readFileSync(path.join(root, "src/webview/page.tsx"), "utf8");
-  assert.match(page, /<BacklinkLayer[^>]*annotate=\{annotate\}/u);
-
-  const css = readFileSync(
-    path.join(root, "src/webview/styles/page.css"),
-    "utf8",
-  );
-  assert.match(
-    css,
-    /\.pdf-backlink-overlay\.is-passive \.pdf-backlink-overlay-line\s*\{[^}]*pointer-events:\s*none/u,
-  );
+  // With no Annotate mode, the lines never step aside for the marks.
+  assert.doesNotMatch(overlay, /is-passive/u);
 });
