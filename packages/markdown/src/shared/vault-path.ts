@@ -107,6 +107,31 @@ export function relativeVaultPath(folder: string, target: string): string {
   return [...up, ...to.slice(common)].join("/");
 }
 
+/**
+ * The relative path a new link from a note in `folder` writes for `target`,
+ * so that it reads back to `target`. A path without `./` or `../` is first
+ * looked up from the vault root, so `X` written in `notes/` would open a
+ * root `X.md`; when another file sits at the path the text would name,
+ * `./` is put in front (`./X`), which is always joined to the note's folder.
+ * `hasFile` answers for any vault path, ignoring case.
+ */
+export function relativeLinkPath(
+  folder: string,
+  target: string,
+  hasFile: (path: string) => boolean,
+): string {
+  const path = relativeVaultPath(folder, target);
+  if (!folder || path.startsWith("../")) {
+    return path;
+  }
+  const written = withoutNoteExtension(path);
+  const isShadowed = [written, `${written}.md`, `${written}.markdown`].some(
+    (candidate) =>
+      candidate.toLowerCase() !== target.toLowerCase() && hasFile(candidate),
+  );
+  return isShadowed ? `./${path}` : path;
+}
+
 /** `https:`, `mailto:`, `obsidian:` and similar links never name vault files. */
 export function isExternalLink(link: string): boolean {
   return /^[a-z][a-z0-9+.-]*:/i.test(link);

@@ -219,7 +219,7 @@ const NAVIGATION_KEYS = [
 
 /** Elements whose keys belong to them, not to reading. */
 const OWN_KEYS =
-  'input, textarea, select, [contenteditable], [role="slider"], [role="spinbutton"], [role="listbox"], [role="menu"], [role="combobox"], .view-menu, .grip';
+  'input, textarea, select, [contenteditable], [role="slider"], [role="spinbutton"], [role="listbox"], [role="menu"], [role="combobox"], .view-menu';
 
 const INTERRUPTING_EVENTS = ["wheel", "pointerdown", "touchstart", "keydown"];
 

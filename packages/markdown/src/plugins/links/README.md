@@ -4,7 +4,7 @@ Renders and follows wikilinks and Markdown links, with local heading/block
 navigation and side opens, like Obsidian's internal links. Wikilinks to notes
 that do not exist yet are dimmed with a dotted underline. Links to PDFs
 (`[[paper.pdf#page=3]]`, `[text](paper.pdf#page=3&viewrect=…)`) open in PDF
-Workshop at that page and box, through its Open Location command.
+Lumiere at that page and box, through its Open Location command.
 
 ## How it works
 
@@ -13,7 +13,10 @@ and selection gestures, and routes commands through a shared opener. Local
 fragments navigate with metadata; other requests cross a validated RPC channel.
 The host authorizes embedded source identities, offers links to host plugins,
 then applies scheme policy or resolves through the vault/native adapter.
-Native opening binds a panel ID before waiting for the links plugin. Each
+Native opening binds a panel ID before waiting for the links plugin, which
+registers each editor's reveal: every jump into a note (links, Outline rows,
+Go to Heading, Backlinks) goes through it, and with Links off for a note those
+jumps open the note without moving in it (Outline says so). Each
 webview registers a fresh session; requests are acknowledged after layout and
 cancelled on newer navigation, reload or disposal. No URI-keyed pending reveal
 survives successful delivery. Missing fragments show a message without moving
@@ -75,7 +78,7 @@ the host services `dialogs`, `settings` and `navigation`, `vault` and `resources
 caret following; host provides no service. Queries `link/click`
 and `links/open` with bail semantics. Settings: plugin enabled (true),
 `links.newLinkFormat` (shortest), `links.useWikilinks` (true), `links.folderNote`
-(empty), and native `files.newNoteFolder` for creation. The editor binds Mod+Enter to follow the caret link.
+(empty), `links.focusNewTab` (true), and native `files.newNoteFolder` for creation. The editor binds Mod+Enter to follow the caret link.
 
 ## Limits and differences from Obsidian
 
@@ -94,6 +97,15 @@ File-location fields are validated by this plugin's schema and exposed as
 pipeline consumes the former; the Attachments plugin saves dropped/pasted images using the latter.
 `useWikilinks` controls suggestion acceptance; explicit Insert Wikilink retains
 wiki syntax. New-link format still controls vault link text.
+
+`links.focusNewTab` is Obsidian's Always focus new tabs. Off, a link opened in
+a new tab (Open Link in New Tab) or beside (Open Link to Side) is shown with
+VS Code's `preserveFocus`, and a heading or block it names is scrolled to
+without moving the focus either. The tab is not opened in the background (a
+heading it names needs its page to exist), so it still becomes the visible one
+in its group, unlike Obsidian, where the old tab stays in front; a PDF always takes the focus
+(Lumiere PDF's Open Location command has no such option), and hosts with no tabs
+of their own ignore the setting.
 
 A reused side-open destination must be unambiguous among same-note panes;
 otherwise navigation fails clearly rather than choosing another pane. Ordinary

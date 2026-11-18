@@ -3,10 +3,13 @@
 //   client.js          the browser half (src/client), in DSH's module format
 //   markdown/, page/shim.js, contributed.json   host-node's assets (see
 //                      packages/host-node/scripts/assets.mjs)
-//   package.json, cordis.patch.yml, locale/, icon.png, LICENSE, notices
+//   package.json     generated from scripts/manifest.json (the DSH contract)
+//   cordis.patch.yml, locale/, README.md   from bundle/
+//   icon.png, LICENSE, notices
 //
 // Usage: node scripts/build.mjs [--production]
-// Install into a DSH profile: dsh plugin --profile web add link:<dist/bundle>
+// Install into a DSH profile: dsh plugin --profile web add link:<dist/bundle>,
+// or plugin_manager install_bundle with the absolute path to dist/bundle.
 import { cp, readFile, rm, writeFile } from "node:fs/promises";
 import path from "node:path";
 import * as esbuild from "esbuild";
@@ -43,33 +46,15 @@ await esbuild.build({
   logLevel: "info",
 });
 
+// The bundle contract lives in a JSON template so a unit test can check it
+// without running the (slow) build. Only the version and repository change
+// from one build to the next.
+const manifest = JSON.parse(
+  await readFile(path.join(here, "scripts", "manifest.json"), "utf8"),
+);
 await writeFile(
   path.join(out, "package.json"),
-  JSON.stringify(
-    {
-      name: "@lumiere/dsh",
-      version,
-      description:
-        "Lumière in DeepSeek Harness: Obsidian-style Live Preview for the Markdown notes in your workspace.",
-      license: "MIT",
-      repository,
-      type: "module",
-      main: "index.js",
-      icon: "./icon.png",
-      exports: {
-        ".": "./index.js",
-        "./client": "./client.js",
-        "./package.json": "./package.json",
-        "./locale/*.json": "./locale/*.json",
-      },
-      dsh: {
-        bundle: { patch: "./cordis.patch.yml" },
-        client: { platform: "web" },
-      },
-    },
-    null,
-    2,
-  ) + "\n",
+  JSON.stringify({ ...manifest, version, repository }, null, 2) + "\n",
 );
 await cp(path.join(here, "bundle"), out, { recursive: true });
 await cp(path.join(root, "media", "icon.png"), path.join(out, "icon.png"));

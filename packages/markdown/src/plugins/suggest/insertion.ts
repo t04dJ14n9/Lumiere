@@ -1,7 +1,7 @@
-import type { VaultIndex } from "../vault/api";
+import type { VaultFile, VaultIndex } from "../vault/api";
 import type { Candidate, Value } from "./candidates";
 import type { Suggestion } from "./protocol";
-import { folderOf, relativeVaultPath } from "../../shared/vault-path";
+import { folderOf, relativeLinkPath } from "../../shared/vault-path";
 export function materialize(options: {
   vault: VaultIndex;
   source: string;
@@ -18,7 +18,11 @@ export function materialize(options: {
     ...blockIdOf(entry, source),
   };
   if (!useWikilinks) {
-    return { ...base, insert: markdownLink(entry, source), replaceLink: true };
+    return {
+      ...base,
+      insert: markdownLink(vault, entry, source),
+      replaceLink: true,
+    };
   }
   const text = wikiText(vault, source, entry.value, globalBlock);
   const bare = options.bare && entry.value.kind === "block" && !globalBlock;
@@ -62,18 +66,49 @@ function wikiText(
     (value.alias ? `|${value.alias}` : "")
   );
 }
-function markdownLink(entry: Candidate, source: string): string {
+function markdownLink(
+  vault: VaultIndex,
+  entry: Candidate,
+  source: string,
+): string {
   const value = entry.value;
   let path: string;
   if (value.kind === "literal") {
     path = /\.[^/]+$/.test(value.text) ? value.text : `${value.text}.md`;
   } else {
-    path = relativeVaultPath(folderOf(source), value.target.path);
+    path = relativeLinkPath(folderOf(source), value.target.path, (candidate) =>
+      hasFileIgnoringCase(vault, candidate),
+    );
   }
   const destination =
     path.split("/").map(encodeDestination).join("/") + fragment(value);
   const label = entry.label.replace(/([\\[\]])/g, "\\$1");
   return `[${label}](${destination})`;
+}
+/**
+ * Whether the vault has a file at `path` in any case: links resolve without
+ * case, so a root `x.md` captures `X.md` as surely as a root `X.md` does.
+ */
+function hasFileIgnoringCase(vault: VaultIndex, path: string): boolean {
+  return (
+    vault.file(path) !== undefined ||
+    lowerCasePaths(vault.files()).has(path.toLowerCase())
+  );
+}
+
+const lowerCaseSets = new WeakMap<readonly VaultFile[], Set<string>>();
+
+/**
+ * The vault's paths lower-cased, built once per file list: the index hands
+ * out the same array until a file is added or removed.
+ */
+function lowerCasePaths(files: readonly VaultFile[]): Set<string> {
+  let set = lowerCaseSets.get(files);
+  if (!set) {
+    set = new Set(files.map((file) => file.path.toLowerCase()));
+    lowerCaseSets.set(files, set);
+  }
+  return set;
 }
 function fragment(value: Value): string {
   if (value.kind === "heading") {

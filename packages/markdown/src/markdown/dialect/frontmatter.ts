@@ -7,7 +7,9 @@ export const frontmatter: MarkdownConfig = {
       before: "HorizontalRule",
       parse(cx, line) {
         // The fence may follow a byte order mark, as headerParts reads it.
-        if (cx.lineStart !== 0 || !/^\uFEFF?---$/.test(line.text)) {
+        // A note read from a CRLF file keeps its `\r`s (the editor's text
+        // has none), and its frontmatter is still frontmatter.
+        if (cx.lineStart !== 0 || !/^\uFEFF?---\r?$/.test(line.text)) {
           return false;
         }
         const from = cx.lineStart;

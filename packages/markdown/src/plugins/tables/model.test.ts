@@ -1,14 +1,16 @@
 import test from "node:test";
 import assert from "node:assert/strict";
 import {
-  cellText,
   copyCells,
   copyCellsHtml,
   copyCellsMarkdown,
   copyCellsObsidian,
-  parseTable,
   pastedCells,
   pastedMarkdownCells,
+} from "../../markdown/tables/clipboard-formats";
+import {
+  cellText,
+  parseTable,
   serializeTable,
   writeCells,
 } from "../../markdown/tables/model";

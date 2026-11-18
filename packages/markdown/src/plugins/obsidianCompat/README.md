@@ -1,7 +1,7 @@
 # Obsidian Compatibility
 
 Uses a vault's Obsidian property types, eight Files & Links/editor policies and
-its Templates and Daily notes options in Lumiere, like Obsidian's vault configuration. This is a host-only
+its Templates options in Lumiere, like Obsidian's vault configuration. This is a host-only
 feature, enabled by default in the Obsidian preset.
 
 ## How it works
@@ -25,7 +25,7 @@ settings are written. Watcher changes and plugin teardown notify those consumers
 - `types-document.ts`: lossless JSON edits, built-in guards and UI/wire conversion.
 - `types-registry.ts`: last-good property cache, operation queue and conflicts.
 - `app-settings.ts`: the eight ranked `app.json` mappings and input validation.
-- `core-plugin-settings.ts`: the `templates.json` and `daily-notes.json` mappings.
+- `core-plugin-settings.ts`: the `templates.json` mapping.
 - `precedence.ts`: pure detection of all explicit inspect layers.
 - `config-dir.ts`: independent, contained config-folder selection.
 - `config-files.ts`: strict contained reads, watchers and read-only write rejection.
@@ -58,21 +58,20 @@ owning their settings. Supported `app.json` mappings, in rank order:
 | `userIgnoreFilters` | `vault.excludedFiles` |
 | `propertiesInDocument` | `properties.display` |
 | `livePreview` | `editor.defaultMode` (true → livePreview, false → source) |
-| `alwaysUpdateLinks` | `linkUpdates.mode` → always when true, prompt when false (invalid contributes nothing) |
+| `alwaysUpdateLinks` | `linkUpdates.mode` → always when true, prompt when false (invalid contributes nothing); the rename dialog's Always Update saves an explicit `always` in VS Code's settings, which wins, and `app.json` is not written |
 
-`templates.json` and `daily-notes.json` seed the Templates and Daily Notes
-plugins' settings the same way. A date format is carried over only when it
+`templates.json` seeds the Templates plugin's settings the same way. A date format is carried over only when it
 uses Lumiere's tokens (`YYYY MM DD HH mm ss`); empty strings contribute nothing.
 
 | Obsidian | Lumiere |
 | --- | --- |
 | `templates.json` `folder`, `dateFormat`, `timeFormat` | `templates.folder`, `templates.dateFormat`, `templates.timeFormat` |
-| `daily-notes.json` `folder`, `format`, `template` | `dailyNotes.folder`, `dailyNotes.dateFormat`, `dailyNotes.template` |
 
 ## Limits and differences from Obsidian
 
-The property UI still uses its existing preference storage; it does not yet
-consume this registry. Host consumers can use the scoped service now. Wire types
+The properties plugin reads `types.json` through this service
+(`properties/vault-types.ts`); types chosen in Lumiere that the registry does not
+take stay in its workspace storage. Wire types
 are `text`, `number`, `checkbox`, `date`, `datetime`, `multitext`, `tags`, `aliases`.
 `multitext` maps to the `list` editor; `aliases` and `tags` keep their distinct
 wire/UI kinds. Built-ins are guarded: tags → tags, aliases → aliases,
@@ -94,4 +93,6 @@ regular-expression filters are not translated. Changes to `editor.defaultMode`
 affect new editor views, preserving an existing view's current mode.
 
 CSS snippets, appearance, graph configuration, hotkeys,
-themes, workspace state and community plugins are outside this phase.
+themes, workspace state and community plugins are outside this plugin. The
+properties plugin reads `appearance.json` and the enabled CSS snippets itself
+(`properties/snippets.ts`).

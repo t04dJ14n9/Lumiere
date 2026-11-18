@@ -14,7 +14,7 @@ import type { ScrollDirection } from "./view-settings";
  * computer-use coordinate must be converted into this CSS space if the
  * capture is scaled relative to the display.
  */
-export const PAGED_DRAG_TURN_PX = 60;
+const PAGED_DRAG_TURN_PX = 60;
 
 /**
  * Which way a finished blank-page drag should turn in page-by-page

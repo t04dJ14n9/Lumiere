@@ -121,7 +121,7 @@ export function imeVimCommandKey(
  * those glyphs in normal/visual mode so repeat and f/t-repeat still work.
  * Literal arguments (`f`/`t`/`r`) keep the Chinese glyph.
  */
-export function chineseVimPunctuationKey(
+function chineseVimPunctuationKey(
   event: KeyEvent,
   mode: VimMode,
 ): string | undefined {

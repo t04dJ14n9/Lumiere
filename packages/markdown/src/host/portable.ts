@@ -29,7 +29,11 @@ export {
 } from "../shared/link-location";
 export { RevealRouter, chooseRevealPanel } from "./reveal-router";
 export { SourceCoordinates } from "../shared/document/coordinates";
-export { mergeDiskChange, type DiskChange } from "../shared/document/merge";
+export {
+  diskChangeConflicts,
+  mergeDiskChange,
+  type DiskChange,
+} from "../shared/document/merge";
 export type * from "../shared/host";
 export type {
   FileEvent,
@@ -58,5 +62,5 @@ export type {
   GitIdentity,
 } from "../shared/git-blame";
 export { exceedsDiffLimits, MAX_DIFF_CHARS } from "../shared/diff/limits";
-export type { DiagnosticSink, WorkspaceFiles } from "../shared/workspace-files";
+export type { WorkspaceFiles } from "../shared/workspace-files";
 export type { EditorProvider } from "../shared/editor-provider";

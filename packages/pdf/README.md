@@ -4,11 +4,11 @@
 
 A Lumiere PDF viewer for VS Code and Cursor, built on [EmbedPDF](https://www.embedpdf.com/)
 3 and its PDFium engine. Select text and choose **Copy link to this**: the
-clipboard gets a Quote with a Chrome-aligned deep link (`#page=` +
-`#:~:text=`), ready to paste into any note. Opening the PDF paints
-**backlink overlays** from those vault Markdown links. Annotate tools
-(Highlight, Note, freeText, …) never change the PDF: their marks are kept in
-the workspace's `.lumiere/pdf-annotations/`. Region / box selection
+clipboard gets an `@papers/a.pdf#page=3` locator and the quoted text, ready
+to paste into an agent chat. Opening the PDF paints **backlink overlays**
+from vault Markdown links to it (`[label](papers/a.pdf#page=3#:~:text=…)`). Right-click
+selected text to **Highlight** it or **Add Annotation…** with a note; the marks
+never change the PDF: they are kept in the workspace's `.lumiere/pdf-annotations/`. Region / box selection
 is opt-in (`lumiere.pdf.regions.enabled`, default off).
 
 ## Features
@@ -19,7 +19,9 @@ is opt-in (`lumiere.pdf.regions.enabled`, default off).
   Ctrl/⌘+wheel and pinch zoom around the pointer (a wheel notch zooms by 1.2),
   find in PDF (⌘F / Ctrl+F), internal links and web links.
   When the file changes on disk (a rebuilt paper), the viewer reloads at the
-  same page and zoom.
+  same page and zoom; a touch or sync that leaves its bytes as they were
+  reloads nothing. Annotations made while it reloads are kept with the
+  version they were made on.
 - **View controls.** A View picker in the editor title/status bar, and a
   compact **View** menu in the slim toolbar of the web and iPad hosts, selects zoom, layout,
   scrolling mode and direction. Saved choices and reading position return
@@ -45,26 +47,38 @@ is opt-in (`lumiere.pdf.regions.enabled`, default off).
   touch contacts. A drag over text or a page whose text geometry is not ready
   stays with text selection or Stage pan. Device touch is not GUI-verified
   here. Select Region is hidden.
-- **Passage highlights = vault Markdown.** **Copy link to this** copies a
-  Quote with `#page=N#:~:text=…` (or a page-only `#page=N` link with nothing
-  selected). Paste into any note; the viewer paints **backlink overlays**
-  from those links (hover preview, click opens the note; Del ignores
-  overlays). See [CAPABILITIES.md](CAPABILITIES.md).
-- **Annotations never change the PDF.** Annotate **Highlight** / Note /
-  freeText / underline / ink are kept in
+- **Passage highlights = vault Markdown.** A note's Markdown link to
+  `papers/a.pdf#page=N#:~:text=…` is a passage highlight: the viewer paints
+  **backlink overlays** from those links (hover preview, click opens the
+  note; Del ignores overlays). **Copy link to this** copies an `@` locator
+  for agents, not such a link. See [CAPABILITIES.md](CAPABILITIES.md).
+- **Annotate from the context menu.** There is no Annotate mode or button.
+  Select text and right-click: **Highlight**, **Add Annotation…** (a
+  highlight with a note you type), or **Mark Text** ▸ Underline, Strikeout,
+  Squiggly. The keys are Preview's: ⌃⌘H highlights, ⌃⌘U underlines and
+  ⌃⌘S strikes out the selected text (Ctrl+Alt+H / U / S on Windows and
+  Linux). Right-click one of your marks
+  for **Edit Note…**, **Change Color** ▸ (six colours; new highlights take the
+  last one picked) and **Delete Annotation**; **Copy link to this** then
+  hands the mark to an agent. A click never selects, moves or deletes a
+  mark, and the PDF's own annotations do not answer the menu.
+- **Annotations never change the PDF.** Marks are kept in
   `.lumiere/pdf-annotations/<sha256>.json` in the PDF's workspace folder
   (`~/.lumiere/…` for a PDF outside every folder), named by the PDF's
   SHA-256. `lumiere.pdf.annotations.folder` puts them elsewhere: another
   workspace-relative folder, `~/…`, or an absolute path. The PDF's bytes, and so the hash a vault records for an immutable
   source, stay as they are. The same PDF anywhere (in `inbox/`, then
   captured into `.raw/`) shows the same annotations, and a renamed or moved
-  copy keeps them. Del deletes them. The file is Lumiere's own format
+  copy keeps them. The file is Lumiere's own format
   (`{"version": 2, "bundle": …}`, EmbedPDF 3's annotation transfer); files
   from earlier versions are converted when read and saved in the new format on
   the next change, after which earlier versions cannot read them.
   - **PDF: Save Annotations into This PDF** writes them into the file after
     you confirm (its SHA-256 changes). It refuses PDFs in
-    `lumiere.pdf.annotations.protectedFolders` (default `[".raw"]`).
+    `lumiere.pdf.annotations.protectedFolders` (default `[".raw"]`). The
+    extension writes the PDF only for a save this command (or its Retry)
+    asked the viewer for, and checks the protected folders again just
+    before writing.
   - **PDF: Export Annotated Copy…** writes a new PDF with them, for sharing.
   - Annotations a PDF already holds show as usual; a change to one is kept
     only by saving into the PDF, and Lumiere says so the first time.
@@ -87,19 +101,20 @@ is opt-in (`lumiere.pdf.regions.enabled`, default off).
   bookmarks with its own PDFium, started on the first request, from PDFs up to
   200 MB, and rereads a PDF only when it changes.
 - **Copy link to this.** Right-click the PDF (or run **PDF: Copy link to
-  this**). With text selected, the clipboard gets a Quote:
+  this**). With text selected, the clipboard gets the page's `@` locator, a
+  blank line, the quoted text and a newline:
 
-  ```markdown
+  ```text
+  @papers/paper.pdf#page=3
+
   > selected text
-  >
-  > [paper.pdf · p.3](papers/paper.pdf#page=3#:~:text=…)
   ```
 
-  With nothing selected, it copies a page-only link for the reading page:
-  `[paper.pdf · p.N](papers/paper.pdf#page=N)`. Clipboard only — it does
+  With nothing selected, it copies the reading page's locator:
+  `@papers/paper.pdf#page=N`. Clipboard only — it does
   **not** open agent chat. ⌘C / Ctrl+C still copies plain selected text.
   `lumiere.pdf.copyLinkForAgent.target` is legacy for IDE Context / MCP
-  delivery only. Region `viewrect=` links appear only when
+  delivery only. Region `viewrect=` locators appear only when
   `lumiere.pdf.regions.enabled` is on. Contract:
   `packages/agents/docs/agent-handoff-format.md`.
 
@@ -149,11 +164,11 @@ the window). Set `lumiere.pdf.keyboardShortcuts` to `false` to leave every key
 to VS Code (the **PDF:** commands remain, unbound, for **Keyboard Shortcuts**).
 Some desktops keep Ctrl+Alt+T for opening a terminal; rebind it there if so.
 
-**In Cursor**, the editor title bar keeps extension buttons in its **…**
-menu, so the viewer leaves its title buttons out (the menu lists every
-action, grouped) and the status bar also shows previous and next page, zoom
-out and in, and find buttons. `lumiere.pdf.toolbar.statusBarButtons`
-(`auto`, `always`, `never`) changes that, in either editor.
+The editor title bar keeps the viewer's actions in its **…** menu (the menu
+lists every action, grouped), so the status bar also shows history back and
+forward, previous and next page, zoom out and in, and find buttons. Set
+`lumiere.pdf.toolbar.statusBarButtons` to `never` to leave only the page,
+zoom and View.
 
 ![Cursor: page, zoom and find in the status bar](docs/images/toolbar-cursor.png)
 
@@ -175,21 +190,22 @@ viewer gives the system a word to find, and what needs a Mac to verify.
 
 ## What Copy link puts on the clipboard
 
-```markdown
+```text
+@papers/attention.pdf#page=3
+
 > Scaled dot-product attention
->
-> [attention.pdf · p.3](papers/attention.pdf#page=3#:~:text=Scaled%20dot%2Dproduct%20attention)
 ```
 
-With no selection:
+The text ends with a newline. With no selection:
 
-```markdown
-[attention.pdf · p.3](papers/attention.pdf#page=3)
+```text
+@papers/attention.pdf#page=3
 ```
 
-A path with spaces or parentheses is percent-encoded
-(`papers/my%20paper%20%28v2%29.pdf`) so the link stays one Markdown link, and
-the quote's `(`, `)`, `-`, `,` and `&` are encoded too.
+A selection across pages has one locator line per page. A path with spaces,
+`#` or parentheses is percent-encoded (`@papers/my%20paper%20%28v2%29.pdf`)
+so the locator stays one token. It is not a Markdown link: pasted into a
+note, it is neither clickable nor a backlink overlay.
 
 Backlink overlays read a note's link path the way the Markdown editor opens
 it: `./`, `../` and a bare name from the note's folder, a leading `/` from the
@@ -198,11 +214,11 @@ root, or from the note's folder when the root has no such file. In a
 multi-root workspace a note's links reach only PDFs in its own workspace
 folder.
 
-Paste into any note; **PDF: Open Location…** and clicking a Markdown link
-open that page (and resolve `#:~:text=` to an overlay when possible). Legacy
+**PDF: Open Location…** takes a pasted locator or link, and clicking a
+Markdown link opens that page (and resolve `#:~:text=` to an overlay when possible). Legacy
 `#page=N&viewrect=…` links still open best-effort.
 
-When **regions are enabled**, a region Copy link may include RFC 8118
+When **regions are enabled**, a region's locator may include RFC 8118
 `viewrect=left,top,width,height` (PDF points from the page's top-left). MCP
 `get_current_pdf_selection` can still attach a region PNG snapshot from
 extension storage (`workspaceStorage/…/regions`); Copy link itself does not
@@ -246,11 +262,10 @@ only the on/off switch has an end-to-end test.
 
 Other extensions can ask for the current PDF selection as data, without the
 clipboard. `vscodeEmbedPdf.bridge.envelope` returns a Workbench v1 envelope
-(`producer` `"pdf"`) for the PDF you last looked at: the same shape Markdown
-Workshop's `parseBridgeEnvelope` already consumes (`capturedAt`,
+(`producer` `"pdf"`) for the PDF you last looked at: the same shape Lumiere's `parseBridgeEnvelope` already consumes (`capturedAt`,
 `source.identity` / `kind` / `media`, `locator`, `view`, `selection`,
 `revision`). Lumiere is the aggregator and may call this command;
-this command does not call Workshop back. Copy link to this still copies
+this command does not call Lumiere back. Copy link to this still copies
 the same source-link text. See [docs/bridge-envelope.md](docs/bridge-envelope.md).
 
 ## Opening a location from another extension
@@ -320,7 +335,6 @@ src/
     │                           the plugins EmbedPDF 3 runs (stage, render, …)
     ├── viewer.tsx              toolbar, search, the Stage and its pages
     ├── toolbar.tsx             the slim bar's controls
-    ├── floating-toolbar.tsx    the removed floating bar, no longer shown
     ├── view-sync.ts            page and zoom to the extension, its actions back
     ├── tool-mode.ts            the Select Text and Select Region tools
     ├── page.tsx, page-links.tsx  one page's layers in the Stage
@@ -386,11 +400,12 @@ into a throwaway profile and home folder under `/tmp`, and drives the window
 with Playwright. It never touches your own VS Code settings or extensions. Set
 `VSCODE_EXECUTABLE` to test another build, or Cursor (its `cursor` executable,
 for example `…/usr/share/cursor/cursor` in an extracted AppImage). On Linux
-without a display, run it under `xvfb-run -a`.
+it opens the window on a private 1920×1080 Xvfb display of its own;
+`LUMIERE_VSCODE_DISPLAY=inherit` keeps your display instead.
 
 Set `VSCODE_TEST_USE_SOURCE=1` to load the built extension and test fixtures
 through VS Code's extension development paths without installing any VSIX.
-For example, `VSCODE_TEST_USE_SOURCE=1 xvfb-run -a pnpm check:full` runs all
+For example, `VSCODE_TEST_USE_SOURCE=1 pnpm check:full` runs all
 local checks in this mode; `pnpm package` separately verifies packaging.
 
 On macOS, an empty test home can prompt for Keychain access. For credential-free
@@ -409,8 +424,7 @@ the two native suites sequentially; both use the same throwaway test directory.
 
 **Before every push run `pnpm check` and `pnpm test:browser`. Before merging a
 pull request, and before pushing a change to editor integration, run the full
-local check, `pnpm check:full`** (on headless Linux:
-`xvfb-run -a pnpm check:full`). It runs `pnpm check`, `pnpm test:browser` and
+local check, `pnpm check:full`**. It runs `pnpm check`, `pnpm test:browser` and
 `pnpm test:vscode` sequentially, stopping at the first failure. `pnpm check`
 already includes unit tests; no separate unit run is needed. The full local
 check does not include the separate CI packaging/size, secret-scan or advisory
@@ -444,7 +458,7 @@ request and on pushes to `main`. Each job, and how to run it locally:
 The real-VS Code specs (`pnpm test:vscode`) are not a CI job: run them locally
 before merging (see Development). Cursor cannot run in CI either, so test it
 by hand with
-`VSCODE_EXECUTABLE=<cursor executable> xvfb-run -a pnpm test:vscode`. CI never
+`VSCODE_EXECUTABLE=<cursor executable> pnpm test:vscode`. CI never
 uses API keys or other secrets. Dependabot proposes grouped npm and
 GitHub Actions updates weekly.
 

@@ -3,7 +3,6 @@ import { readFileSync } from "node:fs";
 import path from "node:path";
 import { fileURLToPath } from "node:url";
 import { test } from "node:test";
-import { shouldDeleteAnnotationOnKey } from "../../src/shared/annotation-delete-keys";
 
 const root = path.join(path.dirname(fileURLToPath(import.meta.url)), "../..");
 
@@ -17,34 +16,15 @@ test("page layer order lists AnnotationLayer before BacklinkLayer in source", ()
   );
 });
 
-test("overlays never enter mark-selection / never set hasAnnotationSelection", () => {
-  const markSelection = readFileSync(
-    path.join(root, "src/webview/mark-selection.ts"),
+test("overlays never become the context menu's mark", () => {
+  const markMenu = readFileSync(
+    path.join(root, "src/webview/mark-menu.ts"),
     "utf8",
   );
-  // No store/selection imports or hooks for overlays — only a doc comment is allowed.
-  assert.doesNotMatch(markSelection, /from ["'][^"']*backlink[^"']*["']/);
+  // Marks come from EmbedPDF's annotations only: no backlink store or hooks.
+  assert.doesNotMatch(markMenu, /from ["'][^"']*backlink[^"']*["']/);
   assert.doesNotMatch(
-    markSelection,
+    markMenu,
     /useBacklink|rememberBacklink|selectBacklink|pdfBacklink/i,
-  );
-  // Del with no annotation selection (overlay-only click path) is a no-op.
-  assert.equal(
-    shouldDeleteAnnotationOnKey({
-      key: "Delete",
-      annotate: true,
-      hasAnnotationSelection: false,
-      editable: false,
-    }),
-    false,
-  );
-  assert.equal(
-    shouldDeleteAnnotationOnKey({
-      key: "Backspace",
-      annotate: true,
-      hasAnnotationSelection: false,
-      editable: false,
-    }),
-    false,
   );
 });

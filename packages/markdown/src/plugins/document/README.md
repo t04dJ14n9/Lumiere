@@ -78,5 +78,7 @@ VS Code: it keeps the unsaved text and reports a conflict when saving. Hosts
 that own the files merge instead, as Obsidian does: host-node's `NoteDocuments`
 applies the outside change onto the unsaved text with `mergeDiskChange`
 (`shared/document/merge.ts`), a line-based three-way merge. Where both changed
-the same lines the unsaved lines stay, and no notice says so. The session only
-records the merged text as the document's.
+the same lines the unsaved lines stay; host-node first keeps the other
+program's version in a conflict copy beside the note (`diskChangeConflicts`
+says when) and tells the reader. The session only records the merged text as
+the document's.

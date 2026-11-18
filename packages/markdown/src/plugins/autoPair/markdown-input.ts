@@ -14,7 +14,7 @@ import { continuationPrefix } from "../../markdown/list-markup";
  */
 
 /** Characters that wrap a selection, but insert alone without one. */
-export const WRAP_ONLY: readonly string[] = ["=", "~", "$", "%"];
+const WRAP_ONLY: readonly string[] = ["=", "~", "$", "%"];
 
 /** Typing one of `WRAP_ONLY` over selections wraps each, keeping it selected. */
 export function wrapOnly(

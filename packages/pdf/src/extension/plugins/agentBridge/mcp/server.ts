@@ -24,7 +24,7 @@
  * - The token never reaches the log: request URLs are logged as a fixed
  *   route label, and every logged line is scrubbed of the token.
  */
-import { randomBytes } from "node:crypto";
+import { randomBytes, timingSafeEqual } from "node:crypto";
 import { mkdir, rm, writeFile, copyFile } from "node:fs/promises";
 import * as http from "node:http";
 import type { AddressInfo } from "node:net";
@@ -225,8 +225,11 @@ async function serve(
   }
   // Token in the Authorization header, or in the path (/mcp/<token>): Cursor 3.24 drops the
   // headers of servers registered through vscode.cursor.mcp.registerServer.
-  const pathToken = req.url?.split("?")[0] === `/mcp/${token}`;
-  if (req.headers.authorization !== `Bearer ${token}` && !pathToken) {
+  const requestPath = req.url?.split("?")[0] ?? "";
+  if (
+    !sameSecret(req.headers.authorization, `Bearer ${token}`) &&
+    !sameSecret(requestPath, `/mcp/${token}`)
+  ) {
     log.warn(`Agent bridge rejected ${req.method} ${route}: no valid token`);
     // 404 for OAuth discovery probes (/.well-known/...), so clients don't start an OAuth flow.
     res.writeHead(route === "/mcp" ? 401 : 404).end();
@@ -244,6 +247,17 @@ async function serve(
       res.writeHead(500).end();
     }
   }
+}
+
+/**
+ * Whether `candidate` is `expected`, taking as long whatever it is: an
+ * early-exit compare tells another local process how much of a guess was
+ * right. Only the length (fixed by the token) can differ in time.
+ */
+function sameSecret(candidate: string | undefined, expected: string): boolean {
+  const given = Buffer.from(candidate ?? "");
+  const wanted = Buffer.from(expected);
+  return given.length === wanted.length && timingSafeEqual(given, wanted);
 }
 
 /** Answer an MCP request with a fresh, stateless server and transport. */

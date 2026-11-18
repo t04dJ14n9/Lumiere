@@ -141,6 +141,28 @@ test("Copy appears while hovering any line of a fence (BH-015)", async ({
   await expect(language).toHaveCSS("opacity", "1");
 });
 
+test("Copy confirms on the button after the clipboard write succeeds", async ({
+  page,
+}) => {
+  await open(page, "Before\n\n```ts\nlet x = 1;\n```\n\nAfter");
+  const fence = page.locator(".cm-line.md-code-fence-open");
+  const copy = fence.locator(".copy-code");
+  await expect(copy).toHaveAttribute("aria-label", "Copy code");
+
+  await copy.click({ force: true });
+  await expect
+    .poll(() => page.evaluate(() => window.harness.clipboard))
+    .toBe("let x = 1;");
+  await expect(copy).toHaveText("Copied");
+  await expect(copy).toHaveAttribute("aria-label", "Copied");
+  await expect(copy).toHaveClass(/is-copied/);
+  await expect(copy).toHaveCSS("animation-name", "copy-code-confirmed");
+
+  await expect(copy).toHaveText("Copy", { timeout: 2_000 });
+  await expect(copy).toHaveAttribute("aria-label", "Copy code");
+  await expect(copy).not.toHaveClass(/is-copied/);
+});
+
 /** Reveals that show their source in place (audited; none may jump). */
 const inPlace: Record<string, string> = {
   "a heading": "## A heading",

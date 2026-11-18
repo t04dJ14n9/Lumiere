@@ -950,8 +950,7 @@ interface VaultIndex {
 6. Otherwise, files whose path ends with the link path: those under the
    source's folder (or a descendant) first, then the rest, each group by
    path length, shortest first, then by path. The first wins;
-   `resolveLinkCandidates` returns all of them. Inside an OKF bundle, a
-   wikilink takes the first of them in the source's bundle (okfCore).
+   `resolveLinkCandidates` returns all of them.
 
 A folder link resolves to `lumiere.markdown.links.folderNote` inside it when
 that setting is set (default empty; LLM Wiki uses `_index.md`), and otherwise
@@ -1044,7 +1043,7 @@ Short specifications, beyond the source's tested behaviour:
   auto-inserted one) and inserts `vault.linkText`; Tab takes the text only.
 - **outline**: a native Explorer tree view (like PDF Outline) of the active
   editor's headings, with click to reveal and current-heading tracking, plus
-  a heading Quick Pick on Ctrl+Shift+O in Workshop. VS Code's built-in Markdown
+  a heading Quick Pick on Ctrl+Shift+O in Lumiere. VS Code's built-in Markdown
   provider supplies Outline and breadcrumbs in the plain text editor. This
   removes the in-webview outline panel and its
   **Toggle Outline** title action.
@@ -1061,9 +1060,12 @@ Short specifications, beyond the source's tested behaviour:
   `workspace.onWillRenameFiles`), rewrite incoming links and embeds through
   `vault.backlinks`, keeping aliases, subpaths and the link style. The default
   `prompt` matches Obsidian's `alwaysUpdateLinks: false` and shows the
-  **Update links in N files?** dialog (with a persistent **Always Update** that
-  sets `always`); `always` rewrites without asking and `never` leaves links
-  untouched. Heading renames are a later enhancement.
+  **Update links in N files?** dialog (with a persistent **Always Update**
+  that updates the links and sets `always` for the renamed file's workspace
+  folder, else the workspace; the user's settings only when no folder is
+  open); `always` rewrites without asking and `never` leaves links untouched.
+  The edits are built after the answer, once the vault index has settled
+  again. Heading renames are a later enhancement.
 - **quickSwitcher**: **Lumiere: Quick Switcher** opens a quick pick
   over notes, aliases and unresolved links, with Obsidian's scoring. Enter
   opens; an unresolved or new name creates the note in the configured
@@ -1149,7 +1151,8 @@ Rules:
 ### 15.1 Editor settings (Obsidian → Lumiere)
 
 Defaults are Obsidian's application defaults, except where the owner decided
-otherwise (2026-10-09): line numbers on, readable line length off, Mermaid on.
+otherwise (2026-10-09): line numbers on, readable line length off, inline
+title off, Mermaid on (the first three are listed with their reasons in §15.3).
 Vim stays off; the owner's Vim profile is a test profile, not the product
 default (§25).
 
@@ -1169,7 +1172,7 @@ default (§25).
 | Auto pair brackets / Markdown syntax | `lumiere.markdown.autoPair.brackets`, `.markdown` | `true`, `true` |
 | Smart lists | plugin `smartLists` | on |
 | Indent using tabs, Tab indent size | `lumiere.markdown.editor.useTabs`, `.tabSize` | `true`, `4` |
-| (Workshop-specific) Text-selection edge-scroll speed | `lumiere.markdown.editor.dragScrollSpeed` (multiplier 1–10; 1 restores CodeMirror speed) | `4` |
+| (Lumiere-specific) Text-selection edge-scroll speed | `lumiere.markdown.editor.dragScrollSpeed` (multiplier 1–10; 1 restores CodeMirror speed) | `4` |
 | (Obsidian saves every open note about 2 s after its last edit) | `lumiere.markdown.editor.autosave`; VS Code's own `files.autoSave` (any mode but `off`) takes over, and an untitled note is never saved this way | `true` |
 | Auto convert HTML | plugin `pasteHtml` | on |
 | Vim key bindings | plugin `vim` | off |
@@ -1180,10 +1183,15 @@ default (§25).
 | --- | --- | --- |
 | New link format | `lumiere.markdown.links.newLinkFormat` (`shortest` \| `relative` \| `absolute`) | `shortest` |
 | Use [[Wikilinks]] | `lumiere.markdown.links.useWikilinks` | `true` |
-| Automatically update internal links | `lumiere.markdown.linkUpdates.mode` (`prompt` \| `always` \| `never`) | `prompt` (Obsidian's `alwaysUpdateLinks: false`) |
+| Automatically update internal links | `lumiere.markdown.linkUpdates.mode` (`prompt` \| `always` \| `never`; resource scope, and Always Update saves `always` for the renamed file's workspace folder) | `prompt` (Obsidian's `alwaysUpdateLinks: false`, which also asks; owner decision 2026-11-13: keep it) |
 | Default location for new notes | `lumiere.markdown.files.newNoteFolder` (empty = vault root, `.` = current folder, or a path) | empty |
 | Default location for new attachments | `lumiere.markdown.files.attachmentFolder` (same forms, plus `./sub`) | empty |
 | Excluded files | `lumiere.markdown.vault.excludedFiles` (globs) | `[]` |
+| Delete attachments when deleting files | `lumiere.markdown.attachments.deleteUnlinkedAttachments` (`ask` \| `always` \| `never`) for notes deleted in VS Code; attachments only they linked, to the trash per `files.enableTrash` | `ask` |
+| Spellcheck languages (`spellcheckLanguages`) | none: the host owns them (§15.3) | n/a |
+| Quick font size adjustment (`baseFontSizeAction`) | none: `lumiere.markdown.editor.fontSize` and **Set Note Font Size** (§15.3) | n/a |
+| Show all file types | `lumiere.markdown.vault.showUnsupportedFiles` (on: the quick switcher also finds files Obsidian cannot open; the Explorer is VS Code's and link suggestions list every file already) | `false` |
+| Always focus new tabs | `lumiere.markdown.links.focusNewTab` (off: a link opened in a new tab or beside keeps the keyboard focus, VS Code's `preserveFocus`) | `true` |
 | (no equivalent) | `lumiere.markdown.vault.rootMarkers` | `[".obsidian"]` |
 | (no equivalent) | `lumiere.markdown.links.folderNote` | `""` |
 
@@ -1213,12 +1221,52 @@ available for a later consumer. See [the plugin contract](src/plugins/obsidianCo
   Code's.
 - Theme follows VS Code's colours (headings and spacing follow Obsidian's
   default theme scale, as on the source branch).
-- Link updates on rename ask first by default.
+- Link updates on rename: the default `prompt` is Obsidian's own (its
+  `alwaysUpdateLinks: false` asks, so this is not a divergence, and `never` was
+  rejected as a default on that evidence). What differs is the dialog (VS
+  Code's, with Update Links, Always Update, Don't Update; Obsidian's has Always
+  update, Just once, Do not update) and where Always Update is saved: a
+  `lumiere.markdown.linkUpdates.mode` value in the renamed file's workspace
+  folder settings, not the vault's `.obsidian/app.json`, which is read (false
+  is `prompt`, true is `always`) and never written. An explicit value wins
+  over it.
 - The outline, backlinks, tags and plugin management use native VS Code views
   and Settings, not panes inside the editor.
 - External application links (`obsidian://`, `zotero://` and similar) need
   confirmation (Obsidian also asks); links in VS Code's own scheme
   (`vscode://`, `cursor://`) open directly.
+- Three editor defaults are the inverse of Obsidian 1.15.0's application
+  defaults (`readableLineLength: true`, `showInlineTitle: true`,
+  `showLineNumber: false`) and stay so on purpose (owner decision, issue #689):
+  readable line length is **off**, so text fills the pane as in VS Code's text
+  editor; the inline title is **off**, so line 1 starts at the top and the
+  name stays in the tab; line numbers are **on**, following
+  `editor.lineNumbers`. A reader who wants Obsidian's look turns
+  `lumiere.markdown.editor.readableLineLength` and
+  `lumiere.markdown.plugins.inlineTitle.enabled` on and `editor.lineNumbers`
+  off. The three contributed defaults are pinned in
+  `test/unit/settings/editor.test.ts`, so changing one means changing this
+  decision.
+- `spellcheckLanguages` (the languages Obsidian's spellchecker uses) has no
+  Lumiere setting. Spellcheck here is the `spellcheck` attribute of the note's
+  contenteditable (plugin `spellcheck`), and Chromium takes its dictionaries
+  from the application's spellchecker languages, which only the main process
+  sets, not from page markup. Obsidian does it through Electron's session
+  (`availableSpellCheckerLanguages`, `setSpellCheckerLanguages`) in its desktop
+  app, and on macOS only says that the system detects the language. Neither
+  VS Code's API nor an extension webview can change them, so a setting would
+  do nothing. The equivalent is the host's own: the operating system's
+  languages, or a spelling extension for the text editor.
+- `baseFontSizeAction` (Ctrl/Cmd+scroll or pinch changes the text size) has no
+  setting. VS Code's `editor.mouseWheelZoom` zooms `editor.fontSize`, which
+  notes ignore (they have `lumiere.markdown.editor.fontSize`), and VS Code's
+  zoom is temporary and window-wide where Obsidian stores the size. Honouring
+  it would mean a new wheel and pinch gesture in the webview that changes a
+  transient size, or writes the setting on every scroll, and that cannot be
+  checked without a live VS Code window. The size stays a setting:
+  `lumiere.markdown.editor.fontSize` (8 to 48, default 16), changed with **Set
+  Note Font Size**; `window.zoomLevel` and Ctrl/Cmd +/- still scale the whole
+  window.
 
 ## 16. Opening links
 
@@ -1287,10 +1335,8 @@ Copy Link for Agent still copies the text above and may open a chat. A
 separate `bridge` plugin publishes a versioned JSON envelope
 (`docs/bridge-envelope.md`) for the same selection and does not open a
 chat. Agent PDF Viewer stays a second extension: `vscodeEmbedPdf.bridge.envelope`
-is called only when that command is registered. Wiki copy commands use the
-envelope and the clipboard text, and they never start an agent. The envelope
-is a workbench protocol, not OKF metadata, and it is not a shared
-Back/Forward history.
+is called only when that command is registered. The envelope is a workbench
+protocol, not note metadata, and it is not a shared Back/Forward history.
 
 ## 18. Public API v1 and outside extensions
 

@@ -44,6 +44,11 @@ caret; a pending operator is detected in the input state, the prompt through
 `cm.state.dialog`, and `R` is insert mode with overwrite enabled. Note and table-cell extensions
 share this mode source and remove its listeners when they stop.
 
+Where the host has a status bar (VS Code, Cursor), Vim's mode (`-- NORMAL --`,
+with keys typed so far) shows there for the active editor, and the note's Vim
+panel opens only for a `:`/`/`/`?` prompt or a message. Elsewhere Vim's own
+panel shows the mode as before.
+
 While visual mode is active, Live Preview reveal stays frozen at the selection from when visual started, like the pointer-drag freeze, so extending the selection does not reflow blocks and jump the viewport.
 Mode events queue freeze/thaw transactions after CodeMirror's update lifecycle;
 the event's target mode also thaws visual-to-insert commands. The Vim extension
@@ -73,11 +78,17 @@ Keyboard-created visual selections keep Vim's text-object behavior.
 - `caret.test.ts`: mode, pending-operator, prompt and stale-state regression units.
 - `visual-reveal.ts`: freeze Live Preview reveal for the duration of visual mode.
 - `visual-reveal.test.ts`: deferred mode transitions, insert commands, selection mapping and cleanup units.
+- `status.ts`: the mode line text and its reporter.
+- `status-panel.ts`: the note's Vim panel, mounted only for prompts and messages while the host's status bar shows the mode.
+- `protocol.ts`: the `statusBar` question and `status` notification.
+- `host.ts`: `vimPanelHost` answers whether the host's status bar shows the mode; `vimHost` shows the active editor's.
+- `status.test.ts`, `../../../test/unit/vim/host-status.test.ts`: status text and status bar units.
 
 ## Services, events and settings
 
-Injects `editor` and `commands`, optionally `livePreview`; provides `vim`. No kernel event listeners or
-emissions. `lumiere.markdown.plugins.vim.enabled` defaults to false. Ex commands
+In the editor, injects `editor` and `commands`, optionally `livePreview`, `document` and `rpc`;
+provides `vim`. On the host, `vimPanelHost` injects `rpc` and `views`, and `vimHost` injects
+`views` and `editors` and listens to `editor/opened`, `editor/closed` and `editor/activeChanged`. `lumiere.markdown.plugins.vim.enabled` defaults to false. Ex commands
 `:w`, `:q`, `:wq`, `:x`, `:u` and `:red` route to save, close, save-and-close, undo
 and redo. Host shortcut bindings come from the manifest and are plugin-scoped.
 Vim mode chooses the caret shape in every mode but insert, regardless of

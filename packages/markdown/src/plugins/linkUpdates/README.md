@@ -9,22 +9,46 @@ links** setting.
 Before VS Code renames files, the plugin waits (up to five seconds) for the
 vault index to parse what is queued, finds every note that links to them
 (through the vault index's backlinks), re-reads each note's current text and
-rewrites only the path of each link: a wikilink stays a wikilink, a Markdown
+rewrites only the path of each link. A note the index has still not parsed
+when the wait ends has no backlinks yet, so its text is read too. Every
+`.canvas` file in the vault is read as well. Reading those files has one
+20-second budget, shared by the prompt's count and the rewrite (which reuses
+the count's reads), to stay inside VS Code's rename timeout; a message names
+any file left unread, or that failed to read or parse, also when the prompt
+is skipped because nothing else changes. In a canvas, a file
+node's path follows the renamed file and a text node's Markdown links are
+rewritten as a note's, from the canvas's path, and the canvas is written
+back as Obsidian writes it (`JSON.stringify` with its own indentation). In
+notes, a wikilink stays a wikilink, a Markdown
 link stays a Markdown link, and `#subpaths`, aliases, titles, `<…>`
-destinations and a table row's escaped `\|` are kept. The path is written in
+destinations and a table row's escaped `\|` are kept. A link in a property
+value is escaped for the value's quoting (`'` doubled in single quotes, `"`
+escaped in double quotes); a plain value that cannot hold the new name is
+written double-quoted, so the note's YAML stays valid. The path is written in
 the new-link format. As in Obsidian, text that only showed the renamed file's
 name follows it: a Markdown link's text equal to the note's name
 (`[Old](Old.md)`) or to its path when that has folders, and a wikilink alias
 equal to the name when the link has folders (`[[f/Old|Old]]`). A moved note's own path-style links are
 rewritten too. Folder renames cover every file inside. By default it asks
 first, matching Obsidian's `alwaysUpdateLinks: false` (Update Links, Always
-Update, which persistently sets the mode to `always`, or Don't Update).
-`always` rewrites without asking and `never` leaves links untouched. It counts
-the notes from the index's parsed links so that asking reads and rewrites
+Update or Don't Update). `always` rewrites without asking and `never` leaves
+links untouched. Always Update updates the links now and saves `always` in
+the note's workspace folder settings (the workspace's when the note is in no
+folder), so it stays with that vault as Obsidian's `app.json` does and other
+vaults still ask. If the save fails (a settings file with errors), the links
+are still updated and an error says why. An explicit value wins over
+`.obsidian/app.json`'s `alwaysUpdateLinks`, which the Obsidian compatibility
+plugin reads (false is `prompt`, true is `always`) and Lumiere never writes.
+It counts the notes from the index's parsed links so that asking reads and rewrites
 nothing (unless a note is still unparsed, then from the notes' current text),
 and builds the edits once, after the answer, so text typed while the dialog is
 open is what gets rewritten. The edits are applied together with the rename, so
 one undo reverts them.
+
+Each file's edits carry the text they were computed from. When VS Code
+runs the rename, a note whose text has changed since (typed in while the
+prompt or the scan ran) gets no edits: line and column positions from the
+old text would land in the wrong place. A warning names it.
 
 When the rename finishes, each note is brought to the text planned for it and
 saved if it had no unsaved changes. A note edited after the plan was made is
@@ -47,6 +71,9 @@ others; a message names it.
 
 - `host.ts`: the rename hook, the prompt and folder expansion.
 - `rewrite.ts`: the links a rename changes in one note, and their edits.
+- `canvas.ts`: a `.canvas` file's file nodes and text-node links after a
+  rename.
+- `yaml-safe-edits.ts`: link edits escaped for the property value around them.
 - `link-source.ts`: a link's source split around its path, and written back.
 - `rename-label.ts`: the alias or link text that follows a rename.
 - `manifest.ts`: the plugin's switch and `mode` setting.
@@ -61,6 +88,11 @@ others; a message names it.
 
 - Only renames made in VS Code (Explorer, refactoring) are seen; a rename in
   another program looks like a delete and a create.
+- The default is Obsidian's: with `alwaysUpdateLinks: false` Obsidian asks
+  too. The question is VS Code's dialog, with Update Links, Always Update and
+  Don't Update where Obsidian has Always update, Just once and Do not update.
+  Always Update is saved per workspace folder in VS Code's settings, where
+  Obsidian's `alwaysUpdateLinks` is one vault setting in `.obsidian/app.json`.
 - Rename Heading asks for the new name in a prompt; Obsidian renames in
   its own prompt too. Nested subpaths (`#Parent#Heading`) are left, as in
   Obsidian.

@@ -14,13 +14,12 @@
     "@capacitor/core": "8.6.0",
     "@capacitor/ios": "8.6.0",
     "@workshop/app": "workspace:*",
-    "@workshop/core": "workspace:*",
     "@workshop/host-node": "workspace:*",
     "@workshop/host-web": "workspace:*",
     "@workshop/ink": "workspace:*",
     "@workshop/markdown": "workspace:*"
   },
   "devDependencies": {
-    "@capacitor/cli": "8.6.0"
+    "@capacitor/cli": "8.6.2"
   }
 }

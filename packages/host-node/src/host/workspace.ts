@@ -4,7 +4,6 @@
  * small persistent state. Every path is checked against the roots first.
  */
 import type {
-  DiagnosticSink,
   Extensions,
   HostWorkspace,
   WorkerLauncher,
@@ -32,10 +31,7 @@ export function createHostWorkspace({
     folders: roots,
     // The host runs only what its owner installed and opened.
     isTrusted: () => true,
-    read: async (uri) => {
-      await inside(uri);
-      return files.readBytes(uri);
-    },
+    read: async (uri) => files.readBytes(uri, await inside(uri)),
     stat: async (uri) => {
       await inside(uri);
       const info = await files.linkStat(uri);
@@ -54,16 +50,9 @@ export function createHostWorkspace({
       : {}),
     watch: (uri, listener) => watchContained(inside, files, uri, listener),
     files: createWorkspaceFiles(files, roots),
-    diagnostics: noDiagnostics,
     revealTextEditor: async () => {},
   };
 }
-
-/** No Problems list outside VS Code. */
-const noDiagnostics: DiagnosticSink = {
-  replaceAll: () => {},
-  clear: () => {},
-};
 
 export function createWorkspaceFiles(
   files: HostFiles,
@@ -81,13 +70,12 @@ export function createWorkspaceFiles(
 
 function workspaceFileReads(
   files: HostFiles,
-  inside: (uri: string) => Promise<void>,
+  inside: (uri: string) => Promise<string>,
 ): Pick<WorkspaceFiles, "readText" | "list" | "isSymbolicLink"> {
   return {
     readText: async (uri) => {
       try {
-        await inside(uri);
-        return await files.readText(uri);
+        return await files.readText(uri, await inside(uri));
       } catch {
         return undefined;
       }
@@ -111,44 +99,71 @@ function workspaceFileReads(
   };
 }
 
+/**
+ * What a write does before it fills a file: check, make the parent folders,
+ * check again, create. Each step yields the root the file must stay in, which
+ * the write passes on so the platform verifies the file it opens.
+ */
+function containedWrites(
+  files: HostFiles,
+  inside: (uri: string) => Promise<string>,
+) {
+  // The parent folders, then the check again: a folder swapped for a link
+  // after the first check would have had them made outside.
+  const prepareParent = async (uri: string) => {
+    const root = await inside(uri);
+    await files.mkdir(parentUri(files, uri));
+    await inside(uri);
+    return root;
+  };
+  // `save` / `saveBytes` only replace; `create` leaves an existing file as-is.
+  const prepareWrite = async (uri: string) => {
+    const root = await prepareParent(uri);
+    return { root, isCreated: await files.create(uri, root) };
+  };
+  // Only the writer that made the file fills it.
+  const createFilled = async (
+    uri: string,
+    fill: (root: string) => Promise<void>,
+  ) => {
+    const { root, isCreated } = await prepareWrite(uri);
+    if (!isCreated) {
+      return false;
+    }
+    await fill(root);
+    return true;
+  };
+  return { prepareWrite, createFilled };
+}
+
 function workspaceFileWrites(
   files: HostFiles,
-  inside: (uri: string) => Promise<void>,
+  inside: (uri: string) => Promise<string>,
 ): Pick<
   WorkspaceFiles,
   | "writeText"
   | "createText"
   | "writeBytes"
+  | "createBytes"
   | "mkdir"
   | "copy"
   | "move"
   | "remove"
 > {
-  // `save` / `saveBytes` only replace; `create` leaves an existing file as-is.
-  const prepareWrite = async (uri: string) => {
-    await inside(uri);
-    await files.mkdir(parentUri(files, uri));
-    await files.create(uri);
-  };
+  const { prepareWrite, createFilled } = containedWrites(files, inside);
   return {
     writeText: async (uri, text) => {
-      await prepareWrite(uri);
-      await files.save(uri, text);
+      const { root } = await prepareWrite(uri);
+      await files.save(uri, text, root);
     },
-    createText: async (uri, text) => {
-      await inside(uri);
-      await files.mkdir(parentUri(files, uri));
-      // Only the writer that made the file fills it.
-      if (!(await files.create(uri))) {
-        return false;
-      }
-      await files.save(uri, text);
-      return true;
-    },
+    createText: (uri, text) =>
+      createFilled(uri, (root) => files.save(uri, text, root)),
     writeBytes: async (uri, data) => {
-      await prepareWrite(uri);
-      await files.saveBytes(uri, data);
+      const { root } = await prepareWrite(uri);
+      await files.saveBytes(uri, data, root);
     },
+    createBytes: (uri, data) =>
+      createFilled(uri, (root) => files.saveBytes(uri, data, root)),
     mkdir: async (uri) => {
       await inside(uri);
       await files.mkdir(uri);
@@ -198,7 +213,7 @@ export function createWorkspaceStorage(
 
 /** Watch a file only after it is known to sit inside a workspace. */
 function watchContained(
-  inside: (uri: string) => Promise<void>,
+  inside: (uri: string) => Promise<unknown>,
   files: HostFiles,
   uri: string,
   listener: () => void,

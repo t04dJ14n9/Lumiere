@@ -135,6 +135,10 @@ function fixture() {
     lineBlockAtHeight(_height?: number) {
       return { from: view.visibleFrom };
     },
+    /** What CodeMirror has measured: here, one block over every height. */
+    get viewportLineBlocks() {
+      return [{ from: view.visibleFrom, top: 0, bottom: Infinity }];
+    },
     requestMeasure(request: {
       key: object;
       read(): unknown;
@@ -355,3 +359,104 @@ test("measurement probes below the sticky chrome height, not the hidden lines un
   // Iterates from height 0 up to the pinned row count * line height (48).
   assert.deepEqual(probed, [0, 48]);
 });
+
+test("a scroll during the same measuring, such as CodeMirror's anchoring, redraws the pins before paint", async () => {
+  const f = fixture();
+  f.scrollTo("root body");
+  assert.deepEqual(
+    pinRows(f.dom).map((row) => row.label),
+    ["Root"],
+  );
+  // An image above grows and has pushed the view into "Child"'s section
+  // when the bar measures; CodeMirror's anchoring then scrolls back up to
+  // "Root"'s body in the same measuring, with no update to say so.
+  f.view.visibleFrom = f.view.state.doc.toString().indexOf("child body");
+  f.chrome.schedule();
+  f.flush();
+  assert.deepEqual(
+    pinRows(f.dom).map((row) => row.label),
+    ["Root", "Child"],
+  );
+  f.view.visibleFrom = f.view.state.doc.toString().indexOf("root body");
+  f.view.scrollDOM.scrollTop -= 700;
+  await microtasks();
+  assert.deepEqual(
+    pinRows(f.dom).map((row) => row.label),
+    ["Root"],
+    "drawn again for where the view is now",
+  );
+
+  // Without a scroll in between, nothing is measured again.
+  let probed = 0;
+  const lineBlockAtHeight = f.view.lineBlockAtHeight.bind(f.view);
+  f.view.lineBlockAtHeight = (height?: number) => {
+    probed++;
+    return lineBlockAtHeight(height);
+  };
+  f.chrome.schedule();
+  f.flush();
+  const afterMeasure = probed;
+  await microtasks();
+  assert.equal(probed, afterMeasure);
+});
+
+test("the redraw after an anchoring scroll reads only what CodeMirror has measured", async () => {
+  const f = fixture();
+  f.scrollTo("root body");
+  f.view.visibleFrom = f.view.state.doc.toString().indexOf("child body");
+  f.chrome.schedule();
+  f.flush();
+  // lineBlockAtHeight runs CodeMirror's pending measuring at once: from
+  // here it could record an anchoring scroll before a held jump settles,
+  // and the jump would let go.
+  let flushing = 0;
+  const lineBlockAtHeight = f.view.lineBlockAtHeight.bind(f.view);
+  f.view.lineBlockAtHeight = (height?: number) => {
+    flushing++;
+    return lineBlockAtHeight(height);
+  };
+  f.view.visibleFrom = f.view.state.doc.toString().indexOf("root body");
+  f.view.scrollDOM.scrollTop -= 700;
+  await microtasks();
+  assert.equal(flushing, 0);
+  assert.deepEqual(
+    pinRows(f.dom).map((row) => row.label),
+    ["Root"],
+  );
+});
+
+test("an anchoring scroll the held jump puts back before the redraw leaves the bar as measured", async () => {
+  const f = fixture();
+  const at = (text: string) => f.view.state.doc.toString().indexOf(text);
+  f.scrollTo("root body");
+  f.chrome.schedule();
+  f.flush();
+  assert.deepEqual(
+    pinRows(f.dom).map((row) => row.label),
+    ["Root"],
+  );
+  // CodeMirror anchors the view into "Child"'s section in the same
+  // measuring; the held jump, a plugin after this one, puts it back in a
+  // microtask of its own.
+  const measured = f.view.scrollDOM.scrollTop;
+  f.view.visibleFrom = at("child body");
+  f.view.scrollDOM.scrollTop = measured + 700;
+  queueMicrotask(() => {
+    f.view.visibleFrom = at("root body");
+    f.view.scrollDOM.scrollTop = measured;
+  });
+  for (let i = 0; i < 4; i++) {
+    await microtasks();
+  }
+  assert.deepEqual(
+    pinRows(f.dom).map((row) => row.label),
+    ["Root"],
+    "not left drawn for where the view only passed through",
+  );
+});
+
+/** The redraw runs two microtasks after a measuring writes, still before paint. */
+async function microtasks(): Promise<void> {
+  await Promise.resolve();
+  await Promise.resolve();
+}

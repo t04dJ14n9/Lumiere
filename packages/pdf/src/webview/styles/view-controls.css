@@ -20,7 +20,7 @@
   outline: 1px solid var(--vscode-focusBorder, #007fd4);
 }
 
-/* Top-layer popovers remain outside a vertical floating bar's clipping area. */
+/* A top-layer popover is never clipped by the bar that opens it. */
 .view-menu {
   inset: auto 14px 42px auto;
   box-sizing: border-box;
@@ -69,8 +69,7 @@
 }
 
 @media (prefers-reduced-motion: reduce) {
-  .paged-page,
-  .floating-toolbar {
+  .paged-page {
     animation: none !important;
     transition: none !important;
   }

@@ -157,11 +157,17 @@ export async function pagePoint(viewer: Frame, number: number) {
  * browser would make a tab stop), so `focus()` on it does nothing.
  */
 export async function focusViewer(page: Page, viewer: Frame): Promise<void> {
-  const box = (await viewer.locator(".viewport").boundingBox())!;
-  await page.mouse.click(box.x + 6, box.y + box.height / 2);
-  await expect
-    .poll(() => viewer.evaluate(() => document.hasFocus()))
-    .toBe(true);
+  // Measured afresh on each try: after a layout change (entering zen) VS Code
+  // moves the webview a moment later, and a click where it was misses it.
+  await expect(async () => {
+    const box = (await viewer.locator(".viewport").boundingBox())!;
+    await page.mouse.click(box.x + 6, box.y + box.height / 2);
+    await expect
+      .poll(() => viewer.evaluate(() => document.hasFocus()), {
+        timeout: 2_000,
+      })
+      .toBe(true);
+  }).toPass({ timeout: 15_000 });
 }
 
 export type Point = { screen: [number, number]; frame: [number, number] };

@@ -4,7 +4,9 @@ Opens the Markdown notes of a [DeepSeek Harness](https://www.deepseek.com/en/har
 (DSH) workspace in Lumière's editor, in DSH's preview sidebar, instead of
 DSH's read-only preview: the same Obsidian-style Live Preview, wikilinks,
 embeds, properties, math, Mermaid and callouts as in VS Code and Cursor.
-Notes save as you type. DSH's own preview stays in the viewer menu above a
+Notes save as you type. If another program changed a note while you were
+typing, your text is saved and the other version is kept beside it as
+`Note (conflict).md`. DSH's own preview stays in the viewer menu above a
 note.
 
 ## How it works
@@ -35,19 +37,18 @@ iframe once so the retry runs against the live Host.
 ### Manifest
 
 The built `dist/bundle` is a DSH plugin bundle by virtue of its
-`package.json`, which `scripts/build.mjs` writes inline (there is no
-`scripts/manifest.json` template). `dsh.bundle.patch` points at
-`cordis.patch.yml`, which inserts the Host row `lumiere` ->
-`@lumiere/dsh` into DSH's plugin tree. The Node half's `webServer` and
-`connection` inject list is declared in `src/host/index.ts`, not in that
-package file.
+`package.json`, generated from `scripts/manifest.json`. `dsh.bundle.patch`
+points at `cordis.patch.yml`, which inserts the Host row `lumiere` ->
+`@lumiere/dsh` into DSH's plugin tree; that row is what injects `webServer`
+and `connection` into the Node half.
 
-`dsh.client` is `{ platform: "web" }` only; it does not set `immediately`
-or a client `inject` list. The `./client` export exposes `client.js`;
-`./locale/*.json` exports the locale metadata. A top-level `icon` field
-names `./icon.png`, which the builder copies from `media/icon.png`. Preview
-and sidebar registration live in the client source, not the package
-manifest. The generated package.json has no `files` list.
+`dsh.client` marks the browser half `platform: "web"`, loads it
+`immediately`, and lists DSH's document-preview and right-sidebar client UI
+under `inject`. The `./client` export exposes `client.js` in DSH's
+`__ModuleLoader__` format; `./locale/*.json` and `./icon` export the locale
+metadata and `icon.png` (also named by the top-level `icon`) that Plugin
+Manager uses for its display name, description and icon. A `files` list names
+what is shipped.
 
 ## Files
 
@@ -62,7 +63,9 @@ What is DSH's:
 - `src/client/note-frame.ts`: the editor iframe: load and ready handling, one retry after a failed handshake, theme and following links.
 - `src/client/address.ts`: DSH's file addresses.
 - `src/client/theme.ts`: DSH's theme tokens as host-node's palette.
+- `scripts/manifest.json`: the bundle's `package.json` template (the DSH contract).
 - `bundle/`: `cordis.patch.yml`, the locale metadata and the bundle's README.
+- `test/unit/manifest.test.ts`: checks the manifest, locales, icon and patch.
 - `scripts/build.mjs`: writes the bundle `package.json` and builds `dist/bundle`.
 
 ## Services, routes and settings
@@ -133,9 +136,14 @@ of the Host mid-handshake), it recreates the iframe once, and DSH's Reload and
 - Renaming a note from its inline title is not available.
 - The editor page is same-origin with DSH, so its strict content security
   policy (scripts by nonce only) is what keeps a note's scripts from running.
-  The page can still read DSH's DOM, which is how it follows the theme.
+  The page can still read DSH's DOM, which is how it follows the theme. A
+  vault's own files (`/lumiere/file`) are sandboxed and its scripts served
+  as text, so an HTML page or SVG opened from a vault does not run on DSH's
+  origin.
 - A workspace that is the filesystem root is refused. The root otherwise is
-  the directory DSH's preview names for that note; the host re-checks every
-  path against it.
+  the session's workspace DSH's preview names for that note; the host
+  re-checks every path against it. A note DSH names by absolute path has no
+  workspace: its folder stands in, and the session's workspace that holds
+  it still opens later.
 - Copying a file into the vault from outside the workspace is refused.
   DSH has no file picker for that yet.

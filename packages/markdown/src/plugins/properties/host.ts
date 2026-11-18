@@ -2,9 +2,9 @@ import type { Context, Plugin } from "@workshop/core";
 import type { PanelShell, WorkspaceStorage } from "../../shared/host";
 import type {} from "../vault/api";
 import type {} from "./api";
-import { canSetPropertyType } from "../../markdown/properties/types";
 import { joinContained } from "../../shared/workspace-path";
 import { PropertyTypeStore } from "./type-store";
+import { VaultPropertyTypes } from "./vault-types";
 import { PropertyCollapseStore } from "./collapse-store";
 import { vaultPropertyNames } from "./property-names";
 import { protocol } from "./protocol";
@@ -20,12 +20,11 @@ export const propertiesHost: Plugin<{ panel: PanelShell }> = {
   name: "properties",
   inject: {
     required: ["rpc", "storage", "vault"],
-    optional: ["workspace", "settings"],
+    optional: ["workspace", "settings", "obsidianCompat"],
   },
   apply(ctx, { panel }) {
     const preferences = sharedStores(ctx.storage);
     registerTypes(ctx, preferences.types);
-    registerPropertyNames(ctx, preferences.types);
     registerDisclosure(ctx, preferences.collapse, panel.document.uri);
     registerSnippets(ctx);
   },
@@ -46,38 +45,48 @@ function sharedStores(storage: WorkspaceStorage): PropertyStores {
 
 function registerTypes(ctx: Context, preferences: PropertyTypeStore): void {
   const scope = ctx.vault.root;
-  ctx.effect(() =>
-    ctx.rpc.handle(protocol, "types", () => preferences.read(scope)),
-  );
-  ctx.effect(() =>
-    ctx.rpc.handle(protocol, "setType", async ({ key, kind }) => {
-      if (!canSetPropertyType(key, kind ?? null)) {
-        throw new Error("Invalid or reserved property type preference");
+  const types = new VaultPropertyTypes(scope, preferences, ctx.obsidianCompat);
+  const notify = () => {
+    void types.read().then((current) => {
+      if (ctx.isLive) {
+        ctx.rpc.notify(protocol, "types", current);
       }
-      await preferences.set(scope, key, kind ?? null);
-      return preferences.read(scope);
-    }),
+    });
+  };
+  ctx.effect(() => ctx.rpc.handle(protocol, "types", () => types.read()));
+  ctx.effect(() =>
+    ctx.rpc.handle(protocol, "setType", ({ key, kind }) =>
+      types.set(key, kind ?? null),
+    ),
   );
   ctx.effect(() =>
-    preferences.subscribe((root, types) => {
+    preferences.subscribe((root) => {
       if (root === scope) {
-        ctx.rpc.notify(protocol, "types", types);
+        notify();
       }
     }),
   );
+  const compat = ctx.obsidianCompat;
+  if (compat) {
+    ctx.effect(() =>
+      compat.onDidChangeVaultConfig((change) => {
+        if (change.vaultRoot === scope) {
+          notify();
+        }
+      }),
+    );
+  }
+  registerPropertyNames(ctx, types);
 }
 
-function registerPropertyNames(
-  ctx: Context,
-  preferences: PropertyTypeStore,
-): void {
+function registerPropertyNames(ctx: Context, types: VaultPropertyTypes): void {
   ctx.effect(() =>
-    ctx.rpc.handle(protocol, "names", () =>
+    ctx.rpc.handle(protocol, "names", async () =>
       vaultPropertyNames(
         ctx.vault
           .files()
           .map((file) => ctx.vault.metadata(file.path)?.frontmatter),
-        preferences.read(ctx.vault.root),
+        await types.read(),
       ),
     ),
   );

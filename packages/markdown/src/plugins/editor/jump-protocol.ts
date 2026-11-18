@@ -1,7 +1,7 @@
 import { Schema } from "@workshop/core";
 import { defineProtocol } from "../../shared/rpc/protocol";
 import { offset } from "./protocol";
-export const jumpAnchor = Schema.object({
+const jumpAnchor = Schema.object({
   selection: Schema.object({ anchor: offset, head: offset }),
   scroll: Schema.object({
     from: offset,

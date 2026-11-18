@@ -85,7 +85,7 @@ function registerUnresolvedLinks(ctx: Context, panel: PanelShell): void {
 }
 
 /** The note's unresolved link paths, lower-cased, sorted and de-duplicated. */
-export function unresolvedPaths(vault: VaultIndex, source: string): string[] {
+function unresolvedPaths(vault: VaultIndex, source: string): string[] {
   const keys = new Set(
     [...vault.unresolvedLinks(source).keys()].map((path) => path.toLowerCase()),
   );
@@ -177,9 +177,8 @@ async function openInternal(
   const { path, fragment } = linkParts(request.href);
   const root = ctx.vault.root;
   const source = notePath(root, sourceUri);
-  const located = openedVaultTarget(ctx.vault, path, source, request.wiki);
-  let uri = located.uri;
-  if (!uri && located.passthrough) {
+  let uri = openedVaultTarget(ctx.vault, path, source, request.wiki);
+  if (!uri) {
     uri = await navigation.resolve({
       root,
       ...(intent ? { intent } : {}),
@@ -199,15 +198,27 @@ async function openInternal(
   if (!uri || !liveIntent(ctx, intent)) {
     return false;
   }
-  await navigation.open(
-    root,
-    uri,
-    fragment,
-    placeOf(request),
-    request.at,
-    intent,
-  );
+  const place = placeOf(request);
+  await navigation.open(root, uri, fragment, place, request.at, intent, {
+    preserveFocus: keepsFocus(ctx, panel, place),
+  });
   return true;
+}
+
+/**
+ * A new tab or split opens without taking the focus when `focusNewTab` is off;
+ * the current tab is the one the reader is already in.
+ */
+function keepsFocus(
+  ctx: Context,
+  panel: PanelShell,
+  place: OpenPlace,
+): boolean {
+  return (
+    place !== "here" &&
+    ctx.settings.forNote(panel.document).features?.links?.config.focusNewTab ===
+      false
+  );
 }
 
 /** Beside, in a tab of its own (Cmd-click), or in the current group. */

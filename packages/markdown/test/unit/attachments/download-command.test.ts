@@ -54,10 +54,11 @@ async function run(
         list: async (uri: string) =>
           uri.replace(/\/$/u, "") === ROOT ? ["Note.md", "cat.png"] : [],
         mkdir: async () => {},
-        writeBytes: async (uri: string) => {
+        createBytes: async (uri: string) => {
           result.written.push(uri);
+          return true;
         },
-        writeText: async () => {},
+        createText: async () => true,
         isSymbolicLink: async () => false,
       },
     },

@@ -19,9 +19,9 @@
  *   the file.
  *
  * `producer` is `"pdf"`. Lumiere uses the same version and
- * `producer: "markdown"`. Workshop is the aggregator: it returns a Markdown
+ * `producer: "markdown"`. Lumiere is the aggregator: it returns a Markdown
  * selection when it has one, otherwise it calls this command. This command
- * does not call Workshop back, so the two cannot recurse. See
+ * does not call Lumiere back, so the two cannot recurse. See
  * `docs/bridge-envelope.md`.
  */
 import { boundingRect, toViewRect } from "./geometry";
@@ -134,10 +134,7 @@ export function durableLocatorBase(uriOrPath: string): string {
 }
 
 /** Primary durable `#page=` / `viewrect` link for a selection (first page). */
-export function pdfSelectionDurable(
-  base: string,
-  selection: PdfSelection,
-): string {
+function pdfSelectionDurable(base: string, selection: PdfSelection): string {
   const pages = selectedPages(selection);
   const first = pages[0]!;
   return pdfLink(durableLocatorBase(base), {

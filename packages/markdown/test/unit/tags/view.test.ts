@@ -5,7 +5,7 @@ import { createRoot } from "@workshop/core";
 import tagsManifest from "../../../src/plugins/tags/manifest";
 import { SEARCH_COMMAND, VIEW_ID } from "../../../src/plugins/tags/tree";
 import { tagsViewHost } from "../../../src/plugins/tags/view";
-import { workbenchFeatures } from "../../../src/host/workshop-features";
+import { workbenchFeatures } from "../../../src/host/workbench-features";
 import {
   fakeViews,
   memoryVaults,

@@ -20,21 +20,12 @@ test("property sheet distinguishes editable scalars, list chips and Obsidian unk
   assert.doesNotMatch(html, /<script>|<b>/);
 });
 
-test("generated is its YAML in an editable field; sources is a plain text property that scrolls", () => {
+test("generated is Obsidian Unknown JSON; sources is a plain text property that scrolls", () => {
   const html = renderProperties(
     '---\ngenerated:\n  by: agent\n  at: "2026-10-15T00:00:00Z"\nsources:\n  - resource: ../raw/a.pdf\n    id: a1\nnote: hello\n---\n',
   );
-  assert.match(html, /data-property-type="generated"/);
-  const generated = html.match(
-    /<textarea [^>]*data-property-input="generated"[^>]*>([\s\S]*?)<\/textarea>/,
-  );
-  assert.ok(generated, "generated is a text field");
-  assert.match(generated![0], /data-property-kind="yaml"/);
-  // Reads like other text values, two lines tall, with no empty last line.
-  assert.match(generated![0], /class="[^"]*mod-inline" rows="2"/);
-  assert.doesNotMatch(generated![1]!, /\n$/);
-  assert.match(generated![1]!, /by: agent/);
-  assert.match(generated![1]!, /at: /);
+  assert.match(html, /data-property-key="generated"[\s\S]*mod-unknown/);
+  assert.doesNotMatch(html, /data-property-type="generated"/);
   assert.match(
     html,
     /data-property-input="sources"[^>]*data-property-kind="text"/,
@@ -43,96 +34,6 @@ test("generated is its YAML in an editable field; sources is a plain text proper
   assert.match(
     html,
     /class="metadata-input-longtext mod-scroll"[^>]*data-property-input="sources"/,
-  );
-  assert.match(
-    html,
-    /class="metadata-input-longtext"[^>]*data-property-input="note"/,
-  );
-  assert.match(
-    html,
-    /data-property-key="sources"[\s\S]*data-property-type="text"/,
-  );
-  assert.match(
-    html,
-    /data-property-input="note"[^>]*data-property-kind="text"/,
-  );
-  assert.match(html, /resource: \.\.\/raw\/a\.pdf/);
-  assert.doesNotMatch(
-    html,
-    /source-row|source-title|mod-unknown|data-property-type="sources"|data-property-list="sources"|data-property-input="sources"[^>]*data-property-kind="yaml"/,
-  );
-});
-
-test("a string sources value uses the same text control as any other string", () => {
-  const html = renderProperties(
-    "---\nsources: https://example.com/paper\nnote: hello\n---\n",
-  );
-  assert.match(html, />https:\/\/example.com\/paper</);
-  assert.match(
-    html,
-    /data-property-input="sources"[^>]*data-property-kind="text"/,
-  );
-  assert.match(
-    html,
-    /data-property-input="note"[^>]*data-property-kind="text"/,
-  );
-  assert.doesNotMatch(html, /source-row|source-title|property-complex/);
-});
-
-test("a custom renderer cannot replace the sources text field", () => {
-  const html = renderProperties(
-    "---\nsources: hello\n---\n",
-    {},
-    {
-      renderValue: (key) =>
-        key === "sources"
-          ? '<div class="source-rows"><p class="source-title">hello</p></div>'
-          : undefined,
-    },
-  );
-  assert.match(html, /data-property-kind="text">hello</);
-  assert.doesNotMatch(
-    html,
-    /source-title|source-rows|data-property-type="sources"/,
-  );
-});
-
-test("decision confidence maps and lists of maps render as Obsidian unknown JSON", () => {
-  const html = renderProperties(
-    "---\ndecision_conf:\n  score: 0.82\n  rationale: Evidence supports this\n  factors: [evidence, risk]\ndecisions:\n  - score: 0.9\n    factors: [review]\n---\n",
-  );
-  for (const key of ["decision_conf", "decisions"]) {
-    assert.match(
-      html,
-      new RegExp(`data-property-key="${key}"[\\s\\S]*mod-unknown`),
-    );
-  }
-  assert.match(html, /&quot;score&quot;:0\.82/);
-  assert.doesNotMatch(html, /data-property-kind="yaml"/);
-  assert.doesNotMatch(html, /class="property-chip"|class="property-object"/);
-});
-
-test("nested references outside a property's raw slice stay Source-mode (no lossy stringify)", () => {
-  const html = renderProperties(
-    "---\nfactors: &f [evidence, risk]\ndecision_conf:\n  score: 0.82\n  factors: *f\n---\n",
-  );
-  assert.match(html, /data-property-key="decision_conf"[\s\S]*Source mode/);
-  assert.doesNotMatch(
-    html,
-    /data-property-input="decision_conf"[^>]*data-property-kind="yaml"/,
-  );
-  assert.doesNotMatch(html, /class="property-chip"|class="property-object"/);
-});
-
-test("external alias with unsafe integer stays Source-mode (no rounded serial draft)", () => {
-  const html = renderProperties(
-    "---\nfactors: &f [risk]\ndecision_conf:\n  score: 0.82\n  serial: 9007199254740993\n  factors: *f\n---\n",
-  );
-  assert.match(html, /data-property-key="decision_conf"[\s\S]*Source mode/);
-  assert.doesNotMatch(html, /9007199254740992/);
-  assert.doesNotMatch(
-    html,
-    /data-property-input="decision_conf"[^>]*data-property-kind="yaml"/,
   );
 });
 
@@ -267,7 +168,7 @@ test("!!timestamp with +08:00 or Z keeps wall-clock in datetime-local value", ()
   assert.doesNotMatch(html, /value="2026-10-15T06:30"/);
 });
 
-test("OKF maps with nested !!timestamp stay editable YAML drafts when Date is settable", () => {
+test("maps with nested !!timestamp do not fall back to Source mode when Date is settable", () => {
   const html = renderProperties(
     "---\ngenerated: {at: !!timestamp 2026-10-15, by: old}\n---\n",
   );
@@ -352,7 +253,7 @@ test("listPreviewCount, when set, shows the top items with a disclosure", () => 
   assert.doesNotMatch(all, /Showing 3 of 5|data-property-chip-extra/);
 });
 
-test("decision_confirmation stays Obsidian Unknown JSON (not OKF typed)", () => {
+test("decision_confirmation stays Obsidian Unknown JSON", () => {
   const html = renderProperties(
     "---\ndecision_confirmation: {by: human:x, at: '2026-01-01T00:00:00Z', scope: cluster}\n---\n",
   );
@@ -363,22 +264,15 @@ test("decision_confirmation stays Obsidian Unknown JSON (not OKF typed)", () => 
   assert.doesNotMatch(html, /data-property-kind="yaml"/);
 });
 
-test("verified map and list are YAML in an editable field", () => {
-  const single = renderProperties(
-    "---\nverified: {by: human:a, at: '2026-01-01T00:00:00Z'}\n---\n",
-  );
-  assert.match(single, /data-property-type="verified"/);
-  assert.match(
-    single,
-    /<textarea [^>]*data-property-input="verified" data-property-kind="yaml">[^<]*human:a/,
-  );
-  const list = renderProperties(
-    "---\nverified:\n  - {by: human:a, at: '2026-01-01T00:00:00Z'}\n  - {by: human:b}\n---\n",
-  );
-  assert.match(
-    list,
-    /<textarea [^>]*data-property-input="verified" data-property-kind="yaml">[^<]*human:a[^<]*human:b/,
-  );
+test("verified map and list are Obsidian Unknown JSON", () => {
+  for (const yaml of [
+    "verified: {by: human:a, at: '2026-01-01T00:00:00Z'}",
+    "verified:\n  - {by: human:a}\n  - {by: human:b}",
+  ]) {
+    const html = renderProperties(`---\n${yaml}\n---\n`);
+    assert.match(html, /data-property-key="verified"[\s\S]*mod-unknown/);
+    assert.doesNotMatch(html, /data-property-kind="yaml"/);
+  }
 });
 
 test("sheet heading and add control use Obsidian class aliases and lucide-plus", () => {
@@ -394,15 +288,4 @@ test("sheet heading and add control use Obsidian class aliases and lucide-plus",
   );
   assert.match(html, /data-lucide="plus"/);
   assert.doesNotMatch(html, /＋/);
-});
-
-test("generated keeps a final newline its value needs", () => {
-  const html = renderProperties(
-    "---\ngenerated:\n  by: agent\n  notes: |+\n    a\n\n---\n",
-  );
-  const text = html.match(
-    /data-property-input="generated" data-property-kind="yaml">([\s\S]*?)<\/textarea>/,
-  )?.[1];
-  assert.ok(text);
-  assert.match(text!, /\n\n$/);
 });

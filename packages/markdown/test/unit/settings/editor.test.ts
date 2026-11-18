@@ -217,6 +217,8 @@ test("required settings, title actions, native context menus and unbound verify 
     { default: unknown; scope: string }
   >;
   for (const [key, value] of Object.entries({
+    // Deliberately not Obsidian 1.15.0's defaults (readable line length on,
+    // inline title on, line numbers off): DESIGN §15.3, owner decision #689.
     "editor.readableLineLength": false,
     "editor.strictLineBreaks": false,
     "editor.rightToLeft": false,
@@ -332,18 +334,13 @@ test("agent commands copy a reference or open a reference the user already copie
   );
   const commands = generated.commands.map((command) => command.command);
   assert.ok(commands.includes("lumiere.markdown.copyLinkForAgent"));
-  // A bare copyForAgent command would look like it starts an agent. The wiki
-  // command copies text and does not open a chat.
+  // A bare copyForAgent command would look like it starts an agent.
   assert.equal(commands.includes("lumiere.markdown.copyForAgent"), false);
   assert.deepEqual(
     generated.commands
       .filter((command) => /agent/i.test(command.command))
       .map((command) => command.title),
-    [
-      "Copy link to this",
-      "Open Copied Agent Reference",
-      "Copy Wiki Reference for Agent",
-    ],
+    ["Copy link to this", "Open Copied Agent Reference"],
   );
   assert.equal(
     settings.some((key) => key.includes("askAgent")),
@@ -357,11 +354,7 @@ test("agent commands copy a reference or open a reference the user already copie
   );
   for (const menus of Object.values(generated.menus)) {
     assert.equal(
-      menus.some(
-        (menu) =>
-          menu.command?.endsWith(".copyForAgent") &&
-          menu.command !== "lumiere.markdown.wiki.copyForAgent",
-      ),
+      menus.some((menu) => menu.command?.endsWith(".copyForAgent")),
       false,
     );
   }

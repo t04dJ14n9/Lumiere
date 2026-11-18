@@ -1,8 +1,8 @@
 /**
  * Clipboard text for a bridge envelope. Markdown matches the LLM Wiki
- * `@path#start-end` wording; PDF matches Lumiere PDF's Quote-first clipboard
- * (Chrome `#page=` / `#:~:text=`). The structured envelope is separate and
- * is not appended here.
+ * `@path#start-end` wording; PDF matches Lumiere PDF's `@path#page=N`
+ * locator and quote. The structured envelope is separate and is not
+ * appended here.
  */
 
 /** The reference, a blank line, then the selection quoted line by line. */
@@ -22,27 +22,17 @@ export interface PdfHandoffInput {
   readonly text: string;
 }
 
-/** Quote-first one-page link, the form Lumiere PDF copies. */
+/** One page's `@path#page=N` locator, a blank line, the quote, a newline: what Lumiere PDF copies. */
 export function pdfHandoffText(input: PdfHandoffInput): string {
   const body = input.text.replace(/\r\n?/gu, "\n").replace(/\n+$/u, "");
-  const slash = Math.max(
-    input.path.lastIndexOf("/"),
-    input.path.lastIndexOf("\\"),
-  );
-  const basename = slash >= 0 ? input.path.slice(slash + 1) : input.path;
-  const label = `${basename} · p.${input.page}`;
-  const target = body
-    ? `${input.path}#page=${input.page}#${encodeTextFragment(body)}`
-    : pdfTarget(input);
-  const link = `[${label}](${target})`;
   if (!body) {
-    return link;
+    return `@${pdfTarget(input)}\n`;
   }
   const quoted = body
     .split("\n")
     .map((line) => (line ? `> ${line}` : ">"))
     .join("\n");
-  return `${quoted}\n>\n> ${link}`;
+  return `@${input.path}#page=${input.page}\n\n${quoted}\n`;
 }
 
 /** Durable PDF locator for envelopes: `#page=` and optional `&viewrect=`. */
@@ -58,12 +48,4 @@ export function pdfTarget(input: {
   }
   const box = [rect.x, rect.y, rect.width, rect.height].join(",");
   return `${page}&viewrect=${box}`;
-}
-
-/** Encode one textStart value per WICG Text Fragments (dash/amp/comma). */
-function encodeTextFragment(text: string): string {
-  const body = encodeURIComponent(text)
-    .replace(/-/gu, "%2D")
-    .replace(/'/gu, "%27");
-  return `:~:text=${body}`;
 }

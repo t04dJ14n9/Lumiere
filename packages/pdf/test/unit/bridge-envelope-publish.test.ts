@@ -42,7 +42,7 @@ function panel(): PdfPanel {
   } as unknown as PdfPanel;
 }
 
-test("Copy Link for Agent still writes the source-link clipboard text and does not call the workbench envelope", async () => {
+test("Copy Link for Agent still writes the locator and quote clipboard text and does not call the workbench envelope", async () => {
   const calls: string[] = [];
   const clipboard: string[] = [];
   const originalWrite = vscode.env.clipboard.writeText;
@@ -62,11 +62,7 @@ test("Copy Link for Agent still writes the source-link clipboard text and does n
     assert.equal(clipboard.length, 1);
     assert.equal(
       clipboard[0],
-      [
-        "> Scaled dot-product attention",
-        ">",
-        "> [attention_v2.pdf · p.3](papers/attention_v2.pdf#page=3#:~:text=Scaled%20dot%2Dproduct%20attention)",
-      ].join("\n"),
+      "@papers/attention_v2.pdf#page=3\n\n> Scaled dot-product attention\n",
     );
     assert.doesNotMatch(clipboard[0] ?? "", /Source:|SHA-256|\\_/u);
     assert.equal(calls.includes(MARKDOWN_BRIDGE_ENVELOPE_COMMAND), false);

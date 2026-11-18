@@ -73,7 +73,7 @@ export function pagedDragHandler(options: {
     }
   };
   return {
-    id: "lumia-paged-drag",
+    id: "lumiere-paged-drag",
     priority: PAGED_DRAG_PRIORITY,
     enabledFor: (tool) => options.isPaged() && tool.enables.has("scroll"),
     onPointerDown: (sample) => {

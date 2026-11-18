@@ -1,6 +1,9 @@
 import test from "node:test";
 import assert from "node:assert/strict";
-import { mergeDiskChange } from "../../../src/shared/document/merge";
+import {
+  diskChangeConflicts,
+  mergeDiskChange,
+} from "../../../src/shared/document/merge";
 
 const merge = (saved: string, buffer: string, disk: string) =>
   mergeDiskChange({ saved, buffer, disk });
@@ -128,5 +131,24 @@ test("edits and deletions on different lines always all survive", () => {
       join(expected),
       `round ${round}`,
     );
+    assert.equal(
+      conflicts(join(base), join(ours), join(theirs)),
+      false,
+      `round ${round}`,
+    );
   }
+});
+
+const conflicts = (saved: string, buffer: string, disk: string) =>
+  diskChangeConflicts({ saved, buffer, disk });
+
+test("only a change both sides made differently to the same lines conflicts", () => {
+  assert.equal(conflicts("a\nb\nc", "a\nmine\nc", "a\ntheirs\nc"), true);
+  assert.equal(conflicts("a\nb\nc", "A\nb\nc", "a\nb\nC"), false);
+  assert.equal(conflicts("a\nb\nc", "A\nb\nc", "a\nB\nc"), false);
+  assert.equal(conflicts("a\nb", "a\nmine\nb", "a\ntheirs\nb"), false);
+  assert.equal(conflicts("a\nb", "a\nB", "a\nB"), false);
+  assert.equal(conflicts("a\nb\nc", "a\nc", "a\nB\nc"), true);
+  assert.equal(conflicts("a\nb", "A\nb", "a\nb"), false);
+  assert.equal(conflicts("a\nb", "a\nb", "A\nb"), false);
 });

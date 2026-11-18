@@ -90,7 +90,7 @@ function readFileListField(entry: BaseNoteEntry, lower: string): RuntimeVal {
   return NULL_VAL;
 }
 
-export function folderOfPath(filePath: string): string {
+function folderOfPath(filePath: string): string {
   const normalized = filePath.replace(/\\/g, "/");
   const idx = normalized.lastIndexOf("/");
   return idx >= 0 ? normalized.slice(0, idx) : "/";
@@ -116,7 +116,7 @@ export function readNoteProperty(
   return NULL_VAL;
 }
 
-export function fileHasTag(entry: BaseNoteEntry, rawTag: string): boolean {
+function fileHasTag(entry: BaseNoteEntry, rawTag: string): boolean {
   const target = rawTag.trim().replace(/^#/, "").toLowerCase();
   if (!target) {
     return false;
@@ -127,7 +127,7 @@ export function fileHasTag(entry: BaseNoteEntry, rawTag: string): boolean {
   });
 }
 
-export function fileInFolder(entry: BaseNoteEntry, rawFolder: string): boolean {
+function fileInFolder(entry: BaseNoteEntry, rawFolder: string): boolean {
   const target = rawFolder
     .trim()
     .replace(/\\/g, "/")
@@ -152,10 +152,7 @@ function linkTargetString(targetArg: RuntimeVal): string {
   return toStringVal(targetArg);
 }
 
-export function fileHasLink(
-  entry: BaseNoteEntry,
-  targetArg: RuntimeVal,
-): boolean {
+function fileHasLink(entry: BaseNoteEntry, targetArg: RuntimeVal): boolean {
   const rawTarget = linkTargetString(targetArg);
   const needle = stripMdExt(rawTarget.trim().replace(/\\/g, "/")).toLowerCase();
   if (!needle) {
@@ -169,10 +166,7 @@ export function fileHasLink(
   });
 }
 
-export function fileHasProperty(
-  entry: BaseNoteEntry,
-  propName: string,
-): boolean {
+function fileHasProperty(entry: BaseNoteEntry, propName: string): boolean {
   const fm = entry.frontmatter;
   if (!fm) {
     return false;

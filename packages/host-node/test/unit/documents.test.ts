@@ -10,6 +10,10 @@ import {
   noteFiles,
 } from "../../src/host/documents";
 import { createNodePlatform } from "../../src/host/node-platform";
+import {
+  Autosave,
+  AUTOSAVE_DELAY_MS,
+} from "../../../markdown/src/plugins/document/autosave";
 
 /** Notes on Node's file system, as the Node host keeps them. */
 const NODE_NOTES = noteFiles(
@@ -151,6 +155,7 @@ test("a disk read that overlapped a save does not undo it", () => {
       open: true,
       writesAtStart: 0,
       writesNow: 1,
+      writing: false,
     }),
     false,
   );
@@ -161,8 +166,21 @@ test("a disk read that overlapped a save does not undo it", () => {
       open: true,
       writesAtStart: 1,
       writesNow: 1,
+      writing: false,
     }),
     true,
+  );
+  assert.equal(
+    diskReadChangesNote({
+      text: "",
+      diskText: "saved",
+      open: true,
+      writesAtStart: 1,
+      writesNow: 1,
+      writing: true,
+    }),
+    false,
+    "a read made while a save was writing",
   );
 });
 
@@ -173,8 +191,10 @@ test("a disk read in flight during a save is dropped when it resumes", async (t)
   const documents = new NoteDocuments(
     {
       ...NODE_NOTES,
+      // Only the reload's read is held; the save's own read of the disk
+      // (whether another program changed it) goes through.
       readText: (target) => {
-        if (!opened) {
+        if (!opened || pending.length > 0) {
           opened = true;
           return NODE_NOTES.readText(target);
         }
@@ -399,4 +419,235 @@ test("a note reopened and released again while its first save writes is not forg
   assert.equal(await readFile(file, "utf8"), "B");
   assert.equal(documents.text(uri), "C");
   await documents.dispose().catch(() => {});
+});
+
+test("unsaved typing saved over another program's change keeps that change beside the note", async (t) => {
+  const { file, uri, cleanup } = await note("start");
+  const documents = new NoteDocuments(NODE_NOTES, 60_000);
+  t.after(cleanup);
+  t.after(() => documents.dispose());
+  const conflicts: [string, string][] = [];
+  documents.onConflict((target, copy) => conflicts.push([target, copy]));
+  const document = await documents.open(uri);
+  await documents.apply(document, [{ from: 0, to: 0, insert: "mine: " }]);
+  // While the note is dirty the reload skips this; the save must not lose it.
+  await writeFile(file, "theirs");
+
+  assert.equal(await document.save(), true);
+  assert.equal(await readFile(file, "utf8"), "mine: start");
+  const copy = path.join(path.dirname(file), "Note (conflict).md");
+  assert.equal(await readFile(copy, "utf8"), "theirs");
+  assert.deepEqual(conflicts, [[uri, pathToFileURL(copy).toString()]]);
+  assert.equal(document.isDirty, false);
+
+  // The next save is of text that knows the disk: no second copy.
+  await documents.apply(document, [{ from: 0, to: 0, insert: "more " }]);
+  assert.equal(await document.save(), true);
+  assert.equal(conflicts.length, 1);
+});
+
+test("a save with nothing unsaved takes another program's change instead of writing over it", async (t) => {
+  const { file, uri, cleanup } = await note("start");
+  // No watch: the save finds the change before any reload would.
+  const documents = new NoteDocuments(
+    { ...NODE_NOTES, watch: () => () => {} },
+    60_000,
+  );
+  t.after(cleanup);
+  t.after(() => documents.dispose());
+  const document = await documents.open(uri);
+  await documents.apply(document, [{ from: 0, to: 0, insert: "x" }]);
+  await documents.apply(document, [{ from: 0, to: 1, insert: "" }]);
+  assert.equal(document.isDirty, false);
+  await writeFile(file, "theirs");
+
+  assert.equal(await document.save(), true);
+  assert.equal(await readFile(file, "utf8"), "theirs");
+  assert.equal(document.getText(), "theirs");
+  assert.equal(document.isDirty, false);
+});
+
+test("a reload that reads the file while a save has emptied it does not empty the note", async (t) => {
+  // Saves replace the file in place: it is empty between the truncation and
+  // the write, and the truncation alone wakes the watch.
+  let disk = "start";
+  const watchers = new Set<() => void>();
+  const documents = new NoteDocuments(
+    {
+      ...NODE_NOTES,
+      readText: async () => disk,
+      watch: (_uri, listener) => {
+        watchers.add(listener);
+        return () => watchers.delete(listener);
+      },
+      save: async (_uri, text) => {
+        disk = "";
+        for (const listener of watchers) {
+          listener();
+        }
+        await new Promise((resolve) => setTimeout(resolve, 30));
+        disk = text;
+      },
+    },
+    60_000,
+  );
+  t.after(() => documents.dispose());
+  const document = await documents.open("file:///v/Note.md");
+  // Typed and undone before the pause: the autosave writes a clean note.
+  await documents.apply(document, [{ from: 0, to: 0, insert: "x" }]);
+  await documents.apply(document, [{ from: 0, to: 1, insert: "" }]);
+  assert.equal(await document.save(), true);
+  await new Promise((resolve) => setTimeout(resolve, 20));
+  assert.equal(document.getText(), "start");
+  assert.equal(document.isDirty, false);
+  assert.equal(disk, "start");
+});
+
+test("another program's change that lands during a save is read once the save is written", async (t) => {
+  let disk = "start";
+  const watchers = new Set<() => void>();
+  const documents = new NoteDocuments(
+    {
+      ...NODE_NOTES,
+      readText: async () => disk,
+      watch: (_uri, listener) => {
+        watchers.add(listener);
+        return () => watchers.delete(listener);
+      },
+      save: async (_uri, text) => {
+        disk = text;
+        await new Promise((resolve) => setTimeout(resolve, 10));
+        disk = "theirs";
+        for (const listener of watchers) {
+          listener();
+        }
+        await new Promise((resolve) => setTimeout(resolve, 20));
+      },
+    },
+    60_000,
+  );
+  t.after(() => documents.dispose());
+  const document = await documents.open("file:///v/Note.md");
+  await documents.apply(document, [{ from: 5, to: 5, insert: "!" }]);
+  assert.equal(await document.save(), true);
+  await until(() => document.getText() === "theirs");
+  assert.equal(document.isDirty, false);
+});
+
+test("typing during a save's disk read is kept when another program changed the note", async (t) => {
+  const { file, uri, cleanup } = await note("start");
+  let holdReads = false;
+  const held: Array<() => void> = [];
+  const documents = new NoteDocuments(
+    {
+      ...NODE_NOTES,
+      watch: () => () => {},
+      readText: async (target) => {
+        if (holdReads) {
+          await new Promise<void>((resolve) => held.push(resolve));
+        }
+        return NODE_NOTES.readText(target);
+      },
+    },
+    60_000,
+  );
+  t.after(cleanup);
+  t.after(() => documents.dispose());
+  const conflicts: string[] = [];
+  documents.onConflict((_target, copy) => conflicts.push(copy));
+  const document = await documents.open(uri);
+  await writeFile(file, "external");
+
+  holdReads = true;
+  const saved = document.save();
+  await until(() => held.length === 1);
+  holdReads = false;
+  await documents.apply(document, [{ from: 0, to: 0, insert: "typed " }]);
+  held[0]!();
+
+  assert.equal(await saved, true);
+  assert.equal(document.getText(), "typed start");
+  assert.equal(await readFile(file, "utf8"), "typed start");
+  assert.equal(conflicts.length, 1);
+  const copy = path.join(path.dirname(file), "Note (conflict).md");
+  assert.equal(await readFile(copy, "utf8"), "external");
+});
+
+test("a save that cannot read the file to check for another program's change does not write", async (t) => {
+  const { file, uri, cleanup } = await note("start");
+  let readable = true;
+  const documents = new NoteDocuments(
+    {
+      ...NODE_NOTES,
+      watch: () => () => {},
+      readText: (target) =>
+        readable
+          ? NODE_NOTES.readText(target)
+          : Promise.reject(
+              Object.assign(new Error("EACCES: permission denied"), {
+                code: "EACCES",
+              }),
+            ),
+    },
+    60_000,
+  );
+  t.after(cleanup);
+  t.after(() => documents.dispose().catch(() => {}));
+  const document = await documents.open(uri);
+  await documents.apply(document, [{ from: 0, to: 0, insert: "mine: " }]);
+  await writeFile(file, "theirs");
+  readable = false;
+
+  await assert.rejects(document.save(), /EACCES/);
+  assert.equal(await readFile(file, "utf8"), "theirs");
+  assert.equal(document.isDirty, true);
+  assert.equal(document.getText(), "mine: start");
+  readable = true;
+});
+
+test("the editor's autosave over another program's conflicting change keeps that change beside the note first", async (t) => {
+  const { file, uri, cleanup } = await note("start");
+  // No watch: the autosave's save finds the change, as when its event is late.
+  const documents = new NoteDocuments(
+    { ...NODE_NOTES, watch: () => () => {} },
+    60_000,
+  );
+  t.after(cleanup);
+  t.after(() => documents.dispose());
+  const conflicts: string[] = [];
+  documents.onConflict((_target, copy) => conflicts.push(copy));
+  const document = await documents.open(uri);
+  let saving: Promise<boolean> | undefined;
+  t.mock.timers.enable({ apis: ["setTimeout"] });
+  const autosave = new Autosave({
+    document,
+    settings: {
+      forNote: () => ({
+        preset: "minimal",
+        mode: "source",
+        editor: {
+          useTabs: true,
+          tabSize: 4,
+          autosave: true,
+          filesAutoSave: "off",
+        },
+      }),
+    },
+    save: () => (saving = document.save()),
+    logger: { warn: () => {} } as never,
+  });
+  t.after(() => autosave.dispose());
+
+  await documents.apply(document, [{ from: 0, to: 0, insert: "mine: " }]);
+  autosave.edited();
+  await writeFile(file, "theirs");
+  t.mock.timers.tick(AUTOSAVE_DELAY_MS);
+
+  assert.ok(saving, "the countdown saved the note");
+  assert.equal(await saving, true);
+  const copy = path.join(path.dirname(file), "Note (conflict).md");
+  assert.equal(await readFile(copy, "utf8"), "theirs");
+  assert.equal(await readFile(file, "utf8"), "mine: start");
+  assert.deepEqual(conflicts, [pathToFileURL(copy).toString()]);
+  assert.equal(document.isDirty, false);
 });
