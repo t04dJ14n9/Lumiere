@@ -63,14 +63,10 @@ async function selectWords(page: Page) {
 }
 
 /** Highlight the first line's words from the context menu; returns a point inside the mark. */
-async function highlightWords(page: Page, note?: string) {
+async function highlightWords(page: Page) {
   const baseline = await highlightMarkCount(page);
   const at = await selectWords(page);
-  await sendAction(page, {
-    action: "markSelection",
-    tool: "highlight",
-    ...(note ? { note } : {}),
-  });
+  await sendAction(page, { action: "markSelection", tool: "highlight" });
   await expect.poll(() => highlightMarkCount(page)).toBeGreaterThan(baseline);
   return { baseline, inside: at(140, TEXT_MIDLINE), at };
 }
@@ -114,15 +110,7 @@ test("Highlight marks the selected text and keeps it beside the PDF", async ({
   expect(await sent(page, "annotationSave")).toHaveLength(0);
 });
 
-test("Add Annotation puts the note on the highlight", async ({ page }) => {
-  await open(page, "?toolbar=chrome");
-  await highlightWords(page, "Read this twice");
-  await expect
-    .poll(async () => (await keptMarks(page)).map((item) => item.data.contents))
-    .toContain("Read this twice");
-});
-
-test("the Mark Text submenu underlines the selected text", async ({ page }) => {
+test("Underline marks the selected text", async ({ page }) => {
   await open(page, "?toolbar=chrome");
   await selectWords(page);
   await sendAction(page, { action: "markSelection", tool: "underline" });
@@ -135,27 +123,32 @@ test("a right-click on a mark offers its note, colour and Delete", async ({
   page,
 }) => {
   await open(page, "?toolbar=chrome");
-  const { baseline, inside } = await highlightWords(page, "First thought");
-  // The note goes on once the engine has the highlight: wait for it.
+  const { baseline, inside } = await highlightWords(page);
+  // Kept before the right-click: only Lumiere's own marks answer the menu.
   await expect
-    .poll(async () => (await keptMarks(page)).map((item) => item.data.contents))
-    .toEqual(["First thought"]);
+    .poll(async () => (await keptMarks(page)).map((item) => item.data.subtype))
+    .toEqual(["highlight"]);
   await page.mouse.click(...inside, { button: "right" });
   expect(await menuKeys(page)).toMatchObject({
     "lumiere.pdf.hasSelection": true,
     "lumiere.pdf.hasTextSelection": false,
     "lumiere.pdf.hasAnnotationSelection": true,
   });
-  // Reported as the selection: Copy Link for Agent hands the mark over, and
-  // Edit Note… starts from its note.
+  // Reported as the selection: Copy Link for Agent hands the mark over.
+  await expect
+    .poll(async () => lastSelection(page))
+    .toMatchObject({ kind: "region", mark: true });
+
+  await sendAction(page, { action: "setMarkNote", note: "First thought" });
+  await expect
+    .poll(async () => (await keptMarks(page)).map((item) => item.data.contents))
+    .toEqual(["First thought"]);
+  // Opened again on the mark, Edit Note… starts from that note.
+  await page.mouse.click(...inside);
+  await page.mouse.click(...inside, { button: "right" });
   await expect
     .poll(async () => lastSelection(page))
     .toMatchObject({ kind: "region", mark: true, note: "First thought" });
-
-  await sendAction(page, { action: "setMarkNote", note: "Second thought" });
-  await expect
-    .poll(async () => (await keptMarks(page)).map((item) => item.data.contents))
-    .toEqual(["Second thought"]);
 
   await sendAction(page, { action: "setMarkColor", color: "#4DABF7" });
   await expect

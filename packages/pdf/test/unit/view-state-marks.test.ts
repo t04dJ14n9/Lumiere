@@ -1,10 +1,6 @@
 import assert from "node:assert/strict";
 import { test } from "node:test";
-import {
-  MAX_NOTE_LENGTH,
-  parseViewState,
-  parseViewerAction,
-} from "../../src/shared/view-state";
+import { parseViewState, parseViewerAction } from "../../src/shared/view-state";
 import { DEFAULT_VIEW_CHOICES } from "../../src/shared/view-settings";
 
 const baseView = {
@@ -37,34 +33,25 @@ test("the Annotate actions are gone", () => {
   }
 });
 
-test("markSelection takes a text tool and an optional note", () => {
-  assert.deepEqual(
-    parseViewerAction({ action: "markSelection", tool: "highlight" }),
-    { action: "markSelection", tool: "highlight" },
-  );
-  assert.deepEqual(
-    parseViewerAction({
+test("markSelection takes one of the four text marks, and nothing else", () => {
+  for (const tool of ["highlight", "underline", "strikeout", "squiggly"]) {
+    assert.deepEqual(parseViewerAction({ action: "markSelection", tool }), {
       action: "markSelection",
-      tool: "highlight",
-      note: "check this",
-    }),
-    { action: "markSelection", tool: "highlight", note: "check this" },
-  );
+      tool,
+    });
+  }
   assert.equal(
     parseViewerAction({ action: "markSelection", tool: "ink" }),
     undefined,
   );
-  assert.equal(
-    parseViewerAction({ action: "markSelection", tool: "highlight", note: 3 }),
-    undefined,
-  );
-  assert.equal(
+  // A note no longer rides along (Add Annotation is gone); it is dropped.
+  assert.deepEqual(
     parseViewerAction({
       action: "markSelection",
       tool: "highlight",
-      note: "x".repeat(MAX_NOTE_LENGTH + 1),
+      note: "x",
     }),
-    undefined,
+    { action: "markSelection", tool: "highlight" },
   );
 });
 

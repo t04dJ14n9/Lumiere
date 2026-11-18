@@ -86,7 +86,7 @@ function setUp() {
   ) as {
     useMarkMenu: (options: unknown) => {
       openAt: (event: unknown) => boolean;
-      markSelection: (tool: string, note?: string) => void;
+      markSelection: (tool: string) => void;
       setNote: (note: string) => void;
       setColor: (color: string) => void;
       deleteMark: () => void;
@@ -188,19 +188,13 @@ test("a miss, a left press or Escape puts the menu's mark down", () => {
   assert.equal(view.regions.length, 1);
 });
 
-test("Add Annotation highlights the selected text and puts the note on it", async () => {
-  const view = setUp();
-  view.menu().markSelection("highlight", "why this matters");
-  await view.settle();
-  assert.deepEqual(view.calls, [
-    ["createFromSelection", "highlight"],
-    ["update", "new", { contents: "why this matters" }],
-  ]);
-
-  const plain = setUp();
-  plain.menu().markSelection("squiggly");
-  await plain.settle();
-  assert.deepEqual(plain.calls, [["createFromSelection", "squiggly"]]);
+test("each text mark marks the selected text with its own tool", async () => {
+  for (const tool of ["highlight", "underline", "strikeout", "squiggly"]) {
+    const view = setUp();
+    view.menu().markSelection(tool);
+    await view.settle();
+    assert.deepEqual(view.calls, [["createFromSelection", tool]]);
+  }
 });
 
 test("Edit Note, Change Color and Delete act on the menu's mark", async () => {

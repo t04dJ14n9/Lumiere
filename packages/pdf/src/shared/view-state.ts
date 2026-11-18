@@ -74,8 +74,8 @@ export type ViewerAction =
   | { action: "goToPage"; page: number }
   | { action: "setZoom"; percent: number }
   | { action: "setTool"; tool: ToolMode }
-  /** Mark the selected text; a note goes on the mark (Add Annotation…). */
-  | { action: "markSelection"; tool: MarkToolId; note?: string }
+  /** Mark the selected text. */
+  | { action: "markSelection"; tool: MarkToolId }
   /** Change the note of the mark the context menu was opened on; empty removes it. */
   | { action: "setMarkNote"; note: string }
   /** Change the colour of the mark the context menu was opened on. */
@@ -220,7 +220,8 @@ const ACTION_PARSERS: Readonly<
     tool === "text" || tool === "region"
       ? { action: "setTool", tool }
       : undefined,
-  markSelection: parseMarkSelection,
+  markSelection: ({ tool }) =>
+    isMarkToolId(tool) ? { action: "markSelection", tool } : undefined,
   setMarkNote: ({ note }) =>
     isNote(note) ? { action: "setMarkNote", note } : undefined,
   setMarkColor: ({ color }) =>
@@ -244,19 +245,6 @@ export const MAX_NOTE_LENGTH = MAX_NOTE;
 
 function isNote(value: unknown): value is string {
   return typeof value === "string" && value.length <= MAX_NOTE_LENGTH;
-}
-
-function parseMarkSelection({
-  tool,
-  note,
-}: Record<string, unknown>): ViewerAction | undefined {
-  if (!isMarkToolId(tool)) {
-    return undefined;
-  }
-  if (note === undefined) {
-    return { action: "markSelection", tool };
-  }
-  return isNote(note) ? { action: "markSelection", tool, note } : undefined;
 }
 
 /**

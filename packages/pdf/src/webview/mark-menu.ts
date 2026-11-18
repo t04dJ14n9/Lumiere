@@ -24,8 +24,8 @@ export interface MarkMenu {
    * it over. Returns whether there is one.
    */
   openAt(event: MouseEvent): boolean;
-  /** Mark the selected text; a note goes on the first page's mark. */
-  markSelection(tool: MarkToolId, note?: string): void;
+  /** Mark the selected text. */
+  markSelection(tool: MarkToolId): void;
   /** Change the note of the mark the menu was opened on; empty removes it. */
   setNote(note: string): void;
   /** Change the colour of the mark the menu was opened on. */
@@ -44,7 +44,7 @@ export interface MarkMenuOptions {
 
 /**
  * Marks are made and changed from the context menu, never by a tool: select
- * text and pick Highlight, Add Annotation… or a Mark Text entry; right-click
+ * text and pick Highlight, Underline, Strikeout or Squiggly; right-click
  * a mark for Edit Note…, Change Color or Delete Annotation. Only Lumiere's
  * own marks answer a right-click: the PDF's own annotations came with the
  * file and stay as they are.
@@ -107,9 +107,9 @@ function menuOver(state: MenuState): MarkMenu {
       }
       return mark !== null;
     },
-    markSelection: (tool, note) => {
+    markSelection: (tool) => {
       if (annotation) {
-        void report("mark the text", markText(annotation, tool, note));
+        void report("mark the text", annotation.createFromSelection(tool));
       }
     },
     setNote: (note) =>
@@ -206,18 +206,6 @@ function regionOf(mark: Annotation, pageIndex: number) {
     ...(quote ? { text: quote } : {}),
     ...(note ? { note } : {}),
   });
-}
-
-async function markText(
-  annotation: AnnotationCapability,
-  tool: MarkToolId,
-  note: string | undefined,
-): Promise<void> {
-  const { annotations } = await annotation.createFromSelection(tool);
-  const first = annotations[0];
-  if (note?.trim() && first) {
-    await annotation.update(first.ref, { contents: note });
-  }
 }
 
 /** A left press anywhere, or Escape, puts the menu's mark down. */

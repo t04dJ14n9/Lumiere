@@ -25,29 +25,37 @@ const contributes = () => pdfContributes<Contributes>();
 const contextEntry = (match: (entry: MenuEntry) => boolean) =>
   contributes().menus["webview/context"]?.find(match);
 
-test("selected text gets Highlight, Add Annotation… and the Mark Text submenu", () => {
-  const highlight = contextEntry(
-    (entry) => entry.command === MARK_COMMAND_IDS.highlight,
+test("selected text gets Highlight, Underline, Strikeout and Squiggly side by side, first", () => {
+  const marks = contributes().menus["webview/context"]!.filter((entry) =>
+    (entry.group ?? "").startsWith("0_mark@"),
   );
-  const add = contextEntry(
-    (entry) => entry.command === VIEW_COMMAND_IDS.addAnnotation,
+  assert.deepEqual(
+    marks.slice(0, 4).map((entry) => [entry.command, entry.group]),
+    [
+      [MARK_COMMAND_IDS.highlight, "0_mark@1"],
+      [MARK_COMMAND_IDS.underline, "0_mark@2"],
+      [MARK_COMMAND_IDS.strikeout, "0_mark@3"],
+      [MARK_COMMAND_IDS.squiggly, "0_mark@4"],
+    ],
   );
-  const markText = contextEntry(
-    (entry) => entry.submenu === "lumiere.pdf.markText",
-  );
-  for (const entry of [highlight, add, markText]) {
-    assert.ok(entry);
+  for (const entry of marks.slice(0, 4)) {
     assert.match(entry.when ?? "", /webviewId == 'lumiere\.pdf\.viewer'/u);
     assert.match(entry.when ?? "", /lumiere\.pdf\.hasTextSelection/u);
-    assert.match(entry.group ?? "", /^0_mark@/u);
   }
-  assert.deepEqual(
-    contributes().menus["lumiere.pdf.markText"]?.map((entry) => entry.command),
-    [
-      MARK_COMMAND_IDS.underline,
-      MARK_COMMAND_IDS.strikeout,
-      MARK_COMMAND_IDS.squiggly,
-    ],
+});
+
+test("there is no Add Annotation and no Mark Text submenu: Copy link to this hands text to an agent", () => {
+  const ids = new Set(contributes().commands.map((entry) => entry.command));
+  assert.equal(ids.has("lumiere.pdf.addAnnotation"), false);
+  assert.equal(contributes().menus["lumiere.pdf.markText"], undefined);
+  assert.equal(
+    contributes().submenus.some(
+      (submenu) => submenu.id === "lumiere.pdf.markText",
+    ),
+    false,
+  );
+  assert.ok(
+    contextEntry((entry) => entry.command === "lumiere.pdf.copyLinkForAgent"),
   );
 });
 
@@ -79,7 +87,6 @@ test("a mark gets Edit Note…, Change Color and Delete, and nothing else does",
   const labels = Object.fromEntries(
     contributes().submenus.map((submenu) => [submenu.id, submenu.label]),
   );
-  assert.equal(labels["lumiere.pdf.markText"], "Mark Text");
   assert.equal(labels["lumiere.pdf.annotationColor"], "Change Color");
 });
 
@@ -128,7 +135,6 @@ test("each mark and colour command sends its viewer action", () => {
   assert.deepEqual(actions.get(VIEW_COMMAND_IDS.deleteAnnotation), {
     action: "deleteSelectedAnnotations",
   });
-  // These ask for a note first: the annotations plugin registers them.
-  assert.equal(actions.has(VIEW_COMMAND_IDS.addAnnotation), false);
+  // Edit Note… asks for the note first: the annotations plugin registers it.
   assert.equal(actions.has(VIEW_COMMAND_IDS.editAnnotationNote), false);
 });

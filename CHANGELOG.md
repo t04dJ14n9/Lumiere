@@ -1,5 +1,12 @@
 # Changelog
 
+## Unreleased
+
+- PDF: the right-click menu on selected text shows **Highlight**,
+  **Underline**, **Strikeout** and **Squiggly** side by side; the **Mark
+  Text** submenu and **Add Annotation…** are gone (use **Copy link to this**
+  to hand the text to an agent). **Edit Note…** on a mark is unchanged.
+
 ## 0.1.16 (pre-release, 2026-11-18)
 
 - Markdown: an open note is saved 2 s after your last edit, as in Obsidian

@@ -3,7 +3,7 @@
  * zoom, fit, find, pick a tool, change the layout or scrolling, mark the
  * selected text or recolour a mark. Every host registers these the same way;
  * commands that ask the reader first (Go to Page, the zoom and View pickers,
- * Add Annotation…, Edit Note…) are registered on their own.
+ * Edit Note…) are registered on their own.
  */
 import { MARK_TOOL_IDS } from "./annotation-tools";
 import {

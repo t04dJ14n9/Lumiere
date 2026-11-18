@@ -18,22 +18,20 @@ import {
   openFile,
   pagePoint,
   pdfViewer,
-  quickInputTitled,
   selectText,
   showPage,
   test,
 } from "./workbench";
 
 /**
- * Host GUI: select text, right-click, Add Annotation…, type a note. The
- * highlight and its note are kept in the workspace's annotation file for the
- * PDF's hash, never in the PDF (a vault records that hash); they come back
+ * Host GUI: select text, right-click, Highlight. The highlight is kept in
+ * the workspace's annotation file for the PDF's hash, never in the PDF (a
+ * vault records that hash); it comes back
  * when the PDF is opened again, and the mark's own context menu deletes it
  * from that file. There is no Annotate button. Synthetic fixtures only.
  */
 const PDF = "docs/outline.pdf";
 const TEXT_MIDLINE = 94;
-const NOTE = "Synthetic note for the GUI test";
 const SHOT_DIR = path.join(
   paths.repository,
   "test-results",
@@ -70,7 +68,7 @@ type Kept = {
   bundle: { items: { data: { subtype: string; contents?: string } }[] };
 };
 
-test("Add Annotation from the context menu keeps a highlight with its note beside the PDF, and the mark's menu deletes it", async ({
+test("Highlight from the context menu keeps a highlight beside the PDF, and the mark's menu deletes it", async ({
   workbench: page,
 }) => {
   mkdirSync(SHOT_DIR, { recursive: true });
@@ -88,26 +86,32 @@ test("Add Annotation from the context menu keeps a highlight with its note besid
     const at = await pagePoint(viewer, 1);
     await selectText(page, viewer, at(74, TEXT_MIDLINE), at(205, TEXT_MIDLINE));
     const offered = await contextMenuLabels(page, at(140, TEXT_MIDLINE));
+    // The four text marks side by side, beside Copy link to this; no Add
+    // Annotation and no Mark Text submenu.
     expect(offered).toEqual(
-      expect.arrayContaining(["Highlight", "Add Annotation…", "Mark Text"]),
+      expect.arrayContaining([
+        "Copy link to this",
+        "Highlight",
+        "Underline",
+        "Strikeout",
+        "Squiggly",
+      ]),
     );
-    expect(offered).not.toContain("Delete Annotation");
+    for (const gone of ["Add Annotation…", "Mark Text", "Delete Annotation"]) {
+      expect(offered).not.toContain(gone);
+    }
 
-    await contextMenu(page, at(140, TEXT_MIDLINE), "Add Annotation…");
-    const input = quickInputTitled(page, /^Add Annotation$/u);
-    await expect(input).toBeVisible();
-    await input.fill(NOTE);
-    await input.press("Enter");
+    await contextMenu(page, at(140, TEXT_MIDLINE), "Highlight");
     await expect.poll(() => existsSync(kept), { timeout: 20_000 }).toBe(true);
     await expect
       .poll(
         () =>
           (JSON.parse(readFileSync(kept, "utf8")) as Kept).bundle.items.map(
-            (item) => [item.data.subtype, item.data.contents],
+            (item) => item.data.subtype,
           ),
         { timeout: 20_000 },
       )
-      .toEqual([["highlight", NOTE]]);
+      .toEqual(["highlight"]);
     expect(sha256(pdfPath)).toBe(pdfHash);
     evidence.push(`kept=${path.relative(paths.workspace, kept)}`);
     await page.screenshot({
@@ -130,7 +134,7 @@ test("Add Annotation from the context menu keeps a highlight with its note besid
         "Delete Annotation",
       ]),
     );
-    expect(onMark).not.toContain("Add Annotation…");
+    expect(onMark).not.toContain("Highlight");
     await contextMenu(page, again(140, TEXT_MIDLINE), "Delete Annotation");
     await expect.poll(() => existsSync(kept), { timeout: 20_000 }).toBe(false);
     expect(sha256(pdfPath)).toBe(pdfHash);

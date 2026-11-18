@@ -19,7 +19,6 @@ export const VIEW_COMMAND_IDS = {
   find: "lumiere.pdf.find",
   selectTextTool: "lumiere.pdf.selectTextTool",
   selectRegionTool: "lumiere.pdf.selectRegionTool",
-  addAnnotation: "lumiere.pdf.addAnnotation",
   editAnnotationNote: "lumiere.pdf.editAnnotationNote",
   annotationUndo: "lumiere.pdf.annotationUndo",
   annotationRedo: "lumiere.pdf.annotationRedo",
@@ -31,7 +30,7 @@ export const VIEW_COMMAND_IDS = {
   selectZoom: "lumiere.pdf.selectZoom",
 } as const;
 
-/** Mark the selected text: the context menu's Highlight and its Mark Text submenu. */
+/** Mark the selected text: the context menu's Highlight, Underline, Strikeout and Squiggly. */
 export const MARK_COMMAND_IDS: Readonly<Record<MarkToolId, string>> = {
   highlight: "lumiere.pdf.highlightSelection",
   underline: "lumiere.pdf.underlineSelection",
