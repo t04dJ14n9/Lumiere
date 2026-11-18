@@ -1,6 +1,6 @@
 # Changelog
 
-## Unreleased
+## 0.1.15 (pre-release, 2026-11-18)
 
 - Markdown: drag across a rendered callout's text to select it, and copy
   it; the selection no longer collapses into the callout's source.
