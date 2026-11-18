@@ -5,9 +5,14 @@ import { VIEW_COMMAND_IDS } from "../../../shared/command-ids";
 import { isProtectedPdf, PROTECTED_FOLDERS } from "../../protected-folders";
 import type { PdfPanel } from "../pdf/panel";
 import manifest from "./manifest";
+import { addAnnotation, editAnnotationNote } from "./mark-notes";
 import type {} from "../services";
 
 /**
+ * Marks are made and changed from the viewer's context menu; the commands
+ * that ask for a note first (Add Annotation…, Edit Note…) are here, the rest
+ * are plain viewer actions (`view-commands.ts`).
+ *
  * Annotations are kept outside the PDF, never in it (see `annotation-store`).
  * Writing them into a PDF is a command the reader runs: Save Annotations
  * into This PDF (refused in protected folders, such as a vault's sources),
@@ -42,6 +47,18 @@ export const pdfAnnotationsPlugin: Plugin = {
         () => panels.active && saveIntoPdf(panels.active),
       ),
       "save into PDF command",
+    );
+    ctx.own(
+      vscode.commands.registerCommand(VIEW_COMMAND_IDS.addAnnotation, () =>
+        addAnnotation(panels),
+      ),
+      "add annotation command",
+    );
+    ctx.own(
+      vscode.commands.registerCommand(VIEW_COMMAND_IDS.editAnnotationNote, () =>
+        editAnnotationNote(panels),
+      ),
+      "edit note command",
     );
     ctx.own(
       vscode.commands.registerCommand(

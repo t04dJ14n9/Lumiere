@@ -1,5 +1,20 @@
 # Changelog
 
+## Unreleased
+
+- Markdown: drag across a rendered callout's text to select it, and copy
+  it; the selection no longer collapses into the callout's source.
+- PDF: annotate from the context menu; the Annotate button, mode, tool and
+  colour pickers are gone. Select text and right-click for **Highlight**,
+  **Add Annotation…** (a highlight with a note you type) or **Mark Text** ▸
+  Underline, Strikeout, Squiggly. Right-click one of your marks for **Edit
+  Note…**, **Change Color** ▸ and **Delete Annotation**. As in macOS Preview,
+  ⌃⌘H highlights, ⌃⌘U underlines and ⌃⌘S strikes out the selected text
+  (Ctrl+Alt+H / U / S on Windows and Linux); ⌃⌘A / Ctrl+Alt+A no longer
+  does anything. Ink, shapes, text boxes, notes and stamps can
+  no longer be drawn; ones you made before still show, and their context menu
+  recolours or deletes them.
+
 ## 0.1.14 (pre-release, 2026-11-17)
 
 - PDF: the status bar shows the history back/forward, previous/next page,

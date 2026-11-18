@@ -6,9 +6,9 @@ A Lumiere PDF viewer for VS Code and Cursor, built on [EmbedPDF](https://www.emb
 3 and its PDFium engine. Select text and choose **Copy link to this**: the
 clipboard gets an `@papers/a.pdf#page=3` locator and the quoted text, ready
 to paste into an agent chat. Opening the PDF paints **backlink overlays**
-from vault Markdown links to it (`[label](papers/a.pdf#page=3#:~:text=…)`). Annotate tools
-(Highlight, Note, freeText, …) never change the PDF: their marks are kept in
-the workspace's `.lumiere/pdf-annotations/`. Region / box selection
+from vault Markdown links to it (`[label](papers/a.pdf#page=3#:~:text=…)`). Right-click
+selected text to **Highlight** it or **Add Annotation…** with a note; the marks
+never change the PDF: they are kept in the workspace's `.lumiere/pdf-annotations/`. Region / box selection
 is opt-in (`lumiere.pdf.regions.enabled`, default off).
 
 ## Features
@@ -52,15 +52,24 @@ is opt-in (`lumiere.pdf.regions.enabled`, default off).
   **backlink overlays** from those links (hover preview, click opens the
   note; Del ignores overlays). **Copy link to this** copies an `@` locator
   for agents, not such a link. See [CAPABILITIES.md](CAPABILITIES.md).
-- **Annotations never change the PDF.** Annotate **Highlight** / Note /
-  freeText / underline / ink are kept in
+- **Annotate from the context menu.** There is no Annotate mode or button.
+  Select text and right-click: **Highlight**, **Add Annotation…** (a
+  highlight with a note you type), or **Mark Text** ▸ Underline, Strikeout,
+  Squiggly. The keys are Preview's: ⌃⌘H highlights, ⌃⌘U underlines and
+  ⌃⌘S strikes out the selected text (Ctrl+Alt+H / U / S on Windows and
+  Linux). Right-click one of your marks
+  for **Edit Note…**, **Change Color** ▸ (six colours; new highlights take the
+  last one picked) and **Delete Annotation**; **Copy link to this** then
+  hands the mark to an agent. A click never selects, moves or deletes a
+  mark, and the PDF's own annotations do not answer the menu.
+- **Annotations never change the PDF.** Marks are kept in
   `.lumiere/pdf-annotations/<sha256>.json` in the PDF's workspace folder
   (`~/.lumiere/…` for a PDF outside every folder), named by the PDF's
   SHA-256. `lumiere.pdf.annotations.folder` puts them elsewhere: another
   workspace-relative folder, `~/…`, or an absolute path. The PDF's bytes, and so the hash a vault records for an immutable
   source, stay as they are. The same PDF anywhere (in `inbox/`, then
   captured into `.raw/`) shows the same annotations, and a renamed or moved
-  copy keeps them. Del deletes them. The file is Lumiere's own format
+  copy keeps them. The file is Lumiere's own format
   (`{"version": 2, "bundle": …}`, EmbedPDF 3's annotation transfer); files
   from earlier versions are converted when read and saved in the new format on
   the next change, after which earlier versions cannot read them.

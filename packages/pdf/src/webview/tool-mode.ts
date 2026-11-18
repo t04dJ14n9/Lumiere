@@ -8,15 +8,14 @@ import { useDocuments, useOptionalCapability } from "@embedpdf/react/runtime";
 import { useCallback, useEffect } from "react";
 import { READ_TOOL_ID } from "../shared/annotation-tools";
 import type { ToolMode } from "../shared/view-state";
-import { useAnnotateSwitch } from "./annotation-mode";
+import { useReadTool } from "./annotation-mode";
 import { REGION_TOOL_ID, registerRegionTools } from "./region-tool";
 import { currentViewSettings } from "./reading-position";
 
 /**
  * The current tool and a way to change it. The tool is the interaction hub's
  * active one, so nothing here keeps a copy of it: reading is the `lumiere.read`
- * tool (annotation-mode.ts registers it), Annotate is a drawing tool, and
- * Select Region is this file's.
+ * tool (annotation-mode.ts registers it) and Select Region is this file's.
  */
 export function useToolMode(
   regionsEnabled = currentViewSettings().regionsEnabled,
@@ -27,54 +26,30 @@ export function useToolMode(
   const interaction = useOptionalCapability(InteractionToken);
   const selection = useOptionalCapability(SelectionToken);
   const activeToolId = useInteractionState((state) => state.activeToolId);
-  const { annotate, enterAnnotate, leaveAnnotate } = useAnnotateSwitch();
+  useReadTool();
   useRegionTools(interaction, regionsEnabled, activeToolId);
 
   const setTool = useCallback(
     (tool: ToolMode): void => {
-      if (tool === "annotate") {
-        selection?.clear();
-        enterAnnotate();
-      } else if (
+      if (
         tool === "region" &&
         regionsEnabled &&
         interaction?.hasTool(REGION_TOOL_ID)
       ) {
         // A text selection would stay on screen, unreachable by region drags.
         selection?.clear();
-        if (annotate) {
-          leaveAnnotate();
-        }
         interaction.activateTool(REGION_TOOL_ID);
       } else {
-        leaveAnnotate();
+        interaction?.activateTool(READ_TOOL_ID);
       }
     },
-    [
-      interaction,
-      selection,
-      regionsEnabled,
-      annotate,
-      enterAnnotate,
-      leaveAnnotate,
-    ],
+    [interaction, selection, regionsEnabled],
   );
 
   return {
-    tool: resolveToolMode(annotate, activeToolId, regionsEnabled),
+    tool: regionsEnabled && activeToolId === REGION_TOOL_ID ? "region" : "text",
     setTool,
   };
-}
-
-function resolveToolMode(
-  annotate: boolean,
-  activeToolId: string | null,
-  regionsEnabled: boolean,
-): ToolMode {
-  if (annotate) {
-    return "annotate";
-  }
-  return regionsEnabled && activeToolId === REGION_TOOL_ID ? "region" : "text";
 }
 
 /**

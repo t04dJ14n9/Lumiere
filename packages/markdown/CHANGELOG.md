@@ -2,6 +2,12 @@
 
 ## 0.1.0 (unreleased)
 
+- Text inside a rendered callout (or HTML block) can be selected by
+  dragging, and copied, as in reading view. A drag used to collapse into a
+  caret at the callout's start, revealing its source, or the selection
+  vanished when the mouse was released. A plain click still opens the
+  callout's source.
+
 - Jumping to a heading from the Outline, Go to Heading or a link no longer
   flashes another part of the note first. When an image above the heading
   loaded after the jump, one frame showed the note pushed down by the

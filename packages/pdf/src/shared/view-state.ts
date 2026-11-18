@@ -4,10 +4,12 @@
  * extension's status bar, editor title actions and keybindings.
  */
 import {
-  ANNOTATION_COLOR_PRESETS,
-  isAnnotationToolId,
-  type AnnotationToolId,
+  isAnnotationColor,
+  isMarkToolId,
+  type AnnotationColor,
+  type MarkToolId,
 } from "./annotation-tools";
+import { MAX_NOTE } from "./selection";
 import { MAX_ZOOM, MIN_ZOOM } from "./zoom-steps";
 import { isPageOffset } from "./reading-position";
 import {
@@ -30,7 +32,7 @@ export type FitMode = "width" | "page";
  * What a drag on a page selects: `text` selects text, or a region when it
  * starts on empty page space; `region` always selects a region.
  */
-export type ToolMode = "text" | "region" | "annotate";
+export type ToolMode = "text" | "region";
 
 /** What the viewer reports after each change, for the editor's controls. */
 export interface ViewState extends ViewChoices {
@@ -40,10 +42,6 @@ export interface ViewState extends ViewChoices {
   zoomPercent: number;
   fit: FitMode | null;
   tool: ToolMode;
-  /** Active EmbedPDF tool while Annotate mode is on; omitted when not annotating. */
-  annotationTool?: AnnotationToolId | null;
-  canAnnotationUndo?: boolean;
-  canAnnotationRedo?: boolean;
   canGoBack: boolean;
   canGoForward: boolean;
   /** First visible page, which can precede the most-visible page shown in the status bar. */
@@ -76,8 +74,12 @@ export type ViewerAction =
   | { action: "goToPage"; page: number }
   | { action: "setZoom"; percent: number }
   | { action: "setTool"; tool: ToolMode }
-  | { action: "setAnnotationTool"; tool: AnnotationToolId }
-  | { action: "setAnnotationColor"; color: string }
+  /** Mark the selected text; a note goes on the mark (Add Annotation…). */
+  | { action: "markSelection"; tool: MarkToolId; note?: string }
+  /** Change the note of the mark the context menu was opened on; empty removes it. */
+  | { action: "setMarkNote"; note: string }
+  /** Change the colour of the mark the context menu was opened on. */
+  | { action: "setMarkColor"; color: AnnotationColor }
   | { action: "setPageLayout"; pageLayout: PageLayout }
   | { action: "setScrollMode"; scrollMode: ScrollMode }
   | { action: "setScrollDirection"; scrollDirection: ScrollDirection };
@@ -131,17 +133,6 @@ export function parseViewState(value: unknown): ViewState | undefined {
     top: report.top,
     left: report.left,
   };
-  if (isAnnotationToolId(report.annotationTool)) {
-    view.annotationTool = report.annotationTool;
-  } else if (report.annotationTool === null) {
-    view.annotationTool = null;
-  }
-  if (typeof report.canAnnotationUndo === "boolean") {
-    view.canAnnotationUndo = report.canAnnotationUndo;
-  }
-  if (typeof report.canAnnotationRedo === "boolean") {
-    view.canAnnotationRedo = report.canAnnotationRedo;
-  }
   return view;
 }
 
@@ -226,17 +217,14 @@ const ACTION_PARSERS: Readonly<
       ? { action: "setZoom", percent }
       : undefined,
   setTool: ({ tool }) =>
-    tool === "text" || tool === "region" || tool === "annotate"
+    tool === "text" || tool === "region"
       ? { action: "setTool", tool }
       : undefined,
-  setAnnotationTool: ({ tool }) =>
-    isAnnotationToolId(tool)
-      ? { action: "setAnnotationTool", tool }
-      : undefined,
-  setAnnotationColor: ({ color }) =>
-    isAnnotationColor(color)
-      ? { action: "setAnnotationColor", color }
-      : undefined,
+  markSelection: parseMarkSelection,
+  setMarkNote: ({ note }) =>
+    isNote(note) ? { action: "setMarkNote", note } : undefined,
+  setMarkColor: ({ color }) =>
+    isAnnotationColor(color) ? { action: "setMarkColor", color } : undefined,
   setPageLayout: ({ pageLayout }) =>
     isPageLayout(pageLayout)
       ? { action: "setPageLayout", pageLayout }
@@ -251,13 +239,24 @@ const ACTION_PARSERS: Readonly<
       : undefined,
 };
 
-function isAnnotationColor(
-  value: unknown,
-): value is (typeof ANNOTATION_COLOR_PRESETS)[number] {
-  return (
-    typeof value === "string" &&
-    (ANNOTATION_COLOR_PRESETS as readonly string[]).includes(value)
-  );
+/** The longest note a mark takes, in UTF-16 code units (`MAX_NOTE` in selection.ts). */
+export const MAX_NOTE_LENGTH = MAX_NOTE;
+
+function isNote(value: unknown): value is string {
+  return typeof value === "string" && value.length <= MAX_NOTE_LENGTH;
+}
+
+function parseMarkSelection({
+  tool,
+  note,
+}: Record<string, unknown>): ViewerAction | undefined {
+  if (!isMarkToolId(tool)) {
+    return undefined;
+  }
+  if (note === undefined) {
+    return { action: "markSelection", tool };
+  }
+  return isNote(note) ? { action: "markSelection", tool, note } : undefined;
 }
 
 /**
@@ -309,10 +308,7 @@ export function zoomLabel(view: ViewState): string {
 
 /** Coerce a reported tool to a known mode; anything else is text. */
 function asToolMode(tool: unknown): ToolMode {
-  if (tool === "region" || tool === "annotate") {
-    return tool;
-  }
-  return "text";
+  return tool === "region" ? "region" : "text";
 }
 
 function isCount(value: unknown): value is number {

@@ -20,11 +20,19 @@ export interface RegionSelection {
   /** The text inside the box, line by line, once read; missing when it has none. */
   text?: string;
   /**
-   * True when this region is an Annotate-mode mark (an EmbedPDF annotation).
-   * Host / menu Delete uses this so a plain text or marquee selection does
-   * not enable a no-op Delete Annotation.
+   * True when this region is a mark the context menu was opened on (one of
+   * Lumiere's annotations). Edit Note, Change Color and Delete Annotation act
+   * on it; a plain text or marquee selection never enables them.
    */
   mark?: boolean;
+  /** The mark's note, for Edit Note… to start from; missing when it has none. */
+  note?: string;
+  /**
+   * The mark has a note longer than `MAX_NOTE` (another app's, or the PDF's
+   * own), which is not sent: Edit Note… refuses rather than start from an
+   * empty box and overwrite it.
+   */
+  noteTooLong?: true;
 }
 
 export type PdfSelection = TextSelection | RegionSelection;
@@ -35,6 +43,8 @@ export interface SelectedPage {
 }
 
 const MAX_TEXT_LENGTH = 100_000;
+/** As `MAX_NOTE_LENGTH` in view-state.ts: the longest note a mark sends and takes. */
+export const MAX_NOTE = 10_000;
 const MAX_PAGES = 500;
 const MAX_RECTS_PER_PAGE = 2_000;
 
@@ -63,8 +73,24 @@ function parseRegionSelection(
     page: value.page,
     rect: value.rect,
     ...(text ? { text } : {}),
-    ...(value.mark === true ? { mark: true } : {}),
+    ...(value.mark === true ? markFields(value.note, value.noteTooLong) : {}),
   };
+}
+
+/** A mark's flag and its note; a note only comes with a mark. */
+function markFields(
+  note: unknown,
+  noteTooLong: unknown,
+): { mark: true; note?: string; noteTooLong?: true } {
+  if (
+    noteTooLong === true ||
+    (typeof note === "string" && note.length > MAX_NOTE)
+  ) {
+    return { mark: true, noteTooLong: true };
+  }
+  return typeof note === "string" && note.trim()
+    ? { mark: true, note }
+    : { mark: true };
 }
 
 function parseTextSelection(

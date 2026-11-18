@@ -1,79 +1,54 @@
 import assert from "node:assert/strict";
 import { test } from "node:test";
 import {
-  ANNOTATE_IDLE_TOOL_ID,
-  ANNOTATION_TOOL_IDS,
-  LUMIERE_ANNOTATION_TOOLS,
-  READ_TOOL_ID,
-  fromV3ToolId,
-  isAnnotateModeTool,
-  toV3ToolId,
-  toolColorDefaults,
+  ANNOTATION_COLORS,
+  MARK_TOOL_IDS,
+  isAnnotationColor,
+  isMarkToolId,
+  markColorPatch,
 } from "../../src/shared/annotation-tools";
 
-test("Lumiere's tool ids map to EmbedPDF 3's at the boundary and back", () => {
-  assert.equal(toV3ToolId("textComment"), "note");
-  assert.equal(toV3ToolId("freeText"), "free-text");
-  for (const id of [
+test("selected text can be highlighted, underlined, struck out or squiggled", () => {
+  assert.deepEqual(MARK_TOOL_IDS, [
     "highlight",
     "underline",
-    "ink",
-    "square",
-    "stamp",
-  ] as const) {
-    assert.equal(toV3ToolId(id), id);
+    "strikeout",
+    "squiggly",
+  ]);
+  for (const removed of ["ink", "square", "stamp", "freeText", "lineArrow"]) {
+    assert.equal(isMarkToolId(removed), false, removed);
   }
-  for (const tool of ANNOTATION_TOOL_IDS) {
-    assert.equal(fromV3ToolId(toV3ToolId(tool)), tool);
-  }
-  assert.equal(fromV3ToolId("pointer"), null);
-  assert.equal(fromV3ToolId(READ_TOOL_ID), null);
-  assert.equal(fromV3ToolId("note"), "textComment");
-  assert.equal(fromV3ToolId("textComment"), null);
-  assert.equal(fromV3ToolId(null), null);
 });
 
-test("Annotate mode is a drawing tool or the resting tool, never View's read tool", () => {
-  assert.equal(isAnnotateModeTool(ANNOTATE_IDLE_TOOL_ID), true);
-  assert.equal(isAnnotateModeTool("highlight"), true);
-  assert.equal(isAnnotateModeTool("free-text"), true);
-  assert.equal(isAnnotateModeTool(READ_TOOL_ID), false);
-  assert.equal(isAnnotateModeTool("pan"), false);
-  assert.equal(isAnnotateModeTool(null), false);
-});
-
-test("the arrow is a line tool with an open arrowhead at its end", () => {
-  const arrow = LUMIERE_ANNOTATION_TOOLS.find(
-    (tool) => tool.id === "lineArrow",
+test("Change Color offers six named colours, yellow first", () => {
+  assert.deepEqual(
+    ANNOTATION_COLORS.map((color) => color.label),
+    ["Yellow", "Red", "Blue", "Green", "Purple", "Black"],
   );
-  assert.equal(arrow?.extends, "line");
-  assert.deepEqual(arrow?.defaults.lineEndings, {
-    start: "none",
-    end: "open-arrow",
-  });
-  assert.equal(toV3ToolId("lineArrow"), "lineArrow");
+  assert.ok(isAnnotationColor("#FFE566"));
+  assert.equal(isAnnotationColor("red"), false);
 });
 
-test("a colour pick sets the field its tool draws with", () => {
-  assert.deepEqual(toolColorDefaults("highlight", "#4DABF7", "normal"), {
+test("a colour pick sets the field a mark of each kind draws with", () => {
+  assert.deepEqual(markColorPatch("highlight", "#4DABF7", "normal"), {
     color: "#4DABF7",
     opacity: 0.3,
     blendMode: "multiply",
   });
-  for (const tool of [
-    "underline",
-    "ink",
-    "square",
-    "lineArrow",
-    "textComment",
-  ] as const) {
-    assert.deepEqual(toolColorDefaults(tool, "#51CF66", "normal"), {
+  assert.deepEqual(markColorPatch("highlight", "#4DABF7", "dark"), {
+    color: "#4DABF7",
+    opacity: 0.4,
+    blendMode: "normal",
+  });
+  // Marks made before Annotate mode was removed are still recoloured.
+  for (const subtype of ["underline", "ink", "square", "line", "text"]) {
+    assert.deepEqual(markColorPatch(subtype, "#51CF66", "normal"), {
       color: "#51CF66",
     });
   }
-  assert.deepEqual(toolColorDefaults("freeText", "#51CF66", "dark"), {
+  assert.deepEqual(markColorPatch("free-text", "#51CF66", "dark"), {
     color: "#51CF66",
     fontColor: "#51CF66",
   });
-  assert.deepEqual(toolColorDefaults("stamp", "#51CF66", "normal"), {});
+  assert.deepEqual(markColorPatch("stamp", "#51CF66", "normal"), {});
 });

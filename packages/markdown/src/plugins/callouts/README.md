@@ -24,7 +24,9 @@ mapped across renamed source identities. Each pass owns its event listeners and
 bindings; plugin disposal removes registrations and remaining pass handlers.
 Foldable titles (and the fold button) toggle disclosure; a `-` callout starts
 closed. Clicking the body or padding reveals and selects the whole callout
-source, as does its Edit button. Typing replaces that visible selection. Links
+source, as does its Edit button. Dragging across the body selects its
+rendered text instead, as in reading view, and Copy copies that text
+(`src/webview/ui/rendered-text-selection.ts`). Typing replaces that visible selection. Links
 and controls keep their own clicks; keyboard navigation can reveal source with
 a caret.
 
