@@ -9,6 +9,7 @@
  */
 import { randomBytes, timingSafeEqual } from "node:crypto";
 import type { IncomingMessage } from "node:http";
+import { SHELL_KEY_HEADER } from "../shared/shell-key";
 
 export const TOKEN_COOKIE = "lumiere_token";
 
@@ -54,6 +55,44 @@ export function admit(
   return sameSecret(readCookie(req, TOKEN_COOKIE), server.token)
     ? { kind: "admit" }
     : { kind: "reject", status: 401 };
+}
+
+/**
+ * Whether a request to add a folder (a vault) comes from the window and not
+ * from a page in it. Every page of a note or PDF is same-origin with the window
+ * and carries the cookie, and what the server opens for reading and writing
+ * is whatever its vaults hold, so a page must not be able to name a new one.
+ * The window's own page is given `key` (see `mayReceiveShellKey`) and sends it
+ * back; a page's script has no way to read it from a fetch or a frame.
+ *
+ * A request with no Origin and no fetch metadata is no page (a browser sends
+ * an Origin with every POST): it is a process that holds the launch token, such
+ * as the desktop app's own open request, and it passes.
+ *
+ * Limit: script that can open the window's page in a window of its own, and
+ * read it, can still take the key. This bars the direct request, not that.
+ */
+export function fromShell(req: IncomingMessage, key: string): boolean {
+  if (
+    req.headers.origin === undefined &&
+    req.headers["sec-fetch-site"] === undefined
+  ) {
+    return true;
+  }
+  const given = req.headers[SHELL_KEY_HEADER];
+  return sameSecret(Array.isArray(given) ? given[0] : given, key);
+}
+
+/**
+ * Whether a request for the window's page may be answered with the key: a load
+ * of the page itself. A browser says what a request is for in `Sec-Fetch-Dest`
+ * and a page's script cannot change it: a fetch is `empty`, a frame `iframe`.
+ * A browser that sends none is let through; its page cannot be told from the
+ * window's.
+ */
+export function mayReceiveShellKey(req: IncomingMessage): boolean {
+  const destination = req.headers["sec-fetch-dest"];
+  return destination === undefined || destination === "document";
 }
 
 /** The server's own names: the loopback address it listens on, by any spelling. */

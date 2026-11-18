@@ -304,6 +304,7 @@ src/
 │   ├── zoom-steps.ts     the zoom levels the buttons and keys step through
 │   ├── view-state.ts     page and zoom reported by the viewer; view actions
 │   ├── toolbar-settings.ts  toolbar modes; old floating-bar values still parse
+│   ├── picture-swap.ts   a page keeps its picture until the next is decoded
 │   └── geometry.ts       page rectangles
 ├── bridge-stdio/  the stdio shim Claude Code and Codex run to reach the bridge
 ├── extension/   the VS Code side
@@ -338,6 +339,8 @@ src/
     ├── view-sync.ts            page and zoom to the extension, its actions back
     ├── tool-mode.ts            the Select Text and Select Region tools
     ├── page.tsx, page-links.tsx  one page's layers in the Stage
+    ├── page-picture-hold.ts    a zoom step keeps the page's picture on screen
+    │                           until the new one is decoded
     ├── navigation.ts           pages, locations, highlights (Stage verbs)
     ├── stage-layout.ts, stage-position.ts  layout choices and the reading
     │                           place, to and from the Stage

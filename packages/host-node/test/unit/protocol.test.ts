@@ -1,6 +1,10 @@
 import test from "node:test";
 import assert from "node:assert/strict";
-import { parseHostFrame, safeExternalHref } from "../../src/protocol";
+import {
+  parseHostFrame,
+  parsePageFrame,
+  safeExternalHref,
+} from "../../src/protocol";
 
 function uiFrame(data: unknown): string {
   return JSON.stringify({ ch: "ui", data });
@@ -93,6 +97,7 @@ test("every well-formed host-to-page request keeps its fields", () => {
     ["ask", { type: "ask", id: 1, message: "m", actions }],
     ["pick", { type: "pick", id: 1, placeholder: "p", items }],
     ["pickItems", { type: "pickItems", id: 1, items }],
+    ["pickMany", { type: "pickMany", id: 1, placeholder: "p", items }],
     ["input", { type: "input", id: 1, prompt: "p", value: "v", error: "e" }],
     ["menu", { type: "menu", id: 1, x: 1, y: 2, groups }],
     ["open", { type: "open", path: "a.md", fragment: "" }],
@@ -111,6 +116,8 @@ test("unbounded host-to-page fields are dropped", () => {
     uiFrame({ type: "ask", id: 1, message: "m", actions });
   const pick = (items: unknown) =>
     uiFrame({ type: "pick", id: 1, placeholder: "p", items });
+  const pickMany = (items: unknown) =>
+    uiFrame({ type: "pickMany", id: 1, placeholder: "p", items });
   const menu = (groups: unknown) =>
     uiFrame({ type: "menu", id: 1, x: 0, y: 0, groups });
   const rejects: Array<[string, string]> = [
@@ -120,10 +127,30 @@ test("unbounded host-to-page fields are dropped", () => {
     ["pick description", pick([{ label: "a", description: long }])],
     ["pick detail", pick([{ label: "a", detail: long }])],
     ["pick rows", pick(rows)],
+    ["pickMany detail", pickMany([{ label: "a", detail: long }])],
+    ["pickMany rows", pickMany(rows)],
     ["menu label", menu([[{ label: long }]])],
     ["menu depth", menu(nestedGroups(100))],
   ];
   for (const [name, text] of rejects) {
     assert.equal(parseHostFrame(text), undefined, name);
+  }
+});
+
+test("a page's answer is text, a row, a list of rows or nothing", () => {
+  const answer = (value: unknown) =>
+    parsePageFrame(
+      JSON.stringify({ ch: "ui", data: { type: "answer", id: 7, value } }),
+    );
+  for (const value of ["Download", 0, 3, null, [], [0, 2, 5]]) {
+    assert.deepEqual(
+      answer(value),
+      { ch: "ui", data: { type: "answer", id: 7, value } },
+      JSON.stringify(value),
+    );
+  }
+  const tooMany = Array.from({ length: 257 }, (_, index) => index);
+  for (const value of [[-1], [1.5], ["1"], [null], [[1]], tooMany, {}, true]) {
+    assert.equal(answer(value), undefined, JSON.stringify(value));
   }
 });

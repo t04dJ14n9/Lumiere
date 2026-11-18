@@ -101,3 +101,80 @@ test("an error shown on an open page is not shown again on the next one", async 
   hub.attach(second.id, secondPage.socket);
   assert.deepEqual(toasts(secondPage.sent), []);
 });
+
+/** A page's socket the test can answer through. */
+function answeringSocket() {
+  const sent: {
+    ch: string;
+    data: { type: string; id: number; items?: unknown[] };
+  }[] = [];
+  let receive: (text: string) => void = () => {};
+  const socket: PageSocket = {
+    send: (text) => sent.push(JSON.parse(text)),
+    onMessage: (listener) => {
+      receive = listener;
+      return () => {};
+    },
+    onClose: () => () => {},
+    close: () => {},
+  };
+  const answer = (id: number, value: unknown) =>
+    receive(JSON.stringify({ ch: "ui", data: { type: "answer", id, value } }));
+  return { socket, sent, answer };
+}
+
+const choices = [
+  {
+    label: "a.png",
+    description: "ex.com",
+    detail: "https://ex.com/a.png",
+    value: "A",
+  },
+  { label: "b.png", value: "B" },
+  { label: "c.png", value: "C" },
+];
+
+async function askMany(t: test.TestContext, reply: (id: number) => unknown) {
+  const { uri, hub, dialogs } = await setup(t);
+  const { id } = await hub.open({ uri, urls });
+  const page = answeringSocket();
+  hub.attach(id, page.socket);
+  const result = dialogs.pickMany({ placeholder: "Download?", items: choices });
+  const request = page.sent.find((frame) => frame.data.type === "pickMany")!;
+  page.answer(request.data.id, reply(request.data.id));
+  return { request, result: await result };
+}
+
+test("a multi-select pick shows the rows and resolves the ticked values in row order", async (t) => {
+  const { request, result } = await askMany(t, () => [2, 0]);
+  assert.deepEqual(request.data, {
+    type: "pickMany",
+    id: request.data.id,
+    placeholder: "Download?",
+    items: [
+      { label: "a.png", description: "ex.com", detail: "https://ex.com/a.png" },
+      { label: "b.png" },
+      { label: "c.png" },
+    ],
+  });
+  assert.deepEqual(result, ["A", "C"]);
+});
+
+test("a multi-select pick ignores rows the page invented and repeats", async (t) => {
+  const { result } = await askMany(t, () => [1, 1, 9, 0]);
+  assert.deepEqual(result, ["A", "B"]);
+});
+
+test("a multi-select pick is empty when nothing is ticked and none when dismissed", async (t) => {
+  assert.deepEqual((await askMany(t, () => [])).result, []);
+  assert.equal((await askMany(t, () => null)).result, undefined);
+  assert.equal((await askMany(t, () => "A")).result, undefined);
+});
+
+test("a multi-select pick with no page open is dismissed", async (t) => {
+  const { dialogs } = await setup(t);
+  assert.equal(
+    await dialogs.pickMany({ placeholder: "x", items: choices }),
+    undefined,
+  );
+});

@@ -23,10 +23,9 @@ over Node, then starts the plugins with the same `bootstrap` VS Code uses
 `createEditorRoutes()` serves everything a page needs, below `/lumiere`, on
 any Node web server:
 
-- `/lumiere/editor?path=&root=`: a note's page. Its workspace `root` is
-  registered unless it holds a workspace already registered, which it would
-  widen (`editor-roots.ts`). Without `root` the note's folder stands in, and
-  gives way when a workspace that holds it arrives;
+- `/lumiere/editor?path=&root=`: a note's page, from its workspace `root`
+  (without one, the note's folder), which must lie inside a workspace the
+  embedder registered (below); the page registers none;
 - `/lumiere/pdf?path=&root=`: a PDF's page, Lumière PDF's viewer
   (`/lumiere/pdf/viewer/*`), which fetches the PDF from `/lumiere/pdf/bytes`.
   It runs only when the embedder passes the built viewer (`EditorAssets.pdf`);
@@ -47,6 +46,13 @@ The embedder puts its own authentication in front of them. A page runs in
 the embedder's iframe. Its shim stands in for VS Code's webview API: what
 VS Code would carry between webview and extension travels over the page's
 socket to its panel here.
+
+A page's URL names a note and the workspace it is shown from, but a page
+decides nothing about which folders are workspaces. The embedder registers
+each one with `host.addRoot` (by real path) before it serves the page: the app
+for each vault, DSH for each session's workspace. A note's or PDF's page
+answers 403 for a `root` that is not inside a registered one, and a registered filesystem
+root counts for nothing.
 
 A right-click in a page shows Lumière's `webview/context` menu as VS Code
 does (`context-menu.ts`): the page reports the clicked element's
@@ -91,7 +97,6 @@ forbids this package from importing `vscode` or any embedder.
 - `src/host/conflict-copy.ts`: where another program's version of a note goes when unsaved typing on the same lines is saved over it.
 - `src/host/panels.ts`, `src/host/panel.ts`: editor pages as panels, and their sockets.
 - `src/host/routes.ts`, `src/host/page.ts`, `src/host/static.ts`: the routes above.
-- `src/host/editor-roots.ts`: which workspace roots an editor page may open from.
 - `src/host/pdf-pages.ts`, `src/host/pdf-routes.ts`: PDF tabs, on Lumière PDF's viewer core (`@workshop/pdf/portable`) and the same page shim and socket as notes.
 - `src/host/trees.ts`, `src/host/view-routes.ts`: the plugins' tree views and their routes.
 - `src/host/settings-routes.ts`: the settings for a settings page, and changes to them.

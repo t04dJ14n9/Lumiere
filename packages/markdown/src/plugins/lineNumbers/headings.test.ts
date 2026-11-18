@@ -6,11 +6,15 @@ import { markdownLanguageSupport } from "../../markdown/dialect";
 import { headingLines } from "./headings";
 
 function gutterClasses(doc: string): { line: number; cls: string }[] {
-  const state = EditorState.create({
+  const created = EditorState.create({
     doc,
     extensions: [markdownLanguageSupport()],
   });
-  ensureSyntaxTree(state, doc.length, 5000);
+  // A new state holds the tree parsed within the creation budget, which a
+  // busy machine can end before the last line. Finish the parse, then take
+  // a state whose syntax tree is the finished one: `headingLines` reads it.
+  assert.ok(ensureSyntaxTree(created, doc.length, 5000));
+  const state = created.update({}).state;
   const found: { line: number; cls: string }[] = [];
   headingLines(state).between(0, doc.length, (from, _to, marker) => {
     found.push({

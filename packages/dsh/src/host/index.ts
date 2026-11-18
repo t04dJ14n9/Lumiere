@@ -12,7 +12,7 @@ import type { DshContext, DshLogger } from "./dsh";
 import { registerRoutes } from "./routes";
 
 export const name = "lumiere";
-export const inject = ["webServer", "connection"];
+export const inject = ["webServer", "connection", "sessions"];
 
 export async function apply(ctx: DshContext): Promise<void> {
   // The bundle's index.js sits beside markdown/, page/ and contributed.json.

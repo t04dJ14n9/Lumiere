@@ -60,6 +60,7 @@ function defaultHost(): HostServices {
       inform() {},
       ask: async () => undefined,
       pick: async () => undefined,
+      pickMany: async () => undefined,
       input: async () => undefined,
     },
     views: {

@@ -14,12 +14,16 @@ import {
   pluginTitles,
   settingsUnavailableIn,
 } from "@workshop/markdown/portable";
-import { editorRoots, type AcceptEditorRoot } from "./editor-roots";
 import { NODE_HOST_OFFERS } from "./inert";
 import { injectShim, socketSource } from "./page";
 import { pageQuery } from "./page-query";
 import type { PageSocket, PanelUrls } from "./panel";
-import { assertContained, fileUriToPath, resolveContainedNote } from "./paths";
+import {
+  assertContained,
+  fileUriToPath,
+  isInsideRegisteredRoot,
+  resolveContainedNote,
+} from "./paths";
 import type { LumiereHost } from "./start";
 import { createPdfRoutes, NO_PDF_ROUTES, type PdfRoutes } from "./pdf-routes";
 import { serveFile, serveStatic } from "./static";
@@ -113,12 +117,12 @@ function routeParts(host: LumiereHost, assets: EditorAssets): RouteParts {
       ? createPdfRoutes({
           base: BASE,
           viewer: assets.pdf,
+          roots: () => host.workspaceRoots(),
           log: assets.log ?? (() => {}),
         })
       : NO_PDF_ROUTES,
     // Each panel's workspace root: what its page may read files from.
     roots: new Map<string, string>(),
-    acceptRoot: editorRoots(host),
   };
 }
 
@@ -130,7 +134,6 @@ interface RouteParts {
   readonly commands: ReturnType<typeof createCommandRoutes> | undefined;
   readonly pdf: PdfRoutes;
   readonly roots: Map<string, string>;
-  readonly acceptRoot: AcceptEditorRoot;
 }
 
 interface RouteRequest {
@@ -223,7 +226,7 @@ interface PageRequest {
   readonly req: IncomingMessage;
   readonly res: ServerResponse;
   readonly url: URL;
-  readonly parts: Pick<RouteParts, "host" | "roots" | "acceptRoot">;
+  readonly parts: Pick<RouteParts, "host" | "roots">;
 }
 
 async function servePage({ req, res, url, parts }: PageRequest): Promise<void> {
@@ -240,9 +243,10 @@ async function servePage({ req, res, url, parts }: PageRequest): Promise<void> {
     return;
   }
   const rootUri = pathToFileURL(resolved.root).toString();
-  // A note page is same-origin with this GET, so the query is not trusted to
-  // widen a workspace already registered (editor-roots.ts).
-  if (!parts.acceptRoot({ uri: rootUri, isNoteFolder: query.isNoteFolder })) {
+  // The query comes from a page on the embedder's own origin, so it is not
+  // trusted to name a workspace: the embedder registered it (`addRoot`) or
+  // the page is refused.
+  if (!isInsideRegisteredRoot(host.workspaceRoots(), rootUri)) {
     res.writeHead(403).end();
     return;
   }

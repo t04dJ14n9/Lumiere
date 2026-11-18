@@ -9,12 +9,10 @@ test("a page opens a Markdown note inside its workspace, and nothing else", () =
   assert.deepEqual(pageQuery(url("path=/v/notes/A.md&root=/v")), {
     note: "/v/notes/A.md",
     root: "/v",
-    isNoteFolder: false,
   });
   assert.deepEqual(pageQuery(url("path=/v/A.markdown")), {
     note: "/v/A.markdown",
     root: "/v",
-    isNoteFolder: true,
   });
   for (const bad of [
     "path=/v/A.txt&root=/v",

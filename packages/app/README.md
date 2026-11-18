@@ -27,6 +27,25 @@ Every request must come from the window it was started for (`auth.ts`):
   refused.
 - A request that has an Origin must come from this server.
 
+A page of a note or PDF is same-origin with the window and carries the same
+cookie, and the server reads and writes whatever its vaults hold. So the two
+routes that can add a folder as a vault (`POST /api/vaults`, `POST /api/open`)
+answer only the window itself (`fromShell` in `auth.ts`):
+
+- The server gives each run a random shell key and puts it in the window's page
+  (`GET /`, a `<meta>` tag), and only when the request is a load of the page
+  itself: a browser's `Sec-Fetch-Dest` says a `fetch` or a frame is not, and a
+  page's script cannot change it. The window sends the key back in
+  `x-lumiere-shell` (`src/shell/api.ts`).
+- A request with no Origin and no fetch metadata is not a page (a browser sends
+  an Origin with every POST): it is a process that holds the launch token, such
+  as the desktop app's open request, and passes.
+- A page that is not the window cannot read the key from a `fetch` or a frame.
+  Script that can open the window's page in a window of its own and read it can
+  still take it; and the window forwards a page's request to follow a link to a
+  note outside the open vaults to `POST /api/open` with its own key. This
+  closes the direct request, not those.
+
 The **window** (`src/shell`, React) is meant to feel like Typora: light,
 with the note in front.
 
@@ -89,11 +108,11 @@ lumiere-server [--vault <dir>]... [--port <n>|0] [--host 127.0.0.1]
 
 | Method and path | What |
 | --- | --- |
-| `GET /` | the window |
+| `GET /` | the window, with the shell key for a load of the page |
 | `GET /api/health` | `{"ok":true,"version":…}` |
-| `GET /api/vaults`, `POST /api/vaults` `{"path"}` | the open and recent vaults; open one |
+| `GET /api/vaults`, `POST /api/vaults` `{"path"}` | the open and recent vaults; open one (the window only: `x-lumiere-shell`) |
 | `GET /api/files?vault=` | a vault's files, sorted, with their kind |
-| `POST /api/open` `{"path"}` | show a note or folder (Finder, a second launch) |
+| `POST /api/open` `{"path"}` | show a note or folder (Finder, a second launch; the window only, or a process with no Origin) |
 | `GET /api/events` | server-sent events: vaults changed, a note to open |
 | `GET /api/ui`, `POST /api/ui` | the window's layout, open folders and Color Theme (`src/shared/ui-state.ts`) |
 | `GET /api/events` | server-sent events: vaults changed, a note to open, a vault's plugins waiting for an answer (`{"type":"trust"}`), a drawing started or ended waiting (`{"type":"ink"}`) |
@@ -108,7 +127,9 @@ lumiere-server [--vault <dir>]... [--port <n>|0] [--host 127.0.0.1]
 - `src/server/contract.ts`: arguments, the ready line, logs, exit codes.
 - `src/server/cli.ts`: the `lumiere-server` process: start, ready line, stop.
 - `src/server/server.ts`: the web server: auth, then the API, editor routes or the window.
-- `src/server/auth.ts`: the token, Host and Origin checks.
+- `src/server/auth.ts`: the token, Host and Origin checks, and the shell key that adds a folder.
+- `src/server/shell-page.ts`: the window's page, with the shell key.
+- `src/shared/shell-key.ts`: the key's header and meta tag, for both sides.
 - `src/server/api.ts`: the API above.
 - `src/server/vaults.ts`: open and recent vaults, and their files.
 - `src/shell/App.tsx`, `src/shell/components/`: the window.
