@@ -5,14 +5,23 @@ import type {
   PanelShell,
 } from "../shared/host";
 import { CancelToken } from "../shared/rpc/lifecycle";
-import type { Disposer } from "@workshop/core";
+import { silentLogger } from "@workshop/core";
+import type { Disposer, Logger } from "@workshop/core";
 
-/** No URI mailbox: the native opener assigns one exact panel before delivery. */
+/** How long a reveal waits for its editor's Links plugin to register it. */
+const REGISTRATION_TIMEOUT_MS = 15000;
+
+/**
+ * No URI mailbox: the native opener assigns one exact panel before delivery.
+ * A reveal that comes to nothing is logged with the panel id: the user sees
+ * only a note that opened without moving to the heading.
+ */
 export class RevealRouter {
   private readonly panels = new Map<string, RevealPanel>();
   private readonly changed = new Set<() => void>();
   private latest = 0;
   private token = new CancelToken();
+  constructor(private readonly logger: Logger = silentLogger) {}
   begin(): { requestId: number; token: CancelToken } {
     this.token.cancel();
     this.token = new CancelToken();
@@ -34,11 +43,11 @@ export class RevealRouter {
     id: string,
     target: NavigationTarget,
   ): Promise<boolean> {
-    if (intent.token.cancelled) {
-      return false;
-    }
-    const panel = await this.destination(id, intent.token);
+    const panel = intent.token.cancelled
+      ? undefined
+      : await this.destination(id, intent.token);
     if (!panel || intent.token.cancelled) {
+      this.logUndelivered(intent, id);
       return false;
     }
     try {
@@ -46,15 +55,34 @@ export class RevealRouter {
         { ...target, requestId: intent.requestId },
         intent.token,
       );
-      return (
-        applied && this.panels.get(id) === panel && !intent.token.cancelled
-      );
+      const isCurrent = this.panels.get(id) === panel;
+      if (!applied || !isCurrent || intent.token.cancelled) {
+        this.logRefused(intent, id);
+        return false;
+      }
+      return true;
     } catch (error) {
       if (intent.token.cancelled) {
+        this.logUndelivered(intent, id);
         return false;
       }
       throw error;
     }
+  }
+  private logUndelivered(intent: NavigationIntent, id: string): void {
+    if (intent.token.cancelled) {
+      this.logger.debug("Reveal cancelled by a newer navigation", id);
+      return;
+    }
+    // Usually the Links plugin is off for this note: it registers reveals.
+    this.logger.warn("No editor registered to reveal the target in time", id);
+  }
+  private logRefused(intent: NavigationIntent, id: string): void {
+    if (intent.token.cancelled) {
+      this.logUndelivered(intent, id);
+      return;
+    }
+    this.logger.debug("The editor did not reveal the target", id);
   }
   private destination(
     id: string,
@@ -79,7 +107,7 @@ export class RevealRouter {
           finish(panel);
         }
       };
-      const timer = setTimeout(() => finish(), 15000);
+      const timer = setTimeout(() => finish(), REGISTRATION_TIMEOUT_MS);
       this.changed.add(check);
       stop = token.onCancel(() => finish());
       check();

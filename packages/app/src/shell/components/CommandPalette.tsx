@@ -31,7 +31,7 @@ const SHELL_SPECS: readonly [MenuCommand, string, string, string?][] = [
   ["theme-dark", "Color Theme: Dark", "Preferences"],
 ];
 
-export function shellPaletteEntries(
+function shellPaletteEntries(
   handlers: CommandHandlers,
 ): readonly PaletteEntry[] {
   return SHELL_SPECS.map(([command, title, category, shortcut]) => ({

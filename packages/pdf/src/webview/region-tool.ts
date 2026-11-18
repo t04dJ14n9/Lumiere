@@ -72,7 +72,7 @@ function emptySpaceHandler(pageSize: PageSize): InteractionHandler {
   /** The page the gesture began on: it goes on there, off the page too. */
   let home: PageRef | undefined;
   return {
-    id: "lumia-region",
+    id: "lumiere-region",
     priority: EMPTY_SPACE_PRIORITY,
     enabledFor: (tool) => tool.id === READ_TOOL_ID,
     onPointerDown: (sample) => {

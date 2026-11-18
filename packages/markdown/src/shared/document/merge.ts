@@ -54,6 +54,36 @@ export function mergeDiskChange({ saved, buffer, disk }: DiskChange): string {
   return kept.flat().join("\n");
 }
 
+/**
+ * Whether `mergeDiskChange` would drop some of the disk's lines: both sides
+ * changed the same lines, and not in the same way. A host that must not lose
+ * the other program's version keeps it elsewhere before merging. Cautious: a
+ * change both sides made alike but inside differently sized hunks counts.
+ */
+export function diskChangeConflicts({
+  saved,
+  buffer,
+  disk,
+}: DiskChange): boolean {
+  if (buffer === disk || saved === disk || saved === buffer) {
+    return false;
+  }
+  const base = saved.split("\n");
+  const own = hunks(base, buffer.split("\n"));
+  return hunks(base, disk.split("\n")).some((theirs) =>
+    own.some((ours) => clashes(ours, theirs) && !sameHunk(ours, theirs)),
+  );
+}
+
+function sameHunk(a: Hunk, b: Hunk): boolean {
+  return (
+    a.from === b.from &&
+    a.to === b.to &&
+    a.lines.length === b.lines.length &&
+    a.lines.every((line, at) => line === b.lines[at])
+  );
+}
+
 /** What changed from `base` to `other`: each run of changed lines is one hunk. */
 function hunks(base: readonly string[], other: readonly string[]): Hunk[] {
   const found: { from: number; to: number; start: number; end: number }[] = [];

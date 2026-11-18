@@ -44,19 +44,14 @@ function yamlDraft(source: string, key: string): string {
   return draft;
 }
 
-/** OKF known type: generated/verified maps with `by` (#144). */
-function assertOkfGenerated(source: string): void {
+/** A nested `generated` map renders as Obsidian's Unknown type. */
+function assertGeneratedUnknown(source: string): void {
   const html = renderProperties(source);
   const keyAt = html.indexOf('data-property-key="generated"');
   assert.ok(keyAt >= 0, "Missing generated");
   const next = html.indexOf('data-property-key="', keyAt + 1);
   const slice = html.slice(keyAt, next < 0 ? keyAt + 4000 : next);
-  assert.ok(
-    slice.includes('data-property-type="generated"') &&
-      slice.includes('data-property-kind="yaml"'),
-    "Expected generated as an editable YAML field",
-  );
-  assert.ok(!slice.includes("mod-unknown"), "generated must not be Unknown");
+  assert.ok(slice.includes("mod-unknown"), "Expected generated as Unknown");
 }
 
 function editYaml(source: string, key: string, yaml: string): string {
@@ -71,7 +66,7 @@ for (const eol of ["\n", "\r\n"]) {
       "generated:\n  by: old\n  # checksum is generated externally; keep this\n  checksum: abc\n  serial: 9007199254740993\n  id: !!str '01' # keep quoting and tag\n  notes: |+\n    a\n\n";
     const source =
       `---\n# Header\n${body}title: 'Note'\n---\nBody\n`.replaceAll("\n", eol);
-    assertOkfGenerated(source);
+    assertGeneratedUnknown(source);
     const yaml = yamlDraft(source, "generated")
       .replace("by: old", "by: new")
       .replace("checksum: abc", "# typed in the draft\nchecksum: abc");
@@ -124,7 +119,7 @@ test("external-alias properties stay Source-mode instead of a lossy stringify dr
 test("anchored YAML set preserves leading comments and prior external alias values", () => {
   const source =
     "---\ngenerated: &a # generated comment\n  # before the first child\n  by: old\n  # checksum is external\n  checksum: 'abc'\nmirror: *a\n---\n";
-  assertOkfGenerated(source);
+  assertGeneratedUnknown(source);
   const yaml = yamlDraft(source, "generated").replace("by: old", "by: new");
   const next = editYaml(source, "generated", yaml);
   assert.match(next, /# generated comment/);
@@ -158,7 +153,7 @@ test("aliases to tagged pairs cannot bypass the draft and set guards", () => {
 test("flow YAML set retains inline comments and property-adjacent bytes", () => {
   const source =
     "---\ngenerated: {by: old, # keep the child comment\n  checksum: 'abc'} # property comment\ntitle: Note\n---\n";
-  assertOkfGenerated(source);
+  assertGeneratedUnknown(source);
   const yaml = yamlDraft(source, "generated")
     .replace("by: old", "by: new")
     .replace("checksum:", "# typed inside flow YAML\n  checksum:");
@@ -319,10 +314,7 @@ test("Unknown JSON shows nested maps; text longtext still round-trips spaces", (
   const source =
     '---\ngenerated:\n  by: old\n  notes: |+\n    a\n\ntext: " one\\n two"\n---\n';
   const html = renderProperties(source);
-  assert.match(
-    html,
-    /data-property-input="generated" data-property-kind="yaml">[^<]*by: old/,
-  );
+  assert.match(html, /data-property-key="generated"[\s\S]*mod-unknown/);
   const text = html.match(
     /data-property-input="text"[^>]*>([\s\S]*?)<\/textarea>/,
   )?.[1];

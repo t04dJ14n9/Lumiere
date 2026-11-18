@@ -26,6 +26,8 @@ export interface AgentChatOptions {
    * file only once, so the attachment is repeated after these delays.
    */
   codexRetryDelaysMs?: readonly number[];
+  /** Aborted when the caller stops: the pending Codex repeats are dropped. */
+  signal?: AbortSignal;
 }
 
 const CODEX_RETRY_DELAYS_MS = [1000, 2000, 4000];
@@ -150,6 +152,7 @@ function chatAnswers(environment: AgentEnvironment | undefined): boolean {
 
 async function openChat({
   execute,
+  copy,
   payload,
   options,
 }: RouteContext): Promise<ChatTarget | undefined> {
@@ -160,10 +163,17 @@ async function openChat({
   ) {
     return undefined;
   }
-  await execute(AGENT_COMMANDS.chatOpen, {
-    query: `${payload}\n\n`,
-    isPartialQuery: true,
-  });
+  // The chat is open now: if it refuses the query, the passage goes on the
+  // clipboard to paste there rather than being lost with the error.
+  if (
+    !(await tryCommand(execute, AGENT_COMMANDS.chatOpen, {
+      query: `${payload}\n\n`,
+      isPartialQuery: true,
+    }))
+  ) {
+    await copy(payload);
+    return "chatWithClipboard";
+  }
   return "chat";
 }
 
@@ -197,9 +207,29 @@ async function attachToCodex({
   }
   void (async () => {
     for (const ms of options.codexRetryDelaysMs ?? CODEX_RETRY_DELAYS_MS) {
-      await new Promise((resolve) => setTimeout(resolve, ms));
+      if (!(await delay(ms, options.signal))) {
+        return;
+      }
       await tryCommand(execute, AGENT_COMMANDS.codexAddFile, file);
     }
   })();
   return "codex";
+}
+
+/** Waits `ms`; false, at once, if `signal` aborts first. */
+function delay(ms: number, signal: AbortSignal | undefined): Promise<boolean> {
+  if (signal?.aborted) {
+    return Promise.resolve(false);
+  }
+  return new Promise((resolve) => {
+    const stop = () => {
+      clearTimeout(timer);
+      resolve(false);
+    };
+    const timer = setTimeout(() => {
+      signal?.removeEventListener("abort", stop);
+      resolve(true);
+    }, ms);
+    signal?.addEventListener("abort", stop, { once: true });
+  });
 }

@@ -2,6 +2,25 @@
 
 ## Unreleased
 
+- Fixed (review 2026-11-15):
+  - The host writes a PDF only for Save Annotations into This PDF, and never
+    one in `lumiere.pdf.annotations.protectedFolders`, whatever the viewer
+    sends.
+  - After a PDF failed to reload from disk, later annotations were silently
+    not saved until the editor was reopened.
+  - Annotations made while a PDF was reloading were lost or filed under the
+    wrong version of the PDF; the viewer now names the hash it saved for.
+    Touching or syncing an unchanged PDF no longer reloads it.
+    An annotation made while Save Annotations into This PDF is writing is
+    kept, and filed under the PDF as written, instead of being lost on the
+    next open.
+    Each save into the PDF settles only the annotations it wrote, so one
+    that fails no longer loses annotations an earlier one did not take; a
+    change made during the write to one it took is reported as a change to
+    the PDF's annotations rather than dropped.
+  - The selection handed to Codex is written in a private temporary folder,
+    and the agent bridge compares its token in constant time.
+
 - **Empty-page drag pans and turns pages.** With region selection off (the
   default), dragging blank page space pans the view in continuous scrolling.
   In page-by-page scrolling, a blank-page drag that travels 60 CSS pixels

@@ -50,18 +50,12 @@ export class PdfSource {
     this.expectedWrite = sha256;
   }
 
-  async diskMatchesBase(): Promise<boolean> {
-    // Taken before the read: a reload that lands meanwhile replaces `sha256`,
-    // and a file another program changed would then match itself.
-    const base = this.sha256;
-    if (!base || !this.files.hash) {
-      return true;
-    }
-    try {
-      return (await this.files.hash(this.uri)) === base;
-    } catch {
-      return false;
-    }
+  /**
+   * The file's hash on disk now; undefined when this host cannot hash
+   * files. Rejects when the file cannot be read.
+   */
+  async diskHash(): Promise<string | undefined> {
+    return this.files.hash ? await this.files.hash(this.uri) : undefined;
   }
 
   acceptWrite(sha256: string): void {
@@ -96,13 +90,14 @@ export class PdfSource {
   }
 
   private async onWatchedChange(): Promise<void> {
-    if (this.expectedWrite && this.files.hash) {
+    if (this.files.hash) {
       try {
         const disk = await this.files.hash(this.uri);
-        if (disk === this.expectedWrite) {
-          // Keep expectedWrite: atomic rename often fires create+change, and
-          // clearing after the first event lets the second reload the viewer
-          // (wiping EmbedPDF History so Undo Annotation no-ops).
+        // Keep expectedWrite: atomic rename often fires create+change, and
+        // clearing after the first event lets the second reload the viewer
+        // (wiping EmbedPDF History so Undo Annotation no-ops). Bytes the
+        // viewer already has (a touch, a sync) need no reload either.
+        if (disk === this.expectedWrite || disk === this.sha256) {
           this.sha256 = disk;
           return;
         }

@@ -7,7 +7,7 @@ import { ticketsPlugin } from "./plugin";
 
 export async function activate(context: vscode.ExtensionContext) {
   const api = await vscode.extensions
-    .getExtension<MarkdownWorkshopApi>("t04dj14n9.vscode-markdown-workshop")
+    .getExtension<MarkdownWorkshopApi>("t04dj14n9.lumiere")
     ?.activate();
   if (api?.apiVersion !== 1) {
     void vscode.window.showWarningMessage(

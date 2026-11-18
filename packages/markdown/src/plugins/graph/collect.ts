@@ -1,4 +1,3 @@
-import { isInsideBundle } from "../../markdown/okf";
 import { isMarkdownPath } from "../../shared/vault-path";
 import type { Vault } from "../vault/api";
 import type { GraphNote } from "./project";
@@ -19,11 +18,11 @@ export function indexCompleteness(
   return "ready";
 }
 
-/** Markdown files inside one bundle (`bundleRoot === ""` = whole vault), plus indexing completeness. */
-export function collectBundle(
-  vault: Vault,
-  bundleRoot: string,
-): { notes: GraphNote[]; completeness: "ready" | "partial" | "indexing" } {
+/** Every Markdown note in the vault, plus indexing completeness. */
+export function collectNotes(vault: Vault): {
+  notes: GraphNote[];
+  completeness: "ready" | "partial" | "indexing";
+} {
   const files = vault.index.files();
   if (!Array.isArray(files)) {
     return { notes: [], completeness: "ready" };
@@ -31,7 +30,7 @@ export function collectBundle(
   const notes: GraphNote[] = [];
   let missingMetadata = false;
   for (const file of files) {
-    if (!isMarkdownPath(file.path) || !isInsideBundle(file.path, bundleRoot)) {
+    if (!isMarkdownPath(file.path)) {
       continue;
     }
     const metadata = vault.index.metadata(file.path);

@@ -66,6 +66,9 @@ export async function outlineFixture(
       ? providerExpanded.get(node.id) === true
       : node.expanded === true;
   const warnings: unknown[] = [];
+  const informs: string[] = [];
+  /** The Links plugin's switch for every note, as `settings.forNote` reports it. */
+  const links = { enabled: true };
   const settingsWrites: unknown[][] = [];
   const resources = new Map<string, boolean>();
   const contexts = new Map<string, unknown>();
@@ -143,6 +146,10 @@ export async function outlineFixture(
       },
     };
   };
+  // Tests replace the fake's dialogs member by member: keep that object.
+  fake.dialogs.inform = (message) => {
+    informs.push(message);
+  };
   const host = withHost(hostWith(fake), {
     hostCommands: {
       execute: async (command, key, value) => {
@@ -155,6 +162,11 @@ export async function outlineFixture(
       },
     },
     settings: {
+      forNote: () => ({
+        preset: "obsidian",
+        mode: "livePreview",
+        features: { links: { enabled: links.enabled, config: {} } },
+      }),
       onChange: (listener) => {
         configure = listener;
         return () => {
@@ -188,7 +200,7 @@ export async function outlineFixture(
           configure();
           return "user";
         },
-        searchFilter: "@ext:test.workshop",
+        searchFilter: "@ext:test.lumiere",
         contributed: () => [],
         openUi: async () => {},
       },
@@ -222,8 +234,11 @@ export async function outlineFixture(
   return {
     root,
     fake,
+    vaults,
     texts,
     opened,
+    informs,
+    links,
     reveals,
     expands,
     collapses,

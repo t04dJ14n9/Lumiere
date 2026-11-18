@@ -25,7 +25,7 @@ what Cordis does not guarantee:
   abandoned `apply` acquires afterwards is undone at once.
 - **Optional services.** Cordis gates on every injected service. Optional
   services are injected while they exist, and the plugin is re-plugged when
-  one appears or disappears.
+  one appears or disappears, except while its owner is stopping it.
 - **An ordered event bus.** Listeners run by plugin rank, so a restarted plugin
   keeps its place; a throwing listener is logged and skipped instead of
   breaking the emitter.

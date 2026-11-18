@@ -121,6 +121,7 @@ export class ContextImpl implements BaseContext {
     this.assertLive();
     const child = new PluginHandleImpl(this.runtime, definition, config as C);
     child.detach = this.activation.acquire("plugin", () => child.dispose());
+    child.isOwnerLive = () => this.activation.isLive;
     this.scope.startChild(child as PluginHandleImpl<unknown>);
     return child;
   }

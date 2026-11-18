@@ -15,10 +15,23 @@ const URI = "file:///vault/Note.md";
 function memoryNote(initial: string) {
   let disk = initial;
   const watchers = new Set<() => void>();
+  /** Files other than the note: its conflict copies. */
+  const others = new Map<string, string>();
   const files: NoteFiles = {
     readText: async () => disk,
-    save: async (_uri, text) => {
-      disk = text;
+    save: async (uri, text) => {
+      if (uri === URI) {
+        disk = text;
+      } else {
+        others.set(uri, text);
+      }
+    },
+    create: async (uri) => {
+      if (uri === URI || others.has(uri)) {
+        return false;
+      }
+      others.set(uri, "");
+      return true;
     },
     watch: (_uri, listener) => {
       watchers.add(listener);
@@ -28,6 +41,7 @@ function memoryNote(initial: string) {
   };
   return {
     files,
+    others,
     get disk() {
       return disk;
     },
@@ -53,6 +67,15 @@ async function settle(): Promise<void> {
   for (let turn = 0; turn < 5; turn++) {
     await new Promise((resolve) => setImmediate(resolve));
   }
+}
+
+/** Wait for an autosave: its delay is short, but a loaded machine is slow. */
+async function until(done: () => boolean): Promise<void> {
+  for (let waited = 0; !done(); waited += 5) {
+    assert.ok(waited < 5_000, "timed out");
+    await new Promise((resolve) => setTimeout(resolve, 5));
+  }
+  await settle();
 }
 
 async function openNote(initial: string, delay = 60_000) {
@@ -100,21 +123,37 @@ test("an outside rewrite elsewhere merges into unsaved typing, and the merge is 
   assert.equal(note.getText(), "A\nb\nC");
   assert.deepEqual(changes.slice(1), ["A\nb\nC"]);
   assert.equal(note.isDirty, true);
-  await settle();
-  await new Promise((resolve) => setTimeout(resolve, 30));
-  assert.equal(file.disk, "A\nb\nC");
+  await until(() => file.disk === "A\nb\nC");
   assert.equal(note.isDirty, false);
 });
 
-test("an outside rewrite of the line being typed in keeps the typed line", async (t) => {
+test("an outside rewrite of the line being typed in keeps the typed line, and the outside version beside it", async (t) => {
   const { file, documents, note } = await openNote("a\nb\nc", 10);
   t.after(() => documents.dispose());
+  const conflicts: string[] = [];
+  documents.onConflict((_uri, copy) => conflicts.push(copy));
   await type(documents, note, "a\nmine\nc");
   await file.writeOutside("a\ntheirs\nc");
   assert.equal(note.getText(), "a\nmine\nc");
   assert.equal(note.isDirty, true);
-  await new Promise((resolve) => setTimeout(resolve, 30));
-  assert.equal(file.disk, "a\nmine\nc");
+  await until(() => file.disk === "a\nmine\nc");
+  assert.deepEqual(conflicts, ["file:///vault/Note%20(conflict).md"]);
+  assert.equal(file.others.get(conflicts[0]!), "a\ntheirs\nc");
+  assert.equal(note.isDirty, false);
+});
+
+test("a conflicting outside rewrite still merges its changes elsewhere when saved", async (t) => {
+  const { file, documents, note } = await openNote("a\nb\nc\nd", 60_000);
+  t.after(() => documents.dispose());
+  await type(documents, note, "a\nmine\nc\nd");
+  await file.writeOutside("a\ntheirs\nc\nD");
+  assert.equal(await note.save(), true);
+  assert.equal(file.disk, "a\nmine\nc\nD");
+  assert.equal(note.getText(), "a\nmine\nc\nD");
+  assert.equal(
+    file.others.get("file:///vault/Note%20(conflict).md"),
+    "a\ntheirs\nc\nD",
+  );
 });
 
 test("the next outside rewrite merges against what the last one left on disk", async (t) => {
@@ -147,8 +186,9 @@ test("typing during an outside rewrite is merged, not replaced, when the read re
       ...file.files,
       readText: async (uri) => {
         reads += 1;
-        // The read after the open waits until the user has typed.
-        if (reads > 1) {
+        // The reload after the open waits until the user has typed; later
+        // reads (the save on dispose checks the disk) do not.
+        if (reads === 2) {
           await new Promise<void>((resolve) => {
             release = resolve;
           });

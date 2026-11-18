@@ -1,19 +1,24 @@
 import * as path from "node:path";
 import * as vscode from "vscode";
 import type { Plugin } from "@workshop/core";
-import { inProtectedFolder } from "../../../shared/annotation-store";
 import { VIEW_COMMAND_IDS } from "../../../shared/command-ids";
+import { isProtectedPdf, PROTECTED_FOLDERS } from "../../protected-folders";
 import type { PdfPanel } from "../pdf/panel";
 import manifest from "./manifest";
+import { addAnnotation, editAnnotationNote } from "./mark-notes";
 import type {} from "../services";
 
-const PROTECTED_FOLDERS = "lumiere.pdf.annotations.protectedFolders";
-
 /**
+ * Marks are made and changed from the viewer's context menu; the commands
+ * that ask for a note first (Add Annotation…, Edit Note…) are here, the rest
+ * are plain viewer actions (`view-commands.ts`).
+ *
  * Annotations are kept outside the PDF, never in it (see `annotation-store`).
  * Writing them into a PDF is a command the reader runs: Save Annotations
  * into This PDF (refused in protected folders, such as a vault's sources),
- * or Export Annotated Copy.
+ * or Export Annotated Copy. The panel writes the PDF only when this command
+ * asked, and `vscodePdfFiles` refuses protected folders again, so a viewer
+ * that sends a PDF on its own changes nothing.
  */
 export const pdfAnnotationsPlugin: Plugin = {
   name: manifest.id,
@@ -44,6 +49,18 @@ export const pdfAnnotationsPlugin: Plugin = {
       "save into PDF command",
     );
     ctx.own(
+      vscode.commands.registerCommand(VIEW_COMMAND_IDS.addAnnotation, () =>
+        addAnnotation(panels),
+      ),
+      "add annotation command",
+    );
+    ctx.own(
+      vscode.commands.registerCommand(VIEW_COMMAND_IDS.editAnnotationNote, () =>
+        editAnnotationNote(panels),
+      ),
+      "edit note command",
+    );
+    ctx.own(
       vscode.commands.registerCommand(
         VIEW_COMMAND_IDS.exportAnnotatedCopy,
         () => panels.active?.writeAnnotations("copy"),
@@ -67,7 +84,7 @@ function attach(panel: PdfPanel): vscode.Disposable {
       if (choice === "Reload") {
         await panel.reloadFromDisk();
       } else if (choice === "Keep mine") {
-        await panel.keepMine(payload.data, payload.load);
+        await panel.keepMine(payload);
       }
     }),
     panel.onAnnotationSaveFailed(async () => {
@@ -100,7 +117,7 @@ function attach(panel: PdfPanel): vscode.Disposable {
 
 async function saveIntoPdf(panel: PdfPanel): Promise<void> {
   const relative = vscode.workspace.asRelativePath(panel.uri, false);
-  if (isProtected(panel.uri)) {
+  if (isProtectedPdf(panel.uri)) {
     const exportCopy = "Export Annotated Copy…";
     const choice = await vscode.window.showWarningMessage(
       `${relative} is in a protected folder (${PROTECTED_FOLDERS}), so Lumiere does not write it. Its annotations stay in .lumiere/pdf-annotations.`,
@@ -131,7 +148,7 @@ async function exportCopy(
   data: ArrayBuffer,
 ): Promise<void> {
   const name = path.posix.basename(source.path).replace(/\.pdf$/iu, "");
-  const folder = isProtected(source)
+  const folder = isProtectedPdf(source)
     ? (vscode.workspace.getWorkspaceFolder(source)?.uri ??
       vscode.Uri.joinPath(source, ".."))
     : vscode.Uri.joinPath(source, "..");
@@ -159,18 +176,4 @@ async function exportCopy(
       `Could not export the annotated copy: ${String(error)}`,
     );
   }
-}
-
-function isProtected(uri: vscode.Uri): boolean {
-  const folder = vscode.workspace.getWorkspaceFolder(uri);
-  if (!folder) {
-    return false;
-  }
-  const folders = vscode.workspace
-    .getConfiguration(undefined, uri)
-    .get<string[]>(PROTECTED_FOLDERS, [".raw"]);
-  return inProtectedFolder(
-    vscode.workspace.asRelativePath(uri, false),
-    Array.isArray(folders) ? folders.filter((f) => typeof f === "string") : [],
-  );
 }

@@ -10,22 +10,39 @@ export type AnnotationViewerMessage =
   | {
       type: "annotationSave";
       load: number;
+      /** The viewer's number for this write; the result names it. */
+      write: number;
       baseSha256: string;
       data: ArrayBuffer;
     }
   | { type: "annotationSaveFailed"; load: number; message: string }
-  /** Lumiere's own annotations as the store file's text; null when there are none. */
-  | { type: "annotationStoreSave"; load: number; text: string | null }
+  /**
+   * Lumiere's own annotations as the store file's text; null when there are
+   * none. `sha256` names the bytes they were made on, whose file they go to.
+   */
+  | {
+      type: "annotationStoreSave";
+      load: number;
+      sha256: string;
+      text: string | null;
+    }
   /** The PDF with its annotations, for a new file (Export Annotated Copy). */
   | { type: "annotationExport"; load: number; data: ArrayBuffer }
   /** An annotation that is part of the PDF changed: only saving into it keeps that. */
   | { type: "annotationEmbeddedEdit"; load: number };
 
 export type AnnotationHostMessage =
-  | { type: "annotationSaveResult"; load: number; ok: true; sha256: string }
   | {
       type: "annotationSaveResult";
       load: number;
+      write: number;
+      ok: true;
+      sha256: string;
+    }
+  | {
+      type: "annotationSaveResult";
+      load: number;
+      write: number;
       ok: false;
       reason: "conflict" | "error";
       message: string;
@@ -57,12 +74,14 @@ export const ANNOTATION_VIEWER_PARSERS: Readonly<
       : undefined,
   annotationStoreSave: (message) =>
     isLoad(message.load) &&
+    isSha256(message.sha256) &&
     (message.text === null ||
       (typeof message.text === "string" &&
         message.text.length <= MAX_ANNOTATION_STORE_LENGTH))
       ? {
           type: "annotationStoreSave",
           load: message.load,
+          sha256: message.sha256,
           text: message.text,
         }
       : undefined,
@@ -85,6 +104,7 @@ function parseAnnotationSave(
 ): AnnotationViewerMessage | undefined {
   if (
     !isLoad(message.load) ||
+    !isLoad(message.write) ||
     typeof message.baseSha256 !== "string" ||
     message.baseSha256.length < 1 ||
     message.baseSha256.length > 128
@@ -98,14 +118,20 @@ function parseAnnotationSave(
   return {
     type: "annotationSave",
     load: message.load,
+    write: message.write,
     baseSha256: message.baseSha256,
     data,
   };
 }
 
-/** A load number: the host numbers loads 1, 2, 3… (see messages.ts). */
+/** A load number: the host numbers loads 1, 2, 3… (see messages.ts); the viewer numbers its PDF writes so too. */
 function isLoad(value: unknown): value is number {
   return typeof value === "number" && Number.isSafeInteger(value) && value >= 1;
+}
+
+/** A SHA-256 as the host writes it: it names a file, so nothing else passes. */
+function isSha256(value: unknown): value is string {
+  return typeof value === "string" && /^[0-9a-f]{64}$/u.test(value);
 }
 
 function asStandaloneArrayBuffer(value: unknown): ArrayBuffer | undefined {

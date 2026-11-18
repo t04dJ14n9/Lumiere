@@ -44,9 +44,7 @@ export function nativeSelectionRange(
 }
 
 /** A Search match has both ends. A caret, including one at offset 0, does not. */
-export function hasRangeSelection(
-  selection: NativeSelection | undefined,
-): boolean {
+function hasRangeSelection(selection: NativeSelection | undefined): boolean {
   return selection?.to !== undefined && selection.to > selection.at;
 }
 

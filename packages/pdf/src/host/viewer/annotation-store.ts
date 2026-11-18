@@ -1,11 +1,10 @@
 import type { PdfFiles } from "../../shared/host";
 import type { ViewerMessage } from "../../shared/messages";
-import type { PdfSource } from "./source";
-
 /**
  * The file of Lumiere's own annotations for the open PDF, named by the hash of
- * the bytes the viewer has (`annotation-store`), so annotating never writes
- * the PDF. Saves run one at a time, in the order they came.
+ * the bytes the viewer made them on (`annotation-store`), so annotating never
+ * writes the PDF. Saves run one at a time, in the order they came, and a read
+ * waits for the saves before it.
  */
 export class AnnotationStore {
   private queue: Promise<void> = Promise.resolve();
@@ -14,9 +13,9 @@ export class AnnotationStore {
   constructor(
     private readonly fileUri: string,
     private readonly files: PdfFiles,
-    private readonly source: PdfSource,
     private readonly deps: {
-      isCurrentLoad: (load: number) => boolean;
+      /** Whether a save about these bytes of this load may be written. */
+      accepts: (load: number, sha256: string) => boolean;
       error: (message: string) => void;
       failed: (message: string) => void;
     },
@@ -24,6 +23,7 @@ export class AnnotationStore {
 
   /** The file's text for the PDF with these bytes; undefined when there is none or it cannot be read. */
   async read(sha256: string): Promise<string | undefined> {
+    await this.queue;
     try {
       return await this.files.annotations?.read(this.fileUri, sha256);
     } catch (error) {
@@ -34,9 +34,13 @@ export class AnnotationStore {
     }
   }
 
+  /** Decided when the message arrives: a reload may start before its turn. */
   save(
     message: Extract<ViewerMessage, { type: "annotationStoreSave" }>,
   ): Promise<void> {
+    if (!this.deps.accepts(message.load, message.sha256)) {
+      return Promise.resolve();
+    }
     const next = this.queue.then(() => this.saveNow(message));
     this.queue = next.catch(() => undefined);
     return next;
@@ -45,10 +49,6 @@ export class AnnotationStore {
   private async saveNow(
     message: Extract<ViewerMessage, { type: "annotationStoreSave" }>,
   ): Promise<void> {
-    const sha256 = this.source.sha256;
-    if (!this.deps.isCurrentLoad(message.load) || !sha256) {
-      return;
-    }
     const store = this.files.annotations;
     if (!store) {
       if (!this.toldUnsupported) {
@@ -60,7 +60,11 @@ export class AnnotationStore {
       return;
     }
     try {
-      await store.write(this.fileUri, sha256, message.text ?? undefined);
+      await store.write(
+        this.fileUri,
+        message.sha256,
+        message.text ?? undefined,
+      );
     } catch (error) {
       const text = error instanceof Error ? error.message : String(error);
       this.deps.error(`Could not save PDF annotations: ${text}`);

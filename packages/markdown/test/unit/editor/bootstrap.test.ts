@@ -116,7 +116,7 @@ test("the editor provider registers once, so an editor opened during activation 
 // VS Code runs a contributed command by activating the extension, so a
 // command whose handler waits for the first Lumiere panel (editor/ready) is
 // "not found" in a window where no note has been opened yet.
-test("Open Today's Daily Note works before any Lumiere editor opens", async () => {
+test("the settings commands work before any Lumiere editor opens", async () => {
   const commands = new Set<string>();
   const host = fakeHost({
     hostCommands: {
@@ -131,11 +131,7 @@ test("Open Today's Daily Note works before any Lumiere editor opens", async () =
   const root = await bootstrap(host, memorySystem(fs).value);
   await wait();
   assert.equal(root.service("editors")?.all().length, 0);
-  for (const id of [
-    "dailyNotes.openToday",
-    "dailyNotes.openPrevious",
-    "dailyNotes.openNext",
-  ]) {
+  for (const id of ["openSettings", "changeSetting"]) {
     assert.ok(commands.has(contributionId(id)), `${id} is registered`);
   }
   await root.dispose();

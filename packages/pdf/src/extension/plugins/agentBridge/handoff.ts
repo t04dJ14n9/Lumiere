@@ -1,5 +1,5 @@
 import * as vscode from "vscode";
-import { agentText, pageLinkText } from "../../../shared/agent-text";
+import { agentText, pageReferenceText } from "../../../shared/agent-text";
 import {
   pdfBridgeEnvelope,
   type PdfBridgeEnvelope,
@@ -25,7 +25,7 @@ export interface AgentSnapshot {
 /**
  * The `handoff` service: turns an editor's selection into the text an agent
  * receives (see `shared/agent-text.ts` and packages/agents/docs/agent-handoff-format.md), and
- * hands it over. Copy link writes the Quote to the clipboard only; the MCP
+ * hands it over. Copy link writes the locator and quote to the clipboard only; the MCP
  * bridge still uses `snapshot` / `envelope` for structured handoff.
  *
  * Invariant: clipboard text and the structured envelope come from one
@@ -36,8 +36,8 @@ export class AgentHandoff {
   constructor(private readonly regions: () => RegionSnapshots | undefined) {}
 
   /**
-   * Copy link to this: clipboard only. With a selection, copies the Quote
-   * (`agentText`); otherwise copies a page-only link for the reading page.
+   * Copy link to this: clipboard only. With a selection, copies its locator
+   * and quote (`agentText`); otherwise the reading page's locator.
    * Does not open agent chat. Returns whether something was copied.
    */
   async copyLinkForAgent(panel: PdfPanel): Promise<boolean> {
@@ -53,7 +53,7 @@ export class AgentHandoff {
     } else {
       const page = panel.view?.readingPage ?? panel.view?.page;
       if (page) {
-        text = pageLinkText({ path: displayPath(panel.uri) }, page);
+        text = pageReferenceText({ path: displayPath(panel.uri) }, page);
       }
     }
     if (!text) {

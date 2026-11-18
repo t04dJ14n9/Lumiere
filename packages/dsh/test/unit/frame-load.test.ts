@@ -32,7 +32,7 @@ function bodyProps() {
       },
       useResource: () => ({
         value: {
-          absolutePath: "/Users/t04dj14n9/Code/Lumia/packages/dsh/README.md",
+          absolutePath: "/Users/t04dj14n9/Code/Lumiere/packages/dsh/README.md",
           version: "1",
         },
       }),
@@ -59,7 +59,7 @@ function pdfBodyProps(revision = 0) {
       scrollportRef: (element: HTMLElement | null) => scrollports.push(element),
       useResource: () => ({
         value: {
-          absolutePath: "/Users/t04dj14n9/Code/Lumia/papers/A.pdf",
+          absolutePath: "/Users/t04dj14n9/Code/Lumiere/papers/A.pdf",
           version: "1",
         },
       }),

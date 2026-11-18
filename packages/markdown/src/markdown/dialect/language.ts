@@ -51,7 +51,7 @@ class EditorMarkdownParser extends Parser {
   }
 }
 
-export function afterFirstLineEdit(
+function afterFirstLineEdit(
   input: Input,
   fragments: readonly TreeFragment[],
 ): readonly TreeFragment[] {
@@ -97,7 +97,7 @@ function firstLineEnd(input: Input): number {
  * The one Markdown parser of an editor: CodeMirror's language keeps its
  * tree, and Live Preview reads that tree (`livePreview/api.ts`).
  */
-export const editorMarkdownParser: Parser = new EditorMarkdownParser();
+const editorMarkdownParser: Parser = new EditorMarkdownParser();
 
 const language = new Language(data, editorMarkdownParser, [], "markdown");
 

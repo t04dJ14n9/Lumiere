@@ -100,6 +100,7 @@ const FROM_ROLE: Readonly<Record<string, Role>> = {
   "textLink-activeForeground": "accent",
   "textLink-foreground": "accent",
   "textPreformat-foreground": "foreground",
+  "testing-iconPassed": "success",
   "toolbar-hoverBackground": "hover",
   "widget-border": "border",
   "widget-shadow": "border",

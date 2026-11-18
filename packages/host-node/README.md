@@ -23,13 +23,19 @@ over Node, then starts the plugins with the same `bootstrap` VS Code uses
 `createEditorRoutes()` serves everything a page needs, below `/lumiere`, on
 any Node web server:
 
-- `/lumiere/editor?path=&root=`: a note's page;
+- `/lumiere/editor?path=&root=`: a note's page. Its workspace `root` is
+  registered unless it holds a workspace already registered, which it would
+  widen (`editor-roots.ts`). Without `root` the note's folder stands in, and
+  gives way when a workspace that holds it arrives;
 - `/lumiere/pdf?path=&root=`: a PDF's page, Lumière PDF's viewer
   (`/lumiere/pdf/viewer/*`), which fetches the PDF from `/lumiere/pdf/bytes`.
   It runs only when the embedder passes the built viewer (`EditorAssets.pdf`);
 - `/lumiere/m/*`: the built editor;
 - `/lumiere/page/shim.js`: the page shim;
-- `/lumiere/file`: a note's images;
+- `/lumiere/file`: a note's images. A vault's file is someone else's content
+  on the embedder's origin: it is served with `Content-Security-Policy:
+  sandbox` (a PDF excepted) and `nosniff`, and a script as text, so it never
+  runs as a page or a script there;
 - `/lumiere/socket`: the page's socket;
 - `/lumiere/views`: the tree views;
 - `/lumiere/settings`: Lumière's settings, for a settings page. A plugin
@@ -82,8 +88,10 @@ forbids this package from importing `vscode` or any embedder.
 - `src/host/start.ts`: starts the plugins over the services below.
 - `src/host/services.ts`: every host service the plugins inject.
 - `src/host/documents.ts`: notes on disk, edited in memory, saved after a pause; a change another program makes to the file is merged into unsaved text.
+- `src/host/conflict-copy.ts`: where another program's version of a note goes when unsaved typing on the same lines is saved over it.
 - `src/host/panels.ts`, `src/host/panel.ts`: editor pages as panels, and their sockets.
 - `src/host/routes.ts`, `src/host/page.ts`, `src/host/static.ts`: the routes above.
+- `src/host/editor-roots.ts`: which workspace roots an editor page may open from.
 - `src/host/pdf-pages.ts`, `src/host/pdf-routes.ts`: PDF tabs, on Lumière PDF's viewer core (`@workshop/pdf/portable`) and the same page shim and socket as notes.
 - `src/host/trees.ts`, `src/host/view-routes.ts`: the plugins' tree views and their routes.
 - `src/host/settings-routes.ts`: the settings for a settings page, and changes to them.
@@ -101,6 +109,17 @@ forbids this package from importing `vscode` or any embedder.
 - `scripts/assets.mjs`, `scripts/menus.mjs`: what every embedder ships beside its code (the editor, the shim, the settings, the menu).
 
 ## Limits
+
+- Another program's change reloads a note with nothing unsaved, and is
+  merged line by line into unsaved typing (`mergeDiskChange`). Where both
+  changed the same lines, unsaved typing wins: the next save, which also
+  checks whether the file changed since it was last read or written, keeps
+  the other version beside the note, as `Note (conflict).md` (then
+  `(conflict 2)`, …), merges the rest, writes the typing, and tells the
+  reader. A change made between that check and the write is not seen.
+  Saves write the file in place (keeping its links and permissions), so it
+  is empty for a moment; a reload that reads it then is made again after
+  the write.
 
 - Git is blame, the change gutter and staging, through the `git` on the
   PATH (`git.ts`), for notes inside the workspace. On macOS, Xcode's

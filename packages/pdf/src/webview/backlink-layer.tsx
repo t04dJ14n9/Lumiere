@@ -14,16 +14,10 @@ import { useTextAccess, type TextAccess } from "./text-access";
 /**
  * Vault backlink overlays on one page: resolve `#:~:text=` to the page's
  * line boxes, paint above hard-written annotations, hover shows the note
- * path, click opens that note at the link. Overlays never enter mark
- * selection, and in Annotate mode they let pointer events through to the
- * annotations.
+ * path, click opens that note at the link. Overlays are never a mark the
+ * context menu acts on.
  */
-export function BacklinkLayer({
-  annotate,
-}: {
-  /** The Annotate tool is active. */
-  annotate: boolean;
-}): React.JSX.Element | null {
+export function BacklinkLayer(): React.JSX.Element | null {
   const page = usePage();
   const text = useTextAccess();
   const { hits } = useSyncExternalStore(onBacklinkChange, backlinkState);
@@ -63,7 +57,6 @@ export function BacklinkLayer({
           key={overlay.key}
           overlay={overlay}
           scale={page.transform.viewScale}
-          isPassive={annotate}
         />
       ))}
     </>

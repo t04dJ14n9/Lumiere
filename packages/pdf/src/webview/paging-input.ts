@@ -4,9 +4,9 @@ import { currentViewSettings } from "./reading-position";
 import type { ScrollDirection, ScrollMode } from "../shared/view-settings";
 import { useStageApi, type StageApi } from "./stage-capability";
 
-/** Elements that keep the arrow keys for themselves (text, numbers, menus, the toolbar grip). */
+/** Elements that keep the arrow keys for themselves (text, numbers, menus). */
 const OWN_KEYS =
-  'input, textarea, select, [contenteditable], [role="slider"], [role="spinbutton"], [role="listbox"], [role="menu"], [role="combobox"], .view-menu, .grip';
+  'input, textarea, select, [contenteditable], [role="slider"], [role="spinbutton"], [role="listbox"], [role="menu"], [role="combobox"], .view-menu';
 
 export interface PagingInput {
   mode: ScrollMode;

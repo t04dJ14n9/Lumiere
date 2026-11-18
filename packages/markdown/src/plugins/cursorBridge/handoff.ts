@@ -53,7 +53,7 @@ export interface HandoffSurface {
   ): { dispose(): void };
   /**
    * Close or hide the native mirror for this URI so focus can return to the
-   * Workshop custom editor when Edit fails or its session ends.
+   * Lumiere custom editor when Edit fails or its session ends.
    * Pass `{ restore: false }` when the reader already closed the mirror
    * (Ctrl+W / Close All) so Live Preview is not brought back.
    * Pass `promptId` from a successful Edit so Cursor's prompt bar is closed

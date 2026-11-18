@@ -3,9 +3,11 @@ import {
   copyCellsHtml,
   copyCellsMarkdown,
   copyCellsObsidian,
-  parseTable,
   pastedCells,
   pastedMarkdownCells,
+} from "../../markdown/tables/clipboard-formats";
+import {
+  parseTable,
   rangeTexts,
   toggleMarker,
   writeCells,

@@ -33,7 +33,7 @@ export interface Outbox {
 }
 
 /** How long changes collect before a patch goes out: about one frame. */
-export const PATCH_DELAY_MS = 16;
+const PATCH_DELAY_MS = 16;
 
 export function createOutbox(
   send: (message: ViewerMessage) => void,

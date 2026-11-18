@@ -22,11 +22,15 @@ import path from "node:path";
 import { createVSIX } from "@vscode/vsce";
 import type { FullConfig } from "@playwright/test";
 import { paths, writeState } from "./state";
+import { startPrivateDisplay } from "../../../../test/vscode/display";
 import {
   devToolsWebSocket,
   freePort,
   resolveVsCode,
 } from "../../../../test/vscode/vscode-host";
+
+/** The private X display the test VS Code opens on (see test/vscode/display.ts). */
+let display: string | undefined;
 
 export default async function globalSetup(config: FullConfig): Promise<void> {
   const restrictedMode = config.metadata.restrictedMode === true;
@@ -40,6 +44,7 @@ export default async function globalSetup(config: FullConfig): Promise<void> {
   mkdirSync(path.join(paths.userData, "User"), { recursive: true });
   mkdirSync(paths.home, { recursive: true });
   mkdirSync(paths.extensions, { recursive: true });
+  display = await startPrivateDisplay(path.join(paths.root, "display.pid"));
   writeFileSync(
     path.join(paths.userData, "User", "settings.json"),
     JSON.stringify(
@@ -174,7 +179,11 @@ export default async function globalSetup(config: FullConfig): Promise<void> {
  * window cannot open once HOME has moved.
  */
 function cleanEnvironment(): NodeJS.ProcessEnv {
-  const environment: NodeJS.ProcessEnv = { ...process.env, HOME: paths.home };
+  const environment: NodeJS.ProcessEnv = {
+    ...process.env,
+    HOME: paths.home,
+    ...(display === undefined ? {} : { DISPLAY: display }),
+  };
   delete environment.ELECTRON_RUN_AS_NODE;
   const cookie = path.join(homedir(), ".Xauthority");
   if (

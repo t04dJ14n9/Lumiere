@@ -1,15 +1,11 @@
-import { isSupportedDateFormat } from "../../markdown/templates";
 import type { ObsidianOverrides } from "./api";
 import { isRecord } from "./app-settings";
 
-/** Lumiere settings seeded from Obsidian's Templates and Daily notes files. */
+/** Lumiere settings seeded from Obsidian's Templates file. */
 export const CORE_PLUGIN_OVERRIDE_KEYS = [
   "templates.folder",
   "templates.dateFormat",
   "templates.timeFormat",
-  "dailyNotes.folder",
-  "dailyNotes.dateFormat",
-  "dailyNotes.template",
 ] as const;
 
 /** `templates.json`; absent or unusable values contribute nothing. */
@@ -19,16 +15,6 @@ export function mapTemplatesSettings(value: unknown): ObsidianOverrides {
     "templates.folder": text(settings.folder),
     "templates.dateFormat": dateFormat(settings.dateFormat),
     "templates.timeFormat": dateFormat(settings.timeFormat),
-  });
-}
-
-/** `daily-notes.json`; absent or unusable values contribute nothing. */
-export function mapDailyNotesSettings(value: unknown): ObsidianOverrides {
-  const settings = object(value, "daily-notes.json");
-  return defined({
-    "dailyNotes.folder": text(settings.folder),
-    "dailyNotes.dateFormat": dateFormat(settings.format),
-    "dailyNotes.template": text(settings.template),
   });
 }
 
@@ -49,11 +35,10 @@ function text(value: unknown): string | undefined {
   return typeof value === "string" && value.trim() !== "" ? value : undefined;
 }
 /**
- * Moment formats Lumiere cannot write would name daily notes differently from
- * the vault's existing ones, so only formats of supported tokens carry over.
+ * Any Moment format carries over: Lumiere writes the common tokens, and
+ * Insert Template names the ones it cannot write instead of this mapping
+ * dropping the whole format silently.
  */
 function dateFormat(value: unknown): string | undefined {
-  return typeof value === "string" && isSupportedDateFormat(value)
-    ? value
-    : undefined;
+  return text(value);
 }

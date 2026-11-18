@@ -58,8 +58,6 @@ export function memoryVaults(notes: Record<string, string>) {
       });
     },
     all: () => [vault],
-    registerLinkPolicy: () => () => {},
-    invalidateLinkResolution() {},
   };
   return { vaults, index, texts, opened };
 }
