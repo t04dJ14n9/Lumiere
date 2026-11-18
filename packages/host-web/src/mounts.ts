@@ -111,9 +111,9 @@ export class Mounts implements HostFiles {
     // A file system's "create" does not say whether it wrote anything, so
     // the check is a step apart from it. Creates of one path take turns, so
     // of overlapping calls here only the first finds the file missing, and
-    // `createText` never fills a file twice. A write from outside between
-    // the check and the write (another tab or app, a sync) is not covered:
-    // these file systems have no exclusive create.
+    // `createText` and `createBytes` never fill a file twice. A write from
+    // outside between the check and the write (another tab or app, a sync)
+    // is not covered: these file systems have no exclusive create.
     const isNew = await this.inTurn(full, async () => {
       const missing = (await fs.stat(path)) === undefined;
       await fs.write(path, new Uint8Array(), "create");

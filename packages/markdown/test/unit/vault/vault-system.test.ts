@@ -106,3 +106,26 @@ test("vault-system traverses directories concurrently in batches and skips ignor
   assert.ok(!entered.some((path) => path.includes(".git")));
   assert.ok(!entered.some((path) => path.includes(".obsidian")));
 });
+
+test("vault-system says file names ignore case where VS Code's workspace folders do", (t) => {
+  const { createVaultSystem } = loadVaultSystem({});
+  const system = createVaultSystem(
+    { storageUri: undefined } as never,
+    fakeConfiguration(),
+  );
+  const platform = Object.getOwnPropertyDescriptor(process, "platform")!;
+  t.after(() => Object.defineProperty(process, "platform", platform));
+  for (const [name, files] of [
+    ["win32", true],
+    ["darwin", true],
+    ["linux", false],
+  ] as const) {
+    Object.defineProperty(process, "platform", { value: name });
+    assert.equal(system.ignoresCase?.("file:///C:/Notes"), files, name);
+    assert.equal(
+      system.ignoresCase?.("vscode-remote://ssh/Notes"),
+      false,
+      `${name}: another file system decides for itself`,
+    );
+  }
+});

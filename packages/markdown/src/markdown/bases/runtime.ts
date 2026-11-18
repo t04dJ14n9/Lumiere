@@ -56,7 +56,7 @@ export function evalPropertyById(propId: string, ctx: EvalContext): RuntimeVal {
   return readNoteProperty(ctx.entry, stripPropertyPrefix(normalized));
 }
 
-export function evalFormula(name: string, ctx: EvalContext): RuntimeVal {
+function evalFormula(name: string, ctx: EvalContext): RuntimeVal {
   const cached = ctx.formulaCache.get(name);
   if (cached) {
     return cached;
@@ -88,7 +88,7 @@ export function evalFilter(filter: BaseFilter, ctx: EvalContext): boolean {
   }
 }
 
-export function evalAst(node: ExprNode, ctx: EvalContext): RuntimeVal {
+function evalAst(node: ExprNode, ctx: EvalContext): RuntimeVal {
   switch (node.kind) {
     case "literal":
       return fromRawValue(node.value);

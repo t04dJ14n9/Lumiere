@@ -10,6 +10,7 @@ import {
 import { codeSource } from "./code-source";
 import { codeBlockRange } from "./range";
 import { bindCodePass } from "./post-process";
+import { copyWithFeedback } from "./copy-feedback";
 export const codeBlocksWebview: Plugin = {
   name: "codeBlocks",
   inject: { required: ["editor", "livePreview", "render", "rpc"] },
@@ -25,10 +26,12 @@ export const codeBlocksWebview: Plugin = {
     });
     ctx.effect(() =>
       ctx.editor.extend(
-        codeSource((text) => {
-          void ctx.editor.clipboard
-            .write(text)
-            .catch((error) => ctx.logger.error("Copy failed", error));
+        codeSource((text, button) => {
+          void copyWithFeedback({
+            button,
+            write: () => ctx.editor.clipboard.write(text),
+            onError: (error) => ctx.logger.error("Copy failed", error),
+          });
         }),
       ),
     );

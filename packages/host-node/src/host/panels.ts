@@ -9,13 +9,13 @@ import {
   type EditorProvider,
   type PanelShell,
 } from "@workshop/markdown/portable";
-import type { NoteDocuments } from "./documents";
+import { errorText, type NoteDocuments } from "./documents";
 import { LivePanel, type PageSocket, type PanelUrls } from "./panel";
 
 /** How long the editor host may take to give a new panel its HTML. */
 const PAGE_TIMEOUT_MS = 15_000;
 /** How long a page may take to connect after it was served. */
-const CONNECT_TIMEOUT_MS = 60_000;
+export const CONNECT_TIMEOUT_MS = 60_000;
 
 export interface PageRequest {
   /** The note's file URI. */
@@ -34,6 +34,9 @@ export class PanelHub implements CustomEditors {
   constructor(
     private readonly documents: NoteDocuments,
     private readonly connectTimeout = CONNECT_TIMEOUT_MS,
+    /** Where a closed panel's failed release goes: no one awaits it. */
+    private readonly log: (message: string) => void = (message) =>
+      console.warn(message),
   ) {}
 
   register(
@@ -145,7 +148,12 @@ export class PanelHub implements CustomEditors {
   private forget(panel: LivePanel): void {
     this.panels.delete(panel.id);
     this.connected.delete(panel.id);
-    void this.documents.release(panel.document.uri);
+    const { uri } = panel.document;
+    this.documents
+      .release(uri)
+      .catch((error: unknown) =>
+        this.log(`Lumière could not release ${uri}: ${errorText(error)}`),
+      );
     if (this.activeId === panel.id) {
       this.activate(undefined);
     }

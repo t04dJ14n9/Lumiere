@@ -86,20 +86,15 @@ export const WORKBENCH_FEATURE_ORDER = [
   "quickSwitcher",
   "wordCount",
   "linkUpdates",
-  // Bridge before wiki: wiki copy reads the bridge, and does not inject back.
   "bridge",
   // Host-only IDE context handoff (no webview half); sits with bridge.
   "ideContext",
-  "wiki",
   "scratch",
   "templates",
-  "dailyNotes",
   "marp",
   "gitDiffEditor",
   // Compatibility supplies settings; core plugins keep owning their behavior.
   "obsidianCompat",
-  // OKF before the graph: the graph reads the okf service.
-  "okfCore",
   "graph",
 ] as const;
 

@@ -32,7 +32,6 @@ export function mountChrome(
   fields.clear.addEventListener("click", () => {
     fields.search.value = "";
     fields.orphans.checked = true;
-    fields.conformant.checked = false;
     clearChecks(facets);
     listener();
   });
@@ -41,7 +40,6 @@ export function mountChrome(
     fields.depth,
     fields.color,
     fields.orphans,
-    fields.conformant,
   ]) {
     input.addEventListener("change", () => listener());
   }
@@ -76,7 +74,6 @@ interface Fields {
   color: HTMLSelectElement;
   search: HTMLInputElement;
   orphans: HTMLInputElement;
-  conformant: HTMLInputElement;
   clear: HTMLButtonElement;
   relayout: HTMLButtonElement;
 }
@@ -107,10 +104,6 @@ function buildControls(root: HTMLElement, initial: GraphViewState): Fields {
   search.placeholder = "Search title, path or description";
   search.value = initial.filters.text;
   const orphans = checkbox("Orphans", initial.filters.showOrphans);
-  const conformant = checkbox(
-    "Conformant only",
-    initial.filters.conformantOnly,
-  );
   const clear = button("Clear filters");
   const relayout = button("Re-layout");
   root.append(
@@ -119,7 +112,6 @@ function buildControls(root: HTMLElement, initial: GraphViewState): Fields {
     label("Color", color),
     search,
     orphans.label,
-    conformant.label,
     clear,
     relayout,
   );
@@ -129,7 +121,6 @@ function buildControls(root: HTMLElement, initial: GraphViewState): Fields {
     color,
     search,
     orphans: orphans.input,
-    conformant: conformant.input,
     clear,
     relayout,
   };
@@ -148,19 +139,18 @@ function viewFrom(fields: Fields, facets: HTMLElement): GraphViewState {
       folders: groupValues(facets, "folder"),
       text: fields.search.value,
       showOrphans: fields.orphans.checked,
-      conformantOnly: fields.conformant.checked,
     },
   };
 }
 
 function scopeLabel(snapshot: GraphSnapshot): string {
-  if (!snapshot.bundleName) {
-    return "No OKF bundle";
+  if (!snapshot.scopeName) {
+    return "No vault";
   }
-  if (!snapshot.bundlePath) {
-    return snapshot.bundleName;
+  if (!snapshot.scopePath) {
+    return snapshot.scopeName;
   }
-  return `${snapshot.bundleName} — ${snapshot.bundlePath}`;
+  return `${snapshot.scopeName} — ${snapshot.scopePath}`;
 }
 
 function bannerNodes(
@@ -187,11 +177,6 @@ function bannerText(snapshot: GraphSnapshot, needsRelayout: boolean): string[] {
   }
   if (snapshot.completeness === "partial") {
     lines.push("The vault index is partial, so some notes may be missing.");
-  }
-  if (snapshot.omittedConformant > 0) {
-    lines.push(
-      `Hiding ${snapshot.omittedConformant} notes that are not conformant.`,
-    );
   }
   if (needsRelayout) {
     lines.push(

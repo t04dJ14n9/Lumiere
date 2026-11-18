@@ -18,7 +18,8 @@ export interface CanvasNode {
   id: string;
   title: string;
   color: string;
-  classification: "conformant" | "nonconformant" | "indexing";
+  /** Its metadata is not parsed yet. */
+  indexing: boolean;
 }
 
 export interface CanvasEdge {
@@ -288,7 +289,7 @@ function replaceGraph(
     graph.addNode(node.id, {
       x: point.x,
       y: point.y,
-      size: sizeFor(node.classification),
+      size: node.indexing ? 4 : 5,
       color: node.color,
       label: labelFor(node),
     });
@@ -344,23 +345,7 @@ function shiftCount(
 }
 
 function labelFor(node: CanvasNode): string {
-  if (node.classification === "nonconformant") {
-    return `! ${node.title}`;
-  }
-  if (node.classification === "indexing") {
-    return `? ${node.title}`;
-  }
-  return node.title;
-}
-
-function sizeFor(classification: CanvasNode["classification"]): number {
-  if (classification === "nonconformant") {
-    return 7;
-  }
-  if (classification === "indexing") {
-    return 4;
-  }
-  return 5;
+  return node.indexing ? `? ${node.title}` : node.title;
 }
 
 function isRecord(value: unknown): value is Record<string, unknown> {

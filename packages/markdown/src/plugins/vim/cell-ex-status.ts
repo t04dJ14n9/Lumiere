@@ -1,6 +1,7 @@
 import type { Extension } from "@codemirror/state";
 import { ViewPlugin, type EditorView } from "@codemirror/view";
-import { getCM } from "@replit/codemirror-vim";
+import { getCM, type CodeMirror } from "@replit/codemirror-vim";
+import { syncVimPanel } from "./status-panel";
 
 /** Matches @replit/codemirror-vim CodeMirror.state.statusbar under exactOptionalPropertyTypes. */
 type StatusHost = {
@@ -50,19 +51,30 @@ export function proxyCellExDialogToOuterStatus(
   };
 }
 
-/** Install the outer-status share on nested (status: false) cell editors. */
+/**
+ * Install the outer-status share on nested (status: false) cell editors, and
+ * open or close the note's panel with the cell's prompt (status-panel.ts).
+ */
 export function shareOuterStatusForCellDialogs(outer: EditorView): Extension {
   return ViewPlugin.fromClass(
     class {
       private restore: () => void = () => {};
+      private readonly sync = () => syncVimPanel(outer);
+      private readonly cm: CodeMirror | null;
       constructor(view: EditorView) {
+        this.cm = getCM(view);
         this.restore = proxyCellExDialogToOuterStatus(
-          getCM(view) ?? { state: {} },
+          this.cm ?? { state: {} },
           getCM(outer),
         );
+        // The cell's own "dialog" handler runs first and moves its prompt
+        // into the shared panel.
+        this.cm?.on("dialog", this.sync);
       }
       destroy() {
+        this.cm?.off("dialog", this.sync);
         this.restore();
+        this.sync();
       }
     },
   );

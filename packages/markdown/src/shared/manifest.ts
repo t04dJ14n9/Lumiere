@@ -117,7 +117,7 @@ export interface Manifest {
       mac?: string;
       /**
        * Where the command applies. `editor` (the default) is the Markdown
-       * Workshop editor; `workbench` is anywhere, for commands such as the
+       * Lumiere editor; `workbench` is anywhere, for commands such as the
        * quick switcher.
        */
       scope?: "editor" | "workbench";

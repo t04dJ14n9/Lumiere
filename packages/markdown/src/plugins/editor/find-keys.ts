@@ -49,7 +49,7 @@ export function findActionFor(
 }
 
 /** INPUT/TEXTAREA and property contenteditables keep native Ctrl+F / Ctrl+H. */
-export function leavesNativeFind(target: EventTarget | null): boolean {
+function leavesNativeFind(target: EventTarget | null): boolean {
   if (!target || !("tagName" in target)) {
     return isPropertyNativeEditor(target);
   }

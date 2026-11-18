@@ -36,8 +36,8 @@ export interface InlineActions {
 export const HUNK_TOKENS = 1500;
 export const REBUILD_TOKENS = 12_000;
 /** The same limits in characters, for few very long tokens. */
-export const HUNK_CHARS = 20_000;
-export const REBUILD_CHARS = 200_000;
+const HUNK_CHARS = 20_000;
+const REBUILD_CHARS = 200_000;
 
 /** Removed words, struck through where they were. Read-only and not copied. */
 class RemovedText extends WidgetType {
@@ -196,7 +196,7 @@ const RENDERED: ReadonlySet<Block["kind"]> = new Set([
 ]);
 
 /** Whether a modified hunk touches a rendered block, in the baseline or now. */
-export function touchesRenderedBlock(
+function touchesRenderedBlock(
   hunk: DocHunk,
   blocks: readonly Block[],
   state: EditorState,

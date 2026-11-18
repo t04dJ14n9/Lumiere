@@ -12,7 +12,9 @@ export async function open(
     videoDetails = {},
     notes = {},
     gitBaseline,
+    vimStatusBar = false,
   }: {
+    vimStatusBar?: boolean;
     gitBaseline?: string;
     trusted?: boolean;
     features?: Record<
@@ -36,6 +38,7 @@ export async function open(
       videoDetails,
       notes,
       gitBaseline,
+      vimStatusBar,
     }) => {
       window.harness = new window.BrowserHost(source);
       window.harness.trusted = trusted;
@@ -43,9 +46,19 @@ export async function open(
       window.harness.videoDetails = videoDetails;
       window.harness.notes = notes;
       window.harness.gitBaseline = gitBaseline;
+      window.harness.vimStatusBar = vimStatusBar;
       await window.harness.open(preset);
     },
-    { source, preset, trusted, features, videoDetails, notes, gitBaseline },
+    {
+      source,
+      preset,
+      trusted,
+      features,
+      videoDetails,
+      notes,
+      gitBaseline,
+      vimStatusBar,
+    },
   );
   await expect(
     page.getByRole("textbox", { name: "Markdown content" }),

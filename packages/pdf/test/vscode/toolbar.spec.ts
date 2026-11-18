@@ -19,7 +19,6 @@ import {
   showPage,
   statusBarEntry,
   test,
-  withoutSpaces,
 } from "./workbench";
 
 // The viewer's controls in the editor's own UI (the default `chrome` mode):
@@ -106,8 +105,11 @@ test("the status bar shows the page and zoom, and opens a page or a zoom when cl
   await expect(
     viewer.getByRole("toolbar", { name: "PDF toolbar" }),
   ).toHaveCount(0);
-  // Status bar buttons only where the title bar hides the actions.
-  await expect(statusBarButton(page, "nextPage")).toHaveCount(inCursor ? 1 : 0);
+  // The title bar keeps the PDF actions in its "…" menu in every editor, so
+  // the status bar shows history, page, zoom and find buttons by default.
+  for (const id of ["historyBack", "historyForward", "nextPage", "find"]) {
+    await expect(statusBarButton(page, id)).toHaveCount(1);
+  }
 
   await statusBarEntry(page, PAGE_STATUS).click();
   const input = quickInputTitled(page, /^Go to Page/u);
@@ -175,7 +177,7 @@ test("editor title actions zoom, fit and switch the selection tool", async ({
   ).toBeFocused();
   await page.keyboard.press("Escape");
 
-  // Regions default off: Select Region is hidden; Copy link is clipboard Quote.
+  // Regions default off: Select Region is hidden; Copy link has no viewrect.
   await editorTitleAction(page, "Fit Page");
   await showPage(page, viewer, 1);
   await page.keyboard.press("F1");
@@ -195,9 +197,7 @@ test("editor title actions zoom, fit and switch the selection tool", async ({
   await selectText(page, viewer, at(74, TEXT_MIDLINE), at(205, TEXT_MIDLINE));
   await contextMenu(page, at(100, TEXT_MIDLINE), "Copy link to this");
   const quote = await pastedClipboard(page);
-  expect(withoutSpaces(quote)).toContain(
-    withoutSpaces(`[outline.pdf · p.1](${PDF}#page=1#:~:text=`),
-  );
+  expect(quote.startsWith(`@${PDF}#page=1\n\n> `)).toBe(true);
   expect(quote).not.toMatch(/viewrect=/u);
 });
 

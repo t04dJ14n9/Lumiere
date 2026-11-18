@@ -1,4 +1,4 @@
-import type { ConceptEdge, ConceptGraph, ConceptNode } from "./project";
+import type { NoteEdge, NoteGraph, NoteNode } from "./project";
 
 export interface GraphFilters {
   types: readonly string[];
@@ -11,7 +11,6 @@ export interface GraphFilters {
    * fall back to the default.
    */
   showOrphans: boolean;
-  conformantOnly: boolean;
 }
 
 export const emptyFilters = (): GraphFilters => ({
@@ -20,29 +19,20 @@ export const emptyFilters = (): GraphFilters => ({
   folders: [],
   text: "",
   showOrphans: true,
-  conformantOnly: false,
 });
 
 /** Structural filters. Orphan uses the degree from the unfiltered projection. */
 export function filterGraph(
-  graph: ConceptGraph,
+  graph: NoteGraph,
   filters: GraphFilters,
-): { graph: ConceptGraph; omittedConformant: number } {
+): NoteGraph {
   const nodes = graph.nodes.filter((node) => matches(node, filters));
   const ids = new Set(nodes.map((node) => node.id));
-  const omittedConformant = filters.conformantOnly
-    ? graph.nodes.filter(
-        (node) => node.classification !== "conformant" && !ids.has(node.id),
-      ).length
-    : 0;
   return {
-    graph: {
-      nodes,
-      edges: graph.edges.filter(
-        (edge) => ids.has(edge.source) && ids.has(edge.target),
-      ),
-    },
-    omittedConformant,
+    nodes,
+    edges: graph.edges.filter(
+      (edge) => ids.has(edge.source) && ids.has(edge.target),
+    ),
   };
 }
 
@@ -51,10 +41,10 @@ export function filterGraph(
  * An excluded focus is not replaced with another node.
  */
 export function localGraph(
-  graph: ConceptGraph,
+  graph: NoteGraph,
   focusId: string | undefined,
   depth: number,
-): { graph: ConceptGraph; focusExcluded: boolean } {
+): { graph: NoteGraph; focusExcluded: boolean } {
   if (!focusId || !graph.nodes.some((node) => node.id === focusId)) {
     return { graph: { nodes: [], edges: [] }, focusExcluded: true };
   }
@@ -84,11 +74,8 @@ export function localGraph(
   };
 }
 
-function matches(node: ConceptNode, filters: GraphFilters): boolean {
+function matches(node: NoteNode, filters: GraphFilters): boolean {
   if (!filters.showOrphans && node.orphan) {
-    return false;
-  }
-  if (filters.conformantOnly && node.classification !== "conformant") {
     return false;
   }
   if (!facet(filters.types, node.type ? [node.type] : [])) {
@@ -126,7 +113,7 @@ export function folderMatches(folder: string, prefix: string): boolean {
   return folder === normalized || folder.startsWith(`${normalized}/`);
 }
 
-function textMatches(node: ConceptNode, text: string): boolean {
+function textMatches(node: NoteNode, text: string): boolean {
   const query = text.trim().toLowerCase();
   if (!query) {
     return true;
@@ -137,7 +124,7 @@ function textMatches(node: ConceptNode, text: string): boolean {
   return haystack.includes(query);
 }
 
-function undirected(edges: readonly ConceptEdge[]): Map<string, Set<string>> {
+function undirected(edges: readonly NoteEdge[]): Map<string, Set<string>> {
   const adjacency = new Map<string, Set<string>>();
   const add = (from: string, to: string) => {
     const next = adjacency.get(from) ?? new Set<string>();

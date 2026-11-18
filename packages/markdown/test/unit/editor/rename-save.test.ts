@@ -7,6 +7,7 @@ import {
   expectedOpenEditorText,
   offsetAt,
   partitionLinkUpdateFiles,
+  planLinkUpdates,
 } from "../../../src/host/rename-save";
 
 const edit = {
@@ -443,4 +444,91 @@ test("post-rename link updates open renamed and folder-moved notes at their new 
   assert.equal(textDocuments[2]!.saved, 1);
   assert.equal(textDocuments[3]!.text, "[[Sub/Moved]]");
   assert.equal(textDocuments[3]!.saved, 1);
+});
+
+test("a note typed in after its link edits were computed is left alone, not edited at stale positions", async () => {
+  const link = {
+    start: { line: 0, col: 4 },
+    end: { line: 0, col: 11 },
+    text: "[[New]]",
+  };
+  const files = [
+    { uri: "file:///a.md", edits: [link], source: "See [[Old]]" },
+    { uri: "file:///b.md", edits: [link], source: "See [[Old]]" },
+  ];
+  const now: Record<string, string> = {
+    "file:///a.md": "See [[Old]]",
+    // Typed at the start of the line: the edit's columns now cut into text.
+    "file:///b.md": "Hi! See [[Old]]",
+  };
+  const { planned, stale } = await planLinkUpdates(files, async (uri) => {
+    return now[uri]!;
+  });
+  assert.deepEqual(
+    [...planned],
+    [["file:///a.md", { before: "See [[Old]]", after: "See [[New]]" }]],
+  );
+  assert.deepEqual(
+    stale.map((file) => file.uri),
+    ["file:///b.md"],
+  );
+});
+
+test("a note whose text differs only in line endings is not stale", async () => {
+  const { planned, stale } = await planLinkUpdates(
+    [
+      {
+        uri: "file:///a.md",
+        edits: [
+          {
+            start: { line: 1, col: 0 },
+            end: { line: 1, col: 7 },
+            text: "[[New]]",
+          },
+        ],
+        source: "x\n[[Old]]",
+      },
+    ],
+    async () => "x\r\n[[Old]]",
+  );
+  assert.deepEqual(stale, []);
+  assert.equal(planned.get("file:///a.md")?.after, "x\r\n[[New]]");
+});
+
+test("a note edited while later notes are read is stale, not replaced with its older text", async () => {
+  const canvas = '{"nodes":[{"id":"1","type":"text","text":"draft"}]}';
+  const open: Record<string, string> = { "file:///board.canvas": canvas };
+  const files = [
+    {
+      uri: "file:///board.canvas",
+      source: canvas,
+      edits: [
+        { start: { line: 0, col: 0 }, end: { line: 0, col: 1 }, text: "{" },
+      ],
+    },
+    {
+      uri: "file:///later.md",
+      source: "See [[Old]]",
+      edits: [
+        { start: { line: 0, col: 6 }, end: { line: 0, col: 9 }, text: "New" },
+      ],
+    },
+  ];
+  const { planned, stale } = await planLinkUpdates(
+    files,
+    async (uri) => {
+      if (uri === "file:///later.md") {
+        // The reader types into the canvas while this note is read.
+        open["file:///board.canvas"] = canvas.replace("draft", "final");
+        return "See [[Old]]";
+      }
+      return open[uri]!;
+    },
+    (uri) => open[uri],
+  );
+  assert.deepEqual([...planned.keys()], ["file:///later.md"]);
+  assert.deepEqual(
+    stale.map((file) => file.uri),
+    ["file:///board.canvas"],
+  );
 });

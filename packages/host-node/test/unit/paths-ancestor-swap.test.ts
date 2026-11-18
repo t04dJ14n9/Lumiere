@@ -25,6 +25,10 @@ import {
 } from "../../src/host/paths";
 import type { HostFiles } from "../../src/host/platform";
 import {
+  createHostVaultSystem,
+  type HostVaultOptions,
+} from "../../src/host/vault";
+import {
   createHostWorkspace,
   createWorkspaceFiles,
 } from "../../src/host/workspace";
@@ -207,11 +211,13 @@ test("writeText stops a swap after the check that follows the folders", async (t
   assert.equal(await readFile(secret, "utf8"), "keep me");
 });
 
-test("writeBytes and createText leave no file outside after the same swap", async (t) => {
+test("writeBytes, createText and createBytes leave no file outside after the same swap", async (t) => {
   for (const write of [
     (files: WorkspaceFiles, uri: string) =>
       files.writeBytes(uri, new Uint8Array([1])),
     (files: WorkspaceFiles, uri: string) => files.createText(uri, "x"),
+    (files: WorkspaceFiles, uri: string) =>
+      files.createBytes(uri, new Uint8Array([1])),
   ]) {
     const { rootUri, outside, target, swap } = await workspaceWithAssets(t);
     const workspace = createWorkspaceFiles(swappedAfterCheck(2, swap), () => [
@@ -240,16 +246,21 @@ test("a swap before the folders are made is caught by the check after them", asy
 });
 
 test("read and readText refuse an outside file reached through a swapped ancestor", async (t) => {
+  const failed = () => undefined;
   for (const read of [
     (files: HostFiles, rootUri: string, uri: string) =>
       createWorkspaceFiles(files, () => [rootUri]).readText(uri),
     (files: HostFiles, rootUri: string, uri: string) =>
       createHostWorkspace({ files, roots: () => [rootUri] })
         .read(uri)
-        .then(
-          (bytes) => new TextDecoder().decode(bytes),
-          () => undefined,
-        ),
+        .then((bytes) => new TextDecoder().decode(bytes), failed),
+    (files: HostFiles, rootUri: string, uri: string) =>
+      createHostVaultSystem({
+        platform: { files },
+        roots: () => [rootUri],
+      } as unknown as HostVaultOptions)
+        .read(uri)
+        .then((bytes) => new TextDecoder().decode(bytes), failed),
   ]) {
     const { rootUri, outside, target, swap } = await workspaceWithAssets(t);
     await writeFile(path.join(outside, "image.png"), "outside secret");

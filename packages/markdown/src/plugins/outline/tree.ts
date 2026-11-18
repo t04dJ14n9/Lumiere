@@ -33,11 +33,14 @@ export class OutlineSource implements TreeSource {
     }
   }
 
+  /** The heading section at an editor offset (line breaks count once). */
   activeNode(editorOffset: number): TreeNode | undefined {
-    const heading = headingAt(
-      this.outline,
-      this.coordinates.toSource(editorOffset),
-    );
+    return this.nodeAtSource(this.coordinates.toSource(editorOffset));
+  }
+
+  /** The heading section at an offset in the file's own text (CRLF intact). */
+  nodeAtSource(sourceOffset: number): TreeNode | undefined {
+    const heading = headingAt(this.outline, sourceOffset);
     return heading ? this.node(heading) : undefined;
   }
 

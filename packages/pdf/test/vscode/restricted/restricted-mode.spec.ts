@@ -43,7 +43,7 @@ test("Restricted Mode renders PDFs and ignores workspace agent settings", async 
       return (JSON.parse(readFileSync(reportFile, "utf8")) as TrustReport)
         .clipboard;
     })
-    .toMatch(/docs\/outline\.pdf#page=1#:~:text=/u);
+    .toMatch(/^@docs\/outline\.pdf#page=1\n\n> /u);
   const report = JSON.parse(readFileSync(reportFile, "utf8")) as TrustReport;
   expect(report.trusted).toBe(false);
   expect(report.extensionActive).toBe(true);

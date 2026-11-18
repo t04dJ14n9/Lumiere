@@ -13,6 +13,7 @@ import { sanitizeGraphics } from "../../webview/ui/graphics";
 import { inlineMathEdit, mathBlockEdit } from "./commands";
 import { delimiters, mathBody, mathTokens } from "./source";
 import { errorMessage } from "../../shared/errors";
+import { decodeDataValue } from "../../markdown/html/helpers";
 import { config } from "./manifest";
 interface MathMount {
   macros: Record<string, string>;
@@ -251,7 +252,7 @@ function typesetNode(options: TypesetOptions): void {
   };
   cleanups.add(cleanup);
   pass.onDispose(cleanup);
-  const expression = decodeURIComponent(node.dataset.math ?? "");
+  const expression = decodeDataValue(node.dataset.math ?? "");
   const display = node.dataset.display === "true";
   if (tryTypesetSync(options, expression, display, () => active)) {
     return;

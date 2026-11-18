@@ -42,7 +42,7 @@ export class DeferredBlockWidget extends WidgetType {
  * livePreview does not import sibling plugins). Everything else shares the
  * MarkdownBlock estimator (math / Mermaid / callout / HTML / embeds).
  */
-export function deferredBlockHeight(block: RenderBlock): number {
+function deferredBlockHeight(block: RenderBlock): number {
   if (block.kind === "Table") {
     const rows = block.source
       .split("\n")

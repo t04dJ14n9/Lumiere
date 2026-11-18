@@ -57,14 +57,11 @@ import quickSwitcher from "./quickSwitcher/manifest";
 import wordCount from "./wordCount/manifest";
 import linkUpdates from "./linkUpdates/manifest";
 import bridge from "./bridge/manifest";
-import wiki from "./wiki/manifest";
 import attachments from "./attachments/manifest";
 import scratch from "./scratch/manifest";
 import templates from "./templates/manifest";
-import dailyNotes from "./dailyNotes/manifest";
 import gitDiffEditor from "./gitDiffEditor/manifest";
 import marp from "./marp/manifest";
-import okfCore from "./okfCore/manifest";
 import obsidianCompat from "./obsidianCompat/manifest";
 import graph from "./graph/manifest";
 /**
@@ -129,10 +126,7 @@ export const workbenchFeatures: readonly Manifest[] = inPluginOrder(
     quickSwitcher,
     scratch,
     templates,
-    dailyNotes,
-    wiki,
     wordCount,
-    okfCore,
     obsidianCompat,
     graph,
   ],

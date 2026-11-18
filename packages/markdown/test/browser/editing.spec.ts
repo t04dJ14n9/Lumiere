@@ -408,4 +408,10 @@ test("Mermaid host has Obsidian pad/align; hover badges remain present", async (
   await expect(lang).toBeVisible();
   await expect(copy).toBeVisible();
   await expect(edit).toBeVisible();
+  await copy.click();
+  await expect
+    .poll(() => page.evaluate(() => window.harness.clipboard))
+    .toContain("sequenceDiagram");
+  await expect(copy).toHaveText("Copied");
+  await expect(copy).toHaveText("Copy", { timeout: 2_000 });
 });

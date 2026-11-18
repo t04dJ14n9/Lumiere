@@ -6,8 +6,3 @@ export function shouldOpenMarpAsText(input: {
 }): boolean {
   return input.mode === "textEditor" && input.isMarp && !input.allowed;
 }
-
-export function outsideDeckPath(folder: string, fileName: string): string {
-  const base = fileName.split(/[/\\]/).pop() || "deck.md";
-  return `${folder.replace(/\/+$/, "")}/${base}`;
-}

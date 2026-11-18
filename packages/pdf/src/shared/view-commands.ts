@@ -1,10 +1,14 @@
 /**
  * The commands that only ask the active viewer to do something: page,
- * zoom, fit, find, pick a tool, change the layout or scrolling. Every host
- * registers these the same way; commands that ask the reader first (Go to
- * Page, the zoom and View pickers) are registered on their own.
+ * zoom, fit, find, pick a tool, change the layout or scrolling, mark the
+ * selected text or recolour a mark. Every host registers these the same way;
+ * commands that ask the reader first (Go to Page, the zoom and View pickers,
+ * Add Annotation…, Edit Note…) are registered on their own.
  */
+import { MARK_TOOL_IDS } from "./annotation-tools";
 import {
+  ANNOTATION_COLOR_COMMAND_IDS,
+  MARK_COMMAND_IDS,
   VIEW_COMMAND_IDS,
   VIEW_CONTROL_COMMAND_IDS,
   viewControlCommandId,
@@ -22,6 +26,7 @@ type ActionArgument =
   | { page: unknown }
   | { percent: unknown }
   | { tool: unknown }
+  | { note: unknown }
   | { color: unknown }
   | { pageLayout: unknown }
   | { scrollMode: unknown }
@@ -54,10 +59,14 @@ export const VIEW_ACTION_COMMANDS: readonly ViewActionCommand[] = [
     id: VIEW_COMMAND_IDS.selectRegionTool,
     action: { action: "setTool", tool: "region" },
   },
-  {
-    id: VIEW_COMMAND_IDS.selectAnnotateTool,
-    action: { action: "setTool", tool: "annotate" },
-  },
+  ...MARK_TOOL_IDS.map((tool) => ({
+    id: MARK_COMMAND_IDS[tool],
+    action: { action: "markSelection", tool } as const,
+  })),
+  ...ANNOTATION_COLOR_COMMAND_IDS.map(({ id, color }) => ({
+    id,
+    action: { action: "setMarkColor", color: color.value } as const,
+  })),
   simple(VIEW_COMMAND_IDS.annotationUndo, "annotationUndo"),
   simple(VIEW_COMMAND_IDS.annotationRedo, "annotationRedo"),
   simple(VIEW_COMMAND_IDS.deleteAnnotation, "deleteSelectedAnnotations"),

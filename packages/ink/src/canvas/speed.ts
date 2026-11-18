@@ -11,7 +11,7 @@ export const RESTING_PRESSURE = 0.6;
 /** The pressure the fastest strokes thin towards. */
 export const FASTEST_PRESSURE = 0.1;
 /** The speed, in the sketch's points per second, that thins a line halfway. */
-export const HALF_SPEED = 700;
+const HALF_SPEED = 700;
 /** How long a change of speed takes to show, in milliseconds. */
 const EASING_MS = 40;
 

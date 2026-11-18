@@ -1,7 +1,7 @@
 import type { IdeContextHostApis } from "./gather";
 import type { DiagnosticItem } from "./types";
 
-export const KNOWN_WORKSHOP_VIEW_TYPES = [
+export const KNOWN_LUMIERE_VIEW_TYPES = [
   "lumiere.markdown.editor",
   "lumiere.pdf.viewer",
 ] as const;
@@ -67,7 +67,7 @@ export function enumerateTabUris(
   customViewTypes: readonly string[] = [],
 ): { visible: string[]; open: string[] } {
   const allowed = new Set<string>([
-    ...KNOWN_WORKSHOP_VIEW_TYPES,
+    ...KNOWN_LUMIERE_VIEW_TYPES,
     ...customViewTypes,
   ]);
   const open = new Set<string>();

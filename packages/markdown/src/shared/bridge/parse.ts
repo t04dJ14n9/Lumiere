@@ -5,7 +5,6 @@ import {
   normalizeHash,
   optionalInteger,
   optionalText,
-  readWikiContext,
   requiredString,
 } from "./checks";
 import { BRIDGE_ENVELOPE_VERSION, BRIDGE_KEYS } from "./model";
@@ -38,7 +37,6 @@ function readEnvelope(input: Record<string, unknown>): BridgeEnvelope {
   const locator = readLocator(input.locator);
   const view = readView(input.view, locator.durable);
   const extra = unknownFields(input);
-  const wiki = readWikiContext(input.wiki);
   return Object.freeze({
     version: 1,
     producer,
@@ -48,7 +46,6 @@ function readEnvelope(input: Record<string, unknown>): BridgeEnvelope {
     ...(view ? { view } : {}),
     selection: readSelection(input.selection),
     revision: readRevision(input.revision),
-    ...(wiki ? { wiki } : {}),
     ...(extra ? { extra } : {}),
   });
 }

@@ -2,7 +2,7 @@ import {
   folderOf,
   lookupKey,
   nameOf,
-  relativeVaultPath,
+  relativeLinkPath,
   withoutNoteExtension,
 } from "../../shared/vault-path";
 import type { VaultFile } from "./api";
@@ -23,7 +23,11 @@ export function linkText(
 ): string {
   if (format === "relative") {
     return withoutNoteExtension(
-      relativeVaultPath(folderOf(sourcePath), target.path),
+      relativeLinkPath(
+        folderOf(sourcePath),
+        target.path,
+        (path) => files.find(path) !== undefined,
+      ),
     );
   }
   if (format === "shortest" && isUniqueName(files, target)) {

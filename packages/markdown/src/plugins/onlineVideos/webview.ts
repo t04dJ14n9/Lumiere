@@ -70,7 +70,7 @@ export const onlineVideosWebview: Plugin<Infer<typeof config>> = {
   },
 };
 
-export function mountVideos(pass: RenderPass, mount: Mount): void {
+function mountVideos(pass: RenderPass, mount: Mount): void {
   const images = pass.container.querySelectorAll<HTMLImageElement>(
     "img.note-image[data-resource]",
   );

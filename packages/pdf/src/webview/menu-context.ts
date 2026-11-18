@@ -10,13 +10,16 @@ import { SETTING_PREFIX } from "../shared/setting-schema";
  * missing. So the document carries the selection as it is when the menu
  * opens; that per-menu context shadows the global key.
  *
- * `hasAnnotationSelection` gates Delete Annotation so a plain text/region
- * selection does not show a no-op Delete (mixed-mark / click-miss case).
+ * `hasTextSelection` shows Highlight, Add Annotation… and Mark Text, which
+ * need selected text (a region has none to mark). `hasAnnotationSelection`
+ * shows Edit Note…, Change Color and Delete Annotation: the menu was opened
+ * on one of Lumiere's marks (`mark-menu.ts`).
  */
 const CONTEXT_ATTRIBUTE = "data-vscode-context";
 
 export type MenuSelectionState = {
   hasSelection: boolean;
+  hasTextSelection: boolean;
   hasAnnotationSelection: boolean;
 };
 
@@ -24,17 +27,21 @@ export type MenuSelectionState = {
 export function menuContext(state: MenuSelectionState): string {
   return JSON.stringify({
     [`${SETTING_PREFIX}hasSelection`]: state.hasSelection,
+    [`${SETTING_PREFIX}hasTextSelection`]: state.hasTextSelection,
     [`${SETTING_PREFIX}hasAnnotationSelection`]: state.hasAnnotationSelection,
   });
 }
 
-/** Keep the attribute current for every context menu; returns how to stop. */
+/**
+ * Keep the attribute current for every context menu; returns how to stop.
+ * `state` gets the menu's event: where it was opened says which mark it is for.
+ */
 export function followMenuContext(
   doc: Pick<Document, "body" | "addEventListener" | "removeEventListener">,
-  state: () => MenuSelectionState,
+  state: (event: MouseEvent) => MenuSelectionState,
 ): () => void {
-  const update = (): void => {
-    doc.body.setAttribute(CONTEXT_ATTRIBUTE, menuContext(state()));
+  const update = (event: MouseEvent): void => {
+    doc.body.setAttribute(CONTEXT_ATTRIBUTE, menuContext(state(event)));
   };
   // A capture listener on the document runs before VS Code's on the window.
   doc.addEventListener("contextmenu", update, true);

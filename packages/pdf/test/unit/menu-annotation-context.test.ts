@@ -4,12 +4,20 @@ import { followMenuContext, menuContext } from "../../src/webview/menu-context";
 
 test("menuContext reports both selection and annotation-selection keys", () => {
   assert.equal(
-    menuContext({ hasSelection: true, hasAnnotationSelection: false }),
-    '{"lumiere.pdf.hasSelection":true,"lumiere.pdf.hasAnnotationSelection":false}',
+    menuContext({
+      hasSelection: true,
+      hasTextSelection: true,
+      hasAnnotationSelection: false,
+    }),
+    '{"lumiere.pdf.hasSelection":true,"lumiere.pdf.hasTextSelection":true,"lumiere.pdf.hasAnnotationSelection":false}',
   );
   assert.equal(
-    menuContext({ hasSelection: true, hasAnnotationSelection: true }),
-    '{"lumiere.pdf.hasSelection":true,"lumiere.pdf.hasAnnotationSelection":true}',
+    menuContext({
+      hasSelection: true,
+      hasTextSelection: false,
+      hasAnnotationSelection: true,
+    }),
+    '{"lumiere.pdf.hasSelection":true,"lumiere.pdf.hasTextSelection":false,"lumiere.pdf.hasAnnotationSelection":true}',
   );
 });
 
@@ -40,19 +48,31 @@ test("followMenuContext writes annotation selection for Delete gating", () => {
       listeners.splice(index, 1);
     },
   };
-  let state = { hasSelection: false, hasAnnotationSelection: false };
+  let state = {
+    hasSelection: false,
+    hasTextSelection: false,
+    hasAnnotationSelection: false,
+  };
   const stop = followMenuContext(doc as never, () => state);
-  state = { hasSelection: true, hasAnnotationSelection: false };
+  state = {
+    hasSelection: true,
+    hasTextSelection: true,
+    hasAnnotationSelection: false,
+  };
   listeners[0]!.listener();
   assert.equal(
     attributes["data-vscode-context"],
-    '{"lumiere.pdf.hasSelection":true,"lumiere.pdf.hasAnnotationSelection":false}',
+    '{"lumiere.pdf.hasSelection":true,"lumiere.pdf.hasTextSelection":true,"lumiere.pdf.hasAnnotationSelection":false}',
   );
-  state = { hasSelection: true, hasAnnotationSelection: true };
+  state = {
+    hasSelection: true,
+    hasTextSelection: false,
+    hasAnnotationSelection: true,
+  };
   listeners[0]!.listener();
   assert.equal(
     attributes["data-vscode-context"],
-    '{"lumiere.pdf.hasSelection":true,"lumiere.pdf.hasAnnotationSelection":true}',
+    '{"lumiere.pdf.hasSelection":true,"lumiere.pdf.hasTextSelection":false,"lumiere.pdf.hasAnnotationSelection":true}',
   );
   stop();
 });

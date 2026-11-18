@@ -102,10 +102,6 @@ function valueColumnHeight(row: string): number {
   if (row.includes("mod-unknown")) {
     return VALUE_MIN;
   }
-  const inline = /<textarea class="[^"]*mod-inline" rows="(\d+)"/.exec(row);
-  if (inline) {
-    return Math.max(VALUE_MIN, Number(inline[1]) * LINE + 8);
-  }
   if (
     row.includes("metadata-input-yaml") &&
     !row.includes(
