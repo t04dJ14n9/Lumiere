@@ -8,7 +8,10 @@ relative Markdown or WikiLink embed from the Links settings.
 ## How it works
 
 Shared helpers in `src/attachments/` resolve the folder, pick a unique
-timestamp name, write bytes, and build the embed. The host half answers each
+timestamp name, write bytes, and build the embed. The write only creates
+(`workspace.files.createBytes` / `createText`): when another file took the
+name after the folder was listed, it moves on to the next free name rather
+than replace that file. The host half answers each
 note page's `save` (bytes) and `importUrl` (http(s) / file://) RPCs. The
 webview half handles drag-and-drop, binary image paste, and rewrites remote /
 data-URI images after HTML→Markdown paste.

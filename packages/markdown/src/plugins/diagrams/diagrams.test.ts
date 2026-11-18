@@ -116,16 +116,19 @@ test("mermaid guarded chrome matches Obsidian radius and UI font sizes", () => {
   assert.match(css, /\.mermaid-guard-description\s*\{[^}]*font-size:\s*12px;/);
 });
 
-test("diagram chrome reserves a physical right lane for RTL editors", () => {
-  const laneRule =
-    /\.hybrid-block\.hybrid-diagram\s+pre\[data-fence="mermaid"\]:has\(> svg\)\s*\{[^}]*\}/;
-  const lane = css.match(laneRule)?.[0];
-  assert.ok(lane, "expected diagram lane rule");
-  // editor.rightToLeft sets dir=rtl, but the chrome uses physical right.
-  assert.match(css, /--diagram-toolbar-lane\s*:/);
-  assert.match(lane, /margin-right\s*:\s*var\(--diagram-toolbar-lane\)/);
-  assert.doesNotMatch(lane, /margin-inline-end\s*:/);
-  // The scrollport is inset; padding stays 0 so Obsidian LP alignment holds.
+test("diagram chrome sits in a row above the diagram, not in a side lane", () => {
+  const rowRule = /\.hybrid-block\.hybrid-diagram\s*\{[^}]*\}/;
+  const row = css.match(rowRule)?.[0];
+  assert.ok(row, "expected a rule that reserves the toolbar row");
+  // Reserved before render too, so drawing the SVG does not grow the block.
+  assert.match(row, /padding-top\s*:/);
+  // Width is the scarcer resource: nothing insets the diagram from the side.
+  assert.doesNotMatch(css, /--diagram-toolbar-lane/);
+  assert.doesNotMatch(
+    css,
+    /pre\[data-fence="mermaid"\]:has\(> svg\)\s*\{[^}]*margin-(right|inline-end)\s*:/,
+  );
+  // The scrollport keeps padding: 0 so Obsidian LP alignment holds.
   assert.match(
     css,
     /pre\[data-fence="mermaid"\]:has\(> svg\)\s*\{[^}]*padding:\s*0;/,

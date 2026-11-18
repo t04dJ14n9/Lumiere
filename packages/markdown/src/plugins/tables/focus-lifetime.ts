@@ -18,7 +18,7 @@ export function noteTookTableFocus(
  * Focus still belongs to the table editing session: inside the table, or in
  * the shared outer Vim status dialog opened from a cell.
  */
-export function tableSessionHoldsFocus(
+function tableSessionHoldsFocus(
   root: { contains(node: Node | null): boolean },
   active: Node | null,
 ): boolean {
@@ -40,7 +40,7 @@ function isSharedVimDialogFocus(active: Node | null): boolean {
  * editor's root). Anywhere else (the note, the find bar, a menu) is where
  * the reader went meanwhile, and a returning table must not take it away.
  */
-export function focusIsUnclaimed(
+function focusIsUnclaimed(
   document: Pick<Document, "activeElement" | "body" | "documentElement">,
   editorRoot: Element,
 ): boolean {

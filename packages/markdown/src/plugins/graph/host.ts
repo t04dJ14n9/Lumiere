@@ -1,17 +1,15 @@
 import type { Plugin } from "@workshop/core";
-import type {} from "../okfCore/api";
 import type {} from "../vault/api";
 import { contributionId } from "../../shared/setting-schema";
 import { createGraphSession } from "./session";
 
-/** Window panel for one graph scope (bundle or whole vault). It does not follow the active note later. */
+/** Window panel for one vault's graph. It does not follow the active note later. */
 export const graphHost: Plugin = {
   name: "graph",
   inject: {
     required: [
       "settings",
       "vaults",
-      "okf",
       "hostCommands",
       "views",
       "dialogs",
@@ -29,9 +27,9 @@ export const graphHost: Plugin = {
       }),
     );
     ctx.effect(() =>
-      ctx.hostCommands.register(contributionId("graph.chooseBundle"), () => {
+      ctx.hostCommands.register(contributionId("graph.chooseVault"), () => {
         void session.choose().catch((error) => {
-          ctx.logger.error("Vault graph bundle choice failed", error);
+          ctx.logger.error("Vault graph vault choice failed", error);
         });
       }),
     );

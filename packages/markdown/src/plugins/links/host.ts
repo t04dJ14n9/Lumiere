@@ -85,7 +85,7 @@ function registerUnresolvedLinks(ctx: Context, panel: PanelShell): void {
 }
 
 /** The note's unresolved link paths, lower-cased, sorted and de-duplicated. */
-export function unresolvedPaths(vault: VaultIndex, source: string): string[] {
+function unresolvedPaths(vault: VaultIndex, source: string): string[] {
   const keys = new Set(
     [...vault.unresolvedLinks(source).keys()].map((path) => path.toLowerCase()),
   );
@@ -177,9 +177,8 @@ async function openInternal(
   const { path, fragment } = linkParts(request.href);
   const root = ctx.vault.root;
   const source = notePath(root, sourceUri);
-  const located = openedVaultTarget(ctx.vault, path, source, request.wiki);
-  let uri = located.uri;
-  if (!uri && located.passthrough) {
+  let uri = openedVaultTarget(ctx.vault, path, source, request.wiki);
+  if (!uri) {
     uri = await navigation.resolve({
       root,
       ...(intent ? { intent } : {}),

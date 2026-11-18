@@ -16,7 +16,7 @@ export function parseNpmPackage(body: unknown): VideoDetails {
 }
 
 /** Prefer a display name over a bare email address. */
-export function npmAuthor(body: Record<string, unknown>): string | undefined {
+function npmAuthor(body: Record<string, unknown>): string | undefined {
   const fromAuthor = npmPersonName(body.author);
   if (fromAuthor) {
     return fromAuthor;

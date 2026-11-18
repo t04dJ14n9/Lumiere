@@ -3,15 +3,12 @@ import { isMarpDocument } from "../../markdown/marp";
 import { registerReportedCommands } from "../../shared/reported-command";
 import { contributionId } from "../../shared/setting-schema";
 import type { HostDocument } from "../../shared/host";
-import { asString, asStrings } from "../../shared/values";
-import { containingFolder } from "../../shared/workspace-path";
+import { asString } from "../../shared/values";
 import type { PanelPort } from "../../shared/host";
-import type { WikiLayout } from "../wiki/api";
 import {
   MARP_EXTENSION,
   exportDeck,
   keepDeck,
-  moveDeckOutside,
   previewDeck,
   redirectToTextEditor,
   toggleMarp,
@@ -33,7 +30,7 @@ export const marpHost: Plugin = {
       "extensions",
       "activeEditor",
     ],
-    optional: ["editors", "wikiLayout"],
+    optional: ["editors"],
   },
   apply(ctx) {
     const effect = (setup: () => Disposer) => {
@@ -44,10 +41,6 @@ export const marpHost: Plugin = {
       { id: contributionId("marp.preview"), run: () => previewActive(ctx) },
       { id: contributionId("marp.export"), run: () => exportActive(ctx) },
       { id: contributionId("marp.toggle"), run: () => toggleActive(ctx) },
-      {
-        id: contributionId("marp.moveOutside"),
-        run: () => moveActive(ctx),
-      },
       {
         id: contributionId("marp.keepInWorkshop"),
         run: () => keepActive(ctx),
@@ -142,32 +135,9 @@ async function keepActive(ctx: Context): Promise<void> {
   await keepDeck(actions(ctx), note.uri);
 }
 
-async function moveActive(ctx: Context): Promise<void> {
-  const note = activeNote(ctx);
-  const roots = asStrings(ctx.workspace.folders());
-  const folder = note ? containingFolder(note.uri, roots) : undefined;
-  if (!note || !folder) {
-    ctx.dialogs.error("Open a Marp deck in a workspace folder.");
-    return;
-  }
-  const place = usableWiki(ctx.wikiLayout)?.place(note.uri);
-  await moveDeckOutside(actions(ctx), {
-    rootUri: folder.root,
-    relativePath: folder.relative,
-    ...(place?.project.layout.bundle
-      ? { bundle: place.project.layout.bundle }
-      : {}),
-    exportsPath: place?.project.layout.exports ?? "exports",
-    text: note.text,
-    sourceUri: note.uri,
-    dirty: note.document.isDirty === true,
-  });
-}
-
 function actions(ctx: Context): MarpActions {
   const { workspace, storage } = ctx;
   return {
-    files: workspace.files,
     storage,
     execute: (id, ...args) => ctx.hostCommands.execute(id, ...args),
     reveal: (uri) => workspace.revealTextEditor(uri),
@@ -187,13 +157,6 @@ function ask(
   choices: readonly string[],
 ): Promise<string | undefined> {
   return ctx.dialogs.ask(message, choices);
-}
-
-function usableWiki(layout: WikiLayout | undefined): WikiLayout | undefined {
-  if (!layout || typeof layout.place !== "function") {
-    return undefined;
-  }
-  return layout;
 }
 
 interface OpenMarpNote {

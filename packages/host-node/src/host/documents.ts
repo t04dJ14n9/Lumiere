@@ -11,6 +11,7 @@ import {
   type SourceEdit,
   type TextEdit,
 } from "@workshop/markdown/portable";
+import { writeConflictCopy } from "./conflict-copy";
 import type { HostFiles, HostPlatform } from "./platform";
 
 /** How long typing must pause before a note is written to disk. */
@@ -68,7 +69,7 @@ export class NoteDocument implements HostDocument {
 /** What notes need from the platform: their files, and a hash of their text. */
 export interface NoteFiles extends Pick<
   HostFiles,
-  "readText" | "save" | "watch"
+  "readText" | "save" | "watch" | "create"
 > {
   sha256(text: string): string;
 }
@@ -80,13 +81,17 @@ export function noteFiles(platform: HostPlatform): NoteFiles {
     readText: (uri) => files.readText(uri),
     save: (uri, text) => files.save(uri, text),
     watch: (uri, listener) => files.watch(uri, listener),
+    create: (uri) => files.create(uri),
     sha256: (text) => platform.sha256(text),
   };
 }
 
 /**
  * Whether a disk read should replace the open note. A read that started
- * before a save finished is stale: applying it would undo that save.
+ * before a save finished is stale: applying it would undo that save. A read
+ * made while a save was writing may see the file empty: saves replace it in
+ * place (paths.ts `writeThroughFile`), truncating it first, and the
+ * truncation alone wakes the watch.
  */
 export function diskReadReplacesNote(state: {
   text: string;
@@ -95,10 +100,13 @@ export function diskReadReplacesNote(state: {
   open: boolean;
   writesAtStart: number;
   writesNow: number;
+  /** A save was writing the file when the read started or when it ended. */
+  writing: boolean;
 }): boolean {
   return (
     state.open &&
     !state.dirty &&
+    !state.writing &&
     state.writesAtStart === state.writesNow &&
     state.text !== state.diskText
   );
@@ -118,12 +126,22 @@ export class NoteDocuments implements HostDocuments {
   private readonly saveFailedListeners = new Set<
     (uri: string, error: unknown) => void
   >();
+  private readonly conflictListeners = new Set<
+    (uri: string, copy: string) => void
+  >();
   /** Saves that have reached disk. A reload captures this before it reads. */
   private readonly settledWrites = new Map<string, number>();
+  /** Notes a save is writing to disk now. */
+  private readonly writing = new Set<string>();
+  /** Notes whose reload was dropped during a save, to read again after it. */
+  private readonly rereadAfterWrite = new Set<string>();
 
   constructor(
     private readonly files: NoteFiles,
     private readonly delay = AUTOSAVE_DELAY_MS,
+    /** Where a reload that failed goes: no one awaits one. */
+    private readonly log: (message: string) => void = (message) =>
+      console.warn(message),
   ) {}
 
   fingerprint(text: string): string {
@@ -247,6 +265,14 @@ export class NoteDocuments implements HostDocuments {
   }
 
   /**
+   * Unsaved typing was written over another program's change to the note:
+   * that version was kept in `copy`, beside it, and the reader must be told.
+   */
+  onConflict(listener: (uri: string, copy: string) => void): Disposer {
+    return subscribe(this.conflictListeners, listener);
+  }
+
+  /**
    * Write every note with unsaved text, then stop watching files. Watches
    * close even when a write fails: an open watch keeps the host process alive.
    */
@@ -278,8 +304,17 @@ export class NoteDocuments implements HostDocuments {
   private async write(note: NoteDocument): Promise<boolean> {
     this.cancelSave(note.uri);
     await Promise.all([...this.willSave].map((listener) => listener(note)));
+    if (await this.tookOutsideChange(note)) {
+      return true;
+    }
+    // Taken after the disk check: typing made while it read is saved too.
     const text = note.getText();
-    await this.files.save(note.uri, text);
+    this.writing.add(note.uri);
+    try {
+      await this.files.save(note.uri, text);
+    } finally {
+      this.writing.delete(note.uri);
+    }
     // Count the save before publishing diskText, so a reload that resumes
     // in between still sees that its read is older than this write.
     this.settledWrites.set(
@@ -291,7 +326,41 @@ export class NoteDocuments implements HostDocuments {
     for (const listener of this.saveListeners) {
       listener(note);
     }
+    // Another program may have written while we did; its watch event fell
+    // inside our write and was dropped.
+    if (this.rereadAfterWrite.delete(note.uri)) {
+      this.reloadUnawaited(note);
+    }
     return true;
+  }
+
+  /**
+   * Another program may have changed the file since we last read or wrote
+   * it: a reload skips a note with unsaved typing, so its change would be
+   * written over unseen. Unsaved typing still wins the note's file; the
+   * other version is kept in a copy beside it. With nothing unsaved, the
+   * change is taken instead, as a reload would. True when nothing is left
+   * to write. (A change landing between this read and the write is not
+   * seen; the window is one read long.) Whether typing is unsaved is
+   * decided once the read returns: the user may type while it reads. A
+   * read that fails fails the save: without it we cannot tell whether we
+   * would write over another program's change (and saving replaces an
+   * existing file only, so a missing one could not be written either).
+   */
+  private async tookOutsideChange(note: NoteDocument): Promise<boolean> {
+    const disk = await this.readNote(note.uri);
+    if (disk === note.diskText) {
+      return false;
+    }
+    if (note.getText() === note.diskText) {
+      this.takeDiskText(note, disk);
+      return true;
+    }
+    const copy = await writeConflictCopy(this.files, note.uri, disk);
+    for (const listener of this.conflictListeners) {
+      listener(note.uri, copy);
+    }
+    return false;
   }
 
   private scheduleSave(note: NoteDocument): void {
@@ -330,19 +399,32 @@ export class NoteDocuments implements HostDocuments {
    * file over the old one would end a watch on the file itself.)
    */
   private watchFile(note: NoteDocument): () => void {
-    return this.files.watch(note.uri, () => void this.reload(note));
+    return this.files.watch(note.uri, () => this.reloadUnawaited(note));
+  }
+
+  /** A reload started by a file event: a listener that throws is logged. */
+  private reloadUnawaited(note: NoteDocument): void {
+    this.reload(note).catch((error: unknown) =>
+      this.log(`Lumière could not reload ${note.uri}: ${errorText(error)}`),
+    );
   }
 
   private async reload(note: NoteDocument): Promise<void> {
     const writesAtStart = this.settledWrites.get(note.uri) ?? 0;
+    const writingAtStart = this.writing.has(note.uri);
     let text: string;
     try {
       text = await this.readNote(note.uri);
     } catch {
       return;
     }
+    const writing = writingAtStart || this.writing.has(note.uri);
+    if (writing) {
+      this.rereadAfterWrite.add(note.uri);
+    }
     // Our own writes come back here; and unsaved typing wins over the disk.
-    // A read that overlapped a save is dropped: it can still hold the old bytes.
+    // A read that overlapped a save is dropped: it can still hold the old
+    // bytes, or none; one made during the write is made again after it.
     if (
       !diskReadReplacesNote({
         text,
@@ -351,10 +433,15 @@ export class NoteDocuments implements HostDocuments {
         open: this.notes.get(note.uri) === note,
         writesAtStart,
         writesNow: this.settledWrites.get(note.uri) ?? 0,
+        writing,
       })
     ) {
       return;
     }
+    this.takeDiskText(note, text);
+  }
+
+  private takeDiskText(note: NoteDocument, text: string): void {
     const change = { from: 0, to: note.getText().length, insert: text };
     note.diskText = text;
     note.replace([change]);
@@ -366,6 +453,7 @@ export class NoteDocuments implements HostDocuments {
     this.watchers.get(uri)?.();
     this.watchers.delete(uri);
     this.saving.delete(uri);
+    this.rereadAfterWrite.delete(uri);
     if (this.notes.delete(uri)) {
       for (const listener of this.closeListeners) {
         listener(uri);
@@ -376,6 +464,10 @@ export class NoteDocuments implements HostDocuments {
   private readNote(uri: string): Promise<string> {
     return this.files.readText(uri);
   }
+}
+
+export function errorText(error: unknown): string {
+  return error instanceof Error ? error.message : String(error);
 }
 
 function subscribe<T>(listeners: Set<T>, listener: T): Disposer {

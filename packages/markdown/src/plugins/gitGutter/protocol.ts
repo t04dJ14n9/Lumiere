@@ -1,7 +1,7 @@
 import { Schema } from "@workshop/core";
 import { defineProtocol } from "../../shared/rpc/protocol";
 import { MAX_DIFF_CHARS } from "../../shared/diff";
-export const baselineResult = Schema.object({
+const baselineResult = Schema.object({
   status: Schema.union(["ok", "untracked", "unavailable", "tooLarge"]),
   text: Schema.string().max(MAX_DIFF_CHARS).optional(),
   label: Schema.string().max(200).optional(),

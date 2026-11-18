@@ -2,14 +2,15 @@ import * as vscode from "vscode";
 import type { WorkspaceFiles } from "../shared/workspace-files";
 import { contained } from "./navigation";
 
-/** VS Code file operations behind `Workshop.files`. Missing files are undefined, not throws. */
+/** VS Code file operations behind `HostWorkspace.files`. Missing files are undefined, not throws. */
 export function createWorkspaceFiles(): WorkspaceFiles {
   return {
     authorize: (root, target) => contained(parse(root), parse(target)),
     readText,
     writeText,
-    createText,
+    createText: (uri, text) => createFile(uri, new TextEncoder().encode(text)),
     writeBytes,
+    createBytes: createFile,
     list,
     mkdir,
     copy,
@@ -36,15 +37,12 @@ async function writeText(uri: string, text: string): Promise<void> {
   );
 }
 
-async function createText(uri: string, text: string): Promise<boolean> {
+async function createFile(uri: string, contents: Uint8Array): Promise<boolean> {
   const target = parse(uri);
   const edit = new vscode.WorkspaceEdit();
   // VS Code refuses to create over a file that is there and checks that in
-  // the same step, so a note made meanwhile is never overwritten.
-  edit.createFile(target, {
-    overwrite: false,
-    contents: new TextEncoder().encode(text),
-  });
+  // the same step, so a file made meanwhile is never overwritten.
+  edit.createFile(target, { overwrite: false, contents });
   if (await vscode.workspace.applyEdit(edit)) {
     return true;
   }

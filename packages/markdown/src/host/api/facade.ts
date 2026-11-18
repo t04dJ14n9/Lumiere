@@ -99,7 +99,7 @@ function bindEvents(
   root.on("vault/resolved", (vault) =>
     events.resolved.fire(Object.freeze({ vault: platform.uri(vault) })),
   );
-  // The workshop reports every text document; the API reports notes open
+  // The host reports every text document; the API reports notes open
   // in this editor.
   const fireDocument = (document: HostDocument) => {
     if (root.editors.all().some((panel) => panel.document.id === document.id)) {

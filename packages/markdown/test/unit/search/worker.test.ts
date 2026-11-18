@@ -138,8 +138,6 @@ test("search host cancels work on disable and registers again on enable", async 
     locate: async () => undefined,
     open: async () => {},
     all: () => [],
-    registerLinkPolicy: () => () => {},
-    invalidateLinkResolution() {},
   });
   provideHostServices(root, fakeHost({ extensions: { workers } }));
   const start = () =>

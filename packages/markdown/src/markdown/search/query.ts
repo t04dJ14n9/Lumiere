@@ -6,7 +6,7 @@ export type SearchQuery =
   | { kind: "scope"; scope: string; term: SearchQuery }
   | { kind: "property"; name: SearchQuery; value?: SearchQuery };
 
-export const searchScopes = new Set([
+const searchScopes = new Set([
   "file",
   "path",
   "content",

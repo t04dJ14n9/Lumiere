@@ -5,7 +5,13 @@ import { SourceCoordinates } from "../../shared/document/coordinates";
 import { MARKDOWN_EDITOR } from "../../shared/editor-provider";
 import type { FileTextEdits, HostDocuments } from "../../shared/host";
 import { renameFile } from "../file-rename";
-import { applyLineColEdits, cleanEditedUris, renamesKey } from "../rename-save";
+import {
+  cleanEditedUris,
+  isSameText,
+  planLinkUpdates,
+  renamesKey,
+  type PlannedNote,
+} from "../rename-save";
 import { registerTextCompletions } from "../text-completions";
 import { onWillDelete } from "./deletions";
 import type { NativeDocuments } from "./native-documents";
@@ -86,8 +92,12 @@ const onWillRename: HostDocuments["onWillRename"] = (listener) => {
         // Lumiere-open tabs stay out of waitUntil so a failed custom-editor
         // apply cannot abort the whole batch.
         const lumiere = lumiereOpenUris();
-        await scheduleLinkUpdatesAfterRename(files, renames, pending);
-        return workspaceEdit(files.filter((file) => !lumiere.has(file.uri)));
+        const current = await scheduleLinkUpdatesAfterRename(
+          files,
+          renames,
+          pending,
+        );
+        return workspaceEdit(current.filter((file) => !lumiere.has(file.uri)));
       }),
     );
   });
@@ -136,29 +146,26 @@ function lumiereOpenUris(): Set<string> {
   return uris;
 }
 
-/** A note a rename's link updates change: its text before and after them. */
-interface PlannedNote {
-  before: string;
-  after: string;
-}
-
 /**
  * Plan post-rename apply+save for every note the link update touches.
  * Expected text is captured here (open buffer or on-disk bytes) so a delayed
  * Preview → Apply cannot leave disk on the old name; targets are mapped to
  * their post-rename URIs because `onDidRenameFiles` runs after the move.
+ *
+ * @returns the files whose edits still fit their text. A note that changed
+ * since its edits were computed is named in a warning and left as it is.
  */
 async function scheduleLinkUpdatesAfterRename(
   files: readonly FileTextEdits[],
   renames: readonly { oldUri: string; newUri: string }[],
   pending: PendingLinkUpdates,
-): Promise<void> {
+): Promise<FileTextEdits[]> {
   const key = renamesKey(renames);
   pending.get(key)?.dispose();
   pending.delete(key);
   const targets = files.filter((file) => file.edits.length > 0);
   if (targets.length === 0) {
-    return;
+    return [];
   }
   const clean = new Set(
     cleanEditedUris(targets, (uri) =>
@@ -167,23 +174,30 @@ async function scheduleLinkUpdatesAfterRename(
       ),
     ).map((uri) => postRenameUri(uri, renames)),
   );
-  const planned = new Map<string, PlannedNote>();
-  for (const file of targets) {
-    const before = await noteTextForLinkUpdate(file.uri);
-    planned.set(postRenameUri(file.uri, renames), {
-      before,
-      after: applyLineColEdits(before, file.edits),
+  const { planned: byUri, stale } = await planLinkUpdates(
+    targets,
+    noteTextForLinkUpdate,
+    (uri) =>
+      vscode.workspace.textDocuments
+        .find((document) => document.uri.toString() === uri)
+        ?.getText(),
+  );
+  warnLinksNotUpdated(stale.map((file) => file.uri));
+  const planned = new Map<string, PlannedNote>(
+    [...byUri].map(([uri, note]) => [postRenameUri(uri, renames), note]),
+  );
+  if (planned.size > 0) {
+    const done = vscode.workspace.onDidRenameFiles((event) => {
+      if (renamesKey(renamePairs(event.files)) !== key) {
+        return;
+      }
+      done.dispose();
+      pending.delete(key);
+      void settleLinkUpdates(planned, clean);
     });
+    pending.set(key, done);
   }
-  const done = vscode.workspace.onDidRenameFiles((event) => {
-    if (renamesKey(renamePairs(event.files)) !== key) {
-      return;
-    }
-    done.dispose();
-    pending.delete(key);
-    void settleLinkUpdates(planned, clean);
-  });
-  pending.set(key, done);
+  return targets.filter((file) => !stale.includes(file));
 }
 
 /**
@@ -334,15 +348,6 @@ async function ensureNoteUpdated(
     return "retry";
   }
   return "updated";
-}
-
-/**
- * Whether two texts of one note are the same. VS Code keeps a document in one
- * line-ending style, so a note read from a file with mixed endings differs
- * from its document only in them.
- */
-function isSameText(a: string, b: string): boolean {
-  return a.replace(/\r\n?/g, "\n") === b.replace(/\r\n?/g, "\n");
 }
 
 /** Tells the user which notes kept their old links. */

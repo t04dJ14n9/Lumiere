@@ -5,7 +5,6 @@ import {
   settablePropertyValue,
 } from "../../markdown/properties";
 import { propertyYamlDraft } from "../../markdown/properties/yaml-draft";
-import { propertyYamlInput } from "../../markdown/properties/values";
 import {
   DEFAULT_LIST_PREVIEW_COUNT,
   listPreviewCount as clampPreview,
@@ -134,12 +133,7 @@ function propertyBody(
   if (options.editable) {
     return editableValue(key, value, options);
   }
-  // OKF generated / verified (map or list of {by,at}): its YAML, edited in
-  // place like any other value; a commit keeps it a map (or list of maps).
-  if (options.draft !== undefined && isOkfProvenance(key, value)) {
-    return editableYaml(key, withoutFinalNewline(options.draft), true);
-  }
-  // Nested non-OKF (incl. decision_confirmation): Obsidian Unknown + JSON.
+  // Nested maps and collections: Obsidian Unknown + JSON.
   if (options.draft !== undefined && isUnknownPropertyValue(value)) {
     return unknownPropertyValue(value);
   }
@@ -155,33 +149,22 @@ function propertyTypeMeta(
   key: string,
   value: unknown,
   options: PropertyRowOptions,
-): { okf: boolean; unknown: boolean; typeLabel: string; typeName: string } {
+): { unknown: boolean; typeLabel: string; typeName: string } {
   const { kind } = options;
-  const namedText = isPlainTextSources(key);
-  const okf =
-    !namedText &&
-    !options.custom &&
-    !options.editable &&
-    options.draft !== undefined &&
-    isOkfProvenance(key, value);
   const unknown =
-    !namedText &&
+    !isPlainTextSources(key) &&
     !options.custom &&
     !options.editable &&
-    !okf &&
     options.draft !== undefined &&
     isUnknownPropertyValue(value);
-  let typeLabel = propertyKindLabels[kind];
-  let typeName: string = kind === "list" ? "multitext" : kind;
-  if (okf) {
-    const name = key.toLowerCase();
-    typeLabel = name === "verified" ? "Verified" : "Generated";
-    typeName = name === "verified" ? "verified" : "generated";
-  } else if (unknown) {
-    typeLabel = "Unknown";
-    typeName = "unknown";
+  if (unknown) {
+    return { unknown, typeLabel: "Unknown", typeName: "unknown" };
   }
-  return { okf, unknown, typeLabel, typeName };
+  return {
+    unknown,
+    typeLabel: propertyKindLabels[kind],
+    typeName: kind === "list" ? "multitext" : kind,
+  };
 }
 
 function propertyRow(
@@ -190,17 +173,14 @@ function propertyRow(
   options: PropertyRowOptions,
 ): string {
   const { kind } = options;
-  const { okf, unknown, typeLabel, typeName } = propertyTypeMeta(
+  const { unknown, typeLabel, typeName } = propertyTypeMeta(
     key,
     value,
     options,
   );
   const warning = mismatchWarning(
     kind,
-    !isPlainTextSources(key) &&
-      !unknown &&
-      !okf &&
-      !matchesPropertyKind(kind, value),
+    !isPlainTextSources(key) && !unknown && !matchesPropertyKind(kind, value),
   );
   const body = propertyBody(key, value, options);
   const icon = propertyIcon(key, value, unknown ? "unknown" : kind);
@@ -312,63 +292,17 @@ function isUnknownPropertyValue(value: unknown): boolean {
   return value !== null && typeof value === "object";
 }
 
-/**
- * OKF SPEC §5.2 `generated` / `verified`: a `{by, at}` map or a list of
- * them, edited as YAML text. `decision_confirmation` is WorkVault-only and
- * stays Unknown+JSON.
- */
-function isOkfProvenance(key: string, value: unknown): boolean {
-  const name = key.toLowerCase();
-  if (name !== "generated" && name !== "verified") {
-    return false;
-  }
-  if (Array.isArray(value)) {
-    return (
-      value.length > 0 &&
-      value.every(
-        (entry) =>
-          entry !== null &&
-          typeof entry === "object" &&
-          !Array.isArray(entry) &&
-          typeof (entry as Record<string, unknown>).by === "string",
-      )
-    );
-  }
-  return (
-    value !== null &&
-    typeof value === "object" &&
-    typeof (value as Record<string, unknown>).by === "string"
-  );
-}
-
 /** Obsidian REA: `metadata-property-value-item mod-unknown` + JSON.stringify. */
 function unknownPropertyValue(value: unknown): string {
   return `<span class="metadata-property-value-item mod-unknown" tabindex="0">${escape(JSON.stringify(value))}</span>`;
 }
 
-/**
- * The draft without its final newline, which would show as an empty last
- * line, unless the value needs it (a `|+` block scalar at the end).
- */
-function withoutFinalNewline(draft: string): string {
-  const trimmed = draft.replace(/\n$/, "");
-  return trimmed === draft ||
-    JSON.stringify(propertyYamlInput(trimmed)) !==
-      JSON.stringify(propertyYamlInput(draft))
-    ? draft
-    : trimmed;
-}
-
-/**
- * A YAML draft. `inline` looks like any other text value (OKF `generated`):
- * no border or code font, and as tall as its lines.
- */
-function editableYaml(key: string, text: string, inline = false): string {
+/** A YAML draft for a value the sheet has no control for. */
+function editableYaml(key: string, text: string): string {
   // textarea keeps Enter as real newlines (contenteditable textContent does not).
   const lines = text.replace(/\n$/, "").split("\n").length;
-  const rows = inline ? lines : Math.min(12, Math.max(3, lines));
-  const mod = inline ? " mod-inline" : "";
-  return `<textarea class="metadata-input-longtext metadata-input-yaml${mod}" rows="${rows}" tabindex="-1" data-placeholder="Empty"${attr("aria-label", key)}${attr("data-property-input", key)} data-property-kind="yaml">${escape(text)}</textarea>`;
+  const rows = Math.min(12, Math.max(3, lines));
+  return `<textarea class="metadata-input-longtext metadata-input-yaml" rows="${rows}" tabindex="-1" data-placeholder="Empty"${attr("aria-label", key)}${attr("data-property-input", key)} data-property-kind="yaml">${escape(text)}</textarea>`;
 }
 
 function complexFallback(draft: string | undefined): string {

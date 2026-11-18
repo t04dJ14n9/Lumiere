@@ -31,248 +31,182 @@ const sent = (page: Page, type: string) =>
     type,
   );
 
-test("Annotate mode has no viewer bar and Escape returns to text", async ({
-  page,
-}) => {
+type KeptItem = {
+  data: { subtype: string; contents?: string; color?: string };
+};
+
+/** The marks in the last annotation file the viewer asked to keep. */
+async function keptMarks(page: Page): Promise<KeptItem[]> {
+  const saves = await sent(page, "annotationStoreSave");
+  const last = saves.at(-1)?.text;
+  return last
+    ? (JSON.parse(last) as { bundle: { items: KeptItem[] } }).bundle.items
+    : [];
+}
+
+/** The keys VS Code's webview context menu would get, read as the menu opens. */
+async function menuKeys(page: Page): Promise<Record<string, boolean>> {
+  const value = await page.evaluate(() =>
+    document.body.getAttribute("data-vscode-context"),
+  );
+  return JSON.parse(value ?? "{}") as Record<string, boolean>;
+}
+
+/** Select the first line's words, as a reader would before right-clicking. */
+async function selectWords(page: Page) {
+  const at = await pagePoint(page, 1);
+  await selectText(page, at(74, TEXT_MIDLINE), at(205, TEXT_MIDLINE));
+  await expect
+    .poll(async () => (await lastSelection(page)) as { kind?: string } | null)
+    .toMatchObject({ kind: "text" });
+  return at;
+}
+
+/** Highlight the first line's words from the context menu; returns a point inside the mark. */
+async function highlightWords(page: Page, note?: string) {
+  const baseline = await highlightMarkCount(page);
+  const at = await selectWords(page);
+  await sendAction(page, {
+    action: "markSelection",
+    tool: "highlight",
+    ...(note ? { note } : {}),
+  });
+  await expect.poll(() => highlightMarkCount(page)).toBeGreaterThan(baseline);
+  return { baseline, inside: at(140, TEXT_MIDLINE), at };
+}
+
+test("there is no Annotate mode to switch to", async ({ page }) => {
   await open(page, "?toolbar=chrome");
   await sendAction(page, { action: "setTool", tool: "annotate" });
-  await expect.poll(() => lastView(page)).toMatchObject({ tool: "annotate" });
-  await expect(
-    page.getByRole("group", { name: "PDF annotation tools" }),
-  ).toHaveCount(0);
-  await expect(
-    page.getByRole("toolbar", { name: "PDF annotation bar" }),
-  ).toHaveCount(0);
+  await expect.poll(() => lastView(page)).toMatchObject({ tool: "text" });
   await expect(
     page.getByRole("button", { name: "Annotate", exact: true }),
   ).toHaveCount(0);
-  const viewport = (await page.locator(".viewport").boundingBox())!;
-  expect(viewport.y).toBe(0);
-  await page.keyboard.press("Escape");
-  await expect.poll(() => lastView(page)).toMatchObject({ tool: "text" });
 });
 
-test("the slim bar does not gain an Annotate control", async ({ page }) => {
-  await open(page, "?toolbar=slim");
-  await sendAction(page, { action: "setTool", tool: "annotate" });
-  await expect.poll(() => lastView(page)).toMatchObject({ tool: "annotate" });
-  await expect(
-    page.getByRole("toolbar", { name: "PDF toolbar" }).getByRole("button", {
-      name: "Annotate",
-      exact: true,
-    }),
-  ).toHaveCount(0);
-  await expect(
-    page.getByRole("group", { name: "PDF annotation tools" }),
-  ).toHaveCount(0);
-});
-
-test("highlight tool can mark text", async ({ page }) => {
+test("a right-click on selected text offers to mark it", async ({ page }) => {
   await open(page, "?toolbar=chrome");
-  await sendAction(page, { action: "setTool", tool: "annotate" });
-  await sendAction(page, { action: "setAnnotationTool", tool: "highlight" });
-  const baseline = await highlightMarkCount(page);
-  const at = await pagePoint(page, 1);
-  await page.mouse.move(...at(74, TEXT_MIDLINE));
-  await page.mouse.down();
-  await page.mouse.move(...at(205, TEXT_MIDLINE), { steps: 10 });
-  await page.mouse.up();
-  await expect.poll(() => highlightMarkCount(page)).toBeGreaterThan(baseline);
-  // The mark is kept in Lumiere's annotation file, not written into the PDF:
-  // its bytes (and their hash, which a vault records) stay as they were.
-  await expect
-    .poll(async () => (await sent(page, "annotationStoreSave")).length)
-    .toBeGreaterThan(0);
-  const kept = JSON.parse(
-    (await sent(page, "annotationStoreSave")).at(-1)!.text!,
-  ) as { version: number; bundle: { items: { data: { subtype: string } }[] } };
-  expect(kept.version).toBe(2);
-  expect(kept.bundle.items.map((item) => item.data.subtype)).toContain(
-    "highlight",
-  );
-  expect(await sent(page, "annotationSave")).toHaveLength(0);
-});
-
-test("annotation undo clears an in-session highlight", async ({ page }) => {
-  await open(page, "?toolbar=chrome");
-  await sendAction(page, { action: "setTool", tool: "annotate" });
-  await sendAction(page, { action: "setAnnotationTool", tool: "highlight" });
-  const baseline = await highlightMarkCount(page);
-  const at = await pagePoint(page, 1);
-  await page.mouse.move(...at(74, TEXT_MIDLINE));
-  await page.mouse.down();
-  await page.mouse.move(...at(205, TEXT_MIDLINE), { steps: 10 });
-  await page.mouse.up();
-  await expect.poll(() => highlightMarkCount(page)).toBeGreaterThan(baseline);
-  await sendAction(page, { action: "annotationUndo" });
-  await expect.poll(() => highlightMarkCount(page)).toBe(baseline);
-});
-
-test("created annotation auto-selects as region and deletes with Delete", async ({
-  page,
-}) => {
-  await open(page, "?toolbar=chrome");
-  await sendAction(page, { action: "setTool", tool: "annotate" });
-  await sendAction(page, { action: "setAnnotationTool", tool: "highlight" });
-  const baseline = await highlightMarkCount(page);
-  const at = await pagePoint(page, 1);
-  await page.mouse.move(...at(74, TEXT_MIDLINE));
-  await page.mouse.down();
-  await page.mouse.move(...at(205, TEXT_MIDLINE), { steps: 10 });
-  await page.mouse.up();
-  await expect.poll(() => highlightMarkCount(page)).toBeGreaterThan(baseline);
-  // selectAfterCreate: selection should be reported as a region for handoff.
-  await expect
-    .poll(async () => {
-      const selection = await lastSelection(page);
-      return selection && typeof selection === "object"
-        ? (selection as { kind?: string; page?: number }).kind
-        : undefined;
-    })
-    .toBe("region");
-  await page.keyboard.press("Delete");
-  await expect.poll(() => highlightMarkCount(page)).toBe(baseline);
-});
-
-test("click-to-select mark reports region and survives reportSelection", async ({
-  page,
-}) => {
-  await open(page, "?toolbar=chrome");
-  await sendAction(page, { action: "setTool", tool: "annotate" });
-  await sendAction(page, { action: "setAnnotationTool", tool: "highlight" });
-  const baseline = await highlightMarkCount(page);
-  const at = await pagePoint(page, 1);
-  const mid = at(140, TEXT_MIDLINE);
-  await page.mouse.move(...at(74, TEXT_MIDLINE));
-  await page.mouse.down();
-  await page.mouse.move(...at(205, TEXT_MIDLINE), { steps: 10 });
-  await page.mouse.up();
-  await expect.poll(() => highlightMarkCount(page)).toBeGreaterThan(baseline);
-  await expect
-    .poll(async () => {
-      const selection = await lastSelection(page);
-      return selection && typeof selection === "object"
-        ? (selection as { kind?: string }).kind
-        : undefined;
-    })
-    .toBe("region");
-
-  // Escape exits Annotate and clears EmbedPDF selection; re-enter and click the mark.
-  await page.keyboard.press("Escape");
-  await expect.poll(() => lastView(page)).toMatchObject({ tool: "text" });
-  await expect
-    .poll(async () => {
-      const selection = await lastSelection(page);
-      return selection;
-    })
-    .toBeNull();
-  await sendAction(page, { action: "setTool", tool: "annotate" });
-  await page.mouse.click(...mid);
-  await expect
-    .poll(async () => {
-      const selection = await lastSelection(page);
-      return selection && typeof selection === "object"
-        ? (selection as { kind?: string }).kind
-        : undefined;
-    })
-    .toBe("region");
-  // Capture-phase embedded select → Delete (Nit from #482 review).
-  await page.keyboard.press("Delete");
-  await expect.poll(() => highlightMarkCount(page)).toBe(baseline);
-  // Recreate for the reportSelection path below.
-  await page.mouse.move(...at(74, TEXT_MIDLINE));
-  await page.mouse.down();
-  await page.mouse.move(...at(205, TEXT_MIDLINE), { steps: 10 });
-  await page.mouse.up();
-  await expect.poll(() => highlightMarkCount(page)).toBeGreaterThan(baseline);
-  await page.mouse.click(...mid);
-  await expect
-    .poll(async () => {
-      const selection = await lastSelection(page);
-      return selection && typeof selection === "object"
-        ? (selection as { kind?: string }).kind
-        : undefined;
-    })
-    .toBe("region");
-
-  // Host Copy Link / ensureSelection path: reportSelection keeps the region.
-  const before = await lastSelection(page);
-  await page.evaluate(() =>
-    (window as unknown as { hostSend: (message: unknown) => void }).hostSend({
-      type: "reportSelection",
-    }),
-  );
-  await expect
-    .poll(async () => {
-      const selection = await lastSelection(page);
-      return selection && typeof selection === "object"
-        ? (selection as { kind?: string }).kind
-        : undefined;
-    })
-    .toBe("region");
-  const after = await lastSelection(page);
-  expect(after).toMatchObject({
-    kind: "region",
-    page: (before as { page?: number }).page,
+  const at = await selectWords(page);
+  await page.mouse.click(...at(140, TEXT_MIDLINE), { button: "right" });
+  expect(await menuKeys(page)).toMatchObject({
+    "lumiere.pdf.hasSelection": true,
+    "lumiere.pdf.hasTextSelection": true,
+    "lumiere.pdf.hasAnnotationSelection": false,
   });
 });
 
-// EmbedPDF 3 decides this by the active tool, not by a pointer-events style on
-// the layer: the reading tool lacks the annotation-edit ability, so a mark
-// under the pointer is not there to select, move or delete in View mode.
-test("a mark can be selected and deleted only in Annotate mode", async ({
+test("Highlight marks the selected text and keeps it beside the PDF", async ({
   page,
 }) => {
   await open(page, "?toolbar=chrome");
-  await sendAction(page, { action: "setTool", tool: "annotate" });
-  await sendAction(page, { action: "setAnnotationTool", tool: "highlight" });
-  const baseline = await highlightMarkCount(page);
-  const at = await pagePoint(page, 1);
-  const mid = at(140, TEXT_MIDLINE);
-  await page.mouse.move(...at(74, TEXT_MIDLINE));
-  await page.mouse.down();
-  await page.mouse.move(...at(205, TEXT_MIDLINE), { steps: 10 });
-  await page.mouse.up();
-  await expect.poll(() => highlightMarkCount(page)).toBeGreaterThan(baseline);
-
-  await page.keyboard.press("Escape");
-  await expect.poll(() => lastView(page)).toMatchObject({ tool: "text" });
+  await highlightWords(page);
+  // The text selection became the mark.
   await expect.poll(() => lastSelection(page)).toBeNull();
+  // The mark is kept in Lumiere's annotation file, not written into the PDF:
+  // its bytes (and their hash, which a vault records) stay as they were.
+  await expect
+    .poll(async () => (await keptMarks(page)).map((item) => item.data.subtype))
+    .toContain("highlight");
+  const kept = JSON.parse(
+    (await sent(page, "annotationStoreSave")).at(-1)!.text!,
+  ) as { version: number };
+  expect(kept.version).toBe(2);
+  expect(await sent(page, "annotationSave")).toHaveLength(0);
+});
+
+test("Add Annotation puts the note on the highlight", async ({ page }) => {
+  await open(page, "?toolbar=chrome");
+  await highlightWords(page, "Read this twice");
+  await expect
+    .poll(async () => (await keptMarks(page)).map((item) => item.data.contents))
+    .toContain("Read this twice");
+});
+
+test("the Mark Text submenu underlines the selected text", async ({ page }) => {
+  await open(page, "?toolbar=chrome");
+  await selectWords(page);
+  await sendAction(page, { action: "markSelection", tool: "underline" });
+  await expect
+    .poll(async () => (await keptMarks(page)).map((item) => item.data.subtype))
+    .toContain("underline");
+});
+
+test("a right-click on a mark offers its note, colour and Delete", async ({
+  page,
+}) => {
+  await open(page, "?toolbar=chrome");
+  const { baseline, inside } = await highlightWords(page, "First thought");
+  // The note goes on once the engine has the highlight: wait for it.
+  await expect
+    .poll(async () => (await keptMarks(page)).map((item) => item.data.contents))
+    .toEqual(["First thought"]);
+  await page.mouse.click(...inside, { button: "right" });
+  expect(await menuKeys(page)).toMatchObject({
+    "lumiere.pdf.hasSelection": true,
+    "lumiere.pdf.hasTextSelection": false,
+    "lumiere.pdf.hasAnnotationSelection": true,
+  });
+  // Reported as the selection: Copy Link for Agent hands the mark over, and
+  // Edit Note… starts from its note.
+  await expect
+    .poll(async () => lastSelection(page))
+    .toMatchObject({ kind: "region", mark: true, note: "First thought" });
+
+  await sendAction(page, { action: "setMarkNote", note: "Second thought" });
+  await expect
+    .poll(async () => (await keptMarks(page)).map((item) => item.data.contents))
+    .toEqual(["Second thought"]);
+
+  await sendAction(page, { action: "setMarkColor", color: "#4DABF7" });
+  await expect
+    .poll(async () =>
+      (await keptMarks(page)).map((item) => item.data.color?.toUpperCase()),
+    )
+    .toEqual(["#4DABF7"]);
+
+  await sendAction(page, { action: "deleteSelectedAnnotations" });
+  await expect.poll(() => highlightMarkCount(page)).toBe(baseline);
+  await expect.poll(() => lastSelection(page)).toBeNull();
+});
+
+test("a right-click on empty page offers no mark actions", async ({ page }) => {
+  await open(page, "?toolbar=chrome");
+  const { at } = await highlightWords(page);
+  await page.mouse.click(...at(150, 250), { button: "right" });
+  expect(await menuKeys(page)).toMatchObject({
+    "lumiere.pdf.hasTextSelection": false,
+    "lumiere.pdf.hasAnnotationSelection": false,
+  });
+});
+
+// EmbedPDF 3 decides this by the active tool: the reading tool lacks the
+// annotation-edit ability, so a click never selects, moves or deletes a mark.
+test("a left click on a mark neither selects nor deletes it", async ({
+  page,
+}) => {
+  await open(page, "?toolbar=chrome");
+  const { inside } = await highlightWords(page);
   const marked = await highlightMarkCount(page);
-  await page.mouse.click(...mid);
+  await page.mouse.click(...inside);
   await page.keyboard.press("Delete");
-  // Nothing reacts to a click: wait a few frames before saying so.
   await page.evaluate(
     () =>
       new Promise((resolve) =>
         requestAnimationFrame(() => requestAnimationFrame(resolve)),
       ),
   );
-  expect(await lastSelection(page)).toBeNull();
   expect(await highlightMarkCount(page)).toBe(marked);
+});
 
-  await sendAction(page, { action: "setTool", tool: "annotate" });
-  await page.mouse.click(...mid);
-  await expect
-    .poll(async () => (await lastSelection(page)) as { kind?: string } | null)
-    .toMatchObject({ kind: "region" });
-  await page.keyboard.press("Delete");
+test("annotation undo clears an in-session highlight", async ({ page }) => {
+  await open(page, "?toolbar=chrome");
+  const { baseline } = await highlightWords(page);
+  await sendAction(page, { action: "annotationUndo" });
   await expect.poll(() => highlightMarkCount(page)).toBe(baseline);
 });
 
-test("text tool still selects text with marks on the page", async ({
-  page,
-}) => {
+test("text still selects with marks on the page", async ({ page }) => {
   await open(page, "?toolbar=chrome");
-  await sendAction(page, { action: "setTool", tool: "text" });
-  const at = await pagePoint(page, 1);
-  await selectText(page, at(74, TEXT_MIDLINE), at(205, TEXT_MIDLINE));
-  await expect
-    .poll(async () => {
-      const selection = await lastSelection(page);
-      return selection && typeof selection === "object"
-        ? (selection as { kind?: string }).kind
-        : undefined;
-    })
-    .toBe("text");
+  await highlightWords(page);
+  await selectWords(page);
 });

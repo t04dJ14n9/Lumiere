@@ -9,7 +9,7 @@ import { CLICK_DRAG_PX, latchClickDrag } from "../../webview/ui/block-pointer";
  * More accurate than CodeMirror's `posAtCoords` for soft-wrapped CJK / wide
  * glyphs when the line also carries Live Preview hide decorations.
  */
-export function domCaretPosition(
+function domCaretPosition(
   view: EditorView,
   point: { clientX: number; clientY: number },
 ): number | undefined {

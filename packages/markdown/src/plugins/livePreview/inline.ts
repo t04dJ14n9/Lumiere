@@ -37,7 +37,7 @@ const inlineClasses: Readonly<Record<string, string>> = {
 };
 
 /** The number of quotes around a node, counting the node itself. */
-export function quoteDepth(node: SyntaxNode | null): number {
+function quoteDepth(node: SyntaxNode | null): number {
   let depth = 0;
   for (let current = node; current; current = current.parent) {
     if (current.name === "Blockquote") {

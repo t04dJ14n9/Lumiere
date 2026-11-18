@@ -57,7 +57,7 @@ export function extractPdfBacklinks(
  * Markdown editor shows them; so is an escaped `\[`. An embed (`![…](…)`)
  * still points at the page.
  */
-export function extractIndexedHits(
+function extractIndexedHits(
   noteText: string,
   notePath: string,
   noteUri: string,

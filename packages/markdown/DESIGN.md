@@ -950,8 +950,7 @@ interface VaultIndex {
 6. Otherwise, files whose path ends with the link path: those under the
    source's folder (or a descendant) first, then the rest, each group by
    path length, shortest first, then by path. The first wins;
-   `resolveLinkCandidates` returns all of them. Inside an OKF bundle, a
-   wikilink takes the first of them in the source's bundle (okfCore).
+   `resolveLinkCandidates` returns all of them.
 
 A folder link resolves to `lumiere.markdown.links.folderNote` inside it when
 that setting is set (default empty; LLM Wiki uses `_index.md`), and otherwise
@@ -1044,7 +1043,7 @@ Short specifications, beyond the source's tested behaviour:
   auto-inserted one) and inserts `vault.linkText`; Tab takes the text only.
 - **outline**: a native Explorer tree view (like PDF Outline) of the active
   editor's headings, with click to reveal and current-heading tracking, plus
-  a heading Quick Pick on Ctrl+Shift+O in Workshop. VS Code's built-in Markdown
+  a heading Quick Pick on Ctrl+Shift+O in Lumiere. VS Code's built-in Markdown
   provider supplies Outline and breadcrumbs in the plain text editor. This
   removes the in-webview outline panel and its
   **Toggle Outline** title action.
@@ -1170,7 +1169,7 @@ default (§25).
 | Auto pair brackets / Markdown syntax | `lumiere.markdown.autoPair.brackets`, `.markdown` | `true`, `true` |
 | Smart lists | plugin `smartLists` | on |
 | Indent using tabs, Tab indent size | `lumiere.markdown.editor.useTabs`, `.tabSize` | `true`, `4` |
-| (Workshop-specific) Text-selection edge-scroll speed | `lumiere.markdown.editor.dragScrollSpeed` (multiplier 1–10; 1 restores CodeMirror speed) | `4` |
+| (Lumiere-specific) Text-selection edge-scroll speed | `lumiere.markdown.editor.dragScrollSpeed` (multiplier 1–10; 1 restores CodeMirror speed) | `4` |
 | Auto convert HTML | plugin `pasteHtml` | on |
 | Vim key bindings | plugin `vim` | off |
 
@@ -1324,10 +1323,8 @@ Copy Link for Agent still copies the text above and may open a chat. A
 separate `bridge` plugin publishes a versioned JSON envelope
 (`docs/bridge-envelope.md`) for the same selection and does not open a
 chat. Agent PDF Viewer stays a second extension: `vscodeEmbedPdf.bridge.envelope`
-is called only when that command is registered. Wiki copy commands use the
-envelope and the clipboard text, and they never start an agent. The envelope
-is a workbench protocol, not OKF metadata, and it is not a shared
-Back/Forward history.
+is called only when that command is registered. The envelope is a workbench
+protocol, not note metadata, and it is not a shared Back/Forward history.
 
 ## 18. Public API v1 and outside extensions
 

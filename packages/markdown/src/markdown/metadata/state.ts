@@ -1,7 +1,7 @@
 import { StateField } from "@codemirror/state";
 import { metadata } from "./index";
 import type { NoteMetadata } from "./types";
-export const metadataField = StateField.define<NoteMetadata>({
+const metadataField = StateField.define<NoteMetadata>({
   create: (state) => metadata(state.doc),
   update(value, transaction) {
     return transaction.docChanged ? metadata(transaction.newDoc) : value;

@@ -2,6 +2,8 @@ import {
   evaluateBaseView,
   parseBaseYaml,
   selectBaseView,
+  unsupportedBaseDateTokens,
+  unsupportedDateTokensMessage,
   type BaseColumn,
   type BaseDefinition,
   type BaseEvaluatedGroup,
@@ -69,6 +71,24 @@ export function renderBaseEmbed(
   mountInteractiveBase(embed, definition, initialView, ctx);
 }
 
+/**
+ * A line naming the date tokens the base's formulas use that Lumiere
+ * cannot write, or none.
+ */
+function dateTokenWarnings(
+  doc: Document,
+  definition: BaseDefinition,
+): HTMLElement[] {
+  const tokens = unsupportedBaseDateTokens(definition);
+  if (tokens.length === 0) {
+    return [];
+  }
+  const warning = doc.createElement("div");
+  warning.className = "bases-warning";
+  warning.textContent = unsupportedDateTokensMessage(tokens);
+  return [warning];
+}
+
 function renderBaseError(
   embed: HTMLElement,
   message: string,
@@ -89,6 +109,7 @@ function mountInteractiveBase(
 ): void {
   const doc = embed.ownerDocument;
   const env: RenderEnv = { doc, open: ctx.open };
+  const warnings = dateTokenWarnings(doc, definition);
   let activeView: BaseViewConfig = {
     ...initialView,
     sort: [...initialView.sort],
@@ -113,7 +134,7 @@ function mountInteractiveBase(
       };
       rerender();
     });
-    embed.append(header, viewEl, createOpenBaseButton(doc, ctx));
+    embed.append(...warnings, header, viewEl, createOpenBaseButton(doc, ctx));
   };
 
   rerender();

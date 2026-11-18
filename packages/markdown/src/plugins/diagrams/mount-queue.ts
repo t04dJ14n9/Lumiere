@@ -114,7 +114,7 @@ const STILL_AFTER_MS = 150;
  * Follows scrolling anywhere in `target` with one passive listener: which
  * way the last scroll went, until it has been still for a moment.
  */
-export function followScrolling(target: Document): {
+function followScrolling(target: Document): {
   direction: () => -1 | 0 | 1;
   stop: () => void;
 } {

@@ -4,6 +4,8 @@ import { pluginConfiguration } from "./settings";
 import type { Configuration } from "../shared/configuration";
 import { createConfiguration } from "./configuration-access";
 import * as vscode from "vscode";
+import { silentLogger } from "@workshop/core";
+import type { Logger } from "@workshop/core";
 import type {
   Navigation,
   OpenPlace,
@@ -47,6 +49,7 @@ async function deliverToOpenedPanel(
     column: number;
     offset: OffsetRevealTarget;
     intent: NavigationIntent;
+    logger: Logger;
   },
 ): Promise<void> {
   const current = panels();
@@ -55,25 +58,33 @@ async function deliverToOpenedPanel(
     new Set(current.map((candidate) => candidate.id)),
     { uri: target.uri, side: false, column: target.column },
   );
-  if (panel) {
-    await reveals.deliver(
-      target.intent,
-      panel.id,
-      toOffsetTarget(target.offset),
+  if (!panel) {
+    target.logger.warn(
+      "No single editor of the opened note to reveal in",
+      target.uri,
     );
+    return;
   }
+  await reveals.deliver(target.intent, panel.id, toOffsetTarget(target.offset));
 }
 
 export function createNavigation(
   panels: () => readonly PanelShell[],
   configuration: Configuration = createConfiguration(),
+  logger: Logger = silentLogger,
 ): NativeNavigation {
-  const reveals = new RevealRouter();
+  const reveals = new RevealRouter(logger);
   const navigation: NativeNavigation = {
     begin: () => reveals.begin(),
     registerReveal: (panel) => reveals.register(panel),
     revealOpened: (uri, column, offset, intent) =>
-      deliverToOpenedPanel(panels, reveals, { uri, column, offset, intent }),
+      deliverToOpenedPanel(panels, reveals, {
+        uri,
+        column,
+        offset,
+        intent,
+        logger,
+      }),
     revealPanel: (panelId, offset, intent = reveals.begin()) =>
       reveals.deliver(intent, panelId, toOffsetTarget(offset)),
     scheme: vscode.env.uriScheme,
@@ -107,6 +118,7 @@ export function createNavigation(
         panels,
         reveals,
         intent: intent ?? reveals.begin(),
+        logger,
         ...(options?.preserveFocus ? { preserveFocus: true } : {}),
       }),
     registerNativeLinks() {
@@ -272,6 +284,7 @@ interface OpenNavigation {
   panels: () => readonly PanelShell[];
   reveals: RevealRouter;
   intent: NavigationIntent;
+  logger: Logger;
   /** Show the destination without moving the keyboard focus to it. */
   preserveFocus?: boolean;
 }
@@ -354,7 +367,11 @@ async function revealOpenedNote(
   column: number,
 ): Promise<void> {
   const { panels, target, place, fragment, at, reveals, intent } = options;
-  if (intent.token.cancelled || (!fragment && at === undefined)) {
+  if (!fragment && at === undefined) {
+    return;
+  }
+  if (intent.token.cancelled) {
+    options.logger.debug("Reveal cancelled by a newer navigation", target);
     return;
   }
   const destination: NavigationTarget = {

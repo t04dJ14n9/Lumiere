@@ -7,14 +7,7 @@ import {
   folderOf,
   type LinkSyntax,
 } from "../../shared/vault-path";
-import type {
-  Backlink,
-  LinkPolicy,
-  LinkPolicyDecision,
-  VaultChange,
-  VaultFile,
-  VaultIndex,
-} from "./api";
+import type { Backlink, VaultChange, VaultFile, VaultIndex } from "./api";
 import { FileTable, vaultFile } from "./file-table";
 import type { FileEntry } from "./file-table";
 import { LinkMaps, outgoingLinks } from "./link-maps";
@@ -43,7 +36,6 @@ export class MemoryVaultIndex implements VaultIndex {
   );
   private readonly changeListeners = new Set<(change: VaultChange) => void>();
   private readonly resolveListeners = new Set<() => void>();
-  private policies: readonly LinkPolicy[] = [];
   private tagCounts?: Map<string, number>;
 
   constructor(options: IndexOptions) {
@@ -78,14 +70,6 @@ export class MemoryVaultIndex implements VaultIndex {
     sourcePath: string,
     syntax: LinkSyntax = "wikilink",
   ): readonly VaultFile[] {
-    const decided = this.policyDecision(linktext, sourcePath, syntax);
-    if (decided?.status === "unresolved") {
-      return [];
-    }
-    if (decided?.status === "resolved") {
-      const file = this.table.get(decided.path);
-      return file ? [file] : [];
-    }
     return resolveCandidates(
       this.table,
       linkpathOfText(linktext, syntax),
@@ -94,33 +78,8 @@ export class MemoryVaultIndex implements VaultIndex {
     );
   }
 
-  classifyLink(
-    linktext: string,
-    sourcePath: string,
-    syntax: LinkSyntax = "wikilink",
-  ): LinkPolicyDecision | undefined {
-    return this.policyDecision(linktext, sourcePath, syntax);
-  }
-
   linkText(target: VaultFile, sourcePath: string): string {
-    return (
-      this.describeLink(target.path, sourcePath) ??
-      linkText(this.table, target, sourcePath, this.options.linkFormat)
-    );
-  }
-
-  describeLink(targetPath: string, sourcePath: string): string | undefined {
-    for (const policy of this.policies) {
-      const text = policy.linkText?.({
-        vaultRoot: this.root,
-        sourcePath,
-        targetPath,
-      });
-      if (text !== undefined) {
-        return text;
-      }
-    }
-    return undefined;
+    return linkText(this.table, target, sourcePath, this.options.linkFormat);
   }
 
   resolvedLinks(sourcePath: string): ReadonlyMap<string, number> {
@@ -250,16 +209,6 @@ export class MemoryVaultIndex implements VaultIndex {
     this.links.resolveSources([...this.links.sources()]);
   }
 
-  /** Replace the window's link policies and re-resolve every note. */
-  setLinkPolicies(policies: readonly LinkPolicy[]): void {
-    this.policies = policies;
-    this.reResolve();
-  }
-
-  invalidateLinkResolution(): void {
-    this.reResolve();
-  }
-
   /** Called by the host when the indexing queue has drained. */
   notifyResolved(): void {
     for (const listener of [...this.resolveListeners]) {
@@ -295,39 +244,6 @@ export class MemoryVaultIndex implements VaultIndex {
       }
     }
     return this.links.sourcesMentioning(keys);
-  }
-
-  private policyDecision(
-    linktext: string,
-    sourcePath: string,
-    syntax: LinkSyntax,
-  ): LinkPolicyDecision | undefined {
-    const query = {
-      vaultRoot: this.root,
-      linktext,
-      sourcePath,
-      syntax,
-      find: (path: string) => this.table.find(path)?.path,
-      candidates: () =>
-        resolveCandidates(
-          this.table,
-          linkpathOfText(linktext, syntax),
-          sourcePath,
-          this.options,
-        ).map((file) => file.path),
-    };
-    for (const policy of this.policies) {
-      const decision = policy.resolve(query);
-      if (decision) {
-        return decision;
-      }
-    }
-    return undefined;
-  }
-
-  private reResolve(): void {
-    this.links.resolveSources([...this.links.sources()]);
-    this.notifyResolved();
   }
 
   private emit(change: VaultChange): void {

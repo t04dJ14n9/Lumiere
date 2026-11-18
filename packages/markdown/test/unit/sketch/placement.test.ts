@@ -1,34 +1,11 @@
 import test from "node:test";
 import assert from "node:assert/strict";
 import {
-  attachmentFolder,
   sketchEmbed,
   sketchFileName,
   sketchInsertion,
   sketchStem,
 } from "../../../src/plugins/sketch/placement";
-
-test("sketches go where Obsidian's attachment folder setting says", () => {
-  const note = "Projects/Garden/Plan.md";
-  for (const [setting, folder] of [
-    ["", ""],
-    ["/", ""],
-    [".", "Projects/Garden"],
-    ["./", "Projects/Garden"],
-    ["./attachments", "Projects/Garden/attachments"],
-    ["./a/b/", "Projects/Garden/a/b"],
-    ["Attachments", "Attachments"],
-    ["/Attachments/", "Attachments"],
-    ["Media/Sketches", "Media/Sketches"],
-    // Never outside the vault.
-    ["../outside", ""],
-    ["./../../..", ""],
-  ] as const) {
-    assert.equal(attachmentFolder(setting, note), folder, setting);
-  }
-  assert.equal(attachmentFolder(".", "Root note.md"), "");
-  assert.equal(attachmentFolder("./sub", "Root note.md"), "sub");
-});
 
 test("a sketch is named by the minute it was drawn, and never takes a name", () => {
   const date = new Date(2026, 9, 22, 14, 3, 59);

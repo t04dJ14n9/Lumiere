@@ -89,3 +89,35 @@ test("schema bounds keep numeric, array and string measurement and JSON keywords
   assert.throws(() => Schema.unknown().min(1).parse({ length: 2 }));
   assert.throws(() => Schema.unknown().max(3).parse(true));
 });
+
+test("bounds and patterns after optional() accept an absent value and still check a present one", () => {
+  const schema = Schema.object({
+    count: Schema.number().optional().min(1).max(4),
+    name: Schema.string()
+      .optional()
+      .pattern(/^[a-z]+$/),
+  });
+  assert.deepEqual(schema.parse({}), {});
+  assert.deepEqual(schema.parse({ count: 2, name: "a" }), {
+    count: 2,
+    name: "a",
+  });
+  assert.throws(() => schema.parse({ count: 0 }), /minimum 1/);
+  assert.throws(() => schema.parse({ count: 5 }), /maximum 4/);
+  assert.throws(() => schema.parse({ name: "A" }), /pattern mismatch/);
+  assert.deepEqual(schema.toJSONSchema().required, []);
+});
+
+test("each parse gets its own copy of a default, however deeply it nests", () => {
+  const initial = { nested: { list: [1] } };
+  const schema = Schema.unknown().default(initial);
+  const first = schema.parse(undefined) as typeof initial;
+  first.nested.list.push(2);
+  initial.nested.list.push(3);
+  assert.deepEqual(schema.parse(undefined), { nested: { list: [1] } });
+  const object = Schema.object({ options: Schema.unknown() }).default({
+    options: { list: [1] },
+  });
+  (object.parse(undefined).options as { list: number[] }).list.push(2);
+  assert.deepEqual(object.parse(undefined), { options: { list: [1] } });
+});

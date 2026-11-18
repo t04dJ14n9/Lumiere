@@ -666,3 +666,48 @@ test("contained and createNote refuse dangling symlinks that point outside the v
     );
   });
 });
+
+test("a jump whose editor cannot be found, or that a newer one cancels, is logged", async (t) => {
+  const directory = await mkdtemp(join(tmpdir(), "mw-navigation-unit-"));
+  t.after(() => rm(directory, { recursive: true, force: true }));
+  const root = pathToFileURL(directory).href;
+  const note = pathToFileURL(join(directory, "Note.md")).href;
+  const logged: [string, string][] = [];
+  const logger = {
+    debug: (message: string) => logged.push(["debug", message]),
+    warn: (message: string) => logged.push(["warn", message]),
+    error: (message: string) => logged.push(["error", message]),
+  };
+  let onOpen = () => {};
+  const { createNavigation } = loadNavigation({
+    Uri: { parse: parseUri },
+    env: { appName: "Visual Studio Code", uriScheme: "vscode" },
+    window: { tabGroups: { activeTabGroup: { viewColumn: 1 } } },
+    workspace: {
+      getConfiguration: () => ({ get: () => "on" }),
+      async openTextDocument() {},
+    },
+    commands: {
+      async executeCommand() {
+        onOpen();
+      },
+    },
+  });
+  const navigation = createNavigation(() => [], undefined, logger);
+
+  // A native editor handed over to Lumiere, with no Lumiere panel for it.
+  await navigation.revealOpened(note, 1, 12, navigation.begin());
+  assert.deepEqual(logged, [
+    ["warn", "No single editor of the opened note to reveal in"],
+  ]);
+
+  // Another jump starts while VS Code opens this one's note.
+  logged.length = 0;
+  onOpen = () => {
+    navigation.begin();
+  };
+  await navigation.open(root, note, "", "here", 12, navigation.begin());
+  assert.deepEqual(logged, [
+    ["debug", "Reveal cancelled by a newer navigation"],
+  ]);
+});

@@ -15,7 +15,7 @@ import { lineSelection, startLineSelection } from "./line-selection";
 export type LineNumberStyle = "on" | "off" | "relative" | "interval";
 
 /** VS Code reserves room for at least this many digits (lineNumbersMinChars). */
-export const minDigits = 5;
+const minDigits = 5;
 
 /**
  * The label VS Code's gutter shows for line `n` with the caret on line

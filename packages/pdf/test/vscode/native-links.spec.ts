@@ -1,5 +1,9 @@
 import { copyFileSync, writeFileSync } from "node:fs";
 import path from "node:path";
+import {
+  modifierClick,
+  settledCaret,
+} from "../../../../test/vscode/source-links";
 import { paths } from "./state";
 import { expect, openFile, pdfViewer, test } from "./workbench";
 
@@ -27,11 +31,8 @@ test("built-in Cmd-click delivers PDF page and region and native Back restores s
     await page.keyboard.up("Control");
     await link.click({ force: true });
     await expect(status).toContainText(target === 9 ? "Ln 1," : "Ln 3,");
-    const beforeClick = await status.innerText();
-    await link.click({
-      force: true,
-      modifiers: [process.platform === "darwin" ? "Meta" : "Control"],
-    });
+    const beforeClick = await settledCaret(status);
+    await modifierClick(page, link);
     await expect(page.locator(".tab.active")).toContainText("目标 space.pdf");
     const viewer = await pdfViewer(page);
     if (target === 9) {
