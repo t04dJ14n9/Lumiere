@@ -1,8 +1,13 @@
 import test from "node:test";
 import assert from "node:assert/strict";
 import { createRoot } from "@workshop/core";
-import type { VaultChange, Vaults } from "../../../src/plugins/vault/api";
+import type {
+  VaultChange,
+  Vaults,
+  VaultSystem,
+} from "../../../src/plugins/vault/api";
 import { vaultHost, vaultsHost } from "../../../src/plugins/vault/host";
+import { fakeHost } from "../../support/vscode-fake";
 import { MemoryFileSystem, memorySystem, wait } from "./memory-fs";
 
 const counts = (map: ReadonlyMap<string, number>) => Object.fromEntries(map);
@@ -119,5 +124,79 @@ test("locate and text give a note's vault, path and current text", async () => {
   host.close("memory:///vault/A.md");
   assert.equal(await vaults.text("memory:///vault/A.md"), "saved");
   assert.equal((await vaults.forWorkspace())?.index.root, "memory:///vault");
+  await root.dispose();
+});
+
+/** The vaults service with a navigation that records opens, and the warnings logged. */
+async function startOpening(
+  fs: MemoryFileSystem,
+  configure: (system: VaultSystem) => void = () => {},
+) {
+  const host = memorySystem(fs);
+  configure(host.value);
+  const warnings: unknown[][] = [];
+  const opens: unknown[][] = [];
+  const root = createRoot({
+    logger: {
+      debug() {},
+      error() {},
+      warn: (...args: unknown[]) => warnings.push(args),
+    },
+  });
+  root.provide("vaultSystem", host.value);
+  root.provide(
+    "navigation",
+    fakeHost({
+      navigation: {
+        open: async (...args: unknown[]) => {
+          opens.push(args);
+        },
+      },
+    }).navigation,
+  );
+  root.plugin(vaultsHost);
+  await root.settled();
+  return { root, vaults: root.service("vaults") as Vaults, warnings, opens };
+}
+
+test("opening a note its vault cannot place logs a warning", async () => {
+  const fs = new MemoryFileSystem({ "A.md": "" });
+  const { root, vaults, warnings, opens } = await startOpening(fs);
+  // In the workspace folder, but not a path in the vault (bad escape).
+  await vaults.open("memory:///vault/%E0.md");
+  assert.deepEqual(opens, []);
+  assert.equal(warnings.length, 1);
+  assert.match(String(warnings[0]![0]), /Could not open/);
+  assert.match(String(warnings[0]![1]), /%E0\.md/);
+  await root.dispose();
+});
+
+test("where file names ignore case, a note's URI in other case still opens in its vault", async () => {
+  const fs = new MemoryFileSystem({ "A.md": "" });
+  const { root, vaults, warnings, opens } = await startOpening(fs, (system) => {
+    // As VS Code's getWorkspaceFolder on Windows and macOS.
+    system.workspaceFolder = (uri) =>
+      uri.toLowerCase().startsWith("memory:///vault/")
+        ? "memory:///vault"
+        : undefined;
+    system.ignoresCase = () => true;
+  });
+  await vaults.open("memory:///VAULT/A.md");
+  assert.deepEqual(opens, [
+    ["memory:///vault", "memory:///VAULT/A.md", "", "here", undefined],
+  ]);
+  assert.equal((await vaults.locate("memory:///Vault/A.md"))?.path, "A.md");
+  assert.deepEqual(warnings, []);
+  await root.dispose();
+});
+
+test("a note outside the workspace opens in its own folder's vault", async () => {
+  const fs = new MemoryFileSystem({ "A.md": "" });
+  const { root, vaults, warnings, opens } = await startOpening(fs);
+  await vaults.open("file:///Downloads/Note.md", { side: true });
+  assert.deepEqual(opens, [
+    ["file:///Downloads", "file:///Downloads/Note.md", "", "side", undefined],
+  ]);
+  assert.deepEqual(warnings, []);
   await root.dispose();
 });

@@ -14,6 +14,7 @@ import {
   onlineVideosHost,
   cursorBridgePanelHost,
   lookUpHost,
+  vimPanelHost,
 } from "../plugins/host";
 
 type PanelHost = Plugin<{ panel: PanelShell }>;
@@ -25,6 +26,7 @@ const CRITICAL_PANEL_HOSTS: readonly PanelHost[] = [
   propertiesHost,
   tagsHost,
   cursorBridgePanelHost,
+  vimPanelHost,
 ];
 
 /**

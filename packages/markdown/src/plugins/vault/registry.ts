@@ -1,13 +1,7 @@
 import { SourceCoordinates } from "../../shared/document/coordinates";
 import type { Navigation } from "../../shared/host";
 import { isMarkdownPath } from "../../shared/vault-path";
-import type {
-  LinkPolicy,
-  Vault,
-  VaultChange,
-  Vaults,
-  VaultSystem,
-} from "./api";
+import type { Vault, VaultChange, Vaults, VaultSystem } from "./api";
 import { VaultIndexer } from "./indexer";
 import { MemoryVaultIndex } from "./memory-index";
 import { findVaultRoot, foldersUpTo } from "./roots";
@@ -31,7 +25,6 @@ export class VaultRegistry implements Vaults {
   private parser?: ReturnType<VaultSystem["createParser"]>;
   /** The latest text of each open note, kept without the indexing delay. */
   private readonly openTexts = new Map<string, string>();
-  private policies: readonly LinkPolicy[] = [];
   private readonly rootByFolder = new Map<string, Promise<string>>();
 
   constructor(
@@ -85,8 +78,16 @@ export class VaultRegistry implements Vaults {
     uri: string,
     options: { offset?: number; side?: boolean; fragment?: string } = {},
   ): Promise<void> {
-    const located = await this.locate(uri);
-    if (!located || !this.navigation) {
+    const root = await this.openingRoot(uri);
+    // Callers (Outline, Backlinks, the graph) have nothing to show for a
+    // refusal: without this the click would do nothing and leave no trace.
+    if (!root || !this.navigation) {
+      this.events.error(
+        root
+          ? "Could not open a note: this host cannot navigate"
+          : "Could not open a note outside its vault",
+        uri,
+      );
       return;
     }
     // The editor counts line breaks as one character; the file may use CRLF.
@@ -95,7 +96,7 @@ export class VaultRegistry implements Vaults {
         ? undefined
         : new SourceCoordinates(await this.text(uri)).toEditor(options.offset);
     await this.navigation.open(
-      located.vault.index.root,
+      root,
       uri,
       options.fragment ?? "",
       options.side ? "side" : "here",
@@ -103,23 +104,16 @@ export class VaultRegistry implements Vaults {
     );
   }
 
+  /** The root of the vault a note opens in (see `looseVault` outside the workspace). */
+  private async openingRoot(uri: string): Promise<string | undefined> {
+    if (!this.system.workspaceFolder(uri)) {
+      return looseRoot(uri);
+    }
+    return (await this.locate(uri))?.vault.index.root;
+  }
+
   all(): readonly Vault[] {
     return [...this.opened.values()];
-  }
-
-  registerLinkPolicy(policy: LinkPolicy): () => void {
-    this.policies = [...this.policies, policy];
-    this.applyPolicies();
-    return () => {
-      this.policies = this.policies.filter((item) => item !== policy);
-      this.applyPolicies();
-    };
-  }
-
-  invalidateLinkResolution(): void {
-    for (const vault of this.opened.values()) {
-      vault.indexer.index.invalidateLinkResolution();
-    }
   }
 
   /** An open note's unsaved text replaces its file on disk in the index. */
@@ -191,8 +185,7 @@ export class VaultRegistry implements Vaults {
       onError: (message, error) => this.events.error(message, error),
     });
     indexer.index.onDidChange((change) => this.events.changed(root, change));
-    indexer.index.setLinkPolicies(this.policies);
-    const vault = new IndexedVault(root, indexer);
+    const vault = new IndexedVault(root, indexer, this.ignoresCase(root));
     this.opened.set(root, vault);
     for (const [uri, text] of this.openTexts) {
       const owner = this.owner(uri);
@@ -211,14 +204,14 @@ export class VaultRegistry implements Vaults {
    * index or watching, only the files beside it, so relative links work.
    */
   private async looseVault(uri: string): Promise<Vault> {
-    const root = uri.slice(0, uri.lastIndexOf("/"));
+    const root = looseRoot(uri);
+    const ignoreCase = this.ignoresCase(root);
     const index = new MemoryVaultIndex({
       root,
       folderNote: "",
       linkFormat: "shortest",
     });
-    index.setLinkPolicies(this.policies);
-    const openedPath = pathInside(root, uri);
+    const openedPath = pathInside(root, uri, ignoreCase);
     if (openedPath !== undefined) {
       index.addFiles([
         {
@@ -238,14 +231,12 @@ export class VaultRegistry implements Vaults {
     return {
       index,
       settled: () => listed,
-      pathOf: (target) => pathInside(root, target),
+      pathOf: (target) => pathInside(root, target, ignoreCase),
     };
   }
 
-  private applyPolicies(): void {
-    for (const vault of this.opened.values()) {
-      vault.indexer.index.setLinkPolicies(this.policies);
-    }
+  private ignoresCase(root: string): boolean {
+    return this.system.ignoresCase?.(root) ?? false;
   }
 
   /** The nearest opened vault containing a URI. */
@@ -269,6 +260,7 @@ class IndexedVault implements Vault {
   constructor(
     private readonly root: string,
     readonly indexer: VaultIndexer,
+    private readonly ignoreCase: boolean,
   ) {}
 
   get index() {
@@ -280,7 +272,7 @@ class IndexedVault implements Vault {
   }
 
   pathOf(uri: string): string | undefined {
-    return pathInside(this.root, uri);
+    return pathInside(this.root, uri, this.ignoreCase);
   }
 
   seedDocument(uri: string): void {
@@ -291,9 +283,26 @@ class IndexedVault implements Vault {
   }
 }
 
-function pathInside(root: string, uri: string): string | undefined {
+function looseRoot(uri: string): string {
+  return uri.slice(0, uri.lastIndexOf("/"));
+}
+
+/**
+ * The path below `root`, in the URI's own case. Where file names ignore case
+ * the workspace folder may be spelled differently from the note's URI (a
+ * drive letter, a folder typed by hand), and the note is still inside.
+ */
+function pathInside(
+  root: string,
+  uri: string,
+  ignoreCase: boolean,
+): string | undefined {
   const prefix = root.replace(/\/+$/, "") + "/";
-  if (!uri.startsWith(prefix)) {
+  const head = uri.slice(0, prefix.length);
+  const isInside = ignoreCase
+    ? head.toLowerCase() === prefix.toLowerCase()
+    : head === prefix;
+  if (!isInside) {
     return undefined;
   }
   try {

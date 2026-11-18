@@ -57,5 +57,5 @@ export type {
   GitIdentity,
 } from "../shared/git-blame";
 export { exceedsDiffLimits, MAX_DIFF_CHARS } from "../shared/diff/limits";
-export type { DiagnosticSink, WorkspaceFiles } from "../shared/workspace-files";
+export type { WorkspaceFiles } from "../shared/workspace-files";
 export type { EditorProvider } from "../shared/editor-provider";

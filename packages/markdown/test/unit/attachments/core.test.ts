@@ -158,15 +158,17 @@ test("saveAttachment writes under files.attachmentFolder with timestamp name", a
   const written = new Map<string, Uint8Array | string>();
   const files: Pick<
     WorkspaceFiles,
-    "list" | "mkdir" | "writeText" | "writeBytes" | "isSymbolicLink"
+    "list" | "mkdir" | "createText" | "createBytes" | "isSymbolicLink"
   > = {
     list: async () => [],
     mkdir: async () => {},
-    writeText: async (uri, text) => {
+    createText: async (uri, text) => {
       written.set(uri, text);
+      return true;
     },
-    writeBytes: async (uri, data) => {
+    createBytes: async (uri, data) => {
       written.set(uri, data);
+      return true;
     },
     isSymbolicLink: async () => false,
   };
@@ -213,18 +215,20 @@ test("saveAttachment writes nothing where a symbolic link is on the way", async 
     );
     const files: Pick<
       WorkspaceFiles,
-      "list" | "mkdir" | "writeText" | "writeBytes" | "isSymbolicLink"
+      "list" | "mkdir" | "createText" | "createBytes" | "isSymbolicLink"
     > = {
       // The folder reads as missing, so a write would create it first.
       list: async () => undefined,
       mkdir: async (uri) => {
         touched.push(uri);
       },
-      writeText: async (uri) => {
+      createText: async (uri) => {
         touched.push(uri);
+        return true;
       },
-      writeBytes: async (uri) => {
+      createBytes: async (uri) => {
         touched.push(uri);
+        return true;
       },
       isSymbolicLink: async (uri) => linked.has(uri),
     };

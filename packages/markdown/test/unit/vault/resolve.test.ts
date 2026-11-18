@@ -228,6 +228,14 @@ test("linkText follows the new link format", () => {
   }
 });
 
+test("a relative link beside a root note of the same name is written with ./", () => {
+  const index = vault(["X.md", "notes/X.md", "notes/Src.md"], "", "relative");
+  const text = index.linkText(index.file("notes/X.md")!, "notes/Src.md");
+  assert.equal(text, "./X");
+  assert.equal(index.resolveLink(text, "notes/Src.md")?.path, "notes/X.md");
+  assert.equal(index.linkText(index.file("X.md")!, "notes/Src.md"), "../X");
+});
+
 // Measured with Obsidian's getFirstLinkpathDest over the same files
 // (2026-10-17): a relative link is joined to its note's folder, `..` above
 // the root dropped, and then resolves like any other link.

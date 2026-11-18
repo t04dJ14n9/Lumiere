@@ -247,10 +247,11 @@ async function serveEditorPages(t: {
     server.close();
   });
   const { port } = server.address() as { port: number };
-  const status = async (note: string, root: string) =>
+  // Without a root the page names no workspace: the note's folder is checked.
+  const status = async (note: string, root?: string) =>
     (
       await fetch(
-        `http://127.0.0.1:${port}/lumiere/${/\.pdf$/i.test(note) ? "pdf" : "editor"}?path=${encodeURIComponent(note)}&root=${encodeURIComponent(root)}`,
+        `http://127.0.0.1:${port}/lumiere/${/\.pdf$/i.test(note) ? "pdf" : "editor"}?path=${encodeURIComponent(note)}${root === undefined ? "" : `&root=${encodeURIComponent(root)}`}`,
       )
     ).status;
   const register = (folder: string) =>
@@ -357,6 +358,26 @@ test("a registered filesystem root authorizes no folder", async (t) => {
   // How an embedder's mistake would look, with its trailing slash dropped.
   host.addRoot("file:///");
   assert.equal(await status(at("vault", "Note.md"), at("vault")), 403);
+});
+
+test("a page that names no workspace opens only from a registered one, and registers nothing", async (t) => {
+  // DSH names no root for a note opened by absolute path: the note's folder
+  // is the page's root, and it is held to what DSH registered for the session.
+  const { scratch, at } = await notes(t, [
+    "workspace/Top.md",
+    "workspace/docs/Deep.md",
+    "Loose.md",
+  ]);
+  const { added, status, register } = await serveEditorPages(t);
+  assert.equal(await status(at("workspace", "docs", "Deep.md")), 403);
+  assert.deepEqual(added, [], "the note's folder is not registered");
+
+  register(at("workspace"));
+  assert.equal(await status(at("workspace", "docs", "Deep.md")), 200);
+  assert.equal(await status(at("workspace", "Top.md"), at("workspace")), 200);
+  assert.equal(await status(at("Loose.md")), 403, "outside the workspace");
+  assert.equal(await status(at("workspace", "Top.md"), scratch), 403);
+  assert.deepEqual(added, [pathToFileURL(at("workspace")).toString()]);
 });
 
 const ROUTE_INDEX = {

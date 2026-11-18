@@ -53,7 +53,12 @@ test("listing walks the vault but not hidden folders or node_modules, and stops 
 test("watching reports a new file, a change to it and its deletion, never hidden files", async (t) => {
   const { dir, root } = await vault(t);
   const events: FileEvent[] = [];
-  const stop = watchVault(nodeFiles, root, (event) => events.push(event));
+  const stop = watchVault(
+    nodeFiles,
+    root,
+    (event) => events.push(event),
+    assert.fail,
+  );
   t.after(stop);
   // macOS starts delivering events a moment after the watch begins.
   await new Promise((resolve) => setTimeout(resolve, 400));

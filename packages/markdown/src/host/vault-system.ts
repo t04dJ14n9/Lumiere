@@ -27,6 +27,11 @@ export function createVaultSystem(
       vscode.workspace
         .getWorkspaceFolder(vscode.Uri.parse(uri))
         ?.uri.toString(),
+    // VS Code's getWorkspaceFolder ignores path case for these, as the file
+    // system does: the vault has to agree, or it refuses notes it contains.
+    ignoresCase: (uri) =>
+      uri.startsWith("file:") &&
+      (process.platform === "win32" || process.platform === "darwin"),
     workspaceFolders: () =>
       (vscode.workspace.workspaceFolders ?? []).map((folder) =>
         folder.uri.toString(),

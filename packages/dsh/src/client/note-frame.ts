@@ -86,7 +86,7 @@ export function pageSearchParams(
   });
 }
 
-function resolveEditorTarget(
+export function resolveEditorTarget(
   resourceAddress: string,
   absolute: string | undefined,
 ) {
@@ -97,9 +97,11 @@ function resolveEditorTarget(
       : undefined;
   const containmentRoot =
     root ?? (absolute && isMarkdown ? parentFolder(absolute) : undefined);
+  // Only a workspace is named. Without one the note's folder is the page's
+  // root, which the host holds to the session's workspace.
   const query =
     absolute && isMarkdown
-      ? pageSearchParams(resourceAddress, absolute, containmentRoot)
+      ? pageSearchParams(resourceAddress, absolute, root)
       : undefined;
   const src = query
     ? `/lumiere/editor?${query.toString()}${addressFragment(resourceAddress)}`

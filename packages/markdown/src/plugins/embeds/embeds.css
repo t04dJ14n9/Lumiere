@@ -444,7 +444,8 @@ img.md-image-selected {
   margin: 3px 0;
 }
 .bases-empty,
-.bases-error {
+.bases-error,
+.bases-warning {
   padding: 12px;
   color: var(--muted, #888);
   font-size: 0.9em;

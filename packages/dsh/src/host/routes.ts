@@ -20,7 +20,7 @@ const REASONS = new Map<number, string>([
 ]);
 
 /** An HTTP error line for an upgrade we refuse before any handshake. */
-export function upgradeRejection(status: number): string {
+function upgradeRejection(status: number): string {
   const reason = REASONS.get(status) ?? "Error";
   return (
     `HTTP/1.1 ${status} ${reason}\r\n` +
@@ -93,7 +93,7 @@ function rejectsMethod(
 }
 
 /** A route failure is logged; the browser never sees the message. */
-export function sendInternalError(
+function sendInternalError(
   ctx: DshContext,
   res: ServerResponse,
   error: unknown,

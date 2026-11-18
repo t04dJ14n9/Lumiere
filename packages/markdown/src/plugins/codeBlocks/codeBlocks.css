@@ -55,9 +55,14 @@ body.vscode-high-contrast-light {
   font: inherit;
   font-size: 0.6875em;
   line-height: 1.6;
+  min-width: 52px;
+  text-align: center;
   cursor: pointer;
   opacity: 0;
-  transition: opacity 120ms;
+  transition:
+    opacity 120ms,
+    color 120ms,
+    border-color 120ms;
 }
 .copy-code:focus-visible {
   opacity: 1;
@@ -74,6 +79,24 @@ body.vscode-high-contrast-light {
 .copy-code:hover {
   color: var(--vscode-editor-foreground);
   background: var(--hover);
+}
+.copy-code.is-copied {
+  color: var(--vscode-testing-iconPassed, #3fb950);
+  border-color: currentColor;
+  animation: copy-code-confirmed 520ms ease-out;
+}
+@keyframes copy-code-confirmed {
+  from {
+    box-shadow: 0 0 0 0 currentColor;
+  }
+  to {
+    box-shadow: 0 0 0 6px transparent;
+  }
+}
+@media (prefers-reduced-motion: reduce) {
+  .copy-code.is-copied {
+    animation: none;
+  }
 }
 /* The language sits in the corner and gives way to the buttons on hover. */
 .code-language {

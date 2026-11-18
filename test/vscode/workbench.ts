@@ -129,7 +129,14 @@ export async function openWorkbench(
     )
     .toBe(true);
   timing.end = Date.now();
-  return frame!.getByRole("textbox", { name: "Markdown content" });
+  const editor = frame!.getByRole("textbox", { name: "Markdown content" });
+  // VS Code gives the new editor's webview the focus once its page has
+  // loaded, which can be after this. Wait for that: a palette opened before
+  // it would lose its focus to the note, and its text would be typed there.
+  await expect(editor)
+    .toBeFocused({ timeout: 5000 })
+    .catch(() => undefined);
+  return editor;
 }
 export function workbenchPage(browser: Browser): Page {
   const page = browser

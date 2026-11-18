@@ -72,7 +72,11 @@ async function serveFileRoute(t: {
         `http://127.0.0.1:${port}/lumiere/file?panel=${encodeURIComponent(panel)}&uri=${encodeURIComponent(uri)}`,
       )
     ).status;
-  return { openEditor, fileStatus };
+  const fileResponse = (panel: string, uri: string) =>
+    fetch(
+      `http://127.0.0.1:${port}/lumiere/file?panel=${encodeURIComponent(panel)}&uri=${encodeURIComponent(uri)}`,
+    );
+  return { openEditor, fileStatus, fileResponse };
 }
 
 test("file route: a missing file inside the root is 404", async (t) => {
@@ -242,4 +246,58 @@ test("file route: swapping a final symlink after validation does not serve outsi
   assert.equal(await openEditor(note, vault), 200);
   // A later request must re-validate the new destination and refuse it.
   assert.equal(await fileStatus("p1", pathToFileURL(alias).toString()), 403);
+});
+
+test("file route: a vault's files never run as pages or scripts on this origin", async (t) => {
+  const scratch = await realpath(
+    await mkdtemp(path.join(tmpdir(), "lumiere-file-active-")),
+  );
+  t.after(() => rm(scratch, { recursive: true, force: true }));
+  const note = path.join(scratch, "Note.md");
+  await writeFile(note, "# Note");
+  const files: Record<string, string> = {
+    "page.html": "<script>parent.document.title = 'owned'</script>",
+    "drawing.svg":
+      '<svg xmlns="http://www.w3.org/2000/svg"><script>alert(1)</script></svg>',
+    "tool.js": "alert(1)",
+    "tool.cjs": "alert(1)",
+    "image.png": "png",
+    "paper.pdf": "%PDF-1.4",
+  };
+  for (const [name, body] of Object.entries(files)) {
+    await writeFile(path.join(scratch, name), body);
+  }
+  const { openEditor, fileResponse } = await serveFileRoute(t);
+  assert.equal(await openEditor(note, scratch), 200);
+  const headers = async (name: string) => {
+    const response = await fileResponse(
+      "p1",
+      pathToFileURL(path.join(scratch, name)).toString(),
+    );
+    assert.equal(response.status, 200, name);
+    await response.arrayBuffer();
+    return response.headers;
+  };
+  for (const name of ["page.html", "drawing.svg", "image.png"]) {
+    const answer = await headers(name);
+    // Opened as a page of its own, it gets an opaque origin and no scripts.
+    assert.match(
+      answer.get("content-security-policy") ?? "",
+      /(^|;)\s*sandbox(\s*;|$)/,
+      name,
+    );
+    assert.equal(answer.get("x-content-type-options"), "nosniff", name);
+  }
+  for (const name of ["tool.js", "tool.cjs"]) {
+    const answer = await headers(name);
+    // With nosniff, a script of any other type is refused by the editor's
+    // page, whose policy allows same-origin scripts.
+    assert.doesNotMatch(answer.get("content-type") ?? "", /javascript/, name);
+    assert.equal(answer.get("x-content-type-options"), "nosniff", name);
+  }
+  // Chrome refuses to show a PDF in a sandboxed document; its viewer runs on
+  // its own origin, not this one.
+  const pdf = await headers("paper.pdf");
+  assert.equal(pdf.get("content-type"), "application/pdf");
+  assert.equal(pdf.get("content-security-policy"), null);
 });

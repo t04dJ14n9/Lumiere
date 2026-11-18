@@ -53,7 +53,7 @@ export async function restoreStoredAnnotations(
 /** Lumiere's annotations as the store file's text, or null when there are none. */
 export async function exportStoreText(
   annotation: AnnotationCapability,
-  ownership: AnnotationOwnership,
+  ownership: Pick<AnnotationOwnership, "isOwn">,
 ): Promise<string | null> {
   const bundle = await annotation.export();
   const own = keepOwned(bundle, (ref) => ownership.isOwn(annotationKey(ref)));

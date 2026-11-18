@@ -16,12 +16,10 @@ import { useExposeStageForTests } from "./test-hook";
 import { SearchBar } from "./search-bar";
 import { useIgnoreSecondaryButtons } from "./secondary-buttons";
 import { useLookUp } from "./look-up";
-import { isEditableTarget } from "./editable-target";
 import { useSelectionReporting } from "./selection";
-import { useAnnotationMode } from "./annotation-mode";
+import { useAnnotationEditing } from "./annotation-mode";
 import { useAnnotationSaveSession } from "./annotation-session";
-import { useMarkSelection } from "./mark-selection";
-import { shouldDeleteAnnotationOnKey } from "../shared/annotation-delete-keys";
+import { useMarkMenu, type MarkMenu } from "./mark-menu";
 import { useToolMode } from "./tool-mode";
 import { currentToolbarSettings } from "./toolbar-settings";
 import { rememberPageColors } from "./page-colors";
@@ -85,7 +83,6 @@ export function Viewer(): React.JSX.Element {
           choices={choices}
           navigation={navigation}
           selection={view.selection}
-          annotate={tool === "annotate"}
           searching={search.isOpen}
         />
       </div>
@@ -145,8 +142,6 @@ function useViewerState() {
     search,
     documentArea,
     tool: tools.tool,
-    annotation: tools.annotation,
-    annotationSelection: tools.annotationSelection,
     runAction: tools.runAction,
     regionsEnabled,
     zen,
@@ -162,47 +157,38 @@ type ViewerToolsDeps = {
   regionsEnabled: boolean;
 };
 
-/** Tool mode, annotations, selection reporting, view actions and keys. */
+/** Tool mode, marks, selection reporting, view actions and keys. */
 function useViewerTools(deps: ViewerToolsDeps) {
   const { navigation, search, choices, setChoices, regionsEnabled } = deps;
   const { tool, setTool } = useToolMode(regionsEnabled);
-  const annotation = useAnnotationMode();
+  const editing = useAnnotationEditing();
   const annotationSave = useAnnotationSaveSession();
-  const annotationSelected = useRef(false);
-  const selection = useSelectionReporting(() =>
-    Boolean(annotationSelected.current),
+  // The selection reporting asks the mark menu, made after it, where a
+  // context menu opened.
+  const markMenu = useRef<MarkMenu | undefined>(undefined);
+  const selection = useSelectionReporting((event) =>
+    Boolean(markMenu.current?.openAt(event)),
   );
-  const annotationSelection = useMarkSelection(
-    tool === "annotate",
-    selection.setAnnotationRegion,
-  );
-  annotationSelected.current = annotationSelection.hasAnnotationSelection;
-  useViewReporting(navigation, tool, choices, annotation);
+  markMenu.current = useMarkMenu({
+    isOwn: annotationSave.isOwn,
+    setAnnotationRegion: selection.setAnnotationRegion,
+    setHighlightColor: editing.setHighlightColor,
+  });
+  const marks = markMenu.current;
+  useViewReporting(navigation, tool, choices);
   const runAction = useViewActions(navigation, search.open, setTool, {
     setChoices: (next) => setChoices((current) => ({ ...current, ...next })),
-    setAnnotationTool: annotation.setAnnotationTool,
-    setColor: annotation.setColor,
-    undo: annotation.undo,
-    redo: annotation.redo,
-    deleteSelectedAnnotations: annotationSelection.deleteSelected,
+    marks: {
+      markSelection: marks.markSelection,
+      setNote: marks.setNote,
+      setColor: marks.setColor,
+      deleteMark: marks.deleteMark,
+      undo: editing.undo,
+      redo: editing.redo,
+    },
   });
-  useViewerKeys({
-    selection,
-    search,
-    tool,
-    setTool,
-    hasAnnotationSelection: annotationSelection.hasAnnotationSelection,
-    editingAnnotationText: annotationSelection.editingText,
-    deleteSelectedAnnotations: annotationSelection.deleteSelected,
-  });
-  return {
-    tool,
-    annotation,
-    annotationSave,
-    annotationSelection,
-    selection,
-    runAction,
-  };
+  useViewerKeys({ selection, search, tool, setTool });
+  return { tool, annotationSave, selection, runAction };
 }
 
 type Selection = ReturnType<typeof useSelectionReporting>;
@@ -259,11 +245,7 @@ function useViewerKeys(state: {
   selection: Selection;
   search: ReturnType<typeof useSearch>;
   tool: string;
-  setTool: (tool: "text" | "region" | "annotate") => void;
-  hasAnnotationSelection: boolean;
-  /** Someone is typing in a free-text box: Delete and Backspace edit its text. */
-  editingAnnotationText: boolean;
-  deleteSelectedAnnotations: () => void;
+  setTool: (tool: "text" | "region") => void;
 }): void {
   const latest = useRef(state);
   latest.current = state;
@@ -274,17 +256,6 @@ function useViewerKeys(state: {
         latest.current.search.open();
       } else if (event.key === "Escape") {
         onEscape(latest.current);
-      } else if (
-        shouldDeleteAnnotationOnKey({
-          key: event.key,
-          annotate: latest.current.tool === "annotate",
-          hasAnnotationSelection: latest.current.hasAnnotationSelection,
-          editingText: latest.current.editingAnnotationText,
-          editable: isEditableTarget(event.target),
-        })
-      ) {
-        event.preventDefault();
-        latest.current.deleteSelectedAnnotations();
       }
     };
     document.addEventListener("keydown", onKeyDown);
@@ -296,7 +267,7 @@ function onEscape(state: {
   selection: Selection;
   search: ReturnType<typeof useSearch>;
   tool: string;
-  setTool: (tool: "text" | "region" | "annotate") => void;
+  setTool: (tool: "text" | "region") => void;
 }): void {
   const { search, selection, tool, setTool } = state;
   if (document.querySelector(".view-menu:popover-open")) {
@@ -304,9 +275,6 @@ function onEscape(state: {
   }
   if (search.isOpen) {
     search.close();
-  } else if (tool === "annotate") {
-    // Spec: Escape exits Annotate mode.
-    setTool("text");
   } else if (tool === "region" && !selection.region) {
     // With nothing selected, Escape puts down the Select Region tool.
     setTool("text");
@@ -320,13 +288,11 @@ function DocumentPages({
   choices,
   navigation,
   selection,
-  annotate,
   searching,
 }: {
   choices: ViewChoices;
   navigation: ReturnType<typeof withHistory>;
   selection: Selection;
-  annotate: boolean;
   searching: boolean;
 }): React.JSX.Element {
   const paged = choices.scrollMode === "paged";
@@ -351,7 +317,6 @@ function DocumentPages({
             page={page}
             highlight={navigation.highlight}
             region={selection.region}
-            annotate={annotate}
             searching={searching}
             paged={paged}
             onOpenPage={(target, top) => navigation.goToPage(target, top)}

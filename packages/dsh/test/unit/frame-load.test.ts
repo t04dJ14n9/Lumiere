@@ -32,7 +32,7 @@ function bodyProps() {
       },
       useResource: () => ({
         value: {
-          absolutePath: "/Users/t04dj14n9/Code/Lumia/packages/dsh/README.md",
+          absolutePath: "/Users/t04dj14n9/Code/Lumiere/packages/dsh/README.md",
           version: "1",
         },
       }),
@@ -59,7 +59,7 @@ function pdfBodyProps(revision = 0) {
       scrollportRef: (element: HTMLElement | null) => scrollports.push(element),
       useResource: () => ({
         value: {
-          absolutePath: "/Users/t04dj14n9/Code/Lumia/papers/A.pdf",
+          absolutePath: "/Users/t04dj14n9/Code/Lumiere/papers/A.pdf",
           version: "1",
         },
       }),
@@ -366,17 +366,18 @@ test("a note's and a PDF's page name the session whose address opened them", () 
 
   const note = search(noteBody(fakeReact(), () => {})(bodyProps().props));
   assert.equal(note.get("session"), "s");
-  assert.equal(note.get("root"), "/Users/t04dj14n9/Code/Lumia");
+  assert.equal(note.get("root"), "/Users/t04dj14n9/Code/Lumiere");
   assert.equal(
     note.get("path"),
-    "/Users/t04dj14n9/Code/Lumia/packages/dsh/README.md",
+    "/Users/t04dj14n9/Code/Lumiere/packages/dsh/README.md",
   );
 
   const pdf = search(pdfBody(fakeReact())(pdfBodyProps().props));
   assert.equal(pdf.get("session"), "s");
-  assert.equal(pdf.get("root"), "/Users/t04dj14n9/Code/Lumia");
+  assert.equal(pdf.get("root"), "/Users/t04dj14n9/Code/Lumiere");
 
-  // An absolute address names the session too: DSH reads the workspace from it.
+  // An absolute address names the session too: DSH reads the workspace from
+  // it, and the note's folder (no root) must lie inside that workspace.
   const outside = bodyProps();
   outside.props.resourceAddress =
     "dsh-resource://file/session/s//v/notes/Start.md";
@@ -385,7 +386,7 @@ test("a note's and a PDF's page name the session whose address opened them", () 
   });
   const elsewhere = search(noteBody(fakeReact(), () => {})(outside.props));
   assert.equal(elsewhere.get("session"), "s");
-  assert.equal(elsewhere.get("root"), "/v/notes");
+  assert.equal(elsewhere.get("root"), null);
 
   // An address that names no session names none.
   const bare = bodyProps();

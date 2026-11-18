@@ -112,7 +112,7 @@
   background: transparent;
 }
 
-/* Vault Markdown backlink overlay (backlink-layer.tsx): above Annotate marks. */
+/* Vault Markdown backlink overlay (backlink-layer.tsx): above the marks. */
 .pdf-backlink-overlay {
   position: absolute;
   inset: 0;
@@ -131,13 +131,6 @@
 #root[data-page-colors="dark"] .pdf-backlink-overlay-line {
   opacity: 0.45;
   mix-blend-mode: normal;
-}
-
-/* Annotate tool active: the overlay sits above AnnotationLayer, so it must
-   not catch the clicks and drags meant for the marks beneath it. */
-.pdf-backlink-overlay.is-passive .pdf-backlink-overlay-line {
-  pointer-events: none;
-  cursor: inherit;
 }
 
 .pdf-backlink-overlay:hover .pdf-backlink-overlay-line {

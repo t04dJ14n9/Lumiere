@@ -417,7 +417,9 @@ Do not:
    script policy keeps a note's content from running. Any change to the
    page's CSP needs review. In the web app the service worker serves the
    page, with the window's policy as its first tag, as a blob: page
-   inherits it; a vault's SVG is served with a sandbox policy.
+   inherits it; a vault's SVG is served with a sandbox policy. host-node
+   serves every vault file but a PDF with `sandbox`, and a vault's scripts
+   as text, so `script-src 'self'` never runs them.
 5. **Two Cordis versions in DSH's process** (DSH's 4.0.0-rc.7 fork and
    Lumière's rc.11). They coexist because they never share objects. Check
    again whenever either changes.

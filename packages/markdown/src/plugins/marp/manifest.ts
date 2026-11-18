@@ -5,15 +5,14 @@ export const config = Schema.object({
   open: Schema.union(["workbench", "textEditor"])
     .default("workbench")
     .description(
-      "Where a Marp deck opens. textEditor sends it to VS Code's text editor, where Marp's own preview and export run. Keep in Workshop remembers a deck.",
+      "Where a Marp deck opens. textEditor sends it to VS Code's text editor, where Marp's own preview and export run. Keep Marp Deck in Lumiere remembers a deck.",
     ),
 });
 
 export default defineManifest({
   id: "marp",
   title: "Marp",
-  description:
-    "Detect Marp decks and open Marp's preview or export. Decks inside a wiki bundle are not wrapped into pages.",
+  description: "Detect Marp decks and open Marp's preview or export.",
   kind: "feature",
   defaultEnabled: true,
   surfaces: ["host"],
@@ -38,13 +37,8 @@ export default defineManifest({
         scope: "workbench",
       },
       {
-        id: "marp.moveOutside",
-        title: "Move Marp Deck Outside Bundle",
-        scope: "workbench",
-      },
-      {
         id: "marp.keepInWorkshop",
-        title: "Keep Marp Deck in Workshop",
+        title: "Keep Marp Deck in Lumiere",
         scope: "workbench",
       },
     ],

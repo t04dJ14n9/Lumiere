@@ -54,7 +54,7 @@ export function layered(
       (target === "workspace" ? workspace : user).set(key, value);
       return target;
     },
-    searchFilter: "@ext:test.workshop",
+    searchFilter: "@ext:test.lumiere",
     contributed: () => list,
     async openUi(query) {
       opened.push(query);

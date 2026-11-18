@@ -60,26 +60,9 @@ export function createEditorRoutes(
   host: LumiereHost,
   assets: EditorAssets,
 ): EditorRoutes {
-  // Each panel's workspace root: what its page may read files from.
-  const roots = new Map<string, string>();
+  const parts = routeParts(host, assets);
+  const { views, pdf, commands } = parts;
   const sockets = new WebSocketServer({ noServer: true });
-  const views = createViewRoutes(host.trees);
-  const pdf = assets.pdf
-    ? createPdfRoutes({
-        base: BASE,
-        viewer: assets.pdf,
-        roots: () => host.workspaceRoots(),
-        log: assets.log ?? (() => {}),
-      })
-    : NO_PDF_ROUTES;
-  const settings = createSettingsRoutes(
-    host.settings,
-    pluginTitles(),
-    settingsUnavailableIn(NODE_HOST_OFFERS),
-  );
-  const commands = host.commands
-    ? createCommandRoutes(host.commands)
-    : undefined;
   return {
     async handle(req, res) {
       const url = new URL(req.url ?? "/", "http://host");
@@ -95,7 +78,7 @@ export function createEditorRoutes(
       }
       const rest = url.pathname.slice(BASE.length);
       return dispatchRoute({
-        parts: { host, assets, views, settings, commands, pdf, roots },
+        parts,
         req,
         res,
         url,
@@ -115,6 +98,31 @@ export function createEditorRoutes(
       views.close();
       pdf.close();
     },
+  };
+}
+
+/** What the routes share: the host, its route families and the pages' roots. */
+function routeParts(host: LumiereHost, assets: EditorAssets): RouteParts {
+  return {
+    host,
+    assets,
+    views: createViewRoutes(host.trees),
+    settings: createSettingsRoutes(
+      host.settings,
+      pluginTitles(),
+      settingsUnavailableIn(NODE_HOST_OFFERS),
+    ),
+    commands: host.commands ? createCommandRoutes(host.commands) : undefined,
+    pdf: assets.pdf
+      ? createPdfRoutes({
+          base: BASE,
+          viewer: assets.pdf,
+          roots: () => host.workspaceRoots(),
+          log: assets.log ?? (() => {}),
+        })
+      : NO_PDF_ROUTES,
+    // Each panel's workspace root: what its page may read files from.
+    roots: new Map<string, string>(),
   };
 }
 
@@ -141,7 +149,7 @@ interface RouteRequest {
 async function dispatchRoute(options: RouteRequest): Promise<boolean> {
   const { parts, req, res, url, rest, range } = options;
   if (rest === "/editor") {
-    await servePage({ req, res, url, host: parts.host, roots: parts.roots });
+    await servePage({ req, res, url, parts });
   } else if (rest.startsWith("/m/")) {
     await serveStatic(res, parts.assets.markdown, rest.slice(3), range);
   } else if (rest === "/page/shim.js") {
@@ -218,17 +226,11 @@ interface PageRequest {
   readonly req: IncomingMessage;
   readonly res: ServerResponse;
   readonly url: URL;
-  readonly host: LumiereHost;
-  readonly roots: Map<string, string>;
+  readonly parts: Pick<RouteParts, "host" | "roots">;
 }
 
-async function servePage({
-  req,
-  res,
-  url,
-  host,
-  roots,
-}: PageRequest): Promise<void> {
+async function servePage({ req, res, url, parts }: PageRequest): Promise<void> {
+  const { host, roots } = parts;
   const query = pageQuery(url);
   if (!query) {
     res.writeHead(400, { "content-type": "text/plain" }).end("Not a note");
@@ -318,7 +320,7 @@ async function serveResource(
     res.writeHead(resource.status).end();
     return;
   }
-  await serveFile(res, resource.file, req.headers.range);
+  await serveFile(res, resource.file, req.headers.range, "vault");
 }
 
 interface ContainedResource {

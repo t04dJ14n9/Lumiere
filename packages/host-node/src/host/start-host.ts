@@ -25,8 +25,8 @@ import {
   registerContextMenus,
   type MenuContribution,
 } from "./context-menu";
-import { NoteDocuments, noteFiles } from "./documents";
-import { PanelHub } from "./panels";
+import { AUTOSAVE_DELAY_MS, NoteDocuments, noteFiles } from "./documents";
+import { CONNECT_TIMEOUT_MS, PanelHub } from "./panels";
 import type { HostPlatform } from "./platform";
 import {
   createHostCommands,
@@ -87,9 +87,13 @@ export async function startHost(
   options: HostStartOptions,
 ): Promise<LumiereHost> {
   const roots = new Set<string>();
-  const documents = new NoteDocuments(noteFiles(platform));
-  const panels = new PanelHub(documents);
   const log = (message: string) => options.logger.warn(message);
+  const documents = new NoteDocuments(
+    noteFiles(platform),
+    AUTOSAVE_DELAY_MS,
+    log,
+  );
+  const panels = new PanelHub(documents, CONNECT_TIMEOUT_MS, log);
   const keys = new ContextKeys();
   const commands = createHostCommands(log, keys);
   const trees = new TreeHub(commands);
@@ -209,11 +213,20 @@ async function readSaved(platform: HostPlatform) {
   return { settings, state };
 }
 
-/** Tell the reader when a note could not be written: its text stays open. */
+/**
+ * Tell the reader when a note could not be written (its text stays open),
+ * and when their typing was written over another program's change (that
+ * version is in a copy beside the note).
+ */
 function reportSaveFailures(
   documents: NoteDocuments,
-  dialogs: Pick<HostServices["dialogs"], "error">,
+  dialogs: Pick<HostServices["dialogs"], "error" | "inform">,
 ): void {
+  documents.onConflict((uri, copy) =>
+    dialogs.inform(
+      `${uriName(uri)} changed on disk while you were typing. Your text was saved; the other version is in ${uriName(copy)}.`,
+    ),
+  );
   documents.onSaveFailed((uri, error) =>
     dialogs.error(
       `Lumière could not save ${uriName(uri)}: ${

@@ -51,8 +51,9 @@ the exact box on the page.
 ### Built for agents
 
 - **Copy Link for Agent.** From a note it copies the passage with an
-  `@note.md#12-18` link to its lines. From a PDF it copies the text with a
-  link to the page and box, and a snapshot of a drawn region.
+  `@note.md#12-18` link to its lines. From a PDF it copies the text with an
+  `@paper.pdf#page=3` locator for the page and box, and a snapshot of a
+  drawn region.
 - **Straight into the chat.** When your editor's own chat is your agent,
   the selection opens there, ready for your question. Or pick Claude Code,
   Codex, Cursor or the clipboard as the target.

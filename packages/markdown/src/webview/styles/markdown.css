@@ -431,6 +431,41 @@ input[type="checkbox"]:focus-visible {
   color: var(--vscode-editor-foreground);
   background: var(--hover);
 }
+/*
+ * A rendered diagram's actions (Inspect, Copy, Edit) are one row of equal
+ * buttons a fixed gap apart at the top-right. Each slot is a set width rather
+ * than a guess at the previous button's width, so the gaps stay even whatever
+ * the labels and font. The language label takes the corner and gives way to
+ * the buttons on hover or keyboard focus. The em sizes resolve against the
+ * button's own font size.
+ */
+.hybrid-diagram {
+  --block-action-width: 4.75em;
+  --block-action-gap: 6px;
+}
+.hybrid-diagram .edit-block,
+.hybrid-diagram .copy-code,
+.hybrid-diagram .inspect-diagram {
+  box-sizing: border-box;
+  width: var(--block-action-width);
+  height: calc(1.6em + 4px);
+  padding: 1px 0;
+  text-align: center;
+  white-space: nowrap;
+}
+.hybrid-diagram .copy-code {
+  right: calc(8px + var(--block-action-width) + var(--block-action-gap));
+}
+.hybrid-diagram .inspect-diagram {
+  right: calc(8px + 2 * (var(--block-action-width) + var(--block-action-gap)));
+}
+.hybrid-diagram .code-language {
+  right: 8px;
+  padding: 1px 7px;
+}
+.hybrid-diagram:focus-within .code-language {
+  opacity: 0;
+}
 .markdown-rendered {
   overflow-wrap: anywhere;
   white-space: normal;

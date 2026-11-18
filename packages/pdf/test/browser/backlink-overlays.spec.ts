@@ -64,35 +64,42 @@ test("injected pdfBacklinks paints an overlay; click posts openBacklinkNote", as
     ]);
 });
 
-test("Delete ignores backlink overlays; Delete still removes an embedded annot", async ({
+test("a backlink overlay is never the menu's mark; a mark under it still is", async ({
   page,
 }) => {
   await open(page, "?toolbar=chrome");
   await injectBacklinks(page);
-  await page.locator(".pdf-backlink-overlay-line").first().click();
-  await page.keyboard.press("Delete");
-  await expect(page.locator(".pdf-backlink-overlay-line")).toHaveCount(1);
+  const menuKeys = async () =>
+    JSON.parse(
+      (await page.evaluate(() =>
+        document.body.getAttribute("data-vscode-context"),
+      )) ?? "{}",
+    ) as Record<string, boolean>;
+  await page
+    .locator(".pdf-backlink-overlay-line")
+    .first()
+    .click({ button: "right" });
+  expect(await menuKeys()).toMatchObject({
+    "lumiere.pdf.hasAnnotationSelection": false,
+  });
 
-  // Same Del path as freeText/Note (hasAnnotationSelection → deleteSelected).
-  await sendAction(page, { action: "setTool", tool: "annotate" });
-  await sendAction(page, { action: "setAnnotationTool", tool: "highlight" });
+  // Highlight "page 1" only, so overlay lines on "Synthetic" do not take the drag.
   const at = await pagePoint(page, 1);
   const baseline = await highlightMarkCount(page);
-  // Drag over "page 1" only so overlay lines on "Synthetic" do not steal the gesture.
   await page.mouse.move(...at(150, TEXT_MIDLINE));
   await page.mouse.down();
   await page.mouse.move(...at(205, TEXT_MIDLINE), { steps: 10 });
   await page.mouse.up();
-  await expect.poll(() => highlightMarkCount(page)).toBeGreaterThan(baseline);
   await expect
-    .poll(async () => {
-      const selection = await lastSelection(page);
-      return selection && typeof selection === "object"
-        ? (selection as { kind?: string }).kind
-        : undefined;
-    })
-    .toBe("region");
-  await page.keyboard.press("Delete");
+    .poll(async () => (await lastSelection(page)) as { kind?: string } | null)
+    .toMatchObject({ kind: "text" });
+  await sendAction(page, { action: "markSelection", tool: "highlight" });
+  await expect.poll(() => highlightMarkCount(page)).toBeGreaterThan(baseline);
+  await page.mouse.click(...at(180, TEXT_MIDLINE), { button: "right" });
+  expect(await menuKeys()).toMatchObject({
+    "lumiere.pdf.hasAnnotationSelection": true,
+  });
+  await sendAction(page, { action: "deleteSelectedAnnotations" });
   await expect.poll(() => highlightMarkCount(page)).toBe(baseline);
   await expect(page.locator(".pdf-backlink-overlay-line")).toHaveCount(1);
 });

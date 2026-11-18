@@ -8,15 +8,14 @@
  * Floating was removed. Saved VS Code values of slim/floating migrate to chrome.
  */
 export type ToolbarMode = "chrome" | "slim" | "none";
-export const TOOLBAR_MODES: readonly ToolbarMode[] = ["chrome", "slim", "none"];
-export const DEFAULT_TOOLBAR_MODE: ToolbarMode = "chrome";
+const DEFAULT_TOOLBAR_MODE: ToolbarMode = "chrome";
 
 /**
  * Legacy dock edge for the removed floating bar. Kept so old messages and
  * HTML data attributes still parse; new code always uses the default.
  */
 export type FloatingDock = "top" | "bottom" | "left" | "right";
-export const FLOATING_DOCKS: readonly FloatingDock[] = [
+const FLOATING_DOCKS: readonly FloatingDock[] = [
   "top",
   "bottom",
   "left",
@@ -80,49 +79,12 @@ export function parseToolbarSettings(value: unknown): ToolbarSettings {
 }
 
 /**
- * The edge nearest to a point in a box of `width` by `height`. Kept for
- * unit tests of the old floating-dock helper; the floating bar is gone.
+ * Whether the status bar shows history, page, zoom and find buttons besides
+ * the page and zoom (setting `lumiere.pdf.toolbar.statusBarButtons`). The
+ * editor title bar keeps every PDF action in its "…" menu, in VS Code as in
+ * Cursor, so the status bar is the only place the buttons are in view:
+ * `auto` shows them.
  */
-export function nearestDock(
-  x: number,
-  y: number,
-  width: number,
-  height: number,
-): FloatingDock {
-  const distances: [FloatingDock, number][] = [
-    ["top", y],
-    ["bottom", height - y],
-    ["left", x],
-    ["right", width - x],
-  ];
-  return distances.reduce((nearest, next) =>
-    next[1] < nearest[1] ? next : nearest,
-  )[0];
-}
-
-/**
- * Whether the editor title bar keeps extension buttons in its "…" menu
- * rather than showing them, as Cursor's does.
- */
-export function titleActionsInMenu(appName: string): boolean {
-  return /cursor/iu.test(appName);
-}
-
-/**
- * Whether the status bar shows page and zoom buttons besides the page and
- * zoom (setting `lumiere.pdf.toolbar.statusBarButtons`). `auto` shows
- * them in Cursor, whose editor title bar keeps extension buttons in its
- * "…" menu, so the status bar is the only place they are always in view.
- */
-export function showStatusBarButtons(
-  setting: unknown,
-  appName: string,
-): boolean {
-  if (setting === "always") {
-    return true;
-  }
-  if (setting === "never") {
-    return false;
-  }
-  return titleActionsInMenu(appName);
+export function showStatusBarButtons(setting: unknown): boolean {
+  return setting !== "never";
 }

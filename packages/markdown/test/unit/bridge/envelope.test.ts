@@ -31,12 +31,6 @@ function saved(extra: Partial<MarkdownEnvelopeInput> = {}) {
     documentVersion: 4,
     sourceSha256: SOURCE,
     isDirty: false,
-    wiki: {
-      preset: "slim",
-      bundle: "knowledge",
-      collection: "$concepts",
-      type: "Concept",
-    },
     ...extra,
   });
 }
@@ -53,7 +47,6 @@ test("a saved note keeps the durable locator apart from the view and the two has
   assert.equal(envelope.selection.sha256, SELECTION);
   assert.equal(envelope.revision.sourceSha256, SOURCE);
   assert.notEqual(envelope.selection.sha256, envelope.revision.sourceSha256);
-  assert.equal(envelope.wiki?.collection, "$concepts");
 });
 
 test("parse keeps unknown top-level fields and drops unknown nested fields", () => {

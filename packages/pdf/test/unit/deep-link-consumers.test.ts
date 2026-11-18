@@ -6,7 +6,6 @@
 import assert from "node:assert/strict";
 import path from "node:path";
 import { test } from "node:test";
-import { agentText } from "../../src/shared/agent-text";
 import { OPEN_NATIVE_LINK_COMMAND_ID } from "../../src/shared/command-ids";
 import { localFragment, nativeLinks } from "../../src/shared/native-links";
 import * as locations from "../../src/shared/pdf-location";
@@ -63,17 +62,11 @@ test("splitFragmentDirective cuts at the second hash only", () => {
 });
 
 test("a quote that spans PDF lines still opens: the link carries no control characters", () => {
-  const selection = {
-    kind: "text" as const,
+  const href = formatPdfDeepLink("papers/attention.pdf", {
+    page: 3,
     text: "Scaled dot-product\nattention\r\nover   keys",
-    pages: [
-      {
-        page: 3,
-        rects: [[72, 83, 206, 104]] as [number, number, number, number][],
-      },
-    ],
-  };
-  const markdown = agentText(selection, { path: "papers/attention.pdf" });
+  });
+  const markdown = `> [attention.pdf · p.3](${href})`;
   const link = nativeLinks(markdown).find((candidate) =>
     candidate.href.startsWith("papers/"),
   );
@@ -90,11 +83,8 @@ test("a quote that spans PDF lines still opens: the link carries no control char
   );
 });
 
-test("a Copy link line in a note is a native link whose fragment opens page 3", () => {
-  const markdown = agentText(
-    { kind: "text", text: QUOTE, pages: [{ page: 3, rects: [[1, 2, 3, 4]] }] },
-    { path: "papers/attention.pdf" },
-  );
+test("a deep link line in a note is a native link whose fragment opens page 3", () => {
+  const markdown = `> [attention.pdf · p.3](${LINK})`;
   const link = nativeLinks(markdown).find((candidate) =>
     candidate.href.startsWith("papers/"),
   );

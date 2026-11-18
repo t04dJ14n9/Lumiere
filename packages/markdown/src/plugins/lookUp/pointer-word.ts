@@ -16,7 +16,7 @@ export function menuWord(content: HTMLElement, point: ClientPoint): string {
 }
 
 /** The selection as one word, when it lies in `content`; "" otherwise. */
-export function selectionWord(content: HTMLElement): string {
+function selectionWord(content: HTMLElement): string {
   const selection = content.ownerDocument.getSelection();
   if (
     !selection ||
@@ -35,7 +35,7 @@ export function selectionWord(content: HTMLElement): string {
  * Markdown markers. "" over spaces, past the end of a line, and outside
  * `content`.
  */
-export function wordAtPoint(content: HTMLElement, point: ClientPoint): string {
+function wordAtPoint(content: HTMLElement, point: ClientPoint): string {
   const caret = content.ownerDocument.caretRangeFromPoint(point.x, point.y);
   const node = caret?.startContainer;
   if (!caret || !(node instanceof Text) || !content.contains(node)) {

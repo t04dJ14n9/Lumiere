@@ -242,7 +242,7 @@ test("Toggle Markdown Outline is workbench-scoped in the palette and editor-scop
   );
 });
 
-test("Go to Heading overrides the symbol shortcut only for enabled Workshop panels", async () => {
+test("Go to Heading overrides the symbol shortcut only for enabled Lumiere panels", async () => {
   const { commands, keybindings, menus } = await contributions();
   assert.equal(
     commands.find((command) => command.command === GO_TO_HEADING_COMMAND)
@@ -352,7 +352,7 @@ test("Ctrl/Cmd+E toggles Lumiere and the host text editor, not Source mode", asy
 
 // The editor host sets `lumiere.markdown.plugin.<id>` for the editor features
 // and the three core ones; outline and ideContext set their own. A window
-// feature (templates, dailyNotes, ...) has no such key, so a command that
+// feature (templates, scratch, ...) has no such key, so a command that
 // waits for it is never in the palette: use scope "workbench" for those.
 test("no contribution waits for a plugin context key that nothing sets", async () => {
   const settable = new Set([

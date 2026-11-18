@@ -57,6 +57,6 @@ export {
   createVsCodeIdeContextHost,
   enumerateTabUris,
   mapVsCodeDiagnostic,
-  KNOWN_WORKSHOP_VIEW_TYPES,
+  KNOWN_LUMIERE_VIEW_TYPES,
   type VsCodeIdeContextFacade,
 } from "./host-apis";
