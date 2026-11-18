@@ -46,7 +46,7 @@ type Status = ReturnType<GitDiff["status"]>;
 type Options = Infer<typeof config>;
 
 /** Debounce between typing and recomputing the diff. */
-export const RECOMPUTE_MS = 250;
+const RECOMPUTE_MS = 250;
 
 /** The baseline, its hunks and the moves between them, for one editor. */
 class GitDiffModel implements GitDiff {

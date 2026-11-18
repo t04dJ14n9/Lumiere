@@ -356,3 +356,51 @@ test("diagram actions stay keyboard-reachable without covering nodes", async ({
   }
   await assertNoOverlap(page, "Intake request", true);
 });
+
+test("the diagram buttons are one even row and the language takes the corner", async ({
+  page,
+}) => {
+  await page.setViewportSize({ width: 1100, height: 800 });
+  await open(page, mermaidNote(WIDE_FLOW));
+  await reveal(page, "after");
+  await waitForDiagram(page, "Intake request");
+  const shell = page.locator(".hybrid-block.hybrid-diagram").first();
+  const box = (selector: string) =>
+    shell.locator(selector).evaluate((element) => {
+      const rect = element.getBoundingClientRect();
+      return {
+        left: rect.left,
+        right: rect.right,
+        top: rect.top,
+        height: rect.height,
+        width: rect.width,
+      };
+    });
+  const edge = await shell.evaluate(
+    (element) => element.getBoundingClientRect().right,
+  );
+  const label = shell.locator(".code-language");
+  await expect(label).toHaveText(/mermaid/i);
+  await expect(label).toHaveCSS("opacity", "1");
+  const corner = await box(".code-language");
+  expect(edge - corner.right).toBeLessThanOrEqual(10);
+
+  await shell.hover();
+  await expect(label).toHaveCSS("opacity", "0");
+  const [inspect, copy, edit] = await Promise.all([
+    box(".inspect-diagram"),
+    box(".copy-code"),
+    box(".edit-block"),
+  ]);
+  expect(edge - edit.right).toBeLessThanOrEqual(10);
+  for (const button of [copy, edit]) {
+    expect(Math.abs(button.width - inspect.width)).toBeLessThan(0.5);
+    expect(Math.abs(button.height - inspect.height)).toBeLessThan(0.5);
+    expect(Math.abs(button.top - inspect.top)).toBeLessThan(0.5);
+  }
+  const firstGap = copy.left - inspect.right;
+  const secondGap = edit.left - copy.right;
+  expect(firstGap).toBeGreaterThan(2);
+  expect(Math.abs(firstGap - secondGap)).toBeLessThan(0.5);
+  await shoot(page, "row-hovered");
+});

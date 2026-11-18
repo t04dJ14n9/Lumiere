@@ -1,5 +1,3 @@
-import { splitTabSeparated } from "./tab-separated";
-
 export interface Cell {
   text: string;
   from: number;
@@ -13,6 +11,11 @@ export interface Table {
   rows: Cell[][];
   alignments: ("left" | "center" | "right" | null)[];
   source: string;
+  /**
+   * The texts of each row's cells past the header's width. GFM does not
+   * render them, but they are the note's text: rewrites carry them along.
+   */
+  surplus: string[][];
 }
 
 export interface CellPosition {
@@ -92,12 +95,14 @@ export function parseTable(source: string): Table | undefined {
     return right ? ("right" as const) : null;
   });
   const rows = [header];
+  const surplus: string[][] = [[]];
   let offset = lines[0]!.length + lines[1]!.length + 2;
   for (const line of lines.slice(2)) {
     if (!line.trim()) {
       break;
     }
-    const row = cells(line, offset).slice(0, header.length);
+    const row = cells(line, offset);
+    surplus.push(row.splice(header.length).map((cell) => cell.text));
     while (row.length < header.length) {
       row.push({
         text: "",
@@ -111,7 +116,27 @@ export function parseTable(source: string): Table | undefined {
     rows.push(row);
     offset += line.length + 1;
   }
-  return { source, rows, alignments };
+  return { source, rows, alignments, surplus };
+}
+
+/** Each row's cell texts followed by its surplus cells, for rewrites that move rows. */
+export function rowTexts(table: Table): string[][] {
+  return table.rows.map((row, index) => [
+    ...row.map((cell) => cell.text),
+    ...(table.surplus[index] ?? []),
+  ]);
+}
+
+/** Rows of `width` cells, each followed by the surplus of the row it came from. */
+function withSurplus(
+  rows: readonly (readonly string[])[],
+  surplus: readonly (readonly string[])[],
+  width: number,
+): string[][] {
+  return rows.map((row, index) => [
+    ...Array.from({ length: width }, (_, column) => row[column] ?? ""),
+    ...(surplus[index] ?? []),
+  ]);
 }
 
 /** Add only the delimiters needed to represent an omitted trailing cell. */
@@ -175,14 +200,32 @@ export function cellPadding(
   return { before, after: extra - before };
 }
 
-/** Structural edits normalize table layout in one outer-document transaction. */
+/**
+ * Structural edits normalize table layout in one outer-document transaction.
+ * Cells past the alignments' width are surplus: written after the row, unpadded.
+ * A header with surplus (a wider body row moved to the top) widens the table
+ * instead: a header wider than its delimiter row is not a table.
+ */
 export function serializeTable(
   rows: readonly (readonly string[])[],
-  alignments: Table["alignments"],
+  tableAlignments: Table["alignments"],
 ): string {
+  const headerWidth = rows[0]?.length ?? 0;
+  const alignments = [
+    ...tableAlignments,
+    ...Array<null>(Math.max(0, headerWidth - tableAlignments.length)).fill(
+      null,
+    ),
+  ];
   const width = alignments.length;
   const normalized = rows.map((row) =>
     Array.from({ length: width }, (_, column) => cellText(row[column] ?? "")),
+  );
+  const surplus = rows.map((row) =>
+    row
+      .slice(width)
+      .map((text) => ` ${cellText(text)} |`)
+      .join(""),
   );
   const lengths = Array.from({ length: width }, (_, column) =>
     Math.max(3, ...normalized.map((row) => row[column]!.length)),
@@ -212,9 +255,11 @@ export function serializeTable(
     return "-".repeat(length);
   });
   return [
-    rowText(normalized[0] ?? Array(width).fill("")),
+    rowText(normalized[0] ?? Array(width).fill("")) + (surplus[0] ?? ""),
     rowText(divider),
-    ...normalized.slice(1).map(rowText),
+    ...normalized
+      .slice(1)
+      .map((row, index) => rowText(row) + surplus[index + 1]),
   ].join("\n");
 }
 
@@ -226,87 +271,6 @@ export function rangeTexts(table: Table, range: CellRange): string[][] {
     .map((row) =>
       row.slice(area.left, area.right + 1).map((cell) => cell.text),
     );
-}
-
-/** Tab-separated cells, as spreadsheets copy them. */
-export function copyCells(table: Table, range: CellRange): string {
-  return rangeTexts(table, range)
-    .map((row) => row.map((text) => text.replace(/\\\|/g, "|")).join("\t"))
-    .join("\n");
-}
-
-/** Plain cell texts for a range (pipes unescaped), as Obsidian `obsidian/table` rows. */
-export function copyCellsRows(table: Table, range: CellRange): string[][] {
-  return rangeTexts(table, range).map((row) =>
-    row.map((text) => text.replace(/\\\|/g, "|")),
-  );
-}
-
-/**
- * Markdown table fragment for the selection (first row as header + alignment
- * line), matching Obsidian `getTableString` / `text/markdown` on copy.
- */
-export function copyCellsMarkdown(table: Table, range: CellRange): string {
-  const area = rectangle(range);
-  const rows = copyCellsRows(table, range);
-  const alignments = table.alignments.slice(area.left, area.right + 1);
-  return serializeTable(rows, alignments);
-}
-
-/** Simple HTML table for `text/html` (Obsidian uses markdown→HTML; we emit a table). */
-export function copyCellsHtml(table: Table, range: CellRange): string {
-  const rows = copyCellsRows(table, range);
-  const escape = (value: string): string =>
-    value
-      .replace(/&/g, "&amp;")
-      .replace(/</g, "&lt;")
-      .replace(/>/g, "&gt;")
-      .replace(/"/g, "&quot;");
-  const body = rows
-    .map((row, index) => {
-      const tag = index === 0 ? "th" : "td";
-      return (
-        "<tr>" +
-        row.map((cell) => `<${tag}>${escape(cell)}</${tag}>`).join("") +
-        "</tr>"
-      );
-    })
-    .join("");
-  return `<!-- lumiere-table -->\n<table>\n${body}\n</table>`;
-}
-
-/** Obsidian-compatible structured payload (`obsidian/table`). */
-export function copyCellsObsidian(
-  table: Table,
-  range: CellRange,
-): { rows: string[][]; alignment: string[] } {
-  const area = rectangle(range);
-  return {
-    rows: copyCellsRows(table, range),
-    alignment: table.alignments
-      .slice(area.left, area.right + 1)
-      .map((alignment) => alignment ?? ""),
-  };
-}
-
-/**
- * Parse a markdown table fragment into cell rows (skips the alignment line).
- * Rows are read as the editor reads them: escaped pipes stay in their cell,
- * short rows are padded, and only a blank line ends the table.
- */
-export function pastedMarkdownCells(text: string): string[][] {
-  const table = parseTable(text.replace(/\r\n?/g, "\n").trim());
-  if (!table) {
-    return [[text]];
-  }
-  return table.rows.map((row) =>
-    row.map((cell) => cell.text.replace(/\\\|/g, "|")),
-  );
-}
-
-/** Split tab-separated clipboard text into rows of cell values. */
-export function pastedCells(text: string): string[][] {
-  return splitTabSeparated(text);
 }
 
 /** Wrap a cell in an inline marker, or unwrap it if already wrapped. */
@@ -404,11 +368,14 @@ export function writeCells(
       }
     }
   }
-  return serializeTable(rows, alignments);
+  return serializeTable(
+    withSurplus(rows, table.surplus, alignments.length),
+    alignments,
+  );
 }
 
 export function insertRow(table: Table, after: number): string {
-  const rows = table.rows.map((row) => row.map((cell) => cell.text));
+  const rows = rowTexts(table);
   rows.splice(
     Math.max(1, after + 1),
     0,
@@ -424,5 +391,8 @@ export function insertColumn(table: Table, after: number): string {
   for (const row of rows) {
     row.splice(after + 1, 0, "");
   }
-  return serializeTable(rows, alignments);
+  return serializeTable(
+    withSurplus(rows, table.surplus, alignments.length),
+    alignments,
+  );
 }

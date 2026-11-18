@@ -41,7 +41,7 @@ export class FenceFlair extends WidgetType {
   constructor(
     readonly language: string | undefined,
     readonly code: string,
-    private readonly copy: (text: string) => void,
+    private readonly copy: (text: string, button: HTMLButtonElement) => void,
   ) {
     super();
   }
@@ -67,7 +67,7 @@ export class FenceFlair extends WidgetType {
     button.addEventListener("mousedown", (event) => event.preventDefault());
     button.addEventListener("click", (event) => {
       event.preventDefault();
-      this.copy(this.code);
+      this.copy(this.code, button);
     });
     flair.append(button);
     return flair;

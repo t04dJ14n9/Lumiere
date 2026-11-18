@@ -96,13 +96,14 @@ export class PdfSource {
   }
 
   private async onWatchedChange(): Promise<void> {
-    if (this.expectedWrite && this.files.hash) {
+    if (this.files.hash) {
       try {
         const disk = await this.files.hash(this.uri);
-        if (disk === this.expectedWrite) {
-          // Keep expectedWrite: atomic rename often fires create+change, and
-          // clearing after the first event lets the second reload the viewer
-          // (wiping EmbedPDF History so Undo Annotation no-ops).
+        // Keep expectedWrite: atomic rename often fires create+change, and
+        // clearing after the first event lets the second reload the viewer
+        // (wiping EmbedPDF History so Undo Annotation no-ops). Bytes the
+        // viewer already has (a touch, a sync) need no reload either.
+        if (disk === this.expectedWrite || disk === this.sha256) {
           this.sha256 = disk;
           return;
         }

@@ -1,9 +1,8 @@
 import { contributionId } from "../setting-schema";
 
 /**
- * Versioned selection envelope shared by Lumiere and PDF
- * Workshop. This is a workbench protocol, not note
- * metadata. Version 1 carries one locator.
+ * Versioned selection envelope shared by Lumiere and Lumiere PDF. This is a
+ * workbench protocol, not note metadata. Version 1 carries one locator.
  *
  * `locator.durable` reopens the spot after the view is gone.
  * `view.id` is the live panel and is not a locator.

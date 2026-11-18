@@ -67,6 +67,8 @@ export function fakeReact() {
       return [cell.value.current, cell.set] as const;
     },
     useCallback: <T>(callback: T) => callback,
+    // Made again on every render: a hook's result may not rely on memoizing.
+    useMemo: <T>(create: () => T) => create(),
     useEffect: effectHook,
     useLayoutEffect: effectHook,
   };

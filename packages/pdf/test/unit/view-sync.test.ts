@@ -183,19 +183,18 @@ test("a report in a fit mode names the mode as the zoom, and none is made before
   );
 });
 
-test("annotation state is reported only in the annotate tool", () => {
+test("a view report carries no annotation tool state", () => {
   const { stage } = fakeStage();
   const { currentView } = load(stage);
-  const annotation = { annotationTool: "ink", canUndo: true, canRedo: false };
-  const input = { navigation, choices, stage, annotation };
-  assert.equal(
-    currentView({ ...input, tool: "text" })?.annotationTool,
-    undefined,
-  );
-  const view = currentView({ ...input, tool: "annotate" });
-  assert.equal(view?.annotationTool, "ink");
-  assert.equal(view?.canAnnotationUndo, true);
-  assert.equal(view?.canAnnotationRedo, false);
+  const view = currentView({ navigation, choices, stage, tool: "text" });
+  assert.ok(view);
+  for (const key of [
+    "annotationTool",
+    "canAnnotationUndo",
+    "canAnnotationRedo",
+  ]) {
+    assert.equal(key in view, false, key);
+  }
 });
 
 test("fit modes of the Stage are the viewer's fit modes; a level is none", () => {

@@ -3,6 +3,7 @@ import type { HostMessage } from "../../shared/messages";
 import { Emitter, type Subscription } from "../events";
 import { AnnotationSave } from "./annotation-save";
 import { AnnotationStore } from "./annotation-store";
+import type { ViewerLoads } from "./loads";
 import type { ViewerPanelHost } from "./panel-types";
 import type { PdfSource } from "./source";
 
@@ -30,12 +31,13 @@ export class PanelAnnotations implements Subscription {
     private readonly host: ViewerPanelHost,
     source: PdfSource,
     private readonly deps: {
-      isCurrentLoad: (load: number) => boolean;
+      /** Which messages are about the bytes the viewer shows. */
+      loads: Pick<ViewerLoads, "isCurrent" | "acceptsStoreSave">;
       post: (message: HostMessage) => void;
     },
   ) {
     this.save = new AnnotationSave(fileUri, host.files, source, {
-      isCurrentLoad: deps.isCurrentLoad,
+      isCurrentLoad: (load) => deps.loads.isCurrent(load),
       post: deps.post,
       error: (message) => host.error(message),
       conflict: (payload) => this.conflict.fire(payload),
@@ -44,16 +46,28 @@ export class PanelAnnotations implements Subscription {
         this.failure = "file";
       },
     });
-    this.store = new AnnotationStore(fileUri, host.files, source, {
-      isCurrentLoad: deps.isCurrentLoad,
+    this.store = new AnnotationStore(fileUri, host.files, {
+      // Only a hash the viewer was given names a file: it is untrusted.
+      accepts: (load, sha256) =>
+        deps.loads.acceptsStoreSave(load) && this.save.knows(load, sha256),
       error: (message) => host.error(message),
       failed: (message) => this.fail("file", message),
     });
   }
 
+  /** The viewer is sent the bytes hashing to `sha256` as load `load`. */
+  loaded(load: number, sha256: string): void {
+    this.save.loaded(load, sha256);
+  }
+
   /** The text of the annotation file kept for these bytes, if any. */
   read(sha256: string): Promise<string | undefined> {
     return this.store.read(sha256);
+  }
+
+  /** The reader asked the viewer of `load` for the PDF to write over the file. */
+  requestPdfWrite(load: number): void {
+    this.save.request(load);
   }
 
   keepMine(data: ArrayBuffer, load: number): Promise<void> {
@@ -75,19 +89,19 @@ export class PanelAnnotations implements Subscription {
         await this.store.save(message);
         return;
       case "annotationSaveFailed":
-        if (this.deps.isCurrentLoad(message.load)) {
+        if (this.deps.loads.isCurrent(message.load)) {
           this.save.markFailed();
           this.host.error(`Could not save PDF annotations: ${message.message}`);
           this.fail("file", message.message);
         }
         return;
       case "annotationExport":
-        if (this.deps.isCurrentLoad(message.load)) {
+        if (this.deps.loads.isCurrent(message.load)) {
           this.exported.fire(message.data);
         }
         return;
       case "annotationEmbeddedEdit":
-        if (this.deps.isCurrentLoad(message.load)) {
+        if (this.deps.loads.isCurrent(message.load)) {
           this.embeddedEdit.fire();
         }
         return;

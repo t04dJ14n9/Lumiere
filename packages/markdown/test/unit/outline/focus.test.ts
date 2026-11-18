@@ -4,12 +4,12 @@ import {
   createOutlineFocus,
   LEAVE_RESTORE_MS,
   NATIVE_OUTLINE_ID,
-  PDF_WORKSHOP_EDITOR,
+  PDF_LUMIERE_EDITOR,
   TAGS_VIEW_ID,
 } from "../../../src/plugins/outline/focus";
 import { VIEW_ID } from "../../../src/plugins/outline/commands";
 
-test("entering a Workshop editor runs no view command until Markdown Outline is on screen", async () => {
+test("entering a Lumiere editor runs no view command until Markdown Outline is on screen", async () => {
   const executed: string[] = [];
   const focus = createOutlineFocus({
     execute: async (command) => {
@@ -86,7 +86,7 @@ test("an editor activated under an Outline already on screen hides the native Ou
   await settle();
 });
 
-test("Markdown Outline appearing with no Workshop editor active hides nothing", async () => {
+test("Markdown Outline appearing with no Lumiere editor active hides nothing", async () => {
   const executed: string[] = [];
   const focus = createOutlineFocus({
     execute: async (command) => {
@@ -239,7 +239,7 @@ test("a quick re-enter cancels the pending native Outline restore", async () => 
   await settle();
 });
 
-test("leave after peer Workshop is active does not restore native Outline", async () => {
+test("leave after peer Lumiere is active does not restore native Outline", async () => {
   const executed: string[] = [];
   let pending: (() => void) | undefined;
   const active = { viewType: undefined as string | undefined };
@@ -266,7 +266,7 @@ test("leave after peer Workshop is active does not restore native Outline", asyn
   executed.length = 0;
   focus.sync(false);
   // Peer Lumiere PDF took the tab before the debounce fired.
-  active.viewType = PDF_WORKSHOP_EDITOR;
+  active.viewType = PDF_LUMIERE_EDITOR;
   pending!();
   await settle();
   assert.deepEqual(
@@ -278,7 +278,7 @@ test("leave after peer Workshop is active does not restore native Outline", asyn
   await settle();
 });
 
-test("dispose restores native Outline unless a peer Workshop owns the tab", async () => {
+test("dispose restores native Outline unless a peer Lumiere owns the tab", async () => {
   const executed: string[] = [];
   const active = { viewType: undefined as string | undefined };
   const focus = createOutlineFocus({
@@ -313,7 +313,7 @@ test("dispose restores native Outline unless a peer Workshop owns the tab", asyn
   peer.outlineShown();
   await settle();
   executed.length = 0;
-  active.viewType = PDF_WORKSHOP_EDITOR;
+  active.viewType = PDF_LUMIERE_EDITOR;
   peer.dispose();
   await settle();
   assert.deepEqual(executed, [], "peer owns the swap; dispose skips restore");

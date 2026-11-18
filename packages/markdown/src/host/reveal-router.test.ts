@@ -128,3 +128,46 @@ test("native side destinations use unique panel identity, not column arithmetic"
     undefined,
   );
 });
+
+function recordingLogger() {
+  const logged: [string, string][] = [];
+  return {
+    logged,
+    logger: {
+      debug: (message: string) => logged.push(["debug", message]),
+      warn: (message: string) => logged.push(["warn", message]),
+      error: (message: string) => logged.push(["error", message]),
+    },
+  };
+}
+
+test("a reveal that no editor takes in time, or that one refuses, is logged", async (t) => {
+  t.mock.timers.enable({ apis: ["setTimeout"] });
+  const { logged, logger } = recordingLogger();
+  const router = new RevealRouter(logger);
+  const waiting = router.deliver(router.begin(), "never", { fragment: "H" });
+  t.mock.timers.tick(15000);
+  assert.equal(await waiting, false);
+  assert.deepEqual(logged, [
+    ["warn", "No editor registered to reveal the target in time"],
+  ]);
+
+  logged.length = 0;
+  router.register({ ...panel("pane", []), reveal: async () => false });
+  assert.equal(
+    await router.deliver(router.begin(), "pane", { fragment: "H" }),
+    false,
+  );
+  assert.deepEqual(logged, [["debug", "The editor did not reveal the target"]]);
+});
+
+test("a reveal a newer navigation cancels is logged at debug level only", async () => {
+  const { logged, logger } = recordingLogger();
+  const router = new RevealRouter(logger);
+  const first = router.deliver(router.begin(), "cold", { fragment: "old" });
+  router.begin();
+  assert.equal(await first, false);
+  assert.deepEqual(logged, [
+    ["debug", "Reveal cancelled by a newer navigation"],
+  ]);
+});

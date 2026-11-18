@@ -20,8 +20,11 @@ to original source offsets. Dirty notes offer Save and Copy, Copy Text Only or
 Cancel; saving recaptures the selection. References use a workspace-relative
 path for one local workspace and a full URI otherwise. `chat.ts` opens Cursor's
 agent chat with the payload on the clipboard (Cursor offers no prefill), else
-VS Code's chat with the payload prefilled and the question left to type, else
-only copies; each case ends in a notice saying where the passage went.
+VS Code's chat with the payload prefilled and the question left to type (on
+the clipboard instead if the open chat refuses it), else only copies; each case
+ends in a notice saying where the passage went. Codex gets the passage as an
+attached file, repeated a few times while its view loads; the repeats stop when
+the plugin stops.
 
 ## Files
 

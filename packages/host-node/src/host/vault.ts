@@ -13,7 +13,7 @@ import {
   type SnapshotStore,
   type VaultSystem,
 } from "@workshop/markdown/portable";
-import type { NoteDocuments } from "./documents";
+import { errorText, type NoteDocuments } from "./documents";
 import { containInRoots, type HostFiles, type HostPlatform } from "./platform";
 import { joinUri } from "./uris";
 
@@ -48,7 +48,7 @@ export function createHostVaultSystem(options: HostVaultOptions): VaultSystem {
       await containInRoots(files, roots(), uri);
       return files.readBytes(uri);
     },
-    watch: (root, listener) => watchVault(files, root, listener),
+    watch: (root, listener) => watchVault(files, root, listener, options.warn),
     store: (root) => snapshotStore(platform, root),
     settings: (root) => ({
       folderNote: settings.get("links.folderNote", "", root),
@@ -152,10 +152,16 @@ export function watchVault(
   files: HostFiles,
   root: string,
   listener: (event: FileEvent) => void,
+  warn: (message: string) => void,
 ): Disposer {
   const known = new Set<string>();
   return files.watchTree(root, (relative) => {
-    void report({ files, root, relative, known, listener });
+    // No one awaits a file event: a listener that throws is logged.
+    report({ files, root, relative, known, listener }).catch((error: unknown) =>
+      warn(
+        `Lumière could not report a change to ${relative}: ${errorText(error)}`,
+      ),
+    );
   });
 }
 

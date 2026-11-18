@@ -89,6 +89,12 @@ export interface VaultSystem extends VaultFileSystem {
   /** The workspace folder containing this URI, if any. */
   workspaceFolder(uri: string): string | undefined;
   workspaceFolders(): readonly string[];
+  /**
+   * Whether file names under this URI ignore case (VS Code: `file:` URIs on
+   * Windows and macOS), so a note's URI may differ in case from its folder's.
+   * Absent: case matters.
+   */
+  ignoresCase?(uri: string): boolean;
   exists(uri: string): Promise<boolean>;
   /** Persistent storage for a vault's snapshot; absent without a workspace. */
   store(root: string): SnapshotStore | undefined;

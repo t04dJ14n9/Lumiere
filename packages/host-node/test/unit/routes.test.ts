@@ -342,10 +342,11 @@ async function serveEditorPages(t: {
     server.close();
   });
   const { port } = server.address() as { port: number };
-  const status = async (note: string, root: string) =>
+  // Without a root the page names no workspace: the note's folder stands in.
+  const status = async (note: string, root?: string) =>
     (
       await fetch(
-        `http://127.0.0.1:${port}/lumiere/editor?path=${encodeURIComponent(note)}&root=${encodeURIComponent(root)}`,
+        `http://127.0.0.1:${port}/lumiere/editor?path=${encodeURIComponent(note)}${root === undefined ? "" : `&root=${encodeURIComponent(root)}`}`,
       )
     ).status;
   return { host, added, status };
@@ -411,6 +412,55 @@ test("an editor page still cannot name a folder that holds a registered workspac
   host.addRoot(pathToFileURL(vault).toString());
   assert.equal(await status(top, vault), 200);
   assert.equal(await status(deep, scratch), 403);
+});
+
+test("a note opened by absolute path does not lock its session's workspace out", async (t) => {
+  // DSH names no workspace for a note opened by absolute path, so the page
+  // names no root and the note's folder stands in. The session's workspace,
+  // which holds that folder, may still open afterwards.
+  const scratch = await realpath(
+    await mkdtemp(path.join(tmpdir(), "lumiere-folder-first-")),
+  );
+  t.after(() => rm(scratch, { recursive: true, force: true }));
+  const workspace = path.join(scratch, "workspace");
+  const docs = path.join(workspace, "docs");
+  await mkdir(docs, { recursive: true });
+  const deep = path.join(docs, "Deep.md");
+  const top = path.join(workspace, "Top.md");
+  await writeFile(deep, "# Deep");
+  await writeFile(top, "# Top");
+
+  const { added, status } = await serveEditorPages(t);
+  assert.equal(await status(deep), 200, "the note's own folder");
+  assert.equal(await status(top, workspace), 200, "its session's workspace");
+  assert.equal(await status(deep, workspace), 200);
+  // The workspace that arrived is a named one: nothing may widen it now.
+  assert.equal(await status(top, scratch), 403, "a folder above it");
+  assert.deepEqual(
+    added,
+    [docs, workspace].map((folder) => pathToFileURL(folder).toString()),
+  );
+});
+
+test("a named workspace is not widened through a note folder inside it", async (t) => {
+  const scratch = await realpath(
+    await mkdtemp(path.join(tmpdir(), "lumiere-named-")),
+  );
+  t.after(() => rm(scratch, { recursive: true, force: true }));
+  const vault = path.join(scratch, "vault");
+  const docs = path.join(vault, "docs");
+  await mkdir(docs, { recursive: true });
+  const deep = path.join(docs, "Deep.md");
+  const loose = path.join(scratch, "Loose.md");
+  await writeFile(deep, "# Deep");
+  await writeFile(loose, "# Loose");
+
+  const { status } = await serveEditorPages(t);
+  // Named first, then the same folder as a note's own: it stays named.
+  assert.equal(await status(deep, docs), 200);
+  assert.equal(await status(deep), 200);
+  assert.equal(await status(loose), 403, "its folder holds the named one");
+  assert.equal(await status(deep, vault), 403);
 });
 
 const ROUTE_INDEX = {

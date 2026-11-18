@@ -23,9 +23,14 @@ export function toggleComment(state: EditorState): TransactionSpec {
 function toggleAt(state: EditorState, range: SelectionRange) {
   const comment = enclosingComment(state, range);
   if (comment) {
+    // A block comment nothing closes runs to the end of the note: it has
+    // no closing `%%` to remove.
+    const isClosed =
+      comment.to - comment.from >= 4 &&
+      state.sliceDoc(comment.to - 2, comment.to) === "%%";
     const changes = state.changes([
       { from: comment.from, to: comment.from + 2 },
-      { from: comment.to - 2, to: comment.to },
+      ...(isClosed ? [{ from: comment.to - 2, to: comment.to }] : []),
     ]);
     return { changes, range: range.map(changes) };
   }

@@ -19,7 +19,7 @@ The same check Marp uses decides whether the note is a deck, and sets `lumiere.m
 - Requires the host services `hostDocuments`, `hostCommands`, `clipboard`, `dialogs`, `activeEditor`, `settings`, `workspace`, `storage` and `extensions`. Optionally uses `editors`.
 - Listens to `editor/opened` and `editor/activeChanged`.
 - Sets `lumiere.markdown.isMarp` (cleared when the plugin stops).
-- Command: `lumiere.markdown.marp.keepInWorkshop` (**Keep Marp Deck in Workshop**) remembers the deck and reopens it in this editor.
+- Command: `lumiere.markdown.marp.keepInWorkshop` (**Keep Marp Deck in Lumiere**) remembers the deck and reopens it in this editor.
 - Setting: `lumiere.markdown.marp.open` (`workbench` or `textEditor`, default `workbench`).
 - Setting: `lumiere.markdown.plugins.marp.enabled`.
 

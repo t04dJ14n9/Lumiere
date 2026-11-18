@@ -9,6 +9,7 @@ import {
   workspaceRoot,
 } from "../../src/client/address";
 import { followOpens, isEditorDocument } from "../../src/client/index";
+import { resolveEditorTarget } from "../../src/client/note-frame";
 
 test("a session address reads back to its session and decoded path", () => {
   assert.deepEqual(
@@ -151,5 +152,28 @@ test("isEditorDocument distinguishes a Lumière editor page from HTTP 400/403 er
         sel === 'meta[name="lumiere-panel"]' ? { content: "p1" } : null,
     }),
     true,
+  );
+});
+
+test("an absolute note address names no root: the host lets its workspace in later", () => {
+  // The host registers a note's folder that stands in for a workspace (no
+  // root in the query) so that the session's workspace, which holds it, may
+  // still open; a root in the query would be a named workspace instead.
+  const absolute = resolveEditorTarget(
+    "dsh-resource://file/session/s1//v/notes/Start.md",
+    "/v/notes/Start.md",
+  );
+  assert.equal(absolute.containmentRoot, "/v/notes");
+  const query = new URLSearchParams(absolute.src?.split("?")[1]);
+  assert.equal(query.get("path"), "/v/notes/Start.md");
+  assert.equal(query.has("root"), false);
+
+  const relative = resolveEditorTarget(
+    "dsh-resource://file/session/s1/notes/Start.md",
+    "/v/notes/Start.md",
+  );
+  assert.equal(
+    new URLSearchParams(relative.src?.split("?")[1]).get("root"),
+    "/v",
   );
 });

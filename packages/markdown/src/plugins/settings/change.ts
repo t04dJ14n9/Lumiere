@@ -35,7 +35,7 @@ export function placement(key: string): { group: string; name: string } {
 }
 
 /** The description as one plain line, without Markdown code ticks and bold. */
-export function plainDescription(schema: Schema): string {
+function plainDescription(schema: Schema): string {
   const raw = schema.markdownDescription ?? schema.description;
   const text = typeof raw === "string" ? raw : "";
   return text.replace(/[`*_]/g, "").replace(/\s+/g, " ").trim();

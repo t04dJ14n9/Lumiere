@@ -3,7 +3,7 @@
  * handoff shape (region + optional quote). Pure: no DOM or EmbedPDF runtime.
  */
 import type { PageRect } from "./geometry";
-import type { RegionSelection } from "./selection";
+import { MAX_NOTE, type RegionSelection } from "./selection";
 
 /** EmbedPDF rect: origin at page top-left, size in PDF points. */
 export interface AnnotationRect {
@@ -17,6 +17,8 @@ export interface AnnotationSelectionInput {
   rect: AnnotationRect;
   /** Prefer page text in the mark's box; else annotation contents. */
   text?: string;
+  /** The mark's note (its `contents`), for Edit Note… to start from. */
+  note?: string;
 }
 
 /** Region selection for AgentHandoff / agentText (1-based page). */
@@ -37,7 +39,19 @@ export function selectionFromAnnotation(
     rect,
     ...(text ? { text } : {}),
     mark: true,
+    ...noteFields(input.note),
   };
+}
+
+/** A mark's note as the selection carries it: too long to send is said so. */
+function noteFields(note: string | undefined): {
+  note?: string;
+  noteTooLong?: true;
+} {
+  if (!note?.trim()) {
+    return {};
+  }
+  return note.length > MAX_NOTE ? { noteTooLong: true } : { note };
 }
 
 /** Quote preference: underlying page text, else annotation contents. */

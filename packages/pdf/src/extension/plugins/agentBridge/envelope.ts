@@ -5,7 +5,7 @@
  *
  * Lumiere is the aggregator: it returns a Markdown selection when
  * it has one, otherwise it calls this command. This publisher does not call
- * Workshop back, so the two cannot recurse. A missing selection returns
+ * Lumiere back, so the two cannot recurse. A missing selection returns
  * `undefined`.
  */
 import { createHash } from "node:crypto";

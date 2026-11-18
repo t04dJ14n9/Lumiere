@@ -73,11 +73,16 @@ function open(files: Partial<PdfFiles> = {}) {
     writes: () => writes,
     triggerWatch: () => watchCb?.(),
     receive: (message: unknown) => receive?.(message),
+    /** A save the viewer sends because Save into This PDF asked for it. */
+    saveAsked: (message: unknown) => {
+      panel.writeAnnotations("pdf");
+      return receive?.(message);
+    },
   };
 }
 
 test("annotationSave overwrites and suppresses watcher reload", async () => {
-  const { posted, receive, writes, triggerWatch } = open();
+  const { posted, receive, writes, triggerWatch, saveAsked } = open();
   await receive({ type: "ready" });
   const load = posted.find((m) => m.type === "load");
   assert.ok(load && load.type === "load");
@@ -85,7 +90,7 @@ test("annotationSave overwrites and suppresses watcher reload", async () => {
 
   const next = new Uint8Array([37, 80, 68, 70, 45, 97]); // %PDF-a
   const before = posted.length;
-  await receive({
+  await saveAsked({
     type: "annotationSave",
     load: load.load,
     baseSha256: INITIAL_SHA,
@@ -116,15 +121,15 @@ const save = (load: number, base: string, data: Uint8Array) => ({
 });
 
 test("a second save sent before the first one's result is no conflict", async () => {
-  const { posted, receive, panel, writes } = open();
+  const { posted, receive, panel, writes, saveAsked } = open();
   const conflicts: unknown[] = [];
   panel.onAnnotationConflict((payload) => conflicts.push(payload));
   await receive({ type: "ready" });
   const load = posted.find((m) => m.type === "load");
   assert.ok(load && load.type === "load");
   // The viewer still names the file as loaded: the first result is on its way.
-  await receive(save(load.load, INITIAL_SHA, bytesOf(1)));
-  await receive(save(load.load, INITIAL_SHA, bytesOf(1, 2)));
+  await saveAsked(save(load.load, INITIAL_SHA, bytesOf(1)));
+  await saveAsked(save(load.load, INITIAL_SHA, bytesOf(1, 2)));
   assert.equal(conflicts.length, 0);
   assert.equal(writes(), 2);
   const results = posted.filter((m) => m.type === "annotationSaveResult");
@@ -137,7 +142,7 @@ test("a second save sent before the first one's result is no conflict", async ()
 test("overlapping saves reach the disk in the order the viewer sent them", async () => {
   let disk = INITIAL;
   let firstHash = true;
-  const { posted, receive } = open({
+  const { posted, receive, saveAsked } = open({
     read: async () => disk,
     hash: async () => {
       // The first save's check of the disk is the slow one.
@@ -155,8 +160,8 @@ test("overlapping saves reach the disk in the order the viewer sent them", async
   await receive({ type: "ready" });
   const load = posted.find((m) => m.type === "load");
   assert.ok(load && load.type === "load");
-  const first = receive(save(load.load, INITIAL_SHA, bytesOf(1)));
-  const second = receive(save(load.load, INITIAL_SHA, bytesOf(1, 2)));
+  const first = saveAsked(save(load.load, INITIAL_SHA, bytesOf(1)));
+  const second = saveAsked(save(load.load, INITIAL_SHA, bytesOf(1, 2)));
   await Promise.all([first, second]);
   assert.deepEqual([...disk], [...bytesOf(1, 2)]);
 });
@@ -180,7 +185,7 @@ test("Keep mine that cannot write reports the failure as a save does", async () 
 });
 
 test("Retry after a failed write into the PDF asks for the PDF write again", async () => {
-  const { posted, receive, panel } = open({
+  const { posted, receive, panel, saveAsked } = open({
     writeAtomic: async () => {
       throw new Error("EACCES: permission denied");
     },
@@ -188,7 +193,7 @@ test("Retry after a failed write into the PDF asks for the PDF write again", asy
   await receive({ type: "ready" });
   const load = posted.find((m) => m.type === "load");
   assert.ok(load && load.type === "load");
-  await receive(save(load.load, INITIAL_SHA, bytesOf(1)));
+  await saveAsked(save(load.load, INITIAL_SHA, bytesOf(1)));
   panel.postAnnotationRetry();
   assert.deepEqual(posted.at(-1), {
     type: "annotationWrite",
@@ -217,7 +222,7 @@ test("Retry after a failed Keep mine asks for the PDF write again", async () => 
 
 test("Retry goes back to the annotation file once the PDF is saved", async () => {
   let failing = true;
-  const { posted, receive, panel } = open({
+  const { posted, receive, panel, saveAsked } = open({
     writeAtomic: async (_uri, bytes) => {
       if (failing) {
         throw new Error("EACCES: permission denied");
@@ -228,15 +233,15 @@ test("Retry goes back to the annotation file once the PDF is saved", async () =>
   await receive({ type: "ready" });
   const load = posted.find((m) => m.type === "load");
   assert.ok(load && load.type === "load");
-  await receive(save(load.load, INITIAL_SHA, bytesOf(1)));
+  await saveAsked(save(load.load, INITIAL_SHA, bytesOf(1)));
   failing = false;
-  await receive(save(load.load, INITIAL_SHA, bytesOf(1)));
+  await saveAsked(save(load.load, INITIAL_SHA, bytesOf(1)));
   panel.postAnnotationRetry();
   assert.deepEqual(posted.at(-1), { type: "annotationRetry", load: load.load });
 });
 
 test("Retry repeats the annotation file save when that failed after the PDF write", async () => {
-  const { posted, receive, panel } = open({
+  const { posted, receive, panel, saveAsked } = open({
     writeAtomic: async () => {
       throw new Error("EACCES: permission denied");
     },
@@ -250,15 +255,20 @@ test("Retry repeats the annotation file save when that failed after the PDF writ
   await receive({ type: "ready" });
   const load = posted.find((m) => m.type === "load");
   assert.ok(load && load.type === "load");
-  await receive(save(load.load, INITIAL_SHA, bytesOf(1)));
-  await receive({ type: "annotationStoreSave", load: load.load, text: "A" });
+  await saveAsked(save(load.load, INITIAL_SHA, bytesOf(1)));
+  await receive({
+    type: "annotationStoreSave",
+    load: load.load,
+    sha256: INITIAL_SHA,
+    text: "A",
+  });
   panel.postAnnotationRetry();
   assert.deepEqual(posted.at(-1), { type: "annotationRetry", load: load.load });
 });
 
 test("annotationSave conflicts when disk hash diverges", async () => {
   let writes = 0;
-  const { posted, receive, panel } = open({
+  const { posted, receive, panel, saveAsked } = open({
     hash: async () => "other-disk-hash",
     writeAtomic: async () => {
       writes += 1;
@@ -270,7 +280,7 @@ test("annotationSave conflicts when disk hash diverges", async () => {
   await receive({ type: "ready" });
   const load = posted.find((m) => m.type === "load");
   assert.ok(load && load.type === "load");
-  await receive({
+  await saveAsked({
     type: "annotationSave",
     load: load.load,
     baseSha256: load.sha256,
@@ -291,7 +301,7 @@ test("annotationSave suppresses watcher that fires during writeAtomic", async ()
   // Shared disk so mid-write hash() sees the bytes already on disk
   // (realistic: rename completed before the watcher callback).
   let disk = INITIAL;
-  const { posted, receive } = open({
+  const { posted, receive, saveAsked } = open({
     watch: (_uri, onChange) => {
       watchCb = onChange;
       return () => {
@@ -314,7 +324,7 @@ test("annotationSave suppresses watcher that fires during writeAtomic", async ()
   assert.ok(load && load.type === "load");
   const loadsBefore = posted.filter((m) => m.type === "load").length;
   const next = new Uint8Array([37, 80, 68, 70, 45, 98]); // %PDF-b
-  await receive({
+  await saveAsked({
     type: "annotationSave",
     load: load.load,
     baseSha256: INITIAL_SHA,
@@ -330,12 +340,12 @@ test("annotationSave suppresses watcher that fires during writeAtomic", async ()
 });
 
 test("annotationSave survives create+change watcher pair after self-write", async () => {
-  const { posted, receive, writes, triggerWatch } = open();
+  const { posted, receive, writes, triggerWatch, saveAsked } = open();
   await receive({ type: "ready" });
   const load = posted.find((m) => m.type === "load");
   assert.ok(load && load.type === "load");
   const next = new Uint8Array([37, 80, 68, 70, 45, 99]); // %PDF-c
-  await receive({
+  await saveAsked({
     type: "annotationSave",
     load: load.load,
     baseSha256: INITIAL_SHA,
@@ -370,7 +380,7 @@ test("a save whose disk check outlasts a reload does not overwrite the file the 
   let writes = 0;
   let release: (() => void) | undefined;
   let stalled = false;
-  const { posted, receive, panel, triggerWatch } = open({
+  const { posted, receive, panel, triggerWatch, saveAsked } = open({
     read: async () => disk,
     hash: async () => {
       if (!stalled) {
@@ -393,7 +403,7 @@ test("a save whose disk check outlasts a reload does not overwrite the file the 
   await receive({ type: "ready" });
   const load = posted.find((m) => m.type === "load");
   assert.ok(load && load.type === "load");
-  const saving = receive(save(load.load, INITIAL_SHA, bytesOf(1)));
+  const saving = saveAsked(save(load.load, INITIAL_SHA, bytesOf(1)));
   disk = bytesOf(9);
   triggerWatch();
   await untilLoads(posted, 2);
@@ -409,7 +419,7 @@ test("a save whose disk check read the old file before a reload does not overwri
   let writes = 0;
   let release: (() => void) | undefined;
   let stalled = false;
-  const { posted, receive, triggerWatch } = open({
+  const { posted, receive, triggerWatch, saveAsked } = open({
     read: async () => disk,
     hash: async () => {
       const hash = createHash("sha256").update(disk).digest("hex");
@@ -430,7 +440,7 @@ test("a save whose disk check read the old file before a reload does not overwri
   await receive({ type: "ready" });
   const load = posted.find((m) => m.type === "load");
   assert.ok(load && load.type === "load");
-  const saving = receive(save(load.load, INITIAL_SHA, bytesOf(1)));
+  const saving = saveAsked(save(load.load, INITIAL_SHA, bytesOf(1)));
   // Another program replaces the file once the check has read the old one.
   while (!stalled) {
     await new Promise((resolve) => setTimeout(resolve, 1));
@@ -442,4 +452,24 @@ test("a save whose disk check read the old file before a reload does not overwri
   await saving;
   assert.equal(writes, 0);
   assert.deepEqual([...disk], [...bytesOf(9)]);
+});
+
+test("a PDF write the viewer sends without Save into This PDF is refused", async () => {
+  const { panel, posted, receive, writes, errors } = open();
+  await receive({ type: "ready" });
+  const load = posted.find((m) => m.type === "load");
+  assert.ok(load && load.type === "load");
+  // An untrusted viewer sends the PDF unasked.
+  await receive(save(load.load, INITIAL_SHA, bytesOf(1)));
+  assert.equal(writes(), 0);
+  assert.match(errors.at(-1) ?? "", /not asked/u);
+  // Asked once, it writes once; the request is used up.
+  panel.writeAnnotations("pdf");
+  await receive(save(load.load, INITIAL_SHA, bytesOf(1)));
+  await receive(save(load.load, INITIAL_SHA, bytesOf(1, 2)));
+  assert.equal(writes(), 1);
+  // A copy is no request to write the PDF.
+  panel.writeAnnotations("copy");
+  await receive(save(load.load, INITIAL_SHA, bytesOf(1, 2, 3)));
+  assert.equal(writes(), 1);
 });

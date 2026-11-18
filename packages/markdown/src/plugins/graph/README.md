@@ -15,7 +15,9 @@ the drawing by type, tag, folder and text; **Orphans** (on by default, as
 Obsidian's `showOrphans`) hides notes with no links when off. Filtering and
 later edits keep coordinates; a large change waits for **Re-layout**.
 Clicking a node asks the host to open that note. The host checks the scope, the
-snapshot generation and that the id is still in the drawing.
+snapshot generation and that the id is still in the drawing. The generation is
+that of the last drawing sent, so a click still opens while a refresh waits for
+the vault.
 
 ## Files
 

@@ -61,6 +61,20 @@ function own(
   return setting;
 }
 
+/**
+ * Where a per-vault write goes: the resource's workspace folder, else the
+ * workspace, else (no folder open) the user's settings.
+ */
+function folderTarget(resource: string | undefined): SettingTarget {
+  const folder = resource
+    ? vscode.workspace.getWorkspaceFolder(vscode.Uri.parse(resource))
+    : undefined;
+  if (folder) {
+    return "workspaceFolder";
+  }
+  return vscode.workspace.workspaceFolders?.length ? "workspace" : "user";
+}
+
 export function createSettingsAccess(extension: {
   id: string;
   packageJSON: unknown;
@@ -97,15 +111,19 @@ export function createSettingsAccess(extension: {
       const { target, value } = locate(key, resource);
       return { target, value };
     },
-    async update(key, value, resource) {
+    async update(key, value, resource, scope) {
       const checked = checkWrite(settings(), key, value);
       if ("problem" in checked) {
         throw new Error(
           `Not writing ${PREFIX}${String(key)}: ${checked.problem}`,
         );
       }
-      const { config, target } = locate(key, resource);
-      await config.update(key, value, targets[target]);
+      const located = locate(key, resource);
+      const target =
+        scope && located.target === "user"
+          ? folderTarget(resource)
+          : located.target;
+      await located.config.update(key, value, targets[target]);
       return target;
     },
     contributed: settings,

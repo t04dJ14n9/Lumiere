@@ -9,8 +9,8 @@ const escape = (s: string) =>
  * fired `load`, and a module script's whole import graph delays that
  * (`import()` does not), which would hold the snapshot back until the editor
  * was nearly up. Host messages that arrive before the editor's own listener
- * exists are kept in `window.lumiaEarlyMessages` for webview/transport.ts.
- * The script also takes the page's one VS Code API (`window.lumiaVsCodeApi`,
+ * exists are kept in `window.lumiereEarlyMessages` for webview/transport.ts.
+ * The script also takes the page's one VS Code API (`window.lumiereVsCodeApi`,
  * which webview/main.ts then uses) to see whether the webview was restored
  * with a view of its own: it opens elsewhere than the top, so no snapshot.
  */
@@ -18,11 +18,11 @@ function importEditor(entry: string): string {
   const url = JSON.stringify(entry).replaceAll("<", "\\u003c");
   const drop = `document.querySelector(".${SNAPSHOT_CLASS}")?.remove()`;
   return (
-    `(()=>{const api=acquireVsCodeApi();window.lumiaVsCodeApi=api;` +
+    `(()=>{const api=acquireVsCodeApi();window.lumiereVsCodeApi=api;` +
     `if(api.getState()!==undefined){${drop}}` +
     `const early={queue:[],stop(){removeEventListener("message",keep)}};` +
     `function keep(event){if(early.queue.length<1000){early.queue.push(event)}}` +
-    `addEventListener("message",keep);window.lumiaEarlyMessages=early;` +
+    `addEventListener("message",keep);window.lumiereEarlyMessages=early;` +
     `import(${url}).catch((error)=>{${drop};early.stop();console.error(error)})})()`
   );
 }

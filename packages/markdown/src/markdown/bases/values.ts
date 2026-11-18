@@ -142,7 +142,7 @@ export function isEmptyVal(val: RuntimeVal): boolean {
   return false;
 }
 
-export function formatDateVal(ms: number, dateOnly: boolean): string {
+function formatDateVal(ms: number, dateOnly: boolean): string {
   const iso = new Date(ms).toISOString();
   if (dateOnly) {
     return iso.slice(0, 10);

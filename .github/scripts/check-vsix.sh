@@ -6,7 +6,7 @@ set -euo pipefail
 vsix=$1
 max_mb=$2
 
-size=$(stat -c %s "$vsix")
+size=$(wc -c < "$vsix" | tr -d '[:space:]')
 echo "VSIX: $vsix, $((size / 1024)) KB (limit ${max_mb} MB)"
 if (( size > max_mb * 1024 * 1024 )); then
   echo "::error file=$vsix::VSIX is $((size / 1024 / 1024)) MB, over the ${max_mb} MB limit"
@@ -34,9 +34,27 @@ workdir=$(mktemp -d)
 trap 'rm -rf "$workdir"' EXIT
 unzip -q "$vsix" -d "$workdir"
 secrets='(-----BEGIN [A-Z ]*PRIVATE KEY-----|gh[pousr]_[A-Za-z0-9]{36}|github_pat_[A-Za-z0-9_]{40,}|sk-[A-Za-z0-9]{32,}|AKIA[0-9A-Z]{16}|xox[baprs]-[A-Za-z0-9-]{10,}|(DEEPSEEK|OPENAI|ANTHROPIC)_API_KEY *[=:] *["'"'"']?[A-Za-z0-9_-]{16,})'
+known_false_positive=AKIAAOMAAOYCAAEABAAH
 if hits=$(grep -rlE "$secrets" "$workdir"); then
-  echo "::error file=$vsix::Secret-shaped strings found in:"$'\n'"${hits//$workdir\//}"
-  status=1
+  reviewed=''
+  unreviewed=''
+  while IFS= read -r hit; do
+    values=$(grep -aoE "$secrets" "$hit" || true)
+    unknown=$(grep -Fvx "$known_false_positive" <<<"$values" || true)
+    relative=${hit#"$workdir"/}
+    if [[ -n "$unknown" ]]; then
+      unreviewed+="${relative}"$'\n'
+    else
+      reviewed+="${relative}"$'\n'
+    fi
+  done <<<"$hits"
+  if [[ -n "$reviewed" ]]; then
+    echo "Ignored the reviewed PDF-engine false positive in:"$'\n'"$reviewed"
+  fi
+  if [[ -n "$unreviewed" ]]; then
+    echo "::error file=$vsix::Secret-shaped strings found in:"$'\n'"$unreviewed"
+    status=1
+  fi
 fi
 
 # The viewer and its PDF engine must be in the package.

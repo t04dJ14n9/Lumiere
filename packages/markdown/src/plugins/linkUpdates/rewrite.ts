@@ -8,12 +8,13 @@ import {
 import type { FileTextEdits } from "../../shared/host";
 import { formatLinkSource, linkSource } from "./link-source";
 import { withRenamedLabel } from "./rename-label";
+import { linkRewriteEdits, pointAt } from "./yaml-safe-edits";
 import {
   folderOf,
   isMarkdownPath,
   lookupKey,
   nameOf,
-  relativeVaultPath,
+  relativeLinkPath,
   withoutNoteExtension,
   type LinkSyntax,
 } from "../../shared/vault-path";
@@ -94,16 +95,21 @@ export function rewriteLinks(
   context: RewriteContext,
 ): Edit[] {
   const newSource = context.renames.get(sourcePath) ?? sourcePath;
-  return changedLinks(vaultLinks(metadata(text)), sourcePath, context).map(
-    ({ link, newTarget, oldPath }) => ({
-      start: link.position.start,
-      end: link.position.end,
-      text: rewritten(link, targetText(newTarget, newSource, context), {
+  const changes = changedLinks(vaultLinks(metadata(text)), sourcePath, context);
+  const rewrites = changes.map(({ link, newTarget, oldPath }) => ({
+    from: link.position.start.offset,
+    to: link.position.end.offset,
+    rewrite: (original: string) =>
+      rewritten(original, targetText(newTarget, newSource, context), {
         target: newTarget,
         oldPath,
       }),
-    }),
-  );
+  }));
+  return linkRewriteEdits(text, rewrites).map((edit) => ({
+    start: pointAt(text, edit.from),
+    end: pointAt(text, edit.to),
+    text: edit.insert,
+  }));
 }
 
 /** The new path text for a link, without the `.md` of notes. */
@@ -115,7 +121,12 @@ function targetText(
   const withoutNote = (path: string) =>
     isMarkdownPath(path) ? withoutNoteExtension(path) : path;
   if (context.format === "relative") {
-    return withoutNote(relativeVaultPath(folderOf(source), target));
+    const after = lowerCasePaths(context.pathsAfter);
+    return withoutNote(
+      relativeLinkPath(folderOf(source), target, (path) =>
+        after.has(path.toLowerCase()),
+      ),
+    );
   }
   const key = lookupKey(target);
   const isUnique =
@@ -126,18 +137,30 @@ function targetText(
   return withoutNote(target);
 }
 
+const lowerCaseSets = new WeakMap<readonly string[], Set<string>>();
+
+/** `paths` lower-cased, built once per rename rather than once per link. */
+function lowerCasePaths(paths: readonly string[]): Set<string> {
+  let set = lowerCaseSets.get(paths);
+  if (!set) {
+    set = new Set(paths.map((path) => path.toLowerCase()));
+    lowerCaseSets.set(paths, set);
+  }
+  return set;
+}
+
 /**
  * The link's source text with its path replaced, and with an alias or text
  * that showed the renamed file's name (`oldPath`) following it.
  */
 function rewritten(
-  link: LinkMetadata,
+  original: string,
   path: string,
   { target, oldPath }: { target: string; oldPath: string | undefined },
 ): string {
-  const source = linkSource(link.original);
+  const source = linkSource(original);
   if (!source) {
-    return link.original;
+    return original;
   }
   const isWikilink = source.opening.endsWith("[[");
   const extension = !isWikilink && isMarkdownPath(target) ? ".md" : "";

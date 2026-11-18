@@ -135,7 +135,7 @@ function legendOf(nodes: readonly DrawnNode[]): DrawnGraph["legend"] {
     .slice(0, 40);
 }
 
-export function colorFor(key: string): string {
+function colorFor(key: string): string {
   let hash = 0;
   for (const char of key) {
     hash = Math.imul(hash, 31) + char.charCodeAt(0);

@@ -1043,7 +1043,7 @@ Short specifications, beyond the source's tested behaviour:
   auto-inserted one) and inserts `vault.linkText`; Tab takes the text only.
 - **outline**: a native Explorer tree view (like PDF Outline) of the active
   editor's headings, with click to reveal and current-heading tracking, plus
-  a heading Quick Pick on Ctrl+Shift+O in Workshop. VS Code's built-in Markdown
+  a heading Quick Pick on Ctrl+Shift+O in Lumiere. VS Code's built-in Markdown
   provider supplies Outline and breadcrumbs in the plain text editor. This
   removes the in-webview outline panel and its
   **Toggle Outline** title action.
@@ -1168,7 +1168,7 @@ default (§25).
 | Auto pair brackets / Markdown syntax | `lumiere.markdown.autoPair.brackets`, `.markdown` | `true`, `true` |
 | Smart lists | plugin `smartLists` | on |
 | Indent using tabs, Tab indent size | `lumiere.markdown.editor.useTabs`, `.tabSize` | `true`, `4` |
-| (Workshop-specific) Text-selection edge-scroll speed | `lumiere.markdown.editor.dragScrollSpeed` (multiplier 1–10; 1 restores CodeMirror speed) | `4` |
+| (Lumiere-specific) Text-selection edge-scroll speed | `lumiere.markdown.editor.dragScrollSpeed` (multiplier 1–10; 1 restores CodeMirror speed) | `4` |
 | Auto convert HTML | plugin `pasteHtml` | on |
 | Vim key bindings | plugin `vim` | off |
 

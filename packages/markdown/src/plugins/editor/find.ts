@@ -67,5 +67,3 @@ export function findExtension(): Extension {
     }),
   ];
 }
-
-export { countLabel, countMatches, countLimit } from "./find-count";
