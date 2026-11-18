@@ -2,15 +2,19 @@ import test from "node:test";
 import assert from "node:assert/strict";
 import { EditorState } from "@codemirror/state";
 import type { EditorView } from "@codemirror/view";
-import { isInTableCell } from "../../../src/plugins/formatting/table-cell";
+import {
+  isInTableCell,
+  selectionTouchesTableCell,
+} from "../../../src/markdown/table-cell";
 import { formattingCommands } from "../../../src/plugins/formatting/webview";
 
 const TABLE = "| a | b |\n| --- | --- |\n| c | d |";
 const WITH_TEXT = `${TABLE}\n\nafter text`;
 
 // Obsidian's inTableCell check covers these block commands. The formatting
-// layer owns the list, quote and code-block ones; the checklist and callout
-// commands live in the tasks and callouts plugins.
+// layer owns the list, quote and code-block ones; the callouts and tasks
+// plugins refuse Insert Callout and the checklist commands with the same
+// predicate (their own tests).
 const REFUSED = [
   "editor:toggle-bullet-list",
   "editor:toggle-numbered-list",
@@ -112,6 +116,21 @@ test("a selection with one end in a table cell refuses the commands either way",
       assert.equal(dispatched(), false, `${id} dispatches no edit`);
     }
   }
+});
+
+test("selectionTouchesTableCell looks at the head and at the lower end", () => {
+  const inside = WITH_TEXT.indexOf("c");
+  const outside = WITH_TEXT.indexOf("after");
+  assert.equal(selectionTouchesTableCell(state(WITH_TEXT, inside)), true);
+  assert.equal(selectionTouchesTableCell(state(WITH_TEXT, outside)), false);
+  assert.equal(
+    selectionTouchesTableCell(state(WITH_TEXT, inside, outside)),
+    true,
+  );
+  assert.equal(
+    selectionTouchesTableCell(state(WITH_TEXT, outside, inside)),
+    true,
+  );
 });
 
 test("the guard matches Obsidian's list: headings are not refused", () => {

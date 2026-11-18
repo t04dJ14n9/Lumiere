@@ -2,7 +2,8 @@ import test from "node:test";
 import assert from "node:assert/strict";
 import { history, undo } from "@codemirror/commands";
 import { EditorState, type Transaction } from "@codemirror/state";
-import { insertCallout, isCallout } from "./edit";
+import type { EditorView } from "@codemirror/view";
+import { insertCallout, insertCalloutCommand, isCallout } from "./edit";
 
 const applyInsertCallout = (doc: string, anchor: number, head = anchor) => {
   const state = EditorState.create({ doc, selection: { anchor, head } });
@@ -47,6 +48,41 @@ test("Insert Callout inserts the Title/Contents template above a non-empty line 
   assert.equal(
     applyInsertCallout("above\none\ntwo", 6).doc.toString(),
     "above\n\n> [!NOTE] Title\n> Contents\none\ntwo",
+  );
+});
+
+// Obsidian's condition for the template branch is a collapsed selection with
+// only whitespace before the caret (`!sameCursor(from, to) ||
+// line.substring(0, ch).trim()` takes the wrapping branch), so the template
+// goes in at the caret, not at the line start, and a whitespace-only line
+// keeps its whitespace.
+test("Insert Callout inserts the template at a caret that only whitespace precedes", () => {
+  const template = "\n> [!NOTE] Title\n> Contents\n";
+  const indented = applyInsertCallout("  one", 2);
+  assert.equal(indented.doc.toString(), `  ${template}one`);
+  assert.equal(
+    indented.sliceDoc(indented.selection.main.from, indented.selection.main.to),
+    "NOTE",
+  );
+  assert.equal(indented.selection.main.from, 2 + "\n> [!".length);
+
+  const blank = applyInsertCallout("  \nafter", 2);
+  assert.equal(blank.doc.toString(), `  ${template}\nafter`);
+  assert.equal(
+    blank.sliceDoc(blank.selection.main.from, blank.selection.main.to),
+    "NOTE",
+  );
+});
+
+test("Insert Callout wraps when text precedes the caret or the selection is not empty", () => {
+  assert.equal(applyInsertCallout("one", 3).doc.toString(), "> [!NOTE]\n> one");
+  assert.equal(
+    applyInsertCallout("  one", 3).doc.toString(),
+    "> [!NOTE]\n>   one",
+  );
+  assert.equal(
+    applyInsertCallout("one", 0, 1).doc.toString(),
+    "> [!NOTE]\n> one",
   );
 });
 
@@ -108,4 +144,34 @@ test("a callout's type is any text but ], as in Obsidian", () => {
   assert.equal(isCallout("> [!my type]- Folded"), true);
   assert.equal(isCallout("> [!note]text"), false);
   assert.equal(isCallout("> [!info](https://example.com)"), false);
+});
+
+/** A view that records whether the command dispatched an edit. */
+function fakeView(doc: string, anchor: number) {
+  let state = EditorState.create({ doc, selection: { anchor } });
+  let dispatched = false;
+  const view = {
+    get state() {
+      return state;
+    },
+    dispatch(spec: Parameters<EditorState["update"]>[0]) {
+      dispatched = true;
+      state = state.update(spec).state;
+    },
+  } as unknown as EditorView;
+  return { view, didDispatch: () => dispatched };
+}
+
+// Obsidian 1.15.0 registers Insert Callout behind `if (!a.inTableCell)`
+// (issue #693).
+test("Insert Callout is refused inside a table cell and runs outside one", () => {
+  const table = "| a | b |\n| --- | --- |\n| c | d |";
+  const refused = fakeView(table, table.indexOf("c"));
+  assert.equal(insertCalloutCommand(refused.view), false);
+  assert.equal(refused.didDispatch(), false);
+  assert.equal(refused.view.state.doc.toString(), table);
+
+  const allowed = fakeView(`${table}\n\nafter`, `${table}\n\nafter`.length);
+  assert.equal(insertCalloutCommand(allowed.view), true);
+  assert.equal(allowed.didDispatch(), true);
 });

@@ -1,5 +1,7 @@
 import type { EditorState, Line, TransactionSpec } from "@codemirror/state";
+import type { EditorView } from "@codemirror/view";
 import { lineMarkup } from "../../markdown/list-markup";
+import { selectionTouchesTableCell } from "../../markdown/table-cell";
 import { taskMarker } from "../../markdown/tasks";
 import type { TextEdit } from "../../shared/host";
 export function taskEdit(
@@ -71,6 +73,18 @@ export function checklistEdit(
     selection: state.selection.map(set, 1),
     userEvent: "input.checklist",
   };
+}
+
+/**
+ * Run the checklist edit as an editor command. Obsidian's check callback
+ * refuses both commands in a table cell, so nothing is edited there.
+ */
+export function runChecklist(view: EditorView, cycle: boolean): boolean {
+  if (selectionTouchesTableCell(view.state)) {
+    return false;
+  }
+  view.dispatch(checklistEdit(view.state, cycle));
+  return true;
 }
 
 function selectedLines(state: EditorState): Line[] {

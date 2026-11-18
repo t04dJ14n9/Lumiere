@@ -525,9 +525,10 @@ title, then set `lumiere.markdown.plugins.inlineTitle.enabled` to true.
    Obsidian. Click a foldable title to toggle; reload: each panel keeps its
    own state. Clicking the link in a title follows it without folding.
 2. With the caret inside, the source shows and edits normally.
-3. **Insert Callout** wraps the selected lines; at column 0 of a non-empty
-   line it inserts a Title/Contents callout template above the line, and on
-   an empty line it inserts that template with blank lines around it. Check
+3. **Insert Callout** wraps the selected lines, and a caret after text on its
+   line; a collapsed caret with only whitespace before it (column 0, indentation
+   or an empty line) inserts a Title/Contents callout template at the caret,
+   leaving the rest of the line below it. Check
    that `NOTE` is selected and one undo removes the insertion.
 
 ### math
