@@ -221,6 +221,63 @@ test("a Cmd-clicked link opens a tab VS Code keeps, not the preview the next lin
   ]);
 });
 
+test("a link that must not take the focus opens its tab or split with preserveFocus", async (t) => {
+  const directory = await mkdtemp(join(tmpdir(), "mw-navigation-unit-"));
+  t.after(() => rm(directory, { recursive: true, force: true }));
+  const root = pathToFileURL(directory).href;
+  const note = pathToFileURL(join(directory, "Note.md")).href;
+  const file = pathToFileURL(join(directory, "data.csv")).href;
+  const commands: unknown[][] = [];
+  const withFragment = (uri: string) =>
+    Object.assign(parseUri(uri), {
+      with: ({ fragment }: { fragment: string }) =>
+        withFragment(`${uri.split("#")[0]}${fragment ? `#${fragment}` : ""}`),
+    });
+  const { createNavigation } = loadNavigation({
+    Uri: { parse: withFragment },
+    ViewColumn: { Beside: -2 },
+    env: { appName: "Visual Studio Code", uriScheme: "vscode" },
+    window: { tabGroups: { activeTabGroup: { viewColumn: 1 } } },
+    workspace: {
+      getConfiguration: () => ({ get: () => "on" }),
+      async openTextDocument() {},
+    },
+    commands: {
+      async executeCommand(
+        command: string,
+        uri: ReturnType<typeof parseUri>,
+        ...args: unknown[]
+      ) {
+        commands.push([command, uri.toString(), ...args]);
+      },
+    },
+  });
+  const navigation = createNavigation(() => []);
+  const keep = { preserveFocus: true };
+  await navigation.open(root, note, "", "tab", undefined, undefined, keep);
+  await navigation.open(root, note, "", "side", undefined, undefined, keep);
+  await navigation.open(root, file, "", "tab", undefined, undefined, keep);
+  assert.deepEqual(commands, [
+    [
+      "vscode.openWith",
+      note,
+      MARKDOWN_EDITOR.viewType,
+      { viewColumn: 1, preview: false, preserveFocus: true },
+    ],
+    [
+      "vscode.openWith",
+      note,
+      MARKDOWN_EDITOR.viewType,
+      { viewColumn: -2, preserveFocus: true },
+    ],
+    [
+      "vscode.open",
+      file,
+      { viewColumn: 1, preview: false, preserveFocus: true },
+    ],
+  ]);
+});
+
 test("createNote: basename respects newNoteFolder; foldered path is vault-relative", async (t) => {
   const directory = await mkdtemp(join(tmpdir(), "mw-navigation-create-"));
   t.after(() => rm(directory, { recursive: true, force: true }));

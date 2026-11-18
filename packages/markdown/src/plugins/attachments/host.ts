@@ -19,6 +19,7 @@ import {
 } from "../../attachments";
 import type { EditorPanel } from "../editor/api";
 import type {} from "../vault/api";
+import { registerDeleteUnlinked } from "./delete-unlinked";
 import { NO_VAULT, registerDownloadAttachments } from "./download-command";
 import { hostFetch } from "./host-fetch";
 import { containedReader } from "./local-source";
@@ -50,6 +51,7 @@ export const attachmentsHost: Plugin = {
     answerNotePages(ctx);
     reclaimExplorerOpens(ctx);
     registerDownloadAttachments(ctx);
+    registerDeleteUnlinked(ctx);
   },
 };
 

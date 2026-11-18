@@ -241,3 +241,43 @@ test("an oversized clean external rewrite still delivers its updates", async () 
   assert.equal(session.text, oversize);
   await pair.dispose();
 });
+
+test("a dirty change by another extension is recorded as the document has it, never merged back", () => {
+  let text = "a\nb\nc";
+  const applied: unknown[] = [];
+  const doc = fakeDocument({
+    getText: () => text,
+    get isDirty() {
+      return true;
+    },
+  });
+  const session = new Session(
+    doc,
+    fakeHost({
+      hostDocuments: {
+        apply: async (...args) => {
+          applied.push(args);
+          return true;
+        },
+      },
+    }),
+  );
+  const panel = recordingPanel();
+  session.attach("panel", panel.rpc);
+
+  // A formatter rewrites the line the user has unsaved edits in.
+  text = "a\nB\nc";
+  session.changed();
+  text = "a\nB\nc\nend";
+  session.changed();
+
+  assert.equal(session.text, "a\nB\nc\nend");
+  assert.deepEqual(applied, []);
+  // Each broadcast is against the version the panel was at: the log only grows.
+  assert.deepEqual(
+    panel.sent.map((message) => message.version),
+    [0, 1],
+  );
+  assert.equal(session.version, 2);
+  assert.ok(session.authority.since(0).every((u) => u.clientID === "host"));
+});

@@ -2,6 +2,10 @@
 
 ## 0.1.0 (unreleased)
 
+- **Always Update** in the link update prompt still updates the links when
+  the setting cannot be saved (a settings file with errors), and a message
+  says why. The failed save used to drop every link edit of that rename.
+
 - Text inside a rendered callout (or HTML block) can be selected by
   dragging, and copied, as in reading view. A drag used to collapse into a
   caret at the callout's start, revealing its source, or the selection

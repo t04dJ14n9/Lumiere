@@ -112,7 +112,7 @@ function uncheckedMessage(unchecked: readonly string[]): string {
   );
 }
 
-/** Asks the user; "Always" also stops asking for this resource. */
+/** Asks the user; "Always Update" also stops asking in this vault. */
 async function askToUpdate(
   host: RenameHost,
   files: number,
@@ -125,16 +125,35 @@ async function askToUpdate(
     [update, always, "Don't Update"],
   );
   if (answer === always) {
-    // Per vault, as Obsidian's `alwaysUpdateLinks`: a user-wide value would
-    // rewrite links in every other vault without asking.
+    await rememberAlwaysUpdate(host, resource);
+  }
+  return answer === update || answer === always;
+}
+
+/**
+ * Saves `always` per vault, as Obsidian's `alwaysUpdateLinks`: a user-wide
+ * value would rewrite links in every other vault without asking. An explicit
+ * value wins over `.obsidian/app.json` (never written). A save that fails (a
+ * settings file with errors) is reported, and the links are still updated as
+ * asked: a rejection here would drop all of the rename's link edits.
+ */
+async function rememberAlwaysUpdate(
+  host: Pick<RenameHost, "settings" | "dialogs">,
+  resource: string | undefined,
+): Promise<void> {
+  try {
     await host.settings.access.update(
       "linkUpdates.mode",
       "always",
       resource,
       "workspaceFolder",
     );
+  } catch (error) {
+    const reason = error instanceof Error ? error.message : String(error);
+    host.dialogs.error(
+      `Lumiere could not save "Always Update" (${reason}). The links are updated this time.`,
+    );
   }
-  return answer === update || answer === always;
 }
 
 /**

@@ -27,7 +27,9 @@ export const inlineRenderers = Facet.define<
  */
 const revealRangesCache = new WeakMap<EditorState, readonly SelectionRange[]>();
 
-function cachedRevealRanges(state: EditorState): readonly SelectionRange[] {
+export function cachedRevealRanges(
+  state: EditorState,
+): readonly SelectionRange[] {
   let ranges = revealRangesCache.get(state);
   if (!ranges) {
     ranges = revealRanges(state);

@@ -24,6 +24,7 @@ import {
   createEmptyFile,
   fileUriToPath,
   isInside,
+  readContainedBytes,
   writeAtomic,
   writeThroughFile,
   writeThroughBytes,
@@ -80,11 +81,17 @@ function toFile(uri: string): string {
 export const nodeFiles: HostFiles = {
   isInside,
   contain: assertContained,
-  readText: (uri) => readFile(toFile(uri), "utf8"),
-  readBytes: (uri) => readFile(toFile(uri)),
-  save: (uri, text) => writeThroughFile(toFile(uri), text),
-  saveBytes: (uri, data) => writeThroughBytes(toFile(uri), data),
-  create: (uri) => createEmptyFile(toFile(uri)),
+  readText: async (uri, root) =>
+    root === undefined
+      ? readFile(toFile(uri), "utf8")
+      : (await readContainedBytes(toFile(uri), root)).toString("utf8"),
+  readBytes: (uri, root) =>
+    root === undefined
+      ? readFile(toFile(uri))
+      : readContainedBytes(toFile(uri), root),
+  save: (uri, text, root) => writeThroughFile(toFile(uri), text, root),
+  saveBytes: (uri, data, root) => writeThroughBytes(toFile(uri), data, root),
+  create: (uri, root) => createEmptyFile(toFile(uri), root),
   async stat(uri) {
     try {
       const info = await stat(toFile(uri));

@@ -44,10 +44,8 @@ export function createHostVaultSystem(options: HostVaultOptions): VaultSystem {
       return (await files.stat(uri)) !== undefined;
     },
     list: (root, limit, shallow) => listVault(files, { root, limit, shallow }),
-    read: async (uri) => {
-      await containInRoots(files, roots(), uri);
-      return files.readBytes(uri);
-    },
+    read: async (uri) =>
+      files.readBytes(uri, await containInRoots(files, roots(), uri)),
     watch: (root, listener) => watchVault(files, root, listener, options.warn),
     store: (root) => snapshotStore(platform, root),
     settings: (root) => ({

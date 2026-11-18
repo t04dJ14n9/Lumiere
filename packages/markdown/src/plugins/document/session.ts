@@ -154,7 +154,14 @@ export class Session implements DocumentSession {
       this.broadcast();
       return; // keep UndoGroups
     }
-    // Dirty unexpected host rewrite: keep today's clear + record (slim: no merge).
+    // The document changed under unsaved edits, and its text is the whole
+    // truth: a formatter, an agent or another extension edited the live buffer
+    // (VS Code), or the host merged an outside rewrite of the file into the
+    // unsaved text (host-node's NoteDocuments). Either way the unsaved text is
+    // already in it, so merging here again would undo the other change wherever
+    // the two overlap. VS Code never reloads a dirty note from disk (it reports
+    // a conflict on save), so a rewrite of the file never reaches this branch
+    // there. The groups do not know this edit, so grouping starts afresh.
     delete this.saveEcho;
     this.groups.clear();
     this.authority.record(hostText);

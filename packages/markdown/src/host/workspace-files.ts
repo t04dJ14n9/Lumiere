@@ -88,8 +88,19 @@ async function move(from: string, to: string): Promise<void> {
   });
 }
 
-async function remove(uri: string): Promise<void> {
-  await vscode.workspace.fs.delete(parse(uri), { recursive: false });
+async function remove(
+  uri: string,
+  options?: { trash?: boolean },
+): Promise<void> {
+  const trash =
+    options?.trash === true &&
+    vscode.workspace
+      .getConfiguration("files")
+      .get<boolean>("enableTrash", true);
+  await vscode.workspace.fs.delete(parse(uri), {
+    recursive: false,
+    useTrash: trash,
+  });
 }
 
 async function isSymbolicLink(uri: string): Promise<boolean> {
