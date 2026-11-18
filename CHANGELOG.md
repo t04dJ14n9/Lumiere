@@ -1,5 +1,40 @@
 # Changelog
 
+## 0.1.16 (pre-release, 2026-11-18)
+
+- Markdown: an open note is saved 2 s after your last edit, as in Obsidian
+  (`lumiere.markdown.editor.autosave`, on by default; it steps aside when
+  VS Code's own `files.autoSave` is on).
+- Markdown: three Obsidian settings Lumiere can honour.
+  `links.focusNewTab` (off keeps the focus in the note when a link opens in a
+  new tab or to the side), `vault.showUnsupportedFiles` (the Quick Switcher
+  lists every file) and `attachments.deleteUnlinkedAttachments` (when you
+  delete a note in VS Code, offer to delete the attachments only it used).
+- Markdown: **Download Attachments for Current File** shows a checklist of the
+  images to download, names files from the server's `Content-Disposition`,
+  downloads image URLs in properties too, skips responses that are not images
+  and reports them, and never overwrites an existing file.
+- Markdown: Insert Callout, Toggle Checklist Status and Cycle List Checklist
+  do nothing inside a table cell; Insert Callout follows Obsidian's rule for
+  wrapping a line or inserting at the caret; Clear Formatting leaves a plain
+  `[[Page]]` link alone.
+- Markdown: a rename whose Always Update choice cannot be saved still updates
+  its links, and says why the choice was not kept.
+- Markdown: the Git diff view pairs each changed block with the one it most
+  resembles and splits lists into items, as VS Code does.
+- PDF: zooming no longer flashes a page blank for a frame on a slow machine:
+  a page keeps its picture until the zoomed one is ready.
+- PDF: **Save Annotations into This PDF** no longer loses annotations made
+  while it writes, saved by an overlapping write, or brought back by Undo, and
+  never writes over a newer PDF it was not shown.
+- DSH and the Lumiere app: an outside change to a note with unsaved typing is
+  merged into it instead of being overwritten by the next save; where both
+  changed the same lines, the other version is kept in `Note (conflict).md`.
+  Files are written and read only after checking they are inside the
+  workspace, and a page can no longer make the host trust a folder (a note
+  opened by absolute path from outside every registered workspace is
+  refused).
+
 ## 0.1.15 (pre-release, 2026-11-18)
 
 - Markdown: drag across a rendered callout's text to select it, and copy
