@@ -100,12 +100,13 @@ export class ParseQueue {
       const overlay = this.overlays.get(path);
       const text = overlay ?? (await this.readText(file.uri));
       const hash = this.options.hash(text);
-      const metadata = await this.metadataFor(hash, text);
+      const isUnsaved = overlay !== undefined;
+      const metadata = await this.metadataFor(hash, text, isUnsaved);
       if (this.stopped || hasChanged(file, index.file(path))) {
         // A newer version of the file is already queued.
         return;
       }
-      if (overlay === undefined) {
+      if (!isUnsaved) {
         this.options.snapshot.setFile(path, {
           uri: file.uri,
           mtime: file.mtime,
@@ -126,15 +127,22 @@ export class ParseQueue {
     return new TextDecoder().decode(await this.options.fs.read(uri));
   }
 
-  /** Identical text is parsed once, across files and sessions. */
-  private async metadataFor(hash: string, text: string) {
+  /**
+   * Identical text is parsed once, across files and sessions. Unsaved text
+   * reuses what is known but is not kept: the snapshot keeps the metadata of
+   * files on disk, and each typing pause would otherwise add an entry that
+   * stays in memory until the next save.
+   */
+  private async metadataFor(hash: string, text: string, isUnsaved: boolean) {
     const { snapshot } = this.options;
     const known = snapshot.metadata[hash];
     if (known) {
       return known;
     }
     const metadata = await this.options.parse(text);
-    snapshot.setMetadata(hash, metadata);
+    if (!isUnsaved) {
+      snapshot.setMetadata(hash, metadata);
+    }
     return metadata;
   }
 }
