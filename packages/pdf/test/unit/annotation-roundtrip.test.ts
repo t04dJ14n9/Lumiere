@@ -1,5 +1,7 @@
 import assert from "node:assert/strict";
+import { readFileSync } from "node:fs";
 import { mkdtemp, readFile } from "node:fs/promises";
+import { createRequire } from "node:module";
 import { tmpdir } from "node:os";
 import path from "node:path";
 import { pathToFileURL } from "node:url";
@@ -34,6 +36,12 @@ const line = {
   lowerRight: { x: 192, y: 298 },
 };
 
+const wasm = readFileSync(
+  createRequire(import.meta.url).resolve(
+    "@embedpdf/engine-runtime-wasm32/embedpdf.wasm",
+  ),
+);
+
 /** A local engine, as the viewer opens documents, destroyed when the test ends. */
 async function withEngine<T>(
   run: (
@@ -42,7 +50,11 @@ async function withEngine<T>(
     ) => ReturnType<ReturnType<typeof localEngine>["open"]>,
   ) => Promise<T>,
 ): Promise<T> {
-  const engine = localEngine();
+  // PDFium as WebAssembly, as the viewer and every other host run it. In Node
+  // the runtime would otherwise load its native addon for this platform,
+  // which no part of Lumiere ships and which crashed the Windows runner
+  // (0xE0000008) before any test reported.
+  const engine = localEngine({ runtime: { prefer: "wasm", wasmBinary: wasm } });
   try {
     return await run((bytes) =>
       engine.open(
