@@ -56,11 +56,31 @@ export class TableGrid {
       return undefined;
     }
     const from = this.start();
+    return this.holdsSource(from) ? from : undefined;
+  }
+
+  /**
+   * Where cell rendering takes source lines from. The block's start is exact
+   * after each widget update, but CodeMirror keeps a widget whose source did
+   * not change, so an edit above the table leaves it stale; the mounted
+   * root's position is used then. Never past the note's end.
+   */
+  private renderStart(): number {
+    let from = this.block.from;
+    if (!this.holdsSource(from) && this.root.isConnected) {
+      from = this.start();
+    }
+    return Math.max(0, Math.min(from, this.outer.state.doc.length));
+  }
+
+  private holdsSource(from: number): boolean {
     const to = from + this.block.source.length;
     const doc = this.outer.state.doc;
-    return to <= doc.length && doc.sliceString(from, to) === this.block.source
-      ? from
-      : undefined;
+    return (
+      from >= 0 &&
+      to <= doc.length &&
+      doc.sliceString(from, to) === this.block.source
+    );
   }
 
   commandGroup(): string {
@@ -108,6 +128,7 @@ export class TableGrid {
     this.disposeContent();
     this.table.replaceChildren();
     this.cells = [];
+    const start = this.renderStart();
     const header = this.table.createTHead();
     const body = this.table.createTBody();
     this.model.rows.forEach((row, rowIndex) => {
@@ -131,11 +152,14 @@ export class TableGrid {
       });
       this.cells.push(cells);
       (rowIndex === 0 ? header : body).append(element);
-      cells.forEach((_cell, column) => this.display({ row: rowIndex, column }));
+      cells.forEach((_cell, column) =>
+        this.display({ row: rowIndex, column }, start),
+      );
     });
   }
 
   refresh(active?: CellPosition, previous?: Table, force = false): void {
+    let start: number | undefined;
     this.cells.forEach((row, rowIndex) =>
       row.forEach((_cell, column) => {
         const position = { row: rowIndex, column };
@@ -153,14 +177,16 @@ export class TableGrid {
             prevCell.text !== nextCell.text ||
             offsetSensitive
           ) {
-            this.display(position);
+            start ??= this.renderStart();
+            this.display(position, start);
           }
         }
       }),
     );
   }
 
-  display(position: CellPosition): void {
+  /** Render one cell; callers rendering many pass `renderStart()` once. */
+  display(position: CellPosition, start = this.renderStart()): void {
     const cell = this.model.rows[position.row]?.[position.column];
     const element = this.contentElement(position);
     if (!cell || !element) {
@@ -168,7 +194,8 @@ export class TableGrid {
     }
     this.content.disposeContent(element);
     this.align(position);
-    this.content.renderContent(element, cell.text, this.block.from + cell.from);
+    const offset = Math.min(start + cell.from, this.outer.state.doc.length);
+    this.content.renderContent(element, cell.text, offset);
   }
 
   disposeContent(): void {

@@ -94,3 +94,46 @@ test("a table command on a mounted table replaces exactly the table", () => {
     note.replace(table, "| x | y |\n| --- | --- |\n| 1 | 2 |"),
   );
 });
+
+/** Rendered cells for `display`: each holds a content element. */
+function fakeCells(model: NonNullable<ReturnType<typeof parseTable>>) {
+  return model.rows.map((row) =>
+    row.map(() => {
+      const content = {};
+      return {
+        style: {},
+        setAttribute() {},
+        querySelector: () => content,
+      };
+    }),
+  ) as unknown as HTMLElement[][];
+}
+
+function renderedOffsets(
+  target: TableGrid,
+): { text: string; offset: number }[] {
+  return (target as unknown as { rendered: { text: string; offset: number }[] })
+    .rendered;
+}
+
+test("leaving a cell after an edit above the table renders it at the table's place", () => {
+  // The widget was built when the intro stood above the table; deleting the
+  // intro keeps the widget (same source), so its block start is stale.
+  const outer = outerEditor(`${table}\n\nTail`, () => 0);
+  const target = grid(outer.view, { connected: true, from: tableFrom });
+  target.cells = fakeCells(target.model);
+  target.display({ row: 1, column: 1 });
+  assert.deepEqual(renderedOffsets(target), [
+    { text: "2", offset: target.model.rows[1]![1]!.from },
+  ]);
+});
+
+test("a cell of an unmounted table renders within the note", () => {
+  const outer = outerEditor(table, () => 0);
+  const target = grid(outer.view, { connected: false, from: tableFrom });
+  target.cells = fakeCells(target.model);
+  target.display({ row: 1, column: 1 });
+  const rendered = renderedOffsets(target);
+  assert.equal(rendered.length, 1);
+  assert.ok(rendered[0]!.offset <= table.length);
+});
