@@ -270,3 +270,30 @@ test("an overlay at the default delay re-indexes unresolved links after the paus
   });
   await indexer.dispose();
 });
+
+test("a settings change that leaves the index's settings alone re-resolves nothing", async () => {
+  const fs = new MemoryFileSystem({ "A.md": "[[B]]", "B.md": "" });
+  const options = indexerOptions(fs);
+  const settings = options.settings();
+  let current = settings;
+  const indexer = new VaultIndexer({ ...options, settings: () => current });
+  await indexer.settled();
+  let configured = 0;
+  const configure = indexer.index.configure.bind(indexer.index);
+  indexer.index.configure = (next) => {
+    configured++;
+    configure(next);
+  };
+
+  current = { ...settings, rootMarkers: [".vault"] };
+  indexer.applySettings();
+  indexer.applySettings();
+  assert.equal(configured, 0);
+
+  current = { ...settings, excludedFiles: ["B.md"] };
+  indexer.applySettings();
+  indexer.applySettings();
+  assert.equal(configured, 1);
+  assert.equal(indexer.index.file("B.md")?.excluded, true);
+  await indexer.dispose();
+});

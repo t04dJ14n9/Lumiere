@@ -20,6 +20,12 @@ import type {
 const FILE_LIMIT = 50_000;
 /** At most one snapshot write per interval (DESIGN §12.2). */
 const SAVE_DELAY_MS = 2_000;
+
+/** The settings that shape the index, comparable as one string. */
+function indexSettingsKey(settings: VaultSettings): string {
+  const { folderNote, linkFormat, excludedFiles } = settings;
+  return JSON.stringify([folderNote, linkFormat, excludedFiles]);
+}
 /**
  * Typing in an open note re-indexes it after this pause. Obsidian updates
  * unresolved link chrome near-instantly; 300 ms left new `[[Missing]]`
@@ -63,6 +69,8 @@ export class VaultIndexer {
   private disposed = false;
   private reconciling = false;
   private isExcluded: (path: string) => boolean;
+  /** The settings the index was built with (`indexSettingsKey`). */
+  private indexedWith: string;
   /** Resolves as soon as the initial file list is in the index. */
   private fileListReady: Promise<void>;
   private markFileListReady!: () => void;
@@ -74,7 +82,9 @@ export class VaultIndexer {
   private saving: Promise<void> = Promise.resolve();
 
   constructor(private readonly options: IndexerOptions) {
-    const { folderNote, linkFormat, excludedFiles } = options.settings();
+    const settings = options.settings();
+    const { folderNote, linkFormat, excludedFiles } = settings;
+    this.indexedWith = indexSettingsKey(settings);
     this.isExcluded = exclusionMatcher(excludedFiles);
     this.index = new MemoryVaultIndex({
       root: options.root,
@@ -141,9 +151,18 @@ export class VaultIndexer {
     this.queue.clearOverlay(path);
   }
 
-  /** Settings changed: apply exclusion and link settings to every file. */
+  /**
+   * Settings changed: apply exclusion and link settings to every file. That
+   * re-resolves every link synchronously, so a change to anything else (most
+   * settings) leaves the index alone.
+   */
   applySettings(): void {
     const settings = this.options.settings();
+    const key = indexSettingsKey(settings);
+    if (key === this.indexedWith) {
+      return;
+    }
+    this.indexedWith = key;
     this.index.configure(settings);
     this.isExcluded = exclusionMatcher(settings.excludedFiles);
     this.index.replaceFiles(this.index.files().map((file) => this.entry(file)));

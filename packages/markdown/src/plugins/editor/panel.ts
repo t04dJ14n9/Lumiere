@@ -203,9 +203,16 @@ function registerConfiguration(
   document: PanelShell["document"],
   host: Pick<HostServices, "settings" | "clipboard">,
 ): void {
+  // The webview reconfigures every plugin on each message: send only news.
+  let sent: string | undefined;
   owned.effect(() =>
     host.settings.onChange(() => {
-      sendConfiguration(rpc, document, host);
+      const configuration = panelConfiguration(document, host);
+      const key = JSON.stringify(configuration);
+      if (key !== sent) {
+        sent = key;
+        sendConfiguration(rpc, configuration);
+      }
     }),
   );
 }
@@ -273,29 +280,31 @@ function panelReporting(
     async refreshPlugins() {
       await ready;
       owned.emit("editor/configure");
-      sendConfiguration(rpc, document, host);
+      sendConfiguration(rpc, panelConfiguration(document, host));
       await owned.settled();
       remote = await rpc.call(protocol, "plugins", {});
     },
   };
 }
+/** What the webview is configured with, from the note's settings. */
+function panelConfiguration(
+  document: PanelShell["document"],
+  host: Pick<HostServices, "settings">,
+) {
+  const config = host.settings.forNote(document);
+  return {
+    logging: config.debugLogging ?? false,
+    editor: editorConfig.parse(config.editor ?? {}),
+    features: config.preset === "minimal" ? {} : (config.features ?? {}),
+  };
+}
 function sendConfiguration(
   rpc: Endpoint,
-  document: PanelShell["document"],
-  host: Pick<HostServices, "settings" | "clipboard">,
+  configuration: ReturnType<typeof panelConfiguration>,
 ): void {
-  const config = host.settings.forNote(document);
-  rpc.notify(protocol, "configureLogging", config.debugLogging ?? false);
-  rpc.notify(
-    protocol,
-    "configureEditor",
-    editorConfig.parse(config.editor ?? {}),
-  );
-  rpc.notify(
-    protocol,
-    "configure",
-    config.preset === "minimal" ? {} : (config.features ?? {}),
-  );
+  rpc.notify(protocol, "configureLogging", configuration.logging);
+  rpc.notify(protocol, "configureEditor", configuration.editor);
+  rpc.notify(protocol, "configure", configuration.features);
 }
 
 /**
