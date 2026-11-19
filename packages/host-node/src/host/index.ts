@@ -28,6 +28,8 @@ export {
 } from "./routes";
 export type { HostIdentity } from "./services";
 export type { GitTrust } from "./git";
+export type { VaultFileOperations } from "./file-operations";
+export type { Rename } from "./note-renames";
 /** A setting and its default (StartOptions.contributed), for an embedder that changes defaults. */
 export type { ContributedSetting } from "@workshop/markdown/portable";
 export type { MenuContribution } from "./context-menu";

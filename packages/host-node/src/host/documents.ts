@@ -15,6 +15,7 @@ import {
 } from "@workshop/markdown/portable";
 import { writeConflictCopy } from "./conflict-copy";
 import type { NoteFiles } from "./note-files";
+import { isAtOrUnder, NoteRenames, type WillRename } from "./note-renames";
 
 export { noteFiles, type NoteFiles } from "./note-files";
 
@@ -118,6 +119,8 @@ export class NoteDocuments implements HostDocuments {
   private readonly writing = new Set<string>();
   /** Notes whose reload was dropped during a save, to read again after it. */
   private readonly rereadAfterWrite = new Set<string>();
+  /** Renames and moves that update links (note-renames.ts). */
+  readonly renames: NoteRenames;
 
   constructor(
     private readonly files: NoteFiles,
@@ -125,7 +128,9 @@ export class NoteDocuments implements HostDocuments {
     /** Where a reload that failed goes: no one awaits one. */
     private readonly log: (message: string) => void = (message) =>
       console.warn(message),
-  ) {}
+  ) {
+    this.renames = new NoteRenames(files, this);
+  }
 
   fingerprint(text: string): string {
     return this.files.sha256(text);
@@ -209,8 +214,22 @@ export class NoteDocuments implements HostDocuments {
     return this.notes.get(uri)?.getText();
   }
 
-  async rename(): Promise<void> {
-    throw new Error("Renaming a note is not available here yet");
+  /** Rename the note's file in its folder (the inline title), as VS Code checks it. */
+  readonly rename = (document: HostDocument, target: string) =>
+    this.renames.renameNote(document.uri, target);
+
+  /**
+   * The file at `uri`, or every file in the folder, went away (moved,
+   * deleted, put in the trash): the notes open there are closed clean, so
+   * their pages closing writes nothing back, and their edits are refused.
+   */
+  forget(uri: string): void {
+    for (const note of this.notes.values()) {
+      if (isAtOrUnder(note.uri, uri)) {
+        note.isDirty = false;
+        this.close(note.uri);
+      }
+    }
   }
 
   onChange(listener: ChangeListener): Disposer {
@@ -225,12 +244,11 @@ export class NoteDocuments implements HostDocuments {
     return subscribe(this.willSave, listener);
   }
 
-  /** No host reports renames here, so there is nothing to update links for. */
-  onWillRename(): Disposer {
-    return () => {};
-  }
+  /** Before a rename moves files; the listeners' edits apply after it. */
+  readonly onWillRename = (listener: WillRename): Disposer =>
+    this.renames.onWillRename(listener);
 
-  /** Nor deletions, so there are no attachments to offer to delete. */
+  /** No host reports deletions here, so there are no attachments to offer to delete. */
   onWillDelete(): Disposer {
     return () => {};
   }

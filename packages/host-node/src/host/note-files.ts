@@ -7,6 +7,11 @@ export interface NoteFiles extends Pick<
   "readText" | "save" | "watch" | "create"
 > {
   sha256(text: string): string;
+  /**
+   * Move a file or folder inside the workspace roots, refusing a target
+   * that exists; without it, notes cannot be renamed (start-host.ts gives it).
+   */
+  move?(from: string, to: string): Promise<void>;
 }
 
 export function noteFiles(platform: HostPlatform): NoteFiles {

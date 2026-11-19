@@ -26,6 +26,10 @@ import {
   type MenuContribution,
 } from "./context-menu";
 import { AUTOSAVE_DELAY_MS, NoteDocuments, noteFiles } from "./documents";
+import {
+  createFileOperations,
+  type VaultFileOperations,
+} from "./file-operations";
 import { CONNECT_TIMEOUT_MS, PanelHub } from "./panels";
 import type { HostPlatform } from "./platform";
 import {
@@ -38,7 +42,7 @@ import { servedDefaults, SETTINGS_FILE } from "./settings";
 import { TreeHub } from "./trees";
 import { uriName } from "./uris";
 import { createHostVaultSystem } from "./vault";
-import { STATE_FILE } from "./workspace";
+import { createWorkspaceFiles, STATE_FILE } from "./workspace";
 
 export interface HostStartOptions {
   readonly identity: HostIdentity;
@@ -65,6 +69,8 @@ export interface LumiereHost {
   readonly settings: HostSettings;
   /** Lumière's Command Palette commands, filtered by active editor and settings. */
   readonly commands?: CommandPalette;
+  /** New notes and folders, renames that update links, deletion (file-operations.ts). */
+  readonly files: VaultFileOperations;
   /**
    * Trust a workspace: vaults are found inside it, and the pages of
    * `createEditorRoutes` open only from a folder inside one. The embedder
@@ -98,17 +104,14 @@ export async function startHost(
   options: HostStartOptions,
 ): Promise<LumiereHost> {
   const roots = new Set<string>();
+  const rootList = () => [...roots];
   const log = (message: string) => options.logger.warn(message);
-  const documents = new NoteDocuments(
-    noteFiles(platform),
-    AUTOSAVE_DELAY_MS,
-    log,
-  );
+  const { documents, files } = createNotes(platform, rootList, log);
   const panels = new PanelHub(documents, CONNECT_TIMEOUT_MS, log);
   const keys = new ContextKeys();
   const commands = createHostCommands(log, keys);
   const trees = new TreeHub(commands);
-  const git = options.git?.(() => [...roots]);
+  const git = options.git?.(rootList);
   const { settings, root } = await bootstrapPlugins({
     platform,
     options,
@@ -117,7 +120,7 @@ export async function startHost(
     panels,
     trees,
     commands,
-    roots: () => [...roots],
+    roots: rootList,
     log,
   });
   const stopMenus = registerContextMenus({
@@ -141,6 +144,7 @@ export async function startHost(
       viewType: MARKDOWN_EDITOR.viewType,
       log,
     }),
+    files,
     addRoot: (item) => {
       roots.add(item.replace(/\/+$/, ""));
     },
@@ -152,6 +156,29 @@ export async function startHost(
     saveAll: () => documents.saveAll(),
     stop: () => stopHost({ stopMenus, panels, root, git, documents }),
   };
+}
+
+/**
+ * The notes, and what the embedder's file tree does to files; renames move
+ * files only inside the workspace roots.
+ */
+function createNotes(
+  platform: HostPlatform,
+  roots: () => readonly string[],
+  log: (message: string) => void,
+): { documents: NoteDocuments; files: VaultFileOperations } {
+  const contained = createWorkspaceFiles(platform.files, roots);
+  const documents = new NoteDocuments(
+    { ...noteFiles(platform), move: (from, to) => contained.move(from, to) },
+    AUTOSAVE_DELAY_MS,
+    log,
+  );
+  const files = createFileOperations({
+    files: platform.files,
+    roots,
+    documents,
+  });
+  return { documents, files };
 }
 
 async function bootstrapPlugins({

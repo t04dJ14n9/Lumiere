@@ -80,7 +80,10 @@ export interface HostFiles {
    * another case of its name.
    */
   move(from: string, to: string): Promise<void>;
-  /** Remove one file (not a folder's contents); a missing one is not an error. */
+  /**
+   * Remove one file, or an empty folder (not a folder's contents); a missing
+   * one is not an error.
+   */
   remove(uri: string): Promise<void>;
   /** Hear a file change, appear or go away; it and the folders above it need not exist yet. */
   watch(uri: string, listener: () => void): () => void;

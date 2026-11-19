@@ -30,6 +30,7 @@ export {
 } from "../shared/link-location";
 export { RevealRouter, chooseRevealPanel } from "./reveal-router";
 export { SourceCoordinates } from "../shared/document/coordinates";
+export { applyLineColEdits, isSameText } from "./rename-save";
 export {
   diskChangeConflicts,
   mergeDiskChange,

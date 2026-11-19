@@ -13,6 +13,7 @@ import {
   readFile,
   rename,
   rm,
+  rmdir,
   stat,
   writeFile,
 } from "node:fs/promises";
@@ -145,8 +146,9 @@ export const nodeFiles: HostFiles = {
   copy: (from, to) =>
     cp(toFile(from), toFile(to), { recursive: true, force: true }),
   move: (from, to) => moveEntry(toFile(from), toFile(to)),
-  // A file, not a tree: VS Code's workspace fs deletes one entry.
-  remove: (uri) => rm(toFile(uri), { recursive: false, force: true }),
+  // A file or an empty folder, not a tree: VS Code's workspace fs deletes
+  // one entry.
+  remove: (uri) => removeEntry(toFile(uri)),
   watch: (uri, listener) => watchFile(toFile(uri), listener),
   watchTree: (uri, listener) => watchTree(toFile(uri), listener),
   toPath: (uri) => fileURLToPath(uri),
@@ -154,6 +156,18 @@ export const nodeFiles: HostFiles = {
   uriOf: (file) => pathToFileURL(fileURLToPath(fileUri(file))).href,
   realContains,
 };
+
+/** One file, or an empty folder, which `rm` without `recursive` refuses. */
+async function removeEntry(file: string): Promise<void> {
+  try {
+    await rm(file, { recursive: false, force: true });
+  } catch (error) {
+    if ((error as { code?: string }).code !== "ERR_FS_EISDIR") {
+      throw error;
+    }
+    await rmdir(file);
+  }
+}
 
 /**
  * Move a file or folder as VS Code's rename without overwrite does: a

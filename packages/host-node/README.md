@@ -110,6 +110,8 @@ forbids this package from importing `vscode` or any embedder.
 - `src/host/start.ts`: starts the plugins over the services below.
 - `src/host/services.ts`: every host service the plugins inject.
 - `src/host/documents.ts`: notes on disk, edited in memory, saved after a pause (at once when the page is hidden or goes away); a change another program makes to the file is merged into unsaved text.
+- `src/host/note-renames.ts`: renaming and moving notes and folders with the links to them updated, as VS Code's rename does: the will-rename listeners (the linkUpdates plugin) plan the edits before the files move, and they apply after it, to an open note or the file. The inline title renames through it too.
+- `src/host/file-operations.ts`: what an embedder's file tree does (`LumiereHost.files`): new notes and folders, renames and moves, deletion of a file or a whole folder (a symbolic link is removed, never followed), each checked against the workspace roots; `onDidRename` names what moved, so the embedder can show its tabs at the new names.
 - `src/host/conflict-copy.ts`: where another program's version of a note goes when unsaved typing on the same lines is saved over it.
 - `src/host/panels.ts`, `src/host/panel.ts`: editor pages as panels, and their sockets.
 - `src/host/routes.ts`, `src/host/page.ts`, `src/host/static.ts`: the routes above.
