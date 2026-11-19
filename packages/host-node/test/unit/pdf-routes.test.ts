@@ -182,6 +182,21 @@ test("a PDF's page runs the viewer with the shim, and its bytes are served by lo
   assert.equal(bytes.status, 200);
   assert.equal(bytes.headers.get("content-type"), "application/pdf");
   assert.equal(await bytes.text(), PDF);
+  assert.equal(bytes.headers.get("accept-ranges"), "bytes");
+  const part = await fetch(origin + load.data.url, {
+    headers: { range: "bytes=1-4" },
+  });
+  assert.equal(part.status, 206);
+  assert.equal(
+    part.headers.get("content-range"),
+    `bytes 1-4/${Buffer.byteLength(PDF)}`,
+  );
+  assert.equal(await part.text(), PDF.slice(1, 5));
+  const beyond = await fetch(origin + load.data.url, {
+    headers: { range: `bytes=${Buffer.byteLength(PDF)}-` },
+  });
+  assert.equal(beyond.status, 416);
+  await beyond.text();
   const stale = new URL(origin + load.data.url);
   stale.searchParams.set("load", String(load.data.load + 1));
   assert.equal((await fetch(stale)).status, 404);
