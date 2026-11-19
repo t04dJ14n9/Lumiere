@@ -7,8 +7,8 @@ import {
   formatPdfOpenTarget,
   parsePdfEmbedSubpath,
   pdfFilename,
-  renderPdfPageFromBytes,
 } from "../../../src/plugins/embeds/pdf-embed";
+import { openPdfInEngine } from "../../../src/plugins/embeds/pdf-engine";
 
 const require = createRequire(import.meta.url);
 
@@ -65,6 +65,37 @@ const wasmArrayBuffer = wasmBuffer.buffer.slice(
   wasmBuffer.byteOffset,
   wasmBuffer.byteOffset + wasmBuffer.byteLength,
 );
+
+/** Open `bytes`, render one page about `width` wide, and close the document. */
+async function renderPdfPageFromBytes(
+  bytes: Uint8Array,
+  page: number,
+  width: number,
+  wasm: ArrayBuffer,
+) {
+  const document = await openPdfInEngine(bytes, wasm);
+  try {
+    return await document.render(page, width);
+  } finally {
+    await document.close();
+  }
+}
+
+test("an open PDF renders page after page without opening it again", async () => {
+  const document = await openPdfInEngine(
+    turnedPdf(300, 400, 0),
+    wasmArrayBuffer,
+  );
+  try {
+    const first = await document.render(1, 300);
+    const again = await document.render(1, 600);
+    assert.equal(document.pageCount, 1);
+    assert.equal(first.width, 300);
+    assert.equal(again.width, 600);
+  } finally {
+    await document.close();
+  }
+});
 
 test("renderPdfPageFromBytes renders PDF pages via EmbedPDF's engine", async () => {
   const samplePdf = new Uint8Array(
