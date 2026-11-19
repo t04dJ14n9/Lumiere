@@ -18,6 +18,7 @@ import {
   reportEngineFailure,
   useEngineFailure,
 } from "./engine-failure";
+import { engineHealth } from "./engine-health";
 import { postToHost } from "./host";
 import { PasswordPrompt } from "./password-prompt";
 import { DOCUMENT_ID, viewerPlugins } from "./plugins";
@@ -115,6 +116,19 @@ function useHostEngine(
   return state;
 }
 
+/**
+ * Why the engine stopped working since it started (`engine-health.ts`);
+ * undefined while it works.
+ */
+function useEngineDeath(engine: ViewerEngine | undefined): string | undefined {
+  const [cause, setCause] = useState<string>();
+  useEffect(() => {
+    const health = engine && engineHealth(engine);
+    return health?.onDeath(setCause);
+  }, [engine]);
+  return cause;
+}
+
 /** The pane this viewer opens in, for the pictures it will draw. */
 function currentPane(): PaneSize {
   return {
@@ -144,8 +158,10 @@ function EngineSession({
   // The engine opened the PDF, or said why it cannot: the worker works.
   const [answered, setAnswered] = useState(false);
   const markAnswered = useCallback(() => setAnswered(true), []);
+  const died = useEngineDeath(engine);
   useEngineFailure({
-    error,
+    // A worker that dies before the PDF opened gives way to the main thread.
+    error: error ?? (worker && !answered ? died : undefined),
     worker,
     answered,
     onWorkerFailure,
@@ -153,6 +169,9 @@ function EngineSession({
   });
   if (!engine) {
     return <Status text="Starting the PDF engine…" />;
+  }
+  if (died !== undefined && (answered || !worker)) {
+    return <EngineStopped cause={died} onReload={() => reload(host)} />;
   }
   return (
     <EmbedPDF
@@ -278,6 +297,40 @@ function OpenFailed({
           : "This PDF could not be opened: the file is damaged or is not a PDF."
       }
     />
+  );
+}
+
+/**
+ * Start a new engine, once the dead one has stopped, and ask the extension
+ * for the PDF again: the page let its own copy go once the PDF was open.
+ * The extension sends it as to a new page, with the reading place.
+ */
+function reload(host: EngineHost<ViewerEngine>): void {
+  host.restart();
+  postToHost({ type: "ready" });
+}
+
+/**
+ * The engine stopped working after the PDF opened: say so, rather than
+ * leave pages that never draw and calls that never answer.
+ */
+function EngineStopped({
+  cause,
+  onReload,
+}: {
+  cause: string;
+  onReload: () => void;
+}): React.JSX.Element {
+  useEffect(() => {
+    reportToHost(`The PDF engine stopped working: ${cause}`);
+  }, [cause]);
+  return (
+    <div className="status engine-stopped" role="alert">
+      <p>The PDF engine stopped working, so this PDF cannot be shown.</p>
+      <button type="button" onClick={onReload}>
+        Reload
+      </button>
+    </div>
   );
 }
 

@@ -25,7 +25,10 @@ is opt-in (`lumiere.pdf.regions.enabled`, default off).
   and Lumiere says it can no longer read it.
   A password-protected PDF asks for its password in the viewer; the password
   stays in the viewer and is never kept, so each open asks again. A damaged
-  file, or one that is not a PDF, says so at once.
+  file, or one that is not a PDF, says so at once. If the PDF engine stops
+  working once the PDF is open (its worker fails, or PDFium crashes), the
+  viewer says so and offers **Reload**, which starts a new engine at the
+  same page, instead of leaving pages that never draw.
 - **View controls.** A View picker in the editor title/status bar, and a
   compact **View** menu in the slim toolbar of the web and iPad hosts, selects zoom, layout,
   scrolling mode and direction. Saved choices and reading position return
@@ -356,6 +359,7 @@ src/
     ├── outbox.ts               state reports batched into versioned patches
     ├── engine-host.ts          the page's one engine, kept across reloads
     ├── engine-failure.ts       when the worker gives way to the main thread
+    ├── engine-health.ts        an engine that dies after the PDF opened
     ├── password-prompt.tsx     a locked PDF's password
     ├── engine.tsx, plugins.ts  PDFium in a worker (main-thread fallback);
     │                           the plugins EmbedPDF 3 runs (stage, render, …)
