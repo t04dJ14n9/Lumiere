@@ -142,8 +142,9 @@ export const nodeFiles: HostFiles = {
   mkdir: async (uri) => {
     await mkdir(toFile(uri), { recursive: true });
   },
-  copy: (from, to) => cp(toFile(from), toFile(to), { recursive: true }),
-  move: (from, to) => rename(toFile(from), toFile(to)),
+  copy: (from, to) =>
+    cp(toFile(from), toFile(to), { recursive: true, force: true }),
+  move: (from, to) => moveEntry(toFile(from), toFile(to)),
   // A file, not a tree: VS Code's workspace fs deletes one entry.
   remove: (uri) => rm(toFile(uri), { recursive: false, force: true }),
   watch: (uri, listener) => watchFile(toFile(uri), listener),
@@ -153,6 +154,38 @@ export const nodeFiles: HostFiles = {
   uriOf: (file) => pathToFileURL(fileURLToPath(fileUri(file))).href,
   realContains,
 };
+
+/**
+ * Move a file or folder as VS Code's rename without overwrite does: a
+ * target that exists is refused (a rename would replace a file silently),
+ * unless it is the same file under another case of its name; across
+ * devices, it is copied and the original removed.
+ */
+async function moveEntry(from: string, to: string): Promise<void> {
+  const [source, target] = await Promise.all([
+    lstat(from, { bigint: true }),
+    lstat(to, { bigint: true }).catch(() => undefined),
+  ]);
+  if (target && (target.dev !== source.dev || target.ino !== source.ino)) {
+    throw Object.assign(new Error(`EEXIST: file already exists, '${to}'`), {
+      code: "EEXIST",
+    });
+  }
+  try {
+    await rename(from, to);
+  } catch (error) {
+    if ((error as NodeJS.ErrnoException).code !== "EXDEV") {
+      throw error;
+    }
+    await cp(from, to, {
+      recursive: true,
+      errorOnExist: true,
+      force: false,
+      verbatimSymlinks: true,
+    });
+    await rm(from, { recursive: true, force: true });
+  }
+}
 
 /** The host's own files, in a folder. */
 function folderStore(folder: string): HostStore {

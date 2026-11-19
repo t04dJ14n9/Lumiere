@@ -69,8 +69,16 @@ export interface HostFiles {
   list(uri: string): Promise<readonly HostEntry[] | undefined>;
   /** Make a folder and those above it. */
   mkdir(uri: string): Promise<void>;
-  /** Copy a file, or a folder with everything in it. */
+  /**
+   * Copy a file, or a folder with everything in it, replacing what is at
+   * `to` (VS Code's `workspace.fs.copy` with `overwrite`).
+   */
   copy(from: string, to: string): Promise<void>;
+  /**
+   * Move a file or folder; a target that exists is refused (VS Code's
+   * `workspace.fs.rename` without `overwrite`), except the same file under
+   * another case of its name.
+   */
   move(from: string, to: string): Promise<void>;
   /** Remove one file (not a folder's contents); a missing one is not an error. */
   remove(uri: string): Promise<void>;
