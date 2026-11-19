@@ -29,7 +29,9 @@ Tab and Shift+Tab never leave the note, as in Obsidian: on a list item they
 indent or outdent the item with its nested lines (renumbering the ordered
 lists it leaves and joins; an item that starts a new level counts from 1),
 and otherwise they indent or outdent the lines the selection touches, even
-with the caret mid-line. Home (Cmd+Left on macOS), with Shift to select, goes
+with the caret mid-line. Inside code (between a fence's lines, or indented)
+and frontmatter a line is text, so `# comment` or `---` there indents like
+any other line, and Backspace does not unwrap a `- ` or `> `. Home (Cmd+Left on macOS), with Shift to select, goes
 first to the start of a list item's, task's or quote's text, then to the line
 start (`line-start.ts`).
 Ctrl/Cmd+F opens an in-note find bar at the top right, like Obsidian's (capture-phase ownership so Vim cannot treat it as page-forward, BH-023; Ctrl/Cmd+H opens Replace the same way, BH-025): it
@@ -135,6 +137,8 @@ it yet.
   webview compares with its own settings (`webview/snapshot.ts`).
 - `snapshot.css`: its scroller and content, sized as the editor's are.
 - `indentation.ts`: Tab and Shift+Tab commands (capture-phase for Vim NORMAL, BH-040).
+- `literal-lines.ts`: whether the caret's line is code or frontmatter text, where
+  the Markdown indentation rules do not apply; `literal-lines.test.ts` covers it.
 - `find.ts`, `find-panel.ts`, `find-caret.ts`, `find-count.ts`, `find.css`: in-note find and replace.
 - `find-keys.ts`: capture-phase Ctrl/Cmd+F Find and Ctrl/Cmd+H Replace (BH-023 / BH-025).
 - `find-keys.test.ts`: Mod+F/H mapping and native-field skip.
