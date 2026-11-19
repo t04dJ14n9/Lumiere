@@ -181,6 +181,19 @@ test("a pasted table cell keeps its line breaks as <br>, as Obsidian writes them
   );
 });
 
+test("a table nested in a cell stays in that cell, its rows written once", () => {
+  const markdown = markdownFromHtml(
+    "<table><thead><tr><th>A</th><th>B</th></tr></thead><tbody><tr><td>outer</td><td><table><tr><td>in1</td><td>in2</td></tr></table></td></tr><tr><td>o2</td><td>o3</td></tr></tbody></table>",
+  )!;
+  const lines = markdown.split("\n");
+  assert.equal(lines.length, 4, markdown);
+  assert.deepEqual(
+    [lines[0], lines[1], lines[3]],
+    ["|A|B|", "|---|---|", "|o2|o3|"],
+  );
+  assert.match(lines[2]!, /^\|outer\|.*in1.*in2.*\|$/);
+});
+
 test("a pasted cell spanning columns is followed by empty cells, so later cells keep their columns", () => {
   assert.equal(
     markdownFromHtml(
