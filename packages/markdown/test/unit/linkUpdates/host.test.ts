@@ -211,7 +211,8 @@ test("the prompt counts from the index and the answer is followed by the only re
 });
 
 test("the prompt counts the notes the rename would change, as a folder rename does", async () => {
-  const { root, fake } = await start();
+  // Written by name, the links would keep their text: a path changes it.
+  const { root, fake } = await start({ "links.newLinkFormat": "absolute" });
   fake.answerWith("Update Links");
   const edits = await fake.rename([
     { oldUri: uriOf("Topic"), newUri: uriOf("Subject") },
@@ -230,6 +231,37 @@ test("a rename that changes no link does not ask", async () => {
   ]);
   assert.deepEqual(fake.prompts, []);
   assert.deepEqual(edits, []);
+  await root.dispose();
+});
+
+test("moving a note whose links keep their text neither asks nor edits", async () => {
+  const { root, fake } = await start();
+  fake.answerWith("Update Links");
+  // A.md and B.md link to Old by its name, which the move does not change.
+  const edits = await fake.rename([
+    { oldUri: uriOf("Topic/Old.md"), newUri: uriOf("Elsewhere/Old.md") },
+  ]);
+  assert.deepEqual(fake.prompts, []);
+  assert.deepEqual(edits, []);
+  await root.dispose();
+});
+
+test("moving a note counts and edits only the links whose text changes", async () => {
+  const { root, fake, index } = await start(
+    {},
+    { "D.md": "[[Old]] and [[Topic/Old]]", "E.md": "[[Old]]" },
+  );
+  // A note the index has not parsed is counted from its text the same way.
+  index.setMetadata("E.md", undefined);
+  fake.answerWith("Update Links");
+  const edits = await fake.rename([
+    { oldUri: uriOf("Topic/Old.md"), newUri: uriOf("Elsewhere/Old.md") },
+  ]);
+  assert.deepEqual(fake.prompts, ["Update links in 1 file?"]);
+  assert.deepEqual(
+    edits.map((file) => [file.uri, file.edits.map((edit) => edit.text)]),
+    [[uriOf("D.md"), ["[[Old]]"]]],
+  );
   await root.dispose();
 });
 

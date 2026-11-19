@@ -83,11 +83,29 @@ export function changedLinks(
 }
 
 /**
+ * Whether renaming files changes the text of any of a note's links, from its
+ * parsed links alone. A link to a moved file can keep its text (a link by
+ * name to a note moved to another folder), and then is no change.
+ */
+export function changesLinkText(
+  links: readonly LinkMetadata[],
+  sourcePath: string,
+  context: RewriteContext,
+): boolean {
+  const newSource = context.renames.get(sourcePath) ?? sourcePath;
+  return changedLinks(links, sourcePath, context).some((change) => {
+    const { original } = change.link;
+    return rewriterOf(change, newSource, context)(original) !== original;
+  });
+}
+
+/**
  * Edits that keep a note's links pointing at renamed files, as Obsidian's
  * **Automatically update internal links**. Each link keeps its form
  * (wikilink or Markdown link), its `#subpath` and its alias; the path is
  * written in the new-link format. A renamed note's own path-style links are
- * also rewritten when its folder changes.
+ * also rewritten when its folder changes. A link whose text stays the same
+ * gets no edit, so a note with none is not touched.
  */
 export function rewriteLinks(
   text: string,
@@ -96,20 +114,31 @@ export function rewriteLinks(
 ): Edit[] {
   const newSource = context.renames.get(sourcePath) ?? sourcePath;
   const changes = changedLinks(vaultLinks(metadata(text)), sourcePath, context);
-  const rewrites = changes.map(({ link, newTarget, oldPath }) => ({
-    from: link.position.start.offset,
-    to: link.position.end.offset,
-    rewrite: (original: string) =>
-      rewritten(original, targetText(newTarget, newSource, context), {
-        target: newTarget,
-        oldPath,
-      }),
+  const rewrites = changes.map((change) => ({
+    from: change.link.position.start.offset,
+    to: change.link.position.end.offset,
+    rewrite: rewriterOf(change, newSource, context),
   }));
-  return linkRewriteEdits(text, rewrites).map((edit) => ({
-    start: pointAt(text, edit.from),
-    end: pointAt(text, edit.to),
-    text: edit.insert,
-  }));
+  return linkRewriteEdits(text, rewrites)
+    .filter((edit) => edit.insert !== text.slice(edit.from, edit.to))
+    .map((edit) => ({
+      start: pointAt(text, edit.from),
+      end: pointAt(text, edit.to),
+      text: edit.insert,
+    }));
+}
+
+/** The link's new source text from its current one. */
+function rewriterOf(
+  { newTarget, oldPath }: LinkChange,
+  newSource: string,
+  context: RewriteContext,
+): (original: string) => string {
+  return (original) =>
+    rewritten(original, targetText(newTarget, newSource, context), {
+      target: newTarget,
+      oldPath,
+    });
 }
 
 /** The new path text for a link, without the `.md` of notes. */
