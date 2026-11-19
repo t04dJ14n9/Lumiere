@@ -302,6 +302,20 @@ export class NoteDocuments implements HostDocuments {
     }
   }
 
+  /**
+   * Write a note with unsaved text now, as its autosave would after the
+   * pause (its page was hidden); a failure is reported the same way.
+   */
+  saveNow(note: NoteDocument): void {
+    if (!note.isDirty) {
+      return;
+    }
+    this.cancelSave(note.uri);
+    this.save(note).catch((error: unknown) =>
+      this.reportSaveFailed(note.uri, error),
+    );
+  }
+
   /** One write at a time per note; a save asked for during a write follows it. */
   save(note: NoteDocument): Promise<boolean> {
     const previous = this.saving.get(note.uri) ?? Promise.resolve(true);

@@ -43,6 +43,12 @@ export type UiEvent =
   | { type: "focus" }
   | { type: "blur" }
   /**
+   * The page was hidden or is going away (a tab switched, the window
+   * minimised or closing, an iPad app sent to the background): its note is
+   * written now rather than after the autosave's pause.
+   */
+  | { type: "hidden" }
+  /**
    * An `ask` action, a `pick` row index, `input` text or the row indices a
    * `pickMany` left ticked; null when dismissed.
    */
@@ -274,6 +280,7 @@ function parseUiEvent(value: unknown): UiEvent | undefined {
   switch (value.type) {
     case "focus":
     case "blur":
+    case "hidden":
       return { type: value.type };
     case "answer":
       return isId(value.id) && isAnswer(value.value)

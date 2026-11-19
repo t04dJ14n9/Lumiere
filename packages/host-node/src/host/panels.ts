@@ -74,6 +74,8 @@ export class PanelHub implements CustomEditors {
     panel.onUi((event) => {
       if (event.type === "focus") {
         this.activate(panel.id);
+      } else if (event.type === "hidden") {
+        this.documents.saveNow(panel.document);
       }
     });
     open(panel.shell);

@@ -1,9 +1,9 @@
 import test from "node:test";
 import assert from "node:assert/strict";
-import { mkdtemp, rm, writeFile } from "node:fs/promises";
+import { mkdtemp, readFile, rm, writeFile } from "node:fs/promises";
 import { tmpdir } from "node:os";
 import * as path from "node:path";
-import { pathToFileURL } from "node:url";
+import { fileURLToPath, pathToFileURL } from "node:url";
 import { MARKDOWN_EDITOR, type PanelShell } from "@workshop/markdown/portable";
 import { NoteDocuments, noteFiles } from "../../src/host/documents";
 import { createNodePlatform } from "../../src/host/node-platform";
@@ -177,4 +177,25 @@ test("a panel whose page does not reconnect within the grace closes", async (t) 
   t.mock.timers.tick(1);
   assert.equal(disposed, true);
   assert.equal(hub.get(id), undefined);
+});
+
+test("a page that is hidden has its note written at once, not after the autosave pause", async (t) => {
+  const { uri, documents, hub, shells } = await setup(t);
+  const { id } = await hub.open({ uri, urls });
+  const page = fakeSocket();
+  hub.attach(id, page.socket);
+  const document = shells[0]!.document;
+  await documents.apply(document, [{ from: 5, to: 5, insert: " world" }]);
+  assert.equal(document.isDirty, true);
+  page.page({ ch: "ui", data: { type: "hidden" } });
+  const file = fileURLToPath(uri);
+  for (
+    let i = 0;
+    i < 100 && (await readFile(file, "utf8")) !== "hello world";
+    i++
+  ) {
+    await new Promise((resolve) => setTimeout(resolve, 10));
+  }
+  assert.equal(await readFile(file, "utf8"), "hello world");
+  assert.equal(document.isDirty, false);
 });

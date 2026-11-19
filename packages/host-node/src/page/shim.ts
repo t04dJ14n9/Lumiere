@@ -46,6 +46,7 @@ const send =
 window.acquireVsCodeApi = () => vsCodeApi(send);
 listenToEmbedder(send);
 reportFocus(send);
+reportHidden(send);
 reportContextMenus(send);
 
 /**
@@ -205,4 +206,18 @@ function reportFocus(send: (frame: PageFrame) => void): void {
   window.addEventListener("blur", () =>
     send({ ch: "ui", data: { type: "blur" } }),
   );
+}
+
+/**
+ * A hidden page may never be shown again (the window closes, the process is
+ * ended in the background): the host writes its note now.
+ */
+function reportHidden(send: (frame: PageFrame) => void): void {
+  const hidden = () => send({ ch: "ui", data: { type: "hidden" } });
+  document.addEventListener("visibilitychange", () => {
+    if (document.visibilityState === "hidden") {
+      hidden();
+    }
+  });
+  window.addEventListener("pagehide", hidden);
 }

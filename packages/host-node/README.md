@@ -104,7 +104,7 @@ forbids this package from importing `vscode` or any embedder.
 
 - `src/host/start.ts`: starts the plugins over the services below.
 - `src/host/services.ts`: every host service the plugins inject.
-- `src/host/documents.ts`: notes on disk, edited in memory, saved after a pause; a change another program makes to the file is merged into unsaved text.
+- `src/host/documents.ts`: notes on disk, edited in memory, saved after a pause (at once when the page is hidden or goes away); a change another program makes to the file is merged into unsaved text.
 - `src/host/conflict-copy.ts`: where another program's version of a note goes when unsaved typing on the same lines is saved over it.
 - `src/host/panels.ts`, `src/host/panel.ts`: editor pages as panels, and their sockets.
 - `src/host/routes.ts`, `src/host/page.ts`, `src/host/static.ts`: the routes above.
