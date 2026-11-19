@@ -50,6 +50,11 @@ export class Mounts implements HostFiles {
     };
   }
 
+  /** Whether a folder is mounted at exactly this path. */
+  isMounted(root: string): boolean {
+    return this.mounts.has(normalize(root));
+  }
+
   /** The URI of a mount's root (or of a path in it). */
   uriOf(path: string): string {
     return fileUri(path);

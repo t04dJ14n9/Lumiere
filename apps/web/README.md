@@ -11,7 +11,7 @@ pnpm --filter @workshop/web build   # dist/: any static web server, under any pa
 Vaults are:
 
 - folders the reader picks (Chromium's File System Access API), remembered
-  between visits;
+  between visits; two of one name are two vaults ("Notes", "Notes 2");
 - kept in the browser: its private storage where a page can write it
   (Chromium), else IndexedDB (Safari, Firefox).
 

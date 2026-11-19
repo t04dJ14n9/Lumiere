@@ -16,12 +16,7 @@ import {
 import type { ContributedSetting } from "@workshop/markdown/portable";
 import { answerWorker, windowAnswers } from "./answers";
 import { DEMO } from "./demo";
-import {
-  canPickFolders,
-  mountRemembered,
-  pickFolder,
-  privateFolder,
-} from "./folders";
+import { canPickFolders, PickedFolders, privateFolder } from "./folders";
 import { HandleFileSystem } from "./handle-fs";
 import { NotePages } from "./note-pages";
 import { fileUrl } from "./shared/routes";
@@ -36,7 +31,8 @@ async function main(): Promise<void> {
   const files = new Mounts();
   files.mount(DATA, await kept("data"));
   files.mount(DEMO_VAULT, await demoVault());
-  await mountRemembered(files);
+  const picked = new PickedFolders(files);
+  await picked.mountRemembered();
   const [contributed, menus] = await Promise.all([
     json<ContributedSetting[]>(new URL("contributed.json", base)),
     json<unknown>(new URL("menus.json", base)),
@@ -66,7 +62,7 @@ async function main(): Promise<void> {
       resource: (panel, uri) => fileUrl(base.href, panel, uri),
       servePage: (html) => notePages.serve(html),
     },
-    ...(canPickFolders() ? { pickFolder: () => pickFolder(files) } : {}),
+    ...(canPickFolders() ? { pickFolder: () => picked.pick() } : {}),
   });
   if (navigator.serviceWorker) {
     answerWorker({
