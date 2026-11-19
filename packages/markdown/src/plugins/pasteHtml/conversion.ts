@@ -7,7 +7,7 @@ import {
   tableMarkdown,
 } from "./special";
 import { imageMarkdown, linkMarkdown } from "./links";
-import { registerStyledTextRules } from "./office";
+import { registerStyledTextRules, registerWordListRules } from "./office";
 /**
  * Rich text as Markdown, written as Obsidian writes it (measured): `_italic_`,
  * `- item` and `1. item` with one space, `---` rules and compact tables. Unlike
@@ -31,6 +31,7 @@ export function markdownFromHtml(html: string): string | undefined {
   registerInlineRules(converter);
   registerStyledTextRules(converter);
   registerBlockRules(converter);
+  registerWordListRules(converter);
   return converter.turndown(html).trim() || undefined;
 }
 function registerInlineRules(converter: TurndownService): void {

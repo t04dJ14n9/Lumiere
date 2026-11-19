@@ -198,6 +198,32 @@ test("Google Docs text keeps its bold and italic, with no stray markers around i
   );
 });
 
+test("Word list paragraphs become a Markdown list, without their literal bullets", () => {
+  // Word writes each item as a paragraph with an mso-list style and its
+  // bullet or number as text in an `mso-list:Ignore` span.
+  const item = (list: string, level: number, marker: string, text: string) =>
+    `<p class=MsoListParagraphCxSpMiddle style='text-indent:-.25in;mso-list:${list} level${level} lfo1'><span style='font-family:Symbol'><span style='mso-list:Ignore'>${marker}<span style='font:7.0pt "Times New Roman"'>&nbsp;&nbsp;&nbsp;&nbsp; </span></span></span>${text}<o:p></o:p></p>`;
+  assert.equal(
+    markdownFromHtml(
+      "<p class=MsoNormal>Before</p>" +
+        item("l0", 1, "·", "First <b>item</b>") +
+        item("l0", 2, "o", "Nested") +
+        item("l0", 1, "·", "Last") +
+        item("l1", 1, "1.", "One") +
+        item("l1", 1, "2.", "Two") +
+        "<p class=MsoNormal>After</p>",
+    ),
+    "Before\n\n- First **item**\n    - Nested\n- Last\n\n1. One\n2. Two\n\nAfter",
+  );
+  // A copy whose marker is plain text before the item's own.
+  assert.equal(
+    markdownFromHtml(
+      "<p style='mso-list:l2 level1 lfo3'>3.&nbsp;&nbsp; Third</p><p style='mso-list:l3 level1 lfo4'>·&nbsp;&nbsp; Dot</p>",
+    ),
+    "3. Third\n\n- Dot",
+  );
+});
+
 test("preformatted text without a code element is a fenced block, as copied", () => {
   // GitHub and many documentation sites highlight with spans in a bare <pre>.
   assert.equal(
