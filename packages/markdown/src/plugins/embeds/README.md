@@ -42,7 +42,7 @@ it go (`image-selection.ts`, `image-size.ts`). While selected, the caret is hidd
 - `post-process.ts`: resource resolution, per-kind display and pass lifetime.
 - `embed-lives.ts`: what each embed of a pass holds (listeners, teardowns, the file it shows), released when it is shown again or the pass ends.
 - `embed-lives.test.ts`: release order and lookup by file.
-- `missing.ts`: the text an embed that cannot be shown says (`“x.png” could not be found.`, a missing heading, `failed to fetch image` for bytes that did not load).
+- `missing.ts`: the text an embed that cannot be shown says (`“x.png” could not be found.`, a missing heading, `failed to fetch image` for bytes that did not load, a circular or too deep embed).
 - `stand-in.ts`: the `.file-embed` block that takes a failed Markdown `<img>`'s place, since an `<img>` shows no text.
 - `resource-cache.ts`: what embeds resolved, so a block rendered again shows its files at once.
 - `note.ts`: note/heading/block selection, ancestry and source-line mapping.
@@ -88,7 +88,8 @@ workspace trust from Render. YouTube/Bilibili image links share the EmbedBlock h
 
 ## Limits and differences from Obsidian
 
-Cycles and ancestry depth of twelve are refused. Local files remain host-contained;
+Cycles and ancestry depth of twelve are refused, and the embed says which (“A” embeds
+itself, so it is not shown again.); what Obsidian says is not measured. Local files remain host-contained;
 remote media requires a trusted workspace. A PDF embed draws one page (`#page=`,
 `#height=`) with page buttons rather than Obsidian's full PDF viewer; its Open
 button opens the PDF in Lumiere PDF at that page. WebM recovery supports VP8/VP9 and Opus/Vorbis when the host

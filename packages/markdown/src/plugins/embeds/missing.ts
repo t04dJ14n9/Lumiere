@@ -18,9 +18,17 @@ export function missingEmbedText(
     note?: string | undefined;
     section?: boolean | undefined;
     fetchFailed?: boolean | undefined;
+    /** The note is there, but showing it would loop or nest too deep. */
+    refused?: "circular" | "too deep" | undefined;
   } = {},
 ): string {
   const path = target.split("|")[0]!.trim();
+  if (missing.refused === "circular") {
+    return `“${path}” embeds itself, so it is not shown again.`;
+  }
+  if (missing.refused === "too deep") {
+    return `“${path}” is nested too deeply to show.`;
+  }
   const hash = path.indexOf("#");
   if (missing.section && hash >= 0) {
     const note = path.slice(0, hash).split("/").at(-1) || missing.note;

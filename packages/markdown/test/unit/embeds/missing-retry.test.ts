@@ -392,6 +392,33 @@ test("an extensionless remote markdown img still says failed to fetch after wrap
   }
 });
 
+test("a note that embeds itself says so, not that it could not be found", async () => {
+  const restoreDom = installFakeDom();
+  try {
+    const note = new FakeElement();
+    note.dataset = { resource: "Other", wiki: "true" };
+    // Rendered inside Other's own embed: Other is in the pass's ancestry.
+    const pass = { ...passOf([note]), ancestry: ["file:///vault/Other.md#"] };
+    enhanceEmbeds({
+      pass,
+      render: { trusted: true } as unknown as RenderService,
+      resources: {
+        load: async () => ({
+          kind: "note",
+          source: "file:///vault/Other.md",
+          url: "file:///vault/Other.md",
+          text: "![[Other]]",
+        }),
+      },
+      open: () => {},
+    });
+    await settled();
+    assertUnresolved(note, "“Other” embeds itself, so it is not shown again.");
+  } finally {
+    restoreDom();
+  }
+});
+
 test("a missing note embed keeps the could-not-be-found wording", async () => {
   const restoreDom = installFakeDom();
   try {

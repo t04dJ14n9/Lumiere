@@ -6,7 +6,7 @@ import { ImageLoadError, missingEmbedText, noteName } from "./missing";
 import { ImageStandIns } from "./stand-in";
 import { inspectImage } from "./image-dialog";
 import { IMAGE_EMBED, mountImageEmbedActions } from "./embed-actions";
-import { embeddedNote, MissingSection } from "./note";
+import { embeddedNote, MissingSection, RefusedEmbed } from "./note";
 import { renderBaseEmbed } from "./base-embed";
 import { mountPdfEmbed } from "./pdf-embed";
 import { EmbedLives } from "./embed-lives";
@@ -137,6 +137,7 @@ class EmbedPass implements PassEmbeds {
     surface.textContent = missingEmbedText(target, {
       note: noteName(pass.documentUri),
       section: error instanceof MissingSection,
+      refused: error instanceof RefusedEmbed ? error.reason : undefined,
       fetchFailed: error instanceof ImageLoadError,
     });
     surface.title = String(error);
