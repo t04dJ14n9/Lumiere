@@ -22,7 +22,7 @@ export class TableGrid {
     public block: RenderBlock,
     private readonly content: Pick<
       TableEnvironment,
-      "disposeContent" | "renderContent"
+      "disposeContent" | "renderContent" | "renderedSource" | "moveContent"
     >,
   ) {
     this.model = parsedTable(block.source)!;
@@ -121,8 +121,13 @@ export class TableGrid {
     return this.block.source;
   }
 
+  /**
+   * Build the table's cells for the current model. A cell whose text some
+   * rendered cell already shows takes that rendering, moved to its new line,
+   * so adding, removing or moving a row or column renders only new text.
+   */
   render(): void {
-    this.disposeContent();
+    const rendered = this.renderedCells();
     this.table.replaceChildren();
     this.cells = [];
     const start = this.renderStart();
@@ -131,28 +136,64 @@ export class TableGrid {
     this.model.rows.forEach((row, rowIndex) => {
       const element = document.createElement("tr");
       const cells = row.map((_cell, column) => {
-        const cell = document.createElement(rowIndex === 0 ? "th" : "td");
-        cell.dataset.row = String(rowIndex);
-        cell.dataset.column = String(column);
-        cell.setAttribute(
-          "aria-label",
-          `Row ${rowIndex + 1}, column ${column + 1}`,
-        );
-        const wrapper = document.createElement("div");
-        wrapper.className = "table-cell-wrapper";
-        const content = document.createElement("div");
-        content.className = "table-cell-content";
-        wrapper.append(content);
-        cell.append(wrapper);
+        const cell = tableCell(rowIndex, column);
         element.append(cell);
         return cell;
       });
       this.cells.push(cells);
       (rowIndex === 0 ? header : body).append(element);
-      cells.forEach((_cell, column) =>
-        this.display({ row: rowIndex, column }, start),
-      );
+      row.forEach((cell, column) => {
+        const position = { row: rowIndex, column };
+        const kept = isOffsetSensitive(cell.text)
+          ? undefined
+          : rendered.take(cell.text);
+        this.fill(position, kept, start);
+      });
     });
+    for (const unused of rendered.rest()) {
+      this.content.disposeContent(unused);
+    }
+  }
+
+  /** The content elements that hold a rendering, by the text they show. */
+  private renderedCells(): RenderedCells<HTMLElement> {
+    const rendered = new RenderedCells<HTMLElement>();
+    for (const element of this.table.querySelectorAll<HTMLElement>(
+      ".table-cell-content",
+    )) {
+      const source = this.content.renderedSource(element);
+      if (source === undefined) {
+        this.content.disposeContent(element);
+      } else {
+        rendered.add(source, element);
+      }
+    }
+    return rendered;
+  }
+
+  /** Give the cell at `position` the kept rendering, or render it. */
+  private fill(
+    position: CellPosition,
+    kept: HTMLElement | undefined,
+    start: number,
+  ): void {
+    // tableCell gives every cell its wrapper.
+    const wrapper =
+      this.cells[position.row]![position.column]!.firstElementChild!;
+    if (!kept) {
+      const content = document.createElement("div");
+      content.className = "table-cell-content";
+      wrapper.append(content);
+      this.display(position, start);
+      return;
+    }
+    wrapper.append(kept);
+    this.align(position);
+    const cell = this.model.rows[position.row]![position.column]!;
+    this.content.moveContent(
+      kept,
+      Math.min(start + cell.from, this.outer.state.doc.length),
+    );
   }
 
   refresh(active?: CellPosition, previous?: Table, force = false): void {
@@ -164,15 +205,12 @@ export class TableGrid {
         if (!sameCell(active, position)) {
           const prevCell = previous?.rows[rowIndex]?.[column];
           const nextCell = this.model.rows[rowIndex]?.[column];
-          const offsetSensitive =
-            nextCell !== undefined &&
-            (nextCell.text.includes("[^") || nextCell.text.includes("^["));
           if (
             force ||
             !prevCell ||
             !nextCell ||
             prevCell.text !== nextCell.text ||
-            offsetSensitive
+            isOffsetSensitive(nextCell.text)
           ) {
             start ??= this.renderStart();
             this.display(position, start);
@@ -232,6 +270,46 @@ export class TableGrid {
       row: Number(cell.dataset.row),
       column: Number(cell.dataset.column),
     };
+  }
+}
+
+/** A header or body cell with its (empty) content wrapper. */
+function tableCell(row: number, column: number): HTMLElement {
+  const cell = document.createElement(row === 0 ? "th" : "td");
+  cell.dataset.row = String(row);
+  cell.dataset.column = String(column);
+  cell.setAttribute("aria-label", `Row ${row + 1}, column ${column + 1}`);
+  const wrapper = document.createElement("div");
+  wrapper.className = "table-cell-wrapper";
+  cell.append(wrapper);
+  return cell;
+}
+
+/**
+ * A footnote's number depends on where its reference is in the note, so a
+ * cell that has one is rendered again even when its text is unchanged.
+ */
+function isOffsetSensitive(text: string): boolean {
+  return text.includes("[^") || text.includes("^[");
+}
+
+/** Rendered elements by the text they show, taken in table order. */
+export class RenderedCells<T> {
+  private readonly byText = new Map<string, T[]>();
+  add(text: string, item: T): void {
+    const items = this.byText.get(text);
+    if (items) {
+      items.push(item);
+    } else {
+      this.byText.set(text, [item]);
+    }
+  }
+  take(text: string): T | undefined {
+    return this.byText.get(text)?.shift();
+  }
+  /** What no cell took. */
+  rest(): T[] {
+    return [...this.byText.values()].flat();
   }
 }
 

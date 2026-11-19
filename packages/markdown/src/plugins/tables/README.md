@@ -16,6 +16,12 @@ note, and each table source is parsed once however many readers ask for it
 render, stay in the source: every rewrite writes them back after their row,
 which keeps them through row moves and column edits. The controller reconciles
 incoming snapshots, preserving the active cell editor across structural edits.
+When a row or column is added, removed or moved, a cell whose text a rendered
+cell already shows takes that rendering instead of going through the render
+pipeline again; its render pass is given the cell's new line, which a task
+box in the cell writes to. A cell with a footnote reference is always rendered
+again (its number depends on its place), and `render/changed` keeps no old
+rendering.
 
 The table never cancels wheel input: whether it is hovered, a cell is open
 or cells are selected, the browser scrolls the note natively. `.table-scroll`
@@ -81,7 +87,7 @@ plugin registrations and widget lifetimes end when the plugin stops.
 - `manifest.ts`: settings identity and table command contributions.
 - `webview.ts`: named registrations for rendering, wheel input, projection and commands.
 - `environment.ts`: injected capabilities available to table interactions.
-- `content.ts`: asynchronous render-pass ownership and cancellation.
+- `content.ts`: asynchronous render-pass ownership, cancellation, and moving a kept rendering to its cell's new line.
 - `renderer-match.ts`: which `Table` nodes the editor takes: those it can parse, so not one inside a block quote.
 - `widget.ts`: Live Preview widget creation, reuse and disposal; `estimatedHeight` reserves row height before measure and across off-viewport rebuilds.
 - `estimated-height.ts`: pure row-count reserve used by the widget.
@@ -130,6 +136,7 @@ plugin registrations and widget lifetimes end when the plugin stops.
 - `src/markdown/tables/model.ts`: pure table parsing, serialization and source-position mapping.
 - `src/markdown/tables/parsed.ts`: `parseTable` for the last few sources, shared by the readers of one keystroke.
 - `keystroke-cost.test.ts`: one parse per source and a one-row edit for a keystroke.
+- `cell-reuse.test.ts`: a shape change renders only new cell text and moves kept renderings to their new lines.
 - `window-listeners.test.ts`: selection and grip drags listen on the window only while they run (the sticky scrollbar's thumb drag does the same).
 - `src/markdown/tables/clipboard-formats.ts`: pure copy flavors (TSV, Markdown, HTML, `obsidian/table`) of a cell range and pasted-text parsing.
 - `src/markdown/tables/tab-separated.ts`: pure splitting of pasted tab-separated text into cells, honouring spreadsheet quotes.

@@ -82,6 +82,8 @@ function createEnvironment(ctx: Context): TableEnvironment {
     disposeContent: (element) => content.disposeContent(element),
     renderContent: (element, source, offset) =>
       content.renderContent(element, source, offset),
+    renderedSource: (element) => content.renderedSource(element),
+    moveContent: (element, offset) => content.moveContent(element, offset),
     position: (source, element, point) =>
       cellPointerOffset(source, element, point, livePreview.position),
     wrap: (marker, target) => formatting?.wrap(marker, target) ?? false,

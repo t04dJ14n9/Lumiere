@@ -325,6 +325,10 @@ export class TableController {
       return;
     }
     delete this.selected.range;
+    if (force) {
+      // Rendering itself changed (render/changed): keep no cell's old one.
+      this.grid.disposeContent();
+    }
     if (moved && this.editor && this.active) {
       this.projection.relocate(moved);
     } else {
