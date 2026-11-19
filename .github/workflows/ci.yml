@@ -31,6 +31,22 @@ jobs:
           # heap on the 7 GB runners private repositories get is about 2 GB.
           NODE_OPTIONS: --max-old-space-size=4096
 
+  # The extension ships to Windows too: its path handling and the unit tests'
+  # runners are exercised there. Lint, format and typecheck do not depend on
+  # the platform and run in `check`.
+  check-windows:
+    name: check (windows)
+    runs-on: windows-latest
+    timeout-minutes: 30
+    steps:
+      # Pinned fixtures and Prettier expect LF; Git for Windows checks out CRLF.
+      - name: Check out with LF line endings
+        run: git config --global core.autocrlf false
+      - uses: actions/checkout@v7
+      - uses: ./.github/actions/setup
+      - name: pnpm test (unit tests)
+        run: pnpm test
+
   browser:
     name: browser
     runs-on: ubuntu-latest
