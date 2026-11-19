@@ -8,7 +8,8 @@ setting. It works in the note editor and focused table cell editors.
 A capture listener finds the focused CodeMirror view, bypasses plain-text paste
 and literal code, then runs the awaited `paste/transform` pipeline. HTML is
 sanitized before conversion. Turndown handles ordinary blocks and literal escaping;
-custom rules preserve tables, tasks, wiki references, math and callouts. The paste
+custom rules preserve tables, tasks, wiki references, math, callouts, bare `<pre>`
+code and the bold and italic office suites set in CSS (Google Docs). The paste
 applies only if the view, document and selection are still current.
 
 ## Files
@@ -17,6 +18,7 @@ applies only if the view, document and selection are still current.
 - `api.ts`: typed paste data and transform event.
 - `conversion.ts`: conversion setup and semantic rules.
 - `special.ts`: math, callout, table and bare `<pre>` code-block conversion.
+- `office.ts`: bold and italic set in CSS, and Google Docs' not-bold wrapper.
 - `links.ts`: wiki/media destinations and unsafe-scheme filtering.
 - `paste.ts`: code-context and stale-paste guards.
 - `webview.ts`: sanitization, focused-view routing and listener lifecycle.

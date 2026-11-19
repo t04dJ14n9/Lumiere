@@ -181,6 +181,23 @@ test("a pasted table cell keeps its line breaks as <br>, as Obsidian writes them
   );
 });
 
+test("Google Docs text keeps its bold and italic, with no stray markers around it", () => {
+  // Google Docs wraps the copy in a not-bold <b> and styles its spans.
+  assert.equal(
+    markdownFromHtml(
+      '<meta charset="utf-8"><b style="font-weight:normal;" id="docs-internal-guid-1234"><p dir="ltr"><span style="font-weight:700;font-style:normal;">Bold</span><span style="font-weight:400;"> and plain and </span><span style="font-weight:400;font-style:italic;">italic</span><span style="font-weight:700;font-style:italic;"> both </span></p><p dir="ltr"><span style="font-weight:400">Second</span></p></b><br class="Apple-interchange-newline">',
+    ),
+    "**Bold** and plain and _italic_ **_both_**\n\nSecond",
+  );
+  // Inside real bold, a bold span adds no second pair of markers.
+  assert.equal(
+    markdownFromHtml(
+      '<p><strong><span style="font-weight:bold">x</span></strong></p>',
+    ),
+    "**x**",
+  );
+});
+
 test("preformatted text without a code element is a fenced block, as copied", () => {
   // GitHub and many documentation sites highlight with spans in a bare <pre>.
   assert.equal(
