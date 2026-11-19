@@ -393,6 +393,26 @@ test("a link to a file with # in its name follows that file, not the name before
   );
 });
 
+test("a rename reads the vault's file list once, not once per link", () => {
+  const text = Array.from({ length: 50 }, () => "[[Old]]").join("\n");
+  for (const format of ["shortest", "relative", "absolute"] as const) {
+    const ctx = context({ ...vault, "A.md": text }, { "Old.md": "New.md" });
+    let scans = 0;
+    // Every pass over the list reads its first path.
+    const pathsAfter = new Proxy([...ctx.pathsAfter], {
+      get(target, property, receiver) {
+        if (property === "0") {
+          scans += 1;
+        }
+        return Reflect.get(target, property, receiver) as unknown;
+      },
+    });
+    const edits = rewriteLinks(text, "A.md", { ...ctx, pathsAfter, format });
+    assert.equal(edits.length, 50);
+    assert.ok(scans <= 1, `${format}: ${scans} passes over the file list`);
+  }
+});
+
 test("a moved note's own links keep their text", () => {
   const text = "[sub/Deep](sub/Deep.md)";
   const ctx = context(

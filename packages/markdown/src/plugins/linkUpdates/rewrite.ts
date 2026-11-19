@@ -157,13 +157,32 @@ function targetText(
       ),
     );
   }
-  const key = lookupKey(target);
-  const isUnique =
-    context.pathsAfter.filter((path) => lookupKey(path) === key).length === 1;
-  if (context.format === "shortest" && isUnique) {
+  const isUnique = () =>
+    lookupKeyCounts(context.pathsAfter).get(lookupKey(target)) === 1;
+  if (context.format === "shortest" && isUnique()) {
     return withoutNote(nameOf(target));
   }
   return withoutNote(target);
+}
+
+const keyCounts = new WeakMap<readonly string[], Map<string, number>>();
+
+/**
+ * How many of `paths` share each lookup key, counted once per rename rather
+ * than once per link: a hub note's backlinks would otherwise scan the whole
+ * vault for each link, inside VS Code's rename timeout.
+ */
+function lookupKeyCounts(paths: readonly string[]): Map<string, number> {
+  let counts = keyCounts.get(paths);
+  if (!counts) {
+    counts = new Map();
+    for (const path of paths) {
+      const key = lookupKey(path);
+      counts.set(key, (counts.get(key) ?? 0) + 1);
+    }
+    keyCounts.set(paths, counts);
+  }
+  return counts;
 }
 
 const lowerCaseSets = new WeakMap<readonly string[], Set<string>>();
