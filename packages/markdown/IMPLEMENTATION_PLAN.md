@@ -4859,7 +4859,8 @@ products' editors are registered up front, and notes link to PDFs: a link or
 embed card to `paper.pdf#page=3` opens PDF Workshop at that page (through its
 Open Location command, which now takes a view column for side opens).
 
-The plugins run on `@workshop/core` over Cordis 4.0.0-rc.11 (pinned): the
+The plugins run on `@workshop/core` over Cordis 4.0.0-rc.11 (pinned; rc.13
+since #757): the
 in-house kernel and PDF's runtime are deleted. The core adds joined,
 last-first release, abandoning a start, optional services, a ranked event bus
 and an ownership tree; its 23 conformance scenarios pass (stock Cordis: 6).

@@ -423,7 +423,7 @@ Do not:
    serves every vault file but a PDF with `sandbox`, and a vault's scripts
    as text, so `script-src 'self'` never runs them.
 5. **Two Cordis versions in DSH's process** (DSH's 4.0.0-rc.7 fork and
-   Lumière's rc.11). They coexist because they never share objects. Check
+   Lumière's rc.13). They coexist because they never share objects. Check
    again whenever either changes.
 
 ## 9. Decisions for the owner

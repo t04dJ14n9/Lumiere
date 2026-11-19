@@ -140,7 +140,7 @@ configuration.
 
 `packages/core` (`@workshop/core`) runs every plugin of both products, in the
 extension host, in each webview and in unit tests. It sits on
-[Cordis](https://github.com/cordiverse/cordis) 4.0.0-rc.11 (pinned exactly):
+[Cordis](https://github.com/cordiverse/cordis) 4.0.0-rc.13 (pinned exactly):
 each running plugin is a Cordis fiber, gated on the services it injects. The
 core adds what Cordis does not guarantee (joined, last-first release;
 abandoning a start; optional services; a ranked, error-isolated event bus;

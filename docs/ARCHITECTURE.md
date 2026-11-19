@@ -5,9 +5,8 @@ the plugin trees, the hosts and the contracts between them, and how a note
 travels from disk to the screen and back. It also records where the design
 is sound, where it has drifted, and what to change next.
 
-State: `main` at 0.1.11 (#515). The text editor's `[[` suggestions and
-`pdfOutlines` come from the link-suggestion PR, which is not merged yet.
-Update this document when the structure it describes changes.
+State: `main` at 0.1.17 (#774). Update this document when the structure it
+describes changes.
 
 Read this first, then the detailed documents it points to:
 
@@ -104,7 +103,7 @@ this, so a forbidden import fails `pnpm check`, not a review.
 
 `packages/core` (about 1,500 lines) is the API every plugin programs
 against. Underneath it runs [Cordis](https://github.com/cordiverse/cordis)
-4.0.0-rc.12, pinned exactly.
+4.0.0-rc.13, pinned exactly.
 
 ### 3.1 Concepts
 
@@ -599,7 +598,6 @@ what it changes, or a later spec fails for the wrong reason.
 - **PDF sits outside the seam.** Its extension plugins import `vscode`
   directly, and its backlink index re-scans the vault instead of reading
   Markdown's index. The last two backlink fixes were both drift repairs.
-- **Doc drift.** Some documents still name Cordis rc.11.
 
 ### 18.3 Wikilinks
 
@@ -630,7 +628,7 @@ Ranked by value for effort. S, M and L are rough sizes.
 | 0 | Stop the Properties sheet's quadratic re-renders on open (section 15) and add frontmatter budgets | S | notes with large frontmatter take seconds, or never settle |
 | 1 | Fix the small wikilink bugs: `%` decoding, PDF/image unresolved styling, escaped pipes | S | silent wrong behaviour for users coming from Obsidian |
 | 2 | One `isEnabled(manifest, settings)` helper replacing the eight sites | S | removes a class of "on here, off there" bugs |
-| 3 | Rename PDF's `agentBridge` and `ideContext`; fix rc.11 references | S | clean ranks, ledger and logs |
+| 3 | Rename PDF's `agentBridge` and `ideContext` | S | clean ranks, ledger and logs |
 | 4 | Wikilink document links, hover and unresolved diagnostics in VS Code's text editor | M | completes the text-editor story that `[[` suggestions began |
 | 5 | Manifest-driven registration: each manifest declares its phase (critical, paint, deferred) and loaders; the catalog, host and webview lists, loader map and defer lists are generated; keep one explicit precedence list | M | adding a plugin touches one folder |
 | 6 | Shrink the `editor` hub: an extension point for syntax-specific editing, so callout, footnote, math and other handlers move to their plugins; turn `vim-hooks` and `completion-hooks` into optional services; move the `links` state field behind a `livePreview` API | S–M | restores "core knows no features" |

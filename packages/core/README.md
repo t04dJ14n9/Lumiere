@@ -39,8 +39,8 @@ what Cordis does not guarantee:
 
 `packages/core/test/conformance` holds 23 lifecycle scenarios (joined
 release, cancellation, rollback, dependency barriers, late drains) that the
-core must pass. Stock Cordis 4.0.0-rc.11 passes 6 of them; run them again
-before upgrading Cordis.
+core must pass. Stock Cordis 4.0.0-rc.11 passed 6 of them (the pin is now
+4.0.0-rc.13); run them again before upgrading Cordis.
 
 ## Files
 
