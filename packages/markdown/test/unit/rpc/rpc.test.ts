@@ -94,7 +94,7 @@ test("RPC namespaces methods, validates results, and unregistering disables a ch
   await a.dispose();
   await b.dispose();
 });
-test("RPC rejects invalid outbound params, drops malformed envelopes and inbound params", async () => {
+test("RPC rejects invalid outbound params, drops malformed envelopes and refuses inbound params", async () => {
   const { a, b, logs, sent, toB } = pair();
   let calls = 0;
   b.handle(protocol, "double", (n) => {
@@ -133,8 +133,31 @@ test("RPC rejects invalid outbound params, drops malformed envelopes and inbound
   }
   await tick();
   assert.equal(calls, 0);
-  assert.equal(logs.length, 5);
-  assert.equal(sent.length, 0);
+  // Four malformed envelopes are logged and dropped; the well-formed request
+  // with bad params is answered instead, with the cause.
+  assert.equal(logs.length, 4);
+  assert.equal(sent.length, 1);
+  assert.deepEqual(
+    { ...(sent[0] as object), message: undefined },
+    { kind: "error", id: 1, code: "InvalidParams", message: undefined },
+  );
+  await a.dispose();
+  await b.dispose();
+});
+
+test("a request with invalid params fails at once with the cause, not a timeout", async () => {
+  const { a, b, clock } = pair();
+  b.handle(protocol, "double", (n) => n * 2);
+  // A caller whose schema is looser than the handler's (another build of
+  // the page) sends params its own check lets through.
+  const looser = defineProtocol("example", {
+    requests: { double: { params: Schema.string(), result: Schema.number() } },
+    notifications: {},
+  });
+  await assert.rejects(a.call(looser, "double", "bad"), {
+    code: "InvalidParams",
+  });
+  assert.equal(clock.timers.size, 0);
   await a.dispose();
   await b.dispose();
 });

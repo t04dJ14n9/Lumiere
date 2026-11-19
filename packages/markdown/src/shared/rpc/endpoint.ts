@@ -369,7 +369,10 @@ export class Endpoint {
       try {
         params = definition.params.parse(envelope.params);
       } catch (error) {
-        this.logger.warn("Dropped invalid RPC params", error);
+        // Answered, not dropped: the caller learns why at once instead of
+        // waiting for its timeout, and reports it (a webview's log reaches
+        // the host's).
+        this.sendError(envelope.id, "InvalidParams", String(error));
         return;
       }
       await this.runRequest(envelope.id, handler, definition.result, {
