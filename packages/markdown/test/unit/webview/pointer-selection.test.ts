@@ -2,6 +2,7 @@ import test from "node:test";
 import assert from "node:assert/strict";
 import { readFileSync } from "node:fs";
 import path from "node:path";
+import { fileURLToPath } from "node:url";
 import { EditorSelection, EditorState } from "@codemirror/state";
 import type { Extension } from "@codemirror/state";
 import {
@@ -209,7 +210,7 @@ test("hover buttons-up timer does not arm while inactive; cancelPending drops a 
 });
 
 test("pointer thaw is deferred with setTimeout and generation-scoped", () => {
-  const root = new URL("../../../", import.meta.url).pathname;
+  const root = fileURLToPath(new URL("../../../", import.meta.url));
   const src = readFileSync(
     path.join(root, "src/webview/ui/pointer-selection.ts"),
     "utf8",

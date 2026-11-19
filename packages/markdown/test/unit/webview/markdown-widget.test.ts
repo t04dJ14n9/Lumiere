@@ -2,6 +2,7 @@ import test from "node:test";
 import assert from "node:assert/strict";
 import { readFileSync } from "node:fs";
 import path from "node:path";
+import { fileURLToPath } from "node:url";
 import { EditorSelection, EditorState } from "@codemirror/state";
 import type { Extension } from "@codemirror/state";
 import {
@@ -22,7 +23,7 @@ import {
   type FenceGuardPress,
 } from "../../../src/webview/ui/fence-click-guard";
 
-const root = new URL("../../../", import.meta.url).pathname;
+const root = fileURLToPath(new URL("../../../", import.meta.url));
 
 test("selectionchange is always kept by the widget (native Mermaid labels)", () => {
   assert.equal(

@@ -2,6 +2,7 @@ import test from "node:test";
 import assert from "node:assert/strict";
 import { readFileSync } from "node:fs";
 import path from "node:path";
+import { fileURLToPath } from "node:url";
 import { edgeVelocity } from "../../../src/webview/ui/edge-scroll";
 
 test("edgeVelocity is zero in the middle and grows toward each edge", () => {
@@ -18,7 +19,7 @@ test("edgeVelocity ignores a zero-width or inverted range", () => {
 });
 
 test("table selection and handles edge-scroll the table-scroll box horizontally", () => {
-  const root = new URL("../../../", import.meta.url).pathname;
+  const root = fileURLToPath(new URL("../../../", import.meta.url));
   const read = (relative: string) =>
     readFileSync(path.join(root, relative), "utf8");
   const selection = read("src/plugins/tables/selection.ts");
