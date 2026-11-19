@@ -69,6 +69,8 @@ export function createUi(send: Send): (request: UiRequest) => void {
         return toast(request.kind, request.message);
       case "clipboard":
         return void copy(request.text);
+      case "readClipboard":
+        return void readClipboard(request.id, send);
       case "open":
         return openInEmbedder({
           lumiere: "open",
@@ -125,6 +127,17 @@ function toast(kind: "info" | "error", message: string): void {
   element.textContent = message;
   document.body.append(element);
   setTimeout(() => element.remove(), kind === "error" ? 8000 : 4000);
+}
+
+/** The clipboard's text for the host; null when the browser refuses. */
+async function readClipboard(id: number, send: Send): Promise<void> {
+  let text: string | null;
+  try {
+    text = await navigator.clipboard.readText();
+  } catch {
+    text = null;
+  }
+  send({ ch: "ui", data: { type: "clipboard", id, text } });
 }
 
 async function copy(text: string): Promise<void> {

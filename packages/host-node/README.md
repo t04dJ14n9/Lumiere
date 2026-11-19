@@ -116,7 +116,7 @@ forbids this package from importing `vscode` or any embedder.
 - `src/host/vault.ts`: the vault index's file system: listing and watching.
 - `src/host/navigation.ts`: following links, creating notes, revealing in an open page.
 - `src/host/settings.ts`: settings from the contributed defaults and a JSON file.
-- `src/host/ui-services.ts`: dialogs, the clipboard and the active editor, drawn by the page.
+- `src/host/ui-services.ts`: dialogs, the clipboard and the active editor, drawn by the page. A paste reads the browser's clipboard through the page; one the browser refuses gives what Lumière last copied.
 - `src/host/workspace.ts`, `src/host/watch.ts`: workspace files and state, and file watching.
 - `src/host/paths.ts`, `src/host/atomic-write.ts`: containment, and writes that never leave a file half written.
 - `src/host/git.ts`, `src/host/git-blobs.ts`, `src/host/git-program.ts`: Git from the `git` command line (blame, a note at HEAD or in the index, staging, each repository's changes), and which `git` to run.

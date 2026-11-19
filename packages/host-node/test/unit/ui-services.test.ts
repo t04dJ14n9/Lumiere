@@ -9,7 +9,7 @@ import { NoteDocuments, noteFiles } from "../../src/host/documents";
 import { createNodePlatform } from "../../src/host/node-platform";
 import type { PageSocket } from "../../src/host/panel";
 import { PanelHub } from "../../src/host/panels";
-import { createDialogs } from "../../src/host/ui-services";
+import { createClipboard, createDialogs } from "../../src/host/ui-services";
 
 const urls = () => ({
   cspSource: "'self'",
@@ -177,4 +177,53 @@ test("a multi-select pick with no page open is dismissed", async (t) => {
     await dialogs.pickMany({ placeholder: "x", items: choices }),
     undefined,
   );
+});
+
+/** A page's socket that answers clipboard reads with `clipboard`. */
+function clipboardPage(clipboard: string | null) {
+  const sent: unknown[] = [];
+  let receive: (text: string) => void = () => {};
+  const socket: PageSocket = {
+    send: (text) => {
+      const frame = JSON.parse(text) as {
+        data?: { type?: string; id?: number };
+      };
+      sent.push(frame);
+      if (frame.data?.type === "readClipboard") {
+        const answer = {
+          type: "clipboard",
+          id: frame.data.id,
+          text: clipboard,
+        };
+        queueMicrotask(() =>
+          receive(JSON.stringify({ ch: "ui", data: answer })),
+        );
+      }
+    },
+    onMessage: (listener) => {
+      receive = listener;
+      return () => {};
+    },
+    onClose: () => () => {},
+    close: () => {},
+  };
+  return { socket, sent };
+}
+
+test("a paste reads the real clipboard through the page, not only what Lumière copied", async (t) => {
+  const { uri, hub } = await setup(t);
+  const { id } = await hub.open({ uri, urls });
+  hub.attach(id, clipboardPage("| a | b |\n| - | - |").socket);
+  const clipboard = createClipboard(hub);
+  await clipboard.write("copied by Lumière");
+  assert.equal(await clipboard.read(), "| a | b |\n| - | - |");
+});
+
+test("a page the browser refuses gives what Lumière last copied", async (t) => {
+  const { uri, hub } = await setup(t);
+  const { id } = await hub.open({ uri, urls });
+  hub.attach(id, clipboardPage(null).socket);
+  const clipboard = createClipboard(hub);
+  await clipboard.write("copied by Lumière");
+  assert.equal(await clipboard.read(), "copied by Lumière");
 });

@@ -170,17 +170,50 @@ async function input(
   }
 }
 
-/** Writes go through the page, whose browser holds the clipboard. */
+/**
+ * How long a read waits for the page: the browser may first ask the reader
+ * (a permission prompt, WebKit's Paste button).
+ */
+export const CLIPBOARD_READ_MS = 15_000;
+
+/**
+ * The browser holds the clipboard, so reads and writes go through the page.
+ * A page the browser refuses (no permission, no recent gesture), or none,
+ * gives what Lumière last wrote: the best guess there is.
+ */
 export function createClipboard(panels: PanelHub): Clipboard {
   let last = "";
   return {
-    // A page cannot read the clipboard without asking; what Lumière wrote is the best guess.
-    read: async () => last,
+    read: async () => {
+      const panel = presentingPanel(panels);
+      return panel ? ((await readFromPage(panel)) ?? last) : last;
+    },
     write: async (text) => {
       last = text;
       presentingPanel(panels)?.tell({ type: "clipboard", text });
     },
   };
+}
+
+/** The page's clipboard text; undefined when it refused, closed or did not answer. */
+function readFromPage(panel: LivePanel): Promise<string | undefined> {
+  const id = questionId();
+  return new Promise((resolve) => {
+    const finish = (text: string | undefined) => {
+      clearTimeout(timer);
+      stopListening();
+      void stopWaitingForClose();
+      resolve(text);
+    };
+    const timer = setTimeout(() => finish(undefined), CLIPBOARD_READ_MS);
+    const stopListening = panel.onUi((event) => {
+      if (event.type === "clipboard" && event.id === id) {
+        finish(event.text ?? undefined);
+      }
+    });
+    const stopWaitingForClose = panel.shell.onDispose(() => finish(undefined));
+    panel.tell({ type: "readClipboard", id });
+  });
 }
 
 export function createActiveEditor(panels: PanelHub): ActiveEditor {
