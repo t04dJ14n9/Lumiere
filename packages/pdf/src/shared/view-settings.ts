@@ -20,8 +20,12 @@ export interface ViewSettings extends ViewChoices {
   regionsEnabled: boolean;
   /** Plain Left/Right turn the page keeping the place; ⌥ gives them their usual meaning. */
   arrowsKeepPlace: boolean;
-  /** The viewer's default shortcuts (`lumiere.pdf.keyboardShortcuts`); off leaves every key to VS Code. */
-  keyboardShortcuts: boolean;
+  /**
+   * The viewer's default shortcuts (`lumiere.pdf.keyboardShortcuts`); off
+   * leaves every key to VS Code. Optional so hosts without the setting
+   * need not name it: missing is on.
+   */
+  keyboardShortcuts?: boolean;
 }
 
 /**

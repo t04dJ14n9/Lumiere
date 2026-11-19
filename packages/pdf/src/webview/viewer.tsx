@@ -253,7 +253,7 @@ function useViewerKeys(state: {
   latest.current = state;
   useEffect(() => {
     const onKeyDown = (event: KeyboardEvent): void => {
-      const shortcuts = currentViewSettings().keyboardShortcuts;
+      const shortcuts = currentViewSettings().keyboardShortcuts !== false;
       if (isFindKey(event, { mac: MAC, shortcuts })) {
         event.preventDefault();
         latest.current.search.open();
