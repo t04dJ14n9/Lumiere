@@ -83,7 +83,10 @@ async function sample(page: Page, file: string): Promise<Sample> {
       },
     );
   });
-  await page.keyboard.press("Control+End");
+  // Go to the note's end: CodeMirror's Mod-End, which is Cmd+End on macOS.
+  // Control+End does nothing there, and the wait below would only end on some
+  // other change to the editor, or never.
+  await page.keyboard.press("ControlOrMeta+End");
   const keyMs = await frame.evaluate(
     () => (window as unknown as { keyed: Promise<number> }).keyed,
   );
