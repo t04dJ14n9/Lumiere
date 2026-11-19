@@ -87,6 +87,32 @@ test("pending edits flush before a save writes, and save listeners hear it", asy
   assert.deepEqual(saved, ["one two"]);
 });
 
+test("a note that starts with a byte order mark keeps it when saved", async (t) => {
+  const { file, uri, cleanup } = await note("﻿hello");
+  const documents = new NoteDocuments(NODE_NOTES, 60_000);
+  t.after(() => documents.dispose());
+  t.after(cleanup);
+  const document = await documents.open(uri);
+  // The mark is the text's first character, as Node has always read it.
+  await documents.apply(document, [{ from: 6, to: 6, insert: "!" }]);
+  assert.equal(await document.save(), true);
+  const bytes = await readFile(file);
+  assert.deepEqual([...bytes.subarray(0, 3)], [0xef, 0xbb, 0xbf]);
+  assert.equal(bytes.subarray(3).toString("utf8"), "hello!");
+});
+
+test("a note that is not UTF-8 is not opened, so no save rewrites it with U+FFFD", async (t) => {
+  const { file, uri, cleanup } = await note("");
+  t.after(cleanup);
+  // "café" in Latin-1: 0xE9 alone is not UTF-8.
+  const latin1 = Buffer.from([0x63, 0x61, 0x66, 0xe9]);
+  await writeFile(file, latin1);
+  const documents = new NoteDocuments(NODE_NOTES, 60_000);
+  t.after(() => documents.dispose());
+  await assert.rejects(documents.open(uri), /not UTF-8/);
+  assert.deepEqual(await readFile(file), latin1);
+});
+
 test("a page that cannot flush before a save (composing, busy) does not fail the save", async (t) => {
   const { file, uri, cleanup } = await note("one");
   const logged: string[] = [];
@@ -550,7 +576,8 @@ test("another program's change that lands during a save is read once the save is
   );
   t.after(() => documents.dispose());
   const document = await documents.open("file:///v/Note.md");
-  await documents.apply(document, [{ from: 5, to: 5, insert: "!" }]);
+  // The mark is the text's first character, as Node has always read it.
+  await documents.apply(document, [{ from: 6, to: 6, insert: "!" }]);
   assert.equal(await document.save(), true);
   await until(() => document.getText() === "theirs");
   assert.equal(document.isDirty, false);

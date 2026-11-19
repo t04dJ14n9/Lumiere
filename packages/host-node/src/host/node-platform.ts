@@ -76,13 +76,35 @@ function toFile(uri: string): string {
   return file;
 }
 
+/** Keeps a byte order mark as U+FEFF, so a save writes it back. */
+const UTF8 = new TextDecoder("utf-8", { fatal: true, ignoreBOM: true });
+
+/**
+ * A file's text. Bytes that are not UTF-8 are refused: decoding them would
+ * put U+FFFD in their place, and the next save would write that over the
+ * file, losing what they were.
+ */
+function decodeText(bytes: Uint8Array, file: string): string {
+  try {
+    return UTF8.decode(bytes);
+  } catch {
+    throw new Error(
+      `${path.basename(file)} is not UTF-8 text. Lumière does not open it, so that saving cannot rewrite it.`,
+    );
+  }
+}
+
 export const nodeFiles: HostFiles = {
   isInside,
   contain: assertContained,
-  readText: async (uri, root) =>
-    root === undefined
-      ? readFile(toFile(uri), "utf8")
-      : (await readContainedBytes(toFile(uri), root)).toString("utf8"),
+  readText: async (uri, root) => {
+    const file = toFile(uri);
+    const bytes =
+      root === undefined
+        ? await readFile(file)
+        : await readContainedBytes(file, root);
+    return decodeText(bytes, file);
+  },
   readBytes: (uri, root) =>
     root === undefined
       ? readFile(toFile(uri))

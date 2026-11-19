@@ -139,6 +139,8 @@ forbids this package from importing `vscode` or any embedder.
   stays a link (the file it names is replaced, when that file is inside the
   workspace); another hard link to the note keeps the old text. A note in a
   folder that takes no new file is still written in place.
+  Notes are UTF-8: a byte order mark is kept, and a note whose bytes are not
+  UTF-8 is not opened (VS Code would show and save U+FFFD in their place).
 
 - Containment is checked, then the file is opened, and Node has no `openat`
   to bind the two. A local process that swaps a folder for a symlink in
