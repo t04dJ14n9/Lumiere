@@ -11,3 +11,6 @@ playwright-report/
 **/test/fixtures/generated/
 packages/pdf/src/**/*.d.ts
 !packages/pdf/src/webview/assets.d.ts
+# Git worktrees (AGENTS.md: <repo>/.worktree/<branch>) and agents' worktrees.
+.worktree/
+.claude/worktrees/
