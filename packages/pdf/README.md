@@ -453,9 +453,12 @@ request and on pushes to `main`. Each job, and how to run it locally:
 
 | Job                       | What it proves                                                                                                                                                                                         | Locally                                                       |
 | ------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------ | ------------------------------------------------------------- |
-| `check`                   | Lint, typecheck and unit tests pass                                                                                                                                                                    | `pnpm check`                                                  |
-| `browser`                 | The webview suite in Chromium; on failure, `test-results/` is uploaded                                                                                                                                 | `pnpm test:browser`                                           |
-| `package`                 | `pnpm package` builds the VSIX, leaves committed files unchanged, and the VSIX is under 8 MB with no tests, sources, source maps or secret-shaped strings; the VSIX is uploaded as the `vsix` artifact | `pnpm package && bash .github/scripts/check-vsix.sh *.vsix 8` |
+| `check` | Prettier, lint, typecheck, unit tests and generated contributions pass | `pnpm check` |
+| `check (windows)` | The unit tests pass on Windows | `pnpm test` |
+| `desktop` | The desktop app's Rust: `cargo check` and its unit tests | `pnpm check:desktop` |
+| `browser` | The webview suite in Chromium; on failure, `test-results/` is uploaded | `pnpm test:browser` |
+| `quality` | Scroll smoothness and opening speed stay within their budgets | `pnpm test:quality` |
+| `package` | `pnpm package` builds the VSIX, leaves committed files unchanged, and the VSIX is under 20 MB with no tests, sources, source maps or unreviewed secret-shaped strings, and the PDF engine once; the webview entry and the extension host grow no more than 10% over `scripts/bundle-baseline.json`; the VSIX is uploaded as the `vsix` artifact | `pnpm package && bash .github/scripts/check-vsix.sh *.vsix 20 && node scripts/bundle-size.mjs` |
 | `secret-scan`             | gitleaks finds no secrets in the git history                                                                                                                                                           | `gitleaks git --redact .`                                     |
 | `audit (advisory)`        | `pnpm audit --prod`; a warning, never a failure                                                                                                                                                        | `pnpm audit --prod`                                           |
 
