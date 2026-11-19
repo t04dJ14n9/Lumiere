@@ -71,6 +71,18 @@ async function settle(): Promise<void> {
   }
 }
 
+/**
+ * Wait until `done` holds. A retry runs on a timer, which a loaded machine can
+ * fire after any fixed number of event-loop turns, so a test of a retry waits
+ * for its outcome rather than counting turns.
+ */
+async function until(done: () => boolean): Promise<void> {
+  const deadline = Date.now() + 2_000;
+  while (!done() && Date.now() < deadline) {
+    await new Promise((resolve) => setTimeout(resolve, 1));
+  }
+}
+
 /** A panel synchronizing with `note` that retries at once. */
 function connect(
   note: ReturnType<typeof hostNote>,
@@ -96,7 +108,7 @@ test("an edit the workbench refuses once is sent again and reaches the note", as
 
   panel.view.dispatch({ changes: { from: 4, insert: "!" } });
   panel.sync.pump();
-  await settle();
+  await until(() => note.text === "base!");
 
   assert.equal(panel.sync.error, undefined);
   assert.equal(note.text, "base!");
@@ -129,7 +141,7 @@ test("a push that times out on a busy host is retried, not the end of sync", asy
 
   panel.view.dispatch({ changes: { from: 0, insert: "# " } });
   panel.sync.pump();
-  await settle();
+  await until(() => note.text === "# base");
 
   assert.equal(panel.sync.error, undefined);
   assert.match(panel.statuses.join("\n"), /Not synced yet .*Retrying/);
