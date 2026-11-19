@@ -69,16 +69,39 @@ export class PdfViewPreferences {
     if (!restore) {
       return undefined;
     }
-    return parseSavedPosition(this.state.get(positionKey(uri)));
+    return parseSavedPosition(
+      this.positions()[uri] ?? this.state.get(legacyPositionKey(uri)),
+    );
   }
 
+  /**
+   * Keep where the PDF at `uri` is. All PDFs share one state entry, the
+   * most recently read last, and only the last `MAX_POSITIONS` are kept;
+   * a PDF's entry of its own from an earlier version goes once it is saved.
+   */
   save(uri: string, position: ReadingPosition): void {
+    const positions = this.positions();
+    delete positions[uri];
+    positions[uri] = savedPosition(position);
+    const uris = Object.keys(positions);
+    for (const old of uris.slice(0, Math.max(0, uris.length - MAX_POSITIONS))) {
+      delete positions[old];
+    }
     // Detached storage work has an error sink; open panels never follow this saved value.
-    void this.state
-      .update(positionKey(uri), savedPosition(position))
-      .catch((error: unknown) =>
-        console.error("Could not save PDF view", error),
-      );
+    const failed = (error: unknown) =>
+      console.error("Could not save PDF view", error);
+    void this.state.update(POSITIONS_KEY, positions).catch(failed);
+    if (this.state.get(legacyPositionKey(uri)) !== undefined) {
+      void this.state.update(legacyPositionKey(uri), undefined).catch(failed);
+    }
+  }
+
+  /** The saved positions by PDF, oldest first; a copy to change. */
+  private positions(): Record<string, unknown> {
+    const saved = this.state.get(POSITIONS_KEY);
+    return typeof saved === "object" && saved !== null && !Array.isArray(saved)
+      ? { ...(saved as Record<string, unknown>) }
+      : {};
   }
 
   dispose(): void {
@@ -86,6 +109,12 @@ export class PdfViewPreferences {
   }
 }
 
-function positionKey(uri: string): string {
+/** Where each PDF was left, by URI: one state entry for all of them. */
+const POSITIONS_KEY = "lumiere.pdf.readingPositions";
+/** PDFs whose place is kept; reading one more forgets the one read longest ago. */
+export const MAX_POSITIONS = 500;
+
+/** Where earlier versions kept a PDF's place: a state entry of its own, never removed. */
+function legacyPositionKey(uri: string): string {
   return `lumiere.pdf.readingPosition:${uri}`;
 }

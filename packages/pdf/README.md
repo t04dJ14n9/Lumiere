@@ -29,7 +29,8 @@ is opt-in (`lumiere.pdf.regions.enabled`, default off).
 - **View controls.** A View picker in the editor title/status bar, and a
   compact **View** menu in the slim toolbar of the web and iPad hosts, selects zoom, layout,
   scrolling mode and direction. Saved choices and reading position return
-  when a PDF reopens. Next/previous moves by spreads in two-page layouts;
+  when a PDF reopens (the place is kept two seconds after the view stops
+  moving, for the 500 PDFs read most recently). Next/previous moves by spreads in two-page layouts;
   go to page opens its containing spread, and fit modes measure the whole spread.
   Smooth scrolling follows `editor.smoothScrolling`,
   with a PDF setting to override it, and respects reduced motion. See

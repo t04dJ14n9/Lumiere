@@ -12,10 +12,8 @@ import type { HistorySnapshot } from "../../shared/pdf-history";
 import type { PdfSelection } from "../../shared/selection";
 import type { ToolbarSettings } from "../../shared/toolbar-settings";
 import type { ViewerAction, ViewState } from "../../shared/view-state";
-import {
-  positionFromView,
-  type ReadingPosition,
-} from "../../shared/reading-position";
+import type { ReadingPosition } from "../../shared/reading-position";
+import { PanelPosition } from "./panel-position";
 import type { EffectivePageColors } from "../../shared/page-colors";
 import type { ViewSettings } from "../../shared/view-settings";
 import { Emitter, type Subscription } from "../events";
@@ -94,7 +92,7 @@ export class PdfViewerPanel {
   private readonly loads = new ViewerLoads();
   /** The last patch version applied. */
   private patchVersion = 0;
-  private position: ReadingPosition | undefined;
+  private readonly position: PanelPosition;
   private settings: ViewSettings;
   private toolbar: ToolbarSettings;
   private pageColorsMode: EffectivePageColors = "normal";
@@ -110,7 +108,9 @@ export class PdfViewerPanel {
     private readonly host: ViewerPanelHost,
     private readonly options: ViewerPanelOptions,
   ) {
-    this.position = options.position;
+    this.position = new PanelPosition(options.position, (position) =>
+      options.savePosition(position),
+    );
     this.settings = options.settings;
     this.toolbar = { ...options.toolbar };
     this.navigation = new PdfNavigation((message) => this.post(message));
@@ -307,9 +307,7 @@ export class PdfViewerPanel {
 
   dispose(): void {
     this.history.cancelAll();
-    if (this.position) {
-      this.options.savePosition(this.position);
-    }
+    this.position.dispose();
     for (const disposable of this.disposables) {
       disposable.dispose();
     }
@@ -430,7 +428,7 @@ export class PdfViewerPanel {
     }
     if (view) {
       this.view = view;
-      this.position = positionFromView(view);
+      this.position.viewed(view);
     }
     if (selection) {
       this.selectionState.set(
@@ -475,7 +473,7 @@ export class PdfViewerPanel {
       ...this.webview.deliver(bytes.data, load),
       settings: this.settings,
       sha256: bytes.sha256,
-      ...(this.position ? { position: this.position } : {}),
+      ...(this.position.current ? { position: this.position.current } : {}),
       ...(annotations === undefined ? {} : { annotations }),
     });
     this.history.newViewer();
