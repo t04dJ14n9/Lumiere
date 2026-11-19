@@ -3,7 +3,8 @@
  * (a server's route, or a page host-web made). The shell sends it the theme,
  * hears its requests to open other files, and hands it a channel to its host
  * when it asks for one (embedding.ts). Hidden tabs stay loaded, keeping
- * their state.
+ * their state, up to `MAX_LIVE_EDITORS` (tabs.ts); the window drops the
+ * page of a tab used longer ago and loads it again when it is shown.
  */
 import { useEffect, useRef, useState } from "react";
 import {

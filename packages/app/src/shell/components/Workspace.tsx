@@ -10,7 +10,12 @@ import { backend } from "../backend";
 import type { VaultState } from "../hooks";
 import type { Opening } from "../opening";
 import { emptyNotePrompt, type Panels } from "../panels";
-import { takesSketch, type TabsAction, type TabsState } from "../tabs";
+import {
+  liveNoteTabs,
+  takesSketch,
+  type TabsAction,
+  type TabsState,
+} from "../tabs";
 import type { UiStateHandle } from "../ui-state";
 import { EditorFrame } from "./EditorFrame";
 import { FileTree } from "./FileTree";
@@ -108,17 +113,21 @@ function TabBodies({
   readonly children: ReactNode;
 }) {
   const prompt = emptyNotePrompt(panels.narrow, panels.sidebar);
+  const live = liveNoteTabs(tabs);
   return (
     // Every tab stays laid out at full size, hidden or not (styles.css).
     <div className="tab-bodies" ref={bodies}>
       {tabs.tabs.map((tab) =>
         tab.kind === "note" ? (
-          <EditorFrame
-            key={tab.id}
-            tab={tab}
-            visible={tab.id === tabs.active}
-            onOpen={opening.openPath}
-          />
+          // A tab not used lately has no page until it is shown again.
+          live.has(tab.id) && (
+            <EditorFrame
+              key={tab.id}
+              tab={tab}
+              visible={tab.id === tabs.active}
+              onOpen={opening.openPath}
+            />
+          )
         ) : (
           <SettingsEditor
             key={tab.id}

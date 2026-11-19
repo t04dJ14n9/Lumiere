@@ -1,6 +1,8 @@
 import test from "node:test";
 import assert from "node:assert/strict";
 import {
+  liveNoteTabs,
+  MAX_LIVE_EDITORS,
   noTabs,
   restoreTabs,
   SETTINGS_TAB,
@@ -192,4 +194,23 @@ test("F36: a rename the server announces moves the tabs of the open vault that h
     renameAction({ from: "/elsewhere/x.md", to: "/v/x.md" }, ["/v"]),
     undefined,
   );
+});
+
+test("P26: only the pages of the shown tab and those shown last stay loaded", () => {
+  let state = noTabs;
+  for (const name of ["a", "b", "c", "d", "e", "f", "g"]) {
+    state = open(state, `${name}.md`);
+  }
+  state = tabsReducer(state, { type: "openSettings" });
+  state = open(state, "b.md");
+  const live = liveNoteTabs(state, 3);
+  assert.deepEqual(
+    [...live],
+    [tabId("/v", "b.md"), tabId("/v", "g.md"), tabId("/v", "f.md")],
+  );
+  // Settings is no page, and a window with few tabs keeps every one.
+  assert.equal(live.has(SETTINGS_TAB), false);
+  assert.equal(liveNoteTabs(open(noTabs, "a.md")).size, 1);
+  assert.equal(MAX_LIVE_EDITORS, 5);
+  assert.equal(liveNoteTabs(state).size, 5);
 });

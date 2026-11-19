@@ -55,6 +55,14 @@ export type TabsAction =
 
 export const SETTINGS_TAB = "settings";
 
+/**
+ * Note tabs whose page stays loaded. Each page is a whole editor, so a
+ * window with many tabs keeps only those used last; the others' pages go,
+ * which writes their notes at once (the page shim's `pagehide`), and load
+ * again when shown, reading back their scroll position (its `getState`).
+ */
+export const MAX_LIVE_EDITORS = 5;
+
 export const noTabs: TabsState = { tabs: [], active: undefined, recent: [] };
 
 export function tabId(vault: string, path: string): string {
@@ -67,6 +75,26 @@ export function tabId(vault: string, path: string): string {
  */
 export function tabToClose(state: TabsState): string | undefined {
   return state.tabs.length > 1 ? state.active : undefined;
+}
+
+/** The note tabs whose pages stay loaded: the shown one and those shown last. */
+export function liveNoteTabs(
+  state: TabsState,
+  limit = MAX_LIVE_EDITORS,
+): ReadonlySet<string> {
+  const notes = new Set(
+    state.tabs.filter((tab) => tab.kind === "note").map((tab) => tab.id),
+  );
+  const live = new Set<string>();
+  for (const id of [state.active, ...state.recent]) {
+    if (live.size >= limit) {
+      break;
+    }
+    if (id !== undefined && notes.has(id)) {
+      live.add(id);
+    }
+  }
+  return live;
 }
 
 /** What a tab is called in the tab strip. */

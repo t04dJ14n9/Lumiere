@@ -69,7 +69,10 @@ Laid out as VS Code:
   `tree-editing.ts`, `tree-edits.ts`).
 - Notes open as tabs in the middle. Each tab is an editor page in an
   iframe, sent the theme and told when it is shown
-  (`@workshop/host-node/embedding`).
+  (`@workshop/host-node/embedding`). Only the pages of the five tabs used
+  last stay loaded (`MAX_LIVE_EDITORS`, `tabs.ts`); an older tab's page goes,
+  its note written as it does, and loads again at its scroll position when
+  the tab is shown.
 - The outline is the Outline plugin's own tree, served by host-node
   (`@workshop/host-node/views`). Backlinks and Tags can join it the same way
   (`components/OutlinePanel.tsx`).
