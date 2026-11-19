@@ -3,7 +3,7 @@ import { EditorView, ViewPlugin } from "@codemirror/view";
 import type { Context, Plugin } from "@workshop/core";
 import type {} from "../editor/api";
 import { markdownFromHtml } from "./conversion";
-import { acceptsHtml, pasteTransformed } from "./paste";
+import { acceptsHtml, pasteEditTracker, pasteTransformed } from "./paste";
 export const pasteHtmlWebview: Plugin = {
   name: "pasteHtml",
   inject: { required: ["editor"] },
@@ -26,6 +26,7 @@ function registerHtmlTransform(ctx: Context): void {
   });
 }
 function registerPasteCapture(ctx: Context): void {
+  ctx.effect(() => ctx.editor.extend(pasteEditTracker));
   ctx.effect(() =>
     ctx.editor.extend(
       ViewPlugin.define((outer) => {
