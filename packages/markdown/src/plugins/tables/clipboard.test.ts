@@ -3,8 +3,10 @@ import assert from "node:assert/strict";
 import { EditorState, type TransactionSpec } from "@codemirror/state";
 import type { EditorView } from "@codemirror/view";
 import { parseTable, type CellRange } from "../../markdown/tables/model";
+import type { MenuItem } from "../editor/api";
 import { TableClipboard } from "./clipboard";
 import { TableSelection } from "./selection";
+import { TableToolbar } from "./toolbar";
 import type { CellProjection } from "./projection";
 import type { TableGrid } from "./grid";
 
@@ -209,6 +211,69 @@ test("a pasted Markdown table keeps its cells for every delimiter row GFM allows
       delimiter,
     );
   }
+});
+
+test("Paste as plain text keeps a copied Markdown table's rows as text", async () => {
+  const pasted = "| h1 | h2 |\n| --- | --- |";
+  const cellTexts = async (plainText: boolean) => {
+    const fixture = clipboardFixture();
+    const range = {
+      anchor: { row: 1, column: 0 },
+      head: { row: 1, column: 1 },
+    };
+    fixture.selection.range = range;
+    Object.assign(fixture.selection, { highlight() {} });
+    Object.assign(fixture.clipboard, {
+      projection: { ...fixture.inner, inner: undefined, close() {} },
+    });
+    fixture.setRead(async () => pasted);
+    await fixture.clipboard.pasteFromMenu(range, plainText);
+    return parseTable(fixture.grid.block.source)!.rows.map((row) =>
+      row.map((cell) => cell.text),
+    );
+  };
+  // Paste reads the table cell for cell; plain text keeps its lines.
+  assert.deepEqual((await cellTexts(false))[1], ["h1", "h2"]);
+  assert.deepEqual(
+    (await cellTexts(true)).slice(1).map((row) => row[0]),
+    ["\\| h1 \\| h2 \\|", "\\| --- \\| --- \\|"],
+  );
+});
+
+test("the menu's Paste as plain text asks for plain text", async () => {
+  const requests: boolean[] = [];
+  const position = { row: 1, column: 0 };
+  const menus: MenuItem[][] = [];
+  const grid = {
+    model: parseTable(source)!,
+    root: {},
+  } as unknown as TableGrid;
+  const toolbar = new TableToolbar(
+    grid,
+    {
+      range: () => ({ anchor: position, head: position }),
+      active: () => position,
+      open() {},
+      request() {},
+      execute() {},
+      selectAll() {},
+    },
+    {
+      pasteFromMenu: async (_range: CellRange, plainText?: boolean) => {
+        requests.push(plainText === true);
+      },
+    } as unknown as TableClipboard,
+    (_owner, items) => {
+      menus.push([...items]);
+      return () => {};
+    },
+  );
+  toolbar.showMenu(position, { x: 0, y: 0 });
+  const item = (label: string) =>
+    menus[0]!.find((candidate) => candidate.label === label)!;
+  await item("Paste").run!();
+  await item("Paste as plain text").run!();
+  assert.deepEqual(requests, [false, true]);
 });
 
 test("pasted text is not a Markdown table when its delimiter row has another cell count than the header", () => {

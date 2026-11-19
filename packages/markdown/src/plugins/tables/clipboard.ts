@@ -133,13 +133,18 @@ export class TableClipboard {
     this.pasteText(text, range);
   }
 
-  pasteText(text: string, range: CellRange): void {
+  /**
+   * Write pasted text into the range: a Markdown table cell for cell, other
+   * text split at tabs and lines. Plain text is never read as a table.
+   */
+  pasteText(text: string, range: CellRange, plainText = false): void {
     if (!text) {
       return;
     }
-    const cells = looksLikeMarkdownTable(text)
-      ? pastedMarkdownCells(text)
-      : pastedCells(text);
+    const cells =
+      !plainText && looksLikeMarkdownTable(text)
+        ? pastedMarkdownCells(text)
+        : pastedCells(text);
     this.grid.replace(writeCells(this.grid.model, range, cells));
   }
 
@@ -163,7 +168,7 @@ export class TableClipboard {
     }
   }
 
-  async pasteFromMenu(range: CellRange): Promise<void> {
+  async pasteFromMenu(range: CellRange, plainText = false): Promise<void> {
     const expected = this.grid.block.source;
     const editor = this.projection.inner;
     // Word navigation mutates the retained editor's position object in place.
@@ -207,7 +212,7 @@ export class TableClipboard {
     } else {
       this.projection.close();
       this.selection.range = range;
-      this.pasteText(text, range);
+      this.pasteText(text, range, plainText);
       this.selection.highlight();
       this.grid.root.focus();
     }
