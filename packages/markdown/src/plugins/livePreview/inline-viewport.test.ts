@@ -10,7 +10,7 @@ import {
   visualRevealFreeze,
 } from "../../webview/ui/pointer-selection";
 import { documentTree } from "./document-tree";
-import { HybridInline } from "./inline";
+import { HybridInline } from "./inline-plugin";
 
 const doc =
   "before\n\n# Heading\n\n**bold** [label](Target.md)\n\n```\ncode\n```\n\nafter";

@@ -58,7 +58,13 @@ syntax parser and HTML renderer share the highlight-aware emphasis flanking rule
 - `quoted-block.test.ts`: quote markers stay out of a quoted block's render.
 - `block-discovery.ts`: structural syntax cache and renderer candidate selection.
 - `block-discovery.test.ts`: registration cost, discovery parity and unrestricted renderers.
-- `inline.ts`: basic inline decoration builder and composition/drag lifetime.
+- `inline.ts`: basic inline decoration builder.
+- `inline-plugin.ts`: when inline decorations are built again, and their
+  composition/drag lifetime.
+- `offscreen-reuse.ts`: while only the caret moves, persistent widgets off
+  screen (tall embeds) keep what they drew, apart from those in the
+  paragraphs the old or new selection reveals; `offscreen-reuse.test.ts`
+  checks this against a full drawing over random selections.
 - `highlight-colour.ts`: a coloured highlight's class and emoji.
 - `../../markdown/dialect/highlight-emphasis.ts`: highlight-aware emphasis flanking,
   shared with the HTML renderer.

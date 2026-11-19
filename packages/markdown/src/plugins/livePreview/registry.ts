@@ -1,4 +1,11 @@
-import { Facet, StateField, type Transaction } from "@codemirror/state";
+import {
+  Facet,
+  StateField,
+  type Range,
+  type Transaction,
+} from "@codemirror/state";
+import type { Decoration } from "@codemirror/view";
+import type { OffscreenDrawing, OffscreenReuse } from "./offscreen-reuse";
 import { revealRanges } from "../../webview/ui/pointer-selection";
 import type { EditorState, SelectionRange } from "@codemirror/state";
 import type { SyntaxNode, Tree } from "@lezer/common";
@@ -178,29 +185,57 @@ export function cachedPersistentNodes(
   return found;
 }
 
+/**
+ * Draws the persistent inline widgets outside the visible ranges. With
+ * `reuse`, a widget away from its dirty spans keeps what it drew last time
+ * instead of being decorated again. Returns this drawing, for next time.
+ */
 export function decoratePersistentOffViewport(
   state: EditorState,
-  builder: InlineContext,
+  builder: InlineContext & { readonly ranges: Range<Decoration>[] },
   visibleRanges: readonly { from: number; to: number }[],
-): void {
+  reuse?: OffscreenReuse,
+): OffscreenDrawing {
+  const drawing: OffscreenDrawing = { state, drawn: new Map() };
   const allRenderers = state.facet(inlineRenderers);
   const persistent = new Set(
     allRenderers.filter((r) => r.persistent).flatMap((r) => r.nodes),
   );
   if (persistent.size === 0) {
-    return;
+    return drawing;
   }
   const tree = state.field(documentTree);
   for (const entry of cachedPersistentNodes(tree, persistent)) {
-    if (!visibleRanges.some((v) => entry.from < v.to && entry.to > v.from)) {
-      const node = entry.node ?? nodeOf(tree, entry);
-      if (node) {
-        allRenderers
-          .find((r) => r.nodes.includes(entry.name))
-          ?.decorate(node, builder);
-      }
+    if (visibleRanges.some((v) => entry.from < v.to && entry.to > v.from)) {
+      continue;
     }
+    const key = `${entry.name}:${entry.from}:${entry.to}`;
+    const kept =
+      reuse && !isDirty(reuse, entry) && reuse.previous.drawn.get(key);
+    if (kept) {
+      builder.ranges.push(...kept);
+      drawing.drawn.set(key, kept);
+      continue;
+    }
+    const node = entry.node ?? nodeOf(tree, entry);
+    const start = builder.ranges.length;
+    if (node) {
+      allRenderers
+        .find((r) => r.nodes.includes(entry.name))
+        ?.decorate(node, builder);
+    }
+    drawing.drawn.set(key, builder.ranges.slice(start));
   }
+  return drawing;
+}
+
+function isDirty(
+  reuse: OffscreenReuse,
+  entry: { from: number; to: number },
+): boolean {
+  return reuse.dirty.some(
+    (span) => span.from <= entry.to && span.to >= entry.from,
+  );
 }
 
 function nodeOf(tree: Tree, entry: PersistentInlineEntry): SyntaxNode | null {

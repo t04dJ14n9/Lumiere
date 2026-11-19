@@ -25,7 +25,7 @@ import {
 import { blockDecorations, blockViewportSupport } from "./viewport-decorations";
 import { documentTree, documentTreeParser } from "./document-tree";
 import { frontmatterPlaceholderRenderer } from "./frontmatter-placeholder";
-import { hybridInline } from "./inline";
+import { hybridInline } from "./inline-plugin";
 import { headingDragStart } from "./heading-drag";
 import type {} from "../render/api";
 import {
