@@ -21,6 +21,9 @@
         max-width: 32rem;
         padding: 24px;
       }
+      #starting {
+        opacity: 0.6;
+      }
       pre {
         white-space: pre-wrap;
         opacity: 0.8;
@@ -29,10 +32,14 @@
   </head>
   <body>
     <!--
-      Shown only when Lumière's server could not start (src-tauri/src/lib.rs);
-      every other window is the server's own page.
+      The window's first page, shown at once while Lumière's server starts
+      (src-tauri/src/lib.rs); the server's own page replaces it. When the
+      server could not start, it says why.
     -->
-    <main>
+    <main id="starting" aria-live="polite">
+      <p>Starting Lumière…</p>
+    </main>
+    <main id="failed" hidden>
       <h1>Lumière could not start</h1>
       <pre id="reason"></pre>
       <p>

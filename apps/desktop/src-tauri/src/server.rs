@@ -11,7 +11,7 @@ use std::sync::{mpsc, Mutex};
 use std::time::{Duration, Instant};
 
 use serde::Deserialize;
-use tauri::{AppHandle, Manager, Runtime, Url, WebviewUrl};
+use tauri::{AppHandle, Manager, Runtime, Url};
 
 /// How long the server may take to print its ready line.
 const READY_TIMEOUT: Duration = Duration::from_secs(30);
@@ -41,8 +41,9 @@ struct Server {
 
 struct Running(Mutex<Option<Server>>);
 
-/// Start the server; the window's URL once it is ready.
-pub fn start<R: Runtime>(app: &AppHandle<R>) -> Result<WebviewUrl, String> {
+/// Start the server; the window's URL once it is ready. Blocks until then:
+/// call it off the main thread.
+pub fn start<R: Runtime>(app: &AppHandle<R>) -> Result<Url, String> {
     let data = data_folder(app)?;
     let mut command = server_command(app)?;
     hide_console(&mut command);
@@ -70,7 +71,7 @@ pub fn start<R: Runtime>(app: &AppHandle<R>) -> Result<WebviewUrl, String> {
         address,
         token,
     }))));
-    Ok(WebviewUrl::External(url))
+    Ok(url)
 }
 
 pub fn is_running<R: Runtime>(app: &AppHandle<R>) -> bool {
