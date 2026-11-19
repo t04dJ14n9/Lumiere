@@ -3,7 +3,7 @@ import assert from "node:assert/strict";
 import { realpathSync } from "node:fs";
 import { mkdtemp, mkdir, writeFile, rm, symlink } from "node:fs/promises";
 import { tmpdir } from "node:os";
-import { isAbsolute, join, relative } from "node:path";
+import { isAbsolute, join, relative, resolve as resolvePath } from "node:path";
 import { execFileSync } from "node:child_process";
 import { EventEmitter } from "node:events";
 import type { ChildProcess, spawn } from "node:child_process";
@@ -286,7 +286,10 @@ test("production runner runs the git it is given, with its environment added", a
   assert.equal(seen[1]?.[0], "/opt/git/bin/git");
   const env = (seen[1]?.[2] as { env: Record<string, string | undefined> }).env;
   assert.equal(env.GIT_TERMINAL_PROMPT, "0");
-  assert.equal(env.PATH, process.env.PATH);
+  // Windows spells it Path; process.env finds it in any case, a copy does not.
+  const pathKey = Object.keys(env).find((key) => key.toUpperCase() === "PATH");
+  assert.ok(pathKey, "the process's PATH is passed on");
+  assert.equal(env[pathKey], process.env.PATH);
 });
 
 test("production runner enforces timeout and kills the child", async () => {
@@ -491,8 +494,11 @@ test("discoverGitRoot finds the work tree from a nested path without vscode.git"
     const nested = join(root, "notes");
     await mkdir(nested, { recursive: true });
     await writeFile(join(nested, "home.md"), "hello\n");
-    // git reports the real path (macOS tmp dirs live under /private/var).
-    assert.equal(await discoverGitRoot(nested, runGit), realpathSync(root));
+    // git reports the real path: macOS tmp dirs live under /private/var, and
+    // on Windows git writes C:/Users/<long name>/... for C:\Users\RUNNER~1\....
+    const discoveredRoot = await discoverGitRoot(nested, runGit);
+    assert.ok(discoveredRoot);
+    assert.equal(resolvePath(discoveredRoot), realpathSync.native(root));
     assert.equal(
       await discoverGitRoot(join(nested, "missing-dir"), runGit),
       undefined,
