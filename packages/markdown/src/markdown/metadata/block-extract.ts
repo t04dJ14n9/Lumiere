@@ -14,24 +14,18 @@ export function extractBlocks(
   position: (from: number, to: number) => Position,
 ): NoteMetadata["blocks"] {
   const blocks = Object.create(null) as NoteMetadata["blocks"];
-  for (const match of source.matchAll(
-    /(?:^|[ \t])\^([A-Za-z0-9-]+)[ \t]*(?=\r?$)/gm,
-  )) {
+  const markers = new BlockMarkers(source);
+  for (const match of markers.all) {
     const start = tree.resolve(match.index, 1);
     if (excludedBlock(start)) {
       continue;
     }
     let node = blockOf(start);
     const id = match[1]!;
-    if (
-      source.slice(node.from, node.to).trim() === "^" + id &&
-      node.prevSibling
-    ) {
+    if (isOnlyMarker(source, node, id) && node.prevSibling) {
       node = node.prevSibling;
     }
-    const text = source
-      .slice(node.from, node.to)
-      .replace(new RegExp(`(?:^|[ \\t])\\^${id}[ \\t]*(?=\\r?$)`, "gm"), "");
+    const text = markers.textWithout(node, id);
     blocks[id] = {
       id,
       from: node.from,
@@ -41,6 +35,97 @@ export function extractBlocks(
     };
   }
   return blocks;
+}
+
+const MARKER = /(?:^|[ \t])\^([A-Za-z0-9-]+)[ \t]*(?=\r?$)/gm;
+
+/**
+ * The note's `^id` markers (with the space before them and the spaces
+ * after), found in one pass. Many ids can name one block (each line of a
+ * long quote), so a block's text without one id is put together from the
+ * markers inside the block, grouped once per block, rather than by reading
+ * the whole block again for every id.
+ */
+class BlockMarkers {
+  readonly all: RegExpExecArray[];
+  private readonly byBlock = new Map<string, Map<string, RegExpExecArray[]>>();
+  constructor(private readonly source: string) {
+    this.all = [...source.matchAll(MARKER)];
+  }
+
+  /** The block's text with every marker of `id` in it removed. */
+  textWithout(block: { from: number; to: number }, id: string): string {
+    let text = "";
+    let at = block.from;
+    for (const marker of this.inBlock(block).get(id) ?? []) {
+      text += this.source.slice(at, marker.index);
+      at = marker.index + marker[0].length;
+    }
+    return text + this.source.slice(at, block.to);
+  }
+
+  private inBlock(block: {
+    from: number;
+    to: number;
+  }): Map<string, RegExpExecArray[]> {
+    const key = `${block.from}:${block.to}`;
+    let ids = this.byBlock.get(key);
+    if (!ids) {
+      ids = new Map();
+      for (
+        let index = this.firstAtOrAfter(block.from);
+        index < this.all.length;
+        index++
+      ) {
+        const marker = this.all[index]!;
+        if (marker.index + marker[0].length > block.to) {
+          break;
+        }
+        const same = ids.get(marker[1]!);
+        if (same) {
+          same.push(marker);
+        } else {
+          ids.set(marker[1]!, [marker]);
+        }
+      }
+      this.byBlock.set(key, ids);
+    }
+    return ids;
+  }
+
+  private firstAtOrAfter(offset: number): number {
+    let low = 0;
+    let high = this.all.length;
+    while (low < high) {
+      const middle = (low + high) >> 1;
+      if (this.all[middle]!.index < offset) {
+        low = middle + 1;
+      } else {
+        high = middle;
+      }
+    }
+    return low;
+  }
+}
+
+/** Whether `node` holds nothing but the marker `^id`, read without slicing it. */
+function isOnlyMarker(
+  source: string,
+  node: { from: number; to: number },
+  id: string,
+): boolean {
+  let at = node.from;
+  while (at < node.to && /\s/.test(source[at]!)) {
+    at++;
+  }
+  if (!source.startsWith(`^${id}`, at)) {
+    return false;
+  }
+  at += id.length + 1;
+  while (at < node.to && /\s/.test(source[at]!)) {
+    at++;
+  }
+  return at === node.to;
 }
 
 /** The block an id at `node` names (see `extractBlocks`). */

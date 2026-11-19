@@ -68,3 +68,27 @@ test("a definition lookup answers in document order, each definition passed once
     false,
   ]);
 });
+
+function quotedIds(count: number): string {
+  return Array.from({ length: count }, (_, i) => `> line ${i} ^q${i}`).join(
+    "\n",
+  );
+}
+
+test("block ids in one long quote each cost the same however many there are", () => {
+  // Each id names the whole quote, written without that id.
+  const note = metadata("> a ^x\n> b ^y\n> c ^x\n\npara ^z");
+  assert.equal(note.blocks.x!.text, "> a\n> b ^y\n> c");
+  assert.equal(note.blocks.y!.text, "> a ^x\n> b\n> c ^x");
+  assert.equal(note.blocks.z!.text, "para");
+  const alone = metadata("para\n\n^solo");
+  assert.equal(alone.blocks.solo!.text, "para");
+  // Sixteen times the ids: about sixteen times the time when each id reads
+  // its own place, far more when each reads the whole quote.
+  const small = fastest(quotedIds(500));
+  const large = fastest(quotedIds(8000));
+  assert.ok(
+    large / small < 32,
+    `500 ids: ${small.toFixed(1)} ms; 8,000: ${large.toFixed(1)} ms`,
+  );
+});
