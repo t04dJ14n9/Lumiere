@@ -1,4 +1,4 @@
-import type { MarkdownConfig } from "@lezer/markdown";
+import type { BlockContext, MarkdownConfig } from "@lezer/markdown";
 
 /**
  * Whether a line (from its first non-space character) opens display math.
@@ -54,6 +54,33 @@ export function inlineMathEnd(
   return -1;
 }
 
+/**
+ * The text after a formula's closing `$$` on a later line, as a paragraph of
+ * its own (`$$\nx\n$$ is famous`), so the sentence, its links and its tags
+ * are kept. A formula closed on its opening line is never followed by text:
+ * `opensMathBlock` leaves that line to the paragraph parser.
+ */
+function addTrailingParagraph(
+  cx: BlockContext,
+  text: string,
+  after: number,
+): void {
+  const start = text.length - text.slice(after).trimStart().length;
+  const end = text.trimEnd().length;
+  if (start >= end) {
+    return;
+  }
+  const from = cx.lineStart + start;
+  cx.addElement(
+    cx.elt(
+      "Paragraph",
+      from,
+      cx.lineStart + end,
+      cx.parser.parseInline(text.slice(start, end), from),
+    ),
+  );
+}
+
 export const math: MarkdownConfig = {
   defineNodes: ["MathBlock", "InlineMath", "MathMark"],
   parseBlock: [
@@ -75,9 +102,9 @@ export const math: MarkdownConfig = {
         while (cx.nextLine()) {
           const end = line.text.indexOf("$$");
           if (end >= 0) {
-            const to = cx.lineStart + end + 2;
+            cx.addElement(cx.elt("MathBlock", from, cx.lineStart + end + 2));
+            addTrailingParagraph(cx, line.text, end + 2);
             cx.nextLine();
-            cx.addElement(cx.elt("MathBlock", from, to));
             return true;
           }
         }

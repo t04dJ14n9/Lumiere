@@ -55,6 +55,7 @@ function blockMath(
   let last = start;
   let content = first.slice(2);
   let closing = content.indexOf("$$");
+  let trailing = "";
   while (closing < 0 && last + 1 < end) {
     last++;
     const line = state.src.slice(
@@ -65,6 +66,7 @@ function blockMath(
     if (found >= 0) {
       content += "\n" + line.slice(0, found);
       closing = content.length;
+      trailing = line.slice(found + 2).trim();
     } else {
       content += "\n" + line;
     }
@@ -79,6 +81,28 @@ function blockMath(
   token.block = true;
   token.content = content.slice(0, closing).trim();
   token.map = [start, last + 1];
+  pushTrailingParagraph(state, trailing, last);
   state.line = last + 1;
   return true;
+}
+
+/**
+ * The text after a formula's closing `$$` on a later line, as its own
+ * paragraph, as the editor's parser reads it (dialect/math.ts).
+ */
+function pushTrailingParagraph(
+  state: StateBlock,
+  text: string,
+  line: number,
+): void {
+  if (!text) {
+    return;
+  }
+  const map: [number, number] = [line, line + 1];
+  state.push("paragraph_open", "p", 1).map = map;
+  const inline = state.push("inline", "", 0);
+  inline.content = text;
+  inline.map = map;
+  inline.children = [];
+  state.push("paragraph_close", "p", -1);
 }

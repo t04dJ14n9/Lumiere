@@ -59,6 +59,60 @@ test("a paragraph line is not cut by a following line that starts with inline di
   assert.equal(names.filter((name) => name === "Paragraph").length, 1);
 });
 
+/** The top-level blocks of `text` with their source. */
+function topBlocks(text: string): [string, string][] {
+  const blocks: [string, string][] = [];
+  for (
+    let node = markdownParser.parse(text).topNode.firstChild;
+    node;
+    node = node.nextSibling
+  ) {
+    blocks.push([node.name, text.slice(node.from, node.to)]);
+  }
+  return blocks;
+}
+
+const MULTILINE = "$$\nE=mc^2\n$$ is the famous one, see [[Einstein]] #physics";
+
+test("text after a closing $$ on a later line is kept in the rendered HTML", () => {
+  const html = renderMarkdown(`${MULTILINE}\n\nNext`);
+  assert.match(html, /data-math="E%3Dmc%5E2" data-display="true"/);
+  assert.match(html, /<p>is the famous one, see .*<\/p>/);
+  assert.match(html, /<p>Next<\/p>/);
+});
+
+test("text after a closing $$ on a later line keeps its link and tag in the index", () => {
+  const note = metadata(MULTILINE);
+  assert.deepEqual(
+    note.links.map((link) => [link.link, link.position.start.line]),
+    [["Einstein", 2]],
+  );
+  assert.deepEqual(
+    note.tags.map((tag) => tag.tag),
+    ["physics"],
+  );
+});
+
+test("a multi-line formula ends at its closing $$; the rest of the line is a paragraph", () => {
+  assert.deepEqual(topBlocks(MULTILINE), [
+    ["MathBlock", "$$\nE=mc^2\n$$"],
+    ["Paragraph", "is the famous one, see [[Einstein]] #physics"],
+  ]);
+  assert.deepEqual(topBlocks("> $$\n> x\n> $$ after")[0]![0], "Blockquote");
+  assert.ok(nodeNames("> $$\n> x\n> $$ after [[A]]").includes("WikiLink"));
+});
+
+test("a multi-line formula closed by $$ and spaces has no paragraph after it", () => {
+  const text = "$$\nx\n$$   \nafter";
+  assert.deepEqual(renderMarkdown(text).match(/<p>[^<]*<\/p>/g), [
+    "<p>after</p>",
+  ]);
+  assert.deepEqual(topBlocks(text), [
+    ["MathBlock", "$$\nx\n$$"],
+    ["Paragraph", "after"],
+  ]);
+});
+
 /** The formulas of a paragraph as the editor's parser reads it. */
 function editorFormulas(text: string): string[] {
   const formulas: string[] = [];

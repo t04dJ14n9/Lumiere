@@ -10,7 +10,7 @@ import {
 } from "../../webview/ui/inline-widget";
 import { sanitizeGraphics } from "../../webview/ui/graphics";
 import { inlineMathEdit, mathBlockEdit } from "./commands";
-import { mathBody } from "./source";
+import { mathBlockRange, mathBody } from "./source";
 import { markMathSource } from "./source-marks";
 import { errorMessage } from "../../shared/errors";
 import { decodeDataValue } from "../../markdown/html/helpers";
@@ -101,6 +101,7 @@ function registerMathRenderers(ctx: Context): void {
       nodes: ["MathBlock"],
       editing: "reveal",
       match: (node) => node.name === "MathBlock",
+      range: (node, state) => mathBlockRange(node, state.doc),
       // BH-009 / BH-004: revealed block math is source only (no preview stacked
       // under the $$ lines). Obsidian keeps a live preview below; we prefer a
       // single coherent view while editing, like callouts and HTML blocks.

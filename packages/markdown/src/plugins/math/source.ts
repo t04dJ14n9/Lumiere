@@ -1,3 +1,4 @@
+import type { Text } from "@codemirror/state";
 import type { SourceSpan } from "../../webview/ui/markdown-widget";
 
 /** The `$` or `$$` around a formula, and whether it is closed. */
@@ -23,6 +24,21 @@ export function mathBody(source: string): SourceSpan {
     to--;
   }
   return { from, to: Math.max(from, to) };
+}
+
+/**
+ * What a display formula's widget replaces: the formula, and the text after
+ * its closing `$$` on the same line (a paragraph of its own, which the widget
+ * renders below the formula). A block widget cannot end inside a line and
+ * leave the rest of it as text.
+ */
+export function mathBlockRange(
+  node: { from: number; to: number },
+  doc: Text,
+): { from: number; to: number } {
+  const line = doc.lineAt(node.to);
+  const rest = doc.sliceString(node.to, line.to);
+  return { from: node.from, to: rest.trim() ? line.to : node.to };
 }
 
 /** A highlighted part of a formula, as Obsidian colours TeX. */
