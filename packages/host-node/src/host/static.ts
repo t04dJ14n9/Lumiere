@@ -1,6 +1,7 @@
 /** Files served as they are: the built editor, the page shim, a note's images. */
-import { open, realpath, stat } from "node:fs/promises";
-import type { ServerResponse } from "node:http";
+import type { Stats } from "node:fs";
+import { open, realpath, stat, type FileHandle } from "node:fs/promises";
+import type { IncomingHttpHeaders, ServerResponse } from "node:http";
 import * as path from "node:path";
 import { pipeline } from "node:stream/promises";
 import { isFilesystemRoot } from "./paths";
@@ -55,12 +56,24 @@ function vaultTypeHeaders(type: string): Record<string, string> {
   };
 }
 
+/** The request headers a file's response depends on. */
+export type FileRequestHeaders = Pick<
+  IncomingHttpHeaders,
+  "range" | "if-none-match"
+>;
+
+/**
+ * esbuild's chunk names (`chunk-<hash>.js`, `[name]-<hash>`): eight upper-case
+ * letters and digits from the chunk's contents, so one name never changes.
+ */
+const CONTENT_HASHED = /-[A-Z0-9]{8}\.(?:js|css|wasm)$/;
+
 /** A file under `base`, named by a URL path segment; 403 for anything outside it. */
 export async function serveStatic(
   res: ServerResponse,
   base: string,
   relative: string,
-  range?: string,
+  request: FileRequestHeaders = {},
 ): Promise<void> {
   let decoded: string;
   try {
@@ -100,7 +113,7 @@ export async function serveStatic(
     res.writeHead(403).end();
     return;
   }
-  await serveFile(res, fileReal, range);
+  await serveFile(res, fileReal, request);
 }
 
 /**
@@ -135,10 +148,40 @@ export function byteRange(
   return { start, end: Math.min(end, size - 1) };
 }
 
+/**
+ * A validator from the file's size and modification time: a page opened
+ * again (each note is a new iframe that loads the editor anew) revalidates
+ * the editor's files and gets 304 instead of their bytes.
+ */
+function entityTag(info: Stats): string {
+  return `W/"${info.size.toString(16)}-${Math.floor(info.mtimeMs).toString(16)}"`;
+}
+
+/** Whether `If-None-Match` names `tag` (weak comparison, RFC 9110 13.1.2). */
+export function matchesTag(header: string | undefined, tag: string): boolean {
+  if (!header) {
+    return false;
+  }
+  const opaque = (item: string) => item.trim().replace(/^W\//, "");
+  return header
+    .split(",")
+    .some((item) => item.trim() === "*" || opaque(item) === opaque(tag));
+}
+
+/**
+ * The editor's content-hashed chunks never change under one name; anything
+ * else is revalidated on each use.
+ */
+function cacheControl(name: string, source: FileSource): string {
+  return source === "editor" && CONTENT_HASHED.test(path.basename(name))
+    ? "public, max-age=31536000, immutable"
+    : "no-cache";
+}
+
 export async function serveFile(
   res: ServerResponse,
   file: string | URL,
-  rangeHeader?: string,
+  request: FileRequestHeaders = {},
   source: FileSource = "editor",
 ): Promise<void> {
   // stat before open: opening a FIFO would block until something writes to it.
@@ -151,31 +194,60 @@ export async function serveFile(
     return;
   }
   const name = typeof file === "string" ? file : file.pathname;
+  const tag = entityTag(info);
+  const cache = { "cache-control": cacheControl(name, source), etag: tag };
+  if (matchesTag(request["if-none-match"], tag)) {
+    await handle.close().catch(() => undefined);
+    res.writeHead(304, cache).end();
+    return;
+  }
+  await sendContents(res, handle, {
+    headers: { ...typeHeaders(name, source), ...cache },
+    size: info.size,
+    range: request.range,
+  });
+}
+
+function typeHeaders(name: string, source: FileSource): Record<string, string> {
   const type =
     CONTENT_TYPES[path.extname(name).toLowerCase()] ??
     "application/octet-stream";
-  const headers: Record<string, string | number> = {
+  return {
     ...(source === "vault" ? vaultTypeHeaders(type) : { "content-type": type }),
-    "cache-control": "no-cache",
     "x-content-type-options": "nosniff",
     "accept-ranges": "bytes",
   };
-  const range = byteRange(rangeHeader ?? "", info.size);
+}
+
+interface Contents {
+  readonly headers: Record<string, string>;
+  readonly size: number;
+  /** The request's Range header. */
+  readonly range: string | undefined;
+}
+
+/** The whole file, or the one range the request asks for. */
+async function sendContents(
+  res: ServerResponse,
+  handle: FileHandle,
+  { headers, size, range: rangeHeader }: Contents,
+): Promise<void> {
+  const range = byteRange(rangeHeader ?? "", size);
   if (range === "unsatisfiable") {
     await handle.close().catch(() => undefined);
     res
       .writeHead(416, {
         ...headers,
-        "content-range": `bytes */${info.size}`,
+        "content-range": `bytes */${size}`,
       })
       .end();
     return;
   }
   res.writeHead(range ? 206 : 200, {
     ...headers,
-    "content-length": range ? range.end - range.start + 1 : info.size,
+    "content-length": range ? range.end - range.start + 1 : size,
     ...(range
-      ? { "content-range": `bytes ${range.start}-${range.end}/${info.size}` }
+      ? { "content-range": `bytes ${range.start}-${range.end}/${size}` }
       : {}),
   });
   // An unhandled stream error would end the whole server; pipeline destroys

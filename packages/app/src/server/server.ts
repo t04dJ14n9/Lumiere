@@ -210,7 +210,7 @@ async function respond({
   } else if (pathname === "/") {
     await serveShellPage(req, res, shell, shellKey);
   } else {
-    await serveStatic(res, shell, pathname.slice(1));
+    await serveStatic(res, shell, pathname.slice(1), req.headers);
   }
 }
 

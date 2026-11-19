@@ -29,7 +29,9 @@ any Node web server:
 - `/lumiere/pdf?path=&root=`: a PDF's page, Lumière PDF's viewer
   (`/lumiere/pdf/viewer/*`), which fetches the PDF from `/lumiere/pdf/bytes`.
   It runs only when the embedder passes the built viewer (`EditorAssets.pdf`);
-- `/lumiere/m/*`: the built editor;
+- `/lumiere/m/*`: the built editor. Its files carry an `ETag` and answer a
+  request that names it with 304, so each page that opens the editor again
+  revalidates them; esbuild's content-hashed chunks are cached as `immutable`;
 - `/lumiere/page/shim.js`: the page shim;
 - `/lumiere/file`: a note's images. A vault's file is someone else's content
   on the embedder's origin: it is served with `Content-Security-Policy:
