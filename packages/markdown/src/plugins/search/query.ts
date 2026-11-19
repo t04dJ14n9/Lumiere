@@ -2,16 +2,14 @@ import type { VaultIndex, VaultFile } from "../vault/api";
 import type { Cancellation } from "../../shared/rpc/lifecycle";
 import { RpcError } from "../../shared/rpc/lifecycle";
 import { folderOf, nameOf, relativeVaultPath } from "../../shared/vault-path";
-import type { SearchEvaluator } from "./runner";
+import type { SearchEvaluator, SearchVerdict } from "./runner";
 import type { SearchResponse } from "./protocol";
 import type { SearchDocument } from "../../markdown/search/evaluate";
-import { extractMatchLines } from "./match-lines";
 import { readAhead } from "./read-ahead";
 export interface SearchInput {
   vault: VaultIndex;
   source: string;
-  /** Raw query string; used for match-line snippets after a file hits. */
-  query: string;
+  /** Evaluates the query, and finds a hit's match lines, in a worker. */
   worker: SearchEvaluator;
   token: Cancellation;
   read(uri: string): Promise<string>;
@@ -99,7 +97,7 @@ async function evaluateDocument(
   target: { origin: { path: string }; file: VaultFile; prepared: Prepared },
   results: SearchResponse["results"],
 ): Promise<"skip" | "hit" | "unreadable" | "cancel"> {
-  const { worker, token, query } = input;
+  const { worker, token } = input;
   const { origin, file, prepared } = target;
   if (token.cancelled) {
     return "cancel";
@@ -110,23 +108,24 @@ async function evaluateDocument(
   if (prepared.kind === "failed") {
     return "unreadable";
   }
-  const { document } = prepared;
+  let verdict: SearchVerdict;
   try {
-    if (!(await worker.matches(document))) {
-      return "skip";
-    }
+    verdict = await worker.matches(prepared.document);
   } catch (error) {
     if (worker.stopped || token.cancelled) {
       throw error;
     }
     return "unreadable";
   }
+  if (!verdict.matched) {
+    return "skip";
+  }
   const href = relativeVaultPath(folderOf(origin.path), file.path)
     .split("/")
     .map(encodeURIComponent)
     .join("/");
-  const matches =
-    document.text.length > 0 ? extractMatchLines(document.text, query) : [];
+  // The worker found the match lines: they run the user's regexes.
+  const matches = verdict.matches ?? [];
   results.push({
     path: file.path,
     href,

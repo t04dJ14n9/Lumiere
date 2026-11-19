@@ -18,7 +18,6 @@ export const searchHost: Plugin<{ panel: PanelShell }> = {
           return await searchVault({
             vault: ctx.vault,
             source: request.source,
-            query: request.query,
             worker,
             token,
             read: (uri) => ctx.vaults.text(uri),

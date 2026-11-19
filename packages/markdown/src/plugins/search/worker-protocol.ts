@@ -1,4 +1,5 @@
 import { Schema } from "@workshop/core";
+import { matchLine } from "./protocol";
 export const startup = Schema.object({ query: Schema.string().max(4096) });
 export const submission = Schema.object({
   id: Schema.number().min(1),
@@ -26,6 +27,8 @@ const matched = Schema.object({
   type: Schema.union(["result"]),
   id: Schema.number().min(1),
   matched: Schema.boolean(),
+  /** A hit's content lines, found in the worker since they run user regexes. */
+  matches: Schema.array(matchLine).max(100).optional(),
 });
 const rejected = Schema.object({
   type: Schema.union(["rejected"]),

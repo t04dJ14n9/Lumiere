@@ -22,14 +22,14 @@ live subscriptions. Result links use encoded relative paths and normal navigatio
 - `runner.ts`: worker startup, deadlines, pending requests and termination.
 - `query.ts`: indexed file eligibility, cached metadata/live reads and result ordering.
 - `read-ahead.ts`: bounded, in-order read-ahead of the notes a query evaluates.
-- `match-lines.ts`: content-needle scan for Obsidian-style match-line snippets.
+- `match-lines.ts`: content-needle scan for Obsidian-style match-line snippets (run in the worker: it runs user regexes).
 - `open.ts`: resolve result path to vault open (offset / beside).
 - `../../markdown/search/plan.ts`: scope-aware content/metadata requirements.
 - `host.ts`: RPC handlers and index change notification.
 - `client.ts`: subscriptions, refresh generations and cancellation.
 - `blocks.ts`: accessible status, refresh button, result links and clickable match lines.
 - `webview.ts`: query renderer and rendered-fence ownership.
-- `../../workers/search.ts`: isolated query compilation and evaluation entry.
+- `../../workers/search.ts`, `search-worker.ts`: isolated query compilation, evaluation and match lines.
 - `search.css`: the plugin's styles, bundled through `src/webview/styles/index.css`.
 
 ## Services, events and settings

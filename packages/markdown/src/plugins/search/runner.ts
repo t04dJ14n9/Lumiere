@@ -5,8 +5,14 @@ import { startup, submission, workerReply } from "./worker-protocol";
 import { errorMessage } from "../../shared/errors";
 import type { Disposer } from "@workshop/core";
 import type { WorkerChannel, WorkerLauncher } from "../../shared/workers";
+import type { MatchLine } from "./match-lines";
+/** Whether a document matched, and a hit's content lines. */
+export interface SearchVerdict {
+  matched: boolean;
+  matches?: MatchLine[];
+}
 interface Pending {
-  resolve(value: boolean): void;
+  resolve(value: SearchVerdict): void;
   reject(error: Error): void;
   timer: ReturnType<typeof setTimeout>;
 }
@@ -16,7 +22,7 @@ export interface SearchEvaluator {
   requiresText: boolean;
   requiresMetadata: boolean;
   stopped: boolean;
-  matches(document: SearchDocument): Promise<boolean>;
+  matches(document: SearchDocument): Promise<SearchVerdict>;
   dispose(): Promise<void>;
 }
 /** One query per worker: a stuck regex can be terminated without blocking the host. */
@@ -76,7 +82,7 @@ export class SearchWorker implements SearchEvaluator {
   get stopped(): boolean {
     return this.closed !== undefined;
   }
-  async matches(document: SearchDocument): Promise<boolean> {
+  async matches(document: SearchDocument): Promise<SearchVerdict> {
     await this.ready;
     if (this.closed) {
       throw this.closed;
@@ -123,7 +129,10 @@ export class SearchWorker implements SearchEvaluator {
       this.pending.delete(reply.id);
       clearTimeout(request.timer);
       if (reply.type === "result") {
-        request.resolve(reply.matched);
+        request.resolve({
+          matched: reply.matched,
+          ...(reply.matches ? { matches: reply.matches } : {}),
+        });
       } else {
         request.reject(new Error(reply.message));
       }

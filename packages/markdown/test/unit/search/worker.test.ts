@@ -29,12 +29,17 @@ before(async () => {
 test("search worker evaluates multiple documents and survives a document parse error", async () => {
   const worker = new SearchWorker(workers, "content:meeting");
   try {
-    assert.equal(
+    assert.deepEqual(
       await worker.matches({ path: "One.md", text: "Meeting notes" }),
-      true,
+      {
+        matched: true,
+        matches: [
+          { text: "Meeting notes", offset: 0, mark: { from: 0, to: 7 } },
+        ],
+      },
     );
     assert.equal(
-      await worker.matches({ path: "Two.md", text: "Other notes" }),
+      (await worker.matches({ path: "Two.md", text: "Other notes" })).matched,
       false,
     );
     await assert.rejects(
@@ -42,7 +47,8 @@ test("search worker evaluates multiple documents and survives a document parse e
     );
     assert.equal(worker.stopped, false);
     assert.equal(
-      await worker.matches({ path: "Three.md", text: "Another meeting" }),
+      (await worker.matches({ path: "Three.md", text: "Another meeting" }))
+        .matched,
       true,
     );
   } finally {
@@ -92,11 +98,24 @@ test("a pathological regex times out in its worker and a fresh worker remains us
   const next = new SearchWorker(workers, "working");
   try {
     assert.equal(
-      await next.matches({ path: "Next.md", text: "working" }),
+      (await next.matches({ path: "Next.md", text: "working" })).matched,
       true,
     );
   } finally {
     await next.dispose();
+  }
+});
+test("a regex that is slow only line by line times out in the worker, not on the host", async () => {
+  // The whole note matches at once ("a" on its first line); the match lines
+  // then try the second line, where `(x+x+)+y` backtracks exponentially.
+  const worker = new SearchWorker(workers, "/a|(x+x+)+y/", { timeoutMs: 300 });
+  try {
+    await assert.rejects(
+      worker.matches({ path: "Slow.md", text: "a\n" + "x".repeat(34) }),
+      /evaluation timed out/,
+    );
+  } finally {
+    await worker.dispose();
   }
 });
 
@@ -191,21 +210,21 @@ test("search worker advertises indexed requirements and evaluates transported me
     await worker.ready;
     assert.equal(worker.requiresText, false);
     assert.equal(worker.requiresMetadata, true);
-    assert.equal(
+    assert.deepEqual(
       await worker.matches({
         path: "Note.md",
         text: "",
         metadata: { tags: ["project/notes"], properties: { priority: 3 } },
       }),
-      true,
+      { matched: true },
     );
-    assert.equal(
+    assert.deepEqual(
       await worker.matches({
         path: "Note.md",
         text: "",
         metadata: { tags: ["project"], properties: { priority: 1 } },
       }),
-      false,
+      { matched: false },
     );
   } finally {
     await worker.dispose();
