@@ -113,8 +113,9 @@ is opt-in (`lumiere.pdf.regions.enabled`, default off).
   With nothing selected, it copies the reading page's locator:
   `@papers/paper.pdf#page=N`. Clipboard only — it does
   **not** open agent chat. ⌘C / Ctrl+C still copies plain selected text.
-  `lumiere.pdf.copyLinkForAgent.target` is legacy for IDE Context / MCP
-  delivery only. Region `viewrect=` locators appear only when
+  `lumiere.pdf.copyLinkForAgent.target` only chooses where **Send IDE
+  Context to Agent…** goes (`cursor` and `chat` remain for older settings and
+  only copy). Region `viewrect=` locators appear only when
   `lumiere.pdf.regions.enabled` is on. Contract:
   `packages/agents/docs/agent-handoff-format.md`.
 
