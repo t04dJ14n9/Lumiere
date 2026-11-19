@@ -67,8 +67,9 @@ names the heading (as links resolve, so case does not matter), in the note
 and in every note linking to it, keeping its path, form and alias
 (`heading-rename.ts`, `rename-heading.ts`). The note itself is edited first;
 if it changed while the name was being asked for, nothing is renamed and the
-command says so. A linking note that cannot be updated does not stop the
-others; a message names it.
+command says so. As after a file rename, a linking note is saved if it had
+no unsaved changes, and one that had is left unsaved. A linking note that
+cannot be updated or saved does not stop the others; a message names it.
 
 ## Files
 

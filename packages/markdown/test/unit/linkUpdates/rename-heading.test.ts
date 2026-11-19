@@ -31,6 +31,10 @@ interface RenameOptions {
   whileOpening?: (docs: Map<string, string>, uri: string) => void;
   /** Linking notes that refuse their edit. */
   refused?: readonly string[];
+  /** Notes that have unsaved changes before the rename. */
+  unsaved?: readonly string[];
+  /** Notes whose save fails. */
+  unsaveable?: readonly string[];
 }
 
 /** Renames the heading holding `caretAt` in `Note.md`; `input` is the prompt. */
@@ -38,15 +42,39 @@ async function rename(
   notes: Record<string, string>,
   caretAt: string,
   input: (docs: Map<string, string>) => string,
-  { isApplied = true, whileOpening, refused = [] }: RenameOptions = {},
+  {
+    isApplied = true,
+    whileOpening,
+    refused = [],
+    unsaved = [],
+    unsaveable = [],
+  }: RenameOptions = {},
 ) {
   const docs = new Map(
     Object.entries(notes).map(([path, text]) => [uriOf(path), text]),
   );
   const informed: string[] = [];
   const errors: string[] = [];
+  const dirty = new Set(unsaved);
+  const saved: string[] = [];
   const document = (uri: string): HostDocument =>
-    fakeDocument({ uri, id: uri, getText: () => docs.get(uri) ?? "" });
+    Object.defineProperty(
+      fakeDocument({
+        uri,
+        id: uri,
+        getText: () => docs.get(uri) ?? "",
+        save: async () => {
+          if (unsaveable.includes(uri)) {
+            return false;
+          }
+          saved.push(uri);
+          dirty.delete(uri);
+          return true;
+        },
+      }),
+      "isDirty",
+      { get: () => dirty.has(uri) },
+    );
   const host = fakeHost({
     dialogs: {
       error: (message) => errors.push(message),
@@ -68,6 +96,7 @@ async function rename(
           return false;
         }
         docs.set(target.uri, applyEditorEdits(target.getText(), edits));
+        dirty.add(target.uri);
         return true;
       },
     },
@@ -88,7 +117,12 @@ async function rename(
     vaults: memoryVaults(notes).vaults,
     hostDocuments: host.hostDocuments,
   });
-  return { text: (path: string) => docs.get(uriOf(path)), informed, errors };
+  return {
+    text: (path: string) => docs.get(uriOf(path)),
+    informed,
+    errors,
+    saved,
+  };
 }
 
 test("renaming a heading in a CRLF note edits the heading and its links in place", async () => {
@@ -194,5 +228,38 @@ test("a linking note that refuses its edit is named, and the notes after it are 
   assert.equal(text("B.md"), "See [[Note#New]].\n");
   assert.deepEqual(errors, [
     "The heading was renamed, but its links could not be updated in A.md.",
+  ]);
+});
+
+test("linking notes are saved after their links change, unless they had unsaved changes", async () => {
+  const { text, saved, errors } = await rename(
+    {
+      "Note.md": "# Old\n",
+      "A.md": "See [[Note#Old]].\n",
+      "B.md": "See [[Note#Old]].\n",
+      "C.md": "No link here.\n",
+    },
+    "# Old",
+    () => "New",
+    { unsaved: [uriOf("B.md")] },
+  );
+  assert.equal(text("A.md"), "See [[Note#New]].\n");
+  assert.equal(text("B.md"), "See [[Note#New]].\n");
+  // As a file rename's link updates do: B.md keeps its unsaved changes
+  // for the user to review, and the note being renamed is the user's own.
+  assert.deepEqual(saved, [uriOf("A.md")]);
+  assert.deepEqual(errors, []);
+});
+
+test("a linking note that cannot be saved is named to the user", async () => {
+  const { text, errors } = await rename(
+    { "Note.md": "# Old\n", "A.md": "See [[Note#Old]].\n" },
+    "# Old",
+    () => "New",
+    { unsaveable: [uriOf("A.md")] },
+  );
+  assert.equal(text("A.md"), "See [[Note#New]].\n");
+  assert.deepEqual(errors, [
+    "The heading's links were updated in A.md, but could not be saved.",
   ]);
 });
