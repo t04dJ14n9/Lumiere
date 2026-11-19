@@ -7,8 +7,22 @@ import Foundation
 /// them, with their types and byte ranges, as it does the app's files. The
 /// path is checked as every vault path is (VaultPath): nothing outside the
 /// vault's folder. Every other path is Capacitor's.
+///
+/// Only what a note shows is served: the images, audio, video and PDFs the
+/// editor embeds (the web app's media-types.ts). These answers are on the
+/// app's own origin, next to the native plugins, and Capacitor's handler
+/// adds no `Content-Security-Policy: sandbox` as the other hosts do, so an
+/// HTML page or a script from a vault must never be served as one.
 public struct VaultRouter: Router {
     public static let prefix = "/_lumiere/vault/"
+
+    /// The extensions served, lowercased.
+    static let servedExtensions: Set<String> = [
+        "avif", "bmp", "gif", "jpeg", "jpg", "png", "svg", "webp",
+        "aac", "aif", "aiff", "flac", "m4a", "mp3", "ogg", "wav",
+        "mkv", "mov", "mp4", "ogv", "webm",
+        "pdf",
+    ]
 
     private let vaults: VaultStore
     private var fallback: Router
@@ -36,6 +50,8 @@ public struct VaultRouter: Router {
         let id = String(rest[..<slash])
         let path = String(rest[rest.index(after: slash)...])
         let url = try VaultPath.url(for: path, in: try vaults.root(of: id))
+        guard Self.servedExtensions.contains(url.pathExtension.lowercased())
+        else { throw VaultError.notFound(path) }
         var isFolder: ObjCBool = false
         guard FileManager.default.fileExists(atPath: url.path, isDirectory: &isFolder), !isFolder.boolValue
         else { throw VaultError.notFound(path) }

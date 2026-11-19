@@ -19,6 +19,9 @@ final class VaultRouterTests: XCTestCase {
         try FileManager.default.createDirectory(at: notes, withIntermediateDirectories: true)
         try Data("%PDF".utf8).write(to: notes.appendingPathComponent("Light and growth.pdf"))
         try Data("{}".utf8).write(to: folder.appendingPathComponent("secret.json"))
+        for name in ["Page.html", "page.HTM", "tool.js", "Notes.md", "Photo.JPG"] {
+            try Data("x".utf8).write(to: notes.appendingPathComponent(name))
+        }
         let vaults = VaultStore(
             appFolder: folder.appendingPathComponent("Documents", isDirectory: true),
             dataFolder: folder.appendingPathComponent("Support", isDirectory: true)
@@ -47,6 +50,17 @@ final class VaultRouterTests: XCTestCase {
         ] {
             XCTAssertEqual(router.route(for: path), missing, path)
         }
+    }
+
+    /// The app's origin holds the native plugins, and these answers carry no
+    /// sandbox header: a vault's page or script must not run there.
+    func testServesOnlyWhatANoteShows() {
+        let missing = "/app/public/_lumiere/missing"
+        for name in ["Page.html", "page.HTM", "tool.js", "Notes.md"] {
+            XCTAssertEqual(router.route(for: "/_lumiere/vault/app/Attachments/\(name)"), missing, name)
+        }
+        let photo = router.route(for: "/_lumiere/vault/app/Attachments/Photo.JPG")
+        XCTAssertEqual(URL(fileURLWithPath: photo).lastPathComponent, "Photo.JPG")
     }
 
     func testLeavesTheAppsOwnFilesToCapacitor() {
