@@ -9,8 +9,9 @@ CodeMirror's close-brackets input handler and empty-pair Backspace keymap use
 language data from this plugin. With Markdown pairing on, `markdown-input.ts`
 adds what bracket closing cannot express, as in Obsidian: `=`, `~`, `$` and
 `%` wrap a selection but type alone without one, and the third backtick
-closes a code fence on the next line, keeping the line's quotes and list
-indentation. Independent configuration flags select bracket
+at the start of a line (after its quotes and list marker) closes a code
+fence on the next line, keeping the line's quotes and list indentation;
+after other text it is typed as it is. Independent configuration flags select bracket
 and Markdown families. A private compartment updates that data without replacing
 the editor or unrelated plugin state; disposal removes the registrations.
 

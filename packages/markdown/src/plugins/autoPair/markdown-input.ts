@@ -6,7 +6,7 @@ import {
   type TransactionSpec,
 } from "@codemirror/state";
 import { EditorView } from "@codemirror/view";
-import { continuationPrefix } from "../../markdown/list-markup";
+import { continuationPrefix, lineMarkup } from "../../markdown/list-markup";
 
 /**
  * Markdown pairing that CodeMirror's bracket closing cannot express, as
@@ -40,7 +40,10 @@ export function wrapOnly(
 /**
  * The third backtick opens a code fence and closes it on the next line,
  * which keeps the line's quotes and list indentation. Backticks after the
- * third are typed as they are.
+ * third are typed as they are. A fence opens a line (after its quotes and
+ * list marker), as Obsidian documents code blocks: after other text on the
+ * line, backticks are inline code, and a closing fence written below would
+ * open a fence that runs to the end of the note.
  */
 export function completeFence(
   state: EditorState,
@@ -53,7 +56,7 @@ export function completeFence(
   const line = state.doc.lineAt(main.head);
   const before = line.text.slice(0, main.head - line.from);
   const ticks = /`*$/u.exec(before)![0].length;
-  if (ticks < 2) {
+  if (ticks < 2 || !opensLine(before.slice(0, before.length - ticks))) {
     return undefined;
   }
   const close =
@@ -63,6 +66,12 @@ export function completeFence(
     selection: EditorSelection.cursor(main.head + 1),
     userEvent: "input.type",
   };
+}
+
+/** Whether `prefix` is only a line's indentation, quotes and list marker. */
+function opensLine(prefix: string): boolean {
+  const { quotes, marker } = lineMarkup(prefix);
+  return prefix.slice(quotes.length + marker.length).trim() === "";
 }
 
 /** Runs before CodeMirror's bracket closing, which would pair these. */
