@@ -713,6 +713,23 @@ test("canonicalPath keeps symlink alias notes inside the discovered root", async
   }
 });
 
+test("canonicalPath spells a note's path as git names its work tree (Windows short names)", (t) => {
+  // On Windows the note can arrive as `C:\\Users\\RUNNER~1\\...` while
+  // `git rev-parse --show-toplevel` prints `C:/Users/runneradmin/...`. Only the
+  // operating system's realpath expands the short name; this stands in for it
+  // so the comparison is exercised on any OS.
+  const short = join(tmpdir(), "RUNNER~1", "repo");
+  const long = join(tmpdir(), "runneradmin", "repo");
+  t.mock.method(realpathSync, "native", (path: string) =>
+    path.startsWith(short) ? long + path.slice(short.length) : path,
+  );
+  const relativePath = relative(
+    canonicalPath(long),
+    canonicalPath(join(short, "note.md")),
+  );
+  assert.equal(relativePath, "note.md");
+});
+
 test("linked worktree watches shared commondir config changes", async () => {
   const { root } = await repo();
   const parent = await mkdtemp(join(tmpdir(), "mw-blame-wt-"));

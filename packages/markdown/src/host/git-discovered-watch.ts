@@ -12,10 +12,17 @@ import type { RepositoryWatch } from "./git-watch";
 /** Structural change event matching RepositoryWatch's GitEvent shape. */
 type GitEvent = (listener: () => void) => { dispose(): unknown };
 
-/** Resolve symlinks when present so containment checks match `git rev-parse`. */
+/**
+ * `path` as `git rev-parse` names it, so a note and its work tree compare:
+ * symbolic links resolved and each name spelled as the disk has it. Only the
+ * operating system's realpath does the second (on Windows it expands short
+ * names such as `RUNNER~1`, on a case-insensitive disk it gives each name's
+ * case); Node's own `realpathSync` keeps them as given. A path that cannot
+ * be resolved stays as it is.
+ */
 export function canonicalPath(path: string): string {
   try {
-    return realpathSync(path);
+    return realpathSync.native(path);
   } catch {
     return path;
   }
