@@ -8,7 +8,7 @@ import type { Plugin } from "@workshop/core";
 import type {} from "../services";
 import manifest from "./manifest";
 import { IDE_CONTEXT_COMMAND_IDS } from "../../../shared/command-ids";
-import { buildPdfIdeContextPacket, viewedPages } from "./adapter";
+import { buildPdfIdeContextPacketWithRegion, viewedPages } from "./adapter";
 import {
   copyIdeContext,
   sendIdeContext,
@@ -25,6 +25,7 @@ import {
 } from "@workshop/agents/ide-context";
 import type { AgentTargetSetting } from "../../../shared/agent-target";
 import type { PdfPanels } from "../pdf/panels";
+import type { RegionSnapshots } from "../pdfRegions/region-snapshots";
 
 const nodeTempFs: TempFs = {
   // Only ever the packet folder, in the shared temp folder: it must be ours.
@@ -54,13 +55,14 @@ export const ideContextPlugin: Plugin = {
   },
   apply(ctx) {
     const panels = ctx.pdfPanels;
+    const packet = () => activePacket(panels, ctx.regionSnapshots);
     ctx.own(
       vscode.commands.registerCommand(
         IDE_CONTEXT_COMMAND_IDS.copy,
         async () => {
-          const packet = activePacket(panels);
-          if (packet) {
-            await copyIdeContext(packet, writeClipboard, inform);
+          const active = await packet();
+          if (active) {
+            await copyIdeContext(active, writeClipboard, inform);
           }
         },
       ),
@@ -70,9 +72,9 @@ export const ideContextPlugin: Plugin = {
       vscode.commands.registerCommand(
         IDE_CONTEXT_COMMAND_IDS.send,
         async () => {
-          const packet = activePacket(panels);
-          if (packet) {
-            await sendIdeContext(packet, await sendDeps());
+          const active = await packet();
+          if (active) {
+            await sendIdeContext(active, await sendDeps());
           }
         },
       ),
@@ -81,21 +83,35 @@ export const ideContextPlugin: Plugin = {
   },
 };
 
-/** The IDE context of the active PDF and its selection; warns without one. */
-function activePacket(panels: PdfPanels) {
+/**
+ * The IDE context of the active PDF and its selection; warns without one.
+ * A region's snapshot is saved (or marked recently used) in the region
+ * image cache, as the agent bridge does, and its path goes in the packet.
+ */
+async function activePacket(
+  panels: PdfPanels,
+  regions: RegionSnapshots | undefined,
+) {
   const panel = panels.active;
   if (!panel) {
     void vscode.window.showWarningMessage("Open a PDF first");
     return undefined;
   }
   const selected = panel.selectionSnapshot() ?? undefined;
-  return buildPdfIdeContextPacket({
-    uri: panel.uri.toString(),
-    selection: selected?.selection,
-    ...viewedPages(panel.view),
-    ...(selected ? { sourceSha256: selected.sha256 } : {}),
-    host: createVsCodeIdeContextHost(vscode),
-  });
+  const saveRegionImage =
+    regions &&
+    (async () =>
+      (await regions.save(panel, selected, { notify: true }))?.fsPath);
+  return buildPdfIdeContextPacketWithRegion(
+    {
+      uri: panel.uri.toString(),
+      selection: selected?.selection,
+      ...viewedPages(panel.view),
+      ...(selected ? { sourceSha256: selected.sha256 } : {}),
+      host: createVsCodeIdeContextHost(vscode),
+    },
+    saveRegionImage,
+  );
 }
 
 async function writeClipboard(text: string): Promise<void> {

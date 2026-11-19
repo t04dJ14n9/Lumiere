@@ -2,6 +2,7 @@ import test from "node:test";
 import assert from "node:assert/strict";
 import {
   buildPdfIdeContextPacket,
+  buildPdfIdeContextPacketWithRegion,
   mapPdfSelectionWire,
   viewedPages,
 } from "../../src/extension/plugins/ideContext/adapter";
@@ -90,4 +91,55 @@ test("active.uri === pdf.uri", () => {
   });
   assert.equal(packet.product, "pdfWorkshop");
   assert.equal(packet.active?.uri, packet.pdf.uri);
+});
+
+test("a region's snapshot is saved to the region image cache and named in the packet", async () => {
+  const host = {
+    listTabs: () => ({ visible: ["file:///a.pdf"], open: [] }),
+    getDiagnostics: () => [],
+  };
+  let saves = 0;
+  const save = async () => {
+    saves++;
+    return "/storage/regions/a-2.png";
+  };
+  const region = await buildPdfIdeContextPacketWithRegion(
+    {
+      uri: "file:///a.pdf",
+      selection: { kind: "region", page: 2, rect: [1, 2, 4, 6] },
+      host,
+    },
+    save,
+  );
+  assert.equal(region.pdf?.selection.kind, "region");
+  if (region.pdf?.selection.kind === "region") {
+    assert.equal(
+      region.pdf.selection.regionImagePath,
+      "/storage/regions/a-2.png",
+    );
+  }
+  // Text has no snapshot to save; with no cache, a region has no path.
+  const text = await buildPdfIdeContextPacketWithRegion(
+    {
+      uri: "file:///a.pdf",
+      selection: { kind: "text", text: "x", pages: [] },
+      host,
+    },
+    save,
+  );
+  assert.equal(text.pdf?.selection.kind, "text");
+  assert.equal(saves, 1);
+  const uncached = await buildPdfIdeContextPacketWithRegion(
+    {
+      uri: "file:///a.pdf",
+      selection: { kind: "region", page: 2, rect: [1, 2, 4, 6] },
+      host,
+    },
+    undefined,
+  );
+  assert.equal(
+    uncached.pdf?.selection.kind === "region" &&
+      uncached.pdf.selection.regionImagePath,
+    undefined,
+  );
 });

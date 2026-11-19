@@ -245,8 +245,9 @@ Markdown link opens that page (and resolve `#:~:text=` to an overlay when possib
 When **regions are enabled**, a region's locator may include RFC 8118
 `viewrect=left,top,width,height` (PDF points from the page's top-left). MCP
 `get_current_pdf_selection` can still attach a region PNG snapshot from
-extension storage (`workspaceStorage/…/regions`); Copy link itself does not
-put the image path on the clipboard. See
+extension storage (`workspaceStorage/…/regions`), and **Copy / Send IDE
+Context** names the same file as the region's `regionImagePath`; Copy link
+itself does not put the image path on the clipboard. See
 `packages/agents/docs/agent-handoff-format.md`.
 
 ## Agent bridge (MCP, experimental, off by default)
