@@ -21,7 +21,10 @@ export const PDF_LUMIERE_EDITOR = "lumiere.pdf.viewer";
  */
 export const LEAVE_RESTORE_MS = 120;
 
-export type OutlineFocusExecute = (command: string) => Promise<unknown>;
+export type OutlineFocusExecute = (
+  command: string,
+  ...args: unknown[]
+) => Promise<unknown>;
 
 export type OutlineFocusSchedule = (
   run: () => void,
@@ -30,8 +33,6 @@ export type OutlineFocusSchedule = (
 
 export type OutlineFocusOptions = {
   execute: OutlineFocusExecute;
-  /** Return keyboard focus to the editor after restoring the native Outline. */
-  focusEditor: () => Promise<unknown>;
   /**
    * Whether Markdown Outline is on screen: in the Explorer, which is the
    * sidebar's container, and not collapsed. It is how this module learns the
@@ -129,7 +130,6 @@ export function createOutlineFocus(options: OutlineFocusOptions): {
 
 type ResolvedFocus = {
   execute: OutlineFocusExecute;
-  focusEditor: () => Promise<unknown>;
   isOutlineShown: () => boolean;
   activeViewType: () => string | undefined;
   ownEditorViewType: string;
@@ -140,7 +140,6 @@ type ResolvedFocus = {
 function resolveOptions(options: OutlineFocusOptions): ResolvedFocus {
   return {
     execute: options.execute,
-    focusEditor: options.focusEditor,
     isOutlineShown: () => options.isOutlineShown?.() ?? false,
     activeViewType: () => options.activeCustomEditorViewType?.(),
     ownEditorViewType: options.ownEditorViewType ?? MARKDOWN_LUMIERE_EDITOR,
@@ -223,12 +222,16 @@ async function restoreNativeOutline(
     return;
   }
   try {
-    // Showing a hidden view means focusing it, which also brings up the
-    // Explorer. Only the native Outline this module hid is worth that.
-    await options.execute(`${NATIVE_OUTLINE_ID}.focus`);
-    if (reason === "leave") {
-      await options.focusEditor();
-    }
+    // `preserveFocus` shows the view without focusing it. The Outline is in
+    // the main window's sidebar, and this debounced restore lands (later
+    // still over a remote extension host) after the reader has moved on,
+    // possibly into an editor in another window: focusing the view, then the
+    // active editor group, would take the focus from wherever that is. The
+    // view still brings up the Explorer; only the native Outline this module
+    // hid is worth that.
+    await options.execute(`${NATIVE_OUTLINE_ID}.focus`, {
+      preserveFocus: true,
+    });
   } catch (error) {
     // Dispose runs from an effect cleanup; the queued restore can land after
     // the host context has already rejected further execute calls.

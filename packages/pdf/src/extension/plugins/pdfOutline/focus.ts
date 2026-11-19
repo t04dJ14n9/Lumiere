@@ -13,7 +13,10 @@ export const MARKDOWN_LUMIERE_EDITOR = "lumiere.markdown.editor";
  */
 export const LEAVE_RESTORE_MS = 120;
 
-export type OutlineFocusExecute = (command: string) => Thenable<unknown>;
+export type OutlineFocusExecute = (
+  command: string,
+  ...args: unknown[]
+) => Thenable<unknown>;
 
 export type OutlineFocusSchedule = (
   run: () => void,
@@ -22,8 +25,6 @@ export type OutlineFocusSchedule = (
 
 export type OutlineFocusOptions = {
   execute: OutlineFocusExecute;
-  /** Return keyboard focus to the editor after restoring the native Outline. */
-  focusEditor: () => Thenable<unknown>;
   /**
    * Whether PDF Outline is on screen: in the Explorer, which is the
    * sidebar's container, and not collapsed. It is how this module learns the
@@ -59,7 +60,6 @@ type FocusState = {
 
 type ResolvedFocus = {
   execute: OutlineFocusExecute;
-  focusEditor: () => Thenable<unknown>;
   isOutlineShown: () => boolean;
   activeViewType: () => string | undefined;
   ownEditorViewType: string;
@@ -129,7 +129,6 @@ export function createOutlineFocus(options: OutlineFocusOptions): {
 function resolveOptions(options: OutlineFocusOptions): ResolvedFocus {
   return {
     execute: options.execute,
-    focusEditor: options.focusEditor,
     isOutlineShown: () => options.isOutlineShown?.() ?? false,
     activeViewType: () => options.activeCustomEditorViewType?.(),
     ownEditorViewType: options.ownEditorViewType ?? PDF_LUMIERE_EDITOR,
@@ -210,12 +209,16 @@ async function restoreNativeOutline(
     return;
   }
   try {
-    // Showing a hidden view means focusing it, which also brings up the
-    // Explorer. Only the native Outline this module hid is worth that.
-    await options.execute(`${NATIVE_OUTLINE_ID}.focus`);
-    if (reason === "leave") {
-      await options.focusEditor();
-    }
+    // `preserveFocus` shows the view without focusing it. The Outline is in
+    // the main window's sidebar, and this debounced restore lands (later
+    // still over a remote extension host) after the reader has moved on,
+    // possibly into an editor in another window: focusing the view, then the
+    // active editor group, would take the focus from wherever that is. The
+    // view still brings up the Explorer; only the native Outline this module
+    // hid is worth that.
+    await options.execute(`${NATIVE_OUTLINE_ID}.focus`, {
+      preserveFocus: true,
+    });
   } catch (error) {
     // Dispose runs while the extension stops; the queued restore can land
     // after VS Code has stopped taking commands from it.

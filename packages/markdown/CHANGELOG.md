@@ -2,6 +2,12 @@
 
 ## 0.1.0 (unreleased)
 
+- Leaving a note or PDF no longer moves the keyboard focus to restore VS
+  Code's Outline. The restore focused the Outline in the main window's side
+  bar and then the active editor group, a moment after the reader had left;
+  with an editor moved into a new window, and more so over Remote-SSH, it
+  could take the focus from the window the reader had just clicked into.
+
 - **Always Update** in the link update prompt still updates the links when
   the setting cannot be saved (a settings file with errors), and a message
   says why. The failed save used to drop every link edit of that rename.

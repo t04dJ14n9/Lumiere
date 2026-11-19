@@ -145,8 +145,12 @@ test("closing the note restores the native Outline only where it was hidden", as
   assert.deepEqual(sidebarCommands(explorer), [
     "outline.removeView",
     "outline.focus",
-    "workbench.action.focusActiveEditorGroup",
   ]);
+  assert.deepEqual(
+    explorer.executed.find(([command]) => command === "outline.focus"),
+    ["outline.focus", { preserveFocus: true }],
+    "shown without taking the focus from wherever the reader went",
+  );
 });
 
 /** Past the debounce that lets a PDF tab take over without flashing the Outline. */

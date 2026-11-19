@@ -16,9 +16,6 @@ test("entering a Lumiere PDF editor runs no view command until PDF Outline is on
     execute: async (command) => {
       executed.push(command);
     },
-    focusEditor: async () => {
-      executed.push("focusEditor");
-    },
     isOutlineShown: () => false,
     schedule: () => ({ dispose() {} }),
   });
@@ -37,9 +34,6 @@ test("PDF Outline appearing replaces the native Outline once, without focusing a
   const focus = createOutlineFocus({
     execute: async (command) => {
       executed.push(command);
-    },
-    focusEditor: async () => {
-      executed.push("focusEditor");
     },
     isOutlineShown: () => false,
     schedule: () => ({ dispose() {} }),
@@ -64,9 +58,6 @@ test("a PDF activated under an Outline already on screen hides the native Outlin
     execute: async (command) => {
       executed.push(command);
     },
-    focusEditor: async () => {
-      executed.push("focusEditor");
-    },
     isOutlineShown: () => true,
     schedule: () => ({ dispose() {} }),
   });
@@ -83,9 +74,6 @@ test("PDF Outline appearing with no PDF active hides nothing", async () => {
     execute: async (command) => {
       executed.push(command);
     },
-    focusEditor: async () => {
-      executed.push("focusEditor");
-    },
     schedule: () => ({ dispose() {} }),
   });
   focus.outlineShown();
@@ -101,9 +89,6 @@ test("leaving a PDF opened under Search restores nothing it did not hide", async
   const focus = createOutlineFocus({
     execute: async (command) => {
       executed.push(command);
-    },
-    focusEditor: async () => {
-      executed.push("focusEditor");
     },
     activeCustomEditorViewType: () => undefined,
     schedule: (run) => {
@@ -129,9 +114,6 @@ test("leaving restores native Outline after the debounce window", async () => {
     execute: async (command) => {
       executed.push(command);
     },
-    focusEditor: async () => {
-      executed.push("focusEditor");
-    },
     activeCustomEditorViewType: () => undefined,
     leaveDelayMs: LEAVE_RESTORE_MS,
     schedule: (run) => {
@@ -152,7 +134,7 @@ test("leaving restores native Outline after the debounce window", async () => {
   assert.deepEqual(executed, []);
   pending!();
   await settle();
-  assert.deepEqual(executed, [`${NATIVE_OUTLINE_ID}.focus`, "focusEditor"]);
+  assert.deepEqual(executed, [`${NATIVE_OUTLINE_ID}.focus`]);
   focus.dispose();
   await settle();
 });
@@ -163,9 +145,6 @@ test("a quick re-enter cancels the pending native Outline restore", async () => 
   const focus = createOutlineFocus({
     execute: async (command) => {
       executed.push(command);
-    },
-    focusEditor: async () => {
-      executed.push("focusEditor");
     },
     schedule: (run) => {
       pending = run;
@@ -196,9 +175,6 @@ test("leave after peer Lumiere is active does not restore native Outline", async
   const focus = createOutlineFocus({
     execute: async (command) => {
       executed.push(command);
-    },
-    focusEditor: async () => {
-      executed.push("focusEditor");
     },
     activeCustomEditorViewType: () => active.viewType,
     schedule: (run) => {
@@ -234,9 +210,6 @@ test("dispose restores native Outline unless a peer Lumiere owns the tab", async
     execute: async (command) => {
       executed.push(command);
     },
-    focusEditor: async () => {
-      executed.push("focusEditor");
-    },
     activeCustomEditorViewType: () => active.viewType,
     schedule: () => ({ dispose() {} }),
   });
@@ -252,9 +225,6 @@ test("dispose restores native Outline unless a peer Lumiere owns the tab", async
     execute: async (command) => {
       executed.push(command);
     },
-    focusEditor: async () => {
-      executed.push("focusEditor");
-    },
     activeCustomEditorViewType: () => active.viewType,
     schedule: () => ({ dispose() {} }),
   });
@@ -266,6 +236,38 @@ test("dispose restores native Outline unless a peer Lumiere owns the tab", async
   peer.dispose();
   await settle();
   assert.deepEqual(executed, [], "peer owns the swap; dispose skips restore");
+});
+
+// The restore runs a debounce after the reader left, and over Remote-SSH its
+// commands reach the window later still: by then the reader may be typing in
+// another window. Focusing a view or the active group there would pull the
+// focus out of it (an editor moved into a new window lost every click), so
+// the restore shows the native Outline and leaves the focus where it is.
+test("restoring the native Outline leaves the keyboard focus where the reader put it", async () => {
+  const executed: unknown[][] = [];
+  let pending: (() => void) | undefined;
+  const focus = createOutlineFocus({
+    execute: async (...call: unknown[]) => {
+      executed.push(call);
+    },
+    activeCustomEditorViewType: () => undefined,
+    schedule: (run) => {
+      pending = run;
+      return { dispose() {} };
+    },
+  });
+  focus.sync(true);
+  focus.outlineShown();
+  await settle();
+  executed.length = 0;
+  focus.sync(false);
+  pending!();
+  await settle();
+  assert.deepEqual(executed, [
+    [`${NATIVE_OUTLINE_ID}.focus`, { preserveFocus: true }],
+  ]);
+  focus.dispose();
+  await settle();
 });
 
 function settle(): Promise<void> {
