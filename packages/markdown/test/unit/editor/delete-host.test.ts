@@ -3,6 +3,7 @@ import Module, { createRequire } from "node:module";
 import test from "node:test";
 import type * as DeletionsModule from "../../../src/host/services/deletions";
 import type { AfterDelete } from "../../../src/shared/host";
+import { forgetModules } from "../../support/module-cache";
 
 const uri = (value: string) => ({ toString: () => value });
 type Files = { files: { toString(): string }[] };
@@ -34,11 +35,7 @@ function setup() {
     id === "vscode" ? fakeVscode : originalLoad.call(Module, id, ...args);
   const require = createRequire(import.meta.url);
   // Each test brings its own fake: load the module again for it.
-  for (const id of Object.keys(require.cache)) {
-    if (id.includes("/src/host/services/deletions")) {
-      delete require.cache[id];
-    }
-  }
+  forgetModules(require, "/src/host/services/deletions");
   let onWillDelete: typeof DeletionsModule.onWillDelete;
   try {
     ({ onWillDelete } = require("../../../src/host/services/deletions.ts"));

@@ -3,6 +3,7 @@ import test from "node:test";
 import assert from "node:assert/strict";
 import Module, { createRequire } from "node:module";
 import type * as HostVaultSystem from "../../../src/host/vault-system";
+import { forgetModules } from "../../support/module-cache";
 
 function loadVaultSystem(vscode: unknown) {
   const loader = Module as typeof Module & {
@@ -12,11 +13,7 @@ function loadVaultSystem(vscode: unknown) {
   loader._load = (id, ...args) =>
     id === "vscode" ? vscode : originalLoad.call(Module, id, ...args);
   const require = createRequire(import.meta.url);
-  for (const id of Object.keys(require.cache)) {
-    if (id.includes("/src/host/") || id.includes("/src/shared/")) {
-      delete require.cache[id];
-    }
-  }
+  forgetModules(require, "/src/host/", "/src/shared/");
   try {
     return require("../../../src/host/vault-system.ts") as typeof HostVaultSystem;
   } finally {

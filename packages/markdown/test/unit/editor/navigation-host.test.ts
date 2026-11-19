@@ -15,6 +15,7 @@ import { join } from "node:path";
 import { fileURLToPath, pathToFileURL } from "node:url";
 import type * as HostNavigation from "../../../src/host/navigation";
 import { MARKDOWN_EDITOR } from "../../../src/shared/editor-provider";
+import { forgetModules } from "../../support/module-cache";
 
 function loadNavigation(vscode: unknown) {
   const loader = Module as typeof Module & {
@@ -25,11 +26,7 @@ function loadNavigation(vscode: unknown) {
     id === "vscode" ? vscode : originalLoad.call(Module, id, ...args);
   const require = createRequire(import.meta.url);
   // Each test brings its own fake: load the host modules again for it.
-  for (const id of Object.keys(require.cache)) {
-    if (id.includes("/src/host/") || id.includes("/src/shared/")) {
-      delete require.cache[id];
-    }
-  }
+  forgetModules(require, "/src/host/", "/src/shared/");
   try {
     return require("../../../src/host/navigation.ts") as typeof HostNavigation;
   } finally {
@@ -312,7 +309,10 @@ test("createNote: basename respects newNoteFolder; foldered path is vault-relati
       fsPath,
       toString: () => href,
       with({ path: next }: { path: string }) {
-        return fileUri(next);
+        // `next` is a URI path (/C:/... on Windows), not a file system path.
+        const moved = new URL(href);
+        moved.pathname = next;
+        return fileUri(fileURLToPath(moved));
       },
     };
     return uri;
@@ -451,7 +451,10 @@ async function withResolveVault(
       fsPath,
       toString: () => href,
       with({ path: next }: { path: string }) {
-        return fileUri(next);
+        // `next` is a URI path (/C:/... on Windows), not a file system path.
+        const moved = new URL(href);
+        moved.pathname = next;
+        return fileUri(fileURLToPath(moved));
       },
     };
     return uri;

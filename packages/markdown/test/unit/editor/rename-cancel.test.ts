@@ -3,6 +3,7 @@ import assert from "node:assert/strict";
 import Module, { createRequire } from "node:module";
 import type * as HostDocumentsModule from "../../../src/host/services/documents";
 import type { FileTextEdits, HostDocuments } from "../../../src/shared/host";
+import { forgetModules } from "../../support/module-cache";
 
 class FakeUri {
   static parse(value: string) {
@@ -172,11 +173,7 @@ function setup(
     id === "vscode" ? fakeVscode : originalLoad.call(Module, id, ...args);
   const require = createRequire(import.meta.url);
   // Each test brings its own fake: load the host module again for it.
-  for (const id of Object.keys(require.cache)) {
-    if (id.includes("/src/host/") || id.includes("/src/shared/")) {
-      delete require.cache[id];
-    }
-  }
+  forgetModules(require, "/src/host/", "/src/shared/");
   let createHostDocuments: typeof HostDocumentsModule.createHostDocuments;
   try {
     ({
