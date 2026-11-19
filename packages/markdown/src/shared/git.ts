@@ -17,12 +17,35 @@ export interface GitBaseline {
 
 export type GitBaselineResult =
   | { readonly status: "ok"; readonly baseline: GitBaseline }
-  /** No repository, git disabled, or the file is outside any repository. */
+  /**
+   * No repository, git disabled, the file is outside any repository, or git
+   * failed to answer (a timeout, a damaged repository).
+   */
   | { readonly status: "unavailable" }
   /** The file is in a repository but not at `ref` (new or untracked). */
   | { readonly status: "untracked" }
   /** Past the diff limits (`src/shared/diff/limits.ts`); the text is not kept. */
   | { readonly status: "tooLarge" };
+
+/**
+ * What a failed read of a note at HEAD or in the index means: `untracked`
+ * when git says the note is not there (new, untracked, only in a merge
+ * conflict's stages), `unavailable` for any other failure, such as a
+ * timeout or a damaged repository. Reads git's wording, in `message` and,
+ * for VS Code's git extension, `stderr`.
+ */
+export function baselineFailure(error: unknown): "untracked" | "unavailable" {
+  const { message, stderr } = (error ?? {}) as {
+    message?: unknown;
+    stderr?: unknown;
+  };
+  const text = `${String(message ?? error)}\n${String(stderr ?? "")}`;
+  return /does not exist|exists on disk, but not in|is in the index, but not at stage|not a valid object name|invalid object name|bad revision|unknown revision/i.test(
+    text,
+  )
+    ? "untracked"
+    : "unavailable";
+}
 
 /**
  * Git through VS Code's built-in git extension (`vscode.git`, API 1). Plugins

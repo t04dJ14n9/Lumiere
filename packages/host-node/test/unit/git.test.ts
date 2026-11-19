@@ -5,6 +5,7 @@ import { mkdir, mkdtemp, rm, writeFile } from "node:fs/promises";
 import { tmpdir } from "node:os";
 import * as path from "node:path";
 import { pathToFileURL } from "node:url";
+import { createSpawnBlameRunner } from "@workshop/markdown/node";
 import { settingsUnavailableIn } from "@workshop/markdown/portable";
 import { NodeGitAccess } from "../../src/host/git";
 import { NODE_HOST_OFFERS } from "../../src/host/inert";
@@ -119,6 +120,28 @@ test("a note git does not know is untracked; past the diff limits, too large", a
   git(dir, "commit", "--quiet", "-m", "Long");
   assert.deepEqual(await access.baseline(fileUri(long), "HEAD"), {
     status: "tooLarge",
+  });
+});
+
+test("F22: git failing to read a tracked note is unavailable, not untracked", async (t) => {
+  const { dir } = await repository(t);
+  const real = createSpawnBlameRunner();
+  const access = new NodeGitAccess({
+    roots: () => [fileUri(dir)],
+    runGit: async (request) => {
+      if (request.args[0] === "cat-file") {
+        throw new Error("git timed out after 5000ms");
+      }
+      return real(request);
+    },
+  });
+  t.after(() => access.dispose());
+  const uri = fileUri(path.join(dir, "note.md"));
+  assert.deepEqual(await access.baseline(uri, "HEAD"), {
+    status: "unavailable",
+  });
+  assert.deepEqual(await access.baseline(uri, "index"), {
+    status: "unavailable",
   });
 });
 

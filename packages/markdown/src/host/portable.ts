@@ -57,6 +57,7 @@ export type {
   GitBaselineResult,
   GitRef,
 } from "../shared/git";
+export { baselineFailure } from "../shared/git";
 export type {
   GitBlameLineResult,
   GitBlameSnapshot,
