@@ -1,5 +1,8 @@
 import test from "node:test";
 import assert from "node:assert/strict";
+import { tmpdir } from "node:os";
+import { join } from "node:path";
+import { pathToFileURL } from "node:url";
 import {
   isMarkdownAbsentOnDisk,
   isMarkdownFileUri,
@@ -27,7 +30,9 @@ test("isMarkdownAbsentOnDisk uses the test override without touching disk", () =
 
 test("isMarkdownAbsentOnDisk default reports a surely-missing file path", () => {
   setMarkdownAbsentOnDiskForTests();
-  const missing =
-    "file:///tmp/lumiere-definitely-missing-open-bridge-test/nope.md";
+  // A real absolute path: a file URL without a drive letter is no path on Windows.
+  const missing = pathToFileURL(
+    join(tmpdir(), "lumiere-definitely-missing-open-bridge-test", "nope.md"),
+  ).href;
   assert.equal(isMarkdownAbsentOnDisk(missing), true);
 });

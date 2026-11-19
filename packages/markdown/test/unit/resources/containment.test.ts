@@ -1,6 +1,8 @@
 import test from "node:test";
 import assert from "node:assert/strict";
 import { mkdtemp, mkdir, writeFile, symlink, rm } from "node:fs/promises";
+import { tmpdir } from "node:os";
+import { join } from "node:path";
 import { pathToFileURL } from "node:url";
 import {
   contains,
@@ -20,22 +22,22 @@ test("resource containment rejects sibling prefixes, traversal and different aut
   }
 });
 test("realpath checks reject symlink escapes while permitting contained files", async () => {
-  const temp = await mkdtemp("/tmp/mw-resources-");
+  const temp = await mkdtemp(join(tmpdir(), "mw-resources-"));
   try {
-    await mkdir(temp + "/vault");
-    await writeFile(temp + "/vault/note.md", "note");
-    await writeFile(temp + "/outside.md", "outside");
-    await symlink(temp + "/outside.md", temp + "/vault/escape.md");
+    await mkdir(join(temp, "vault"));
+    await writeFile(join(temp, "vault/note.md"), "note");
+    await writeFile(join(temp, "outside.md"), "outside");
+    await symlink(join(temp, "outside.md"), join(temp, "vault/escape.md"));
     await containedResource(
-      pathToFileURL(temp + "/vault").href,
-      pathToFileURL(temp + "/vault/note.md").href,
+      pathToFileURL(join(temp, "vault")).href,
+      pathToFileURL(join(temp, "vault/note.md")).href,
       false,
       { realContains },
     );
     await assert.rejects(
       containedResource(
-        pathToFileURL(temp + "/vault").href,
-        pathToFileURL(temp + "/vault/escape.md").href,
+        pathToFileURL(join(temp, "vault")).href,
+        pathToFileURL(join(temp, "vault/escape.md")).href,
         true,
         { realContains },
       ),
@@ -44,8 +46,8 @@ test("realpath checks reject symlink escapes while permitting contained files", 
     // Without real paths (a browser host), any link is refused.
     await assert.rejects(
       containedResource(
-        pathToFileURL(temp + "/vault").href,
-        pathToFileURL(temp + "/vault/escape.md").href,
+        pathToFileURL(join(temp, "vault")).href,
+        pathToFileURL(join(temp, "vault/escape.md")).href,
         true,
       ),
       /Virtual symbolic/,
