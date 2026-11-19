@@ -8,7 +8,7 @@ import type { Plugin } from "@workshop/core";
 import type {} from "../services";
 import manifest from "./manifest";
 import { IDE_CONTEXT_COMMAND_IDS } from "../../../shared/command-ids";
-import { buildPdfIdeContextPacket } from "./adapter";
+import { buildPdfIdeContextPacket, viewedPages } from "./adapter";
 import {
   copyIdeContext,
   sendIdeContext,
@@ -92,6 +92,7 @@ function activePacket(panels: PdfPanels) {
   return buildPdfIdeContextPacket({
     uri: panel.uri.toString(),
     selection: selected?.selection,
+    ...viewedPages(panel.view),
     ...(selected ? { sourceSha256: selected.sha256 } : {}),
     host: createVsCodeIdeContextHost(vscode),
   });

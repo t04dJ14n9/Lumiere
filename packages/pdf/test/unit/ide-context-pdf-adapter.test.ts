@@ -3,6 +3,7 @@ import assert from "node:assert/strict";
 import {
   buildPdfIdeContextPacket,
   mapPdfSelectionWire,
+  viewedPages,
 } from "../../src/extension/plugins/ideContext/adapter";
 import { DEFAULT_CAPS } from "@workshop/agents/ide-context";
 
@@ -20,6 +21,21 @@ test("no selection → pdf.selection kind none", () => {
   assert.equal(packet.active?.uri, "file:///a.pdf");
   assert.equal(packet.active?.selection, undefined);
   assert.equal(packet.markdown, undefined);
+});
+
+test("the packet says which page is shown and how many the PDF has", () => {
+  const packet = buildPdfIdeContextPacket({
+    uri: "file:///a.pdf",
+    selection: null,
+    ...viewedPages({ page: 3, pageCount: 12 }),
+    host: {
+      listTabs: () => ({ visible: ["file:///a.pdf"], open: [] }),
+      getDiagnostics: () => [],
+    },
+  });
+  assert.equal(packet.pdf?.page, 3);
+  assert.equal(packet.pdf?.pageCount, 12);
+  assert.deepEqual(viewedPages(undefined), {});
 });
 
 test("text selection maps to pdf.selection text with rects; not active.selection", () => {

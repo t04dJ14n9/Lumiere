@@ -55,6 +55,13 @@ export function mapPdfSelectionWire(
   };
 }
 
+/** The page shown and the PDF's page count, once the viewer has reported its view. */
+export function viewedPages(
+  view: { page: number; pageCount: number } | undefined,
+): Pick<PdfIdeContextInput, "page" | "pageCount"> {
+  return view ? { page: view.page, pageCount: view.pageCount } : {};
+}
+
 export function buildPdfIdeContextPacket(
   input: PdfIdeContextInput,
 ): IdeContextPacket {
