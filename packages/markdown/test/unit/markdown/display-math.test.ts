@@ -58,3 +58,44 @@ test("a paragraph line is not cut by a following line that starts with inline di
   const names = nodeNames("first line\n$$x$$ continues");
   assert.equal(names.filter((name) => name === "Paragraph").length, 1);
 });
+
+/** The formulas of a paragraph as the editor's parser reads it. */
+function editorFormulas(text: string): string[] {
+  const formulas: string[] = [];
+  markdownParser.parse(text).iterate({
+    enter(node) {
+      if (node.name === "InlineMath") {
+        const source = text.slice(node.from, node.to);
+        const width = source.startsWith("$$") ? 2 : 1;
+        formulas.push(source.slice(width, -width));
+      }
+    },
+  });
+  return formulas;
+}
+
+/** The formulas of a paragraph as the HTML renderer reads it. */
+function renderedFormulas(text: string): string[] {
+  return [...renderMarkdown(text).matchAll(/data-math="([^"]*)"/g)].map(
+    (match) => decodeURIComponent(match[1]!),
+  );
+}
+
+test("Live Preview and rendered blocks agree on which text is inline math", () => {
+  const cases: [string, string[]][] = [
+    ["a $x$ b", ["x"]],
+    ["$ x$ is not math", []],
+    // A `$` after a space does not close; a later one can.
+    ["$a $b$ c", ["a $b"]],
+    ["costs $5 and $10 today", []],
+    ["escaped \\$x$ and $y\\$z$", ["y\\$z"]],
+    ["display $$x + y$$ inline", ["x + y"]],
+    // A formula does not run over a line break.
+    ["a $x\ny$ b", []],
+    ["$1$2", ["1"]],
+  ];
+  for (const [text, formulas] of cases) {
+    assert.deepEqual(editorFormulas(text), formulas, `editor: ${text}`);
+    assert.deepEqual(renderedFormulas(text), formulas, `rendered: ${text}`);
+  }
+});

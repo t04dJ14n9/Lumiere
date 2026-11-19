@@ -2,7 +2,7 @@ import type { MarkdownIt } from "markdown-it";
 import type { StateInline } from "markdown-it";
 import type { StateBlock } from "markdown-it";
 import { attr, encodeDataValue, escape } from "./helpers";
-import { opensMathBlock } from "../dialect/math";
+import { inlineMathEnd, opensMathBlock } from "../dialect/math";
 export function math(md: MarkdownIt): void {
   md.inline.ruler.before("escape", "math", inlineMath);
   md.renderer.rules.math_inline = (tokens, index) =>
@@ -22,27 +22,20 @@ function inlineMath(state: StateInline, silent: boolean): boolean {
   if (state.src[state.pos] !== "$") {
     return false;
   }
-  const delimiter = state.src.startsWith("$$", state.pos) ? "$$" : "$";
-  const start = state.pos + delimiter.length;
-  if (/\s/.test(state.src[start] ?? "") && delimiter === "$") {
-    return false;
-  }
-  let end = start;
-  do {
-    end = state.src.indexOf(delimiter, end + 1);
-  } while (end >= 0 && state.src[end - 1] === "\\");
-  if (end < 0 || (/\s/.test(state.src[end - 1] ?? "") && delimiter === "$")) {
+  const width = state.src.startsWith("$$", state.pos) ? 2 : 1;
+  const end = inlineMathEnd(
+    (at) => state.src.charCodeAt(at),
+    state.pos,
+    state.posMax,
+  );
+  if (end < 0) {
     return false;
   }
   if (!silent) {
-    const token = state.push(
-      delimiter === "$$" ? "math_block" : "math_inline",
-      "",
-      0,
-    );
-    token.content = state.src.slice(start, end);
+    const token = state.push(width === 2 ? "math_block" : "math_inline", "", 0);
+    token.content = state.src.slice(state.pos + width, end);
   }
-  state.pos = end + delimiter.length;
+  state.pos = end + width;
   return true;
 }
 
