@@ -2,7 +2,7 @@ import type { AnnotationViewerMessage } from "../../shared/annotation-messages";
 import type { HostMessage } from "../../shared/messages";
 import { Emitter, type Subscription } from "../events";
 import { AnnotationSave, type PdfWriteConflict } from "./annotation-save";
-import { AnnotationStore } from "./annotation-store";
+import { AnnotationStore, type StoreChange } from "./annotation-store";
 import type { ViewerLoads } from "./loads";
 import type { ViewerPanelHost } from "./panel-types";
 import type { PdfSource } from "./source";
@@ -32,7 +32,7 @@ export class PanelAnnotations implements Subscription {
     source: PdfSource,
     private readonly deps: {
       /** Which messages are about the bytes the viewer shows. */
-      loads: Pick<ViewerLoads, "isCurrent" | "acceptsStoreSave">;
+      loads: Pick<ViewerLoads, "current" | "isCurrent" | "acceptsStoreSave">;
       post: (message: HostMessage) => void;
     },
   ) {
@@ -52,6 +52,22 @@ export class PanelAnnotations implements Subscription {
         deps.loads.acceptsStoreSave(load) && this.save.knows(load, sha256),
       error: (message) => host.error(message),
       failed: (message) => this.fail("file", message),
+      changed: (change) => this.storeChanged(change),
+    });
+  }
+
+  /** Another editor of the PDF saved its annotations: show this viewer what the file holds, if it shows those bytes. */
+  private storeChanged({ sha256, revision, text }: StoreChange): void {
+    const load = this.deps.loads.current;
+    if (!this.deps.loads.isCurrent(load) || !this.save.knows(load, sha256)) {
+      return;
+    }
+    this.deps.post({
+      type: "annotationStoreChanged",
+      load,
+      sha256,
+      revision,
+      text: text ?? null,
     });
   }
 
@@ -88,6 +104,9 @@ export class PanelAnnotations implements Subscription {
       case "annotationStoreSave":
         await this.store.save(message);
         return;
+      case "annotationStoreShown":
+        await this.store.shown(message);
+        return;
       case "annotationSaveFailed":
         if (this.deps.loads.isCurrent(message.load)) {
           this.save.markFailed();
@@ -114,6 +133,7 @@ export class PanelAnnotations implements Subscription {
   }
 
   dispose(): void {
+    this.store.dispose();
     this.conflict.dispose();
     this.failed.dispose();
     this.exported.dispose();

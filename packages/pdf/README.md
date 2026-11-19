@@ -73,6 +73,13 @@ is opt-in (`lumiere.pdf.regions.enabled`, default off).
   (`{"version": 2, "bundle": …}`, EmbedPDF 3's annotation transfer); files
   from earlier versions are converted when read and saved in the new format on
   the next change, after which earlier versions cannot read them.
+  - **The same PDF in two panes or windows.** Each save is merged into the
+    file by annotation (its `/NM` name), against what that pane last had
+    from the file: a mark made, changed or deleted in one pane is kept, and
+    the other pane's save does not undo it. Other panes in the same window
+    then show the change; a pane in another VS Code window shows it when the
+    PDF is reopened. A mark changed in two panes at once keeps the last
+    save's version.
   - **PDF: Save Annotations into This PDF** writes them into the file after
     you confirm (its SHA-256 changes). It refuses PDFs in
     `lumiere.pdf.annotations.protectedFolders` (default `[".raw"]`). The
@@ -306,6 +313,7 @@ src/
 │   ├── view-state.ts     page and zoom reported by the viewer; view actions
 │   ├── toolbar-settings.ts  toolbar modes; old floating-bar values still parse
 │   ├── picture-swap.ts   a page keeps its picture until the next is decoded
+│   ├── annotation-merge.ts  two panes' saves of one annotation file, merged by mark
 │   └── geometry.ts       page rectangles
 ├── bridge-stdio/  the stdio shim Claude Code and Codex run to reach the bridge
 ├── extension/   the VS Code side
@@ -349,6 +357,7 @@ src/
     ├── smooth-scrolling.ts     animated wheel notches in continuous reading
     ├── text-access.ts          the page text and its glyph boxes, as a plugin
     ├── annotation-store-session.ts  marks to and from their file
+    ├── annotation-store-sync.ts     another pane's saved marks, shown here
     ├── selection.ts            reporting text and region selections
     ├── region-details.ts       a region's text and PNG snapshot
     ├── drag-release.ts         ending drags released outside the viewer

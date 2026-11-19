@@ -52,13 +52,17 @@ function open(
   const posted: OutgoingMessage[] = [];
   const present = new Map<number, string>();
   let exports = 0;
+  let hostText = options.stored;
   const host: SessionHost = {
     post: (message) => posted.push(message),
     loadState: () => ({
       load: 3,
       sha256: options.sha256?.() ?? SHA,
-      ...(options.stored === undefined ? {} : { annotations: options.stored }),
+      ...(hostText === undefined ? {} : { annotations: hostText }),
     }),
+    keepStoreText: (text) => {
+      hostText = text;
+    },
   };
   const annotation = {
     import: async (incoming: AnnotationBundle) => {
@@ -229,6 +233,7 @@ test("a save that fails tells the host, which can ask again", async () => {
     {
       post: (message) => posted.push(message),
       loadState: () => ({ load: 3, sha256: SHA }),
+      keepStoreText: () => undefined,
     },
   );
   session.restore(true);

@@ -7,6 +7,10 @@ import { test } from "node:test";
 import { localEngine } from "@embedpdf/engine";
 import { writeAtomicFile } from "../../src/host/atomic-write";
 import {
+  annotationEntries,
+  mergeAnnotationFile,
+} from "../../src/shared/annotation-merge";
+import {
   parseAnnotations,
   serializeAnnotations,
 } from "../../src/shared/annotation-store";
@@ -185,5 +189,60 @@ test("an old version 1 file's annotations come back through the same import", as
       ],
     );
     await doc.close();
+  });
+});
+
+test("marks made on the same PDF in two panes, merged, both come back", async () => {
+  const bytes = await shortPdf();
+  await withEngine(async (open) => {
+    const mark = async (
+      doc: Awaited<ReturnType<typeof open>>,
+      contents: string,
+    ): Promise<string> => {
+      const [first] = (await doc.pages.list()).pages;
+      await doc.page(first!.ref).annotations.create({
+        subtype: "highlight",
+        quadPoints: [line],
+        color: "#FFE566",
+        contents,
+      });
+      return serializeAnnotations(await doc.annotations.export())!;
+    };
+    const pane1 = await open(bytes);
+    const pane2 = await open(bytes);
+    const afterPane1 = mergeAnnotationFile(
+      undefined,
+      undefined,
+      await mark(pane1, "A"),
+    );
+    const afterPane2 = mergeAnnotationFile(
+      afterPane1,
+      undefined,
+      await mark(pane2, "B"),
+    );
+
+    const reopened = await open(bytes);
+    const stored = (await parseAnnotations(afterPane2!))!;
+    const result = await reopened.annotations.import(stored.bundle, {
+      pages: stored.pages,
+    });
+    assert.deepEqual(result.dropped, []);
+    const { annotations } = await reopened.annotations.list();
+    assert.deepEqual(annotations.map((found) => found.contents).sort(), [
+      "A",
+      "B",
+    ]);
+    // A pane that imported the file says what the file says, so applying
+    // another pane's save never sends a change back.
+    const contents = (text: string | undefined) =>
+      [...(annotationEntries(text) ?? [])].map(([id, entry]) => [
+        id,
+        entry.content,
+      ]);
+    assert.deepEqual(
+      contents(serializeAnnotations(await reopened.annotations.export())),
+      contents(afterPane2),
+    );
+    await Promise.all([pane1.close(), pane2.close(), reopened.close()]);
   });
 });
