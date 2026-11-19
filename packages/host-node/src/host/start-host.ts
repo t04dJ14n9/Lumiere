@@ -108,6 +108,7 @@ export async function startHost(
   const log = (message: string) => options.logger.warn(message);
   const { documents, files } = createNotes(platform, rootList, log);
   const panels = new PanelHub(documents, CONNECT_TIMEOUT_MS, log);
+  panels.followRenames((uri) => platform.files.toPath(uri));
   const keys = new ContextKeys();
   const commands = createHostCommands(log, keys);
   const trees = new TreeHub(commands);

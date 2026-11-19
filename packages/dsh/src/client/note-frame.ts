@@ -3,7 +3,11 @@
  * stale-load handling, theme and open-message wiring. Split from index.ts so
  * each file and function stays inside the lint budget.
  */
-import { parseOpenMessage, SHOWN } from "@workshop/host-node/embedding";
+import {
+  parseMovedMessage,
+  parseOpenMessage,
+  SHOWN,
+} from "@workshop/host-node/embedding";
 import {
   addressFragment,
   insideWorkspace,
@@ -398,7 +402,18 @@ export function sendTheme(frame: HTMLIFrameElement | null): void {
   frame?.contentWindow?.postMessage(readDshTheme(), location.origin);
 }
 
-/** The page asks to open another note (a link to it): open it in a DSH tab. */
+/** An open request, or a moved note as one, for the note at its new path. */
+function openRequest(
+  data: unknown,
+): { path: string; fragment: string } | undefined {
+  const moved = parseMovedMessage(data);
+  return moved ? { path: moved.path, fragment: "" } : parseOpenMessage(data);
+}
+
+/**
+ * The page asks to open another note (a link to it), or says its own note
+ * was renamed or moved (its inline title): open that note in a DSH tab.
+ */
 export function followOpens(
   frame: { current: HTMLIFrameElement | null },
   target: {
@@ -412,7 +427,7 @@ export function followOpens(
     const request =
       event.origin === location.origin &&
       event.source === frame.current?.contentWindow
-        ? parseOpenMessage(event.data)
+        ? openRequest(event.data)
         : undefined;
     const allowedRoot = target.containmentRoot ?? target.root;
     if (

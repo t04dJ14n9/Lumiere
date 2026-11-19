@@ -23,6 +23,7 @@ import { openMenuAtSelection, reportContextMenus } from "./context-menu";
 import { createUi } from "./ui";
 import { reconnectingSocket } from "./connection";
 import { showConnection } from "./disconnected";
+import { stateKey } from "./moved";
 import { showSvgImagesSafely } from "./svg-images";
 
 interface VsCodeApi {
@@ -179,7 +180,7 @@ function connect(panel: string): (frame: PageFrame) => void {
 /** Saved view state (scroll, folds) lives with the tab, as VS Code keeps it with the webview. */
 function vsCodeApi(send: (frame: PageFrame) => void): VsCodeApi {
   // A page host-web made is a blob: document, with no query to key on.
-  const key = `lumiere:state:${meta("lumiere-state") ?? location.search}`;
+  const key = stateKey(meta("lumiere-state") ?? location.search);
   return {
     postMessage: (message) => send({ ch: "rpc", data: message }),
     getState: () => {

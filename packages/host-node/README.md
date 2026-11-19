@@ -95,7 +95,7 @@ and reaches no Node built-in, which `test/unit/core-layers.test.ts` checks.
 | Module | Between | What |
 | --- | --- | --- |
 | `src/protocol.ts` | page ↔ host (socket) | `rpc` frames (the editor's own RPC) and `ui` frames (prompts, toasts, focus, the right-click menu) |
-| `src/embedding.ts` | embedder ↔ page (`postMessage`) | the theme, "open this file", "you are shown" |
+| `src/embedding.ts` | embedder ↔ page (`postMessage`) | the theme, "open this file", "you are shown", "my note moved" (a rename by its title or the file tree; DSH opens the note at its new path, the app's window follows its own `renamed` event and ignores it) |
 | `src/palette.ts` | embedder → page | an embedder's colour roles as the `--vscode-*` variables |
 | `src/views.ts` | embedder ↔ host (HTTP) | tree snapshots, clicks, visibility, events |
 | `src/settings.ts` | embedder ↔ host (HTTP) | every setting with its value, group and title; changes, checked as VS Code's commands check them |

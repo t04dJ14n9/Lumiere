@@ -25,6 +25,8 @@ export type UiRequest =
    */
   | { type: "menu"; id: number; x: number; y: number; groups: MenuRow[][] }
   | { type: "open"; path: string; fragment: string }
+  /** The page's own note was renamed or moved to `path` (absolute). */
+  | { type: "moved"; path: string }
   | { type: "external"; href: string };
 
 /** One item of the right-click menu, without its command; a submenu's row holds its own rows. */
@@ -264,6 +266,8 @@ const REQUEST_PARSERS: Readonly<Record<string, RequestParser>> = {
     isText(value.path) && isText(value.fragment)
       ? { type: "open", path: value.path, fragment: value.fragment }
       : undefined,
+  moved: (value) =>
+    isText(value.path) ? { type: "moved", path: value.path } : undefined,
   external: (value) =>
     isText(value.href) ? { type: "external", href: value.href } : undefined,
 };

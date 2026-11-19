@@ -28,6 +28,9 @@ Code's webview API: `acquireVsCodeApi().postMessage` and the page's
 `message` events travel over a WebSocket to the panel on the host, and DSH's
 theme tokens become the `--vscode-*` variables the editor's styles read.
 
+When a note is renamed by its inline title, its page passes on the new
+path (`moved`, `@workshop/host-node/embedding`) with its scroll position,
+and DSH opens the note there, as it opens a followed link.
 Following a link to a note that is not open asks DSH to open it in a new
 tab (`ctx.sidebarRight.openResource`); the host reveals the heading or block
 once the new page connects. If the page's first `ready` handshake fails (for
