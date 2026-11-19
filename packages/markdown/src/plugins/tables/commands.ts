@@ -1,4 +1,8 @@
-import type { CellPosition } from "../../markdown/tables/model";
+import {
+  rectangle,
+  type CellPosition,
+  type CellRange,
+} from "../../markdown/tables/model";
 import type { TableOperation } from "../../markdown/tables/operations";
 import type { EditorState, TransactionSpec } from "@codemirror/state";
 
@@ -20,55 +24,61 @@ export function insertTable(state: EditorState): TransactionSpec {
   };
 }
 
+/**
+ * The operation a `Table: …` command applies to the selected cells (or the
+ * open cell): every selected row or column, as the context menu does.
+ */
 export function tableOperation(
   id: string,
-  cell: CellPosition,
+  target: CellPosition | CellRange,
 ): TableOperation | undefined {
-  const { row, column } = cell;
-  const alignment = alignmentOperation(id, column);
+  const range = "anchor" in target ? target : { anchor: target, head: target };
+  const area = rectangle(range);
+  const alignment = alignmentOperation(id, area.left, area.right);
   if (alignment) {
     return alignment;
   }
   if (id === "sort-ascending" || id === "sort-descending") {
     return {
       type: "sort",
-      column,
+      column: range.head.column,
       direction: id === "sort-ascending" ? "ascending" : "descending",
     };
   }
   const axis = id.includes("row") ? "row" : "column";
-  return lineOperation(id, axis, axis === "row" ? row : column);
+  return axis === "row"
+    ? lineOperation(id, axis, { from: area.top, to: area.bottom })
+    : lineOperation(id, axis, { from: area.left, to: area.right });
 }
 
-/** Insert, delete, duplicate or move the row or column at `index`. */
+/** Insert beside, delete, duplicate or move the rows or columns `from`…`to`. */
 function lineOperation(
   id: string,
   axis: "row" | "column",
-  index: number,
+  { from, to }: { from: number; to: number },
 ): TableOperation | undefined {
   if (id.startsWith("insert-")) {
-    // As in Obsidian, a new column is aligned as the cell's.
+    const after = id.endsWith("below") || id.endsWith("right");
+    // As in Obsidian, a new column is aligned as the one it is added beside.
     return {
       type: "insert",
       axis,
-      index: index + (id.endsWith("below") || id.endsWith("right") ? 1 : 0),
-      ...(axis === "column" && { alignAs: index }),
+      index: after ? to + 1 : from,
+      ...(axis === "column" && { alignAs: after ? to : from }),
     };
   }
   if (id.startsWith("delete-") || id.startsWith("duplicate-")) {
     const type = id.startsWith("delete-") ? "delete" : "duplicate";
-    return { type, axis, from: index, to: index };
+    return { type, axis, from, to };
   }
   if (id.startsWith("move-")) {
+    const back = id.endsWith("up") || id.endsWith("left");
     return {
       type: "move",
       axis,
-      from: index,
-      to: index,
-      destination: Math.max(
-        0,
-        index + (id.endsWith("up") || id.endsWith("left") ? -1 : 1),
-      ),
+      from,
+      to,
+      destination: Math.max(0, from + (back ? -1 : 1)),
     };
   }
   return undefined;
@@ -76,7 +86,8 @@ function lineOperation(
 
 function alignmentOperation(
   id: string,
-  column: number,
+  from: number,
+  to: number,
 ): TableOperation | undefined {
   if (id.startsWith("align-")) {
     const alignment = id.slice(6);
@@ -85,7 +96,7 @@ function alignmentOperation(
       alignment === "center" ||
       alignment === "right"
     ) {
-      return { type: "align", from: column, to: column, alignment };
+      return { type: "align", from, to, alignment };
     }
   }
   return undefined;

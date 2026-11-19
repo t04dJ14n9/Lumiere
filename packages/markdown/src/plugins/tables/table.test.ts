@@ -3,8 +3,13 @@ import assert from "node:assert/strict";
 import { EditorState } from "@codemirror/state";
 import { CellSource, cellSyntax } from "./cell-source";
 import { parseTable, serializeTable } from "../../markdown/tables/model";
-import { operateTable } from "../../markdown/tables/operations";
+import {
+  operateTable,
+  type TableOperation,
+} from "../../markdown/tables/operations";
+import type { MenuItem } from "../editor/api";
 import { tableOperation } from "./commands";
+import { tableMenu } from "./menu";
 import { tableCommands } from "./manifest";
 import { arrowStep } from "./navigation";
 import { nearestEntry } from "./hit-test";
@@ -39,6 +44,50 @@ test("every contributed table command produces a valid operation and preserves a
     to: 1,
     alignment: "center",
   });
+});
+
+test("a palette command acts on the whole cell selection, as the context menu does", () => {
+  const model = parseTable(
+    "| a | b | c |\n| --- | --- | --- |\n| 1 | 2 | 3 |\n| 4 | 5 | 6 |\n| 7 | 8 | 9 |",
+  )!;
+  const range = { anchor: { row: 1, column: 0 }, head: { row: 2, column: 1 } };
+  let executed: TableOperation | undefined;
+  const menu = tableMenu(model, range, {
+    copy() {},
+    paste: async () => {},
+    selectAll() {},
+    format() {},
+    clear() {},
+    execute(operation) {
+      executed = operation;
+    },
+  });
+  const find = (items: readonly MenuItem[], label: string): MenuItem =>
+    items.find((item) => item.label === label) ??
+    items
+      .map((item) => item.children && find(item.children, label))
+      .find(Boolean)!;
+  const run = (label: string) => {
+    executed = undefined;
+    void find(menu, label).run!();
+    return executed;
+  };
+  for (const [id, label] of [
+    ["insert-row-above", "Add row above"],
+    ["insert-row-below", "Add row below"],
+    ["insert-column-left", "Add column to the left"],
+    ["insert-column-right", "Add column to the right"],
+    ["delete-row", "Delete row"],
+    ["delete-column", "Delete column"],
+    ["duplicate-row", "Duplicate row"],
+    ["duplicate-column", "Duplicate column"],
+    ["move-row-up", "Move row up"],
+    ["move-row-down", "Move row down"],
+    ["move-column-right", "Move column right"],
+    ["align-center", "Align center"],
+  ] as const) {
+    assert.deepEqual(tableOperation(id, range), run(label), id);
+  }
 });
 
 // Obsidian 1.15.0's column commands and table menu, read from its app.js with

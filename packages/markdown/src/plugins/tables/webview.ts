@@ -202,7 +202,7 @@ function registerTableCommands(ctx: Context): void {
         if (!controller || !position) {
           return false;
         }
-        const operation = tableOperation(id, position);
+        const operation = tableOperation(id, controller.range ?? position);
         if (!operation) {
           return false;
         }

@@ -115,7 +115,7 @@ plugin registrations and widget lifetimes end when the plugin stops.
 - `column-widths.test.ts`: apply, remap, border hit and row indent unit tests.
 - `column-resize.ts`: hover and drag a column's right border in any row (`col-resize` cursor, guide line); clear of the move grips.
 - `hit-test.ts`: cell and axis hit testing.
-- `commands.ts`: command IDs to table operations.
+- `commands.ts`: command IDs to table operations on every selected row or column, as the context menu acts.
 - `state.ts`: active-table registry, projection annotation and selection/action facets.
 - `interactions.test.ts`: source projection, navigation, selection and menu unit tests.
 - `table.test.ts`: cell-source and operation unit tests.
