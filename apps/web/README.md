@@ -16,6 +16,10 @@ Vaults are:
   (Chromium), else IndexedDB (Safari, Firefox).
 
 A first visit opens a short demo vault; later visits reopen the last vault.
+A browser lets a page read a picked folder again only once the reader allows
+it, and asks only on a click: a remembered folder it no longer allows opens
+from the window's list of vaults, which asks, while at load the demo vault
+opens in its place.
 
 ## How it works
 

@@ -87,3 +87,50 @@ test("folders picked on an earlier visit come back at the paths they had", async
   assert.equal(await note(files, "/vaults/Notes"), "work");
   assert.equal(await note(files, "/vaults/Notes 2"), "home");
 });
+
+test("a remembered folder asks for access on its first use, and again after a refusal", async () => {
+  let permission: PermissionState = "prompt";
+  let asked = 0;
+  const notes = Object.assign(
+    folder("Notes", "work", () => permission),
+    {
+      // A browser answers only during a click; the test plays the reader.
+      requestPermission: async () => {
+        asked += 1;
+        return permission;
+      },
+    },
+  );
+  const files = new Mounts();
+  await new PickedFolders(
+    files,
+    memoryStore([["Notes", notes]]),
+  ).mountRemembered();
+  assert.equal(files.isMounted("/vaults/Notes"), true);
+
+  permission = "denied";
+  await assert.rejects(note(files, "/vaults/Notes"), /until you allow it/);
+  assert.equal(asked, 1);
+
+  permission = "granted";
+  assert.equal(await note(files, "/vaults/Notes"), "work");
+  assert.equal(await note(files, "/vaults/Notes"), "work");
+  assert.equal(asked, 1, "allowed now, so not asked again");
+});
+
+test("a remembered folder the reader allowed before does not ask", async () => {
+  let asked = 0;
+  const notes = Object.assign(folder("Notes", "work"), {
+    requestPermission: async () => {
+      asked += 1;
+      return "granted" as const;
+    },
+  });
+  const files = new Mounts();
+  await new PickedFolders(
+    files,
+    memoryStore([["Notes", notes]]),
+  ).mountRemembered();
+  assert.equal(await note(files, "/vaults/Notes"), "work");
+  assert.equal(asked, 0);
+});

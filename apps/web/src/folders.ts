@@ -4,7 +4,7 @@
  * vaults kept in the browser's private storage (every browser). Each is
  * mounted in host-web at `/vaults/<name>`, a name no other vault has.
  */
-import type { Mounts } from "@workshop/host-web";
+import type { Mounts, VaultFileSystem } from "@workshop/host-web";
 import { HandleFileSystem } from "./handle-fs";
 
 declare global {
@@ -77,21 +77,27 @@ export class PickedFolders {
     return path;
   }
 
-  /** Mount the folders picked on earlier visits that the browser still lets us read. */
+  /**
+   * Mount the folders picked on earlier visits. A browser lets a page read
+   * one again only once the reader allows it, and asks only during a click:
+   * each asks on its first use, so opening the vault from the window's list
+   * asks, while reopening the last vault at load cannot and falls back.
+   */
   async mountRemembered(): Promise<void> {
     for (const [name, handle] of await this.store.all()) {
       const path = `${VAULTS}${safeName(name)}`;
-      const permission = await handle
-        .queryPermission?.({ mode: "readwrite" })
-        .catch(() => "denied");
-      if (permission === "granted" && !this.files.isMounted(path)) {
-        this.mount(path, handle);
+      if (!this.files.isMounted(path)) {
+        this.mount(path, handle, askingFirst(handle));
       }
     }
   }
 
-  private mount(path: string, handle: FileSystemDirectoryHandle): void {
-    this.files.mount(path, new HandleFileSystem(handle));
+  private mount(
+    path: string,
+    handle: FileSystemDirectoryHandle,
+    folder: VaultFileSystem = new HandleFileSystem(handle),
+  ): void {
+    this.files.mount(path, folder);
     this.picked.set(path, handle);
   }
 
@@ -104,6 +110,51 @@ export class PickedFolders {
       }
     }
     return undefined;
+  }
+}
+
+/**
+ * A remembered folder that asks the reader for access before its first use,
+ * and again after a refusal. Once allowed, it stays allowed for the visit.
+ */
+export function askingFirst(
+  handle: FileSystemDirectoryHandle,
+): VaultFileSystem {
+  const folder = new HandleFileSystem(handle);
+  let allowed: Promise<void> | undefined;
+  const ask = () => {
+    allowed ??= requestAccess(handle).catch((error: unknown) => {
+      allowed = undefined;
+      throw error;
+    });
+    return allowed;
+  };
+  const first =
+    <A extends unknown[], R>(call: (...args: A) => Promise<R>) =>
+    async (...args: A): Promise<R> => {
+      await ask();
+      return call(...args);
+    };
+  return {
+    read: first((path) => folder.read(path)),
+    readBlob: first((path) => folder.readBlob(path)),
+    write: first((path, data, mode) => folder.write(path, data, mode)),
+    stat: first((path) => folder.stat(path)),
+    list: first((path) => folder.list(path)),
+    mkdir: first((path) => folder.mkdir(path)),
+    remove: first((path) => folder.remove(path)),
+    move: first((from, to) => folder.move(from, to)),
+  };
+}
+
+async function requestAccess(handle: FileSystemDirectoryHandle): Promise<void> {
+  const mode = { mode: "readwrite" } as const;
+  if ((await handle.queryPermission?.(mode)) === "granted") {
+    return;
+  }
+  // Without a click to answer, the browser refuses (or throws) at once.
+  if ((await handle.requestPermission?.(mode)) !== "granted") {
+    throw new Error(`Lumière may not open ${handle.name} until you allow it`);
   }
 }
 
@@ -189,6 +240,9 @@ async function remembered(): Promise<
 declare global {
   interface FileSystemHandle {
     queryPermission?(descriptor: {
+      mode: "read" | "readwrite";
+    }): Promise<PermissionState>;
+    requestPermission?(descriptor: {
       mode: "read" | "readwrite";
     }): Promise<PermissionState>;
   }
