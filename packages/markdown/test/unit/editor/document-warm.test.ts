@@ -276,6 +276,44 @@ test("queued git sweeps recheck liveness, enablement and already-open notes", as
   assert.deepEqual(host.opened, [first, eligible]);
 });
 
+test("P13: a repository's next sweep supersedes the one still draining", async () => {
+  let release = () => {};
+  const blocked = new Promise<void>((resolve) => {
+    release = resolve;
+  });
+  const notes = ["a", "b", "c", "d"].map((name) => `file:///repo/${name}.md`);
+  const [a, b, c, d] = notes as [string, string, string, string];
+  const other = "file:///other/e.md";
+  const host = fakeHost({
+    modeFor: () => "on",
+    beforeOpen: (uri) => (uri === a ? blocked : Promise.resolve()),
+  });
+  const { warmGitChanges } = createDocumentWarmer(host, { gitLimit: 1 });
+  warmGitChanges([a, b, c], () => true, "file:///repo");
+  await tick();
+  // Another repository's sweep is not superseded by this one's.
+  warmGitChanges([other], () => true, "file:///other");
+  warmGitChanges([d], () => true, "file:///repo");
+  release();
+  await settle();
+  assert.deepEqual(host.opened, [a, other, d]);
+});
+
+test("P13: one git sweep warms at most its cap of notes", async () => {
+  const changes = Array.from(
+    { length: 10 },
+    (_, i) => `file:///vault/n${String(i).padStart(2, "0")}.md`,
+  );
+  const host = fakeHost({ modeFor: () => "on" });
+  const { warmGitChanges } = createDocumentWarmer(host, {
+    gitLimit: 2,
+    gitCap: 3,
+  });
+  warmGitChanges(changes, () => true, "file:///vault");
+  await settle();
+  assert.deepEqual(host.opened, changes.slice(0, 3));
+});
+
 test("foreground missing-file rejection does not throw", async () => {
   const note = "file:///vault/missing.md";
   const host = fakeHost({

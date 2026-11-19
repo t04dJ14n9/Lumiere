@@ -93,19 +93,37 @@ async function drainGitWarmTargets(options: {
 }
 
 /**
+ * Notes one git sweep warms at most. A repository with more changed notes
+ * would otherwise open a TextDocument for each on every state change; the
+ * rest are still warmed in the foreground, before our editor opens them.
+ */
+const GIT_SWEEP_CAP = 256;
+
+/**
  * Background warmer: document opens, create/change and git sweeps. Callers
  * share the same enablement and pending-key rules.
  */
 export function createDocumentWarmer(
   host: DocumentWarmHost,
-  options: { gitLimit?: number } = {},
+  options: { gitLimit?: number; gitCap?: number } = {},
 ): {
   warm: (uri: string) => void;
   warmOpenedDocument: (uri: string) => void;
-  warmGitChanges: (changeUris: readonly string[], live: () => boolean) => void;
+  /**
+   * Warm one repository's changed notes. A later sweep of the same `source`
+   * (the repository) supersedes this one: it stops at its next batch.
+   */
+  warmGitChanges: (
+    changeUris: readonly string[],
+    live: () => boolean,
+    source?: string,
+  ) => void;
 } {
   const gitLimit = options.gitLimit ?? 64;
+  const gitCap = options.gitCap ?? GIT_SWEEP_CAP;
   const pending = new Set<string>();
+  const latestSweep = new Map<string, number>();
+  let sweeps = 0;
   let gitDrain = Promise.resolve();
 
   const warmOpenedDocument = (uri: string) => {
@@ -127,14 +145,21 @@ export function createDocumentWarmer(
   const warmGitChanges = (
     changeUris: readonly string[],
     live: () => boolean,
+    source?: string,
   ) => {
-    const targets = collectGitWarmTargets(
-      changeUris,
-      host.textDocumentUris(),
-    ).filter((uri) => enabledFor(host, uri));
+    const sweep = ++sweeps;
+    if (source !== undefined) {
+      latestSweep.set(source, sweep);
+    }
+    const current = () =>
+      live() && (source === undefined || latestSweep.get(source) === sweep);
+    // Capped before the per-note setting is read: that read is the cost.
+    const targets = collectGitWarmTargets(changeUris, host.textDocumentUris())
+      .slice(0, gitCap)
+      .filter((uri) => enabledFor(host, uri));
     // All repositories and change events share one concurrency budget.
     gitDrain = gitDrain.then(() =>
-      drainGitWarmTargets({ host, targets, gitLimit, pending, live }),
+      drainGitWarmTargets({ host, targets, gitLimit, pending, live: current }),
     );
   };
 

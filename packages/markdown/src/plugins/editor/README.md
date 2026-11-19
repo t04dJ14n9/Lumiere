@@ -242,9 +242,10 @@ top of the viewport below the sticky headings, after the first paint.
 
 `editor.warmTextDocument` (`auto`/`on`/`off`, auto meaning on in Cursor) opens
 Markdown `TextDocument`s early: at activation for open notes, on document open,
-on file create/change and for git-dirty notes. Every extension-controlled
-`openWith` into this editor awaits another warm, even when Cursor's built-in
-editor already holds the dirty document. The workaround targets Cursor's
+on file create/change and for git-dirty notes (at most 256 per repository
+state change; a newer change of that repository stops the older sweep). Every
+extension-controlled `openWith` into this editor awaits another warm, even
+when Cursor's built-in editor already holds the dirty document. The workaround targets Cursor's
 custom-editor handoff assertion before `resolveCustomTextEditor` runs.
 
 ## Limits and differences from Obsidian
