@@ -185,6 +185,42 @@ test("vault-system skips what files.exclude hides and limits notes apart from ot
   assert.equal(listing.partial, true);
 });
 
+test("vault-system reports the unsaved text of .markdown and .MD notes, not of other documents", () => {
+  let changed = (_event: unknown) => {};
+  let closed = (_document: unknown) => {};
+  const { createVaultSystem } = loadVaultSystem({
+    workspace: {
+      onDidChangeTextDocument: (listener: typeof changed) => {
+        changed = listener;
+        return { dispose() {} };
+      },
+      onDidCloseTextDocument: (listener: typeof closed) => {
+        closed = listener;
+        return { dispose() {} };
+      },
+    },
+  });
+  const system = createVaultSystem(
+    { storageUri: undefined } as never,
+    fakeConfiguration(),
+  );
+  const edited: string[] = [];
+  const left: string[] = [];
+  system.onDocumentChanged((uri) => edited.push(uri));
+  system.onDocumentClosed((uri) => left.push(uri));
+  const document = (path: string) => ({
+    uri: { path, toString: () => `file://${path}` },
+    getText: () => "text",
+  });
+  for (const path of ["/v/A.md", "/v/B.markdown", "/v/C.MD", "/v/D.txt"]) {
+    changed({ document: document(path), contentChanges: [{}] });
+    closed(document(path));
+  }
+  const notes = ["file:///v/A.md", "file:///v/B.markdown", "file:///v/C.MD"];
+  assert.deepEqual(edited, notes);
+  assert.deepEqual(left, notes);
+});
+
 test("vault-system says file names ignore case where VS Code's workspace folders do", (t) => {
   const { createVaultSystem } = loadVaultSystem({});
   const system = createVaultSystem(

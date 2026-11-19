@@ -11,6 +11,7 @@ import type {
 } from "../plugins/vault/api";
 import { globToRegExp, isIgnoredPath } from "../plugins/vault/exclusion";
 import { ListingBudget } from "../plugins/vault/listing-budget";
+import { isMarkdownPath } from "../shared/vault-path";
 import { createVaultParser } from "./vault-parser";
 import { nodeWorkerLauncher } from "./node-workers";
 import { workersFolder } from "./running-extension";
@@ -71,7 +72,8 @@ export function createVaultSystem(
 }
 
 function isNote(document: vscode.TextDocument): boolean {
-  return document.uri.path.toLowerCase().endsWith(".md");
+  // `.markdown` is a note too, as the index and the Node host count it.
+  return isMarkdownPath(document.uri.path);
 }
 
 function toDisposer(disposable: vscode.Disposable): () => void {
