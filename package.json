@@ -63,6 +63,10 @@
         "lumiere.pdf.annotations.folder",
         "lumiere.pdf.annotations.protectedFolders"
       ]
+    },
+    "virtualWorkspaces": {
+      "supported": "limited",
+      "description": "Notes and PDFs open and save through VS Code's file system, but the git change bar, blame and rendered diff need a repository on disk and are off."
     }
   },
   "contributes": {

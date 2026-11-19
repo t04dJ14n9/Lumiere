@@ -5,6 +5,7 @@ import { readFileSync } from "node:fs";
 const manifest = JSON.parse(readFileSync("package.json", "utf8")) as {
   capabilities: {
     untrustedWorkspaces: { restrictedConfigurations: string[] };
+    virtualWorkspaces?: { supported: unknown; description?: string };
   };
 };
 
@@ -23,4 +24,12 @@ test("settings that send content or choose where files are written are restricte
   ]) {
     assert.ok(restricted.includes(key), `${key} is restricted`);
   }
+});
+
+// Undeclared, VS Code treats the extension as fully supported in a virtual
+// workspace, where the git features cannot work.
+test("virtual workspace support is declared as limited, with what is off", () => {
+  const virtual = manifest.capabilities.virtualWorkspaces;
+  assert.equal(virtual?.supported, "limited");
+  assert.match(virtual?.description ?? "", /git/);
 });
