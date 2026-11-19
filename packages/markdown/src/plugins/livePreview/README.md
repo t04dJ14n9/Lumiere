@@ -51,7 +51,11 @@ syntax parser and HTML renderer share the highlight-aware emphasis flanking rule
   CodeMirror, viewport catch-up, idle slices, reach kept across edits,
   progress handed on, first-line frontmatter edits, indexing what a parse
   newly reached.
-- `blocks.ts`: block index, widget decorations and render revision.
+- `blocks.ts`: block index, widget decorations and render revision. A block
+  that starts after `> ` (display math or a diagram in a quote) carries its
+  Markdown without the later lines' quote markers, which is what its widget
+  renders (`../../markdown/quoted-block.ts`).
+- `quoted-block.test.ts`: quote markers stay out of a quoted block's render.
 - `block-discovery.ts`: structural syntax cache and renderer candidate selection.
 - `block-discovery.test.ts`: registration cost, discovery parity and unrestricted renderers.
 - `inline.ts`: basic inline decoration builder and composition/drag lifetime.

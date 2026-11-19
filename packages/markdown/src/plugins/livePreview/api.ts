@@ -19,6 +19,12 @@ export interface RenderBlock {
   to: number;
   kind: string;
   source: string;
+  /**
+   * The block's Markdown with the quote markers of its later lines removed,
+   * when it starts after `> ` on its first line; what a rendered widget
+   * renders. Absent when it equals `source`.
+   */
+  markdown?: string;
 }
 export interface InlineContext {
   state: EditorState;

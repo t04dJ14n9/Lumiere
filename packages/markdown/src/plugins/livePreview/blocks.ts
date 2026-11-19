@@ -7,6 +7,7 @@ import { blockRenderers, revealed } from "./registry";
 import { documentTree } from "./document-tree";
 import { treeReached, type BlockRenderer, type RenderBlock } from "./api";
 import { rendererMatcher, visitRendererNodes } from "./block-discovery";
+import { unquotedBlock } from "../../markdown/quoted-block";
 import {
   changedRegion,
   renderInvalidations,
@@ -66,6 +67,7 @@ function reuseIndexedBlocks(
       candidate.to === target.to &&
       candidate.kind === target.kind &&
       candidate.source === target.source &&
+      candidate.markdown === target.markdown &&
       candidate.renderer === target.renderer
     ) {
       next[i] = candidate;
@@ -155,11 +157,17 @@ function index(
         if (region && (range.from < region.from || range.to > region.to)) {
           escaped = true;
         }
+        const source = state.sliceDoc(range.from, range.to);
+        const markdown = unquotedBlock(
+          source,
+          state.sliceDoc(state.doc.lineAt(range.from).from, range.from),
+        );
         blocks.push({
           from: range.from,
           to: range.to,
           kind: renderer.kind,
-          source: state.sliceDoc(range.from, range.to),
+          source,
+          ...(markdown !== source && { markdown }),
           renderer,
         });
         // A renderer may claim only the start of a node (one footnote
@@ -187,6 +195,7 @@ class GuardedWidget extends WidgetType {
       this.block.renderer === other.block.renderer &&
       this.block.kind === other.block.kind &&
       this.block.source === other.block.source &&
+      this.block.markdown === other.block.markdown &&
       this.widget.eq(other.widget)
     );
   }
