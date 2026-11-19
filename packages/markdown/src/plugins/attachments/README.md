@@ -21,7 +21,10 @@ Drag-and-drop listens on the webview document (capture) and always
 `preventDefault`s file / uri-list drags so VS Code does not open the drop as a
 tab when the webview actually receives the event (OS drops; Explorer drops
 while holding Shift). Explorer drops that only carry URIs are imported on the
-host; OS `File` drops are read in the webview. Remote HTML images are
+host; OS `File` drops are read in the webview. A web address is imported only
+when it is an image's: an image dragged from a page (named by the dragged
+`<img>`) or an address whose path ends in an image extension. A link dragged
+from a browser is inserted as its text, as any dragged text is. Remote HTML images are
 downloaded on the host because the editor CSP `connect-src` does not allow
 `https:`.
 

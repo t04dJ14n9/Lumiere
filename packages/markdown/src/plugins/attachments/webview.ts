@@ -9,6 +9,8 @@ import { EditorView, ViewPlugin } from "@codemirror/view";
 import type { Context, Plugin } from "@workshop/core";
 import {
   decodeDataUri,
+  droppedAttachmentUris,
+  droppedLinkText,
   encodeBase64,
   extensionForMime,
   filesFromDataTransfer,
@@ -16,7 +18,6 @@ import {
   isHostSourceUrl,
   rewriteRemoteImages,
   shouldClaimEditorDrop,
-  urisFromDataTransfer,
   type DragFile,
 } from "../../attachments";
 import type {} from "../editor/api";
@@ -106,15 +107,33 @@ async function onDrop(
     }
   }
 
-  const files = filesFromDataTransfer(event.dataTransfer);
-  const uris = files.length > 0 ? [] : urisFromDataTransfer(event.dataTransfer);
-  if (files.length === 0 && uris.length === 0) {
-    return;
-  }
-
   const pos =
     target.posAtCoords({ x: event.clientX, y: event.clientY }) ??
     target.state.selection.main.head;
+  const files = filesFromDataTransfer(event.dataTransfer);
+  const uris =
+    files.length > 0 ? [] : droppedAttachmentUris(event.dataTransfer);
+  if (files.length === 0 && uris.length === 0) {
+    // A web link dragged from a browser: its text, as for any dragged text.
+    const text = droppedLinkText(event.dataTransfer);
+    if (text) {
+      insertDroppedText(target, pos, text);
+    }
+    return;
+  }
+  const embeds = await saveDropped(ctx, files, uris);
+  if (!isLive() || embeds.length === 0) {
+    return;
+  }
+  insertAt(target, pos, embeds.join("\n\n"));
+}
+
+/** Save each dropped file or URI in turn; the embeds of those saved. */
+async function saveDropped(
+  ctx: Context,
+  files: readonly DragFile[],
+  uris: readonly string[],
+): Promise<string[]> {
   const embeds: string[] = [];
   for (const file of files) {
     const embed = await saveFile(ctx, file);
@@ -128,10 +147,7 @@ async function onDrop(
       embeds.push(embed);
     }
   }
-  if (!isLive() || embeds.length === 0) {
-    return;
-  }
-  insertAt(target, pos, embeds.join("\n\n"));
+  return embeds;
 }
 
 async function onPasteImage(
@@ -159,6 +175,15 @@ async function onPasteImage(
     return;
   }
   insertAt(target, target.state.selection.main.head, embed);
+}
+
+function insertDroppedText(view: EditorView, pos: number, text: string): void {
+  view.dispatch({
+    changes: { from: pos, insert: text },
+    selection: { anchor: pos + text.length },
+    userEvent: "input.drop",
+    scrollIntoView: true,
+  });
 }
 
 function insertAt(view: EditorView, pos: number, embed: string): void {

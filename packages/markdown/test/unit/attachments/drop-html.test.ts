@@ -6,6 +6,8 @@ import {
   isAttachmentDrag,
   urisFromDataTransfer,
   shouldClaimEditorDrop,
+  droppedAttachmentUris,
+  droppedLinkText,
 } from "../../../src/attachments/drop";
 
 function transfer(partial: {
@@ -75,6 +77,39 @@ test("urisFromDataTransfer reads text/uri-list and code uri-list", () => {
     ),
     ["file:///vault/shot.png"],
   );
+});
+
+test("a web link dragged from a browser is dropped as its text, not imported", () => {
+  const drag = (uris: string, html = "", plain = uris) =>
+    transfer({
+      types: ["text/uri-list", "text/plain", "text/html"],
+      getData: (type) =>
+        ({ "text/uri-list": uris, "text/plain": plain, "text/html": html })[
+          type
+        ] ?? "",
+    });
+  const link = drag(
+    "https://example.com/article?id=1",
+    '<a href="https://example.com/article?id=1">An article</a>',
+  );
+  assert.deepEqual(droppedAttachmentUris(link), []);
+  assert.equal(droppedLinkText(link), "https://example.com/article?id=1");
+  // An image dragged from a page is imported, as is a link to an image file.
+  const image = drag(
+    "https://cdn.example.com/photo?w=800&h=600",
+    '<img src="https://cdn.example.com/photo?w=800&amp;h=600" alt="">',
+  );
+  assert.deepEqual(droppedAttachmentUris(image), [
+    "https://cdn.example.com/photo?w=800&h=600",
+  ]);
+  assert.deepEqual(droppedAttachmentUris(drag("https://ex.com/a/cat.PNG")), [
+    "https://ex.com/a/cat.PNG",
+  ]);
+  // Files and VS Code resources are always attachments.
+  assert.deepEqual(droppedAttachmentUris(drag("file:///tmp/notes.pdf")), [
+    "file:///tmp/notes.pdf",
+  ]);
+  assert.equal(droppedLinkText(drag("file:///tmp/notes.pdf")), undefined);
 });
 
 test("shouldClaimEditorDrop is true for file drags so VS Code must not open tabs", () => {
