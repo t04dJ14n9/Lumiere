@@ -5,6 +5,8 @@ import { errorMessage } from "../../shared/errors";
 export type SearchUpdate =
   /** A query started: nothing found yet. */
   | { loading: true }
+  /** A query started again: what it found last time stays until it ends. */
+  | { loading: true; refreshing: true }
   /** Matches the running query found since the last update, to append. */
   | { loading: true; added: SearchResponse["results"]; unreadable: number }
   | ({ loading: false; error?: string } & Partial<SearchResponse>);
@@ -16,6 +18,8 @@ interface Subscription {
   token?: CancelToken;
   /** The matches streamed so far by the running query. */
   partial?: SearchResponse;
+  /** The last complete result, shown while the query runs again. */
+  settled?: SearchResponse;
 }
 export class QueryClient {
   private readonly subscriptions = new Set<Subscription>();
@@ -59,7 +63,13 @@ export class QueryClient {
     const id = `q${++this.nextId}`;
     subscription.id = id;
     delete subscription.partial;
-    subscription.update({ loading: true });
+    // An index change re-runs the query: emptying the block until the new
+    // results arrive would make it flicker after every typing pause.
+    subscription.update(
+      subscription.settled
+        ? { loading: true, refreshing: true }
+        : { loading: true },
+    );
     // A large vault takes longer than the default RPC deadline; the token
     // ends the query when the block refreshes or goes away.
     void this.rpc
@@ -72,16 +82,17 @@ export class QueryClient {
       .then(
         (response) => {
           if (!token.cancelled) {
+            subscription.settled = response;
             subscription.update({ loading: false, ...response });
           }
         },
         (error) => {
           if (!token.cancelled) {
-            // What was found before the failure stays on screen.
+            // What is on screen stays: the last result, or what this run found.
             subscription.update({
               loading: false,
               error: errorMessage(error),
-              ...subscription.partial,
+              ...(subscription.settled ?? subscription.partial),
             });
           }
         },
@@ -107,6 +118,10 @@ function receivePartial(
     subscription.partial.results.push(result);
   }
   subscription.partial.unreadable = message.unreadable;
+  if (subscription.settled) {
+    // Refreshing: the last result stays until this run's whole result.
+    return;
+  }
   subscription.update({
     loading: true,
     added: message.results,

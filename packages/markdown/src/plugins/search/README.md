@@ -12,7 +12,8 @@ vault service, and sends each document to a worker. A conservative query plan
 uses indexed tags/properties and file paths without reading note content when
 possible; mixed content predicates read one coherent current text snapshot. Per-document parse errors are
 counted; timeout or cancellation terminates the worker. Index resolution refreshes
-live subscriptions. Result links use encoded relative paths and normal navigation.
+live subscriptions once it has been quiet for a second (it resolves after every
+typing pause), and a block keeps its results until the new ones arrive. Result links use encoded relative paths and normal navigation.
 
 ## Files
 

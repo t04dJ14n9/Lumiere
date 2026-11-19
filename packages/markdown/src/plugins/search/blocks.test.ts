@@ -310,6 +310,10 @@ test("streamed matches are appended; rows already painted are kept", () => {
   assert.equal(container.children.length, 2);
   assert.equal(container.children[0]?.children[0]?.textContent, "B.md");
   assert.match(status.textContent, /^2 results/);
+  const rows = [...container.children];
+  push({ loading: true, refreshing: true });
+  assert.deepEqual(container.children, rows, "a refresh keeps the rows");
+  assert.match(status.textContent, /^2 results/);
 });
 
 test("a failed search still lists what it found before the failure", () => {

@@ -79,6 +79,10 @@ function resultsView(
     shown = matches.length;
   };
   return (update) => {
+    if (update.loading && "refreshing" in update) {
+      // The rows and their count stay until the new result replaces them.
+      return;
+    }
     if (update.loading && "added" in update) {
       paintMatches(results, update.added, open);
       shown += update.added.length;

@@ -281,3 +281,57 @@ test("a failed query keeps the matches streamed before the failure", async () =>
   client.dispose();
   await pair.dispose();
 });
+
+test("an index refresh keeps the last results until the new ones arrive", async () => {
+  const pair = rpcPair();
+  const jobs: {
+    id: string | undefined;
+    resolve(value: SearchResponse): void;
+  }[] = [];
+  pair.host.handle(
+    protocol,
+    "query",
+    (request) =>
+      new Promise<SearchResponse>((resolve) =>
+        jobs.push({ id: request.id, resolve }),
+      ),
+  );
+  const updates: SearchUpdate[] = [];
+  const client = new QueryClient(pair.client);
+  client.watch("meeting", "file:///Note.md", (value) => updates.push(value));
+  await tick();
+  jobs[0]!.resolve({
+    results: [{ path: "A.md", href: "A.md" }],
+    unreadable: 0,
+  });
+  await tick();
+  updates.length = 0;
+  client.refresh();
+  await tick();
+  pair.host.notify(protocol, "partial", {
+    id: jobs[1]!.id!,
+    results: [{ path: "B.md", href: "B.md" }],
+    unreadable: 0,
+  });
+  await tick();
+  // Nothing empties the block or shows half a result meanwhile.
+  assert.deepEqual(updates, [{ loading: true, refreshing: true }]);
+  jobs[1]!.resolve({
+    results: [
+      { path: "A.md", href: "A.md" },
+      { path: "B.md", href: "B.md" },
+    ],
+    unreadable: 0,
+  });
+  await tick();
+  assert.deepEqual(updates.at(-1), {
+    loading: false,
+    results: [
+      { path: "A.md", href: "A.md" },
+      { path: "B.md", href: "B.md" },
+    ],
+    unreadable: 0,
+  });
+  client.dispose();
+  await pair.dispose();
+});
