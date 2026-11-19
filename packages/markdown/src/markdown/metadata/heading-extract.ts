@@ -141,48 +141,70 @@ function takeDelimited(options: {
 }
 
 export function extractHeadings(source: string, tree: Tree): Heading[] {
+  return headingsIn(tree, (from, to) => source.slice(from, to));
+}
+
+/**
+ * The note's own headings, reading their text through `slice`, so an editor
+ * can pass its document without joining it into one string. As in Obsidian,
+ * only a note's own headings count: not one inside a list item, quote or
+ * callout, so only the top-level blocks are visited.
+ */
+export function headingsIn(
+  tree: Tree,
+  slice: (from: number, to: number) => string,
+): Heading[] {
   const result: Heading[] = [];
   const counts = new Map<string, number>();
-  tree.iterate({
-    enter(node) {
-      const match = /^(?:ATX|Setext)Heading([1-6])$/.exec(node.name);
-      // As in Obsidian, only a note's own headings count: not one inside a
-      // list item, quote or callout.
-      if (!match || node.node.parent?.name !== "Document") {
-        return;
-      }
-      const text = source
-        .slice(node.from, node.to)
-        .split("\n")[0]!
-        .replace(/\r$/, "")
-        .replace(/^#{1,6}\s+/, "")
-        .replace(/\s+#+\s*$/, "");
-      const label = headingLabel(text);
-      const base = `${match[1]}:${label}`;
-      const count = counts.get(base) ?? 0;
-      counts.set(base, count + 1);
-      const parent = node.node.parent;
-      result.push({
-        from: node.from,
-        to: node.to,
-        end: parent?.to ?? source.length,
-        level: Number(match[1]),
-        label,
-        key: `${base}:${count}`,
-        scope: `${parent?.from}:${parent?.to}`,
-      });
-    },
-  });
-  result.forEach((heading, index) => {
-    const next = result
-      .slice(index + 1)
-      .find(
-        (other) =>
-          other.scope === heading.scope && other.level <= heading.level,
-      );
-    if (next) {
-      heading.end = Math.max(heading.to, next.from - 1);
+  const scope = `${tree.topNode.from}:${tree.topNode.to}`;
+  const cursor = tree.cursor();
+  for (let more = cursor.firstChild(); more; more = cursor.nextSibling()) {
+    const level = headingLevels.get(cursor.name);
+    if (level === undefined) {
+      continue;
     }
-  });
+    const text = slice(cursor.from, cursor.to)
+      .split("\n")[0]!
+      .replace(/\r$/, "")
+      .replace(/^#{1,6}\s+/, "")
+      .replace(/\s+#+\s*$/, "");
+    const label = headingLabel(text);
+    const base = `${level}:${label}`;
+    const count = counts.get(base) ?? 0;
+    counts.set(base, count + 1);
+    result.push({
+      from: cursor.from,
+      to: cursor.to,
+      end: tree.topNode.to,
+      level,
+      label,
+      key: `${base}:${count}`,
+      scope,
+    });
+  }
+  closeSections(result);
   return result;
+}
+
+const headingLevels = new Map(
+  [1, 2, 3, 4, 5, 6].flatMap((level) => [
+    [`ATXHeading${level}`, level],
+    [`SetextHeading${level}`, level],
+  ]),
+);
+
+/**
+ * A heading's section ends before the next heading of the same or a higher
+ * level. One pass with a stack of open sections, rather than a search ahead
+ * from every heading (quadratic in a note of many headings).
+ */
+function closeSections(headings: Heading[]): void {
+  const open: Heading[] = [];
+  for (const heading of headings) {
+    while (open.length && open[open.length - 1]!.level >= heading.level) {
+      const closed = open.pop()!;
+      closed.end = Math.max(closed.to, heading.from - 1);
+    }
+    open.push(heading);
+  }
 }
