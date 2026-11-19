@@ -70,7 +70,11 @@ test("watching under a path that cannot exist neither throws nor hears", () => {
   stop();
 });
 
-import { watchTree } from "../../src/host/watch-tree";
+import {
+  FIRST_REARM_MS,
+  keepArmed,
+  watchTree,
+} from "../../src/host/watch-tree";
 
 test("folders created and removed at once under a watched tree throw nothing, and files are still heard", async (t) => {
   const dir = await scratch(t);
@@ -109,4 +113,59 @@ test("a stopped tree watch hears nothing more", async (t) => {
   await writeFile(path.join(dir, "late.md"), "x");
   await new Promise((resolve) => setTimeout(resolve, 200));
   assert.deepEqual(heard, []);
+});
+
+test("hidden folders and node_modules, which the vault ignores, are not watched folder by folder", async (t) => {
+  const dir = await scratch(t);
+  const hidden = path.join(dir, ".obsidian", "plugins");
+  const modules = path.join(dir, "node_modules", "pkg");
+  await mkdir(hidden, { recursive: true });
+  await mkdir(modules, { recursive: true });
+  await mkdir(path.join(dir, "notes"));
+  const heard: string[] = [];
+  const stop = watchTree(dir, (relative) => heard.push(relative), "linux");
+  t.after(stop);
+  // The folders are read asynchronously: let the watch reach them.
+  await new Promise((resolve) => setTimeout(resolve, 200));
+  await writeFile(path.join(hidden, "data.json"), "x");
+  await writeFile(path.join(modules, "index.js"), "x");
+  await writeFile(path.join(dir, "notes", "a.md"), "x");
+  await until(() => heard.includes("notes/a.md"), "a note");
+  await new Promise((resolve) => setTimeout(resolve, 200));
+  assert.deepEqual(
+    heard.filter(
+      (item) =>
+        item.startsWith(".obsidian/") || item.startsWith("node_modules/"),
+    ),
+    [],
+  );
+});
+
+test("a watch that fails or cannot start is armed again after a growing pause", (t) => {
+  t.mock.timers.enable({ apis: ["setTimeout"] });
+  const failures: (() => void)[] = [];
+  let closed = 0;
+  let attempts = 0;
+  const stop = keepArmed((failed) => {
+    attempts++;
+    if (attempts === 1) {
+      throw new Error("ENOENT: the vault is not there yet");
+    }
+    failures.push(failed);
+    return () => closed++;
+  });
+  assert.equal(attempts, 1);
+  t.mock.timers.tick(FIRST_REARM_MS);
+  assert.equal(attempts, 2);
+  failures[0]!();
+  assert.equal(closed, 1);
+  t.mock.timers.tick(FIRST_REARM_MS - 1);
+  assert.equal(attempts, 2);
+  t.mock.timers.tick(1);
+  assert.equal(attempts, 3);
+  stop();
+  assert.equal(closed, 2);
+  failures[1]!();
+  t.mock.timers.tick(60_000);
+  assert.equal(attempts, 3);
 });

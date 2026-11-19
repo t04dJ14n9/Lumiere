@@ -76,7 +76,11 @@ export interface HostFiles {
   remove(uri: string): Promise<void>;
   /** Hear a file change, appear or go away; it and the folders above it need not exist yet. */
   watch(uri: string, listener: () => void): () => void;
-  /** Hear changes anywhere under a folder: each changed path, relative to it, with `/`. */
+  /**
+   * Hear changes anywhere under a folder: each changed path, relative to it,
+   * with `/`. Changes in hidden folders and `node_modules`, which the vault
+   * ignores, may go unheard. A watch that fails is armed again.
+   */
   watchTree(uri: string, listener: (relative: string) => void): () => void;
   /** The path an embedder knows a file by (the app opens notes by path). */
   toPath(uri: string): string;
