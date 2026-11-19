@@ -7,6 +7,17 @@ export interface Transport {
 export interface Clock {
   after(ms: number, callback: () => void): Disposer;
 }
+/**
+ * A timer for a call's deadline. An infinite `ms` sets none: the call waits
+ * for its reply, its cancellation or the endpoint's disposal.
+ */
+export function deadline(
+  clock: Clock,
+  ms: number,
+  callback: () => void,
+): Disposer {
+  return Number.isFinite(ms) ? clock.after(ms, callback) : () => {};
+}
 export interface Cancellation {
   readonly cancelled: boolean;
   onCancel(callback: () => void): Disposer;

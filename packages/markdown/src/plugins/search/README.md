@@ -21,6 +21,7 @@ live subscriptions. Result links use encoded relative paths and normal navigatio
 - `worker-protocol.ts`: validated worker startup, submissions and replies.
 - `runner.ts`: worker startup, deadlines, pending requests and termination.
 - `query.ts`: indexed file eligibility, cached metadata/live reads and result ordering.
+- `read-ahead.ts`: bounded, in-order read-ahead of the notes a query evaluates.
 - `match-lines.ts`: content-needle scan for Obsidian-style match-line snippets.
 - `open.ts`: resolve result path to vault open (offset / beside).
 - `../../markdown/search/plan.ts`: scope-aware content/metadata requirements.
@@ -43,8 +44,11 @@ true; no assigned keybindings or palette command.
 
 Uses the documented pure search grammar; no Dataview scripting. Worker startup
 has a 15-second deadline and each document has a 5-second evaluation deadline.
-A failed worker affects its query only. Results reflect the index's eligible files
-and unsaved text available through the host. Large vault searches may be slow;
+A failed worker affects its query only, and the block keeps listing what it found
+before the failure. Results reflect the index's eligible files
+and unsaved text available through the host. Large vault searches may be slow:
+the query has no RPC deadline (refresh or disposal cancels it), up to eight notes
+are read ahead of the one being evaluated, and
 partial match snapshots stream over RPC (throttled) while the query runs, then the
 final sorted set replaces them. Excluded files are omitted. Content hits nest up to
 25 match lines per file (highlighted substring, truncated around the hit); file /

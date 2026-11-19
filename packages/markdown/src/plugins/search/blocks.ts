@@ -82,7 +82,11 @@ function renderResults(
     return;
   }
   if (update.error) {
-    status.textContent = `Search failed: ${update.error}`;
+    const found = update.results ?? [];
+    const kept =
+      found.length > 0 ? ` · showing ${found.length} found before it` : "";
+    status.textContent = `Search failed: ${update.error}${kept}`;
+    paintMatches(results, found, open);
     return;
   }
   const matches = update.results ?? [];

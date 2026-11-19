@@ -165,6 +165,54 @@ test("searchVault emits partial snapshots as matches accumulate", async () => {
   );
 });
 
+test("searchVault reads notes ahead while evaluating them one at a time, in order", async () => {
+  const index = new MemoryVaultIndex({
+    root: "file:///vault",
+    folderNote: "",
+    linkFormat: "shortest",
+  });
+  const paths = Array.from({ length: 20 }, (_, n) => `N${n + 10}.md`);
+  for (const path of paths) {
+    index.upsertFile({ path, uri: `file:///vault/${path}`, mtime: 0, size: 1 });
+  }
+  let reading = 0;
+  let mostReading = 0;
+  let evaluating = 0;
+  const evaluated: string[] = [];
+  const worker: SearchEvaluator = {
+    ready: Promise.resolve(),
+    includesFiles: false,
+    requiresText: true,
+    requiresMetadata: false,
+    stopped: false,
+    matches: async (doc) => {
+      assert.equal(evaluating++, 0, "one document at a time");
+      evaluated.push(doc.path);
+      await new Promise((resolve) => setImmediate(resolve));
+      evaluating--;
+      return compileSearch("content:meeting")(doc);
+    },
+    dispose: async () => {},
+  };
+  const result = await searchVault({
+    vault: index,
+    source: "file:///vault/N10.md",
+    query: "content:meeting",
+    worker,
+    token: new CancelToken(),
+    read: async () => {
+      mostReading = Math.max(mostReading, ++reading);
+      await new Promise((resolve) => setTimeout(resolve, 5));
+      reading--;
+      return "Meeting";
+    },
+  });
+  assert.equal(result.results.length, 20);
+  assert.deepEqual(evaluated, paths);
+  assert.ok(mostReading > 1, `reads overlapped (${mostReading})`);
+  assert.ok(mostReading <= 8, `reads are bounded (${mostReading})`);
+});
+
 test("searchVault supports EMBEDS.md query syntax (tag:#project status:done) and blanks origin query fences", async () => {
   const { metadata } = await import("../../../src/markdown/metadata");
   const { queryRequirements } =

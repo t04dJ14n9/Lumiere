@@ -260,3 +260,33 @@ test("bindSearchBlock mounts Obsidian internal-query classes, header and results
   assert.deepEqual(opened, [{ path: "projects/Launch.md" }]);
   dispose();
 });
+
+test("a failed search still lists what it found before the failure", () => {
+  const doc = new FakeDocument();
+  const element = doc.createElement("pre");
+  bindSearchBlock({
+    fence: {
+      element: element as unknown as HTMLElement,
+      language: "query",
+      source: "meeting",
+    },
+    pass: { measure() {} } as never,
+    client: {
+      watch(_query, _source, onUpdate) {
+        onUpdate({
+          loading: false,
+          error: "Search evaluation timed out for B.md",
+          results: [{ path: "A.md", href: "A.md" }],
+          unreadable: 0,
+        });
+        return () => {};
+      },
+    },
+    source: "file:///vault/Search.md",
+  });
+  const status = element.children[1];
+  assert.match(status?.textContent ?? "", /^Search failed: .*B\.md/);
+  assert.match(status?.textContent ?? "", /1 found before it/);
+  const container = element.querySelector(".search-result-container");
+  assert.equal(container?.children.length, 1);
+});

@@ -15,6 +15,8 @@ interface Subscription {
   id?: string;
   update(value: SearchUpdate): void;
   token?: CancelToken;
+  /** The matches streamed so far by the running query. */
+  partial?: SearchResponse;
 }
 export class QueryClient {
   private readonly subscriptions = new Set<Subscription>();
@@ -25,6 +27,10 @@ export class QueryClient {
     this.stopPartial = rpc.on(protocol, "partial", (message) => {
       for (const subscription of this.subscriptions) {
         if (subscription.id === message.id && !subscription.token?.cancelled) {
+          subscription.partial = {
+            results: message.results,
+            unreadable: message.unreadable,
+          };
           subscription.update({
             loading: true,
             results: message.results,
@@ -61,13 +67,16 @@ export class QueryClient {
     subscription.token = token;
     const id = `q${++this.nextId}`;
     subscription.id = id;
+    delete subscription.partial;
     subscription.update({ loading: true });
+    // A large vault takes longer than the default RPC deadline; the token
+    // ends the query when the block refreshes or goes away.
     void this.rpc
       .call(
         protocol,
         "query",
         { query: subscription.query, source: subscription.source, id },
-        { token },
+        { token, timeout: Number.POSITIVE_INFINITY },
       )
       .then(
         (response) => {
@@ -77,9 +86,11 @@ export class QueryClient {
         },
         (error) => {
           if (!token.cancelled) {
+            // What was found before the failure stays on screen.
             subscription.update({
               loading: false,
               error: errorMessage(error),
+              ...subscription.partial,
             });
           }
         },

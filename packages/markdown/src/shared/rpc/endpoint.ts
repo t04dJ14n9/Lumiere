@@ -18,7 +18,7 @@ import type {
   Pending,
 } from "./endpoint-types";
 import type { Transport, Clock, Cancellation } from "./lifecycle";
-import { CancelToken, RpcError, callFailed } from "./lifecycle";
+import { CancelToken, RpcError, callFailed, deadline } from "./lifecycle";
 export * from "./lifecycle";
 /**
  * Typed requests and notifications over one transport.
@@ -172,6 +172,10 @@ export class Endpoint {
       this.send(message);
     }
   }
+  /**
+   * Send a request. It fails after `timeout` ms (10 s by default) without a
+   * reply; `Infinity` leaves a long job to its `token` instead.
+   */
   call<P extends Protocol, M extends keyof P["requests"] & string>(
     protocol: P,
     method: M,
@@ -232,7 +236,7 @@ export class Endpoint {
         cleanup,
       });
       const timeout = options.timeout ?? 10_000;
-      timer = this.clock.after(timeout, () =>
+      timer = deadline(this.clock, timeout, () =>
         fail(callFailed.timeout(method, timeout)),
       );
       cancel =
