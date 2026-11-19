@@ -51,6 +51,56 @@ test("a rewritten file resolves again, with its new version, after resources/cha
   await pair.dispose();
 });
 
+test("embeds of one note's sections share one load while it runs", async () => {
+  const pair = rpcPair();
+  const requests: string[] = [];
+  const answers: (() => void)[] = [];
+  pair.host.handle(
+    protocol,
+    "load",
+    ({ target }) =>
+      new Promise((resolve) => {
+        requests.push(target);
+        answers.push(() =>
+          resolve({
+            kind: "note" as const,
+            source: "file:///vault/Big.md",
+            url: "file:///vault/Big.md",
+            text: "# A\none\n# B\ntwo",
+          }),
+        );
+      }),
+  );
+  const root = createRoot();
+  root.provide("rpc", pair.client);
+  root.plugin(resourcesWebview);
+  let resources: Resources | undefined;
+  root.plugin({
+    name: "reader",
+    inject: { required: ["resources"] },
+    apply(ctx) {
+      resources = ctx.resources;
+    },
+  });
+  await root.settled();
+  const load = (target: string) =>
+    resources!.load(target, "file:///vault/Note.md", "wikilink");
+  const loads = ["Big#A", "Big#B", "Big", "Big#A"].map(load);
+  await new Promise((resolve) => setTimeout(resolve, 5));
+  assert.deepEqual(requests, ["Big#A"]);
+  answers.shift()!();
+  const texts = (await Promise.all(loads)).map((resource) => resource.text);
+  assert.equal(new Set(texts).size, 1);
+
+  const later = load("Big#B");
+  await new Promise((resolve) => setTimeout(resolve, 5));
+  assert.deepEqual(requests, ["Big#A", "Big#B"], "a note is not kept");
+  answers.shift()!();
+  await later;
+  await root.dispose();
+  await pair.dispose();
+});
+
 test("embeds forget what they resolved with a resources service", () => {
   const resources: Resources = { load: () => Promise.reject(new Error()) };
   const other: Resources = { load: () => Promise.reject(new Error()) };

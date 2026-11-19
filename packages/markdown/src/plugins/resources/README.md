@@ -10,6 +10,9 @@ Targets resolve through the injected vault index; URI and realpath containment
 are checked before reads. Notes use open-document text when available, preserving
 unsaved edits. Successfully loaded notes become authorized sources for nested
 requests. Webview URLs include modification time for cache invalidation.
+The webview keeps resolved media, not note text; loads of one file that
+overlap (`![[Big#A]]`, `![[Big#B]]` and a hover preview of Big) share one
+request.
 A link whose file the vault does not have is remembered; when the index lists
 it later (a file created or renamed into place, or found while the index
 catches up), the host tells the page, so its embed shows the file as in
