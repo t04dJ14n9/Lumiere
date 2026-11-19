@@ -226,3 +226,22 @@ test("a memory folder reports every change, and starts again from what it report
   );
   assert.equal(new TextDecoder().decode(await again.read("Kept.md")), "two");
 });
+
+test("a note's UTF-8 byte order mark is read and written back, as Node's host keeps it", async () => {
+  const files = new Mounts();
+  const bom = new Uint8Array([
+    0xef,
+    0xbb,
+    0xbf,
+    ...new TextEncoder().encode("# Note"),
+  ]);
+  files.mount("/v", new MemoryFileSystem({ "Note.md": bom }));
+  const uri = files.uriOf("/v/Note.md");
+  const text = await files.readText(uri);
+  assert.equal(text, "﻿# Note");
+  await files.save(uri, `${text}!`);
+  assert.deepEqual(
+    [...(await files.readBytes(uri)).slice(0, 3)],
+    [0xef, 0xbb, 0xbf],
+  );
+});

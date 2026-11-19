@@ -81,7 +81,11 @@ export class Mounts implements HostFiles {
   }
 
   async readText(uri: string): Promise<string> {
-    return new TextDecoder().decode(await this.readBytes(uri));
+    // A byte order mark stays in the text, as Node's host reads it, so a
+    // save writes it back instead of dropping it.
+    return new TextDecoder("utf-8", { ignoreBOM: true }).decode(
+      await this.readBytes(uri),
+    );
   }
 
   async readBytes(uri: string): Promise<Uint8Array> {
