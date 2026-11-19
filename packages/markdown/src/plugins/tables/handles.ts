@@ -27,6 +27,8 @@ interface Drag {
 export class TableHandles {
   private readonly indicator = document.createElement("div");
   private readonly events = new AbortController();
+  /** Window listeners exist only while a grip is dragged: a note can hold many tables. */
+  private dragEvents?: AbortController;
   private active: CellPosition = { row: 0, column: 0 };
   private drag?: Drag;
   private readonly scrolling: EdgeScroll;
@@ -47,7 +49,6 @@ export class TableHandles {
     this.indicator.hidden = true;
     root.append(this.indicator);
     this.registerHandleEvents(actions);
-    this.registerDragEvents(actions);
     this.refresh();
   }
 
@@ -183,11 +184,14 @@ export class TableHandles {
       origin: { x: event.clientX, y: event.clientY },
       moved: false,
     };
+    this.listenDuringDrag(actions);
     button.setPointerCapture(event.pointerId);
   }
 
-  private registerDragEvents(actions: HandleActions): void {
-    const options = { signal: this.events.signal };
+  private listenDuringDrag(actions: HandleActions): void {
+    this.dragEvents?.abort();
+    this.dragEvents = new AbortController();
+    const options = { signal: this.dragEvents.signal };
     window.addEventListener(
       "pointermove",
       (event) => this.pointerMove(event),
@@ -319,6 +323,8 @@ export class TableHandles {
     this.scrolling.stop();
     const drag = this.drag;
     delete this.drag;
+    this.dragEvents?.abort();
+    delete this.dragEvents;
     if (drag?.button.hasPointerCapture(drag.pointer)) {
       drag.button.releasePointerCapture(drag.pointer);
     }

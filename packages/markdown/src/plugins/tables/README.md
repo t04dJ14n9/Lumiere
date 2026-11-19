@@ -129,6 +129,7 @@ plugin registrations and widget lifetimes end when the plugin stops.
 - `src/markdown/tables/model.ts`: pure table parsing, serialization and source-position mapping.
 - `src/markdown/tables/parsed.ts`: `parseTable` for the last few sources, shared by the readers of one keystroke.
 - `keystroke-cost.test.ts`: one parse per source and a one-row edit for a keystroke.
+- `window-listeners.test.ts`: selection and grip drags listen on the window only while they run (the sticky scrollbar's thumb drag does the same).
 - `src/markdown/tables/clipboard-formats.ts`: pure copy flavors (TSV, Markdown, HTML, `obsidian/table`) of a cell range and pasted-text parsing.
 - `src/markdown/tables/tab-separated.ts`: pure splitting of pasted tab-separated text into cells, honouring spreadsheet quotes.
 - `clipboard.test.ts`: cell/grid clipboard, selection and stale-paste unit tests.

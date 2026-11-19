@@ -53,7 +53,12 @@ export class TableStickyHScroll {
   private readonly events = new AbortController();
   private readonly resize: ResizeObserver;
   private readonly footWatch: IntersectionObserver;
-  private drag?: { startX: number; startLeft: number };
+  private drag?: {
+    startX: number;
+    startLeft: number;
+    /** Window listeners exist only while the thumb is dragged. */
+    events: AbortController;
+  };
   private overflowsX = false;
   /** Assumed until the observer reports, so the mirror never flashes over the native bar. */
   private footVisible = true;
@@ -99,6 +104,9 @@ export class TableStickyHScroll {
       (event) => this.onTrackDown(event),
       { signal },
     );
+  }
+
+  private listenDuringDrag(signal: AbortSignal): void {
     window.addEventListener("pointermove", (event) => this.onDrag(event), {
       signal,
     });
@@ -141,10 +149,13 @@ export class TableStickyHScroll {
     }
     event.preventDefault();
     event.stopPropagation();
+    this.endDrag();
     this.drag = {
       startX: event.clientX,
       startLeft: this.tableScroll.scrollLeft,
+      events: new AbortController(),
     };
+    this.listenDuringDrag(this.drag.events.signal);
     this.thumb.setPointerCapture(event.pointerId);
   }
 
@@ -179,6 +190,7 @@ export class TableStickyHScroll {
   }
 
   private endDrag(): void {
+    this.drag?.events.abort();
     delete this.drag;
   }
 
@@ -201,6 +213,7 @@ export class TableStickyHScroll {
   }
 
   destroy(): void {
+    this.endDrag();
     this.events.abort();
     this.resize.disconnect();
     this.footWatch.disconnect();
