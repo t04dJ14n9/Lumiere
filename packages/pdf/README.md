@@ -23,6 +23,9 @@ is opt-in (`lumiere.pdf.regions.enabled`, default off).
   reloads nothing. Annotations made while it reloads are kept with the
   version they were made on. A PDF deleted on disk keeps showing as it was,
   and Lumiere says it can no longer read it.
+  A password-protected PDF asks for its password in the viewer; the password
+  stays in the viewer and is never kept, so each open asks again. A damaged
+  file, or one that is not a PDF, says so at once.
 - **View controls.** A View picker in the editor title/status bar, and a
   compact **View** menu in the slim toolbar of the web and iPad hosts, selects zoom, layout,
   scrolling mode and direction. Saved choices and reading position return
@@ -345,6 +348,8 @@ src/
     ├── main.tsx, host.ts       entry and messages to the extension
     ├── outbox.ts               state reports batched into versioned patches
     ├── engine-host.ts          the page's one engine, kept across reloads
+    ├── engine-failure.ts       when the worker gives way to the main thread
+    ├── password-prompt.tsx     a locked PDF's password
     ├── engine.tsx, plugins.ts  PDFium in a worker (main-thread fallback);
     │                           the plugins EmbedPDF 3 runs (stage, render, …)
     ├── viewer.tsx              toolbar, search, the Stage and its pages

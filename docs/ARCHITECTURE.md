@@ -441,7 +441,8 @@ src/host (no vscode): portable viewer logic, reused by host-node
   (a wheel notch is ×1.2; the buttons and keys walk Lumiere's ladder).
 - **One engine per viewer page** (`webview/engine-host.ts`): PDFium runs in a
   web worker, with the main thread as a fallback when the worker fails or
-  does not boot in 15 s. A reload of the file keeps the engine; the page
+  does not answer in 15 s (a locked or damaged PDF is an answer, shown as
+  such, never a reason to start the main-thread engine). A reload of the file keeps the engine; the page
   leaving stops it. `embedpdf.wasm` (7.9 MB) is fetched while the host sends
   the bytes, and the page names it in `data-pdfium-wasm`. The extension host's
   bookmark reader runs the same engine in Node
