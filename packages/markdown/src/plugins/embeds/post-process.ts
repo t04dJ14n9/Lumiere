@@ -9,6 +9,7 @@ import { IMAGE_EMBED, mountImageEmbedActions } from "./embed-actions";
 import { embeddedNote, MissingSection } from "./note";
 import { renderBaseEmbed } from "./base-embed";
 import { mountPdfEmbed } from "./pdf-embed";
+import { EmbedLives } from "./embed-lives";
 import {
   getCachedEmbedResource,
   setCachedEmbedResource,
@@ -41,8 +42,7 @@ export function enhanceEmbeds(options: EmbedOptions): PassEmbeds {
 }
 
 class EmbedPass implements PassEmbeds {
-  private readonly events = new AbortController();
-  private readonly disposers: (() => void)[] = [];
+  private readonly lives = new EmbedLives<HTMLElement>();
   private readonly restore: (() => void)[] = [];
   /** Embeds whose file could not be loaded. */
   private readonly missing = new Set<HTMLElement>();
@@ -74,11 +74,8 @@ class EmbedPass implements PassEmbeds {
 
   dispose(): void {
     this.isActive = false;
-    this.events.abort();
     this.standIns.restoreAll();
-    for (const dispose of this.disposers.reverse()) {
-      dispose();
-    }
+    this.lives.releaseAll();
     for (const reset of this.restore) {
       reset();
     }
@@ -189,21 +186,23 @@ class EmbedPass implements PassEmbeds {
     });
   }
 
+  /** The button that opens what `node` embeds (`target`). */
   private openButton(
+    node: HTMLElement,
     target: string,
-    wiki: boolean,
     label: string,
     className: "open-embed" | "attachment-open",
   ): HTMLButtonElement {
-    const node = document.createElement("button");
-    node.type = "button";
-    node.className = className;
-    node.textContent = label;
-    node.setAttribute("aria-label", `Open ${target}`);
-    node.addEventListener("click", () => this.options.open(target, wiki), {
-      signal: this.events.signal,
+    const wiki = embedIsWiki(node);
+    const button = document.createElement("button");
+    button.type = "button";
+    button.className = className;
+    button.textContent = label;
+    button.setAttribute("aria-label", `Open ${target}`);
+    button.addEventListener("click", () => this.options.open(target, wiki), {
+      signal: this.lives.signal(node),
     });
-    return node;
+    return button;
   }
 
   private async apply(
@@ -221,7 +220,7 @@ class EmbedPass implements PassEmbeds {
     } else if (resource.kind === "audio" || resource.kind === "video") {
       this.showMedia(node, target, resource);
     } else if (resource.kind === "note" && resource.text !== undefined) {
-      await this.showNote(node, target, resource, wiki);
+      await this.showNote(node, target, resource);
     } else if (resource.kind === "base") {
       renderBaseEmbed(node, {
         target,
@@ -235,13 +234,13 @@ class EmbedPass implements PassEmbeds {
         target,
         url: resource.url,
         wiki,
-        signal: this.events.signal,
+        signal: this.lives.signal(node),
         measure: this.options.pass.measure,
         open: (openTarget, isWiki) => this.options.open(openTarget, isWiki),
       });
     } else {
       node.replaceChildren(
-        this.openButton(target, wiki, target, "attachment-open"),
+        this.openButton(node, target, target, "attachment-open"),
       );
     }
     if (this.isActive) {
@@ -269,7 +268,7 @@ class EmbedPass implements PassEmbeds {
       image.height = Number(node.dataset.height);
     }
     image.addEventListener("load", pass.measure, {
-      signal: this.events.signal,
+      signal: this.lives.signal(node),
     });
     image.addEventListener(
       "error",
@@ -283,7 +282,7 @@ class EmbedPass implements PassEmbeds {
             : node;
         this.showError(surface, target, new ImageLoadError(target));
       },
-      { signal: this.events.signal },
+      { signal: this.lives.signal(node) },
     );
     if (image !== node) {
       node.replaceChildren(image);
@@ -313,7 +312,9 @@ class EmbedPass implements PassEmbeds {
       );
     };
     syncCompact();
-    image.addEventListener("load", syncCompact, { signal: this.events.signal });
+    image.addEventListener("load", syncCompact, {
+      signal: this.lives.signal(node),
+    });
     const inspect = document.createElement("button");
     inspect.type = "button";
     inspect.className = "inspect-image";
@@ -327,15 +328,16 @@ class EmbedPass implements PassEmbeds {
         event.stopPropagation();
         inspect.click();
       },
-      { signal: this.events.signal },
+      { signal: this.lives.signal(node) },
     );
-    this.disposers.push(
-      () => {
-        actions.remove();
-        if (host !== node && host.parentNode) {
-          host.replaceWith(image);
-        }
-      },
+    this.lives.onRelease(node, () => {
+      actions.remove();
+      if (host !== node && host.parentNode) {
+        host.replaceWith(image);
+      }
+    });
+    this.lives.onRelease(
+      node,
       inspectImage(inspect, image.src, image.alt, () =>
         this.options.open(target, wiki),
       ),
@@ -353,7 +355,8 @@ class EmbedPass implements PassEmbeds {
     media.controls = true;
     media.preload = "metadata";
     media.setAttribute("aria-label", target);
-    this.disposers.push(
+    this.lives.onRelease(
+      node,
       mediaRecovery(media, resource.url, (message) => {
         if (this.isActive) {
           node.textContent = `${target}: ${message}`;
@@ -361,13 +364,13 @@ class EmbedPass implements PassEmbeds {
         }
       }),
     );
-    this.disposers.push(() => {
+    this.lives.onRelease(node, () => {
       media.pause();
       media.removeAttribute("src");
       media.load();
     });
     media.addEventListener("loadedmetadata", pass.measure, {
-      signal: this.events.signal,
+      signal: this.lives.signal(node),
     });
     node.replaceChildren(media);
   }
@@ -376,7 +379,6 @@ class EmbedPass implements PassEmbeds {
     node: HTMLElement,
     target: string,
     resource: Resource,
-    wiki: boolean,
   ): Promise<void> {
     const { pass, render } = this.options;
     // apply admits note resources only after checking their text.
@@ -390,8 +392,9 @@ class EmbedPass implements PassEmbeds {
     const section = document.createElement("section");
     section.className = "note-embed";
     const content = document.createElement("div");
-    section.append(this.openButton(target, wiki, "↗", "open-embed"), content);
+    section.append(this.openButton(node, target, "↗", "open-embed"), content);
     node.replaceChildren(section);
+    const shown = this.lives.signal(node);
     const nested = await render.into(content, selection.text, {
       ...(pass.readOnly === undefined ? {} : { readOnly: pass.readOnly }),
       documentUri: resource.source,
@@ -401,8 +404,9 @@ class EmbedPass implements PassEmbeds {
       taskLineCount: selection.text.split("\n").length,
       measure: pass.measure,
     });
-    if (this.isActive) {
-      this.disposers.push(() => {
+    // Released meanwhile (the pass ended): nothing will dispose it later.
+    if (this.isActive && !shown.aborted) {
+      this.lives.onRelease(node, () => {
         void nested.dispose();
       });
     } else {

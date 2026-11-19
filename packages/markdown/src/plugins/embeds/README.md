@@ -40,6 +40,8 @@ it go (`image-selection.ts`, `image-size.ts`). While selected, the caret is hidd
 - `manifest.ts`: enablement and Insert Embed contribution.
 - `webview.ts`: renderer, post-processor and command registrations.
 - `post-process.ts`: resource resolution, per-kind display and pass lifetime.
+- `embed-lives.ts`: what each embed of a pass holds (listeners, teardowns, the file it shows), released when it is shown again or the pass ends.
+- `embed-lives.test.ts`: release order and lookup by file.
 - `missing.ts`: the text an embed that cannot be shown says (`“x.png” could not be found.`, a missing heading, `failed to fetch image` for bytes that did not load).
 - `stand-in.ts`: the `.file-embed` block that takes a failed Markdown `<img>`'s place, since an `<img>` shows no text.
 - `resource-cache.ts`: what embeds resolved, so a block rendered again shows its files at once.
