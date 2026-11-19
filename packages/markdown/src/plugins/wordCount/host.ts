@@ -20,10 +20,16 @@ export const wordCountHost: Plugin = {
     ctx.effect(() => () => status.dispose());
     let timer: ReturnType<typeof setTimeout> | undefined;
     let generation = 0;
+    const counter = new PanelCounter();
     const update = async () => {
       const gen = ++generation;
       const uri = ctx.activeEditor.note();
-      const text = await activeText(ctx.activeEditor, ctx.editors, uri);
+      const text = await activeText({
+        activeEditor: ctx.activeEditor,
+        editors: ctx.editors,
+        counter,
+        uri,
+      });
       if (gen !== generation) {
         return;
       }
@@ -41,7 +47,10 @@ export const wordCountHost: Plugin = {
     ctx.effect(() => ctx.activeEditor.onNoteChanged(schedule));
     ctx.effect(() => ctx.activeEditor.onTextSelectionChanged(schedule));
     ctx.effect(() => ctx.hostDocuments.onChange(schedule));
-    ctx.on("editor/selectionChanged", schedule);
+    ctx.on("editor/selectionChanged", (panel, hasSelection) => {
+      counter.selectionChanged(panel, hasSelection);
+      schedule();
+    });
     ctx.on("editor/opened", schedule);
     ctx.on("editor/activeChanged", schedule);
     ctx.on("editor/ready", schedule);
@@ -56,17 +65,20 @@ export const wordCountHost: Plugin = {
  * short timeout. A text editor on the note wins over a Lumiere editor that is
  * not the active one (another group): the reader is looking at the text editor.
  */
-async function activeText(
-  activeEditor: ActiveEditor,
-  editors: Editors | undefined,
-  uri: string | undefined = activeEditor.note(),
-): Promise<ReturnType<typeof countText> | undefined> {
+async function activeText(options: {
+  activeEditor: ActiveEditor;
+  editors: Editors | undefined;
+  counter: PanelCounter;
+  uri: string | undefined;
+}): Promise<Counts | undefined> {
+  const { activeEditor, editors, counter } = options;
+  const uri = options.uri ?? activeEditor.note();
   if (!uri) {
     return undefined;
   }
   const active = editors?.active();
   if (active?.document.uri === uri) {
-    return panelCounts(active);
+    return counter.counts(active);
   }
   const editor = activeEditor.textEditor(uri);
   if (editor) {
@@ -75,9 +87,10 @@ async function activeText(
       : countText(editor.text);
   }
   const panel = editors?.all().find((item) => item.document.uri === uri);
-  return panel ? panelCounts(panel) : undefined;
+  return panel ? counter.counts(panel) : undefined;
 }
 
+/**
 /**
  * Each note's counts while its version stands. Every caret move asks again,
  * and counting a long note takes a while; its text changes only with the version.
@@ -99,16 +112,31 @@ function documentCounts(document: HostDocument): Counts {
   return counts;
 }
 
-async function panelCounts(panel: EditorPanel) {
-  const selection = await Promise.race([
-    panel.rpc
-      .call(editorProtocol, "captureSelection", {})
-      .catch(() => undefined),
-    new Promise<undefined>((resolve) =>
-      setTimeout(() => resolve(undefined), SELECTION_WAIT_MS),
-    ),
-  ]);
-  return selection?.text
-    ? countText(selection.text, false)
-    : documentCounts(panel.document);
+/**
+ * Counts for a Lumiere editor. The selected text is fetched from the webview
+ * only when it last reported a selection.
+ */
+class PanelCounter {
+  private readonly empty = new WeakMap<EditorPanel, boolean>();
+
+  selectionChanged(panel: EditorPanel, hasSelection: boolean): void {
+    this.empty.set(panel, !hasSelection);
+  }
+
+  async counts(panel: EditorPanel): Promise<Counts> {
+    if (this.empty.get(panel)) {
+      return documentCounts(panel.document);
+    }
+    const selection = await Promise.race([
+      panel.rpc
+        .call(editorProtocol, "captureSelection", {})
+        .catch(() => undefined),
+      new Promise<undefined>((resolve) =>
+        setTimeout(() => resolve(undefined), SELECTION_WAIT_MS),
+      ),
+    ]);
+    return selection?.text
+      ? countText(selection.text, false)
+      : documentCounts(panel.document);
+  }
 }
