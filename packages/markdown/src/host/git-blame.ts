@@ -140,7 +140,10 @@ export async function runBlameLine(
   }
   const args = ["blame", "--line-porcelain", "-L", `${line},${line}`];
   if (!knownClean) {
-    args.push("--contents", "-", "HEAD");
+    // The snapshot on top of HEAD. No revision after it: Git before 2.41
+    // refuses `--contents` with one ("cannot use --contents with final
+    // commit object name"), and without one HEAD is the parent anyway.
+    args.push("--contents", "-");
   }
   // With no explicit revision, git includes uncommitted worktree lines. A clean
   // editor snapshot only proves disk identity, not that disk equals HEAD.

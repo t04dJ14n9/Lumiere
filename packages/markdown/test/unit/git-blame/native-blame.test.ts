@@ -140,6 +140,13 @@ test("dirty argv forwards stdin and timeout; clean argv omits contents", async (
   assert.equal(calls[0]?.stdin, "alpha\n");
   assert.equal(calls[0]?.timeoutMs, 5000);
   assert.ok(calls[0]?.args.includes("--contents"));
+  // F22: Git before 2.41 refuses `--contents` with a revision.
+  assert.deepEqual(calls[0]?.args.slice(4), [
+    "--contents",
+    "-",
+    "--",
+    "note.md",
+  ]);
   assert.deepEqual(calls[1]?.args.slice(0, 3), ["log", "-1", "--format=%b"]);
   assert.equal(dirty.status, "ok");
   if (dirty.status === "ok") {
