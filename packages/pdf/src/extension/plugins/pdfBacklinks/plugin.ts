@@ -1,3 +1,4 @@
+import { createHash } from "node:crypto";
 import * as vscode from "vscode";
 import type { Context, Plugin } from "@workshop/core";
 import { isTrustedBacklinkNoteUri } from "../../../shared/backlink-note-uri";
@@ -18,10 +19,15 @@ import manifest from "./manifest";
 
 const SCAN_CHUNK = 40;
 
+/** Changes to notes that come together (a save, a checkout) make one push. */
+const PUSH_DELAY_MS = 250;
+
 /**
- * Derived vault index of Markdown → PDF deep links. Idle-scans every
- * Markdown note, refreshes on save/create/delete, and pushes per-PDF hits
- * to open viewers. The index is never written to disk.
+ * Derived vault index of Markdown → PDF deep links. From the first PDF
+ * opened in the window (the extension also activates for Markdown alone,
+ * whose readers need none of it), idle-scans every Markdown note, refreshes
+ * on save/create/delete, and pushes per-PDF hits to open viewers. The index
+ * is never written to disk.
  */
 export const pdfBacklinksPlugin: Plugin = {
   name: manifest.id,
@@ -45,10 +51,53 @@ export const pdfBacklinksPlugin: Plugin = {
 
     wireOpenBacklinkNote(ctx, panels);
     const pushAll = wirePanelPush(ctx, panels, index);
-    wireMarkdownListeners(ctx, index, () => cancelled, pushAll);
-    void idleScan(index, () => cancelled, pushAll);
+    const pushSoon = debounced(ctx, pushAll, PUSH_DELAY_MS);
+    startOnFirstPdf(ctx, panels, () => {
+      if (cancelled) {
+        return;
+      }
+      const indexed = wireMarkdownListeners(
+        ctx,
+        index,
+        () => cancelled,
+        pushSoon,
+      );
+      void idleScan(index, indexed, () => cancelled, pushSoon);
+    });
   },
 };
+
+/** Run `start` once, when a PDF is open: now, or when the first one opens. */
+function startOnFirstPdf(
+  ctx: Context,
+  panels: PdfPanels,
+  start: () => void,
+): void {
+  if (panels.all.length > 0) {
+    start();
+    return;
+  }
+  let started = false;
+  ctx.own(
+    panels.onDidOpen(() => {
+      if (!started) {
+        started = true;
+        start();
+      }
+    }),
+    "first open listener",
+  );
+}
+
+/** `run` after `delayMs` of quiet; never after the plugin stops. */
+function debounced(ctx: Context, run: () => void, delayMs: number): () => void {
+  let timer: ReturnType<typeof setTimeout> | undefined;
+  ctx.own({ dispose: () => clearTimeout(timer) }, "push timer");
+  return () => {
+    clearTimeout(timer);
+    timer = setTimeout(run, delayMs);
+  };
+}
 
 function wireOpenBacklinkNote(ctx: Context, panels: PdfPanels): void {
   ctx.own(
@@ -143,29 +192,52 @@ async function isWorkspaceFile(file: PdfFile): Promise<boolean> {
   }
 }
 
-/** A note's links, under its workspace folder: see `workspaceLocation`. */
+/**
+ * The notes as last indexed, by URI: a fingerprint of their folder and
+ * text. A save is reported twice (the save itself, then the file watcher's
+ * change), and only the first is indexed.
+ */
+type Indexed = Map<string, string>;
+
+/**
+ * Index a note's links, under its workspace folder (`workspaceLocation`).
+ * Returns whether the open viewers need a push: the note's text changed and
+ * it links, or linked, to a PDF.
+ */
 function indexNote(
   index: PdfBacklinkIndex,
+  indexed: Indexed,
   uri: vscode.Uri,
   text: string,
-): void {
+): boolean {
   const { folder, path } = workspaceLocation(uri);
-  index.replaceNote(uri.toString(), path, text, folder);
+  const key = uri.toString();
+  const fingerprint = `${folder}\u0000${createHash("sha256").update(text).digest("base64")}`;
+  if (indexed.get(key) === fingerprint) {
+    return false;
+  }
+  indexed.set(key, fingerprint);
+  const linked = index.hasLinks(key);
+  index.replaceNote(key, path, text, folder);
+  return linked || index.hasLinks(key);
 }
 
 function wireMarkdownListeners(
   ctx: Context,
   index: PdfBacklinkIndex,
   isCancelled: () => boolean,
-  pushAll: () => void,
-): void {
+  push: () => void,
+): Indexed {
+  const indexed: Indexed = new Map();
+  ctx.own({ dispose: () => indexed.clear() }, "indexed notes");
   ctx.own(
     vscode.workspace.onDidSaveTextDocument((document) => {
       if (isCancelled() || !isMarkdownUri(document.uri)) {
         return;
       }
-      indexNote(index, document.uri, document.getText());
-      pushAll();
+      if (indexNote(index, indexed, document.uri, document.getText())) {
+        push();
+      }
     }),
     "save listener",
   );
@@ -179,8 +251,9 @@ function wireMarkdownListeners(
     try {
       const bytes = await vscode.workspace.fs.readFile(uri);
       const text = new TextDecoder("utf8").decode(bytes);
-      indexNote(index, uri, text);
-      pushAll();
+      if (indexNote(index, indexed, uri, text)) {
+        push();
+      }
     } catch {
       // Unreadable notes are skipped; the index stays a best-effort cache.
     }
@@ -198,11 +271,16 @@ function wireMarkdownListeners(
       if (isCancelled() || !isMarkdownUri(uri)) {
         return;
       }
-      index.removeNote(uri.toString());
-      pushAll();
+      const key = uri.toString();
+      indexed.delete(key);
+      if (index.hasLinks(key)) {
+        index.removeNote(key);
+        push();
+      }
     }),
     "delete listener",
   );
+  return indexed;
 }
 
 function isMarkdownUri(uri: vscode.Uri): boolean {
@@ -230,6 +308,7 @@ async function findNotes(): Promise<vscode.Uri[]> {
 /** Scan vault Markdown in chunks so activation stays responsive. */
 async function idleScan(
   index: PdfBacklinkIndex,
+  indexed: Indexed,
   isCancelled: () => boolean,
   onProgress: () => void,
 ): Promise<void> {
@@ -239,6 +318,8 @@ async function idleScan(
   } catch {
     return;
   }
+  // A chunk with no links to any PDF changes no viewer.
+  let linked = false;
   for (let i = 0; i < files.length; i += SCAN_CHUNK) {
     if (isCancelled()) {
       return;
@@ -252,13 +333,18 @@ async function idleScan(
         try {
           const bytes = await vscode.workspace.fs.readFile(uri);
           const text = new TextDecoder("utf8").decode(bytes);
-          indexNote(index, uri, text);
+          if (indexNote(index, indexed, uri, text)) {
+            linked = true;
+          }
         } catch {
           // skip unreadable
         }
       }),
     );
-    onProgress();
+    if (linked) {
+      onProgress();
+    }
+    linked = false;
     await yieldIdle();
   }
 }

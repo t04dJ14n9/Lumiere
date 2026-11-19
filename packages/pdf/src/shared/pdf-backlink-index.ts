@@ -200,6 +200,11 @@ export class PdfBacklinkIndex {
     }
   }
 
+  /** Whether the note links to any PDF. */
+  hasLinks(noteUri: string): boolean {
+    return this.byNote.has(noteUri);
+  }
+
   removeNote(noteUri: string): void {
     const previous = this.byNote.get(noteUri);
     if (!previous) {

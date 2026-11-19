@@ -317,8 +317,10 @@ Neither product imports the other. Hosts that lack a provider simply lack
 the feature (no PDF sections outside VS Code).
 
 The PDF backlink index does not use Markdown's vault index: it scans notes
-itself (`pdf/src/shared/pdf-backlink-index.ts`, `pdfBacklinks/plugin.ts`) and has
-had to copy the editor's path rules to stay consistent. See
+itself (`pdf/src/shared/pdf-backlink-index.ts`, `pdfBacklinks/plugin.ts`),
+from the first PDF opened in the window, so a reader of Markdown alone pays
+nothing for it, and has had to copy the editor's path rules to stay
+consistent. See
 [section 19](#19-recommended-changes).
 
 ## 9. The document: who owns the text

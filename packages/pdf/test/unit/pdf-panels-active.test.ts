@@ -74,3 +74,40 @@ test("a PDF opened from a link with a #page fragment is the active one", () => {
   panels.add(panel);
   assert.equal(panels.active, panel);
 });
+
+test("a view report sets only the context keys whose values changed", () => {
+  const set: string[] = [];
+  let changed = (): void => undefined;
+  class Panels extends PdfViewerPanels<never> {
+    constructor() {
+      super((key, value) => set.push(`${key}=${String(value)}`));
+    }
+    open(panel: never): void {
+      this.track(panel, { onState: subscription, onDispose: subscription });
+    }
+    protected findActive(panels: ReadonlySet<never>): never | undefined {
+      return [...panels][0];
+    }
+  }
+  const view = { fit: "", tool: "text", pageLayout: "single" };
+  const panel = {
+    view,
+    outline: [],
+    onDidChange: (listener: () => void) => {
+      changed = listener;
+      return subscription();
+    },
+    dispose: () => undefined,
+  } as unknown as never;
+  const panels = new Panels();
+  panels.open(panel);
+  const first = set.length;
+  assert.ok(first > 0);
+  // Scrolling: page and zoom change, none of the keys do.
+  changed();
+  changed();
+  assert.equal(set.length, first);
+  view.tool = "region";
+  changed();
+  assert.deepEqual(set.slice(first), ["lumiere.pdf.tool=region"]);
+});

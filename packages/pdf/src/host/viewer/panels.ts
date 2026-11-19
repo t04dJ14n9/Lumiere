@@ -47,6 +47,8 @@ export abstract class PdfViewerPanels<P extends PdfViewerPanel> {
   readonly onDidOpen = this.opened.event;
   private readonly handlers = new Map<PluginMessage["type"], AnyHandler<P>>();
   private toolbar: () => ToolbarSettings = () => DEFAULT_TOOLBAR_SETTINGS;
+  /** Each context key's value as last set. */
+  private readonly sentContext = new Map<string, unknown>();
 
   /** `setContext`: the context keys menus and keybindings read, `lumiere.pdf.*`. */
   constructor(
@@ -158,9 +160,17 @@ export abstract class PdfViewerPanels<P extends PdfViewerPanel> {
     }
   }
 
+  /**
+   * Context keys go to the host only when they change: the viewer reports
+   * its view about every 100 ms while scrolling, and each key set is a
+   * command round-trip through VS Code.
+   */
   private publish(): void {
     for (const [key, value] of Object.entries(contextKeys(this.current))) {
-      this.setContext(`lumiere.pdf.${key}`, value);
+      if (this.sentContext.get(key) !== value || !this.sentContext.has(key)) {
+        this.sentContext.set(key, value);
+        this.setContext(`lumiere.pdf.${key}`, value);
+      }
     }
     this.changed.fire();
   }

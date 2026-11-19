@@ -23,6 +23,8 @@ export type Direction = "back" | "forward";
 /** A separate memory-only jump history for each PDF editor, split views included. */
 export class PdfHistories {
   private readonly states = new Map<PdfPanel, PanelHistory>();
+  /** The history context keys as last set. */
+  private readonly contextKeys = new Map<string, boolean>();
 
   constructor(private readonly panels: PdfPanels) {}
 
@@ -95,16 +97,23 @@ export class PdfHistories {
     const active = this.panels.active;
     const state = active?.view ? this.states.get(active) : undefined;
     const ready = Boolean(state && !state.busy);
-    void vscode.commands.executeCommand(
-      "setContext",
+    this.setContext(
       "lumiere.pdf.historyBack",
       ready && Boolean(state?.history.canGoBack),
     );
-    void vscode.commands.executeCommand(
-      "setContext",
+    this.setContext(
       "lumiere.pdf.historyForward",
       ready && Boolean(state?.history.canGoForward),
     );
+  }
+
+  /** Set a context key only when it changes: this runs on every view report. */
+  private setContext(key: string, value: boolean): void {
+    if (this.contextKeys.get(key) === value) {
+      return;
+    }
+    this.contextKeys.set(key, value);
+    void vscode.commands.executeCommand("setContext", key, value);
   }
 
   private async move(
