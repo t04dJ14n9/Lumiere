@@ -41,6 +41,48 @@ export function calloutMarkdown(
     : [];
   return `\n\n${[first, ...lines].join("\n")}\n\n`;
 }
+/**
+ * A `<pre>` with no `<code>` inside (GitHub and many documentation sites
+ * highlight with spans in a bare `<pre>`), as a fenced block of its text.
+ * Turndown's own rule needs `<pre><code>`, and otherwise escapes the code.
+ */
+export function preformattedMarkdown(node: HTMLElement): string {
+  const code = preformattedText(node).replace(/\n$/, "");
+  const longest = Math.max(
+    0,
+    ...(code.match(/`+/g) ?? []).map((run) => run.length),
+  );
+  const fence = "`".repeat(Math.max(3, longest + 1));
+  return `\n\n${fence}${codeLanguage(node)}\n${code}\n${fence}\n\n`;
+}
+
+export function isBarePre(node: HTMLElement): boolean {
+  return node.nodeName === "PRE" && node.firstChild?.nodeName !== "CODE";
+}
+
+function preformattedText(node: Node): string {
+  return Array.from(node.childNodes)
+    .map((child) => {
+      if (child.nodeName === "BR") {
+        return "\n";
+      }
+      return child.nodeType === 3
+        ? (child.textContent ?? "")
+        : preformattedText(child);
+    })
+    .join("");
+}
+
+/** `language-x` on the block, or GitHub's `highlight-source-x` around it. */
+function codeLanguage(node: HTMLElement): string {
+  const classes = `${node.className} ${(node.parentNode as HTMLElement | null)?.className ?? ""}`;
+  return (
+    /(?:^|\s)(?:language|lang|highlight-source)-([\w+#.-]+)/.exec(
+      classes,
+    )?.[1] ?? ""
+  );
+}
+
 export function tableMarkdown(
   node: HTMLElement,
   convert: (node: HTMLElement) => string,

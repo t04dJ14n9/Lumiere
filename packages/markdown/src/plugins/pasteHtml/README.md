@@ -16,7 +16,7 @@ applies only if the view, document and selection are still current.
 - `manifest.ts`: default enablement.
 - `api.ts`: typed paste data and transform event.
 - `conversion.ts`: conversion setup and semantic rules.
-- `special.ts`: math, callout and table conversion.
+- `special.ts`: math, callout, table and bare `<pre>` code-block conversion.
 - `links.ts`: wiki/media destinations and unsafe-scheme filtering.
 - `paste.ts`: code-context and stale-paste guards.
 - `webview.ts`: sanitization, focused-view routing and listener lifecycle.

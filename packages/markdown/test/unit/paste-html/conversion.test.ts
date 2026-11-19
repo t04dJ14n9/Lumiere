@@ -181,6 +181,20 @@ test("a pasted table cell keeps its line breaks as <br>, as Obsidian writes them
   );
 });
 
+test("preformatted text without a code element is a fenced block, as copied", () => {
+  // GitHub and many documentation sites highlight with spans in a bare <pre>.
+  assert.equal(
+    markdownFromHtml(
+      '<p>Run:</p><div class="highlight highlight-source-js"><pre><span class="pl-k">const</span> a_b = <span class="pl-s">"x*y"</span>;<br>if (a &lt; b) { [1] }\n</pre></div>',
+    ),
+    'Run:\n\n```js\nconst a_b = "x*y";\nif (a < b) { [1] }\n```',
+  );
+  assert.equal(
+    markdownFromHtml("<pre>has ``` inside</pre>"),
+    "````\nhas ``` inside\n````",
+  );
+});
+
 test("a table nested in a cell stays in that cell, its rows written once", () => {
   const markdown = markdownFromHtml(
     "<table><thead><tr><th>A</th><th>B</th></tr></thead><tbody><tr><td>outer</td><td><table><tr><td>in1</td><td>in2</td></tr></table></td></tr><tr><td>o2</td><td>o3</td></tr></tbody></table>",
