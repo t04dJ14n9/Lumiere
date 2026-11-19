@@ -40,8 +40,27 @@ export class TableGrid {
     root.append(this.scroll);
   }
 
+  /** Where the mounted table starts in the note (0 or the end when it is not). */
   start(): number {
     return this.outer.posAtDOM(this.root);
+  }
+
+  /**
+   * Where this table's Markdown starts in the note, or undefined when the
+   * note does not hold it there. A table with a grid selection stays active
+   * after it scrolls out of view, and CodeMirror places a detached root at 0
+   * or at the note's end: a write there would replace unrelated text.
+   */
+  locate(): number | undefined {
+    if (!this.root.isConnected) {
+      return undefined;
+    }
+    const from = this.start();
+    const to = from + this.block.source.length;
+    const doc = this.outer.state.doc;
+    return to <= doc.length && doc.sliceString(from, to) === this.block.source
+      ? from
+      : undefined;
   }
 
   commandGroup(): string {
@@ -51,17 +70,23 @@ export class TableGrid {
   /**
    * Write `tableMarkdown` back as this block, every line after the first
    * indented like the table's rows, so a table in a list item stays in it.
+   * Returns false, writing nothing, when the note no longer holds the table
+   * where this grid is (see `locate`).
    */
-  replace(tableMarkdown: string): void {
+  replace(tableMarkdown: string): boolean {
     const source = this.sourceFor(tableMarkdown);
     if (source === this.block.source) {
-      return;
+      return true;
     }
-    const from = this.start();
+    const from = this.locate();
+    if (from === undefined) {
+      return false;
+    }
     this.outer.dispatch({
       changes: { from, to: from + this.block.source.length, insert: source },
       annotations: editGroup.of(this.commandGroup()),
     });
+    return true;
   }
 
   /** The block's source for `tableMarkdown` (see `replace`). */

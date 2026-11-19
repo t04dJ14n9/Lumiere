@@ -369,6 +369,10 @@ export class TableController {
       (this.editor ?? this.grid.outer).focus();
       return;
     }
+    // A palette command can reach a table that has scrolled out of view.
+    if (this.grid.locate() === undefined) {
+      return;
+    }
     const next = parseTable(table);
     this.close();
     delete this.selected.range;

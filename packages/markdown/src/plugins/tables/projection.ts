@@ -186,11 +186,15 @@ export class CellProjection {
     group: string,
   ): void {
     this.cellEditor?.source.remember(text);
+    const start = this.grid.locate();
+    if (start === undefined) {
+      return;
+    }
     const changes = projectedChanges(
       this.grid.tableSource(),
       position,
       text,
-      this.grid.start(),
+      start,
     );
     this.grid.outer.dispatch({ changes, annotations: editGroup.of(group) });
   }

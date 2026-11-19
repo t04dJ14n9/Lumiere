@@ -40,7 +40,10 @@ an earlier version is an ordinary comment now.
 Every rewrite of the table (a paste, Delete, an added row or column, a moved
 column) goes through `TableGrid.replace`, which, for a table in a list item,
 indents every line after the header like the table's rows, so the table
-stays in the item.
+stays in the item. It first checks that the note still holds the table's
+Markdown where the widget is, and writes nothing otherwise: a table that
+stays active after scrolling out of view has no position in the note, so a
+`Table: …` command then does nothing rather than replace other text.
 
 Tall wide tables also show a sticky mirror of the table's horizontal
 scrollbar (BH-016) while the native bar is below the note viewport, so
