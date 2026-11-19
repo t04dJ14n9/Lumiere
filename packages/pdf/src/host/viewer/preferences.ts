@@ -14,6 +14,7 @@ import type { PdfViewerPanel } from "./panel";
 const SECTION = "lumiere.pdf.view";
 const EDITOR_SMOOTH_SCROLLING = "editor.smoothScrolling";
 const REGIONS_SETTING = "lumiere.pdf.regions.enabled";
+const SHORTCUTS_SETTING = "lumiere.pdf.keyboardShortcuts";
 
 /** Defaults for new views; saved positions are read once, independently by each panel. */
 export class PdfViewPreferences {
@@ -28,7 +29,8 @@ export class PdfViewPreferences {
       if (
         !affects(SECTION) &&
         !affects(EDITOR_SMOOTH_SCROLLING) &&
-        !affects(REGIONS_SETTING)
+        !affects(REGIONS_SETTING) &&
+        !affects(SHORTCUTS_SETTING)
       ) {
         return;
       }
@@ -50,6 +52,7 @@ export class PdfViewPreferences {
       smoothScrolling: view("smoothScrolling"),
       arrowsKeepPlace: view("arrowsKeepPlace"),
       regionsEnabled: this.configuration.get(REGIONS_SETTING, uri) === true,
+      keyboardShortcuts: this.configuration.get(SHORTCUTS_SETTING, uri),
     });
     settings.smoothScrolling = resolveSmoothScrolling(
       settings.smoothScrolling,

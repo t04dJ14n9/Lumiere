@@ -20,6 +20,35 @@ export interface ViewSettings extends ViewChoices {
   regionsEnabled: boolean;
   /** Plain Left/Right turn the page keeping the place; ⌥ gives them their usual meaning. */
   arrowsKeepPlace: boolean;
+  /** The viewer's default shortcuts (`lumiere.pdf.keyboardShortcuts`); off leaves every key to VS Code. */
+  keyboardShortcuts: boolean;
+}
+
+/**
+ * Whether a key opens Find in the viewer: ⌘F on a Mac, Ctrl+F elsewhere,
+ * with no other modifier (⇧⌘F and ⌥⌘F are VS Code's), and only while the
+ * viewer's shortcuts are on, as the same key's VS Code binding.
+ */
+export function isFindKey(
+  event: {
+    key: string;
+    metaKey: boolean;
+    ctrlKey: boolean;
+    shiftKey: boolean;
+    altKey: boolean;
+  },
+  options: { mac: boolean; shortcuts: boolean },
+): boolean {
+  const command = options.mac ? event.metaKey : event.ctrlKey;
+  const other = options.mac ? event.ctrlKey : event.metaKey;
+  return (
+    options.shortcuts &&
+    command &&
+    !other &&
+    !event.shiftKey &&
+    !event.altKey &&
+    event.key.toLowerCase() === "f"
+  );
 }
 
 export const DEFAULT_VIEW_CHOICES: ViewChoices = {
@@ -80,6 +109,7 @@ export function parseViewSettings(value: unknown): ViewSettings {
         : null,
     regionsEnabled: settings.regionsEnabled === true,
     arrowsKeepPlace: settings.arrowsKeepPlace !== false,
+    keyboardShortcuts: settings.keyboardShortcuts !== false,
   };
 }
 

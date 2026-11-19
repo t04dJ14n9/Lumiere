@@ -89,6 +89,7 @@ test("smooth page/outline jumps animate (a zoom step lands at once); explicit fa
       smoothScrolling: false,
       regionsEnabled: false,
       arrowsKeepPlace: false,
+      keyboardShortcuts: true,
     },
   });
   await expect(page.locator(".viewer")).toHaveAttribute(
@@ -130,6 +131,7 @@ for (const [name, setup] of [
           smoothScrolling: false,
           regionsEnabled: false,
           arrowsKeepPlace: false,
+          keyboardShortcuts: true,
         },
       }),
   ],

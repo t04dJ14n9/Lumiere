@@ -6,7 +6,7 @@ import { useNavigation } from "./navigation";
 import { useOutlinePublishing } from "./outline";
 import { Page } from "./page";
 import { currentViewSettings, useRestorePosition } from "./reading-position";
-import type { ViewChoices } from "../shared/view-settings";
+import { isFindKey, type ViewChoices } from "../shared/view-settings";
 import { usePagingKeys } from "./paging-input";
 import { useSmoothMotion, useSmoothWheel } from "./smooth-scrolling";
 import { zenToolbarMode } from "../shared/zen";
@@ -240,6 +240,8 @@ function useDocumentInput(
   useIgnoreSecondaryButtons(documentArea);
 }
 
+const MAC = /Mac|iPhone|iPad/u.test(navigator.userAgent);
+
 /** Cmd/Ctrl+F opens the search bar; Escape closes it, or drops the tool or selection. */
 function useViewerKeys(state: {
   selection: Selection;
@@ -251,7 +253,8 @@ function useViewerKeys(state: {
   latest.current = state;
   useEffect(() => {
     const onKeyDown = (event: KeyboardEvent): void => {
-      if ((event.metaKey || event.ctrlKey) && event.key.toLowerCase() === "f") {
+      const shortcuts = currentViewSettings().keyboardShortcuts;
+      if (isFindKey(event, { mac: MAC, shortcuts })) {
         event.preventDefault();
         latest.current.search.open();
       } else if (event.key === "Escape") {
