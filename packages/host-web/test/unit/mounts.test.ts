@@ -196,9 +196,13 @@ test("URIs are written as Node writes them, so equal files compare equal", () =>
 
 test("a memory folder reports every change, and starts again from what it reported", async () => {
   const kept = new Map<string, unknown>();
-  const files = new MemoryFileSystem({}, (path, entry) =>
-    entry ? kept.set(path, entry) : kept.delete(path),
-  );
+  const files = new MemoryFileSystem({}, (path, entry) => {
+    if (entry) {
+      kept.set(path, entry);
+    } else {
+      kept.delete(path);
+    }
+  });
   await files.mkdir("daily");
   await files.write(
     "daily/Today.md",
