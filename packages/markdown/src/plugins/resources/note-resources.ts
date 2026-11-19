@@ -205,11 +205,12 @@ function buildBaseVaultSnapshot(
   }
   const entries: BaseNoteEntry[] = [];
   let thisEntry: BaseNoteEntry | undefined;
+  const backlinks = backlinksByTarget(vault);
   for (const file of vault.files()) {
     if (!/^(?:md|markdown)$/i.test(file.extension) || file.excluded) {
       continue;
     }
-    const entry = buildNoteEntry(vault, file);
+    const entry = buildNoteEntry(vault, file, backlinks.get(file.path) ?? []);
     entries.push(entry);
     if (relativeSource && file.path === relativeSource) {
       thisEntry = entry;
@@ -218,7 +219,40 @@ function buildBaseVaultSnapshot(
   return { entries, ...(thisEntry ? { thisEntry } : {}) };
 }
 
-function buildNoteEntry(vault: VaultIndex, file: VaultFile): BaseNoteEntry {
+/**
+ * Every note's backlinks, from one pass over the notes' resolved links.
+ * The index computes one note's backlinks by inverting every note's links,
+ * so asking it for each note costs n² for n notes.
+ */
+function backlinksByTarget(vault: VaultIndex): Map<string, string[]> {
+  const byTarget = new Map<string, string[]>();
+  if (typeof vault.resolvedLinks !== "function") {
+    return byTarget;
+  }
+  for (const { path } of vault.files()) {
+    for (const target of vault.resolvedLinks(path).keys()) {
+      if (target === path) {
+        continue;
+      }
+      const sources = byTarget.get(target);
+      if (sources) {
+        sources.push(path);
+      } else {
+        byTarget.set(target, [path]);
+      }
+    }
+  }
+  for (const sources of byTarget.values()) {
+    sources.sort();
+  }
+  return byTarget;
+}
+
+function buildNoteEntry(
+  vault: VaultIndex,
+  file: VaultFile,
+  backlinks: string[],
+): BaseNoteEntry {
   const meta =
     typeof vault.metadata === "function"
       ? vault.metadata(file.path)
@@ -227,10 +261,6 @@ function buildNoteEntry(vault: VaultIndex, file: VaultFile): BaseNoteEntry {
   const tags = collectNoteTags(meta?.tags, frontmatter);
   const links = meta?.links?.map((l) => l.link) ?? [];
   const embeds = meta?.embeds?.map((e) => e.link) ?? [];
-  const backlinks =
-    typeof vault.backlinks === "function"
-      ? vault.backlinks(file.path).map((b) => b.path)
-      : [];
   return {
     path: file.path,
     basename: file.basename,

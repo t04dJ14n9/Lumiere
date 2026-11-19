@@ -127,3 +127,63 @@ test("a Markdown image whose path has spaces resolves, as its link is written en
     `${root}/Attachments/My%20image.png`,
   );
 });
+
+test("a base snapshot reads each note's links once, not every note's per note", async () => {
+  const { metadata } = await import("../../../src/markdown/metadata");
+  const root = "file:///vault";
+  const index = new MemoryVaultIndex({
+    root,
+    folderNote: "",
+    linkFormat: "shortest",
+  });
+  const notes = ["A.md", "B.md", "C.md", "Self.md"];
+  index.replaceFiles(
+    [...notes, "View.base"].map((path) => ({
+      uri: `${root}/${path}`,
+      path,
+      mtime: 1,
+      size: 1,
+    })),
+  );
+  index.setMetadata("A.md", metadata("[[B]] [[C]] [[B]]"));
+  index.setMetadata("B.md", metadata("[[C]]"));
+  index.setMetadata("C.md", metadata("no links"));
+  index.setMetadata("Self.md", metadata("[[Self]] [[C]]"));
+  const asked = { resolvedLinks: 0, backlinks: 0 };
+  const vault = new Proxy(index, {
+    get(target, key, receiver) {
+      const value = Reflect.get(target, key, receiver);
+      if (typeof value !== "function") {
+        return value;
+      }
+      return (...args: unknown[]) => {
+        if (key === "resolvedLinks" || key === "backlinks") {
+          asked[key]++;
+        }
+        return value.apply(target, args);
+      };
+    },
+  });
+  const resources = new NoteResources({
+    source: `${root}/A.md`,
+    vault,
+    host: fakeHost({
+      workspace: { stat: async () => ({ mtime: 1, symbolicLink: false }) },
+    }),
+    resourceUrl: (uri) => uri,
+  });
+  const base = await resources.load("View.base", `${root}/A.md`, "wikilink");
+  const backlinks = Object.fromEntries(
+    base.entries!.map((entry) => [entry.path, entry.backlinks]),
+  );
+  for (const note of notes) {
+    assert.deepEqual(
+      backlinks[note],
+      index.backlinks(note).map((link) => link.path),
+      `${note}'s backlinks are the index's`,
+    );
+  }
+  assert.deepEqual(backlinks["C.md"], ["A.md", "B.md", "Self.md"]);
+  assert.equal(asked.backlinks, 0, "no note inverts every note's links");
+  assert.equal(asked.resolvedLinks, notes.length + 1, "once per file");
+});
