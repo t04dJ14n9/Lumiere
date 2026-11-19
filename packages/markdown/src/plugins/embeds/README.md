@@ -55,6 +55,7 @@ it go (`image-selection.ts`, `image-size.ts`). While selected, the caret is hidd
 - `image-resize-corner.ts`: the resize corner drawn on a selected image (visual only; resizing stays on the keys).
 - `embed-actions.ts`: the `.embed-actions` bar around an image's inspect control.
 - `clicks.ts`: what a click on an embed does: a note embed selects its source, an image leaves the caret alone.
+- `pdf-bytes.ts`: a PDF's bytes, fetched once for every embed that shows it.
 - `pdf-embed.ts`: the inline PDF viewer (`#page=` and `#height=` subpaths, page rendering through EmbedPDF, the Open button).
 - `base-embed.ts`: renders an embedded `.base` file's selected view (table, cards or list).
 - `base-embed-views.ts`: the cards and list views, cell values and note links for base embeds.
@@ -92,5 +93,8 @@ Cycles and ancestry depth of twelve are refused, and the embed says which (â€œAâ
 itself, so it is not shown again.); what Obsidian says is not measured. Local files remain host-contained;
 remote media requires a trusted workspace. A PDF embed draws one page (`#page=`,
 `#height=`) with page buttons rather than Obsidian's full PDF viewer; its Open
-button opens the PDF in Lumiere PDF at that page. WebM recovery supports VP8/VP9 and Opus/Vorbis when the host
+button opens the PDF in Lumiere PDF at that page. Embeds of one PDF fetch
+and hold its bytes once (`pdf-bytes.ts`), but each page turn still opens the
+document again and renders it in the editor's own thread (its page allows no
+worker), so a large PDF's page turn is slow. WebM recovery supports VP8/VP9 and Opus/Vorbis when the host
 MediaSource supports them. Visual and playback parity await owner comparison. Image embeds use Obsidian's `.embed-actions` frosted bar (inspect control; VS Code tokens).

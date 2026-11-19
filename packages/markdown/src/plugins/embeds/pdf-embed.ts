@@ -1,4 +1,5 @@
 import type { LocalEngine } from "@embedpdf/engine";
+import { sharedPdfBytes } from "./pdf-bytes";
 
 export interface PdfEmbedParams {
   readonly page: number;
@@ -371,13 +372,7 @@ export function mountPdfEmbed(options: MountPdfEmbedOptions): void {
   const paintPage = async (pageToRender: number): Promise<void> => {
     const seq = ++renderSeq;
     try {
-      if (!pdfBytes) {
-        const response = await fetch(url, { signal });
-        if (!response.ok) {
-          throw new Error(`HTTP ${response.status}`);
-        }
-        pdfBytes = new Uint8Array(await response.arrayBuffer());
-      }
+      pdfBytes ??= await sharedPdfBytes(url, signal);
       if (signal.aborted || seq !== renderSeq) {
         return;
       }

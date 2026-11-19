@@ -17,6 +17,7 @@ import { MarkdownInline } from "../../webview/ui/inline-widget";
 import { protocol as links } from "../links/protocol";
 import { enhanceEmbeds, type PassEmbeds } from "./post-process";
 import { forgetEmbedResources } from "./resource-cache";
+import { forgetPdfBytes } from "./pdf-bytes";
 import { wikilinkEdit } from "../../markdown/wikilink-edit";
 import {
   embedEditing,
@@ -204,7 +205,10 @@ class EmbedInline extends MarkdownInline {
 
 function registerEmbedContent(ctx: Context, cleanups: Set<() => void>): void {
   const passes = new Set<PassEmbeds>();
-  ctx.on("resources/changed", () => forgetEmbedResources(ctx.resources));
+  ctx.on("resources/changed", () => {
+    forgetEmbedResources(ctx.resources);
+    forgetPdfBytes();
+  });
   // Every pass, nested note embeds included: inline embeds keep their DOM
   // when the page renders again, so `render/changed` would not reach them.
   ctx.on("resources/found", () => {
