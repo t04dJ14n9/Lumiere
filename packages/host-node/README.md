@@ -162,10 +162,12 @@ forbids this package from importing `vscode` or any embedder.
   `/usr/bin/git` stand-in is used only when the command-line tools are
   installed, so no install dialog appears. A repository is watched once a
   note in it was asked about; a `git init` is seen on the next question.
-  There is no trust gate: git runs in the repository of any note inside a
-  workspace the embedder registered, with that repository's own
-  configuration, which can name commands git runs (a `textconv` for blame,
-  a `clean` filter for staging, `core.fsmonitor`). VS Code turns its git
+  Every command turns off the programs a repository's own configuration
+  can name for it to run that can be turned off by key (`core.fsmonitor`,
+  hooks, transports: `HARDENED_GIT_CONFIG`). Its filters and diff drivers
+  (a `clean` filter for staging) cannot be, by name. There is no trust
+  gate: git runs in the repository of any note inside a workspace the
+  embedder registered. VS Code turns its git
   extension off in an untrusted workspace; here, registering a folder
   (`addRoot`: the app's Open Folder, DSH's session workspace) is that
   trust, so a folder from someone else should not be opened as a vault.

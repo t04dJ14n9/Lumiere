@@ -1,13 +1,20 @@
 import test from "node:test";
 import assert from "node:assert/strict";
 import { execFileSync } from "node:child_process";
-import { mkdir, mkdtemp, rm, writeFile } from "node:fs/promises";
+import {
+  access as exists,
+  chmod,
+  mkdir,
+  mkdtemp,
+  rm,
+  writeFile,
+} from "node:fs/promises";
 import { tmpdir } from "node:os";
 import * as path from "node:path";
 import { pathToFileURL } from "node:url";
 import { createSpawnBlameRunner } from "@workshop/markdown/node";
 import { settingsUnavailableIn } from "@workshop/markdown/portable";
-import { NodeGitAccess } from "../../src/host/git";
+import { HARDENED_GIT_CONFIG, NodeGitAccess } from "../../src/host/git";
 import { NODE_HOST_OFFERS } from "../../src/host/inert";
 
 /**
@@ -129,7 +136,7 @@ test("F22: git failing to read a tracked note is unavailable, not untracked", as
   const access = new NodeGitAccess({
     roots: () => [fileUri(dir)],
     runGit: async (request) => {
-      if (request.args[0] === "cat-file") {
+      if (request.args.includes("cat-file")) {
         throw new Error("git timed out after 5000ms");
       }
       return real(request);
@@ -252,4 +259,53 @@ test("this host offers Git, so blame and the gutter keep their settings", () => 
     hidden.has("lumiere.markdown.plugins.gitDiffEditor.enabled"),
     true,
   );
+});
+
+test("S5: every git command turns off the repository's fsmonitor, hooks and transports", async (t) => {
+  const { dir } = await repository(t);
+  const real = createSpawnBlameRunner();
+  const argv: string[][] = [];
+  const access = new NodeGitAccess({
+    roots: () => [fileUri(dir)],
+    runGit: (request) => {
+      argv.push([...request.args]);
+      return real(request);
+    },
+  });
+  t.after(() => access.dispose());
+  const uri = fileUri(path.join(dir, "note.md"));
+  await access.blameLine(uri, 1, { contents: "one\n", version: 1 });
+  await access.baseline(uri, "HEAD");
+  await access.identity(uri);
+  await access.stage(uri);
+  assert.deepEqual(HARDENED_GIT_CONFIG, [
+    "-c",
+    "core.fsmonitor=false",
+    "-c",
+    "core.hooksPath=/dev/null",
+    "-c",
+    "protocol.allow=never",
+  ]);
+  assert.ok(argv.length >= 4);
+  for (const args of argv) {
+    assert.deepEqual(args.slice(0, HARDENED_GIT_CONFIG.length), [
+      ...HARDENED_GIT_CONFIG,
+    ]);
+  }
+});
+
+test("S5: a repository's core.fsmonitor program does not run when a note is staged", async (t) => {
+  if (process.platform === "win32") {
+    t.skip("a shell script stands in for the program");
+    return;
+  }
+  const { dir, uri, access } = await repository(t);
+  const marker = path.join(dir, "ran");
+  const program = path.join(dir, "monitor.sh");
+  await writeFile(program, `#!/bin/sh\ntouch "${marker}"\n`);
+  await chmod(program, 0o755);
+  git(dir, "config", "core.fsmonitor", program);
+  await writeFile(path.join(dir, "note.md"), "two\n");
+  assert.equal(await access.stage(uri), true);
+  await assert.rejects(exists(marker));
 });

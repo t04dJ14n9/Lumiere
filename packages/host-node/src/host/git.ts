@@ -44,7 +44,26 @@ const QUIET_GIT: Readonly<Record<string, string>> = {
   GIT_OPTIONAL_LOCKS: "0",
   LC_ALL: "en_US.UTF-8",
   LANG: "en_US.UTF-8",
+  // A partial clone would fetch a missing object through its remote.
+  GIT_NO_LAZY_FETCH: "1",
 };
+
+/**
+ * Put before every command's own arguments: what a repository's own
+ * configuration could otherwise run while git reads it. `core.fsmonitor`
+ * names a program, hooks are programs, and a transport (a partial clone
+ * fetching an object) runs `core.sshCommand` or a remote helper. A
+ * repository's filters and diff drivers cannot be turned off by name; the
+ * embedder's trust in the workspace (`NodeGitOptions.trusted`) covers them.
+ */
+export const HARDENED_GIT_CONFIG: readonly string[] = [
+  "-c",
+  "core.fsmonitor=false",
+  "-c",
+  "core.hooksPath=/dev/null",
+  "-c",
+  "protocol.allow=never",
+];
 
 export interface NodeGitOptions {
   /** The workspace roots, as file URIs: only notes inside them are asked about. */
@@ -74,7 +93,7 @@ export class NodeGitAccess implements GitAccess {
   private disposed = false;
 
   constructor(private readonly options: NodeGitOptions) {
-    this.runGit = options.runGit ?? foundGitRunner();
+    this.runGit = hardened(options.runGit ?? foundGitRunner());
     this.blobs = new GitBlobs(this.runGit);
   }
 
@@ -241,6 +260,12 @@ function foundGitRunner(): GitBlameRunner {
     }
     return run(options);
   };
+}
+
+/** Every command with `HARDENED_GIT_CONFIG` before its own arguments. */
+function hardened(runGit: GitBlameRunner): GitBlameRunner {
+  return (options) =>
+    runGit({ ...options, args: [...HARDENED_GIT_CONFIG, ...options.args] });
 }
 
 function isOutside(relative: string): boolean {
