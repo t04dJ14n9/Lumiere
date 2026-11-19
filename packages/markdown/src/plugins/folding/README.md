@@ -25,7 +25,12 @@ ranges before removing controls; late enable restores valid saved ranges.
 - `heading-fold.ts`: lazy heading ranges with per-document caching.
 - `heading-fold.test.ts`: range parity, bounded gutter traversal, edit
   invalidation and folds from a prefix tree.
-- `view-state.ts`: fold capture, validation, source mapping and restore.
+- `view-state.ts`: fold capture, validation, source mapping and restore. A
+  saved fold records the text of the lines it starts and ends on and comes
+  back only where they still read the same, so a note changed outside the
+  panel does not fold other lines. Folds saved without that record (before
+  it existed) are restored by offset.
+- `view-state.test.ts`: restore on the same text, and not on changed text.
 
 ## Services, events and settings
 
