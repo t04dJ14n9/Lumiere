@@ -1,6 +1,6 @@
 import test from "node:test";
 import assert from "node:assert/strict";
-import { mkdtemp, readFile, rm } from "node:fs/promises";
+import { mkdtemp, readFile, rm, writeFile } from "node:fs/promises";
 import { tmpdir } from "node:os";
 import * as path from "node:path";
 import type {
@@ -75,6 +75,39 @@ test("a damaged settings file reads as no changes", async (t) => {
   await import("node:fs/promises").then((fs) => fs.writeFile(file, "{oops"));
   const settings = await nodeSettings(contributed, dir);
   assert.equal(settings.get("preset", "minimal"), "obsidian");
+});
+
+test("a change made by hand while the host runs is kept when a setting changes", async (t) => {
+  const dir = await mkdtemp(path.join(tmpdir(), "lumiere-settings-"));
+  t.after(() => rm(dir, { recursive: true, force: true }));
+  const file = path.join(dir, "settings.json");
+  const settings = await nodeSettings(contributed, dir);
+  await writeFile(
+    file,
+    JSON.stringify({ "lumiere.markdown.preset": "minimal" }),
+  );
+  await settings.access.update("editor.readableLineLength", false);
+  assert.deepEqual(JSON.parse(await readFile(file, "utf8")), {
+    "lumiere.markdown.preset": "minimal",
+    "lumiere.markdown.editor.readableLineLength": false,
+  });
+  assert.equal(settings.get("preset", "obsidian"), "minimal");
+});
+
+test("a settings file damaged by hand is not written over", async (t) => {
+  const dir = await mkdtemp(path.join(tmpdir(), "lumiere-settings-"));
+  t.after(() => rm(dir, { recursive: true, force: true }));
+  const file = path.join(dir, "settings.json");
+  const settings = await nodeSettings(contributed, dir);
+  await writeFile(file, '{"lumiere.markdown.preset": "minimal",');
+  await assert.rejects(
+    settings.access.update("editor.readableLineLength", false),
+    /not valid JSON/,
+  );
+  assert.equal(
+    await readFile(file, "utf8"),
+    '{"lumiere.markdown.preset": "minimal",',
+  );
 });
 
 test("a plugin this host cannot serve is off by default; the others keep theirs", async () => {
