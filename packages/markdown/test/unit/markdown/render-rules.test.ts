@@ -78,6 +78,20 @@ test("an untitled callout of a hyphenated type reads as words, as in Obsidian", 
   );
 });
 
+test("a coloured highlight keeps its colour in a callout's first paragraph", () => {
+  for (const source of [
+    "> [!note]\n> ==🟢green== first",
+    "> [!note] Title\n> ==🟢green== first",
+    "==🟢green== plain",
+  ]) {
+    assert.match(
+      renderMarkdown(source),
+      /<mark data-highlight="green">green<\/mark>/,
+      source,
+    );
+  }
+});
+
 test("math delimiters and paragraph block IDs retain literal boundary behavior", () => {
   assert.match(
     renderMarkdown("$$\na + b\n$$"),

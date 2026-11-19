@@ -6,7 +6,9 @@ import { highlightColourAt } from "../dialect/highlight";
  * `<mark data-highlight="blue">text</mark>`, the emoji dropped.
  */
 export function highlights(md: MarkdownIt): void {
-  md.core.ruler.after("inline", "highlight_colour", (state) => {
+  // Last of the core rules: the callout rule, which also runs after
+  // "inline", parses its first paragraph's inline content again.
+  md.core.ruler.push("highlight_colour", (state) => {
     for (const block of state.tokens) {
       const children = block.children ?? [];
       children.forEach((token, index) => {
