@@ -37,7 +37,9 @@ any other line, and Backspace does not unwrap a `- ` or `> `. Home (Cmd+Left on 
 first to the start of a list item's, task's or quote's text, then to the line
 start (`line-start.ts`).
 Ctrl/Cmd+F opens an in-note find bar at the top right, like Obsidian's (capture-phase ownership so Vim cannot treat it as page-forward, BH-023; Ctrl/Cmd+H opens Replace the same way, BH-025): it
-shows "N / M" for the selected match (counting stops at 1000), typing extends
+shows "N / M" for the selected match (counting stops at 1000; a caret move
+looks the match up among those found, and an edit to the note is searched
+again 150 ms after typing pauses), typing extends
 the query at the caret even when the current query already has matches
 (CodeMirror's findNext would otherwise select-all the field), Enter and
 Shift+Enter (or F3, Ctrl/Cmd+G) move between matches, Aa toggles case,
