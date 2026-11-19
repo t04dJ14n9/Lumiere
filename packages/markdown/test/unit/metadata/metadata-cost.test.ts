@@ -83,12 +83,14 @@ test("block ids in one long quote each cost the same however many there are", ()
   assert.equal(note.blocks.z!.text, "para");
   const alone = metadata("para\n\n^solo");
   assert.equal(alone.blocks.solo!.text, "para");
-  // Sixteen times the ids: about sixteen times the time when each id reads
-  // its own place, far more when each reads the whole quote.
-  const small = fastest(quotedIds(500));
+  // Eight times the ids: about eight times the time when each id reads its
+  // own place, far more when each reads the whole quote (measured: 10x when
+  // each reads its place, 115x the whole quote). The smaller note takes a few
+  // milliseconds, so a busy machine's jitter does not decide the ratio.
+  const small = fastest(quotedIds(1000));
   const large = fastest(quotedIds(8000));
   assert.ok(
-    large / small < 32,
-    `500 ids: ${small.toFixed(1)} ms; 8,000: ${large.toFixed(1)} ms`,
+    large / small < 40,
+    `1,000 ids: ${small.toFixed(1)} ms; 8,000: ${large.toFixed(1)} ms`,
   );
 });
