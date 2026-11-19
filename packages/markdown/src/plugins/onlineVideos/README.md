@@ -135,7 +135,8 @@ Checked in VS Code 1.141 (Electron 43, Chromium 150) on 2026-10-09:
 
 - `manifest.ts`: enablement and the `bilibiliPlayer` setting.
 - `webview.ts`: the post-processor that swaps images for cards and asks the
-  host for details (once per video per editor).
+  host for details (once per video per editor; an empty answer is asked for
+  again by the next render, so the host's 5-minute retry can take effect).
 - `host.ts`: the trusted-only `details` RPC handler.
 - `details.ts`: provider lookups, cover fetches, timeout, concurrency
   and cache.
@@ -153,7 +154,7 @@ Checked in VS Code 1.141 (Electron 43, Chromium 150) on 2026-10-09:
   thumbnails.
 - `card.ts`: the card, details and the Play here swap.
 - `parse.test.ts`, `player.test.ts`, `details.test.ts` (fake fetch),
-  `meta.test.ts`, `host.test.ts`: unit tests;
+  `meta.test.ts`, `host.test.ts`, `remembered-details.test.ts`: unit tests;
   `test/browser/online-videos.spec.ts`: cards, covers, failures, reveal,
   Play here and trust.
 - `onlineVideos.css`: cards and frames, bundled through

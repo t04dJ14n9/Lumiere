@@ -15,6 +15,7 @@ import { markMathSource } from "./source-marks";
 import { errorMessage } from "../../shared/errors";
 import { decodeDataValue } from "../../markdown/html/helpers";
 import { config } from "./manifest";
+import { loadOnceUnlessFailed } from "../../shared/load-once";
 interface MathMount {
   macros: Record<string, string>;
 }
@@ -26,24 +27,31 @@ export interface MathJaxModule {
   typesetSync(expression: string, display: boolean): string | undefined;
 }
 let mathjaxMod: MathJaxModule | undefined;
-let mathjaxLoad: Promise<MathJaxModule> | undefined;
+let mathjaxLoadStarted = false;
+// A failed load (a chunk that did not arrive) is tried again by the next
+// formula, not remembered for the rest of the session.
+let loadMathJax = mathJaxLoader();
 
-function loadMathJax(): Promise<MathJaxModule> {
-  return (mathjaxLoad ??= import("./mathjax").then((mod) => {
-    mathjaxMod = mod;
-    return mod;
-  }));
+function mathJaxLoader(): () => Promise<MathJaxModule> {
+  return loadOnceUnlessFailed(() => {
+    mathjaxLoadStarted = true;
+    return import("./mathjax").then((mod) => {
+      mathjaxMod = mod;
+      return mod;
+    });
+  });
 }
 
 /** Test hook to prime the MathJax module reference for synchronous postProcess tests. */
 export function primeMathJaxForTest(mod: MathJaxModule | undefined): void {
   mathjaxMod = mod;
-  mathjaxLoad = mod ? Promise.resolve(mod) : undefined;
+  mathjaxLoadStarted = mod !== undefined;
+  loadMathJax = mod ? () => Promise.resolve(mod) : mathJaxLoader();
 }
 
 /** Test hook: true once apply/typeset has started a MathJax dynamic import. */
 export function mathJaxLoadStartedForTest(): boolean {
-  return mathjaxLoad !== undefined;
+  return mathjaxLoadStarted;
 }
 
 const mounts = new WeakMap<Context, MathMount>();

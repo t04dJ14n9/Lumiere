@@ -11,7 +11,8 @@ Obsidian.
 ## How it works
 
 The plugin registers inline/block renderers and a render post-processor. MathJax
-loads on demand; its SVG is sanitized before insertion. The font keeps many
+loads on demand (a load that fails is tried again by the next formula, not
+remembered for the session); its SVG is sanitized before insertion. The font keeps many
 glyphs (`\mathbb`, `\mathfrak`, `\mathscr`, `\mathcal`, `\ell`, AMS relations,
 arrows, accented letters) in separate files that MathJax asks for on first use;
 each is a chunk of the webview bundle, so they load offline and only when

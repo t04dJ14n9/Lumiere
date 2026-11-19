@@ -46,9 +46,8 @@ export const onlineVideosWebview: Plugin<Infer<typeof config>> = {
       details(video) {
         const part = video.part ?? 1;
         const key = `${video.provider}:${video.kind}:${video.id}:${part}`;
-        let answer = known.get(key);
-        if (!answer) {
-          answer = ctx.rpc
+        return rememberedDetails(known, key, () =>
+          ctx.rpc
             .call(protocol, "details", {
               provider: video.provider,
               id: video.id,
@@ -58,10 +57,8 @@ export const onlineVideosWebview: Plugin<Infer<typeof config>> = {
             .catch((error) => {
               ctx.logger.debug("Video details unavailable", error);
               return {};
-            });
-          known.set(key, answer);
-        }
-        return answer;
+            }),
+        );
       },
     };
     mounts.set(ctx, mount);
@@ -69,6 +66,32 @@ export const onlineVideosWebview: Plugin<Infer<typeof config>> = {
     ctx.on("render/postProcess", (pass) => mountVideos(pass, mount));
   },
 };
+
+/**
+ * The host's answer for a video, kept for re-rendered blocks. An empty one
+ * (the lookup failed, or the host had no answer yet) is not kept: the next
+ * render asks again, and the host, which caches answers for the window,
+ * decides when to retry the provider. A failure was otherwise remembered
+ * for as long as the note stayed open.
+ */
+export function rememberedDetails(
+  known: Map<string, Promise<VideoDetails>>,
+  key: string,
+  ask: () => Promise<VideoDetails>,
+): Promise<VideoDetails> {
+  const kept = known.get(key);
+  if (kept) {
+    return kept;
+  }
+  const answer = ask().then((details) => {
+    if (Object.keys(details).length === 0 && known.get(key) === answer) {
+      known.delete(key);
+    }
+    return details;
+  });
+  known.set(key, answer);
+  return answer;
+}
 
 function mountVideos(pass: RenderPass, mount: Mount): void {
   const images = pass.container.querySelectorAll<HTMLImageElement>(
