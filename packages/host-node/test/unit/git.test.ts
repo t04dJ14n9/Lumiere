@@ -44,12 +44,18 @@ function git(cwd: string, ...args: string[]): string {
   ).trim();
 }
 
-/** A repository whose note.md says "one" at HEAD. */
+/**
+ * A repository whose note.md says "one" at HEAD. A test's own `access` is
+ * handed to `beforeRemoval`: one disposed after the folder is gone would
+ * still be watching it, and Node's recursive watch on Linux throws, uncaught,
+ * when a folder it walks disappears.
+ */
 async function repository(t: test.TestContext): Promise<{
   dir: string;
   note: string;
   uri: string;
   access: NodeGitAccess;
+  beforeRemoval: (stop: () => void) => void;
 }> {
   const stops: Array<() => void> = [];
   const dir = await scratch(t, () => stops.forEach((stop) => stop()));
@@ -62,7 +68,13 @@ async function repository(t: test.TestContext): Promise<{
   git(dir, "commit", "--quiet", "-m", "First");
   const access = new NodeGitAccess({ roots: () => [fileUri(dir)] });
   stops.push(() => access.dispose());
-  return { dir, note, uri: fileUri(note), access };
+  return {
+    dir,
+    note,
+    uri: fileUri(note),
+    access,
+    beforeRemoval: (stop) => stops.push(stop),
+  };
 }
 
 function fileUri(file: string): string {
@@ -131,7 +143,7 @@ test("a note git does not know is untracked; past the diff limits, too large", a
 });
 
 test("F22: git failing to read a tracked note is unavailable, not untracked", async (t) => {
-  const { dir } = await repository(t);
+  const { dir, beforeRemoval } = await repository(t);
   const real = createSpawnBlameRunner();
   const access = new NodeGitAccess({
     roots: () => [fileUri(dir)],
@@ -142,7 +154,7 @@ test("F22: git failing to read a tracked note is unavailable, not untracked", as
       return real(request);
     },
   });
-  t.after(() => access.dispose());
+  beforeRemoval(() => access.dispose());
   const uri = fileUri(path.join(dir, "note.md"));
   assert.deepEqual(await access.baseline(uri, "HEAD"), {
     status: "unavailable",
@@ -153,12 +165,13 @@ test("F22: git failing to read a tracked note is unavailable, not untracked", as
 });
 
 test("a repository with no commit has nothing at HEAD", async (t) => {
-  const dir = await scratch(t);
+  const stops: Array<() => void> = [];
+  const dir = await scratch(t, () => stops.forEach((stop) => stop()));
   git(dir, "init", "--quiet");
   const note = path.join(dir, "note.md");
   await writeFile(note, "one\n");
   const access = new NodeGitAccess({ roots: () => [fileUri(dir)] });
-  t.after(() => access.dispose());
+  stops.push(() => access.dispose());
   assert.deepEqual(await access.baseline(fileUri(note), "HEAD"), {
     status: "untracked",
   });
@@ -180,7 +193,7 @@ test("identity is the repository's author", async (t) => {
 });
 
 test("a note is found in its repository however git spells the work tree", async (t) => {
-  const { dir, uri } = await repository(t);
+  const { dir, uri, beforeRemoval } = await repository(t);
   // On Windows git names `C:\Users\RUNNER~1\...` as `C:/Users/runneradmin/...`;
   // a case-insensitive disk has another spelling of every folder: its case.
   const respelled = path.join(
@@ -204,7 +217,7 @@ test("a note is found in its repository however git spells the work tree", async
         ? { stdout: `${respelled}\n`, stderr: "" }
         : real(request),
   });
-  t.after(() => access.dispose());
+  beforeRemoval(() => access.dispose());
   const head = git(dir, "rev-parse", "HEAD");
   assert.deepEqual(await access.baseline(uri, "HEAD"), {
     status: "ok",
@@ -239,10 +252,10 @@ test("a question answered after stopping starts no watch, so the host can exit",
 });
 
 test("a note outside the workspace roots is never asked about", async (t) => {
-  const { uri } = await repository(t);
+  const { uri, beforeRemoval } = await repository(t);
   const elsewhere = await scratch(t);
   const access = new NodeGitAccess({ roots: () => [fileUri(elsewhere)] });
-  t.after(() => access.dispose());
+  beforeRemoval(() => access.dispose());
   assert.deepEqual(await access.baseline(uri, "HEAD"), {
     status: "unavailable",
   });
@@ -295,7 +308,7 @@ test("this host offers Git, so blame and the gutter keep their settings", () => 
 });
 
 test("S5: every git command turns off the repository's fsmonitor, hooks and transports", async (t) => {
-  const { dir } = await repository(t);
+  const { dir, beforeRemoval } = await repository(t);
   const real = createSpawnBlameRunner();
   const argv: string[][] = [];
   const access = new NodeGitAccess({
@@ -305,7 +318,7 @@ test("S5: every git command turns off the repository's fsmonitor, hooks and tran
       return real(request);
     },
   });
-  t.after(() => access.dispose());
+  beforeRemoval(() => access.dispose());
   const uri = fileUri(path.join(dir, "note.md"));
   await access.blameLine(uri, 1, { contents: "one\n", version: 1 });
   await access.baseline(uri, "HEAD");
@@ -344,7 +357,7 @@ test("S5: a repository's core.fsmonitor program does not run when a note is stag
 });
 
 test("S5: git runs in no repository of a workspace the reader has not trusted", async (t) => {
-  const { dir, uri } = await repository(t);
+  const { dir, uri, beforeRemoval } = await repository(t);
   const real = createSpawnBlameRunner();
   let runs = 0;
   let trusted = false;
@@ -367,7 +380,7 @@ test("S5: git runs in no repository of a workspace the reader has not trusted", 
       },
     },
   });
-  t.after(() => access.dispose());
+  beforeRemoval(() => access.dispose());
   let changes = 0;
   const stop = access.onDidChange(() => (changes += 1));
   t.after(stop);
