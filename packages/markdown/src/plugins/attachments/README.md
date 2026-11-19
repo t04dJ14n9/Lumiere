@@ -106,7 +106,9 @@ and other non-routable addresses are refused (`localhost`, `127.0.0.0/8`,
 `fc00::/7`, `fe80::/10`, IPv4-mapped forms, and the `.local`, `.internal` and
 `.home.arpa` names), as is a redirect to anything but `http(s)`. A refused or
 oversized download counts as one that could not be downloaded. The same limits
-apply to a remote image in pasted HTML.
+apply to a remote image in pasted HTML; the page waits for each such image as
+long as the host may take to download and save it (45 seconds), and one that
+fails keeps its link while the others are still embedded.
 If the note was closed before that edit, the files stay in the vault and the
 dialog says the note was not changed.
 

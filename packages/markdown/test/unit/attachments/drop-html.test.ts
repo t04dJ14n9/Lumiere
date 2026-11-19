@@ -2,6 +2,8 @@ import test from "node:test";
 import assert from "node:assert/strict";
 import { markdownFromHtml } from "../../../src/plugins/pasteHtml/conversion";
 import { rewriteRemoteImages, decodeDataUri } from "../../../src/attachments";
+import { DOWNLOAD_LIMITS } from "../../../src/attachments/guarded-download";
+import { IMPORT_URL_TIMEOUT_MS } from "../../../src/plugins/attachments/protocol";
 import {
   isAttachmentDrag,
   urisFromDataTransfer,
@@ -118,6 +120,25 @@ test("shouldClaimEditorDrop is true for file drags so VS Code must not open tabs
     shouldClaimEditorDrop(transfer({ types: ["text/plain"] })),
     false,
   );
+});
+
+test("an image that cannot be imported keeps its link; the others are still rewritten", async () => {
+  const markdown =
+    "![a](https://ex.com/a.png) ![slow](https://slow.example/b.png) ![c](https://ex.com/c.png)";
+  const out = await rewriteRemoteImages(markdown, async (src) => {
+    if (src.includes("slow")) {
+      throw new Error('RPC "importUrl" timed out');
+    }
+    return `![[${src.slice(-5)}]]`;
+  });
+  assert.equal(
+    out,
+    "![[a.png]] ![slow](https://slow.example/b.png) ![[c.png]]",
+  );
+});
+
+test("a page waits for an image import as long as the host may download it", () => {
+  assert.ok(IMPORT_URL_TIMEOUT_MS > DOWNLOAD_LIMITS.timeoutMs);
 });
 
 test("rich HTML data+http images rewrite to embeds after conversion", async () => {

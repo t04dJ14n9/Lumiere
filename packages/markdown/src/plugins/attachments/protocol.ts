@@ -1,8 +1,15 @@
 import { Schema } from "@workshop/core";
 import { defineProtocol } from "../../shared/rpc/protocol";
+import { DOWNLOAD_LIMITS } from "../../attachments/guarded-download";
 
 /** The largest file a page can send: enough for a large screenshot. */
 export const MAX_ATTACHMENT_BYTES = 15_000_000;
+/**
+ * How long a page waits for `importUrl`: the host's download limit and time
+ * to write the file. Waiting less gave up on an image the host then saved,
+ * leaving the file unlinked.
+ */
+export const IMPORT_URL_TIMEOUT_MS = DOWNLOAD_LIMITS.timeoutMs + 15_000;
 /** `MAX_ATTACHMENT_BYTES` as base64. */
 const MAX_BASE64 = Math.ceil(MAX_ATTACHMENT_BYTES / 3) * 4;
 

@@ -44,7 +44,12 @@ export async function rewriteRemoteImages(
   const embeds = new Map<string, string | undefined>();
   for (const candidate of candidates) {
     if (!embeds.has(candidate.src)) {
-      embeds.set(candidate.src, await embedFor(candidate.src));
+      // One image that fails keeps its link; the others' saved files
+      // still get their embeds rather than being left unlinked.
+      embeds.set(
+        candidate.src,
+        await embedFor(candidate.src).catch(() => undefined),
+      );
     }
   }
   return markdown.replace(REMOTE_IMAGE, (full, _alt, src: string) => {

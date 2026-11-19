@@ -20,7 +20,7 @@ import {
 } from "../../attachments";
 import type {} from "../editor/api";
 import type {} from "../pasteHtml/api";
-import { protocol } from "./protocol";
+import { IMPORT_URL_TIMEOUT_MS, protocol } from "./protocol";
 import { saveDropped, saveDroppedFile, type DropSaver } from "./drop-save";
 
 export const attachmentsWebview: Plugin = {
@@ -194,7 +194,12 @@ async function saveSrc(ctx: Context, src: string): Promise<string | undefined> {
     return saveBytes(ctx, decoded.bytes, decoded.ext);
   }
   if (isHostSourceUrl(src)) {
-    const result = await ctx.rpc.call(protocol, "importUrl", { url: src });
+    const result = await ctx.rpc.call(
+      protocol,
+      "importUrl",
+      { url: src },
+      { timeout: IMPORT_URL_TIMEOUT_MS },
+    );
     return result.ok ? result.embed : undefined;
   }
   // Relative / vault paths are not downloaded.
