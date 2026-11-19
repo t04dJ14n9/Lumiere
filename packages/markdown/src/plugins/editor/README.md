@@ -215,7 +215,10 @@ so the toggle leaves one tab rather than Lumiere + Text Editor side by side
 (BH-011 / BH-003). This is **not** Obsidian's Ctrl/Cmd+E (Live Preview ↔
 Source); Source mode stays on the unbound **Toggle Live Preview/Source Mode**
 command. Selection and caret are not restored across the switch
-(`vscode.openWith` carries no range).
+(`vscode.openWith` carries no range). In a text editor the key is bound only
+where the toggle acts, a `.md` file's own editor: a diff editor, an untitled
+buffer or a notebook cell keeps VS Code's Ctrl+E (Quick Open) and Cmd+E (Use
+Selection for Find).
 
 **Open as Text** keeps the text editor. A just-reclaimed note also
 ignores repeated tab notifications for 10 s; an explicit native command jump
