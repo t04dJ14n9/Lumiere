@@ -314,7 +314,7 @@ export class NoteDocuments implements HostDocuments {
 
   private async write(note: NoteDocument): Promise<boolean> {
     this.cancelSave(note.uri);
-    await Promise.all([...this.willSave].map((listener) => listener(note)));
+    await this.prepareSave(note);
     if (await this.tookOutsideChange(note)) {
       return true;
     }
@@ -343,6 +343,26 @@ export class NoteDocuments implements HostDocuments {
       this.reloadUnawaited(note);
     }
     return true;
+  }
+
+  /**
+   * Run the will-save listeners (a page flushing its pending edits). As in
+   * VS Code, a listener that fails or times out does not stop the save: a
+   * page composing with an IME holds its edits back past the flush's wait,
+   * and failing the save for that reported an error for nothing. The held
+   * edits arrive later as edits, which schedule their own save.
+   */
+  private async prepareSave(note: NoteDocument): Promise<void> {
+    const results = await Promise.allSettled(
+      [...this.willSave].map((listener) => listener(note)),
+    );
+    for (const result of results) {
+      if (result.status === "rejected") {
+        this.log(
+          `Lumière saved ${note.uri} without waiting for its page: ${errorText(result.reason)}`,
+        );
+      }
+    }
   }
 
   /**

@@ -87,6 +87,28 @@ test("pending edits flush before a save writes, and save listeners hear it", asy
   assert.deepEqual(saved, ["one two"]);
 });
 
+test("a page that cannot flush before a save (composing, busy) does not fail the save", async (t) => {
+  const { file, uri, cleanup } = await note("one");
+  const logged: string[] = [];
+  const documents = new NoteDocuments(NODE_NOTES, 60_000, (message) =>
+    logged.push(message),
+  );
+  t.after(() => documents.dispose());
+  t.after(cleanup);
+  const document = await documents.open(uri);
+  const failed: string[] = [];
+  documents.onSaveFailed((item) => failed.push(item));
+  documents.onWillSave(async () => {
+    throw new Error("flush timed out after 1200ms");
+  });
+  await documents.apply(document, [{ from: 3, to: 3, insert: " two" }]);
+  assert.equal(await document.save(), true);
+  assert.equal(await readFile(file, "utf8"), "one two");
+  assert.equal(document.isDirty, false);
+  assert.deepEqual(failed, []);
+  assert.match(logged.join(" "), /flush timed out/);
+});
+
 test("another program's change reloads a clean note, and where both changed the same line unsaved typing stays", async (t) => {
   const { file, uri, cleanup } = await note("start");
   const documents = new NoteDocuments(NODE_NOTES, 60_000);
