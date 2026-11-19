@@ -94,14 +94,14 @@ export async function listVaultPaths(
   request: { root: string; limit: number },
 ): Promise<{ paths: string[]; partial: boolean }> {
   const { root, limit } = request;
-  const found = await collectFiles(files, root, limit + 1, false);
+  const budget = new ListingBudget(limit);
+  const found = await collectFiles(files, { root, budget, shallow: false });
   const paths = found
-    .slice(0, limit)
     .map((file) => file.relative)
     .filter(
       (relative) => !relative.startsWith("..") && !isIgnoredPath(relative),
     );
-  return { paths, partial: found.length > limit };
+  return { paths, partial: budget.isPartial };
 }
 
 /** Vault-relative paths (with `/`) of the files under `root`. */
