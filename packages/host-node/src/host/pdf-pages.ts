@@ -20,7 +20,7 @@ import {
   type ReadingPosition,
   type ViewSettings,
 } from "@workshop/pdf/portable";
-import type { PageSocket } from "./panel";
+import { awaitReconnect, type PageSocket } from "./panel";
 import {
   assertContained,
   fileUriToPath,
@@ -72,6 +72,7 @@ export class PdfPage implements PdfWebview {
   /** Only the newest load's bytes are kept: an older load's fetch has lost. */
   private bytes: { load: number; data: ArrayBuffer } | undefined;
   private disposed = false;
+  private cancelExpiry: () => void = () => {};
   private readonly connectTimer: ReturnType<typeof setTimeout>;
 
   constructor(
@@ -154,6 +155,7 @@ export class PdfPage implements PdfWebview {
       return;
     }
     clearTimeout(this.connectTimer);
+    this.cancelExpiry();
     this.socket?.close();
     this.socket = socket;
     socket.onMessage((text) => {
@@ -164,10 +166,16 @@ export class PdfPage implements PdfWebview {
         }
       }
     });
-    socket.onClose(() => {
-      if (this.socket === socket) {
-        this.dispose();
+    socket.onClose((dropped) => {
+      if (this.socket !== socket) {
+        return;
       }
+      if (!dropped) {
+        this.dispose();
+        return;
+      }
+      this.socket = undefined;
+      this.cancelExpiry = awaitReconnect(() => this.dispose());
     });
     for (const text of this.outbox.splice(0)) {
       socket.send(text);
@@ -184,6 +192,7 @@ export class PdfPage implements PdfWebview {
     }
     this.disposed = true;
     clearTimeout(this.connectTimer);
+    this.cancelExpiry();
     this.panel.dispose();
     this.socket?.close();
     this.bytes = undefined;

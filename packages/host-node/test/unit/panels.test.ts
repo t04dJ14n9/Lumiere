@@ -8,7 +8,7 @@ import { MARKDOWN_EDITOR, type PanelShell } from "@workshop/markdown/portable";
 import { NoteDocuments, noteFiles } from "../../src/host/documents";
 import { createNodePlatform } from "../../src/host/node-platform";
 import { PanelHub } from "../../src/host/panels";
-import type { PageSocket } from "../../src/host/panel";
+import { RECONNECT_GRACE_MS, type PageSocket } from "../../src/host/panel";
 
 const urls = () => ({
   cspSource: "'self'",
@@ -19,7 +19,7 @@ const urls = () => ({
 function fakeSocket() {
   const sent: unknown[] = [];
   let receive: (text: string) => void = () => {};
-  let closed: () => void = () => {};
+  let closed: (dropped?: boolean) => void = () => {};
   const socket: PageSocket = {
     send: (text) => sent.push(JSON.parse(text)),
     onMessage: (listener) => {
@@ -37,6 +37,8 @@ function fakeSocket() {
     sent,
     page: (frame: unknown) => receive(JSON.stringify(frame)),
     drop: () => closed(),
+    /** The connection broke; the page will try to reconnect. */
+    breakConnection: () => closed(true),
   };
 }
 
@@ -133,5 +135,46 @@ test("a page that never connects is dropped after the timeout", async (t) => {
   const { uri, hub } = await setup(t, 20);
   const { id } = await hub.open({ uri, urls });
   await new Promise((resolve) => setTimeout(resolve, 60));
+  assert.equal(hub.get(id), undefined);
+});
+
+test("a page whose connection breaks reconnects to its panel and gets what was sent meanwhile", async (t) => {
+  const { uri, hub, shells } = await setup(t);
+  const { id } = await hub.open({ uri, urls });
+  const first = fakeSocket();
+  hub.attach(id, first.socket);
+  let disposed = false;
+  shells[0]!.onDispose(() => {
+    disposed = true;
+  });
+  first.breakConnection();
+  shells[0]!.transport.send({ while: "away" });
+  assert.equal(disposed, false);
+  assert.deepEqual(first.sent, []);
+
+  const second = fakeSocket();
+  assert.equal(hub.attach(id, second.socket), true);
+  assert.deepEqual(second.sent, [{ ch: "rpc", data: { while: "away" } }]);
+  const received: unknown[] = [];
+  shells[0]!.transport.listen((message) => received.push(message));
+  second.page({ ch: "rpc", data: { back: true } });
+  assert.deepEqual(received, [{ back: true }]);
+});
+
+test("a panel whose page does not reconnect within the grace closes", async (t) => {
+  const { uri, hub, shells } = await setup(t);
+  const { id } = await hub.open({ uri, urls });
+  const page = fakeSocket();
+  hub.attach(id, page.socket);
+  let disposed = false;
+  shells[0]!.onDispose(() => {
+    disposed = true;
+  });
+  t.mock.timers.enable({ apis: ["setTimeout"] });
+  page.breakConnection();
+  t.mock.timers.tick(RECONNECT_GRACE_MS - 1);
+  assert.equal(disposed, false);
+  t.mock.timers.tick(1);
+  assert.equal(disposed, true);
   assert.equal(hub.get(id), undefined);
 });

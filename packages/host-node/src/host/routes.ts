@@ -206,9 +206,11 @@ function acceptSocket({
         };
       },
       onClose: (listener) => {
-        ws.on("close", listener);
+        // 1006: the connection broke with no close frame from the page.
+        const closed = (code: number) => listener(code === 1006);
+        ws.on("close", closed);
         return () => {
-          ws.off("close", listener);
+          ws.off("close", closed);
         };
       },
       close: () => ws.close(),

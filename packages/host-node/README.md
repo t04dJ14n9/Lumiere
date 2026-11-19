@@ -47,6 +47,14 @@ the embedder's iframe. Its shim stands in for VS Code's webview API: what
 VS Code would carry between webview and extension travels over the page's
 socket to its panel here.
 
+A page whose socket breaks (the connection drops without the page closing
+it) keeps its panel for 30 seconds: the page shows a dialog that pauses
+typing and reconnects, and frames sent meanwhile wait on both sides; the
+editor recovers any revision it missed through the document's `catchUp`.
+When the host no longer knows the panel (it restarted), the page stops
+trying and offers to reload. A page that closes its socket (its tab closed)
+closes its panel at once.
+
 A page's URL names a note and the workspace it is shown from, but a page
 decides nothing about which folders are workspaces. The embedder registers
 each one with `host.addRoot` (by real path) before it serves the page: the app
@@ -111,6 +119,7 @@ forbids this package from importing `vscode` or any embedder.
 - `src/host/git.ts`, `src/host/git-blobs.ts`, `src/host/git-program.ts`: Git from the `git` command line (blame, a note at HEAD or in the index, staging, each repository's changes), and which `git` to run.
 - `src/host/inert.ts`: diffs, status entries and panels, which have no counterpart yet.
 - `src/page/shim.ts`, `src/page/ui.ts`, `src/page/theme.ts`: the page's stand-in for VS Code.
+- `src/page/connection.ts`, `src/page/disconnected.ts`: the page's socket, reconnected when it drops, and the dialog shown while it is down.
 - `scripts/assets.mjs`, `scripts/menus.mjs`: what every embedder ships beside its code (the editor, the shim, the settings, the menu).
 
 ## Limits

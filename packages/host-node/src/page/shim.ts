@@ -21,6 +21,8 @@ import { parseHostFrame, type PageFrame } from "../protocol";
 import { applyTheme, followSystemTheme } from "./theme";
 import { openMenuAtSelection, reportContextMenus } from "./context-menu";
 import { createUi } from "./ui";
+import { reconnectingSocket } from "./connection";
+import { showConnection } from "./disconnected";
 
 interface VsCodeApi {
   postMessage(message: unknown): void;
@@ -158,27 +160,15 @@ function connectChannel(panel: string): (frame: PageFrame) => void {
 
 function connect(panel: string): (frame: PageFrame) => void {
   const scheme = location.protocol === "https:" ? "wss" : "ws";
-  const socket = new WebSocket(
-    `${scheme}://${location.host}/lumiere/socket?panel=${encodeURIComponent(panel)}`,
-  );
-  const waiting: string[] = [];
+  const url = `${scheme}://${location.host}/lumiere/socket?panel=${encodeURIComponent(panel)}`;
   const receive = receiver((frame) => send(frame));
-  socket.addEventListener("open", () => {
-    for (const text of waiting.splice(0)) {
-      socket.send(text);
-    }
-  });
-  socket.addEventListener("message", (event) => receive(String(event.data)));
-  socket.addEventListener("close", () => {
-    document.body.dataset.lumiereDisconnected = "";
+  const sendText = reconnectingSocket({
+    open: () => new WebSocket(url),
+    receive,
+    onState: showConnection,
   });
   function send(frame: PageFrame): void {
-    const text = JSON.stringify(frame);
-    if (socket.readyState === WebSocket.OPEN) {
-      socket.send(text);
-    } else {
-      waiting.push(text);
-    }
+    sendText(JSON.stringify(frame));
   }
   return send;
 }
