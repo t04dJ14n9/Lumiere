@@ -90,9 +90,21 @@ button.primary:hover {
   background: var(--vscode-list-hoverBackground);
 }
 .file-tree {
+  position: relative;
   flex: 1;
   overflow: auto;
   padding: 6px 4px;
+}
+/* Only the rows in view are drawn, each at its place (tree-rows.ts). */
+.tree-rows {
+  position: relative;
+}
+.tree-row {
+  position: absolute;
+  left: 0;
+  box-sizing: border-box;
+  height: 24px;
+  line-height: 18px;
 }
 .file-tree-partial {
   margin: 4px 12px 8px;
@@ -100,14 +112,6 @@ button.primary:hover {
   color: var(--vscode-descriptionForeground, inherit);
 }
 
-.file-tree ul {
-  list-style: none;
-  margin: 0;
-  padding-left: 12px;
-}
-.file-tree > ul {
-  padding-left: 0;
-}
 .tree-folder,
 .tree-file {
   display: block;

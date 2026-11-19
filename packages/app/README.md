@@ -154,6 +154,7 @@ With no `--vault`, the vault used last opens again, if it is still there.
 - `src/shell/settings.ts`, `src/shell/settings-view.ts`: the settings, and how the Settings tab lays them out.
 - `src/shell/ui-state.ts`, `src/shared/ui-state.ts`, `src/server/ui-state.ts`: the layout and Color Theme, kept by the server.
 - `src/shell/tabs.ts`, `src/shell/tree.ts`, `src/shell/tree-state.ts`: tabs and tree state, as pure functions.
+- `src/shell/tree-rows.ts`: the file tree as the rows it shows; only those in view are drawn, so a vault of tens of thousands of files scrolls as a small one does.
 - `src/shell/saved-tabs.ts`: the open tabs kept with the layout, and opened again at launch.
 - `src/shell/folders.ts`: which of the file list's folders are open, kept with the layout.
 - `src/shell/api.ts`, `src/shell/views.ts`: the server's API and the tree views, from the window.
