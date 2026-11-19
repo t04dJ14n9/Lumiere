@@ -1,7 +1,10 @@
 import test from "node:test";
 import assert from "node:assert/strict";
 import { MemoryTempFs } from "../support/memory-temp-fs";
-import { publishIdeContextTemp } from "../../src/ide-context/temp-publish";
+import {
+  ideContextFolderName,
+  publishIdeContextTemp,
+} from "../../src/ide-context/temp-publish";
 
 test("publish: final payload name is not visible until lease sidecar exists", async () => {
   const fs = new MemoryTempFs();
@@ -46,4 +49,10 @@ test("publish: crash after lease before final leaves orphan lease only (no final
   );
   assert.equal(fs.exists("ide-context-crash.json"), false);
   assert.equal(fs.exists("ide-context-crash.json.lease"), true);
+});
+
+test("S3: each user has a packet folder of their own; no ids, the shared name", () => {
+  assert.equal(ideContextFolderName(501), "agent-ide-context-501");
+  assert.equal(ideContextFolderName(0), "agent-ide-context-0");
+  assert.equal(ideContextFolderName(undefined), "agent-ide-context");
 });

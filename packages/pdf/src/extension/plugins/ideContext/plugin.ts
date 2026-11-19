@@ -14,8 +14,10 @@ import {
   sendIdeContext,
   type SendIdeContextDeps,
 } from "./delivery";
+import { makePrivateFolder } from "./private-folder";
 import {
   createVsCodeIdeContextHost,
+  ideContextFolderName,
   publishIdeContextTemp,
   renewLeaseAtomic,
   type TempFs,
@@ -25,9 +27,8 @@ import type { AgentTargetSetting } from "../../../shared/agent-target";
 import type { PdfPanels } from "../pdf/panels";
 
 const nodeTempFs: TempFs = {
-  mkdir: async (p, o) => {
-    await fs.mkdir(p, { recursive: true, mode: o?.mode });
-  },
+  // Only ever the packet folder, in the shared temp folder: it must be ours.
+  mkdir: (p) => makePrivateFolder(p),
   writeFile: (p, data, o) => fs.writeFile(p, data, { mode: o?.mode }),
   rename: (a, b) => fs.rename(a, b),
   readFile: (p) => fs.readFile(p),
@@ -126,7 +127,7 @@ async function sendDeps(): Promise<SendIdeContextDeps> {
     publishTemp: publishIdeContextTemp,
     renewLease: renewLeaseAtomic,
     tempFs: nodeTempFs,
-    tempDir: path.join(os.tmpdir(), "agent-ide-context"),
+    tempDir: path.join(os.tmpdir(), ideContextFolderName(process.getuid?.())),
     owner: "pdfWorkshop",
   };
 }

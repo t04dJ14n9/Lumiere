@@ -1,10 +1,10 @@
-import { mkdir, writeFile } from "node:fs/promises";
-import * as os from "node:os";
+import { writeFile } from "node:fs/promises";
 import * as path from "node:path";
 import * as vscode from "vscode";
 import { createVsCodeIdeContextHost } from "@workshop/agents/ide-context";
 import type { AgentHost, CopyLinkTarget } from "../../shared/host";
 import { ideContextTemp } from "../ide-context-temp";
+import { makePrivateFolder, userTempFolder } from "../private-temp";
 
 /** Extensions that bring an agent chat of their own besides the editor's. */
 const AGENT_EXTENSIONS = ["anthropic.claude-code", "openai.chatgpt"];
@@ -29,8 +29,8 @@ export function createAgentHost(): AgentHost {
       };
     },
     async writeScratchFile(name, text) {
-      const folder = path.join(os.tmpdir(), "markdown-workshop-agent");
-      await mkdir(folder, { recursive: true, mode: 0o700 });
+      const folder = userTempFolder("markdown-workshop-agent");
+      await makePrivateFolder(folder);
       const file = path.join(folder, path.basename(name));
       await writeFile(file, text, { mode: 0o600 });
       return vscode.Uri.file(file).toString();
