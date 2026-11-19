@@ -33,7 +33,7 @@ export interface InlineContext {
    * off screen. A renderer of a node that can reach far past the screen (an
    * unclosed `$$`) marks only this range.
    */
-  readonly visible?: { from: number; to: number };
+  readonly visible?: { from: number; to: number } | undefined;
   /** Inclusive selection touch, extended through inline ancestors and abutting elements. */
   revealed(from: number, to: number): boolean;
   mark(
@@ -221,4 +221,4 @@ export function markdownTree(state: EditorState): Tree {
 }
 
 export { editTouches, isPlainTextEdit } from "./plain-edit";
-export { changedBlocks } from "./invalidation";
+export { changedBlocks } from "./changed-region";

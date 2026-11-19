@@ -58,7 +58,7 @@ export class FindPanel implements Panel {
   private readonly navigation: FindNavigation;
   private readonly inputLifetime = new AbortController();
   private found?: FoundMatches;
-  private pendingCount?: ReturnType<typeof setTimeout>;
+  private pendingCount: ReturnType<typeof setTimeout> | undefined;
 
   static of(view: EditorView): FindPanel | undefined {
     return panels.get(view);

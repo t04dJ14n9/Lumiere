@@ -101,7 +101,9 @@ text change may have altered: every top-level syntax node, before or after
 the change, that touches it or the region found so far, widened to whole
 lines until stable), `selection` (lines the caret left or
 entered) or `metadata` (an effect, a reconfiguration or a renderer change:
-every line).
+every line). The `text` region is computed in `changed-region.ts`, which
+needs no DOM; `api.ts` offers it to other plugins' indexes as
+`changedBlocks` (sticky scroll's headings, the line-number gutter).
 
 - `blockIndex` indexes only the `text` region again. Blocks before it are
   kept as the same objects; blocks after it are shifted copies. A region over

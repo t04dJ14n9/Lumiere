@@ -1,5 +1,5 @@
 import type { Plugin } from "@workshop/core";
-import type { ActiveEditor, HostDocument } from "../../shared/host";
+import type { ActiveEditor, HostDocument, PanelPort } from "../../shared/host";
 import type { EditorPanel, Editors } from "../editor/api";
 import { protocol as editorProtocol } from "../editor/protocol";
 import { countText, formatCounts, type Counts } from "./count";
@@ -91,7 +91,6 @@ async function activeText(options: {
 }
 
 /**
-/**
  * Each note's counts while its version stands. Every caret move asks again,
  * and counting a long note takes a while; its text changes only with the version.
  */
@@ -117,9 +116,9 @@ function documentCounts(document: HostDocument): Counts {
  * only when it last reported a selection.
  */
 class PanelCounter {
-  private readonly empty = new WeakMap<EditorPanel, boolean>();
+  private readonly empty = new WeakMap<PanelPort, boolean>();
 
-  selectionChanged(panel: EditorPanel, hasSelection: boolean): void {
+  selectionChanged(panel: PanelPort, hasSelection: boolean): void {
     this.empty.set(panel, !hasSelection);
   }
 

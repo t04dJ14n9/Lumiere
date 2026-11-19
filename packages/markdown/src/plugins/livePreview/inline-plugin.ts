@@ -13,6 +13,7 @@ import {
   offscreenReuse,
   outdatesOffscreenDrawing,
   type OffscreenDrawing,
+  type OffscreenReuse,
 } from "./offscreen-reuse";
 
 /**
@@ -48,7 +49,8 @@ function shouldRebuildInline(update: ViewUpdate): boolean {
 export class HybridInline {
   decorations: DecorationSet;
   private wasComposing = false;
-  private offscreen: { drawing?: OffscreenDrawing } = {};
+  private offscreen: { reuse?: OffscreenReuse; drawing?: OffscreenDrawing } =
+    {};
   constructor(view: EditorView) {
     this.decorations = inlineDecorations(
       view.state,
