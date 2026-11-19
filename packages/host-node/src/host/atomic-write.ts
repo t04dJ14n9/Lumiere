@@ -65,12 +65,57 @@ export async function writeAtomic(
     await handle.writeFile(data);
     await handle.sync();
     await handle.close();
-    await rename(temporary, file);
+    await renameOver(temporary, file);
   } catch (error) {
     await handle.close().catch(() => {});
     await unlink(temporary).catch(() => {});
     throw error;
   }
+}
+
+/** How `renameOver` renames, and on which platform; a test replaces them. */
+export interface RenameAttempts {
+  readonly rename?: (from: string, to: string) => Promise<void>;
+  readonly platform?: NodeJS.Platform;
+  /** The pauses before each retry; their count is the number of retries. */
+  readonly delaysMs?: readonly number[];
+}
+
+/** About two and a half seconds in all, doubling from 10 ms. */
+const RENAME_RETRY_DELAYS_MS = [10, 20, 40, 80, 160, 320, 640, 1280];
+
+/** Errors Windows gives for a moment while another program has the target open. */
+const HELD_OPEN = new Set(["EPERM", "EACCES", "EBUSY"]);
+
+/**
+ * Rename `from` over `to`. On Windows the rename fails with EPERM, EACCES or
+ * EBUSY while any other program has `to` open (a virus scanner checking the
+ * note just written, the search indexer, a sync client, an editor reading
+ * it), so it is tried again for a short while, as VS Code and graceful-fs
+ * do. Elsewhere those errors mean the folder refuses the write, which no
+ * wait changes.
+ */
+export async function renameOver(
+  from: string,
+  to: string,
+  attempts: RenameAttempts = {},
+): Promise<void> {
+  const {
+    rename: renameFile = rename,
+    platform = process.platform,
+    delaysMs = RENAME_RETRY_DELAYS_MS,
+  } = attempts;
+  for (const delay of platform === "win32" ? delaysMs : []) {
+    try {
+      return await renameFile(from, to);
+    } catch (error) {
+      if (!HELD_OPEN.has((error as NodeJS.ErrnoException).code ?? "")) {
+        throw error;
+      }
+    }
+    await new Promise((resolve) => setTimeout(resolve, delay));
+  }
+  await renameFile(from, to);
 }
 
 /**

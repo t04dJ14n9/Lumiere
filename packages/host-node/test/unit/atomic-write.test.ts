@@ -15,7 +15,7 @@ import {
 import { tmpdir } from "node:os";
 import * as path from "node:path";
 import { pathToFileURL } from "node:url";
-import { replaceFile } from "../../src/host/atomic-write";
+import { renameOver, replaceFile } from "../../src/host/atomic-write";
 
 async function directory(t: test.TestContext, prefix: string) {
   const dir = await realpath(await mkdtemp(path.join(tmpdir(), prefix)));
@@ -97,4 +97,67 @@ test("a link to a file outside the workspace is not saved through", async (t) =>
   );
   assert.equal(await readFile(secret, "utf8"), "keep");
   assert.deepEqual(await readdir(outside), ["secret.md"]);
+});
+
+/** A rename that fails with `code` the first `failures` times, as Windows does while another program has the target open. */
+function renameHeld(code: string, failures: number) {
+  const calls: Array<[string, string]> = [];
+  const rename = async (from: string, to: string) => {
+    calls.push([from, to]);
+    if (calls.length <= failures) {
+      throw Object.assign(new Error(`${code}: rename '${from}' -> '${to}'`), {
+        code,
+        syscall: "rename",
+      });
+    }
+  };
+  return { calls, rename };
+}
+
+test("on Windows a rename over a note another program holds open is tried again", async () => {
+  for (const code of ["EPERM", "EACCES", "EBUSY"]) {
+    const held = renameHeld(code, 2);
+    await renameOver("a.tmp", "a.md", {
+      rename: held.rename,
+      platform: "win32",
+      delaysMs: [0, 0, 0],
+    });
+    assert.equal(held.calls.length, 3, code);
+  }
+});
+
+test("a rename that keeps failing on Windows fails once the retries are spent", async () => {
+  const held = renameHeld("EPERM", Infinity);
+  await assert.rejects(
+    renameOver("a.tmp", "a.md", {
+      rename: held.rename,
+      platform: "win32",
+      delaysMs: [0, 0],
+    }),
+    { code: "EPERM" },
+  );
+  assert.equal(held.calls.length, 3);
+});
+
+test("elsewhere, or for another error, a failed rename is not tried again", async () => {
+  const posix = renameHeld("EACCES", 1);
+  await assert.rejects(
+    renameOver("a.tmp", "a.md", {
+      rename: posix.rename,
+      platform: "linux",
+      delaysMs: [0],
+    }),
+    { code: "EACCES" },
+  );
+  assert.equal(posix.calls.length, 1);
+  const missing = renameHeld("ENOENT", 1);
+  await assert.rejects(
+    renameOver("a.tmp", "a.md", {
+      rename: missing.rename,
+      platform: "win32",
+      delaysMs: [0],
+    }),
+    { code: "ENOENT" },
+  );
+  assert.equal(missing.calls.length, 1);
 });
