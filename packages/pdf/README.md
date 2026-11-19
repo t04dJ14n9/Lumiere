@@ -270,7 +270,8 @@ it at once; no reload is needed.
   when the shim's path contains `%`, which cmd would expand. The shim picks
   the window whose workspace contains the agent's folder (the most specific
   one when workspaces nest), from the files each running bridge writes to
-  `~/.agent-pdf-viewer/bridges/`. If no window matches, or two match
+  `~/.agent-pdf-viewer/bridges/` (a bridge starting removes those of
+  windows that crashed). If no window matches, or two match
   equally, it refuses rather than guess; set `AGENT_PDF_BRIDGE_PID` (shown
   in the extension's log) to name the window.
 

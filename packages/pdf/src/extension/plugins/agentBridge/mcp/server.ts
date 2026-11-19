@@ -32,6 +32,7 @@ import * as path from "node:path";
 import * as vscode from "vscode";
 import { StreamableHTTPServerTransport } from "@modelcontextprotocol/sdk/server/streamableHttp.js";
 import { tokenScrubber } from "./scrub";
+import { sweepDiscoveryFiles } from "./discovery-sweep";
 import type { AgentHandoff } from "../handoff";
 import type { NoteSelections } from "../note-selections";
 import type { LastPdf } from "../last-pdf";
@@ -299,6 +300,7 @@ async function announce(
 ): Promise<void> {
   const discoveryFile = path.join(discoveryDir, `${port}.json`);
   await mkdir(discoveryDir, { recursive: true, mode: 0o700 });
+  await sweepDiscoveryFiles(discoveryDir);
   undo.push(() => rm(discoveryFile, { force: true }));
   await writeFile(discoveryFile, JSON.stringify(info, null, 2), {
     mode: 0o600,
