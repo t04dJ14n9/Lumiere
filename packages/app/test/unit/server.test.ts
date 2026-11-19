@@ -313,6 +313,65 @@ test("notes opened before the window listens reach it, in order, when it does", 
   assert.deepEqual(paths, ["first.md", "daily/today.md"]);
 });
 
+/** Every `data:` line of an event stream, read for `ms`. */
+function streamEvents(
+  port: number,
+  { path: route, cookie, ms }: { path: string; cookie: string; ms: number },
+): Promise<unknown[]> {
+  return new Promise((resolve, reject) => {
+    let received = "";
+    const req = httpRequest(
+      {
+        host: "127.0.0.1",
+        port,
+        path: route,
+        headers: { host: `127.0.0.1:${port}`, cookie },
+      },
+      (res) => {
+        res.setEncoding("utf8");
+        res.on("data", (chunk: string) => {
+          received += chunk;
+        });
+      },
+    );
+    req.on("error", (error) => (req.destroyed ? undefined : reject(error)));
+    req.end();
+    setTimeout(() => {
+      req.destroy();
+      resolve(
+        received
+          .split("\n")
+          .filter((line) => line.startsWith("data: "))
+          .map((line) => JSON.parse(line.slice(6)) as unknown),
+      );
+    }, ms);
+  });
+}
+
+test("a note opened before the window listens is kept for the window, not its canvas's stream", async (t) => {
+  const { server, vault, cookie } = await fixture(t);
+  // The canvas's stream connects first and stays open.
+  const canvas = streamEvents(server.port, {
+    path: "/api/events?only=ink",
+    cookie,
+    ms: 400,
+  });
+  await new Promise((resolve) => setTimeout(resolve, 50));
+  const opened = await send(server.port, "/api/open", {
+    method: "POST",
+    headers: { cookie, "content-type": "application/json" },
+    body: JSON.stringify({ path: path.join(vault, "daily", "today.md") }),
+  });
+  assert.equal(opened.status, 200);
+  const window = await streamEvents(server.port, {
+    path: "/api/events",
+    cookie,
+    ms: 150,
+  });
+  assert.deepEqual(window, [{ type: "open", vault, path: "daily/today.md" }]);
+  assert.deepEqual(await canvas, []);
+});
+
 test("the plugins' tree views are served behind the token", async (t) => {
   const { server, cookie } = await fixture(t);
   const listed = await send(server.port, "/lumiere/views", {

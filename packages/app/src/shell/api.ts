@@ -94,12 +94,19 @@ export const httpApi = {
     run: (command: string) => post("/lumiere/commands", { command }),
   },
   events(listener: (event: ServerEvent) => void): () => void {
-    const source = new EventSource("/api/events");
-    source.onmessage = (message: MessageEvent<string>) =>
-      listener(JSON.parse(message.data) as ServerEvent);
-    return () => source.close();
+    return listen("/api/events", listener);
   },
 };
+
+function listen(
+  url: string,
+  listener: (event: ServerEvent) => void,
+): () => void {
+  const source = new EventSource(url);
+  source.onmessage = (message: MessageEvent<string>) =>
+    listener(JSON.parse(message.data) as ServerEvent);
+  return () => source.close();
+}
 
 /** Drawings for the server's plugins, on the window's canvas (ink.ts). */
 export const httpInk = {
@@ -112,7 +119,9 @@ export const httpInk = {
     post("/api/ink", sketch === undefined ? { id } : { id, sketch }),
   /** Start Insert Sketch in the note last focused. */
   insertSketch: () => post("/api/sketch", {}),
-  events: httpApi.events,
+  // Drawings only: a note waiting to open must go to the window's stream.
+  events: (listener: (event: ServerEvent) => void) =>
+    listen("/api/events?only=ink", listener),
 };
 
 export const api = {

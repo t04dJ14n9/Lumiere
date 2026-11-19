@@ -45,9 +45,15 @@ export interface ApiState {
   readonly version: string;
 }
 
+/**
+ * The open event streams, each with the event types it asked for
+ * (`?only=ink`), or undefined for every type.
+ */
+type Streams = Map<ServerResponse, ReadonlySet<string> | undefined>;
+
 export function createApi(state: ApiState): Api {
   const { vaults, ui, version } = state;
-  const streams = new Set<ServerResponse>();
+  const streams: Streams = new Map();
   const waiting = relayEvents(state, streams);
   return {
     async handle(req, res) {
@@ -80,17 +86,14 @@ export function createApi(state: ApiState): Api {
             files: await vaults.files(url.searchParams.get("vault") ?? ""),
           });
         case "GET /api/events":
-          openStream(res, streams);
-          for (const event of waiting.splice(0)) {
-            sendEvent(res, event);
-          }
+          openStream(res, { url, streams, waiting });
           return true;
         default:
           return drawingRoute(route, { req, res }, state);
       }
     },
     close() {
-      for (const stream of streams) {
+      for (const stream of streams.keys()) {
         stream.end();
       }
       streams.clear();
@@ -136,34 +139,45 @@ async function drawingRoute(
 }
 
 /**
- * Send vault events and drawings to every open event stream. Notes to open
- * that come before any window listens wait in the returned list (the desktop
- * app passes a note from Finder while its window is still loading); a window
- * that connects later reads a drawing with GET /api/ink.
+ * Send vault events and drawings to every open event stream that takes
+ * them. Notes to open that come before a stream that takes them (the
+ * window's, not its canvas's `?only=ink`) wait in the returned list: the
+ * desktop app passes a note from Finder while its window is still loading,
+ * and the window's two streams connect in either order. A window that
+ * connects later reads a drawing with GET /api/ink.
  */
 function relayEvents(
   { vaults, ink }: Pick<ApiState, "vaults" | "ink">,
-  streams: ReadonlySet<ServerResponse>,
+  streams: Streams,
 ): VaultEvent[] {
   const waiting: VaultEvent[] = [];
+  const broadcast = (event: ServerEvent): boolean => {
+    let sent = false;
+    for (const [stream, types] of streams) {
+      if (accepts(types, event.type)) {
+        sendEvent(stream, event);
+        sent = true;
+      }
+    }
+    return sent;
+  };
   vaults.onEvent((event) => {
-    if (streams.size === 0 && event.type === "open") {
+    if (!broadcast(event) && event.type === "open") {
       waiting.push(event);
       if (waiting.length > MAX_WAITING) {
         waiting.shift();
       }
-      return;
-    }
-    for (const stream of streams) {
-      sendEvent(stream, event);
     }
   });
-  ink.onChange(() => {
-    for (const stream of streams) {
-      sendEvent(stream, { type: "ink" });
-    }
-  });
+  ink.onChange(() => broadcast({ type: "ink" }));
   return waiting;
+}
+
+function accepts(
+  types: ReadonlySet<string> | undefined,
+  type: string,
+): boolean {
+  return types === undefined || types.has(type);
 }
 
 function json(res: ServerResponse, status: number, body: unknown): true {
@@ -221,16 +235,34 @@ function inkBody(body: unknown): { id: string; sketch: string | undefined } {
   return { id: value.id, sketch: value.sketch };
 }
 
-/** Server-sent events: one `data:` line of JSON per vault event. */
-function openStream(res: ServerResponse, streams: Set<ServerResponse>): void {
+/**
+ * Server-sent events: one `data:` line of JSON per vault event, of the types
+ * the stream asked for (`?only=a,b`) or of every type. A stream that takes
+ * notes to open is sent those waiting for one.
+ */
+function openStream(
+  res: ServerResponse,
+  {
+    url,
+    streams,
+    waiting,
+  }: { url: URL; streams: Streams; waiting: VaultEvent[] },
+): void {
+  const only = url.searchParams.get("only");
+  const types = only ? new Set(only.split(",")) : undefined;
   res.writeHead(200, {
     "content-type": "text/event-stream",
     "cache-control": "no-store",
     connection: "keep-alive",
   });
   res.write(": lumiere\n\n");
-  streams.add(res);
+  streams.set(res, types);
   res.on("close", () => streams.delete(res));
+  if (accepts(types, "open")) {
+    for (const event of waiting.splice(0)) {
+      sendEvent(res, event);
+    }
+  }
 }
 
 function sendEvent(stream: ServerResponse, event: ServerEvent): void {
