@@ -109,3 +109,29 @@ test("createCommandPalette scopes editor commands to active panel and runs offer
   );
   assert.deepEqual(ran, ["lumiere.markdown.toggleBold"]);
 });
+
+test("an embedder that passes no command list runs no command from the palette route", async () => {
+  const keys = new ContextKeys();
+  const commands = createHostCommands(() => {}, keys);
+  const ran: string[] = [];
+  commands.register("lumiere.markdown.scratch.create", () => {
+    ran.push("scratch");
+  });
+  const palette = createCommandPalette({
+    contributions: [],
+    keys,
+    settings: createHostSettings({
+      contributed: [],
+      store: { read: async () => undefined, write: async () => {} },
+      saved: undefined,
+    }),
+    panels: { active: () => undefined },
+    commands,
+    viewType: EDITOR,
+    log: () => {},
+  });
+  assert.deepEqual(palette.list(), []);
+  assert.equal(await palette.run("lumiere.markdown.scratch.create"), false);
+  assert.equal(await palette.run("setContext"), false);
+  assert.deepEqual(ran, []);
+});

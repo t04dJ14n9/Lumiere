@@ -132,7 +132,9 @@ of the Host mid-handshake), it recreates the iframe once, and DSH's Reload and
   not yet shown in DSH: each would be a DSH sidebar tab drawing a tree from
   `@workshop/host-node/views`, as the desktop app's sidebar does.
 - Commands have no palette or keybindings in DSH yet; what Lumière does
-  through clicks, links, the editor and its context menus works.
+  through clicks, links, the editor and its context menus works. The host
+  already lists the palette's commands (`GET /lumiere/commands`, from the
+  bundle's `commands.json`) and runs only those.
 - Copy Link for Agent copies to the clipboard: paste into DSH's chat.
 - Renaming a note from its inline title is not available.
 - The editor page is same-origin with DSH, so its strict content security
