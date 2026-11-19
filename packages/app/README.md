@@ -127,6 +127,9 @@ With no `--vault`, the vault used last opens again, if it is still there.
 | `GET /api/events`, `?only=ink` | server-sent events: vaults changed, a note to open, a drawing started or ended waiting (`{"type":"ink"}`); `only` keeps the listed types. Notes to open that come before a stream that takes them wait for one |
 | `GET /api/ink`, `POST /api/ink` `{"id","sketch"?}` | the drawing the plugins wait for (`{"id","title","sketch"}`, the sketch as its file's metadata JSON), or `{}`; the window's drawing, or none when cancelled, accepted only for the drawing waiting |
 | `POST /api/sketch` | start Insert Sketch in the note last focused |
+| `POST /api/files/note`, `POST /api/files/folder` `{"vault","path"}` | a new, empty note or a new folder, by its path in an open vault (the window only) |
+| `POST /api/files/rename` `{"vault","from","to"}` | rename or move a file or folder, updating the links to it as VS Code does; `{"notUpdated"}` names the notes left as they were (the window only). The event stream then says `{"type":"renamed","from","to"}`, by absolute paths, as it does for a note renamed by its title |
+| `POST /api/files/delete` `{"vault","path","permanently"?}` | to the system's trash (`src/server/trash.ts`): `{"deleted":true,"trashed":true}`; where there is none, `{"deleted":false}` and nothing is deleted until the window, once the reader confirms, sends `permanently` (the window only) |
 | `GET /api/git-trust`, `POST /api/git-trust` `{"vault","allow"}` | `{"waiting"}`: the vaults git waits to be trusted in (`{"type":"git-trust"}` on the event stream when it changes); the reader's answer for one (the window only) |
 | `/lumiere/*` | the editor pages and tree views (`@workshop/host-node`) |
 
@@ -140,6 +143,7 @@ With no `--vault`, the vault used last opens again, if it is still there.
 - `src/shared/shell-key.ts`: the key's header and meta tag, for both sides.
 - `src/server/api.ts`: the API above.
 - `src/server/vaults.ts`: open and recent vaults, and their files.
+- `src/server/files-api.ts`, `src/server/trash.ts`: the file tree's new notes and folders, renames and moves, and deletion to the system's trash (`trash` on macOS 15 and later, `gio trash` on Linux, the Recycle Bin on Windows), through host-node's `LumiereHost.files`.
 - `src/shell/App.tsx`, `src/shell/components/`: the window.
 - `src/shell/opening.ts`: opening vaults and notes from the picker, menu, links and the server.
 - `src/shell/commands.ts`: the window's commands and VS Code's keys for them.

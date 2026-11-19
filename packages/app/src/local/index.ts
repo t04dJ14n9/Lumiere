@@ -4,7 +4,11 @@
  * embedder mounts its folders (vaults, and the host's data) and says where
  * the built editor, page shim and workers are.
  */
-import type { LumiereHost, MenuContribution } from "@workshop/host-node/core";
+import {
+  uriPath,
+  type LumiereHost,
+  type MenuContribution,
+} from "@workshop/host-node/core";
 import {
   startHostWeb,
   type EditorPageUrls,
@@ -43,6 +47,27 @@ export interface LocalHostConfig {
   readonly ink?: InkService;
 }
 
+/**
+ * The host's workspace roots are the open vaults, as the server registers
+ * them (docs/HOSTS_PLAN.md section 4): the file tree's changes and a note's
+ * pages stay inside them.
+ */
+function trustOpenVaults(
+  host: LumiereHost,
+  files: Mounts,
+  open: readonly string[],
+): void {
+  const roots = new Set(open.map((vault) => files.uriOf(vault)));
+  for (const root of roots) {
+    host.addRoot(root);
+  }
+  for (const root of host.workspaceRoots()) {
+    if (!roots.has(root)) {
+      host.removeRoot(root);
+    }
+  }
+}
+
 export interface LocalHost {
   readonly backend: WindowBackend;
   readonly host: LumiereHost;
@@ -68,9 +93,22 @@ export async function startLocalHost(
   const vaults = new LocalVaults(
     files,
     dataFile(files, `${dataRoot}/window/vaults.json`),
-    (event) => events.emit(event),
+    (event) => {
+      if (event.type === "vaults") {
+        trustOpenVaults(host, files, event.open);
+      }
+      events.emit(event);
+    },
   );
   await vaults.load();
+  // Renames by the file tree or a note's title, for the window's tabs.
+  host.files.onDidRename(({ oldUri, newUri }) =>
+    events.emit({
+      type: "renamed",
+      from: uriPath(oldUri),
+      to: uriPath(newUri),
+    }),
+  );
   const backend = createLocalBackend({
     host,
     files,

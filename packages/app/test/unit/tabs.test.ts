@@ -11,6 +11,7 @@ import {
   tabsToSave,
   type TabsState,
 } from "../../src/shell/tabs";
+import { renameAction } from "../../src/shell/opening";
 
 const open = (state: TabsState, path: string, vault = "/v") =>
   tabsReducer(state, { type: "open", vault, path });
@@ -145,5 +146,50 @@ test("the open notes are kept for the next launch and reopen there, the shown on
   assert.deepEqual(
     onlyW.tabs.map((tab) => tab.id),
     [tabId("/w", "b.md")],
+  );
+});
+
+test("F36: tabs follow a moved file or folder, keeping their places, and close with a deleted one", () => {
+  let state = open(noTabs, "a/x.md");
+  state = open(state, "b.md");
+  state = open(state, "a/y.md");
+  state = open(state, "b.md");
+  state = tabsReducer(state, {
+    type: "moved",
+    vault: "/v",
+    from: "a",
+    to: "c/a",
+  });
+  assert.deepEqual(
+    state.tabs.map((tab) => tab.kind === "note" && tab.path),
+    ["c/a/x.md", "b.md", "c/a/y.md"],
+  );
+  assert.equal(state.active, tabId("/v", "b.md"));
+  assert.deepEqual(state.recent, [
+    tabId("/v", "b.md"),
+    tabId("/v", "c/a/y.md"),
+    tabId("/v", "c/a/x.md"),
+  ]);
+  // "ab.md" is not in folder "a"; another vault's "a" is not this one.
+  const other = open(open(noTabs, "ab.md"), "a/x.md", "/w");
+  assert.deepEqual(
+    tabsReducer(other, { type: "moved", vault: "/v", from: "a", to: "z" }),
+    other,
+  );
+  state = tabsReducer(state, { type: "removed", vault: "/v", path: "c" });
+  assert.deepEqual(
+    state.tabs.map((tab) => tab.kind === "note" && tab.path),
+    ["b.md"],
+  );
+});
+
+test("F36: a rename the server announces moves the tabs of the open vault that holds it", () => {
+  assert.deepEqual(
+    renameAction({ from: "/v/a/x.md", to: "/v/b/x.md" }, ["/w", "/v"]),
+    { type: "moved", vault: "/v", from: "a/x.md", to: "b/x.md" },
+  );
+  assert.equal(
+    renameAction({ from: "/elsewhere/x.md", to: "/v/x.md" }, ["/v"]),
+    undefined,
   );
 });

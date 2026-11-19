@@ -4,7 +4,14 @@
 import test from "node:test";
 import assert from "node:assert/strict";
 import { request as httpRequest } from "node:http";
-import { mkdir, mkdtemp, realpath, rm, writeFile } from "node:fs/promises";
+import {
+  mkdir,
+  mkdtemp,
+  readFile,
+  realpath,
+  rm,
+  writeFile,
+} from "node:fs/promises";
 import { tmpdir } from "node:os";
 import * as path from "node:path";
 import { startServer, type RunningServer } from "../../src/server/server";
@@ -610,3 +617,124 @@ test("S5: only the window answers whether git may run in a vault", async (t) => 
   assert.equal(own.status, 400);
   assert.match(own.body, /did not ask/);
 });
+
+test("F36: the window makes, renames, moves and deletes a vault's files; a page may not", async (t) => {
+  const { server, vault, cookie } = await fixture(t);
+  const key = await windowKey(server.port, cookie);
+  const page = {
+    cookie,
+    "content-type": "application/json",
+    origin: `http://127.0.0.1:${server.port}`,
+    "sec-fetch-site": "same-origin",
+    "sec-fetch-dest": "empty",
+  };
+  const post = (route: string, body: object, headers: object = {}) =>
+    send(server.port, route, {
+      method: "POST",
+      headers: { ...page, [SHELL_KEY_HEADER]: key, ...headers },
+      body: JSON.stringify({ vault, ...body }),
+    });
+  const events = new EventCollector(server.port, cookie);
+  t.after(() => events.close());
+  await events.ready;
+
+  assert.equal(
+    (
+      await post(
+        "/api/files/note",
+        { path: "x.md" },
+        { [SHELL_KEY_HEADER]: "" },
+      )
+    ).status,
+    403,
+  );
+  assert.equal(
+    (await post("/api/files/note", { path: "Untitled.md" })).status,
+    200,
+  );
+  assert.equal(
+    (await post("/api/files/folder", { path: "archive" })).status,
+    200,
+  );
+  const moved = await post("/api/files/rename", {
+    from: "daily/today.md",
+    to: "archive/today.md",
+  });
+  assert.equal(moved.status, 200);
+  assert.deepEqual(JSON.parse(moved.body), { notUpdated: [] });
+  assert.equal(
+    await readFile(path.join(vault, "archive", "today.md"), "utf8"),
+    "# Today",
+  );
+  await events.until((event) => event.type === "renamed");
+  assert.deepEqual(
+    events.seen.find((event) => event.type === "renamed"),
+    {
+      type: "renamed",
+      from: path.join(vault, "daily", "today.md"),
+      to: path.join(vault, "archive", "today.md"),
+    },
+  );
+  assert.equal(
+    (await post("/api/files/rename", { from: "archive", to: "../out" })).status,
+    400,
+  );
+  const deleted = await post("/api/files/delete", {
+    path: "archive",
+    permanently: true,
+  });
+  assert.deepEqual(JSON.parse(deleted.body), { deleted: true, trashed: false });
+  await assert.rejects(readFile(path.join(vault, "archive", "today.md")));
+});
+
+/** The window's event stream, collected. */
+class EventCollector {
+  readonly seen: { type: string; [key: string]: unknown }[] = [];
+  readonly ready: Promise<void>;
+  private readonly request: ReturnType<typeof httpRequest>;
+
+  constructor(port: number, cookie: string) {
+    let opened = () => {};
+    this.ready = new Promise((resolve) => (opened = resolve));
+    this.request = httpRequest(
+      {
+        host: "127.0.0.1",
+        port,
+        path: "/api/events",
+        headers: { host: `127.0.0.1:${port}`, cookie },
+      },
+      (res) => {
+        res.setEncoding("utf8");
+        let buffer = "";
+        res.on("data", (chunk: string) => {
+          buffer += chunk;
+          if (buffer.includes(": lumiere")) {
+            opened();
+          }
+          for (const line of buffer.split("\n")) {
+            if (line.startsWith("data: ")) {
+              this.seen.push(JSON.parse(line.slice(6)));
+            }
+          }
+          buffer = buffer.slice(buffer.lastIndexOf("\n") + 1);
+        });
+      },
+    );
+    this.request.on("error", () => {});
+    this.request.end();
+  }
+
+  async until(found: (event: { type: string }) => boolean): Promise<void> {
+    for (let waited = 0; waited < 5000; waited += 20) {
+      if (this.seen.some(found)) {
+        return;
+      }
+      await new Promise((resolve) => setTimeout(resolve, 20));
+    }
+    assert.fail("the event never came");
+  }
+
+  close(): void {
+    this.request.destroy();
+  }
+}

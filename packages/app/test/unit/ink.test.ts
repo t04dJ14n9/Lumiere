@@ -61,6 +61,11 @@ async function api(t: test.TestContext) {
     ui: new UiStore(path.join(dir, "window.json")),
     ink,
     gitTrust: new GitTrustStore(path.join(dir, "git-trust.json")),
+    files: {
+      openVaults: () => [],
+      files: { onDidRename: () => () => {} } as never,
+      trash: async () => false,
+    },
     shellKey: "shell-key",
     insertSketch: () => {
       sketchesStarted += 1;

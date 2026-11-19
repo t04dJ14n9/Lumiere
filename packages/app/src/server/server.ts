@@ -26,6 +26,8 @@ import { createApi, type Api } from "./api";
 import { withAppDefaults } from "./defaults";
 import { admit, newToken } from "./auth";
 import { GitTrustStore } from "./git-trust";
+import type { FileRoutesState } from "./files-api";
+import { createTrash } from "./trash";
 import { WindowInk } from "./ink";
 import { serveShellPage } from "./shell-page";
 import { UiStore } from "./ui-state";
@@ -66,6 +68,7 @@ export async function startServer(setup: ServerSetup): Promise<RunningServer> {
     ui,
     ink,
     gitTrust,
+    files: fileRoutes(vaults, lumiere),
     shellKey,
     insertSketch: () => insertSketch(lumiere, setup.logger),
     version: setup.version,
@@ -143,6 +146,15 @@ async function startEditor(setup: ServerSetup, ink: WindowInk) {
     log: (message) => setup.logger.warn(message),
   });
   return { lumiere, editor, gitTrust };
+}
+
+/** The file tree's changes, in the open vaults, to the system's trash first. */
+function fileRoutes(vaults: Vaults, lumiere: LumiereHost): FileRoutesState {
+  return {
+    openVaults: () => vaults.list().open,
+    files: lumiere.files,
+    trash: createTrash(),
+  };
 }
 
 /** Insert Sketch in the note last focused; the drawing comes back through POST /api/ink. */

@@ -6,7 +6,13 @@
  * reach the window.
  */
 import type { IncomingMessage, ServerResponse } from "node:http";
+import { fileURLToPath } from "node:url";
 import { fromShell } from "./auth";
+import {
+  answerFileRoute,
+  FILE_ROUTES,
+  type FileRoutesState,
+} from "./files-api";
 import type { GitTrustStore } from "./git-trust";
 import type { WindowInk } from "./ink";
 import type { UiStore } from "./ui-state";
@@ -28,6 +34,8 @@ const WINDOW_ONLY = new Set([
   "POST /api/vaults",
   "POST /api/open",
   "POST /api/git-trust",
+  // A page writes its own note; only the file tree renames and deletes.
+  ...FILE_ROUTES,
 ]);
 
 export interface Api {
@@ -38,17 +46,24 @@ export interface Api {
 }
 
 /**
- * A vault event, a drawing started or ended waiting (GET /api/ink), or the
- * vaults git waits to be trusted in changed (GET /api/git-trust).
+ * A vault event, a drawing started or ended waiting (GET /api/ink), the
+ * vaults git waits to be trusted in changed (GET /api/git-trust), or a file
+ * or folder was renamed or moved (by the file tree or a note's title), by
+ * absolute paths.
  */
 export type ServerEvent =
-  VaultEvent | { readonly type: "ink" } | { readonly type: "git-trust" };
+  | VaultEvent
+  | { readonly type: "ink" }
+  | { readonly type: "git-trust" }
+  | { readonly type: "renamed"; readonly from: string; readonly to: string };
 
 export interface ApiState {
   readonly vaults: Vaults;
   readonly ui: UiStore;
   readonly ink: WindowInk;
   readonly gitTrust: GitTrustStore;
+  /** The file tree's changes (files-api.ts). */
+  readonly files: FileRoutesState;
   /** What the window's page was given to prove it, not a page in it, adds a folder. */
   readonly shellKey: string;
   /** Start Insert Sketch in the note last focused (the window's pencil). */
@@ -102,10 +117,7 @@ export function createApi(state: ApiState): Api {
           openStream(res, { url, streams, waiting });
           return true;
         default:
-          return (
-            (await gitTrustRoute(route, { req, res }, state.gitTrust)) ||
-            drawingRoute(route, { req, res }, state)
-          );
+          return otherRoute(route, { req, res }, state);
       }
     },
     close() {
@@ -127,6 +139,23 @@ function refusedFromPage(
     return false;
   }
   return json(res, 403, { error: "Only the window may do that" });
+}
+
+/** The file tree's changes, git's trust and drawings; false for any other route. */
+async function otherRoute(
+  route: string,
+  exchange: { req: IncomingMessage; res: ServerResponse },
+  state: ApiState,
+): Promise<boolean> {
+  if (FILE_ROUTES.has(route)) {
+    const body = await jsonBody(exchange.req);
+    const answer = await answerFileRoute(route, body, state.files);
+    return json(exchange.res, 200, answer);
+  }
+  return (
+    (await gitTrustRoute(route, exchange, state.gitTrust)) ||
+    drawingRoute(route, exchange, state)
+  );
 }
 
 /**
@@ -194,7 +223,12 @@ async function drawingRoute(
  * connects later reads a drawing with GET /api/ink.
  */
 function relayEvents(
-  { vaults, ink, gitTrust }: Pick<ApiState, "vaults" | "ink" | "gitTrust">,
+  {
+    vaults,
+    ink,
+    gitTrust,
+    files,
+  }: Pick<ApiState, "vaults" | "ink" | "gitTrust" | "files">,
   streams: Streams,
 ): VaultEvent[] {
   const waiting: VaultEvent[] = [];
@@ -218,6 +252,13 @@ function relayEvents(
   });
   ink.onChange(() => broadcast({ type: "ink" }));
   gitTrust.onAsk(() => broadcast({ type: "git-trust" }));
+  files.files.onDidRename(({ oldUri, newUri }) => {
+    broadcast({
+      type: "renamed",
+      from: fileURLToPath(oldUri),
+      to: fileURLToPath(newUri),
+    });
+  });
   return waiting;
 }
 

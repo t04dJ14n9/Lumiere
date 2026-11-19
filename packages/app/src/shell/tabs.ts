@@ -42,7 +42,16 @@ export type TabsAction =
   /** The tab beside the shown one: 1 to the right, -1 to the left, wrapping. */
   | { readonly type: "step"; readonly by: 1 | -1 }
   /** The tab shown before this one. */
-  | { readonly type: "last" };
+  | { readonly type: "last" }
+  /** A file or folder of the vault moved: its tabs follow it. */
+  | {
+      readonly type: "moved";
+      readonly vault: string;
+      readonly from: string;
+      readonly to: string;
+    }
+  /** A file or folder of the vault was deleted: its tabs close. */
+  | { readonly type: "removed"; readonly vault: string; readonly path: string };
 
 export const SETTINGS_TAB = "settings";
 
@@ -88,7 +97,45 @@ export function tabsReducer(state: TabsState, action: TabsAction): TabsState {
       return activate(state, state.recent[1]);
     case "close":
       return close(state, action.id);
+    case "moved":
+      return moved(state, action);
+    case "removed":
+      return state.tabs
+        .filter((tab) => isIn(tab, action.vault, action.path))
+        .reduce((left, tab) => close(left, tab.id), state);
   }
+}
+
+/** Whether a note tab shows `path` of `vault` or a file in that folder. */
+function isIn(tab: Tab, vault: string, path: string): tab is NoteTab {
+  return (
+    tab.kind === "note" &&
+    tab.vault === vault &&
+    (tab.path === path || tab.path.startsWith(`${path}/`))
+  );
+}
+
+/** The tabs of what moved show it at its new path, keeping their places. */
+function moved(
+  state: TabsState,
+  { vault, from, to }: { vault: string; from: string; to: string },
+): TabsState {
+  const ids = new Map<string, string>();
+  const tabs = state.tabs.map((tab): Tab => {
+    if (!isIn(tab, vault, from)) {
+      return tab;
+    }
+    const path = to + tab.path.slice(from.length);
+    const id = tabId(vault, path);
+    ids.set(tab.id, id);
+    return { ...tab, id, path };
+  });
+  const rename = (id: string) => ids.get(id) ?? id;
+  return {
+    tabs,
+    active: state.active === undefined ? undefined : rename(state.active),
+    recent: state.recent.map(rename),
+  };
 }
 
 /** Show a tab, opening it after the others when it is not open yet. */

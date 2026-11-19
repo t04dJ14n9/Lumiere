@@ -33,7 +33,7 @@ export function useOpening(
     (folder?: string) => chooseVault(folder, setPickingVault, report),
     [report],
   );
-  const { reload, select, refreshFiles } = vaults;
+  const { reload, refreshFiles } = vaults;
   const closeVault = useCallback(
     (folder: string) =>
       report(
@@ -48,20 +48,7 @@ export function useOpening(
       openNotePath({ path, vaults, refreshFiles, dispatch, report }),
     [vaults, refreshFiles, dispatch, report],
   );
-  const onServerEvent = useCallback(
-    (event: ServerEvent) => {
-      if (event.type === "vaults") {
-        report(reload().then(() => event.added && select(event.added)));
-      } else if (event.type === "open" && isNotePath(event.path)) {
-        select(event.vault);
-        if (!vaults.files.some((entry) => entry.path === event.path)) {
-          refreshFiles();
-        }
-        dispatch({ type: "open", vault: event.vault, path: event.path });
-      }
-    },
-    [vaults.files, reload, select, refreshFiles, dispatch, report],
-  );
+  const onServerEvent = useServerEventHandler(vaults, dispatch, report);
   return useMemo(
     () => ({
       openVault,
@@ -79,6 +66,31 @@ export function useOpening(
       openPath,
       onServerEvent,
     ],
+  );
+}
+
+/** What the window does for an event from its host: vaults, renames, notes to open. */
+function useServerEventHandler(
+  vaults: VaultState,
+  dispatch: Dispatch<TabsAction>,
+  report: (work: Promise<unknown>) => void,
+): (event: ServerEvent) => void {
+  const { reload, select, refreshFiles, open, files } = vaults;
+  return useCallback(
+    (event: ServerEvent) => {
+      if (event.type === "vaults") {
+        report(reload().then(() => event.added && select(event.added)));
+      } else if (event.type === "renamed") {
+        followRename(event, { open, dispatch, refreshFiles });
+      } else if (event.type === "open" && isNotePath(event.path)) {
+        select(event.vault);
+        if (!files.some((entry) => entry.path === event.path)) {
+          refreshFiles();
+        }
+        dispatch({ type: "open", vault: event.vault, path: event.path });
+      }
+    },
+    [open, files, reload, select, refreshFiles, dispatch, report],
   );
 }
 
@@ -129,4 +141,42 @@ function openNotePath({
     }
   }
   report(backend().vaults.open(path));
+}
+
+/**
+ * The tabs action for a file or folder renamed or moved (by the file tree
+ * or a note's title), when an open vault holds it before and after.
+ */
+export function renameAction(
+  event: { readonly from: string; readonly to: string },
+  openVaults: readonly string[],
+): TabsAction | undefined {
+  for (const vault of openVaults) {
+    const from = relativeTo(vault, event.from);
+    const to = relativeTo(vault, event.to);
+    if (from !== undefined && to !== undefined) {
+      return { type: "moved", vault, from, to };
+    }
+  }
+  return undefined;
+}
+
+/** The tabs follow what moved, and the file tree is listed again. */
+function followRename(
+  event: { readonly from: string; readonly to: string },
+  {
+    open,
+    dispatch,
+    refreshFiles,
+  }: {
+    readonly open: readonly string[];
+    readonly dispatch: Dispatch<TabsAction>;
+    readonly refreshFiles: () => void;
+  },
+): void {
+  const action = renameAction(event, open);
+  if (action) {
+    dispatch(action);
+  }
+  refreshFiles();
 }

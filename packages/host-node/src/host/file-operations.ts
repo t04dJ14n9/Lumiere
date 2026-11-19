@@ -23,6 +23,12 @@ export interface VaultFileOperations {
   /** Delete a file, or a folder with everything in it, for good. */
   remove(uri: string): Promise<void>;
   /**
+   * The platform's path of a file or folder that exists inside the roots,
+   * also through symbolic links, to hand another program (the system's
+   * trash); rejects otherwise.
+   */
+  contain(uri: string): Promise<string>;
+  /**
    * A file or folder went away by other means (the system's trash): notes
    * open there are not written back when their pages close.
    */
@@ -66,6 +72,13 @@ export function createFileOperations(parts: {
         await removeTree(files, uri);
       }
       documents.forget(uri);
+    },
+    async contain(uri) {
+      await inside(uri);
+      if (!(await files.linkStat(uri))) {
+        throw new Error("There is no such file or folder");
+      }
+      return files.toPath(uri);
     },
     forget: (uri) => documents.forget(uri),
     onDidRename: (listener) => documents.renames.onDidRename(listener),

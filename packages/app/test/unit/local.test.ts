@@ -174,3 +174,41 @@ test(
     page.dispose();
   },
 );
+
+test(
+  "F36: the web window makes, renames and deletes files, deleting only once confirmed",
+  { skip: !built && "the editor is not built" },
+  async (t) => {
+    const { backend, events } = await localWindow(t);
+    await backend.vaults.add("/vaults/Notes");
+    await backend.files.createFolder("/vaults/Notes", "archive");
+    await backend.files.createNote("/vaults/Notes", "archive/New.md");
+    await assert.rejects(
+      backend.files.createNote("/vaults/Notes", "archive/New.md"),
+    );
+    await backend.files.rename("/vaults/Notes", "Other.md", "archive/Other.md");
+    assert.deepEqual(events.at(-1), {
+      type: "renamed",
+      from: "/vaults/Notes/Other.md",
+      to: "/vaults/Notes/archive/Other.md",
+    });
+    // No trash here: nothing goes until the reader confirms.
+    assert.deepEqual(
+      await backend.files.remove("/vaults/Notes", "archive", {
+        permanently: false,
+      }),
+      { deleted: false, trashed: false },
+    );
+    assert.deepEqual(
+      await backend.files.remove("/vaults/Notes", "archive", {
+        permanently: true,
+      }),
+      { deleted: true, trashed: false },
+    );
+    const { files } = await backend.vaults.files("/vaults/Notes");
+    assert.equal(
+      files.some((file) => file.path.startsWith("archive")),
+      false,
+    );
+  },
+);

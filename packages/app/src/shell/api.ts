@@ -37,7 +37,15 @@ export type ServerEvent =
   /** A drawing started or ended waiting; read it with `httpInk.waiting`. */
   | { readonly type: "ink" }
   /** The vaults git waits to be trusted in changed (`httpGitTrust.waiting`). */
-  | { readonly type: "git-trust" };
+  | { readonly type: "git-trust" }
+  /** A file or folder was renamed or moved, by its paths in the vaults' form. */
+  | { readonly type: "renamed"; readonly from: string; readonly to: string };
+
+/** What deleting did: to the trash, or nothing yet where there is none. */
+export interface Deletion {
+  readonly deleted: boolean;
+  readonly trashed: boolean;
+}
 
 /** A drawing the server's plugins wait for (src/server/ink.ts). */
 export interface InkWaiting {
@@ -103,6 +111,31 @@ export const httpApi = {
   },
   events(listener: (event: ServerEvent) => void): () => void {
     return listen("/api/events", listener);
+  },
+  // The file tree's changes, which only the window may ask for.
+  files: {
+    createNote: (vault: string, path: string) =>
+      post("/api/files/note", { vault, path }, shellKeyHeaders()),
+    createFolder: (vault: string, path: string) =>
+      post("/api/files/folder", { vault, path }, shellKeyHeaders()),
+    rename: async (vault: string, from: string, to: string) =>
+      (
+        (await post(
+          "/api/files/rename",
+          { vault, from, to },
+          shellKeyHeaders(),
+        )) as { notUpdated: string[] }
+      ).notUpdated,
+    remove: async (
+      vault: string,
+      path: string,
+      { permanently }: { permanently: boolean },
+    ) =>
+      (await post(
+        "/api/files/delete",
+        { vault, path, permanently },
+        shellKeyHeaders(),
+      )) as Deletion,
   },
 };
 

@@ -185,6 +185,17 @@ test("deleting a folder removes what is in it, never what a link inside points a
     operations.remove(uri(path.join(root, "notes"))),
     /no such/,
   );
+  // What may go to another program (the trash) is checked the same way.
+  await writeFile(path.join(root, "kept.md"), "");
+  assert.equal(
+    await operations.contain(uri(path.join(root, "kept.md"))),
+    path.join(root, "kept.md"),
+  );
+  await assert.rejects(operations.contain(uri(outside)), /outside/);
+  await assert.rejects(
+    operations.contain(uri(path.join(root, "gone.md"))),
+    /no such/,
+  );
 });
 
 test("a note's title renames it only within its folder and kind", async (t) => {
