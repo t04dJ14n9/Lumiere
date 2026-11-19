@@ -20,7 +20,10 @@ the field, overlay, scroll listener and margins.
 - `manifest.ts`: on-by-default enablement and maximum row setting.
 - `model.ts`: section index, ancestor selection and document state field;
   a plain edit outside every heading moves the index instead of extracting
-  every heading again.
+  every heading again, and any other edit reads again only the top-level
+  blocks Live Preview's `changedBlocks` names (every block when Live Preview's
+  tree is absent). `test/unit/stickyScroll/incremental-headings.test.ts`
+  checks both against a rebuild over random edits.
 - `view.ts`: measured overlay, heading buttons and scroll margins.
 - `webview.ts`: owned registration, configuration updates and jump history.
 - `stickyScroll.css`: VS Code theme colors, compact rows and focus styling.

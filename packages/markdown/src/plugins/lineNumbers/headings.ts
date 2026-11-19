@@ -3,9 +3,14 @@ import {
   StateField,
   type EditorState,
   type Range,
+  type Transaction,
 } from "@codemirror/state";
 import { GutterMarker, gutterLineClass } from "@codemirror/view";
-import { isPlainTextEdit, markdownTree } from "../livePreview/api";
+import {
+  changedBlocks,
+  isPlainTextEdit,
+  markdownTree,
+} from "../livePreview/api";
 
 /**
  * Marks the gutter cells of heading, code and list item lines, so line
@@ -57,9 +62,21 @@ const containers = new Set([
   "ListItem",
 ]);
 
-export function headingLines(state: EditorState): RangeSet<GutterMarker> {
+/** The marked lines of the note, or of the lines starting in `range`. */
+export function headingLines(
+  state: EditorState,
+  range?: { from: number; to: number },
+): RangeSet<GutterMarker> {
+  return RangeSet.of(markedLines(state, range), true);
+}
+
+function markedLines(
+  state: EditorState,
+  range?: { from: number; to: number },
+): Range<GutterMarker>[] {
   const ranges: Range<GutterMarker>[] = [];
   markdownTree(state).iterate({
+    ...range,
     enter(node) {
       const level = /^(?:ATXHeading|SetextHeading)(\d)$/.exec(node.name)?.[1];
       if (level) {
@@ -87,7 +104,34 @@ export function headingLines(state: EditorState): RangeSet<GutterMarker> {
       return containers.has(node.name);
     },
   });
-  return RangeSet.of(ranges, true);
+  // The walk also enters blocks that only touch the range.
+  return range
+    ? ranges.filter(
+        (marker) => marker.from >= range.from && marker.from <= range.to,
+      )
+    : ranges;
+}
+
+/**
+ * After an edit that may have made or unmade marked lines (Enter, a `#`, a
+ * fence), only the lines of the top-level blocks Live Preview found changed
+ * are marked again; the others keep their markers, moved.
+ */
+function remarkChangedBlocks(
+  value: RangeSet<GutterMarker>,
+  transaction: Transaction,
+): RangeSet<GutterMarker> {
+  const region = changedBlocks(transaction);
+  if (!region) {
+    return headingLines(transaction.state);
+  }
+  return value.map(transaction.changes).update({
+    filterFrom: region.from,
+    filterTo: region.to,
+    filter: (from) => from < region.from || from > region.to,
+    add: markedLines(transaction.state, region),
+    sort: true,
+  });
 }
 
 export const headingGutterClasses = StateField.define<RangeSet<GutterMarker>>({
@@ -97,9 +141,13 @@ export const headingGutterClasses = StateField.define<RangeSet<GutterMarker>>({
       // No line became or stopped being a heading, list item or code line.
       return value.map(transaction.changes);
     }
-    return markdownTree(transaction.state) ===
-      markdownTree(transaction.startState)
-      ? value
+    if (
+      markdownTree(transaction.state) === markdownTree(transaction.startState)
+    ) {
+      return value;
+    }
+    return transaction.docChanged
+      ? remarkChangedBlocks(value, transaction)
       : headingLines(transaction.state);
   },
   provide: (field) => gutterLineClass.from(field),

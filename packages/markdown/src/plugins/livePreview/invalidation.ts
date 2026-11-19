@@ -51,6 +51,23 @@ export function changedRegion(tr: Transaction): Region | null {
 }
 
 /**
+ * For indexes of the note's blocks outside Live Preview's own: the span of
+ * the new document outside which a text change left the top-level blocks as
+ * they were, shifted (`changedRegion`'s invariant). `undefined` when the text
+ * did not change or a state has no Live Preview tree to tell.
+ */
+export function changedBlocks(tr: Transaction): Region | undefined {
+  if (
+    !tr.docChanged ||
+    !tr.startState.field(documentTree, false) ||
+    !tr.state.field(documentTree, false)
+  ) {
+    return undefined;
+  }
+  return changedRegion(tr) ?? undefined;
+}
+
+/**
  * An edit can also bring a tree that reaches further than the old one (the
  * background parse's progress, handed on with the edit): blocks there are
  * new, so the region takes them in.
