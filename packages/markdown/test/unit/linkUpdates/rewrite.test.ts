@@ -393,6 +393,26 @@ test("a link to a file with # in its name follows that file, not the name before
   );
 });
 
+test("a Markdown link to a .markdown or .MD note keeps that extension", () => {
+  const text = "[x](Old.markdown) [[Old]] [y](Up.MD)";
+  const notes = { "A.md": text, "Old.markdown": "", "Up.MD": "" };
+  const renames = { "Old.markdown": "New.markdown", "Up.MD": "Down.MD" };
+  const result = apply(
+    text,
+    rewriteLinks(text, "A.md", context(notes, renames)),
+  );
+  assert.equal(result, "[x](New.markdown) [[New]] [y](Down.MD)");
+  const { index } = memoryVaults({
+    "A.md": result,
+    "New.markdown": "",
+    "Down.MD": "",
+  });
+  assert.deepEqual(Object.fromEntries(index.resolvedLinks("A.md")), {
+    "New.markdown": 2,
+    "Down.MD": 1,
+  });
+});
+
 test("a rename reads the vault's file list once, not once per link", () => {
   const text = Array.from({ length: 50 }, () => "[[Old]]").join("\n");
   for (const format of ["shortest", "relative", "absolute"] as const) {

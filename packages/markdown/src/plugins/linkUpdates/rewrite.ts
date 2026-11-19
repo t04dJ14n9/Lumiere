@@ -10,6 +10,7 @@ import { formatLinkSource, linkSource } from "./link-source";
 import { withRenamedLabel } from "./rename-label";
 import { linkRewriteEdits, pointAt } from "./yaml-safe-edits";
 import {
+  extensionOf,
   folderOf,
   isMarkdownPath,
   lookupKey,
@@ -211,7 +212,11 @@ function rewritten(
     return original;
   }
   const isWikilink = source.opening.endsWith("[[");
-  const extension = !isWikilink && isMarkdownPath(target) ? ".md" : "";
+  // The note's own extension, `.markdown` or `.MD` too: a Markdown link is
+  // a file path to other tools, which do not look for `New.markdown` when
+  // the link names `New.md`.
+  const extension =
+    !isWikilink && isMarkdownPath(target) ? `.${extensionOf(target)}` : "";
   const newPath = `${path}${extension}`;
   const labelled =
     oldPath === undefined ? source : withRenamedLabel(source, oldPath, newPath);
