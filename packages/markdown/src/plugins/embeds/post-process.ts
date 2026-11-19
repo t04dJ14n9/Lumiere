@@ -10,10 +10,7 @@ import { embeddedNote, MissingSection } from "./note";
 import { renderBaseEmbed } from "./base-embed";
 import { mountPdfEmbed } from "./pdf-embed";
 import { EmbedLives } from "./embed-lives";
-import {
-  getCachedEmbedResource,
-  setCachedEmbedResource,
-} from "./resource-cache";
+import { vaultEmbedResource } from "./resource-cache";
 
 interface EmbedOptions {
   pass: RenderPass;
@@ -170,19 +167,10 @@ class EmbedPass implements PassEmbeds {
     if (/^data:image\//i.test(target)) {
       return { kind: "image", source: target, url: target };
     }
-    const syntax = node.dataset.wiki === "true" ? "wikilink" : "markdown";
-    const key = `${syntax}\0${pass.documentUri ?? ""}\0${target}`;
-    const cached =
-      resources.peek?.(target, pass.documentUri, syntax) ??
-      getCachedEmbedResource(resources, key);
-    if (cached !== undefined) {
-      return cached;
-    }
-    return resources.load(target, pass.documentUri, syntax).then((resolved) => {
-      if (resolved.kind !== "note" && resolved.kind !== "base") {
-        setCachedEmbedResource(resources, key, resolved);
-      }
-      return resolved;
+    return vaultEmbedResource(resources, {
+      target,
+      documentUri: pass.documentUri,
+      isWiki: embedIsWiki(node),
     });
   }
 
