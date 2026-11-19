@@ -251,6 +251,20 @@ test("linking notes are saved after their links change, unless they had unsaved 
   assert.deepEqual(errors, []);
 });
 
+test("links to the heading are updated in .markdown and upper-case .MD notes", async () => {
+  const { text } = await rename(
+    {
+      "Note.md": "# Old\n",
+      "A.markdown": "See [[Note#Old]].\n",
+      "B.MD": "See [[Note#Old]].\n",
+    },
+    "# Old",
+    () => "New",
+  );
+  assert.equal(text("A.markdown"), "See [[Note#New]].\n");
+  assert.equal(text("B.MD"), "See [[Note#New]].\n");
+});
+
 test("a linking note that cannot be saved is named to the user", async () => {
   const { text, errors } = await rename(
     { "Note.md": "# Old\n", "A.md": "See [[Note#Old]].\n" },

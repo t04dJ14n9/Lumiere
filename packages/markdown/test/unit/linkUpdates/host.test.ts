@@ -265,6 +265,23 @@ test("moving a note counts and edits only the links whose text changes", async (
   await root.dispose();
 });
 
+test("links are updated in .markdown and upper-case .MD notes too", async () => {
+  const { root, fake, index } = await start(
+    {},
+    { "E.markdown": "[[Old]]", "F.MD": "[[Old]]", "G.Markdown": "[[Old]]" },
+  );
+  // A note the index has not parsed is read for its links the same way.
+  index.setMetadata("G.Markdown", undefined);
+  fake.answerWith("Update Links");
+  const edits = await fake.rename(rename);
+  assert.deepEqual(fake.prompts, ["Update links in 5 files?"]);
+  assert.deepEqual(
+    edits.map((file) => file.uri).sort(),
+    ["A.md", "B.md", "E.markdown", "F.MD", "G.Markdown"].map(uriOf).sort(),
+  );
+  await root.dispose();
+});
+
 test("moving a note asks about its own path-style links", async () => {
   const { root, fake } = await start({}, { "D.md": "From [[Topic/Old]]." });
   fake.answerWith("Update Links");

@@ -1,6 +1,7 @@
 import type { Plugin } from "@workshop/core";
 import type { FileTextEdits, HostServices } from "../../shared/host";
 import { vaultLinks } from "../../markdown/metadata/linkpaths";
+import { isMarkdownPath } from "../../shared/vault-path";
 import type { Vault, VaultFile, Vaults } from "../vault/api";
 import type {} from "../editor/api";
 import { changesLinkText, rewriteLinks } from "./rewrite";
@@ -227,13 +228,18 @@ function candidateNotes(vault: Vault, paths: Map<string, string>): VaultFile[] {
     .map((source) => vault.index.file(source))
     .filter(
       (file): file is VaultFile =>
-        file?.extension === "md" || file?.extension === "canvas",
+        file !== undefined &&
+        (isMarkdownPath(file.path) || file.extension === "canvas"),
     );
 }
 
+/**
+ * Whether `file` is a note the index has not parsed yet. Notes are what the
+ * index parses: `.md` and `.markdown`, in any case.
+ */
 function isUnparsedNote(vault: Vault, file: VaultFile): boolean {
   return (
-    file.extension === "md" && vault.index.metadata(file.path) === undefined
+    isMarkdownPath(file.path) && vault.index.metadata(file.path) === undefined
   );
 }
 

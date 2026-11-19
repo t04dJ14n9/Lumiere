@@ -11,6 +11,7 @@ import {
 } from "./heading-rename";
 import { sourceText } from "./source-text";
 import { contributionId } from "../../shared/setting-schema";
+import { isMarkdownPath } from "../../shared/vault-path";
 
 interface Services {
   /** Undefined when the window has no Lumiere editors. */
@@ -128,7 +129,7 @@ async function updateLinks(
   const unsaved: string[] = [];
   for (const source of sources) {
     const file = vault.index.file(source);
-    if (file?.extension !== "md") {
+    if (!file || !isMarkdownPath(file.path)) {
       continue;
     }
     const outcome = await updateLinksIn(ctx, vault, renamed, file);
