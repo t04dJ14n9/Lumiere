@@ -13,6 +13,14 @@ it runs strict draft commit participants; invalid drafts reject saving. Session
 queues serialize edits and host actions, while logical grouping coordinates native
 undo steps. All registrations and synchronizers follow their context/view lifetime.
 
+An undo group names the note's state before and after each step by its
+immutable CodeMirror `Text`, and compares states by content only when Undo or
+Redo runs, so a pushed edit hashes nothing. Native undo gives the document a
+new version, so only content can show that a step's start was restored. The
+session's successive texts are derived from each other by the recorded changes
+(even a host rewrite's), so they share every unchanged part: a checkpoint costs
+about what its step changed, and comparing two of them skips what they share.
+
 If a panel receives updates against a version it never reached (a broadcast it
 missed), it asks the host for the revision log from its own version (`catchUp`)
 and applies it like any other update. Unsent local edits are rebased over it,
@@ -47,7 +55,7 @@ running waits for it and then saves what came after.
 - `session.ts`: authority, edit queues, broadcasting and native history actions.
 - `save.ts`: native save completion and overlapping-save handling.
 - `autosave.ts`: the 2 s save countdown of an open, dirty note.
-- `undo-groups.ts`: logical groups over native history fingerprints.
+- `undo-groups.ts`: logical groups over native history, each step named by its texts.
 - `webview.ts`: connection service and update/flush registrations.
 - `view-connection.ts`: buffered attachment, strict flush and synchronizer lifetime.
 - `sync.ts`: CodeMirror collaborative send/receive and flush coordination.

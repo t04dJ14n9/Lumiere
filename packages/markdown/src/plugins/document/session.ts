@@ -2,6 +2,7 @@ import { saveDocument } from "./save";
 import { Authority } from "../../shared/document/authority";
 import { textDocument } from "../../shared/document/wire";
 import type { Prepared } from "../../shared/document/authority";
+import type { Text } from "@codemirror/state";
 import type { HostDocument, HostServices, TextEdit } from "../../shared/host";
 import { RpcError, type Endpoint } from "../../shared/rpc/endpoint";
 import { UndoGroups } from "./undo-groups";
@@ -13,29 +14,23 @@ export class Session implements DocumentSession {
   private queue: Promise<unknown> = Promise.resolve();
   private actions: Promise<unknown> = Promise.resolve();
   private expected?: Prepared;
-  private readonly groups = new UndoGroups();
+  /**
+   * Undo checkpoints name the note's text by its immutable `Text`, compared
+   * by content only when Undo or Redo runs: typing hashes nothing. The
+   * authority's successive texts share their unchanged parts, so a
+   * checkpoint keeps little more than what its step changed, and comparing
+   * two of them skips what they share.
+   */
+  private readonly groups = new UndoGroups<Text>((left, right) =>
+    left.eq(right),
+  );
   private historyAction = false;
   private saveEcho?: string;
-  private fingerprinted?: { version: number; hash: string };
   constructor(
     readonly document: HostDocument,
     private readonly host: HostServices,
   ) {
     this.authority = new Authority(document.getText());
-  }
-  /**
-   * The text's hash, kept while the authority's version stands: its text
-   * changes only with a new revision. Each push needs the hash before and
-   * after it, and the one before is the previous push's after, so typing
-   * hashes the note once per push, not twice.
-   */
-  private fingerprint(): string {
-    const version = this.authority.version;
-    if (this.fingerprinted?.version !== version) {
-      const hash = this.host.hostDocuments.fingerprint(this.text);
-      this.fingerprinted = { version, hash };
-    }
-    return this.fingerprinted.hash;
   }
   markSaved(text: string): void {
     this.saveEcho = text;
@@ -77,7 +72,7 @@ export class Session implements DocumentSession {
         if (!prepared) {
           return true;
         }
-        const before = this.fingerprint();
+        const before = this.authority.doc;
         if (prepared.text.eq(this.authority.doc)) {
           this.authority.record(this.document.getText(), prepared);
           this.broadcast();
@@ -99,7 +94,7 @@ export class Session implements DocumentSession {
           }
           this.groups.record(
             before,
-            this.fingerprint(),
+            this.authority.doc,
             params.group === undefined ? undefined : `${id}/${params.group}`,
           );
         } finally {
@@ -226,7 +221,7 @@ export class Session implements DocumentSession {
     try {
       await this.groups.run(
         action,
-        () => this.fingerprint(),
+        () => this.authority.doc,
         () => this.host.hostCommands.execute(action),
       );
     } finally {

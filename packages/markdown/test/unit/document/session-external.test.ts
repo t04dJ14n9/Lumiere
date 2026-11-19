@@ -1,5 +1,6 @@
 import test from "node:test";
 import assert from "node:assert/strict";
+import { Text } from "@codemirror/state";
 import { createRoot } from "@workshop/core";
 import { provideHostServices } from "../../../src/shared/host";
 import type { HostDocument } from "../../../src/shared/host";
@@ -16,9 +17,11 @@ import { fakeDocument, fakeHost } from "../../support/vscode-fake";
 import { rpcPair } from "../../support/rpc-pair";
 
 type SessionInternals = {
-  groups: UndoGroups;
+  groups: UndoGroups<Text>;
   saveEcho?: string;
 };
+
+const textOf = (text: string) => Text.of(text.split("\n"));
 
 function internals(session: DocumentSession): SessionInternals {
   return session as unknown as SessionInternals;
@@ -45,11 +48,11 @@ test("own save echo does not clear UndoGroups", async () => {
     clears.push("clear");
     clear();
   };
-  groups.record("note", "note!");
+  groups.record(textOf("note"), textOf("note!"));
   text = "note!";
   session.changed(); // may clear; reset:
   clears.length = 0;
-  groups.record("note", "note!");
+  groups.record(textOf("note"), textOf("note!"));
   await session.save();
   session.changed(); // echo
   assert.deepEqual(clears, []);
@@ -91,7 +94,7 @@ test("native hostDocuments.onSave arms saveEcho without Session.save", async () 
   };
   // Host edit lands without Session.save — authority still "note".
   text = "note!";
-  groups.record("note", "note!");
+  groups.record(textOf("note"), textOf("note!"));
   // Native Ctrl+S / File→Save fires onSave only (not Session.save).
   assert.equal(
     typeof onSave,
@@ -120,7 +123,7 @@ test("saveEcho rewrite-bytes path keeps UndoGroups when text differs from author
     clears.push("clear");
     clear();
   };
-  groups.record("note", "note!");
+  groups.record(textOf("note"), textOf("note!"));
   // Simulate host onSave → markSaved(doc.getText()) while authority lags.
   text = "note!";
   session.markSaved(text);
@@ -146,7 +149,7 @@ test("clean external rewrite does not clear UndoGroups", () => {
     clears.push("clear");
     clear();
   };
-  groups.record("base", "base");
+  groups.record(textOf("base"), textOf("base"));
   // Stale armed echo must not survive a real host rewrite.
   session.markSaved("stale-echo");
   assert.equal(internals(session).saveEcho, "stale-echo");
