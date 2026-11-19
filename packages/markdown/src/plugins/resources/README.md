@@ -14,6 +14,10 @@ A link whose file the vault does not have is remembered; when the index lists
 it later (a file created or renamed into place, or found while the index
 catches up), the host tells the page, so its embed shows the file as in
 Obsidian instead of saying it could not be found until the note is reopened.
+The host also remembers the files each page loaded (the latest 1,024). When
+the index says one was rewritten (on disk, or as unsaved text in another
+editor), moved or removed, it tells the page, gathering a burst of changes
+into one notice within 100 ms, so its embeds show the new version.
 
 ## Files
 
@@ -34,7 +38,10 @@ Host injects `rpc`, the host services `hostDocuments`, `workspace` and `git`, pl
 were rewritten): the webview drops its resolved URLs, whose `?v=` is the old
 mtime. Declares `resources/found`, which the webview emits when the host's
 `found` notice says a missing link resolves now; the host listens to the
-index's `onDidChange` (create, rename) and `onDidResolve` for it. No commands
+index's `onDidChange` (create, rename) and `onDidResolve` for it. Declares
+`resources/modified (sources)`, which the webview emits, after dropping its
+resolved URLs, when the host's `changed` notice names files the page loaded
+that the index's `onDidChange` (modify, rename, delete) reported. No commands
 or direct user settings.
 Vault configuration determines roots and resolution. The window service
 `diffResources` injects `vaults` and the host services `hostDocuments`, `workspace` and `git`, plus provides contained image

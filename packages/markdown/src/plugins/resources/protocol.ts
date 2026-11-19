@@ -46,5 +46,12 @@ export const protocol = defineProtocol("resources", {
      * that said they could not be found load again.
      */
     found: Schema.object({}),
+    /**
+     * Files the page loaded were rewritten (on disk, or as unsaved text in
+     * an editor), moved or removed: embeds showing them load them again.
+     */
+    changed: Schema.object({
+      sources: Schema.array(Schema.string().max(8192)).max(1024),
+    }),
   },
 });

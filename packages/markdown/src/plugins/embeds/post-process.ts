@@ -28,6 +28,8 @@ export function embedIsWiki(node: { dataset: { wiki?: string } }): boolean {
 export interface PassEmbeds {
   /** Load again the embeds whose file could not be loaded: it may be there now. */
   retryMissing(): void;
+  /** Load again the embeds showing these files (URIs): they changed. */
+  reload(sources: ReadonlySet<string>): void;
   dispose(): void;
 }
 
@@ -46,6 +48,8 @@ class EmbedPass implements PassEmbeds {
   /** The title an embed had before an error replaced it. */
   private readonly ownTitles = new Map<HTMLElement, string>();
   private readonly standIns = new ImageStandIns();
+  /** How many times each embed was shown: only the latest lands. */
+  private readonly showings = new Map<HTMLElement, number>();
   private isActive = true;
   constructor(private readonly options: EmbedOptions) {}
 
@@ -78,25 +82,43 @@ class EmbedPass implements PassEmbeds {
     }
   }
 
+  reload(sources: ReadonlySet<string>): void {
+    for (const node of this.lives.showing(sources)) {
+      // What it shows stays until the new version is there to replace it.
+      this.show(node, () => this.lives.release(node));
+    }
+  }
+
   /** Resolve an embed and show what it names, or why it cannot. */
-  private show(node: HTMLElement): void {
+  private show(node: HTMLElement, replace = () => {}): void {
     const target = node.dataset.resource ?? "";
+    // Only the latest showing of an embed lands: its file may change twice
+    // before the first load answers.
+    const showing = (this.showings.get(node) ?? 0) + 1;
+    this.showings.set(node, showing);
+    const isLatest = () => this.showings.get(node) === showing;
     const showError = (error: unknown) => this.showError(node, target, error);
     const resource = this.resolve(node, target);
     if (!resource) {
       return;
     }
+    const land = (resolved: Resource) => {
+      if (isLatest()) {
+        replace();
+        void this.apply(node, target, resolved).catch(showError);
+      }
+    };
     if (!isPromise(resource)) {
-      void this.apply(node, target, resource).catch(showError);
+      land(resource);
       return;
     }
-    void resource.then(
-      (resolved) => this.apply(node, target, resolved).catch(showError),
-      (error: unknown) => {
+    void resource.then(land, (error: unknown) => {
+      if (isLatest()) {
+        replace();
         this.missing.add(node);
         showError(error);
-      },
-    );
+      }
+    });
   }
 
   private showError(node: HTMLElement, target: string, error: unknown): void {
@@ -201,6 +223,7 @@ class EmbedPass implements PassEmbeds {
     if (!this.isActive) {
       return;
     }
+    this.lives.setSource(node, resource.source);
     this.clearError(node);
     const wiki = embedIsWiki(node);
     if (resource.kind === "image") {

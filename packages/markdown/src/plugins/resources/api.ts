@@ -43,6 +43,13 @@ declare module "@workshop/core" {
      * @mode emit
      */
     "resources/found": () => void;
+    /**
+     * Vault files the note shows changed (edited in another editor,
+     * rewritten by another app, moved or removed), by URI. The resolved
+     * resources are dropped first; embeds showing them load them again.
+     * @mode emit
+     */
+    "resources/modified": (sources: readonly string[]) => void;
   }
 }
 

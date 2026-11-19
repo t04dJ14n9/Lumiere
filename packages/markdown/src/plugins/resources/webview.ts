@@ -35,6 +35,13 @@ export const resourcesWebview: Plugin = {
     ctx.effect(() =>
       ctx.rpc.on(protocol, "found", () => ctx.emit("resources/found")),
     );
+    // A changed image has a new `?v=` mtime: what was resolved is stale.
+    ctx.effect(() =>
+      ctx.rpc.on(protocol, "changed", ({ sources }) => {
+        cache.clear();
+        ctx.emit("resources/modified", sources);
+      }),
+    );
 
     ctx.provide("resources", {
       peek: (target, source, syntax) =>

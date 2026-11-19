@@ -4,7 +4,8 @@ import {
   splitMarkdownDestination,
   type LinkSyntax,
 } from "../../shared/vault-path";
-import type { VaultFile, VaultIndex } from "../vault/api";
+import type { VaultChange, VaultFile, VaultIndex } from "../vault/api";
+import { RecentlyUsed } from "../../shared/recently-used";
 import type { BaseNoteEntry, Resource, Resources } from "./api";
 import { containedResource, contains } from "./containment";
 
@@ -24,11 +25,15 @@ interface ResourceLink {
 
 /** Links remembered as missing at most; the oldest are forgotten first. */
 const MISSING_LIMIT = 256;
+/** Files remembered as shown at most; the least recently loaded go first. */
+const SHOWN_LIMIT = 1024;
 
 export class NoteResources implements Resources {
   private readonly known: Set<string>;
   /** Links whose file the vault did not have when asked, by `linkKey`. */
   private readonly missing = new Map<string, ResourceLink>();
+  /** The files the page loaded, by vault path: their URIs. */
+  private readonly shown = new RecentlyUsed<string, string>(SHOWN_LIMIT);
   constructor(private readonly options: ResourceOptions) {
     this.known = new Set([options.source]);
   }
@@ -59,6 +64,7 @@ export class NoteResources implements Resources {
       throw new Error("Resource not found");
     }
     this.missing.delete(linkKey(link));
+    this.shown.set(file.path, file.uri);
     const stat = await this.containedStat(file.uri);
     const kind = resourceKind(file.path);
     const text =
@@ -98,6 +104,23 @@ export class NoteResources implements Resources {
       }
     }
     return isFound;
+  }
+
+  /**
+   * The URI of a file the page shows that this change rewrote (on disk, or
+   * as unsaved text in an editor), moved or removed, so its embeds load it
+   * again. A moved or removed file is forgotten until it is loaded again.
+   */
+  changedSource(change: VaultChange): string | undefined {
+    if (change.type === "create") {
+      return undefined;
+    }
+    const path = change.type === "rename" ? change.oldPath : change.path;
+    const uri = this.shown.get(path);
+    if (uri !== undefined && change.type !== "modify") {
+      this.shown.delete(path);
+    }
+    return uri;
   }
 
   /** The vault file a link names, if the vault has it. */

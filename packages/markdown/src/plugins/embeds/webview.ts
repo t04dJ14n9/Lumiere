@@ -212,6 +212,15 @@ function registerEmbedContent(ctx: Context, cleanups: Set<() => void>): void {
       embeds.retryMissing();
     }
   });
+  // An embed is the same widget whatever its file contains, so nothing
+  // redraws it when the file changes: its pass loads the file again.
+  ctx.on("resources/modified", (sources) => {
+    forgetEmbedResources(ctx.resources);
+    const changed = new Set(sources);
+    for (const embeds of [...passes]) {
+      embeds.reload(changed);
+    }
+  });
   ctx.on("render/postProcess", (pass) => {
     if (
       pass.container.querySelectorAll<HTMLElement>("[data-resource]").length ===
