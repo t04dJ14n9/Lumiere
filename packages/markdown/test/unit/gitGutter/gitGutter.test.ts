@@ -265,6 +265,28 @@ test("P12: a baseline the editor already has is not sent again", async () => {
   await h.pair.dispose();
 });
 
+test("F22: the Revert lock keeps its owner; closing the owner frees it", async () => {
+  const first = await host(fakeGit("old\n"));
+  const second = await host(fakeGit("old\n"));
+  const hold = (h: typeof first, hold: boolean) =>
+    h.pair.client.call(protocol, "mutationLock", { hold });
+  assert.equal(await hold(first, true), true);
+  // A second Revert from the owner while its first runs is refused...
+  assert.equal(await hold(first, true), false);
+  // ...and another panel of the note can neither take nor free the lock.
+  assert.equal(await hold(second, true), false);
+  assert.equal(await hold(second, false), true);
+  assert.equal(await hold(second, true), false);
+  // The owner's panel closes mid-Revert: the lock goes with it.
+  await first.fiber.dispose();
+  assert.equal(await hold(second, true), true);
+  assert.equal(await hold(second, false), true);
+  for (const h of [first, second]) {
+    await h.root.dispose();
+    await h.pair.dispose();
+  }
+});
+
 /** Revert as the model does it: resolve the held hunk against a fresh diff. */
 function revertHeld(state: EditorState, baseline: string, held: DocHunk) {
   const target = resolveHunk(computeHunks(baseline, state.doc), held);

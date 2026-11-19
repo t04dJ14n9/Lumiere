@@ -7,19 +7,24 @@ import { protocol } from "./protocol";
 
 /**
  * Per-file mutation lock shared by every panel of that file. Not an SCM
- * transaction: one in-flight Stage/Revert per path, released when it finishes.
+ * transaction: one in-flight Stage/Revert per path, released when it finishes
+ * or when its panel closes. Each entry names its owner, so only that panel
+ * frees it: another panel's release, or the owner's own refused second
+ * request, must not leave a lock nobody frees until restart.
  */
-const pendingFiles = new Set<string>();
+const pendingFiles = new Map<string, object>();
 
-function mutationHold(uri: string, hold: boolean): boolean {
+function mutationHold(uri: string, owner: object, hold: boolean): boolean {
   if (!hold) {
-    pendingFiles.delete(uri);
+    if (pendingFiles.get(uri) === owner) {
+      pendingFiles.delete(uri);
+    }
     return true;
   }
   if (pendingFiles.has(uri)) {
     return false;
   }
-  pendingFiles.add(uri);
+  pendingFiles.set(uri, owner);
   return true;
 }
 
@@ -139,19 +144,14 @@ function registerMutationLock(
   ctx: Parameters<NonNullable<typeof gitGutterHost.apply>>[0],
   uri: string,
 ): void {
-  let holding = false;
+  const owner = {};
   ctx.effect(() => () => {
-    if (holding) {
-      mutationHold(uri, false);
-      holding = false;
-    }
+    mutationHold(uri, owner, false);
   });
   ctx.effect(() =>
-    ctx.rpc.handle(protocol, "mutationLock", async ({ hold }) => {
-      const allowed = mutationHold(uri, hold);
-      holding = hold ? allowed : false;
-      return allowed;
-    }),
+    ctx.rpc.handle(protocol, "mutationLock", async ({ hold }) =>
+      mutationHold(uri, owner, hold),
+    ),
   );
 }
 
