@@ -199,14 +199,14 @@ async function host(
 test("host: serves the baseline, stages after saving, and stops listening when off", async () => {
   const git = fakeGit("old\n");
   const h = await host(git);
-  assert.deepEqual(
-    await h.pair.client.call(protocol, "baseline", { ref: "HEAD" }),
-    {
-      status: "ok",
-      text: "old\n",
-      label: "HEAD (abc1234)",
-    },
-  );
+  const first = await h.pair.client.call(protocol, "baseline", { ref: "HEAD" });
+  assert.deepEqual(first, {
+    status: "ok",
+    text: "old\n",
+    label: "HEAD (abc1234)",
+    identity: first.identity,
+  });
+  assert.ok(first.identity);
   assert.equal(await h.pair.client.call(protocol, "stage", {}), true);
   assert.deepEqual(git.staged, ["file:///n.md"]);
   assert.equal(h.saved(), 1);
@@ -224,6 +224,43 @@ test("host: without git the note is unavailable, not an error", async () => {
     { status: "unavailable" },
   );
   assert.equal(await h.pair.client.call(protocol, "stage", {}), false);
+  await h.root.dispose();
+  await h.pair.dispose();
+});
+
+test("P12: a baseline the editor already has is not sent again", async () => {
+  let text = "old\n";
+  let reads = 0;
+  const git: GitAccess = {
+    ...fakeGit(undefined),
+    async baseline() {
+      reads++;
+      return { status: "ok", baseline: { text, label: "HEAD (abc1234)" } };
+    },
+  };
+  const h = await host(git);
+  const call = (known?: string) =>
+    h.pair.client.call(protocol, "baseline", {
+      ref: "HEAD",
+      ...(known === undefined ? {} : { known }),
+    });
+  const first = await call();
+  assert.equal(first.status, "ok");
+  // A repository event that left this note's baseline as it was.
+  assert.deepEqual(await call(first.identity), {
+    status: "unchanged",
+    identity: first.identity,
+  });
+  // A stranger's identity, or none, gets the text.
+  assert.equal((await call("someone-else")).text, "old\n");
+  assert.equal((await call()).text, "old\n");
+  // A commit that changed it.
+  text = "new\n";
+  const changed = await call(first.identity);
+  assert.equal(changed.status, "ok");
+  assert.equal(changed.text, "new\n");
+  assert.notEqual(changed.identity, first.identity);
+  assert.equal(reads, 5);
   await h.root.dispose();
   await h.pair.dispose();
 });

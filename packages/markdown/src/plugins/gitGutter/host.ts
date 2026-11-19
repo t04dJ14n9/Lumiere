@@ -2,7 +2,7 @@ import type { Plugin } from "@workshop/core";
 import type { PanelShell } from "../../shared/host";
 import { exceedsDiffLimits } from "../../shared/diff";
 import type { DiffSide } from "../../shared/git-diff";
-import type { GitAccess } from "../../shared/git";
+import type { GitAccess, GitRef } from "../../shared/git";
 import { protocol } from "./protocol";
 
 /**
@@ -80,21 +80,47 @@ function registerBaseline(
   git: GitAccess,
   uri: string,
 ): void {
+  const sent = sentBaselines();
   ctx.effect(() =>
-    ctx.rpc.handle(protocol, "baseline", async ({ ref }) => {
+    ctx.rpc.handle(protocol, "baseline", async ({ ref, known }) => {
       const result = await git.baseline(uri, ref);
-      if (result.status === "ok" && exceedsDiffLimits(result.baseline.text)) {
+      if (result.status !== "ok") {
+        return { status: result.status };
+      }
+      const { text, label } = result.baseline;
+      if (exceedsDiffLimits(text)) {
         return { status: "tooLarge" as const };
       }
-      return result.status === "ok"
-        ? {
-            status: "ok" as const,
-            text: result.baseline.text,
-            label: result.baseline.label,
-          }
-        : { status: result.status };
+      const identity = sent.identify(ref, label, text);
+      if (known === identity) {
+        return { status: "unchanged" as const, identity };
+      }
+      return { status: "ok" as const, text, label, identity };
     }),
   );
+}
+
+/**
+ * The last baseline this panel's editor was sent. Every repository event
+ * makes the editor ask again, and most (another file staged, a fetch) leave
+ * this note's baseline as it was: then the answer is `unchanged`, with no
+ * copy of the text and no recompute in the editor. The identity is unique
+ * to this host plugin, so an editor never mistakes another's for its own.
+ */
+function sentBaselines() {
+  const instance = Math.random().toString(36).slice(2, 10);
+  let count = 0;
+  let last:
+    { identity: string; ref: GitRef; label: string; text: string } | undefined;
+  return {
+    identify(ref: GitRef, label: string, text: string): string {
+      if (last?.ref !== ref || last.label !== label || last.text !== text) {
+        count += 1;
+        last = { identity: `${instance}-${count}`, ref, label, text };
+      }
+      return last.identity;
+    },
+  };
 }
 
 function registerStage(

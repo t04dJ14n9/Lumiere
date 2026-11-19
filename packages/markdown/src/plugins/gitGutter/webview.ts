@@ -43,6 +43,7 @@ import {
   setPeek,
 } from "./peek";
 import { protocol } from "./protocol";
+import { BaselineSource } from "./baseline";
 
 type Status = ReturnType<GitDiff["status"]>;
 type Options = Infer<typeof config>;
@@ -61,22 +62,22 @@ class GitDiffModel implements GitDiff {
   get field() {
     return hunkField;
   }
-  private text: string | undefined;
-  private name = "HEAD";
-  /** What the last baseline request returned; the status adds the size check. */
-  private loaded: Status = "loading";
+  private readonly source: BaselineSource;
   private state: Status = "loading";
-  private request = 0;
-  private live = true;
   private fileUri = "live-document";
   private readonly session: DiffSession;
   private readonly listeners = new Set<() => void>();
 
   constructor(
     private readonly ctx: Context,
-    private readonly options: Options,
+    options: Options,
   ) {
     this.session = new DiffSession(options.compareTo);
+    this.source = new BaselineSource(ctx, options.compareTo);
+  }
+
+  private get text(): string | undefined {
+    return this.source.text;
   }
 
   get view(): EditorView {
@@ -89,7 +90,7 @@ class GitDiffModel implements GitDiff {
   context(state: EditorState, hunk: DocHunk) {
     return peekContext(state, hunk);
   }
-  label = () => this.name;
+  label = () => this.source.label;
   baseline = () => this.text;
 
   onChange(listener: () => void) {
@@ -100,7 +101,7 @@ class GitDiffModel implements GitDiff {
   }
 
   dispose(): void {
-    this.live = false;
+    this.source.stop();
     this.listeners.clear();
   }
 
@@ -197,7 +198,7 @@ class GitDiffModel implements GitDiff {
     const { doc } = this.view.state;
     const text = this.text;
     if (text === undefined) {
-      this.state = this.loaded;
+      this.state = this.source.status;
       return undefined;
     }
     const docTooLarge =
@@ -248,28 +249,11 @@ class GitDiffModel implements GitDiff {
     }
   };
 
+  /** Fetch the baseline again; recompute only when it changed. */
   load = async (): Promise<void> => {
-    const mine = ++this.request;
-    const { compareTo } = this.options;
-    try {
-      const result = await this.ctx.rpc.call(protocol, "baseline", {
-        ref: compareTo,
-      });
-      if (mine !== this.request || !this.live) {
-        return;
-      }
-      this.loaded = result.status;
-      this.text = result.status === "ok" ? (result.text ?? "") : undefined;
-      this.name = result.label ?? (compareTo === "HEAD" ? "HEAD" : "Index");
-    } catch (error) {
-      if (mine !== this.request || !this.live) {
-        return;
-      }
-      this.ctx.logger.warn("Git baseline unavailable", error);
-      this.loaded = "unavailable";
-      this.text = undefined;
+    if (await this.source.refresh()) {
+      this.recompute();
     }
-    this.recompute();
   };
 
   /** Move the caret (and an open peek) to the next or previous change, wrapping. */
@@ -323,7 +307,9 @@ class GitDiffModel implements GitDiff {
   peekActions() {
     return {
       comparisonLabel: () =>
-        this.session.snapshot ? `${this.name} → Working tree` : this.name,
+        this.session.snapshot
+          ? `${this.source.label} → Working tree`
+          : this.source.label,
       move: (target: EditorView, direction: 1 | -1) =>
         this.move(target, direction, true),
       revert: (view: EditorView, hunk: DocHunk) => {
