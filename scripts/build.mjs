@@ -7,7 +7,7 @@
 //
 // Usage: node scripts/build.mjs [--production]
 import { execFileSync } from "node:child_process";
-import { cp, mkdir, readFile, rm, writeFile } from "node:fs/promises";
+import { access, cp, mkdir, readFile, rm, writeFile } from "node:fs/promises";
 import path from "node:path";
 import * as esbuild from "esbuild";
 import { lazyBridgeServer } from "../packages/pdf/scripts/lazy-bridge-server.mjs";
@@ -48,11 +48,19 @@ const host = await esbuild.build({
     lazyYaml("./markdown/yaml-runtime.cjs"),
   ],
 });
+// The PDF engine ships once, in the PDF viewer's folder: the Markdown editor's
+// PDF embeds load that copy (packages/markdown/src/host/editor-panels.ts), so
+// the Markdown build's own copy (for the hosts outside VS Code) stays out.
+const sharedPdfEngine = path.join("markdown", "webview", "embedpdf.wasm");
 for (const name of products) {
-  await cp(path.join(root, "packages", name, "dist"), path.join(dist, name), {
+  const from = path.join(root, "packages", name, "dist");
+  await cp(from, path.join(dist, name), {
     recursive: true,
+    filter: (source) =>
+      path.join(name, path.relative(from, source)) !== sharedPdfEngine,
   });
 }
+await access(path.join(dist, "pdf", "webview", "embedpdf.wasm"));
 
 // Every bundled source file, for scripts/third-party-notices.mjs.
 const productInputs = [];

@@ -64,5 +64,11 @@ for shipped in viewer.js embedpdf.wasm; do
     status=1
   fi
 done
+# ...and only once: the Markdown editor's PDF embeds load the viewer's copy.
+engines=$(grep -c '/embedpdf\.wasm$' <<<"$files" || true)
+if (( engines != 1 )); then
+  echo "::error file=$vsix::embedpdf.wasm ships ${engines} times, expected once"
+  status=1
+fi
 
 exit $status

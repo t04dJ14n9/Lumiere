@@ -29,6 +29,12 @@ export interface PanelShell {
   setHTML(html: string): void;
   asset(relative: string): string;
   /**
+   * The PDF engine (embedpdf.wasm) for PDF embeds, when the host serves it
+   * from elsewhere than `asset("webview/embedpdf.wasm")`: the VS Code
+   * extension ships one copy, the PDF viewer's.
+   */
+  readonly pdfEngine?: string;
+  /**
    * Files under the extension's dist/markdown the page will fetch right
    * after its entry, so the page can ask for them all at once.
    */

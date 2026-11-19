@@ -107,6 +107,22 @@ test("with a snapshot it is in #app and the editor loads by import()", () => {
   );
 });
 
+test("the page names the PDF engine the host serves, else its own copy", () => {
+  const engine = (html: string) => /data-pdfium-wasm="([^"]*)"/.exec(html)?.[1];
+  assert.equal(
+    engine(webviewHTML(shell(true))),
+    "vscode-resource:/webview/embedpdf.wasm",
+  );
+  const shared = {
+    ...shell(true),
+    pdfEngine: "vscode-resource:/pdf/webview/embedpdf.wasm",
+  } as unknown as PanelShell;
+  assert.equal(
+    engine(webviewHTML(shared)),
+    "vscode-resource:/pdf/webview/embedpdf.wasm",
+  );
+});
+
 test("the editor's address cannot end the inline script", () => {
   const hostile = {
     cspSource: "vscode-resource:",
