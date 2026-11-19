@@ -152,3 +152,64 @@ test("composition maps existing decorations even when the viewport changes", () 
   assert.equal(mapped.from, 18);
   assert.equal(mapped.value, decoration);
 });
+
+test("an edit above a fence reuses its highlighting instead of tokenising it again", () => {
+  const state = EditorState.create({
+    doc: "before\n\n```js\nlet x = 1;\n```\n\nafter",
+    extensions: [markdown()],
+  });
+  ensureSyntaxTree(state, state.doc.length, 10_000);
+  const view = {
+    state: state.update({}).state,
+    visibleRanges: [{ from: 0, to: state.doc.length }],
+    composing: false,
+    dom: { isConnected: true },
+  };
+  const editorView = view as unknown as EditorView;
+  const source = new CodeSource(editorView, () => {});
+  const tokenised: string[] = [];
+  Object.assign(source, {
+    highlighter: {
+      tokenRanges(text: string) {
+        tokenised.push(text);
+        return [{ from: 0, to: 3, classes: "token keyword" }];
+      },
+    },
+    languageLoads: new Map([["js", "ready"]]),
+  });
+  const apply = (spec: TransactionSpec) => {
+    const transaction = view.state.update(spec);
+    view.state = transaction.state;
+    view.visibleRanges = [{ from: 0, to: transaction.state.doc.length }];
+    source.update({
+      view: editorView,
+      state: transaction.state,
+      startState: transaction.startState,
+      transactions: [transaction],
+      changes: transaction.changes,
+      docChanged: transaction.docChanged,
+      selectionSet: false,
+      viewportChanged: true,
+      viewportMoved: false,
+      heightChanged: false,
+      geometryChanged: transaction.docChanged,
+      focusChanged: false,
+    } as ViewUpdate);
+  };
+  apply({});
+  assert.deepEqual(tokenised, ["let x = 1;"]);
+  apply({ changes: { from: 0, insert: "more text " } });
+  assert.deepEqual(tokenised, ["let x = 1;"]);
+  // The keyword mark moved with the fence.
+  const marks: string[] = [];
+  source.decorations.between(0, view.state.doc.length, (from, to, value) => {
+    if (value.spec.class === "token keyword") {
+      marks.push(view.state.sliceDoc(from, to));
+    }
+  });
+  assert.deepEqual(marks, ["let"]);
+  // An edit inside the fence tokenises it again.
+  const inside = view.state.doc.toString().indexOf("1;");
+  apply({ changes: { from: inside, insert: "4" } });
+  assert.deepEqual(tokenised, ["let x = 1;", "let x = 41;"]);
+});
