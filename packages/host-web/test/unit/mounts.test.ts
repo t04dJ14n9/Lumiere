@@ -227,6 +227,45 @@ test("a memory folder reports every change, and starts again from what it report
   assert.equal(new TextDecoder().decode(await again.read("Kept.md")), "two");
 });
 
+test("copy replaces a file of the same name, as VS Code and Node do", async () => {
+  const files = mounted();
+  await files.mkdir(uri("old/daily"));
+  await files.create(uri("old/daily/Today.md"));
+  await files.save(uri("old/daily/Today.md"), "stale");
+  await files.copy(uri("daily"), uri("old/daily"));
+  assert.equal(await files.readText(uri("old/daily/Today.md")), "# Today");
+  await files.copy(uri("Welcome.md"), uri("daily/Today.md"));
+  assert.equal(await files.readText(uri("daily/Today.md")), "# Welcome");
+});
+
+test("move never replaces what is at the target, in one folder or across two", async () => {
+  const files = mounted();
+  files.mount("/vaults/Other", new MemoryFileSystem({ "Welcome.md": "mine" }));
+  const other = pathToFileURL("/vaults/Other/Welcome.md").href;
+  await assert.rejects(files.move(uri("Welcome.md"), uri("daily/Today.md")), {
+    code: "FileExists",
+  });
+  await assert.rejects(files.move(uri("Welcome.md"), other), {
+    code: "FileExists",
+  });
+  assert.equal(await files.readText(uri("Welcome.md")), "# Welcome");
+  assert.equal(await files.readText(uri("daily/Today.md")), "# Today");
+  assert.equal(await files.readText(other), "mine");
+});
+
+test("a folder moves to another mounted folder with everything in it", async () => {
+  const files = mounted();
+  files.mount("/vaults/Other", new MemoryFileSystem());
+  await files.save(uri("daily/Today.md"), "# Today, edited");
+  await files.mkdir(uri("daily/old"));
+  await files.create(uri("daily/old/Last.md"));
+  const moved = pathToFileURL("/vaults/Other/daily").href;
+  await files.move(uri("daily"), moved);
+  assert.equal(await files.stat(uri("daily")), undefined);
+  assert.equal(await files.readText(`${moved}/Today.md`), "# Today, edited");
+  assert.equal((await files.stat(`${moved}/old/Last.md`))?.kind, "file");
+});
+
 test("a note's UTF-8 byte order mark is read and written back, as Node's host keeps it", async () => {
   const files = new Mounts();
   const bom = new Uint8Array([

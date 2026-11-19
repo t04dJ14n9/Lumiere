@@ -14,7 +14,7 @@ import {
   type HostFileInfo,
   type HostFiles,
 } from "@workshop/host-node/core";
-import { notFound, type VaultFileSystem } from "./vault-fs";
+import { alreadyThere, notFound, type VaultFileSystem } from "./vault-fs";
 
 interface Resolved {
   readonly fs: VaultFileSystem;
@@ -153,6 +153,10 @@ export class Mounts implements HostFiles {
     this.changed(full);
   }
 
+  /**
+   * Copy a file, or a folder with everything in it, replacing files of the
+   * same name at `to`, as VS Code (`overwrite: true`) and Node's `cp` do.
+   */
   async copy(from: string, to: string): Promise<void> {
     const source = this.resolve(from);
     const target = this.resolve(to);
@@ -160,14 +164,22 @@ export class Mounts implements HostFiles {
     this.changed(target.full);
   }
 
+  /**
+   * Move a file, or a folder with everything in it, within a mount or to
+   * another. Something already at `to` is never replaced, as VS Code's
+   * rename (`overwrite: false`): a move rejects with `FileExists` instead.
+   */
   async move(from: string, to: string): Promise<void> {
     const source = this.resolve(from);
     const target = this.resolve(to);
+    if (await target.fs.stat(target.path)) {
+      throw alreadyThere(target.full);
+    }
     if (source.fs === target.fs) {
       await source.fs.move(source.path, target.path);
     } else {
       await copyTree(source, target);
-      await source.fs.remove(source.path);
+      await removeTree(source);
     }
     this.changed(source.full);
     this.changed(target.full);
@@ -263,13 +275,26 @@ async function copyTree(source: Resolved, target: Resolved): Promise<void> {
   }
   if (info.kind === "file") {
     const data = await source.fs.read(source.path);
-    await target.fs.write(target.path, data, "create");
+    const there = await target.fs.stat(target.path);
+    await target.fs.write(
+      target.path,
+      data,
+      there?.kind === "file" ? "replace" : "create",
+    );
     return;
   }
   await target.fs.mkdir(target.path);
   for (const entry of (await source.fs.list(source.path)) ?? []) {
     await copyTree(child(source, entry.name), child(target, entry.name));
   }
+}
+
+/** A file, or a folder and everything in it, removed: the end of a move. */
+async function removeTree(source: Resolved): Promise<void> {
+  for (const entry of (await source.fs.list(source.path)) ?? []) {
+    await removeTree(child(source, entry.name));
+  }
+  await source.fs.remove(source.path);
 }
 
 function child(parent: Resolved, name: string): Resolved {

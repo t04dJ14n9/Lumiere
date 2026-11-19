@@ -24,7 +24,12 @@ import { webWorkerLauncher } from "./workers";
 export { indexedDbFolder } from "./idb-folder";
 export { Mounts } from "./mounts";
 export { MemoryFileSystem, type MemoryEntry, type Persist } from "./memory-fs";
-export { notFound, type VaultFileInfo, type VaultFileSystem } from "./vault-fs";
+export {
+  alreadyThere,
+  notFound,
+  type VaultFileInfo,
+  type VaultFileSystem,
+} from "./vault-fs";
 export {
   openEditorPage,
   openPdfPage,

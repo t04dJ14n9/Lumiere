@@ -39,3 +39,82 @@ test("a file is handed over as its File, not read", async () => {
     code: "FileNotFound",
   });
 });
+
+type Entries = Map<string, string | Entries>;
+
+const notFoundError = () => new DOMException("Not found", "NotFoundError");
+
+/** A folder handle that can be written, over a tree of text files. */
+function writable(entries: Entries): FileSystemDirectoryHandle {
+  return {
+    getDirectoryHandle: async (
+      name: string,
+      options?: { create?: boolean },
+    ) => {
+      let entry = entries.get(name);
+      if (entry === undefined && options?.create) {
+        entry = new Map();
+        entries.set(name, entry);
+      }
+      if (!(entry instanceof Map)) {
+        throw notFoundError();
+      }
+      return writable(entry);
+    },
+    getFileHandle: async (name: string, options?: { create?: boolean }) => {
+      if (!entries.has(name) && options?.create) {
+        entries.set(name, "");
+      }
+      if (typeof entries.get(name) !== "string") {
+        throw notFoundError();
+      }
+      return {
+        getFile: async () => new File([entries.get(name) as string], name),
+        createWritable: async () => ({
+          write: async (data: Uint8Array) =>
+            entries.set(name, new TextDecoder().decode(data)),
+          close: async () => {},
+        }),
+      };
+    },
+    removeEntry: async (name: string) => {
+      const entry = entries.get(name);
+      if (entry === undefined) {
+        throw notFoundError();
+      }
+      if (entry instanceof Map && entry.size > 0) {
+        throw new DOMException("Not empty", "InvalidModificationError");
+      }
+      entries.delete(name);
+    },
+    entries: async function* () {
+      for (const [name, entry] of entries) {
+        yield [name, { kind: entry instanceof Map ? "directory" : "file" }];
+      }
+    },
+  } as unknown as FileSystemDirectoryHandle;
+}
+
+test("a folder moves with everything in it, and nothing is moved over", async () => {
+  const daily: Entries = new Map<string, string | Entries>([
+    ["Today.md", "# Today"],
+    ["old", new Map([["Last.md", "last"]])],
+  ]);
+  const vault = new HandleFileSystem(
+    writable(
+      new Map<string, string | Entries>([
+        ["daily", daily],
+        ["Welcome.md", "# Welcome"],
+      ]),
+    ),
+  );
+  await assert.rejects(vault.move("Welcome.md", "daily/Today.md"), {
+    code: "FileExists",
+  });
+  await vault.move("daily", "journal");
+  assert.equal(await vault.stat("daily"), undefined);
+  const text = async (path: string) =>
+    new TextDecoder().decode(await vault.read(path));
+  assert.equal(await text("journal/Today.md"), "# Today");
+  assert.equal(await text("journal/old/Last.md"), "last");
+});

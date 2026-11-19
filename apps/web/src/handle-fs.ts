@@ -5,6 +5,7 @@
  * from outside, so a picked folder's other changes show on the next listing.
  */
 import {
+  alreadyThere,
   notFound,
   type VaultFileInfo,
   type VaultFileSystem,
@@ -98,15 +99,36 @@ export class HandleFileSystem implements VaultFileSystem {
     }
   }
 
+  /** A browser folder has no rename here: copied, then removed. */
   async move(from: string, to: string): Promise<void> {
     const info = await this.stat(from);
-    if (info?.kind !== "file") {
-      throw new Error("Only files can be moved in a browser folder");
+    if (!info) {
+      throw notFound(from);
     }
     if (await this.stat(to)) {
-      throw new Error(`Something is already at ${to}`);
+      throw alreadyThere(to);
     }
-    await this.write(to, await this.read(from), "create");
+    await this.moveEntry(from, to, info.kind);
+  }
+
+  private async moveEntry(
+    from: string,
+    to: string,
+    kind: "file" | "folder",
+  ): Promise<void> {
+    if (kind === "file") {
+      await this.write(to, await this.read(from), "create");
+      await this.remove(from);
+      return;
+    }
+    await this.mkdir(to);
+    for (const entry of (await this.list(from)) ?? []) {
+      await this.moveEntry(
+        `${from}/${entry.name}`,
+        `${to}/${entry.name}`,
+        entry.kind,
+      );
+    }
     await this.remove(from);
   }
 
