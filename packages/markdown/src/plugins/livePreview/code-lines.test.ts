@@ -91,6 +91,34 @@ test("an unclosed fence has no closing line and indented code is code lines", ()
   assert.equal(indented.map((line) => line.hidden).join(""), "");
 });
 
+test("a fence opened on a list item's first line hides its fences, not the bullet", () => {
+  const doc = "- ```js\n  let x = 1;\n  ```\n- next";
+  const outside = lines(doc, doc.length);
+  assert.deepEqual(
+    outside.map((line) => line.hidden),
+    ["```js", "", "```", ""],
+  );
+  // The bullet keeps its own decoration: the bullet widget over `- `.
+  const state = EditorState.create({
+    doc,
+    selection: { anchor: doc.length },
+    extensions: [documentTree],
+  });
+  const onBullet: string[] = [];
+  inlineDecorations(state, [{ from: 0, to: doc.length }]).between(
+    0,
+    1,
+    (from, to, value) => {
+      if (from < to) {
+        onBullet.push(
+          `${state.sliceDoc(from, to)}:${value.spec.widget ? "widget" : "hidden"}`,
+        );
+      }
+    },
+  );
+  assert.deepEqual(onBullet, ["- :widget"]);
+});
+
 test("a thematic break is one line: its source hides outside and shows inside", () => {
   const doc = "Before\n\n---\n\nAfter";
   const outside = lines(doc, 0)[2]!;
