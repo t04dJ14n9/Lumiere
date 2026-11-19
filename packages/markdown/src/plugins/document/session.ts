@@ -16,14 +16,26 @@ export class Session implements DocumentSession {
   private readonly groups = new UndoGroups();
   private historyAction = false;
   private saveEcho?: string;
+  private fingerprinted?: { version: number; hash: string };
   constructor(
     readonly document: HostDocument,
     private readonly host: HostServices,
   ) {
     this.authority = new Authority(document.getText());
   }
+  /**
+   * The text's hash, kept while the authority's version stands: its text
+   * changes only with a new revision. Each push needs the hash before and
+   * after it, and the one before is the previous push's after, so typing
+   * hashes the note once per push, not twice.
+   */
   private fingerprint(): string {
-    return this.host.hostDocuments.fingerprint(this.text);
+    const version = this.authority.version;
+    if (this.fingerprinted?.version !== version) {
+      const hash = this.host.hostDocuments.fingerprint(this.text);
+      this.fingerprinted = { version, hash };
+    }
+    return this.fingerprinted.hash;
   }
   markSaved(text: string): void {
     this.saveEcho = text;
@@ -132,9 +144,11 @@ export class Session implements DocumentSession {
   }
   changed(): void {
     const hostText = this.document.getText();
+    // Built once: on a large note each build is a pass over the whole text.
+    const hostDocument = textDocument(hostText);
     // A change event with no new text (a dirty-state change; Cursor can send
     // one before an edit lands) must not consume the expected panel edit.
-    if (textDocument(hostText).eq(this.authority.doc)) {
+    if (hostDocument.eq(this.authority.doc)) {
       if (this.saveEcho !== undefined && hostText === this.saveEcho) {
         delete this.saveEcho;
       }
@@ -144,13 +158,13 @@ export class Session implements DocumentSession {
     // wiping undo grouping.
     if (this.saveEcho !== undefined && hostText === this.saveEcho) {
       delete this.saveEcho;
-      this.authority.record(hostText, this.expected);
+      this.authority.record(hostDocument, this.expected);
       delete this.expected;
       this.broadcast();
       return;
     }
     if (this.expected || this.historyAction) {
-      this.authority.record(hostText, this.expected);
+      this.authority.record(hostDocument, this.expected);
       delete this.expected;
       this.broadcast();
       return;
@@ -159,7 +173,7 @@ export class Session implements DocumentSession {
     // later identical echo cannot false-match after this external rewrite.
     if (!this.document.isDirty) {
       delete this.saveEcho;
-      this.authority.record(hostText);
+      this.authority.record(hostDocument);
       this.broadcast();
       return; // keep UndoGroups
     }
@@ -173,7 +187,7 @@ export class Session implements DocumentSession {
     // there. The groups do not know this edit, so grouping starts afresh.
     delete this.saveEcho;
     this.groups.clear();
-    this.authority.record(hostText);
+    this.authority.record(hostDocument);
     this.broadcast();
   }
   private broadcast(): void {
