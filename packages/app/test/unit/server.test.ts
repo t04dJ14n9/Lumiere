@@ -582,3 +582,31 @@ test("a process that holds the launch token and is no page may still open a fold
     other,
   ]);
 });
+
+test("S5: only the window answers whether git may run in a vault", async (t) => {
+  const { server, vault, cookie } = await fixture(t);
+  const key = await windowKey(server.port, cookie);
+  const waiting = await send(server.port, "/api/git-trust", {
+    headers: { cookie },
+  });
+  assert.equal(waiting.status, 200);
+  assert.deepEqual(JSON.parse(waiting.body), { waiting: [] });
+  const page = {
+    cookie,
+    "content-type": "application/json",
+    origin: `http://127.0.0.1:${server.port}`,
+    "sec-fetch-site": "same-origin",
+    "sec-fetch-dest": "empty",
+  };
+  const answer = (headers: object) =>
+    send(server.port, "/api/git-trust", {
+      method: "POST",
+      headers: { ...page, ...headers },
+      body: JSON.stringify({ vault, allow: true }),
+    });
+  assert.equal((await answer({})).status, 403);
+  // The window may answer, but only a question git asked.
+  const own = await answer({ [SHELL_KEY_HEADER]: key });
+  assert.equal(own.status, 400);
+  assert.match(own.body, /did not ask/);
+});

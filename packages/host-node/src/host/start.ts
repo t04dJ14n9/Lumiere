@@ -7,7 +7,7 @@ import * as path from "node:path";
 import type { ContributedSetting } from "@workshop/markdown/portable";
 import type { CommandContribution } from "./command-palette";
 import { parseMenus, type MenuContribution } from "./context-menu";
-import { NodeGitAccess } from "./git";
+import { NodeGitAccess, type GitTrust } from "./git";
 import { createNodePlatform } from "./node-platform";
 import {
   startHost,
@@ -22,6 +22,8 @@ export interface StartOptions extends HostStartOptions {
   readonly markdown: string;
   /** Where settings, state and vault snapshots are kept. */
   readonly data: string;
+  /** Which workspaces git may run in (the app asks the reader); all without it. */
+  readonly gitTrust?: GitTrust;
 }
 
 export function startLumiere(options: StartOptions): Promise<LumiereHost> {
@@ -31,7 +33,11 @@ export function startLumiere(options: StartOptions): Promise<LumiereHost> {
   });
   return startHost(platform, {
     ...options,
-    git: (roots) => new NodeGitAccess({ roots }),
+    git: (roots) =>
+      new NodeGitAccess({
+        roots,
+        ...(options.gitTrust ? { trust: options.gitTrust } : {}),
+      }),
   });
 }
 

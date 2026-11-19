@@ -15,6 +15,7 @@ import {
 } from "@workshop/ink/format";
 import type { InkService } from "@workshop/ink/service";
 import { createApi } from "../../src/server/api";
+import { GitTrustStore } from "../../src/server/git-trust";
 import { WindowInk } from "../../src/server/ink";
 import { UiStore } from "../../src/server/ui-state";
 import { Vaults } from "../../src/server/vaults";
@@ -59,6 +60,7 @@ async function api(t: test.TestContext) {
     vaults: new Vaults(path.join(dir, "vaults.json")),
     ui: new UiStore(path.join(dir, "window.json")),
     ink,
+    gitTrust: new GitTrustStore(path.join(dir, "git-trust.json")),
     shellKey: "shell-key",
     insertSketch: () => {
       sketchesStarted += 1;

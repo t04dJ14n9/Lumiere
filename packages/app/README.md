@@ -127,6 +127,7 @@ With no `--vault`, the vault used last opens again, if it is still there.
 | `GET /api/events`, `?only=ink` | server-sent events: vaults changed, a note to open, a drawing started or ended waiting (`{"type":"ink"}`); `only` keeps the listed types. Notes to open that come before a stream that takes them wait for one |
 | `GET /api/ink`, `POST /api/ink` `{"id","sketch"?}` | the drawing the plugins wait for (`{"id","title","sketch"}`, the sketch as its file's metadata JSON), or `{}`; the window's drawing, or none when cancelled, accepted only for the drawing waiting |
 | `POST /api/sketch` | start Insert Sketch in the note last focused |
+| `GET /api/git-trust`, `POST /api/git-trust` `{"vault","allow"}` | `{"waiting"}`: the vaults git waits to be trusted in (`{"type":"git-trust"}` on the event stream when it changes); the reader's answer for one (the window only) |
 | `/lumiere/*` | the editor pages and tree views (`@workshop/host-node`) |
 
 ## Files
@@ -143,6 +144,7 @@ With no `--vault`, the vault used last opens again, if it is still there.
 - `src/shell/opening.ts`: opening vaults and notes from the picker, menu, links and the server.
 - `src/shell/commands.ts`: the window's commands and VS Code's keys for them.
 - `src/server/ink.ts`: the `ink` service: drawings waiting for the window's canvas.
+- `src/server/git-trust.ts`, `src/shell/git-trust.ts`, `src/shell/components/GitTrustPrompt.tsx`: which vaults git may run in, and the window's question.
 - `src/server/json-file.ts`: writing the data folder's JSON files without leaving half a file.
 - `src/shell/ink.ts`: drawing what the server's plugins ask for, on the window's canvas.
 - `src/shell/settings.ts`, `src/shell/settings-view.ts`: the settings, and how the Settings tab lays them out.
@@ -164,6 +166,10 @@ With no `--vault`, the vault used last opens again, if it is still there.
 - Git blame and the change gutter start off in the app (`src/server/defaults.ts`):
   git runs with the repository's own configuration, which can name programs
   to run, so the owner turns them on in Settings for their own repositories.
+  Even then git runs in a vault only once the reader allows it there: the
+  first time git is wanted in a vault, the window asks (`git-trust.ts`).
+  Allow is kept in `git-trust.json` in the data folder; Not Now lasts until
+  the app restarts.
 - Git blame and the change gutter use the `git` on the server's PATH. The
   desktop app started from Finder sees only the system's PATH, so on macOS
   that is Xcode's git, and Git is off without the command-line tools.

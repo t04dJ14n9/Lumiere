@@ -6,8 +6,9 @@
  * runner, repository discovery, and the `.git` watch that counts a
  * repository's changes.
  *
- * Without git (git-program.ts), or for a note in no repository, every answer
- * is the one VS Code gives when its git extension is off: unavailable.
+ * Without git (git-program.ts), for a note in no repository, or in a
+ * workspace the reader has not trusted (`GitTrust`), every answer is the one
+ * VS Code gives when its git extension is off: unavailable.
  */
 import { spawn } from "node:child_process";
 import * as path from "node:path";
@@ -30,7 +31,7 @@ import type {
 } from "@workshop/markdown/portable";
 import { GitBlobs, type BlobLocation } from "./git-blobs";
 import { findGit } from "./git-program";
-import { pathInsideRoots } from "./paths";
+import { isInside, pathInsideRoots } from "./paths";
 
 const TIMEOUT_MS = 5000;
 
@@ -65,9 +66,27 @@ export const HARDENED_GIT_CONFIG: readonly string[] = [
   "protocol.allow=never",
 ];
 
+/**
+ * Whether the reader lets git run in a workspace root's repositories: git
+ * runs a repository's own configuration (its filters and diff drivers), so
+ * a folder from someone else must be trusted first, as VS Code's git
+ * extension waits for workspace trust. The embedder asks and remembers.
+ */
+export interface GitTrust {
+  /**
+   * Whether git may run for notes in `root` (a workspace root's file URI).
+   * False while the reader has not answered; the embedder may ask then.
+   */
+  isTrusted(root: string): boolean;
+  /** A root was trusted or no longer is: pages ask git again. */
+  onDidChange(listener: () => void): () => void;
+}
+
 export interface NodeGitOptions {
   /** The workspace roots, as file URIs: only notes inside them are asked about. */
   readonly roots: () => readonly string[];
+  /** Which roots git may run in; every one without it (DSH's session workspace). */
+  readonly trust?: GitTrust;
   /** Runs `git`; tests may pass their own. */
   readonly runGit?: GitBlameRunner;
 }
@@ -152,9 +171,17 @@ export class NodeGitAccess implements GitAccess {
       : { status: "unavailable" };
   }
 
-  /** A commit, checkout, stage or config change in any repository a note was found in. */
+  /**
+   * A commit, checkout, stage or config change in any repository a note was
+   * found in, or a workspace trusted or no longer trusted.
+   */
   onDidChange(listener: () => void): () => void {
-    return this.watch.subscribe(listener);
+    const stopWatch = this.watch.subscribe(listener);
+    const stopTrust = this.options.trust?.onDidChange(listener);
+    return () => {
+      stopWatch();
+      stopTrust?.();
+    };
   }
 
   /** Throws what git said when it refuses (an ignored file, a locked index). */
@@ -197,6 +224,9 @@ export class NodeGitAccess implements GitAccess {
    * for a note outside the workspace roots or in no repository.
    */
   private async locate(uri: string): Promise<Located | undefined> {
+    if (!this.mayRunIn(uri)) {
+      return undefined;
+    }
     let file: string;
     try {
       file = await pathInsideRoots(this.options.roots(), uri);
@@ -220,6 +250,16 @@ export class NodeGitAccess implements GitAccess {
       relativePath,
       gitPath: relativePath.split(path.sep).join("/"),
     };
+  }
+
+  /** Whether the workspace root holding `uri` is trusted, when trust is asked. */
+  private mayRunIn(uri: string): boolean {
+    const { trust, roots } = this.options;
+    if (!trust) {
+      return true;
+    }
+    const root = roots().find((item) => isInside(item, uri));
+    return root !== undefined && trust.isTrusted(root);
   }
 
   private watchRepository(root: string): void {

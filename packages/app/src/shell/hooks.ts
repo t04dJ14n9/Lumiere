@@ -114,11 +114,19 @@ export function useVaults(report: Errors["report"]): VaultState {
 
 const EMPTY_LISTING: VaultFiles = { files: [], partial: false };
 
-/** One event stream for the window; `listener` may change between renders. */
-export function useServerEvents(listener: (event: ServerEvent) => void): void {
-  const latest = useRef(listener);
-  latest.current = listener;
-  useEffect(() => backend().events((event) => latest.current(event)), []);
+/** One event stream for the window; the listeners may change between renders. */
+export function useServerEvents(
+  ...listeners: readonly ((event: ServerEvent) => void)[]
+): void {
+  const latest = useRef(listeners);
+  latest.current = listeners;
+  useEffect(
+    () =>
+      backend().events((event) =>
+        latest.current.forEach((listener) => listener(event)),
+      ),
+    [],
+  );
 }
 
 export function useMenuCommands(

@@ -309,3 +309,51 @@ test("S5: a repository's core.fsmonitor program does not run when a note is stag
   assert.equal(await access.stage(uri), true);
   await assert.rejects(exists(marker));
 });
+
+test("S5: git runs in no repository of a workspace the reader has not trusted", async (t) => {
+  const { dir, uri } = await repository(t);
+  const real = createSpawnBlameRunner();
+  let runs = 0;
+  let trusted = false;
+  const listeners = new Set<() => void>();
+  const asked: string[] = [];
+  const access = new NodeGitAccess({
+    roots: () => [fileUri(dir)],
+    runGit: (request) => {
+      runs += 1;
+      return real(request);
+    },
+    trust: {
+      isTrusted: (root) => {
+        asked.push(root);
+        return trusted;
+      },
+      onDidChange: (listener) => {
+        listeners.add(listener);
+        return () => listeners.delete(listener);
+      },
+    },
+  });
+  t.after(() => access.dispose());
+  let changes = 0;
+  const stop = access.onDidChange(() => (changes += 1));
+  t.after(stop);
+  const snapshot = { contents: "one\n", version: 1 };
+  assert.equal(
+    (await access.blameLine(uri, 1, snapshot)).status,
+    "unavailable",
+  );
+  assert.deepEqual(await access.baseline(uri, "HEAD"), {
+    status: "unavailable",
+  });
+  assert.equal(await access.identity(uri), undefined);
+  assert.equal(await access.stage(uri), false);
+  assert.equal(runs, 0);
+  assert.equal(asked[0], fileUri(dir));
+
+  trusted = true;
+  listeners.forEach((listener) => listener());
+  assert.equal(changes, 1);
+  assert.equal((await access.blameLine(uri, 1, snapshot)).status, "ok");
+  assert.ok(runs > 0);
+});

@@ -165,12 +165,13 @@ forbids this package from importing `vscode` or any embedder.
   Every command turns off the programs a repository's own configuration
   can name for it to run that can be turned off by key (`core.fsmonitor`,
   hooks, transports: `HARDENED_GIT_CONFIG`). Its filters and diff drivers
-  (a `clean` filter for staging) cannot be, by name. There is no trust
-  gate: git runs in the repository of any note inside a workspace the
-  embedder registered. VS Code turns its git
-  extension off in an untrusted workspace; here, registering a folder
-  (`addRoot`: the app's Open Folder, DSH's session workspace) is that
-  trust, so a folder from someone else should not be opened as a vault.
+  (a `clean` filter for staging) cannot be, by name, so git waits for
+  trust, as VS Code's git extension does in Restricted Mode: an embedder
+  may pass `gitTrust` (`GitTrust`, `StartOptions.gitTrust`), and git then
+  runs only in the workspace roots it says are trusted, answering
+  unavailable elsewhere. The app asks the reader per vault
+  (`packages/app/src/server/git-trust.ts`). DSH passes none: registering a
+  session's workspace (`addRoot`) is its trust.
 - No rendered or native diffs, no status bar entries and no extra panels
   (the vault graph) yet: `inert.ts` answers for them as VS Code does when
   they are unavailable.

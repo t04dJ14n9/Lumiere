@@ -27,6 +27,7 @@ export {
   type EditorRoutes,
 } from "./routes";
 export type { HostIdentity } from "./services";
+export type { GitTrust } from "./git";
 /** A setting and its default (StartOptions.contributed), for an embedder that changes defaults. */
 export type { ContributedSetting } from "@workshop/markdown/portable";
 export type { MenuContribution } from "./context-menu";

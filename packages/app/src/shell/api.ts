@@ -35,7 +35,9 @@ export type ServerEvent =
     }
   | { readonly type: "open"; readonly vault: string; readonly path: string }
   /** A drawing started or ended waiting; read it with `httpInk.waiting`. */
-  | { readonly type: "ink" };
+  | { readonly type: "ink" }
+  /** The vaults git waits to be trusted in changed (`httpGitTrust.waiting`). */
+  | { readonly type: "git-trust" };
 
 /** A drawing the server's plugins wait for (src/server/ink.ts). */
 export interface InkWaiting {
@@ -113,6 +115,17 @@ function listen(
     listener(JSON.parse(message.data) as ServerEvent);
   return () => source.close();
 }
+
+/**
+ * The vaults git waits for the reader to trust (server/git-trust.ts), and
+ * the answer, which only the window may give.
+ */
+export const httpGitTrust = {
+  waiting: async (): Promise<readonly string[]> =>
+    (await request<{ waiting: string[] }>("/api/git-trust")).waiting,
+  answer: (vault: string, allow: boolean) =>
+    post("/api/git-trust", { vault, allow }, shellKeyHeaders()),
+};
 
 /** Drawings for the server's plugins, on the window's canvas (ink.ts). */
 export const httpInk = {

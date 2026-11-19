@@ -367,6 +367,25 @@ button.primary:hover {
   );
   color: var(--vscode-errorForeground);
 }
+.git-trust-prompt {
+  position: fixed;
+  bottom: 12px;
+  left: 50%;
+  z-index: 10;
+  display: flex;
+  gap: 8px;
+  align-items: center;
+  max-width: 80%;
+  padding: 8px 8px 8px 12px;
+  transform: translateX(-50%);
+  border: 1px solid var(--vscode-widget-border, transparent);
+  border-radius: 6px;
+  background: var(
+    --vscode-editorWidget-background,
+    var(--vscode-editor-background)
+  );
+  color: var(--vscode-foreground);
+}
 .tree-panel {
   flex: 1;
   overflow: auto;

@@ -76,6 +76,14 @@ export interface WindowBackend {
    * button beside its layout buttons; without it there is none.
    */
   readonly insertSketch?: () => Promise<unknown>;
+  /**
+   * Where git runs in vaults (a Lumière server): the vaults it waits for the
+   * reader to trust, and the answer for one. A host with no git has none.
+   */
+  readonly gitTrust?: {
+    waiting(): Promise<readonly string[]>;
+    answer(vault: string, allow: boolean): Promise<unknown>;
+  };
   /** A folder picker the window can show, when it has one; the vault's path. */
   readonly pickFolder?: () => Promise<string | undefined>;
   /**

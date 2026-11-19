@@ -25,6 +25,7 @@ import {
 import { createApi, type Api } from "./api";
 import { withAppDefaults } from "./defaults";
 import { admit, newToken } from "./auth";
+import { GitTrustStore } from "./git-trust";
 import { WindowInk } from "./ink";
 import { serveShellPage } from "./shell-page";
 import { UiStore } from "./ui-state";
@@ -56,7 +57,7 @@ export interface RunningServer {
 export async function startServer(setup: ServerSetup): Promise<RunningServer> {
   // The plugins draw on the window's canvas, through the API.
   const ink = new WindowInk();
-  const { lumiere, editor } = await startEditor(setup, ink);
+  const { lumiere, editor, gitTrust } = await startEditor(setup, ink);
   const [vaults, ui] = await loadState(setup, lumiere);
   // Given to the window's page only, to add a folder (auth.ts `fromShell`).
   const shellKey = newToken();
@@ -64,6 +65,7 @@ export async function startServer(setup: ServerSetup): Promise<RunningServer> {
     vaults,
     ui,
     ink,
+    gitTrust,
     shellKey,
     insertSketch: () => insertSketch(lumiere, setup.logger),
     version: setup.version,
@@ -117,6 +119,9 @@ export async function startServer(setup: ServerSetup): Promise<RunningServer> {
 
 /** Lumière's plugins, and the routes that serve their pages (notes and PDFs). */
 async function startEditor(setup: ServerSetup, ink: WindowInk) {
+  // Git runs only in the vaults the reader trusts (git-trust.ts).
+  const gitTrust = new GitTrustStore(path.join(setup.data, "git-trust.json"));
+  await gitTrust.load();
   const markdown = path.join(setup.assets, "markdown");
   const lumiere = await startLumiere({
     identity: { appName: "Lumière", uriScheme: "lumiere" },
@@ -129,6 +134,7 @@ async function startEditor(setup: ServerSetup, ink: WindowInk) {
     data: setup.data,
     logger: setup.logger,
     ink,
+    gitTrust,
   });
   const editor = createEditorRoutes(lumiere, {
     markdown,
@@ -136,7 +142,7 @@ async function startEditor(setup: ServerSetup, ink: WindowInk) {
     pdf: path.join(setup.assets, "pdf"),
     log: (message) => setup.logger.warn(message),
   });
-  return { lumiere, editor };
+  return { lumiere, editor, gitTrust };
 }
 
 /** Insert Sketch in the note last focused; the drawing comes back through POST /api/ink. */

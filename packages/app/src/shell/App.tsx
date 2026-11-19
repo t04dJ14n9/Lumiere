@@ -8,6 +8,7 @@ import { useEffect, useReducer, useState } from "react";
 import { useShortcuts, type CommandHandlers } from "./commands";
 import { CommandPalette } from "./components/CommandPalette";
 import { ErrorBanner } from "./components/ErrorBanner";
+import { GitTrustPrompt } from "./components/GitTrustPrompt";
 import { VaultPicker } from "./components/VaultPicker";
 import { Workspace } from "./components/Workspace";
 import {
@@ -17,6 +18,7 @@ import {
   useShellTheme,
   useVaults,
 } from "./hooks";
+import { useGitTrust } from "./git-trust";
 import { useOpening, type Opening } from "./opening";
 import { usePanels, type Panels } from "./panels";
 import {
@@ -41,7 +43,8 @@ export function App() {
   const [paletteOpen, setPaletteOpen] = useState(false);
   const opening = useOpening(vaults, dispatch, errors.report);
   useSavedTabs({ ui, openVaults: vaults.open, tabs, dispatch });
-  useServerEvents(opening.onServerEvent);
+  const gitTrust = useGitTrust(errors.report);
+  useServerEvents(opening.onServerEvent, gitTrust.onServerEvent);
   useEffect(() => setColorTheme(ui.state.theme), [ui.state.theme]);
   const commands = windowCommands({
     tabs,
@@ -58,6 +61,7 @@ export function App() {
   return (
     <>
       <ErrorBanner message={errors.message} onDismiss={errors.dismiss} />
+      <GitTrustPrompt vault={gitTrust.asking} onAnswer={gitTrust.answer} />
       {showsWorkspace && !opening.pickingVault ? (
         <Workspace
           vault={vaults.current}

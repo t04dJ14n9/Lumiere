@@ -7,6 +7,7 @@
  */
 import type { IncomingMessage, ServerResponse } from "node:http";
 import { fromShell } from "./auth";
+import type { GitTrustStore } from "./git-trust";
 import type { WindowInk } from "./ink";
 import type { UiStore } from "./ui-state";
 import type { VaultEvent, Vaults } from "./vaults";
@@ -19,10 +20,15 @@ const MAX_DRAWING_BODY = 64 * 1024 * 1024;
 const MAX_WAITING = 16;
 /**
  * The routes that can add a folder as a vault, and so widen what the editor
- * pages may read and write. A page of a note is same-origin with the window,
- * so these answer the window only (auth.ts `fromShell`).
+ * pages may read and write, or let git run a vault's own configuration. A
+ * page of a note is same-origin with the window, so these answer the window
+ * only (auth.ts `fromShell`).
  */
-const ADDS_A_FOLDER = new Set(["POST /api/vaults", "POST /api/open"]);
+const WINDOW_ONLY = new Set([
+  "POST /api/vaults",
+  "POST /api/open",
+  "POST /api/git-trust",
+]);
 
 export interface Api {
   /** Answer a request under `/api/`; false when its path is not one of these. */
@@ -31,13 +37,18 @@ export interface Api {
   close(): void;
 }
 
-/** A vault event, or a drawing started or ended waiting (GET /api/ink). */
-export type ServerEvent = VaultEvent | { readonly type: "ink" };
+/**
+ * A vault event, a drawing started or ended waiting (GET /api/ink), or the
+ * vaults git waits to be trusted in changed (GET /api/git-trust).
+ */
+export type ServerEvent =
+  VaultEvent | { readonly type: "ink" } | { readonly type: "git-trust" };
 
 export interface ApiState {
   readonly vaults: Vaults;
   readonly ui: UiStore;
   readonly ink: WindowInk;
+  readonly gitTrust: GitTrustStore;
   /** What the window's page was given to prove it, not a page in it, adds a folder. */
   readonly shellKey: string;
   /** Start Insert Sketch in the note last focused (the window's pencil). */
@@ -91,7 +102,10 @@ export function createApi(state: ApiState): Api {
           openStream(res, { url, streams, waiting });
           return true;
         default:
-          return drawingRoute(route, { req, res }, state);
+          return (
+            (await gitTrustRoute(route, { req, res }, state.gitTrust)) ||
+            drawingRoute(route, { req, res }, state)
+          );
       }
     },
     close() {
@@ -109,10 +123,41 @@ function refusedFromPage(
   { req, res }: { req: IncomingMessage; res: ServerResponse },
   shellKey: string,
 ): boolean {
-  if (!ADDS_A_FOLDER.has(route) || fromShell(req, shellKey)) {
+  if (!WINDOW_ONLY.has(route) || fromShell(req, shellKey)) {
     return false;
   }
-  return json(res, 403, { error: "Only the window may open a folder" });
+  return json(res, 403, { error: "Only the window may do that" });
+}
+
+/**
+ * The vaults git waits to be trusted in, and the reader's answer for one
+ * (git-trust.ts); false for any other route.
+ */
+async function gitTrustRoute(
+  route: string,
+  { req, res }: { req: IncomingMessage; res: ServerResponse },
+  gitTrust: GitTrustStore,
+): Promise<boolean> {
+  switch (route) {
+    case "GET /api/git-trust":
+      return json(res, 200, { waiting: gitTrust.waiting() });
+    case "POST /api/git-trust": {
+      const { vault, allow } = trustBody(await jsonBody(req));
+      await gitTrust.answer(vault, allow);
+      return json(res, 200, { waiting: gitTrust.waiting() });
+    }
+    default:
+      return false;
+  }
+}
+
+/** `{"vault": "<path>", "allow": true|false}`. */
+function trustBody(body: unknown): { vault: string; allow: boolean } {
+  const value = body as { vault?: unknown; allow?: unknown } | null;
+  if (typeof value?.vault !== "string" || typeof value.allow !== "boolean") {
+    throw new Error('Expected {"vault": "<path>", "allow": true|false}');
+  }
+  return { vault: value.vault, allow: value.allow };
 }
 
 /**
@@ -149,7 +194,7 @@ async function drawingRoute(
  * connects later reads a drawing with GET /api/ink.
  */
 function relayEvents(
-  { vaults, ink }: Pick<ApiState, "vaults" | "ink">,
+  { vaults, ink, gitTrust }: Pick<ApiState, "vaults" | "ink" | "gitTrust">,
   streams: Streams,
 ): VaultEvent[] {
   const waiting: VaultEvent[] = [];
@@ -172,6 +217,7 @@ function relayEvents(
     }
   });
   ink.onChange(() => broadcast({ type: "ink" }));
+  gitTrust.onAsk(() => broadcast({ type: "git-trust" }));
   return waiting;
 }
 
