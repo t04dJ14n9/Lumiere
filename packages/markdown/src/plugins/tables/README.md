@@ -175,7 +175,7 @@ as for any nested scroller.
 HTML paste in a focused cell uses the outer editor capture pipeline; the table
 clipboard ignores already-handled events. Rectangular paste keeps TSV semantics:
 a cell a spreadsheet wraps in quotes may hold tabs, line breaks (stored as `<br>`) and `""` for a quote.
-Copy publishes TSV as `text/plain` (spreadsheets), Markdown and HTML table flavors, and an `obsidian/table` JSON payload of rows that a table paste reads back cell for cell, the same four flavors Obsidian offers.
+Copy publishes TSV as `text/plain` (spreadsheets), Markdown and HTML table flavors, and an `obsidian/table` JSON payload of rows that a table paste reads back cell for cell, the same four flavors Obsidian offers. A pasted payload that is not rows of text is ignored for the text flavors.
 Menu paste reads plain text through the host (VS Code's clipboard has no
 HTML): Paste writes a copied Markdown table cell for cell, while Paste as
 plain text never reads the text as a table and splits it only at tabs and

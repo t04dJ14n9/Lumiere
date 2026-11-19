@@ -315,6 +315,37 @@ test("ClipboardEvent copy sets plain TSV, markdown, HTML and obsidian/table", ()
   assert.deepEqual(structured.alignment, ["", "right"]);
 });
 
+test("an obsidian/table payload that is not rows of text is ignored for the text", () => {
+  for (const rows of [
+    [["Zed", 99]],
+    [[{ toString: "x" }]],
+    ["Zed"],
+    [["Zed"], null],
+    [[]],
+    "Zed",
+  ]) {
+    const fixture = clipboardFixture();
+    fixture.selection.range = {
+      anchor: { row: 1, column: 0 },
+      head: { row: 1, column: 1 },
+    };
+    const event = {
+      defaultPrevented: false,
+      clipboardData: {
+        getData: (type: string) =>
+          type === "obsidian/table" ? JSON.stringify({ rows }) : "plain\ttext",
+      },
+      preventDefault() {},
+    };
+    fixture.clipboard.paste(event as unknown as ClipboardEvent);
+    assert.deepEqual(
+      parseTable(fixture.grid.block.source)!.rows[1]!.map((cell) => cell.text),
+      ["plain", "text"],
+      JSON.stringify(rows),
+    );
+  }
+});
+
 test("paste prefers obsidian/table rows over plain text", () => {
   const fixture = clipboardFixture();
   const range = {

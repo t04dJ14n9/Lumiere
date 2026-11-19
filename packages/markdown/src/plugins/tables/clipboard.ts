@@ -5,6 +5,7 @@ import {
   copyCellsObsidian,
   pastedCells,
   pastedMarkdownCells,
+  pastedObsidianRows,
 } from "../../markdown/tables/clipboard-formats";
 import {
   parseTable,
@@ -111,18 +112,11 @@ export class TableClipboard {
     if (!data || !range) {
       return;
     }
-    const structured = data.getData("obsidian/table");
-    if (structured) {
-      try {
-        const payload = JSON.parse(structured) as { rows?: string[][] };
-        if (Array.isArray(payload.rows) && payload.rows.length > 0) {
-          event.preventDefault();
-          this.grid.replace(writeCells(this.grid.model, range, payload.rows));
-          return;
-        }
-      } catch {
-        // Fall through to text flavors.
-      }
+    const rows = pastedObsidianRows(data.getData("obsidian/table"));
+    if (rows) {
+      event.preventDefault();
+      this.grid.replace(writeCells(this.grid.model, range, rows));
+      return;
     }
     const text =
       data.getData("text/plain") || data.getData("text/markdown") || "";
