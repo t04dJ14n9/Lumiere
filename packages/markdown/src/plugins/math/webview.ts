@@ -2,7 +2,6 @@ import type { Context, Infer, Plugin } from "@workshop/core";
 import type {} from "../editor/api";
 import type {} from "../commands/api";
 import type {} from "../formatting/api";
-import type { InlineContext } from "../livePreview/api";
 import type { RenderPass } from "../render/api";
 import { MarkdownBlock } from "../../webview/ui/markdown-widget";
 import {
@@ -11,7 +10,8 @@ import {
 } from "../../webview/ui/inline-widget";
 import { sanitizeGraphics } from "../../webview/ui/graphics";
 import { inlineMathEdit, mathBlockEdit } from "./commands";
-import { delimiters, mathBody, mathTokens } from "./source";
+import { mathBody } from "./source";
+import { markMathSource } from "./source-marks";
 import { errorMessage } from "../../shared/errors";
 import { decodeDataValue } from "../../markdown/html/helpers";
 import { config } from "./manifest";
@@ -104,10 +104,10 @@ function registerMathRenderers(ctx: Context): void {
       // Block math too: its revealed source is marked like inline math.
       nodes: ["InlineMath", "MathBlock"],
       decorate(node, cx) {
-        const source = cx.state.sliceDoc(node.from, node.to);
         if (cx.revealed(node.from, node.to)) {
-          markMathSource(cx, node.from, source);
+          markMathSource(cx, node);
         } else if (node.name === "InlineMath") {
+          const source = cx.state.sliceDoc(node.from, node.to);
           cx.replace(
             node.from,
             node.to,
@@ -117,25 +117,6 @@ function registerMathRenderers(ctx: Context): void {
       },
     }),
   );
-}
-
-/**
- * Revealed math reads as highlighted code, its delimiters in the accent
- * colour, as in Obsidian.
- */
-function markMathSource(cx: InlineContext, from: number, source: string): void {
-  const { width, closed } = delimiters(source);
-  const end = from + source.length;
-  const bodyEnd = closed ? end - width : end;
-  cx.mark(from, from + width, "md-math md-math-delimiter");
-  cx.mark(from + width, bodyEnd, "md-math");
-  const body = from + width;
-  for (const token of mathTokens(source.slice(width, bodyEnd - from))) {
-    cx.mark(body + token.from, body + token.to, `md-math-${token.type}`);
-  }
-  if (closed) {
-    cx.mark(bodyEnd, end, "md-math md-math-delimiter");
-  }
 }
 
 function registerMathCleanup(ctx: Context): Set<() => void> {

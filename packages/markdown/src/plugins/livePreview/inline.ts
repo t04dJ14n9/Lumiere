@@ -62,12 +62,14 @@ export function inlineDecorations(
   // Persistent inline widgets (tall embeds) must stay in the decoration set
   // off-viewport: otherwise estimatedHeight never reaches the height map and
   // a remount collapses the line to ~one text line (#117 gap).
+  builder.visible = undefined;
   decoratePersistentOffViewport(state, builder, visibleRanges);
   return Decoration.set(builder.ranges, true);
 }
 
 class InlineDecorations implements InlineContext {
   readonly ranges: Range<Decoration>[] = [];
+  visible: { from: number; to: number } | undefined;
   private readonly lines = new Set<string>();
   constructor(readonly state: EditorState) {}
 
@@ -120,6 +122,7 @@ class InlineDecorations implements InlineContext {
     visible: { from: number; to: number },
   ): false | undefined {
     const { name, from, to } = node;
+    this.visible = visible;
     const custom = this.state
       .facet(inlineRenderers)
       .find((renderer) => renderer.nodes.includes(name));

@@ -28,6 +28,12 @@ export interface RenderBlock {
 }
 export interface InlineContext {
   state: EditorState;
+  /**
+   * The visible range being decorated; absent for persistent widgets drawn
+   * off screen. A renderer of a node that can reach far past the screen (an
+   * unclosed `$$`) marks only this range.
+   */
+  readonly visible?: { from: number; to: number };
   /** Inclusive selection touch, extended through inline ancestors and abutting elements. */
   revealed(from: number, to: number): boolean;
   mark(

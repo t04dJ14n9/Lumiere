@@ -31,6 +31,9 @@ source is already shown, so typing replaces the body and preserves delimiters.
 - `webview.ts`: renderer, post-processor, cleanup and command registrations.
 - `commands.ts`: pure selection edits and delimiter placement.
 - `source.ts`: a formula's delimiters, and the span a click selects.
+- `source-marks.ts`: highlights a revealed formula, only the lines on screen
+  (an unclosed `$$` reaches to the end of the note).
+- `test/unit/math/source-marks.test.ts`: highlighting, and its cost bounded by the screen.
 - `mathjax.ts`: lazy TeX-to-SVG conversion with supported TeX packages and user macros.
 - `macros.ts`: normalize Obsidian-style MathJax macro maps for configmacros.
 - `fonts.ts`: MathJax's loader for the font's dynamic glyph files.
