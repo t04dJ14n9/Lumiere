@@ -19,7 +19,7 @@ const SCANS =
 test("only the vault's file system adapter lists folders", () => {
   const scanners = readdirSync("src", { recursive: true, encoding: "utf8" })
     .filter((path) => path.endsWith(".ts") && !path.endsWith(".test.ts"))
-    .map((path) => `src/${path}`)
+    .map((path) => `src/${path.replaceAll("\\", "/")}`)
     .filter((path) => !LISTERS.has(path))
     .filter((path) => SCANS.test(readFileSync(path, "utf8")));
   assert.deepEqual(scanners, []);
