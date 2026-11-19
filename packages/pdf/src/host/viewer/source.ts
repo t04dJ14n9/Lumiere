@@ -29,7 +29,10 @@ export class PdfSource {
   sha256: string | undefined;
   private expectedWrite: string | undefined;
   private generation = 0;
+  private watchGeneration = 0;
   private timer: ReturnType<typeof setTimeout> | undefined;
+  /** What a watched change read, for the reload it starts. */
+  private changedBytes: PdfBytes | undefined;
   private readonly stopWatching: () => void;
 
   constructor(
@@ -66,44 +69,74 @@ export class PdfSource {
   /** Start a new read; resolves `undefined` if a newer read started meanwhile or it failed. */
   async read(): Promise<PdfBytes | undefined> {
     const generation = ++this.generation;
-    let bytes: Uint8Array;
-    try {
-      bytes = await this.files.read(this.uri);
-    } catch (error) {
-      this.events.failed(
-        `Could not read ${this.files.displayPath(this.uri)}: ${String(error)}`,
-      );
+    const ready = this.changedBytes;
+    this.changedBytes = undefined;
+    if (ready) {
+      this.sha256 = ready.sha256;
+      return ready;
+    }
+    const read = await this.readNow();
+    if (!read || generation !== this.generation) {
       return undefined;
     }
-    if (generation !== this.generation) {
-      return undefined;
-    }
-    this.sha256 = createHash("sha256").update(bytes).digest("hex");
-    return { data: standaloneBuffer(bytes), sha256: this.sha256 };
+    this.sha256 = read.sha256;
+    return read;
   }
 
   dispose(): void {
     // A read in flight finishes into a stale generation and is dropped.
     this.generation++;
+    this.watchGeneration++;
+    this.changedBytes = undefined;
     clearTimeout(this.timer);
     this.stopWatching();
   }
 
-  private async onWatchedChange(): Promise<void> {
-    if (this.files.hash) {
-      try {
-        const disk = await this.files.hash(this.uri);
-        // Keep expectedWrite: atomic rename often fires create+change, and
-        // clearing after the first event lets the second reload the viewer
-        // (wiping EmbedPDF History so Undo Annotation no-ops). Bytes the
-        // viewer already has (a touch, a sync) need no reload either.
-        if (disk === this.expectedWrite || disk === this.sha256) {
-          this.sha256 = disk;
-          return;
-        }
-      } catch {
-        // Fall through to a normal reload.
+  /**
+   * The file's bytes and hash now; undefined when it cannot be read, which
+   * is reported when `report` says so.
+   */
+  private async readNow(report = true): Promise<PdfBytes | undefined> {
+    let bytes: Uint8Array;
+    try {
+      bytes = await this.files.read(this.uri);
+    } catch (error) {
+      if (report) {
+        this.events.failed(
+          `Could not read ${this.files.displayPath(this.uri)}: ${String(error)}`,
+        );
       }
+      return undefined;
+    }
+    return {
+      data: standaloneBuffer(bytes),
+      sha256: createHash("sha256").update(bytes).digest("hex"),
+    };
+  }
+
+  /**
+   * The file changed on disk: read it once, and hand those same bytes to
+   * the reload (`read`) rather than reading and hashing the file twice.
+   */
+  private async onWatchedChange(): Promise<void> {
+    // Its own count: a reload already reading goes on, and the newer bytes
+    // found here start the next one.
+    const generation = ++this.watchGeneration;
+    const read = await this.readNow(false);
+    if (generation !== this.watchGeneration) {
+      return;
+    }
+    // Unreadable (deleted, locked): the reload reads again and says why.
+    if (read) {
+      // Keep expectedWrite: atomic rename often fires create+change, and
+      // clearing after the first event lets the second reload the viewer
+      // (wiping EmbedPDF History so Undo Annotation no-ops). Bytes the
+      // viewer already has (a touch, a sync) need no reload either.
+      if (read.sha256 === this.expectedWrite || read.sha256 === this.sha256) {
+        this.sha256 = read.sha256;
+        return;
+      }
+      this.changedBytes = read;
     }
     this.events.changed();
   }

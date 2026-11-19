@@ -5,6 +5,7 @@ import {
   type PageRef,
 } from "@embedpdf/react/runtime";
 import type { PageTextSnapshot, TextLayout, TextRange } from "@embedpdf/engine";
+import { RecentCache } from "../shared/recent-cache";
 
 /**
  * A page's text, for the parts of the viewer that read it directly: where
@@ -35,11 +36,15 @@ export function useTextAccess(): TextAccess | null {
   return useOptionalCapability(TextAccessToken);
 }
 
+/** Pages whose text and layout are kept; a page's layout holds every glyph box. */
+const CACHED_PAGES = 64;
+
 /**
  * Lumiere only ever adds annotations, which change neither the characters nor
- * their boxes, so what is read once per page is kept for the document's life.
- * A read that fails (copy forbidden, page gone) is forgotten, so a later
- * ask tries again.
+ * their boxes, so what is read of a page is kept, for the pages read most
+ * recently (a long PDF read through would otherwise keep every page's). A
+ * read that fails (copy forbidden, page gone) is forgotten, so a later ask
+ * tries again.
  */
 export const lumiereTextPlugin = () =>
   definePlugin({
@@ -47,10 +52,14 @@ export const lumiereTextPlugin = () =>
     token: TextAccessToken,
     scope: "document",
     create: (ctx) => {
-      const layouts = new Map<number, Promise<TextLayout>>();
-      const texts = new Map<number, Promise<PageTextSnapshot>>();
+      const layouts = new RecentCache<number, Promise<TextLayout>>(
+        CACHED_PAGES,
+      );
+      const texts = new RecentCache<number, Promise<PageTextSnapshot>>(
+        CACHED_PAGES,
+      );
       const once = <Value>(
-        cache: Map<number, Promise<Value>>,
+        cache: RecentCache<number, Promise<Value>>,
         page: PageRef,
         read: () => Promise<Value>,
       ): Promise<Value> => {
@@ -60,7 +69,7 @@ export const lumiereTextPlugin = () =>
         }
         const pending = read();
         cache.set(page.objectNumber, pending);
-        pending.catch(() => cache.delete(page.objectNumber));
+        pending.catch(() => cache.delete(page.objectNumber, pending));
         return pending;
       };
       return {
