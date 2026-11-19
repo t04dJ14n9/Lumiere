@@ -1,8 +1,10 @@
 import { Schema } from "@workshop/core";
 import { defineProtocol } from "../../shared/rpc/protocol";
 
-/** Enough for a large screenshot as base64 (~15 MiB of binary). */
-const MAX_BASE64 = 20_000_000;
+/** The largest file a page can send: enough for a large screenshot. */
+export const MAX_ATTACHMENT_BYTES = 15_000_000;
+/** `MAX_ATTACHMENT_BYTES` as base64. */
+const MAX_BASE64 = Math.ceil(MAX_ATTACHMENT_BYTES / 3) * 4;
 
 const saveResult = Schema.object({
   ok: Schema.boolean(),
@@ -35,5 +37,14 @@ export const protocol = defineProtocol("attachments", {
       result: saveResult,
     },
   },
-  notifications: {},
+  notifications: {
+    /**
+     * The page did not send a dropped or pasted file: the host says why.
+     * The page names only the file and a reason; the host writes the words.
+     */
+    refused: Schema.object({
+      name: Schema.string().max(255),
+      reason: Schema.union(["tooLarge", "unreadable"]),
+    }),
+  },
 });

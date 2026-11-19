@@ -22,6 +22,8 @@ export interface DragPayload {
   readonly files: ArrayLike<{
     readonly name: string;
     readonly type: string;
+    /** In bytes: a file too large to send is refused before it is read. */
+    readonly size: number;
     arrayBuffer(): Promise<ArrayBuffer>;
   }>;
   getData(format: string): string;

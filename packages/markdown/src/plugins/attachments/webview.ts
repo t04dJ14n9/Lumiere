@@ -12,17 +12,16 @@ import {
   droppedAttachmentUris,
   droppedLinkText,
   encodeBase64,
-  extensionForMime,
   filesFromDataTransfer,
   insertEmbed,
   isHostSourceUrl,
   rewriteRemoteImages,
   shouldClaimEditorDrop,
-  type DragFile,
 } from "../../attachments";
 import type {} from "../editor/api";
 import type {} from "../pasteHtml/api";
 import { protocol } from "./protocol";
+import { saveDropped, saveDroppedFile, type DropSaver } from "./drop-save";
 
 export const attachmentsWebview: Plugin = {
   name: "attachments",
@@ -121,33 +120,21 @@ async function onDrop(
     }
     return;
   }
-  const embeds = await saveDropped(ctx, files, uris);
+  const embeds = await saveDropped(dropSaver(ctx), files, uris);
   if (!isLive() || embeds.length === 0) {
     return;
   }
   insertAt(target, pos, embeds.join("\n\n"));
 }
 
-/** Save each dropped file or URI in turn; the embeds of those saved. */
-async function saveDropped(
-  ctx: Context,
-  files: readonly DragFile[],
-  uris: readonly string[],
-): Promise<string[]> {
-  const embeds: string[] = [];
-  for (const file of files) {
-    const embed = await saveFile(ctx, file);
-    if (embed) {
-      embeds.push(embed);
-    }
-  }
-  for (const uri of uris) {
-    const embed = await saveSrc(ctx, uri);
-    if (embed) {
-      embeds.push(embed);
-    }
-  }
-  return embeds;
+function dropSaver(ctx: Context): DropSaver {
+  return {
+    saveBytes: (bytes, ext) => saveBytes(ctx, bytes, ext),
+    saveSource: (uri) => saveSrc(ctx, uri),
+    refuse: (name, reason) =>
+      ctx.rpc.notify(protocol, "refused", { name: name.slice(0, 255), reason }),
+    failed: (error) => ctx.logger.error("Could not save the attachment", error),
+  };
 }
 
 async function onPasteImage(
@@ -170,7 +157,7 @@ async function onPasteImage(
     return;
   }
   event.preventDefault();
-  const embed = await saveFile(ctx, file);
+  const embed = await saveDroppedFile(dropSaver(ctx), file);
   if (!isLive() || !embed) {
     return;
   }
@@ -196,15 +183,6 @@ function insertAt(view: EditorView, pos: number, embed: string): void {
     userEvent: "input",
     scrollIntoView: true,
   });
-}
-
-async function saveFile(
-  ctx: Context,
-  file: DragFile,
-): Promise<string | undefined> {
-  const bytes = new Uint8Array(await file.arrayBuffer());
-  const ext = extensionFromName(file.name) || extensionForMime(file.type);
-  return saveBytes(ctx, bytes, ext);
 }
 
 async function saveSrc(ctx: Context, src: string): Promise<string | undefined> {
@@ -284,14 +262,4 @@ function dropView(event: DragEvent, outer: EditorView): EditorView | undefined {
   }
   // Drop elsewhere in the webview still embeds into the active note editor.
   return outer.dom.isConnected ? outer : undefined;
-}
-
-function extensionFromName(name: string): string {
-  const base = name.split(/[/\\]/).pop() ?? "";
-  const dot = base.lastIndexOf(".");
-  if (dot <= 0) {
-    return "";
-  }
-  const ext = base.slice(dot + 1).toLowerCase();
-  return /^[a-z0-9]{1,8}$/.test(ext) ? ext : "";
 }

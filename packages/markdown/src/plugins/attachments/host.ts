@@ -23,7 +23,7 @@ import { registerDeleteUnlinked } from "./delete-unlinked";
 import { NO_VAULT, registerDownloadAttachments } from "./download-command";
 import { hostFetch } from "./host-fetch";
 import { containedReader } from "./local-source";
-import { protocol } from "./protocol";
+import { MAX_ATTACHMENT_BYTES, protocol } from "./protocol";
 import { attachmentTarget } from "./target";
 
 type SaveResult = {
@@ -69,6 +69,11 @@ function answerNotePages(ctx: Context): void {
         owned.effect(() =>
           panel.rpc.handle(protocol, "importUrl", (params) =>
             importUrlForPanel(ctx, panel, params.url, { imagesOnly: true }),
+          ),
+        );
+        owned.effect(() =>
+          panel.rpc.on(protocol, "refused", ({ name, reason }) =>
+            ctx.dialogs.error(refusalMessage(name, reason)),
           ),
         );
       },
@@ -190,6 +195,17 @@ async function writeAttachment(
       error instanceof Error ? error.message : "Could not save the attachment.";
     return fail(ctx, message);
   }
+}
+
+/** Why a page did not send a dropped or pasted file, in the reader's words. */
+export function refusalMessage(
+  name: string,
+  reason: "tooLarge" | "unreadable",
+): string {
+  const megabytes = MAX_ATTACHMENT_BYTES / 1_000_000;
+  return reason === "tooLarge"
+    ? `“${name}” is larger than ${megabytes} MB, so it was not added to the note.`
+    : `“${name}” could not be read, so it was not added to the note.`;
 }
 
 function fail(ctx: Context, error: string): SaveResult {

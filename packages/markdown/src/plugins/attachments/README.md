@@ -113,7 +113,7 @@ dialog says the note was not changed.
 ## Files
 
 - `manifest.ts`: feature switch and the Download command.
-- `protocol.ts`: webview → host `save` / `importUrl` requests.
+- `protocol.ts`: webview → host `save` / `importUrl` requests and the `refused` notice for a file the page did not send.
 - `host.ts`: write into the vault; bind each open note page; opt into Explorer
   reclaim when the adapter offers it (no `vscode` import).
 - `target.ts`: a note's attachment folder and link settings.
@@ -124,6 +124,7 @@ dialog says the note was not changed.
 - `unlinked.ts`: the attachments only some notes link to (pure, on the index).
 - `delete-unlinked.ts`: the offer to delete them when those notes are deleted.
 - `webview.ts`: DnD, clipboard image paste, HTML image rewrite.
+- `drop-save.ts`: saves dropped items one by one; one that fails or is too large is reported and the rest go on.
 
 ## Services, commands and settings
 
@@ -138,7 +139,9 @@ Folder: `files.attachmentFolder` (Links). Links: `links.useWikilinks` and
 ## Limits
 
 A failed save leaves that item unchanged and shows a short error; no broken
-vault link is inserted. Other items in a multi-drop may still succeed. An
+vault link is inserted. Other items in a multi-drop are still saved. A dropped
+or pasted file larger than 15 MB (what a page can send the host) is refused
+before it is read, with a message naming it. An
 attachment folder that is a symbolic link, or sits behind one, is not written
 to: a link could lead out of the vault, so that save fails the same way.
 
