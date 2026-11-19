@@ -1,9 +1,6 @@
 import type { EditorView } from "@codemirror/view";
-import {
-  parseTable,
-  type CellPosition,
-  type Table,
-} from "../../markdown/tables/model";
+import type { CellPosition, Table } from "../../markdown/tables/model";
+import { parsedTable } from "../../markdown/tables/parsed";
 import { editGroup } from "../document/api";
 import type { RenderBlock } from "../livePreview/api";
 import { indentRows, rowPrefix } from "./column-widths";
@@ -28,7 +25,7 @@ export class TableGrid {
       "disposeContent" | "renderContent"
     >,
   ) {
-    this.model = parseTable(block.source)!;
+    this.model = parsedTable(block.source)!;
     this.table.className = "markdown-rendered table-editor";
     this.table.setAttribute("aria-label", "Markdown table");
     // A wide table scrolls by itself, as in Obsidian, not the whole note.

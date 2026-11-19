@@ -2,10 +2,10 @@ import type { EditorView } from "@codemirror/view";
 import {
   cellAtOffset,
   cellForSourceOffset,
-  parseTable,
   type CellPosition,
   type CellRange,
 } from "../../markdown/tables/model";
+import { parsedTable } from "../../markdown/tables/parsed";
 import {
   operateTable,
   type TableOperation,
@@ -253,7 +253,7 @@ export class TableController {
       this.toolbar.close();
     }
     this.grid.outer = outer;
-    const model = parseTable(block.source);
+    const model = parsedTable(block.source);
     if (!model) {
       return;
     }
@@ -373,7 +373,7 @@ export class TableController {
     if (this.grid.locate() === undefined) {
       return;
     }
-    const next = parseTable(table);
+    const next = parsedTable(table);
     this.close();
     delete this.selected.range;
     this.requested = next

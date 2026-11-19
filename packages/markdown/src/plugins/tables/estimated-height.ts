@@ -1,4 +1,4 @@
-import { parseTable } from "../../markdown/tables/model";
+import { parsedTable } from "../../markdown/tables/parsed";
 
 /**
  * CodeMirror sizes a block widget from `estimatedHeight` until it measures
@@ -52,7 +52,7 @@ export function tableEstimatedHeight(source: string): number {
     measuredTableHeights.set(source, measured);
     return measured;
   }
-  const model = parseTable(source);
+  const model = parsedTable(source);
   if (!model || model.rows.length === 0) {
     return ROW + CHROME;
   }

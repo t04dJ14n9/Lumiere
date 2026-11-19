@@ -10,7 +10,9 @@ column beside it; the add strip's new last column has no alignment.
 A table widget wires a rendered grid to a cell projection, selection, keyboard,
 clipboard and toolbar collaborator. The projection reserializes the entire table
 with column-aligned padding on each cell edit, in the existing native input group;
-it never owns undo history. Cells past the header's width, which GFM does not
+it never owns undo history. Only the rows whose text changed are edited in the
+note, and each table source is parsed once however many readers ask for it
+(`parsedTable` keeps the last few). Cells past the header's width, which GFM does not
 render, stay in the source: every rewrite writes them back after their row,
 which keeps them through row moves and column edits. The controller reconciles
 incoming snapshots, preserving the active cell editor across structural edits.
@@ -125,6 +127,8 @@ plugin registrations and widget lifetimes end when the plugin stops.
 - `navigation.test.ts`: keyboard routing, append, exit and re-entry unit tests.
 - `vim-source.test.ts`: source-column ownership, delimiter entry, transaction/mode guards and deferred-entry cancellation unit tests.
 - `src/markdown/tables/model.ts`: pure table parsing, serialization and source-position mapping.
+- `src/markdown/tables/parsed.ts`: `parseTable` for the last few sources, shared by the readers of one keystroke.
+- `keystroke-cost.test.ts`: one parse per source and a one-row edit for a keystroke.
 - `src/markdown/tables/clipboard-formats.ts`: pure copy flavors (TSV, Markdown, HTML, `obsidian/table`) of a cell range and pasted-text parsing.
 - `src/markdown/tables/tab-separated.ts`: pure splitting of pasted tab-separated text into cells, honouring spreadsheet quotes.
 - `clipboard.test.ts`: cell/grid clipboard, selection and stale-paste unit tests.

@@ -172,6 +172,10 @@ export function rectangle(range: CellRange) {
 }
 
 export function cellText(text: string): string {
+  // Most cells need neither: serializing a large table writes every cell.
+  if (!/[|\r\n]/.test(text)) {
+    return text;
+  }
   let result = "";
   let escapes = 0;
   for (const char of text.replace(/\r\n?|\n/g, "<br>")) {

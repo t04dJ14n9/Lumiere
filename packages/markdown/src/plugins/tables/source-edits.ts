@@ -1,4 +1,5 @@
-import { parseTable, type Table } from "../../markdown/tables/model";
+import type { Table } from "../../markdown/tables/model";
+import { parsedTable } from "../../markdown/tables/parsed";
 import { difference } from "../../shared/document/wire";
 
 interface SourceChange {
@@ -12,7 +13,7 @@ export function tableSourceChanges(
   table: Table,
   source: string,
 ): SourceChange[] {
-  const next = parseTable(source);
+  const next = parsedTable(source);
   const beforeLines = sourceLines(table.source);
   const afterLines = sourceLines(source);
   if (
@@ -23,8 +24,19 @@ export function tableSourceChanges(
     return sourceChanges(table.source, source, 0);
   }
   return beforeLines.flatMap((line, index) => {
+    const afterLine = afterLines[index]!;
+    // One keystroke usually rewrites a single row of a large table.
+    if (
+      line.to - line.from === afterLine.to - afterLine.from &&
+      table.source.startsWith(
+        source.slice(afterLine.from, afterLine.to),
+        line.from,
+      )
+    ) {
+      return [];
+    }
     const before = cellCuts(table, line, index);
-    const after = cellCuts(next, afterLines[index]!, index);
+    const after = cellCuts(next, afterLine, index);
     return before
       .slice(1)
       .flatMap((end, part) =>
@@ -71,6 +83,9 @@ function sourceChanges(
   offset: number,
 ): SourceChange[] {
   const changes: SourceChange[] = [];
+  if (before === after) {
+    return changes;
+  }
   difference(before, after).iterChanges((...change) => {
     const [from, to, , , insert] = change;
     changes.push({
