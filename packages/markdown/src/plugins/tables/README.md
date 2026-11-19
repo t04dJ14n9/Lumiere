@@ -146,7 +146,9 @@ Injects `editor`, `document`, `markdown`, `livePreview`, `render`, `commands`,
 `menu`, `rpc`; optionally `vim`, `formatting` and `links`. The optional Links
 service follows Mod-Enter from the focused cell's own document and caret.
 Provides no service. Listens to
-`editor/clearProjection`, `editor/projectSelection` and `editor/activeView`;
+`editor/clearProjection`, `editor/projectSelection`, `editor/activeView` and
+`render/changed` (mounted tables re-render their cells, unmounted retained
+ones are dropped);
 emits `editor/scrollInput` for vertical table wheel input and sends the validated
 editor `selectionChanged` notification. The feature switch
 is `lumiere.markdown.plugins.tables.enabled`; it has no separate configuration.
