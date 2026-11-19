@@ -278,14 +278,24 @@ export class NoteDocuments implements HostDocuments {
    * close even when a write fails: an open watch keeps the host process alive.
    */
   async dispose(): Promise<void> {
+    const writes = this.saveAll();
+    await writes.catch(() => {});
+    for (const uri of [...this.notes.keys()]) {
+      this.close(uri);
+    }
+    await writes;
+  }
+
+  /**
+   * Write every note with unsaved text now, without waiting for autosave;
+   * rejects with the first failure once every write has settled.
+   */
+  async saveAll(): Promise<void> {
     const writes = await Promise.allSettled(
       [...this.notes.values()]
         .filter((note) => note.isDirty)
         .map((note) => this.save(note)),
     );
-    for (const uri of [...this.notes.keys()]) {
-      this.close(uri);
-    }
     const failed = writes.find((write) => write.status === "rejected");
     if (failed) {
       throw failed.reason;

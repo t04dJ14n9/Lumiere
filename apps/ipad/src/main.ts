@@ -7,7 +7,12 @@
 import { startLocalHost } from "@workshop/app/local";
 import { startWindow } from "@workshop/app/shell";
 import { parseMenus } from "@workshop/host-node/core";
-import { indexedDbFolder, MemoryFileSystem, Mounts } from "@workshop/host-web";
+import {
+  indexedDbFolder,
+  MemoryFileSystem,
+  Mounts,
+  saveOnHide,
+} from "@workshop/host-web";
 import type { ContributedSetting } from "@workshop/markdown/portable";
 import { NativeFileSystem } from "./native-fs";
 import { vaultFileUrl } from "./resources";
@@ -68,6 +73,8 @@ async function main(): Promise<void> {
       return path;
     },
   });
+  // The iPad may stop the app soon after it leaves the screen.
+  saveOnHide(() => local.host.saveAll(), window);
   const insertSketch = () => local.host.run(INSERT_SKETCH_COMMAND);
   startWindow(document.getElementById("root")!, {
     ...local.backend,

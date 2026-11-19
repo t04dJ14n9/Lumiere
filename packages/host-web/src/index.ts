@@ -33,6 +33,7 @@ export {
   type ServedPage,
 } from "./pages";
 export { createWebPlatform } from "./platform";
+export { saveOnHide, type HidingWindow } from "./save-on-hide";
 export { sha256 } from "./sha256";
 export { webWorkerLauncher } from "./workers";
 export type { LumiereHost } from "@workshop/host-node/core";

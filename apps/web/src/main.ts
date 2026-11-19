@@ -11,6 +11,7 @@ import {
   indexedDbFolder,
   MemoryFileSystem,
   Mounts,
+  saveOnHide,
   type VaultFileSystem,
 } from "@workshop/host-web";
 import type { ContributedSetting } from "@workshop/markdown/portable";
@@ -64,6 +65,7 @@ async function main(): Promise<void> {
     },
     ...(canPickFolders() ? { pickFolder: () => picked.pick() } : {}),
   });
+  saveOnHide(() => local.host.saveAll(), window);
   if (navigator.serviceWorker) {
     answerWorker({
       messages: navigator.serviceWorker,

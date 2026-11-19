@@ -79,6 +79,12 @@ export interface LumiereHost {
    * does: for the embedder's own menus, such as the iPad's edit menu.
    */
   run(command: string): Promise<unknown>;
+  /**
+   * Write every note with unsaved text now, without waiting for autosave:
+   * for an embedder whose window can go away under the host (a browser tab
+   * hidden or reloaded, the iPad app sent to the background).
+   */
+  saveAll(): Promise<void>;
   stop(): Promise<void>;
 }
 
@@ -135,6 +141,7 @@ export async function startHost(
     },
     workspaceRoots: () => [...roots],
     run: (command) => commands.execute(command),
+    saveAll: () => documents.saveAll(),
     stop: () => stopHost({ stopMenus, panels, root, git, documents }),
   };
 }

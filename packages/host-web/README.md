@@ -29,6 +29,8 @@ encoded `/` or `\` in a URI is refused.
 - `src/platform.ts`: the `HostPlatform`: files, the store in the data folder, workers, SHA-256.
 - `src/pages.ts`: a note's page (a blob: document, or the embedder's), and its channel.
 - `src/workers.ts`: web workers from the built `*.web.js` scripts.
+- `src/save-on-hide.ts`: unsaved notes written when the window is hidden or
+  goes (a tab hidden, reloaded or closed; the iPad app sent to the background).
 - `src/sha256.ts`: SHA-256 without waiting, checked against node:crypto.
 
 ## Contracts
