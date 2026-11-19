@@ -175,7 +175,7 @@ it yet.
 
 ## Services, events and settings
 
-Host injects the host services `hostDocuments`, `hostCommands`, `clipboard`, `dialogs`, `settings`, `customEditors` and `activeEditor`, plus `documents`, provides `editors`, and emits/listens to
+Host injects the host services `hostDocuments`, `hostCommands`, `clipboard`, `dialogs`, `settings`, `storage`, `customEditors`, `activeEditor` and `workspace` (a page loaded in Restricted Mode is loaded again when the workspace is trusted, so its remote images and frames are allowed: `registerTrustReload` in `panel.ts`), plus `documents`, provides `editors`, and emits/listens to
 `editor/opened`, `editor/closed` and `editor/activeChanged`. Webview injects
 `document`, `markdown` and `rpc`, provides `editor` and `menu`, listens to
 `document/syncStatus` and `editor/scrollInput` (widget scroll input cancels a

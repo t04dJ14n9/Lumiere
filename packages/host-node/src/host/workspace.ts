@@ -31,6 +31,8 @@ export function createHostWorkspace({
     folders: roots,
     // The host runs only what its owner installed and opened.
     isTrusted: () => true,
+    // Always trusted, so trust is never granted later.
+    onDidGrantTrust: () => () => {},
     read: async (uri) => files.readBytes(uri, await inside(uri)),
     stat: async (uri) => {
       await inside(uri);

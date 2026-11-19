@@ -195,7 +195,11 @@ Each contract is written once, in code. Change both sides in the same PR.
 No host runs a vault's own code: the Obsidian community plugin runtime, and
 the per-vault trust question that gated it, were removed in #414.
 `HostWorkspace.isTrusted()` is VS Code's workspace trust (Restricted Mode)
-and stays true outside VS Code: it covers remote images and media.
+and stays true outside VS Code: it covers remote images and media. When the
+reader trusts a workspace in VS Code, `onDidGrantTrust` fires and each
+note's page loads again with remote content allowed; outside VS Code it
+never fires. Git outside VS Code waits for the embedder's own trust
+(`GitTrust`, host-node's README).
 
 ## 5. Milestones
 

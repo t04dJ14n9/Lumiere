@@ -6,6 +6,12 @@ import type { WorkspaceFiles } from "../workspace-files";
 export interface HostWorkspace {
   folders(): readonly string[];
   isTrusted(): boolean;
+  /**
+   * The reader trusted the workspace (VS Code's Restricted Mode ended).
+   * What was decided while it was untrusted (a page's remote images and
+   * frames) is decided again. A host that is always trusted never calls it.
+   */
+  onDidGrantTrust(listener: () => void): Disposer;
   read(uri: string): Promise<Uint8Array>;
   stat(uri: string): Promise<{ mtime: number; symbolicLink: boolean }>;
   /**

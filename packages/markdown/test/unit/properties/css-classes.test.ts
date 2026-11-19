@@ -85,6 +85,7 @@ test("loadVaultCssSnippets loads only the snippets appearance.json enables", asy
   const workspace: HostWorkspace = {
     folders: () => ["file:///vault"],
     isTrusted: () => true,
+    onDidGrantTrust: () => () => {},
     read: async () => new Uint8Array(),
     stat: async () => ({ mtime: 1, symbolicLink: false }),
     watch: () => () => {},

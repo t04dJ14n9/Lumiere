@@ -11,6 +11,7 @@ export interface PanelShell {
   readonly document: HostDocument;
   readonly transport: Transport;
   readonly cspSource: string;
+  /** Whether the workspace is trusted now; the page is built from it when it loads. */
   readonly trusted: boolean;
   /** A native source selection was present while this panel was opened. */
   readonly openedFromNativeSelection?: boolean;

@@ -33,6 +33,7 @@ export const editorHost: Plugin<EditorHostConfig> = {
       "customEditors",
       "documents",
       "activeEditor",
+      "workspace",
     ],
     optional: ["vaults", "pdfOutlines"],
   },

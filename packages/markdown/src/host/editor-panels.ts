@@ -209,7 +209,10 @@ function createPanelShell(
     },
     document: documents.wrap(document),
     cspSource: panel.webview.cspSource,
-    trusted: vscode.workspace.isTrusted,
+    // Read when the page loads: trust granted later reloads it (editor/panel.ts).
+    get trusted() {
+      return vscode.workspace.isTrusted;
+    },
     ...panelOpenFields(options),
     transport: panelTransport(panel, binding.shellDisposeListeners),
     preload: firstViewPreload(extensionUri),
