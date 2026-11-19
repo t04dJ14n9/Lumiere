@@ -52,7 +52,9 @@ is opt-in (`lumiere.pdf.regions.enabled`, default off).
   stays with text selection or Stage pan. Device touch is not GUI-verified
   here. Select Region is hidden.
 - **Passage highlights = vault Markdown.** A note's Markdown link to
-  `papers/a.pdf#page=N#:~:text=…` is a passage highlight: the viewer paints
+  `papers/a.pdf#page=N#:~:text=…` is a passage highlight (the standard
+  `prefix-,start,end,-suffix` parts are understood, as a browser's Copy link
+  to highlight writes them): the viewer paints
   **backlink overlays** from those links (hover preview, click opens the
   note; Del ignores overlays). **Copy link to this** copies an `@` locator
   for agents, not such a link. See [CAPABILITIES.md](CAPABILITIES.md).

@@ -2,8 +2,8 @@
  * Find a Chrome Text Fragment in a page's text.
  *
  * Matching follows Chrome's: case and whitespace differences are ignored.
- * That matters because a link's quote was joined with single spaces when it
- * was copied, while the page text has the "\r\n" PDFium puts between lines.
+ * That matters because a link's quote is written on one line, with single
+ * spaces, while the page text has the "\r\n" PDFium puts between lines.
  */
 import { foldText, rawRangeOf, type TextRange } from "./page-text-fold";
 

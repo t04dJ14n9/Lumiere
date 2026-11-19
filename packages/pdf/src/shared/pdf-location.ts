@@ -30,8 +30,8 @@ export function formatLocationFragment(location: PdfLocation): string {
 }
 
 /**
- * Split a link fragment at its text-fragment directive. Copy Link writes
- * `page=3#:~:text=…`: the part before the second `#` is the PDF location, the
+ * Split a link fragment at its text-fragment directive. A note's passage
+ * link is `page=3#:~:text=…`: the part before the second `#` is the PDF location, the
  * rest (`:~:text=…`) is the Chrome directive. Every reader of such a link
  * must split here first, or the directive ends up inside the `page` value.
  */

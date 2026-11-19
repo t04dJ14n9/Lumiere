@@ -1,8 +1,8 @@
 /**
  * Page text folded for matching, the way Chrome matches a text fragment:
  * case and whitespace differences do not matter. A page's text has a line
- * break between its lines, while the quote a link carries was joined with
- * single spaces when it was copied, so neither side can be compared as it is.
+ * break between its lines, while the quote a link carries is written on one
+ * line, with single spaces, so neither side can be compared as it is.
  */
 
 /** Characters that carry no text: they vanish from the folded text. */

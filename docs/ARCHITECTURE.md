@@ -52,9 +52,9 @@ ships two products that share one plugin tree:
   diagrams, tasks, tags, backlinks, outline and graph. VS Code keeps the
   text, saving and undo.
 - **Lumiere PDF.** A PDF viewer on EmbedPDF 3 (PDFium compiled to WebAssembly).
-  Its signature feature is **Copy link to this**: a quote with a deep link
-  (`paper.pdf#page=3#:~:text=…`) that notes can paste, and that paints
-  backlink overlays back onto the PDF.
+  Its signature feature is **Copy link to this**: an `@paper.pdf#page=3`
+  locator and the quote, for agents. A note's deep link to a passage
+  (`paper.pdf#page=3#:~:text=…`) paints a backlink overlay back onto the PDF.
 
 The Markdown product also runs outside VS Code, on the same plugins:
 
@@ -422,10 +422,13 @@ src/host (no vscode): portable viewer logic, reused by host-node
   `packages/pdf/src/host` (no `vscode` imports) holds the portable part,
   already reused by host-node's PDF pages.
 - Links into PDFs are plain fragments (`#page=N`, `#:~:text=`), so Obsidian
-  and browsers open them too. Lumiere's own links add a text fragment for the
-  quote; the backlink index matches it against the page text (folding case,
-  whitespace and hyphenated line breaks, across page edges) and paints an
-  overlay that opens the note.
+  and browsers open them too. A note's link may add a text fragment for a
+  passage, in the standard form (`[prefix-,]start[,end][,-suffix]`, as a
+  browser's Copy link to highlight writes it); the backlink index matches it
+  against the page text (folding case, whitespace and hyphenated line
+  breaks, across page edges) and paints an overlay that opens the note. Copy
+  link to this writes an `@` locator and the quote for agents, never a text
+  fragment (`packages/agents/docs/agent-handoff-format.md`).
 - Bookmarks are read in the webview for the viewer's outline, and in the
   extension host by the `pdfOutlines` reader (one PDFium instance, started
   on first use, cached per file by mtime and size, PDFs over 200 MB skipped).
