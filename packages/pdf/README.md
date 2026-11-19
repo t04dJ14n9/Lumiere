@@ -20,7 +20,9 @@ is opt-in (`lumiere.pdf.regions.enabled`, default off).
   find in PDF (⌘F / Ctrl+F), internal links and web links.
   When the file changes on disk (a rebuilt paper), the viewer reloads at the
   same page and zoom; a touch or sync that leaves its bytes as they were
-  reloads nothing. Annotations made while it reloads are kept with the
+  reloads nothing. The file is read and hashed once per change for every
+  pane that shows it. A PDF over 512 MB is not opened, and Lumiere says so
+  ([Large PDFs](docs/large-pdfs.md)). Annotations made while it reloads are kept with the
   version they were made on. A PDF deleted on disk keeps showing as it was,
   and Lumiere says it can no longer read it.
   A password-protected PDF asks for its password in the viewer; the password

@@ -452,7 +452,9 @@ src/host (no vscode): portable viewer logic, reused by host-node
   runtime is gone or PDFium trapped: `webview/engine-health.ts`) is shown as
   stopped, with Reload, which starts a new engine and asks for the PDF
   again. A reload of the file keeps the engine; the page
-  leaving stops it. `embedpdf.wasm` (7.9 MB) is fetched while the host sends
+  leaving stops it. The host reads a PDF once per change for all its panes
+  (`host/viewer/shared-file.ts`) and opens files up to 512 MB
+  (`packages/pdf/docs/large-pdfs.md`). `embedpdf.wasm` (7.9 MB) is fetched while the host sends
   the bytes, and the page names it in `data-pdfium-wasm`. The extension host's
   bookmark reader runs the same engine in Node
   (`dist/pdf/outline-engine.js`), and Markdown's PDF embeds run it in the

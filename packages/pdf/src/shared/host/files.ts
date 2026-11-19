@@ -10,6 +10,13 @@ export interface PdfFiles {
   watch(uri: string, onChange: () => void): () => void;
   /** The path agents and messages show: workspace-relative when inside one, with `/`. */
   displayPath(uri: string): string;
+  /**
+   * The file's size in bytes, so a PDF over `maxBytes` is refused before it
+   * is read. Without it, the size is checked once the bytes are read.
+   */
+  size?(uri: string): Promise<number>;
+  /** The largest PDF the viewer opens here; `MAX_PDF_BYTES` (512 MB) by default. */
+  maxBytes?: number;
   /** SHA-256 hex of the file on disk. */
   hash?(uri: string): Promise<string>;
   /**

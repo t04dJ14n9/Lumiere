@@ -17,6 +17,8 @@ export const vscodePdfFiles: PdfFiles = {
     Promise.resolve(vscode.workspace.fs.readFile(vscode.Uri.parse(uri))),
   watch: (uri, onChange) => watchFile(vscode.Uri.parse(uri), onChange),
   displayPath: (uri) => displayPath(vscode.Uri.parse(uri)),
+  size: async (uri) =>
+    (await vscode.workspace.fs.stat(vscode.Uri.parse(uri))).size,
   hash: async (uri) => {
     const bytes = await vscode.workspace.fs.readFile(vscode.Uri.parse(uri));
     return createHash("sha256").update(bytes).digest("hex");

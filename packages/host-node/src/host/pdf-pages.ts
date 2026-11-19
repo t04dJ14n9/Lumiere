@@ -7,7 +7,7 @@
  * only in VS Code for now, so their messages are dropped here.
  */
 import { randomUUID } from "node:crypto";
-import { readFile, realpath } from "node:fs/promises";
+import { readFile, realpath, stat } from "node:fs/promises";
 import * as path from "node:path";
 import {
   DEFAULT_FLOATING_DOCK,
@@ -77,14 +77,21 @@ export class PdfPage implements PdfWebview {
 
   constructor(
     private readonly setup: PdfPageSetup,
-    positions: Map<string, ReadingPosition>,
+    {
+      files,
+      positions,
+    }: {
+      /** The workspace's files, one for all its pages: they share each read. */
+      files: PdfFiles;
+      positions: Map<string, ReadingPosition>;
+    },
   ) {
     this.cspSource = setup.cspSource;
     this.panel = new PdfViewerPanel(
       setup.uri,
       this,
       {
-        files: containedFiles(setup.root),
+        files,
         error: (message) => setup.log(`PDF: ${message}`),
         // Links in a PDF open only in VS Code for now.
         openExternal: async (url) => setup.log(`PDF link not opened: ${url}`),
@@ -206,9 +213,19 @@ export class PdfPage implements PdfWebview {
 export class PdfPages {
   private readonly pages = new Map<string, PdfPage>();
   private readonly positions = new Map<string, ReadingPosition>();
+  /**
+   * By workspace root. The viewer core shares one read of a file among the
+   * pages given the same files (`shared-file.ts` in @workshop/pdf).
+   */
+  private readonly files = new Map<string, PdfFiles>();
 
   open(setup: PdfPageSetup): PdfPage {
-    const page = new PdfPage(setup, this.positions);
+    let files = this.files.get(setup.root);
+    if (!files) {
+      files = containedFiles(setup.root);
+      this.files.set(setup.root, files);
+    }
+    const page = new PdfPage(setup, { files, positions: this.positions });
     this.pages.set(page.id, page);
     page.onDispose(() => this.pages.delete(page.id));
     return page;
@@ -228,21 +245,23 @@ export class PdfPages {
 /** The PDF's file, read and watched only inside the workspace it opened from. */
 function containedFiles(root: string): PdfFiles {
   const rootPath = fileUriToPath(root) ?? "";
+  // The canonical file once it is inside the canonical root, so a link
+  // swapped in after the containment check cannot redirect the read.
+  const containedPath = async (uri: string): Promise<string> => {
+    const real = await realpath(await pathInsideRoots([root], uri));
+    const relative = path.relative(await realpath(rootPath), real);
+    if (
+      relative === ".." ||
+      relative.startsWith(`..${path.sep}`) ||
+      path.isAbsolute(relative)
+    ) {
+      throw new OutsideWorkspace();
+    }
+    return real;
+  };
   return {
-    // Read the canonical file once it is inside the canonical root, so a link
-    // swapped in after the containment check cannot redirect the read.
-    read: async (uri) => {
-      const real = await realpath(await pathInsideRoots([root], uri));
-      const relative = path.relative(await realpath(rootPath), real);
-      if (
-        relative === ".." ||
-        relative.startsWith(`..${path.sep}`) ||
-        path.isAbsolute(relative)
-      ) {
-        throw new OutsideWorkspace();
-      }
-      return readFile(real);
-    },
+    read: async (uri) => readFile(await containedPath(uri)),
+    size: async (uri) => (await stat(await containedPath(uri))).size,
     watch(uri, onChange) {
       const file = fileUriToPath(uri);
       return file ? watchFile(file, onChange) : () => {};

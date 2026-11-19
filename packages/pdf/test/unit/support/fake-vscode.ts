@@ -197,7 +197,10 @@ export const workspace = {
       onDidDelete: event("watcher.delete"),
     }),
   asRelativePath: (value: unknown) => String(value),
-  fs: { readFile: async () => new Uint8Array() },
+  fs: {
+    readFile: async () => new Uint8Array(),
+    stat: async () => ({ size: 0 }),
+  },
 };
 
 export const env = {
