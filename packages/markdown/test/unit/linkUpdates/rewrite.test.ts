@@ -194,6 +194,30 @@ test("a # in a new name is written %23, so the link reads back to that file", ()
   });
 });
 
+test("a new name with %, spaces, # or parentheses reads back to that file", () => {
+  const text = "[a](Old.md) [b](Old.md#Part) [c](<Old.md#Part>)";
+  const names = [
+    "a b.md",
+    "50% off.md",
+    "a%20b.md",
+    "100%.md",
+    "c#d.md",
+    "e (f).md",
+    "g(.md",
+    "h%23i.md",
+  ];
+  for (const name of names) {
+    const ctx = context({ ...vault, "A.md": text }, { "Old.md": name });
+    const result = apply(text, rewriteLinks(text, "A.md", ctx));
+    const { index } = memoryVaults({ "A.md": result, [name]: "" });
+    assert.deepEqual(
+      Object.fromEntries(index.resolvedLinks("A.md")),
+      { [name]: 3 },
+      `${name} written as ${result}`,
+    );
+  }
+});
+
 // Obsidian 1.15.0's rule for link text on rename, read from its link
 // updater with REA (2026-11-07).
 test("text showing the renamed file's name follows it; the writer's own text stays", () => {
