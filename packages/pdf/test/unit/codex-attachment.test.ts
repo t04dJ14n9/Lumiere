@@ -19,12 +19,16 @@ import { AGENT_COMMANDS } from "../../src/shared/agent-target";
 
 let temp: string;
 const attached: string[] = [];
-const realTmpdir = process.env.TMPDIR;
+// os.tmpdir() reads TMPDIR on POSIX, TEMP (then TMP) on Windows.
+const TEMP_VARIABLES = ["TMPDIR", "TEMP", "TMP"] as const;
+const realTemp = TEMP_VARIABLES.map((name) => process.env[name]);
 
 before(async () => {
   // A temp folder of its own, so another user's folder can be played here.
   temp = await mkdtemp(path.join(os.tmpdir(), "lumiere-codex-"));
-  process.env.TMPDIR = temp;
+  for (const name of TEMP_VARIABLES) {
+    process.env[name] = temp;
+  }
   fake.configuration.set("lumiere.pdf.copyLinkForAgent.target", "codex");
   Object.assign(fake.commands, {
     getCommands: async () => [
@@ -43,7 +47,14 @@ before(async () => {
 
 after(async () => {
   mock.timers.reset();
-  process.env.TMPDIR = realTmpdir;
+  TEMP_VARIABLES.forEach((name, index) => {
+    const value = realTemp[index];
+    if (value === undefined) {
+      delete process.env[name];
+    } else {
+      process.env[name] = value;
+    }
+  });
   await rm(temp, { recursive: true, force: true });
 });
 
@@ -64,6 +75,9 @@ test("the selection for Codex goes to a private folder, never through another us
   assert.equal(await readFile(file, "utf8"), "> quoted text\n");
   const folder = await lstat(path.dirname(file));
   assert.ok(folder.isDirectory() && !folder.isSymbolicLink());
-  assert.equal(folder.mode & 0o777, 0o700);
+  // Windows has no mode bits: its temp folder is the user's own, by ACL.
+  if (process.platform !== "win32") {
+    assert.equal(folder.mode & 0o777, 0o700);
+  }
   assert.equal(path.dirname(path.dirname(file)), temp);
 });
