@@ -109,7 +109,7 @@ plugin registrations and widget lifetimes end when the plugin stops.
 - `vim-entry.ts`: deferred normal-mode source entry with transaction and mode guards.
 - `clipboard.ts`: text/grid copy, paste and formatting, including stale-paste checks.
 - `toolbar.ts`: add-row/column controls and contextual menu lifetime. Horizontal pans on the add-row strip scroll `.table-scroll` and do not insert (BH-019); a true click still adds a row.
-- `menu.ts`: menu items and their operation/focus targets.
+- `menu.ts`: menu items and their operation/focus targets; a failed action shows its message on the table.
 - `handles.ts`: row/column grips, drag feedback and drop handling.
 - `column-widths.ts`: the open table's column widths and their remap on column ops; the border hit test (`columnEdgeAt`); a list item's row indent (`rowPrefix`, `indentRows`).
 - `column-widths.test.ts`: apply, remap, border hit and row indent unit tests.

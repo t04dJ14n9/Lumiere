@@ -30,6 +30,7 @@ import { vimTableEntry } from "./vim-entry";
 import { listenForTableWheel } from "./scroll-input";
 import { cellPointerOffset } from "./cell-pointer";
 import { matchesEditableTable } from "./renderer-match";
+import { reportingFailures } from "./menu";
 export const tablesWebview: Plugin = {
   name: "tables",
   inject: {
@@ -86,10 +87,11 @@ function createEnvironment(ctx: Context): TableEnvironment {
     wrap: (marker, target) => formatting?.wrap(marker, target) ?? false,
     canFormat: formatting !== undefined,
     clearFormatting: (source) => formatting?.clear(source) ?? source,
-    openMenu: (owner, items, point) => {
+    openMenu: (owner, items, point, report) => {
       let live = true;
       let stop: (() => void | Promise<void>) | undefined;
-      void ctx.pipeline("editor/selectionMenu", items).then((items) => {
+      const tableItems = reportingFailures(items, report);
+      void ctx.pipeline("editor/selectionMenu", tableItems).then((items) => {
         if (live) {
           stop = menu.open(owner, items, point, "Table actions");
         }

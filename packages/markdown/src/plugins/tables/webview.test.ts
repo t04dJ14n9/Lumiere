@@ -9,7 +9,7 @@ import {
 } from "@codemirror/state";
 import { createRoot } from "@workshop/core";
 import { Endpoint } from "../../shared/rpc/endpoint";
-import type { EditorService } from "../editor/api";
+import type { EditorService, MenuItem } from "../editor/api";
 import type { MarkdownService } from "../dialect/api";
 import type { BlockRenderer } from "../livePreview/api";
 import { tablesWebview } from "./webview";
@@ -86,7 +86,13 @@ async function startTables(before?: (root: Root) => void) {
       return false;
     },
   });
-  root.provide("menu", { open: () => () => {} });
+  const menus: (readonly MenuItem[])[] = [];
+  root.provide("menu", {
+    open: (_owner, items) => {
+      menus.push(items);
+      return () => {};
+    },
+  });
   const rpc = new Endpoint(
     { send() {}, listen: () => () => {} },
     { after: () => () => {} },
@@ -101,6 +107,7 @@ async function startTables(before?: (root: Root) => void) {
     renderers,
     extensions,
     commands,
+    menus,
     document: () => document,
     async dispose() {
       await root.dispose();
@@ -165,5 +172,36 @@ test("render/changed gives the widgets Live Preview rebuilds a new revision", as
   // A changed revision makes updateDOM re-render the mounted cells.
   assert.notEqual(rebuilt[0]!.revision, before.revision);
   assert.equal(rebuilt[0]!.eq(before), false);
+  await tables.dispose();
+});
+
+test("a table menu action that fails is reported on the table", async () => {
+  const tables = await startTables();
+  const { environment } = tables.renderers[0]!.widget(block) as TableWidget;
+  const reported: string[] = [];
+  environment.openMenu(
+    {} as HTMLElement,
+    [
+      {
+        label: "Row",
+        children: [
+          {
+            label: "Paste",
+            run: async () => {
+              throw new Error("The table changed. Paste again.");
+            },
+          },
+        ],
+      },
+    ],
+    { x: 0, y: 0 },
+    (message) => reported.push(message),
+  );
+  await tables.root.settled();
+  await new Promise((resolve) => setTimeout(resolve));
+  const paste = tables.menus[0]![0]!.children![0]!;
+  // The menu logs the rejection; the table shows its message.
+  await assert.rejects(async () => paste.run!(), /Paste again/);
+  assert.deepEqual(reported, ["The table changed. Paste again."]);
   await tables.dispose();
 });

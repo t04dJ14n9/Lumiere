@@ -54,6 +54,38 @@ export function tableMenu(
   ];
 }
 
+/**
+ * The items with each action reporting its failure through `report`, so the
+ * table shows it; the failure is rethrown for the menu to log.
+ */
+export function reportingFailures(
+  items: readonly MenuItem[],
+  report: (message: string) => void,
+): MenuItem[] {
+  return items.map((item) => {
+    const reporting: MenuItem = { ...item };
+    const run = item.run;
+    if (run) {
+      reporting.run = async () => {
+        try {
+          await run();
+        } catch (error) {
+          report(
+            error instanceof Error
+              ? error.message
+              : "The table action could not be completed.",
+          );
+          throw error;
+        }
+      };
+    }
+    if (item.children) {
+      reporting.children = reportingFailures(item.children, report);
+    }
+    return reporting;
+  });
+}
+
 interface AxisMenuOptions {
   table: Table;
   range: CellRange;
