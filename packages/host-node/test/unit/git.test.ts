@@ -179,6 +179,39 @@ test("identity is the repository's author", async (t) => {
   });
 });
 
+test("a note is found in its repository however git spells the work tree", async (t) => {
+  const { dir, uri } = await repository(t);
+  // On Windows git names `C:\Users\RUNNER~1\...` as `C:/Users/runneradmin/...`;
+  // a case-insensitive disk has another spelling of every folder: its case.
+  const respelled = path.join(
+    path.dirname(dir),
+    path.basename(dir).toUpperCase(),
+  );
+  if (
+    !(await exists(respelled).then(
+      () => true,
+      () => false,
+    ))
+  ) {
+    t.skip("a case-sensitive file system spells a folder one way");
+    return;
+  }
+  const real = createSpawnBlameRunner();
+  const access = new NodeGitAccess({
+    roots: () => [fileUri(dir)],
+    runGit: async (request) =>
+      request.args.includes("--show-toplevel")
+        ? { stdout: `${respelled}\n`, stderr: "" }
+        : real(request),
+  });
+  t.after(() => access.dispose());
+  const head = git(dir, "rev-parse", "HEAD");
+  assert.deepEqual(await access.baseline(uri, "HEAD"), {
+    status: "ok",
+    baseline: { text: "one\n", label: `HEAD (${head.slice(0, 7)})` },
+  });
+});
+
 test("a commit is heard, and the repository's generation moves first", async (t) => {
   const { dir, note, uri, access } = await repository(t);
   // The repository is watched once a note in it was asked about.

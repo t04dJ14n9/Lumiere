@@ -11,10 +11,10 @@
  * VS Code gives when its git extension is off: unavailable.
  */
 import { spawn } from "node:child_process";
+import { realpathSync } from "node:fs";
 import * as path from "node:path";
 import {
   bindDiscoveredRoot,
-  canonicalPath,
   createSpawnBlameRunner,
   discoverGitRoot,
   RepositoryWatch,
@@ -237,9 +237,10 @@ export class NodeGitAccess implements GitAccess {
     if (!found) {
       return undefined;
     }
-    // git names the work tree with symbolic links resolved; so must the note.
-    const root = canonicalPath(found);
-    const relativePath = path.relative(root, canonicalPath(file));
+    // git names the work tree its own way (`C:/Users/runneradmin` where the
+    // note is under `C:\Users\RUNNER~1`); both are spelled as the disk does.
+    const root = realPath(found);
+    const relativePath = path.relative(root, realPath(file));
     if (isOutside(relativePath)) {
       return undefined;
     }
@@ -306,6 +307,21 @@ function foundGitRunner(): GitBlameRunner {
 function hardened(runGit: GitBlameRunner): GitBlameRunner {
   return (options) =>
     runGit({ ...options, args: [...HARDENED_GIT_CONFIG, ...options.args] });
+}
+
+/**
+ * `file` with symbolic links resolved and each name spelled as the disk
+ * has it: the operating system's realpath, which on Windows also expands
+ * short names (`RUNNER~1`) and on macOS gives a name's case. Node's own
+ * `realpathSync` keeps both as given, so a note and the work tree git
+ * names would not compare. A path that cannot be resolved stays as it is.
+ */
+function realPath(file: string): string {
+  try {
+    return realpathSync.native(file);
+  } catch {
+    return file;
+  }
 }
 
 function isOutside(relative: string): boolean {
