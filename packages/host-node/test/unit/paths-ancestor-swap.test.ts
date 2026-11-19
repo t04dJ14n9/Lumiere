@@ -20,9 +20,8 @@ import {
   assertOpenedInside,
   createEmptyFile,
   readContainedBytes,
-  writeThroughBytes,
-  writeThroughFile,
 } from "../../src/host/paths";
+import { replaceFile } from "../../src/host/atomic-write";
 import type { HostFiles } from "../../src/host/platform";
 import {
   createHostVaultSystem,
@@ -120,11 +119,11 @@ test("a write through a swapped ancestor neither truncates nor fills the outside
   await writeFile(secret, "keep me");
   await swap();
 
-  await assert.rejects(writeThroughFile(target, "x", rootUri), {
+  await assert.rejects(replaceFile(target, "x", rootUri), {
     name: "OutsideWorkspace",
   });
   await assert.rejects(
-    writeThroughBytes(target, new Uint8Array([1, 2, 3]), rootUri),
+    replaceFile(target, new Uint8Array([1, 2, 3]), rootUri),
     { name: "OutsideWorkspace" },
   );
   assert.equal(await readFile(secret, "utf8"), "keep me");
@@ -134,12 +133,12 @@ test("a write inside the workspace replaces the whole file", async (t) => {
   const { rootUri, target } = await workspaceWithAssets(t);
   await writeFile(target, "a much longer first version");
 
-  await writeThroughFile(target, "short", rootUri);
+  await replaceFile(target, "short", rootUri);
   assert.equal(await readFile(target, "utf8"), "short");
-  await writeThroughBytes(target, new Uint8Array([104, 105]), rootUri);
+  await replaceFile(target, new Uint8Array([104, 105]), rootUri);
   assert.equal(await readFile(target, "utf8"), "hi");
   // Without a root the write is as before: it does not follow a final link.
-  await writeThroughFile(target, "plain");
+  await replaceFile(target, "plain");
   assert.equal(await readFile(target, "utf8"), "plain");
 });
 

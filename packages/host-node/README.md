@@ -115,7 +115,7 @@ forbids this package from importing `vscode` or any embedder.
 - `src/host/settings.ts`: settings from the contributed defaults and a JSON file.
 - `src/host/ui-services.ts`: dialogs, the clipboard and the active editor, drawn by the page.
 - `src/host/workspace.ts`, `src/host/watch.ts`: workspace files and state, and file watching.
-- `src/host/paths.ts`: containment and safe writes.
+- `src/host/paths.ts`, `src/host/atomic-write.ts`: containment, and writes that never leave a file half written.
 - `src/host/git.ts`, `src/host/git-blobs.ts`, `src/host/git-program.ts`: Git from the `git` command line (blame, a note at HEAD or in the index, staging, each repository's changes), and which `git` to run.
 - `src/host/inert.ts`: diffs, status entries and panels, which have no counterpart yet.
 - `src/page/shim.ts`, `src/page/ui.ts`, `src/page/theme.ts`: the page's stand-in for VS Code.
@@ -131,15 +131,18 @@ forbids this package from importing `vscode` or any embedder.
   the other version beside the note, as `Note (conflict).md` (then
   `(conflict 2)`, …), merges the rest, writes the typing, and tells the
   reader. A change made between that check and the write is not seen.
-  Saves write the file in place (keeping its links and permissions), so it
-  is empty for a moment; a reload that reads it then is made again after
-  the write.
+  Saves write a temporary file beside the note and rename it over the note
+  (`atomic-write.ts`), so a crash or a full disk leaves the old text, never
+  an empty note. The note keeps its permissions, and a symbolic link to it
+  stays a link (the file it names is replaced, when that file is inside the
+  workspace); another hard link to the note keeps the old text. A note in a
+  folder that takes no new file is still written in place.
 
 - Containment is checked, then the file is opened, and Node has no `openat`
   to bind the two. A local process that swaps a folder for a symlink in
   between is caught afterwards, not prevented: a workspace write or read
   verifies the descriptor it opened is the file inside the root before it
-  truncates, writes or returns anything (`paths.ts`). Folders made through
+  writes or returns anything (`paths.ts`, `atomic-write.ts`). Folders made through
   the link can stay behind, empty. Notes' autosave and their conflict
   copies, copy, move, remove and the file and PDF routes still trust the
   path checked just before.

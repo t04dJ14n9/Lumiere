@@ -25,13 +25,11 @@ import {
   fileUriToPath,
   isInside,
   readContainedBytes,
-  writeAtomic,
-  writeThroughFile,
-  writeThroughBytes,
 } from "./paths";
 import type { HostEntry, HostFiles, HostPlatform, HostStore } from "./platform";
 import { fileUri } from "./uris";
 import { listVault } from "./vault";
+import { replaceFile, writeAtomic } from "./atomic-write";
 import { watchFile } from "./watch";
 import { watchTree } from "./watch-tree";
 
@@ -89,8 +87,8 @@ export const nodeFiles: HostFiles = {
     root === undefined
       ? readFile(toFile(uri))
       : readContainedBytes(toFile(uri), root),
-  save: (uri, text, root) => writeThroughFile(toFile(uri), text, root),
-  saveBytes: (uri, data, root) => writeThroughBytes(toFile(uri), data, root),
+  save: (uri, text, root) => replaceFile(toFile(uri), text, root),
+  saveBytes: (uri, data, root) => replaceFile(toFile(uri), data, root),
   create: (uri, root) => createEmptyFile(toFile(uri), root),
   async stat(uri) {
     try {

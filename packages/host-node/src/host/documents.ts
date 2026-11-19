@@ -92,9 +92,9 @@ export function noteFiles(platform: HostPlatform): NoteFiles {
  * Whether a disk read is another program's change to the open note. A read
  * that started before a save finished is stale: applying it would undo that
  * save. One that equals what we last read or wrote is our own write coming
- * back. A read made while a save was writing may see the file empty: saves
- * replace it in place (paths.ts `writeThroughFile`), truncating it first, and
- * the truncation alone wakes the watch.
+ * back. A read made while a save was writing is not taken either: the save's
+ * own rename (atomic-write.ts) wakes the watch, and the read may see the old
+ * text or the new one before the save is counted.
  */
 export function diskReadChangesNote(state: {
   text: string;

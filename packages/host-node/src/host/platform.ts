@@ -46,9 +46,12 @@ export interface HostFiles {
   /** Rejects with an error whose `code` is `FileNotFound` (or Node's `ENOENT`) when missing. */
   readText(uri: string, root?: string): Promise<string>;
   readBytes(uri: string, root?: string): Promise<Uint8Array>;
-  /** Replace an existing file's text; a symbolic link in its place is not followed. */
+  /**
+   * Replace an existing file's text, never leaving it half written. A
+   * symbolic link in its place is followed only to a file inside `root`.
+   */
   save(uri: string, text: string, root?: string): Promise<void>;
-  /** Replace an existing file's bytes; a symbolic link in its place is not followed. */
+  /** Replace an existing file's bytes, as `save` replaces its text. */
   saveBytes(uri: string, data: Uint8Array, root?: string): Promise<void>;
   /**
    * Write a new, empty file; true when this call made it. An existing file
