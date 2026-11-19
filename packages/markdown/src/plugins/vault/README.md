@@ -14,6 +14,14 @@ a worker, one at a time) and follows file events. While a note is open, its
 unsaved text replaces the file on disk. Each panel's half provides `vault`,
 the shared index of its note's vault.
 
+In VS Code a listing stats only the notes before it returns: their time and
+size decide which parses the snapshot can reuse. The other files, most of a
+code repository, are listed with `statPending` (time and size 0), so links to
+them resolve at once, and their stats follow in the listing's `stats`
+(`late-stats.ts`); until then a file the snapshot knows keeps its cached time
+and size, and a file event reported meanwhile wins over the late stat. The
+Node hosts still stat every file in the listing.
+
 `vaults.open` opens a note at an offset or fragment through the `navigation`
 host service, from its vault's root, or its own folder's for a note outside the
 workspace. A note it cannot place, or a host without navigation, is logged as a
@@ -33,6 +41,7 @@ name are resolved again.
 - `roots.ts`: vault root discovery from root markers (DESIGN §12.1).
 - `indexer.ts`: start-up, reconciliation, file events, overlays, saving.
 - `keyed-timers.ts`: the indexer's named, restartable timers (overlay pauses, snapshot saves).
+- `late-stats.ts`: a listing's late stats, without the files an event has reported since.
 - `parse-queue.ts`: sequential parsing with overlays and hash reuse.
 - `memory-index.ts`: the in-memory index behind `VaultIndex`.
 - `file-table.ts`, `resolve.ts`, `link-text.ts`, `link-maps.ts`: files and

@@ -51,6 +51,19 @@ export interface ListedFile {
   path: string;
   mtime: number;
   size: number;
+  /**
+   * The file's time and size are not read yet (both 0): the listing's
+   * `stats` brings them. A host may list files other than notes this way:
+   * stating every file of a large repository delays the index.
+   */
+  statPending?: true;
+}
+/** A vault listing (see `VaultFileSystem.list`). */
+export interface VaultListing {
+  files: ListedFile[];
+  partial: boolean;
+  /** The stats of the files listed with `statPending`, read after the listing. */
+  stats?: Promise<ListedFile[]>;
 }
 export type FileEvent =
   | { type: "create" | "change"; file: ListedFile }
@@ -59,11 +72,7 @@ export type FileEvent =
 /** What the indexer needs from the file system, so tests can use memory. */
 export interface VaultFileSystem {
   /** Files under the root outside ignored folders, up to `limit` notes and `limit` other files (ListingBudget); only the root's own files when `shallow`. */
-  list(
-    root: string,
-    limit: number,
-    shallow?: boolean,
-  ): Promise<{ files: ListedFile[]; partial: boolean }>;
+  list(root: string, limit: number, shallow?: boolean): Promise<VaultListing>;
   read(uri: string): Promise<Uint8Array>;
   /** File events under the root; created and changed files carry fresh stats. */
   watch(root: string, listener: (event: FileEvent) => void): Disposer;

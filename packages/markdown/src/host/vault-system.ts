@@ -6,6 +6,7 @@ import type {
   FileEvent,
   ListedFile,
   SnapshotStore,
+  VaultListing,
   VaultSettings,
   VaultSystem,
 } from "../plugins/vault/api";
@@ -110,19 +111,35 @@ function relativePath(root: vscode.Uri, uri: vscode.Uri): string | undefined {
 /**
  * Walk the vault, skipping hidden folders, `node_modules`, what VS Code's
  * `files.exclude` hides and symbolic links to folders (which could loop),
- * and stat each file it keeps (ListingBudget: notes and other files are
- * limited apart).
+ * keeping files by ListingBudget (notes and other files are limited apart).
+ * Only the notes are statted before the listing returns: the index compares
+ * their time and size with its snapshot to reuse their parses. In a code
+ * repository the other files are most of the walk, so they are listed with
+ * `statPending` and their stats follow in `stats`.
  */
 async function listVault(
   root: string,
   limit: number,
   shallow = false,
-): Promise<{ files: ListedFile[]; partial: boolean }> {
+): Promise<VaultListing> {
   const base = vscode.Uri.parse(root);
   const budget = new ListingBudget(limit);
   const uris = await collectFiles(base, budget, shallow);
-  const files = await statAll(base, uris);
-  return { files, partial: budget.isPartial };
+  const notes = uris.filter((uri) => isMarkdownPath(uri.path));
+  const others = uris.filter((uri) => !isMarkdownPath(uri.path));
+  const files = await statAll(base, notes);
+  for (const uri of others) {
+    const path = relativePath(base, uri);
+    if (path !== undefined && !isIgnoredPath(path)) {
+      const file = { uri: uri.toString(), path, mtime: 0, size: 0 };
+      files.push({ ...file, statPending: true });
+    }
+  }
+  return {
+    files,
+    partial: budget.isPartial,
+    ...(others.length > 0 && { stats: statAll(base, others) }),
+  };
 }
 
 async function collectFiles(

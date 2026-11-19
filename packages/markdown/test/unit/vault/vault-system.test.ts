@@ -185,6 +185,84 @@ test("vault-system skips what files.exclude hides and limits notes apart from ot
   assert.equal(listing.partial, true);
 });
 
+test("vault-system stats the notes before the listing and the other files after it", async () => {
+  const FileType = { Unknown: 0, File: 1, Directory: 2, SymbolicLink: 64 };
+  const parseUri = (raw: string) => {
+    const url = new URL(raw);
+    return {
+      scheme: url.protocol.slice(0, -1),
+      path: decodeURIComponent(url.pathname),
+      toString: () => url.href,
+    };
+  };
+  const statted: string[] = [];
+  let release!: () => void;
+  const gate = new Promise<void>((resolve) => {
+    release = resolve;
+  });
+  const { createVaultSystem } = loadVaultSystem({
+    FileType,
+    RelativePattern: class {},
+    Uri: {
+      parse: parseUri,
+      joinPath: (base: { toString(): string }, ...parts: string[]) =>
+        parseUri(
+          `${base.toString().replace(/\/+$/, "")}/${parts.map(encodeURIComponent).join("/")}`,
+        ),
+    },
+    workspace: {
+      workspaceFolders: [],
+      getWorkspaceFolder: () => undefined,
+      fs: {
+        async readDirectory() {
+          return [
+            ["Note.md", FileType.File],
+            ["Other.markdown", FileType.File],
+            ...Array.from(
+              { length: 200 },
+              (_, n) => [`src-${n}.ts`, FileType.File] as [string, number],
+            ),
+            ["image.png", FileType.File],
+          ];
+        },
+        async stat(uri: { path: string }) {
+          // A slow file system: other files' stats wait for the test.
+          if (!/\.(md|markdown)$/.test(uri.path)) {
+            await gate;
+          }
+          statted.push(uri.path);
+          return { type: FileType.File, mtime: 7, size: uri.path.length };
+        },
+      },
+    },
+  });
+  const system = createVaultSystem(
+    { storageUri: undefined } as never,
+    fakeConfiguration(),
+  );
+
+  const listing = await system.list("file:///repo", 50_000);
+  // Only the notes were statted before the listing came back.
+  assert.deepEqual(statted.sort(), ["/repo/Note.md", "/repo/Other.markdown"]);
+  assert.equal(listing.files.length, 203);
+  const image = listing.files.find((file) => file.path === "image.png")!;
+  assert.equal(image.statPending, true);
+  const note = listing.files.find((file) => file.path === "Note.md")!;
+  assert.deepEqual(
+    [note.mtime, note.size, note.statPending],
+    [7, 13, undefined],
+  );
+  // The other files' stats follow.
+  release();
+  const stats = await listing.stats!;
+  assert.equal(stats.length, 201);
+  assert.deepEqual(
+    stats.find((file) => file.path === "image.png"),
+    { uri: "file:///repo/image.png", path: "image.png", mtime: 7, size: 15 },
+  );
+  assert.equal(statted.length, 203);
+});
+
 test("vault-system reports the unsaved text of .markdown and .MD notes, not of other documents", () => {
   let changed = (_event: unknown) => {};
   let closed = (_document: unknown) => {};
