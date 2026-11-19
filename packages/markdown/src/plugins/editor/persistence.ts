@@ -25,6 +25,15 @@ export const hasPersistedEffects = (update: {
     (tx) => tx.effects.length > 0 && !tx.annotation(backgroundUpdate),
   );
 
+/** Whether an update changes what the saved view state holds. */
+export const savesViewState = (
+  update: Parameters<typeof hasPersistedEffects>[0] & {
+    selectionSet: boolean;
+    docChanged: boolean;
+  },
+): boolean =>
+  update.selectionSet || update.docChanged || hasPersistedEffects(update);
+
 interface PersistenceConfig {
   saved?: unknown;
   persist?: (state: SavedView) => void;
@@ -67,12 +76,11 @@ export function registerViewPersistence(
   ctx.effect(() =>
     editor.extend(
       EditorView.updateListener.of((update) => {
-        if (update.selectionSet || update.docChanged) {
-          config.persist?.(state.capture());
-          checkpoint();
-          return;
-        }
-        if (hasPersistedEffects(update)) {
+        // The caret and the text are saved by the checkpoint, with the
+        // scroll position, 150 ms after the last change (and at once when
+        // the page goes away). Capturing here too re-validated every fold
+        // on each keystroke and caret move.
+        if (savesViewState(update)) {
           checkpoint();
         }
       }),

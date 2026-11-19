@@ -6,7 +6,7 @@ import {
   type TransactionSpec,
 } from "@codemirror/state";
 import { backgroundUpdate } from "./api";
-import { hasPersistedEffects } from "./persistence";
+import { hasPersistedEffects, savesViewState } from "./persistence";
 
 const folded = StateEffect.define<null>();
 
@@ -28,4 +28,21 @@ test("view state is saved for effects, but not for background work", () => {
     false,
   );
   assert.equal(hasPersistedEffects(update({})), false);
+});
+
+test("a caret move or an edit is saved through the checkpoint, like a fold", () => {
+  const moved = update({ selection: { anchor: 2 } });
+  assert.equal(
+    savesViewState({ ...moved, selectionSet: true, docChanged: false }),
+    true,
+  );
+  const typed = update({ changes: { from: 0, insert: "x" } });
+  assert.equal(
+    savesViewState({ ...typed, selectionSet: false, docChanged: true }),
+    true,
+  );
+  assert.equal(
+    savesViewState({ ...update({}), selectionSet: false, docChanged: false }),
+    false,
+  );
 });

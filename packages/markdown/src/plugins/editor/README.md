@@ -15,8 +15,10 @@ its synchronized version for cursor-following host views; projected table
 selections return a position in the outer document.
 Extensions sort by slot, catalog rank, owner ID and owner-local order in one
 compartment. Persistence captures source identity and feature-owned contributions;
-transfers flush first and reject a moving document version. Scroll-settle and
-pagehide checkpoints also save geometric anchors without measuring every keypress. Settings update a
+transfers flush first and reject a moving document version. A checkpoint
+150 ms after the last caret move, edit, fold or scroll (and at once on
+pagehide) saves the view with its geometric anchors, so no keypress captures
+or measures it. Settings update a
 separate compartment so user state survives reconfiguration.
 Text-selection edge scrolling uses `lumiere.markdown.editor.dragScrollSpeed`,
 a multiplier from 1 to 10 (default 4; 1 restores CodeMirror's original speed).
