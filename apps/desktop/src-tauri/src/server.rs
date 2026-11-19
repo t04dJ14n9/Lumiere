@@ -45,6 +45,7 @@ struct Running(Mutex<Option<Server>>);
 pub fn start<R: Runtime>(app: &AppHandle<R>) -> Result<WebviewUrl, String> {
     let data = data_folder(app)?;
     let mut command = server_command(app)?;
+    hide_console(&mut command);
     command
         .arg("--data")
         .arg(&data)
@@ -162,6 +163,18 @@ fn server_command<R: Runtime>(app: &AppHandle<R>) -> Result<Command, String> {
     command.arg(script);
     Ok(command)
 }
+
+/// On Windows a GUI app that starts a console program gets a console window
+/// for it, open for as long as the server runs, unless it is created without one.
+#[cfg(windows)]
+fn hide_console(command: &mut Command) {
+    use std::os::windows::process::CommandExt;
+    const CREATE_NO_WINDOW: u32 = 0x0800_0000;
+    command.creation_flags(CREATE_NO_WINDOW);
+}
+
+#[cfg(not(windows))]
+fn hide_console(_command: &mut Command) {}
 
 /// Where the server keeps settings and state: the app's data folder, or in
 /// development a throwaway one (`LUMIERE_DATA`).
