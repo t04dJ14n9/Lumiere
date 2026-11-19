@@ -5,7 +5,7 @@ import {
   type DragViewports,
   type PointerPoint,
 } from "../../webview/ui/edge-scroll";
-import { nearestEntry } from "./hit-test";
+import { nearestEntry, nearestRow } from "./hit-test";
 
 interface HandleActions {
   select(axis: Axis, index: number): void;
@@ -250,7 +250,10 @@ export class TableHandles {
       drag.axis === "column"
         ? Array.from(this.table.rows[0]!.cells)
         : Array.from(this.table.rows);
-    const target = nearestEntry(entries, drag.axis, point);
+    const target =
+      drag.axis === "column"
+        ? nearestEntry(entries, drag.axis, point)
+        : nearestRow(entries, point.y);
     if (target < 0) {
       return;
     }

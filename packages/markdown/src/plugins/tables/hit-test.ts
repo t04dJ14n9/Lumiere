@@ -27,11 +27,40 @@ export function nearestEntry(
   return selected;
 }
 
+/**
+ * `nearestEntry` for rows laid out top to bottom, reading the layout of a
+ * few rows instead of every one: a drag over a long table asks on each
+ * pointer move.
+ */
+export function nearestRow(rows: ArrayLike<Element>, y: number): number {
+  if (rows.length === 0) {
+    return -1;
+  }
+  const bounds = (index: number) => rows[index]!.getBoundingClientRect();
+  // The first row whose bottom is at or below the point, else the last.
+  let low = 0;
+  let high = rows.length - 1;
+  while (low < high) {
+    const middle = (low + high) >> 1;
+    if (bounds(middle).bottom < y) {
+      low = middle + 1;
+    } else {
+      high = middle;
+    }
+  }
+  const distance = (index: number) => {
+    const { top, bottom } = bounds(index);
+    return Math.max(top - y, y - bottom, 0);
+  };
+  // Only the row above can be as near; a tie goes to it, as in nearestEntry.
+  return low > 0 && distance(low - 1) <= distance(low) ? low - 1 : low;
+}
+
 export function cellAtPoint(
   table: HTMLTableElement,
   point: PointerPoint,
 ): CellPosition | undefined {
-  const row = nearestEntry(table.rows, "row", point);
+  const row = nearestRow(table.rows, point.y);
   const cells = table.rows[row]?.cells;
   const column = cells ? nearestEntry(cells, "column", point) : -1;
   return row < 0 || column < 0 ? undefined : { row, column };
