@@ -1,5 +1,6 @@
 /**
- * What the service worker asks the app's window, and what the window answers.
+ * What the service worker asks the app's window, and what the window answers;
+ * and the one thing a window tells a worker (`TAKE_OVER`).
  * The worker posts a question with a `MessagePort`, and the window answers on
  * that port. Each side parses what it receives: a window can be any page
  * of this origin, and a message can come from any of its workers.
@@ -54,6 +55,16 @@ export function parseAnswer(value: unknown): Answer | undefined {
     return { kind: value.kind };
   }
   return undefined;
+}
+
+/**
+ * What a window posts a new build's waiting worker once the reader has
+ * chosen to reload into it (src/updates.ts): take over now.
+ */
+export const TAKE_OVER = { lumiere: "take-over" } as const;
+
+export function isTakeOver(value: unknown): boolean {
+  return isRecord(value) && value.lumiere === TAKE_OVER.lumiere;
 }
 
 function isRecord(value: unknown): value is Record<string, unknown> {

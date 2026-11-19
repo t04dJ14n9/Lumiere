@@ -21,6 +21,7 @@ import { canPickFolders, PickedFolders, privateFolder } from "./folders";
 import { HandleFileSystem } from "./handle-fs";
 import { NotePages } from "./note-pages";
 import { fileUrl } from "./shared/routes";
+import { offerUpdates, updateBanner } from "./updates";
 
 const DATA = "/lumiere-data";
 const DEMO_VAULT = "/vaults/Lumière Demo";
@@ -89,9 +90,18 @@ async function main(): Promise<void> {
   await local.backend.vaults
     .add(last ?? DEMO_VAULT)
     .catch(() => local.backend.vaults.add(DEMO_VAULT));
-  await navigator.serviceWorker
+  const registration = await navigator.serviceWorker
     ?.register(new URL("sw.js", base))
-    .catch(() => {});
+    .catch(() => undefined);
+  if (registration) {
+    offerUpdates({
+      registration,
+      workers: navigator.serviceWorker,
+      offer: updateBanner,
+      saveAll: () => local.host.saveAll(),
+      reload: () => location.reload(),
+    });
+  }
 }
 
 /** The window's content security policy, which a note's page keeps. */
