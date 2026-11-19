@@ -58,7 +58,7 @@ async function applyAtSelection(
   plan: Plan,
 ): Promise<boolean> {
   const caret = await panel.session.withAction(async () => {
-    await panel.session.flush();
+    await panel.session.flush(panel.id);
     const range = await panel.rpc.call(editorProtocol, "captureSelection", {});
     if (range.version !== panel.session.version) {
       throw new Error("The note changed while inserting. Try again.");

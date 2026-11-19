@@ -80,7 +80,7 @@ function runPanelAction(
   }
   return panel.session.withAction(async () => {
     await ctx.serial("document/willSave", panel.session);
-    await panel.session.flush();
+    await panel.session.flush(panel.id);
     if (action !== "save" && !panel.active()) {
       throw new Error("The editor lost focus before the command completed.");
     }

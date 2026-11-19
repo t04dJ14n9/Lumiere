@@ -141,7 +141,7 @@ async function reveal(
       { token },
     );
     check();
-    await panel.session.flush();
+    await panel.session.flush(panel.id);
     check();
     const current = await panel.rpc.call(
       jumps,

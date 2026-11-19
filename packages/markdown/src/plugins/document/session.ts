@@ -3,7 +3,7 @@ import { Authority } from "../../shared/document/authority";
 import { textDocument } from "../../shared/document/wire";
 import type { Prepared } from "../../shared/document/authority";
 import type { HostDocument, HostServices, TextEdit } from "../../shared/host";
-import type { Endpoint } from "../../shared/rpc/endpoint";
+import { RpcError, type Endpoint } from "../../shared/rpc/endpoint";
 import { UndoGroups } from "./undo-groups";
 import { protocol } from "./protocol";
 import type { DocumentSession } from "./api";
@@ -71,19 +71,15 @@ export class Session implements DocumentSession {
           this.broadcast();
           return true;
         }
-        const edits: TextEdit[] = [];
-        prepared.changes.iterChanges((...change) => {
-          const [from, to, , , insert] = change;
-          edits.push({
-            from,
-            to,
-            insert: insert.sliceString(0, insert.length, this.document.eol),
-          });
-        });
+        const edits = this.hostEdits(prepared);
         this.expected = prepared;
         try {
           if (!(await this.host.hostDocuments.apply(this.document, edits))) {
-            throw new Error("The host could not apply the edit.");
+            // The panel keeps the edit and sends it again (sync.ts).
+            throw new RpcError(
+              "ApplyRefused",
+              "The host could not apply the edit.",
+            );
           }
           // Real workbenches fire change before apply resolves. Fakes may not.
           if (this.expected) {
@@ -108,6 +104,19 @@ export class Session implements DocumentSession {
       await stopCatchUp();
       await stop();
     };
+  }
+  /** The prepared changes as edits to the host document, in its line endings. */
+  private hostEdits(prepared: Prepared): TextEdit[] {
+    const edits: TextEdit[] = [];
+    prepared.changes.iterChanges((...change) => {
+      const [from, to, , , insert] = change;
+      edits.push({
+        from,
+        to,
+        insert: insert.sliceString(0, insert.length, this.document.eol),
+      });
+    });
+    return edits;
   }
   /**
    * A panel whose version differs from `client.sent` missed a broadcast, and
@@ -179,11 +188,22 @@ export class Session implements DocumentSession {
       client.sent = this.version;
     }
   }
-  async flush(): Promise<void> {
+  /**
+   * Bring in every panel's unsent typing. Only the failure of `origin`, the
+   * panel asking, rejects: another panel of the note that cannot answer (busy,
+   * or stopped syncing) must not make Save, Undo or Redo fail in this one.
+   */
+  async flush(origin?: string): Promise<void> {
     await Promise.all(
-      [...this.clients.values()].map((client) =>
-        client.rpc.call(protocol, "flush", {}, { timeout: 1200 }),
-      ),
+      [...this.clients].map(([id, client]) => {
+        const flushed = client.rpc.call(
+          protocol,
+          "flush",
+          {},
+          { timeout: 1200 },
+        );
+        return id === origin ? flushed : flushed.catch(() => false);
+      }),
     );
     await this.queue;
   }

@@ -18,6 +18,16 @@ missed), it asks the host for the revision log from its own version (`catchUp`)
 and applies it like any other update. Unsent local edits are rebased over it,
 and edits the host already took are confirmed, never dropped or applied twice.
 
+A push or catch-up that times out (a busy extension host) or an edit the
+workbench refuses is not the end of sync: the panel keeps the unsent edits,
+says so in its status line, and tries again after 0.5 s, doubling up to 8 s.
+Sending again is safe because the host drops updates it already took. Any
+other failure means the panel and the note have diverged; the panel stops
+syncing, shows the error and turns read-only so no more typing is lost.
+`Session.flush(origin)` rejects only when `origin`, the panel asking, cannot
+flush: another panel of the same note that cannot answer does not make Save,
+Undo or Redo fail.
+
 While a panel has a note open and the note is dirty, the host saves it 2 s
 after the last edit, as Obsidian does (`autosave.ts`). The countdown lives with
 the session's registry entry, which `release` drops with the last panel, so

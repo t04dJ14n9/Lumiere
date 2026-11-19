@@ -3,14 +3,34 @@ import {
   receiveUpdates,
   sendableUpdates,
 } from "@codemirror/collab";
-import { ChangeSet } from "@codemirror/state";
+import { ChangeSet, EditorState, StateEffect } from "@codemirror/state";
 import type { EditorView } from "@codemirror/view";
-import type { Endpoint } from "../../shared/rpc/endpoint";
+import { RpcError, type Endpoint } from "../../shared/rpc/endpoint";
 import { protocol } from "./protocol";
 import { editGroup } from "./input-annotation";
 
 const revisionMismatch =
   "Document revisions differ. Keep this tab open and copy your edits before reopening.";
+
+/**
+ * Failures that say nothing about the two documents: the host did not answer
+ * in time (a busy extension host) or the workbench refused one edit. The
+ * unconfirmed updates are still in the editor's collab state, and the host
+ * drops any it already took (by client id), so sending again is safe.
+ * Anything else (a revision the host does not know, an edit that does not fit
+ * its revision) means the two have diverged, and retrying cannot fix that.
+ */
+function isTransient(error: unknown): boolean {
+  return (
+    error instanceof RpcError &&
+    (error.code === "Timeout" || error.code === "ApplyRefused")
+  );
+}
+
+/** Wait before the next try: 0.5 s, doubling up to 8 s. */
+function backoff(attempt: number): number {
+  return Math.min(500 * 2 ** attempt, 8_000);
+}
 
 type UpdatesMessage = {
   version: number;
@@ -27,12 +47,16 @@ export class Synchronizer {
    */
   private catchUp?: { held: UpdatesMessage[] };
   error?: string;
+  /** Pending while a transient failure waits for its retry. */
+  private retry?: ReturnType<typeof setTimeout>;
+  private failures = 0;
   private readonly waiting: { resolve(): void; reject(error: Error): void }[] =
     [];
   constructor(
     private readonly view: EditorView,
     private readonly rpc: Endpoint,
     private readonly status: (message: string) => void,
+    private readonly retryDelay: (attempt: number) => number = backoff,
   ) {}
   receive(message: UpdatesMessage): void {
     if (this.catchUp) {
@@ -61,12 +85,15 @@ export class Synchronizer {
    * an echo from a new edit and either dropped or duplicated typing.
    */
   private startCatchUp(version: number, message: UpdatesMessage): void {
-    const catchUp = { held: [message] };
-    this.catchUp = catchUp;
+    this.catchUp = { held: [message] };
     this.status("Syncing…");
+    this.requestCatchUp(version);
+  }
+  private requestCatchUp(version: number): void {
+    const held = this.catchUp!.held;
     void this.rpc.call(protocol, "catchUp", { version }).then(
-      (log) => this.finishCatchUp(version, log, catchUp.held),
-      (error) => this.fail(error),
+      (log) => this.finishCatchUp(version, log, held),
+      (error) => this.retryOrFail(error, () => this.requestCatchUp(version)),
     );
   }
   private finishCatchUp(
@@ -78,6 +105,7 @@ export class Synchronizer {
       return;
     }
     delete this.catchUp;
+    this.failures = 0;
     // An empty log cannot explain the skew that triggered the request.
     if (log.version !== requested || !log.updates.length) {
       this.fail(new Error(revisionMismatch));
@@ -114,6 +142,7 @@ export class Synchronizer {
       this.stopped ||
       this.error ||
       this.catchUp ||
+      this.retry ||
       this.view.composing ||
       this.sending
     ) {
@@ -146,10 +175,39 @@ export class Synchronizer {
       .then(
         () => {
           this.sending = false;
+          this.failures = 0;
           this.pump();
         },
-        (error) => this.fail(error),
+        (error) => {
+          this.sending = false;
+          this.retryOrFail(error, () => this.pump());
+        },
       );
+  }
+  /**
+   * Keep the typing and try again later after a transient failure; stop for
+   * good after any other. Waiting flushes fail now with the reason, so a save
+   * reports it instead of timing out, while the retry goes on behind it.
+   */
+  private retryOrFail(error: unknown, again: () => void): void {
+    if (this.stopped || this.error) {
+      return;
+    }
+    if (!isTransient(error)) {
+      this.fail(error);
+      return;
+    }
+    const reason = `Not synced yet (${String(error)}). Retrying…`;
+    this.status(reason);
+    for (const pending of this.waiting.splice(0)) {
+      pending.reject(new Error(reason));
+    }
+    this.retry = setTimeout(() => {
+      delete this.retry;
+      if (!this.stopped && !this.error) {
+        again();
+      }
+    }, this.retryDelay(this.failures++));
   }
   flush(): Promise<void> {
     if (this.error || this.stopped) {
@@ -161,12 +219,18 @@ export class Synchronizer {
     });
   }
   dispose(): void {
+    clearTimeout(this.retry);
+    delete this.retry;
     this.stopped = true;
     this.error = "Document closed";
     for (const pending of this.waiting.splice(0)) {
       pending.reject(new Error(this.error));
     }
   }
+  /**
+   * Stop for good. The editor turns read-only: typing here would never reach
+   * the note, and the status line already says to copy the unsent edits.
+   */
   private fail(error: unknown): void {
     delete this.catchUp;
     this.error = String(error);
@@ -175,5 +239,11 @@ export class Synchronizer {
     for (const pending of this.waiting.splice(0)) {
       pending.reject(new Error(this.error));
     }
+    // Not inside the dispatch whose failure may have brought us here.
+    queueMicrotask(() =>
+      this.view.dispatch({
+        effects: StateEffect.appendConfig.of(EditorState.readOnly.of(true)),
+      }),
+    );
   }
 }

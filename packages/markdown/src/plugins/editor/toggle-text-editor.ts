@@ -57,7 +57,7 @@ async function openPanelAsText(
   const uri = panel.document.uri;
   await panel.session.withAction(async () => {
     await host.serial("document/willSave", panel.session);
-    await panel.session.flush();
+    await panel.session.flush(panel.id);
     if (!panel.active()) {
       throw new Error("The editor lost focus before the command completed.");
     }
