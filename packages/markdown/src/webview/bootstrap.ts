@@ -6,6 +6,7 @@ import { runFeaturePhases } from "./feature-phases";
 import { headerParts } from "../markdown/properties/header-parts";
 import { registerEditorSettings } from "./editor-settings";
 import { settleSnapshot } from "./snapshot";
+import { requestReady } from "./ready";
 import { createRoot, type RootContext } from "@workshop/core";
 import type { Infer } from "@workshop/core";
 import type { viewState } from "../plugins/editor/protocol";
@@ -33,7 +34,7 @@ export async function bootstrap(
   } = {},
   logging = webviewLogging((record) => rpc.notify(protocol, "log", record)),
 ) {
-  const init = await rpc.call(protocol, "ready", {});
+  const init = await requestReady(rpc);
   performance.mark("mw:ready");
   logging.configure(init.debugLogging);
   const root = createRoot({
