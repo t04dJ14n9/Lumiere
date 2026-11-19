@@ -72,6 +72,11 @@ export interface LumiereHost {
    * cannot (docs/HOSTS_PLAN.md section 4).
    */
   addRoot(root: string): void;
+  /**
+   * Stop trusting a workspace the embedder closed (the app's closed vault):
+   * no new page opens from it. Pages already open keep their notes.
+   */
+  removeRoot(root: string): void;
   /** Workspace roots already registered with `addRoot`. */
   workspaceRoots(): readonly string[];
   /**
@@ -138,6 +143,9 @@ export async function startHost(
     }),
     addRoot: (item) => {
       roots.add(item.replace(/\/+$/, ""));
+    },
+    removeRoot: (item) => {
+      roots.delete(item.replace(/\/+$/, ""));
     },
     workspaceRoots: () => [...roots],
     run: (command) => commands.execute(command),

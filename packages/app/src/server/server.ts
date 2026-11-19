@@ -28,7 +28,7 @@ import { admit, newToken } from "./auth";
 import { WindowInk } from "./ink";
 import { serveShellPage } from "./shell-page";
 import { UiStore } from "./ui-state";
-import { Vaults } from "./vaults";
+import { Vaults, type VaultEvent } from "./vaults";
 
 /** The sketch plugin's command (packages/markdown/src/plugins/sketch). */
 const INSERT_SKETCH_COMMAND = "lumiere.markdown.insertSketch";
@@ -154,8 +154,8 @@ async function loadState(
   const vaults = new Vaults(path.join(setup.data, "vaults.json"));
   await vaults.load();
   vaults.onEvent((event) => {
-    if (event.type === "vaults" && event.added) {
-      lumiere.addRoot(pathToFileURL(event.added).toString());
+    if (event.type === "vaults") {
+      trustOpenVaults(lumiere, event);
     }
   });
   for (const vault of setup.vaults) {
@@ -164,6 +164,27 @@ async function loadState(
   const ui = new UiStore(path.join(setup.data, "window.json"));
   await ui.load();
   return [vaults, ui];
+}
+
+/**
+ * The host trusts the open vaults and no others: a vault the window closed
+ * opens no more pages.
+ */
+function trustOpenVaults(
+  lumiere: LumiereHost,
+  event: Extract<VaultEvent, { type: "vaults" }>,
+): void {
+  if (event.added) {
+    lumiere.addRoot(pathToFileURL(event.added).toString());
+  }
+  const open = new Set(
+    event.open.map((vault) => pathToFileURL(vault).toString()),
+  );
+  for (const root of lumiere.workspaceRoots()) {
+    if (!open.has(root)) {
+      lumiere.removeRoot(root);
+    }
+  }
 }
 
 interface Request {

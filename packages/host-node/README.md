@@ -60,8 +60,9 @@ closes its panel at once.
 A page's URL names a note and the workspace it is shown from, but a page
 decides nothing about which folders are workspaces. The embedder registers
 each one with `host.addRoot` (by real path) before it serves the page: the app
-for each vault, DSH for each session's workspace. A note's or PDF's page
-answers 403 for a `root` that is not inside a registered one, and a registered filesystem
+for each vault, DSH for each session's workspace; `host.removeRoot` stops
+trusting one (the app's closed vault). A note's or PDF's page answers 403 for
+a `root` that is not inside a registered one, and a registered filesystem
 root counts for nothing.
 
 A right-click in a page shows Lumière's `webview/context` menu as VS Code

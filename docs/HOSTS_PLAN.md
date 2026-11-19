@@ -186,7 +186,7 @@ Each contract is written once, in code. Change both sides in the same PR.
 | Web app's worker ↔ window | `apps/web/src/shared/routes.ts`, `messages.ts` | `apps/web/src/worker` ↔ `src/answers.ts`: notes' pages and the files they show |
 | Theme | `packages/host-node/src/palette.ts` | DSH client, app window → page |
 | Tree views | `packages/host-node/src/views.ts` | host-node ↔ app window (DSH later) |
-| Workspace roots | `LumiereHost.addRoot` in `packages/host-node/src/host/start-host.ts` | the embedder registers (app: each vault; DSH: each session's workspace, `src/host/workspace.ts`) ↔ host-node's note and PDF pages, which refuse any `root` outside a registered one |
+| Workspace roots | `LumiereHost.addRoot`, `removeRoot` in `packages/host-node/src/host/start-host.ts` | the embedder registers (app: each open vault, removed when it closes; DSH: each session's workspace, `src/host/workspace.ts`) ↔ host-node's note and PDF pages, which refuse any `root` outside a registered one |
 | Server process | `packages/app/src/server/contract.ts` | server ↔ `apps/desktop/src-tauri/src/server.rs` |
 | Server API | `packages/app/src/server/api.ts` (table in its README) | server ↔ window, desktop |
 | Window ↔ Tauri | `packages/app/src/shell/tauri.ts` | window ↔ `capabilities/shell.json`, `menu.rs` |

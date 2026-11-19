@@ -463,6 +463,14 @@ test("the API closes open vaults, refuses non-note opens, and serves the command
   });
   assert.equal(closed.status, 200);
   assert.deepEqual((JSON.parse(closed.body) as { open: string[] }).open, []);
+  // A closed vault is no longer trusted: no new page opens from it.
+  const note = path.join(vault, "daily", "today.md");
+  const page = await send(
+    server.port,
+    `/lumiere/editor?path=${encodeURIComponent(note)}&root=${encodeURIComponent(vault)}`,
+    { headers: { cookie } },
+  );
+  assert.equal(page.status, 403);
 });
 
 /** The key the window's own page was given, read as its script would. */
