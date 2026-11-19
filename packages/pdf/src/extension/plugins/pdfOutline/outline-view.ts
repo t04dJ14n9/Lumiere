@@ -24,6 +24,7 @@ export function registerOutlineView(
     execute: (command) => vscode.commands.executeCommand(command),
     focusEditor: () =>
       vscode.commands.executeCommand("workbench.action.focusActiveEditorGroup"),
+    isOutlineShown: () => view.visible,
     activeCustomEditorViewType: () => {
       const input = vscode.window.tabGroups.activeTabGroup.activeTab?.input;
       return input instanceof vscode.TabInputCustom
@@ -41,7 +42,13 @@ export function registerOutlineView(
       follower.treeChanged(provider.refresh());
       outlineFocus.sync(Boolean(panels.active));
     }),
-    view.onDidChangeVisibility(() => follower.treeChanged(true)),
+    view.onDidChangeVisibility(() => {
+      follower.treeChanged(true);
+      // On screen only where the Explorer is the sidebar's container.
+      if (view.visible) {
+        outlineFocus.outlineShown();
+      }
+    }),
     vscode.workspace.onDidChangeConfiguration((event) => {
       if (event.affectsConfiguration(FOLLOW_SETTING)) {
         follower.applySetting();

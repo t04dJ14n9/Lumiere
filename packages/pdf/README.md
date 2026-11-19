@@ -99,9 +99,12 @@ is opt-in (`lumiere.pdf.regions.enabled`, default off).
   branch is closed. A click on a bookmark leaves the tree as it is, so a
   double-click's second click hits the same row. This choice is saved as
   `lumiere.pdf.outline.followCursor`.
-  Opening a Lumiere PDF editor hides VS Code's native **Outline** and shows
-  **PDF Outline**; leaving restores the native Outline after a short debounce,
-  skipped if Lumiere already owns the active tab.
+  Opening a PDF never changes which side bar is shown: from Search or Quick
+  Open, Search stays. Wherever the Explorer is shown, **PDF Outline** appears
+  in it and VS Code's native **Outline** is hidden; leaving the PDF restores
+  the native Outline after a short debounce, only if it was hidden, and not
+  when Lumiere already owns the active tab. VS Code lists PDF Outline
+  collapsed the first time; it remembers once you expand it.
 - **Section links from notes.** In a Markdown note in Lumiere, typing
   `[[paper.pdf#` lists the PDF's bookmarks; typing more filters them, and
   picking one inserts `[[paper.pdf#page=5|Methods]]` (or
