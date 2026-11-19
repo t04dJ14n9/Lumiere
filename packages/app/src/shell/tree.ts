@@ -13,23 +13,34 @@ export interface Folder {
  * Folders and files in the order the list gives them; the server sorts
  * the list by path, so siblings come out sorted by name.
  */
-export function buildTree(files: readonly FileEntry[]): Folder {
+export function buildTree(
+  files: readonly FileEntry[],
+  /** Empty folders to show too (made in the window, so not listed yet). */
+  emptyFolders: Iterable<string> = [],
+): Folder {
   const root: Folder = { name: "", path: "", folders: new Map(), files: [] };
   for (const file of files) {
-    const parts = file.path.split("/");
-    let folder = root;
-    for (const name of parts.slice(0, -1)) {
-      let child = folder.folders.get(name);
-      if (!child) {
-        const path = folder.path ? `${folder.path}/${name}` : name;
-        child = { name, path, folders: new Map(), files: [] };
-        folder.folders.set(name, child);
-      }
-      folder = child;
-    }
-    folder.files.push(file);
+    folderAt(root, file.path.split("/").slice(0, -1)).files.push(file);
+  }
+  for (const path of emptyFolders) {
+    folderAt(root, path.split("/"));
   }
   return root;
+}
+
+/** The folder down `names` from `root`, made where missing. */
+function folderAt(root: Folder, names: readonly string[]): Folder {
+  let folder = root;
+  for (const name of names) {
+    let child = folder.folders.get(name);
+    if (!child) {
+      const path = folder.path ? `${folder.path}/${name}` : name;
+      child = { name, path, folders: new Map(), files: [] };
+      folder.folders.set(name, child);
+    }
+    folder = child;
+  }
+  return folder;
 }
 
 /** The folders that hold a file, from the vault down: `a/b/c.md` → `a`, `a/b`. */

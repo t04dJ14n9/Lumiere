@@ -30,7 +30,11 @@ export type TreeRow =
 export function visibleRows(root: Folder, open: OpenFolders): TreeRow[] {
   const rows: TreeRow[] = [];
   const visit = (folder: Folder, depth: number) => {
-    for (const child of folder.folders.values()) {
+    // Sorted here: a folder made in the window comes after the listed ones.
+    const children = [...folder.folders.values()].sort((a, b) =>
+      a.name.localeCompare(b.name),
+    );
+    for (const child of children) {
       const isOpen = open.has(child.path);
       rows.push({
         kind: "folder",

@@ -156,6 +156,7 @@ function FilesSidebar({
   opening,
   ui,
   panels,
+  report,
 }: WorkspaceProps) {
   const shown = tabs.tabs.find((tab) => tab.id === tabs.active);
   const className = panels.narrow ? "sidebar floating-panel" : "sidebar";
@@ -186,6 +187,9 @@ function FilesSidebar({
               dispatch({ type: "open", vault, path });
               panels.dismiss();
             }}
+            dispatch={dispatch}
+            refreshFiles={vaults.refreshFiles}
+            report={report}
           />
         </>
       ) : (

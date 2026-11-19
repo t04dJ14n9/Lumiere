@@ -60,7 +60,13 @@ Laid out as VS Code:
 
 - The vault's files on the left, the shown note's outline on the right.
   As in VS Code's Explorer, folders start closed, and the ones on the way
-  to the shown note open whenever it changes (`folders.ts`).
+  to the shown note open whenever it changes (`folders.ts`). New Note and
+  New Folder sit above the files and in the right-click menu, with Rename
+  (typed in the row) and Delete; dragging a file or folder onto a folder
+  moves it. A rename or move updates the links to it, and its tabs follow
+  it; Delete goes to the system's trash, or, where the host has none (a
+  browser, the iPad), asks before deleting for good (`file-actions.ts`,
+  `tree-editing.ts`, `tree-edits.ts`).
 - Notes open as tabs in the middle. Each tab is an editor page in an
   iframe, sent the theme and told when it is shown
   (`@workshop/host-node/embedding`).
@@ -154,6 +160,7 @@ With no `--vault`, the vault used last opens again, if it is still there.
 - `src/shell/settings.ts`, `src/shell/settings-view.ts`: the settings, and how the Settings tab lays them out.
 - `src/shell/ui-state.ts`, `src/shared/ui-state.ts`, `src/server/ui-state.ts`: the layout and Color Theme, kept by the server.
 - `src/shell/tabs.ts`, `src/shell/tree.ts`, `src/shell/tree-state.ts`: tabs and tree state, as pure functions.
+- `src/shell/file-actions.ts`, `src/shell/tree-editing.ts`, `src/shell/tree-edits.ts`, `src/shell/components/TreeRowItem.tsx`, `src/shell/components/TreeMenu.tsx`: the file tree's new notes and folders, renames, moves by dragging, and deletion.
 - `src/shell/tree-rows.ts`: the file tree as the rows it shows; only those in view are drawn, so a vault of tens of thousands of files scrolls as a small one does.
 - `src/shell/saved-tabs.ts`: the open tabs kept with the layout, and opened again at launch.
 - `src/shell/folders.ts`: which of the file list's folders are open, kept with the layout.
@@ -168,6 +175,8 @@ With no `--vault`, the vault used last opens again, if it is still there.
   plugins (Copy Link for Agent, look up, the outline view) and the PDF
   settings work only in VS Code for now, and links in a PDF do not open.
 - One window per server.
+- The file list names files only, so an empty folder shows only while the
+  window that made it is open.
 - Git blame and the change gutter start off in the app (`src/server/defaults.ts`):
   git runs with the repository's own configuration, which can name programs
   to run, so the owner turns them on in Settings for their own repositories.

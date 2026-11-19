@@ -2,13 +2,25 @@
  * The open vault's files as folders and notes; a note opens in a tab.
  * Folders start closed, and the way to the shown note opens (folders.ts).
  * Only the rows in view are drawn (tree-rows.ts): a vault of tens of
- * thousands of files opens and scrolls as a small one does.
+ * thousands of files opens and scrolls as a small one does. As in VS
+ * Code's Explorer, notes and folders are made, renamed and deleted from
+ * the right-click menu and the buttons above, and moved by dragging them
+ * onto a folder (tree-editing.ts).
  */
-import { useEffect, useLayoutEffect, useMemo, useRef, useState } from "react";
+import {
+  useEffect,
+  useLayoutEffect,
+  useMemo,
+  useRef,
+  useState,
+  type Dispatch,
+} from "react";
 import type { FileKind } from "../../shared/file-kind";
 import type { FileEntry } from "../api";
 import { useOpenFolders } from "../folders";
+import type { TabsAction } from "../tabs";
 import { buildTree } from "../tree";
+import { useTreeEditing, type TreeEditing } from "../tree-editing";
 import {
   ROW_HEIGHT,
   rowWindow,
@@ -17,6 +29,8 @@ import {
   type TreeRow,
 } from "../tree-rows";
 import type { UiStateHandle } from "../ui-state";
+import { DeletePrompt, TreeMenu } from "./TreeMenu";
+import { dropHandlers, TreeRowItem } from "./TreeRowItem";
 
 export interface FileTreeProps {
   readonly vault: string;
@@ -29,19 +43,18 @@ export interface FileTreeProps {
   /** The saved layout, which keeps the open folders. */
   readonly ui: UiStateHandle;
   readonly onOpen: (path: string) => void;
+  readonly dispatch: Dispatch<TabsAction>;
+  /** List the vault's files again (they were changed here). */
+  readonly refreshFiles: () => void;
+  readonly report: (work: Promise<unknown>) => void;
 }
 
-export function FileTree({
-  vault,
-  files,
-  partial = false,
-  activePath,
-  opens,
-  ui,
-  onOpen,
-}: FileTreeProps) {
-  const root = useMemo(() => buildTree(files), [files]);
+export function FileTree(props: FileTreeProps) {
+  const { vault, files, partial = false, activePath, ui } = props;
   const folders = useOpenFolders(ui, vault, activePath);
+  const paths = useMemo(() => files.map((file) => file.path), [files]);
+  const edit = useTreeEditing({ ...props, paths, folders });
+  const root = useMemo(() => buildTree(files, edit.made), [files, edit.made]);
   const rows = useMemo(
     () => visibleRows(root, folders.open),
     [root, folders.open],
@@ -49,19 +62,25 @@ export function FileTree({
   const scroll = useScroll();
   useRevealRow(scroll, rows, activePath);
   const { start, end } = rowWindow({ count: rows.length, ...scroll.at });
+  const handlers = {
+    ...edit.handlers,
+    opens: props.opens,
+    onOpen: props.onOpen,
+    onToggle: folders.toggle,
+  };
   return (
     <>
-      {partial && (
-        <p className="file-tree-partial" role="status">
-          This vault has more files than the {files.length.toLocaleString()}{" "}
-          listed here; open others from Finder or a link.
-        </p>
-      )}
+      <TreeTop edit={edit} partial={partial ? files.length : undefined} />
       <nav
         ref={scroll.ref}
         className="file-tree"
         aria-label="Files"
         onScroll={scroll.onScroll}
+        onContextMenu={(event) => {
+          event.preventDefault();
+          edit.openMenu(undefined, { x: event.clientX, y: event.clientY });
+        }}
+        {...dropHandlers("", handlers)}
       >
         <div
           className="tree-rows"
@@ -69,63 +88,67 @@ export function FileTree({
           style={{ height: rows.length * ROW_HEIGHT }}
         >
           {rows.slice(start, end).map((row, index) => (
-            <Row
+            <TreeRowItem
               key={`${row.kind}:${row.path}`}
               row={row}
               top={(start + index) * ROW_HEIGHT}
               isShown={row.path === activePath}
-              opens={opens}
-              onOpen={onOpen}
-              onToggle={folders.toggle}
+              isRenaming={row.path === edit.renaming}
+              handlers={handlers}
             />
           ))}
         </div>
       </nav>
+      <TreeOverlays edit={edit} />
     </>
   );
 }
 
-function Row({
-  row,
-  top,
-  isShown,
-  opens,
-  onOpen,
-  onToggle,
-}: Pick<FileTreeProps, "opens" | "onOpen"> & {
-  readonly row: TreeRow;
-  readonly top: number;
-  readonly isShown: boolean;
-  readonly onToggle: (path: string) => void;
+/** New Note and New Folder for the vault, and a word when the list is cut short. */
+function TreeTop({
+  edit,
+  partial,
+}: {
+  readonly edit: TreeEditing;
+  /** How many files are listed, when the vault holds more. */
+  readonly partial: number | undefined;
 }) {
-  const style = { top, paddingLeft: 8 + row.depth * 12 };
-  if (row.kind === "folder") {
-    return (
-      <button
-        type="button"
-        role="listitem"
-        className="tree-row tree-folder"
-        style={style}
-        aria-expanded={row.isOpen}
-        onClick={() => onToggle(row.path)}
-      >
-        {row.name}
-      </button>
-    );
-  }
   return (
-    <button
-      type="button"
-      role="listitem"
-      className="tree-row tree-file"
-      style={style}
-      data-kind={row.entry.kind}
-      aria-current={isShown ? "page" : undefined}
-      disabled={!opens.includes(row.entry.kind)}
-      onClick={() => onOpen(row.path)}
-    >
-      {row.name}
-    </button>
+    <>
+      <div className="file-tree-actions">
+        <button type="button" onClick={() => edit.actions.createNote("")}>
+          New Note
+        </button>
+        <button type="button" onClick={() => edit.newFolder("")}>
+          New Folder
+        </button>
+      </div>
+      {partial !== undefined && (
+        <p className="file-tree-partial" role="status">
+          This vault has more files than the {partial.toLocaleString()} listed
+          here; open others from Finder or a link.
+        </p>
+      )}
+    </>
+  );
+}
+
+/** The right-click menu, and the question before deleting for good. */
+function TreeOverlays({ edit }: { readonly edit: TreeEditing }) {
+  return (
+    <>
+      {edit.menu && (
+        <TreeMenu
+          at={edit.menu}
+          items={edit.menuItems}
+          onClose={edit.closeMenu}
+        />
+      )}
+      <DeletePrompt
+        path={edit.actions.confirming}
+        onAnswer={edit.actions.answer}
+      />
+    </>
   );
 }
 
