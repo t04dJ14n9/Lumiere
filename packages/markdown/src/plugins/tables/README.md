@@ -82,6 +82,7 @@ plugin registrations and widget lifetimes end when the plugin stops.
 - `webview.ts`: named registrations for rendering, wheel input, projection and commands.
 - `environment.ts`: injected capabilities available to table interactions.
 - `content.ts`: asynchronous render-pass ownership and cancellation.
+- `renderer-match.ts`: which `Table` nodes the editor takes: those it can parse, so not one inside a block quote.
 - `widget.ts`: Live Preview widget creation, reuse and disposal; `estimatedHeight` reserves row height before measure and across off-viewport rebuilds.
 - `estimated-height.ts`: pure row-count reserve used by the widget.
 - `estimated-height.test.ts`: empty/invalid, row scaling, and tall-table unit cases.
@@ -162,7 +163,9 @@ is `lumiere.markdown.plugins.tables.enabled`; it has no separate configuration.
 
 Save, undo and redo belong to VS Code's TextDocument. Cell selections map to
 Markdown offsets for consumers of the editor selection API. Live Preview always
-keeps tables rendered; only the focused cell reveals raw Markdown. A click on
+keeps tables rendered; only the focused cell reveals raw Markdown. A table
+inside a block quote is not: its `> ` markers are part of every row, which
+the table editor cannot read, so it stays Markdown text (`renderer-match.ts`). A click on
 the cell's padding (outside the rendered glyphs) opens the editor at the
 nearest edge of the cell text, as in Obsidian; on-glyph clicks still map
 through the rendered source. Source mode
