@@ -72,6 +72,39 @@ test("the active Lumiere editor's selection is counted even when a text editor s
   assert.deepEqual(f.shown, ["1 word 5 characters"]);
 });
 
+test("a caret move does not count the whole note again until its text changes", async (t) => {
+  let reads = 0;
+  let version = 1;
+  const panel = {
+    document: {
+      uri: NOTE,
+      get version() {
+        return version;
+      },
+      getText: () => {
+        reads++;
+        return TEXT;
+      },
+    },
+    rpc: { call: async () => ({ text: "" }) },
+  } as unknown as EditorPanel;
+  const f = await start({ panels: [panel], active: panel });
+  t.after(() => f.root.dispose());
+  const caretMoved = async () => {
+    f.root.emit("editor/selectionChanged", panel as never);
+    await new Promise((resolve) => setTimeout(resolve, 300));
+  };
+  assert.equal(reads, 1);
+
+  await caretMoved();
+  assert.equal(reads, 1);
+
+  version = 2;
+  await caretMoved();
+  assert.equal(reads, 2);
+  assert.equal(f.shown.at(-1), "4 words 22 characters");
+});
+
 test("a Lumiere editor on the note is counted when no text editor shows it", async (t) => {
   const f = await start({ panels: [lumierePanel("")] });
   t.after(() => f.root.dispose());

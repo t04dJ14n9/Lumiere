@@ -1,8 +1,8 @@
 import type { Plugin } from "@workshop/core";
-import type { ActiveEditor } from "../../shared/host";
+import type { ActiveEditor, HostDocument } from "../../shared/host";
 import type { EditorPanel, Editors } from "../editor/api";
 import { protocol as editorProtocol } from "../editor/protocol";
-import { countText, formatCounts } from "./count";
+import { countText, formatCounts, type Counts } from "./count";
 
 const UPDATE_DELAY_MS = 200;
 /** Do not block the status bar on a webview that is still booting (BH-018). */
@@ -78,8 +78,28 @@ async function activeText(
   return panel ? panelCounts(panel) : undefined;
 }
 
+/**
+ * Each note's counts while its version stands. Every caret move asks again,
+ * and counting a long note takes a while; its text changes only with the version.
+ */
+const noteCounts = new WeakMap<
+  HostDocument,
+  { version: number; counts: Counts }
+>();
+
+function documentCounts(document: HostDocument): Counts {
+  const cached = noteCounts.get(document);
+  if (cached && cached.version === document.version) {
+    return cached.counts;
+  }
+  const counts = countText(document.getText());
+  if (typeof document.version === "number") {
+    noteCounts.set(document, { version: document.version, counts });
+  }
+  return counts;
+}
+
 async function panelCounts(panel: EditorPanel) {
-  const documentCounts = countText(panel.document.getText());
   const selection = await Promise.race([
     panel.rpc
       .call(editorProtocol, "captureSelection", {})
@@ -88,5 +108,7 @@ async function panelCounts(panel: EditorPanel) {
       setTimeout(() => resolve(undefined), SELECTION_WAIT_MS),
     ),
   ]);
-  return selection?.text ? countText(selection.text, false) : documentCounts;
+  return selection?.text
+    ? countText(selection.text, false)
+    : documentCounts(panel.document);
 }
