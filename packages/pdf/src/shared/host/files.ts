@@ -3,8 +3,9 @@ export interface PdfFiles {
   /** The file's bytes; rejects when it cannot be read. */
   read(uri: string): Promise<Uint8Array>;
   /**
-   * Calls `onChange` when the file is written or replaced. A URI the host
-   * cannot watch (not a file) never calls it.
+   * Calls `onChange` when the file is written or replaced, and when it is
+   * deleted if the host can tell (the reload then fails and says so). A
+   * URI the host cannot watch (not a file) never calls it.
    */
   watch(uri: string, onChange: () => void): () => void;
   /** The path agents and messages show: workspace-relative when inside one, with `/`. */

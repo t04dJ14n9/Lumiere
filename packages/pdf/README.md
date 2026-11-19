@@ -21,7 +21,8 @@ is opt-in (`lumiere.pdf.regions.enabled`, default off).
   When the file changes on disk (a rebuilt paper), the viewer reloads at the
   same page and zoom; a touch or sync that leaves its bytes as they were
   reloads nothing. Annotations made while it reloads are kept with the
-  version they were made on.
+  version they were made on. A PDF deleted on disk keeps showing as it was,
+  and Lumiere says it can no longer read it.
 - **View controls.** A View picker in the editor title/status bar, and a
   compact **View** menu in the slim toolbar of the web and iPad hosts, selects zoom, layout,
   scrolling mode and direction. Saved choices and reading position return

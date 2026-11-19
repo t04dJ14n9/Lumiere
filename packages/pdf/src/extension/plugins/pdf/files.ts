@@ -117,19 +117,35 @@ function isNotFound(error: unknown): boolean {
   );
 }
 
+/**
+ * Watch the folder's files and pick this one: a pattern is a glob, so the
+ * name itself as the pattern never matches `Smith [2020].pdf`. A delete
+ * counts too: an atomic replace may arrive as one, and a PDF really
+ * deleted then fails its reload and says so, rather than showing the old
+ * bytes as if nothing happened.
+ */
 function watchFile(uri: vscode.Uri, onChange: () => void): () => void {
   if (uri.scheme !== "file") {
     return () => undefined;
   }
+  const folder = path.dirname(uri.fsPath);
+  const name = path.basename(uri.fsPath);
   const watcher = vscode.workspace.createFileSystemWatcher(
-    new vscode.RelativePattern(
-      vscode.Uri.file(path.dirname(uri.fsPath)),
-      path.basename(uri.fsPath),
-    ),
+    new vscode.RelativePattern(vscode.Uri.file(folder), "*"),
   );
+  const ifThisFile = (changed: vscode.Uri): void => {
+    if (
+      changed.scheme === "file" &&
+      path.basename(changed.fsPath) === name &&
+      path.dirname(changed.fsPath) === folder
+    ) {
+      onChange();
+    }
+  };
   const subscriptions = [
-    watcher.onDidChange(onChange),
-    watcher.onDidCreate(onChange),
+    watcher.onDidChange(ifThisFile),
+    watcher.onDidCreate(ifThisFile),
+    watcher.onDidDelete(ifThisFile),
   ];
   return () => {
     for (const subscription of subscriptions) {
