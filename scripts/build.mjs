@@ -9,13 +9,14 @@
 import { execFileSync } from "node:child_process";
 import { access, cp, mkdir, readFile, rm, writeFile } from "node:fs/promises";
 import path from "node:path";
+import { fileURLToPath } from "node:url";
 import * as esbuild from "esbuild";
 import { lazyBridgeServer } from "../packages/pdf/scripts/lazy-bridge-server.mjs";
 import { lazyYaml } from "../packages/markdown/scripts/lazy-yaml.mjs";
 import { keepsBasenameCreate } from "./bundle-checks.mjs";
 
 const production = process.argv.includes("--production");
-const root = path.dirname(path.dirname(new URL(import.meta.url).pathname));
+const root = path.dirname(path.dirname(fileURLToPath(import.meta.url)));
 const dist = path.join(root, "dist");
 const products = ["markdown", "pdf"];
 
