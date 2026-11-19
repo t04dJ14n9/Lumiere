@@ -1,6 +1,6 @@
 import test from "node:test";
 import assert from "node:assert/strict";
-import { realpathSync } from "node:fs";
+import { chmodSync, existsSync, realpathSync, statSync } from "node:fs";
 import { mkdtemp, mkdir, writeFile, rm, symlink } from "node:fs/promises";
 import { tmpdir } from "node:os";
 import { isAbsolute, join, relative, resolve as resolvePath } from "node:path";
@@ -647,6 +647,47 @@ test("watchGitMetadata fires when HEAD is rewritten", async () => {
     assert.ok(fires >= 1, "expected HEAD/refs watch to fire on amend");
     watcher.dispose();
   } finally {
+    await rm(root, { recursive: true, force: true });
+  }
+});
+
+test("watchGitMetadata hears no change when git's files are only touched, not changed", async () => {
+  // On Windows fs.watch also reports a file's last access, attributes and
+  // security as changes, so git reading `.git` (or a virus scanner opening a
+  // new object) would make every blame stale. Setting a file's mode to what it
+  // is raises the same attribute notification on Linux and macOS.
+  const { root } = await repo();
+  const gitDir = resolveGitDir(root)!;
+  let fires = 0;
+  const watcher = watchGitMetadata(gitDir, () => {
+    fires++;
+  });
+  try {
+    for (const file of [
+      "HEAD",
+      "config",
+      "index",
+      "refs/heads/master",
+      "refs/heads/main",
+    ]) {
+      const target = join(gitDir, file);
+      if (existsSync(target)) {
+        chmodSync(target, statSync(target).mode);
+      }
+    }
+    await new Promise((resolve) => setTimeout(resolve, 300));
+    assert.equal(fires, 0, "touching git's files is no change");
+    execFileSync("git", ["commit", "--amend", "-m", "Rewrite HEAD"], {
+      cwd: root,
+      stdio: ["pipe", "pipe", "pipe"],
+    });
+    const deadline = Date.now() + 3000;
+    while (Date.now() < deadline && fires === 0) {
+      await new Promise((resolve) => setTimeout(resolve, 25));
+    }
+    assert.ok(fires >= 1, "a commit after the touches is still heard");
+  } finally {
+    watcher.dispose();
     await rm(root, { recursive: true, force: true });
   }
 });

@@ -7,11 +7,14 @@ import { readFileSync, readdirSync } from "node:fs";
 // own is slow in a large vault and disagrees with the index about what exists.
 // workspace-files lists one directory the user just named (assets, scratch or
 // exports). It does not walk the vault or replace the index. ide-context-temp
-// lists the agents' temp folder, outside every vault.
+// lists the agents' temp folder, outside every vault. git-metadata-changes
+// lists git's own `.git`, `refs` and `logs` once when they are watched, never
+// a note's folder.
 const LISTERS = new Set([
   "src/host/vault-system.ts",
   "src/host/workspace-files.ts",
   "src/host/ide-context-temp.ts",
+  "src/host/git-metadata-changes.ts",
 ]);
 const SCANS =
   /\b(findFiles|readDirectory|readdir(Sync)?|opendir(Sync)?|glob)\s*\(/;

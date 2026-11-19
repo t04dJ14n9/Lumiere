@@ -7,6 +7,7 @@ import {
   type FSWatcher,
 } from "node:fs";
 import { join, isAbsolute, resolve } from "node:path";
+import { MetadataChanges } from "./git-metadata-changes";
 import type { RepositoryWatch } from "./git-watch";
 
 /** Structural change event matching RepositoryWatch's GitEvent shape. */
@@ -113,11 +114,17 @@ function trackPath(
   if (!existsSync(target)) {
     return;
   }
+  const changes = new MetadataChanges(target, recursive);
+  const fireOnChange = (_event: string, entry: string | null) => {
+    if (changes.changed(entry)) {
+      fire();
+    }
+  };
   try {
     watchers.push(
       recursive
-        ? watch(target, { recursive: true }, fire)
-        : watch(target, fire),
+        ? watch(target, { recursive: true }, fireOnChange)
+        : watch(target, fireOnChange),
     );
   } catch {
     /* Missing or unwatchable paths are skipped; blame still works once. */
