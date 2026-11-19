@@ -3,6 +3,10 @@
  * folder (resolving `.` and `..` as `path.posix.join` does), a URI's folder,
  * and its name. The host compares URIs as strings, so they are built by the
  * platform (`HostFiles.uriOf`), exactly as its own runtime writes them.
+ *
+ * A Windows drive (`/C:/x`) is a root, as the URL standard makes it: `..`
+ * never climbs above it, and the folder of `/C:/x` is `/C:/`. A bare `/C:`
+ * would name the drive's current folder on Windows, not its root.
  */
 import type { HostFiles } from "./platform";
 
@@ -49,8 +53,7 @@ export function parentUri(
   files: Pick<HostFiles, "uriOf">,
   uri: string,
 ): string {
-  const path = uriPath(uri).replace(/\/+$/, "");
-  return files.uriOf(path.slice(0, path.lastIndexOf("/")) || "/");
+  return files.uriOf(joinPaths(uriPath(uri), ".."));
 }
 
 /** The last part of `uri`'s path, decoded. */
@@ -59,14 +62,19 @@ export function uriName(uri: string): string {
   return path.slice(path.lastIndexOf("/") + 1);
 }
 
+const isDrive = (part: string | undefined) => /^[A-Za-z]:$/.test(part ?? "");
+
 function joinPaths(base: string, relative: string): string {
   const parts: string[] = [];
   for (const part of `${base}/${relative}`.split("/")) {
     if (part === "..") {
-      parts.pop();
+      if (!(parts.length === 1 && isDrive(parts[0]))) {
+        parts.pop();
+      }
     } else if (part !== "" && part !== ".") {
       parts.push(part);
     }
   }
-  return `/${parts.join("/")}`;
+  const path = `/${parts.join("/")}`;
+  return parts.length === 1 && isDrive(parts[0]) ? `${path}/` : path;
 }

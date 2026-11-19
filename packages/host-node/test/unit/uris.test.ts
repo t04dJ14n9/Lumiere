@@ -43,11 +43,32 @@ test("a URI's folder and name", () => {
     parentUri(nodeFiles, note),
     pathToFileURL("/vault/daily notes").toString(),
   );
+  // `file:///` here, the current drive's root (`file:///D:/`) on Windows.
   assert.equal(
     parentUri(nodeFiles, pathToFileURL("/vault").toString()),
-    "file:///",
+    pathToFileURL("/").toString(),
   );
   assert.equal(uriName(note), "Q #1.md");
+});
+
+test("a Windows drive is a root: its folder is itself, and `..` stops there", () => {
+  // As the URL standard resolves them, on every platform; `/C:` alone would
+  // be the drive's current folder on Windows.
+  const files = { uriOf: fileUri };
+  const resolved = (relative: string, base: string) =>
+    new URL(relative, base).href;
+  assert.equal(parentUri(files, "file:///C:/vault"), "file:///C:/");
+  assert.equal(parentUri(files, "file:///C:/vault/"), "file:///C:/");
+  assert.equal(parentUri(files, "file:///C:/"), "file:///C:/");
+  assert.equal(parentUri(files, "file:///C:/vault/a.md"), "file:///C:/vault");
+  for (const relative of ["..", "../..", "../../x.md", "a/../../../y.md"]) {
+    assert.equal(
+      joinUri(files, "file:///C:/vault", relative),
+      resolved(relative, "file:///C:/vault/"),
+      relative,
+    );
+  }
+  assert.equal(uriName("file:///C:/vault/a.md"), "a.md");
 });
 
 // Node's own host names files with pathToFileURL (node-platform.ts), so
