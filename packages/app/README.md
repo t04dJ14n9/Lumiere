@@ -124,8 +124,7 @@ With no `--vault`, the vault used last opens again, if it is still there.
 | `GET /api/files?vault=` | `{"files","partial"}`: a vault’s files, sorted, with their kind (read from its folders, no file stat-ed), at most 20,000; `partial` when there are more, which the file tree says |
 | `POST /api/open` `{"path"}` | show a note or folder (Finder, a second launch; the window only, or a process with no Origin) |
 | `GET /api/ui`, `POST /api/ui` | the window's layout, open folders, open tabs and Color Theme (`src/shared/ui-state.ts`) |
-| `GET /api/events`, `?only=ink` | server-sent events: vaults changed, a note to open, a vault's plugins waiting for an answer (`{"type":"trust"}`), a drawing started or ended waiting (`{"type":"ink"}`); `only` keeps the listed types. Notes to open that come before a stream that takes them wait for one |
-| `GET /api/trust`, `POST /api/trust` `{"vault","allowed"}` | the vaults waiting for an answer, with the plugins they turn on; the owner's answer, accepted only for a vault that asked |
+| `GET /api/events`, `?only=ink` | server-sent events: vaults changed, a note to open, a drawing started or ended waiting (`{"type":"ink"}`); `only` keeps the listed types. Notes to open that come before a stream that takes them wait for one |
 | `GET /api/ink`, `POST /api/ink` `{"id","sketch"?}` | the drawing the plugins wait for (`{"id","title","sketch"}`, the sketch as its file's metadata JSON), or `{}`; the window's drawing, or none when cancelled, accepted only for the drawing waiting |
 | `POST /api/sketch` | start Insert Sketch in the note last focused |
 | `/lumiere/*` | the editor pages and tree views (`@workshop/host-node`) |
@@ -143,10 +142,8 @@ With no `--vault`, the vault used last opens again, if it is still there.
 - `src/shell/App.tsx`, `src/shell/components/`: the window.
 - `src/shell/opening.ts`: opening vaults and notes from the picker, menu, links and the server.
 - `src/shell/commands.ts`: the window's commands and VS Code's keys for them.
-- `src/server/vault-trust.ts`: the owner's answers about running a vault's plugins (`trust.json`), and the questions waiting.
 - `src/server/ink.ts`: the `ink` service: drawings waiting for the window's canvas.
 - `src/server/json-file.ts`: writing the data folder's JSON files without leaving half a file.
-- `src/shell/trust.ts`, `src/shell/components/TrustDialog.tsx`: asking the owner about a vault's plugins, one vault at a time.
 - `src/shell/ink.ts`: drawing what the server's plugins ask for, on the window's canvas.
 - `src/shell/settings.ts`, `src/shell/settings-view.ts`: the settings, and how the Settings tab lays them out.
 - `src/shell/ui-state.ts`, `src/shared/ui-state.ts`, `src/server/ui-state.ts`: the layout and Color Theme, kept by the server.

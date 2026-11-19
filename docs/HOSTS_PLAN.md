@@ -190,24 +190,12 @@ Each contract is written once, in code. Change both sides in the same PR.
 | Server process | `packages/app/src/server/contract.ts` | server ↔ `apps/desktop/src-tauri/src/server.rs` |
 | Server API | `packages/app/src/server/api.ts` (table in its README) | server ↔ window, desktop |
 | Window ↔ Tauri | `packages/app/src/shell/tauri.ts` | window ↔ `capabilities/shell.json`, `menu.rs` |
-
-| Vault code trust | `VaultCodeTrust` in `packages/markdown/src/shared/host/workspace.ts` | plugins ↔ VS Code adapter, host-node ← app |
 | Drawings for the window | `packages/app/src/server/ink.ts` (`InkWaiting`, the `ink` service on `@workshop/ink/service`) | plugins → server → window's canvas (`src/shell/ink.ts`, `@workshop/ink/canvas`) |
-A vault's own code (Obsidian community plugins) runs only where the owner
-said yes. The plugins ask `HostWorkspace.vaultCode`: its answer for a vault,
-a request to ask, and a change event. Vaults are named by root URI.
-- VS Code answers with workspace trust (Restricted Mode) and never asks
-  itself.
-- host-node takes the embedder's answer as `StartOptions.vaultCode`. An
-  embedder that cannot ask leaves it out and gets `noVaultCode` (`inert.ts`):
-  every vault refused, nobody asked. DSH does this.
-- The app asks once per vault (`vault-trust.ts`). A waiting question reaches
-  the window as the `{"type":"trust"}` event on `GET /api/events`; the window
-  reads the questions with `GET /api/trust` and posts the answer to
-  `POST /api/trust` `{"vault","allowed"}`, accepted only for a vault that
-  asked. Answers are kept in `trust.json` in the data folder.
-- `isTrusted()` stays true outside VS Code: it covers remote images and
-  media, not a vault's code.
+
+No host runs a vault's own code: the Obsidian community plugin runtime, and
+the per-vault trust question that gated it, were removed in #414.
+`HostWorkspace.isTrusted()` is VS Code's workspace trust (Restricted Mode)
+and stays true outside VS Code: it covers remote images and media.
 
 ## 5. Milestones
 

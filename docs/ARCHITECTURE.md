@@ -252,7 +252,7 @@ in `packages/markdown/src/shared/host`:
 | `views` | tree views (outline, backlinks, tags, …) |
 | `activeEditor` | the focused editor and its selection |
 | `settings` | per-note settings (`forNote`), effective settings, `prepare(uri)` |
-| `workspace` | folders, trust, vault code trust |
+| `workspace` | folders, workspace trust, files |
 | `storage` | workspace storage (snapshots, recents) |
 | `extensions` | other extensions (public API v1) |
 | `navigation` | open a link target, create notes, native document links |
@@ -545,9 +545,8 @@ Not done:
   and containment (symlinks included) before opening, creating or writing.
 - **Link schemes.** External application schemes ask first; script, data,
   command and file schemes are refused.
-- **Vault code** (Obsidian community plugins) runs only where the owner said
-  yes: workspace trust in VS Code, an explicit per-vault answer in the app,
-  never in DSH.
+- **Vault code.** No host runs a vault's own code: the Obsidian community
+  plugin runtime and the trust question that gated it were removed (#414).
 - **Native links** in VS Code's text editor carry a signed ticket that is
   checked against the clicked text, the document version and containment.
 
