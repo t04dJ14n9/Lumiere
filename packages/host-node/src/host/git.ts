@@ -216,6 +216,14 @@ export class NodeGitAccess implements GitAccess {
 }
 
 /**
+ * `spawn` with no console window: on Windows, a `git` started by a process
+ * that has no console of its own (the desktop app's server) would open one
+ * for every command.
+ */
+const hiddenSpawn = ((command: string, args: readonly string[], options) =>
+  spawn(command, args, { ...options, windowsHide: true })) as typeof spawn;
+
+/**
  * Runs the `git` findGit names, looked for once, on first use: Git that is
  * installed while the host runs is seen after a restart, as in VS Code.
  */
@@ -225,7 +233,7 @@ function foundGitRunner(): GitBlameRunner {
     found ??= findGit().then((program) =>
       program === undefined
         ? undefined
-        : createSpawnBlameRunner(spawn, { program, env: QUIET_GIT }),
+        : createSpawnBlameRunner(hiddenSpawn, { program, env: QUIET_GIT }),
     );
     const run = await found;
     if (!run) {
