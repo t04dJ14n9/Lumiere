@@ -181,6 +181,7 @@ test("the API lists vaults and their files, and refuses what is not a vault", as
   );
   assert.deepEqual(JSON.parse(files.body), {
     files: [{ path: "daily/today.md", kind: "note" }],
+    partial: false,
   });
 
   const outside = await send(

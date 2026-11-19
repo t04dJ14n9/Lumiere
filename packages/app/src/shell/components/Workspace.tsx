@@ -174,6 +174,7 @@ function FilesSidebar({
             key={vault}
             vault={vault}
             files={vaults.files}
+            partial={vaults.partial}
             activePath={
               shown?.kind === "note" && shown.vault === vault
                 ? shown.path

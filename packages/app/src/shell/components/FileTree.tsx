@@ -13,6 +13,8 @@ import type { UiStateHandle } from "../ui-state";
 export interface FileTreeProps {
   readonly vault: string;
   readonly files: readonly FileEntry[];
+  /** The vault holds more files than are listed: the tree says so. */
+  readonly partial?: boolean;
   readonly activePath: string | undefined;
   /** The kinds of file that open in a tab; the others are listed greyed. */
   readonly opens: readonly FileKind[];
@@ -24,6 +26,7 @@ export interface FileTreeProps {
 export function FileTree({
   vault,
   files,
+  partial = false,
   activePath,
   opens,
   ui,
@@ -33,6 +36,12 @@ export function FileTree({
   const folders = useOpenFolders(ui, vault, activePath);
   return (
     <nav className="file-tree" aria-label="Files">
+      {partial && (
+        <p className="file-tree-partial" role="status">
+          This vault has more files than the {files.length.toLocaleString()}{" "}
+          listed here; open others from Finder or a link.
+        </p>
+      )}
       <FolderItems
         folder={root}
         open={folders.open}

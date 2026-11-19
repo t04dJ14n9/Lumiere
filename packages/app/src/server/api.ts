@@ -82,9 +82,11 @@ export function createApi(state: ApiState): Api {
           await vaults.show(await pathBody(req));
           return json(res, 200, { ok: true });
         case "GET /api/files":
-          return json(res, 200, {
-            files: await vaults.files(url.searchParams.get("vault") ?? ""),
-          });
+          return json(
+            res,
+            200,
+            await vaults.files(url.searchParams.get("vault") ?? ""),
+          );
         case "GET /api/events":
           openStream(res, { url, streams, waiting });
           return true;

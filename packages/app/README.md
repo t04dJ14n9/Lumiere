@@ -111,7 +111,7 @@ lumiere-server [--vault <dir>]... [--port <n>|0] [--host 127.0.0.1]
 | `GET /` | the window, with the shell key for a load of the page |
 | `GET /api/health` | `{"ok":true,"version":…}` |
 | `GET /api/vaults`, `POST /api/vaults` `{"path"}` | the open and recent vaults; open one (the window only: `x-lumiere-shell`) |
-| `GET /api/files?vault=` | a vault's files, sorted, with their kind |
+| `GET /api/files?vault=` | `{"files","partial"}`: a vault’s files, sorted, with their kind (read from its folders, no file stat-ed), at most 20,000; `partial` when there are more, which the file tree says |
 | `POST /api/open` `{"path"}` | show a note or folder (Finder, a second launch; the window only, or a process with no Origin) |
 | `GET /api/ui`, `POST /api/ui` | the window's layout, open folders and Color Theme (`src/shared/ui-state.ts`) |
 | `GET /api/events`, `?only=ink` | server-sent events: vaults changed, a note to open, a vault's plugins waiting for an answer (`{"type":"trust"}`), a drawing started or ended waiting (`{"type":"ink"}`); `only` keeps the listed types. Notes to open that come before a stream that takes them wait for one |

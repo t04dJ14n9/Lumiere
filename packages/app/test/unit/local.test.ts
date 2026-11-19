@@ -76,12 +76,15 @@ test(
       open: ["/vaults/Notes"],
       added: "/vaults/Notes",
     });
-    assert.deepEqual(await backend.vaults.files("/vaults/Notes"), [
-      { path: "images/a.png", kind: "image" },
-      { path: "Other.md", kind: "note" },
-      { path: "papers/A.pdf", kind: "pdf" },
-      { path: "Welcome.md", kind: "note" },
-    ]);
+    assert.deepEqual(await backend.vaults.files("/vaults/Notes"), {
+      files: [
+        { path: "images/a.png", kind: "image" },
+        { path: "Other.md", kind: "note" },
+        { path: "papers/A.pdf", kind: "pdf" },
+        { path: "Welcome.md", kind: "note" },
+      ],
+      partial: false,
+    });
     await backend.vaults.open("/vaults/Notes/Other.md");
     assert.deepEqual(events.at(-1), {
       type: "open",

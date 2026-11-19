@@ -1,5 +1,5 @@
 /** A vault's flat file list as nested folders, for the file tree. */
-import type { FileEntry } from "./api";
+import type { FileEntry, VaultFiles } from "./api";
 
 export interface Folder {
   readonly name: string;
@@ -36,4 +36,17 @@ export function buildTree(files: readonly FileEntry[]): Folder {
 export function foldersAbove(path: string): readonly string[] {
   const names = path.split("/").slice(0, -1);
   return names.map((_, index) => names.slice(0, index + 1).join("/"));
+}
+
+/** Whether two listings name the same files, of the same kinds, in order. */
+export function sameListing(a: VaultFiles, b: VaultFiles): boolean {
+  return (
+    a.partial === b.partial &&
+    a.files.length === b.files.length &&
+    a.files.every(
+      (file, index) =>
+        file.path === b.files[index]?.path &&
+        file.kind === b.files[index]?.kind,
+    )
+  );
 }

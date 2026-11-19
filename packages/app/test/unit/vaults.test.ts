@@ -133,12 +133,15 @@ test("a vault's files are listed by kind, sorted by path", async (t) => {
     }),
   );
   await vaults.add(dir);
-  assert.deepEqual(await vaults.files(dir), [
-    { path: "a.pdf", kind: "pdf" },
-    { path: "b/z.md", kind: "note" },
-    { path: "data.csv", kind: "other" },
-    { path: "pic.PNG", kind: "image" },
-  ]);
+  assert.deepEqual(await vaults.files(dir), {
+    files: [
+      { path: "a.pdf", kind: "pdf" },
+      { path: "b/z.md", kind: "note" },
+      { path: "data.csv", kind: "other" },
+      { path: "pic.PNG", kind: "image" },
+    ],
+    partial: false,
+  });
 });
 
 test("a vault reached through a symlink is known by its real path", async (t) => {

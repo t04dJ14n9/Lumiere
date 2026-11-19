@@ -28,7 +28,7 @@ import {
 } from "./paths";
 import type { HostEntry, HostFiles, HostPlatform, HostStore } from "./platform";
 import { fileUri } from "./uris";
-import { listVault } from "./vault";
+import { listVault, listVaultPaths } from "./vault";
 import { replaceFile, writeAtomic } from "./atomic-write";
 import { watchFile } from "./watch";
 import { watchTree } from "./watch-tree";
@@ -204,4 +204,9 @@ function folderStore(folder: string): HostStore {
 /** Every file under a vault root (vault.ts `listVault`), on Node's file system. */
 export function listNodeVault(root: string, limit: number, shallow = false) {
   return listVault(nodeFiles, { root, limit, shallow });
+}
+
+/** The paths of the files under a vault root (vault.ts `listVaultPaths`), on Node's file system. */
+export function listNodeVaultPaths(root: string, limit: number) {
+  return listVaultPaths(nodeFiles, { root, limit });
 }

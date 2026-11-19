@@ -32,6 +32,6 @@ export {
   createSettingsService,
   type SettingsService,
 } from "./host/settings-service";
-export { listVault } from "./host/vault";
+export { listVault, listVaultPaths } from "./host/vault";
 export type { TreeHub } from "./host/trees";
 export { createWorkspaceFiles, STATE_FILE } from "./host/workspace";

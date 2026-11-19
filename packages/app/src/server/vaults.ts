@@ -5,7 +5,7 @@
 import { readFile, realpath, stat } from "node:fs/promises";
 import * as path from "node:path";
 import { pathToFileURL } from "node:url";
-import { listVault } from "@workshop/host-node";
+import { listVaultPaths } from "@workshop/host-node";
 import { fileKind } from "../shared/file-kind";
 import { saveFile } from "./json-file";
 
@@ -105,17 +105,18 @@ export class Vaults {
     );
   }
 
-  async files(vault: string): Promise<readonly FileEntry[]> {
+  /** The vault's files, sorted; `partial` when there are more than `MAX_FILES`. */
+  async files(
+    vault: string,
+  ): Promise<{ files: readonly FileEntry[]; partial: boolean }> {
     if (!this.open.has(vault)) {
       throw new Error(`Not an open vault: ${vault}`);
     }
-    const { files } = await listVault(
+    const { paths, partial } = await listVaultPaths(
       pathToFileURL(vault).toString(),
       MAX_FILES,
     );
-    return files
-      .map((file) => ({ path: file.path, kind: fileKind(file.path) }))
-      .sort((a, b) => a.path.localeCompare(b.path));
+    return { files: fileEntries(paths), partial };
   }
 
   onEvent(listener: (event: VaultEvent) => void): () => void {
@@ -138,6 +139,12 @@ export class Vaults {
     ].slice(0, MAX_RECENT);
     await saveFile(this.file, JSON.stringify(this.recent, null, 2));
   }
+}
+
+function fileEntries(paths: readonly string[]): FileEntry[] {
+  return paths
+    .map((path) => ({ path, kind: fileKind(path) }))
+    .sort((a, b) => a.path.localeCompare(b.path));
 }
 
 async function realPath(target: string): Promise<string | undefined> {

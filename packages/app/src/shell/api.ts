@@ -10,6 +10,12 @@ export interface VaultList {
   readonly recent: readonly string[];
 }
 
+/** A vault's files; `partial` when the vault holds more than are listed. */
+export interface VaultFiles {
+  readonly files: readonly FileEntry[];
+  readonly partial: boolean;
+}
+
 export interface FileEntry {
   readonly path: string;
   readonly kind: "note" | "pdf" | "image" | "other";
@@ -79,12 +85,12 @@ export const httpApi = {
         headers: { "content-type": "application/json" },
         body: JSON.stringify({ path }),
       }),
-    files: async (vault: string) =>
-      (
-        await request<{ files: FileEntry[] }>(
-          `/api/files?vault=${encodeURIComponent(vault)}`,
-        )
-      ).files,
+    files: async (vault: string): Promise<VaultFiles> => {
+      const body = await request<{ files: FileEntry[]; partial?: boolean }>(
+        `/api/files?vault=${encodeURIComponent(vault)}`,
+      );
+      return { files: body.files, partial: body.partial === true };
+    },
     open: (path: string) => post("/api/open", { path }, shellKeyHeaders()),
   },
   commands: {

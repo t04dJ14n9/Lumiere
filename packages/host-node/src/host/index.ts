@@ -31,5 +31,8 @@ export type { HostIdentity } from "./services";
 export type { ContributedSetting } from "@workshop/markdown/portable";
 export type { MenuContribution } from "./context-menu";
 export { serveFile, serveStatic } from "./static";
-export { listNodeVault as listVault } from "./node-platform";
+export {
+  listNodeVault as listVault,
+  listNodeVaultPaths as listVaultPaths,
+} from "./node-platform";
 export { isInside } from "./paths";

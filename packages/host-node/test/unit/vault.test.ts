@@ -10,6 +10,7 @@ import { isInside } from "../../src/host/paths";
 import {
   createHostVaultSystem,
   listVault,
+  listVaultPaths,
   watchVault,
 } from "../../src/host/vault";
 import type { FileEvent } from "@workshop/markdown/portable";
@@ -47,6 +48,25 @@ test("listing walks the vault but not hidden folders or node_modules, and stops 
   );
   const limited = await listVault(nodeFiles, { root, limit: 1 });
   assert.equal(limited.files.length, 1);
+  assert.equal(limited.partial, true);
+});
+
+test("a file tree's listing names the same files without a stat per file", async (t) => {
+  const { root } = await vault(t);
+  let stats = 0;
+  const counting = {
+    ...nodeFiles,
+    stat: (uri: string) => {
+      stats++;
+      return nodeFiles.stat(uri);
+    },
+  };
+  const all = await listVaultPaths(counting, { root, limit: 100 });
+  assert.deepEqual(all.paths.sort(), ["Home.md", "notes/A note.md"]);
+  assert.equal(all.partial, false);
+  assert.equal(stats, 0);
+  const limited = await listVaultPaths(counting, { root, limit: 1 });
+  assert.equal(limited.paths.length, 1);
   assert.equal(limited.partial, true);
 });
 

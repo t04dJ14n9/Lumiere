@@ -9,7 +9,7 @@ import type { SettingChange, SettingItem } from "@workshop/host-node/settings";
 import type { TreeEvent, TreeSnapshot } from "@workshop/host-node/views";
 import type { FileKind } from "../shared/file-kind";
 import type { UiState } from "../shared/ui-state";
-import type { FileEntry, PaletteCommand, ServerEvent, VaultList } from "./api";
+import type { PaletteCommand, ServerEvent, VaultFiles, VaultList } from "./api";
 import { MENU_COMMANDS, type MenuCommand } from "./tauri";
 
 /**
@@ -32,7 +32,7 @@ export interface WindowBackend {
     list(): Promise<VaultList>;
     add(path: string): Promise<unknown>;
     close(path: string): Promise<unknown>;
-    files(vault: string): Promise<readonly FileEntry[]>;
+    files(vault: string): Promise<VaultFiles>;
     /** A note or folder from outside the window (a menu, a dropped path). */
     open(path: string): Promise<unknown>;
   };

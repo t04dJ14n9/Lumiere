@@ -84,6 +84,26 @@ export async function listVault(
   return { files: listed, partial: budget.isPartial };
 }
 
+/**
+ * The paths of the files `listVault` lists, without reading each one's size
+ * and time: what a file tree needs, at a fraction of the cost in a large
+ * vault.
+ */
+export async function listVaultPaths(
+  files: HostFiles,
+  request: { root: string; limit: number },
+): Promise<{ paths: string[]; partial: boolean }> {
+  const { root, limit } = request;
+  const found = await collectFiles(files, root, limit + 1, false);
+  const paths = found
+    .slice(0, limit)
+    .map((file) => file.relative)
+    .filter(
+      (relative) => !relative.startsWith("..") && !isIgnoredPath(relative),
+    );
+  return { paths, partial: found.length > limit };
+}
+
 /** Vault-relative paths (with `/`) of the files under `root`. */
 async function collectFiles(
   files: HostFiles,

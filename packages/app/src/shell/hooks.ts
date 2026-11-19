@@ -1,7 +1,8 @@
 /** The shell's state hooks: theme, vaults and files, server events, menu. */
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
-import type { FileEntry, ServerEvent } from "./api";
+import type { FileEntry, ServerEvent, VaultFiles } from "./api";
 import { backend } from "./backend";
+import { sameListing } from "./tree";
 import { openShownPageMenu } from "./components/EditorFrame";
 import { onMenuCommand, type MenuCommand } from "./tauri";
 import { applyShellTheme, onThemeChange } from "./theme";
@@ -39,6 +40,8 @@ export interface VaultState {
   readonly recent: readonly string[];
   readonly current: string | undefined;
   readonly files: readonly FileEntry[];
+  /** The vault holds more files than are listed. */
+  readonly partial: boolean;
   select(vault: string): void;
   /** Read the vault list again (a vault opened or closed). */
   reload(): Promise<void>;
@@ -50,7 +53,7 @@ export function useVaults(report: Errors["report"]): VaultState {
   const [open, setOpen] = useState<readonly string[]>([]);
   const [recent, setRecent] = useState<readonly string[]>([]);
   const [current, setCurrent] = useState<string>();
-  const [files, setFiles] = useState<readonly FileEntry[]>([]);
+  const [listing, setListing] = useState<VaultFiles>(EMPTY_LISTING);
   const [generation, setGeneration] = useState(0);
 
   const reload = useCallback(async () => {
@@ -64,14 +67,21 @@ export function useVaults(report: Errors["report"]): VaultState {
   useEffect(() => report(reload()), [reload, report]);
   useEffect(() => {
     if (!current) {
-      setFiles([]);
+      setListing(EMPTY_LISTING);
       return;
     }
     let live = true;
     report(
       backend()
         .vaults.files(current)
-        .then((listed) => live && setFiles(listed)),
+        .then(
+          (listed) =>
+            // An unchanged listing (most focus changes) keeps the tree as it is.
+            live &&
+            setListing((shown) =>
+              sameListing(shown, listed) ? shown : listed,
+            ),
+        ),
     );
     return () => {
       live = false;
@@ -92,14 +102,17 @@ export function useVaults(report: Errors["report"]): VaultState {
       open,
       recent,
       current,
-      files,
+      files: listing.files,
+      partial: listing.partial,
       select: setCurrent,
       reload,
       refreshFiles,
     }),
-    [open, recent, current, files, reload, refreshFiles],
+    [open, recent, current, listing, reload, refreshFiles],
   );
 }
+
+const EMPTY_LISTING: VaultFiles = { files: [], partial: false };
 
 /** One event stream for the window; `listener` may change between renders. */
 export function useServerEvents(listener: (event: ServerEvent) => void): void {
