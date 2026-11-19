@@ -108,7 +108,11 @@ and other non-routable addresses are refused (`localhost`, `127.0.0.0/8`,
 oversized download counts as one that could not be downloaded. The same limits
 apply to a remote image in pasted HTML; the page waits for each such image as
 long as the host may take to download and save it (45 seconds), and one that
-fails keeps its link while the others are still embedded.
+fails keeps its link while the others are still embedded. In an untrusted
+workspace the host downloads nothing for a page (a pasted or dropped web
+image keeps its link, with a short error), as other plugins reach the network
+only in a trusted one; dropped files and `file:` images inside the workspace
+are still saved.
 If the note was closed before that edit, the files stay in the vault and the
 dialog says the note was not changed.
 

@@ -68,7 +68,7 @@ function answerNotePages(ctx: Context): void {
         );
         owned.effect(() =>
           panel.rpc.handle(protocol, "importUrl", (params) =>
-            importUrlForPanel(ctx, panel, params.url, { imagesOnly: true }),
+            importUrlForPage(ctx, panel, params.url),
           ),
         );
         owned.effect(() =>
@@ -145,6 +145,25 @@ async function saveForPanel(
     return fail(ctx, "Could not read the image data.");
   }
   return writeAttachment(ctx, panel, bytes, params.ext);
+}
+
+/**
+ * A note page's import: an image from the web is downloaded only in a
+ * trusted workspace, as other plugins reach the network only there; a
+ * `file:` image inside the workspace is still copied.
+ */
+async function importUrlForPage(
+  ctx: Context,
+  panel: EditorPanel,
+  url: string,
+): Promise<SaveResult> {
+  if (/^https?:/i.test(url) && !ctx.workspace.isTrusted()) {
+    return fail(
+      ctx,
+      "Images from the web are downloaded only in a trusted workspace.",
+    );
+  }
+  return importUrlForPanel(ctx, panel, url, { imagesOnly: true });
 }
 
 async function importUrlForPanel(
