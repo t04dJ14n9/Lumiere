@@ -3,6 +3,7 @@ import { RecentlyUsed } from "../../shared/recently-used";
 import { splitLinktext, type LinkSyntax } from "../../shared/vault-path";
 import type { Resource } from "./api";
 import { protocol } from "./protocol";
+import { PageBaseSnapshot } from "./page-base-snapshot";
 
 const RESOURCE_CACHE_LIMIT = 256;
 
@@ -73,6 +74,8 @@ export const resourcesWebview: Plugin = {
  */
 function sharedLoads(ctx: Context) {
   const running = new Map<string, Promise<Resource>>();
+  // Every base embed of this panel shares one copy of the vault snapshot.
+  const bases = new PageBaseSnapshot();
   return {
     load(target: string, source?: string, syntax?: LinkSyntax) {
       const key = makeResourceKey(splitLinktext(target).path, source, syntax);
@@ -80,11 +83,15 @@ function sharedLoads(ctx: Context) {
       if (shared) {
         return shared;
       }
-      const load = ctx.rpc.call(protocol, "load", {
-        target,
-        ...(source === undefined ? {} : { source }),
-        ...(syntax === undefined ? {} : { syntax }),
-      });
+      const snapshot = bases.have;
+      const load = ctx.rpc
+        .call(protocol, "load", {
+          target,
+          ...(source === undefined ? {} : { source }),
+          ...(syntax === undefined ? {} : { syntax }),
+          ...(snapshot === undefined ? {} : { snapshot }),
+        })
+        .then((resource) => bases.take(resource));
       running.set(key, load);
       const settle = () => {
         if (running.get(key) === load) {

@@ -22,6 +22,15 @@ the index says one was rewritten (on disk, or as unsaved text in another
 editor), moved or removed, it tells the page, gathering a burst of changes
 into one notice within 100 ms, so its embeds show the new version.
 
+A `.base` embed needs every note's properties, tags, links and backlinks.
+The host keeps one snapshot of them per panel, built again only after the
+index changed (any change, or a resolve after silent updates and settings).
+Each base load says which version the page holds: the reply carries nothing
+when that is current, only the entries that changed when it is the version
+just before (the same notes in the same order), and every entry otherwise.
+The page keeps its copy (`PageBaseSnapshot`) and hands each base embed the
+whole list, so twenty base embeds in a note cost one snapshot, not twenty.
+
 ## Files
 
 - `manifest.ts`: core plugin metadata and surfaces.
@@ -30,6 +39,8 @@ into one notice within 100 ms, so its embeds show the new version.
 - `host.ts`: service and RPC registration.
 - `diff-resources.ts`: independent diff-side resolution and Git revision selection.
 - `note-resources.ts`: known-source authorization, target containment, contained reads, kind selection and missing links.
+- `base-snapshot.ts`: the panel's snapshot of the notes for base embeds, and what a reply sends of it.
+- `page-base-snapshot.ts`: the page's copy of that snapshot, completed from each reply.
 - `containment.ts`: URI/realpath and virtual-symlink checks.
 - `webview.ts`: validated resource RPC client.
 - `note-resources.test.ts`: kind precedence and fallback units.

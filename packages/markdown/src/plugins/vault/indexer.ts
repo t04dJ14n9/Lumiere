@@ -169,6 +169,9 @@ export class VaultIndexer {
     this.index.configure(settings);
     this.isExcluded = exclusionMatcher(settings.excludedFiles);
     this.index.replaceFiles(this.index.files().map((file) => this.entry(file)));
+    // Links resolved again and files were (un)excluded, without file events:
+    // what reads the index (a base's snapshot) must read it again.
+    this.index.notifyResolved();
   }
 
   async dispose(): Promise<void> {

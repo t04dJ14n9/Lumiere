@@ -6,7 +6,8 @@ import {
 } from "../../shared/vault-path";
 import type { VaultChange, VaultFile, VaultIndex } from "../vault/api";
 import { RecentlyUsed } from "../../shared/recently-used";
-import type { BaseNoteEntry, Resource, Resources } from "./api";
+import type { Resource, Resources } from "./api";
+import { BaseSnapshots } from "./base-snapshot";
 import { containedResource, contains } from "./containment";
 
 interface ResourceOptions {
@@ -34,8 +35,10 @@ export class NoteResources implements Resources {
   private readonly missing = new Map<string, ResourceLink>();
   /** The files the page loaded, by vault path: their URIs. */
   private readonly shown = new RecentlyUsed<string, string>(SHOWN_LIMIT);
+  private readonly bases: BaseSnapshots;
   constructor(private readonly options: ResourceOptions) {
     this.known = new Set([options.source]);
+    this.bases = new BaseSnapshots(options.vault);
   }
 
   async authorize(source: string): Promise<void> {
@@ -47,10 +50,16 @@ export class NoteResources implements Resources {
     await this.containedStat(target);
   }
 
+  /** The vault changed: base embeds need a new snapshot. */
+  vaultChanged(): void {
+    this.bases.invalidate();
+  }
+
   async load(
     target: string,
     source = this.options.source,
     syntax: LinkSyntax = "markdown",
+    snapshot?: number,
   ): Promise<Resource> {
     this.assertKnown(source);
     if (/^[a-z][a-z\d+.-]*:/i.test(target) || target.startsWith("//")) {
@@ -76,7 +85,7 @@ export class NoteResources implements Resources {
     }
     const baseSnapshot =
       kind === "base"
-        ? buildBaseVaultSnapshot(vault, vaultPath(vault.root, source))
+        ? this.bases.reply(vaultPath(vault.root, source), snapshot)
         : undefined;
     return {
       kind,
@@ -194,150 +203,4 @@ export function resourceKind(path: string): Resource["kind"] {
     return "pdf";
   }
   return mediaKind(path) ?? "file";
-}
-
-function buildBaseVaultSnapshot(
-  vault: VaultIndex,
-  relativeSource?: string,
-): { entries: BaseNoteEntry[]; thisEntry?: BaseNoteEntry } {
-  if (typeof vault.files !== "function") {
-    return { entries: [] };
-  }
-  const entries: BaseNoteEntry[] = [];
-  let thisEntry: BaseNoteEntry | undefined;
-  const backlinks = backlinksByTarget(vault);
-  for (const file of vault.files()) {
-    if (!/^(?:md|markdown)$/i.test(file.extension) || file.excluded) {
-      continue;
-    }
-    const entry = buildNoteEntry(vault, file, backlinks.get(file.path) ?? []);
-    entries.push(entry);
-    if (relativeSource && file.path === relativeSource) {
-      thisEntry = entry;
-    }
-  }
-  return { entries, ...(thisEntry ? { thisEntry } : {}) };
-}
-
-/**
- * Every note's backlinks, from one pass over the notes' resolved links.
- * The index computes one note's backlinks by inverting every note's links,
- * so asking it for each note costs n² for n notes.
- */
-function backlinksByTarget(vault: VaultIndex): Map<string, string[]> {
-  const byTarget = new Map<string, string[]>();
-  if (typeof vault.resolvedLinks !== "function") {
-    return byTarget;
-  }
-  for (const { path } of vault.files()) {
-    for (const target of vault.resolvedLinks(path).keys()) {
-      if (target === path) {
-        continue;
-      }
-      const sources = byTarget.get(target);
-      if (sources) {
-        sources.push(path);
-      } else {
-        byTarget.set(target, [path]);
-      }
-    }
-  }
-  for (const sources of byTarget.values()) {
-    sources.sort();
-  }
-  return byTarget;
-}
-
-function buildNoteEntry(
-  vault: VaultIndex,
-  file: VaultFile,
-  backlinks: string[],
-): BaseNoteEntry {
-  const meta =
-    typeof vault.metadata === "function"
-      ? vault.metadata(file.path)
-      : undefined;
-  const frontmatter = sanitizeFrontmatter(meta?.frontmatter);
-  const tags = collectNoteTags(meta?.tags, frontmatter);
-  const links = meta?.links?.map((l) => l.link) ?? [];
-  const embeds = meta?.embeds?.map((e) => e.link) ?? [];
-  return {
-    path: file.path,
-    basename: file.basename,
-    extension: file.extension,
-    mtime: file.mtime,
-    size: file.size,
-    ...(frontmatter ? { frontmatter } : {}),
-    tags,
-    links,
-    embeds,
-    backlinks,
-  };
-}
-
-function sanitizeFrontmatter(
-  raw?: Record<string, unknown>,
-): Record<string, unknown> | undefined {
-  if (!raw) {
-    return undefined;
-  }
-  const out: Record<string, unknown> = {};
-  for (const [key, value] of Object.entries(raw)) {
-    out[key] = sanitizeValue(value);
-  }
-  return out;
-}
-
-function sanitizeValue(value: unknown): unknown {
-  if (
-    value === null ||
-    typeof value === "string" ||
-    typeof value === "number" ||
-    typeof value === "boolean"
-  ) {
-    return value;
-  }
-  if (value instanceof Date) {
-    return value.toISOString().slice(0, 10);
-  }
-  if (Array.isArray(value)) {
-    return value.map((item) => sanitizeValue(item));
-  }
-  return String(value);
-}
-
-function collectNoteTags(
-  inlineTags?: readonly { tag: string }[],
-  frontmatter?: Record<string, unknown>,
-): string[] {
-  const seen = new Set<string>();
-  const tags: string[] = [];
-  const addTag = (raw: unknown) => {
-    if (typeof raw !== "string") {
-      return;
-    }
-    const clean = raw.trim().replace(/^#/, "");
-    if (!clean) {
-      return;
-    }
-    const key = clean.toLowerCase();
-    if (!seen.has(key)) {
-      seen.add(key);
-      tags.push(`#${clean}`);
-    }
-  };
-  for (const t of inlineTags ?? []) {
-    addTag(t.tag);
-  }
-  const fmTags = frontmatter?.tags ?? frontmatter?.tag;
-  if (Array.isArray(fmTags)) {
-    for (const item of fmTags) {
-      addTag(item);
-    }
-  } else if (typeof fmTags === "string") {
-    for (const part of fmTags.split(/[,\s]+/)) {
-      addTag(part);
-    }
-  }
-  return tags;
 }

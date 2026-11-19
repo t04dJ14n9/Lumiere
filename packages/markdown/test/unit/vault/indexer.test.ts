@@ -284,17 +284,22 @@ test("a settings change that leaves the index's settings alone re-resolves nothi
     configured++;
     configure(next);
   };
+  let resolves = 0;
+  indexer.index.onDidResolve(() => resolves++);
 
   current = { ...settings, rootMarkers: [".vault"] };
   indexer.applySettings();
   indexer.applySettings();
   assert.equal(configured, 0);
+  assert.equal(resolves, 0);
 
   current = { ...settings, excludedFiles: ["B.md"] };
   indexer.applySettings();
   indexer.applySettings();
   assert.equal(configured, 1);
   assert.equal(indexer.index.file("B.md")?.excluded, true);
+  // What reads the index learns that it changed without file events.
+  assert.equal(resolves, 1);
   await indexer.dispose();
 });
 

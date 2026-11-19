@@ -21,6 +21,8 @@ export const protocol = defineProtocol("resources", {
         target: Schema.string().max(8192),
         source: Schema.string().max(8192).optional(),
         syntax: Schema.union(["markdown", "wikilink"]).optional(),
+        /** The version of the panel's base snapshot the page holds. */
+        snapshot: Schema.number().optional(),
       }),
       result: Schema.object({
         kind: Schema.union([
@@ -37,6 +39,8 @@ export const protocol = defineProtocol("resources", {
         text: Schema.string().optional(),
         entries: Schema.array(baseNoteEntrySchema).optional(),
         thisEntry: baseNoteEntrySchema.optional(),
+        snapshot: Schema.number().optional(),
+        changed: Schema.array(baseNoteEntrySchema).optional(),
       }),
     },
   },

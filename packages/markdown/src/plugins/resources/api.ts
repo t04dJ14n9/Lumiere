@@ -11,13 +11,26 @@ export interface Resource {
   text?: string;
   entries?: BaseNoteEntry[];
   thisEntry?: BaseNoteEntry;
+  /** A base's snapshot version (`BaseSnapshots`); the page fills `entries`. */
+  snapshot?: number;
+  /** A base's entries that changed since the snapshot the page holds. */
+  changed?: BaseNoteEntry[];
 }
 export interface Resources {
   /** Known source-note allowlist (owning doc and nested Markdown notes). */
   authorize?(source: string): Promise<void>;
   /** Vault containment for a target that is not itself a known source note. */
   authorizeTarget?(target: string): Promise<void>;
-  load(target: string, source?: string, syntax?: LinkSyntax): Promise<Resource>;
+  /**
+   * A base's reply leaves out what the page already holds when `snapshot`
+   * names the version of the panel's base snapshot it has.
+   */
+  load(
+    target: string,
+    source?: string,
+    syntax?: LinkSyntax,
+    snapshot?: number,
+  ): Promise<Resource>;
   peek?(
     target: string,
     source?: string,
