@@ -15,6 +15,8 @@ import { createWebPlatform } from "../../src/platform";
 const MARKDOWN = path.resolve(import.meta.dirname, "../../../markdown");
 const WORKERS = path.join(MARKDOWN, "dist", "workers");
 const ROOT = "/vaults/Notes";
+/** A browser's folders have POSIX paths; Windows would add its drive. */
+const fileUrl = (file: string) => pathToFileURL(file, { windows: false }).href;
 
 /** Lumière's contributed settings, as the build writes them. */
 function contributed(): ContributedSetting[] {
@@ -61,8 +63,8 @@ test(
       const page = await openEditorPage(
         host,
         {
-          uri: pathToFileURL(`${ROOT}/Welcome.md`).href,
-          root: pathToFileURL(ROOT).href,
+          uri: fileUrl(`${ROOT}/Welcome.md`),
+          root: fileUrl(ROOT),
         },
         {
           origin: "https://lumiere.example",

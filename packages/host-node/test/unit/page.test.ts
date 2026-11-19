@@ -1,18 +1,20 @@
 import test from "node:test";
 import assert from "node:assert/strict";
+import * as path from "node:path";
 import { injectShim, socketSource } from "../../src/host/page";
 import { pageQuery } from "../../src/host/page-query";
 
 const url = (query: string) => new URL(`http://h/lumiere/editor?${query}`);
 
 test("a page opens a Markdown note inside its workspace, and nothing else", () => {
+  // Paths come back in the platform's spelling: `\v\notes\A.md` on Windows.
   assert.deepEqual(pageQuery(url("path=/v/notes/A.md&root=/v")), {
-    note: "/v/notes/A.md",
-    root: "/v",
+    note: path.normalize("/v/notes/A.md"),
+    root: path.normalize("/v"),
   });
   assert.deepEqual(pageQuery(url("path=/v/A.markdown")), {
-    note: "/v/A.markdown",
-    root: "/v",
+    note: path.normalize("/v/A.markdown"),
+    root: path.normalize("/v"),
   });
   for (const bad of [
     "path=/v/A.txt&root=/v",

@@ -3,7 +3,7 @@
 // the trash is reached with the right argv on each system.
 import test from "node:test";
 import assert from "node:assert/strict";
-import { pathToFileURL } from "node:url";
+import { fileURLToPath, pathToFileURL } from "node:url";
 import type { VaultFileOperations } from "@workshop/host-node";
 import { answerFileRoute } from "../../src/server/files-api";
 import { createTrash, trashCommand } from "../../src/server/trash";
@@ -22,7 +22,8 @@ function operations(calls: string[]): VaultFileOperations {
     remove: async (target) => void calls.push(`remove ${target}`),
     contain: async (target) => {
       calls.push(`contain ${target}`);
-      return new URL(target).pathname;
+      // The platform's path, as host-node's `contain` gives it (`D:\notes`).
+      return fileURLToPath(target);
     },
     forget: (target) => void calls.push(`forget ${target}`),
     onDidRename: () => () => {},
@@ -99,7 +100,7 @@ test("deleting goes to the trash; without one nothing is deleted until confirmed
   );
   assert.deepEqual(trashed, [
     `contain ${uri("/notes/old.md")}`,
-    "trash /notes/old.md",
+    `trash ${fileURLToPath(uri("/notes/old.md"))}`,
     `forget ${uri("/notes/old.md")}`,
   ]);
 

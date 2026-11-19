@@ -107,14 +107,16 @@ test("watching reports a new file, a change to it and its deletion, never hidden
 });
 
 test("a URI is inside a root only at a path boundary, after dot segments resolve", () => {
-  assert.equal(isInside("file:///v", "file:///v/a.md"), true);
-  assert.equal(isInside("file:///v/", "file:///v/a.md"), true);
-  assert.equal(isInside("file:///v", "file:///v"), true);
-  assert.equal(isInside("file:///v", "file:///v/..secret"), true);
-  assert.equal(isInside("file:///v", "file:///vault/a.md"), false);
-  assert.equal(isInside("file:///v", "file:///v/../etc/passwd"), false);
-  assert.equal(isInside("file:///v", "file:///v/%2e%2e/etc/passwd"), false);
-  assert.equal(isInside("file:///v", "file:///v/foo%2f..%2fetc/passwd"), false);
+  // `file:///v`; on Windows a path is on a drive (`file:///D:/v`).
+  const v = pathToFileURL("/v").toString();
+  assert.equal(isInside(v, `${v}/a.md`), true);
+  assert.equal(isInside(`${v}/`, `${v}/a.md`), true);
+  assert.equal(isInside(v, v), true);
+  assert.equal(isInside(v, `${v}/..secret`), true);
+  assert.equal(isInside(v, `${v}ault/a.md`), false);
+  assert.equal(isInside(v, `${v}/../etc/passwd`), false);
+  assert.equal(isInside(v, `${v}/%2e%2e/etc/passwd`), false);
+  assert.equal(isInside(v, `${v}/foo%2f..%2fetc/passwd`), false);
 });
 
 async function waitFor(check: () => boolean): Promise<void> {

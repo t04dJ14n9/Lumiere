@@ -78,10 +78,12 @@ const SAME_AS_NODE = Number(process.versions.node.split(".")[0]) >= 26;
 const pathOf = (uri: string) => decodeURIComponent(new URL(uri).pathname);
 
 test("without Node, a path's URI is the one Node 26's pathToFileURL gives", () => {
+  // These paths have no drive, so Node is asked for its POSIX URI: on
+  // Windows it would put the current drive in front.
   for (let code = 32; code < 127; code++) {
     const file = `/v/x${String.fromCharCode(code)}y.md`;
     if (!file.slice(3).includes("/")) {
-      const node = pathToFileURL(file).toString();
+      const node = pathToFileURL(file, { windows: false }).toString();
       if (SAME_AS_NODE) {
         assert.equal(fileUri(file), node, file);
       }
@@ -90,7 +92,10 @@ test("without Node, a path's URI is the one Node 26's pathToFileURL gives", () =
       assert.equal(pathOf(fileUri(file)), file, file);
     }
   }
-  assert.equal(fileUri("/v/é ü.md"), pathToFileURL("/v/é ü.md").toString());
+  assert.equal(
+    fileUri("/v/é ü.md"),
+    pathToFileURL("/v/é ü.md", { windows: false }).toString(),
+  );
 });
 
 test("a URI's path resolves dot segments and refuses hidden separators", () => {
