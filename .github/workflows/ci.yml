@@ -116,7 +116,11 @@ jobs:
         run: git diff --exit-code
       - name: Check the VSIX size and file list
         run: bash .github/scripts/check-vsix.sh "$(ls *.vsix)" 20
-      - name: Bundle size report (job summary, warns on growth over 10%)
+      # Fails when the webview entry or the extension host grows over 10%;
+      # warns for the other rows. `shell: bash` adds pipefail, so tee does
+      # not hide the failure.
+      - name: Bundle size report (job summary)
+        shell: bash
         run: node scripts/bundle-size.mjs | tee -a "$GITHUB_STEP_SUMMARY"
       - name: Upload the VSIX
         uses: actions/upload-artifact@v7

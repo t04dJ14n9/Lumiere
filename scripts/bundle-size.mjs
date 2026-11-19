@@ -2,13 +2,16 @@
  * Bundle size report: raw and gzip sizes of what the webview loads (the entry,
  * every lazy chunk, the CSS), the extension host and the workers, compared with
  * scripts/bundle-baseline.json. Markdown on stdout (CI appends it to the job
- * summary); growth over the tolerance is a warning annotation, not a failure,
- * because a deliberate feature may grow the bundle. Refresh the baseline with
+ * summary). Growth over the tolerance of the webview entry or the extension
+ * host fails (exit code 1, an error annotation); of any other row it is a
+ * warning, because a deliberate feature may add lazy code. Measure the
+ * production build (`pnpm package`, as CI does), and refresh the baseline with
  * `node scripts/bundle-size.mjs --write-baseline` after a deliberate change.
  */
 import { readdirSync, readFileSync, writeFileSync } from "node:fs";
 import path from "node:path";
 import { gzipSync } from "node:zlib";
+import { bundleGrowth } from "./bundle-checks.mjs";
 
 const baselineFile = "scripts/bundle-baseline.json";
 const tolerance = 0.1;
@@ -76,7 +79,6 @@ const lines = [
   "| | now | baseline | change |",
   "| --- | ---: | ---: | ---: |",
 ];
-const warnings = [];
 for (const [name, value] of Object.entries(current)) {
   const before = baseline[name];
   const count = name.endsWith("(count)");
@@ -88,12 +90,14 @@ for (const [name, value] of Object.entries(current)) {
   lines.push(
     `| ${name} | ${show(value)} | ${before === undefined ? "n/a" : show(before)} | ${change} |`,
   );
-  if (!count && before && value > before * (1 + tolerance)) {
-    warnings.push(
-      `::warning title=Bundle size::${name} grew from ${kb(before)} to ${kb(value)} (over ${tolerance * 100}%). If deliberate, refresh ${baselineFile}.`,
-    );
-  }
 }
+const growth = bundleGrowth(current, baseline, tolerance);
+const annotation = (level, { name, before, now }) =>
+  `::${level} title=Bundle size::${name} grew from ${kb(before)} to ${kb(now)} (over ${tolerance * 100}%). If deliberate, refresh ${baselineFile}.`;
+const annotations = [
+  ...growth.failures.map((row) => annotation("error", row)),
+  ...growth.warnings.map((row) => annotation("warning", row)),
+];
 const largest = [...chunks, entry].sort((a, b) => b.raw - a.raw).slice(0, 5);
 lines.push(
   "",
@@ -106,6 +110,9 @@ lines.push(
       .join(", "),
 );
 console.log(lines.join("\n"));
-for (const warning of warnings) {
-  console.log(warning);
+for (const line of annotations) {
+  console.log(line);
+}
+if (growth.failures.length > 0) {
+  process.exitCode = 1;
 }
