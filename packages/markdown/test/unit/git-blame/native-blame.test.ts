@@ -95,6 +95,38 @@ test("dirty insert above caret blames snapshot alpha, not disk beta by Eve", asy
   }
 });
 
+test("F22: a note committed with CRLF endings still blames its unchanged lines", async () => {
+  const root = await mkdtemp(join(tmpdir(), "mw-blame-crlf-"));
+  try {
+    const git = (...args: string[]) =>
+      execFileSync("git", args, { cwd: root, encoding: "utf8" }).trim();
+    git("init");
+    git("config", "core.autocrlf", "false");
+    git("config", "user.email", "dev@example.com");
+    git("config", "user.name", "Dev");
+    await writeFile(join(root, "note.md"), "alpha\r\nbeta\r\ngamma\r\n");
+    git("add", "note.md");
+    git("commit", "-m", "Initial");
+    const head = git("rev-parse", "HEAD");
+    const base = {
+      ...options(createSpawnBlameRunner()),
+      cwd: root,
+      line: 2,
+      // The editor's text: LF endings, one line added above.
+      snapshot: { contents: "alpha\nbeta\ngamma\nNEW\n", version: 2 },
+    };
+    const kept = await runBlameLine(base);
+    assert.equal(kept.status, "ok");
+    assert.equal(kept.status === "ok" && kept.blame.commit, head);
+    assert.equal(
+      (await runBlameLine({ ...base, line: 4 })).status,
+      "uncommitted",
+    );
+  } finally {
+    await rm(root, { recursive: true, force: true });
+  }
+});
+
 test("dirty argv forwards stdin and timeout; clean argv omits contents", async () => {
   const calls: Parameters<GitBlameRunner>[0][] = [];
   const runGit: GitBlameRunner = async (request) => {
@@ -342,16 +374,23 @@ function watchedRepository() {
 test("NativeGitAccess production watcher binding makes an in-flight blame stale (B5)", async () => {
   const { watch, change, root } = watchedRepository();
   let resolve!: (value: { stdout: string; stderr: string }) => void;
+  let spawned!: () => void;
+  const running = new Promise<void>((done) => {
+    spawned = done;
+  });
   const pending = runBlameLine({
     ...options(
       () =>
         new Promise((done) => {
           resolve = done;
+          spawned();
         }),
     ),
     generationAtStart: watch.repoGeneration(root),
     getGeneration: () => watch.repoGeneration(root),
   });
+  // git is running (the snapshot's line endings are read first).
+  await running;
   change.fire();
   resolve({ stdout: porcelain(), stderr: "" });
   const result = await pending;
