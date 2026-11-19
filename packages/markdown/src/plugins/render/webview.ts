@@ -4,7 +4,7 @@ import type { Context, Plugin } from "@workshop/core";
 import type {} from "../dialect/api";
 import type { RenderPass, RenderService } from "./api";
 import { createRenderPass } from "./pass";
-import { constrainRemoteContent } from "./security";
+import { insertRenderedHtml } from "./security";
 import { decodeDataValue } from "../../markdown/html/helpers";
 
 export const renderWebview: Plugin<{ trusted: boolean }> = {
@@ -111,11 +111,14 @@ function executeRenderPass({
     if (context.signal?.aborted) {
       return pass.dispose().then(() => pass);
     }
-    container.innerHTML = ctx.markdown.renderer.renderMarkdown(
-      pass.displaySource ?? source,
-      { sanitize, strictLineBreaks: ctx.editor.settings.strictLineBreaks },
+    insertRenderedHtml(
+      container,
+      ctx.markdown.renderer.renderMarkdown(pass.displaySource ?? source, {
+        sanitize,
+        strictLineBreaks: ctx.editor.settings.strictLineBreaks,
+      }),
+      trusted,
     );
-    constrainRemoteContent(container, trusted);
     return finishPostProcess();
   };
   try {
