@@ -2,11 +2,12 @@
  * The vaults the app has open (folders of notes), the ones opened before,
  * and what is in each, for the shell's file tree.
  */
-import { mkdir, readFile, realpath, stat, writeFile } from "node:fs/promises";
+import { readFile, realpath, stat } from "node:fs/promises";
 import * as path from "node:path";
 import { pathToFileURL } from "node:url";
 import { listVault } from "@workshop/host-node";
 import { fileKind } from "../shared/file-kind";
+import { saveFile } from "./json-file";
 
 /** Files listed per vault; a larger vault's tree is cut short. */
 const MAX_FILES = 20_000;
@@ -135,8 +136,7 @@ export class Vaults {
       vault,
       ...this.recent.filter((item) => item !== vault),
     ].slice(0, MAX_RECENT);
-    await mkdir(path.dirname(this.file), { recursive: true });
-    await writeFile(this.file, JSON.stringify(this.recent, null, 2));
+    await saveFile(this.file, JSON.stringify(this.recent, null, 2));
   }
 }
 

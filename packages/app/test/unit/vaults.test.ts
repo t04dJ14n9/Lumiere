@@ -3,9 +3,11 @@ import assert from "node:assert/strict";
 import {
   mkdir,
   mkdtemp,
+  readdir,
   readFile,
   realpath,
   rm,
+  stat,
   symlink,
   writeFile,
 } from "node:fs/promises";
@@ -21,6 +23,24 @@ async function scratch(t: test.TestContext): Promise<string> {
   t.after(() => rm(dir, { recursive: true, force: true }));
   return dir;
 }
+
+test("the recent vaults are written beside their file and renamed over it", async (t) => {
+  const dir = await scratch(t);
+  await mkdir(path.join(dir, "a"));
+  const file = path.join(dir, "data", "vaults.json");
+  await mkdir(path.dirname(file));
+  await writeFile(file, "[]");
+  const before = (await stat(file)).ino;
+  const vaults = new Vaults(file);
+  await vaults.load();
+  await vaults.add(path.join(dir, "a"));
+  // Written in place, the file would keep its inode and be empty for a moment.
+  assert.notEqual((await stat(file)).ino, before);
+  assert.deepEqual(JSON.parse(await readFile(file, "utf8")), [
+    path.join(dir, "a"),
+  ]);
+  assert.deepEqual(await readdir(path.dirname(file)), ["vaults.json"]);
+});
 
 test("opening a vault announces it once and remembers it, newest first", async (t) => {
   const dir = await scratch(t);
