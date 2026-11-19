@@ -38,13 +38,14 @@ export function bindSearchBlock(input: {
   fence.element.replaceChildren(header, status, results);
   let stop: (() => void) | undefined;
   let live = true;
+  const render = resultsView({ status, results }, open);
   const start = () => {
     stop?.();
     stop = client.watch(fence.source, source, (update) => {
       if (!live) {
         return;
       }
-      renderResults({ status, results }, update, open);
+      render(update);
       pass.measure();
     });
   };
@@ -61,40 +62,46 @@ export function bindSearchBlock(input: {
     refresh.disabled = true;
   };
 }
-function renderResults(
+
+/**
+ * Shows a block's search: streamed matches are appended, so a search with
+ * n hits paints n rows while it runs; its final, sorted set replaces them.
+ */
+function resultsView(
   elements: { status: HTMLElement; results: HTMLElement },
-  update: SearchUpdate,
   open?: OpenSearchResult,
-): void {
+): (update: SearchUpdate) => void {
   const { status, results } = elements;
-  results.replaceChildren();
-  if (update.loading) {
-    const matches = update.results ?? [];
-    if (matches.length === 0) {
-      status.textContent = "Searching…";
-      return;
-    }
-    const unreadable = update.unreadable
-      ? ` · ${update.unreadable} files could not be searched`
-      : "";
-    status.textContent = `Searching… ${matches.length} so far${unreadable}`;
+  let shown = 0;
+  const show = (matches: SearchResponse["results"]) => {
+    results.replaceChildren();
     paintMatches(results, matches, open);
-    return;
-  }
-  if (update.error) {
-    const found = update.results ?? [];
-    const kept =
-      found.length > 0 ? ` · showing ${found.length} found before it` : "";
-    status.textContent = `Search failed: ${update.error}${kept}`;
-    paintMatches(results, found, open);
-    return;
-  }
-  const matches = update.results ?? [];
-  const unreadable = update.unreadable
-    ? ` · ${update.unreadable} files could not be searched`
-    : "";
-  status.textContent = `${matches.length} ${matches.length === 1 ? "result" : "results"}${unreadable}`;
-  paintMatches(results, matches, open);
+    shown = matches.length;
+  };
+  return (update) => {
+    if (update.loading && "added" in update) {
+      paintMatches(results, update.added, open);
+      shown += update.added.length;
+      status.textContent =
+        shown === 0
+          ? "Searching…"
+          : `Searching… ${shown} so far${unreadableNote(update.unreadable)}`;
+    } else if (update.loading) {
+      show([]);
+      status.textContent = "Searching…";
+    } else if (update.error) {
+      show(update.results ?? []);
+      const kept = shown > 0 ? ` · showing ${shown} found before it` : "";
+      status.textContent = `Search failed: ${update.error}${kept}`;
+    } else {
+      show(update.results ?? []);
+      status.textContent = `${shown} ${shown === 1 ? "result" : "results"}${unreadableNote(update.unreadable)}`;
+    }
+  };
+}
+
+function unreadableNote(unreadable: number | undefined): string {
+  return unreadable ? ` · ${unreadable} files could not be searched` : "";
 }
 function paintMatches(
   results: HTMLElement,

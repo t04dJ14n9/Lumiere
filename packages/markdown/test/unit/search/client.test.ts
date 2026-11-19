@@ -88,7 +88,7 @@ test("partial notifications paint matches while loading for the matching id", as
   await tick();
   assert.deepEqual(updates.at(-1), {
     loading: true,
-    results: [{ path: "A.md", href: "A.md" }],
+    added: [{ path: "A.md", href: "A.md" }],
     unreadable: 0,
   });
   pair.host.notify(protocol, "partial", {
@@ -99,7 +99,7 @@ test("partial notifications paint matches while loading for the matching id", as
   await tick();
   assert.deepEqual(updates.at(-1), {
     loading: true,
-    results: [{ path: "A.md", href: "A.md" }],
+    added: [{ path: "A.md", href: "A.md" }],
     unreadable: 0,
   });
   jobs[0]!.resolve({
@@ -260,18 +260,24 @@ test("a failed query keeps the matches streamed before the failure", async () =>
   pair.host.notify(protocol, "partial", {
     id: id!,
     results: [{ path: "A.md", href: "A.md" }],
+    unreadable: 0,
+  });
+  pair.host.notify(protocol, "partial", {
+    id: id!,
+    results: [{ path: "B.md", href: "B.md" }],
     unreadable: 1,
   });
   await tick();
-  fail(new Error("Search evaluation timed out for B.md"));
+  fail(new Error("Search evaluation timed out for C.md"));
   await tick();
   const last = updates.at(-1);
   assert.equal(last?.loading, false);
-  assert.match(String(last && "error" in last ? last.error : ""), /B\.md/);
+  assert.match(String(last && "error" in last ? last.error : ""), /C\.md/);
   assert.deepEqual(last && "results" in last ? last.results : undefined, [
     { path: "A.md", href: "A.md" },
+    { path: "B.md", href: "B.md" },
   ]);
-  assert.equal(last?.unreadable, 1);
+  assert.equal(last && "unreadable" in last ? last.unreadable : 0, 1);
   client.dispose();
   await pair.dispose();
 });

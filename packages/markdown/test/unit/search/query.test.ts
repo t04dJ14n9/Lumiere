@@ -160,11 +160,13 @@ test("searchVault emits partial snapshots as matches accumulate", async () => {
       }),
   });
   assert.equal(result.unreadable, 1);
-  assert.ok(partials.length >= 1);
-  assert.deepEqual(partials.at(-1), {
-    results: ["folder/Note.md", "other/A #.md"],
-    unreadable: 1,
-  });
+  assert.ok(partials.length >= 2, "partials stream while the search runs");
+  // Each partial carries only what is new: every match is sent once.
+  assert.deepEqual(
+    partials.flatMap((partial) => partial.results),
+    ["folder/Note.md", "other/A #.md"],
+  );
+  assert.equal(partials.at(-1)?.unreadable, 1);
   assert.deepEqual(
     result.results.map((item) => item.path),
     ["other/A #.md", "folder/Note.md"],

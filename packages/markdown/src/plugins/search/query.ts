@@ -13,7 +13,7 @@ export interface SearchInput {
   worker: SearchEvaluator;
   token: Cancellation;
   read(uri: string): Promise<string>;
-  /** Called with the accumulated match set as files are scored (may be throttled). */
+  /** Called with the matches found since the last call, as files are scored (throttled). */
   onPartial?: (snapshot: SearchResponse) => void;
 }
 /** Minimum gap between partial snapshots; final sort still arrives via the RPC result. */
@@ -40,7 +40,7 @@ export async function searchVault(input: SearchInput): Promise<SearchResponse> {
   await worker.ready;
   const results: SearchResponse["results"] = [];
   let unreadable = 0;
-  const emit = createPartialEmitter(input.onPartial);
+  const emit = createPartialEmitter(results, input.onPartial);
   const files = vault
     .files()
     .filter((file) => !file.excluded)
@@ -60,10 +60,9 @@ export async function searchVault(input: SearchInput): Promise<SearchResponse> {
       throw new RpcError("Cancelled", "Search cancelled");
     }
     if (outcome === "unreadable") {
-      unreadable++;
-      emit.push({ results: [...results], unreadable });
+      emit.push(++unreadable);
     } else if (outcome === "hit") {
-      emit.push({ results: [...results], unreadable });
+      emit.push(unreadable);
     }
   }
   emit.flush();
@@ -134,49 +133,58 @@ async function evaluateDocument(
   return "hit";
 }
 
-function createPartialEmitter(onPartial?: (snapshot: SearchResponse) => void) {
+/**
+ * Streams the matches found since the last partial, at most once per
+ * PARTIAL_INTERVAL_MS. It reads `results` when it sends, so a hit costs no
+ * copy, and a search with n hits sends n results in all, not n²/2.
+ */
+function createPartialEmitter(
+  results: SearchResponse["results"],
+  onPartial?: (snapshot: SearchResponse) => void,
+) {
   if (!onPartial) {
     return { push() {}, flush() {} };
   }
   let last = 0;
-  let pending: SearchResponse | undefined;
+  let sent = 0;
+  let unreadable = 0;
+  let isPending = false;
   let timer: ReturnType<typeof setTimeout> | undefined;
-  const send = (snapshot: SearchResponse) => {
+  const send = () => {
     last = Date.now();
-    pending = undefined;
-    onPartial(snapshot);
+    isPending = false;
+    const added = results.slice(sent);
+    sent = results.length;
+    onPartial({ results: added, unreadable });
+  };
+  const cancelTimer = () => {
+    clearTimeout(timer);
+    timer = undefined;
   };
   return {
-    push(snapshot: SearchResponse) {
+    push(count: number) {
+      unreadable = count;
+      isPending = true;
       const now = Date.now();
       if (now - last >= PARTIAL_INTERVAL_MS) {
-        if (timer) {
-          clearTimeout(timer);
-          timer = undefined;
-        }
-        send(snapshot);
+        cancelTimer();
+        send();
         return;
       }
-      pending = snapshot;
-      if (!timer) {
-        timer = setTimeout(
-          () => {
-            timer = undefined;
-            if (pending) {
-              send(pending);
-            }
-          },
-          PARTIAL_INTERVAL_MS - (now - last),
-        );
-      }
+      timer ??= setTimeout(
+        () => {
+          timer = undefined;
+          if (isPending) {
+            send();
+          }
+        },
+        PARTIAL_INTERVAL_MS - (now - last),
+      );
     },
     flush() {
-      if (timer) {
-        clearTimeout(timer);
-        timer = undefined;
-      }
-      if (pending) {
-        send(pending);
+      cancelTimer();
+      if (isPending) {
+        send();
       }
     },
   };

@@ -3,6 +3,7 @@ import test from "node:test";
 import { bindSearchBlock, paintSearchMatchesForTest } from "./blocks";
 import { resolveSearchOpen } from "./open";
 import { protocol } from "./protocol";
+import type { SearchUpdate } from "./client";
 
 class FakeNode {
   textContent = "";
@@ -259,6 +260,56 @@ test("bindSearchBlock mounts Obsidian internal-query classes, header and results
   });
   assert.deepEqual(opened, [{ path: "projects/Launch.md" }]);
   dispose();
+});
+
+test("streamed matches are appended; rows already painted are kept", () => {
+  const doc = new FakeDocument();
+  const element = doc.createElement("pre");
+  let push = (_update: SearchUpdate) => {};
+  bindSearchBlock({
+    fence: {
+      element: element as unknown as HTMLElement,
+      language: "query",
+      source: "meeting",
+    },
+    pass: { measure() {} } as never,
+    client: {
+      watch(_query, _source, onUpdate) {
+        push = onUpdate;
+        return () => {};
+      },
+    },
+    source: "file:///vault/Search.md",
+  });
+  const status = element.children[1]!;
+  const container = element.querySelector(".search-result-container")!;
+  push({ loading: true });
+  assert.equal(status.textContent, "Searching…");
+  push({
+    loading: true,
+    added: [{ path: "A.md", href: "A.md" }],
+    unreadable: 0,
+  });
+  const first = container.children[0];
+  push({
+    loading: true,
+    added: [{ path: "B.md", href: "B.md" }],
+    unreadable: 1,
+  });
+  assert.equal(container.children.length, 2);
+  assert.equal(container.children[0], first, "the first row is not redrawn");
+  assert.match(status.textContent, /^Searching… 2 so far · 1 files/);
+  push({
+    loading: false,
+    results: [
+      { path: "B.md", href: "B.md" },
+      { path: "A.md", href: "A.md" },
+    ],
+    unreadable: 1,
+  });
+  assert.equal(container.children.length, 2);
+  assert.equal(container.children[0]?.children[0]?.textContent, "B.md");
+  assert.match(status.textContent, /^2 results/);
 });
 
 test("a failed search still lists what it found before the failure", () => {

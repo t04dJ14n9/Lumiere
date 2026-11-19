@@ -49,7 +49,7 @@ before the failure. Results reflect the index's eligible files
 and unsaved text available through the host. Large vault searches may be slow:
 the query has no RPC deadline (refresh or disposal cancels it), up to eight notes
 are read ahead of the one being evaluated, and
-partial match snapshots stream over RPC (throttled) while the query runs, then the
+new matches stream over RPC (throttled) and are appended while the query runs, then the
 final sorted set replaces them. Excluded files are omitted. Content hits nest up to
 25 match lines per file (highlighted substring, truncated around the hit); file /
 path / tag / property-only queries stay path-only. Match rows call `search/open` with the vault path and content offset (Cmd/Ctrl+Alt opens beside). File titles still use relative href links. No Dataview.

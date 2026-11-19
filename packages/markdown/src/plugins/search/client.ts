@@ -3,11 +3,10 @@ import { CancelToken } from "../../shared/rpc/lifecycle";
 import { protocol, type SearchResponse } from "./protocol";
 import { errorMessage } from "../../shared/errors";
 export type SearchUpdate =
-  | {
-      loading: true;
-      results?: SearchResponse["results"];
-      unreadable?: number;
-    }
+  /** A query started: nothing found yet. */
+  | { loading: true }
+  /** Matches the running query found since the last update, to append. */
+  | { loading: true; added: SearchResponse["results"]; unreadable: number }
   | ({ loading: false; error?: string } & Partial<SearchResponse>);
 interface Subscription {
   query: string;
@@ -27,15 +26,7 @@ export class QueryClient {
     this.stopPartial = rpc.on(protocol, "partial", (message) => {
       for (const subscription of this.subscriptions) {
         if (subscription.id === message.id && !subscription.token?.cancelled) {
-          subscription.partial = {
-            results: message.results,
-            unreadable: message.unreadable,
-          };
-          subscription.update({
-            loading: true,
-            results: message.results,
-            unreadable: message.unreadable,
-          });
+          receivePartial(subscription, message);
         }
       }
     });
@@ -104,4 +95,21 @@ export class QueryClient {
     }
     this.subscriptions.clear();
   }
+}
+
+/** Partials carry only new matches: each one costs what it adds. */
+function receivePartial(
+  subscription: Subscription,
+  message: SearchResponse,
+): void {
+  subscription.partial ??= { results: [], unreadable: 0 };
+  for (const result of message.results) {
+    subscription.partial.results.push(result);
+  }
+  subscription.partial.unreadable = message.unreadable;
+  subscription.update({
+    loading: true,
+    added: message.results,
+    unreadable: message.unreadable,
+  });
 }
