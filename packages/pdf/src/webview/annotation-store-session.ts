@@ -69,10 +69,19 @@ export class StoreSession {
     this.markRestored = resolve;
   });
 
+  /**
+   * The load this session's document came with. The `load` message of the
+   * next bytes switches the page's load state while this document's work
+   * may still be queued: that work must not be filed under the new load.
+   */
+  private readonly load: number | undefined;
+
   constructor(
     private readonly annotation: AnnotationCapability,
     private readonly host: SessionHost,
-  ) {}
+  ) {
+    this.load = host.loadState()?.load;
+  }
 
   /** Bring back the file's annotations, once; `ready` is false when this document's could not be read. */
   restore(ready: boolean): void {
@@ -324,7 +333,8 @@ export class StoreSession {
         await this.restored;
         started();
         const state = this.host.loadState();
-        if (state) {
+        // Another document's bytes arrived meanwhile: this one is gone.
+        if (state && (this.load === undefined || state.load === this.load)) {
           await task(state);
         }
       })
