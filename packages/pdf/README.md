@@ -466,11 +466,12 @@ uses API keys or other secrets. Dependabot proposes grouped npm and
 GitHub Actions updates weekly.
 
 Pushing a tag `v<version>` that matches `package.json` runs
-[`release.yml`](.github/workflows/release.yml): `pnpm check`, `pnpm package`,
-and a GitHub Release with the VSIX attached. Publishing stays manual: with a
-Marketplace PAT run `pnpm exec vsce publish --packagePath <file>.vsix`, and
-for Open VSX `pnpm dlx ovsx publish <file>.vsix -p <token>`. Do not store
-these tokens in the repository.
+[`release.yml`](.github/workflows/release.yml). It checks that the tag's
+commit is on `main`, runs `pnpm test:browser` and `pnpm test:quality` on it,
+then `pnpm check`, `pnpm package`, Marketplace Trusted Publishing, and a
+GitHub Release with the VSIX attached. Open VSX publishing stays manual:
+`pnpm dlx ovsx publish <file>.vsix -p <token>`. Do not store that token in
+the repository.
 
 ## License
 

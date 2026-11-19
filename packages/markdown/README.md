@@ -173,9 +173,11 @@ uses API keys or other secrets. Dependabot proposes grouped npm and
 GitHub Actions updates weekly.
 
 Pushing a tag `v<version>` that matches `package.json` runs
-[`release.yml`](.github/workflows/release.yml): `pnpm check`, `pnpm package`,
-Marketplace Trusted Publishing, and a GitHub Release with the VSIX attached.
-The job uses `ubuntu-latest` by default. Set the repository variable
+[`release.yml`](.github/workflows/release.yml). It checks that the tag's
+commit is on `main`, runs `pnpm test:browser` and `pnpm test:quality` on it,
+then `pnpm check`, `pnpm package`, Marketplace Trusted Publishing, and a
+GitHub Release with the VSIX attached.
+The jobs use `ubuntu-latest` by default. Set the repository variable
 `RELEASE_RUNNER` to a JSON array such as
 `["self-hosted","lumiere-release"]` to use a labelled self-hosted runner when
 hosted Actions minutes are unavailable.
