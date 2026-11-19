@@ -91,7 +91,7 @@ test("a caret move does not count the whole note again until its text changes", 
   const f = await start({ panels: [panel], active: panel });
   t.after(() => f.root.dispose());
   const caretMoved = async () => {
-    f.root.emit("editor/selectionChanged", panel as never);
+    f.root.emit("editor/selectionChanged", panel, false);
     await new Promise((resolve) => setTimeout(resolve, 300));
   };
   assert.equal(reads, 1);
