@@ -2,6 +2,7 @@ import type { MarkdownIt } from "markdown-it";
 import type { StateInline } from "markdown-it";
 import type { StateBlock } from "markdown-it";
 import { attr, encodeDataValue, escape } from "./helpers";
+import { opensMathBlock } from "../dialect/math";
 export function math(md: MarkdownIt): void {
   md.inline.ruler.before("escape", "math", inlineMath);
   md.renderer.rules.math_inline = (tokens, index) =>
@@ -55,7 +56,7 @@ function blockMath(
     state.bMarks[start]! + state.tShift[start]!,
     state.eMarks[start],
   );
-  if (!first.startsWith("$$") || state.sCount[start]! - state.blkIndent >= 4) {
+  if (!opensMathBlock(first) || state.sCount[start]! - state.blkIndent >= 4) {
     return false;
   }
   let last = start;
