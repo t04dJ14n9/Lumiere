@@ -30,4 +30,16 @@ export interface PdfAnnotationFiles {
   read(uri: string, sha256: string): Promise<string | undefined>;
   /** Replace the file with `text`, or remove it when `text` is undefined. */
   write(uri: string, sha256: string, text: string | undefined): Promise<void>;
+  /**
+   * Which file that is: two PDFs with the same bytes in two folders may
+   * keep theirs apart. Without it, the hash alone names the file.
+   */
+  key?(uri: string, sha256: string): string;
+  /**
+   * Calls `onChange` when the file may have changed on disk, whoever wrote
+   * it (another window's extension host too); this host's own writes may
+   * call it as well. Hosts that cannot watch omit it: another window's
+   * change then shows when the PDF is reopened.
+   */
+  watch?(uri: string, sha256: string, onChange: () => void): () => void;
 }

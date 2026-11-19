@@ -8,7 +8,13 @@ import { vscodePdfFiles } from "../../src/extension/plugins/pdf/files";
 type Listener = (uri: fake.Uri) => void;
 
 /** Watch `uri` with a watcher whose events the test fires. */
-function watch(uri: string) {
+function watch(
+  uri: string,
+  start: (uri: string, onChange: () => void) => () => void = (
+    given,
+    onChange,
+  ) => vscodePdfFiles.watch(given, onChange),
+) {
   const listeners = { change: [] as Listener[], create: [], delete: [] } as {
     change: Listener[];
     create: Listener[];
@@ -32,7 +38,7 @@ function watch(uri: string) {
     },
   });
   let changes = 0;
-  const stop = vscodePdfFiles.watch(uri, () => {
+  const stop = start(uri, () => {
     changes++;
   });
   Object.assign(fake.workspace, { createFileSystemWatcher: original });
@@ -67,4 +73,31 @@ test("a deleted PDF is noticed", () => {
   const { fire, changes } = watch("file:///vault/papers/a.pdf");
   fire("delete", "/vault/papers/a.pdf");
   assert.equal(changes(), 1);
+});
+
+test("another window's save of a PDF's annotation file is noticed", () => {
+  const sha256 = "a".repeat(64);
+  const original = (fake.workspace as Record<string, unknown>)
+    .getWorkspaceFolder;
+  Object.assign(fake.workspace, {
+    getWorkspaceFolder: () => ({ uri: fake.Uri.file("/vault") }),
+  });
+  try {
+    const { fire, changes, pattern } = watch(
+      "file:///vault/papers/a.pdf",
+      (uri, onChange) =>
+        vscodePdfFiles.annotations!.watch!(uri, sha256, onChange),
+    );
+    assert.equal(pattern()?.pattern, "*");
+    fire("change", `/vault/.lumiere/pdf-annotations/${sha256}.json`);
+    fire("change", "/vault/.lumiere/pdf-annotations/other.json");
+    fire("change", "/vault/papers/a.pdf");
+    assert.equal(changes(), 1);
+    assert.equal(
+      vscodePdfFiles.annotations!.key!("file:///vault/papers/a.pdf", sha256),
+      `file:///vault/.lumiere/pdf-annotations/${sha256}.json`,
+    );
+  } finally {
+    Object.assign(fake.workspace, { getWorkspaceFolder: original });
+  }
 });

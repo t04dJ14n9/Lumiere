@@ -4,13 +4,19 @@ import { mergeAnnotationFile } from "../../shared/annotation-merge";
 
 /**
  * The editors whose annotation files one host's `PdfAnnotationFiles` keeps,
- * and the saves to each file (by the PDF's hash, which names it) in the
- * order they came: two editors of one PDF never read, merge and write the
- * same file at once.
+ * and the saves to each file (by its key: `PdfAnnotationFiles.key`, else the
+ * PDF's hash, which names it) in the order they came: two editors of one PDF
+ * never read, merge and write the same file at once.
  */
 interface SharedFiles {
   readonly stores: Set<AnnotationStore>;
   readonly queues: Map<string, Promise<void>>;
+  /**
+   * By key, for watched files only: the text this host last read from the
+   * file or wrote to it. A watcher event that finds anything else is a
+   * write from outside this host (another VS Code window).
+   */
+  readonly known: Map<string, string | undefined>;
 }
 
 const shared = new WeakMap<PdfAnnotationFiles, SharedFiles>();
@@ -28,7 +34,7 @@ export interface StoreChange {
 function sharedFiles(files: PdfAnnotationFiles): SharedFiles {
   let found = shared.get(files);
   if (!found) {
-    found = { stores: new Set(), queues: new Map() };
+    found = { stores: new Set(), queues: new Map(), known: new Map() };
     shared.set(files, found);
   }
   return found;
@@ -36,18 +42,18 @@ function sharedFiles(files: PdfAnnotationFiles): SharedFiles {
 
 function enqueue<T>(
   files: SharedFiles,
-  sha256: string,
+  key: string,
   run: () => Promise<T>,
 ): Promise<T> {
-  const next = (files.queues.get(sha256) ?? Promise.resolve()).then(run);
+  const next = (files.queues.get(key) ?? Promise.resolve()).then(run);
   const settled = next.then(
     () => undefined,
     () => undefined,
   );
-  files.queues.set(sha256, settled);
+  files.queues.set(key, settled);
   void settled.then(() => {
-    if (files.queues.get(sha256) === settled) {
-      files.queues.delete(sha256);
+    if (files.queues.get(key) === settled) {
+      files.queues.delete(key);
     }
   });
   return next;
@@ -62,7 +68,9 @@ function enqueue<T>(
  * shows. A save is therefore merged into the file by annotation
  * (`annotation-merge`), against what this editor last had from the host
  * (`base`): so a mark made or deleted in one editor is never undone by the
- * other's save. The other editors of the file are then sent what it holds.
+ * other's save. The other editors of the file in this host are then sent
+ * what it holds. An editor in another window has its own host: the file's
+ * watcher tells it, and it is sent the file the same way.
  */
 export class AnnotationStore {
   private toldUnsupported = false;
@@ -75,6 +83,8 @@ export class AnnotationStore {
     { sha256: string; text: string | undefined }
   >();
   private revision = 0;
+  /** The file of the bytes the viewer was last given, watched for other windows' saves. */
+  private watched: { key: string; stop: () => void } | undefined;
 
   constructor(
     private readonly fileUri: string,
@@ -95,15 +105,22 @@ export class AnnotationStore {
   /** The file's text for the PDF with these bytes; undefined when there is none or it cannot be read. */
   async read(sha256: string): Promise<string | undefined> {
     const store = this.files.annotations;
-    if (!store || !this.shared) {
+    const files = this.shared;
+    if (!store || !files) {
       return undefined;
     }
+    const key = this.keyOf(sha256);
     try {
       // After the saves before it: the viewer gets the file they wrote.
-      const text = await enqueue(this.shared, sha256, () =>
-        store.read(this.fileUri, sha256),
-      );
+      const text = await enqueue(files, key, async () => {
+        const found = await store.read(this.fileUri, sha256);
+        if (store.watch) {
+          files.known.set(key, found);
+        }
+        return found;
+      });
       this.base.set(sha256, text);
+      this.watch(store, sha256);
       return text;
     } catch (error) {
       this.deps.error(
@@ -125,13 +142,23 @@ export class AnnotationStore {
       this.tellUnsupported();
       return Promise.resolve();
     }
-    return enqueue(this.shared, message.sha256, () =>
+    return enqueue(this.shared, this.keyOf(message.sha256), () =>
       this.saveNow(store, message.sha256, message.text ?? undefined),
     );
   }
 
   dispose(): void {
+    this.unwatch();
     this.shared?.stores.delete(this);
+  }
+
+  private keyOf(sha256: string): string {
+    try {
+      return this.files.annotations?.key?.(this.fileUri, sha256) ?? sha256;
+    } catch {
+      // The read or write that follows fails the same way, and says why.
+      return sha256;
+    }
   }
 
   private async saveNow(
@@ -139,6 +166,7 @@ export class AnnotationStore {
     sha256: string,
     mine: string | undefined,
   ): Promise<void> {
+    const key = this.keyOf(sha256);
     let disk: string | undefined;
     let merged: string | undefined;
     try {
@@ -152,15 +180,93 @@ export class AnnotationStore {
       return;
     }
     this.base.set(sha256, mine);
+    const known = this.shared?.known;
+    // Another window wrote the file since this host last saw it, and its
+    // watcher has not said so yet: this viewer has not seen that either.
+    const isNewToAll = known?.has(key) === true && known.get(key) !== disk;
+    if (known?.has(key)) {
+      known.set(key, merged);
+    }
     // Nothing changed for the others: telling them would only echo.
-    if (merged === disk) {
+    if (merged === disk && !isNewToAll) {
       return;
     }
+    this.tell(key, sha256, merged, isNewToAll ? undefined : this);
+  }
+
+  /** Send the editors of the file `key` what it holds now, except `except`. */
+  private tell(
+    key: string,
+    sha256: string,
+    text: string | undefined,
+    except?: AnnotationStore,
+  ): void {
     for (const other of this.shared?.stores ?? []) {
-      if (other !== this) {
-        other.savedElsewhere(sha256, merged);
+      if (other !== except && other.keyOf(sha256) === key) {
+        other.savedElsewhere(sha256, text);
       }
     }
+  }
+
+  /** Watch the file kept for `sha256`, and stop watching the one before. */
+  private watch(store: PdfAnnotationFiles, sha256: string): void {
+    const key = this.keyOf(sha256);
+    if (!store.watch || this.watched?.key === key) {
+      return;
+    }
+    this.unwatch();
+    const stop = store.watch(this.fileUri, sha256, () => {
+      void this.changedOnDisk(store, sha256, key);
+    });
+    this.watched = { key, stop };
+  }
+
+  private unwatch(): void {
+    const watched = this.watched;
+    if (!watched) {
+      return;
+    }
+    this.watched = undefined;
+    watched.stop();
+    const isStillWatched = [...(this.shared?.stores ?? [])].some(
+      (other) => other.watched?.key === watched.key,
+    );
+    if (!isStillWatched) {
+      this.shared?.known.delete(watched.key);
+    }
+  }
+
+  /**
+   * The watcher says the file may have changed. In the queue, after this
+   * host's own saves: a file as one of them left it is no news. Another
+   * window's write is sent to every editor of the file here, and each
+   * viewer merges it with what it has not saved yet (`showStoreFile`).
+   */
+  private changedOnDisk(
+    store: PdfAnnotationFiles,
+    sha256: string,
+    key: string,
+  ): Promise<void> {
+    const files = this.shared;
+    if (!files) {
+      return Promise.resolve();
+    }
+    return enqueue(files, key, async () => {
+      if (this.watched?.key !== key) {
+        return;
+      }
+      const text = await store.read(this.fileUri, sha256);
+      if (files.known.has(key) && files.known.get(key) === text) {
+        return;
+      }
+      files.known.set(key, text);
+      this.tell(key, sha256, text);
+    }).catch((error: unknown) => {
+      // The next save reads and merges the file again; nothing is lost.
+      this.deps.error(
+        `Could not read the annotations another window saved: ${String(error)}`,
+      );
+    });
   }
 
   /**
@@ -186,7 +292,7 @@ export class AnnotationStore {
         this.sent.delete(revision);
       }
     }
-    return enqueue(this.shared, message.sha256, async () => {
+    return enqueue(this.shared, this.keyOf(message.sha256), async () => {
       const base = this.base.get(message.sha256);
       this.base.set(
         message.sha256,

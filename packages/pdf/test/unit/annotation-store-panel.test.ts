@@ -24,6 +24,7 @@ const PDF_SHA = createHash("sha256").update(PDF).digest("hex");
 function open(
   store: PdfAnnotationFiles | undefined,
   overrides: Partial<PdfFiles> = {},
+  uri = "file:///vault/inbox/paper.pdf",
 ) {
   const posted: HostMessage[] = [];
   const errors: string[] = [];
@@ -53,7 +54,7 @@ function open(
     ...overrides,
   };
   const panel = new PdfViewerPanel(
-    "file:///vault/inbox/paper.pdf",
+    uri,
     webview,
     {
       files,
@@ -537,4 +538,138 @@ test("Lumiere owns what it imported or made; changes to the PDF's own are the PD
   assert.equal(owned.isOwn("obj:20"), true);
   assert.equal(owned.savedIntoPdf(owned.keys()), false);
   assert.equal(owned.change("update", "obj:10"), "pdf");
+});
+
+/**
+ * Two VS Code windows on one disk: each extension host has its own
+ * annotation files, which share `kept` and tell every watcher of a write,
+ * as a file watcher would.
+ */
+function twoWindows() {
+  const kept = new Map<string, string>();
+  const watchers = new Set<{ sha256: string; onChange: () => void }>();
+  const window = (): PdfAnnotationFiles => ({
+    read: async (_uri, sha256) => kept.get(sha256),
+    write: async (_uri, sha256, text) => {
+      if (text === undefined) {
+        kept.delete(sha256);
+      } else {
+        kept.set(sha256, text);
+      }
+      for (const watcher of [...watchers]) {
+        if (watcher.sha256 === sha256) {
+          watcher.onChange();
+        }
+      }
+    },
+    watch: (_uri, sha256, onChange) => {
+      const watcher = { sha256, onChange };
+      watchers.add(watcher);
+      return () => {
+        watchers.delete(watcher);
+      };
+    },
+  });
+  return { kept, watchers, first: window(), second: window() };
+}
+
+/** Let the watcher's read and the store's queue run. */
+const settle = () => new Promise((resolve) => setTimeout(resolve, 10));
+
+test("a pane in another window is sent the file when another window saves it", async () => {
+  const { kept, first, second } = twoWindows();
+  const one = open(first);
+  const two = open(second);
+  await one.receive({ type: "ready" });
+  await two.receive({ type: "ready" });
+  await one.receive({
+    type: "annotationStoreSave",
+    load: one.load().load,
+    sha256: PDF_SHA,
+    text: markA,
+  });
+  await settle();
+  const changed = two.posted.filter((m) => m.type === "annotationStoreChanged");
+  assert.deepEqual(changed, [
+    {
+      type: "annotationStoreChanged",
+      load: two.load().load,
+      sha256: PDF_SHA,
+      revision: 1,
+      text: kept.get(PDF_SHA),
+    },
+  ]);
+  // Its own write, seen by its own watcher, is no news to pane 1.
+  assert.equal(
+    one.posted.some((m) => m.type === "annotationStoreChanged"),
+    false,
+  );
+  // Pane 2's unsaved mark is merged with pane 1's, not written over it.
+  await two.receive({
+    type: "annotationStoreSave",
+    load: two.load().load,
+    sha256: PDF_SHA,
+    text: markB,
+  });
+  assert.deepEqual(await namesKept(kept.get(PDF_SHA)), ["uuid-a", "uuid-b"]);
+});
+
+test("a save over another window's write its watcher has not reported shows that write here too", async () => {
+  const { kept, first } = twoWindows();
+  const one = open(first);
+  await one.receive({ type: "ready" });
+  kept.set(PDF_SHA, markB); // another window's write, not yet reported
+  await one.receive({
+    type: "annotationStoreSave",
+    load: one.load().load,
+    sha256: PDF_SHA,
+    text: markA,
+  });
+  const changed = one.posted.filter((m) => m.type === "annotationStoreChanged");
+  assert.equal(changed.length, 1);
+  assert.equal(changed[0]?.type, "annotationStoreChanged");
+  assert.deepEqual(
+    await namesKept(
+      changed[0]?.type === "annotationStoreChanged"
+        ? (changed[0].text ?? undefined)
+        : undefined,
+    ),
+    ["uuid-a", "uuid-b"],
+  );
+});
+
+test("a closed pane stops watching its annotation file", async () => {
+  const { watchers, first } = twoWindows();
+  const one = open(first);
+  await one.receive({ type: "ready" });
+  assert.equal(watchers.size, 1);
+  one.panel.dispose();
+  assert.equal(watchers.size, 0);
+});
+
+test("two PDFs with the same bytes in two folders keep apart annotation files", async () => {
+  const kept = new Map<string, string>();
+  const fileOf = (uri: string, sha256: string) =>
+    `${uri.split("/")[3]}/${sha256}`;
+  const store: PdfAnnotationFiles = {
+    key: fileOf,
+    read: async (uri, sha256) => kept.get(fileOf(uri, sha256)),
+    write: async (uri, sha256, text) => {
+      kept.set(fileOf(uri, sha256), text ?? "");
+    },
+  };
+  const one = open(store);
+  const two = open(store, {}, "file:///other/inbox/paper.pdf");
+  await one.receive({ type: "ready" });
+  await two.receive({ type: "ready" });
+  await one.receive({
+    type: "annotationStoreSave",
+    load: one.load().load,
+    sha256: PDF_SHA,
+    text: markA,
+  });
+  assert.equal(
+    two.posted.some((m) => m.type === "annotationStoreChanged"),
+    false,
+  );
 });

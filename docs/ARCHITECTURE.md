@@ -461,7 +461,9 @@ src/host (no vscode): portable viewer logic, reused by host-node
   annotation, three-way against what that pane last had
   (`shared/annotation-merge.ts`), so two panes or windows of one PDF never
   overwrite each other's marks; the host then sends the file to its other
-  panes. **Dark paper** is drawn by the engine:
+  panes of that file, and a pane in another window (another extension
+  host) is sent it when the file's watcher sees a write this host did not
+  make. **Dark paper** is drawn by the engine:
   EmbedPDF 3 has no page colour-scheme option, so the viewer runs EmbedPDF's
   engine host with Lumiere's own page reader in its worker and in the
   main-thread fallback (`packages/pdf/docs/embedpdf-page-colors-patch.md`).

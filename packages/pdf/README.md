@@ -84,9 +84,11 @@ is opt-in (`lumiere.pdf.regions.enabled`, default off).
     file by annotation (its `/NM` name), against what that pane last had
     from the file: a mark made, changed or deleted in one pane is kept, and
     the other pane's save does not undo it. Other panes in the same window
-    then show the change; a pane in another VS Code window shows it when the
-    PDF is reopened. A mark changed in two panes at once keeps the last
-    save's version.
+    then show the change. A pane in another VS Code window watches the
+    annotation file and shows the change when it lands on disk, merged with
+    the marks it has not saved yet (a local annotation file only: a remote
+    or virtual one shows it when the PDF is reopened). A mark changed in
+    two panes at once keeps the last save's version.
   - **PDF: Save Annotations into This PDF** writes them into the file after
     you confirm (its SHA-256 changes). It refuses PDFs in
     `lumiere.pdf.annotations.protectedFolders` (default `[".raw"]`). The

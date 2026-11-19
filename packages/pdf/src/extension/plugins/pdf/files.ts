@@ -68,6 +68,14 @@ export const vscodePdfFiles: PdfFiles = {
       await vscode.workspace.fs.writeFile(temp, new TextEncoder().encode(text));
       await vscode.workspace.fs.rename(temp, file, { overwrite: true });
     },
+    key: (uri, sha256) =>
+      annotationFile(vscode.Uri.parse(uri), sha256)?.toString() ?? sha256,
+    // Another VS Code window has its own extension host: only the disk
+    // tells this one that it saved the file.
+    watch: (uri, sha256, onChange) => {
+      const file = annotationFile(vscode.Uri.parse(uri), sha256);
+      return file ? watchFile(file, onChange) : () => undefined;
+    },
   },
 };
 
