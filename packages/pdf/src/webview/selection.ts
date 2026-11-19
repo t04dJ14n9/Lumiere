@@ -15,7 +15,7 @@ import {
   type MutableRefObject,
 } from "react";
 import type { PageRect } from "../shared/geometry";
-import type { RegionSelection } from "../shared/selection";
+import { copiedText, type RegionSelection } from "../shared/selection";
 import { isEditableTarget } from "./editable-target";
 import { postToHost, reportToHost } from "./host";
 import { followMenuContext } from "./menu-context";
@@ -307,8 +307,8 @@ function rangeKey(range: TextRange | null): string | undefined {
 }
 
 /**
- * Read the selected text and its line boxes, report them, and return the
- * text. The engine reads asynchronously, slowly while it renders pages, so
+ * Read the selected text and its line boxes, report them (on one line), and
+ * return the text as Cmd/Ctrl+C copies it (`copiedText`). The engine reads asynchronously, slowly while it renders pages, so
  * a selection cleared or replaced meanwhile is not reported. A PDF that
  * forbids copying has no text to report.
  */
@@ -339,7 +339,7 @@ async function reportText(
   if (text && pages.length > 0) {
     reportToHost({ selection: { selection: { kind: "text", text, pages } } });
   }
-  return text || undefined;
+  return text ? copiedText(lines) : undefined;
 }
 
 function toPageRect(rect: {

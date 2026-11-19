@@ -146,6 +146,21 @@ function parseSelectedPage(value: unknown): SelectedPage | undefined {
   return { page: value.page, rects: rects as PageRect[] };
 }
 
+/**
+ * Selected text as Cmd/Ctrl+C copies it: its lines and paragraphs kept, as
+ * any PDF reader copies them, with PDFium's `\r\n` made `\n` and the spaces
+ * at line ends dropped. (What the viewer reports to agents is joined into
+ * one line instead.) Empty when it is only whitespace.
+ */
+export function copiedText(lines: string): string {
+  return lines
+    .replace(/\r\n?/gu, "\n")
+    .split("\n")
+    .map((line) => line.replace(/[ \t]+$/u, ""))
+    .join("\n")
+    .trim();
+}
+
 function isPageNumber(value: unknown): value is number {
   return typeof value === "number" && Number.isSafeInteger(value) && value >= 1;
 }

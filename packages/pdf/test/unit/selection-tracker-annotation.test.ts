@@ -1,7 +1,7 @@
 import assert from "node:assert/strict";
 import { test } from "node:test";
 import { agentText } from "../../src/shared/agent-text";
-import type { RegionSelection } from "../../src/shared/selection";
+import { copiedText, type RegionSelection } from "../../src/shared/selection";
 import { loadModule } from "./support/load-module";
 
 type RegionEnd =
@@ -35,6 +35,7 @@ function loadSelectionTracker(reports: unknown[]) {
       },
       "@embedpdf/plugin-render/contract": { RenderToken: {} },
       "@embedpdf/plugin-selection/contract": { SelectionToken: {} },
+      "../shared/selection": { copiedText },
       "./editable-target": { isEditableTarget: () => false },
       "./host": {
         postToHost: () => undefined,
@@ -192,6 +193,8 @@ test("text is reported on one line, with a box per line of the selection", async
     plain(reports.at(-1)),
     textReport("Scaled dot-product attention"),
   );
+  // Cmd/Ctrl+C copies the lines as they are.
+  assert.equal(tracker.selectedText, "Scaled dot-product\n  attention");
 });
 
 test("a PDF that forbids copying reports no text and keeps the last copy", async () => {
