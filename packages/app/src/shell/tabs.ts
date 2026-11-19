@@ -4,6 +4,7 @@
  * Settings opens as a tab too, as in VS Code.
  */
 import { fileKind } from "../shared/file-kind";
+import type { SavedTab, UiState } from "../shared/ui-state";
 
 export interface NoteTab {
   readonly kind: "note";
@@ -133,4 +134,31 @@ function close(state: TabsState, id: string): TabsState {
   return next === undefined
     ? noTabs
     : activate({ tabs, active: undefined, recent }, next);
+}
+
+/** The note tabs to keep for the next launch (Settings is not kept). */
+export function tabsToSave(
+  state: TabsState,
+): Pick<UiState, "tabs" | "activeTab"> {
+  const notes = state.tabs.filter((tab): tab is NoteTab => tab.kind === "note");
+  return {
+    tabs: notes.map(({ vault, path }) => ({ vault, path })),
+    activeTab: notes.findIndex((tab) => tab.id === state.active),
+  };
+}
+
+/** Reopen the saved tabs of the vaults that are open, showing the one shown last. */
+export function restoreTabs(
+  saved: Pick<UiState, "tabs" | "activeTab">,
+  openVaults: readonly string[],
+): TabsAction[] {
+  const kept = (tab: SavedTab | undefined): tab is SavedTab =>
+    tab !== undefined && openVaults.includes(tab.vault);
+  const opens: TabsAction[] = saved.tabs
+    .filter(kept)
+    .map((tab) => ({ type: "open", vault: tab.vault, path: tab.path }));
+  const shown = saved.tabs[saved.activeTab];
+  return kept(shown)
+    ? [...opens, { type: "activate", id: tabId(shown.vault, shown.path) }]
+    : opens;
 }

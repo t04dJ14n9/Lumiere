@@ -71,7 +71,8 @@ and ⌥⌘←) the next and previous tab, ⌘B the files sidebar, ⌥⌘B the ou
 ⌘O Open Folder. The app menu runs the same commands. A key the
 editor uses itself, such as ⌘B for Bold while typing, stays the editor's.
 
-The layout (the panels, and each vault's open folders) and Color Theme are
+The layout (the panels, each vault's open folders, and the notes open in tabs,
+which open again at launch) and Color Theme are
 kept by the server (`/api/ui`), because the window's own storage does not
 last: its port changes every launch.
 
@@ -115,9 +116,8 @@ With no `--vault`, the vault used last opens again, if it is still there.
 | `GET /api/vaults`, `POST /api/vaults` `{"path"}` | the open and recent vaults; open one (the window only: `x-lumiere-shell`) |
 | `GET /api/files?vault=` | `{"files","partial"}`: a vault’s files, sorted, with their kind (read from its folders, no file stat-ed), at most 20,000; `partial` when there are more, which the file tree says |
 | `POST /api/open` `{"path"}` | show a note or folder (Finder, a second launch; the window only, or a process with no Origin) |
-| `GET /api/ui`, `POST /api/ui` | the window's layout, open folders and Color Theme (`src/shared/ui-state.ts`) |
+| `GET /api/ui`, `POST /api/ui` | the window's layout, open folders, open tabs and Color Theme (`src/shared/ui-state.ts`) |
 | `GET /api/events`, `?only=ink` | server-sent events: vaults changed, a note to open, a vault's plugins waiting for an answer (`{"type":"trust"}`), a drawing started or ended waiting (`{"type":"ink"}`); `only` keeps the listed types. Notes to open that come before a stream that takes them wait for one |
-| `GET /api/ui`, `POST /api/ui` | the window's layout and Color Theme (`src/shared/ui-state.ts`) |
 | `GET /api/trust`, `POST /api/trust` `{"vault","allowed"}` | the vaults waiting for an answer, with the plugins they turn on; the owner's answer, accepted only for a vault that asked |
 | `GET /api/ink`, `POST /api/ink` `{"id","sketch"?}` | the drawing the plugins wait for (`{"id","title","sketch"}`, the sketch as its file's metadata JSON), or `{}`; the window's drawing, or none when cancelled, accepted only for the drawing waiting |
 | `POST /api/sketch` | start Insert Sketch in the note last focused |
@@ -144,6 +144,7 @@ With no `--vault`, the vault used last opens again, if it is still there.
 - `src/shell/settings.ts`, `src/shell/settings-view.ts`: the settings, and how the Settings tab lays them out.
 - `src/shell/ui-state.ts`, `src/shared/ui-state.ts`, `src/server/ui-state.ts`: the layout and Color Theme, kept by the server.
 - `src/shell/tabs.ts`, `src/shell/tree.ts`, `src/shell/tree-state.ts`: tabs and tree state, as pure functions.
+- `src/shell/saved-tabs.ts`: the open tabs kept with the layout, and opened again at launch.
 - `src/shell/folders.ts`: which of the file list's folders are open, kept with the layout.
 - `src/shell/api.ts`, `src/shell/views.ts`: the server's API and the tree views, from the window.
 - `src/shell/theme.ts`: the window's light and dark palettes, and which one shows.

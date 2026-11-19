@@ -26,6 +26,7 @@ import {
   type TabsAction,
   type TabsState,
 } from "./tabs";
+import { useSavedTabs } from "./saved-tabs";
 import { closeWindow } from "./tauri";
 import { setColorTheme } from "./theme";
 import { useUiState, type UiStateHandle } from "./ui-state";
@@ -39,6 +40,7 @@ export function App() {
   const [tabs, dispatch] = useReducer(tabsReducer, noTabs);
   const [paletteOpen, setPaletteOpen] = useState(false);
   const opening = useOpening(vaults, dispatch, errors.report);
+  useSavedTabs({ ui, openVaults: vaults.open, tabs, dispatch });
   useServerEvents(opening.onServerEvent);
   useEffect(() => setColorTheme(ui.state.theme), [ui.state.theme]);
   const commands = windowCommands({

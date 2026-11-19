@@ -399,6 +399,8 @@ test("the window's layout and theme are kept, and only valid changes apply", asy
       outline: true,
       theme: "system",
       folders: {},
+      tabs: [],
+      activeTab: -1,
     },
   );
   const changed = await send(server.port, "/api/ui", {
@@ -416,6 +418,8 @@ test("the window's layout and theme are kept, and only valid changes apply", asy
     outline: false,
     theme: "dark",
     folders: { "/v": ["a", "a/b"] },
+    tabs: [],
+    activeTab: -1,
   };
   assert.deepEqual(JSON.parse(changed.body), kept);
   assert.deepEqual(

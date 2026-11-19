@@ -10,6 +10,15 @@ export type ColorTheme = "system" | "light" | "dark";
 /** Vault → the file list's open folders, by vault-relative path. */
 export type SavedFolders = Readonly<Record<string, readonly string[]>>;
 
+/** A note's tab, by its vault and its path in the vault. */
+export interface SavedTab {
+  readonly vault: string;
+  readonly path: string;
+}
+
+/** The most tabs kept between launches. */
+const MAX_SAVED_TABS = 64;
+
 export interface UiState {
   /** The files sidebar on the left. */
   readonly sidebar: boolean;
@@ -18,6 +27,10 @@ export interface UiState {
   readonly theme: ColorTheme;
   /** The folders open in each vault's file list; the others are closed. */
   readonly folders: SavedFolders;
+  /** The notes open in tabs, in order, reopened at launch. */
+  readonly tabs: readonly SavedTab[];
+  /** The index in `tabs` of the one shown; -1 for none. */
+  readonly activeTab: number;
 }
 
 export const DEFAULT_UI_STATE: UiState = {
@@ -25,6 +38,8 @@ export const DEFAULT_UI_STATE: UiState = {
   outline: true,
   theme: "system",
   folders: {},
+  tabs: [],
+  activeTab: -1,
 };
 
 const THEMES: readonly ColorTheme[] = ["system", "light", "dark"];
@@ -43,7 +58,24 @@ export function parseUiChange(input: unknown): Partial<UiState> {
     ...(isRecord(input.folders)
       ? { folders: parseFolders(input.folders) }
       : {}),
+    ...(Array.isArray(input.tabs) ? { tabs: parseTabs(input.tabs) } : {}),
+    ...(Number.isSafeInteger(input.activeTab) && Number(input.activeTab) >= -1
+      ? { activeTab: Number(input.activeTab) }
+      : {}),
   };
+}
+
+/** Each tab's vault and path; anything else is dropped. */
+function parseTabs(value: readonly unknown[]): SavedTab[] {
+  return value
+    .filter(
+      (tab): tab is SavedTab =>
+        isRecord(tab) &&
+        typeof tab.vault === "string" &&
+        typeof tab.path === "string",
+    )
+    .slice(0, MAX_SAVED_TABS)
+    .map(({ vault, path }) => ({ vault, path }));
 }
 
 /** Each vault's list of folder paths; what is not a list, or not a path in one, is dropped. */

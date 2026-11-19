@@ -2,11 +2,13 @@ import test from "node:test";
 import assert from "node:assert/strict";
 import {
   noTabs,
+  restoreTabs,
   SETTINGS_TAB,
   tabId,
   tabsReducer,
   tabTitle,
   tabToClose,
+  tabsToSave,
   type TabsState,
 } from "../../src/shell/tabs";
 
@@ -115,4 +117,33 @@ test("a sketch goes into a Markdown note, not a PDF or Settings", async () => {
   assert.equal(takesSketch(note("Attachments/Field handbook.pdf")), false);
   assert.equal(takesSketch({ kind: "settings", id: SETTINGS_TAB }), false);
   assert.equal(takesSketch(undefined), false);
+});
+
+test("the open notes are kept for the next launch and reopen there, the shown one shown", () => {
+  let state = open(noTabs, "a.md");
+  state = open(state, "b.md", "/w");
+  state = tabsReducer(state, { type: "openSettings" });
+  state = tabsReducer(state, { type: "activate", id: tabId("/v", "a.md") });
+  const saved = tabsToSave(state);
+  assert.deepEqual(saved, {
+    tabs: [
+      { vault: "/v", path: "a.md" },
+      { vault: "/w", path: "b.md" },
+    ],
+    activeTab: 0,
+  });
+
+  const reopened = restoreTabs(saved, ["/v", "/w"]).reduce(tabsReducer, noTabs);
+  assert.deepEqual(
+    reopened.tabs.map((tab) => tab.id),
+    [tabId("/v", "a.md"), tabId("/w", "b.md")],
+  );
+  assert.equal(reopened.active, tabId("/v", "a.md"));
+
+  // A vault that did not open again keeps its tabs closed.
+  const onlyW = restoreTabs(saved, ["/w"]).reduce(tabsReducer, noTabs);
+  assert.deepEqual(
+    onlyW.tabs.map((tab) => tab.id),
+    [tabId("/w", "b.md")],
+  );
 });
