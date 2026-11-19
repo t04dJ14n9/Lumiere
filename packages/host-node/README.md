@@ -28,6 +28,11 @@ any Node web server:
   embedder registered (below); the page registers none;
 - `/lumiere/pdf?path=&root=`: a PDF's page, Lumière PDF's viewer
   (`/lumiere/pdf/viewer/*`), which fetches the PDF from `/lumiere/pdf/bytes`.
+  That route answers a `Range` request with the one range, and lets the
+  page's copy of the bytes go once it has sent them whole: the viewer's
+  engine cannot read a PDF by range, so it fetches it once, whole
+  (`packages/pdf/docs/large-pdfs.md`). The pages of one workspace share
+  each read of a file.
   It runs only when the embedder passes the built viewer (`EditorAssets.pdf`);
 - `/lumiere/m/*`: the built editor. Its files carry an `ETag` and answer a
   request that names it with 304, so each page that opens the editor again

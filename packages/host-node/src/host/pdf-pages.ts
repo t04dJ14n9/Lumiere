@@ -150,9 +150,22 @@ export class PdfPage implements PdfWebview {
     }
   }
 
-  /** The bytes of `load`, while it is the newest. */
+  /** The bytes of `load`, while it is the newest and not yet fetched whole. */
   bytesOf(load: number): ArrayBuffer | undefined {
     return this.bytes?.load === load ? this.bytes.data : undefined;
+  }
+
+  /**
+   * The page fetched `load` whole: let its bytes go. The viewer's engine
+   * opens a PDF only from all its bytes (it cannot read by range:
+   * packages/pdf/docs/large-pdfs.md) and never fetches them again, so
+   * keeping them would hold a second copy of the file for as long as the
+   * tab is open.
+   */
+  fetchedWhole(load: number): void {
+    if (this.bytes?.load === load) {
+      this.bytes = undefined;
+    }
   }
 
   /** The page's socket. The page sends the viewer's messages as `rpc` frames. */

@@ -35,3 +35,45 @@ file would risk the webview rather than only be slow.
 
 The bookmark reader for `[[paper.pdf#` completions has its own, lower
 limit (200 MB), as it runs in the extension host.
+
+## Why the viewer cannot load a PDF by range
+
+Outside VS Code, `packages/host-node` serves the bytes at
+`/lumiere/pdf/bytes` and answers `Range` requests. The viewer still fetches
+the whole file once, because EmbedPDF 3.0.0, the engine it runs, opens a
+document in the browser only from all its bytes:
+
+- `LocalEngine.open` (`@embedpdf/engine`) accepts `kind: "bytes"`,
+  `"layerBytes"` and `"layerFile"` and rejects anything else ("local engine
+  only supports OpenInput.kind === 'bytes', 'layerBytes' or 'layerFile'").
+  `bytes` and `layerBytes` take a `Uint8Array | ArrayBuffer` of the whole
+  file, which becomes the `open.fatMem` / `open.layerMemBase` request: the
+  whole file copied into PDFium's WASM heap.
+- `layerFile` is the one input PDFium range-reads, and only from a file
+  path on the native Node runtime: in the WASM runtime the worker answers
+  "'layerFile' needs the native Node runtime; open the file's bytes
+  instead" (`@embedpdf/engine-services`, `handleOpen`).
+- The inputs that load from a server (`id`, `token`, `grant`) belong to the
+  cloud engine and speak EmbedPDF's own document API, not HTTP ranges of a
+  file.
+- PDFium's own progressive loading (`FPDFAvail_*`, `FPDF_LoadCustomDocument`
+  with a block reader) needs synchronous reads from inside the WASM call.
+  The runtime ships `FPDF_LoadCustomDocument` in its function table, but no
+  input or request of EmbedPDF 3 reaches it, and a page cannot answer a
+  synchronous read from the network without blocking the worker.
+
+So what the hosts do instead is hold as few copies as they can:
+
+- VS Code sends the bytes in the `load` message; the extension host keeps
+  none of them once sent.
+- host-node keeps the newest load's bytes for its page only until the page
+  has fetched them whole (a ranged request leaves them), then lets them go;
+  serving a range is a view of those bytes, not a copy. The pages of one
+  workspace share each read of a file.
+- The viewer page lets its fetched copy go as soon as the engine has opened
+  the document (`engine.tsx`). Until then it hands the engine a view, which
+  the engine copies: an `ArrayBuffer` would be moved into the worker,
+  leaving nothing for the main-thread engine to open if the worker fails.
+
+If a later EmbedPDF opens a document from a range reader in the browser,
+the host route is ready for it.

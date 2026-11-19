@@ -125,6 +125,7 @@ async function servePdfPage({
  * The bytes of the load a page asked for, while it is that page's newest:
  * all of them, or the one range a request asks for, from the bytes the
  * viewer core read (never read again from disk, which may have changed).
+ * Once they have gone out whole, the page lets them go (`fetchedWhole`).
  */
 async function serveBytes(
   res: ServerResponse,
@@ -132,8 +133,7 @@ async function serveBytes(
   pages: PdfPages,
 ): Promise<void> {
   const page = pages.get(url.searchParams.get("page") ?? "");
-  const bytes = page?.bytesOf(Number(url.searchParams.get("load")));
-  if (!page || !bytes) {
+  if (!page) {
     res.writeHead(404).end();
     return;
   }
@@ -143,14 +143,25 @@ async function serveBytes(
     res.writeHead(403).end();
     return;
   }
-  sendBytes(res, Buffer.from(bytes), range);
+  const load = Number(url.searchParams.get("load"));
+  const bytes = page.bytesOf(load);
+  if (!bytes) {
+    res.writeHead(404).end();
+    return;
+  }
+  // A view of the page's bytes, not a copy.
+  sendBytes(res, Buffer.from(bytes), range, () => page.fetchedWhole(load));
 }
 
-/** A buffer as a whole PDF, or the one byte range a request asks for. */
+/**
+ * A buffer as a whole PDF, or the one byte range a request asks for;
+ * `sentWhole` once the whole PDF has gone out.
+ */
 function sendBytes(
   res: ServerResponse,
   data: Buffer,
   rangeHeader: string | undefined,
+  sentWhole: () => void,
 ): void {
   const headers = {
     "content-type": "application/pdf",
@@ -166,6 +177,7 @@ function sendBytes(
     return;
   }
   if (!range) {
+    res.once("finish", sentWhole);
     res.writeHead(200, headers).end(data);
     return;
   }
