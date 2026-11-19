@@ -149,9 +149,11 @@ of the Host mid-handshake), it recreates the iframe once, and DSH's Reload and
   `ctx.sessionPersistence` for a stored session, as DSH's own file service
   does) and registers it with host-node before the page is served. A page
   cannot name a folder of its own: host-node refuses any `root` that is not
-  inside a registered one. A note outside its session's workspace (named by an
-  absolute address) is therefore refused: the tab reports that Lumière could
-  not open it, and DSH's own preview, in the viewer menu, still shows it. DSH's
+  inside a registered one. Registered roots are shared by every page: a note
+  inside the workspace of another session a page has already opened is
+  served, and only a note outside every registered workspace (named by an
+  absolute address) is refused: the tab reports that Lumière could not open
+  it, and DSH's own preview, in the viewer menu, still shows it. DSH's
   file reads are not contained to a workspace, so the server has nothing to
   check such a folder against. The host re-checks every path against the
   workspace.
