@@ -23,6 +23,7 @@ import { openMenuAtSelection, reportContextMenus } from "./context-menu";
 import { createUi } from "./ui";
 import { reconnectingSocket } from "./connection";
 import { showConnection } from "./disconnected";
+import { showSvgImagesSafely } from "./svg-images";
 
 interface VsCodeApi {
   postMessage(message: unknown): void;
@@ -48,6 +49,7 @@ listenToEmbedder(send);
 reportFocus(send);
 reportHidden(send);
 reportContextMenus(send);
+showSvgImagesSafely();
 
 /**
  * The embedder's messages arrive as `message` events, like the editor's RPC.

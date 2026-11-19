@@ -205,6 +205,11 @@ function installPageGlobals() {
     document,
     location: window.location,
     matchMedia: window.matchMedia,
+    // The shim watches for SVG images (page/svg-images.ts).
+    MutationObserver: class {
+      observe() {}
+      disconnect() {}
+    },
   });
   return { window, style, classes, dataset, parentPosts, origin, parent };
 }

@@ -37,6 +37,13 @@ xcrun devicectl device copy to --device <udid> --domain-type appDataContainer \
 - `src/native/window-commands.ts`: the menu bar's, keys' and edit menu's commands, for the window,
   and Insert Sketch from the edit menu.
 - `src/native/ink.ts`: the `LumiereInk` plugin (PencilKit) as the `ink` host service.
+- `src/resources.ts`: where the web view reads the files a note shows, which the
+  native router (`VaultRouter.swift`) serves from the vault's folder: images,
+  audio, video and PDFs as they are; an SVG only as plain text
+  (`_lumiere/vault-svg/<vault>/<path>.txt`), which the note's page shows from
+  a `data:` URL (host-node's `page/svg-images.ts`). Capacitor's file handler
+  adds no sandbox header, so nothing that can run script is served on the
+  app's origin.
 - `src/welcome.ts`: the note the app's folder starts with.
 - `index.html`: the page and its content security policy.
 - `scripts/build.mjs`: the build (host-web's `buildBrowserApp`).

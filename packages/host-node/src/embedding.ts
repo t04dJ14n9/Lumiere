@@ -98,6 +98,14 @@ export interface PortMessage {
  */
 export const TRANSPORT_META = "lumiere-transport";
 
+/**
+ * Ends the URL a host gives a note's SVG image when it serves the SVG's
+ * bytes there as plain text, because it cannot serve an SVG on the page's
+ * origin with the sandbox the other hosts give it (the iPad's router). The
+ * page shows it from a `data:` URL (page/svg-images.ts).
+ */
+export const SVG_IMAGE_MARK = "#lumiere-svg-image";
+
 export type EmbedderMessage = ThemeMessage | ShownMessage | PortMessage;
 export type PageMessage = OpenMessage | ConnectMessage;
 

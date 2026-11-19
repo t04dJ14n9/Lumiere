@@ -128,6 +128,7 @@ forbids this package from importing `vscode` or any embedder.
 - `src/host/inert.ts`: diffs, status entries and panels, which have no counterpart yet.
 - `src/page/shim.ts`, `src/page/ui.ts`, `src/page/theme.ts`: the page's stand-in for VS Code.
 - `src/page/connection.ts`, `src/page/disconnected.ts`: the page's socket, reconnected when it drops, and the dialog shown while it is down.
+- `src/page/svg-images.ts`: an SVG a host serves only as text (`SVG_IMAGE_MARK`, the iPad), shown from a `data:` URL.
 - `scripts/assets.mjs`, `scripts/menus.mjs`: what every embedder ships beside its code (the editor, the shim, the settings, the menu).
 
 ## Limits
