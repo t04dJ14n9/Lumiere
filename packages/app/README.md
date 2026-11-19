@@ -22,10 +22,17 @@ The **server** (`src/server`) starts Lumière's Markdown plugins through
 Every request must come from the window it was started for (`auth.ts`):
 
 - The launch token arrives once in the URL. It is moved into an HttpOnly,
-  SameSite=Strict cookie, and the URL is cleaned by a redirect.
+  SameSite=Strict cookie named for the port (`lumiere_token_<port>`: a
+  cookie is shared by every port of a host, so two servers would replace each
+  other's), and the URL is cleaned by a redirect. A process that is no
+  browser may send it as `lumiere_token`.
 - The Host header must name this server, so a DNS-rebinding page is
   refused.
-- A request that has an Origin must come from this server.
+- A request that has an Origin must come from this server, and one the
+  browser marks as made by another site's page (`Sec-Fetch-Site`
+  `same-site` or `cross-site`) is refused: a page on another local port
+  is the same site, and its `<img>` or link would carry the cookie with no
+  Origin.
 
 A page of a note or PDF is same-origin with the window and carries the same
 cookie, and the server reads and writes whatever its vaults hold. So the two

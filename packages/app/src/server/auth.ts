@@ -5,13 +5,31 @@
  * - the launch token, given once in the URL and then kept in an HttpOnly
  *   cookie (the URL is stripped by a redirect);
  * - the Host header names this server, which a DNS-rebinding page cannot;
- * - a request that has an Origin comes from this server's own origin.
+ * - a request that has an Origin comes from this server's own origin, and
+ *   one a browser marks as made by another site's page (`Sec-Fetch-Site`) is
+ *   refused: a cookie is not scoped to a port, so a page on another local
+ *   port is the same site and its `<img>` or link would carry the cookie
+ *   with no Origin.
  */
 import { randomBytes, timingSafeEqual } from "node:crypto";
 import type { IncomingMessage } from "node:http";
 import { SHELL_KEY_HEADER } from "../shared/shell-key";
 
+/**
+ * The cookie a process that is no browser sends the token in (the desktop
+ * app's open request, apps/desktop/src-tauri/src/server.rs). Still read from
+ * a browser too, for a window logged in before the cookie had its port.
+ */
 export const TOKEN_COOKIE = "lumiere_token";
+
+/**
+ * The cookie the window keeps the token in: named for the port, as a cookie
+ * is shared by every port of a host, and two servers would otherwise
+ * replace each other's.
+ */
+export function tokenCookie(port: number): string {
+  return `${TOKEN_COOKIE}_${port}`;
+}
 
 export type Admission =
   | { readonly kind: "admit" }
@@ -39,6 +57,10 @@ export function admit(
   if (origin !== undefined && origin !== `http://${host}`) {
     return { kind: "reject", status: 403 };
   }
+  const site = req.headers["sec-fetch-site"];
+  if (site === "same-site" || site === "cross-site") {
+    return { kind: "reject", status: 403 };
+  }
   const url = new URL(req.url ?? "/", `http://${host}`);
   const given = url.searchParams.get("token");
   if (given !== null) {
@@ -49,12 +71,13 @@ export function admit(
     return {
       kind: "redirect",
       location: url.pathname + url.search,
-      cookie: `${TOKEN_COOKIE}=${server.token}; HttpOnly; SameSite=Strict; Path=/`,
+      cookie: `${tokenCookie(server.port)}=${server.token}; HttpOnly; SameSite=Strict; Path=/`,
     };
   }
-  return sameSecret(readCookie(req, TOKEN_COOKIE), server.token)
-    ? { kind: "admit" }
-    : { kind: "reject", status: 401 };
+  const admitted = [tokenCookie(server.port), TOKEN_COOKIE].some((name) =>
+    sameSecret(readCookie(req, name), server.token),
+  );
+  return admitted ? { kind: "admit" } : { kind: "reject", status: 401 };
 }
 
 /**
