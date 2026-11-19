@@ -24,7 +24,7 @@ product choices for VS Code, not parity claims.
 | livePreview | Syntax hidden except where the selection is; rendered blocks crossed as one unit | No Reading view (DESIGN §25.8); comments stay visible, faint, as in Obsidian |
 | commands | Obsidian editor command IDs, save/undo/redo/close, Open as Text | Commands act on the active panel |
 | publicApi | Versioned extension API, plugin management, and **Open Copied Agent Reference** | Explicit `@path#lines`/full-URI navigation; native chat clicks and global cross-extension history are unchanged |
-| vault | Index of every note: link resolution like Obsidian's, resolved and unresolved links, tags, aliases, headings, blocks | `.obsidian` marks a vault; without it the workspace folder is the vault. 50,000-file cap; hidden folders and `node_modules` skipped |
+| vault | Index of every note: link resolution like Obsidian's, resolved and unresolved links, tags, aliases, headings, blocks | `.obsidian` marks a vault; without it the workspace folder is the vault. 50,000-note cap (other files capped apart); hidden folders, `node_modules` and, in VS Code, `files.exclude` skipped |
 | resources | Contained file access for embeds and previews | Files outside the vault and escaping symlinks are refused |
 
 ## Features (on by default unless noted)

@@ -934,7 +934,8 @@ interface VaultIndex {
   indexed and links to them resolve, but they are flagged `excluded`, and the
   quick switcher, suggestions, search and unlinked mentions leave them out. A
   filter without wildcards is a path prefix, as in Obsidian; globs are also
-  accepted. Limit 50,000 files per vault; beyond that the index reports
+  accepted. Limit 50,000 notes and 50,000 other files per vault, counted
+  apart so other files never crowd out notes; beyond that the index reports
   itself partial.
 
 ### 12.3 Link resolution

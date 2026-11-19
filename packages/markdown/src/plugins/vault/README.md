@@ -38,6 +38,7 @@ name are resolved again.
   `uniqueFileLookup`, link resolution, new-link text, resolved and unresolved
   links.
 - `exclusion.ts`: excluded-file filters and always-ignored folders.
+- `listing-budget.ts`: how many notes and other files a listing keeps.
 - `snapshot.ts`: the persisted format.
 - `manifest.ts`: root markers and excluded files settings.
 
@@ -68,7 +69,10 @@ The VS Code adapter is `src/host/vault-system.ts`; the worker is
   is a path prefix (Obsidian's form); globs are also accepted.
 - Hidden folders and `node_modules` are never indexed. Symbolic links to
   folders are not followed.
-- A vault indexes at most 50,000 files and warns when it has more.
+- A vault indexes at most 50,000 notes and 50,000 other files, counted apart
+  so that other files never crowd notes out, and warns when it has more. In
+  VS Code, what `files.exclude` hides is neither walked nor indexed (read when
+  the vault is listed or watched).
 - A note outside every workspace folder is a vault of its own folder, with no
   index, watching or saved snapshot.
 - Nested vaults: a folder with a root marker inside a larger vault is its own

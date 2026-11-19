@@ -58,7 +58,7 @@ export type FileEvent =
   | { type: "rename"; oldPath: string; file: ListedFile };
 /** What the indexer needs from the file system, so tests can use memory. */
 export interface VaultFileSystem {
-  /** Files under the root outside ignored folders, up to `limit`; only the root's own files when `shallow`. */
+  /** Files under the root outside ignored folders, up to `limit` notes and `limit` other files (ListingBudget); only the root's own files when `shallow`. */
   list(
     root: string,
     limit: number,

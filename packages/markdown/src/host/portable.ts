@@ -21,6 +21,7 @@ export {
 export { readSettings } from "./settings";
 export { createVaultParser } from "./vault-parser";
 export { isIgnoredPath } from "../plugins/vault/exclusion";
+export { ListingBudget } from "../plugins/vault/listing-budget";
 export { MARKDOWN_EDITOR } from "../shared/editor-provider";
 export {
   followsNewNoteFolder,

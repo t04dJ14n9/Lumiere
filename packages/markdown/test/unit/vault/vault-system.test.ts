@@ -107,6 +107,84 @@ test("vault-system traverses directories concurrently in batches and skips ignor
   assert.ok(!entered.some((path) => path.includes(".obsidian")));
 });
 
+test("vault-system skips what files.exclude hides and limits notes apart from other files", async () => {
+  const FileType = { Unknown: 0, File: 1, Directory: 2, SymbolicLink: 64 };
+  const parseUri = (raw: string) => {
+    const url = new URL(raw);
+    return {
+      scheme: url.protocol.slice(0, -1),
+      path: decodeURIComponent(url.pathname),
+      toString: () => url.href,
+    };
+  };
+  const folder = { uri: parseUri("file:///repo") };
+  const entered: string[] = [];
+  const tree: Record<string, [string, number][]> = {
+    "/repo": [
+      ["app.ts", FileType.File],
+      ["debug.log", FileType.File],
+      ...Array.from(
+        { length: 30 },
+        (_, n) => [`image-${n}.png`, FileType.File] as [string, number],
+      ),
+      ["out", FileType.Directory],
+      ["notes", FileType.Directory],
+    ],
+    "/repo/out": [["Generated.md", FileType.File]],
+    "/repo/notes": Array.from(
+      { length: 5 },
+      (_, n) => [`Note ${n}.md`, FileType.File] as [string, number],
+    ),
+  };
+  const { createVaultSystem } = loadVaultSystem({
+    FileType,
+    RelativePattern: class {},
+    Uri: {
+      parse: parseUri,
+      joinPath: (base: { toString(): string }, ...parts: string[]) =>
+        parseUri(
+          `${base.toString().replace(/\/+$/, "")}/${parts.map(encodeURIComponent).join("/")}`,
+        ),
+    },
+    workspace: {
+      workspaceFolders: [folder],
+      getWorkspaceFolder: () => folder,
+      getConfiguration: (section: string) => ({
+        get: (key: string) =>
+          section === "files" && key === "exclude"
+            ? { out: true, "**/*.log": true, "**/*.ts": false }
+            : undefined,
+      }),
+      fs: {
+        async readDirectory(uri: { path: string }) {
+          entered.push(uri.path);
+          return tree[uri.path] ?? [];
+        },
+        async stat() {
+          return { type: FileType.File, mtime: 1, size: 1 };
+        },
+      },
+    },
+  });
+  const system = createVaultSystem(
+    { storageUri: undefined } as never,
+    fakeConfiguration(),
+  );
+
+  const listing = await system.list("file:///repo", 10);
+  const paths = listing.files.map((file) => file.path);
+  assert.ok(!entered.includes("/repo/out"), "an excluded folder is not walked");
+  assert.ok(!paths.includes("debug.log"));
+  assert.ok(paths.includes("app.ts"), "a pattern set to false is off");
+  assert.equal(
+    paths.filter((path) => path.endsWith(".md")).length,
+    5,
+    "every note, though other files filled the limit first",
+  );
+  assert.equal(paths.filter((path) => !path.endsWith(".md")).length, 10);
+  assert.equal(listing.partial, true);
+});
+
 test("vault-system says file names ignore case where VS Code's workspace folders do", (t) => {
   const { createVaultSystem } = loadVaultSystem({});
   const system = createVaultSystem(
