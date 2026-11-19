@@ -55,10 +55,13 @@
   "capabilities": {
     "untrustedWorkspaces": {
       "supported": "limited",
-      "description": "Markdown: remote content and external code processors are disabled. PDF: the viewer renders PDFs in a sandboxed webview, so it works in Restricted Mode; the agent bridge (a local MCP server) and the Copy Link for Agent target are not read from workspace settings until the folder is trusted.",
+      "description": "Markdown: remote content and external code processors are disabled, and the Copy Link for Agent target is not read from workspace settings until the folder is trusted. PDF: the viewer renders PDFs in a sandboxed webview, so it works in Restricted Mode; the agent bridge (a local MCP server), the Copy Link for Agent target, the annotations folder and the protected folders are not read from workspace settings until the folder is trusted.",
       "restrictedConfigurations": [
+        "lumiere.markdown.copyLinkForAgent.target",
         "lumiere.pdf.agentBridge.enabled",
-        "lumiere.pdf.copyLinkForAgent.target"
+        "lumiere.pdf.copyLinkForAgent.target",
+        "lumiere.pdf.annotations.folder",
+        "lumiere.pdf.annotations.protectedFolders"
       ]
     }
   },
