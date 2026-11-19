@@ -11,6 +11,9 @@ placeholders through Resources. Note renders retain the native source identity,
 full text and line offsets for links/tasks/footnotes. Media controls, image dialogs,
 recovery streams and nested passes are disposed when the owning pass or plugin
 stops. Original placeholders are restored and late resource results are ignored.
+A note, base or PDF embed far down a long rendered block loads only when it
+comes near the screen (`near-viewport.ts`), so a block with many of them
+renders the ones the reader can reach first.
 
 A block embed (`![[Note#^id]]`) shows the block as Obsidian scopes it
 (`src/markdown/metadata/block-extract.ts`): an id on a list item shows that
@@ -40,6 +43,10 @@ it go (`image-selection.ts`, `image-size.ts`). While selected, the caret is hidd
 - `manifest.ts`: enablement and Insert Embed contribution.
 - `webview.ts`: renderer, post-processor and command registrations.
 - `post-process.ts`: resource resolution, per-kind display and pass lifetime.
+- `near-viewport.ts`: note, base and PDF embeds wait until they are within
+  1,500 px of the editor scroller's visible area (an IntersectionObserver
+  rooted at the scroller); images, media, web addresses, and embeds outside
+  an editor scroller (hover previews) load at once.
 - `embed-lives.ts`: what each embed of a pass holds (listeners, teardowns, the file it shows), released when it is shown again or the pass ends.
 - `embed-lives.test.ts`: release order and lookup by file.
 - `missing.ts`: the text an embed that cannot be shown says (`“x.png” could not be found.`, a missing heading, `failed to fetch image` for bytes that did not load, a circular or too deep embed).

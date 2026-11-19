@@ -11,6 +11,7 @@ import { renderBaseEmbed } from "./base-embed";
 import { mountPdfEmbed } from "./pdf-embed";
 import { EmbedLives } from "./embed-lives";
 import { vaultEmbedResource } from "./resource-cache";
+import { NearViewport, waitsUntilNear } from "./near-viewport";
 
 interface EmbedOptions {
   pass: RenderPass;
@@ -50,6 +51,8 @@ class EmbedPass implements PassEmbeds {
   private readonly standIns = new ImageStandIns();
   /** How many times each embed was shown: only the latest lands. */
   private readonly showings = new Map<HTMLElement, number>();
+  /** Notes, bases and PDFs load only when they come near the screen. */
+  private readonly near = new NearViewport();
   private isActive = true;
   constructor(private readonly options: EmbedOptions) {}
 
@@ -59,7 +62,11 @@ class EmbedPass implements PassEmbeds {
       "[data-resource]",
     )) {
       this.rememberPlaceholder(node);
-      this.show(node);
+      if (waitsUntilNear(node.dataset.resource ?? "")) {
+        this.near.whenNear(node, () => this.show(node));
+      } else {
+        this.show(node);
+      }
     }
   }
 
@@ -75,6 +82,7 @@ class EmbedPass implements PassEmbeds {
 
   dispose(): void {
     this.isActive = false;
+    this.near.dispose();
     this.standIns.restoreAll();
     this.lives.releaseAll();
     for (const reset of this.restore) {
