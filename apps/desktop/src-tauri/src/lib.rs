@@ -4,13 +4,15 @@
 //! 1. start the server (`server.rs`, the contract in
 //!    packages/app/src/server/contract.ts) and open its page in a window;
 //! 2. give that page what a browser cannot: a folder picker, a menu, files
-//!    opened from Finder or Explorer (`menu.rs`, `opening.rs`);
+//!    opened from Finder or Explorer, and web links opened in the system's
+//!    browser (`menu.rs`, `opening.rs`, `external.rs`);
 //! 3. stop the server when the app quits, so unsaved notes are written.
 //!
 //! Everything else (vaults, files, editing, settings) belongs to the server
 //! and its page. When a feature seems to need Rust, put it in the server
 //! first; the page is the same in a browser and in this window.
 
+mod external;
 mod menu;
 mod opening;
 mod server;
@@ -62,6 +64,8 @@ fn open_window(app: &tauri::AppHandle) {
         .title("Lumière")
         .inner_size(1200.0, 800.0)
         .min_inner_size(640.0, 400.0)
+        // A note's web and mail links open in the system's apps.
+        .on_new_window(|url, _features| external::on_new_window(url))
         .build();
     if let Err(error) = built {
         eprintln!("Lumière: could not open its window: {error}");

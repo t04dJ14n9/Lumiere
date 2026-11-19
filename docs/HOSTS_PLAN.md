@@ -308,7 +308,9 @@ The pass, in the Tauri window:
    - A plain click on a wikilink reveals its source.
    - Mod-click follows it into a new tab.
    - A link to a missing note creates it.
-   - An external link opens the system browser.
+   - An external link opens the system browser (and a `mailto:` link the
+     mail app): `apps/desktop/src-tauri/src/external.rs`, unit-tested for
+     which schemes leave, not yet tried in the window.
 5. **Outline**, in the right panel.
    - It shows the shown note's headings and follows tab switches.
    - Clicking a heading scrolls to it.

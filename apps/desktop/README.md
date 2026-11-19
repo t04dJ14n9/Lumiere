@@ -26,7 +26,9 @@ extension.
 
 The Rust side stays thin on purpose. It starts the server, opens a window on
 the server's URL, and passes on what only a native app gets: the menu, the
-folder picker, and files opened from Finder or a second launch. Everything
+folder picker, files opened from Finder or a second launch, and a note's web
+and mail links, which a web view leaves to its app and `src/external.rs`
+hands to the system's browser or mail app (`open` on macOS). Everything
 else (vaults, files, editing, settings, outline) is the server's, so it
 works the same in a browser. If a feature seems to need Rust, put it in the
 server first.
@@ -81,7 +83,7 @@ pnpm --filter @workshop/desktop check
 ```
 
 This runs `cargo check` and the Rust unit tests: the ready line, the open
-request and launch arguments. The server and window have their own tests in
+request, launch arguments and which links leave for the system. The server and window have their own tests in
 `packages/app` (`pnpm check` at the root runs them).
 
 ## Not done yet
