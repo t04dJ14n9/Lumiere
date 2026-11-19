@@ -1299,7 +1299,7 @@
         "command": "lumiere.markdown.toggleTextEditor",
         "key": "ctrl+e",
         "mac": "cmd+e",
-        "when": "editorLangId == 'markdown' && editorTextFocus && !activeCustomEditorId && !isInDiffEditor && resourceFilename =~ /\\.md$/i"
+        "when": "editorLangId == 'markdown' && editorTextFocus && !activeCustomEditorId && !isInDiffEditor && resourceFilename =~ /\\.(md|markdown)$/i"
       },
       {
         "command": "lumiere.markdown.toggleBold",
