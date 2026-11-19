@@ -5,12 +5,16 @@
  * case *before* it starts and one after, so the parent can name a case that
  * stalled when it has to kill this process.
  */
+import { pathToFileURL } from "node:url";
 import { INPUTS } from "./inputs";
 import type { Target } from "./target";
 
 async function main(): Promise<void> {
   const [file, name] = process.argv.slice(2);
-  const loaded = (await import(file!)) as { targets: Record<string, Target> };
+  // An absolute Windows path (D:\...) is not a module specifier; its file URL is.
+  const loaded = (await import(pathToFileURL(file!).href)) as {
+    targets: Record<string, Target>;
+  };
   const target = loaded.targets[name!]!;
   for (const [input, text] of Object.entries(INPUTS)) {
     const cases: [string, () => unknown][] =
