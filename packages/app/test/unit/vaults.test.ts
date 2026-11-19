@@ -42,6 +42,34 @@ test("the recent vaults are written beside their file and renamed over it", asyn
   assert.deepEqual(await readdir(path.dirname(file)), ["vaults.json"]);
 });
 
+test("at launch the vault used last opens again; a vault given or a missing one opens nothing more", async (t) => {
+  const dir = await scratch(t);
+  await mkdir(path.join(dir, "a"));
+  await mkdir(path.join(dir, "b"));
+  const file = path.join(dir, "data", "vaults.json");
+  const first = new Vaults(file);
+  await first.load();
+  await first.add(path.join(dir, "a"));
+  await first.add(path.join(dir, "b"));
+
+  const relaunched = new Vaults(file);
+  await relaunched.load();
+  await relaunched.restoreLast();
+  assert.deepEqual(relaunched.list().open, [path.join(dir, "b")]);
+
+  const given = new Vaults(file);
+  await given.load();
+  await given.add(path.join(dir, "a"));
+  await given.restoreLast();
+  assert.deepEqual(given.list().open, [path.join(dir, "a")]);
+
+  await rm(path.join(dir, "a"), { recursive: true });
+  const gone = new Vaults(file);
+  await gone.load();
+  await gone.restoreLast();
+  assert.deepEqual(gone.list().open, []);
+});
+
 test("opening a vault announces it once and remembers it, newest first", async (t) => {
   const dir = await scratch(t);
   await mkdir(path.join(dir, "a"));

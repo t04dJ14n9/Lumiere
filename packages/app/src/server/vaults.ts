@@ -67,6 +67,18 @@ export class Vaults {
     return vault;
   }
 
+  /**
+   * At launch with no vault given, open the one used last, as Obsidian does;
+   * one that is gone is left in the recent list and nothing opens.
+   */
+  async restoreLast(): Promise<void> {
+    const last = this.recent[0];
+    if (this.open.size > 0 || last === undefined) {
+      return;
+    }
+    await this.add(last).catch(() => undefined);
+  }
+
   /** Close an open vault; it stays in the recent list. */
   async close(folder: string): Promise<void> {
     const vault = (await realPath(folder)) ?? path.resolve(folder);

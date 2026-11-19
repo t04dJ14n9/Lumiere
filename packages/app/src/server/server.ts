@@ -161,6 +161,7 @@ async function loadState(
   for (const vault of setup.vaults) {
     await vaults.add(vault);
   }
+  await vaults.restoreLast();
   const ui = new UiStore(path.join(setup.data, "window.json"));
   await ui.load();
   return [vaults, ui];

@@ -100,6 +100,8 @@ lumiere-server [--vault <dir>]... [--port <n>|0] [--host 127.0.0.1]
                [--token <t>] [--data <dir>] [--assets <dir>] [--version]
 ```
 
+With no `--vault`, the vault used last opens again, if it is still there.
+
 - **Ready.** Once ready, one JSON line goes to stdout:
   `{"lumiere":"ready","url":…,"port":…,"pid":…,"version":…}`. Nothing else
   ever goes to stdout. Logs go to stderr, as JSON lines.
