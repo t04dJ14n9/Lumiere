@@ -22,7 +22,9 @@ parsing, references are numbered from Live Preview's partial tree (a number
 depends only on the references before it) rather than a parse of the whole
 note; `carry.ts` moves the registry to the next document version through a
 plain edit that touches no footnote, so typing does not extract them all
-again. The
+again. In a note without `[^`, an edit reads only its own lines to see
+whether it wrote one (`marker-presence.ts`), so rendered blocks are
+re-rendered for a changed footnote without reading the note per keystroke. The
 markdown dialect claims `[^label]:` lines before CommonMark link-reference
 definitions, so a body that is only a link or URL still parses as a
 paragraph with FootnoteRef (and Link / WikiLink) for Live Preview. The
@@ -54,6 +56,8 @@ whole heading so its text and outline entry stay intact.
 - `webview.ts`: named invalidation, renderer and command registrations.
 - `inline.ts`: the Live Preview renderer for references and definitions.
 - `carry.ts`: carries the registry through edits that cannot change it.
+- `marker-presence.ts`: whether a note holds `[^`, read once and then only
+  where edits change it; `marker-presence.test.ts` covers it.
 - `preprocess.ts`: pure reference resolution and placeholder substitution.
 - `render-references.ts`: pass reference registry and mounted-control lifetime.
 - `reference-widget.ts`: reference widget, its number, and the hover/focus
