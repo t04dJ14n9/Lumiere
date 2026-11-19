@@ -102,3 +102,35 @@ test("inline title host owns resource-enabled RPC handlers and reports rename er
   await host.dispose();
   await client.dispose();
 });
+
+test("a host that names no inline title setting keeps the manifest's default, off", async () => {
+  const { host, client } = endpoints();
+  const root = createRoot();
+  const panel = {
+    id: "panel",
+    document: fakeDocument(),
+    rpc: host,
+  } as EditorPanel;
+  root.provide("editors", {
+    all: () => [panel],
+    active: () => panel,
+    capture: async () => {
+      throw new Error("Unexpected capture");
+    },
+    restore: async () => {},
+  } satisfies Editors);
+  provideHostServices(
+    root,
+    fakeHost({
+      settings: { forNote: () => ({ preset: "obsidian", mode: "source" }) },
+    }),
+  );
+  root.plugin(inlineTitleHost);
+  await root.settled();
+  await assert.rejects(client.call(protocol, "rename", { title: "Note" }), {
+    code: "PluginDisabled",
+  });
+  await root.dispose();
+  await host.dispose();
+  await client.dispose();
+});

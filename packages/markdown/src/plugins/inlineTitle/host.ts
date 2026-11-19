@@ -5,6 +5,7 @@ import type {} from "../editor/api";
 import { protocol } from "./protocol";
 import { TitleRenames } from "./rename";
 import { titleFromSource } from "./title";
+import manifest from "./manifest";
 
 /** Root host half owns independent panel transfers across native recreation. */
 export const inlineTitleHost: Plugin = {
@@ -54,7 +55,7 @@ class InlineTitles {
       const config = this.options.host.settings.forNote(panel.document);
       const enabled =
         config.preset === "obsidian" &&
-        (config.features?.inlineTitle?.enabled ?? true);
+        (config.features?.inlineTitle?.enabled ?? manifest.defaultEnabled);
       if (!enabled) {
         void this.handlers.get(panel.id)?.();
         this.handlers.delete(panel.id);
