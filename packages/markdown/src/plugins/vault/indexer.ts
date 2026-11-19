@@ -7,6 +7,7 @@ import type { FileEntry } from "./file-table";
 import { MemoryVaultIndex } from "./memory-index";
 import { ParseQueue } from "./parse-queue";
 import { Snapshot } from "./snapshot";
+import { KeyedTimers } from "./keyed-timers";
 import type {
   FileEvent,
   ListedFile,
@@ -64,7 +65,7 @@ export class VaultIndexer {
   readonly ready: Promise<void>;
   private readonly queue: ParseQueue;
   private readonly snapshot = new Snapshot();
-  private readonly timers = new Map<string, ReturnType<typeof setTimeout>>();
+  private readonly timers = new KeyedTimers();
   private stopWatching?: Disposer;
   private disposed = false;
   private reconciling = false;
@@ -140,14 +141,14 @@ export class VaultIndexer {
         this.entry({ uri: uri ?? fallbackUri, path, mtime: 0, size: 0 }),
       ]);
     }
-    this.debounce(`overlay:${path}`, this.delays.overlay, () =>
+    this.timers.debounce(`overlay:${path}`, this.delays.overlay, () =>
       this.queue.setOverlay(path, text),
     );
   }
 
   /** The note was closed; its file on disk is authoritative again. */
   clearOverlay(path: string): void {
-    this.cancel(`overlay:${path}`);
+    this.timers.cancel(`overlay:${path}`);
     this.queue.clearOverlay(path);
   }
 
@@ -172,9 +173,7 @@ export class VaultIndexer {
     this.disposed = true;
     void this.queue.stop();
     void this.stopWatching?.();
-    for (const key of [...this.timers.keys()]) {
-      this.cancel(key);
-    }
+    this.timers.cancelAll();
     await this.save();
   }
 
@@ -427,11 +426,11 @@ export class VaultIndexer {
     if (!this.options.store || this.timers.has("save")) {
       return;
     }
-    this.debounce("save", this.delays.save, () => void this.save());
+    this.timers.debounce("save", this.delays.save, () => void this.save());
   }
 
   private save(): Promise<void> {
-    this.cancel("save");
+    this.timers.cancel("save");
     this.saving = this.saving.then(() => this.writeSnapshot());
     return this.saving;
   }
@@ -446,21 +445,5 @@ export class VaultIndexer {
     } catch (error) {
       this.options.onError?.("Could not save the vault index", error);
     }
-  }
-
-  private debounce(key: string, delay: number, run: () => void): void {
-    this.cancel(key);
-    this.timers.set(
-      key,
-      setTimeout(() => {
-        this.timers.delete(key);
-        run();
-      }, delay),
-    );
-  }
-
-  private cancel(key: string): void {
-    clearTimeout(this.timers.get(key));
-    this.timers.delete(key);
   }
 }

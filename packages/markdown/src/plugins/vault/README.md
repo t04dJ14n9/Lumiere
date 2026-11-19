@@ -32,6 +32,7 @@ name are resolved again.
 - `registry.ts`: finds a note's vault and shares indexers; routes open documents.
 - `roots.ts`: vault root discovery from root markers (DESIGN §12.1).
 - `indexer.ts`: start-up, reconciliation, file events, overlays, saving.
+- `keyed-timers.ts`: the indexer's named, restartable timers (overlay pauses, snapshot saves).
 - `parse-queue.ts`: sequential parsing with overlays and hash reuse.
 - `memory-index.ts`: the in-memory index behind `VaultIndex`.
 - `file-table.ts`, `resolve.ts`, `link-text.ts`, `link-maps.ts`: files and
