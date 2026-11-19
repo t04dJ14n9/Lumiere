@@ -23,16 +23,19 @@ export function vaultFileUrl(
   }
   for (const [id, folder] of vaults) {
     if (path.startsWith(`${folder}/`)) {
-      const relative = path
-        .slice(folder.length + 1)
-        .split("/")
-        .map(encodeURIComponent)
-        .join("/");
-      return new URL(
-        `_lumiere/vault/${encodeURIComponent(id)}/${relative}`,
-        base,
-      ).href;
+      return vaultAddress(id, path.slice(folder.length + 1), base);
     }
   }
   return undefined;
+}
+
+/** Where the router serves `path` (inside the vault, with "/") of vault `id`. */
+export function vaultAddress(
+  id: string,
+  path: string,
+  base: URL | string,
+): string {
+  const relative = path.split("/").map(encodeURIComponent).join("/");
+  return new URL(`_lumiere/vault/${encodeURIComponent(id)}/${relative}`, base)
+    .href;
 }

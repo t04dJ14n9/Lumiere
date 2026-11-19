@@ -159,7 +159,10 @@ test("the channel carries frames both ways, and closing the tab closes the panel
 
 test("a PDF's page is Lumière's viewer, with its host's stand-in first and the PDF named", async () => {
   const { openPdfPage } = await import("../../src/pages");
-  const page = openPdfPage(new Uint8Array([37, 80, 68, 70]), URLS);
+  // The reader's file, as a picked folder hands it over: named, not read.
+  const file = new File([new Uint8Array([37, 80, 68, 70])], "Paper.pdf");
+  file.arrayBuffer = () => assert.fail("the window reads the PDF");
+  const page = openPdfPage(file, URLS);
   assert.match(page.url, /^blob:/);
   const html = await (await fetch(page.url)).text();
   const shim = html.indexOf(

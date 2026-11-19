@@ -9,9 +9,14 @@ import {
   type VaultFileSystem,
 } from "@workshop/host-web";
 import { isNotFound, vaultFiles } from "./native/vault-files";
+import { vaultAddress } from "./resources";
 
 export class NativeFileSystem implements VaultFileSystem {
-  constructor(private readonly vault: string) {}
+  /** `base` is the app's own address, where its router serves vault files. */
+  constructor(
+    private readonly vault: string,
+    private readonly base: URL | string,
+  ) {}
 
   async read(path: string): Promise<Uint8Array> {
     try {
@@ -24,6 +29,22 @@ export class NativeFileSystem implements VaultFileSystem {
     } catch (error) {
       throw isNotFound(error) ? notFound(path) : error;
     }
+  }
+
+  /**
+   * The file as the web view's router serves it (VaultRouter.swift): read
+   * from disk by WebKit, not carried over the plugin as base64 and decoded
+   * (a PDF in a tab). The router serves only what a note shows; anything
+   * else is read whole.
+   */
+  async readBlob(path: string): Promise<Blob> {
+    const response = await fetch(
+      vaultAddress(this.vault, path, this.base),
+    ).catch(() => undefined);
+    if (response?.ok) {
+      return response.blob();
+    }
+    return new Blob([(await this.read(path)) as Uint8Array<ArrayBuffer>]);
   }
 
   async write(

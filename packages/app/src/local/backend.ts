@@ -84,7 +84,7 @@ async function openPdf(
   uri: string,
   pages: EditorPageUrls,
 ): Promise<OpenedEditor> {
-  return openPdfPage(await files.readBytes(uri), pages);
+  return openPdfPage(await files.readBlob(uri), pages);
 }
 
 /** The window's layout and theme, kept in `file`. */

@@ -35,7 +35,7 @@ async function main(): Promise<void> {
   const { vaults } = await vaultFiles.vaults();
   const paths = new Map<string, string>();
   for (const vault of vaults) {
-    paths.set(vault.id, mountVault(files, vault, paths));
+    paths.set(vault.id, mountVault(files, vault, paths, base));
   }
   const appFolder = paths.get("app")!;
   await welcome(files, appFolder);
@@ -68,7 +68,7 @@ async function main(): Promise<void> {
       if (!vault) {
         return undefined;
       }
-      const path = paths.get(vault.id) ?? mountVault(files, vault, paths);
+      const path = paths.get(vault.id) ?? mountVault(files, vault, paths, base);
       paths.set(vault.id, path);
       return path;
     },
@@ -97,6 +97,7 @@ function mountVault(
   files: Mounts,
   vault: NativeVault,
   taken: ReadonlyMap<string, string>,
+  base: URL,
 ): string {
   const name = vault.name.replace(/[/\\]/g, "-") || "Folder";
   const used = new Set(taken.values());
@@ -104,7 +105,7 @@ function mountVault(
   for (let n = 2; used.has(path); n++) {
     path = `/vaults/${name} ${n}`;
   }
-  files.mount(path, new NativeFileSystem(vault.id));
+  files.mount(path, new NativeFileSystem(vault.id, base));
   return path;
 }
 
