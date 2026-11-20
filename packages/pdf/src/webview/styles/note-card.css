@@ -4,6 +4,8 @@
  */
 .note-card {
   box-sizing: border-box;
+  /* As wide as the note, not as the wrapper Anchored positions it in. */
+  width: max-content;
   max-width: min(480px, calc(100vw - 32px));
   max-height: min(320px, calc(100vh - 32px));
   overflow: auto;
