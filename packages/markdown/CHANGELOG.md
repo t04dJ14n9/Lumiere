@@ -2,6 +2,11 @@
 
 ## 0.1.0 (unreleased)
 
+- A Markdown link into a hidden folder, such as
+  `[source](/.raw/captured/page.md)`, now previews and embeds its file. A
+  click already opened it, but the hover preview said "Resource not found":
+  the vault index skips hidden folders, and only the click looked on disk.
+
 - Leaving a note or PDF no longer moves the keyboard focus to restore VS
   Code's Outline. The restore focused the Outline in the main window's side
   bar and then the active editor group, a moment after the reader had left;
