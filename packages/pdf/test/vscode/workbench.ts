@@ -245,9 +245,17 @@ export async function contextMenu(
     await chooseNativeItem(page, label);
     return;
   }
+  // By the item's own label, exactly: its accessible name also holds its
+  // shortcut ("Highlight Ctrl+Alt+H"), and "Highlight" would also find
+  // "Highlight with Note".
+  const exact = new RegExp(
+    `^${label.replace(/[.*+?^${}()|[\]\\]/gu, "\\$&")}$`,
+    "u",
+  );
   const item = page
     .locator(".monaco-menu")
-    .getByRole("menuitem", { name: label });
+    .getByRole("menuitem")
+    .filter({ has: page.locator(".action-label", { hasText: exact }) });
   // A right-click right after another menu closed can open nothing: again.
   await expect(async () => {
     if (!(await item.isVisible())) {
