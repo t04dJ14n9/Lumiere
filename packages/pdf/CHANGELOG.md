@@ -6,6 +6,16 @@
   Outline (it focused the main window's Outline, then the active editor
   group, a moment after the reader had left, possibly for another window).
 
+- **Notes on marks, in Markdown.** Resting the pointer on a mark with a
+  note shows it under the mark in a card drawn like VS Code's own hovers,
+  rendered as Markdown with working web links; a small note icon marks
+  which marks have one. Edit Note… now writes the note in that card, in a
+  multi-line field (⌘Enter / Ctrl+Enter keeps it, Escape cancels), instead
+  of a one-line prompt; the card of one of your marks has an Edit button
+  too. **Highlight with Note** in the menu of selected text highlights it
+  and opens the note to write. Notes are still kept as the mark's
+  `contents`, so saving into the PDF and exporting carry them.
+
 - Fixed (review 2026-11-15):
   - The host writes a PDF only for Save Annotations into This PDF, and never
     one in `lumiere.pdf.annotations.protectedFolders`, whatever the viewer

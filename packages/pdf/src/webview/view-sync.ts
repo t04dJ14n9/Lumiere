@@ -131,7 +131,8 @@ interface ActionContext {
 /** What the extension's commands do to marks (`mark-menu.ts`, annotation history). */
 export interface MarkActions {
   markSelection: (tool: MarkToolId) => void;
-  setNote: (note: string) => void;
+  editNote: () => void;
+  highlightWithNote: () => void;
   setColor: (color: string) => void;
   deleteMark: () => void;
   undo: () => void;
@@ -172,7 +173,8 @@ const ACTIONS: Handlers = {
   find: (_, { openSearch }) => openSearch(),
   setTool: ({ tool }, { setTool }) => setTool(tool),
   markSelection: ({ tool }, { marks }) => marks.markSelection(tool),
-  setMarkNote: ({ note }, { marks }) => marks.setNote(note),
+  editMarkNote: (_, { marks }) => marks.editNote(),
+  highlightWithNote: (_, { marks }) => marks.highlightWithNote(),
   setMarkColor: ({ color }, { marks }) => marks.setColor(color),
   annotationUndo: (_, { marks }) => marks.undo(),
   annotationRedo: (_, { marks }) => marks.redo(),

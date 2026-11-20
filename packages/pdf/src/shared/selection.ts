@@ -43,7 +43,7 @@ export interface SelectedPage {
 }
 
 const MAX_TEXT_LENGTH = 100_000;
-/** As `MAX_NOTE_LENGTH` in view-state.ts: the longest note a mark sends and takes. */
+/** The longest note a mark reports, and the most the note card lets one hold. */
 export const MAX_NOTE = 10_000;
 const MAX_PAGES = 500;
 const MAX_RECTS_PER_PAGE = 2_000;

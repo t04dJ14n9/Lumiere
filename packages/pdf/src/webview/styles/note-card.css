@@ -1,0 +1,200 @@
+/*
+ * A mark's note (note-card.tsx), drawn like VS Code's own hovers: the hover
+ * widget's colours, the workbench font, the theme's link and code colours.
+ */
+.note-card {
+  box-sizing: border-box;
+  /* As wide as the note, not as the wrapper Anchored positions it in. */
+  width: max-content;
+  max-width: min(480px, calc(100vw - 32px));
+  max-height: min(320px, calc(100vh - 32px));
+  overflow: auto;
+  padding: 4px 8px;
+  color: var(--vscode-editorHoverWidget-foreground, var(--vscode-foreground));
+  background: var(--vscode-editorHoverWidget-background, #252526);
+  border: 1px solid var(--vscode-editorHoverWidget-border, #454545);
+  border-radius: 4px;
+  box-shadow: 0 2px 8px var(--vscode-widget-shadow, #0008);
+  font-family: var(--vscode-font-family, sans-serif);
+  font-size: var(--vscode-font-size, 13px);
+  line-height: 1.45;
+  overflow-wrap: anywhere;
+  user-select: text;
+  cursor: auto;
+}
+
+/* Edit, at the card's top right like a hover's action; shown while the card is. */
+.note-card-edit {
+  float: right;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 22px;
+  height: 22px;
+  margin: -2px -6px 0 6px;
+  padding: 0;
+  border: none;
+  border-radius: 4px;
+  color: var(--vscode-icon-foreground, inherit);
+  background: transparent;
+  cursor: pointer;
+  opacity: 0.7;
+}
+
+.note-card-edit:hover {
+  background: var(--vscode-toolbar-hoverBackground, #5a5d5e50);
+  opacity: 1;
+}
+
+.note-card-edit:focus-visible {
+  outline: 1px solid var(--vscode-focusBorder, #007fd4);
+  outline-offset: -1px;
+}
+
+/* Writing the note: VS Code's input box, growing with what is typed. */
+.note-card.editing {
+  width: min(360px, calc(100vw - 32px));
+  padding: 6px;
+  overflow: visible;
+}
+
+.note-card-input {
+  display: block;
+  box-sizing: border-box;
+  width: 100%;
+  min-height: calc(4lh + 8px);
+  max-height: 240px;
+  field-sizing: content;
+  padding: 4px 6px;
+  resize: none;
+  color: var(--vscode-input-foreground, inherit);
+  background: var(--vscode-input-background, #3c3c3c);
+  border: 1px solid var(--vscode-input-border, transparent);
+  border-radius: 2px;
+  font: inherit;
+  line-height: 1.45;
+}
+
+.note-card-input:focus {
+  outline: 1px solid var(--vscode-focusBorder, #007fd4);
+  outline-offset: -1px;
+}
+
+.note-card-input::placeholder {
+  color: var(--vscode-input-placeholderForeground, #a6a6a6);
+}
+
+.note-card-hint {
+  margin-top: 4px;
+  color: var(--vscode-descriptionForeground, #a6a6a6);
+  font-size: 0.9em;
+}
+
+.note-card-body > :first-child {
+  margin-top: 0;
+}
+
+.note-card-body > :last-child {
+  margin-bottom: 0;
+}
+
+.note-card p,
+.note-card ul,
+.note-card ol,
+.note-card pre,
+.note-card blockquote,
+.note-card table {
+  margin: 4px 0;
+}
+
+.note-card ul,
+.note-card ol {
+  padding-left: 20px;
+}
+
+.note-card h1,
+.note-card h2,
+.note-card h3,
+.note-card h4,
+.note-card h5,
+.note-card h6 {
+  margin: 6px 0 4px;
+  font-size: 1em;
+  font-weight: 600;
+}
+
+.note-card a {
+  color: var(--vscode-textLink-foreground, #3794ff);
+  text-decoration: none;
+  cursor: pointer;
+}
+
+.note-card a:hover {
+  color: var(--vscode-textLink-activeForeground, #3794ff);
+  text-decoration: underline;
+}
+
+.note-card code {
+  padding: 1px 3px;
+  border-radius: 3px;
+  background: var(--vscode-textCodeBlock-background, #0003);
+  font-family: var(--vscode-editor-font-family, monospace);
+  font-size: 0.92em;
+}
+
+.note-card pre {
+  padding: 4px 6px;
+  overflow: auto;
+  border-radius: 3px;
+  background: var(--vscode-textCodeBlock-background, #0003);
+}
+
+.note-card pre code {
+  padding: 0;
+  background: none;
+}
+
+.note-card blockquote {
+  padding-left: 8px;
+  border-left: 3px solid var(--vscode-textBlockQuote-border, #007acc80);
+  color: var(--vscode-descriptionForeground, inherit);
+}
+
+.note-card hr {
+  border: none;
+  border-top: 1px solid var(--vscode-editorHoverWidget-border, #454545);
+}
+
+.note-card table {
+  border-collapse: collapse;
+}
+
+.note-card th,
+.note-card td {
+  padding: 2px 6px;
+  border: 1px solid var(--vscode-editorHoverWidget-border, #454545);
+}
+
+/* The note icon by a mark that has a note (note-badges.tsx): a tiny hover widget. */
+.note-badge {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  box-sizing: border-box;
+  width: 16px;
+  height: 16px;
+  border: 1px solid var(--vscode-editorHoverWidget-border, #454545);
+  border-radius: 3px;
+  color: var(--vscode-editorHoverWidget-foreground, var(--vscode-foreground));
+  background: var(--vscode-editorHoverWidget-background, #252526);
+  opacity: 0.85;
+  cursor: default;
+}
+
+.note-badge:hover {
+  opacity: 1;
+}
+
+.note-badge .codicon {
+  font-size: 12px;
+}

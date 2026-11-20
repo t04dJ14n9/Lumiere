@@ -417,6 +417,9 @@ importers:
       '@workshop/core':
         specifier: workspace:*
         version: link:../core
+      markdown-it:
+        specifier: 15.0.3
+        version: 15.0.3
       react:
         specifier: 19.3.1
         version: 19.3.1

@@ -55,12 +55,18 @@ test("markSelection takes one of the four text marks, and nothing else", () => {
   );
 });
 
-test("setMarkNote takes any note, empty to remove it; setMarkColor a preset", () => {
-  assert.deepEqual(parseViewerAction({ action: "setMarkNote", note: "" }), {
-    action: "setMarkNote",
-    note: "",
+test("Edit Note asks the viewer to open the note, which it carries no text for; setMarkColor takes a preset", () => {
+  assert.deepEqual(parseViewerAction({ action: "editMarkNote" }), {
+    action: "editMarkNote",
   });
-  assert.equal(parseViewerAction({ action: "setMarkNote" }), undefined);
+  assert.deepEqual(parseViewerAction({ action: "highlightWithNote" }), {
+    action: "highlightWithNote",
+  });
+  // The note is written in the viewer's own card now, not sent from a prompt.
+  assert.equal(
+    parseViewerAction({ action: "setMarkNote", note: "x" }),
+    undefined,
+  );
   assert.deepEqual(
     parseViewerAction({ action: "setMarkColor", color: "#FF6B6B" }),
     { action: "setMarkColor", color: "#FF6B6B" },

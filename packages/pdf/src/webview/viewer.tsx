@@ -20,6 +20,8 @@ import { useSelectionReporting } from "./selection";
 import { useAnnotationEditing } from "./annotation-mode";
 import { useAnnotationSaveSession } from "./annotation-session";
 import { useMarkMenu, type MarkMenu } from "./mark-menu";
+import { NoteBadges } from "./note-badges";
+import { NoteCard } from "./note-card";
 import { useToolMode } from "./tool-mode";
 import { currentToolbarSettings } from "./toolbar-settings";
 import { rememberPageColors } from "./page-colors";
@@ -84,6 +86,7 @@ export function Viewer(): React.JSX.Element {
           navigation={navigation}
           selection={view.selection}
           searching={search.isOpen}
+          isOwnMark={view.isOwnMark}
         />
       </div>
     </div>
@@ -143,6 +146,7 @@ function useViewerState() {
     documentArea,
     tool: tools.tool,
     runAction: tools.runAction,
+    isOwnMark: tools.annotationSave.isOwn,
     regionsEnabled,
     zen,
     toolbar: { ...setting, mode: zenToolbarMode(setting.mode, zen) },
@@ -180,7 +184,8 @@ function useViewerTools(deps: ViewerToolsDeps) {
     setChoices: (next) => setChoices((current) => ({ ...current, ...next })),
     marks: {
       markSelection: marks.markSelection,
-      setNote: marks.setNote,
+      editNote: marks.editNote,
+      highlightWithNote: marks.highlightWithNote,
       setColor: marks.setColor,
       deleteMark: marks.deleteMark,
       undo: editing.undo,
@@ -292,11 +297,13 @@ function DocumentPages({
   navigation,
   selection,
   searching,
+  isOwnMark,
 }: {
   choices: ViewChoices;
   navigation: ReturnType<typeof withHistory>;
   selection: Selection;
   searching: boolean;
+  isOwnMark: React.ComponentProps<typeof NoteCard>["isOwn"];
 }): React.JSX.Element {
   const paged = choices.scrollMode === "paged";
   return (
@@ -306,13 +313,18 @@ function DocumentPages({
         className="viewport"
         // The Stage has no scrolling element, so no native scrollbars: its own
         // are drawn over it, except where a page is turned, not scrolled.
+        // A mark's note icon and note card sit there too, beside the mark.
         overlay={
-          paged ? undefined : (
-            <>
-              <Scrollbar axis="y" />
-              <Scrollbar axis="x" />
-            </>
-          )
+          <>
+            {!paged && (
+              <>
+                <Scrollbar axis="y" />
+                <Scrollbar axis="x" />
+              </>
+            )}
+            <NoteBadges />
+            <NoteCard isOwn={isOwnMark} />
+          </>
         }
       >
         {(page) => (

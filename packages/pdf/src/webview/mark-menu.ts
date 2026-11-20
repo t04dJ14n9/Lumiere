@@ -13,6 +13,7 @@ import {
 import { markColorPatch, type MarkToolId } from "../shared/annotation-tools";
 import { postToHost } from "./host";
 import { lookUpPageAt } from "./look-up-pages";
+import { requestNoteEdit } from "./note-edit-request";
 import { currentPageColors } from "./page-colors";
 import type { SetAnnotationRegion } from "./selection";
 
@@ -26,8 +27,10 @@ export interface MarkMenu {
   openAt(event: MouseEvent): boolean;
   /** Mark the selected text. */
   markSelection(tool: MarkToolId): void;
-  /** Change the note of the mark the menu was opened on; empty removes it. */
-  setNote(note: string): void;
+  /** Highlight the selected text, then open the new mark's note to write it. */
+  highlightWithNote(): void;
+  /** Open the note of the mark the menu was opened on, to write it (note-card.tsx). */
+  editNote(): void;
   /** Change the colour of the mark the menu was opened on. */
   setColor(color: string): void;
   /** Delete the mark the menu was opened on. */
@@ -45,13 +48,12 @@ export interface MarkMenuOptions {
 /**
  * Marks are made and changed from the context menu, never by a tool: select
  * text and pick Highlight, Underline, Strikeout or Squiggly; right-click
- * a mark for Edit Note…, Change Color or Delete Annotation. Only Lumiere's
- * own marks answer a right-click: the PDF's own annotations came with the
- * file and stay as they are.
+ * a mark for Edit Note… (written in the mark's note card), Change Color or
+ * Delete Annotation. Only Lumiere's own marks answer a right-click: the
+ * PDF's own annotations came with the file and stay as they are.
  *
  * The mark the menu was opened on stays the target until the next left
- * press or Escape, so the command the menu runs (after a note is typed,
- * perhaps) still finds it.
+ * press or Escape, so the command the menu runs still finds it.
  */
 export function useMarkMenu(options: MarkMenuOptions): MarkMenu {
   const annotation = useOptionalCapability(AnnotationToken);
@@ -112,8 +114,21 @@ function menuOver(state: MenuState): MarkMenu {
         void report("mark the text", annotation.createFromSelection(tool));
       }
     },
-    setNote: (note) =>
-      withMark(state, (mark, api) => setNote(state, mark, api, note)),
+    highlightWithNote: () => {
+      if (annotation) {
+        const made = annotation
+          .createFromSelection("highlight")
+          .then(({ annotations }) => {
+            // One mark per page: the note goes on the first.
+            const [first] = annotations;
+            if (first) {
+              requestNoteEdit({ ref: first.ref });
+            }
+          });
+        void report("mark the text", made);
+      }
+    },
+    editNote: () => withMark(state, (mark) => editNote(state, mark)),
     setColor: (color) =>
       withMark(state, (mark, api) => setColor(state, mark, api, color)),
     deleteMark: () =>
@@ -135,21 +150,16 @@ function withMark(
   }
 }
 
-function setNote(
-  state: MenuState,
-  mark: Annotation,
-  annotation: AnnotationCapability,
-  note: string,
-): void {
-  const change = annotation
-    .update(mark.ref, { contents: note })
-    .then(({ annotation: updated }) => {
-      // The reported mark carries the new note, for the next Edit Note….
+function editNote(state: MenuState, mark: Annotation): void {
+  requestNoteEdit({
+    ref: mark.ref,
+    onSaved: (updated) => {
+      // The reported mark carries the new note, for Copy Link for Agent.
       if (state.target.current === mark) {
         state.remember(updated);
       }
-    });
-  void report("change the note", change);
+    },
+  });
 }
 
 function setColor(
