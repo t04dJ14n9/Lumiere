@@ -1,5 +1,30 @@
 # Changelog
 
+## 0.1.18 (pre-release, 2026-11-20)
+
+Fixes from a full code review (#775), each with a test.
+
+- Markdown: text after a closing `$$` on a later line of a formula is kept;
+  typing while images are imported no longer drops the paste.
+- Markdown: large notes and vaults are faster. Inserting a table row redraws
+  only its cells, a note is not hashed again on every edit, `.base` embeds
+  send a tenth of the data, embeds load as they come near the screen, and
+  listing a vault reads only what it needs first.
+- Markdown: Ctrl/Cmd+E switches from the text editor to Lumiere only in a
+  `.md` or `.markdown` file, not in diff editors, untitled files or notebook
+  cells.
+- PDF: annotations saved in another window show up in this one; a PDF engine
+  that stops working says so and offers Reload; files over 512 MB are
+  refused; a PDF embed turns pages without reopening the file; the context
+  sent to an agent includes the selected region's image.
+- Windows: Git features find a note's repository however Windows spells the
+  folder (a short name such as `RUNNER~1`, or another case).
+- App and desktop (preview): the file tree can create, rename, move and
+  delete (to the system trash), and draws only the rows in view; the window
+  shows at once; Git asks before it runs in a vault and blocks hooks; on
+  Windows the server starts without a console window, and a save waits for a
+  program that briefly holds the note open.
+
 ## 0.1.17 (pre-release, 2026-11-19)
 
 - PDF: the right-click menu on selected text shows **Highlight**,
