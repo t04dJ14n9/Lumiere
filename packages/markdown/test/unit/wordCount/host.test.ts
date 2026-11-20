@@ -72,8 +72,72 @@ test("the active Lumiere editor's selection is counted even when a text editor s
   assert.deepEqual(f.shown, ["1 word 5 characters"]);
 });
 
+test("a caret move does not count the whole note again until its text changes", async (t) => {
+  let reads = 0;
+  let version = 1;
+  const panel = {
+    document: {
+      uri: NOTE,
+      get version() {
+        return version;
+      },
+      getText: () => {
+        reads++;
+        return TEXT;
+      },
+    },
+    rpc: { call: async () => ({ text: "" }) },
+  } as unknown as EditorPanel;
+  const f = await start({ panels: [panel], active: panel });
+  t.after(() => f.root.dispose());
+  const caretMoved = async () => {
+    f.root.emit("editor/selectionChanged", panel, false);
+    await new Promise((resolve) => setTimeout(resolve, 300));
+  };
+  assert.equal(reads, 1);
+
+  await caretMoved();
+  assert.equal(reads, 1);
+
+  version = 2;
+  await caretMoved();
+  assert.equal(reads, 2);
+  assert.equal(f.shown.at(-1), "4 words 22 characters");
+});
+
 test("a Lumiere editor on the note is counted when no text editor shows it", async (t) => {
   const f = await start({ panels: [lumierePanel("")] });
   t.after(() => f.root.dispose());
   assert.deepEqual(f.shown, ["4 words 22 characters"]);
+});
+
+test("a caret move in an unchanged note neither counts it again nor fetches an empty selection", async (t) => {
+  let reads = 0;
+  let calls = 0;
+  const panel = {
+    document: {
+      uri: NOTE,
+      version: 3,
+      getText: () => {
+        reads += 1;
+        return TEXT;
+      },
+    },
+    rpc: {
+      call: async () => {
+        calls += 1;
+        return { text: "" };
+      },
+    },
+  } as unknown as EditorPanel;
+  const f = await start({ panels: [panel], active: panel });
+  t.after(() => f.root.dispose());
+  assert.deepEqual([reads, calls], [1, 1]);
+  for (let move = 0; move < 3; move += 1) {
+    f.root.emit("editor/selectionChanged", panel, false);
+    await new Promise((resolve) => setTimeout(resolve, 260));
+  }
+  assert.deepEqual([reads, calls], [1, 1]);
+  assert.equal(f.shown.length, 4);
+  assert.deepEqual(f.shown.at(-1), "4 words 22 characters");
 });

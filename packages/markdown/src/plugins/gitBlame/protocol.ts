@@ -27,14 +27,26 @@ const version = new Schema<number | string>(
   },
 );
 
+/**
+ * The longest text fields a blame result carries. Git allows longer ones, so
+ * the host shortens them (host.ts) rather than have the schema refuse the
+ * whole result.
+ */
+export const blameTextLimits = {
+  authorName: 200,
+  authorEmail: 320,
+  subject: 500,
+  body: 8000,
+} as const;
+
 const blameOk = Schema.object({
   commit: Schema.string().max(128),
   shortCommit: Schema.string().max(16),
-  authorName: Schema.string().max(200),
-  authorEmail: Schema.string().max(320),
+  authorName: Schema.string().max(blameTextLimits.authorName),
+  authorEmail: Schema.string().max(blameTextLimits.authorEmail),
   authorDate: integer,
-  subject: Schema.string().max(500),
-  body: Schema.string().max(8000).optional(),
+  subject: Schema.string().max(blameTextLimits.subject),
+  body: Schema.string().max(blameTextLimits.body).optional(),
   committerDate: integer.optional(),
   line: integer.min(1),
   boundary: Schema.boolean().optional(),

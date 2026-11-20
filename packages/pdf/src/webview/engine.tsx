@@ -13,12 +13,16 @@ import {
   type EngineHost,
   type EngineMode,
 } from "./engine-host";
+import {
+  isEngineFailure,
+  reportEngineFailure,
+  useEngineFailure,
+} from "./engine-failure";
+import { engineHealth } from "./engine-health";
 import { postToHost } from "./host";
+import { PasswordPrompt } from "./password-prompt";
 import { DOCUMENT_ID, viewerPlugins } from "./plugins";
 import { Viewer } from "./viewer";
-
-/** A worker that has not opened the PDF within this time is given up. */
-const WORKER_TIMEOUT_MS = 15_000;
 
 /** Who the author of a mark made in the viewer is. */
 const AUTHOR: Identity = { displayName: "Lumiere" };
@@ -55,7 +59,9 @@ export interface PdfBytes {
  *
  * PDFium normally runs in a web worker so rendering never blocks scrolling.
  * If the worker cannot start (a blocked blob URL, a failed WASM fetch, a
- * crash, or silence), the engine restarts on the main thread instead. The
+ * crash, or silence), the engine restarts on the main thread instead; a
+ * PDF that is locked or damaged is the file's answer, not the worker's
+ * failure, and is shown as such (`engine-failure.ts`). The
  * engines belong to the host (engine-host.ts, owned by main.tsx), which keeps
  * the engine across reloads; this component only asks for them.
  */
@@ -110,6 +116,19 @@ function useHostEngine(
   return state;
 }
 
+/**
+ * Why the engine stopped working since it started (`engine-health.ts`);
+ * undefined while it works.
+ */
+function useEngineDeath(engine: ViewerEngine | undefined): string | undefined {
+  const [cause, setCause] = useState<string>();
+  useEffect(() => {
+    const health = engine && engineHealth(engine);
+    return health?.onDeath(setCause);
+  }, [engine]);
+  return cause;
+}
+
 /** The pane this viewer opens in, for the pictures it will draw. */
 function currentPane(): PaneSize {
   return {
@@ -136,10 +155,23 @@ function EngineSession({
   const [documents] = useState(() => [
     { source: () => bytesToOpen(bytes), name: "document.pdf" },
   ]);
-  const [opened, setOpened] = useState(false);
-  useEngineFailure({ error, worker, opened, onWorkerFailure });
+  // The engine opened the PDF, or said why it cannot: the worker works.
+  const [answered, setAnswered] = useState(false);
+  const markAnswered = useCallback(() => setAnswered(true), []);
+  const died = useEngineDeath(engine);
+  useEngineFailure({
+    // A worker that dies before the PDF opened gives way to the main thread.
+    error: error ?? (worker && !answered ? died : undefined),
+    worker,
+    answered,
+    onWorkerFailure,
+    report: reportToHost,
+  });
   if (!engine) {
     return <Status text="Starting the PDF engine…" />;
+  }
+  if (died !== undefined && (answered || !worker)) {
+    return <EngineStopped cause={died} onReload={() => reload(host)} />;
   }
   return (
     <EmbedPDF
@@ -151,30 +183,61 @@ function EngineSession({
       page={PAGE_LOOK}
       renderError={(failure) => <Failed error={failure} />}
     >
-      <DocumentGate
-        fallback={<Status text="Opening the PDF…" />}
-        locked={() => (
-          <Status text="This PDF is password-protected, which the viewer cannot open." />
-        )}
-        error={(document) => (
-          <OpenFailed
-            document={document}
-            worker={worker}
-            onWorkerFailure={onWorkerFailure}
-          />
-        )}
-      >
-        <OnMount
-          callback={() => {
-            performance.mark("pdf:opened");
-            bytes.current = undefined;
-            setOpened(true);
-          }}
-        >
-          <Viewer />
-        </OnMount>
-      </DocumentGate>
+      <OpenedDocument
+        worker={worker}
+        onWorkerFailure={onWorkerFailure}
+        onAnswer={markAnswered}
+        onOpened={() => {
+          performance.mark("pdf:opened");
+          bytes.current = undefined;
+        }}
+      />
     </EmbedPDF>
+  );
+}
+
+/**
+ * The viewer once the PDF is open; until then, what the engine said of it:
+ * a password to ask for, or why it could not be opened.
+ */
+function OpenedDocument({
+  worker,
+  onWorkerFailure,
+  onAnswer,
+  onOpened,
+}: {
+  worker: boolean;
+  onWorkerFailure: () => void;
+  /** The engine answered for the PDF: it opened, is locked, or is damaged. */
+  onAnswer: () => void;
+  onOpened: () => void;
+}): React.JSX.Element {
+  return (
+    <DocumentGate
+      fallback={<Status text="Opening the PDF…" />}
+      locked={(document) => (
+        <OnMount callback={onAnswer}>
+          <PasswordPrompt document={document} />
+        </OnMount>
+      )}
+      error={(document) => (
+        <OpenFailed
+          document={document}
+          worker={worker}
+          onWorkerFailure={onWorkerFailure}
+          onFileFailure={onAnswer}
+        />
+      )}
+    >
+      <OnMount
+        callback={() => {
+          onOpened();
+          onAnswer();
+        }}
+      >
+        <Viewer />
+      </OnMount>
+    </DocumentGate>
   );
 }
 
@@ -192,78 +255,83 @@ function bytesToOpen(bytes: PdfBytes): OpenInput {
   };
 }
 
-/**
- * A worker engine that fails, or never opens the PDF, gives way to one on
- * the main thread; a failing main-thread engine is reported to the host.
- */
-function useEngineFailure({
-  error,
-  worker,
-  opened,
-  onWorkerFailure,
-}: {
-  error: unknown;
-  worker: boolean;
-  opened: boolean;
-  onWorkerFailure: () => void;
-}): void {
-  useEffect(() => {
-    if (error) {
-      reportEngineFailure(error, worker, onWorkerFailure);
-    }
-  }, [error, onWorkerFailure, worker]);
-
-  // Treat a worker that never answers like one that failed.
-  useEffect(() => {
-    if (!worker || opened) {
-      return;
-    }
-    const timer = window.setTimeout(onWorkerFailure, WORKER_TIMEOUT_MS);
-    return () => window.clearTimeout(timer);
-  }, [onWorkerFailure, opened, worker]);
-}
-
-function reportEngineFailure(
-  error: unknown,
-  worker: boolean,
-  onWorkerFailure: () => void,
-): void {
-  if (worker) {
-    console.warn(
-      "The PDF engine could not start in a worker; using the main thread.",
-      error,
-    );
-    onWorkerFailure();
-  } else {
-    postToHost({
-      type: "error",
-      message: `The PDF engine failed: ${String(error)}`,
-    });
-  }
+function reportToHost(message: string): void {
+  postToHost({ type: "error", message });
 }
 
 /**
- * The PDF did not open. Most often it is the file (damaged), which the
- * engine says as `invalid-input`; any other reason is the engine's own (a
- * worker that failed to boot rejects every document with `operation-failed`),
- * and a worker gives way to the main thread for it.
+ * The PDF did not open. When the engine failed (`isEngineFailure`), a worker
+ * gives way to the main thread. Otherwise it is the file (damaged, or not a
+ * PDF): the engine answered, and a main-thread engine would only say the
+ * same after starting PDFium again.
  */
 function OpenFailed({
   document,
   worker,
   onWorkerFailure,
+  onFileFailure,
 }: {
   document: FailedDocumentInfo;
   worker: boolean;
   onWorkerFailure: () => void;
+  onFileFailure: () => void;
 }): React.JSX.Element {
   const { code, message } = document.error;
+  const engineFailed = isEngineFailure(code);
   useEffect(() => {
-    if (code === "operation-failed") {
-      reportEngineFailure(message, worker, onWorkerFailure);
+    if (engineFailed) {
+      reportEngineFailure(message, {
+        worker,
+        onWorkerFailure,
+        report: reportToHost,
+      });
+    } else {
+      onFileFailure();
     }
-  }, [code, message, onWorkerFailure, worker]);
-  return <Status text="This PDF could not be opened." />;
+  }, [engineFailed, message, onWorkerFailure, onFileFailure, worker]);
+  return (
+    <Status
+      text={
+        engineFailed
+          ? "This PDF could not be opened."
+          : "This PDF could not be opened: the file is damaged or is not a PDF."
+      }
+    />
+  );
+}
+
+/**
+ * Start a new engine, once the dead one has stopped, and ask the extension
+ * for the PDF again: the page let its own copy go once the PDF was open.
+ * The extension sends it as to a new page, with the reading place.
+ */
+function reload(host: EngineHost<ViewerEngine>): void {
+  host.restart();
+  postToHost({ type: "ready" });
+}
+
+/**
+ * The engine stopped working after the PDF opened: say so, rather than
+ * leave pages that never draw and calls that never answer.
+ */
+function EngineStopped({
+  cause,
+  onReload,
+}: {
+  cause: string;
+  onReload: () => void;
+}): React.JSX.Element {
+  useEffect(() => {
+    reportToHost(`The PDF engine stopped working: ${cause}`);
+  }, [cause]);
+  return (
+    <div className="status engine-stopped" role="alert">
+      <p>The PDF engine stopped working, so this PDF cannot be shown.</p>
+      <button type="button" onClick={onReload}>
+        Reload
+      </button>
+    </div>
+  );
 }
 
 /** The viewer itself failed to start (a plugin could not be set up). */

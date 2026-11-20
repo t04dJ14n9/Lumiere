@@ -216,11 +216,12 @@ test("saved positions carry a schema version; other versions and malformed value
   };
   preferences.save(uri, position);
   await new Promise((resolve) => setImmediate(resolve));
-  const key = state.keys()[0]!;
-  assert.equal(
-    (state.get(key) as { version?: number }).version,
-    SAVED_POSITION_VERSION,
-  );
+  // Every PDF's place is in one entry, by URI.
+  const key = "lumiere.pdf.readingPositions";
+  const name = String(uri);
+  assert.deepEqual(state.keys(), [key]);
+  const saved = state.get(key) as Record<string, { version?: number }>;
+  assert.equal(saved[name]?.version, SAVED_POSITION_VERSION);
   assert.deepEqual(preferences.position(uri), position);
   for (const stored of [
     position, // saved by an older build, without a version
@@ -230,7 +231,7 @@ test("saved positions carry a schema version; other versions and malformed value
     null,
     "garbage",
   ]) {
-    await state.update(key, stored);
+    await state.update(key, { [name]: stored });
     assert.equal(preferences.position(uri), undefined, JSON.stringify(stored));
   }
   preferences.dispose();

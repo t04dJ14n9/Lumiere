@@ -99,17 +99,23 @@ test("a file that cannot be read is reported with its display path, and nothing 
 test("a change on disk reloads once the writes settle, with the next load number", async (t) => {
   t.mock.timers.enable({ apis: ["setTimeout"] });
   let changed: (() => void) | undefined;
+  let disk = new Uint8Array([37, 80, 68, 70]);
   const { posted, receive } = open({
+    read: async () => disk,
     watch: (_uri, onChange) => {
       changed = onChange;
       return () => undefined;
     },
   });
   await receive({ type: "ready" });
+  // Another program writes the file: the watcher fires twice as it settles.
+  disk = new Uint8Array([37, 80, 68, 70, 45, 50]);
   changed?.();
   changed?.();
   t.mock.timers.tick(150);
-  await new Promise((resolve) => setImmediate(resolve));
+  for (let tick = 0; tick < 5; tick++) {
+    await new Promise((resolve) => setImmediate(resolve));
+  }
   const loads = posted
     .filter((message) => message.type === "load")
     .map((message) => message.load);

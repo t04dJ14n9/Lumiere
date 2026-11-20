@@ -344,6 +344,13 @@ test("Ctrl/Cmd+E toggles Lumiere and the host text editor, not Source mode", asy
   assert.match(inLumiere!.when ?? "", /&& lumiere\.markdown\.editorFocus$/);
   assert.ok(inText, "one binding for the built-in Markdown text editor");
   assert.match(inText!.when ?? "", /editorTextFocus && !activeCustomEditorId/);
+  // Only a note's own text editor (.md or .markdown): elsewhere the toggle does nothing and
+  // would still take VS Code's Quick Open (Cmd+E: Use Selection for Find).
+  assert.match(inText!.when ?? "", /&& !isInDiffEditor/);
+  assert.match(
+    inText!.when ?? "",
+    /&& resourceFilename =~ \/\\\.\(md\|markdown\)\$\/i$/,
+  );
   assert.doesNotMatch(
     inText!.when ?? "",
     /activeCustomEditorId == 'lumiere\.markdown\.editor'/,

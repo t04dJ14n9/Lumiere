@@ -1,6 +1,6 @@
 import type {} from "../plugins/editor/api";
 import type {} from "../plugins/render/api";
-import type { BaseContext, Infer, Plugin } from "@workshop/core";
+import type { BaseContext, Infer, Logger, Plugin } from "@workshop/core";
 import type { featureSettings } from "../shared/features";
 import { PluginSwitch, type WantedPlugin } from "../shared/plugin-switch";
 import {
@@ -127,6 +127,37 @@ async function loadWebviewPlugin(
   return plugin;
 }
 
+type LoadPlugin = (id: string) => Promise<Plugin<unknown> | undefined>;
+
+/**
+ * Load each feature's chunk, by id. One that fails to load (a dropped
+ * request, a missing file) is reported and left out: the others still run.
+ */
+async function loadEach(
+  ids: readonly string[],
+  load: LoadPlugin,
+  logger: Logger,
+): Promise<ReadonlyMap<string, Plugin<unknown>>> {
+  const results = await Promise.allSettled(ids.map((id) => load(id)));
+  const plugins = new Map<string, Plugin<unknown>>();
+  results.forEach((result, index) => {
+    const id = ids[index]!;
+    if (result.status === "rejected") {
+      logger.error(`The ${id} feature could not be loaded`, result.reason);
+    } else if (result.value) {
+      plugins.set(id, result.value);
+    }
+  });
+  return plugins;
+}
+
+/** Fetch chunks ahead of use; the feature switch reports any that fail. */
+function preload(ids: readonly string[]): Promise<void> {
+  return Promise.allSettled(ids.map((id) => loadWebviewPlugin(id))).then(
+    () => undefined,
+  );
+}
+
 const WEBVIEW_FEATURE_IDS = features
   .filter((manifest) => manifest.surfaces.includes("webview"))
   .map((manifest) => manifest.id);
@@ -161,9 +192,7 @@ export function chromePreloadIds(withProperties: boolean): readonly string[] {
  * compete with the entry's static graph for the resource loader.
  */
 export function preloadChromeFeatures(withProperties: boolean): Promise<void> {
-  return Promise.all(
-    chromePreloadIds(withProperties).map((id) => loadWebviewPlugin(id)),
-  ).then(() => undefined);
+  return preload(chromePreloadIds(withProperties));
 }
 
 /**
@@ -181,9 +210,7 @@ export function preloadPaintFeatures(
       !CHROME_FEATURE_IDS.has(manifest.id) &&
       (settings[manifest.id]?.enabled ?? (defaults && manifest.defaultEnabled)),
   );
-  return Promise.all(
-    structure.map((manifest) => loadWebviewPlugin(manifest.id)),
-  ).then(() => undefined);
+  return preload(structure.map((manifest) => manifest.id));
 }
 
 /**
@@ -197,7 +224,10 @@ export function preloadPaintFeatures(
  * loaded yet). `phase: "all"` (default) applies the full wanted set — used
  * after first paint and on settings changes.
  */
-export function featureController(root: BaseContext) {
+export function featureController(
+  root: BaseContext,
+  load: LoadPlugin = loadWebviewPlugin,
+) {
   const switches = new PluginSwitch(root);
   // Serialize load + switch so overlapping configure calls cannot apply an
   // older wanted set after a newer one finished loading. Do not root.track
@@ -211,14 +241,16 @@ export function featureController(root: BaseContext) {
   ): Promise<void> => {
     const run = async () => {
       const wantedManifests = selectPhaseManifests(settings, defaults, phase);
-      await Promise.all(
-        wantedManifests.map((manifest) => loadWebviewPlugin(manifest.id)),
+      const plugins = await loadEach(
+        wantedManifests.map((manifest) => manifest.id),
+        load,
+        root.logger,
       );
       const managed = managedIdsForPhase(phase);
       const hadRenderedBlocks = hasMountedRenderFeatures || phase === "all";
       const applySwitch = async () => {
         const changed = await switches.update(managed, () =>
-          wantedPlugins(wantedManifests, settings),
+          wantedPlugins(wantedManifests, settings, plugins),
         );
         await root.settled();
         return changed;
@@ -282,9 +314,10 @@ function touchesRenderFeatures(affected: ReadonlySet<string>): boolean {
 function wantedPlugins(
   manifests: readonly Manifest[],
   settings: FeatureSettings,
+  plugins: ReadonlyMap<string, Plugin<unknown>>,
 ): WantedPlugin[] {
   return manifests.flatMap((manifest) => {
-    const plugin = loaded.get(manifest.id);
+    const plugin = plugins.get(manifest.id);
     if (!plugin) {
       return [];
     }

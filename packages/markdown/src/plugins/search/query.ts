@@ -2,23 +2,35 @@ import type { VaultIndex, VaultFile } from "../vault/api";
 import type { Cancellation } from "../../shared/rpc/lifecycle";
 import { RpcError } from "../../shared/rpc/lifecycle";
 import { folderOf, nameOf, relativeVaultPath } from "../../shared/vault-path";
-import type { SearchEvaluator } from "./runner";
+import type { SearchEvaluator, SearchVerdict } from "./runner";
 import type { SearchResponse } from "./protocol";
 import type { SearchDocument } from "../../markdown/search/evaluate";
-import { extractMatchLines } from "./match-lines";
+import { readAhead } from "./read-ahead";
 export interface SearchInput {
   vault: VaultIndex;
   source: string;
-  /** Raw query string; used for match-line snippets after a file hits. */
-  query: string;
+  /** Evaluates the query, and finds a hit's match lines, in a worker. */
   worker: SearchEvaluator;
   token: Cancellation;
   read(uri: string): Promise<string>;
-  /** Called with the accumulated match set as files are scored (may be throttled). */
+  /** Called with the matches found since the last call, as files are scored (throttled). */
   onPartial?: (snapshot: SearchResponse) => void;
 }
 /** Minimum gap between partial snapshots; final sort still arrives via the RPC result. */
 const PARTIAL_INTERVAL_MS = 32;
+/**
+ * Notes read ahead of the one being evaluated. Reads overlap, so a vault on
+ * a slow disk is not searched one round trip at a time; evaluation stays in
+ * order, one document at a time, so each keeps its own worker deadline.
+ */
+const READ_AHEAD = 8;
+
+/** A file's search document, or why it has none. */
+type Prepared =
+  | { kind: "document"; document: SearchDocument }
+  | { kind: "skip" }
+  | { kind: "failed"; error: unknown };
+
 export async function searchVault(input: SearchInput): Promise<SearchResponse> {
   const { vault, source, worker, token } = input;
   const origin = vault.files().find((file) => file.uri === source);
@@ -28,26 +40,29 @@ export async function searchVault(input: SearchInput): Promise<SearchResponse> {
   await worker.ready;
   const results: SearchResponse["results"] = [];
   let unreadable = 0;
-  const emit = createPartialEmitter(input.onPartial);
+  const emit = createPartialEmitter(results, input.onPartial);
   const files = vault
     .files()
     .filter((file) => !file.excluded)
     .sort((a, b) => a.path.localeCompare(b.path));
+  const documents = readAhead(
+    files,
+    (file) => prepareDocument(input, origin.path, file),
+    READ_AHEAD,
+  );
   for (const file of files) {
-    if (token.cancelled) {
-      emit.flush();
-      throw new RpcError("Cancelled", "Search cancelled");
-    }
-    const outcome = await searchOneFile(input, origin, file, results);
+    const prepared = token.cancelled ? undefined : await documents.next();
+    const outcome = prepared
+      ? await evaluateDocument(input, { origin, file, prepared }, results)
+      : "cancel";
     if (outcome === "cancel") {
       emit.flush();
       throw new RpcError("Cancelled", "Search cancelled");
     }
     if (outcome === "unreadable") {
-      unreadable++;
-      emit.push({ results: [...results], unreadable });
+      emit.push(++unreadable);
     } else if (outcome === "hit") {
-      emit.push({ results: [...results], unreadable });
+      emit.push(unreadable);
     }
   }
   emit.flush();
@@ -59,92 +74,117 @@ export async function searchVault(input: SearchInput): Promise<SearchResponse> {
   return { results, unreadable };
 }
 
-async function searchOneFile(
+/** Never rejects: a read that fails counts as an unreadable file. */
+async function prepareDocument(
   input: SearchInput,
-  origin: { path: string },
+  originPath: string,
   file: VaultFile,
-  results: SearchResponse["results"],
-): Promise<"skip" | "hit" | "unreadable" | "cancel"> {
-  const { vault, worker, token, read, query } = input;
-  const kind = documentKind(file.extension);
-  if (kind === "file" && !worker.includesFiles) {
-    return "skip";
+): Promise<Prepared> {
+  if (documentKind(file.extension) === "file" && !input.worker.includesFiles) {
+    return { kind: "skip" };
   }
   try {
-    const document = await searchDocument(
-      { vault, worker, read },
-      file,
-      origin.path,
-    );
-    if (token.cancelled) {
-      return "cancel";
-    }
-    if (!(await worker.matches(document))) {
-      return "skip";
-    }
-    const href = relativeVaultPath(folderOf(origin.path), file.path)
-      .split("/")
-      .map(encodeURIComponent)
-      .join("/");
-    const matches =
-      document.text.length > 0 ? extractMatchLines(document.text, query) : [];
-    results.push({
-      path: file.path,
-      href,
-      ...(matches.length > 0 ? { matches } : {}),
-    });
-    return "hit";
+    const document = await searchDocument(input, file, originPath);
+    return { kind: "document", document };
+  } catch (error) {
+    return { kind: "failed", error };
+  }
+}
+
+async function evaluateDocument(
+  input: SearchInput,
+  target: { origin: { path: string }; file: VaultFile; prepared: Prepared },
+  results: SearchResponse["results"],
+): Promise<"skip" | "hit" | "unreadable" | "cancel"> {
+  const { worker, token } = input;
+  const { origin, file, prepared } = target;
+  if (token.cancelled) {
+    return "cancel";
+  }
+  if (prepared.kind === "skip") {
+    return "skip";
+  }
+  if (prepared.kind === "failed") {
+    return "unreadable";
+  }
+  let verdict: SearchVerdict;
+  try {
+    verdict = await worker.matches(prepared.document);
   } catch (error) {
     if (worker.stopped || token.cancelled) {
       throw error;
     }
     return "unreadable";
   }
+  if (!verdict.matched) {
+    return "skip";
+  }
+  const href = relativeVaultPath(folderOf(origin.path), file.path)
+    .split("/")
+    .map(encodeURIComponent)
+    .join("/");
+  // The worker found the match lines: they run the user's regexes.
+  const matches = verdict.matches ?? [];
+  results.push({
+    path: file.path,
+    href,
+    ...(matches.length > 0 ? { matches } : {}),
+  });
+  return "hit";
 }
 
-function createPartialEmitter(onPartial?: (snapshot: SearchResponse) => void) {
+/**
+ * Streams the matches found since the last partial, at most once per
+ * PARTIAL_INTERVAL_MS. It reads `results` when it sends, so a hit costs no
+ * copy, and a search with n hits sends n results in all, not n²/2.
+ */
+function createPartialEmitter(
+  results: SearchResponse["results"],
+  onPartial?: (snapshot: SearchResponse) => void,
+) {
   if (!onPartial) {
     return { push() {}, flush() {} };
   }
   let last = 0;
-  let pending: SearchResponse | undefined;
+  let sent = 0;
+  let unreadable = 0;
+  let isPending = false;
   let timer: ReturnType<typeof setTimeout> | undefined;
-  const send = (snapshot: SearchResponse) => {
+  const send = () => {
     last = Date.now();
-    pending = undefined;
-    onPartial(snapshot);
+    isPending = false;
+    const added = results.slice(sent);
+    sent = results.length;
+    onPartial({ results: added, unreadable });
+  };
+  const cancelTimer = () => {
+    clearTimeout(timer);
+    timer = undefined;
   };
   return {
-    push(snapshot: SearchResponse) {
+    push(count: number) {
+      unreadable = count;
+      isPending = true;
       const now = Date.now();
       if (now - last >= PARTIAL_INTERVAL_MS) {
-        if (timer) {
-          clearTimeout(timer);
-          timer = undefined;
-        }
-        send(snapshot);
+        cancelTimer();
+        send();
         return;
       }
-      pending = snapshot;
-      if (!timer) {
-        timer = setTimeout(
-          () => {
-            timer = undefined;
-            if (pending) {
-              send(pending);
-            }
-          },
-          PARTIAL_INTERVAL_MS - (now - last),
-        );
-      }
+      timer ??= setTimeout(
+        () => {
+          timer = undefined;
+          if (isPending) {
+            send();
+          }
+        },
+        PARTIAL_INTERVAL_MS - (now - last),
+      );
     },
     flush() {
-      if (timer) {
-        clearTimeout(timer);
-        timer = undefined;
-      }
-      if (pending) {
-        send(pending);
+      cancelTimer();
+      if (isPending) {
+        send();
       }
     },
   };

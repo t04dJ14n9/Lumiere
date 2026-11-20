@@ -8,8 +8,13 @@ import {
 import { MemoryFileSystem } from "../../src/memory-fs";
 import { Mounts } from "../../src/mounts";
 
+/**
+ * Node's URI of a path in a browser's folders: POSIX on every OS, where
+ * Windows would put its current drive in front (`file:///D:/vaults`).
+ */
+const fileUrl = (path: string) => pathToFileURL(path, { windows: false }).href;
 const ROOT = "/vaults/Notes";
-const uri = (path: string) => pathToFileURL(`${ROOT}/${path}`).href;
+const uri = (path: string) => fileUrl(`${ROOT}/${path}`);
 
 function mounted() {
   const files = new Mounts();
@@ -27,10 +32,7 @@ test("files in a mounted folder are read, listed and stat'ed by URI", async () =
   const files = mounted();
   assert.equal(await files.readText(uri("Welcome.md")), "# Welcome");
   assert.deepEqual(
-    (await files.list(pathToFileURL(ROOT).href))?.map((entry) => [
-      entry.name,
-      entry.kind,
-    ]),
+    (await files.list(fileUrl(ROOT)))?.map((entry) => [entry.name, entry.kind]),
     [
       ["Welcome.md", "file"],
       ["daily", "folder"],
@@ -42,7 +44,7 @@ test("files in a mounted folder are read, listed and stat'ed by URI", async () =
   await assert.rejects(files.readText(uri("Missing.md")), {
     code: "FileNotFound",
   });
-  await assert.rejects(files.readText(pathToFileURL("/elsewhere/x.md").href), {
+  await assert.rejects(files.readText(fileUrl("/elsewhere/x.md")), {
     code: "FileNotFound",
   });
 });
@@ -69,7 +71,7 @@ test("a file is a Blob, read as it is used where its folder can, else whole", as
     }),
   );
   assert.equal(
-    await files.readBlob(pathToFileURL("/vaults/Videos/clip.webm").href),
+    await files.readBlob(fileUrl("/vaults/Videos/clip.webm")),
     video,
   );
   assert.equal(reads, 0, "the folder's own Blob, not a read of the file");
@@ -79,7 +81,7 @@ test("saving needs an existing file, creating never overwrites, and watchers hea
   const files = mounted();
   const heard: string[] = [];
   const stopFile = files.watch(uri("New.md"), () => heard.push("file"));
-  const stopTree = files.watchTree(pathToFileURL(ROOT).href, (relative) =>
+  const stopTree = files.watchTree(fileUrl(ROOT), (relative) =>
     heard.push(`tree:${relative}`),
   );
   await assert.rejects(files.save(uri("New.md"), "x"), {
@@ -141,9 +143,7 @@ test("a create that fails does not hold up the next one for its path", async () 
 
 test("of overlapping createText calls one makes the note and its body stays", async () => {
   const files = mounted();
-  const workspace = createWorkspaceFiles(files, () => [
-    pathToFileURL(ROOT).href,
-  ]);
+  const workspace = createWorkspaceFiles(files, () => [fileUrl(ROOT)]);
   const note = uri("daily/2026-11-05.md");
   const results = await Promise.all([
     workspace.createText(note, "# First"),
@@ -168,17 +168,14 @@ test("folders are made, files moved and copied, and removed", async () => {
 
 test("containment is by path: dot segments resolve, hidden separators are refused", async () => {
   const files = mounted();
-  const root = pathToFileURL(ROOT).href;
+  const root = fileUrl(ROOT);
   assert.equal(files.isInside(root, uri("daily/Today.md")), true);
   assert.equal(files.isInside(root, `${root}/../Other/x.md`), false);
   assert.equal(
     files.isInside(root, `${root}/daily%2F..%2F..%2FOther%2Fx.md`),
     false,
   );
-  assert.equal(
-    files.isInside(root, pathToFileURL("/vaults/Notes-old/x.md").href),
-    false,
-  );
+  assert.equal(files.isInside(root, fileUrl("/vaults/Notes-old/x.md")), false);
   await files.contain(root, uri("New/Note.md"));
   await assert.rejects(
     files.contain(root, `${root}/../x.md`),
@@ -189,16 +186,20 @@ test("containment is by path: dot segments resolve, hidden separators are refuse
 test("URIs are written as Node writes them, so equal files compare equal", () => {
   const files = mounted();
   for (const path of ["/v/a b.md", "/v/Paper [draft] ~ 100%.md", "/v/é#?.md"]) {
-    assert.equal(files.uriOf(path), pathToFileURL(path).href);
+    assert.equal(files.uriOf(path), fileUrl(path));
     assert.equal(files.toPath(files.uriOf(path)), path);
   }
 });
 
 test("a memory folder reports every change, and starts again from what it reported", async () => {
   const kept = new Map<string, unknown>();
-  const files = new MemoryFileSystem({}, (path, entry) =>
-    entry ? kept.set(path, entry) : kept.delete(path),
-  );
+  const files = new MemoryFileSystem({}, (path, entry) => {
+    if (entry) {
+      kept.set(path, entry);
+    } else {
+      kept.delete(path);
+    }
+  });
   await files.mkdir("daily");
   await files.write(
     "daily/Today.md",
@@ -221,4 +222,62 @@ test("a memory folder reports every change, and starts again from what it report
     "# Today",
   );
   assert.equal(new TextDecoder().decode(await again.read("Kept.md")), "two");
+});
+
+test("copy replaces a file of the same name, as VS Code and Node do", async () => {
+  const files = mounted();
+  await files.mkdir(uri("old/daily"));
+  await files.create(uri("old/daily/Today.md"));
+  await files.save(uri("old/daily/Today.md"), "stale");
+  await files.copy(uri("daily"), uri("old/daily"));
+  assert.equal(await files.readText(uri("old/daily/Today.md")), "# Today");
+  await files.copy(uri("Welcome.md"), uri("daily/Today.md"));
+  assert.equal(await files.readText(uri("daily/Today.md")), "# Welcome");
+});
+
+test("move never replaces what is at the target, in one folder or across two", async () => {
+  const files = mounted();
+  files.mount("/vaults/Other", new MemoryFileSystem({ "Welcome.md": "mine" }));
+  const other = fileUrl("/vaults/Other/Welcome.md");
+  await assert.rejects(files.move(uri("Welcome.md"), uri("daily/Today.md")), {
+    code: "FileExists",
+  });
+  await assert.rejects(files.move(uri("Welcome.md"), other), {
+    code: "FileExists",
+  });
+  assert.equal(await files.readText(uri("Welcome.md")), "# Welcome");
+  assert.equal(await files.readText(uri("daily/Today.md")), "# Today");
+  assert.equal(await files.readText(other), "mine");
+});
+
+test("a folder moves to another mounted folder with everything in it", async () => {
+  const files = mounted();
+  files.mount("/vaults/Other", new MemoryFileSystem());
+  await files.save(uri("daily/Today.md"), "# Today, edited");
+  await files.mkdir(uri("daily/old"));
+  await files.create(uri("daily/old/Last.md"));
+  const moved = fileUrl("/vaults/Other/daily");
+  await files.move(uri("daily"), moved);
+  assert.equal(await files.stat(uri("daily")), undefined);
+  assert.equal(await files.readText(`${moved}/Today.md`), "# Today, edited");
+  assert.equal((await files.stat(`${moved}/old/Last.md`))?.kind, "file");
+});
+
+test("a note's UTF-8 byte order mark is read and written back, as Node's host keeps it", async () => {
+  const files = new Mounts();
+  const bom = new Uint8Array([
+    0xef,
+    0xbb,
+    0xbf,
+    ...new TextEncoder().encode("# Note"),
+  ]);
+  files.mount("/v", new MemoryFileSystem({ "Note.md": bom }));
+  const uri = files.uriOf("/v/Note.md");
+  const text = await files.readText(uri);
+  assert.equal(text, "﻿# Note");
+  await files.save(uri, `${text}!`);
+  assert.deepEqual(
+    [...(await files.readBytes(uri)).slice(0, 3)],
+    [0xef, 0xbb, 0xbf],
+  );
 });

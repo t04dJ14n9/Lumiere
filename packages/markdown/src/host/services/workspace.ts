@@ -16,6 +16,10 @@ export function createHostWorkspace(): HostWorkspace {
         folder.uri.toString(),
       ),
     isTrusted: () => vscode.workspace.isTrusted,
+    onDidGrantTrust: (listener) => {
+      const subscription = vscode.workspace.onDidGrantWorkspaceTrust(listener);
+      return () => subscription.dispose();
+    },
     read: async (uri) => vscode.workspace.fs.readFile(vscode.Uri.parse(uri)),
     async stat(uri) {
       const info = await vscode.workspace.fs.stat(vscode.Uri.parse(uri));

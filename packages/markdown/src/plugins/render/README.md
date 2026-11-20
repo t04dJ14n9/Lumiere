@@ -17,7 +17,11 @@ plugin disposal disposes all remaining passes.
 - `api.ts`: render service, pass, fence and event contracts.
 - `webview.ts`: service assembly and ordered render pipeline.
 - `pass.ts`: pass identity, source context and disposal lifecycle.
-- `security.ts`: trusted iframe and untrusted remote-source restrictions.
+- `security.ts`: trusted iframe and untrusted remote-source restrictions,
+  applied in an inert template before the rendered HTML enters the page (an
+  iframe's `sandbox` only binds loads that start after it is set).
+- `security.test.ts`: iframes are sandboxed, and untrusted ones removed,
+  before insertion.
 - `sanitizer-options.ts`: DOMPurify options; links keep application schemes for the host's link policy.
 - `sanitizer-options.test.ts`: sanitizer option units.
 - `pass.test.ts`: cleanup ordering, late registration and reentrant disposal units.

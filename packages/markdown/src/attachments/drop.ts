@@ -7,6 +7,8 @@
  * (shared with the host half).
  */
 
+import { mediaKind } from "../shared/media-kinds";
+
 const URI_LIST = "text/uri-list";
 const CODE_URI_LIST = "application/vnd.code.uri-list";
 /** VS Code Explorer / editor drag payload (JSON array of URI strings). */
@@ -20,6 +22,8 @@ export interface DragPayload {
   readonly files: ArrayLike<{
     readonly name: string;
     readonly type: string;
+    /** In bytes: a file too large to send is refused before it is read. */
+    readonly size: number;
     arrayBuffer(): Promise<ArrayBuffer>;
   }>;
   getData(format: string): string;
@@ -93,6 +97,62 @@ export function urisFromDataTransfer(data: DragPayload | null): string[] {
     appendJsonUriList(found, raw);
   }
   return [...new Set(found)];
+}
+
+/**
+ * The dropped URIs to import as attachments: files and VS Code resources,
+ * and web addresses only of images. A link dragged from a browser carries
+ * its page's address in `text/uri-list` too; importing it fetched the page
+ * and failed. An image dragged from a page names itself in an `<img>`.
+ */
+export function droppedAttachmentUris(data: DragPayload | null): string[] {
+  const uris = urisFromDataTransfer(data);
+  const html =
+    data && hasType(data, "text/html") ? data.getData("text/html") : "";
+  const images = imageSources(html);
+  return uris.filter(
+    (uri) =>
+      !isWebAddress(uri) ||
+      mediaKind(webPath(uri)) === "image" ||
+      images.includes(uri),
+  );
+}
+
+function webPath(uri: string): string {
+  try {
+    return new URL(uri).pathname;
+  } catch {
+    return "";
+  }
+}
+
+/**
+ * The text to insert for a drop of web links that are not attachments (see
+ * `droppedAttachmentUris`): the dragged text, else the addresses.
+ */
+export function droppedLinkText(data: DragPayload | null): string | undefined {
+  const links = urisFromDataTransfer(data).filter(isWebAddress);
+  if (!data || links.length === 0 || droppedAttachmentUris(data).length > 0) {
+    return undefined;
+  }
+  const plain = hasType(data, "text/plain") ? data.getData("text/plain") : "";
+  return plain.trim() || links.join("\n");
+}
+
+function isWebAddress(uri: string): boolean {
+  return /^https?:\/\//i.test(uri);
+}
+
+function hasType(data: DragPayload, type: string): boolean {
+  return Array.from(data.types).includes(type);
+}
+
+/** The `src` of each `<img>` in dragged HTML, its `&amp;`s decoded. */
+function imageSources(html: string): string[] {
+  return Array.from(
+    html.matchAll(/<img\b[^>]*?\ssrc\s*=\s*(["'])(.*?)\1/gi),
+    (match) => match[2]!.replace(/&amp;/g, "&"),
+  );
 }
 
 export type DragFile =

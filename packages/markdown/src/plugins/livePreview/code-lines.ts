@@ -38,8 +38,9 @@ export function decorateCodeLines(
   }
   const open = state.doc.lineAt(node.from);
   const close = state.doc.lineAt(node.to);
-  const closed =
-    close.number > open.number && node.node.getChildren("CodeMark").length > 1;
+  const marks = node.node.getChildren("CodeMark");
+  const closer = marks.length > 1 ? marks[marks.length - 1] : undefined;
+  const closed = close.number > open.number && closer !== undefined;
   context.line(open.from, "md-code-fence md-code-fence-open");
   if (closed) {
     context.line(close.from, "md-code-fence md-code-fence-close");
@@ -47,8 +48,11 @@ export function decorateCodeLines(
   if (context.revealed(open.from, close.to)) {
     return;
   }
-  context.hide(open.from, open.to);
+  // From the fence marks, not the line start: a fence opened on a list
+  // item's first line (`- ```js`) keeps its bullet, and the quote and list
+  // marks before them have decorations of their own.
+  context.hide(node.from, open.to);
   if (closed) {
-    context.hide(close.from, close.to);
+    context.hide(closer.from, close.to);
   }
 }

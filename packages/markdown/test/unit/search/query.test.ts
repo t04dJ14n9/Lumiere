@@ -4,7 +4,16 @@ import { searchVault } from "../../../src/plugins/search/query";
 import type { SearchEvaluator } from "../../../src/plugins/search/runner";
 import { MemoryVaultIndex } from "../../../src/plugins/vault/memory-index";
 import { CancelToken } from "../../../src/shared/rpc/lifecycle";
-import { compileSearch } from "../../../src/markdown/search/evaluate";
+import {
+  compileSearch,
+  type SearchDocument,
+} from "../../../src/markdown/search/evaluate";
+import { parseSearch as parseQuery } from "../../../src/markdown/search/query";
+import { searchVerdict } from "../../../src/workers/search-worker";
+/** What the search worker answers for a document, without the worker. */
+function inWorker(query: string) {
+  return async (doc: SearchDocument) => searchVerdict(parseQuery(query), doc);
+}
 function vault() {
   const index = new MemoryVaultIndex({
     root: "file:///vault",
@@ -36,13 +45,12 @@ test("vault search uses live text, excludes hidden files and counts per-document
     requiresText: true,
     requiresMetadata: false,
     stopped: false,
-    matches: async (doc) => compileSearch("content:meeting")(doc),
+    matches: inWorker("content:meeting"),
     dispose: async () => {},
   };
   const input = {
     vault: vault(),
     source: "file:///vault/folder/Note.md",
-    query: "content:meeting",
     worker,
     token: new CancelToken(),
     read: async (uri: string) => {
@@ -94,13 +102,12 @@ test("indexed predicates avoid note reads while content scopes conservatively re
     requiresText: needs.text,
     requiresMetadata: needs.metadata,
     stopped: false,
-    matches: async (doc) => compileSearch(query)(doc),
+    matches: inWorker(query),
     dispose: async () => {},
   };
   const result = await searchVault({
     vault: index,
     source: "file:///vault/folder/Note.md",
-    query,
     worker,
     token: new CancelToken(),
     read: async () => {
@@ -132,14 +139,13 @@ test("searchVault emits partial snapshots as matches accumulate", async () => {
     requiresText: true,
     requiresMetadata: false,
     stopped: false,
-    matches: async (doc) => compileSearch("content:meeting")(doc),
+    matches: inWorker("content:meeting"),
     dispose: async () => {},
   };
   const partials: { results: string[]; unreadable: number }[] = [];
   const result = await searchVault({
     vault: vault(),
     source: "file:///vault/folder/Note.md",
-    query: "content:meeting",
     worker,
     token: new CancelToken(),
     read: async (uri: string) => {
@@ -154,15 +160,64 @@ test("searchVault emits partial snapshots as matches accumulate", async () => {
       }),
   });
   assert.equal(result.unreadable, 1);
-  assert.ok(partials.length >= 1);
-  assert.deepEqual(partials.at(-1), {
-    results: ["folder/Note.md", "other/A #.md"],
-    unreadable: 1,
-  });
+  assert.ok(partials.length >= 2, "partials stream while the search runs");
+  // Each partial carries only what is new: every match is sent once.
+  assert.deepEqual(
+    partials.flatMap((partial) => partial.results),
+    ["folder/Note.md", "other/A #.md"],
+  );
+  assert.equal(partials.at(-1)?.unreadable, 1);
   assert.deepEqual(
     result.results.map((item) => item.path),
     ["other/A #.md", "folder/Note.md"],
   );
+});
+
+test("searchVault reads notes ahead while evaluating them one at a time, in order", async () => {
+  const index = new MemoryVaultIndex({
+    root: "file:///vault",
+    folderNote: "",
+    linkFormat: "shortest",
+  });
+  const paths = Array.from({ length: 20 }, (_, n) => `N${n + 10}.md`);
+  for (const path of paths) {
+    index.upsertFile({ path, uri: `file:///vault/${path}`, mtime: 0, size: 1 });
+  }
+  let reading = 0;
+  let mostReading = 0;
+  let evaluating = 0;
+  const evaluated: string[] = [];
+  const worker: SearchEvaluator = {
+    ready: Promise.resolve(),
+    includesFiles: false,
+    requiresText: true,
+    requiresMetadata: false,
+    stopped: false,
+    matches: async (doc) => {
+      assert.equal(evaluating++, 0, "one document at a time");
+      evaluated.push(doc.path);
+      await new Promise((resolve) => setImmediate(resolve));
+      evaluating--;
+      return { matched: compileSearch("content:meeting")(doc) };
+    },
+    dispose: async () => {},
+  };
+  const result = await searchVault({
+    vault: index,
+    source: "file:///vault/N10.md",
+    worker,
+    token: new CancelToken(),
+    read: async () => {
+      mostReading = Math.max(mostReading, ++reading);
+      await new Promise((resolve) => setTimeout(resolve, 5));
+      reading--;
+      return "Meeting";
+    },
+  });
+  assert.equal(result.results.length, 20);
+  assert.deepEqual(evaluated, paths);
+  assert.ok(mostReading > 1, `reads overlapped (${mostReading})`);
+  assert.ok(mostReading <= 8, `reads are bounded (${mostReading})`);
 });
 
 test("searchVault supports EMBEDS.md query syntax (tag:#project status:done) and blanks origin query fences", async () => {
@@ -201,13 +256,12 @@ test("searchVault supports EMBEDS.md query syntax (tag:#project status:done) and
     requiresText: needs.text,
     requiresMetadata: needs.metadata,
     stopped: false,
-    matches: async (doc) => compileSearch(query)(doc),
+    matches: inWorker(query),
     dispose: async () => {},
   };
   const result = await searchVault({
     vault: index,
     source: "file:///vault/folder/Note.md",
-    query,
     worker,
     token: new CancelToken(),
     read: async (uri: string) => {

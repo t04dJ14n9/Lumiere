@@ -11,6 +11,7 @@ import { LocalEngine, localEngine } from "@embedpdf/engine";
 import { createPdfRuntime } from "@embedpdf/engine-runtime";
 import { DarkInlineTransport } from "../engine-worker/inline-transport";
 import type { PageColorsMessage } from "../shared/page-colors-engine";
+import { EngineHealth, watchEngine } from "./engine-health";
 import type { EngineEnvironment, EngineMode } from "./engine-host";
 import { connectEnginePageColors } from "./page-colors";
 
@@ -61,7 +62,7 @@ async function engineWorkerScript(): Promise<string> {
  * the page's own origin, and the extension's resources do not. The page
  * tells it the page colours before the engine says where its WASM is.
  */
-function startEngineWorker(script: string): Worker {
+function startEngineWorker(script: string, health: EngineHealth): Worker {
   const url = URL.createObjectURL(
     new Blob([script], { type: "text/javascript" }),
   );
@@ -71,6 +72,7 @@ function startEngineWorker(script: string): Worker {
     worker.addEventListener("message", () => URL.revokeObjectURL(url), {
       once: true,
     });
+    watchWorker(worker, health);
     connectEnginePageColors((mode) => {
       const message: PageColorsMessage = { kind: "lumiere.pageColors", mode };
       worker.postMessage(message);
@@ -89,14 +91,34 @@ function startEngineWorker(script: string): Worker {
  * engine the bytes. Nothing is booted until the first document or `warmup()`.
  */
 function workerEngine(wasmUrl: string, script: string): ViewerEngine {
-  return localEngine({
-    worker: () => startEngineWorker(script),
+  const health = new EngineHealth();
+  const engine = localEngine({
+    worker: () => startEngineWorker(script, health),
     encoderWorker: "inline",
     wasmLoader: async () => (await warmWasm(wasmUrl)).arrayBuffer(),
     // Never load the Hebrew and Arabic fallback fonts; the viewer works offline
     // and ships without them.
     defaultFallbackFonts: false,
   });
+  watchEngine(engine, health);
+  return engine;
+}
+
+/**
+ * Tell `health` what the worker does after it booted, which EmbedPDF's own
+ * transport no longer listens for (`engine-health.ts`). An error before the
+ * boot ends is also EmbedPDF's: the worker then gives way to the main thread.
+ */
+function watchWorker(worker: Worker, health: EngineHealth): void {
+  worker.addEventListener("error", (event) =>
+    health.workerFailed(event.message),
+  );
+  worker.addEventListener("messageerror", () =>
+    health.workerFailed("A message from the PDF engine could not be read."),
+  );
+  worker.addEventListener("message", (event: MessageEvent<unknown>) =>
+    health.answered(event.data),
+  );
 }
 
 /** The engine on the main thread, for a worker that cannot start. */
@@ -107,7 +129,10 @@ async function mainThreadEngine(wasmUrl: string): Promise<ViewerEngine> {
   });
   const transport = new DarkInlineTransport(runtime);
   connectEnginePageColors((mode) => transport.setPageColors(mode));
-  return LocalEngine.fromTransport({ transport });
+  const engine = LocalEngine.fromTransport({ transport });
+  const health = watchEngine(engine);
+  transport.onMessage((response) => health.answered(response));
+  return engine;
 }
 
 /** The engines of the viewer page, whose WASM is at `wasmUrl`. */

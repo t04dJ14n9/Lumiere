@@ -7,8 +7,10 @@ import {
 } from "@embedpdf/react/annotation";
 import { useDocuments, useOptionalCapability } from "@embedpdf/react/runtime";
 import { useCallback, useEffect, useMemo } from "react";
+import type { HostMessage } from "../shared/messages";
 import {
   annotationLoadState,
+  rememberStoreText,
   settlePdfWrite,
   type SaveResult,
 } from "./annotation-load-state";
@@ -17,6 +19,32 @@ import { postToHost } from "./host";
 
 /** Told how each Save into This PDF ended, by the viewer's number for its write. */
 const pdfWriteResults = new Set<(write: number, ok: boolean) => void>();
+
+interface StoreChange {
+  sha256: string;
+  revision: number;
+  text: string | undefined;
+}
+
+/** Told what another editor of this PDF left in its annotation file. */
+const storeChanges = new Set<(change: StoreChange) => void>();
+
+/** Another editor saved the annotations of the bytes this viewer shows. */
+export function applyStoreChange(
+  message: Extract<HostMessage, { type: "annotationStoreChanged" }>,
+): void {
+  const state = annotationLoadState();
+  if (message.load !== state?.load || message.sha256 !== state.sha256) {
+    return;
+  }
+  for (const listener of storeChanges) {
+    listener({
+      sha256: message.sha256,
+      revision: message.revision,
+      text: message.text ?? undefined,
+    });
+  }
+}
 
 /**
  * Lumiere's own annotations live in a file outside the PDF, named by its hash
@@ -42,6 +70,7 @@ export function useAnnotationSaveSession(): {
         ? new StoreSession(annotation, {
             post: postToHost,
             loadState: annotationLoadState,
+            keepStoreText: rememberStoreText,
           })
         : undefined,
     [annotation],
@@ -65,8 +94,12 @@ export function useAnnotationSaveSession(): {
       }
     };
     pdfWriteResults.add(listener);
+    const showChange = (change: StoreChange): void =>
+      session.showStoreFile(change);
+    storeChanges.add(showChange);
     return () => {
       pdfWriteResults.delete(listener);
+      storeChanges.delete(showChange);
     };
   }, [session]);
 

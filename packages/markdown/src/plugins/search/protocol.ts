@@ -1,6 +1,6 @@
 import { Schema, type Infer } from "@workshop/core";
 import { defineProtocol } from "../../shared/rpc/protocol";
-const matchLine = Schema.object({
+export const matchLine = Schema.object({
   text: Schema.string().max(512),
   offset: Schema.number().min(0),
   mark: Schema.object({
@@ -41,7 +41,7 @@ export const protocol = defineProtocol("search", {
   },
   notifications: {
     changed: Schema.object({}),
-    /** Accumulated matches so far for an in-flight `query` (Obsidian streams results). */
+    /** Matches an in-flight `query` found since its last partial (Obsidian streams results). */
     partial: Schema.object({
       id: Schema.string().min(1).max(64),
       results: Schema.array(result).max(100000),

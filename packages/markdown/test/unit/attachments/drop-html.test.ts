@@ -2,10 +2,14 @@ import test from "node:test";
 import assert from "node:assert/strict";
 import { markdownFromHtml } from "../../../src/plugins/pasteHtml/conversion";
 import { rewriteRemoteImages, decodeDataUri } from "../../../src/attachments";
+import { DOWNLOAD_LIMITS } from "../../../src/attachments/guarded-download";
+import { IMPORT_URL_TIMEOUT_MS } from "../../../src/plugins/attachments/protocol";
 import {
   isAttachmentDrag,
   urisFromDataTransfer,
   shouldClaimEditorDrop,
+  droppedAttachmentUris,
+  droppedLinkText,
 } from "../../../src/attachments/drop";
 
 function transfer(partial: {
@@ -77,12 +81,64 @@ test("urisFromDataTransfer reads text/uri-list and code uri-list", () => {
   );
 });
 
+test("a web link dragged from a browser is dropped as its text, not imported", () => {
+  const drag = (uris: string, html = "", plain = uris) =>
+    transfer({
+      types: ["text/uri-list", "text/plain", "text/html"],
+      getData: (type) =>
+        ({ "text/uri-list": uris, "text/plain": plain, "text/html": html })[
+          type
+        ] ?? "",
+    });
+  const link = drag(
+    "https://example.com/article?id=1",
+    '<a href="https://example.com/article?id=1">An article</a>',
+  );
+  assert.deepEqual(droppedAttachmentUris(link), []);
+  assert.equal(droppedLinkText(link), "https://example.com/article?id=1");
+  // An image dragged from a page is imported, as is a link to an image file.
+  const image = drag(
+    "https://cdn.example.com/photo?w=800&h=600",
+    '<img src="https://cdn.example.com/photo?w=800&amp;h=600" alt="">',
+  );
+  assert.deepEqual(droppedAttachmentUris(image), [
+    "https://cdn.example.com/photo?w=800&h=600",
+  ]);
+  assert.deepEqual(droppedAttachmentUris(drag("https://ex.com/a/cat.PNG")), [
+    "https://ex.com/a/cat.PNG",
+  ]);
+  // Files and VS Code resources are always attachments.
+  assert.deepEqual(droppedAttachmentUris(drag("file:///tmp/notes.pdf")), [
+    "file:///tmp/notes.pdf",
+  ]);
+  assert.equal(droppedLinkText(drag("file:///tmp/notes.pdf")), undefined);
+});
+
 test("shouldClaimEditorDrop is true for file drags so VS Code must not open tabs", () => {
   assert.equal(shouldClaimEditorDrop(transfer({ types: ["Files"] })), true);
   assert.equal(
     shouldClaimEditorDrop(transfer({ types: ["text/plain"] })),
     false,
   );
+});
+
+test("an image that cannot be imported keeps its link; the others are still rewritten", async () => {
+  const markdown =
+    "![a](https://ex.com/a.png) ![slow](https://slow.example/b.png) ![c](https://ex.com/c.png)";
+  const out = await rewriteRemoteImages(markdown, async (src) => {
+    if (src.includes("slow")) {
+      throw new Error('RPC "importUrl" timed out');
+    }
+    return `![[${src.slice(-5)}]]`;
+  });
+  assert.equal(
+    out,
+    "![[a.png]] ![slow](https://slow.example/b.png) ![[c.png]]",
+  );
+});
+
+test("a page waits for an image import as long as the host may download it", () => {
+  assert.ok(IMPORT_URL_TIMEOUT_MS > DOWNLOAD_LIMITS.timeoutMs);
 });
 
 test("rich HTML data+http images rewrite to embeds after conversion", async () => {

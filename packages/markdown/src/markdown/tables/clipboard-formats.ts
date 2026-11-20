@@ -70,6 +70,27 @@ export function copyCellsObsidian(
 }
 
 /**
+ * The cell rows of an `obsidian/table` payload, or undefined unless it is a
+ * non-empty list of non-empty rows of text. The clipboard is another
+ * program's data: anything else falls back to the text flavors.
+ */
+export function pastedObsidianRows(payload: string): string[][] | undefined {
+  let rows: unknown;
+  try {
+    rows = (JSON.parse(payload) as { rows?: unknown } | null)?.rows;
+  } catch {
+    return undefined;
+  }
+  const isTextRow = (row: unknown): row is string[] =>
+    Array.isArray(row) &&
+    row.length > 0 &&
+    row.every((cell) => typeof cell === "string");
+  return Array.isArray(rows) && rows.length > 0 && rows.every(isTextRow)
+    ? rows
+    : undefined;
+}
+
+/**
  * Parse a markdown table fragment into cell rows (skips the alignment line).
  * Rows are read as the editor reads them: escaped pipes stay in their cell,
  * short rows are padded, and only a blank line ends the table.

@@ -16,7 +16,6 @@ export interface PdfWriteConflict {
 /** Collaborator for in-place annotation overwrite on the open PDF. */
 export class AnnotationSave {
   dirty: AnnotationDirty = "clean";
-  lastBytes: ArrayBuffer | undefined;
   /** Saves and Keep mine run one at a time, in the order they came. */
   private queue: Promise<void> = Promise.resolve();
   /**
@@ -140,7 +139,6 @@ export class AnnotationSave {
       );
       return;
     }
-    this.lastBytes = message.data;
     if (!this.knows(message.load, message.baseSha256)) {
       this.reportConflict(
         message,

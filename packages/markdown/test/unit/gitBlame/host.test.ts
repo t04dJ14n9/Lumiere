@@ -236,6 +236,39 @@ test("contents cap is enforced by behavioral schema parsing", () => {
   );
 });
 
+test("F22: a commit subject or author past the protocol's limits still blames", async (t) => {
+  const fake = fakeGit();
+  const subject = "s".repeat(600);
+  fake.git.blameLine = async () => ({
+    status: "ok",
+    repoGeneration: 0,
+    blame: {
+      commit: "a".repeat(40),
+      shortCommit: "aaaaaaa",
+      authorName: "n".repeat(300),
+      authorEmail: "ada@example.com",
+      authorDate: 1,
+      subject,
+      body: "b".repeat(9000),
+      line: 1,
+    },
+  });
+  const host = await setup(fake.git);
+  t.after(() => host.dispose());
+  const result = await host.pair.client.call(protocol, "blameLine", {
+    line: 1,
+    contents: "x",
+    version: 1,
+  });
+  assert.equal(result.status, "ok");
+  assert.ok(result.status === "ok");
+  assert.equal(result.blame.subject.length, 500);
+  assert.equal(result.blame.subject, `${subject.slice(0, 499)}…`);
+  assert.equal(result.blame.authorName.length, 200);
+  assert.equal(result.blame.authorEmail, "ada@example.com");
+  assert.equal(result.blame.body?.length, 8000);
+});
+
 test("host over-cap defense never calls GitAccess; absent git soft-hides", async (t) => {
   const fake = fakeGit();
   fake.bump();

@@ -2,14 +2,15 @@ import test from "node:test";
 import assert from "node:assert/strict";
 import { readFileSync, readdirSync } from "node:fs";
 import path from "node:path";
+import { fileURLToPath } from "node:url";
 
-const root = new URL("../../../", import.meta.url).pathname;
+const root = fileURLToPath(new URL("../../../", import.meta.url));
 const css = (file: string) => readFileSync(path.join(root, file), "utf8");
 
 function stylesheets(directory: string): string[] {
   return readdirSync(path.join(root, directory), { withFileTypes: true })
     .flatMap((entry) => {
-      const relative = path.join(directory, entry.name);
+      const relative = path.posix.join(directory, entry.name);
       if (entry.isDirectory()) {
         return stylesheets(relative);
       }

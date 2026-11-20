@@ -21,6 +21,7 @@ import type { NativeNavigation } from "./navigation";
 import {
   createReclaimScheduler,
   registerSelectionReclaim,
+  shouldTransferSelection,
 } from "./reclaim-selection";
 import {
   healWorkspaceEditorAssociation,
@@ -94,12 +95,7 @@ export function registerReclaim(
     registerSelectionReclaim({
       capture: transfer.capture,
       ready: scheduler.ready,
-      shouldTransfer: (tab, uri) =>
-        hasSelectionTarget(nativeSelectionRange(tab, uri)) &&
-        shouldReclaim(
-          { uri, before: "none", after: kindOf(tab) },
-          reclaimContext(uri, workspaceDefault(), kindOf(tab)),
-        ),
+      shouldTransfer: selectionTransfers(workspaceDefault),
       transfer: transfer.open,
     }),
     scheduler,
@@ -119,6 +115,19 @@ export function registerReclaim(
         .forEach(judge);
     },
   };
+}
+
+/** Whether a command's selection change moves the note into Lumiere. */
+function selectionTransfers(workspaceDefault: () => boolean) {
+  return (tab: vscode.Tab, uri: string) =>
+    shouldTransferSelection(
+      () =>
+        shouldReclaim(
+          { uri, before: "none", after: kindOf(tab) },
+          reclaimContext(uri, workspaceDefault(), kindOf(tab)),
+        ),
+      () => hasSelectionTarget(nativeSelectionRange(tab, uri)),
+    );
 }
 
 function createReclaimJudge(options: {

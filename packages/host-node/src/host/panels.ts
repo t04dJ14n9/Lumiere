@@ -10,6 +10,7 @@ import {
   type PanelShell,
 } from "@workshop/markdown/portable";
 import { errorText, type NoteDocuments } from "./documents";
+import { afterRenames, isAtOrUnder } from "./note-renames";
 import { LivePanel, type PageSocket, type PanelUrls } from "./panel";
 
 /** How long the editor host may take to give a new panel its HTML. */
@@ -30,6 +31,7 @@ export class PanelHub implements CustomEditors {
   private activeId: string | undefined;
   private readonly activeListeners = new Set<() => void>();
   private readonly openedListeners = new Set<(panel: LivePanel) => void>();
+  private stopFollowingRenames: () => void = () => {};
 
   constructor(
     private readonly documents: NoteDocuments,
@@ -74,6 +76,8 @@ export class PanelHub implements CustomEditors {
     panel.onUi((event) => {
       if (event.type === "focus") {
         this.activate(panel.id);
+      } else if (event.type === "hidden") {
+        this.documents.saveNow(panel.document);
       }
     });
     open(panel.shell);
@@ -88,6 +92,25 @@ export class PanelHub implements CustomEditors {
       panel.dispose();
       throw error;
     }
+  }
+
+  /**
+   * Tell each page whose note was renamed or moved where it is now (a
+   * `moved` request, which the page passes to its embedder). `toPath` names
+   * a file as the embedder knows it.
+   */
+  followRenames(toPath: (uri: string) => string): void {
+    this.stopFollowingRenames();
+    const stop = this.documents.renames.onDidRename((rename) => {
+      for (const panel of this.panels.values()) {
+        const { uri } = panel.document;
+        if (isAtOrUnder(uri, rename.oldUri)) {
+          const path = toPath(afterRenames(uri, [rename]));
+          panel.tell({ type: "moved", path });
+        }
+      }
+    });
+    this.stopFollowingRenames = () => void stop();
   }
 
   /** The page of panel `id` connected; false if there is no such panel. */
@@ -130,6 +153,7 @@ export class PanelHub implements CustomEditors {
   }
 
   dispose(): void {
+    this.stopFollowingRenames();
     for (const panel of this.all()) {
       panel.dispose();
     }

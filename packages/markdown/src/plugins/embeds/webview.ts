@@ -17,6 +17,7 @@ import { MarkdownInline } from "../../webview/ui/inline-widget";
 import { protocol as links } from "../links/protocol";
 import { enhanceEmbeds, type PassEmbeds } from "./post-process";
 import { forgetEmbedResources } from "./resource-cache";
+import { forgetPdfDocuments } from "./pdf-documents";
 import { wikilinkEdit } from "../../markdown/wikilink-edit";
 import {
   embedEditing,
@@ -204,12 +205,24 @@ class EmbedInline extends MarkdownInline {
 
 function registerEmbedContent(ctx: Context, cleanups: Set<() => void>): void {
   const passes = new Set<PassEmbeds>();
-  ctx.on("resources/changed", () => forgetEmbedResources(ctx.resources));
+  ctx.on("resources/changed", () => {
+    forgetEmbedResources(ctx.resources);
+    forgetPdfDocuments();
+  });
   // Every pass, nested note embeds included: inline embeds keep their DOM
   // when the page renders again, so `render/changed` would not reach them.
   ctx.on("resources/found", () => {
     for (const embeds of [...passes]) {
       embeds.retryMissing();
+    }
+  });
+  // An embed is the same widget whatever its file contains, so nothing
+  // redraws it when the file changes: its pass loads the file again.
+  ctx.on("resources/modified", (sources) => {
+    forgetEmbedResources(ctx.resources);
+    const changed = new Set(sources);
+    for (const embeds of [...passes]) {
+      embeds.reload(changed);
     }
   });
   ctx.on("render/postProcess", (pass) => {

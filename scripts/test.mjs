@@ -9,7 +9,12 @@ const concurrency = process.env.WORKSHOP_TEST_CONCURRENCY;
 const options = concurrency ? [`--test-concurrency=${concurrency}`] : [];
 
 function run(cwd, command, args) {
-  const result = spawnSync(command, args, { cwd, stdio: "inherit" });
+  // On Windows pnpm is a .cmd, which Node starts only through a shell.
+  const result = spawnSync(command, args, {
+    cwd,
+    stdio: "inherit",
+    shell: process.platform === "win32",
+  });
   return result.status ?? 1;
 }
 
@@ -17,7 +22,7 @@ function testFiles(...roots) {
   return roots.flatMap((root) =>
     readdirSync(root, { recursive: true, encoding: "utf8" })
       .filter((file) => file.endsWith(".test.ts"))
-      .map((file) => `${root}/${file}`),
+      .map((file) => `${root}/${file}`.replaceAll("\\", "/")),
   );
 }
 

@@ -130,9 +130,21 @@ class SettingValues {
     return job;
   }
 
-  /** Reads `overrides` when it runs, so a queued change sees the one before it. */
+  /**
+   * Reads the file again when it runs, so a queued change sees the one
+   * before it and a change made by hand since the host started is kept, not
+   * written over from memory. As VS Code does, a file that is not valid JSON
+   * is not written: that would drop what the reader wrote in it.
+   */
   private async persist(key: string, value: unknown): Promise<void> {
-    const next = { ...this.overrides };
+    const saved = await this.options.store.read(SETTINGS_FILE);
+    const onDisk = saved === undefined ? {} : parseOverrides(saved);
+    if (!onDisk) {
+      throw new Error(
+        `Lumière's ${SETTINGS_FILE} is not valid JSON: correct it, then change the setting again.`,
+      );
+    }
+    const next = { ...onDisk };
     if (value === undefined) {
       delete next[key];
     } else {
@@ -155,15 +167,17 @@ function fullKey(key: string): string {
 
 /** A missing or unreadable file means no changes; a damaged one is not fatal. */
 function readOverrides(text: string | undefined): Record<string, unknown> {
-  if (text === undefined) {
-    return {};
-  }
+  return text === undefined ? {} : (parseOverrides(text) ?? {});
+}
+
+/** The changes a file holds; undefined when it is not a JSON object. */
+function parseOverrides(text: string): Record<string, unknown> | undefined {
   try {
     const value: unknown = JSON.parse(text);
     return typeof value === "object" && value !== null && !Array.isArray(value)
       ? (value as Record<string, unknown>)
-      : {};
+      : undefined;
   } catch {
-    return {};
+    return undefined;
   }
 }

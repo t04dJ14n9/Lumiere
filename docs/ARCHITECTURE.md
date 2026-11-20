@@ -5,9 +5,8 @@ the plugin trees, the hosts and the contracts between them, and how a note
 travels from disk to the screen and back. It also records where the design
 is sound, where it has drifted, and what to change next.
 
-State: `main` at 0.1.11 (#515). The text editor's `[[` suggestions and
-`pdfOutlines` come from the link-suggestion PR, which is not merged yet.
-Update this document when the structure it describes changes.
+State: `main` at 0.1.17 (#774). Update this document when the structure it
+describes changes.
 
 Read this first, then the detailed documents it points to:
 
@@ -53,9 +52,9 @@ ships two products that share one plugin tree:
   diagrams, tasks, tags, backlinks, outline and graph. VS Code keeps the
   text, saving and undo.
 - **Lumiere PDF.** A PDF viewer on EmbedPDF 3 (PDFium compiled to WebAssembly).
-  Its signature feature is **Copy link to this**: a quote with a deep link
-  (`paper.pdf#page=3#:~:text=…`) that notes can paste, and that paints
-  backlink overlays back onto the PDF.
+  Its signature feature is **Copy link to this**: an `@paper.pdf#page=3`
+  locator and the quote, for agents. A note's deep link to a passage
+  (`paper.pdf#page=3#:~:text=…`) paints a backlink overlay back onto the PDF.
 
 The Markdown product also runs outside VS Code, on the same plugins:
 
@@ -104,7 +103,7 @@ this, so a forbidden import fails `pnpm check`, not a review.
 
 `packages/core` (about 1,500 lines) is the API every plugin programs
 against. Underneath it runs [Cordis](https://github.com/cordiverse/cordis)
-4.0.0-rc.12, pinned exactly.
+4.0.0-rc.13, pinned exactly.
 
 ### 3.1 Concepts
 
@@ -253,7 +252,7 @@ in `packages/markdown/src/shared/host`:
 | `views` | tree views (outline, backlinks, tags, …) |
 | `activeEditor` | the focused editor and its selection |
 | `settings` | per-note settings (`forNote`), effective settings, `prepare(uri)` |
-| `workspace` | folders, trust, vault code trust |
+| `workspace` | folders, workspace trust, files |
 | `storage` | workspace storage (snapshots, recents) |
 | `extensions` | other extensions (public API v1) |
 | `navigation` | open a link target, create notes, native document links |
@@ -318,8 +317,10 @@ Neither product imports the other. Hosts that lack a provider simply lack
 the feature (no PDF sections outside VS Code).
 
 The PDF backlink index does not use Markdown's vault index: it scans notes
-itself (`pdf/src/shared/pdf-backlink-index.ts`, `pdfBacklinks/plugin.ts`) and has
-had to copy the editor's path rules to stay consistent. See
+itself (`pdf/src/shared/pdf-backlink-index.ts`, `pdfBacklinks/plugin.ts`),
+from the first PDF opened in the window, so a reader of Markdown alone pays
+nothing for it, and has had to copy the editor's path rules to stay
+consistent. See
 [section 19](#19-recommended-changes).
 
 ## 9. The document: who owns the text
@@ -423,10 +424,13 @@ src/host (no vscode): portable viewer logic, reused by host-node
   `packages/pdf/src/host` (no `vscode` imports) holds the portable part,
   already reused by host-node's PDF pages.
 - Links into PDFs are plain fragments (`#page=N`, `#:~:text=`), so Obsidian
-  and browsers open them too. Lumiere's own links add a text fragment for the
-  quote; the backlink index matches it against the page text (folding case,
-  whitespace and hyphenated line breaks, across page edges) and paints an
-  overlay that opens the note.
+  and browsers open them too. A note's link may add a text fragment for a
+  passage, in the standard form (`[prefix-,]start[,end][,-suffix]`, as a
+  browser's Copy link to highlight writes it); the backlink index matches it
+  against the page text (folding case, whitespace and hyphenated line
+  breaks, across page edges) and paints an overlay that opens the note. Copy
+  link to this writes an `@` locator and the quote for agents, never a text
+  fragment (`packages/agents/docs/agent-handoff-format.md`).
 - Bookmarks are read in the webview for the viewer's outline, and in the
   extension host by the `pdfOutlines` reader (one PDFium instance, started
   on first use, cached per file by mtime and size, PDFs over 200 MB skipped).
@@ -442,8 +446,15 @@ src/host (no vscode): portable viewer logic, reused by host-node
   (a wheel notch is ×1.2; the buttons and keys walk Lumiere's ladder).
 - **One engine per viewer page** (`webview/engine-host.ts`): PDFium runs in a
   web worker, with the main thread as a fallback when the worker fails or
-  does not boot in 15 s. A reload of the file keeps the engine; the page
-  leaving stops it. `embedpdf.wasm` (7.9 MB) is fetched while the host sends
+  does not answer in 15 s (a locked or damaged PDF is an answer, shown as
+  such, never a reason to start the main-thread engine). An engine that
+  dies after the PDF opened (a worker error, a call rejected because the
+  runtime is gone or PDFium trapped: `webview/engine-health.ts`) is shown as
+  stopped, with Reload, which starts a new engine and asks for the PDF
+  again. A reload of the file keeps the engine; the page
+  leaving stops it. The host reads a PDF once per change for all its panes
+  (`host/viewer/shared-file.ts`) and opens files up to 512 MB
+  (`packages/pdf/docs/large-pdfs.md`). `embedpdf.wasm` (7.9 MB) is fetched while the host sends
   the bytes, and the page names it in `data-pdfium-wasm`. The extension host's
   bookmark reader runs the same engine in Node
   (`dist/pdf/outline-engine.js`), and Markdown's PDF embeds run it in the
@@ -452,7 +463,13 @@ src/host (no vscode): portable viewer logic, reused by host-node
   `scripts/embedpdf-stubs.mjs`, which leaves out what they never use.
 - **Annotations stay outside the PDF**, as `{ "version": 2, "bundle": … }`
   files named by the PDF's SHA-256 (`shared/annotation-store.ts`); version 1
-  files are converted when read. **Dark paper** is drawn by the engine:
+  files are converted when read. A save is merged into the file by
+  annotation, three-way against what that pane last had
+  (`shared/annotation-merge.ts`), so two panes or windows of one PDF never
+  overwrite each other's marks; the host then sends the file to its other
+  panes of that file, and a pane in another window (another extension
+  host) is sent it when the file's watcher sees a write this host did not
+  make. **Dark paper** is drawn by the engine:
   EmbedPDF 3 has no page colour-scheme option, so the viewer runs EmbedPDF's
   engine host with Lumiere's own page reader in its worker and in the
   main-thread fallback (`packages/pdf/docs/embedpdf-page-colors-patch.md`).
@@ -546,9 +563,8 @@ Not done:
   and containment (symlinks included) before opening, creating or writing.
 - **Link schemes.** External application schemes ask first; script, data,
   command and file schemes are refused.
-- **Vault code** (Obsidian community plugins) runs only where the owner said
-  yes: workspace trust in VS Code, an explicit per-vault answer in the app,
-  never in DSH.
+- **Vault code.** No host runs a vault's own code: the Obsidian community
+  plugin runtime and the trust question that gated it were removed (#414).
 - **Native links** in VS Code's text editor carry a signed ticket that is
   checked against the clicked text, the document version and containment.
 
@@ -599,7 +615,6 @@ what it changes, or a later spec fails for the wrong reason.
 - **PDF sits outside the seam.** Its extension plugins import `vscode`
   directly, and its backlink index re-scans the vault instead of reading
   Markdown's index. The last two backlink fixes were both drift repairs.
-- **Doc drift.** Some documents still name Cordis rc.11.
 
 ### 18.3 Wikilinks
 
@@ -630,7 +645,7 @@ Ranked by value for effort. S, M and L are rough sizes.
 | 0 | Stop the Properties sheet's quadratic re-renders on open (section 15) and add frontmatter budgets | S | notes with large frontmatter take seconds, or never settle |
 | 1 | Fix the small wikilink bugs: `%` decoding, PDF/image unresolved styling, escaped pipes | S | silent wrong behaviour for users coming from Obsidian |
 | 2 | One `isEnabled(manifest, settings)` helper replacing the eight sites | S | removes a class of "on here, off there" bugs |
-| 3 | Rename PDF's `agentBridge` and `ideContext`; fix rc.11 references | S | clean ranks, ledger and logs |
+| 3 | Rename PDF's `agentBridge` and `ideContext` | S | clean ranks, ledger and logs |
 | 4 | Wikilink document links, hover and unresolved diagnostics in VS Code's text editor | M | completes the text-editor story that `[[` suggestions began |
 | 5 | Manifest-driven registration: each manifest declares its phase (critical, paint, deferred) and loaders; the catalog, host and webview lists, loader map and defer lists are generated; keep one explicit precedence list | M | adding a plugin touches one folder |
 | 6 | Shrink the `editor` hub: an extension point for syntax-specific editing, so callout, footnote, math and other handlers move to their plugins; turn `vim-hooks` and `completion-hooks` into optional services; move the `links` state field behind a `livePreview` API | S–M | restores "core knows no features" |

@@ -2,7 +2,8 @@ name: Release
 
 # Push a tag such as v0.2.0 (matching package.json's version) to build the
 # VSIX, publish it through Marketplace Trusted Publishing, and attach it to a
-# GitHub Release.
+# GitHub Release. The tag's commit must be on main, and the release runs the
+# merge gate's suites (AGENTS.md) on that commit before it publishes.
 on:
   push:
     tags: ["v*"]
@@ -15,8 +16,60 @@ concurrency:
   cancel-in-progress: false
 
 jobs:
+  tag:
+    name: tag
+    runs-on: ${{ fromJSON(vars.RELEASE_RUNNER || '["ubuntu-latest"]') }}
+    timeout-minutes: 5
+    steps:
+      - uses: actions/checkout@v7
+        with:
+          # The whole history, so the tag's commit can be found on main.
+          fetch-depth: 0
+      - uses: ./.github/actions/setup
+        with:
+          install: "false"
+      - name: The tag matches package.json
+        run: |
+          version=$(node -p 'require("./package.json").version')
+          if [ "v${version}" != "${GITHUB_REF_NAME}" ]; then
+            echo "::error::Tag ${GITHUB_REF_NAME} does not match package.json version ${version}"
+            exit 1
+          fi
+      - name: The tag's commit is on main
+        run: |
+          git fetch --no-tags origin +refs/heads/main:refs/remotes/origin/main
+          if ! git merge-base --is-ancestor "${GITHUB_SHA}" origin/main; then
+            echo "::error::Tag ${GITHUB_REF_NAME} (${GITHUB_SHA}) is not on main"
+            exit 1
+          fi
+
+  browser:
+    name: browser
+    needs: tag
+    runs-on: ${{ fromJSON(vars.RELEASE_RUNNER || '["ubuntu-latest"]') }}
+    timeout-minutes: 35
+    steps:
+      - uses: actions/checkout@v7
+      - uses: ./.github/actions/setup
+      - uses: ./.github/actions/playwright
+      - name: pnpm test:browser
+        run: pnpm test:browser
+
+  quality:
+    name: quality
+    needs: tag
+    runs-on: ${{ fromJSON(vars.RELEASE_RUNNER || '["ubuntu-latest"]') }}
+    timeout-minutes: 20
+    steps:
+      - uses: actions/checkout@v7
+      - uses: ./.github/actions/setup
+      - uses: ./.github/actions/playwright
+      - name: pnpm test:quality
+        run: pnpm test:quality
+
   release:
     name: release
+    needs: [tag, browser, quality]
     environment: vscode-marketplace
     runs-on: ${{ fromJSON(vars.RELEASE_RUNNER || '["ubuntu-latest"]') }}
     timeout-minutes: 15
@@ -26,13 +79,6 @@ jobs:
     steps:
       - uses: actions/checkout@v7
       - uses: ./.github/actions/setup
-      - name: The tag matches package.json
-        run: |
-          version=$(node -p 'require("./package.json").version')
-          if [ "v${version}" != "${GITHUB_REF_NAME}" ]; then
-            echo "::error::Tag ${GITHUB_REF_NAME} does not match package.json version ${version}"
-            exit 1
-          fi
       - name: pnpm check
         run: pnpm check
       - name: pnpm package

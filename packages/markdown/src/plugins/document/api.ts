@@ -10,7 +10,11 @@ export interface DocumentSession {
   /** Rebase LF editor offsets from a confirmed synchronization revision. */
   mapOffsets?(version: number, offsets: readonly number[]): readonly number[];
   attach(id: string, rpc: Endpoint): Disposer;
-  flush(): Promise<void>;
+  /**
+   * Bring in every panel's unsent edits. Rejects only when `origin` (the
+   * panel id of the caller) cannot; other panels are best effort.
+   */
+  flush(origin?: string): Promise<void>;
   changed(): void;
   save(): Promise<boolean>;
   withAction<T>(action: () => Promise<T>): Promise<T>;

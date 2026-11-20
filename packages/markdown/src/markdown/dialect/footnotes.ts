@@ -1,5 +1,8 @@
 import type { MarkdownConfig } from "@lezer/markdown";
 
+/** A definition's continuation line, as footnote-definitions.ts reads it. */
+const continuation = /^(?: {2,4}| {0,3}\t)/;
+
 /**
  * Footnote markers and definitions.
  *
@@ -33,12 +36,23 @@ export const footnotes: MarkdownConfig = {
         // parseInline offsets match source (continuation lines keep indent).
         let content = line.text.slice(line.pos);
         let to = cx.lineStart + line.text.length;
+        // A blank line, then an indented one, continues the definition, as
+        // the footnote registry and the HTML renderer read it; the indented
+        // line is not an indented code block. Only one line can be peeked, so
+        // a blank line is consumed first: if no continuation follows, it
+        // only separated the definition from the next block.
+        let blank = "";
         for (;;) {
           const nextText = cx.peekLine();
-          if (/^(?: {2,4}| {0,3}\t)/.test(nextText)) {
+          if (continuation.test(nextText)) {
             cx.nextLine();
-            content += "\n" + line.text.slice(line.basePos);
+            content += blank + "\n" + line.text.slice(line.basePos);
             to = cx.lineStart + line.text.length;
+            blank = "";
+            continue;
+          }
+          if (!blank && nextText.trim() === "" && cx.nextLine()) {
+            blank = "\n" + line.text.slice(line.basePos);
             continue;
           }
           break;

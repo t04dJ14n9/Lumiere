@@ -19,15 +19,21 @@ export const codeBlocksHost: Plugin = {
   },
   provides: ["codeBlocks"],
   apply(ctx) {
-    const registry = new ProcessorRegistry(() => {
+    // What each panel last received, by panel id. A notice makes the panel
+    // re-render every rendered block, so one that changes nothing is skipped.
+    // A registry change always differs: it bumps the revision.
+    const told = new Map<string, string>();
+    const tellPanels = () => {
       for (const panel of ctx.editors.all()) {
-        panel.rpc.notify(
-          protocol,
-          "changed",
-          availableProcessors(ctx, registry, panel.id),
-        );
+        const value = availableProcessors(ctx, registry, panel.id);
+        const key = JSON.stringify(value);
+        if (told.get(panel.id) !== key) {
+          told.set(panel.id, key);
+          panel.rpc.notify(protocol, "changed", value);
+        }
       }
-    });
+    };
+    const registry = new ProcessorRegistry(tellPanels);
     const service: CodeBlocks & CallerBound<CodeBlocks> = {
       register: (processor) => registry.register("codeBlocks", processor),
       [bindCaller](caller) {
@@ -51,24 +57,15 @@ export const codeBlocksHost: Plugin = {
       },
     };
     ctx.provide("codeBlocks", service);
-    registerProcessorPanels(ctx, registry);
+    registerProcessorPanels(ctx, registry, told);
     ctx.effect(() => () => registry.dispose());
-    ctx.effect(() =>
-      ctx.settings.onChange(() => {
-        for (const panel of ctx.editors.all()) {
-          panel.rpc.notify(
-            protocol,
-            "changed",
-            availableProcessors(ctx, registry, panel.id),
-          );
-        }
-      }),
-    );
+    ctx.effect(() => ctx.settings.onChange(tellPanels));
   },
 };
 function registerProcessorPanels(
   ctx: Context,
   registry: ProcessorRegistry,
+  told: Map<string, string>,
 ): void {
   const handlers = new Map<string, Disposer[]>();
   const register = (id: string) => {
@@ -77,9 +74,11 @@ function registerProcessorPanels(
       return;
     }
     handlers.set(id, [
-      panel.rpc.handle(protocol, "current", () =>
-        availableProcessors(ctx, registry, id),
-      ),
+      panel.rpc.handle(protocol, "current", () => {
+        const value = availableProcessors(ctx, registry, id);
+        told.set(id, JSON.stringify(value));
+        return value;
+      }),
       panel.rpc.handle(protocol, "render", async (request, token) => {
         assertProcessorAccess(ctx, id);
         if (request.uri !== panel.document.uri) {
@@ -100,6 +99,7 @@ function registerProcessorPanels(
       void stop();
     }
     handlers.delete(panel.id);
+    told.delete(panel.id);
   });
   ctx.effect(() => () => {
     for (const stops of handlers.values()) {

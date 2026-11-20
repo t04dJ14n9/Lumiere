@@ -87,3 +87,27 @@ test("rejects encoded path separators in the raw noteUri", () => {
     false,
   );
 });
+
+test("rejects . and .. segments, written or percent-encoded", () => {
+  for (const [noteUri, path] of [
+    ["file:///work/../etc/a.md", "/work/../etc/a.md"],
+    ["file:///work/notes/./a.md", "/work/notes/./a.md"],
+    ["file:///work/%2e%2e/etc/a.md", "/work/%2e%2e/etc/a.md"],
+    ["file:///work/%2E%2E/etc/a.md", "/work/../etc/a.md"],
+  ] as const) {
+    assert.equal(
+      isTrustedBacklinkNoteUri({ ...ok, noteUri, path }),
+      false,
+      noteUri,
+    );
+  }
+  // A name that merely contains dots is a name.
+  assert.equal(
+    isTrustedBacklinkNoteUri({
+      ...ok,
+      noteUri: "file:///work/notes/..draft.md",
+      path: "/work/notes/..draft.md",
+    }),
+    true,
+  );
+});

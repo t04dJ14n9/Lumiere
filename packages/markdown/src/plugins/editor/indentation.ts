@@ -26,6 +26,7 @@ import { onPlainAtxHeading, onQuotedAtxHeading } from "./atx-indent";
 import { onFenceLine, onQuotedFenceLine } from "./fence-indent";
 import { onMathFence, onQuotedMathFence } from "./math-indent";
 import { onThematicBreak, onQuotedThematicBreak } from "./thematic-indent";
+import { caretOnLiteralLine } from "./literal-lines";
 
 interface Target {
   state: EditorState;
@@ -204,6 +205,13 @@ function onListItem(state: EditorState): boolean {
 
 /** Tab: HR/fence/math-fence no-op (BH-088/089/090), list (BH-057), footnote-def no-op (BH-067), link-ref no-op (BH-069), quoted-setext no-op (BH-068), quoted-ATX no-op (BH-070), nest quote (BH-058), setext no-op (BH-066), plain ATX no-op (BH-087), else indentMore. */
 export function indentTab(target: Target): boolean {
+  if (caretOnLiteralLine(target.state)) {
+    return indentMore(target);
+  }
+  return indentMarkdownLine(target);
+}
+
+function indentMarkdownLine(target: Target): boolean {
   // Before list: `- - -` / `* * *` look like list items but are thematic breaks;
   // indenting them into a CodeBlock destroys the HR (BH-088).
   if (onThematicBreak(target.state)) {
@@ -264,6 +272,10 @@ export function indentTab(target: Target): boolean {
 
 /** Shift+Tab: list, quoted-setext no-op (BH-068), unwrap quote, else indentLess. */
 export function outdentTab(target: Target): boolean {
+  if (caretOnLiteralLine(target.state)) {
+    indentLess(target);
+    return true;
+  }
   if (onListItem(target.state)) {
     return reindent(target, -1);
   }
@@ -280,6 +292,10 @@ export function outdentTab(target: Target): boolean {
 
 /** Backspace at list/quote/heading text start (BH-052–056, 061, 068, 071, 074, 083). */
 export function outdentBackspace(target: Target): boolean {
+  return !caretOnLiteralLine(target.state) && outdentMarkdownBackspace(target);
+}
+
+function outdentMarkdownBackspace(target: Target): boolean {
   const { state } = target;
   const range = state.selection.main;
   if (state.selection.ranges.length > 1 || !range.empty) {

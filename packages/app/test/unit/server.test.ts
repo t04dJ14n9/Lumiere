@@ -4,7 +4,14 @@
 import test from "node:test";
 import assert from "node:assert/strict";
 import { request as httpRequest } from "node:http";
-import { mkdir, mkdtemp, realpath, rm, writeFile } from "node:fs/promises";
+import {
+  mkdir,
+  mkdtemp,
+  readFile,
+  realpath,
+  rm,
+  writeFile,
+} from "node:fs/promises";
 import { tmpdir } from "node:os";
 import * as path from "node:path";
 import { startServer, type RunningServer } from "../../src/server/server";
@@ -181,6 +188,7 @@ test("the API lists vaults and their files, and refuses what is not a vault", as
   );
   assert.deepEqual(JSON.parse(files.body), {
     files: [{ path: "daily/today.md", kind: "note" }],
+    partial: false,
   });
 
   const outside = await send(
@@ -313,6 +321,65 @@ test("notes opened before the window listens reach it, in order, when it does", 
   assert.deepEqual(paths, ["first.md", "daily/today.md"]);
 });
 
+/** Every `data:` line of an event stream, read for `ms`. */
+function streamEvents(
+  port: number,
+  { path: route, cookie, ms }: { path: string; cookie: string; ms: number },
+): Promise<unknown[]> {
+  return new Promise((resolve, reject) => {
+    let received = "";
+    const req = httpRequest(
+      {
+        host: "127.0.0.1",
+        port,
+        path: route,
+        headers: { host: `127.0.0.1:${port}`, cookie },
+      },
+      (res) => {
+        res.setEncoding("utf8");
+        res.on("data", (chunk: string) => {
+          received += chunk;
+        });
+      },
+    );
+    req.on("error", (error) => (req.destroyed ? undefined : reject(error)));
+    req.end();
+    setTimeout(() => {
+      req.destroy();
+      resolve(
+        received
+          .split("\n")
+          .filter((line) => line.startsWith("data: "))
+          .map((line) => JSON.parse(line.slice(6)) as unknown),
+      );
+    }, ms);
+  });
+}
+
+test("a note opened before the window listens is kept for the window, not its canvas's stream", async (t) => {
+  const { server, vault, cookie } = await fixture(t);
+  // The canvas's stream connects first and stays open.
+  const canvas = streamEvents(server.port, {
+    path: "/api/events?only=ink",
+    cookie,
+    ms: 400,
+  });
+  await new Promise((resolve) => setTimeout(resolve, 50));
+  const opened = await send(server.port, "/api/open", {
+    method: "POST",
+    headers: { cookie, "content-type": "application/json" },
+    body: JSON.stringify({ path: path.join(vault, "daily", "today.md") }),
+  });
+  assert.equal(opened.status, 200);
+  const window = await streamEvents(server.port, {
+    path: "/api/events",
+    cookie,
+    ms: 150,
+  });
+  assert.deepEqual(window, [{ type: "open", vault, path: "daily/today.md" }]);
+  assert.deepEqual(await canvas, []);
+});
+
 test("the plugins' tree views are served behind the token", async (t) => {
   const { server, cookie } = await fixture(t);
   const listed = await send(server.port, "/lumiere/views", {
@@ -339,6 +406,8 @@ test("the window's layout and theme are kept, and only valid changes apply", asy
       outline: true,
       theme: "system",
       folders: {},
+      tabs: [],
+      activeTab: -1,
     },
   );
   const changed = await send(server.port, "/api/ui", {
@@ -356,6 +425,8 @@ test("the window's layout and theme are kept, and only valid changes apply", asy
     outline: false,
     theme: "dark",
     folders: { "/v": ["a", "a/b"] },
+    tabs: [],
+    activeTab: -1,
   };
   assert.deepEqual(JSON.parse(changed.body), kept);
   assert.deepEqual(
@@ -404,6 +475,14 @@ test("the API closes open vaults, refuses non-note opens, and serves the command
   });
   assert.equal(closed.status, 200);
   assert.deepEqual((JSON.parse(closed.body) as { open: string[] }).open, []);
+  // A closed vault is no longer trusted: no new page opens from it.
+  const note = path.join(vault, "daily", "today.md");
+  const page = await send(
+    server.port,
+    `/lumiere/editor?path=${encodeURIComponent(note)}&root=${encodeURIComponent(vault)}`,
+    { headers: { cookie } },
+  );
+  assert.equal(page.status, 403);
 });
 
 /** The key the window's own page was given, read as its script would. */
@@ -510,3 +589,152 @@ test("a process that holds the launch token and is no page may still open a fold
     other,
   ]);
 });
+
+test("S5: only the window answers whether git may run in a vault", async (t) => {
+  const { server, vault, cookie } = await fixture(t);
+  const key = await windowKey(server.port, cookie);
+  const waiting = await send(server.port, "/api/git-trust", {
+    headers: { cookie },
+  });
+  assert.equal(waiting.status, 200);
+  assert.deepEqual(JSON.parse(waiting.body), { waiting: [] });
+  const page = {
+    cookie,
+    "content-type": "application/json",
+    origin: `http://127.0.0.1:${server.port}`,
+    "sec-fetch-site": "same-origin",
+    "sec-fetch-dest": "empty",
+  };
+  const answer = (headers: object) =>
+    send(server.port, "/api/git-trust", {
+      method: "POST",
+      headers: { ...page, ...headers },
+      body: JSON.stringify({ vault, allow: true }),
+    });
+  assert.equal((await answer({})).status, 403);
+  // The window may answer, but only a question git asked.
+  const own = await answer({ [SHELL_KEY_HEADER]: key });
+  assert.equal(own.status, 400);
+  assert.match(own.body, /did not ask/);
+});
+
+test("F36: the window makes, renames, moves and deletes a vault's files; a page may not", async (t) => {
+  const { server, vault, cookie } = await fixture(t);
+  const key = await windowKey(server.port, cookie);
+  const page = {
+    cookie,
+    "content-type": "application/json",
+    origin: `http://127.0.0.1:${server.port}`,
+    "sec-fetch-site": "same-origin",
+    "sec-fetch-dest": "empty",
+  };
+  const post = (route: string, body: object, headers: object = {}) =>
+    send(server.port, route, {
+      method: "POST",
+      headers: { ...page, [SHELL_KEY_HEADER]: key, ...headers },
+      body: JSON.stringify({ vault, ...body }),
+    });
+  const events = new EventCollector(server.port, cookie);
+  t.after(() => events.close());
+  await events.ready;
+
+  assert.equal(
+    (
+      await post(
+        "/api/files/note",
+        { path: "x.md" },
+        { [SHELL_KEY_HEADER]: "" },
+      )
+    ).status,
+    403,
+  );
+  assert.equal(
+    (await post("/api/files/note", { path: "Untitled.md" })).status,
+    200,
+  );
+  assert.equal(
+    (await post("/api/files/folder", { path: "archive" })).status,
+    200,
+  );
+  const moved = await post("/api/files/rename", {
+    from: "daily/today.md",
+    to: "archive/today.md",
+  });
+  assert.equal(moved.status, 200);
+  assert.deepEqual(JSON.parse(moved.body), { notUpdated: [] });
+  assert.equal(
+    await readFile(path.join(vault, "archive", "today.md"), "utf8"),
+    "# Today",
+  );
+  await events.until((event) => event.type === "renamed");
+  assert.deepEqual(
+    events.seen.find((event) => event.type === "renamed"),
+    {
+      type: "renamed",
+      from: path.join(vault, "daily", "today.md"),
+      to: path.join(vault, "archive", "today.md"),
+    },
+  );
+  assert.equal(
+    (await post("/api/files/rename", { from: "archive", to: "../out" })).status,
+    400,
+  );
+  const deleted = await post("/api/files/delete", {
+    path: "archive",
+    permanently: true,
+  });
+  assert.deepEqual(JSON.parse(deleted.body), { deleted: true, trashed: false });
+  await assert.rejects(readFile(path.join(vault, "archive", "today.md")));
+});
+
+/** The window's event stream, collected. */
+class EventCollector {
+  readonly seen: { type: string; [key: string]: unknown }[] = [];
+  readonly ready: Promise<void>;
+  private readonly request: ReturnType<typeof httpRequest>;
+
+  constructor(port: number, cookie: string) {
+    let opened = () => {};
+    this.ready = new Promise((resolve) => (opened = resolve));
+    this.request = httpRequest(
+      {
+        host: "127.0.0.1",
+        port,
+        path: "/api/events",
+        headers: { host: `127.0.0.1:${port}`, cookie },
+      },
+      (res) => {
+        res.setEncoding("utf8");
+        let buffer = "";
+        res.on("data", (chunk: string) => {
+          buffer += chunk;
+          if (buffer.includes(": lumiere")) {
+            opened();
+          }
+          for (const line of buffer.split("\n")) {
+            if (line.startsWith("data: ")) {
+              this.seen.push(JSON.parse(line.slice(6)));
+            }
+          }
+          buffer = buffer.slice(buffer.lastIndexOf("\n") + 1);
+        });
+      },
+    );
+    this.request.on("error", () => {});
+    this.request.end();
+  }
+
+  async until(found: (event: { type: string }) => boolean): Promise<void> {
+    for (let waited = 0; waited < 5000; waited += 20) {
+      if (this.seen.some(found)) {
+        return;
+      }
+      await new Promise((resolve) => setTimeout(resolve, 20));
+    }
+    assert.fail("the event never came");
+  }
+
+  close(): void {
+    this.request.destroy();
+  }
+}

@@ -3,7 +3,8 @@
  * picks), drawn inside the page: the embedder has no API for them. Styled
  * with the page's `--vscode-*` variables, so they follow the embedder's theme.
  */
-import type { OpenMessage } from "../embedding";
+import type { MovedMessage, OpenMessage } from "../embedding";
+import { carryState, movedSearch } from "./moved";
 import { PageMenu } from "./page-menu";
 import {
   safeExternalHref,
@@ -64,19 +65,16 @@ export function createUi(send: Send): (request: UiRequest) => void {
   let picker: Picker | undefined;
   let menu: PageMenu | undefined;
   return (request) => {
+    if (leavesThePage(request)) {
+      return;
+    }
     switch (request.type) {
       case "toast":
         return toast(request.kind, request.message);
       case "clipboard":
         return void copy(request.text);
-      case "open":
-        return openInEmbedder({
-          lumiere: "open",
-          path: request.path,
-          fragment: request.fragment,
-        });
-      case "external":
-        return openExternal(request.href);
+      case "readClipboard":
+        return void readClipboard(request.id, send);
       case "pickItems":
         return picker?.id === request.id
           ? picker.update(request.items)
@@ -108,6 +106,40 @@ function openExternal(href: string): void {
 }
 
 /** Only the embedder can open a tab; it decides how (embedding.ts). */
+/**
+ * What goes to the embedder or the system rather than the page: a file to
+ * open, the page's note moved, a web link. True when `request` was one.
+ */
+function leavesThePage(request: UiRequest): boolean {
+  switch (request.type) {
+    case "open":
+      openInEmbedder({
+        lumiere: "open",
+        path: request.path,
+        fragment: request.fragment,
+      });
+      return true;
+    case "moved":
+      followMove(request.path);
+      return true;
+    case "external":
+      openExternal(request.href);
+      return true;
+    default:
+      return false;
+  }
+}
+
+/**
+ * The note moved: its scroll position goes with it (the state is kept by
+ * the page's query, shim.ts), and the embedder is told, to show it there.
+ */
+function followMove(path: string): void {
+  carryState(location.search, movedSearch(location.search, path));
+  const message: MovedMessage = { lumiere: "moved", path };
+  window.parent.postMessage(message, location.origin);
+}
+
 function openInEmbedder(message: OpenMessage): void {
   window.parent.postMessage(message, location.origin);
 }
@@ -125,6 +157,17 @@ function toast(kind: "info" | "error", message: string): void {
   element.textContent = message;
   document.body.append(element);
   setTimeout(() => element.remove(), kind === "error" ? 8000 : 4000);
+}
+
+/** The clipboard's text for the host; null when the browser refuses. */
+async function readClipboard(id: number, send: Send): Promise<void> {
+  let text: string | null;
+  try {
+    text = await navigator.clipboard.readText();
+  } catch {
+    text = null;
+  }
+  send({ ch: "ui", data: { type: "clipboard", id, text } });
 }
 
 async function copy(text: string): Promise<void> {

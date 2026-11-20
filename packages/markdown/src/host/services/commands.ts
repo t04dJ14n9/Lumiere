@@ -4,6 +4,7 @@ import type { HostCommands } from "../../shared/host";
 import { warmMarkdownDocument } from "../document-warm";
 import { textBypass } from "../reclaim";
 import { toDisposer } from "./documents";
+import { ContextKeys } from "../context-keys";
 
 /** Commands whose first argument is a URI, which plugins pass as a string. */
 const URI_COMMANDS = new Set([
@@ -14,10 +15,16 @@ const URI_COMMANDS = new Set([
   "chatgpt.addFileToThread",
 ]);
 
+// One per extension host, as VS Code keeps one set of context keys per window.
+const contextKeys = new ContextKeys();
+
 export function createHostCommands(): HostCommands {
   return {
     register: (id, run) => toDisposer(vscode.commands.registerCommand(id, run)),
     async execute(id, ...args) {
+      if (id === "setContext" && typeof args[0] === "string") {
+        return setContext(args[0], args[1]);
+      }
       const nativeArgs = commandArguments(id, args);
       if (
         id === "vscode.openWith" &&
@@ -28,6 +35,18 @@ export function createHostCommands(): HostCommands {
       return vscode.commands.executeCommand(id, ...nativeArgs);
     },
   };
+}
+
+async function setContext(key: string, value: unknown): Promise<unknown> {
+  if (!contextKeys.changes(key, value)) {
+    return undefined;
+  }
+  try {
+    return await vscode.commands.executeCommand("setContext", key, value);
+  } catch (error) {
+    contextKeys.forget(key);
+    throw error;
+  }
 }
 
 function commandArguments(id: string, args: unknown[]): unknown[] {

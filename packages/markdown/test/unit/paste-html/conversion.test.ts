@@ -7,6 +7,8 @@ import { markdownFromHtml } from "../../../src/plugins/pasteHtml/conversion";
 import {
   acceptsHtml,
   pasteTransformed,
+  reportPasteEdits,
+  trackPasteEdits,
 } from "../../../src/plugins/pasteHtml/paste";
 
 test("rich HTML converts headings, literal text, formatting, lists and tables", () => {
@@ -99,18 +101,45 @@ test("conversion drops active containers and script destinations", () => {
     "safe",
   );
 });
-function view(doc = "before") {
+/** An editor whose edits reach pending pastes, as pasteEditTracker reports them. */
+function view(doc = "before", options = { tracked: true }) {
   let state = EditorState.create({ doc, selection: { anchor: doc.length } });
-  return {
+  const target = {
     get state() {
       return state;
     },
     dispatch(spec: Parameters<EditorState["update"]>[0]) {
-      state = state.update(spec).state;
+      const transaction = state.update(spec);
+      state = transaction.state;
+      if (transaction.docChanged) {
+        reportPasteEdits(target, transaction.changes);
+      }
     },
   } as EditorView;
+  if (options.tracked) {
+    trackPasteEdits(target);
+  }
+  return target;
 }
-test("async paste applies once and rejects changed documents, selections and closed views", async () => {
+/** A paste whose transform finishes only when the test says so. */
+function slowPaste(target: EditorView, isLive = () => true) {
+  let finish!: (data: { html: string; text: string }) => void;
+  const pending = pasteTransformed({
+    view: target,
+    data: { html: "", text: "paste" },
+    transform: () =>
+      new Promise((resolve) => {
+        finish = resolve;
+      }),
+    isLive,
+  });
+  return () => {
+    finish({ html: "", text: "PASTE" });
+    return pending;
+  };
+}
+
+test("async paste applies once, and not into a closed view", async () => {
   const target = view();
   assert.equal(
     await pasteTransformed({
@@ -122,28 +151,54 @@ test("async paste applies once and rejects changed documents, selections and clo
     true,
   );
   assert.equal(target.state.doc.toString(), "before**after**");
-  for (const change of ["text", "selection", "closed"]) {
-    const target = view();
-    let finish!: (data: { html: string; text: string }) => void;
-    const pending = pasteTransformed({
-      view: target,
-      data: { html: "", text: "paste" },
-      transform: () =>
-        new Promise((resolve) => {
-          finish = resolve;
-        }),
-      isLive: () => change !== "closed",
-    });
-    if (change === "text") {
-      target.dispatch({ changes: { from: 0, insert: "typed" } });
-    }
-    if (change === "selection") {
-      target.dispatch({ selection: { anchor: 0 } });
-    }
-    finish({ html: "", text: "paste" });
-    assert.equal(await pending, false);
-    assert.ok(!target.state.doc.toString().includes("paste"));
-  }
+  assert.equal(target.state.selection.main.head, 15);
+  const closed = view();
+  const finish = slowPaste(closed, () => false);
+  assert.equal(await finish(), false);
+  assert.equal(closed.state.doc.toString(), "before");
+});
+
+test("a slow paste lands where it was made, after the reader typed meanwhile", async () => {
+  // Typing at the caret while the images import: the paste comes first.
+  const typedAtCaret = view("abcd");
+  typedAtCaret.dispatch({ selection: { anchor: 2 } });
+  let finish = slowPaste(typedAtCaret);
+  typedAtCaret.dispatch({
+    changes: { from: 2, insert: "typed" },
+    selection: { anchor: 7 },
+  });
+  typedAtCaret.dispatch({ changes: { from: 0, insert: "> " } });
+  assert.equal(await finish(), true);
+  assert.equal(typedAtCaret.state.doc.toString(), "> abPASTEtypedcd");
+  // The reader's caret stays where they were typing.
+  assert.equal(typedAtCaret.state.selection.main.head, 14);
+
+  // A caret move only: the paste still goes where it was made.
+  const moved = view();
+  finish = slowPaste(moved);
+  moved.dispatch({ selection: { anchor: 0 } });
+  assert.equal(await finish(), true);
+  assert.equal(moved.state.doc.toString(), "beforePASTE");
+  assert.equal(moved.state.selection.main.head, 0);
+});
+
+test("a slow paste over a selection the reader typed over replaces none of their text", async () => {
+  const target = view("say hello there");
+  target.dispatch({ selection: { anchor: 4, head: 9 } });
+  const finish = slowPaste(target);
+  // Typing replaces the selection, sharing its first letters.
+  target.dispatch({ changes: { from: 4, to: 9, insert: "help" } });
+  assert.equal(await finish(), true);
+  assert.equal(target.state.doc.toString(), "say PASTEhelp there");
+
+  // An untouched selection is still replaced by the paste, also in a view
+  // whose edits are not tracked (a table cell's editor).
+  const kept = view("say hello there", { tracked: false });
+  kept.dispatch({ selection: { anchor: 4, head: 9 } });
+  const finishKept = slowPaste(kept);
+  kept.dispatch({ changes: { from: 0, insert: "I " } });
+  assert.equal(await finishKept(), true);
+  assert.equal(kept.state.doc.toString(), "I say PASTE there");
 });
 test("HTML conversion is suppressed inside literal code", () => {
   for (const doc of ["`literal`", "```\nliteral\n```", "    literal"]) {
@@ -179,6 +234,76 @@ test("a pasted table cell keeps its line breaks as <br>, as Obsidian writes them
     ),
     "|A|B|\n|---|---|\n|one<br>two|p1<br><br>p2|",
   );
+});
+
+test("Google Docs text keeps its bold and italic, with no stray markers around it", () => {
+  // Google Docs wraps the copy in a not-bold <b> and styles its spans.
+  assert.equal(
+    markdownFromHtml(
+      '<meta charset="utf-8"><b style="font-weight:normal;" id="docs-internal-guid-1234"><p dir="ltr"><span style="font-weight:700;font-style:normal;">Bold</span><span style="font-weight:400;"> and plain and </span><span style="font-weight:400;font-style:italic;">italic</span><span style="font-weight:700;font-style:italic;"> both </span></p><p dir="ltr"><span style="font-weight:400">Second</span></p></b><br class="Apple-interchange-newline">',
+    ),
+    "**Bold** and plain and _italic_ **_both_**\n\nSecond",
+  );
+  // Inside real bold, a bold span adds no second pair of markers.
+  assert.equal(
+    markdownFromHtml(
+      '<p><strong><span style="font-weight:bold">x</span></strong></p>',
+    ),
+    "**x**",
+  );
+});
+
+test("Word list paragraphs become a Markdown list, without their literal bullets", () => {
+  // Word writes each item as a paragraph with an mso-list style and its
+  // bullet or number as text in an `mso-list:Ignore` span.
+  const item = (list: string, level: number, marker: string, text: string) =>
+    `<p class=MsoListParagraphCxSpMiddle style='text-indent:-.25in;mso-list:${list} level${level} lfo1'><span style='font-family:Symbol'><span style='mso-list:Ignore'>${marker}<span style='font:7.0pt "Times New Roman"'>&nbsp;&nbsp;&nbsp;&nbsp; </span></span></span>${text}<o:p></o:p></p>`;
+  assert.equal(
+    markdownFromHtml(
+      "<p class=MsoNormal>Before</p>" +
+        item("l0", 1, "·", "First <b>item</b>") +
+        item("l0", 2, "o", "Nested") +
+        item("l0", 1, "·", "Last") +
+        item("l1", 1, "1.", "One") +
+        item("l1", 1, "2.", "Two") +
+        "<p class=MsoNormal>After</p>",
+    ),
+    "Before\n\n- First **item**\n    - Nested\n- Last\n\n1. One\n2. Two\n\nAfter",
+  );
+  // A copy whose marker is plain text before the item's own.
+  assert.equal(
+    markdownFromHtml(
+      "<p style='mso-list:l2 level1 lfo3'>3.&nbsp;&nbsp; Third</p><p style='mso-list:l3 level1 lfo4'>·&nbsp;&nbsp; Dot</p>",
+    ),
+    "3. Third\n\n- Dot",
+  );
+});
+
+test("preformatted text without a code element is a fenced block, as copied", () => {
+  // GitHub and many documentation sites highlight with spans in a bare <pre>.
+  assert.equal(
+    markdownFromHtml(
+      '<p>Run:</p><div class="highlight highlight-source-js"><pre><span class="pl-k">const</span> a_b = <span class="pl-s">"x*y"</span>;<br>if (a &lt; b) { [1] }\n</pre></div>',
+    ),
+    'Run:\n\n```js\nconst a_b = "x*y";\nif (a < b) { [1] }\n```',
+  );
+  assert.equal(
+    markdownFromHtml("<pre>has ``` inside</pre>"),
+    "````\nhas ``` inside\n````",
+  );
+});
+
+test("a table nested in a cell stays in that cell, its rows written once", () => {
+  const markdown = markdownFromHtml(
+    "<table><thead><tr><th>A</th><th>B</th></tr></thead><tbody><tr><td>outer</td><td><table><tr><td>in1</td><td>in2</td></tr></table></td></tr><tr><td>o2</td><td>o3</td></tr></tbody></table>",
+  )!;
+  const lines = markdown.split("\n");
+  assert.equal(lines.length, 4, markdown);
+  assert.deepEqual(
+    [lines[0], lines[1], lines[3]],
+    ["|A|B|", "|---|---|", "|o2|o3|"],
+  );
+  assert.match(lines[2]!, /^\|outer\|.*in1.*in2.*\|$/);
 });
 
 test("a pasted cell spanning columns is followed by empty cells, so later cells keep their columns", () => {

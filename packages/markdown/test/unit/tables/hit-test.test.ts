@@ -4,6 +4,7 @@ import {
   nearestEntry,
   cellAtPoint,
   cellUnderPoint,
+  nearestRow,
 } from "../../../src/plugins/tables/hit-test";
 
 function fakeElement(
@@ -65,6 +66,29 @@ test("nearestEntry picks the closest row past the bottom edge", () => {
   ];
   assert.equal(nearestEntry(rows, "row", { x: 10, y: 30 }), 1);
   assert.equal(nearestEntry(rows, "row", { x: 10, y: 90 }), 2);
+});
+
+test("a drag over a long table finds its row from a few row layouts", () => {
+  let reads = 0;
+  const rows = Array.from({ length: 3000 }, (_, index) => {
+    // Rows of uneven height, the header taller, as in a rendered table.
+    const top = index === 0 ? 0 : 30 + (index - 1) * 21;
+    const bottom = index === 0 ? 30 : top + 21;
+    const element = fakeElement(0, 100, top, bottom);
+    return {
+      getBoundingClientRect() {
+        reads++;
+        return element.getBoundingClientRect();
+      },
+    } as Element;
+  });
+  for (const y of [-50, 0, 15, 30, 31, 51, 1000, 30_000, 62_985, 70_000]) {
+    const expected = nearestEntry(rows, "row", { x: 10, y });
+    reads = 0;
+    assert.equal(nearestRow(rows, y), expected, `y ${y}`);
+    assert.ok(reads <= 16, `y ${y}: ${reads} layout reads`);
+  }
+  assert.equal(nearestRow([], 10), -1);
 });
 
 test("cellAtPoint still clamps to the nearest cell past an edge", () => {

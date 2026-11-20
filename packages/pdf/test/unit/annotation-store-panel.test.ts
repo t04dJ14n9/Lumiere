@@ -11,6 +11,11 @@ import type { HostMessage } from "../../src/shared/messages";
 import { AnnotationOwnership } from "../../src/shared/annotation-ownership";
 import { parseViewerMessage } from "../../src/shared/messages";
 import { parseViewSettings } from "../../src/shared/view-settings";
+import {
+  parseAnnotations,
+  serializeAnnotations,
+} from "../../src/shared/annotation-store";
+import { bundle, refOn } from "./support/bundle";
 
 const PDF = new Uint8Array([37, 80, 68, 70]); // %PDF
 const PDF_SHA = createHash("sha256").update(PDF).digest("hex");
@@ -19,6 +24,7 @@ const PDF_SHA = createHash("sha256").update(PDF).digest("hex");
 function open(
   store: PdfAnnotationFiles | undefined,
   overrides: Partial<PdfFiles> = {},
+  uri = "file:///vault/inbox/paper.pdf",
 ) {
   const posted: HostMessage[] = [];
   const errors: string[] = [];
@@ -48,7 +54,7 @@ function open(
     ...overrides,
   };
   const panel = new PdfViewerPanel(
-    "file:///vault/inbox/paper.pdf",
+    uri,
     webview,
     {
       files,
@@ -131,7 +137,8 @@ test("Lumiere's annotations are saved by the hash of the bytes shown, and the PD
     text: null,
   });
   assert.equal(kept.has(PDF_SHA), false);
-  assert.deepEqual(calls.slice(-2), [
+  // Each save reads the file first, to merge with what another editor saved.
+  assert.deepEqual(calls.filter((call) => call.startsWith("write")).slice(-2), [
     `write file:///vault/inbox/paper.pdf ${PDF_SHA} text`,
     `write file:///vault/inbox/paper.pdf ${PDF_SHA} -`,
   ]);
@@ -292,6 +299,124 @@ test("a store save is filed under the hash the viewer names, when that is its by
   assert.equal(kept.size, 2);
 });
 
+// Each pane's engine numbers its new annotations itself: both call theirs 40.
+const markA = serializeAnnotations(
+  bundle([{ ref: refOn(40), nm: "uuid-a", contents: "A" }]),
+)!;
+const markB = serializeAnnotations(
+  bundle([{ ref: refOn(40), nm: "uuid-b", contents: "B" }]),
+)!;
+
+async function namesKept(text: string | undefined): Promise<string[]> {
+  if (text === undefined) {
+    return [];
+  }
+  const stored = (await parseAnnotations(text))!;
+  return stored.bundle.items
+    .map((item) => String((item.data as { nm?: string }).nm))
+    .sort();
+}
+
+/** Two editors of the same PDF, on one host's annotation files. */
+async function twoPanes(memory = memoryStore()) {
+  const one = open(memory.store);
+  const two = open(memory.store);
+  await one.receive({ type: "ready" });
+  await two.receive({ type: "ready" });
+  const save = (pane: typeof one, text: string | null) =>
+    pane.receive({
+      type: "annotationStoreSave",
+      load: pane.load().load,
+      sha256: PDF_SHA,
+      text,
+    });
+  return { ...memory, one, two, save };
+}
+
+test("a mark made in pane 1, then one in pane 2: the file keeps both", async () => {
+  const { kept, one, two, save } = await twoPanes();
+  await save(one, markA);
+  await save(two, markB);
+  assert.deepEqual(await namesKept(kept.get(PDF_SHA)), ["uuid-a", "uuid-b"]);
+});
+
+test("pane 2 makes and deletes a mark: the file keeps pane 1's", async () => {
+  const { kept, one, two, save } = await twoPanes();
+  await save(one, markA);
+  await save(two, markB);
+  await save(two, null);
+  assert.deepEqual(await namesKept(kept.get(PDF_SHA)), ["uuid-a"]);
+});
+
+test("the other pane is sent what the file holds after a save", async () => {
+  const { kept, one, two, save } = await twoPanes();
+  await save(one, markA);
+  const changed = two.posted.filter(
+    (message) => message.type === "annotationStoreChanged",
+  );
+  assert.deepEqual(changed, [
+    {
+      type: "annotationStoreChanged",
+      load: two.load().load,
+      sha256: PDF_SHA,
+      revision: 1,
+      text: kept.get(PDF_SHA),
+    },
+  ]);
+  assert.equal(
+    one.posted.some((message) => message.type === "annotationStoreChanged"),
+    false,
+  );
+});
+
+test("once pane 2 shows pane 1's mark, deleting it there deletes it from the file", async () => {
+  const { kept, one, two, save } = await twoPanes();
+  await save(one, markA);
+  // Sent before pane 2 showed A: it does not delete A.
+  await save(two, markB);
+  assert.deepEqual(await namesKept(kept.get(PDF_SHA)), ["uuid-a", "uuid-b"]);
+  await two.receive({
+    type: "annotationStoreShown",
+    load: two.load().load,
+    sha256: PDF_SHA,
+    revision: 1,
+  });
+  // Pane 2 deletes A and keeps B.
+  await save(two, markB);
+  assert.deepEqual(await namesKept(kept.get(PDF_SHA)), ["uuid-b"]);
+});
+
+test("a revision the host never sent changes nothing", async () => {
+  const { kept, one, two, save } = await twoPanes();
+  await save(one, markA);
+  await two.receive({
+    type: "annotationStoreShown",
+    load: two.load().load,
+    sha256: PDF_SHA,
+    revision: 9,
+  });
+  await save(two, markB);
+  assert.deepEqual(await namesKept(kept.get(PDF_SHA)), ["uuid-a", "uuid-b"]);
+});
+
+test("a pane that still shows a mark another pane deleted does not bring it back", async () => {
+  const memory = memoryStore();
+  memory.kept.set(PDF_SHA, markA);
+  const { kept, one, two, save } = await twoPanes(memory);
+  // Both opened with A; pane 1 deletes it.
+  await save(one, null);
+  assert.equal(kept.has(PDF_SHA), false);
+  // Pane 2 adds B while it still shows A as it was.
+  const both = serializeAnnotations(
+    bundle([
+      { ref: refOn(40), nm: "uuid-a", contents: "A" },
+      { ref: refOn(41), nm: "uuid-b", contents: "B" },
+    ]),
+  )!;
+  await save(two, both);
+  assert.deepEqual(await namesKept(kept.get(PDF_SHA)), ["uuid-b"]);
+});
+
 test("a host with nowhere to keep annotations says so once", async () => {
   const { receive, load, errors } = open(undefined);
   await receive({ type: "ready" });
@@ -413,4 +538,138 @@ test("Lumiere owns what it imported or made; changes to the PDF's own are the PD
   assert.equal(owned.isOwn("obj:20"), true);
   assert.equal(owned.savedIntoPdf(owned.keys()), false);
   assert.equal(owned.change("update", "obj:10"), "pdf");
+});
+
+/**
+ * Two VS Code windows on one disk: each extension host has its own
+ * annotation files, which share `kept` and tell every watcher of a write,
+ * as a file watcher would.
+ */
+function twoWindows() {
+  const kept = new Map<string, string>();
+  const watchers = new Set<{ sha256: string; onChange: () => void }>();
+  const window = (): PdfAnnotationFiles => ({
+    read: async (_uri, sha256) => kept.get(sha256),
+    write: async (_uri, sha256, text) => {
+      if (text === undefined) {
+        kept.delete(sha256);
+      } else {
+        kept.set(sha256, text);
+      }
+      for (const watcher of [...watchers]) {
+        if (watcher.sha256 === sha256) {
+          watcher.onChange();
+        }
+      }
+    },
+    watch: (_uri, sha256, onChange) => {
+      const watcher = { sha256, onChange };
+      watchers.add(watcher);
+      return () => {
+        watchers.delete(watcher);
+      };
+    },
+  });
+  return { kept, watchers, first: window(), second: window() };
+}
+
+/** Let the watcher's read and the store's queue run. */
+const settle = () => new Promise((resolve) => setTimeout(resolve, 10));
+
+test("a pane in another window is sent the file when another window saves it", async () => {
+  const { kept, first, second } = twoWindows();
+  const one = open(first);
+  const two = open(second);
+  await one.receive({ type: "ready" });
+  await two.receive({ type: "ready" });
+  await one.receive({
+    type: "annotationStoreSave",
+    load: one.load().load,
+    sha256: PDF_SHA,
+    text: markA,
+  });
+  await settle();
+  const changed = two.posted.filter((m) => m.type === "annotationStoreChanged");
+  assert.deepEqual(changed, [
+    {
+      type: "annotationStoreChanged",
+      load: two.load().load,
+      sha256: PDF_SHA,
+      revision: 1,
+      text: kept.get(PDF_SHA),
+    },
+  ]);
+  // Its own write, seen by its own watcher, is no news to pane 1.
+  assert.equal(
+    one.posted.some((m) => m.type === "annotationStoreChanged"),
+    false,
+  );
+  // Pane 2's unsaved mark is merged with pane 1's, not written over it.
+  await two.receive({
+    type: "annotationStoreSave",
+    load: two.load().load,
+    sha256: PDF_SHA,
+    text: markB,
+  });
+  assert.deepEqual(await namesKept(kept.get(PDF_SHA)), ["uuid-a", "uuid-b"]);
+});
+
+test("a save over another window's write its watcher has not reported shows that write here too", async () => {
+  const { kept, first } = twoWindows();
+  const one = open(first);
+  await one.receive({ type: "ready" });
+  kept.set(PDF_SHA, markB); // another window's write, not yet reported
+  await one.receive({
+    type: "annotationStoreSave",
+    load: one.load().load,
+    sha256: PDF_SHA,
+    text: markA,
+  });
+  const changed = one.posted.filter((m) => m.type === "annotationStoreChanged");
+  assert.equal(changed.length, 1);
+  assert.equal(changed[0]?.type, "annotationStoreChanged");
+  assert.deepEqual(
+    await namesKept(
+      changed[0]?.type === "annotationStoreChanged"
+        ? (changed[0].text ?? undefined)
+        : undefined,
+    ),
+    ["uuid-a", "uuid-b"],
+  );
+});
+
+test("a closed pane stops watching its annotation file", async () => {
+  const { watchers, first } = twoWindows();
+  const one = open(first);
+  await one.receive({ type: "ready" });
+  assert.equal(watchers.size, 1);
+  one.panel.dispose();
+  assert.equal(watchers.size, 0);
+});
+
+test("two PDFs with the same bytes in two folders keep apart annotation files", async () => {
+  const kept = new Map<string, string>();
+  const fileOf = (uri: string, sha256: string) =>
+    `${uri.split("/")[3]}/${sha256}`;
+  const store: PdfAnnotationFiles = {
+    key: fileOf,
+    read: async (uri, sha256) => kept.get(fileOf(uri, sha256)),
+    write: async (uri, sha256, text) => {
+      kept.set(fileOf(uri, sha256), text ?? "");
+    },
+  };
+  const one = open(store);
+  const two = open(store, {}, "file:///other/inbox/paper.pdf");
+  await one.receive({ type: "ready" });
+  await two.receive({ type: "ready" });
+  await one.receive({
+    type: "annotationStoreSave",
+    load: one.load().load,
+    sha256: PDF_SHA,
+    text: markA,
+  });
+  assert.equal(
+    two.posted.some((m) => m.type === "annotationStoreChanged"),
+    false,
+  );
 });

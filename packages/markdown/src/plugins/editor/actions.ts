@@ -86,7 +86,7 @@ export class ActionRegistry {
     ) {
       return false;
     }
-    await panel.session.flush();
+    await panel.session.flush(panel.id);
     let selection: SourceSelection | undefined;
     if (entry.value.scope === "selection") {
       selection = await this.selections.capture(editorId, token);

@@ -11,6 +11,7 @@ export interface PanelShell {
   readonly document: HostDocument;
   readonly transport: Transport;
   readonly cspSource: string;
+  /** Whether the workspace is trusted now; the page is built from it when it loads. */
   readonly trusted: boolean;
   /** A native source selection was present while this panel was opened. */
   readonly openedFromNativeSelection?: boolean;
@@ -28,6 +29,12 @@ export interface PanelShell {
   dispose(): void;
   setHTML(html: string): void;
   asset(relative: string): string;
+  /**
+   * The PDF engine (embedpdf.wasm) for PDF embeds, when the host serves it
+   * from elsewhere than `asset("webview/embedpdf.wasm")`: the VS Code
+   * extension ships one copy, the PDF viewer's.
+   */
+  readonly pdfEngine?: string;
   /**
    * Files under the extension's dist/markdown the page will fetch right
    * after its entry, so the page can ask for them all at once.

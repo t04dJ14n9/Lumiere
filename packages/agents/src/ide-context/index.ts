@@ -34,6 +34,7 @@ export {
   type TempFs,
 } from "./temp-lease";
 export {
+  ideContextFolderName,
   publishIdeContextTemp,
   commitFinalPayload,
   type PublishOpts,

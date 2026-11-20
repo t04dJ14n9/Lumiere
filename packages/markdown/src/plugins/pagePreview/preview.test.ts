@@ -38,6 +38,27 @@ test("note previews retain source offsets and disable embedded task edits", asyn
   );
 });
 
+test("a preview of a long note renders a bounded beginning, never cut inside a code block", async () => {
+  const { notePreview, PREVIEW_LIMIT } = await import("./content");
+  const paragraph = "Some prose that goes on for a while. ".repeat(10) + "\n\n";
+  const fence = "```js\n" + "let x = 1;\n".repeat(400) + "```\n\n";
+  const long = paragraph.repeat(30) + fence + paragraph.repeat(400);
+  const preview = notePreview(long, "Note", "file:///vault/Note.md");
+  assert.ok(
+    preview.text.length <= PREVIEW_LIMIT + 10,
+    `${preview.text.length}`,
+  );
+  assert.ok(preview.text.endsWith("\n\n…"));
+  assert.ok(long.startsWith(preview.text.slice(0, -3)));
+  // The cut fell inside the code block: it comes before the block instead.
+  assert.ok(!preview.text.includes("```"));
+  // A heading's section is bounded the same way; a short one is whole.
+  const section = notePreview(`# Big\n${long}`, "Note#Big", "Note");
+  assert.ok(section.text.length <= PREVIEW_LIMIT + 10);
+  const short = "# A\ntext\n";
+  assert.equal(notePreview(short, "Note", "Note").text, short);
+});
+
 test("preview labels decode valid escapes and preserve malformed targets", async () => {
   const { previewLabel } = await import("./popup");
   assert.equal(previewLabel("My%20Note#Heading"), "My Note#Heading");

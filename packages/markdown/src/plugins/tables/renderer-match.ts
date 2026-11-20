@@ -1,5 +1,5 @@
 import type { BlockRenderer } from "../livePreview/api";
-import { parseTable } from "../../markdown/tables/model";
+import { parsedTable } from "../../markdown/tables/parsed";
 
 /**
  * The table editor needs a table it can read. A table inside a quote keeps
@@ -8,4 +8,4 @@ import { parseTable } from "../../markdown/tables/model";
  */
 export const matchesEditableTable: BlockRenderer["match"] = (node, state) =>
   node.name === "Table" &&
-  parseTable(state.sliceDoc(node.from, node.to)) !== undefined;
+  parsedTable(state.sliceDoc(node.from, node.to)) !== undefined;

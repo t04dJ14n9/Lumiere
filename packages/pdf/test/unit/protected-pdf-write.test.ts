@@ -3,6 +3,7 @@ import { mkdtemp, mkdir, readFile, rm, writeFile } from "node:fs/promises";
 import * as os from "node:os";
 import * as path from "node:path";
 import { after, before, test } from "node:test";
+import { pathToFileURL } from "node:url";
 // First: files.ts imports 'vscode', which this points at the fake.
 import "./support/install-fake-vscode";
 import * as fake from "./support/fake-vscode";
@@ -23,7 +24,7 @@ async function pdfAt(relative: string): Promise<string> {
   const file = path.join(vault, relative);
   await mkdir(path.dirname(file), { recursive: true });
   await writeFile(file, "%PDF-original");
-  return `file://${file}`;
+  return pathToFileURL(file).href;
 }
 
 test("the host refuses to write a PDF in a protected folder, whoever asks", async () => {

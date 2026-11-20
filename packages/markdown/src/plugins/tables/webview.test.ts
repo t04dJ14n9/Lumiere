@@ -9,13 +9,16 @@ import {
 } from "@codemirror/state";
 import { createRoot } from "@workshop/core";
 import { Endpoint } from "../../shared/rpc/endpoint";
-import type { EditorService } from "../editor/api";
+import type { EditorService, MenuItem } from "../editor/api";
 import type { MarkdownService } from "../dialect/api";
 import type { BlockRenderer } from "../livePreview/api";
 import { tablesWebview } from "./webview";
 import { TableWidget } from "./widget";
 
-test("tables always register a widget and own their document-entry keys and commands", async () => {
+type Root = ReturnType<typeof createRoot>;
+
+/** The tables plugin on fake services; `before` runs on the root first. */
+async function startTables(before?: (root: Root) => void) {
   const root = createRoot();
   const renderers: BlockRenderer[] = [];
   const extensions: Extension[] = [];
@@ -83,15 +86,47 @@ test("tables always register a widget and own their document-entry keys and comm
       return false;
     },
   });
-  root.provide("menu", { open: () => () => {} });
+  const menus: (readonly MenuItem[])[] = [];
+  root.provide("menu", {
+    open: (_owner, items) => {
+      menus.push(items);
+      return () => {};
+    },
+  });
   const rpc = new Endpoint(
     { send() {}, listen: () => () => {} },
     { after: () => () => {} },
   );
   root.provide("rpc", rpc);
+  before?.(root);
   const fiber = root.plugin(tablesWebview);
   await root.settled();
-  assert.equal(fiber.state, "active");
+  return {
+    root,
+    fiber,
+    renderers,
+    extensions,
+    commands,
+    menus,
+    document: () => document,
+    async dispose() {
+      await root.dispose();
+      rpc.dispose();
+    },
+  };
+}
+
+const block = {
+  kind: "Table",
+  source: "| a | b |\n| --- | --- |\n| 1 | 2 |",
+  from: 0,
+  to: 33,
+};
+
+test("tables always register a widget and own their document-entry keys and commands", async () => {
+  const tables = await startTables();
+  const { renderers, extensions, commands } = tables;
+  assert.equal(tables.fiber.state, "active");
   assert.equal(renderers[0]!.editing, "widget");
   assert.equal(renderers[0]!.showSource, undefined);
   const state = EditorState.create({ extensions });
@@ -103,6 +138,7 @@ test("tables always register a widget and own their document-entry keys and comm
   );
   assert.ok(commands.has("editor:insert-table"));
   assert.equal(await commands.get("editor:insert-table")!(), true);
+  const document = tables.document();
   assert.equal(
     document.doc.toString(),
     "\n|     |     |\n| --- | --- |\n|     |     |\n",
@@ -114,9 +150,58 @@ test("tables always register a widget and own their document-entry keys and comm
     to: document.doc.length,
   });
   assert.ok(widget instanceof TableWidget);
-  await root.dispose();
-  rpc.dispose();
+  await tables.dispose();
   assert.equal(renderers.length, 0);
   assert.equal(extensions.length, 0);
   assert.equal(commands.size, 0);
+});
+
+test("render/changed gives the widgets Live Preview rebuilds a new revision", async () => {
+  const rebuilt: TableWidget[] = [];
+  // Live Preview rebuilds its widgets from its own render/changed listener,
+  // registered before the tables plugin starts.
+  const tables = await startTables((root) =>
+    root.on("render/changed", () => {
+      rebuilt.push(tables.renderers[0]!.widget(block) as TableWidget);
+    }),
+  );
+  const before = tables.renderers[0]!.widget(block) as TableWidget;
+  tables.root.emit("render/changed");
+  await tables.root.settled();
+  assert.equal(rebuilt.length, 1);
+  // A changed revision makes updateDOM re-render the mounted cells.
+  assert.notEqual(rebuilt[0]!.revision, before.revision);
+  assert.equal(rebuilt[0]!.eq(before), false);
+  await tables.dispose();
+});
+
+test("a table menu action that fails is reported on the table", async () => {
+  const tables = await startTables();
+  const { environment } = tables.renderers[0]!.widget(block) as TableWidget;
+  const reported: string[] = [];
+  environment.openMenu(
+    {} as HTMLElement,
+    [
+      {
+        label: "Row",
+        children: [
+          {
+            label: "Paste",
+            run: async () => {
+              throw new Error("The table changed. Paste again.");
+            },
+          },
+        ],
+      },
+    ],
+    { x: 0, y: 0 },
+    (message) => reported.push(message),
+  );
+  await tables.root.settled();
+  await new Promise((resolve) => setTimeout(resolve));
+  const paste = tables.menus[0]![0]!.children![0]!;
+  // The menu logs the rejection; the table shows its message.
+  await assert.rejects(async () => paste.run!(), /Paste again/);
+  assert.deepEqual(reported, ["The table changed. Paste again."]);
+  await tables.dispose();
 });

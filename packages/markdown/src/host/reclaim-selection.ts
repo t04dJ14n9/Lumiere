@@ -43,6 +43,19 @@ export function nativeSelectionRange(
   return topLine === undefined ? selection : { ...selection, topLine };
 }
 
+/**
+ * Whether a command's selection change in a text editor (Go to Symbol, a
+ * Search result) should move the note into Lumiere. The policy decides first:
+ * it fires in every text editor, and most are not notes, while reading the
+ * selection copies and splits the whole document.
+ */
+export function shouldTransferSelection(
+  reclaims: () => boolean,
+  hasTarget: () => boolean,
+): boolean {
+  return reclaims() && hasTarget();
+}
+
 /** A Search match has both ends. A caret, including one at offset 0, does not. */
 function hasRangeSelection(selection: NativeSelection | undefined): boolean {
   return selection?.to !== undefined && selection.to > selection.at;

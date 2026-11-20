@@ -140,7 +140,7 @@ configuration.
 
 `packages/core` (`@workshop/core`) runs every plugin of both products, in the
 extension host, in each webview and in unit tests. It sits on
-[Cordis](https://github.com/cordiverse/cordis) 4.0.0-rc.11 (pinned exactly):
+[Cordis](https://github.com/cordiverse/cordis) 4.0.0-rc.13 (pinned exactly):
 each running plugin is a Cordis fiber, gated on the services it injects. The
 core adds what Cordis does not guarantee (joined, last-first release;
 abandoning a start; optional services; a ranked, error-isolated event bus;
@@ -934,7 +934,8 @@ interface VaultIndex {
   indexed and links to them resolve, but they are flagged `excluded`, and the
   quick switcher, suggestions, search and unlinked mentions leave them out. A
   filter without wildcards is a path prefix, as in Obsidian; globs are also
-  accepted. Limit 50,000 files per vault; beyond that the index reports
+  accepted. Limit 50,000 notes and 50,000 other files per vault, counted
+  apart so other files never crowd out notes; beyond that the index reports
   itself partial.
 
 ### 12.3 Link resolution

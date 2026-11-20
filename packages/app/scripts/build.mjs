@@ -6,6 +6,7 @@
 // Usage: node scripts/build.mjs [--production]
 import { cp, rm } from "node:fs/promises";
 import path from "node:path";
+import { fileURLToPath } from "node:url";
 import * as esbuild from "esbuild";
 import {
   buildHostAssets,
@@ -13,7 +14,7 @@ import {
 } from "../../host-node/scripts/assets.mjs";
 
 const production = process.argv.includes("--production");
-const here = path.dirname(path.dirname(new URL(import.meta.url).pathname));
+const here = path.dirname(path.dirname(fileURLToPath(import.meta.url)));
 const out = path.join(here, "dist", "app");
 
 await rm(out, { recursive: true, force: true });

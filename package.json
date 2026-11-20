@@ -55,11 +55,18 @@
   "capabilities": {
     "untrustedWorkspaces": {
       "supported": "limited",
-      "description": "Markdown: remote content and external code processors are disabled. PDF: the viewer renders PDFs in a sandboxed webview, so it works in Restricted Mode; the agent bridge (a local MCP server) and the Copy Link for Agent target are not read from workspace settings until the folder is trusted.",
+      "description": "Markdown: remote content and external code processors are disabled, and the Copy Link for Agent target is not read from workspace settings until the folder is trusted. PDF: the viewer renders PDFs in a sandboxed webview, so it works in Restricted Mode; the agent bridge (a local MCP server), the Copy Link for Agent target, the annotations folder and the protected folders are not read from workspace settings until the folder is trusted.",
       "restrictedConfigurations": [
+        "lumiere.markdown.copyLinkForAgent.target",
         "lumiere.pdf.agentBridge.enabled",
-        "lumiere.pdf.copyLinkForAgent.target"
+        "lumiere.pdf.copyLinkForAgent.target",
+        "lumiere.pdf.annotations.folder",
+        "lumiere.pdf.annotations.protectedFolders"
       ]
+    },
+    "virtualWorkspaces": {
+      "supported": "limited",
+      "description": "Notes and PDFs open and save through VS Code's file system, but the git change bar, blame and rendered diff need a repository on disk and are off."
     }
   },
   "contributes": {
@@ -1292,7 +1299,7 @@
         "command": "lumiere.markdown.toggleTextEditor",
         "key": "ctrl+e",
         "mac": "cmd+e",
-        "when": "editorLangId == 'markdown' && editorTextFocus && !activeCustomEditorId"
+        "when": "editorLangId == 'markdown' && editorTextFocus && !activeCustomEditorId && !isInDiffEditor && resourceFilename =~ /\\.(md|markdown)$/i"
       },
       {
         "command": "lumiere.markdown.toggleBold",
@@ -3706,14 +3713,14 @@
               "clipboard"
             ],
             "enumDescriptions": [
-              "The editor's own chat (Cursor, or VS Code with a chat extension such as Copilot Chat) when it is the only agent installed; with Claude Code or Codex installed too, only copy, to paste into the agent you use.",
-              "Cursor's chat.",
-              "VS Code's chat.",
-              "Claude Code: a new conversation with the selection typed in.",
-              "Codex: the selection (and a region's snapshot) attached to the thread.",
-              "Only copy the selection."
+              "Claude Code or Codex, whichever is installed; asks which when both are; with neither, only copy.",
+              "Only copy, as Clipboard does (kept for older settings: Cursor's chat is no longer opened).",
+              "Only copy, as Clipboard does (kept for older settings: VS Code's chat is no longer opened).",
+              "Claude Code: a new conversation with the context typed in.",
+              "Codex: the context attached to the thread as a file.",
+              "Only copy the context."
             ],
-            "markdownDescription": "Legacy agent-target preference for IDE Context / MCP delivery. **Copy link to this** no longer opens agent chat: it only writes a Quote or page link to the clipboard. Pick a target here only when another path (IDE Context or MCP) still routes a selection to an agent."
+            "markdownDescription": "Where **Send IDE Context to Agent…** sends the context. **Copy link to this** never opens an agent chat: it only writes a quote or page link to the clipboard. `cursor` and `chat` remain for older settings and only copy."
           },
           "lumiere.pdf.regionImageCache.maxSizeMB": {
             "type": "number",

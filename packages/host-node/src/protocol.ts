@@ -10,6 +10,8 @@
 export type UiRequest =
   | { type: "toast"; kind: "info" | "error"; message: string }
   | { type: "clipboard"; text: string }
+  /** Read the clipboard's text; answered with a `clipboard` event of the same id. */
+  | { type: "readClipboard"; id: number }
   | { type: "ask"; id: number; message: string; actions: string[] }
   | { type: "pick"; id: number; placeholder: string; items: PickRow[] }
   | { type: "pickItems"; id: number; items: PickRow[] }
@@ -23,6 +25,8 @@ export type UiRequest =
    */
   | { type: "menu"; id: number; x: number; y: number; groups: MenuRow[][] }
   | { type: "open"; path: string; fragment: string }
+  /** The page's own note was renamed or moved to `path` (absolute). */
+  | { type: "moved"; path: string }
   | { type: "external"; href: string };
 
 /** One item of the right-click menu, without its command; a submenu's row holds its own rows. */
@@ -43,11 +47,19 @@ export type UiEvent =
   | { type: "focus" }
   | { type: "blur" }
   /**
+   * The page was hidden or is going away (a tab switched, the window
+   * minimised or closing, an iPad app sent to the background): its note is
+   * written now rather than after the autosave's pause.
+   */
+  | { type: "hidden" }
+  /**
    * An `ask` action, a `pick` row index, `input` text or the row indices a
    * `pickMany` left ticked; null when dismissed.
    */
   | { type: "answer"; id: number; value: string | number | number[] | null }
   | { type: "query"; id: number; query: string }
+  /** The clipboard's text a `readClipboard` asked for; null when the browser refused. */
+  | { type: "clipboard"; id: number; text: string | null }
   /**
    * The reader right-clicked at (x, y). `context` is VS Code's webview
    * context: the `data-vscode-context` of the element and its parents.
@@ -185,6 +197,8 @@ const REQUEST_PARSERS: Readonly<Record<string, RequestParser>> = {
     isClipboardText(value.text)
       ? { type: "clipboard", text: value.text }
       : undefined,
+  readClipboard: (value) =>
+    isId(value.id) ? { type: "readClipboard", id: value.id } : undefined,
   ask: (value) =>
     isId(value.id) &&
     isText(value.message) &&
@@ -252,6 +266,8 @@ const REQUEST_PARSERS: Readonly<Record<string, RequestParser>> = {
     isText(value.path) && isText(value.fragment)
       ? { type: "open", path: value.path, fragment: value.fragment }
       : undefined,
+  moved: (value) =>
+    isText(value.path) ? { type: "moved", path: value.path } : undefined,
   external: (value) =>
     isText(value.href) ? { type: "external", href: value.href } : undefined,
 };
@@ -274,6 +290,7 @@ function parseUiEvent(value: unknown): UiEvent | undefined {
   switch (value.type) {
     case "focus":
     case "blur":
+    case "hidden":
       return { type: value.type };
     case "answer":
       return isId(value.id) && isAnswer(value.value)
@@ -285,9 +302,19 @@ function parseUiEvent(value: unknown): UiEvent | undefined {
         : undefined;
     case "contextmenu":
       return parseContextMenu(value);
+    case "clipboard":
+      return parseClipboardRead(value);
     default:
       return undefined;
   }
+}
+
+function parseClipboardRead(
+  value: Record<string, unknown>,
+): UiEvent | undefined {
+  return isId(value.id) && (value.text === null || isClipboardRead(value.text))
+    ? { type: "clipboard", id: value.id, text: value.text }
+    : undefined;
 }
 
 const MAX_CONTEXT_KEYS = 32;
@@ -337,6 +364,13 @@ function isText(value: unknown): value is string {
 // and many host callers (bridge envelopes, wiki copies) have no size limit.
 function isClipboardText(value: unknown): value is string {
   return typeof value === "string";
+}
+
+/** What a page may answer a clipboard read with: a long table, not unbounded. */
+const MAX_CLIPBOARD_READ = 4 * 1024 * 1024;
+
+function isClipboardRead(value: unknown): value is string {
+  return typeof value === "string" && value.length <= MAX_CLIPBOARD_READ;
 }
 
 function isAnswer(value: unknown): value is string | number | number[] | null {

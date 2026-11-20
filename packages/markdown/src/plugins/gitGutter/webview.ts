@@ -21,7 +21,9 @@ import {
   MAX_DIFF_CHARS,
   MAX_DIFF_LINES,
   exceedsDiffLimits,
+  lineHunks,
 } from "../../shared/diff";
+import type { LineHunk } from "../../shared/diff";
 import {
   computeHunks,
   hunkAt,
@@ -41,6 +43,7 @@ import {
   setPeek,
 } from "./peek";
 import { protocol } from "./protocol";
+import { BaselineSource } from "./baseline";
 
 type Status = ReturnType<GitDiff["status"]>;
 type Options = Infer<typeof config>;
@@ -48,27 +51,33 @@ type Options = Infer<typeof config>;
 /** Debounce between typing and recomputing the diff. */
 const RECOMPUTE_MS = 250;
 
+interface LiveDiff {
+  readonly baseline: string;
+  readonly docText: string;
+  readonly lines: readonly LineHunk[];
+}
+
 /** The baseline, its hunks and the moves between them, for one editor. */
 class GitDiffModel implements GitDiff {
   get field() {
     return hunkField;
   }
-  private text: string | undefined;
-  private name = "HEAD";
-  /** What the last baseline request returned; the status adds the size check. */
-  private loaded: Status = "loading";
+  private readonly source: BaselineSource;
   private state: Status = "loading";
-  private request = 0;
-  private live = true;
   private fileUri = "live-document";
   private readonly session: DiffSession;
   private readonly listeners = new Set<() => void>();
 
   constructor(
     private readonly ctx: Context,
-    private readonly options: Options,
+    options: Options,
   ) {
     this.session = new DiffSession(options.compareTo);
+    this.source = new BaselineSource(ctx, options.compareTo);
+  }
+
+  private get text(): string | undefined {
+    return this.source.text;
   }
 
   get view(): EditorView {
@@ -81,7 +90,7 @@ class GitDiffModel implements GitDiff {
   context(state: EditorState, hunk: DocHunk) {
     return peekContext(state, hunk);
   }
-  label = () => this.name;
+  label = () => this.source.label;
   baseline = () => this.text;
 
   onChange(listener: () => void) {
@@ -92,7 +101,7 @@ class GitDiffModel implements GitDiff {
   }
 
   dispose(): void {
-    this.live = false;
+    this.source.stop();
     this.listeners.clear();
   }
 
@@ -114,8 +123,8 @@ class GitDiffModel implements GitDiff {
   }
 
   /** Record a keystroke so the gate sees it even before the debounced publish. */
-  noteEdit(text: string): void {
-    this.session.noteDocument(text);
+  noteEdit(): void {
+    this.session.noteEdit();
   }
 
   openHunk(ref: HunkRef, at?: number): void {
@@ -181,26 +190,40 @@ class GitDiffModel implements GitDiff {
     }
   }
 
-  /** The hunks of the document as it is now; none past the size limits. */
-  private fresh() {
+  /**
+   * The line diff of the document as it is now, and its text; undefined
+   * without a baseline or past the size limits. Sets the status.
+   */
+  private diffNow(): LiveDiff | undefined {
     const { doc } = this.view.state;
     const text = this.text;
     if (text === undefined) {
-      this.state = this.loaded;
-      return [];
+      this.state = this.source.status;
+      return undefined;
     }
     const docTooLarge =
       doc.length > MAX_DIFF_CHARS || doc.lines > MAX_DIFF_LINES;
     if (docTooLarge || exceedsDiffLimits(text)) {
       this.state = "tooLarge";
-      return [];
+      return undefined;
     }
     this.state = "ok";
-    return computeHunks(text, doc);
+    const docText = doc.toString();
+    return { baseline: text, docText, lines: lineHunks(text, docText) };
+  }
+
+  /** The hunks of the document as it is now; none past the size limits. */
+  private fresh(diff = this.diffNow()) {
+    if (!diff) {
+      return [];
+    }
+    return computeHunks(diff.baseline, this.view.state.doc, diff.lines);
   }
 
   recompute = (): void => {
-    const fresh = this.fresh();
+    // One diff for the bars and the published snapshot.
+    const diff = this.diffNow();
+    const fresh = this.fresh(diff);
     const previous = this.session.snapshot;
     const baseline = this.text;
     if (baseline === undefined) {
@@ -209,7 +232,8 @@ class GitDiffModel implements GitDiff {
       this.session.publish(
         this.fileUri,
         baseline,
-        this.view.state.doc.toString(),
+        diff?.docText ?? this.view.state.doc.toString(),
+        diff?.lines,
       );
     }
     const open = this.view.state.field(peekState, false) ?? null;
@@ -225,28 +249,11 @@ class GitDiffModel implements GitDiff {
     }
   };
 
+  /** Fetch the baseline again; recompute only when it changed. */
   load = async (): Promise<void> => {
-    const mine = ++this.request;
-    const { compareTo } = this.options;
-    try {
-      const result = await this.ctx.rpc.call(protocol, "baseline", {
-        ref: compareTo,
-      });
-      if (mine !== this.request || !this.live) {
-        return;
-      }
-      this.loaded = result.status;
-      this.text = result.status === "ok" ? (result.text ?? "") : undefined;
-      this.name = result.label ?? (compareTo === "HEAD" ? "HEAD" : "Index");
-    } catch (error) {
-      if (mine !== this.request || !this.live) {
-        return;
-      }
-      this.ctx.logger.warn("Git baseline unavailable", error);
-      this.loaded = "unavailable";
-      this.text = undefined;
+    if (await this.source.refresh()) {
+      this.recompute();
     }
-    this.recompute();
   };
 
   /** Move the caret (and an open peek) to the next or previous change, wrapping. */
@@ -300,7 +307,9 @@ class GitDiffModel implements GitDiff {
   peekActions() {
     return {
       comparisonLabel: () =>
-        this.session.snapshot ? `${this.name} → Working tree` : this.name,
+        this.session.snapshot
+          ? `${this.source.label} → Working tree`
+          : this.source.label,
       move: (target: EditorView, direction: 1 | -1) =>
         this.move(target, direction, true),
       revert: (view: EditorView, hunk: DocHunk) => {
@@ -372,7 +381,9 @@ function debounce(model: GitDiffModel) {
         if (!update.docChanged) {
           return;
         }
-        model.noteEdit(update.state.doc.toString());
+        // No copy of the document per keystroke: the edit only bumps the
+        // version the Revert gate compares.
+        model.noteEdit();
         if (model.baseline() !== undefined) {
           clearTimeout(timer);
           timer = setTimeout(model.recompute, RECOMPUTE_MS);

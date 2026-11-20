@@ -270,3 +270,89 @@ test("an overlay at the default delay re-indexes unresolved links after the paus
   });
   await indexer.dispose();
 });
+
+test("a settings change that leaves the index's settings alone re-resolves nothing", async () => {
+  const fs = new MemoryFileSystem({ "A.md": "[[B]]", "B.md": "" });
+  const options = indexerOptions(fs);
+  const settings = options.settings();
+  let current = settings;
+  const indexer = new VaultIndexer({ ...options, settings: () => current });
+  await indexer.settled();
+  let configured = 0;
+  const configure = indexer.index.configure.bind(indexer.index);
+  indexer.index.configure = (next) => {
+    configured++;
+    configure(next);
+  };
+  let resolves = 0;
+  indexer.index.onDidResolve(() => resolves++);
+
+  current = { ...settings, rootMarkers: [".vault"] };
+  indexer.applySettings();
+  indexer.applySettings();
+  assert.equal(configured, 0);
+  assert.equal(resolves, 0);
+
+  current = { ...settings, excludedFiles: ["B.md"] };
+  indexer.applySettings();
+  indexer.applySettings();
+  assert.equal(configured, 1);
+  assert.equal(indexer.index.file("B.md")?.excluded, true);
+  // What reads the index learns that it changed without file events.
+  assert.equal(resolves, 1);
+  await indexer.dispose();
+});
+
+test("other files listed before their stats resolve links at once and take their stats later", async () => {
+  const fs = new MemoryFileSystem({
+    "A.md": "![[pic.png]]",
+    "pic.png": "png",
+  });
+  let release!: () => void;
+  fs.statsGate = new Promise((resolve) => (release = resolve));
+  const store = new MemoryStore();
+  const indexer = new VaultIndexer(indexerOptions(fs, { store }));
+  await indexer.ready;
+  await wait();
+  assert.deepEqual(counts(indexer.index.resolvedLinks("A.md")), {
+    "pic.png": 1,
+  });
+  assert.equal(indexer.index.file("pic.png")?.mtime, 0);
+  release();
+  await indexer.settled();
+  const picture = indexer.index.file("pic.png")!;
+  assert.deepEqual(
+    [picture.mtime, picture.size],
+    [fs.mtimes.get("pic.png"), 3],
+  );
+  await wait();
+  const snapshot = new Snapshot();
+  await snapshot.load(store);
+  assert.equal(snapshot.files["pic.png"]?.mtime, fs.mtimes.get("pic.png"));
+  await indexer.dispose();
+});
+
+test("a cached file keeps its stats until the late ones come, and an event meanwhile wins", async () => {
+  const fs = new MemoryFileSystem({ "A.md": "", "a.png": "1", "b.png": "2" });
+  const store = new MemoryStore();
+  const first = new VaultIndexer(indexerOptions(fs, { store }));
+  await first.settled();
+  await first.dispose();
+  await wait();
+  const cached = fs.mtimes.get("a.png");
+
+  let release!: () => void;
+  fs.statsGate = new Promise((resolve) => (release = resolve));
+  const indexer = new VaultIndexer(indexerOptions(fs, { store }));
+  await indexer.ready;
+  await wait();
+  assert.equal(indexer.index.file("a.png")?.mtime, cached);
+  // b.png changes after its stat was read: the late stat is older.
+  fs.change("b.png", "changed");
+  const fresh = fs.mtimes.get("b.png");
+  release();
+  await indexer.settled();
+  assert.equal(indexer.index.file("b.png")?.mtime, fresh);
+  assert.equal(indexer.index.file("a.png")?.mtime, cached);
+  await indexer.dispose();
+});

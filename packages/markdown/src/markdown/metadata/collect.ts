@@ -40,6 +40,28 @@ export function linkReferences(
   return references;
 }
 
+/**
+ * Whether a node lies inside a footnote definition (collected on its own,
+ * without its indentation), for nodes asked about in document order, as a
+ * tree's iteration enters them. Definitions do not overlap, so the only one
+ * that can hold a node is the first that does not end before it: a cursor
+ * moves forward through them, where checking every definition for every
+ * node took time in the product of the two.
+ */
+export function definitionLookup(
+  definitions: readonly { from: number; to: number }[],
+): (from: number, to: number) => boolean {
+  const sorted = [...definitions].sort((a, b) => a.from - b.from);
+  let next = 0;
+  return (from, to) => {
+    while (next < sorted.length && sorted[next]!.to < from) {
+      next++;
+    }
+    const note = sorted[next];
+    return note !== undefined && from >= note.from && to <= note.to;
+  };
+}
+
 export class MetadataCollector {
   constructor(
     private readonly result: Collected,
@@ -53,14 +75,12 @@ export class MetadataCollector {
     map = (n) => n,
     inDefinition = false,
   }: CollectionSource): void {
+    const isInDefinition = inDefinition
+      ? () => false
+      : definitionLookup(this.result.footnotes.definitions);
     syntax.iterate({
       enter: (node) => {
-        if (
-          !inDefinition &&
-          this.result.footnotes.definitions.some(
-            (note) => node.from >= note.from && node.to <= note.to,
-          )
-        ) {
+        if (isInDefinition(node.from, node.to)) {
           return false;
         }
         if (node.name === "ObsidianComment") {

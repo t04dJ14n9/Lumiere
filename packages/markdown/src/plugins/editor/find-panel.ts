@@ -11,7 +11,13 @@ import {
   replaceNext,
   setSearchQuery,
 } from "@codemirror/search";
-import { countLabel, countMatches } from "./find-count";
+import {
+  countLabel,
+  findMatches,
+  selectedMatch,
+  stillFound,
+  type FoundMatches,
+} from "./find-count";
 import { readFindCaret, restoreFindCaret } from "./find-caret";
 
 const panels = new WeakMap<EditorView, FindPanel>();
@@ -51,6 +57,8 @@ export class FindPanel implements Panel {
   private readonly caseToggle: HTMLButtonElement;
   private readonly navigation: FindNavigation;
   private readonly inputLifetime = new AbortController();
+  private found?: FoundMatches;
+  private pendingCount: ReturnType<typeof setTimeout> | undefined;
 
   static of(view: EditorView): FindPanel | undefined {
     return panels.get(view);
@@ -199,10 +207,16 @@ export class FindPanel implements Panel {
   }
 
   private refresh(): void {
-    const query = getSearchQuery(this.view.state);
+    clearTimeout(this.pendingCount);
+    this.pendingCount = undefined;
+    const { state } = this.view;
+    const query = getSearchQuery(state);
+    if (!stillFound(this.found, state, query)) {
+      this.found = findMatches(state, query);
+    }
     this.count.textContent = countLabel(
       query,
-      countMatches(this.view.state, query),
+      selectedMatch(this.found, state.selection.main),
     );
     this.dom.classList.toggle(
       "is-empty",
@@ -229,12 +243,20 @@ export class FindPanel implements Panel {
         this.replace.value = query.replace;
       }
     }
-    if (changed || update.docChanged || update.selectionSet) {
+    if (changed) {
+      this.refresh();
+    } else if (update.docChanged) {
+      // Typing in the note searches it again once the typing pauses, not
+      // on every keystroke.
+      this.pendingCount ??= setTimeout(() => this.refresh(), 150);
+    } else if (update.selectionSet) {
+      // Only which match is selected changed: no new search.
       this.refresh();
     }
   }
 
   destroy(): void {
+    clearTimeout(this.pendingCount);
     this.inputLifetime.abort();
     this.navigation.cancel();
     panels.delete(this.view);

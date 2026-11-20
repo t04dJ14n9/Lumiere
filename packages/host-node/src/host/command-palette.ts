@@ -84,10 +84,10 @@ export function createCommandPalette(
   return {
     list,
     async run(command: string): Promise<boolean> {
-      const allowed =
-        list().some((item) => item.command === command) ||
-        (options.contributions.length === 0 && options.commands.has(command));
-      if (!allowed) {
+      // Only what the palette shows runs: a page is same-origin with the
+      // embedder and could otherwise run any registered command, setContext
+      // included. Without a command list nothing runs.
+      if (!list().some((item) => item.command === command)) {
         return false;
       }
       try {

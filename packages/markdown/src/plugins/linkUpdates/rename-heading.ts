@@ -11,6 +11,7 @@ import {
 } from "./heading-rename";
 import { sourceText } from "./source-text";
 import { contributionId } from "../../shared/setting-schema";
+import { isMarkdownPath } from "../../shared/vault-path";
 
 interface Services {
   /** Undefined when the window has no Lumiere editors. */
@@ -125,13 +126,17 @@ async function updateLinks(
   );
   sources.delete(renamed.path);
   const failed: string[] = [];
+  const unsaved: string[] = [];
   for (const source of sources) {
     const file = vault.index.file(source);
-    if (file?.extension !== "md") {
+    if (!file || !isMarkdownPath(file.path)) {
       continue;
     }
-    if (!(await updateLinksIn(ctx, vault, renamed, file))) {
+    const outcome = await updateLinksIn(ctx, vault, renamed, file);
+    if (outcome === "failed") {
       failed.push(source);
+    } else if (outcome === "unsaved") {
+      unsaved.push(source);
     }
   }
   if (failed.length > 0) {
@@ -139,15 +144,27 @@ async function updateLinks(
       `The heading was renamed, but its links could not be updated in ${failed.join(", ")}.`,
     );
   }
+  if (unsaved.length > 0) {
+    ctx.dialogs.error(
+      `The heading's links were updated in ${unsaved.join(", ")}, but could not be saved.`,
+    );
+  }
 }
 
-/** Update the links in one note; false when it could not be updated. */
+/** Whether one note's links were updated, and saved when they should be. */
+type LinkUpdate = "updated" | "unsaved" | "failed";
+
+/**
+ * Update the links in one note. A note that had no unsaved changes is saved
+ * afterwards, as a file rename's link updates are, so the rename leaves no
+ * note edited out of sight; one with unsaved changes is left for its writer.
+ */
 async function updateLinksIn(
   ctx: Services,
   vault: Vault,
   renamed: RenamedHeading,
   file: VaultFile,
-): Promise<boolean> {
+): Promise<LinkUpdate> {
   try {
     const text = editorText(
       await sourceText(ctx.vaults, ctx.hostDocuments, file.uri),
@@ -155,7 +172,7 @@ async function updateLinksIn(
     if (
       headingLinkEdits(text, file.path, renamed, resolver(vault)).length === 0
     ) {
-      return true;
+      return "updated";
     }
     const document = await ctx.hostDocuments.open(file.uri);
     // The note can change while it is read and opened, so the offsets come
@@ -166,11 +183,17 @@ async function updateLinksIn(
       renamed,
       resolver(vault),
     );
-    return (
-      edits.length === 0 || (await ctx.hostDocuments.apply(document, edits))
-    );
+    if (edits.length === 0) {
+      return "updated";
+    }
+    const isClean = !document.isDirty;
+    if (!(await ctx.hostDocuments.apply(document, edits))) {
+      return "failed";
+    }
+    const isSaved = !isClean || (await document.save().catch(() => false));
+    return isSaved ? "updated" : "unsaved";
   } catch {
-    return false;
+    return "failed";
   }
 }
 

@@ -156,9 +156,9 @@ test("images resolve separately against each note and Git revision with existing
   const rootUri = pathToFileURL(directory).href;
   const revisions: [string, string][] = [];
   try {
-    await mkdir(`${directory}/notes`);
-    await writeFile(`${directory}/old.png`, new Uint8Array([1]));
-    await writeFile(`${directory}/new.png`, new Uint8Array([2]));
+    await mkdir(join(directory, "notes"));
+    await writeFile(join(directory, "old.png"), new Uint8Array([1]));
+    await writeFile(join(directory, "new.png"), new Uint8Array([2]));
     const localVaults = {
       async forDocument(uri: string) {
         assert.equal(uri, `${rootUri}/notes/n.md`);
@@ -178,7 +178,7 @@ test("images resolve separately against each note and Git revision with existing
       git: {
         toGitUri(uri, ref) {
           revisions.push([uri, ref]);
-          return gitUri(new URL(uri).pathname, ref);
+          return gitUri(fileURLToPath(uri), ref);
         },
       },
     });
@@ -187,13 +187,13 @@ test("images resolve separately against each note and Git revision with existing
       ["", "new.png"],
     ]) {
       const access = await sideResources(localVaults, revisionFiles, {
-        uri: gitUri(`${directory}/notes/n.md`, ref!),
+        uri: gitUri(join(directory, "notes", "n.md"), ref!),
         label: ref!,
         text: "",
       });
       assert.equal(
         await access.load(target!),
-        gitUri(`${directory}/${target}`, ref!),
+        gitUri(join(directory, target!), ref!),
       );
     }
     assert.deepEqual(revisions, [

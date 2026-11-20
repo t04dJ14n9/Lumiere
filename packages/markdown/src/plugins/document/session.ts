@@ -2,8 +2,9 @@ import { saveDocument } from "./save";
 import { Authority } from "../../shared/document/authority";
 import { textDocument } from "../../shared/document/wire";
 import type { Prepared } from "../../shared/document/authority";
+import type { Text } from "@codemirror/state";
 import type { HostDocument, HostServices, TextEdit } from "../../shared/host";
-import type { Endpoint } from "../../shared/rpc/endpoint";
+import { RpcError, type Endpoint } from "../../shared/rpc/endpoint";
 import { UndoGroups } from "./undo-groups";
 import { protocol } from "./protocol";
 import type { DocumentSession } from "./api";
@@ -13,7 +14,16 @@ export class Session implements DocumentSession {
   private queue: Promise<unknown> = Promise.resolve();
   private actions: Promise<unknown> = Promise.resolve();
   private expected?: Prepared;
-  private readonly groups = new UndoGroups();
+  /**
+   * Undo checkpoints name the note's text by its immutable `Text`, compared
+   * by content only when Undo or Redo runs: typing hashes nothing. The
+   * authority's successive texts share their unchanged parts, so a
+   * checkpoint keeps little more than what its step changed, and comparing
+   * two of them skips what they share.
+   */
+  private readonly groups = new UndoGroups<Text>((left, right) =>
+    left.eq(right),
+  );
   private historyAction = false;
   private saveEcho?: string;
   constructor(
@@ -21,9 +31,6 @@ export class Session implements DocumentSession {
     private readonly host: HostServices,
   ) {
     this.authority = new Authority(document.getText());
-  }
-  private fingerprint(): string {
-    return this.host.hostDocuments.fingerprint(this.text);
   }
   markSaved(text: string): void {
     this.saveEcho = text;
@@ -65,25 +72,21 @@ export class Session implements DocumentSession {
         if (!prepared) {
           return true;
         }
-        const before = this.fingerprint();
+        const before = this.authority.doc;
         if (prepared.text.eq(this.authority.doc)) {
           this.authority.record(this.document.getText(), prepared);
           this.broadcast();
           return true;
         }
-        const edits: TextEdit[] = [];
-        prepared.changes.iterChanges((...change) => {
-          const [from, to, , , insert] = change;
-          edits.push({
-            from,
-            to,
-            insert: insert.sliceString(0, insert.length, this.document.eol),
-          });
-        });
+        const edits = this.hostEdits(prepared);
         this.expected = prepared;
         try {
           if (!(await this.host.hostDocuments.apply(this.document, edits))) {
-            throw new Error("The host could not apply the edit.");
+            // The panel keeps the edit and sends it again (sync.ts).
+            throw new RpcError(
+              "ApplyRefused",
+              "The host could not apply the edit.",
+            );
           }
           // Real workbenches fire change before apply resolves. Fakes may not.
           if (this.expected) {
@@ -91,7 +94,7 @@ export class Session implements DocumentSession {
           }
           this.groups.record(
             before,
-            this.fingerprint(),
+            this.authority.doc,
             params.group === undefined ? undefined : `${id}/${params.group}`,
           );
         } finally {
@@ -109,6 +112,19 @@ export class Session implements DocumentSession {
       await stop();
     };
   }
+  /** The prepared changes as edits to the host document, in its line endings. */
+  private hostEdits(prepared: Prepared): TextEdit[] {
+    const edits: TextEdit[] = [];
+    prepared.changes.iterChanges((...change) => {
+      const [from, to, , , insert] = change;
+      edits.push({
+        from,
+        to,
+        insert: insert.sliceString(0, insert.length, this.document.eol),
+      });
+    });
+    return edits;
+  }
   /**
    * A panel whose version differs from `client.sent` missed a broadcast, and
    * only the revision log can tell which of its unsent edits the host already
@@ -123,9 +139,11 @@ export class Session implements DocumentSession {
   }
   changed(): void {
     const hostText = this.document.getText();
+    // Built once: on a large note each build is a pass over the whole text.
+    const hostDocument = textDocument(hostText);
     // A change event with no new text (a dirty-state change; Cursor can send
     // one before an edit lands) must not consume the expected panel edit.
-    if (textDocument(hostText).eq(this.authority.doc)) {
+    if (hostDocument.eq(this.authority.doc)) {
       if (this.saveEcho !== undefined && hostText === this.saveEcho) {
         delete this.saveEcho;
       }
@@ -135,13 +153,13 @@ export class Session implements DocumentSession {
     // wiping undo grouping.
     if (this.saveEcho !== undefined && hostText === this.saveEcho) {
       delete this.saveEcho;
-      this.authority.record(hostText, this.expected);
+      this.authority.record(hostDocument, this.expected);
       delete this.expected;
       this.broadcast();
       return;
     }
     if (this.expected || this.historyAction) {
-      this.authority.record(hostText, this.expected);
+      this.authority.record(hostDocument, this.expected);
       delete this.expected;
       this.broadcast();
       return;
@@ -150,7 +168,7 @@ export class Session implements DocumentSession {
     // later identical echo cannot false-match after this external rewrite.
     if (!this.document.isDirty) {
       delete this.saveEcho;
-      this.authority.record(hostText);
+      this.authority.record(hostDocument);
       this.broadcast();
       return; // keep UndoGroups
     }
@@ -164,7 +182,7 @@ export class Session implements DocumentSession {
     // there. The groups do not know this edit, so grouping starts afresh.
     delete this.saveEcho;
     this.groups.clear();
-    this.authority.record(hostText);
+    this.authority.record(hostDocument);
     this.broadcast();
   }
   private broadcast(): void {
@@ -179,11 +197,22 @@ export class Session implements DocumentSession {
       client.sent = this.version;
     }
   }
-  async flush(): Promise<void> {
+  /**
+   * Bring in every panel's unsent typing. Only the failure of `origin`, the
+   * panel asking, rejects: another panel of the note that cannot answer (busy,
+   * or stopped syncing) must not make Save, Undo or Redo fail in this one.
+   */
+  async flush(origin?: string): Promise<void> {
     await Promise.all(
-      [...this.clients.values()].map((client) =>
-        client.rpc.call(protocol, "flush", {}, { timeout: 1200 }),
-      ),
+      [...this.clients].map(([id, client]) => {
+        const flushed = client.rpc.call(
+          protocol,
+          "flush",
+          {},
+          { timeout: 1200 },
+        );
+        return id === origin ? flushed : flushed.catch(() => false);
+      }),
     );
     await this.queue;
   }
@@ -192,7 +221,7 @@ export class Session implements DocumentSession {
     try {
       await this.groups.run(
         action,
-        () => this.fingerprint(),
+        () => this.authority.doc,
         () => this.host.hostCommands.execute(action),
       );
     } finally {

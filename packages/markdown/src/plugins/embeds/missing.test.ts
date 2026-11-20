@@ -55,3 +55,14 @@ test("an image whose bytes failed to load says failed to fetch, even without an 
     "failed to fetch image",
   );
 });
+
+test("a circular or too deeply nested embed says so, not that the note is missing", () => {
+  assert.equal(
+    missingEmbedText("A#Second", { refused: "circular", section: false }),
+    "“A#Second” embeds itself, so it is not shown again.",
+  );
+  assert.equal(
+    missingEmbedText("Deep", { refused: "too deep" }),
+    "“Deep” is nested too deeply to show.",
+  );
+});

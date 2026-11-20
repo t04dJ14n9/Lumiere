@@ -7,6 +7,7 @@ import {
   mayReceiveShellKey,
   newToken,
   TOKEN_COOKIE,
+  tokenCookie,
 } from "../../src/server/auth";
 import { SHELL_KEY_HEADER } from "../../src/shared/shell-key";
 
@@ -31,7 +32,7 @@ test("the token in the URL moves into a cookie and out of the URL", () => {
   assert.equal(result.kind, "redirect");
   if (result.kind === "redirect") {
     assert.equal(result.location, "/lumiere/editor?path=%2Fn.md");
-    assert.match(result.cookie, new RegExp(`^${TOKEN_COOKIE}=${token};`));
+    assert.match(result.cookie, new RegExp(`^${tokenCookie(5000)}=${token};`));
     assert.match(result.cookie, /HttpOnly/);
     assert.match(result.cookie, /SameSite=Strict/);
   }
@@ -145,5 +146,45 @@ test("only a load of the page itself may be given the key", () => {
     "object",
   ]) {
     assert.equal(given(dest), false, dest);
+  }
+});
+
+test("the window's cookie is named for its port, so two servers keep their own", () => {
+  assert.equal(tokenCookie(5000), "lumiere_token_5000");
+  const mine = `${tokenCookie(5000)}=${token}`;
+  const other = `${tokenCookie(5001)}=another-token`;
+  assert.equal(
+    admit(request("/", { cookie: `${other}; ${mine}` }), server).kind,
+    "admit",
+  );
+  assert.equal(admit(request("/", { cookie: other }), server).kind, "reject");
+  // A process that is no browser (the desktop app) sends the plain name.
+  assert.equal(
+    admit(request("/", { cookie: `${TOKEN_COOKIE}=${token}` }), server).kind,
+    "admit",
+  );
+});
+
+test("a request a page on another site or port made is refused, cookie or not", () => {
+  const cookie = `${tokenCookie(5000)}=${token}`;
+  for (const site of ["same-site", "cross-site"]) {
+    assert.deepEqual(
+      admit(
+        request("/lumiere/editor?path=%2Fn.md", {
+          cookie,
+          "sec-fetch-site": site,
+        }),
+        server,
+      ),
+      { kind: "reject", status: 403 },
+      site,
+    );
+  }
+  for (const site of ["same-origin", "none"]) {
+    assert.equal(
+      admit(request("/", { cookie, "sec-fetch-site": site }), server).kind,
+      "admit",
+      site,
+    );
   }
 });

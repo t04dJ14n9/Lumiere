@@ -35,6 +35,17 @@ export interface PublishOpts {
 export type PublishResult =
   { finalPath: string } | { skipped: true; warning: string };
 
+/**
+ * The folder, in the system temp folder, both products publish IDE context
+ * packets in. That temp folder is shared on a multi-user machine, and each
+ * product's TempFs `mkdir` refuses a folder this user does not own (another
+ * user's, or a link planted there): so the name carries the user's id, where
+ * the platform has one, and two users never contend for one folder.
+ */
+export function ideContextFolderName(uid: number | undefined): string {
+  return uid === undefined ? "agent-ide-context" : `agent-ide-context-${uid}`;
+}
+
 function join(dir: string, name: string): string {
   return `${dir.replace(/\/$/, "")}/${name}`;
 }

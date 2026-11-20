@@ -35,7 +35,7 @@ function isUnderPrefix(path: string, prefix: string): boolean {
 }
 
 /** Translate a glob into an anchored regular expression. */
-function globToRegExp(glob: string): RegExp {
+export function globToRegExp(glob: string): RegExp {
   let source = "";
   let braces = 0;
   for (let at = 0; at < glob.length; at++) {

@@ -38,7 +38,9 @@ Catalog rank places line numbers before folding.
 - `gutter.test.ts`: labels, block numbering and marker equality.
 - `headings.ts`: gutter classes on heading lines, so numbers align with the
   larger heading text. A plain edit (Live Preview's `isPlainTextEdit`) maps
-  them; anything else walks the tree again.
+  them; another edit marks again only the lines of the top-level blocks
+  Live Preview's `changedBlocks` names, and a new tree without an edit (or a
+  state without Live Preview's tree) walks the whole tree again.
 - `lineNumbers.css`: the plugin's styles, bundled through `src/webview/styles/index.css`.
 
 ## Services, events and settings

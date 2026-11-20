@@ -46,9 +46,12 @@ export interface HostFiles {
   /** Rejects with an error whose `code` is `FileNotFound` (or Node's `ENOENT`) when missing. */
   readText(uri: string, root?: string): Promise<string>;
   readBytes(uri: string, root?: string): Promise<Uint8Array>;
-  /** Replace an existing file's text; a symbolic link in its place is not followed. */
+  /**
+   * Replace an existing file's text, never leaving it half written. A
+   * symbolic link in its place is followed only to a file inside `root`.
+   */
   save(uri: string, text: string, root?: string): Promise<void>;
-  /** Replace an existing file's bytes; a symbolic link in its place is not followed. */
+  /** Replace an existing file's bytes, as `save` replaces its text. */
   saveBytes(uri: string, data: Uint8Array, root?: string): Promise<void>;
   /**
    * Write a new, empty file; true when this call made it. An existing file
@@ -66,14 +69,29 @@ export interface HostFiles {
   list(uri: string): Promise<readonly HostEntry[] | undefined>;
   /** Make a folder and those above it. */
   mkdir(uri: string): Promise<void>;
-  /** Copy a file, or a folder with everything in it. */
+  /**
+   * Copy a file, or a folder with everything in it, replacing what is at
+   * `to` (VS Code's `workspace.fs.copy` with `overwrite`).
+   */
   copy(from: string, to: string): Promise<void>;
+  /**
+   * Move a file or folder; a target that exists is refused (VS Code's
+   * `workspace.fs.rename` without `overwrite`), except the same file under
+   * another case of its name.
+   */
   move(from: string, to: string): Promise<void>;
-  /** Remove one file (not a folder's contents); a missing one is not an error. */
+  /**
+   * Remove one file, or an empty folder (not a folder's contents); a missing
+   * one is not an error.
+   */
   remove(uri: string): Promise<void>;
   /** Hear a file change, appear or go away; it and the folders above it need not exist yet. */
   watch(uri: string, listener: () => void): () => void;
-  /** Hear changes anywhere under a folder: each changed path, relative to it, with `/`. */
+  /**
+   * Hear changes anywhere under a folder: each changed path, relative to it,
+   * with `/`. Changes in hidden folders and `node_modules`, which the vault
+   * ignores, may go unheard. A watch that fails is armed again.
+   */
   watchTree(uri: string, listener: (relative: string) => void): () => void;
   /** The path an embedder knows a file by (the app opens notes by path). */
   toPath(uri: string): string;

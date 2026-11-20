@@ -16,6 +16,7 @@ interface GitChange {
   readonly uri: vscode.Uri;
 }
 interface GitRepository {
+  readonly rootUri: vscode.Uri;
   readonly state: {
     readonly workingTreeChanges: readonly GitChange[];
     readonly indexChanges: readonly GitChange[];
@@ -106,9 +107,16 @@ export async function warmMarkdownDocument(uri: vscode.Uri): Promise<void> {
   await warmMarkdownDocumentFor(uri.toString(), vscodeWarmHost());
 }
 
-/** Dirty and merge notes from every open repository, drained in batches. */
+/**
+ * Dirty and merge notes from every open repository, drained in batches; a
+ * repository's next state change supersedes its sweep still in progress.
+ */
 function watchGit(
-  warmGitChanges: (changeUris: readonly string[], live: () => boolean) => void,
+  warmGitChanges: (
+    changeUris: readonly string[],
+    live: () => boolean,
+    source: string,
+  ) => void,
 ): (() => void) | undefined {
   let live = true;
   const seen = new Set<GitRepository>();
@@ -123,6 +131,7 @@ function watchGit(
     warmGitChanges(
       changes.map((change) => change.uri.toString()),
       () => live,
+      repository.rootUri.toString(),
     );
   };
 

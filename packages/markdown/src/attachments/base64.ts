@@ -1,12 +1,17 @@
+/** Bytes per `String.fromCharCode` call, well inside engines' argument limits. */
+const CHUNK = 0x8000;
+
 /** Encode bytes as base64 without Node or DOM imports. */
 export function encodeBase64(bytes: Uint8Array): string {
   const encode = (globalThis as { btoa?: (data: string) => string }).btoa;
   if (typeof encode === "function") {
-    let binary = "";
-    for (let i = 0; i < bytes.length; i += 1) {
-      binary += String.fromCharCode(bytes[i]!);
+    // A chunk at a time: one string concatenation per byte made a large
+    // attachment slow to send.
+    const parts: string[] = [];
+    for (let start = 0; start < bytes.length; start += CHUNK) {
+      parts.push(String.fromCharCode(...bytes.subarray(start, start + CHUNK)));
     }
-    return encode(binary);
+    return encode(parts.join(""));
   }
   const buffer = (
     globalThis as {

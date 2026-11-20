@@ -1,9 +1,9 @@
 import test from "node:test";
 import assert from "node:assert/strict";
-import { realpathSync } from "node:fs";
+import { chmodSync, existsSync, realpathSync, statSync } from "node:fs";
 import { mkdtemp, mkdir, writeFile, rm, symlink } from "node:fs/promises";
 import { tmpdir } from "node:os";
-import { isAbsolute, join, relative } from "node:path";
+import { isAbsolute, join, relative, resolve as resolvePath } from "node:path";
 import { execFileSync } from "node:child_process";
 import { EventEmitter } from "node:events";
 import type { ChildProcess, spawn } from "node:child_process";
@@ -95,6 +95,38 @@ test("dirty insert above caret blames snapshot alpha, not disk beta by Eve", asy
   }
 });
 
+test("F22: a note committed with CRLF endings still blames its unchanged lines", async () => {
+  const root = await mkdtemp(join(tmpdir(), "mw-blame-crlf-"));
+  try {
+    const git = (...args: string[]) =>
+      execFileSync("git", args, { cwd: root, encoding: "utf8" }).trim();
+    git("init");
+    git("config", "core.autocrlf", "false");
+    git("config", "user.email", "dev@example.com");
+    git("config", "user.name", "Dev");
+    await writeFile(join(root, "note.md"), "alpha\r\nbeta\r\ngamma\r\n");
+    git("add", "note.md");
+    git("commit", "-m", "Initial");
+    const head = git("rev-parse", "HEAD");
+    const base = {
+      ...options(createSpawnBlameRunner()),
+      cwd: root,
+      line: 2,
+      // The editor's text: LF endings, one line added above.
+      snapshot: { contents: "alpha\nbeta\ngamma\nNEW\n", version: 2 },
+    };
+    const kept = await runBlameLine(base);
+    assert.equal(kept.status, "ok");
+    assert.equal(kept.status === "ok" && kept.blame.commit, head);
+    assert.equal(
+      (await runBlameLine({ ...base, line: 4 })).status,
+      "uncommitted",
+    );
+  } finally {
+    await rm(root, { recursive: true, force: true });
+  }
+});
+
 test("dirty argv forwards stdin and timeout; clean argv omits contents", async () => {
   const calls: Parameters<GitBlameRunner>[0][] = [];
   const runGit: GitBlameRunner = async (request) => {
@@ -108,6 +140,13 @@ test("dirty argv forwards stdin and timeout; clean argv omits contents", async (
   assert.equal(calls[0]?.stdin, "alpha\n");
   assert.equal(calls[0]?.timeoutMs, 5000);
   assert.ok(calls[0]?.args.includes("--contents"));
+  // F22: Git before 2.41 refuses `--contents` with a revision.
+  assert.deepEqual(calls[0]?.args.slice(4), [
+    "--contents",
+    "-",
+    "--",
+    "note.md",
+  ]);
   assert.deepEqual(calls[1]?.args.slice(0, 3), ["log", "-1", "--format=%b"]);
   assert.equal(dirty.status, "ok");
   if (dirty.status === "ok") {
@@ -247,7 +286,10 @@ test("production runner runs the git it is given, with its environment added", a
   assert.equal(seen[1]?.[0], "/opt/git/bin/git");
   const env = (seen[1]?.[2] as { env: Record<string, string | undefined> }).env;
   assert.equal(env.GIT_TERMINAL_PROMPT, "0");
-  assert.equal(env.PATH, process.env.PATH);
+  // Windows spells it Path; process.env finds it in any case, a copy does not.
+  const pathKey = Object.keys(env).find((key) => key.toUpperCase() === "PATH");
+  assert.ok(pathKey, "the process's PATH is passed on");
+  assert.equal(env[pathKey], process.env.PATH);
 });
 
 test("production runner enforces timeout and kills the child", async () => {
@@ -342,16 +384,23 @@ function watchedRepository() {
 test("NativeGitAccess production watcher binding makes an in-flight blame stale (B5)", async () => {
   const { watch, change, root } = watchedRepository();
   let resolve!: (value: { stdout: string; stderr: string }) => void;
+  let spawned!: () => void;
+  const running = new Promise<void>((done) => {
+    spawned = done;
+  });
   const pending = runBlameLine({
     ...options(
       () =>
         new Promise((done) => {
           resolve = done;
+          spawned();
         }),
     ),
     generationAtStart: watch.repoGeneration(root),
     getGeneration: () => watch.repoGeneration(root),
   });
+  // git is running (the snapshot's line endings are read first).
+  await running;
   change.fire();
   resolve({ stdout: porcelain(), stderr: "" });
   const result = await pending;
@@ -445,8 +494,11 @@ test("discoverGitRoot finds the work tree from a nested path without vscode.git"
     const nested = join(root, "notes");
     await mkdir(nested, { recursive: true });
     await writeFile(join(nested, "home.md"), "hello\n");
-    // git reports the real path (macOS tmp dirs live under /private/var).
-    assert.equal(await discoverGitRoot(nested, runGit), realpathSync(root));
+    // git reports the real path: macOS tmp dirs live under /private/var, and
+    // on Windows git writes C:/Users/<long name>/... for C:\Users\RUNNER~1\....
+    const discoveredRoot = await discoverGitRoot(nested, runGit);
+    assert.ok(discoveredRoot);
+    assert.equal(resolvePath(discoveredRoot), realpathSync.native(root));
     assert.equal(
       await discoverGitRoot(join(nested, "missing-dir"), runGit),
       undefined,
@@ -599,6 +651,47 @@ test("watchGitMetadata fires when HEAD is rewritten", async () => {
   }
 });
 
+test("watchGitMetadata hears no change when git's files are only touched, not changed", async () => {
+  // On Windows fs.watch also reports a file's last access, attributes and
+  // security as changes, so git reading `.git` (or a virus scanner opening a
+  // new object) would make every blame stale. Setting a file's mode to what it
+  // is raises the same attribute notification on Linux and macOS.
+  const { root } = await repo();
+  const gitDir = resolveGitDir(root)!;
+  let fires = 0;
+  const watcher = watchGitMetadata(gitDir, () => {
+    fires++;
+  });
+  try {
+    for (const file of [
+      "HEAD",
+      "config",
+      "index",
+      "refs/heads/master",
+      "refs/heads/main",
+    ]) {
+      const target = join(gitDir, file);
+      if (existsSync(target)) {
+        chmodSync(target, statSync(target).mode);
+      }
+    }
+    await new Promise((resolve) => setTimeout(resolve, 300));
+    assert.equal(fires, 0, "touching git's files is no change");
+    execFileSync("git", ["commit", "--amend", "-m", "Rewrite HEAD"], {
+      cwd: root,
+      stdio: ["pipe", "pipe", "pipe"],
+    });
+    const deadline = Date.now() + 3000;
+    while (Date.now() < deadline && fires === 0) {
+      await new Promise((resolve) => setTimeout(resolve, 25));
+    }
+    assert.ok(fires >= 1, "a commit after the touches is still heard");
+  } finally {
+    watcher.dispose();
+    await rm(root, { recursive: true, force: true });
+  }
+});
+
 test("directory metadata watch survives successive atomic config replaces", async () => {
   const { root } = await repo();
   const rootUri = `file://${root}`;
@@ -659,6 +752,23 @@ test("canonicalPath keeps symlink alias notes inside the discovered root", async
     await rm(parent, { recursive: true, force: true });
     await rm(root, { recursive: true, force: true });
   }
+});
+
+test("canonicalPath spells a note's path as git names its work tree (Windows short names)", (t) => {
+  // On Windows the note can arrive as `C:\\Users\\RUNNER~1\\...` while
+  // `git rev-parse --show-toplevel` prints `C:/Users/runneradmin/...`. Only the
+  // operating system's realpath expands the short name; this stands in for it
+  // so the comparison is exercised on any OS.
+  const short = join(tmpdir(), "RUNNER~1", "repo");
+  const long = join(tmpdir(), "runneradmin", "repo");
+  t.mock.method(realpathSync, "native", (path: string) =>
+    path.startsWith(short) ? long + path.slice(short.length) : path,
+  );
+  const relativePath = relative(
+    canonicalPath(long),
+    canonicalPath(join(short, "note.md")),
+  );
+  assert.equal(relativePath, "note.md");
 });
 
 test("linked worktree watches shared commondir config changes", async () => {

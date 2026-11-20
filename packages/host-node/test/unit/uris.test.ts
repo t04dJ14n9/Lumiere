@@ -43,11 +43,32 @@ test("a URI's folder and name", () => {
     parentUri(nodeFiles, note),
     pathToFileURL("/vault/daily notes").toString(),
   );
+  // `file:///` here, the current drive's root (`file:///D:/`) on Windows.
   assert.equal(
     parentUri(nodeFiles, pathToFileURL("/vault").toString()),
-    "file:///",
+    pathToFileURL("/").toString(),
   );
   assert.equal(uriName(note), "Q #1.md");
+});
+
+test("a Windows drive is a root: its folder is itself, and `..` stops there", () => {
+  // As the URL standard resolves them, on every platform; `/C:` alone would
+  // be the drive's current folder on Windows.
+  const files = { uriOf: fileUri };
+  const resolved = (relative: string, base: string) =>
+    new URL(relative, base).href;
+  assert.equal(parentUri(files, "file:///C:/vault"), "file:///C:/");
+  assert.equal(parentUri(files, "file:///C:/vault/"), "file:///C:/");
+  assert.equal(parentUri(files, "file:///C:/"), "file:///C:/");
+  assert.equal(parentUri(files, "file:///C:/vault/a.md"), "file:///C:/vault");
+  for (const relative of ["..", "../..", "../../x.md", "a/../../../y.md"]) {
+    assert.equal(
+      joinUri(files, "file:///C:/vault", relative),
+      resolved(relative, "file:///C:/vault/"),
+      relative,
+    );
+  }
+  assert.equal(uriName("file:///C:/vault/a.md"), "a.md");
 });
 
 // Node's own host names files with pathToFileURL (node-platform.ts), so
@@ -57,10 +78,12 @@ const SAME_AS_NODE = Number(process.versions.node.split(".")[0]) >= 26;
 const pathOf = (uri: string) => decodeURIComponent(new URL(uri).pathname);
 
 test("without Node, a path's URI is the one Node 26's pathToFileURL gives", () => {
+  // These paths have no drive, so Node is asked for its POSIX URI: on
+  // Windows it would put the current drive in front.
   for (let code = 32; code < 127; code++) {
     const file = `/v/x${String.fromCharCode(code)}y.md`;
     if (!file.slice(3).includes("/")) {
-      const node = pathToFileURL(file).toString();
+      const node = pathToFileURL(file, { windows: false }).toString();
       if (SAME_AS_NODE) {
         assert.equal(fileUri(file), node, file);
       }
@@ -69,7 +92,10 @@ test("without Node, a path's URI is the one Node 26's pathToFileURL gives", () =
       assert.equal(pathOf(fileUri(file)), file, file);
     }
   }
-  assert.equal(fileUri("/v/é ü.md"), pathToFileURL("/v/é ü.md").toString());
+  assert.equal(
+    fileUri("/v/é ü.md"),
+    pathToFileURL("/v/é ü.md", { windows: false }).toString(),
+  );
 });
 
 test("a URI's path resolves dot segments and refuses hidden separators", () => {

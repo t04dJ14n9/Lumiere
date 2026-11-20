@@ -2,10 +2,10 @@ import type { EditorView } from "@codemirror/view";
 import {
   cellAtOffset,
   cellForSourceOffset,
-  parseTable,
   type CellPosition,
   type CellRange,
 } from "../../markdown/tables/model";
+import { parsedTable } from "../../markdown/tables/parsed";
 import {
   operateTable,
   type TableOperation,
@@ -253,7 +253,7 @@ export class TableController {
       this.toolbar.close();
     }
     this.grid.outer = outer;
-    const model = parseTable(block.source);
+    const model = parsedTable(block.source);
     if (!model) {
       return;
     }
@@ -325,6 +325,10 @@ export class TableController {
       return;
     }
     delete this.selected.range;
+    if (force) {
+      // Rendering itself changed (render/changed): keep no cell's old one.
+      this.grid.disposeContent();
+    }
     if (moved && this.editor && this.active) {
       this.projection.relocate(moved);
     } else {
@@ -369,7 +373,11 @@ export class TableController {
       (this.editor ?? this.grid.outer).focus();
       return;
     }
-    const next = parseTable(table);
+    // A palette command can reach a table that has scrolled out of view.
+    if (this.grid.locate() === undefined) {
+      return;
+    }
+    const next = parsedTable(table);
     this.close();
     delete this.selected.range;
     this.requested = next

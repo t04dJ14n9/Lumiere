@@ -7,6 +7,7 @@ import type { Disposer } from "@workshop/core";
 import {
   createVaultParser,
   isIgnoredPath,
+  ListingBudget,
   type FileEvent,
   type HostSettings,
   type ListedFile,
@@ -68,27 +69,50 @@ export function createHostVaultSystem(options: HostVaultOptions): VaultSystem {
   };
 }
 
-/** Every file under a root, outside hidden folders and `node_modules`, up to `limit`. */
+/**
+ * Every file under a root, outside hidden folders and `node_modules`, up to
+ * `limit` notes and `limit` other files (ListingBudget).
+ */
 export async function listVault(
   files: HostFiles,
   request: { root: string; limit: number; shallow?: boolean | undefined },
 ): Promise<{ files: ListedFile[]; partial: boolean }> {
   const { root, limit, shallow = false } = request;
-  const found = await collectFiles(files, root, limit + 1, shallow);
-  const listed = await statAll(files, found.slice(0, limit));
-  return { files: listed, partial: found.length > limit };
+  const budget = new ListingBudget(limit);
+  const found = await collectFiles(files, { root, budget, shallow });
+  const listed = await statAll(files, found);
+  return { files: listed, partial: budget.isPartial };
+}
+
+/**
+ * The paths of the files `listVault` lists, without reading each one's size
+ * and time: what a file tree needs, at a fraction of the cost in a large
+ * vault.
+ */
+export async function listVaultPaths(
+  files: HostFiles,
+  request: { root: string; limit: number },
+): Promise<{ paths: string[]; partial: boolean }> {
+  const { root, limit } = request;
+  const budget = new ListingBudget(limit);
+  const found = await collectFiles(files, { root, budget, shallow: false });
+  const paths = found
+    .map((file) => file.relative)
+    .filter(
+      (relative) => !relative.startsWith("..") && !isIgnoredPath(relative),
+    );
+  return { paths, partial: budget.isPartial };
 }
 
 /** Vault-relative paths (with `/`) of the files under `root`. */
 async function collectFiles(
   files: HostFiles,
-  root: string,
-  limit: number,
-  shallow: boolean,
+  walk: { root: string; budget: ListingBudget; shallow: boolean },
 ): Promise<{ relative: string; uri: string }[]> {
+  const { root, budget, shallow } = walk;
   const found: { relative: string; uri: string }[] = [];
   const folders = [""];
-  while (folders.length > 0 && found.length < limit) {
+  while (folders.length > 0 && !budget.isSpent) {
     const folder = folders.shift()!;
     const entries = await files.list(
       folder ? joinUri(files, root, folder) : root,
@@ -101,11 +125,12 @@ async function collectFiles(
       // A symbolic link ("other") could loop, so it is not entered.
       if (entry.kind === "folder" && !shallow) {
         folders.push(relative);
-      } else if (entry.kind === "file") {
+      } else if (entry.kind === "file" && budget.admit(relative)) {
         found.push({ relative, uri: joinUri(files, root, relative) });
       }
     }
   }
+  budget.stop(folders.length);
   return found;
 }
 

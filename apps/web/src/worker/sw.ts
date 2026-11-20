@@ -7,7 +7,13 @@
  * videos, embedded PDFs), by the routes in shared/routes.ts (src/answers.ts
  * answers them).
  * scripts/build.mjs builds it into sw.js.
+ *
+ * A new build's worker waits while a window of the old one is open: file
+ * names are not hashed, so taking over would serve that window's editor
+ * pages from another build than the window. The window offers the reader a
+ * reload and then tells the waiting worker to take over (src/updates.ts).
  */
+import { isTakeOver } from "../shared/messages";
 import { isAppWindow, routeOf, type Route } from "../shared/routes";
 import { notFound, pageResponse, vaultFileResponse } from "./responses";
 import { askWindows } from "./windows";
@@ -22,9 +28,14 @@ self.addEventListener("install", (event) => {
   event.waitUntil(
     caches
       .open(LUMIERE_BUILD)
-      .then((cache) => cache.addAll([...LUMIERE_FILES]))
-      .then(() => self.skipWaiting()),
+      .then((cache) => cache.addAll([...LUMIERE_FILES])),
   );
+});
+
+self.addEventListener("message", (event) => {
+  if (isTakeOver(event.data)) {
+    void self.skipWaiting();
+  }
 });
 
 self.addEventListener("activate", (event) => {
@@ -38,6 +49,8 @@ self.addEventListener("activate", (event) => {
             .map((key) => caches.delete(key)),
         ),
       )
+      // Only the first worker, or one a reloading window asked for, gets
+      // here while a window is open: neither leaves a window on another build.
       .then(() => self.clients.claim()),
   );
 });

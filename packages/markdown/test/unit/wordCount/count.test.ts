@@ -3,6 +3,7 @@ import assert from "node:assert/strict";
 import Module, { createRequire } from "node:module";
 import type * as WorkbenchService from "../../../src/host/services/workbench";
 import { countText, formatCounts } from "../../../src/plugins/wordCount/count";
+import { forgetModules } from "../../support/module-cache";
 
 // Each count below was read from Obsidian's status bar for the same text.
 test("words are counted as Obsidian counts them", () => {
@@ -65,11 +66,7 @@ function loadWorkbench(vscode: unknown) {
   loader._load = (id, ...args) =>
     id === "vscode" ? vscode : originalLoad.call(Module, id, ...args);
   const require = createRequire(import.meta.url);
-  for (const id of Object.keys(require.cache)) {
-    if (id.includes("/src/host/") || id.includes("/src/shared/")) {
-      delete require.cache[id];
-    }
-  }
+  forgetModules(require, "/src/host/", "/src/shared/");
   try {
     return require("../../../src/host/services/workbench.ts") as typeof WorkbenchService;
   } finally {

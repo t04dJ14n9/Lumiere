@@ -55,6 +55,13 @@ export function mapPdfSelectionWire(
   };
 }
 
+/** The page shown and the PDF's page count, once the viewer has reported its view. */
+export function viewedPages(
+  view: { page: number; pageCount: number } | undefined,
+): Pick<PdfIdeContextInput, "page" | "pageCount"> {
+  return view ? { page: view.page, pageCount: view.pageCount } : {};
+}
+
 export function buildPdfIdeContextPacket(
   input: PdfIdeContextInput,
 ): IdeContextPacket {
@@ -78,4 +85,22 @@ export function buildPdfIdeContextPacket(
     },
     input.caps ?? DEFAULT_CAPS,
   );
+}
+
+/**
+ * The packet, with a region selection's PNG snapshot saved to the region
+ * image cache (`pdfRegions`) so the agent can open it. `saveRegionImage`
+ * resolves the snapshot's path, or undefined when there is no snapshot, no
+ * cache, or it could not be saved; text has no snapshot and is not saved.
+ */
+export async function buildPdfIdeContextPacketWithRegion(
+  input: Omit<PdfIdeContextInput, "regionImagePath">,
+  saveRegionImage: (() => Promise<string | undefined>) | undefined,
+): Promise<IdeContextPacket> {
+  const regionImagePath =
+    input.selection?.kind === "region" ? await saveRegionImage?.() : undefined;
+  return buildPdfIdeContextPacket({
+    ...input,
+    ...(regionImagePath ? { regionImagePath } : {}),
+  });
 }

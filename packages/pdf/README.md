@@ -20,12 +20,22 @@ is opt-in (`lumiere.pdf.regions.enabled`, default off).
   find in PDF (⌘F / Ctrl+F), internal links and web links.
   When the file changes on disk (a rebuilt paper), the viewer reloads at the
   same page and zoom; a touch or sync that leaves its bytes as they were
-  reloads nothing. Annotations made while it reloads are kept with the
-  version they were made on.
+  reloads nothing. The file is read and hashed once per change for every
+  pane that shows it. A PDF over 512 MB is not opened, and Lumiere says so
+  ([Large PDFs](docs/large-pdfs.md)). Annotations made while it reloads are kept with the
+  version they were made on. A PDF deleted on disk keeps showing as it was,
+  and Lumiere says it can no longer read it.
+  A password-protected PDF asks for its password in the viewer; the password
+  stays in the viewer and is never kept, so each open asks again. A damaged
+  file, or one that is not a PDF, says so at once. If the PDF engine stops
+  working once the PDF is open (its worker fails, or PDFium crashes), the
+  viewer says so and offers **Reload**, which starts a new engine at the
+  same page, instead of leaving pages that never draw.
 - **View controls.** A View picker in the editor title/status bar, and a
   compact **View** menu in the slim toolbar of the web and iPad hosts, selects zoom, layout,
   scrolling mode and direction. Saved choices and reading position return
-  when a PDF reopens. Next/previous moves by spreads in two-page layouts;
+  when a PDF reopens (the place is kept two seconds after the view stops
+  moving, for the 500 PDFs read most recently). Next/previous moves by spreads in two-page layouts;
   go to page opens its containing spread, and fit modes measure the whole spread.
   Smooth scrolling follows `editor.smoothScrolling`,
   with a PDF setting to override it, and respects reduced motion. See
@@ -48,7 +58,9 @@ is opt-in (`lumiere.pdf.regions.enabled`, default off).
   stays with text selection or Stage pan. Device touch is not GUI-verified
   here. Select Region is hidden.
 - **Passage highlights = vault Markdown.** A note's Markdown link to
-  `papers/a.pdf#page=N#:~:text=…` is a passage highlight: the viewer paints
+  `papers/a.pdf#page=N#:~:text=…` is a passage highlight (the standard
+  `prefix-,start,end,-suffix` parts are understood, as a browser's Copy link
+  to highlight writes them): the viewer paints
   **backlink overlays** from those links (hover preview, click opens the
   note; Del ignores overlays). **Copy link to this** copies an `@` locator
   for agents, not such a link. See [CAPABILITIES.md](CAPABILITIES.md).
@@ -73,6 +85,15 @@ is opt-in (`lumiere.pdf.regions.enabled`, default off).
   (`{"version": 2, "bundle": …}`, EmbedPDF 3's annotation transfer); files
   from earlier versions are converted when read and saved in the new format on
   the next change, after which earlier versions cannot read them.
+  - **The same PDF in two panes or windows.** Each save is merged into the
+    file by annotation (its `/NM` name), against what that pane last had
+    from the file: a mark made, changed or deleted in one pane is kept, and
+    the other pane's save does not undo it. Other panes in the same window
+    then show the change. A pane in another VS Code window watches the
+    annotation file and shows the change when it lands on disk, merged with
+    the marks it has not saved yet (a local annotation file only: a remote
+    or virtual one shows it when the PDF is reopened). A mark changed in
+    two panes at once keeps the last save's version.
   - **PDF: Save Annotations into This PDF** writes them into the file after
     you confirm (its SHA-256 changes). It refuses PDFs in
     `lumiere.pdf.annotations.protectedFolders` (default `[".raw"]`). The
@@ -91,9 +112,12 @@ is opt-in (`lumiere.pdf.regions.enabled`, default off).
   branch is closed. A click on a bookmark leaves the tree as it is, so a
   double-click's second click hits the same row. This choice is saved as
   `lumiere.pdf.outline.followCursor`.
-  Opening a Lumiere PDF editor hides VS Code's native **Outline** and shows
-  **PDF Outline**; leaving restores the native Outline after a short debounce,
-  skipped if Lumiere already owns the active tab.
+  Opening a PDF never changes which side bar is shown: from Search or Quick
+  Open, Search stays. Wherever the Explorer is shown, **PDF Outline** appears
+  in it and VS Code's native **Outline** is hidden; leaving the PDF restores
+  the native Outline after a short debounce, only if it was hidden, and not
+  when Lumiere already owns the active tab. VS Code lists PDF Outline
+  collapsed the first time; it remembers once you expand it.
 - **Section links from notes.** In a Markdown note in Lumiere, typing
   `[[paper.pdf#` lists the PDF's bookmarks; typing more filters them, and
   picking one inserts `[[paper.pdf#page=5|Methods]]` (or
@@ -112,9 +136,11 @@ is opt-in (`lumiere.pdf.regions.enabled`, default off).
 
   With nothing selected, it copies the reading page's locator:
   `@papers/paper.pdf#page=N`. Clipboard only — it does
-  **not** open agent chat. ⌘C / Ctrl+C still copies plain selected text.
-  `lumiere.pdf.copyLinkForAgent.target` is legacy for IDE Context / MCP
-  delivery only. Region `viewrect=` locators appear only when
+  **not** open agent chat. ⌘C / Ctrl+C still copies plain selected text,
+  with its line and paragraph breaks.
+  `lumiere.pdf.copyLinkForAgent.target` only chooses where **Send IDE
+  Context to Agent…** goes (`cursor` and `chat` remain for older settings and
+  only copy). Region `viewrect=` locators appear only when
   `lumiere.pdf.regions.enabled` is on. Contract:
   `packages/agents/docs/agent-handoff-format.md`.
 
@@ -221,8 +247,9 @@ Markdown link opens that page (and resolve `#:~:text=` to an overlay when possib
 When **regions are enabled**, a region's locator may include RFC 8118
 `viewrect=left,top,width,height` (PDF points from the page's top-left). MCP
 `get_current_pdf_selection` can still attach a region PNG snapshot from
-extension storage (`workspaceStorage/…/regions`); Copy link itself does not
-put the image path on the clipboard. See
+extension storage (`workspaceStorage/…/regions`), and **Copy / Send IDE
+Context** names the same file as the region's `regionImagePath`; Copy link
+itself does not put the image path on the clipboard. See
 `packages/agents/docs/agent-handoff-format.md`.
 
 ## Agent bridge (MCP, experimental, off by default)
@@ -251,7 +278,8 @@ it at once; no reload is needed.
   when the shim's path contains `%`, which cmd would expand. The shim picks
   the window whose workspace contains the agent's folder (the most specific
   one when workspaces nest), from the files each running bridge writes to
-  `~/.agent-pdf-viewer/bridges/`. If no window matches, or two match
+  `~/.agent-pdf-viewer/bridges/` (a bridge starting removes those of
+  windows that crashed). If no window matches, or two match
   equally, it refuses rather than guess; set `AGENT_PDF_BRIDGE_PID` (shown
   in the extension's log) to name the window.
 
@@ -305,6 +333,7 @@ src/
 │   ├── view-state.ts     page and zoom reported by the viewer; view actions
 │   ├── toolbar-settings.ts  toolbar modes; old floating-bar values still parse
 │   ├── picture-swap.ts   a page keeps its picture until the next is decoded
+│   ├── annotation-merge.ts  two panes' saves of one annotation file, merged by mark
 │   └── geometry.ts       page rectangles
 ├── bridge-stdio/  the stdio shim Claude Code and Codex run to reach the bridge
 ├── extension/   the VS Code side
@@ -332,6 +361,9 @@ src/
     ├── main.tsx, host.ts       entry and messages to the extension
     ├── outbox.ts               state reports batched into versioned patches
     ├── engine-host.ts          the page's one engine, kept across reloads
+    ├── engine-failure.ts       when the worker gives way to the main thread
+    ├── engine-health.ts        an engine that dies after the PDF opened
+    ├── password-prompt.tsx     a locked PDF's password
     ├── engine.tsx, plugins.ts  PDFium in a worker (main-thread fallback);
     │                           the plugins EmbedPDF 3 runs (stage, render, …)
     ├── viewer.tsx              toolbar, search, the Stage and its pages
@@ -348,6 +380,7 @@ src/
     ├── smooth-scrolling.ts     animated wheel notches in continuous reading
     ├── text-access.ts          the page text and its glyph boxes, as a plugin
     ├── annotation-store-session.ts  marks to and from their file
+    ├── annotation-store-sync.ts     another pane's saved marks, shown here
     ├── selection.ts            reporting text and region selections
     ├── region-details.ts       a region's text and PNG snapshot
     ├── drag-release.ts         ending drags released outside the viewer
@@ -452,9 +485,12 @@ request and on pushes to `main`. Each job, and how to run it locally:
 
 | Job                       | What it proves                                                                                                                                                                                         | Locally                                                       |
 | ------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------ | ------------------------------------------------------------- |
-| `check`                   | Lint, typecheck and unit tests pass                                                                                                                                                                    | `pnpm check`                                                  |
-| `browser`                 | The webview suite in Chromium; on failure, `test-results/` is uploaded                                                                                                                                 | `pnpm test:browser`                                           |
-| `package`                 | `pnpm package` builds the VSIX, leaves committed files unchanged, and the VSIX is under 8 MB with no tests, sources, source maps or secret-shaped strings; the VSIX is uploaded as the `vsix` artifact | `pnpm package && bash .github/scripts/check-vsix.sh *.vsix 8` |
+| `check` | Prettier, lint, typecheck, unit tests and generated contributions pass | `pnpm check` |
+| `check (windows)` | The unit tests pass on Windows | `pnpm test` |
+| `desktop` | The desktop app's Rust: `cargo check` and its unit tests | `pnpm check:desktop` |
+| `browser` | The webview suite in Chromium; on failure, `test-results/` is uploaded | `pnpm test:browser` |
+| `quality` | Scroll smoothness and opening speed stay within their budgets | `pnpm test:quality` |
+| `package` | `pnpm package` builds the VSIX, leaves committed files unchanged, and the VSIX is under 20 MB with no tests, sources, source maps or unreviewed secret-shaped strings, and the PDF engine once; the webview entry and the extension host grow no more than 10% over `scripts/bundle-baseline.json`; the VSIX is uploaded as the `vsix` artifact | `pnpm package && bash .github/scripts/check-vsix.sh *.vsix 20 && node scripts/bundle-size.mjs` |
 | `secret-scan`             | gitleaks finds no secrets in the git history                                                                                                                                                           | `gitleaks git --redact .`                                     |
 | `audit (advisory)`        | `pnpm audit --prod`; a warning, never a failure                                                                                                                                                        | `pnpm audit --prod`                                           |
 
@@ -466,11 +502,12 @@ uses API keys or other secrets. Dependabot proposes grouped npm and
 GitHub Actions updates weekly.
 
 Pushing a tag `v<version>` that matches `package.json` runs
-[`release.yml`](.github/workflows/release.yml): `pnpm check`, `pnpm package`,
-and a GitHub Release with the VSIX attached. Publishing stays manual: with a
-Marketplace PAT run `pnpm exec vsce publish --packagePath <file>.vsix`, and
-for Open VSX `pnpm dlx ovsx publish <file>.vsix -p <token>`. Do not store
-these tokens in the repository.
+[`release.yml`](.github/workflows/release.yml). It checks that the tag's
+commit is on `main`, runs `pnpm test:browser` and `pnpm test:quality` on it,
+then `pnpm check`, `pnpm package`, Marketplace Trusted Publishing, and a
+GitHub Release with the VSIX attached. Open VSX publishing stays manual:
+`pnpm dlx ovsx publish <file>.vsix -p <token>`. Do not store that token in
+the repository.
 
 ## License
 

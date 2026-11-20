@@ -141,6 +141,10 @@ const size = {
 export default tseslint.config(
   {
     ignores: [
+      // Other checkouts of this repository: git worktrees (AGENTS.md puts
+      // them in .worktree/) and agents' worktrees.
+      ".worktree/**",
+      ".claude/worktrees/**",
       // Build output, including the sample plugin's.
       // Throw-away measurement scripts (not part of the product).
       "packages/markdown/docs/obsidian-measurements/**",

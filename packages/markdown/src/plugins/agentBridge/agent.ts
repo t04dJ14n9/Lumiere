@@ -138,7 +138,7 @@ export class AgentHandoff {
   private async save(panel: EditorPanel): Promise<void> {
     await panel.session.withAction(async () => {
       await this.options.beforeSave(panel);
-      await panel.session.flush();
+      await panel.session.flush(panel.id);
       if (!(await panel.session.save())) {
         throw new RpcError("SourceChanged", "The note was not saved");
       }

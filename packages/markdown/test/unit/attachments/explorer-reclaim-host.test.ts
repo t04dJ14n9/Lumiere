@@ -3,6 +3,7 @@ import assert from "node:assert/strict";
 import Module, { createRequire } from "node:module";
 import type * as Reclaim from "../../../src/host/attachments-explorer-reclaim";
 import { MARKDOWN_EDITOR } from "../../../src/shared/editor-provider";
+import { forgetModules } from "../../support/module-cache";
 
 class TabInputCustom {
   constructor(
@@ -66,11 +67,7 @@ function harness(answer: string | undefined) {
   loader._load = (id, ...args) =>
     id === "vscode" ? vscode : originalLoad.call(Module, id, ...args);
   const require = createRequire(import.meta.url);
-  for (const id of Object.keys(require.cache)) {
-    if (id.includes("/src/host/")) {
-      delete require.cache[id];
-    }
-  }
+  forgetModules(require, "/src/host/");
   let reclaim: typeof Reclaim;
   try {
     reclaim =

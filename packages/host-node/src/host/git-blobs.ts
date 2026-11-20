@@ -5,6 +5,7 @@
  */
 import type { GitBlameRunner } from "@workshop/markdown/node";
 import {
+  baselineFailure,
   exceedsDiffLimits,
   MAX_DIFF_CHARS,
   type GitBaselineResult,
@@ -41,7 +42,7 @@ export class GitBlobs {
       return { status: "untracked" };
     }
     const read = await this.text(location, commit);
-    if (read === "untracked" || read === "tooLarge") {
+    if (read === "untracked" || read === "unavailable" || read === "tooLarge") {
       return { status: read };
     }
     const label = commit ? `HEAD (${commit.slice(0, 7)})` : "Index";
@@ -66,7 +67,7 @@ export class GitBlobs {
   private async text(
     location: BlobLocation,
     commit: string | undefined,
-  ): Promise<string | "untracked" | "tooLarge"> {
+  ): Promise<string | "untracked" | "unavailable" | "tooLarge"> {
     const spec = `${commit ?? ""}:${location.gitPath}`;
     const key = `${location.root}\0${spec}`;
     const cached = commit ? this.cache.get(key) : undefined;
@@ -84,11 +85,11 @@ export class GitBlobs {
         })
       ).stdout;
     } catch (error) {
-      // The runner's own refusal of a long output; anything else means the
-      // note is not there (new, untracked, or in a merge conflict).
+      // The runner's own refusal of a long output; git saying the note is
+      // not there (new, untracked, or in a merge conflict); or git failing.
       return /exceeds buffer limit/.test(String(error))
         ? "tooLarge"
-        : "untracked";
+        : baselineFailure(error);
     }
     const text = raw.replace(/\r\n?/g, "\n");
     if (exceedsDiffLimits(text)) {

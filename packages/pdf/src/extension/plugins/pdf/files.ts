@@ -17,6 +17,8 @@ export const vscodePdfFiles: PdfFiles = {
     Promise.resolve(vscode.workspace.fs.readFile(vscode.Uri.parse(uri))),
   watch: (uri, onChange) => watchFile(vscode.Uri.parse(uri), onChange),
   displayPath: (uri) => displayPath(vscode.Uri.parse(uri)),
+  size: async (uri) =>
+    (await vscode.workspace.fs.stat(vscode.Uri.parse(uri))).size,
   hash: async (uri) => {
     const bytes = await vscode.workspace.fs.readFile(vscode.Uri.parse(uri));
     return createHash("sha256").update(bytes).digest("hex");
@@ -68,6 +70,14 @@ export const vscodePdfFiles: PdfFiles = {
       await vscode.workspace.fs.writeFile(temp, new TextEncoder().encode(text));
       await vscode.workspace.fs.rename(temp, file, { overwrite: true });
     },
+    key: (uri, sha256) =>
+      annotationFile(vscode.Uri.parse(uri), sha256)?.toString() ?? sha256,
+    // Another VS Code window has its own extension host: only the disk
+    // tells this one that it saved the file.
+    watch: (uri, sha256, onChange) => {
+      const file = annotationFile(vscode.Uri.parse(uri), sha256);
+      return file ? watchFile(file, onChange) : () => undefined;
+    },
   },
 };
 
@@ -117,19 +127,35 @@ function isNotFound(error: unknown): boolean {
   );
 }
 
+/**
+ * Watch the folder's files and pick this one: a pattern is a glob, so the
+ * name itself as the pattern never matches `Smith [2020].pdf`. A delete
+ * counts too: an atomic replace may arrive as one, and a PDF really
+ * deleted then fails its reload and says so, rather than showing the old
+ * bytes as if nothing happened.
+ */
 function watchFile(uri: vscode.Uri, onChange: () => void): () => void {
   if (uri.scheme !== "file") {
     return () => undefined;
   }
+  const folder = path.dirname(uri.fsPath);
+  const name = path.basename(uri.fsPath);
   const watcher = vscode.workspace.createFileSystemWatcher(
-    new vscode.RelativePattern(
-      vscode.Uri.file(path.dirname(uri.fsPath)),
-      path.basename(uri.fsPath),
-    ),
+    new vscode.RelativePattern(vscode.Uri.file(folder), "*"),
   );
+  const ifThisFile = (changed: vscode.Uri): void => {
+    if (
+      changed.scheme === "file" &&
+      path.basename(changed.fsPath) === name &&
+      path.dirname(changed.fsPath) === folder
+    ) {
+      onChange();
+    }
+  };
   const subscriptions = [
-    watcher.onDidChange(onChange),
-    watcher.onDidCreate(onChange),
+    watcher.onDidChange(ifThisFile),
+    watcher.onDidCreate(ifThisFile),
+    watcher.onDidDelete(ifThisFile),
   ];
   return () => {
     for (const subscription of subscriptions) {

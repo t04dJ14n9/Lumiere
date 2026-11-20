@@ -2,7 +2,7 @@ import type { EditorPanel, ViewSnapshot } from "./api";
 import { protocol } from "./protocol";
 /** Capture by panel identity; two panels of a note never overwrite each other. */
 export async function captureView(panel: EditorPanel): Promise<ViewSnapshot> {
-  await panel.session.flush();
+  await panel.session.flush(panel.id);
   const version = panel.document.version;
   const state = await panel.rpc.call(protocol, "captureView", {});
   if (panel.document.version !== version) {

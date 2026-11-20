@@ -1,6 +1,13 @@
 import TurndownService from "turndown";
-import { mathMarkdown, calloutMarkdown, tableMarkdown } from "./special";
+import {
+  calloutMarkdown,
+  isBarePre,
+  mathMarkdown,
+  preformattedMarkdown,
+  tableMarkdown,
+} from "./special";
 import { imageMarkdown, linkMarkdown } from "./links";
+import { registerStyledTextRules, registerWordListRules } from "./office";
 /**
  * Rich text as Markdown, written as Obsidian writes it (measured): `_italic_`,
  * `- item` and `1. item` with one space, `---` rules and compact tables. Unlike
@@ -22,7 +29,9 @@ export function markdownFromHtml(html: string): string | undefined {
       "",
   });
   registerInlineRules(converter);
+  registerStyledTextRules(converter);
   registerBlockRules(converter);
+  registerWordListRules(converter);
   return converter.turndown(html).trim() || undefined;
 }
 function registerInlineRules(converter: TurndownService): void {
@@ -59,6 +68,10 @@ function registerBlockRules(converter: TurndownService): void {
   converter.addRule("listItem", {
     filter: "li",
     replacement: listItemMarkdown,
+  });
+  converter.addRule("preformatted", {
+    filter: isBarePre,
+    replacement: (_content, node) => preformattedMarkdown(node),
   });
   converter.addRule("table", {
     filter: "table",

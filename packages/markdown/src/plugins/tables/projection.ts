@@ -1,9 +1,6 @@
 import { editGroup } from "../document/api";
-import {
-  parseTable,
-  writeCells,
-  type CellPosition,
-} from "../../markdown/tables/model";
+import { writeCells, type CellPosition } from "../../markdown/tables/model";
+import { parsedTable } from "../../markdown/tables/parsed";
 import { tableSourceChanges } from "./source-edits";
 import { indentRows, rowPrefix } from "./column-widths";
 import { CellEditor, type CellSelection } from "./cell-editor";
@@ -186,11 +183,15 @@ export class CellProjection {
     group: string,
   ): void {
     this.cellEditor?.source.remember(text);
+    const start = this.grid.locate();
+    if (start === undefined) {
+      return;
+    }
     const changes = projectedChanges(
       this.grid.tableSource(),
       position,
       text,
-      this.grid.start(),
+      start,
     );
     this.grid.outer.dispatch({ changes, annotations: editGroup.of(group) });
   }
@@ -294,7 +295,7 @@ export function projectedChanges(
   text: string,
   start: number,
 ) {
-  const table = parseTable(source);
+  const table = parsedTable(source);
   if (!table) {
     return [];
   }

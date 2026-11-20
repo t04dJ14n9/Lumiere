@@ -2,24 +2,29 @@ import type { Plugin } from "@workshop/core";
 import type { PanelShell } from "../../shared/host";
 import { exceedsDiffLimits } from "../../shared/diff";
 import type { DiffSide } from "../../shared/git-diff";
-import type { GitAccess } from "../../shared/git";
+import type { GitAccess, GitRef } from "../../shared/git";
 import { protocol } from "./protocol";
 
 /**
  * Per-file mutation lock shared by every panel of that file. Not an SCM
- * transaction: one in-flight Stage/Revert per path, released when it finishes.
+ * transaction: one in-flight Stage/Revert per path, released when it finishes
+ * or when its panel closes. Each entry names its owner, so only that panel
+ * frees it: another panel's release, or the owner's own refused second
+ * request, must not leave a lock nobody frees until restart.
  */
-const pendingFiles = new Set<string>();
+const pendingFiles = new Map<string, object>();
 
-function mutationHold(uri: string, hold: boolean): boolean {
+function mutationHold(uri: string, owner: object, hold: boolean): boolean {
   if (!hold) {
-    pendingFiles.delete(uri);
+    if (pendingFiles.get(uri) === owner) {
+      pendingFiles.delete(uri);
+    }
     return true;
   }
   if (pendingFiles.has(uri)) {
     return false;
   }
-  pendingFiles.add(uri);
+  pendingFiles.set(uri, owner);
   return true;
 }
 
@@ -80,21 +85,47 @@ function registerBaseline(
   git: GitAccess,
   uri: string,
 ): void {
+  const sent = sentBaselines();
   ctx.effect(() =>
-    ctx.rpc.handle(protocol, "baseline", async ({ ref }) => {
+    ctx.rpc.handle(protocol, "baseline", async ({ ref, known }) => {
       const result = await git.baseline(uri, ref);
-      if (result.status === "ok" && exceedsDiffLimits(result.baseline.text)) {
+      if (result.status !== "ok") {
+        return { status: result.status };
+      }
+      const { text, label } = result.baseline;
+      if (exceedsDiffLimits(text)) {
         return { status: "tooLarge" as const };
       }
-      return result.status === "ok"
-        ? {
-            status: "ok" as const,
-            text: result.baseline.text,
-            label: result.baseline.label,
-          }
-        : { status: result.status };
+      const identity = sent.identify(ref, label, text);
+      if (known === identity) {
+        return { status: "unchanged" as const, identity };
+      }
+      return { status: "ok" as const, text, label, identity };
     }),
   );
+}
+
+/**
+ * The last baseline this panel's editor was sent. Every repository event
+ * makes the editor ask again, and most (another file staged, a fetch) leave
+ * this note's baseline as it was: then the answer is `unchanged`, with no
+ * copy of the text and no recompute in the editor. The identity is unique
+ * to this host plugin, so an editor never mistakes another's for its own.
+ */
+function sentBaselines() {
+  const instance = Math.random().toString(36).slice(2, 10);
+  let count = 0;
+  let last:
+    { identity: string; ref: GitRef; label: string; text: string } | undefined;
+  return {
+    identify(ref: GitRef, label: string, text: string): string {
+      if (last?.ref !== ref || last.label !== label || last.text !== text) {
+        count += 1;
+        last = { identity: `${instance}-${count}`, ref, label, text };
+      }
+      return last.identity;
+    },
+  };
 }
 
 function registerStage(
@@ -113,19 +144,14 @@ function registerMutationLock(
   ctx: Parameters<NonNullable<typeof gitGutterHost.apply>>[0],
   uri: string,
 ): void {
-  let holding = false;
+  const owner = {};
   ctx.effect(() => () => {
-    if (holding) {
-      mutationHold(uri, false);
-      holding = false;
-    }
+    mutationHold(uri, owner, false);
   });
   ctx.effect(() =>
-    ctx.rpc.handle(protocol, "mutationLock", async ({ hold }) => {
-      const allowed = mutationHold(uri, hold);
-      holding = hold ? allowed : false;
-      return allowed;
-    }),
+    ctx.rpc.handle(protocol, "mutationLock", async ({ hold }) =>
+      mutationHold(uri, owner, hold),
+    ),
   );
 }
 

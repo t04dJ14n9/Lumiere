@@ -4,8 +4,8 @@
  * mounts it, when the reader picks a folder or the app starts.
  */
 import type { Mounts } from "@workshop/host-web";
-import { listVault } from "@workshop/host-node/core";
-import type { FileEntry, ServerEvent, VaultList } from "../shell/api";
+import { listVaultPaths } from "@workshop/host-node/core";
+import type { ServerEvent, VaultFiles, VaultList } from "../shell/api";
 import { fileKind } from "../shared/file-kind";
 import type { TextFile } from "./json-file";
 
@@ -62,17 +62,19 @@ export class LocalVaults {
     return list;
   }
 
-  async files(vault: string): Promise<readonly FileEntry[]> {
+  /** The vault's files, sorted; `partial` when there are more than `MAX_FILES`. */
+  async files(vault: string): Promise<VaultFiles> {
     if (!this.open.has(vault)) {
       throw new Error(`Not an open vault: ${vault}`);
     }
-    const { files } = await listVault(this.mounts, {
+    const { paths, partial } = await listVaultPaths(this.mounts, {
       root: this.mounts.uriOf(vault),
       limit: MAX_FILES,
     });
-    return files
-      .map((file) => ({ path: file.path, kind: fileKind(file.path) }))
+    const files = paths
+      .map((path) => ({ path, kind: fileKind(path) }))
       .sort((a, b) => a.path.localeCompare(b.path));
+    return { files, partial };
   }
 
   /** Show a note or folder by its path: a folder opens as a vault. */

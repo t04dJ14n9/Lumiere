@@ -15,8 +15,10 @@ its synchronized version for cursor-following host views; projected table
 selections return a position in the outer document.
 Extensions sort by slot, catalog rank, owner ID and owner-local order in one
 compartment. Persistence captures source identity and feature-owned contributions;
-transfers flush first and reject a moving document version. Scroll-settle and
-pagehide checkpoints also save geometric anchors without measuring every keypress. Settings update a
+transfers flush first and reject a moving document version. A checkpoint
+150 ms after the last caret move, edit, fold or scroll (and at once on
+pagehide) saves the view with its geometric anchors, so no keypress captures
+or measures it. Settings update a
 separate compartment so user state survives reconfiguration.
 Text-selection edge scrolling uses `lumiere.markdown.editor.dragScrollSpeed`,
 a multiplier from 1 to 10 (default 4; 1 restores CodeMirror's original speed).
@@ -29,11 +31,15 @@ Tab and Shift+Tab never leave the note, as in Obsidian: on a list item they
 indent or outdent the item with its nested lines (renumbering the ordered
 lists it leaves and joins; an item that starts a new level counts from 1),
 and otherwise they indent or outdent the lines the selection touches, even
-with the caret mid-line. Home (Cmd+Left on macOS), with Shift to select, goes
+with the caret mid-line. Inside code (between a fence's lines, or indented)
+and frontmatter a line is text, so `# comment` or `---` there indents like
+any other line, and Backspace does not unwrap a `- ` or `> `. Home (Cmd+Left on macOS), with Shift to select, goes
 first to the start of a list item's, task's or quote's text, then to the line
 start (`line-start.ts`).
 Ctrl/Cmd+F opens an in-note find bar at the top right, like Obsidian's (capture-phase ownership so Vim cannot treat it as page-forward, BH-023; Ctrl/Cmd+H opens Replace the same way, BH-025): it
-shows "N / M" for the selected match (counting stops at 1000), typing extends
+shows "N / M" for the selected match (counting stops at 1000; a caret move
+looks the match up among those found, and an edit to the note is searched
+again 150 ms after typing pauses), typing extends
 the query at the caret even when the current query already has matches
 (CodeMirror's findNext would otherwise select-all the field), Enter and
 Shift+Enter (or F3, Ctrl/Cmd+G) move between matches, Aa toggles case,
@@ -135,6 +141,8 @@ it yet.
   webview compares with its own settings (`webview/snapshot.ts`).
 - `snapshot.css`: its scroller and content, sized as the editor's are.
 - `indentation.ts`: Tab and Shift+Tab commands (capture-phase for Vim NORMAL, BH-040).
+- `literal-lines.ts`: whether the caret's line is code or frontmatter text, where
+  the Markdown indentation rules do not apply; `literal-lines.test.ts` covers it.
 - `find.ts`, `find-panel.ts`, `find-caret.ts`, `find-count.ts`, `find.css`: in-note find and replace.
 - `find-keys.ts`: capture-phase Ctrl/Cmd+F Find and Ctrl/Cmd+H Replace (BH-023 / BH-025).
 - `find-keys.test.ts`: Mod+F/H mapping and native-field skip.
@@ -167,7 +175,7 @@ it yet.
 
 ## Services, events and settings
 
-Host injects the host services `hostDocuments`, `hostCommands`, `clipboard`, `dialogs`, `settings`, `customEditors` and `activeEditor`, plus `documents`, provides `editors`, and emits/listens to
+Host injects the host services `hostDocuments`, `hostCommands`, `clipboard`, `dialogs`, `settings`, `storage`, `customEditors`, `activeEditor` and `workspace` (a page loaded in Restricted Mode is loaded again when the workspace is trusted, so its remote images and frames are allowed: `registerTrustReload` in `panel.ts`), plus `documents`, provides `editors`, and emits/listens to
 `editor/opened`, `editor/closed` and `editor/activeChanged`. Webview injects
 `document`, `markdown` and `rpc`, provides `editor` and `menu`, listens to
 `document/syncStatus` and `editor/scrollInput` (widget scroll input cancels a
@@ -215,7 +223,10 @@ so the toggle leaves one tab rather than Lumiere + Text Editor side by side
 (BH-011 / BH-003). This is **not** Obsidian's Ctrl/Cmd+E (Live Preview ↔
 Source); Source mode stays on the unbound **Toggle Live Preview/Source Mode**
 command. Selection and caret are not restored across the switch
-(`vscode.openWith` carries no range).
+(`vscode.openWith` carries no range). In a text editor the key is bound only
+where the toggle acts, a `.md` file's own editor: a diff editor, an untitled
+buffer or a notebook cell keeps VS Code's Ctrl+E (Quick Open) and Cmd+E (Use
+Selection for Find).
 
 **Open as Text** keeps the text editor. A just-reclaimed note also
 ignores repeated tab notifications for 10 s; an explicit native command jump
@@ -239,9 +250,10 @@ top of the viewport below the sticky headings, after the first paint.
 
 `editor.warmTextDocument` (`auto`/`on`/`off`, auto meaning on in Cursor) opens
 Markdown `TextDocument`s early: at activation for open notes, on document open,
-on file create/change and for git-dirty notes. Every extension-controlled
-`openWith` into this editor awaits another warm, even when Cursor's built-in
-editor already holds the dirty document. The workaround targets Cursor's
+on file create/change and for git-dirty notes (at most 256 per repository
+state change; a newer change of that repository stops the older sweep). Every
+extension-controlled `openWith` into this editor awaits another warm, even
+when Cursor's built-in editor already holds the dirty document. The workaround targets Cursor's
 custom-editor handoff assertion before `resolveCustomTextEditor` runs.
 
 ## Limits and differences from Obsidian

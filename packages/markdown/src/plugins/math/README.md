@@ -11,7 +11,8 @@ Obsidian.
 ## How it works
 
 The plugin registers inline/block renderers and a render post-processor. MathJax
-loads on demand; its SVG is sanitized before insertion. The font keeps many
+loads on demand (a load that fails is tried again by the next formula, not
+remembered for the session); its SVG is sanitized before insertion. The font keeps many
 glyphs (`\mathbb`, `\mathfrak`, `\mathscr`, `\mathcal`, `\ell`, AMS relations,
 arrows, accented letters) in separate files that MathJax asks for on first use;
 each is a chunk of the webview bundle, so they load offline and only when
@@ -30,7 +31,13 @@ source is already shown, so typing replaces the body and preserves delimiters.
 - `manifest.ts`: feature metadata and the two command contributions.
 - `webview.ts`: renderer, post-processor, cleanup and command registrations.
 - `commands.ts`: pure selection edits and delimiter placement.
-- `source.ts`: a formula's delimiters, and the span a click selects.
+- `source.ts`: a formula's delimiters, the span a click selects, and the
+  range a display formula's widget replaces: text after a closing `$$` on a
+  later line is a paragraph of its own, which the widget renders below the
+  formula.
+- `source-marks.ts`: highlights a revealed formula, only the lines on screen
+  (an unclosed `$$` reaches to the end of the note).
+- `test/unit/math/source-marks.test.ts`: highlighting, and its cost bounded by the screen.
 - `mathjax.ts`: lazy TeX-to-SVG conversion with supported TeX packages and user macros.
 - `macros.ts`: normalize Obsidian-style MathJax macro maps for configmacros.
 - `fonts.ts`: MathJax's loader for the font's dynamic glyph files.

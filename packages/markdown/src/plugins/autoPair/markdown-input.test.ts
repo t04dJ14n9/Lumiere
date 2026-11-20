@@ -41,10 +41,18 @@ test("= ~ $ % wrap a selection, as in Obsidian, and type alone without one", () 
 test("the third backtick closes the fence on the next line", () => {
   assert.equal(type("``|", "`", completeFence), "```|\n```");
   assert.equal(type("``|abc", "`", completeFence), "```|\n```abc");
-  assert.equal(type("x ``|", "`", completeFence), "x ```|\n```");
   assert.equal(type("> ``|", "`", completeFence), "> ```|\n> ```");
   assert.equal(type("\t``|", "`", completeFence), "\t```|\n\t```");
   assert.equal(type("- ``|", "`", completeFence), "- ```|\n  ```");
+});
+
+test("after other text on the line, the third backtick is typed as it is, not a fence", () => {
+  // `x ```` is no fence opener: a closing fence below it would open a fence
+  // that runs to the end of the note.
+  assert.equal(type("x ``|", "`", completeFence), "default");
+  assert.equal(type("- [ ] ``|", "`", completeFence), "default");
+  assert.equal(type("> quoted ``|", "`", completeFence), "default");
+  assert.equal(type("> - ``|", "`", completeFence), "> - ```|\n>   ```");
 });
 
 test("a fourth backtick is typed as it is; the first two pair as usual", () => {

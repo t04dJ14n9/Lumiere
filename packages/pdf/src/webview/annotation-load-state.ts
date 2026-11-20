@@ -21,6 +21,13 @@ export function annotationLoadState():
   return current;
 }
 
+/** The annotation file as another editor's save left it, which this viewer now shows. */
+export function rememberStoreText(annotations: string | undefined): void {
+  if (current) {
+    rememberAnnotationLoad(current.load, current.sha256, annotations);
+  }
+}
+
 export function acceptAnnotationSave(sha256: string): void {
   if (current) {
     current = { ...current, sha256 };

@@ -2,11 +2,12 @@
  * The vaults the app has open (folders of notes), the ones opened before,
  * and what is in each, for the shell's file tree.
  */
-import { mkdir, readFile, realpath, stat, writeFile } from "node:fs/promises";
+import { readFile, realpath, stat } from "node:fs/promises";
 import * as path from "node:path";
 import { pathToFileURL } from "node:url";
-import { listVault } from "@workshop/host-node";
+import { listVaultPaths } from "@workshop/host-node";
 import { fileKind } from "../shared/file-kind";
+import { saveFile } from "./json-file";
 
 /** Files listed per vault; a larger vault's tree is cut short. */
 const MAX_FILES = 20_000;
@@ -66,6 +67,18 @@ export class Vaults {
     return vault;
   }
 
+  /**
+   * At launch with no vault given, open the one used last, as Obsidian does;
+   * one that is gone is left in the recent list and nothing opens.
+   */
+  async restoreLast(): Promise<void> {
+    const last = this.recent[0];
+    if (this.open.size > 0 || last === undefined) {
+      return;
+    }
+    await this.add(last).catch(() => undefined);
+  }
+
   /** Close an open vault; it stays in the recent list. */
   async close(folder: string): Promise<void> {
     const vault = (await realPath(folder)) ?? path.resolve(folder);
@@ -104,17 +117,18 @@ export class Vaults {
     );
   }
 
-  async files(vault: string): Promise<readonly FileEntry[]> {
+  /** The vault's files, sorted; `partial` when there are more than `MAX_FILES`. */
+  async files(
+    vault: string,
+  ): Promise<{ files: readonly FileEntry[]; partial: boolean }> {
     if (!this.open.has(vault)) {
       throw new Error(`Not an open vault: ${vault}`);
     }
-    const { files } = await listVault(
+    const { paths, partial } = await listVaultPaths(
       pathToFileURL(vault).toString(),
       MAX_FILES,
     );
-    return files
-      .map((file) => ({ path: file.path, kind: fileKind(file.path) }))
-      .sort((a, b) => a.path.localeCompare(b.path));
+    return { files: fileEntries(paths), partial };
   }
 
   onEvent(listener: (event: VaultEvent) => void): () => void {
@@ -135,9 +149,14 @@ export class Vaults {
       vault,
       ...this.recent.filter((item) => item !== vault),
     ].slice(0, MAX_RECENT);
-    await mkdir(path.dirname(this.file), { recursive: true });
-    await writeFile(this.file, JSON.stringify(this.recent, null, 2));
+    await saveFile(this.file, JSON.stringify(this.recent, null, 2));
   }
+}
+
+function fileEntries(paths: readonly string[]): FileEntry[] {
+  return paths
+    .map((path) => ({ path, kind: fileKind(path) }))
+    .sort((a, b) => a.path.localeCompare(b.path));
 }
 
 async function realPath(target: string): Promise<string | undefined> {

@@ -37,7 +37,7 @@ export class TitleRenames {
     if (target === panel.document.uri) {
       return target;
     }
-    await panel.session.flush();
+    await panel.session.flush(panel.id);
     const views = await this.captureViews(panel, focus);
     if (token.cancelled) {
       throw new Error("Rename cancelled.");

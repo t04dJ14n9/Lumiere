@@ -29,7 +29,10 @@ the new-link format. As in Obsidian, text that only showed the renamed file's
 name follows it: a Markdown link's text equal to the note's name
 (`[Old](Old.md)`) or to its path when that has folders, and a wikilink alias
 equal to the name when the link has folders (`[[f/Old|Old]]`). A moved note's own path-style links are
-rewritten too. Folder renames cover every file inside. By default it asks
+rewritten too. Folder renames cover every file inside. A link whose text
+would come out the same (a note moved to another folder and linked by its
+name) is neither counted in the prompt nor edited, so a move that changes no
+link's text does not ask. By default it asks
 first, matching Obsidian's `alwaysUpdateLinks: false` (Update Links, Always
 Update or Don't Update). `always` rewrites without asking and `never` leaves
 links untouched. Always Update updates the links now and saves `always` in
@@ -64,8 +67,9 @@ names the heading (as links resolve, so case does not matter), in the note
 and in every note linking to it, keeping its path, form and alias
 (`heading-rename.ts`, `rename-heading.ts`). The note itself is edited first;
 if it changed while the name was being asked for, nothing is renamed and the
-command says so. A linking note that cannot be updated does not stop the
-others; a message names it.
+command says so. As after a file rename, a linking note is saved if it had
+no unsaved changes, and one that had is left unsaved. A linking note that
+cannot be updated or saved does not stop the others; a message names it.
 
 ## Files
 

@@ -148,7 +148,27 @@ function panelResourceRoots(
   const root =
     vscode.workspace.getWorkspaceFolder(document.uri)?.uri ??
     vscode.Uri.joinPath(document.uri, "..");
-  return [vscode.Uri.joinPath(extensionUri, "dist", "markdown"), root];
+  return [
+    vscode.Uri.joinPath(extensionUri, "dist", "markdown"),
+    pdfViewerAssets(extensionUri),
+    root,
+  ];
+}
+
+/**
+ * The PDF viewer's built files. The extension ships embedpdf.wasm once, there
+ * (scripts/build.mjs at the repository root), and PDF embeds load it from it.
+ */
+function pdfViewerAssets(extensionUri: vscode.Uri): vscode.Uri {
+  return vscode.Uri.joinPath(extensionUri, "dist", "pdf", "webview");
+}
+
+function pdfEngine(webview: vscode.Webview, extensionUri: vscode.Uri): string {
+  const file = vscode.Uri.joinPath(
+    pdfViewerAssets(extensionUri),
+    "embedpdf.wasm",
+  );
+  return webview.asWebviewUri(file).toString();
 }
 
 function panelOpenFields(options: {
@@ -189,10 +209,14 @@ function createPanelShell(
     },
     document: documents.wrap(document),
     cspSource: panel.webview.cspSource,
-    trusted: vscode.workspace.isTrusted,
+    // Read when the page loads: trust granted later reloads it (editor/panel.ts).
+    get trusted() {
+      return vscode.workspace.isTrusted;
+    },
     ...panelOpenFields(options),
     transport: panelTransport(panel, binding.shellDisposeListeners),
     preload: firstViewPreload(extensionUri),
+    pdfEngine: pdfEngine(panel.webview, extensionUri),
     active: () => isActivePanel(provider.viewType, binding.document, panel),
     reveal() {
       panel.reveal();

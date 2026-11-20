@@ -14,6 +14,7 @@ import type {
   LineRecord,
   SourceState,
 } from "../../shared/git-diff";
+import type { LineHunk } from "../../shared/diff";
 import type { DocHunk } from "./api";
 import { sameBaseline, sameChange } from "./identity";
 import { revertControlEnabled } from "./mutations";
@@ -26,7 +27,8 @@ export class DiffSession {
   readonly gate: MutationGate = createMutationGate();
   /** Bumps on every distinct buffer text, including edits before the next publish. */
   private docVersion = 0;
-  private docText = "";
+  /** The buffer as last recorded; undefined after an edit not yet read. */
+  private docText: string | undefined = "";
   private baseline = "";
   private baselineToken = "";
 
@@ -38,6 +40,15 @@ export class DiffSession {
       return;
     }
     this.docText = text;
+    this.docVersion += 1;
+  }
+
+  /**
+   * Record an edit to the live buffer without reading it, so a keystroke
+   * costs no copy of the document. The next `noteDocument` counts as new.
+   */
+  noteEdit(): void {
+    this.docText = undefined;
     this.docVersion += 1;
   }
 
@@ -63,7 +74,13 @@ export class DiffSession {
     };
   }
 
-  publish(fileUri: string, baseline: string, doc: string): DiffSnapshot {
+  /** `diff` is `lineHunks(baseline, doc)` when the caller already has it. */
+  publish(
+    fileUri: string,
+    baseline: string,
+    doc: string,
+    diff?: readonly LineHunk[],
+  ): DiffSnapshot {
     this.noteBaseline(baseline);
     this.noteDocument(doc);
     const base =
@@ -96,6 +113,7 @@ export class DiffSession {
         canRevert: true,
       }),
       computedAt: this.docVersion,
+      ...(diff ? { hunks: diff } : {}),
     });
     return this.snapshot;
   }

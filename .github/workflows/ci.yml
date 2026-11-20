@@ -31,6 +31,58 @@ jobs:
           # heap on the 7 GB runners private repositories get is about 2 GB.
           NODE_OPTIONS: --max-old-space-size=4096
 
+  # The extension ships to Windows too: its path handling and the unit tests'
+  # runners are exercised there. Lint, format and typecheck do not depend on
+  # the platform and run in `check`.
+  check-windows:
+    name: check (windows)
+    runs-on: windows-latest
+    timeout-minutes: 30
+    steps:
+      # Pinned fixtures and Prettier expect LF; Git for Windows checks out CRLF.
+      - name: Check out with LF line endings
+        run: git config --global core.autocrlf false
+      - uses: actions/checkout@v7
+      - uses: ./.github/actions/setup
+      - name: pnpm test (unit tests)
+        run: pnpm test
+
+  # The desktop app's Rust (apps/desktop/src-tauri): `cargo check` and the
+  # Rust unit tests. Its server and window are tested by `check`.
+  desktop:
+    name: desktop
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    steps:
+      - uses: actions/checkout@v7
+      - uses: ./.github/actions/setup
+        with:
+          install: "false"
+      - name: Install the Rust toolchain
+        run: |
+          rustup toolchain install stable --profile minimal
+          rustup default stable
+          rustc --version
+      # What Tauri links on Linux (https://v2.tauri.app/start/prerequisites/).
+      - name: Install Tauri's system libraries
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y libwebkit2gtk-4.1-dev libgtk-3-dev \
+            libayatana-appindicator3-dev librsvg2-dev libsoup-3.0-dev \
+            libjavascriptcoregtk-4.1-dev
+      - name: Cache Cargo's registry and the build
+        uses: actions/cache@v6
+        with:
+          path: |
+            ~/.cargo/registry/index/
+            ~/.cargo/registry/cache/
+            ~/.cargo/git/db/
+            apps/desktop/src-tauri/target/
+          key: cargo-${{ runner.os }}-${{ hashFiles('apps/desktop/src-tauri/Cargo.lock') }}
+          restore-keys: cargo-${{ runner.os }}-
+      - name: pnpm check:desktop (cargo check and cargo test)
+        run: pnpm check:desktop
+
   browser:
     name: browser
     runs-on: ubuntu-latest
@@ -40,21 +92,7 @@ jobs:
     steps:
       - uses: actions/checkout@v7
       - uses: ./.github/actions/setup
-      - name: Read the Playwright version
-        id: playwright
-        run: echo "version=$(pnpm exec playwright --version | awk '{print $2}')" >> "$GITHUB_OUTPUT"
-      - name: Cache Playwright browsers
-        id: browsers
-        uses: actions/cache@v6
-        with:
-          path: ~/.cache/ms-playwright
-          key: playwright-${{ runner.os }}-${{ steps.playwright.outputs.version }}-chromium
-      - name: Install Chromium and its system dependencies
-        if: steps.browsers.outputs.cache-hit != 'true'
-        run: pnpm exec playwright install --with-deps chromium
-      - name: Install Chromium's system dependencies
-        if: steps.browsers.outputs.cache-hit == 'true'
-        run: pnpm exec playwright install-deps chromium
+      - uses: ./.github/actions/playwright
       - name: pnpm test:browser
         run: pnpm test:browser
       - name: Upload test results
@@ -77,21 +115,7 @@ jobs:
     steps:
       - uses: actions/checkout@v7
       - uses: ./.github/actions/setup
-      - name: Read the Playwright version
-        id: playwright
-        run: echo "version=$(pnpm exec playwright --version | awk '{print $2}')" >> "$GITHUB_OUTPUT"
-      - name: Cache Playwright browsers
-        id: browsers
-        uses: actions/cache@v6
-        with:
-          path: ~/.cache/ms-playwright
-          key: playwright-${{ runner.os }}-${{ steps.playwright.outputs.version }}-chromium
-      - name: Install Chromium and its system dependencies
-        if: steps.browsers.outputs.cache-hit != 'true'
-        run: pnpm exec playwright install --with-deps chromium
-      - name: Install Chromium's system dependencies
-        if: steps.browsers.outputs.cache-hit == 'true'
-        run: pnpm exec playwright install-deps chromium
+      - uses: ./.github/actions/playwright
       - name: pnpm test:quality
         run: pnpm test:quality
       - name: Upload the measurements
@@ -116,7 +140,11 @@ jobs:
         run: git diff --exit-code
       - name: Check the VSIX size and file list
         run: bash .github/scripts/check-vsix.sh "$(ls *.vsix)" 20
-      - name: Bundle size report (job summary, warns on growth over 10%)
+      # Fails when the webview entry or the extension host grows over 10%;
+      # warns for the other rows. `shell: bash` adds pipefail, so tee does
+      # not hide the failure.
+      - name: Bundle size report (job summary)
+        shell: bash
         run: node scripts/bundle-size.mjs | tee -a "$GITHUB_STEP_SUMMARY"
       - name: Upload the VSIX
         uses: actions/upload-artifact@v7

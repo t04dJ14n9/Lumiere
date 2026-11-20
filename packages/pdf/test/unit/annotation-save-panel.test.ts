@@ -315,6 +315,8 @@ test("annotationSave suppresses watcher that fires during writeAtomic", async ()
         watchCb = undefined;
       };
     },
+    // Reads see the same disk: a watched change reads the file to check it.
+    read: async () => disk,
     hash: async () => createHash("sha256").update(disk).digest("hex"),
     writeAtomic: async (_uri, bytes) => {
       disk = new Uint8Array(bytes);

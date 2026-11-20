@@ -4,6 +4,7 @@ import {
   splitFragmentDirective,
 } from "./pdf-location";
 import type { ViewRect } from "./geometry";
+import type { TextFragmentQuery } from "./pdf-backlink-resolve";
 
 /**
  * Encode one textStart value per WICG Text Fragments: `-` (the prefix and
@@ -41,23 +42,38 @@ export function encodeLinkPath(path: string): string {
   );
 }
 
+/**
+ * The first text directive of `:~:text=…`, in the WICG form
+ * `[prefix-,]textStart[,textEnd][,-suffix]`: the parts are split at the raw
+ * `,` and `-` markers before decoding, so an encoded `%2C` or `%2D` is text.
+ * A browser's "Copy link to highlight" writes `start,end` for a long passage.
+ * Undefined when there is no text directive, or it is not well formed.
+ */
 export function decodeTextFragment(
   directive: string,
-):
-  | { textStart: string; textEnd?: string; prefix?: string; suffix?: string }
-  | undefined {
+): TextFragmentQuery | undefined {
   const raw = directive.replace(/^#?/, "");
-  if (!raw.startsWith(":~:text=")) {
+  if (!raw.startsWith(":~:")) {
     return undefined;
   }
-  const value = raw.slice(":~:text=".length);
-  if (!value) {
+  const text = raw
+    .slice(":~:".length)
+    .split("&")
+    .find((part) => part.startsWith("text="));
+  const parts = text?.slice("text=".length).split(",") ?? [];
+  const prefix = parts[0]?.endsWith("-") ? parts.shift()!.slice(0, -1) : "";
+  const suffix = parts.at(-1)?.startsWith("-") ? parts.pop()!.slice(1) : "";
+  const [start, end, ...rest] = parts;
+  if (!start || rest.length > 0 || end === "") {
     return undefined;
   }
-  // v1: single textStart only (prefix-/textEnd/,-suffix deferred).
   try {
-    const textStart = decodeURIComponent(value);
-    return textStart ? { textStart } : undefined;
+    return {
+      textStart: decodeURIComponent(start),
+      ...(end === undefined ? {} : { textEnd: decodeURIComponent(end) }),
+      ...(prefix ? { prefix: decodeURIComponent(prefix) } : {}),
+      ...(suffix ? { suffix: decodeURIComponent(suffix) } : {}),
+    };
   } catch {
     return undefined;
   }

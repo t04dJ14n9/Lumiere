@@ -186,28 +186,20 @@ Each contract is written once, in code. Change both sides in the same PR.
 | Web app's worker ↔ window | `apps/web/src/shared/routes.ts`, `messages.ts` | `apps/web/src/worker` ↔ `src/answers.ts`: notes' pages and the files they show |
 | Theme | `packages/host-node/src/palette.ts` | DSH client, app window → page |
 | Tree views | `packages/host-node/src/views.ts` | host-node ↔ app window (DSH later) |
-| Workspace roots | `LumiereHost.addRoot` in `packages/host-node/src/host/start-host.ts` | the embedder registers (app: each vault; DSH: each session's workspace, `src/host/workspace.ts`) ↔ host-node's note and PDF pages, which refuse any `root` outside a registered one |
+| Workspace roots | `LumiereHost.addRoot`, `removeRoot` in `packages/host-node/src/host/start-host.ts` | the embedder registers (app: each open vault, removed when it closes; DSH: each session's workspace, `src/host/workspace.ts`) ↔ host-node's note and PDF pages, which refuse any `root` outside a registered one |
 | Server process | `packages/app/src/server/contract.ts` | server ↔ `apps/desktop/src-tauri/src/server.rs` |
 | Server API | `packages/app/src/server/api.ts` (table in its README) | server ↔ window, desktop |
 | Window ↔ Tauri | `packages/app/src/shell/tauri.ts` | window ↔ `capabilities/shell.json`, `menu.rs` |
-
-| Vault code trust | `VaultCodeTrust` in `packages/markdown/src/shared/host/workspace.ts` | plugins ↔ VS Code adapter, host-node ← app |
 | Drawings for the window | `packages/app/src/server/ink.ts` (`InkWaiting`, the `ink` service on `@workshop/ink/service`) | plugins → server → window's canvas (`src/shell/ink.ts`, `@workshop/ink/canvas`) |
-A vault's own code (Obsidian community plugins) runs only where the owner
-said yes. The plugins ask `HostWorkspace.vaultCode`: its answer for a vault,
-a request to ask, and a change event. Vaults are named by root URI.
-- VS Code answers with workspace trust (Restricted Mode) and never asks
-  itself.
-- host-node takes the embedder's answer as `StartOptions.vaultCode`. An
-  embedder that cannot ask leaves it out and gets `noVaultCode` (`inert.ts`):
-  every vault refused, nobody asked. DSH does this.
-- The app asks once per vault (`vault-trust.ts`). A waiting question reaches
-  the window as the `{"type":"trust"}` event on `GET /api/events`; the window
-  reads the questions with `GET /api/trust` and posts the answer to
-  `POST /api/trust` `{"vault","allowed"}`, accepted only for a vault that
-  asked. Answers are kept in `trust.json` in the data folder.
-- `isTrusted()` stays true outside VS Code: it covers remote images and
-  media, not a vault's code.
+
+No host runs a vault's own code: the Obsidian community plugin runtime, and
+the per-vault trust question that gated it, were removed in #414.
+`HostWorkspace.isTrusted()` is VS Code's workspace trust (Restricted Mode)
+and stays true outside VS Code: it covers remote images and media. When the
+reader trusts a workspace in VS Code, `onDidGrantTrust` fires and each
+note's page loads again with remote content allowed; outside VS Code it
+never fires. Git outside VS Code waits for the embedder's own trust
+(`GitTrust`, host-node's README).
 
 ## 5. Milestones
 
@@ -308,7 +300,9 @@ The pass, in the Tauri window:
    - A plain click on a wikilink reveals its source.
    - Mod-click follows it into a new tab.
    - A link to a missing note creates it.
-   - An external link opens the system browser.
+   - An external link opens the system browser (and a `mailto:` link the
+     mail app): `apps/desktop/src-tauri/src/external.rs`, unit-tested for
+     which schemes leave, not yet tried in the window.
 5. **Outline**, in the right panel.
    - It shows the shown note's headings and follows tab switches.
    - Clicking a heading scrolls to it.
@@ -421,7 +415,7 @@ Do not:
    serves every vault file but a PDF with `sandbox`, and a vault's scripts
    as text, so `script-src 'self'` never runs them.
 5. **Two Cordis versions in DSH's process** (DSH's 4.0.0-rc.7 fork and
-   Lumière's rc.11). They coexist because they never share objects. Check
+   Lumière's rc.13). They coexist because they never share objects. Check
    again whenever either changes.
 
 ## 9. Decisions for the owner

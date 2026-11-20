@@ -57,13 +57,15 @@ fn show_all<R: Runtime>(app: &AppHandle<R>, paths: Vec<PathBuf>) {
     if paths.is_empty() {
         return;
     }
-    if !server::is_running(app) {
-        if let Some(pending) = app.try_state::<Pending>() {
-            if let Ok(mut list) = pending.0.lock() {
+    // Checked under the lock `flush` takes: the server starts on another
+    // thread (lib.rs), and a path kept after its flush would never be shown.
+    if let Some(pending) = app.try_state::<Pending>() {
+        if let Ok(mut list) = pending.0.lock() {
+            if !server::is_running(app) {
                 list.extend(paths);
+                return;
             }
         }
-        return;
     }
     let app = app.clone();
     // Off the main thread: each is a request to the server.

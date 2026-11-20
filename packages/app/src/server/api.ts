@@ -6,7 +6,14 @@
  * reach the window.
  */
 import type { IncomingMessage, ServerResponse } from "node:http";
+import { fileURLToPath } from "node:url";
 import { fromShell } from "./auth";
+import {
+  answerFileRoute,
+  FILE_ROUTES,
+  type FileRoutesState,
+} from "./files-api";
+import type { GitTrustStore } from "./git-trust";
 import type { WindowInk } from "./ink";
 import type { UiStore } from "./ui-state";
 import type { VaultEvent, Vaults } from "./vaults";
@@ -19,10 +26,17 @@ const MAX_DRAWING_BODY = 64 * 1024 * 1024;
 const MAX_WAITING = 16;
 /**
  * The routes that can add a folder as a vault, and so widen what the editor
- * pages may read and write. A page of a note is same-origin with the window,
- * so these answer the window only (auth.ts `fromShell`).
+ * pages may read and write, or let git run a vault's own configuration. A
+ * page of a note is same-origin with the window, so these answer the window
+ * only (auth.ts `fromShell`).
  */
-const ADDS_A_FOLDER = new Set(["POST /api/vaults", "POST /api/open"]);
+const WINDOW_ONLY = new Set([
+  "POST /api/vaults",
+  "POST /api/open",
+  "POST /api/git-trust",
+  // A page writes its own note; only the file tree renames and deletes.
+  ...FILE_ROUTES,
+]);
 
 export interface Api {
   /** Answer a request under `/api/`; false when its path is not one of these. */
@@ -31,13 +45,25 @@ export interface Api {
   close(): void;
 }
 
-/** A vault event, or a drawing started or ended waiting (GET /api/ink). */
-export type ServerEvent = VaultEvent | { readonly type: "ink" };
+/**
+ * A vault event, a drawing started or ended waiting (GET /api/ink), the
+ * vaults git waits to be trusted in changed (GET /api/git-trust), or a file
+ * or folder was renamed or moved (by the file tree or a note's title), by
+ * absolute paths.
+ */
+export type ServerEvent =
+  | VaultEvent
+  | { readonly type: "ink" }
+  | { readonly type: "git-trust" }
+  | { readonly type: "renamed"; readonly from: string; readonly to: string };
 
 export interface ApiState {
   readonly vaults: Vaults;
   readonly ui: UiStore;
   readonly ink: WindowInk;
+  readonly gitTrust: GitTrustStore;
+  /** The file tree's changes (files-api.ts). */
+  readonly files: FileRoutesState;
   /** What the window's page was given to prove it, not a page in it, adds a folder. */
   readonly shellKey: string;
   /** Start Insert Sketch in the note last focused (the window's pencil). */
@@ -45,9 +71,15 @@ export interface ApiState {
   readonly version: string;
 }
 
+/**
+ * The open event streams, each with the event types it asked for
+ * (`?only=ink`), or undefined for every type.
+ */
+type Streams = Map<ServerResponse, ReadonlySet<string> | undefined>;
+
 export function createApi(state: ApiState): Api {
   const { vaults, ui, version } = state;
-  const streams = new Set<ServerResponse>();
+  const streams: Streams = new Map();
   const waiting = relayEvents(state, streams);
   return {
     async handle(req, res) {
@@ -76,21 +108,20 @@ export function createApi(state: ApiState): Api {
           await vaults.show(await pathBody(req));
           return json(res, 200, { ok: true });
         case "GET /api/files":
-          return json(res, 200, {
-            files: await vaults.files(url.searchParams.get("vault") ?? ""),
-          });
+          return json(
+            res,
+            200,
+            await vaults.files(url.searchParams.get("vault") ?? ""),
+          );
         case "GET /api/events":
-          openStream(res, streams);
-          for (const event of waiting.splice(0)) {
-            sendEvent(res, event);
-          }
+          openStream(res, { url, streams, waiting });
           return true;
         default:
-          return drawingRoute(route, { req, res }, state);
+          return otherRoute(route, { req, res }, state);
       }
     },
     close() {
-      for (const stream of streams) {
+      for (const stream of streams.keys()) {
         stream.end();
       }
       streams.clear();
@@ -104,10 +135,58 @@ function refusedFromPage(
   { req, res }: { req: IncomingMessage; res: ServerResponse },
   shellKey: string,
 ): boolean {
-  if (!ADDS_A_FOLDER.has(route) || fromShell(req, shellKey)) {
+  if (!WINDOW_ONLY.has(route) || fromShell(req, shellKey)) {
     return false;
   }
-  return json(res, 403, { error: "Only the window may open a folder" });
+  return json(res, 403, { error: "Only the window may do that" });
+}
+
+/** The file tree's changes, git's trust and drawings; false for any other route. */
+async function otherRoute(
+  route: string,
+  exchange: { req: IncomingMessage; res: ServerResponse },
+  state: ApiState,
+): Promise<boolean> {
+  if (FILE_ROUTES.has(route)) {
+    const body = await jsonBody(exchange.req);
+    const answer = await answerFileRoute(route, body, state.files);
+    return json(exchange.res, 200, answer);
+  }
+  return (
+    (await gitTrustRoute(route, exchange, state.gitTrust)) ||
+    drawingRoute(route, exchange, state)
+  );
+}
+
+/**
+ * The vaults git waits to be trusted in, and the reader's answer for one
+ * (git-trust.ts); false for any other route.
+ */
+async function gitTrustRoute(
+  route: string,
+  { req, res }: { req: IncomingMessage; res: ServerResponse },
+  gitTrust: GitTrustStore,
+): Promise<boolean> {
+  switch (route) {
+    case "GET /api/git-trust":
+      return json(res, 200, { waiting: gitTrust.waiting() });
+    case "POST /api/git-trust": {
+      const { vault, allow } = trustBody(await jsonBody(req));
+      await gitTrust.answer(vault, allow);
+      return json(res, 200, { waiting: gitTrust.waiting() });
+    }
+    default:
+      return false;
+  }
+}
+
+/** `{"vault": "<path>", "allow": true|false}`. */
+function trustBody(body: unknown): { vault: string; allow: boolean } {
+  const value = body as { vault?: unknown; allow?: unknown } | null;
+  if (typeof value?.vault !== "string" || typeof value.allow !== "boolean") {
+    throw new Error('Expected {"vault": "<path>", "allow": true|false}');
+  }
+  return { vault: value.vault, allow: value.allow };
 }
 
 /**
@@ -136,34 +215,58 @@ async function drawingRoute(
 }
 
 /**
- * Send vault events and drawings to every open event stream. Notes to open
- * that come before any window listens wait in the returned list (the desktop
- * app passes a note from Finder while its window is still loading); a window
- * that connects later reads a drawing with GET /api/ink.
+ * Send vault events and drawings to every open event stream that takes
+ * them. Notes to open that come before a stream that takes them (the
+ * window's, not its canvas's `?only=ink`) wait in the returned list: the
+ * desktop app passes a note from Finder while its window is still loading,
+ * and the window's two streams connect in either order. A window that
+ * connects later reads a drawing with GET /api/ink.
  */
 function relayEvents(
-  { vaults, ink }: Pick<ApiState, "vaults" | "ink">,
-  streams: ReadonlySet<ServerResponse>,
+  {
+    vaults,
+    ink,
+    gitTrust,
+    files,
+  }: Pick<ApiState, "vaults" | "ink" | "gitTrust" | "files">,
+  streams: Streams,
 ): VaultEvent[] {
   const waiting: VaultEvent[] = [];
+  const broadcast = (event: ServerEvent): boolean => {
+    let sent = false;
+    for (const [stream, types] of streams) {
+      if (accepts(types, event.type)) {
+        sendEvent(stream, event);
+        sent = true;
+      }
+    }
+    return sent;
+  };
   vaults.onEvent((event) => {
-    if (streams.size === 0 && event.type === "open") {
+    if (!broadcast(event) && event.type === "open") {
       waiting.push(event);
       if (waiting.length > MAX_WAITING) {
         waiting.shift();
       }
-      return;
-    }
-    for (const stream of streams) {
-      sendEvent(stream, event);
     }
   });
-  ink.onChange(() => {
-    for (const stream of streams) {
-      sendEvent(stream, { type: "ink" });
-    }
+  ink.onChange(() => broadcast({ type: "ink" }));
+  gitTrust.onAsk(() => broadcast({ type: "git-trust" }));
+  files.files.onDidRename(({ oldUri, newUri }) => {
+    broadcast({
+      type: "renamed",
+      from: fileURLToPath(oldUri),
+      to: fileURLToPath(newUri),
+    });
   });
   return waiting;
+}
+
+function accepts(
+  types: ReadonlySet<string> | undefined,
+  type: string,
+): boolean {
+  return types === undefined || types.has(type);
 }
 
 function json(res: ServerResponse, status: number, body: unknown): true {
@@ -221,16 +324,34 @@ function inkBody(body: unknown): { id: string; sketch: string | undefined } {
   return { id: value.id, sketch: value.sketch };
 }
 
-/** Server-sent events: one `data:` line of JSON per vault event. */
-function openStream(res: ServerResponse, streams: Set<ServerResponse>): void {
+/**
+ * Server-sent events: one `data:` line of JSON per vault event, of the types
+ * the stream asked for (`?only=a,b`) or of every type. A stream that takes
+ * notes to open is sent those waiting for one.
+ */
+function openStream(
+  res: ServerResponse,
+  {
+    url,
+    streams,
+    waiting,
+  }: { url: URL; streams: Streams; waiting: VaultEvent[] },
+): void {
+  const only = url.searchParams.get("only");
+  const types = only ? new Set(only.split(",")) : undefined;
   res.writeHead(200, {
     "content-type": "text/event-stream",
     "cache-control": "no-store",
     connection: "keep-alive",
   });
   res.write(": lumiere\n\n");
-  streams.add(res);
+  streams.set(res, types);
   res.on("close", () => streams.delete(res));
+  if (accepts(types, "open")) {
+    for (const event of waiting.splice(0)) {
+      sendEvent(res, event);
+    }
+  }
 }
 
 function sendEvent(stream: ServerResponse, event: ServerEvent): void {

@@ -1,9 +1,9 @@
 import type { Context, Plugin, Infer } from "@workshop/core";
 import type { PanelShell } from "../../shared/host";
 import type { GitAccess } from "../../shared/git";
-import type { GitBlameLineResult } from "../../shared/git-blame";
+import type { GitBlameLineResult, GitBlameOk } from "../../shared/git-blame";
 import { MAX_DIFF_CHARS } from "../../shared/diff";
-import { protocol } from "./protocol";
+import { blameTextLimits, protocol } from "./protocol";
 
 type BlameRequest = Infer<typeof protocol.requests.blameLine.params>;
 
@@ -18,13 +18,38 @@ export async function readBlameLine(
     return { status: "unavailable", repoGeneration: generation() };
   }
   try {
-    return await git.blameLine(uri, request.line, {
+    const result = await git.blameLine(uri, request.line, {
       contents: request.contents,
       version: request.version,
     });
+    return result.status === "ok"
+      ? { ...result, blame: fitBlameText(result.blame) }
+      : result;
   } catch {
     return { status: "unavailable", repoGeneration: generation() };
   }
+}
+
+/**
+ * The blame with its text fields within the protocol's limits. A commit
+ * subject over 500 characters (or a longer author name) would otherwise fail
+ * the result's schema, and the line would show no blame at all.
+ */
+function fitBlameText(blame: GitBlameOk): GitBlameOk {
+  const limits = blameTextLimits;
+  return {
+    ...blame,
+    authorName: clip(blame.authorName, limits.authorName),
+    authorEmail: clip(blame.authorEmail, limits.authorEmail),
+    subject: clip(blame.subject, limits.subject),
+    ...(blame.body === undefined
+      ? {}
+      : { body: clip(blame.body, limits.body) }),
+  };
+}
+
+function clip(text: string, limit: number): string {
+  return text.length > limit ? `${text.slice(0, limit - 1)}…` : text;
 }
 
 export const gitBlameHost: Plugin<{ panel: PanelShell }> = {

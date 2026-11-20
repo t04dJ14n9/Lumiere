@@ -8,13 +8,10 @@
 import { constants } from "node:fs";
 import {
   lstat,
-  mkdir,
   open,
   realpath,
-  rename,
   stat,
   unlink,
-  writeFile,
   type FileHandle,
 } from "node:fs/promises";
 import * as path from "node:path";
@@ -100,7 +97,7 @@ export async function assertContained(
 }
 
 /** Whether the real path `resolved` is `root` or below it. */
-function isWithin(root: string, resolved: string): boolean {
+export function isWithin(root: string, resolved: string): boolean {
   const relative = path.relative(root, resolved);
   return !(
     relative === ".." ||
@@ -174,8 +171,9 @@ export async function resolveContainedNote(
  * workspace, and `O_NOFOLLOW` guards only the last component. Node has no
  * `openat`, so the ancestors cannot be pinned while the file is opened. What
  * can be done is to open without truncating, then ask the kernel which file
- * the descriptor is (`assertOpenedInside`), and only then truncate, write or
- * read. A swap that sends the open outside is then caught before any byte of
+ * the descriptor is (`assertOpenedInside`), and only then write or read
+ * (a save writes a new file beside the old one and checks that file the same
+ * way, atomic-write.ts). A swap that sends the open outside is then caught before any byte of
  * an outside file is changed or returned, and the swap cannot be hidden by
  * swapping back: the descriptor would still be the outside file, whose
  * device and inode are not those of the path's file inside.
@@ -235,28 +233,12 @@ async function openVerified(
 }
 
 /**
- * Replace a file without following a symlink at the final path. `writeFile`
- * would follow one planted after the containment check and write outside.
- * The open does not truncate: that waits until `root` is verified.
+ * Replace a file's contents in place, without following a symlink at the
+ * final path. The open does not truncate: that waits until `root` is
+ * verified. Only for a file whose folder takes no new file, where a save
+ * cannot write beside it and rename (atomic-write.ts).
  */
-export async function writeThroughFile(
-  file: string,
-  text: string,
-  root?: string,
-): Promise<void> {
-  await replaceContents(file, text, root);
-}
-
-/** Like `writeThroughFile`, for binary payloads (images). */
-export async function writeThroughBytes(
-  file: string,
-  data: Uint8Array,
-  root?: string,
-): Promise<void> {
-  await replaceContents(file, data, root);
-}
-
-async function replaceContents(
+export async function writeInPlace(
   file: string,
   data: string | Uint8Array,
   root: string | undefined,
@@ -335,14 +317,6 @@ async function removeCreated(handle: FileHandle, file: string): Promise<void> {
   } catch {
     // Gone already, or replaced by something that is not ours to remove.
   }
-}
-
-/** Write beside the destination, then rename, so a crash never leaves half a file. */
-export async function writeAtomic(file: string, text: string): Promise<void> {
-  await mkdir(path.dirname(file), { recursive: true });
-  const temporary = `${file}.${process.pid}.tmp`;
-  await writeFile(temporary, text);
-  await rename(temporary, file);
 }
 
 const noFollow = (): number => constants.O_NOFOLLOW ?? 0;

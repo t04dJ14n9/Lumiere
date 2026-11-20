@@ -24,6 +24,17 @@ export interface OpenMessage {
 }
 
 /**
+ * The page's note was renamed or moved (by its inline title, or another
+ * page's file operations): the embedder shows the note at its new path.
+ * An embedder that hears of renames itself (the app's window) ignores it.
+ */
+export interface MovedMessage {
+  readonly lumiere: "moved";
+  /** Absolute path on the host. */
+  readonly path: string;
+}
+
+/**
  * The embedder shows this page (its tab was opened or chosen). The host then
  * takes the page's note as the active one, as VS Code does when a tab is
  * chosen, without waiting for the reader to click into it: Outline and the
@@ -98,8 +109,16 @@ export interface PortMessage {
  */
 export const TRANSPORT_META = "lumiere-transport";
 
+/**
+ * Ends the URL a host gives a note's SVG image when it serves the SVG's
+ * bytes there as plain text, because it cannot serve an SVG on the page's
+ * origin with the sandbox the other hosts give it (the iPad's router). The
+ * page shows it from a `data:` URL (page/svg-images.ts).
+ */
+export const SVG_IMAGE_MARK = "#lumiere-svg-image";
+
 export type EmbedderMessage = ThemeMessage | ShownMessage | PortMessage;
-export type PageMessage = OpenMessage | ConnectMessage;
+export type PageMessage = OpenMessage | ConnectMessage | MovedMessage;
 
 const VARIABLE = /^--vscode-[A-Za-z0-9-]+$/;
 const MAX_VALUE = 512;
@@ -142,6 +161,16 @@ export function parseOpenMessage(data: unknown): OpenMessage | undefined {
     return undefined;
   }
   return { lumiere: "open", path: data.path, fragment: data.fragment };
+}
+
+/** A page saying its note moved, or undefined when `data` is not one. */
+export function parseMovedMessage(data: unknown): MovedMessage | undefined {
+  return isRecord(data) &&
+    data.lumiere === "moved" &&
+    typeof data.path === "string" &&
+    data.path !== ""
+    ? { lumiere: "moved", path: data.path }
+    : undefined;
 }
 
 /** A page asking for its channel, or undefined when `data` is not one. */

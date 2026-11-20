@@ -3,6 +3,7 @@ import { EditorView } from "@codemirror/view";
 import type { Context, Plugin } from "@workshop/core";
 import { footnoteRegistry } from "../../markdown/metadata/footnote-extract";
 import { footnoteCarry } from "./carry";
+import { gainedFootnoteMarker, hasFootnoteMarker } from "./marker-presence";
 import type { Footnote } from "../../markdown/metadata/footnotes";
 import type {} from "../editor/api";
 import type {} from "../commands/api";
@@ -35,6 +36,8 @@ export const footnotesWebview: Plugin = {
 function registerDefinitionInvalidation(ctx: Context): void {
   let active = true;
   let key = "";
+  // Whether the note holds `[^`; unknown until its first edit.
+  let hasMarker: boolean | undefined;
   ctx.effect(() => () => {
     active = false;
   });
@@ -45,14 +48,23 @@ function registerDefinitionInvalidation(ctx: Context): void {
         if (!update.docChanged) {
           return;
         }
-        if (key === "" && !update.state.doc.toString().includes("[^")) {
+        const { doc } = update.state;
+        hasMarker =
+          hasMarker === undefined
+            ? hasFootnoteMarker(doc)
+            : hasMarker || gainedFootnoteMarker(update.changes, doc);
+        if (key === "" && !hasMarker) {
           return;
         }
         // Shared with Live Preview's references (cached per document).
         const definitions = footnoteRegistry(
-          update.state.doc,
+          doc,
           update.state.field(documentTree, false),
         ).definitions;
+        if (!definitions.length) {
+          // The last `[^` may have gone; look again only in such a note.
+          hasMarker = hasFootnoteMarker(doc);
+        }
         // What rendered blocks show of the footnotes, not where they are:
         // their positions move with every edit above them.
         const next = definitions.length

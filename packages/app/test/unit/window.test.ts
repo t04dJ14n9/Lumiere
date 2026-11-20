@@ -119,6 +119,8 @@ test("the saved layout keeps only known fields of the right type", () => {
     outline: false,
     theme: "dark",
     folders: {},
+    tabs: [],
+    activeTab: -1,
   });
   assert.deepEqual(parseUiChange({ sidebar: "no", theme: "purple" }), {});
   assert.deepEqual(parseUiChange([true]), {});
@@ -128,6 +130,15 @@ test("the saved layout keeps only known fields of the right type", () => {
     "each vault's folder paths; anything else is dropped",
   );
   assert.deepEqual(parseUiChange({ folders: ["a"] }), {});
+  assert.deepEqual(
+    parseUiChange({
+      tabs: [{ vault: "/v", path: "a.md", extra: 1 }, { vault: 2 }, "b.md"],
+      activeTab: 0,
+    }),
+    { tabs: [{ vault: "/v", path: "a.md" }], activeTab: 0 },
+    "each tab's vault and path; anything else is dropped",
+  );
+  assert.deepEqual(parseUiChange({ activeTab: -2 }), {});
 });
 
 test("Color Theme: the system's, or always light, or always dark", () => {

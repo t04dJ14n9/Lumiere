@@ -17,12 +17,55 @@ export const resourcesHost: Plugin<{ panel: PanelShell }> = {
     ctx.provide("resources", resources);
     ctx.effect(() =>
       ctx.rpc.handle(protocol, "load", (params) =>
-        resources.load(params.target, params.source, params.syntax),
+        resources.load(
+          params.target,
+          params.source,
+          params.syntax,
+          params.snapshot,
+        ),
       ),
     );
+    // Any change can change a base's entries (a note's properties, links
+    // or backlinks); the index also resolves again after silent updates.
+    const changed = () => resources.vaultChanged();
+    ctx.effect(() => ctx.vault.onDidChange(changed));
+    ctx.effect(() => ctx.vault.onDidResolve(changed));
     reportFoundFiles(ctx, resources);
+    reportChangedFiles(ctx, resources);
   },
 };
+
+/**
+ * Changes are gathered this long into one notice: a sync or a save that
+ * touches several shown files, or a burst of index events, reloads once.
+ */
+export const CHANGED_NOTICE_DELAY_MS = 100;
+
+/**
+ * Tell the page when a file it shows changes: edited in another editor
+ * (the index re-reads unsaved text after each typing pause), rewritten by
+ * another app, moved or removed. Its embeds show the new version.
+ */
+function reportChangedFiles(ctx: Context, resources: NoteResources): void {
+  const changed = new Set<string>();
+  let timer: ReturnType<typeof setTimeout> | undefined;
+  ctx.effect(() => () => clearTimeout(timer));
+  const send = () => {
+    timer = undefined;
+    const sources = [...changed].slice(0, 1024);
+    changed.clear();
+    ctx.rpc.notify(protocol, "changed", { sources });
+  };
+  ctx.effect(() =>
+    ctx.vault.onDidChange((change) => {
+      const source = resources.changedSource(change);
+      if (source !== undefined) {
+        changed.add(source);
+        timer ??= setTimeout(send, CHANGED_NOTICE_DELAY_MS);
+      }
+    }),
+  );
+}
 
 /**
  * Tell the page when a file it could not show is in the vault after all:

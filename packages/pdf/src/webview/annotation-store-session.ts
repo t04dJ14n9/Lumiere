@@ -10,13 +10,14 @@ import {
   exportStoreText,
   restoreStoredAnnotations,
 } from "./annotation-persist";
+import { showStoreFile } from "./annotation-store-sync";
+import type { OutgoingMessage } from "./outbox";
 
 /**
  * Numbers the PDF writes of every session on this page, so a result for a
  * write of an earlier load can never settle a later one's.
  */
 let lastPdfWrite = 0;
-import type { OutgoingMessage } from "./outbox";
 
 /**
  * The write that brings back Lumiere's annotations. Its events carry this id as
@@ -27,8 +28,16 @@ export const RESTORE_OP_ID = "lumiere-restore-annotations";
 /** Where a session reads the load it belongs to and sends its messages. */
 export interface SessionHost {
   post(message: OutgoingMessage): void;
-  loadState():
-    { load: number; sha256: string; annotations?: string } | undefined;
+  loadState(): LoadState | undefined;
+  /** The viewer shows this file text from the host now (another editor's save). */
+  keepStoreText(text: string | undefined): void;
+}
+
+interface LoadState {
+  load: number;
+  sha256: string;
+  /** The annotation file's text as this viewer last had it from the host. */
+  annotations?: string;
 }
 
 type Change = "create" | "update" | "delete";
@@ -60,10 +69,19 @@ export class StoreSession {
     this.markRestored = resolve;
   });
 
+  /**
+   * The load this session's document came with. The `load` message of the
+   * next bytes switches the page's load state while this document's work
+   * may still be queued: that work must not be filed under the new load.
+   */
+  private readonly load: number | undefined;
+
   constructor(
     private readonly annotation: AnnotationCapability,
     private readonly host: SessionHost,
-  ) {}
+  ) {
+    this.load = host.loadState()?.load;
+  }
 
   /** Bring back the file's annotations, once; `ready` is false when this document's could not be read. */
   restore(ready: boolean): void {
@@ -182,6 +200,48 @@ export class StoreSession {
   }
 
   /**
+   * Another editor of this PDF saved: the file kept for `sha256` holds
+   * `text` now. Shown in turn with this viewer's saves, then the host is
+   * told, so it knows this viewer's later saves were made with it in view.
+   */
+  showStoreFile(change: {
+    sha256: string;
+    revision: number;
+    text: string | undefined;
+  }): void {
+    this.run(async (state) => {
+      if (this.fileLeftAlone || state.sha256 !== change.sha256) {
+        return;
+      }
+      try {
+        const lost = await showStoreFile(
+          this.annotation,
+          this.ownership,
+          { previous: state.annotations, next: change.text },
+          RESTORE_OP_ID,
+        );
+        if (lost > 0) {
+          this.error(
+            `${lost} annotation(s) saved in another editor of this PDF could not be shown here.`,
+          );
+        }
+      } catch (error) {
+        this.error(
+          `Annotations saved in another editor of this PDF could not be shown here (${describe(error)}).`,
+        );
+        return;
+      }
+      this.host.keepStoreText(change.text);
+      this.host.post({
+        type: "annotationStoreShown",
+        load: state.load,
+        sha256: change.sha256,
+        revision: change.revision,
+      });
+    });
+  }
+
+  /**
    * The host wrote PDF write `write` over the file, and the viewer now has
    * its hash. What went into it is the PDF's now. Lumiere's made since are
    * saved again, under the new hash: the old one names a file no longer
@@ -265,7 +325,7 @@ export class StoreSession {
 
   /** Queue work for the load shown when it starts, once the file's annotations are back. */
   private run(
-    task: (state: { load: number; sha256: string }) => Promise<void>,
+    task: (state: LoadState) => Promise<void>,
     started: () => void = () => undefined,
   ): void {
     this.chain = this.chain
@@ -273,7 +333,8 @@ export class StoreSession {
         await this.restored;
         started();
         const state = this.host.loadState();
-        if (state) {
+        // Another document's bytes arrived meanwhile: this one is gone.
+        if (state && (this.load === undefined || state.load === this.load)) {
           await task(state);
         }
       })

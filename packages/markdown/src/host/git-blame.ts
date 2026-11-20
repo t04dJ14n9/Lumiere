@@ -1,4 +1,6 @@
 import { spawn, type SpawnOptionsWithoutStdio } from "node:child_process";
+import { open, type FileHandle } from "node:fs/promises";
+import { join } from "node:path";
 import { MAX_DIFF_CHARS } from "../shared/diff";
 import { parseBlamePorcelain } from "../shared/git-blame";
 import type { GitBlameLineResult, GitBlameSnapshot } from "../shared/git-blame";
@@ -138,7 +140,10 @@ export async function runBlameLine(
   }
   const args = ["blame", "--line-porcelain", "-L", `${line},${line}`];
   if (!knownClean) {
-    args.push("--contents", "-", "HEAD");
+    // The snapshot on top of HEAD. No revision after it: Git before 2.41
+    // refuses `--contents` with one ("cannot use --contents with final
+    // commit object name"), and without one HEAD is the parent anyway.
+    args.push("--contents", "-");
   }
   // With no explicit revision, git includes uncommitted worktree lines. A clean
   // editor snapshot only proves disk identity, not that disk equals HEAD.
@@ -148,7 +153,7 @@ export async function runBlameLine(
       args,
       cwd: options.cwd,
       timeoutMs: options.timeoutMs ?? 5000,
-      ...(knownClean ? {} : { stdin: snapshot.contents }),
+      ...(knownClean ? {} : { stdin: await blameContents(options) }),
     });
     const repoGeneration = getGeneration();
     if (repoGeneration !== generationAtStart) {
@@ -179,6 +184,42 @@ export async function runBlameLine(
       status: isUntracked ? "untracked" : "unavailable",
       repoGeneration,
     };
+  }
+}
+
+/**
+ * The snapshot as git should read it for `--contents`. The editor's text has
+ * LF line endings, and git compares it with the committed blob after only
+ * its own conversion (core.autocrlf, text attributes): a note committed with
+ * CRLF endings, unconverted, would blame every line as not committed. Given
+ * the working-tree file's endings, git converts the snapshot exactly as it
+ * converts the file.
+ */
+async function blameContents(options: BlameOptions): Promise<string> {
+  const { contents } = options.snapshot;
+  if (contents.includes("\r")) {
+    return contents;
+  }
+  const file = join(options.cwd, options.relativePath);
+  return (await usesCrlf(file)) ? contents.replaceAll("\n", "\r\n") : contents;
+}
+
+/** Whether the file's first line ends in CRLF; false when it cannot be read. */
+async function usesCrlf(file: string): Promise<boolean> {
+  let handle: FileHandle | undefined;
+  try {
+    handle = await open(file, "r");
+    const { buffer, bytesRead } = await handle.read({
+      buffer: Buffer.alloc(64 * 1024),
+      position: 0,
+    });
+    const head = buffer.subarray(0, bytesRead);
+    const newline = head.indexOf(10);
+    return newline > 0 && head[newline - 1] === 13;
+  } catch {
+    return false;
+  } finally {
+    await handle?.close().catch(() => undefined);
   }
 }
 

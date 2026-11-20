@@ -10,7 +10,9 @@ for each added (green), modified (blue) or removed (red triangle) range, against
   (`vscode.git`, API 1, wrapped by `src/host/git.ts` as `workbench.git`) for the
   note's text at `HEAD` (`repository.show`) or in the index. It never runs git
   itself. HEAD text is cached per commit. The webview asks again when the
-  repository changes (commit, checkout, stage). Without git, a repository, or a
+  repository changes (commit, checkout, stage), naming the baseline it has;
+  when that is still the baseline the host answers `unchanged`, with no text,
+  and nothing is recomputed (`baseline.ts`). Without git, a repository, or a
   tracked file, the plugin stays active and shows nothing.
 - **Hunks.** `src/shared/diff` (Myers line diff, shared with the inline and
   rendered diff plugins) turns baseline and buffer into hunks, 250 ms after
@@ -52,6 +54,7 @@ handlers and the repository listener.
 
 - `manifest.ts`, `protocol.ts`, `api.ts`: switch, settings, commands, RPC, service.
 - `host.ts`: baseline and stage through `workbench.git`; repository change notifications.
+- `baseline.ts`: the editor's copy of the baseline and the host's name for it.
 - `hunks.ts`: hunk state, mapping, revert edits.
 - `gutter.ts`: the bar gutter.
 - `peek.ts`: peek state and placement.

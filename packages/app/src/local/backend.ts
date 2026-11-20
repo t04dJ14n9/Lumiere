@@ -4,6 +4,7 @@
  */
 import {
   createSettingsService,
+  uriPath,
   type LumiereHost,
 } from "@workshop/host-node/core";
 import {
@@ -47,6 +48,7 @@ export function createLocalBackend(parts: LocalBackendParts): WindowBackend {
       files: (vault) => vaults.files(vault),
       open: (path) => vaults.show(path),
     },
+    files: localFiles(host, files),
     commands: {
       list: async () => host.commands?.list() ?? [],
       run: async (command) => {
@@ -78,13 +80,39 @@ export function createLocalBackend(parts: LocalBackendParts): WindowBackend {
   };
 }
 
+/**
+ * The file tree's changes, through host-node's file operations on the
+ * mounted folders. A browser or the iPad has no system trash Lumière can
+ * reach, so deleting always waits for the reader to confirm.
+ */
+function localFiles(host: LumiereHost, files: Mounts): WindowBackend["files"] {
+  const uri = (vault: string, path: string) => files.uriOf(`${vault}/${path}`);
+  const relative = (vault: string, target: string) =>
+    uriPath(target).slice(vault.length + 1);
+  return {
+    createNote: (vault, path) => host.files.createNote(uri(vault, path)),
+    createFolder: (vault, path) => host.files.createFolder(uri(vault, path)),
+    rename: async (vault, from, to) =>
+      (await host.files.rename(uri(vault, from), uri(vault, to))).map((left) =>
+        relative(vault, left),
+      ),
+    async remove(vault, path, { permanently }) {
+      if (!permanently) {
+        return { deleted: false, trashed: false };
+      }
+      await host.files.remove(uri(vault, path));
+      return { deleted: true, trashed: false };
+    },
+  };
+}
+
 /** A PDF in a tab: Lumière's PDF viewer, in a page of its own. */
 async function openPdf(
   files: Mounts,
   uri: string,
   pages: EditorPageUrls,
 ): Promise<OpenedEditor> {
-  return openPdfPage(await files.readBytes(uri), pages);
+  return openPdfPage(await files.readBlob(uri), pages);
 }
 
 /** The window's layout and theme, kept in `file`. */

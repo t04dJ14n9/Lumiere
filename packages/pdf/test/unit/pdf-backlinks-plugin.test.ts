@@ -137,6 +137,7 @@ function launch(options: {
     ),
     {
       vscode,
+      "node:crypto": crypto,
       "../../../shared/backlink-note-uri": backlinkNoteUri,
       "../../../shared/markdown-scan": markdownScan,
       "../../../shared/pdf-backlink-index": backlinkIndex,
@@ -155,18 +156,45 @@ function launch(options: {
     return panel;
   });
   const owned: { dispose(): void }[] = [];
+  const openListeners: ((panel: FakePanel) => void)[] = [];
+  const reads: string[] = [];
+  const readFile = vscode.workspace.fs.readFile;
+  vscode.workspace.fs.readFile = async (uri: Uri) => {
+    reads.push(uri.path);
+    return readFile(uri);
+  };
   pdfBacklinksPlugin.apply({
     pdfPanels: {
       all: panels,
-      onDidOpen: () => ({ dispose: () => undefined }),
+      onDidOpen: (listener: (panel: FakePanel) => void) => {
+        openListeners.push(listener);
+        return { dispose: () => undefined };
+      },
       handle: () => ({ dispose: () => undefined }),
     },
     provide: () => undefined,
-    own: (item: { dispose(): void }) => owned.push(item),
+    own: (item: { dispose(): void }) => {
+      owned.push(item);
+      return item;
+    },
   });
   return {
     panels,
     searches,
+    reads,
+    /** A PDF opens in a new viewer. */
+    open: (viewer: string) => {
+      const panel: FakePanel = {
+        uri: new Uri(viewer),
+        received: [],
+        backlinks: { set: (hits) => panel.received.push(hits as never) },
+      };
+      panels.push(panel);
+      for (const listener of openListeners) {
+        listener(panel);
+      }
+      return panel;
+    },
     /** Save a note with new text, as VS Code reports it. */
     save: (note: FakeNote) => {
       texts.set(note.path, note.text);
@@ -179,6 +207,11 @@ function launch(options: {
 }
 
 async function settle(): Promise<void> {
+  for (let tick = 0; tick < 40; tick++) {
+    await new Promise((resolve) => setImmediate(resolve));
+  }
+  // Pushes wait for changes to stop coming (`PUSH_DELAY_MS`).
+  await new Promise((resolve) => setTimeout(resolve, 300));
   for (let tick = 0; tick < 40; tick++) {
     await new Promise((resolve) => setImmediate(resolve));
   }
@@ -272,11 +305,48 @@ test("a push that finishes after the plugin stopped posts nothing", async () => 
   assert.equal(app.panels[0]!.received.length, received);
 });
 
+test("no note is read until a PDF opens", async () => {
+  const app = launch({
+    folders: ["/A"],
+    notes: [NOTE],
+    files: [],
+    viewers: [],
+  });
+  await settle();
+  assert.deepEqual(app.searches, []);
+  assert.deepEqual(app.reads, []);
+  const panel = app.open("/A/notes/papers/a.pdf");
+  await settle();
+  assert.equal(app.searches.length, 1);
+  assert.deepEqual(summary(panel), [["file:///A/notes/n.md", 1]]);
+});
+
+test("a saved note is indexed once, and one without PDF links pushes nothing", async () => {
+  const app = launch({
+    folders: ["/A"],
+    notes: [NOTE],
+    files: [],
+    viewers: ["/A/notes/papers/a.pdf"],
+  });
+  await settle();
+  const pushes = app.panels[0]!.received.length;
+  app.save({ path: "/A/notes/plain.md", text: "no links here" });
+  app.save({ path: "/A/notes/plain.md", text: "still none" });
+  await settle();
+  assert.equal(app.panels[0]!.received.length, pushes);
+  // The same text again (the watcher's change after a save) is not new.
+  app.save({ ...NOTE, text: "[x](papers/a.pdf#page=5)" });
+  app.save({ ...NOTE, text: "[x](papers/a.pdf#page=5)" });
+  await settle();
+  assert.equal(app.panels[0]!.received.length, pushes + 1);
+  assert.deepEqual(summary(app.panels[0]!), [["file:///A/notes/n.md", 5]]);
+});
+
 test("each folder is searched for .md and .markdown, keeping its own files.exclude", async () => {
   const app = launch({
     notes: [],
     files: [],
-    viewers: [],
+    viewers: ["/A/papers/a.pdf"],
     filesExclude: {
       "/A": { "**/.git": true, "**/drafts": true, "**/shown": false },
       "/B": { "**/gen": { when: "$(basename).ts" } },

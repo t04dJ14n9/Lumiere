@@ -6,14 +6,15 @@ import * as fs from "node:fs/promises";
 import { renameSync } from "node:fs";
 import * as os from "node:os";
 import * as path from "node:path";
+import { ideContextFolderName } from "@workshop/agents/ide-context";
 import type { TempFs } from "@workshop/agents/ide-context";
 import type { IdeContextTemp } from "../shared/host";
 import { pathToFileUriString } from "./ide-context-file-uri";
+import { makePrivateFolder } from "./private-temp";
 
 const nodeTempFs: TempFs = {
-  mkdir: async (folder, options) => {
-    await fs.mkdir(folder, { recursive: true, mode: options?.mode });
-  },
+  // Only ever the packet folder, in the shared temp folder: it must be ours.
+  mkdir: (folder) => makePrivateFolder(folder),
   writeFile: (file, data, options) =>
     fs.writeFile(file, data, { mode: options?.mode }),
   rename: (from, to) => fs.rename(from, to),
@@ -36,7 +37,7 @@ export const ideContextTemp: IdeContextTemp = {
   fs: nodeTempFs,
   // Read at each use, as before: the system temp folder can change.
   get dir() {
-    return path.join(os.tmpdir(), "agent-ide-context");
+    return path.join(os.tmpdir(), ideContextFolderName(process.getuid?.()));
   },
   fileUri: pathToFileUriString,
 };

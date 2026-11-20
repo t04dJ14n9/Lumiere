@@ -10,6 +10,7 @@ import {
 } from "./indentation";
 import { isNoteBodyIndentTarget } from "./indent-target";
 import { onSetextHeading } from "./setext-indent";
+import { caretOnLiteralLine } from "./literal-lines";
 
 /**
  * Capture-phase Tab / Shift+Tab so Vim's override-slot DOM handler cannot
@@ -42,7 +43,12 @@ function absorbPreventedSetextTab(
   view: EditorView,
   event: KeyboardEvent,
 ): boolean {
-  if (event.key !== "Tab" || event.shiftKey || !onSetextHeading(view.state)) {
+  if (
+    event.key !== "Tab" ||
+    event.shiftKey ||
+    !onSetextHeading(view.state) ||
+    caretOnLiteralLine(view.state)
+  ) {
     return false;
   }
   event.preventDefault();

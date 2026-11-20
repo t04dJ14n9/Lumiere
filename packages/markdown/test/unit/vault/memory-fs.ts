@@ -5,6 +5,7 @@ import type {
   FileEvent,
   ListedFile,
   VaultFileSystem,
+  VaultListing,
   VaultSettings,
   VaultSystem,
 } from "../../../src/plugins/vault/api";
@@ -42,16 +43,33 @@ export class MemoryFileSystem implements VaultFileSystem {
     };
   }
 
-  async list(_root: string, limit: number) {
+  async list(_root: string, limit: number): Promise<VaultListing> {
     this.listings++;
     await this.gate;
     const paths = [...this.texts.keys()];
     const max = Math.min(limit, this.limit);
+    const files = paths.slice(0, max).map((path) => this.listed(path));
+    if (!this.statsGate) {
+      return { files, partial: paths.length > max };
+    }
+    // As VS Code lists: other files than notes are statted after.
+    const isPending = (file: ListedFile) => !file.path.endsWith(".md");
+    const gate = this.statsGate;
+    // Read now, reported when the gate opens: a change meanwhile is newer.
+    const statted = files.filter(isPending);
     return {
-      files: paths.slice(0, max).map((path) => this.listed(path)),
+      files: files.map((file) =>
+        isPending(file)
+          ? { ...file, mtime: 0, size: 0, statPending: true as const }
+          : file,
+      ),
       partial: paths.length > max,
+      stats: gate.then(() => statted),
     };
   }
+
+  /** When set, other files' stats arrive after the listing, once it resolves. */
+  statsGate?: Promise<void>;
 
   async read(uri: string): Promise<Uint8Array> {
     this.reads++;

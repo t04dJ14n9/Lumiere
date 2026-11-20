@@ -72,17 +72,23 @@ export class Authority {
     return { updates, changes: combined, text: combined.apply(this.doc) };
   }
 
-  record(text: string, expected?: Prepared): void {
-    const next = textDocument(text);
+  /**
+   * Take the host's text (or the `Text` already built from it) as current.
+   * The new `Text` is derived from the previous one by the recorded changes,
+   * not the one built from the host's string: equal in content, it shares
+   * every unchanged part with its predecessor, so the texts undo checkpoints
+   * keep cost only what changed, and comparing two of them skips the rest.
+   */
+  record(text: string | Text, expected?: Prepared): void {
+    const next = typeof text === "string" ? textDocument(text) : text;
     if (expected && next.eq(expected.text)) {
       this.history.push(...expected.updates);
+      this.doc = expected.text;
     } else if (!next.eq(this.doc)) {
-      this.history.push({
-        clientID: "host",
-        changes: difference(this.doc.toString(), next.toString()),
-      });
+      const changes = difference(this.doc.toString(), next.toString());
+      this.history.push({ clientID: "host", changes });
+      this.doc = changes.apply(this.doc);
     }
-    this.doc = next;
   }
 
   private validateVersion(version: number): void {

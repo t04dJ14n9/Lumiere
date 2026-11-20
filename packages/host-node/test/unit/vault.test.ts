@@ -10,6 +10,7 @@ import { isInside } from "../../src/host/paths";
 import {
   createHostVaultSystem,
   listVault,
+  listVaultPaths,
   watchVault,
 } from "../../src/host/vault";
 import type { FileEvent } from "@workshop/markdown/portable";
@@ -50,6 +51,25 @@ test("listing walks the vault but not hidden folders or node_modules, and stops 
   assert.equal(limited.partial, true);
 });
 
+test("a file tree's listing names the same files without a stat per file", async (t) => {
+  const { root } = await vault(t);
+  let stats = 0;
+  const counting = {
+    ...nodeFiles,
+    stat: (uri: string) => {
+      stats++;
+      return nodeFiles.stat(uri);
+    },
+  };
+  const all = await listVaultPaths(counting, { root, limit: 100 });
+  assert.deepEqual(all.paths.sort(), ["Home.md", "notes/A note.md"]);
+  assert.equal(all.partial, false);
+  assert.equal(stats, 0);
+  const limited = await listVaultPaths(counting, { root, limit: 1 });
+  assert.equal(limited.paths.length, 1);
+  assert.equal(limited.partial, true);
+});
+
 test("watching reports a new file, a change to it and its deletion, never hidden files", async (t) => {
   const { dir, root } = await vault(t);
   const events: FileEvent[] = [];
@@ -87,14 +107,16 @@ test("watching reports a new file, a change to it and its deletion, never hidden
 });
 
 test("a URI is inside a root only at a path boundary, after dot segments resolve", () => {
-  assert.equal(isInside("file:///v", "file:///v/a.md"), true);
-  assert.equal(isInside("file:///v/", "file:///v/a.md"), true);
-  assert.equal(isInside("file:///v", "file:///v"), true);
-  assert.equal(isInside("file:///v", "file:///v/..secret"), true);
-  assert.equal(isInside("file:///v", "file:///vault/a.md"), false);
-  assert.equal(isInside("file:///v", "file:///v/../etc/passwd"), false);
-  assert.equal(isInside("file:///v", "file:///v/%2e%2e/etc/passwd"), false);
-  assert.equal(isInside("file:///v", "file:///v/foo%2f..%2fetc/passwd"), false);
+  // `file:///v`; on Windows a path is on a drive (`file:///D:/v`).
+  const v = pathToFileURL("/v").toString();
+  assert.equal(isInside(v, `${v}/a.md`), true);
+  assert.equal(isInside(`${v}/`, `${v}/a.md`), true);
+  assert.equal(isInside(v, v), true);
+  assert.equal(isInside(v, `${v}/..secret`), true);
+  assert.equal(isInside(v, `${v}ault/a.md`), false);
+  assert.equal(isInside(v, `${v}/../etc/passwd`), false);
+  assert.equal(isInside(v, `${v}/%2e%2e/etc/passwd`), false);
+  assert.equal(isInside(v, `${v}/foo%2f..%2fetc/passwd`), false);
 });
 
 async function waitFor(check: () => boolean): Promise<void> {

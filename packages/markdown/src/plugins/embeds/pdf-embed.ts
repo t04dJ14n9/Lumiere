@@ -1,16 +1,15 @@
-import type { LocalEngine } from "@embedpdf/engine";
+import {
+  forgetPdfDocument,
+  pdfPagePainter,
+  sharedPdfDocument,
+  type OpenedPdf,
+  type RenderedPdfPage,
+} from "./pdf-documents";
+import { openPdfInEngine } from "./pdf-engine";
 
 export interface PdfEmbedParams {
   readonly page: number;
   readonly height?: number;
-}
-
-export interface RenderedPdfPage {
-  readonly pageCount: number;
-  readonly page: number;
-  readonly width: number;
-  readonly height: number;
-  readonly rgba: Uint8ClampedArray;
 }
 
 function resolveHeightParam(
@@ -70,116 +69,6 @@ export function pdfFilename(target: string): string {
     return decodeURIComponent(rawName);
   } catch {
     return rawName;
-  }
-}
-
-let enginePromise: Promise<LocalEngine> | undefined;
-
-/** The page names the engine's file in `data-pdfium-wasm`, as the PDF viewer's page does. */
-function resolveWasmUrl(): string {
-  if (typeof document !== "undefined") {
-    const configured = document.getElementById("app")?.dataset["pdfiumWasm"];
-    if (configured) {
-      return configured;
-    }
-  }
-  return "/dist/webview/embedpdf.wasm";
-}
-
-/**
- * One engine for every embed of the editor. It runs in this thread because
- * the editor's page allows no workers (webview-html.ts has no `worker-src`);
- * the wasm is fetched here, from the URL the page names, and handed over as
- * bytes.
- */
-async function loadEngine(
-  wasmBinaryOverride?: ArrayBuffer,
-): Promise<LocalEngine> {
-  if (!enginePromise) {
-    enginePromise = (async () => {
-      const { createLocalEngine } = await import("@embedpdf/engine");
-      const wasmBinary =
-        wasmBinaryOverride ??
-        (await (await fetch(resolveWasmUrl())).arrayBuffer());
-      return createLocalEngine({ runtime: { prefer: "wasm", wasmBinary } });
-    })().catch((error: unknown) => {
-      enginePromise = undefined;
-      throw error;
-    });
-  }
-  return enginePromise;
-}
-
-/**
- * Open a PDF in the shared engine. The engine starts PDFium on its first
- * job, so a failure to start shows up here, and leaves an engine that
- * rejects every job from then on: it is dropped, and the next embed starts
- * a new one.
- */
-async function openDocument(
-  bytes: Uint8Array,
-  wasmBinaryOverride?: ArrayBuffer,
-) {
-  const engine = await loadEngine(wasmBinaryOverride);
-  try {
-    return await engine.open({ kind: "bytes", bytes });
-  } catch (error) {
-    const { EngineError, EngineErrorCode } = await import("@embedpdf/engine");
-    if (EngineError.is(error, EngineErrorCode.RuntimeUnavailable)) {
-      enginePromise = undefined;
-      void engine.destroy().catch(() => undefined);
-    }
-    throw error;
-  }
-}
-
-/**
- * Render a 1-indexed page from a PDF byte buffer into an RGBA pixel buffer
- * using EmbedPDF's engine (PDFium WASM).
- */
-export async function renderPdfPageFromBytes(
-  bytes: Uint8Array,
-  requestedPage: number,
-  targetWidth = 760,
-  wasmBinaryOverride?: ArrayBuffer,
-): Promise<RenderedPdfPage> {
-  const pdf = await openDocument(bytes, wasmBinaryOverride);
-  try {
-    const { pages } = await pdf.pages.list();
-    if (pages.length === 0) {
-      throw new Error("PDF document has no pages");
-    }
-    const page = Math.min(
-      Math.max(1, Math.floor(requestedPage || 1)),
-      pages.length,
-    );
-    const layout = pages[page - 1]!;
-    // `size` is the page unrotated, and so is its picture unless asked
-    // otherwise: the page's own rotation draws it the way a viewer shows it,
-    // and a page turned by 90 or 270 degrees is as wide as it was tall.
-    const turned = layout.rotation === 90 || layout.rotation === 270;
-    const pageWidth = Math.max(
-      1,
-      turned ? layout.size.height : layout.size.width,
-    );
-    const scale = Math.max(1, Math.min(2.5, targetWidth / pageWidth));
-    const raster = await pdf.page(layout.ref).render.raw({
-      viewport: {
-        kind: "width",
-        width: Math.max(1, Math.round(pageWidth * scale)),
-      },
-      rotation: layout.rotation,
-      includeAnnotations: true,
-    });
-    return {
-      pageCount: pages.length,
-      page,
-      width: raster.width,
-      height: raster.height,
-      rgba: new Uint8ClampedArray(raster.data),
-    };
-  } finally {
-    await pdf.close();
   }
 }
 
@@ -358,8 +247,7 @@ export function mountPdfEmbed(options: MountPdfEmbedOptions): void {
 
   let currentPage = parsed.page;
   let totalPages = Math.max(1, currentPage);
-  let pdfBytes: Uint8Array | undefined;
-  let renderSeq = 0;
+  let opened: Promise<OpenedPdf> | undefined;
 
   const dom = buildPdfEmbedDom(target, currentPage, parsed.height);
   dom.openBtn.setAttribute(
@@ -368,37 +256,30 @@ export function mountPdfEmbed(options: MountPdfEmbedOptions): void {
   );
   node.replaceChildren(dom.container);
 
-  const paintPage = async (pageToRender: number): Promise<void> => {
-    const seq = ++renderSeq;
-    try {
-      if (!pdfBytes) {
-        const response = await fetch(url, { signal });
-        if (!response.ok) {
-          throw new Error(`HTTP ${response.status}`);
-        }
-        pdfBytes = new Uint8Array(await response.arrayBuffer());
-      }
-      if (signal.aborted || seq !== renderSeq) {
-        return;
-      }
-      const rendered = await renderPdfPageFromBytes(pdfBytes, pageToRender);
-      if (signal.aborted || seq !== renderSeq) {
-        return;
-      }
+  // Opened once for the embed, and shared with the other embeds of the file:
+  // a page turn only renders the page.
+  const paintPage = pdfPagePainter({
+    document: () =>
+      (opened = sharedPdfDocument(url, signal, { open: openPdfInEngine })),
+    signal,
+    draw: (rendered) => {
       currentPage = rendered.page;
       totalPages = rendered.pageCount;
       drawRenderedPdfPage(dom, rendered, target);
       measure();
-    } catch (error) {
-      if (signal.aborted || seq !== renderSeq) {
-        return;
-      }
+    },
+    fail: (error) => {
+      // An engine that failed the document: the next embed opens it again.
+      void opened?.then(
+        (document) => forgetPdfDocument(url, document),
+        () => undefined,
+      );
       dom.container.classList.add("pdf-embed-error");
       dom.pageNumbers.textContent = `Page ${currentPage}`;
       dom.viewer.textContent = `Could not render ${pdfFilename(target)}: ${String(error)}`;
       measure();
-    }
-  };
+    },
+  });
 
   bindPdfToolbarEvents(
     dom,

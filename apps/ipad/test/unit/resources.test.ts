@@ -3,7 +3,8 @@
 import test from "node:test";
 import assert from "node:assert/strict";
 import { fileUri } from "@workshop/host-node/core";
-import { vaultFileUrl } from "../../src/resources";
+import { SVG_IMAGE_MARK } from "@workshop/host-node/embedding";
+import { svgAddress, vaultFileUrl } from "../../src/resources";
 
 const BASE = "capacitor://localhost/";
 const VAULTS = new Map([
@@ -38,5 +39,20 @@ test("anything else has no address: another folder, a look-alike, not a file", (
   assert.equal(
     vaultFileUrl("https://example.com/a.png", VAULTS, BASE),
     undefined,
+  );
+});
+
+test("S10: an SVG is read as text at its own address, marked to be shown only as an image", () => {
+  assert.equal(
+    vaultFileUrl(
+      fileUri("/vaults/Lumière/Attachments/Plan A.SVG"),
+      VAULTS,
+      BASE,
+    ),
+    `capacitor://localhost/_lumiere/vault-svg/app/Attachments/Plan%20A.SVG.txt${SVG_IMAGE_MARK}`,
+  );
+  assert.equal(
+    svgAddress("B1E2", "a#b.svg", BASE),
+    `capacitor://localhost/_lumiere/vault-svg/B1E2/a%23b.svg.txt${SVG_IMAGE_MARK}`,
   );
 });

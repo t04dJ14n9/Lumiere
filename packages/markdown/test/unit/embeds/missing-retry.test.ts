@@ -1,6 +1,7 @@
 import test from "node:test";
 import assert from "node:assert/strict";
 import { enhanceEmbeds } from "../../../src/plugins/embeds/post-process";
+import { forgetEmbedResources } from "../../../src/plugins/embeds/resource-cache";
 import type {
   RenderPass,
   RenderService,
@@ -391,6 +392,33 @@ test("an extensionless remote markdown img still says failed to fetch after wrap
   }
 });
 
+test("a note that embeds itself says so, not that it could not be found", async () => {
+  const restoreDom = installFakeDom();
+  try {
+    const note = new FakeElement();
+    note.dataset = { resource: "Other", wiki: "true" };
+    // Rendered inside Other's own embed: Other is in the pass's ancestry.
+    const pass = { ...passOf([note]), ancestry: ["file:///vault/Other.md#"] };
+    enhanceEmbeds({
+      pass,
+      render: { trusted: true } as unknown as RenderService,
+      resources: {
+        load: async () => ({
+          kind: "note",
+          source: "file:///vault/Other.md",
+          url: "file:///vault/Other.md",
+          text: "![[Other]]",
+        }),
+      },
+      open: () => {},
+    });
+    await settled();
+    assertUnresolved(note, "“Other” embeds itself, so it is not shown again.");
+  } finally {
+    restoreDom();
+  }
+});
+
 test("a missing note embed keeps the could-not-be-found wording", async () => {
   const restoreDom = installFakeDom();
   try {
@@ -408,6 +436,111 @@ test("a missing note embed keeps the could-not-be-found wording", async () => {
     });
     await settled();
     assertUnresolved(note, "“MissingNote” could not be found.");
+  } finally {
+    restoreDom();
+  }
+});
+
+test("an embedded image shows its new version when its file changes", async () => {
+  const restoreDom = installFakeDom();
+  try {
+    let version = 1;
+    const loads: string[] = [];
+    const resources: Resources = {
+      async load(target: string): Promise<Resource> {
+        loads.push(target);
+        const source = `file:///vault/${target}`;
+        return { kind: "image", source, url: `${source}?v=${version}` };
+      },
+    };
+    const photo = new FakeElement();
+    photo.dataset = { resource: "photo.png", wiki: "true" };
+    const other = new FakeElement();
+    other.dataset = { resource: "other.png", wiki: "true" };
+    const embeds = enhanceEmbeds({
+      pass: passOf([photo, other]),
+      render: { trusted: true } as unknown as RenderService,
+      resources,
+      open: () => {},
+    });
+    await settled();
+    loads.length = 0;
+    version = 2;
+    // As the plugin does: what embeds resolved is dropped first.
+    forgetEmbedResources(resources);
+    embeds.reload(new Set(["file:///vault/photo.png"]));
+    await settled();
+    assert.deepEqual(
+      loads,
+      ["photo.png"],
+      "only the embed of the changed file",
+    );
+    const images = photo.children.filter((child) => child.tagName === "IMG");
+    assert.equal(images.length, 1);
+    assert.equal(images[0]!.src, "file:///vault/photo.png?v=2");
+    assert.equal(
+      photo.children.filter((child) => child.className === "embed-actions")
+        .length,
+      1,
+      "the old image's controls went with it",
+    );
+    embeds.dispose();
+  } finally {
+    restoreDom();
+  }
+});
+
+test("an embedded note shows its new text, and only the latest of two changes lands", async () => {
+  const restoreDom = installFakeDom();
+  try {
+    const answers: ((text: string) => void)[] = [];
+
+    const resources: Resources = {
+      load: () =>
+        new Promise<Resource>((resolve) =>
+          answers.push((body) =>
+            resolve({
+              kind: "note",
+              source: "file:///vault/Other.md",
+              url: "file:///vault/Other.md",
+              text: body,
+            }),
+          ),
+        ),
+    };
+    const disposed: string[] = [];
+    const render = {
+      trusted: true,
+      async into(content: FakeElement, source: string) {
+        content.textContent = source;
+        return { dispose: async () => void disposed.push(source) };
+      },
+    } as unknown as RenderService;
+    const note = new FakeElement();
+    note.dataset = { resource: "Other", wiki: "true" };
+    const embeds = enhanceEmbeds({
+      pass: passOf([note]),
+      render,
+      resources,
+      open: () => {},
+    });
+    answers.shift()!("First version");
+    await settled();
+    assert.match(visibleText(note), /First version/);
+
+    const changed = new Set(["file:///vault/Other.md"]);
+    embeds.reload(changed);
+    embeds.reload(changed);
+    const [stale, latest] = answers.splice(0);
+    latest!("Third version");
+    await settled();
+    stale!("Second version");
+    await settled();
+    assert.match(visibleText(note), /Third version/);
+    assert.doesNotMatch(visibleText(note), /First|Second/);
+    assert.deepEqual(disposed, ["First version"]);
+    embeds.dispose();
+    assert.deepEqual(disposed, ["First version", "Third version"]);
   } finally {
     restoreDom();
   }

@@ -1,5 +1,8 @@
 import { useEffect, useRef } from "react";
-import { applyAnnotationHostMessage } from "./annotation-session";
+import {
+  applyAnnotationHostMessage,
+  applyStoreChange,
+} from "./annotation-session";
 import type { HostMessage } from "../shared/messages";
 import type { ToolbarSettings } from "../shared/toolbar-settings";
 import type { ViewChoices, ViewSettings } from "../shared/view-settings";
@@ -109,6 +112,9 @@ function handleMarksMessage(
       return;
     case "annotationRetry":
       handlers.retryAnnotationSave?.();
+      return;
+    case "annotationStoreChanged":
+      applyStoreChange(message);
       return;
     case "annotationWrite":
       if (message.load === annotationLoadState()?.load) {

@@ -2,6 +2,7 @@ import type { MarkdownIt } from "markdown-it";
 import type { StateInline } from "markdown-it";
 import type { StateBlock } from "markdown-it";
 import { attr, encodeDataValue, escape } from "./helpers";
+import { inlineMathEnd, opensMathBlock } from "../dialect/math";
 export function math(md: MarkdownIt): void {
   md.inline.ruler.before("escape", "math", inlineMath);
   md.renderer.rules.math_inline = (tokens, index) =>
@@ -21,27 +22,20 @@ function inlineMath(state: StateInline, silent: boolean): boolean {
   if (state.src[state.pos] !== "$") {
     return false;
   }
-  const delimiter = state.src.startsWith("$$", state.pos) ? "$$" : "$";
-  const start = state.pos + delimiter.length;
-  if (/\s/.test(state.src[start] ?? "") && delimiter === "$") {
-    return false;
-  }
-  let end = start;
-  do {
-    end = state.src.indexOf(delimiter, end + 1);
-  } while (end >= 0 && state.src[end - 1] === "\\");
-  if (end < 0 || (/\s/.test(state.src[end - 1] ?? "") && delimiter === "$")) {
+  const width = state.src.startsWith("$$", state.pos) ? 2 : 1;
+  const end = inlineMathEnd(
+    (at) => state.src.charCodeAt(at),
+    state.pos,
+    state.posMax,
+  );
+  if (end < 0) {
     return false;
   }
   if (!silent) {
-    const token = state.push(
-      delimiter === "$$" ? "math_block" : "math_inline",
-      "",
-      0,
-    );
-    token.content = state.src.slice(start, end);
+    const token = state.push(width === 2 ? "math_block" : "math_inline", "", 0);
+    token.content = state.src.slice(state.pos + width, end);
   }
-  state.pos = end + delimiter.length;
+  state.pos = end + width;
   return true;
 }
 
@@ -55,12 +49,13 @@ function blockMath(
     state.bMarks[start]! + state.tShift[start]!,
     state.eMarks[start],
   );
-  if (!first.startsWith("$$") || state.sCount[start]! - state.blkIndent >= 4) {
+  if (!opensMathBlock(first) || state.sCount[start]! - state.blkIndent >= 4) {
     return false;
   }
   let last = start;
   let content = first.slice(2);
   let closing = content.indexOf("$$");
+  let trailing = "";
   while (closing < 0 && last + 1 < end) {
     last++;
     const line = state.src.slice(
@@ -71,6 +66,7 @@ function blockMath(
     if (found >= 0) {
       content += "\n" + line.slice(0, found);
       closing = content.length;
+      trailing = line.slice(found + 2).trim();
     } else {
       content += "\n" + line;
     }
@@ -85,6 +81,28 @@ function blockMath(
   token.block = true;
   token.content = content.slice(0, closing).trim();
   token.map = [start, last + 1];
+  pushTrailingParagraph(state, trailing, last);
   state.line = last + 1;
   return true;
+}
+
+/**
+ * The text after a formula's closing `$$` on a later line, as its own
+ * paragraph, as the editor's parser reads it (dialect/math.ts).
+ */
+function pushTrailingParagraph(
+  state: StateBlock,
+  text: string,
+  line: number,
+): void {
+  if (!text) {
+    return;
+  }
+  const map: [number, number] = [line, line + 1];
+  state.push("paragraph_open", "p", 1).map = map;
+  const inline = state.push("inline", "", 0);
+  inline.content = text;
+  inline.map = map;
+  inline.children = [];
+  state.push("paragraph_close", "p", -1);
 }

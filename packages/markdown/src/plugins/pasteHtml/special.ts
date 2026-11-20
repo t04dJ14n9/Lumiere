@@ -41,11 +41,53 @@ export function calloutMarkdown(
     : [];
   return `\n\n${[first, ...lines].join("\n")}\n\n`;
 }
+/**
+ * A `<pre>` with no `<code>` inside (GitHub and many documentation sites
+ * highlight with spans in a bare `<pre>`), as a fenced block of its text.
+ * Turndown's own rule needs `<pre><code>`, and otherwise escapes the code.
+ */
+export function preformattedMarkdown(node: HTMLElement): string {
+  const code = preformattedText(node).replace(/\n$/, "");
+  const longest = Math.max(
+    0,
+    ...(code.match(/`+/g) ?? []).map((run) => run.length),
+  );
+  const fence = "`".repeat(Math.max(3, longest + 1));
+  return `\n\n${fence}${codeLanguage(node)}\n${code}\n${fence}\n\n`;
+}
+
+export function isBarePre(node: HTMLElement): boolean {
+  return node.nodeName === "PRE" && node.firstChild?.nodeName !== "CODE";
+}
+
+function preformattedText(node: Node): string {
+  return Array.from(node.childNodes)
+    .map((child) => {
+      if (child.nodeName === "BR") {
+        return "\n";
+      }
+      return child.nodeType === 3
+        ? (child.textContent ?? "")
+        : preformattedText(child);
+    })
+    .join("");
+}
+
+/** `language-x` on the block, or GitHub's `highlight-source-x` around it. */
+function codeLanguage(node: HTMLElement): string {
+  const classes = `${node.className} ${(node.parentNode as HTMLElement | null)?.className ?? ""}`;
+  return (
+    /(?:^|\s)(?:language|lang|highlight-source)-([\w+#.-]+)/.exec(
+      classes,
+    )?.[1] ?? ""
+  );
+}
+
 export function tableMarkdown(
   node: HTMLElement,
   convert: (node: HTMLElement) => string,
 ): string {
-  const rows = Array.from(node.querySelectorAll("tr"))
+  const rows = ownRows(node)
     .map(rowSlots)
     .filter((row) => row.length);
   const columns = Math.max(0, ...rows.map((row) => row.length));
@@ -64,6 +106,21 @@ export function tableMarkdown(
   );
   lines.splice(1, 0, `|${rule.join("|")}|`);
   return `\n\n${lines.join("\n")}\n\n`;
+}
+
+/**
+ * The table's own rows, directly or in its head, bodies and foot. A table
+ * nested in a cell keeps its rows: that cell converts them.
+ */
+function ownRows(table: Element): Element[] {
+  return Array.from(table.children).flatMap((child) => {
+    if (child.nodeName === "TR") {
+      return [child];
+    }
+    return /^(THEAD|TBODY|TFOOT)$/.test(child.nodeName)
+      ? Array.from(child.children).filter((row) => row.nodeName === "TR")
+      : [];
+  });
 }
 
 /**

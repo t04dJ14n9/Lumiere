@@ -34,4 +34,14 @@ test("the native tests find Cursor's bin/cursor and fall back to bin/code", () =
     }),
     "/A/Contents/Resources/app/bin/code",
   );
+  assert.equal(
+    hostCli({
+      app: "C:\\Cursor",
+      resources: "C:\\Cursor\\resources\\app",
+      platform: "win32",
+      applicationName: "cursor",
+      exists: () => false,
+    }),
+    "C:\\Cursor\\bin\\code.cmd",
+  );
 });

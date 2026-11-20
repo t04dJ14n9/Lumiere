@@ -1,6 +1,7 @@
 import { StateEffect, StateField } from "@codemirror/state";
 import type { EditorState, Text } from "@codemirror/state";
 import { lineHunks } from "../../shared/diff";
+import type { LineHunk } from "../../shared/diff";
 import type { DocHunk, HunkSet } from "./api";
 
 export const setHunks = StateEffect.define<readonly DocHunk[]>();
@@ -26,10 +27,17 @@ export const hunkField = StateField.define<HunkSet>({
   },
 });
 
-/** The hunks from `baseline` to `doc`, in document offsets. */
-export function computeHunks(baseline: string, doc: Text): DocHunk[] {
+/**
+ * The hunks from `baseline` to `doc`, in document offsets. `diff` is
+ * `lineHunks(baseline, doc.toString())` when the caller already has it.
+ */
+export function computeHunks(
+  baseline: string,
+  doc: Text,
+  diff: readonly LineHunk[] = lineHunks(baseline, doc.toString()),
+): DocHunk[] {
   const baseLines = baseline.split("\n");
-  return lineHunks(baseline, doc.toString()).map((hunk) => {
+  return diff.map((hunk) => {
     const old = baseLines.slice(hunk.oldFrom, hunk.oldTo).join("\n");
     if (hunk.kind === "deleted") {
       const atEnd = hunk.newFrom >= doc.lines;

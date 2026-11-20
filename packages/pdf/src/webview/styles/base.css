@@ -31,6 +31,39 @@ input {
   color: var(--vscode-descriptionForeground, #999);
 }
 
+/* The password of a locked PDF (password-prompt.tsx). */
+.password-box {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  width: min(320px, 100% - 32px);
+}
+
+.password-box input {
+  padding: 4px 6px;
+  color: var(--vscode-input-foreground, #ccc);
+  background: var(--vscode-input-background, #3c3c3c);
+  border: 1px solid var(--vscode-input-border, transparent);
+}
+
+/* An engine that died after the PDF opened (engine.tsx). */
+.engine-stopped {
+  place-content: center;
+  gap: 8px;
+}
+
+.password-box button,
+.engine-stopped button {
+  padding: 4px 14px;
+  color: var(--vscode-button-foreground, #fff);
+  background: var(--vscode-button-background, #0e639c);
+  border: 0;
+}
+
+.password-box button {
+  align-self: flex-end;
+}
+
 .viewer {
   /*
    * Colours drawn on pages. Pages are white paper in every theme, while

@@ -175,7 +175,7 @@ async function replay(
   token: CancelToken,
 ): Promise<void> {
   const { panel, history } = pane;
-  await panel.session.flush();
+  await panel.session.flush(panel.id);
   if (!live()) {
     return;
   }

@@ -105,7 +105,7 @@ test("inline lint exceptions are the reviewed ones, each with a reason", () => {
       ) {
         continue;
       }
-      const file = `${root}/${path}`;
+      const file = `${root}/${path.replaceAll("\\", "/")}`;
       for (const line of readFileSync(file, "utf8").split("\n")) {
         const directive = /eslint-disable(?:-next-line|-line)?\b(.*)$/.exec(
           line,

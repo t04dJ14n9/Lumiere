@@ -29,6 +29,8 @@ export {
   isAttachmentDrag,
   shouldClaimEditorDrop,
   urisFromDataTransfer,
+  droppedAttachmentUris,
+  droppedLinkText,
   filesFromDataTransfer,
   type DragPayload,
   type DragFile,

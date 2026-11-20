@@ -149,17 +149,17 @@ function escape(text: string): string {
 
 /**
  * Show a PDF in a new page: Lumière's PDF viewer, as in VS Code, with a
- * stand-in for its extension host that hands it these bytes (host-node's
- * src/page/pdf-shim.ts). Closing the tab frees both blobs.
+ * stand-in for its extension host that hands it the file (host-node's
+ * src/page/pdf-shim.ts). The file is named, not copied: a picked folder's
+ * File is read from disk only when the page reads it, and a book-sized PDF
+ * is not held twice more in the window. Closing the tab frees both blobs.
  */
 export function openPdfPage(
-  bytes: Uint8Array,
+  file: Blob,
   urls: EditorPageUrls,
 ): { readonly url: string; dispose(): void } {
-  // A copy in a plain ArrayBuffer, as a Blob takes.
-  const pdf = URL.createObjectURL(
-    new Blob([new Uint8Array(bytes)], { type: "application/pdf" }),
-  );
+  // A slice with the PDF's type shares the file's bytes.
+  const pdf = URL.createObjectURL(file.slice(0, file.size, "application/pdf"));
   const html = viewerPageHtml({
     asset: (name) => new URL(name, urls.pdf.viewer).href,
     cspSource: urls.origin,

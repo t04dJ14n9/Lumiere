@@ -5,6 +5,7 @@
  */
 import { statSync, watch, type FSWatcher } from "node:fs";
 import * as path from "node:path";
+import { FIRST_REARM_MS } from "./watch-tree";
 
 /**
  * Calls `listener` when `file` changes, appears or goes away. The nearest
@@ -38,7 +39,15 @@ export function watchFile(file: string, listener: () => void): () => void {
           listener();
         }
       });
-      current.on("error", () => current.close());
+      // The folder went away, or the system refused it: try again, from
+      // whichever folder on the way exists by then.
+      current.on("error", () => {
+        current.close();
+        if (watcher === current) {
+          watcher = undefined;
+          setTimeout(arm, FIRST_REARM_MS).unref();
+        }
+      });
       watcher = current;
     } catch {
       // The folder went away between finding it and watching it.

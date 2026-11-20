@@ -7,7 +7,12 @@
 import { startLocalHost } from "@workshop/app/local";
 import { startWindow } from "@workshop/app/shell";
 import { parseMenus } from "@workshop/host-node/core";
-import { indexedDbFolder, MemoryFileSystem, Mounts } from "@workshop/host-web";
+import {
+  indexedDbFolder,
+  MemoryFileSystem,
+  Mounts,
+  saveOnHide,
+} from "@workshop/host-web";
 import type { ContributedSetting } from "@workshop/markdown/portable";
 import { NativeFileSystem } from "./native-fs";
 import { vaultFileUrl } from "./resources";
@@ -30,7 +35,7 @@ async function main(): Promise<void> {
   const { vaults } = await vaultFiles.vaults();
   const paths = new Map<string, string>();
   for (const vault of vaults) {
-    paths.set(vault.id, mountVault(files, vault, paths));
+    paths.set(vault.id, mountVault(files, vault, paths, base));
   }
   const appFolder = paths.get("app")!;
   await welcome(files, appFolder);
@@ -63,11 +68,13 @@ async function main(): Promise<void> {
       if (!vault) {
         return undefined;
       }
-      const path = paths.get(vault.id) ?? mountVault(files, vault, paths);
+      const path = paths.get(vault.id) ?? mountVault(files, vault, paths, base);
       paths.set(vault.id, path);
       return path;
     },
   });
+  // The iPad may stop the app soon after it leaves the screen.
+  saveOnHide(() => local.host.saveAll(), window);
   const insertSketch = () => local.host.run(INSERT_SKETCH_COMMAND);
   startWindow(document.getElementById("root")!, {
     ...local.backend,
@@ -90,6 +97,7 @@ function mountVault(
   files: Mounts,
   vault: NativeVault,
   taken: ReadonlyMap<string, string>,
+  base: URL,
 ): string {
   const name = vault.name.replace(/[/\\]/g, "-") || "Folder";
   const used = new Set(taken.values());
@@ -97,7 +105,7 @@ function mountVault(
   for (let n = 2; used.has(path); n++) {
     path = `/vaults/${name} ${n}`;
   }
-  files.mount(path, new NativeFileSystem(vault.id));
+  files.mount(path, new NativeFileSystem(vault.id, base));
   return path;
 }
 

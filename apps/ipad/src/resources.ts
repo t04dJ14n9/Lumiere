@@ -5,6 +5,7 @@
  * iPad's vaults has no such address.
  */
 import { uriPath } from "@workshop/host-node/core";
+import { SVG_IMAGE_MARK } from "@workshop/host-node/embedding";
 
 /**
  * `vaults` maps each vault's id to the folder host-web mounts it at
@@ -23,16 +24,41 @@ export function vaultFileUrl(
   }
   for (const [id, folder] of vaults) {
     if (path.startsWith(`${folder}/`)) {
-      const relative = path
-        .slice(folder.length + 1)
-        .split("/")
-        .map(encodeURIComponent)
-        .join("/");
-      return new URL(
-        `_lumiere/vault/${encodeURIComponent(id)}/${relative}`,
-        base,
-      ).href;
+      const inside = path.slice(folder.length + 1);
+      return /\.svg$/i.test(inside)
+        ? svgAddress(id, inside, base)
+        : vaultAddress(id, inside, base);
     }
   }
   return undefined;
+}
+
+/**
+ * Where the router serves an SVG's bytes as plain text (`.txt`), so that
+ * no link or frame runs its script on the app's origin, which has no
+ * sandbox header to give it; the note's page shows it from a `data:` URL
+ * (`SVG_IMAGE_MARK`, host-node's page/svg-images.ts).
+ */
+export function svgAddress(
+  id: string,
+  path: string,
+  base: URL | string,
+): string {
+  const relative = path.split("/").map(encodeURIComponent).join("/");
+  const address = new URL(
+    `_lumiere/vault-svg/${encodeURIComponent(id)}/${relative}.txt`,
+    base,
+  ).href;
+  return address + SVG_IMAGE_MARK;
+}
+
+/** Where the router serves `path` (inside the vault, with "/") of vault `id`. */
+export function vaultAddress(
+  id: string,
+  path: string,
+  base: URL | string,
+): string {
+  const relative = path.split("/").map(encodeURIComponent).join("/");
+  return new URL(`_lumiere/vault/${encodeURIComponent(id)}/${relative}`, base)
+    .href;
 }

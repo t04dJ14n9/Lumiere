@@ -10,6 +10,7 @@ import { formatLinkSource, linkSource } from "./link-source";
 import { withRenamedLabel } from "./rename-label";
 import { linkRewriteEdits, pointAt } from "./yaml-safe-edits";
 import {
+  extensionOf,
   folderOf,
   isMarkdownPath,
   lookupKey,
@@ -83,11 +84,29 @@ export function changedLinks(
 }
 
 /**
+ * Whether renaming files changes the text of any of a note's links, from its
+ * parsed links alone. A link to a moved file can keep its text (a link by
+ * name to a note moved to another folder), and then is no change.
+ */
+export function changesLinkText(
+  links: readonly LinkMetadata[],
+  sourcePath: string,
+  context: RewriteContext,
+): boolean {
+  const newSource = context.renames.get(sourcePath) ?? sourcePath;
+  return changedLinks(links, sourcePath, context).some((change) => {
+    const { original } = change.link;
+    return rewriterOf(change, newSource, context)(original) !== original;
+  });
+}
+
+/**
  * Edits that keep a note's links pointing at renamed files, as Obsidian's
  * **Automatically update internal links**. Each link keeps its form
  * (wikilink or Markdown link), its `#subpath` and its alias; the path is
  * written in the new-link format. A renamed note's own path-style links are
- * also rewritten when its folder changes.
+ * also rewritten when its folder changes. A link whose text stays the same
+ * gets no edit, so a note with none is not touched.
  */
 export function rewriteLinks(
   text: string,
@@ -96,20 +115,31 @@ export function rewriteLinks(
 ): Edit[] {
   const newSource = context.renames.get(sourcePath) ?? sourcePath;
   const changes = changedLinks(vaultLinks(metadata(text)), sourcePath, context);
-  const rewrites = changes.map(({ link, newTarget, oldPath }) => ({
-    from: link.position.start.offset,
-    to: link.position.end.offset,
-    rewrite: (original: string) =>
-      rewritten(original, targetText(newTarget, newSource, context), {
-        target: newTarget,
-        oldPath,
-      }),
+  const rewrites = changes.map((change) => ({
+    from: change.link.position.start.offset,
+    to: change.link.position.end.offset,
+    rewrite: rewriterOf(change, newSource, context),
   }));
-  return linkRewriteEdits(text, rewrites).map((edit) => ({
-    start: pointAt(text, edit.from),
-    end: pointAt(text, edit.to),
-    text: edit.insert,
-  }));
+  return linkRewriteEdits(text, rewrites)
+    .filter((edit) => edit.insert !== text.slice(edit.from, edit.to))
+    .map((edit) => ({
+      start: pointAt(text, edit.from),
+      end: pointAt(text, edit.to),
+      text: edit.insert,
+    }));
+}
+
+/** The link's new source text from its current one. */
+function rewriterOf(
+  { newTarget, oldPath }: LinkChange,
+  newSource: string,
+  context: RewriteContext,
+): (original: string) => string {
+  return (original) =>
+    rewritten(original, targetText(newTarget, newSource, context), {
+      target: newTarget,
+      oldPath,
+    });
 }
 
 /** The new path text for a link, without the `.md` of notes. */
@@ -128,13 +158,32 @@ function targetText(
       ),
     );
   }
-  const key = lookupKey(target);
-  const isUnique =
-    context.pathsAfter.filter((path) => lookupKey(path) === key).length === 1;
-  if (context.format === "shortest" && isUnique) {
+  const isUnique = () =>
+    lookupKeyCounts(context.pathsAfter).get(lookupKey(target)) === 1;
+  if (context.format === "shortest" && isUnique()) {
     return withoutNote(nameOf(target));
   }
   return withoutNote(target);
+}
+
+const keyCounts = new WeakMap<readonly string[], Map<string, number>>();
+
+/**
+ * How many of `paths` share each lookup key, counted once per rename rather
+ * than once per link: a hub note's backlinks would otherwise scan the whole
+ * vault for each link, inside VS Code's rename timeout.
+ */
+function lookupKeyCounts(paths: readonly string[]): Map<string, number> {
+  let counts = keyCounts.get(paths);
+  if (!counts) {
+    counts = new Map();
+    for (const path of paths) {
+      const key = lookupKey(path);
+      counts.set(key, (counts.get(key) ?? 0) + 1);
+    }
+    keyCounts.set(paths, counts);
+  }
+  return counts;
 }
 
 const lowerCaseSets = new WeakMap<readonly string[], Set<string>>();
@@ -163,7 +212,11 @@ function rewritten(
     return original;
   }
   const isWikilink = source.opening.endsWith("[[");
-  const extension = !isWikilink && isMarkdownPath(target) ? ".md" : "";
+  // The note's own extension, `.markdown` or `.MD` too: a Markdown link is
+  // a file path to other tools, which do not look for `New.markdown` when
+  // the link names `New.md`.
+  const extension =
+    !isWikilink && isMarkdownPath(target) ? `.${extensionOf(target)}` : "";
   const newPath = `${path}${extension}`;
   const labelled =
     oldPath === undefined ? source : withRenamedLabel(source, oldPath, newPath);

@@ -7,7 +7,12 @@ import { homedir } from "node:os";
 import * as path from "node:path";
 import { fileURLToPath } from "node:url";
 import type { Logger } from "@workshop/core";
-import { readContributed, readMenus, startLumiere } from "@workshop/host-node";
+import {
+  readCommands,
+  readContributed,
+  readMenus,
+  startLumiere,
+} from "@workshop/host-node";
 import type { DshContext, DshLogger } from "./dsh";
 import { registerRoutes } from "./routes";
 
@@ -23,6 +28,8 @@ export async function apply(ctx: DshContext): Promise<void> {
     markdown,
     contributed: await readContributed(path.join(bundle, "contributed.json")),
     menus: await readMenus(path.join(bundle, "menus.json")),
+    // The palette's commands, and the only ones POST /lumiere/commands runs.
+    commands: await readCommands(path.join(bundle, "commands.json")),
     data: dataFolder(),
     logger: toLogger(ctx.logger?.("lumiere") ?? console),
   });

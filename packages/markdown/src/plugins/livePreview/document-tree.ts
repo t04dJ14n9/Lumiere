@@ -182,4 +182,9 @@ function browserIdleScheduler(): IdleScheduler {
   };
 }
 
-export const documentTreeParser = ViewPlugin.fromClass(DocumentTreeParser);
+// Named so the plugin takes no argument (the scheduler defaults; tests pass
+// their own to the class). Inferred, its argument type depended on the
+// order TypeScript checks the modules in, and with an argument a plugin is
+// not an extension until `.of()` gives it one.
+export const documentTreeParser =
+  ViewPlugin.fromClass<DocumentTreeParser>(DocumentTreeParser);

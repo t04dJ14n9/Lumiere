@@ -24,7 +24,12 @@ import { webWorkerLauncher } from "./workers";
 export { indexedDbFolder } from "./idb-folder";
 export { Mounts } from "./mounts";
 export { MemoryFileSystem, type MemoryEntry, type Persist } from "./memory-fs";
-export { notFound, type VaultFileInfo, type VaultFileSystem } from "./vault-fs";
+export {
+  alreadyThere,
+  notFound,
+  type VaultFileInfo,
+  type VaultFileSystem,
+} from "./vault-fs";
 export {
   openEditorPage,
   openPdfPage,
@@ -33,6 +38,7 @@ export {
   type ServedPage,
 } from "./pages";
 export { createWebPlatform } from "./platform";
+export { saveOnHide, type HidingWindow } from "./save-on-hide";
 export { sha256 } from "./sha256";
 export { webWorkerLauncher } from "./workers";
 export type { LumiereHost } from "@workshop/host-node/core";

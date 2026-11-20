@@ -8,7 +8,9 @@ setting. It works in the note editor and focused table cell editors.
 A capture listener finds the focused CodeMirror view, bypasses plain-text paste
 and literal code, then runs the awaited `paste/transform` pipeline. HTML is
 sanitized before conversion. Turndown handles ordinary blocks and literal escaping;
-custom rules preserve tables, tasks, wiki references, math and callouts. The paste
+custom rules preserve tables, tasks, wiki references, math, callouts, bare `<pre>`
+code, the bold and italic office suites set in CSS (Google Docs) and Word's
+list paragraphs. The paste
 applies only if the view, document and selection are still current.
 
 ## Files
@@ -16,9 +18,10 @@ applies only if the view, document and selection are still current.
 - `manifest.ts`: default enablement.
 - `api.ts`: typed paste data and transform event.
 - `conversion.ts`: conversion setup and semantic rules.
-- `special.ts`: math, callout and table conversion.
+- `special.ts`: math, callout, table and bare `<pre>` code-block conversion.
+- `office.ts`: bold and italic set in CSS, Google Docs' not-bold wrapper, and Word's list paragraphs as list items.
 - `links.ts`: wiki/media destinations and unsafe-scheme filtering.
-- `paste.ts`: code-context and stale-paste guards.
+- `paste.ts`: code-context guard, and placing a slow paste through the edits made meanwhile.
 - `webview.ts`: sanitization, focused-view routing and listener lifecycle.
 
 ## Services, events and settings
@@ -44,5 +47,10 @@ focused cell. Menu paste receives plain text from VS Code's clipboard API. After
 conversion, the attachments plugin downloads or decodes remote and data-URI
 images, saves them under `files.attachmentFolder`, and rewrites embeds; failed
 images stay as in the pasted Markdown. Shift+Mod+V, code and property inputs
-keep their native behavior. Asynchronous transforms are discarded after an
-intervening edit or selection change; the user can paste again.
+keep their native behavior. A paste whose transforms take a while (images can
+import for up to 45 s) is not lost to typing meanwhile, since the host has
+already saved its files: it goes where it was made, mapped through the edits
+since (`pasteEditTracker` reports them exactly; a table cell's editor, which
+lacks it, is compared instead), before text typed at that caret, and replaces
+the selection it was made over only if that is untouched. The reader's caret
+stays where it is. A view that has closed gets nothing.

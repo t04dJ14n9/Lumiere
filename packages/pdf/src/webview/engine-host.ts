@@ -81,14 +81,22 @@ export class EngineHost<Engine> {
     return entry.engine;
   }
 
-  /** Let go of the engine; resolves when it has stopped. Never rejects. */
-  dispose(): Promise<void> {
-    this.live = false;
+  /**
+   * Let go of the engine, which stopped working (`engine-health.ts`): the
+   * next ask starts a new one, once this one has stopped.
+   */
+  restart(): void {
     const entry = this.current;
     this.current = undefined;
     if (entry) {
       this.stop(entry);
     }
+  }
+
+  /** Let go of the engine; resolves when it has stopped. Never rejects. */
+  dispose(): Promise<void> {
+    this.live = false;
+    this.restart();
     return this.stopped;
   }
 

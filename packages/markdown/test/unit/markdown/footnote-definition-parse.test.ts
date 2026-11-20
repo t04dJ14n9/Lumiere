@@ -199,3 +199,40 @@ test("list item - [^x]: is not claimed by FootnoteDefinition", () => {
   });
   assert.deepEqual(names, ["BulletList", "ListItem"]);
 });
+
+function nodeNames(source: string): string[] {
+  const names: string[] = [];
+  markdownParser.parse(source).iterate({
+    enter(node) {
+      names.push(node.name);
+    },
+  });
+  return names;
+}
+
+test("an indented line after a blank line continues the definition, not an indented code block", () => {
+  const source = "Text[^1].\n\n[^1]: first\n\n    continued [[Link]]\n\nafter";
+  assert.equal(nodeNames(source).includes("CodeBlock"), false);
+  assert.deepEqual(
+    nodes(source).filter((node) => node.name !== "FootnoteRef"),
+    [
+      { name: "Paragraph", text: "Text[^1]." },
+      { name: "Paragraph", text: "[^1]: first\n\n    continued [[Link]]" },
+      { name: "WikiLink", text: "[[Link]]" },
+      { name: "Paragraph", text: "after" },
+    ],
+  );
+});
+
+test("a blank line without an indented line after it ends the definition", () => {
+  const source = "[^1]: first\n\nafter\n\n    code";
+  assert.deepEqual(
+    nodes(source).map((node) => node.text),
+    ["[^1]: first", "[^1]", "after"],
+  );
+  assert.ok(nodeNames(source).includes("CodeBlock"));
+  assert.deepEqual(
+    nodes("[^1]: first\n\n").map((node) => node.text),
+    ["[^1]: first", "[^1]"],
+  );
+});

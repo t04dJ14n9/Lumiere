@@ -1,24 +1,14 @@
 import type { Range, EditorState } from "@codemirror/state";
-import { Decoration, ViewPlugin } from "@codemirror/view";
-import type {
-  EditorView,
-  DecorationSet,
-  ViewUpdate,
-  WidgetType,
-} from "@codemirror/view";
+import { Decoration } from "@codemirror/view";
+import type { DecorationSet, WidgetType } from "@codemirror/view";
 import { linkDestination } from "../../markdown/html/helpers";
 import { documentTree } from "./document-tree";
-import { renderRevision } from "./blocks";
 import {
   decoratePersistentOffViewport,
   inlineRenderers,
   inlineRevealRange,
   revealed,
 } from "./registry";
-import {
-  isPointerSelecting,
-  revealFreezeToggled,
-} from "../../webview/ui/pointer-selection";
 import { decorateListItem } from "./lists";
 import { decorateInlineHtml } from "./inline-html";
 import { bareUrlTarget, linkClass } from "./link-style";
@@ -27,7 +17,8 @@ import { decorateHighlightColour, highlightClass } from "./highlight-colour";
 import { decorateCodeLines } from "./code-lines";
 import type { SyntaxNode, SyntaxNodeRef } from "@lezer/common";
 import type { InlineContext } from "./api";
-import { isUnresolved, unresolvedLinks } from "../links/api";
+import { isUnresolved } from "../links/api";
+import type { OffscreenDrawing, OffscreenReuse } from "./offscreen-reuse";
 const inlineClasses: Readonly<Record<string, string>> = {
   Highlight: "md-highlight",
   StrongEmphasis: "md-strong",
@@ -50,6 +41,7 @@ function quoteDepth(node: SyntaxNode | null): number {
 export function inlineDecorations(
   state: EditorState,
   visibleRanges: readonly { from: number; to: number }[],
+  offscreen?: { reuse?: OffscreenReuse; drawing?: OffscreenDrawing },
 ): DecorationSet {
   const builder = new InlineDecorations(state);
   for (const visible of visibleRanges) {
@@ -62,12 +54,22 @@ export function inlineDecorations(
   // Persistent inline widgets (tall embeds) must stay in the decoration set
   // off-viewport: otherwise estimatedHeight never reaches the height map and
   // a remount collapses the line to ~one text line (#117 gap).
-  decoratePersistentOffViewport(state, builder, visibleRanges);
+  builder.visible = undefined;
+  const drawing = decoratePersistentOffViewport(
+    state,
+    builder,
+    visibleRanges,
+    offscreen?.reuse,
+  );
+  if (offscreen) {
+    offscreen.drawing = drawing;
+  }
   return Decoration.set(builder.ranges, true);
 }
 
 class InlineDecorations implements InlineContext {
   readonly ranges: Range<Decoration>[] = [];
+  visible: { from: number; to: number } | undefined;
   private readonly lines = new Set<string>();
   constructor(readonly state: EditorState) {}
 
@@ -120,6 +122,7 @@ class InlineDecorations implements InlineContext {
     visible: { from: number; to: number },
   ): false | undefined {
     const { name, from, to } = node;
+    this.visible = visible;
     const custom = this.state
       .facet(inlineRenderers)
       .find((renderer) => renderer.nodes.includes(name));
@@ -366,72 +369,5 @@ const SYNTAX_MARKS = [
   "QuoteMark",
   "HighlightMark",
 ];
-
-function shouldRebuildInline(update: ViewUpdate): boolean {
-  if (
-    update.docChanged ||
-    update.viewportChanged ||
-    update.selectionSet ||
-    update.focusChanged
-  ) {
-    return true;
-  }
-  const { startState, state } = update;
-  if (startState === state) {
-    return false;
-  }
-  return (
-    startState.field(documentTree) !== state.field(documentTree) ||
-    startState.facet(inlineRenderers) !== state.facet(inlineRenderers) ||
-    startState.field(unresolvedLinks, false) !==
-      state.field(unresolvedLinks, false) ||
-    startState.field(renderRevision, false) !==
-      state.field(renderRevision, false) ||
-    revealFreezeToggled(startState, state)
-  );
-}
-
-export class HybridInline {
-  decorations: DecorationSet;
-  private wasComposing = false;
-  constructor(view: EditorView) {
-    this.decorations = inlineDecorations(view.state, view.visibleRanges);
-  }
-  update(update: ViewUpdate): void {
-    // Selection-only pointer updates keep the DOM stable. Scrollbar presses
-    // also freeze reveal, but new viewport content still needs decorations;
-    // revealRanges keeps those tied to the selection from before the press.
-    if (
-      update.view.composing ||
-      (isPointerSelecting(update.state) && !update.viewportChanged)
-    ) {
-      this.wasComposing = update.view.composing;
-      this.decorations = this.decorations.map(update.changes);
-      return;
-    }
-    const endedComposing = this.wasComposing && !update.view.composing;
-    this.wasComposing = false;
-    if (!endedComposing && !shouldRebuildInline(update)) {
-      return;
-    }
-    this.decorations = inlineDecorations(
-      update.view.state,
-      update.view.visibleRanges,
-    );
-  }
-}
-
-export const hybridInline = ViewPlugin.fromClass(HybridInline, {
-  decorations: (plugin) => plugin.decorations,
-  eventHandlers: {
-    compositionend(_event, view) {
-      queueMicrotask(() => {
-        if (view.dom.isConnected) {
-          view.dispatch({});
-        }
-      });
-    },
-  },
-});
 
 export { bareUrlTarget, linkClass } from "./link-style";

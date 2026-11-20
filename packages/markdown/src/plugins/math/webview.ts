@@ -2,7 +2,6 @@ import type { Context, Infer, Plugin } from "@workshop/core";
 import type {} from "../editor/api";
 import type {} from "../commands/api";
 import type {} from "../formatting/api";
-import type { InlineContext } from "../livePreview/api";
 import type { RenderPass } from "../render/api";
 import { MarkdownBlock } from "../../webview/ui/markdown-widget";
 import {
@@ -11,10 +10,12 @@ import {
 } from "../../webview/ui/inline-widget";
 import { sanitizeGraphics } from "../../webview/ui/graphics";
 import { inlineMathEdit, mathBlockEdit } from "./commands";
-import { delimiters, mathBody, mathTokens } from "./source";
+import { mathBlockRange, mathBody } from "./source";
+import { markMathSource } from "./source-marks";
 import { errorMessage } from "../../shared/errors";
 import { decodeDataValue } from "../../markdown/html/helpers";
 import { config } from "./manifest";
+import { loadOnceUnlessFailed } from "../../shared/load-once";
 interface MathMount {
   macros: Record<string, string>;
 }
@@ -26,24 +27,31 @@ export interface MathJaxModule {
   typesetSync(expression: string, display: boolean): string | undefined;
 }
 let mathjaxMod: MathJaxModule | undefined;
-let mathjaxLoad: Promise<MathJaxModule> | undefined;
+let mathjaxLoadStarted = false;
+// A failed load (a chunk that did not arrive) is tried again by the next
+// formula, not remembered for the rest of the session.
+let loadMathJax = mathJaxLoader();
 
-function loadMathJax(): Promise<MathJaxModule> {
-  return (mathjaxLoad ??= import("./mathjax").then((mod) => {
-    mathjaxMod = mod;
-    return mod;
-  }));
+function mathJaxLoader(): () => Promise<MathJaxModule> {
+  return loadOnceUnlessFailed(() => {
+    mathjaxLoadStarted = true;
+    return import("./mathjax").then((mod) => {
+      mathjaxMod = mod;
+      return mod;
+    });
+  });
 }
 
 /** Test hook to prime the MathJax module reference for synchronous postProcess tests. */
 export function primeMathJaxForTest(mod: MathJaxModule | undefined): void {
   mathjaxMod = mod;
-  mathjaxLoad = mod ? Promise.resolve(mod) : undefined;
+  mathjaxLoadStarted = mod !== undefined;
+  loadMathJax = mod ? () => Promise.resolve(mod) : mathJaxLoader();
 }
 
 /** Test hook: true once apply/typeset has started a MathJax dynamic import. */
 export function mathJaxLoadStartedForTest(): boolean {
-  return mathjaxLoad !== undefined;
+  return mathjaxLoadStarted;
 }
 
 const mounts = new WeakMap<Context, MathMount>();
@@ -93,6 +101,7 @@ function registerMathRenderers(ctx: Context): void {
       nodes: ["MathBlock"],
       editing: "reveal",
       match: (node) => node.name === "MathBlock",
+      range: (node, state) => mathBlockRange(node, state.doc),
       // BH-009 / BH-004: revealed block math is source only (no preview stacked
       // under the $$ lines). Obsidian keeps a live preview below; we prefer a
       // single coherent view while editing, like callouts and HTML blocks.
@@ -104,10 +113,10 @@ function registerMathRenderers(ctx: Context): void {
       // Block math too: its revealed source is marked like inline math.
       nodes: ["InlineMath", "MathBlock"],
       decorate(node, cx) {
-        const source = cx.state.sliceDoc(node.from, node.to);
         if (cx.revealed(node.from, node.to)) {
-          markMathSource(cx, node.from, source);
+          markMathSource(cx, node);
         } else if (node.name === "InlineMath") {
+          const source = cx.state.sliceDoc(node.from, node.to);
           cx.replace(
             node.from,
             node.to,
@@ -117,25 +126,6 @@ function registerMathRenderers(ctx: Context): void {
       },
     }),
   );
-}
-
-/**
- * Revealed math reads as highlighted code, its delimiters in the accent
- * colour, as in Obsidian.
- */
-function markMathSource(cx: InlineContext, from: number, source: string): void {
-  const { width, closed } = delimiters(source);
-  const end = from + source.length;
-  const bodyEnd = closed ? end - width : end;
-  cx.mark(from, from + width, "md-math md-math-delimiter");
-  cx.mark(from + width, bodyEnd, "md-math");
-  const body = from + width;
-  for (const token of mathTokens(source.slice(width, bodyEnd - from))) {
-    cx.mark(body + token.from, body + token.to, `md-math-${token.type}`);
-  }
-  if (closed) {
-    cx.mark(bodyEnd, end, "md-math md-math-delimiter");
-  }
 }
 
 function registerMathCleanup(ctx: Context): Set<() => void> {

@@ -211,6 +211,7 @@ function harness(enabled = false, visible = true) {
     "./focus": {
       createOutlineFocus: () => ({
         sync() {},
+        outlineShown() {},
         dispose() {},
       }),
     },

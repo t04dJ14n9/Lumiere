@@ -13,7 +13,10 @@ apostrophes, where `,` and `.` join digits only (`1,000.50` is one word,
 `e.g.` two), so a lone `-` bullet is a word too. Han and kana characters
 count one each, while Korean runs whole words; combining marks end a word,
 except in Tamil. Characters are the text's length, line breaks included.
-A note's properties are not counted; a selection's are.
+A note's properties are not counted; a selection's are. A Lumiere editor's
+note is counted again only when its version changes, and its selected text
+is fetched from the webview only after the webview last reported a selection,
+so moving the caret costs neither.
 
 ## Files
 

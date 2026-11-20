@@ -28,6 +28,9 @@ Code's webview API: `acquireVsCodeApi().postMessage` and the page's
 `message` events travel over a WebSocket to the panel on the host, and DSH's
 theme tokens become the `--vscode-*` variables the editor's styles read.
 
+When a note is renamed by its inline title, its page passes on the new
+path (`moved`, `@workshop/host-node/embedding`) with its scroll position,
+and DSH opens the note there, as it opens a followed link.
 Following a link to a note that is not open asks DSH to open it in a new
 tab (`ctx.sidebarRight.openResource`); the host reveals the heading or block
 once the new page connects. If the page's first `ready` handshake fails (for
@@ -132,7 +135,9 @@ of the Host mid-handshake), it recreates the iframe once, and DSH's Reload and
   not yet shown in DSH: each would be a DSH sidebar tab drawing a tree from
   `@workshop/host-node/views`, as the desktop app's sidebar does.
 - Commands have no palette or keybindings in DSH yet; what Lumière does
-  through clicks, links, the editor and its context menus works.
+  through clicks, links, the editor and its context menus works. The host
+  already lists the palette's commands (`GET /lumiere/commands`, from the
+  bundle's `commands.json`) and runs only those.
 - Copy Link for Agent copies to the clipboard: paste into DSH's chat.
 - Renaming a note from its inline title is not available.
 - The editor page is same-origin with DSH, so its strict content security
@@ -147,9 +152,11 @@ of the Host mid-handshake), it recreates the iframe once, and DSH's Reload and
   `ctx.sessionPersistence` for a stored session, as DSH's own file service
   does) and registers it with host-node before the page is served. A page
   cannot name a folder of its own: host-node refuses any `root` that is not
-  inside a registered one. A note outside its session's workspace (named by an
-  absolute address) is therefore refused: the tab reports that Lumière could
-  not open it, and DSH's own preview, in the viewer menu, still shows it. DSH's
+  inside a registered one. Registered roots are shared by every page: a note
+  inside the workspace of another session a page has already opened is
+  served, and only a note outside every registered workspace (named by an
+  absolute address) is refused: the tab reports that Lumière could not open
+  it, and DSH's own preview, in the viewer menu, still shows it. DSH's
   file reads are not contained to a workspace, so the server has nothing to
   check such a folder against. The host re-checks every path against the
   workspace.

@@ -1,7 +1,9 @@
 import * as vscode from "vscode";
 import { EffectiveConfiguration } from "./configuration";
+import { watchedSections } from "./configuration-sections";
 
 export function createConfiguration(): EffectiveConfiguration {
+  const sections = watchedSections();
   const scoped = (resource?: string) =>
     vscode.workspace.getConfiguration(
       "lumiere.markdown",
@@ -13,7 +15,13 @@ export function createConfiguration(): EffectiveConfiguration {
     get: (key, resource) => scoped(resource).get(key),
     inspect: (key, resource) => scoped(resource).inspect(key),
     onDidChange(listener) {
-      const subscription = vscode.workspace.onDidChangeConfiguration(listener);
+      const subscription = vscode.workspace.onDidChangeConfiguration(
+        (event) => {
+          if (sections.some((section) => event.affectsConfiguration(section))) {
+            listener();
+          }
+        },
+      );
       return () => subscription.dispose();
     },
   });

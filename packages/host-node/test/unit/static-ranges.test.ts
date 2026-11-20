@@ -62,7 +62,7 @@ async function file(t: test.TestContext): Promise<string> {
 
 async function serving(t: test.TestContext, name: string): Promise<string> {
   const server = createServer((req, res) => {
-    void serveFile(res, name, req.headers.range);
+    void serveFile(res, name, req.headers);
   });
   await new Promise<void>((resolve) => server.listen(0, "127.0.0.1", resolve));
   t.after(() => new Promise((resolve) => server.close(resolve)));
@@ -140,7 +140,7 @@ test("a static bundle file honours a range and still refuses a symlink out", asy
   await writeFile(outside, "secret");
   await symlink(outside, path.join(root, "escape.js"));
   const server = createServer((req, res) => {
-    void serveStatic(res, root, req.url?.slice(1) ?? "", req.headers.range);
+    void serveStatic(res, root, req.url?.slice(1) ?? "", req.headers);
   });
   await new Promise<void>((resolve) => server.listen(0, "127.0.0.1", resolve));
   t.after(() => new Promise((resolve) => server.close(resolve)));

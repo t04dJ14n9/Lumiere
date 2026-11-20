@@ -7,6 +7,8 @@ import type { FileEntry } from "./file-table";
 import { MemoryVaultIndex } from "./memory-index";
 import { ParseQueue } from "./parse-queue";
 import { Snapshot } from "./snapshot";
+import { KeyedTimers } from "./keyed-timers";
+import { LateStats } from "./late-stats";
 import type {
   FileEvent,
   ListedFile,
@@ -20,6 +22,12 @@ import type {
 const FILE_LIMIT = 50_000;
 /** At most one snapshot write per interval (DESIGN §12.2). */
 const SAVE_DELAY_MS = 2_000;
+
+/** The settings that shape the index, comparable as one string. */
+function indexSettingsKey(settings: VaultSettings): string {
+  const { folderNote, linkFormat, excludedFiles } = settings;
+  return JSON.stringify([folderNote, linkFormat, excludedFiles]);
+}
 /**
  * Typing in an open note re-indexes it after this pause. Obsidian updates
  * unresolved link chrome near-instantly; 300 ms left new `[[Missing]]`
@@ -58,11 +66,13 @@ export class VaultIndexer {
   readonly ready: Promise<void>;
   private readonly queue: ParseQueue;
   private readonly snapshot = new Snapshot();
-  private readonly timers = new Map<string, ReturnType<typeof setTimeout>>();
+  private readonly timers = new KeyedTimers();
   private stopWatching?: Disposer;
   private disposed = false;
   private reconciling = false;
   private isExcluded: (path: string) => boolean;
+  /** The settings the index was built with (`indexSettingsKey`). */
+  private indexedWith: string;
   /** Resolves as soon as the initial file list is in the index. */
   private fileListReady: Promise<void>;
   private markFileListReady!: () => void;
@@ -72,9 +82,12 @@ export class VaultIndexer {
   private reconciled: Promise<void> = Promise.resolve();
   /** The save in progress, which the next save waits for. */
   private saving: Promise<void> = Promise.resolve();
+  private readonly lateStats = new LateStats();
 
   constructor(private readonly options: IndexerOptions) {
-    const { folderNote, linkFormat, excludedFiles } = options.settings();
+    const settings = options.settings();
+    const { folderNote, linkFormat, excludedFiles } = settings;
+    this.indexedWith = indexSettingsKey(settings);
     this.isExcluded = exclusionMatcher(excludedFiles);
     this.index = new MemoryVaultIndex({
       root: options.root,
@@ -130,32 +143,42 @@ export class VaultIndexer {
         this.entry({ uri: uri ?? fallbackUri, path, mtime: 0, size: 0 }),
       ]);
     }
-    this.debounce(`overlay:${path}`, this.delays.overlay, () =>
+    this.timers.debounce(`overlay:${path}`, this.delays.overlay, () =>
       this.queue.setOverlay(path, text),
     );
   }
 
   /** The note was closed; its file on disk is authoritative again. */
   clearOverlay(path: string): void {
-    this.cancel(`overlay:${path}`);
+    this.timers.cancel(`overlay:${path}`);
     this.queue.clearOverlay(path);
   }
 
-  /** Settings changed: apply exclusion and link settings to every file. */
+  /**
+   * Settings changed: apply exclusion and link settings to every file. That
+   * re-resolves every link synchronously, so a change to anything else (most
+   * settings) leaves the index alone.
+   */
   applySettings(): void {
     const settings = this.options.settings();
+    const key = indexSettingsKey(settings);
+    if (key === this.indexedWith) {
+      return;
+    }
+    this.indexedWith = key;
     this.index.configure(settings);
     this.isExcluded = exclusionMatcher(settings.excludedFiles);
     this.index.replaceFiles(this.index.files().map((file) => this.entry(file)));
+    // Links resolved again and files were (un)excluded, without file events:
+    // what reads the index (a base's snapshot) must read it again.
+    this.index.notifyResolved();
   }
 
   async dispose(): Promise<void> {
     this.disposed = true;
     void this.queue.stop();
     void this.stopWatching?.();
-    for (const key of [...this.timers.keys()]) {
-      this.cancel(key);
-    }
+    this.timers.cancelAll();
     await this.save();
   }
 
@@ -242,6 +265,9 @@ export class VaultIndexer {
       this.stopWatching = this.options.fs.watch(this.options.root, (event) =>
         this.onFileEvent(event),
       );
+      const take = this.takeLateStats.bind(this);
+      const lateStats =
+        listing.stats && this.lateStats.apply(listing.stats, take);
       const files = listing.files.filter((file) => !isIgnoredPath(file.path));
       if (
         this.index.files().length > 0 ||
@@ -279,8 +305,23 @@ export class VaultIndexer {
       if (!this.disposed && this.queue.isIdle) {
         this.drained();
       }
+      await lateStats;
     } finally {
       this.reconciling = false;
+    }
+  }
+
+  /** Late stats of files still listed, added without events as the listing's are. */
+  private takeLateStats(files: readonly ListedFile[]): void {
+    if (this.disposed) {
+      return;
+    }
+    const current = files.filter((file) => this.index.file(file.path));
+    this.index.addFiles(current.map((file) => this.entry(file)));
+    for (const file of current) {
+      if (this.needsParse(file)) {
+        this.queue.enqueue(file.path);
+      }
     }
   }
 
@@ -289,6 +330,10 @@ export class VaultIndexer {
    * the snapshot reuses its metadata. Attachments are only recorded.
    */
   private needsParse(file: ListedFile): boolean {
+    if (file.statPending) {
+      // Decided when its stats come (takeLateStats).
+      return false;
+    }
     const cached = this.snapshot.files[file.path];
     if (!isMarkdownPath(file.path)) {
       return this.recordAttachment(file, cached);
@@ -341,6 +386,9 @@ export class VaultIndexer {
   }
 
   private onFileEvent(event: FileEvent): void {
+    this.lateStats.report(
+      event.type === "delete" ? event.path : event.file.path,
+    );
     if (event.type === "delete") {
       this.deletePath(event.path);
       return;
@@ -387,11 +435,13 @@ export class VaultIndexer {
   }
 
   private entry(file: ListedFile): FileEntry {
+    // A file whose stats are still to come keeps those the index has.
+    const known = file.statPending ? this.index.file(file.path) : undefined;
     return {
       uri: file.uri,
       path: file.path,
-      mtime: file.mtime,
-      size: file.size,
+      mtime: known?.mtime ?? file.mtime,
+      size: known?.size ?? file.size,
       excluded: this.isExcluded(file.path),
     };
   }
@@ -408,11 +458,11 @@ export class VaultIndexer {
     if (!this.options.store || this.timers.has("save")) {
       return;
     }
-    this.debounce("save", this.delays.save, () => void this.save());
+    this.timers.debounce("save", this.delays.save, () => void this.save());
   }
 
   private save(): Promise<void> {
-    this.cancel("save");
+    this.timers.cancel("save");
     this.saving = this.saving.then(() => this.writeSnapshot());
     return this.saving;
   }
@@ -427,21 +477,5 @@ export class VaultIndexer {
     } catch (error) {
       this.options.onError?.("Could not save the vault index", error);
     }
-  }
-
-  private debounce(key: string, delay: number, run: () => void): void {
-    this.cancel(key);
-    this.timers.set(
-      key,
-      setTimeout(() => {
-        this.timers.delete(key);
-        run();
-      }, delay),
-    );
-  }
-
-  private cancel(key: string): void {
-    clearTimeout(this.timers.get(key));
-    this.timers.delete(key);
   }
 }

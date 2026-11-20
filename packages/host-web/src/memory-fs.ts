@@ -9,8 +9,16 @@ export type MemoryEntry =
   | { readonly kind: "file"; data: Uint8Array; mtime: number }
   | { readonly kind: "folder"; mtime: number };
 
-/** Hears each entry set (or removed, as undefined), by path. */
-export type Persist = (path: string, entry: MemoryEntry | undefined) => void;
+/**
+ * Hears each entry set (or removed, as undefined), by path. A change it
+ * returns a promise for is done only when that settles: a rejection fails
+ * the write (and undoes it here), so a note is never shown as saved when it
+ * was not kept.
+ */
+export type Persist = (
+  path: string,
+  entry: MemoryEntry | undefined,
+) => void | Promise<void>;
 
 export class MemoryFileSystem implements VaultFileSystem {
   private readonly entries = new Map<string, MemoryEntry>([
@@ -60,7 +68,11 @@ export class MemoryFileSystem implements VaultFileSystem {
       throw notFound(path);
     }
     this.requireFolder(parentOf(key));
-    this.set(key, { kind: "file", data: data.slice(), mtime: Date.now() });
+    await this.set(key, {
+      kind: "file",
+      data: data.slice(),
+      mtime: Date.now(),
+    });
   }
 
   async stat(path: string) {
@@ -96,7 +108,7 @@ export class MemoryFileSystem implements VaultFileSystem {
         throw new Error(`A file is in the way: ${current}`);
       }
       if (!entry) {
-        this.set(current, { kind: "folder", mtime: Date.now() });
+        await this.set(current, { kind: "folder", mtime: Date.now() });
       }
     }
   }
@@ -106,7 +118,7 @@ export class MemoryFileSystem implements VaultFileSystem {
     if ((await this.list(key))?.length) {
       throw new Error(`Folder not empty: ${path}`);
     }
-    this.unset(key);
+    await this.unset(key);
   }
 
   async move(from: string, to: string): Promise<void> {
@@ -116,31 +128,79 @@ export class MemoryFileSystem implements VaultFileSystem {
       throw notFound(from);
     }
     this.requireFolder(parentOf(target));
+    const kept: Promise<void>[] = [];
     for (const [name, entry] of [...this.entries]) {
       if (name === source || name.startsWith(`${source}/`)) {
-        this.unset(name);
-        this.set(target + name.slice(source.length), entry);
+        kept.push(this.unset(name));
+        kept.push(this.set(target + name.slice(source.length), entry));
       }
     }
+    await Promise.all(kept);
   }
 
-  /** Synchronous setup, for files to start with. */
+  /**
+   * Synchronous setup, for files to start with: in memory at once, and
+   * handed to `persist` without waiting for it.
+   */
   put(path: string, content: string | Uint8Array): void {
     const key = clean(path);
-    void this.mkdir(parentOf(key));
+    let current = "";
+    for (const part of parentOf(key).split("/").filter(Boolean)) {
+      current = current ? `${current}/${part}` : part;
+      if (!this.entries.has(current)) {
+        this.setUnwaited(current, { kind: "folder", mtime: Date.now() });
+      }
+    }
     const data =
       typeof content === "string" ? new TextEncoder().encode(content) : content;
-    this.set(key, { kind: "file", data, mtime: Date.now() });
+    this.setUnwaited(key, { kind: "file", data, mtime: Date.now() });
   }
 
-  private set(path: string, entry: MemoryEntry): void {
+  private setUnwaited(path: string, entry: MemoryEntry): void {
+    this.set(path, entry).catch((error: unknown) =>
+      console.error(`Lumière could not keep ${path}`, error),
+    );
+  }
+
+  private set(path: string, entry: MemoryEntry): Promise<void> {
+    const before = this.entries.get(path);
     this.entries.set(path, entry);
-    this.persist(path, entry);
+    return this.keep(path, entry, () => {
+      // A later change to the same path wins; only undo our own.
+      if (this.entries.get(path) !== entry) {
+        return;
+      }
+      if (before) {
+        this.entries.set(path, before);
+      } else {
+        this.entries.delete(path);
+      }
+    });
   }
 
-  private unset(path: string): void {
-    if (this.entries.delete(path)) {
-      this.persist(path, undefined);
+  private unset(path: string): Promise<void> {
+    const before = this.entries.get(path);
+    if (!before) {
+      return Promise.resolve();
+    }
+    this.entries.delete(path);
+    return this.keep(path, undefined, () => {
+      if (!this.entries.has(path)) {
+        this.entries.set(path, before);
+      }
+    });
+  }
+
+  private async keep(
+    path: string,
+    entry: MemoryEntry | undefined,
+    undo: () => void,
+  ): Promise<void> {
+    try {
+      await this.persist(path, entry);
+    } catch (error) {
+      undo();
+      throw error;
     }
   }
 

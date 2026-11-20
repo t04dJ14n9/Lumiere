@@ -14,7 +14,10 @@ import {
   type TextEdit,
 } from "@workshop/markdown/portable";
 import { writeConflictCopy } from "./conflict-copy";
-import type { HostFiles, HostPlatform } from "./platform";
+import type { NoteFiles } from "./note-files";
+import { isAtOrUnder, NoteRenames, type WillRename } from "./note-renames";
+
+export { noteFiles, type NoteFiles } from "./note-files";
 
 /** How long typing must pause before a note is written to disk. */
 export const AUTOSAVE_DELAY_MS = 800;
@@ -68,33 +71,13 @@ export class NoteDocument implements HostDocument {
   }
 }
 
-/** What notes need from the platform: their files, and a hash of their text. */
-export interface NoteFiles extends Pick<
-  HostFiles,
-  "readText" | "save" | "watch" | "create"
-> {
-  sha256(text: string): string;
-}
-
-export function noteFiles(platform: HostPlatform): NoteFiles {
-  const { files } = platform;
-  // Called through `files`: a platform's files may be a class instance.
-  return {
-    readText: (uri) => files.readText(uri),
-    save: (uri, text) => files.save(uri, text),
-    watch: (uri, listener) => files.watch(uri, listener),
-    create: (uri) => files.create(uri),
-    sha256: (text) => platform.sha256(text),
-  };
-}
-
 /**
  * Whether a disk read is another program's change to the open note. A read
  * that started before a save finished is stale: applying it would undo that
  * save. One that equals what we last read or wrote is our own write coming
- * back. A read made while a save was writing may see the file empty: saves
- * replace it in place (paths.ts `writeThroughFile`), truncating it first, and
- * the truncation alone wakes the watch.
+ * back. A read made while a save was writing is not taken either: the save's
+ * own rename (atomic-write.ts) wakes the watch, and the read may see the old
+ * text or the new one before the save is counted.
  */
 export function diskReadChangesNote(state: {
   text: string;
@@ -136,6 +119,8 @@ export class NoteDocuments implements HostDocuments {
   private readonly writing = new Set<string>();
   /** Notes whose reload was dropped during a save, to read again after it. */
   private readonly rereadAfterWrite = new Set<string>();
+  /** Renames and moves that update links (note-renames.ts). */
+  readonly renames: NoteRenames;
 
   constructor(
     private readonly files: NoteFiles,
@@ -143,7 +128,9 @@ export class NoteDocuments implements HostDocuments {
     /** Where a reload that failed goes: no one awaits one. */
     private readonly log: (message: string) => void = (message) =>
       console.warn(message),
-  ) {}
+  ) {
+    this.renames = new NoteRenames(files, this);
+  }
 
   fingerprint(text: string): string {
     return this.files.sha256(text);
@@ -227,8 +214,22 @@ export class NoteDocuments implements HostDocuments {
     return this.notes.get(uri)?.getText();
   }
 
-  async rename(): Promise<void> {
-    throw new Error("Renaming a note is not available here yet");
+  /** Rename the note's file in its folder (the inline title), as VS Code checks it. */
+  readonly rename = (document: HostDocument, target: string) =>
+    this.renames.renameNote(document.uri, target);
+
+  /**
+   * The file at `uri`, or every file in the folder, went away (moved,
+   * deleted, put in the trash): the notes open there are closed clean, so
+   * their pages closing writes nothing back, and their edits are refused.
+   */
+  forget(uri: string): void {
+    for (const note of this.notes.values()) {
+      if (isAtOrUnder(note.uri, uri)) {
+        note.isDirty = false;
+        this.close(note.uri);
+      }
+    }
   }
 
   onChange(listener: ChangeListener): Disposer {
@@ -243,12 +244,11 @@ export class NoteDocuments implements HostDocuments {
     return subscribe(this.willSave, listener);
   }
 
-  /** No host reports renames here, so there is nothing to update links for. */
-  onWillRename(): Disposer {
-    return () => {};
-  }
+  /** Before a rename moves files; the listeners' edits apply after it. */
+  readonly onWillRename = (listener: WillRename): Disposer =>
+    this.renames.onWillRename(listener);
 
-  /** Nor deletions, so there are no attachments to offer to delete. */
+  /** No host reports deletions here, so there are no attachments to offer to delete. */
   onWillDelete(): Disposer {
     return () => {};
   }
@@ -278,18 +278,42 @@ export class NoteDocuments implements HostDocuments {
    * close even when a write fails: an open watch keeps the host process alive.
    */
   async dispose(): Promise<void> {
+    const writes = this.saveAll();
+    await writes.catch(() => {});
+    for (const uri of [...this.notes.keys()]) {
+      this.close(uri);
+    }
+    await writes;
+  }
+
+  /**
+   * Write every note with unsaved text now, without waiting for autosave;
+   * rejects with the first failure once every write has settled.
+   */
+  async saveAll(): Promise<void> {
     const writes = await Promise.allSettled(
       [...this.notes.values()]
         .filter((note) => note.isDirty)
         .map((note) => this.save(note)),
     );
-    for (const uri of [...this.notes.keys()]) {
-      this.close(uri);
-    }
     const failed = writes.find((write) => write.status === "rejected");
     if (failed) {
       throw failed.reason;
     }
+  }
+
+  /**
+   * Write a note with unsaved text now, as its autosave would after the
+   * pause (its page was hidden); a failure is reported the same way.
+   */
+  saveNow(note: NoteDocument): void {
+    if (!note.isDirty) {
+      return;
+    }
+    this.cancelSave(note.uri);
+    this.save(note).catch((error: unknown) =>
+      this.reportSaveFailed(note.uri, error),
+    );
   }
 
   /** One write at a time per note; a save asked for during a write follows it. */
@@ -304,7 +328,7 @@ export class NoteDocuments implements HostDocuments {
 
   private async write(note: NoteDocument): Promise<boolean> {
     this.cancelSave(note.uri);
-    await Promise.all([...this.willSave].map((listener) => listener(note)));
+    await this.prepareSave(note);
     if (await this.tookOutsideChange(note)) {
       return true;
     }
@@ -333,6 +357,26 @@ export class NoteDocuments implements HostDocuments {
       this.reloadUnawaited(note);
     }
     return true;
+  }
+
+  /**
+   * Run the will-save listeners (a page flushing its pending edits). As in
+   * VS Code, a listener that fails or times out does not stop the save: a
+   * page composing with an IME holds its edits back past the flush's wait,
+   * and failing the save for that reported an error for nothing. The held
+   * edits arrive later as edits, which schedule their own save.
+   */
+  private async prepareSave(note: NoteDocument): Promise<void> {
+    const results = await Promise.allSettled(
+      [...this.willSave].map((listener) => listener(note)),
+    );
+    for (const result of results) {
+      if (result.status === "rejected") {
+        this.log(
+          `Lumière saved ${note.uri} without waiting for its page: ${errorText(result.reason)}`,
+        );
+      }
+    }
   }
 
   /**

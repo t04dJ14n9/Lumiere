@@ -11,6 +11,9 @@ placeholders through Resources. Note renders retain the native source identity,
 full text and line offsets for links/tasks/footnotes. Media controls, image dialogs,
 recovery streams and nested passes are disposed when the owning pass or plugin
 stops. Original placeholders are restored and late resource results are ignored.
+A note, base or PDF embed far down a long rendered block loads only when it
+comes near the screen (`near-viewport.ts`), so a block with many of them
+renders the ones the reader can reach first.
 
 A block embed (`![[Note#^id]]`) shows the block as Obsidian scopes it
 (`src/markdown/metadata/block-extract.ts`): an id on a list item shows that
@@ -40,7 +43,13 @@ it go (`image-selection.ts`, `image-size.ts`). While selected, the caret is hidd
 - `manifest.ts`: enablement and Insert Embed contribution.
 - `webview.ts`: renderer, post-processor and command registrations.
 - `post-process.ts`: resource resolution, per-kind display and pass lifetime.
-- `missing.ts`: the text an embed that cannot be shown says (`“x.png” could not be found.`, a missing heading, `failed to fetch image` for bytes that did not load).
+- `near-viewport.ts`: note, base and PDF embeds wait until they are within
+  1,500 px of the editor scroller's visible area (an IntersectionObserver
+  rooted at the scroller); images, media, web addresses, and embeds outside
+  an editor scroller (hover previews) load at once.
+- `embed-lives.ts`: what each embed of a pass holds (listeners, teardowns, the file it shows), released when it is shown again or the pass ends.
+- `embed-lives.test.ts`: release order and lookup by file.
+- `missing.ts`: the text an embed that cannot be shown says (`“x.png” could not be found.`, a missing heading, `failed to fetch image` for bytes that did not load, a circular or too deep embed).
 - `stand-in.ts`: the `.file-embed` block that takes a failed Markdown `<img>`'s place, since an `<img>` shows no text.
 - `resource-cache.ts`: what embeds resolved, so a block rendered again shows its files at once.
 - `note.ts`: note/heading/block selection, ancestry and source-line mapping.
@@ -53,6 +62,8 @@ it go (`image-selection.ts`, `image-size.ts`). While selected, the caret is hidd
 - `image-resize-corner.ts`: the resize corner drawn on a selected image (visual only; resizing stays on the keys).
 - `embed-actions.ts`: the `.embed-actions` bar around an image's inspect control.
 - `clicks.ts`: what a click on an embed does: a note embed selects its source, an image leaves the caret alone.
+- `pdf-documents.ts`: a PDF fetched and opened once for every embed that shows it; an embed's page turns.
+- `pdf-engine.ts`: EmbedPDF's engine on the editor's thread, and a page rendered from an open document.
 - `pdf-embed.ts`: the inline PDF viewer (`#page=` and `#height=` subpaths, page rendering through EmbedPDF, the Open button).
 - `base-embed.ts`: renders an embedded `.base` file's selected view (table, cards or list).
 - `base-embed-views.ts`: the cards and list views, cell values and note links for base embeds.
@@ -77,15 +88,23 @@ Injects `editor`, `commands`, `livePreview`, `render`, `resources` and `rpc`;
 provides no services. Listens to `render/postProcess`; to
 `resources/changed`, which drops the resources it resolved; and to
 `resources/found`, which loads again, in place, every embed that said its file
-could not be found; no kernel events emitted.
+could not be found; and to `resources/modified`, which loads again, in place,
+every embed showing a file that changed (what it showed stays until the new
+version replaces it); no kernel events emitted.
 Uses Links RPC to open an embedded target. `lumiere.markdown.plugins.embeds.enabled`
 defaults to true. Insert Embed has no default keybinding. Remote media follows
 workspace trust from Render. YouTube/Bilibili image links share the EmbedBlock height reserve via Online Videos `api` (`parseVideoUrl`) so off-viewport remounts keep card height. Note embeds reserve a multi-paragraph floor and remember painted height across off-viewport remounts (`estimated-height.ts`).
 
 ## Limits and differences from Obsidian
 
-Cycles and ancestry depth of twelve are refused. Local files remain host-contained;
+Cycles and ancestry depth of twelve are refused, and the embed says which (“A” embeds
+itself, so it is not shown again.); what Obsidian says is not measured. Local files remain host-contained;
 remote media requires a trusted workspace. A PDF embed draws one page (`#page=`,
 `#height=`) with page buttons rather than Obsidian's full PDF viewer; its Open
-button opens the PDF in Lumiere PDF at that page. WebM recovery supports VP8/VP9 and Opus/Vorbis when the host
+button opens the PDF in Lumiere PDF at that page. Embeds of one PDF fetch
+and open it once (`pdf-documents.ts`), and a page turn only renders the page
+of that open document. The bytes go once the engine has opened them; the
+document closes with the last embed of it. Rendering still runs in the
+editor's own thread: its page allows no worker (no `worker-src`), so a large
+page at a high zoom can hold up typing while it draws. WebM recovery supports VP8/VP9 and Opus/Vorbis when the host
 MediaSource supports them. Visual and playback parity await owner comparison. Image embeds use Obsidian's `.embed-actions` frosted bar (inspect control; VS Code tokens).

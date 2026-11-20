@@ -26,7 +26,7 @@ interface PanelOptions {
 export function createPanel(
   shell: PanelShell,
   documents: Documents,
-  host: Pick<HostServices, "settings" | "clipboard">,
+  host: Pick<HostServices, "settings" | "clipboard" | "workspace">,
   options: PanelOptions,
 ): EditorPanel {
   const { onClose, onState, configure, rank = () => 0 } = options;
@@ -47,9 +47,11 @@ export function createPanel(
   // Kick off webview HTML (and editor.js fetch/parse) before panel host
   // plugins configure, so download overlaps with host work. ready still
   // waits for owned.settled() and settings prepare.
-  shell.setHTML(
-    webviewHTML(shell, pageSnapshot(shell, session, host, owned.logger)),
-  );
+  const loadPage = () =>
+    shell.setHTML(
+      webviewHTML(shell, pageSnapshot(shell, session, host, owned.logger)),
+    );
+  loadPage();
   configure(owned, shell);
   const reporting = panelReporting(owned, rpc, shell.document, host);
   const panel: EditorPanel = {
@@ -81,7 +83,39 @@ export function createPanel(
   registerSessionHandshake(owned, { shell, session, rpc, host });
   registerClipboard(owned, rpc, host.clipboard);
   registerConfiguration(owned, rpc, shell.document, host);
+  registerTrustReload(owned, { shell, workspace: host.workspace, loadPage });
   return panel;
+}
+
+/**
+ * A page loaded in an untrusted workspace has no remote images, media or
+ * frames: its Content Security Policy and the `trusted` its ready answer
+ * gives were decided then. Once the reader trusts the workspace, the page is
+ * loaded again, so both are decided anew (S2). The note's text is the
+ * document's, so nothing typed is lost; the page asks for it again.
+ */
+function registerTrustReload(
+  owned: RootContext,
+  {
+    shell,
+    workspace,
+    loadPage,
+  }: {
+    shell: Pick<PanelShell, "trusted">;
+    workspace: Pick<HostServices["workspace"], "onDidGrantTrust">;
+    loadPage: () => void;
+  },
+): void {
+  let wasTrusted = shell.trusted;
+  owned.effect(() =>
+    workspace.onDidGrantTrust(() => {
+      if (wasTrusted || !shell.trusted || !owned.isLive) {
+        return;
+      }
+      wasTrusted = true;
+      loadPage();
+    }),
+  );
 }
 
 /**
@@ -203,9 +237,16 @@ function registerConfiguration(
   document: PanelShell["document"],
   host: Pick<HostServices, "settings" | "clipboard">,
 ): void {
+  // The webview reconfigures every plugin on each message: send only news.
+  let sent: string | undefined;
   owned.effect(() =>
     host.settings.onChange(() => {
-      sendConfiguration(rpc, document, host);
+      const configuration = panelConfiguration(document, host);
+      const key = JSON.stringify(configuration);
+      if (key !== sent) {
+        sent = key;
+        sendConfiguration(rpc, configuration);
+      }
     }),
   );
 }
@@ -273,29 +314,31 @@ function panelReporting(
     async refreshPlugins() {
       await ready;
       owned.emit("editor/configure");
-      sendConfiguration(rpc, document, host);
+      sendConfiguration(rpc, panelConfiguration(document, host));
       await owned.settled();
       remote = await rpc.call(protocol, "plugins", {});
     },
   };
 }
+/** What the webview is configured with, from the note's settings. */
+function panelConfiguration(
+  document: PanelShell["document"],
+  host: Pick<HostServices, "settings">,
+) {
+  const config = host.settings.forNote(document);
+  return {
+    logging: config.debugLogging ?? false,
+    editor: editorConfig.parse(config.editor ?? {}),
+    features: config.preset === "minimal" ? {} : (config.features ?? {}),
+  };
+}
 function sendConfiguration(
   rpc: Endpoint,
-  document: PanelShell["document"],
-  host: Pick<HostServices, "settings" | "clipboard">,
+  configuration: ReturnType<typeof panelConfiguration>,
 ): void {
-  const config = host.settings.forNote(document);
-  rpc.notify(protocol, "configureLogging", config.debugLogging ?? false);
-  rpc.notify(
-    protocol,
-    "configureEditor",
-    editorConfig.parse(config.editor ?? {}),
-  );
-  rpc.notify(
-    protocol,
-    "configure",
-    config.preset === "minimal" ? {} : (config.features ?? {}),
-  );
+  rpc.notify(protocol, "configureLogging", configuration.logging);
+  rpc.notify(protocol, "configureEditor", configuration.editor);
+  rpc.notify(protocol, "configure", configuration.features);
 }
 
 /**

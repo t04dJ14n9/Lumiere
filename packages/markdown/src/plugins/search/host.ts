@@ -1,4 +1,4 @@
-import type { Plugin } from "@workshop/core";
+import type { Context, Plugin } from "@workshop/core";
 import type { PanelShell } from "../../shared/host";
 import type {} from "../vault/api";
 import { protocol } from "./protocol";
@@ -18,7 +18,6 @@ export const searchHost: Plugin<{ panel: PanelShell }> = {
           return await searchVault({
             vault: ctx.vault,
             source: request.source,
-            query: request.query,
             worker,
             token,
             read: (uri) => ctx.vaults.text(uri),
@@ -48,8 +47,27 @@ export const searchHost: Plugin<{ panel: PanelShell }> = {
         return true;
       }),
     );
-    ctx.effect(() =>
-      ctx.vault.onDidResolve(() => ctx.rpc.notify(protocol, "changed", {})),
-    );
+    registerRefreshNotice(ctx);
   },
 };
+
+/**
+ * Pause after the index last resolved before blocks search again. The index
+ * resolves after every typing pause in any open note (about 50 ms), and
+ * each `changed` restarts every query block's whole-vault search.
+ */
+export const SEARCH_REFRESH_DELAY_MS = 1000;
+
+function registerRefreshNotice(ctx: Context): void {
+  let timer: ReturnType<typeof setTimeout> | undefined;
+  ctx.effect(() => () => clearTimeout(timer));
+  ctx.effect(() =>
+    ctx.vault.onDidResolve(() => {
+      clearTimeout(timer);
+      timer = setTimeout(() => {
+        timer = undefined;
+        ctx.rpc.notify(protocol, "changed", {});
+      }, SEARCH_REFRESH_DELAY_MS);
+    }),
+  );
+}

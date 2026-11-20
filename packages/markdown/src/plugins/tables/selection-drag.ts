@@ -38,6 +38,8 @@ export class TableSelectionDrag {
   private gesture?: Gesture;
   private readonly scrolling: EdgeScroll;
   private readonly events = new AbortController();
+  /** Window listeners exist only while a gesture runs: a note can hold many tables. */
+  private gestureEvents?: AbortController;
 
   constructor(
     private readonly root: HTMLElement,
@@ -51,11 +53,23 @@ export class TableSelectionDrag {
       (point) => this.update(point),
       { horizontal: viewports.horizontal },
     );
-    this.registerEvents();
+    this.root.addEventListener(
+      "lostpointercapture",
+      (event) => {
+        if (this.gesture?.pointer === event.pointerId) {
+          this.cancel();
+        }
+      },
+      { signal: this.events.signal },
+    );
   }
 
-  private registerEvents(): void {
-    this.registerPointerMove();
+  private listenDuringGesture(): void {
+    this.gestureEvents?.abort();
+    const gestureEvents = new AbortController();
+    this.gestureEvents = gestureEvents;
+    const { signal } = gestureEvents;
+    this.registerPointerMove(signal);
     window.addEventListener(
       "pointerup",
       (event) => {
@@ -76,7 +90,7 @@ export class TableSelectionDrag {
           endPoint,
         });
       },
-      { signal: this.events.signal },
+      { signal },
     );
     window.addEventListener(
       "pointercancel",
@@ -85,11 +99,9 @@ export class TableSelectionDrag {
           this.cancel();
         }
       },
-      { signal: this.events.signal },
+      { signal },
     );
-    window.addEventListener("blur", () => this.cancel(), {
-      signal: this.events.signal,
-    });
+    window.addEventListener("blur", () => this.cancel(), { signal });
     window.addEventListener(
       "keydown",
       (event) => {
@@ -99,20 +111,11 @@ export class TableSelectionDrag {
           this.cancel();
         }
       },
-      { capture: true, signal: this.events.signal },
-    );
-    this.root.addEventListener(
-      "lostpointercapture",
-      (event) => {
-        if (this.gesture?.pointer === event.pointerId) {
-          this.cancel();
-        }
-      },
-      { signal: this.events.signal },
+      { capture: true, signal },
     );
   }
 
-  private registerPointerMove(): void {
+  private registerPointerMove(signal: AbortSignal): void {
     window.addEventListener(
       "pointermove",
       (event) => {
@@ -129,7 +132,7 @@ export class TableSelectionDrag {
           this.scrolling.move(gesture.point);
         }
       },
-      { signal: this.events.signal },
+      { signal },
     );
   }
 
@@ -152,6 +155,7 @@ export class TableSelectionDrag {
       startPoint,
       point: startPoint,
     };
+    this.listenDuringGesture();
     if (!nativeText) {
       this.root.setPointerCapture(event.pointerId);
     }
@@ -190,6 +194,8 @@ export class TableSelectionDrag {
   cancel(): void {
     const gesture = this.gesture;
     delete this.gesture;
+    this.gestureEvents?.abort();
+    delete this.gestureEvents;
     this.scrolling.stop();
     if (gesture && this.root.hasPointerCapture(gesture.pointer)) {
       this.root.releasePointerCapture(gesture.pointer);

@@ -70,10 +70,15 @@ function scopeNeedles(
   return contentNeedles(query.term, sensitive);
 }
 
-/** Scan note text for lines matching content needles of `querySource`. */
+/**
+ * Scan note text for lines matching content needles of `querySource`.
+ *
+ * Invariant: this runs the user's regular expressions, so it runs in the
+ * search worker, under its per-document deadline, never on the host.
+ */
 export function extractMatchLines(
   text: string,
-  querySource: string,
+  querySource: string | SearchQuery,
   limit = MAX_MATCHES,
 ): MatchLine[] {
   if (!text || limit <= 0) {
@@ -81,7 +86,8 @@ export function extractMatchLines(
   }
   let query: SearchQuery;
   try {
-    query = parseSearch(querySource);
+    query =
+      typeof querySource === "string" ? parseSearch(querySource) : querySource;
   } catch {
     return [];
   }

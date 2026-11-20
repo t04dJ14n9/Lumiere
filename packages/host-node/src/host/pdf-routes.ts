@@ -9,7 +9,7 @@ import { injectShim, socketSource } from "./page";
 import { pdfQuery } from "./page-query";
 import { PdfPages, type PdfPage } from "./pdf-pages";
 import { isInsideRegisteredRoot, resolveContainedNote } from "./paths";
-import { serveStatic } from "./static";
+import { byteRange, serveStatic } from "./static";
 
 export interface PdfRouteOptions {
   /** The editor routes' base path (`/lumiere`). */
@@ -52,10 +52,10 @@ export function createPdfRoutes(options: PdfRouteOptions): PdfRoutes {
           res,
           options.viewer,
           rest.slice("/pdf/viewer/".length),
-          req.headers.range,
+          req.headers,
         );
       } else if (rest === "/pdf/bytes") {
-        await serveBytes(res, url, pages);
+        await serveBytes(res, { url, range: req.headers.range }, pages);
       } else {
         return false;
       }
@@ -121,15 +121,19 @@ async function servePdfPage({
   res.end(injectShim(page.html, page.id, `${base}/page/shim.js`));
 }
 
-/** The bytes of the load a page asked for, while it is that page's newest. */
+/**
+ * The bytes of the load a page asked for, while it is that page's newest:
+ * all of them, or the one range a request asks for, from the bytes the
+ * viewer core read (never read again from disk, which may have changed).
+ * Once they have gone out whole, the page lets them go (`fetchedWhole`).
+ */
 async function serveBytes(
   res: ServerResponse,
-  url: URL,
+  { url, range }: { url: URL; range: string | undefined },
   pages: PdfPages,
 ): Promise<void> {
   const page = pages.get(url.searchParams.get("page") ?? "");
-  const bytes = page?.bytesOf(Number(url.searchParams.get("load")));
-  if (!page || !bytes) {
+  if (!page) {
     res.writeHead(404).end();
     return;
   }
@@ -139,10 +143,49 @@ async function serveBytes(
     res.writeHead(403).end();
     return;
   }
-  res.writeHead(200, {
+  const load = Number(url.searchParams.get("load"));
+  const bytes = page.bytesOf(load);
+  if (!bytes) {
+    res.writeHead(404).end();
+    return;
+  }
+  // A view of the page's bytes, not a copy.
+  sendBytes(res, Buffer.from(bytes), range, () => page.fetchedWhole(load));
+}
+
+/**
+ * A buffer as a whole PDF, or the one byte range a request asks for;
+ * `sentWhole` once the whole PDF has gone out.
+ */
+function sendBytes(
+  res: ServerResponse,
+  data: Buffer,
+  rangeHeader: string | undefined,
+  sentWhole: () => void,
+): void {
+  const headers = {
     "content-type": "application/pdf",
     "cache-control": "no-store",
     "x-content-type-options": "nosniff",
-  });
-  res.end(Buffer.from(bytes));
+    "accept-ranges": "bytes",
+  };
+  const range = byteRange(rangeHeader ?? "", data.length);
+  if (range === "unsatisfiable") {
+    res
+      .writeHead(416, { ...headers, "content-range": `bytes */${data.length}` })
+      .end();
+    return;
+  }
+  if (!range) {
+    res.once("finish", sentWhole);
+    res.writeHead(200, headers).end(data);
+    return;
+  }
+  res
+    .writeHead(206, {
+      ...headers,
+      "content-range": `bytes ${range.start}-${range.end}/${data.length}`,
+    })
+    // A view of the same memory, not a copy.
+    .end(data.subarray(range.start, range.end + 1));
 }

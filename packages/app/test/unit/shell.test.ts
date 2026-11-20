@@ -2,7 +2,7 @@ import test from "node:test";
 import assert from "node:assert/strict";
 import { editorUrl, relativeTo, shellKeyHeaders } from "../../src/shell/api";
 import { SHELL_KEY_HEADER } from "../../src/shared/shell-key";
-import { buildTree, foldersAbove } from "../../src/shell/tree";
+import { buildTree, foldersAbove, sameListing } from "../../src/shell/tree";
 import {
   foldersOf,
   revealFile,
@@ -175,4 +175,26 @@ test("the window sends the key its page was given when it adds a folder, and non
   // A page the server did not give the key (a frame's) has an empty tag, or none.
   assert.deepEqual(shellKeyHeaders(page("") as unknown as Document), {});
   assert.deepEqual(shellKeyHeaders(page(undefined) as unknown as Document), {});
+});
+
+test("a listing that did not change is the same listing, so a focus does not rebuild the tree", () => {
+  const listing = {
+    files: [
+      { path: "a.md", kind: "note" as const },
+      { path: "b.pdf", kind: "pdf" as const },
+    ],
+    partial: false,
+  };
+  assert.equal(
+    sameListing(listing, { files: [...listing.files], partial: false }),
+    true,
+  );
+  assert.equal(sameListing(listing, { ...listing, partial: true }), false);
+  assert.equal(
+    sameListing(listing, {
+      files: [{ path: "a.md", kind: "note" }],
+      partial: false,
+    }),
+    false,
+  );
 });

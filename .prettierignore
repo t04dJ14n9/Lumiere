@@ -20,3 +20,6 @@ apps/ipad/ios/App/App/public/
 apps/ipad/ios/App/App/capacitor.config.json
 apps/ipad/ios/App/App/Assets.xcassets/
 apps/ipad/ios/App/CapApp-SPM/
+# Local editor and agent settings; not part of the product.
+.vscode/
+.claude/settings.local.json

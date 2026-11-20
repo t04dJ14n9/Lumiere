@@ -166,14 +166,16 @@ export class MarkdownBlock extends WidgetType {
 
   override eq(other: MarkdownBlock): boolean {
     return (
-      this.render === other.render && this.block.source === other.block.source
+      this.render === other.render &&
+      this.block.source === other.block.source &&
+      this.block.markdown === other.block.markdown
     );
   }
 
   // The note's width comes from markdownBlockWidthTracker: reading it here
   // forced a layout for every block CodeMirror mounted.
   override toDOM(view: EditorView): HTMLElement {
-    const poolKey = `${this.block.kind}\0${this.editing.reveal}\0${this.editing.guardMargin ? 1 : 0}\0${this.editing.editSummary ? 1 : 0}\0${this.block.source}`;
+    const poolKey = `${this.block.kind}\0${this.editing.reveal}\0${this.editing.guardMargin ? 1 : 0}\0${this.editing.editSummary ? 1 : 0}\0${this.block.markdown ?? this.block.source}`;
     // The pool alone keeps finished blocks, so its limit bounds what stays
     // in memory; a widget holding its last block kept every diagram alive.
     const reusable = takePooledShell(this.render, poolKey);
@@ -307,7 +309,7 @@ function beginMarkdownBlockRender(options: {
   const { entry, block, render, onSettled } = options;
   const { shell, body } = entry;
   void render
-    .into(body, block.source, {
+    .into(body, block.markdown ?? block.source, {
       sourceLine: entry.currentView.state.doc.lineAt(block.from).number - 1,
       measure: () => {
         if (entry.alive) {

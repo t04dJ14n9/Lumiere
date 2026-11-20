@@ -19,9 +19,21 @@ export interface RenderBlock {
   to: number;
   kind: string;
   source: string;
+  /**
+   * The block's Markdown with the quote markers of its later lines removed,
+   * when it starts after `> ` on its first line; what a rendered widget
+   * renders. Absent when it equals `source`.
+   */
+  markdown?: string;
 }
 export interface InlineContext {
   state: EditorState;
+  /**
+   * The visible range being decorated; absent for persistent widgets drawn
+   * off screen. A renderer of a node that can reach far past the screen (an
+   * unclosed `$$`) marks only this range.
+   */
+  readonly visible?: { from: number; to: number } | undefined;
   /** Inclusive selection touch, extended through inline ancestors and abutting elements. */
   revealed(from: number, to: number): boolean;
   mark(
@@ -209,3 +221,4 @@ export function markdownTree(state: EditorState): Tree {
 }
 
 export { editTouches, isPlainTextEdit } from "./plain-edit";
+export { changedBlocks } from "./changed-region";

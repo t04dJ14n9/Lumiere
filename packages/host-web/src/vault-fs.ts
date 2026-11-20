@@ -35,6 +35,10 @@ export interface VaultFileSystem {
   mkdir(path: string): Promise<void>;
   /** Remove a file, or an empty folder; a missing one is not an error. */
   remove(path: string): Promise<void>;
+  /**
+   * Move a file, or a folder with everything in it. `Mounts` refuses a
+   * target that exists before it asks (`move` in HostFiles never replaces).
+   */
   move(from: string, to: string): Promise<void>;
   /** Changes made from outside (another app, a sync), by path; none for memory. */
   watch?(listener: (path: string) => void): () => void;
@@ -44,5 +48,12 @@ export interface VaultFileSystem {
 export function notFound(path: string): Error {
   return Object.assign(new Error(`No file at ${path}`), {
     code: "FileNotFound",
+  });
+}
+
+/** The error a move onto an existing file rejects with, as VS Code names it. */
+export function alreadyThere(path: string): Error {
+  return Object.assign(new Error(`Something is already at ${path}`), {
+    code: "FileExists",
   });
 }

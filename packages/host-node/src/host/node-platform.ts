@@ -13,6 +13,7 @@ import {
   readFile,
   rename,
   rm,
+  rmdir,
   stat,
   writeFile,
 } from "node:fs/promises";
@@ -25,13 +26,11 @@ import {
   fileUriToPath,
   isInside,
   readContainedBytes,
-  writeAtomic,
-  writeThroughFile,
-  writeThroughBytes,
 } from "./paths";
 import type { HostEntry, HostFiles, HostPlatform, HostStore } from "./platform";
 import { fileUri } from "./uris";
-import { listVault } from "./vault";
+import { listVault, listVaultPaths } from "./vault";
+import { replaceFile, writeAtomic } from "./atomic-write";
 import { watchFile } from "./watch";
 import { watchTree } from "./watch-tree";
 
@@ -78,19 +77,41 @@ function toFile(uri: string): string {
   return file;
 }
 
+/** Keeps a byte order mark as U+FEFF, so a save writes it back. */
+const UTF8 = new TextDecoder("utf-8", { fatal: true, ignoreBOM: true });
+
+/**
+ * A file's text. Bytes that are not UTF-8 are refused: decoding them would
+ * put U+FFFD in their place, and the next save would write that over the
+ * file, losing what they were.
+ */
+function decodeText(bytes: Uint8Array, file: string): string {
+  try {
+    return UTF8.decode(bytes);
+  } catch {
+    throw new Error(
+      `${path.basename(file)} is not UTF-8 text. Lumière does not open it, so that saving cannot rewrite it.`,
+    );
+  }
+}
+
 export const nodeFiles: HostFiles = {
   isInside,
   contain: assertContained,
-  readText: async (uri, root) =>
-    root === undefined
-      ? readFile(toFile(uri), "utf8")
-      : (await readContainedBytes(toFile(uri), root)).toString("utf8"),
+  readText: async (uri, root) => {
+    const file = toFile(uri);
+    const bytes =
+      root === undefined
+        ? await readFile(file)
+        : await readContainedBytes(file, root);
+    return decodeText(bytes, file);
+  },
   readBytes: (uri, root) =>
     root === undefined
       ? readFile(toFile(uri))
       : readContainedBytes(toFile(uri), root),
-  save: (uri, text, root) => writeThroughFile(toFile(uri), text, root),
-  saveBytes: (uri, data, root) => writeThroughBytes(toFile(uri), data, root),
+  save: (uri, text, root) => replaceFile(toFile(uri), text, root),
+  saveBytes: (uri, data, root) => replaceFile(toFile(uri), data, root),
   create: (uri, root) => createEmptyFile(toFile(uri), root),
   async stat(uri) {
     try {
@@ -122,10 +143,12 @@ export const nodeFiles: HostFiles = {
   mkdir: async (uri) => {
     await mkdir(toFile(uri), { recursive: true });
   },
-  copy: (from, to) => cp(toFile(from), toFile(to), { recursive: true }),
-  move: (from, to) => rename(toFile(from), toFile(to)),
-  // A file, not a tree: VS Code's workspace fs deletes one entry.
-  remove: (uri) => rm(toFile(uri), { recursive: false, force: true }),
+  copy: (from, to) =>
+    cp(toFile(from), toFile(to), { recursive: true, force: true }),
+  move: (from, to) => moveEntry(toFile(from), toFile(to)),
+  // A file or an empty folder, not a tree: VS Code's workspace fs deletes
+  // one entry.
+  remove: (uri) => removeEntry(toFile(uri)),
   watch: (uri, listener) => watchFile(toFile(uri), listener),
   watchTree: (uri, listener) => watchTree(toFile(uri), listener),
   toPath: (uri) => fileURLToPath(uri),
@@ -133,6 +156,50 @@ export const nodeFiles: HostFiles = {
   uriOf: (file) => pathToFileURL(fileURLToPath(fileUri(file))).href,
   realContains,
 };
+
+/** One file, or an empty folder, which `rm` without `recursive` refuses. */
+async function removeEntry(file: string): Promise<void> {
+  try {
+    await rm(file, { recursive: false, force: true });
+  } catch (error) {
+    if ((error as { code?: string }).code !== "ERR_FS_EISDIR") {
+      throw error;
+    }
+    await rmdir(file);
+  }
+}
+
+/**
+ * Move a file or folder as VS Code's rename without overwrite does: a
+ * target that exists is refused (a rename would replace a file silently),
+ * unless it is the same file under another case of its name; across
+ * devices, it is copied and the original removed.
+ */
+async function moveEntry(from: string, to: string): Promise<void> {
+  const [source, target] = await Promise.all([
+    lstat(from, { bigint: true }),
+    lstat(to, { bigint: true }).catch(() => undefined),
+  ]);
+  if (target && (target.dev !== source.dev || target.ino !== source.ino)) {
+    throw Object.assign(new Error(`EEXIST: file already exists, '${to}'`), {
+      code: "EEXIST",
+    });
+  }
+  try {
+    await rename(from, to);
+  } catch (error) {
+    if ((error as NodeJS.ErrnoException).code !== "EXDEV") {
+      throw error;
+    }
+    await cp(from, to, {
+      recursive: true,
+      errorOnExist: true,
+      force: false,
+      verbatimSymlinks: true,
+    });
+    await rm(from, { recursive: true, force: true });
+  }
+}
 
 /** The host's own files, in a folder. */
 function folderStore(folder: string): HostStore {
@@ -151,4 +218,9 @@ function folderStore(folder: string): HostStore {
 /** Every file under a vault root (vault.ts `listVault`), on Node's file system. */
 export function listNodeVault(root: string, limit: number, shallow = false) {
   return listVault(nodeFiles, { root, limit, shallow });
+}
+
+/** The paths of the files under a vault root (vault.ts `listVaultPaths`), on Node's file system. */
+export function listNodeVaultPaths(root: string, limit: number) {
+  return listVaultPaths(nodeFiles, { root, limit });
 }

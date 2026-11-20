@@ -12,7 +12,8 @@ vault service, and sends each document to a worker. A conservative query plan
 uses indexed tags/properties and file paths without reading note content when
 possible; mixed content predicates read one coherent current text snapshot. Per-document parse errors are
 counted; timeout or cancellation terminates the worker. Index resolution refreshes
-live subscriptions. Result links use encoded relative paths and normal navigation.
+live subscriptions once it has been quiet for a second (it resolves after every
+typing pause), and a block keeps its results until the new ones arrive. Result links use encoded relative paths and normal navigation.
 
 ## Files
 
@@ -21,14 +22,15 @@ live subscriptions. Result links use encoded relative paths and normal navigatio
 - `worker-protocol.ts`: validated worker startup, submissions and replies.
 - `runner.ts`: worker startup, deadlines, pending requests and termination.
 - `query.ts`: indexed file eligibility, cached metadata/live reads and result ordering.
-- `match-lines.ts`: content-needle scan for Obsidian-style match-line snippets.
+- `read-ahead.ts`: bounded, in-order read-ahead of the notes a query evaluates.
+- `match-lines.ts`: content-needle scan for Obsidian-style match-line snippets (run in the worker: it runs user regexes).
 - `open.ts`: resolve result path to vault open (offset / beside).
 - `../../markdown/search/plan.ts`: scope-aware content/metadata requirements.
 - `host.ts`: RPC handlers and index change notification.
 - `client.ts`: subscriptions, refresh generations and cancellation.
 - `blocks.ts`: accessible status, refresh button, result links and clickable match lines.
 - `webview.ts`: query renderer and rendered-fence ownership.
-- `../../workers/search.ts`: isolated query compilation and evaluation entry.
+- `../../workers/search.ts`, `search-worker.ts`: isolated query compilation, evaluation and match lines.
 - `search.css`: the plugin's styles, bundled through `src/webview/styles/index.css`.
 
 ## Services, events and settings
@@ -43,9 +45,12 @@ true; no assigned keybindings or palette command.
 
 Uses the documented pure search grammar; no Dataview scripting. Worker startup
 has a 15-second deadline and each document has a 5-second evaluation deadline.
-A failed worker affects its query only. Results reflect the index's eligible files
-and unsaved text available through the host. Large vault searches may be slow;
-partial match snapshots stream over RPC (throttled) while the query runs, then the
+A failed worker affects its query only, and the block keeps listing what it found
+before the failure. Results reflect the index's eligible files
+and unsaved text available through the host. Large vault searches may be slow:
+the query has no RPC deadline (refresh or disposal cancels it), up to eight notes
+are read ahead of the one being evaluated, and
+new matches stream over RPC (throttled) and are appended while the query runs, then the
 final sorted set replaces them. Excluded files are omitted. Content hits nest up to
 25 match lines per file (highlighted substring, truncated around the hit); file /
 path / tag / property-only queries stay path-only. Match rows call `search/open` with the vault path and content offset (Cmd/Ctrl+Alt opens beside). File titles still use relative href links. No Dataview.

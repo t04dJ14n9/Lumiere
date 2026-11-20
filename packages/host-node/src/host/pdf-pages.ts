@@ -7,7 +7,7 @@
  * only in VS Code for now, so their messages are dropped here.
  */
 import { randomUUID } from "node:crypto";
-import { readFile, realpath } from "node:fs/promises";
+import { readFile, realpath, stat } from "node:fs/promises";
 import * as path from "node:path";
 import {
   DEFAULT_FLOATING_DOCK,
@@ -20,7 +20,7 @@ import {
   type ReadingPosition,
   type ViewSettings,
 } from "@workshop/pdf/portable";
-import type { PageSocket } from "./panel";
+import { awaitReconnect, type PageSocket } from "./panel";
 import {
   assertContained,
   fileUriToPath,
@@ -72,18 +72,26 @@ export class PdfPage implements PdfWebview {
   /** Only the newest load's bytes are kept: an older load's fetch has lost. */
   private bytes: { load: number; data: ArrayBuffer } | undefined;
   private disposed = false;
+  private cancelExpiry: () => void = () => {};
   private readonly connectTimer: ReturnType<typeof setTimeout>;
 
   constructor(
     private readonly setup: PdfPageSetup,
-    positions: Map<string, ReadingPosition>,
+    {
+      files,
+      positions,
+    }: {
+      /** The workspace's files, one for all its pages: they share each read. */
+      files: PdfFiles;
+      positions: Map<string, ReadingPosition>;
+    },
   ) {
     this.cspSource = setup.cspSource;
     this.panel = new PdfViewerPanel(
       setup.uri,
       this,
       {
-        files: containedFiles(setup.root),
+        files,
         error: (message) => setup.log(`PDF: ${message}`),
         // Links in a PDF open only in VS Code for now.
         openExternal: async (url) => setup.log(`PDF link not opened: ${url}`),
@@ -142,9 +150,22 @@ export class PdfPage implements PdfWebview {
     }
   }
 
-  /** The bytes of `load`, while it is the newest. */
+  /** The bytes of `load`, while it is the newest and not yet fetched whole. */
   bytesOf(load: number): ArrayBuffer | undefined {
     return this.bytes?.load === load ? this.bytes.data : undefined;
+  }
+
+  /**
+   * The page fetched `load` whole: let its bytes go. The viewer's engine
+   * opens a PDF only from all its bytes (it cannot read by range:
+   * packages/pdf/docs/large-pdfs.md) and never fetches them again, so
+   * keeping them would hold a second copy of the file for as long as the
+   * tab is open.
+   */
+  fetchedWhole(load: number): void {
+    if (this.bytes?.load === load) {
+      this.bytes = undefined;
+    }
   }
 
   /** The page's socket. The page sends the viewer's messages as `rpc` frames. */
@@ -154,6 +175,7 @@ export class PdfPage implements PdfWebview {
       return;
     }
     clearTimeout(this.connectTimer);
+    this.cancelExpiry();
     this.socket?.close();
     this.socket = socket;
     socket.onMessage((text) => {
@@ -164,10 +186,16 @@ export class PdfPage implements PdfWebview {
         }
       }
     });
-    socket.onClose(() => {
-      if (this.socket === socket) {
-        this.dispose();
+    socket.onClose((dropped) => {
+      if (this.socket !== socket) {
+        return;
       }
+      if (!dropped) {
+        this.dispose();
+        return;
+      }
+      this.socket = undefined;
+      this.cancelExpiry = awaitReconnect(() => this.dispose());
     });
     for (const text of this.outbox.splice(0)) {
       socket.send(text);
@@ -184,6 +212,7 @@ export class PdfPage implements PdfWebview {
     }
     this.disposed = true;
     clearTimeout(this.connectTimer);
+    this.cancelExpiry();
     this.panel.dispose();
     this.socket?.close();
     this.bytes = undefined;
@@ -197,9 +226,19 @@ export class PdfPage implements PdfWebview {
 export class PdfPages {
   private readonly pages = new Map<string, PdfPage>();
   private readonly positions = new Map<string, ReadingPosition>();
+  /**
+   * By workspace root. The viewer core shares one read of a file among the
+   * pages given the same files (`shared-file.ts` in @workshop/pdf).
+   */
+  private readonly files = new Map<string, PdfFiles>();
 
   open(setup: PdfPageSetup): PdfPage {
-    const page = new PdfPage(setup, this.positions);
+    let files = this.files.get(setup.root);
+    if (!files) {
+      files = containedFiles(setup.root);
+      this.files.set(setup.root, files);
+    }
+    const page = new PdfPage(setup, { files, positions: this.positions });
     this.pages.set(page.id, page);
     page.onDispose(() => this.pages.delete(page.id));
     return page;
@@ -219,21 +258,23 @@ export class PdfPages {
 /** The PDF's file, read and watched only inside the workspace it opened from. */
 function containedFiles(root: string): PdfFiles {
   const rootPath = fileUriToPath(root) ?? "";
+  // The canonical file once it is inside the canonical root, so a link
+  // swapped in after the containment check cannot redirect the read.
+  const containedPath = async (uri: string): Promise<string> => {
+    const real = await realpath(await pathInsideRoots([root], uri));
+    const relative = path.relative(await realpath(rootPath), real);
+    if (
+      relative === ".." ||
+      relative.startsWith(`..${path.sep}`) ||
+      path.isAbsolute(relative)
+    ) {
+      throw new OutsideWorkspace();
+    }
+    return real;
+  };
   return {
-    // Read the canonical file once it is inside the canonical root, so a link
-    // swapped in after the containment check cannot redirect the read.
-    read: async (uri) => {
-      const real = await realpath(await pathInsideRoots([root], uri));
-      const relative = path.relative(await realpath(rootPath), real);
-      if (
-        relative === ".." ||
-        relative.startsWith(`..${path.sep}`) ||
-        path.isAbsolute(relative)
-      ) {
-        throw new OutsideWorkspace();
-      }
-      return readFile(real);
-    },
+    read: async (uri) => readFile(await containedPath(uri)),
+    size: async (uri) => (await stat(await containedPath(uri))).size,
     watch(uri, onChange) {
       const file = fileUriToPath(uri);
       return file ? watchFile(file, onChange) : () => {};

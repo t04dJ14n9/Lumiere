@@ -51,10 +51,20 @@ syntax parser and HTML renderer share the highlight-aware emphasis flanking rule
   CodeMirror, viewport catch-up, idle slices, reach kept across edits,
   progress handed on, first-line frontmatter edits, indexing what a parse
   newly reached.
-- `blocks.ts`: block index, widget decorations and render revision.
+- `blocks.ts`: block index, widget decorations and render revision. A block
+  that starts after `> ` (display math or a diagram in a quote) carries its
+  Markdown without the later lines' quote markers, which is what its widget
+  renders (`../../markdown/quoted-block.ts`).
+- `quoted-block.test.ts`: quote markers stay out of a quoted block's render.
 - `block-discovery.ts`: structural syntax cache and renderer candidate selection.
 - `block-discovery.test.ts`: registration cost, discovery parity and unrestricted renderers.
-- `inline.ts`: basic inline decoration builder and composition/drag lifetime.
+- `inline.ts`: basic inline decoration builder.
+- `inline-plugin.ts`: when inline decorations are built again, and their
+  composition/drag lifetime.
+- `offscreen-reuse.ts`: while only the caret moves, persistent widgets off
+  screen (tall embeds) keep what they drew, apart from those in the
+  paragraphs the old or new selection reveals; `offscreen-reuse.test.ts`
+  checks this against a full drawing over random selections.
 - `highlight-colour.ts`: a coloured highlight's class and emoji.
 - `../../markdown/dialect/highlight-emphasis.ts`: highlight-aware emphasis flanking,
   shared with the HTML renderer.
@@ -91,7 +101,9 @@ text change may have altered: every top-level syntax node, before or after
 the change, that touches it or the region found so far, widened to whole
 lines until stable), `selection` (lines the caret left or
 entered) or `metadata` (an effect, a reconfiguration or a renderer change:
-every line).
+every line). The `text` region is computed in `changed-region.ts`, which
+needs no DOM; `api.ts` offers it to other plugins' indexes as
+`changedBlocks` (sticky scroll's headings, the line-number gutter).
 
 - `blockIndex` indexes only the `text` region again. Blocks before it are
   kept as the same objects; blocks after it are shifted copies. A region over

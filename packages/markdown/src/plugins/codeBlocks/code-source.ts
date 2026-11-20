@@ -4,7 +4,7 @@ import {
   revealFreezeToggled,
 } from "../../webview/ui/pointer-selection";
 import type { SyntaxNodeRef } from "@lezer/common";
-import { StateEffect, type Range } from "@codemirror/state";
+import { StateEffect, type ChangeDesc, type Range } from "@codemirror/state";
 import {
   Decoration,
   ViewPlugin,
@@ -188,6 +188,9 @@ export class CodeSource {
   }
 
   update(update: ViewUpdate): void {
+    if (update.docChanged) {
+      this.cache = movedCache(this.cache, update.changes);
+    }
     if (update.view.composing) {
       this.decorations = this.decorations.map(update.changes);
       return;
@@ -209,6 +212,22 @@ export class CodeSource {
   destroy(): void {
     this.destroyed = true;
   }
+}
+
+/**
+ * The cache moved with the blocks it describes, so an edit above a fence
+ * does not tokenise it again. An entry is used only when its text and
+ * language still match, so a key that lands on another block is harmless.
+ */
+function movedCache(
+  cache: Map<number, CachedCode>,
+  changes: ChangeDesc,
+): Map<number, CachedCode> {
+  const moved = new Map<number, CachedCode>();
+  for (const [from, cached] of cache) {
+    moved.set(changes.mapPos(from, 1), cached);
+  }
+  return moved;
 }
 
 /** Highlighted fences, with a copy button that writes through `copy`. */

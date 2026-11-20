@@ -92,6 +92,10 @@ export async function bootstrap(
       context.on("links/open", (request) =>
         root.bail("links/open", { ...request, editorId: panel.id }),
       );
+      // The change bar emits this in the panel; the diff editor listens on the window.
+      context.on("git-diff:open-full", (request) =>
+        root.emit("git-diff:open-full", request),
+      );
       if (host.settings.forNote(panel.document).preset === "obsidian") {
         context.plugin(vaultHost, { documentUri: panel.document.uri });
         context.plugin(resourcesHost, { panel });

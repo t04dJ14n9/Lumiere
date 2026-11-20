@@ -47,18 +47,23 @@ function open(
     dropped?: string[];
     gate?: Promise<void>;
     sha256?: () => string;
+    load?: () => number;
   } = {},
 ) {
   const posted: OutgoingMessage[] = [];
   const present = new Map<number, string>();
   let exports = 0;
+  let hostText = options.stored;
   const host: SessionHost = {
     post: (message) => posted.push(message),
     loadState: () => ({
-      load: 3,
+      load: options.load?.() ?? 3,
       sha256: options.sha256?.() ?? SHA,
-      ...(options.stored === undefined ? {} : { annotations: options.stored }),
+      ...(hostText === undefined ? {} : { annotations: hostText }),
     }),
+    keepStoreText: (text) => {
+      hostText = text;
+    },
   };
   const annotation = {
     import: async (incoming: AnnotationBundle) => {
@@ -138,6 +143,19 @@ test("a change to the PDF's own annotation is reported, and nothing is saved for
     { type: "annotationEmbeddedEdit", load: 3 },
   ]);
   await new Promise((resolve) => setTimeout(resolve, 20));
+  assert.equal(saves().length, 0);
+});
+
+test("a save still queued when the next bytes' load arrives is not filed under it", async () => {
+  let load = 3;
+  const { session, present, saves } = open({ load: () => load });
+  session.restore(true);
+  present.set(1, "highlight");
+  session.committed("create", [refOn(1)], {});
+  // Before the queued save runs, the file changed on disk: the host sent
+  // load 4, whose document replaces this one.
+  load = 4;
+  await new Promise((resolve) => setTimeout(resolve, 30));
   assert.equal(saves().length, 0);
 });
 
@@ -229,6 +247,7 @@ test("a save that fails tells the host, which can ask again", async () => {
     {
       post: (message) => posted.push(message),
       loadState: () => ({ load: 3, sha256: SHA }),
+      keepStoreText: () => undefined,
     },
   );
   session.restore(true);

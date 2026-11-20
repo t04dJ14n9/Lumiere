@@ -10,6 +10,12 @@ export interface VaultList {
   readonly recent: readonly string[];
 }
 
+/** A vault's files; `partial` when the vault holds more than are listed. */
+export interface VaultFiles {
+  readonly files: readonly FileEntry[];
+  readonly partial: boolean;
+}
+
 export interface FileEntry {
   readonly path: string;
   readonly kind: "note" | "pdf" | "image" | "other";
@@ -29,7 +35,17 @@ export type ServerEvent =
     }
   | { readonly type: "open"; readonly vault: string; readonly path: string }
   /** A drawing started or ended waiting; read it with `httpInk.waiting`. */
-  | { readonly type: "ink" };
+  | { readonly type: "ink" }
+  /** The vaults git waits to be trusted in changed (`httpGitTrust.waiting`). */
+  | { readonly type: "git-trust" }
+  /** A file or folder was renamed or moved, by its paths in the vaults' form. */
+  | { readonly type: "renamed"; readonly from: string; readonly to: string };
+
+/** What deleting did: to the trash, or nothing yet where there is none. */
+export interface Deletion {
+  readonly deleted: boolean;
+  readonly trashed: boolean;
+}
 
 /** A drawing the server's plugins wait for (src/server/ink.ts). */
 export interface InkWaiting {
@@ -79,12 +95,12 @@ export const httpApi = {
         headers: { "content-type": "application/json" },
         body: JSON.stringify({ path }),
       }),
-    files: async (vault: string) =>
-      (
-        await request<{ files: FileEntry[] }>(
-          `/api/files?vault=${encodeURIComponent(vault)}`,
-        )
-      ).files,
+    files: async (vault: string): Promise<VaultFiles> => {
+      const body = await request<{ files: FileEntry[]; partial?: boolean }>(
+        `/api/files?vault=${encodeURIComponent(vault)}`,
+      );
+      return { files: body.files, partial: body.partial === true };
+    },
     open: (path: string) => post("/api/open", { path }, shellKeyHeaders()),
   },
   commands: {
@@ -94,11 +110,54 @@ export const httpApi = {
     run: (command: string) => post("/lumiere/commands", { command }),
   },
   events(listener: (event: ServerEvent) => void): () => void {
-    const source = new EventSource("/api/events");
-    source.onmessage = (message: MessageEvent<string>) =>
-      listener(JSON.parse(message.data) as ServerEvent);
-    return () => source.close();
+    return listen("/api/events", listener);
   },
+  // The file tree's changes, which only the window may ask for.
+  files: {
+    createNote: (vault: string, path: string) =>
+      post("/api/files/note", { vault, path }, shellKeyHeaders()),
+    createFolder: (vault: string, path: string) =>
+      post("/api/files/folder", { vault, path }, shellKeyHeaders()),
+    rename: async (vault: string, from: string, to: string) =>
+      (
+        (await post(
+          "/api/files/rename",
+          { vault, from, to },
+          shellKeyHeaders(),
+        )) as { notUpdated: string[] }
+      ).notUpdated,
+    remove: async (
+      vault: string,
+      path: string,
+      { permanently }: { permanently: boolean },
+    ) =>
+      (await post(
+        "/api/files/delete",
+        { vault, path, permanently },
+        shellKeyHeaders(),
+      )) as Deletion,
+  },
+};
+
+function listen(
+  url: string,
+  listener: (event: ServerEvent) => void,
+): () => void {
+  const source = new EventSource(url);
+  source.onmessage = (message: MessageEvent<string>) =>
+    listener(JSON.parse(message.data) as ServerEvent);
+  return () => source.close();
+}
+
+/**
+ * The vaults git waits for the reader to trust (server/git-trust.ts), and
+ * the answer, which only the window may give.
+ */
+export const httpGitTrust = {
+  waiting: async (): Promise<readonly string[]> =>
+    (await request<{ waiting: string[] }>("/api/git-trust")).waiting,
+  answer: (vault: string, allow: boolean) =>
+    post("/api/git-trust", { vault, allow }, shellKeyHeaders()),
 };
 
 /** Drawings for the server's plugins, on the window's canvas (ink.ts). */
@@ -112,7 +171,9 @@ export const httpInk = {
     post("/api/ink", sketch === undefined ? { id } : { id, sketch }),
   /** Start Insert Sketch in the note last focused. */
   insertSketch: () => post("/api/sketch", {}),
-  events: httpApi.events,
+  // Drawings only: a note waiting to open must go to the window's stream.
+  events: (listener: (event: ServerEvent) => void) =>
+    listen("/api/events?only=ink", listener),
 };
 
 export const api = {

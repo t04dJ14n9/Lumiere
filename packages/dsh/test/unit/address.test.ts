@@ -177,3 +177,45 @@ test("an absolute note address names no root, only its session", () => {
     "/v",
   );
 });
+
+test("a page whose note was renamed opens the note at its new path, in its workspace only", () => {
+  const prevWindow = globalThis.window;
+  const prevLocation = globalThis.location;
+  try {
+    let listener: ((event: MessageEvent) => void) | undefined;
+    globalThis.location = { origin: "http://127.0.0.1:3000" } as Location;
+    globalThis.window = {
+      addEventListener: (_type: string, fn: (event: MessageEvent) => void) => {
+        listener = fn;
+      },
+      removeEventListener: () => {
+        listener = undefined;
+      },
+    } as unknown as Window & typeof globalThis;
+    const contentWindow = {} as Window;
+    const frame = {
+      current: { contentWindow } as unknown as HTMLIFrameElement,
+    };
+    const opened: string[] = [];
+    const stop = followOpens(frame, {
+      sessionId: "s1",
+      root: "/v",
+      open: (address) => opened.push(address),
+    });
+    const moved = (path: string) =>
+      listener?.({
+        origin: "http://127.0.0.1:3000",
+        source: contentWindow,
+        data: { lumiere: "moved", path },
+      } as unknown as MessageEvent);
+    moved("/v/notes/Renamed.md");
+    moved("/elsewhere/Renamed.md");
+    assert.deepEqual(opened, [
+      sessionAddress("s1", "/v", "/v/notes/Renamed.md", ""),
+    ]);
+    stop();
+  } finally {
+    globalThis.window = prevWindow;
+    globalThis.location = prevLocation;
+  }
+});

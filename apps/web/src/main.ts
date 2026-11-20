@@ -11,20 +11,17 @@ import {
   indexedDbFolder,
   MemoryFileSystem,
   Mounts,
+  saveOnHide,
   type VaultFileSystem,
 } from "@workshop/host-web";
 import type { ContributedSetting } from "@workshop/markdown/portable";
 import { answerWorker, windowAnswers } from "./answers";
 import { DEMO } from "./demo";
-import {
-  canPickFolders,
-  mountRemembered,
-  pickFolder,
-  privateFolder,
-} from "./folders";
+import { canPickFolders, PickedFolders, privateFolder } from "./folders";
 import { HandleFileSystem } from "./handle-fs";
 import { NotePages } from "./note-pages";
 import { fileUrl } from "./shared/routes";
+import { offerUpdates, updateBanner } from "./updates";
 
 const DATA = "/lumiere-data";
 const DEMO_VAULT = "/vaults/Lumière Demo";
@@ -36,7 +33,8 @@ async function main(): Promise<void> {
   const files = new Mounts();
   files.mount(DATA, await kept("data"));
   files.mount(DEMO_VAULT, await demoVault());
-  await mountRemembered(files);
+  const picked = new PickedFolders(files);
+  await picked.mountRemembered();
   const [contributed, menus] = await Promise.all([
     json<ContributedSetting[]>(new URL("contributed.json", base)),
     json<unknown>(new URL("menus.json", base)),
@@ -66,8 +64,9 @@ async function main(): Promise<void> {
       resource: (panel, uri) => fileUrl(base.href, panel, uri),
       servePage: (html) => notePages.serve(html),
     },
-    ...(canPickFolders() ? { pickFolder: () => pickFolder(files) } : {}),
+    ...(canPickFolders() ? { pickFolder: () => picked.pick() } : {}),
   });
+  saveOnHide(() => local.host.saveAll(), window);
   if (navigator.serviceWorker) {
     answerWorker({
       messages: navigator.serviceWorker,
@@ -91,9 +90,18 @@ async function main(): Promise<void> {
   await local.backend.vaults
     .add(last ?? DEMO_VAULT)
     .catch(() => local.backend.vaults.add(DEMO_VAULT));
-  await navigator.serviceWorker
+  const registration = await navigator.serviceWorker
     ?.register(new URL("sw.js", base))
-    .catch(() => {});
+    .catch(() => undefined);
+  if (registration) {
+    offerUpdates({
+      registration,
+      workers: navigator.serviceWorker,
+      offer: updateBanner,
+      saveAll: () => local.host.saveAll(),
+      reload: () => location.reload(),
+    });
+  }
 }
 
 /** The window's content security policy, which a note's page keeps. */

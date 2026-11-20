@@ -6,10 +6,13 @@ import type {
   FileEvent,
   ListedFile,
   SnapshotStore,
+  VaultListing,
   VaultSettings,
   VaultSystem,
 } from "../plugins/vault/api";
-import { isIgnoredPath } from "../plugins/vault/exclusion";
+import { globToRegExp, isIgnoredPath } from "../plugins/vault/exclusion";
+import { ListingBudget } from "../plugins/vault/listing-budget";
+import { isMarkdownPath } from "../shared/vault-path";
 import { createVaultParser } from "./vault-parser";
 import { nodeWorkerLauncher } from "./node-workers";
 import { workersFolder } from "./running-extension";
@@ -70,7 +73,8 @@ export function createVaultSystem(
 }
 
 function isNote(document: vscode.TextDocument): boolean {
-  return document.uri.path.toLowerCase().endsWith(".md");
+  // `.markdown` is a note too, as the index and the Node host count it.
+  return isMarkdownPath(document.uri.path);
 }
 
 function toDisposer(disposable: vscode.Disposable): () => void {
@@ -105,40 +109,61 @@ function relativePath(root: vscode.Uri, uri: vscode.Uri): string | undefined {
 }
 
 /**
- * Walk the vault, skipping hidden folders, `node_modules` and symbolic links
- * to folders (which could loop), and stat each file.
+ * Walk the vault, skipping hidden folders, `node_modules`, what VS Code's
+ * `files.exclude` hides and symbolic links to folders (which could loop),
+ * keeping files by ListingBudget (notes and other files are limited apart).
+ * Only the notes are statted before the listing returns: the index compares
+ * their time and size with its snapshot to reuse their parses. In a code
+ * repository the other files are most of the walk, so they are listed with
+ * `statPending` and their stats follow in `stats`.
  */
 async function listVault(
   root: string,
   limit: number,
   shallow = false,
-): Promise<{ files: ListedFile[]; partial: boolean }> {
+): Promise<VaultListing> {
   const base = vscode.Uri.parse(root);
-  const uris = await collectFiles(base, limit + 1, shallow);
-  const partial = uris.length > limit;
-  const files = await statAll(base, uris.slice(0, limit));
-  return { files, partial };
+  const budget = new ListingBudget(limit);
+  const uris = await collectFiles(base, budget, shallow);
+  const notes = uris.filter((uri) => isMarkdownPath(uri.path));
+  const others = uris.filter((uri) => !isMarkdownPath(uri.path));
+  const files = await statAll(base, notes);
+  for (const uri of others) {
+    const path = relativePath(base, uri);
+    if (path !== undefined && !isIgnoredPath(path)) {
+      const file = { uri: uri.toString(), path, mtime: 0, size: 0 };
+      files.push({ ...file, statPending: true });
+    }
+  }
+  return {
+    files,
+    partial: budget.isPartial,
+    ...(others.length > 0 && { stats: statAll(base, others) }),
+  };
 }
 
 async function collectFiles(
   base: vscode.Uri,
-  limit: number,
+  budget: ListingBudget,
   shallow: boolean,
 ): Promise<vscode.Uri[]> {
   const files: vscode.Uri[] = [];
   const folders = [base];
-  while (folders.length > 0 && files.length < limit) {
+  const isExcluded = filesExcludeMatcher(base);
+  while (folders.length > 0 && !budget.isSpent) {
     const batch = folders.splice(0, STAT_CONCURRENCY);
     const listings = await Promise.all(batch.map(readDirectory));
-    for (let i = 0; i < batch.length && files.length < limit; i++) {
+    for (let i = 0; i < batch.length && !budget.isSpent; i++) {
       appendFolderEntries(base, batch[i]!, listings[i]!, {
         shallow,
-        limit,
+        budget,
+        isExcluded,
         files,
         folders,
       });
     }
   }
+  budget.stop(folders.length);
   return files;
 }
 
@@ -148,13 +173,14 @@ function appendFolderEntries(
   entries: readonly [string, vscode.FileType][],
   state: {
     shallow: boolean;
-    limit: number;
+    budget: ListingBudget;
+    isExcluded: (uri: vscode.Uri) => boolean;
     files: vscode.Uri[];
     folders: vscode.Uri[];
   },
 ): void {
   for (const [name, type] of entries) {
-    if (state.files.length >= state.limit) {
+    if (state.budget.isSpent) {
       return;
     }
     const uri = vscode.Uri.joinPath(folder, name);
@@ -162,7 +188,8 @@ function appendFolderEntries(
     if (
       name.startsWith(".") ||
       name === "node_modules" ||
-      (relPath !== undefined && isIgnoredPath(relPath))
+      (relPath !== undefined && isIgnoredPath(relPath)) ||
+      state.isExcluded(uri)
     ) {
       continue;
     }
@@ -171,10 +198,41 @@ function appendFolderEntries(
       if (!state.shallow && !isLink) {
         state.folders.push(uri);
       }
-    } else if (type & vscode.FileType.File) {
+    } else if (type & vscode.FileType.File && state.budget.admit(uri.path)) {
       state.files.push(uri);
     }
   }
+}
+
+/**
+ * VS Code's `files.exclude` in the vault's workspace folder: what the
+ * Explorer hides (build output, say) is not walked or indexed. Patterns are
+ * globs from the workspace folder; one with a `when` clause is not applied.
+ */
+function filesExcludeMatcher(base: vscode.Uri): (uri: vscode.Uri) => boolean {
+  const folder = vscode.workspace.getWorkspaceFolder(base);
+  if (!folder) {
+    return () => false;
+  }
+  const patterns = vscode.workspace
+    .getConfiguration("files", folder)
+    .get<Record<string, unknown>>("exclude", {});
+  const tests = Object.entries(patterns)
+    .filter(([, isOn]) => isOn === true)
+    .map(([glob]) => globToRegExp(glob.replace(/^\/+/, "")));
+  const prefix = folder.uri.path.replace(/\/+$/, "") + "/";
+  // A file inside an excluded folder is excluded: the walk never enters
+  // it, and a file event names the file, so every ancestor is tested.
+  return (uri) => {
+    if (tests.length === 0 || !uri.path.startsWith(prefix)) {
+      return false;
+    }
+    const segments = uri.path.slice(prefix.length).split("/");
+    return segments.some((_, at) => {
+      const path = segments.slice(0, at + 1).join("/");
+      return tests.some((test) => test.test(path));
+    });
+  };
 }
 
 async function readDirectory(
@@ -236,7 +294,11 @@ function watchVault(
   const watcher = vscode.workspace.createFileSystemWatcher(
     new vscode.RelativePattern(base, "**/*"),
   );
+  const isExcluded = filesExcludeMatcher(base);
   const created = async (uri: vscode.Uri, type: "create" | "change") => {
+    if (isExcluded(uri)) {
+      return;
+    }
     for (const file of await filesAt(base, uri)) {
       listener({ type, file });
     }
@@ -277,7 +339,8 @@ async function filesAt(
   if (path === undefined || isIgnoredPath(path)) {
     return [];
   }
-  return statAll(base, await collectFiles(uri, Infinity, false));
+  const everything = new ListingBudget(Number.POSITIVE_INFINITY);
+  return statAll(base, await collectFiles(uri, everything, false));
 }
 
 async function renamed(

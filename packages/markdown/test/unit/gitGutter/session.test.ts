@@ -149,3 +149,17 @@ test("a shifted bar with different baseline text does not match", () => {
   };
   assert.equal(session.refFor(other), undefined);
 });
+
+test("a keystroke noted without the text still makes the snapshot stale", () => {
+  const session = new DiffSession("HEAD");
+  const snap = session.publish("file", "a\nold\n", "a\nnew\n");
+  assert.deepEqual(session.authoritativeSourceState(), snap.sourceState);
+  session.noteEdit();
+  assert.notDeepEqual(session.authoritativeSourceState(), snap.sourceState);
+  // Even back at the published text, the buffer was read anew: a new version.
+  const before = session.authoritativeSourceState();
+  session.noteDocument("a\nnew\n");
+  assert.notDeepEqual(session.authoritativeSourceState(), before);
+  const again = session.publish("file", "a\nold\n", "a\nnew\n");
+  assert.deepEqual(session.authoritativeSourceState(), again.sourceState);
+});

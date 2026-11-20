@@ -194,6 +194,30 @@ test("a # in a new name is written %23, so the link reads back to that file", ()
   });
 });
 
+test("a new name with %, spaces, # or parentheses reads back to that file", () => {
+  const text = "[a](Old.md) [b](Old.md#Part) [c](<Old.md#Part>)";
+  const names = [
+    "a b.md",
+    "50% off.md",
+    "a%20b.md",
+    "100%.md",
+    "c#d.md",
+    "e (f).md",
+    "g(.md",
+    "h%23i.md",
+  ];
+  for (const name of names) {
+    const ctx = context({ ...vault, "A.md": text }, { "Old.md": name });
+    const result = apply(text, rewriteLinks(text, "A.md", ctx));
+    const { index } = memoryVaults({ "A.md": result, [name]: "" });
+    assert.deepEqual(
+      Object.fromEntries(index.resolvedLinks("A.md")),
+      { [name]: 3 },
+      `${name} written as ${result}`,
+    );
+  }
+});
+
 // Obsidian 1.15.0's rule for link text on rename, read from its link
 // updater with REA (2026-11-07).
 test("text showing the renamed file's name follows it; the writer's own text stays", () => {
@@ -367,6 +391,46 @@ test("a link to a file with # in its name follows that file, not the name before
     ),
     "See [ch](second.md) and [x](chapter.md)",
   );
+});
+
+test("a Markdown link to a .markdown or .MD note keeps that extension", () => {
+  const text = "[x](Old.markdown) [[Old]] [y](Up.MD)";
+  const notes = { "A.md": text, "Old.markdown": "", "Up.MD": "" };
+  const renames = { "Old.markdown": "New.markdown", "Up.MD": "Down.MD" };
+  const result = apply(
+    text,
+    rewriteLinks(text, "A.md", context(notes, renames)),
+  );
+  assert.equal(result, "[x](New.markdown) [[New]] [y](Down.MD)");
+  const { index } = memoryVaults({
+    "A.md": result,
+    "New.markdown": "",
+    "Down.MD": "",
+  });
+  assert.deepEqual(Object.fromEntries(index.resolvedLinks("A.md")), {
+    "New.markdown": 2,
+    "Down.MD": 1,
+  });
+});
+
+test("a rename reads the vault's file list once, not once per link", () => {
+  const text = Array.from({ length: 50 }, () => "[[Old]]").join("\n");
+  for (const format of ["shortest", "relative", "absolute"] as const) {
+    const ctx = context({ ...vault, "A.md": text }, { "Old.md": "New.md" });
+    let scans = 0;
+    // Every pass over the list reads its first path.
+    const pathsAfter = new Proxy([...ctx.pathsAfter], {
+      get(target, property, receiver) {
+        if (property === "0") {
+          scans += 1;
+        }
+        return Reflect.get(target, property, receiver) as unknown;
+      },
+    });
+    const edits = rewriteLinks(text, "A.md", { ...ctx, pathsAfter, format });
+    assert.equal(edits.length, 50);
+    assert.ok(scans <= 1, `${format}: ${scans} passes over the file list`);
+  }
 });
 
 test("a moved note's own links keep their text", () => {

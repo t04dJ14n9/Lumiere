@@ -6,13 +6,12 @@ import { ImageLoadError, missingEmbedText, noteName } from "./missing";
 import { ImageStandIns } from "./stand-in";
 import { inspectImage } from "./image-dialog";
 import { IMAGE_EMBED, mountImageEmbedActions } from "./embed-actions";
-import { embeddedNote, MissingSection } from "./note";
+import { embeddedNote, MissingSection, RefusedEmbed } from "./note";
 import { renderBaseEmbed } from "./base-embed";
 import { mountPdfEmbed } from "./pdf-embed";
-import {
-  getCachedEmbedResource,
-  setCachedEmbedResource,
-} from "./resource-cache";
+import { EmbedLives } from "./embed-lives";
+import { vaultEmbedResource } from "./resource-cache";
+import { NearViewport, waitsUntilNear } from "./near-viewport";
 
 interface EmbedOptions {
   pass: RenderPass;
@@ -30,6 +29,8 @@ export function embedIsWiki(node: { dataset: { wiki?: string } }): boolean {
 export interface PassEmbeds {
   /** Load again the embeds whose file could not be loaded: it may be there now. */
   retryMissing(): void;
+  /** Load again the embeds showing these files (URIs): they changed. */
+  reload(sources: ReadonlySet<string>): void;
   dispose(): void;
 }
 
@@ -41,14 +42,17 @@ export function enhanceEmbeds(options: EmbedOptions): PassEmbeds {
 }
 
 class EmbedPass implements PassEmbeds {
-  private readonly events = new AbortController();
-  private readonly disposers: (() => void)[] = [];
+  private readonly lives = new EmbedLives<HTMLElement>();
   private readonly restore: (() => void)[] = [];
   /** Embeds whose file could not be loaded. */
   private readonly missing = new Set<HTMLElement>();
   /** The title an embed had before an error replaced it. */
   private readonly ownTitles = new Map<HTMLElement, string>();
   private readonly standIns = new ImageStandIns();
+  /** How many times each embed was shown: only the latest lands. */
+  private readonly showings = new Map<HTMLElement, number>();
+  /** Notes, bases and PDFs load only when they come near the screen. */
+  private readonly near = new NearViewport();
   private isActive = true;
   constructor(private readonly options: EmbedOptions) {}
 
@@ -58,7 +62,11 @@ class EmbedPass implements PassEmbeds {
       "[data-resource]",
     )) {
       this.rememberPlaceholder(node);
-      this.show(node);
+      if (waitsUntilNear(node.dataset.resource ?? "")) {
+        this.near.whenNear(node, () => this.show(node));
+      } else {
+        this.show(node);
+      }
     }
   }
 
@@ -74,35 +82,51 @@ class EmbedPass implements PassEmbeds {
 
   dispose(): void {
     this.isActive = false;
-    this.events.abort();
+    this.near.dispose();
     this.standIns.restoreAll();
-    for (const dispose of this.disposers.reverse()) {
-      dispose();
-    }
+    this.lives.releaseAll();
     for (const reset of this.restore) {
       reset();
     }
   }
 
+  reload(sources: ReadonlySet<string>): void {
+    for (const node of this.lives.showing(sources)) {
+      // What it shows stays until the new version is there to replace it.
+      this.show(node, () => this.lives.release(node));
+    }
+  }
+
   /** Resolve an embed and show what it names, or why it cannot. */
-  private show(node: HTMLElement): void {
+  private show(node: HTMLElement, replace = () => {}): void {
     const target = node.dataset.resource ?? "";
+    // Only the latest showing of an embed lands: its file may change twice
+    // before the first load answers.
+    const showing = (this.showings.get(node) ?? 0) + 1;
+    this.showings.set(node, showing);
+    const isLatest = () => this.showings.get(node) === showing;
     const showError = (error: unknown) => this.showError(node, target, error);
     const resource = this.resolve(node, target);
     if (!resource) {
       return;
     }
+    const land = (resolved: Resource) => {
+      if (isLatest()) {
+        replace();
+        void this.apply(node, target, resolved).catch(showError);
+      }
+    };
     if (!isPromise(resource)) {
-      void this.apply(node, target, resource).catch(showError);
+      land(resource);
       return;
     }
-    void resource.then(
-      (resolved) => this.apply(node, target, resolved).catch(showError),
-      (error: unknown) => {
+    void resource.then(land, (error: unknown) => {
+      if (isLatest()) {
+        replace();
         this.missing.add(node);
         showError(error);
-      },
-    );
+      }
+    });
   }
 
   private showError(node: HTMLElement, target: string, error: unknown): void {
@@ -121,6 +145,7 @@ class EmbedPass implements PassEmbeds {
     surface.textContent = missingEmbedText(target, {
       note: noteName(pass.documentUri),
       section: error instanceof MissingSection,
+      refused: error instanceof RefusedEmbed ? error.reason : undefined,
       fetchFailed: error instanceof ImageLoadError,
     });
     surface.title = String(error);
@@ -173,37 +198,30 @@ class EmbedPass implements PassEmbeds {
     if (/^data:image\//i.test(target)) {
       return { kind: "image", source: target, url: target };
     }
-    const syntax = node.dataset.wiki === "true" ? "wikilink" : "markdown";
-    const key = `${syntax}\0${pass.documentUri ?? ""}\0${target}`;
-    const cached =
-      resources.peek?.(target, pass.documentUri, syntax) ??
-      getCachedEmbedResource(resources, key);
-    if (cached !== undefined) {
-      return cached;
-    }
-    return resources.load(target, pass.documentUri, syntax).then((resolved) => {
-      if (resolved.kind !== "note" && resolved.kind !== "base") {
-        setCachedEmbedResource(resources, key, resolved);
-      }
-      return resolved;
+    return vaultEmbedResource(resources, {
+      target,
+      documentUri: pass.documentUri,
+      isWiki: embedIsWiki(node),
     });
   }
 
+  /** The button that opens what `node` embeds (`target`). */
   private openButton(
+    node: HTMLElement,
     target: string,
-    wiki: boolean,
     label: string,
     className: "open-embed" | "attachment-open",
   ): HTMLButtonElement {
-    const node = document.createElement("button");
-    node.type = "button";
-    node.className = className;
-    node.textContent = label;
-    node.setAttribute("aria-label", `Open ${target}`);
-    node.addEventListener("click", () => this.options.open(target, wiki), {
-      signal: this.events.signal,
+    const wiki = embedIsWiki(node);
+    const button = document.createElement("button");
+    button.type = "button";
+    button.className = className;
+    button.textContent = label;
+    button.setAttribute("aria-label", `Open ${target}`);
+    button.addEventListener("click", () => this.options.open(target, wiki), {
+      signal: this.lives.signal(node),
     });
-    return node;
+    return button;
   }
 
   private async apply(
@@ -214,6 +232,7 @@ class EmbedPass implements PassEmbeds {
     if (!this.isActive) {
       return;
     }
+    this.lives.setSource(node, resource.source);
     this.clearError(node);
     const wiki = embedIsWiki(node);
     if (resource.kind === "image") {
@@ -221,7 +240,7 @@ class EmbedPass implements PassEmbeds {
     } else if (resource.kind === "audio" || resource.kind === "video") {
       this.showMedia(node, target, resource);
     } else if (resource.kind === "note" && resource.text !== undefined) {
-      await this.showNote(node, target, resource, wiki);
+      await this.showNote(node, target, resource);
     } else if (resource.kind === "base") {
       renderBaseEmbed(node, {
         target,
@@ -235,13 +254,13 @@ class EmbedPass implements PassEmbeds {
         target,
         url: resource.url,
         wiki,
-        signal: this.events.signal,
+        signal: this.lives.signal(node),
         measure: this.options.pass.measure,
         open: (openTarget, isWiki) => this.options.open(openTarget, isWiki),
       });
     } else {
       node.replaceChildren(
-        this.openButton(target, wiki, target, "attachment-open"),
+        this.openButton(node, target, target, "attachment-open"),
       );
     }
     if (this.isActive) {
@@ -269,7 +288,7 @@ class EmbedPass implements PassEmbeds {
       image.height = Number(node.dataset.height);
     }
     image.addEventListener("load", pass.measure, {
-      signal: this.events.signal,
+      signal: this.lives.signal(node),
     });
     image.addEventListener(
       "error",
@@ -283,7 +302,7 @@ class EmbedPass implements PassEmbeds {
             : node;
         this.showError(surface, target, new ImageLoadError(target));
       },
-      { signal: this.events.signal },
+      { signal: this.lives.signal(node) },
     );
     if (image !== node) {
       node.replaceChildren(image);
@@ -313,7 +332,9 @@ class EmbedPass implements PassEmbeds {
       );
     };
     syncCompact();
-    image.addEventListener("load", syncCompact, { signal: this.events.signal });
+    image.addEventListener("load", syncCompact, {
+      signal: this.lives.signal(node),
+    });
     const inspect = document.createElement("button");
     inspect.type = "button";
     inspect.className = "inspect-image";
@@ -327,15 +348,16 @@ class EmbedPass implements PassEmbeds {
         event.stopPropagation();
         inspect.click();
       },
-      { signal: this.events.signal },
+      { signal: this.lives.signal(node) },
     );
-    this.disposers.push(
-      () => {
-        actions.remove();
-        if (host !== node && host.parentNode) {
-          host.replaceWith(image);
-        }
-      },
+    this.lives.onRelease(node, () => {
+      actions.remove();
+      if (host !== node && host.parentNode) {
+        host.replaceWith(image);
+      }
+    });
+    this.lives.onRelease(
+      node,
       inspectImage(inspect, image.src, image.alt, () =>
         this.options.open(target, wiki),
       ),
@@ -353,7 +375,8 @@ class EmbedPass implements PassEmbeds {
     media.controls = true;
     media.preload = "metadata";
     media.setAttribute("aria-label", target);
-    this.disposers.push(
+    this.lives.onRelease(
+      node,
       mediaRecovery(media, resource.url, (message) => {
         if (this.isActive) {
           node.textContent = `${target}: ${message}`;
@@ -361,13 +384,13 @@ class EmbedPass implements PassEmbeds {
         }
       }),
     );
-    this.disposers.push(() => {
+    this.lives.onRelease(node, () => {
       media.pause();
       media.removeAttribute("src");
       media.load();
     });
     media.addEventListener("loadedmetadata", pass.measure, {
-      signal: this.events.signal,
+      signal: this.lives.signal(node),
     });
     node.replaceChildren(media);
   }
@@ -376,7 +399,6 @@ class EmbedPass implements PassEmbeds {
     node: HTMLElement,
     target: string,
     resource: Resource,
-    wiki: boolean,
   ): Promise<void> {
     const { pass, render } = this.options;
     // apply admits note resources only after checking their text.
@@ -390,8 +412,9 @@ class EmbedPass implements PassEmbeds {
     const section = document.createElement("section");
     section.className = "note-embed";
     const content = document.createElement("div");
-    section.append(this.openButton(target, wiki, "↗", "open-embed"), content);
+    section.append(this.openButton(node, target, "↗", "open-embed"), content);
     node.replaceChildren(section);
+    const shown = this.lives.signal(node);
     const nested = await render.into(content, selection.text, {
       ...(pass.readOnly === undefined ? {} : { readOnly: pass.readOnly }),
       documentUri: resource.source,
@@ -401,8 +424,9 @@ class EmbedPass implements PassEmbeds {
       taskLineCount: selection.text.split("\n").length,
       measure: pass.measure,
     });
-    if (this.isActive) {
-      this.disposers.push(() => {
+    // Released meanwhile (the pass ended): nothing will dispose it later.
+    if (this.isActive && !shown.aborted) {
+      this.lives.onRelease(node, () => {
         void nested.dispose();
       });
     } else {

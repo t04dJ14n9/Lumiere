@@ -130,12 +130,16 @@ export default defineManifest({
       // Built-in Markdown text editor focused: Ctrl/Cmd+E → Lumiere.
       // workbench scope so the binding is not gated on activeCustomEditorId /
       // editorFocus (those keys are false while the text editor has focus).
+      // Only where the toggle acts, a note's own text editor (`.md` or
+      // `.markdown`, the custom editor's selector): in a diff
+      // editor, an untitled buffer or a notebook cell it would do nothing and
+      // still take VS Code's Quick Open (Cmd+E: Use Selection for Find).
       {
         id: "toggleTextEditor",
         key: "ctrl+e",
         mac: "cmd+e",
         scope: "workbench",
-        when: "editorLangId == 'markdown' && editorTextFocus && !activeCustomEditorId",
+        when: "editorLangId == 'markdown' && editorTextFocus && !activeCustomEditorId && !isInDiffEditor && resourceFilename =~ /\\.(md|markdown)$/i",
       },
     ],
     menus: [

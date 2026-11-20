@@ -1,9 +1,10 @@
 import type { Plugin } from "@workshop/core";
 import type { FileTextEdits, HostServices } from "../../shared/host";
 import { vaultLinks } from "../../markdown/metadata/linkpaths";
+import { isMarkdownPath } from "../../shared/vault-path";
 import type { Vault, VaultFile, Vaults } from "../vault/api";
 import type {} from "../editor/api";
-import { changedLinks, rewriteLinks } from "./rewrite";
+import { changesLinkText, rewriteLinks } from "./rewrite";
 import { sourceText } from "./source-text";
 import { registerRenameHeading } from "./rename-heading";
 import { rewriteCanvas, wholeTextEdit } from "./canvas";
@@ -227,13 +228,18 @@ function candidateNotes(vault: Vault, paths: Map<string, string>): VaultFile[] {
     .map((source) => vault.index.file(source))
     .filter(
       (file): file is VaultFile =>
-        file?.extension === "md" || file?.extension === "canvas",
+        file !== undefined &&
+        (isMarkdownPath(file.path) || file.extension === "canvas"),
     );
 }
 
+/**
+ * Whether `file` is a note the index has not parsed yet. Notes are what the
+ * index parses: `.md` and `.markdown`, in any case.
+ */
 function isUnparsedNote(vault: Vault, file: VaultFile): boolean {
   return (
-    file.extension === "md" && vault.index.metadata(file.path) === undefined
+    isMarkdownPath(file.path) && vault.index.metadata(file.path) === undefined
   );
 }
 
@@ -258,14 +264,14 @@ async function affectedNoteCount(
 ): Promise<{ files: number; unchecked: string[] }> {
   const { vault, paths } = plan;
   const candidates = candidateNotes(vault, paths);
-  const context = { renames: paths, resolve: resolverOf(vault) };
+  const context = rewriteContext(host, plan, renames);
   const indexed = candidates.filter((file) => {
     const parsed = needsText(vault, file)
       ? undefined
       : vault.index.metadata(file.path);
     return (
       parsed !== undefined &&
-      changedLinks(vaultLinks(parsed), file.path, context).length > 0
+      changesLinkText(vaultLinks(parsed), file.path, context)
     );
   }).length;
   const read = candidates.filter((file) => needsText(vault, file));
@@ -310,17 +316,13 @@ interface LinkEditResult {
   unchecked: string[];
 }
 
-/** Reads each file's current text and rewrites its links. */
-async function textEdits(
-  host: Pick<RenameHost, "settings" | "hostDocuments" | "vaults">,
+/** What rewriting links needs to know about this rename. */
+function rewriteContext(
+  host: Pick<RenameHost, "settings">,
   { vault, paths }: RenamePlan,
-  {
-    files,
-    renames,
-    scan,
-  }: { files: readonly VaultFile[]; renames: Renames; scan: RenameScan },
-): Promise<LinkEditResult> {
-  const context: RewriteContext = {
+  renames: Renames,
+): RewriteContext {
+  return {
     renames: paths,
     resolve: resolverOf(vault),
     pathsAfter: vault.index
@@ -332,6 +334,20 @@ async function textEdits(
       renames[0]?.oldUri,
     ),
   };
+}
+
+/** Reads each file's current text and rewrites its links. */
+async function textEdits(
+  host: Pick<RenameHost, "settings" | "hostDocuments" | "vaults">,
+  plan: RenamePlan,
+  {
+    files,
+    renames,
+    scan,
+  }: { files: readonly VaultFile[]; renames: Renames; scan: RenameScan },
+): Promise<LinkEditResult> {
+  const { vault } = plan;
+  const context = rewriteContext(host, plan, renames);
   const result: LinkEditResult = { edits: [], unchecked: [] };
   for (const file of files) {
     try {

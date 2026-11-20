@@ -3,9 +3,11 @@ import assert from "node:assert/strict";
 import {
   mkdir,
   mkdtemp,
+  readdir,
   readFile,
   realpath,
   rm,
+  stat,
   symlink,
   writeFile,
 } from "node:fs/promises";
@@ -21,6 +23,52 @@ async function scratch(t: test.TestContext): Promise<string> {
   t.after(() => rm(dir, { recursive: true, force: true }));
   return dir;
 }
+
+test("the recent vaults are written beside their file and renamed over it", async (t) => {
+  const dir = await scratch(t);
+  await mkdir(path.join(dir, "a"));
+  const file = path.join(dir, "data", "vaults.json");
+  await mkdir(path.dirname(file));
+  await writeFile(file, "[]");
+  const before = (await stat(file)).ino;
+  const vaults = new Vaults(file);
+  await vaults.load();
+  await vaults.add(path.join(dir, "a"));
+  // Written in place, the file would keep its inode and be empty for a moment.
+  assert.notEqual((await stat(file)).ino, before);
+  assert.deepEqual(JSON.parse(await readFile(file, "utf8")), [
+    path.join(dir, "a"),
+  ]);
+  assert.deepEqual(await readdir(path.dirname(file)), ["vaults.json"]);
+});
+
+test("at launch the vault used last opens again; a vault given or a missing one opens nothing more", async (t) => {
+  const dir = await scratch(t);
+  await mkdir(path.join(dir, "a"));
+  await mkdir(path.join(dir, "b"));
+  const file = path.join(dir, "data", "vaults.json");
+  const first = new Vaults(file);
+  await first.load();
+  await first.add(path.join(dir, "a"));
+  await first.add(path.join(dir, "b"));
+
+  const relaunched = new Vaults(file);
+  await relaunched.load();
+  await relaunched.restoreLast();
+  assert.deepEqual(relaunched.list().open, [path.join(dir, "b")]);
+
+  const given = new Vaults(file);
+  await given.load();
+  await given.add(path.join(dir, "a"));
+  await given.restoreLast();
+  assert.deepEqual(given.list().open, [path.join(dir, "a")]);
+
+  await rm(path.join(dir, "a"), { recursive: true });
+  const gone = new Vaults(file);
+  await gone.load();
+  await gone.restoreLast();
+  assert.deepEqual(gone.list().open, []);
+});
 
 test("opening a vault announces it once and remembers it, newest first", async (t) => {
   const dir = await scratch(t);
@@ -113,12 +161,15 @@ test("a vault's files are listed by kind, sorted by path", async (t) => {
     }),
   );
   await vaults.add(dir);
-  assert.deepEqual(await vaults.files(dir), [
-    { path: "a.pdf", kind: "pdf" },
-    { path: "b/z.md", kind: "note" },
-    { path: "data.csv", kind: "other" },
-    { path: "pic.PNG", kind: "image" },
-  ]);
+  assert.deepEqual(await vaults.files(dir), {
+    files: [
+      { path: "a.pdf", kind: "pdf" },
+      { path: "b/z.md", kind: "note" },
+      { path: "data.csv", kind: "other" },
+      { path: "pic.PNG", kind: "image" },
+    ],
+    partial: false,
+  });
 });
 
 test("a vault reached through a symlink is known by its real path", async (t) => {

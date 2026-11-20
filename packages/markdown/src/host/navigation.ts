@@ -15,6 +15,7 @@ import type {
 } from "../shared/host";
 import { warmMarkdownDocument } from "./document-warm";
 import { contained } from "./navigation-containment";
+import { openExternalLink } from "./external-link";
 import { registerNativeLinks } from "./native-links";
 import { MARKDOWN_EDITOR } from "../shared/editor-provider";
 import {
@@ -88,7 +89,7 @@ export function createNavigation(
     revealPanel: (panelId, offset, intent = reveals.begin()) =>
       reveals.deliver(intent, panelId, toOffsetTarget(offset)),
     scheme: vscode.env.uriScheme,
-    external: async (href) => vscode.env.openExternal(vscode.Uri.parse(href)),
+    external: async (href) => openExternalLink(vscode.env, href),
     confirm: async (message) =>
       (await vscode.window.showWarningMessage(
         message,

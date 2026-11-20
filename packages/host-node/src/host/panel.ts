@@ -17,8 +17,31 @@ import {
 export interface PageSocket {
   send(text: string): void;
   onMessage(listener: (text: string) => void): Disposer;
-  onClose(listener: () => void): Disposer;
+  /**
+   * `dropped` when the connection broke without the page closing it (the
+   * page then tries to reconnect, page/connection.ts); a page that went
+   * away (its tab closed, a reload) closes it cleanly.
+   */
+  onClose(listener: (dropped?: boolean) => void): Disposer;
   close(): void;
+}
+
+/**
+ * How long a panel whose page dropped its socket waits for the page to
+ * reconnect before it closes. The page gives up a little sooner
+ * (page/connection.ts, `GIVE_UP_AFTER_MS`).
+ */
+export const RECONNECT_GRACE_MS = 30_000;
+
+/**
+ * Calls `expire` unless the page reconnects within the grace; the returned
+ * function cancels it.
+ */
+export function awaitReconnect(expire: () => void): () => void {
+  const timer = setTimeout(expire, RECONNECT_GRACE_MS);
+  // Node keeps a process alive for a timer; a browser has no unref.
+  (timer as { unref?: () => void }).unref?.();
+  return () => clearTimeout(timer);
 }
 
 /** Where the panel's page and its files are served. */
@@ -54,6 +77,7 @@ export class LivePanel {
   private readonly answers = new Map<number, (answer: Answer) => void>();
   private html: (value: string) => void = () => {};
   private disposed = false;
+  private cancelExpiry: () => void = () => {};
   /** The page's HTML, once the editor host sets it. */
   readonly page: Promise<string>;
 
@@ -69,15 +93,26 @@ export class LivePanel {
     this.shell = this.createShell(urls);
   }
 
-  /** The page connected; send what waited for it. A second socket replaces the first. */
+  /**
+   * The page connected, or reconnected after its socket dropped; send what
+   * waited for it. A second socket replaces the first.
+   */
   attach(socket: PageSocket): void {
+    this.cancelExpiry();
     this.socket?.close();
     this.socket = socket;
     socket.onMessage((text) => this.receive(text));
-    socket.onClose(() => {
-      if (this.socket === socket) {
-        this.dispose();
+    socket.onClose((dropped) => {
+      if (this.socket !== socket) {
+        return;
       }
+      if (!dropped) {
+        this.dispose();
+        return;
+      }
+      // Frames wait for the page to reconnect, as they waited for it to connect.
+      this.socket = undefined;
+      this.cancelExpiry = awaitReconnect(() => this.dispose());
     });
     for (const text of this.waiting.splice(0)) {
       socket.send(text);
@@ -113,6 +148,7 @@ export class LivePanel {
       return;
     }
     this.disposed = true;
+    this.cancelExpiry();
     this.socket?.close();
     for (const answer of this.answers.values()) {
       answer(null);

@@ -32,6 +32,11 @@ export interface BuildSnapshotInput {
   readonly capabilitiesFor: (kind: LineHunk["kind"]) => HunkCapabilities;
   readonly generationId?: string;
   readonly computedAt?: number;
+  /**
+   * `lineHunks(baseText, targetText)`, when the caller has already diffed
+   * them (the gutter draws its bars from the same diff).
+   */
+  readonly hunks?: readonly LineHunk[];
 }
 
 let generationCounter = 0;
@@ -46,8 +51,22 @@ export function buildWorktreeSnapshot(input: BuildSnapshotInput): DiffSnapshot {
   const generationId = input.generationId ?? nextGenerationId();
   const baseLines = splitLines(input.baseText);
   const targetLines = splitLines(input.targetText);
-  const hunks = lineHunks(input.baseText, input.targetText).map((hunk) =>
-    toDiffHunk({ input, hunk, baseLines, targetLines, generationId }),
+  // Only live anchors need offsets: one table for every hunk, not a scan
+  // from the start of the text per hunk.
+  const targetStarts = input.mapLiveAnchor
+    ? lineStarts(input.targetText)
+    : undefined;
+  const lineHunksOfText =
+    input.hunks ?? lineHunks(input.baseText, input.targetText);
+  const hunks = lineHunksOfText.map((hunk) =>
+    toDiffHunk({
+      input,
+      hunk,
+      baseLines,
+      targetLines,
+      targetStarts,
+      generationId,
+    }),
   );
   return {
     generationId,
@@ -73,6 +92,7 @@ function toDiffHunk(parts: {
   hunk: LineHunk;
   baseLines: readonly string[];
   targetLines: readonly string[];
+  targetStarts: LineStarts | undefined;
   generationId: string;
 }): DiffHunk {
   const { input, hunk, baseLines, targetLines, generationId } = parts;
@@ -85,7 +105,9 @@ function toDiffHunk(parts: {
     endLine: hunk.newTo,
   };
   const lines = hunkLines(hunk, baseLines, targetLines);
-  const liveAnchor = input.mapLiveAnchor?.(anchorSpan(input.targetText, hunk));
+  const liveAnchor =
+    parts.targetStarts &&
+    input.mapLiveAnchor?.(anchorSpan(parts.targetStarts, hunk));
   return {
     hunkId: hunkFingerprint({
       originalRange,
@@ -103,28 +125,42 @@ function toDiffHunk(parts: {
   };
 }
 
-function anchorSpan(targetText: string, hunk: LineHunk): LiveAnchorSpan {
+function anchorSpan(starts: LineStarts, hunk: LineHunk): LiveAnchorSpan {
   return {
-    modifiedFrom: offsetOfLine(targetText, hunk.newFrom),
-    modifiedTo: offsetOfLine(targetText, hunk.newTo),
+    modifiedFrom: starts.offsetOf(hunk.newFrom),
+    modifiedTo: starts.offsetOf(hunk.newTo),
+  };
+}
+
+/** Where each line of one text starts, for many lookups. */
+interface LineStarts {
+  /** As `offsetOfLine(text, line)`. */
+  offsetOf(line: number): number;
+}
+
+function lineStarts(text: string): LineStarts {
+  // afterNewline[k] is the offset just past the (k+1)th "\n".
+  const afterNewline: number[] = [];
+  for (
+    let at = text.indexOf("\n");
+    at !== -1;
+    at = text.indexOf("\n", at + 1)
+  ) {
+    afterNewline.push(at + 1);
+  }
+  return {
+    offsetOf(line) {
+      if (line <= 0) {
+        return 0;
+      }
+      return afterNewline[line - 1] ?? text.length;
+    },
   };
 }
 
 /** 0-based line index → offset of that line's first character. */
 export function offsetOfLine(text: string, line: number): number {
-  if (line <= 0) {
-    return 0;
-  }
-  let seen = 0;
-  for (let i = 0; i < text.length; i++) {
-    if (text.charCodeAt(i) === 10) {
-      seen += 1;
-      if (seen === line) {
-        return i + 1;
-      }
-    }
-  }
-  return text.length;
+  return lineStarts(text).offsetOf(line);
 }
 
 function hunkLines(

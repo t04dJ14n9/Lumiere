@@ -82,13 +82,23 @@ export class Uri {
     return new Uri("file", path);
   }
   static parse(value: string): Uri {
-    const [scheme, rest = ""] = value.split(":", 2);
-    return new Uri(scheme ?? "file", rest.replace(/^\/\//u, ""));
+    // The scheme ends at the first colon; a Windows drive (`/C:/x`) has one too.
+    const colon = value.indexOf(":");
+    const scheme = colon < 0 ? value : value.slice(0, colon);
+    const rest = colon < 0 ? "" : value.slice(colon + 1);
+    return new Uri(scheme, decodeURIComponent(rest.replace(/^\/\//u, "")));
   }
   static joinPath(base: Uri, ...parts: string[]): Uri {
     return new Uri(base.scheme, [base.path, ...parts].join("/"));
   }
   get fsPath(): string {
+    // As VS Code's: on Windows, `/C:/x` is `c:\x`.
+    if (process.platform === "win32" && /^\/[A-Za-z]:/u.test(this.path)) {
+      return `${this.path.charAt(1).toLowerCase()}${this.path.slice(2)}`.replaceAll(
+        "/",
+        "\\",
+      );
+    }
     return this.path;
   }
   toString(): string {
@@ -197,7 +207,10 @@ export const workspace = {
       onDidDelete: event("watcher.delete"),
     }),
   asRelativePath: (value: unknown) => String(value),
-  fs: { readFile: async () => new Uint8Array() },
+  fs: {
+    readFile: async () => new Uint8Array(),
+    stat: async () => ({ size: 0 }),
+  },
 };
 
 export const env = {

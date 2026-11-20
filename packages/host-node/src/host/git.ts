@@ -6,14 +6,15 @@
  * runner, repository discovery, and the `.git` watch that counts a
  * repository's changes.
  *
- * Without git (git-program.ts), or for a note in no repository, every answer
- * is the one VS Code gives when its git extension is off: unavailable.
+ * Without git (git-program.ts), for a note in no repository, or in a
+ * workspace the reader has not trusted (`GitTrust`), every answer is the one
+ * VS Code gives when its git extension is off: unavailable.
  */
 import { spawn } from "node:child_process";
+import { realpathSync } from "node:fs";
 import * as path from "node:path";
 import {
   bindDiscoveredRoot,
-  canonicalPath,
   createSpawnBlameRunner,
   discoverGitRoot,
   RepositoryWatch,
@@ -30,7 +31,7 @@ import type {
 } from "@workshop/markdown/portable";
 import { GitBlobs, type BlobLocation } from "./git-blobs";
 import { findGit } from "./git-program";
-import { pathInsideRoots } from "./paths";
+import { isInside, pathInsideRoots } from "./paths";
 
 const TIMEOUT_MS = 5000;
 
@@ -44,11 +45,48 @@ const QUIET_GIT: Readonly<Record<string, string>> = {
   GIT_OPTIONAL_LOCKS: "0",
   LC_ALL: "en_US.UTF-8",
   LANG: "en_US.UTF-8",
+  // A partial clone would fetch a missing object through its remote.
+  GIT_NO_LAZY_FETCH: "1",
 };
+
+/**
+ * Put before every command's own arguments: what a repository's own
+ * configuration could otherwise run while git reads it. `core.fsmonitor`
+ * names a program, hooks are programs, and a transport (a partial clone
+ * fetching an object) runs `core.sshCommand` or a remote helper. A
+ * repository's filters and diff drivers cannot be turned off by name; the
+ * embedder's trust in the workspace (`NodeGitOptions.trusted`) covers them.
+ */
+export const HARDENED_GIT_CONFIG: readonly string[] = [
+  "-c",
+  "core.fsmonitor=false",
+  "-c",
+  "core.hooksPath=/dev/null",
+  "-c",
+  "protocol.allow=never",
+];
+
+/**
+ * Whether the reader lets git run in a workspace root's repositories: git
+ * runs a repository's own configuration (its filters and diff drivers), so
+ * a folder from someone else must be trusted first, as VS Code's git
+ * extension waits for workspace trust. The embedder asks and remembers.
+ */
+export interface GitTrust {
+  /**
+   * Whether git may run for notes in `root` (a workspace root's file URI).
+   * False while the reader has not answered; the embedder may ask then.
+   */
+  isTrusted(root: string): boolean;
+  /** A root was trusted or no longer is: pages ask git again. */
+  onDidChange(listener: () => void): () => void;
+}
 
 export interface NodeGitOptions {
   /** The workspace roots, as file URIs: only notes inside them are asked about. */
   readonly roots: () => readonly string[];
+  /** Which roots git may run in; every one without it (DSH's session workspace). */
+  readonly trust?: GitTrust;
   /** Runs `git`; tests may pass their own. */
   readonly runGit?: GitBlameRunner;
 }
@@ -74,7 +112,7 @@ export class NodeGitAccess implements GitAccess {
   private disposed = false;
 
   constructor(private readonly options: NodeGitOptions) {
-    this.runGit = options.runGit ?? foundGitRunner();
+    this.runGit = hardened(options.runGit ?? foundGitRunner());
     this.blobs = new GitBlobs(this.runGit);
   }
 
@@ -133,9 +171,17 @@ export class NodeGitAccess implements GitAccess {
       : { status: "unavailable" };
   }
 
-  /** A commit, checkout, stage or config change in any repository a note was found in. */
+  /**
+   * A commit, checkout, stage or config change in any repository a note was
+   * found in, or a workspace trusted or no longer trusted.
+   */
   onDidChange(listener: () => void): () => void {
-    return this.watch.subscribe(listener);
+    const stopWatch = this.watch.subscribe(listener);
+    const stopTrust = this.options.trust?.onDidChange(listener);
+    return () => {
+      stopWatch();
+      stopTrust?.();
+    };
   }
 
   /** Throws what git said when it refuses (an ignored file, a locked index). */
@@ -178,6 +224,9 @@ export class NodeGitAccess implements GitAccess {
    * for a note outside the workspace roots or in no repository.
    */
   private async locate(uri: string): Promise<Located | undefined> {
+    if (!this.mayRunIn(uri)) {
+      return undefined;
+    }
     let file: string;
     try {
       file = await pathInsideRoots(this.options.roots(), uri);
@@ -188,9 +237,10 @@ export class NodeGitAccess implements GitAccess {
     if (!found) {
       return undefined;
     }
-    // git names the work tree with symbolic links resolved; so must the note.
-    const root = canonicalPath(found);
-    const relativePath = path.relative(root, canonicalPath(file));
+    // git names the work tree its own way (`C:/Users/runneradmin` where the
+    // note is under `C:\Users\RUNNER~1`); both are spelled as the disk does.
+    const root = realPath(found);
+    const relativePath = path.relative(root, realPath(file));
     if (isOutside(relativePath)) {
       return undefined;
     }
@@ -201,6 +251,16 @@ export class NodeGitAccess implements GitAccess {
       relativePath,
       gitPath: relativePath.split(path.sep).join("/"),
     };
+  }
+
+  /** Whether the workspace root holding `uri` is trusted, when trust is asked. */
+  private mayRunIn(uri: string): boolean {
+    const { trust, roots } = this.options;
+    if (!trust) {
+      return true;
+    }
+    const root = roots().find((item) => isInside(item, uri));
+    return root !== undefined && trust.isTrusted(root);
   }
 
   private watchRepository(root: string): void {
@@ -216,6 +276,14 @@ export class NodeGitAccess implements GitAccess {
 }
 
 /**
+ * `spawn` with no console window: on Windows, a `git` started by a process
+ * that has no console of its own (the desktop app's server) would open one
+ * for every command.
+ */
+const hiddenSpawn = ((command: string, args: readonly string[], options) =>
+  spawn(command, args, { ...options, windowsHide: true })) as typeof spawn;
+
+/**
  * Runs the `git` findGit names, looked for once, on first use: Git that is
  * installed while the host runs is seen after a restart, as in VS Code.
  */
@@ -225,7 +293,7 @@ function foundGitRunner(): GitBlameRunner {
     found ??= findGit().then((program) =>
       program === undefined
         ? undefined
-        : createSpawnBlameRunner(spawn, { program, env: QUIET_GIT }),
+        : createSpawnBlameRunner(hiddenSpawn, { program, env: QUIET_GIT }),
     );
     const run = await found;
     if (!run) {
@@ -233,6 +301,27 @@ function foundGitRunner(): GitBlameRunner {
     }
     return run(options);
   };
+}
+
+/** Every command with `HARDENED_GIT_CONFIG` before its own arguments. */
+function hardened(runGit: GitBlameRunner): GitBlameRunner {
+  return (options) =>
+    runGit({ ...options, args: [...HARDENED_GIT_CONFIG, ...options.args] });
+}
+
+/**
+ * `file` with symbolic links resolved and each name spelled as the disk
+ * has it: the operating system's realpath, which on Windows also expands
+ * short names (`RUNNER~1`) and on macOS gives a name's case. Node's own
+ * `realpathSync` keeps both as given, so a note and the work tree git
+ * names would not compare. A path that cannot be resolved stays as it is.
+ */
+function realPath(file: string): string {
+  try {
+    return realpathSync.native(file);
+  } catch {
+    return file;
+  }
 }
 
 function isOutside(relative: string): boolean {

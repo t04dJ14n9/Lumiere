@@ -19,6 +19,9 @@ final class VaultRouterTests: XCTestCase {
         try FileManager.default.createDirectory(at: notes, withIntermediateDirectories: true)
         try Data("%PDF".utf8).write(to: notes.appendingPathComponent("Light and growth.pdf"))
         try Data("{}".utf8).write(to: folder.appendingPathComponent("secret.json"))
+        for name in ["Page.html", "page.HTM", "tool.js", "Notes.md", "Photo.JPG", "Drawing.svg"] {
+            try Data("x".utf8).write(to: notes.appendingPathComponent(name))
+        }
         let vaults = VaultStore(
             appFolder: folder.appendingPathComponent("Documents", isDirectory: true),
             dataFolder: folder.appendingPathComponent("Support", isDirectory: true)
@@ -44,6 +47,34 @@ final class VaultRouterTests: XCTestCase {
             "/_lumiere/vault/app/Attachments/none.pdf",
             "/_lumiere/vault/unknown/Attachments/Light and growth.pdf",
             "/_lumiere/vault/app",
+        ] {
+            XCTAssertEqual(router.route(for: path), missing, path)
+        }
+    }
+
+    /// The app's origin holds the native plugins, and these answers carry no
+    /// sandbox header: a vault's page or script must not run there.
+    func testServesOnlyWhatANoteShows() {
+        let missing = "/app/public/_lumiere/missing"
+        for name in ["Page.html", "page.HTM", "tool.js", "Notes.md"] {
+            XCTAssertEqual(router.route(for: "/_lumiere/vault/app/Attachments/\(name)"), missing, name)
+        }
+        let photo = router.route(for: "/_lumiere/vault/app/Attachments/Photo.JPG")
+        XCTAssertEqual(URL(fileURLWithPath: photo).lastPathComponent, "Photo.JPG")
+    }
+
+    /// An SVG is a page that can run script: never served as one, only its
+    /// bytes, typed as plain text by the `.txt` the address ends with.
+    func testServesAnSvgOnlyAsText() {
+        let missing = "/app/public/_lumiere/missing"
+        XCTAssertEqual(router.route(for: "/_lumiere/vault/app/Attachments/Drawing.svg"), missing)
+        let text = router.route(for: "/_lumiere/vault-svg/app/Attachments/Drawing.svg.txt")
+        XCTAssertEqual(URL(fileURLWithPath: text).lastPathComponent, "Drawing.svg")
+        for path in [
+            "/_lumiere/vault-svg/app/Attachments/Drawing.svg",
+            "/_lumiere/vault-svg/app/Attachments/Photo.JPG.txt",
+            "/_lumiere/vault-svg/app/Attachments/Page.html.txt",
+            "/_lumiere/vault-svg/app/../secret.json.txt",
         ] {
             XCTAssertEqual(router.route(for: path), missing, path)
         }

@@ -361,8 +361,11 @@ test("the viewer declares limited Restricted Mode support, so PDFs render instea
       "lumiere.pdf.copyLinkForAgent.target",
     ),
   );
+  // The list is the extension's, shared with Lumiere's Markdown settings.
   for (const key of untrusted?.restrictedConfigurations ?? []) {
-    assert.ok(key in contributes.configuration.properties, key);
+    if (key.startsWith("lumiere.pdf.")) {
+      assert.ok(key in contributes.configuration.properties, key);
+    }
   }
 });
 

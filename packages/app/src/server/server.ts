@@ -25,10 +25,13 @@ import {
 import { createApi, type Api } from "./api";
 import { withAppDefaults } from "./defaults";
 import { admit, newToken } from "./auth";
+import { GitTrustStore } from "./git-trust";
+import type { FileRoutesState } from "./files-api";
+import { createTrash } from "./trash";
 import { WindowInk } from "./ink";
 import { serveShellPage } from "./shell-page";
 import { UiStore } from "./ui-state";
-import { Vaults } from "./vaults";
+import { Vaults, type VaultEvent } from "./vaults";
 
 /** The sketch plugin's command (packages/markdown/src/plugins/sketch). */
 const INSERT_SKETCH_COMMAND = "lumiere.markdown.insertSketch";
@@ -56,7 +59,7 @@ export interface RunningServer {
 export async function startServer(setup: ServerSetup): Promise<RunningServer> {
   // The plugins draw on the window's canvas, through the API.
   const ink = new WindowInk();
-  const { lumiere, editor } = await startEditor(setup, ink);
+  const { lumiere, editor, gitTrust } = await startEditor(setup, ink);
   const [vaults, ui] = await loadState(setup, lumiere);
   // Given to the window's page only, to add a folder (auth.ts `fromShell`).
   const shellKey = newToken();
@@ -64,6 +67,8 @@ export async function startServer(setup: ServerSetup): Promise<RunningServer> {
     vaults,
     ui,
     ink,
+    gitTrust,
+    files: fileRoutes(vaults, lumiere),
     shellKey,
     insertSketch: () => insertSketch(lumiere, setup.logger),
     version: setup.version,
@@ -117,6 +122,9 @@ export async function startServer(setup: ServerSetup): Promise<RunningServer> {
 
 /** Lumière's plugins, and the routes that serve their pages (notes and PDFs). */
 async function startEditor(setup: ServerSetup, ink: WindowInk) {
+  // Git runs only in the vaults the reader trusts (git-trust.ts).
+  const gitTrust = new GitTrustStore(path.join(setup.data, "git-trust.json"));
+  await gitTrust.load();
   const markdown = path.join(setup.assets, "markdown");
   const lumiere = await startLumiere({
     identity: { appName: "Lumière", uriScheme: "lumiere" },
@@ -129,6 +137,7 @@ async function startEditor(setup: ServerSetup, ink: WindowInk) {
     data: setup.data,
     logger: setup.logger,
     ink,
+    gitTrust,
   });
   const editor = createEditorRoutes(lumiere, {
     markdown,
@@ -136,7 +145,16 @@ async function startEditor(setup: ServerSetup, ink: WindowInk) {
     pdf: path.join(setup.assets, "pdf"),
     log: (message) => setup.logger.warn(message),
   });
-  return { lumiere, editor };
+  return { lumiere, editor, gitTrust };
+}
+
+/** The file tree's changes, in the open vaults, to the system's trash first. */
+function fileRoutes(vaults: Vaults, lumiere: LumiereHost): FileRoutesState {
+  return {
+    openVaults: () => vaults.list().open,
+    files: lumiere.files,
+    trash: createTrash(),
+  };
 }
 
 /** Insert Sketch in the note last focused; the drawing comes back through POST /api/ink. */
@@ -154,16 +172,38 @@ async function loadState(
   const vaults = new Vaults(path.join(setup.data, "vaults.json"));
   await vaults.load();
   vaults.onEvent((event) => {
-    if (event.type === "vaults" && event.added) {
-      lumiere.addRoot(pathToFileURL(event.added).toString());
+    if (event.type === "vaults") {
+      trustOpenVaults(lumiere, event);
     }
   });
   for (const vault of setup.vaults) {
     await vaults.add(vault);
   }
+  await vaults.restoreLast();
   const ui = new UiStore(path.join(setup.data, "window.json"));
   await ui.load();
   return [vaults, ui];
+}
+
+/**
+ * The host trusts the open vaults and no others: a vault the window closed
+ * opens no more pages.
+ */
+function trustOpenVaults(
+  lumiere: LumiereHost,
+  event: Extract<VaultEvent, { type: "vaults" }>,
+): void {
+  if (event.added) {
+    lumiere.addRoot(pathToFileURL(event.added).toString());
+  }
+  const open = new Set(
+    event.open.map((vault) => pathToFileURL(vault).toString()),
+  );
+  for (const root of lumiere.workspaceRoots()) {
+    if (!open.has(root)) {
+      lumiere.removeRoot(root);
+    }
+  }
 }
 
 interface Request {
@@ -210,7 +250,7 @@ async function respond({
   } else if (pathname === "/") {
     await serveShellPage(req, res, shell, shellKey);
   } else {
-    await serveStatic(res, shell, pathname.slice(1));
+    await serveStatic(res, shell, pathname.slice(1), req.headers);
   }
 }
 

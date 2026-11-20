@@ -21,6 +21,10 @@ import { parseHostFrame, type PageFrame } from "../protocol";
 import { applyTheme, followSystemTheme } from "./theme";
 import { openMenuAtSelection, reportContextMenus } from "./context-menu";
 import { createUi } from "./ui";
+import { reconnectingSocket } from "./connection";
+import { showConnection } from "./disconnected";
+import { stateKey } from "./moved";
+import { showSvgImagesSafely } from "./svg-images";
 
 interface VsCodeApi {
   postMessage(message: unknown): void;
@@ -44,7 +48,9 @@ const send =
 window.acquireVsCodeApi = () => vsCodeApi(send);
 listenToEmbedder(send);
 reportFocus(send);
+reportHidden(send);
 reportContextMenus(send);
+showSvgImagesSafely();
 
 /**
  * The embedder's messages arrive as `message` events, like the editor's RPC.
@@ -158,27 +164,15 @@ function connectChannel(panel: string): (frame: PageFrame) => void {
 
 function connect(panel: string): (frame: PageFrame) => void {
   const scheme = location.protocol === "https:" ? "wss" : "ws";
-  const socket = new WebSocket(
-    `${scheme}://${location.host}/lumiere/socket?panel=${encodeURIComponent(panel)}`,
-  );
-  const waiting: string[] = [];
+  const url = `${scheme}://${location.host}/lumiere/socket?panel=${encodeURIComponent(panel)}`;
   const receive = receiver((frame) => send(frame));
-  socket.addEventListener("open", () => {
-    for (const text of waiting.splice(0)) {
-      socket.send(text);
-    }
-  });
-  socket.addEventListener("message", (event) => receive(String(event.data)));
-  socket.addEventListener("close", () => {
-    document.body.dataset.lumiereDisconnected = "";
+  const sendText = reconnectingSocket({
+    open: () => new WebSocket(url),
+    receive,
+    onState: showConnection,
   });
   function send(frame: PageFrame): void {
-    const text = JSON.stringify(frame);
-    if (socket.readyState === WebSocket.OPEN) {
-      socket.send(text);
-    } else {
-      waiting.push(text);
-    }
+    sendText(JSON.stringify(frame));
   }
   return send;
 }
@@ -186,7 +180,7 @@ function connect(panel: string): (frame: PageFrame) => void {
 /** Saved view state (scroll, folds) lives with the tab, as VS Code keeps it with the webview. */
 function vsCodeApi(send: (frame: PageFrame) => void): VsCodeApi {
   // A page host-web made is a blob: document, with no query to key on.
-  const key = `lumiere:state:${meta("lumiere-state") ?? location.search}`;
+  const key = stateKey(meta("lumiere-state") ?? location.search);
   return {
     postMessage: (message) => send({ ch: "rpc", data: message }),
     getState: () => {
@@ -215,4 +209,18 @@ function reportFocus(send: (frame: PageFrame) => void): void {
   window.addEventListener("blur", () =>
     send({ ch: "ui", data: { type: "blur" } }),
   );
+}
+
+/**
+ * A hidden page may never be shown again (the window closes, the process is
+ * ended in the background): the host writes its note now.
+ */
+function reportHidden(send: (frame: PageFrame) => void): void {
+  const hidden = () => send({ ch: "ui", data: { type: "hidden" } });
+  document.addEventListener("visibilitychange", () => {
+    if (document.visibilityState === "hidden") {
+      hidden();
+    }
+  });
+  window.addEventListener("pagehide", hidden);
 }

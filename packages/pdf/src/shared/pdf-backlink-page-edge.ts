@@ -1,7 +1,8 @@
 /**
- * A quote that crosses a page break. Copy link writes the whole quote into
- * the link of each page the selection touches (agent-text.ts), so a page
- * only holds one end of it and a search for the whole quote fails on both.
+ * A quote that crosses a page break. A note that links each page a passage
+ * spans with the whole quote (a page link's quote is whatever its writer
+ * selected) leaves each page holding only one end of it, and a search for
+ * the whole quote fails on both.
  * What is left to paint is the part of the quote that is on this page, which
  * can only be at an edge of it: the quote's beginning at the page's end, or
  * its ending at the page's start (or all of the page, if the quote runs on

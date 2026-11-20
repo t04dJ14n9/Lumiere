@@ -17,7 +17,7 @@ their render passes. Preview task controls cannot edit the source.
 - `webview.ts`: editor extension and view-plugin lifetime registrations.
 - `controller.ts`: target selection, timers, loading generations and focus lifetime.
 - `popup.ts`: popup controls, label decoding and viewport placement.
-- `content.ts`: note fragment context and attachment rendering.
+- `content.ts`: note fragment context, the bounded beginning of a long note, and attachment rendering.
 - `preview.test.ts`: internal-target policy, fragment context and label unit tests.
 - `pagePreview.css`: the plugin's styles, bundled through `src/webview/styles/index.css`.
 
@@ -33,7 +33,10 @@ No kernel events are registered. The feature switch is
 Hover needs Mod (Cmd or Ctrl) everywhere in the editor, including links
 rendered in tables, callouts and embeds, as Obsidian's editor hover source
 does by default; Obsidian's per-source setting to change that is not
-offered. External schemes are not fetched. Missing notes, resolve errors and unsupported
+offered. A preview renders only what it shows: a heading's or block's section,
+and of a whole note or a long section its first 12,000 characters or so, cut
+at a blank line, never inside a code block or display formula, and ended with
+`…` (Obsidian renders the whole note in a scrolling popup). External schemes are not fetched. Missing notes, resolve errors and unsupported
 attachments use Obsidian `.mod-empty` centred chrome. Previews use this
 extension's renderers and VS Code theme.
 All timers, listeners, popup DOM and render passes stop with the view/plugin.

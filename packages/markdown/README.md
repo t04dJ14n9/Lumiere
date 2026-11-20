@@ -160,8 +160,11 @@ request and on pushes to `main`. Each job, and how to run it locally:
 | Job | What it proves | Locally |
 | --- | --- | --- |
 | `check` | Prettier, lint (with the code-norm limits), typecheck, unit tests and generated contributions pass | `pnpm check` |
+| `check (windows)` | The unit tests pass on Windows | `pnpm test` |
+| `desktop` | The desktop app's Rust: `cargo check` and its unit tests | `pnpm check:desktop` |
 | `browser` | The webview suite in Chromium; on failure, `test-results/` is uploaded | `pnpm test:browser` |
-| `package` | `pnpm package` builds the VSIX, leaves committed files unchanged, and the VSIX is under 20 MB with no tests, sources, source maps or unreviewed secret-shaped strings; the VSIX is uploaded as the `vsix` artifact | `pnpm package && bash .github/scripts/check-vsix.sh *.vsix 20` |
+| `quality` | Scroll smoothness and opening speed stay within their budgets | `pnpm test:quality` |
+| `package` | `pnpm package` builds the VSIX, leaves committed files unchanged, and the VSIX is under 20 MB with no tests, sources, source maps or unreviewed secret-shaped strings, and the PDF engine once; the webview entry and the extension host grow no more than 10% over `scripts/bundle-baseline.json`; the VSIX is uploaded as the `vsix` artifact | `pnpm package && bash .github/scripts/check-vsix.sh *.vsix 20 && node scripts/bundle-size.mjs` |
 | `secret-scan` | gitleaks finds no secrets in the git history | `gitleaks git --redact .` |
 | `audit (advisory)` | `pnpm audit --prod`; a warning, never a failure | `pnpm audit --prod` |
 
@@ -173,9 +176,11 @@ uses API keys or other secrets. Dependabot proposes grouped npm and
 GitHub Actions updates weekly.
 
 Pushing a tag `v<version>` that matches `package.json` runs
-[`release.yml`](.github/workflows/release.yml): `pnpm check`, `pnpm package`,
-Marketplace Trusted Publishing, and a GitHub Release with the VSIX attached.
-The job uses `ubuntu-latest` by default. Set the repository variable
+[`release.yml`](.github/workflows/release.yml). It checks that the tag's
+commit is on `main`, runs `pnpm test:browser` and `pnpm test:quality` on it,
+then `pnpm check`, `pnpm package`, Marketplace Trusted Publishing, and a
+GitHub Release with the VSIX attached.
+The jobs use `ubuntu-latest` by default. Set the repository variable
 `RELEASE_RUNNER` to a JSON array such as
 `["self-hosted","lumiere-release"]` to use a labelled self-hosted runner when
 hosted Actions minutes are unavailable.

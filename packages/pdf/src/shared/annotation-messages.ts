@@ -26,6 +26,16 @@ export type AnnotationViewerMessage =
       sha256: string;
       text: string | null;
     }
+  /**
+   * The viewer shows what `annotationStoreChanged` `revision` said the file
+   * holds: its saves from here on were made with those annotations in view.
+   */
+  | {
+      type: "annotationStoreShown";
+      load: number;
+      sha256: string;
+      revision: number;
+    }
   /** The PDF with its annotations, for a new file (Export Annotated Copy). */
   | { type: "annotationExport"; load: number; data: ArrayBuffer }
   /** An annotation that is part of the PDF changed: only saving into it keeps that. */
@@ -48,6 +58,18 @@ export type AnnotationHostMessage =
       message: string;
     }
   | { type: "annotationRetry"; load: number }
+  /**
+   * Another editor of the same PDF saved Lumiere's annotations: the file kept
+   * for `sha256` now holds `text` (null: no file). The viewer shows the same
+   * and answers `annotationStoreShown` with the `revision`.
+   */
+  | {
+      type: "annotationStoreChanged";
+      load: number;
+      sha256: string;
+      revision: number;
+      text: string | null;
+    }
   /** Send the PDF with its annotations: to overwrite the open file, or for a copy. */
   | { type: "annotationWrite"; load: number; to: "pdf" | "copy" };
 
@@ -83,6 +105,15 @@ export const ANNOTATION_VIEWER_PARSERS: Readonly<
           load: message.load,
           sha256: message.sha256,
           text: message.text,
+        }
+      : undefined,
+  annotationStoreShown: (message) =>
+    isLoad(message.load) && isSha256(message.sha256) && isLoad(message.revision)
+      ? {
+          type: "annotationStoreShown",
+          load: message.load,
+          sha256: message.sha256,
+          revision: message.revision,
         }
       : undefined,
   annotationExport: (message) => {

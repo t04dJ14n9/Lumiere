@@ -9,7 +9,13 @@ import type { SettingChange, SettingItem } from "@workshop/host-node/settings";
 import type { TreeEvent, TreeSnapshot } from "@workshop/host-node/views";
 import type { FileKind } from "../shared/file-kind";
 import type { UiState } from "../shared/ui-state";
-import type { FileEntry, PaletteCommand, ServerEvent, VaultList } from "./api";
+import type {
+  Deletion,
+  PaletteCommand,
+  ServerEvent,
+  VaultFiles,
+  VaultList,
+} from "./api";
 import { MENU_COMMANDS, type MenuCommand } from "./tauri";
 
 /**
@@ -32,9 +38,31 @@ export interface WindowBackend {
     list(): Promise<VaultList>;
     add(path: string): Promise<unknown>;
     close(path: string): Promise<unknown>;
-    files(vault: string): Promise<readonly FileEntry[]>;
+    files(vault: string): Promise<VaultFiles>;
     /** A note or folder from outside the window (a menu, a dropped path). */
     open(path: string): Promise<unknown>;
+  };
+  /**
+   * The file tree's changes, by paths relative to an open vault, with `/`.
+   * A rename or move updates the links to what moved, and the backend's
+   * events then say `renamed`.
+   */
+  readonly files: {
+    /** A new, empty note; an existing file is refused. */
+    createNote(vault: string, path: string): Promise<unknown>;
+    createFolder(vault: string, path: string): Promise<unknown>;
+    /** The notes whose links were left as they were. */
+    rename(vault: string, from: string, to: string): Promise<readonly string[]>;
+    /**
+     * To the system's trash where the host has one. Where it has none,
+     * nothing is deleted (`deleted: false`) unless `permanently`, which the
+     * window sends once the reader has confirmed.
+     */
+    remove(
+      vault: string,
+      path: string,
+      options: { readonly permanently: boolean },
+    ): Promise<Deletion>;
   };
   readonly commands?: {
     list(): Promise<readonly PaletteCommand[]>;
@@ -76,6 +104,14 @@ export interface WindowBackend {
    * button beside its layout buttons; without it there is none.
    */
   readonly insertSketch?: () => Promise<unknown>;
+  /**
+   * Where git runs in vaults (a Lumière server): the vaults it waits for the
+   * reader to trust, and the answer for one. A host with no git has none.
+   */
+  readonly gitTrust?: {
+    waiting(): Promise<readonly string[]>;
+    answer(vault: string, allow: boolean): Promise<unknown>;
+  };
   /** A folder picker the window can show, when it has one; the vault's path. */
   readonly pickFolder?: () => Promise<string | undefined>;
   /**

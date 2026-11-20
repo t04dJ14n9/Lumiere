@@ -28,8 +28,11 @@ click handlers, original text and late-result guards.
 - `manifest.ts`: feature metadata and default enablement.
 - `webview.ts`: editable-source, block and post-processor registrations.
 - `post-process.ts`: rendered highlighting, copy controls and source reveal.
-- `code-source.ts`: viewport highlighting, cache and lazy-load lifecycle.
-- `code-source.test.ts`: unit tests for rebuilding while reveal is frozen.
+- `code-source.ts`: viewport highlighting, cache and lazy-load lifecycle. The
+  cache moves with the fences through edits, so typing above a fence does not
+  tokenise it again.
+- `code-source.test.ts`: unit tests for rebuilding while reveal is frozen, and
+  for keeping a fence's tokens through an edit above it.
 - `fence-flair.ts`: label and Copy button in the hidden opening fence line.
 - `processor-view.ts`: code processor rendering and its fence widgets.
 - `code-highlight.ts`: Lezer AST + Prism fallback HTML highlighting and UTF-16 token ranges.

@@ -10,6 +10,7 @@ import {
   pdfKeysOfLinkPath,
   type PdfLinkKeys,
 } from "./pdf-backlink-key";
+import type { TextFragmentQuery } from "./pdf-backlink-resolve";
 import { parsePdfDeepLinkFragment } from "./text-fragment";
 
 export { normalizePdfKey };
@@ -21,7 +22,7 @@ export interface PdfBacklinkHit {
   /** The PDF this link opens, as a path in the note's workspace folder. */
   pdfKey: string;
   page: number;
-  textFragment?: { textStart: string };
+  textFragment?: TextFragmentQuery;
   viewRect?: ViewRect;
 }
 
@@ -116,9 +117,7 @@ function hitFromTarget(
     linkOffset: source.linkOffset,
     pdfKey: keys.pdfKey,
     page: parsed.page ?? 1,
-    ...(parsed.textFragment
-      ? { textFragment: { textStart: parsed.textFragment.textStart } }
-      : {}),
+    ...(parsed.textFragment ? { textFragment: parsed.textFragment } : {}),
     ...(parsed.viewRect ? { viewRect: parsed.viewRect } : {}),
   };
   return { hit, keys };
@@ -199,6 +198,11 @@ export class PdfBacklinkIndex {
         addTo(this.fallbacks, slot(folder, fallbackKey), entry);
       }
     }
+  }
+
+  /** Whether the note links to any PDF. */
+  hasLinks(noteUri: string): boolean {
+    return this.byNote.has(noteUri);
   }
 
   removeNote(noteUri: string): void {
@@ -324,11 +328,11 @@ function parseOptionalHitFields(
 ): Pick<PdfBacklinkHit, "textFragment" | "viewRect"> | undefined {
   const out: Pick<PdfBacklinkHit, "textFragment" | "viewRect"> = {};
   if (fields.textFragment !== undefined) {
-    const textStart = parseTextFragmentStart(fields.textFragment);
-    if (textStart === undefined) {
+    const textFragment = parseTextFragmentField(fields.textFragment);
+    if (textFragment === undefined) {
       return undefined;
     }
-    out.textFragment = { textStart };
+    out.textFragment = textFragment;
   }
   if (fields.viewRect !== undefined) {
     const viewRect = parseViewRectField(fields.viewRect);
@@ -340,12 +344,27 @@ function parseOptionalHitFields(
   return out;
 }
 
-function parseTextFragmentStart(value: unknown): string | undefined {
+/** `textStart`, and each of `textEnd`, `prefix` and `suffix` a link names. */
+function parseTextFragmentField(value: unknown): TextFragmentQuery | undefined {
   if (typeof value !== "object" || value === null) {
     return undefined;
   }
-  const textStart = (value as { textStart?: unknown }).textStart;
-  return isBoundedString(textStart) ? textStart : undefined;
+  const { textStart, ...optional } = value as Record<string, unknown>;
+  if (!isBoundedString(textStart)) {
+    return undefined;
+  }
+  const query: TextFragmentQuery = { textStart };
+  for (const key of ["textEnd", "prefix", "suffix"] as const) {
+    const part = optional[key];
+    if (part === undefined) {
+      continue;
+    }
+    if (!isBoundedString(part)) {
+      return undefined;
+    }
+    query[key] = part;
+  }
+  return query;
 }
 
 function parseViewRectField(value: unknown): ViewRect | undefined {

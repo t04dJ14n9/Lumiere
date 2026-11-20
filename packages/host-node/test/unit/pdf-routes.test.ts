@@ -178,13 +178,33 @@ test("a PDF's page runs the viewer with the shim, and its bytes are served by lo
       ) as { ch: string; data: { load: number; url: string } } | undefined,
   );
   assert.equal(load.ch, "rpc");
+  const part = await fetch(origin + load.data.url, {
+    headers: { range: "bytes=1-4" },
+  });
+  assert.equal(part.status, 206);
+  assert.equal(
+    part.headers.get("content-range"),
+    `bytes 1-4/${Buffer.byteLength(PDF)}`,
+  );
+  assert.equal(await part.text(), PDF.slice(1, 5));
+  const beyond = await fetch(origin + load.data.url, {
+    headers: { range: `bytes=${Buffer.byteLength(PDF)}-` },
+  });
+  assert.equal(beyond.status, 416);
+  await beyond.text();
+  const stale = new URL(origin + load.data.url);
+  stale.searchParams.set("load", String(load.data.load + 1));
+  assert.equal((await fetch(stale)).status, 404);
+  // Ranges leave the bytes with the page. The whole file, which the viewer
+  // fetches to open, lets them go: its engine cannot read by range.
+  assert.ok(page.bytesOf(load.data.load));
   const bytes = await fetch(origin + load.data.url);
   assert.equal(bytes.status, 200);
   assert.equal(bytes.headers.get("content-type"), "application/pdf");
   assert.equal(await bytes.text(), PDF);
-  const stale = new URL(origin + load.data.url);
-  stale.searchParams.set("load", String(load.data.load + 1));
-  assert.equal((await fetch(stale)).status, 404);
+  assert.equal(bytes.headers.get("accept-ranges"), "bytes");
+  await until(() => (page.bytesOf(load.data.load) ? undefined : true));
+  assert.equal((await fetch(origin + load.data.url)).status, 404);
 
   socket.close();
   assert.equal(routes.page(id), undefined, "a closed page is dropped");

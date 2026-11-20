@@ -150,7 +150,7 @@ export class TableToolbar {
   private menuActions(range: CellRange): TableMenuActions {
     return {
       copy: (cut) => this.clipboard.copyFromMenu(range, cut),
-      paste: () => this.clipboard.pasteFromMenu(range),
+      paste: (plainText) => this.clipboard.pasteFromMenu(range, plainText),
       selectAll: () => this.selection.selectAll(),
       canFormat: this.clipboard.canFormat,
       format: (marker) => this.clipboard.formatCells(range, marker),

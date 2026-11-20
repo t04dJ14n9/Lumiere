@@ -10,10 +10,18 @@ column beside it; the add strip's new last column has no alignment.
 A table widget wires a rendered grid to a cell projection, selection, keyboard,
 clipboard and toolbar collaborator. The projection reserializes the entire table
 with column-aligned padding on each cell edit, in the existing native input group;
-it never owns undo history. Cells past the header's width, which GFM does not
+it never owns undo history. Only the rows whose text changed are edited in the
+note, and each table source is parsed once however many readers ask for it
+(`parsedTable` keeps the last few). Cells past the header's width, which GFM does not
 render, stay in the source: every rewrite writes them back after their row,
 which keeps them through row moves and column edits. The controller reconciles
 incoming snapshots, preserving the active cell editor across structural edits.
+When a row or column is added, removed or moved, a cell whose text a rendered
+cell already shows takes that rendering instead of going through the render
+pipeline again; its render pass is given the cell's new line, which a task
+box in the cell writes to. A cell with a footnote reference is always rendered
+again (its number depends on its place), and `render/changed` keeps no old
+rendering.
 
 The table never cancels wheel input: whether it is hovered, a cell is open
 or cells are selected, the browser scrolls the note natively. `.table-scroll`
@@ -40,7 +48,10 @@ an earlier version is an ordinary comment now.
 Every rewrite of the table (a paste, Delete, an added row or column, a moved
 column) goes through `TableGrid.replace`, which, for a table in a list item,
 indents every line after the header like the table's rows, so the table
-stays in the item.
+stays in the item. It first checks that the note still holds the table's
+Markdown where the widget is, and writes nothing otherwise: a table that
+stays active after scrolling out of view has no position in the note, so a
+`Table: …` command then does nothing rather than replace other text.
 
 Tall wide tables also show a sticky mirror of the table's horizontal
 scrollbar (BH-016) while the native bar is below the note viewport, so
@@ -76,7 +87,8 @@ plugin registrations and widget lifetimes end when the plugin stops.
 - `manifest.ts`: settings identity and table command contributions.
 - `webview.ts`: named registrations for rendering, wheel input, projection and commands.
 - `environment.ts`: injected capabilities available to table interactions.
-- `content.ts`: asynchronous render-pass ownership and cancellation.
+- `content.ts`: asynchronous render-pass ownership, cancellation, and moving a kept rendering to its cell's new line.
+- `renderer-match.ts`: which `Table` nodes the editor takes: those it can parse, so not one inside a block quote.
 - `widget.ts`: Live Preview widget creation, reuse and disposal; `estimatedHeight` reserves row height before measure and across off-viewport rebuilds.
 - `estimated-height.ts`: pure row-count reserve used by the widget.
 - `estimated-height.test.ts`: empty/invalid, row scaling, and tall-table unit cases.
@@ -106,13 +118,13 @@ plugin registrations and widget lifetimes end when the plugin stops.
 - `vim-entry.ts`: deferred normal-mode source entry with transaction and mode guards.
 - `clipboard.ts`: text/grid copy, paste and formatting, including stale-paste checks.
 - `toolbar.ts`: add-row/column controls and contextual menu lifetime. Horizontal pans on the add-row strip scroll `.table-scroll` and do not insert (BH-019); a true click still adds a row.
-- `menu.ts`: menu items and their operation/focus targets.
+- `menu.ts`: menu items and their operation/focus targets; a failed action shows its message on the table.
 - `handles.ts`: row/column grips, drag feedback and drop handling.
 - `column-widths.ts`: the open table's column widths and their remap on column ops; the border hit test (`columnEdgeAt`); a list item's row indent (`rowPrefix`, `indentRows`).
 - `column-widths.test.ts`: apply, remap, border hit and row indent unit tests.
 - `column-resize.ts`: hover and drag a column's right border in any row (`col-resize` cursor, guide line); clear of the move grips.
-- `hit-test.ts`: cell and axis hit testing.
-- `commands.ts`: command IDs to table operations.
+- `hit-test.ts`: cell and axis hit testing; rows are found by binary search, so a drag reads a few row layouts per move.
+- `commands.ts`: command IDs to table operations on every selected row or column, as the context menu acts.
 - `state.ts`: active-table registry, projection annotation and selection/action facets.
 - `interactions.test.ts`: source projection, navigation, selection and menu unit tests.
 - `table.test.ts`: cell-source and operation unit tests.
@@ -122,6 +134,10 @@ plugin registrations and widget lifetimes end when the plugin stops.
 - `navigation.test.ts`: keyboard routing, append, exit and re-entry unit tests.
 - `vim-source.test.ts`: source-column ownership, delimiter entry, transaction/mode guards and deferred-entry cancellation unit tests.
 - `src/markdown/tables/model.ts`: pure table parsing, serialization and source-position mapping.
+- `src/markdown/tables/parsed.ts`: `parseTable` for the last few sources, shared by the readers of one keystroke.
+- `keystroke-cost.test.ts`: one parse per source and a one-row edit for a keystroke.
+- `cell-reuse.test.ts`: a shape change renders only new cell text and moves kept renderings to their new lines.
+- `window-listeners.test.ts`: selection and grip drags listen on the window only while they run (the sticky scrollbar's thumb drag does the same).
 - `src/markdown/tables/clipboard-formats.ts`: pure copy flavors (TSV, Markdown, HTML, `obsidian/table`) of a cell range and pasted-text parsing.
 - `src/markdown/tables/tab-separated.ts`: pure splitting of pasted tab-separated text into cells, honouring spreadsheet quotes.
 - `clipboard.test.ts`: cell/grid clipboard, selection and stale-paste unit tests.
@@ -143,7 +159,9 @@ Injects `editor`, `document`, `markdown`, `livePreview`, `render`, `commands`,
 `menu`, `rpc`; optionally `vim`, `formatting` and `links`. The optional Links
 service follows Mod-Enter from the focused cell's own document and caret.
 Provides no service. Listens to
-`editor/clearProjection`, `editor/projectSelection` and `editor/activeView`;
+`editor/clearProjection`, `editor/projectSelection`, `editor/activeView` and
+`render/changed` (mounted tables re-render their cells, unmounted retained
+ones are dropped);
 emits `editor/scrollInput` for vertical table wheel input and sends the validated
 editor `selectionChanged` notification. The feature switch
 is `lumiere.markdown.plugins.tables.enabled`; it has no separate configuration.
@@ -152,7 +170,9 @@ is `lumiere.markdown.plugins.tables.enabled`; it has no separate configuration.
 
 Save, undo and redo belong to VS Code's TextDocument. Cell selections map to
 Markdown offsets for consumers of the editor selection API. Live Preview always
-keeps tables rendered; only the focused cell reveals raw Markdown. A click on
+keeps tables rendered; only the focused cell reveals raw Markdown. A table
+inside a block quote is not: its `> ` markers are part of every row, which
+the table editor cannot read, so it stays Markdown text (`renderer-match.ts`). A click on
 the cell's padding (outside the rendered glyphs) opens the editor at the
 nearest edge of the cell text, as in Obsidian; on-glyph clicks still map
 through the rendered source. Source mode
@@ -170,8 +190,11 @@ as for any nested scroller.
 HTML paste in a focused cell uses the outer editor capture pipeline; the table
 clipboard ignores already-handled events. Rectangular paste keeps TSV semantics:
 a cell a spreadsheet wraps in quotes may hold tabs, line breaks (stored as `<br>`) and `""` for a quote.
-Copy publishes TSV as `text/plain` (spreadsheets), Markdown and HTML table flavors, and an `obsidian/table` JSON payload of rows that a table paste reads back cell for cell, the same four flavors Obsidian offers.
-Menu paste reads plain text through the host. Shift+Enter stores `<br>`, as measured in Obsidian. Rectangular selections and
+Copy publishes TSV as `text/plain` (spreadsheets), Markdown and HTML table flavors, and an `obsidian/table` JSON payload of rows that a table paste reads back cell for cell, the same four flavors Obsidian offers. A pasted payload that is not rows of text is ignored for the text flavors.
+Menu paste reads plain text through the host (VS Code's clipboard has no
+HTML): Paste writes a copied Markdown table cell for cell, while Paste as
+plain text never reads the text as a table and splits it only at tabs and
+lines. Shift+Enter stores `<br>`, as measured in Obsidian. Rectangular selections and
 keyboard menus on grips are additional capabilities. Generic block insertion and
 link-creation submenus are outside this cell menu; editor commands still work.
 

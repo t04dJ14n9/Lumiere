@@ -42,6 +42,42 @@ test("decodeTextFragment rejects empty text", () => {
   assert.equal(decodeTextFragment(":~:text="), undefined);
 });
 
+test("a browser's start,end link names the passage's two ends, not a literal comma", () => {
+  assert.deepEqual(decodeTextFragment(":~:text=Scaled%20dot,over%20keys"), {
+    textStart: "Scaled dot",
+    textEnd: "over keys",
+  });
+  assert.deepEqual(decodeTextFragment(":~:text=a%2Cb"), { textStart: "a,b" });
+});
+
+test("a text directive's prefix and suffix are read, and encoded dashes are text", () => {
+  assert.deepEqual(
+    decodeTextFragment(":~:text=the-,dot%2Dproduct,attention,-over"),
+    {
+      textStart: "dot-product",
+      textEnd: "attention",
+      prefix: "the",
+      suffix: "over",
+    },
+  );
+  assert.deepEqual(decodeTextFragment(":~:text=well-known"), {
+    textStart: "well-known",
+  });
+  assert.deepEqual(decodeTextFragment(":~:text=a&text=b"), { textStart: "a" });
+});
+
+test("a text directive that is not well formed is no fragment", () => {
+  for (const bad of [
+    ":~:text=a,b,c",
+    ":~:text=a,",
+    ":~:text=pre-,",
+    ":~:text=%E0%A4%A",
+    ":~:other=a",
+  ]) {
+    assert.equal(decodeTextFragment(bad), undefined, bad);
+  }
+});
+
 test("formatPdfDeepLink collapses line breaks in a quote to single spaces", () => {
   const href = formatPdfDeepLink("a.pdf", {
     page: 2,

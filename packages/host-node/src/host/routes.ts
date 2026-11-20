@@ -66,7 +66,6 @@ export function createEditorRoutes(
   return {
     async handle(req, res) {
       const url = new URL(req.url ?? "/", "http://host");
-      const range = req.headers.range;
       if (url.pathname === BASE) {
         return serveIndex(res, {
           pdf: Boolean(assets.pdf),
@@ -83,7 +82,6 @@ export function createEditorRoutes(
         res,
         url,
         rest,
-        range,
       });
     },
     upgrade: (req, socket, head) =>
@@ -142,18 +140,17 @@ interface RouteRequest {
   readonly res: ServerResponse;
   readonly url: URL;
   readonly rest: string;
-  readonly range: string | undefined;
 }
 
 /** Answer one request below BASE; false when no route claims it. */
 async function dispatchRoute(options: RouteRequest): Promise<boolean> {
-  const { parts, req, res, url, rest, range } = options;
+  const { parts, req, res, url, rest } = options;
   if (rest === "/editor") {
     await servePage({ req, res, url, parts });
   } else if (rest.startsWith("/m/")) {
-    await serveStatic(res, parts.assets.markdown, rest.slice(3), range);
+    await serveStatic(res, parts.assets.markdown, rest.slice(3), req.headers);
   } else if (rest === "/page/shim.js") {
-    await serveFile(res, parts.assets.shim, range);
+    await serveFile(res, parts.assets.shim, req.headers);
   } else if (rest === "/file") {
     await serveResource(req, res, url, parts.roots);
   } else if (rest === "/views" || rest.startsWith("/views/")) {
@@ -206,9 +203,11 @@ function acceptSocket({
         };
       },
       onClose: (listener) => {
-        ws.on("close", listener);
+        // 1006: the connection broke with no close frame from the page.
+        const closed = (code: number) => listener(code === 1006);
+        ws.on("close", closed);
         return () => {
-          ws.off("close", listener);
+          ws.off("close", closed);
         };
       },
       close: () => ws.close(),
@@ -320,7 +319,7 @@ async function serveResource(
     res.writeHead(resource.status).end();
     return;
   }
-  await serveFile(res, resource.file, req.headers.range, "vault");
+  await serveFile(res, resource.file, req.headers, "vault");
 }
 
 interface ContainedResource {

@@ -2,6 +2,7 @@ import assert from "node:assert/strict";
 import { test } from "node:test";
 import {
   extractPdfBacklinks,
+  parsePdfBacklinkHits,
   PdfBacklinkIndex,
 } from "../../src/shared/pdf-backlink-index";
 
@@ -19,6 +20,26 @@ test("extractPdfBacklinks finds page+text links and ignores non-pdf", () => {
   );
   assert.equal(hits[0]!.page, 3);
   assert.equal(hits[0]!.textFragment?.textStart, "hello");
+});
+
+test("a link's start,end passage reaches the viewer with both ends", () => {
+  const md = "[x](papers/a.pdf#page=3#:~:text=the-,Scaled,keys,-and)";
+  const [hit] = extractPdfBacklinks(md, "notes/n.md", "file:///notes/n.md");
+  const fragment = {
+    textStart: "Scaled",
+    textEnd: "keys",
+    prefix: "the",
+    suffix: "and",
+  };
+  assert.deepEqual(hit!.textFragment, fragment);
+  // The hit as the viewer checks it on arrival.
+  assert.deepEqual(parsePdfBacklinkHits([hit])?.[0]?.textFragment, fragment);
+  assert.deepEqual(
+    parsePdfBacklinkHits([
+      { ...hit, textFragment: { textStart: "a", textEnd: 5 } },
+    ]),
+    [],
+  );
 });
 
 test("extractPdfBacklinks skips what is not a link: code, comments, escapes", () => {

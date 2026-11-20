@@ -24,7 +24,7 @@ export class SelectionSnapshots {
       throw new RpcError("EditorNotFound", "Editor not found");
     }
     return panel.session.withAction(async () => {
-      await panel.session.flush();
+      await panel.session.flush(panel.id);
       const version = panel.document.version;
       const range = await panel.rpc.call(
         protocol,

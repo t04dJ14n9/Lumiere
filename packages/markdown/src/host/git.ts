@@ -16,6 +16,7 @@ import { gitSource } from "./git-source";
 import { RepositoryWatch } from "./git-watch";
 import { bindDiscoveredRoot, canonicalPath } from "./git-discovered-watch";
 import { exceedsDiffLimits } from "../shared/diff";
+import { baselineFailure } from "../shared/git";
 import type { GitAccess, GitBaselineResult, GitRef } from "../shared/git";
 
 /** Cached HEAD texts, by total length, so the cache cannot grow without bound. */
@@ -160,8 +161,8 @@ export class NativeGitAccess implements GitAccess {
       }
       const label = ref === "HEAD" ? `HEAD (${commit!.slice(0, 7)})` : "Index";
       return { status: "ok", baseline: { text, label } };
-    } catch {
-      return { status: "untracked" };
+    } catch (error) {
+      return { status: baselineFailure(error) };
     }
   }
 

@@ -11,11 +11,15 @@ pnpm --filter @workshop/web build   # dist/: any static web server, under any pa
 Vaults are:
 
 - folders the reader picks (Chromium's File System Access API), remembered
-  between visits;
+  between visits; two of one name are two vaults ("Notes", "Notes 2");
 - kept in the browser: its private storage where a page can write it
   (Chromium), else IndexedDB (Safari, Firefox).
 
 A first visit opens a short demo vault; later visits reopen the last vault.
+A browser lets a page read a picked folder again only once the reader allows
+it, and asks only on a click: a remembered folder it no longer allows opens
+from the window's list of vaults, which asks, while at load the demo vault
+opens in its place.
 
 ## How it works
 
@@ -31,6 +35,13 @@ the worker cannot have, over `postMessage` with a port for the answer:
   only from an open vault that holds the panel's note (403 for anything
   else), as a Blob that a picked folder reads from disk as it is used; the
   worker answers whole files and single byte ranges, which video needs.
+
+A new build's worker installs and waits while a window of the old one is
+open: file names are not hashed, so it must not serve a running window's
+editor pages from another build. The window offers "A new version of
+Lumière is ready" with Reload; on Reload the worker takes over, and every
+window of the app saves its notes and reloads.
+
 Sketches are drawn on the web canvas (`@workshop/ink/canvas`), which
 `src/main.ts` hands host-web as its `ink` service: Insert Sketch (the pencil
 beside the layout buttons, or Lumière's right-click menu) and a click on a
@@ -55,6 +66,7 @@ trackpad with a line that thins as it speeds up.
   the routes above. `windows.ts` asks the app's windows; `responses.ts`
   answers with the page or the file (whole, or a byte range), with its
   type from `media-types.ts`.
+- `src/updates.ts`: a new build offered to the reader, and the reload into it.
 - `public/manifest.webmanifest`, `public/icon.svg`: installing.
 - `scripts/build.mjs`: the build.
 

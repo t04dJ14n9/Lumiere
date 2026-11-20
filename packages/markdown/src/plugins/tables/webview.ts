@@ -30,6 +30,7 @@ import { vimTableEntry } from "./vim-entry";
 import { listenForTableWheel } from "./scroll-input";
 import { cellPointerOffset } from "./cell-pointer";
 import { matchesEditableTable } from "./renderer-match";
+import { reportingFailures } from "./menu";
 export const tablesWebview: Plugin = {
   name: "tables",
   inject: {
@@ -81,15 +82,18 @@ function createEnvironment(ctx: Context): TableEnvironment {
     disposeContent: (element) => content.disposeContent(element),
     renderContent: (element, source, offset) =>
       content.renderContent(element, source, offset),
+    renderedSource: (element) => content.renderedSource(element),
+    moveContent: (element, offset) => content.moveContent(element, offset),
     position: (source, element, point) =>
       cellPointerOffset(source, element, point, livePreview.position),
     wrap: (marker, target) => formatting?.wrap(marker, target) ?? false,
     canFormat: formatting !== undefined,
     clearFormatting: (source) => formatting?.clear(source) ?? source,
-    openMenu: (owner, items, point) => {
+    openMenu: (owner, items, point, report) => {
       let live = true;
       let stop: (() => void | Promise<void>) | undefined;
-      void ctx.pipeline("editor/selectionMenu", items).then((items) => {
+      const tableItems = reportingFailures(items, report);
+      void ctx.pipeline("editor/selectionMenu", tableItems).then((items) => {
         if (live) {
           stop = menu.open(owner, items, point, "Table actions");
         }
@@ -144,15 +148,27 @@ function registerTableRenderer(
   ctx: Context,
   environment: TableEnvironment,
 ): void {
+  // A new revision makes a mounted table re-render its cells when the
+  // widgets are rebuilt, though its source did not change.
+  let revision = 0;
   ctx.effect(() => enableTableRetention(environment));
-  ctx.on("render/changed", () => evictDisconnectedTables(environment));
+  // Prepended: Live Preview rebuilds the widgets from its own listener for
+  // this event, and they must be built with the new revision.
+  ctx.on(
+    "render/changed",
+    () => {
+      revision++;
+      evictDisconnectedTables(environment);
+    },
+    { prepend: true },
+  );
   ctx.effect(() =>
     ctx.livePreview.block({
       kind: "Table",
       nodes: ["Table"],
       editing: "widget",
       match: matchesEditableTable,
-      widget: (block) => new TableWidget(block, 0, environment),
+      widget: (block) => new TableWidget(block, revision, environment),
     }),
   );
 }
@@ -188,7 +204,7 @@ function registerTableCommands(ctx: Context): void {
         if (!controller || !position) {
           return false;
         }
-        const operation = tableOperation(id, position);
+        const operation = tableOperation(id, controller.range ?? position);
         if (!operation) {
           return false;
         }

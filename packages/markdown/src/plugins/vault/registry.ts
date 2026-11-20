@@ -180,7 +180,7 @@ export class VaultRegistry implements Vaults {
       onResolved: () => this.events.resolved(root),
       onPartial: () =>
         this.system.warn(
-          `This vault has more than 50,000 files. Lumiere indexes the first 50,000.`,
+          `This vault has more than 50,000 notes or 50,000 other files. Lumiere indexes the first 50,000 of each.`,
         ),
       onError: (message, error) => this.events.error(message, error),
     });

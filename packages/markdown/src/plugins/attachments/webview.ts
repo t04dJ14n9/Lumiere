@@ -9,19 +9,19 @@ import { EditorView, ViewPlugin } from "@codemirror/view";
 import type { Context, Plugin } from "@workshop/core";
 import {
   decodeDataUri,
+  droppedAttachmentUris,
+  droppedLinkText,
   encodeBase64,
-  extensionForMime,
   filesFromDataTransfer,
   insertEmbed,
   isHostSourceUrl,
   rewriteRemoteImages,
   shouldClaimEditorDrop,
-  urisFromDataTransfer,
-  type DragFile,
 } from "../../attachments";
 import type {} from "../editor/api";
 import type {} from "../pasteHtml/api";
-import { protocol } from "./protocol";
+import { IMPORT_URL_TIMEOUT_MS, protocol } from "./protocol";
+import { saveDropped, saveDroppedFile, type DropSaver } from "./drop-save";
 
 export const attachmentsWebview: Plugin = {
   name: "attachments",
@@ -106,32 +106,35 @@ async function onDrop(
     }
   }
 
-  const files = filesFromDataTransfer(event.dataTransfer);
-  const uris = files.length > 0 ? [] : urisFromDataTransfer(event.dataTransfer);
-  if (files.length === 0 && uris.length === 0) {
-    return;
-  }
-
   const pos =
     target.posAtCoords({ x: event.clientX, y: event.clientY }) ??
     target.state.selection.main.head;
-  const embeds: string[] = [];
-  for (const file of files) {
-    const embed = await saveFile(ctx, file);
-    if (embed) {
-      embeds.push(embed);
+  const files = filesFromDataTransfer(event.dataTransfer);
+  const uris =
+    files.length > 0 ? [] : droppedAttachmentUris(event.dataTransfer);
+  if (files.length === 0 && uris.length === 0) {
+    // A web link dragged from a browser: its text, as for any dragged text.
+    const text = droppedLinkText(event.dataTransfer);
+    if (text) {
+      insertDroppedText(target, pos, text);
     }
+    return;
   }
-  for (const uri of uris) {
-    const embed = await saveSrc(ctx, uri);
-    if (embed) {
-      embeds.push(embed);
-    }
-  }
+  const embeds = await saveDropped(dropSaver(ctx), files, uris);
   if (!isLive() || embeds.length === 0) {
     return;
   }
   insertAt(target, pos, embeds.join("\n\n"));
+}
+
+function dropSaver(ctx: Context): DropSaver {
+  return {
+    saveBytes: (bytes, ext) => saveBytes(ctx, bytes, ext),
+    saveSource: (uri) => saveSrc(ctx, uri),
+    refuse: (name, reason) =>
+      ctx.rpc.notify(protocol, "refused", { name: name.slice(0, 255), reason }),
+    failed: (error) => ctx.logger.error("Could not save the attachment", error),
+  };
 }
 
 async function onPasteImage(
@@ -154,11 +157,20 @@ async function onPasteImage(
     return;
   }
   event.preventDefault();
-  const embed = await saveFile(ctx, file);
+  const embed = await saveDroppedFile(dropSaver(ctx), file);
   if (!isLive() || !embed) {
     return;
   }
   insertAt(target, target.state.selection.main.head, embed);
+}
+
+function insertDroppedText(view: EditorView, pos: number, text: string): void {
+  view.dispatch({
+    changes: { from: pos, insert: text },
+    selection: { anchor: pos + text.length },
+    userEvent: "input.drop",
+    scrollIntoView: true,
+  });
 }
 
 function insertAt(view: EditorView, pos: number, embed: string): void {
@@ -173,15 +185,6 @@ function insertAt(view: EditorView, pos: number, embed: string): void {
   });
 }
 
-async function saveFile(
-  ctx: Context,
-  file: DragFile,
-): Promise<string | undefined> {
-  const bytes = new Uint8Array(await file.arrayBuffer());
-  const ext = extensionFromName(file.name) || extensionForMime(file.type);
-  return saveBytes(ctx, bytes, ext);
-}
-
 async function saveSrc(ctx: Context, src: string): Promise<string | undefined> {
   if (src.startsWith("data:")) {
     const decoded = decodeDataUri(src);
@@ -191,7 +194,12 @@ async function saveSrc(ctx: Context, src: string): Promise<string | undefined> {
     return saveBytes(ctx, decoded.bytes, decoded.ext);
   }
   if (isHostSourceUrl(src)) {
-    const result = await ctx.rpc.call(protocol, "importUrl", { url: src });
+    const result = await ctx.rpc.call(
+      protocol,
+      "importUrl",
+      { url: src },
+      { timeout: IMPORT_URL_TIMEOUT_MS },
+    );
     return result.ok ? result.embed : undefined;
   }
   // Relative / vault paths are not downloaded.
@@ -259,14 +267,4 @@ function dropView(event: DragEvent, outer: EditorView): EditorView | undefined {
   }
   // Drop elsewhere in the webview still embeds into the active note editor.
   return outer.dom.isConnected ? outer : undefined;
-}
-
-function extensionFromName(name: string): string {
-  const base = name.split(/[/\\]/).pop() ?? "";
-  const dot = base.lastIndexOf(".");
-  if (dot <= 0) {
-    return "";
-  }
-  const ext = base.slice(dot + 1).toLowerCase();
-  return /^[a-z0-9]{1,8}$/.test(ext) ? ext : "";
 }

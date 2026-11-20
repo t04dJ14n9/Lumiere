@@ -3,7 +3,7 @@
  * private storage from a page (Safari), and the iPad app's own data. Its
  * files are held in memory (memory-fs.ts) and every change is written through.
  */
-import { MemoryFileSystem, type MemoryEntry } from "./memory-fs";
+import { MemoryFileSystem, type MemoryEntry, type Persist } from "./memory-fs";
 
 const DATABASE = "lumiere-files";
 const ENTRIES = "entries";
@@ -13,13 +13,34 @@ const SEPARATOR = "\u0000";
 export async function indexedDbFolder(name: string): Promise<MemoryFileSystem> {
   const db = await open();
   const entries = await load(db, name);
-  return new MemoryFileSystem(entries, (path, entry) => {
-    const store = db.transaction(ENTRIES, "readwrite").objectStore(ENTRIES);
-    const key = `${name}${SEPARATOR}${path}`;
-    const request = entry ? store.put(entry, key) : store.delete(key);
-    request.onerror = () =>
-      console.error(`Lumière could not keep ${path}`, request.error);
-  });
+  return new MemoryFileSystem(entries, keepIn(db, name));
+}
+
+/**
+ * Writes each change in its own transaction, done only once IndexedDB has
+ * committed it: a request's success is not yet stored, and a quota error can
+ * still abort the transaction after it.
+ */
+export function keepIn(db: IDBDatabase, name: string): Persist {
+  return (path, entry) =>
+    new Promise<void>((resolve, reject) => {
+      const transaction = db.transaction(ENTRIES, "readwrite");
+      const store = transaction.objectStore(ENTRIES);
+      const key = `${name}${SEPARATOR}${path}`;
+      const failed = () =>
+        reject(
+          transaction.error ??
+            new Error(`Lumière could not keep ${path} in IndexedDB`),
+        );
+      transaction.oncomplete = () => resolve();
+      transaction.onerror = failed;
+      transaction.onabort = failed;
+      if (entry) {
+        store.put(entry, key);
+      } else {
+        store.delete(key);
+      }
+    });
 }
 
 function open(): Promise<IDBDatabase> {

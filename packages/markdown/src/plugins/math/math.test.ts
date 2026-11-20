@@ -2,7 +2,7 @@ import test from "node:test";
 import assert from "node:assert/strict";
 import { readFileSync } from "node:fs";
 import { EditorState } from "@codemirror/state";
-import { mathBody, mathTokens } from "./source";
+import { mathBlockRange, mathBody, mathTokens } from "./source";
 import { inlineMathEdit, mathBlockEdit } from "./commands";
 
 /** The declarations of a rule in `file`, by its exact selector. */
@@ -169,4 +169,19 @@ test("typesetSync converts standard TeX synchronously once initialized and cache
     setMathAdaptorForTest(undefined);
     clearMathCache();
   }
+});
+
+test("a display formula's widget also covers the text after its closing $$", () => {
+  const doc = EditorState.create({
+    doc: "$$\nx\n$$ is famous\n$$\ny\n$$  \nnext",
+  }).doc;
+  assert.deepEqual(mathBlockRange({ from: 0, to: 7 }, doc), {
+    from: 0,
+    to: 17,
+  });
+  // Only spaces after the closing `$$`: the widget ends at it.
+  assert.deepEqual(mathBlockRange({ from: 18, to: 25 }, doc), {
+    from: 18,
+    to: 25,
+  });
 });
