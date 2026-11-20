@@ -37,6 +37,7 @@ function loadSelectionTracker(reports: unknown[]) {
       "@embedpdf/plugin-selection/contract": { SelectionToken: {} },
       "../shared/selection": { copiedText },
       "./editable-target": { isEditableTarget: () => false },
+      "./note-card-target": { isInNoteCard: () => false },
       "./host": {
         postToHost: () => undefined,
         reportToHost: (patch: unknown) => reports.push(patch),

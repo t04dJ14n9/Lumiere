@@ -20,6 +20,7 @@ import { useSelectionReporting } from "./selection";
 import { useAnnotationEditing } from "./annotation-mode";
 import { useAnnotationSaveSession } from "./annotation-session";
 import { useMarkMenu, type MarkMenu } from "./mark-menu";
+import { NoteCard } from "./note-card";
 import { useToolMode } from "./tool-mode";
 import { currentToolbarSettings } from "./toolbar-settings";
 import { rememberPageColors } from "./page-colors";
@@ -306,13 +307,17 @@ function DocumentPages({
         className="viewport"
         // The Stage has no scrolling element, so no native scrollbars: its own
         // are drawn over it, except where a page is turned, not scrolled.
+        // A mark's note card sits there too, beside its mark.
         overlay={
-          paged ? undefined : (
-            <>
-              <Scrollbar axis="y" />
-              <Scrollbar axis="x" />
-            </>
-          )
+          <>
+            {!paged && (
+              <>
+                <Scrollbar axis="y" />
+                <Scrollbar axis="x" />
+              </>
+            )}
+            <NoteCard />
+          </>
         }
       >
         {(page) => (

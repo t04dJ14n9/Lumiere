@@ -24,6 +24,7 @@ import "./styles/base.css";
 import "./styles/toolbar.css";
 import "./styles/page.css";
 import "./styles/view-controls.css";
+import "./styles/note-card.css";
 
 performance.mark("pdf:main");
 const container = document.getElementById("root");

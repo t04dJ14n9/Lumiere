@@ -17,6 +17,7 @@ import {
 import type { PageRect } from "../shared/geometry";
 import { copiedText, type RegionSelection } from "../shared/selection";
 import { isEditableTarget } from "./editable-target";
+import { isInNoteCard } from "./note-card-target";
 import { postToHost, reportToHost } from "./host";
 import { followMenuContext } from "./menu-context";
 import { readRegionDetails } from "./region-details";
@@ -282,7 +283,13 @@ function useCopiedText(state: SelectionTracker): void {
   useEffect(() => {
     const onCopy = (event: ClipboardEvent): void => {
       const text = state.selectedText;
-      if (!text || !event.clipboardData || isEditableTarget(event.target)) {
+      if (
+        !text ||
+        !event.clipboardData ||
+        isEditableTarget(event.target) ||
+        // Text selected in a note card copies as the browser copies it.
+        isInNoteCard(event.target)
+      ) {
         return;
       }
       event.clipboardData.setData("text/plain", text);

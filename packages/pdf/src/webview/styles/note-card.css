@@ -1,0 +1,107 @@
+/*
+ * A mark's note (note-card.tsx), drawn like VS Code's own hovers: the hover
+ * widget's colours, the workbench font, the theme's link and code colours.
+ */
+.note-card {
+  box-sizing: border-box;
+  max-width: min(480px, calc(100vw - 32px));
+  max-height: min(320px, calc(100vh - 32px));
+  overflow: auto;
+  padding: 4px 8px;
+  color: var(--vscode-editorHoverWidget-foreground, var(--vscode-foreground));
+  background: var(--vscode-editorHoverWidget-background, #252526);
+  border: 1px solid var(--vscode-editorHoverWidget-border, #454545);
+  border-radius: 4px;
+  box-shadow: 0 2px 8px var(--vscode-widget-shadow, #0008);
+  font-family: var(--vscode-font-family, sans-serif);
+  font-size: var(--vscode-font-size, 13px);
+  line-height: 1.45;
+  overflow-wrap: anywhere;
+  user-select: text;
+  cursor: auto;
+}
+
+.note-card > :first-child {
+  margin-top: 0;
+}
+
+.note-card > :last-child {
+  margin-bottom: 0;
+}
+
+.note-card p,
+.note-card ul,
+.note-card ol,
+.note-card pre,
+.note-card blockquote,
+.note-card table {
+  margin: 4px 0;
+}
+
+.note-card ul,
+.note-card ol {
+  padding-left: 20px;
+}
+
+.note-card h1,
+.note-card h2,
+.note-card h3,
+.note-card h4,
+.note-card h5,
+.note-card h6 {
+  margin: 6px 0 4px;
+  font-size: 1em;
+  font-weight: 600;
+}
+
+.note-card a {
+  color: var(--vscode-textLink-foreground, #3794ff);
+  text-decoration: none;
+  cursor: pointer;
+}
+
+.note-card a:hover {
+  color: var(--vscode-textLink-activeForeground, #3794ff);
+  text-decoration: underline;
+}
+
+.note-card code {
+  padding: 1px 3px;
+  border-radius: 3px;
+  background: var(--vscode-textCodeBlock-background, #0003);
+  font-family: var(--vscode-editor-font-family, monospace);
+  font-size: 0.92em;
+}
+
+.note-card pre {
+  padding: 4px 6px;
+  overflow: auto;
+  border-radius: 3px;
+  background: var(--vscode-textCodeBlock-background, #0003);
+}
+
+.note-card pre code {
+  padding: 0;
+  background: none;
+}
+
+.note-card blockquote {
+  padding-left: 8px;
+  border-left: 3px solid var(--vscode-textBlockQuote-border, #007acc80);
+  color: var(--vscode-descriptionForeground, inherit);
+}
+
+.note-card hr {
+  border: none;
+  border-top: 1px solid var(--vscode-editorHoverWidget-border, #454545);
+}
+
+.note-card table {
+  border-collapse: collapse;
+}
+
+.note-card th,
+.note-card td {
+  padding: 2px 6px;
+  border: 1px solid var(--vscode-editorHoverWidget-border, #454545);
+}

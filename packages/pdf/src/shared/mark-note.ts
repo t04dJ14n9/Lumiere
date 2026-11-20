@@ -5,8 +5,8 @@ import MarkdownIt from "markdown-it";
  * can neither run nor load anything. The note comes from Lumiere's
  * annotation file or from the PDF itself, which anyone may have written, so
  * raw HTML stays text, images are not drawn (a picture would be fetched),
- * and only web and mail links become links. The card opens a link through
- * the extension, which checks it again (`isNoteLink`).
+ * and only web and mail links become links. The card opens a link with the
+ * viewer's `openExternal` message, which the extension checks again.
  */
 
 /** The longest link a note may open, in UTF-16 code units. */
