@@ -21,9 +21,8 @@ export function registerOutlineView(
   });
   const follower = new OutlineFollower(view, provider, panels, log);
   const outlineFocus = createOutlineFocus({
-    execute: (command) => vscode.commands.executeCommand(command),
-    focusEditor: () =>
-      vscode.commands.executeCommand("workbench.action.focusActiveEditorGroup"),
+    execute: (command, ...args) =>
+      vscode.commands.executeCommand(command, ...args),
     isOutlineShown: () => view.visible,
     activeCustomEditorViewType: () => {
       const input = vscode.window.tabGroups.activeTabGroup.activeTab?.input;

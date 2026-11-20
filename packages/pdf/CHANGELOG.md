@@ -2,6 +2,10 @@
 
 ## Unreleased
 
+- Leaving a PDF no longer moves the keyboard focus to restore VS Code's
+  Outline (it focused the main window's Outline, then the active editor
+  group, a moment after the reader had left, possibly for another window).
+
 - Fixed (review 2026-11-15):
   - The host writes a PDF only for Save Annotations into This PDF, and never
     one in `lumiere.pdf.annotations.protectedFolders`, whatever the viewer

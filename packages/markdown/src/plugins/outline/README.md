@@ -75,7 +75,8 @@ When a Lumiere editor is active, **Markdown Outline** stands in for VS Code's
 native **Outline**: the native one is hidden as soon as Markdown Outline is on
 screen, and comes back when the last Lumiere editor is left (after a short
 debounce, skipped if Lumiere PDF or another Lumiere editor already owns the
-active tab), but only if this plugin hid it. Opening a note never changes which
+active tab), but only if this plugin hid it, and without taking the keyboard
+focus: the reader may be in another window by then. Opening a note never changes which
 sidebar container is shown: a note opened from Search or Quick Open leaves the
 Search view in place, because focusing the view (`lumiere.markdown.outline.focus`)
 would bring up the Explorer. Markdown Outline is therefore never focused on open. It

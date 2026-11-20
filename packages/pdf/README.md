@@ -116,7 +116,8 @@ is opt-in (`lumiere.pdf.regions.enabled`, default off).
   Open, Search stays. Wherever the Explorer is shown, **PDF Outline** appears
   in it and VS Code's native **Outline** is hidden; leaving the PDF restores
   the native Outline after a short debounce, only if it was hidden, and not
-  when Lumiere already owns the active tab. VS Code lists PDF Outline
+  when Lumiere already owns the active tab; restoring it leaves the keyboard
+  focus where it is. VS Code lists PDF Outline
   collapsed the first time; it remembers once you expand it.
 - **Section links from notes.** In a Markdown note in Lumiere, typing
   `[[paper.pdf#` lists the PDF's bookmarks; typing more filters them, and

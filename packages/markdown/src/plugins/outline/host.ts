@@ -155,9 +155,7 @@ function registerOutlineFocus(ctx: Context, tree: TreeHandle): void {
   // Captured while live: the focus check can run after the plugin stops.
   const activeEditor = ctx.activeEditor;
   const focus = createOutlineFocus({
-    execute: (command) => ctx.hostCommands.execute(command),
-    focusEditor: () =>
-      ctx.hostCommands.execute("workbench.action.focusActiveEditorGroup"),
+    execute: (command, ...args) => ctx.hostCommands.execute(command, ...args),
     isOutlineShown: () => tree.visible,
     activeCustomEditorViewType: () => activeEditor.customEditorViewType(),
   });
