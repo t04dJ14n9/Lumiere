@@ -66,14 +66,25 @@ is opt-in (`lumiere.pdf.regions.enabled`, default off).
   for agents, not such a link. See [CAPABILITIES.md](CAPABILITIES.md).
 - **Annotate from the context menu.** There is no Annotate mode or button.
   Select text and right-click: **Highlight**, **Underline**, **Strikeout**
-  or **Squiggly**, side by side; **Copy link to this** hands the text to an
-  agent. The keys are Preview's: ⌃⌘H highlights, ⌃⌘U underlines and
-  ⌃⌘S strikes out the selected text (Ctrl+Alt+H / U / S on Windows and
-  Linux). Right-click one of your marks
+  or **Squiggly**, side by side, then **Highlight with Note**; **Copy link
+  to this** hands the text to an agent. The keys are Preview's: ⌃⌘H
+  highlights, ⌃⌘U underlines and ⌃⌘S strikes out the selected text
+  (Ctrl+Alt+H / U / S on Windows and Linux). Right-click one of your marks
   for **Edit Note…**, **Change Color** ▸ (six colours; new highlights take the
   last one picked) and **Delete Annotation**; **Copy link to this** then
   hands the mark to an agent. A click never selects, moves or deletes a
   mark, and the PDF's own annotations do not answer the menu.
+- **Notes on marks, in Markdown.** Rest the pointer on a mark with a note
+  (or on the small note icon by its corner) and the note shows under it,
+  rendered as Markdown, in a card drawn like VS Code's own hovers. Links in
+  it open in the browser (web and mail links only); raw HTML stays text and
+  images are not loaded. **Edit Note…**, **Highlight with Note** or the
+  card's Edit button turn the card into a field to write in:
+  ⌘Enter / Ctrl+Enter or a click elsewhere keeps the note, Escape leaves it
+  as it was, and an emptied note is removed. Notes are kept with the mark
+  (its `contents`), so Save Annotations into This PDF and Export Annotated
+  Copy… carry them; other PDF readers show the Markdown as plain text. The
+  PDF's own annotations show their notes read-only.
 - **Annotations never change the PDF.** Marks are kept in
   `.lumiere/pdf-annotations/<sha256>.json` in the PDF's workspace folder
   (`~/.lumiere/…` for a PDF outside every folder), named by the PDF's
