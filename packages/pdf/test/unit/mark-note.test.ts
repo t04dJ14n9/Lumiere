@@ -1,6 +1,10 @@
 import assert from "node:assert/strict";
 import test from "node:test";
-import { isNoteLink, renderNote } from "../../src/shared/mark-note";
+import {
+  isNoteLink,
+  renderNote,
+  showsNoteBadge,
+} from "../../src/shared/mark-note";
 
 test("a note renders as Markdown", () => {
   const html = renderNote("**Key** point:\n\n- one\n- `two`")!;
@@ -66,4 +70,22 @@ test("isNoteLink accepts web and mail links only", () => {
   ]) {
     assert.equal(isNoteLink(bad), false, String(bad).slice(0, 40));
   }
+});
+
+test("a text mark with a note shows the note icon; others draw their own or have none", () => {
+  for (const subtype of ["highlight", "underline", "strikeout", "squiggly"]) {
+    assert.equal(
+      showsNoteBadge({ subtype, contents: "a note" }),
+      true,
+      subtype,
+    );
+  }
+  assert.equal(
+    showsNoteBadge({ subtype: "highlight", contents: " \n" }),
+    false,
+  );
+  assert.equal(showsNoteBadge({ subtype: "highlight" }), false);
+  // A sticky note (text) already draws its icon; a link's text is not a note.
+  assert.equal(showsNoteBadge({ subtype: "text", contents: "a note" }), false);
+  assert.equal(showsNoteBadge({ subtype: "link", contents: "a note" }), false);
 });

@@ -132,6 +132,7 @@ interface ActionContext {
 export interface MarkActions {
   markSelection: (tool: MarkToolId) => void;
   editNote: () => void;
+  highlightWithNote: () => void;
   setColor: (color: string) => void;
   deleteMark: () => void;
   undo: () => void;
@@ -173,6 +174,7 @@ const ACTIONS: Handlers = {
   setTool: ({ tool }, { setTool }) => setTool(tool),
   markSelection: ({ tool }, { marks }) => marks.markSelection(tool),
   editMarkNote: (_, { marks }) => marks.editNote(),
+  highlightWithNote: (_, { marks }) => marks.highlightWithNote(),
   setMarkColor: ({ color }, { marks }) => marks.setColor(color),
   annotationUndo: (_, { marks }) => marks.undo(),
   annotationRedo: (_, { marks }) => marks.redo(),

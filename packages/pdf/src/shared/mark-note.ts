@@ -44,3 +44,21 @@ markdown.validateLink = isNoteLink;
 export function renderNote(note: string): string | undefined {
   return note.trim() ? markdown.render(note) : undefined;
 }
+
+/** The marks made from selected text: the ones that show a note icon. */
+const TEXT_MARKS = new Set(["highlight", "underline", "strikeout", "squiggly"]);
+
+/**
+ * Whether a mark shows the small note icon by its corner: a text mark with a
+ * note. A sticky note draws its own icon, and other kinds' text is no note.
+ */
+export function showsNoteBadge(mark: {
+  subtype: string;
+  contents?: unknown;
+}): boolean {
+  return (
+    TEXT_MARKS.has(mark.subtype) &&
+    typeof mark.contents === "string" &&
+    mark.contents.trim() !== ""
+  );
+}

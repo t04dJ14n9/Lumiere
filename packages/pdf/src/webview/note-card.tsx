@@ -14,7 +14,11 @@ import { isNoteLink, renderNote } from "../shared/mark-note";
 import { createNoteHover, type NoteHover } from "../shared/note-hover";
 import { postToHost } from "./host";
 import { lookUpPageAt } from "./look-up-pages";
-import { isInNoteCard, NOTE_CARD_CLASS } from "./note-card-target";
+import {
+  isInNoteCard,
+  NOTE_CARD_CLASS,
+  noteKeyOfBadge,
+} from "./note-card-target";
 import { onNoteEditRequest } from "./note-edit-request";
 import { NoteEditor } from "./note-editor";
 
@@ -266,11 +270,15 @@ function cardListeners(
   };
 }
 
-/** The key of the mark with a note under the pointer, if there is one. */
+/** The key of the mark with a note under the pointer (or its note icon), if there is one. */
 function noteKeyAt(
   annotation: AnnotationCapability,
   event: PointerEvent,
 ): string | undefined {
+  const badge = noteKeyOfBadge(event.target);
+  if (badge !== undefined) {
+    return badge;
+  }
   const found = lookUpPageAt(event.clientX, event.clientY);
   const mark = found ? annotation.getAt(found.page.ref, found.point) : null;
   return mark && noteOf(mark).trim() ? annotationKey(mark.ref) : undefined;

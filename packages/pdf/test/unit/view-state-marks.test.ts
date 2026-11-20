@@ -59,6 +59,9 @@ test("Edit Note asks the viewer to open the note, which it carries no text for; 
   assert.deepEqual(parseViewerAction({ action: "editMarkNote" }), {
     action: "editMarkNote",
   });
+  assert.deepEqual(parseViewerAction({ action: "highlightWithNote" }), {
+    action: "highlightWithNote",
+  });
   // The note is written in the viewer's own card now, not sent from a prompt.
   assert.equal(
     parseViewerAction({ action: "setMarkNote", note: "x" }),

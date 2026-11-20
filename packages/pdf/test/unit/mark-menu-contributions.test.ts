@@ -140,3 +140,21 @@ test("each mark and colour command sends its viewer action", () => {
     action: "editMarkNote",
   });
 });
+
+test("selected text also gets Highlight with Note, after the four marks", () => {
+  const entry = contextEntry(
+    (item) => item.command === VIEW_COMMAND_IDS.highlightWithNote,
+  );
+  assert.equal(entry?.group, "0_mark@5");
+  assert.match(entry?.when ?? "", /webviewId == 'lumiere\.pdf\.viewer'/u);
+  assert.match(entry?.when ?? "", /lumiere\.pdf\.hasTextSelection/u);
+  const command = contributes().commands.find(
+    (item) => item.command === VIEW_COMMAND_IDS.highlightWithNote,
+  );
+  assert.equal(command?.title, "Highlight with Note");
+  assert.match(command?.enablement ?? "", /lumiere\.pdf\.hasTextSelection/u);
+  const action = VIEW_ACTION_COMMANDS.find(
+    (item) => item.id === VIEW_COMMAND_IDS.highlightWithNote,
+  )?.action;
+  assert.deepEqual(action, { action: "highlightWithNote" });
+});

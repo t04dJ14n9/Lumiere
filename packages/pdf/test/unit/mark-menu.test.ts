@@ -92,6 +92,7 @@ function setUp() {
     useMarkMenu: (options: unknown) => {
       openAt: (event: unknown) => boolean;
       markSelection: (tool: string) => void;
+      highlightWithNote: () => void;
       editNote: () => void;
       setColor: (color: string) => void;
       deleteMark: () => void;
@@ -245,4 +246,15 @@ test("a stamp has no colour to change", async () => {
     false,
   );
   assert.deepEqual(view.colors, []);
+});
+
+test("Highlight with Note highlights the text, then opens the new mark's note", async () => {
+  const view = setUp();
+  view.menu().highlightWithNote();
+  await view.settle();
+  assert.deepEqual(view.calls, [["createFromSelection", "highlight"]]);
+  assert.deepEqual(
+    view.edits.map((edit) => edit.ref.id),
+    ["new"],
+  );
 });

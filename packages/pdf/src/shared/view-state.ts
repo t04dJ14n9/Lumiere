@@ -70,7 +70,9 @@ export type ViewerAction =
         | "annotationRedo"
         | "deleteSelectedAnnotations"
         /** Open the note of the mark the context menu was opened on, to write it. */
-        | "editMarkNote";
+        | "editMarkNote"
+        /** Highlight the selected text and open the new mark's note, to write it. */
+        | "highlightWithNote";
     }
   | { action: "goToPage"; page: number }
   | { action: "setZoom"; percent: number }
@@ -98,6 +100,7 @@ const SIMPLE_ACTIONS = new Set([
   "annotationRedo",
   "deleteSelectedAnnotations",
   "editMarkNote",
+  "highlightWithNote",
 ]);
 
 /** Accept a view report only if it is well-formed (it comes from the untrusted viewer). */

@@ -27,6 +27,8 @@ export interface MarkMenu {
   openAt(event: MouseEvent): boolean;
   /** Mark the selected text. */
   markSelection(tool: MarkToolId): void;
+  /** Highlight the selected text, then open the new mark's note to write it. */
+  highlightWithNote(): void;
   /** Open the note of the mark the menu was opened on, to write it (note-card.tsx). */
   editNote(): void;
   /** Change the colour of the mark the menu was opened on. */
@@ -110,6 +112,20 @@ function menuOver(state: MenuState): MarkMenu {
     markSelection: (tool) => {
       if (annotation) {
         void report("mark the text", annotation.createFromSelection(tool));
+      }
+    },
+    highlightWithNote: () => {
+      if (annotation) {
+        const made = annotation
+          .createFromSelection("highlight")
+          .then(({ annotations }) => {
+            // One mark per page: the note goes on the first.
+            const [first] = annotations;
+            if (first) {
+              requestNoteEdit({ ref: first.ref });
+            }
+          });
+        void report("mark the text", made);
       }
     },
     editNote: () => withMark(state, (mark) => editNote(state, mark)),

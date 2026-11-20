@@ -20,6 +20,7 @@ export const VIEW_COMMAND_IDS = {
   selectTextTool: "lumiere.pdf.selectTextTool",
   selectRegionTool: "lumiere.pdf.selectRegionTool",
   editAnnotationNote: "lumiere.pdf.editAnnotationNote",
+  highlightWithNote: "lumiere.pdf.highlightWithNote",
   annotationUndo: "lumiere.pdf.annotationUndo",
   annotationRedo: "lumiere.pdf.annotationRedo",
   annotationRetrySave: "lumiere.pdf.annotationRetrySave",

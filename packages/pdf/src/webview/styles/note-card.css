@@ -172,3 +172,27 @@
   padding: 2px 6px;
   border: 1px solid var(--vscode-editorHoverWidget-border, #454545);
 }
+
+/* The note icon by a mark that has a note (note-badges.tsx): a tiny hover widget. */
+.note-badge {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  box-sizing: border-box;
+  width: 16px;
+  height: 16px;
+  border: 1px solid var(--vscode-editorHoverWidget-border, #454545);
+  border-radius: 3px;
+  color: var(--vscode-editorHoverWidget-foreground, var(--vscode-foreground));
+  background: var(--vscode-editorHoverWidget-background, #252526);
+  opacity: 0.85;
+  cursor: default;
+}
+
+.note-badge:hover {
+  opacity: 1;
+}
+
+.note-badge .codicon {
+  font-size: 12px;
+}

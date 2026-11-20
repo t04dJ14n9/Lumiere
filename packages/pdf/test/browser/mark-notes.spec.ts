@@ -199,3 +199,36 @@ test("one of Lumiere's own marks offers Edit Note in its card", async ({
     card(page).getByRole("button", { name: "Edit Note" }),
   ).toBeVisible();
 });
+
+test("a mark with a note shows the note icon by its corner; resting on it shows the note", async ({
+  page,
+}) => {
+  await open(page, "?toolbar=chrome");
+  const inside = await highlightWords(page);
+  const badge = page.locator(".note-badge");
+  await expect(badge).toHaveCount(0);
+  await setNote(page, inside, "Found by its icon");
+  await expect(badge).toHaveCount(1);
+  const box = (await badge.boundingBox())!;
+  expect(box.x).toBeGreaterThan(inside[0]);
+  expect(Math.abs(box.y - inside[1])).toBeLessThan(40);
+  await badge.hover();
+  await expect(card(page)).toContainText("Found by its icon");
+});
+
+test("Highlight with Note marks the text and opens its note to write", async ({
+  page,
+}) => {
+  await open(page, "?toolbar=chrome");
+  const at = await pagePoint(page, 1);
+  await selectText(page, at(74, TEXT_MIDLINE), at(205, TEXT_MIDLINE));
+  await expect
+    .poll(async () => (await lastSelection(page)) as { kind?: string } | null)
+    .toMatchObject({ kind: "text" });
+  await sendAction(page, { action: "highlightWithNote" });
+  await expect(field(page)).toBeFocused();
+  await page.keyboard.type("Why it matters");
+  await page.keyboard.press("ControlOrMeta+Enter");
+  await expect.poll(() => keptNotes(page)).toEqual(["Why it matters"]);
+  await expect(page.locator(".note-badge")).toHaveCount(1);
+});

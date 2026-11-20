@@ -1065,6 +1065,12 @@
         "enablement": "lumiere.pdf.pdfActive && lumiere.pdf.hasTextSelection"
       },
       {
+        "command": "lumiere.pdf.highlightWithNote",
+        "title": "Highlight with Note",
+        "category": "PDF",
+        "enablement": "lumiere.pdf.pdfActive && lumiere.pdf.hasTextSelection"
+      },
+      {
         "command": "lumiere.pdf.editAnnotationNote",
         "title": "Edit Note…",
         "category": "PDF",
@@ -2315,6 +2321,10 @@
           "when": "activeCustomEditorId == 'lumiere.pdf.viewer' && lumiere.pdf.hasTextSelection"
         },
         {
+          "command": "lumiere.pdf.highlightWithNote",
+          "when": "activeCustomEditorId == 'lumiere.pdf.viewer' && lumiere.pdf.hasTextSelection"
+        },
+        {
           "command": "lumiere.pdf.editAnnotationNote",
           "when": "false"
         },
@@ -2481,6 +2491,11 @@
           "command": "lumiere.pdf.squigglySelection",
           "when": "webviewId == 'lumiere.pdf.viewer' && lumiere.pdf.hasTextSelection",
           "group": "0_mark@4"
+        },
+        {
+          "command": "lumiere.pdf.highlightWithNote",
+          "when": "webviewId == 'lumiere.pdf.viewer' && lumiere.pdf.hasTextSelection",
+          "group": "0_mark@5"
         },
         {
           "command": "lumiere.pdf.editAnnotationNote",
