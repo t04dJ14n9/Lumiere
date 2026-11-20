@@ -1,5 +1,21 @@
 # Changelog
 
+## 0.1.19 (pre-release, 2026-11-20)
+
+- PDF: notes on marks are Markdown. Rest the pointer on a highlight,
+  underline, strikeout or squiggly mark that has a note, and the note shows
+  in a card drawn like VS Code's hovers, with working web links; a small icon
+  marks the marks that have one. **Edit Note…** writes the note in that card,
+  in a multi-line field, instead of a one-line prompt, and **Highlight with
+  Note** highlights the selected text and opens its note to write (#778).
+- Markdown and PDF: leaving a Lumiere editor brings VS Code's Outline back
+  without taking the keyboard focus, which could pull it out of an editor in
+  another window (#777).
+- Markdown: a Markdown link into a hidden folder, such as
+  `[source](/.raw/captured/page.md)`, now shows its file in the hover preview
+  and in an embed. A click already opened it, but the preview said "Resource
+  not found" (#779).
+
 ## 0.1.18 (pre-release, 2026-11-20)
 
 Fixes from a full code review (#775), each with a test.
