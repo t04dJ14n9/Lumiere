@@ -9,6 +9,7 @@ import {
   type ScrollDirection,
   type ScrollMode,
 } from "../shared/view-settings";
+import { scrollsNoteCard } from "./note-card-target";
 import { useStageApi, type StageApi } from "./stage-capability";
 
 export function useSmoothMotion(enabled: boolean | null): boolean {
@@ -98,7 +99,9 @@ class SmoothWheel {
   readonly onWheel = (event: WheelEvent): void => {
     if (
       !(event.target instanceof Element) ||
-      !event.target.closest(".viewport")
+      !event.target.closest(".viewport") ||
+      // A note card sits in the Stage's overlay and scrolls itself.
+      scrollsNoteCard(event)
     ) {
       return;
     }

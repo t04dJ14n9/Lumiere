@@ -324,6 +324,7 @@ function notch(stage: Stage, options: { shift: boolean; direction: string }) {
       "../shared/smooth-motion": { WheelGesture, wheelPixels, wheelTarget },
       "../shared/view-settings": { resolveSmoothScrolling },
       "./stage-capability": { useStageApi: () => stage },
+      "./note-card-target": { scrollsNoteCard: () => false },
     },
     { Element },
   );

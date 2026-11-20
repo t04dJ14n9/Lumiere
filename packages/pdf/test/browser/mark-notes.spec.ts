@@ -132,6 +132,27 @@ test("a press or Escape closes the card", async ({ page }) => {
   await page.mouse.up();
 });
 
+test("the wheel over a long note scrolls the card, not the pages", async ({
+  page,
+}) => {
+  await open(page, "?toolbar=chrome");
+  const inside = await highlightWords(page);
+  const lines = Array.from({ length: 40 }, (_, index) => `- item ${index}`);
+  await setNote(page, inside, lines.join("\n"));
+  await page.mouse.move(...inside);
+  await expect(card(page)).toBeVisible();
+  await card(page).hover();
+  const pages = page.locator('.page[data-page-index="0"]');
+  const before = (await pages.boundingBox())!.y;
+
+  await page.mouse.wheel(0, 120);
+  await expect
+    .poll(() => card(page).evaluate((element) => element.scrollTop))
+    .toBeGreaterThan(0);
+  await expect(card(page)).toBeVisible();
+  expect((await pages.boundingBox())!.y).toBe(before);
+});
+
 test("Edit Note… writes the note in the card; it is kept beside the PDF", async ({
   page,
 }) => {

@@ -10,11 +10,27 @@ import { fakeReact } from "./support/fake-react";
 import { loadHook } from "./support/load-hook";
 
 class Element {
-  constructor(private readonly inViewport: boolean) {}
+  constructor(
+    private readonly inViewport: boolean,
+    private readonly inNoteCard = false,
+  ) {}
   closest(selector: string): Element | null {
+    if (selector === ".note-card") {
+      return this.inNoteCard ? this : null;
+    }
     return selector === ".viewport" && this.inViewport ? this : null;
   }
 }
+
+/** The real note-card-target.ts, over this file's elements. */
+const noteCardTarget = loadHook(
+  "note-card-target.ts",
+  {},
+  {
+    Element,
+    Node: class {},
+  },
+);
 
 /** A Stage that scrolls from `top`/`left`, recording each scroll it is asked for. */
 function fakeStage(view = { top: 200, left: 50 }) {
@@ -117,6 +133,7 @@ function attach(
       "../shared/smooth-motion": { WheelGesture, wheelPixels, wheelTarget },
       "../shared/view-settings": { resolveSmoothScrolling },
       "./stage-capability": { useStageApi: () => options.stage },
+      "./note-card-target": noteCardTarget,
     },
     { Element, window: { matchMedia: () => ({ matches: false }) } },
   );
@@ -148,6 +165,17 @@ test("a mouse notch animates one notch further, and takes the event from the Sta
     true,
     "the Stage's own wheel handler never sees it",
   );
+});
+
+// A note card sits in the Stage's overlay, inside the viewport: a long note
+// scrolls in it, and the pages under it stay where they are.
+test("a notch over a note card is the card's, not the pages'", () => {
+  const { stage, scrolls } = fakeStage();
+  const view = attach({ stage });
+  const notch = wheel({ target: new Element(true, true) });
+  view.wheel(notch);
+  assert.deepEqual(scrolls, []);
+  assert.equal(notch.prevented, false, "the card scrolls as the browser does");
 });
 
 test("notches during an animation add up from where it is headed; a reversal starts from where the view is", () => {

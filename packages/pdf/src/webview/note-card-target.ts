@@ -6,6 +6,14 @@ export function isInNoteCard(target: EventTarget | null): boolean {
   return (elementOf(target)?.closest(`.${NOTE_CARD_CLASS}`) ?? null) !== null;
 }
 
+/**
+ * Whether a wheel scrolls a note card rather than the pages: it turns over
+ * the card, and is not a pinch or Ctrl+wheel, which still zooms the pages.
+ */
+export function scrollsNoteCard(event: WheelEvent): boolean {
+  return !event.ctrlKey && !event.metaKey && isInNoteCard(event.target);
+}
+
 /** The element an event target is, or the one a text node is in. */
 function elementOf(target: EventTarget | null): Element | null {
   if (target instanceof Element) {

@@ -18,6 +18,7 @@ import {
   isInNoteCard,
   NOTE_CARD_CLASS,
   noteKeyOfBadge,
+  scrollsNoteCard,
 } from "./note-card-target";
 import { onNoteEditRequest } from "./note-edit-request";
 import { NoteEditor } from "./note-editor";
@@ -69,6 +70,7 @@ export function NoteCard({
   return (
     <Anchored anchor={anchor} placement="bottom-start" gap={4}>
       <div
+        ref={keepWheelInCard}
         className={`${NOTE_CARD_CLASS}${shown.editing ? " editing" : ""}`}
         role={shown.editing ? "dialog" : "tooltip"}
         aria-label="Note"
@@ -91,6 +93,24 @@ export function NoteCard({
       </div>
     </Anchored>
   );
+}
+
+/**
+ * A wheel over the card scrolls the card: a long note or the field it is
+ * written in. The Stage pans on the wheel events that bubble up to it, so
+ * they stop here (as EmbedPDF's own list boxes stop theirs).
+ */
+function keepWheelInCard(card: HTMLDivElement | null): (() => void) | void {
+  if (!card) {
+    return;
+  }
+  const keep = (event: WheelEvent): void => {
+    if (scrollsNoteCard(event)) {
+      event.stopPropagation();
+    }
+  };
+  card.addEventListener("wheel", keep, { passive: true });
+  return () => card.removeEventListener("wheel", keep);
 }
 
 /** The note as Markdown, and the Edit button on Lumiere's own marks. */
@@ -195,8 +215,8 @@ function useEditRequests(
 
 /**
  * Tell the hover which mark with a note is under the pointer, once a frame.
- * A press, a wheel, Escape or the pointer leaving the viewer closes the
- * card; a drag (a selection being made) shows none. While a note is being
+ * A press, a wheel that moves the pages, Escape or the pointer leaving the
+ * viewer closes the card; a drag (a selection being made) shows none. While a note is being
  * written, a press outside the card keeps what was written.
  */
 function usePointerOverMarks(
@@ -248,6 +268,11 @@ function cardListeners(
       hover.dismiss();
     }
   };
+  const onWheel = (event: WheelEvent): void => {
+    if (!scrollsNoteCard(event)) {
+      hover.dismiss();
+    }
+  };
   const onKey = (event: KeyboardEvent): void => {
     if (event.key === "Escape" && !hover.editing()) {
       hover.dismiss();
@@ -262,7 +287,7 @@ function cardListeners(
     listeners: [
       ["pointermove", onMove],
       ["pointerdown", onPress],
-      ["wheel", () => hover.dismiss()],
+      ["wheel", onWheel],
       ["keydown", onKey],
       ["pointerout", onLeave],
     ],
