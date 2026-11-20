@@ -9,7 +9,6 @@ import {
   type AnnotationColor,
   type MarkToolId,
 } from "./annotation-tools";
-import { MAX_NOTE } from "./selection";
 import { MAX_ZOOM, MIN_ZOOM } from "./zoom-steps";
 import { isPageOffset } from "./reading-position";
 import {
@@ -69,15 +68,15 @@ export type ViewerAction =
         | "find"
         | "annotationUndo"
         | "annotationRedo"
-        | "deleteSelectedAnnotations";
+        | "deleteSelectedAnnotations"
+        /** Open the note of the mark the context menu was opened on, to write it. */
+        | "editMarkNote";
     }
   | { action: "goToPage"; page: number }
   | { action: "setZoom"; percent: number }
   | { action: "setTool"; tool: ToolMode }
   /** Mark the selected text. */
   | { action: "markSelection"; tool: MarkToolId }
-  /** Change the note of the mark the context menu was opened on; empty removes it. */
-  | { action: "setMarkNote"; note: string }
   /** Change the colour of the mark the context menu was opened on. */
   | { action: "setMarkColor"; color: AnnotationColor }
   | { action: "setPageLayout"; pageLayout: PageLayout }
@@ -98,6 +97,7 @@ const SIMPLE_ACTIONS = new Set([
   "annotationUndo",
   "annotationRedo",
   "deleteSelectedAnnotations",
+  "editMarkNote",
 ]);
 
 /** Accept a view report only if it is well-formed (it comes from the untrusted viewer). */
@@ -222,8 +222,6 @@ const ACTION_PARSERS: Readonly<
       : undefined,
   markSelection: ({ tool }) =>
     isMarkToolId(tool) ? { action: "markSelection", tool } : undefined,
-  setMarkNote: ({ note }) =>
-    isNote(note) ? { action: "setMarkNote", note } : undefined,
   setMarkColor: ({ color }) =>
     isAnnotationColor(color) ? { action: "setMarkColor", color } : undefined,
   setPageLayout: ({ pageLayout }) =>
@@ -239,13 +237,6 @@ const ACTION_PARSERS: Readonly<
       ? { action: "setScrollDirection", scrollDirection }
       : undefined,
 };
-
-/** The longest note a mark takes, in UTF-16 code units (`MAX_NOTE` in selection.ts). */
-export const MAX_NOTE_LENGTH = MAX_NOTE;
-
-function isNote(value: unknown): value is string {
-  return typeof value === "string" && value.length <= MAX_NOTE_LENGTH;
-}
 
 /**
  * A page number typed by the reader ("7", " 7 "), clamped to the document;

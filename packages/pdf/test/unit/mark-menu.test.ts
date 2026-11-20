@@ -34,6 +34,7 @@ function setUp() {
   const regions: unknown[] = [];
   const colors: string[] = [];
   const errors: unknown[] = [];
+  const edits: { ref: Ref; onSaved?: (mark: Mark) => void }[] = [];
   const listeners = new Map<string, (event: unknown) => void>();
   let under: Mark | null = own;
   const annotation = {
@@ -75,6 +76,10 @@ function setUp() {
         lookUpPageAt: () => ({ page: PAGE, point: { x: 40, y: 25 } }),
       },
       "./page-colors": { currentPageColors: () => "normal" },
+      "./note-edit-request": {
+        requestNoteEdit: (request: (typeof edits)[number]) =>
+          edits.push(request),
+      },
     },
     {
       document: {
@@ -87,7 +92,7 @@ function setUp() {
     useMarkMenu: (options: unknown) => {
       openAt: (event: unknown) => boolean;
       markSelection: (tool: string) => void;
-      setNote: (note: string) => void;
+      editNote: () => void;
       setColor: (color: string) => void;
       deleteMark: () => void;
     };
@@ -107,6 +112,7 @@ function setUp() {
     regions,
     colors,
     errors,
+    edits,
     listeners,
     settle,
     pointAt: (mark: Mark | null) => {
@@ -151,11 +157,12 @@ test("the PDF's own annotations, and empty page, are not marks the menu acts on"
   assert.equal(view.menu().openAt(rightClick), false);
   assert.deepEqual(view.regions, []);
   view.menu().deleteMark();
-  view.menu().setNote("x");
+  view.menu().editNote();
   assert.equal(
     view.calls.some(([verb]) => verb === "delete" || verb === "update"),
     false,
   );
+  assert.deepEqual(view.edits, [], "no note card opens to edit");
 });
 
 test("a mark just made, still waiting for the engine, is Lumiere's", () => {
@@ -200,14 +207,14 @@ test("each text mark marks the selected text with its own tool", async () => {
 test("Edit Note, Change Color and Delete act on the menu's mark", async () => {
   const view = setUp();
   view.menu().openAt(rightClick);
-  view.menu().setNote("second note");
-  await view.settle();
-  assert.deepEqual(view.calls.at(-1), [
-    "update",
-    "own",
-    { contents: "second note" },
-  ]);
-  // The reported mark now carries the new note, for the next Edit Note….
+  // Edit Note… opens the mark's note card to write in (note-card.tsx).
+  view.menu().editNote();
+  assert.deepEqual(
+    view.edits.map((edit) => edit.ref.id),
+    ["own"],
+  );
+  view.edits[0]!.onSaved!({ ...own, contents: "second note" });
+  // The reported mark now carries the new note, for Copy Link for Agent.
   assert.equal((view.regions.at(-1) as { note?: string }).note, "second note");
 
   view.menu().setColor("#4DABF7");

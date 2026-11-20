@@ -11,6 +11,7 @@ function setUp() {
   let now = 0;
   const timers: { at: number; run: () => void; live: boolean }[] = [];
   const shown: (string | undefined)[] = [];
+  const editing: boolean[] = [];
   const hover = createNoteHover({
     schedule: (run, ms) => {
       const timer = { at: now + ms, run, live: true };
@@ -21,7 +22,10 @@ function setUp() {
         },
       };
     },
-    onChange: (key) => shown.push(key),
+    onChange: (key, isEditing) => {
+      shown.push(key);
+      editing.push(isEditing);
+    },
   });
   const tick = (ms: number) => {
     now += ms;
@@ -30,7 +34,7 @@ function setUp() {
       timer.run();
     }
   };
-  return { hover, shown, tick };
+  return { hover, shown, editing, tick };
 }
 
 test("a note shows once the pointer rests on its mark", () => {
@@ -115,4 +119,35 @@ test("dispose stops every timer", () => {
   hover.dispose();
   tick(NOTE_OPEN_DELAY_MS * 2);
   assert.deepEqual(shown, []);
+});
+
+test("editing shows the note at once and holds it until the edit ends", () => {
+  const { hover, shown, editing, tick } = setUp();
+  hover.pointerOver("b");
+  hover.edit("a");
+  assert.deepEqual(shown, ["a"]);
+  assert.deepEqual(editing, [true]);
+  assert.equal(hover.editing(), true);
+  // Nothing the pointer does closes or replaces the note being written.
+  hover.pointerOver(undefined);
+  hover.pointerOver("b");
+  hover.cardLeft();
+  hover.dismiss();
+  tick(NOTE_OPEN_DELAY_MS * 4);
+  assert.deepEqual(shown, ["a"]);
+  hover.endEdit();
+  assert.deepEqual(shown, ["a", "a"]);
+  assert.deepEqual(editing, [true, false]);
+  // Afterwards it is a hover again.
+  hover.pointerOver(undefined);
+  tick(NOTE_CLOSE_DELAY_MS);
+  assert.deepEqual(shown, ["a", "a", undefined]);
+});
+
+test("closing an edit with nothing left closes the card", () => {
+  const { hover, shown } = setUp();
+  hover.edit("a");
+  hover.endEdit({ close: true });
+  assert.deepEqual(shown, ["a", undefined]);
+  assert.equal(hover.editing(), false);
 });

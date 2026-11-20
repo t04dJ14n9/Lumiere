@@ -85,6 +85,7 @@ export function Viewer(): React.JSX.Element {
           navigation={navigation}
           selection={view.selection}
           searching={search.isOpen}
+          isOwnMark={view.isOwnMark}
         />
       </div>
     </div>
@@ -144,6 +145,7 @@ function useViewerState() {
     documentArea,
     tool: tools.tool,
     runAction: tools.runAction,
+    isOwnMark: tools.annotationSave.isOwn,
     regionsEnabled,
     zen,
     toolbar: { ...setting, mode: zenToolbarMode(setting.mode, zen) },
@@ -181,7 +183,7 @@ function useViewerTools(deps: ViewerToolsDeps) {
     setChoices: (next) => setChoices((current) => ({ ...current, ...next })),
     marks: {
       markSelection: marks.markSelection,
-      setNote: marks.setNote,
+      editNote: marks.editNote,
       setColor: marks.setColor,
       deleteMark: marks.deleteMark,
       undo: editing.undo,
@@ -293,11 +295,13 @@ function DocumentPages({
   navigation,
   selection,
   searching,
+  isOwnMark,
 }: {
   choices: ViewChoices;
   navigation: ReturnType<typeof withHistory>;
   selection: Selection;
   searching: boolean;
+  isOwnMark: React.ComponentProps<typeof NoteCard>["isOwn"];
 }): React.JSX.Element {
   const paged = choices.scrollMode === "paged";
   return (
@@ -316,7 +320,7 @@ function DocumentPages({
                 <Scrollbar axis="x" />
               </>
             )}
-            <NoteCard />
+            <NoteCard isOwn={isOwnMark} />
           </>
         }
       >

@@ -21,11 +21,78 @@
   cursor: auto;
 }
 
-.note-card > :first-child {
+/* Edit, at the card's top right like a hover's action; shown while the card is. */
+.note-card-edit {
+  float: right;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 22px;
+  height: 22px;
+  margin: -2px -6px 0 6px;
+  padding: 0;
+  border: none;
+  border-radius: 4px;
+  color: var(--vscode-icon-foreground, inherit);
+  background: transparent;
+  cursor: pointer;
+  opacity: 0.7;
+}
+
+.note-card-edit:hover {
+  background: var(--vscode-toolbar-hoverBackground, #5a5d5e50);
+  opacity: 1;
+}
+
+.note-card-edit:focus-visible {
+  outline: 1px solid var(--vscode-focusBorder, #007fd4);
+  outline-offset: -1px;
+}
+
+/* Writing the note: VS Code's input box, growing with what is typed. */
+.note-card.editing {
+  width: min(360px, calc(100vw - 32px));
+  padding: 6px;
+  overflow: visible;
+}
+
+.note-card-input {
+  display: block;
+  box-sizing: border-box;
+  width: 100%;
+  min-height: calc(4lh + 8px);
+  max-height: 240px;
+  field-sizing: content;
+  padding: 4px 6px;
+  resize: none;
+  color: var(--vscode-input-foreground, inherit);
+  background: var(--vscode-input-background, #3c3c3c);
+  border: 1px solid var(--vscode-input-border, transparent);
+  border-radius: 2px;
+  font: inherit;
+  line-height: 1.45;
+}
+
+.note-card-input:focus {
+  outline: 1px solid var(--vscode-focusBorder, #007fd4);
+  outline-offset: -1px;
+}
+
+.note-card-input::placeholder {
+  color: var(--vscode-input-placeholderForeground, #a6a6a6);
+}
+
+.note-card-hint {
+  margin-top: 4px;
+  color: var(--vscode-descriptionForeground, #a6a6a6);
+  font-size: 0.9em;
+}
+
+.note-card-body > :first-child {
   margin-top: 0;
 }
 
-.note-card > :last-child {
+.note-card-body > :last-child {
   margin-bottom: 0;
 }
 

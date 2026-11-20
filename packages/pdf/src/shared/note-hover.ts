@@ -2,8 +2,10 @@
  * When a mark's note card shows, like VS Code's own hovers: only once the
  * pointer rests on the mark, so passing over the page shows nothing, and it
  * stays while the pointer crosses into the card to read it or follow a link.
- * Marks are named by a key (`annotationKey`); the viewer reports which one is
- * under the pointer and draws `onChange`'s.
+ * While the note is being written (Edit Note…), it stays until the edit
+ * ends, whatever the pointer does. Marks are named by a key
+ * (`annotationKey`); the viewer reports which one is under the pointer and
+ * draws `onChange`'s.
  */
 
 /** How long the pointer rests on a mark before its note shows. */
@@ -13,8 +15,8 @@ export const NOTE_CLOSE_DELAY_MS = 250;
 
 export interface NoteHoverOptions {
   schedule: (run: () => void, ms: number) => { cancel: () => void };
-  /** The mark whose note now shows, or undefined for none. */
-  onChange: (key: string | undefined) => void;
+  /** The mark whose note now shows (undefined for none), and whether it is being written. */
+  onChange: (key: string | undefined, editing: boolean) => void;
 }
 
 export interface NoteHover {
@@ -24,93 +26,143 @@ export interface NoteHover {
   cardLeft(): void;
   /** Close now (a press, a scroll, Escape), and forget a pending one. */
   dismiss(): void;
+  /** Show this mark's note at once, to be written. */
+  edit(key: string): void;
+  /** The note is written (or not): a hover again, or closed with `close`. */
+  endEdit(options?: { close?: boolean }): void;
   shown(): string | undefined;
+  editing(): boolean;
   dispose(): void;
+}
+
+export function createNoteHover(options: NoteHoverOptions): NoteHover {
+  return new NoteHoverController(options);
 }
 
 type Schedule = NoteHoverOptions["schedule"];
 
 /** One timer at a time: setting it again replaces what was waiting. */
-function timerSlot(schedule: Schedule) {
-  let cancel: (() => void) | undefined;
-  let tag: string | undefined;
-  return {
-    /** What the waiting timer is for, if one waits. */
-    tag: () => (cancel ? (tag ?? "") : undefined),
-    set(run: () => void, ms: number, label?: string): void {
-      cancel?.();
-      tag = label;
-      cancel = schedule(() => {
-        cancel = undefined;
-        run();
-      }, ms).cancel;
-    },
-    clear(): void {
-      cancel?.();
-      cancel = undefined;
-    },
-  };
+class TimerSlot {
+  private cancelWaiting: (() => void) | undefined;
+  private label: string | undefined;
+
+  constructor(private readonly schedule: Schedule) {}
+
+  /** What the waiting timer is for ("" when unlabelled), or undefined when none waits. */
+  tag(): string | undefined {
+    return this.cancelWaiting ? (this.label ?? "") : undefined;
+  }
+
+  set(run: () => void, ms: number, label?: string): void {
+    this.clear();
+    this.label = label;
+    this.cancelWaiting = this.schedule(() => {
+      this.cancelWaiting = undefined;
+      run();
+    }, ms).cancel;
+  }
+
+  clear(): void {
+    this.cancelWaiting?.();
+    this.cancelWaiting = undefined;
+  }
 }
 
-export function createNoteHover(options: NoteHoverOptions): NoteHover {
-  let shown: string | undefined;
-  let overCard = false;
-  const opening = timerSlot(options.schedule);
-  const closing = timerSlot(options.schedule);
-  const stop = (): void => {
-    opening.clear();
-    closing.clear();
-  };
-  const show = (key: string | undefined): void => {
-    if (shown !== key) {
-      shown = key;
-      options.onChange(key);
+class NoteHoverController implements NoteHover {
+  private key: string | undefined;
+  private writing = false;
+  private overCard = false;
+  private readonly opening: TimerSlot;
+  private readonly closing: TimerSlot;
+
+  constructor(private readonly options: NoteHoverOptions) {
+    this.opening = new TimerSlot(options.schedule);
+    this.closing = new TimerSlot(options.schedule);
+  }
+
+  pointerOver(key: string | undefined): void {
+    if (this.writing) {
+      return;
     }
-  };
-  const closeLater = (): void => {
-    if (shown !== undefined && !overCard && closing.tag() === undefined) {
-      closing.set(() => show(undefined), NOTE_CLOSE_DELAY_MS);
-    }
-  };
-  const openLater = (key: string): void => {
-    if (opening.tag() !== key) {
-      opening.set(
+    if (key !== undefined && key === this.key) {
+      this.dispose();
+    } else if (key === undefined) {
+      this.opening.clear();
+      this.closeLater();
+    } else if (this.opening.tag() !== key) {
+      // From one mark straight onto another: its note replaces this one
+      // when it opens, without the card closing in between.
+      this.opening.set(
         () => {
-          closing.clear();
-          show(key);
+          this.closing.clear();
+          this.show(key, false);
         },
         NOTE_OPEN_DELAY_MS,
         key,
       );
     }
-  };
-  return {
-    pointerOver(key) {
-      if (key !== undefined && key === shown) {
-        stop();
-      } else if (key === undefined) {
-        opening.clear();
-        closeLater();
-      } else {
-        // From one mark straight onto another: its note replaces this one
-        // when it opens, without the card closing in between.
-        openLater(key);
-      }
-    },
-    cardEntered() {
-      overCard = true;
-      stop();
-    },
-    cardLeft() {
-      overCard = false;
-      closeLater();
-    },
-    dismiss() {
-      stop();
-      overCard = false;
-      show(undefined);
-    },
-    shown: () => shown,
-    dispose: stop,
-  };
+  }
+
+  cardEntered(): void {
+    this.overCard = true;
+    this.dispose();
+  }
+
+  cardLeft(): void {
+    this.overCard = false;
+    this.closeLater();
+  }
+
+  dismiss(): void {
+    if (!this.writing) {
+      this.dispose();
+      this.overCard = false;
+      this.show(undefined, false);
+    }
+  }
+
+  edit(key: string): void {
+    this.dispose();
+    this.overCard = false;
+    this.show(key, true);
+  }
+
+  endEdit(options: { close?: boolean } = {}): void {
+    if (this.writing) {
+      this.show(options.close ? undefined : this.key, false);
+    }
+  }
+
+  shown(): string | undefined {
+    return this.key;
+  }
+
+  editing(): boolean {
+    return this.writing;
+  }
+
+  /** Stop every timer. */
+  dispose(): void {
+    this.opening.clear();
+    this.closing.clear();
+  }
+
+  private show(key: string | undefined, writing: boolean): void {
+    if (this.key !== key || this.writing !== writing) {
+      this.key = key;
+      this.writing = writing;
+      this.options.onChange(key, writing);
+    }
+  }
+
+  private closeLater(): void {
+    if (
+      this.key !== undefined &&
+      !this.writing &&
+      !this.overCard &&
+      this.closing.tag() === undefined
+    ) {
+      this.closing.set(() => this.show(undefined, false), NOTE_CLOSE_DELAY_MS);
+    }
+  }
 }

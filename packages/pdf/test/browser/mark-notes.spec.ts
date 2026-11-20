@@ -24,17 +24,43 @@ async function highlightWords(page: Page): Promise<[number, number]> {
   return at(140, TEXT_MIDLINE);
 }
 
-/** Give the mark under `inside` a note, as the context menu does. */
-async function setNote(page: Page, inside: [number, number], note: string) {
+/** Right-click the mark and pick Edit Note…: its card opens to write in. */
+async function editNote(page: Page, inside: [number, number]) {
   await page.mouse.click(...inside, { button: "right" });
   await expect
     .poll(async () => lastSelection(page))
     .toMatchObject({ kind: "region", mark: true });
-  await sendAction(page, { action: "setMarkNote", note });
-  await page.mouse.click(...inside);
+  await sendAction(page, { action: "editMarkNote" });
+  await expect(field(page)).toBeFocused();
+}
+
+/** Give the mark under `inside` a note through Edit Note…, and put the pointer away. */
+async function setNote(page: Page, inside: [number, number], note: string) {
+  await editNote(page, inside);
+  await field(page).fill(note);
+  await page.keyboard.press("ControlOrMeta+Enter");
+  await expect(field(page)).toHaveCount(0);
+  await page.mouse.move(inside[0] + 300, inside[1] + 300);
+  await expect(card(page)).toHaveCount(0);
+}
+
+/** The notes in the last annotation file the viewer asked to keep. */
+async function keptNotes(page: Page): Promise<(string | undefined)[]> {
+  const saves = (await messages(page)).filter(
+    (m) => m.type === "annotationStoreSave",
+  );
+  const text = saves.at(-1)?.text;
+  return typeof text === "string"
+    ? (
+        JSON.parse(text) as {
+          bundle: { items: { data: { contents?: string } }[] };
+        }
+      ).bundle.items.map((item) => item.data.contents)
+    : [];
 }
 
 const card = (page: Page) => page.locator(".note-card");
+const field = (page: Page) => page.getByRole("textbox", { name: "Note" });
 
 test("resting on a mark shows its note as Markdown, beside the mark", async ({
   page,
@@ -104,4 +130,72 @@ test("a press or Escape closes the card", async ({ page }) => {
   await page.mouse.down();
   await expect(card(page)).toHaveCount(0);
   await page.mouse.up();
+});
+
+test("Edit Note… writes the note in the card; it is kept beside the PDF", async ({
+  page,
+}) => {
+  await open(page, "?toolbar=chrome");
+  const inside = await highlightWords(page);
+  await editNote(page, inside);
+  await expect(field(page)).toHaveValue("");
+  await field(page).fill("A **first** thought");
+  await page.keyboard.press("ControlOrMeta+Enter");
+  await expect(field(page)).toHaveCount(0);
+  // The card shows the note it now has, until the pointer goes elsewhere.
+  await expect(card(page).locator("strong")).toHaveText("first");
+  await expect.poll(() => keptNotes(page)).toEqual(["A **first** thought"]);
+
+  // Opened again, it starts from that note; Escape leaves it as it was.
+  await editNote(page, inside);
+  await expect(field(page)).toHaveValue("A **first** thought");
+  await field(page).fill("changed");
+  await page.keyboard.press("Escape");
+  await expect(field(page)).toHaveCount(0);
+  await expect(card(page)).toContainText("A first thought");
+  await expect.poll(() => keptNotes(page)).toEqual(["A **first** thought"]);
+});
+
+test("the card's Edit button writes the note; a press outside keeps it", async ({
+  page,
+}) => {
+  await open(page, "?toolbar=chrome");
+  const inside = await highlightWords(page);
+  await setNote(page, inside, "before");
+  await page.mouse.move(...inside);
+  await card(page).getByRole("button", { name: "Edit Note" }).click();
+  await expect(field(page)).toBeFocused();
+  // Keys typed are the note's: neither Find nor paging takes them.
+  await page.keyboard.press("End");
+  await page.keyboard.type(" and after");
+  await expect(page.locator(".search-bar")).toHaveCount(0);
+  await page.mouse.click(inside[0] + 200, inside[1] + 250);
+  await expect(card(page)).toHaveCount(0);
+  await expect.poll(() => keptNotes(page)).toEqual(["before and after"]);
+});
+
+test("emptying a note removes it, and the card closes", async ({ page }) => {
+  await open(page, "?toolbar=chrome");
+  const inside = await highlightWords(page);
+  await setNote(page, inside, "to remove");
+  await editNote(page, inside);
+  await field(page).fill("");
+  await page.keyboard.press("ControlOrMeta+Enter");
+  await expect(card(page)).toHaveCount(0);
+  await expect.poll(() => keptNotes(page)).toEqual([""]);
+  await page.mouse.move(...inside);
+  await page.waitForTimeout(800);
+  await expect(card(page)).toHaveCount(0);
+});
+
+test("one of Lumiere's own marks offers Edit Note in its card", async ({
+  page,
+}) => {
+  await open(page, "?toolbar=chrome");
+  const inside = await highlightWords(page);
+  await setNote(page, inside, "mine");
+  await page.mouse.move(...inside);
+  await expect(
+    card(page).getByRole("button", { name: "Edit Note" }),
+  ).toBeVisible();
 });

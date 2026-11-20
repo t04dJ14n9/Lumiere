@@ -139,7 +139,10 @@ test("a right-click on a mark offers its note, colour and Delete", async ({
     .poll(async () => lastSelection(page))
     .toMatchObject({ kind: "region", mark: true });
 
-  await sendAction(page, { action: "setMarkNote", note: "First thought" });
+  // Edit Note… opens the mark's note card to write in (mark-notes.spec.ts).
+  await sendAction(page, { action: "editMarkNote" });
+  await page.getByRole("textbox", { name: "Note" }).fill("First thought");
+  await page.keyboard.press("ControlOrMeta+Enter");
   await expect
     .poll(async () => (await keptMarks(page)).map((item) => item.data.contents))
     .toEqual(["First thought"]);

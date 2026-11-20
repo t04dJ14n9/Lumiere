@@ -135,6 +135,8 @@ test("each mark and colour command sends its viewer action", () => {
   assert.deepEqual(actions.get(VIEW_COMMAND_IDS.deleteAnnotation), {
     action: "deleteSelectedAnnotations",
   });
-  // Edit Note… asks for the note first: the annotations plugin registers it.
-  assert.equal(actions.has(VIEW_COMMAND_IDS.editAnnotationNote), false);
+  // Edit Note… opens the mark's note card, where the note is written.
+  assert.deepEqual(actions.get(VIEW_COMMAND_IDS.editAnnotationNote), {
+    action: "editMarkNote",
+  });
 });
