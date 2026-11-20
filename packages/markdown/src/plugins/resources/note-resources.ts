@@ -1,6 +1,10 @@
 import type { HostServices } from "../../shared/host";
+import { linkLocation } from "../../shared/link-location";
 import { mediaKind } from "../../shared/media-kinds";
 import {
+  extensionOf,
+  folderOf,
+  joinVaultPath,
   splitMarkdownDestination,
   type LinkSyntax,
 } from "../../shared/vault-path";
@@ -16,6 +20,9 @@ interface ResourceOptions {
   host: Pick<HostServices, "workspace" | "hostDocuments">;
   resourceUrl(uri: string): string;
 }
+
+/** A file a link names: its vault path and URI. */
+type LinkedFile = Pick<VaultFile, "path" | "uri">;
 
 /** A link a note shows, as `load` receives it. */
 interface ResourceLink {
@@ -67,7 +74,7 @@ export class NoteResources implements Resources {
     }
     const { vault, resourceUrl } = this.options;
     const link = { target, source, syntax };
-    const file = this.locate(link);
+    const file = this.locate(link) ?? (await this.locateOnDisk(link));
     if (!file) {
       this.rememberMissing(link);
       throw new Error("Resource not found");
@@ -148,6 +155,55 @@ export class NoteResources implements Resources {
     );
   }
 
+  /**
+   * A Markdown link the index does not know, looked for where a click on it
+   * looks (`linkLocation`): a leading `/` from the vault root, `./` and `../`
+   * from the note's folder. The index never enters hidden folders, so
+   * `[source](/.raw/captured/page.md)` opened on a click while its preview
+   * and embed said "Resource not found". `load` still checks that the file
+   * is inside the vault, through symbolic links too.
+   */
+  private async locateOnDisk({
+    target,
+    source,
+    syntax,
+  }: ResourceLink): Promise<LinkedFile | undefined> {
+    if (syntax !== "markdown") {
+      return undefined;
+    }
+    const link = splitMarkdownDestination(target).path;
+    // A folder is no resource, and the host's stat cannot tell one apart.
+    if (!extensionOf(link)) {
+      return undefined;
+    }
+    const { root } = this.options.vault;
+    const { relative, folders } = linkLocation(link, false);
+    const sourceFolder = folderOf(vaultPath(root, source));
+    for (const folder of folders) {
+      const path = joinVaultPath(
+        folder === "vault" ? "" : sourceFolder,
+        relative,
+      );
+      if (!path) {
+        continue;
+      }
+      const uri = uriInVault(root, path);
+      if (await this.exists(uri)) {
+        return { path, uri };
+      }
+    }
+    return undefined;
+  }
+
+  private async exists(uri: string): Promise<boolean> {
+    try {
+      await this.options.host.workspace.stat(uri);
+      return true;
+    } catch {
+      return false;
+    }
+  }
+
   private rememberMissing(link: ResourceLink): void {
     const key = linkKey(link);
     this.missing.delete(key);
@@ -183,6 +239,12 @@ export class NoteResources implements Resources {
 
 function linkKey({ target, source, syntax }: ResourceLink): string {
   return `${syntax}\0${source}\0${target}`;
+}
+
+/** The URI of a path inside the vault, each name percent-encoded. */
+function uriInVault(root: string, path: string): string {
+  const names = path.split("/").map((name) => encodeURIComponent(name));
+  return `${root.replace(/\/+$/, "")}/${names.join("/")}`;
 }
 
 /** A note's path inside the vault, from its URI. */
