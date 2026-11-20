@@ -61,7 +61,10 @@ test("the Select Region tool selects a region even over text; Escape puts it dow
   await expect.poll(() => lastSelection(page)).toBeNull();
 
   // The first Escape clears the region, the second goes back to selecting text.
-  await drag(page, at(74, TEXT_MIDLINE), at(205, 140));
+  // This drag starts away from the text selection below: EmbedPDF counts a
+  // press within 400 ms and 6 px of the last one as a double-click, which
+  // selects the word under it ("Synthetic") and ignores the drag.
+  await drag(page, at(74, 120), at(205, 140));
   await expect
     .poll(() => lastSelection(page))
     .toMatchObject({ kind: "region", page: 1 });
