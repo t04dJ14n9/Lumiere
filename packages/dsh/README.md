@@ -131,9 +131,13 @@ of the Host mid-handshake), it recreates the iframe once, and DSH's Reload and
 - Git blame and the change gutter work for notes in a repository, through
   the `git` on DSH's PATH; the rendered diff does not.
 - No graph panel and no status bar: DSH has no counterpart yet.
-- Outline, Backlinks and Tags are served by the host (`/lumiere/views`) but
-  not yet shown in DSH: each would be a DSH sidebar tab drawing a tree from
-  `@workshop/host-node/views`, as the desktop app's sidebar does.
+- Outline, Backlinks, Tags and Vault Search are served by the host
+  (`/lumiere/views`) but not yet shown in DSH: each would be a DSH sidebar
+  tab drawing a tree from `@workshop/host-node/views`, as the desktop app's
+  sidebar does. Search Vault… (#792) has no palette to run from here, and
+  its view nowhere to show; dragging an Outline heading to move its section
+  (#788) is VS Code's only, as host-node never calls a tree's `drop`. The
+  owner deferred both on 2026-11-21 (`docs/HOSTS_PLAN.md`, section 2).
 - Commands have no palette or keybindings in DSH yet; what Lumière does
   through clicks, links, the editor and its context menus works. The host
   already lists the palette's commands (`GET /lumiere/commands`, from the
@@ -142,9 +146,12 @@ of the Host mid-handshake), it recreates the iframe once, and DSH's Reload and
 - Renaming a note from its inline title is not available.
 - The editor page is same-origin with DSH, so its strict content security
   policy (scripts by nonce only) is what keeps a note's scripts from running.
-  DSH's iframe has no `sandbox`, and script that ran in the page could
-  still read DSH's DOM and call its routes (#744); the theme itself arrives
-  by message. A
+  DSH's iframe (`src/client/note-frame.ts`) has no `sandbox`, and script
+  that ran in the page could still read DSH's DOM and call its routes
+  (#744); the theme itself arrives by message. Isolating it needs per-page
+  tokens with CORS on host-node's routes, or pages on an origin of their
+  own; the owner deferred that on 2026-11-21 (`docs/HOSTS_PLAN.md`, risk
+  4). A
   vault's own files (`/lumiere/file`) are sandboxed, and only its images,
   audio, video and PDFs keep their type (an HTML page or a script is served
   as bytes to save), so a file opened from a vault does not run on DSH's

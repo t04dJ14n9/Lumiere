@@ -85,4 +85,5 @@ are no match-case, explain, sort, more-context or copy-results controls; a
 match line is plain text, without its match highlighted; Obsidian's Search
 in all files fills in the editor's selection, this the last query. It has
 no key: Obsidian's Mod+Shift+F is VS Code's Find in Files. A tag clicked in
-the Tags view still opens a quick pick rather than this view.
+the Tags view still opens a quick pick rather than this view. Outside VS
+Code (DeepSeek Harness, the app) the view is not shown (host-node's README).

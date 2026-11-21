@@ -206,10 +206,18 @@ embedder.
 - No command palette or keybindings: commands run from clicks, links and the
   editor's own menus.
 - `TreeSource.drop` is never called: a tree's rows cannot be dragged, so the
-  Outline does not move sections here as it does in VS Code.
+  Outline does not move sections here as it does in VS Code (#788; deferred
+  by the owner, 2026-11-21).
 - The Vault Search tree (`VIEW_IDS.search`) is served like the others, but
-  neither the app nor DSH shows it yet, so Search Vault… in their palettes
-  fills a view the reader cannot see.
+  neither the app nor DSH shows it yet: Search Vault… in the app's Command
+  Palette fills a view the reader cannot see, and DSH has no palette to run
+  it from (#792; deferred by the owner, 2026-11-21).
+- A page is served on its embedder's origin, behind the embedder's
+  authentication, so script that ran in it could call these routes as the
+  embedder's own page can. The nonce-only script policy and the vault
+  files' headers keep a note's content from running; isolating the page
+  (per-page tokens with CORS, or an origin of its own) is deferred by the
+  owner (2026-11-21, #744; `docs/HOSTS_PLAN.md`, risk 4).
 - `TreeHandle.clearSelection` emits `deselect` (the Outline when the reader is
   above the first heading); the app's tree panel unmarks the current row.
 - `TreeHandle.expand` / `collapse` emit `expand` / `collapse` events (and

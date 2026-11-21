@@ -83,3 +83,9 @@ trackpad with a line that thins as it speeds up.
 - PDFs do not open in tabs yet.
 - No Git. A vault's Obsidian community plugins run only after the reader
   says yes, once per vault, as in the desktop app.
+- A note's page is on the window's origin, and its frame keeps
+  `allow-same-origin` (`packages/app/src/shell/editor-sandbox.ts`), so
+  script that ran in it could reach the window. The page's policy, the
+  sanitizer and the vault files' headers keep a note's content from
+  running; isolating the page is deferred by the owner (2026-11-21, #744;
+  `docs/HOSTS_PLAN.md`, risk 4).
