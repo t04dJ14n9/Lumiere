@@ -8,7 +8,6 @@
  *
  *     claude mcp add agent-pdf-viewer -- node bridge-stdio.js
  */
-import { readdirSync, readFileSync } from "node:fs";
 import * as os from "node:os";
 import * as path from "node:path";
 import { StdioServerTransport } from "@modelcontextprotocol/sdk/server/stdio.js";
@@ -17,7 +16,7 @@ import type { JSONRPCMessage } from "@modelcontextprotocol/sdk/types.js";
 import { Upstream } from "./upstream";
 import {
   chooseBridge,
-  parseBridgeRecord,
+  readBridgeRecords,
   type BridgeRecord,
 } from "./discovery";
 
@@ -35,22 +34,7 @@ function alive(pid: number): boolean {
 }
 
 function readRecords(): BridgeRecord[] {
-  let files: string[];
-  try {
-    files = readdirSync(DIR).filter((file) => file.endsWith(".json"));
-  } catch {
-    return [];
-  }
-  return files.flatMap((file) => {
-    try {
-      const record = parseBridgeRecord(
-        JSON.parse(readFileSync(path.join(DIR, file), "utf8")),
-      );
-      return record ? [record] : [];
-    } catch {
-      return [];
-    }
-  });
+  return readBridgeRecords(DIR);
 }
 
 const stdio = new StdioServerTransport();

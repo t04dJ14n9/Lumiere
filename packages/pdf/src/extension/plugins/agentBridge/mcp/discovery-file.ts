@@ -20,6 +20,14 @@ export function workspaceFolderPaths(): string[] {
  * window's folders: one added to the window, or removed from it, while the
  * bridge runs would otherwise send an agent there to another window, or to
  * none.
+ *
+ * The file's name is no other publication's: `<port>-<pid>-<random>.json`.
+ * Another window's sweep reads a stale file for this port, waits on a probe
+ * of the port, and removes the file by name afterwards. If this bridge got
+ * the port meanwhile and published under the stale file's name, that
+ * removal would delete this live record, and publishing atomically does
+ * not prevent it; a name nobody else writes does. The shim reads every
+ * `.json` there, so it needs nothing from the name.
  */
 export async function announce(
   info: BridgeInfo,
@@ -31,9 +39,16 @@ export async function announce(
   },
 ): Promise<void> {
   const { discoveryDir, port, undo, log } = where;
-  const discoveryFile = path.join(discoveryDir, `${port}.json`);
+  const fileName = `${port}-${info.pid}-${randomBytes(6).toString("hex")}.json`;
+  const discoveryFile = path.join(discoveryDir, fileName);
   await mkdir(discoveryDir, { recursive: true, mode: 0o700 });
-  await sweepDiscoveryFiles(discoveryDir);
+  // Only this bridge can listen on `port`, so an older file naming it is
+  // stale. Publishing under the same name used to replace it; now it must
+  // go, or it would stay for as long as this bridge holds the port. The
+  // sweep leaves this bridge's own file alone, written yet or not.
+  await sweepDiscoveryFiles(discoveryDir, {
+    self: { port, file: fileName },
+  });
   // VS Code ends a closing window's extension host a few milliseconds after
   // it asks the extensions to stop, long before this undo step's turn: the
   // file goes on `exit` too, which runs synchronously as the process ends.

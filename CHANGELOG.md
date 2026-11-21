@@ -197,6 +197,13 @@
   once for a whole gesture, momentum included, so a swipe does not change
   axis in the middle. Pinch and Ctrl, Cmd and Shift wheels are untouched
   (owner request).
+- PDF agent bridge: a window starting no longer removes the discovery file of
+  another window that started at the same moment, which left an agent unable
+  to find that window. The sweep that clears a crashed window's file could,
+  if the crashed window's port had been given to the other window and its
+  file written in between, remove that new file. Each window's file now has
+  a name of its own, `<port>-<pid>-<random>.json`; a file an earlier version
+  named `<port>.json` is still read and swept (#830).
 
 Fixes for several VS Code windows open at once, each with a test; checked
 with two real windows on one profile.

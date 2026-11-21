@@ -88,6 +88,21 @@ function portOf(url: string): number {
   return Number(new URL(url).port);
 }
 
+/** The names a bridge started now writes: its port, process id and a random suffix. */
+function discoveryFileName(port: number): RegExp {
+  return new RegExp(`^${port}-${process.pid}-[0-9a-f]{12}\\.json$`, "u");
+}
+
+/** The one discovery file in the folder, as the shim would read it. */
+async function discoveryFile(): Promise<string> {
+  const bridges = path.join(folder, "bridges");
+  const names = (await readdir(bridges)).filter((name) =>
+    name.endsWith(".json"),
+  );
+  assert.equal(names.length, 1, names.join(", "));
+  return path.join(bridges, names[0]!);
+}
+
 /** Whether something accepts connections on the port. */
 function listening(port: number): Promise<boolean> {
   return new Promise((resolve) => {
@@ -176,9 +191,9 @@ test("the token is compared in constant time, in the header and in the path", as
 test("dispose resolves only once the listener is closed, a stalled connection cut and the discovery file removed", async () => {
   const bridge = await startAgentBridge(options());
   const port = portOf(bridge.info.url);
-  assert.deepEqual(await readdir(path.join(folder, "bridges")), [
-    `${port}.json`,
-  ]);
+  const names = await readdir(path.join(folder, "bridges"));
+  assert.equal(names.length, 1, names.join(", "));
+  assert.match(names[0]!, discoveryFileName(port));
   assert.equal(
     vscode.outstanding().filter((kind) => kind.startsWith("mcpProvider:"))
       .length,
@@ -218,9 +233,9 @@ test("a folder added to the window or removed from it is in the discovery file t
     await bridge.dispose();
     vscode.workspace.workspaceFolders = undefined;
   });
-  const file = path.join(folder, "bridges", `${portOf(bridge.info.url)}.json`);
   const folders = async () =>
-    (JSON.parse(await readFile(file, "utf8")) as BridgeInfo).workspaceFolders;
+    (JSON.parse(await readFile(await discoveryFile(), "utf8")) as BridgeInfo)
+      .workspaceFolders;
   assert.deepEqual(await folders(), [vscode.Uri.file("/work/a").fsPath]);
   vscode.setWorkspaceFolders([vscode.Uri.file("/work/b")]);
   await new Promise((resolve) => setTimeout(resolve, 50));
