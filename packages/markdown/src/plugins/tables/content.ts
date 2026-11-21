@@ -61,6 +61,39 @@ export class TableContent {
     return this.passes.get(element)?.source;
   }
 
+  /** The text `element` shows a finished rendering of, if any. */
+  finishedSource(element: HTMLElement): string | undefined {
+    const entry = this.passes.get(element);
+    return entry?.pass ? entry.source : undefined;
+  }
+
+  /**
+   * The text `source` shows rendered as the cell at `offset`. It is
+   * rendered into a probe in `host` that is laid out, so its `innerText`
+   * reads as a shown cell's does, but not seen, and removed at once.
+   */
+  async renderedText(
+    source: string,
+    offset: number,
+    host: HTMLElement,
+  ): Promise<string> {
+    const probe = host.ownerDocument.createElement("div");
+    probe.className = "table-sort-probe";
+    probe.setAttribute("aria-hidden", "true");
+    host.append(probe);
+    try {
+      const pass = await this.render.into(probe, displayedCell(source), {
+        readOnly: true,
+        sourceLine: this.lineAt(offset),
+      });
+      const text = probe.innerText;
+      void pass.dispose();
+      return text;
+    } finally {
+      probe.remove();
+    }
+  }
+
   /**
    * Keep `element`'s rendering for a cell of the same text that is now at
    * `offset`. Its pass takes the new line: a task box in the cell writes to

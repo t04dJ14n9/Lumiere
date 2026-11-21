@@ -13,7 +13,8 @@ export interface TableMenuActions {
   selectAll(): void;
   format(marker: string | null): void;
   clear(): void;
-  execute(operation: TableOperation, focus: CellPosition): void;
+  /** A sort may finish later: it renders cells for its keys first. */
+  execute(operation: TableOperation, focus: CellPosition): void | Promise<void>;
   canFormat?: boolean;
 }
 

@@ -2,6 +2,7 @@ import { ViewPlugin } from "@codemirror/view";
 import type { DecorationSet, EditorView, ViewUpdate } from "@codemirror/view";
 import { documentTree } from "./document-tree";
 import { renderRevision } from "./blocks";
+import { editorFocus } from "./editor-focus";
 import { inlineRenderers } from "./registry";
 import { inlineDecorations } from "./inline";
 import {
@@ -18,9 +19,13 @@ import {
 
 /**
  * When Live Preview's inline decorations are built again: after an edit, a
- * caret move, a scroll or a new tree, renderer or render revision. The
- * persistent widgets off screen keep what they drew while only the caret
- * moves, apart from those near it.
+ * caret move, a scroll, a focus change or a new tree, renderer or render
+ * revision. The persistent widgets off screen keep what they drew while only
+ * the caret moves, apart from those near it.
+ *
+ * Focus is read from the state field too (a `$$` formula reveals only while
+ * focused): `initialFocus` reports a focused editor in a transaction of its
+ * own, for which CodeMirror sets no `focusChanged`.
  */
 function shouldRebuildInline(update: ViewUpdate): boolean {
   if (
@@ -42,6 +47,7 @@ function shouldRebuildInline(update: ViewUpdate): boolean {
       state.field(unresolvedLinks, false) ||
     startState.field(renderRevision, false) !==
       state.field(renderRevision, false) ||
+    startState.field(editorFocus, false) !== state.field(editorFocus, false) ||
     revealFreezeToggled(startState, state)
   );
 }

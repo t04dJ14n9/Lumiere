@@ -1,10 +1,21 @@
 import test from "node:test";
 import assert from "node:assert/strict";
-import { EditorSelection, EditorState, Text } from "@codemirror/state";
+import {
+  EditorSelection,
+  EditorState,
+  Text,
+  type TransactionSpec,
+} from "@codemirror/state";
+import type { DecorationSet, EditorView, ViewUpdate } from "@codemirror/view";
 import { MarkdownInline } from "../../../src/webview/ui/inline-widget";
 import { documentTree } from "../../../src/plugins/livePreview/document-tree";
 import { inlineRenderers } from "../../../src/plugins/livePreview/registry";
 import { inlineDecorations } from "../../../src/plugins/livePreview/inline";
+import { HybridInline } from "../../../src/plugins/livePreview/inline-plugin";
+import {
+  pointerSelection,
+  visualRevealFreeze,
+} from "../../../src/webview/ui/pointer-selection";
 import {
   editorFocus,
   setEditorFocus,
@@ -57,21 +68,24 @@ function formulas(doc: string, selection: EditorSelection, hasFocus: boolean) {
     selection,
     extensions: [documentTree, editorFocus, math],
   }).update({ effects: setEditorFocus.of(hasFocus) }).state;
-  const found: string[] = [];
-  inlineDecorations(state, [{ from: 0, to: doc.length }]).between(
-    0,
+  return drawnFormulas(
+    inlineDecorations(state, [{ from: 0, to: doc.length }]),
     doc.length,
-    (from, to, value) => {
-      const widget = value.spec.widget as unknown;
-      if (widget instanceof MarkdownInline) {
-        found.push(
-          from === to
-            ? `preview ${widget.source} at ${from}`
-            : `rendered ${widget.source}`,
-        );
-      }
-    },
   );
+}
+
+function drawnFormulas(decorations: DecorationSet, length: number): string[] {
+  const found: string[] = [];
+  decorations.between(0, length, (from, to, value) => {
+    const widget = value.spec.widget as unknown;
+    if (widget instanceof MarkdownInline) {
+      found.push(
+        from === to
+          ? `preview ${widget.source} at ${from}`
+          : `rendered ${widget.source}`,
+      );
+    }
+  });
   return found;
 }
 
@@ -83,6 +97,71 @@ test("inline $$ math, revealed while focused, is typeset again just after its cl
   assert.deepEqual(formulas(doc, EditorSelection.single(0), true), [
     "rendered $$x^2$$",
   ]);
+});
+
+/**
+ * Live Preview's inline plugin on an editor whose focus reaches the state
+ * only through `setEditorFocus`, as `initialFocus` reports a focused editor
+ * Live Preview is turned on in: CodeMirror's own focus flag stays unset.
+ */
+function inlinePluginWithCaret(doc: string, caret: number) {
+  const view = {
+    state: EditorState.create({
+      doc,
+      selection: EditorSelection.single(caret),
+      extensions: [
+        documentTree,
+        editorFocus,
+        math,
+        pointerSelection,
+        visualRevealFreeze,
+      ],
+    }),
+    visibleRanges: [{ from: 0, to: doc.length }],
+    composing: false,
+  };
+  const editorView = view as unknown as EditorView;
+  const inline = new HybridInline(editorView);
+  return {
+    inline,
+    drawn: () => drawnFormulas(inline.decorations, doc.length),
+    dispatch(spec: TransactionSpec) {
+      const transaction = view.state.update(spec);
+      view.state = transaction.state;
+      inline.update({
+        view: editorView,
+        state: transaction.state,
+        startState: transaction.startState,
+        transactions: [transaction],
+        changes: transaction.changes,
+        docChanged: transaction.docChanged,
+        selectionSet: Boolean(transaction.selection),
+        viewportChanged: false,
+        viewportMoved: false,
+        heightChanged: false,
+        geometryChanged: false,
+        focusChanged: false,
+      } satisfies ViewUpdate);
+    },
+  };
+}
+
+test("focus reaching the state alone redraws a $$ formula at the caret with its source and preview (#809)", () => {
+  const plugin = inlinePluginWithCaret("a $$x^2$$ b", 5);
+  assert.deepEqual(plugin.drawn(), ["rendered $$x^2$$"]);
+  // Same document, selection and tree; only the focus field changes.
+  plugin.dispatch({ effects: setEditorFocus.of(true) });
+  assert.deepEqual(plugin.drawn(), ["preview $$x^2$$ at 9"]);
+  plugin.dispatch({ effects: setEditorFocus.of(false) });
+  assert.deepEqual(plugin.drawn(), ["rendered $$x^2$$"]);
+});
+
+test("an effect that leaves the focus field as it is does not rebuild inline decorations", () => {
+  const plugin = inlinePluginWithCaret("a $$x^2$$ b", 5);
+  const decorations = plugin.inline.decorations;
+  plugin.dispatch({ effects: setEditorFocus.of(false) });
+  plugin.dispatch({});
+  assert.equal(plugin.inline.decorations, decorations);
 });
 
 test("inline $ math reveals without focus and has no preview", () => {

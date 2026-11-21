@@ -8140,3 +8140,78 @@ note-embed-remount-height, embed-under-tall-props, vim-caret-geometry
 math-vim-click and tables-vim (37 + 57, with the specs above). Not run:
 the full browser suite, `test:quality`, `test:vscode`.
 
+
+## Table sort keys do not depend on the cell being edited (#808; 2026-11-21)
+
+Review finding on #797/#799. The sort keys (the text each cell shows, as
+Obsidian sorts by; "Table sort compares the shown text" above) were each
+cell's `.table-cell-content` `innerText`. The cell being edited holds the
+cell editor there, so its key was its Markdown (`**z**`) while every other
+row gave its rendered text (`a`): sorting from a formatted cell that was
+open ordered `**z**` before `a`, and from the header `a` before `**z**`.
+
+- `tables/sort-keys.ts`: a key is the element's text only when the element
+  shows a finished rendering of the cell's current Markdown
+  (`TableContent.finishedSource`); the cell being edited, a cell still
+  rendering or one showing older text is rendered for the sort through the
+  same render service (`TableContent.renderedText`), into a probe in the
+  cell's wrapper that is laid out (so `innerText` reads alike) but clipped
+  out of sight, and removed at once. The cell editor stays open, with its
+  selection; nothing is written before the sort's own edit, so one Undo
+  still takes the sort back.
+- The sort is asynchronous now (a render pass may wait on its pre and post
+  processors). `withShownText` drops a sort whose table changed while its
+  keys rendered, since they no longer describe its rows; the controller
+  also drops one for a table that was torn down. The menu and the palette
+  command wait for it, so a failure still shows on the table.
+
+Tests, each failing before the fix: `sort-keys.test.ts` (the same order
+from the edited formatted cell, the header and no cell; only the edited
+cell is rendered; a stale or still-rendering cell is rendered; one edit,
+one undo; a table edited meanwhile is left alone) and a grid-level case in
+`cell-reuse.test.ts` (a real `TableGrid` and `TableContent` on the fake DOM:
+keys `name, z, a` whichever cell is edited; the probe is removed).
+
+Native check with a throwaway browser spec (not committed): in the browser
+harness the palette's **Table: Sort Ascending** with the caret in the open
+`**z**` cell wrote `**z**, a` before the fix and writes `a, **z**` now,
+the cell editor staying open; Ctrl+Z restores the note in one step. The
+menu path (right-click the open cell, Sort by column A to Z) gives the
+right order and one-step undo too, but did before as well: in the harness
+the menu click closes the cell editor before the sort runs. Not checked in
+VS Code itself.
+
+Checks: `pnpm check`; browser spec tables-parity. Not run: the full
+browser suite, `test:quality`, `test:vscode`.
+
+## Inline decorations follow the focus field (#809; 2026-11-21)
+
+Review finding on #797/#798. `$$` math reveals only while the editor has
+focus, read from the `editorFocus` state field. The block decorations
+invalidate on a change of that field (`invalidation.ts`), but HybridInline
+rebuilt only on CodeMirror's update flags and a new tree, renderer list,
+unresolved-link set, render revision or reveal freeze. `initialFocus`
+(`editor-focus-tracking.ts`) reports a focused editor that Live Preview is
+installed into with a transaction carrying only `setEditorFocus`, for
+which CodeMirror sets no `focusChanged`; the caret inside `a $$x^2$$ b`
+then kept the typeset formula, with no source or preview, until some other
+update (a caret move, a scroll) rebuilt the decorations.
+`shouldRebuildInline` now also compares the `editorFocus` field between
+the update's start and end states, as the block path does. A real focus
+change may now rebuild the inline decorations twice (CodeMirror's focus
+update and the effect's transaction), as the block decorations already
+are; nothing else changes.
+
+Tests in `test/unit/math/editing-preview.test.ts`: HybridInline on a
+minimal view whose focus reaches the state only through `setEditorFocus`
+(same document, selection and tree; `focusChanged` false) shows the
+formula's source and preview after `true`, and the typeset formula again
+after `false`; it failed before the fix. A control: an effect that leaves
+the field as it was, and an empty update, keep the same decoration set.
+Not reproduced natively: the path needs Live Preview turned on in an
+editor that keeps its focus, which no default key does.
+
+Checks: `pnpm check`; browser specs editing, math-vim-click,
+math-remount-height, keyboard-widget-input, stable-blocks and
+selection-inline (64 passed). Not run: the full browser suite,
+`test:quality`, `test:vscode`.
