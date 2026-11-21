@@ -9022,5 +9022,39 @@ the known flaky large-vault byte check (#843); its Playwright quality specs
 passed. Not run here: `pnpm test:browser`, `pnpm test:quality`,
 `pnpm test:vscode`.
 
+Third review round (PR #814, 2026-11-22), each with a unit test that
+failed before it (`src/plugins/tables/read-only-cells.test.ts`):
+
+- **Changes dispatched straight to an open cell.** The read-only facet only
+  advises commands: Shift+Enter's `<br>` (`insertCellBreak`), the menu's
+  Cut in a cell, Paste of one line into a cell and Clear formatting
+  dispatched to the cell's view, which showed text the note never got. At
+  the root, the nested editor's read-only extension (`noteReadOnly` in
+  editor/api.ts) now also has a transaction filter that drops document
+  changes while the note is read-only, whatever dispatches them;
+  transactions that bring the cell's text to the note's (the note changed
+  under it, or word motion moved it to another cell) are marked
+  `nestedSync` and still apply. Up front, Shift+Enter adds nothing, Cut
+  still copies but removes nothing, Paste reads no clipboard and writes
+  nothing (also when the note turned read-only while the clipboard was
+  read: no cell closes and the grid selection stays), Clear cells selects
+  nothing, and formatting from the menu does not select the cell's text
+  first.
+- **No stale cell request.** Tab past the last row and the + strips below
+  and right of the table ask for the new cell to open once the table is
+  drawn again; when the write is refused the request is dropped
+  (`TableToolbar.addRow`, `addColumn`).
+- **Handle moves.** A row or column dragged by its handle remaps the
+  column widths and moves the axis selection only when the move is written
+  (`ColumnResize.remapFor` restores the widths otherwise; the operation
+  comes from `moveOperation`).
+
+Of #826 this round completes typing in a table cell (every edit path of
+an open cell) and the table clipboard. Left for #826: the Properties
+sheet's inputs, the image size keys and list continuation on Enter.
+
+Checks: `pnpm check` passes. Not run here: `pnpm test:browser`,
+`pnpm test:quality`, `pnpm test:vscode`.
+
 Checks: `pnpm check` passes. Not run here: `pnpm test:browser`,
 `pnpm test:quality`, `pnpm test:vscode` (others run them on this machine).
