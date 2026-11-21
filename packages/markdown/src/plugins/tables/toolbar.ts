@@ -19,7 +19,10 @@ import type { TableEnvironment } from "./environment";
 interface MenuSelection {
   range(): CellRange | undefined;
   active(): CellPosition | undefined;
-  open(position: CellPosition): void;
+  /** Open the cell; false when none opens (a read-only note). */
+  open(position: CellPosition): boolean;
+  /** Select cells in the grid. */
+  select(range: CellRange): void;
   request(position: CellPosition | undefined): void;
   execute(operation: TableOperation, focus: CellPosition): void | Promise<void>;
   selectAll(): void;
@@ -148,8 +151,15 @@ export class TableToolbar {
   ): void {
     this.close();
     const range = this.selection.range();
-    if (!containsCell(range, position)) {
-      this.selection.open(position);
+    // A cell outside the selection becomes the menu's target: opened, or in
+    // a read-only note, where none opens, selected in the grid, so the
+    // menu acts on it rather than on the cells selected before.
+    if (
+      !containsCell(range, position) &&
+      !this.selection.open(position) &&
+      this.grid.outer.state.readOnly
+    ) {
+      this.selection.select({ anchor: position, head: position });
     }
     const selected = this.selection.range() ?? {
       anchor: { ...position },

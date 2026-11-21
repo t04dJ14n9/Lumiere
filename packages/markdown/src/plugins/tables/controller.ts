@@ -103,6 +103,7 @@ export class TableController {
         range: () => this.selected.range,
         active: () => this.projection.active,
         open: (position) => this.projection.open(position),
+        select: (range) => this.selected.select(range),
         request,
         execute: (operation, focus) => this.execute(operation, focus),
         selectAll: () => this.selected.selectAll(),

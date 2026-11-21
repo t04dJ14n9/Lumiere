@@ -343,6 +343,7 @@ test("Copy from the menu of a right-clicked cell copies that cell, not one left 
         range: () => undefined,
         active: () => projection.active,
         open: (position) => projection.open(position),
+        select() {},
         request() {},
         execute() {},
         selectAll() {},
@@ -496,5 +497,71 @@ test("Tab or Right from a cell left open in a read-only note moves the focus to 
     assert.equal(handled, true, key);
     assert.equal(focused(), "grid", key);
     assert.deepEqual(selection.range, cell(1, 1), key);
+  }
+});
+
+test("in a read-only note the menu of a cell outside the grid selection acts on that cell", () => {
+  const tall = "| a | b |\n| --- | --- |\n| 1 | 2 |\n| 3 | 4 |";
+  for (const [clicked, copied] of [
+    [{ row: 0, column: 0 }, "a"],
+    // Inside the selection: the selection stays the menu's target.
+    [{ row: 2, column: 1 }, "4"],
+  ] as const) {
+    const grid = {
+      outer: { state: note(true), focus() {} },
+      model: parseTable(tall)!,
+      block: { source: tall },
+      root: { isConnected: true, focus() {} },
+      contentElement: () => ({ replaceChildren() {} }),
+      display() {},
+    } as unknown as TableGrid;
+    const projection = new CellProjection(grid, {} as TableEnvironment, {
+      activate() {},
+      highlight() {},
+      move: () => false,
+      arrow: () => false,
+    });
+    // The grid selection the keys left on (2, 1), and its highlight.
+    const selection = {
+      range: cell(2, 1) as CellRange | undefined,
+      select(next: CellRange) {
+        this.range = next;
+      },
+    };
+    const copies: string[] = [];
+    const clipboard = new TableClipboard(
+      grid,
+      projection,
+      selection as unknown as TableSelection,
+      {
+        copy: (text: string) => copies.push(text),
+        paste: async () => "",
+        wrap: () => true,
+        clearFormatting: (text: string) => text,
+        canFormat: true,
+      },
+    );
+    let items: { label?: string; run?: () => void }[] = [];
+    const toolbar = new TableToolbar(
+      grid,
+      {
+        range: () => selection.range,
+        active: () => projection.active,
+        open: (position) => projection.open(position),
+        select: (next) => selection.select(next),
+        request() {},
+        execute() {},
+        selectAll() {},
+      },
+      clipboard,
+      (_root, menu) => {
+        items = menu as typeof items;
+        return () => {};
+      },
+    );
+    toolbar.showMenu(clicked, { x: 0, y: 0 });
+    items.find((item) => item.label === "Copy")!.run!();
+    assert.deepEqual(copies, [copied]);
+    assert.deepEqual(selection.range, cell(clicked.row, clicked.column));
   }
 });
