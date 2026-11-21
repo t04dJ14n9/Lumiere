@@ -99,6 +99,10 @@ test("images (standalone and inside tables) and Mermaid diagrams open in larger 
   expect(lineHasEmbedClass).toBe(false);
   await inlineImg.dblclick();
   await expect(dialog).toBeVisible();
+  // It stays open: the focus it takes does not draw the image again under
+  // it (which would close it).
+  await page.waitForTimeout(300);
+  await expect(dialog).toBeVisible();
   await page.keyboard.press("Escape");
   await expect(dialog).toHaveCount(0);
 

@@ -25,7 +25,11 @@ import {
   embedsNote,
   inlineEmbedClick,
 } from "./clicks";
-import { imageSelection, showsImageSource } from "./image-selection";
+import { imageSelection } from "./image-selection";
+import { decorateImage } from "./image-reveal";
+import { IMAGE_AFTER_SOURCE } from "./image-anchor";
+import type { RenderService } from "../render/api";
+import type { InlineClick } from "../../webview/ui/inline-widget";
 import { writtenHeight } from "./image-size";
 export const embedsWebview: Plugin = {
   name: "embeds",
@@ -125,18 +129,19 @@ function registerEmbedRenderers(ctx: Context): void {
       widget,
     }),
   );
-  // An image stays rendered whatever the caret does, as in Obsidian 1.13,
-  // until Enter or Tab opens its source for editing.
+  // Obsidian 1.12 and earlier (owner request 2026-11-21): the caret on an
+  // image shows its source, with or without focus (`image-reveal.ts`), the
+  // image kept below it, as display math keeps its formula.
   ctx.effect(() =>
     ctx.livePreview.block({
       kind: "embed",
       nodes: ["Paragraph"],
-      editing: "widget",
+      editing: "reveal",
+      editingPreview: { sourceClass: "md-image-source" },
       match(node, state) {
         const source = soleEmbed(node, state);
         return source !== undefined && embedsImage(source);
       },
-      showSource: (state, block) => showsImageSource(state, block),
       widget,
     }),
   );
@@ -148,18 +153,42 @@ function registerEmbedRenderers(ctx: Context): void {
       persistent: true,
       decorate(node, cx) {
         const source = cx.state.sliceDoc(node.from, node.to);
-        const shown = embedsImage(source)
-          ? showsImageSource(cx.state, node)
-          : cx.revealed(node.from, node.to);
-        if (!shown) {
-          cx.replace(
-            node.from,
-            node.to,
-            new EmbedInline(source, ctx.render, inlineEmbedClick(source)),
+        const image = (isAfterSource = false) =>
+          new EmbedInline(
+            source,
+            ctx.render,
+            inlineEmbedClick(source),
+            isAfterSource,
           );
+        if (embedsImage(source)) {
+          decorateImage(cx, node, {
+            image,
+            isInRevealedBlock: (state, range) =>
+              isInRevealedImageBlock(ctx, state, range),
+          });
+        } else if (!cx.revealed(node.from, node.to)) {
+          cx.replace(node.from, node.to, image());
         }
       },
     }),
+  );
+}
+
+/** Whether an embed's image is drawn below its revealed block's source. */
+function isInRevealedImageBlock(
+  ctx: Context,
+  state: EditorState,
+  range: { from: number; to: number },
+): boolean {
+  return (
+    ctx.livePreview
+      .revealedSourceBlocks?.(state, range.from, range.to)
+      .some(
+        (block) =>
+          block.kind === "embed" &&
+          block.from <= range.from &&
+          block.to >= range.to,
+      ) ?? false
   );
 }
 
@@ -173,6 +202,22 @@ function registerEmbedRenderers(ctx: Context): void {
  * overwrite the reserve with a short unresolved placeholder (~one line).
  */
 class EmbedInline extends MarkdownInline {
+  constructor(
+    source: string,
+    render: RenderService,
+    click: InlineClick,
+    /** Drawn just after its shown source (`image-anchor.ts`). */
+    private readonly isAfterSource: boolean,
+  ) {
+    super(source, render, click);
+  }
+  override eq(other: MarkdownInline): boolean {
+    return (
+      other instanceof EmbedInline &&
+      other.isAfterSource === this.isAfterSource &&
+      super.eq(other)
+    );
+  }
   override get estimatedHeight(): number {
     return embedEstimatedHeight(this.source);
   }
@@ -186,6 +231,9 @@ class EmbedInline extends MarkdownInline {
    */
   override toDOM(view: EditorView): HTMLElement {
     const node = super.toDOM(view);
+    if (this.isAfterSource) {
+      node.classList.add(IMAGE_AFTER_SOURCE);
+    }
     if (writtenHeight(this.source) !== undefined) {
       const height = this.estimatedHeight;
       if (height > 0) {

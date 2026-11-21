@@ -7981,3 +7981,162 @@ the chrome inset, the `portable` entries) serve more than sketches; and
 the `resources/changed` event (drop resolved resource URLs after a file is
 rewritten), whose only emitter was the sketch plugin but which `resources`
 and `embeds` still listen to as a general invalidation hook.
+
+## Images show their source at the caret, as in Obsidian 1.12 (owner request, 2026-11-21)
+
+Owner request (2026-11-21): in Live Preview, show an image's source when
+the caret is on it, as Obsidian 1.12 and earlier did, reversing the
+Obsidian 1.13 behaviour adopted in "Image editing and suggestion keys from
+Obsidian 1.13 — 2026-10-17" and "Footnote popover and images that stay
+rendered" (images rendered whatever the caret did; source only after Enter
+or Tab on a selected image). A deliberate difference from 1.13+, recorded
+as such in docs/OBSIDIAN_REVEAL_RULES.md ("Intentional divergence:
+images"), PARITY, CAPABILITIES, DESIGN §11.3 and the embeds README.
+
+- Rule: an image (`![[a.png]]`, `![[a.png|100]]`, `![alt](a.png)`, a
+  `data:image` URL) reveals by rule 1 like any inline element: touched by
+  the caret or a selection, each of several carets; images join chains of
+  abutting elements again (`collectInlineChains` no longer skips them).
+  With or without focus since the second review round (below); the find
+  bar's match still reveals one (#791), now with the image kept too.
+- Placement reuses #798's machinery: an image alone on its line is a
+  `reveal` block with `editingPreview`, so
+  Live Preview draws the image as a block below the source line; an image
+  in text is drawn again just after its source through
+  `InlineContext.widgetAfter` (`embeds/image-reveal.ts`). The inline
+  renderer asks Live Preview's `revealedSourceBlocks` (only for an image on
+  a line a selection touches) so a block image is not drawn twice, including
+  for a caret on the line's trailing spaces. Without a caret on an image
+  nothing new is built: one more cheap reveal test per drawn image.
+- Click: unchanged selection and keys (outline, `+`/`=`/`-`, `0`, Space,
+  Enter, Tab, Backspace/Delete, Escape), the caret at the image's start, so
+  its source shows while it is selected. Nothing moves between mousedown and
+  click: the pointer freeze holds every reveal until the release (unit test,
+  and measured in the browser harness: the image's top identical at
+  mousedown, mouseup and click). On release the source appears above a block
+  image; `embeds/image-click-pin.ts` scrolls the note by the shift so the
+  image stays under the pointer (without it, a double-click near the
+  image's top edge hit the source line and the inspector did not open). An
+  image in text moves right by its source's width; see the second review
+  round for its double-click.
+- Arrow keys no longer select an image: ArrowRight/ArrowLeft move through
+  the shown source as through a link's (removed from the selected-image
+  keymap and its capture-phase keydown); Up/Down and Vim `j`/`k` enter a
+  block image's source line as any revealable block.
+- Other embeds (notes, PDFs, bases, other files) are unchanged: they reveal
+  their source on touch, with or without focus, with nothing drawn after.
+
+Tests: new `test/unit/embeds/image-reveal.test.ts` (inline and block
+placement at every caret offset, trailing spaces, focus, chains, a
+selection over two of three images, two carets, note embeds unchanged, the
+press freezing the reveal until release, `+`/`=`/`-`/`0` with the source
+shown, arrows) and `src/plugins/embeds/image-click-pin.test.ts`; in
+`test/unit/livePreview/reveal-plugins.test.ts` the shared inline reveal test
+no longer exempts images and the find-bar test now pins focus and the find
+match for inline and block images. The unit fixture's Live Preview fake
+gains `revealedSourceBlocks`. No browser spec pinned "images stay rendered
+under the caret", so none changed; the affected specs pass unchanged
+(below). A throwaway browser probe (not committed) checked a block and an
+inline image: a stable press, the source after release, the pinned block
+image, a double-click near its top edge opening the inspector, `=`/`-`
+writing the size in the shown source, Enter then Escape, ArrowRight from
+the selected image moving one character, Up/Down entering the block,
+blur hiding the source, and Vim `=` and `l`.
+
+Checks: `pnpm check` (Prettier, ESLint, typecheck, every unit suite,
+contributions) passes; the browser specs image-selection-chrome,
+selection-inline, image-remount-height, inline-image-remount-height,
+html-media-remount-height, note-embed-remount-height,
+embed-under-tall-props and vim-caret-geometry pass (22). Not run here: the
+full browser suite, `pnpm test:quality` and `pnpm test:vscode` (the owner
+runs those).
+
+Open for the owner: the pin needs room to scroll and may leave the source
+line above the pane's top when the image was near it; an inline image
+still moves along its line on release (its double-click is handled, see
+below).
+
+Review fixes (PR #806 review, 2026-11-21), each with a unit test that
+failed before it:
+
+- A block image's line may end in spaces, which its block covers
+  (`![[a.png]]  ` is a block over 0–12, the embed 0–10), so its image drawn
+  below the revealed source stood at 12, outside the embed: the selected
+  outline, the inspector key, the resize width and the click pin found no
+  image, and a click on it selected nothing. Abutting inline images
+  (`![[a.png]]![[b.png]]`) share a position, the end of one and the start
+  of the other, so a click on one selected both. `embeds/image-anchor.ts`
+  now finds the embed a drawn image shows from where CodeMirror reports it
+  (the start of its widget): a block image is its line's only image, an
+  image drawn in place of its source starts there, and one drawn after its
+  source (marked `md-image-after-source`) ends there.
+  `image-anchor.test.ts`.
+- The click pin now carries its range through edits made while the button
+  is down. `image-click-pin.test.ts`.
+- An image alone in a list item or quote line (`- ![[a.png]]`,
+  `> ![[a.png]]`) is a block in Lumiere, so its revealed image is drawn
+  below the source; the rules now say so (they said inline). A task
+  item's image stays inline. Obsidian 1.12's placement there was not
+  measured.
+- New coverage: Up and Down entering a block image's source line, plain
+  motion leaving it, Escape leaving it (`image-reveal.test.ts`).
+
+Second review round (PR #806, 2026-11-21), each with a test that failed
+first:
+
+- **Double-click on an image in text (CI failure of
+  `image-selection-chrome.spec.ts`).** Reproduced locally with the CPU
+  slowed down eight times (a throwaway copy of the spec): the inspector
+  opened and closed at once. Opening it moves the focus to the dialog;
+  with the reveal tied to the editor's focus, the source hid, the image in
+  text was drawn again by a new widget, and the inspector, which lives
+  with the image it opened from, closed. The unthrottled run passed only
+  because its assertion caught the dialog in the moment before it closed.
+  Fixed at the cause: images now reveal with or without focus, as links
+  do (the ⤢ button takes the focus too). Display math keeps its focus
+  rule; its preview has no controls. And a person's double-click on an
+  image in text still has its first click reveal the source, which moves
+  the image along its line, so the second press misses it:
+  `embeds/image-double-press.ts` takes a second press that the browser
+  counts as a double-click (`detail` 2, within 800 ms and 12 px of the
+  first), missing the image the first press selected while it is still
+  selected, as a double-click on that image, opening its inspector instead
+  of selecting a word (a second press that hits the image is left to its
+  own `dblclick`). Rejected: delaying the reveal for the double-click
+  interval, which would make the source appear late on every click and
+  needs a hold in Live Preview's reveal. The block image's pin now also
+  waits up to 400 ms after the release for the image's move (its drawing
+  below the source may come a frame later; `redrawn` from the selection
+  chrome's mutation observer measures again), and ends when the caret
+  leaves the image or the note changes.
+  `image-double-press.test.ts`, `image-click-pin.test.ts`,
+  `image-reveal.test.ts` (focus leaving keeps the drawing), and the spec
+  now checks that the inspector is still open 300 ms later. Checked with
+  the throwaway specs: a person-like double-click (two presses 150 ms
+  apart) on an unselected image in text, at normal speed and six times
+  slower, opens the inspector, which stays open, with no word selected.
+- **Up and Down into an image after a prefix.** A block can start after a
+  list, quote or indentation prefix on its line (`- ![[a.png]]` is a block
+  from 2), and `verticalBlock` put the caret at the line's start, which
+  does not touch the block: the image stayed drawn and the next press
+  skipped it. It now lands at `max(line start, block start)`, for every
+  revealable block (quoted or listed math and code too).
+  `image-reveal.test.ts` covers `- `, `1. `, `> ` and two spaces, and a
+  task item's image, which stays inline and is reached by plain motion.
+- **Images in rendered blocks.** The list of hosts whose images are not
+  image embeds named `.hybrid-Callout`, `.hybrid-Blockquote`,
+  `.hybrid-BulletList` and `.hybrid-OrderedList`; the callout's class is
+  `hybrid-callout` and no renderer draws the other three (only
+  `.cm-table-widget` was right). A click on an image in a rendered
+  callout's first line was taken as an image selection. `image-anchor.ts`
+  now accepts a block image only inside an embed's own block
+  (`hybrid-block hybrid-embed`). `image-anchor.test.ts`.
+
+Checks: `pnpm check` passes; browser specs image-selection-chrome
+(`--repeat-each 5`, 10 passed), selection-inline, image-remount-height,
+inline-image-remount-height, html-media-remount-height,
+note-embed-remount-height, embed-under-tall-props, vim-caret-geometry
+(20), and for the motion change editing, stable-blocks, vim-block-motion,
+math-vim-click and tables-vim (37 + 57, with the specs above). Not run:
+the full browser suite, `test:quality`, `test:vscode`.
+

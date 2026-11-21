@@ -859,8 +859,9 @@ One function, `revealed(state, from, to, kind)`, used by every renderer:
 - The find bar's current match reveals the source around it, as Obsidian's
   search highlight does. Find selects each match, so the selection rule above
   covers most syntax; the renderers that keep rendering under a selection
-  (footnote references, images) also reveal for the match while the bar is
-  open (`findMatchTouches`, `livePreview/find-match.ts`).
+  or without focus (footnote references, display math) also reveal
+  for the match while the bar is open (`findMatchTouches`,
+  `livePreview/find-match.ts`).
 - Display math (`$$…$$`, as a block or inline) reveals only while the editor
   has focus, as everything does in Obsidian; without focus it stays rendered
   wherever the caret is. While revealed, the formula is typeset again just
@@ -869,6 +870,14 @@ One function, `revealed(state, from, to, kind)`, used by every renderer:
   #698 item 23). The focus is a state field (`livePreview/editor-focus.ts`),
   set from CodeMirror's focus-change transactions, so block decorations can
   read it; a focus change redraws only the blocks the selection touches.
+- Images (`![[a.png]]`, `![alt](a.png)`) reveal as links do, with or
+  without focus (their inspector takes it), and keep the image just after
+  the source as display math keeps its formula: a block below it when the
+  embed is alone on its line (after any list or quote marker), inline
+  after it otherwise. This is Obsidian
+  1.12's behaviour, which Lumiere keeps at the owner's request
+  (2026-11-21); 1.13 and later keep images rendered under the caret
+  (docs/OBSIDIAN_REVEAL_RULES.md, "Intentional divergence: images").
 
 ### 11.4 Widgets
 

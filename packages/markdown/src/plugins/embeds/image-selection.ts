@@ -1,14 +1,10 @@
-import { syntaxTree } from "@codemirror/language";
 import {
   Prec,
   StateEffect,
   StateField,
-  type EditorState,
   type Extension,
 } from "@codemirror/state";
 import { ViewPlugin, keymap, type EditorView } from "@codemirror/view";
-import { findMatchTouches } from "../livePreview/api";
-import { embedsNote } from "./clicks";
 import { IMAGE_EMBED } from "./embed-actions";
 import {
   aliasRange,
@@ -17,26 +13,21 @@ import {
   withWidth,
   writtenWidth,
 } from "./image-size";
-import {
-  isSelectableImage,
-  setImageSelectedChrome,
-} from "./image-resize-corner";
+import { setImageSelectedChrome } from "./image-resize-corner";
+import { embedOfImage, type Range } from "./image-anchor";
 import { imageKeyFromEvent } from "./image-selection-keys";
+import { ClickedImagePin } from "./image-click-pin";
+import { ImageDoublePress } from "./image-double-press";
 
 export { imageKeyFromEvent } from "./image-selection-keys";
-
-interface Range {
-  from: number;
-  to: number;
-}
 
 export const selectImage = StateEffect.define<Range | null>();
 export const editImage = StateEffect.define<Range | null>();
 
 /**
- * The image whose source is shown for editing (Enter or Tab on a selected
- * image), until the caret leaves it. Otherwise images stay rendered, as
- * Obsidian 1.13 keeps them whatever the caret does.
+ * The image being edited (Enter or Tab on a selected image), until the
+ * caret leaves it, so that Escape selects it again. Its source shows
+ * anyway while the caret touches it (`image-reveal.ts`).
  */
 export const editingImage = StateField.define<Range | null>({
   create: () => null,
@@ -57,35 +48,9 @@ export const editingImage = StateField.define<Range | null>({
 });
 
 /**
- * Whether the image at `from`–`to` shows its source: while it is edited, or
- * while the find bar's current match is in it (Obsidian reveals the source
- * under its search highlight; an image otherwise stays rendered under the
- * caret and selections).
- */
-export function showsImageSource(
-  state: EditorState,
-  range: { from: number; to: number },
-): boolean {
-  return (
-    editingImageAt(state, range) ||
-    findMatchTouches(state, range.from, range.to)
-  );
-}
-
-/** Whether the image at `from`–`to` shows its source for editing. */
-export function editingImageAt(
-  state: EditorState,
-  range: { from: number; to: number },
-): boolean {
-  const editing = state.field(editingImage, false);
-  return Boolean(
-    editing && editing.from <= range.from && editing.to >= range.to,
-  );
-}
-
-/**
  * The image embed a click selected, as Obsidian 1.13 selects images: its
- * source. Any other edit or move of the caret lets it go.
+ * source, which shows while it is selected (the caret is at its start).
+ * Any other edit or move of the caret lets it go.
  */
 export const selectedImage = StateField.define<Range | null>({
   create: () => null,
@@ -101,71 +66,38 @@ export const selectedImage = StateField.define<Range | null>({
   },
 });
 
-/** The image embeds (`![[a.png]]`, `![](a.png)`) on the line holding `at`. */
-function imagesOnLine(state: EditorState, at: number): Range[] {
-  const line = state.doc.lineAt(at);
-  const found: Range[] = [];
-  syntaxTree(state).iterate({
-    from: line.from,
-    to: line.to,
-    enter(node) {
-      if (!["WikiEmbed", "Image"].includes(node.name)) {
-        return true;
-      }
-      if (!embedsNote(state.sliceDoc(node.from, node.to))) {
-        found.push({ from: node.from, to: node.to });
-      }
-      return false;
-    },
+/** The rendered images of the selected embed. */
+export function imagesOf(view: EditorView, range: Range): HTMLImageElement[] {
+  return [...view.contentDOM.querySelectorAll("img")].filter((image) => {
+    const embed = embedOfImage(view, image);
+    return embed?.from === range.from && embed.to === range.to;
   });
-  return found;
-}
-
-/** The image embed drawn at `at`: the one around it, else the next on its line. */
-function embedAt(state: EditorState, at: number): Range | undefined {
-  const images = imagesOnLine(state, at);
-  return (
-    images.find((range) => at >= range.from && at <= range.to) ??
-    images.find((range) => range.from >= at)
-  );
 }
 
 /**
- * The rendered images of the selected embed: those drawn at its source (a
- * block's image may report its block's start or end).
+ * A click on an image selects it, the caret at its start, as in Obsidian.
+ * Returns what it selected.
  */
-export function imagesOf(view: EditorView, range: Range): HTMLImageElement[] {
-  return [...view.contentDOM.querySelectorAll("img")].filter((image) => {
-    try {
-      const at = isSelectableImage(image) ? view.posAtDOM(image) : -1;
-      return at >= range.from && at <= range.to;
-    } catch {
-      return false;
-    }
-  });
-}
-
-/** A click on an image selects it, the caret at its start, as in Obsidian. */
-function selectOnClick(view: EditorView, event: MouseEvent): void {
+function selectOnClick(
+  view: EditorView,
+  event: MouseEvent,
+): { image: HTMLImageElement; range: Range } | undefined {
   const image =
     event.target instanceof HTMLImageElement ? event.target : undefined;
   if (
     !image ||
-    !isSelectableImage(image) ||
     event.button !== 0 ||
     event.shiftKey ||
     event.metaKey ||
     event.ctrlKey ||
     event.altKey ||
-    image.closest(
-      "a, button, .hybrid-Callout, .hybrid-Blockquote, .hybrid-BulletList, .hybrid-OrderedList, .cm-table-widget",
-    )
+    image.closest("a, button")
   ) {
-    return;
+    return undefined;
   }
-  const range = embedAt(view.state, view.posAtDOM(image));
+  const range = embedOfImage(view, image);
   if (!range) {
-    return;
+    return undefined;
   }
   event.preventDefault();
   event.stopPropagation();
@@ -174,6 +106,7 @@ function selectOnClick(view: EditorView, event: MouseEvent): void {
     selection: { anchor: range.from },
     effects: selectImage.of(range),
   });
+  return { image, range };
 }
 
 /** The widest an image can be: the width of the note's text. */
@@ -245,35 +178,6 @@ function remove(view: EditorView): boolean {
     changes: { from: range.from, to: range.to },
     selection: { anchor: range.from },
   });
-  return true;
-}
-
-/**
- * An arrow key next to an image, as in Obsidian 1.13: with the caret just
- * before it (Right) or just after it (Left) the first press selects it, the
- * caret staying; with it selected, the press moves past it.
- */
-function arrow(view: EditorView, forward: boolean): boolean {
-  const { state } = view;
-  const selected = state.field(selectedImage);
-  if (selected) {
-    view.dispatch({
-      selection: { anchor: forward ? selected.to : selected.from },
-      effects: selectImage.of(null),
-    });
-    return true;
-  }
-  const { main } = state.selection;
-  if (!main.empty || state.selection.ranges.length > 1) {
-    return false;
-  }
-  const next = imagesOnLine(state, main.head).find((range) =>
-    forward ? range.from === main.head : range.to === main.head,
-  );
-  if (!next) {
-    return false;
-  }
-  view.dispatch({ effects: selectImage.of(next) });
   return true;
 }
 
@@ -354,10 +258,6 @@ export function runSelectedImageKey(view: EditorView, key: string): boolean {
       return remove(view);
     case "Escape":
       return escapeImage(view);
-    case "ArrowRight":
-      return arrow(view, true);
-    case "ArrowLeft":
-      return arrow(view, false);
     default:
       return false;
   }
@@ -429,19 +329,39 @@ const selectedClass = ViewPlugin.define((view) => {
     marked = syncSelectedChrome(view, marked);
   };
   // Resized images redraw once the file loads — remake chrome then.
+  const pin = new ClickedImagePin(view, (range) => imagesOf(view, range));
   const redrawn = new MutationObserver(() => {
     if (view.state.field(selectedImage) || marked.length) {
       mark();
     }
+    pin.redrawn();
   });
   redrawn.observe(view.contentDOM, { childList: true, subtree: true });
-  const onClick = (event: MouseEvent) => selectOnClick(view, event);
+  const doublePress = new ImageDoublePress({
+    selected: () => view.state.field(selectedImage),
+    isImageOf: (target, range) =>
+      imagesOf(view, range).some((image) => image === target),
+    inspect: () => inspectSelected(view),
+  });
+  const onClick = (event: MouseEvent) => {
+    if (doublePress.opensInspector(event)) {
+      event.preventDefault();
+      event.stopPropagation();
+      return;
+    }
+    const selected = selectOnClick(view, event);
+    if (selected) {
+      doublePress.selected(event, selected.range);
+      pin.press(selected.image, selected.range);
+    }
+  };
   const onKeydown = (event: KeyboardEvent) =>
     captureSelectedImageKeydown(view, event);
   view.contentDOM.addEventListener("mousedown", onClick, { capture: true });
   view.contentDOM.addEventListener("keydown", onKeydown, true);
   return {
     update(update) {
+      pin.update(update);
       const before = update.startState.field(selectedImage);
       const after = update.state.field(selectedImage);
       if (before !== after || (after && update.docChanged)) {
@@ -464,9 +384,10 @@ const selectedClass = ViewPlugin.define((view) => {
 
 /**
  * Selecting and editing images in Live Preview, as Obsidian 1.13 does
- * (measured): a click, or an arrow key from just beside it, selects an
- * image; then `+`/`=` and `-` resize it in steps of 25 pixels, `0` resets
- * its size, Space opens the inspector (Obsidian lightbox), Enter selects
+ * (measured): a click selects an image, its source shown above or before
+ * it (Obsidian 1.12's reveal, owner request 2026-11-21; arrow keys move
+ * through that source as through a link's, so they select nothing); then
+ * `+`/`=` and `-` resize it in steps of 25 pixels, `0` resets its size, Space opens the inspector (Obsidian lightbox), Enter selects
  * its file name, Tab selects its alias / size segment (Obsidian
  * `editSelectedImageAlias`), Backspace or Delete removes it, and Escape
  * leaves source edit (re-selecting) or clears the outline. Selection also
@@ -481,7 +402,7 @@ export function imageSelection(): Extension {
     selectedClass,
     Prec.highest(
       keymap.of(
-        "+ = - 0 Space Enter Tab Backspace Delete Escape ArrowRight ArrowLeft"
+        "+ = - 0 Space Enter Tab Backspace Delete Escape"
           .split(" ")
           .map((key) => ({
             key,

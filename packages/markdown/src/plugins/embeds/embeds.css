@@ -237,9 +237,8 @@ img.md-image-selected {
   outline-offset: 1px;
 }
 
-/* Selected image: outline only (Obsidian). Hide the caret — at a block
-   embed it inherits the widget height (including a tall |W| minHeight
-   reserve) and draws a long bar below the card. */
+/* Selected image: outline only (Obsidian). Hide the caret at its shown
+   source: the keys resize or edit the image rather than type there. */
 #app .cm-editor[data-mw-image-selected] > .cm-scroller > .mw-caret-layer {
   visibility: hidden;
 }

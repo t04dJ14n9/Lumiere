@@ -7,7 +7,7 @@ For every case the caret was moved to every character offset (`editor.setCursor`
 
 **Obsidian does not reveal the whole line. It reveals only the element the caret touches, with a few line-level and block-level exceptions.**
 
-1. **Inline elements** (bold, italic, strike, highlight, inline code, links, wikilinks, embeds, math, inline HTML, autolinks): the raw syntax of an element shows when the caret or selection is inside it **or touching its first or last character** (inclusive on both ends). Other elements on the same line stay rendered. **Images** (embedded or Markdown, inline or alone on a line) are the exception since Obsidian 1.13: they stay rendered whatever the caret or selection does, and show their source only after Enter or Tab on a selected image, until the caret leaves it (measured on 1.14.4).
+1. **Inline elements** (bold, italic, strike, highlight, inline code, links, wikilinks, embeds, math, inline HTML, autolinks): the raw syntax of an element shows when the caret or selection is inside it **or touching its first or last character** (inclusive on both ends). Other elements on the same line stay rendered. **Images** (embedded or Markdown, inline or alone on a line) are the exception since Obsidian 1.13: they stay rendered whatever the caret or selection does, and show their source only after Enter or Tab on a selected image, until the caret leaves it (measured on 1.14.4). Obsidian 1.12 and earlier revealed an image like any other element, the image kept after its source. **Lumiere follows 1.12 here** (owner request 2026-11-21, a deliberate difference from 1.13+; see "Intentional divergence: images" below).
 2. **Elements that directly abut each other** (zero characters between them, e.g. `**a**~~b~~` or `[x](y)[[z]]**c**`) are revealed **together as a chain**. One character or a space between them breaks the chain.
 3. **Nested elements** (e.g. `**b _i_ b**`, `[t **b** t](u)`, `==h `c` h==`): touching the **outermost** element reveals the outer *and every inner* element, even if the caret is not inside the inner one.
 4. **Selections** (non-empty): every element the selected range overlaps or touches is revealed. With multiple cursors, each cursor reveals the elements it touches.
@@ -41,13 +41,16 @@ For every case the caret was moved to every character offset (`editor.setCursor`
       resize it in steps of 25 px
       (up to the text's width), `0` removes the size, Enter selects the file
       name, Tab goes where the size is written, Backspace or Delete removes
-      the embed, and Escape or moving the caret lets it go;
+      the embed, and Escape or moving the caret lets it go. Lumiere keeps the
+      click and its keys but shows the image's source while it is selected,
+      and its arrow keys move through that source (see "Intentional
+      divergence: images");
     - a click on a drawn horizontal rule selects its source, the head at its start;
     - checkboxes toggle on a click, in lists, nested lists and callouts.
 
     Obsidian's Live Preview does not render a list inside a plain quote (`> - [ ] task` stays text), so there is no checkbox there to click. Lumiere renders and toggles it, as Obsidian's reading view does: a deliberate difference.
 
-Decision for our editor: follow all of this, **except** footnote references (ours render as numbered superscripts, with the raw text revealed when the caret is inside) and **rendered link clicks** (plain reveals / Mod opens a new tab — BH-020; the user's preference, diverging from the 2026-10-17 Obsidian measurement above).
+Decision for our editor: follow all of this, **except** footnote references (ours render as numbered superscripts, with the raw text revealed when the caret is inside), **rendered link clicks** (plain reveals / Mod opens a new tab — BH-020; the user's preference, diverging from the 2026-10-17 Obsidian measurement above) and **images** (their source shows at the caret, as in Obsidian 1.12; owner request 2026-11-21).
 
 ## Detail
 
@@ -63,7 +66,7 @@ Offsets are relative to the element's start; "touch" means `caret >= from && car
 | wikilink `[[A]]`, `[[A|alias]]`, `[[A#H]]`, `[[A^b]]` | | element only | same |
 | autolink `<https://…>` | | element only | "links" |
 | bare URL | `https://z.io` | nothing to hide | "links" |
-| embeds `![[x]]`, `![alt](x)`, `![[x|100]]` | | element only | "embeds" |
+| embeds `![[x]]`, `![alt](x)`, `![[x|100]]` | | element only (images: 1.13+ never; Lumiere: element only, image kept after the source) | "embeds" |
 | math `$x$`, `$$x$$` inline | | element only | "math" |
 | inline HTML `<b>x</b>`, `<span>` | | element only | "misc" |
 | escapes `\*` `\[` | | **whole line** | "escapes" |
@@ -125,3 +128,59 @@ each reference as a superscript number, numbered in order of first reference,
 and reveals the raw `[^id]` text when the caret is inside
 (`src/plugins/footnotes/README.md`). This is a deliberate product decision, not a measurement gap, and the
 reveal tests for footnotes pin our rule, not Obsidian's.
+
+## Intentional divergence: images (owner request 2026-11-21, Obsidian ≤1.12 behaviour)
+
+Obsidian 1.13 and later keep an image rendered under the caret (rule 1)
+and show its source only after Enter or Tab on a selected image. At the
+owner's request (2026-11-21) Lumiere shows an image's source as Obsidian
+1.12 and earlier did, keeping the image after it, the way display math
+keeps its formula (rule 6). The rules, which the tests pin:
+
+1. **Reveal.** An image embed (`![[a.png]]`, `![[a.png|100]]`, `![alt](a.png)`,
+   a `data:image/…` URL) shows its source when a selection touches it by
+   rule 1: the caret on its first or last character or inside it, any
+   selection overlapping or touching it, each of several carets. Images
+   join chains of abutting elements again (rule 2: `**b**![[a.png]]`
+   reveals both) and reveal inside a revealed outer element (rule 3).
+2. **Focus.** With or without the editor's focus, as a link's source
+   shows (display math reveals only while focused, as everything does in
+   Obsidian). An image's own controls take the focus (its inspector, its
+   ⤢ button): a reveal that ended with the focus would draw the image
+   again under them and close the inspector it had just opened. The find
+   bar's current match is a selection, so it shows the source too.
+3. **Placement.** While its source shows, the image stays drawn just
+   after it, where Lumiere draws it when the source is hidden. As a block
+   below the source line when the embed is alone on its line, also after a
+   list or quote marker (`- ![[a.png]]`, `1. ![[a.png]]`, `> ![[a.png]]`);
+   a caret on that line's trailing spaces reveals it too. Inline right
+   after the source otherwise: in a sentence, in a task item
+   (`- [ ] ![[a.png]]`, whose image stays in its line), in a revealed
+   callout. Where Obsidian 1.12 put the image of a list item that holds
+   only an image was not measured; Lumiere keeps it where it was, so
+   revealing never moves it from block to line.
+4. **Click.** A click on the image selects it as rule 12 describes
+   (outline, `+`/`=`/`-` resize, `0`, Space opens the inspector, Enter
+   selects the file name, Tab the size, Backspace or Delete removes it,
+   Escape lets go or, after Enter or Tab, selects it again), the caret at
+   its start, so its source shows too. While the button is down nothing
+   moves (every reveal waits for the release); on release the source
+   appears and a block image is scrolled back to where it was under the
+   pointer (an image in a line of text moves along its line by the
+   source's width). A double-click opens the inspector even so: a second
+   press of a double-click (the browser's count, within 800 ms and 12 px
+   of the first) that misses the image the first press selected, because
+   it moved, opens that image's inspector instead of selecting a word of
+   its source. The caret stays hidden while the image is selected: its
+   keys resize or edit the image rather than type.
+5. **Arrow keys.** No arrow key selects an image: with its source shown,
+   the arrows move through the source as through a link's, and a selected
+   image's arrow moves the caret one character and lets the image go.
+   Up and Down (and Vim's `j`/`k`) enter an image alone on its line as
+   any revealable block, at the image's source even after a list, quote or
+   indentation prefix (its source line first, then past the image).
+6. **Images in rendered blocks** (a callout, a table, an HTML block) belong
+   to that block: a click on one is the block's, not an image selection.
+7. **Other embeds** are unchanged: an embedded note, PDF, base or other
+   file reveals its source on touch as before, with or without focus, and
+   keeps nothing drawn after it.

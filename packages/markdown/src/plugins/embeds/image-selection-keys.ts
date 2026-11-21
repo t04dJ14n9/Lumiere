@@ -13,8 +13,6 @@ const PLAIN: Readonly<Record<string, string>> = {
   Tab: "Tab",
   Backspace: "Backspace",
   Delete: "Delete",
-  ArrowRight: "ArrowRight",
-  ArrowLeft: "ArrowLeft",
   "+": "+",
 };
 
