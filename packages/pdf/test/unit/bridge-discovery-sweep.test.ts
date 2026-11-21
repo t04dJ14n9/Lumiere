@@ -111,10 +111,11 @@ test("every other file naming the port the sweeping bridge listens on goes, whic
     record(other),
   );
   await sweepDiscoveryFiles(dir, { self: { port: held, file: own } });
-  assert.deepEqual((await readdir(dir)).sort(), [
-    own,
-    `${other}-1-bbbbbbbbbbbb.json`,
-  ]);
+  // Both names start with a random port, so compare them as sets.
+  assert.deepEqual(
+    (await readdir(dir)).sort(),
+    [own, `${other}-1-bbbbbbbbbbbb.json`].sort(),
+  );
 });
 
 test("a file is not the sweeping bridge's own just because it names the same port", async (t) => {
