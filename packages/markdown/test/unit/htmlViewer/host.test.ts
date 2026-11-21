@@ -225,14 +225,74 @@ test("the tab may load the vault's files and no others", async () => {
   assert.equal("column" in v.opened[0]!.options!, false);
 });
 
-test("in Restricted Mode the file opens as text and no page is ever made", async () => {
+test("in Restricted Mode the file opens as text, in the column asked for, and no page is ever made", async () => {
   const v = await viewer({ trusted: false });
   await v.open(FILE, ROOT, { viewColumn: 1 });
   assert.deepEqual(v.opened, []);
-  assert.deepEqual(v.executed, [["vscode.open", FILE]]);
+  assert.deepEqual(v.executed, [["vscode.open", FILE, { viewColumn: 1 }]]);
+  // Open Link to Side asks for the group beside (-2), and gets it.
+  await v.open(FILE, ROOT, { viewColumn: -2 });
+  assert.deepEqual(v.executed.at(-1), [
+    "vscode.open",
+    FILE,
+    { viewColumn: -2 },
+  ]);
+  // No column asked for, none passed.
+  await v.open(FILE, ROOT);
+  assert.deepEqual(v.executed.at(-1), ["vscode.open", FILE]);
   // Nothing was read, so nothing of the page reached an editor of ours.
-  assert.deepEqual(v.stats, []);
   assert.deepEqual(v.reads, []);
+});
+
+test("Restricted Mode refuses what trusted mode refuses: it opens no file outside the vault as text either", async () => {
+  for (const trusted of [true, false]) {
+    const v = await viewer({ trusted });
+    for (const [uri, root] of [
+      // Outside the vault, however the command was called.
+      ["file:///home/reader/secret.html", ROOT],
+      ["file:///home/reader/vault-other/a.html", ROOT],
+      [`${ROOT}/../secret.html`, ROOT],
+      // A vault outside the workspace.
+      ["file:///etc/page.html", "file:///etc"],
+      // Another scheme, in no workspace folder.
+      ["vscode-remote://host/vault/a.html", ROOT],
+      ["https://example.com/vault/a.html", "https://example.com/vault"],
+      ["untitled:Untitled-1.html", "untitled:"],
+    ] as const) {
+      await v.open(uri, root);
+    }
+    assert.deepEqual(v.opened, [], `trusted ${trusted}`);
+    assert.deepEqual(
+      v.executed,
+      [],
+      `trusted ${trusted}: nothing opened as text`,
+    );
+    assert.equal(v.errors.length, 7, `trusted ${trusted}`);
+    assert.deepEqual(v.reads, [], `trusted ${trusted}`);
+  }
+});
+
+test("without a workspace folder only a file: vault stands, in Restricted Mode too", async () => {
+  const loose = await viewer({ trusted: false, folders: [] });
+  await loose.open(FILE, ROOT);
+  assert.deepEqual(loose.executed, [["vscode.open", FILE]]);
+  const remote = await viewer({ trusted: false, folders: [] });
+  await remote.open(
+    "vscode-remote://host/vault/a.html",
+    "vscode-remote://host/vault",
+  );
+  assert.deepEqual(remote.executed, []);
+  assert.equal(remote.errors.length, 1);
+});
+
+test("a file in a virtual workspace folder opens as text where it did before", async () => {
+  const vault = "vscode-vfs://github/owner/repo";
+  const v = await viewer({ trusted: false, folders: [vault] });
+  await v.open(`${vault}/docs/page.html`, vault, { viewColumn: 2 });
+  assert.deepEqual(v.executed, [
+    ["vscode.open", `${vault}/docs/page.html`, { viewColumn: 2 }],
+  ]);
+  assert.deepEqual(v.errors, []);
 });
 
 test("a file outside the vault is refused, in no panel and in no editor", async () => {

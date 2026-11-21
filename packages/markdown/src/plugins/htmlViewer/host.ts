@@ -48,9 +48,17 @@ async function open(ctx: Context, args: readonly unknown[]): Promise<void> {
     ctx.logger.warn("HTML viewer asked to open something it cannot");
     return;
   }
+  // Before anything is opened, in either mode: no disk is asked, and a file
+  // outside the vault is not shown or opened as text by a caller that names it.
+  assertInVault(ctx, request);
   if (!ctx.workspace.isTrusted()) {
-    // The page must never run here: the file is shown as text, as before.
-    await ctx.hostCommands.execute("vscode.open", request.uri);
+    // The page must never run here: the file is shown as text, as before, in
+    // the group the link asked for (Open Link to Side).
+    await ctx.hostCommands.execute(
+      "vscode.open",
+      request.uri,
+      ...(request.column === undefined ? [] : [{ viewColumn: request.column }]),
+    );
     return;
   }
   const html = await readContained(ctx, request);
@@ -81,27 +89,36 @@ function folderOf(uri: string): string {
 }
 
 /**
- * The file's text, once it is shown to be inside the vault by its path and
- * through symbolic links (`plugins/resources`, the rule embeds follow), and
- * the vault inside a workspace folder. The tab's resource roots then hold the
- * vault and nothing else.
+ * The checks that need no disk: the vault is inside a workspace folder (with
+ * no workspace folder, a `file:` vault, which is where a note opened on its own
+ * has one), and the file is inside the vault by path. Both modes run them
+ * first, so the command, which any caller may run, never opens as text, or
+ * shows, a file that is not the vault's.
+ */
+function assertInVault(ctx: Context, request: HtmlViewerRequest): void {
+  const folders = ctx.workspace.folders();
+  const isInWorkspace =
+    folders.length > 0
+      ? folders.some((folder) => contains(folder, request.root))
+      : new URL(request.root).protocol === "file:";
+  if (!isInWorkspace) {
+    throw new Error("The vault is outside the workspace");
+  }
+  if (!contains(request.root, request.uri)) {
+    throw new Error("The file is outside the vault");
+  }
+}
+
+/**
+ * The file's text, once it is shown to be inside the vault through symbolic
+ * links too (`plugins/resources`, the rule embeds follow). The tab's resource
+ * roots then hold the vault and nothing else.
  */
 async function readContained(
   ctx: Context,
   request: HtmlViewerRequest,
 ): Promise<string> {
   const { workspace } = ctx;
-  const folders = workspace.folders();
-  if (
-    folders.length > 0 &&
-    !folders.some((folder) => contains(folder, request.root))
-  ) {
-    throw new Error("The vault is outside the workspace");
-  }
-  // By path first: a file outside the vault is not even asked of the disk.
-  if (!contains(request.root, request.uri)) {
-    throw new Error("The file is outside the vault");
-  }
   const stat = await workspace.stat(request.uri);
   const realContains = workspace.realContains?.bind(workspace);
   await containedResource(request.root, request.uri, stat.symbolicLink, {
