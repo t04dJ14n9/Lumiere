@@ -8250,16 +8250,17 @@ reached nothing (`noteFragment`, `resolveNavigationTarget`).
 heading's text from the renamed note's own metadata and writes links'
 subpaths from it (`headingSubpath`, unchanged), once per rename
 (`RenamedHeading.subpath`), for the note and every linking note. It keeps
-the subpath only when `noteFragment` on the renamed note reaches the
-heading and the subpath is not an `L` line range, which
+the subpath only when `noteFragment` on the renamed heading's line reaches
+the heading and the subpath is not an `L` line range, which
 `resolveNavigationTarget` reads as lines (that rule moved, unchanged, to
 `noteLineFragment` in `src/shared/native-links.ts`, so both read it from
 one place). Otherwise `headingNameProblem` refuses the name in the prompt
 and the command checks again before editing: nothing left for a link
-(`#|^`, `![](a.png)`), `L12`, an earlier heading with the same text as
-links compare it (they would reach that one; Obsidian lets them), or a `%`
-that starts an escape (`a%41b`). The heading's current name always passes
-the prompt. The heading and the note's own links are still one edit, one
+(`#|^`, `![](a.png)`), `L12`, or a `%` that starts an escape (`a%41b`).
+A name an earlier heading already has is taken (owner decision,
+2026-11-21), as Obsidian takes it: the check reads the heading's line
+alone, and links then reach the first heading with that text, as
+Obsidian's do. The heading's current name always passes the prompt. The heading and the note's own links are still one edit, one
 undo step.
 
 Validation: `test/unit/linkUpdates/rename-heading.test.ts` runs the
@@ -8271,7 +8272,8 @@ shown one and that every rewritten link in the note and in a linking note
 (Markdown links, wikilinks with and without an alias, an embed) resolves
 through the vault's resolver, `noteFragment` and `resolveNavigationTarget`;
 the note takes one edit and the linking note is saved; refused names leave
-both notes as they were. These failed before the fix. `heading-rename.test.ts`
+both notes as they were; a name an earlier heading has renames, and its
+links reach that first heading. These failed before the fix. `heading-rename.test.ts`
 (updated for the new validator) and `native-links.test.ts`
 (`noteLineFragment`). `pnpm check` passes. Not run: `test:browser`,
 `test:quality`, `test:vscode`.

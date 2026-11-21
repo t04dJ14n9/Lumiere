@@ -130,9 +130,10 @@ export type HeadingFragment = { subpath: string } | { problem: string };
  * text as the note's metadata reads it, which drops formatting
  * (`New [[Target|Alias]]` is `New Alias`, `[Label](url)` is `Label`), so the
  * subpath is written from that text, and kept only if a link holding it
- * reaches this heading in the renamed note as links are followed
- * (`noteFragment`, and not read as a `#L12` line range). Obsidian 1.15
- * writes the name as typed (`#New Target Alias`).
+ * names this heading as links are followed (`noteFragment`, and not read as
+ * a `#L12` line range). As in Obsidian, a name an earlier heading has is
+ * kept: links then reach the first heading with it. Obsidian 1.15 writes
+ * the name as typed (`#New Target Alias`).
  */
 export function renamedHeadingFragment(
   text: string,
@@ -159,15 +160,14 @@ export function renamedHeadingFragment(
       problem: `Links would read #${subpath} as a line number, not as this heading.`,
     };
   }
-  const reached = noteFragment(note, subpath);
-  if (reached?.from === heading.from) {
-    return { subpath };
+  // Checked against the heading's line alone, so an earlier heading with
+  // the same text (which links reach first, as in Obsidian) does not count.
+  const lineEnd = note.indexOf("\n", heading.from);
+  const line = note.slice(heading.from, lineEnd < 0 ? undefined : lineEnd);
+  if (noteFragment(line, subpath)?.from !== 0) {
+    return { problem: "Links could not reach a heading with this name." };
   }
-  return {
-    problem: reached
-      ? "A heading above has the same name, so links would reach it instead."
-      : "Links could not reach a heading with this name.",
-  };
+  return { subpath };
 }
 
 /**
