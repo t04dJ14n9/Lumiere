@@ -7132,3 +7132,33 @@ without a fallback in `links.css` names a property a Lumiere stylesheet
 declares; it fails on the old rule. Not checked by eye in a running editor.
 Another undefined variable without a fallback outside this plugin
 (`--editor-font` in `gitGutter.css`) is left for its own change.
+
+## Display math while editing: what Obsidian shows (#698 item 23; 2026-11-21)
+
+Documentation only; no behaviour changed. Item 23 asks for the typeset
+formula to stay under a revealed `$$` block, as in Obsidian. A static read of
+Obsidian 1.15.0's Live Preview decorations (lines 142550–142592 of the
+formatted `app.js`; nothing copied) gives the exact rule: while the editor
+has focus and a selection touches the span from the opening `$$` to the
+closing one, the whole source shows and the formula widget is added just
+after the closing `$$` (`side: 1`). It is a block under the closing line
+when the opening `$$` starts its line and the closing one ends its line, and
+inline after the closing `$$` when text shares either line. The widget is
+kept only while the TeX is unchanged, so the preview is typeset again as the
+formula is edited. Without focus the block stays rendered; an unclosed `$$`
+and inline `$…$` get no preview. This matches the 2026-10-17 measurement
+on 1.14.4 (docs/OBSIDIAN_REVEAL_RULES.md rule 6).
+
+Lumiere shipped that preview (math's `editingPreview`) until #269 removed it
+on 2026-10-22, after Host GUI findings BH-009 and BH-004 reported the stacked
+formula as a duplicate; it has been source only since, on purpose, and the
+backlog's own plan says to ship item 23 only if Obsidian's behaviour is
+wanted over that choice. It is not reversed here: that is the owner's call.
+Reversing it would mean restoring `editingPreview` on the math block
+renderer (the livePreview hook is still there and unit-tested), adding the
+focus condition and the inline placement Obsidian uses for `$$` that share a
+line with text, and turning around the BH-009 unit test in
+`test/unit/livePreview/reveal-plugins.test.ts` and the four browser
+regressions that pin source-only (editing, keyboard-widget-input,
+math-vim-click, stable-blocks), which need the browser suite to rerun.
+`docs/PARITY.md` (math) and rule 6 record the read.
