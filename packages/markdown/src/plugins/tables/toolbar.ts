@@ -21,7 +21,7 @@ interface MenuSelection {
   active(): CellPosition | undefined;
   open(position: CellPosition): void;
   request(position: CellPosition): void;
-  execute(operation: TableOperation, focus: CellPosition): void;
+  execute(operation: TableOperation, focus: CellPosition): void | Promise<void>;
   selectAll(): void;
 }
 

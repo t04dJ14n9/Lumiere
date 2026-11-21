@@ -83,6 +83,9 @@ function createEnvironment(ctx: Context): TableEnvironment {
     renderContent: (element, source, offset) =>
       content.renderContent(element, source, offset),
     renderedSource: (element) => content.renderedSource(element),
+    finishedSource: (element) => content.finishedSource(element),
+    renderedText: (source, offset, host) =>
+      content.renderedText(source, offset, host),
     moveContent: (element, offset) => content.moveContent(element, offset),
     position: (source, element, point) =>
       cellPointerOffset(source, element, point, livePreview.position),
@@ -198,7 +201,7 @@ function registerTableCommands(ctx: Context): void {
   );
   for (const [id] of tableCommands) {
     ctx.effect(() =>
-      ctx.commands.register("editor:table-" + id, () => {
+      ctx.commands.register("editor:table-" + id, async () => {
         const controller = activeTables.get(view);
         const position = controller?.range?.head ?? controller?.active;
         if (!controller || !position) {
@@ -208,7 +211,7 @@ function registerTableCommands(ctx: Context): void {
         if (!operation) {
           return false;
         }
-        controller.execute(operation, position);
+        await controller.execute(operation, position);
         return true;
       }),
     );

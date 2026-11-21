@@ -8162,3 +8162,45 @@ yet" as no image, rather than an unmoved one). Checks: `pnpm check`;
 browser specs image-selection-chrome and image-remount-height pass; a
 throwaway probe confirmed a clicked block image still stays under the
 pointer and a double-click near its top edge opens the inspector.
+## Table sort keys do not depend on the cell being edited (#808; 2026-11-21)
+
+Review finding on #797/#799. The sort keys (the text each cell shows, as
+Obsidian sorts by; "Table sort compares the shown text" above) were each
+cell's `.table-cell-content` `innerText`. The cell being edited holds the
+cell editor there, so its key was its Markdown (`**z**`) while every other
+row gave its rendered text (`a`): sorting from a formatted cell that was
+open ordered `**z**` before `a`, and from the header `a` before `**z**`.
+
+- `tables/sort-keys.ts`: a key is the element's text only when the element
+  shows a finished rendering of the cell's current Markdown
+  (`TableContent.finishedSource`); the cell being edited, a cell still
+  rendering or one showing older text is rendered for the sort through the
+  same render service (`TableContent.renderedText`), into a probe in the
+  cell's wrapper that is laid out (so `innerText` reads alike) but clipped
+  out of sight, and removed at once. The cell editor stays open, with its
+  selection; nothing is written before the sort's own edit, so one Undo
+  still takes the sort back.
+- The sort is asynchronous now (a render pass may wait on its pre and post
+  processors). `withShownText` drops a sort whose table changed while its
+  keys rendered, since they no longer describe its rows; the controller
+  also drops one for a table that was torn down. The menu and the palette
+  command wait for it, so a failure still shows on the table.
+
+Tests, each failing before the fix: `sort-keys.test.ts` (the same order
+from the edited formatted cell, the header and no cell; only the edited
+cell is rendered; a stale or still-rendering cell is rendered; one edit,
+one undo; a table edited meanwhile is left alone) and a grid-level case in
+`cell-reuse.test.ts` (a real `TableGrid` and `TableContent` on the fake DOM:
+keys `name, z, a` whichever cell is edited; the probe is removed).
+
+Native check with a throwaway browser spec (not committed): in the browser
+harness the palette's **Table: Sort Ascending** with the caret in the open
+`**z**` cell wrote `**z**, a` before the fix and writes `a, **z**` now,
+the cell editor staying open; Ctrl+Z restores the note in one step. The
+menu path (right-click the open cell, Sort by column A to Z) gives the
+right order and one-step undo too, but did before as well: in the harness
+the menu click closes the cell editor before the sort runs. Not checked in
+VS Code itself.
+
+Checks: `pnpm check`; browser spec tables-parity. Not run: the full
+browser suite, `test:quality`, `test:vscode`.

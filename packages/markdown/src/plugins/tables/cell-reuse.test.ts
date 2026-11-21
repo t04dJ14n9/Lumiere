@@ -15,9 +15,21 @@ class FakeElement {
   dataset: Record<string, string> = {};
   style: Record<string, string> = {};
   isConnected = true;
+  /** What the element reads as: its rendering, or the cell editor's text. */
+  innerText = "";
   constructor(readonly tagName: string) {}
   get firstElementChild(): FakeElement | null {
     return this.children[0] ?? null;
+  }
+  get parentElement(): FakeElement | null {
+    return this.parent ?? null;
+  }
+  get ownerDocument() {
+    return { createElement: (tag: string) => new FakeElement(tag) };
+  }
+  remove(): void {
+    this.parent?.children.splice(this.parent.children.indexOf(this), 1);
+    this.parent = undefined;
   }
   append(...nodes: FakeElement[]): void {
     for (const node of nodes) {
@@ -89,6 +101,8 @@ function mountedGrid(note: string) {
   const renders: { source: string; pass: RenderPass }[] = [];
   const render: RenderService = {
     async into(container, source, context) {
+      // Rendered, bold and code lose their markers.
+      container.innerText = source.replace(/\*\*|`/g, "");
       const pass = {
         source,
         container,
@@ -116,10 +130,14 @@ function mountedGrid(note: string) {
       disposeContent: (element) => content.disposeContent(element),
       renderedSource: (element) => content.renderedSource(element),
       moveContent: (element, offset) => content.moveContent(element, offset),
+      finishedSource: (element) => content.finishedSource(element),
+      renderedText: (source, offset, host) =>
+        content.renderedText(source, offset, host),
     },
   );
   return {
     grid,
+    content,
     renders,
     setNote(text: string) {
       state = EditorState.create({ doc: text });
@@ -198,4 +216,50 @@ test("a cell with a footnote is rendered again: its number depends on its place"
     mounted.renders.map((render) => render.source),
     ["a", "x[^1]", "y", "x[^1]"],
   );
+});
+
+/**
+ * Open a cell editor on `position` as the projection does: the cell's
+ * rendering goes and its element holds the editor, which reads as Markdown.
+ */
+function editCell(
+  mounted: ReturnType<typeof mountedGrid>,
+  position: { row: number; column: number },
+): void {
+  const element = mounted.grid.contentElement(position)!;
+  mounted.content.disposeContent(element);
+  element.replaceChildren();
+  const cell = mounted.grid.model.rows[position.row]![position.column]!;
+  element.innerText = cell.text;
+}
+
+test("sort keys are each cell's rendered text, whichever cell is being edited (#808)", async () => {
+  const note = "| name |\n| --- |\n| **z** |\n| a |";
+  const keysWhileEditing = async (position: {
+    row: number;
+    column: number;
+  }) => {
+    let mounted!: ReturnType<typeof mountedGrid>;
+    withDocument(() => {
+      mounted = mountedGrid(note);
+      mounted.grid.render();
+    });
+    await settle();
+    editCell(mounted, position);
+    const keys = await mounted.grid.shownTexts(0);
+    const wrapper = mounted.grid.contentElement(position)!.parentElement!;
+    // The probe the edited cell's key was rendered in is gone.
+    assert.equal(wrapper.children.length, 1);
+    return keys;
+  };
+  assert.deepEqual(await keysWhileEditing({ row: 1, column: 0 }), [
+    "name",
+    "z",
+    "a",
+  ]);
+  assert.deepEqual(await keysWhileEditing({ row: 0, column: 0 }), [
+    "name",
+    "z",
+    "a",
+  ]);
 });

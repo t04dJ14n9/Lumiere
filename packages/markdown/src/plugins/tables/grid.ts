@@ -5,6 +5,7 @@ import { editGroup } from "../document/api";
 import type { RenderBlock } from "../livePreview/api";
 import { indentRows, rowPrefix } from "./column-widths";
 import type { TableEnvironment } from "./environment";
+import { shownColumn } from "./sort-keys";
 
 /** Rendered cells and their current source snapshot. It owns no selection. */
 export class TableGrid {
@@ -22,7 +23,12 @@ export class TableGrid {
     public block: RenderBlock,
     private readonly content: Pick<
       TableEnvironment,
-      "disposeContent" | "renderContent" | "renderedSource" | "moveContent"
+      | "disposeContent"
+      | "renderContent"
+      | "renderedSource"
+      | "moveContent"
+      | "finishedSource"
+      | "renderedText"
     >,
   ) {
     this.model = parsedTable(block.source)!;
@@ -243,15 +249,29 @@ export class TableGrid {
 
   /**
    * Each row's cell in `column` as the reader sees it (the rendered text),
-   * which Obsidian sorts by; a cell without a rendering gives its Markdown.
+   * which Obsidian sorts by. The cell being edited, whose element holds its
+   * Markdown, and a cell still rendering are rendered for it beside their
+   * cell (`shownColumn`).
    */
-  shownTexts(column: number): string[] {
-    return this.model.rows.map(
-      (row, index) =>
-        this.contentElement({ row: index, column })?.innerText ??
-        row[column]?.text ??
-        "",
-    );
+  shownTexts(column: number): Promise<string[]> {
+    const start = this.renderStart();
+    return shownColumn(this.model, column, {
+      renderedSource: (position) => {
+        const element = this.contentElement(position);
+        return element && this.content.finishedSource(element);
+      },
+      elementText: (position) => this.contentElement(position)?.innerText ?? "",
+      renderText: (markdown, position) => {
+        const from = this.model.rows[position.row]?.[position.column]?.from;
+        // Beside the cell's content, in its wrapper, so it is styled alike.
+        const host = this.contentElement(position)?.parentElement;
+        return this.content.renderedText(
+          markdown,
+          Math.min(start + (from ?? 0), this.outer.state.doc.length),
+          host ?? this.root,
+        );
+      },
+    });
   }
 
   contentElement(position: CellPosition): HTMLElement | undefined {

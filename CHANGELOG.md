@@ -150,6 +150,10 @@
   Tab and Delete, now with its source shown, a double-click still opens
   the inspector, and the arrow keys move through the source instead of
   selecting the image (owner request).
+- Markdown: sorting a table from a cell you are editing orders that cell by
+  its shown text like every other row. With the caret in a cell such as
+  `**z**`, **Table: Sort Ascending** compared its Markdown, so it sorted
+  before `a`; it now sorts after it, as from the header (#808).
 
 Fixes for several VS Code windows open at once, each with a test; checked
 with two real windows on one profile.
