@@ -64,6 +64,10 @@
   Properties, as in Obsidian, where Unfold All does not expand them either.
   In Source mode, or with Properties shown as YAML, **Toggle Fold
   Properties** folds and unfolds the front matter (#787).
+- Markdown: **Follow Link**, **Open Link in New Tab** and **Open Link to
+  Side** also follow a reference link (`[text][label]`, `[text][]`) through
+  the note's definition, and search the vault for a tag at the caret, as
+  Obsidian's commands do. Their keys are unchanged (#787).
 
 Fixes for several VS Code windows open at once, each with a test; checked
 with two real windows on one profile.

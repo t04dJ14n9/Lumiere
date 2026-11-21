@@ -7536,3 +7536,29 @@ Validation: unit tests src/plugins/properties/folding.test.ts and
 src/plugins/folding/fold-all.test.ts; folding and properties tests,
 typecheck, ESLint and Prettier pass. Not run here (other agents' suites):
 `pnpm test:browser`, `test:quality`, `test:vscode`.
+
+## Follow Link follows reference links and tags (#787; 2026-11-21)
+
+Obsidian 1.15.0, read in its shipped code (behaviour only, nothing copied):
+Follow link, Open link in new tab, to the right and in a new window all take
+the clickable token at the caret (`getClickableTokenAt`) and follow it
+(`triggerClickableToken`): internal and external links; full and collapsed
+reference links, through the note's definition, opened only when the
+destination has a scheme; a tag opens search for `tag:#…`; block IDs and
+footnote references are found but not followed. Lumiere's commands followed
+wikilinks, inline Markdown links and bare URLs only.
+
+The links plugin's three commands now also take a full or collapsed
+reference link (`referenceLinkAt`, src/plugins/links/caret-link.ts): the
+first definition of the label in the note, matched as CommonMark matches
+labels; a destination naming a note opens it, as `[text](note)` does, where
+Obsidian shows a notice. With no link at the caret they ask
+`links/followToken` (bail); the Tags plugin answers for a tag at the caret
+(`tagAt`) with the same search a click on the tag runs. Links knows nothing
+of tags. Key bindings are unchanged (#699's owner decision is pending): the
+editor's own Mod+Enter and Mod+Alt+Enter still follow links only.
+
+Validation: unit tests for reference links (src/plugins/links/links.test.ts)
+and the tag at the caret (test/unit/tags/clicks.test.ts); links and tags
+tests, typecheck, ESLint and Prettier pass. Not run here (other agents'
+suites): `pnpm test:browser`, `test:quality`, `test:vscode`.

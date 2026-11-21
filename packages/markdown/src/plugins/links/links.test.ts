@@ -3,7 +3,7 @@ import assert from "node:assert/strict";
 import { linkParts, externalScheme } from "./target";
 import { linkAt } from "./webview";
 import { protocol } from "./protocol";
-import { followCaretLink } from "./caret-link";
+import { followCaretLink, referenceLinkAt } from "./caret-link";
 import { EditorState } from "@codemirror/state";
 import type { EditorView } from "@codemirror/view";
 test("links retain aliases, Unicode fragments and source caret identity", () => {
@@ -75,4 +75,40 @@ test("caret following supports bare URLs and autolinks without following images 
   }
   assert.equal(linkAt("![image](https://example.com)", 15), undefined);
   assert.equal(linkAt("`https://example.com`", 8), undefined);
+});
+
+test("Follow Link's reference links take the note's definition, as Obsidian's command does", () => {
+  const text = [
+    "a [text][Ref] b [Other][] c [ref] d [x][missing]",
+    "",
+    "> [quoted][ref]",
+    "",
+    '[REF]:  https://example.com/a "Title"',
+    "[other]: <Note one.md>",
+    "[ref]: https://example.com/second",
+  ].join("\n");
+  const at = (needle: string) => text.indexOf(needle) + 1;
+  assert.deepEqual(referenceLinkAt(text, at("text]")), {
+    href: "https://example.com/a",
+    wiki: false,
+  });
+  // The label part counts, and its case and spaces do not.
+  assert.deepEqual(referenceLinkAt(text, at("Ref]")), {
+    href: "https://example.com/a",
+    wiki: false,
+  });
+  assert.deepEqual(referenceLinkAt(text, at("Other]")), {
+    href: "Note%20one.md",
+    wiki: false,
+  });
+  assert.deepEqual(referenceLinkAt(text, at("quoted")), {
+    href: "https://example.com/a",
+    wiki: false,
+  });
+  // A shortcut reference, an undefined label and plain text are not followed.
+  assert.equal(referenceLinkAt(text, at("ref] d")), undefined);
+  assert.equal(referenceLinkAt(text, at("x][missing")), undefined);
+  assert.equal(referenceLinkAt(text, 0), undefined);
+  // An inline link is linkAt's, not a reference.
+  assert.equal(referenceLinkAt("[l](https://e.com)", 2), undefined);
 });

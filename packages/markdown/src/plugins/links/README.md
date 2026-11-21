@@ -63,7 +63,7 @@ renderer adds `is-unresolved` to rendered links whose path is in it.
   present. The sticky bar can draw after the jump (its feature loads late) or
   change height; the margin follows it for about a second and a half, a few
   times at most, until the reader scrolls.
-- `links.test.ts`: target parsing and caret lookup units.
+- `links.test.ts`: target parsing, caret lookup and reference-link units.
 - `host.test.ts`: source identity, scheme policy, side opens and handler lifecycle.
 - `test/unit/links/unresolved.test.ts`: unresolved keys, styled decorations and
   the host's set updates.
@@ -76,8 +76,10 @@ Listens to `suggest/trigger` for its own completion syntax.
 
 Webview injects `editor`, `livePreview`, `commands` and `rpc`; host injects `rpc`,
 the host services `dialogs`, `settings` and `navigation`, `vault` and `resources`. Webview provides `links` for focused-editor
-caret following; host provides no service. Queries `link/click`
-and `links/open` with bail semantics. Settings: plugin enabled (true),
+caret following; host provides no service. Queries `link/click`,
+`links/open` and `links/followToken` with bail semantics: when Follow Link,
+Open Link in New Tab or Open Link to Side finds no link at the caret,
+another plugin may follow its token there (Tags searches a tag). Settings: plugin enabled (true),
 `links.newLinkFormat` (shortest), `links.useWikilinks` (true), `links.folderNote`
 (empty), `links.focusNewTab` (true), and native `files.newNoteFolder` for creation. The editor binds Mod+Enter to follow the caret link and Mod+Alt+Enter (Obsidian's default, also a VS Code keybinding) to open it beside.
 
@@ -123,6 +125,16 @@ remote files, external links and native line/column fragments keep the built-in
 route. Command links do not receive VS Code's side-open modifier context; this
 route uses the source group. A manual switch to the exact expected target cannot
 be distinguished from the built-in definition gesture through the public API.
+
+Follow Link, Open Link in New Tab and Open Link to Side follow what
+Obsidian 1.15.0's commands do: a link, a full or collapsed reference link
+(`[text][label]`, `[text][]`) through the note's definition of the label,
+matched as CommonMark matches labels, or a tag, which searches for it. A
+shortcut reference (`[label]`) is not followed, as in Obsidian. Obsidian
+opens a reference link's destination only when it has a scheme (a web or
+`mailto:` link) and names labels as written; here a destination naming a
+note opens it, as `[text](note)` does. The editor's own keys below follow
+links only.
 
 Command+Enter on macOS (Ctrl+Enter elsewhere) follows a link at the caret
 through the same navigation and trust checks as clicking it. It only handles
