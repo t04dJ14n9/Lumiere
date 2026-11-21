@@ -141,6 +141,8 @@
   The setting and the hidden Insert Sketch command are gone; a value left in
   settings.json is dimmed as unknown, and a `*.sketch.svg` file still shows
   as an image. The plugin lives on the `hosts-snapshot-2026-11-21` branch.
+- Markdown: the note's right-click menu offers Rename Heading… on a heading
+  far down a long note, before the editor has parsed that far.
 
 Fixes for several VS Code windows open at once, each with a test; checked
 with two real windows on one profile.
