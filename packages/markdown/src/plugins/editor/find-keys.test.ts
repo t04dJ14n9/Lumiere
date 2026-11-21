@@ -206,3 +206,149 @@ test("Vim INSERT Mod+H deletes char instead of opening Replace (BH-045)", () => 
   fire("f");
   assert.deepEqual(calls, ["find"]);
 });
+
+/**
+ * A capture listener on a fake Document of the given platform, with Vim INSERT
+ * switched by `state.insert`. `fire` returns whether the key was claimed
+ * (preventDefault) and `calls` lists what ran, in order.
+ */
+function captureHarness(platform: string, insert: boolean) {
+  const calls: string[] = [];
+  const state = { insert };
+  let listener: EventListener | undefined;
+  const doc = {
+    defaultView: { navigator: { platform } },
+    addEventListener(_type: string, handler: EventListener) {
+      listener = handler;
+    },
+    removeEventListener() {},
+  } as unknown as Document;
+  keepFindKey(
+    doc,
+    (replace) => {
+      calls.push(replace ? "replace" : "find");
+    },
+    undefined,
+    {
+      isInsertMode: () => state.insert,
+      onInsertCtrlH: () => {
+        calls.push("delete-backward");
+      },
+    },
+  );
+  const fire = (init: Partial<KeyboardEvent> & { target?: unknown }) => {
+    let prevented = false;
+    listener!({
+      key: "f",
+      ctrlKey: false,
+      metaKey: false,
+      altKey: false,
+      shiftKey: false,
+      target: null,
+      preventDefault() {
+        prevented = true;
+      },
+      stopPropagation() {},
+      ...init,
+    } as unknown as Event);
+    return prevented;
+  };
+  return { calls, state, fire };
+}
+
+const MAC = "MacIntel";
+const LINUX = "Linux x86_64";
+
+test("Vim INSERT: macOS Cmd+Option+F opens Replace and deletes nothing (#817)", () => {
+  const { calls, fire } = captureHarness(MAC, true);
+
+  // Option+F types ƒ, so a real keydown carries key "ƒ" and keyCode 70.
+  assert.equal(
+    fire({ key: "ƒ", keyCode: 70, metaKey: true, altKey: true }),
+    true,
+  );
+  assert.deepEqual(calls, ["replace"]);
+
+  calls.length = 0;
+  assert.equal(fire({ key: "f", metaKey: true, altKey: true }), true);
+  assert.deepEqual(calls, ["replace"]);
+
+  // A non-Latin layout reaches F only through its physical keyCode.
+  calls.length = 0;
+  assert.equal(
+    fire({ key: "а", keyCode: 70, metaKey: true, altKey: true }),
+    true,
+  );
+  assert.deepEqual(calls, ["replace"]);
+});
+
+test("Vim INSERT: Ctrl+H on Windows and Linux still deletes backward (BH-045)", () => {
+  const { calls, fire } = captureHarness(LINUX, true);
+
+  assert.equal(fire({ key: "h", ctrlKey: true }), true);
+  assert.deepEqual(calls, ["delete-backward"]);
+
+  calls.length = 0;
+  assert.equal(fire({ key: "H", ctrlKey: true }), true);
+  assert.deepEqual(calls, ["delete-backward"]);
+
+  // A non-Latin layout reaches H only through its physical keyCode.
+  calls.length = 0;
+  assert.equal(fire({ key: "р", keyCode: 72, ctrlKey: true }), true);
+  assert.deepEqual(calls, ["delete-backward"]);
+
+  // Ctrl+F stays Find in INSERT.
+  calls.length = 0;
+  assert.equal(fire({ key: "f", ctrlKey: true }), true);
+  assert.deepEqual(calls, ["find"]);
+});
+
+test("Vim INSERT: only the Ctrl+H chord deletes; Cmd+H on macOS opens Replace (#817)", () => {
+  const { calls, fire } = captureHarness(MAC, true);
+
+  // Cmd+H is not Ctrl+H, and on macOS Ctrl+H is left to the editor's own
+  // keymap (the capture does not claim it).
+  assert.equal(fire({ key: "h", metaKey: true }), true);
+  assert.deepEqual(calls, ["replace"]);
+
+  calls.length = 0;
+  assert.equal(fire({ key: "h", ctrlKey: true }), false);
+  assert.deepEqual(calls, []);
+});
+
+test("outside Vim INSERT the Replace chords open Replace (#817)", () => {
+  const linux = captureHarness(LINUX, false);
+  assert.equal(linux.fire({ key: "h", ctrlKey: true }), true);
+  assert.deepEqual(linux.calls, ["replace"]);
+
+  const mac = captureHarness(MAC, false);
+  assert.equal(mac.fire({ key: "h", metaKey: true }), true);
+  assert.equal(
+    mac.fire({ key: "ƒ", keyCode: 70, metaKey: true, altKey: true }),
+    true,
+  );
+  assert.equal(mac.fire({ key: "f", metaKey: true, altKey: true }), true);
+  assert.deepEqual(mac.calls, ["replace", "replace", "replace"]);
+});
+
+test("native INPUT and TEXTAREA keep Ctrl+H and Cmd+Option+F, in INSERT too (#817)", () => {
+  for (const tagName of ["INPUT", "TEXTAREA"]) {
+    const target = { tagName } as unknown as EventTarget;
+    const mac = captureHarness(MAC, true);
+    assert.equal(
+      mac.fire({
+        key: "ƒ",
+        keyCode: 70,
+        metaKey: true,
+        altKey: true,
+        target,
+      }),
+      false,
+    );
+    assert.deepEqual(mac.calls, []);
+
+    const linux = captureHarness(LINUX, true);
+    assert.equal(linux.fire({ key: "h", ctrlKey: true, target }), false);
+    assert.deepEqual(linux.calls, []);
+  }
+});

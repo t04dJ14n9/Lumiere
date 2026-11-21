@@ -164,6 +164,9 @@
   it shows (`#New Alias`), so they reach it; they were written with the
   name as typed and led nowhere. A name no link could reach (only
   formatting, `L12`) is refused (#811).
+- Markdown: with Vim on, in Insert mode, Cmd+Option+F on macOS opens Replace
+  instead of deleting the character before the caret. Only Ctrl+H
+  deletes backward there.
 
 Fixes for several VS Code windows open at once, each with a test; checked
 with two real windows on one profile.

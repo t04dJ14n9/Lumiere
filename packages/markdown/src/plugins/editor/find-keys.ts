@@ -1,6 +1,7 @@
 /**
  * Ctrl/Cmd+F → Find; Ctrl/Cmd+H → Replace (BH-023 / BH-025), except Vim INSERT
- * Ctrl+H (BH-045).
+ * Ctrl+H (BH-045). The exception is that one chord: macOS Cmd+Option+F and
+ * Cmd+H open Replace in INSERT too (#817).
  *
  * `@replit/codemirror-vim` maps `<C-f>` → page-forward by default, so with Vim
  * on the CM Mod-f keymap never runs and Find stays closed. Capture-phase
@@ -49,10 +50,23 @@ export function findActionFor(
   if (isF) {
     return "find";
   }
-  if (key === "h" || event.keyCode === 72) {
+  if (isH(event)) {
     return "replace";
   }
   return undefined;
+}
+
+function isH(event: FindKey): boolean {
+  return event.key.toLowerCase() === "h" || event.keyCode === 72;
+}
+
+/**
+ * The one chord Vim INSERT turns into backspace (BH-045): Ctrl+H itself. The
+ * other Replace chords (macOS Cmd+Option+F, Cmd+H) share the "replace" action
+ * but are not backspace, so they must not take this exception (#817).
+ */
+function isCtrlH(event: FindKey): boolean {
+  return event.ctrlKey && !event.metaKey && !event.altKey && isH(event);
 }
 
 /** INPUT/TEXTAREA and property contenteditables keep native Ctrl+F / Ctrl+H. */
@@ -97,11 +111,12 @@ function elementForClosest(target: EventTarget | null): Element | null {
 
 export interface KeepFindKeyOptions {
   /**
-   * When true, Ctrl/Cmd+H is Vim INSERT backspace (CM Ctrl-h → deleteCharBackward)
-   * — do not open Replace. BH-045.
+   * When true, Ctrl+H is Vim INSERT backspace (CM Ctrl-h → deleteCharBackward)
+   * — do not open Replace. BH-045. Only that chord: Cmd+Option+F and Cmd+H
+   * still open Replace (#817).
    */
   isInsertMode?: () => boolean;
-  /** Run instead of Replace when `isInsertMode()` is true (delete prior char). */
+  /** Run instead of Replace for Ctrl+H when `isInsertMode()` is true (delete prior char). */
   onInsertCtrlH?: () => void;
 }
 
@@ -132,7 +147,7 @@ export function keepFindKey(
     }
     event.preventDefault();
     event.stopPropagation();
-    if (action === "replace" && options.isInsertMode?.()) {
+    if (action === "replace" && isCtrlH(event) && options.isInsertMode?.()) {
       options.onInsertCtrlH?.();
       return;
     }

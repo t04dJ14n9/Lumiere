@@ -145,7 +145,7 @@ arrive before the editor's own listener are kept and replayed by
   the Markdown indentation rules do not apply; `literal-lines.test.ts` covers it.
 - `find.ts`, `find-panel.ts`, `find-caret.ts`, `find-count.ts`, `find.css`: in-note find and replace.
 - `find-keys.ts`: capture-phase Ctrl/Cmd+F Find and Ctrl/Cmd+H (macOS also Cmd+Option+F) Replace (BH-023 / BH-025).
-- `find-keys.test.ts`: Mod+F/H mapping and native-field skip.
+- `find-keys.test.ts`: Mod+F/H mapping, native-field skip, and Vim INSERT's Ctrl+H-only backspace exception.
 - `select-all.ts`: stops VS Code's own Select All from undoing the
   editor's Ctrl/Cmd+A (VS Code forwards every webview keydown).
 - `focus-report.ts`: reports the webview's focus for
