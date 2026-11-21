@@ -150,6 +150,11 @@
   Tab and Delete, now with its source shown, a double-click still opens
   the inspector, and the arrow keys move through the source instead of
   selecting the image (owner request).
+- Markdown: Rename Heading to a name with formatting, such as
+  `New [[Target|Alias]]` or `[Label](url)`, writes links to the heading as
+  it shows (`#New Alias`), so they reach it; they were written with the
+  name as typed and led nowhere. A name no link could reach (only
+  formatting, `L12`) is refused (#811).
 
 Fixes for several VS Code windows open at once, each with a test; checked
 with two real windows on one profile.

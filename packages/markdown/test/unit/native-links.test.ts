@@ -75,6 +75,7 @@ test("external, command, UNC, malformed encoding and control paths are never int
 
 import {
   nativeLineFragment,
+  noteLineFragment,
   parseNativeLineFragment,
 } from "../../src/shared/native-links";
 test("native line fragments parse to inclusive 1-based ranges", () => {
@@ -103,6 +104,14 @@ test("native line fragments parse to inclusive 1-based ranges", () => {
   for (const value of ["heading", "L20-heading", "%ZZ", "L0", "L5-L3"]) {
     assert.equal(parseNativeLineFragment(value), undefined, value);
     assert.equal(nativeLineFragment(value), false, value);
+  }
+});
+
+test("a note's fragment is a line range only in its L form: bare digits name a heading", () => {
+  assert.deepEqual(noteLineFragment("L20-L30"), { startLine: 20, endLine: 30 });
+  assert.deepEqual(noteLineFragment("%4C20"), { startLine: 20, endLine: 20 });
+  for (const value of ["20", "20:2-30:4", "L20 notes", "Lunch", "%ZZ"]) {
+    assert.equal(noteLineFragment(value), undefined, value);
   }
 });
 
