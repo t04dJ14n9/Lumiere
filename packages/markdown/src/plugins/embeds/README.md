@@ -72,7 +72,8 @@ The syntax of the community plugins is read so that notes written for them show
 the card (see "Community plugin compatibility" in docs/PARITY.md): `![[page.html|600x200]]`
 (Embed HTML's sizes, and `|x200`, `|-`, `|height: 300px`), `#height=480`, `#gamma`,
 and a fenced block of the `html-embed` plugins with `file:` or `path:`, or the path
-on its first line alone. The file is what is read; the size and the other keys are
+on its first line alone. Only a vault path counts (`resources` loads nothing else): an address
+(`![alt](https://host/page.html)`) is no HTML card, and a block naming one stays code. The file is what is read; the size and the other keys are
 read past.
 
 ## Files

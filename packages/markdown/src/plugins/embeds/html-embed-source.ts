@@ -15,10 +15,24 @@ import { isHtmlFile } from "../../shared/html-file";
  *   ```                                   or the path alone on the first line
  */
 
-/** The file an embed or Markdown image's source names, if it is an HTML file. */
+/**
+ * Whether a target is a vault file (a name, a path, `./`, `../`, `/` from the
+ * vault root) and not an address (`https:`, `file:`, `data:`, `//host`): as
+ * `resources` has it, which loads nothing else. An address is a remote page,
+ * or an image the note links, and keeps what it was.
+ */
+function isVaultTarget(target: string): boolean {
+  return !/^[a-z][a-z\d+.-]*:/iu.test(target) && !target.startsWith("//");
+}
+
+function isHtmlVaultFile(target: string): boolean {
+  return isVaultTarget(target) && isHtmlFile(target);
+}
+
+/** The file an embed or Markdown image's source names, if it is a vault HTML file. */
 export function htmlEmbedTarget(source: string): string | undefined {
   const target = wikiTarget(source) ?? markdownTarget(source);
-  return target !== undefined && isHtmlFile(target) ? target : undefined;
+  return target !== undefined && isHtmlVaultFile(target) ? target : undefined;
 }
 
 function wikiTarget(source: string): string | undefined {
@@ -59,7 +73,7 @@ export function parseHtmlEmbedBlock(content: string): string | undefined {
     }
     line += 1;
   }
-  return file && isHtmlFile(file) ? file : undefined;
+  return file && isHtmlVaultFile(file) ? file : undefined;
 }
 
 function unquoted(value: string): string {

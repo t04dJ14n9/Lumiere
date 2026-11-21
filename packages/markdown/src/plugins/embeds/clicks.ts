@@ -1,6 +1,7 @@
 import type { BlockEditing } from "../../webview/ui/markdown-widget";
 import type { InlineClick } from "../../webview/ui/inline-widget";
 import { embedsImage } from "../../markdown/images";
+import { isHtmlEmbedFence } from "./html-embed-source";
 
 export { embedsImage };
 
@@ -9,6 +10,11 @@ export { embedsImage };
  * another file or a web address: its target has no extension, or `.md`.
  */
 export function embedsNote(source: string): boolean {
+  // A fenced `html-embed` block has no target of the embed forms, which would
+  // read as a note's: it is an HTML card, and has no note's height to watch.
+  if (isHtmlEmbedFence(source)) {
+    return false;
+  }
   const target = (
     /^!\[\[([^\]|#^]*)/u.exec(source)?.[1] ??
     /^!\[[^\]]*\]\(\s*<?([^)>\s]*)/u.exec(source)?.[1] ??

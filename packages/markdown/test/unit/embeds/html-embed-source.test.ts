@@ -68,8 +68,8 @@ test("an html-embed block names its file by file:, path:, or its first line alon
     "lessons/matrix-stepper.html",
   );
   assert.equal(file("\n  a.html  \n\n 700px \n"), "a.html");
-  // A Windows path has a colon, and is still a path.
-  assert.equal(file("C:/x/a.html"), "C:/x/a.html");
+  // A Windows path has a colon, and is no vault path: the block stays code.
+  assert.equal(file("C:/x/a.html"), undefined);
   // Not a file, not an HTML file, or keys alone: the block stays code.
   for (const content of [
     "",
@@ -130,4 +130,56 @@ test("an HTML card keeps clicks for its buttons and reveals its source from the 
     assert.equal(embedsNote(source), false, source);
     assert.equal(embedEditing(source).reveal, "button", source);
   }
+});
+
+test("a target that is not a vault file is no HTML embed: an address, or a remote page, stays what it was", () => {
+  for (const source of [
+    "![alt](https://host/page.html)",
+    "![alt|600x200](http://host/page.html)",
+    "![[https://host/page.html]]",
+    "![alt](//host/page.html)",
+    "![alt](file:///etc/page.html)",
+    "![alt](data:text/html,<p>)",
+    "![alt](javascript:alert(1)//a.html)",
+    "![[C:/x/a.html]]",
+  ]) {
+    assert.equal(htmlEmbedTarget(source), undefined, source);
+    assert.equal(embedsHtml(source), false, source);
+  }
+  // So it gets no HTML card's inline minimum height either: that is
+  // `embedsHtml`'s (plugins/embeds/webview.ts), and an unknown remote link keeps
+  // the reserve it always had.
+  // A block that names an address or an absolute path stays code.
+  for (const content of [
+    "file: https://host/page.html",
+    "path: http://host/page.html",
+    "https://host/page.html\nheight: 5",
+    "file: //host/page.html",
+    "file: C:/x/page.html",
+    "C:/x/page.html",
+  ]) {
+    assert.equal(parseHtmlEmbedBlock(content), undefined, content);
+  }
+  assert.equal(
+    embedsHtml("```html-embed\nfile: https://host/page.html\n```"),
+    false,
+  );
+  // The vault's own relative and rooted paths still are.
+  for (const source of [
+    "![alt](./a.html)",
+    "![alt](../a.html)",
+    "![alt](/a.html)",
+  ]) {
+    assert.equal(embedsHtml(source), true, source);
+  }
+});
+
+test("an html-embed block is no note embed: it gets no note's height watching", () => {
+  const block = "```html-embed\nfile: a.html\n```";
+  assert.equal(embedsNote(block), false);
+  assert.equal(embedsNote("```html-embed\nnot a file\n```"), false);
+  // A note embed is still one.
+  assert.equal(embedsNote("![[Note]]"), true);
+  assert.equal(embedsNote("![[folder/Other.md]]"), true);
+  assert.equal(embedEditing(block).reveal, "button");
 });
