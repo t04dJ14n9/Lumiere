@@ -6,7 +6,7 @@ import { EditorSelection, EditorState } from "@codemirror/state";
 import { createRoot } from "@workshop/core";
 import { metadata } from "../../../src/markdown/metadata";
 import { linksHost } from "../../../src/plugins/links/host";
-import { protocol } from "../../../src/plugins/links/protocol";
+import { MAX_KNOWN_NOTES, protocol } from "../../../src/plugins/links/protocol";
 import {
   unresolvedKey,
   knownNoteKeys,
@@ -246,25 +246,76 @@ test("unresolved accepts an embedded note URI for that note's outbound misses", 
   client.dispose();
 });
 
-test("known note keys include path, basename and aliases", () => {
+/** A memory vault holding `paths`; those in `excluded` are Excluded files. */
+function vaultOf(
+  paths: readonly string[],
+  excluded: readonly string[] = [],
+): MemoryVaultIndex {
   const index = new MemoryVaultIndex({
     root: "memory:///vault",
     folderNote: "",
     linkFormat: "shortest",
   });
-  index.replaceFiles([
-    {
-      uri: "memory:///vault/Folder/Note.md",
-      path: "Folder/Note.md",
+  index.replaceFiles(
+    paths.map((path) => ({
+      uri: `memory:///vault/${encodeURI(path)}`,
+      path,
       mtime: 1,
       size: 1,
-    },
-  ]);
+      excluded: excluded.includes(path),
+    })),
+  );
+  return index;
+}
+
+test("known note keys are basenames and aliases", () => {
+  const index = vaultOf(["Folder/Note.md"]);
   index.setMetadata(
     "Folder/Note.md",
     metadata("---\naliases: [Big Map]\n---\n"),
   );
-  assert.deepEqual(knownNoteKeys(index), ["big map", "folder/note", "note"]);
+  assert.deepEqual(knownNoteKeys(index), ["big map", "note"]);
+});
+
+test("known keys name attachments with their extension and keep excluded notes", () => {
+  const index = vaultOf(
+    ["Papers/Paper.pdf", "image.PNG", "Archive/Old.markdown", "Excluded.md"],
+    ["Excluded.md"],
+  );
+  assert.deepEqual(knownNoteKeys(index), [
+    "excluded",
+    "image.png",
+    "old",
+    "paper.pdf",
+  ]);
+});
+
+test("links to attachments and excluded notes stay bright before the unresolved set arrives", () => {
+  const known = knownNoteKeys(
+    vaultOf(["Papers/Paper.pdf", "Excluded.md", "Here.md"], ["Excluded.md"]),
+  );
+  const doc =
+    "[[Paper.pdf]] [[Papers/Paper.pdf#page=3]] [[Excluded]] [[Missing.pdf]] end";
+  assert.deepEqual(wikiLinkClasses(doc, doc.length, [], known), {
+    "Paper.pdf": "md-link md-link-rendered",
+    "Papers/Paper.pdf#page=3": "md-link md-link-rendered",
+    Excluded: "md-link md-link-rendered",
+    "Missing.pdf": "md-link md-link-rendered is-unresolved",
+  });
+});
+
+test("too many known keys send none, which turns optimistic dimming off", () => {
+  const paths = Array.from(
+    { length: MAX_KNOWN_NOTES + 1 },
+    (_, n) => `n${n}.md`,
+  );
+  const keys = knownNoteKeys(vaultOf(paths));
+  assert.deepEqual(keys, []);
+  const doc = "[[n0]] [[Missing]] end";
+  assert.deepEqual(wikiLinkClasses(doc, doc.length, [], keys), {
+    n0: "md-link md-link-rendered",
+    Missing: "md-link md-link-rendered",
+  });
 });
 
 test("a missing link dims from vault known-keys before the unresolved set updates", () => {

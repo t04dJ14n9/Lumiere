@@ -7088,3 +7088,31 @@ outgoingLinks READMEs drop claims the read contradicted. The behavioural
 differences the reads found are listed in the PARITY status column ("differs")
 and left for separate issues; the visual rows still need the owner's
 disposable-vault pass.
+
+## Unresolved links: attachments and excluded notes stay bright (#698 item 24; 2026-11-21)
+
+Item 24 of #698 asked for unresolved Markdown links in Live Preview and links
+inside embeds to be dimmed. Both have been dimmed since #146 and #152
+(October); the backlog row was written against an older tree. Verifying it
+found a bug in the optimistic dimming #159 added: the webview dims a link
+whose target is not among the host's "known note keys", and those keys left
+out every file that is not a note and every excluded note, so once the keys
+had loaded (always, shortly after a note opens), `[[paper.pdf]]`,
+`[report](report.pdf)` and links to excluded notes were dimmed for good: the
+vault's own unresolved set never lists them, but `isUnresolved` falls back to
+the known keys for any link the set does not name. `knownNoteKeys` now lists a note's basename and aliases
+and any other file's name with its extension, excluded files included; path
+keys were dropped, since `isUnresolved` already matches a link's last
+segment. Past the 150,000-key cap it sends none (optimistic dimming off)
+instead of a sorted prefix that dimmed every file after the cut.
+
+A static read of Obsidian 1.15.0 (nothing copied) shows that its Live
+Preview dims only wikilinks; Markdown links get no `is-unresolved` there,
+while embeds and Reading view dim both. Lumiere keeps dimming Markdown links
+in Live Preview (#146); `docs/PARITY.md` and CAPABILITIES now say it
+differs, for the owner to keep or drop.
+
+Tests: `test/unit/links/unresolved.test.ts` (known keys for attachments,
+`.markdown` notes and excluded notes, those links staying bright, the cap).
+Checks: the links unit tests, typecheck, eslint and Prettier on the changed
+files; browser and VS Code suites not run (unit-only change).

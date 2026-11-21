@@ -87,10 +87,15 @@ External application schemes ask first; script, data, command and file schemes
 are refused. Unresolved wikilinks can create notes. Basename Markdown destinations
 (`Note`, `Note.md`) create too; relative Markdown paths stay open-only. Unresolved styling applies to wikilinks and Markdown links in Live Preview
 while they are rendered, to wiki / Markdown / embed link source in source
-mode, and to both kinds of link inside embedded notes. A link typed just
-now is dimmed optimistically when its target is not among the vault's known
-note keys; the open-note overlay re-index still refreshes the authoritative
-unresolved set shortly after. Host claim handlers may override default opening.
+mode, and to both kinds of link inside embedded notes. Obsidian 1.15.0 dims
+only wikilinks in Live Preview (its embeds and Reading view dim both), so
+the dimmed Markdown links in Live Preview are Lumiere's own. A link typed just
+now is dimmed optimistically when its last segment names no file in the vault
+(a note's basename or alias, or another file's name with its extension;
+excluded files count, since links to them resolve); the open-note overlay
+re-index still refreshes the authoritative unresolved set shortly after. In a
+vault with more than 150,000 such names the optimistic dimming is off. Host
+claim handlers may override default opening.
 
 File-location fields are validated by this plugin's schema and exposed as
 `files.newNoteFolder` and `files.attachmentFolder`. The native note-creation
