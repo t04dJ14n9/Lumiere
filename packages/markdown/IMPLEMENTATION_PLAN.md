@@ -8982,5 +8982,45 @@ Two issues from the post-merge review of #800 (#787's editing commands).
   (the registered Insert Footnote is also run read-only). Each read-only
   assertion failed with its guard removed; each has a writable control.
 
+Second review round (PR #814, 2026-11-22), each with a unit test that
+failed before it (part of #826):
+
+- **Table cells.** Formatting commands run on the active view, which with
+  a table cell open is the cell's own `EditorView`; its state never had
+  the note's `readOnly`, so Bold, Insert Link, Set Heading, Clear
+  Formatting, Delete Paragraph and the rest edited the cell, and
+  `CellProjection.projectChange` wrote the edit into the read-only note.
+  The cell now carries the note's read-only state: set when it opens and
+  changed through a compartment when the note turns read-only or writable
+  (`noteReadOnly` and `followNoteReadOnly` in editor/api.ts; tables'
+  `cell-read-only.ts` keeps the open cells and tells them from an update
+  listener on the note's editor). The copy comes from the editor plugin
+  because it owns the note's read-only state: the composition policy test
+  forbids features from setting `EditorState.readOnly`. So those commands
+  refuse and CodeMirror ignores typing in the cell.
+  `CellProjection.open` opens no cell, `TableSelection.pointerDown` starts
+  no selection, and `projectChange` writes nothing while the note is
+  read-only. `TableGrid.replace`, through which table commands, the sort,
+  the table clipboard (cut, paste, delete) and row/column moves by handle
+  write, refuses too, and `TableController.write` checks again after a
+  sort's keys have rendered, before it closes the open cell. Leaving a
+  table at the note's edge (`TableKeyboard.leave`) adds no blank line.
+  `src/plugins/tables/read-only.test.ts`, and in read-only-commands every
+  formatting command (bar Add Cursor Above/Below) in a stand-in open cell
+  of a read-only note.
+- Coverage: Toggle Inline Math through `formatting.wrap` with the formatting
+  plugin running (already refused), and the three Properties commands
+  through their registered handlers (read-only; Clear file properties
+  writable).
+
+Of #826 this covers typing in a table cell and the table's clipboard and
+drag (handle) writes. Left for #826: the Properties sheet's inputs, the
+image size keys and list continuation on Enter.
+
+Checks: `pnpm check` passes. CI's quality job failed once on this PR with
+the known flaky large-vault byte check (#843); its Playwright quality specs
+passed. Not run here: `pnpm test:browser`, `pnpm test:quality`,
+`pnpm test:vscode`.
+
 Checks: `pnpm check` passes. Not run here: `pnpm test:browser`,
 `pnpm test:quality`, `pnpm test:vscode` (others run them on this machine).

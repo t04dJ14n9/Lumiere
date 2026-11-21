@@ -224,7 +224,9 @@
   Footnote, Insert Table and the table commands, the checklist commands, Add
   file property (Mod+;), Add alias and Clear file properties no longer
   change a note whose editor has turned read-only after it stopped syncing
-  (#812).
+  (#812). Neither do tables in such a note: a cell no longer opens, an open
+  cell takes no typing or formatting, and table commands, sorting, the
+  table clipboard and moving rows or columns write nothing.
 
 Fixes for several VS Code windows open at once, each with a test; checked
 with two real windows on one profile.
