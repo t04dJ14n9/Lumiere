@@ -1053,8 +1053,9 @@ Short specifications, beyond the source's tested behaviour:
   tag only on its own text. Accepting with Enter closes `]]` (reusing an
   auto-inserted one) and inserts `vault.linkText`; Tab takes the text only.
 - **outline**: a native Explorer tree view (like PDF Outline) of the active
-  editor's headings, with click to reveal and current-heading tracking, plus
-  a heading Quick Pick on Ctrl+Shift+O in Lumiere. VS Code's built-in Markdown
+  editor's headings, with click to reveal, current-heading tracking and
+  drag to move a section before another heading (one `TextDocument` edit),
+  plus a heading Quick Pick on Ctrl+Shift+O in Lumiere. VS Code's built-in Markdown
   provider supplies Outline and breadcrumbs in the plain text editor. This
   removes the in-webview outline panel and its
   **Toggle Outline** title action.

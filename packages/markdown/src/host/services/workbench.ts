@@ -5,6 +5,7 @@ import type {
   Dialogs,
   StatusHandle,
   TreeNode,
+  TreeSource,
   WorkbenchViews,
 } from "../../shared/host";
 import { createLumierePanel } from "../panel-adapter";
@@ -118,8 +119,10 @@ function textEditor(uri: string) {
 const createTree: WorkbenchViews["tree"] = (viewId, source, options) => {
   const changed = new vscode.EventEmitter<TreeNode | undefined>();
   const expansion = new Map<string, boolean>();
+  const dragAndDropController = dragWithin(viewId, source);
   const view = vscode.window.createTreeView<TreeNode>(viewId, {
     ...options,
+    ...(dragAndDropController && { dragAndDropController }),
     treeDataProvider: {
       onDidChangeTreeData: changed.event,
       getChildren: (node) => (node ? source.children(node) : source.roots()),
@@ -182,6 +185,36 @@ const createTree: WorkbenchViews["tree"] = (viewId, source, options) => {
     },
   };
 };
+
+/**
+ * Row dragging within one tree, for a source that takes drops. The rows
+ * travel as objects under the tree's own MIME type, which VS Code hands only
+ * to this extension's trees; a drop from anywhere else carries none of it.
+ */
+function dragWithin(
+  viewId: string,
+  source: TreeSource,
+): vscode.TreeDragAndDropController<TreeNode> | undefined {
+  const drop = source.drop?.bind(source);
+  if (!drop) {
+    return undefined;
+  }
+  const mimeType = `application/vnd.code.tree.${viewId.toLowerCase()}`;
+  return {
+    dragMimeTypes: [mimeType],
+    dropMimeTypes: [mimeType],
+    handleDrag(nodes, transfer) {
+      transfer.set(mimeType, new vscode.DataTransferItem(nodes));
+    },
+    async handleDrop(target, transfer) {
+      const nodes: unknown = transfer.get(mimeType)?.value;
+      if (!Array.isArray(nodes) || nodes.length !== 1) {
+        return;
+      }
+      await drop(nodes[0] as TreeNode, target);
+    },
+  };
+}
 
 async function collapseAll(
   view: vscode.TreeView<TreeNode>,

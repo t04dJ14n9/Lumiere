@@ -204,6 +204,8 @@ embedder.
   out: typing `[[` suggests notes in the Lumiere editor only.
 - No command palette or keybindings: commands run from clicks, links and the
   editor's own menus.
+- `TreeSource.drop` is never called: a tree's rows cannot be dragged, so the
+  Outline does not move sections here as it does in VS Code.
 - `TreeHandle.clearSelection` emits `deselect` (the Outline when the reader is
   above the first heading); the app's tree panel unmarks the current row.
 - `TreeHandle.expand` / `collapse` emit `expand` / `collapse` events (and

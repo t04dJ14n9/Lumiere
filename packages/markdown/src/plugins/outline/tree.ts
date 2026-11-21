@@ -5,6 +5,18 @@ import { OPEN_COMMAND } from "./commands";
 import { headingAt, outlineOf } from "./headings";
 import type { OutlineHeading } from "./headings";
 
+/**
+ * A heading row dropped in the outline: the note and the text the rows were
+ * built from, and where the section goes (offsets in that text).
+ */
+export interface SectionDrop {
+  uri: string;
+  text: string;
+  heading: number;
+  /** The heading it goes before; undefined for the end of the note. */
+  beforeHeading: number | undefined;
+}
+
 /** The active note's headings, indexed for navigation and native tree reveals. */
 export class OutlineSource implements TreeSource {
   private uri: string | undefined;
@@ -13,6 +25,10 @@ export class OutlineSource implements TreeSource {
   private readonly byId = new Map<string, OutlineHeading>();
   /** When true, parents emit `expanded: true` (expandMode `all`). Default false = accordion. */
   parentsStartExpanded = false;
+
+  constructor(
+    private readonly moveSection?: (drop: SectionDrop) => Promise<void>,
+  ) {}
 
   get isEmpty(): boolean {
     return this.outline.length === 0;
@@ -61,6 +77,24 @@ export class OutlineSource implements TreeSource {
   parent(node: TreeNode): TreeNode | undefined {
     const parent = this.byId.get(node.id)?.parent;
     return parent ? this.node(parent) : undefined;
+  }
+
+  /**
+   * A row dropped on another moves its section before that heading; dropped
+   * below the last row, to the end of the note.
+   */
+  async drop(dragged: TreeNode, target: TreeNode | undefined): Promise<void> {
+    const heading = this.byId.get(dragged.id);
+    const before = target && this.byId.get(target.id);
+    if (!this.uri || !heading || (target && !before)) {
+      return;
+    }
+    await this.moveSection?.({
+      uri: this.uri,
+      text: this.coordinates.source,
+      heading: heading.offset,
+      beforeHeading: before?.offset,
+    });
   }
 
   pathTo(node: TreeNode): TreeNode[] {
