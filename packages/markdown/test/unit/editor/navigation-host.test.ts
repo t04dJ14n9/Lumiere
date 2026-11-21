@@ -552,6 +552,37 @@ test("resolve: basename (create:false) still uses source parent", async (t) => {
   });
 });
 
+test("resolve: a bare link to another kind of file opens the one beside the note, else the vault root's", async (t) => {
+  await withResolveVault(t, async ({ navigation, root, source, directory }) => {
+    const areas = join(directory, "wiki", "areas");
+    await writeFile(join(directory, "root-only.png"), "root");
+    await writeFile(join(directory, "twin.png"), "root twin");
+    await writeFile(join(areas, "twin.png"), "beside");
+    const href = (...parts: string[]) =>
+      pathToFileURL(join(directory, ...parts)).href;
+    // `[x](image.png)` may not make a note, so only the lookup decides.
+    const resolve = (path: string) =>
+      navigation.resolve({
+        root,
+        source,
+        path,
+        create: false,
+        folderNote: "",
+        newNoteFolder: "",
+      });
+
+    // Only a vault-root file: the link opens it from a note in a folder.
+    assert.equal(await resolve("root-only.png"), href("root-only.png"));
+    // A file beside the note wins over the vault root's twin.
+    assert.equal(await resolve("twin.png"), href("wiki/areas/twin.png"));
+    // No file anywhere, and nothing is made for it.
+    assert.equal(await resolve("nowhere.png"), undefined);
+    await assert.rejects(() => stat(join(directory, "nowhere.png")), /ENOENT/);
+    // `./` stays the note's folder only, with no vault-root fallback.
+    assert.equal(await resolve("./root-only.png"), undefined);
+  });
+});
+
 /**
  * The preview and embed side of a link: resources over the same disk, with
  * an index that knows no file, as for the hidden files the index skips.

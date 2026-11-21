@@ -209,7 +209,9 @@
   at the vault root, the preview showed the one beside the note and a click
   opened the root's. A click and a preview now look in the same places, in
   the same order (a bare name beside the note, then at the vault root), and
-  a click makes a note only when neither has the file (#823).
+  a click makes a note only when neither has the file. A click on a bare
+  link to another kind of file, such as `[x](image.png)`, now opens the
+  vault root's file when none is beside the note; it did nothing (#823).
 - Markdown: a link to a heading of the note it is in (`[jump](#Part)`),
   inside a hidden note such as `.raw/captured/page.md` that an embed or a
   preview showed by its path, now previews its heading. It said "Resource

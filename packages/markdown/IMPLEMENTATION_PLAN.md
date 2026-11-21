@@ -8839,7 +8839,12 @@ through both sides, `resolve` (fake `vscode` over the disk) and
 click (failing before: the click opened the root's), the explicit `./` and
 `/` forms, a root-only file with `newNoteFolder` set (no second note), and a
 link that names no file (the preview says "Resource not found", the click
-makes the note where it did, and the preview then finds it).
+makes the note where it did, and the preview then finds it). Review nit,
+added later: `resolve` for a bare link to another kind of file
+(`[x](image.png)`, `create: false`) from a note in a subfolder opens a
+vault-root file when none is beside the note (failing before: it did
+nothing), the file beside the note when both exist, nothing for neither, and
+`./` still never falls back to the vault root.
 `note-resources.test.ts` adds the probe order of the disk fallback;
 `test/unit/shared/link-location.test.ts` is rewritten for the two
 functions (the open-image and rooted-link tests lose only the removed
