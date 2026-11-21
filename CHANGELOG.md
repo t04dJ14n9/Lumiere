@@ -220,9 +220,11 @@
 - Markdown: Insert Code Block and Insert Math Block with several carets or
   selections on one line put one block around the line, instead of two empty
   blocks with the text left outside them (#810). Insert Math Block, Toggle
-  Inline Math, Insert Wikilink, Insert Embed, Insert Callout and the
-  checklist commands no longer change a note whose editor has turned
-  read-only after it stopped syncing (#812).
+  Inline Math, Insert Wikilink, Insert Embed, Insert Callout, Insert
+  Footnote, Insert Table and the table commands, the checklist commands, Add
+  file property (Mod+;), Add alias and Clear file properties no longer
+  change a note whose editor has turned read-only after it stopped syncing
+  (#812).
 
 Fixes for several VS Code windows open at once, each with a test; checked
 with two real windows on one profile.
