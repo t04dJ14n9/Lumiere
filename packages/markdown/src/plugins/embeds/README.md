@@ -101,8 +101,13 @@ workspace trust from Render. YouTube/Bilibili image links share the EmbedBlock h
 Cycles and ancestry depth of twelve are refused, and the embed says which (“A” embeds
 itself, so it is not shown again.); what Obsidian says is not measured. Local files remain host-contained;
 remote media requires a trusted workspace. A PDF embed draws one page (`#page=`,
-`#height=`) with page buttons rather than Obsidian's full PDF viewer; its Open
-button opens the PDF in Lumiere PDF at that page. Embeds of one PDF fetch
+`#height=`) with page buttons rather than Obsidian's full PDF viewer (a
+scrolling viewer with its toolbar inside the note); its Open
+button opens the PDF in Lumiere PDF at that page, which is where the full
+viewer is. The viewer is not embedded (DESIGN §1): it is Lumiere PDF's
+React interface over PDFium in a worker, in its own editor; a note's page
+allows no worker, and loading that interface into every note that embeds a
+PDF would weigh on opening notes, which the quality budgets hold. Embeds of one PDF fetch
 and open it once (`pdf-documents.ts`), and a page turn only renders the page
 of that open document. The bytes go once the engine has opened them; the
 document closes with the last embed of it. Rendering still runs in the

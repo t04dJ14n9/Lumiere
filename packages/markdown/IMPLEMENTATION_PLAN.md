@@ -7408,3 +7408,40 @@ search with no source (`query.test.ts`); search, identity, plugin and
 contributions tests, typecheck, ESLint, Prettier and `pnpm contributions
 --check` pass. Not run here: `pnpm test:browser`, `test:quality`,
 `test:vscode`.
+
+## The rest of #699's documented limits: decisions (2026-11-21)
+
+Each limit was read against Obsidian 1.15.0's shipped code (behaviour only,
+nothing copied). Three are implemented in their own pull requests: dragging
+a heading in Markdown Outline moves its section (#788); Rename Heading… is in
+the note's menu on a heading line, the part of Obsidian's heading rename
+that was missing, and typing over a heading does not update links in
+Obsidian either (#790); Search Vault… and the Vault Search view stand in for
+the search pane (#792). The others are decided here:
+
+- **Quick switcher key.** Obsidian's Mod+O is VS Code's Open File, bound
+  for the whole window; bound inside notes it would take Open File away
+  there, and no other key is Obsidian's. Left unbound; the quickSwitcher
+  README gives the `keybindings.json` entry that binds Mod+O in notes.
+  Choosing a key of Lumiere's own is the owner's call.
+- **PDF embeds.** Obsidian embeds its whole PDF viewer. Lumiere's embed
+  draws one page with page buttons and opens Lumiere PDF, the full viewer,
+  in its own editor (DESIGN §1): that viewer is a React interface over
+  PDFium in a worker, a note's page allows no worker, and loading it into
+  every note embedding a PDF would weigh on opening notes. DESIGN §1's
+  stale "card that opens the PDF" text now says this.
+- **Community plugins, themes, CSS snippets.** Plugins for Lumiere are VS
+  Code extensions on its API (AGENT.md); the in-note Obsidian plugin runtime
+  was removed for its cost (2026-10-27). Colours follow the VS Code theme.
+  CSS snippets already load from the vault's config folder as
+  `appearance.json` enables them, so nothing was missing there.
+- **External link page preview.** Obsidian 1.15.0 does not preview external
+  links either: its editor and Reading view send `hover-link` only for
+  internal links (and footnotes in the editor). Lumiere matches; the
+  CAPABILITIES row and the pagePreview README say so.
+- **Reading-view footnotes section.** Declined with Reading view (owner
+  decision); the footnotes README and CAPABILITIES say so.
+
+Documentation only: CAPABILITIES, DESIGN §1, the embeds, footnotes,
+pagePreview and quickSwitcher READMEs, and two PARITY rows ("not observed
+running").
