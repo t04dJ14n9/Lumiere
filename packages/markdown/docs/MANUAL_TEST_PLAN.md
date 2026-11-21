@@ -417,6 +417,25 @@ title, then set `lumiere.markdown.plugins.inlineTitle.enabled` to true.
    the embedded note.
 5. In an untrusted workspace, remote images do not load.
 6. **Insert Embed** wraps the selection; undo restores it.
+7. HTML (issue #831; in a disposable vault, in a trusted window; needs a
+   self-contained `diagram.html` with an inline script that changes the page
+   on a click, a `style.css` beside it that it links, and a note `Html.md`
+   with `![[diagram.html]]`, `![[diagram.html|600x200]]`,
+   `![[diagram.html#height=480]]`, `![alt](/diagram.html)` and a fenced block
+   `html-embed` with `file: diagram.html` and `height: 300`): each shows a card
+   with the file's name, **Open** and **Open as Text**, no frame, and the same
+   small height; scrolling the note past and back moves nothing below a card.
+   **Open as Text** shows the file's source in a text editor. **Open** opens a
+   tab `diagram.html` whose page is the diagram: its click changes it, its
+   `style.css` applies (the `<base>` is the file's folder), `Open` again shows the
+   same tab and loads the file again. In that page's DevTools `acquireVsCodeApi`
+   exists, and posting a message does nothing (nothing in Lumiere listens).
+   `![alt](../../outside.html)`, a file outside the vault, shows the missing-file
+   placeholder. The Edit button of a block reveals its Markdown. In an untrusted
+   workspace (Restricted Mode) each card also says "Interactive HTML is disabled
+   in Restricted Mode", and **Open** opens the file as text, no page. Record
+   whether the tab's page runs its inline script, loads `style.css`, and loads a
+   script from an `https:` CDN.
 
 ### onlineVideos
 
@@ -1300,6 +1319,7 @@ Use the disposable fixture vault from Setup. These rows enumerate every generate
 | `lumiere.markdown.gitGutter.showChange` — Show Git Change | alt+f3 | On a disposable fixture, run Show Git Change; confirm its named action using the plugin scenarios above, then undo where applicable. Repeat after disable/re-enable and switching panes. |
 | `lumiere.markdown.graph.open` — Open Vault Graph | unbound | On a disposable fixture, run Open Vault Graph; confirm its named action using the plugin scenarios above, then undo where applicable. Repeat after disable/re-enable and switching panes. |
 | `lumiere.markdown.graph.chooseVault` — Choose Vault for Graph | unbound | On a disposable fixture, run Choose Vault for Graph; confirm its named action using the plugin scenarios above, then undo where applicable. Repeat after disable/re-enable and switching panes. |
+| `lumiere.markdown.htmlViewer.open` — Open HTML File | unbound | Hidden from the palette; link navigation calls it. In a disposable vault in a trusted window, with `diagram.html` (an inline script that changes the page on a click, and a `style.css` beside it that it links) in it, click a note's link `[Open](/diagram.html)`: a tab named `diagram.html` opens, the click changes the page and `style.css` applies; click the link again: the same tab is shown and the file loads again. Posting a message from the page does nothing. A link to a file outside the vault (`../outside.html`) does not open. In Restricted Mode the same link opens the file as text. Turn the plugin off and the link opens as text. |
 | `lumiere.markdown.ideContext.copy` — Copy IDE Context | unbound | On a disposable fixture, run Copy IDE Context; confirm its named action using the plugin scenarios above, then undo where applicable. Repeat after disable/re-enable and switching panes. |
 | `lumiere.markdown.ideContext.send` — Send IDE Context to Agent… | unbound | On a disposable fixture, run Send IDE Context to Agent…; confirm its named action using the plugin scenarios above, then undo where applicable. Repeat after disable/re-enable and switching panes. |
 | `lumiere.markdown.downloadAttachments` — Download Attachments for Current File | unbound | On a disposable fixture with `![A cat](https://…/cat.png)` twice, a web page link written as an image and a `data:` image: run the command and choose Download; confirm one `cat.png` (or `cat 1.png`) and one `Image.*` in the attachment folder, embeds that keep the alt text, the page link left as it was, and that one undo restores the note. Choosing nothing changes nothing. |
@@ -1411,6 +1431,7 @@ Use the disposable fixture vault from Setup. These rows enumerate every generate
 | `lumiere.markdown.plugins.gitGutter.enabled` | `true` | boolean; change at workspace-folder scope, verify the owning plugin scenario, then reset the override. |
 | `lumiere.markdown.plugins.gitInline.enabled` | `false` | boolean; change at workspace-folder scope, verify the owning plugin scenario, then reset the override. |
 | `lumiere.markdown.plugins.graph.enabled` | `true` | boolean; change at workspace-folder scope, verify the owning plugin scenario, then reset the override. |
+| `lumiere.markdown.plugins.htmlViewer.enabled` | `true` | boolean; with it off, a link to an `.html` file opens the file as text; then reset. |
 | `lumiere.markdown.plugins.ideContext.enabled` | `true` | boolean; change at workspace-folder scope, verify the owning plugin scenario, then reset the override. |
 | `lumiere.markdown.plugins.indentGuides.enabled` | `true` | boolean; change at workspace-folder scope, verify the owning plugin scenario, then reset the override. |
 | `lumiere.markdown.plugins.inlineTitle.enabled` | `false` | boolean; change at workspace-folder scope, verify the owning plugin scenario, then reset the override. |

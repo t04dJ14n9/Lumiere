@@ -1,8 +1,9 @@
 # Embeds
 
 Transcludes notes, headings and block IDs and displays images, audio and video,
-like Obsidian's embeds. A PDF shows one page inline; other attachments appear as
-cards that open files.
+like Obsidian's embeds. A PDF shows one page inline; a local HTML file appears
+as a card that opens it in the HTML viewer; other attachments appear as cards
+that open files.
 
 ## How it works
 
@@ -51,6 +52,29 @@ removes the embed; Escape leaves source edit and re-selects the image
 (Obsidian), or clears the outline; a click elsewhere or any edit also lets
 it go (`image-selection.ts`, `image-size.ts`). While selected, the caret is hidden: the keys resize or edit the image rather than type. With Vim on, those keys still win: a capture-phase keydown runs them before `@replit/codemirror-vim`'s handler (BH-006).
 
+An HTML file (`![[diagram.html]]`, `![alt](/wiki/diagram.html)`, or a fenced
+`html-embed` block) is a resource of kind `html`, and a note shows it as a
+**card**: the file's name and two buttons, Open and Open as Text (`html-embed.ts`).
+Open hands the file to link navigation, which shows it in the HTML Viewer
+(`plugins/htmlViewer`: the page in a tab of its own, in a trusted workspace;
+Restricted Mode opens it as text, and the card says so there). Open as Text
+asks link navigation for the text editor (`links.open` with `text`). The page
+never runs in the note: community plugins such as Embed HTML draw it in a frame,
+but VS Code serves a vault file only to its own webview documents, so a frame in
+the editor's page stays blank (checked in VS Code 1.147, 2026-11-22), and the page
+could not be kept apart from the note in the editor's own document.
+A card reserves the height of an attachment card (`estimated-height.ts`), whatever
+size the source writes. It waits until it is near the screen, like a note or PDF
+embed. Clicks stay with its buttons; the note's Markdown is edited from the
+block's Edit button, as for a PDF.
+
+The syntax of the community plugins is read so that notes written for them show
+the card (see "Community plugin compatibility" in docs/PARITY.md): `![[page.html|600x200]]`
+(Embed HTML's sizes, and `|x200`, `|-`, `|height: 300px`), `#height=480`, `#gamma`,
+and a fenced block of the `html-embed` plugins with `file:` or `path:`, or the path
+on its first line alone. The file is what is read; the size and the other keys are
+read past.
+
 ## Files
 
 - `manifest.ts`: enablement and Insert Embed contribution.
@@ -62,6 +86,7 @@ it go (`image-selection.ts`, `image-size.ts`). While selected, the caret is hidd
   an editor scroller (hover previews) load at once.
 - `embed-lives.ts`: what each embed of a pass holds (listeners, teardowns, the file it shows), released when it is shown again or the pass ends.
 - `embed-lives.test.ts`: release order and lookup by file.
+- `embed-errors.ts`: writing what an embed that cannot be shown says, on the embed or the block that stands in for a Markdown `<img>`, and giving back its own title.
 - `missing.ts`: the text an embed that cannot be shown says (`“x.png” could not be found.`, a missing heading, `failed to fetch image` for bytes that did not load, a circular or too deep embed).
 - `stand-in.ts`: the `.file-embed` block that takes a failed Markdown `<img>`'s place, since an `<img>` shows no text.
 - `resource-cache.ts`: what embeds resolved, so a block rendered again shows its files at once.
@@ -82,6 +107,9 @@ it go (`image-selection.ts`, `image-size.ts`). While selected, the caret is hidd
 - `pdf-documents.ts`: a PDF fetched and opened once for every embed that shows it; an embed's page turns.
 - `pdf-engine.ts`: EmbedPDF's engine on the editor's thread, and a page rendered from an open document.
 - `pdf-embed.ts`: the inline PDF viewer (`#page=` and `#height=` subpaths, page rendering through EmbedPDF, the Open button).
+- `html-embed.ts`: the card of an HTML file: its name, Open and Open as Text.
+- `html-embed-source.ts`: the file an embed's, a Markdown image's or a block's source names; pure.
+- `html-embed-block.ts`: a fenced `html-embed` block that names a file into the embed placeholder.
 - `base-embed.ts`: renders an embedded `.base` file's selected view (table, cards or list).
 - `base-embed-views.ts`: the cards and list views, cell values and note links for base embeds.
 - `webm.ts`: WebM parsing/recovery exports.
@@ -91,6 +119,7 @@ it go (`image-selection.ts`, `image-size.ts`). While selected, the caret is hidd
 - `note.test.ts`: fragment, source-offset and circular-embed units.
 - `image.test.ts`: saved-scale validation and legacy state units.
 - `webm.test.ts`: real codec fixtures, stream ordering and invalid/truncated data.
+- `test/unit/embeds/html-embed.test.ts`, `html-embed-source.test.ts`, `html-fake-dom.ts`: the card for every syntax and workspace trust (no frame, script or address), the buttons, the block conversion, the reserved height.
 - `estimated-height.test.ts`: height reserves for sized, unsized and note embeds.
 - `missing.test.ts`: the text shown for missing files, headings and blocks.
 - `image-selection-keys.test.ts`, `image-resize-corner.test.ts`, `embed-actions.test.ts`: selected-image keys and chrome.
@@ -113,7 +142,7 @@ every embed showing a file that changed (what it showed stays until the new
 version replaces it); no kernel events emitted.
 Uses Links RPC to open an embedded target. `lumiere.markdown.plugins.embeds.enabled`
 defaults to true. Insert Embed has no default keybinding. Remote media follows
-workspace trust from Render. A link Online Videos draws (a tweet's frame, or its card in an untrusted workspace) reserves the height that plugin claims through `render/claimedHeight` (none when the plugin is off) so off-viewport remounts keep that height, and an inline embed of such a link is drawn again when the claim changes. Any other remote link, a removed Online Videos site included, is a remote image: `failed to fetch image` when it is not one. Note embeds reserve a multi-paragraph floor and remember painted height across off-viewport remounts (`estimated-height.ts`).
+workspace trust from Render (`render.trusted`, anything else is untrusted), and so does the note an HTML card shows in Restricted Mode. A link Online Videos draws (a tweet's frame, or its card in an untrusted workspace) reserves the height that plugin claims through `render/claimedHeight` (none when the plugin is off) so off-viewport remounts keep that height, and an inline embed of such a link is drawn again when the claim changes. Any other remote link, a removed Online Videos site included, is a remote image: `failed to fetch image` when it is not one. Note embeds reserve a multi-paragraph floor and remember painted height across off-viewport remounts (`estimated-height.ts`).
 
 ## Limits and differences from Obsidian
 
@@ -133,3 +162,10 @@ document closes with the last embed of it. Rendering still runs in the
 editor's own thread: its page allows no worker (no `worker-src`), so a large
 page at a high zoom can hold up typing while it draws. WebM recovery supports VP8/VP9 and Opus/Vorbis when the host
 MediaSource supports them. Visual and playback parity await owner comparison. Images show their source at the caret as Obsidian 1.12 did, not as 1.13+ (owner request 2026-11-21; docs/OBSIDIAN_REVEAL_RULES.md, "Intentional divergence: images"). The scroll that keeps a clicked block image under the pointer needs room to scroll, and may leave its source line above the top of the pane. Image embeds use Obsidian's `.embed-actions` frosted bar (inspect control; VS Code tokens).
+
+An HTML file is a card, not the page: no live page appears in a note, whatever
+the syntax, unlike Embed HTML, HTML Embed, Local HTML Embed and HTML Widget Embed,
+which embed it. The size options, `#id`, `mode=extract` and an `html-embed` block's
+`height:` and `width:` are read and have no effect. Remote pages
+(`![[https://host/page.html]]`) are not HTML cards: they stay what they were. A hover
+preview of an HTML link says the file is an attachment to open.

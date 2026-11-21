@@ -9156,3 +9156,142 @@ Checks: my `pnpm check` (private TMPDIR) passed. The PR gate on the sixth
 round's head (31c54c90) passed `pnpm check`, `pnpm test:vscode` and CI.
 Not run here: `pnpm test:browser`, `pnpm test:quality`,
 `pnpm test:vscode`.
+## HTML embeds and the HTML viewer (#831; 2026-11-22)
+
+Owner-approved 2026-11-21: a vault's `.html` / `.htm` file can be shown in a
+note and opened from a link, without coupling to any generator. VS Code and
+Cursor only; the hosts outside it are on `hosts-snapshot-2026-11-21` and are
+untouched.
+
+**First design, and why it was dropped.** The first version showed the file in a
+frame in the note: `<iframe sandbox="allow-scripts">`, no `allow-same-origin`,
+loaded by the file's `asWebviewUri` address, in a trusted workspace, with
+`frame-src` naming the webview's source. A probe in a real VS Code 1.147 window
+(the coordinator's, 2026-11-22; the first design was never run in a window)
+found that the frame never loads: its document is `chrome-error://chromewebdata/`
+and the box is blank. VS Code serves `vscode-resource` addresses only to its own
+webview documents (through the webview's service worker), and an opaque-origin
+sandboxed child frame is not one. The viewer's page framed the file the same
+way, so it would have failed too. **Owner decision 2026-11-22: option B, the
+viewer panel only, no live embed in the note.** The frame code, the sandbox
+constant, the address check, the `frame-src` change and the change to the
+editor page's message check were removed with it.
+
+Design.
+
+- `resources`: `Resource["kind"]` has `"html"` (`resourceKind`, `isHtmlFile` in
+  `src/shared/html-file.ts`); the resource carries the file's address and no
+  text, so a missing or escaping file fails as any embed's does. The resources
+  api also exports the containment functions, so the viewer reuses the rule.
+- `embeds`: an HTML embed is a **card** (`html-embed.ts`): the file's name, Open
+  (link navigation: the viewer, or text in Restricted Mode, where the card
+  says so) and Open as Text (`links.open` with `text`, `OpenOptions.asText`,
+  skips the viewer). No frame, script or address is made, in any workspace.
+  `html-embed-source.ts` reads the file from the three syntaxes (a wikilink
+  embed, a Markdown image, a fenced `html-embed` block) and reads past any size;
+  `html-embed-block.ts` turns a block that names a file into the embed
+  placeholder in `render/postProcess`. A card reserves an attachment card's
+  height (`estimated-height.ts`), so no budget moves. `embedsNote` is false for
+  HTML, so editing the Markdown is the Edit button (`reveal: "button"`).
+- `htmlViewer` (new plugin, host surface, `needs: ["panels"]`): the command
+  `lumiere.markdown.htmlViewer.open` (hidden from the palette; declared in the
+  manifest, `pnpm contributions`). A trusted workspace only. It reads the file in
+  the host after containment and sets it as **the panel's own HTML document**
+  (`document.ts`), not in a child frame: a `<meta>` policy and a `<base href>`
+  (the webview address of the file's folder) are put first in its `<head>`.
+  One panel per file; opening it again shows the tab and loads the file again
+  (the page text carries the load time). `localResourceRoots` is the vault.
+- `views.panel` gained `PanelOptions` (key, column, resource roots, retain
+  context) and `webview.resource(uri)`; every panel has `enableCommandUris:
+  false`. The graph's panel is unchanged. `host/navigation.ts` hands an HTML link
+  to the command when it is registered, else opens it as text.
+- `post-process.ts` reached the 400-line limit, so what an embed that cannot be
+  shown says (`showError`, `clearError`) moved, with no change of behaviour, to
+  `embed-errors.ts`.
+
+The policy the viewer sets, exactly (`S` is the webview's `cspSource`):
+
+```text
+default-src 'none'; script-src 'unsafe-inline' 'unsafe-eval' S https:; style-src 'unsafe-inline' S https:; img-src S data: blob: https:; font-src S data: https:; media-src S data: blob: https:; connect-src S blob: https:; frame-src https:; worker-src S blob:; base-uri S; form-action 'none'
+```
+
+The page is the document, so its own inline and vault scripts and styles must run
+(`'unsafe-inline'`, `S`). `https:` scripts and styles are allowed because pages
+often load a library from a CDN, which a trusted workspace allows (stated in
+`plugins/htmlViewer/README.md`). `'unsafe-eval'` is there because many
+generated pages need it and a page that can run its own script gains nothing
+from it (a decision the owner may reverse). The rest is closed unless named.
+
+Security, and where each rule is enforced and tested.
+
+1. **Isolation.** The page is a separate webview with its own origin, so it
+   cannot reach Lumiere's editor. It has `acquireVsCodeApi`, so **no
+   `onDidReceiveMessage` handler is registered for the panel** and nothing is
+   posted to it (`htmlViewer/host.ts` never calls `webview.onMessage` or `post`;
+   `test/unit/htmlViewer/host.test.ts` uses a panel that throws on either;
+   `test/unit/host/panel-adapter.test.ts` shows creating a panel registers
+   none). `enableCommandUris` is false (`host/panel-adapter.ts`, tested).
+2. **Resources.** `localResourceRoots` is the vault alone (`resourceRoots` of
+   `PanelOptions`; `host.test.ts`, `panel-adapter.test.ts`); `enableScripts` is
+   true.
+3. **Trusted workspaces only.** The command opens the file as text in Restricted
+   Mode and reads nothing (`host.test.ts`). The card in a note never runs a page
+   (`html-embed.test.ts`: no frame, script, object or address, trusted, untrusted
+   and unknown).
+4. **Containment.** The file is checked by path, through symbolic links
+   (`containedResource`, the embeds' rule) and against the workspace folders
+   before it is read; a refused file is never read (`host.test.ts`: outside, a
+   sibling prefix, `..`, another scheme, a vault outside the workspace, a symbolic
+   link, a real path). `host/navigation.ts` still runs `contained` first
+   (`editor/navigation-host.test.ts`). The file is at most 16 MB.
+5. **The document.** The policy is tested to the character, and the injection
+   (with and without a head, a comment, a byte order mark, a base or policy of
+   the file's own, a `<head` inside a script) in `htmlViewer/document.test.ts`;
+   the injected text has no script.
+6. **Not changed.** The editor page's CSP (`frame-src https:`), DOMPurify
+   (`sanitizer-options.ts`, `security.ts`) and the editor page's `fromHost`
+   message check are as on main.
+
+Left for a separate change. `fromHost` (`webview/transport.ts`) accepts a message
+with no `source`, and a frame removed right after it posted reaches the page that
+way. The first design added a frame, which made this reachable; it also exists
+today for a raw `<iframe src="https://…">` in a note in a trusted workspace (a
+remote page that posts, then is removed by a redraw). Fixing it (refusing an
+opaque origin and the window of an `iframe` in the page) was in the first
+version of this change with a test; it is not part of an HTML viewer and was
+dropped to keep this one focused.
+
+Community plugin compatibility (owner request 2026-11-21). Read, not run:
+https://community.obsidian.md/plugins/embed-html (Embed HTML) and its demo notes
+"00 Start", "02 Custom Size" and "03 Scroll to Element" in
+https://github.com/mnaoumov/obsidian-embed-html;
+https://community.obsidian.md/plugins/html-embed (HTML Embed),
+https://community.obsidian.md/plugins/local-html-embed (Local HTML Embed) and
+https://community.obsidian.md/plugins/html-widget-embed (HTML Widget Embed).
+Their syntax is read so notes written for them show the card; those plugins
+embed the page live, and Lumiere does not (docs/PARITY.md, "Community plugin
+compatibility", one row per difference). The demo note "04 Extract Element" and
+the repository's settings note were not read. No plugin code was read or copied.
+
+Tests (unit only; no browser spec added). `shared/html-file`,
+`embeds/html-embed` (with `html-fake-dom.ts`) and `html-embed-source`,
+`htmlViewer/{document,request,host}`, `host/panel-adapter`, additions to
+`resources/note-resources`, `links/host` and `editor/navigation-host`, and the
+viewer registered in the contribution-parity test.
+
+Checks: `pnpm check` passes (unit tests: core 97, agents 50, markdown 3,864, pdf 938
+passed and 1 skipped; run with a private `TMPDIR`, as the shared tsx cache made it
+take hours). `pnpm --filter @workshop/markdown test:quality` passed once (the 9
+Playwright checks and the large-vault test), no budget touched. Browser specs run,
+only those the change touches: pdf-embed, image-remount-height,
+inline-image-remount-height, note-embed-remount-height, embed-under-tall-props,
+link-clicks, build, first-paint-snapshot, iframe-remount-height,
+html-css-height-remount and html-media-remount-height (32 passed). Not run: the
+full browser suite and `test:vscode` (the owner probes the viewer in a real window).
+
+Not verified, for the owner's probe in a real window: that VS Code runs the
+panel's page (its inline script) and applies the `<base>` and the policy; that a
+relative stylesheet, script and image load from the vault; that an `https:`
+library loads; that a `fetch` of a vault file works across the webview's origins;
+that the hidden tab keeps its page (`retainContextWhenHidden`); and what a link
+inside the page does.

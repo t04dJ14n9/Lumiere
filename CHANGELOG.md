@@ -227,6 +227,17 @@
   (#812). Neither do tables in such a note: a cell no longer opens, an open
   cell takes no typing or formatting, and table commands, sorting, the
   table clipboard and moving rows or columns write nothing.
+- Markdown: a link to a local HTML file in the vault (`[Open](/wiki/diagram.html)`)
+  opens the page in a tab of its own, in a trusted workspace, instead of the
+  file's source. The tab is a webview whose page is the file, with the file's folder
+  as its base, so relative styles, scripts and images load from the vault; the
+  extension listens to nothing it posts. In Restricted Mode, and when the HTML
+  Viewer plugin is off, the file opens as text. An HTML file embedded in a note
+  (`![[diagram.html]]`, `![alt](/wiki/diagram.html)`, an `html-embed` block, with
+  the size syntax of the Embed HTML and HTML Embed community plugins) shows a card
+  with Open and Open as Text, not the page: VS Code does not serve a vault file to a
+  frame in the editor. docs/PARITY.md, "Community plugin compatibility", lists
+  each difference (#831).
 
 Fixes for several VS Code windows open at once, each with a test; checked
 with two real windows on one profile.
