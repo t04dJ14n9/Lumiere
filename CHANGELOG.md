@@ -188,6 +188,15 @@
   lookups and the setting `lumiere.markdown.onlineVideos.bilibiliPlayer`. Links
   to those sites are plain images, which fail to load. A Bilibili player is
   tracked in #835.
+- Markdown and PDF: a trackpad or wheel scroll that is nearly straight up and
+  down, or sideways, now scrolls along that one axis, as VS Code's editor
+  does; a clearly diagonal one still pans freely. Over a wide table, a
+  vertical gesture scrolls the note and no longer nudges the table sideways,
+  and a sideways one scrolls the table. It follows `editor.scrollPredominantAxis`
+  (on by default; turn it off to scroll every gesture freely) and is decided
+  once for a whole gesture, momentum included, so a swipe does not change
+  axis in the middle. Pinch and Ctrl, Cmd and Shift wheels are untouched
+  (owner request).
 
 Fixes for several VS Code windows open at once, each with a test; checked
 with two real windows on one profile.

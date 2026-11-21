@@ -3317,6 +3317,12 @@
             "scope": "resource",
             "description": "Temporary notes in a scratch folder."
           },
+          "lumiere.markdown.plugins.scrollAxisLock.enabled": {
+            "type": "boolean",
+            "default": true,
+            "scope": "resource",
+            "description": "A trackpad or wheel scroll that is nearly straight up and down or sideways moves the note, its tables and its code blocks along that one axis, following editor.scrollPredominantAxis."
+          },
           "lumiere.markdown.plugins.search.enabled": {
             "type": "boolean",
             "default": true,
@@ -4055,7 +4061,7 @@
   },
   "scripts": {
     "build": "node scripts/build.mjs",
-    "typecheck": "tsc -p tsconfig.json && tsc -p test && tsc -p packages/core && tsc -p packages/agents && tsc -p packages/agents/test && pnpm --filter @workshop/markdown typecheck && pnpm --filter @workshop/pdf typecheck",
+    "typecheck": "tsc -p tsconfig.json && tsc -p test && tsc -p packages/core && tsc -p packages/agents && tsc -p packages/agents/test && tsc -p packages/scroll && tsc -p packages/scroll/test && pnpm --filter @workshop/markdown typecheck && pnpm --filter @workshop/pdf typecheck",
     "lint": "eslint . --max-warnings=0",
     "format": "prettier --write .",
     "format:check": "prettier --check .",

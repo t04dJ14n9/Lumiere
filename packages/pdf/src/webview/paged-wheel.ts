@@ -1,5 +1,6 @@
 import { useEffect, type RefObject } from "react";
 import type { ScrollMode } from "../shared/view-settings";
+import { LockedWheel } from "./axis-locked-wheel";
 import { scrollsNoteCard } from "./note-card-target";
 import { useStageApi, type StageApi } from "./stage-capability";
 
@@ -19,6 +20,11 @@ import { useStageApi, type StageApi } from "./stage-capability";
  * push. When the swipe has reached the end of the page by then, that "new
  * push" begins at the edge, and the same swipe turns the page.
  *
+ * A gesture that is nearly straight is locked to its axis
+ * (`axis-locked-wheel.ts`): only its movement along it pans the page, so a
+ * swipe down that drifts sideways neither slides the page nor reaches the
+ * side edge that would turn it.
+ *
  * Pinches and Ctrl/Cmd+wheel (zoom) and wheels over a note card are left
  * alone. The listener sits on the viewer around the Stage and takes the
  * events it handles first (capture phase), so the Stage's own wheel handler
@@ -34,7 +40,9 @@ export function usePagedWheel(
     if (!element || mode !== "paged") {
       return;
     }
-    const onWheel = (event: WheelEvent): void => panPagedWheel(stage, event);
+    const locked = new LockedWheel();
+    const onWheel = (event: WheelEvent): void =>
+      panPagedWheel(stage, event, locked);
     element.addEventListener("wheel", onWheel, {
       passive: false,
       capture: true,
@@ -44,7 +52,11 @@ export function usePagedWheel(
   }, [container, stage, mode]);
 }
 
-function panPagedWheel(stage: StageApi, event: WheelEvent): void {
+function panPagedWheel(
+  stage: StageApi,
+  event: WheelEvent,
+  locked: LockedWheel,
+): void {
   if (
     // The browser is already scrolling with this wheel's gesture.
     !event.cancelable ||
@@ -59,8 +71,13 @@ function panPagedWheel(stage: StageApi, event: WheelEvent): void {
   }
   event.preventDefault();
   event.stopPropagation();
-  // Shift turns a vertical wheel sideways, as the Stage's binding does.
-  const dx = event.shiftKey ? event.deltaY : event.deltaX;
-  const dy = event.shiftKey ? event.deltaX : event.deltaY;
+  const { dx, dy } = locked.along(event) ?? wheelDelta(event);
   stage.panBy(-dx, -dy);
+}
+
+/** Shift turns a vertical wheel sideways, as the Stage's binding does. */
+function wheelDelta(event: WheelEvent): { dx: number; dy: number } {
+  return event.shiftKey
+    ? { dx: event.deltaY, dy: event.deltaX }
+    : { dx: event.deltaX, dy: event.deltaY };
 }

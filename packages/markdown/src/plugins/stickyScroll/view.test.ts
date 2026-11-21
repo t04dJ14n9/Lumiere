@@ -345,6 +345,24 @@ test("wheel input over pinned rows scrolls the note with pixel, line and page un
   assert.equal(f.wheel.length, 3);
 });
 
+test("a wheel the axis lock already took is not scrolled again", () => {
+  const f = fixture();
+  f.scrollTo("root body");
+  let prevented = 0;
+  for (const listener of f.dom.listeners.get("wheel") ?? []) {
+    listener({
+      deltaX: 3,
+      deltaY: 40,
+      deltaMode: 0,
+      ctrlKey: false,
+      defaultPrevented: true,
+      preventDefault: () => prevented++,
+    });
+  }
+  assert.deepEqual(f.wheel, []);
+  assert.equal(prevented, 0);
+});
+
 test("measurement probes below the sticky chrome height, not the hidden lines under it", () => {
   const f = fixture();
   f.scrollTo("child body");

@@ -267,7 +267,9 @@ export class StickyScrollView {
   }
 
   private scroll(event: WheelEvent): void {
-    if (event.ctrlKey) {
+    // A pinch zooms, and a locked gesture was already scrolled along its axis
+    // by the axis lock, which listens to the whole editor before this does.
+    if (event.ctrlKey || event.defaultPrevented) {
       return;
     }
     let scale = 1;

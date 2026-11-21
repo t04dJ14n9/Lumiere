@@ -62,6 +62,11 @@ export function followDiagonalWheel(
   let pending = 0;
   let since = 0;
   const remember = (event: WheelEvent): void => {
+    if (event.defaultPrevented) {
+      // The axis lock took this wheel and scrolled the note by its vertical
+      // part itself; the table never pans for it.
+      return;
+    }
     if (!isMostlyVerticalDiagonal(event)) {
       pending = 0;
       return;

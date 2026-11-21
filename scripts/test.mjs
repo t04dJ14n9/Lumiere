@@ -1,5 +1,5 @@
 // Unit tests of every package, each run from its own directory: the core,
-// the agent formats, then Lumiere and Lumiere PDF.
+// the agent formats, the scroll gestures, then Lumiere and Lumiere PDF.
 // Root scripts are tested too.
 import { readdirSync } from "node:fs";
 import { spawnSync } from "node:child_process";
@@ -41,6 +41,15 @@ const failures = [
     // From the package's directory, where its fixtures are.
     ...testFiles("packages/agents/test").map((file) =>
       file.replace("packages/agents/", ""),
+    ),
+  ]),
+  run("packages/scroll", "pnpm", [
+    "exec",
+    "tsx",
+    "--test",
+    ...options,
+    ...testFiles("packages/scroll/test").map((file) =>
+      file.replace("packages/scroll/", ""),
     ),
   ]),
   run("packages/markdown", "node", ["scripts/test.mjs"]),

@@ -70,6 +70,10 @@ const WEBVIEW_LOADERS: Record<string, () => Promise<Plugin<unknown>>> = {
     import("../plugins/stickyScroll/webview").then(
       (m) => m.stickyScrollWebview,
     ),
+  scrollAxisLock: () =>
+    import("../plugins/scrollAxisLock/webview").then(
+      (m) => m.scrollAxisLockWebview,
+    ),
   inlineTitle: () =>
     import("../plugins/inlineTitle/webview").then((m) => m.inlineTitleWebview),
   lineNumbers: () =>

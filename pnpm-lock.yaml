@@ -167,6 +167,9 @@ importers:
       '@workshop/core':
         specifier: workspace:*
         version: link:../core
+      '@workshop/scroll':
+        specifier: workspace:*
+        version: link:../scroll
       dompurify:
         specifier: 3.4.18
         version: 3.4.18
@@ -282,6 +285,9 @@ importers:
       '@workshop/core':
         specifier: workspace:*
         version: link:../core
+      '@workshop/scroll':
+        specifier: workspace:*
+        version: link:../scroll
       markdown-it:
         specifier: 15.0.3
         version: 15.0.3
@@ -307,6 +313,8 @@ importers:
       '@types/vscode':
         specifier: 1.90.0
         version: 1.90.0
+
+  packages/scroll: {}
 
 packages:
 

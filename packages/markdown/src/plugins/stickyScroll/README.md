@@ -13,7 +13,9 @@ Markdown parser and heading labels. A view plugin measures the first visible
 block and draws its scrolled-away ancestors in an overlay, without changing the
 document's height. CodeMirror scroll margins keep navigation targets below the
 overlay. Each panel owns its own chrome; removing the editor extension removes
-the field, overlay, scroll listener and margins.
+the field, overlay, scroll listener and margins. A wheel over the pinned rows
+scrolls the note (the overlay sits outside the scroller); one that axis-locked
+scrolling (`scrollAxisLock`) has already taken is not scrolled again.
 
 ## Files
 

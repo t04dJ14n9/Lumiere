@@ -5,6 +5,7 @@ import {
   wheelPixels,
   wheelTarget,
 } from "../../src/shared/smooth-motion";
+import { AxisLock } from "@workshop/scroll/axis-lock";
 import { resolveSmoothScrolling } from "../../src/shared/view-settings";
 import { fakeReact } from "./support/fake-react";
 import { loadHook } from "./support/load-hook";
@@ -32,9 +33,17 @@ const noteCardTarget = loadHook(
   },
 );
 
+/** The real axis-locked-wheel.ts, over the viewer settings `viewSettings` holds. */
+const viewSettings: { predominantAxis?: boolean } = {};
+const axisLockedWheel = loadHook("axis-locked-wheel.ts", {
+  "@workshop/scroll/axis-lock": { AxisLock },
+  "./reading-position": { currentViewSettings: () => viewSettings },
+});
+
 /** A Stage that scrolls from `top`/`left`, recording each scroll it is asked for. */
 function fakeStage(view = { top: 200, left: 50 }) {
   const scrolls: Record<string, unknown>[] = [];
+  const wheels: [number, number, number][] = [];
   const stops: string[] = [];
   let moving = false;
   let motionEnded: () => void = () => undefined;
@@ -56,6 +65,10 @@ function fakeStage(view = { top: 200, left: 50 }) {
       motionEnded = listener;
       return () => undefined;
     },
+    wheelBy: (dx: number, dy: number, time: number) => {
+      wheels.push([dx, dy, time]);
+      return true;
+    },
     scrollTo: (options: Record<string, unknown>) => {
       scrolls.push(
         JSON.parse(JSON.stringify(options)) as Record<string, unknown>,
@@ -66,6 +79,7 @@ function fakeStage(view = { top: 200, left: 50 }) {
   return {
     stage,
     scrolls,
+    wheels,
     stops,
     endMotion: () => {
       moving = false;
@@ -82,6 +96,7 @@ interface Wheel {
   ctrlKey: boolean;
   metaKey: boolean;
   timeStamp: number;
+  cancelable: boolean;
   target: Element;
   prevented: boolean;
   stopped: boolean;
@@ -98,6 +113,7 @@ function wheel(patch: Partial<Wheel> = {}): Wheel {
     ctrlKey: false,
     metaKey: false,
     timeStamp: 0,
+    cancelable: true,
     target: new Element(true),
     prevented: false,
     stopped: false,
@@ -134,6 +150,7 @@ function attach(
       "../shared/view-settings": { resolveSmoothScrolling },
       "./stage-capability": { useStageApi: () => options.stage },
       "./note-card-target": noteCardTarget,
+      "./axis-locked-wheel": axisLockedWheel,
     },
     { Element, window: { matchMedia: () => ({ matches: false }) } },
   );
@@ -252,4 +269,73 @@ test("input stops an animation of the wheel's, but not a move that is not its ow
   endMotion();
   view.emit("touchstart");
   assert.deepEqual(stops, ["stop"], "the animation had ended");
+});
+
+const swipe = (deltaX: number, deltaY: number, timeStamp: number) =>
+  wheel({ deltaX, deltaY, timeStamp });
+
+test("a trackpad swipe that is nearly straight pans along its axis only, and the Stage's own handler never sees it", () => {
+  viewSettings.predominantAxis = true;
+  const { stage, wheels, scrolls } = fakeStage();
+  const view = attach({ stage });
+  const first = swipe(4, 30, 1_000);
+  const second = swipe(-5, 28, 1_016);
+  view.wheel(first);
+  view.wheel(second);
+  assert.deepEqual(wheels, [
+    [-0, -30, 1_000],
+    [-0, -28, 1_016],
+  ]);
+  for (const event of [first, second]) {
+    assert.equal(event.prevented, true);
+    assert.equal(event.stopped, true);
+  }
+  assert.deepEqual(scrolls, []);
+  // A sideways swipe keeps its sideways part, and drops the stray vertical.
+  const sideways = swipe(30, 4, 5_000);
+  view.wheel(sideways);
+  assert.deepEqual(wheels.at(-1), [-30, -0, 5_000]);
+});
+
+test("a diagonal swipe, a straight one and a pinch are panned by the Stage as they come", () => {
+  viewSettings.predominantAxis = true;
+  const { stage, wheels } = fakeStage();
+  const view = attach({ stage });
+  const events = [
+    swipe(20, 20, 1_000),
+    swipe(0, 40, 2_000),
+    wheel({ deltaX: 3, deltaY: 40, timeStamp: 3_000, ctrlKey: true }),
+    wheel({ deltaX: 3, deltaY: 40, timeStamp: 4_000, shiftKey: true }),
+    wheel({ deltaX: 3, deltaY: 40, timeStamp: 5_000, cancelable: false }),
+  ];
+  for (const event of events) {
+    view.wheel(event);
+    assert.equal(event.prevented, false);
+    assert.equal(event.stopped, false);
+  }
+  assert.deepEqual(wheels, []);
+});
+
+test("with editor.scrollPredominantAxis off the Stage pans every swipe whole", () => {
+  viewSettings.predominantAxis = false;
+  const { stage, wheels } = fakeStage();
+  const event = swipe(4, 30, 1_000);
+  attach({ stage }).wheel(event);
+  viewSettings.predominantAxis = true;
+  assert.deepEqual(wheels, []);
+  assert.equal(event.prevented, false);
+});
+
+test("the lock hears a gesture's whole length, so a delta like a notch in the middle of it is not animated", () => {
+  viewSettings.predominantAxis = true;
+  const { stage, wheels, scrolls } = fakeStage();
+  const view = attach({ stage });
+  view.wheel(swipe(3, 60, 1_000));
+  view.wheel(swipe(2, 80, 1_016));
+  // Exactly 100 with no sideways part: a notch to a classifier that only sees this one.
+  const lookalike = swipe(0, 100, 1_032);
+  view.wheel(lookalike);
+  assert.deepEqual(scrolls, []);
+  assert.equal(lookalike.prevented, false);
+  assert.equal(wheels.length, 2);
 });

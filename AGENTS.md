@@ -8,6 +8,7 @@ workspace. Everything is a plugin. The whole-repository map is
 | --- | --- | --- |
 | `packages/core` | The plugin core on Cordis | its README.md |
 | `packages/agents` | What both products hand to agents | its README.md |
+| `packages/scroll` | How both products read a wheel or trackpad scroll (axis locking) | its README.md |
 | `packages/markdown` | Lumiere: Obsidian-like Live Preview | its DESIGN.md, IMPLEMENTATION_PLAN.md |
 | `packages/pdf` | Lumiere PDF: EmbedPDF viewer with agent links | its README.md, AGENTS.md |
 | `src/extension.ts` | The composition root: one plugin tree for both | |
@@ -27,8 +28,8 @@ If the task is a user / third-party custom plugin, read
 
 - PR review layers: see [REVIEW.md](REVIEW.md).
 - Pure code runs anywhere, with no DOM, VS Code or Node APIs:
-  `packages/core/src`, `packages/agents/src`, and `src/shared` and
-  `src/markdown` in each product.
+  `packages/core/src`, `packages/agents/src`, `packages/scroll/src`, and
+  `src/shared` and `src/markdown` in each product.
   The tsconfig projects and the `architecture/boundaries` lint rule enforce
   this.
 - Every capability is a plugin (`packages/markdown/src/plugins/<id>/`,

@@ -1232,6 +1232,7 @@ default (§25).
 | Show line numbers | plugin `lineNumbers` | on (owner decision), following `editor.lineNumbers` |
 | Show indentation guides | plugin `indentGuides` | on |
 | (no built-in equivalent) Sticky headings | plugin `stickyScroll`; `lumiere.markdown.stickyScroll.maxLines` | on; 5 rows |
+| (no built-in equivalent) Axis-locked scrolling: a nearly straight trackpad or wheel gesture scrolls along one axis | plugin `scrollAxisLock`, following `editor.scrollPredominantAxis` | on (owner request, 2026-11-21) |
 | Right-to-left | `lumiere.markdown.editor.rightToLeft` | `false` |
 | Spellcheck | plugin `spellcheck` | on |
 | Auto pair brackets / Markdown syntax | `lumiere.markdown.autoPair.brackets`, `.markdown` | `true`, `true` |

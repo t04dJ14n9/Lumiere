@@ -790,6 +790,31 @@ paragraphs. Keep **Formatting section** as a following sibling.
 7. Disable sticky scroll while scrolled: all rows disappear immediately. Enable
    it again: the current ancestors return. The `minimal` preset has no rows.
 
+### scrollAxisLock
+
+On by default; needs a trackpad (or a Magic Mouse). Use a note with a table wider
+than the pane (a dozen columns) between a few screens of text. A real
+trackpad's momentum and event rate are what the automated checks cannot give.
+
+1. With `editor.scrollPredominantAxis` at its default (on), swipe down over the
+   table with a slight sideways wobble: the note scrolls and the table never
+   moves sideways, however many swipes. Swipe along the table, again with a
+   wobble: the table scrolls and the note does not move.
+2. Swipe clearly diagonally (about 45 degrees) in the note and over the
+   table: it pans as it did before this plugin (the browser gives a gesture to
+   the first scroller that can take it, so over the table the table takes it).
+   A swipe within about 27 degrees of an axis is locked to it; beyond that it
+   is free.
+3. Flick down and let the momentum coast: it stays vertical to the end. Pinch
+   and Ctrl or Cmd with the wheel are left to the browser as before, and a
+   mouse wheel scrolls as before.
+4. Turn `editor.scrollPredominantAxis` off while the note is open: the wobble
+   moves the table again. Turn it back on, and disable
+   `lumiere.markdown.plugins.scrollAxisLock.enabled`: the same.
+5. Do the same over the pinned heading rows, a code block, a Mermaid diagram
+   and a display formula that are wider than the pane, and in a PDF zoomed in
+   (see the PDF manual checks): each scrolls along the swipe's axis only.
+
 ### gitGutter
 
 On by default. Needs the built-in Git extension and a note in a repository.
@@ -1404,6 +1429,7 @@ Use the disposable fixture vault from Setup. These rows enumerate every generate
 | `lumiere.markdown.plugins.properties.enabled` | `true` | boolean; change at workspace-folder scope, verify the owning plugin scenario, then reset the override. |
 | `lumiere.markdown.plugins.quickSwitcher.enabled` | `true` | boolean; change at workspace-folder scope, verify the owning plugin scenario, then reset the override. |
 | `lumiere.markdown.plugins.scratch.enabled` | `true` | boolean; change at workspace-folder scope, verify the owning plugin scenario, then reset the override. |
+| `lumiere.markdown.plugins.scrollAxisLock.enabled` | `true` | boolean; change at workspace-folder scope, verify the owning plugin scenario, then reset the override. |
 | `lumiere.markdown.plugins.search.enabled` | `true` | boolean; change at workspace-folder scope, verify the owning plugin scenario, then reset the override. |
 | `lumiere.markdown.plugins.smartLists.enabled` | `true` | boolean; change at workspace-folder scope, verify the owning plugin scenario, then reset the override. |
 | `lumiere.markdown.plugins.spellcheck.enabled` | `true` | boolean; change at workspace-folder scope, verify the owning plugin scenario, then reset the override. |

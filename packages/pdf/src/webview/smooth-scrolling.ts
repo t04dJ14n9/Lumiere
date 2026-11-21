@@ -9,6 +9,7 @@ import {
   type ScrollDirection,
   type ScrollMode,
 } from "../shared/view-settings";
+import { LockedWheel } from "./axis-locked-wheel";
 import { scrollsNoteCard } from "./note-card-target";
 import { useStageApi, type StageApi } from "./stage-capability";
 
@@ -28,7 +29,9 @@ export function useSmoothMotion(enabled: boolean | null): boolean {
 /**
  * Animate discrete wheels only, and turn them sideways in horizontal reading
  * (or with Shift). The Stage scrolls pixel input (a trackpad) as it comes,
- * so that is left to it. Paged scrolling has its own wheel (`paged-wheel.ts`).
+ * so that is left to it, except that a gesture that is nearly straight is
+ * locked to its axis (`axis-locked-wheel.ts`): the Stage is given only its
+ * movement along it. Paged scrolling has its own wheel (`paged-wheel.ts`).
  *
  * The listener sits on the viewer around the Stage and takes the events it
  * handles first (capture phase), so the Stage's own wheel handler never sees
@@ -72,6 +75,7 @@ const INTERRUPTING_INPUT = ["pointerdown", "touchstart", "keydown"];
 /** A mouse wheel's notches over one Stage, animated or stepped. */
 class SmoothWheel {
   private readonly gesture = new WheelGesture();
+  private readonly locked = new LockedWheel();
   /** Where the animation in progress is headed, along `horizontal`'s axis. */
   private target = 0;
   private horizontal = false;
@@ -112,12 +116,30 @@ class SmoothWheel {
       !event.metaKey;
     if (!discrete || (!smooth && !horizontal)) {
       this.animating = false;
+      this.panLocked(event);
       return;
     }
     event.preventDefault();
     event.stopPropagation();
     this.step(event, horizontal);
   };
+
+  /**
+   * Pan by only the part of a pixel wheel along its locked axis, as the
+   * Stage's own handler would pan by all of it, and keep the event from it.
+   */
+  private panLocked(event: WheelEvent): void {
+    const kept = this.locked.along(event);
+    if (
+      kept === null ||
+      !event.cancelable ||
+      !this.stage.wheelBy(-kept.dx, -kept.dy, event.timeStamp)
+    ) {
+      return;
+    }
+    event.preventDefault();
+    event.stopPropagation();
+  }
 
   /** Move one notch further along the axis, adding to a move in progress. */
   private step(event: WheelEvent, horizontal: boolean): void {

@@ -26,6 +26,12 @@ export interface ViewSettings extends ViewChoices {
    * need not name it: missing is on.
    */
   keyboardShortcuts?: boolean;
+  /**
+   * A wheel or trackpad gesture that is nearly straight scrolls along that
+   * one axis (`editor.scrollPredominantAxis`, which the host reads for the
+   * PDF). Optional so hosts without the setting need not name it: missing is on.
+   */
+  predominantAxis?: boolean;
 }
 
 /**
@@ -114,6 +120,7 @@ export function parseViewSettings(value: unknown): ViewSettings {
     regionsEnabled: settings.regionsEnabled === true,
     arrowsKeepPlace: settings.arrowsKeepPlace !== false,
     keyboardShortcuts: settings.keyboardShortcuts !== false,
+    predominantAxis: settings.predominantAxis !== false,
   };
 }
 

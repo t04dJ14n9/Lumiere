@@ -8596,3 +8596,197 @@ large-vault test) and the whole markdown browser suite (486 tests) passed
 before YouTube was removed; no budget was changed, and the removal only drops
 a frame kind. Not run by the author: `pnpm test:vscode` (the probe above was
 run by the coordinator, with the owner's go-ahead).
+## Axis-locked scrolling (owner request, 2026-11-21)
+
+Owner request (2026-11-21): when a wheel or trackpad gesture deviates only
+slightly from straight up and down or sideways, it scrolls purely along that
+axis; a clearly diagonal one still pans freely. In the Markdown editor
+(the note's scroller and its nested horizontal scrollers) and in Lumiere
+PDF when zoomed. Follows VS Code's `editor.scrollPredominantAxis`.
+
+### Survey: how others do it
+
+What was read, and what was not.
+
+- **VS Code and Monaco, `editor.scrollPredominantAxis`** (read in the
+  installed VS Code 1.147.0, Electron 43.8.9, Chrome 150:
+  `Contents/Resources/app/out/vs/workbench/workbench.desktop.main.js`,
+  `ScrollableElement._onMouseWheel`; upstream
+  `src/vs/base/browser/ui/scrollbar/scrollableElement.ts`, checked against
+  `microsoft/vscode` `main`). The editor option is registered with default
+  `true`; its description (`out/nls.messages.json`, entry 678) is "Scroll
+  only along the predominant axis when scrolling both vertically and
+  horizontally at the same time. Prevents horizontal drift when scrolling
+  vertically on a trackpad." Per wheel event, `Math.abs(deltaY) >=
+  Math.abs(deltaX)` zeroes `deltaX`, else `deltaY` (a tie goes vertical), and
+  the listener is registered `{ passive: false }` and scrolls by itself. So
+  Monaco decides event by event at 45 degrees, with no memory of the gesture,
+  and pays for it with a main-thread wait on every wheel.
+- **macOS AppKit, `NSScrollView.usesPredominantAxisScrolling`** (read in
+  the SDK header `NSScrollView.h`, Xcode's MacOSX SDK, and Apple's
+  documentation page for the property). Both say content that scrolls in
+  both axes but "predominantly one axis at a time" should set it, that with
+  scroll balls and touch surfaces the user's intention is harder to tell, and
+  that when set the scroll view "will only scroll in the predominate
+  direction the user is scrolling"; the default is YES (NO for apps built
+  before 10.7). Neither says how the direction is chosen or that it is held
+  for a whole gesture: the owner's description ("locks the axis for the whole
+  gesture, decided at its start") is not in what Apple publishes, so the
+  design below is ours, not a reading of AppKit.
+- **Chromium.** Chromium has axis locking ("rails") of its own, and a recent
+  CSS property opts out of it. The input-dev thread "Rail Scrolling" (2015)
+  says touch restricts the axis in two places, gesture recognition and scroll
+  bubbling, while a touchpad only does during bubbling, and that the logic is
+  inconsistent between the main and compositor threads. The blink-dev Intent
+  to Prototype and Ship, `scroll-axis-lock` (Chrome 153, `auto` | `none`,
+  not inherited), the explainer
+  (`explainers-by-googlers/scroll-axis-lock`) and Chrome's "Two-Dimensional
+  Panning" guide describe the default as locking a gesture that starts with
+  significantly more movement on one axis, at its start, for touchscreens,
+  trackpads and mouse wheels, with no numbers. I did not read the Chromium
+  source. Measured instead, with Playwright 1.65's Chromium 158 and trusted
+  wheel events over a 2-D scroller (`Input.dispatchMouseEvent`, which carries
+  no gesture phase): five events of (3, 20) scrolled to (15, 100), (10, 20)
+  to (50, 100) and (20, 3) to (100, 15): no locking. Whether Electron 43's
+  Chromium rails a real macOS trackpad gesture could not be tested here (no
+  trackpad, and no event phases from CDP), so the plugin does not rely on it:
+  if the browser does lock, taking the gesture ourselves changes nothing.
+- **Obsidian 1.15.0** (static search of `obsidian.asar` and `app.asar` for
+  "predominant", `scroll-axis-lock`, `axisLock`, `usesPredominantAxis`):
+  nothing, so there is no Obsidian setting to mirror; it is a VS Code
+  behaviour (CAPABILITIES says so).
+
+### Design
+
+- `@workshop/scroll` (new pure package, shared because neither product may
+  import the other): `AxisLock.axisFor(wheelEvent)` returns `"x"`, `"y"` or
+  null per event. A gesture is the wheel events with no pause of 150 ms
+  (the pause Lumiere PDF already uses to tell a notch from a swipe), momentum
+  included. Its first events add up (signed, so jitter cancels) until they
+  cover 8 px or number three, then it is judged once: locked to the longer
+  axis if the shorter is at most half of it (about 26.6 degrees from the
+  axis; the owner's range was 25 to 30, and half is a ratio people can
+  state), else free for the rest of the gesture. Ctrl and Cmd wheels (pinch
+  and zoom) and Shift wheels return null and leave the gesture untouched;
+  line and page deltas are judged by their pixels (40 and 800). Not in the
+  request: fingers that land again before momentum stops are not told from
+  drift by a pause, so movement across the locked axis beyond what movement
+  along it cancels ends the lock at 48 px. That is the "sufficiently far in
+  the other direction" CSS WG's description of browsers' locking mentions.
+- Setting: `editor.scrollPredominantAxis` through the plugin's manifest
+  (`nativeConfigKeys`, as `editor.lineNumbers` is read), so it applies to
+  Markdown files, reaches the webview in the plugin's validated config and
+  reconfigures live. No contributed setting. In PDF the host reads it beside
+  `editor.smoothScrolling` (`host/viewer/preferences.ts`) and sends it with
+  the view settings, `parseViewSettings` validates it in the webview.
+- **Markdown: a listener that cancels only while it has something to
+  cancel (the one place this departs from "a capturing wheel listener that
+  prevents the default").** The quality gate "no wheel or touch listener
+  makes scrolling wait for the page" (`blockingScrollListeners: 0`, which
+  reads every listener on the window and the document) forbids a wheel
+  listener that could cancel on the scroll path, as does the tables'
+  "never cancels wheel input" rule; raising a budget is not allowed.
+  Passive listeners cannot stop a drift the browser applies on its own
+  thread (putting the offset back in a scroll handler shows a frame of
+  drift per event). So `scrollAxisLock/wheel-rails.ts` listens to the
+  editor's root, capture, passive; a straight swipe, a mouse wheel (no
+  sideways delta at all) and a diagonal gesture stay that way. Only when a
+  locked gesture also carries movement across its axis is the listener
+  replaced by one that can cancel, until a gesture's pause after the last
+  event. Measured in Chromium 158 (scratch, not committed): a listener
+  added in the middle of a gesture sees its first one or two events
+  uncancelable (the browser had them), and every event after that
+  cancelable. While it can cancel it takes every event of the gesture:
+  `preventDefault()` and `scrollBy({ behavior: "instant" })` of the part
+  along the axis on the nearest scroller at or above the pointer that can
+  go that way (`scroll-route.ts`, chosen once per gesture), the part across
+  dropped. For the events the browser had, the scrollers that can move
+  across the axis (the one the browser latched included) are put back where
+  they stood, in a frame of their own per event.
+- Integration, not a fight: a vertical gesture over a wide table scrolls the
+  note and never pans the table (the table was the latched scroller, so what
+  its first events moved is put back); a sideways one scrolls the table, and
+  the note does not follow the stray vertical. `tables/diagonal-wheel.ts`
+  (the passive listener that gives the note the vertical part of a diagonal
+  the table latched) ignores a wheel that was cancelled, as does the
+  pinned headings' wheel forwarding (`stickyScroll/view.ts`), which
+  already cancels and scrolls the note itself. The note's own scroller
+  rarely scrolls sideways (`EditorView.lineWrapping` is always on), so
+  nested scrollers (tables, mermaid, math, embeds) are where this shows; the
+  rule is the same everywhere in the editor.
+- PDF: the Stage's own wheel binding is a cancelling listener already, so
+  nothing new waits on the page. `webview/axis-locked-wheel.ts` (`LockedWheel`)
+  asks the lock about the wheel and, for a locked pixel wheel with movement
+  across its axis, `smooth-scrolling.ts` calls `stage.wheelBy` with the part
+  along the axis and keeps the event from the Stage's handler;
+  `paged-wheel.ts` does the same through `panBy`. It sits after the notch
+  classifier (`WheelGesture`) so that still hears every event; mouse-wheel
+  notches have no sideways part and are untouched; pinches, Ctrl/Cmd wheels
+  and wheels over a note card are not taken. Paged reading and the page
+  turn at the edge keep their rules; they just receive only the along-axis
+  push.
+
+Review fix (PR #846, Gemini): the first event of a locked gesture was
+cancelled and then scrolled by the page in the same, still passive,
+invocation. A passive listener's `preventDefault` does nothing, so over the
+pinned headings (whose own non-passive listener makes the event cancelable) the
+note scrolled twice: by the browser or the pins' handler, and by the page. The
+page now scrolls only when its own cancel took effect
+(`defaultPrevented` after the call, by the listener that was non-passive when
+the event arrived); otherwise the browser, or the pins' handler, scrolls it and
+the cross-axis drift is put back in a frame. A target outside the note's
+scroller (the pins) now has the note's own cross-axis position held too. Tests
+that failed first: `wheel-rails.test.ts` (a cancelable first event, with a
+stand-in that ignores `preventDefault` in a passive listener, as the DOM does),
+`scroll-route.test.ts` (a target outside the scroller) and
+`test/unit/scrollAxisLock/sticky-overlap.test.ts` (the real pinned-headings
+view and the rails together: one scroll per event).
+
+### What stays imperfect
+
+The first event or two of a locked gesture reach the browser whole, so a few
+pixels across the axis can remain per swipe (measured: 4 px of a table's
+position from the first of twelve events, against 28 px without the lock).
+While a gesture is locked and has sideways movement, each wheel event waits
+for the main thread, as in VS Code's editor. Real macOS trackpad gestures
+(momentum, event phases, event rates of 8 to 16 ms) were not available to
+test; the browser checks below use trusted wheel events one after another.
+Not done: `scroll-axis-lock: none` on 2-D scrollers, which would keep
+Chromium's own locking from catching a diagonal gesture this leaves free. The
+property ships in Chrome 153; Electron 43 (VS Code 1.147) is Chromium 150, and
+whether the browser's lock would fight a diagonal gesture is unmeasured.
+
+### Tests
+
+New unit tests: `packages/scroll/test/axis-lock.test.ts` (angles just inside
+and outside the ratio, gesture boundaries by time, momentum, undecided and
+jittery starts, pinch and Shift passthrough, line and page deltas, a new
+swipe across a locked axis); `scrollAxisLock/scroll-route.test.ts` and
+`wheel-rails.test.ts` (passive until locked with sideways movement, what it
+takes, tables, units, pause, stop); PDF `smooth-scrolling.test.ts` and
+`paged-wheel.test.ts` (lock, diagonal, setting off, pinch, the classifier
+hears the whole gesture) and `view-persistence.test.ts` (the host reads
+`editor.scrollPredominantAxis`); the sticky and table tests for a cancelled
+wheel. Existing expectations changed: `view-controls.test.ts` (the parsed
+view settings gain `predominantAxis`) and PDF `wheel-lifecycle.spec.ts`,
+which sent a vertical, a sideways and a diagonal wheel in one instant: they
+are now separated by the 150 ms that ends a gesture, with every assertion
+as before.
+
+Checks: `pnpm check` (format, lint, typecheck, every unit suite,
+contributions) passes; it found, and the same branch fixed, the lifecycle
+test (a plugin with no editor extension is listed in `noEditorExtensions`)
+and the manual and parity inventories (`scrollAxisLock` rows); two timing
+tests (`fuzz: rows.diffRows`, the vault indexer's cold start) failed once while
+other worktrees' suites loaded the machine to a load average of 57 and passed
+on a rerun. Browser: the Markdown specs tables-scroll, tables-native-scroll,
+tables-cell-click, vim-status-scroll, blank-body-large-properties,
+outline-jump-top, sticky-tall-properties, build and core (37 passed), and the
+PDF specs trackpad-scrolling, zoom-smoothness, paged-every-input, paged-view,
+smooth-motion and wheel-lifecycle (190 passed, then 172 more after the
+wheel-lifecycle change). `pnpm --filter @workshop/markdown test:quality`, once:
+its nine browser checks pass, including "no wheel or touch listener makes
+scrolling wait for the page" (budget 0, unchanged) and the scroll smoothness
+checks, and the large-vault check passes. Not run: the full browser suites and
+`test:vscode` (the owner runs it; the change adds a setting to `package.json`
+and runs in the webview).
