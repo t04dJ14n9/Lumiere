@@ -171,7 +171,11 @@ markers reveal on their first line; math and HTML blocks reveal whole.
 Display math (a renderer with `revealsOnlyWhileFocused`) reveals only while
 the editor has focus, as everything does in Obsidian, and keeps its formula
 typeset just after the source (`editingPreview`: a block below it, or the
-math plugin's own inline preview when the `$$` share a line with text). Styled inline HTML (`kbd`, `mark`, `span`, …) hides both tags and paints the content even when the opener carries attributes (`<kbd class="…">`); self-closing and block tags stay source. A click on a
+math plugin's own inline preview when the `$$` share a line with text). Images
+do the same (owner request 2026-11-21, Obsidian 1.12's behaviour): an image
+alone on its line is a block with `revealsOnlyWhileFocused` and
+`editingPreview`, and an image in text is drawn again after its source
+through `widgetAfter` (embeds' `image-reveal.ts`); images join reveal chains. Styled inline HTML (`kbd`, `mark`, `span`, …) hides both tags and paints the content even when the opener carries attributes (`<kbd class="…">`); self-closing and block tags stay source. A click on a
 rendered math block reveals it as in Obsidian, selecting the formula. Callout
 title/body clicks and Edit select the whole source; their fold buttons toggle disclosure.
 A click on a drawn horizontal rule selects its source (head at start) via the
@@ -184,8 +188,8 @@ markers stay visible. Footnote references deliberately retain superscript
 rendering except when a caret touches the reference itself.
 The find bar's current match reveals the source around it, as Obsidian's
 search highlight does: Find selects each match, so the rules above apply, and
-footnote references and images, which keep rendering under a selection, ask
-`findMatchTouches` (provided through `api.ts`) while the bar is open. Tables
+footnote references, display math and images, which keep rendering under a
+selection or without focus, ask `findMatchTouches` (provided through `api.ts`) while the bar is open. Tables
 and Properties keep their widgets for a match too.
 
 `reveal-rules.test.ts` documents the inline and line rules as caret-offset tables;
