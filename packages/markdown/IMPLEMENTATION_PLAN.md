@@ -8140,3 +8140,25 @@ note-embed-remount-height, embed-under-tall-props, vim-caret-geometry
 math-vim-click and tables-vim (37 + 57, with the specs above). Not run:
 the full browser suite, `test:quality`, `test:vscode`.
 
+Follow-up (owner-approved review nit, after #806 merged; #807): the click
+pin could fight the reader's scroll. When a release left the image where
+it was (an image already selected, its source already shown), the pin
+stayed for its 400 ms, and a scroll within them, followed by a redraw, was
+undone. The pin now ends at the image's first drawing after the release,
+moved or not (only a release that has not drawn the image yet keeps it
+waiting), and corrects nothing once the note's scroll position differs
+from the one at the press, whatever changed it: a wheel, touch, keys, a
+scrollbar drag, an overlay scrollbar, sticky scroll's `scrollBy`,
+CodeMirror keeping its own anchor. A first version listened for the
+reader's input (wheel, touch, keydown, `pointerdown` on the scroller); the
+review showed that Blink sends a scrollbar press as `mousedown` with no
+`pointerdown`, macOS overlay scrollbars send only `scroll`, and other
+plugins scroll with `scrollBy`, so it compares positions instead (read in
+the measure phase). Tests in `src/plugins/embeds/image-click-pin.test.ts`:
+a release that leaves the image in place, a scrollbar drag, an overlay
+scrollbar, a `scrollBy` from another plugin, and a scroll during the press
+(the last two tests failing before; one older test now models "not drawn
+yet" as no image, rather than an unmoved one). Checks: `pnpm check`;
+browser specs image-selection-chrome and image-remount-height pass; a
+throwaway probe confirmed a clicked block image still stays under the
+pointer and a double-click near its top edge opens the inspector.

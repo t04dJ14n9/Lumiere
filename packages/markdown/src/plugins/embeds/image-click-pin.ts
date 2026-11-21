@@ -15,10 +15,25 @@ interface Range {
  * double-click (the inspector) could land on the source instead. The note
  * scrolls by that height instead, when it can. An image in a line of text
  * moves along its line and is left alone.
+ *
+ * The pin never overrides a scroll it did not make: it ends at the first
+ * drawing of the image after the release, moved or not, and it corrects
+ * nothing once the note has scrolled since the press, whatever scrolled it
+ * (a wheel, touch, keys, the scrollbar, sticky scroll's header, CodeMirror
+ * keeping its own anchor). Input events cannot say: a native scrollbar
+ * drag fires no `pointerdown`, macOS overlay scrollbars only `scroll`, and
+ * other plugins scroll the note with `scrollBy`.
  */
 export class ClickedImagePin {
   private pin:
-    { range: Range; top: number; releasedAt: number | undefined } | undefined;
+    | {
+        range: Range;
+        top: number;
+        /** The note's scroll position at the press. */
+        scrollTop: number;
+        releasedAt: number | undefined;
+      }
+    | undefined;
 
   constructor(
     private readonly view: EditorView,
@@ -33,6 +48,7 @@ export class ClickedImagePin {
       : {
           range,
           top: image.getBoundingClientRect().top,
+          scrollTop: this.view.scrollDOM.scrollTop,
           releasedAt: undefined,
         };
   }
@@ -42,7 +58,8 @@ export class ClickedImagePin {
    * its source shows. That may be a little after the release: the image
    * drawn below the source may come in a later frame, once it is rendered
    * (see `redrawn`). So the pin lasts a short while after the release, and
-   * ends with the first move it undoes, or when the reader moves on.
+   * ends with the image's first drawing after it, when the note has
+   * scrolled, or when the reader moves on.
    */
   update(update: ViewUpdate): void {
     const pin = this.pin;
@@ -79,17 +96,29 @@ export class ClickedImagePin {
     const { view } = this;
     view.requestMeasure({
       key: this,
-      read: () => this.imagesOf(pin.range)[0]?.getBoundingClientRect().top,
-      write: (top) => {
-        if (
-          this.pin !== pin ||
-          top === undefined ||
-          Math.abs(top - pin.top) < 1
-        ) {
+      read: () => ({
+        top: this.imagesOf(pin.range)[0]?.getBoundingClientRect().top,
+        hasScrolled: Math.abs(view.scrollDOM.scrollTop - pin.scrollTop) >= 1,
+      }),
+      write: ({ top, hasScrolled }) => {
+        if (this.pin !== pin) {
           return;
         }
+        // Scrolled by anyone but the pin: the image is where they put it.
+        if (hasScrolled) {
+          this.pin = undefined;
+          return;
+        }
+        // Not drawn yet: its drawing below the source may come later.
+        if (top === undefined) {
+          return;
+        }
+        // Drawn: whether it moved or not, this is the release's doing, the
+        // only move to undo; later ones are the reader's.
         this.pin = undefined;
-        view.scrollDOM.scrollTop += (top - pin.top) / view.scaleY;
+        if (Math.abs(top - pin.top) >= 1) {
+          view.scrollDOM.scrollTop += (top - pin.top) / view.scaleY;
+        }
       },
     });
   }

@@ -20,15 +20,20 @@ function image(top: { value: number }, inLine: boolean) {
 function setup(inLine: boolean) {
   const top = { value: 300 };
   const drawn = image(top, inLine);
+  /** Whether the image is in the editor's DOM (not between two drawings). */
+  const isDrawn = { value: true };
   const measures: { read(): unknown; write(value: unknown): void }[] = [];
   const view = {
     scaleY: 1,
-    scrollDOM: { scrollTop: 1000 },
+    dom: new EventTarget(),
+    scrollDOM: Object.assign(new EventTarget(), { scrollTop: 1000 }),
     requestMeasure(request: (typeof measures)[number]) {
       measures.push(request);
     },
   };
-  const pin = new ClickedImagePin(view as unknown as EditorView, () => [drawn]);
+  const pin = new ClickedImagePin(view as unknown as EditorView, () =>
+    isDrawn.value ? [drawn] : [],
+  );
   const base = EditorState.create({ doc: "x", extensions: [pointerSelection] });
   const frozen = base.update({
     effects: setPointerSelection(EditorSelection.single(0)),
@@ -40,7 +45,7 @@ function setup(inLine: boolean) {
       request.write(request.read());
     }
   };
-  return { top, drawn, view, pin, base, frozen, update, measure };
+  return { top, drawn, isDrawn, view, pin, base, frozen, update, measure };
 }
 
 test("a clicked image alone on its line is scrolled back under the pointer once its source shows", () => {
@@ -112,14 +117,17 @@ test("an edit while the button is down moves the pinned image's range with it", 
 });
 
 test("an image that moves a moment after the release, its drawing below the source rendered in a later frame, is still scrolled back", () => {
-  const { top, drawn, view, pin, base, frozen, update, measure } = setup(false);
+  const { top, drawn, isDrawn, view, pin, base, frozen, update, measure } =
+    setup(false);
   pin.press(drawn, { from: 0, to: 1 });
   pin.update(update(frozen));
   // Released, the image below the source not drawn yet: nothing moves ...
+  isDrawn.value = false;
   pin.update(update(base));
   measure();
   assert.equal(view.scrollDOM.scrollTop, 1000);
   // ... then it is drawn, below the source.
+  isDrawn.value = true;
   top.value = 324;
   pin.redrawn();
   measure();
@@ -187,4 +195,86 @@ test("the pin ends when the reader moves on, edits, or after a short while", () 
     }
     assert.equal(view.scrollDOM.scrollTop, 1000, name);
   }
+});
+
+test("a release that leaves the image where it was ends the pin, so a later scroll of the reader's stands", () => {
+  // An image already selected, its source already shown: nothing to undo.
+  const { top, drawn, view, pin, base, frozen, update, measure } = setup(false);
+  pin.press(drawn, { from: 0, to: 1 });
+  pin.update(update(frozen));
+  pin.update(update(base));
+  measure();
+  assert.equal(view.scrollDOM.scrollTop, 1000);
+  // The reader scrolls 80 px; CodeMirror draws the content again.
+  view.scrollDOM.scrollTop = 1080;
+  top.value = 220;
+  pin.update(update(base));
+  pin.redrawn();
+  measure();
+  assert.equal(view.scrollDOM.scrollTop, 1080);
+});
+
+test("any scroll of the note since the press ends a pin still waiting for the image, whatever made it", () => {
+  type Scroller = EventTarget & {
+    scrollTop: number;
+    scrollBy(x: number, y: number): void;
+  };
+  const scrolls: [string, (scroller: Scroller) => void][] = [
+    // Blink sends a scrollbar press as `mousedown`, with no `pointerdown`.
+    [
+      "scrollbar drag",
+      (scroller) => {
+        scroller.dispatchEvent(new Event("mousedown"));
+        scroller.scrollTop += 80;
+      },
+    ],
+    // macOS overlay scrollbars: only `scroll`.
+    [
+      "overlay scrollbar",
+      (scroller) => {
+        scroller.scrollTop += 80;
+        scroller.dispatchEvent(new Event("scroll"));
+      },
+    ],
+    // Sticky scroll's header passes its wheel on with `scrollBy`.
+    ["scrollBy from another plugin", (scroller) => scroller.scrollBy(0, 80)],
+  ];
+  for (const [name, scroll] of scrolls) {
+    const { top, drawn, isDrawn, view, pin, base, frozen, update, measure } =
+      setup(false);
+    const scroller = Object.assign(view.scrollDOM, {
+      scrollBy(_x: number, y: number) {
+        scroller.scrollTop += y;
+      },
+    });
+    pin.press(drawn, { from: 0, to: 1 });
+    pin.update(update(frozen));
+    // Released; the image below the source is not drawn yet.
+    isDrawn.value = false;
+    pin.update(update(base));
+    measure();
+    scroll(scroller);
+    // Drawn now, 24 px lower for its source, and 80 px higher for the scroll.
+    isDrawn.value = true;
+    top.value = 244;
+    pin.redrawn();
+    measure();
+    assert.equal(view.scrollDOM.scrollTop, 1080, name);
+    // And the pin is over: no later drawing scrolls either.
+    top.value = 400;
+    pin.redrawn();
+    measure();
+    assert.equal(view.scrollDOM.scrollTop, 1080, name);
+  }
+});
+
+test("a scroll while the button is down leaves the image where the reader scrolled it", () => {
+  const { top, drawn, view, pin, base, frozen, update, measure } = setup(false);
+  pin.press(drawn, { from: 0, to: 1 });
+  pin.update(update(frozen));
+  view.scrollDOM.scrollTop = 1080;
+  top.value = 244;
+  pin.update(update(base));
+  measure();
+  assert.equal(view.scrollDOM.scrollTop, 1080);
 });
