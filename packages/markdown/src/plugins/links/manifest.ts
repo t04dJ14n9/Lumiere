@@ -58,6 +58,11 @@ export default defineManifest({
         id: "openLinkToSide",
         title: "Open Link to Side",
         editorCommand: "editor:open-link-in-new-split",
+        // Obsidian 1.15.0's default. Its Alt+Enter (Follow Link) and
+        // Mod+Enter (Open Link in New Tab) stay unbound: in the note they
+        // are Page Preview's and the editor's follow-in-place keys.
+        key: "ctrl+alt+enter",
+        mac: "cmd+alt+enter",
       },
     ],
   },

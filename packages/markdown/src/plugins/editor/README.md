@@ -43,7 +43,8 @@ again 150 ms after typing pauses), typing extends
 the query at the caret even when the current query already has matches
 (CodeMirror's findNext would otherwise select-all the field), Enter and
 Shift+Enter (or F3, Ctrl/Cmd+G) move between matches, Aa toggles case,
-Ctrl/Cmd+H or the ⇄ button shows the replace row (Enter replaces one,
+Ctrl/Cmd+H (on macOS, where Cmd+H hides the application, Cmd+Option+F,
+Obsidian's and VS Code's key there) or the ⇄ button shows the replace row (Enter replaces one,
 Ctrl/Cmd+Enter or Replace all replaces all), and Escape closes it.
 The note has its own size, `lumiere.markdown.editor.fontSize` (8 to 48, default
 16: Obsidian 1.14.4's body size, measured in
@@ -144,7 +145,7 @@ it yet.
 - `literal-lines.ts`: whether the caret's line is code or frontmatter text, where
   the Markdown indentation rules do not apply; `literal-lines.test.ts` covers it.
 - `find.ts`, `find-panel.ts`, `find-caret.ts`, `find-count.ts`, `find.css`: in-note find and replace.
-- `find-keys.ts`: capture-phase Ctrl/Cmd+F Find and Ctrl/Cmd+H Replace (BH-023 / BH-025).
+- `find-keys.ts`: capture-phase Ctrl/Cmd+F Find and Ctrl/Cmd+H (macOS also Cmd+Option+F) Replace (BH-023 / BH-025).
 - `find-keys.test.ts`: Mod+F/H mapping and native-field skip.
 - `select-all.ts`: stops VS Code's own Select All from undoing the
   editor's Ctrl/Cmd+A (VS Code forwards every webview keydown).

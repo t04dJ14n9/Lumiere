@@ -7184,3 +7184,33 @@ left and right edges, and stop at a release outside rather than when the
 pointer returns. The editor README's limits and a new `docs/PARITY.md` row
 say so. Pointer Lock, the one way a page keeps receiving moves, hides the
 pointer while it holds, so it is not a fit.
+
+## Obsidian 1.15.0's default editor hotkeys (#699; 2026-11-21)
+
+Owner decision (2026-11-21): bind Obsidian 1.15.0's default editor hotkeys
+wherever VS Code and Cursor have no default on the key while a note has focus,
+and list the clashes in CAPABILITIES.md ("Hotkeys"). The defaults come from a
+static read of the shipped `app.js` (each `addCommand`'s `hotkeys`; nothing
+copied). Newly contributed, scoped like every note key to the focused Lumiere
+editor: Toggle Comment (Mod+/), Toggle Checklist Status (Mod+L, not in Cursor,
+where the Cursor bridge has the key for the chat) and Open Link to Side
+(Mod+Alt+Enter). The editor already handled Mod+/ and Mod+L in its own
+keymap; Mod+Alt+Enter is added there too, stopping the event so VS Code does
+not run the command a second time. On macOS Cmd+Option+F now opens Replace
+(Obsidian's and VS Code's key there; Cmd+H hides the application), in the
+capture-phase find keys, the find keymap and the find bar.
+
+Left unbound: Mod+D (VS Code's Add Selection to Next Find Match, which the
+note does too), Mod+E (Toggle Text Editor, owner decision; no Reading view),
+Mod+O (Open File), Alt+Enter (Page Preview of the caret's link, Lumiere's own
+key) and Mod+Enter (the editor's follow-in-place). The last two clash with
+Lumiere's own keys, not VS Code's, so they are kept and flagged for the owner.
+Mod+Alt+Shift+Enter has no command. Set Heading's Mod+Alt+0…6 stays (#310);
+the docs already said 1.15.0 binds no key to it.
+
+Tests: `test/unit/settings/editor.test.ts` pins the new bindings and the
+unbound clashes (it previously pinned Toggle Comment and Toggle Checklist as
+unbound, the state before this decision); `test/unit/features/link-keys.test.ts`
+the Mod+Alt+Enter keymap; `find-keys.test.ts` and `find-navigation.test.ts`
+the macOS Replace key. `pnpm test:vscode` is required for the contribution
+change and is left to the owner.

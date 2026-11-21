@@ -98,6 +98,10 @@ export default defineManifest({
         id: "toggleComment",
         title: "Toggle Comment",
         editorCommand: "editor:toggle-comments",
+        // Obsidian 1.15.0's default; VS Code's Ctrl+/ comments only in its
+        // own text editor.
+        key: "ctrl+/",
+        mac: "cmd+/",
       },
       {
         id: "insertLink",

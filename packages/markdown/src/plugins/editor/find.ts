@@ -35,6 +35,8 @@ function step(reverse = false): Command {
 export const findKeymap: readonly KeyBinding[] = [
   { key: "Mod-f", run: open(false), preventDefault: true },
   { key: "Mod-h", run: open(true), preventDefault: true },
+  // macOS only: Obsidian's and VS Code's Replace there (Cmd+H hides the app).
+  { mac: "Mod-Alt-f", run: open(true), preventDefault: true },
   {
     key: "Mod-g",
     run: step(),

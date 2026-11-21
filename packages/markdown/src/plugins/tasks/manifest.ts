@@ -6,8 +6,18 @@ export default defineManifest({
   kind: "feature",
   defaultEnabled: true,
   surfaces: ["host", "webview"],
-  capabilities: ["rendering", "editing", "commands"],
+  capabilities: ["rendering", "editing", "commands", "keybindings"],
   contributes: {
+    keybindings: [
+      {
+        // Obsidian 1.15.0's default. In Cursor the key opens the chat
+        // (through the Cursor bridge), so it is not bound there.
+        id: "toggleChecklist",
+        key: "ctrl+l",
+        mac: "cmd+l",
+        when: "!lumiere.markdown.isCursorHost",
+      },
+    ],
     commands: [
       {
         id: "toggleChecklist",

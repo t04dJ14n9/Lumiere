@@ -86,5 +86,6 @@ cell projections. Obsidian's command check callback hides the guarded
 commands from its command list and disables the cell's block submenus; Lumiere
 leaves them in the command palette as no-ops. The guard treats any parsed `Table` position as a cell, including separator
 rows, raw table source in Source mode and tables the widget cannot draw. No live-reference
-keybinding or visual-parity observation is claimed; remaining shortcuts await
-the owner's verification.
+keybinding or visual-parity observation is claimed. Obsidian 1.15.0's other
+default, Mod+D (Delete Paragraph), is left to VS Code's Add Selection to Next
+Find Match (CAPABILITIES.md, Hotkeys).

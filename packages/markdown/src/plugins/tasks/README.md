@@ -2,8 +2,9 @@
 
 Makes Markdown task checkboxes clickable in Live Preview and embedded notes,
 like Obsidian. Commands toggle checklist status or cycle list/checklist form;
-Mod+L toggles the status, Obsidian's default (in Cursor, where Cmd/Ctrl+L
-opens the chat, the Cursor bridge keeps that key). A line without a list
+Mod+L toggles the status, Obsidian's default, in the editor's own keymap and
+as a VS Code keybinding (in Cursor, where Cmd/Ctrl+L opens the chat, the
+Cursor bridge keeps that key and none is contributed). A line without a list
 gets `- [ ] ` after its quotes and indentation. Selected lines move together,
 as in Obsidian: every task is checked while any is open, and blank lines in
 the selection are left alone. As in Obsidian, both commands are refused (no
