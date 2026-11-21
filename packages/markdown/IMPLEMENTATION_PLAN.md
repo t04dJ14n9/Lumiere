@@ -7636,3 +7636,19 @@ ties between equal names.
 Validation: `test/unit/backlinks/sort.test.ts` (numbers sort by value);
 unit tests, typecheck, ESLint and Prettier pass. Not run: `test:browser`,
 `test:quality`, `test:vscode` (no editor-integration change).
+
+## Vim: no `gc`, as in Obsidian (#787; 2026-11-21)
+
+Obsidian 1.15.0's `lib/codemirror/vim.js` maps no `gc` (read in its shipped
+file; behaviour only). `@replit/codemirror-vim` maps `gc` to its
+toggle-comment operator, and the Vim README and PARITY listed it as the one
+key Lumiere's engine had beyond Obsidian's, a difference rather than a
+deliberate addition (DESIGN, the plan and the docs name no reason for it).
+`comment-operator.ts` unmaps it when the Vim plugin starts and maps the
+library default back when it stops, as `<C-p>` and `<C-a>` are released.
+Toggle Comment stays on Mod+/.
+
+Validation: `src/plugins/vim/comment-operator.test.ts` (`gcc` runs
+`toggleLineComment` before, nothing after, and again after the restore);
+unit tests, typecheck, ESLint and Prettier pass. Not run: `test:browser`,
+`test:quality`, `test:vscode`.

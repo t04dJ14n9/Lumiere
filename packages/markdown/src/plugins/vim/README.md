@@ -69,6 +69,7 @@ Keyboard-created visual selections keep Vim's text-object behavior.
 - `../../../test/unit/livePreview/click-position.test.ts`: source selection, typing and Vim handoff units.
 - `test/unit/vim-key-routing.test.ts`: cross-buffer sequences, unaffected adapters and hook disposal.
 - `webview.ts`: service, host action, Ex and editor extension registrations.
+- `comment-operator.ts`: unmaps vim-core's `gc`, which Obsidian's Vim does not have; `comment-operator.test.ts` pins it.
 - `motion.ts`: per-editor table motion correction and single-step entry into revealable blocks.
 - `source-motion.ts`: pure source-line target decision for table and revealed-source overshoots.
 - `source-motion.test.ts`: counted, clamped, folded and other-widget target regression units.
@@ -144,7 +145,8 @@ parse the line range before eating those spaces, so `: 123` becomes an unknown c
 `ex-address-space.ts` eats spaces after `eatWhile(':')` so `: 123`, `:123`, and
 bare `123` all move to line N. Stock keymap / `defaultExCommandMap` match
 Obsidian's engine (1.14.4; a static read of 1.15.0's `vim.js` on 2026-11-21 finds
-the same 164 key mappings and 37 ex commands) except one extra key: vim-core
-maps `gc` (toggle comment), which Obsidian's vim.js does not have. Lumiere keeps its note-oriented overlays (za/zc/zo folds,
+the same 164 key mappings and 37 ex commands). vim-core also maps `gc`
+(toggle comment), which Obsidian's vim.js does not have; `comment-operator.ts`
+unmaps it, so `gc` does nothing, as in Obsidian. Lumiere keeps its note-oriented overlays (za/zc/zo folds,
 Ctrl+[ outdent, IME key routing, table motions). Deferred: Neovim, VSCodeVim-only
 commands, community Obsidian vimrc plugins.
