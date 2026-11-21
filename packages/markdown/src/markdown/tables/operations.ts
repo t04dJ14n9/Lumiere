@@ -17,7 +17,17 @@ export type TableOperation =
       to: number;
       alignment: "left" | "center" | "right";
     }
-  | { type: "sort"; column: number; direction: "ascending" | "descending" };
+  | {
+      type: "sort";
+      column: number;
+      direction: "ascending" | "descending";
+      /**
+       * The text each row's cell in the column shows, by row index (the
+       * header's included), as Obsidian sorts by. Without it, or for a row it
+       * lacks, the cell's Markdown is compared.
+       */
+      shown?: readonly string[];
+    };
 
 /** Every structural command produces one complete Markdown edit. */
 export function operateTable(table: Table, operation: TableOperation): string {
@@ -72,13 +82,13 @@ export function operateTable(table: Table, operation: TableOperation): string {
     : "";
 }
 
-/** Sorts the rows below the header by one column, numbers by their value. */
+/**
+ * Sorts the rows below the header by one column's shown text, numbers by
+ * their value, with Obsidian's collator; ties keep their order.
+ */
 function sortBody(
   rows: string[][],
-  {
-    column,
-    direction,
-  }: { column: number; direction: "ascending" | "descending" },
+  { column, direction, shown }: Extract<TableOperation, { type: "sort" }>,
 ): void {
   const collator = new Intl.Collator(undefined, {
     numeric: true,
@@ -87,9 +97,11 @@ function sortBody(
   const sign = direction === "ascending" ? 1 : -1;
   const body = rows
     .slice(1)
-    .sort(
-      (left, right) =>
-        sign * collator.compare(left[column] ?? "", right[column] ?? ""),
-    );
+    .map((row, index) => ({
+      row,
+      key: shown?.[index + 1] ?? row[column] ?? "",
+    }))
+    .sort((left, right) => sign * collator.compare(left.key, right.key))
+    .map(({ row }) => row);
   rows.splice(1, rows.length - 1, ...body);
 }

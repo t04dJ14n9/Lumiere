@@ -49,7 +49,8 @@ it is visible. Both halves follow `lumiere.markdown.plugins.tags.enabled`. The E
 
 - `manifest.ts`: default enablement and host/webview declarations.
 - `protocol.ts`: grammar-validated tag search request.
-- `webview.ts`: the inline tag mark, click-to-search, and rendered-button lifetime.
+- `webview.ts`: the inline tag mark, click-to-search, Follow Link on a tag
+  (`tagAt`), and rendered-button lifetime.
 - `search.ts`: metadata filtering and quick-pick query ranking.
 - `suggestions.ts`: plugin-owned completion trigger through `suggest/trigger`.
 - `host.ts`: RPC, native picker and contained note opening (per panel).
@@ -66,8 +67,10 @@ it is visible. Both halves follow `lumiere.markdown.plugins.tags.enabled`. The E
 
 Webview injects `editor`, `livePreview` and `rpc`; the panel host injects `rpc`,
 `vault` and the host services `hostCommands`, `dialogs`, `views`, `activeEditor`, `settings` and `navigation`; the view injects the host services `hostCommands`, `dialogs`, `views`, `activeEditor`, `settings` and `navigation`, plus `vaults`. Provides no
-services. The webview listens to `render/postProcess`, and to `suggest/trigger`
-for its own completion syntax; the view listens to `vault/resolved`. Emits no
+services. The webview listens to `render/postProcess`, to `suggest/trigger`
+for its own completion syntax, and to `links/followToken`: Follow Link (or
+Open Link in New Tab or to Side) on a tag searches for it, as a click does
+and as Obsidian's commands do; the view listens to `vault/resolved`. Emits no
 kernel events. Settings: `lumiere.markdown.plugins.tags.enabled` (true),
 `lumiere.markdown.tags.viewSort` (`frequency` or `name`, default `frequency`) and
 `lumiere.markdown.tags.viewNested` (true). No palette command or keybinding;

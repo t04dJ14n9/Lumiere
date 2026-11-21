@@ -1,5 +1,6 @@
 import type { EditorView } from "@codemirror/view";
 import { markdownParser } from "../../markdown/dialect";
+import { linkDestination } from "../../markdown/html/helpers";
 
 export function linkAt(
   text: string,
@@ -34,6 +35,66 @@ export function linkAt(
   });
   return found;
 }
+/** A reference label as CommonMark matches it: case and runs of spaces ignored. */
+const normalLabel = (label: string): string =>
+  label.trim().replace(/\s+/g, " ").toLowerCase();
+
+/**
+ * The destination of the full or collapsed reference link at `at` (`[text][label]`,
+ * `[text][]`), from the note's definition of that label (`[label]: url`), as
+ * Obsidian's Follow link resolves it. A shortcut `[label]` is not followed,
+ * nor a label the note does not define.
+ */
+export function referenceLinkAt(
+  text: string,
+  at: number,
+): { href: string; wiki: false } | undefined {
+  const tree = markdownParser.parse(text);
+  let label: string | undefined;
+  tree.iterate({
+    enter(node) {
+      if (node.from > at || node.to < at || node.name === "Image") {
+        return false;
+      }
+      const reference = node.node.getChild("LinkLabel");
+      if (node.name !== "Link" || !reference || node.node.getChild("URL")) {
+        return undefined;
+      }
+      const textEnd = node.node.getChildren("LinkMark")[1];
+      const written = text.slice(reference.from + 1, reference.to - 1);
+      label = written.trim() || text.slice(node.from + 1, textEnd?.from);
+      return false;
+    },
+  });
+  if (label === undefined) {
+    return undefined;
+  }
+  const wanted = normalLabel(label);
+  // The first definition of a label wins; one in a quote or list counts.
+  let href: string | undefined;
+  tree.iterate({
+    enter(node) {
+      if (href !== undefined) {
+        return false;
+      }
+      if (node.name !== "LinkReference") {
+        return undefined;
+      }
+      const name = node.node.getChild("LinkLabel");
+      const url = node.node.getChild("URL");
+      if (
+        name &&
+        url &&
+        normalLabel(text.slice(name.from + 1, name.to - 1)) === wanted
+      ) {
+        href = linkDestination(text.slice(url.from, url.to));
+      }
+      return false;
+    },
+  });
+  return href === undefined ? undefined : { href, wiki: false };
+}
+
 export function followCaretLink(
   view: EditorView,
   open: (href: string, wiki: boolean) => Promise<boolean>,

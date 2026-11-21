@@ -61,10 +61,7 @@ export class PropertyEditing {
       },
       names: () => this.options.propertyNames?.() ?? Promise.resolve([]),
       collapsed: () => this.collapsed,
-      setCollapsed: (collapsed) => {
-        this.receiveCollapsed(collapsed);
-        this.options.setCollapsed?.(collapsed);
-      },
+      setCollapsed: (collapsed) => this.setCollapsed(collapsed),
       action: this.options.action,
       focusTitle: () => {
         const view = this.options.view();
@@ -194,6 +191,16 @@ export class PropertyEditing {
   receiveTypes(message: { types: PropertyTypes }): void {
     this.preferences = message.types;
     this.options.refresh();
+  }
+
+  get isCollapsed(): boolean {
+    return this.collapsed;
+  }
+
+  /** Collapse or expand the sheet and remember it for the note. */
+  setCollapsed(collapsed: boolean): void {
+    this.receiveCollapsed(collapsed);
+    this.options.setCollapsed?.(collapsed);
   }
 
   receiveCollapsed(collapsed: boolean): void {

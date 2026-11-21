@@ -173,9 +173,8 @@ export const foldingWebview: Plugin<Infer<typeof config>> = {
       ctx.editor.viewState.contribute("folded", foldedViewState),
     );
     registerNoteFolds(ctx);
+    registerFoldAllCommands(ctx);
     for (const [id, command] of [
-      ["fold-all", foldAll],
-      ["unfold-all", unfoldAll],
       ["toggle-fold", toggleFold],
       ["fold-more", foldMore],
       ["fold-less", foldLess],
@@ -186,3 +185,23 @@ export const foldingWebview: Plugin<Infer<typeof config>> = {
     }
   },
 };
+
+/**
+ * Fold All and Unfold All, which announce themselves first: Obsidian 1.15.0
+ * collapses the note's Properties on either command, and Properties listens.
+ */
+export function registerFoldAllCommands(ctx: Context): void {
+  for (const [id, command] of [
+    ["foldAll", foldAll],
+    ["unfoldAll", unfoldAll],
+  ] as const) {
+    const editorCommand =
+      id === "foldAll" ? "editor:fold-all" : "editor:unfold-all";
+    ctx.effect(() =>
+      ctx.commands.register(editorCommand, () => {
+        ctx.emit("folding/allCommand", id);
+        return command(ctx.editor.view);
+      }),
+    );
+  }
+}

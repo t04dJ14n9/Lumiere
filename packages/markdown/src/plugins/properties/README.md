@@ -37,6 +37,9 @@ accepted.
 - `vault-types.ts`: `types.json` types with Lumiere's preferences on top.
 - `collapse-store.ts`: per-note disclosure persistence (as in Obsidian) and same-note subscriptions.
 - `collapse-store.test.ts`: disclosure propagation, rendering and reopen checks.
+- `folding.ts`: Toggle Fold Properties, and collapsing the sheet on Fold All
+  and Unfold All.
+- `folding.test.ts`: the front matter's fold and both commands.
 - `property-names.ts`: vault metadata and registered-name suggestions.
 - `name-suggestions.ts`: one pending row’s accessible filtered popup.
 - `webview.ts`: named display, controls, preferences and draft-flush registrations.
@@ -97,7 +100,12 @@ optionally `obsidianCompat` for `types.json`; the webview injects `editor`,
 Widgets bind sheet content; heading interactions call `editor/focusTitle`.
 Edits emit `render/changed` and `editor/clearProjection`; RPC receives type
 preferences and shared disclosure; name suggestions use indexed vault metadata.
-Toggle Fold Properties collapses or expands the sheet, as its heading does.
+Toggle Fold Properties collapses or expands the sheet, as its heading does;
+where the YAML shows as text (Source mode, or `display` `source`) it folds
+or unfolds the front matter instead, as Obsidian 1.15.0 does in Source mode,
+through CodeMirror's fold state (nothing while the Folding plugin is off).
+Listens to `folding/allCommand`: Fold All and Unfold All both collapse the
+sheet of a note with front matter, as in Obsidian, where neither expands it.
 Settings are `lumiere.markdown.properties.display`
 (`visible`, `hidden`, `source`) and `lumiere.markdown.plugins.properties.enabled`.
 
@@ -105,7 +113,8 @@ Settings are `lumiere.markdown.properties.display`
 
 Native TextDocument save and undo are authoritative. Menus use the editor menu
 service; structured clipboard uses the `obsidian/properties` payload. Type
-preferences follow the root supplied by the vault service. Source mode shows YAML;
+preferences follow the root supplied by the vault service. Source mode shows YAML; there, unlike Obsidian, the gutter and Fold All do
+not fold the front matter (only Toggle Fold Properties does);
 Add File Property can temporarily show the sheet when properties are hidden.
 Disclosure is shared within the VS Code workspace, rather than across unrelated
 workspaces. Native picker appearance depends on Chromium, OS and locale. Heading/add markup includes Obsidian class aliases (`metadata-properties-title`, `collapse-indicator collapse-icon`, `metadata-add-button`) and a lucide-plus add control. Unfocused text values clamp to three lines with a 300px max height, as in Obsidian 1.14.4; focus expands them with scroll (`sources` is never clamped). The sheet uses 0.875em metadata type, 8px top padding, 2rem bottom margin, 3px row gap, 6px hover/focus rings, and link values (`metadata-link`) padded 4px 8px like Obsidian's `--metadata-input-padding` (VS Code colours). Value inputs use Obsidian `--metadata-input-padding` (4px 8px). List, tags and aliases pills use Obsidian `.multi-select-pill` chrome (transparent fill, 1px border, 2em radius, content/remove `--pill-padding-x`, focus ring via `::after`). Daily

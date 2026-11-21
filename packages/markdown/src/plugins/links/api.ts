@@ -20,6 +20,12 @@ declare module "@workshop/core" {
     /** @mode bail */ "links/open": (
       request: LinkRequest,
     ) => Promise<true> | undefined;
+    /**
+     * Follow Link, Open Link in New Tab or Open Link to Side found no link at
+     * `at`: a plugin whose token is there follows it (Tags searches a tag),
+     * as Obsidian's commands follow any clickable token. @mode bail
+     */
+    "links/followToken": (state: EditorState, at: number) => true | undefined;
     /** @mode bail */ "link/click": (
       request: Infer<typeof requestSchema>,
     ) => true | undefined;

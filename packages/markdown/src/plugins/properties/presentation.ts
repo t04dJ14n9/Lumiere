@@ -26,6 +26,11 @@ export class PropertyPresentation {
     return this.display === "visible" && this.preview.mode !== "source";
   }
 
+  /** The front matter is shown as YAML text: in Source mode, or by the setting. */
+  get showsYaml(): boolean {
+    return this.display === "source" || this.preview.mode === "source";
+  }
+
   configure(display: Display): void {
     // Replacing an unchanged renderer would discard unnamed draft rows.
     if (display === this.display && this.removeRenderer) {

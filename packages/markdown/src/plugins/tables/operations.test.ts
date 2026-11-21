@@ -32,6 +32,41 @@ test("sort works in both directions, is stable for ties and keeps the header and
   );
 });
 
+test("sort compares the text a cell shows, as Obsidian's does, not its Markdown", () => {
+  const table = parseTable(
+    "| link |\n| --- |\n| [[Note\\|Zed]] |\n| **b** |\n| `a` |\n| c |",
+  )!;
+  // As rendered: Zed, b, a; the last row has no rendering, so its Markdown.
+  const shown = ["link", "Zed", "b", "a"];
+  const sorted = (direction: "ascending" | "descending") =>
+    parseTable(
+      operateTable(table, { type: "sort", column: 0, direction, shown }),
+    )!
+      .rows.slice(1)
+      .map((row) => row[0]!.text);
+  assert.deepEqual(sorted("ascending"), [
+    "`a`",
+    "**b**",
+    "c",
+    "[[Note\\|Zed]]",
+  ]);
+  assert.deepEqual(sorted("descending"), [
+    "[[Note\\|Zed]]",
+    "c",
+    "**b**",
+    "`a`",
+  ]);
+  // By Markdown, `[`, `*` and the backtick would come before the letters.
+  assert.deepEqual(
+    parseTable(
+      operateTable(table, { type: "sort", column: 0, direction: "ascending" }),
+    )!
+      .rows.slice(1)
+      .map((row) => row[0]!.text),
+    ["[[Note\\|Zed]]", "**b**", "`a`", "c"],
+  );
+});
+
 test("a column added beside another can take its alignment", () => {
   const table = parseTable(source)!;
   const inserted = (index: number, alignAs: number) =>

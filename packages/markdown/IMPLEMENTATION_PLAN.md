@@ -7507,3 +7507,96 @@ math-vim-click, stable-blocks, selection-inline and math-remount-height
 (64 passed). The full browser and quality suites and `pnpm test:vscode` were
 not run here (CI runs the first two; the change touches no editor
 integration).
+
+## Fold All, Unfold All and Toggle Fold Properties fold Properties (#787; 2026-11-21)
+
+Obsidian 1.15.0, read in its shipped code (behaviour only, nothing copied):
+`editor:fold-all` and `editor:unfold-all` each call
+`metadataEditor.setCollapse(true, false)` before folding the text, so both
+collapse the note's Properties and neither expands them (1.13.7 does the
+same). `editor:toggle-fold-properties` collapses the Properties view when it
+can show, and otherwise, in an editing view, folds the front matter: a fold
+service (present while Fold heading or Fold indent is on) folds a first
+`---` line through the next `---` line from the note's start, and the
+command unfolds a fold at the note's start instead when there is one.
+Lumiere did neither.
+
+The Folding plugin's Fold All and Unfold All commands now emit
+`folding/allCommand` before folding; Properties collapses the sheet of a
+note with front matter on it, through the same path as its heading (so the
+note remembers it). Toggle Fold Properties folds or unfolds the front matter
+where the YAML shows as text (Source mode, or `properties.display`
+`source`), with CodeMirror's fold state, as other plugins already use it;
+elsewhere it still clicks the sheet's heading. Lumiere's gutter and Fold
+All do not fold the front matter in Source mode, as Obsidian's fold service
+does; Vim's zM and zR run the same commands, so they collapse Properties
+too. Both are documented.
+
+Validation: unit tests src/plugins/properties/folding.test.ts and
+src/plugins/folding/fold-all.test.ts; folding and properties tests,
+typecheck, ESLint and Prettier pass. Not run here (other agents' suites):
+`pnpm test:browser`, `test:quality`, `test:vscode`.
+
+## Follow Link follows reference links and tags (#787; 2026-11-21)
+
+Obsidian 1.15.0, read in its shipped code (behaviour only, nothing copied):
+Follow link, Open link in new tab, to the right and in a new window all take
+the clickable token at the caret (`getClickableTokenAt`) and follow it
+(`triggerClickableToken`): internal and external links; full and collapsed
+reference links, through the note's definition, opened only when the
+destination has a scheme; a tag opens search for `tag:#…`; block IDs and
+footnote references are found but not followed. Lumiere's commands followed
+wikilinks, inline Markdown links and bare URLs only.
+
+The links plugin's three commands now also take a full or collapsed
+reference link (`referenceLinkAt`, src/plugins/links/caret-link.ts): the
+first definition of the label in the note, matched as CommonMark matches
+labels; a destination naming a note opens it, as `[text](note)` does, where
+Obsidian shows a notice. With no link at the caret they ask
+`links/followToken` (bail); the Tags plugin answers for a tag at the caret
+(`tagAt`) with the same search a click on the tag runs. Links knows nothing
+of tags. Key bindings are unchanged (#699's owner decision is pending): the
+editor's own Mod+Enter and Mod+Alt+Enter still follow links only.
+
+Validation: unit tests for reference links (src/plugins/links/links.test.ts)
+and the tag at the caret (test/unit/tags/clicks.test.ts); links and tags
+tests, typecheck, ESLint and Prettier pass. Not run here (other agents'
+suites): `pnpm test:browser`, `test:quality`, `test:vscode`.
+
+## Image shrink stops at 20 px (#787; 2026-11-21)
+
+Obsidian 1.15.0's `resizeSelectedImage` (read in its shipped code;
+behaviour only, nothing copied) steps to the next or previous multiple of
+25 and clamps the result between 20 px and the text's width, so `-` takes
+a 25 px image to 20 px. Lumiere's `steppedWidth` stopped at 25 px; its
+floor is now 20 px. Another difference seen in the same code, not changed
+here: Obsidian shrinks a written width wider than the text from that width
+(a `|400` image in 316 px of text steps to 375, clamped to 316), where
+Lumiere steps from the text's width (to 300).
+
+Validation: test/unit/embeds/image-size.test.ts; embeds tests, ESLint and
+Prettier pass. Not run here: `pnpm test:browser`, `test:quality`,
+`test:vscode`.
+
+## Table sort compares the shown text (#787; 2026-11-21)
+
+Obsidian 1.15.0 (read in its shipped code; behaviour only, nothing copied)
+sorts a table's body rows by each cell's rendered text (`innerText`) with a
+numeric, case-insensitive collator, ties in their order; the items are in
+the cell menu and in the column grip's menu, and there is no sort command.
+Lumiere compared the cells' Markdown with the same collator. The sort
+operation now takes the text each row's cell shows (`shown`, from the
+grid's rendered cells; a cell without a rendering gives its Markdown), and
+the table controller passes it for every sort, from either menu or the
+palette.
+
+Entry points, reported rather than removed (removing UI is the owner's
+call): Lumiere has Sort by column in the cell menu and the column grip's
+menu, as Obsidian does, and also the palette commands **Table: Sort
+Ascending** and **Table: Sort Descending**, which Obsidian lacks. The
+issue's "only in the cell's context menu" leaves out Obsidian's column grip
+menu.
+
+Validation: src/plugins/tables/operations.test.ts; tables tests, typecheck,
+ESLint and Prettier pass. Not run here: `pnpm test:browser`,
+`test:quality`, `test:vscode`.

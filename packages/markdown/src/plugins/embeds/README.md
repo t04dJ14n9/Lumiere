@@ -30,7 +30,7 @@ its source shows the source, as Obsidian's search highlight does. A click select
 ArrowRight with the caret just before it or ArrowLeft just after it (the
 next press moves past): it stays outlined. Then `+`/`=` and `-`
 resize it in steps of 25 pixels, from the width it shows, up to the width of
-the note's text (written as `![[a.png|100]]`, or in a Markdown image's alt
+the note's text and down to 20 pixels, as in Obsidian (written as `![[a.png|100]]`, or in a Markdown image's alt
 text, `![100](a.png)`); `0` removes the size; Space opens the image
 inspector (Obsidian lightbox); Enter shows its source with the file name
 selected, and Tab with the alias / size segment selected (as Obsidian's

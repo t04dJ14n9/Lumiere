@@ -2,7 +2,9 @@ import { tagSuggestion } from "./suggestions";
 import { ViewPlugin } from "@codemirror/view";
 import type { Context, Plugin } from "@workshop/core";
 import type {} from "../editor/api";
-import type {} from "../livePreview/api";
+import { markdownTree } from "../livePreview/api";
+import type {} from "../links/api";
+import type { EditorState } from "@codemirror/state";
 import type {} from "../render/api";
 import { validTag } from "../../markdown/tags/grammar";
 import { protocol } from "./protocol";
@@ -22,10 +24,36 @@ export const tagsWebview: Plugin = {
     };
     registerTagRenderer(ctx);
     registerTagClicks(ctx, search);
+    // Follow Link (and its tab and side variants) searches a tag, as in
+    // Obsidian, where the commands follow any clickable token.
+    ctx.on("links/followToken", (state, at) => {
+      const tag = tagAt(state, at);
+      if (tag === undefined) {
+        return undefined;
+      }
+      search(tag);
+      return true;
+    });
     registerTagControls(ctx, search);
     registerDelegatedTags(ctx, search);
   },
 };
+/** The tag the caret at `at` is in or touches, without its `#`. */
+export function tagAt(state: EditorState, at: number): string | undefined {
+  let tag: string | undefined;
+  markdownTree(state).iterate({
+    from: at,
+    to: at,
+    enter(node) {
+      if (node.name === "Tag" && node.from <= at && node.to >= at) {
+        tag = state.sliceDoc(node.from + 1, node.to);
+      }
+      return tag === undefined ? undefined : false;
+    },
+  });
+  return tag !== undefined && validTag(tag) ? tag : undefined;
+}
+
 /**
  * A tag stays text, styled as a tag, as in Obsidian: never hidden, and the
  * caret goes where it is clicked.

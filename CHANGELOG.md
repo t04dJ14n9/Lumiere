@@ -60,6 +60,19 @@
   and inline otherwise, as in Obsidian; it follows your typing. With the
   note unfocused the formula stays rendered. This reverses the source-only
   reveal of #269 (#698).
+- Markdown: **Fold All** and **Unfold All** also collapse the note's
+  Properties, as in Obsidian, where Unfold All does not expand them either.
+  In Source mode, or with Properties shown as YAML, **Toggle Fold
+  Properties** folds and unfolds the front matter (#787).
+- Markdown: **Follow Link**, **Open Link in New Tab** and **Open Link to
+  Side** also follow a reference link (`[text][label]`, `[text][]`) through
+  the note's definition, and search the vault for a tag at the caret, as
+  Obsidian's commands do. Their keys are unchanged (#787).
+- Markdown: `-` on a selected image shrinks it down to 20 px, as in
+  Obsidian, rather than stopping at 25 px (#787).
+- Markdown: sorting a table by a column compares the text each cell shows,
+  as Obsidian does, not its Markdown: `[[Note|Zed]]` sorts as "Zed" and
+  `**b**` as "b" (#787).
 
 Fixes for several VS Code windows open at once, each with a test; checked
 with two real windows on one profile.

@@ -17,7 +17,7 @@ import { sourceUnresolved } from "./source-unresolved";
 export { isUnresolved, knownNotes, unresolvedLinks } from "./api";
 import { tagUnresolvedAnchors } from "./tag-unresolved-anchors";
 import { protocol } from "./protocol";
-import { linkAt, followCaretLink } from "./caret-link";
+import { linkAt, followCaretLink, referenceLinkAt } from "./caret-link";
 import { wikilinkEdit } from "../../markdown/wikilink-edit";
 import { linkClickHandlers, type OpenLink } from "./clicks";
 import { bindFlashingLifecycle, flashingHighlights } from "./target-highlight";
@@ -333,11 +333,16 @@ function registerLinkCommands(ctx: Context, open: OpenLink): void {
   ] as const) {
     ctx.effect(() =>
       ctx.commands.register(command, async () => {
-        const link = linkAt(
-          view.state.doc.toString(),
-          view.state.selection.main.head,
-        );
-        return link ? open(link.href, link.wiki, place) : false;
+        const { state } = view;
+        const text = state.doc.toString();
+        const at = state.selection.main.head;
+        // As in Obsidian, the commands follow a reference link or a tag
+        // too; the editor's own Mod+Enter (followCaretLink) does not.
+        const link = linkAt(text, at) ?? referenceLinkAt(text, at);
+        if (link) {
+          return open(link.href, link.wiki, place);
+        }
+        return ctx.bail("links/followToken", state, at) === true;
       }),
     );
   }

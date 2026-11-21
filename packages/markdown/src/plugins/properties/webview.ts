@@ -18,6 +18,7 @@ import { frontmatterBodyStart, propertyCaretGuard } from "./caret-guard";
 import { noteCssClassesExtension, registerVaultSnippets } from "./css-classes";
 import type { PropertyContext } from "./context";
 import { createPropertyRenderers } from "./renderers";
+import { registerPropertyFolding } from "./folding";
 import type {} from "./renderers";
 import type { PropertyKind } from "../../markdown/properties/types";
 
@@ -93,6 +94,7 @@ export const propertiesWebview: Plugin<Infer<typeof config>> = {
     registerEditorControls(ctx, { heading, editing, presentation });
     registerPreferences(ctx, editing, lifetime.signal);
     registerDisclosure(ctx, editing, lifetime.signal);
+    registerPropertyFolding(ctx, { editing, presentation });
     registerDraftFlush(ctx);
   },
 };
@@ -340,17 +342,6 @@ function registerAddProperty(ctx: Context, editing: PropertyEditing): void {
     ctx.commands.register("markdown:clear-metadata-properties", () =>
       editing.clear(),
     ),
-  );
-  // As in Obsidian: collapse or expand the note's Properties, as their
-  // heading does when clicked (which also remembers it for the note).
-  ctx.effect(() =>
-    ctx.commands.register("editor:toggle-fold-properties", () => {
-      const heading = ctx.editor.view.dom.querySelector<HTMLElement>(
-        "[data-properties-heading]",
-      );
-      heading?.click();
-      return heading !== null;
-    }),
   );
 }
 
