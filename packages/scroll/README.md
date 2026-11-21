@@ -9,7 +9,7 @@ both:
   `usesPredominantAxisScrolling` do), or is diagonal and scrolls freely. It
   only classifies; each product applies the answer to its own scrollers
   (Markdown: `packages/markdown/src/plugins/scrollAxisLock`; PDF:
-  `packages/pdf/src/webview/axis-lock-wheel.ts`).
+  `packages/pdf/src/webview/axis-locked-wheel.ts`).
 
 Pure TypeScript: no DOM, VS Code or Node APIs (`WheelSample` is the part of a
 `WheelEvent` it reads). The rule, with its constants (a rail is within 26.6

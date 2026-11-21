@@ -81,6 +81,7 @@ export function routeGesture(options: {
   const overflowOf = options.overflowOf ?? computedOverflow;
   const crossAxis: Axis = axis === "x" ? "y" : "x";
   let scroller: Scroller | null = null;
+  let reachedRoot = false;
   const across: { scroller: Scroller; offset: number }[] = [];
   for (let node: Scroller | null = target; node; node = node.parentElement) {
     if (scroller === null && hasRoom(node, axis, direction, overflowOf)) {
@@ -90,8 +91,14 @@ export function routeGesture(options: {
       across.push({ scroller: node, offset: position(node, crossAxis) });
     }
     if (node === root) {
+      reachedRoot = true;
       break;
     }
+  }
+  if (!reachedRoot && range(root, crossAxis) > EDGE_TOLERANCE) {
+    // A target outside the note's scroller (the pinned headings, whose own
+    // wheel handler scrolls the note by both axes) still moves it.
+    across.push({ scroller: root, offset: position(root, crossAxis) });
   }
   return { scroller: scroller ?? root, across };
 }

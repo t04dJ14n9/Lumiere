@@ -8726,6 +8726,22 @@ What was read, and what was not.
   turn at the edge keep their rules; they just receive only the along-axis
   push.
 
+Review fix (PR #846, Gemini): the first event of a locked gesture was
+cancelled and then scrolled by the page in the same, still passive,
+invocation. A passive listener's `preventDefault` does nothing, so over the
+pinned headings (whose own non-passive listener makes the event cancelable) the
+note scrolled twice: by the browser or the pins' handler, and by the page. The
+page now scrolls only when its own cancel took effect
+(`defaultPrevented` after the call, by the listener that was non-passive when
+the event arrived); otherwise the browser, or the pins' handler, scrolls it and
+the cross-axis drift is put back in a frame. A target outside the note's
+scroller (the pins) now has the note's own cross-axis position held too. Tests
+that failed first: `wheel-rails.test.ts` (a cancelable first event, with a
+stand-in that ignores `preventDefault` in a passive listener, as the DOM does),
+`scroll-route.test.ts` (a target outside the scroller) and
+`test/unit/scrollAxisLock/sticky-overlap.test.ts` (the real pinned-headings
+view and the rails together: one scroll per event).
+
 ### What stays imperfect
 
 The first event or two of a locked gesture reach the browser whole, so a few

@@ -185,3 +185,19 @@ test("holding the route puts back what moved across the axis and leaves the rest
   holdAcross(sideways, "x");
   assert.equal(nodes.root.scrollTop, 3500);
 });
+
+test("a target outside the note's scroller still has the note's position held", () => {
+  const nodes = note();
+  nodes.root.scrollWidth = 2000;
+  nodes.root.scrollLeft = 25;
+  const outside = scroller("pin");
+  const found = route(nodes, "y", 1, outside);
+  assert.equal((found.scroller as Node).name, "note");
+  assert.deepEqual(
+    found.across.map((entry) => [(entry.scroller as Node).name, entry.offset]),
+    [["note", 25]],
+  );
+  nodes.root.scrollLeft = 31;
+  holdAcross(found, "y");
+  assert.equal(nodes.root.scrollLeft, 25);
+});

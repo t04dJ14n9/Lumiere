@@ -102,19 +102,36 @@ export class WheelRails {
       // Nothing to take: the browser scrolls it, a notch or a straight swipe.
       return;
     }
+    // The listener swapped in below hears the next event: this one is still
+    // heard by the registration that was passive, whose preventDefault does
+    // nothing, however cancelable the event (one over the pinned headings
+    // is, for their own listener's sake).
+    const canCancel = this.canCancel;
     this.lastEvent = this.now();
     this.route = this.routeOf(event, axis);
     this.timer ??= setTimeout(this.expire, GESTURE_GAP_MS);
-    if (!this.canCancel) {
+    if (!canCancel) {
       this.listen(true);
     }
-    if (event.cancelable) {
-      event.preventDefault();
+    if (this.cancel(event, canCancel)) {
       this.scrollAlong(event, axis);
     } else {
       this.holdLater(axis);
     }
   };
+
+  /**
+   * Cancel the wheel, if this listener can: true when the browser will not
+   * scroll it, so the page must. Scrolling after a cancel that did nothing
+   * would scroll the event twice.
+   */
+  private cancel(event: WheelEvent, canCancel: boolean): boolean {
+    if (!canCancel || !event.cancelable || event.defaultPrevented) {
+      return false;
+    }
+    event.preventDefault();
+    return event.defaultPrevented;
+  }
 
   /** The route of the event's gesture, made when it locked. */
   private routeOf(event: WheelEvent, axis: Axis): ScrollRoute {

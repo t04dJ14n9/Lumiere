@@ -6,7 +6,11 @@ import { WheelRails } from "./wheel-rails";
 
 type Registration = { passive: boolean; live: () => boolean };
 
-/** The editor's root element, recording how each listener was registered. */
+/**
+ * The editor's root element, recording how each listener was registered. As in
+ * the DOM, `preventDefault` does nothing inside a passive listener, whatever
+ * the event: `defaultPrevented` stays false.
+ */
 class FakeDom extends EventTarget {
   readonly registrations: Registration[] = [];
 
@@ -20,7 +24,22 @@ class FakeDom extends EventTarget {
       passive: given.passive === true,
       live: () => given.signal?.aborted !== true,
     });
-    super.addEventListener(type, listener, options);
+    const heard = listener as (event: Event) => void;
+    super.addEventListener(
+      type,
+      given.passive === true
+        ? (event: Event) => {
+            const prevent = event.preventDefault;
+            event.preventDefault = () => {};
+            try {
+              heard(event);
+            } finally {
+              event.preventDefault = prevent;
+            }
+          }
+        : heard,
+      options,
+    );
   }
 
   /** How the wheel listener now registered is, as the browser would see it. */
@@ -166,6 +185,26 @@ test("a gesture locked up and down becomes one that can cancel, and takes the ev
   const upward = wheel(note, { x: -2, y: -25 }, { cancelable: true });
   dom.dispatchEvent(upward);
   assert.deepEqual(note.by.at(-1), { top: -25, behavior: "instant" });
+});
+
+test("a first event the browser lets the page cancel is still the browser's while the listener is passive", (t) => {
+  const { dom, note, frames } = setup(t);
+  // Over the pinned headings an event is cancelable from the start, for their
+  // own listener's sake; this listener is passive, so cancelling does nothing.
+  const first = wheel(note, { x: 3, y: 40 }, { cancelable: true, at: 6000 });
+  dom.dispatchEvent(first);
+  assert.equal(first.defaultPrevented, false);
+  assert.deepEqual(
+    note.by,
+    [],
+    "the browser scrolls it; scrolling it here too would scroll it twice",
+  );
+  assert.equal(frames.length, 1, "what it moved across is put back instead");
+  assert.equal(dom.passive, false, "the next event can be cancelled");
+  const next = wheel(note, { x: 3, y: 40 }, { cancelable: true });
+  dom.dispatchEvent(next);
+  assert.equal(next.defaultPrevented, true);
+  assert.deepEqual(note.by, [{ top: 40, behavior: "instant" }]);
 });
 
 test("a sideways gesture over a wide table scrolls the table along its axis only", (t) => {

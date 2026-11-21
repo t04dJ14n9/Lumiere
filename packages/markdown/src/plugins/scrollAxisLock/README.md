@@ -28,7 +28,11 @@ the axis scrolls the nearest scroller that can go that way (the table for a
 sideways gesture over a table, the note for an up and down one), and its
 movement across the axis is dropped. The events the browser already had are
 not taken back, but whatever they moved across the axis is put back in the
-next frame.
+next frame. An event is taken only by the listener that can cancel: the one
+swapped in hears the next event, so the first event of a locked gesture is the
+browser's even when it is cancelable (over the pinned headings it is, for
+their own wheel handler's sake, which then scrolls the note by both axes for
+that one event).
 
 ## Files
 
