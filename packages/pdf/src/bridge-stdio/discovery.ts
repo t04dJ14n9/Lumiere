@@ -12,7 +12,7 @@
  * another project. Records that are malformed, stale (their process is
  * gone) or point anywhere but a loopback /mcp endpoint are ignored.
  */
-import { realpathSync } from "node:fs";
+import { readdirSync, readFileSync, realpathSync } from "node:fs";
 import * as path from "node:path";
 
 export interface BridgeRecord {
@@ -73,6 +73,29 @@ export function parseBridgeRecord(value: unknown): BridgeRecord | undefined {
     workspaceFolders: workspaceFolders as string[],
     startedAt,
   };
+}
+
+/**
+ * Every well-formed record in the folder. Any `*.json` is read, whatever
+ * its name: the shim relies on nothing but a file's content.
+ */
+export function readBridgeRecords(dir: string): BridgeRecord[] {
+  let files: string[];
+  try {
+    files = readdirSync(dir).filter((file) => file.endsWith(".json"));
+  } catch {
+    return [];
+  }
+  return files.flatMap((file) => {
+    try {
+      const record = parseBridgeRecord(
+        JSON.parse(readFileSync(path.join(dir, file), "utf8")),
+      );
+      return record ? [record] : [];
+    } catch {
+      return [];
+    }
+  });
 }
 
 /** Only http://127.0.0.1:<port>/mcp, as the bridge writes it. */

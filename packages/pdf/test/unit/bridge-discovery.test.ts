@@ -1,12 +1,13 @@
 import assert from "node:assert/strict";
 import { realpathSync } from "node:fs";
-import { mkdir, mkdtemp, rm, symlink } from "node:fs/promises";
+import { mkdir, mkdtemp, rm, symlink, writeFile } from "node:fs/promises";
 import { tmpdir } from "node:os";
 import * as path from "node:path";
 import { test } from "node:test";
 import {
   chooseBridge,
   parseBridgeRecord,
+  readBridgeRecords,
   type BridgeRecord,
 } from "../../src/bridge-stdio/discovery";
 
@@ -151,4 +152,25 @@ test("a window opened through a link to the folder is the agent's, whichever pat
     ...allAlive,
   });
   assert.deepEqual(started, { bridge: record(1, [project]) });
+});
+
+test("the shim reads every well-formed .json in the folder, whatever its name, and nothing else", async (t) => {
+  const dir = await mkdtemp(path.join(tmpdir(), "lumiere-bridges-"));
+  t.after(() => rm(dir, { recursive: true, force: true }));
+  await writeFile(path.join(dir, "a.json"), JSON.stringify(record(1, ["/a"])));
+  await writeFile(path.join(dir, "b.json"), JSON.stringify(record(2, ["/b"])));
+  await writeFile(path.join(dir, "c.json"), "not json");
+  await writeFile(path.join(dir, "d.json"), JSON.stringify({ pid: 3 }));
+  await writeFile(path.join(dir, "e.txt"), JSON.stringify(record(4, ["/e"])));
+  await writeFile(
+    path.join(dir, "f.json.0123456789ab.tmp"),
+    JSON.stringify(record(5, ["/f"])),
+  );
+  assert.deepEqual(
+    readBridgeRecords(dir)
+      .map((found) => found.pid)
+      .sort(),
+    [1, 2],
+  );
+  assert.deepEqual(readBridgeRecords(path.join(dir, "missing")), []);
 });
