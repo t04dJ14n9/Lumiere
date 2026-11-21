@@ -34,15 +34,15 @@ product choices for VS Code, not parity claims.
 | properties | The properties sheet: every type, chips, type menu, sort, drag, structured copy and paste | Type choices are stored per vault by this extension |
 | inlineTitle | Off by default. The file name above the note; edit it to rename | Off so line 1 starts at the top, as in VS Code; a deliberate difference from Obsidian 1.15.0, which shows it by default. Only saved local files can be renamed |
 | links | Click to follow, Mod-click in source, open to side, create missing notes, unresolved links dimmed | Wikilinks and Markdown links dimmed when unresolved, in Live Preview, source mode and inside embeds; Obsidian 1.15.0 dims Markdown links only inside embeds and in Reading view, not in Live Preview (code read) |
-| embeds | Notes, sections, blocks, images (with an inspector), audio, video, PDFs | A PDF embed draws one page inline (`#page=`, `#height=`) with page buttons and an Open button for Lumiere PDF, not Obsidian's full PDF viewer; remote media needs a trusted workspace |
+| embeds | Notes, sections, blocks, images (with an inspector), audio, video, PDFs | A PDF embed draws one page inline (`#page=`, `#height=`) with page buttons and an Open button for Lumiere PDF, not Obsidian's full PDF viewer, which stays in its own editor (DESIGN §1); remote media needs a trusted workspace |
 | onlineVideos | YouTube (watch, youtu.be, Shorts) and Bilibili (BV, av, `?p=`) links written as images show as cards with a button that opens the browser; in trusted workspaces the title, author, length and cover (Bilibili via its public API, YouTube via oEmbed, looked up by the extension host) | Not in Obsidian. No player by default: YouTube refuses to play in VS Code webviews (error 153) and Bilibili's player does not buffer there (`onlineVideos.bilibiliPlayer` brings back **Play here**); nothing is fetched in an untrusted workspace |
-| pagePreview | Mod-hover preview of notes, headings, blocks and attachments | External links are not previewed |
+| pagePreview | Mod-hover preview of notes, headings, blocks and attachments | External links are not previewed, as in Obsidian 1.15.0 |
 | tables | Spreadsheet-style table editing, selection, TSV clipboard, row and column commands and dragging | — |
 | callouts | All callout types, nesting, folding: each callout opens as the note says (`-` closed) whenever the note loads, as in Obsidian, and a toggle lasts while the panel is open | Colours follow the VS Code theme; a toggle survives the callout re-rendering in the panel, where Obsidian's can reset |
 | math | MathJax inline and block math | `lumiere.markdown.math.macros` supplies user macros (name → replacement); empty by default |
 | diagrams | Mermaid | Theme follows VS Code light or dark; HTML labels off |
 | codeBlocks | Prism highlighting and a Copy button | Languages without a loaded grammar stay plain |
-| footnotes | References as superscript numbers in LaTeX paper style (an intentional departure from Obsidian), kept under selections, faint source only at the caret, hover previews, click to the definition, inline footnotes, Insert Footnote | Definitions stay editable text led by their number; no Reading view footnotes section |
+| footnotes | References as superscript numbers in LaTeX paper style (an intentional departure from Obsidian), kept under selections, faint source only at the caret, hover previews, click to the definition, inline footnotes, Insert Footnote | Definitions stay editable text led by their number; no Reading view footnotes section (declined with Reading view, owner decision) |
 | tasks | Clickable checkboxes in notes, embeds and callouts; checklist commands | Any status but a space is checked, like Obsidian's default theme; `data-task` attributes let a snippet style custom statuses |
 | tags | Tag rendering and search, Explorer **Tags** view | A clicked tag's notes are a quick pick, not the Vault Search view |
 | suggest | `[[`, `[[#`, `[[^`, `[[^^` and `#` completions; a picked block without an id gets one, as in Obsidian | At most 50 results |
@@ -50,7 +50,7 @@ product choices for VS Code, not parity claims.
 | outline | Explorer **Markdown Outline** and **Go to Heading…** (Ctrl+Shift+O); drag a heading to move its section | A section dropped on a heading goes before it (VS Code's tree has no drop position after a row; below the last row is the note's end); no dragging outside VS Code; VS Code's native Outline and breadcrumbs apply to the plain text editor |
 | backlinks | Explorer **Backlinks** with unlinked mentions and a status bar count | Off by default (owner decision) |
 | outgoingLinks | Explorer **Outgoing Links** | Off by default; no unlinked mentions section |
-| quickSwitcher | **Quick Switcher** over notes, aliases and unresolved links | No key binding (Mod+O is VS Code's Open File; see [Hotkeys](#hotkeys)); an empty query lists recently opened notes, then recently modified ones never opened here |
+| quickSwitcher | **Quick Switcher** over notes, aliases and unresolved links | No key binding (Mod+O is VS Code's Open File; see [Hotkeys](#hotkeys); the README shows how to bind it in notes); an empty query lists recently opened notes, then recently modified ones never opened here |
 | wordCount | Words and characters in the status bar | Counting rules are this extension's reading of Obsidian's |
 | linkUpdates | Updates links when notes or folders are renamed in VS Code | Asks first by default (`prompt`, matching Obsidian's `alwaysUpdateLinks: false`), with a persistent **Always Update** (saved for the renamed file's workspace folder); `always` rewrites without asking, `never` leaves links untouched; **Rename Heading…** (palette, or the note's right-click menu on a heading line) updates links to a heading; editing a heading's text in the note does not, as in Obsidian |
 | folding | Heading and list folding; a note's folds are kept for the note, so reopening it, a second panel and a reload show them, as Obsidian keeps folds per file | Open panels keep their own folds; the note keeps those of the panel last folded in (Obsidian: the last changed or closed) |
@@ -134,6 +134,9 @@ Webview-side plugins from other extensions are not in v1.
 ## Not implemented
 
 - Reading view, canvas, bookmarks, publish and sync.
-- Obsidian community plugins and themes. CSS snippets are supported: those
+- Obsidian community plugins and themes. Plugins for Lumiere are VS Code
+  extensions on its API (AGENT.md); the in-note Obsidian plugin runtime was
+  removed by the owner for its cost (IMPLEMENTATION_PLAN, 2026-10-27).
+  Colours follow the VS Code theme. CSS snippets are supported: those
   `.obsidian/appearance.json` enables load from `.obsidian/snippets/`.
 - Performance measurement against DESIGN §20.

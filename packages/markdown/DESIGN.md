@@ -60,8 +60,9 @@ Non-goals for v1:
 - Plugins that change the Markdown grammar (Obsidian does not allow it either).
 - Markdown linting, Git diff gutters, LLM Wiki Queries, anchors, exports,
   agent chat handoff, repository cards. These stay in LLM Wiki.
-- Embedding the PDF viewer in notes. PDF embeds show a card that opens the PDF
-  with whatever editor VS Code associates (PDF Workbench when installed).
+- Embedding the PDF viewer in notes. A PDF embed draws one page with page
+  buttons and opens the full viewer, Lumiere PDF, in its own editor;
+  Obsidian 1.15.0 embeds its whole viewer (embeds README).
 - VS Code for the Web. The extension host uses Node `worker_threads`.
 
 ## 2. Source material

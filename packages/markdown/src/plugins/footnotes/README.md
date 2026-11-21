@@ -89,5 +89,7 @@ Editing and undo use the native TextDocument. Definition ranges include multilin
 continuations. Obsidian's Live Preview shows a reference as its own
 `[^label]` source; this plugin shows numbers instead (owner decision). Like
 Obsidian's Live Preview there is no rendered footnotes
-section and no back-reference links; Reading view does not exist here. Preview ancestry prevents recursive footnote enhancement. Rendered
+section and no back-reference links. Obsidian's Reading view adds a
+footnotes section at the end of the note; it is declined with Reading view
+itself (owner decision, #699). Preview ancestry prevents recursive footnote enhancement. Rendered
 embedded-note links re-enter the host's authorized navigation path.

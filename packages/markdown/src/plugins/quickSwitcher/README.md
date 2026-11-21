@@ -36,7 +36,12 @@ a name no note has, creates it in the new-note folder.
   governs its File Explorer and link suggestions. Here it governs only this
   list: VS Code's Explorer is not Lumiere's to filter (`files.exclude` does it),
   and link suggestions already list every file, since VS Code opens most of them.
-- The command has no key binding: Cmd/Ctrl+O is VS Code's **Open File**. Bind
-  one in Keyboard Shortcuts if you want Obsidian's.
+- The command has no key binding. Obsidian's Mod+O is VS Code's **Open
+  File…** (Cmd+O on macOS, Ctrl+O elsewhere), a window-wide key; bound
+  inside a note it would take Open File away there. No other key is
+  Obsidian's, and VS Code's **Go to File…** (Mod+P) already finds files by
+  name, so none is chosen for you. To have Obsidian's, add to
+  `keybindings.json`:
+  `{ "key": "ctrl+o", "mac": "cmd+o", "command": "lumiere.markdown.quickSwitcher", "when": "activeCustomEditorId == 'lumiere.markdown.editor'" }`.
 - An empty query lists recently opened notes (workspace storage), then falls
   back to recently modified for notes never opened here. Bookmarks are not listed.

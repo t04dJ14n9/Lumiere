@@ -36,7 +36,9 @@ does by default; Obsidian's per-source setting to change that is not
 offered. A preview renders only what it shows: a heading's or block's section,
 and of a whole note or a long section its first 12,000 characters or so, cut
 at a blank line, never inside a code block or display formula, and ended with
-`…` (Obsidian renders the whole note in a scrolling popup). External schemes are not fetched. Missing notes, resolve errors and unsupported
+`…` (Obsidian renders the whole note in a scrolling popup). External links
+(`https:` and other schemes) are not previewed or fetched, as in Obsidian
+1.15.0, whose page preview hovers only internal links and footnotes. Missing notes, resolve errors and unsupported
 attachments use Obsidian `.mod-empty` centred chrome. Previews use this
 extension's renderers and VS Code theme.
 All timers, listeners, popup DOM and render passes stop with the view/plugin.
