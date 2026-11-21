@@ -192,6 +192,14 @@ Each contract is written once, in code. Change both sides in the same PR.
 | Window ↔ Tauri | `packages/app/src/shell/tauri.ts` | window ↔ `capabilities/shell.json`, `menu.rs` |
 | Drawings for the window | `packages/app/src/server/ink.ts` (`InkWaiting`, the `ink` service on `@workshop/ink/service`) | plugins → server → window's canvas (`src/shell/ink.ts`, `@workshop/ink/canvas`) |
 
+Undo and redo are part of the host services contract: the plugins run
+`hostCommands.execute("undo" | "redo")` as the native step under their
+undo groups (`packages/markdown/src/plugins/document/undo-groups.ts`). VS
+Code answers with the active editor's `TextDocument`; host-node registers
+both commands over the active panel's note (`history-commands.ts`,
+`note-history.ts`), one step per `apply`, so the groups line up the same
+way on both sides.
+
 No host runs a vault's own code: the Obsidian community plugin runtime, and
 the per-vault trust question that gated it, were removed in #414.
 `HostWorkspace.isTrusted()` is VS Code's workspace trust (Restricted Mode)
@@ -286,7 +294,9 @@ The pass, in the Tauri window:
      above it. After Quit and a new launch, the same folders are open.
 2. **Edit.**
    - Open a note and type: the file on disk changes within a second.
-   - Undo and redo work.
+   - Undo and redo work: a run of typing undoes at once, and only in the
+     tab that has focus (host-node's per-note history, #743; unit-tested,
+     not yet tried in the window).
    - Copy, cut and paste work, from the Edit menu and with the keys.
    - IME (Chinese) input works.
 3. **Right-click.**

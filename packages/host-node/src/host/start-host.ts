@@ -30,6 +30,7 @@ import {
   createFileOperations,
   type VaultFileOperations,
 } from "./file-operations";
+import { registerHistoryCommands } from "./history-commands";
 import { CONNECT_TIMEOUT_MS, PanelHub } from "./panels";
 import type { HostPlatform } from "./platform";
 import {
@@ -111,6 +112,8 @@ export async function startHost(
   panels.followRenames((uri) => platform.files.toPath(uri));
   const keys = new ContextKeys();
   const commands = createHostCommands(log, keys);
+  // The notes own undo here, as VS Code's TextDocuments do there.
+  registerHistoryCommands(commands, panels, documents);
   const trees = new TreeHub(commands);
   const git = options.git?.(rootList);
   const { settings, root } = await bootstrapPlugins({

@@ -577,7 +577,8 @@ tested and stays the same. The changes are structural.
 
 ### 8.2 Undo, redo and save
 
-- Undo and redo are VS Code's. `UndoGroups` is metadata over native steps:
+- Undo and redo are VS Code's (outside VS Code, host-node's, one step per
+  applied edit as in VS Code). `UndoGroups` is metadata over native steps:
   it lets one logical input group (a Vim insert, a structural table edit)
   undo in one step, and clears itself whenever native history diverges.
 - Save waits for `document/willSave` (which flushes every view through

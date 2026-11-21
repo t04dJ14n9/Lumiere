@@ -2,6 +2,7 @@
  * Notes outside VS Code: files on the host's disk. VS Code owns a note's text,
  * saving and undo; here this module does. A note's text lives in memory while
  * a panel shows it and is written back once typing pauses, as Obsidian does.
+ * Its undo and redo live with it (note-document.ts) until it is closed.
  */
 import type { Disposer } from "@workshop/core";
 import {
@@ -14,9 +15,11 @@ import {
   type TextEdit,
 } from "@workshop/markdown/portable";
 import { writeConflictCopy } from "./conflict-copy";
+import { NoteDocument } from "./note-document";
 import type { NoteFiles } from "./note-files";
 import { isAtOrUnder, NoteRenames, type WillRename } from "./note-renames";
 
+export { NoteDocument } from "./note-document";
 export { noteFiles, type NoteFiles } from "./note-files";
 
 /** How long typing must pause before a note is written to disk. */
@@ -26,50 +29,6 @@ type ChangeListener = (
   document: HostDocument,
   changes?: readonly SourceEdit[],
 ) => void;
-
-/** One open note. Its text here is authoritative until written to disk. */
-export class NoteDocument implements HostDocument {
-  version = 1;
-  isDirty = false;
-  readonly isUntitled = false;
-  /** The text as last read from or written to disk. */
-  diskText: string;
-
-  constructor(
-    readonly uri: string,
-    private text: string,
-    private readonly saveNote: (note: NoteDocument) => Promise<boolean>,
-  ) {
-    this.diskText = text;
-  }
-
-  get id(): string {
-    return this.uri;
-  }
-
-  get eol(): "\n" | "\r\n" {
-    return this.text.includes("\r\n") ? "\r\n" : "\n";
-  }
-
-  getText(): string {
-    return this.text;
-  }
-
-  save(): Promise<boolean> {
-    return this.saveNote(this);
-  }
-
-  /** Apply non-overlapping source edits, last first, as one version. */
-  replace(edits: readonly SourceEdit[]): void {
-    let text = this.text;
-    for (const edit of edits) {
-      text = text.slice(0, edit.from) + edit.insert + text.slice(edit.to);
-    }
-    this.text = text;
-    this.version += 1;
-    this.isDirty = this.text !== this.diskText;
-  }
-}
 
 /**
  * Whether a disk read is another program's change to the open note. A read
@@ -154,6 +113,27 @@ export class NoteDocuments implements HostDocuments {
       }))
       .sort((a, b) => b.from - a.from);
     note.replace(changes);
+    this.emitChange(note, changes);
+    this.scheduleSave(note);
+    return true;
+  }
+
+  /**
+   * Undo or redo the note's last step, as VS Code's `undo` and `redo` do to
+   * a TextDocument: the change reaches the pages and is saved after the
+   * pause like typing. False when the note is not open here or has nothing
+   * to undo or redo. A save leaves the steps as they were; undoing past it
+   * leaves the note unsaved, and back to it, saved.
+   */
+  undoOrRedo(document: HostDocument, action: "undo" | "redo"): boolean {
+    const note = this.notes.get(document.uri);
+    if (!note || note !== document) {
+      return false;
+    }
+    const changes = note.undoOrRedo(action);
+    if (!changes.length) {
+      return false;
+    }
     this.emitChange(note, changes);
     this.scheduleSave(note);
     return true;
@@ -514,6 +494,14 @@ export class NoteDocuments implements HostDocuments {
    * leaves a note with unsaved changes as it is and reports a conflict when
    * it is saved; here nobody is asked, the save is automatic.) A clean note's
    * text is diskText, so for it the merge is the outside text.
+   *
+   * What the note gains is one undo step, as VS Code makes a reload of a
+   * clean note one: the steps before it stay, Undo first takes the other
+   * program's change back (what the reader typed stays, and the pause then
+   * writes that over the file, as VS Code's own autosave would), and Redo
+   * brings it back. Undoing earlier typing while keeping the change would
+   * mean rebasing every step over it; VS Code never merges into an unsaved
+   * note, so it has no such undo to match.
    */
   private takeDiskText(note: NoteDocument, text: string): void {
     const merged = mergeDiskChange({

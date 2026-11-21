@@ -110,6 +110,8 @@ forbids this package from importing `vscode` or any embedder.
 - `src/host/start.ts`: starts the plugins over the services below.
 - `src/host/services.ts`: every host service the plugins inject.
 - `src/host/documents.ts`: notes on disk, edited in memory, saved after a pause (at once when the page is hidden or goes away); a change another program makes to the file is merged into unsaved text.
+- `src/host/note-document.ts`, `src/host/note-history.ts`: one open note's text, and its undo and redo steps.
+- `src/host/history-commands.ts`: VS Code's `undo` and `redo` commands, on the active page's note.
 - `src/host/note-renames.ts`: renaming and moving notes and folders with the links to them updated, as VS Code's rename does: the will-rename listeners (the linkUpdates plugin) plan the edits before the files move, and they apply after it, to an open note or the file. The inline title renames through it too.
 - `src/host/file-operations.ts`: what an embedder's file tree does (`LumiereHost.files`): new notes and folders, renames and moves, deletion of a file or a whole folder (a symbolic link is removed, never followed), each checked against the workspace roots; `onDidRename` names what moved, so the embedder can show its tabs at the new names.
 - `src/host/conflict-copy.ts`: where another program's version of a note goes when unsaved typing on the same lines is saved over it.
@@ -150,6 +152,19 @@ forbids this package from importing `vscode` or any embedder.
   folder that takes no new file is still written in place.
   Notes are UTF-8: a byte order mark is kept, and a note whose bytes are not
   UTF-8 is not opened (VS Code would show and save U+FFFD in their place).
+
+- Undo and redo are each note's own, as a TextDocument's are in VS Code
+  (`note-history.ts`): one step per edit a page sends, per link update and
+  per change another program made to the file. The Markdown plugins' undo
+  groups (`packages/markdown/src/plugins/document/undo-groups.ts`) join the
+  steps of one run of typing or one table edit, as they do over VS Code's
+  steps, so a step here never joins two edits. `undo` and `redo` act on the
+  active page's note; pages of other notes keep their own steps. A save
+  keeps the steps. Another program's change is one step, as VS Code makes a
+  reload one: Undo first takes it back (typing merged with it stays), and
+  the pause then writes the note over the file, as VS Code's autosave would.
+  The steps live as long as the note is open: closing its last page or
+  renaming it forgets them.
 
 - Containment is checked, then the file is opened, and Node has no `openat`
   to bind the two. A local process that swaps a folder for a symlink in
