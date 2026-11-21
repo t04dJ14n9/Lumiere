@@ -11,6 +11,13 @@ Recovered from `/workspace/obsidian-rea/recovered/application/{app.js,app.css}`:
 - Fat cursor drawn while not in insert (overwrite / normal / visual use the fat layer).
 - Lumiere maps accent → `--vscode-button-background` / on-accent → `--vscode-button-foreground` under the `obsidian` profile.
 
+The installed reference is now Obsidian 1.15.0. A static read of its shipped
+`app.js` and `app.css` (2026-11-21; nothing was run) finds the same fat-caret
+rules: the editor theme fills the focused caret with the accent and draws the
+character in the on-accent colour, hides the character when unfocused, and
+the blink is the same 1.06 s hard on/off. The fat caret is still drawn
+whenever Vim is not in insert mode, and in replace mode.
+
 ---
 
 Reference: **VSCodeVim** (`vscodevim.vim` 1.32.4) running in VS Code 1.141, the

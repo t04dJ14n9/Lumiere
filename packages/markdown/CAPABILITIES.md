@@ -61,7 +61,7 @@ product choices for VS Code, not parity claims.
 | gitDiffEditor | A side-by-side diff of two versions of a note, both rendered: blocks aligned, changed words and lines marked, read-only left side; Open Rendered Git Diff, or replaces Source Control's Markdown text diffs when diffEditor is rendered | On; diffEditor setting (native by default) |
 | indentGuides | Indentation guides | No active-guide highlight |
 | stickyScroll | Pins ancestor headings while scrolling in Live Preview and Source; click to navigate | On by default; document-level headings only; up to five compact rows by default, limited to one third of the pane height |
-| spellcheck | The host's spellchecker | Dictionaries come from the OS |
+| spellcheck | The host's spellchecker | Languages and dictionaries are the host's (VS Code's Chromium spellchecker; on macOS the system's); no language setting, unlike Obsidian 1.15.0's per-device Spellcheck languages (DESIGN §15.3) |
 | autoPair | Brackets, quotes and Markdown markers | — |
 | smartLists | List continuation and exit | — |
 | formatting | Bold, italics, strikethrough, highlight, code, comment, link, headings, lists, quote, line swaps | Only Mod+B, Mod+I, Mod+K are bound until the owner checks Obsidian's hotkeys |
@@ -76,7 +76,7 @@ product choices for VS Code, not parity claims.
 | marp | Detects `marp: true` and bridges to VS Code preview and Marp export | Slide widgets and Marp themes are not drawn here |
 | markers | Badges and actions that other extensions place on source ranges | Plain text only; at most 1,000 per plugin per editor |
 | graph | **Open Vault Graph**: a vault's notes as a directed graph in a panel, global or local, filtered by type, tag, folder, text and orphans | Hard caps (2000 notes, 20000 links); a larger graph is refused, not sampled; no 3D view |
-| settings | Open Settings, Change Setting… (any contributed setting, edited by type), and commands to set the note font size and toggle line numbers, readable line width, Mermaid, inline title and Vim | Same keys as the Settings UI, no state of its own; Obsidian has no such commands |
+| settings | Open Settings, Change Setting… (any contributed setting, edited by type), and commands to set the note font size and toggle line numbers, readable line width, Mermaid, inline title and Vim | Same keys as the Settings UI, no state of its own. Obsidian 1.15.0 has commands only for line numbers, readable line length, spellcheck, the font size and opening Settings; the others are Lumiere's |
 
 ## Lumiere
 

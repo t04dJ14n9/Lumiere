@@ -7,6 +7,8 @@
 
 **Update 2026-11-16:** G1–G5 and G7–G9 have shipped (`properties.css`, `sheet-html.ts`, `estimated-height.ts`); the "Lumiere today" / "Lumiere" columns below describe the code before them. G18 now matches Obsidian.
 
+**Reference now 1.15.0 (2026-11-21):** the installed Obsidian is 1.15.0; the survey below read 1.14.4. A static comparison of the `metadata-` rules in the shipped 1.15.0 `app.css` with 1.13.7's (nothing was run) finds the values this survey relies on unchanged: the container, property and properties rules, `--metadata-input-longtext-lines` (3 in a note), and label and input sizes of `--font-smaller` (0.875em). What changed is outside the note's sheet or minor: Bases filter and table rules, iOS and phone layout (a phone's input height now follows `--font-preferred-size`, which equals `--font-text-size` on desktop), the properties heading's inset written for right-to-left, and the drag-over highlight's shorthand. The behaviour rows remain 1.14.4 readings.
+
 Do not copy Obsidian code/CSS/assets. Gaps below are behaviour/layout targets.
 
 Severity: **P0** height/remount or editing broken · **P1** clear visual/interaction mismatch · **P2** polish · **OK** matched or intentional · **N/A** OKF-only

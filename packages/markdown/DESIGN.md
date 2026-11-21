@@ -20,7 +20,7 @@ plugin**.
 | Identity | Display name **Lumiere**, one half of the extension **Lumiere: Markdown Editor and PDF Reader** (package `lumiere`, publisher `t04dj14n9`, extension ID `t04dj14n9.lumiere`); editor view type `lumiere.markdown.editor`; settings, commands and context keys under `lumiere.markdown.` |
 | Source to extract | `claude/markdown-integration` at `ff3a902ef4ec50a136455c0cf2ccaff698682a06` in `~/Code/human-learning`. Not `main`, whose 4,900-line `webview-src/markdown-editor.ts` it supersedes |
 | Architecture | `@workshop/core` (on Cordis) runs in the extension host, in each webview and in unit tests. Every capability, the core ones included, is a plugin that injects services, provides services, owns effects and extends others through typed events |
-| Behaviour reference | Obsidian 1.13.7 as observed, plus the 1.12.7 source study. Implement behaviour independently; never copy Obsidian code. The installed app is **Obsidian 1.15.0** (static shipped-artifact REA, 2026-11-10); `docs/PARITY.md` flags older measurements that still need live re-baselining |
+| Behaviour reference | **Obsidian 1.15.0**, the installed app (`CFBundleShortVersionString` 1.15.0; shipped `obsidian.asar` SHA-256 `0e6383301078a798f0f3bdb42bdb606d904ada77eab8c8fc89da533573979248`), read statically and compared live only in a disposable vault. Older evidence keeps its version: 1.14.4 behaviour measurements (October 2026), 1.13.7 observations and the 1.12.7 source study; `docs/PARITY.md` labels each row with what was measured on which version and what was only read in 1.15.0's code. What changed from 1.13.7 to 1.15.0 that matters here is in `docs/PARITY.md` (Reference version): new font size commands, per-device text size, Mermaid replaced by the Pele renderer, highlight colour and other CSS variables. Implement behaviour independently; never copy Obsidian code |
 | Document authority | The VS Code `TextDocument` is the only source of text, saving and undo. Webviews are synchronized views (`@codemirror/collab`) |
 | Markdown dialect | Obsidian Flavored Markdown is one fixed dialect, parsed identically everywhere. Plugins change presentation and interaction, never parsing (as in Obsidian) |
 | Vault model | One host-side vault index (Obsidian's MetadataCache) replaces the three link resolvers and four whole-workspace scans in the source |
@@ -74,7 +74,7 @@ Non-goals for v1:
 | Native tests | `packages/vscode-extension/test/vscode-e2e/{markdown,properties,file-title,rename-state,obsidian-commands}.spec.ts`, `fixtures/test-vault/` | Installed-extension scenarios to port |
 | Status and evidence | `docs/markdown-integration.md`, `docs/markdown-integration-handover.md` on the branch | Tested behaviour, known flakes, open acceptance items |
 | Obsidian study | `~/Code/human-learning/docs/obsidian-1.12-source-study.md` (untracked, main checkout) | Architecture of MetadataCache, link resolution, Live Preview engine, fuzzy scoring |
-| Obsidian reference | Obsidian 1.15.0 installed in `/Applications`; its shipped ASAR was extracted for static reads. Older 1.12.7 / 1.13.7 source-study bundles are in `~/Code/obsidian-re/` | Behaviour reference only; static reads are not live parity observations. Proprietary: never copy code or assets |
+| Obsidian reference | Obsidian 1.15.0 installed in `/Applications`; its shipped `obsidian.asar` is extracted (`npx @electron/asar extract`) into a scratch directory and `app.js` formatted with Prettier 3.10.1 for static reads (178,969 lines; `docs/PARITY.md` cites lines of that copy). Older 1.12.7 / 1.13.7 bundles are in `~/Code/obsidian-re/`; no 1.14.4 bundle was kept | Behaviour reference only; static reads are not live parity observations. Proprietary: never copy code or assets, and never commit the extraction |
 | Template | `~/Code/vscode-embedPDF` | Repository shape, catalogue-generated settings, API style, test tiers |
 | Plugin model | DeepSeek Harness and Cordis (links above) | Context, inject, services, effects, events, fibers |
 
@@ -1094,10 +1094,10 @@ the active editor. They work in the command palette, keybindings and menus.
 | --- | --- | --- | --- |
 | `toggleBold` | `editor:toggle-bold` | formatting | Mod+B |
 | `toggleItalics` | `editor:toggle-italics` | formatting | Mod+I |
-| `toggleStrikethrough` | `editor:toggle-strikethrough` | formatting | verify |
-| `toggleHighlight` | `editor:toggle-highlight` | formatting | verify |
-| `toggleCode` | `editor:toggle-code` | formatting | verify |
-| `toggleComment` | `editor:toggle-comments` | formatting | Mod+/ (verify) |
+| `toggleStrikethrough` | `editor:toggle-strikethrough` | formatting | — (1.15.0 binds none) |
+| `toggleHighlight` | `editor:toggle-highlight` | formatting | — (1.15.0 binds none) |
+| `toggleCode` | `editor:toggle-code` | formatting | — (1.15.0 binds none) |
+| `toggleComment` | `editor:toggle-comments` | formatting | Mod+/ in the editor's own keymap, no VS Code keybinding (1.15.0 binds Mod+/) |
 | `toggleInlineMath` | `editor:toggle-inline-math` | math | — |
 | `insertMathBlock` | `editor:insert-mathblock` | math | — |
 | `insertLink` | `editor:insert-link` | formatting | Mod+K |
@@ -1107,16 +1107,16 @@ the active editor. They work in the command palette, keybindings and menus.
 | `insertHorizontalRule` | `editor:insert-horizontal-rule` | formatting | — |
 | `insertFootnote` | `editor:insert-footnote` | footnotes | — |
 | `insertCallout` | `editor:insert-callout` | callouts | — |
-| `setHeading0`…`setHeading6` | `editor:set-heading-0`…`6` | formatting | — |
-| `toggleChecklist` | `editor:toggle-checklist-status` | tasks | verify |
-| `cycleListChecklist` | `editor:cycle-list-checklist` | tasks | verify |
+| `setHeading0`…`setHeading6` | `editor:set-heading-0`…`6` | formatting | Mod+Alt+0…6 (#310; 1.15.0 binds none by default) |
+| `toggleChecklist` | `editor:toggle-checklist-status` | tasks | Mod+L in the editor's own keymap, no VS Code keybinding (1.15.0 binds Mod+L) |
+| `cycleListChecklist` | `editor:cycle-list-checklist` | tasks | — (1.15.0 binds none) |
 | `toggleBulletList`, `toggleNumberedList`, `toggleBlockquote` | `editor:toggle-*` | formatting | — |
 | `swapLineUp`, `swapLineDown` | `editor:swap-line-up/down` | formatting | — |
 | `followLink` | `editor:follow-link` | links | — |
 | `openLinkToSide` | `editor:open-link-in-new-split` | links | — |
 | `foldAll`, `unfoldAll`, `toggleFold` | `editor:fold-all`, `editor:unfold-all`, `editor:toggle-fold` | folding | — |
 | `addProperty` | `markdown:add-metadata-property` | properties | Mod+; |
-| table commands (insert/move/delete row and column, align, sort) | `editor:table-*` | tables | — |
+| table commands (insert/move/delete row and column, align, sort) | `editor:table-*` (Lumiere's own names such as `editor:table-insert-row-above`; 1.15.0's are `editor:table-row-before` and so on, and it sorts only from the cell menu) | tables | — |
 | `toggleSourceMode` | `editor:toggle-source` | livePreview | — |
 | `openAsText` | none | editor | title action |
 | `toggleTextEditor` | none | editor | Mod+E (Lumiere ↔ host text editor; not Obsidian's LP↔Source) |
@@ -1126,8 +1126,19 @@ the active editor. They work in the command palette, keybindings and menus.
 
 Rules:
 
-- Rows marked "verify" use a default to be confirmed in the installed Obsidian
-  1.15.0 (Settings → Hotkeys) before it is bound. Record the observation (§21.4).
+- Obsidian's default hotkeys were read from 1.15.0's shipped code
+  (2026-11-21; the `hotkeys` of each `addCommand`, not Settings → Hotkeys in a
+  running app): Mod+B, Mod+I, Mod+K, Mod+/ (comments), Mod+L (checklist),
+  Mod+D (delete paragraph), Mod+; (add property), Mod+E (Reading view),
+  Mod+O (switcher), Alt+Enter, Mod+Enter, Mod+Alt+Enter (links); every other
+  command in this table has none. Lumiere binds Mod+B, Mod+I, Mod+K and Mod+;
+  as Obsidian does. Mod+/ and Mod+L work inside the note through the editor's
+  own keymap but are not contributed as VS Code keybindings until the owner
+  decides (the earlier "verify" rows, IMPLEMENTATION_PLAN.md); Mod+D and Mod+O stay
+  VS Code's, Mod+E is Lumiere's Toggle Text Editor, and the three link-command
+  keys are not bound. Mod+Alt+0…6 for Set Heading is Lumiere's own (#310): 1.15.0
+  has no default key for those commands, so a heading key in Obsidian is a
+  user binding. Record live observations in `docs/PARITY.md` (§21.4).
 - Host shortcuts that collide with editor keys while the editor has focus
   (Vim's Ctrl-O, Ctrl-B and others) are consumed only while the `vim` plugin is
   active (`lumiere.markdown.plugin.vim` context key), as the source's
@@ -1197,6 +1208,26 @@ default (§25).
 | (no equivalent) | `lumiere.markdown.vault.rootMarkers` | `[".obsidian"]` |
 | (no equivalent) | `lumiere.markdown.links.folderNote` | `""` |
 
+The defaults in §15.1 and §15.2 were checked against 1.15.0's shipped defaults
+and Settings tabs (static read, 2026-11-21; `docs/PARITY.md` has the rows).
+Most Obsidian keys map one to one under another name (`smartIndentList` is
+plugin `smartLists`, `userIgnoreFilters` is `vault.excludedFiles`,
+`livePreview` is `editor.defaultMode`). Two differ in shape:
+
+- **Wikilinks are inverted.** Obsidian stores `useMarkdownLinks` (default
+  `false`) and its **Use [[Wikilinks]]** toggle shows and writes the inverse;
+  Lumiere stores `links.useWikilinks` (default `true`). The defaults agree;
+  `obsidianCompat` reads `useMarkdownLinks` inverted.
+- **Folder choices are one string each.** Obsidian's new-note location is two
+  keys, a `newFileLocation` dropdown (`root`, `current`, `folder`) and a
+  `newFileFolderPath` shown only for `folder`; Lumiere folds them into
+  `files.newNoteFolder` (empty, `.`, or a path). Obsidian's
+  `attachmentFolderPath` is one key that its Settings shows as a dropdown
+  (vault root, current folder, subfolder, specified folder) plus a text field;
+  Lumiere's `files.attachmentFolder` keeps the stored encoding (`.` or `./`,
+  `./sub`, a path) except that the root is empty rather than `/` (a `/` is
+  still read as the root). `obsidianCompat` reads all three keys.
+
 Settings are resource-scoped, so a vault (workspace folder) can carry its own,
 as Obsidian keeps settings per vault. Core plugins keep owning these settings.
 The optional host-only `obsidianCompat` feature supplies in-memory candidates
@@ -1255,7 +1286,9 @@ available for a later consumer. See [the plugin contract](src/plugins/obsidianCo
   from the application's spellchecker languages, which only the main process
   sets, not from page markup. Obsidian does it through Electron's session
   (`availableSpellCheckerLanguages`, `setSpellCheckerLanguages`) in its desktop
-  app, and on macOS only says that the system detects the language. Neither
+  app, keeps the choice per device in local storage rather than in
+  `app.json` (1.15.0, static read), and on macOS only says that the system
+  detects the language. Neither
   VS Code's API nor an extension webview can change them, so a setting would
   do nothing. The equivalent is the host's own: the operating system's
   languages, or a spelling extension for the text editor.
@@ -1267,8 +1300,12 @@ available for a later consumer. See [the plugin contract](src/plugins/obsidianCo
   transient size, or writes the setting on every scroll, and that cannot be
   checked without a live VS Code window. The size stays a setting:
   `lumiere.markdown.editor.fontSize` (8 to 48, default 16), changed with **Set
-  Note Font Size**; `window.zoomLevel` and Ctrl/Cmd +/- still scale the whole
-  window.
+  Note Font Size** and **Increase/Decrease Note Font Size** (Obsidian 1.15.0's
+  `app:increase-font-size` and `app:decrease-font-size`: a pixel a step,
+  10 to 30); `window.zoomLevel` and Ctrl/Cmd +/- still scale the whole
+  window. Where the size lives differs too: 1.15.0 keeps it per device in local
+  storage (`base-font-size`, seeded from the vault's `baseFontSize`; 1.13.7
+  kept it in the vault), Lumiere in a VS Code setting.
 
 ## 16. Opening links
 
@@ -1567,7 +1604,10 @@ Obsidian observation (version, date, method, or `not observed`), our result
 and how it was checked. Use a disposable vault (never the owner's). Static
 shipped-code reads are not live observations; unobserved rows stay "not
 observed" until the owner's computer-use pass compares them with the live
-reference.
+reference. A row's status says which evidence it has, with its version:
+"behaviour measured on 1.14.4" (a differential probe ran both apps), "code
+read on 1.15.0" (the shipped code was read; nothing ran), "not observed
+running", and "visual parity not observed".
 
 ## 22. Build and toolchain
 
