@@ -1,5 +1,5 @@
 import { keymap } from "@codemirror/view";
-import { deleteLine, moveLineUp, moveLineDown } from "@codemirror/commands";
+import { deleteLine } from "@codemirror/commands";
 import { selectNextOccurrence } from "@codemirror/search";
 import { EditorSelection } from "@codemirror/state";
 import type { Command } from "@codemirror/view";
@@ -17,6 +17,7 @@ import { HIGHLIGHT_COLOURS } from "../../markdown/dialect/highlight";
 import type { HighlightColour } from "../../markdown/dialect/highlight";
 import { fenceLines, lineEdit, linkEdit, ruleEdit, tagEdit } from "./lines";
 import { addCursor } from "./cursors";
+import { swapLine } from "./swap-lines";
 import { linkPasteHandler } from "./paste-link";
 import { keepFormatKeys } from "./format-keys";
 import { selectAllOccurrences } from "./select-occurrences";
@@ -97,8 +98,8 @@ export function formattingCommands(): Map<string, Command> {
     view.dispatch(ruleEdit(view.state));
     return true;
   });
-  commands.set("editor:swap-line-up", moveLineUp);
-  commands.set("editor:swap-line-down", moveLineDown);
+  commands.set("editor:swap-line-up", swapLine(-1));
+  commands.set("editor:swap-line-down", swapLine(1));
   addEditingCommands(commands);
   for (const id of REFUSE_IN_TABLE_CELL) {
     const run = commands.get(id);

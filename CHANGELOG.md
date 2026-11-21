@@ -112,6 +112,10 @@
   and checklist commands, Insert Link, Insert Wikilink, Insert Embed, Insert
   Horizontal Rule, Insert Code Block and Insert Math Block act at every one,
   as in Obsidian; they used only the main one (#787).
+- Markdown: Swap Line Up and Down move a list item with the items and lines
+  under it while Smart lists is on, as Obsidian 1.15 does: past its sibling,
+  out of its parent upwards and into the next item downwards, numbers
+  staying in place (#787).
 
 Fixes for several VS Code windows open at once, each with a test; checked
 with two real windows on one profile.

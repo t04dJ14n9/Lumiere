@@ -7806,3 +7806,17 @@ running. One commit per item.
   where Obsidian shifts every range by the first one's offset. Insert
   Callout, Insert Table, Insert Tag and Insert Footnote use the main
   selection in Obsidian too and are unchanged.
+- **Swap Line moves list items whole.** New since 1.13.7: with
+  `smartIndentList` on and one selection, `swapLineUp`/`swapLineDown` take
+  the item at the selection's first line with the lines under it (grown
+  over following siblings to the selection's end), then swap it with the
+  sibling or the one paragraph line beyond; next to a shallower item it
+  moves out before the parent (up, when the parent has a sibling above;
+  the next sibling takes its number) or in as the next item's first child
+  (down, numbered as that child, or `1.`). Nesting counts tabs or four
+  spaces; lines in code, math and frontmatter are no items. Otherwise
+  CodeMirror's line move, as before. Rewritten from the read rules in
+  `list-blocks.ts` and `swap-lines.ts`; the smartLists plugin provides a
+  `smartListsOn` facet (src/markdown/smart-lists.ts) for the switch, so
+  formatting does not reach into it. Not done: Obsidian carries folds
+  inside the moved item. Unit tests: swap-lines.test.ts.
