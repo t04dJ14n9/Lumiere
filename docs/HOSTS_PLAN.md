@@ -422,8 +422,10 @@ Do not:
    page's CSP needs review. In the web app the service worker serves the
    page, with the window's policy as its first tag, as a blob: page
    inherits it; a vault's SVG is served with a sandbox policy. host-node
-   serves every vault file but a PDF with `sandbox`, and a vault's scripts
-   as text, so `script-src 'self'` never runs them.
+   serves a vault's images, audio, video and PDFs as themselves and anything
+   else as an attachment of bytes, every one but a PDF with `default-src
+   'none'; sandbox` (`packages/host-node/src/vault-file-headers.ts`), so
+   neither a page nor `script-src 'self'` runs a vault's file.
 5. **Two Cordis versions in DSH's process** (DSH's 4.0.0-rc.7 fork and
    Lumière's rc.13). They coexist because they never share objects. Check
    again whenever either changes.

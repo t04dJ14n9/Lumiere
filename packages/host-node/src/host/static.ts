@@ -4,6 +4,7 @@ import { open, realpath, stat, type FileHandle } from "node:fs/promises";
 import type { IncomingHttpHeaders, ServerResponse } from "node:http";
 import * as path from "node:path";
 import { pipeline } from "node:stream/promises";
+import { vaultFileHeaders } from "../vault-file-headers";
 import { isFilesystemRoot } from "./paths";
 
 const CONTENT_TYPES: Readonly<Record<string, string>> = {
@@ -32,29 +33,9 @@ const CONTENT_TYPES: Readonly<Record<string, string>> = {
 /**
  * Whose file a response carries: the editor's own (its built files, the
  * shim), or a vault's, which is someone else's content on the embedder's
- * origin and must never run there.
+ * origin and must never run there (vault-file-headers.ts).
  */
 export type FileSource = "editor" | "vault";
-
-/**
- * A vault's file opened as a page of its own (an HTML page, an SVG) would run
- * its scripts on the embedder's origin, next to DSH or the app: `sandbox`
- * gives it an opaque origin and no scripts, and an image or a video still
- * shows. A PDF is left out: Chrome refuses to show one in a sandboxed
- * document, and its viewer runs on its own origin anyway. Scripts are served
- * as text: the editor's page allows same-origin scripts ('self'), and with
- * nosniff a browser refuses to run a script of any other type.
- */
-function vaultTypeHeaders(type: string): Record<string, string> {
-  return {
-    "content-type": type.startsWith("text/javascript")
-      ? "text/plain; charset=utf-8"
-      : type,
-    ...(type === "application/pdf"
-      ? {}
-      : { "content-security-policy": "sandbox" }),
-  };
-}
 
 /** The request headers a file's response depends on. */
 export type FileRequestHeaders = Pick<
@@ -209,11 +190,13 @@ export async function serveFile(
 }
 
 function typeHeaders(name: string, source: FileSource): Record<string, string> {
-  const type =
-    CONTENT_TYPES[path.extname(name).toLowerCase()] ??
-    "application/octet-stream";
+  if (source === "vault") {
+    return { ...vaultFileHeaders(name), "accept-ranges": "bytes" };
+  }
   return {
-    ...(source === "vault" ? vaultTypeHeaders(type) : { "content-type": type }),
+    "content-type":
+      CONTENT_TYPES[path.extname(name).toLowerCase()] ??
+      "application/octet-stream",
     "x-content-type-options": "nosniff",
     "accept-ranges": "bytes",
   };

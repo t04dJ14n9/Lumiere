@@ -143,8 +143,9 @@ of the Host mid-handshake), it recreates the iframe once, and DSH's Reload and
 - The editor page is same-origin with DSH, so its strict content security
   policy (scripts by nonce only) is what keeps a note's scripts from running.
   The page can still read DSH's DOM, which is how it follows the theme. A
-  vault's own files (`/lumiere/file`) are sandboxed and its scripts served
-  as text, so an HTML page or SVG opened from a vault does not run on DSH's
+  vault's own files (`/lumiere/file`) are sandboxed, and only its images,
+  audio, video and PDFs keep their type (an HTML page or a script is served
+  as bytes to save), so a file opened from a vault does not run on DSH's
   origin.
 - A workspace that is the filesystem root is refused. The workspace is the
   working directory DSH records for the session whose address opened the note
