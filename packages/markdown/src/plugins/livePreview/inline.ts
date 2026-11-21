@@ -242,7 +242,7 @@ class InlineDecorations implements InlineContext {
       ? linkDestination(this.state.sliceDoc(url.from, url.to))
       : undefined;
 
-    // Rendered labels: plain click reveals source; Mod-click follows (BH-020).
+    // Rendered labels: plain click reveals source (BH-020); Mod-click opens.
     // When revealed, mark the full [label](url) span with data-href so Mod-click
     // and Mod-hover preview work anywhere on the link syntax.
     this.mark(

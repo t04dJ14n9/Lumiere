@@ -3,7 +3,7 @@ import assert from "node:assert/strict";
 import { linkParts, externalScheme } from "./target";
 import { linkAt } from "./webview";
 import { protocol } from "./protocol";
-import { followCaretLink, referenceLinkAt } from "./caret-link";
+import { caretLinkAt, ownsCaretKey, referenceLinkAt } from "./caret-link";
 import { EditorState } from "@codemirror/state";
 import type { EditorView } from "@codemirror/view";
 test("links retain aliases, Unicode fragments and source caret identity", () => {
@@ -22,11 +22,11 @@ test("links retain aliases, Unicode fragments and source caret identity", () => 
   assert.equal(linkAt("`[[not a link]]`", 5), undefined);
 });
 
-test("caret following keeps focus, composition and collapsed-selection guards for every editor", () => {
-  for (const guard of ["focus", "composition", "selection", "no link"]) {
+test("caret keys keep focus, composition and collapsed-selection guards for every editor", () => {
+  for (const guard of ["focus", "composition", "selection", "none"]) {
     const contentDOM = {};
     const state = EditorState.create({
-      doc: guard === "no link" ? "plain text" : "[[Target]]",
+      doc: "[[Target]]",
       selection: { anchor: 3, head: guard === "selection" ? 5 : 3 },
     });
     const view = {
@@ -37,20 +37,18 @@ test("caret following keeps focus, composition and collapsed-selection guards fo
         ownerDocument: { activeElement: guard === "focus" ? {} : contentDOM },
       },
     } as unknown as EditorView;
-    assert.equal(
-      followCaretLink(
-        view,
-        async () => {
-          assert.fail("Should not open");
-        },
-        () => {
-          assert.fail("Should not report");
-        },
-      ),
-      false,
-      guard,
-    );
+    assert.equal(ownsCaretKey(view), guard === "none", guard);
   }
+});
+
+test("the link commands take a link at the caret, else a reference link", () => {
+  const text = "[[Target]] [ref][r] plain\n\n[r]: https://example.com";
+  assert.deepEqual(caretLinkAt(text, 3), { href: "Target", wiki: true });
+  assert.deepEqual(caretLinkAt(text, text.indexOf("ref]")), {
+    href: "https://example.com",
+    wiki: false,
+  });
+  assert.equal(caretLinkAt(text, text.indexOf("plain") + 1), undefined);
 });
 test("link requests reject malformed values and ambiguous paths", () => {
   assert.throws(() => linkParts("bad%00path"));

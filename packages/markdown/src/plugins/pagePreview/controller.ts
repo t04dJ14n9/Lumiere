@@ -27,7 +27,12 @@ export function linkPreviews(
   root: HTMLElement,
   context: () => PreviewContext,
   restoreFocus?: () => void,
-): { dispose(): void; refresh(): void; close(): void } {
+): {
+  dispose(): void;
+  refresh(): void;
+  close(): void;
+  preview(link: HTMLElement): void;
+} {
   return new LinkPreviews(root, context, restoreFocus);
 }
 
@@ -251,29 +256,18 @@ class LinkPreviews {
       event.stopPropagation();
       this.close();
     }
-    if (event.altKey && event.key === "Enter") {
-      this.showSelectedLink(event);
-    }
     if ((event.key === "Control" || event.key === "Meta") && this.hovered) {
       this.scheduleShow(this.hovered);
     }
   }
 
-  private showSelectedLink(event: KeyboardEvent): void {
-    if (
-      document.activeElement instanceof HTMLInputElement ||
-      document.activeElement instanceof HTMLTextAreaElement
-    ) {
-      return;
-    }
-    const node = window.getSelection()?.anchorNode;
-    const target = (
-      node instanceof Element ? node : node?.parentElement
-    )?.closest<HTMLElement>("a[href], [data-href]");
-    if (target && this.root.contains(target)) {
-      event.preventDefault();
-      event.stopPropagation();
-      void this.show(target, true);
+  /**
+   * Preview `link` with the focus in the popup, as Preview Link at Caret
+   * does from the Command Palette.
+   */
+  preview(link: HTMLElement): void {
+    if (this.root.contains(link)) {
+      void this.show(link, true);
     }
   }
 

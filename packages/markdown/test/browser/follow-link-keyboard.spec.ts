@@ -2,43 +2,58 @@ import { expect, test } from "@playwright/test";
 import { open } from "./harness";
 import { readFileSync } from "node:fs";
 
+// Obsidian 1.15.0's keys (owner decision, 2026-11-21): Alt+Enter follows the
+// caret's link, Mod+Enter opens it in a new tab. The fake host records only
+// what opens; unit tests (link-keys.test.ts) pin where.
+const LINK_KEYS = ["Alt+Enter", "ControlOrMeta+Enter"];
+
 for (const vim of [false, true]) {
-  test(`follow caret links with Mod-Enter, Vim ${vim}`, async ({ page }) => {
+  test(`follow caret links with Alt-Enter and Mod-Enter, Vim ${vim}`, async ({
+    page,
+  }) => {
     const source =
       "---\ntitle: Example\n---\n\n[web](https://example.com)\n\n[file](Other.md)\n\n[[Target#Heading]]\n\n[local](#heading)\n\n# Heading\n\nplain text";
     await open(page, source, "obsidian", {
       features: { vim: { enabled: vim, config: {} } },
     });
-    for (const [label, target] of [
-      ["web", "https://example.com"],
-      ["file", "Other.md"],
-      ["Target", "Target#Heading"],
-    ]) {
+    for (const key of LINK_KEYS) {
+      for (const [label, target] of [
+        ["web", "https://example.com"],
+        ["file", "Other.md"],
+        ["Target", "Target#Heading"],
+      ]) {
+        await page.evaluate(
+          (at) => window.harness.reveal(at),
+          source.indexOf(label!) + 1,
+        );
+        const before = await page.evaluate(() => window.harness.opened.length);
+        await page.keyboard.press(key);
+        await expect
+          .poll(() => page.evaluate(() => window.harness.opened.length))
+          .toBe(before + 1);
+        expect(await page.evaluate(() => window.harness.opened.at(-1))).toBe(
+          target,
+        );
+      }
       await page.evaluate(
         (at) => window.harness.reveal(at),
-        source.indexOf(label!) + 1,
+        source.indexOf("local") + 1,
       );
-      await page.keyboard.press("ControlOrMeta+Enter");
+      await page.keyboard.press(key);
       await expect
-        .poll(() => page.evaluate(() => window.harness.opened.at(-1)))
-        .toBe(target);
+        .poll(() =>
+          page.evaluate(async () => (await window.harness.viewState()).head),
+        )
+        .toBe(source.indexOf("# Heading"));
     }
-    await page.evaluate(
-      (at) => window.harness.reveal(at),
-      source.indexOf("local") + 1,
-    );
-    await page.keyboard.press("ControlOrMeta+Enter");
-    await expect
-      .poll(() =>
-        page.evaluate(async () => (await window.harness.viewState()).head),
-      )
-      .toBe(source.indexOf("# Heading"));
     const opened = await page.evaluate(() => window.harness.opened.length);
     await page.evaluate(
       (at) => window.harness.reveal(at),
       source.indexOf("plain text"),
     );
-    await page.keyboard.press("ControlOrMeta+Enter");
+    for (const key of LINK_KEYS) {
+      await page.keyboard.press(key);
+    }
     expect(await page.evaluate(() => window.harness.opened.length)).toBe(
       opened,
     );
@@ -49,12 +64,14 @@ for (const vim of [false, true]) {
       (at) => window.harness.reveal(at),
       source.indexOf("web") + 1,
     );
-    await input.focus();
-    await page.keyboard.press("ControlOrMeta+Enter");
-    expect(await page.evaluate(() => window.harness.opened.length)).toBe(
-      opened,
-    );
-    await expect(input).toHaveText("Example");
+    for (const key of LINK_KEYS) {
+      await input.focus();
+      await page.keyboard.press(key);
+      expect(await page.evaluate(() => window.harness.opened.length)).toBe(
+        opened,
+      );
+      await expect(input).toHaveText("Example");
+    }
   });
 }
 
@@ -127,7 +144,9 @@ test("Tags reading layout in light and dark themes", async ({ page }) => {
   }
 });
 
-test("Mod-Enter leaves the Vim prompt and dialogs alone", async ({ page }) => {
+test("the link keys leave the Vim prompt and dialogs alone", async ({
+  page,
+}) => {
   const source = "[web](https://example.com)\n\nplain";
   await open(page, source, "obsidian", {
     features: { vim: { enabled: true, config: {} } },
@@ -142,5 +161,9 @@ test("Mod-Enter leaves the Vim prompt and dialogs alone", async ({ page }) => {
   await expect(prompt.first()).toBeFocused();
   const opened = await page.evaluate(() => window.harness.opened.length);
   await page.keyboard.press("ControlOrMeta+Enter");
+  expect(await page.evaluate(() => window.harness.opened.length)).toBe(opened);
+  await page.keyboard.press(":");
+  await expect(prompt.first()).toBeFocused();
+  await page.keyboard.press("Alt+Enter");
   expect(await page.evaluate(() => window.harness.opened.length)).toBe(opened);
 });

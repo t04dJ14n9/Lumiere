@@ -2,9 +2,18 @@ import { defineManifest } from "../../shared/manifest";
 export default defineManifest({
   id: "pagePreview",
   title: "Page Preview",
-  description: "Preview internal links with a modifier hover or keyboard.",
+  description: "Preview internal links with a modifier hover or a command.",
   kind: "feature",
   defaultEnabled: true,
   surfaces: ["webview"],
-  capabilities: ["rendering", "vaultIndex", "navigation"],
+  capabilities: ["rendering", "vaultIndex", "navigation", "commands"],
+  contributes: {
+    commands: [
+      {
+        id: "previewLink",
+        title: "Preview Link at Caret",
+        editorCommand: "page-preview:preview-link",
+      },
+    ],
+  },
 });

@@ -1,6 +1,5 @@
 import { linkSuggestion } from "./suggestions";
-import { Prec } from "@codemirror/state";
-import { ViewPlugin, keymap } from "@codemirror/view";
+import { ViewPlugin } from "@codemirror/view";
 import type { EditorView } from "@codemirror/view";
 import type { Context, Plugin } from "@workshop/core";
 import type {} from "../editor/api";
@@ -17,11 +16,11 @@ import { sourceUnresolved } from "./source-unresolved";
 export { isUnresolved, knownNotes, unresolvedLinks } from "./api";
 import { tagUnresolvedAnchors } from "./tag-unresolved-anchors";
 import { protocol } from "./protocol";
-import { linkAt, followCaretLink, referenceLinkAt } from "./caret-link";
 import { wikilinkEdit } from "../../markdown/wikilink-edit";
 import { linkClickHandlers, type OpenLink } from "./clicks";
 import { bindFlashingLifecycle, flashingHighlights } from "./target-highlight";
 import { navigator, type Navigate } from "./navigate";
+import { registerCaretFollowing } from "./follow-caret";
 export { linkAt } from "./caret-link";
 
 export const linksWebview: Plugin = {
@@ -53,8 +52,8 @@ export const linksWebview: Plugin = {
     registerKnownNotes(ctx, unresolvedBySource);
     registerWikiLinks(ctx);
     registerLinkClicks(ctx, open);
-    registerLinkCommands(ctx, open);
-    registerLinkFollowing(ctx, open);
+    registerInsertWikilink(ctx);
+    registerCaretFollowing(ctx, open);
   },
 };
 
@@ -308,6 +307,9 @@ function registerLinkClicks(ctx: Context, open: OpenLink): void {
             view.dom.addEventListener("click", handlers.click, {
               signal: this.events.signal,
             });
+            view.dom.addEventListener("auxclick", handlers.auxclick, {
+              signal: this.events.signal,
+            });
           }
           destroy(): void {
             this.events.abort();
@@ -318,64 +320,12 @@ function registerLinkClicks(ctx: Context, open: OpenLink): void {
   );
 }
 
-function registerLinkCommands(ctx: Context, open: OpenLink): void {
+function registerInsertWikilink(ctx: Context): void {
   const view = ctx.editor.view;
   ctx.effect(() =>
     ctx.commands.register("editor:insert-wikilink", () => {
       view.dispatch(wikilinkEdit(view.state, false));
       return true;
     }),
-  );
-  for (const [command, place] of [
-    ["editor:follow-link", {}],
-    ["editor:open-link-in-new-leaf", { tab: true }],
-    ["editor:open-link-in-new-split", { side: true }],
-  ] as const) {
-    ctx.effect(() =>
-      ctx.commands.register(command, async () => {
-        const { state } = view;
-        const text = state.doc.toString();
-        const at = state.selection.main.head;
-        // As in Obsidian, the commands follow a reference link or a tag
-        // too; the editor's own Mod+Enter (followCaretLink) does not.
-        const link = linkAt(text, at) ?? referenceLinkAt(text, at);
-        if (link) {
-          return open(link.href, link.wiki, place);
-        }
-        return ctx.bail("links/followToken", state, at) === true;
-      }),
-    );
-  }
-}
-
-function registerLinkFollowing(ctx: Context, open: OpenLink): void {
-  const report = (error: unknown) =>
-    ctx.logger.warn("Follow link failed", error);
-  const follow = (view: EditorView) => followCaretLink(view, open, report);
-  const followBeside = (view: EditorView) =>
-    followCaretLink(
-      view,
-      (href, wiki) => open(href, wiki, { side: true }),
-      report,
-    );
-  ctx.provide("links", { follow });
-  ctx.effect(() =>
-    ctx.editor.extend(
-      Prec.highest(
-        keymap.of([
-          {
-            key: "Mod-Enter",
-            run: follow,
-          },
-          // Obsidian's Open Link to Side key, also contributed to VS Code;
-          // stopping propagation keeps VS Code from running it a second time.
-          {
-            key: "Mod-Alt-Enter",
-            run: followBeside,
-            stopPropagation: true,
-          },
-        ]),
-      ),
-    ),
   );
 }

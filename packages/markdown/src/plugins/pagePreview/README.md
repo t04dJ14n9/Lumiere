@@ -1,11 +1,13 @@
 # Page preview
 
-Preview an internal link with modifier-hover or Alt+Enter, like Obsidian's Page
-preview. Open the target from the popup or dismiss it with Escape or Close.
+Preview an internal link with modifier-hover, like Obsidian's Page preview,
+or the link at the caret with **Preview Link at Caret** from the Command
+Palette. Open the target from the popup or dismiss it with Escape or Close.
 
 ## How it works
 
-Editor-owned hover, keyboard and focus listeners select a target. The controller
+Editor-owned hover, keyboard and focus listeners select a target; the
+command takes the rendered link at the caret. The controller
 opens a positioned popup, resolves the target through resources, and renders a
 note fragment or attachment through the shared pipeline. Each load carries a
 generation; closing or replacing the popup invalidates late results and disposes
@@ -16,6 +18,8 @@ their render passes. Preview task controls cannot edit the source.
 - `manifest.ts`: feature identity and default enablement.
 - `webview.ts`: editor extension and view-plugin lifetime registrations.
 - `controller.ts`: target selection, timers, loading generations and focus lifetime.
+- `caret.ts`: the rendered link at the caret, for Preview Link at Caret.
+- `caret.test.ts`: which link the caret is in or beside.
 - `popup.ts`: popup controls, label decoding and viewport placement.
 - `content.ts`: note fragment context, the bounded beginning of a long note, and attachment rendering.
 - `preview.test.ts`: internal-target policy, fragment context and label unit tests.
@@ -23,7 +27,9 @@ their render passes. Preview task controls cannot edit the source.
 
 ## Services, events and settings
 
-Injects `editor`, `resources`, `render` and `rpc`; provides no service. Opens
+Injects `editor`, `resources`, `render`, `rpc` and `commands`; provides no
+service. Registers `page-preview:preview-link`, the VS Code command
+`lumiere.markdown.previewLink` (Preview Link at Caret), with no key. Opens
 through the validated `links.open` RPC. Document changes close the popup.
 No kernel events are registered. The feature switch is
 `lumiere.markdown.plugins.pagePreview.enabled`; there is no separate config.
@@ -41,4 +47,7 @@ at a blank line, never inside a code block or display formula, and ended with
 1.15.0, whose page preview hovers only internal links and footnotes. Missing notes, resolve errors and unsupported
 attachments use Obsidian `.mod-empty` centred chrome. Previews use this
 extension's renderers and VS Code theme.
+Obsidian 1.15.0's Page preview has no command; Preview Link at Caret is
+Lumiere's own, and has no key: Alt+Enter, which previewed the link at the
+caret until 2026-11-21, is Follow Link's, as in Obsidian (owner decision).
 All timers, listeners, popup DOM and render passes stop with the view/plugin.

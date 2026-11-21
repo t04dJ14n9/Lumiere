@@ -95,27 +95,27 @@ export function referenceLinkAt(
   return href === undefined ? undefined : { href, wiki: false };
 }
 
-export function followCaretLink(
-  view: EditorView,
-  open: (href: string, wiki: boolean) => Promise<boolean>,
-  report: (error: unknown) => void,
-): boolean {
-  // Each editor owns its caret: prompts, property inputs and another editor
-  // must not follow the outer caret's link. Enter also commits IME composition.
-  if (
-    view.dom.ownerDocument.activeElement !== view.contentDOM ||
-    view.composing ||
-    !view.state.selection.main.empty
-  ) {
-    return false;
-  }
-  const link = linkAt(
-    view.state.doc.toString(),
-    view.state.selection.main.head,
+/**
+ * The link Obsidian's Follow Link commands take at `at`: a wikilink, inline
+ * link or bare URL, else a full or collapsed reference link.
+ */
+export function caretLinkAt(
+  text: string,
+  at: number,
+): { href: string; wiki: boolean } | undefined {
+  return linkAt(text, at) ?? referenceLinkAt(text, at);
+}
+
+/**
+ * Whether a key typed in `view` belongs to the link at its caret. Each editor
+ * owns its caret: prompts, property inputs and another editor must not
+ * follow the outer caret's link. Enter also commits IME composition, and a
+ * selection leaves the key to other handlers.
+ */
+export function ownsCaretKey(view: EditorView): boolean {
+  return (
+    view.dom.ownerDocument.activeElement === view.contentDOM &&
+    !view.composing &&
+    view.state.selection.main.empty
   );
-  if (!link) {
-    return false;
-  }
-  void open(link.href, link.wiki).catch(report);
-  return true;
 }

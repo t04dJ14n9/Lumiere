@@ -252,10 +252,20 @@ export function cellKeymap(options: CellEditorOptions) {
       },
     }),
     keymap.of([
-      {
-        key: "Mod-Enter",
-        run: (view) => options.environment.links?.follow(view) ?? false,
-      },
+      // The note's link keys, on the cell's own caret. Stopping propagation
+      // keeps VS Code from running its binding for the key a second time.
+      ...(
+        [
+          ["Alt-Enter", {}],
+          ["Mod-Enter", { tab: true }],
+          ["Mod-Alt-Enter", { side: true }],
+        ] as const
+      ).map(([key, place]) => ({
+        key,
+        run: (view: EditorView) =>
+          options.environment.links?.follow(view, place) ?? false,
+        stopPropagation: true,
+      })),
       {
         key: "Mod-s",
         run: () => options.action("save"),

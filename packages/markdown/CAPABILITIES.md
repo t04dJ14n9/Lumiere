@@ -33,10 +33,10 @@ product choices for VS Code, not parity claims.
 | --- | --- | --- |
 | properties | The properties sheet: every type, chips, type menu, sort, drag, structured copy and paste | Type choices are stored per vault by this extension |
 | inlineTitle | Off by default. The file name above the note; edit it to rename | Off so line 1 starts at the top, as in VS Code; a deliberate difference from Obsidian 1.15.0, which shows it by default. Only saved local files can be renamed |
-| links | Click to follow, Mod-click in source, open to side, create missing notes, unresolved links dimmed; Follow Link and its tab and side variants also follow reference links and search a tag at the caret, as in Obsidian | Wikilinks and Markdown links dimmed when unresolved, in Live Preview, source mode and inside embeds; Obsidian 1.15.0 dims Markdown links only inside embeds and in Reading view, not in Live Preview (code read) |
+| links | Mod-click (or a middle click) opens a link in a new tab and Mod+Alt-click to the side, as in Obsidian; at the caret Alt+Enter follows the link, Mod+Enter opens it in a new tab and Mod+Alt+Enter to the side ([Hotkeys](#hotkeys)); create missing notes, unresolved links dimmed; Follow Link and its tab and side variants also follow reference links and search a tag at the caret, as in Obsidian | A plain click on a rendered link reveals its source instead of following it (BH-020, owner decision). Wikilinks and Markdown links dimmed when unresolved, in Live Preview, source mode and inside embeds; Obsidian 1.15.0 dims Markdown links only inside embeds and in Reading view, not in Live Preview (code read) |
 | embeds | Notes, sections, blocks, images (with an inspector), audio, video, PDFs | A PDF embed draws one page inline (`#page=`, `#height=`) with page buttons and an Open button for Lumiere PDF, not Obsidian's full PDF viewer, which stays in its own editor (DESIGN §1); remote media needs a trusted workspace |
 | onlineVideos | YouTube (watch, youtu.be, Shorts) and Bilibili (BV, av, `?p=`) links written as images show as cards with a button that opens the browser; in trusted workspaces the title, author, length and cover (Bilibili via its public API, YouTube via oEmbed, looked up by the extension host) | Not in Obsidian. No player by default: YouTube refuses to play in VS Code webviews (error 153) and Bilibili's player does not buffer there (`onlineVideos.bilibiliPlayer` brings back **Play here**); nothing is fetched in an untrusted workspace |
-| pagePreview | Mod-hover preview of notes, headings, blocks and attachments | External links are not previewed, as in Obsidian 1.15.0 |
+| pagePreview | Mod-hover preview of notes, headings, blocks and attachments | External links are not previewed, as in Obsidian 1.15.0. No key: **Preview Link at Caret** in the Command Palette previews the link at the caret (Alt+Enter is Follow Link's) |
 | tables | Spreadsheet-style table editing, selection, TSV clipboard, row and column commands and dragging | — |
 | callouts | All callout types, nesting, folding: each callout opens as the note says (`-` closed) whenever the note loads, as in Obsidian, and a toggle lasts while the panel is open | Colours follow the VS Code theme; a toggle survives the callout re-rendering in the panel, where Obsidian's can reset |
 | math | MathJax inline and block math. While you edit a `$$` formula, its source shows with the formula typeset again just after it, below it when the `$$` have their lines to themselves, as in Obsidian 1.15.0; without focus it stays rendered | `lumiere.markdown.math.macros` supplies user macros (name → replacement); empty by default. Quoted display math keeps its preview below (Obsidian puts it inline in the quote); `$…$` gets no preview and reveals without focus, as before |
@@ -94,6 +94,8 @@ window. Mod is Ctrl on Windows and Linux, Cmd on macOS.
 | Mod+/ | Toggle Comment |
 | Mod+L | Toggle Checklist Status (not in Cursor) |
 | Mod+; | Add File Property |
+| Alt+Enter | Follow Link (here) |
+| Mod+Enter | Open Link in New Tab (a tab of its own in the same group; the note stays open) |
 | Mod+Alt+Enter | Open Link to Side |
 | Mod+F; Mod+H, or Mod+Alt+F on macOS | Find; Replace (the editor's own keys) |
 
@@ -104,8 +106,6 @@ Left unbound, because the key already does something here:
 | Mod+D | Delete paragraph | VS Code's Add Selection to Next Find Match, which the note does too |
 | Mod+E | Toggle Reading view | Lumiere's Toggle Text Editor (there is no Reading view) |
 | Mod+O | Open quick switcher | VS Code's (and Cursor's) Open File |
-| Alt+Enter | Follow link under cursor | Page Preview of the link at the caret (Lumiere's own key; VS Code has none) |
-| Mod+Enter | Open link under cursor in new tab | The note follows the link in place, as a Mod-click does (VS Code has none) |
 | Mod+K in Cursor | Insert link | Cursor's inline edit, through the Cursor bridge |
 | Mod+L in Cursor | Toggle checkbox status | Cursor's chat, through the Cursor bridge |
 
@@ -116,9 +116,22 @@ bound only while the switcher is open (`inQuickOpen` and
 `lumiere.markdown.quickSwitcherOpen`), so the note's Mod+Enter and VS Code's
 other quick picks are untouched.
 
+The link keys follow what the caret is on, as Obsidian's commands do: a
+link, a reference link or a tag (which searches). A click places links the
+same way: Mod-click opens a new tab, Mod+Alt-click the side, a middle click a
+new tab; a plain click on a rendered link reveals its source (BH-020), where
+Obsidian follows it. Outside VS Code, in the app and DSH, a followed link
+opens a tab of its own there (or shows the one it is in) whichever key opened
+it: their tabs neither replace a note in place nor split.
+
+Page Preview has no key since 2026-11-21 (owner decision): Alt+Enter, which
+previewed the link at the caret, is Follow Link's, as in Obsidian. A preview
+opens on a Mod-hover, or for the link at the caret with **Preview Link at
+Caret** in the Command Palette.
+
 Mod+Alt+Shift+Enter (open link in a new window) has no Lumiere command.
-Follow Link, Open Link in New Tab, Delete Paragraph and the Quick Switcher are
-in the command palette and can be given keys in VS Code's Keyboard Shortcuts.
+Delete Paragraph, Preview Link at Caret and the Quick Switcher are in the
+command palette and can be given keys in VS Code's Keyboard Shortcuts.
 Mod+Alt+0…6 (Set Heading) and Mod+Alt+Up/Down (more carets) are Lumiere's
 own; Obsidian binds no key to those commands.
 

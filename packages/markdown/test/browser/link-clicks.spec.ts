@@ -1,6 +1,8 @@
 /**
  * BH-020: plain click on a rendered LP link reveals source / places caret;
- * Mod-click follows. Footnotes are a separate path and are not covered here.
+ * Mod-click opens it (in a new tab since 2026-11-21, as in Obsidian; the fake
+ * host records only what opens, and unit tests pin where). Footnotes are a
+ * separate path and are not covered here.
  */
 import { expect, test } from "@playwright/test";
 import { open } from "./harness";

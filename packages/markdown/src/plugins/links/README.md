@@ -4,7 +4,10 @@ Renders and follows wikilinks and Markdown links, with local heading/block
 navigation and side opens, like Obsidian's internal links. Wikilinks to notes
 that do not exist yet are dimmed with a dotted underline. Links to PDFs
 (`[[paper.pdf#page=3]]`, `[text](paper.pdf#page=3&viewrect=…)`) open in PDF
-Lumiere at that page and box, through its Open Location command.
+Lumiere at that page and box, through its Open Location command. As in
+Obsidian 1.15.0, Alt+Enter follows the link at the caret, Mod+Enter opens it
+in a new tab and Mod+Alt+Enter to the side; Mod-click and a middle click open
+a new tab, Mod+Alt-click the side.
 
 ## How it works
 
@@ -53,9 +56,12 @@ renderer adds `is-unresolved` to rendered links whose path is in it.
 - `navigation-host.ts`: per-panel readiness, session identity and cancellation.
 - `host.ts`: unresolved sets, source authorization and
   default opening policy.
-- `caret-link.ts`: source caret lookup and focus-guarded link following for any editor.
+- `caret-link.ts`: the link or reference link at a caret, and the focus guard of the caret keys.
+- `follow-caret.ts`: Follow Link, Open Link in New Tab and Open Link to Side,
+  their keys in the editor's keymap, and the `links` service cells use.
+- `clicks.ts`: where a click on a rendered link opens.
 - `webview.ts`: decoration (including unresolved styling), click
-  handling, navigation and commands.
+  handling, navigation and Insert Wikilink.
 - `navigate.ts`: webview fragment navigation (top-of-viewport jump).
 - `scroll-to-top.ts`: fragment / outline / Search-match jumps use `y: "start"`
   and hold the target there (`EditorService.holdAtTop`) while the layout
@@ -81,7 +87,7 @@ caret following; host provides no service. Queries `link/click`,
 Open Link in New Tab or Open Link to Side finds no link at the caret,
 another plugin may follow its token there (Tags searches a tag). Settings: plugin enabled (true),
 `links.newLinkFormat` (shortest), `links.useWikilinks` (true), `links.folderNote`
-(empty), `links.focusNewTab` (true), and native `files.newNoteFolder` for creation. The editor binds Mod+Enter to follow the caret link and Mod+Alt+Enter (Obsidian's default, also a VS Code keybinding) to open it beside.
+(empty), `links.focusNewTab` (true), and native `files.newNoteFolder` for creation. The editor binds Alt+Enter, Mod+Enter and Mod+Alt+Enter, Obsidian's defaults, which are VS Code keybindings too.
 
 ## Limits and differences from Obsidian
 
@@ -133,17 +139,38 @@ matched as CommonMark matches labels, or a tag, which searches for it. A
 shortcut reference (`[label]`) is not followed, as in Obsidian. Obsidian
 opens a reference link's destination only when it has a scheme (a web or
 `mailto:` link) and names labels as written; here a destination naming a
-note opens it, as `[text](note)` does. The editor's own keys below follow
-links only.
+note opens it, as `[text](note)` does. Their keys below follow the same.
 
-Command+Enter on macOS (Ctrl+Enter elsewhere) follows a link at the caret
-through the same navigation and trust checks as clicking it. It only handles
-a collapsed caret in the Markdown editor, leaving property inputs, dialogs
-and unlinked text to their existing handlers. Bare URLs and autolinks work too.
-The injected `links.follow(view)` service lets table cell editors use the same
-open path with their own text and caret. Each editor keeps its contentDOM focus
-guard; focusing a cell never follows a link at the outer editor's caret.
-Obsidian 1.15.0's Alt+Enter (Follow Link) and Mod+Enter (Open Link in New
-Tab) are not bound: in the note Alt+Enter is Page Preview's key and Mod+Enter
-follows in place, as a Mod-click does (CAPABILITIES.md, Hotkeys). Table cells
-handle only Mod+Enter.
+Alt+Enter (Follow Link), Mod+Enter (Open Link in New Tab) and Mod+Alt+Enter
+(Open Link to Side) are Obsidian 1.15.0's default keys, bound since the
+owner's decision of 2026-11-21 (before it Alt+Enter was Page Preview's key
+and Mod+Enter followed in place). They are in the editor's own keymap, which
+stops the event so VS Code does not run its binding a second time, and are
+VS Code keybindings scoped to the focused note. They follow what the
+commands follow, through the same navigation and trust checks as a click,
+but only for a collapsed caret in the editor that has the focus: property
+inputs, dialogs, the Vim prompt and text with nothing to follow keep the key.
+The injected `links.follow(view, place)` service lets table cell editors
+bind the same keys on their own text and caret. Each editor keeps its
+contentDOM focus guard; focusing a cell never follows a link at the outer
+editor's caret. The commands VS Code runs for the keys do nothing while the
+focus is in such a field, since the key was the field's; from the Command
+Palette they act on the caret where it was.
+
+In VS Code a new tab is a tab of its own in the same group, one VS Code keeps
+rather than a preview the next link replaces; the note stays open. A link
+to a heading or block of the same note moves in place whatever the key,
+except to the side, because VS Code shows a note once in a group (Obsidian
+opens the note again in the new tab). Outside VS Code (the app and DSH,
+through host-node) every followed link opens its file in a tab of its own
+there, or shows the tab it is already in, whichever key or click opened it:
+those tabs neither replace a note in place nor split.
+
+Clicks follow Obsidian 1.15.0's Live Preview (`Keymap.isModEvent`) except for
+a plain click: Mod-click opens a new tab, Mod+Alt-click the side and a middle
+click a new tab; Obsidian's Mod+Alt+Shift-click (a new window) opens the side
+here. A plain click on a rendered link reveals its source and places the
+caret (BH-020, owner decision), where Obsidian follows the link; a plain
+click on a link rendered as HTML (in a table cell, callout or embed) follows
+it here. Alt-click places one caret to edit the link, Shift-click extends
+the selection.

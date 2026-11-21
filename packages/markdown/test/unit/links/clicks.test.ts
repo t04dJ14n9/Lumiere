@@ -8,37 +8,32 @@ import {
 } from "../../../src/plugins/links/clicks";
 
 const click = (
-  keys: Partial<Record<"metaKey" | "ctrlKey" | "altKey", boolean>>,
+  keys: Partial<
+    Record<"metaKey" | "ctrlKey" | "altKey", boolean> & { button: number }
+  >,
 ) => ({
   metaKey: false,
   ctrlKey: false,
   altKey: false,
+  button: 0,
   ...keys,
 });
 
-test("Mod alone follows in the same editor; Mod+Alt opens beside (BH-020)", () => {
-  assert.deepEqual(placeOfClick(click({})), { side: false, tab: false });
-  assert.deepEqual(placeOfClick(click({ metaKey: true })), {
-    side: false,
-    tab: false,
-  });
-  assert.deepEqual(placeOfClick(click({ ctrlKey: true })), {
-    side: false,
-    tab: false,
-  });
-  assert.deepEqual(placeOfClick(click({ metaKey: true, altKey: true })), {
-    side: true,
-    tab: false,
-  });
-  assert.deepEqual(placeOfClick(click({ ctrlKey: true, altKey: true })), {
-    side: true,
-    tab: false,
-  });
+// Obsidian 1.15.0's Keymap.isModEvent (owner decision, 2026-11-21).
+test("Mod-click opens a new tab, Mod+Alt-click the side and a middle click a new tab, as in Obsidian", () => {
+  const here = { side: false, tab: false };
+  const tab = { side: false, tab: true };
+  const side = { side: true, tab: false };
+  // A plain click follows here only on a rendered HTML link (allowsLinkClick).
+  assert.deepEqual(placeOfClick(click({})), here);
+  assert.deepEqual(placeOfClick(click({ metaKey: true })), tab);
+  assert.deepEqual(placeOfClick(click({ ctrlKey: true })), tab);
+  assert.deepEqual(placeOfClick(click({ metaKey: true, altKey: true })), side);
+  assert.deepEqual(placeOfClick(click({ ctrlKey: true, altKey: true })), side);
+  assert.deepEqual(placeOfClick(click({ button: 1 })), tab);
+  assert.deepEqual(placeOfClick(click({ button: 1, altKey: true })), tab);
   // Alt alone does not follow; placeOfClick is unused for that gesture.
-  assert.deepEqual(placeOfClick(click({ altKey: true })), {
-    side: false,
-    tab: false,
-  });
+  assert.deepEqual(placeOfClick(click({ altKey: true })), here);
 });
 
 test("follow requires Ctrl or Cmd; plain click does not open (BH-020)", () => {

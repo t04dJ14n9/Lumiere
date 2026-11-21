@@ -289,6 +289,10 @@ test("Obsidian 1.15.0's default editor keys are bound where VS Code and Cursor l
   const note = "activeCustomEditorId == 'lumiere.markdown.editor'";
   for (const [id, key, mac, plugin] of [
     ["toggleComment", "ctrl+/", "cmd+/", "formatting"],
+    // Follow Link, Open Link in New Tab and Open Link to Side (owner
+    // decision, 2026-11-21; Alt+Enter was Page Preview's key before).
+    ["followLink", "alt+enter", undefined, "links"],
+    ["openLinkInNewTab", "ctrl+enter", "cmd+enter", "links"],
     ["openLinkToSide", "ctrl+alt+enter", "cmd+alt+enter", "links"],
   ] as const) {
     assert.deepEqual(
@@ -313,18 +317,16 @@ test("Obsidian 1.15.0's default editor keys are bound where VS Code and Cursor l
   ]);
   // Clashes left unbound (CAPABILITIES.md, "Hotkeys"): Mod+O is VS Code's
   // Open File, Mod+D its Add Selection to Next Find Match, Mod+E Lumiere's
-  // Toggle Text Editor; Alt+Enter and Mod+Enter are Page Preview's and the
-  // editor's own follow-in-place keys in the note.
+  // Toggle Text Editor. Page Preview has no key: Alt+Enter is Follow Link's.
   for (const id of [
     "quickSwitcher",
     "deleteParagraph",
     "toggleSourceMode",
-    "followLink",
-    "openLinkInNewTab",
+    "previewLink",
   ]) {
     assert.deepEqual(keysOf(id), [], id);
   }
-  for (const chord of ["ctrl+o", "ctrl+d", "alt+enter", "ctrl+enter"]) {
+  for (const chord of ["ctrl+o", "ctrl+d"]) {
     assert.ok(
       !keybindings.some(
         (binding) =>

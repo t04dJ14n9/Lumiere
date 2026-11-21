@@ -6,7 +6,7 @@ import { cellKeymap } from "../../../src/plugins/tables/cell-editor";
 import { fixture } from "./fixture";
 import type { LinksService } from "../../../src/plugins/links/api";
 
-test("Mod-Enter follows the active cell's link through Links; the outer focus guard ignores cell focus", async () => {
+test("the link keys follow the active cell's link through Links; the outer focus guard ignores cell focus", async () => {
   const f = fixture();
   await f.configure({ links: { enabled: true, config: {} } });
   let links: LinksService | undefined;
@@ -49,31 +49,39 @@ test("Mod-Enter follows the active cell's link through Links; the outer focus gu
     dom: { ownerDocument },
     composing: false,
   } as unknown as EditorView;
-  const binding = (view: EditorView) =>
+  const binding = (view: EditorView, key: string) =>
     view.state
       .facet(keymap)
       .flat()
-      .find((binding) => binding.key === "Mod-Enter")!;
-  assert.equal(binding(f.view).run!(f.view), false);
-  assert.equal(binding(cell).run!(cell), true);
+      .find((binding) => binding.key === key)!;
+  for (const key of ["Alt-Enter", "Mod-Enter", "Mod-Alt-Enter"]) {
+    assert.equal(binding(f.view, key).run!(f.view), false, key);
+    // VS Code must not run its binding for the key a second time.
+    assert.equal(binding(cell, key).stopPropagation, true, key);
+    assert.equal(binding(cell, key).run!(cell), true, key);
+  }
   assert.deepEqual(opened, [
     { href: "Cell#Heading", wiki: true, side: false, tab: false },
+    { href: "Cell#Heading", wiki: true, side: false, tab: true },
+    { href: "Cell#Heading", wiki: true, side: true, tab: false },
   ]);
   ownerDocument.activeElement = outerContent;
-  assert.equal(binding(f.view).run!(f.view), true);
+  assert.equal(binding(f.view, "Alt-Enter").run!(f.view), true);
   assert.equal(opened.at(-1)?.href, "Outer");
   await f.root.dispose();
 });
 
-test("cells without the optional Links service leave Mod-Enter unhandled", () => {
+test("cells without the optional Links service leave the link keys unhandled", () => {
   const state = EditorState.create({
     extensions: cellKeymap({ environment: {} } as Parameters<
       typeof cellKeymap
     >[0]),
   });
-  const binding = state
-    .facet(keymap)
-    .flat()
-    .find((binding) => binding.key === "Mod-Enter")!;
-  assert.equal(binding.run!({ state } as EditorView), false);
+  for (const key of ["Alt-Enter", "Mod-Enter", "Mod-Alt-Enter"]) {
+    const binding = state
+      .facet(keymap)
+      .flat()
+      .find((binding) => binding.key === key)!;
+    assert.equal(binding.run!({ state } as EditorView), false, key);
+  }
 });

@@ -397,7 +397,7 @@ Obsidian; ties go by path.
 | Parse `[[…]]`, `![[…]]`, `[](…)` | `markdown/dialect/wiki.ts`, `html/helpers.ts` |
 | Index outgoing links, resolve them, keep unresolved sets | `plugins/vault` (worker + `resolve.ts`) |
 | Render in Live Preview, dim unresolved | `plugins/links/webview.ts`, `livePreview/inline.ts` |
-| Follow (click, Mod+Enter), navigate to heading or block | `plugins/links` (webview → RPC → host `navigation`) |
+| Follow (click, Alt+Enter, Mod+Enter), navigate to heading or block | `plugins/links` (webview → RPC → host `navigation`) |
 | Open in the host: note, PDF page, external URL (with scheme policy), create a missing note | `host/navigation.ts`, `host-node` equivalent |
 | Suggest while typing in Lumiere's editor | `plugins/suggest` (`SuggestionIndex`, Obsidian's fuzzy ranking) via `links/suggestions.ts` |
 | Suggest while typing in VS Code's own text editor | `suggest/native-host.ts` → `hostDocuments.registerCompletions` → `host/text-completions.ts` |
@@ -631,11 +631,11 @@ the graph. Gaps, most important first:
 | VS Code's own text editor has `[[` suggestions but no wikilink following, hover or unresolved marks | Cmd+click on `[[Note]]` does nothing there | M |
 | `%` in a wikilink (`[[100% Done]]`, `#50% done`) is URI-decoded | following throws or reports "heading not found" | S |
 | Links to PDFs and images are styled as unresolved | resolved links look broken | S |
-| `\|` escaped pipe in raw source | Mod+Enter fails; a rename drops the backslash and breaks the table | S |
+| `\|` escaped pipe in raw source | Alt+Enter fails; a rename drops the backslash and breaks the table | S |
 | `[[Note#Heading]]` displays `Note#Heading`; Obsidian shows `Note > Heading` | cosmetic | S–M |
 | Nested heading paths that skip a level; block ids are case-sensitive | some valid links miss | S |
 | `![[img.png\|alt\|300]]` loses its width | sizing | S |
-| Mod+click opens in place; no middle-click, no new-tab key | differs from Obsidian (an owner decision, BH-020) | S |
+| A plain click on a rendered link reveals its source instead of following it | differs from Obsidian (an owner decision, BH-020) | S |
 | Markdown-link suggestions ignore `newLinkFormat`; link updates only rewrite `.md` sources and lack "Always" | minor | S each |
 
 ## 19. Recommended changes

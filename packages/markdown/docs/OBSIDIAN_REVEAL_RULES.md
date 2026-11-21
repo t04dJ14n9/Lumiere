@@ -30,7 +30,7 @@ For every case the caret was moved to every character offset (`editor.setCursor`
 
 12. **Clicking links, tags, embeds, images and rules** (measured 2026-10-17 in a throwaway vault, 74 click cases, by clicking the same rendered element in Obsidian and in Lumiere's editor and comparing the selection, the note and what was opened):
     - Obsidian (measured 2026-10-17): a plain click on a rendered link, wikilink, bare URL or autolink opens it and leaves the caret where it was; Cmd-click opens a note in a new tab, Cmd+Alt-click in a split; Alt-click places the caret in the link's source and Shift-click extends the selection there, without opening;
-    - **Lumiere (BH-020 / user 2026-10-22):** plain click reveals the link source and places the caret (does not navigate); Ctrl/Cmd-click follows in the same editor; Ctrl/Cmd+Alt-click opens beside; Shift-click extends without following;
+    - **Lumiere (BH-020 / user 2026-10-22):** plain click reveals the link source and places the caret (does not navigate); Ctrl/Cmd-click opens a new tab (since 2026-11-21, owner decision, as Obsidian 1.15.0's code does; it followed in the same editor before) and so does a middle click; Ctrl/Cmd+Alt-click opens beside; Shift-click extends without following;
     - an unresolved wikilink opens (Obsidian creates the note);
     - a click on a tag places the caret where it was clicked and searches for `tag:#name`;
     - a click on an embedded note's content selects the whole embed source, the head at its start; a link inside the embedded note opens instead;
@@ -47,7 +47,7 @@ For every case the caret was moved to every character offset (`editor.setCursor`
 
     Obsidian's Live Preview does not render a list inside a plain quote (`> - [ ] task` stays text), so there is no checkbox there to click. Lumiere renders and toggles it, as Obsidian's reading view does: a deliberate difference.
 
-Decision for our editor: follow all of this, **except** footnote references (ours render as numbered superscripts, with the raw text revealed when the caret is inside) and **rendered link clicks** (plain reveals / Mod follows — BH-020; the user's preference, diverging from the 2026-10-17 Obsidian measurement above).
+Decision for our editor: follow all of this, **except** footnote references (ours render as numbered superscripts, with the raw text revealed when the caret is inside) and **rendered link clicks** (plain reveals / Mod opens a new tab — BH-020; the user's preference, diverging from the 2026-10-17 Obsidian measurement above).
 
 ## Detail
 
