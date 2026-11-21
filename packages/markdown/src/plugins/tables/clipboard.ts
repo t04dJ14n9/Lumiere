@@ -52,6 +52,11 @@ export class TableClipboard {
   get canFormat(): boolean {
     return this.environment.canFormat;
   }
+
+  /** A read-only note's table is copied from, never written to. */
+  private get isReadOnly(): boolean {
+    return this.grid.outer.state.readOnly;
+  }
   keyDown(event: KeyboardEvent): void {
     const range = this.selection.range;
     if (
@@ -148,7 +153,7 @@ export class TableClipboard {
     const selection = inner?.state.selection.main;
     if (!this.selection.range && inner && selection && !selection.empty) {
       context.copy(inner.state.sliceDoc(selection.from, selection.to));
-      if (cut) {
+      if (cut && !this.isReadOnly) {
         inner.dispatch(inner.state.replaceSelection(""));
       }
       inner.focus();
@@ -163,6 +168,9 @@ export class TableClipboard {
   }
 
   async pasteFromMenu(range: CellRange, plainText = false): Promise<void> {
+    if (this.isReadOnly) {
+      return;
+    }
     const expected = this.grid.block.source;
     const editor = this.projection.inner;
     // Word navigation mutates the retained editor's position object in place.
@@ -194,6 +202,18 @@ export class TableClipboard {
         "The table or selection changed before paste completed. Paste again.",
       );
     }
+    this.insertPasted(text, range, plainText);
+  }
+
+  /**
+   * Paste's write: one line of text into the open cell, anything else over
+   * the cells. Nothing when the note turned read-only while the clipboard
+   * was read: no cell closes and the selection stays.
+   */
+  private insertPasted(text: string, range: CellRange, plainText: boolean) {
+    if (this.isReadOnly) {
+      return;
+    }
     if (
       this.projection.inner &&
       !this.selection.range &&
@@ -213,6 +233,9 @@ export class TableClipboard {
   }
 
   clearCells(range: CellRange): void {
+    if (this.isReadOnly) {
+      return;
+    }
     this.selection.activate(range);
     this.grid.replace(writeCells(this.grid.model, range, [[""]]));
     this.selection.highlight();
@@ -220,6 +243,10 @@ export class TableClipboard {
   }
 
   formatCells(range: CellRange, marker: string | null): void {
+    // Not even the select-all a cell's formatting starts with.
+    if (this.isReadOnly) {
+      return;
+    }
     if (this.projection.inner && !this.selection.range) {
       const editor = this.projection.inner;
       if (editor.state.selection.main.empty) {

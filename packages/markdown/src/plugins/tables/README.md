@@ -98,6 +98,9 @@ press starts no selection, the table commands and every whole-table write
 refuse (a sort also after rendering its keys), leaving the table at the
 note's edge adds no blank line, and an open cell becomes
 read-only with the note, so typing and formatting commands in it refuse too.
+A change dispatched to the cell anyway (Shift+Enter's `<br>`, the menu's
+Cut, Paste and Clear formatting) is dropped, and those menu items leave the
+cell, its selection and the grid selection as they were.
 
 ## Files
 

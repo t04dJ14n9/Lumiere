@@ -18,7 +18,7 @@ import type { CellProjection } from "./projection";
 import type { TableSelection } from "./selection";
 
 interface KeyboardActions {
-  request(position: CellPosition): void;
+  request(position: CellPosition | undefined): void;
   deactivate(): void;
   menu(position: CellPosition, point: { x: number; y: number }): void;
 }
@@ -155,10 +155,15 @@ export class TableKeyboard {
       return true;
     }
     if (target.row >= this.grid.model.rows.length) {
+      // The new row's cell opens when the table is drawn again.
       this.actions.request(target);
-      this.grid.replace(
-        insertRow(this.grid.model, this.grid.model.rows.length - 1),
-      );
+      if (
+        !this.grid.replace(
+          insertRow(this.grid.model, this.grid.model.rows.length - 1),
+        )
+      ) {
+        this.actions.request(undefined);
+      }
     } else {
       this.projection.open(target, "all");
     }

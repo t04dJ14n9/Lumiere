@@ -37,9 +37,30 @@ export const backgroundUpdate = Annotation.define<boolean>();
  */
 const nestedReadOnly = new Compartment();
 
-/** A nested editor's read-only state: the note's when it opens. */
+/**
+ * Marks a transaction that brings a nested editor's text to the note's (the
+ * note changed under it, or it moved to another cell): not an edit, so it
+ * applies while the note is read-only.
+ */
+export const nestedSync = Annotation.define<boolean>();
+
+/**
+ * A nested editor's read-only state: the note's when it opens. The facet
+ * only advises commands, so a change dispatched to the nested editor anyway
+ * (a key handler's or a menu's) is dropped while the note is read-only;
+ * otherwise the nested editor would show text the note never gets.
+ */
 export function noteReadOnly(note: EditorState): Extension {
-  return nestedReadOnly.of(EditorState.readOnly.of(note.readOnly));
+  return [
+    nestedReadOnly.of(EditorState.readOnly.of(note.readOnly)),
+    EditorState.transactionFilter.of((transaction) =>
+      transaction.docChanged &&
+      transaction.startState.readOnly &&
+      !transaction.annotation(nestedSync)
+        ? []
+        : transaction,
+    ),
+  ];
 }
 
 /** What makes a nested editor read-only exactly when the note is, if needed. */

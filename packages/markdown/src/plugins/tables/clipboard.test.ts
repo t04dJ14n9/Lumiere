@@ -30,7 +30,8 @@ function clipboardFixture() {
     block: { source },
     model: parseTable(source)!,
     root: { isConnected: true, focus() {} },
-    outer: { focus() {} },
+    // A writable note: the clipboard writes to it.
+    outer: { focus() {}, state: EditorState.create() },
     replace(next: string) {
       grid.block.source = next;
       grid.model = parseTable(next)!;

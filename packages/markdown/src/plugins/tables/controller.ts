@@ -26,6 +26,7 @@ import { TableStickyHScroll } from "./sticky-hscroll";
 import { bindTableFocus } from "./focus-lifetime";
 import { followDiagonalWheel } from "./diagonal-wheel";
 import { withShownText } from "./sort-keys";
+import { moveOperation } from "./commands";
 
 /** Wires table interactions and reconciles snapshots from the outer document. */
 export class TableController {
@@ -94,7 +95,7 @@ export class TableController {
       selected,
       environment,
     );
-    const request = (position: CellPosition) =>
+    const request = (position: CellPosition | undefined) =>
       void (this.requested = position);
     const toolbar = new TableToolbar(
       this.grid,
@@ -220,16 +221,13 @@ export class TableController {
       {
         select: (axis, index) => this.selected.selectAxis(axis, index),
         move: (axis, from, to) => {
-          const op: TableOperation = {
-            type: "move",
-            axis,
-            from,
-            to: from,
-            destination: to,
-          };
-          this.columnResize.remap(op);
-          this.grid.replace(operateTable(this.grid.model, op));
-          this.selected.selectAxis(axis, to);
+          const op = moveOperation(axis, from, to);
+          const written = this.columnResize.remapFor(op, () =>
+            this.grid.replace(operateTable(this.grid.model, op)),
+          );
+          if (written) {
+            this.selected.selectAxis(axis, to);
+          }
         },
         menu: (axis, index, point) => {
           this.selected.selectAxis(axis, index, false);

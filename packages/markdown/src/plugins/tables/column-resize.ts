@@ -61,6 +61,21 @@ export class ColumnResize {
     this.widths = widthsAfterOperation(this.widths, operation);
   }
 
+  /**
+   * Remap the widths for `operation`, then `write` it; the widths go back
+   * when nothing is written (a read-only note). They are remapped first so
+   * the table drawn again by the write gets them.
+   */
+  remapFor(operation: TableOperation, write: () => boolean): boolean {
+    const before = this.widths;
+    this.remap(operation);
+    if (!write()) {
+      this.widths = before;
+      return false;
+    }
+    return true;
+  }
+
   destroy(): void {
     this.cancel();
     this.events.abort();

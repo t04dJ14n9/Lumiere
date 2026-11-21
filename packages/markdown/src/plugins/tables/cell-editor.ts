@@ -13,7 +13,7 @@ import { difference } from "../../shared/document/wire";
 import type { InputGrouping } from "../document/api";
 import { editGroup } from "../document/api";
 import { CellSource, cellSyntax } from "./cell-source";
-import { followNoteReadOnly, noteReadOnly } from "../editor/api";
+import { followNoteReadOnly, nestedSync, noteReadOnly } from "../editor/api";
 import { watchNoteReadOnly } from "./cell-read-only";
 import type { Action, TableEnvironment } from "./environment";
 import { cellNavKey, cellNavigation, type CellStep } from "./navigation";
@@ -204,6 +204,7 @@ export class CellEditor {
       if (this.view.state.doc.toString() !== text) {
         this.view.dispatch({
           changes: difference(this.view.state.doc.toString(), text),
+          annotations: nestedSync.of(true),
         });
       }
       if (this.vimEnabled !== vim) {
@@ -231,6 +232,7 @@ export class CellEditor {
       this.view.dispatch({
         changes: { from: 0, to: this.view.state.doc.length, insert: cell.text },
         selection: { anchor: head },
+        annotations: nestedSync.of(true),
       });
     } finally {
       this.reconciling = false;
@@ -242,6 +244,16 @@ export class CellEditor {
     this.unbindMode?.();
     this.view.destroy();
     this.groups.dispose();
+  }
+}
+
+/**
+ * Shift+Enter in a cell: a `<br>`, since a cell is one line of the table.
+ * Nothing in a read-only note.
+ */
+export function insertCellBreak(view: EditorView): void {
+  if (!view.state.readOnly) {
+    view.dispatch(view.state.replaceSelection("<br>"));
   }
 }
 
@@ -257,7 +269,7 @@ export function cellKeymap(options: CellEditorOptions) {
           return false;
         }
         if (nav === "br") {
-          view.dispatch(view.state.replaceSelection("<br>"));
+          insertCellBreak(view);
         } else if (!options.move(nav.row, nav.column)) {
           return false;
         }

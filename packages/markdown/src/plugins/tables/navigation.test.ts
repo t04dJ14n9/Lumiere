@@ -25,7 +25,7 @@ function keyboardFixture(position: CellPosition, standalone = false) {
     position: CellPosition;
     selection: number | "all" | undefined;
   }[] = [];
-  const requested: CellPosition[] = [];
+  const requested: (CellPosition | undefined)[] = [];
   const replacements: string[] = [];
   const projection = {
     active: position as CellPosition | undefined,
@@ -55,6 +55,7 @@ function keyboardFixture(position: CellPosition, standalone = false) {
     commandGroup: () => "table-test",
     replace(text: string) {
       replacements.push(text);
+      return true;
     },
   } as unknown as TableGrid;
   const keyboard = new TableKeyboard(
