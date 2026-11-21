@@ -7069,3 +7069,22 @@ The regression expectations follow that difference, read from Obsidian's
 command and from `@codemirror/state`'s transaction mapping.
 Validation: `obsidian-commands.test.ts` passes (20 tests); full gates run
 separately. Table-cell refusal is not part of this command.
+
+## Parity docs re-baselined on Obsidian 1.15.0 (#700; 2026-11-21)
+
+Documentation only. The installed Obsidian is 1.15.0 (its Info.plist), so
+DESIGN §0 and §2, `docs/PARITY.md` and the subsidiary parity docs now name it
+as the reference. Its shipped `obsidian.asar` was read statically (extracted
+into a scratch directory, never committed; nothing copied); no Obsidian was
+run, so no row claims a live 1.15.0 observation. `docs/PARITY.md` gained
+evidence labels ("behaviour measured on 1.14.4", "code read on 1.15.0", "not
+observed running"), a list of what changed from 1.13.7 (font size commands
+and per-device size, Mermaid replaced by Pele, MathJax 4, highlight and other
+CSS variables), and static reads for the settings, command and 1.14.4-measured
+rows. DESIGN §14 records 1.15.0's default hotkeys in place of the "verify"
+marks (no keys bound or unbound), §15 the inverted `useMarkdownLinks` and the
+folded folder settings. CAPABILITIES, the settings, vim, diagrams and
+outgoingLinks READMEs drop claims the read contradicted. The behavioural
+differences the reads found are listed in the PARITY status column ("differs")
+and left for separate issues; the visual rows still need the owner's
+disposable-vault pass.

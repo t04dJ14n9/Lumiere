@@ -5,6 +5,17 @@ Reference: Obsidian 1.14.4, measured on 2026-10-10 in
 table screenshots in `/workspace/obsidian-compare/`. “Ours today” describes
 the starting code on `tables-parity`; actions below describe this change.
 
+**Reference now 1.15.0 (2026-11-21).** The installed Obsidian is 1.15.0. A
+static read of its shipped `app.js` and `app.css` (nothing was run) finds the
+same rules for recognising a table as in 1.13.7: the header and delimiter-row
+patterns, the alignment patterns, and which following lines continue the
+table (a header that starts with `|` takes lines starting with `|`; a bare
+header takes lines that contain a `|` but do not start with one). The table
+widget's selection styling differs only in minifier spelling. The interaction
+rules below (focus, cell editing, Tab and Enter routing, grips, aligning on a
+click) were not re-read, so they remain 1.14.4 measurements until the owner
+re-measures them on 1.15.0 in a disposable vault.
+
 | Obsidian behaviour | ours today | action (fix / reject+why / defer+why) |
 | --- | --- | --- |
 | Table stays a widget in Live Preview, even with the caret in its source range. | Normally a widget, but “Edit table source” reveals the whole table. | Fix: remove that action and its disclosure state; Source mode remains the way to edit the full Markdown. |
@@ -83,6 +94,7 @@ unchanged-cell anchor check guards the aligned rewrite itself.
 `obsidian-tables-behaviour.md`) and is reproduced by a test that runs in a real
 Chromium (`test/browser/tables-measured.spec.ts`, `tables-parity.spec.ts`,
 `tables-a11y.spec.ts`) or in the real VS Code (`test/vscode/tables.spec.ts`).
+The claim is about 1.14.4; for 1.15.0 only the static read above applies.
 
 Deliberate differences, all measured:
 

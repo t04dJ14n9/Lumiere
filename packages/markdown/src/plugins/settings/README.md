@@ -69,6 +69,9 @@ own; every key above is contributed by the plugin that owns it.
 
 ## Limits and differences from Obsidian
 
-Obsidian has no command-palette entries for its settings; this is a VS Code
-convenience. "Line numbers" flips the plugin; the style (`on`, `relative`,
+Obsidian 1.15.0 has palette commands for a few settings (Toggle line numbers,
+Toggle readable line length, Toggle spellcheck, Increase/Decrease font size,
+Open settings; static read, 2026-11-21) and shows no notice when they run.
+Change Setting…, Set Note Font Size and the Mermaid, inline title and Vim
+toggles are Lumiere's. "Line numbers" flips the plugin; the style (`on`, `relative`,
 `interval`) stays VS Code's `editor.lineNumbers`.
