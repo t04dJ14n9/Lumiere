@@ -1,19 +1,19 @@
 /**
- * YouTube image links become 16:9 player frames. Without an online-video
- * estimatedHeight they fell through to PDF CARD_DEFAULT (~64px); off-viewport
- * rebuilds then collapse the height map like tall Properties.
+ * Tweet image links become tall frames. Without a reserved height they fell
+ * through to PDF CARD_DEFAULT (~64px); off-viewport rebuilds then collapse the
+ * height map like tall Properties.
  */
 import { expect, test, type Page } from "@playwright/test";
 import { open } from "./harness";
 
-const YOUTUBE = "https://www.youtube.com/watch?v=dQw4w9WgXcQ";
+const TWEET = "https://x.com/jack/status/20";
 
 function note(): string {
   const filler = Array.from(
     { length: 40 },
-    (_, i) => `Filler paragraph ${i} scrolls the video away.`,
+    (_, i) => `Filler paragraph ${i} scrolls the tweet away.`,
   ).join("\n\n");
-  return `# Title\n\n![Never gonna](${YOUTUBE})\n\n${filler}\n`;
+  return `# Title\n\n![](${TWEET})\n\n${filler}\n`;
 }
 
 async function constrain(page: Page) {
@@ -24,17 +24,17 @@ async function constrain(page: Page) {
   await page.evaluate(() => window.dispatchEvent(new Event("resize")));
 }
 
-async function stubPlayer(page: Page) {
-  await page.route(/^https:\/\/www\.youtube-nocookie\.com\//, (route) =>
-    route.fulfill({ contentType: "text/html", body: "<p>player stub</p>" }),
+async function stubWidget(page: Page) {
+  await page.route(/^https:\/\/platform\.twitter\.com\//, (route) =>
+    route.fulfill({ contentType: "text/html", body: "<p>tweet stub</p>" }),
   );
 }
 
-test("off-viewport YouTube frame rebuild keeps video height in the map", async ({
+test("off-viewport tweet frame rebuild keeps its height in the map", async ({
   page,
 }) => {
   await page.setViewportSize({ width: 1100, height: 760 });
-  await stubPlayer(page);
+  await stubWidget(page);
   await open(page, note(), "obsidian", { trusted: true });
   await constrain(page);
   await expect(page.locator(".cm-content .mw-embed").first()).toBeVisible({
@@ -49,7 +49,7 @@ test("off-viewport YouTube frame rebuild keeps video height in the map", async (
     await new Promise((resolve) =>
       requestAnimationFrame(() => requestAnimationFrame(resolve)),
     );
-    const from = window.harness.text.indexOf("![Never");
+    const from = window.harness.text.indexOf("![](");
     const measured = view.lineBlockAt(from).height;
     const cardH = document
       .querySelector(".mw-embed")

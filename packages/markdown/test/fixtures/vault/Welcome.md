@@ -16,6 +16,6 @@ else before testing; never test in a real vault. Each note covers one area of
 - [[Callouts]], [[Math]], [[Diagrams]], [[Code]]
 - [[Footnotes]], [[Tasks]], [[Tags]]
 - [[Embeds]]: images, media, PDF and note embeds
-- [[Videos]]: YouTube and tweet embeds
+- [[Videos]]: tweet embeds
 - [[Search]]: embedded query blocks
 - [[notes/Project plan|Project plan]] and [[Duplicate]] (two notes share that name)

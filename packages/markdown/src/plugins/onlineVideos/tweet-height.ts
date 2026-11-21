@@ -1,4 +1,4 @@
-import { TWEET_ORIGIN, clampTweetHeight } from "./player";
+import { TWEET_ORIGIN, clampTweetHeight } from "./tweet-embed";
 
 /** The parts of a `message` event this reads. */
 export interface FrameMessage {

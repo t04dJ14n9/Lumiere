@@ -1,16 +1,14 @@
 # Videos
 
-YouTube videos and tweets written as images (Online Videos plugin).
-
-![Never Gonna Give You Up](https://www.youtube.com/watch?v=dQw4w9WgXcQ)
-
-![](https://youtu.be/dQw4w9WgXcQ?t=42)
+Tweets written as images (Online Videos plugin).
 
 ![](https://x.com/jack/status/20)
 
-A link in text stays a link: [video](https://youtu.be/dQw4w9WgXcQ).
+![A tweet's own words](https://twitter.com/jack/status/20?s=20)
 
-Links to other sites, Shorts, playlists and channels are not embedded, as in
-Obsidian:
+A link in text stays a link: [tweet](https://x.com/jack/status/20).
 
-![](https://www.youtube.com/shorts/dQw4w9WgXcQ)
+Links to other sites, YouTube included (its player shows Error 153 in VS
+Code), are not embedded; they are plain images that fail to load:
+
+![](https://www.youtube.com/watch?v=dQw4w9WgXcQ)

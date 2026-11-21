@@ -1,19 +1,13 @@
-/* Web embeds (YouTube players, tweets) and the card Restricted Mode shows. */
+/* Tweet frames and the card Restricted Mode shows. */
 .mw-embed {
   display: block;
   width: 100%;
   margin: 4px 0;
 }
-.mw-embed-youtube {
-  aspect-ratio: 16 / 9;
-}
 .mw-embed iframe {
   display: block;
   width: 100%;
   border: 0;
-}
-.mw-embed-youtube iframe {
-  height: 100%;
 }
 .mw-embed-card {
   display: flex;

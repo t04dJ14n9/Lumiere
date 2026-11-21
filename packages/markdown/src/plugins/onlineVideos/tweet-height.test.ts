@@ -1,6 +1,6 @@
 import test from "node:test";
 import assert from "node:assert/strict";
-import { TWEET_MAX_HEIGHT, TWEET_MIN_HEIGHT } from "./player";
+import { TWEET_MAX_HEIGHT, TWEET_MIN_HEIGHT } from "./tweet-embed";
 import { tweetResizeHeight, type FrameMessage } from "./tweet-height";
 
 const frame = {};

@@ -1,6 +1,6 @@
 import { embedsImage } from "../../markdown/images";
 import { mediaKind } from "../../shared/media-kinds";
-import { parseWebEmbed, reservedHeight } from "../onlineVideos/api";
+import { TWEET_DEFAULT_HEIGHT, parseTweet } from "../onlineVideos/api";
 import { embedsNote } from "./clicks";
 import { writtenHeight, writtenWidth } from "./image-size";
 
@@ -15,8 +15,8 @@ import { writtenHeight, writtenWidth } from "./image-size";
  * Prefer an explicit `|WxH` height; otherwise reserve a stable default so
  * PageDown / click coordinates below the embed stay valid until measure runs.
  *
- * YouTube and tweet image links become frames (Online Videos). Without a
- * dedicated reserve they fall through to CARD_DEFAULT (~64px).
+ * Tweet image links become a frame (Online Videos). Without a dedicated
+ * reserve they fall through to CARD_DEFAULT (~64px).
  *
  * Note embeds are worse: the source is one line (`![[Other]]`) while resolved
  * content can be many paragraphs. A modest floor covers first paint; after
@@ -92,11 +92,10 @@ export function embedEstimatedHeight(source: string): number {
     const cached = measuredNoteHeights.get(source);
     return cached === undefined ? floor : Math.max(floor, cached);
   }
-  // Online Videos replaces matching image URLs with a player or a tweet; an
-  // untrusted workspace's link card is shorter, and measure settles it.
-  const webEmbed = parseWebEmbed(embedTarget(source));
-  if (webEmbed) {
-    return reservedHeight(webEmbed) + CHROME;
+  // Online Videos replaces a tweet's image URL with its frame; an untrusted
+  // workspace's link card is shorter, and measure settles it.
+  if (parseTweet(embedTarget(source))) {
+    return TWEET_DEFAULT_HEIGHT + CHROME;
   }
   if (/\.base$/i.test(embedTarget(source))) {
     return BASE_DEFAULT + CHROME;

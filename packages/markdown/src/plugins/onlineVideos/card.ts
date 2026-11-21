@@ -1,4 +1,4 @@
-import type { WebEmbed } from "./parse";
+import type { Tweet } from "./parse";
 
 interface CardOptions {
   /** The image's alt text, if any. */
@@ -10,46 +10,32 @@ interface CardOptions {
 
 /**
  * What an untrusted workspace (Restricted Mode) shows in place of a frame: a
- * title (the alt text, else what the link is), the site and ID, and a button
- * that opens the page in the external browser. It loads nothing. A button,
- * not an anchor: VS Code's webview opens every clicked `<a href>` itself as
- * well.
+ * title (the alt text, else "Tweet"), the site and ID, and a button that opens
+ * the tweet in the external browser. It loads nothing. A button, not an
+ * anchor: VS Code's webview opens every clicked `<a href>` itself as well.
  */
-export function linkCard(embed: WebEmbed, options: CardOptions): HTMLElement {
-  const names = SITES[embed.kind];
+export function linkCard(tweet: Tweet, options: CardOptions): HTMLElement {
   const card = document.createElement("span");
   card.className = "mw-embed-card";
-  card.dataset.embed = embed.kind;
-  card.append(
-    element("span", "mw-embed-card-title", options.label.trim() || names.thing),
-    element("span", "mw-embed-card-meta", `${names.site} · ${embed.id}`),
-  );
   const open = document.createElement("button");
   open.type = "button";
   open.className = "mw-embed-card-open";
-  open.textContent = `Open on ${names.site}`;
-  open.title = embed.page;
-  open.addEventListener("click", () => options.open(embed.page), {
+  open.textContent = "Open on X";
+  open.title = tweet.page;
+  open.addEventListener("click", () => options.open(tweet.page), {
     signal: options.signal,
   });
   card.append(
+    element("mw-embed-card-title", options.label.trim() || "Tweet"),
+    element("mw-embed-card-meta", `X · ${tweet.id}`),
     open,
-    element(
-      "span",
-      "mw-embed-card-note",
-      "Embeds are off in an untrusted workspace.",
-    ),
+    element("mw-embed-card-note", "Embeds are off in an untrusted workspace."),
   );
   return card;
 }
 
-const SITES = {
-  youtube: { site: "YouTube", thing: "YouTube video" },
-  tweet: { site: "X", thing: "Tweet" },
-} as const;
-
-function element(tag: string, className: string, text: string): HTMLElement {
-  const node = document.createElement(tag);
+function element(className: string, text: string): HTMLElement {
+  const node = document.createElement("span");
   node.className = className;
   node.textContent = text;
   return node;

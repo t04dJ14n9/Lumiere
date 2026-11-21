@@ -65,22 +65,16 @@ test("inline WxH images use the same height reserve as block embeds", () => {
   assert.ok(height > 700, `got ${height}`);
 });
 
-test("YouTube links reserve a 16:9 player and tweets a default height, not a PDF card", () => {
-  // Online Videos replaces these with frames. Without a dedicated reserve
+test("tweet links reserve the frame's starting height, not a PDF card", () => {
+  // Online Videos replaces these with a frame. Without a dedicated reserve
   // they fell through to CARD_DEFAULT (~64px).
   const pdf = embedEstimatedHeight("![[doc.pdf]]");
-  const youtube = embedEstimatedHeight(
-    "![Never](https://www.youtube.com/watch?v=dQw4w9WgXcQ)",
-  );
-  const short = embedEstimatedHeight("![](https://youtu.be/dQw4w9WgXcQ?t=42)");
-  // 560 px wide at 16:9, plus the embed chrome.
-  assert.equal(youtube, 315 + 16);
-  assert.equal(short, youtube);
-  const tweet = embedEstimatedHeight(
-    "![](https://x.com/jack/status/1590000000000000000)",
-  );
-  assert.ok(tweet > 300, `got ${tweet}`);
-  for (const height of [youtube, tweet]) {
+  for (const link of [
+    "https://x.com/jack/status/1590000000000000000",
+    "https://twitter.com/jack/status/20?s=20",
+  ]) {
+    const height = embedEstimatedHeight(`![](${link})`);
+    assert.equal(height, 400 + 16, link);
     assert.ok(height > pdf * 2, `embed=${height} pdf=${pdf}`);
   }
 });
@@ -88,11 +82,11 @@ test("YouTube links reserve a 16:9 player and tweets a default height, not a PDF
 test("links that are not embedded keep the card reserve, whatever site they name", () => {
   const card = embedEstimatedHeight("![[doc.pdf]]");
   for (const link of [
+    "https://www.youtube.com/watch?v=dQw4w9WgXcQ",
+    "https://youtu.be/dQw4w9WgXcQ",
     "https://www.bilibili.com/video/BV1DRHU6LELy",
     "https://open.spotify.com/track/11dFghVXANMlKmJXsNCbNl",
     "https://vimeo.com/22439234",
-    "https://www.youtube.com/shorts/dQw4w9WgXcQ",
-    "https://www.youtube.com/playlist?list=PL4cUxeGkcC9gZD-Tvwfod2gaISzfRiP9d",
     "https://twitter.com/jack",
   ]) {
     assert.equal(embedEstimatedHeight(`![](${link})`), card, link);

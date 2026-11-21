@@ -3,9 +3,9 @@ import { protocol as links } from "../links/protocol";
 import type { RenderPass } from "../render/api";
 import type {} from "../render/api";
 import { linkCard } from "./card";
-import { embedFrame, trackTweetHeights } from "./frame";
-import { parseWebEmbed } from "./parse";
-import { embedTheme, embedView } from "./player";
+import { trackTweetHeights, tweetFrame } from "./frame";
+import { parseTweet } from "./parse";
+import { embedTheme, embedView } from "./tweet-embed";
 
 interface Mount {
   isTrusted: boolean;
@@ -21,15 +21,15 @@ export const onlineVideosWebview: Plugin = {
       open(href) {
         void ctx.rpc
           .call(links, "open", { href, wiki: false, side: false })
-          .catch((error) => ctx.logger.warn("Open web embed failed", error));
+          .catch((error) => ctx.logger.warn("Open tweet failed", error));
       },
     };
     // Runs before embeds, which would otherwise treat the link as an image.
-    ctx.on("render/postProcess", (pass) => mountEmbeds(pass, mount));
+    ctx.on("render/postProcess", (pass) => mountTweets(pass, mount));
   },
 };
 
-function mountEmbeds(pass: RenderPass, mount: Mount): void {
+function mountTweets(pass: RenderPass, mount: Mount): void {
   const images = pass.container.querySelectorAll<HTMLImageElement>(
     "img.note-image[data-resource]",
   );
@@ -43,23 +43,21 @@ function mountEmbeds(pass: RenderPass, mount: Mount): void {
   });
   const restore: (() => void)[] = [];
   for (const image of images) {
-    const embed = parseWebEmbed(image.dataset.resource ?? "");
-    if (!embed) {
+    const tweet = parseTweet(image.dataset.resource ?? "");
+    if (!tweet) {
       continue;
     }
-    const view = embedView(embed, {
+    const view = embedView(tweet, {
       isTrusted: mount.isTrusted,
       theme: embedTheme(document.body.classList),
     });
     let shown: HTMLElement;
     if (view.kind === "frame") {
-      const { shell, frame } = embedFrame(embed, view, events.signal);
-      if (embed.kind === "tweet") {
-        trackHeight(frame);
-      }
+      const { shell, frame } = tweetFrame(view, events.signal);
+      trackHeight(frame);
       shown = shell;
     } else {
-      shown = linkCard(embed, {
+      shown = linkCard(tweet, {
         label: image.alt,
         signal: events.signal,
         open: mount.open,

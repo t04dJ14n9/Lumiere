@@ -3273,7 +3273,7 @@
             "type": "boolean",
             "default": true,
             "scope": "resource",
-            "description": "Embed YouTube videos and tweets written as images (![](link)) as Obsidian does. In an untrusted workspace they show a link card."
+            "description": "Embed tweets written as images (![](link)) as Obsidian does. In an untrusted workspace they show a link card."
           },
           "lumiere.markdown.plugins.outgoingLinks.enabled": {
             "type": "boolean",
