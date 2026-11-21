@@ -1,9 +1,9 @@
 import { EditorSelection, type EditorState } from "@codemirror/state";
 import type { EditorView, KeyBinding } from "@codemirror/view";
 import { textStart } from "../../markdown/list-markup";
-import { HIGHLIGHT_COLOURS } from "../../markdown/dialect/highlight";
+import { HIGHLIGHT_COLOUR_EMOJI } from "../../markdown/dialect/highlight";
 
-const HIGHLIGHT_COLOUR_EMOJI = Object.values(HIGHLIGHT_COLOURS).join("|");
+const COLOUR_EMOJI = HIGHLIGHT_COLOUR_EMOJI.join("|");
 
 /**
  * Live Preview–hidden openers that can sit after list/quote markup on the
@@ -13,7 +13,7 @@ const HIGHLIGHT_COLOUR_EMOJI = Object.values(HIGHLIGHT_COLOURS).join("|");
  * applies to trailing closers. Colour emoji only count right after `==`.
  */
 const LEADING_OPENERS = new RegExp(
-  `^(?:[*_~=\`$%]+|!?\\[\\[|\\[|%%|<[^>\\n]+>|(?<===)(?:${HIGHLIGHT_COLOUR_EMOJI}))+$`,
+  `^(?:[*_~=\`$%]+|!?\\[\\[|\\[|%%|<[^>\\n]+>|(?<===)(?:${COLOUR_EMOJI}))+$`,
   "u",
 );
 

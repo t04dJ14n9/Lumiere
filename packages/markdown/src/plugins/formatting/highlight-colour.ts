@@ -16,8 +16,17 @@ import { spanContent, spansIn, type Span } from "./spans";
 /** A highlight's colour, `"default"` for a plain one. */
 type Tint = HighlightColour | "default";
 
-const opening = (tint: Tint) =>
-  tint === "default" ? "==" : `==${HIGHLIGHT_COLOURS[tint]}`;
+/**
+ * A highlight's opening in `tint`. As in Obsidian 1.15, a colour keeps the
+ * emoji a covered highlight of that colour has (a square one, say).
+ */
+function opening(tint: Tint, covered: readonly Span[] = []): string {
+  if (tint === "default") {
+    return "==";
+  }
+  const kept = covered.find((span) => span.colour === tint)?.emoji;
+  return `==${kept ?? HIGHLIGHT_COLOURS[tint]}`;
+}
 
 /**
  * **Toggle red highlight** and the other colours, as Obsidian 1.14 toggles
@@ -239,7 +248,7 @@ function rewritten(
     const last =
       chars.length - [...chars].reverse().findIndex((c) => !isSpace(c));
     write(chars.slice(0, first));
-    text += opening(tint);
+    text += opening(tint, rewrite.spans);
     write(chars.slice(first, last));
     text += "==";
     write(chars.slice(last));

@@ -116,6 +116,9 @@
   under it while Smart lists is on, as Obsidian 1.15 does: past its sibling,
   out of its parent upwards and into the next item downwards, numbers
   staying in place (#787).
+- Markdown: a highlight coloured with a square emoji (`==🟥text==`, and
+  🟧🟨🟩🟦🟪) shows in its colour, in the note and in embeds, as Obsidian
+  1.15 reads it; the colour commands treat it as that colour (#787).
 
 Fixes for several VS Code windows open at once, each with a test; checked
 with two real windows on one profile.

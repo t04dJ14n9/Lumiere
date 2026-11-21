@@ -7820,3 +7820,15 @@ running. One commit per item.
   `smartListsOn` facet (src/markdown/smart-lists.ts) for the switch, so
   formatting does not reach into it. Not done: Obsidian carries folds
   inside the moved item. Unit tests: swap-lines.test.ts.
+- **Square-emoji highlight colours.** 1.15.0's colour table maps 🟥🟧🟨🟩🟦🟪
+  to red, orange, yellow, green, blue and purple beside the round emoji;
+  Reading view puts the colour name in `data-highlight`, Live Preview draws
+  its swatch for it, and the commands treat it as that colour, writing round
+  emoji except where a covered highlight of the colour already has a marker,
+  which they keep. `highlightColourAt` (dialect/highlight.ts), which every
+  parser, renderer and command uses, now knows both sets, so Lumiere's own
+  colour styles apply; Home's opener rule (editor/line-start.ts) skips both;
+  a recolouring merge keeps a covered square emoji (`Span.emoji`). Left:
+  1.15.0 offers no colour list after `==` when a colour emoji already
+  follows, which Lumiere's suggestion does not check (round or square).
+  Unit tests: highlight-colours and livePreview inline tests.

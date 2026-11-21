@@ -30,7 +30,9 @@ Highlights take Obsidian 1.14's colours, an emoji right after `==`
 word or selection in that colour; on a highlight they recolour it, or remove
 it in its own colour; on part of one they split it, the part in the new
 colour and the rest in its own, spaces left outside; highlights a selection
-spans merge (`highlight-colour.ts`). Typing `==` that opens a highlight offers
+spans merge (`highlight-colour.ts`). The square emoji (`==🟦text==`) are the
+same colours, as in Obsidian 1.15; the commands write round ones, but keep a
+square one when merging highlights of its colour. Typing `==` that opens a highlight offers
 Default and the six colours; taking one wraps an immediately following word,
 reuses its closing `==` if present, or opens an empty pair, with the caret
 inside after the colour (`highlight-suggest.ts`); Tab takes nothing, as in
