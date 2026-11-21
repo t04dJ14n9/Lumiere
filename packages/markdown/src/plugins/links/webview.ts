@@ -324,6 +324,9 @@ function registerInsertWikilink(ctx: Context): void {
   const view = ctx.editor.view;
   ctx.effect(() =>
     ctx.commands.register("editor:insert-wikilink", () => {
+      if (view.state.readOnly) {
+        return false;
+      }
       view.dispatch(wikilinkEdit(view.state, false));
       return true;
     }),
