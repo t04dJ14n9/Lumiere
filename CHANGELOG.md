@@ -133,6 +133,14 @@
   `hosts-snapshot-2026-11-21` branch (commit `db1a5aaf`), which takes no
   further changes from `main`. The entries above that name them describe
   that branch, not this release.
+- Markdown: the Sketches plugin (drawing with Apple Pencil in a note) and
+  the `packages/ink` it drew with left `main`. It ran only in the iPad,
+  desktop and web apps, which provided a canvas; in VS Code and Cursor it
+  never started, but its setting `lumiere.markdown.plugins.sketch.enabled`
+  ("Draw with Apple Pencil in a note…") still showed in the Settings editor.
+  The setting and the hidden Insert Sketch command are gone; a value left in
+  settings.json is dimmed as unknown, and a `*.sketch.svg` file still shows
+  as an image. The plugin lives on the `hosts-snapshot-2026-11-21` branch.
 
 Fixes for several VS Code windows open at once, each with a test; checked
 with two real windows on one profile.

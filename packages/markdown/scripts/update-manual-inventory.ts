@@ -17,9 +17,7 @@ async function main() {
       ? "Enable Vim and press the listed keys; host commands must not steal them. This helper stays hidden from the palette."
       : command.command.endsWith("handleVimCtrlN")
         ? "Enable Vim in Live Preview and press Ctrl+N; must not open Untitled and must move like j (<C-n>). Disable Vim: Ctrl+N opens Untitled. Hidden from the palette."
-        : command.command.endsWith("insertSketch")
-          ? "VS Code and Cursor provide no canvas: confirm Insert Sketch is absent from the Command Palette and the note's right-click menu, and that an existing `*.sketch.svg` embed shows as an image."
-          : `On a disposable fixture, run ${command.title}; confirm its named action using the plugin scenarios above, then undo where applicable. Repeat after disable/re-enable and switching panes.`;
+        : `On a disposable fixture, run ${command.title}; confirm its named action using the plugin scenarios above, then undo where applicable. Repeat after disable/re-enable and switching panes.`;
     return `| \`${command.command}\` — ${escape(command.title)} | ${escape(keys)} | ${escape(action)} |`;
   });
   const submenus = generated.submenus.map((submenu) => {
@@ -36,9 +34,6 @@ async function main() {
   const settingProcedure = (key: string, values: string) => {
     if (key === "lumiere.markdown.plugins.attachments.enabled") {
       return "boolean; drop/paste an image into a note, confirm a timestamp file under `files.attachmentFolder` and its embed; turn off and confirm drop/paste leave the vault unchanged; then reset.";
-    }
-    if (key === "lumiere.markdown.plugins.sketch.enabled") {
-      return "boolean; VS Code and Cursor provide no canvas, so Insert Sketch stays hidden whether it is on or off; confirm a `*.sketch.svg` embed shows as an image either way; then reset.";
     }
     return `${values}; change at workspace-folder scope, verify the owning plugin scenario, then reset the override.`;
   };
@@ -73,7 +68,7 @@ async function main() {
     "| --- | --- | --- |",
     ...settings,
     "",
-    "Attachment folder (`files.attachmentFolder`) is where dropped, pasted, and HTML-paste images (and sketches) are saved under timestamp names. `links.useWikilinks` changes suggestion acceptance; explicit Insert Wikilink retains wiki syntax. Strict line breaks affects rendered Markdown; source text and its line boundaries remain intact. Default mode affects newly opened panes, not restored pane state.",
+    "Attachment folder (`files.attachmentFolder`) is where dropped, pasted, and HTML-paste images are saved under timestamp names. `links.useWikilinks` changes suggestion acceptance; explicit Insert Wikilink retains wiki syntax. Strict line breaks affects rendered Markdown; source text and its line boundaries remain intact. Default mode affects newly opened panes, not restored pane state.",
     "<!-- command-setting-inventory:end -->",
   ].join("\n");
   const path = "docs/MANUAL_TEST_PLAN.md";

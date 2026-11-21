@@ -80,8 +80,6 @@ const WEBVIEW_LOADERS: Record<string, () => Promise<Plugin<unknown>>> = {
   math: () => import("../plugins/math/webview").then((m) => m.mathWebview),
   outline: () =>
     import("../plugins/outline/webview").then((m) => m.outlineWebview),
-  sketch: () =>
-    import("../plugins/sketch/webview").then((m) => m.sketchWebview),
   onlineVideos: () =>
     import("../plugins/onlineVideos/webview").then(
       (m) => m.onlineVideosWebview,

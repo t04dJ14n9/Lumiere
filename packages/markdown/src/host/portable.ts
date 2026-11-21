@@ -5,7 +5,6 @@
  * Nothing this module imports may reach `vscode` (see test/unit/layers.test.ts).
  */
 export { bootstrap, type BootstrapOptions } from "./bootstrap";
-export type { InkService } from "@workshop/ink/service";
 export {
   pluginRank,
   pluginTitles,

@@ -9,7 +9,6 @@
  */
 import type { Plugin, Services } from "@workshop/core";
 import { HOST_SERVICE_NAMES } from "../shared/host";
-import type {} from "@workshop/ink/service";
 import type {} from "../shared/pdf-outlines";
 
 type ServiceName = keyof Services;
@@ -20,8 +19,6 @@ const ROOT_SERVICES: readonly ServiceName[] = [
   "vaultSystem",
   "rpc",
   "pluginStates",
-  // Only some hosts have a canvas (BootstrapOptions.ink).
-  "ink",
   // Only the extension has a PDF engine (Lumiere PDF's, provided by its root).
   "pdfOutlines",
 ];

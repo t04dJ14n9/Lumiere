@@ -41,22 +41,15 @@ import {
   obsidianCompatHost,
   graphHost,
   diffResourcesHost,
-  sketchHost,
   vimHost,
 } from "../plugins/host";
 import { workbenchFeatures as startWorkbenchFeatures } from "./workbench-features";
 import type { CursorBridgeConfig } from "../plugins/cursorBridge/host";
-import type { InkService } from "@workshop/ink/service";
 
 /** What only some editors offer the plugins. */
 export interface BootstrapOptions {
   /** Cursor's Chat and Edit hand-off; without it the bridge stays off. */
   readonly cursorBridge?: CursorBridgeConfig;
-  /**
-   * A canvas to draw on (VS Code provides none); without it the plugins
-   * that draw (`sketch`) wait and show nothing.
-   */
-  readonly ink?: InkService;
 }
 
 /**
@@ -74,9 +67,6 @@ export async function bootstrap(
   providePluginStates(root);
   if (vaultSystem) {
     root.provide("vaultSystem", vaultSystem);
-  }
-  if (options.ink) {
-    root.provide("ink", options.ink);
   }
   root.plugin(documentHost);
   root.plugin(vaultsHost);
@@ -139,7 +129,6 @@ const DEFERRED_WINDOW_FEATURES = [
   "gitDiffEditor",
   "marp",
   "tags",
-  "sketch",
   "graph",
   "linkUpdates",
 ];
@@ -164,7 +153,6 @@ function startWindowFeatures(root: BaseContext, host: HostServices): void {
     marpHost,
     tagsViewHost,
     vaultSearchHost,
-    sketchHost,
     obsidianCompatHost,
     graphHost,
     vimHost,

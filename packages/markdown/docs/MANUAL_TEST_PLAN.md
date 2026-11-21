@@ -1323,7 +1323,6 @@ Use the disposable fixture vault from Setup. These rows enumerate every generate
 | `lumiere.markdown.toggleInlineGitChanges` — Toggle Inline Git Changes | unbound | On a disposable fixture, run Toggle Inline Git Changes; confirm its named action using the plugin scenarios above, then undo where applicable. Repeat after disable/re-enable and switching panes. |
 | `lumiere.markdown.toggleVim` — Toggle Vim Mode | unbound | On a disposable fixture, run Toggle Vim Mode; confirm its named action using the plugin scenarios above, then undo where applicable. Repeat after disable/re-enable and switching panes. |
 | `lumiere.markdown.toggleSpellcheck` — Toggle Spellcheck | unbound | On a disposable fixture, run Toggle Spellcheck; confirm its named action using the plugin scenarios above, then undo where applicable. Repeat after disable/re-enable and switching panes. |
-| `lumiere.markdown.insertSketch` — Insert Sketch | unbound | VS Code and Cursor provide no canvas: confirm Insert Sketch is absent from the Command Palette and the note's right-click menu, and that an existing `*.sketch.svg` embed shows as an image. |
 | `lumiere.markdown.insertTable` — Insert Table | unbound | On a disposable fixture, run Insert Table; confirm its named action using the plugin scenarios above, then undo where applicable. Repeat after disable/re-enable and switching panes. |
 | `lumiere.markdown.tableInsertRowAbove` — Table: Insert Row Above | unbound | On a disposable fixture, run Table: Insert Row Above; confirm its named action using the plugin scenarios above, then undo where applicable. Repeat after disable/re-enable and switching panes. |
 | `lumiere.markdown.tableInsertRowBelow` — Table: Insert Row Below | unbound | On a disposable fixture, run Table: Insert Row Below; confirm its named action using the plugin scenarios above, then undo where applicable. Repeat after disable/re-enable and switching panes. |
@@ -1398,7 +1397,6 @@ Use the disposable fixture vault from Setup. These rows enumerate every generate
 | `lumiere.markdown.plugins.quickSwitcher.enabled` | `true` | boolean; change at workspace-folder scope, verify the owning plugin scenario, then reset the override. |
 | `lumiere.markdown.plugins.scratch.enabled` | `true` | boolean; change at workspace-folder scope, verify the owning plugin scenario, then reset the override. |
 | `lumiere.markdown.plugins.search.enabled` | `true` | boolean; change at workspace-folder scope, verify the owning plugin scenario, then reset the override. |
-| `lumiere.markdown.plugins.sketch.enabled` | `true` | boolean; VS Code and Cursor provide no canvas, so Insert Sketch stays hidden whether it is on or off; confirm a `*.sketch.svg` embed shows as an image either way; then reset. |
 | `lumiere.markdown.plugins.smartLists.enabled` | `true` | boolean; change at workspace-folder scope, verify the owning plugin scenario, then reset the override. |
 | `lumiere.markdown.plugins.spellcheck.enabled` | `true` | boolean; change at workspace-folder scope, verify the owning plugin scenario, then reset the override. |
 | `lumiere.markdown.plugins.stickyScroll.enabled` | `true` | boolean; change at workspace-folder scope, verify the owning plugin scenario, then reset the override. |
@@ -1470,7 +1468,7 @@ Use the disposable fixture vault from Setup. These rows enumerate every generate
 | `lumiere.markdown.plugins.external` | `{}` | object; change at workspace-folder scope, verify the owning plugin scenario, then reset the override. |
 | `lumiere.markdown.preset` | `"obsidian"` | obsidian / minimal; change at workspace-folder scope, verify the owning plugin scenario, then reset the override. |
 
-Attachment folder (`files.attachmentFolder`) is where dropped, pasted, and HTML-paste images (and sketches) are saved under timestamp names. `links.useWikilinks` changes suggestion acceptance; explicit Insert Wikilink retains wiki syntax. Strict line breaks affects rendered Markdown; source text and its line boundaries remain intact. Default mode affects newly opened panes, not restored pane state.
+Attachment folder (`files.attachmentFolder`) is where dropped, pasted, and HTML-paste images are saved under timestamp names. `links.useWikilinks` changes suggestion acceptance; explicit Insert Wikilink retains wiki syntax. Strict line breaks affects rendered Markdown; source text and its line boundaries remain intact. Default mode affects newly opened panes, not restored pane state.
 <!-- command-setting-inventory:end -->
 
 

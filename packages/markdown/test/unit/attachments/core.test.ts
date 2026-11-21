@@ -19,7 +19,7 @@ test("resolveAttachmentDir matches Obsidian attachment folder setting", () => {
     ["./a/b/", "Projects/Garden/a/b"],
     ["Attachments", "Attachments"],
     ["/Attachments/", "Attachments"],
-    ["Media/Sketches", "Media/Sketches"],
+    ["Media/Drawings", "Media/Drawings"],
     ["assets", "assets"],
     ["../outside", ""],
     ["./../../..", ""],
@@ -47,8 +47,8 @@ test("uniqueTimestampName uses YYYY-MM-DD HH.mm.ext and collision suffixes", () 
     "2026-10-30 14.52 3.png",
   );
   assert.equal(
-    uniqueTimestampName("sketch.svg", [], date),
-    "2026-10-30 14.52.sketch.svg",
+    uniqueTimestampName("tar.gz", [], date),
+    "2026-10-30 14.52.tar.gz",
   );
 });
 
@@ -255,7 +255,7 @@ test("saveAttachment writes nothing where a symbolic link is on the way", async 
   }
 });
 
-test("sketch and attachments share the same folder resolution", () => {
+test("the attachment folder resolves from the vault root or beside the note", () => {
   assert.equal(resolveAttachmentDir("assets", "Notes/A.md"), "assets");
   assert.equal(resolveAttachmentDir("./shots", "Notes/A.md"), "Notes/shots");
 });
