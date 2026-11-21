@@ -80,8 +80,14 @@ and draws dark paper the way the worker does.
 
 `dark-host.ts` reads three private members of EmbedPDF's `WorkerHost`
 (`handlePagesRender`, `requireSession`, `slices`). They exist in the pinned
-`@embedpdf/engine-services@3.0.0`, and the host refuses to start without them
-rather than leave dark pages quietly white. The struct layouts in
+`@embedpdf/engine-services@3.2.0`, and the host refuses to start without them
+rather than leave dark pages quietly white. In 3.2.0 the method
+`handlePagesRender(request, signal)` is on the prototype and answers a
+`pages.render` wire pack; `slicedWork` calls it as `this.handlePagesRender(...)`,
+so the instance override `dark-host.ts` makes is the one that runs.
+`requireSession(request)` returns the `DocumentSession` (`resolvePageRef` is
+public), and `slices` is the instance field `{ budgetMs, between() }` that
+`PageRenderReader.render` takes as its last argument. The struct layouts in
 `color-scheme-runtime.ts` (`FPDF_COLORSCHEME`, and `IFSDK_PAUSE` on wasm32) are
 PDFium's.
 

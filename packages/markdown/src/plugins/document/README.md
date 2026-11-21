@@ -43,8 +43,17 @@ closing cancels it; each edit restarts it. When it ends the host reads the setti
 through `Session.save`, the same path as the commands, so VS Code still does the
 write, runs the save participants and owns conflicts. A failed save is not
 retried: VS Code reports it (a file changed on disk becomes its conflict dialog)
-and the next edit starts a new countdown. A countdown that ends while a save is
-running waits for it and then saves what came after.
+and the next edit starts a new countdown. A countdown that ends while a save
+that same `Autosave` started is still running waits for it and then saves what
+came after. That wait is the autosave's own flag, so it does not see a save
+begun elsewhere: a Save command (which runs under `Session.withAction`, a queue
+the autosave does not use) or VS Code's own. A note whose last panel closed and
+that is opened again gets a new `Autosave`, which knows nothing of the old
+one's save. For overlapping saves `saveDocument` (`save.ts`), which
+`Session.save` runs, does this much: it asks VS Code to save and, if VS Code
+answers false while the note is still dirty or untitled, waits up to 2 s for VS
+Code's saved event for that note, reporting success if it arrives and failure
+if not. It does not queue or order the saves.
 
 ## Files
 
