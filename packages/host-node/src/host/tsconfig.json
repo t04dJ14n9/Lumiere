@@ -11,6 +11,7 @@
     "../embedding.ts",
     "../palette.ts",
     "../views.ts",
-    "../settings.ts"
+    "../settings.ts",
+    "../vault-file-headers.ts"
   ]
 }

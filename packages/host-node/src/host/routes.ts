@@ -266,6 +266,9 @@ function panelUrls(panelId: string, host: string): PanelUrls {
   return {
     // The page's socket is same-origin, but CSP 'self' does not cover ws: everywhere.
     cspSource: socketSource(host),
+    // 'self' is the embedder's origin, which serves a vault's files and the
+    // API: no same-origin URL may be a script of this page.
+    scriptsByNonceOnly: true,
     asset: (relative) => `${BASE}/m/${relative}`,
     resource: (uri) =>
       `${BASE}/file?panel=${encodeURIComponent(panelId)}&uri=${encodeURIComponent(uri)}`,

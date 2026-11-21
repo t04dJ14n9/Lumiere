@@ -280,19 +280,25 @@ test("file route: a vault's files never run as pages or scripts on this origin",
   };
   for (const name of ["page.html", "drawing.svg", "image.png"]) {
     const answer = await headers(name);
-    // Opened as a page of its own, it gets an opaque origin and no scripts.
-    assert.match(
-      answer.get("content-security-policy") ?? "",
-      /(^|;)\s*sandbox(\s*;|$)/,
+    // Opened as a page of its own, it gets an opaque origin, no scripts and
+    // nothing to load.
+    assert.equal(
+      answer.get("content-security-policy"),
+      "default-src 'none'; sandbox",
       name,
     );
     assert.equal(answer.get("x-content-type-options"), "nosniff", name);
   }
-  for (const name of ["tool.js", "tool.cjs"]) {
+  assert.equal(
+    (await headers("drawing.svg")).get("content-type"),
+    "image/svg+xml",
+  );
+  assert.equal((await headers("image.png")).get("content-type"), "image/png");
+  for (const name of ["page.html", "tool.js", "tool.cjs"]) {
     const answer = await headers(name);
-    // With nosniff, a script of any other type is refused by the editor's
-    // page, whose policy allows same-origin scripts.
-    assert.doesNotMatch(answer.get("content-type") ?? "", /javascript/, name);
+    // Neither rendered nor run: bytes, which a browser saves when opened.
+    assert.equal(answer.get("content-type"), "application/octet-stream", name);
+    assert.equal(answer.get("content-disposition"), "attachment", name);
     assert.equal(answer.get("x-content-type-options"), "nosniff", name);
   }
   // Chrome refuses to show a PDF in a sandboxed document; its viewer runs on

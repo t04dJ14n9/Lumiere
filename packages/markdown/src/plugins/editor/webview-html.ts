@@ -34,12 +34,15 @@ function importEditor(entry: string): string {
 export function webviewHTML(panel: PanelShell, snapshot = ""): string {
   const nonce = scriptNonce();
   const source = panel.cspSource;
-  const policy = `default-src 'none'; script-src 'nonce-${nonce}' 'wasm-unsafe-eval' ${source}; style-src ${source} 'unsafe-inline'; img-src ${source} data: blob:${panel.trusted ? " https:" : ""}; media-src ${source} blob:${panel.trusted ? " https:" : ""}; frame-src ${panel.trusted ? "https:" : "'none'"}; font-src ${source} data:; connect-src ${source} blob:;`;
+  // A module's imports, static or `import()`, inherit its nonce, so the
+  // editor's chunks load without a source here.
+  const scripts = panel.scriptsByNonceOnly ? "" : ` ${source}`;
+  const policy = `default-src 'none'; script-src 'nonce-${nonce}' 'wasm-unsafe-eval'${scripts}; style-src ${source} 'unsafe-inline'; img-src ${source} data: blob:${panel.trusted ? " https:" : ""}; media-src ${source} blob:${panel.trusted ? " https:" : ""}; frame-src ${panel.trusted ? "https:" : "'none'"}; font-src ${source} data:; connect-src ${source} blob:;`;
   const entry = panel.asset("webview/editor.js");
   const script = snapshot
     ? `<script nonce="${nonce}">${importEditor(entry)}</script>`
     : `<script type="module" nonce="${nonce}" src="${escape(entry)}"></script>`;
-  return `<!doctype html><html><head><meta charset="UTF-8"><meta http-equiv="Content-Security-Policy" content="${escape(policy)}"><meta name="viewport" content="width=device-width,initial-scale=1"><link rel="stylesheet" href="${escape(panel.asset("webview/editor.css"))}">${preloads(panel)}<style>html,body,#app{height:100%;margin:0;background:var(--vscode-editor-background,transparent)}</style></head><body><main id="app" data-pdfium-wasm="${escape(panel.pdfEngine ?? panel.asset("webview/embedpdf.wasm"))}">${snapshot}</main>${script}</body></html>`;
+  return `<!doctype html><html><head><meta charset="UTF-8"><meta http-equiv="Content-Security-Policy" content="${escape(policy)}"><meta name="viewport" content="width=device-width,initial-scale=1"><link rel="stylesheet" href="${escape(panel.asset("webview/editor.css"))}">${preloads(panel, nonce)}<style>html,body,#app{height:100%;margin:0;background:var(--vscode-editor-background,transparent)}</style></head><body><main id="app" data-pdfium-wasm="${escape(panel.pdfEngine ?? panel.asset("webview/embedpdf.wasm"))}">${snapshot}</main>${script}</body></html>`;
 }
 
 /**
@@ -47,12 +50,14 @@ export function webviewHTML(panel: PanelShell, snapshot = ""): string {
  * is built. Listing them lets the browser request them together, while the
  * entry's own imports are still unknown: their fetches overlap instead of
  * following one another (the page evaluates none of them until it imports it).
+ * Each carries the nonce: under a nonce-only policy a hint without it fails,
+ * and the module it names would then fail to import as well.
  */
-function preloads(panel: PanelShell): string {
+function preloads(panel: PanelShell, nonce: string): string {
   return (panel.preload ?? [])
     .map(
       (file) =>
-        `<link rel="modulepreload" href="${escape(panel.asset(file))}">`,
+        `<link rel="modulepreload" nonce="${nonce}" href="${escape(panel.asset(file))}">`,
     )
     .join("");
 }

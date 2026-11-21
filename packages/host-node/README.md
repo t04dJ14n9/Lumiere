@@ -38,10 +38,13 @@ any Node web server:
   request that names it with 304, so each page that opens the editor again
   revalidates them; esbuild's content-hashed chunks are cached as `immutable`;
 - `/lumiere/page/shim.js`: the page shim;
-- `/lumiere/file`: a note's images. A vault's file is someone else's content
-  on the embedder's origin: it is served with `Content-Security-Policy:
-  sandbox` (a PDF excepted) and `nosniff`, and a script as text, so it never
-  runs as a page or a script there;
+- `/lumiere/file`: a note's images, audio, video and PDFs. A vault's file is
+  someone else's content on the embedder's origin, so it never runs as a page
+  or a script there (`src/vault-file-headers.ts`): what the editor embeds
+  keeps its media type, anything else (an HTML page, a script, XML) is
+  `application/octet-stream` with `Content-Disposition: attachment`, and every
+  file but a PDF carries `Content-Security-Policy: default-src 'none';
+  sandbox`, all with `nosniff`;
 - `/lumiere/socket`: the page's socket;
 - `/lumiere/views`: the tree views;
 - `/lumiere/settings`: Lumière's settings, for a settings page. A plugin
@@ -99,11 +102,14 @@ and reaches no Node built-in, which `test/unit/core-layers.test.ts` checks.
 | `src/palette.ts` | embedder → page | an embedder's colour roles as the `--vscode-*` variables |
 | `src/views.ts` | embedder ↔ host (HTTP) | tree snapshots, clicks, visibility, events |
 | `src/settings.ts` | embedder ↔ host (HTTP) | every setting with its value, group and title; changes, checked as VS Code's commands check them |
+| `src/vault-file-headers.ts` | `/lumiere/file` ↔ the web app's service worker | the media types and headers a vault's file is served with, so it never runs as a page or a script |
 
 The last four are browser-safe entries (`@workshop/host-node/embedding`,
 `/palette`, `/views`, `/settings`) for an embedder's page. Its Node half imports the main
-entry. The `architecture/boundaries` lint rule allows no other import, and
-forbids this package from importing `vscode` or any embedder.
+entry. `@workshop/host-node/vault-file-headers` is browser-safe too, for the
+web app's service worker. The `architecture/boundaries` lint rule allows no
+other import, and forbids this package from importing `vscode` or any
+embedder.
 
 ## Files
 
@@ -117,6 +123,7 @@ forbids this package from importing `vscode` or any embedder.
 - `src/host/conflict-copy.ts`: where another program's version of a note goes when unsaved typing on the same lines is saved over it.
 - `src/host/panels.ts`, `src/host/panel.ts`: editor pages as panels, and their sockets.
 - `src/host/routes.ts`, `src/host/page.ts`, `src/host/static.ts`: the routes above.
+- `src/vault-file-headers.ts`: the media types and headers a vault's file is served with.
 - `src/host/pdf-pages.ts`, `src/host/pdf-routes.ts`: PDF tabs, on Lumière PDF's viewer core (`@workshop/pdf/portable`) and the same page shim and socket as notes.
 - `src/host/trees.ts`, `src/host/view-routes.ts`: the plugins' tree views and their routes.
 - `src/host/settings-routes.ts`: the settings for a settings page, and changes to them.

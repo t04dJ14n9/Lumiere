@@ -10,8 +10,11 @@ function shell(trusted: boolean): PanelShell {
     asset: (relative: string) => `vscode-resource:/${relative}`,
   } as unknown as PanelShell;
 }
-function policy(trusted: boolean): Map<string, string> {
-  const html = webviewHTML(shell(trusted));
+function policy(
+  trusted: boolean,
+  extra: Partial<PanelShell> = {},
+): Map<string, string> {
+  const html = webviewHTML({ ...shell(trusted), ...extra } as PanelShell);
   const content = /Content-Security-Policy" content="([^"]*)"/.exec(html)?.[1];
   assert.ok(content);
   const directives = new Map<string, string>();
@@ -38,6 +41,22 @@ test("the webview CSP matches DESIGN §19 in a trusted workspace", () => {
   assert.equal(csp.get("connect-src"), "vscode-resource: blob:");
 });
 
+test("a host that asks for it gets scripts by nonce only; other files still come from its source", () => {
+  const csp = policy(true, {
+    cspSource: "'self' ws://127.0.0.1:4000",
+    scriptsByNonceOnly: true,
+  });
+  assert.match(
+    csp.get("script-src") ?? "",
+    /^'nonce-[^']+' 'wasm-unsafe-eval'$/,
+  );
+  assert.equal(csp.get("connect-src"), "'self' ws://127.0.0.1:4000 blob:");
+  assert.equal(
+    csp.get("style-src"),
+    "'self' ws://127.0.0.1:4000 'unsafe-inline'",
+  );
+});
+
 test("an untrusted workspace drops remote images, media and frames", () => {
   const csp = policy(false);
   assert.equal(csp.get("img-src"), "vscode-resource: data: blob:");
@@ -59,9 +78,11 @@ test("the page lists the files the host says it will fetch as modulepreload hint
     preload: ["webview/editor.js", "webview/chunk-A.js"],
   } as unknown as PanelShell);
   assert.deepEqual(
-    [...html.matchAll(/<link rel="modulepreload" href="([^"]*)">/g)].map(
-      (match) => match[1],
-    ),
+    [
+      ...html.matchAll(
+        /<link rel="modulepreload" nonce="([^"]*)" href="([^"]*)">/g,
+      ),
+    ].map((match) => match[2]),
     [
       "vscode-resource:/webview/editor.js",
       "vscode-resource:/webview/chunk-A.js",
@@ -70,6 +91,15 @@ test("the page lists the files the host says it will fetch as modulepreload hint
   assert.ok(
     html.indexOf("modulepreload") < html.indexOf('<script type="module"'),
   );
+  // Under a nonce-only policy a hint without the page's nonce would fail,
+  // and so would the import of the module it names.
+  const nonce = /<script type="module" nonce="([^"]+)"/.exec(html)?.[1];
+  assert.ok(nonce);
+  for (const match of html.matchAll(
+    /<link rel="modulepreload" nonce="([^"]*)"/g,
+  )) {
+    assert.equal(match[1], nonce);
+  }
 });
 
 test("a host with nothing to preload gets a page without hints", () => {

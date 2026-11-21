@@ -64,8 +64,9 @@ trackpad with a line that thins as it speeds up.
   page keeps too.
 - `src/worker/sw.ts`: the service worker (built into `sw.js`): offline, and
   the routes above. `windows.ts` asks the app's windows; `responses.ts`
-  answers with the page or the file (whole, or a byte range), with its
-  type from `media-types.ts`.
+  answers with the page or the file (whole, or a byte range), with the
+  type and headers every host gives a vault's file
+  (`@workshop/host-node/vault-file-headers`).
 - `src/updates.ts`: a new build offered to the reader, and the reload into it.
 - `public/manifest.webmanifest`, `public/icon.svg`: installing.
 - `scripts/build.mjs`: the build.

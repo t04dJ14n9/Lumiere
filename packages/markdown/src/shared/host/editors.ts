@@ -11,6 +11,14 @@ export interface PanelShell {
   readonly document: HostDocument;
   readonly transport: Transport;
   readonly cspSource: string;
+  /**
+   * The page's scripts run by its nonce only, never because they come from
+   * `cspSource`. For a host whose page shares its origin with what else it
+   * serves (host-node: a vault's files, its API), where `'self'` would let
+   * any same-origin URL be a script. VS Code gives each webview an origin of
+   * its own and leaves this out.
+   */
+  readonly scriptsByNonceOnly?: boolean;
   /** Whether the workspace is trusted now; the page is built from it when it loads. */
   readonly trusted: boolean;
   /** A native source selection was present while this panel was opened. */

@@ -25,6 +25,7 @@ const HOST_NODE_ENTRIES = [
   "@workshop/host-node/palette",
   "@workshop/host-node/views",
   "@workshop/host-node/settings",
+  "@workshop/host-node/vault-file-headers",
 ];
 function crossesHostLayer(file, source, target) {
   const owner = file.match(/\/packages\/(host-node|host-web|dsh|app)\//)?.[1];

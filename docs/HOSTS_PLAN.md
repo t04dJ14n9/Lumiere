@@ -184,6 +184,7 @@ Each contract is written once, in code. Change both sides in the same PR.
 | Window ↔ its host | `packages/app/src/shell/backend.ts` (`WindowBackend`) | window ↔ `http-backend.ts`, `src/local` |
 | A vault's folder in a browser | `packages/host-web/src/vault-fs.ts` (`VaultFileSystem`) | host-web ↔ apps/web, the iPad's native files |
 | Web app's worker ↔ window | `apps/web/src/shared/routes.ts`, `messages.ts` | `apps/web/src/worker` ↔ `src/answers.ts`: notes' pages and the files they show |
+| A vault's file over HTTP | `packages/host-node/src/vault-file-headers.ts` | host-node's `/lumiere/file` ↔ the web app's worker: which types keep their type, the sandbox policy, `nosniff` |
 | Theme | `packages/host-node/src/palette.ts` | DSH client, app window → page |
 | Tree views | `packages/host-node/src/views.ts` | host-node ↔ app window (DSH later) |
 | Workspace roots | `LumiereHost.addRoot`, `removeRoot` in `packages/host-node/src/host/start-host.ts` | the embedder registers (app: each open vault, removed when it closes; DSH: each session's workspace, `src/host/workspace.ts`) ↔ host-node's note and PDF pages, which refuse any `root` outside a registered one |
@@ -417,13 +418,25 @@ Do not:
    one and the server's workers and ES modules work unchanged without it.
 3. **DSH's APIs are a preview.** Pin the tested DSH version. Keep the DSH
    surface in `packages/dsh/src/host/dsh.ts` and the address helpers.
-4. **The editor page is same-origin with its embedder.** Its nonce-only
-   script policy keeps a note's content from running. Any change to the
-   page's CSP needs review. In the web app the service worker serves the
+4. **The editor page is same-origin with its embedder.** Its script policy
+   keeps a note's content from running: in host-node by nonce only
+   (`PanelShell.scriptsByNonceOnly`), since `'self'` there also serves a
+   vault's files and the API. Any change to the page's CSP needs review. The
+   app's window frames each page with a `sandbox` that keeps
+   `allow-same-origin` (`packages/app/src/shell/editor-sandbox.ts`): it takes
+   away top navigation, downloads and dialogs, but script that ran in the
+   page could still reach the window and the server's routes (#744).
+   Dropping the origin needs the page's requests and socket to authenticate
+   without the window's cookie, the window to stop reaching into the page's
+   window, both sides to check messages by source rather than origin, the
+   page to keep no state in `sessionStorage`, and, in the web app, pages a
+   service worker still serves; or pages served from an origin of their own. In the web app the service worker serves the
    page, with the window's policy as its first tag, as a blob: page
-   inherits it; a vault's SVG is served with a sandbox policy. host-node
-   serves every vault file but a PDF with `sandbox`, and a vault's scripts
-   as text, so `script-src 'self'` never runs them.
+   inherits it. host-node and the web app's worker both serve a vault's
+   images, audio, video and PDFs as themselves and anything else as an
+   attachment of bytes, every one but a PDF with `default-src 'none';
+   sandbox` (`packages/host-node/src/vault-file-headers.ts`), so neither a
+   page nor `script-src 'self'` runs a vault's file.
 5. **Two Cordis versions in DSH's process** (DSH's 4.0.0-rc.7 fork and
    Lumière's rc.13). They coexist because they never share objects. Check
    again whenever either changes.

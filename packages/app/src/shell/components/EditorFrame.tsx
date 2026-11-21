@@ -18,6 +18,7 @@ import {
 import { fileKind } from "../../shared/file-kind";
 import { chromeInset, onChromeInset } from "../chrome-inset";
 import { backend, type OpenedEditor } from "../backend";
+import { editorFrameSandbox } from "../editor-sandbox";
 import { forwardFrameShortcuts } from "../commands";
 import type { NoteTab } from "../tabs";
 import { currentThemeMessage, onThemeChange } from "../theme";
@@ -69,14 +70,15 @@ export function EditorFrame({ tab, visible, onOpen }: EditorFrameProps) {
       </p>
     );
   }
+  const kind = fileKind(tab.path);
   return opened.opened ? (
     <iframe
       ref={frame}
       // A PDF keeps its own toolbar below the window's glass (styles.css).
-      className={
-        fileKind(tab.path) === "pdf" ? "editor-frame is-pdf" : "editor-frame"
-      }
+      className={kind === "pdf" ? "editor-frame is-pdf" : "editor-frame"}
       hidden={!visible}
+      // A frame takes its sandbox as it navigates: it never changes here.
+      sandbox={editorFrameSandbox(kind)}
       src={opened.opened.url}
       title={tab.path}
       allow="clipboard-read; clipboard-write"
