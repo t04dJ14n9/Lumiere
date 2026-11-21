@@ -58,6 +58,12 @@ syntax parser and HTML renderer share the highlight-aware emphasis flanking rule
   Markdown without the later lines' quote markers, which is what its widget
   renders (`../../markdown/quoted-block.ts`).
 - `quoted-block.test.ts`: quote markers stay out of a quoted block's render.
+- `revealed-block.ts`: whether a block shows its source (for a renderer
+  that asks, only while the editor has focus or under the find bar's match),
+  and the editing preview after a revealed block's source.
+- `editor-focus.ts`: the editor's focus as a state field, which block
+  decorations read; `editor-focus-tracking.ts` sets it from CodeMirror's
+  focus-change transactions, and once when installed into a focused editor.
 - `block-discovery.ts`: structural syntax cache and renderer candidate selection.
 - `block-discovery.test.ts`: registration cost, discovery parity and unrestricted renderers.
 - `inline.ts`: basic inline decoration builder.
@@ -102,7 +108,7 @@ Each transaction yields `RenderInvalidation`s (`invalidation.ts`):
 text change may have altered: every top-level syntax node, before or after
 the change, that touches it or the region found so far, widened to whole
 lines until stable), `selection` (lines the caret left or
-entered) or `metadata` (an effect, a reconfiguration or a renderer change:
+entered, and the selection's lines when the editor gains or loses focus) or `metadata` (an effect, a reconfiguration or a renderer change:
 every line). The `text` region is computed in `changed-region.ts`, which
 needs no DOM; `api.ts` offers it to other plugins' indexes as
 `changedBlocks` (sticky scroll's headings, the line-number gutter).
@@ -160,8 +166,11 @@ one character or space breaks the chain. Escapes and heading/quote marks reveal
 on selected lines. Tasks reveal only through the checkbox end (columns 0–5
 for `- [ ]`). Both code fences reveal anywhere in the block. Callouts reveal
 source with quote marks per line and inline syntax per element. Definition
-markers reveal on their first line; math and HTML blocks reveal whole, and
-display math keeps its rendered formula below the source. Styled inline HTML (`kbd`, `mark`, `span`, …) hides both tags and paints the content even when the opener carries attributes (`<kbd class="…">`); self-closing and block tags stay source. A click on a
+markers reveal on their first line; math and HTML blocks reveal whole.
+Display math (a renderer with `revealsOnlyWhileFocused`) reveals only while
+the editor has focus, as everything does in Obsidian, and keeps its formula
+typeset just after the source (`editingPreview`: a block below it, or the
+math plugin's own inline preview when the `$$` share a line with text). Styled inline HTML (`kbd`, `mark`, `span`, …) hides both tags and paints the content even when the opener carries attributes (`<kbd class="…">`); self-closing and block tags stay source. A click on a
 rendered math block reveals it as in Obsidian, selecting the formula. Callout
 title/body clicks and Edit select the whole source; their fold buttons toggle disclosure.
 A click on a drawn horizontal rule selects its source (head at start) via the

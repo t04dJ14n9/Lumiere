@@ -4,14 +4,10 @@ import type {} from "../commands/api";
 import type {} from "../formatting/api";
 import type { RenderPass } from "../render/api";
 import { MarkdownBlock } from "../../webview/ui/markdown-widget";
-import {
-  MarkdownInline,
-  type InlineClick,
-} from "../../webview/ui/inline-widget";
 import { sanitizeGraphics } from "../../webview/ui/graphics";
 import { inlineMathEdit, mathBlockEdit } from "./commands";
 import { mathBlockRange, mathBody } from "./source";
-import { markMathSource } from "./source-marks";
+import { blockPreviewPlacement, decorateMath } from "./editing-preview";
 import { errorMessage } from "../../shared/errors";
 import { decodeDataValue } from "../../markdown/html/helpers";
 import { config } from "./manifest";
@@ -90,9 +86,6 @@ export const mathWebview: Plugin<Infer<typeof config>> = {
   },
 };
 
-/** As in Obsidian, a click on a formula selects it without its `$`. */
-const SELECT_FORMULA: InlineClick = { select: mathBody };
-
 function registerMathRenderers(ctx: Context): void {
   const editing = { reveal: "click", select: mathBody } as const;
   ctx.effect(() =>
@@ -100,11 +93,16 @@ function registerMathRenderers(ctx: Context): void {
       kind: "math",
       nodes: ["MathBlock"],
       editing: "reveal",
+      // As in Obsidian (#698 item 23): the source shows only while the editor
+      // has focus, and the formula is typeset again after it as it is edited.
+      revealsOnlyWhileFocused: true,
+      editingPreview: {
+        sourceClass: "md-math-source",
+        isBlock: (state, block) =>
+          blockPreviewPlacement(state.doc, block) === "block",
+      },
       match: (node) => node.name === "MathBlock",
       range: (node, state) => mathBlockRange(node, state.doc),
-      // BH-009 / BH-004: revealed block math is source only (no preview stacked
-      // under the $$ lines). Obsidian keeps a live preview below; we prefer a
-      // single coherent view while editing, like callouts and HTML blocks.
       widget: (block) => new MarkdownBlock(block, ctx.render, editing),
     }),
   );
@@ -112,18 +110,7 @@ function registerMathRenderers(ctx: Context): void {
     ctx.livePreview.inline({
       // Block math too: its revealed source is marked like inline math.
       nodes: ["InlineMath", "MathBlock"],
-      decorate(node, cx) {
-        if (cx.revealed(node.from, node.to)) {
-          markMathSource(cx, node);
-        } else if (node.name === "InlineMath") {
-          const source = cx.state.sliceDoc(node.from, node.to);
-          cx.replace(
-            node.from,
-            node.to,
-            new MarkdownInline(source, ctx.render, SELECT_FORMULA),
-          );
-        }
-      },
+      decorate: (node, cx) => decorateMath(cx, node, ctx.render),
     }),
   );
 }

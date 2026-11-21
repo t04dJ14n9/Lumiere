@@ -5,6 +5,7 @@ import {
 } from "../../webview/ui/pointer-selection";
 import { blockRenderers } from "./registry";
 import { changedRegion } from "./changed-region";
+import { editorFocusToggled, setEditorFocus } from "./editor-focus";
 
 export { changedRegion, type Region } from "./changed-region";
 
@@ -21,10 +22,14 @@ export interface RenderInvalidation {
   reason: "text" | "metadata" | "selection";
 }
 
-/** Whether a transaction changes anything besides the text and selection. */
+/**
+ * Whether a transaction changes anything besides the text, the selection
+ * and the editor's focus (which, like the selection, matters only where the
+ * selection is).
+ */
 export function changesMetadata(tr: Transaction): boolean {
   return (
-    tr.effects.length > 0 ||
+    tr.effects.some((effect) => !effect.is(setEditorFocus)) ||
     tr.reconfigured ||
     tr.startState.facet(blockRenderers) !== tr.state.facet(blockRenderers)
   );
@@ -48,6 +53,7 @@ export function renderInvalidations(tr: Transaction): RenderInvalidation[] {
   if (
     tr.selection ||
     tr.docChanged ||
+    editorFocusToggled(tr) ||
     revealFreezeToggled(tr.startState, tr.state)
   ) {
     const before = revealRanges(tr.startState).map((range) =>

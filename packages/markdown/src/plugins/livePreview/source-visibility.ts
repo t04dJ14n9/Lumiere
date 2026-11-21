@@ -1,6 +1,6 @@
 import type { EditorState } from "@codemirror/state";
 import { blockIndex } from "./blocks";
-import { revealed } from "./registry";
+import { isSourceRevealed } from "./revealed-block";
 
 /**
  * Whether the Markdown source at `position` is painted. Inside a rendered
@@ -15,7 +15,5 @@ export function sourceVisibleAt(state: EditorState, position: number): boolean {
   if (!block || block.renderer.showSource?.(state, block)) {
     return true;
   }
-  return (
-    block.renderer.editing === "reveal" && revealed(state, block.from, block.to)
-  );
+  return isSourceRevealed(state, block);
 }

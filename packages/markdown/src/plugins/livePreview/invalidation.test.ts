@@ -9,6 +9,7 @@ import { blockDecorations } from "./viewport-decorations";
 import { documentTree } from "./document-tree";
 import { renderInvalidations } from "./invalidation";
 import { blockRenderers } from "./registry";
+import { editorFocus, setEditorFocus } from "./editor-focus";
 import type { RenderBlock } from "./api";
 
 class SourceWidget extends WidgetType {
@@ -236,4 +237,65 @@ test("deleting a fence's closing line re-finds the blocks an old block opener it
     described(next.field(decorations)),
     described(fresh(next).field(decorations)),
   );
+});
+
+test("a focus change invalidates the selection's lines only, and decorations that depend on focus equal a full rebuild", () => {
+  const focusExtensions: Extension[] = [
+    ...extensions,
+    editorFocus,
+    blockRenderers.of({
+      kind: "math",
+      editing: "reveal",
+      revealsOnlyWhileFocused: true,
+      editingPreview: { sourceClass: "is-editing" },
+      match: (node) => node.name === "MathBlock",
+      widget,
+    }),
+  ];
+  const withFocus = (state: EditorState, hasFocus: boolean) =>
+    state.update({ effects: setEditorFocus.of(hasFocus) });
+  const doc = "one\n\n$$\nx\n$$\n\ntwo";
+  const state = EditorState.create({
+    doc,
+    selection: { anchor: doc.indexOf("x") },
+    extensions: focusExtensions,
+  });
+  assert.deepEqual(renderInvalidations(withFocus(state, true)), [
+    { fromLine: 4, toLine: 4, reason: "selection" },
+    { fromLine: 4, toLine: 4, reason: "selection" },
+  ]);
+  for (let seed = 1; seed <= 60; seed++) {
+    const next = random(seed);
+    const text = Array.from(
+      { length: 8 + next(20) },
+      () => CHUNKS[next(CHUNKS.length)],
+    ).join("\n\n");
+    let current = EditorState.create({
+      doc: text,
+      extensions: focusExtensions,
+    });
+    for (let step = 0; step < 20; step++) {
+      const kind = next(3);
+      current = (
+        kind === 0
+          ? withFocus(current, next(2) === 0)
+          : current.update({
+              selection: EditorSelection.cursor(next(current.doc.length + 1)),
+            })
+      ).state;
+      const expected = withFocus(
+        EditorState.create({
+          doc: current.doc,
+          selection: current.selection,
+          extensions: focusExtensions,
+        }),
+        current.field(editorFocus),
+      ).state;
+      assert.deepEqual(
+        described(current.field(decorations)),
+        described(expected.field(decorations)),
+        `seed ${seed}, step ${step}`,
+      );
+    }
+  }
 });

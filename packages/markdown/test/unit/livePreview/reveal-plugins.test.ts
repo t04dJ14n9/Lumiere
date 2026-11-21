@@ -11,6 +11,10 @@ import { withFindBar } from "../support/find-bar";
 import { documentTree } from "../../../src/plugins/livePreview/document-tree";
 import { inlineDecorations } from "../../../src/plugins/livePreview/inline";
 import { blockIndex } from "../../../src/plugins/livePreview/blocks";
+import {
+  editorFocus,
+  setEditorFocus,
+} from "../../../src/plugins/livePreview/editor-focus";
 import { blockDecorations } from "../../../src/plugins/livePreview/viewport-decorations";
 import {
   blockRenderers,
@@ -200,17 +204,23 @@ test("Obsidian callout reveals its block, only selected quote lines, and indepen
   }
 });
 
-function blockWidgetCount(set: DecorationSet): number {
-  let count = 0;
+/** The widgets in a decoration set: `block` ones and inline ones apart. */
+function widgets(set: DecorationSet): { block: number; inline: number } {
+  const count = { block: 0, inline: 0 };
   set.between(0, 1e9, (_from, _to, value) => {
     if (value.spec.widget) {
-      count++;
+      count[value.spec.block ? "block" : "inline"]++;
     }
   });
   return count;
 }
 
-test("display math reveals whole source while the caret is inside (BH-009)", async () => {
+/** A state that tracks focus, as the editor's does, focused or not. */
+function focused(state: EditorState, hasFocus: boolean): EditorState {
+  return state.update({ effects: setEditorFocus.of(hasFocus) }).state;
+}
+
+test("display math, as in Obsidian 1.15.0: focused, the whole source with the formula typeset below it; without focus, rendered", async () => {
   const f = fixture();
   try {
     f.root.plugin(mathWebview);
@@ -219,27 +229,67 @@ test("display math reveals whole source while the caret is inside (BH-009)", asy
       throw error;
     });
     const doc = "before\n\n$$\nx + y\n$$\n\nafter";
+    const closing = doc.lastIndexOf("$$") + 2;
     let state = stateFor(doc, EditorSelection.single(0), [
+      editorFocus,
+      search(),
       blockIndex,
       blocks,
       f.view.state.facet(blockRenderers).map((r) => blockRenderers.of(r)),
     ]);
+    state = focused(state, true);
     assert.equal(
       visibleSource(state, state.field(blocks)),
       "before\n\n\n\nafter",
     );
-    assert.equal(blockWidgetCount(state.field(blocks)), 1, "rendered outside");
-    // Math renderer must not register an editingPreview (source+render stack).
-    const renderer = state.facet(blockRenderers).find((r) => r.kind === "math");
-    assert.equal(renderer?.editingPreview, undefined);
-    for (let at = doc.indexOf("$$"); at <= doc.lastIndexOf("$$") + 2; at++) {
+    assert.deepEqual(widgets(state.field(blocks)), { block: 1, inline: 0 });
+    for (let at = doc.indexOf("$$"); at <= closing; at++) {
       state = state.update({ selection: EditorSelection.single(at) }).state;
       assert.equal(visibleSource(state, state.field(blocks)), doc);
-      assert.equal(
-        blockWidgetCount(state.field(blocks)),
-        0,
-        `no stacked preview at ${at}`,
-      );
+      const preview: number[] = [];
+      state.field(blocks).between(0, doc.length, (from, _to, value) => {
+        if (value.spec.widget) {
+          assert.equal(value.spec.block, true);
+          assert.equal(value.spec.side, 1);
+          preview.push(from);
+        }
+      });
+      assert.deepEqual(preview, [closing], `preview after $$ at ${at}`);
+    }
+    // Without focus the caret inside it leaves it rendered.
+    state = focused(state, false);
+    assert.equal(
+      visibleSource(state, state.field(blocks)),
+      "before\n\n\n\nafter",
+    );
+    assert.deepEqual(widgets(state.field(blocks)), { block: 1, inline: 0 });
+    // The find bar's match in it reveals it while the find field has focus.
+    state = withFindBar(
+      state.update({ selection: EditorSelection.single(11, 12) }).state,
+      { search: "x" },
+    );
+    assert.equal(visibleSource(state, state.field(blocks)), doc);
+  } finally {
+    await f.root.dispose();
+  }
+});
+
+test("display math sharing a line with text, or unclosed, gets no preview below it", async () => {
+  const f = fixture();
+  try {
+    f.root.plugin(mathWebview);
+    await f.root.settled();
+    const blocks = blockDecorations((error) => {
+      throw error;
+    });
+    for (const doc of ["$$\nx\n$$ is famous", "$$\nx + y"]) {
+      const state = stateFor(doc, EditorSelection.single(3), [
+        blockIndex,
+        blocks,
+        f.view.state.facet(blockRenderers).map((r) => blockRenderers.of(r)),
+      ]);
+      assert.equal(visibleSource(state, state.field(blocks)), doc);
+      assert.deepEqual(widgets(state.field(blocks)), { block: 0, inline: 0 });
     }
   } finally {
     await f.root.dispose();

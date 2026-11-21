@@ -42,6 +42,7 @@ import {
   foldedRanges,
 } from "./motion";
 import { sourceVisibleAt } from "./source-visibility";
+import { editorFocusTracking } from "./editor-focus-tracking";
 export const livePreviewWebview: Plugin<{ mode: "source" | "livePreview" }> = {
   name: "livePreview",
   inject: { required: ["editor", "commands", "render"] },
@@ -168,6 +169,7 @@ function engineExtensions(ctx: Context) {
     documentTreeParser,
     markdownBlockWidthTracker,
     renderRevision,
+    editorFocusTracking,
     pointerSelectionTracking,
     fenceGuardSelectionSupport,
     clickPositionSync,

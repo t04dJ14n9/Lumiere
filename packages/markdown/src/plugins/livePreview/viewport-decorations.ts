@@ -14,6 +14,7 @@ import type { BlockRenderer, RenderBlock } from "./api";
 import { blockDecoration, blockIndex, redecorate } from "./blocks";
 import { DeferredBlockWidget, rangesIntersect } from "./deferred-block";
 import { changesMetadata } from "./invalidation";
+import { editorFocusToggled } from "./editor-focus";
 
 /** Viewport (+ margin) the block decorator treats as live when explicitly set. */
 export const setBlockHotRanges =
@@ -101,6 +102,7 @@ export function blockDecorations(report: (error: unknown) => void) {
       if (
         !tr.docChanged &&
         !freeze &&
+        !editorFocusToggled(tr) &&
         (isRevealFrozen(tr.state) || !tr.selection)
       ) {
         return value;

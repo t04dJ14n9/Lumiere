@@ -2,11 +2,12 @@
 
 Renders inline and display TeX formulas with MathJax, like Obsidian's math in
 Live Preview. Moving the caret into a formula reveals its source, which reads
-as code with its `$` delimiters in the accent colour. A display formula shows
-either its typeset result or its source — not both stacked — while you edit
-(callout-style; Obsidian keeps a live preview under the `$$` lines). Clicking a
-formula reveals it with the formula selected, without its delimiters, as in
-Obsidian.
+as code with its `$` delimiters in the accent colour. As in Obsidian 1.15.0,
+a `$$` formula reveals only while the editor has focus, and then is typeset
+again just after its closing `$$` as you edit it: below the source when the
+`$$` have their lines to themselves, inline after the `$$` otherwise.
+Clicking a formula reveals it with the formula selected, without its
+delimiters, as in Obsidian.
 
 ## How it works
 
@@ -31,6 +32,11 @@ source is already shown, so typing replaces the body and preserves delimiters.
 - `manifest.ts`: feature metadata and the two command contributions.
 - `webview.ts`: renderer, post-processor, cleanup and command registrations.
 - `commands.ts`: pure selection edits and delimiter placement.
+- `editing-preview.ts`: inline math and revealed math source, and where a
+  revealed `$$` formula's preview goes (Obsidian's rule); the block
+  renderer's preview below the source is Live Preview's `editingPreview`.
+- `test/unit/math/editing-preview.test.ts`: placement, focus, and the
+  inline preview's click.
 - `source.ts`: a formula's delimiters, the span a click selects, and the
   range a display formula's widget replaces: text after a closing `$$` on a
   later line is a paragraph of its own, which the widget renders below the
@@ -58,4 +64,16 @@ Commands are Toggle Inline Math and Insert Math Block; neither has a default key
 ## Limits and differences from Obsidian
 
 Uses the configured MathJax TeX packages plus optional user macros. Errors retain the
-placeholder and show a render error. Save and undo belong to VS Code. Display math shares MarkdownBlock `estimatedHeight` with a MathJax-aware floor so short matrices do not collapse the height map on remount. Inline math line box matches Obsidian `.hmd-fold-math` (placeholder `line-height: 0`, inline SVG `overflow: hidden`). Exact glyph metrics still await the owner's manual comparison. Unlike Obsidian, revealed display math does not keep a typeset preview under the source (BH-009 / BH-004).
+placeholder and show a render error. Save and undo belong to VS Code. Display math shares MarkdownBlock `estimatedHeight` with a MathJax-aware floor so short matrices do not collapse the height map on remount. Inline math line box matches Obsidian `.hmd-fold-math` (placeholder `line-height: 0`, inline SVG `overflow: hidden`). Exact glyph metrics still await the owner's manual comparison.
+
+The editing preview reverses #269 (Host GUI findings BH-009 / BH-004 had
+called the stacked formula a duplicate); the owner chose Obsidian's
+behaviour on 2026-11-21 (#698 item 23). Differences: `$$` after quote
+markers count as starting their line, so quoted display math, which Lumiere
+renders as a block, keeps a block preview (Obsidian renders it, and its
+preview, inline in the quote); a `$$` formula whose later lines are quoted
+and whose closing line carries text gets no inline preview, since a click on
+it could not map back to the note; `$…$` still reveals without focus (only
+`$$` formulas follow Obsidian's focus rule) and, as in Obsidian, has no
+preview. While the find field has focus, the find bar's match still reveals
+a formula, as Obsidian's search highlight does.

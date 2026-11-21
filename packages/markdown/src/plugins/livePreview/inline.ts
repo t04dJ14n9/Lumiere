@@ -100,6 +100,9 @@ class InlineDecorations implements InlineContext {
   replace = (from: number, to: number, widget: WidgetType): void => {
     this.ranges.push(Decoration.replace({ widget }).range(from, to));
   };
+  widgetAfter = (at: number, widget: WidgetType): void => {
+    this.ranges.push(Decoration.widget({ widget, side: 1 }).range(at));
+  };
   line = (
     at: number,
     cls: string,

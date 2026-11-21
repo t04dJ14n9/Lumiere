@@ -817,12 +817,16 @@ interface BlockRenderer {
   match(node: SyntaxNodeRef, state: EditorState): boolean;
   /** 'reveal' shows source while selected; 'widget' stays rendered (tables, properties). */
   editing: 'reveal' | 'widget';
+  /** Reveal only while the editor has focus (display math, as in Obsidian). */
+  revealsOnlyWhileFocused?: boolean;
+  /** While revealed, mark the source lines and keep the render after them. */
+  editingPreview?: { sourceClass: string; isBlock?(state, block): boolean };
   widget(block: RenderBlock): WidgetType;
   estimatedHeight?: number;
 }
 interface InlineRenderer {
   nodes: readonly string[];                        // e.g. ['Tag'] or ['WikiLink']
-  decorate(node: SyntaxNodeRef, cx: InlineContext): void;   // cx.mark/hide/replace/line, cx.revealed(from, to)
+  decorate(node: SyntaxNodeRef, cx: InlineContext): void;   // cx.mark/hide/replace/widgetAfter/line, cx.revealed(from, to)
 }
 ctx.effect(() => ctx.livePreview.block(tableRenderer));
 ctx.effect(() => ctx.livePreview.inline(tagRenderer));
@@ -858,6 +862,14 @@ One function, `revealed(state, from, to, kind)`, used by every renderer:
   covers most syntax; the renderers that keep rendering under a selection
   (footnote references, images) also reveal for the match while the bar is
   open (`findMatchTouches`, `livePreview/find-match.ts`).
+- Display math (`$$…$$`, as a block or inline) reveals only while the editor
+  has focus, as everything does in Obsidian; without focus it stays rendered
+  wherever the caret is. While revealed, the formula is typeset again just
+  after its closing `$$`: a block below the source when the `$$` have their
+  lines to themselves, otherwise inline after the `$$` (Obsidian 1.15.0;
+  #698 item 23). The focus is a state field (`livePreview/editor-focus.ts`),
+  set from CodeMirror's focus-change transactions, so block decorations can
+  read it; a focus change redraws only the blocks the selection touches.
 
 ### 11.4 Widgets
 

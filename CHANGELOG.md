@@ -55,6 +55,11 @@
   lines in the Explorer's **Vault Search** view, as Obsidian's search pane
   does. Click a line to open the note there; the results follow edits
   (#699).
+- Markdown: while you edit a `$$` formula, the formula stays typeset just
+  after its source, below it when the `$$` have their lines to themselves
+  and inline otherwise, as in Obsidian; it follows your typing. With the
+  note unfocused the formula stays rendered. This reverses the source-only
+  reveal of #269 (#698).
 
 Fixes for several VS Code windows open at once, each with a test; checked
 with two real windows on one profile.
