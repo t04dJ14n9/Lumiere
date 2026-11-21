@@ -18,6 +18,8 @@ import { contained } from "./navigation-containment";
 import { openExternalLink } from "./external-link";
 import { registerNativeLinks } from "./native-links";
 import { MARKDOWN_EDITOR } from "../shared/editor-provider";
+import { isHtmlFile } from "../shared/html-file";
+import { contributionId } from "../shared/setting-schema";
 import {
   creationLocation,
   followsNewNoteFolder,
@@ -68,6 +70,16 @@ async function deliverToOpenedPanel(
     return;
   }
   await reveals.deliver(target.intent, panel.id, toOffsetTarget(target.offset));
+}
+
+/** What an open asks beyond where it goes: not to take the focus, to open as text. */
+function openFlags(
+  options: Parameters<Navigation["open"]>[6],
+): Pick<OpenNavigation, "preserveFocus" | "asText"> {
+  return {
+    ...(options?.preserveFocus ? { preserveFocus: true } : {}),
+    ...(options?.asText ? { asText: true } : {}),
+  };
 }
 
 export function createNavigation(
@@ -121,7 +133,7 @@ export function createNavigation(
         reveals,
         intent: intent ?? reveals.begin(),
         logger,
-        ...(options?.preserveFocus ? { preserveFocus: true } : {}),
+        ...openFlags(options),
       }),
     registerNativeLinks() {
       const links = registerNativeLinks(navigation);
@@ -316,6 +328,8 @@ interface OpenNavigation {
   logger: Logger;
   /** Show the destination without moving the keyboard focus to it. */
   preserveFocus?: boolean;
+  /** An HTML file opens in a text editor, not in the HTML viewer. */
+  asText?: boolean;
 }
 
 /** A bare column, or options where the tab must be kept or must not take the focus. */
@@ -357,13 +371,47 @@ async function openNavigation(options: OpenNavigation): Promise<void> {
     await revealOpenedNote(options, before, activeColumn);
   } else if (/\.pdf$/i.test(uri.path)) {
     await openPdf(uri, options.fragment, column);
-  } else {
+  } else if (!(await openedInHtmlViewer(uri, options, column))) {
     await vscode.commands.executeCommand(
       "vscode.open",
       uri.with({ fragment: options.fragment }),
       show,
     );
   }
+}
+
+/**
+ * The HTML viewer's command (plugins/htmlViewer): open a vault's HTML file as
+ * a page in a tab of its own. It is the plugin that decides whether the file
+ * may be shown (a trusted workspace) and refuses what is outside the vault;
+ * this only hands the file over, with the vault it was linked from.
+ */
+export const HTML_VIEWER_COMMAND = contributionId("htmlViewer.open");
+
+/**
+ * Hand an HTML file to the viewer. False for any other file, and when there
+ * is no viewer to hand it to (the plugin is turned off): it then opens as
+ * text, as every other file does.
+ */
+async function openedInHtmlViewer(
+  uri: vscode.Uri,
+  options: OpenNavigation,
+  column: vscode.ViewColumn,
+): Promise<boolean> {
+  if (options.asText || !isHtmlFile(uri.path)) {
+    return false;
+  }
+  const commands = await vscode.commands.getCommands(true);
+  if (!commands.includes(HTML_VIEWER_COMMAND)) {
+    return false;
+  }
+  await vscode.commands.executeCommand(
+    HTML_VIEWER_COMMAND,
+    uri.toString(),
+    options.root,
+    { viewColumn: column },
+  );
+  return true;
 }
 
 /** Lumiere PDF's public command (in this extension): open a PDF at a location. */

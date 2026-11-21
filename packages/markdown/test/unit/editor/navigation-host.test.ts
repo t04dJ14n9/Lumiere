@@ -154,6 +154,111 @@ test("a link to a PDF opens it in Lumiere PDF at its page, beside when asked", a
   ]);
 });
 
+test("a link to an HTML file goes to the HTML viewer with its vault, as text when asked; one outside the vault goes nowhere", async (t) => {
+  const directory = await mkdtemp(join(tmpdir(), "mw-navigation-unit-"));
+  t.after(() => rm(directory, { recursive: true, force: true }));
+  const outsideDirectory = await mkdtemp(join(tmpdir(), "mw-navigation-out-"));
+  t.after(() => rm(outsideDirectory, { recursive: true, force: true }));
+  const root = pathToFileURL(directory).href;
+  const page = pathToFileURL(join(directory, "diagram.html")).href;
+  const old = pathToFileURL(join(directory, "old.htm")).href;
+  const outside = pathToFileURL(join(outsideDirectory, "secret.html")).href;
+  const commands: unknown[][] = [];
+  const withFragment = (uri: string) =>
+    Object.assign(parseUri(uri), {
+      with: ({ fragment }: { fragment: string }) =>
+        withFragment(`${uri.split("#")[0]}${fragment ? `#${fragment}` : ""}`),
+    });
+  const { createNavigation, HTML_VIEWER_COMMAND } = loadNavigation({
+    Uri: { parse: withFragment },
+    ViewColumn: { Beside: -2 },
+    env: { appName: "Visual Studio Code", uriScheme: "vscode" },
+    window: { tabGroups: { activeTabGroup: { viewColumn: 1 } } },
+    workspace: { getConfiguration: () => ({ get: () => "on" }) },
+    commands: {
+      getCommands: async () => [
+        "vscode.open",
+        "lumiere.markdown.htmlViewer.open",
+      ],
+      async executeCommand(command: string, ...args: unknown[]) {
+        commands.push([command, ...args]);
+      },
+    },
+  });
+  assert.equal(HTML_VIEWER_COMMAND, "lumiere.markdown.htmlViewer.open");
+  const navigation = createNavigation(() => []);
+  await navigation.open(root, page, "", "here");
+  await navigation.open(root, old, "", "side");
+  // A subpath (`#height=480`, `#gamma`) is the embed's, not a place to scroll a text editor to.
+  await navigation.open(root, page, "height=480", "tab");
+  assert.deepEqual(commands, [
+    [HTML_VIEWER_COMMAND, page, root, { viewColumn: 1 }],
+    [HTML_VIEWER_COMMAND, old, root, { viewColumn: -2 }],
+    [HTML_VIEWER_COMMAND, page, root, { viewColumn: 1 }],
+  ]);
+
+  // Open as Text (an HTML embed's second button) skips the viewer, as for any file.
+  commands.length = 0;
+  await navigation.open(root, page, "", "here", undefined, undefined, {
+    asText: true,
+  });
+  assert.deepEqual(
+    commands.map(([command, uri]) => [command, String(uri)]),
+    [["vscode.open", page]],
+  );
+
+  // The vault's own check stands before the viewer is asked.
+  commands.length = 0;
+  await assert.rejects(
+    navigation.open(root, outside, "", "here"),
+    /Link escapes the vault/,
+  );
+  assert.deepEqual(commands, []);
+});
+
+test("an HTML file opens as text when the viewer is not there, and other files never ask for it", async (t) => {
+  const directory = await mkdtemp(join(tmpdir(), "mw-navigation-unit-"));
+  t.after(() => rm(directory, { recursive: true, force: true }));
+  const root = pathToFileURL(directory).href;
+  const page = pathToFileURL(join(directory, "diagram.html")).href;
+  const data = pathToFileURL(join(directory, "data.csv")).href;
+  const commands: unknown[][] = [];
+  let asked = 0;
+  const withFragment = (uri: string) =>
+    Object.assign(parseUri(uri), {
+      with: ({ fragment }: { fragment: string }) =>
+        withFragment(`${uri.split("#")[0]}${fragment ? `#${fragment}` : ""}`),
+    });
+  const { createNavigation } = loadNavigation({
+    Uri: { parse: withFragment },
+    ViewColumn: { Beside: -2 },
+    env: { appName: "Visual Studio Code", uriScheme: "vscode" },
+    window: { tabGroups: { activeTabGroup: { viewColumn: 1 } } },
+    workspace: { getConfiguration: () => ({ get: () => "on" }) },
+    commands: {
+      // The HTML Viewer plugin is turned off: its command is not registered.
+      getCommands: async () => {
+        asked += 1;
+        return ["vscode.open"];
+      },
+      async executeCommand(command: string, ...args: unknown[]) {
+        commands.push([command, ...args]);
+      },
+    },
+  });
+  const navigation = createNavigation(() => []);
+  await navigation.open(root, page, "", "here");
+  assert.equal(asked, 1);
+  assert.deepEqual(
+    commands.map(([command, uri]) => [command, String(uri)]),
+    [["vscode.open", page]],
+  );
+  commands.length = 0;
+  await navigation.open(root, data, "", "here");
+  assert.equal(asked, 1, "a CSV never asks whether there is a viewer");
+  assert.equal(commands[0]![0], "vscode.open");
+});
+
 test("a Cmd-clicked link opens a tab VS Code keeps, not the preview the next link replaces", async (t) => {
   const directory = await mkdtemp(join(tmpdir(), "mw-navigation-unit-"));
   t.after(() => rm(directory, { recursive: true, force: true }));

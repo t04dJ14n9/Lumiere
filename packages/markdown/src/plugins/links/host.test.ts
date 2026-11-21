@@ -134,6 +134,20 @@ test("links host owns handlers, fixes source identity, confirms schemes and rout
     });
     assert.equal((opens.at(-1) as unknown[])[3], place);
   }
+  // `text` opens a file in a text editor where a viewer would show it (an HTML
+  // embed's Open as Text); without it the option is not passed at all.
+  await client.call(protocol, "open", {
+    href: "New",
+    wiki: true,
+    side: false,
+    text: true,
+  });
+  assert.deepEqual((opens.at(-1) as unknown[])[6], {
+    preserveFocus: false,
+    asText: true,
+  });
+  await client.call(protocol, "open", { href: "New", wiki: true, side: false });
+  assert.deepEqual((opens.at(-1) as unknown[])[6], { preserveFocus: false });
   // Host GUI: basename MD (with/without .md) create+open; relative stay open-only.
   for (const href of ["MissingNote", "MissingNote.md"] as const) {
     opens.length = 0;
