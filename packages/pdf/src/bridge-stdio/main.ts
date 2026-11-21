@@ -75,10 +75,29 @@ async function connect(): Promise<StreamableHTTPClientTransport> {
   transport.onerror = () => upstream.drop(transport);
   transport.onclose = () => upstream.drop(transport);
   await transport.start();
+  bridges.set(transport, bridge);
   return transport;
 }
 
-const upstream = new Upstream(connect);
+/** The bridge each connection went to. */
+const bridges = new WeakMap<StreamableHTTPClientTransport, BridgeRecord>();
+
+/**
+ * Gone: its window removed its discovery file (a closing window does, as
+ * its process ends) or its process no longer exists (a crash).
+ */
+function isGone(transport: StreamableHTTPClientTransport): boolean {
+  const bridge = bridges.get(transport);
+  return (
+    !bridge ||
+    !alive(bridge.pid) ||
+    !readRecords().some(
+      (record) => record.url === bridge.url && record.pid === bridge.pid,
+    )
+  );
+}
+
+const upstream = new Upstream({ open: connect, isGone });
 
 /** Detached work's error sink: stderr, which MCP clients show as the server's log. */
 function report(error: unknown): void {
