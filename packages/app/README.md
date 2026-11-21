@@ -35,7 +35,11 @@ Every request must come from the window it was started for (`auth.ts`):
   Origin.
 
 A page of a note or PDF is same-origin with the window and carries the same
-cookie, and the server reads and writes whatever its vaults hold. So the two
+cookie, and the server reads and writes whatever its vaults hold. Its scripts
+run by nonce only, and its frame has a `sandbox` (`src/shell/editor-sandbox.ts`)
+that takes away top navigation, downloads and dialogs; it keeps
+`allow-same-origin`, so it is no wall against script in the page (that file
+says what dropping the origin needs). So the two
 routes that can add a folder as a vault (`POST /api/vaults`, `POST /api/open`)
 answer only the window itself (`fromShell` in `auth.ts`):
 
@@ -163,6 +167,7 @@ With no `--vault`, the vault used last opens again, if it is still there.
 - `src/shell/settings.ts`, `src/shell/settings-view.ts`: the settings, and how the Settings tab lays them out.
 - `src/shell/ui-state.ts`, `src/shared/ui-state.ts`, `src/server/ui-state.ts`: the layout and Color Theme, kept by the server.
 - `src/shell/tabs.ts`, `src/shell/tree.ts`, `src/shell/tree-state.ts`: tabs and tree state, as pure functions.
+- `src/shell/editor-sandbox.ts`: the `sandbox` of a tab's editor frame, and why it keeps the window's origin.
 - `src/shell/file-actions.ts`, `src/shell/tree-editing.ts`, `src/shell/tree-edits.ts`, `src/shell/components/TreeRowItem.tsx`, `src/shell/components/TreeMenu.tsx`: the file tree's new notes and folders, renames, moves by dragging, and deletion.
 - `src/shell/tree-rows.ts`: the file tree as the rows it shows; only those in view are drawn, so a vault of tens of thousands of files scrolls as a small one does.
 - `src/shell/saved-tabs.ts`: the open tabs kept with the layout, and opened again at launch.

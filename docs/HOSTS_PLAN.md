@@ -418,9 +418,19 @@ Do not:
    one and the server's workers and ES modules work unchanged without it.
 3. **DSH's APIs are a preview.** Pin the tested DSH version. Keep the DSH
    surface in `packages/dsh/src/host/dsh.ts` and the address helpers.
-4. **The editor page is same-origin with its embedder.** Its nonce-only
-   script policy keeps a note's content from running. Any change to the
-   page's CSP needs review. In the web app the service worker serves the
+4. **The editor page is same-origin with its embedder.** Its script policy
+   keeps a note's content from running: in host-node by nonce only
+   (`PanelShell.scriptsByNonceOnly`), since `'self'` there also serves a
+   vault's files and the API. Any change to the page's CSP needs review. The
+   app's window frames each page with a `sandbox` that keeps
+   `allow-same-origin` (`packages/app/src/shell/editor-sandbox.ts`): it takes
+   away top navigation, downloads and dialogs, but script that ran in the
+   page could still reach the window and the server's routes (#744).
+   Dropping the origin needs the page's requests and socket to authenticate
+   without the window's cookie, the window to stop reaching into the page's
+   window, both sides to check messages by source rather than origin, the
+   page to keep no state in `sessionStorage`, and, in the web app, pages a
+   service worker still serves; or pages served from an origin of their own. In the web app the service worker serves the
    page, with the window's policy as its first tag, as a blob: page
    inherits it. host-node and the web app's worker both serve a vault's
    images, audio, video and PDFs as themselves and anything else as an
