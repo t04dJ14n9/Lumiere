@@ -32,6 +32,7 @@ export const protocol = defineProtocol("resources", {
           "audio",
           "video",
           "pdf",
+          "html",
           "file",
         ]),
         source: Schema.string(),
