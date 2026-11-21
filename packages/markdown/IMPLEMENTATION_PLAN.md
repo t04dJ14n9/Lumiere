@@ -7682,3 +7682,36 @@ heading through `metadata` and `noteFragment`; the written forms) and
 `test/unit/metadata/fragments.test.ts` (a bare `%`); unit tests,
 typecheck, ESLint and Prettier pass. Not run: `test:browser`,
 `test:quality`, `test:vscode`.
+
+## Templates: variables in any case, Insert Current Date and Time (#787; 2026-11-21)
+
+Obsidian 1.15.0's Templates core plugin (read in its shipped code, lines
+172445–172660 and its variable expansion near line 78394; behaviour only,
+nothing copied) matches `{{title}}`, `{{date}}`, `{{time}}` and their
+`:FORMAT` forms without case, and has two more commands, Insert current
+date and Insert current time, with no default keys. They format the current
+moment with the plugin's date format (default `YYYY-MM-DD`) or time format
+(default `HH:mm`) and insert it at the selection's head without replacing
+the selected text, the caret after it; they need no templates folder.
+Lumiere's variables were case-sensitive and it had neither command.
+
+- `src/markdown/templates.ts`: the variable pattern ignores case;
+  `currentDateTime` formats one date or time, shared by the variables and
+  the commands.
+- `insert.ts`: `insertAtCaret` takes the head from `captureCursor` and
+  inserts there; `insertAtSelection` and `insertTemplate` are unchanged.
+- **Insert Current Date** and **Insert Current Time**
+  (`lumiere.markdown.templates.insertCurrentDate`/`insertCurrentTime`), in
+  the palette while a Lumiere editor is active, with no keys; a format
+  token Lumiere cannot write is inserted as written and named in a message,
+  as for templates.
+
+Contributions changed (two commands, two setting descriptions):
+`pnpm contributions --check` passes; `pnpm test:vscode` was not run here.
+
+Validation: `test/unit/templates/expand.test.ts` (variables in any case;
+the two formats and their defaults), `test/unit/templates/insert.test.ts`
+(the head insert keeps the selection's text); the inventory test lists the
+commands in `docs/MANUAL_TEST_PLAN.md` (a new templates step) and
+`docs/PARITY.md`. Unit tests, typecheck, ESLint and Prettier pass. Not run:
+`test:browser`, `test:quality`, `test:vscode`.

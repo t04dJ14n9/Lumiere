@@ -72,7 +72,7 @@ product choices for VS Code, not parity claims.
 | bridge | **Copy Bridge Envelope** copies a versioned JSON selection. The hidden `bridge.envelope` command returns the same object. Agent PDF Viewer is called only when `vscodeEmbedPdf.bridge.envelope` is registered | Does not open a chat. See `docs/bridge-envelope.md` |
 | attachments | Drop, paste, or HTML-paste images into `files.attachmentFolder` with Obsidian-style timestamp names and embeds | Shares folder/embed rules with sketches. Import Asset / `assets.path` removed |
 | scratch | **New Scratch Note** writes a temporary note in `scratch.folder` | No automatic filing |
-| templates | **Insert Template** inserts a note from `templates.folder` at the caret, expanding `{{title}}`, `{{date}}`, `{{time}}` and `{{date:FORMAT}}` | Formats know `YYYY MM DD HH mm ss` only; Lumiere's editor only |
+| templates | **Insert Template** inserts a note from `templates.folder` at the caret, expanding `{{title}}`, `{{date}}`, `{{time}}` and `{{date:FORMAT}}` in any case, as Obsidian does; **Insert Current Date** and **Insert Current Time** write the date or time in `templates.dateFormat` / `templates.timeFormat` at the caret (no keys, as in Obsidian) | Formats know `YYYY MM DD HH mm ss` only; Lumiere's editor only |
 | marp | Detects `marp: true` and bridges to VS Code preview and Marp export | Slide widgets and Marp themes are not drawn here |
 | markers | Badges and actions that other extensions place on source ranges | Plain text only; at most 1,000 per plugin per editor |
 | graph | **Open Vault Graph**: a vault's notes as a directed graph in a panel, global or local, filtered by type, tag, folder, text and orphans | Hard caps (2000 notes, 20000 links); a larger graph is refused, not sampled; no 3D view |

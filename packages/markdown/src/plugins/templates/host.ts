@@ -1,12 +1,18 @@
 import type { Context, Disposer, Plugin } from "@workshop/core";
-import { expandTemplateWithReport } from "../../markdown/templates";
+import {
+  currentDateTime,
+  expandTemplateWithReport,
+} from "../../markdown/templates";
 import { registerReportedCommands } from "../../shared/reported-command";
 import { contributionId } from "../../shared/setting-schema";
 import { baseName } from "../../shared/workspace-path";
-import { insertTemplate } from "./insert";
+import { insertAtCaret, insertTemplate } from "./insert";
 import { templateFiles, templateFolder, templatePickItems } from "./list";
 
-/** **Lumiere: Templates**: insert a template note at the caret. */
+/**
+ * **Lumiere: Templates**: insert a template note, or the current date or
+ * time, at the caret.
+ */
 export const templatesHost: Plugin = {
   name: "templates",
   inject: {
@@ -27,10 +33,47 @@ export const templatesHost: Plugin = {
       effect,
       ctx.hostCommands,
       (message) => ctx.dialogs.error(message),
-      [{ id: contributionId("templates.insert"), run: () => insert(ctx) }],
+      [
+        { id: contributionId("templates.insert"), run: () => insert(ctx) },
+        {
+          id: contributionId("templates.insertCurrentDate"),
+          run: () => insertNow(ctx, "date"),
+        },
+        {
+          id: contributionId("templates.insertCurrentTime"),
+          run: () => insertNow(ctx, "time"),
+        },
+      ],
     );
   },
 };
+
+/**
+ * Obsidian's Insert current date and Insert current time: the date or time
+ * in the Templates format settings, at the caret, whether or not a
+ * templates folder is set.
+ */
+async function insertNow(ctx: Context, kind: "date" | "time"): Promise<void> {
+  const panel = ctx.editors.active();
+  if (!panel) {
+    ctx.dialogs.error(`Open a note in Lumiere to insert the ${kind}.`);
+    return;
+  }
+  const uri = panel.document.uri;
+  await ctx.settings.effective.prepare(uri);
+  const { text, unsupported } = currentDateTime(kind, {
+    now: new Date(),
+    dateFormat: ctx.settings.effective.get("templates.dateFormat", "", uri),
+    timeFormat: ctx.settings.effective.get("templates.timeFormat", "", uri),
+  });
+  if (!(await insertAtCaret(ctx.hostDocuments, panel, text))) {
+    ctx.dialogs.error(`The ${kind} could not be inserted.`);
+  } else if (unsupported.length > 0) {
+    ctx.dialogs.error(
+      `The ${kind} format uses ${unsupported.join(", ")}, which Lumiere cannot format yet; it was inserted as written.`,
+    );
+  }
+}
 
 async function insert(ctx: Context): Promise<void> {
   const panel = ctx.editors.active();

@@ -1149,6 +1149,14 @@ Use a disposable vault with `Templates/Meeting.md` containing
    Lumiere setting is set explicitly. A `dateFormat` such as
    `YYYY-MM-DD dddd` is not carried over. No `.obsidian` file changes.
 3. In host-node (the app or DSH), repeat step 1 from its Command Palette.
+4. A template written `# {{Title}}` and `{{DATE:YYYY}}` fills both in, as
+   `{{title}}` and `{{date:YYYY}}` do.
+5. With no templates folder set, **Insert Current Date** writes today's
+   date (`YYYY-MM-DD`) at the caret and **Insert Current Time** the time
+   (`HH:mm`), with the caret after it; with text selected, the date goes in
+   at the selection's head (where the drag ended), and the selected text
+   stays. With `templates.dateFormat` set to `DD.MM.YYYY`, the date follows
+   it. Neither has a key.
 
 ### scratch and Marp
 
@@ -1284,6 +1292,8 @@ Use the disposable fixture vault from Setup. These rows enumerate every generate
 | `lumiere.markdown.quickSwitcher` — Quick Switcher | unbound | On a disposable fixture, run Quick Switcher; confirm its named action using the plugin scenarios above, then undo where applicable. Repeat after disable/re-enable and switching panes. |
 | `lumiere.markdown.scratch.new` — New Scratch Note | unbound | On a disposable fixture, run New Scratch Note; confirm its named action using the plugin scenarios above, then undo where applicable. Repeat after disable/re-enable and switching panes. |
 | `lumiere.markdown.templates.insert` — Insert Template | unbound | On a disposable fixture, run Insert Template; confirm its named action using the plugin scenarios above, then undo where applicable. Repeat after disable/re-enable and switching panes. |
+| `lumiere.markdown.templates.insertCurrentDate` — Insert Current Date | unbound | On a disposable fixture, run Insert Current Date; confirm its named action using the plugin scenarios above, then undo where applicable. Repeat after disable/re-enable and switching panes. |
+| `lumiere.markdown.templates.insertCurrentTime` — Insert Current Time | unbound | On a disposable fixture, run Insert Current Time; confirm its named action using the plugin scenarios above, then undo where applicable. Repeat after disable/re-enable and switching panes. |
 | `lumiere.markdown.openSettings` — Open Settings | unbound | On a disposable fixture, run Open Settings; confirm its named action using the plugin scenarios above, then undo where applicable. Repeat after disable/re-enable and switching panes. |
 | `lumiere.markdown.changeSetting` — Change Setting… | unbound | On a disposable fixture, run Change Setting…; confirm its named action using the plugin scenarios above, then undo where applicable. Repeat after disable/re-enable and switching panes. |
 | `lumiere.markdown.setNoteFontSize` — Set Note Font Size | unbound | On a disposable fixture, run Set Note Font Size; confirm its named action using the plugin scenarios above, then undo where applicable. Repeat after disable/re-enable and switching panes. |

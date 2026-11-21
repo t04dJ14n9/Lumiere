@@ -1,6 +1,7 @@
 import assert from "node:assert/strict";
 import test from "node:test";
 import {
+  currentDateTime,
   expandTemplate,
   expandTemplateWithReport,
   formatLocalDate,
@@ -41,6 +42,30 @@ test("configured formats apply to bare tokens; inline formats win", () => {
   assert.equal(
     expandTemplate("{{date}} {{time}} {{date:YYYYMMDD}} {{time:HH}}", context),
     "05/11/2026 09.07.03 20261105 09",
+  );
+});
+
+// Obsidian 1.15.0 matches variable names without case (read in its code).
+test("variable names match in any case, as in Obsidian", () => {
+  assert.equal(
+    expandTemplate("{{Title}} {{TITLE}} {{Date}} {{TIME}} {{DATE:YYYY}}", {
+      title: "Plan",
+      now: NOW,
+    }),
+    "Plan Plan 2026-11-05 09:07 2026",
+  );
+});
+
+test("Insert Current Date and Time write the configured formats, else Obsidian's defaults", () => {
+  assert.equal(currentDateTime("date", { now: NOW }).text, "2026-11-05");
+  assert.equal(currentDateTime("time", { now: NOW }).text, "09:07");
+  assert.equal(
+    currentDateTime("date", { now: NOW, dateFormat: "DD/MM/YYYY" }).text,
+    "05/11/2026",
+  );
+  assert.equal(
+    currentDateTime("time", { now: NOW, timeFormat: "", dateFormat: "Y" }).text,
+    "09:07",
   );
 });
 

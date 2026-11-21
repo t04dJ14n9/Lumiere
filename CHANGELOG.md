@@ -85,6 +85,11 @@
   them (those characters as spaces) and still reach it. A link to a heading
   with a `%` in its name, such as `[[Note#100% done]]`, now reaches it
   (#787).
+- Markdown: **Insert Current Date** and **Insert Current Time**, Obsidian's
+  Templates commands, write the date or time in the Templates formats at the
+  caret (no keys, as in Obsidian). Template variables match in any case:
+  `{{Title}}` and `{{DATE:YYYY}}` are filled in like `{{title}}` and
+  `{{date:YYYY}}` (#787).
 
 Fixes for several VS Code windows open at once, each with a test; checked
 with two real windows on one profile.

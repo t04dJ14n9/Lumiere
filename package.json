@@ -857,6 +857,16 @@
         "category": "Lumiere"
       },
       {
+        "command": "lumiere.markdown.templates.insertCurrentDate",
+        "title": "Insert Current Date",
+        "category": "Lumiere"
+      },
+      {
+        "command": "lumiere.markdown.templates.insertCurrentTime",
+        "title": "Insert Current Time",
+        "category": "Lumiere"
+      },
+      {
         "command": "lumiere.markdown.consumeVimHostShortcut",
         "title": "Consume Vim Host Shortcut",
         "category": "Lumiere"
@@ -2238,6 +2248,14 @@
         },
         {
           "command": "lumiere.markdown.templates.insert",
+          "when": "config.lumiere.markdown.preset != 'minimal' && config.lumiere.markdown.plugins.templates.enabled && activeCustomEditorId == 'lumiere.markdown.editor'"
+        },
+        {
+          "command": "lumiere.markdown.templates.insertCurrentDate",
+          "when": "config.lumiere.markdown.preset != 'minimal' && config.lumiere.markdown.plugins.templates.enabled && activeCustomEditorId == 'lumiere.markdown.editor'"
+        },
+        {
+          "command": "lumiere.markdown.templates.insertCurrentTime",
           "when": "config.lumiere.markdown.preset != 'minimal' && config.lumiere.markdown.plugins.templates.enabled && activeCustomEditorId == 'lumiere.markdown.editor'"
         },
         {
@@ -3674,13 +3692,13 @@
           "lumiere.markdown.templates.dateFormat": {
             "type": "string",
             "default": "YYYY-MM-DD",
-            "description": "Format of {{date}} in templates. Tokens: YYYY, MM, DD, HH, mm and ss.",
+            "description": "Format of {{date}} in templates and of Insert Current Date. Tokens: YYYY, MM, DD, HH, mm and ss.",
             "scope": "resource"
           },
           "lumiere.markdown.templates.timeFormat": {
             "type": "string",
             "default": "HH:mm",
-            "description": "Format of {{time}} in templates. Tokens: YYYY, MM, DD, HH, mm and ss.",
+            "description": "Format of {{time}} in templates and of Insert Current Time. Tokens: YYYY, MM, DD, HH, mm and ss.",
             "scope": "resource"
           },
           "lumiere.markdown.vault.rootMarkers": {
