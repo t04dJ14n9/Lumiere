@@ -25,6 +25,7 @@ import { activeTables, tableSelectionChanges } from "./state";
 import { TableStickyHScroll } from "./sticky-hscroll";
 import { bindTableFocus } from "./focus-lifetime";
 import { followDiagonalWheel } from "./diagonal-wheel";
+import { withShownText } from "./sort-keys";
 
 /** Wires table interactions and reconciles snapshots from the outer document. */
 export class TableController {
@@ -367,13 +368,22 @@ export class TableController {
     this.clearActiveTable(false);
   }
 
-  execute(operation: TableOperation, focus: CellPosition): void {
-    const table = operateTable(
-      this.grid.model,
-      operation.type === "sort"
-        ? { ...operation, shown: this.grid.shownTexts(operation.column) }
-        : operation,
-    );
+  execute(
+    operation: TableOperation,
+    focus: CellPosition,
+  ): void | Promise<void> {
+    if (operation.type !== "sort") {
+      return this.write(operation, focus);
+    }
+    return withShownText(this.grid, operation).then((sort) => {
+      if (sort && !this.events.signal.aborted) {
+        this.write(sort, focus);
+      }
+    });
+  }
+
+  private write(operation: TableOperation, focus: CellPosition): void {
+    const table = operateTable(this.grid.model, operation);
     if (this.grid.sourceFor(table) === this.grid.block.source) {
       (this.editor ?? this.grid.outer).focus();
       return;
