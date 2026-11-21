@@ -83,11 +83,11 @@ Markdown link's destination also has `%`, and a space or parenthesis
 (bare) or `<` and `>` (in `<…>`), percent-encoded so the link stays a link.
 
 A name is refused, in the prompt, when a link written for it would not
-reach the heading in the renamed note as links are followed
-(`noteFragment`): nothing of its text is left for a link (`#|^`,
-`![](a.png)`), it reads as a line range (`L12`), an earlier heading has
-the same text as links compare it, or a `%` in it starts an escape
-(`a%41b`).
+name the heading as links are followed (`noteFragment`): nothing of its
+text is left for a link (`#|^`, `![](a.png)`), it reads as a line range
+(`L12`), or a `%` in it starts an escape (`a%41b`). A name that an earlier
+heading in the note already has is taken, as in Obsidian, and links then
+reach the first heading with that text, as Obsidian's do.
 
 ## Files
 
@@ -124,6 +124,4 @@ the same text as links compare it, or a `%` in it starts an escape
   `[[Note#]]`; Lumiere refuses it.
 - Obsidian writes a formatted name into links as typed
   (`#New Target Alias` for `New [[Target|Alias]]`); Lumiere's metadata
-  reads a heading's text as shown (`New Alias`), so links get that. Obsidian also accepts a name that an
-  earlier heading has, and its links then reach the earlier heading;
-  Lumiere refuses the name.
+  reads a heading's text as shown (`New Alias`), so links get that.

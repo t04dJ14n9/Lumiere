@@ -420,9 +420,6 @@ test("a name no link to the heading could reach is refused, and nothing is renam
     // A link would select line 12.
     ["L12", /line number/u],
     ["[[Target|L1-L3]]", /line number/u],
-    // Links would reach `# Intro`.
-    ["[[Target|Intro]]", /same name/u],
-    ["intro", /same name/u],
     // `%41` reads as an escape for `A`.
     ["a%41b", /could not reach/u],
   ] as const) {
@@ -436,6 +433,38 @@ test("a name no link to the heading could reach is refused, and nothing is renam
     assert.deepEqual(applies, [], name);
     assert.equal(text("Note.md"), notes["Note.md"], name);
     assert.equal(text("Other.md"), notes["Other.md"], name);
+  }
+});
+
+test("a name an earlier heading has is taken, as in Obsidian, and its links reach the first heading", async () => {
+  const notes = {
+    "Note.md": "# Intro\n\n# Old\n\n[go](#Old) [[#Old]]\n",
+    "Other.md": "[[Note#Old]] [a](Note.md#Old)\n",
+  };
+  for (const [name, written] of [
+    ["intro", "intro"],
+    ["[[Target|Intro]]", "Intro"],
+  ] as const) {
+    const { text, validations, informed } = await rename(
+      notes,
+      "# Old",
+      () => name,
+    );
+    assert.deepEqual(validations, [undefined], name);
+    assert.deepEqual(informed, [], name);
+    const note = text("Note.md")!;
+    assert.equal(
+      note,
+      `# Intro\n\n# ${name}\n\n[go](#${written}) [[#${written}]]\n`,
+    );
+    assert.equal(
+      text("Other.md"),
+      `[[Note#${written}]] [a](Note.md#${written})\n`,
+    );
+    // Both headings read as `Intro` as links compare them; links reach the
+    // first, as Obsidian's do.
+    assertLinksReach({ path: "Note.md", text: note }, note, 0);
+    assertLinksReach({ path: "Other.md", text: text("Other.md")! }, note, 0);
   }
 });
 
