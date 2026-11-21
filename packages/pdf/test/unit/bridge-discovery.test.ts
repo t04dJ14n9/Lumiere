@@ -174,3 +174,26 @@ test("the shim reads every well-formed .json in the folder, whatever its name, a
   );
   assert.deepEqual(readBridgeRecords(path.join(dir, "missing")), []);
 });
+
+test("the shim finds a bridge's file under the name an earlier version gave it (<port>.json) and the current one", async (t) => {
+  const dir = await mkdtemp(path.join(tmpdir(), "lumiere-bridges-"));
+  t.after(() => rm(dir, { recursive: true, force: true }));
+  // A window not yet reloaded after an upgrade still writes `<port>.json`.
+  await writeFile(
+    path.join(dir, "4001.json"),
+    JSON.stringify(record(1, ["/work/old"])),
+  );
+  await writeFile(
+    path.join(dir, "4002-2-0123456789ab.json"),
+    JSON.stringify(record(2, ["/work/new"])),
+  );
+  const records = readBridgeRecords(dir);
+  for (const [pid, cwd] of [
+    [1, "/work/old"],
+    [2, "/work/new"],
+  ] as const) {
+    assert.deepEqual(chooseBridge(records, { cwd, ...allAlive }), {
+      bridge: record(pid, [cwd]),
+    });
+  }
+});
