@@ -8278,7 +8278,7 @@ both notes as they were; a name an earlier heading has renames, and its
 links reach that first heading. These failed before the fix. `heading-rename.test.ts`
 (updated for the new validator) and `native-links.test.ts`
 (`noteLineFragment`). `pnpm check` passes. Not run: `test:browser`,
-`test:quality`, `test:vscode` (no editor-integration change).
+`test:quality`, `test:vscode`.
 
 ## Cmd+Option+F in Vim Insert opens Replace (#817; 2026-11-21)
 
