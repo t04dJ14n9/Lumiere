@@ -123,6 +123,7 @@ export interface HostPlatform {
   sha256(text: string): string;
   /**
    * A passage for an agent chat, written outside every workspace; its URI.
+   * Each call's file is its own: a later call never replaces it.
    * The agent host's `writeScratchFile`.
    */
   writeScratchFile(name: string, text: string): Promise<string>;

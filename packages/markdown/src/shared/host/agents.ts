@@ -24,7 +24,11 @@ export interface AgentHost {
   readonly appName: string;
   /** Registered commands and VS Code's chat state, read now. */
   environment(): Promise<AgentEnvironment>;
-  /** Writes a scratch file outside the workspace (a passage to attach to an agent chat); returns its URI. */
+  /**
+   * Writes a scratch file outside the workspace (a passage to attach to an
+   * agent chat); returns its URI. Each call's file is its own: a later call,
+   * in this window or another, never replaces it.
+   */
   writeScratchFile(name: string, text: string): Promise<string>;
   /** The editor's tabs and diagnostics for an IDE context packet; absent where the editor has none. */
   ideContextHost?(): IdeContextHostApis;
