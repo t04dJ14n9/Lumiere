@@ -7,6 +7,7 @@ import type { VaultFile, Vaults } from "../vault/api";
 import {
   headingAt,
   headingLinkEdits,
+  headingSubpath,
   type RenamedHeading,
 } from "./heading-rename";
 import { sourceText } from "./source-text";
@@ -21,17 +22,19 @@ interface Services {
   hostDocuments: HostDocuments;
 }
 
-/** Characters that would break a `[[Note#Heading]]` link to the heading. */
-const BREAKS_LINKS = /[#|^[\]]/u;
-
-/** Why a new heading name will not do, or undefined when it will. */
+/**
+ * Why a new heading name will not do, or undefined when it will. Any name
+ * does, as in Obsidian: links get it without the characters they cannot
+ * hold (`headingSubpath`). Only a name with nothing left for a link (such
+ * as `#|^`) is refused, since no link could reach the heading.
+ */
 export function headingNameProblem(value: string): string | undefined {
   if (!value.trim()) {
     return "A heading needs a name.";
   }
-  return BREAKS_LINKS.test(value)
-    ? "A heading name cannot contain # | ^ [ or ]."
-    : undefined;
+  return headingSubpath(value)
+    ? undefined
+    : "Links could not reach a heading with only : # | ^ \\ [[ or ]] in its name.";
 }
 
 /**

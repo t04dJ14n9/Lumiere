@@ -7652,3 +7652,33 @@ Validation: `src/plugins/vim/comment-operator.test.ts` (`gcc` runs
 `toggleLineComment` before, nothing after, and again after the restore);
 unit tests, typecheck, ESLint and Prettier pass. Not run: `test:browser`,
 `test:quality`, `test:vscode`.
+
+## Rename Heading accepts any name (#787; 2026-11-21)
+
+Obsidian 1.15.0's Rename heading (read in its shipped code, the modal near
+line 87580; behaviour only) refuses only an empty name. It writes the name
+as typed into the heading line, and into each link to the heading with
+`:`, `#`, `|`, `^`, `\`, line breaks, `%%`, `[[` and `]]` turned to spaces
+(runs of spaces made one, ends trimmed); a Markdown destination gets its
+spaces encoded. Links still reach the heading because headings are matched
+with punctuation read as spaces. Lumiere refused `# | ^ [ ]` in the name.
+
+`headingSubpath` (`heading-rename.ts`) now gives a link's subpath as
+Obsidian writes it, and `headingNameProblem` accepts any name except one
+with nothing left for a link (`#|^`), for which Obsidian would write
+`[[Note#]]`, a link that no longer names the heading. Markdown destinations also get `%`,
+and a space or parenthesis (bare) or `<` and `>` (angled), percent-encoded,
+where Obsidian's form could break the link. Checking that every renamed
+link resolves found `noteFragment` refusing a fragment with a `%` that
+starts no escape (`[[Note#100% done]]`); it now reads such a `%` as text,
+as `decodeLinkPath` does. A heading whose text looks like an HTML tag
+(`a < b > c`) is still labelled without it by `headingLabel`, so a link
+written with that text does not reach it; that is the heading index's
+existing difference, not the rename's.
+
+Validation: `test/unit/linkUpdates/heading-rename.test.ts` (any name
+accepted; links renamed with `| # ^ [ ] [[ ]] : % ( >` resolve to the
+heading through `metadata` and `noteFragment`; the written forms) and
+`test/unit/metadata/fragments.test.ts` (a bare `%`); unit tests,
+typecheck, ESLint and Prettier pass. Not run: `test:browser`,
+`test:quality`, `test:vscode`.

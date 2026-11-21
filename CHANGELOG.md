@@ -80,6 +80,11 @@
   "Note 2" comes before "Note 10" (#787).
 - Markdown: in Vim mode `gc` no longer toggles a comment. Obsidian's Vim has
   no `gc`; Mod+/ still toggles one (#787).
+- Markdown: Rename Heading… accepts any name, as Obsidian does, `#`, `|`, `^`,
+  `[` and `]` included. Links to the heading get the name as Obsidian writes
+  them (those characters as spaces) and still reach it. A link to a heading
+  with a `%` in its name, such as `[[Note#100% done]]`, now reaches it
+  (#787).
 
 Fixes for several VS Code windows open at once, each with a test; checked
 with two real windows on one profile.
