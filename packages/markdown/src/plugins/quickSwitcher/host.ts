@@ -1,6 +1,8 @@
-import type { Plugin } from "@workshop/core";
+import type { Context, Plugin } from "@workshop/core";
+import type { PickItem } from "../../shared/host";
 import { contributionId } from "../../shared/setting-schema";
 import type { Vault, Vaults } from "../vault/api";
+import { AcceptKeys, type Acceptance } from "./accept";
 import { switcherItems } from "./ranking";
 import type { SwitcherTarget } from "./ranking";
 import { readRecent, rememberOpen } from "./recent";
@@ -20,65 +22,108 @@ export const quickSwitcherHost: Plugin = {
     ],
   },
   apply(ctx) {
-    const create = async (vault: Vault, name: string, source: string) => {
-      const uri = await ctx.navigation.resolve({
-        root: vault.index.root,
-        source,
-        path: name,
-        create: true,
-        folderNote: "",
-      });
-      if (uri) {
-        await ctx.vaults.open(uri);
-      }
-    };
-    const open = async (
-      vault: Vault,
-      target: SwitcherTarget,
-      source: string,
-    ) => {
-      if (target.kind === "note") {
-        await ctx.vaults.open(target.file.uri);
-      } else {
-        await create(
-          vault,
-          target.kind === "create" ? target.name : target.linkpath,
-          source,
-        );
-      }
-    };
+    const keys = new AcceptKeys(ctx.hostCommands);
     ctx.on("editor/opened", (panel) => {
       void rememberOpen(ctx.storage, panel.document.uri);
     });
+    ctx.effect(() => {
+      const disposers = keys.register();
+      return async () => {
+        await Promise.all(disposers.map((dispose) => dispose()));
+      };
+    });
     ctx.effect(() =>
-      ctx.hostCommands.register(contributionId("quickSwitcher"), async () => {
-        const active = ctx.activeEditor.note();
-        const vault = await switcherVault(ctx.vaults, active);
-        if (!vault) {
-          ctx.dialogs.error("Open a folder to use the quick switcher.");
-          return;
-        }
-        // Keep the initiating note through the picker, even if focus changes.
-        const source = active ?? `${vault.index.root}/`;
-        await ctx.settings.effective.prepare(source);
-        const recent = readRecent(ctx.storage);
-        const showUnsupportedFiles = Boolean(
-          ctx.settings.get("vault.showUnsupportedFiles", false, source),
-        );
-        const result = await ctx.dialogs.pick({
-          placeholder: "Find or create a note…",
-          items: (query) =>
-            switcherItems(vault.index, query, { recent, showUnsupportedFiles }),
-        });
-        if (result?.item) {
-          await open(vault, result.item.value, source);
-        } else if (result?.query.trim()) {
-          await create(vault, result.query.trim(), source);
-        }
-      }),
+      ctx.hostCommands.register(contributionId("quickSwitcher"), () =>
+        runSwitcher(ctx, keys),
+      ),
     );
   },
 };
+
+/** Ask for a note, then open or create it as the accepting key says. */
+async function runSwitcher(ctx: Context, keys: AcceptKeys): Promise<void> {
+  const active = ctx.activeEditor.note();
+  const vault = await switcherVault(ctx.vaults, active);
+  if (!vault) {
+    ctx.dialogs.error("Open a folder to use the quick switcher.");
+    return;
+  }
+  // Keep the initiating note through the picker, even if focus changes.
+  const source = active ?? `${vault.index.root}/`;
+  await ctx.settings.effective.prepare(source);
+  const recent = readRecent(ctx.storage);
+  const showUnsupportedFiles = Boolean(
+    ctx.settings.get("vault.showUnsupportedFiles", false, source),
+  );
+  await keys.begin();
+  let result: { item?: PickItem<SwitcherTarget>; query: string } | undefined;
+  let acceptance: Acceptance;
+  try {
+    result = await ctx.dialogs.pick({
+      placeholder: "Find or create a note…",
+      items: (query) =>
+        switcherItems(vault.index, query, { recent, showUnsupportedFiles }),
+    });
+  } finally {
+    acceptance = await keys.end();
+  }
+  const opener = new SwitcherOpener(ctx, vault, source, acceptance);
+  const query = result?.query.trim() ?? "";
+  if (acceptance.isCreate) {
+    // Shift+Enter: the typed name, whatever row is selected.
+    if (query) {
+      await opener.create(query);
+    }
+  } else if (result?.item) {
+    await opener.open(result.item.value);
+  } else if (query) {
+    await opener.create(query);
+  }
+}
+
+/** Opens or creates the chosen note where the accepting key says. */
+class SwitcherOpener {
+  constructor(
+    private readonly ctx: Context,
+    private readonly vault: Vault,
+    private readonly source: string,
+    private readonly acceptance: Acceptance,
+  ) {}
+
+  async open(target: SwitcherTarget): Promise<void> {
+    if (target.kind !== "note") {
+      await this.create(
+        target.kind === "create" ? target.name : target.linkpath,
+      );
+      return;
+    }
+    // Attachments open in other editors, which do not report it: remember
+    // them here so an empty query lists them, as Obsidian's does.
+    await rememberOpen(this.ctx.storage, target.file.uri);
+    await this.ctx.vaults.open(target.file.uri, this.place());
+  }
+
+  async create(name: string): Promise<void> {
+    const uri = await this.ctx.navigation.resolve({
+      root: this.vault.index.root,
+      source: this.source,
+      path: name,
+      create: true,
+      folderNote: "",
+    });
+    if (uri) {
+      await this.ctx.vaults.open(uri, this.place());
+    }
+  }
+
+  private place(): { side?: boolean; tab?: boolean } {
+    const { place } = this.acceptance;
+    if (place === "here") {
+      return {};
+    }
+    return place === "side" ? { side: true } : { tab: true };
+  }
+}
 
 async function switcherVault(
   vaults: Vaults,

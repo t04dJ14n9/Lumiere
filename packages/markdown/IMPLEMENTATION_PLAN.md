@@ -7715,3 +7715,47 @@ the two formats and their defaults), `test/unit/templates/insert.test.ts`
 commands in `docs/MANUAL_TEST_PLAN.md` (a new templates step) and
 `docs/PARITY.md`. Unit tests, typecheck, ESLint and Prettier pass. Not run:
 `test:browser`, `test:quality`, `test:vscode`.
+
+## Quick switcher: Obsidian's modifier keys, attachments in the empty query (#787; 2026-11-21)
+
+Obsidian 1.15.0's switcher (read in its shipped code, `switcher:open` near
+line 166846 and its file suggester near line 140805; behaviour only)
+opens the chosen row in the current tab on Enter, in a new tab on
+Mod+Enter, to the right on Mod+Alt+Enter and in a new window on
+Mod+Alt+Shift+Enter; Shift+Enter creates the typed name and
+Mod+Shift+Enter creates it in a new tab. With an empty query it lists the
+recently opened files, attachments included under its default "Show
+attachments". Lumiere's switcher had only Enter and left attachments out
+of the empty query.
+
+- VS Code tells a quick pick nothing about the keys that accepted it, so
+  `accept.ts` contributes one hidden command per key, bound with
+  `inQuickOpen && lumiere.markdown.quickSwitcherOpen`: the switcher sets
+  that context while its pick is open, and each command notes how to open
+  and runs `workbench.action.acceptSelectedQuickOpenItem`. The bindings
+  therefore never reach the note (where Mod+Enter follows a link) or VS
+  Code's other quick picks (where Mod+Enter opens to the side). New tab
+  maps to `vaults.open(…, { tab: true })`, the navigation's `tab` place
+  (a tab that stays open, Lumiere's Mod-click); to the right maps to
+  `side`. The new window (Mod+Alt+Shift+Enter) is not bound. In host-node
+  `setContext` and `workbench.*` do nothing, so only Enter applies there.
+- `recent.ts` records any file; the switcher records the files it opens,
+  since VS Code's image and PDF editors do not report opens to Lumiere.
+  `switcherItems` lists an attachment for an empty query only when it is
+  among the recent files; notes keep their mtime fallback.
+- Bookmarks: Lumiere has no bookmarks feature (CAPABILITIES, "Not
+  implemented"), so the switcher lists none; the README says so. Nothing
+  was built.
+
+Contributions changed (four hidden commands with keys):
+`pnpm contributions --check` passes; `pnpm test:vscode` was not run here
+and is needed before merging (new keybindings and a context key in the
+extension host).
+
+Validation: `test/unit/quickSwitcher/host.test.ts` (each key's place,
+creation from the typed name, the context set and cleared, the accept
+command run), `ranking.test.ts` (recent attachments listed, others not),
+`recent.test.ts` (attachments recorded), `test/unit/settings/editor.test.ts`
+(the keys are bound only in the open switcher; no note key on Mod+Enter);
+unit tests, typecheck, ESLint and Prettier pass. Not run: `test:browser`,
+`test:quality`, `test:vscode`.

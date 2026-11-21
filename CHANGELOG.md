@@ -90,6 +90,12 @@
   caret (no keys, as in Obsidian). Template variables match in any case:
   `{{Title}}` and `{{DATE:YYYY}}` are filled in like `{{title}}` and
   `{{date:YYYY}}` (#787).
+- Markdown: Obsidian's quick switcher keys work in Lumiere's Quick Switcher:
+  Mod+Enter opens the note in a tab that stays open, Mod+Alt+Enter opens it
+  to the side, Shift+Enter creates a note with the typed name and
+  Mod+Shift+Enter creates it in a new tab. They apply only while the
+  switcher is open. With nothing typed, it also lists the images, PDFs and
+  other attachments recently opened from it, as Obsidian does (#787).
 
 Fixes for several VS Code windows open at once, each with a test; checked
 with two real windows on one profile.

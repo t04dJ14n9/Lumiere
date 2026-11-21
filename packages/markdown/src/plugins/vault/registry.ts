@@ -1,5 +1,5 @@
 import { SourceCoordinates } from "../../shared/document/coordinates";
-import type { Navigation } from "../../shared/host";
+import type { Navigation, OpenPlace } from "../../shared/host";
 import { isMarkdownPath } from "../../shared/vault-path";
 import type { Vault, VaultChange, Vaults, VaultSystem } from "./api";
 import { VaultIndexer } from "./indexer";
@@ -76,7 +76,12 @@ export class VaultRegistry implements Vaults {
 
   async open(
     uri: string,
-    options: { offset?: number; side?: boolean; fragment?: string } = {},
+    options: {
+      offset?: number;
+      side?: boolean;
+      tab?: boolean;
+      fragment?: string;
+    } = {},
   ): Promise<void> {
     const root = await this.openingRoot(uri);
     // Callers (Outline, Backlinks, the graph) have nothing to show for a
@@ -99,7 +104,7 @@ export class VaultRegistry implements Vaults {
       root,
       uri,
       options.fragment ?? "",
-      options.side ? "side" : "here",
+      openPlace(options),
       at,
     );
   }
@@ -310,4 +315,12 @@ function pathInside(
   } catch {
     return undefined;
   }
+}
+
+/** Beside wins over a tab of its own; neither opens it here. */
+function openPlace(options: { side?: boolean; tab?: boolean }): OpenPlace {
+  if (options.side) {
+    return "side";
+  }
+  return options.tab ? "tab" : "here";
 }

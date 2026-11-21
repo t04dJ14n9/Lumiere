@@ -1097,7 +1097,10 @@ Short specifications, beyond the source's tested behaviour:
 - **quickSwitcher**: **Lumiere: Quick Switcher** opens a quick pick
   over notes, aliases and unresolved links, with Obsidian's scoring. Enter
   opens; an unresolved or new name creates the note in the configured
-  new-note folder.
+  new-note folder. Obsidian's switcher keys apply while it is open:
+  Mod+Enter opens in a tab of its own, Mod+Alt+Enter to the side,
+  Shift+Enter creates the typed name and Mod+Shift+Enter creates it in a
+  tab of its own.
 - **wordCount**: words and characters for the note or selection in the status
   bar, counting CJK characters individually.
 - **properties**: everything in the source, including types per vault (now

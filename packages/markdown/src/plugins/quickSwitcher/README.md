@@ -12,15 +12,28 @@ video, PDFs, canvases and bases, as Obsidian's default "Show attachments"),
 notes' aliases and links whose note does not exist yet with Obsidian's
 fuzzy scoring, accents folded as in 1.15.0 (`src/shared/fuzzy.ts`): a file matches on its name, or on its
 path a point lower, and an excluded file ranks 10 points lower. An empty query
-lists recently opened notes (mtime fallback). Choosing a missing note, or pressing Enter on
-a name no note has, creates it in the new-note folder.
+lists recently opened notes and attachments (mtime fallback for notes).
+Choosing a missing note, or pressing Enter on a name no note has, creates it in
+the new-note folder.
+
+Obsidian's switcher keys work while the list is open: Mod+Enter opens the
+choice in a tab of its own (one that stays open, as Obsidian's new tab),
+Mod+Alt+Enter opens it to the side, Shift+Enter creates a note with the typed
+name whatever row is selected, and Mod+Shift+Enter creates it in a tab of its
+own. VS Code tells a quick pick nothing about the keys that accepted it, so
+each is a key binding of its own, live only while the switcher is open
+(`inQuickOpen` and the `lumiere.markdown.quickSwitcherOpen` context the
+switcher sets): its command notes how to open, then accepts the selected row
+(`accept.ts`).
 
 ## Files
 
 - `host.ts`: the command, opening and creating.
+- `accept.ts`: the modifier keys' commands and the context key that scopes
+  them to the open switcher.
 - `ranking.ts`: the ranked items for a query.
-- `recent.ts`: workspace-scoped recently opened note URIs.
-- `manifest.ts`: the command contribution.
+- `recent.ts`: workspace-scoped recently opened file URIs.
+- `manifest.ts`: the command and the switcher keys' contributions.
 
 ## Services, events and settings
 
@@ -43,5 +56,14 @@ a name no note has, creates it in the new-note folder.
   name, so none is chosen for you. To have Obsidian's, add to
   `keybindings.json`:
   `{ "key": "ctrl+o", "mac": "cmd+o", "command": "lumiere.markdown.quickSwitcher", "when": "activeCustomEditorId == 'lumiere.markdown.editor'" }`.
-- An empty query lists recently opened notes (workspace storage), then falls
-  back to recently modified for notes never opened here. Bookmarks are not listed.
+- An empty query lists recently opened files (workspace storage), then falls
+  back to recently modified for notes never opened here. Obsidian lists only
+  recently opened files, attachments included; here an attachment counts as
+  opened when it was opened from the switcher, since VS Code's image and PDF
+  editors do not report opens to Lumiere.
+- Bookmarks are not listed: Lumiere has no bookmarks (CAPABILITIES, "Not
+  implemented"). Obsidian's switcher also finds bookmarked searches, graphs
+  and URLs by their titles.
+- Mod+Alt+Shift+Enter (Obsidian's open in a new window) is not bound. In
+  host-node the switcher keys do nothing: they rely on VS Code's quick pick
+  and context keys; Enter works there.
