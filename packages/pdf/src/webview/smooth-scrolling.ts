@@ -28,8 +28,7 @@ export function useSmoothMotion(enabled: boolean | null): boolean {
 /**
  * Animate discrete wheels only, and turn them sideways in horizontal reading
  * (or with Shift). The Stage scrolls pixel input (a trackpad) as it comes,
- * and in paged scrolling it also turns the page when a push meets the edge,
- * so those are left to it.
+ * so that is left to it. Paged scrolling has its own wheel (`paged-wheel.ts`).
  *
  * The listener sits on the viewer around the Stage and takes the events it
  * handles first (capture phase), so the Stage's own wheel handler never sees
