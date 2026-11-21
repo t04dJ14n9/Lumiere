@@ -22,7 +22,10 @@ item, quotes and callouts, code, tables, math and footnote definitions. A
 block without an id gets one when picked, six hex digits, as in Obsidian: after
 a space at the end of a paragraph, list item or footnote, or on a line of its
 own after any other block, in this note or in the other one (if the text
-there has not changed).
+there has not changed). `[[^^` does the same across the vault, as Obsidian
+1.15.0 does: it reads every note once (16 at a time, kept until the note
+changes; a query cancelled by the next keystroke leaves the rest for it,
+offering what is read so far) and leaves out the block the caret is in.
 
 `[[paper.pdf#` offers the PDF's bookmarks, as Obsidian offers a note's
 headings. Picking one writes the page and its title:
@@ -64,7 +67,7 @@ nothing typed, notes come most recently changed first.
 
 - `api.ts`: caller-owned source registration and trigger event.
 - `manifest.ts`: default enablement and surfaces.
-- `protocol.ts`: bounded query and result schemas.
+- `protocol.ts`: bounded query and result schemas (the caret, for `[[^^`).
 - `sources.ts`: indexed candidate groups and per-file cache invalidation.
 - `candidates.ts`: metadata candidate construction, PDF bookmarks included.
 - `insertion.ts`: deferred wiki/Markdown insertion and destination encoding.
@@ -95,8 +98,11 @@ At most 50 results. Equal scores keep the vault's order, which is by path
 here and the order the files were loaded in Obsidian, so exact ties can list
 differently. First candidate construction can exceed a frame on large vaults;
 warm queries reuse cached candidates. Existing indexed metadata can lag typing by the indexer's
-refresh interval. The popup uses CodeMirror's UI. A vault-wide block search
-(`[[^^`) offers blocks with an id only.
+refresh interval. The popup uses CodeMirror's UI. The first `[[^^` in a
+large vault reads every note, so its list can fill in over a few keystrokes;
+excluded notes are not read. Obsidian 1.15.0 has no Copy link to block
+command (it makes block ids only from link suggestions, Bookmark block and a
+canvas card's Narrow to block), so neither does Lumiere.
 
 PDF bookmarks are listed flat, in document order, without their nesting, and
 only those that open a page of the PDF itself. They exist only where a PDF

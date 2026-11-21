@@ -45,7 +45,7 @@ product choices for VS Code, not parity claims.
 | footnotes | References as superscript numbers in LaTeX paper style (an intentional departure from Obsidian), kept under selections, faint source only at the caret, hover previews, click to the definition, inline footnotes, Insert Footnote | Definitions stay editable text led by their number; no Reading view footnotes section |
 | tasks | Clickable checkboxes in notes, embeds and callouts; checklist commands | Any status but a space is checked, like Obsidian's default theme; `data-task` attributes let a snippet style custom statuses |
 | tags | Tag rendering and search, Explorer **Tags** view | Search results are a quick pick, not a search pane |
-| suggest | `[[`, `[[#`, `[[^` and `#` completions | At most 50 results |
+| suggest | `[[`, `[[#`, `[[^`, `[[^^` and `#` completions; a picked block without an id gets one, as in Obsidian | At most 50 results |
 | search | `query` blocks with Obsidian's search syntax | No Dataview |
 | outline | Explorer **Markdown Outline** and **Go to Heading…** (Ctrl+Shift+O) | No drag to reorder sections; VS Code's native Outline and breadcrumbs apply to the plain text editor |
 | backlinks | Explorer **Backlinks** with unlinked mentions and a status bar count | Off by default (owner decision) |

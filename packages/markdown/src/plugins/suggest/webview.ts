@@ -162,6 +162,8 @@ async function requestCompletions(
         query: trigger.query,
         ...(trigger.note === undefined ? {} : { note: trigger.note }),
         ...(trigger.bare && { bare: true }),
+        ...(trigger.kind === "block" &&
+          trigger.note === undefined && { caret: context.pos }),
       },
       { token },
     );

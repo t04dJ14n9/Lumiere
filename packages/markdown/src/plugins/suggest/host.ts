@@ -38,7 +38,7 @@ export const suggestHost: Plugin<{ panel: PanelShell }> = {
         ) {
           return [];
         }
-        await index.prepare(source, request);
+        await index.prepare(source, request, () => token.cancelled);
         if (token.cancelled) {
           return [];
         }

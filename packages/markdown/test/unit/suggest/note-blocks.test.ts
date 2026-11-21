@@ -120,3 +120,70 @@ test("a picked block without an id comes with the id to add", async () => {
   assert.equal(existing!.insert, "#^existing");
   assert.equal(existing!.blockId, undefined);
 });
+
+test("[[^^ offers every block of every note, an id given to one picked without", async () => {
+  const vault = new MemoryVaultIndex({
+    root: "file:///vault",
+    folderNote: "",
+    linkFormat: "shortest",
+  });
+  const HOME = "Own first line.\n\nI am typing [[^^first here.\n";
+  const texts: Record<string, string> = { "Blocks.md": NOTE, "Home.md": HOME };
+  for (const [path, text] of Object.entries(texts)) {
+    vault.upsertFile({
+      path,
+      uri: `file:///vault/${path}`,
+      size: text.length,
+      mtime: 0,
+      excluded: false,
+    });
+    vault.setMetadata(path, metadata(text));
+  }
+  const request = {
+    kind: "block" as const,
+    query: "first",
+    caret: HOME.indexOf(" here"),
+  };
+  // A cancelled query reads nothing: only blocks with an id are offered.
+  const reads: string[] = [];
+  const index = new SuggestionIndex(vault, async (file) => {
+    reads.push(file.path);
+    return texts[file.path]!;
+  });
+  await index.prepare("Home.md", request, () => true);
+  assert.deepEqual(reads, []);
+  assert.deepEqual(index.query("Home.md", request), []);
+  await index.prepare("Home.md", request);
+  assert.deepEqual(reads.sort(), ["Blocks.md", "Home.md"]);
+  const found = index.query("Home.md", request);
+  // The block holding the caret is left out; the note's other block is not.
+  assert.deepEqual(
+    found.map((item) => [item.label, item.detail]),
+    [
+      ["First paragraph here. It continues.", "Blocks.md"],
+      ["Own first line.", "Home.md"],
+    ],
+  );
+  const [other, own] = found;
+  assert.match(other!.insert, /^Blocks#\^[0-9a-f]{6}$/u);
+  assert.equal(other!.blockId?.here, false);
+  assert.equal(other!.blockId?.insert, ` ^${other!.insert.slice(-6)}`);
+  assert.match(own!.insert, /^Home#\^[0-9a-f]{6}$/u);
+  assert.deepEqual(own!.blockId, {
+    uri: "file:///vault/Home.md",
+    at: "Own first line.".length,
+    before: "Own first line.",
+    insert: ` ^${own!.insert.slice(-6)}`,
+    here: true,
+  });
+  // A block that has an id links to it, ranked first on its id.
+  const [existing] = index.query("Home.md", { ...request, query: "existing" });
+  assert.equal(existing!.insert, "Blocks#^existing");
+  assert.equal(existing!.blockId, undefined);
+  // Each note is read once, until it changes.
+  await index.prepare("Home.md", request);
+  assert.equal(reads.length, 2);
+  index.invalidate({ type: "modify", path: "Blocks.md" });
+  await index.prepare("Home.md", request);
+  assert.deepEqual(reads.slice(2), ["Blocks.md"]);
+});

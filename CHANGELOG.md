@@ -39,6 +39,10 @@
   it. Reloading the window no longer brings back callouts opened or closed
   before; a toggle still lasts while the panel is open, and through a
   rename (#698).
+- Markdown: `[[^^` offers every block in the vault, not only those that
+  already have an `^id`, as in Obsidian. Picking one without an id gives it
+  one (six hex digits) at the end of the block, in this note or the other.
+  The block being typed in is not offered (#698).
 
 Fixes for several VS Code windows open at once, each with a test; checked
 with two real windows on one profile.

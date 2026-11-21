@@ -7310,3 +7310,26 @@ reload), `callouts/view-state.test.ts` (a second panel starts from the
 sign), `src/plugins/editor/*.test.ts`, `test/unit/editor`,
 `test/unit/callouts`, the markdown typecheck and eslint. Browser, quality and
 real-VS Code suites not run here.
+
+## Block ids on demand across the vault (#698 item 25; 2026-11-21)
+
+`[[Note#^` and `[[Note^` already offered every block of a note and gave a
+picked block without an id one; `[[^^` offered only blocks with an id. A
+static read of Obsidian 1.15.0's shipped `app.js` (behaviour only, nothing
+copied; lines in docs/PARITY.md) shows `[[^^` reading every Markdown note's
+blocks, leaving out the block holding the caret, and the same id allocation
+on pick (six random hex digits, not letters from the block text as the
+backlog guessed). It has no Copy link to block command: ids are otherwise
+made only by Bookmark block and a canvas card's Narrow to block, so no
+command was added. `SuggestionIndex.prepare` now reads every non-excluded
+note for `[[^^` (16 at a time, each kept until it changes, stopping when the
+query is cancelled so the next keystroke continues), and the query carries
+the caret so the block being typed in is not offered. Picking a block
+reuses the existing id insertion: in the note being edited within the same
+edit, in another note through `addBlockId`. VS Code's text editor still
+offers only blocks with an id.
+Validation: `test/unit/suggest/note-blocks.test.ts` (every note's blocks
+offered, the caret's block left out, ids for this note and another, a
+cancelled query reads nothing, a note is read again only after it changes),
+`test/unit/suggest/*.test.ts`, the markdown typecheck and eslint. Browser,
+quality and real-VS Code suites not run here.

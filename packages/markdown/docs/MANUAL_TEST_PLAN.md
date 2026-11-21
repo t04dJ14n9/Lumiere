@@ -622,6 +622,11 @@ title, then set `lumiere.markdown.plugins.inlineTitle.enabled` to true.
    aliases (`[[Ho` suggests `[[Welcome|Home]]`), headings, blocks and tags
    are offered; Enter inserts without duplicating `]]`.
 2. Suggestions do not open in code, headings or frontmatter.
+3. Type `[[^^` and a word from a paragraph of another note that has no
+   `^id`: the paragraph is offered with its note's path; Enter inserts
+   `[[Note#^xxxxxx]]` and the other note gains ` ^xxxxxx` at the paragraph's
+   end. Picking a paragraph of the note being edited adds the id there, in
+   the same undo step. The paragraph being typed in is not offered.
 
 ### search
 
