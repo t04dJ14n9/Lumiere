@@ -2,6 +2,11 @@
 
 ## Unreleased
 
+- Markdown outside VS Code (DeepSeek Harness, the app, the desktop app):
+  Undo and Redo work. Each note keeps its own steps, a run of typing undoes
+  at once as in VS Code, and a save keeps the steps. Another program's
+  change to the note is one step: Undo takes it back first (#743).
+
 Fixes for several VS Code windows open at once, each with a test; checked
 with two real windows on one profile.
 

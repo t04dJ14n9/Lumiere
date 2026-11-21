@@ -343,6 +343,8 @@ writes a file; it edits a local CodeMirror copy and synchronizes.
   text with the host's full text and could drop unsent typing.)
 - Undo and redo are VS Code's: the webview forwards the commands; the host
   runs them on the document; the result comes back as an ordinary change.
+  Outside VS Code, host-node's notes keep the same steps
+  (`packages/host-node/src/host/note-history.ts`).
 - Save is VS Code's; plugins may contribute to a flush before save
   (`document/save.ts`).
 
