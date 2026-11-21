@@ -4,6 +4,8 @@ import {
   headingAt,
   headingLinkEdits,
   headingSubpath,
+  renamedHeadingFragment,
+  type HeadingToRename,
   type RenamedHeading,
 } from "../../../src/plugins/linkUpdates/heading-rename";
 import { metadata } from "../../../src/markdown/metadata";
@@ -32,6 +34,18 @@ function apply(
   return text;
 }
 
+/** `heading` in `text` renamed to `name`, with the subpath its links get. */
+function renaming(
+  text: string,
+  heading: HeadingToRename,
+  name: string,
+  path = "probe.md",
+): RenamedHeading {
+  const fragment = renamedHeadingFragment(text, heading, name);
+  assert.ok("subpath" in fragment, `${name}: ${JSON.stringify(fragment)}`);
+  return { path, text, heading, name, subpath: fragment.subpath };
+}
+
 const resolve = (linkpath: string) =>
   linkpath.replace(/\.md$/u, "") === "probe" ? "probe.md" : undefined;
 
@@ -46,12 +60,7 @@ test("the heading at the caret is an ATX heading the note has, not a # line in c
 
 test("renaming a heading updates the links to it in the note and in other notes, as Obsidian does", () => {
   const heading = headingAt(PROBE, PROBE.indexOf("Old Name"))!;
-  const renamed: RenamedHeading = {
-    path: "probe.md",
-    text: PROBE,
-    heading,
-    name: "New Name",
-  };
+  const renamed = renaming(PROBE, heading, "New Name");
   const own = apply(PROBE, [
     { from: heading.nameFrom, to: heading.nameTo, insert: "New Name" },
     ...headingLinkEdits(PROBE, "probe.md", renamed, resolve),
@@ -67,12 +76,14 @@ test("renaming a heading updates the links to it in the note and in other notes,
 });
 
 test("any heading name is accepted, as in Obsidian, unless no link could reach it", () => {
-  assert.equal(headingNameProblem("Fine name"), undefined);
-  assert.ok(headingNameProblem("  "));
+  const heading = headingAt(PROBE, PROBE.indexOf("Old Name"))!;
+  const problem = (name: string) => headingNameProblem(PROBE, heading, name);
+  assert.equal(problem("Fine name"), undefined);
+  assert.ok(problem("  "));
   for (const name of ["a#b", "a|b", "a^b", "a[b", "a]b", "[[x]]"]) {
-    assert.equal(headingNameProblem(name), undefined, name);
+    assert.equal(problem(name), undefined, name);
   }
-  assert.ok(headingNameProblem("#|^"));
+  assert.ok(problem("#|^"));
 });
 
 // Obsidian 1.15.0 (read in its shipped code) writes the new name into links
@@ -93,12 +104,7 @@ test("links to a heading renamed with characters links cannot hold still reach i
     "f(x) = (y",
     "x > y",
   ]) {
-    const renamed: RenamedHeading = {
-      path: "probe.md",
-      text: PROBE,
-      heading,
-      name,
-    };
+    const renamed = renaming(PROBE, heading, name);
     const note = apply(PROBE, [
       { from: heading.nameFrom, to: heading.nameTo, insert: name },
     ]);
@@ -125,12 +131,7 @@ test("links to a heading renamed with characters links cannot hold still reach i
 test("a heading's links get its name as Obsidian writes it, encoded where Markdown needs it", () => {
   assert.equal(headingSubpath("A | B: c#d ^e"), "A B c d e");
   const heading = headingAt(PROBE, PROBE.indexOf("Old Name"))!;
-  const renamed: RenamedHeading = {
-    path: "probe.md",
-    text: PROBE,
-    heading,
-    name: "f(x) | 5%",
-  };
+  const renamed = renaming(PROBE, heading, "f(x) | 5%");
   const links =
     "[[probe#Old Name]] [y](probe.md#Old%20Name) [z](<probe.md#Old Name>)";
   assert.equal(
@@ -141,12 +142,7 @@ test("a heading's links get its name as Obsidian writes it, encoded where Markdo
 
 test("a renamed heading keeps a table row's escaped pipe, angle brackets and titles", () => {
   const heading = headingAt(PROBE, PROBE.indexOf("Old Name"))!;
-  const renamed: RenamedHeading = {
-    path: "probe.md",
-    text: PROBE,
-    heading,
-    name: "New Name",
-  };
+  const renamed = renaming(PROBE, heading, "New Name");
   const text = [
     "| [[probe#Old Name\\|alias]] | b |",
     "| - | - |",
@@ -164,12 +160,7 @@ test("a renamed heading keeps a table row's escaped pipe, angle brackets and tit
 
 test("a renamed heading's link keeps a title with escaped quotes", () => {
   const heading = headingAt(PROBE, PROBE.indexOf("Old Name"))!;
-  const renamed: RenamedHeading = {
-    path: "probe.md",
-    text: PROBE,
-    heading,
-    name: "New Name",
-  };
+  const renamed = renaming(PROBE, heading, "New Name");
   const text = '[a](probe.md#Old%20Name "Say \\"hello\\"")';
   assert.equal(
     apply(text, headingLinkEdits(text, "other.md", renamed, resolve)),
@@ -179,12 +170,7 @@ test("a renamed heading's link keeps a title with escaped quotes", () => {
 
 test("a renamed heading's link to a file with # in its name is read from its encoded path", () => {
   const text = "# Old Name\n";
-  const renamed: RenamedHeading = {
-    path: "probe#1.md",
-    text,
-    heading: headingAt(text, 2)!,
-    name: "New Name",
-  };
+  const renamed = renaming(text, headingAt(text, 2)!, "New Name", "probe#1.md");
   const resolveByPath = (linkpath: string) =>
     ["probe.md", "probe#1.md"].find((path) => path === linkpath);
   const links = "[a](probe%231.md#Old%20Name) [b](probe.md#Old%20Name)";
