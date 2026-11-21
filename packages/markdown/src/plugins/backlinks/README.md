@@ -31,7 +31,8 @@ note's basename and aliases as whole words, outside links and properties.
 
 - The view is an Explorer section rather than a sidebar pane. File lists
   honour Obsidian sortOrder for file name and modified time (title-bar
-  cycle); created-time sorts are omitted because the vault index stores
+  cycle), names compared numerically as Obsidian compares them ("Note 2"
+  before "Note 10"); created-time sorts are omitted because the vault index stores
   mtime only. "Show more context" matches Obsidian's extraContext (adjacent
   lines; off by default; view title toggle +
   `lumiere.markdown.backlinks.extraContext`).

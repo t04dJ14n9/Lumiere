@@ -76,6 +76,8 @@
 - Markdown: link suggestions, the quick switcher and the other fuzzy
   pickers ignore accents, as Obsidian 1.15.0 does: `cafe` finds `café`, and
   a query typed with an accent puts the notes that have it first (#787).
+- Markdown: Backlinks sorts note names by their numbers, as Obsidian does:
+  "Note 2" comes before "Note 10" (#787).
 
 Fixes for several VS Code windows open at once, each with a test; checked
 with two real windows on one profile.

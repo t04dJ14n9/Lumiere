@@ -200,6 +200,13 @@ export function parseSortOrder(value: unknown): BacklinkSortOrder {
     : "alphabetical";
 }
 
+/** Obsidian compares names numerically: "Note 2" before "Note 10". */
+const NAME_ORDER = new Intl.Collator(undefined, {
+  usage: "sort",
+  sensitivity: "base",
+  numeric: true,
+});
+
 /** Obsidian backlinks sortOrder (file name / modified time). */
 export function sortBacklinkPaths(
   paths: readonly string[],
@@ -207,8 +214,7 @@ export function sortBacklinkPaths(
   mtimeOf: (path: string) => number = () => 0,
 ): string[] {
   const byName = (a: string, b: string) =>
-    stemOf(a).localeCompare(stemOf(b), undefined, { sensitivity: "base" }) ||
-    a.localeCompare(b);
+    NAME_ORDER.compare(stemOf(a), stemOf(b)) || a.localeCompare(b);
   switch (order) {
     case "alphabetical":
       return [...paths].sort(byName);

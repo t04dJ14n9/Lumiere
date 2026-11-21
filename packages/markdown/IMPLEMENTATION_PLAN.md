@@ -7622,3 +7622,17 @@ normalized" test now expects a decomposed `Å` to match `å`, as 1.15.0
 does; new tests for folding and the 0.05); unit tests, typecheck, ESLint
 and Prettier pass. Not run: `test:browser`, `test:quality`, `test:vscode`
 (no editor-integration change).
+
+## Backlinks sort names numerically (#787; 2026-11-21)
+
+Obsidian 1.15.0's backlinks view sorts files by name with its numeric
+collator (base sensitivity), so "Note 2" comes before "Note 10" (read in its
+shipped code, the sort table its search results share; behaviour only).
+`sortBacklinkPaths` compared names with `localeCompare` without numeric
+order. It now uses a numeric, base-sensitivity `Intl.Collator`, both ways
+and as the modified-time orders' tie-break; the full path still breaks
+ties between equal names.
+
+Validation: `test/unit/backlinks/sort.test.ts` (numbers sort by value);
+unit tests, typecheck, ESLint and Prettier pass. Not run: `test:browser`,
+`test:quality`, `test:vscode` (no editor-integration change).
