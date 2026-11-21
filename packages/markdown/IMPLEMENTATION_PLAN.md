@@ -7184,3 +7184,71 @@ left and right edges, and stop at a release outside rather than when the
 pointer returns. The editor README's limits and a new `docs/PARITY.md` row
 say so. Pointer Lock, the one way a page keeps receiving moves, hides the
 pointer while it holds, so it is not a fit.
+
+## Obsidian 1.15.0's default editor hotkeys (#699; 2026-11-21)
+
+Owner decision (2026-11-21): bind Obsidian 1.15.0's default editor hotkeys
+wherever VS Code and Cursor have no default on the key while a note has focus,
+and list the clashes in CAPABILITIES.md ("Hotkeys"). The defaults come from a
+static read of the shipped `app.js` (each `addCommand`'s `hotkeys`; nothing
+copied). Newly contributed, scoped like every note key to the focused Lumiere
+editor: Toggle Comment (Mod+/), Toggle Checklist Status (Mod+L, not in Cursor,
+where the Cursor bridge has the key for the chat) and Open Link to Side
+(Mod+Alt+Enter). The editor already handled Mod+/ and Mod+L in its own
+keymap; Mod+Alt+Enter is added there too, stopping the event so VS Code does
+not run the command a second time. On macOS Cmd+Option+F now opens Replace
+(Obsidian's and VS Code's key there; Cmd+H hides the application), in the
+capture-phase find keys, the find keymap and the find bar.
+
+Left unbound: Mod+D (VS Code's Add Selection to Next Find Match, which the
+note does too), Mod+E (Toggle Text Editor, owner decision; no Reading view),
+Mod+O (Open File), Alt+Enter (Page Preview of the caret's link, Lumiere's own
+key) and Mod+Enter (the editor's follow-in-place). The last two clash with
+Lumiere's own keys, not VS Code's, so they are kept and flagged for the owner.
+Mod+Alt+Shift+Enter has no command. Set Heading's Mod+Alt+0…6 stays (#310);
+the docs already said 1.15.0 binds no key to it.
+
+Tests: `test/unit/settings/editor.test.ts` pins the new bindings and the
+unbound clashes (it previously pinned Toggle Comment and Toggle Checklist as
+unbound, the state before this decision); `test/unit/features/link-keys.test.ts`
+the Mod+Alt+Enter keymap; `find-keys.test.ts` and `find-navigation.test.ts`
+the macOS Replace key. `pnpm test:vscode` is required for the contribution
+change and is left to the owner.
+
+## Search matches reveal source (#699; 2026-11-21)
+
+DESIGN §11.3's "Later: search matches reveal source". Obsidian 1.15.0's Live
+Preview builders reveal a range when the selection touches it (while the
+editor has focus) or when its search highlight lies in it (static read of the
+shipped `app.js`; nothing copied). Lumiere's find bar selects each match it
+moves to, and its reveal rule follows the selection, so most syntax was
+already revealed; `reveal-rules.test.ts` now pins that for a link's
+destination and label, emphasis markers, a highlight, an escape and a heading
+marker. The gap was the renderers that keep rendering under a selection:
+footnote references (only a caret reveals them) and images (they stay
+rendered whatever the caret does). `livePreview/find-match.ts` names the find
+bar's current match (while the bar is open, the main selection when it is
+exactly a match of its query), exported as `findMatchTouches` through the
+plugin's `api.ts`; footnotes and embeds reveal the source for it. It needs
+the bar open because CodeMirror keeps the query after the bar closes and
+seeds it with whatever text was selected when its state was made. Tables and
+Properties keep their widgets for a match.
+
+Tests: `find-match.test.ts`, the new `reveal-rules.test.ts` cases,
+`test/unit/footnotes/inline.test.ts` and
+`test/unit/livePreview/reveal-plugins.test.ts` (images), with a find-bar
+helper in `test/unit/support/find-bar.ts`. No browser test was added.
+
+## Typography: the note's line height is already Obsidian's 1.5 (#699; 2026-11-21)
+
+Documentation only. #699 took its typography item from CAPABILITIES.md's
+editor row, which still described the behaviour the owner replaced on
+2026-10-10: at VS Code's default `editor.lineHeight` (0) a note's lines were
+as tall as the built-in editor's (19px at 14px). Since then the note has its
+own `lumiere.markdown.editor.lineHeight` (default 1.5, a multiple of the
+note's own `lumiere.markdown.editor.fontSize`, default 16) and VS Code's
+`editor.fontSize` and `editor.lineHeight` do not apply to notes
+(`src/plugins/editor/font.ts`, pinned in `test/unit/settings/editor.test.ts`;
+docs/HANDOVER.md "Line height", PARITY's line-height rows). So Lumiere already
+follows Obsidian whether or not the user set `editor.lineHeight`; the row is
+corrected and no layout, budget or browser expectation changes.

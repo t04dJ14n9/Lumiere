@@ -25,7 +25,7 @@ import {
   embedsNote,
   inlineEmbedClick,
 } from "./clicks";
-import { editingImageAt, imageSelection } from "./image-selection";
+import { imageSelection, showsImageSource } from "./image-selection";
 import { writtenHeight } from "./image-size";
 export const embedsWebview: Plugin = {
   name: "embeds",
@@ -136,7 +136,7 @@ function registerEmbedRenderers(ctx: Context): void {
         const source = soleEmbed(node, state);
         return source !== undefined && embedsImage(source);
       },
-      showSource: (state, block) => editingImageAt(state, block),
+      showSource: (state, block) => showsImageSource(state, block),
       widget,
     }),
   );
@@ -149,7 +149,7 @@ function registerEmbedRenderers(ctx: Context): void {
       decorate(node, cx) {
         const source = cx.state.sliceDoc(node.from, node.to);
         const shown = embedsImage(source)
-          ? editingImageAt(cx.state, node)
+          ? showsImageSource(cx.state, node)
           : cx.revealed(node.from, node.to);
         if (!shown) {
           cx.replace(

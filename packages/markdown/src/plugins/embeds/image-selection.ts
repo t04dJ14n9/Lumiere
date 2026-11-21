@@ -7,6 +7,7 @@ import {
   type Extension,
 } from "@codemirror/state";
 import { ViewPlugin, keymap, type EditorView } from "@codemirror/view";
+import { findMatchTouches } from "../livePreview/api";
 import { embedsNote } from "./clicks";
 import { IMAGE_EMBED } from "./embed-actions";
 import {
@@ -54,6 +55,22 @@ export const editingImage = StateField.define<Range | null>({
     return head >= from && head <= to ? { from, to } : null;
   },
 });
+
+/**
+ * Whether the image at `from`–`to` shows its source: while it is edited, or
+ * while the find bar's current match is in it (Obsidian reveals the source
+ * under its search highlight; an image otherwise stays rendered under the
+ * caret and selections).
+ */
+export function showsImageSource(
+  state: EditorState,
+  range: { from: number; to: number },
+): boolean {
+  return (
+    editingImageAt(state, range) ||
+    findMatchTouches(state, range.from, range.to)
+  );
+}
 
 /** Whether the image at `from`–`to` shows its source for editing. */
 export function editingImageAt(

@@ -6,8 +6,10 @@ import {
   type Extension,
 } from "@codemirror/state";
 import type { DecorationSet } from "@codemirror/view";
+import { search } from "@codemirror/search";
 import { documentTree } from "./document-tree";
 import { inlineDecorations } from "./inline";
+import { withFindBar } from "../../../test/unit/support/find-bar";
 
 function stateFor(
   doc: string,
@@ -315,3 +317,39 @@ test("inline chains are recomputed after inserting or removing a gap", () => {
   state = state.update({ changes: { from: 8, to: 9 } }).state;
   assert.equal(visibleSource(state), "aa **b**~~s~~ zz");
 });
+
+// Obsidian 1.15.0 reveals the source under its find highlight as under the
+// selection (`app.js`, the Live Preview builders' reveal test). Find selects
+// each match it moves to, so the selection rule reveals it here too.
+for (const [name, doc, query, expected] of [
+  [
+    "link destination",
+    "aa [label](target) zz",
+    "target",
+    "aa [label](target) zz",
+  ],
+  [
+    "link label",
+    "aa [label](target) zz **b**",
+    "label",
+    "aa [label](target) zz b",
+  ],
+  ["emphasis marker", "aa **b** cc *i* zz", "**", "aa **b** cc i zz"],
+  ["highlight", "aa ==mark== zz `c`", "mark", "aa ==mark== zz c"],
+  ["escape on the matched line", "aa\\*\nzz \\*", "aa", "aa\\*\nzz *"],
+  [
+    "heading marker on the matched line",
+    "## title\n\nbody **b**",
+    "title",
+    "## title\n\nbody b",
+  ],
+] as const) {
+  test(`Obsidian find match reveals hidden source: ${name}`, () => {
+    const at = doc.indexOf(query);
+    const state = withFindBar(
+      stateFor(doc, EditorSelection.single(at, at + query.length), search()),
+      { search: query },
+    );
+    assert.equal(visibleSource(state), expected);
+  });
+}

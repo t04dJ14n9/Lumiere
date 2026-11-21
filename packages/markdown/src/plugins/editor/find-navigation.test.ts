@@ -111,3 +111,10 @@ test("failed search acceptance does not record and preview ownership unwinds on 
   );
   assert.equal(h.navigation.running, false);
 });
+
+test("the find keymap opens Replace with Cmd+Option+F on macOS only", () => {
+  const replace = findKeymap.filter((item) => item.mac === "Mod-Alt-f");
+  assert.equal(replace.length, 1);
+  assert.equal(replace[0]!.key, undefined);
+  assert.equal(replace[0]!.preventDefault, true);
+});

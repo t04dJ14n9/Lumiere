@@ -19,6 +19,16 @@
   Undo and Redo work. Each note keeps its own steps, a run of typing undoes
   at once as in VS Code, and a save keeps the steps. Another program's
   change to the note is one step: Undo takes it back first (#743).
+- Markdown: Obsidian's default editor keys work where VS Code and Cursor
+  leave them free in a note: Mod+/ toggles a comment, Mod+L a checkbox (not
+  in Cursor, whose chat has the key), Mod+Alt+Enter opens the link at the
+  caret to the side, and on macOS Cmd+Option+F opens Replace. Keys that
+  already do something here (Mod+D, Mod+E, Mod+O, Alt+Enter, Mod+Enter) are
+  left alone; CAPABILITIES.md lists each (#699).
+- Markdown: the find bar's match shows the Markdown around it in Live
+  Preview, as Obsidian's search highlight does, now also on a footnote
+  reference or an image, which otherwise stay rendered under a selection
+  (#699).
 
 Fixes for several VS Code windows open at once, each with a test; checked
 with two real windows on one profile.

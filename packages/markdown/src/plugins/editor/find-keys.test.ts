@@ -11,7 +11,7 @@ const key = (overrides: Partial<FindKey> = {}): FindKey => ({
   ...overrides,
 });
 
-test("Ctrl/Cmd+F is Find; Ctrl/Cmd+H is Replace; other chords are not", () => {
+test("Ctrl/Cmd+F is Find; Ctrl/Cmd+H (and Cmd+Option+F on macOS) is Replace; other chords are not", () => {
   for (const isMac of [false, true]) {
     const modifier = { ctrlKey: !isMac, metaKey: isMac };
     assert.equal(findActionFor(key({ ...modifier }), isMac), "find");
@@ -32,8 +32,22 @@ test("Ctrl/Cmd+F is Find; Ctrl/Cmd+H is Replace; other chords are not", () => {
       findActionFor(key({ ...modifier, key: "а", keyCode: 72 }), isMac),
       "replace",
     );
+    // Mod+Alt+F is Replace on macOS only (Obsidian's and VS Code's key
+    // there); Mod+Alt+H is nothing anywhere.
+    assert.equal(
+      findActionFor(key({ ...modifier, altKey: true }), isMac),
+      isMac ? "replace" : undefined,
+    );
+    assert.equal(
+      findActionFor(
+        key({ ...modifier, altKey: true, key: "ƒ", keyCode: 70 }),
+        isMac,
+      ),
+      isMac ? "replace" : undefined,
+    );
     for (const override of [
-      { altKey: true },
+      { altKey: true, key: "h" },
+      { altKey: true, shiftKey: true },
       { shiftKey: true },
       { ctrlKey: true, metaKey: true },
       { ctrlKey: false, metaKey: false },

@@ -2,7 +2,7 @@ import type { EditorState } from "@codemirror/state";
 import { revealRanges } from "../../webview/ui/pointer-selection";
 import { WidgetType } from "@codemirror/view";
 import { footnoteRegistry } from "../../markdown/metadata/footnote-extract";
-import { documentTree } from "../livePreview/api";
+import { documentTree, findMatchTouches } from "../livePreview/api";
 import type { Footnote } from "../../markdown/metadata/footnotes";
 import type { InlineContext, InlineRenderer } from "../livePreview/api";
 import type { RenderService } from "../render/api";
@@ -12,7 +12,8 @@ import { FootnoteReference, referenceText } from "./reference-widget";
  * Footnotes in Live Preview, LaTeX paper style (a deliberate departure from
  * Obsidian): a reference shows as a superscript number in order of first
  * reference, and a definition as that number leading its text. References
- * stay rendered under selections (Ctrl+A included); only a caret reveals them.
+ * stay rendered under selections (Ctrl+A included); only a caret, or the find
+ * bar's current match, reveals them.
  * Definition markers reveal when a selection touches their first line.
  *
  * Inline `^[body]` keeps its body visible after the number (Obsidian shows the
@@ -44,7 +45,12 @@ export function footnoteInline(
       if (!note) {
         return;
       }
-      if (hasCaretWithin(cx.state, node.from, node.to)) {
+      // The find bar's match reveals the source, as Obsidian's search
+      // highlight does; another selection keeps the number.
+      if (
+        hasCaretWithin(cx.state, node.from, node.to) ||
+        findMatchTouches(cx.state, node.from, node.to)
+      ) {
         markReferenceSource(cx, node.from, node.to, note);
         return;
       }

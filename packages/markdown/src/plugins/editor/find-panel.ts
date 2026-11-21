@@ -19,8 +19,15 @@ import {
   type FoundMatches,
 } from "./find-count";
 import { readFindCaret, restoreFindCaret } from "./find-caret";
+import { findActionFor } from "./find-keys";
 
 const panels = new WeakMap<EditorView, FindPanel>();
+
+function isMac(view: EditorView): boolean {
+  return /Mac|iPhone|iPad/.test(
+    view.dom.ownerDocument.defaultView?.navigator.platform ?? "",
+  );
+}
 
 function button(
   label: string,
@@ -178,7 +185,10 @@ export class FindPanel implements Panel {
   private keydown(event: KeyboardEvent): void {
     const mod = event.ctrlKey || event.metaKey;
     const key = event.key.toLowerCase();
-    if (mod && (key === "f" || key === "h")) {
+    if (event.altKey && findActionFor(event, isMac(this.view))) {
+      // macOS Cmd+Option+F (Option+F types ƒ, so `key` is not "f").
+      this.show(true, false);
+    } else if (mod && (key === "f" || key === "h")) {
       this.show(key === "h", false);
     } else if (event.key === "Escape") {
       this.close();

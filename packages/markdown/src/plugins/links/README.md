@@ -79,7 +79,7 @@ the host services `dialogs`, `settings` and `navigation`, `vault` and `resources
 caret following; host provides no service. Queries `link/click`
 and `links/open` with bail semantics. Settings: plugin enabled (true),
 `links.newLinkFormat` (shortest), `links.useWikilinks` (true), `links.folderNote`
-(empty), `links.focusNewTab` (true), and native `files.newNoteFolder` for creation. The editor binds Mod+Enter to follow the caret link.
+(empty), `links.focusNewTab` (true), and native `files.newNoteFolder` for creation. The editor binds Mod+Enter to follow the caret link and Mod+Alt+Enter (Obsidian's default, also a VS Code keybinding) to open it beside.
 
 ## Limits and differences from Obsidian
 
@@ -131,3 +131,7 @@ and unlinked text to their existing handlers. Bare URLs and autolinks work too.
 The injected `links.follow(view)` service lets table cell editors use the same
 open path with their own text and caret. Each editor keeps its contentDOM focus
 guard; focusing a cell never follows a link at the outer editor's caret.
+Obsidian 1.15.0's Alt+Enter (Follow Link) and Mod+Enter (Open Link in New
+Tab) are not bound: in the note Alt+Enter is Page Preview's key and Mod+Enter
+follows in place, as a Mod-click does (CAPABILITIES.md, Hotkeys). Table cells
+handle only Mod+Enter.

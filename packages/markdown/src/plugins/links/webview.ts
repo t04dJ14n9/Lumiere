@@ -344,9 +344,14 @@ function registerLinkCommands(ctx: Context, open: OpenLink): void {
 }
 
 function registerLinkFollowing(ctx: Context, open: OpenLink): void {
-  const follow = (view: EditorView) =>
-    followCaretLink(view, open, (error) =>
-      ctx.logger.warn("Follow link failed", error),
+  const report = (error: unknown) =>
+    ctx.logger.warn("Follow link failed", error);
+  const follow = (view: EditorView) => followCaretLink(view, open, report);
+  const followBeside = (view: EditorView) =>
+    followCaretLink(
+      view,
+      (href, wiki) => open(href, wiki, { side: true }),
+      report,
     );
   ctx.provide("links", { follow });
   ctx.effect(() =>
@@ -356,6 +361,13 @@ function registerLinkFollowing(ctx: Context, open: OpenLink): void {
           {
             key: "Mod-Enter",
             run: follow,
+          },
+          // Obsidian's Open Link to Side key, also contributed to VS Code;
+          // stopping propagation keeps VS Code from running it a second time.
+          {
+            key: "Mod-Alt-Enter",
+            run: followBeside,
+            stopPropagation: true,
           },
         ]),
       ),

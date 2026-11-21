@@ -847,7 +847,11 @@ One function, `revealed(state, from, to, kind)`, used by every renderer:
 - While composing (IME) or dragging with the mouse, decorations are mapped,
   not rebuilt (Obsidian skips rebuilds in both cases). Add the drag case; the
   source handles only composition.
-- Later: search matches reveal source, as in Obsidian.
+- The find bar's current match reveals the source around it, as Obsidian's
+  search highlight does. Find selects each match, so the selection rule above
+  covers most syntax; the renderers that keep rendering under a selection
+  (footnote references, images) also reveal for the match while the bar is
+  open (`findMatchTouches`, `livePreview/find-match.ts`).
 
 ### 11.4 Widgets
 
@@ -1097,7 +1101,7 @@ the active editor. They work in the command palette, keybindings and menus.
 | `toggleStrikethrough` | `editor:toggle-strikethrough` | formatting | — (1.15.0 binds none) |
 | `toggleHighlight` | `editor:toggle-highlight` | formatting | — (1.15.0 binds none) |
 | `toggleCode` | `editor:toggle-code` | formatting | — (1.15.0 binds none) |
-| `toggleComment` | `editor:toggle-comments` | formatting | Mod+/ in the editor's own keymap, no VS Code keybinding (1.15.0 binds Mod+/) |
+| `toggleComment` | `editor:toggle-comments` | formatting | Mod+/ (as 1.15.0) |
 | `toggleInlineMath` | `editor:toggle-inline-math` | math | — |
 | `insertMathBlock` | `editor:insert-mathblock` | math | — |
 | `insertLink` | `editor:insert-link` | formatting | Mod+K |
@@ -1108,12 +1112,13 @@ the active editor. They work in the command palette, keybindings and menus.
 | `insertFootnote` | `editor:insert-footnote` | footnotes | — |
 | `insertCallout` | `editor:insert-callout` | callouts | — |
 | `setHeading0`…`setHeading6` | `editor:set-heading-0`…`6` | formatting | Mod+Alt+0…6 (#310; 1.15.0 binds none by default) |
-| `toggleChecklist` | `editor:toggle-checklist-status` | tasks | Mod+L in the editor's own keymap, no VS Code keybinding (1.15.0 binds Mod+L) |
+| `toggleChecklist` | `editor:toggle-checklist-status` | tasks | Mod+L (as 1.15.0), not in Cursor, where the key opens the chat |
 | `cycleListChecklist` | `editor:cycle-list-checklist` | tasks | — (1.15.0 binds none) |
 | `toggleBulletList`, `toggleNumberedList`, `toggleBlockquote` | `editor:toggle-*` | formatting | — |
 | `swapLineUp`, `swapLineDown` | `editor:swap-line-up/down` | formatting | — |
-| `followLink` | `editor:follow-link` | links | — |
-| `openLinkToSide` | `editor:open-link-in-new-split` | links | — |
+| `followLink` | `editor:follow-link` | links | — (1.15.0's Alt+Enter is Page Preview's key here; the editor's own Mod+Enter follows in place) |
+| `openLinkInNewTab` | `editor:open-link-in-new-leaf` | links | — (1.15.0's Mod+Enter follows in place here) |
+| `openLinkToSide` | `editor:open-link-in-new-split` | links | Mod+Alt+Enter (as 1.15.0) |
 | `foldAll`, `unfoldAll`, `toggleFold` | `editor:fold-all`, `editor:unfold-all`, `editor:toggle-fold` | folding | — |
 | `addProperty` | `markdown:add-metadata-property` | properties | Mod+; |
 | table commands (insert/move/delete row and column, align, sort) | `editor:table-*` (Lumiere's own names such as `editor:table-insert-row-above`; 1.15.0's are `editor:table-row-before` and so on, and it sorts only from the cell menu) | tables | — |
@@ -1130,15 +1135,23 @@ Rules:
   (2026-11-21; the `hotkeys` of each `addCommand`, not Settings → Hotkeys in a
   running app): Mod+B, Mod+I, Mod+K, Mod+/ (comments), Mod+L (checklist),
   Mod+D (delete paragraph), Mod+; (add property), Mod+E (Reading view),
-  Mod+O (switcher), Alt+Enter, Mod+Enter, Mod+Alt+Enter (links); every other
-  command in this table has none. Lumiere binds Mod+B, Mod+I, Mod+K and Mod+;
-  as Obsidian does. Mod+/ and Mod+L work inside the note through the editor's
-  own keymap but are not contributed as VS Code keybindings until the owner
-  decides (the earlier "verify" rows, IMPLEMENTATION_PLAN.md); Mod+D and Mod+O stay
-  VS Code's, Mod+E is Lumiere's Toggle Text Editor, and the three link-command
-  keys are not bound. Mod+Alt+0…6 for Set Heading is Lumiere's own (#310): 1.15.0
-  has no default key for those commands, so a heading key in Obsidian is a
-  user binding. Record live observations in `docs/PARITY.md` (§21.4).
+  Mod+O (switcher), Mod+F and Mod+H, on macOS Mod+Alt+F (find and replace),
+  Alt+Enter, Mod+Enter, Mod+Alt+Enter, Mod+Alt+Shift+Enter (links); every
+  other command in this table has none. Owner decision (2026-11-21): Lumiere
+  binds each where neither VS Code nor Cursor has a default on the key while a
+  note has focus, and leaves the clashes unbound, listed in CAPABILITIES.md
+  ("Hotkeys"). So Mod+B, Mod+I, Mod+K, Mod+/, Mod+L, Mod+; and Mod+Alt+Enter
+  are contributed (Mod+K and Mod+L not in Cursor), each scoped to the focused
+  note. All but Mod+; are also handled in the editor's own keymap, which
+  stops the event so VS Code does not run them twice and which works in hosts
+  without VS Code's keybindings; Find and Replace are the editor's own keys. Mod+D, Mod+O,
+  Alt+Enter and Mod+Enter keep what they already do here (VS Code's Add
+  Selection to Next Find Match and Open File, Lumiere's Page Preview and
+  follow in place); Mod+E is Lumiere's Toggle Text Editor
+  (there is no Reading view, §1); Mod+Alt+Shift+Enter has no command (no new
+  windows). Mod+Alt+0…6 for Set Heading is Lumiere's own (#310): 1.15.0 has no
+  default key for those commands, so a heading key in Obsidian is a user
+  binding. Record live observations in `docs/PARITY.md` (§21.4).
 - Host shortcuts that collide with editor keys while the editor has focus
   (Vim's Ctrl-O, Ctrl-B and others) are consumed only while the `vim` plugin is
   active (`lumiere.markdown.plugin.vim` context key), as the source's

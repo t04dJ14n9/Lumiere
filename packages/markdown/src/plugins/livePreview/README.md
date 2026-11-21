@@ -43,6 +43,8 @@ syntax parser and HTML renderer share the highlight-aware emphasis flanking rule
 - `host.ts`: native Toggle Source command routing.
 - `webview.ts`: engine/service, invalidation, fallback and mode registrations.
 - `registry.ts`: renderer facets and reveal rules.
+- `find-match.ts`: the find bar's current match, which reveals source where a
+  selection would not; `find-match.test.ts` covers it.
 - `document-tree.ts`: pushes CodeMirror's parse past the viewport when the
   viewport outruns the tree, and finishes a large note in idle slices.
 - `../../markdown/dialect/language.ts`: the parser CodeMirror's language
@@ -170,6 +172,11 @@ queries, processed code) only from its Edit button, selecting the code
 Tables and Properties retain their widgets; bullets, numbers, tags and comment
 markers stay visible. Footnote references deliberately retain superscript
 rendering except when a caret touches the reference itself.
+The find bar's current match reveals the source around it, as Obsidian's
+search highlight does: Find selects each match, so the rules above apply, and
+footnote references and images, which keep rendering under a selection, ask
+`findMatchTouches` (provided through `api.ts`) while the bar is open. Tables
+and Properties keep their widgets for a match too.
 
 `reveal-rules.test.ts` documents the inline and line rules as caret-offset tables;
 `test/unit/livePreview/reveal-plugins.test.ts` checks feature renderer composition.

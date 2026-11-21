@@ -25,7 +25,8 @@ tab reaches the next multiple of four), so they stay nested; a task ticked
 in such an embed is matched to its source line ignoring that indentation.
 
 As in Obsidian 1.13 and later, an image stays rendered whatever the caret or
-a selection does, and has no Edit button. A click selects it, and so does
+a selection does, and has no Edit button; the find bar's current match inside
+its source shows the source, as Obsidian's search highlight does. A click selects it, and so does
 ArrowRight with the caret just before it or ArrowLeft just after it (the
 next press moves past): it stays outlined. Then `+`/`=` and `-`
 resize it in steps of 25 pixels, from the width it shows, up to the width of

@@ -1320,6 +1320,12 @@
         "when": "activeCustomEditorId == 'lumiere.markdown.editor' && lumiere.markdown.plugin.formatting && lumiere.markdown.editorFocus"
       },
       {
+        "command": "lumiere.markdown.toggleComment",
+        "key": "ctrl+/",
+        "mac": "cmd+/",
+        "when": "activeCustomEditorId == 'lumiere.markdown.editor' && lumiere.markdown.plugin.formatting && lumiere.markdown.editorFocus"
+      },
+      {
         "command": "lumiere.markdown.setHeading0",
         "key": "ctrl+alt+0",
         "mac": "cmd+alt+0",
@@ -1383,6 +1389,12 @@
         "when": "activeCustomEditorId == 'lumiere.markdown.editor' && lumiere.markdown.plugin.gitGutter && lumiere.markdown.editorFocus"
       },
       {
+        "command": "lumiere.markdown.openLinkToSide",
+        "key": "ctrl+alt+enter",
+        "mac": "cmd+alt+enter",
+        "when": "activeCustomEditorId == 'lumiere.markdown.editor' && lumiere.markdown.plugin.links && lumiere.markdown.editorFocus"
+      },
+      {
         "command": "lumiere.markdown.outline.goToHeading",
         "key": "ctrl+shift+o",
         "mac": "cmd+shift+o",
@@ -1399,6 +1411,12 @@
         "key": "ctrl+;",
         "mac": "cmd+;",
         "when": "activeCustomEditorId == 'lumiere.markdown.editor' && lumiere.markdown.plugin.properties && lumiere.markdown.editorFocus"
+      },
+      {
+        "command": "lumiere.markdown.toggleChecklist",
+        "key": "ctrl+l",
+        "mac": "cmd+l",
+        "when": "activeCustomEditorId == 'lumiere.markdown.editor' && lumiere.markdown.plugin.tasks && !lumiere.markdown.isCursorHost && lumiere.markdown.editorFocus"
       },
       {
         "command": "lumiere.markdown.consumeVimHostShortcut",

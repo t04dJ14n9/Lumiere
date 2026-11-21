@@ -6,6 +6,8 @@ import {
   type Extension,
 } from "@codemirror/state";
 import type { DecorationSet } from "@codemirror/view";
+import { search } from "@codemirror/search";
+import { withFindBar } from "../support/find-bar";
 import { documentTree } from "../../../src/plugins/livePreview/document-tree";
 import { inlineDecorations } from "../../../src/plugins/livePreview/inline";
 import { blockIndex } from "../../../src/plugins/livePreview/blocks";
@@ -127,6 +129,38 @@ test("Obsidian math and embeds use the shared inline reveal rules", async () => 
         raw.endsWith(".png)") ? "aa **b  b** zz" : nested,
       );
     }
+  } finally {
+    await f.root.dispose();
+  }
+});
+
+test("the find bar's match shows an image's source, as Obsidian's search highlight does", async () => {
+  const f = fixture();
+  try {
+    f.root.plugin(embedsWebview);
+    await f.root.settled();
+    const inline = f.view.state
+      .facet(inlineRenderers)
+      .map((r) => inlineRenderers.of(r));
+    const doc = "aa ![alt](image.png) zz";
+    const at = doc.indexOf("image");
+    const match = EditorSelection.single(at, at + "image".length);
+    const state = stateFor(doc, match, [inline, search()]);
+    // An image stays rendered under a selection (Obsidian 1.13) ...
+    assert.equal(visibleSource(state), "aa  zz");
+    // ... but not under the find bar's match.
+    assert.equal(visibleSource(withFindBar(state, { search: "image" })), doc);
+    const block = f.view.state
+      .facet(blockRenderers)
+      .find((renderer) => renderer.kind === "embed" && renderer.showSource)!;
+    const alone = "![alt](image.png)";
+    const sole = stateFor(alone, EditorSelection.single(7, 12), search());
+    const range = { from: 0, to: alone.length, kind: "embed", source: alone };
+    assert.equal(block.showSource!(sole, range), false);
+    assert.equal(
+      block.showSource!(withFindBar(sole, { search: "image" }), range),
+      true,
+    );
   } finally {
     await f.root.dispose();
   }

@@ -25,8 +25,9 @@ export interface FindKey {
 export type FindAction = "find" | "replace";
 
 /**
- * Map a keydown to Find (F / keyCode 70) or Replace (H / keyCode 72). Physical
- * codes cover non-Latin layouts the way history-keys covers Z/Y.
+ * Map a keydown to Find (F / keyCode 70) or Replace (H / keyCode 72, and on
+ * macOS Cmd+Option+F). Physical codes cover non-Latin layouts the way
+ * history-keys covers Z/Y, and Option's characters (Option+F types ƒ).
  */
 export function findActionFor(
   event: FindKey,
@@ -35,11 +36,17 @@ export function findActionFor(
   const modifier = isMac
     ? event.metaKey && !event.ctrlKey
     : event.ctrlKey && !event.metaKey;
-  if (!modifier || event.altKey || event.shiftKey) {
+  if (!modifier || event.shiftKey) {
     return undefined;
   }
   const key = event.key.toLowerCase();
-  if (key === "f" || event.keyCode === 70) {
+  const isF = key === "f" || event.keyCode === 70;
+  if (event.altKey) {
+    // Obsidian's and VS Code's Replace key on macOS, where Cmd+H hides the
+    // application before the note sees it.
+    return isMac && isF ? "replace" : undefined;
+  }
+  if (isF) {
     return "find";
   }
   if (key === "h" || event.keyCode === 72) {

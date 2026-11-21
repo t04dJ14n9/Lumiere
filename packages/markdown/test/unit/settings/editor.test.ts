@@ -264,20 +264,76 @@ test("required settings, title actions, native context menus and unbound verify 
         menu.when.includes("markdownContent"),
     ),
   );
+  // Obsidian 1.15.0 binds no key to these.
   for (const id of [
     "toggleStrikethrough",
     "toggleHighlight",
     "toggleCode",
-    "toggleComment",
-    "toggleChecklist",
     "cycleListChecklist",
-    "quickSwitcher",
   ]) {
     assert.ok(
       !generated.keybindings.some(
         (binding) => binding.command === `lumiere.markdown.${id}`,
       ),
       id,
+    );
+  }
+});
+
+test("Obsidian 1.15.0's default editor keys are bound where VS Code and Cursor leave them free", async () => {
+  const { keybindings } = await contributions();
+  const keysOf = (id: string) =>
+    keybindings
+      .filter((binding) => binding.command === `lumiere.markdown.${id}`)
+      .map((binding) => [binding.key, binding.mac, binding.when]);
+  const note = "activeCustomEditorId == 'lumiere.markdown.editor'";
+  for (const [id, key, mac, plugin] of [
+    ["toggleComment", "ctrl+/", "cmd+/", "formatting"],
+    ["openLinkToSide", "ctrl+alt+enter", "cmd+alt+enter", "links"],
+  ] as const) {
+    assert.deepEqual(
+      keysOf(id),
+      [
+        [
+          key,
+          mac,
+          `${note} && lumiere.markdown.plugin.${plugin} && lumiere.markdown.editorFocus`,
+        ],
+      ],
+      id,
+    );
+  }
+  // Cursor opens its chat with Cmd/Ctrl+L (through the Cursor bridge).
+  assert.deepEqual(keysOf("toggleChecklist"), [
+    [
+      "ctrl+l",
+      "cmd+l",
+      `${note} && lumiere.markdown.plugin.tasks && !lumiere.markdown.isCursorHost && lumiere.markdown.editorFocus`,
+    ],
+  ]);
+  // Clashes left unbound (CAPABILITIES.md, "Hotkeys"): Mod+O is VS Code's
+  // Open File, Mod+D its Add Selection to Next Find Match, Mod+E Lumiere's
+  // Toggle Text Editor; Alt+Enter and Mod+Enter are Page Preview's and the
+  // editor's own follow-in-place keys in the note.
+  for (const id of [
+    "quickSwitcher",
+    "deleteParagraph",
+    "toggleSourceMode",
+    "followLink",
+    "openLinkInNewTab",
+  ]) {
+    assert.deepEqual(keysOf(id), [], id);
+  }
+  for (const chord of ["ctrl+o", "ctrl+d", "alt+enter", "ctrl+enter"]) {
+    assert.ok(
+      !keybindings.some(
+        (binding) =>
+          binding.key === chord &&
+          binding.command.startsWith("lumiere.markdown.") &&
+          // Vim's Control keys, which the vim plugin consumes on purpose.
+          !/Vim/.test(binding.command),
+      ),
+      chord,
     );
   }
 });
