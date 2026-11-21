@@ -67,5 +67,16 @@ declare module "@workshop/core" {
     /** @mode serial */ "render/postProcess": (
       pass: RenderPass,
     ) => void | Promise<void>;
+    /**
+     * Whether a plugin draws a remote image link as something of its own
+     * (Online Videos does for a tweet: a frame, or a card in an untrusted
+     * workspace), and how tall that starts. A plugin answers only while it
+     * runs. Embeds reserves that height, and draws an inline widget of such a
+     * link again when the answer changes, since a widget that compares equal
+     * keeps its DOM after the plugin that drew into it was switched off, or
+     * the plugin's drawing never reached it if it was switched on.
+     * @mode bail
+     */
+    "render/claimedHeight": (target: string) => number | undefined;
   }
 }

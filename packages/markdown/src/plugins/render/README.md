@@ -30,7 +30,9 @@ plugin disposal disposes all remaining passes.
 
 Injects `markdown` and `editor`; provides `render`. Dispatches `render/preProcess` and
 `render/postProcess` serially, and `render/fence` with bail semantics. No commands
-or independent user settings. Render calls read `editor.strictLineBreaks`;
+or independent user settings. It declares `render/claimedHeight` (bail): Embeds
+asks which plugin draws a remote image link as a frame of its own and how tall
+that starts, Online Videos answers for a tweet. Render calls read `editor.strictLineBreaks`;
 host-provided workspace trust controls remote content.
 
 ## Limits and differences from Obsidian

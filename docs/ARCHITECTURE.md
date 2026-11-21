@@ -158,7 +158,7 @@ Extension root (src/extension.ts) ─ createRoot()
         re-provided: host services, vaults, pdfOutlines
         vaultHost (this note's vault), resourcesHost
         critical hosts:  links, tasks, properties, tags, cursorBridgePanel
-        deferred hosts:  gitGutter, gitBlame, suggest, search, onlineVideos, lookUp
+        deferred hosts:  gitGutter, gitBlame, suggest, search, lookUp
               (started after the webview's ready handshake has been answered)
 
 Webview (one per panel, its own JavaScript realm) ─ createRoot()

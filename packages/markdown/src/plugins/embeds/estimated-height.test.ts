@@ -65,19 +65,48 @@ test("inline WxH images use the same height reserve as block embeds", () => {
   assert.ok(height > 700, `got ${height}`);
 });
 
-test("YouTube and Bilibili image links reserve video-card height, not PDF card", () => {
-  // Online Videos post-processes these into `.mw-video` cards (~16:9 thumb).
-  // Without a dedicated reserve they fell through to CARD_DEFAULT (~64px).
-  const youtube = embedEstimatedHeight(
-    "![Never](https://www.youtube.com/watch?v=dQw4w9WgXcQ)",
-  );
-  const short = embedEstimatedHeight("![](https://youtu.be/dQw4w9WgXcQ)");
-  const bilibili = embedEstimatedHeight(
-    "![](https://www.bilibili.com/video/BV1DRHU6LELy)",
-  );
+test("a link a plugin claims reserves the height it names, not a PDF card", () => {
+  // Online Videos claims a tweet's link while it runs in a trusted workspace
+  // (`render/claimedHeight`) and says how tall its frame starts.
   const pdf = embedEstimatedHeight("![[doc.pdf]]");
-  for (const height of [youtube, short, bilibili]) {
-    assert.ok(height > 150, `got ${height}`);
-    assert.ok(height > pdf * 2, `video=${height} pdf=${pdf}`);
+  const claim = (target: string) =>
+    /^https:\/\/(x|twitter)\.com\/jack\/status\/\d+/.test(target)
+      ? 400
+      : undefined;
+  for (const link of [
+    "https://x.com/jack/status/1590000000000000000",
+    "https://twitter.com/jack/status/20?s=20",
+  ]) {
+    const height = embedEstimatedHeight(`![](${link})`, claim);
+    assert.equal(height, 400 + 16, link);
+    assert.ok(height > pdf * 2, `embed=${height} pdf=${pdf}`);
+  }
+  assert.equal(
+    embedEstimatedHeight("![](https://example.com/page)", claim),
+    pdf,
+  );
+});
+
+test("a tweet link nobody claims (the plugin off, or an untrusted workspace) keeps the card reserve", () => {
+  const card = embedEstimatedHeight("![[doc.pdf]]");
+  const link = "![](https://x.com/jack/status/20)";
+  assert.equal(embedEstimatedHeight(link), card);
+  assert.equal(
+    embedEstimatedHeight(link, () => undefined),
+    card,
+  );
+});
+
+test("links that are not embedded keep the card reserve, whatever site they name", () => {
+  const card = embedEstimatedHeight("![[doc.pdf]]");
+  for (const link of [
+    "https://www.youtube.com/watch?v=dQw4w9WgXcQ",
+    "https://youtu.be/dQw4w9WgXcQ",
+    "https://www.bilibili.com/video/BV1DRHU6LELy",
+    "https://open.spotify.com/track/11dFghVXANMlKmJXsNCbNl",
+    "https://vimeo.com/22439234",
+    "https://twitter.com/jack",
+  ]) {
+    assert.equal(embedEstimatedHeight(`![](${link})`), card, link);
   }
 });

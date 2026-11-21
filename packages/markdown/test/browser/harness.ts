@@ -9,7 +9,6 @@ export async function open(
   {
     trusted = false,
     features = {},
-    videoDetails = {},
     notes = {},
     gitBaseline,
     vimStatusBar = false,
@@ -21,7 +20,6 @@ export async function open(
       string,
       { enabled: boolean; config: Record<string, unknown> }
     >;
-    videoDetails?: Record<string, Record<string, unknown>>;
     notes?: Record<string, string>;
   } = {},
 ) {
@@ -35,7 +33,6 @@ export async function open(
       preset,
       trusted,
       features,
-      videoDetails,
       notes,
       gitBaseline,
       vimStatusBar,
@@ -43,7 +40,6 @@ export async function open(
       window.harness = new window.BrowserHost(source);
       window.harness.trusted = trusted;
       window.harness.features = features;
-      window.harness.videoDetails = videoDetails;
       window.harness.notes = notes;
       window.harness.gitBaseline = gitBaseline;
       window.harness.vimStatusBar = vimStatusBar;
@@ -54,7 +50,6 @@ export async function open(
       preset,
       trusted,
       features,
-      videoDetails,
       notes,
       gitBaseline,
       vimStatusBar,

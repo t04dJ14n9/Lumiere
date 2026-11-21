@@ -113,7 +113,7 @@ every embed showing a file that changed (what it showed stays until the new
 version replaces it); no kernel events emitted.
 Uses Links RPC to open an embedded target. `lumiere.markdown.plugins.embeds.enabled`
 defaults to true. Insert Embed has no default keybinding. Remote media follows
-workspace trust from Render. YouTube/Bilibili image links share the EmbedBlock height reserve via Online Videos `api` (`parseVideoUrl`) so off-viewport remounts keep card height. Note embeds reserve a multi-paragraph floor and remember painted height across off-viewport remounts (`estimated-height.ts`).
+workspace trust from Render. A link Online Videos draws (a tweet's frame, or its card in an untrusted workspace) reserves the height that plugin claims through `render/claimedHeight` (none when the plugin is off) so off-viewport remounts keep that height, and an inline embed of such a link is drawn again when the claim changes. Any other remote link, a removed Online Videos site included, is a remote image: `failed to fetch image` when it is not one. Note embeds reserve a multi-paragraph floor and remember painted height across off-viewport remounts (`estimated-height.ts`).
 
 ## Limits and differences from Obsidian
 

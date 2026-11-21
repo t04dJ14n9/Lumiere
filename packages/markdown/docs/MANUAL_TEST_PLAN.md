@@ -422,23 +422,20 @@ title, then set `lumiere.markdown.plugins.inlineTitle.enabled` to true.
 
 `Videos.md`.
 
-1. Each image-style YouTube and Bilibili link shows a card. The Bilibili
-   card shows its cover, the video's title (no alt text) or the alt text,
-   and `Bilibili · 英雄联盟 · 4:17`; YouTube cards show the still, and the
-   card without alt text shows the oEmbed title and channel. The link in
-   text stays a link.
-2. **Open on YouTube** and **Open on Bilibili** (and clicking a cover) open
-   the video page in the external browser (the second YouTube card at 42 s).
-3. Offline (or with the providers blocked), reopen the note: cards show the
-   alt text or provider and ID, with no errors.
-4. No card offers **Play here**. Set
-   `lumiere.markdown.onlineVideos.bilibiliPlayer` to true: the Bilibili
-   card offers it and shows the player; note whether the video plays (it
-   did not buffer in VS Code 1.141 on Linux). Reset the setting.
-5. Put the caret on a video line: the Markdown shows; move away: the card
+1. In a trusted workspace the two tweet links show the tweet, in the VS Code
+   theme (light or dark), grow to the tweet's height and do not scroll; the
+   link in text stays a link. Clicking a name or a link in the tweet opens
+   the page in the external browser.
+2. The YouTube link, and a link to any other site (Spotify, Vimeo,
+   Bilibili), show `failed to fetch image`, as any link that is not an
+   image does. YouTube is not embedded: its player showed Error 153 in VS
+   Code 1.147.
+3. Put the caret on a tweet line: the Markdown shows; move away: the tweet
    returns.
-6. In an untrusted workspace the cards have no cover, still, fetched title
-   or Play here, and a note says so; no request reaches either provider.
+4. Switch the theme and reopen the note: a tweet follows it.
+5. In an untrusted workspace the tweet links are cards with an **Open on X**
+   button, which opens the tweet in the external browser, and a note that
+   embeds are off; no request reaches the site.
 
 ### pagePreview
 
@@ -1455,7 +1452,6 @@ Use the disposable fixture vault from Setup. These rows enumerate every generate
 | `lumiere.markdown.marp.open` | `"workbench"` | workbench / textEditor; change at workspace-folder scope, verify the owning plugin scenario, then reset the override. |
 | `lumiere.markdown.math.macros` | `{}` | object; change at workspace-folder scope, verify the owning plugin scenario, then reset the override. |
 | `lumiere.markdown.obsidianCompat.configFolder` | `".obsidian"` | string; change at workspace-folder scope, verify the owning plugin scenario, then reset the override. |
-| `lumiere.markdown.onlineVideos.bilibiliPlayer` | `false` | boolean; change at workspace-folder scope, verify the owning plugin scenario, then reset the override. |
 | `lumiere.markdown.outgoingLinks.sortOrder` | `"alphabetical"` | alphabetical / alphabeticalReverse / byModifiedTime / byModifiedTimeReverse; change at workspace-folder scope, verify the owning plugin scenario, then reset the override. |
 | `lumiere.markdown.outgoingLinks.extraContext` | `false` | boolean; change at workspace-folder scope, verify the owning plugin scenario, then reset the override. |
 | `lumiere.markdown.outline.followCursor` | `true` | boolean; change at workspace-folder scope, verify the owning plugin scenario, then reset the override. |

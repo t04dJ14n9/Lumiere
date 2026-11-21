@@ -1,20 +1,13 @@
-import { Schema } from "@workshop/core";
 import { defineManifest } from "../../shared/manifest";
-export const config = Schema.object({
-  bilibiliPlayer: Schema.boolean()
-    .default(false)
-    .description(
-      "Offer **Play here** on Bilibili cards in trusted workspaces. Off by default: Bilibili's player does not play inside VS Code's webview.",
-    ),
-});
+// The id is the plugin's setting key (`plugins.onlineVideos.enabled`), kept
+// from when it also carded video sites, so no setting changes.
 export default defineManifest({
   id: "onlineVideos",
-  title: "Online Videos",
+  title: "Embedded tweets",
   description:
-    "Show YouTube and Bilibili links embedded as images as video cards, with titles and covers in trusted workspaces.",
+    "Embed tweets written as images (![](link)) as Obsidian does. In an untrusted workspace they show a link card.",
   kind: "feature",
   defaultEnabled: true,
-  surfaces: ["host", "webview"],
+  surfaces: ["webview"],
   capabilities: ["rendering", "network"],
-  config,
 } as const);

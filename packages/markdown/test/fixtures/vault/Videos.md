@@ -1,13 +1,14 @@
 # Videos
 
-Online video links written as images (Online Videos plugin).
+Tweets written as images (Online Videos plugin).
 
-![Never Gonna Give You Up](https://www.youtube.com/watch?v=dQw4w9WgXcQ)
+![](https://x.com/jack/status/20)
 
-![](https://youtu.be/dQw4w9WgXcQ?t=42)
+![A tweet's own words](https://twitter.com/jack/status/20?s=20)
 
-![](https://www.bilibili.com/video/BV1DRHU6LELy)
+A link in text stays a link: [tweet](https://x.com/jack/status/20).
 
-![Alt text wins](https://www.bilibili.com/video/av170001)
+Links to other sites, YouTube included (its player shows Error 153 in VS
+Code), are not embedded; they are plain images that fail to load:
 
-A YouTube link in text stays a link: [video](https://youtu.be/dQw4w9WgXcQ).
+![](https://www.youtube.com/watch?v=dQw4w9WgXcQ)

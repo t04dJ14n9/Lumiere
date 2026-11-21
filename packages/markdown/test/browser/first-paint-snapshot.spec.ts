@@ -146,7 +146,6 @@ async function openUnderSnapshot(
       );
       window.harness = new window.BrowserHost(source);
       window.harness.features = {};
-      window.harness.videoDetails = {};
       window.harness.notes = {};
       window.harness.editorSettings = editor;
       await window.harness.open("obsidian");

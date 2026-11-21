@@ -3,237 +3,135 @@ import type { Page } from "@playwright/test";
 import { open } from "./harness";
 
 const YOUTUBE = "https://www.youtube.com/watch?v=dQw4w9WgXcQ";
-const BILIBILI = "https://www.bilibili.com/video/BV1DRHU6LELy?p=2";
-// A 1×1 PNG, so no test reaches the real providers.
-const PIXEL = Buffer.from(
-  "iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAQAAAC1HAwCAAAAC0lEQVR42mNk+A8AAQUBAScY42YAAAAASUVORK5CYII=",
-  "base64",
-);
+const TWEET = "https://twitter.com/jack/status/1590000000000000000";
 
-async function stubProviders(page: Page): Promise<string[]> {
+/**
+ * Stands in for the tweet widget, so no test reaches the site. Its page
+ * reports a height of 600 to its parent, as the real widget does.
+ */
+async function stubSites(page: Page): Promise<string[]> {
   const requests: string[] = [];
+  await page.route(/^https:\/\/platform\.twitter\.com\//, (route) => {
+    requests.push(route.request().url());
+    const resize = JSON.stringify({
+      "twttr.embed": {
+        method: "twttr.private.resize",
+        params: [{ width: 550, height: 600 }],
+        jsonrpc: "2.0",
+      },
+    });
+    return route.fulfill({
+      contentType: "text/html",
+      body: `<p>tweet stub</p><script>parent.postMessage(${resize}, "*")</script>`,
+    });
+  });
+  // Links to anything else are not embedded and fail as any non-image does.
   await page.route(
-    /^https:\/\/(i\.ytimg\.com|[^/]*youtube[^/]*|[^/]*bilibili\.com)\//,
-    (route) => {
-      const url = route.request().url();
-      requests.push(url);
-      return url.startsWith("https://i.ytimg.com/")
-        ? route.fulfill({ contentType: "image/png", body: PIXEL })
-        : route.fulfill({
-            contentType: "text/html",
-            body: "<p>player stub</p>",
-          });
-    },
+    /^https:\/\/(www\.youtube\.com|open\.spotify\.com|example\.com)\//,
+    (route) => route.fulfill({ status: 404, body: "" }),
   );
   return requests;
 }
 
-test("a YouTube link becomes a card that opens the video in the browser", async ({
+test("a tweet link becomes a sandboxed frame that takes its widget's height, from its widget alone", async ({
   page,
 }) => {
-  const requests = await stubProviders(page);
+  const requests = await stubSites(page);
   await open(
     page,
-    `Intro\n\n![Never gonna](${YOUTUBE}&t=42)\n\nAfter`,
+    `Intro\n\n![](${TWEET}?s=20)\n\n![](${YOUTUBE})\n\n![](https://open.spotify.com/track/11dFghVXANMlKmJXsNCbNl)\n\n![](https://example.com/page)\n\nAfter`,
     "obsidian",
-    {
-      trusted: true,
-    },
+    { trusted: true },
   );
-  const card = page.locator(".cm-content .mw-video");
-  await expect(card).toHaveAttribute("data-provider", "youtube");
-  await expect(card.locator(".mw-video-title")).toHaveText("Never gonna");
-  await expect(card.locator(".mw-video-meta")).toHaveText(
-    "YouTube · dQw4w9WgXcQ",
-  );
-  await expect(card.locator(".mw-video-thumb img")).toHaveAttribute(
-    "src",
-    "https://i.ytimg.com/vi/dQw4w9WgXcQ/hqdefault.jpg",
-  );
-  // YouTube refuses embeds in webviews (error 153), so there is no player.
-  await expect(card.locator(".mw-video-play")).toHaveCount(0);
-  await expect(page.locator("iframe")).toHaveCount(0);
-  // Buttons, since VS Code's webview would also open a clicked <a href>.
-  await expect(card.locator("a")).toHaveCount(0);
-  await card.getByRole("button", { name: "Open on YouTube" }).click();
-  await card
-    .getByRole("button", { name: "Open Never gonna on YouTube" })
-    .click();
-  await expect
-    .poll(() => page.evaluate(() => window.harness.opened))
-    .toEqual([`${YOUTUBE}&t=42s`, `${YOUTUBE}&t=42s`]);
-  expect(requests.every((url) => url.startsWith("https://i.ytimg.com/"))).toBe(
-    true,
-  );
-});
-
-test("the caret on a video link reveals its Markdown, like an image", async ({
-  page,
-}) => {
-  await stubProviders(page);
-  const source = `Intro\n\n![](https://youtu.be/dQw4w9WgXcQ)\n\nAfter`;
-  await open(page, source, "obsidian", {
-    trusted: true,
-    videoDetails: {
-      "youtube:dQw4w9WgXcQ": {
-        title: "Never Gonna Give You Up",
-        author: "Rick Astley",
-      },
-    },
-  });
-  await expect(page.locator(".cm-content .mw-video")).toHaveCount(1);
-  // No alt text: the oEmbed title and channel fill in.
-  await expect(page.locator(".mw-video-title")).toHaveText(
-    "Never Gonna Give You Up",
-  );
-  await expect(page.locator(".mw-video-meta")).toHaveText(
-    "YouTube · Rick Astley",
-  );
-  await page.evaluate((at) => window.harness.reveal(at), source.indexOf("!["));
-  await expect(page.locator(".cm-content .mw-video")).toHaveCount(0);
-  await expect(page.locator(".cm-content")).toContainText(
-    "![](https://youtu.be/dQw4w9WgXcQ)",
-  );
-  await page.evaluate(() => window.harness.reveal(0));
-  await expect(page.locator(".cm-content .mw-video")).toHaveCount(1);
-});
-
-const BILIBILI_DETAILS = {
-  "bilibili:BV1DRHU6LELy": {
-    title: "2026英雄联盟全球总决赛主题曲《KNOW MY NAME》",
-    author: "英雄联盟",
-    duration: 257,
-    cover: `data:image/png;base64,${PIXEL.toString("base64")}`,
-  },
-};
-
-test("a Bilibili card shows the host's cover, title, author and length", async ({
-  page,
-}) => {
-  const requests = await stubProviders(page);
-  await open(
-    page,
-    `Intro\n\n![](${BILIBILI})\n\n![Mine](${BILIBILI})`,
-    "obsidian",
-    {
-      trusted: true,
-      videoDetails: BILIBILI_DETAILS,
-    },
-  );
-  const cards = page.locator(".cm-content .mw-video");
-  const card = cards.first();
-  await expect(card.locator(".mw-video-title")).toHaveText(
-    "2026英雄联盟全球总决赛主题曲《KNOW MY NAME》",
-  );
-  await expect(card.locator(".mw-video-meta")).toHaveText(
-    "Bilibili · 英雄联盟 · 4:17",
-  );
-  await expect(card.locator(".mw-video-thumb img")).toHaveAttribute(
-    "src",
-    BILIBILI_DETAILS["bilibili:BV1DRHU6LELy"].cover,
-  );
-  // Alt text wins over the fetched title.
-  await expect(cards.nth(1).locator(".mw-video-title")).toHaveText("Mine");
-  // The player stays off unless the setting turns it on.
-  await expect(page.locator(".mw-video-play")).toHaveCount(0);
-  await card.locator(".mw-video-thumb").click();
-  await expect
-    .poll(() => page.evaluate(() => window.harness.opened))
-    .toEqual(["https://www.bilibili.com/video/BV1DRHU6LELy/?p=2"]);
-  // The webview itself fetches nothing; the same video is asked about once.
-  expect(requests).toEqual([]);
-  expect(await page.evaluate(() => window.harness.videoRequests)).toEqual([
-    "bilibili:BV1DRHU6LELy",
-  ]);
-});
-
-test("a card whose details fail stays as it was", async ({ page }) => {
-  await stubProviders(page);
-  await open(page, `Intro\n\n![](${BILIBILI})`, "obsidian", { trusted: true });
-  const card = page.locator(".cm-content .mw-video");
-  await expect
-    .poll(() => page.evaluate(() => window.harness.videoRequests))
-    .toEqual(["bilibili:BV1DRHU6LELy"]);
-  await expect(card.locator(".mw-video-title")).toHaveText("Bilibili video");
-  await expect(card.locator(".mw-video-meta")).toHaveText(
-    "Bilibili · BV1DRHU6LELy",
-  );
-  await expect(card.locator(".mw-video-thumb")).toHaveCount(0);
-  await expect(
-    card.getByRole("button", { name: "Open on Bilibili" }),
-  ).toBeVisible();
-});
-
-test("with bilibiliPlayer on, Play here swaps a Bilibili card for a sandboxed player", async ({
-  page,
-}) => {
-  const requests = await stubProviders(page);
-  await open(page, `Intro\n\n![](${BILIBILI})`, "obsidian", {
-    trusted: true,
-    features: {
-      onlineVideos: { enabled: true, config: { bilibiliPlayer: true } },
-    },
-  });
-  const card = page.locator(".cm-content .mw-video");
-  await expect(card.locator(".mw-video-title")).toHaveText("Bilibili video");
-  await expect(card.locator(".mw-video-thumb")).toHaveCount(0);
-  expect(requests).toEqual([]);
-  await card.getByRole("button", { name: "Play here" }).click();
-  const frame = card.locator(".mw-video-frame iframe");
+  const frame = page.locator(".cm-content .mw-embed-tweet iframe");
   await expect(frame).toHaveAttribute(
     "src",
-    "https://player.bilibili.com/player.html?bvid=BV1DRHU6LELy&p=2&autoplay=0",
+    "https://platform.twitter.com/embed/Tweet.html?dnt=true&theme=light&id=1590000000000000000",
   );
+  await expect(frame).toHaveAttribute("scrolling", "no");
   await expect(frame).toHaveAttribute(
     "sandbox",
-    "allow-scripts allow-same-origin allow-presentation",
+    "allow-scripts allow-same-origin allow-presentation allow-popups allow-popups-to-escape-sandbox",
   );
   await expect(frame).toHaveAttribute(
     "referrerpolicy",
     "strict-origin-when-cross-origin",
   );
+  await expect(frame).toHaveAttribute("loading", "lazy");
   await expect(
-    page.frameLocator(".mw-video-frame iframe").getByText("player stub"),
+    page.frameLocator(".mw-embed-tweet iframe").getByText("tweet stub"),
   ).toBeVisible();
-  // The card hugs the player and its caption.
-  const [cardBox, frameBox, bodyBox] = await Promise.all([
-    card.boundingBox(),
-    frame.boundingBox(),
-    card.locator(".mw-video-body").boundingBox(),
-  ]);
-  expect(frameBox!.height).toBeCloseTo((frameBox!.width * 9) / 16, 0);
-  expect(cardBox!.height).toBeLessThanOrEqual(
-    frameBox!.height + bodyBox!.height + 4,
+  await expect(frame).toHaveCSS("height", "600px");
+  // The page's own message, or a forged one from another origin, changes nothing.
+  await page.evaluate(() =>
+    window.postMessage(
+      {
+        "twttr.embed": {
+          method: "twttr.private.resize",
+          params: [{ height: 900 }],
+        },
+      },
+      "*",
+    ),
   );
-  expect(bodyBox!.height).toBeLessThan(120);
-  // The browser link stays in case the player cannot play here.
-  await expect(card.getByText("Open on Bilibili")).toBeVisible();
-  await expect(card.getByRole("button", { name: "Play here" })).toHaveCount(0);
+  await page.waitForTimeout(200);
+  await expect(frame).toHaveCSS("height", "600px");
+  await expect(page.locator(".mw-embed-card")).toHaveCount(0);
+  // A YouTube link, like a link to a removed site, is as any unrecognised
+  // remote image: Embeds'. Only the tweet's frame is made.
+  await expect(page.locator("iframe")).toHaveCount(1);
+  await expect(page.locator(".cm-content .unresolved-embed")).toHaveText([
+    "failed to fetch image",
+    "failed to fetch image",
+    "failed to fetch image",
+  ]);
+  expect(requests).toEqual([
+    "https://platform.twitter.com/embed/Tweet.html?dnt=true&theme=light&id=1590000000000000000",
+  ]);
 });
 
-test("an untrusted workspace shows a card with no player or remote image", async ({
+test("the caret on a tweet link reveals its Markdown, like an image", async ({
   page,
 }) => {
-  const requests = await stubProviders(page);
+  await stubSites(page);
+  const source = `Intro\n\n![](https://x.com/jack/status/20)\n\nAfter`;
+  await open(page, source, "obsidian", { trusted: true });
+  await expect(page.locator(".cm-content .mw-embed iframe")).toHaveCount(1);
+  await page.evaluate((at) => window.harness.reveal(at), source.indexOf("!["));
+  await expect(page.locator(".cm-content .mw-embed")).toHaveCount(0);
+  await expect(page.locator(".cm-content")).toContainText(
+    "![](https://x.com/jack/status/20)",
+  );
+  await page.evaluate(() => window.harness.reveal(0));
+  await expect(page.locator(".cm-content .mw-embed iframe")).toHaveCount(1);
+});
+
+test("an untrusted workspace shows a link card and loads nothing", async ({
+  page,
+}) => {
+  const requests = await stubSites(page);
   await open(
     page,
-    `Intro\n\n![Talk](${YOUTUBE})\n\n![](${BILIBILI})\n\n![](https://example.com/photo.png)`,
+    `Intro\n\n![Talk](${TWEET})\n\n![](https://x.com/jack/status/20)\n\n![](https://www.bilibili.com/video/BV1DRHU6LELy)\n\n![](https://example.com/photo.png)`,
     "obsidian",
-    { videoDetails: BILIBILI_DETAILS },
   );
-  const cards = page.locator(".cm-content .mw-video");
+  const cards = page.locator(".cm-content .mw-embed-card");
   await expect(cards).toHaveCount(2);
-  await expect(cards.locator("img")).toHaveCount(0);
-  await expect(cards.locator(".mw-video-play")).toHaveCount(0);
-  await expect(cards.first().locator(".mw-video-note")).toContainText(
+  await expect(page.locator("iframe")).toHaveCount(0);
+  await expect(cards.first().locator(".mw-embed-card-title")).toHaveText(
+    "Talk",
+  );
+  await expect(cards.nth(1).locator(".mw-embed-card-title")).toHaveText(
+    "Tweet",
+  );
+  await expect(cards.first().locator(".mw-embed-card-note")).toContainText(
     "untrusted workspace",
   );
-  await cards.nth(1).getByRole("button", { name: "Open on Bilibili" }).click();
+  await cards.first().getByRole("button", { name: "Open on X" }).click();
   await expect
     .poll(() => page.evaluate(() => window.harness.opened))
-    .toEqual(["https://www.bilibili.com/video/BV1DRHU6LELy/?p=2"]);
-  expect(await page.evaluate(() => window.harness.videoRequests)).toEqual([]);
-  // Other remote images still go through embeds.
-  await expect(page.locator(".cm-content img.note-image")).toHaveCount(1);
+    .toEqual(["https://x.com/i/status/1590000000000000000"]);
+  // A removed provider's link is an ordinary remote image, as is any other.
+  await expect(page.locator(".cm-content img.note-image")).toHaveCount(2);
   expect(requests).toEqual([]);
 });

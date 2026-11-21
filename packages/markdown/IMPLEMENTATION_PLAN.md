@@ -8422,3 +8422,173 @@ definition in the note (test/unit/features/table-links.test.ts); the three
 commands with the cell as the active view (test/unit/features/link-keys.test.ts).
 Not run: a native key press in VS Code, `pnpm test:browser`,
 `test:quality`, `test:vscode`.
+
+## Tweets embed as in Obsidian 1.15.0; the site cards and YouTube go (owner decisions, 2026-11-21 and 2026-11-22)
+
+Owner decision (2026-11-21): the Online Videos plugin drops the site-specific
+cards Obsidian does not have and embeds what Obsidian 1.15.0 embeds from a web
+link, the way it does. Behaviour reference only (AGENTS.md): Obsidian's
+shipped code was read (`_B` and `$3e`, `kv`, `Q5` and the resize listener,
+app.js lines 98284-98354; its Reading view post-processor 99714-99730 and Live
+Preview widget 141537-141566); none of it is copied. That is two embeds,
+YouTube and tweets. The first version of this change built both.
+
+Owner decision (2026-11-22), after a probe in a real VS Code window:
+YouTube and X are non-essential; keep what is easy, drop what is not. The
+YouTube embed is removed; the tweet embed stays. The probe (VS Code 1.147,
+the test window on the built-in screen, a trusted workspace, a note with
+`![](https://www.youtube.com/watch?v=dQw4w9WgXcQ)` and
+`![](https://x.com/jack/status/20)`, not kept in the repository):
+
+- YouTube: the `youtube-nocookie.com/embed/ID` frame showed "Video player
+  configuration error / Error 153 / Watch video on YouTube"; its
+  `document.referrer` was empty, its ancestor origins `vscode-webview://…`
+  (twice) and `vscode-file://vscode-app`, and its video `readyState` 0, paused
+  at 0. As measured in 1.141 on 2026-10-09 (when the card offered no player
+  for this reason): the webview page is not http(s), so its frames get no
+  referrer. Obsidian's desktop app avoids it with a page of its own
+  (`releases.obsidian.md/youtube`); that is not copied.
+- Tweet: the widget rendered ("just setting up my twttr", with Follow, Reply
+  and Copy link) in the dark theme the VS Code window had
+  (`theme=dark` in its URL); `twttr.private.resize` messages arrived from
+  `https://platform.twitter.com` (and `twttr.private.results`), from the
+  embed frame's window, and set the frame to 225 px.
+
+Removed (commit 1): the Spotify, SoundCloud, Vimeo, Hugging Face and npm
+cards; every Bilibili card (video, bangumi, UP space, live room; an inline
+Bilibili player is tracked separately in #835); the YouTube playlist and
+channel cards; the extension host's title and cover lookups (`details.ts`,
+`host.ts`, `bilibili.ts`, `oembed.ts`, `thumbnails.ts`, `imageData.ts` and the
+rest), the `onlineVideos.details` RPC and with it the plugin's host half;
+the setting `lumiere.markdown.onlineVideos.bilibiliPlayer`; and their tests,
+the fake host's `details` handler and the harness's `videoDetails`. The
+YouTube video card's oEmbed title and the Play here button went with them. A
+link to a removed site is now an ordinary remote image, which Embeds shows as
+`failed to fetch image` (a browser spec checks a Spotify, a YouTube and an
+`example.com/page` link show the same).
+
+Kept and added: from `![](link)`, a `twitter.com`, `x.com`,
+`mobile.twitter.com` or `mobile.x.com` `/{handle}/status/{ID}` link (also
+`/i/web/status/{ID}`, a `/photo/N` or `/video/N` suffix) is an iframe on
+`https://platform.twitter.com/embed/Tweet.html?dnt=true&theme={light|dark}&id=ID`,
+the theme from VS Code's body class, `scrolling=no`. Decisions from what
+Obsidian's pattern matches: it takes any path and the last number in it, so a
+`/photo/1` link embeds tweet 1 (the ID must follow `/status/` here); it has no
+`www.`, so `www.` hosts are not matched here either. The frame follows the
+widget's `twttr.private.resize` message (Obsidian: cap 1000 px, no source or
+origin check); here only from a message whose `source` is that frame's window
+and whose `origin` is `https://platform.twitter.com`, shape-checked (only the
+fields read, each typed; the real message carries `jsonrpc`, `id` and a
+`data` object besides) and clamped to 100-1000 px.
+
+With YouTube gone nothing but tweets remains in the plugin. The id stays
+`onlineVideos` (it is the setting key `plugins.onlineVideos.enabled`; renaming
+it would drop users' settings); the manifest title is now "Embedded tweets",
+the README says so, and the files are named for tweets (`tweet-embed.ts`,
+`tweet-height.ts`; `parse.ts` is `parseTweet`).
+
+Security (non-negotiable per the first decision), each pinned by a unit test:
+
+- The frame is sandboxed: `allow-scripts allow-same-origin allow-presentation`
+  (the player sandbox the plugin had) plus `allow-popups
+  allow-popups-to-escape-sandbox`, because a tweet is made of links and
+  without the pair none of them opens; with it the opened page runs as an
+  ordinary page. Obsidian's list also has `allow-forms` and `allow-modals`; a
+  tweet needs neither (replies and likes are links) and neither is granted. No
+  `allow-top-navigation`.
+- `referrerpolicy=strict-origin-when-cross-origin`, `loading=lazy`.
+- The URL is built from the validated ID only, then checked again against an
+  allowlist of origin, path and exact query (`isEmbedUrl`).
+- Only a trusted workspace gets a frame (`embedView`); Restricted Mode shows a
+  static card with an Open button and nothing is loaded.
+- CSP: the webview's `frame-src` is `https:` in a trusted workspace and
+  `'none'` otherwise, as before this change, so it already admits the widget's
+  origin only when trusted and was not widened. A unit test pins it, trusted
+  and untrusted. Narrowing a trusted workspace's `frame-src` to one origin
+  would also block `<iframe>` in a note's HTML (Render allows https ones), a
+  separate decision for the owner.
+
+Also: the frame's starting height (`TWEET_DEFAULT_HEIGHT`, 400 px) feeds
+Embeds' height estimate; it is the same in an untrusted workspace, where the
+shorter card settles on its first measure. A frame loads 100 ms after it is
+made: the browser spec found the editor renders a block three times while a
+note opens (32 ms from the first to the last), each time loading its frame to
+drop it. With the delay each embed makes one request (the browser spec
+asserts it).
+
+Tests: unit tests for every accepted and rejected tweet URL shape, YouTube and
+the other removed sites not parsing, the frame URL, attributes and sandbox,
+trust gating, the allowlist, the theme, the height messages (right source and
+origin, every wrong shape, the clamp), the reserved height, and the CSP.
+Browser specs `online-videos.spec.ts` (3 tests, replacing the card tests) and
+`online-video-remount-height.spec.ts`.
+
+Docs: the plugin README rewritten to the template, CAPABILITIES, PARITY (a
+YouTube row, "Obsidian embeds it; Lumiere does not", and a tweet row, both
+"code read on 1.15.0", the tweet's with the probe; the `bilibiliPlayer` row
+removed), MANUAL_TEST_PLAN, the Embeds README, ARCHITECTURE, the CHANGELOG, and
+the contributed setting list (`pnpm contributions`).
+
+Review fixes (Gemini review of #842): a render pass outlives this plugin when
+the plugin is switched off, so its side effects are now tied to the plugin's
+lifecycle as the callouts plugin's are: each open pass registers its cleanup in
+a set that `ctx.effect` runs when the plugin stops (the cleanup aborts the
+pass's signal, which removes the `message` listener and clears the load
+timers, and puts the swapped images back; the pass ending runs the same
+cleanup, so the second run finds nothing to do). `loadWhenSettled` and
+`trackTweetHeights` do nothing for a signal that is already aborted, since
+`abort` would never fire for it. Unit tests (`test/unit/onlineVideos/
+pass-lifecycle.test.ts`, a small fake DOM and mock timers) fail without the fix
+and pass with it.
+
+Review fixes, round 2 (Gemini review of #842):
+
+- Switching Online Videos off while a note held an inline tweet link
+  (`See ![](https://x.com/jack/status/20) here`, drawn by Embeds' `EmbedInline`)
+  left the widget blank. The stop puts the original `<img>` back, `render/
+  changed` bumps the render revision and the decorations are built again, but
+  CodeMirror keeps the DOM of a widget that `eq` says is unchanged, and Embeds
+  processes an image only in the pass that rendered it, so nothing drew it.
+  (Block widgets were fine: `GuardedWidget` compares the render revision, so a
+  block is drawn again.) The same held in the other direction, switching it on.
+  Embeds now asks a new bail event, `render/claimedHeight(target)`, declared in
+  render's `api.ts`, which Online Videos answers with the frame's starting
+  height for a tweet link in a trusted workspace while it runs. An inline embed
+  records the answer when it is made and `eq` compares it, so the widget built
+  after the switch is a different widget and the link is drawn again (Embeds'
+  own image, or the frame). Only a web address is asked about. Unit tests
+  (`test/unit/embeds/claimed-embeds.test.ts`): switched off and switched on, as
+  the inline widget's `eq` (they fail without the comparison), and a block as
+  the control, through the real block decorations and a `refreshRender`.
+- Embeds reserved a tweet frame's height for every tweet URL, even with the
+  plugin off or the workspace untrusted. It now reserves what is claimed
+  (`embedEstimatedHeight(source, claimedHeight)`) and the card's height
+  otherwise; the cross-plugin `onlineVideos/api.ts` is gone.
+- Round 3: the claim was made only in a trusted workspace, so in Restricted
+  Mode it was `undefined` with the plugin on and off, and an inline widget
+  compared equal across a switch: switching on never showed the "Open on X"
+  card, and switching off kept the bare image. Online Videos now answers for a
+  tweet link while it runs in both modes: 400 px for the frame, and 112 px
+  (`TWEET_CARD_HEIGHT`, measured 111 px for a one-line title in the browser
+  harness) for the card, so the claim changes with the plugin in either mode
+  and the height reserved is the height drawn. Unit tests for both toggles in
+  an untrusted workspace (`claimed-embeds.test.ts`, with Online Videos' real
+  answer) fail with the trusted-only answer; the trusted ones stay. Unit tests for
+  both, in `estimated-height.test.ts`, `claimed-embeds.test.ts` and
+  `pass-lifecycle.test.ts` (Online Videos answers only for a tweet link, only
+  when trusted).
+
+Checks: format, lint, typecheck, the PDF package's tests and
+`pnpm contributions --check` pass. In `pnpm check`'s one full unit-test run
+five timing tests of the markdown package failed (four `fuzz: ... is linear on
+adversarial input`, killed at their 20 s limit, and `each footnote definition
+costs the same however many the note has`) with the machine's load average
+near 45 from other worktrees' suites; they passed when run alone
+(`test/unit/fuzz/*.test.ts`, `test/unit/metadata/metadata-cost.test.ts`).
+Nothing in this change touches them. After the review fixes `pnpm check` passed
+in full (markdown 3767 tests, PDF 939). The two affected browser specs pass.
+`pnpm --filter @workshop/markdown test:quality` (9 browser budgets and the
+large-vault test) and the whole markdown browser suite (486 tests) passed
+before YouTube was removed; no budget was changed, and the removal only drops
+a frame kind. Not run by the author: `pnpm test:vscode` (the probe above was
+run by the coordinator, with the owner's go-ahead).

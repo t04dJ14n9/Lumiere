@@ -176,6 +176,18 @@
   Mod+Enter, Mod+Alt+Enter) on a reference link in a table cell open its
   destination. The cell's editor held only the cell, so a definition written
   below the table (`[r]: https://example.com`) was not found (#822).
+- Markdown: a tweet written as an image, `![](https://x.com/user/status/ID)`
+  (or twitter.com, or a mobile. address), now embeds as in Obsidian: the tweet
+  shows in the note in the VS Code theme, sized to its content. In an
+  untrusted workspace it shows a card with an Open button and loads nothing.
+  YouTube links are not embedded, though Obsidian embeds them: VS Code's
+  webview sends no referrer, and YouTube's player answers Error 153. Removed,
+  because Obsidian has none: the Spotify, SoundCloud, Vimeo, Hugging Face and
+  npm cards, every Bilibili card (video, bangumi, UP space and live room), and
+  the YouTube video, playlist and channel cards, with their title and cover
+  lookups and the setting `lumiere.markdown.onlineVideos.bilibiliPlayer`. Links
+  to those sites are plain images, which fail to load. A Bilibili player is
+  tracked in #835.
 
 Fixes for several VS Code windows open at once, each with a test; checked
 with two real windows on one profile.
