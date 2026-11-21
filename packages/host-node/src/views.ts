@@ -13,6 +13,8 @@ export const VIEW_IDS = {
   backlinks: "lumiere.markdown.backlinks",
   outgoingLinks: "lumiere.markdown.outgoingLinks",
   tags: "lumiere.markdown.tags",
+  /** Search Vault…'s results; no embedder shows it yet. */
+  search: "lumiere.markdown.search",
 } as const;
 
 /** A node as the embedder shows it. */

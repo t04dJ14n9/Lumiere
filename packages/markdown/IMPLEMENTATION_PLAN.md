@@ -7381,3 +7381,30 @@ generated menu entry and host-node's config-gated item; linkUpdates, plugin
 and contributions tests, typecheck (markdown, host-node), ESLint, Prettier
 and `pnpm contributions --check` pass. Not run here: `pnpm test:browser`,
 `test:quality`, `test:vscode`.
+
+## Vault Search: Obsidian's search pane as a native view (#699; 2026-11-21)
+
+Obsidian 1.15.0's global search (read in its shipped code; behaviour only,
+nothing copied) opens a pane that lists each matching file with its match
+lines; Lumiere had the same query syntax only in `query` blocks, and a tag
+click's quick pick. The search plugin gains a window half (`view.ts`, the
+pattern of the Tags view): **Search Vault…** asks for a query (the last one
+filled in) and runs it with the blocks' worker and `searchVault`, now
+callable without a source note (links relative to the vault's root), over
+the active note's vault. The Explorer's **Vault Search** view shows a row
+per file (folder, match count), open on its match lines; clicks open the
+note at the match. The query reruns a second after the index settles while
+the view is visible. The view shows beside a Lumiere editor, and anywhere
+while it holds results (`lumiere.markdown.search.hasResults`).
+
+Left as documented differences: a native tree has no match highlight and
+no search-as-you-type input; no match-case, explain, sort, extra-context or
+copy controls; no key (Mod+Shift+F is VS Code's Find in Files); the Tags
+view's click still opens a quick pick.
+
+Validation: unit tests for the view's rows, queries, refresh, clearing,
+cancellation and the vault-less message (`vault-search.test.ts`) and for a
+search with no source (`query.test.ts`); search, identity, plugin and
+contributions tests, typecheck, ESLint, Prettier and `pnpm contributions
+--check` pass. Not run here: `pnpm test:browser`, `test:quality`,
+`test:vscode`.

@@ -44,9 +44,9 @@ product choices for VS Code, not parity claims.
 | codeBlocks | Prism highlighting and a Copy button | Languages without a loaded grammar stay plain |
 | footnotes | References as superscript numbers in LaTeX paper style (an intentional departure from Obsidian), kept under selections, faint source only at the caret, hover previews, click to the definition, inline footnotes, Insert Footnote | Definitions stay editable text led by their number; no Reading view footnotes section |
 | tasks | Clickable checkboxes in notes, embeds and callouts; checklist commands | Any status but a space is checked, like Obsidian's default theme; `data-task` attributes let a snippet style custom statuses |
-| tags | Tag rendering and search, Explorer **Tags** view | Search results are a quick pick, not a search pane |
+| tags | Tag rendering and search, Explorer **Tags** view | A clicked tag's notes are a quick pick, not the Vault Search view |
 | suggest | `[[`, `[[#`, `[[^`, `[[^^` and `#` completions; a picked block without an id gets one, as in Obsidian | At most 50 results |
-| search | `query` blocks with Obsidian's search syntax | No Dataview |
+| search | `query` blocks with Obsidian's search syntax; **Search Vault…** lists matching notes and their lines in the Explorer's **Vault Search** view | No Dataview. The view is a native tree: the query runs on Enter in an input box, with no match-case, sort, explain or extra-context controls and no match highlight; no key (Mod+Shift+F is VS Code's Find in Files) |
 | outline | Explorer **Markdown Outline** and **Go to Heading…** (Ctrl+Shift+O); drag a heading to move its section | A section dropped on a heading goes before it (VS Code's tree has no drop position after a row; below the last row is the note's end); no dragging outside VS Code; VS Code's native Outline and breadcrumbs apply to the plain text editor |
 | backlinks | Explorer **Backlinks** with unlinked mentions and a status bar count | Off by default (owner decision) |
 | outgoingLinks | Explorer **Outgoing Links** | Off by default; no unlinked mentions section |

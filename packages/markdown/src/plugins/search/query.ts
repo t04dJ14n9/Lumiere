@@ -8,7 +8,12 @@ import type { SearchDocument } from "../../markdown/search/evaluate";
 import { readAhead } from "./read-ahead";
 export interface SearchInput {
   vault: VaultIndex;
-  source: string;
+  /**
+   * The note holding the query block: links are relative to it, and its own
+   * query blocks are not searched. Undefined for the Vault Search view, whose
+   * links are relative to the vault's root.
+   */
+  source?: string;
   /** Evaluates the query, and finds a hit's match lines, in a worker. */
   worker: SearchEvaluator;
   token: Cancellation;
@@ -33,7 +38,10 @@ type Prepared =
 
 export async function searchVault(input: SearchInput): Promise<SearchResponse> {
   const { vault, source, worker, token } = input;
-  const origin = vault.files().find((file) => file.uri === source);
+  const origin =
+    source === undefined
+      ? { path: undefined }
+      : vault.files().find((file) => file.uri === source);
   if (!origin) {
     throw new Error("Unknown search source");
   }
@@ -77,7 +85,7 @@ export async function searchVault(input: SearchInput): Promise<SearchResponse> {
 /** Never rejects: a read that fails counts as an unreadable file. */
 async function prepareDocument(
   input: SearchInput,
-  originPath: string,
+  originPath: string | undefined,
   file: VaultFile,
 ): Promise<Prepared> {
   if (documentKind(file.extension) === "file" && !input.worker.includesFiles) {
@@ -93,7 +101,11 @@ async function prepareDocument(
 
 async function evaluateDocument(
   input: SearchInput,
-  target: { origin: { path: string }; file: VaultFile; prepared: Prepared },
+  target: {
+    origin: { path: string | undefined };
+    file: VaultFile;
+    prepared: Prepared;
+  },
   results: SearchResponse["results"],
 ): Promise<"skip" | "hit" | "unreadable" | "cancel"> {
   const { worker, token } = input;
@@ -119,7 +131,7 @@ async function evaluateDocument(
   if (!verdict.matched) {
     return "skip";
   }
-  const href = relativeVaultPath(folderOf(origin.path), file.path)
+  const href = relativeVaultPath(folderOf(origin.path ?? ""), file.path)
     .split("/")
     .map(encodeURIComponent)
     .join("/");

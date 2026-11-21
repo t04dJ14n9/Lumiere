@@ -655,6 +655,18 @@
         "category": "Lumiere"
       },
       {
+        "command": "lumiere.markdown.search.vault",
+        "title": "Search Vault…",
+        "category": "Lumiere",
+        "icon": "$(search)"
+      },
+      {
+        "command": "lumiere.markdown.search.clearResults",
+        "title": "Clear Search Results",
+        "category": "Lumiere",
+        "icon": "$(clear-all)"
+      },
+      {
         "command": "lumiere.markdown.openSettings",
         "title": "Open Settings",
         "category": "Lumiere"
@@ -1635,6 +1647,12 @@
           "visibility": "visible"
         },
         {
+          "id": "lumiere.markdown.search",
+          "name": "Vault Search",
+          "when": "config.lumiere.markdown.preset != 'minimal' && config.lumiere.markdown.plugins.search.enabled && (activeCustomEditorId == 'lumiere.markdown.editor' || lumiere.markdown.search.hasResults)",
+          "visibility": "collapsed"
+        },
+        {
           "id": "lumiere.markdown.tags",
           "name": "Tags",
           "when": "config.lumiere.markdown.preset != 'minimal' && config.lumiere.markdown.plugins.tags.enabled && activeCustomEditorId == 'lumiere.markdown.editor'",
@@ -2073,6 +2091,14 @@
         {
           "command": "lumiere.markdown.scratch.new",
           "when": "config.lumiere.markdown.preset != 'minimal' && config.lumiere.markdown.plugins.scratch.enabled"
+        },
+        {
+          "command": "lumiere.markdown.search.vault",
+          "when": "config.lumiere.markdown.preset != 'minimal' && config.lumiere.markdown.plugins.search.enabled"
+        },
+        {
+          "command": "lumiere.markdown.search.clearResults",
+          "when": "false"
         },
         {
           "command": "lumiere.markdown.openSettings"
@@ -2764,6 +2790,16 @@
           "group": "outline@1"
         },
         {
+          "command": "lumiere.markdown.search.vault",
+          "when": "config.lumiere.markdown.preset != 'minimal' && config.lumiere.markdown.plugins.search.enabled && view == lumiere.markdown.search",
+          "group": "navigation@1"
+        },
+        {
+          "command": "lumiere.markdown.search.clearResults",
+          "when": "config.lumiere.markdown.preset != 'minimal' && config.lumiere.markdown.plugins.search.enabled && view == lumiere.markdown.search && lumiere.markdown.search.hasResults",
+          "group": "navigation@2"
+        },
+        {
           "command": "lumiere.markdown.tags.sortByFrequency",
           "when": "config.lumiere.markdown.preset != 'minimal' && config.lumiere.markdown.plugins.tags.enabled && view == lumiere.markdown.tags && lumiere.markdown.tags.sortFrequency",
           "group": "tagsSort@1"
@@ -3202,7 +3238,7 @@
             "type": "boolean",
             "default": true,
             "scope": "resource",
-            "description": "Render query blocks as live vault search results."
+            "description": "Render query blocks as live vault search results, and search the vault with Obsidian's syntax in the Vault Search view."
           },
           "lumiere.markdown.plugins.sketch.enabled": {
             "type": "boolean",
