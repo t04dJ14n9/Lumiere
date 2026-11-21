@@ -7,7 +7,7 @@ export function timestampStem(date: Date): string {
 /**
  * A unique attachment file name: `YYYY-MM-DD HH.mm.ext`, then
  * `YYYY-MM-DD HH.mm 2.ext` when that name is taken (compared without case).
- * `ext` may be compound (`sketch.svg`) and may omit the leading dot.
+ * `ext` may be compound (`tar.gz`) and may omit the leading dot.
  */
 export function uniqueTimestampName(
   ext: string,

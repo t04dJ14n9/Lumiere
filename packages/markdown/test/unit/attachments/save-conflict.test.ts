@@ -71,16 +71,16 @@ test("saveAttachment never overwrites a file its listing missed", async () => {
 });
 
 test("saveAttachment creates text attachments without overwriting either", async () => {
-  const taken = `${FOLDER}/2026-10-30%2014.52.sketch.svg`;
+  const taken = `${FOLDER}/2026-10-30%2014.52.svg`;
   const folder = staleFolder({ [taken]: "<svg>old</svg>" });
   const saved = await saveAttachment({
     ...input,
-    ext: "sketch.svg",
+    ext: "svg",
     files: folder.api,
     text: "<svg>new</svg>",
   });
   assert.equal(folder.files.get(taken), "<svg>old</svg>");
-  assert.equal(saved?.path, "assets/2026-10-30 14.52 2.sketch.svg");
+  assert.equal(saved?.path, "assets/2026-10-30 14.52 2.svg");
 });
 
 test("saveAttachment gives a named download the next free name on conflict", async () => {

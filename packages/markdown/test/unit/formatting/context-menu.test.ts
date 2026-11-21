@@ -30,7 +30,6 @@ test("the note's menu groups formatting into Format, Highlight and Insert submen
       "lumiere.markdown.selectionActions",
       "lumiere.markdown.renameHeading",
       "lumiere.markdown.lookUp",
-      "lumiere.markdown.insertSketch",
     ],
   );
   const shortTitles = (menu: { command: string }[]) =>

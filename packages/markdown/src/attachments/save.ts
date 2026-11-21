@@ -1,7 +1,7 @@
 /**
  * Write attachment bytes into the vault's attachment folder under a unique
  * timestamp name. Callers supply the note's vault path and link settings so
- * the returned embed matches sketch / Obsidian rules.
+ * the returned embed follows Obsidian's rules.
  */
 import { lookupKey } from "../shared/vault-path";
 import { joinContained, walksSymbolicLink } from "../shared/workspace-path";
@@ -22,7 +22,7 @@ export interface SaveAttachmentInput {
   readonly attachmentFolder: string;
   readonly useWikilinks: boolean;
   readonly format: EmbedLink["format"];
-  /** Extension without a required leading dot (`png`, `sketch.svg`). */
+  /** Extension without a required leading dot (`png`, `tar.gz`). */
   readonly ext: string;
   readonly bytes?: Uint8Array;
   readonly text?: string;

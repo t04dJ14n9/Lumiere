@@ -66,12 +66,6 @@ importers:
         specifier: 4.0.0-rc.13
         version: 4.0.0-rc.13
 
-  packages/ink:
-    dependencies:
-      '@workshop/core':
-        specifier: workspace:*
-        version: link:../core
-
   packages/markdown:
     dependencies:
       '@codemirror/autocomplete':
@@ -173,9 +167,6 @@ importers:
       '@workshop/core':
         specifier: workspace:*
         version: link:../core
-      '@workshop/ink':
-        specifier: workspace:*
-        version: link:../ink
       dompurify:
         specifier: 3.4.18
         version: 3.4.18
