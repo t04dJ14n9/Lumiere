@@ -37,7 +37,9 @@ The frame gets:
 
 `webview.ts` listens to `render/postProcess`, registered before Embeds, and
 replaces each `img.note-image` whose `data-resource` parses with the frame or
-the card; the image comes back when the pass is disposed. A frame starts
+the card; the image comes back, the `message` listener goes and the load
+timers are cleared when the pass is disposed or the plugin stops, whichever
+comes first (a pass outlives the plugin when it is switched off). A frame starts
 loading 100 ms after it is made (`frame.ts`): the editor renders a block more
 than once while a note opens, and each render drops the frames of the one
 before, so a frame that loaded at once would load, heavily, to be dropped.
@@ -74,7 +76,9 @@ the widget's origin passes it then and not otherwise.
 - `api.ts`: what Embeds may import (`parseTweet`, `TWEET_DEFAULT_HEIGHT`).
 - `onlineVideos.css`: frames and the card, bundled through
   `src/webview/styles/index.css`.
-- `parse.test.ts`, `tweet-embed.test.ts`, `tweet-height.test.ts`: unit tests;
+- `parse.test.ts`, `tweet-embed.test.ts`, `tweet-height.test.ts`,
+  `test/unit/onlineVideos/pass-lifecycle.test.ts` (with a small fake DOM: stopping
+  the plugin mid-pass, an already aborted signal): unit tests;
   `test/browser/online-videos.spec.ts`, `online-video-remount-height.spec.ts`:
   the frame, one request per frame, its height, reveal, trust and the height
   held across a remount.

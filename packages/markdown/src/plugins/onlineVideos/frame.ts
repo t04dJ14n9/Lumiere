@@ -51,6 +51,11 @@ function loadWhenSettled(
   if (src === undefined || !isEmbedUrl(src)) {
     throw new Error(`Refusing embed URL ${src}`);
   }
+  // An aborted signal never fires `abort` again, so a timer started now
+  // could not be cancelled.
+  if (signal.aborted) {
+    return;
+  }
   const timer = setTimeout(() => {
     frame.src = src;
   }, SETTLE_MS);
@@ -83,6 +88,10 @@ export function trackTweetHeights(options: {
     }
   };
   return (frame) => {
+    // Likewise a listener added now would never be removed.
+    if (options.signal.aborted) {
+      return;
+    }
     if (frames.size === 0) {
       window.addEventListener("message", onMessage, { signal: options.signal });
     }

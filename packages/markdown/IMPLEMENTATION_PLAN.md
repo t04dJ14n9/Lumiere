@@ -8422,7 +8422,7 @@ definition in the note (test/unit/features/table-links.test.ts); the three
 commands with the cell as the active view (test/unit/features/link-keys.test.ts).
 Not run: a native key press in VS Code, `pnpm test:browser`,
 `test:quality`, `test:vscode`.
-## Web embeds follow Obsidian 1.15.0; the site cards go (owner decision, 2026-11-21)
+
 ## Tweets embed as in Obsidian 1.15.0; the site cards and YouTube go (owner decisions, 2026-11-21 and 2026-11-22)
 
 Owner decision (2026-11-21): the Online Videos plugin drops the site-specific
@@ -8529,6 +8529,18 @@ YouTube row, "Obsidian embeds it; Lumiere does not", and a tweet row, both
 removed), MANUAL_TEST_PLAN, the Embeds README, ARCHITECTURE, the CHANGELOG, and
 the contributed setting list (`pnpm contributions`).
 
+Review fixes (Gemini review of #842): a render pass outlives this plugin when
+the plugin is switched off, so its side effects are now tied to the plugin's
+lifecycle as the callouts plugin's are: each open pass registers its cleanup in
+a set that `ctx.effect` runs when the plugin stops (the cleanup aborts the
+pass's signal, which removes the `message` listener and clears the load
+timers, and puts the swapped images back; the pass ending runs the same
+cleanup, so the second run finds nothing to do). `loadWhenSettled` and
+`trackTweetHeights` do nothing for a signal that is already aborted, since
+`abort` would never fire for it. Unit tests (`test/unit/onlineVideos/
+pass-lifecycle.test.ts`, a small fake DOM and mock timers) fail without the fix
+and pass with it.
+
 Checks: format, lint, typecheck, the PDF package's tests and
 `pnpm contributions --check` pass. In `pnpm check`'s one full unit-test run
 five timing tests of the markdown package failed (four `fuzz: ... is linear on
@@ -8536,7 +8548,8 @@ adversarial input`, killed at their 20 s limit, and `each footnote definition
 costs the same however many the note has`) with the machine's load average
 near 45 from other worktrees' suites; they passed when run alone
 (`test/unit/fuzz/*.test.ts`, `test/unit/metadata/metadata-cost.test.ts`).
-Nothing in this change touches them. The two affected browser specs pass.
+Nothing in this change touches them. After the review fixes `pnpm check` passed
+in full (markdown 3767 tests, PDF 939). The two affected browser specs pass.
 `pnpm --filter @workshop/markdown test:quality` (9 browser budgets and the
 large-vault test) and the whole markdown browser suite (486 tests) passed
 before YouTube was removed; no budget was changed, and the removal only drops
