@@ -32,8 +32,10 @@ previous and next source lines.
 
 - Clicking a link not created yet creates and opens the note (same
   `navigation.resolve` path as Quick Switcher / in-note wiki create).
-- File lists honour Obsidian sortOrder for file name and modified time
-  (title-bar cycle); created-time sorts are omitted because the vault index
+- File lists sort by file name or modified time (title-bar cycle), the
+  orders of Obsidian's Backlinks view; Obsidian 1.15.0's Outgoing links view
+  itself has no sort order or extra context (static read, 2026-11-21).
+  Created-time sorts are omitted because the vault index
   stores mtime only. Unresolved linkpaths have no mtime and keep name order
   within modified-time modes.
 - Unlinked mentions read the active note once per expand; very large vaults

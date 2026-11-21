@@ -54,4 +54,12 @@ diagram inspector. Light is `vscode-light` or `vscode-high-contrast-light`.
 `mermaid-wrapper.is-guarded` chrome (title, error, Allow, source). Allow persists vault trust (`lumiere.mermaid-vault-trust`, Obsidian `mermaid-vault-trust`) and retries with `htmlLabels: true`; SVG output is still sanitized. Untrusted renders keep `htmlLabels: false`.
 Inline Mermaid sizing follows Obsidian per-type `useMaxWidth` (false for flowchart/sequence/git/er; true for gantt/journey/class/state/pie). The fence is contained to the column (`contain: inline-size`) and scrolls horizontally when the native SVG is wider; height grows with the diagram. Do not shrink the SVG via CSS `max-width: 100%`, and do not let the SVG widen the note (the pane would clip it).
 
+The Obsidian behaviour above is 1.14.4's, which drew diagrams with Mermaid
+11.13.0. Obsidian 1.15.0 no longer ships Mermaid: it renders Mermaid syntax
+with its own Pele 1.8.0 (`lib/pele.min.js`), without the guarded-render
+chrome, the vault trust prompt or the dark-theme invert filter, and colours
+diagrams from new `--mermaid-*` theme variables (static read, 2026-11-21).
+Lumiere still renders with Mermaid as described here; its output has not been
+compared with 1.15.0's.
+
 Live-reference visual parity remains for the owner's manual comparison.

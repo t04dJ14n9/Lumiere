@@ -98,7 +98,7 @@ and `editor.cursorWidth` apply there. Setting `lumiere.markdown.vim.caretStyle`
 
 | Value        | Look                                                                                             |
 | ------------ | ------------------------------------------------------------------------------------------------ |
-| `obsidian`   | CodeMirror fat caret as in Obsidian 1.14.4 (REA): accent fill, on-accent glyph, 1.06s step blink |
+| `obsidian`   | CodeMirror fat caret as in Obsidian 1.14.4 (REA; 1.15.0's code reads the same): accent fill, on-accent glyph, 1.06s step blink |
 | `vscodevim`  | Measured VSCodeVim shapes (block, half-block operator-pending, thin visual end caret)            |
 | `codemirror` | Stock CM-vim fat caret with inverse editor colours                                               |
 
@@ -139,10 +139,12 @@ cannot become another table row.
 ## Ex go-to-line leading spaces
 
 Real Vim accepts `: 123` (spaces after the colon before the line address).
-`@replit/codemirror-vim-core` (and Obsidian 1.14.4's bundled vim.js) parse the
-line range before eating those spaces, so `: 123` becomes an unknown command.
+`@replit/codemirror-vim-core` (and Obsidian's bundled vim.js, 1.14.4 and 1.15.0)
+parse the line range before eating those spaces, so `: 123` becomes an unknown command.
 `ex-address-space.ts` eats spaces after `eatWhile(':')` so `: 123`, `:123`, and
-bare `123` all move to line N. Stock keymap / `defaultExCommandMap` already match
-Obsidian 1.14.4's engine; Lumiere keeps its note-oriented overlays (za/zc/zo folds,
+bare `123` all move to line N. Stock keymap / `defaultExCommandMap` match
+Obsidian's engine (1.14.4; a static read of 1.15.0's `vim.js` on 2026-11-21 finds
+the same 164 key mappings and 37 ex commands) except one extra key: vim-core
+maps `gc` (toggle comment), which Obsidian's vim.js does not have. Lumiere keeps its note-oriented overlays (za/zc/zo folds,
 Ctrl+[ outdent, IME key routing, table motions). Deferred: Neovim, VSCodeVim-only
 commands, community Obsidian vimrc plugins.
