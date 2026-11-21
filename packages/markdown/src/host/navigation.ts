@@ -147,6 +147,18 @@ export interface NativeNavigation extends Navigation {
   ): Promise<boolean | void>;
 }
 
+/**
+ * The folder links in `sourceUri` are relative to: a note's parent. The
+ * Quick Switcher, with no note open, names the vault itself as the source,
+ * by a folder URI (`file:///vault/`), which is its own folder; its parent
+ * would be above the vault.
+ */
+function sourceFolderOf(sourceUri: vscode.Uri): vscode.Uri {
+  return sourceUri.path.endsWith("/")
+    ? sourceUri
+    : vscode.Uri.joinPath(sourceUri, "..");
+}
+
 /** `relative` inside the vault root or the source note's folder. */
 function inFolder(
   folder: LinkFolder,
@@ -154,16 +166,15 @@ function inFolder(
   places: { base: vscode.Uri; sourceUri: vscode.Uri },
 ): vscode.Uri {
   const parent =
-    folder === "vault"
-      ? places.base
-      : vscode.Uri.joinPath(places.sourceUri, "..");
+    folder === "vault" ? places.base : sourceFolderOf(places.sourceUri);
   return vscode.Uri.joinPath(parent, relative);
 }
 
 /**
  * The places an existing file a link names may be, in the order
  * `linkLocation` tries them: the order a preview looks in too, whether or
- * not the click may create the note.
+ * not the click may create the note. A place two folders share (a note at
+ * the vault root, whose folder is the vault) is asked about once.
  */
 function linkCandidates(
   link: string,
@@ -174,8 +185,12 @@ function linkCandidates(
     return [sourceUri];
   }
   const { relative, folders } = linkLocation(link);
-  return folders.map((folder) =>
+  const places = folders.map((folder) =>
     inFolder(folder, relative, { base, sourceUri }),
+  );
+  return places.filter(
+    (place, at) =>
+      places.findIndex((other) => other.toString() === place.toString()) === at,
   );
 }
 
@@ -270,7 +285,7 @@ async function createNote({
   if (followsNewNoteFolder(link)) {
     const parent =
       folder === "."
-        ? vscode.Uri.joinPath(sourceUri, "..")
+        ? sourceFolderOf(sourceUri)
         : vscode.Uri.joinPath(base, folder);
     uri = vscode.Uri.joinPath(parent, link);
   }

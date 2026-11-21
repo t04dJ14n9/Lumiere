@@ -8855,6 +8855,29 @@ open-image intent and rooted links pass (the new ones fail on the old
 source); the full `pnpm check` is recorded with the #824 change that
 follows. Not run: the browser, quality and VS Code suites.
 
+Review finding (regression of the shared lookup order, fixed): the Quick
+Switcher, with no note open, calls `navigation.resolve` with the vault root
+as a folder URI for `source` (`file:///vault/`, no note). Looking beside the
+source note used the source's parent, which for that URI is the folder above
+the vault, and the containment check then refused the link
+("Link escapes the vault"), so a note typed into the switcher could not be
+made (`NewNote`, `area/NewNote`). Before the shared order a creating call
+only looked at the vault root. `sourceFolderOf` (`host/navigation.ts`) now
+takes a source URI that ends in `/` as its own folder, for the lookup, for a
+`./` link and for the `newNoteFolder` of `.`; a note's folder is its parent
+as before. A place two folders share (a note at the vault root, whose folder
+is the vault) is asked about once. A path above the vault is still refused.
+Tests (the first two fail before): `resolve` with `source = ${root}/` for a
+bare and a foldered name and `./`, with `create` true and false, existing
+and missing files, a `newNoteFolder` of a folder and of `.`, and `../` still
+refused; the duplicate place asked once (the file system's `stat` is
+counted); `test/unit/quickSwitcher/create-note.test.ts` types a name into the
+real switcher with no note open, over the real navigation on a temporary
+vault (`NewNote`, `area/NewNote`, and an existing name left as it was; fails
+before). `test/support/disk-navigation.ts` now holds the `vscode` fake over
+the real disk that `navigation-host.test.ts` carried twice, and
+`memoryVaults` takes a root. Checks: `pnpm check`.
+
 ## A fragment-only link in a hidden note names that note (#824; 2026-11-21)
 
 Review finding on #779's disk fallback, an index-only assumption it

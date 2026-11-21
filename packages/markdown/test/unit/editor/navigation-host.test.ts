@@ -1,8 +1,6 @@
 import test from "node:test";
 import assert from "node:assert/strict";
-import Module, { createRequire } from "node:module";
 import {
-  access,
   mkdtemp,
   mkdir,
   readFile,
@@ -14,28 +12,10 @@ import {
 import { tmpdir } from "node:os";
 import { join } from "node:path";
 import { fileURLToPath, pathToFileURL } from "node:url";
-import type * as HostNavigation from "../../../src/host/navigation";
 import { NoteResources } from "../../../src/plugins/resources/note-resources";
 import type { VaultIndex } from "../../../src/plugins/vault/api";
 import { MARKDOWN_EDITOR } from "../../../src/shared/editor-provider";
-import { forgetModules } from "../../support/module-cache";
-
-function loadNavigation(vscode: unknown) {
-  const loader = Module as typeof Module & {
-    _load(id: string, ...args: unknown[]): unknown;
-  };
-  const originalLoad = loader._load;
-  loader._load = (id, ...args) =>
-    id === "vscode" ? vscode : originalLoad.call(Module, id, ...args);
-  const require = createRequire(import.meta.url);
-  // Each test brings its own fake: load the host modules again for it.
-  forgetModules(require, "/src/host/", "/src/shared/");
-  try {
-    return require("../../../src/host/navigation.ts") as typeof HostNavigation;
-  } finally {
-    loader._load = originalLoad;
-  }
-}
+import { diskNavigation, loadNavigation } from "../../support/disk-navigation";
 
 function parseUri(uri: string) {
   const url = new URL(uri);
@@ -288,76 +268,7 @@ test("createNote: basename respects newNoteFolder; foldered path is vault-relati
   const root = pathToFileURL(directory).href;
   const source = pathToFileURL(sourcePath).href;
 
-  class FileSystemError extends Error {
-    constructor(
-      message: string,
-      readonly code: string,
-    ) {
-      super(message);
-    }
-  }
-  class WorkspaceEdit {
-    creates: ReturnType<typeof fileUri>[] = [];
-    createFile(uri: ReturnType<typeof fileUri>) {
-      this.creates.push(uri);
-    }
-  }
-  function fileUri(fsPath: string) {
-    const href = pathToFileURL(fsPath).href;
-    const url = new URL(href);
-    const uri = {
-      scheme: url.protocol.slice(0, -1),
-      authority: url.host,
-      path: decodeURIComponent(url.pathname),
-      fsPath,
-      toString: () => href,
-      with({ path: next }: { path: string }) {
-        // `next` is a URI path (/C:/... on Windows), not a file system path.
-        const moved = new URL(href);
-        moved.pathname = next;
-        return fileUri(fileURLToPath(moved));
-      },
-    };
-    return uri;
-  }
-  function joinPath(base: ReturnType<typeof fileUri>, ...parts: string[]) {
-    return fileUri(join(base.fsPath, ...parts));
-  }
-
-  const { createNavigation } = loadNavigation({
-    Uri: {
-      parse: (value: string) => fileUri(fileURLToPath(value)),
-      joinPath,
-    },
-    WorkspaceEdit,
-    FileSystemError,
-    FileType: { File: 1, Directory: 2, SymbolicLink: 64 },
-    env: { appName: "Cursor", uriScheme: "vscode" },
-    window: { tabGroups: { activeTabGroup: { viewColumn: 1 } } },
-    workspace: {
-      getConfiguration: () => ({ get: () => "on" }),
-      fs: {
-        async stat(uri: { fsPath: string }) {
-          try {
-            await access(uri.fsPath);
-            return { type: 1 };
-          } catch {
-            throw new FileSystemError("missing", "FileNotFound");
-          }
-        },
-      },
-      async applyEdit(edit: WorkspaceEdit) {
-        for (const uri of edit.creates) {
-          await mkdir(join(uri.fsPath, ".."), { recursive: true });
-          await writeFile(uri.fsPath, "");
-        }
-        return true;
-      },
-    },
-    commands: { async executeCommand() {} },
-  });
-
-  const navigation = createNavigation(() => []);
+  const navigation = diskNavigation();
   async function create(link: string, newNoteFolder: string) {
     return navigation.resolve({
       root,
@@ -414,14 +325,14 @@ test("createNote: basename respects newNoteFolder; foldered path is vault-relati
 async function withResolveVault(
   t: { after: (fn: () => void | Promise<void>) => void },
   run: (ctx: {
-    navigation: ReturnType<
-      ReturnType<typeof loadNavigation>["createNavigation"]
-    >;
+    navigation: ReturnType<typeof diskNavigation>;
     root: string;
     source: string;
     directory: string;
     areas: string;
   }) => Promise<void>,
+  /** Told the path of each file system `stat` the navigation makes. */
+  onStat?: (fsPath: string) => void,
 ) {
   const directory = await mkdtemp(join(tmpdir(), "mw-navigation-resolve-"));
   t.after(() => rm(directory, { recursive: true, force: true }));
@@ -436,78 +347,8 @@ async function withResolveVault(
   const root = pathToFileURL(directory).href;
   const source = pathToFileURL(sourcePath).href;
 
-  class FileSystemError extends Error {
-    constructor(
-      message: string,
-      readonly code: string,
-    ) {
-      super(message);
-    }
-  }
-  function fileUri(fsPath: string) {
-    const href = pathToFileURL(fsPath).href;
-    const url = new URL(href);
-    const uri = {
-      scheme: url.protocol.slice(0, -1),
-      authority: url.host,
-      path: decodeURIComponent(url.pathname),
-      fsPath,
-      toString: () => href,
-      with({ path: next }: { path: string }) {
-        // `next` is a URI path (/C:/... on Windows), not a file system path.
-        const moved = new URL(href);
-        moved.pathname = next;
-        return fileUri(fileURLToPath(moved));
-      },
-    };
-    return uri;
-  }
-  function joinPath(base: ReturnType<typeof fileUri>, ...parts: string[]) {
-    return fileUri(join(base.fsPath, ...parts));
-  }
-
-  class WorkspaceEdit {
-    creates: ReturnType<typeof fileUri>[] = [];
-    createFile(uri: ReturnType<typeof fileUri>) {
-      this.creates.push(uri);
-    }
-  }
-
-  const { createNavigation } = loadNavigation({
-    Uri: {
-      parse: (value: string) => fileUri(fileURLToPath(value)),
-      joinPath,
-    },
-    WorkspaceEdit,
-    FileSystemError,
-    FileType: { File: 1, Directory: 2, SymbolicLink: 64 },
-    env: { appName: "Cursor", uriScheme: "vscode" },
-    window: { tabGroups: { activeTabGroup: { viewColumn: 1 } } },
-    workspace: {
-      getConfiguration: () => ({ get: () => "on" }),
-      fs: {
-        async stat(uri: { fsPath: string }) {
-          try {
-            await access(uri.fsPath);
-            return { type: 1 };
-          } catch {
-            throw new FileSystemError("missing", "FileNotFound");
-          }
-        },
-      },
-      async applyEdit(edit: WorkspaceEdit) {
-        for (const uri of edit.creates) {
-          await mkdir(join(uri.fsPath, ".."), { recursive: true });
-          await writeFile(uri.fsPath, "");
-        }
-        return true;
-      },
-    },
-    commands: { async executeCommand() {} },
-  });
-
   await run({
-    navigation: createNavigation(() => []),
+    navigation: diskNavigation(onStat ? { onStat } : {}),
     root,
     source,
     directory,
@@ -749,6 +590,93 @@ test("resolve: ./ and ../ start from the source note's folder, sub/ falls back t
     assert.equal(await resolve("./Fresh", true), href("wiki/areas/Fresh.md"));
     assert.equal(await readFile(join(areas, "Fresh.md"), "utf8"), "");
   });
+});
+
+test("resolve: a folder URI as the source is its own folder, as the Quick Switcher names the vault", async (t) => {
+  await withResolveVault(t, async ({ navigation, root, directory }) => {
+    // The Quick Switcher with no note open: the source is the vault root as
+    // a folder (`file:///vault/`), whose parent is above the vault.
+    const source = `${root}/`;
+    await writeFile(join(directory, "Top.md"), "top");
+    const href = (...parts: string[]) =>
+      pathToFileURL(join(directory, ...parts)).href;
+    const resolve = (path: string, create: boolean, newNoteFolder = "") =>
+      navigation.resolve({
+        root,
+        source,
+        path,
+        create,
+        folderNote: "",
+        newNoteFolder,
+      });
+
+    for (const create of [false, true]) {
+      assert.equal(await resolve("Top.md", create), href("Top.md"), "bare");
+      assert.equal(
+        await resolve("wiki/resources/mocs/Target.md", create),
+        href("wiki/resources/mocs/Target.md"),
+        "foldered",
+      );
+      assert.equal(await resolve("./Top.md", create), href("Top.md"));
+    }
+    // Names no file: nothing, and not an error from a place above the vault.
+    assert.equal(await resolve("Nope.md", false), undefined);
+    assert.equal(await resolve("wiki/Nope.md", false), undefined);
+    assert.equal(await resolve("./Nope.md", false), undefined);
+
+    // A note typed into the switcher is made in the vault, as a name or a path.
+    assert.equal(await resolve("NewNote", true), href("NewNote.md"));
+    assert.equal(await resolve("area/NewNote", true), href("area/NewNote.md"));
+    assert.equal(await resolve("./Rel", true), href("Rel.md"));
+    assert.equal(
+      await readFile(join(directory, "area/NewNote.md"), "utf8"),
+      "",
+    );
+    assert.equal(
+      await resolve("InInbox", true, "Inbox"),
+      href("Inbox/InInbox.md"),
+    );
+    // The current folder, with no note open, is the vault.
+    assert.equal(await resolve("InFolder", true, "."), href("InFolder.md"));
+
+    // The vault is still the limit.
+    await assert.rejects(
+      () => resolve("../outside.md", false),
+      /escapes the vault/,
+    );
+    await assert.rejects(
+      () => resolve("../outside", true),
+      /escapes the vault/,
+    );
+  });
+});
+
+test("resolve: a place two folders share is asked about once", async (t) => {
+  const asked: string[] = [];
+  await withResolveVault(
+    t,
+    async ({ navigation, root, directory }) => {
+      // A note at the vault root has the vault as its folder.
+      const source = pathToFileURL(join(directory, "Top.md")).href;
+      await writeFile(join(directory, "Top.md"), "top");
+      for (const path of ["Nope.md", "area/Nope.md"]) {
+        asked.length = 0;
+        assert.equal(
+          await navigation.resolve({
+            root,
+            source,
+            path,
+            create: false,
+            folderNote: "",
+            newNoteFolder: "",
+          }),
+          undefined,
+        );
+        assert.deepEqual(asked, [join(directory, path)], path);
+      }
+    },
+    (fsPath) => asked.push(fsPath),
+  );
 });
 
 test("resolve: a relative path that leaves the vault is still refused", async (t) => {

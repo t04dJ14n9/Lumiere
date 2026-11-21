@@ -15,17 +15,20 @@ import { fakeHost } from "../../support/vscode-fake";
 export const ROOT = "memory:///vault";
 export const uriOf = (path: string) => `${ROOT}/${encodeURI(path)}`;
 
-/** A Vaults service over one in-memory index built from note texts. */
-export function memoryVaults(notes: Record<string, string>) {
+/**
+ * A Vaults service over one in-memory index built from note texts, at `root`
+ * (a `file:` URI where the real disk is wanted too).
+ */
+export function memoryVaults(notes: Record<string, string>, root = ROOT) {
   const index = new MemoryVaultIndex({
-    root: ROOT,
+    root,
     folderNote: "",
     linkFormat: "shortest",
   });
   const texts = new Map(Object.entries(notes));
   index.replaceFiles(
     Object.keys(notes).map((path) => ({
-      uri: uriOf(path),
+      uri: `${root}/${encodeURI(path)}`,
       path,
       mtime: 1,
       size: 1,
@@ -38,8 +41,8 @@ export function memoryVaults(notes: Record<string, string>) {
     index,
     settled: async () => {},
     pathOf: (uri) =>
-      uri.startsWith(`${ROOT}/`)
-        ? decodeURI(uri.slice(ROOT.length + 1))
+      uri.startsWith(`${root}/`)
+        ? decodeURI(uri.slice(root.length + 1))
         : undefined,
   };
   const opened: { uri: string; offset?: number }[] = [];
