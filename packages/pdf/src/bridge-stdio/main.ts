@@ -3,7 +3,8 @@
  * configured with a command (Claude Code, Codex). It forwards JSON-RPC
  * messages to the bridge of the window whose workspace contains the
  * client's working directory, or to the one named by AGENT_PDF_BRIDGE_PID;
- * see discovery.ts for how (and when it refuses to) choose.
+ * see discovery.ts for how (and when it refuses to) choose. When that
+ * window closes or reloads, the next message chooses again (upstream.ts).
  *
  *     claude mcp add agent-pdf-viewer -- node bridge-stdio.js
  */
@@ -13,6 +14,7 @@ import * as path from "node:path";
 import { StdioServerTransport } from "@modelcontextprotocol/sdk/server/stdio.js";
 import { StreamableHTTPClientTransport } from "@modelcontextprotocol/sdk/client/streamableHttp.js";
 import type { JSONRPCMessage } from "@modelcontextprotocol/sdk/types.js";
+import { Upstream } from "./upstream";
 import {
   chooseBridge,
   parseBridgeRecord,
@@ -52,12 +54,9 @@ function readRecords(): BridgeRecord[] {
 }
 
 const stdio = new StdioServerTransport();
-let http: StreamableHTTPClientTransport | undefined;
 
-async function upstream(): Promise<StreamableHTTPClientTransport> {
-  if (http) {
-    return http;
-  }
+/** Choose the bridge (see discovery.ts) and connect to it. */
+async function connect(): Promise<StreamableHTTPClientTransport> {
   const choice = chooseBridge(readRecords(), {
     cwd: process.cwd(),
     alive,
@@ -73,16 +72,13 @@ async function upstream(): Promise<StreamableHTTPClientTransport> {
   transport.onmessage = (message) => {
     stdio.send(message).catch(report);
   };
-  transport.onerror = () => {
-    http = undefined;
-  };
-  transport.onclose = () => {
-    http = undefined;
-  };
+  transport.onerror = () => upstream.drop(transport);
+  transport.onclose = () => upstream.drop(transport);
   await transport.start();
-  http = transport;
   return transport;
 }
+
+const upstream = new Upstream(connect);
 
 /** Detached work's error sink: stderr, which MCP clients show as the server's log. */
 function report(error: unknown): void {
@@ -94,9 +90,8 @@ function report(error: unknown): void {
 stdio.onmessage = (message: JSONRPCMessage) => {
   (async () => {
     try {
-      await (await upstream()).send(message);
+      await upstream.send(message);
     } catch (error) {
-      http = undefined;
       if ("id" in message && "method" in message) {
         await stdio.send({
           jsonrpc: "2.0",
