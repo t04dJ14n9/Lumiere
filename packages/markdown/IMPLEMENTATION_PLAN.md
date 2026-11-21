@@ -7162,3 +7162,25 @@ line with text, and turning around the BH-009 unit test in
 regressions that pin source-only (editing, keyboard-widget-input,
 math-vim-click, stable-blocks), which need the browser suite to rerun.
 `docs/PARITY.md` (math) and rule 6 record the read.
+
+## Selection past the webview: what is left is the platform's (#698 item 13; 2026-11-21)
+
+Documentation only. The backlog's item 13 says that once the pointer leaves
+the webview the selection stops (citing `editor/README.md`), and plans for
+the host to listen to the window's mouseup and scroll while the pointer is
+outside. The premise predates the 2026-11-01 work ("Selection drags past the
+note's edge in VS Code" above): a drag that leaves through the top or bottom
+edge keeps extending the selection and scrolling until the pointer returns.
+
+The plan's first two steps cannot be built. The extension host is a separate
+process with no API for the workbench's pointer events, and the webview,
+measured in a real VS Code window on 2026-11-01, receives nothing once a
+drag leaves it: no moves, no mouseup, with or without `setPointerCapture`.
+So nothing can see the pointer's position outside, or the button released
+there. The third step (do not start a VS Code text selection) already holds.
+What Obsidian's window still does and Lumiere cannot: scroll faster the
+further out the pointer is, follow its column outside, continue through the
+left and right edges, and stop at a release outside rather than when the
+pointer returns. The editor README's limits and a new `docs/PARITY.md` row
+say so. Pointer Lock, the one way a page keeps receiving moves, hides the
+pointer while it holds, so it is not a fit.
