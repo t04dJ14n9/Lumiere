@@ -7507,3 +7507,32 @@ math-vim-click, stable-blocks, selection-inline and math-remount-height
 (64 passed). The full browser and quality suites and `pnpm test:vscode` were
 not run here (CI runs the first two; the change touches no editor
 integration).
+
+## Fold All, Unfold All and Toggle Fold Properties fold Properties (#787; 2026-11-21)
+
+Obsidian 1.15.0, read in its shipped code (behaviour only, nothing copied):
+`editor:fold-all` and `editor:unfold-all` each call
+`metadataEditor.setCollapse(true, false)` before folding the text, so both
+collapse the note's Properties and neither expands them (1.13.7 does the
+same). `editor:toggle-fold-properties` collapses the Properties view when it
+can show, and otherwise, in an editing view, folds the front matter: a fold
+service (present while Fold heading or Fold indent is on) folds a first
+`---` line through the next `---` line from the note's start, and the
+command unfolds a fold at the note's start instead when there is one.
+Lumiere did neither.
+
+The Folding plugin's Fold All and Unfold All commands now emit
+`folding/allCommand` before folding; Properties collapses the sheet of a
+note with front matter on it, through the same path as its heading (so the
+note remembers it). Toggle Fold Properties folds or unfolds the front matter
+where the YAML shows as text (Source mode, or `properties.display`
+`source`), with CodeMirror's fold state, as other plugins already use it;
+elsewhere it still clicks the sheet's heading. Lumiere's gutter and Fold
+All do not fold the front matter in Source mode, as Obsidian's fold service
+does; Vim's zM and zR run the same commands, so they collapse Properties
+too. Both are documented.
+
+Validation: unit tests src/plugins/properties/folding.test.ts and
+src/plugins/folding/fold-all.test.ts; folding and properties tests,
+typecheck, ESLint and Prettier pass. Not run here (other agents' suites):
+`pnpm test:browser`, `test:quality`, `test:vscode`.

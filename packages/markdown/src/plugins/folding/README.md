@@ -35,6 +35,8 @@ its folds when it moves (a rename, Back and Forward in the panel).
 - `manifest.ts`: heading/indent settings and three command contributions.
 - `api.ts`: fold service contract.
 - `webview.ts`: range calculation, gutter, commands and reconfiguration.
+- `fold-all.test.ts`: Fold All and Unfold All emit `folding/allCommand`
+  before folding.
 - `heading-fold.ts`: lazy heading ranges with per-document caching.
 - `heading-fold.test.ts`: range parity, bounded gutter traversal, edit
   invalidation and folds from a prefix tree.
@@ -57,8 +59,10 @@ its folds when it moves (a rename, Back and Forward in the panel).
 ## Services, events and settings
 
 The webview half injects `editor`, `commands` and `rpc`; provides `fold`.
-The host half injects `rpc` and the host service `storage`. No kernel
-events. Contributes `folded` view state. `plugins.folding.enabled`, `folding.heading` and
+The host half injects `rpc` and the host service `storage`. The Fold All
+and Unfold All commands emit `folding/allCommand` first (the `fold`
+service's methods do not), and Properties collapses the note's sheet on
+it, as Obsidian 1.15.0 does on both commands. Contributes `folded` view state. `plugins.folding.enabled`, `folding.heading` and
 `folding.indent` under `lumiere.markdown` default to true. Commands: Fold All,
 Unfold All, Toggle Fold, Fold More and Fold Less (`commands.ts`), as in
 Obsidian, measured against it: Fold All folds nested sections too; Toggle Fold

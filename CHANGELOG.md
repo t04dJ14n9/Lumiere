@@ -60,6 +60,10 @@
   and inline otherwise, as in Obsidian; it follows your typing. With the
   note unfocused the formula stays rendered. This reverses the source-only
   reveal of #269 (#698).
+- Markdown: **Fold All** and **Unfold All** also collapse the note's
+  Properties, as in Obsidian, where Unfold All does not expand them either.
+  In Source mode, or with Properties shown as YAML, **Toggle Fold
+  Properties** folds and unfolds the front matter (#787).
 
 Fixes for several VS Code windows open at once, each with a test; checked
 with two real windows on one profile.
