@@ -37,7 +37,12 @@ is opt-in (`lumiere.pdf.regions.enabled`, default off).
   moving, for the 500 PDFs read most recently). Next/previous moves by spreads in two-page layouts;
   go to page opens its containing spread, and fit modes measure the whole spread.
   Smooth scrolling follows `editor.smoothScrolling`,
-  with a PDF setting to override it, and respects reduced motion. See
+  with a PDF setting to override it, and respects reduced motion. A trackpad
+  gesture that is nearly straight up and down or sideways pans along that
+  one axis, which matters most when zoomed in; a diagonal one still pans
+  freely, and pinches and Ctrl/⌘ wheels are untouched. It follows
+  `editor.scrollPredominantAxis` (on by default), and `@workshop/scroll`'s
+  `AxisLock` decides it once per gesture, as in the Markdown editor. See
   [View controls](docs/view-controls.md) for settings, commands and native
   EmbedPDF support.
 - **Controls in VS Code's own UI.** By default the viewer has no toolbar of
@@ -389,6 +394,8 @@ src/
     │                           place, to and from the Stage
     ├── reading-position.ts     the place and zoom kept across reloads
     ├── smooth-scrolling.ts     animated wheel notches in continuous reading
+    ├── paged-wheel.ts          a wheel as a pan in paged reading
+    ├── axis-locked-wheel.ts    a nearly straight swipe pans along one axis
     ├── text-access.ts          the page text and its glyph boxes, as a plugin
     ├── annotation-store-session.ts  marks to and from their file
     ├── annotation-store-sync.ts     another pane's saved marks, shown here

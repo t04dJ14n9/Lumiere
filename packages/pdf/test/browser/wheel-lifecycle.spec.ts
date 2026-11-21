@@ -51,14 +51,16 @@ test("Ctrl/Cmd+wheel and pinch never zoom the browser's window, and plain wheel 
   await page.waitForTimeout(400);
   // The Stage has no scrolling element, so it takes every wheel event and pans its camera with it.
   const before = await scrollOffsets(page);
-  expect(
-    await wheel(page, [
-      { deltaY: 3 },
-      { deltaY: 7 },
-      { deltaX: 5 },
-      { deltaX: 4, deltaY: 1 },
-    ]),
-  ).toEqual([true, true, true, true]);
+  // A pause of 150 ms ends a gesture, and a gesture that is nearly straight is
+  // locked to its axis (axis-locked-wheel.ts): each direction is its own
+  // gesture here, not a sideways event inside a vertical one.
+  const pause = () => page.waitForTimeout(200);
+  const prevented = await wheel(page, [{ deltaY: 3 }, { deltaY: 7 }]);
+  await pause();
+  prevented.push(...(await wheel(page, [{ deltaX: 5 }])));
+  await pause();
+  prevented.push(...(await wheel(page, [{ deltaX: 4, deltaY: 1 }])));
+  expect(prevented).toEqual([true, true, true, true]);
   await expect
     .poll(async () => {
       const now = await scrollOffsets(page);

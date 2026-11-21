@@ -133,6 +133,21 @@ test("view defaults inherit editor smoothScrolling and explicit PDF false overri
   vscode.configuration.clear();
 });
 
+test("view settings follow editor.scrollPredominantAxis, which is on unless turned off", () => {
+  const preferences = new ViewPreferences(
+    memory() as never,
+    { all: [] } as never,
+  );
+  const uri = vscode.Uri.parse("memory://same.pdf") as never;
+  assert.equal(preferences.settings(uri).predominantAxis, true);
+  vscode.configuration.set("editor.scrollPredominantAxis", false);
+  assert.equal(preferences.settings(uri).predominantAxis, false);
+  vscode.configuration.set("editor.scrollPredominantAxis", true);
+  assert.equal(preferences.settings(uri).predominantAxis, true);
+  preferences.dispose();
+  vscode.configuration.clear();
+});
+
 test("recreated webviews receive the current toolbar mode and dock after loading bytes", async () => {
   const preferences = new ViewPreferences(
     memory() as never,

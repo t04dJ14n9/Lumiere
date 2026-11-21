@@ -1,7 +1,8 @@
 /**
  * Lumiere PDF's settings (`lumiere.pdf.*`) and the editor settings it
- * follows (`editor.smoothScrolling`), as the host keeps them. Only the PDF
- * product reads and writes `lumiere.pdf.` keys (AGENTS.md).
+ * follows (`editor.smoothScrolling`, `editor.scrollPredominantAxis`), as the
+ * host keeps them. Only the PDF product reads and writes `lumiere.pdf.` keys
+ * (AGENTS.md).
  */
 export interface PdfConfiguration {
   /**

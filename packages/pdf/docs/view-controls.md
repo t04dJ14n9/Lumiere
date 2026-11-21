@@ -58,6 +58,13 @@ commands and in the PDF context menu, including when the toolbar is hidden.
 - Smooth motion applies to discrete wheel scrolling and page/outline/internal
   link jumps. Native trackpad scrolling is retained, and zoom changes are not
   animated. Motion is always disabled with `prefers-reduced-motion: reduce`.
+- A trackpad gesture that is nearly straight up and down or sideways (within
+  about 27 degrees of an axis, judged once from its first events and held to
+  the end of its momentum) pans along that one axis only, in continuous and
+  page-by-page reading; a diagonal one pans freely. Pinches and Ctrl/⌘ or
+  Shift wheels are untouched. `editor.scrollPredominantAxis` (VS Code's, on by
+  default) turns it off; the host reads it for each PDF and sends it with the
+  view settings, and a change applies immediately.
 
 ## Settings
 
