@@ -2,6 +2,7 @@ import { metadata } from "../../markdown/metadata";
 import { noteFragment } from "../../markdown/metadata/fragments";
 import { linkSyntax } from "../../markdown/metadata/linkpaths";
 import type { TextEdit } from "../../shared/host";
+import { noteLineFragment } from "../../shared/native-links";
 import {
   isExternalLink,
   splitLinktext,
@@ -53,6 +54,8 @@ export interface RenamedHeading {
   text: string;
   heading: HeadingToRename;
   name: string;
+  /** What links to the heading hold after its `#` (`renamedHeadingFragment`). */
+  subpath: string;
 }
 
 /**
@@ -98,24 +101,73 @@ export function headingLinkEdits(
     rewrites.push({
       from: link.position.start.offset,
       to: link.position.end.offset,
-      rewrite: (original) => withSubpath(original, renamed.name),
+      rewrite: (original) => withSubpath(original, renamed.subpath),
     });
   }
   return linkRewriteEdits(text, rewrites);
 }
 
 /**
- * What a link to a heading named `name` holds after its `#`, as Obsidian
- * writes it: the characters a link cannot carry (`:`, `#`, `|`, `^`, `\`,
- * line breaks, `%%`, `[[`, `]]`) become spaces, and runs of spaces one.
+ * What a link to a heading whose text is `text` holds after its `#`, as
+ * Obsidian writes it: the characters a link cannot carry (`:`, `#`, `|`, `^`,
+ * `\`, line breaks, `%%`, `[[`, `]]`) become spaces, and runs of spaces one.
  * Links still reach the heading: they are matched with punctuation read as
- * spaces. Empty when nothing of the name is left for a link.
+ * spaces. Empty when nothing of the text is left for a link.
  */
-export function headingSubpath(name: string): string {
-  return name
+export function headingSubpath(text: string): string {
+  return text
     .replace(/[:#|^\\\r\n]|%%|\[\[|\]\]/gu, " ")
     .replace(/\s+/gu, " ")
     .trim();
+}
+
+/** The subpath links to a renamed heading get, or why none can reach it. */
+export type HeadingFragment = { subpath: string } | { problem: string };
+
+/**
+ * What links to `heading` hold after its `#` once it is named `name`, or why
+ * no link could reach it by that name. Links resolve against the heading's
+ * text as the note's metadata reads it, which drops formatting
+ * (`New [[Target|Alias]]` is `New Alias`, `[Label](url)` is `Label`), so the
+ * subpath is written from that text, and kept only if a link holding it
+ * reaches this heading in the renamed note as links are followed
+ * (`noteFragment`, and not read as a `#L12` line range). Obsidian 1.15
+ * writes the name as typed (`#New Target Alias`).
+ */
+export function renamedHeadingFragment(
+  text: string,
+  heading: HeadingToRename,
+  name: string,
+): HeadingFragment {
+  const note =
+    text.slice(0, heading.nameFrom) + name + text.slice(heading.nameTo);
+  const shown = metadata(note).headings.find(
+    (entry) => entry.from === heading.from,
+  )?.heading;
+  if (shown === undefined) {
+    return { problem: "With this name the line would no longer be a heading." };
+  }
+  const subpath = headingSubpath(shown);
+  if (!subpath) {
+    return {
+      problem:
+        "Links could not reach a heading with only formatting or : # | ^ \\ [[ ]] in its name.",
+    };
+  }
+  if (noteLineFragment(subpath)) {
+    return {
+      problem: `Links would read #${subpath} as a line number, not as this heading.`,
+    };
+  }
+  const reached = noteFragment(note, subpath);
+  if (reached?.from === heading.from) {
+    return { subpath };
+  }
+  return {
+    problem: reached
+      ? "A heading above has the same name, so links would reach it instead."
+      : "Links could not reach a heading with this name.",
+  };
 }
 
 /**
@@ -134,13 +186,12 @@ function percentEncoded(text: string, unsafe: RegExp): string {
   );
 }
 
-/** A link's source text with its `#subpath` replaced by heading `name`'s. */
-function withSubpath(original: string, name: string): string {
+/** A link's source text with its `#subpath` replaced by `subpath`. */
+function withSubpath(original: string, subpath: string): string {
   const source = linkSource(original);
   if (!source) {
     return original;
   }
-  const subpath = headingSubpath(name);
   const written = source.opening.endsWith("[[")
     ? subpath
     : percentEncoded(subpath, source.isAngled ? ANGLED_UNSAFE : BARE_UNSAFE);
