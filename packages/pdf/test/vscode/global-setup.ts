@@ -22,7 +22,10 @@ import path from "node:path";
 import { createVSIX } from "@vscode/vsce";
 import type { FullConfig } from "@playwright/test";
 import { paths, writeState } from "./state";
-import { startPrivateDisplay } from "../../../../test/vscode/display";
+import {
+  placeWindowOnBuiltInScreen,
+  startPrivateDisplay,
+} from "../../../../test/vscode/display";
 import {
   devToolsWebSocket,
   freePort,
@@ -45,6 +48,7 @@ export default async function globalSetup(config: FullConfig): Promise<void> {
   mkdirSync(paths.home, { recursive: true });
   mkdirSync(paths.extensions, { recursive: true });
   display = await startPrivateDisplay(path.join(paths.root, "display.pid"));
+  placeWindowOnBuiltInScreen(paths.userData);
   writeFileSync(
     path.join(paths.userData, "User", "settings.json"),
     JSON.stringify(

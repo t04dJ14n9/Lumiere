@@ -144,7 +144,9 @@ pnpm test:vscode   # both products in a real, isolated VS Code window
 opens VS Code on a private 1920×1080 Xvfb display of its own (the specs
 measure layouts a small screen changes; `xvfb-run`'s default is 640×480), so
 a headless box needs no `xvfb-run`; `LUMIERE_VSCODE_DISPLAY=inherit` keeps
-your display instead, to watch the window. The real-VS Code specs (`test/vscode`,
+your display instead, to watch the window. On a Mac with more than one
+screen, the test window opens maximized on the built-in screen, off the
+external ones. The real-VS Code specs (`test/vscode`,
 `packages/pdf/test/vscode`) do **not** run in GitHub Actions: they were flaky
 under load, and Cursor cannot run there.
 
