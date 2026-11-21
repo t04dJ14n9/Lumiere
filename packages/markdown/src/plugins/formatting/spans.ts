@@ -23,6 +23,8 @@ export interface Span {
   open: number;
   close: number;
   colour?: HighlightColour;
+  /** A coloured highlight's emoji, round or square. */
+  emoji?: string;
 }
 
 /** The text a span formats, between its markers. */
@@ -57,7 +59,10 @@ export function spansIn(
         to: node.to,
         open: marker.length + (colour ? 2 : 0),
         close: marker.length,
-        ...(colour && { colour }),
+        ...(colour && {
+          colour,
+          emoji: state.sliceDoc(node.from + 2, node.from + 4),
+        }),
       });
     },
   });

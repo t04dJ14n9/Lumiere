@@ -5,6 +5,7 @@ import { continueLine, continueList } from "./commands";
 import { renumberOnEdit } from "./renumber";
 import { pasteIntoListItem } from "./paste";
 import { setVimListContinueHandler } from "../../shared/vim-hooks";
+import { smartListsOn } from "../../markdown/smart-lists";
 export const smartListsWebview: Plugin = {
   name: "smartLists",
   inject: { required: ["editor"] },
@@ -16,6 +17,8 @@ export const smartListsWebview: Plugin = {
         renumberOnEdit,
         // Filters run last first: the paste is merged before numbering.
         pasteIntoListItem,
+        // Swap Line Up and Down move list items whole while this is on.
+        smartListsOn.of(true),
       ]),
     );
   },

@@ -23,8 +23,9 @@ export const highlight: MarkdownConfig = {
 };
 
 /**
- * Obsidian 1.14's highlight colours: one of these emoji right after the
- * opening `==` colours the highlight (`==🔵text==`); any other text does not.
+ * Obsidian's highlight colours: one of these emoji right after the opening
+ * `==` colours the highlight (`==🔵text==`); any other text does not. The
+ * colour commands write these.
  */
 export const HIGHLIGHT_COLOURS = {
   red: "\u{1F534}",
@@ -37,14 +38,34 @@ export const HIGHLIGHT_COLOURS = {
 
 export type HighlightColour = keyof typeof HIGHLIGHT_COLOURS;
 
+/**
+ * The square emoji Obsidian 1.15 also reads as the same colours
+ * (`==🟥text==` is red), though its commands write the round ones.
+ */
+const SQUARE_COLOURS: Readonly<Record<HighlightColour, string>> = {
+  red: "\u{1F7E5}",
+  orange: "\u{1F7E7}",
+  yellow: "\u{1F7E8}",
+  green: "\u{1F7E9}",
+  blue: "\u{1F7E6}",
+  purple: "\u{1F7EA}",
+};
+
 const byEmoji = new Map<string, HighlightColour>(
-  Object.entries(HIGHLIGHT_COLOURS).map(([colour, emoji]) => [
-    emoji,
-    colour as HighlightColour,
-  ]),
+  [HIGHLIGHT_COLOURS, SQUARE_COLOURS].flatMap((emoji) =>
+    Object.entries(emoji).map(
+      ([colour, char]) => [char, colour as HighlightColour] as const,
+    ),
+  ),
 );
 
-/** The colour whose emoji starts `text` at `at`, if one does. */
+/** Every emoji that colours a highlight, round and square. */
+export const HIGHLIGHT_COLOUR_EMOJI: readonly string[] = [...byEmoji.keys()];
+
+/**
+ * The colour whose emoji starts `text` at `at`, if one does. Every colour
+ * emoji is two UTF-16 units long.
+ */
 export function highlightColourAt(
   text: string,
   at = 0,

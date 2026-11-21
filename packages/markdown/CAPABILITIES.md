@@ -19,7 +19,7 @@ product choices for VS Code, not parity claims.
 | --- | --- | --- |
 | document | One text shared by every panel and VS Code's text editor; VS Code owns save, EOL and undo | Typing groups for undo like Obsidian; history is VS Code's |
 | editor | Per-pane precise-jump Back/Forward (100 locations, in memory), geometric restoration, and the CodeMirror editor in a webview, view state per panel, settings for mode, readable line length (700 px; off by default, Obsidian 1.15.0's is on), strict line breaks, right-to-left, tabs; the note's own font size (`lumiere.markdown.editor.fontSize`, 16) and line height (`lumiere.markdown.editor.lineHeight`, 1.5 times the size), Obsidian's defaults; family, weight, letter spacing and ligatures follow VS Code's `editor.*` settings for Markdown files | Panels of one note keep separate selections, scroll and folds. A selection dragged out of the note continues only past its top and bottom edges, at one speed, until the pointer returns (a webview gets no pointer events outside it). VS Code's `editor.fontSize` and `editor.lineHeight` do not apply to notes (owner decision, 2026-10-10); headings keep Obsidian's sizes and line heights |
-| dialect | Obsidian-flavoured Markdown: wikilinks, embeds, tags, highlights, comments, callouts, footnotes, math, block IDs | Grammar is fixed; plugins cannot change parsing |
+| dialect | Obsidian-flavoured Markdown: wikilinks, embeds, tags, highlights (coloured by a round or square emoji), comments, callouts, footnotes, math, block IDs | Grammar is fixed; plugins cannot change parsing |
 | render | Sanitized HTML for rendered blocks | Scripts, forms, objects, embeds and `srcdoc` are removed; application links (`obsidian:`, `zotero:`) are kept and confirmed before opening |
 | livePreview | Syntax hidden except where the selection is; rendered blocks crossed as one unit | No Reading view (DESIGN §25.8); comments stay visible, faint, as in Obsidian |
 | commands | Obsidian editor command IDs, save/undo/redo/close, Open as Text | Commands act on the active panel |
@@ -64,7 +64,7 @@ product choices for VS Code, not parity claims.
 | spellcheck | The host's spellchecker | Languages and dictionaries are the host's (VS Code's Chromium spellchecker; on macOS the system's); no language setting, unlike Obsidian 1.15.0's per-device Spellcheck languages (DESIGN §15.3) |
 | autoPair | Brackets, quotes and Markdown markers | — |
 | smartLists | List continuation and exit | — |
-| formatting | Bold, italics, strikethrough, highlight, code, comment, link, headings, lists, quote, line swaps | Obsidian 1.15.0's default keys where VS Code and Cursor leave them free; see [Hotkeys](#hotkeys) |
+| formatting | Bold, italics, strikethrough, highlight, code, comment, link, headings, lists, quote, line swaps (a list item moves with its children while Smart lists is on); line and insert commands act at every selection | Obsidian 1.15.0's default keys where VS Code and Cursor leave them free; see [Hotkeys](#hotkeys) |
 | vim | Vim mode with `:w`, `:q`, `:u`, `:red` mapped to VS Code | Off by default |
 | pasteHtml | Rich paste as Markdown | Images are not downloaded |
 | agentBridge | **Copy link to this** copies `@path#lines` and the quoted passage, opening a chat only when the editor's own chat is the only agent or a target is set | Not an Obsidian feature. The separate Copy for Agent command was removed (plain Ctrl+C copies text). No public API |

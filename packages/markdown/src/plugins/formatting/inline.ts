@@ -8,6 +8,7 @@ import type { Command } from "@codemirror/view";
 import { markdownParser } from "../../markdown/dialect";
 import { highlightColourAt } from "../../markdown/dialect/highlight";
 import { MARKER_KINDS, spanContent, spansIn, type Span } from "./spans";
+import { formattableParts } from "./line-parts";
 const formattingParser = markdownParser;
 export function clearInlineFormatting(source: string): string {
   const removed: { from: number; to: number }[] = [];
@@ -92,20 +93,30 @@ function toggleRange(
         range: EditorSelection.cursor(range.from + marker.length),
       };
     }
+    return toggleSelectedText(state, range, marker);
   }
-  if (
-    state.doc.lineAt(range.from).number !== state.doc.lineAt(range.to).number
-  ) {
-    return toggleLines(state, range, marker);
+  // As in Obsidian 1.15, line markers and the selection's edge spaces stay
+  // outside the markers.
+  const parts = formattableParts(state, range.from, range.to);
+  if (parts.length === 0) {
+    return { range };
   }
-  return toggleSelectedText(state, range, marker);
+  if (parts.length === 1) {
+    return toggleSelectedText(
+      state,
+      EditorSelection.range(parts[0]!.from, parts[0]!.to),
+      marker,
+    );
+  }
+  return toggleLines(state, range, marker);
 }
 
 /**
- * A selection over several lines, as in Obsidian: each line's part is
- * wrapped on its own (formatting does not cross a line), or, when every part
- * is already wrapped (markers just outside the selection count), unwrapped.
- * Empty lines are left alone.
+ * A selection over several lines, as in Obsidian: each line's part (its text
+ * after the line's markers, `formattableParts`) is wrapped on its own
+ * (formatting does not cross a line), or, when every part is already wrapped
+ * (markers just outside the selection count), unwrapped. Empty lines are
+ * left alone.
  */
 function toggleLines(
   state: EditorState,
@@ -113,8 +124,14 @@ function toggleLines(
   marker: string,
 ) {
   const size = marker.length;
-  const widened = partsOf(state, range.from - size, range.to + size);
-  const parts = partsOf(state, range.from, range.to);
+  // Widened within the selection's first and last lines only, so the line
+  // above or below never joins in.
+  const widened = formattableParts(
+    state,
+    Math.max(state.doc.lineAt(range.from).from, range.from - size),
+    Math.min(state.doc.lineAt(range.to).to, range.to + size),
+  );
+  const parts = formattableParts(state, range.from, range.to);
   const unwrap = [widened, parts].find((candidate) =>
     candidate.every((part) => isWrapped(state, part, marker)),
   );
@@ -142,29 +159,6 @@ function toggleLines(
         ? EditorSelection.range(stop, start)
         : EditorSelection.range(start, stop),
   };
-}
-
-/** The non-empty part of each line between `from` and `to`. */
-function partsOf(
-  state: EditorState,
-  from: number,
-  to: number,
-): { from: number; to: number }[] {
-  const start = Math.max(0, from);
-  const stop = Math.min(state.doc.length, to);
-  const parts: { from: number; to: number }[] = [];
-  const last = state.doc.lineAt(stop).number;
-  for (let n = state.doc.lineAt(start).number; n <= last; n++) {
-    const line = state.doc.line(n);
-    const part = {
-      from: Math.max(line.from, start),
-      to: Math.min(line.to, stop),
-    };
-    if (part.to > part.from) {
-      parts.push(part);
-    }
-  }
-  return parts;
 }
 
 function isWrapped(

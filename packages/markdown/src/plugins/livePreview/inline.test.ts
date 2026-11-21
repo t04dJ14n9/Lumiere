@@ -43,6 +43,34 @@ test("nested bold and every highlight colour keep caret-inside markers faint and
   }
 });
 
+test("a square colour emoji colours a highlight in Live Preview, as in Obsidian 1.15", () => {
+  const doc = "a ==🟩green== b";
+  const classes: string[] = [];
+  const hidden: string[] = [];
+  const state = EditorState.create({
+    doc,
+    selection: { anchor: doc.length },
+    extensions: [documentTree],
+  });
+  inlineDecorations(state, [{ from: 0, to: doc.length }]).between(
+    0,
+    doc.length,
+    (from, to, value) => {
+      if (typeof value.spec.class === "string") {
+        classes.push(value.spec.class);
+      }
+      if (doc.slice(from, to) === "🟩") {
+        hidden.push(doc.slice(from, to));
+      }
+    },
+  );
+  assert.ok(
+    classes.includes("md-highlight md-highlight-green"),
+    classes.join(),
+  );
+  assert.deepEqual(hidden, ["🟩"]);
+});
+
 test("inline decorations retain basic marks, rendered links and deduplicated heading lines", () => {
   const doc = "# Title\n\n**bold** [label](target)\n\nafter";
   const state = EditorState.create({

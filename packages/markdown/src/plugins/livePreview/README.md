@@ -25,7 +25,8 @@ Inline decorations map through IME and selection-only mouse drag updates.
 Viewport changes during a drag or scrollbar press render newly visible text using
 the frozen reveal selection; rendered clicks map visible text back to source
 before syntax is revealed.
-A coloured highlight (`==🔵text==`, Obsidian 1.14) shows in its colour with
+A coloured highlight (`==🔵text==`, Obsidian 1.14; the square `==🟦text==`
+too, as in 1.15) shows in its colour with
 the emoji hidden, or a swatch in its place while the caret is in it, as
 Obsidian shows it.
 Emphasis around a highlight remains parsed inside a word, including its colour

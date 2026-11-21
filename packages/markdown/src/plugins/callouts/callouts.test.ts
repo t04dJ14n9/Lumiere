@@ -86,10 +86,10 @@ test("Insert Callout wraps when text precedes the caret or the selection is not 
   );
 });
 
-test("Insert Callout keeps a selection ending at column zero on the previous line", () => {
+test("Insert Callout includes the line a selection ends at the start of, as Obsidian 1.15 does", () => {
   const next = applyInsertCallout("one\ntwo\nbelow", 0, 4);
   const { from, to } = next.selection.main;
-  assert.equal(next.doc.toString(), "> [!NOTE]\n> one\n\ntwo\nbelow");
+  assert.equal(next.doc.toString(), "> [!NOTE]\n> one\n> two\n\nbelow");
   assert.equal(next.sliceDoc(from, to), "NOTE");
 });
 

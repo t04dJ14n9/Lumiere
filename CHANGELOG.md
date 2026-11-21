@@ -96,6 +96,29 @@
   Mod+Shift+Enter creates it in a new tab. They apply only while the
   switcher is open. With nothing typed, it also lists the images, PDFs and
   other attachments recently opened from it, as Obsidian does (#787).
+- Markdown: bold, italics, strikethrough, highlight (and its colours), inline
+  code and inline math wrap a selected line's text after its list, quote,
+  task or heading marker, and leave the spaces at the selection's ends
+  outside, as Obsidian 1.15 does; a selection running over a table, code
+  block or math block skips its lines (#787).
+- Markdown: Set Heading, the list, quote and checklist commands, Insert Code
+  Block, Insert Math Block and Insert Callout include the line a selection
+  ends at the start of, as Obsidian 1.15 does, whichever way it was made
+  (#787).
+- Markdown: Toggle Blockquote quotes the blank lines of a selection too, as
+  Obsidian does, so a blank line among quoted ones is quoted instead of the
+  others losing their quote (#787).
+- Markdown: with several carets or selections, Set Heading, the list, quote
+  and checklist commands, Insert Link, Insert Wikilink, Insert Embed, Insert
+  Horizontal Rule, Insert Code Block and Insert Math Block act at every one,
+  as in Obsidian; they used only the main one (#787).
+- Markdown: Swap Line Up and Down move a list item with the items and lines
+  under it while Smart lists is on, as Obsidian 1.15 does: past its sibling,
+  out of its parent upwards and into the next item downwards, numbers
+  staying in place (#787).
+- Markdown: a highlight coloured with a square emoji (`==🟥text==`, and
+  🟧🟨🟩🟦🟪) shows in its colour, in the note and in embeds, as Obsidian
+  1.15 reads it; the colour commands treat it as that colour (#787).
 
 Fixes for several VS Code windows open at once, each with a test; checked
 with two real windows on one profile.

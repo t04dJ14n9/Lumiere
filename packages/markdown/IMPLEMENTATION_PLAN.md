@@ -7759,3 +7759,96 @@ command run), `ranking.test.ts` (recent attachments listed, others not),
 (the keys are bound only in the open switcher; no note key on Mod+Enter);
 unit tests, typecheck, ESLint and Prettier pass. Not run: `test:browser`,
 `test:quality`, `test:vscode`.
+
+## Editing commands follow Obsidian 1.15.0 (#787), 2026-11-21
+
+Items of #787 the owner approved fixing (2026-11-21), each read in Obsidian
+1.15.0's shipped code (behaviour only, nothing copied) and not observed
+running. One commit per item.
+
+- **Inline formats skip line markers and edge spaces.** Obsidian's
+  `toggleMarkdownFormatting` and `toggleHighlight` trim the selection's edge
+  spaces, then wrap each line from after its list indent, quote, list, task
+  or heading marker, trimmed, and skip a table, code or math line the
+  selection runs past. `formattableParts` (formatting/line-parts.ts) picks
+  those parts for bold, italics, strikethrough, highlight, inline code,
+  inline math and the highlight colours. Toggle Comment keeps wrapping the
+  selection as it is: 1.15.0's `toggleComment` neither trims nor skips
+  markers, so #787's "comment" was not a difference. Left: the selection
+  ends on the formatted text, where Obsidian's keeps a selected leading
+  marker. Unit tests in obsidian-commands and highlight-colours.
+- **A selection ending at column 0 includes that line.** Obsidian's line
+  commands take the lines from the lower to the higher of each range's
+  anchor and head lines (`processLines`: Set Heading, the bullet, numbered,
+  quote and checklist toggles), `insertBlock` grows each range to
+  `lineAt(to)` (Insert Code Block, Insert Math Block), and `insertCallout`
+  quotes through the `to` cursor's line, so a forward or backward selection
+  ending at the start of a line includes it. Lumiere left that line out on
+  purpose; `lineEdit`, `fenceLines`, `checklistEdit`, `mathBlockEdit` and
+  Insert Callout now include it. Copy Link for Agent keeps excluding it (its
+  own reference format, DESIGN §17). Tests that pinned the exclusion
+  (formatting, tasks, callouts) now pin the inclusion; new ones cover both
+  directions.
+- **Toggle Blockquote quotes blank lines.** `toggleBlockquote` calls
+  `processLines` with blank-skipping off (as in 1.13.7), so a blank line in
+  a selection of several gets `> `, and because it has no quote the whole
+  selection counts as unquoted: quoted lines stay, the blank ones are
+  quoted. `lineEdit` keeps blank lines for the quote only; the unit test
+  that pinned the skip now pins this.
+- **Line and insert commands act at every selection.** `processLines`
+  gathers the lines of every range (one set, so blank lines are skipped
+  when the set has several, and one step decides a checklist toggle for
+  all); `insertBlock`, `insertMarkdownLink`, `triggerWikilink` and
+  `insertHorizontalRule` edit per range. `selectedLines`
+  (src/markdown/selected-lines.ts, shared by formatting and tasks) and
+  `changeByRange` in `linkEdit`, `ruleEdit`, `fenceLines`, `mathBlockEdit`
+  and `wikilinkEdit` do the same. Each block selection stays on its text,
+  where Obsidian shifts every range by the first one's offset. Insert
+  Callout, Insert Table, Insert Tag and Insert Footnote use the main
+  selection in Obsidian too and are unchanged.
+- **Swap Line moves list items whole.** New since 1.13.7: with
+  `smartIndentList` on and one selection, `swapLineUp`/`swapLineDown` take
+  the item at the selection's first line with the lines under it (grown
+  over following siblings to the selection's end), then swap it with the
+  sibling or the one paragraph line beyond; next to a shallower item it
+  moves out before the parent (up, when the parent has a sibling above;
+  the next sibling takes its number) or in as the next item's first child
+  (down, numbered as that child, or `1.`). Nesting counts tabs or four
+  spaces; lines in code, math and frontmatter are no items. Otherwise
+  CodeMirror's line move, as before. Rewritten from the read rules in
+  `list-blocks.ts` and `swap-lines.ts`; the smartLists plugin provides a
+  `smartListsOn` facet (src/markdown/smart-lists.ts) for the switch, so
+  formatting does not reach into it. Not done: Obsidian carries folds
+  inside the moved item. Unit tests: swap-lines.test.ts.
+- **Square-emoji highlight colours.** 1.15.0's colour table maps 🟥🟧🟨🟩🟦🟪
+  to red, orange, yellow, green, blue and purple beside the round emoji;
+  Reading view puts the colour name in `data-highlight`, Live Preview draws
+  its swatch for it, and the commands treat it as that colour, writing round
+  emoji except where a covered highlight of the colour already has a marker,
+  which they keep. `highlightColourAt` (dialect/highlight.ts), which every
+  parser, renderer and command uses, now knows both sets, so Lumiere's own
+  colour styles apply; Home's opener rule (editor/line-start.ts) skips both;
+  a recolouring merge keeps a covered square emoji (`Span.emoji`). Left:
+  1.15.0 offers no colour list after `==` when a colour emoji already
+  follows, which Lumiere's suggestion does not check (round or square).
+  Unit tests: highlight-colours and livePreview inline tests.
+- **Insert Table: left for a live re-check.** 1.15.0's `insertTable` puts
+  the table after the line of the main selection's anchor and the caret at
+  `e + r.length + 1`, after the table's first `|`; Lumiere uses the `from`
+  line and the table's start. The 2026-10-17 probe that "matched" does not
+  contradict the read: its notation writes the caret as `|`, so `||     |`
+  reads the same with the caret before or after the first pipe, and the unit
+  test built from it (obsidian-commands, "a new table goes after the line…")
+  passes at either offset. What a user sees differs from the offset alone:
+  with the editor focused, Obsidian's table widget takes a selection
+  anywhere in the table into the first cell (`receiveSelection`, through
+  `placeCursorInCell` from just before the table), while Lumiere's outer
+  caret opens no cell at either offset (only Vim's entry does). Matching it
+  means deciding whether Insert Table should open the first cell, which
+  needs Obsidian running; nothing changed. PARITY's insertTable rows say so.
+
+Documentation: CAPABILITIES (formatting and dialect rows). Checks for the
+whole branch: the Markdown package's unit tests (3,742 pass), typecheck,
+ESLint and Prettier. Not run here (other agents share the machine): `pnpm
+test:browser`, `test:quality`, `test:vscode`. No browser spec runs the
+changed commands (searched for their command IDs).

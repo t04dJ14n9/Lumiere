@@ -16,17 +16,19 @@ test("checkbox changes check the expected line and preserve quotes, labels and c
   assert.equal(taskEdit(text, 2, "missing", true), undefined);
   assert.equal(taskEdit("plain", 0, "plain", true), undefined);
 });
-test("checklist cycling preserves list identity and excludes a final column-zero line", () => {
+test("checklist cycling preserves list identity and includes a final column-zero line, as Obsidian 1.15 does", () => {
   let state = EditorState.create({
-    doc: "- item\nuntouched",
+    doc: "- item\nnext",
     selection: { anchor: 0, head: 7 },
   });
   state = state.update(checklistEdit(state, true)).state;
-  assert.equal(state.doc.toString(), "- [ ] item\nuntouched");
+  assert.equal(state.doc.toString(), "- item\n- next");
   state = state.update(checklistEdit(state, true)).state;
-  assert.equal(state.doc.toString(), "- [x] item\nuntouched");
+  assert.equal(state.doc.toString(), "- [ ] item\n- [ ] next");
   state = state.update(checklistEdit(state, true)).state;
-  assert.equal(state.doc.toString(), "- item\nuntouched");
+  assert.equal(state.doc.toString(), "- [x] item\n- [x] next");
+  state = state.update(checklistEdit(state, true)).state;
+  assert.equal(state.doc.toString(), "- item\n- next");
 });
 
 test("cycling a completed task without trailing text preserves the next line", () => {

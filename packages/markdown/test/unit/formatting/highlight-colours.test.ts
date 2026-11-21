@@ -60,6 +60,13 @@ test("a colour wraps the word or selection, its emoji after the opening ==", () 
   );
 });
 
+test("a colour skips the line's markers and the selection's edge spaces, as Obsidian 1.15 reads", () => {
+  const red = toggleHighlightColour("red");
+  assert.equal(run(red, "- item", 0, 6).text, "- ==🔴item==");
+  assert.equal(run(red, "> # a b ", 0, 8).text, "> # ==🔴a b== ");
+  assert.equal(run(red, "- a\n- b", 0, 7).text, "- ==🔴a==\n- ==🔴b==");
+});
+
 test("a highlight takes another colour, and loses its own", () => {
   const cases: [string, number, number, string, string][] = [
     ["one ==two== three", 7, 7, "blue", "one ==🔵two== three"],
@@ -267,4 +274,33 @@ test("a local colour acceptance reads the current word at the mapped completion 
   const next = current.update(red.apply(current, { from: 6, to: 6 })).state;
   assert.equal(next.doc.toString(), "A **==🔴hard==** line");
   assert.equal(next.selection.main.head, 8);
+});
+
+// Read from Obsidian 1.15.0 (not measured): the square emoji 🟥🟧🟨🟩🟦🟪 are
+// the same six colours as the round ones; its commands write round ones but
+// keep a covered highlight's square emoji when it is that colour.
+test("square emoji colour a highlight as the round ones do", () => {
+  const { renderInline } = createRenderer();
+  const squares: [string, string][] = [
+    ["red", "🟥"],
+    ["orange", "🟧"],
+    ["yellow", "🟨"],
+    ["green", "🟩"],
+    ["blue", "🟦"],
+    ["purple", "🟪"],
+  ];
+  for (const [colour, emoji] of squares) {
+    assert.equal(
+      renderInline(`==${emoji}text==`),
+      `<mark data-highlight="${colour}">text</mark>`,
+    );
+  }
+  const red = toggleHighlightColour("red");
+  assert.equal(run(red, "one ==🟥two== three", 9).text, "one two three");
+  assert.equal(
+    run(toggleHighlightColour("blue"), "one ==🟥two== three", 9).text,
+    "one ==🔵two== three",
+  );
+  assert.equal(run(red, "==🟥a== b", 0, 9).text, "==🟥a b==");
+  assert.equal(run(wrapSelection("=="), "==🟦a==", 0, 7).text, "a");
 });
