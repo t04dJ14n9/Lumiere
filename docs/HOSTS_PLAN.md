@@ -18,10 +18,11 @@ On that branch:
 | The Tauri desktop app, the static web app, the iPad app | `apps/desktop`, `apps/web`, `apps/ipad` |
 | This plan in full: layers, contracts, milestones, deferred limits | `docs/HOSTS_PLAN.md` |
 | The iPad plan (local vaults, sync, Apple Pencil) | `docs/IPAD_PLAN.md` |
+| The `sketch` plugin (Apple Pencil drawing in a note) and the sketch format and `ink` service it drew with | `packages/markdown/src/plugins/sketch`, `packages/ink` |
 | The web host handoff | `docs/handoff/web-host.md` |
 
 What stayed on `main`: the extension (`src/`, `test/`) and the packages it
 builds from (`packages/core`, `packages/agents`, `packages/markdown`,
-`packages/pdf`, `packages/ink`). The host services in
+`packages/pdf`). The host services in
 `packages/markdown/src/shared/host` remain the seam between the Markdown
 plugins and VS Code ([ARCHITECTURE.md section 6](ARCHITECTURE.md#6-host-services-the-seam-between-plugins-and-a-host)).

@@ -7949,3 +7949,35 @@ webview; the web-worker variant of the workers; the `sketch` plugin, which
 waits for an `ink` service VS Code does not provide; and in Lumiere PDF the
 `portable` and `viewer-page` entries and the `slim` toolbar mode
 (`PAGE_TOOLBAR`).
+
+## Sketches and `packages/ink` leave `main` (owner decision, 2026-11-21)
+
+The owner decided that the `sketch` plugin (drawing with Apple Pencil in a
+note) and `packages/ink` (the sketch file format, its outlines, the `ink`
+host service and the web canvas) leave `main` as well. Only the iPad,
+desktop and web apps provided an `ink` canvas, and they left in the record
+above, which kept the plugin because it merely waited for the service. In
+VS Code and Cursor it never started, yet its setting
+`lumiere.markdown.plugins.sketch.enabled` ("Draw with Apple Pencil in a
+note…") still showed in the Settings editor. Both are preserved on the
+`hosts-snapshot-2026-11-21` branch (docs/HOSTS_PLAN.md).
+
+Removed: `src/plugins/sketch` and its unit tests, its manifest in the
+catalog, its precedence in `plugin-order.ts` and its deferred window
+feature; the `ink` option of `BootstrapOptions`, the `InkService` export of
+`@workshop/markdown/portable` and `ink` among the root services of the
+plugin graph; the `@workshop/ink` dependency; `packages/ink` and its entries
+in the root typecheck, the test runner and `eslint.config.mjs`. `pnpm
+contributions` drops the setting, the Insert Sketch command and its menu
+item, which a `when` clause had always hidden in VS Code.
+
+No settings migration: a value left in a user's settings.json is shown by
+VS Code as an unknown setting and read by nothing, since every
+`plugins.<id>.enabled` read goes through a manifest. A `*.sketch.svg` file
+in a vault is an SVG and still shows as an image through `embeds`.
+
+Kept: the iPad-era hooks the record above lists (the soft-keyboard check,
+the chrome inset, the `portable` entries) serve more than sketches; and
+the `resources/changed` event (drop resolved resource URLs after a file is
+rewritten), whose only emitter was the sketch plugin but which `resources`
+and `embeds` still listen to as a general invalidation hook.

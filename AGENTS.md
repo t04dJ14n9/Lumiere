@@ -11,7 +11,6 @@ workspace. Everything is a plugin. The whole-repository map is
 | `packages/markdown` | Lumiere: Obsidian-like Live Preview | its DESIGN.md, IMPLEMENTATION_PLAN.md |
 | `packages/pdf` | Lumiere PDF: EmbedPDF viewer with agent links | its README.md, AGENTS.md |
 | `src/extension.ts` | The composition root: one plugin tree for both | |
-| `packages/ink` | Sketch format and the `ink` service (used only by a host that provides a canvas) | its README.md |
 
 `main` is the VS Code and Cursor extension only (owner decision,
 2026-11-21). The hosts outside VS Code (host-node, host-web, DSH, the app,

@@ -112,7 +112,6 @@ pnpm package        # the .vsix
 | `packages/agents` | What both parts hand to agents: handoff text, IDE context |
 | `packages/markdown` | The Markdown editor ([README](packages/markdown/README.md), [plugins](packages/markdown/CAPABILITIES.md)) |
 | `packages/pdf` | The PDF reader ([README](packages/pdf/README.md)) |
-| `packages/ink` | The sketch file format and the `ink` service a drawing canvas provides |
 | `scripts/` | Build, `package.json` contributions, third-party notices, tests |
 | `test/vscode` | End-to-end tests in a real, isolated VS Code (or Cursor) |
 

@@ -45,9 +45,6 @@ open looks exactly like `code image.png` in a terminal, Quick Open or a
 double-click, which used to be inserted into the note without asking.
 Portable hosts omit the hook.
 
-Sketch placement uses the same shared helpers, so sketches and pasted images
-share one folder and link story.
-
 ### Delete attachments when deleting files
 
 Obsidian's setting of that name, `attachments.deleteUnlinkedAttachments`

@@ -67,7 +67,6 @@ integration) left `main` on 2026-11-21 (section 7).
 ```text
 packages/core          plugin core (Cordis underneath). Pure: no DOM, Node or VS Code.
 packages/agents        what both products hand to coding agents. Pure.
-packages/ink           sketch format, outlines and the ink service. Pure + a web canvas.
 packages/markdown      the Markdown plugins, their webview, and VS Code's host services
 packages/pdf           the PDF plugins (VS Code only), its portable host code and React webview
 src/extension.ts       the composition root of the VS Code extension
@@ -76,7 +75,7 @@ src/extension.ts       the composition root of the VS Code extension
 Imports point one way:
 
 ```text
-core, agents, ink  ◄── markdown, pdf ◄── markdown/src/host (VS Code) ◄── src/extension.ts
+core, agents ◄── markdown, pdf ◄── markdown/src/host (VS Code) ◄── src/extension.ts
 ```
 
 Inside each product, `src/shared` and `src/markdown` are pure too. The
@@ -247,9 +246,7 @@ On `main` they have one implementation, VS Code's:
 `packages/markdown/src/host/services` (about 1,000 lines). Tests fake the
 seam with `fakeHost(overrides)`. The seam stays even with one host: it keeps
 `vscode` out of the plugins and lets them be tested without VS Code. A
-service the host does not provide leaves the plugins that need it off: VS
-Code provides no `ink` canvas, so the `sketch` plugin's host half does not
-start and Insert Sketch is not shown.
+service the host does not provide leaves the plugins that need it off.
 
 ## 7. Hosts
 
@@ -257,7 +254,10 @@ start and Insert Sketch is not shown.
 2026-11-21). The hosts outside VS Code (the shared Node and browser hosts,
 the DeepSeek Harness integration, Lumiere's own server and window, the
 desktop, web and iPad apps) live, frozen, on the `hosts-snapshot-2026-11-21`
-branch (commit `db1a5aaf`), which takes no further merges from `main`.
+branch (commit `db1a5aaf`), which takes no further merges from `main`. The
+`sketch` plugin (drawing with Apple Pencil in a note) and `packages/ink`,
+which ran only where those apps provided a drawing canvas, left `main` the
+same day and are on that branch too.
 
 Where a change belongs is unchanged: how a note edits, renders or links goes
 in the plugin, never in `packages/markdown/src/host` as a special case.
