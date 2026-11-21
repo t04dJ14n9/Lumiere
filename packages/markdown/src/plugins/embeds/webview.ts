@@ -25,7 +25,8 @@ import {
   embedsNote,
   inlineEmbedClick,
 } from "./clicks";
-import { imageSelection, showsImageSource } from "./image-selection";
+import { imageSelection } from "./image-selection";
+import { decorateImage } from "./image-reveal";
 import { writtenHeight } from "./image-size";
 export const embedsWebview: Plugin = {
   name: "embeds",
@@ -125,18 +126,20 @@ function registerEmbedRenderers(ctx: Context): void {
       widget,
     }),
   );
-  // An image stays rendered whatever the caret does, as in Obsidian 1.13,
-  // until Enter or Tab opens its source for editing.
+  // Obsidian 1.12 and earlier (owner request 2026-11-21): the caret on an
+  // image shows its source while the editor has focus, the image kept
+  // below it, as display math keeps its formula (`image-reveal.ts`).
   ctx.effect(() =>
     ctx.livePreview.block({
       kind: "embed",
       nodes: ["Paragraph"],
-      editing: "widget",
+      editing: "reveal",
+      revealsOnlyWhileFocused: true,
+      editingPreview: { sourceClass: "md-image-source" },
       match(node, state) {
         const source = soleEmbed(node, state);
         return source !== undefined && embedsImage(source);
       },
-      showSource: (state, block) => showsImageSource(state, block),
       widget,
     }),
   );
@@ -148,18 +151,37 @@ function registerEmbedRenderers(ctx: Context): void {
       persistent: true,
       decorate(node, cx) {
         const source = cx.state.sliceDoc(node.from, node.to);
-        const shown = embedsImage(source)
-          ? showsImageSource(cx.state, node)
-          : cx.revealed(node.from, node.to);
-        if (!shown) {
-          cx.replace(
-            node.from,
-            node.to,
-            new EmbedInline(source, ctx.render, inlineEmbedClick(source)),
-          );
+        const image = () =>
+          new EmbedInline(source, ctx.render, inlineEmbedClick(source));
+        if (embedsImage(source)) {
+          decorateImage(cx, node, {
+            image,
+            isInRevealedBlock: (state, range) =>
+              isInRevealedImageBlock(ctx, state, range),
+          });
+        } else if (!cx.revealed(node.from, node.to)) {
+          cx.replace(node.from, node.to, image());
         }
       },
     }),
+  );
+}
+
+/** Whether an embed's image is drawn below its revealed block's source. */
+function isInRevealedImageBlock(
+  ctx: Context,
+  state: EditorState,
+  range: { from: number; to: number },
+): boolean {
+  return (
+    ctx.livePreview
+      .revealedSourceBlocks?.(state, range.from, range.to)
+      .some(
+        (block) =>
+          block.kind === "embed" &&
+          block.from <= range.from &&
+          block.to >= range.to,
+      ) ?? false
   );
 }
 

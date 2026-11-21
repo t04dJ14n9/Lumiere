@@ -112,13 +112,12 @@ test("Obsidian math and embeds use the shared inline reveal rules", async () => 
     for (const raw of ["$x$", "$$x$$", "![[note]]", "![alt](image.png)"]) {
       for (const gap of ["", " ", "x"]) {
         const doc = `aa **b**${gap}${raw} zz`;
-        // Obsidian 1.13: an image stays rendered and joins no chain.
-        const image = raw.endsWith(".png)");
+        // An image too, as in Obsidian 1.12 (owner request 2026-11-21).
         for (let at = 0; at <= doc.length; at++) {
           const state = stateFor(doc, EditorSelection.single(at), renderers);
           const from = gap === "" ? 3 : 8 + gap.length;
-          const isRevealed = !image && at >= from && at <= doc.length - 3;
-          const chained = gap === "" && !image;
+          const isRevealed = at >= from && at <= doc.length - 3;
+          const chained = gap === "";
           const bold = at >= 3 && at <= (chained ? doc.length - 3 : 8);
           assert.equal(
             visibleSource(state),
@@ -130,7 +129,7 @@ test("Obsidian math and embeds use the shared inline reveal rules", async () => 
       const nested = `aa **b ${raw} b** zz`;
       assert.equal(
         visibleSource(stateFor(nested, EditorSelection.single(3), renderers)),
-        raw.endsWith(".png)") ? "aa **b  b** zz" : nested,
+        nested,
       );
     }
   } finally {
@@ -138,33 +137,41 @@ test("Obsidian math and embeds use the shared inline reveal rules", async () => 
   }
 });
 
-test("the find bar's match shows an image's source, as Obsidian's search highlight does", async () => {
+test("an image's source shows for a selection while the editor has focus, and for the find bar's match without it", async () => {
   const f = fixture();
   try {
     f.root.plugin(embedsWebview);
     await f.root.settled();
-    const inline = f.view.state
-      .facet(inlineRenderers)
-      .map((r) => inlineRenderers.of(r));
-    const doc = "aa ![alt](image.png) zz";
-    const at = doc.indexOf("image");
-    const match = EditorSelection.single(at, at + "image".length);
-    const state = stateFor(doc, match, [inline, search()]);
-    // An image stays rendered under a selection (Obsidian 1.13) ...
-    assert.equal(visibleSource(state), "aa  zz");
-    // ... but not under the find bar's match.
-    assert.equal(visibleSource(withFindBar(state, { search: "image" })), doc);
-    const block = f.view.state
-      .facet(blockRenderers)
-      .find((renderer) => renderer.kind === "embed" && renderer.showSource)!;
-    const alone = "![alt](image.png)";
-    const sole = stateFor(alone, EditorSelection.single(7, 12), search());
-    const range = { from: 0, to: alone.length, kind: "embed", source: alone };
-    assert.equal(block.showSource!(sole, range), false);
-    assert.equal(
-      block.showSource!(withFindBar(sole, { search: "image" }), range),
-      true,
-    );
+    const renderers = [
+      ...f.view.state.facet(inlineRenderers).map((r) => inlineRenderers.of(r)),
+      ...f.view.state.facet(blockRenderers).map((r) => blockRenderers.of(r)),
+    ];
+    const blocks = blockDecorations((error) => {
+      throw error;
+    });
+    const shown = (state: EditorState) =>
+      visibleSource(state, state.field(blocks)) === state.doc.toString() &&
+      visibleSource(state) === state.doc.toString();
+    for (const doc of ["aa ![alt](image.png) zz", "![alt](image.png)"]) {
+      const at = doc.indexOf("image");
+      const match = EditorSelection.single(at, at + "image".length);
+      const state = stateFor(doc, match, [
+        renderers,
+        editorFocus,
+        search(),
+        blockIndex,
+        blocks,
+      ]);
+      assert.equal(shown(focused(state, true)), true, doc);
+      // The find field has the focus: a selection alone leaves it drawn ...
+      assert.equal(shown(focused(state, false)), false, doc);
+      // ... and the find bar's match shows it.
+      assert.equal(
+        shown(withFindBar(focused(state, false), { search: "image" })),
+        true,
+        doc,
+      );
+    }
   } finally {
     await f.root.dispose();
   }

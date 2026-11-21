@@ -7,7 +7,6 @@ import {
   type Extension,
 } from "@codemirror/state";
 import { ViewPlugin, keymap, type EditorView } from "@codemirror/view";
-import { findMatchTouches } from "../livePreview/api";
 import { embedsNote } from "./clicks";
 import { IMAGE_EMBED } from "./embed-actions";
 import {
@@ -22,6 +21,7 @@ import {
   setImageSelectedChrome,
 } from "./image-resize-corner";
 import { imageKeyFromEvent } from "./image-selection-keys";
+import { ClickedImagePin } from "./image-click-pin";
 
 export { imageKeyFromEvent } from "./image-selection-keys";
 
@@ -34,9 +34,9 @@ export const selectImage = StateEffect.define<Range | null>();
 export const editImage = StateEffect.define<Range | null>();
 
 /**
- * The image whose source is shown for editing (Enter or Tab on a selected
- * image), until the caret leaves it. Otherwise images stay rendered, as
- * Obsidian 1.13 keeps them whatever the caret does.
+ * The image being edited (Enter or Tab on a selected image), until the
+ * caret leaves it, so that Escape selects it again. Its source shows
+ * anyway while the caret touches it (`image-reveal.ts`).
  */
 export const editingImage = StateField.define<Range | null>({
   create: () => null,
@@ -57,35 +57,9 @@ export const editingImage = StateField.define<Range | null>({
 });
 
 /**
- * Whether the image at `from`–`to` shows its source: while it is edited, or
- * while the find bar's current match is in it (Obsidian reveals the source
- * under its search highlight; an image otherwise stays rendered under the
- * caret and selections).
- */
-export function showsImageSource(
-  state: EditorState,
-  range: { from: number; to: number },
-): boolean {
-  return (
-    editingImageAt(state, range) ||
-    findMatchTouches(state, range.from, range.to)
-  );
-}
-
-/** Whether the image at `from`–`to` shows its source for editing. */
-export function editingImageAt(
-  state: EditorState,
-  range: { from: number; to: number },
-): boolean {
-  const editing = state.field(editingImage, false);
-  return Boolean(
-    editing && editing.from <= range.from && editing.to >= range.to,
-  );
-}
-
-/**
  * The image embed a click selected, as Obsidian 1.13 selects images: its
- * source. Any other edit or move of the caret lets it go.
+ * source, which shows while it is selected (the caret is at its start).
+ * Any other edit or move of the caret lets it go.
  */
 export const selectedImage = StateField.define<Range | null>({
   create: () => null,
@@ -145,8 +119,14 @@ export function imagesOf(view: EditorView, range: Range): HTMLImageElement[] {
   });
 }
 
-/** A click on an image selects it, the caret at its start, as in Obsidian. */
-function selectOnClick(view: EditorView, event: MouseEvent): void {
+/**
+ * A click on an image selects it, the caret at its start, as in Obsidian.
+ * Returns what it selected.
+ */
+function selectOnClick(
+  view: EditorView,
+  event: MouseEvent,
+): { image: HTMLImageElement; range: Range } | undefined {
   const image =
     event.target instanceof HTMLImageElement ? event.target : undefined;
   if (
@@ -161,11 +141,11 @@ function selectOnClick(view: EditorView, event: MouseEvent): void {
       "a, button, .hybrid-Callout, .hybrid-Blockquote, .hybrid-BulletList, .hybrid-OrderedList, .cm-table-widget",
     )
   ) {
-    return;
+    return undefined;
   }
   const range = embedAt(view.state, view.posAtDOM(image));
   if (!range) {
-    return;
+    return undefined;
   }
   event.preventDefault();
   event.stopPropagation();
@@ -174,6 +154,7 @@ function selectOnClick(view: EditorView, event: MouseEvent): void {
     selection: { anchor: range.from },
     effects: selectImage.of(range),
   });
+  return { image, range };
 }
 
 /** The widest an image can be: the width of the note's text. */
@@ -245,35 +226,6 @@ function remove(view: EditorView): boolean {
     changes: { from: range.from, to: range.to },
     selection: { anchor: range.from },
   });
-  return true;
-}
-
-/**
- * An arrow key next to an image, as in Obsidian 1.13: with the caret just
- * before it (Right) or just after it (Left) the first press selects it, the
- * caret staying; with it selected, the press moves past it.
- */
-function arrow(view: EditorView, forward: boolean): boolean {
-  const { state } = view;
-  const selected = state.field(selectedImage);
-  if (selected) {
-    view.dispatch({
-      selection: { anchor: forward ? selected.to : selected.from },
-      effects: selectImage.of(null),
-    });
-    return true;
-  }
-  const { main } = state.selection;
-  if (!main.empty || state.selection.ranges.length > 1) {
-    return false;
-  }
-  const next = imagesOnLine(state, main.head).find((range) =>
-    forward ? range.from === main.head : range.to === main.head,
-  );
-  if (!next) {
-    return false;
-  }
-  view.dispatch({ effects: selectImage.of(next) });
   return true;
 }
 
@@ -354,10 +306,6 @@ export function runSelectedImageKey(view: EditorView, key: string): boolean {
       return remove(view);
     case "Escape":
       return escapeImage(view);
-    case "ArrowRight":
-      return arrow(view, true);
-    case "ArrowLeft":
-      return arrow(view, false);
     default:
       return false;
   }
@@ -435,13 +383,20 @@ const selectedClass = ViewPlugin.define((view) => {
     }
   });
   redrawn.observe(view.contentDOM, { childList: true, subtree: true });
-  const onClick = (event: MouseEvent) => selectOnClick(view, event);
+  const pin = new ClickedImagePin(view, (range) => imagesOf(view, range));
+  const onClick = (event: MouseEvent) => {
+    const selected = selectOnClick(view, event);
+    if (selected) {
+      pin.press(selected.image, selected.range);
+    }
+  };
   const onKeydown = (event: KeyboardEvent) =>
     captureSelectedImageKeydown(view, event);
   view.contentDOM.addEventListener("mousedown", onClick, { capture: true });
   view.contentDOM.addEventListener("keydown", onKeydown, true);
   return {
     update(update) {
+      pin.update(update);
       const before = update.startState.field(selectedImage);
       const after = update.state.field(selectedImage);
       if (before !== after || (after && update.docChanged)) {
@@ -464,9 +419,10 @@ const selectedClass = ViewPlugin.define((view) => {
 
 /**
  * Selecting and editing images in Live Preview, as Obsidian 1.13 does
- * (measured): a click, or an arrow key from just beside it, selects an
- * image; then `+`/`=` and `-` resize it in steps of 25 pixels, `0` resets
- * its size, Space opens the inspector (Obsidian lightbox), Enter selects
+ * (measured): a click selects an image, its source shown above or before
+ * it (Obsidian 1.12's reveal, owner request 2026-11-21; arrow keys move
+ * through that source as through a link's, so they select nothing); then
+ * `+`/`=` and `-` resize it in steps of 25 pixels, `0` resets its size, Space opens the inspector (Obsidian lightbox), Enter selects
  * its file name, Tab selects its alias / size segment (Obsidian
  * `editSelectedImageAlias`), Backspace or Delete removes it, and Escape
  * leaves source edit (re-selecting) or clears the outline. Selection also
@@ -481,7 +437,7 @@ export function imageSelection(): Extension {
     selectedClass,
     Prec.highest(
       keymap.of(
-        "+ = - 0 Space Enter Tab Backspace Delete Escape ArrowRight ArrowLeft"
+        "+ = - 0 Space Enter Tab Backspace Delete Escape"
           .split(" ")
           .map((key) => ({
             key,

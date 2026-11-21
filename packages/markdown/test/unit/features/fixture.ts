@@ -21,6 +21,7 @@ import {
   blockRenderers,
   inlineRenderers,
 } from "../../../src/plugins/livePreview/registry";
+import { revealedSourceBlocks } from "../../../src/plugins/livePreview/motion";
 export function fixture() {
   const root = createRoot({ rank: pluginRank });
   const compartment = new Compartment();
@@ -79,6 +80,8 @@ export function fixture() {
   const preview: LivePreview & CallerBound<LivePreview> = {
     mode: "source",
     setMode() {},
+    // Reads the state it is given, as Live Preview's own does.
+    revealedSourceBlocks,
     block() {
       throw new Error("unbound renderer");
     },
