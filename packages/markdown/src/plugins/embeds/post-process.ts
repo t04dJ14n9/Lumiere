@@ -10,6 +10,7 @@ import { IMAGE_EMBED, mountImageEmbedActions } from "./embed-actions";
 import { embeddedNote } from "./note";
 import { renderBaseEmbed } from "./base-embed";
 import { mountPdfEmbed } from "./pdf-embed";
+import { mountHtmlCard } from "./html-embed";
 import { EmbedLives } from "./embed-lives";
 import { vaultEmbedResource } from "./resource-cache";
 import { NearViewport, waitsUntilNear } from "./near-viewport";
@@ -18,7 +19,7 @@ interface EmbedOptions {
   pass: RenderPass;
   render: RenderService;
   resources: Resources;
-  open(target: string, wiki: boolean): void;
+  open(target: string, wiki: boolean, asText?: boolean): void;
 }
 
 /** True when the resource element came from a wikilink embed (`![[...]]`). */
@@ -217,6 +218,8 @@ class EmbedPass implements PassEmbeds {
         resource,
         open: (href, isWiki) => this.options.open(href, isWiki),
       });
+    } else if (resource.kind === "html") {
+      this.showHtml(node, target, wiki);
     } else if (resource.kind === "pdf") {
       mountPdfEmbed({
         node,
@@ -235,6 +238,25 @@ class EmbedPass implements PassEmbeds {
     if (this.isActive) {
       this.options.pass.measure();
     }
+  }
+
+  /**
+   * An HTML file is a card that opens it (html-embed.ts), whatever the trust
+   * of the workspace: the page itself runs only in the HTML viewer. A Markdown
+   * image is an `<img>`, which shows no children: a block stands in for it, as
+   * for a failed image.
+   */
+  private showHtml(node: HTMLElement, target: string, wiki: boolean): void {
+    mountHtmlCard({
+      node: this.standIns.surfaceFor(node),
+      target,
+      trusted: this.options.render.trusted === true,
+      wiki,
+      signal: this.lives.signal(node),
+      open: (openTarget, isWiki) => this.options.open(openTarget, isWiki),
+      openAsText: (openTarget, isWiki) =>
+        this.options.open(openTarget, isWiki, true),
+    });
   }
 
   private showImage(
