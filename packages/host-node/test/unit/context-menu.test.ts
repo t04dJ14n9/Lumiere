@@ -100,6 +100,7 @@ function fakePanel(answer: number | null) {
 function setUp(
   answer: number | null,
   menu: readonly MenuContribution[] = contributions,
+  settings: Record<string, unknown> = {},
 ) {
   const keys = new ContextKeys();
   const ran: unknown[][] = [];
@@ -121,6 +122,9 @@ function setUp(
     panels,
     contributions: menu,
     keys,
+    settings: {
+      get: <T>(key: string, fallback: T) => (settings[key] as T) ?? fallback,
+    },
     commands,
     viewType: EDITOR,
     log: () => {},
@@ -460,4 +464,31 @@ test("menus.json carries package.json's submenus with their labels, items and sh
     },
   ]);
   assert.deepEqual(parseMenus(written), written);
+});
+
+test("a window plugin's item follows its setting, as VS Code reads `config.` keys", async () => {
+  const rename: MenuCommand = {
+    command: "lumiere.markdown.renameHeading",
+    title: "Rename Heading…",
+    group: "1_heading@1",
+    when: "webviewId == 'lumiere.markdown.editor' && config.lumiere.markdown.preset != 'minimal' && config.lumiere.markdown.plugins.linkUpdates.enabled && webviewSection == 'markdownContent' && lumiere.markdown.selectionOnHeading",
+  };
+  const shown = async (
+    settings: Record<string, unknown>,
+    context: Record<string, unknown>,
+  ) => {
+    const { page } = setUp(null, [rename], settings);
+    page.rightClick({ webviewSection: "markdownContent", ...context });
+    await new Promise((resolve) => setImmediate(resolve));
+    return (page.asked[0] as { groups: unknown[] }).groups;
+  };
+  const on = { preset: "obsidian", "plugins.linkUpdates.enabled": true };
+  const heading = { "lumiere.markdown.selectionOnHeading": true };
+  assert.deepEqual(await shown(on, heading), [[{ label: "Rename Heading…" }]]);
+  assert.deepEqual(await shown(on, {}), []);
+  assert.deepEqual(
+    await shown({ ...on, "plugins.linkUpdates.enabled": false }, heading),
+    [],
+  );
+  assert.deepEqual(await shown({ ...on, preset: "minimal" }, heading), []);
 });

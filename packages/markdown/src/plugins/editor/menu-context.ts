@@ -1,3 +1,6 @@
+import { syntaxTree } from "@codemirror/language";
+import type { EditorState } from "@codemirror/state";
+import type { SyntaxNode } from "@lezer/common";
 import { contributionId } from "../../shared/setting-schema";
 import { ViewPlugin } from "@codemirror/view";
 import type { EditorView } from "@codemirror/view";
@@ -13,6 +16,8 @@ import type { EditorView } from "@codemirror/view";
  * the key can follow: the word looks selected but Copy Link for Agent is
  * missing. So the editor element carries the selection (and webviewSection) as
  * it is when the menu opens; that per-menu context shadows the global key.
+ * It also says whether the selection starts on a heading line, where Rename
+ * Heading… is offered, as Obsidian's editor menu offers Rename heading.
  */
 const CONTEXT_ATTRIBUTE = "data-vscode-context";
 
@@ -21,6 +26,8 @@ export interface DomSelection {
   /** Both ends lie in the editor's content. */
   isInContent: boolean;
   isCollapsed: boolean;
+  /** Where the selection starts in the document, when it is in the content. */
+  from?: number;
 }
 
 /**
@@ -41,14 +48,42 @@ export function menuHasSelection(
   return !isStateEmpty;
 }
 
+/**
+ * Whether the line holding `position` is an ATX heading with a name: the
+ * heading Rename Heading… renames from the caret. A `#` line in code or in
+ * a list item is not one.
+ */
+export function isHeadingLine(state: EditorState, position: number): boolean {
+  const line = state.doc.lineAt(position);
+  const marker = /^ {0,3}#{1,6}[ \t]+\S/u.exec(line.text);
+  if (!marker) {
+    return false;
+  }
+  const start = line.from + marker[0].indexOf("#");
+  for (
+    let node: SyntaxNode | null = syntaxTree(state).resolveInner(start, 1);
+    node;
+    node = node.parent
+  ) {
+    if (/^ATXHeading[1-6]$/u.test(node.name)) {
+      return true;
+    }
+  }
+  return false;
+}
+
 /** The `data-vscode-context` value for a menu opened now. */
-export function menuContext(hasSelection: boolean): string {
+export function menuContext(
+  hasSelection: boolean,
+  isOnHeading = false,
+): string {
   // webviewSection must travel with hasSelection: the stamp replaces the
   // editor element's attribute, and clicks on scroller chrome / widgets may
   // not sit under contentDOM (where contentAttributes puts webviewSection).
   return JSON.stringify({
     webviewSection: "markdownContent",
     [contributionId("hasSelection")]: hasSelection,
+    [contributionId("selectionOnHeading")]: isOnHeading,
   });
 }
 
@@ -57,12 +92,35 @@ function readDomSelection(view: EditorView): DomSelection | null {
   if (!selection || selection.rangeCount === 0) {
     return null;
   }
+  const isInContent =
+    view.contentDOM.contains(selection.anchorNode) &&
+    view.contentDOM.contains(selection.focusNode);
+  const from = isInContent ? domSelectionFrom(view, selection) : undefined;
   return {
-    isInContent:
-      view.contentDOM.contains(selection.anchorNode) &&
-      view.contentDOM.contains(selection.focusNode),
+    isInContent,
     isCollapsed: selection.isCollapsed,
+    ...(from !== undefined && { from }),
   };
+}
+
+/**
+ * The browser's selection start, which a secondary click has already moved
+ * (to the word on macOS, to the pointer elsewhere) before CodeMirror reads
+ * it. Rename Heading… reads the caret later, once CodeMirror has.
+ */
+function domSelectionFrom(
+  view: EditorView,
+  selection: Selection,
+): number | undefined {
+  try {
+    return Math.min(
+      view.posAtDOM(selection.anchorNode!, selection.anchorOffset),
+      view.posAtDOM(selection.focusNode!, selection.focusOffset),
+    );
+  } catch {
+    // posAtDOM throws for a node outside the document's content.
+    return undefined;
+  }
 }
 
 /**
@@ -74,11 +132,13 @@ function readDomSelection(view: EditorView): DomSelection | null {
  */
 export const menuSelectionContext = ViewPlugin.define((view) => {
   const stampSelection = () => {
-    const hasSelection = menuHasSelection(
-      readDomSelection(view),
-      view.state.selection.main.empty,
+    const dom = readDomSelection(view);
+    const hasSelection = menuHasSelection(dom, view.state.selection.main.empty);
+    const from = dom?.from ?? view.state.selection.main.from;
+    view.dom.setAttribute(
+      CONTEXT_ATTRIBUTE,
+      menuContext(hasSelection, isHeadingLine(view.state, from)),
     );
-    view.dom.setAttribute(CONTEXT_ATTRIBUTE, menuContext(hasSelection));
   };
   // Capture: stamp before VS Code's window listener reads data-vscode-context.
   view.dom.addEventListener("contextmenu", stampSelection, true);

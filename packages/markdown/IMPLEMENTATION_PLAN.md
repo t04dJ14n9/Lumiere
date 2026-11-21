@@ -7356,3 +7356,28 @@ and the VS Code controller (`test/unit/host/tree-drag.test.ts`); outline
 tests, typecheck, ESLint and Prettier pass. Not run here (another agent's
 real VS Code suite was running): `pnpm test:browser`, `test:quality`,
 `test:vscode`.
+
+## Rename Heading in the note's menu (#699; 2026-11-21)
+
+Obsidian 1.15.0, read in its shipped code (behaviour only, nothing copied),
+offers **Rename heading** in the editor's right-click menu whenever the
+caret's line is a heading, besides the `editor:rename-heading` command; its
+links are renamed only through that modal, never when a heading's text is
+typed over. Lumiere had the command (2026-10-17) but not the menu item, and
+DESIGN §13 still called heading renames a later enhancement.
+
+The editor's menu context now also carries
+`lumiere.markdown.selectionOnHeading`: whether the selection, as the browser
+has it when the menu opens, starts on an ATX heading line (a `#` line in code
+is not one). Link updates contributes Rename Heading… to `webview/context`
+under it. Link updates is a window plugin, which has no per-note
+`plugin.<id>` key, so the contributions script gates a workbench-scoped
+command's note-menu item by its plugin switch (`config.…enabled`), as the
+palette does; host-node's menu now reads `config.lumiere.markdown.*` keys
+from the settings, as its palette did, so the item shows there too.
+
+Validation: unit tests for the heading-line rule, the menu context, the
+generated menu entry and host-node's config-gated item; linkUpdates, plugin
+and contributions tests, typecheck (markdown, host-node), ESLint, Prettier
+and `pnpm contributions --check` pass. Not run here: `pnpm test:browser`,
+`test:quality`, `test:vscode`.

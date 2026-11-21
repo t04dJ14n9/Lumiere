@@ -1077,7 +1077,9 @@ Short specifications, beyond the source's tested behaviour:
   folder, else the workspace; the user's settings only when no folder is
   open); `always` rewrites without asking and `never` leaves links untouched.
   The edits are built after the answer, once the vault index has settled
-  again. Heading renames are a later enhancement.
+  again. **Rename Heading…** (palette, and the note's menu on a heading
+  line) renames the heading at the caret and updates the `#heading` links
+  to it, as Obsidian's Rename heading does.
 - **quickSwitcher**: **Lumiere: Quick Switcher** opens a quick pick
   over notes, aliases and unresolved links, with Obsidian's scoring. Enter
   opens; an unresolved or new name creates the note in the configured

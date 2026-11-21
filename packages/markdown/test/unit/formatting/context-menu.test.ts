@@ -28,6 +28,7 @@ test("the note's menu groups formatting into Format, Highlight and Insert submen
     [
       "lumiere.markdown.copyLinkForAgent",
       "lumiere.markdown.selectionActions",
+      "lumiere.markdown.renameHeading",
       "lumiere.markdown.lookUp",
       "lumiere.markdown.insertSketch",
     ],
@@ -96,4 +97,18 @@ test("Copy link to this is the note menu label (matches PDF)", async () => {
   );
   assert.ok(command);
   assert.equal(command.title, "Copy link to this");
+});
+
+test("Rename Heading… is in the note's menu on a heading line while its plugin is on", async () => {
+  const generated = await contributions();
+  const rename = generated.menus["webview/context"]?.find(
+    (action) => action.command === "lumiere.markdown.renameHeading",
+  );
+  assert.ok(rename);
+  // Link updates is a window plugin: no per-note `plugin.linkUpdates` key
+  // is ever set, so its switch gates the item.
+  assert.equal(
+    rename.when,
+    "webviewId == 'lumiere.markdown.editor' && config.lumiere.markdown.preset != 'minimal' && config.lumiere.markdown.plugins.linkUpdates.enabled && webviewSection == 'markdownContent' && lumiere.markdown.selectionOnHeading",
+  );
 });

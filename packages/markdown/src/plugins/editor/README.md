@@ -153,7 +153,8 @@ it yet.
   `lumiere.markdown.editorFocus`, which every note keybinding requires.
 - `menu-context.ts`: gives the native context menu the selection as it is
   when the menu opens, so a macOS secondary click that selects a word shows
-  the selection items.
+  the selection items, and whether it starts on a heading line
+  (`lumiere.markdown.selectionOnHeading`, for Rename Heading…).
 - `webview.ts`: view creation and named service/settings/RPC registrations.
 - `service.ts`: shared editor facade with caller-bound extension ownership.
 - `extensions.ts`: deterministic ordered extension registry.

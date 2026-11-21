@@ -13,6 +13,18 @@ type Token =
     }
   | { readonly kind: "value"; readonly text: string; readonly quoted: boolean };
 
+const CONFIG_PREFIX = "config.lumiere.markdown.";
+
+/**
+ * The setting a `config.lumiere.markdown.*` key names, as VS Code reads
+ * `config.` keys in when-clauses; undefined for any other key.
+ */
+export function settingOfKey(key: string): string | undefined {
+  return key.startsWith(CONFIG_PREFIX)
+    ? key.slice(CONFIG_PREFIX.length)
+    : undefined;
+}
+
 /** Whether `expression` holds for the keys `lookup` gives. Empty is true. */
 export function evaluateWhen(
   expression: string | undefined,

@@ -76,7 +76,8 @@ root counts for nothing.
 A right-click in a page shows Lumière's `webview/context` menu as VS Code
 does (`context-menu.ts`): the page reports the clicked element's
 `data-vscode-context`, the host keeps the context keys the plugins set
-(`setContext`) and evaluates each item's when-clause (`when.ts`), the page
+(`setContext`) and evaluates each item's when-clause (`when.ts`; a
+`config.lumiere.markdown.*` key reads the setting, as in VS Code), the page
 draws the items it is sent with Cut, Copy and Paste, and the host runs the
 chosen command. A submenu (`contributes.submenus`) is a row that opens its
 own items beside it, on a tap, a click or Right, showing each command's
