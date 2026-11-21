@@ -16,48 +16,30 @@ interface Range {
  * scrolls by that height instead, when it can. An image in a line of text
  * moves along its line and is left alone.
  *
- * The pin never overrides the reader: it ends at the first drawing of the
- * image after the release, moved or not, and at once on any scroll the
- * reader starts (wheel, touch, a key, the scrollbar).
+ * The pin never overrides a scroll it did not make: it ends at the first
+ * drawing of the image after the release, moved or not, and it corrects
+ * nothing once the note has scrolled since the press, whatever scrolled it
+ * (a wheel, touch, keys, the scrollbar, sticky scroll's header, CodeMirror
+ * keeping its own anchor). Input events cannot say: a native scrollbar
+ * drag fires no `pointerdown`, macOS overlay scrollbars only `scroll`, and
+ * other plugins scroll the note with `scrollBy`.
  */
 export class ClickedImagePin {
   private pin:
-    { range: Range; top: number; releasedAt: number | undefined } | undefined;
+    | {
+        range: Range;
+        top: number;
+        /** The note's scroll position at the press. */
+        scrollTop: number;
+        releasedAt: number | undefined;
+      }
+    | undefined;
 
   constructor(
     private readonly view: EditorView,
     private readonly imagesOf: (range: Range) => HTMLImageElement[],
     private readonly now: () => number = Date.now,
   ) {}
-
-  /**
-   * Ends the pin on the reader's own scrolling input in the editor; returns
-   * what removes the listeners. CodeMirror's and the pin's own scrolling
-   * fire `scroll` too, so that event cannot tell the reader's apart.
-   */
-  attach(): () => void {
-    const events = new AbortController();
-    const { scrollDOM, dom } = this.view;
-    const end = () => {
-      this.pin = undefined;
-    };
-    const options = { passive: true, signal: events.signal };
-    for (const type of ["wheel", "touchstart"]) {
-      scrollDOM.addEventListener(type, end, options);
-    }
-    // A press on the scroller itself is its scrollbar.
-    scrollDOM.addEventListener(
-      "pointerdown",
-      (event) => {
-        if (event.target === scrollDOM) {
-          end();
-        }
-      },
-      options,
-    );
-    dom.addEventListener("keydown", end, { ...options, capture: true });
-    return () => events.abort();
-  }
 
   /** Remembers where a pressed image is drawn, if it is a block. */
   press(image: HTMLImageElement, range: Range): void {
@@ -66,6 +48,7 @@ export class ClickedImagePin {
       : {
           range,
           top: image.getBoundingClientRect().top,
+          scrollTop: this.view.scrollDOM.scrollTop,
           releasedAt: undefined,
         };
   }
@@ -75,8 +58,8 @@ export class ClickedImagePin {
    * its source shows. That may be a little after the release: the image
    * drawn below the source may come in a later frame, once it is rendered
    * (see `redrawn`). So the pin lasts a short while after the release, and
-   * ends with the image's first drawing after it, when the reader scrolls,
-   * or when the reader moves on.
+   * ends with the image's first drawing after it, when the note has
+   * scrolled, or when the reader moves on.
    */
   update(update: ViewUpdate): void {
     const pin = this.pin;
@@ -113,10 +96,21 @@ export class ClickedImagePin {
     const { view } = this;
     view.requestMeasure({
       key: this,
-      read: () => this.imagesOf(pin.range)[0]?.getBoundingClientRect().top,
-      write: (top) => {
+      read: () => ({
+        top: this.imagesOf(pin.range)[0]?.getBoundingClientRect().top,
+        hasScrolled: Math.abs(view.scrollDOM.scrollTop - pin.scrollTop) >= 1,
+      }),
+      write: ({ top, hasScrolled }) => {
+        if (this.pin !== pin) {
+          return;
+        }
+        // Scrolled by anyone but the pin: the image is where they put it.
+        if (hasScrolled) {
+          this.pin = undefined;
+          return;
+        }
         // Not drawn yet: its drawing below the source may come later.
-        if (this.pin !== pin || top === undefined) {
+        if (top === undefined) {
           return;
         }
         // Drawn: whether it moved or not, this is the release's doing, the

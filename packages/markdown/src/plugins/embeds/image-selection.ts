@@ -330,7 +330,6 @@ const selectedClass = ViewPlugin.define((view) => {
   };
   // Resized images redraw once the file loads — remake chrome then.
   const pin = new ClickedImagePin(view, (range) => imagesOf(view, range));
-  const detachPin = pin.attach();
   const redrawn = new MutationObserver(() => {
     if (view.state.field(selectedImage) || marked.length) {
       mark();
@@ -371,7 +370,6 @@ const selectedClass = ViewPlugin.define((view) => {
     },
     destroy() {
       redrawn.disconnect();
-      detachPin();
       view.contentDOM.removeEventListener("mousedown", onClick, {
         capture: true,
       });

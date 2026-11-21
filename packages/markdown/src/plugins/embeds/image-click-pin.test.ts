@@ -214,65 +214,67 @@ test("a release that leaves the image where it was ends the pin, so a later scro
   assert.equal(view.scrollDOM.scrollTop, 1080);
 });
 
-test("the reader's wheel, touch, key or scrollbar press ends a pin still waiting for the image", () => {
-  for (const [name, input] of [
+test("any scroll of the note since the press ends a pin still waiting for the image, whatever made it", () => {
+  type Scroller = EventTarget & {
+    scrollTop: number;
+    scrollBy(x: number, y: number): void;
+  };
+  const scrolls: [string, (scroller: Scroller) => void][] = [
+    // Blink sends a scrollbar press as `mousedown`, with no `pointerdown`.
     [
-      "wheel",
-      (scroller: EventTarget) => scroller.dispatchEvent(new Event("wheel")),
+      "scrollbar drag",
+      (scroller) => {
+        scroller.dispatchEvent(new Event("mousedown"));
+        scroller.scrollTop += 80;
+      },
     ],
+    // macOS overlay scrollbars: only `scroll`.
     [
-      "touch",
-      (scroller: EventTarget) =>
-        scroller.dispatchEvent(new Event("touchstart")),
+      "overlay scrollbar",
+      (scroller) => {
+        scroller.scrollTop += 80;
+        scroller.dispatchEvent(new Event("scroll"));
+      },
     ],
-    [
-      "scrollbar",
-      (scroller: EventTarget) =>
-        scroller.dispatchEvent(new Event("pointerdown")),
-    ],
-    [
-      "key",
-      (_scroller: EventTarget, dom: EventTarget) =>
-        dom.dispatchEvent(new Event("keydown")),
-    ],
-  ] as const) {
+    // Sticky scroll's header passes its wheel on with `scrollBy`.
+    ["scrollBy from another plugin", (scroller) => scroller.scrollBy(0, 80)],
+  ];
+  for (const [name, scroll] of scrolls) {
     const { top, drawn, isDrawn, view, pin, base, frozen, update, measure } =
       setup(false);
-    const detach = pin.attach();
+    const scroller = Object.assign(view.scrollDOM, {
+      scrollBy(_x: number, y: number) {
+        scroller.scrollTop += y;
+      },
+    });
     pin.press(drawn, { from: 0, to: 1 });
     pin.update(update(frozen));
+    // Released; the image below the source is not drawn yet.
     isDrawn.value = false;
     pin.update(update(base));
     measure();
-    input(view.scrollDOM, view.dom);
-    // The reader's scroll moved the image, drawn now.
-    view.scrollDOM.scrollTop = 1080;
+    scroll(scroller);
+    // Drawn now, 24 px lower for its source, and 80 px higher for the scroll.
     isDrawn.value = true;
-    top.value = 220;
+    top.value = 244;
     pin.redrawn();
     measure();
     assert.equal(view.scrollDOM.scrollTop, 1080, name);
-    detach();
+    // And the pin is over: no later drawing scrolls either.
+    top.value = 400;
+    pin.redrawn();
+    measure();
+    assert.equal(view.scrollDOM.scrollTop, 1080, name);
   }
 });
 
-test("a press inside the note's content is not a scrollbar press", () => {
-  const { top, drawn, isDrawn, view, pin, base, frozen, update, measure } =
-    setup(false);
-  pin.attach();
+test("a scroll while the button is down leaves the image where the reader scrolled it", () => {
+  const { top, drawn, view, pin, base, frozen, update, measure } = setup(false);
   pin.press(drawn, { from: 0, to: 1 });
   pin.update(update(frozen));
-  isDrawn.value = false;
+  view.scrollDOM.scrollTop = 1080;
+  top.value = 244;
   pin.update(update(base));
   measure();
-  // A press bubbling up from the content (a target below the scroller).
-  const content = new EventTarget();
-  const press = new Event("pointerdown");
-  Object.defineProperty(press, "target", { value: content });
-  view.scrollDOM.dispatchEvent(press);
-  isDrawn.value = true;
-  top.value = 324;
-  pin.redrawn();
-  measure();
-  assert.equal(view.scrollDOM.scrollTop, 1024);
+  assert.equal(view.scrollDOM.scrollTop, 1080);
 });
