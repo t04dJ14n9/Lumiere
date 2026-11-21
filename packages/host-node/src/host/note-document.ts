@@ -1,5 +1,9 @@
-/** One open note outside VS Code: its text, version and unsaved state. */
+/**
+ * One open note outside VS Code: its text, version and unsaved state, and
+ * its undo and redo (note-history.ts), which last while it is open.
+ */
 import type { HostDocument, SourceEdit } from "@workshop/markdown/portable";
+import { NoteHistory, type Edits } from "./note-history";
 
 /** One open note. Its text here is authoritative until written to disk. */
 export class NoteDocument implements HostDocument {
@@ -8,6 +12,8 @@ export class NoteDocument implements HostDocument {
   readonly isUntitled = false;
   /** The text as last read from or written to disk. */
   diskText: string;
+  /** Every change to the text is a step here, so undo always fits the text. */
+  private readonly history = new NoteHistory();
 
   constructor(
     readonly uri: string,
@@ -33,8 +39,26 @@ export class NoteDocument implements HostDocument {
     return this.saveNote(this);
   }
 
-  /** Apply non-overlapping source edits, last first, as one version. */
+  /** Apply non-overlapping source edits, last first, as one version and one undo step. */
   replace(edits: readonly SourceEdit[]): void {
+    this.history.record(this.text, edits);
+    this.change(edits);
+  }
+
+  /**
+   * Take back the last step, or make the last one taken back again, as one
+   * version; the edits it made, or none when there is nothing to undo or redo.
+   */
+  undoOrRedo(action: "undo" | "redo"): Edits {
+    const edits = action === "undo" ? this.history.undo() : this.history.redo();
+    if (!edits) {
+      return [];
+    }
+    this.change(edits);
+    return edits;
+  }
+
+  private change(edits: Edits): void {
     let text = this.text;
     for (const edit of edits) {
       text = text.slice(0, edit.from) + edit.insert + text.slice(edit.to);
