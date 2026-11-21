@@ -8235,6 +8235,8 @@ editor that keeps its focus, which no default key does.
 Checks: `pnpm check`; browser specs editing, math-vim-click,
 math-remount-height, keyboard-widget-input, stable-blocks and
 selection-inline (64 passed). Not run: the full browser suite,
+`test:quality`, `test:vscode`.
+
 ## Rename Heading: links get the heading's shown text (#811; 2026-11-21)
 
 Since #787 Rename Heading accepted brackets and pipes in a name and wrote
@@ -8276,6 +8278,8 @@ both notes as they were; a name an earlier heading has renames, and its
 links reach that first heading. These failed before the fix. `heading-rename.test.ts`
 (updated for the new validator) and `native-links.test.ts`
 (`noteLineFragment`). `pnpm check` passes. Not run: `test:browser`,
+`test:quality`, `test:vscode` (no editor-integration change).
+
 ## Cmd+Option+F in Vim Insert opens Replace (#817; 2026-11-21)
 
 Review finding (#817): with Vim on, in Insert mode, macOS Cmd+Option+F, the
