@@ -9252,6 +9252,21 @@ Security, and where each rule is enforced and tested.
    (`sanitizer-options.ts`, `security.ts`) and the editor page's `fromHost`
    message check are as on main.
 
+Review fixes (2026-11-22, after the gate). (1) The viewer command ran its
+Restricted Mode branch before any containment check and without the column, so
+the public command opened any URI as text and Open Link to Side opened in the
+active group. It now runs the pure checks (the vault in a workspace folder, or a
+`file:` vault when there is none; the file in the vault by path) before the trust
+branch, refuses in both modes, and passes `{ viewColumn }` to `vscode.open`. A
+virtual workspace's folder still counts as a workspace folder, so its files open
+as text as they did. Still different from main: a Cmd-clicked link in Restricted
+Mode opens a preview tab rather than a kept one, and `preserveFocus` is not
+passed, because the command is given only a column. (2) `htmlEmbedTarget` and
+`parseHtmlEmbedBlock` took addresses: a vault target only now (`resources`'
+rule), so `![alt](https://host/page.html)` is no card and an `html-embed` block
+naming an address or `C:/…` stays code. (3) `embedsNote` is false for an
+`html-embed` block, so `EmbedBlock` watches no height and keeps none.
+
 Left for a separate change. `fromHost` (`webview/transport.ts`) accepts a message
 with no `source`, and a frame removed right after it posted reaches the page that
 way. The first design added a frame, which made this reachable; it also exists
