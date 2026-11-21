@@ -1246,7 +1246,7 @@ OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN
 THE SOFTWARE.
 ```
 
-## @embedpdf/core 3.0.0
+## @embedpdf/core 3.2.0
 
 License: Apache-2.0  
 Source: git+https://github.com/embedpdf/embed-pdf-viewer.git
@@ -1446,7 +1446,7 @@ limitations under the License.
    END OF TERMS AND CONDITIONS
 ```
 
-## @embedpdf/core-acrojs 3.0.0
+## @embedpdf/core-acrojs 3.2.0
 
 License: Apache-2.0  
 Source: git+https://github.com/embedpdf/embed-pdf-viewer.git
@@ -1646,7 +1646,7 @@ limitations under the License.
    END OF TERMS AND CONDITIONS
 ```
 
-## @embedpdf/core-annotation 3.0.0
+## @embedpdf/core-annotation 3.2.0
 
 License: Apache-2.0  
 Source: git+https://github.com/embedpdf/embed-pdf-viewer.git
@@ -1846,7 +1846,7 @@ limitations under the License.
    END OF TERMS AND CONDITIONS
 ```
 
-## @embedpdf/core-fonts 3.0.0
+## @embedpdf/core-fonts 3.2.0
 
 License: Apache-2.0  
 Source: git+https://github.com/embedpdf/embed-pdf-viewer.git
@@ -2046,7 +2046,7 @@ limitations under the License.
    END OF TERMS AND CONDITIONS
 ```
 
-## @embedpdf/core-geometry 3.0.0
+## @embedpdf/core-geometry 3.2.0
 
 License: Apache-2.0  
 Source: git+https://github.com/embedpdf/embed-pdf-viewer.git
@@ -2246,7 +2246,7 @@ limitations under the License.
    END OF TERMS AND CONDITIONS
 ```
 
-## @embedpdf/core-stage 3.0.0
+## @embedpdf/core-stage 3.2.0
 
 License: Apache-2.0  
 Source: git+https://github.com/embedpdf/embed-pdf-viewer.git
@@ -2446,7 +2446,7 @@ limitations under the License.
    END OF TERMS AND CONDITIONS
 ```
 
-## @embedpdf/core-text 3.0.0
+## @embedpdf/core-text 3.2.0
 
 License: Apache-2.0  
 Source: git+https://github.com/embedpdf/embed-pdf-viewer.git
@@ -2646,7 +2646,7 @@ limitations under the License.
    END OF TERMS AND CONDITIONS
 ```
 
-## @embedpdf/engine 3.0.0
+## @embedpdf/engine 3.2.0
 
 License: Apache-2.0  
 Source: https://www.embedpdf.com
@@ -2846,7 +2846,7 @@ limitations under the License.
    END OF TERMS AND CONDITIONS
 ```
 
-## @embedpdf/engine-core 3.0.0
+## @embedpdf/engine-core 3.2.0
 
 License: Apache-2.0  
 Source: https://www.embedpdf.com
@@ -3046,7 +3046,7 @@ limitations under the License.
    END OF TERMS AND CONDITIONS
 ```
 
-## @embedpdf/engine-runtime 3.0.0
+## @embedpdf/engine-runtime 3.2.0
 
 License: Apache-2.0  
 Source: https://www.embedpdf.com
@@ -3246,7 +3246,7 @@ limitations under the License.
    END OF TERMS AND CONDITIONS
 ```
 
-## @embedpdf/engine-runtime-wasm32 3.0.0
+## @embedpdf/engine-runtime-wasm32 3.2.0
 
 License: Apache-2.0  
 Source: git+https://github.com/embedpdf/embed-pdf-viewer.git
@@ -3446,7 +3446,7 @@ limitations under the License.
    END OF TERMS AND CONDITIONS
 ```
 
-## @embedpdf/engine-services 3.0.0
+## @embedpdf/engine-services 3.2.0
 
 License: Apache-2.0  
 Source: https://www.embedpdf.com
@@ -3646,7 +3646,7 @@ limitations under the License.
    END OF TERMS AND CONDITIONS
 ```
 
-## @embedpdf/plugin-actions 3.0.0
+## @embedpdf/plugin-actions 3.2.0
 
 License: Apache-2.0  
 Source: git+https://github.com/embedpdf/embed-pdf-viewer.git
@@ -3846,7 +3846,7 @@ limitations under the License.
    END OF TERMS AND CONDITIONS
 ```
 
-## @embedpdf/plugin-annotation 3.0.0
+## @embedpdf/plugin-annotation 3.2.0
 
 License: Apache-2.0  
 Source: git+https://github.com/embedpdf/embed-pdf-viewer.git
@@ -4046,7 +4046,7 @@ limitations under the License.
    END OF TERMS AND CONDITIONS
 ```
 
-## @embedpdf/plugin-fonts 3.0.0
+## @embedpdf/plugin-fonts 3.2.0
 
 License: Apache-2.0  
 Source: git+https://github.com/embedpdf/embed-pdf-viewer.git
@@ -4246,7 +4246,7 @@ limitations under the License.
    END OF TERMS AND CONDITIONS
 ```
 
-## @embedpdf/plugin-history 3.0.0
+## @embedpdf/plugin-history 3.2.0
 
 License: Apache-2.0  
 Source: git+https://github.com/embedpdf/embed-pdf-viewer.git
@@ -4446,7 +4446,7 @@ limitations under the License.
    END OF TERMS AND CONDITIONS
 ```
 
-## @embedpdf/plugin-i18n 3.0.0
+## @embedpdf/plugin-i18n 3.2.0
 
 License: Apache-2.0  
 Source: git+https://github.com/embedpdf/embed-pdf-viewer.git
@@ -4646,7 +4646,7 @@ limitations under the License.
    END OF TERMS AND CONDITIONS
 ```
 
-## @embedpdf/plugin-interaction 3.0.0
+## @embedpdf/plugin-interaction 3.2.0
 
 License: Apache-2.0  
 Source: git+https://github.com/embedpdf/embed-pdf-viewer.git
@@ -4846,7 +4846,7 @@ limitations under the License.
    END OF TERMS AND CONDITIONS
 ```
 
-## @embedpdf/plugin-link 3.0.0
+## @embedpdf/plugin-link 3.2.0
 
 License: Apache-2.0  
 Source: git+https://github.com/embedpdf/embed-pdf-viewer.git
@@ -5046,7 +5046,7 @@ limitations under the License.
    END OF TERMS AND CONDITIONS
 ```
 
-## @embedpdf/plugin-outline 3.0.0
+## @embedpdf/plugin-outline 3.2.0
 
 License: Apache-2.0  
 Source: git+https://github.com/embedpdf/embed-pdf-viewer.git
@@ -5246,7 +5246,7 @@ limitations under the License.
    END OF TERMS AND CONDITIONS
 ```
 
-## @embedpdf/plugin-render 3.0.0
+## @embedpdf/plugin-render 3.2.0
 
 License: Apache-2.0  
 Source: git+https://github.com/embedpdf/embed-pdf-viewer.git
@@ -5446,7 +5446,7 @@ limitations under the License.
    END OF TERMS AND CONDITIONS
 ```
 
-## @embedpdf/plugin-search 3.0.0
+## @embedpdf/plugin-search 3.2.0
 
 License: Apache-2.0  
 Source: git+https://github.com/embedpdf/embed-pdf-viewer.git
@@ -5646,7 +5646,7 @@ limitations under the License.
    END OF TERMS AND CONDITIONS
 ```
 
-## @embedpdf/plugin-selection 3.0.0
+## @embedpdf/plugin-selection 3.2.0
 
 License: Apache-2.0  
 Source: git+https://github.com/embedpdf/embed-pdf-viewer.git
@@ -5846,7 +5846,7 @@ limitations under the License.
    END OF TERMS AND CONDITIONS
 ```
 
-## @embedpdf/plugin-stage 3.0.0
+## @embedpdf/plugin-stage 3.2.0
 
 License: Apache-2.0  
 Source: git+https://github.com/embedpdf/embed-pdf-viewer.git
@@ -6046,7 +6046,7 @@ limitations under the License.
    END OF TERMS AND CONDITIONS
 ```
 
-## @embedpdf/react 3.0.0
+## @embedpdf/react 3.2.0
 
 License: Apache-2.0  
 Source: git+https://github.com/embedpdf/embed-pdf-viewer.git
@@ -6246,7 +6246,7 @@ limitations under the License.
    END OF TERMS AND CONDITIONS
 ```
 
-## @embedpdf/web 3.0.0
+## @embedpdf/web 3.2.0
 
 License: Apache-2.0  
 Source: git+https://github.com/embedpdf/embed-pdf-viewer.git
@@ -6504,7 +6504,7 @@ OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
 SOFTWARE.
 ```
 
-## @lezer/common 1.5.4
+## @lezer/common 1.5.5
 
 License: MIT  
 Source: git+https://code.haverbeke.berlin/lezer/common.git
@@ -9459,7 +9459,7 @@ Apache License
    limitations under the License.
 ```
 
-## dompurify 3.4.17
+## dompurify 3.4.18
 
 License: (MPL-2.0 OR Apache-2.0)  
 Source: https://github.com/cure53/DOMPurify
@@ -9668,9 +9668,9 @@ Apache License
    limitations under the License.
 ```
 
-## elkjs 0.9.3
+## elkjs 0.12.1
 
-License: EPL-2.0  
+License: EPL-2.0 OR GPL-3.0-or-later  
 Source: https://github.com/kieler/elkjs.git
 
 ```text
@@ -9926,8 +9926,7 @@ No third-party beneficiary rights are created under this Agreement.
 
 “This Source Code may also be made available under the following
 Secondary Licenses when the conditions for such availability set forth
-in the Eclipse Public License, v. 2.0 are satisfied: {name license(s),
-version(s), and exceptions or additional permissions here}.”
+in the Eclipse Public License, v. 2.0 are satisfied: GNU General Public License v3.0 or later”
 
 > Simply including a copy of this Agreement, including this Exhibit A is
 > not sufficient to license the Source Code under Secondary Licenses.
@@ -10473,7 +10472,7 @@ licenses; we recommend you read them, as their terms may differ from the
 terms above.
 ```
 
-## lucide 1.64.0
+## lucide 1.73.0
 
 License: ISC  
 Source: https://lucide.dev
@@ -10719,7 +10718,7 @@ FROM, OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS
 IN THE SOFTWARE.
 ```
 
-## mermaid 12.2.0
+## mermaid 12.3.0
 
 License: MIT  
 Source: https://github.com/mermaid-js/mermaid
@@ -10961,7 +10960,7 @@ OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
 SOFTWARE.
 ```
 
-## sigma 4.0.4
+## sigma 4.0.6
 
 License: MIT  
 Source: https://www.sigmajs.org
@@ -11066,7 +11065,7 @@ OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
 SOFTWARE.
 ```
 
-## turndown 7.2.4
+## turndown 7.2.5
 
 License: MIT  
 Source: https://github.com/mixmark-io/turndown.git
@@ -11121,23 +11120,6 @@ NONINFRINGEMENT. IN NO EVENT SHALL THE AUTHORS OR COPYRIGHT HOLDERS BE
 LIABLE FOR ANY CLAIM, DAMAGES OR OTHER LIABILITY, WHETHER IN AN ACTION
 OF CONTRACT, TORT OR OTHERWISE, ARISING FROM, OUT OF OR IN CONNECTION
 WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
-```
-
-## uuid 14.0.3
-
-License: MIT  
-Source: https://github.com/uuidjs/uuid.git
-
-```text
-The MIT License (MIT)
-
-Copyright (c) 2010-2020 Robert Kieffer and other contributors
-
-Permission is hereby granted, free of charge, to any person obtaining a copy of this software and associated documentation files (the "Software"), to deal in the Software without restriction, including without limitation the rights to use, copy, modify, merge, publish, distribute, sublicense, and/or sell copies of the Software, and to permit persons to whom the Software is furnished to do so, subject to the following conditions:
-
-The above copyright notice and this permission notice shall be included in all copies or substantial portions of the Software.
-
-THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY, FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM, OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
 ```
 
 ## w3c-keyname 2.2.8
