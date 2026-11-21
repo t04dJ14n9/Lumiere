@@ -67,7 +67,10 @@ export const outlineHost: Plugin = {
   },
 };
 
-/** A click on a row: its command carries the note's URI and the heading's offset in the file. */
+/**
+ * A click on a row: its command carries the note's URI and the heading's
+ * offset in the file (and a revision, which only a drop reads).
+ */
 function registerHeadingRows(ctx: Context, view: OutlineView): void {
   const jumps: HeadingJumps = {
     vaults: ctx.vaults,

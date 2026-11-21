@@ -70,6 +70,14 @@ before the insertion point and the moved section each end in a blank line
 follows. A drop inside the dragged section, or right after it, changes
 nothing, and a note edited since the outline last refreshed is not moved
 (the rows' offsets would no longer fit it); a message says to try again.
+Rows are named by sibling ordinals (`1`, `0/2`), and VS Code hands the drop
+the row it picked up, not a fresh one. Each row therefore carries the
+revision of the text it was built from (a third argument of its click
+command, which a click ignores), and the outline bumps the revision when a
+refresh finds the note's text or URI changed. A drop whose dragged row or
+target row is of an older revision moves nothing and gives the same message,
+so another writer's edit during the drag cannot turn a row's id into another
+heading. A refresh that finds the text unchanged keeps the revision.
 
 Ctrl+Shift+O (Command+Shift+O on macOS), or **Lumiere: Go to
 Heading…** in the command palette, opens a searchable heading picker. It reads
@@ -111,11 +119,12 @@ Markdown Outline so they do not linger beside non-Lumiere editors.
 - `jump.ts`: opens a note at a heading for rows and Go to Heading; checks
   Links and logs a failed jump.
 - `symbols.ts`: nested heading symbols with enclosing section ranges.
-- `tree.ts`: heading nodes, parent lookup, editor-to-source coordinates and
-  the dropped row's move.
+- `tree.ts`: heading nodes, parent lookup, editor-to-source coordinates, the
+  text revision each row carries and the dropped row's move.
 - `move-section.ts`: the edit that moves a heading's section before another
   heading or to the end of the note.
-- `section-drag.ts`: applies a dropped row's move to the note's document.
+- `section-drag.ts`: applies a dropped row's move to the note's document, and
+  refuses a drop of rows from replaced text.
 - `view.ts`: refresh timing, cursor following and expansion traversal.
 - `jump-window.ts`: the second after an outline click, when the tree and scroll follow are left alone.
 - `actions.ts`: commands, configuration reads and the follow context key.
