@@ -2,6 +2,14 @@
 
 ## Unreleased
 
+- DeepSeek Harness, the desktop app and the web app: a file in a vault can no
+  longer run as a page or a script on the editor's origin. The images, audio,
+  video and PDFs a note shows are served as themselves, and sandboxed if
+  opened on their own; anything else (an HTML page, a script) is served as a
+  download. A note's page runs only its own scripts (by nonce) in DeepSeek
+  Harness and the desktop app, and the desktop app's tabs frame it in a
+  sandbox that stops it navigating the window or starting downloads. The page
+  still shares the window's origin (#744).
 - Markdown outside VS Code (DeepSeek Harness, the app, the desktop app):
   Undo and Redo work. Each note keeps its own steps, a run of typing undoes
   at once as in VS Code, and a save keeps the steps. Another program's
