@@ -1,6 +1,8 @@
 import assert from "node:assert/strict";
 import test from "node:test";
 import { webviewHTML } from "../../../src/plugins/editor/webview-html";
+import { parseWebEmbed } from "../../../src/plugins/onlineVideos/parse";
+import { embedUrl } from "../../../src/plugins/onlineVideos/player";
 import type { PanelShell } from "../../../src/shared/host";
 
 function shell(trusted: boolean): PanelShell {
@@ -162,4 +164,35 @@ test("the editor's address cannot end the inline script", () => {
   const html = webviewHTML(hostile, "<div></div>");
   assert.equal(html.match(/<\/script>/g)?.length, 1);
   assert.equal(html.includes("<b>"), false);
+});
+
+/** Whether a CSP source list admits a URL (scheme-sources and host-sources). */
+function admits(sources: string, href: string): boolean {
+  const url = new URL(href);
+  return sources.split(" ").some((source) => {
+    if (source.endsWith(":")) {
+      return url.protocol === source;
+    }
+    return source !== "'none'" && source === url.origin;
+  });
+}
+
+test("Online Videos' two frame origins load only in a trusted workspace", () => {
+  const frames = [
+    embedUrl(parseWebEmbed("https://youtu.be/dQw4w9WgXcQ?t=5")!, "light"),
+    embedUrl(parseWebEmbed("https://x.com/jack/status/20")!, "dark"),
+  ];
+  assert.deepEqual(
+    frames.map((frame) => new URL(frame).origin),
+    ["https://www.youtube-nocookie.com", "https://platform.twitter.com"],
+  );
+  const trusted = policy(true).get("frame-src") ?? "";
+  const untrusted = policy(false).get("frame-src") ?? "";
+  for (const frame of frames) {
+    assert.equal(admits(trusted, frame), true, frame);
+    assert.equal(admits(untrusted, frame), false, frame);
+  }
+  // Nothing wider than https: a trusted page may frame, and no http: frame.
+  assert.equal(trusted, "https:");
+  assert.equal(admits(trusted, "http://platform.twitter.com/embed/"), false);
 });

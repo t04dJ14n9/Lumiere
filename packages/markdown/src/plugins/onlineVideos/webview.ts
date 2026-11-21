@@ -2,8 +2,10 @@ import type { Plugin } from "@workshop/core";
 import { protocol as links } from "../links/protocol";
 import type { RenderPass } from "../render/api";
 import type {} from "../render/api";
-import { videoCard } from "./card";
-import { parseVideoUrl } from "./parse";
+import { linkCard } from "./card";
+import { embedFrame, trackTweetHeights } from "./frame";
+import { parseWebEmbed } from "./parse";
+import { embedTheme, embedView } from "./player";
 
 interface Mount {
   isTrusted: boolean;
@@ -19,15 +21,15 @@ export const onlineVideosWebview: Plugin = {
       open(href) {
         void ctx.rpc
           .call(links, "open", { href, wiki: false, side: false })
-          .catch((error) => ctx.logger.warn("Open video failed", error));
+          .catch((error) => ctx.logger.warn("Open web embed failed", error));
       },
     };
     // Runs before embeds, which would otherwise treat the link as an image.
-    ctx.on("render/postProcess", (pass) => mountVideos(pass, mount));
+    ctx.on("render/postProcess", (pass) => mountEmbeds(pass, mount));
   },
 };
 
-function mountVideos(pass: RenderPass, mount: Mount): void {
+function mountEmbeds(pass: RenderPass, mount: Mount): void {
   const images = pass.container.querySelectorAll<HTMLImageElement>(
     "img.note-image[data-resource]",
   );
@@ -35,21 +37,36 @@ function mountVideos(pass: RenderPass, mount: Mount): void {
     return;
   }
   const events = new AbortController();
+  const trackHeight = trackTweetHeights({
+    signal: events.signal,
+    measure: pass.measure,
+  });
   const restore: (() => void)[] = [];
   for (const image of images) {
-    const video = parseVideoUrl(image.dataset.resource ?? "");
-    if (!video) {
+    const embed = parseWebEmbed(image.dataset.resource ?? "");
+    if (!embed) {
       continue;
     }
-    const card = videoCard(video, {
-      label: image.alt,
-      trusted: mount.isTrusted,
-      signal: events.signal,
-      measure: pass.measure,
-      open: mount.open,
+    const view = embedView(embed, {
+      isTrusted: mount.isTrusted,
+      theme: embedTheme(document.body.classList),
     });
-    image.replaceWith(card);
-    restore.push(() => card.replaceWith(image));
+    let shown: HTMLElement;
+    if (view.kind === "frame") {
+      const { shell, frame } = embedFrame(embed, view, events.signal);
+      if (embed.kind === "tweet") {
+        trackHeight(frame);
+      }
+      shown = shell;
+    } else {
+      shown = linkCard(embed, {
+        label: image.alt,
+        signal: events.signal,
+        open: mount.open,
+      });
+    }
+    image.replaceWith(shown);
+    restore.push(() => shown.replaceWith(image));
   }
   if (restore.length) {
     pass.onDispose(() => {

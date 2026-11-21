@@ -1,6 +1,6 @@
 import { embedsImage } from "../../markdown/images";
 import { mediaKind } from "../../shared/media-kinds";
-import { parseVideoUrl } from "../onlineVideos/api";
+import { parseWebEmbed, reservedHeight } from "../onlineVideos/api";
 import { embedsNote } from "./clicks";
 import { writtenHeight, writtenWidth } from "./image-size";
 
@@ -15,8 +15,8 @@ import { writtenHeight, writtenWidth } from "./image-size";
  * Prefer an explicit `|WxH` height; otherwise reserve a stable default so
  * PageDown / click coordinates below the embed stay valid until measure runs.
  *
- * YouTube image links become `.mw-video` cards (16:9 thumb ≈200px wide).
- * Without a dedicated reserve they fall through to CARD_DEFAULT (~64px).
+ * YouTube and tweet image links become frames (Online Videos). Without a
+ * dedicated reserve they fall through to CARD_DEFAULT (~64px).
  *
  * Note embeds are worse: the source is one line (`![[Other]]`) while resolved
  * content can be many paragraphs. A modest floor covers first paint; after
@@ -28,12 +28,6 @@ const CHROME = 16;
 const IMAGE_DEFAULT = 240;
 /** `<video>` / `<audio>` controls chrome before metadata. */
 const MEDIA_DEFAULT = 180;
-/**
- * Online video card with cover: thumb flex-basis 200px at 16:9 (~112px) plus
- * title/meta/actions. Stacked layout in a narrow pane is taller; 200 covers
- * both until measure.
- */
-const ONLINE_VIDEO_DEFAULT = 200;
 /** PDF and other attachment cards. */
 const CARD_DEFAULT = 48;
 /** Embedded Obsidian Base (.base) table/cards/list view. */
@@ -98,9 +92,11 @@ export function embedEstimatedHeight(source: string): number {
     const cached = measuredNoteHeights.get(source);
     return cached === undefined ? floor : Math.max(floor, cached);
   }
-  // Online Videos replaces matching image URLs with tall cards.
-  if (parseVideoUrl(embedTarget(source))) {
-    return ONLINE_VIDEO_DEFAULT + CHROME;
+  // Online Videos replaces matching image URLs with a player or a tweet; an
+  // untrusted workspace's link card is shorter, and measure settles it.
+  const webEmbed = parseWebEmbed(embedTarget(source));
+  if (webEmbed) {
+    return reservedHeight(webEmbed) + CHROME;
   }
   if (/\.base$/i.test(embedTarget(source))) {
     return BASE_DEFAULT + CHROME;

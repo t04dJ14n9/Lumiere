@@ -1,27 +1,45 @@
-/* Online video cards and player frames. */
-.mw-video {
+/* Web embeds (YouTube players, tweets) and the card Restricted Mode shows. */
+.mw-embed {
+  display: block;
+  width: 100%;
+  margin: 4px 0;
+}
+.mw-embed-youtube {
+  aspect-ratio: 16 / 9;
+}
+.mw-embed iframe {
+  display: block;
+  width: 100%;
+  border: 0;
+}
+.mw-embed-youtube iframe {
+  height: 100%;
+}
+.mw-embed-card {
   display: flex;
-  flex-wrap: wrap;
-  align-items: stretch;
+  flex-direction: column;
+  gap: 2px;
+  box-sizing: border-box;
   max-width: min(100%, 560px);
   margin: 4px 0;
-  overflow: hidden;
+  padding: 8px 12px;
   border: 1px solid var(--line, #8884);
   border-radius: 8px;
   background: var(--surface, transparent);
   line-height: 1.4;
 }
-.mw-video-thumb {
-  position: relative;
-  display: block;
-  flex: 0 0 200px;
-  max-width: 100%;
-  padding: 0;
-  border: 0;
-  background: none;
-  cursor: pointer;
+.mw-embed-card-title {
+  font-weight: 600;
+  overflow-wrap: anywhere;
 }
-.mw-video-open {
+.mw-embed-card-meta,
+.mw-embed-card-note {
+  color: var(--muted, #888);
+  font-size: 0.85em;
+}
+.mw-embed-card-open {
+  align-self: flex-start;
+  margin-top: 4px;
   padding: 0;
   border: 0;
   font: inherit;
@@ -29,45 +47,4 @@
   background: none;
   text-decoration: underline;
   cursor: pointer;
-}
-.mw-video-thumb img {
-  display: block;
-  width: 100%;
-  height: 100%;
-  aspect-ratio: 16 / 9;
-  object-fit: cover;
-}
-.mw-video-badge {
-  position: absolute;
-  inset: 50% auto auto 50%;
-  translate: -50% -50%;
-  padding: 2px 12px;
-  border-radius: 8px;
-  color: #fff;
-  background: #000a;
-  font-size: 0.9em;
-}
-.mw-video-body {
-  display: flex;
-  flex: 1 1 220px;
-  flex-direction: column;
-  gap: 2px;
-  min-width: 0;
-  padding: 8px 12px;
-}
-.mw-video-title {
-  font-weight: 600;
-  overflow-wrap: anywhere;
-}
-.mw-video-meta,
-.mw-video-note {
-  color: var(--muted, #888);
-  font-size: 0.85em;
-}
-.mw-video-actions {
-  display: flex;
-  flex-wrap: wrap;
-  align-items: center;
-  gap: 12px;
-  margin-top: 4px;
 }
