@@ -46,6 +46,8 @@ import {
 import { outgoingLinksHost } from "../../../src/plugins/outgoingLinks/host";
 import { SEARCH_COMMAND } from "../../../src/plugins/tags/tree";
 import { tagsViewHost } from "../../../src/plugins/tags/view";
+import { vaultSearchHost } from "../../../src/plugins/search/view";
+import { OPEN_RESULT_COMMAND as searchOpenCommand } from "../../../src/plugins/search/view-ids";
 import { quickSwitcherHost } from "../../../src/plugins/quickSwitcher/host";
 import { scratchHost } from "../../../src/plugins/scratch/host";
 import { templatesHost } from "../../../src/plugins/templates/host";
@@ -131,6 +133,7 @@ test("tree hosts register open and search commands outside contributes", async (
   const outsideContributes = new Set([
     outlineOpenCommand,
     SEARCH_COMMAND,
+    searchOpenCommand,
     backlinksOpenCommand,
     outgoingOpenCommand,
     outgoingCreateCommand,
@@ -342,6 +345,7 @@ async function captureTreeHostCommands(): Promise<{
   root.provide("editors", idleEditors());
   root.plugin(outlineHost);
   root.plugin(tagsViewHost);
+  root.plugin(vaultSearchHost);
   root.plugin(backlinksHost);
   root.plugin(outgoingLinksHost);
   root.provide("selections", {

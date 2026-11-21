@@ -635,6 +635,13 @@ title, then set `lumiere.markdown.plugins.inlineTitle.enabled` to true.
 1. Each `query` block lists matching notes; the invalid query shows an
    error. Edit a matching note without saving: results refresh.
 2. Turn the plugin off: the blocks show as code.
+3. Run **Search Vault…** (`lumiere.markdown.search.vault`) with `tag:#idea`:
+   the Explorer's **Vault Search** view lists a row per matching note with
+   its folder and match count, open on its match lines. Click a line: the
+   note opens at the match. Run it again: the last query is filled in. Edit
+   a matching note without saving: the rows follow within a second. **Clear
+   Search Results** (`lumiere.markdown.search.clearResults`) empties the
+   view.
 
 ### outline
 
@@ -1312,6 +1319,8 @@ Use the disposable fixture vault from Setup. These rows enumerate every generate
 | `lumiere.markdown.tags.sortByName` — ✓ Sort by Name | unbound | On a disposable fixture, run ✓ Sort by Name; confirm its named action using the plugin scenarios above, then undo where applicable. Repeat after disable/re-enable and switching panes. |
 | `lumiere.markdown.tags.enableNested` — Show Nested Tags | unbound | On a disposable fixture, run Show Nested Tags; confirm its named action using the plugin scenarios above, then undo where applicable. Repeat after disable/re-enable and switching panes. |
 | `lumiere.markdown.tags.disableNested` — ✓ Show Nested Tags | unbound | On a disposable fixture, run ✓ Show Nested Tags; confirm its named action using the plugin scenarios above, then undo where applicable. Repeat after disable/re-enable and switching panes. |
+| `lumiere.markdown.search.vault` — Search Vault… | unbound | On a disposable fixture, run Search Vault…; confirm its named action using the plugin scenarios above, then undo where applicable. Repeat after disable/re-enable and switching panes. |
+| `lumiere.markdown.search.clearResults` — Clear Search Results | unbound | On a disposable fixture, run Clear Search Results; confirm its named action using the plugin scenarios above, then undo where applicable. Repeat after disable/re-enable and switching panes. |
 | `lumiere.markdown.toggleChecklist` — Toggle Checklist Status | ctrl+l (Mac cmd+l); not in Cursor | On a disposable fixture, run Toggle Checklist Status; confirm its named action using the plugin scenarios above, then undo where applicable. Repeat after disable/re-enable and switching panes. |
 | `lumiere.markdown.cycleListChecklist` — Cycle List Checklist | unbound | On a disposable fixture, run Cycle List Checklist; confirm its named action using the plugin scenarios above, then undo where applicable. Repeat after disable/re-enable and switching panes. |
 | `lumiere.markdown.consumeVimHostShortcut` — Consume Vim Host Shortcut | ctrl+o (Mac ctrl+o); ctrl+b (Mac ctrl+b); ctrl+i (Mac ctrl+i); ctrl+k (Mac ctrl+k) | Enable Vim and press the listed keys; host commands must not steal them. This helper stays hidden from the palette. |

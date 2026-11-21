@@ -76,7 +76,8 @@ its clicks.
 
 ## Limits and differences from Obsidian
 
-Uses a native quick pick for search results, not a search pane. Sorting
+Uses a native quick pick for search results, not the Vault Search view
+(search plugin) that Obsidian's tag click opens. Sorting
 (frequency ↔ name) and nesting toggles sit on the Tags view title bar (and
 remain available as settings). Search and the view
 reflect currently indexed metadata; hidden and excluded files follow the

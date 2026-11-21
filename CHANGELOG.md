@@ -50,6 +50,11 @@
 - Markdown: **Rename Heading…** is in a note's right-click menu on a heading
   line, as Obsidian's editor menu offers it, in VS Code and outside it. It
   renames the heading and updates the links to it (#699).
+- Markdown: **Search Vault…** searches the vault with Obsidian's search
+  syntax (the one `query` blocks use) and lists the matching notes and their
+  lines in the Explorer's **Vault Search** view, as Obsidian's search pane
+  does. Click a line to open the note there; the results follow edits
+  (#699).
 
 Fixes for several VS Code windows open at once, each with a test; checked
 with two real windows on one profile.

@@ -29,6 +29,7 @@ export { onlineVideosHost } from "./onlineVideos/host";
 export { suggestHost } from "./suggest/host";
 export { searchHost } from "./search/host";
 export { tagsViewHost } from "./tags/view";
+export { vaultSearchHost } from "./search/view";
 export { sketchHost } from "./sketch/host";
 export { agentBridgeHost } from "./agentBridge/host";
 export { ideContextHost } from "./ideContext/host";

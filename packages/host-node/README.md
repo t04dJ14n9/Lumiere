@@ -207,6 +207,9 @@ embedder.
   editor's own menus.
 - `TreeSource.drop` is never called: a tree's rows cannot be dragged, so the
   Outline does not move sections here as it does in VS Code.
+- The Vault Search tree (`VIEW_IDS.search`) is served like the others, but
+  neither the app nor DSH shows it yet, so Search Vault… in their palettes
+  fills a view the reader cannot see.
 - `TreeHandle.clearSelection` emits `deselect` (the Outline when the reader is
   above the first heading); the app's tree panel unmarks the current row.
 - `TreeHandle.expand` / `collapse` emit `expand` / `collapse` events (and

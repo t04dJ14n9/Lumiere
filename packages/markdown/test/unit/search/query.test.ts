@@ -278,3 +278,24 @@ test("searchVault supports EMBEDS.md query syntax (tag:#project status:done) and
     "Ready to launch the release.",
   );
 });
+
+test("with no source note, links are relative to the vault's root", async () => {
+  const result = await searchVault({
+    vault: vault(),
+    worker: {
+      ready: Promise.resolve(),
+      includesFiles: false,
+      requiresText: true,
+      requiresMetadata: false,
+      stopped: false,
+      matches: inWorker("content:meeting"),
+      dispose: async () => {},
+    },
+    token: new CancelToken(),
+    read: async (uri: string) => (uri.endsWith("canvas") ? "{}" : "Meeting"),
+  });
+  assert.deepEqual(
+    result.results.map((item) => item.href),
+    ["other/A%20%23.md", "folder/Note.md"],
+  );
+});
