@@ -8140,3 +8140,45 @@ note-embed-remount-height, embed-under-tall-props, vim-caret-geometry
 math-vim-click and tables-vim (37 + 57, with the specs above). Not run:
 the full browser suite, `test:quality`, `test:vscode`.
 
+
+## Cmd+Option+F in Vim Insert opens Replace (#817; 2026-11-21)
+
+Review finding (#817): with Vim on, in Insert mode, macOS Cmd+Option+F, the
+Replace key added on 2026-11-21 ("Obsidian 1.15.0's default editor
+hotkeys"), ran the Insert-mode backspace instead. The capture-phase find
+keys (`find-keys.ts`, BH-045) sent every `"replace"` action to
+`onInsertCtrlH` while Vim was in Insert mode, on the reading that "replace"
+meant Ctrl+H. Since Cmd+Option+F, and Cmd+H on macOS, also map to
+`"replace"`, `webview.ts` ran `deleteCharBackward` and the note lost the
+character before the caret; Replace never opened. The #817 report predicts
+this from the source and did not observe it in a native window; the cause
+is in code that a capture-level unit test reaches.
+
+Fix: the Insert-mode exception is the chord it was written for.
+`keepFindKey` takes it only when the keydown is Ctrl+H itself (`ctrlKey`,
+no `metaKey` or `altKey`, key `h` or physical keyCode 72, as
+`findActionFor` reads H). Every other Replace chord opens Replace in Insert
+mode as it does in Normal mode. Consequence worth knowing: on macOS Cmd+H in
+Insert mode now opens Replace too (it deleted before). The application menu
+usually takes Cmd+H first, so the page rarely sees it; on macOS Ctrl+H is
+not claimed by the capture at all (it needs Cmd there) and reaches the
+editor's own keymap, as before. No change outside Insert mode, for native
+INPUT and TEXTAREA targets, or for Ctrl/Cmd+F.
+
+Tests that failed first, in `find-keys.test.ts`, at the capture-listener
+level with a fake Document and the real `keepFindKey`: macOS Cmd+Option+F in
+Insert mode (key `ƒ` with keyCode 70, plain `f`, and a non-Latin layout's
+keyCode 70) opens Replace and deletes nothing; Cmd+H on macOS in Insert mode
+opens Replace and Ctrl+H on macOS is left unclaimed. Controls that held
+before and after: Ctrl+H in Insert mode on Windows and Linux still deletes
+backward (`h`, `H`, keyCode 72) while Ctrl+F stays Find; outside Insert mode
+every Replace chord opens Replace; native INPUT and TEXTAREA keep both keys
+in Insert mode.
+
+Checks: `pnpm check` passes (markdown 3779 tests). One earlier run failed
+the PDF package's "a dark page drawn in slices is the page drawn at once"
+(`packages/pdf/test/unit/dark-page-engine.test.ts`), a timing test, while
+other worktrees' suites shared the machine; it passed on a rerun. No
+browser spec covers these keys (the editing spec only clicks the find bar's
+Replace all), so none was run; not run: the full browser suite,
+`test:quality`, `test:vscode`.

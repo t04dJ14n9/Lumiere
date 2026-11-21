@@ -150,6 +150,9 @@
   Tab and Delete, now with its source shown, a double-click still opens
   the inspector, and the arrow keys move through the source instead of
   selecting the image (owner request).
+- Markdown: with Vim on, in Insert mode, Cmd+Option+F on macOS opens Replace
+  instead of deleting the character before the caret. Only Ctrl+H
+  deletes backward there.
 
 Fixes for several VS Code windows open at once, each with a test; checked
 with two real windows on one profile.
