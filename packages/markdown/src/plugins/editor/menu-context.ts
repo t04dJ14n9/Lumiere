@@ -1,4 +1,4 @@
-import { syntaxTree } from "@codemirror/language";
+import { ensureSyntaxTree, syntaxTree } from "@codemirror/language";
 import type { EditorState } from "@codemirror/state";
 import type { SyntaxNode } from "@lezer/common";
 import { contributionId } from "../../shared/setting-schema";
@@ -48,6 +48,9 @@ export function menuHasSelection(
   return !isStateEmpty;
 }
 
+/** How long a menu may wait for the parse to reach the clicked line. */
+const PARSE_BUDGET_MS = 200;
+
 /**
  * Whether the line holding `position` is an ATX heading with a name: the
  * heading Rename Heading… renames from the caret. A `#` line in code or in
@@ -60,8 +63,13 @@ export function isHeadingLine(state: EditorState, position: number): boolean {
     return false;
   }
   const start = line.from + marker[0].indexOf("#");
+  // The parse may not have reached this line yet (a state just created, or
+  // a long note parsed in slices): finish it up to the line, or a heading
+  // reads as plain text and the menu leaves Rename Heading out.
+  const tree =
+    ensureSyntaxTree(state, line.to, PARSE_BUDGET_MS) ?? syntaxTree(state);
   for (
-    let node: SyntaxNode | null = syntaxTree(state).resolveInner(start, 1);
+    let node: SyntaxNode | null = tree.resolveInner(start, 1);
     node;
     node = node.parent
   ) {
