@@ -9115,3 +9115,20 @@ Checks: my `pnpm check` (private TMPDIR) passed. The PR gate on the fourth
 round's head (2b3599db) passed `pnpm check`, `pnpm test:vscode` and CI.
 Not run here: `pnpm test:browser`, `pnpm test:quality`,
 `pnpm test:vscode`.
+
+Sixth review round (PR #814, 2026-11-22), with a unit test in
+`read-only-cells.test.ts` that fails with the change undone:
+
+- **Right-click outside the grid selection.** The context menu
+  (`TableToolbar.showMenu`) opened a right-clicked cell outside the
+  selection, which, when writable, also clears the grid selection. In a
+  read-only note no cell opens, so the menu kept the old selection: Copy
+  copied the old cells and the highlight stayed. Now `open` reports
+  whether a cell opened, and in a read-only note the right-clicked cell is
+  selected in the grid before the menu is built; inside the selection,
+  the selection stays the menu's target.
+
+Checks: my `pnpm check` (private TMPDIR) passed. The PR gate on the fifth
+round's head (6c26d3c4) passed `pnpm check`, `pnpm test:vscode` and CI.
+Not run here: `pnpm test:browser`, `pnpm test:quality`,
+`pnpm test:vscode`.
