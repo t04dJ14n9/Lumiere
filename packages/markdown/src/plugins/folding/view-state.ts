@@ -1,45 +1,15 @@
 import { foldEffect, foldedRanges, unfoldEffect } from "@codemirror/language";
-import type { StateEffect, Text } from "@codemirror/state";
+import {
+  Annotation,
+  type StateEffect,
+  type Text,
+  type Transaction,
+} from "@codemirror/state";
 import type { EditorView } from "@codemirror/view";
-import { Schema } from "@workshop/core";
+import { EDGE_LENGTH, savedFolds, type SavedFold } from "./protocol";
 
-/** Enough of a line to tell it from its neighbours, and no more to save. */
-const EDGE_LENGTH = 120;
-
-interface SavedFold {
-  from: number;
-  to: number;
-  /**
-   * The text of the lines the fold starts and ends on (their first
-   * `EDGE_LENGTH` characters). Saved offsets are only good for the text
-   * they were taken from: a note changed outside this panel would fold
-   * other lines. Absent in view state saved before it was recorded.
-   */
-  edges?: string[];
-}
-
-const foldedSchema = Schema.array(
-  new Schema<SavedFold>(
-    (value) => {
-      const range = Schema.object({
-        from: Schema.number(),
-        to: Schema.number(),
-        edges: Schema.array(Schema.string()).optional(),
-      }).parse(value);
-      if (
-        !Number.isSafeInteger(range.from) ||
-        !Number.isSafeInteger(range.to) ||
-        range.from < 0 ||
-        range.from >= range.to ||
-        (range.edges && range.edges.length !== 2)
-      ) {
-        throw new Error("Invalid fold range");
-      }
-      return range;
-    },
-    { type: "object" },
-  ),
-);
+/** Marks the transaction that puts saved folds back: not the reader's fold. */
+const restoredFolds = Annotation.define<boolean>();
 
 function foldEdges(doc: Text, from: number, to: number): string[] {
   return [from, to].map((at) => doc.lineAt(at).text.slice(0, EDGE_LENGTH));
@@ -58,8 +28,21 @@ function stillFits(doc: Text, fold: SavedFold): boolean {
   return start === edges[0] && end === edges[1];
 }
 
+/**
+ * Whether a transaction folds or unfolds something itself (a command, the
+ * gutter, a reveal), rather than putting saved folds back.
+ */
+export function changesFolds(transaction: Transaction): boolean {
+  return (
+    !transaction.annotation(restoredFolds) &&
+    transaction.effects.some(
+      (effect) => effect.is(foldEffect) || effect.is(unfoldEffect),
+    )
+  );
+}
+
 export const foldedViewState = {
-  schema: foldedSchema,
+  schema: savedFolds,
   capture(view: EditorView): SavedFold[] {
     const { doc } = view.state;
     const ranges: SavedFold[] = [];
@@ -80,6 +63,6 @@ export const foldedViewState = {
         effects.push(foldEffect.of({ from: range.from, to: range.to }));
       }
     }
-    view.dispatch({ effects });
+    view.dispatch({ effects, annotations: restoredFolds.of(true) });
   },
 };

@@ -10,6 +10,7 @@ import type { EditorView } from "@codemirror/view";
 import { Compartment, type EditorState, type Text } from "@codemirror/state";
 import type { Tree } from "@lezer/common";
 import { foldedViewState } from "./view-state";
+import { registerNoteFolds } from "./note-folds";
 import type { Context, Infer, Plugin } from "@workshop/core";
 import type {} from "../editor/api";
 import type {} from "../commands/api";
@@ -138,7 +139,7 @@ export const foldingWebview: Plugin<Infer<typeof config>> = {
   name: "folding",
   provides: ["fold"],
   config,
-  inject: { required: ["editor", "commands"] },
+  inject: { required: ["editor", "commands", "rpc"] },
   reconfigure(ctx, options) {
     const compartment = configurations.get(ctx);
     if (!compartment) {
@@ -171,6 +172,7 @@ export const foldingWebview: Plugin<Infer<typeof config>> = {
     ctx.effect(() =>
       ctx.editor.viewState.contribute("folded", foldedViewState),
     );
+    registerNoteFolds(ctx);
     for (const [id, command] of [
       ["fold-all", foldAll],
       ["unfold-all", unfoldAll],

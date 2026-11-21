@@ -7252,3 +7252,35 @@ note's own `lumiere.markdown.editor.fontSize`, default 16) and VS Code's
 docs/HANDOVER.md "Line height", PARITY's line-height rows). So Lumiere already
 follows Obsidian whether or not the user set `editor.lineHeight`; the row is
 corrected and no layout, budget or browser expectation changes.
+
+## Folds kept per note (#698 item 14; 2026-11-21)
+
+A static read of Obsidian 1.15.0's shipped `app.js` (behaviour only, nothing
+copied; line numbers in docs/PARITY.md) shows its fold store: one record per
+file path in local storage, saved half a second after a fold, an unfold or an
+edit in any leaf of the file and when a leaf closes, and applied whenever a
+leaf loads the file. Other leaves of the file are not refolded live.
+
+Lumiere now keeps a note's folds for the note. The folding plugin gained a
+host half (`folding/host.ts`, a critical panel host) over the host service
+`storage`: `load` gives a panel the note's saved folds when it opens (a
+reopen, a second panel, a window reload), and `save` records them. Per
+AGENTS.md editors stay tracked per panel; only the saved record is per note
+(keyed by the note's URI), and the store remembers which open panel holds
+it. The choice for two panels of one note: each keeps its own folds while
+open, and the note keeps those of the panel where the reader last folded or
+unfolded (a claim), brought up to date 500 ms after each text change while
+that panel holds the record. An edit or the close of the other panel never
+overwrites it, so the panels do not undo each other's folds; Obsidian, which
+saves from every leaf, lets the last leaf changed or closed win. A note
+opened when no open panel holds its record makes that panel the holder.
+Saved folds keep their line-text check, so a note changed while no panel
+showed it does not fold other lines. At most 500 notes and 1000 folds a
+note are kept. The panel's own `folded` view state still carries folds
+across a rename and Back/Forward.
+Validation: `note-store.test.ts` (last fold wins; another panel's edit and
+close do not; panel B opens with panel A's folds through the RPC),
+`note-folds.test.ts` (when a panel sends, the restore is not a fold),
+`view-state.test.ts`, `test/unit/features/*.test.ts`, the markdown package
+typecheck, eslint and `pnpm contributions --check`. Browser, quality and
+real-VS Code suites not run here (CI and the owner run them).

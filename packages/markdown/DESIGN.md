@@ -530,7 +530,7 @@ quick pick of states for the active editor. `setPluginEnabled` and
 | `suggest` | webview | `suggest` | EditorSuggest framework; plugins register sources |
 | `menu` | webview | `editor` | In-editor menus (tables, properties, chips) |
 | `markers` | both | `markers` | Source-bound badges from plugins and the API (§18.3) |
-| `fold` | webview | `folding` | Heading and indent folds, persisted per view through a view-state contribution (§9.2) |
+| `fold` | webview | `folding` | Heading and indent folds, carried with the panel through a view-state contribution (§9.2) and kept per note in workspace storage by its host half, as Obsidian keeps folds per file |
 
 `vault`, `resources` and `markers` are `replaceable`: an outside plugin (for
 example LLM Wiki) may provide a richer implementation that implements the same
@@ -664,7 +664,9 @@ associations, reclaiming, navigation, renames and generated contributions.
 
 Registration keeps `retainContextWhenHidden: true` and
 `supportsMultipleEditorsPerDocument: true`. Two panels of one note share a
-session and history but keep their own selections, folds and scroll.
+session and history but keep their own selections, folds and scroll. A
+note's folds are also kept for the note (the folds of the panel last folded
+in), so a panel that opens the note starts with them (`folding/README.md`).
 
 ### 9.2 Webview half
 

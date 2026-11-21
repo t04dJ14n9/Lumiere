@@ -58,7 +58,8 @@ Unless the section says otherwise, also check:
   text, selection, undo history and other plugins' state stay. Turn it on:
   everything returns once, with no duplicates.
 - **Two panels.** Open the note in two editor groups: selections, scroll,
-  folds and disclosure states stay independent (Properties collapse is shared); edits appear in both.
+  folds and disclosure states stay independent (Properties collapse is shared; a
+  newly opened panel starts with the note's folds); edits appear in both.
 - **Source mode.** Toggle Live Preview/Source: Source shows plain Markdown
   with no widgets.
 - **Undo.** Every edit the plugin makes is one step in VS Code's undo.
@@ -801,6 +802,11 @@ Off by default; needs **gitGutter**. Turn it on with **Toggle Inline Git Changes
    include children. Reload: folds are restored.
 2. `lumiere.markdown.folding.heading` and `lumiere.markdown.folding.indent`
    act independently.
+3. Fold a heading, close the note and open it again: the heading is still
+   folded. With the note folded in one group, open it in a second group:
+   the same headings are folded there. Unfold one in the second group, type
+   in the first, then close the first: reopened, the note shows the second
+   group's folds (the last panel folded in).
 
 ### lineNumbers
 
