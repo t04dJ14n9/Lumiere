@@ -8204,3 +8204,35 @@ VS Code itself.
 
 Checks: `pnpm check`; browser spec tables-parity. Not run: the full
 browser suite, `test:quality`, `test:vscode`.
+
+## Inline decorations follow the focus field (#809; 2026-11-21)
+
+Review finding on #797/#798. `$$` math reveals only while the editor has
+focus, read from the `editorFocus` state field. The block decorations
+invalidate on a change of that field (`invalidation.ts`), but HybridInline
+rebuilt only on CodeMirror's update flags and a new tree, renderer list,
+unresolved-link set, render revision or reveal freeze. `initialFocus`
+(`editor-focus-tracking.ts`) reports a focused editor that Live Preview is
+installed into with a transaction carrying only `setEditorFocus`, for
+which CodeMirror sets no `focusChanged`; the caret inside `a $$x^2$$ b`
+then kept the typeset formula, with no source or preview, until some other
+update (a caret move, a scroll) rebuilt the decorations.
+`shouldRebuildInline` now also compares the `editorFocus` field between
+the update's start and end states, as the block path does. A real focus
+change may now rebuild the inline decorations twice (CodeMirror's focus
+update and the effect's transaction), as the block decorations already
+are; nothing else changes.
+
+Tests in `test/unit/math/editing-preview.test.ts`: HybridInline on a
+minimal view whose focus reaches the state only through `setEditorFocus`
+(same document, selection and tree; `focusChanged` false) shows the
+formula's source and preview after `true`, and the typeset formula again
+after `false`; it failed before the fix. A control: an effect that leaves
+the field as it was, and an empty update, keep the same decoration set.
+Not reproduced natively: the path needs Live Preview turned on in an
+editor that keeps its focus, which no default key does.
+
+Checks: `pnpm check`; browser specs editing, math-vim-click,
+math-remount-height, keyboard-widget-input, stable-blocks and
+selection-inline (64 passed). Not run: the full browser suite,
+`test:quality`, `test:vscode`.

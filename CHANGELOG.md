@@ -154,6 +154,9 @@
   its shown text like every other row. With the caret in a cell such as
   `**z**`, **Table: Sort Ascending** compared its Markdown, so it sorted
   before `a`; it now sorts after it, as from the header (#808).
+- Markdown: a `$$` formula in a line of text that the caret is in shows its
+  source and its preview as soon as Live Preview starts in an editor that
+  already has the focus. It stayed typeset until the caret moved (#809).
 
 Fixes for several VS Code windows open at once, each with a test; checked
 with two real windows on one profile.
