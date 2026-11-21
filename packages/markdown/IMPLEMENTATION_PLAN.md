@@ -8317,3 +8317,64 @@ other worktrees' suites shared the machine; it passed on a rerun. No
 browser spec covers these keys (the editing spec only clicks the find bar's
 Replace all), so none was run; not run: the full browser suite,
 `test:quality`, `test:vscode`.
+## Outline: a drop refuses rows of text the outline has replaced (#818; 2026-11-21)
+
+Defect (source-level, from the issue's callback chain; no native drag was
+reproduced): a heading row's id is a sibling ordinal (`1`, `0/2`), and VS
+Code's drop hands `OutlineSource.drop` the row object picked up when the drag
+began. If another writer edited the note and the 300 ms refresh replaced the
+outline's map and text before the drop, the old id resolved against the new
+map to another heading (B's id `1` became A after an `# X` was prepended),
+and the mover's check (document text equals the text it was given) passed,
+because the text it was given was the refreshed one. A moved the wrong
+section, as one edit.
+
+Decision: bind each row to the text it was built from, and refuse a drop
+whose dragged or target row is of an older text. `OutlineSource` counts a
+`revision`, bumped in `set` when the URI or the text differs from the
+current one (a refresh that finds both unchanged keeps it, so a no-op
+refresh during a drag does not spoil it), and stamps it on every row as the
+third argument of its click command (`[uri, offset, revision]`; the click
+handler reads two). A drop checks both rows against the current revision
+before it resolves any id; a stale one calls `SectionDrops.refuseStale`,
+which shows the existing "The note changed while the heading was dragged.
+Try again." message, and nothing moves. The mover's own guard (document
+text equals the outline's text, for typing since the last refresh) stays.
+`sectionMover` now returns `{ move, refuseStale }` (`SectionDrops`) instead
+of a function, so the message stays in `section-drag.ts`.
+
+Why this and not the alternatives:
+
+- Comparing a row's own label and offset to the heading its id now names
+  would need no new state, but passes when another heading has the same
+  title at the same offset (a second `# N` at 7 dragged, seven characters
+  prepended, the first `# N` is now at 7 with id `1`); the test
+  "an equal-length edit above does not pass a duplicate heading off"
+  pins that.
+- Invalidating transfers when the tree refreshes, in `src/host`'s adapter,
+  would put the policy in the host (AGENTS.md: a Markdown fix goes in the
+  plugin), have no message to show, and refuse a drag across a refresh that
+  changed nothing.
+- A `WeakMap` from row object to revision would depend on VS Code handing
+  back the same objects; a row's own data survives either way.
+
+Unit tests that fail without the guard (`section-drag.test.ts`, the real
+mover behind a real `OutlineSource`): the issue's sequence (drag B, prepend
+X, refresh, drop below the last row) applies no edit and informs once; a
+fresh dragged row dropped on a target row from before the refresh moves
+nothing; rows kept across a visit to another note move nothing; the
+duplicate-heading case above. Guards that pass either way: a refresh with
+unchanged text keeps the drag valid (one edit, no message); a drop on
+another row moves the right section in one edit (one Undo); the last
+section dropped below the last row stays a no-op without a message.
+
+Checks: Prettier, ESLint, typecheck and `contributions --check` pass, and
+every unit suite passes (core and root 93, agents 50, Markdown 3781, PDF
+939). On a machine loaded past 30 by other runs, `pnpm check` stopped twice
+on one wall-clock test outside this change
+(`editor/slow-vault-ready.test.ts`, a 100 ms budget: 112 ms under that load,
+7 to 10 ms alone three times); the Markdown suite run on its own passed in
+full. Not run: `pnpm test:browser`, `test:quality`, `test:vscode` (not
+asked for here). The native check the issue lists (an external edit during a
+real drag, then one-step Undo) is open: whether VS Code cancels a held drag
+on refresh is unverified.

@@ -167,6 +167,11 @@
 - Markdown: with Vim on, in Insert mode, Cmd+Option+F on macOS opens Replace
   instead of deleting the character before the caret. Only Ctrl+H
   deletes backward there.
+- Markdown: dragging a heading in **Markdown Outline** while another writer
+  edits the note (or another program rewrites it) no longer moves a
+  different heading. A drop is refused, with the message to try again, once
+  the outline has refreshed to a changed note since the row was picked up
+  (#818).
 
 Fixes for several VS Code windows open at once, each with a test; checked
 with two real windows on one profile.

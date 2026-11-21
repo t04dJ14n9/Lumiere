@@ -17,24 +17,43 @@ export interface SectionDrop {
   beforeHeading: number | undefined;
 }
 
+/** What the outline does with a drop: move the section, or refuse the rows. */
+export interface SectionDrops {
+  move(drop: SectionDrop): Promise<void>;
+  /**
+   * A dragged or target row was built from a text the outline has since
+   * replaced, so its id may now name another heading: nothing moves.
+   */
+  refuseStale(): void;
+}
+
 /** The active note's headings, indexed for navigation and native tree reveals. */
 export class OutlineSource implements TreeSource {
   private uri: string | undefined;
   private outline: OutlineHeading[] = [];
   private coordinates = new SourceCoordinates("");
   private readonly byId = new Map<string, OutlineHeading>();
+  /**
+   * Counts the texts the outline was built from, and is stamped on every row
+   * (`node`). A row's id is a sibling ordinal, so against another text it can
+   * name another heading; a drop therefore trusts only rows of the current
+   * revision. A refresh that finds the text unchanged keeps the revision, so
+   * it does not spoil a drag in progress.
+   */
+  private revision = 0;
   /** When true, parents emit `expanded: true` (expandMode `all`). Default false = accordion. */
   parentsStartExpanded = false;
 
-  constructor(
-    private readonly moveSection?: (drop: SectionDrop) => Promise<void>,
-  ) {}
+  constructor(private readonly drops?: SectionDrops) {}
 
   get isEmpty(): boolean {
     return this.outline.length === 0;
   }
 
   set(uri: string | undefined, text: string): void {
+    if (uri !== this.uri || text !== this.coordinates.source) {
+      this.revision++;
+    }
     this.uri = uri;
     this.coordinates = new SourceCoordinates(text);
     this.outline = uri ? outlineOf(metadata(text).headings) : [];
@@ -81,20 +100,34 @@ export class OutlineSource implements TreeSource {
 
   /**
    * A row dropped on another moves its section before that heading; dropped
-   * below the last row, to the end of the note.
+   * below the last row, to the end of the note. VS Code keeps the dragged row
+   * from when the drag began, across refreshes, so both rows must be of the
+   * current text before their ids mean anything.
    */
   async drop(dragged: TreeNode, target: TreeNode | undefined): Promise<void> {
-    const heading = this.byId.get(dragged.id);
-    const before = target && this.byId.get(target.id);
-    if (!this.uri || !heading || (target && !before)) {
+    if (!this.uri) {
       return;
     }
-    await this.moveSection?.({
+    if (!this.isCurrent(dragged) || (target && !this.isCurrent(target))) {
+      this.drops?.refuseStale();
+      return;
+    }
+    const heading = this.byId.get(dragged.id);
+    const before = target && this.byId.get(target.id);
+    if (!heading || (target && !before)) {
+      return;
+    }
+    await this.drops?.move({
       uri: this.uri,
       text: this.coordinates.source,
       heading: heading.offset,
       beforeHeading: before?.offset,
     });
+  }
+
+  /** Whether a row was built from the text the outline holds now. */
+  private isCurrent(node: TreeNode): boolean {
+    return node.command?.args?.[2] === this.revision;
   }
 
   pathTo(node: TreeNode): TreeNode[] {
@@ -114,7 +147,11 @@ export class OutlineSource implements TreeSource {
       ...(heading.children.length > 0 && {
         expanded: this.parentsStartExpanded,
       }),
-      command: { id: OPEN_COMMAND, args: [this.uri, heading.offset] },
+      // A click uses the note and the offset; a drop reads the revision.
+      command: {
+        id: OPEN_COMMAND,
+        args: [this.uri, heading.offset, this.revision],
+      },
     };
   }
 }

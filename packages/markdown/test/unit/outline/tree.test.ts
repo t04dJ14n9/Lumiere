@@ -34,7 +34,7 @@ test("LF editor offsets find the right CRLF section and clicks keep source offse
   const editorText = text.replaceAll("\r\n", "\n");
   const node = source.activeNode(editorText.indexOf("## Second"))!;
   assert.equal(node.label, "Second");
-  assert.deepEqual(node.command?.args, [
+  assert.deepEqual(node.command?.args?.slice(0, 2), [
     "memory:///A.md",
     text.indexOf("## Second"),
   ]);
