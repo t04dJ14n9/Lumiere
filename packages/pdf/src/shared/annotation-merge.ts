@@ -139,6 +139,28 @@ export function annotationEntries(
   );
 }
 
+/**
+ * Whether two annotation files hold the same annotations, each saying the
+ * same, however they are written out (a merge writes refs and fields anew).
+ * Texts that are not version 2 files are the same only when equal.
+ */
+export function sameAnnotations(
+  a: string | undefined,
+  b: string | undefined,
+): boolean {
+  if (a === b) {
+    return true;
+  }
+  const left = annotationEntries(a);
+  const right = annotationEntries(b);
+  if (!left || !right || left.size !== right.size) {
+    return false;
+  }
+  return [...left].every(
+    ([id, entry]) => right.get(id)?.content === entry.content,
+  );
+}
+
 function entriesOf(bundle: StoreBundle): Map<string, Entry> {
   const entries = new Map<string, Entry>();
   for (const item of bundle.items) {

@@ -15,6 +15,7 @@ import {
   parseAnnotations,
   serializeAnnotations,
 } from "../../src/shared/annotation-store";
+import { mergeAnnotationFile } from "../../src/shared/annotation-merge";
 import { bundle, refOn } from "./support/bundle";
 
 const PDF = new Uint8Array([37, 80, 68, 70]); // %PDF
@@ -672,4 +673,48 @@ test("two PDFs with the same bytes in two folders keep apart annotation files", 
     two.posted.some((m) => m.type === "annotationStoreChanged"),
     false,
   );
+});
+
+test("a save that adds nothing does not write over another window's write that lands meanwhile", async () => {
+  const { kept, first, second } = twoWindows();
+  const one = open(first);
+  // Window 2's store: another window writes the file between its read and its write.
+  let landsAfterRead: (() => void) | undefined;
+  const two = open({
+    ...second,
+    read: async (uri, sha256) => {
+      const text = await second.read(uri, sha256);
+      landsAfterRead?.();
+      landsAfterRead = undefined;
+      return text;
+    },
+  });
+  await one.receive({ type: "ready" });
+  await two.receive({ type: "ready" });
+  await one.receive({
+    type: "annotationStoreSave",
+    load: one.load().load,
+    sha256: PDF_SHA,
+    text: markA,
+  });
+  await settle();
+  const shown = two.posted.find((m) => m.type === "annotationStoreChanged");
+  assert.ok(shown?.type === "annotationStoreChanged");
+  await two.receive({
+    type: "annotationStoreShown",
+    load: two.load().load,
+    sha256: PDF_SHA,
+    revision: shown.revision,
+  });
+  // Window 1 makes a second mark; its write lands while window 2 saves
+  // again what it was sent, with nothing of its own.
+  const both = mergeAnnotationFile(kept.get(PDF_SHA), undefined, markB)!;
+  landsAfterRead = () => kept.set(PDF_SHA, both);
+  await two.receive({
+    type: "annotationStoreSave",
+    load: two.load().load,
+    sha256: PDF_SHA,
+    text: shown.text,
+  });
+  assert.deepEqual(await namesKept(kept.get(PDF_SHA)), ["uuid-a", "uuid-b"]);
 });
