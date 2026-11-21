@@ -8,11 +8,11 @@
  * asks the page to draw them, and runs the chosen one's command with the
  * argument VS Code passes: the webview and the element's context.
  */
-import type { HostCommands } from "@workshop/markdown/portable";
+import type { HostCommands, HostSettings } from "@workshop/markdown/portable";
 import type { MenuContext, MenuRow, UiEvent } from "../protocol";
 import { questionId, type LivePanel } from "./panel";
 import type { PanelHub } from "./panels";
-import { evaluateWhen } from "./when";
+import { evaluateWhen, settingOfKey } from "./when";
 
 /** One item of the `webview/context` menu or of a submenu, with its command's titles (assets.mjs writes them). */
 export interface MenuCommand {
@@ -149,6 +149,8 @@ export interface ContextMenuOptions {
   readonly panels: PanelHub;
   readonly contributions: readonly MenuContribution[];
   readonly keys: ContextKeys;
+  /** For `config.lumiere.markdown.*` keys: a window plugin's switch gates its items. */
+  readonly settings: Pick<HostSettings, "get">;
   readonly commands: Pick<HostCommands, "execute">;
   /** The editor's view type: VS Code's `activeCustomEditorId`, `webview` and `webviewId`. */
   readonly viewType: string;
@@ -284,7 +286,10 @@ const EDITOR_KEYS: ReadonlySet<string> = new Set([
   "webviewId",
 ]);
 
-/** The element's context first, then what VS Code knows about the editor, then the plugins' keys. */
+/**
+ * The element's context first, then what VS Code knows about the editor and
+ * the settings, then the plugins' keys.
+ */
 function lookupKey(
   key: string,
   context: MenuContext,
@@ -295,6 +300,10 @@ function lookupKey(
   }
   if (EDITOR_KEYS.has(key)) {
     return options.viewType;
+  }
+  const setting = settingOfKey(key);
+  if (setting !== undefined) {
+    return options.settings.get(setting, undefined);
   }
   return options.keys.get(key);
 }

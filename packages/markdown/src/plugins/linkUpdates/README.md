@@ -61,8 +61,9 @@ failing note does not stop the others.
 
 ## Rename Heading
 
-Rename Heading… renames the heading at the caret and updates the links to
-it, as Obsidian's Rename heading does: each link whose single `#subpath`
+Rename Heading…, in the command palette and in the note's right-click menu
+on a heading line (as in Obsidian's editor menu), renames the heading at the
+caret and updates the links to it, as Obsidian's Rename heading does: each link whose single `#subpath`
 names the heading (as links resolve, so case does not matter), in the note
 and in every note linking to it, keeping its path, form and alias
 (`heading-rename.ts`, `rename-heading.ts`). The note itself is edited first;

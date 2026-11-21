@@ -18,6 +18,16 @@ export default defineManifest({
   capabilities: ["vaultIndex", "fileWrites", "commands"],
   config,
   contributes: {
+    menus: [
+      {
+        command: "renameHeading",
+        location: "webview/context",
+        // Obsidian's editor menu offers Rename heading on a heading line;
+        // the editor stamps the key when the menu opens (menu-context.ts).
+        when: "webviewSection == 'markdownContent' && lumiere.markdown.selectionOnHeading",
+        group: "1_heading@1",
+      },
+    ],
     commands: [
       { id: "renameHeading", title: "Rename Heading…", scope: "workbench" },
     ],

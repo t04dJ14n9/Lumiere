@@ -7,9 +7,8 @@ import type { HostSettings } from "@workshop/markdown/portable";
 import type { ContextKeys } from "./context-menu";
 import type { PanelHub } from "./panels";
 import type { NodeHostCommands } from "./services";
-import { evaluateWhen } from "./when";
+import { evaluateWhen, settingOfKey } from "./when";
 
-const CONFIG_PREFIX = "config.lumiere.markdown.";
 /** One command from `package.json`, with its `commandPalette` when-clause (`assets.mjs`). */
 export interface CommandContribution {
   readonly command: string;
@@ -72,8 +71,9 @@ export function createCommandPalette(
     if (key === "activeCustomEditorId") {
       return options.panels.active() ? options.viewType : undefined;
     }
-    if (key.startsWith(CONFIG_PREFIX)) {
-      return options.settings.get(key.slice(CONFIG_PREFIX.length), undefined);
+    const setting = settingOfKey(key);
+    if (setting !== undefined) {
+      return options.settings.get(setting, undefined);
     }
     return options.keys.get(key);
   };

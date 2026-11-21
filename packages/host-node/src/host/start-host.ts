@@ -127,26 +127,23 @@ export async function startHost(
     roots: rootList,
     log,
   });
+  // The note's menu and the palette evaluate when-clauses over the same
+  // keys and settings, as VS Code's do.
+  const whenServices = { keys, settings, commands, panels, log };
+  const viewType = MARKDOWN_EDITOR.viewType;
   const stopMenus = registerContextMenus({
-    panels,
+    ...whenServices,
     contributions: options.menus ?? [],
-    keys,
-    commands,
-    viewType: MARKDOWN_EDITOR.viewType,
-    log,
+    viewType,
   });
   return {
     panels,
     trees,
     settings,
     commands: createCommandPalette({
+      ...whenServices,
       contributions: options.commands ?? [],
-      keys,
-      settings,
-      panels,
-      commands,
-      viewType: MARKDOWN_EDITOR.viewType,
-      log,
+      viewType,
     }),
     files,
     addRoot: (item) => {

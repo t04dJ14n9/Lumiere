@@ -258,14 +258,31 @@ function contributionKeyWhen(
 function menuEnablement(
   manifest: Manifest,
   location: "editor/title" | "webview/context" | "view/title",
+  command: string,
 ): string {
   if (location === "view/title") {
     return whenEnabled(manifest, "workbench");
   }
   if (location === "webview/context") {
-    return `${whenWebview(MARKDOWN_EDITOR)} && ${contributionId(`plugin.${manifest.id}`)}`;
+    // A window plugin's command (Rename Heading…) has no per-note
+    // `plugin.<id>` key: the editor sets those for note plugins only.
+    const enabled =
+      commandScope(manifest, command) === "workbench"
+        ? whenEnabled(manifest, "workbench")
+        : contributionId(`plugin.${manifest.id}`);
+    return [whenWebview(MARKDOWN_EDITOR), enabled].filter(Boolean).join(" && ");
   }
   return whenEnabled(manifest, "editor");
+}
+
+function commandScope(
+  manifest: Manifest,
+  command: string,
+): "editor" | "workbench" {
+  const contributed = manifest.contributes?.commands?.find(
+    (entry) => entry.id === command,
+  );
+  return contributed?.scope ?? "editor";
 }
 
 function manifestMenus(
@@ -278,7 +295,7 @@ function manifestMenus(
       .filter((menu) => menu.location === location && menu.submenu === submenu)
       .map((menu) => ({
         command: contributionId(menu.command),
-        when: [menuEnablement(manifest, location), menu.when]
+        when: [menuEnablement(manifest, location, menu.command), menu.when]
           .filter(Boolean)
           .join(" && "),
         ...(menu.group ? { group: menu.group } : {}),

@@ -2456,6 +2456,11 @@
           "group": "0_agent@2"
         },
         {
+          "command": "lumiere.markdown.renameHeading",
+          "when": "webviewId == 'lumiere.markdown.editor' && config.lumiere.markdown.preset != 'minimal' && config.lumiere.markdown.plugins.linkUpdates.enabled && webviewSection == 'markdownContent' && lumiere.markdown.selectionOnHeading",
+          "group": "1_heading@1"
+        },
+        {
           "command": "lumiere.markdown.lookUp",
           "when": "webviewId == 'lumiere.markdown.editor' && lumiere.markdown.plugin.lookUp && isMac && webviewSection == 'markdownContent'",
           "group": "0_agent@3"

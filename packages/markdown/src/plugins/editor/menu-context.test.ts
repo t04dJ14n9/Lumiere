@@ -1,6 +1,8 @@
 import test from "node:test";
 import assert from "node:assert/strict";
-import { menuContext, menuHasSelection } from "./menu-context";
+import { EditorState } from "@codemirror/state";
+import { markdownLanguageSupport } from "../../markdown/dialect";
+import { isHeadingLine, menuContext, menuHasSelection } from "./menu-context";
 
 test("a word the browser selected on a macOS secondary click counts before CodeMirror reads it", () => {
   assert.equal(
@@ -37,9 +39,46 @@ test("the menu context shadows the global selection key", () => {
   assert.deepEqual(JSON.parse(menuContext(true)), {
     webviewSection: "markdownContent",
     "lumiere.markdown.hasSelection": true,
+    "lumiere.markdown.selectionOnHeading": false,
   });
-  assert.deepEqual(JSON.parse(menuContext(false)), {
+  assert.deepEqual(JSON.parse(menuContext(false, true)), {
     webviewSection: "markdownContent",
     "lumiere.markdown.hasSelection": false,
+    "lumiere.markdown.selectionOnHeading": true,
   });
+});
+
+test("Rename Heading is offered on an ATX heading line, not on code, tags or other lines", () => {
+  const doc = [
+    "# Title",
+    "text",
+    "```",
+    "# not a heading",
+    "```",
+    "#tag",
+    "   ## Indented",
+    "    # code",
+    "#",
+    "- # in a list",
+  ].join("\n");
+  const state = EditorState.create({
+    doc,
+    extensions: [markdownLanguageSupport()],
+  });
+  const lines = doc.split("\n").map((_, index) => {
+    const line = state.doc.line(index + 1);
+    return isHeadingLine(state, line.to);
+  });
+  assert.deepEqual(lines, [
+    true,
+    false,
+    false,
+    false,
+    false,
+    false,
+    true,
+    false,
+    false,
+    false,
+  ]);
 });

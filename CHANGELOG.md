@@ -47,6 +47,9 @@
   its subheadings, as in Obsidian's Outline. Dropped on a heading, the
   section goes before it; dropped below the last heading, to the end of the
   note. One Undo takes the move back (#699).
+- Markdown: **Rename Heading…** is in a note's right-click menu on a heading
+  line, as Obsidian's editor menu offers it, in VS Code and outside it. It
+  renames the heading and updates the links to it (#699).
 
 Fixes for several VS Code windows open at once, each with a test; checked
 with two real windows on one profile.
