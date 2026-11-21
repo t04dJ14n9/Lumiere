@@ -389,16 +389,18 @@ async function openNavigation(options: OpenNavigation): Promise<void> {
 export const HTML_VIEWER_COMMAND = contributionId("htmlViewer.open");
 
 /**
- * Hand an HTML file to the viewer. False for any other file, and when there
- * is no viewer to hand it to (the plugin is turned off): it then opens as
- * text, as every other file does.
+ * Hand an HTML file to the viewer. False for any other file, when the caller
+ * asked for text, in Restricted Mode, and when there is no viewer to hand it to
+ * (the plugin is turned off): it then opens as text, as every other file does,
+ * with the options the link was opened with (a kept tab, the focus, the group).
+ * The viewer's own Restricted Mode branch is for callers that run its command.
  */
 async function openedInHtmlViewer(
   uri: vscode.Uri,
   options: OpenNavigation,
   column: vscode.ViewColumn,
 ): Promise<boolean> {
-  if (options.asText || !isHtmlFile(uri.path)) {
+  if (options.asText || !isHtmlFile(uri.path) || !vscode.workspace.isTrusted) {
     return false;
   }
   const commands = await vscode.commands.getCommands(true);
