@@ -1,8 +1,7 @@
 // The PDF viewer page's files, built into `out`: viewer.js (with the engine's
 // worker inside it) and viewer.css (with the codicon font beside it) and
 // embedpdf.wasm, the engine the viewer loads at runtime. Built into
-// dist/webview for the extension (scripts/build.mjs), and into pdf/ for the
-// web and iPad apps (packages/host-web/scripts/bundle.mjs).
+// dist/webview for the extension (scripts/build.mjs).
 import { copyFile, mkdir } from "node:fs/promises";
 import { createRequire } from "node:module";
 import path from "node:path";

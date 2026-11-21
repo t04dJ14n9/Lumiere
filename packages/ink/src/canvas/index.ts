@@ -2,8 +2,8 @@
  * The `ink` host service in a browser (`@workshop/ink/canvas`): a canvas
  * over the whole window, drawn on with Pointer Events. A pen tablet draws
  * with its pressure and tilt; a mouse or trackpad with a line that thins
- * as it speeds up. The desktop app's window and the web app provide it;
- * the iPad has PencilKit instead (docs/IPAD_PLAN.md section 5).
+ * as it speeds up. The desktop and web apps provided it (they are on the
+ * hosts-snapshot-2026-11-21 branch, with docs/IPAD_PLAN.md section 5).
  */
 import type { InkService } from "../service/ink";
 import { openSketchCanvas } from "./sketch-canvas";

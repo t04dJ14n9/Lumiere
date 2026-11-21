@@ -2,10 +2,15 @@
 
 Lumiere's ink: the sketch file format, the outlines that draw it, the
 `ink` host service a canvas provides, and the web canvas that provides it
-in a browser. It knows nothing of Markdown or of any host. The iPad app
-(`apps/ipad`) provides the service on PencilKit; the desktop and web apps
-on the web canvas; the `sketch` Markdown plugin uses it. See
-[docs/IPAD_PLAN.md](../../docs/IPAD_PLAN.md) section 5.
+in a browser. It knows nothing of Markdown or of any host. The `sketch`
+Markdown plugin uses the service where a host provides it. On `main` no host
+does: VS Code has no canvas, so the extension shows sketches as images and
+offers no Insert Sketch. The hosts that provided it (the iPad app on
+PencilKit, the desktop and web apps on the web canvas) and their design
+(`docs/IPAD_PLAN.md` section 5) live, frozen, on the
+`hosts-snapshot-2026-11-21` branch ([docs/HOSTS_PLAN.md](../../docs/HOSTS_PLAN.md)).
+References to "the iPad" below describe that app's behaviour, which the
+format and the canvas match.
 
 ## The sketch file
 

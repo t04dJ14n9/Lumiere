@@ -10,15 +10,14 @@ Notes' drawings are the model for how it feels.
 
 A sketch is a `*.sketch.svg` file (`@workshop/ink/format`): an SVG every
 viewer shows, with the strokes and their pressure kept inside it. The host
-half needs a canvas, the `ink` host service, which only some hosts have
-(the iPad's PencilKit; the desktop and web apps' web canvas,
-`@workshop/ink/canvas`); elsewhere it waits, and sketches show as images.
+half needs a canvas, the `ink` host service (`@workshop/ink`, whose web
+canvas is `@workshop/ink/canvas`); where the host provides none it waits,
+and sketches show as images.
 
-- **Insert Sketch** (the right-click menu, the window's pencil, and the
-  iPad's edit menu) opens the canvas, then writes the drawing to the
-  attachment folder as `2026-10-22 14.03.sketch.svg` and embeds it at the
-  caret, in a paragraph of its own so Live Preview shows it as a block.
-  Nothing is written if the canvas is cancelled.
+- **Insert Sketch** (the right-click menu) opens the canvas, then writes
+  the drawing to the attachment folder as `2026-10-22 14.03.sketch.svg` and
+  embeds it at the caret, in a paragraph of its own so Live Preview shows
+  it as a block. Nothing is written if the canvas is cancelled.
 - **A tap on a sketch** in Live Preview: the page names the embed's link,
   the host resolves it from the note, opens the canvas on the drawing and
   writes the new one over the file. The page then emits
@@ -49,9 +48,11 @@ link form use the shared `src/attachments/` helpers (same as paste/drop) and the
 
 ## Limits
 
-- Only where the host has a canvas: the iPad, and the desktop and web apps.
-  VS Code shows sketches as images, without Insert Sketch.
-- The canvas opens over the whole note, not in place (docs/IPAD_PLAN.md 5.5).
+- Only where the host has a canvas. VS Code and Cursor provide none, so the
+  extension shows sketches as images, without Insert Sketch. The hosts that
+  provided one (the iPad, the desktop and web apps) are on the
+  `hosts-snapshot-2026-11-21` branch (docs/HOSTS_PLAN.md).
+- The canvas opens over the whole note, not in place.
 - A sketch embedded in the middle of a line opens on a tap, but keeps showing
   its old drawing until the line is redrawn.
 - Sketches are not resized from the note. A sketch is as large as its

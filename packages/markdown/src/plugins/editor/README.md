@@ -106,8 +106,7 @@ a module script's import graph delays that, so a page with a snapshot loads
 the editor by `import()` from a small inline script (`webview-html.ts`): the
 snapshot is visible as soon as the page's stylesheet is, and host messages that
 arrive before the editor's own listener are kept and replayed by
-`webview/transport.ts`. Hosts that build their own page (host-node) do not draw
-it yet.
+`webview/transport.ts`.
 
 ## Files
 

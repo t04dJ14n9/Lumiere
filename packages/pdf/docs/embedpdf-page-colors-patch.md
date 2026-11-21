@@ -69,8 +69,7 @@ render.invalidate()                   dark-host.ts     host.handlePagesRender
 is `worker-entry.ts` built as an IIFE (the recipe of EmbedPDF's
 `scripts/build-workers.mjs`: ES2020, `import.meta.url` as `self.location.href`)
 and exported as a string, which `browser-render-environment.ts` starts as a
-blob worker. `scripts/viewer.mjs` (so the extension, the web app and the iPad
-app) uses it, and stubs EmbedPDF's own worker and in-thread transport
+blob worker. `scripts/viewer.mjs` (so the extension) uses it, and stubs EmbedPDF's own worker and in-thread transport
 (`scripts/embedpdf-stubs.mjs`), which Lumiere no longer starts.
 
 The main-thread fallback (a worker that cannot start) runs the same host:

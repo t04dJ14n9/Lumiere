@@ -578,8 +578,7 @@ tested and stays the same. The changes are structural.
 
 ### 8.2 Undo, redo and save
 
-- Undo and redo are VS Code's (outside VS Code, host-node's, one step per
-  applied edit as in VS Code). `UndoGroups` is metadata over native steps:
+- Undo and redo are VS Code's. `UndoGroups` is metadata over native steps:
   it lets one logical input group (a Vim insert, a structural table edit)
   undo in one step, and clears itself whenever native history diverges.
 - Save waits for `document/willSave` (which flushes every view through
@@ -1196,7 +1195,7 @@ Rules:
   Formatting sits in submenus, as Obsidian's editor menu groups it: Format,
   Highlight (the colours) and Insert (`src/shared/editor-menus.ts`; a
   manifest's menu item names its submenu, and the generator contributes
-  VS Code's `submenus`). Inside one, host-node shows each command's
+  VS Code's `submenus`). Each command also contributes VS Code's
   `shortTitle` (Bold); VS Code's context menus keep the title.
   Context-dependent items (tables, property chips) keep in-editor menus via
   the `menu` service and `editor/menu`.
@@ -1564,8 +1563,10 @@ and `markdown.previewScripts`. Lumiere v2 adds:
 ## 19. Security
 
 - CSP: `default-src 'none'`; scripts by nonce and `webview.cspSource` (by
-  nonce only where the host asks, `PanelShell.scriptsByNonceOnly`: host-node,
-  whose page shares its origin with a vault's files and its API); styles
+  nonce only where the host asks, `PanelShell.scriptsByNonceOnly`, which
+  VS Code does not: it was for the hosts outside VS Code, now on the
+  `hosts-snapshot-2026-11-21` branch, whose page shared its origin with a
+  vault's files); styles
   from `cspSource` plus inline style attributes (needed by CodeMirror);
   images from `cspSource`, `https:`, `data:`, `blob:`; media from `cspSource`,
   `https:` and `blob:`; `frame-src https:`; fonts from `cspSource` and

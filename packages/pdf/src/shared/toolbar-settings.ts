@@ -2,8 +2,9 @@
  * Where the viewer's controls are (setting `lumiere.pdf.toolbar.mode`):
  *   chrome  VS Code status bar (and Settings / command palette)
  *   none    no status-bar PDF entries; keyboard, menus and commands only
- *   slim    in-page slim bar — used by stand-alone hosts (web / iPad) that
- *           have no VS Code status bar; not offered in the VS Code setting
+ *   slim    in-page slim bar, for a stand-alone host with no VS Code status
+ *           bar (the web and iPad apps, now on the hosts-snapshot-2026-11-21
+ *           branch); not offered in the VS Code setting
  *
  * Floating was removed. Saved VS Code values of slim/floating migrate to chrome.
  */

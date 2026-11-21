@@ -87,16 +87,13 @@ update is checked against native authority rather than overwriting the document.
 providers can preserve ranges between disjoint changes, including CRLF offsets.
 
 Only a note with a panel open is autosaved, and an untitled note never is,
-since saving it asks where to put it. Hosts that own their files (host-node)
-already write a note 800 ms after typing pauses, so there the 2 s countdown
-finds the note saved.
+since saving it asks where to put it.
 
 A note with unsaved text whose file another program rewrites is not reloaded by
-VS Code: it keeps the unsaved text and reports a conflict when saving. Hosts
-that own the files merge instead, as Obsidian does: host-node's `NoteDocuments`
-applies the outside change onto the unsaved text with `mergeDiskChange`
-(`shared/document/merge.ts`), a line-based three-way merge. Where both changed
-the same lines the unsaved lines stay; host-node first keeps the other
-program's version in a conflict copy beside the note (`diskChangeConflicts`
-says when) and tells the reader. The session only records the merged text as
-the document's.
+VS Code: it keeps the unsaved text and reports a conflict when saving. A host
+that owns the files can merge instead, as Obsidian does, with
+`mergeDiskChange` (`shared/document/merge.ts`), a line-based three-way merge
+in which the unsaved lines win where both changed the same lines
+(`diskChangeConflicts` says when); the session then only records the merged
+text as the document's. No host on `main` does: the one that did is on the
+`hosts-snapshot-2026-11-21` branch.

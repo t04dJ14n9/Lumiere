@@ -4,8 +4,9 @@ import {
 } from "./toolbar-settings";
 
 /**
- * The toolbar of a viewer in a page of its own (the web and iPad apps): in
- * the page, since there is no editor title bar to hold its buttons.
+ * The toolbar of a viewer in a page of its own (the web and iPad apps, now
+ * on the hosts-snapshot-2026-11-21 branch): in the page, since there is no
+ * editor title bar to hold its buttons.
  */
 export const PAGE_TOOLBAR: ToolbarSettings = {
   mode: "slim",
@@ -29,7 +30,8 @@ export interface ViewerPageParts {
 
 /**
  * The viewer page, in VS Code's webview (extension/plugins/pdf/webview-html.ts)
- * or in a page of the web and iPad apps (packages/host-web, `openPdfPage`).
+ * or in a page of its own (the web and iPad apps, now on the
+ * hosts-snapshot-2026-11-21 branch).
  * Scripts load only with the nonce; the PDF engine needs `wasm-unsafe-eval`,
  * and its worker starts from a blob URL. The toolbar setting is in the page,
  * so the first paint has the right layout; later changes arrive as messages.

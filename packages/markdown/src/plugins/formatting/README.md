@@ -58,7 +58,7 @@ contributed bindings still apply when focus is outside the editor text.
 Read-only views reject edits. The note's right-click menu holds the inline
 commands in submenus, as Obsidian's editor menu does: Format (bold, italics,
 strikethrough, highlight, inline code), Highlight (the six colours) and
-Insert (link), where host-node labels each by its short title (Bold).
+Insert (link).
 
 ## Files
 

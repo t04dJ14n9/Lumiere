@@ -99,7 +99,7 @@ function redirectTarget(
 /**
  * GET `url`, following redirects by hand so that every address, the first
  * and each hop, is checked before it is requested. Node's fetch (the editor
- * host, DSH, the app) hands back the redirect itself. A browser's hides it
+ * host) hands back the redirect itself. A browser's hides it
  * (`opaqueredirect`): the URL is then fetched once more for the browser to
  * follow, and only the address it ended at can be checked, after the fact;
  * the browser's own rules (CORS, private network access) stand in for the rest.

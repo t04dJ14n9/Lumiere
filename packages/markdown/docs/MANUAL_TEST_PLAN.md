@@ -167,11 +167,7 @@ do not install a VSIX or use the owner's profile.
    menus open instead. Right-click the note's text: Format, Highlight and
    Insert are submenus (bold to inline code; the six highlight colours;
    link), each opening beside its row; VS Code and Cursor list the
-   commands' titles (Toggle Bold), the app their short titles (Bold). In
-   the app, open each by a click, by resting the mouse on it, and by Right
-   or Enter, and leave it by Left or Escape. On the iPad (More… in the edit
-   menu) the rows are finger-sized, and one tap opens a submenu and one
-   runs its row.
+   commands' titles (Toggle Bold).
 
 8. Copy `Core.md` repeatedly into a disposable long note (at least 300 lines).
    At the default `lumiere.markdown.editor.dragScrollSpeed: 4`, drag a text
@@ -1165,10 +1161,9 @@ Use a disposable vault with `Templates/Meeting.md` containing
    `dateFormat`, **Insert Template** uses those values until the matching
    Lumiere setting is set explicitly. A `dateFormat` such as
    `YYYY-MM-DD dddd` is not carried over. No `.obsidian` file changes.
-3. In host-node (the app or DSH), repeat step 1 from its Command Palette.
-4. A template written `# {{Title}}` and `{{DATE:YYYY}}` fills both in, as
+3. A template written `# {{Title}}` and `{{DATE:YYYY}}` fills both in, as
    `{{title}}` and `{{date:YYYY}}` do.
-5. With no templates folder set, **Insert Current Date** writes today's
+4. With no templates folder set, **Insert Current Date** writes today's
    date (`YYYY-MM-DD`) at the caret and **Insert Current Time** the time
    (`HH:mm`), with the caret after it; with text selected, the date goes in
    at the selection's head (where the drag ended), and the selected text
@@ -1328,7 +1323,7 @@ Use the disposable fixture vault from Setup. These rows enumerate every generate
 | `lumiere.markdown.toggleInlineGitChanges` — Toggle Inline Git Changes | unbound | On a disposable fixture, run Toggle Inline Git Changes; confirm its named action using the plugin scenarios above, then undo where applicable. Repeat after disable/re-enable and switching panes. |
 | `lumiere.markdown.toggleVim` — Toggle Vim Mode | unbound | On a disposable fixture, run Toggle Vim Mode; confirm its named action using the plugin scenarios above, then undo where applicable. Repeat after disable/re-enable and switching panes. |
 | `lumiere.markdown.toggleSpellcheck` — Toggle Spellcheck | unbound | On a disposable fixture, run Toggle Spellcheck; confirm its named action using the plugin scenarios above, then undo where applicable. Repeat after disable/re-enable and switching panes. |
-| `lumiere.markdown.insertSketch` — Insert Sketch | unbound | On the iPad, in a disposable vault, run Insert Sketch from the right-click menu (More… in the edit menu) and from the edit menu; draw, press Done, and confirm a `*.sketch.svg` in the attachment folder and its embed below the caret's line. Tap the sketch, change it, press Done: the note shows the new drawing. Cancel leaves the vault and the note unchanged. Not shown in VS Code or the desktop app. |
+| `lumiere.markdown.insertSketch` — Insert Sketch | unbound | VS Code and Cursor provide no canvas: confirm Insert Sketch is absent from the Command Palette and the note's right-click menu, and that an existing `*.sketch.svg` embed shows as an image. |
 | `lumiere.markdown.insertTable` — Insert Table | unbound | On a disposable fixture, run Insert Table; confirm its named action using the plugin scenarios above, then undo where applicable. Repeat after disable/re-enable and switching panes. |
 | `lumiere.markdown.tableInsertRowAbove` — Table: Insert Row Above | unbound | On a disposable fixture, run Table: Insert Row Above; confirm its named action using the plugin scenarios above, then undo where applicable. Repeat after disable/re-enable and switching panes. |
 | `lumiere.markdown.tableInsertRowBelow` — Table: Insert Row Below | unbound | On a disposable fixture, run Table: Insert Row Below; confirm its named action using the plugin scenarios above, then undo where applicable. Repeat after disable/re-enable and switching panes. |
@@ -1360,9 +1355,9 @@ Use the disposable fixture vault from Setup. These rows enumerate every generate
 
 | Submenu of the note's menu | Items | Procedure and expected outcome |
 | --- | --- | --- |
-| `lumiere.markdown.menu.format` — Format | Toggle Bold, Toggle Italics, Toggle Strikethrough, Toggle Highlight, Toggle Inline Code | Right-click the note's text (on the iPad, More… in the edit menu) and open Format: it lists its items beside its row, by tap, click or Right, and each runs as from the palette. VS Code and Cursor show the titles; the app shows the short ones. |
-| `lumiere.markdown.menu.highlight` — Highlight | Toggle Red Highlight, Toggle Orange Highlight, Toggle Yellow Highlight, Toggle Green Highlight, Toggle Blue Highlight, Toggle Purple Highlight | Right-click the note's text (on the iPad, More… in the edit menu) and open Highlight: it lists its items beside its row, by tap, click or Right, and each runs as from the palette. VS Code and Cursor show the titles; the app shows the short ones. |
-| `lumiere.markdown.menu.insert` — Insert | Insert Link | Right-click the note's text (on the iPad, More… in the edit menu) and open Insert: it lists its items beside its row, by tap, click or Right, and each runs as from the palette. VS Code and Cursor show the titles; the app shows the short ones. |
+| `lumiere.markdown.menu.format` — Format | Toggle Bold, Toggle Italics, Toggle Strikethrough, Toggle Highlight, Toggle Inline Code | Right-click the note's text and open Format: it lists its items beside its row, by click or Right, and each runs as from the palette, with the commands' titles. |
+| `lumiere.markdown.menu.highlight` — Highlight | Toggle Red Highlight, Toggle Orange Highlight, Toggle Yellow Highlight, Toggle Green Highlight, Toggle Blue Highlight, Toggle Purple Highlight | Right-click the note's text and open Highlight: it lists its items beside its row, by click or Right, and each runs as from the palette, with the commands' titles. |
+| `lumiere.markdown.menu.insert` — Insert | Insert Link | Right-click the note's text and open Insert: it lists its items beside its row, by click or Right, and each runs as from the palette, with the commands' titles. |
 
 | Setting | Default | Procedure |
 | --- | --- | --- |
@@ -1403,7 +1398,7 @@ Use the disposable fixture vault from Setup. These rows enumerate every generate
 | `lumiere.markdown.plugins.quickSwitcher.enabled` | `true` | boolean; change at workspace-folder scope, verify the owning plugin scenario, then reset the override. |
 | `lumiere.markdown.plugins.scratch.enabled` | `true` | boolean; change at workspace-folder scope, verify the owning plugin scenario, then reset the override. |
 | `lumiere.markdown.plugins.search.enabled` | `true` | boolean; change at workspace-folder scope, verify the owning plugin scenario, then reset the override. |
-| `lumiere.markdown.plugins.sketch.enabled` | `true` | boolean; turn off on the iPad and confirm Insert Sketch leaves the right-click menu and a tap on a sketch selects it as an image; then reset. |
+| `lumiere.markdown.plugins.sketch.enabled` | `true` | boolean; VS Code and Cursor provide no canvas, so Insert Sketch stays hidden whether it is on or off; confirm a `*.sketch.svg` embed shows as an image either way; then reset. |
 | `lumiere.markdown.plugins.smartLists.enabled` | `true` | boolean; change at workspace-folder scope, verify the owning plugin scenario, then reset the override. |
 | `lumiere.markdown.plugins.spellcheck.enabled` | `true` | boolean; change at workspace-folder scope, verify the owning plugin scenario, then reset the override. |
 | `lumiere.markdown.plugins.stickyScroll.enabled` | `true` | boolean; change at workspace-folder scope, verify the owning plugin scenario, then reset the override. |

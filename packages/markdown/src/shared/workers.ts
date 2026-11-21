@@ -1,6 +1,6 @@
 /**
- * Workers the plugins' host half starts: Node worker threads in VS Code and
- * host-node, web workers in a browser. A caller names a built script; the
+ * Workers the plugins' host half starts: Node worker threads in VS Code,
+ * web workers in a browser. A caller names a built script; the
  * host knows where its build is and how to start it.
  */
 

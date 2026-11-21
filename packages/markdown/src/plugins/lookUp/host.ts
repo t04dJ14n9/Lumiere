@@ -43,11 +43,10 @@ export async function openInDictionary(
 }
 
 /**
- * The OS of the process the plugins run in. VS Code's extension host and
- * host-node are Node; host-web runs the same plugins in a browser, which has
- * no `process` (and no Dictionary app to open), so there it is "". Read
- * through `globalThis` because host-web compiles these plugins without
- * Node's types.
+ * The OS of the process the plugins run in. VS Code's extension host is
+ * Node; a host that runs the plugins in a browser has no `process` (and no
+ * Dictionary app to open), so there it is "". Read through `globalThis` so
+ * the plugins also compile without Node's types.
  */
 function hostPlatform(): string {
   const runtime = (globalThis as unknown as { process?: { platform?: string } })

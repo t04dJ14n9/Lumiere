@@ -154,8 +154,9 @@ to: a link could lead out of the vault, so that save fails the same way.
 A name that resolves to a private address is not caught: only the address as
 written, and each redirect's, is checked, since there is no DNS answer to look
 at (`http://127.0.0.1.nip.io/` passes), and a name could change address between
-the check and the request. Where a browser hides a redirect from `fetch` (the
-web and iPad apps), the URL is fetched once more for the browser to follow, and
+the check and the request. Where a browser hides a redirect from `fetch` (a
+host whose fetch runs in a page rather than in Node; none on `main`), the URL
+is fetched once more for the browser to follow, and
 only the address it ended at is checked, after the request; the browser's CORS
 and private-network rules stand in for the rest.
 
@@ -174,7 +175,7 @@ uses an attachment), the question is one choice for all the attachments rather
 than Obsidian's list with a checkbox each, and the trash is VS Code's
 (`files.enableTrash`), not Obsidian's trash options. Links from canvases and
 bases are not indexed, so an attachment only a canvas uses may be offered.
-Hosts outside VS Code never report deletions, so the setting is hidden there.
+A host that does not report deletions hides the setting.
 
 Single-click preview media while a Lumiere note is focused is left alone
 (preview tabs are not offered). Any other pinned open of media in the note's

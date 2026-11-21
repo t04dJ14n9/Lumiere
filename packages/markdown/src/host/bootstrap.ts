@@ -53,7 +53,7 @@ export interface BootstrapOptions {
   /** Cursor's Chat and Edit hand-off; without it the bridge stays off. */
   readonly cursorBridge?: CursorBridgeConfig;
   /**
-   * A canvas to draw on (PencilKit on the iPad); without it the plugins
+   * A canvas to draw on (VS Code provides none); without it the plugins
    * that draw (`sketch`) wait and show nothing.
    */
   readonly ink?: InkService;

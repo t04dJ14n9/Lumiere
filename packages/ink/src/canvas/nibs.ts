@@ -1,9 +1,10 @@
 /**
  * The web canvas's tools: three of PencilKit's inks and an eraser, with the
  * colours and widths on offer, and how each ink answers pressure and tilt
- * (docs/IPAD_PLAN.md 5.2): the pen thickens as it presses; the pencil
- * shades darker as it presses and broader as it tilts; the marker lays a
- * broad, nearly even line that multiplies with what is under it.
+ * (docs/IPAD_PLAN.md 5.2, on the hosts-snapshot-2026-11-21 branch): the
+ * pen thickens as it presses; the pencil shades darker as it presses and
+ * broader as it tilts; the marker lays a broad, nearly even line that
+ * multiplies with what is under it.
  */
 import type { InkTool } from "../format";
 import { clamp } from "./input";

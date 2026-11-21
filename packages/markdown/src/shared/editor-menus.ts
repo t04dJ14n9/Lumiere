@@ -3,7 +3,7 @@
  * Obsidian's editor menu does. A plugin's `webview/context` item names the
  * submenu it belongs in; the generator contributes each submenu some plugin
  * fills (VS Code's `contributes.submenus`). VS Code hides a submenu while
- * none of its items shows, and so does host-node.
+ * none of its items shows.
  */
 export const EDITOR_SUBMENUS = {
   format: { label: "Format", group: "formatting@1" },

@@ -39,8 +39,9 @@ per note, injects `rpc` and the host service `navigation`. Neither provides
 a service or listens to or emits kernel events. The webview command is
 `editor:look-up`, behind `lumiere.markdown.lookUp` (context menu only; not in
 the palette). `lumiere.markdown.plugins.lookUp.enabled` defaults to true. The
-plugin needs VS Code's window (`needs: ["workbench"]`): host-node's menu
-has no `isMac` key, so the item could not show there, and it stays off.
+plugin needs VS Code's window (`needs: ["workbench"]`): its menu item
+depends on VS Code's `isMac` context key, so a host without that window
+keeps the plugin off.
 
 ## Limits and differences from Obsidian
 

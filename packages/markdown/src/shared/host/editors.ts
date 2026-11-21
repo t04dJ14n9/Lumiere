@@ -14,7 +14,7 @@ export interface PanelShell {
   /**
    * The page's scripts run by its nonce only, never because they come from
    * `cspSource`. For a host whose page shares its origin with what else it
-   * serves (host-node: a vault's files, its API), where `'self'` would let
+   * serves (a vault's files, an API), where `'self'` would let
    * any same-origin URL be a script. VS Code gives each webview an origin of
    * its own and leaves this out.
    */

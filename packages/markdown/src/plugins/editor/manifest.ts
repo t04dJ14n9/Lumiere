@@ -81,7 +81,7 @@ export default defineManifest({
     reclaimTextEditor: ["workbench"],
     reclaimInPlaceTextEditor: ["workbench"],
     warmTextDocument: ["workbench"],
-    // Outside VS Code the host saves notes itself, a moment after typing pauses.
+    // A host without VS Code's window saves notes itself, a moment after typing pauses.
     autosave: ["workbench"],
   },
   contributes: {

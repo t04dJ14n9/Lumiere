@@ -11,10 +11,14 @@ workspace. Everything is a plugin. The whole-repository map is
 | `packages/markdown` | Lumiere: Obsidian-like Live Preview | its DESIGN.md, IMPLEMENTATION_PLAN.md |
 | `packages/pdf` | Lumiere PDF: EmbedPDF viewer with agent links | its README.md, AGENTS.md |
 | `src/extension.ts` | The composition root: one plugin tree for both | |
-| `packages/host-node` | The plugins' host outside VS Code: services, editor routes, tree views | its README.md |
-| `packages/dsh` | Lumiere in DeepSeek Harness, on host-node | its README.md |
-| `packages/app` | Lumiere's own server and Typora-like window, on host-node | its README.md |
-| `apps/desktop` | The Tauri desktop app around `packages/app` | its README.md, [docs/HOSTS_PLAN.md](docs/HOSTS_PLAN.md) |
+| `packages/ink` | Sketch format and the `ink` service (used only by a host that provides a canvas) | its README.md |
+
+`main` is the VS Code and Cursor extension only (owner decision,
+2026-11-21). The hosts outside VS Code (host-node, host-web, DSH, the app,
+the desktop, web and iPad apps) live, frozen, on the branch
+`hosts-snapshot-2026-11-21` ([docs/HOSTS_PLAN.md](docs/HOSTS_PLAN.md)). It
+takes no merges from `main`; do not port changes to it or add a host back
+without the owner.
 
 If the task is a user / third-party custom plugin, read
 [packages/markdown/AGENT.md](packages/markdown/AGENT.md) and implement it as a
@@ -40,11 +44,8 @@ If the task is a user / third-party custom plugin, read
   `dialogs`, `settings`, `workspace`, …); their VS Code adapters live in
   `src/host/services`. Inject the narrowest service that does the job, and
   fake it in tests with `fakeHost(overrides)`.
-- Outside VS Code the same services come from `packages/host-node`, which
-  knows no embedder. DSH, the app and the desktop app add only what is
-  theirs. Put each change in the layer docs/HOSTS_PLAN.md section 3 names: a
-  Markdown fix goes in the plugin, never in one host. The contracts between
-  the layers (docs/HOSTS_PLAN.md section 4) change on both sides in one PR.
+- A Markdown fix goes in the plugin, never as a special case in
+  `src/host`.
 - The `TextDocument` owns text, saving and undo. Webviews only synchronize.
 - Webviews are untrusted. Every message has a schema and is validated in
   both directions; the host re-checks paths and containment.

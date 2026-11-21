@@ -7919,3 +7919,33 @@ follows Mod-click. Checks: `pnpm test` (all packages), typecheck, ESLint,
 Prettier and `pnpm contributions --check` pass. Not run here (a real VS Code
 suite was running on the machine): `pnpm test:browser`, `test:quality`,
 `test:vscode`.
+
+## `main` is the VS Code extension only (owner decision, 2026-11-21)
+
+The owner decided that `main` ships the VS Code and Cursor extension and
+nothing else. `packages/host-node`, `packages/host-web`, `packages/app`,
+`packages/dsh` and `apps/` (the desktop, web and iPad apps) left `main`. They
+are preserved, frozen, on the branch `hosts-snapshot-2026-11-21` at
+`db1a5aaf`, which takes no further merges from `main`
+(docs/HOSTS_PLAN.md on `main` is now a pointer to it).
+
+What stays: the extension (`src/`, `test/`), `packages/core`,
+`packages/agents`, `packages/markdown`, `packages/pdf` and `packages/ink`.
+Nothing in them depended on the hosts. The host services in
+`src/shared/host` remain the seam between the plugins and VS Code.
+
+The sections above that describe work in host-node, DSH, the app, the
+desktop app or the iPad are history: that code is on the snapshot branch.
+Current documents (CAPABILITIES, DESIGN, the plugin READMEs,
+MANUAL_TEST_PLAN, PARITY) no longer describe behaviour outside VS Code.
+
+Kept on `main` because removing them could change behaviour or they are
+part of the host-service contract (listed, not removed): the
+`@workshop/markdown/portable` and `./node` entries and the layers tests
+that keep them free of VS Code and Node built-ins; manifest `needs` and
+`host-needs.ts`; `PanelShell.scriptsByNonceOnly`; `mergeDiskChange` and
+`diskChangeConflicts`; the chrome inset and the soft-keyboard check in the
+webview; the web-worker variant of the workers; the `sketch` plugin, which
+waits for an `ink` service VS Code does not provide; and in Lumiere PDF the
+`portable` and `viewer-page` entries and the `slim` toolbar mode
+(`PAGE_TOOLBAR`).

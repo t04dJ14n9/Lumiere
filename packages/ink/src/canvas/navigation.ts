@@ -1,7 +1,7 @@
 /**
  * Panning and zooming with a trackpad or a wheel: scrolling pans the paper
  * in every direction; a pinch (which Chromium sends as a wheel with Ctrl,
- * and WebKit, the desktop app's view, as gesture events) or Ctrl with the
+ * and WebKit as gesture events) or Ctrl with the
  * wheel zooms about the pointer.
  */
 import type { ViewPoint } from "./camera";

@@ -315,7 +315,7 @@ async function captureRegisteredCommands(): Promise<{
   });
   root.provide("selections", selections);
   root.provide("vaults", {} as Vaults);
-  // A host with a canvas (the iPad's), where Insert Sketch registers.
+  // A host with a canvas, where Insert Sketch registers.
   root.provide("ink", {
     capabilities: async () => ({
       engine: "test",

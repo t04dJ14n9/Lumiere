@@ -68,7 +68,7 @@ export class AcceptKeys {
     return acceptance;
   }
 
-  /** Hosts without context keys (host-node) ignore it; never fail the switcher. */
+  /** Hosts without context keys ignore it; never fail the switcher. */
   private async setOpen(isOpen: boolean): Promise<void> {
     await this.commands
       .execute("setContext", SWITCHER_OPEN_CONTEXT, isOpen)
