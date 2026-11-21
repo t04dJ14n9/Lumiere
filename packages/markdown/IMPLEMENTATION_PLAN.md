@@ -7116,3 +7116,19 @@ Tests: `test/unit/links/unresolved.test.ts` (known keys for attachments,
 `.markdown` notes and excluded notes, those links staying bright, the cap).
 Checks: the links unit tests, typecheck, eslint and Prettier on the changed
 files; browser and VS Code suites not run (unit-only change).
+
+## The link-target flash has a colour (2026-11-21)
+
+Found in a parity read: `links.css` painted the `.is-flashing` target of a
+jump with `var(--text-highlight-bg)`, `var(--text-normal)` and
+`var(--highlight-mix-blend-mode)`, Obsidian's variables, which no Lumiere
+stylesheet defines (and Obsidian 1.15.0 itself dropped the first). A `var()`
+without a fallback that nothing defines leaves the declaration invalid, so
+the flash had no background and only its 2-second rounding showed. It now
+uses Lumiere's own highlight colour (`--highlight`, the colour of
+`==text==`); the colour and blend-mode lines went, since they did nothing.
+`test/unit/links/flash-css.test.ts` pins the colour and that every `var()`
+without a fallback in `links.css` names a property a Lumiere stylesheet
+declares; it fails on the old rule. Not checked by eye in a running editor.
+Another undefined variable without a fallback outside this plugin
+(`--editor-font` in `gitGutter.css`) is left for its own change.

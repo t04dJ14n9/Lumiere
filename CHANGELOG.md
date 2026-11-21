@@ -4,6 +4,9 @@
 
 - Markdown: links to a PDF, an image or another attachment, and links to
   excluded notes, are no longer dimmed as if their file were missing (#698).
+- Markdown: the heading, block or match a jump lands on (a link, the
+  Outline, Go to Heading, Search) flashes in the highlight colour. The flash
+  had no colour, so nothing showed.
 - DeepSeek Harness, the desktop app and the web app: a file in a vault can no
   longer run as a page or a script on the editor's origin. The images, audio,
   video and PDFs a note shows are served as themselves, and sandboxed if

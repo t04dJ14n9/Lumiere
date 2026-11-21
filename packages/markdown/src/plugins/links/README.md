@@ -68,6 +68,7 @@ renderer adds `is-unresolved` to rendered links whose path is in it.
 - `test/unit/links/unresolved.test.ts`: unresolved keys, styled decorations and
   the host's set updates.
 - `links.css`: the plugin's styles, bundled through `src/webview/styles/index.css`.
+- `test/unit/links/flash-css.test.ts`: the target flash paints a colour Lumiere defines.
 
 ## Services, events and settings
 
