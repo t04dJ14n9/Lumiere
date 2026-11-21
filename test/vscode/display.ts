@@ -1,5 +1,5 @@
 /**
- * The X display the test VS Code opens on, shared by the Markdown
+ * Where the test VS Code's window opens, shared by the Markdown
  * (test/vscode) and PDF (packages/pdf/test/vscode) harnesses.
  *
  * On Linux it gets a display of its own, 1920 by 1080, whatever display the
@@ -9,6 +9,9 @@
  * A private display also keeps the test window off the owner's desktop.
  * LUMIERE_VSCODE_DISPLAY=inherit keeps the caller's display instead, to
  * watch the window; without Xvfb installed the caller's display is used.
+ *
+ * On a Mac with several screens, `placeWindowOnBuiltInScreen` opens the test
+ * window maximized on the built-in screen instead of the one under the pointer.
  */
 import { execFileSync, spawn } from "node:child_process";
 import {
@@ -91,6 +94,19 @@ function killQuietly(pid: number): void {
   }
 }
 
+/** A rectangle in Electron's screen coordinates: points, y down from the top of the primary screen. */
+export interface WorkArea {
+  readonly x: number;
+  readonly y: number;
+  readonly width: number;
+  readonly height: number;
+}
+
+/** A screen as AppKit reports it: its visible frame, y up from the primary screen's bottom edge. */
+export interface MacScreen extends WorkArea {
+  readonly isBuiltIn: boolean;
+}
+
 /**
  * On a Mac with more than one screen, VS Code opens a new window on the
  * screen under the pointer, which is often one the owner is working on. A
@@ -103,61 +119,85 @@ export function placeWindowOnBuiltInScreen(userData: string): void {
   if (process.platform !== "darwin") {
     return;
   }
-  const screen = builtInScreen();
-  if (screen === undefined) {
+  const read = readMacScreens();
+  const area = read && builtInWorkArea(read.screens, read.primaryHeight);
+  if (!area) {
     return;
   }
   const globalStorage = path.join(userData, "User", "globalStorage");
   mkdirSync(globalStorage, { recursive: true });
-  // VS Code's window state (windowsStateHandler): mode 0 is maximized.
   writeFileSync(
     path.join(globalStorage, "storage.json"),
-    JSON.stringify({
-      windowsState: {
-        lastActiveWindow: { uiState: { mode: 0, ...screen } },
-        openedWindows: [],
-      },
-    }),
+    JSON.stringify(windowStateOn(area)),
   );
 }
 
 /**
- * The built-in screen's work area in Electron's coordinates (top-left of the
- * primary screen, y down), when there are other screens too.
+ * The built-in screen's work area in Electron's coordinates, when there are
+ * other screens too. AppKit measures y up from the primary screen's bottom
+ * edge; Electron measures it down from that screen's top edge.
  */
-function builtInScreen():
-  { x: number; y: number; width: number; height: number } | undefined {
-  // AppKit gives each screen's frame with y up from the primary screen's
-  // bottom edge; Electron measures y down from its top edge.
+export function builtInWorkArea(
+  screens: readonly MacScreen[],
+  primaryHeight: number,
+): WorkArea | undefined {
+  const builtIn = screens.find((screen) => screen.isBuiltIn);
+  if (screens.length < 2 || builtIn === undefined) {
+    return undefined;
+  }
+  return {
+    x: builtIn.x,
+    y: primaryHeight - (builtIn.y + builtIn.height),
+    width: builtIn.width,
+    height: builtIn.height,
+  };
+}
+
+/**
+ * VS Code's saved window state (`windowsState` in globalStorage's
+ * storage.json, read by its windowsStateHandler) that opens its first window
+ * maximized (mode 0) on `area`.
+ */
+export function windowStateOn(area: WorkArea): unknown {
+  return {
+    windowsState: {
+      lastActiveWindow: { uiState: { mode: 0, ...area } },
+      openedWindows: [],
+    },
+  };
+}
+
+/**
+ * The screens AppKit knows and the primary screen's height. Built-in is
+ * CoreGraphics' answer, not the screen's name, which follows the system
+ * language.
+ */
+function readMacScreens():
+  { screens: MacScreen[]; primaryHeight: number } | undefined {
   const script = `
     ObjC.import("AppKit");
-    const screens = $.NSScreen.screens;
-    const primary = screens.objectAtIndex(0).frame;
-    let found = null;
-    for (let i = 0; i < screens.count; i++) {
-      const screen = screens.objectAtIndex(i);
-      if (/built-in/i.test(ObjC.unwrap(screen.localizedName))) {
-        const area = screen.visibleFrame;
-        found = {
-          x: area.origin.x,
-          y: primary.size.height - (area.origin.y + area.size.height),
-          width: area.size.width,
-          height: area.size.height,
-        };
-      }
+    ObjC.import("CoreGraphics");
+    const all = $.NSScreen.screens;
+    const screens = [];
+    for (let i = 0; i < all.count; i++) {
+      const screen = all.objectAtIndex(i);
+      const id = ObjC.unwrap(screen.deviceDescription.objectForKey("NSScreenNumber"));
+      const area = screen.visibleFrame;
+      screens.push({
+        isBuiltIn: !!$.CGDisplayIsBuiltin(id),
+        x: area.origin.x,
+        y: area.origin.y,
+        width: area.size.width,
+        height: area.size.height,
+      });
     }
-    JSON.stringify(screens.count > 1 ? found : null);`;
+    JSON.stringify({ screens, primaryHeight: all.objectAtIndex(0).frame.size.height });`;
   try {
-    const output = execFileSync(
-      "osascript",
-      ["-l", "JavaScript", "-e", script],
-      {
+    return JSON.parse(
+      execFileSync("osascript", ["-l", "JavaScript", "-e", script], {
         encoding: "utf8",
-      },
-    );
-    return (
-      (JSON.parse(output) as ReturnType<typeof builtInScreen>) ?? undefined
-    );
+      }),
+    ) as { screens: MacScreen[]; primaryHeight: number };
   } catch {
     return undefined;
   }
