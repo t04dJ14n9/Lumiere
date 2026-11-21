@@ -7795,3 +7795,14 @@ running. One commit per item.
   selection counts as unquoted: quoted lines stay, the blank ones are
   quoted. `lineEdit` keeps blank lines for the quote only; the unit test
   that pinned the skip now pins this.
+- **Line and insert commands act at every selection.** `processLines`
+  gathers the lines of every range (one set, so blank lines are skipped
+  when the set has several, and one step decides a checklist toggle for
+  all); `insertBlock`, `insertMarkdownLink`, `triggerWikilink` and
+  `insertHorizontalRule` edit per range. `selectedLines`
+  (src/markdown/selected-lines.ts, shared by formatting and tasks) and
+  `changeByRange` in `linkEdit`, `ruleEdit`, `fenceLines`, `mathBlockEdit`
+  and `wikilinkEdit` do the same. Each block selection stays on its text,
+  where Obsidian shifts every range by the first one's offset. Insert
+  Callout, Insert Table, Insert Tag and Insert Footnote use the main
+  selection in Obsidian too and are unchanged.

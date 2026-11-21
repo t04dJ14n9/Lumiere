@@ -1,6 +1,7 @@
 import type { EditorState, Line, TransactionSpec } from "@codemirror/state";
 import type { EditorView } from "@codemirror/view";
 import { lineMarkup } from "../../markdown/list-markup";
+import { selectedLines } from "../../markdown/selected-lines";
 import { selectionTouchesTableCell } from "../../markdown/table-cell";
 import { taskMarker } from "../../markdown/tasks";
 import type { TextEdit } from "../../shared/host";
@@ -50,8 +51,9 @@ type Step = (typeof STEPS)[number];
  * Every task is checked while any is open; once all are done they open
  * again, or lose their boxes when cycling. Lines behind join the others,
  * which stay as they are (Obsidian drops their boxes). Blank lines in a
- * selection of several are left alone. As in Obsidian, a selection ending
- * at the start of a line includes that line.
+ * selection of several are left alone. As in Obsidian, the lines of every
+ * selection range count, and a range ending at the start of a line includes
+ * that line.
  */
 export function checklistEdit(
   state: EditorState,
@@ -85,16 +87,6 @@ export function runChecklist(view: EditorView, cycle: boolean): boolean {
   }
   view.dispatch(checklistEdit(view.state, cycle));
   return true;
-}
-
-function selectedLines(state: EditorState): Line[] {
-  const { from, to } = state.selection.main;
-  const first = state.doc.lineAt(from).number;
-  const last = state.doc.lineAt(to).number;
-  const lines = Array.from({ length: last - first + 1 }, (_, index) =>
-    state.doc.line(first + index),
-  );
-  return lines.length > 1 ? lines.filter((line) => line.text.trim()) : lines;
 }
 
 function stepOf(text: string, cycle: boolean): Step {

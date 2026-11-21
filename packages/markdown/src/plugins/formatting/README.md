@@ -29,8 +29,9 @@ spans merge (`highlight-colour.ts`). Typing `==` that opens a highlight offers
 Default and the six colours; taking one wraps an immediately following word,
 reuses its closing `==` if present, or opens an empty pair, with the caret
 inside after the colour (`highlight-suggest.ts`); Tab takes nothing, as in
-Obsidian. Line commands edit each selected line, the line a selection ends at the
-start of included, as in Obsidian 1.15. Registered
+Obsidian. Line commands edit each selected line of every selection, the line a
+selection ends at the start of included, and Insert Link, Insert Horizontal
+Rule and Insert Code Block act at every selection, as in Obsidian 1.15. Registered
 commands target the active projected editor (including table cells), except the
 list, quote and code-block commands: they check the outer document for a parsed
 table at the caret or selection start and return false there, as do Insert

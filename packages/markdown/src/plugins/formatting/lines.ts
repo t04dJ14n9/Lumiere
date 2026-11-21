@@ -1,4 +1,10 @@
-import type { EditorState, Line, TransactionSpec } from "@codemirror/state";
+import {
+  EditorSelection,
+  type EditorState,
+  type Line,
+  type TransactionSpec,
+} from "@codemirror/state";
+import { selectedLines } from "../../markdown/selected-lines";
 
 /**
  * A line's quote markers and indentation, which stay as they are, then its
@@ -49,8 +55,10 @@ function isKind(text: string, prefix: string): boolean {
  * line has one. Markers go after a line's quote markers and indentation, so
  * a quote or callout stays one. Blank lines in a selection of several are
  * left alone, except by the quote, which quotes them too (so a blank line
- * among quoted ones quotes it rather than unquoting the rest). A caret on an empty line ends up after the marker. As in
- * Obsidian, a selection ending at the start of a line includes that line.
+ * among quoted ones quotes it rather than unquoting the rest). A caret on an
+ * empty line ends up after the marker. As in Obsidian, the lines of every
+ * selection range count, and a range ending at the start of a line includes
+ * that line (`selectedLines`).
  */
 export function lineEdit(state: EditorState, prefix: string): TransactionSpec {
   const lines = selectedLines(state, { keepBlank: prefix === "> " });
@@ -63,22 +71,6 @@ export function lineEdit(state: EditorState, prefix: string): TransactionSpec {
     selection: state.selection.map(changes, 1),
     userEvent: "input",
   };
-}
-
-function selectedLines(
-  state: EditorState,
-  { keepBlank }: { keepBlank: boolean },
-): Line[] {
-  const selection = state.selection.main;
-  const first = state.doc.lineAt(selection.from);
-  const last = state.doc.lineAt(selection.to);
-  const lines = Array.from(
-    { length: last.number - first.number + 1 },
-    (_, index) => state.doc.line(first.number + index),
-  );
-  return lines.length > 1 && !keepBlank
-    ? lines.filter((line) => line.text.trim())
-    : lines;
 }
 
 function lineChange(
@@ -105,55 +97,66 @@ function lineChange(
   return { from, to: from + marker.length, insert: all ? "" : prefix };
 }
 /**
- * Insert Link, as in Obsidian: the selection becomes the label and the caret
- * goes into the empty URL; with no selection, into the empty label.
+ * Insert Link, as in Obsidian: at every selection, the selected text becomes
+ * the label and the caret goes into the empty URL; with no selection, into
+ * the empty label.
  */
 export function linkEdit(state: EditorState): TransactionSpec {
-  const { from, to } = state.selection.main;
-  const label = state.sliceDoc(from, to);
   return {
-    changes: { from, to, insert: `[${label}]()` },
-    selection: { anchor: label ? from + label.length + 3 : from + 1 },
+    ...state.changeByRange(({ from, to }) => {
+      const label = state.sliceDoc(from, to);
+      return {
+        changes: { from, to, insert: `[${label}]()` },
+        range: EditorSelection.cursor(
+          label ? from + label.length + 3 : from + 1,
+        ),
+      };
+    }),
     userEvent: "input",
   };
 }
 
 /**
- * Insert Horizontal Rule, as in Obsidian: the rule replaces the selection on
- * a line of its own, after a blank line unless it starts its line, and the
- * caret goes to the start of the line after it.
+ * Insert Horizontal Rule, as in Obsidian: at every selection, the rule
+ * replaces it on a line of its own, after a blank line unless it starts its
+ * line, and the caret goes to the start of the line after it.
  */
 export function ruleEdit(state: EditorState): TransactionSpec {
-  const { from, to } = state.selection.main;
-  const before = state.sliceDoc(state.doc.lineAt(from).from, from);
-  const insert = `${before ? "\n\n" : "\n"}---\n`;
   return {
-    changes: { from, to, insert },
-    selection: { anchor: from + insert.length },
+    ...state.changeByRange(({ from, to }) => {
+      const before = state.sliceDoc(state.doc.lineAt(from).from, from);
+      const insert = `${before ? "\n\n" : "\n"}---\n`;
+      return {
+        changes: { from, to, insert },
+        range: EditorSelection.cursor(from + insert.length),
+      };
+    }),
     userEvent: "input",
   };
 }
 
 /**
- * Fence lines around the selected lines, the selection staying on them, as
- * Obsidian's Insert Code Block does, including the line a selection ends at
- * the start of.
+ * Fence lines around the lines of every selection, each staying on its text,
+ * as Obsidian's Insert Code Block does, including the line a selection ends
+ * at the start of.
  */
 export function fenceLines(
   state: EditorState,
   open: string,
   close: string,
 ): TransactionSpec {
-  const { from, to, anchor, head } = state.selection.main;
-  const first = state.doc.lineAt(from);
-  const last = state.doc.lineAt(to);
   const before = `${open}\n`;
   return {
-    changes: [
-      { from: first.from, insert: before },
-      { from: last.to, insert: `\n${close}` },
-    ],
-    selection: { anchor: anchor + before.length, head: head + before.length },
+    ...state.changeByRange(({ from, to, anchor, head }) => ({
+      changes: [
+        { from: state.doc.lineAt(from).from, insert: before },
+        { from: state.doc.lineAt(to).to, insert: `\n${close}` },
+      ],
+      range: EditorSelection.range(
+        anchor + before.length,
+        head + before.length,
+      ),
+    })),
     userEvent: "input",
   };
 }

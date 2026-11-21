@@ -108,6 +108,10 @@
 - Markdown: Toggle Blockquote quotes the blank lines of a selection too, as
   Obsidian does, so a blank line among quoted ones is quoted instead of the
   others losing their quote (#787).
+- Markdown: with several carets or selections, Set Heading, the list, quote
+  and checklist commands, Insert Link, Insert Wikilink, Insert Embed, Insert
+  Horizontal Rule, Insert Code Block and Insert Math Block act at every one,
+  as in Obsidian; they used only the main one (#787).
 
 Fixes for several VS Code windows open at once, each with a test; checked
 with two real windows on one profile.

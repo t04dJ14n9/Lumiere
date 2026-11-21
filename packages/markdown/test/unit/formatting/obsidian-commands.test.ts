@@ -11,9 +11,11 @@ import { wrapSelection } from "../../../src/plugins/formatting/inline";
 import {
   fenceLines,
   lineEdit,
+  linkEdit,
   ruleEdit,
   tagEdit,
 } from "../../../src/plugins/formatting/lines";
+import { mathBlockEdit } from "../../../src/plugins/math/commands";
 import { withCaretAt } from "../../../src/plugins/formatting/cursors";
 import { checklistEdit } from "../../../src/plugins/tasks/edits";
 import { insertTable } from "../../../src/plugins/tables/commands";
@@ -486,4 +488,88 @@ test("an unclosed %% block keeps the note's last characters when its markers are
   });
   const spec = toggleComment(state);
   assert.equal(state.update(spec).state.doc.toString(), "\ndraft text");
+});
+
+/** `doc` with a caret at each "|", as several selections. */
+function carets(doc: string): EditorState {
+  const heads: number[] = [];
+  let text = "";
+  for (const char of doc) {
+    if (char === "|") {
+      heads.push(text.length);
+    } else {
+      text += char;
+    }
+  }
+  return EditorState.create({
+    doc: text,
+    selection: EditorSelection.create(
+      heads.map((head) => EditorSelection.cursor(head)),
+    ),
+    extensions: [
+      markdownLanguageSupport(),
+      EditorState.allowMultipleSelections.of(true),
+    ],
+  });
+}
+
+function showCarets(state: EditorState): string {
+  let text = state.doc.toString();
+  for (const range of [...state.selection.ranges].reverse()) {
+    text = `${text.slice(0, range.head)}|${text.slice(range.head)}`;
+  }
+  return text;
+}
+
+const atEveryCaret = (
+  doc: string,
+  make: (state: EditorState) => TransactionSpec,
+) => {
+  const state = carets(doc);
+  return showCarets(state.update(make(state)).state);
+};
+
+// Read from Obsidian 1.15.0 (not measured): line commands take the lines of
+// every selection range, and Insert Link, Wikilink, Embed, Horizontal Rule,
+// Code Block and Math Block edit at every selection.
+test("line and insert commands act at every caret", () => {
+  const twoLines = "o|ne\ntwo\nth|ree";
+  assert.equal(
+    atEveryCaret(twoLines, (s) => lineEdit(s, "- ")),
+    "- o|ne\ntwo\n- th|ree",
+  );
+  assert.equal(
+    atEveryCaret(twoLines, (s) => lineEdit(s, "## ")),
+    "## o|ne\ntwo\n## th|ree",
+  );
+  assert.equal(
+    atEveryCaret(twoLines, (s) => checklistEdit(s, false)),
+    "- [ ] o|ne\ntwo\n- [ ] th|ree",
+  );
+  assert.equal(
+    atEveryCaret("o|ne\ntw|o", (s) => fenceLines(s, "```", "```")),
+    "```\no|ne\n```\n```\ntw|o\n```",
+  );
+  assert.equal(
+    atEveryCaret("o|ne\ntw|o", mathBlockEdit),
+    "$$\no|ne\n$$\n$$\ntw|o\n$$",
+  );
+  assert.equal(atEveryCaret("a| b|", linkEdit), "a[|]() b[|]()");
+  assert.equal(
+    atEveryCaret("a| b|", (s) => wikilinkEdit(s, true)),
+    "a![[|]] b![[|]]",
+  );
+  assert.equal(
+    atEveryCaret("a|b\nc|d", ruleEdit),
+    "a\n\n---\n|b\nc\n\n---\n|d",
+  );
+});
+
+test("two carets on blank lines count as a selection of several lines", () => {
+  // Obsidian skips blank lines among several, the lines of every caret
+  // counted together, so a list marker goes on neither.
+  assert.equal(
+    atEveryCaret("|\n\n|", (s) => lineEdit(s, "- ")),
+    "|\n\n|",
+  );
 });
