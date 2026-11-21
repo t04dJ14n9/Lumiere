@@ -15,8 +15,12 @@ export interface LinksService {
    * Follow the link (or tag) at the focused editor's caret, including a
    * projected cell's, here or at `place`. False when the editor does not
    * have the focus or nothing at its caret follows.
+   *
+   * A view that holds only part of its note (a table cell's editor) passes
+   * the whole note's text as `note`: a reference link there takes its
+   * definition from the note, where `view`'s own text has none.
    */
-  follow(view: EditorView, place?: LinkPlace): boolean;
+  follow(view: EditorView, place?: LinkPlace, note?: string): boolean;
 }
 export type LinkRequest = Infer<typeof requestSchema> & {
   source: string;

@@ -37,11 +37,19 @@ const LINK_COMMANDS = [
 export function registerCaretFollowing(ctx: Context, open: OpenLink): void {
   const report = (error: unknown) =>
     ctx.logger.warn("Follow link failed", error);
-  const follow = (view: EditorView, place: LinkPlace = {}): boolean => {
+  const follow = (
+    view: EditorView,
+    place: LinkPlace = {},
+    note?: string,
+  ): boolean => {
     if (!ownsCaretKey(view)) {
       return false;
     }
-    const followed = followAtCaret(ctx, open, view.state, place);
+    const followed = followAtCaret(ctx, open, {
+      state: view.state,
+      place,
+      note,
+    });
     if (typeof followed === "boolean") {
       return followed;
     }
@@ -56,7 +64,11 @@ export function registerCaretFollowing(ctx: Context, open: OpenLink): void {
         if (focusIsElsewhere(view)) {
           return false;
         }
-        return followAtCaret(ctx, open, view.state, place);
+        return followAtCaret(ctx, open, {
+          state: view.state,
+          place,
+          note: noteBeyond(ctx, view),
+        });
       }),
     );
   }
@@ -71,6 +83,14 @@ export function registerCaretFollowing(ctx: Context, open: OpenLink): void {
   ctx.effect(() => ctx.editor.extend(Prec.highest(keymap.of(bindings))));
 }
 
+/** What `followAtCaret` follows: the caret's state, where it opens, its note. */
+interface CaretTarget {
+  state: EditorState;
+  place: LinkPlace;
+  /** The note's text, when `state` holds only part of it (a table cell). */
+  note: string | undefined;
+}
+
 /**
  * Open what the caret is on, as Obsidian's link commands do: a link, a
  * reference link through the note's definition, or another plugin's token
@@ -79,15 +99,25 @@ export function registerCaretFollowing(ctx: Context, open: OpenLink): void {
 function followAtCaret(
   ctx: Context,
   open: OpenLink,
-  state: EditorState,
-  place: LinkPlace,
+  { state, place, note }: CaretTarget,
 ): boolean | Promise<boolean> {
   const at = state.selection.main.head;
-  const link = caretLinkAt(state.doc.toString(), at);
+  const link = caretLinkAt(state.doc.toString(), at, note);
   if (link) {
     return open(link.href, link.wiki, place);
   }
   return ctx.bail("links/followToken", state, at) === true;
+}
+
+/**
+ * The note's text when the active view is a part of it: a table cell's
+ * editor, which holds the cell's text and none of the note's definitions.
+ * The Tables plugin answers `editor/activeView` with the cell of its own
+ * editor, which is this plugin's `ctx.editor`, so that editor is the note.
+ */
+function noteBeyond(ctx: Context, view: EditorView): string | undefined {
+  const note = ctx.editor.view;
+  return view === note ? undefined : note.state.doc.toString();
 }
 
 /**

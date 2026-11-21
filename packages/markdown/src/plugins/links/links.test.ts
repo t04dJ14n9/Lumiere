@@ -110,3 +110,48 @@ test("Follow Link's reference links take the note's definition, as Obsidian's co
   // An inline link is linkAt's, not a reference.
   assert.equal(referenceLinkAt("[l](https://e.com)", 2), undefined);
 });
+
+// A table cell's editor holds only the cell's text; the note holds the
+// definitions (a cell cannot hold one: its row would stop being a row).
+const TABLE_NOTE = [
+  "| Item | Link |",
+  "| --- | --- |",
+  "| A | [web][r] |",
+  "",
+  "[r]: https://example.com",
+].join("\n");
+
+test("a reference link's definition comes from the note when the caret's text is only a cell", () => {
+  const cell = "[web][r]";
+  const at = cell.indexOf("web") + 1;
+  const example = { href: "https://example.com", wiki: false };
+  // The cell alone defines nothing.
+  assert.equal(referenceLinkAt(cell, at), undefined);
+  assert.deepEqual(referenceLinkAt(cell, at, TABLE_NOTE), example);
+  assert.deepEqual(caretLinkAt(cell, at, TABLE_NOTE), example);
+  // Collapsed, and with the label's case and spaces ignored, as in a note.
+  assert.deepEqual(referenceLinkAt("[R][]", 2, TABLE_NOTE), example);
+  assert.deepEqual(referenceLinkAt("[web][ R ]", 2, TABLE_NOTE), example);
+  // A label the note does not define, and a shortcut reference, still are not followed.
+  assert.equal(referenceLinkAt("[web][nope]", 2, TABLE_NOTE), undefined);
+  assert.equal(referenceLinkAt("[r]", 1, TABLE_NOTE), undefined);
+  // What the cell text itself says is not a definition of the note.
+  assert.equal(
+    referenceLinkAt("[web][s] [s]: https://cell.example", 2, TABLE_NOTE),
+    undefined,
+  );
+});
+
+test("a link in a cell that is not a reference is found without the note, and wins over it", () => {
+  const inline = { href: "https://example.com", wiki: false };
+  assert.deepEqual(caretLinkAt("[web](https://example.com)", 2, ""), inline);
+  assert.deepEqual(
+    caretLinkAt("[web](https://example.com)", 2, TABLE_NOTE),
+    inline,
+  );
+  assert.deepEqual(caretLinkAt("[[Target]]", 4, TABLE_NOTE), {
+    href: "Target",
+    wiki: true,
+  });
+  assert.equal(caretLinkAt("plain", 2, TABLE_NOTE), undefined);
+});

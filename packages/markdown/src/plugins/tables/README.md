@@ -163,7 +163,9 @@ plugin registrations and widget lifetimes end when the plugin stops.
 
 Injects `editor`, `document`, `markdown`, `livePreview`, `render`, `commands`,
 `menu`, `rpc`; optionally `vim`, `formatting` and `links`. The optional Links
-service follows Mod-Enter from the focused cell's own document and caret.
+service follows Alt-Enter, Mod-Enter and Mod-Alt-Enter from the focused cell's
+own document and caret, and is given the note's text for the definition of a
+reference link, which a cell cannot hold.
 Provides no service. Listens to
 `editor/clearProjection`, `editor/projectSelection`, `editor/activeView` and
 `render/changed` (mounted tables re-render their cells, unmounted retained

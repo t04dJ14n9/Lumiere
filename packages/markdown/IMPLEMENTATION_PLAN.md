@@ -8378,3 +8378,47 @@ full. Not run: `pnpm test:browser`, `test:quality`, `test:vscode` (not
 asked for here). The native check the issue lists (an external edit during a
 real drag, then one-step Undo) is open: whether VS Code cancels a held drag
 on refresh is unverified.
+
+## Follow Link in a table cell reads the note's reference definitions (#822; 2026-11-22)
+
+Reported while reviewing #801. With the caret in `web` in the cell
+`[web][r]` of a table, and `[r]: https://example.com` below the table,
+Alt+Enter, Mod+Enter and Mod+Alt+Enter (and the three commands from the
+Command Palette) found no destination. A cell editor's document is the cell's
+text alone, `links.follow(view, place)` read the definition from `view`'s
+text, and so did the commands, which act on the view `editor/activeView`
+answers with: the cell's. A definition cannot be written in a cell, so the
+cell never had one.
+
+Fix. The caret's link is still read from the text the caret is in; only the
+reference definitions come from the note.
+
+- `referenceLinkAt` and `caretLinkAt` (links/caret-link.ts) take an optional
+  `note`, the text the definitions are read from, `text` itself when omitted
+  (a note's own editor, Source mode and Live Preview, parses once as before).
+  Reading the label and finding its definition are now two functions.
+- `links.follow(view, place, note)` passes it on. The tables plugin's cell
+  keymap (tables/cell-editor.ts) passes `outer.state.doc.toString()`, the
+  outer editor's document at the key, through the optional `links` service it
+  already injects; it reaches Links through that service only. The outer
+  document carries every edit the cell has made, because the cell projects
+  each change into it; the definitions are outside the cell, so a cell edited
+  after the outer document was last written still resolves its new link.
+- The three commands pass `ctx.editor.view`'s text when the active view is
+  not that editor (a cell's): Tables answers `editor/activeView` only with a
+  cell of its own `ctx.editor.view`, the editor Links runs in.
+
+Unchanged on purpose: an inline link, a wikilink or a bare URL in a cell
+follows as before and wins over a reference; a label the note does not
+define, and a shortcut `[label]`, are still not followed; text in the cell
+that looks like a definition is not one (the note decides); a full-note
+Source or Live Preview editor reads its own text.
+
+Tests, each failing before the change: `referenceLinkAt` and `caretLinkAt`
+with a cell's text and the note (src/plugins/links/links.test.ts); the three
+keys in a cell with a definition outside the table, a cell edited past what
+the note holds, an undefined label, and an inline link with and without a
+definition in the note (test/unit/features/table-links.test.ts); the three
+commands with the cell as the active view (test/unit/features/link-keys.test.ts).
+Not run: a native key press in VS Code, `pnpm test:browser`,
+`test:quality`, `test:vscode`.

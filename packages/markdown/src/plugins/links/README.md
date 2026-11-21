@@ -150,8 +150,11 @@ VS Code keybindings scoped to the focused note. They follow what the
 commands follow, through the same navigation and trust checks as a click,
 but only for a collapsed caret in the editor that has the focus: property
 inputs, dialogs, the Vim prompt and text with nothing to follow keep the key.
-The injected `links.follow(view, place)` service lets table cell editors
-bind the same keys on their own text and caret. Each editor keeps its
+The injected `links.follow(view, place, note)` service lets table cell
+editors bind the same keys on their own text and caret; they pass the
+note's text as `note`, because a reference link in a cell takes its
+definition from the note, where the cell's own text has none, and the
+commands do the same for the active cell. Each editor keeps its
 contentDOM focus guard; focusing a cell never follows a link at the outer
 editor's caret. The commands VS Code runs for the keys do nothing while the
 focus is in such a field, since the key was the field's; from the Command

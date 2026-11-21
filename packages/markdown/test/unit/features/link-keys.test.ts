@@ -1,5 +1,6 @@
 import assert from "node:assert/strict";
 import test from "node:test";
+import { EditorState } from "@codemirror/state";
 import { keymap, type EditorView } from "@codemirror/view";
 import { fixture } from "./fixture";
 
@@ -95,5 +96,44 @@ test("the link commands open at their place and leave a key typed in a field of 
   ownerDocument.activeElement = {};
   assert.equal(await run("editor:open-link-in-new-leaf"), false);
   assert.equal(places().length, 4);
+  await f.root.dispose();
+});
+
+// A table cell's editor is the active view while its cell is open; its
+// document is the cell's text, and the note's definitions are the note's.
+test("the link commands follow a reference link in the active cell through the note's definition", async () => {
+  const { f, ownerDocument, write, places } = await linksFixture();
+  write(
+    "| Item | Link |\n| --- | --- |\n| A | [web][r] |\n\n[r]: https://example.com",
+    0,
+  );
+  const cellContent = {};
+  let cell = {
+    state: EditorState.create({ doc: "[web][r]", selection: { anchor: 2 } }),
+    contentDOM: cellContent,
+    dom: { ownerDocument },
+    composing: false,
+  } as unknown as EditorView;
+  f.root.on("editor/activeView", () => cell);
+  ownerDocument.activeElement = cellContent;
+  const run = (id: string) => f.handlers.get(id)!();
+  assert.equal(await run("editor:follow-link"), true);
+  assert.equal(await run("editor:open-link-in-new-leaf"), true);
+  assert.equal(await run("editor:open-link-in-new-split"), true);
+  assert.deepEqual(places(), [
+    { href: "https://example.com", side: false, tab: false },
+    { href: "https://example.com", side: false, tab: true },
+    { href: "https://example.com", side: true, tab: false },
+  ]);
+  // Inline links in the cell follow as before.
+  cell = {
+    ...cell,
+    state: EditorState.create({
+      doc: "[web](https://inline.example)",
+      selection: { anchor: 2 },
+    }),
+  } as EditorView;
+  assert.equal(await run("editor:follow-link"), true);
+  assert.equal(places().at(-1)?.href, "https://inline.example");
   await f.root.dispose();
 });

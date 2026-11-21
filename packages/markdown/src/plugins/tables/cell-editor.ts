@@ -252,20 +252,7 @@ export function cellKeymap(options: CellEditorOptions) {
       },
     }),
     keymap.of([
-      // The note's link keys, on the cell's own caret. Stopping propagation
-      // keeps VS Code from running its binding for the key a second time.
-      ...(
-        [
-          ["Alt-Enter", {}],
-          ["Mod-Enter", { tab: true }],
-          ["Mod-Alt-Enter", { side: true }],
-        ] as const
-      ).map(([key, place]) => ({
-        key,
-        run: (view: EditorView) =>
-          options.environment.links?.follow(view, place) ?? false,
-        stopPropagation: true,
-      })),
+      ...cellLinkKeys(options),
       {
         key: "Mod-s",
         run: () => options.action("save"),
@@ -293,6 +280,29 @@ export function cellKeymap(options: CellEditorOptions) {
       },
     ]),
   ]);
+}
+
+/**
+ * The note's link keys, on the cell's own caret. Stopping propagation keeps
+ * VS Code from running its binding for the key a second time.
+ */
+function cellLinkKeys(options: CellEditorOptions) {
+  const keys = [
+    ["Alt-Enter", {}],
+    ["Mod-Enter", { tab: true }],
+    ["Mod-Alt-Enter", { side: true }],
+  ] as const;
+  return keys.map(([key, place]) => ({
+    key,
+    // The cell holds no definitions; the note does, outside the table.
+    run: (view: EditorView) =>
+      options.environment.links?.follow(
+        view,
+        place,
+        options.outer.state.doc.toString(),
+      ) ?? false,
+    stopPropagation: true,
+  }));
 }
 
 function isNormalVimMode(
