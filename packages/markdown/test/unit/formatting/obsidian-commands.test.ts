@@ -256,14 +256,28 @@ test("a quote goes on the lines without one, or one level comes off every line",
   );
 });
 
-test("blank lines in a selection of several lines get no marker", () => {
+test("blank lines in a selection of several lines get no list marker", () => {
   assert.equal(
     edit("‹a\n\nb›", (s) => lineEdit(s, "- ")),
     "- ‹a\n\n- b›",
   );
+});
+
+// Read from Obsidian 1.15.0's toggleBlockquote (not measured; the same in
+// 1.13.7): it does not skip blank lines, so one among quoted lines is quoted
+// rather than the others unquoted.
+test("Toggle Blockquote quotes the blank lines of a selection of several lines", () => {
   assert.equal(
     edit("‹a\n  \nb›", (s) => lineEdit(s, "> ")),
-    "> ‹a\n  \n> b›",
+    "> ‹a\n>   \n> b›",
+  );
+  assert.equal(
+    edit("‹> a\n\n> b›", (s) => lineEdit(s, "> ")),
+    "‹> a\n> \n> b›",
+  );
+  assert.equal(
+    edit("‹> a\n> \n> b›", (s) => lineEdit(s, "> ")),
+    "‹a\n\nb›",
   );
 });
 

@@ -48,11 +48,12 @@ function isKind(text: string, prefix: string): boolean {
  * marker goes on the lines without one, or one level comes off when every
  * line has one. Markers go after a line's quote markers and indentation, so
  * a quote or callout stays one. Blank lines in a selection of several are
- * left alone. A caret on an empty line ends up after the marker. As in
+ * left alone, except by the quote, which quotes them too (so a blank line
+ * among quoted ones quotes it rather than unquoting the rest). A caret on an empty line ends up after the marker. As in
  * Obsidian, a selection ending at the start of a line includes that line.
  */
 export function lineEdit(state: EditorState, prefix: string): TransactionSpec {
-  const lines = selectedLines(state);
+  const lines = selectedLines(state, { keepBlank: prefix === "> " });
   const all = lines.every((line) => isKind(line.text, prefix));
   const changes = state.changes(
     lines.map((line) => lineChange(line, prefix, { all })),
@@ -64,7 +65,10 @@ export function lineEdit(state: EditorState, prefix: string): TransactionSpec {
   };
 }
 
-function selectedLines(state: EditorState): Line[] {
+function selectedLines(
+  state: EditorState,
+  { keepBlank }: { keepBlank: boolean },
+): Line[] {
   const selection = state.selection.main;
   const first = state.doc.lineAt(selection.from);
   const last = state.doc.lineAt(selection.to);
@@ -72,7 +76,9 @@ function selectedLines(state: EditorState): Line[] {
     { length: last.number - first.number + 1 },
     (_, index) => state.doc.line(first.number + index),
   );
-  return lines.length > 1 ? lines.filter((line) => line.text.trim()) : lines;
+  return lines.length > 1 && !keepBlank
+    ? lines.filter((line) => line.text.trim())
+    : lines;
 }
 
 function lineChange(

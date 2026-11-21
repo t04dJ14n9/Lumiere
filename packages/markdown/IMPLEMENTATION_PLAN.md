@@ -7789,3 +7789,9 @@ running. One commit per item.
   own reference format, DESIGN §17). Tests that pinned the exclusion
   (formatting, tasks, callouts) now pin the inclusion; new ones cover both
   directions.
+- **Toggle Blockquote quotes blank lines.** `toggleBlockquote` calls
+  `processLines` with blank-skipping off (as in 1.13.7), so a blank line in
+  a selection of several gets `> `, and because it has no quote the whole
+  selection counts as unquoted: quoted lines stay, the blank ones are
+  quoted. `lineEdit` keeps blank lines for the quote only; the unit test
+  that pinned the skip now pins this.

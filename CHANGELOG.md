@@ -105,6 +105,9 @@
   Block, Insert Math Block and Insert Callout include the line a selection
   ends at the start of, as Obsidian 1.15 does, whichever way it was made
   (#787).
+- Markdown: Toggle Blockquote quotes the blank lines of a selection too, as
+  Obsidian does, so a blank line among quoted ones is quoted instead of the
+  others losing their quote (#787).
 
 Fixes for several VS Code windows open at once, each with a test; checked
 with two real windows on one profile.
