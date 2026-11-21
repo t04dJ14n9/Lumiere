@@ -7562,3 +7562,18 @@ Validation: unit tests for reference links (src/plugins/links/links.test.ts)
 and the tag at the caret (test/unit/tags/clicks.test.ts); links and tags
 tests, typecheck, ESLint and Prettier pass. Not run here (other agents'
 suites): `pnpm test:browser`, `test:quality`, `test:vscode`.
+
+## Image shrink stops at 20 px (#787; 2026-11-21)
+
+Obsidian 1.15.0's `resizeSelectedImage` (read in its shipped code;
+behaviour only, nothing copied) steps to the next or previous multiple of
+25 and clamps the result between 20 px and the text's width, so `-` takes
+a 25 px image to 20 px. Lumiere's `steppedWidth` stopped at 25 px; its
+floor is now 20 px. Another difference seen in the same code, not changed
+here: Obsidian shrinks a written width wider than the text from that width
+(a `|400` image in 316 px of text steps to 375, clamped to 316), where
+Lumiere steps from the text's width (to 300).
+
+Validation: test/unit/embeds/image-size.test.ts; embeds tests, ESLint and
+Prettier pass. Not run here: `pnpm test:browser`, `test:quality`,
+`test:vscode`.

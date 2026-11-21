@@ -390,7 +390,7 @@ title, then set `lumiere.markdown.plugins.inlineTitle.enabled` to true.
    depth limit.
 2. Images stay rendered whatever the caret or a selection does, as in
    Obsidian 1.13+. Click an image: it is selected (outlined), the caret
-   before it. `+` and `-` resize it in 25 px steps and write the width
+   before it. `+` and `-` resize it in 25 px steps (`-` stops at 20 px) and write the width
    (`![[diagram.svg|225]]`), `0` removes the width, Enter shows the source
    with the file name selected, Tab puts the caret where the width goes,
    Backspace removes the embed, Escape lets it go. ArrowRight just before

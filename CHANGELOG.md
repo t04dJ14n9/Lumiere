@@ -68,6 +68,8 @@
   Side** also follow a reference link (`[text][label]`, `[text][]`) through
   the note's definition, and search the vault for a tag at the caret, as
   Obsidian's commands do. Their keys are unchanged (#787).
+- Markdown: `-` on a selected image shrinks it down to 20 px, as in
+  Obsidian, rather than stopping at 25 px (#787).
 
 Fixes for several VS Code windows open at once, each with a test; checked
 with two real windows on one profile.

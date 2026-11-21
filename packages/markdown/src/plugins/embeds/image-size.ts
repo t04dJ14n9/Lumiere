@@ -117,9 +117,13 @@ export function aliasRange(
   return { from: 2, to: 2 + alt.length };
 }
 
+/** Obsidian 1.15.0's narrowest stepped width (as in 1.13.7). */
+const SMALLEST_WIDTH = 20;
+
 /**
- * The next width a step takes, as Obsidian 1.13 resizes: up to the next
- * multiple of 25 (at most `max`), or down to the one before (at least 25).
+ * The next width a step takes, as Obsidian resizes: up to the next multiple
+ * of 25 (at most `max`), or down to the one before (at least 20, so 25 and
+ * below shrink to 20).
  */
 export function steppedWidth(
   current: number,
@@ -130,5 +134,5 @@ export function steppedWidth(
   if (direction === 1) {
     return Math.min(max, (Math.floor(from / 25) + 1) * 25);
   }
-  return Math.max(25, (Math.ceil(from / 25) - 1) * 25);
+  return Math.max(SMALLEST_WIDTH, (Math.ceil(from / 25) - 1) * 25);
 }
