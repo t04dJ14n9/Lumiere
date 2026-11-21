@@ -25,14 +25,14 @@
  *   route label, and every logged line is scrubbed of the token.
  */
 import { randomBytes, timingSafeEqual } from "node:crypto";
-import { mkdir, rm, writeFile, copyFile } from "node:fs/promises";
+import { mkdir, copyFile } from "node:fs/promises";
 import * as http from "node:http";
 import type { AddressInfo } from "node:net";
 import * as path from "node:path";
 import * as vscode from "vscode";
 import { StreamableHTTPServerTransport } from "@modelcontextprotocol/sdk/server/streamableHttp.js";
 import { tokenScrubber } from "./scrub";
-import { sweepDiscoveryFiles } from "./discovery-sweep";
+import { announce, workspaceFolderPaths } from "./discovery-file";
 import type { AgentHandoff } from "../handoff";
 import type { NoteSelections } from "../note-selections";
 import type { LastPdf } from "../last-pdf";
@@ -154,15 +154,18 @@ async function listen(
     token,
     pid: process.pid,
     appName: vscode.env.appName,
-    workspaceFolders: (vscode.workspace.workspaceFolders ?? []).map(
-      (folder) => folder.uri.fsPath,
-    ),
+    workspaceFolders: workspaceFolderPaths(),
     startedAt: new Date().toISOString(),
   };
   log.info(
     `Agent bridge listening on ${info.url} (AGENT_PDF_BRIDGE_PID ${info.pid} picks this window)`,
   );
-  await announce(info, options.discoveryDir ?? DISCOVERY_DIR, port, undo);
+  await announce(info, {
+    discoveryDir: options.discoveryDir ?? DISCOVERY_DIR,
+    port,
+    undo,
+    log,
+  });
   await copyShim(options, log);
   registerWithEditor(info, undo, log);
   const steps = undo.splice(0);
@@ -289,22 +292,6 @@ async function serveMcp(
     transport as unknown as Parameters<typeof server.connect>[0],
   );
   await transport.handleRequest(req, res);
-}
-
-/** The discovery file for the stdio shim (Claude Code, Codex, any MCP client). */
-async function announce(
-  info: BridgeInfo,
-  discoveryDir: string,
-  port: number,
-  undo: Undo[],
-): Promise<void> {
-  const discoveryFile = path.join(discoveryDir, `${port}.json`);
-  await mkdir(discoveryDir, { recursive: true, mode: 0o700 });
-  await sweepDiscoveryFiles(discoveryDir);
-  undo.push(() => rm(discoveryFile, { force: true }));
-  await writeFile(discoveryFile, JSON.stringify(info, null, 2), {
-    mode: 0o600,
-  });
 }
 
 /** A stable copy of the shim, so `claude mcp add` survives extension updates. */

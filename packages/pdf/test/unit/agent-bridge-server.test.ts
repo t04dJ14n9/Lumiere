@@ -1,5 +1,5 @@
 import assert from "node:assert/strict";
-import { mkdtemp, readdir, rm, writeFile } from "node:fs/promises";
+import { mkdtemp, readdir, readFile, rm, writeFile } from "node:fs/promises";
 import type * as NodeCrypto from "node:crypto";
 import { createRequire } from "node:module";
 import * as net from "node:net";
@@ -18,6 +18,7 @@ import {
   startAgentBridge,
   type ServerOptions,
 } from "../../src/extension/plugins/agentBridge/mcp/server";
+import type { BridgeInfo } from "../../src/extension/plugins/agentBridge/mcp/constants";
 import type { AgentHandoff } from "../../src/extension/plugins/agentBridge/handoff";
 import { LastPdf } from "../../src/extension/plugins/agentBridge/last-pdf";
 import type { PdfPanels } from "../../src/extension/plugins/pdf/panels";
@@ -208,6 +209,28 @@ test("dispose resolves only once the listener is closed, a stalled connection cu
   assert.deepEqual(vscode.outstanding(), []);
   await cut;
   assert.ok(!lines.some((line) => line.startsWith("error")), lines.join("\n"));
+});
+
+test("a folder added to the window or removed from it is in the discovery file the shim reads", async (t) => {
+  vscode.workspace.workspaceFolders = [{ uri: vscode.Uri.file("/work/a") }];
+  const bridge = await startAgentBridge(options());
+  t.after(async () => {
+    await bridge.dispose();
+    vscode.workspace.workspaceFolders = undefined;
+  });
+  const file = path.join(folder, "bridges", `${portOf(bridge.info.url)}.json`);
+  const folders = async () =>
+    (JSON.parse(await readFile(file, "utf8")) as BridgeInfo).workspaceFolders;
+  assert.deepEqual(await folders(), [vscode.Uri.file("/work/a").fsPath]);
+  vscode.setWorkspaceFolders([vscode.Uri.file("/work/b")]);
+  await new Promise((resolve) => setTimeout(resolve, 50));
+  assert.deepEqual(await folders(), [vscode.Uri.file("/work/b").fsPath]);
+  await bridge.dispose();
+  // A change after the bridge stopped writes no file again.
+  vscode.setWorkspaceFolders([vscode.Uri.file("/work/c")]);
+  await new Promise((resolve) => setTimeout(resolve, 50));
+  assert.deepEqual(await readdir(path.join(folder, "bridges")), []);
+  assert.deepEqual(vscode.outstanding(), []);
 });
 
 test("a failure after listening (writing the discovery file) closes the listener before the error propagates", async () => {
