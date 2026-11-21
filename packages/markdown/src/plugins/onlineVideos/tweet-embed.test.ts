@@ -3,6 +3,7 @@ import assert from "node:assert/strict";
 import { parseTweet } from "./parse";
 import type { Tweet } from "./parse";
 import {
+  TWEET_CARD_HEIGHT,
   TWEET_DEFAULT_HEIGHT,
   TWEET_MAX_HEIGHT,
   TWEET_MIN_HEIGHT,
@@ -12,6 +13,7 @@ import {
   embedUrl,
   embedView,
   isEmbedUrl,
+  tweetStartHeight,
 } from "./tweet-embed";
 
 const tweet = (link: string): Tweet => {
@@ -132,6 +134,13 @@ test("the theme comes from VS Code's body classes", () => {
   assert.equal(theme("vscode-high-contrast-light"), "light");
   // Outside VS Code (a browser page with no theme classes): light.
   assert.equal(theme(), "light");
+});
+
+test("a tweet link starts at the frame's height, or the card's in Restricted Mode", () => {
+  assert.equal(tweetStartHeight(true), TWEET_DEFAULT_HEIGHT);
+  assert.equal(tweetStartHeight(false), TWEET_CARD_HEIGHT);
+  assert.notEqual(TWEET_CARD_HEIGHT, TWEET_DEFAULT_HEIGHT);
+  assert.equal(TWEET_CARD_HEIGHT, 112);
 });
 
 test("a tweet frame starts at a default height and is clamped", () => {

@@ -43,9 +43,20 @@ export const TWEET_SANDBOX =
 export const TWEET_MAX_WIDTH = 550;
 /** Where a frame starts, before its widget reports its own height. */
 export const TWEET_DEFAULT_HEIGHT = 400;
+/**
+ * The link card Restricted Mode shows in the frame's place is about this
+ * tall: a one-line title, the site and ID, the button and the note (measured
+ * 111 px; a longer alt text wraps).
+ */
+export const TWEET_CARD_HEIGHT = 112;
 export const TWEET_MIN_HEIGHT = 100;
 /** The tallest a frame may be made, whatever its widget asks. */
 export const TWEET_MAX_HEIGHT = 1000;
+
+/** How tall a tweet link starts: its frame, or the card in Restricted Mode. */
+export function tweetStartHeight(isTrusted: boolean): number {
+  return isTrusted ? TWEET_DEFAULT_HEIGHT : TWEET_CARD_HEIGHT;
+}
 
 export function clampTweetHeight(height: number): number {
   return Math.min(

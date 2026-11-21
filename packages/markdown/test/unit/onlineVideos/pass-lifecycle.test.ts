@@ -228,14 +228,15 @@ test("a live signal does start the timer and the listener, and aborting ends bot
   assert.equal((frame as unknown as FakeElement).src, undefined);
 });
 
-test("it claims a tweet link's frame height for Embeds, in a trusted workspace only", () => {
+test("it claims a tweet link for Embeds in either trust mode: the frame's height, or the card's", () => {
   const trusted = startPlugin();
-  assert.equal(trusted.claimedHeight(TWEET), 400);
-  assert.equal(
-    trusted.claimedHeight("https://twitter.com/jack/status/20"),
-    400,
-  );
+  const untrusted = startPlugin({ isTrusted: false });
+  for (const link of [TWEET, "https://twitter.com/jack/status/20"]) {
+    assert.equal(trusted.claimedHeight(link), 400, link);
+    assert.equal(untrusted.claimedHeight(link), 112, link);
+  }
   for (const target of [
+    "https://www.youtube-nocookie.com/embed/dQw4w9WgXcQ",
     "https://www.youtube.com/watch?v=dQw4w9WgXcQ",
     "https://example.com/page",
     "https://x.com/jack",
@@ -243,7 +244,6 @@ test("it claims a tweet link's frame height for Embeds, in a trusted workspace o
     "",
   ]) {
     assert.equal(trusted.claimedHeight(target), undefined, target);
+    assert.equal(untrusted.claimedHeight(target), undefined, target);
   }
-  const untrusted = startPlugin({ isTrusted: false });
-  assert.equal(untrusted.claimedHeight(TWEET), undefined);
 });

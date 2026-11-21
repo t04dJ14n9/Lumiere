@@ -8563,7 +8563,17 @@ Review fixes, round 2 (Gemini review of #842):
 - Embeds reserved a tweet frame's height for every tweet URL, even with the
   plugin off or the workspace untrusted. It now reserves what is claimed
   (`embedEstimatedHeight(source, claimedHeight)`) and the card's height
-  otherwise; the cross-plugin `onlineVideos/api.ts` is gone. Unit tests for
+  otherwise; the cross-plugin `onlineVideos/api.ts` is gone.
+- Round 3: the claim was made only in a trusted workspace, so in Restricted
+  Mode it was `undefined` with the plugin on and off, and an inline widget
+  compared equal across a switch: switching on never showed the "Open on X"
+  card, and switching off kept the bare image. Online Videos now answers for a
+  tweet link while it runs in both modes: 400 px for the frame, and 112 px
+  (`TWEET_CARD_HEIGHT`, measured 111 px for a one-line title in the browser
+  harness) for the card, so the claim changes with the plugin in either mode
+  and the height reserved is the height drawn. Unit tests for both toggles in
+  an untrusted workspace (`claimed-embeds.test.ts`, with Online Videos' real
+  answer) fail with the trusted-only answer; the trusted ones stay. Unit tests for
   both, in `estimated-height.test.ts`, `claimed-embeds.test.ts` and
   `pass-lifecycle.test.ts` (Online Videos answers only for a tweet link, only
   when trusted).

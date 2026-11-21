@@ -5,7 +5,7 @@ import type {} from "../render/api";
 import { linkCard } from "./card";
 import { trackTweetHeights, tweetFrame } from "./frame";
 import { parseTweet } from "./parse";
-import { TWEET_DEFAULT_HEIGHT, embedTheme, embedView } from "./tweet-embed";
+import { embedTheme, embedView, tweetStartHeight } from "./tweet-embed";
 
 interface Mount {
   isTrusted: boolean;
@@ -35,10 +35,12 @@ export const onlineVideosWebview: Plugin = {
     });
     // Runs before embeds, which would otherwise treat the link as an image.
     ctx.on("render/postProcess", (pass) => mountTweets(pass, mount, cleanups));
-    // Tells Embeds which links get a frame (only in a trusted workspace, and
-    // only while this plugin runs) and how tall it starts.
+    // Tells Embeds which links this plugin draws, in either trust mode (the
+    // frame, or the card in Restricted Mode), and how tall that starts. It
+    // answers only while the plugin runs, so switching it on or off changes
+    // the answer in both modes, and an inline widget is drawn again.
     ctx.on("render/claimedHeight", (target) =>
-      mount.isTrusted && parseTweet(target) ? TWEET_DEFAULT_HEIGHT : undefined,
+      parseTweet(target) ? tweetStartHeight(mount.isTrusted) : undefined,
     );
   },
 };

@@ -47,11 +47,14 @@ before, so a frame that loaded at once would load, heavily, to be dropped.
 The frame starts 400 px tall (`TWEET_DEFAULT_HEIGHT`), so the block does not
 jump while it loads. Embeds learns it by asking `render/claimedHeight` (a bail
 event; see render's `api.ts`) about a link, which this plugin answers for a
-tweet link while it runs and the workspace is trusted: Embeds reserves that
-height, and draws an inline widget of the link again when the answer changes,
-so switching the plugin off or on redraws every tweet link, block or inline
-(an inline widget that compared equal would keep its old DOM, a bare image
-nobody draws).
+tweet link while it runs, in either trust mode: 400 px for the frame, and 112
+px (`TWEET_CARD_HEIGHT`) for the card Restricted Mode shows. Embeds reserves
+that height, and draws an inline widget of the link again when the answer
+changes, so switching the plugin off or on redraws every tweet link, block or
+inline, trusted or not (an inline widget that compared equal would keep its
+old DOM: a bare image nobody draws after the plugin stops, or no frame or card
+after it starts). The answer has to differ between running and stopped in both
+modes, which is why Restricted Mode answers too.
 The widget posts its height to the page
 (`{"twttr.embed": {method: "twttr.private.resize", params: [{width, height}]}}`);
 `tweet-height.ts` takes it only from a message whose `source` is that frame's
