@@ -10,8 +10,15 @@
  * LUMIERE_VSCODE_DISPLAY=inherit keeps the caller's display instead, to
  * watch the window; without Xvfb installed the caller's display is used.
  */
-import { spawn } from "node:child_process";
-import { existsSync, readFileSync, rmSync, writeFileSync } from "node:fs";
+import { execFileSync, spawn } from "node:child_process";
+import {
+  existsSync,
+  mkdirSync,
+  readFileSync,
+  rmSync,
+  writeFileSync,
+} from "node:fs";
+import path from "node:path";
 
 const SCREEN = "1920x1080x24";
 const START_TIMEOUT_MS = 10_000;
@@ -81,5 +88,77 @@ function killQuietly(pid: number): void {
     process.kill(pid, "SIGTERM");
   } catch {
     // Already gone.
+  }
+}
+
+/**
+ * On a Mac with more than one screen, VS Code opens a new window on the
+ * screen under the pointer, which is often one the owner is working on. A
+ * profile that remembers a last window opens its first window where that one
+ * was instead, so seed the fresh test profile with a maximized window on the
+ * built-in screen. Nothing changes without a built-in screen or with only
+ * one screen. Call it after creating `userData` and before VS Code starts.
+ */
+export function placeWindowOnBuiltInScreen(userData: string): void {
+  if (process.platform !== "darwin") {
+    return;
+  }
+  const screen = builtInScreen();
+  if (screen === undefined) {
+    return;
+  }
+  const globalStorage = path.join(userData, "User", "globalStorage");
+  mkdirSync(globalStorage, { recursive: true });
+  // VS Code's window state (windowsStateHandler): mode 0 is maximized.
+  writeFileSync(
+    path.join(globalStorage, "storage.json"),
+    JSON.stringify({
+      windowsState: {
+        lastActiveWindow: { uiState: { mode: 0, ...screen } },
+        openedWindows: [],
+      },
+    }),
+  );
+}
+
+/**
+ * The built-in screen's work area in Electron's coordinates (top-left of the
+ * primary screen, y down), when there are other screens too.
+ */
+function builtInScreen():
+  { x: number; y: number; width: number; height: number } | undefined {
+  // AppKit gives each screen's frame with y up from the primary screen's
+  // bottom edge; Electron measures y down from its top edge.
+  const script = `
+    ObjC.import("AppKit");
+    const screens = $.NSScreen.screens;
+    const primary = screens.objectAtIndex(0).frame;
+    let found = null;
+    for (let i = 0; i < screens.count; i++) {
+      const screen = screens.objectAtIndex(i);
+      if (/built-in/i.test(ObjC.unwrap(screen.localizedName))) {
+        const area = screen.visibleFrame;
+        found = {
+          x: area.origin.x,
+          y: primary.size.height - (area.origin.y + area.size.height),
+          width: area.size.width,
+          height: area.size.height,
+        };
+      }
+    }
+    JSON.stringify(screens.count > 1 ? found : null);`;
+  try {
+    const output = execFileSync(
+      "osascript",
+      ["-l", "JavaScript", "-e", script],
+      {
+        encoding: "utf8",
+      },
+    );
+    return (
+      (JSON.parse(output) as ReturnType<typeof builtInScreen>) ?? undefined
+    );
+  } catch {
+    return undefined;
   }
 }

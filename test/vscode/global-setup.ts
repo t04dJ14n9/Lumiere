@@ -20,7 +20,7 @@ import {
 import path from "node:path";
 import { createVSIX } from "@vscode/vsce";
 import { hostExecutable, paths, writeState } from "./state";
-import { startPrivateDisplay } from "./display";
+import { placeWindowOnBuiltInScreen, startPrivateDisplay } from "./display";
 import { devToolsWebSocket, freePort, resolveVsCode } from "./vscode-host";
 
 /** The private X display the test VS Code opens on (see display.ts). */
@@ -37,6 +37,7 @@ export default async function globalSetup(): Promise<void> {
   mkdirSync(paths.extensions, { recursive: true });
   mkdirSync(paths.probe, { recursive: true });
   display = await startPrivateDisplay(path.join(paths.root, "display.pid"));
+  placeWindowOnBuiltInScreen(paths.userData);
   writeFileSync(
     path.join(paths.userData, "User", "settings.json"),
     JSON.stringify(
