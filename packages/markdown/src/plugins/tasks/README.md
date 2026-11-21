@@ -4,7 +4,8 @@ Makes Markdown task checkboxes clickable in Live Preview and embedded notes,
 like Obsidian. Commands toggle checklist status or cycle list/checklist form;
 Mod+L toggles the status, Obsidian's default, in the editor's own keymap and
 as a VS Code keybinding (in Cursor, where Cmd/Ctrl+L opens the chat, the
-Cursor bridge keeps that key and none is contributed). A line without a list
+Cursor bridge keeps that key, so the keybinding is not active there). Cycle
+List Checklist has no key. A line without a list
 gets `- [ ] ` after its quotes and indentation. Selected lines move together,
 as in Obsidian: every task is checked while any is open, and blank lines in
 the selection are left alone. As in Obsidian, both commands are refused (no
@@ -48,7 +49,12 @@ replaces the widget. Toggle edits do not request selection or scrolling changes.
 Webview injects `editor`, `commands`, `livePreview` and `rpc`; host injects
 the host service `hostDocuments`, `resources` and `rpc`. Provides no services. Listens to
 `render/postProcess`; emits no kernel events. `lumiere.markdown.plugins.tasks.enabled`
-defaults to true. Both checklist command bindings remain unbound for verification.
+defaults to true. Keys: the manifest contributes one keybinding, `ctrl+l` (Mac
+`cmd+l`) for Toggle Checklist Status, active while the Lumiere editor has focus,
+the plugin is on and the host is not Cursor (`!lumiere.markdown.isCursorHost`).
+The webview also binds `Mod-l` in the editor's own keymap (not while the note is
+read-only); in Cursor the Cursor bridge takes Cmd/Ctrl+L first, in capture phase,
+and opens the chat. Cycle List Checklist is contributed without a key.
 
 ## Limits and differences from Obsidian
 
