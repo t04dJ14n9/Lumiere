@@ -283,9 +283,12 @@ test("collapsing a grid selection keeps Shift arrows extending a cell rectangle"
     open(position: CellPosition) {
       opened.push(position);
       delete selection.range;
+      return true;
     },
   } as unknown as CellProjection;
   const grid = {
+    // A writable note, whose cells open.
+    outer: { state: EditorState.create() },
     model,
     root: { focus() {} },
     cells: model.rows.map((row) => row.map(() => ({ scrollIntoView() {} }))),

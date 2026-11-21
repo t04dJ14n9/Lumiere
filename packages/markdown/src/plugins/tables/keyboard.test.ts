@@ -1,4 +1,5 @@
 import test from "node:test";
+import { EditorState } from "@codemirror/state";
 import assert from "node:assert/strict";
 import {
   parseTable,
@@ -28,9 +29,12 @@ function gridKeyboardFixture(range: CellRange, cursor?: number) {
     open(position: CellPosition, offset?: number | "all") {
       opened.push({ position, offset });
       delete selection.range;
+      return true;
     },
   } as unknown as CellProjection;
   const grid = {
+    // A writable note, whose cells open.
+    outer: { state: EditorState.create() },
     model,
     root: { focus() {} },
     cells: model.rows.map((row) => row.map(() => ({ scrollIntoView() {} }))),

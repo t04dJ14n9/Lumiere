@@ -6,7 +6,11 @@ import {
   type TransactionSpec,
 } from "@codemirror/state";
 import type { EditorView } from "@codemirror/view";
-import { parseTable, type CellRange } from "../../markdown/tables/model";
+import {
+  parseTable,
+  type CellPosition,
+  type CellRange,
+} from "../../markdown/tables/model";
 import { nestedSync, noteReadOnly } from "../editor/api";
 import { insertCellBreak } from "./cell-editor";
 import { TableClipboard } from "./clipboard";
@@ -388,5 +392,109 @@ test("Paste from the menu writes nothing when the note turns read-only while the
     assert.equal(inner.state.doc.toString(), turnsReadOnly ? "ab" : "aXb");
     assert.equal(destroyed(), turnsReadOnly ? 0 : 1);
     assert.equal(selection.range, turnsReadOnly ? undefined : range);
+  }
+});
+
+/**
+ * The keyboard over a three-row table of a read-only note, without DOM.
+ * `focused` follows where the focus is: the grid, the note, an open cell,
+ * or nowhere (the page's body, when a focused cell is destroyed).
+ */
+function readOnlyKeyboard(openCell?: CellPosition) {
+  const tall = "| a | b |\n| --- | --- |\n| 1 | 2 |\n| 3 | 4 |";
+  let focused = openCell ? "cell" : "grid";
+  const grid = {
+    outer: {
+      state: EditorState.create({
+        doc: tall,
+        extensions: EditorState.readOnly.of(true),
+      }),
+      focus: () => (focused = "note"),
+      dispatch() {},
+    },
+    model: parseTable(tall)!,
+    block: { source: tall },
+    start: () => 0,
+    root: { isConnected: true, focus: () => (focused = "grid") },
+    contentElement: () => ({ replaceChildren() {} }),
+    display() {},
+    replace: () => false,
+  } as unknown as TableGrid;
+  const projection = new CellProjection(grid, {} as TableEnvironment, {
+    activate() {},
+    highlight() {},
+    move: () => false,
+    arrow: () => false,
+  });
+  if (openCell) {
+    projection.active = openCell;
+    projection.cellEditor = {
+      view: cellView("1", true),
+      destroy: () => {
+        if (focused === "cell") {
+          focused = "body";
+        }
+      },
+    } as unknown as CellEditor;
+  }
+  const selection = {
+    range: undefined as CellRange | undefined,
+    // As TableSelection's: selecting cells closes the open cell.
+    select(next: CellRange) {
+      projection.close();
+      this.range = next;
+    },
+    highlight() {},
+  };
+  const keyboard = new TableKeyboard(
+    grid,
+    projection,
+    selection as unknown as TableSelection,
+    { request() {}, deactivate() {}, menu() {} } as never,
+  );
+  return { keyboard, selection, focused: () => focused };
+}
+
+const cell = (row: number, column: number) => ({
+  anchor: { row, column },
+  head: { row, column },
+});
+
+test("in a read-only note the arrows move the selected cell through the table", () => {
+  const { keyboard, selection, focused } = readOnlyKeyboard();
+  // Select all, then Down: the selection collapses to the last cell.
+  selection.range = {
+    anchor: { row: 0, column: 0 },
+    head: { row: 2, column: 1 },
+  };
+  assert.equal(keyboard.arrow({ row: 1, column: 0 }, false), true);
+  assert.deepEqual(selection.range, cell(2, 1));
+  // Then each arrow moves it, where it used to stay (the key was taken).
+  assert.equal(keyboard.arrow({ row: -1, column: 0 }, false), true);
+  assert.deepEqual(selection.range, cell(1, 1));
+  assert.equal(keyboard.arrow({ row: 0, column: -1 }, false), true);
+  assert.deepEqual(selection.range, cell(1, 0));
+  assert.equal(focused(), "grid");
+  // Down twice: to the last row, then out of the table into the note.
+  keyboard.arrow({ row: 1, column: 0 }, false);
+  assert.deepEqual(selection.range, cell(2, 0));
+  assert.equal(keyboard.arrow({ row: 1, column: 0 }, false), true);
+  assert.equal(selection.range, undefined);
+  assert.equal(focused(), "note");
+});
+
+test("Tab or Right from a cell left open in a read-only note moves the focus to the grid, never nowhere", () => {
+  for (const key of ["Tab", "ArrowRight"]) {
+    const { keyboard, selection, focused } = readOnlyKeyboard({
+      row: 1,
+      column: 0,
+    });
+    const handled =
+      key === "Tab"
+        ? keyboard.move(0, 1)
+        : keyboard.arrow({ row: 0, column: 1 }, false);
+    assert.equal(handled, true, key);
+    assert.equal(focused(), "grid", key);
+    assert.deepEqual(selection.range, cell(1, 1), key);
   }
 });
