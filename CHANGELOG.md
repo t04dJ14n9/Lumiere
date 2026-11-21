@@ -183,12 +183,18 @@
   sized to its content; in an untrusted workspace they show a card with an Open
   button and load nothing. Shorts, live, playlist and channel links are not
   embedded. YouTube may refuse to play in a VS Code webview (error 153). Removed,
+- Markdown: a tweet written as an image, `![](https://x.com/user/status/ID)`
+  (or twitter.com, or a mobile. address), now embeds as in Obsidian: the tweet
+  shows in the note in the VS Code theme, sized to its content. In an
+  untrusted workspace it shows a card with an Open button and loads nothing.
+  YouTube links are not embedded, though Obsidian embeds them: VS Code's
+  webview sends no referrer, and YouTube's player answers Error 153. Removed,
   because Obsidian has none: the Spotify, SoundCloud, Vimeo, Hugging Face and
   npm cards, every Bilibili card (video, bangumi, UP space and live room), and
-  the YouTube playlist and channel cards, with their title and cover lookups and
-  the setting `lumiere.markdown.onlineVideos.bilibiliPlayer`. Links to those
-  sites are plain images, which fail to load. A Bilibili player is tracked in
-  #835.
+  the YouTube video, playlist and channel cards, with their title and cover
+  lookups and the setting `lumiere.markdown.onlineVideos.bilibiliPlayer`. Links
+  to those sites are plain images, which fail to load. A Bilibili player is
+  tracked in #835.
 
 Fixes for several VS Code windows open at once, each with a test; checked
 with two real windows on one profile.

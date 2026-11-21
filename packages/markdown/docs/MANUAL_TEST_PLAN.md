@@ -422,21 +422,20 @@ title, then set `lumiere.markdown.plugins.inlineTitle.enabled` to true.
 
 `Videos.md`.
 
-1. In a trusted workspace the two YouTube links (the second starting at 42 s)
-   show a 16:9 player and the tweet link shows the tweet, in the VS Code
-   theme (light or dark). The tweet frame grows to the tweet's height and
-   does not scroll; the link in text stays a link. Note whether the YouTube
-   player plays or shows error 153 (the earlier card's frame showed 153 in
-   VS Code 1.141 on Linux).
-2. The Shorts link and a link to any other site (Spotify, Vimeo, Bilibili)
-   show `failed to fetch image`, as any link that is not an image does.
-3. Put the caret on an embed line: the Markdown shows; move away: the
-   embed returns.
+1. In a trusted workspace the two tweet links show the tweet, in the VS Code
+   theme (light or dark), grow to the tweet's height and do not scroll; the
+   link in text stays a link. Clicking a name or a link in the tweet opens
+   the page in the external browser.
+2. The YouTube link, and a link to any other site (Spotify, Vimeo,
+   Bilibili), show `failed to fetch image`, as any link that is not an
+   image does. YouTube is not embedded: its player showed Error 153 in VS
+   Code 1.147.
+3. Put the caret on a tweet line: the Markdown shows; move away: the tweet
+   returns.
 4. Switch the theme and reopen the note: a tweet follows it.
-5. In an untrusted workspace the YouTube and tweet links are cards with an
-   **Open on YouTube** / **Open on X** button, which opens the page in the
-   external browser, and a note that embeds are off; no request reaches
-   either site.
+5. In an untrusted workspace the tweet links are cards with an **Open on X**
+   button, which opens the tweet in the external browser, and a note that
+   embeds are off; no request reaches the site.
 
 ### pagePreview
 

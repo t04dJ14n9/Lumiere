@@ -8423,13 +8423,36 @@ commands with the cell as the active view (test/unit/features/link-keys.test.ts)
 Not run: a native key press in VS Code, `pnpm test:browser`,
 `test:quality`, `test:vscode`.
 ## Web embeds follow Obsidian 1.15.0; the site cards go (owner decision, 2026-11-21)
+## Tweets embed as in Obsidian 1.15.0; the site cards and YouTube go (owner decisions, 2026-11-21 and 2026-11-22)
 
 Owner decision (2026-11-21): the Online Videos plugin drops the site-specific
-cards Obsidian does not have and embeds exactly what Obsidian 1.15.0 embeds
-from a web link, the way it does. Behaviour reference only (AGENTS.md):
-Obsidian's shipped code was read (`_B` and `$3e`, `kv`, `Q5` and the
-resize listener, app.js lines 98284-98354; its Reading view post-processor
-99714-99730 and Live Preview widget 141537-141566); none of it is copied.
+cards Obsidian does not have and embeds what Obsidian 1.15.0 embeds from a web
+link, the way it does. Behaviour reference only (AGENTS.md): Obsidian's
+shipped code was read (`_B` and `$3e`, `kv`, `Q5` and the resize listener,
+app.js lines 98284-98354; its Reading view post-processor 99714-99730 and Live
+Preview widget 141537-141566); none of it is copied. That is two embeds,
+YouTube and tweets. The first version of this change built both.
+
+Owner decision (2026-11-22), after a probe in a real VS Code window:
+YouTube and X are non-essential; keep what is easy, drop what is not. The
+YouTube embed is removed; the tweet embed stays. The probe (VS Code 1.147,
+the test window on the built-in screen, a trusted workspace, a note with
+`![](https://www.youtube.com/watch?v=dQw4w9WgXcQ)` and
+`![](https://x.com/jack/status/20)`, not kept in the repository):
+
+- YouTube: the `youtube-nocookie.com/embed/ID` frame showed "Video player
+  configuration error / Error 153 / Watch video on YouTube"; its
+  `document.referrer` was empty, its ancestor origins `vscode-webview://…`
+  (twice) and `vscode-file://vscode-app`, and its video `readyState` 0, paused
+  at 0. As measured in 1.141 on 2026-10-09 (when the card offered no player
+  for this reason): the webview page is not http(s), so its frames get no
+  referrer. Obsidian's desktop app avoids it with a page of its own
+  (`releases.obsidian.md/youtube`); that is not copied.
+- Tweet: the widget rendered ("just setting up my twttr", with Follow, Reply
+  and Copy link) in the dark theme the VS Code window had
+  (`theme=dark` in its URL); `twttr.private.resize` messages arrived from
+  `https://platform.twitter.com` (and `twttr.private.results`), from the
+  embed frame's window, and set the frame to 225 px.
 
 Removed (commit 1): the Spotify, SoundCloud, Vimeo, Hugging Face and npm
 cards; every Bilibili card (video, bangumi, UP space, live room; an inline
@@ -8438,95 +8461,84 @@ channel cards; the extension host's title and cover lookups (`details.ts`,
 `host.ts`, `bilibili.ts`, `oembed.ts`, `thumbnails.ts`, `imageData.ts` and the
 rest), the `onlineVideos.details` RPC and with it the plugin's host half;
 the setting `lumiere.markdown.onlineVideos.bilibiliPlayer`; and their tests,
-the fake host's `details` handler and the harness's `videoDetails`. The YouTube
-video card's oEmbed title and the Play here button went with them. A link to
-a removed site is now an ordinary remote image, which Embeds shows as
-`failed to fetch image` (a browser spec checks a Spotify link and an
+the fake host's `details` handler and the harness's `videoDetails`. The
+YouTube video card's oEmbed title and the Play here button went with them. A
+link to a removed site is now an ordinary remote image, which Embeds shows as
+`failed to fetch image` (a browser spec checks a Spotify, a YouTube and an
 `example.com/page` link show the same).
 
-Added (commit 2), from `![](link)`:
+Kept and added: from `![](link)`, a `twitter.com`, `x.com`,
+`mobile.twitter.com` or `mobile.x.com` `/{handle}/status/{ID}` link (also
+`/i/web/status/{ID}`, a `/photo/N` or `/video/N` suffix) is an iframe on
+`https://platform.twitter.com/embed/Tweet.html?dnt=true&theme={light|dark}&id=ID`,
+the theme from VS Code's body class, `scrolling=no`. Decisions from what
+Obsidian's pattern matches: it takes any path and the last number in it, so a
+`/photo/1` link embeds tweet 1 (the ID must follow `/status/` here); it has no
+`www.`, so `www.` hosts are not matched here either. The frame follows the
+widget's `twttr.private.resize` message (Obsidian: cap 1000 px, no source or
+origin check); here only from a message whose `source` is that frame's window
+and whose `origin` is `https://platform.twitter.com`, shape-checked (only the
+fields read, each typed; the real message carries `jsonrpc`, `id` and a
+`data` object besides) and clamped to 100-1000 px.
 
-- YouTube: a watch, `youtu.be`, `/embed/` or `/v/` link (`t=` or `start=`)
-  is an iframe on `https://www.youtube-nocookie.com/embed/ID` (`?start=N`).
-  Decisions from what Obsidian's pattern matches: its hosts are `youtube.com`,
-  `youtu.be` with an optional `www.` or `m.`, so `music.youtube.com` and
-  `youtube-nocookie.com` links are no longer recognised. Its optional path
-  prefix is `[\w-]+?v=`, `embed/` or `v/`; a Shorts, live, playlist or channel
-  link falls to "the first path word is the ID" and gives the broken player
-  `/embed/shorts`, so they are not embedded here (Lumiere's 11-character ID
-  check refuses the word; `videoseries`, which is 11 characters, is refused
-  by name). Lumiere keeps its stricter ID and its `1h2m3s` start times
-  (Obsidian reads digits only); the old `rel=0` parameter is dropped, to
-  match Obsidian's URL.
-- Tweets: a `twitter.com`, `x.com`, `mobile.twitter.com` or `mobile.x.com`
-  `/{handle}/status/{ID}` link (also `/i/web/status/{ID}`, a `/photo/N` or
-  `/video/N` suffix) is an iframe on
-  `https://platform.twitter.com/embed/Tweet.html?dnt=true&theme={light|dark}&id=ID`,
-  the theme from VS Code's body class. Obsidian's pattern takes any path and
-  the last number in it, so a `/photo/1` link embeds tweet 1; the ID must
-  follow `/status/` here. `www.` hosts are not matched by Obsidian and are not
-  here. The frame follows the widget's `twttr.private.resize` message
-  (Obsidian: cap 1000 px, no source or origin check); here only from a message
-  whose `source` is that frame's window and whose `origin` is
-  `https://platform.twitter.com`, shape-checked (only the fields read, each
-  typed) and clamped to 100-1000 px; `scrolling=no`.
+With YouTube gone nothing but tweets remains in the plugin. The id stays
+`onlineVideos` (it is the setting key `plugins.onlineVideos.enabled`; renaming
+it would drop users' settings); the manifest title is now "Embedded tweets",
+the README says so, and the files are named for tweets (`tweet-embed.ts`,
+`tweet-height.ts`; `parse.ts` is `parseTweet`).
 
-Security (non-negotiable per the decision), each pinned by a unit test:
+Security (non-negotiable per the first decision), each pinned by a unit test:
 
-- Frames are sandboxed. A video uses `PLAYER_SANDBOX` (`allow-scripts
-  allow-same-origin allow-presentation`) unchanged. A tweet adds
-  `allow-popups allow-popups-to-escape-sandbox`: a tweet is made of links, and
+- The frame is sandboxed: `allow-scripts allow-same-origin allow-presentation`
+  (the player sandbox the plugin had) plus `allow-popups
+  allow-popups-to-escape-sandbox`, because a tweet is made of links and
   without the pair none of them opens; with it the opened page runs as an
-  ordinary page. Obsidian's list also has `allow-forms`, `allow-modals`; a tweet
-  needs neither (replies and likes are links) and neither is granted. No
+  ordinary page. Obsidian's list also has `allow-forms` and `allow-modals`; a
+  tweet needs neither (replies and likes are links) and neither is granted. No
   `allow-top-navigation`.
 - `referrerpolicy=strict-origin-when-cross-origin`, `loading=lazy`.
 - The URL is built from the validated ID only, then checked again against an
-  allowlist of origin, path and exact query (`isEmbedUrl`); the legacy
-  `allowfullscreen` attribute is dropped (`allow` has fullscreen; Chrome warns
-  about both).
+  allowlist of origin, path and exact query (`isEmbedUrl`).
 - Only a trusted workspace gets a frame (`embedView`); Restricted Mode shows a
   static card with an Open button and nothing is loaded.
 - CSP: the webview's `frame-src` is `https:` in a trusted workspace and
-  `'none'` otherwise, as before this change, so it already admits exactly
-  these two frames only when trusted and was not widened. A unit test pins
-  both origins against it, trusted and untrusted. Narrowing a trusted
-  workspace's `frame-src` to the two origins would also block `<iframe>` in a
-  note's HTML (Render allows https ones), a separate decision for the owner.
+  `'none'` otherwise, as before this change, so it already admits the widget's
+  origin only when trusted and was not widened. A unit test pins it, trusted
+  and untrusted. Narrowing a trusted workspace's `frame-src` to one origin
+  would also block `<iframe>` in a note's HTML (Render allows https ones), a
+  separate decision for the owner.
 
-Also: reserved heights (`reservedHeight`: 315 px for a video, 16:9 at its 560
-px maximum width; 400 px for a tweet) feed Embeds' height estimate; the
-reserve is the same in an untrusted workspace, where the shorter card
-settles on its first measure. A frame loads 100 ms after it is made: the
-browser spec found the editor renders a block three times while a note opens
-(32 ms from the first to the last), each time loading its frame to drop it.
-With the delay each embed makes one request (the browser spec asserts it).
+Also: the frame's starting height (`TWEET_DEFAULT_HEIGHT`, 400 px) feeds
+Embeds' height estimate; it is the same in an untrusted workspace, where the
+shorter card settles on its first measure. A frame loads 100 ms after it is
+made: the browser spec found the editor renders a block three times while a
+note opens (32 ms from the first to the last), each time loading its frame to
+drop it. With the delay each embed makes one request (the browser spec
+asserts it).
 
-Not verified: that YouTube plays in a VS Code webview. Measured in VS Code
-1.141 on 2026-10-09, `youtube-nocookie.com` and `youtube.com` frames answered
-Error 153 there (no referrer from a non-http page), which is why the earlier
-card had no player. This embed has Obsidian's web URL and cannot supply a
-referrer; the owner's `test:vscode` and a manual look decide it (MANUAL_TEST_PLAN,
-onlineVideos 1). Obsidian's desktop app avoids it with a page of its own
-(`releases.obsidian.md/youtube`); copying that is not done.
-
-Tests: unit tests for every accepted and rejected URL shape, the frame URLs,
-attributes and sandboxes, trust gating, the allowlist, the CSP, the theme,
-the tweet height messages (right source and origin, every wrong shape, the
-clamp), and the reserved heights; the removed providers are asserted not to
-parse. Browser specs `online-videos.spec.ts` (4 tests, replacing the card
-tests) and `online-video-remount-height.spec.ts`.
+Tests: unit tests for every accepted and rejected tweet URL shape, YouTube and
+the other removed sites not parsing, the frame URL, attributes and sandbox,
+trust gating, the allowlist, the theme, the height messages (right source and
+origin, every wrong shape, the clamp), the reserved height, and the CSP.
+Browser specs `online-videos.spec.ts` (3 tests, replacing the card tests) and
+`online-video-remount-height.spec.ts`.
 
 Docs: the plugin README rewritten to the template, CAPABILITIES, PARITY (a
-row each for the YouTube and tweet embeds, "code read on 1.15.0"; the
-`bilibiliPlayer` row removed), MANUAL_TEST_PLAN, Embeds README, ARCHITECTURE,
-the CHANGELOG, and the contributed setting list (`pnpm contributions`).
+YouTube row, "Obsidian embeds it; Lumiere does not", and a tweet row, both
+"code read on 1.15.0", the tweet's with the probe; the `bilibiliPlayer` row
+removed), MANUAL_TEST_PLAN, the Embeds README, ARCHITECTURE, the CHANGELOG, and
+the contributed setting list (`pnpm contributions`).
 
-Checks: `pnpm check` (format, lint, typecheck, unit tests, contributions)
-passes. Three tests failed in its one full run for reasons outside this change
-and passed alone: `test/unit/build/entry-graph.test.ts` (twice: the run used a
-symlinked `TMPDIR`) and the timing fuzz `rows.diffRows is linear` (killed at
-20 s with the machine's load average near 30; 4.3 s alone). The whole markdown
-browser suite passes (486 tests). `pnpm --filter @workshop/markdown
-test:quality` passes (9 browser budgets and the large-vault test); no budget
-was changed. Not run: `pnpm test:vscode`, which the owner runs.
+Checks: format, lint, typecheck, the PDF package's tests and
+`pnpm contributions --check` pass. In `pnpm check`'s one full unit-test run
+five timing tests of the markdown package failed (four `fuzz: ... is linear on
+adversarial input`, killed at their 20 s limit, and `each footnote definition
+costs the same however many the note has`) with the machine's load average
+near 45 from other worktrees' suites; they passed when run alone
+(`test/unit/fuzz/*.test.ts`, `test/unit/metadata/metadata-cost.test.ts`).
+Nothing in this change touches them. The two affected browser specs pass.
+`pnpm --filter @workshop/markdown test:quality` (9 browser budgets and the
+large-vault test) and the whole markdown browser suite (486 tests) passed
+before YouTube was removed; no budget was changed, and the removal only drops
+a frame kind. Not run by the author: `pnpm test:vscode` (the probe above was
+run by the coordinator, with the owner's go-ahead).
