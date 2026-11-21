@@ -19,6 +19,7 @@ import { openExternalLink } from "./external-link";
 import { registerNativeLinks } from "./native-links";
 import { MARKDOWN_EDITOR } from "../shared/editor-provider";
 import {
+  creationLocation,
   followsNewNoteFolder,
   linkLocation,
   type LinkFolder,
@@ -146,22 +147,36 @@ export interface NativeNavigation extends Navigation {
   ): Promise<boolean | void>;
 }
 
-/** The places a link may name, in the order `linkLocation` tries them. */
+/** `relative` inside the vault root or the source note's folder. */
+function inFolder(
+  folder: LinkFolder,
+  relative: string,
+  places: { base: vscode.Uri; sourceUri: vscode.Uri },
+): vscode.Uri {
+  const parent =
+    folder === "vault"
+      ? places.base
+      : vscode.Uri.joinPath(places.sourceUri, "..");
+  return vscode.Uri.joinPath(parent, relative);
+}
+
+/**
+ * The places an existing file a link names may be, in the order
+ * `linkLocation` tries them: the order a preview looks in too, whether or
+ * not the click may create the note.
+ */
 function linkCandidates(
   link: string,
-  create: boolean,
   base: vscode.Uri,
   sourceUri: vscode.Uri,
-): [vscode.Uri, ...vscode.Uri[]] {
+): vscode.Uri[] {
   if (!link) {
     return [sourceUri];
   }
-  const { relative, folders } = linkLocation(link, create);
-  const sourceFolder = vscode.Uri.joinPath(sourceUri, "..");
-  const place = (folder: LinkFolder) =>
-    vscode.Uri.joinPath(folder === "vault" ? base : sourceFolder, relative);
-  const [first, ...rest] = folders;
-  return [place(first), ...rest.map(place)];
+  const { relative, folders } = linkLocation(link);
+  return folders.map((folder) =>
+    inFolder(folder, relative, { base, sourceUri }),
+  );
 }
 
 async function statIfPresent(
@@ -210,8 +225,9 @@ async function resolveNavigation({
 }: Parameters<Navigation["resolve"]>[0]): Promise<string | undefined> {
   const base = vscode.Uri.parse(root);
   const sourceUri = vscode.Uri.parse(source);
-  const candidates = linkCandidates(link, create, base, sourceUri);
-  for (const uri of candidates) {
+  // Which existing file the link names does not depend on `create`; only a
+  // link that names none may make a note.
+  for (const uri of linkCandidates(link, base, sourceUri)) {
     await contained(base, uri);
     const stat = await statIfPresent(uri);
     if (intent?.token.cancelled) {
@@ -228,8 +244,6 @@ async function resolveNavigation({
     base,
     sourceUri,
     link,
-    // Creating never falls back: the first place is where the link points.
-    uri: candidates[0],
     folder: newNoteFolder,
     ...(intent ? { intent } : {}),
   });
@@ -239,19 +253,18 @@ async function createNote({
   base,
   sourceUri,
   link,
-  uri: candidate,
   folder,
   intent,
 }: {
   base: vscode.Uri;
   sourceUri: vscode.Uri;
   link: string;
-  uri: vscode.Uri;
   folder: string | undefined;
   intent?: NavigationIntent;
 }): Promise<string | undefined> {
   folder ??= "";
-  let uri = candidate;
+  const place = creationLocation(link);
+  let uri = inFolder(place.folder, place.relative, { base, sourceUri });
   // Basename-only links respect newNoteFolder; a path with folders (or a
   // leading "/") creates at the place it names, not under that setting.
   if (followsNewNoteFolder(link)) {

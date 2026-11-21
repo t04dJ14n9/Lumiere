@@ -9,9 +9,12 @@ Each panel owns a set of known note sources and a validated resource RPC channel
 Targets resolve through the injected vault index; URI and realpath containment
 are checked before reads. A Markdown link the index does not know is looked
 for on disk where a click on it looks (`shared/link-location.ts`: a leading
-`/` from the vault root, `./` and `../` from the note's folder), so a link
-into a hidden folder the index skips (`/.raw/captured/page.md`) previews and
-embeds the file a click opens. Notes use open-document text when available, preserving
+`/` from the vault root, `./` and `../` from the note's folder, a bare name
+beside the note and then at the vault root), so a link into a hidden folder
+the index skips (`/.raw/captured/page.md`, `.hidden.md`) previews and embeds
+the file a click opens: the click looks in the same places in the same order
+whether or not it may make a note, and only a link that names no file makes
+one. Notes use open-document text when available, preserving
 unsaved edits. Successfully loaded notes become authorized sources for nested
 requests. Webview URLs include modification time for cache invalidation.
 The webview keeps resolved media, not note text; loads of one file that

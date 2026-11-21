@@ -7,6 +7,7 @@ import {
   mkdir,
   readFile,
   rm,
+  stat,
   symlink,
   writeFile,
 } from "node:fs/promises";
@@ -14,6 +15,8 @@ import { tmpdir } from "node:os";
 import { join } from "node:path";
 import { fileURLToPath, pathToFileURL } from "node:url";
 import type * as HostNavigation from "../../../src/host/navigation";
+import { NoteResources } from "../../../src/plugins/resources/note-resources";
+import type { VaultIndex } from "../../../src/plugins/vault/api";
 import { MARKDOWN_EDITOR } from "../../../src/shared/editor-provider";
 import { forgetModules } from "../../support/module-cache";
 
@@ -546,6 +549,131 @@ test("resolve: basename (create:false) still uses source parent", async (t) => {
       newNoteFolder: "",
     });
     assert.equal(resolved, pathToFileURL(join(areas, "Beside.md")).href);
+  });
+});
+
+/**
+ * The preview and embed side of a link: resources over the same disk, with
+ * an index that knows no file, as for the hidden files the index skips.
+ */
+function previewOver(root: string, source: string) {
+  const fromUri = (uri: string) => fileURLToPath(uri);
+  return new NoteResources({
+    source,
+    vault: {
+      root,
+      resolveLink() {
+        return undefined;
+      },
+    } as unknown as VaultIndex,
+    host: {
+      workspace: {
+        async stat(uri: string) {
+          const found = await stat(fromUri(uri));
+          return { mtime: found.mtimeMs, symbolicLink: false };
+        },
+      },
+      hostDocuments: {
+        async open(uri: string) {
+          const text = await readFile(fromUri(uri), "utf8");
+          return { getText: () => text };
+        },
+      },
+    } as never,
+    resourceUrl: (uri) => uri,
+  });
+}
+
+test("resolve: a bare link names the file a preview names, whether or not a click may create", async (t) => {
+  await withResolveVault(t, async ({ navigation, root, source, directory }) => {
+    const areas = join(directory, "wiki", "areas");
+    // Neither file is in any index: both are hidden, with different content.
+    await writeFile(join(areas, ".twin.md"), "beside");
+    await writeFile(join(directory, ".twin.md"), "root");
+    await writeFile(join(directory, ".rootonly.md"), "root only");
+    const preview = previewOver(root, source);
+    const href = (...parts: string[]) =>
+      pathToFileURL(join(directory, ...parts)).href;
+    const click = (path: string, create: boolean, newNoteFolder = "") =>
+      navigation.resolve({
+        root,
+        source,
+        path,
+        create,
+        folderNote: "",
+        newNoteFolder,
+      });
+
+    // A Markdown link to `.twin.md` may create a note when it names none, but
+    // both files exist, so every way of asking finds the neighbour.
+    for (const create of [true, false]) {
+      assert.equal(
+        await click(".twin.md", create),
+        href("wiki/areas/.twin.md"),
+        `click, create: ${create}`,
+      );
+    }
+    const peeked = await preview.load(".twin.md");
+    assert.equal(peeked.source, href("wiki/areas/.twin.md"));
+    assert.equal(peeked.text, "beside");
+
+    // Explicit forms keep their meaning in both.
+    assert.equal(await click("./.twin.md", true), href("wiki/areas/.twin.md"));
+    assert.equal((await preview.load("./.twin.md")).source, peeked.source);
+    assert.equal(await click("/.twin.md", true), href(".twin.md"));
+    assert.equal((await preview.load("/.twin.md")).text, "root");
+
+    // With no neighbour the vault root's file is the one both name, and a
+    // click does not make a second note in `newNoteFolder` beside it.
+    assert.equal(
+      await click(".rootonly.md", true, "Inbox"),
+      href(".rootonly.md"),
+    );
+    assert.equal(
+      (await preview.load(".rootonly.md")).source,
+      href(".rootonly.md"),
+    );
+    await assert.rejects(
+      () => stat(join(directory, "Inbox")),
+      /ENOENT/,
+      "no note was made",
+    );
+  });
+});
+
+test("resolve: a bare link that names no file is still made where it was; the note made is the one a preview names", async (t) => {
+  await withResolveVault(t, async ({ navigation, root, source, directory }) => {
+    const preview = previewOver(root, source);
+    const click = (path: string, create: boolean, newNoteFolder: string) =>
+      navigation.resolve({
+        root,
+        source,
+        path,
+        create,
+        folderNote: "",
+        newNoteFolder,
+      });
+    await assert.rejects(() => preview.load(".fresh.md"), /Resource not found/);
+    assert.equal(await click(".fresh.md", false, ""), undefined);
+    await assert.rejects(() => stat(join(directory, ".fresh.md")), /ENOENT/);
+
+    assert.equal(
+      await click(".fresh.md", true, ""),
+      pathToFileURL(join(directory, ".fresh.md")).href,
+    );
+    assert.equal(
+      await click(".inbox.md", true, "Inbox"),
+      pathToFileURL(join(directory, "Inbox", ".inbox.md")).href,
+    );
+    assert.equal(
+      await click(".beside.md", true, "."),
+      pathToFileURL(join(directory, "wiki", "areas", ".beside.md")).href,
+    );
+    // The note that now exists is the one a preview names too.
+    assert.equal(
+      (await preview.load(".fresh.md")).source,
+      pathToFileURL(join(directory, ".fresh.md")).href,
+    );
   });
 });
 

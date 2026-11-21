@@ -204,6 +204,12 @@
   file written in between, remove that new file. Each window's file now has
   a name of its own, `<port>-<pid>-<random>.json`; a file an earlier version
   named `<port>.json` is still read and swept (#830).
+- Markdown: a link to a hidden file, such as `[peek](.hidden.md)`, opens the
+  file its preview shows. With a `.hidden.md` both in the note's folder and
+  at the vault root, the preview showed the one beside the note and a click
+  opened the root's. A click and a preview now look in the same places, in
+  the same order (a bare name beside the note, then at the vault root), and
+  a click makes a note only when neither has the file (#823).
 
 Fixes for several VS Code windows open at once, each with a test; checked
 with two real windows on one profile.

@@ -94,7 +94,12 @@ another plugin may follow its token there (Tags searches a tag). Settings: plugi
 The native adapter rechecks containment and symlinks before opening or creating.
 External application schemes ask first; script, data, command and file schemes
 are refused. Unresolved wikilinks can create notes. Basename Markdown destinations
-(`Note`, `Note.md`) create too; relative Markdown paths stay open-only. Unresolved styling applies to wikilinks and Markdown links in Live Preview
+(`Note`, `Note.md`) create too; relative Markdown paths stay open-only.
+Making a note is the last resort: a Markdown link first names the file that
+exists, in `shared/link-location.ts`'s order (a bare name beside the note,
+then at the vault root; `./` and `../` from the note's folder; `/` from the
+vault root), the order a preview and an embed look in too, so a click and a
+preview of `[x](.hidden.md)` reach the same file. Unresolved styling applies to wikilinks and Markdown links in Live Preview
 while they are rendered, to wiki / Markdown / embed link source in source
 mode, and to both kinds of link inside embedded notes. Obsidian 1.15.0 dims
 only wikilinks in Live Preview (its embeds and Reading view dim both), so

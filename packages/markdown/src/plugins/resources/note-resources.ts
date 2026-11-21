@@ -157,8 +157,9 @@ export class NoteResources implements Resources {
 
   /**
    * A Markdown link the index does not know, looked for where a click on it
-   * looks (`linkLocation`): a leading `/` from the vault root, `./` and `../`
-   * from the note's folder. The index never enters hidden folders, so
+   * looks (`linkLocation`, in its order): a leading `/` from the vault root,
+   * `./` and `../` from the note's folder, a bare name beside the note and
+   * then at the vault root. The index never enters hidden folders, so
    * `[source](/.raw/captured/page.md)` opened on a click while its preview
    * and embed said "Resource not found". `load` still checks that the file
    * is inside the vault, through symbolic links too.
@@ -177,7 +178,7 @@ export class NoteResources implements Resources {
       return undefined;
     }
     const { root } = this.options.vault;
-    const { relative, folders } = linkLocation(link, false);
+    const { relative, folders } = linkLocation(link);
     const sourceFolder = folderOf(vaultPath(root, source));
     for (const folder of folders) {
       const path = joinVaultPath(

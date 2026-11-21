@@ -328,7 +328,10 @@ use; `vaults.locate(uri)` gives the vault and the vault path.
   follows Obsidian's `getLinkpathDest`: case-insensitive, `.md` optional,
   `./` and `../` from the note's folder, a leading `/` from the vault root,
   other foldered paths from the root then the note's folder, attachments
-  included. Aliases are not destinations, as in Obsidian.
+  included. Aliases are not destinations, as in Obsidian. A click on a
+  Markdown link looks on disk, and a preview does when the index lacks the
+  file (a hidden one), in `shared/link-location.ts`'s one order: a bare name
+  beside the note, then at the root. Making a note comes only after it.
 
 When a name matches in several folders, the candidates under the source
 note's folder come first, then the rest, each group shortest path first, as in

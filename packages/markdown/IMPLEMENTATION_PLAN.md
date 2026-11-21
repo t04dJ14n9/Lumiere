@@ -8790,3 +8790,62 @@ scrolling wait for the page" (budget 0, unchanged) and the scroll smoothness
 checks, and the large-vault check passes. Not run: the full browser suites and
 `test:vscode` (the owner runs it; the change adds a setting to `package.json`
 and runs in the webview).
+## A bare link to a hidden file names one file to a click and a preview (#823; 2026-11-21)
+
+Review finding on #779's disk fallback. With `.hidden.md` both at the vault
+root and in the note's folder (`notes/`), neither in the index, a link
+`[peek](.hidden.md)` in `notes/Note.md` previewed `notes/.hidden.md` and a
+click opened the root's. The preview asked `linkLocation(link, false)`: a
+bare name is the source note's neighbour. The click asks
+`linkLocation(link, true)` because `mayCreateNote` lets a basename Markdown
+link make a note, and `create` also chose where to look: the vault root only.
+
+- Rule: whether a click may make a note no longer changes which existing
+  file a link names. `linkLocation(link)` has no `create` argument and is
+  the one lookup order, for `host/navigation.ts` (`resolveNavigation`) and
+  the resources plugin's disk fallback (`locateOnDisk`); where a missing note
+  is made is `creationLocation(link)`, asked only after no candidate exists.
+  Both are pure, in `src/shared/link-location.ts`, and both stay exported
+  from `host/portable.ts`. Containment is checked for every candidate as
+  before (`contained` for the click, `containedStat` for the preview).
+- Order for a bare name: the note's folder, then the vault root. The
+  neighbour first is what the helper documented and what two tests pin
+  (`Open image file for a Markdown embed resolves the sibling, not the
+  vault-root twin`; Markdown links are left to navigation for the neighbour).
+  The vault root second keeps what a click on a bare `.md` link already did
+  when only a root file existed (`create` made the root the one candidate),
+  and without it that click would have made a second note in
+  `newNoteFolder` beside the root's. `./` and `../` are the note's folder only,
+  `/` the vault root only, other paths with folders the vault root then the
+  note's folder, as before.
+- Behaviour changes for a click, recorded: a bare `.md` or extensionless
+  link with a file beside the note and a twin at the root opens the file
+  beside the note (it opened the root's); a bare link to another extension
+  (`[x](image.png)`) with only a root file now opens it (it did nothing).
+  A bare link with no file anywhere makes the note where it did.
+- Not changed: the index's own pick for a file it lists. For a bare Markdown
+  link with twins the index prefers the root file
+  (`vault.resolveLink`, `resolve.ts`), so a preview of an indexed twin can
+  still differ from the click, as it already did for an image
+  (`test/unit/links/opened-target.test.ts` records that the index's pick is
+  not what Markdown navigation opens). Only the disk fallback and the click
+  share one order here; the indexed case is a separate question for the
+  owner.
+
+Tests: `test/unit/editor/navigation-host.test.ts` runs one real directory
+through both sides, `resolve` (fake `vscode` over the disk) and
+`NoteResources` over the same files: two existing hidden twins, with
+`create` true and false, giving the same file for the preview and the
+click (failing before: the click opened the root's), the explicit `./` and
+`/` forms, a root-only file with `newNoteFolder` set (no second note), and a
+link that names no file (the preview says "Resource not found", the click
+makes the note where it did, and the preview then finds it).
+`note-resources.test.ts` adds the probe order of the disk fallback;
+`test/unit/shared/link-location.test.ts` is rewritten for the two
+functions (the open-image and rooted-link tests lose only the removed
+argument; the image test keeps "the sibling first" and now expects the
+vault root as its second place). Checks: Prettier, ESLint and the type
+checks pass; the unit tests of navigation, resources, link location, the
+open-image intent and rooted links pass (the new ones fail on the old
+source); the full `pnpm check` is recorded with the #824 change that
+follows. Not run: the browser, quality and VS Code suites.

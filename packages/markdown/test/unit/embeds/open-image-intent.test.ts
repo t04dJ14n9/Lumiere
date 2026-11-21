@@ -35,5 +35,6 @@ test("Open image file for a Markdown embed resolves the sibling, not the vault-r
     openedVaultTarget(vault, "image.png", "notes/source.md", false),
     undefined,
   );
-  assert.deepEqual(linkLocation("image.png", false).folders, ["source"]);
+  // The sibling comes first; the vault root is only the fallback.
+  assert.deepEqual(linkLocation("image.png").folders, ["source", "vault"]);
 });

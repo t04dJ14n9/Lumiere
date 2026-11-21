@@ -171,3 +171,28 @@ test("a name with # or a space is found by its percent-encoded URI", async () =>
   const loaded = await resources.load("/.raw/C%23%20notes.md");
   assert.equal(loaded.source, page);
 });
+
+// The disk is asked in the order a click asks (`linkLocation`): the same
+// existing file whether or not the click could make a note.
+test("a bare Markdown link is looked for beside the note, then at the vault root", async () => {
+  const root = "file:///home/reader/vault";
+  const { resources, stats } = resourcesOnDisk(root, {
+    [`${root}/wiki/notes/.twin.md`]: "beside",
+    [`${root}/.twin.md`]: "root",
+    [`${root}/.rootonly.md`]: "root only",
+  });
+  assert.equal((await resources.load(".twin.md")).text, "beside");
+  assert.equal((await resources.load("./.twin.md")).text, "beside");
+  assert.equal((await resources.load("/.twin.md")).text, "root");
+  // No neighbour: the vault root's file of that name.
+  assert.equal((await resources.load(".rootonly.md")).text, "root only");
+  // `./` is only the note's folder, with no fallback.
+  await assert.rejects(resources.load("./.rootonly.md"), /Resource not found/);
+
+  stats.length = 0;
+  await assert.rejects(resources.load(".nowhere.md"), /Resource not found/);
+  assert.deepEqual(stats, [
+    `${root}/wiki/notes/.nowhere.md`,
+    `${root}/.nowhere.md`,
+  ]);
+});
