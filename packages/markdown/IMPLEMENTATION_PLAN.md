@@ -7214,3 +7214,27 @@ unbound, the state before this decision); `test/unit/features/link-keys.test.ts`
 the Mod+Alt+Enter keymap; `find-keys.test.ts` and `find-navigation.test.ts`
 the macOS Replace key. `pnpm test:vscode` is required for the contribution
 change and is left to the owner.
+
+## Search matches reveal source (#699; 2026-11-21)
+
+DESIGN §11.3's "Later: search matches reveal source". Obsidian 1.15.0's Live
+Preview builders reveal a range when the selection touches it (while the
+editor has focus) or when its search highlight lies in it (static read of the
+shipped `app.js`; nothing copied). Lumiere's find bar selects each match it
+moves to, and its reveal rule follows the selection, so most syntax was
+already revealed; `reveal-rules.test.ts` now pins that for a link's
+destination and label, emphasis markers, a highlight, an escape and a heading
+marker. The gap was the renderers that keep rendering under a selection:
+footnote references (only a caret reveals them) and images (they stay
+rendered whatever the caret does). `livePreview/find-match.ts` names the find
+bar's current match (while the bar is open, the main selection when it is
+exactly a match of its query), exported as `findMatchTouches` through the
+plugin's `api.ts`; footnotes and embeds reveal the source for it. It needs
+the bar open because CodeMirror keeps the query after the bar closes and
+seeds it with whatever text was selected when its state was made. Tables and
+Properties keep their widgets for a match.
+
+Tests: `find-match.test.ts`, the new `reveal-rules.test.ts` cases,
+`test/unit/footnotes/inline.test.ts` and
+`test/unit/livePreview/reveal-plugins.test.ts` (images), with a find-bar
+helper in `test/unit/support/find-bar.ts`. No browser test was added.

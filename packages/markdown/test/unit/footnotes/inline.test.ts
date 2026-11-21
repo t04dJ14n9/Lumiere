@@ -1,6 +1,8 @@
 import test from "node:test";
 import assert from "node:assert/strict";
 import { EditorSelection, EditorState } from "@codemirror/state";
+import { search } from "@codemirror/search";
+import { withFindBar } from "../support/find-bar";
 import { documentTree } from "../../../src/plugins/livePreview/document-tree";
 import { inlineDecorations } from "../../../src/plugins/livePreview/inline";
 import { inlineRenderers } from "../../../src/plugins/livePreview/registry";
@@ -25,15 +27,18 @@ const source = [
   "after",
 ].join("\n");
 
-function decorate(selection: EditorSelection) {
-  const state = EditorState.create({
+function decorate(selection: EditorSelection, find?: string) {
+  const created = EditorState.create({
     doc: source,
     selection,
     extensions: [
       documentTree,
       inlineRenderers.of(footnoteInline({} as RenderService)),
+      search(),
     ],
   });
+  const state =
+    find === undefined ? created : withFindBar(created, { search: find });
   const references: string[] = [];
   const numbers: string[] = [];
   const faint: string[] = [];
@@ -144,6 +149,23 @@ test("a selection ending inside a reference keeps it rendered", () => {
   );
   assert.deepEqual(references, ["1", "2", "3", "1"]);
   assert.deepEqual(faint, []);
+});
+
+test("the find bar's match reveals a reference's source, as Obsidian's search highlight does", () => {
+  const from = source.indexOf("[^note]") + 2;
+  const match = range(from, from + "note".length);
+  // Selected by Find: faint source, like a caret.
+  const found = decorate(match, "note");
+  assert.deepEqual(found.references, ["1", "3", "1"]);
+  assert.deepEqual(found.faint, ["[^note]"]);
+  // The same selection made otherwise keeps the number.
+  assert.deepEqual(decorate(match).references, ["1", "2", "3", "1"]);
+  // A match elsewhere leaves every reference rendered.
+  const other = source.indexOf("sentence");
+  assert.deepEqual(
+    decorate(range(other, other + "sentence".length), "sentence").references,
+    ["1", "2", "3", "1"],
+  );
 });
 
 test("definitions lead with their number; the caret on the marker shows its faint source", () => {

@@ -847,7 +847,11 @@ One function, `revealed(state, from, to, kind)`, used by every renderer:
 - While composing (IME) or dragging with the mouse, decorations are mapped,
   not rebuilt (Obsidian skips rebuilds in both cases). Add the drag case; the
   source handles only composition.
-- Later: search matches reveal source, as in Obsidian.
+- The find bar's current match reveals the source around it, as Obsidian's
+  search highlight does. Find selects each match, so the selection rule above
+  covers most syntax; the renderers that keep rendering under a selection
+  (footnote references, images) also reveal for the match while the bar is
+  open (`findMatchTouches`, `livePreview/find-match.ts`).
 
 ### 11.4 Widgets
 

@@ -222,3 +222,4 @@ export function markdownTree(state: EditorState): Tree {
 
 export { editTouches, isPlainTextEdit } from "./plain-edit";
 export { changedBlocks } from "./changed-region";
+export { findMatchTouches } from "./find-match";

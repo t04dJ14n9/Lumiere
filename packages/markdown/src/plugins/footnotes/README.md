@@ -7,6 +7,7 @@ superscript number in the text colour, numbered in order of first reference
 and inside rendered blocks. An inline `^[text]` keeps its body visible after
 the number (brackets hide; Obsidian shows the whole `^[text]` as superscript).
 Selections, Ctrl+A included, keep it rendered; only a caret inside its source
+(or the find bar's current match, as Obsidian's search highlight reveals)
 shows the faint `[^label]` for editing. Hovering or focusing it previews the
 footnote; clicking jumps to the definition (an inline footnote puts the caret
 in itself). A definition shows the same number before its text, set a little
