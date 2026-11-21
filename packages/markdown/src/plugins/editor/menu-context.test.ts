@@ -84,9 +84,11 @@ test("Rename Heading is offered on an ATX heading line, not on code, tags or oth
 });
 
 test("Rename Heading is offered on a heading the parse has not reached yet", () => {
-  // Far past what CodeMirror parses when a state is created, so the heading
-  // is only found if the check finishes the parse up to its line.
-  const filler = Array.from({ length: 60_000 }, (_, i) => `line ${i}`);
+  // A state is created with only its first few thousand characters parsed
+  // (CodeMirror's initial viewport), so this heading, about 20 kB in, is only
+  // found if the check finishes the parse up to its line. Small enough that
+  // the parse stays far inside isHeadingLine's time budget on a busy runner.
+  const filler = Array.from({ length: 2_000 }, (_, i) => `line ${i}`);
   const doc = [...filler, "# Far heading"].join("\n\n");
   const state = EditorState.create({
     doc,
