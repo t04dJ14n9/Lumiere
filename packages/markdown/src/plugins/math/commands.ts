@@ -1,8 +1,5 @@
-import {
-  EditorSelection,
-  type EditorState,
-  type TransactionSpec,
-} from "@codemirror/state";
+import type { EditorState, TransactionSpec } from "@codemirror/state";
+import { fenceSelectedLines } from "../../markdown/fence-lines";
 
 /** Inline math around the selection, or off when `$` already surrounds it. */
 export function inlineMathEdit(state: EditorState): TransactionSpec {
@@ -33,17 +30,8 @@ export function inlineMathEdit(state: EditorState): TransactionSpec {
  * Insert Math Block, as in Obsidian: `$$` lines go around the lines of every
  * selection (an empty line becomes the formula's), and each selection stays
  * on its text. A selection ending at the start of a line includes that line,
- * as in Obsidian.
+ * as in Obsidian. Selections that share a line share one block.
  */
 export function mathBlockEdit(state: EditorState): TransactionSpec {
-  return {
-    ...state.changeByRange(({ from, to, anchor, head }) => ({
-      changes: [
-        { from: state.doc.lineAt(from).from, insert: "$$\n" },
-        { from: state.doc.lineAt(to).to, insert: "\n$$" },
-      ],
-      range: EditorSelection.range(anchor + 3, head + 3),
-    })),
-    userEvent: "input.math",
-  };
+  return { ...fenceSelectedLines(state, "$$", "$$"), userEvent: "input.math" };
 }

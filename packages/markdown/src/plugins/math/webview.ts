@@ -143,11 +143,15 @@ function registerTypesetting(
 function registerMathCommands(ctx: Context): void {
   const view = ctx.editor.view;
   // Inline math toggles like bold: the word at the caret, each line of a
-  // selection, or off again, through the formatting plugin when it runs.
+  // selection, or off again, through the formatting plugin when it runs
+  // (whose wrap refuses a read-only editor itself).
   ctx.effect(() =>
     ctx.commands.register("editor:toggle-inline-math", () => {
       if (ctx.formatting) {
         return ctx.formatting.wrap("$", view);
+      }
+      if (view.state.readOnly) {
+        return false;
       }
       view.dispatch(inlineMathEdit(view.state));
       return true;
@@ -155,6 +159,10 @@ function registerMathCommands(ctx: Context): void {
   );
   ctx.effect(() =>
     ctx.commands.register("editor:insert-mathblock", () => {
+      // CodeMirror leaves readOnly to commands: a dispatch would still edit.
+      if (view.state.readOnly) {
+        return false;
+      }
       view.dispatch(mathBlockEdit(view.state));
       return true;
     }),

@@ -8162,3 +8162,67 @@ yet" as no image, rather than an unmoved one). Checks: `pnpm check`;
 browser specs image-selection-chrome and image-remount-height pass; a
 throwaway probe confirmed a clicked block image still stays under the
 pointer and a double-click near its top edge opens the inspector.
+## Fence commands with carets on one line; editing commands refuse read-only (#810, #812; 2026-11-21)
+
+Two issues from the post-merge review of #800 (#787's editing commands).
+
+- **#810: one block per shared line.** #800 made Insert Code Block
+  (`fenceLines`) and Insert Math Block (`mathBlockEdit`) edit every
+  selection through `changeByRange`, each range grown to its whole lines on
+  its own. Two carets on one line (`a|lpha be|ta`), or ranges whose first
+  and last lines meet, each put fences around the same text: the line ended
+  up outside two empty blocks. Both now go through
+  `fenceSelectedLines` (`src/markdown/fence-lines.ts`, pure, shared because
+  the two commands live in different plugins): the ranges' line spans are
+  merged where they share a line, one block goes around each merged span,
+  and every range keeps its place on the text and the main selection stays
+  main. Carets on consecutive lines still get a block each, as #787 pinned
+  ("line and insert commands act at every caret"); Obsidian's own result
+  for carets on one line was not observed. Unit tests in
+  obsidian-commands (two carets on a line, overlapping multi-line ranges, a
+  range ending at the start of a caret's line, carets at both ends of a
+  line, and controls: one caret, a shared line followed by a separate one)
+  for both commands; each failed before the change.
+- **#812: read-only.** CodeMirror's `readOnly` facet only advises commands;
+  a dispatched change still applies. In VS Code the editor turns read-only
+  when syncing fails for good (document/sync.ts), so such an edit would
+  never reach the note. The formatting plugin's commands check it; the
+  registered `editor:insert-mathblock` did not (before #800 too). Every
+  command registered through `ctx.commands` in packages/markdown was
+  checked:
+  - Refused now (return false, no dispatch): Insert Math Block; Toggle
+    Inline Math without the formatting plugin; Insert Wikilink (links);
+    Insert Embed (embeds); Insert Callout (`insertCalloutCommand`); Toggle
+    checkbox status and Cycle bullet/checkbox (`runChecklist`, so the Mod+L
+    keymap's own check went); Insert Footnote (`insertFootnoteCommand`, no
+    definition popover either); Insert Table and every `editor:table-*`
+    command (refused before the active table's controller runs); Add file
+    property (and its Mod+; key), Add alias and Clear file properties
+    (`PropertyEditing.add`, `addAlias` and `clear`; `add` and `addAlias`
+    now return whether they ran, false only with no editor or a read-only
+    one, so the commands and Mod+; report a refusal).
+  - Already refused: formatting's inline toggles, highlight colours, line
+    commands, Insert Link, Insert Horizontal Rule, Insert Code Block, Insert
+    Tag, Clear Formatting, Swap Line Up/Down, Toggle Comment; Delete
+    Paragraph (CodeMirror's `deleteLine` checks it).
+  - Not editing commands: Add Cursor Above/Below (selection only); fold
+    commands (folding, Toggle Fold Properties); Toggle Source; Follow Link
+    and opening links; page preview; Look Up; the git change navigation
+    and Show Change; Copy Link for Agent; `vim:consume-host-shortcut` and
+    `vim:handle-ctrl-n` (replays a key to Vim); the host actions the
+    commands plugin forwards (save, undo, redo, close, open as text, quick
+    open), which act on the TextDocument in the extension host.
+  - Not swept (no registered command): editing that a widget or key does
+    itself, such as typing in a table cell, its clipboard and drags, the
+    Properties sheet's inputs, image size keys, list continuation on Enter.
+  `test/unit/features/read-only-commands.test.ts` runs the registered
+  handlers in the unit fixture on a read-only state (refused, note
+  unchanged) and a writable one (edits); the table commands with a stand-in
+  active table (its `execute` never called when read-only); Insert Footnote
+  and the three Properties commands through `insertFootnoteCommand` and
+  `PropertyEditing`, whose popover and sheet need a DOM the fixture lacks
+  (the registered Insert Footnote is also run read-only). Each read-only
+  assertion failed with its guard removed; each has a writable control.
+
+Checks: `pnpm check` passes. Not run here: `pnpm test:browser`,
+`pnpm test:quality`, `pnpm test:vscode` (others run them on this machine).
