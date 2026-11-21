@@ -36,6 +36,14 @@ Horizontal and Shift-wheel gestures stay with the table's overflow box.
 Chromium latches a mostly vertical diagonal wheel to `.table-scroll` when the
 table can take its sideways part, dropping the vertical part; once the table
 has panned for it, a passive listener scrolls the note by that vertical part.
+A gesture that is nearly straight is locked to its axis before that matters
+(`scrollAxisLock`, following `editor.scrollPredominantAxis`): from its first
+events on, an up and down one over a wide table scrolls the note and never
+the table, and a sideways one scrolls the table and never the note. That is
+the one case where a wheel over a table is cancelled, and only for a locked
+gesture that carries stray movement across its axis; the diagonal listener
+ignores a wheel that has been cancelled, and keeps handling the gestures the
+lock leaves free.
 The widget ignores events, so CodeMirror never hears a wheel over it; another
 passive listener reports vertical table wheel input through the editor's
 public scroll-input event, which cancels saved-view scroll restoration.

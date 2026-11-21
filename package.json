@@ -3317,6 +3317,12 @@
             "scope": "resource",
             "description": "Temporary notes in a scratch folder."
           },
+          "lumiere.markdown.plugins.scrollAxisLock.enabled": {
+            "type": "boolean",
+            "default": true,
+            "scope": "resource",
+            "description": "A trackpad or wheel scroll that is nearly straight up and down or sideways moves the note, its tables and its code blocks along that one axis, following editor.scrollPredominantAxis."
+          },
           "lumiere.markdown.plugins.search.enabled": {
             "type": "boolean",
             "default": true,

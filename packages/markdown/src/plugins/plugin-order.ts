@@ -69,6 +69,7 @@ export const FEATURE_ORDER = [
   "gitBlame",
   "indentGuides",
   "stickyScroll",
+  "scrollAxisLock",
   "spellcheck",
   "autoPair",
   "smartLists",

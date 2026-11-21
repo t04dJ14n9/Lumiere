@@ -61,6 +61,7 @@ product choices for VS Code, not parity claims.
 | gitDiffEditor | A side-by-side diff of two versions of a note, both rendered: blocks aligned, changed words and lines marked, read-only left side; Open Rendered Git Diff, or replaces Source Control's Markdown text diffs when diffEditor is rendered | On; diffEditor setting (native by default) |
 | indentGuides | Indentation guides | No active-guide highlight |
 | stickyScroll | Pins ancestor headings while scrolling in Live Preview and Source; click to navigate | On by default; document-level headings only; up to five compact rows by default, limited to one third of the pane height |
+| scrollAxisLock | A trackpad or wheel gesture that is nearly straight up and down, or sideways, scrolls the note, its tables, code and diagrams along that axis only; a diagonal one still pans freely. Follows `editor.scrollPredominantAxis` | On by default. Not in Obsidian. Decides once per gesture, momentum included; pinch and Ctrl, Cmd and Shift wheels are untouched; a locked gesture waits for the main thread per wheel event, as VS Code's editor does |
 | spellcheck | The host's spellchecker | Languages and dictionaries are the host's (VS Code's Chromium spellchecker; on macOS the system's); no language setting, unlike Obsidian 1.15.0's per-device Spellcheck languages (DESIGN §15.3) |
 | autoPair | Brackets, quotes and Markdown markers | — |
 | smartLists | List continuation and exit | — |

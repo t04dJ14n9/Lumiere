@@ -15,8 +15,15 @@ const plain = {
   shiftKey: false,
 };
 
-function wheel(overrides: Partial<WheelEvent>): Event {
-  return Object.assign(new Event("wheel"), { ...plain, ...overrides });
+function wheel(overrides: Partial<WheelEvent>, cancelled = false): Event {
+  const event = Object.assign(new Event("wheel", { cancelable: true }), {
+    ...plain,
+    ...overrides,
+  });
+  if (cancelled) {
+    event.preventDefault();
+  }
+  return event;
 }
 
 function wideTable() {
@@ -105,4 +112,17 @@ test("a diagonal the note took itself adds nothing to a later pan", () => {
   table.dispatchEvent(wheel({ deltaX: 120, deltaY: 10 }));
   table.dispatchEvent(new Event("scroll"));
   assert.deepEqual(scrolls, [], "a horizontal wheel drops the vertical part");
+});
+
+test("a diagonal the axis lock cancelled is neither remembered nor added to a pan", () => {
+  const { table, scrolls } = wideTable();
+  // Cancelled: the axis lock scrolled the note itself and the table never pans for it.
+  table.dispatchEvent(wheel({ deltaX: 30, deltaY: 120 }, true));
+  table.dispatchEvent(new Event("scroll"));
+  assert.deepEqual(scrolls, []);
+  // One the browser had still adds its vertical part once the table pans, and only that one.
+  table.dispatchEvent(wheel({ deltaX: 30, deltaY: 40 }));
+  table.dispatchEvent(wheel({ deltaX: 30, deltaY: 120 }, true));
+  table.dispatchEvent(new Event("scroll"));
+  assert.deepEqual(scrolls, [40]);
 });

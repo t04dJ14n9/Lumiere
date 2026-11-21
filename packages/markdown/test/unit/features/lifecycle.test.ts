@@ -61,11 +61,13 @@ async function renderHooks(root: RootContext) {
 }
 
 // Plugins that only post-process rendered HTML, or only contribute commands
-// and selection-menu items (Copy link to this), add no editor extensions.
+// and selection-menu items (Copy link to this), or only listen to the
+// editor's DOM (scrollAxisLock), add no editor extensions.
 const noEditorExtensions = new Set([
   "onlineVideos",
   "agentBridge",
   "cursorBridge",
+  "scrollAxisLock",
 ]);
 const hasExtensions = (f: ReturnType<typeof fixture>, id: string) =>
   noEditorExtensions.has(id) ? f.extensions === 0 : f.extensions > 0;

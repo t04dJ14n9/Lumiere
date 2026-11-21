@@ -15,6 +15,12 @@ gate (AGENTS.md, "Merge gate").
 | First paint, and every feature loaded, for a small note, a 16,000-block note and a note with diagrams | `open.quality.ts` | Slower opening in the webview |
 | The real Markdown host on an in-memory vault of 3,000 and 30,000 files: bytes sent to an open note per vault change, host work per change, and `ready` in the large vault | `large-vault.test.ts` | Work that grows with the vault (megabytes per change and seconds of host time in the CVM's 126,000-file vault, October 2026) |
 
+The first check looks after a straight wheel. Axis-locked scrolling's listener
+(`src/plugins/scrollAxisLock`) is passive then, and only a locked gesture that
+carries movement across its axis makes it one that can cancel, until the
+gesture's pause; no straight swipe or mouse wheel does. The budget is
+unchanged.
+
 The browser checks run the real webview in Chromium with the browser
 harness's host (`test/browser/fake-host.ts`); the host check runs the real
 host wiring (`src/host/bootstrap.ts`) with fakes for VS Code.
