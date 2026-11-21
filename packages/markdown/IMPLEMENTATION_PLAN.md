@@ -8982,6 +8982,9 @@ Two issues from the post-merge review of #800 (#787's editing commands).
   (the registered Insert Footnote is also run read-only). Each read-only
   assertion failed with its guard removed; each has a writable control.
 
+Checks: `pnpm check` passes. Not run here: `pnpm test:browser`,
+`pnpm test:quality`, `pnpm test:vscode` (others run them on this machine).
+
 Second review round (PR #814, 2026-11-22), each with a unit test that
 failed before it (part of #826):
 
@@ -9037,9 +9040,9 @@ failed before it (`src/plugins/tables/read-only-cells.test.ts`):
   `nestedSync` and still apply. Up front, Shift+Enter adds nothing, Cut
   still copies but removes nothing, Paste reads no clipboard and writes
   nothing (also when the note turned read-only while the clipboard was
-  read: no cell closes and the grid selection stays), Clear cells selects
-  nothing, and formatting from the menu does not select the cell's text
-  first.
+  read: no cell closes and the grid selection stays; that case got its
+  test in the fourth round), Clear cells selects nothing, and formatting
+  from the menu does not select the cell's text first.
 - **No stale cell request.** Tab past the last row and the + strips below
   and right of the table ask for the new cell to open once the table is
   drawn again; when the write is refused the request is dropped
@@ -9053,8 +9056,35 @@ Of #826 this round completes typing in a table cell (every edit path of
 an open cell) and the table clipboard. Left for #826: the Properties
 sheet's inputs, the image size keys and list continuation on Enter.
 
-Checks: `pnpm check` passes. Not run here: `pnpm test:browser`,
-`pnpm test:quality`, `pnpm test:vscode`.
+Fourth review round (PR #814, 2026-11-22), each with a unit test in
+`read-only-cells.test.ts` that fails with the change undone:
 
-Checks: `pnpm check` passes. Not run here: `pnpm test:browser`,
-`pnpm test:quality`, `pnpm test:vscode` (others run them on this machine).
+- **Up and Down past a table in a read-only note.** The editor's
+  ArrowUp/ArrowDown binding (`enterTable`) opened the table's first or last
+  cell and took the key. Since the third round no cell opens in a
+  read-only note, but the key was still taken, so the caret stuck above or
+  below the table (a regression of this PR). `CellProjection.open` now
+  returns whether a cell is open, and `TableKeyboard.enter`,
+  `TableController.enter` and `enterTable` pass it on: the key falls
+  through and the caret moves past the table as through text.
+  `TableController.enterSourcePosition` and `TableKeyboard.arrow` pass it
+  on too, and Tab past the last row reports whether the new row was
+  written. `enterSelectedCell` already checked for an open cell; the
+  pointer gestures do not run in a read-only note, and the menu's open
+  only needs the cell closed (next item).
+- **A cell left open when the note turned read-only.** Asking for another
+  cell closes it (closing is not an edit), so the context menu of a
+  right-clicked cell acts on that cell: Copy copies it, not the old cell's
+  selection. The open cell itself stays open and focused.
+- **Paste while the clipboard is read.** The guard for a note that turns
+  read-only while Paste waits for the clipboard (`insertPasted`) is now
+  tested: writable when Paste starts, read-only before the text arrives;
+  one line leaves the open cell as it was, and cells close nothing and
+  keep the grid selection.
+
+Checks: my `pnpm check` runs for the third and fourth rounds, with a
+private TMPDIR, passed. The PR gate's `pnpm check` on the third round's
+head (d270e47b) failed one test, the PDF timing test "a dark page drawn
+in slices is the page drawn at once", a known flaky test under load, and
+passed everything else. Its `pnpm test:vscode` and CI passed. Not run
+here: `pnpm test:browser`, `pnpm test:quality`, `pnpm test:vscode`.
