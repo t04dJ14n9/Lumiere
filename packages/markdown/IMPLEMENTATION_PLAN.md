@@ -7832,3 +7832,23 @@ running. One commit per item.
   1.15.0 offers no colour list after `==` when a colour emoji already
   follows, which Lumiere's suggestion does not check (round or square).
   Unit tests: highlight-colours and livePreview inline tests.
+- **Insert Table: left for a live re-check.** 1.15.0's `insertTable` puts
+  the table after the line of the main selection's anchor and the caret at
+  `e + r.length + 1`, after the table's first `|`; Lumiere uses the `from`
+  line and the table's start. The 2026-10-17 probe that "matched" does not
+  contradict the read: its notation writes the caret as `|`, so `||     |`
+  reads the same with the caret before or after the first pipe, and the unit
+  test built from it (obsidian-commands, "a new table goes after the line…")
+  passes at either offset. What a user sees differs from the offset alone:
+  with the editor focused, Obsidian's table widget takes a selection
+  anywhere in the table into the first cell (`receiveSelection`, through
+  `placeCursorInCell` from just before the table), while Lumiere's outer
+  caret opens no cell at either offset (only Vim's entry does). Matching it
+  means deciding whether Insert Table should open the first cell, which
+  needs Obsidian running; nothing changed. PARITY's insertTable rows say so.
+
+Documentation: CAPABILITIES (formatting and dialect rows). Checks for the
+whole branch: the Markdown package's unit tests (3,742 pass), typecheck,
+ESLint and Prettier. Not run here (other agents share the machine): `pnpm
+test:browser`, `test:quality`, `test:vscode`. No browser spec runs the
+changed commands (searched for their command IDs).
