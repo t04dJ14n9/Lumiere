@@ -1,4 +1,5 @@
 import { randomBytes } from "node:crypto";
+import { rmSync } from "node:fs";
 import { mkdir, rename, rm, writeFile } from "node:fs/promises";
 import * as path from "node:path";
 import * as vscode from "vscode";
@@ -33,7 +34,15 @@ export async function announce(
   const discoveryFile = path.join(discoveryDir, `${port}.json`);
   await mkdir(discoveryDir, { recursive: true, mode: 0o700 });
   await sweepDiscoveryFiles(discoveryDir);
-  undo.push(() => rm(discoveryFile, { force: true }));
+  // VS Code ends a closing window's extension host a few milliseconds after
+  // it asks the extensions to stop, long before this undo step's turn: the
+  // file goes on `exit` too, which runs synchronously as the process ends.
+  const removeOnExit = () => rmSync(discoveryFile, { force: true });
+  process.once("exit", removeOnExit);
+  undo.push(() => {
+    process.off("exit", removeOnExit);
+    return rm(discoveryFile, { force: true });
+  });
   await writeDiscoveryFile(discoveryFile, info);
   let rewriting = Promise.resolve();
   const subscription = vscode.workspace.onDidChangeWorkspaceFolders(() => {

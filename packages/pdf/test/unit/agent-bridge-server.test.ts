@@ -233,6 +233,24 @@ test("a folder added to the window or removed from it is in the discovery file t
   assert.deepEqual(vscode.outstanding(), []);
 });
 
+test("a window that closes removes its discovery file as its process exits, before any async cleanup could run", async (t) => {
+  const before = process.listeners("exit");
+  const bridge = await startAgentBridge(options());
+  t.after(() => bridge.dispose());
+  const bridges = path.join(folder, "bridges");
+  // VS Code ends the extension host a few milliseconds after it asks the
+  // extensions to stop: only what runs on `exit` itself still happens.
+  const onExit = process.listeners("exit").filter((l) => !before.includes(l));
+  assert.equal(onExit.length, 1);
+  onExit[0]!(0);
+  assert.deepEqual(await readdir(bridges), []);
+  await bridge.dispose();
+  assert.deepEqual(
+    process.listeners("exit").filter((l) => !before.includes(l)),
+    [],
+  );
+});
+
 test("a failure after listening (writing the discovery file) closes the listener before the error propagates", async () => {
   // The discovery folder's parent is a file, so creating the folder fails.
   await writeFile(path.join(folder, "blocker"), "");
