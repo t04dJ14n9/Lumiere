@@ -38,7 +38,7 @@ product choices for VS Code, not parity claims.
 | onlineVideos | YouTube (watch, youtu.be, Shorts) and Bilibili (BV, av, `?p=`) links written as images show as cards with a button that opens the browser; in trusted workspaces the title, author, length and cover (Bilibili via its public API, YouTube via oEmbed, looked up by the extension host) | Not in Obsidian. No player by default: YouTube refuses to play in VS Code webviews (error 153) and Bilibili's player does not buffer there (`onlineVideos.bilibiliPlayer` brings back **Play here**); nothing is fetched in an untrusted workspace |
 | pagePreview | Mod-hover preview of notes, headings, blocks and attachments | External links are not previewed |
 | tables | Spreadsheet-style table editing, selection, TSV clipboard, row and column commands and dragging | — |
-| callouts | All callout types, nesting, folding with per-panel memory | Colours follow the VS Code theme |
+| callouts | All callout types, nesting, folding: each callout opens as the note says (`-` closed) whenever the note loads, as in Obsidian, and a toggle lasts while the panel is open | Colours follow the VS Code theme; a toggle survives the callout re-rendering in the panel, where Obsidian's can reset |
 | math | MathJax inline and block math | `lumiere.markdown.math.macros` supplies user macros (name → replacement); empty by default |
 | diagrams | Mermaid | Theme follows VS Code light or dark; HTML labels off |
 | codeBlocks | Prism highlighting and a Copy button | Languages without a loaded grammar stay plain |

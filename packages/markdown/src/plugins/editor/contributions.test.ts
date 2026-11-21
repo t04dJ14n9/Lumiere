@@ -101,3 +101,53 @@ test("disposing one contribution preserves its snapshot without reading it again
   contributions.restore({ second: null }, "note.md", { second: 8 });
   assert.equal(second, 2);
 });
+
+test("a transient contribution moves with the view but is not kept across a reload", async () => {
+  const contributions = new ViewContributions({} as EditorView);
+  let open: Record<string, boolean> = { callout: true };
+  const disclosure = {
+    schema: Schema.record(Schema.boolean()),
+    transient: true,
+    capture: () => open,
+    restore: (_view: EditorView, value: Record<string, boolean>) => {
+      open = value;
+    },
+  };
+  let count = 3;
+  const counter = {
+    schema: Schema.number(),
+    capture: () => count,
+    restore: (_view: EditorView, value: number) => {
+      count = value;
+    },
+  };
+  const remove = contributions.contribute("folds", disclosure);
+  contributions.contribute("count", counter);
+  assert.deepEqual(contributions.capture({ forReload: true }), { count: 3 });
+  const moved = contributions.capture();
+  assert.deepEqual(moved.folds, { callout: true });
+  // A move of the view (a rename, Back and Forward) carries it.
+  open = {};
+  contributions.restore(moved, "old.md");
+  assert.deepEqual(open, { callout: true });
+  // Disabled and enabled again in the same view, it comes back too.
+  await remove();
+  open = {};
+  contributions.contribute("folds", disclosure);
+  assert.deepEqual(open, { callout: true });
+  // A reload starts from the note, even from a state saved before.
+  const reloaded = new ViewContributions({} as EditorView);
+  reloaded.restore(
+    { folds: { callout: true }, count: 5 },
+    "old.md",
+    {
+      folds: { legacy: false },
+    },
+    { reloaded: true },
+  );
+  open = {};
+  reloaded.contribute("folds", disclosure);
+  reloaded.contribute("count", counter);
+  assert.deepEqual(open, {});
+  assert.equal(count, 5);
+});

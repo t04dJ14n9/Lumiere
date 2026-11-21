@@ -34,6 +34,11 @@
   shows the headings and lists folded as they were left. Two open panels
   keep their own folds; the note keeps those of the panel last folded in,
   so editing or closing the other panel does not undo them (#698).
+- Markdown: a foldable callout starts as its note says (`-` closed, `+`
+  open) whenever the note loads, as in Obsidian, which keeps no record of
+  it. Reloading the window no longer brings back callouts opened or closed
+  before; a toggle still lasts while the panel is open, and through a
+  rename (#698).
 
 Fixes for several VS Code windows open at once, each with a test; checked
 with two real windows on one profile.

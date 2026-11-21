@@ -696,7 +696,10 @@ keymap…"). The new `editor` plugin:
   state, restores it when the contributor registers (including when a plugin
   is enabled after the panel opened), and carries keys with no live
   contributor over unchanged. Folded ranges are the `folding` plugin's
-  contribution, not core state;
+  contribution, not core state. A `transient` contribution (callout
+  disclosure) moves with the panel's view (a rename, Back and Forward) but
+  is neither saved for nor restored after a reload, where a fresh load
+  starts from the note, as Obsidian's does;
 - has named precedence slots instead of comments:
 
 | Slot | Precedence | Used by |

@@ -7284,3 +7284,29 @@ close do not; panel B opens with panel A's folds through the RPC),
 `view-state.test.ts`, `test/unit/features/*.test.ts`, the markdown package
 typecheck, eslint and `pnpm contributions --check`. Browser, quality and
 real-VS Code suites not run here (CI and the owner run them).
+
+## Callout disclosure follows the note (#698 item 15; 2026-11-21)
+
+The backlog asked to store a callout's disclosure with the note, next to its
+folds. A static read of Obsidian 1.15.0's shipped `app.js` (behaviour only,
+nothing copied; lines in docs/PARITY.md) shows it keeps none: a foldable
+callout's state lives only in its rendered element, set from the note's `-`
+when rendered, and is in neither the per-file fold record nor a leaf's
+state. So "follows the note" means the note's sign decides on every load,
+not a stored toggle; storing it per note would not be Obsidian's behaviour.
+Lumiere already started a second panel and a reopen from the sign; a window
+reload restored the panel's toggles from its saved view state. View-state
+contributions can now be `transient`: carried when the panel's view moves (a
+rename, Back and Forward) and through a disable and enable in the same view,
+but left out of the state saved for a reload and not restored from one
+(including states saved before this change). Callout disclosure is one, so a
+reload starts every callout from its sign. Kept on purpose: a toggle
+survives re-renders within the panel (Obsidian's resets when the callout is
+drawn again). If the owner wants the backlog's per-note sharing instead,
+that is a decision against Obsidian's behaviour.
+Validation: `contributions.test.ts` (transient keys move with the view, come
+back after a disable in the same view, are not saved for or restored after a
+reload), `callouts/view-state.test.ts` (a second panel starts from the
+sign), `src/plugins/editor/*.test.ts`, `test/unit/editor`,
+`test/unit/callouts`, the markdown typecheck and eslint. Browser, quality and
+real-VS Code suites not run here.
