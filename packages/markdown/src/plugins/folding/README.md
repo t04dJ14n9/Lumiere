@@ -32,7 +32,7 @@ its folds when it moves (a rename, Back and Forward in the panel).
 
 ## Files
 
-- `manifest.ts`: heading/indent settings and three command contributions.
+- `manifest.ts`: heading/indent settings and five command contributions.
 - `api.ts`: fold service contract.
 - `webview.ts`: range calculation, gutter, commands and reconfiguration.
 - `fold-all.test.ts`: Fold All and Unfold All emit `folding/allCommand`

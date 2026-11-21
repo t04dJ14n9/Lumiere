@@ -306,10 +306,12 @@ Reference: the measured Obsidian 1.14.4 spec and `docs/properties-diff.md`.
    Create `status` in the other note: Number applies there too. Automatic clears
    the registry entry; reopen and check inference. Repeat with two panels and
    a separate vault to verify vault type isolation.
-8. Click the heading to collapse. Both panels and other notes share that state,
-   including notes in a second vault in the same workspace. Reopen/reload the
-   workspace and check persistence. Expanding restores the values; Mod+;
-   expands the sheet and opens a draft. Other plugin disclosures remain per panel.
+8. Click the heading to collapse. Both panels of that note share the state;
+   other notes, including notes in a second vault in the same workspace, stay
+   as they were, because collapse is per note (as in Obsidian). Reopen/reload
+   the workspace and check persistence: the note is still collapsed and the
+   others are not. Expanding restores the values; Mod+; expands the sheet and
+   opens a draft. Other plugin disclosures remain per panel.
 9. `lumiere.markdown.properties.display`: visible, hidden, source. Off/on and
    source/live-preview toggles keep the native document authoritative. Check
    menu clipboard permissions, native pickers/locales and actual IME with the
@@ -633,7 +635,10 @@ title, then set `lumiere.markdown.plugins.inlineTitle.enabled` to true.
 1. Type `[[Tar`, `[[Target#`, `[[Target#^` and `#ar` in any note: notes,
    aliases (`[[Ho` suggests `[[Welcome|Home]]`), headings, blocks and tags
    are offered; Enter inserts without duplicating `]]`.
-2. Suggestions do not open in code, headings or frontmatter.
+2. Link, heading and block suggestions (the `[[` lists) do not open in code
+   (inline, fenced or indented) or frontmatter. Tag suggestions do: `#ar`
+   opens the list in inline and fenced code and in source-mode frontmatter, as
+   in Obsidian 1.14.4 (see the Tags README).
 3. Type `[[^^` and a word from a paragraph of another note that has no
    `^id`: the paragraph is offered with its note's path; Enter inserts
    `[[Note#^xxxxxx]]` and the other note gains ` ^xxxxxx` at the paragraph's
