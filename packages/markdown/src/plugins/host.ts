@@ -10,6 +10,7 @@ export { linksHost } from "./links/host";
 export { tasksHost } from "./tasks/host";
 export { gitGutterHost } from "./gitGutter/host";
 export { propertiesHost } from "./properties/host";
+export { foldingHost } from "./folding/host";
 export { backlinksHost } from "./backlinks/host";
 export { outgoingLinksHost } from "./outgoingLinks/host";
 export { outlineHost } from "./outline/host";

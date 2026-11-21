@@ -7252,3 +7252,84 @@ note's own `lumiere.markdown.editor.fontSize`, default 16) and VS Code's
 docs/HANDOVER.md "Line height", PARITY's line-height rows). So Lumiere already
 follows Obsidian whether or not the user set `editor.lineHeight`; the row is
 corrected and no layout, budget or browser expectation changes.
+
+## Folds kept per note (#698 item 14; 2026-11-21)
+
+A static read of Obsidian 1.15.0's shipped `app.js` (behaviour only, nothing
+copied; line numbers in docs/PARITY.md) shows its fold store: one record per
+file path in local storage, saved half a second after a fold, an unfold or an
+edit in any leaf of the file and when a leaf closes, and applied whenever a
+leaf loads the file. Other leaves of the file are not refolded live.
+
+Lumiere now keeps a note's folds for the note. The folding plugin gained a
+host half (`folding/host.ts`, a critical panel host) over the host service
+`storage`: `load` gives a panel the note's saved folds when it opens (a
+reopen, a second panel, a window reload), and `save` records them. Per
+AGENTS.md editors stay tracked per panel; only the saved record is per note
+(keyed by the note's URI), and the store remembers which open panel holds
+it. The choice for two panels of one note: each keeps its own folds while
+open, and the note keeps those of the panel where the reader last folded or
+unfolded (a claim), brought up to date 500 ms after each text change while
+that panel holds the record. An edit or the close of the other panel never
+overwrites it, so the panels do not undo each other's folds; Obsidian, which
+saves from every leaf, lets the last leaf changed or closed win. A note
+opened when no open panel holds its record makes that panel the holder.
+Saved folds keep their line-text check, so a note changed while no panel
+showed it does not fold other lines. At most 500 notes and 1000 folds a
+note are kept. The panel's own `folded` view state still carries folds
+across a rename and Back/Forward.
+Validation: `note-store.test.ts` (last fold wins; another panel's edit and
+close do not; panel B opens with panel A's folds through the RPC),
+`note-folds.test.ts` (when a panel sends, the restore is not a fold),
+`view-state.test.ts`, `test/unit/features/*.test.ts`, the markdown package
+typecheck, eslint and `pnpm contributions --check`. Browser, quality and
+real-VS Code suites not run here (CI and the owner run them).
+
+## Callout disclosure follows the note (#698 item 15; 2026-11-21)
+
+The backlog asked to store a callout's disclosure with the note, next to its
+folds. A static read of Obsidian 1.15.0's shipped `app.js` (behaviour only,
+nothing copied; lines in docs/PARITY.md) shows it keeps none: a foldable
+callout's state lives only in its rendered element, set from the note's `-`
+when rendered, and is in neither the per-file fold record nor a leaf's
+state. So "follows the note" means the note's sign decides on every load,
+not a stored toggle; storing it per note would not be Obsidian's behaviour.
+Lumiere already started a second panel and a reopen from the sign; a window
+reload restored the panel's toggles from its saved view state. View-state
+contributions can now be `transient`: carried when the panel's view moves (a
+rename, Back and Forward) and through a disable and enable in the same view,
+but left out of the state saved for a reload and not restored from one
+(including states saved before this change). Callout disclosure is one, so a
+reload starts every callout from its sign. Kept on purpose: a toggle
+survives re-renders within the panel (Obsidian's resets when the callout is
+drawn again). If the owner wants the backlog's per-note sharing instead,
+that is a decision against Obsidian's behaviour.
+Validation: `contributions.test.ts` (transient keys move with the view, come
+back after a disable in the same view, are not saved for or restored after a
+reload), `callouts/view-state.test.ts` (a second panel starts from the
+sign), `src/plugins/editor/*.test.ts`, `test/unit/editor`,
+`test/unit/callouts`, the markdown typecheck and eslint. Browser, quality and
+real-VS Code suites not run here.
+
+## Block ids on demand across the vault (#698 item 25; 2026-11-21)
+
+`[[Note#^` and `[[Note^` already offered every block of a note and gave a
+picked block without an id one; `[[^^` offered only blocks with an id. A
+static read of Obsidian 1.15.0's shipped `app.js` (behaviour only, nothing
+copied; lines in docs/PARITY.md) shows `[[^^` reading every Markdown note's
+blocks, leaving out the block holding the caret, and the same id allocation
+on pick (six random hex digits, not letters from the block text as the
+backlog guessed). It has no Copy link to block command: ids are otherwise
+made only by Bookmark block and a canvas card's Narrow to block, so no
+command was added. `SuggestionIndex.prepare` now reads every non-excluded
+note for `[[^^` (16 at a time, each kept until it changes, stopping when the
+query is cancelled so the next keystroke continues), and the query carries
+the caret so the block being typed in is not offered. Picking a block
+reuses the existing id insertion: in the note being edited within the same
+edit, in another note through `addBlockId`. VS Code's text editor still
+offers only blocks with an id.
+Validation: `test/unit/suggest/note-blocks.test.ts` (every note's blocks
+offered, the caret's block left out, ids for this note and another, a
+cancelled query reads nothing, a note is read again only after it changes),
+`test/unit/suggest/*.test.ts`, the markdown typecheck and eslint. Browser,
+quality and real-VS Code suites not run here.

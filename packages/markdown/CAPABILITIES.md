@@ -38,14 +38,14 @@ product choices for VS Code, not parity claims.
 | onlineVideos | YouTube (watch, youtu.be, Shorts) and Bilibili (BV, av, `?p=`) links written as images show as cards with a button that opens the browser; in trusted workspaces the title, author, length and cover (Bilibili via its public API, YouTube via oEmbed, looked up by the extension host) | Not in Obsidian. No player by default: YouTube refuses to play in VS Code webviews (error 153) and Bilibili's player does not buffer there (`onlineVideos.bilibiliPlayer` brings back **Play here**); nothing is fetched in an untrusted workspace |
 | pagePreview | Mod-hover preview of notes, headings, blocks and attachments | External links are not previewed |
 | tables | Spreadsheet-style table editing, selection, TSV clipboard, row and column commands and dragging | — |
-| callouts | All callout types, nesting, folding with per-panel memory | Colours follow the VS Code theme |
+| callouts | All callout types, nesting, folding: each callout opens as the note says (`-` closed) whenever the note loads, as in Obsidian, and a toggle lasts while the panel is open | Colours follow the VS Code theme; a toggle survives the callout re-rendering in the panel, where Obsidian's can reset |
 | math | MathJax inline and block math | `lumiere.markdown.math.macros` supplies user macros (name → replacement); empty by default |
 | diagrams | Mermaid | Theme follows VS Code light or dark; HTML labels off |
 | codeBlocks | Prism highlighting and a Copy button | Languages without a loaded grammar stay plain |
 | footnotes | References as superscript numbers in LaTeX paper style (an intentional departure from Obsidian), kept under selections, faint source only at the caret, hover previews, click to the definition, inline footnotes, Insert Footnote | Definitions stay editable text led by their number; no Reading view footnotes section |
 | tasks | Clickable checkboxes in notes, embeds and callouts; checklist commands | Any status but a space is checked, like Obsidian's default theme; `data-task` attributes let a snippet style custom statuses |
 | tags | Tag rendering and search, Explorer **Tags** view | Search results are a quick pick, not a search pane |
-| suggest | `[[`, `[[#`, `[[^` and `#` completions | At most 50 results |
+| suggest | `[[`, `[[#`, `[[^`, `[[^^` and `#` completions; a picked block without an id gets one, as in Obsidian | At most 50 results |
 | search | `query` blocks with Obsidian's search syntax | No Dataview |
 | outline | Explorer **Markdown Outline** and **Go to Heading…** (Ctrl+Shift+O) | No drag to reorder sections; VS Code's native Outline and breadcrumbs apply to the plain text editor |
 | backlinks | Explorer **Backlinks** with unlinked mentions and a status bar count | Off by default (owner decision) |
@@ -53,7 +53,7 @@ product choices for VS Code, not parity claims.
 | quickSwitcher | **Quick Switcher** over notes, aliases and unresolved links | No key binding (Mod+O is VS Code's Open File; see [Hotkeys](#hotkeys)); an empty query lists recently opened notes, then recently modified ones never opened here |
 | wordCount | Words and characters in the status bar | Counting rules are this extension's reading of Obsidian's |
 | linkUpdates | Updates links when notes or folders are renamed in VS Code | Asks first by default (`prompt`, matching Obsidian's `alwaysUpdateLinks: false`), with a persistent **Always Update** (saved for the renamed file's workspace folder); `always` rewrites without asking, `never` leaves links untouched; **Rename Heading…** updates links to a heading |
-| folding | Heading and list folding, restored on reload | — |
+| folding | Heading and list folding; a note's folds are kept for the note, so reopening it, a second panel and a reload show them, as Obsidian keeps folds per file | Open panels keep their own folds; the note keeps those of the panel last folded in (Obsidian: the last changed or closed) |
 | lineNumbers | Line numbers laid out like VS Code's gutter, following `editor.lineNumbers`; rendered blocks list all their source lines' numbers | On by default, a deliberate difference from Obsidian 1.15.0, where they are off |
 | gitGutter | Git change bars (added, modified, deleted) beside the line numbers against HEAD or the index, through VS Code's git extension; click a bar for a rendered peek with Revert and Stage File; Alt+F5 / Shift+Alt+F5 move between changes | On by default |
 | gitBlame | Quiet dim EOL authorship on the caret line in Live Preview (no wrap; hover shows full commit message), against the exact editor snapshot; You for matching Git identity | Off by default; works without change bars; uncommitted/unavailable lines hide |

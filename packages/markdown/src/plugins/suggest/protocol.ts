@@ -6,6 +6,11 @@ export const query = Schema.object({
   note: Schema.string().max(4096).optional(),
   /** `^` typed without `#` (`[[Note^`): the link gets its `#`. */
   bare: Schema.boolean().optional(),
+  /**
+   * Where the caret is in the note being edited, for `[[^^`: the block it
+   * is in is not offered, as in Obsidian.
+   */
+  caret: Schema.number().min(0).optional(),
 });
 /**
  * The id a picked block without one gets, as in Obsidian: `insert` at `at`

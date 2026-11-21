@@ -21,8 +21,12 @@ stays. Text before the caret, or any selection, wraps instead. The `NOTE` type
 is selected and one editor transaction makes the insertion one undo step. As in Obsidian, the
 command is refused (no edit) with the caret or selection in a table cell.
 The post-processor binds disclosures to panel-local memory.
-That memory is a `folds` view-state contribution, restored on registration and
-mapped across renamed source identities. Each pass owns its event listeners and
+As in Obsidian, a callout starts as its note says (`-` closed, `+` or no
+sign open) whenever the note loads (an open, a second panel, a window
+reload), and the reader's toggle lasts while the panel's view does. The
+memory is a transient `folds` view-state contribution: carried when the
+view moves (a rename, Back and Forward in the panel) and mapped across
+renamed source identities, but not saved for a reload. Each pass owns its event listeners and
 bindings; plugin disposal removes registrations and remaining pass handlers.
 Foldable titles (and the fold button) toggle disclosure; a `-` callout starts
 closed. Clicking the body or padding reveals and selects the whole callout
@@ -39,7 +43,8 @@ a caret.
 - `edit.ts`: callout detection, pure insertion edits and the table-cell-guarded command.
 - `view-state.ts`: disclosure memory, live bindings and source remapping.
 - `callouts.test.ts`: recognition and insertion units.
-- `view-state.test.ts`: persistence, restore and source-remapping units.
+- `view-state.test.ts`: memory across renders, a second panel, and
+  source-remapping units.
 - `disclosure.test.ts`: title/chevron toggling and listener disposal.
 - `../../../test/unit/callouts/interaction.test.ts`: body/button source editing (title folds).
 - `callouts.css`: the plugin's styles, bundled through `src/webview/styles/index.css`.
@@ -55,7 +60,12 @@ Insert Callout has no default keybinding.
 
 Colors follow VS Code's theme rather than Obsidian assets. Live Preview zeros the
 outer callout margin (as Obsidian CM6) and keeps nested callouts at `1em` vertical
-margin; titles use `flex-start` and a 4px icon gap (`--size-4-1`). Disclosure state
-belongs to each panel, while text and undo belong to VS Code. Exact colour parity
+margin; titles use `flex-start` and a 4px icon gap (`--size-4-1`). Obsidian
+1.15.0 keeps a callout's open or closed state only in the rendered callout
+(code read, not observed running), so it resets to the note's sign whenever
+the callout is drawn again, such as after its source was shown; Lumiere keeps
+the reader's toggle through re-renders while the panel is open, and keys it
+by the callout's text, so editing the callout (its sign too) starts it as the
+note now says. Text and undo belong to VS Code. Exact colour parity
 awaits the owner's manual comparison. The template-or-wrap condition follows
 Obsidian 1.15.0's shipped code read; live 1.15.0 vault remeasure is still pending.

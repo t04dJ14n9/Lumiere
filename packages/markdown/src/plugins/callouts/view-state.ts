@@ -1,9 +1,16 @@
 import { Schema } from "@workshop/core";
 import type { EditorView } from "@codemirror/view";
 
-/** Per-plugin disclosure memory; live bindings also support explicit view transfer. */
+/**
+ * Which callouts the reader opened or closed in this panel. As in Obsidian,
+ * a callout starts as its note says (`-` closed, `+` or nothing open) every
+ * time the note loads: a toggle lasts while the panel's view does, through
+ * re-renders and a move of the view (a rename, Back and Forward), but is not
+ * saved for a reload or another panel.
+ */
 export class DisclosureState {
   readonly schema = Schema.record(Schema.boolean());
+  readonly transient = true;
   private values = new Map<string, boolean>();
   private bindings = new Set<{
     key: string;

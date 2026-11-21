@@ -107,7 +107,9 @@ function geometricPersistence(
     clearTimeout(timer);
     timer = undefined;
     pending = false;
-    config.persist?.(presentation.captureViewState(view, state.capture()));
+    config.persist?.(
+      presentation.captureViewState(view, state.capture({ forReload: true })),
+    );
   };
   ctx.effect(() => {
     const window = view.dom.ownerDocument.defaultView;
@@ -137,7 +139,7 @@ class EditorPersistence {
     private readonly modeRestored: (mode: EditorService["mode"]) => void,
   ) {}
 
-  capture(): SavedView {
+  capture(options: { forReload?: boolean } = {}): SavedView {
     const { view } = this.editor;
     return {
       source: this.editor.source,
@@ -147,18 +149,21 @@ class EditorPersistence {
       scrollLeft: view.scrollDOM.scrollLeft,
       folded: [],
       folds: {},
-      contributions: this.contributions.capture(),
+      contributions: this.contributions.capture(options),
       mode: this.editor.mode,
     };
   }
 
-  restore(state: SavedView): void {
+  /** `reloaded`: `state` was saved before the page reloaded. */
+  restore(state: SavedView, options: { reloaded?: boolean } = {}): void {
     this.editor.mode = state.mode;
     // Legacy top-level keys remain readable by their owning contributors.
-    this.contributions.restore(state.contributions, state.source, {
-      folded: state.folded,
-      folds: state.folds,
-    });
+    this.contributions.restore(
+      state.contributions,
+      state.source,
+      { folded: state.folded, folds: state.folds },
+      options,
+    );
     this.presentation.restoreViewState(this.editor.view, state);
     this.modeRestored(state.mode);
   }
@@ -176,7 +181,7 @@ function restoreInitialView(
   try {
     const saved = viewState.parse(value);
     if (saved.source === source) {
-      state.restore(saved);
+      state.restore(saved, { reloaded: true });
     }
   } catch (error) {
     logger.warn("Ignored invalid saved view state", error);

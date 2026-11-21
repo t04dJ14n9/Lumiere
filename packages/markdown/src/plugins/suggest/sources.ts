@@ -13,6 +13,8 @@ import { noteBlocks } from "../../markdown/metadata/note-blocks";
 import type { PdfSection } from "../../shared/pdf-outlines";
 import { rankedCandidates } from "./rank";
 const isPdf = (file: VaultFile) => file.extension.toLowerCase() === "pdf";
+/** How many notes `[[^^` reads at once. */
+const READ_BATCH = 16;
 /** Groups rebuild after index changes; unchanged files retain prepared ranking text. */
 export class SuggestionIndex {
   private readonly groups = new Map<string, readonly Candidate[]>();
@@ -38,9 +40,18 @@ export class SuggestionIndex {
 
   /**
    * Read what `request` asks for beyond the vault's metadata, so `query` can
-   * answer at once: every block of a note, or the bookmarks of a PDF.
+   * answer at once: every block of a note (of every note, for `[[^^`), or the
+   * bookmarks of a PDF.
    */
-  async prepare(source: string, request: Query): Promise<void> {
+  async prepare(
+    source: string,
+    request: Query,
+    isCancelled: () => boolean = () => false,
+  ): Promise<void> {
+    if (request.kind === "block" && request.note === undefined) {
+      await this.prepareVaultBlocks(isCancelled);
+      return;
+    }
     const path = this.targetPath(source, request);
     const file = path === undefined ? undefined : this.vault.file(path);
     if (!file) {
@@ -50,6 +61,31 @@ export class SuggestionIndex {
       await this.prepareBlocks(file);
     } else if (request.kind === "heading" && isPdf(file)) {
       await this.prepareSections(file);
+    }
+  }
+  /**
+   * Every block of every note, as Obsidian's `[[^^` reads them all. Each
+   * note is read once and kept until it changes; a cancelled query leaves
+   * the rest for the next one, which offers what is read so far.
+   */
+  private async prepareVaultBlocks(isCancelled: () => boolean): Promise<void> {
+    if (!this.readText) {
+      return;
+    }
+    const unread = this.vault
+      .files()
+      .filter(
+        (file) => !file.excluded && !this.files.has(`allBlocks:${file.path}`),
+      );
+    for (let start = 0; start < unread.length; start += READ_BATCH) {
+      if (isCancelled()) {
+        return;
+      }
+      await Promise.all(
+        unread
+          .slice(start, start + READ_BATCH)
+          .map((file) => this.prepareBlocks(file)),
+      );
     }
   }
   private async prepareBlocks(file: VaultFile): Promise<void> {
@@ -100,7 +136,11 @@ export class SuggestionIndex {
     this.pdfSections.delete(path);
   }
   query(source: string, request: Query, useWikilinks = true): Suggestion[] {
-    const entries = this.candidates(source, request);
+    const entries = withoutCaretBlock(
+      this.candidates(source, request),
+      source,
+      request,
+    );
     const selected =
       request.kind === "tag" && !request.query
         ? entries.slice(0, 50)
@@ -201,7 +241,7 @@ export class SuggestionIndex {
       if (file.excluded && kind !== "link") {
         continue;
       }
-      result.push(...this.offered(file, kind, path !== undefined));
+      result.push(...this.offered(file, kind));
       if (kind === "link") {
         for (const text of this.vault.unresolvedLinks(file.path).keys()) {
           unresolved.add(text);
@@ -216,16 +256,15 @@ export class SuggestionIndex {
     return result;
   }
   /**
-   * What `file` offers for `kind`. One note's blocks are all offered once
-   * read; a vault-wide search offers the blocks with an id. A PDF offers its
-   * bookmarks where a note offers its headings.
+   * What `file` offers for `kind`. A note's blocks are all offered once its
+   * text is read; until then (or with no way to read it), its blocks with an
+   * id. A PDF offers its bookmarks where a note offers its headings.
    */
   private offered(
     file: VaultFile,
     kind: "link" | "heading" | "block",
-    singleFile: boolean,
   ): readonly Candidate[] {
-    if (kind === "block" && singleFile) {
+    if (kind === "block") {
       const all = this.files.get(`allBlocks:${file.path}`);
       if (all) {
         return all;
@@ -248,6 +287,34 @@ export class SuggestionIndex {
     }
     return entries;
   }
+}
+/**
+ * `[[^^` leaves out the block the caret is in, as Obsidian does: a block
+ * does not link to itself, nor get an id while it is being typed.
+ */
+function withoutCaretBlock(
+  entries: readonly Candidate[],
+  source: string,
+  request: Query,
+): readonly Candidate[] {
+  const caret = request.caret;
+  if (
+    request.kind !== "block" ||
+    request.note !== undefined ||
+    caret === undefined
+  ) {
+    return entries;
+  }
+  return entries.filter(
+    ({ value, range }) =>
+      !(
+        range &&
+        value.kind === "block" &&
+        value.target.path === source &&
+        range.from <= caret &&
+        caret <= range.to
+      ),
+  );
 }
 export function suggestions(
   vault: VaultIndex,

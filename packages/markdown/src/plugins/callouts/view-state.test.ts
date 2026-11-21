@@ -55,3 +55,17 @@ test("callout transfer remaps local and nested identity and refreshes live discl
   const second = new DisclosureState("new.md");
   assert.deepEqual(second.capture(), {});
 });
+
+test("another panel, or a reload, starts each callout as the note says", () => {
+  const first = new DisclosureState("Note.md");
+  const opened = { open: false };
+  const binding = first.bind("Note.md|warning-|0", opened, () => {});
+  opened.open = true;
+  binding.remember();
+  assert.equal(first.transient, true, "kept out of a reload's saved state");
+  // A second panel of the note has its own memory: the `-` closes it.
+  const second = new DisclosureState("Note.md");
+  const closed = { open: false };
+  second.bind("Note.md|warning-|0", closed, () => {});
+  assert.equal(closed.open, false);
+});

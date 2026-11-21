@@ -28,6 +28,8 @@ export interface Candidate {
   penalty: number;
   /** A block matches when its text has every word of the query. */
   words?: boolean;
+  /** Where a block is in its note, when its note's text was read. */
+  range?: { from: number; to: number };
   order: string;
 }
 /**
@@ -39,7 +41,9 @@ export function candidate(
   label: string,
   detail: string,
   value: Value,
-  options: Partial<Pick<Candidate, "text" | "path" | "penalty" | "words">> = {},
+  options: Partial<
+    Pick<Candidate, "text" | "path" | "penalty" | "words" | "range">
+  > = {},
 ): Candidate {
   return {
     label,
@@ -49,6 +53,7 @@ export function candidate(
     penalty: options.penalty ?? 0,
     ...(options.path !== undefined && { path: options.path }),
     ...(options.words && { words: true }),
+    ...(options.range && { range: options.range }),
     order: candidateOrder(value),
   };
 }
@@ -199,7 +204,11 @@ export function noteBlockCandidates(
       block.id ? `${label} ^${block.id}` : label,
       file.path,
       value,
-      { text: block.text.slice(0, 512), words: true },
+      {
+        text: block.text.slice(0, 512),
+        words: true,
+        range: { from: block.from, to: block.to },
+      },
     );
   });
 }

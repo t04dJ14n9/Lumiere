@@ -10,7 +10,7 @@ export default defineManifest({
   description: "Folding in the Markdown editor.",
   kind: "feature",
   defaultEnabled: true,
-  surfaces: ["webview"],
+  surfaces: ["host", "webview"],
   capabilities: ["editorChrome", "commands"],
   config,
   contributes: {
