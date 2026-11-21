@@ -1,4 +1,0 @@
-- insert:
-    - id: lumiere
-      name: "@lumiere/dsh"
-      config: {}

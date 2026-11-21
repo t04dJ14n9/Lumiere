@@ -2,55 +2,6 @@ import js from "@eslint/js";
 import reactHooks from "eslint-plugin-react-hooks";
 import tseslint from "typescript-eslint";
 import path from "node:path";
-// The hosts outside VS Code (docs/HOSTS_PLAN.md, section 3): host-node knows
-// no embedder; each embedder knows host-node only by its public entries.
-// host-web runs the shared host in a browser and knows no embedder either.
-const HOST_PACKAGES = ["host-node", "host-web", "dsh", "app"];
-const FORBIDDEN_BY_HOST = {
-  "host-node": ["vscode", "@workshop/dsh", "@workshop/app", "@tauri-apps/"],
-  "host-web": [
-    "vscode",
-    "@workshop/dsh",
-    "@workshop/app",
-    "@tauri-apps/",
-    "ws",
-  ],
-  dsh: ["vscode", "@workshop/app", "@tauri-apps/"],
-  app: ["vscode", "@workshop/dsh"],
-};
-const HOST_NODE_ENTRIES = [
-  "@workshop/host-node",
-  "@workshop/host-node/core",
-  "@workshop/host-node/embedding",
-  "@workshop/host-node/palette",
-  "@workshop/host-node/views",
-  "@workshop/host-node/settings",
-  "@workshop/host-node/vault-file-headers",
-];
-function crossesHostLayer(file, source, target) {
-  const owner = file.match(/\/packages\/(host-node|host-web|dsh|app)\//)?.[1];
-  if (!owner) {
-    return false;
-  }
-  if (
-    FORBIDDEN_BY_HOST[owner].some(
-      (name) =>
-        source === name ||
-        source.startsWith(name.endsWith("/") ? name : name + "/"),
-    )
-  ) {
-    return true;
-  }
-  const into = target.match(/\/packages\/(host-node|host-web|dsh|app)\//)?.[1];
-  if (into && into !== owner && HOST_PACKAGES.includes(into)) {
-    return true;
-  }
-  return (
-    owner !== "host-node" &&
-    source.startsWith("@workshop/host-node") &&
-    !HOST_NODE_ENTRIES.includes(source)
-  );
-}
 // Same baseline as PDF Workbench, with architecture boundaries for this project.
 const boundaries = {
   meta: {
@@ -94,7 +45,6 @@ const boundaries = {
           /\/src\/webview\//.test(target) &&
           !target.includes("/src/webview/ui/");
       }
-      invalid ||= crossesHostLayer(file, source, target);
       if (invalid) {
         context.report({ node, messageId: "boundary", data: { source } });
       }
@@ -150,8 +100,6 @@ export default tseslint.config(
       // Throw-away measurement scripts (not part of the product).
       "packages/markdown/docs/obsidian-measurements/**",
       "**/dist/**",
-      // The web content cap sync copies into the iPad app's Xcode project.
-      "apps/ipad/ios/**",
       ".cache/**",
       "test-results/**",
       "playwright-report/**",
@@ -162,9 +110,6 @@ export default tseslint.config(
       "packages/markdown/docs/vim-caret-measurements/**",
       // PDFs generated for the PDF tests.
       "packages/pdf/test/fixtures/generated/**",
-      // The desktop app's Rust build output and generated schemas.
-      "apps/desktop/src-tauri/target/**",
-      "apps/desktop/src-tauri/gen/**",
     ],
   },
   js.configs.recommended,
@@ -192,11 +137,8 @@ export default tseslint.config(
     rules: size,
   },
   {
-    // The PDF viewer's React UI and the app's shell.
-    files: [
-      "packages/pdf/src/webview/**/*.{ts,tsx}",
-      "packages/app/src/shell/**/*.{ts,tsx}",
-    ],
+    // The PDF viewer's React UI.
+    files: ["packages/pdf/src/webview/**/*.{ts,tsx}"],
     plugins: { "react-hooks": reactHooks },
     rules: {
       "react-hooks/rules-of-hooks": "error",
@@ -233,17 +175,6 @@ export default tseslint.config(
           "./packages/pdf/src/webview/tsconfig.json",
           "./packages/pdf/src/engine-worker/tsconfig.json",
           "./packages/pdf/src/bridge-stdio/tsconfig.json",
-          "./packages/host-node/src/host/tsconfig.json",
-          "./packages/host-web/tsconfig.json",
-          "./packages/host-web/test/tsconfig.json",
-          "./packages/host-node/src/page/tsconfig.json",
-          "./packages/dsh/src/host/tsconfig.json",
-          "./packages/dsh/src/client/tsconfig.json",
-          "./packages/app/src/server/tsconfig.json",
-          "./packages/app/src/shell/tsconfig.json",
-          "./packages/app/src/local/tsconfig.json",
-          "./apps/web/tsconfig.json",
-          "./apps/ipad/src/tsconfig.json",
           "./packages/ink/src/format/tsconfig.json",
           "./packages/ink/src/service/tsconfig.json",
           "./packages/ink/src/canvas/tsconfig.json",
@@ -257,17 +188,6 @@ export default tseslint.config(
         "error",
         { checksVoidReturn: { arguments: false, attributes: false } },
       ],
-    },
-  },
-  {
-    // The desktop app's own page, shown when its server does not start.
-    files: ["apps/desktop/src/**/*.js"],
-    languageOptions: {
-      globals: {
-        document: "readonly",
-        location: "readonly",
-        URLSearchParams: "readonly",
-      },
     },
   },
   {

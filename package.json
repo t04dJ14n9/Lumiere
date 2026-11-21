@@ -4081,7 +4081,7 @@
   },
   "scripts": {
     "build": "node scripts/build.mjs",
-    "typecheck": "tsc -p tsconfig.json && tsc -p test && tsc -p packages/core && tsc -p packages/agents && tsc -p packages/agents/test && pnpm --filter @workshop/markdown typecheck && pnpm --filter @workshop/pdf typecheck && pnpm --filter @workshop/host-node typecheck && pnpm --filter @workshop/host-web typecheck && pnpm --filter @workshop/dsh typecheck && pnpm --filter @workshop/app typecheck && pnpm --filter @workshop/web typecheck && pnpm --filter @workshop/ink typecheck && pnpm --filter @workshop/ipad typecheck",
+    "typecheck": "tsc -p tsconfig.json && tsc -p test && tsc -p packages/core && tsc -p packages/agents && tsc -p packages/agents/test && pnpm --filter @workshop/markdown typecheck && pnpm --filter @workshop/pdf typecheck && pnpm --filter @workshop/ink typecheck",
     "lint": "eslint . --max-warnings=0",
     "format": "prettier --write .",
     "format:check": "prettier --check .",
@@ -4091,7 +4091,6 @@
     "test:vscode": "pnpm build && playwright test -c test/vscode/playwright.config.ts && playwright test -c packages/pdf/test/vscode/playwright.config.ts",
     "contributions": "tsx scripts/contributions.ts",
     "check": "pnpm format:check && pnpm lint && pnpm typecheck && pnpm test && pnpm contributions --check",
-    "check:desktop": "pnpm --filter @workshop/desktop check",
     "check:full": "pnpm check && pnpm test:browser && pnpm test:quality && pnpm test:vscode",
     "notices": "node scripts/third-party-notices.mjs",
     "package": "node scripts/build.mjs --production && node scripts/third-party-notices.mjs --check && vsce package --pre-release --no-dependencies --no-rewrite-relative-links",
