@@ -7088,3 +7088,99 @@ outgoingLinks READMEs drop claims the read contradicted. The behavioural
 differences the reads found are listed in the PARITY status column ("differs")
 and left for separate issues; the visual rows still need the owner's
 disposable-vault pass.
+
+## Unresolved links: attachments and excluded notes stay bright (#698 item 24; 2026-11-21)
+
+Item 24 of #698 asked for unresolved Markdown links in Live Preview and links
+inside embeds to be dimmed. Both have been dimmed since #146 and #152
+(October); the backlog row was written against an older tree. Verifying it
+found a bug in the optimistic dimming #159 added: the webview dims a link
+whose target is not among the host's "known note keys", and those keys left
+out every file that is not a note and every excluded note, so once the keys
+had loaded (always, shortly after a note opens), `[[paper.pdf]]`,
+`[report](report.pdf)` and links to excluded notes were dimmed for good: the
+vault's own unresolved set never lists them, but `isUnresolved` falls back to
+the known keys for any link the set does not name. `knownNoteKeys` now lists a note's basename and aliases
+and any other file's name with its extension, excluded files included; path
+keys were dropped, since `isUnresolved` already matches a link's last
+segment. Past the 150,000-key cap it sends none (optimistic dimming off)
+instead of a sorted prefix that dimmed every file after the cut.
+
+A static read of Obsidian 1.15.0 (nothing copied) shows that its Live
+Preview dims only wikilinks; Markdown links get no `is-unresolved` there,
+while embeds and Reading view dim both. Lumiere keeps dimming Markdown links
+in Live Preview (#146); `docs/PARITY.md` and CAPABILITIES now say it
+differs, for the owner to keep or drop.
+
+Tests: `test/unit/links/unresolved.test.ts` (known keys for attachments,
+`.markdown` notes and excluded notes, those links staying bright, the cap).
+Checks: the links unit tests, typecheck, eslint and Prettier on the changed
+files; browser and VS Code suites not run (unit-only change).
+
+## The link-target flash has a colour (2026-11-21)
+
+Found in a parity read: `links.css` painted the `.is-flashing` target of a
+jump with `var(--text-highlight-bg)`, `var(--text-normal)` and
+`var(--highlight-mix-blend-mode)`, Obsidian's variables, which no Lumiere
+stylesheet defines (and Obsidian 1.15.0 itself dropped the first). A `var()`
+without a fallback that nothing defines leaves the declaration invalid, so
+the flash had no background and only its 2-second rounding showed. It now
+uses Lumiere's own highlight colour (`--highlight`, the colour of
+`==text==`); the colour and blend-mode lines went, since they did nothing.
+`test/unit/links/flash-css.test.ts` pins the colour and that every `var()`
+without a fallback in `links.css` names a property a Lumiere stylesheet
+declares; it fails on the old rule. Not checked by eye in a running editor.
+Another undefined variable without a fallback outside this plugin
+(`--editor-font` in `gitGutter.css`) is left for its own change.
+
+## Display math while editing: what Obsidian shows (#698 item 23; 2026-11-21)
+
+Documentation only; no behaviour changed. Item 23 asks for the typeset
+formula to stay under a revealed `$$` block, as in Obsidian. A static read of
+Obsidian 1.15.0's Live Preview decorations (lines 142550–142592 of the
+formatted `app.js`; nothing copied) gives the exact rule: while the editor
+has focus and a selection touches the span from the opening `$$` to the
+closing one, the whole source shows and the formula widget is added just
+after the closing `$$` (`side: 1`). It is a block under the closing line
+when the opening `$$` starts its line and the closing one ends its line, and
+inline after the closing `$$` when text shares either line. The widget is
+kept only while the TeX is unchanged, so the preview is typeset again as the
+formula is edited. Without focus the block stays rendered; an unclosed `$$`
+and inline `$…$` get no preview. This matches the 2026-10-17 measurement
+on 1.14.4 (docs/OBSIDIAN_REVEAL_RULES.md rule 6).
+
+Lumiere shipped that preview (math's `editingPreview`) until #269 removed it
+on 2026-10-22, after Host GUI findings BH-009 and BH-004 reported the stacked
+formula as a duplicate; it has been source only since, on purpose, and the
+backlog's own plan says to ship item 23 only if Obsidian's behaviour is
+wanted over that choice. It is not reversed here: that is the owner's call.
+Reversing it would mean restoring `editingPreview` on the math block
+renderer (the livePreview hook is still there and unit-tested), adding the
+focus condition and the inline placement Obsidian uses for `$$` that share a
+line with text, and turning around the BH-009 unit test in
+`test/unit/livePreview/reveal-plugins.test.ts` and the four browser
+regressions that pin source-only (editing, keyboard-widget-input,
+math-vim-click, stable-blocks), which need the browser suite to rerun.
+`docs/PARITY.md` (math) and rule 6 record the read.
+
+## Selection past the webview: what is left is the platform's (#698 item 13; 2026-11-21)
+
+Documentation only. The backlog's item 13 says that once the pointer leaves
+the webview the selection stops (citing `editor/README.md`), and plans for
+the host to listen to the window's mouseup and scroll while the pointer is
+outside. The premise predates the 2026-11-01 work ("Selection drags past the
+note's edge in VS Code" above): a drag that leaves through the top or bottom
+edge keeps extending the selection and scrolling until the pointer returns.
+
+The plan's first two steps cannot be built. The extension host is a separate
+process with no API for the workbench's pointer events, and the webview,
+measured in a real VS Code window on 2026-11-01, receives nothing once a
+drag leaves it: no moves, no mouseup, with or without `setPointerCapture`.
+So nothing can see the pointer's position outside, or the button released
+there. The third step (do not start a VS Code text selection) already holds.
+What Obsidian's window still does and Lumiere cannot: scroll faster the
+further out the pointer is, follow its column outside, continue through the
+left and right edges, and stop at a release outside rather than when the
+pointer returns. The editor README's limits and a new `docs/PARITY.md` row
+say so. Pointer Lock, the one way a page keeps receiving moves, hides the
+pointer while it holds, so it is not a fit.

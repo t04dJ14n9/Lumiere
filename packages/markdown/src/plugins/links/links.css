@@ -20,10 +20,11 @@
   }
 }
 
+/* A link's target flashes in the note's highlight colour (==text==), as in
+   Obsidian. Use Lumiere's own colour: Obsidian's variables are not defined
+   here, and an undefined one painted no background at all. */
 .cm-editor .is-flashing {
   transition: all 0.25s ease;
-  background-color: var(--text-highlight-bg);
-  color: var(--text-normal);
-  mix-blend-mode: var(--highlight-mix-blend-mode);
+  background-color: var(--highlight);
   border-radius: 2px;
 }

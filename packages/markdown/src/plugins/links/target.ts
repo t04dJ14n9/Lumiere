@@ -52,17 +52,23 @@ export function openedVaultTarget(
 
 /**
  * Keys the webview can match against `unresolvedKey` for optimistic dimming
- * before the open note is re-indexed: each note's path without `.md`, its
- * Obsidian lookup basename, and its aliases — all lower-cased.
+ * before the open note is re-indexed, all lower-cased: a note's basename and
+ * its aliases, and any other file's name with its extension. Links resolve
+ * to attachments (`[[paper.pdf]]`) and to excluded files too, so leaving
+ * those out dimmed links that work. A link with a folder (`Folder/Note`)
+ * matches on its last segment (`isUnresolved`), so paths are not listed.
+ *
+ * Past `MAX_KNOWN_NOTES` the list is empty rather than cut short: a missing
+ * key would dim a link to a file that exists, while an empty list only turns
+ * the optimistic dimming off until the vault's own unresolved set arrives.
  */
 export function knownNoteKeys(vault: VaultIndex): string[] {
   const keys = new Set<string>();
   for (const file of vault.files()) {
-    if (file.extension !== "md" || file.excluded) {
+    if (!/^(?:md|markdown)$/i.test(file.extension)) {
+      keys.add(file.path.slice(file.path.lastIndexOf("/") + 1).toLowerCase());
       continue;
     }
-    keys.add(withoutNoteExtension(file.path).toLowerCase());
-    // Basename is already the Obsidian lookup key for .md notes.
     keys.add(file.basename.toLowerCase());
     for (const alias of vault.metadata(file.path)?.aliases ?? []) {
       const name = alias.trim().toLowerCase();
@@ -71,7 +77,7 @@ export function knownNoteKeys(vault: VaultIndex): string[] {
       }
     }
   }
-  return [...keys].sort().slice(0, MAX_KNOWN_NOTES);
+  return keys.size > MAX_KNOWN_NOTES ? [] : [...keys].sort();
 }
 
 /**

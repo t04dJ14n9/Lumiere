@@ -280,7 +280,12 @@ past the edge: a drag carried out of the note did not scroll. When the
 pointer goes silent within 64 px of the top or bottom edge, heading for it
 fast enough to have crossed it, the plugin sends CodeMirror a move 16 px past
 that edge; CodeMirror's own timer then scrolls and extends the selection
-until the pointer comes back.
+until the pointer comes back. What Obsidian's own window still does and a
+webview cannot: the scroll speed past the edge is fixed rather than growing
+with the distance, the selection's column does not follow the pointer
+outside, a drag out through the left or right edge is not continued, and a
+button released outside is noticed only when the pointer returns. No VS Code
+API reports pointer events outside the webview, to it or to the extension.
 
 Editor config owns default mode, readable line length (700 px), strict rendered
 line breaks, right-to-left direction, tabs and tab size. Changing default mode
