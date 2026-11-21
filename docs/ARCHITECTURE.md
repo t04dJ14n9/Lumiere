@@ -67,6 +67,7 @@ integration) left `main` on 2026-11-21 (section 7).
 ```text
 packages/core          plugin core (Cordis underneath). Pure: no DOM, Node or VS Code.
 packages/agents        what both products hand to coding agents. Pure.
+packages/scroll        how both products read a wheel scroll (axis locking). Pure.
 packages/markdown      the Markdown plugins, their webview, and VS Code's host services
 packages/pdf           the PDF plugins (VS Code only), its portable host code and React webview
 src/extension.ts       the composition root of the VS Code extension
@@ -75,7 +76,7 @@ src/extension.ts       the composition root of the VS Code extension
 Imports point one way:
 
 ```text
-core, agents ◄── markdown, pdf ◄── markdown/src/host (VS Code) ◄── src/extension.ts
+core, agents, scroll ◄── markdown, pdf ◄── markdown/src/host (VS Code) ◄── src/extension.ts
 ```
 
 Inside each product, `src/shared` and `src/markdown` are pure too. The

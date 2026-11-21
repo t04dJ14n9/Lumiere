@@ -56,6 +56,7 @@
     "@replit/codemirror-vim": "6.4.0",
     "@workshop/agents": "workspace:*",
     "@workshop/core": "workspace:*",
+    "@workshop/scroll": "workspace:*",
     "dompurify": "3.4.18",
     "graphology": "0.26.0",
     "lucide": "1.73.0",
