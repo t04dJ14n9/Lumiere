@@ -1,10 +1,6 @@
 import type { EditorState } from "@codemirror/state";
 import type { WidgetType } from "@codemirror/view";
-import {
-  findMatchTouches,
-  hasEditorFocus,
-  type InlineContext,
-} from "../livePreview/api";
+import type { InlineContext } from "../livePreview/api";
 
 interface Range {
   from: number;
@@ -15,18 +11,18 @@ interface Range {
  * Whether an image's source shows, as Obsidian 1.12 and earlier showed it
  * (owner request 2026-11-21; 1.13 keeps images rendered): a selection
  * touches it, by the rule every inline element follows (its chain of
- * abutting elements included), while the editor has focus, as display math
- * reveals; or the find bar's current match touches it (the find field has
- * the focus then).
+ * abutting elements included); the find bar's match is a selection.
+ *
+ * With or without the editor's focus, as links reveal, not only while
+ * focused as display math does: an image's own controls take the focus
+ * (its inspector, its ⤢ button), and a reveal that ended with the focus
+ * would draw the image again under them, closing the inspector it opened.
  */
 export function isImageSourceShown(
-  cx: Pick<InlineContext, "state" | "revealed">,
+  cx: Pick<InlineContext, "revealed">,
   range: Range,
 ): boolean {
-  return (
-    (hasEditorFocus(cx.state) && cx.revealed(range.from, range.to)) ||
-    findMatchTouches(cx.state, range.from, range.to)
-  );
+  return cx.revealed(range.from, range.to);
 }
 
 export interface ImageDrawing {

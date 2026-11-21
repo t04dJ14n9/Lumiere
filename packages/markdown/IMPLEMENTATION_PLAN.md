@@ -7997,10 +7997,10 @@ images"), PARITY, CAPABILITIES, DESIGN §11.3 and the embeds README.
   `data:image` URL) reveals by rule 1 like any inline element: touched by
   the caret or a selection, each of several carets; images join chains of
   abutting elements again (`collectInlineChains` no longer skips them).
-  Only while the editor has focus, as display math (#798); the find bar's
-  match still reveals one (#791), now with the image kept too.
+  With or without focus since the second review round (below); the find
+  bar's match still reveals one (#791), now with the image kept too.
 - Placement reuses #798's machinery: an image alone on its line is a
-  `reveal` block with `revealsOnlyWhileFocused` and `editingPreview`, so
+  `reveal` block with `editingPreview`, so
   Live Preview draws the image as a block below the source line; an image
   in text is drawn again just after its source through
   `InlineContext.widgetAfter` (`embeds/image-reveal.ts`). The inline
@@ -8017,7 +8017,8 @@ images"), PARITY, CAPABILITIES, DESIGN §11.3 and the embeds README.
   image; `embeds/image-click-pin.ts` scrolls the note by the shift so the
   image stays under the pointer (without it, a double-click near the
   image's top edge hit the source line and the inspector did not open). An
-  image in text moves right by its source's width.
+  image in text moves right by its source's width; see the second review
+  round for its double-click.
 - Arrow keys no longer select an image: ArrowRight/ArrowLeft move through
   the shown source as through a link's (removed from the selected-image
   keymap and its capture-phase keydown); Up/Down and Vim `j`/`k` enter a
@@ -8052,10 +8053,8 @@ runs those).
 
 Open for the owner: the pin needs room to scroll and may leave the source
 line above the pane's top when the image was near it; an inline image
-still moves along its line on release. A double-click whose second press
-lands before the first press's freeze has thawed (a zero-delay synthetic
-one, as Playwright's `dblclick` sends; a person's double-click leaves time)
-still reveals mid-gesture, as it does for any element.
+still moves along its line on release (its double-click is handled, see
+below).
 
 Review fixes (PR #806 review, 2026-11-21), each with a unit test that
 failed before it:
@@ -8081,4 +8080,63 @@ failed before it:
   measured.
 - New coverage: Up and Down entering a block image's source line, plain
   motion leaving it, Escape leaving it (`image-reveal.test.ts`).
+
+Second review round (PR #806, 2026-11-21), each with a test that failed
+first:
+
+- **Double-click on an image in text (CI failure of
+  `image-selection-chrome.spec.ts`).** Reproduced locally with the CPU
+  slowed down eight times (a throwaway copy of the spec): the inspector
+  opened and closed at once. Opening it moves the focus to the dialog;
+  with the reveal tied to the editor's focus, the source hid, the image in
+  text was drawn again by a new widget, and the inspector, which lives
+  with the image it opened from, closed. The unthrottled run passed only
+  because its assertion caught the dialog in the moment before it closed.
+  Fixed at the cause: images now reveal with or without focus, as links
+  do (the ⤢ button takes the focus too). Display math keeps its focus
+  rule; its preview has no controls. And a person's double-click on an
+  image in text still has its first click reveal the source, which moves
+  the image along its line, so the second press misses it:
+  `embeds/image-double-press.ts` takes a second press that the browser
+  counts as a double-click (`detail` 2, within 800 ms and 12 px of the
+  first), missing the image the first press selected while it is still
+  selected, as a double-click on that image, opening its inspector instead
+  of selecting a word (a second press that hits the image is left to its
+  own `dblclick`). Rejected: delaying the reveal for the double-click
+  interval, which would make the source appear late on every click and
+  needs a hold in Live Preview's reveal. The block image's pin now also
+  waits up to 400 ms after the release for the image's move (its drawing
+  below the source may come a frame later; `redrawn` from the selection
+  chrome's mutation observer measures again), and ends when the caret
+  leaves the image or the note changes.
+  `image-double-press.test.ts`, `image-click-pin.test.ts`,
+  `image-reveal.test.ts` (focus leaving keeps the drawing), and the spec
+  now checks that the inspector is still open 300 ms later. Checked with
+  the throwaway specs: a person-like double-click (two presses 150 ms
+  apart) on an unselected image in text, at normal speed and six times
+  slower, opens the inspector, which stays open, with no word selected.
+- **Up and Down into an image after a prefix.** A block can start after a
+  list, quote or indentation prefix on its line (`- ![[a.png]]` is a block
+  from 2), and `verticalBlock` put the caret at the line's start, which
+  does not touch the block: the image stayed drawn and the next press
+  skipped it. It now lands at `max(line start, block start)`, for every
+  revealable block (quoted or listed math and code too).
+  `image-reveal.test.ts` covers `- `, `1. `, `> ` and two spaces, and a
+  task item's image, which stays inline and is reached by plain motion.
+- **Images in rendered blocks.** The list of hosts whose images are not
+  image embeds named `.hybrid-Callout`, `.hybrid-Blockquote`,
+  `.hybrid-BulletList` and `.hybrid-OrderedList`; the callout's class is
+  `hybrid-callout` and no renderer draws the other three (only
+  `.cm-table-widget` was right). A click on an image in a rendered
+  callout's first line was taken as an image selection. `image-anchor.ts`
+  now accepts a block image only inside an embed's own block
+  (`hybrid-block hybrid-embed`). `image-anchor.test.ts`.
+
+Checks: `pnpm check` passes; browser specs image-selection-chrome
+(`--repeat-each 5`, 10 passed), selection-inline, image-remount-height,
+inline-image-remount-height, html-media-remount-height,
+note-embed-remount-height, embed-under-tall-props, vim-caret-geometry
+(20), and for the motion change editing, stable-blocks, vim-block-motion,
+math-vim-click and tables-vim (37 + 57, with the specs above). Not run:
+the full browser suite, `test:quality`, `test:vscode`.
 

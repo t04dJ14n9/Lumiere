@@ -9,7 +9,7 @@ const currentMatches = new WeakMap<EditorState, SelectionRange | null>();
  * Obsidian reveals the source under its search highlight; every Live Preview
  * renderer already reveals a selection, and the ones that keep rendering
  * under a selection, or without the editor's focus (footnote references,
- * display math, images), ask this as well.
+ * display math), ask this as well.
  *
  * Only while the bar is open: CodeMirror keeps the query after it closes, and
  * its first query is whatever text was selected when the search state was

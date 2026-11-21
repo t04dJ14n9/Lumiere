@@ -79,8 +79,10 @@ export function escapeBlock(state: EditorState): number | undefined {
 
 /**
  * Vertical motion into a rendered block: a block that reveals its source
- * (math, code, callouts, diagrams, embeds) is entered at its first or last
- * line, revealing it, as in Obsidian; a widget block (a table) is skipped.
+ * (math, code, callouts, diagrams, embeds) is entered at the start of its
+ * first or last line (at the block's own start when a prefix comes before
+ * it there), revealing it, as in Obsidian; a widget block (a table) is
+ * skipped.
  */
 export function verticalBlock(
   state: EditorState,
@@ -114,9 +116,13 @@ export function verticalBlock(
     return undefined;
   }
   if (block.renderer.editing === "reveal") {
-    return direction > 0
-      ? state.doc.lineAt(block.from).from
-      : state.doc.lineAt(block.to).from;
+    const lineStart =
+      direction > 0
+        ? state.doc.lineAt(block.from).from
+        : state.doc.lineAt(block.to).from;
+    // A block may start after a list, quote or indentation prefix on its
+    // line (`- ![[a.png]]`): its line's start would not touch, so reveal, it.
+    return Math.max(lineStart, block.from);
   }
   return direction > 0
     ? Math.min(state.doc.length, state.doc.lineAt(block.to).to + 1)

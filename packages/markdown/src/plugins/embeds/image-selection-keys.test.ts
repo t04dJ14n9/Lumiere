@@ -228,7 +228,14 @@ test("imagesOf excludes CodeMirror cm-widgetBuffer and direct .cm-line images", 
   const cmLine = el(["cm-line"]);
   const embedHost = el([IMAGE_EMBED]);
   const widgetBuffer = el(["cm-widgetBuffer"], { parentElement: cmLine });
-  const realImg = el(["note-image"], { parentElement: embedHost });
+  const realImg = el(["note-image"], {
+    parentElement: embedHost,
+    // Drawn in an embed's own block.
+    closest: (selector: string) =>
+      selector === ".hybrid-block"
+        ? el(["hybrid-block", "hybrid-embed"])
+        : null,
+  });
   const view = {
     // A block image: the line's only image, drawn at its start.
     state: EditorState.create({ doc: "xx\n\n![[a.png]]" }),

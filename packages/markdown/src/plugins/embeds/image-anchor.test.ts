@@ -13,24 +13,36 @@ interface Drawn {
   inLine: boolean;
   /** Drawn just after its shown source. */
   isAfterSource?: boolean;
+  /** The class of the rendered block it is in, when not in a line. */
+  block?: string;
 }
 
-/** A rendered image as the editor's DOM holds it. */
+/** An element whose classes `closest` matches (`.a, .b` selectors). */
+function element(classes: string[]) {
+  return { classList: { contains: (name: string) => classes.includes(name) } };
+}
+
+/** A rendered image as the editor's DOM holds it, its ancestors by class. */
 function drawnImage(drawn: Drawn): HTMLImageElement {
-  const found = (is: boolean) => (is ? {} : null);
+  const ancestors = [
+    ...(drawn.isAfterSource
+      ? [["md-inline-render", "md-image-after-source"]]
+      : []),
+    ...(drawn.inLine
+      ? [["cm-line"]]
+      : [["image-embed"], ["hybrid-block", drawn.block ?? "hybrid-embed"]]),
+  ];
   return {
     drawn,
     classList: { contains: () => false },
     parentElement: { classList: { contains: () => false } },
     getBoundingClientRect: () => ({ top: 0, width: 100 }),
     closest: (selector: string) => {
-      if (selector === ".cm-line") {
-        return found(drawn.inLine);
-      }
-      if (selector === ".md-image-after-source") {
-        return found(drawn.isAfterSource ?? false);
-      }
-      return null;
+      const wanted = selector.split(",").map((part) => part.trim().slice(1));
+      const found = ancestors.find((classes) =>
+        wanted.some((name) => classes.includes(name)),
+      );
+      return found ? element(found) : null;
     },
   } as unknown as HTMLImageElement;
 }
@@ -99,4 +111,21 @@ test("of two abutting images, each finds only its own drawing, shown or not", ()
   view = viewOf(doc, after);
   assert.deepEqual(imagesOf(view, a), [after[0]]);
   assert.deepEqual(imagesOf(view, b), [after[1]]);
+});
+
+test("an image in a rendered callout, table or HTML block belongs to that block, not to an image embed", () => {
+  for (const [doc, block] of [
+    ["> [!note] ![[a.png]]\n> body", "hybrid-callout"],
+    ["| ![[a.png]] |\n| --- |", "hybrid-table"],
+    ["<div>![[a.png]]</div>", "hybrid-HTMLBlock"],
+  ] as const) {
+    const image = drawnImage({ at: 0, inLine: false, block });
+    const view = viewOf(doc, [image]);
+    assert.equal(embedOfImage(view, image), undefined, block);
+    assert.deepEqual(
+      imagesOf(view, { from: doc.indexOf("!"), to: doc.indexOf("]]") + 2 }),
+      [],
+      block,
+    );
+  }
 });

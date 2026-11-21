@@ -154,16 +154,16 @@ test("an image alone on its line shows its source, and the image as a block belo
     }
   }));
 
-test("without the editor's focus an image stays drawn, the caret on it or not", () =>
+test("an image's source stays shown when the focus leaves the editor (for its inspector), so its drawing is not replaced", () =>
   withRenderers((renderers) => {
     for (const doc of ["aa ![[a.png]] zz", "![[a.png]]"]) {
       const at = doc.indexOf("a.png");
-      const state = editorState(renderers, doc, EditorSelection.single(at), {
-        hasFocus: false,
-      });
-      const result = drawing(state);
-      assert.equal(result.text.includes("![[a.png]]"), false, doc);
-      assert.deepEqual(result.previews, [], doc);
+      const focused = editorState(renderers, doc, EditorSelection.single(at));
+      const unfocused = focused.update({
+        effects: setEditorFocus.of(false),
+      }).state;
+      assert.deepEqual(drawing(unfocused), drawing(focused), doc);
+      assert.equal(drawing(unfocused).text, doc, doc);
     }
   }));
 
@@ -373,4 +373,41 @@ test("Up and Down enter an image alone on its line at its source line, and Escap
     assert.equal(verticalBlock(line(from + 3), -1), undefined);
     // ... and Escape moves it to the line after the block.
     assert.equal(escapeBlock(line(from + 3)), from + 13);
+  }));
+
+test("Up and Down enter an image alone after a list, quote or indentation prefix at the image, revealing it", () =>
+  withRenderers((renderers) => {
+    for (const prefix of ["- ", "1. ", "> ", "  "]) {
+      const doc = `before\n\n${prefix}![[a.png]]\n\nafter`;
+      const from = doc.indexOf("!");
+      const lineEnd = from + "![[a.png]]".length;
+      const at = (head: number) =>
+        editorState(renderers, doc, EditorSelection.single(head));
+      for (const [start, direction] of [
+        [from - prefix.length - 1, 1],
+        [lineEnd + 1, -1],
+      ] as const) {
+        const target = verticalBlock(at(start), direction);
+        assert.equal(target, from, `${prefix}, ${direction}`);
+        const entered = drawing(at(target!));
+        assert.equal(entered.text.includes("![[a.png]]"), true, prefix);
+        assert.deepEqual(entered.previews, [`block at ${lineEnd}`], prefix);
+        // From there, Escape leaves it for the next line.
+        assert.equal(escapeBlock(at(target!)), lineEnd + 1, prefix);
+      }
+    }
+  }));
+
+test("an image in a task item stays in its line: plain motion reaches it, and its source shows with the image after it", () =>
+  withRenderers((renderers) => {
+    const doc = "before\n\n- [ ] ![[a.png]]\n\nafter";
+    const from = doc.indexOf("!");
+    const to = from + "![[a.png]]".length;
+    const at = (head: number) =>
+      editorState(renderers, doc, EditorSelection.single(head));
+    assert.equal(verticalBlock(at(from - 7), 1), undefined);
+    assert.equal(verticalBlock(at(to + 1), -1), undefined);
+    const shown = drawing(at(from));
+    assert.equal(shown.text.includes("![[a.png]]"), true);
+    assert.deepEqual(shown.previews, [`inline at ${to}`]);
   }));

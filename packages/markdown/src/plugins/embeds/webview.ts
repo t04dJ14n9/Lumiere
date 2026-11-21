@@ -130,14 +130,13 @@ function registerEmbedRenderers(ctx: Context): void {
     }),
   );
   // Obsidian 1.12 and earlier (owner request 2026-11-21): the caret on an
-  // image shows its source while the editor has focus, the image kept
-  // below it, as display math keeps its formula (`image-reveal.ts`).
+  // image shows its source, with or without focus (`image-reveal.ts`), the
+  // image kept below it, as display math keeps its formula.
   ctx.effect(() =>
     ctx.livePreview.block({
       kind: "embed",
       nodes: ["Paragraph"],
       editing: "reveal",
-      revealsOnlyWhileFocused: true,
       editingPreview: { sourceClass: "md-image-source" },
       match(node, state) {
         const source = soleEmbed(node, state);

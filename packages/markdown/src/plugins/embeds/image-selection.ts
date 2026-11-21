@@ -17,6 +17,7 @@ import { setImageSelectedChrome } from "./image-resize-corner";
 import { embedOfImage, type Range } from "./image-anchor";
 import { imageKeyFromEvent } from "./image-selection-keys";
 import { ClickedImagePin } from "./image-click-pin";
+import { ImageDoublePress } from "./image-double-press";
 
 export { imageKeyFromEvent } from "./image-selection-keys";
 
@@ -328,16 +329,29 @@ const selectedClass = ViewPlugin.define((view) => {
     marked = syncSelectedChrome(view, marked);
   };
   // Resized images redraw once the file loads — remake chrome then.
+  const pin = new ClickedImagePin(view, (range) => imagesOf(view, range));
   const redrawn = new MutationObserver(() => {
     if (view.state.field(selectedImage) || marked.length) {
       mark();
     }
+    pin.redrawn();
   });
   redrawn.observe(view.contentDOM, { childList: true, subtree: true });
-  const pin = new ClickedImagePin(view, (range) => imagesOf(view, range));
+  const doublePress = new ImageDoublePress({
+    selected: () => view.state.field(selectedImage),
+    isImageOf: (target, range) =>
+      imagesOf(view, range).some((image) => image === target),
+    inspect: () => inspectSelected(view),
+  });
   const onClick = (event: MouseEvent) => {
+    if (doublePress.opensInspector(event)) {
+      event.preventDefault();
+      event.stopPropagation();
+      return;
+    }
     const selected = selectOnClick(view, event);
     if (selected) {
+      doublePress.selected(event, selected.range);
       pin.press(selected.image, selected.range);
     }
   };

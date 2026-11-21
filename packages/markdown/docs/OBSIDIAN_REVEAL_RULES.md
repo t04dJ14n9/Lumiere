@@ -66,7 +66,7 @@ Offsets are relative to the element's start; "touch" means `caret >= from && car
 | wikilink `[[A]]`, `[[A|alias]]`, `[[A#H]]`, `[[A^b]]` | | element only | same |
 | autolink `<https://…>` | | element only | "links" |
 | bare URL | `https://z.io` | nothing to hide | "links" |
-| embeds `![[x]]`, `![alt](x)`, `![[x|100]]` | | element only (images: 1.13+ never; Lumiere: element only while focused, image kept after the source) | "embeds" |
+| embeds `![[x]]`, `![alt](x)`, `![[x|100]]` | | element only (images: 1.13+ never; Lumiere: element only, image kept after the source) | "embeds" |
 | math `$x$`, `$$x$$` inline | | element only | "math" |
 | inline HTML `<b>x</b>`, `<span>` | | element only | "misc" |
 | escapes `\*` `\[` | | **whole line** | "escapes" |
@@ -143,10 +143,12 @@ keeps its formula (rule 6). The rules, which the tests pin:
    selection overlapping or touching it, each of several carets. Images
    join chains of abutting elements again (rule 2: `**b**![[a.png]]`
    reveals both) and reveal inside a revealed outer element (rule 3).
-2. **Focus.** Only while the editor has focus, as display math: without
-   focus an image stays rendered wherever the caret is. The find bar's
-   current match touching it shows its source too (the find field has the
-   focus then).
+2. **Focus.** With or without the editor's focus, as a link's source
+   shows (display math reveals only while focused, as everything does in
+   Obsidian). An image's own controls take the focus (its inspector, its
+   ⤢ button): a reveal that ended with the focus would draw the image
+   again under them and close the inspector it had just opened. The find
+   bar's current match is a selection, so it shows the source too.
 3. **Placement.** While its source shows, the image stays drawn just
    after it, where Lumiere draws it when the source is hidden. As a block
    below the source line when the embed is alone on its line, also after a
@@ -165,13 +167,20 @@ keeps its formula (rule 6). The rules, which the tests pin:
    moves (every reveal waits for the release); on release the source
    appears and a block image is scrolled back to where it was under the
    pointer (an image in a line of text moves along its line by the
-   source's width). The caret stays hidden while the image is selected:
-   its keys resize or edit the image rather than type.
+   source's width). A double-click opens the inspector even so: a second
+   press of a double-click (the browser's count, within 800 ms and 12 px
+   of the first) that misses the image the first press selected, because
+   it moved, opens that image's inspector instead of selecting a word of
+   its source. The caret stays hidden while the image is selected: its
+   keys resize or edit the image rather than type.
 5. **Arrow keys.** No arrow key selects an image: with its source shown,
    the arrows move through the source as through a link's, and a selected
    image's arrow moves the caret one character and lets the image go.
    Up and Down (and Vim's `j`/`k`) enter an image alone on its line as
-   any revealable block (its source line first, then past the image).
-6. **Other embeds** are unchanged: an embedded note, PDF, base or other
+   any revealable block, at the image's source even after a list, quote or
+   indentation prefix (its source line first, then past the image).
+6. **Images in rendered blocks** (a callout, a table, an HTML block) belong
+   to that block: a click on one is the block's, not an image selection.
+7. **Other embeds** are unchanged: an embedded note, PDF, base or other
    file reveals its source on touch as before, with or without focus, and
    keeps nothing drawn after it.

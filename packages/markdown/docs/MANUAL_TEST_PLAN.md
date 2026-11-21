@@ -395,15 +395,18 @@ title, then set `lumiere.markdown.plugins.inlineTitle.enabled` to true.
    depth limit.
 2. The caret on an image shows its source with the image kept below it
    (alone on its line) or right after it (in text), as in Obsidian 1.12
-   (owner request 2026-11-21); click elsewhere in the window (the editor
-   loses focus) and only the image shows. Click an image: nothing moves
+   (owner request 2026-11-21); move the caret away and only the image
+   shows. Click an image: nothing moves
    while the button is down; on release it is selected (outlined), its
    source above it, and a block image stays under the pointer.
    `+` and `-` resize it in 25 px steps (`-` stops at 20 px) and write the
    width (`![[diagram.svg|225]]`) in the shown source, `0` removes the
    width, Enter selects the file name, Tab the width, Backspace removes the
-   embed, Escape lets it go. A double-click opens the inspector. The arrow
-   keys move through an image's source as through a link's.
+   embed, Escape lets it go. A double-click opens the inspector and it
+   stays open, for an image alone on its line and one in a sentence
+   (which moves along its line on the first click). Down from the line
+   above `- ![[diagram.svg]]` puts the caret in the image's source. The
+   arrow keys move through an image's source as through a link's.
 3. Click the ⤢ button beside an image: the inspector opens. Fit/actual
    size, zoom buttons, + − 0 1 keys, Mod-wheel, pan, Escape; focus returns
    to the button.

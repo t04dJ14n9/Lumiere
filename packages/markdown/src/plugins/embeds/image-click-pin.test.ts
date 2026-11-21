@@ -110,3 +110,81 @@ test("an edit while the button is down moves the pinned image's range with it", 
   }
   assert.deepEqual(asked, [{ from: 5, to: 15 }]);
 });
+
+test("an image that moves a moment after the release, its drawing below the source rendered in a later frame, is still scrolled back", () => {
+  const { top, drawn, view, pin, base, frozen, update, measure } = setup(false);
+  pin.press(drawn, { from: 0, to: 1 });
+  pin.update(update(frozen));
+  // Released, the image below the source not drawn yet: nothing moves ...
+  pin.update(update(base));
+  measure();
+  assert.equal(view.scrollDOM.scrollTop, 1000);
+  // ... then it is drawn, below the source.
+  top.value = 324;
+  pin.redrawn();
+  measure();
+  assert.equal(view.scrollDOM.scrollTop, 1024);
+});
+
+test("the pin ends when the reader moves on, edits, or after a short while", () => {
+  const scenarios: [string, (base: EditorState) => ViewUpdate, number][] = [
+    [
+      "caret moved away",
+      (base) =>
+        ({
+          state: base.update({ selection: { anchor: 3 } }).state,
+          changes: ChangeSet.empty(4),
+        }) as unknown as ViewUpdate,
+      0,
+    ],
+    [
+      "an edit",
+      (base) =>
+        ({
+          state: base,
+          docChanged: true,
+          changes: ChangeSet.empty(4),
+        }) as unknown as ViewUpdate,
+      0,
+    ],
+    [
+      "too late",
+      (base) =>
+        ({ state: base, changes: ChangeSet.empty(4) }) as unknown as ViewUpdate,
+      500,
+    ],
+  ];
+  for (const [name, later, elapsed] of scenarios) {
+    const top = { value: 300 };
+    const drawn = image(top, false);
+    let time = 0;
+    const measures: { read(): unknown; write(value: unknown): void }[] = [];
+    const view = {
+      scaleY: 1,
+      scrollDOM: { scrollTop: 1000 },
+      requestMeasure: (request: (typeof measures)[number]) =>
+        measures.push(request),
+    };
+    const pin = new ClickedImagePin(
+      view as unknown as EditorView,
+      () => [drawn],
+      () => time,
+    );
+    const base = EditorState.create({
+      doc: "x yz",
+      extensions: [pointerSelection],
+    });
+    pin.press(drawn, { from: 0, to: 1 });
+    pin.update({
+      state: base,
+      changes: ChangeSet.empty(4),
+    } as unknown as ViewUpdate);
+    time = elapsed;
+    top.value = 324;
+    pin.update(later(base));
+    for (const request of measures.splice(0)) {
+      request.write(request.read());
+    }
+    assert.equal(view.scrollDOM.scrollTop, 1000, name);
+  }
+});

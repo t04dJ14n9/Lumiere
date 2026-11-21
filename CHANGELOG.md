@@ -146,10 +146,10 @@
 - Markdown: the caret on an image shows its source again, as Obsidian 1.12
   did, and the image stays shown: below the source when the image is alone
   on its line, right after it in a line of text. It hides again when the
-  caret leaves or the editor loses focus. A click still selects the image
-  for `+`, `-`, `0`, Enter, Tab and Delete, now with its source shown, and
-  the arrow keys move through the source instead of selecting the image
-  (owner request).
+  caret leaves. A click still selects the image for `+`, `-`, `0`, Enter,
+  Tab and Delete, now with its source shown, a double-click still opens
+  the inspector, and the arrow keys move through the source instead of
+  selecting the image (owner request).
 
 Fixes for several VS Code windows open at once, each with a test; checked
 with two real windows on one profile.

@@ -137,7 +137,7 @@ test("Obsidian math and embeds use the shared inline reveal rules", async () => 
   }
 });
 
-test("an image's source shows for a selection while the editor has focus, and for the find bar's match without it", async () => {
+test("an image's source shows for a selection, with or without focus, and for the find bar's match", async () => {
   const f = fixture();
   try {
     f.root.plugin(embedsWebview);
@@ -163,9 +163,9 @@ test("an image's source shows for a selection while the editor has focus, and fo
         blocks,
       ]);
       assert.equal(shown(focused(state, true)), true, doc);
-      // The find field has the focus: a selection alone leaves it drawn ...
-      assert.equal(shown(focused(state, false)), false, doc);
-      // ... and the find bar's match shows it.
+      // As a link's: its inspector takes the focus without hiding it.
+      assert.equal(shown(focused(state, false)), true, doc);
+      // The find field has the focus while the find bar's match shows it.
       assert.equal(
         shown(withFindBar(focused(state, false), { search: "image" })),
         true,

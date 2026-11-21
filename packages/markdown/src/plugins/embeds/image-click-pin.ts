@@ -17,47 +17,90 @@ interface Range {
  * moves along its line and is left alone.
  */
 export class ClickedImagePin {
-  private pin: { range: Range; top: number } | undefined;
+  private pin:
+    { range: Range; top: number; releasedAt: number | undefined } | undefined;
 
   constructor(
     private readonly view: EditorView,
     private readonly imagesOf: (range: Range) => HTMLImageElement[],
+    private readonly now: () => number = Date.now,
   ) {}
 
   /** Remembers where a pressed image is drawn, if it is a block. */
   press(image: HTMLImageElement, range: Range): void {
     this.pin = image.closest(".cm-line")
       ? undefined
-      : { range, top: image.getBoundingClientRect().top };
+      : {
+          range,
+          top: image.getBoundingClientRect().top,
+          releasedAt: undefined,
+        };
   }
 
-  /** Once the press has ended, scrolls the image back to where it was. */
+  /**
+   * Once the press has ended, scrolls the image back to where it was when
+   * its source shows. That may be a little after the release: the image
+   * drawn below the source may come in a later frame, once it is rendered
+   * (see `redrawn`). So the pin lasts a short while after the release, and
+   * ends with the first move it undoes, or when the reader moves on.
+   */
   update(update: ViewUpdate): void {
-    if (!this.pin) {
+    const pin = this.pin;
+    if (!pin) {
       return;
     }
     // An edit while the button is down (another panel's, a sync) moves it.
-    const pin = {
-      top: this.pin.top,
-      range: {
-        from: update.changes.mapPos(this.pin.range.from, 1),
-        to: update.changes.mapPos(this.pin.range.to, -1),
-      },
+    pin.range = {
+      from: update.changes.mapPos(pin.range.from, 1),
+      to: update.changes.mapPos(pin.range.to, -1),
     };
     if (isPointerSelecting(update.state)) {
-      this.pin = pin;
       return;
     }
-    this.pin = undefined;
-    const { range } = pin;
+    const isReleased = pin.releasedAt !== undefined;
+    pin.releasedAt ??= this.now();
+    if (isReleased && (update.docChanged || !isAtImage(update, pin.range))) {
+      this.pin = undefined;
+      return;
+    }
+    this.redrawn();
+  }
+
+  /** The editor's content was drawn again: the image may have moved. */
+  redrawn(): void {
+    const pin = this.pin;
+    if (!pin || pin.releasedAt === undefined) {
+      return;
+    }
+    if (this.now() - pin.releasedAt > PIN_AFTER_RELEASE_MS) {
+      this.pin = undefined;
+      return;
+    }
     const { view } = this;
     view.requestMeasure({
-      read: () => this.imagesOf(range)[0]?.getBoundingClientRect().top,
+      key: this,
+      read: () => this.imagesOf(pin.range)[0]?.getBoundingClientRect().top,
       write: (top) => {
-        if (top !== undefined && Math.abs(top - pin.top) >= 1) {
-          view.scrollDOM.scrollTop += (top - pin.top) / view.scaleY;
+        if (
+          this.pin !== pin ||
+          top === undefined ||
+          Math.abs(top - pin.top) < 1
+        ) {
+          return;
         }
+        this.pin = undefined;
+        view.scrollDOM.scrollTop += (top - pin.top) / view.scaleY;
       },
     });
   }
+}
+
+/** How long after the release a clicked image's move is undone. */
+const PIN_AFTER_RELEASE_MS = 400;
+
+/** Whether every selection range still touches the image (the reader has not moved on). */
+function isAtImage(update: ViewUpdate, range: Range): boolean {
+  return update.state.selection.ranges.every(
+    (selection) => selection.from <= range.to && selection.to >= range.from,
+  );
 }

@@ -20,11 +20,12 @@ export interface Range {
 export const IMAGE_AFTER_SOURCE = "md-image-after-source";
 
 /**
- * Rendered blocks whose images belong to that block (a rendered callout,
- * quote, list or table), not to an image embed of their own.
+ * The block Live Preview draws an embed alone on its line in (`hybrid-` and
+ * the renderer's kind, `markdown-widget.ts`). An image in any other block
+ * (a rendered callout, table, HTML block or embedded note) belongs to that
+ * block, not to an image embed of the note.
  */
-export const FOREIGN_IMAGE_HOSTS =
-  ".hybrid-Callout, .hybrid-Blockquote, .hybrid-BulletList, .hybrid-OrderedList, .cm-table-widget";
+const EMBED_BLOCK = "hybrid-embed";
 
 /** The image embeds (`![[a.png]]`, `![](a.png)`) on the line holding `at`. */
 export function imagesOnLine(state: EditorState, at: number): Range[] {
@@ -71,7 +72,14 @@ export function embedOfImage(
   view: EditorView,
   image: HTMLImageElement,
 ): Range | undefined {
-  if (!isSelectableImage(image) || image.closest(FOREIGN_IMAGE_HOSTS)) {
+  if (!isSelectableImage(image)) {
+    return undefined;
+  }
+  const isBlock = !image.closest(".cm-line");
+  if (
+    isBlock &&
+    !image.closest(".hybrid-block")?.classList.contains(EMBED_BLOCK)
+  ) {
     return undefined;
   }
   let at: number;
@@ -81,7 +89,7 @@ export function embedOfImage(
     return undefined;
   }
   return embedDrawnAt(view.state, at, {
-    isBlock: !image.closest(".cm-line"),
+    isBlock,
     isAfterSource: Boolean(image.closest(`.${IMAGE_AFTER_SOURCE}`)),
   });
 }
