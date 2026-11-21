@@ -1,5 +1,21 @@
 # Changelog
 
+## Unreleased
+
+Fixes for several VS Code windows open at once, each with a test; checked
+with two real windows on one profile.
+
+- PDF agent bridge: an agent finds the window of a folder opened through a
+  link (such as anything under `/tmp` on macOS), and the window a folder was
+  added to while the bridge ran. A window that closes takes its discovery
+  file with it, a crashed window's file goes even when its process id is
+  taken again, and an agent's next call after its window reloads reaches the
+  new bridge; after its window closes it is told no window has its folder.
+- PDF: a pane that saves nothing new no longer writes over marks another
+  window made a moment before.
+- Markdown: a passage attached in Codex by Copy Link for Agent keeps its file
+  when another window copies one with the same name.
+
 ## 0.1.19 (pre-release, 2026-11-20)
 
 - PDF: notes on marks are Markdown. Rest the pointer on a highlight,
