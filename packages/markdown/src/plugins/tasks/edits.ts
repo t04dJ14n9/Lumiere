@@ -79,10 +79,11 @@ export function checklistEdit(
 
 /**
  * Run the checklist edit as an editor command. Obsidian's check callback
- * refuses both commands in a table cell, so nothing is edited there.
+ * refuses both commands in a table cell, so nothing is edited there, nor in a
+ * read-only editor.
  */
 export function runChecklist(view: EditorView, cycle: boolean): boolean {
-  if (selectionTouchesTableCell(view.state)) {
+  if (view.state.readOnly || selectionTouchesTableCell(view.state)) {
     return false;
   }
   view.dispatch(checklistEdit(view.state, cycle));

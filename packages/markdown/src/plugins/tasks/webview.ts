@@ -80,7 +80,7 @@ function registerChecklistCommands(ctx: Context): void {
       keymap.of([
         {
           key: "Mod-l",
-          run: (view) => !view.state.readOnly && runChecklist(view, false),
+          run: (view) => runChecklist(view, false),
           stopPropagation: true,
         },
       ]),
