@@ -70,6 +70,9 @@
   Obsidian's commands do. Their keys are unchanged (#787).
 - Markdown: `-` on a selected image shrinks it down to 20 px, as in
   Obsidian, rather than stopping at 25 px (#787).
+- Markdown: sorting a table by a column compares the text each cell shows,
+  as Obsidian does, not its Markdown: `[[Note|Zed]]` sorts as "Zed" and
+  `**b**` as "b" (#787).
 
 Fixes for several VS Code windows open at once, each with a test; checked
 with two real windows on one profile.

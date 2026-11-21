@@ -3,7 +3,11 @@
 Edit Markdown tables as a grid with cell editing, rectangular selections,
 row/column operations and clipboard commands, like Obsidian's Live Preview tables.
 As in Obsidian, a column added with Insert Column or the menu is aligned as the
-column beside it; the add strip's new last column has no alignment.
+column beside it; the add strip's new last column has no alignment. Sort by
+column, in the cell menu and the column grip's menu as in Obsidian, compares
+the text each cell shows (its rendering, so `[[Note|Zed]]` sorts as "Zed"),
+with Obsidian's numeric, case-insensitive collator; the palette's **Table:
+Sort Ascending** and **Sort Descending** are Lumiere's own entry points.
 
 ## How it works
 
@@ -93,7 +97,7 @@ plugin registrations and widget lifetimes end when the plugin stops.
 - `estimated-height.ts`: pure row-count reserve used by the widget.
 - `estimated-height.test.ts`: empty/invalid, row scaling, and tall-table unit cases.
 - `controller.ts`: collaborator wiring and incoming snapshot reconciliation.
-- `grid.ts`: source snapshot, rendered cells and whole-table edits.
+- `grid.ts`: source snapshot, rendered cells (and the text they show, for sorting) and whole-table edits.
 - `projection.ts`: active cell lifetime and edits into outer source offsets.
 - `source-edits.ts`: aligned source edits that preserve unchanged cell anchors.
 - `cell-editor.ts`: temporary raw Markdown cell view, input groups and Vim transfer.
@@ -130,7 +134,7 @@ plugin registrations and widget lifetimes end when the plugin stops.
 - `table.test.ts`: cell-source and operation unit tests.
 - `model.test.ts`: exact aligned source and pipe escaping unit tests.
 - `surplus-cells.test.ts`: cells past the header's width survive cell edits, pastes and row/column operations.
-- `operations.test.ts`: row/column and sort unit tests.
+- `operations.test.ts`: row/column and sort unit tests (sorting by shown text).
 - `navigation.test.ts`: keyboard routing, append, exit and re-entry unit tests.
 - `vim-source.test.ts`: source-column ownership, delimiter entry, transaction/mode guards and deferred-entry cancellation unit tests.
 - `src/markdown/tables/model.ts`: pure table parsing, serialization and source-position mapping.

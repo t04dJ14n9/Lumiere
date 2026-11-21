@@ -7577,3 +7577,26 @@ Lumiere steps from the text's width (to 300).
 Validation: test/unit/embeds/image-size.test.ts; embeds tests, ESLint and
 Prettier pass. Not run here: `pnpm test:browser`, `test:quality`,
 `test:vscode`.
+
+## Table sort compares the shown text (#787; 2026-11-21)
+
+Obsidian 1.15.0 (read in its shipped code; behaviour only, nothing copied)
+sorts a table's body rows by each cell's rendered text (`innerText`) with a
+numeric, case-insensitive collator, ties in their order; the items are in
+the cell menu and in the column grip's menu, and there is no sort command.
+Lumiere compared the cells' Markdown with the same collator. The sort
+operation now takes the text each row's cell shows (`shown`, from the
+grid's rendered cells; a cell without a rendering gives its Markdown), and
+the table controller passes it for every sort, from either menu or the
+palette.
+
+Entry points, reported rather than removed (removing UI is the owner's
+call): Lumiere has Sort by column in the cell menu and the column grip's
+menu, as Obsidian does, and also the palette commands **Table: Sort
+Ascending** and **Table: Sort Descending**, which Obsidian lacks. The
+issue's "only in the cell's context menu" leaves out Obsidian's column grip
+menu.
+
+Validation: src/plugins/tables/operations.test.ts; tables tests, typecheck,
+ESLint and Prettier pass. Not run here: `pnpm test:browser`,
+`test:quality`, `test:vscode`.

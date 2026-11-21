@@ -241,6 +241,19 @@ export class TableGrid {
     }
   }
 
+  /**
+   * Each row's cell in `column` as the reader sees it (the rendered text),
+   * which Obsidian sorts by; a cell without a rendering gives its Markdown.
+   */
+  shownTexts(column: number): string[] {
+    return this.model.rows.map(
+      (row, index) =>
+        this.contentElement({ row: index, column })?.innerText ??
+        row[column]?.text ??
+        "",
+    );
+  }
+
   contentElement(position: CellPosition): HTMLElement | undefined {
     return (
       this.cells[position.row]?.[position.column]?.querySelector<HTMLElement>(

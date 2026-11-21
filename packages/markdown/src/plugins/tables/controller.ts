@@ -368,7 +368,12 @@ export class TableController {
   }
 
   execute(operation: TableOperation, focus: CellPosition): void {
-    const table = operateTable(this.grid.model, operation);
+    const table = operateTable(
+      this.grid.model,
+      operation.type === "sort"
+        ? { ...operation, shown: this.grid.shownTexts(operation.column) }
+        : operation,
+    );
     if (this.grid.sourceFor(table) === this.grid.block.source) {
       (this.editor ?? this.grid.outer).focus();
       return;
