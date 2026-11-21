@@ -1,4 +1,8 @@
 import assert from "node:assert/strict";
+import { realpathSync } from "node:fs";
+import { mkdir, mkdtemp, rm, symlink } from "node:fs/promises";
+import { tmpdir } from "node:os";
+import * as path from "node:path";
 import { test } from "node:test";
 import {
   chooseBridge,
@@ -125,4 +129,26 @@ test("malformed records and non-loopback endpoints are rejected", () => {
   ]) {
     assert.equal(parseBridgeRecord(bad), undefined, JSON.stringify(bad));
   }
+});
+
+test("a window opened through a link to the folder is the agent's, whichever path each side names", async (t) => {
+  const root = realpathSync(
+    await mkdtemp(path.join(tmpdir(), "lumiere-link-")),
+  );
+  t.after(() => rm(root, { recursive: true, force: true }));
+  const project = path.join(root, "project");
+  await mkdir(path.join(project, "src"), { recursive: true });
+  const link = path.join(root, "code-project");
+  await symlink(project, link);
+  // VS Code keeps the path the folder was opened by; process.cwd() is real.
+  const opened = chooseBridge([record(1, [link])], {
+    cwd: path.join(project, "src"),
+    ...allAlive,
+  });
+  assert.deepEqual(opened, { bridge: record(1, [link]) });
+  const started = chooseBridge([record(1, [project])], {
+    cwd: path.join(link, "src"),
+    ...allAlive,
+  });
+  assert.deepEqual(started, { bridge: record(1, [project]) });
 });
