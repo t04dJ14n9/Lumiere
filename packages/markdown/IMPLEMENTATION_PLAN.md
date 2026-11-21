@@ -7238,3 +7238,17 @@ Tests: `find-match.test.ts`, the new `reveal-rules.test.ts` cases,
 `test/unit/footnotes/inline.test.ts` and
 `test/unit/livePreview/reveal-plugins.test.ts` (images), with a find-bar
 helper in `test/unit/support/find-bar.ts`. No browser test was added.
+
+## Typography: the note's line height is already Obsidian's 1.5 (#699; 2026-11-21)
+
+Documentation only. #699 took its typography item from CAPABILITIES.md's
+editor row, which still described the behaviour the owner replaced on
+2026-10-10: at VS Code's default `editor.lineHeight` (0) a note's lines were
+as tall as the built-in editor's (19px at 14px). Since then the note has its
+own `lumiere.markdown.editor.lineHeight` (default 1.5, a multiple of the
+note's own `lumiere.markdown.editor.fontSize`, default 16) and VS Code's
+`editor.fontSize` and `editor.lineHeight` do not apply to notes
+(`src/plugins/editor/font.ts`, pinned in `test/unit/settings/editor.test.ts`;
+docs/HANDOVER.md "Line height", PARITY's line-height rows). So Lumiere already
+follows Obsidian whether or not the user set `editor.lineHeight`; the row is
+corrected and no layout, budget or browser expectation changes.
