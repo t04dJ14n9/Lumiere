@@ -31,6 +31,7 @@ import { listenForTableWheel } from "./scroll-input";
 import { cellPointerOffset } from "./cell-pointer";
 import { matchesEditableTable } from "./renderer-match";
 import { reportingFailures } from "./menu";
+import { cellsFollowNoteReadOnly } from "./cell-read-only";
 export const tablesWebview: Plugin = {
   name: "tables",
   inject: {
@@ -130,6 +131,7 @@ function registerTableExtensions(ctx: Context): void {
           { key: "ArrowUp", run: (view) => enterTable(view, -1) },
           { key: "ArrowDown", run: (view) => enterTable(view, 1) },
         ]),
+        cellsFollowNoteReadOnly,
         tableActions.of((action) => {
           void ctx.commands.run(action);
         }),

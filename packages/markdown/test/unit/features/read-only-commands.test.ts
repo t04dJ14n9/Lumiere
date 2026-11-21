@@ -17,6 +17,8 @@ import type { TableController } from "../../../src/plugins/tables/controller";
 import { tableCommands } from "../../../src/plugins/tables/manifest";
 import { activeTables } from "../../../src/plugins/tables/state";
 import { tablesWebview } from "../../../src/plugins/tables/webview";
+import { noteReadOnly } from "../../../src/plugins/editor/api";
+import { formattingCommands } from "../../../src/plugins/formatting/webview";
 import { tasksWebview } from "../../../src/plugins/tasks/webview";
 import { fixture } from "./fixture";
 
@@ -221,4 +223,134 @@ test("Add file property, Add alias and Clear file properties refuse a read-only 
   } finally {
     (globalThis as { document?: unknown }).document = original;
   }
+});
+
+/**
+ * Loads `features` through the feature controller, as the webview does (so
+ * each gets its configuration), on `doc`, read-only or not, and runs `check`.
+ */
+async function withFeatures<T>(
+  features: string[],
+  options: { doc: string; readOnly: boolean },
+  check: (f: ReturnType<typeof fixture>) => Promise<T>,
+): Promise<T> {
+  const f = fixture();
+  try {
+    await f.configure(
+      Object.fromEntries(
+        features.map((id) => [id, { enabled: true, config: {} }]),
+      ),
+    );
+    await f.root.settled();
+    f.view.dispatch({
+      changes: { from: 0, to: f.view.state.doc.length, insert: options.doc },
+      selection: { anchor: options.doc.length },
+      effects: StateEffect.appendConfig.of(
+        EditorState.readOnly.of(options.readOnly),
+      ),
+    });
+    return await check(f);
+  } finally {
+    await f.root.dispose();
+  }
+}
+
+async function run(f: ReturnType<typeof fixture>, id: string) {
+  const handler = f.handlers.get(id);
+  assert.ok(handler, `${id} is registered`);
+  return handler();
+}
+
+test("Toggle Inline Math through the formatting plugin refuses a read-only editor", async () => {
+  for (const readOnly of [true, false]) {
+    await withFeatures(
+      ["math", "formatting"],
+      { doc: DOC, readOnly },
+      async (f) => {
+        assert.equal(await run(f, "editor:toggle-inline-math"), !readOnly);
+        assert.equal(f.view.state.doc.toString() === DOC, readOnly);
+      },
+    );
+  }
+});
+
+// Formatting commands run on the active view: an open table cell's own
+// editor, whose state carries the note's read-only state (the cell editor
+// builds it with the editor's `noteReadOnly`). Without it they edited the cell, and the
+// cell wrote the edit into the read-only note.
+test("formatting commands in an open table cell refuse a read-only note", async () => {
+  // Commands that only move the selection.
+  const selectionOnly = new Set([
+    "editor:add-cursor-above",
+    "editor:add-cursor-below",
+  ]);
+  const ids = [...formattingCommands().keys()].filter(
+    (id) => !selectionOnly.has(id),
+  );
+  const cellText = "cell text";
+  for (const readOnly of [true, false]) {
+    await withFeatures(
+      ["formatting", "tables"],
+      { doc: DOC, readOnly },
+      async (f) => {
+        let cell = EditorState.create({
+          doc: cellText,
+          selection: { anchor: 0, head: 4 },
+          extensions: noteReadOnly(f.view.state),
+        });
+        const cellView = {
+          get state() {
+            return cell;
+          },
+          dispatch(spec: TransactionSpec) {
+            cell = cell.update(spec).state;
+          },
+          focus() {},
+        } as unknown as EditorView;
+        activeTables.set(f.view, {
+          editor: cellView,
+        } as unknown as TableController);
+        if (readOnly) {
+          for (const id of ids) {
+            assert.equal(await run(f, id), false, id);
+          }
+          assert.equal(cell.doc.toString(), cellText);
+        } else {
+          assert.equal(await run(f, "editor:toggle-bold"), true);
+          assert.equal(cell.doc.toString(), "**cell** text");
+        }
+        assert.equal(f.view.state.doc.toString(), DOC);
+      },
+    );
+  }
+});
+
+test("the Properties commands, as registered, refuse a read-only editor", async () => {
+  const note = "---\na: 1\n---\nalpha";
+  const ids = [
+    "markdown:add-metadata-property",
+    "markdown:add-alias",
+    "markdown:clear-metadata-properties",
+  ];
+  await withFeatures(
+    ["properties"],
+    { doc: note, readOnly: true },
+    async (f) => {
+      for (const id of ids) {
+        assert.equal(await run(f, id), false, id);
+      }
+      assert.equal(f.view.state.doc.toString(), note);
+    },
+  );
+  // Writable: Clear file properties edits. Add file property and Add alias
+  // open the sheet, which needs a DOM; their writable runs are checked
+  // through `PropertyEditing` above.
+  await withFeatures(
+    ["properties"],
+    { doc: note, readOnly: false },
+    async (f) => {
+      assert.equal(await run(f, "markdown:clear-metadata-properties"), true);
+      assert.equal(f.view.state.doc.toString(), "alpha");
+    },
+  );
 });

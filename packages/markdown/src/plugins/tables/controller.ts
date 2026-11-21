@@ -388,8 +388,9 @@ export class TableController {
       (this.editor ?? this.grid.outer).focus();
       return;
     }
-    // A palette command can reach a table that has scrolled out of view.
-    if (this.grid.locate() === undefined) {
+    // A palette command can reach a table that has scrolled out of view; a
+    // sort renders its keys first, and the note may turn read-only meanwhile.
+    if (this.grid.locate() === undefined || this.grid.outer.state.readOnly) {
       return;
     }
     const next = parsedTable(table);

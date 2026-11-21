@@ -7,8 +7,11 @@ import type { viewState } from "./protocol";
 import type { DocumentSession } from "../document/api";
 import {
   Annotation,
+  Compartment,
+  EditorState,
   type Extension,
   type StateEffect,
+  type TransactionSpec,
 } from "@codemirror/state";
 import type { EditorView } from "@codemirror/view";
 import type { PanelPort } from "../../shared/host";
@@ -21,6 +24,36 @@ export type { CaretMode, VimCaretProfile } from "./caret";
  * saves no view state for it.
  */
 export const backgroundUpdate = Annotation.define<boolean>();
+
+/**
+ * A nested editor, such as a table cell's, is a view of its own whose state
+ * does not share the note's facets, and editing commands and typing check
+ * the state they run on (`EditorState.readOnly`). The editor owns the note's
+ * read-only state (features may not set it: composition-policy.test.ts), so
+ * a nested editor takes a copy from here: the note's when it opens
+ * (`noteReadOnly`), and the note's again whenever that changes
+ * (`followNoteReadOnly`). The note turns read-only when syncing fails for
+ * good (document/sync.ts).
+ */
+const nestedReadOnly = new Compartment();
+
+/** A nested editor's read-only state: the note's when it opens. */
+export function noteReadOnly(note: EditorState): Extension {
+  return nestedReadOnly.of(EditorState.readOnly.of(note.readOnly));
+}
+
+/** What makes a nested editor read-only exactly when the note is, if needed. */
+export function followNoteReadOnly(
+  nested: EditorState,
+  note: EditorState,
+): TransactionSpec | undefined {
+  if (nested.readOnly === note.readOnly) {
+    return undefined;
+  }
+  return {
+    effects: nestedReadOnly.reconfigure(EditorState.readOnly.of(note.readOnly)),
+  };
+}
 export interface CaretModeSource {
   mode(view: EditorView): CaretMode;
   /** Vim caret look; omit for VSCodeVim-shaped modes (legacy). */

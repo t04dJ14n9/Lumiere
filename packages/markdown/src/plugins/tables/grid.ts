@@ -94,9 +94,12 @@ export class TableGrid {
    * Write `tableMarkdown` back as this block, every line after the first
    * indented like the table's rows, so a table in a list item stays in it.
    * Returns false, writing nothing, when the note no longer holds the table
-   * where this grid is (see `locate`).
+   * where this grid is (see `locate`) or is read-only.
    */
   replace(tableMarkdown: string): boolean {
+    if (this.outer.state.readOnly) {
+      return false;
+    }
     const source = this.sourceFor(tableMarkdown);
     if (source === this.block.source) {
       return true;

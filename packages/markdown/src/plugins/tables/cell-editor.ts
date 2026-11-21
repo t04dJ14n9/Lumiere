@@ -13,6 +13,8 @@ import { difference } from "../../shared/document/wire";
 import type { InputGrouping } from "../document/api";
 import { editGroup } from "../document/api";
 import { CellSource, cellSyntax } from "./cell-source";
+import { followNoteReadOnly, noteReadOnly } from "../editor/api";
+import { watchNoteReadOnly } from "./cell-read-only";
 import type { Action, TableEnvironment } from "./environment";
 import { cellNavKey, cellNavigation, type CellStep } from "./navigation";
 import { installCellWordNavigation } from "./word-navigation";
@@ -54,6 +56,7 @@ export class CellEditor {
   private unbindMode?: () => void;
   private readonly word: CellEditorOptions["word"];
   private readonly documentLine: CellEditorOptions["documentLine"];
+  private readonly unwatchReadOnly: () => void;
 
   constructor(options: CellEditorOptions) {
     const { cell, selection } = options;
@@ -83,6 +86,8 @@ export class CellEditor {
         extensions: [
           options.environment.language,
           cellSyntax,
+          // Read-only while the note is, so no command or typing edits it.
+          noteReadOnly(options.outer.state),
           cellNavigation(
             (step, extend) => options.arrow(step, extend),
             (view) => options.environment.vim?.mode(view),
@@ -108,6 +113,15 @@ export class CellEditor {
     this.label(options.position);
     this.groups.attach(this.view);
     this.bindMode();
+    this.unwatchReadOnly = watchNoteReadOnly(this.outer, this);
+  }
+
+  /** Become read-only, or writable again, with the note. */
+  followReadOnly(): void {
+    const spec = followNoteReadOnly(this.view.state, this.outer.state);
+    if (spec) {
+      this.view.dispatch(spec);
+    }
   }
 
   /** Edits go to the document, and its caret follows the cell's. */
@@ -224,6 +238,7 @@ export class CellEditor {
   }
 
   destroy(): void {
+    this.unwatchReadOnly();
     this.unbindMode?.();
     this.view.destroy();
     this.groups.dispose();

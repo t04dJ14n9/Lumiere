@@ -257,7 +257,7 @@ export class TableKeyboard {
         selection: { anchor: doc.line(adjacent).from },
         scrollIntoView: true,
       });
-    } else {
+    } else if (!outer.state.readOnly) {
       // Keep newly typed prose separate from the table's Markdown rows.
       outer.dispatch({
         changes: { from: edge, insert: "\n\n" },

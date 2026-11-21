@@ -43,6 +43,10 @@ export class CellProjection {
   ) {}
 
   open(position: CellPosition, selection?: CellSelection): void {
+    // A read-only note's cells are not edited, so none opens for editing.
+    if (this.grid.outer.state.readOnly) {
+      return;
+    }
     const cell = this.grid.model.rows[position.row]?.[position.column];
     const element = this.grid.contentElement(position);
     if (!cell || !element) {
@@ -182,6 +186,11 @@ export class CellProjection {
     text: string,
     group: string,
   ): void {
+    // The cell follows the note's read-only state; this holds for an edit
+    // that reaches the cell some other way.
+    if (this.grid.outer.state.readOnly) {
+      return;
+    }
     this.cellEditor?.source.remember(text);
     const start = this.grid.locate();
     if (start === undefined) {
