@@ -127,6 +127,26 @@ export interface NativeLineRange {
   endLine: number;
 }
 
+/**
+ * The line range a note's `#fragment` selects when followed in Lumiere, or
+ * undefined when it names a heading or block. Only the `L` forms of VS Code
+ * and Cursor (`#L19`, `#L19-L21`) are lines here: bare digits (`#3`) can name
+ * a heading (`## 3`), which Obsidian links to as `#3`. Text Editor opens
+ * still read bare digits as lines (`parseNativeLineFragment`).
+ */
+export function noteLineFragment(
+  fragment: string,
+): NativeLineRange | undefined {
+  try {
+    if (!/^L\d/i.test(decodeURIComponent(fragment))) {
+      return undefined;
+    }
+  } catch {
+    return undefined;
+  }
+  return parseNativeLineFragment(fragment);
+}
+
 /** 1-based inclusive line range, or undefined when the fragment is not `#L…`. */
 export function parseNativeLineFragment(
   fragment: string,
