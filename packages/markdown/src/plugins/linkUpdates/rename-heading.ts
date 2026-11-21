@@ -7,7 +7,8 @@ import type { VaultFile, Vaults } from "../vault/api";
 import {
   headingAt,
   headingLinkEdits,
-  headingSubpath,
+  renamedHeadingFragment,
+  type HeadingToRename,
   type RenamedHeading,
 } from "./heading-rename";
 import { sourceText } from "./source-text";
@@ -23,18 +24,26 @@ interface Services {
 }
 
 /**
- * Why a new heading name will not do, or undefined when it will. Any name
- * does, as in Obsidian: links get it without the characters they cannot
- * hold (`headingSubpath`). Only a name with nothing left for a link (such
- * as `#|^`) is refused, since no link could reach the heading.
+ * Why `value` will not do as a new name for `heading` in the note `text`, or
+ * undefined when it will. Obsidian takes any name that is not empty; here a
+ * name is also refused when the links rewritten for it could not reach the
+ * heading (`renamedHeadingFragment`), rather than break them. The current
+ * name is let through: keeping it renames nothing.
  */
-export function headingNameProblem(value: string): string | undefined {
-  if (!value.trim()) {
+export function headingNameProblem(
+  text: string,
+  heading: HeadingToRename,
+  value: string,
+): string | undefined {
+  const name = value.trim();
+  if (!name) {
     return "A heading needs a name.";
   }
-  return headingSubpath(value)
-    ? undefined
-    : "Links could not reach a heading with only : # | ^ \\ [[ or ]] in its name.";
+  if (name === heading.name) {
+    return undefined;
+  }
+  const fragment = renamedHeadingFragment(text, heading, name);
+  return "problem" in fragment ? fragment.problem : undefined;
 }
 
 /**
@@ -57,7 +66,7 @@ export async function renameHeading(ctx: Services): Promise<void> {
     await ctx.dialogs.input({
       prompt: "Rename heading",
       value: heading.name,
-      validate: headingNameProblem,
+      validate: (value) => headingNameProblem(text, heading, value),
     })
   )?.trim();
   const located = await ctx.vaults.locate(panel.document.uri);
@@ -65,7 +74,20 @@ export async function renameHeading(ctx: Services): Promise<void> {
   if (!name || name === heading.name || !located || path === undefined) {
     return;
   }
-  const renamed: RenamedHeading = { path, text, heading, name };
+  // The prompt refuses such a name; a host that lets one through still
+  // writes no link that misses the heading.
+  const fragment = renamedHeadingFragment(text, heading, name);
+  if ("problem" in fragment) {
+    ctx.dialogs.inform(fragment.problem);
+    return;
+  }
+  const renamed: RenamedHeading = {
+    path,
+    text,
+    heading,
+    name,
+    subpath: fragment.subpath,
+  };
   await applyRename(ctx, panel.document, renamed, located.vault);
 }
 

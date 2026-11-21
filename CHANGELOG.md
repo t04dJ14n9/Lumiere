@@ -159,6 +159,11 @@
 - Markdown: a `$$` formula in a line of text that the caret is in shows its
   source and its preview as soon as Live Preview starts in an editor that
   already has the focus. It stayed typeset until the caret moved (#809).
+- Markdown: Rename Heading to a name with formatting, such as
+  `New [[Target|Alias]]` or `[Label](url)`, writes links to the heading as
+  it shows (`#New Alias`), so they reach it; they were written with the
+  name as typed and led nowhere. A name no link could reach (only
+  formatting, `L12`) is refused (#811).
 
 Fixes for several VS Code windows open at once, each with a test; checked
 with two real windows on one profile.
