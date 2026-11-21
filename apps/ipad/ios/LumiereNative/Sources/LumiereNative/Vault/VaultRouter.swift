@@ -9,7 +9,7 @@ import Foundation
 /// vault's folder. Every other path is Capacitor's.
 ///
 /// Only what a note shows is served: the images, audio, video and PDFs the
-/// editor embeds (the web app's media-types.ts). These answers are on the
+/// editor embeds (host-node's vault-file-headers.ts). These answers are on the
 /// app's own origin, next to the native plugins, and Capacitor's handler
 /// adds no `Content-Security-Policy: sandbox` as the other hosts do, so an
 /// HTML page or a script from a vault must never be served as one.

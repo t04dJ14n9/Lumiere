@@ -1,6 +1,6 @@
 /** The worker's responses to the routes it answers (shared/routes.ts). */
 import type { Answer } from "../shared/messages";
-import { mediaType } from "./media-types";
+import { vaultFileHeaders } from "@workshop/host-node/vault-file-headers";
 
 /** A note's page. Its content security policy is its first tag (note-pages.ts). */
 export function pageResponse(html: string): Response {
@@ -47,7 +47,7 @@ export function vaultFileResponse(
  */
 function fileResponse(file: Blob, request: FileRequest): Response {
   const size = file.size;
-  const headers = fileHeaders(mediaType(request.uri));
+  const headers = fileHeaders(new URL(request.uri).pathname);
   const range = byteRange(request.range, size);
   if (range === "unsatisfiable") {
     return new Response(null, {
@@ -71,18 +71,17 @@ function fileResponse(file: Blob, request: FileRequest): Response {
   });
 }
 
-function fileHeaders(type: string): Record<string, string> {
+/**
+ * The headers every host serves a vault's file with (host-node's
+ * vault-file-headers.ts): what the editor embeds as itself, anything else as
+ * bytes to save, and sandboxed if it is opened as a page of its own.
+ */
+function fileHeaders(path: string): Record<string, string> {
   return {
-    "content-type": type,
+    ...vaultFileHeaders(path),
     "accept-ranges": "bytes",
     // The editor adds the file's mtime to its URL, so a changed file reloads.
     "cache-control": "no-cache",
-    "x-content-type-options": "nosniff",
-    // An SVG opened as a page of its own would run its scripts on the app's
-    // origin, next to the reader's vaults; as an image it runs none.
-    ...(type === "image/svg+xml"
-      ? { "content-security-policy": "default-src 'none'; sandbox" }
-      : {}),
   };
 }
 

@@ -102,11 +102,14 @@ and reaches no Node built-in, which `test/unit/core-layers.test.ts` checks.
 | `src/palette.ts` | embedder → page | an embedder's colour roles as the `--vscode-*` variables |
 | `src/views.ts` | embedder ↔ host (HTTP) | tree snapshots, clicks, visibility, events |
 | `src/settings.ts` | embedder ↔ host (HTTP) | every setting with its value, group and title; changes, checked as VS Code's commands check them |
+| `src/vault-file-headers.ts` | `/lumiere/file` ↔ the web app's service worker | the media types and headers a vault's file is served with, so it never runs as a page or a script |
 
 The last four are browser-safe entries (`@workshop/host-node/embedding`,
 `/palette`, `/views`, `/settings`) for an embedder's page. Its Node half imports the main
-entry. The `architecture/boundaries` lint rule allows no other import, and
-forbids this package from importing `vscode` or any embedder.
+entry. `@workshop/host-node/vault-file-headers` is browser-safe too, for the
+web app's service worker. The `architecture/boundaries` lint rule allows no
+other import, and forbids this package from importing `vscode` or any
+embedder.
 
 ## Files
 

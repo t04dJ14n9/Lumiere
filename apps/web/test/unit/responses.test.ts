@@ -2,7 +2,6 @@
 // video asks for, with its media type.
 import test from "node:test";
 import assert from "node:assert/strict";
-import { mediaType } from "../../src/worker/media-types";
 import { byteRange, vaultFileResponse } from "../../src/worker/responses";
 
 const VIDEO = new Blob([Uint8Array.from({ length: 100 }, (_, i) => i)]);
@@ -64,18 +63,31 @@ test("a range is 206 with those bytes; one past the end is 416", async () => {
   assert.equal(past.headers.get("content-range"), "bytes */100");
 });
 
-test("an SVG cannot run its scripts if it is opened as a page", () => {
-  const svg = vaultFileResponse(
-    { kind: "file", file: new Blob(["<svg/>"]) },
-    { uri: "file:///vaults/Notes/diagram.SVG", range: null },
+test("a vault's file never runs as a page on the app's origin", () => {
+  const response = (name: string) =>
+    vaultFileResponse(
+      { kind: "file", file: new Blob(["<script>alert(1)</script>"]) },
+      { uri: `file:///vaults/Notes/${name}`, range: null },
+    ).headers;
+  // As an image it runs nothing; opened as a page it is sandboxed.
+  const svg = response("diagram.SVG");
+  assert.equal(svg.get("content-type"), "image/svg+xml");
+  assert.equal(
+    svg.get("content-security-policy"),
+    "default-src 'none'; sandbox",
   );
-  assert.equal(svg.headers.get("content-type"), "image/svg+xml");
-  assert.match(svg.headers.get("content-security-policy") ?? "", /sandbox/);
-  const png = vaultFileResponse(
-    { kind: "file", file: new Blob(["png"]) },
-    { uri: "file:///vaults/Notes/photo.png", range: null },
+  assert.equal(
+    response("photo.png").get("content-security-policy"),
+    "default-src 'none'; sandbox",
   );
-  assert.equal(png.headers.get("content-security-policy"), null);
+  for (const name of ["page.html", "tool.js", "feed.xml"]) {
+    const headers = response(name);
+    assert.equal(headers.get("content-type"), "application/octet-stream");
+    assert.equal(headers.get("content-disposition"), "attachment");
+    assert.equal(headers.get("x-content-type-options"), "nosniff");
+  }
+  // Chrome would refuse to show a sandboxed PDF.
+  assert.equal(response("paper.pdf").get("content-security-policy"), null);
 });
 
 test("a refused file is 403; a missing one, or no answer, 404", () => {
@@ -86,12 +98,17 @@ test("a refused file is 403; a missing one, or no answer, 404", () => {
   assert.equal(vaultFileResponse(undefined, request).status, 404);
 });
 
-test("media types by extension; anything else is bytes", () => {
-  assert.equal(mediaType("file:///v/a%20b.JPG"), "image/jpeg");
-  assert.equal(mediaType("file:///v/motion.webm"), "video/webm");
-  assert.equal(mediaType("file:///v/paper.pdf"), "application/pdf");
-  assert.equal(mediaType("file:///v/song.m4a"), "audio/mp4");
-  assert.equal(mediaType("file:///v/page.html"), "application/octet-stream");
-  assert.equal(mediaType("file:///v/Makefile"), "application/octet-stream");
-  assert.equal(mediaType("file:///v.d/README"), "application/octet-stream");
+test("media types by extension, from the file URI; anything else is bytes", () => {
+  const type = (uri: string) =>
+    vaultFileResponse(
+      { kind: "file", file: new Blob([]) },
+      { uri, range: null },
+    ).headers.get("content-type");
+  assert.equal(type("file:///v/a%20b.JPG"), "image/jpeg");
+  assert.equal(type("file:///v/motion.webm"), "video/webm");
+  assert.equal(type("file:///v/paper.pdf"), "application/pdf");
+  assert.equal(type("file:///v/song.m4a"), "audio/mp4");
+  assert.equal(type("file:///v/page.html"), "application/octet-stream");
+  assert.equal(type("file:///v/Makefile"), "application/octet-stream");
+  assert.equal(type("file:///v.d/README"), "application/octet-stream");
 });
