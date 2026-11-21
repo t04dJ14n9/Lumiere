@@ -475,6 +475,11 @@
         "category": "Lumiere"
       },
       {
+        "command": "lumiere.markdown.htmlViewer.open",
+        "title": "Open HTML File",
+        "category": "Lumiere"
+      },
+      {
         "command": "lumiere.markdown.ideContext.copy",
         "title": "Copy IDE Context",
         "category": "Lumiere",
@@ -2020,6 +2025,10 @@
           "when": "config.lumiere.markdown.preset != 'minimal' && config.lumiere.markdown.plugins.graph.enabled"
         },
         {
+          "command": "lumiere.markdown.htmlViewer.open",
+          "when": "false"
+        },
+        {
           "command": "lumiere.markdown.ideContext.copy",
           "when": "activeCustomEditorId == 'lumiere.markdown.editor' && lumiere.markdown.plugin.ideContext"
         },
@@ -3208,6 +3217,12 @@
             "default": true,
             "scope": "resource",
             "description": "Draw a vault's notes as a directed graph in a panel of its own."
+          },
+          "lumiere.markdown.plugins.htmlViewer.enabled": {
+            "type": "boolean",
+            "default": true,
+            "scope": "resource",
+            "description": "Open a vault's HTML file from a link, or an HTML embed's Open button, as a page in a tab of its own, in a trusted workspace."
           },
           "lumiere.markdown.plugins.ideContext.enabled": {
             "type": "boolean",

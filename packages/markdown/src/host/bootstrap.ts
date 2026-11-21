@@ -40,6 +40,7 @@ import {
   settingsHost,
   obsidianCompatHost,
   graphHost,
+  htmlViewerHost,
   diffResourcesHost,
   vimHost,
 } from "../plugins/host";
@@ -155,6 +156,7 @@ function startWindowFeatures(root: BaseContext, host: HostServices): void {
     vaultSearchHost,
     obsidianCompatHost,
     graphHost,
+    htmlViewerHost,
     vimHost,
   ];
   const manifests = [...workbenchFeatures, ...features];

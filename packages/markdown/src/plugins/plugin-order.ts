@@ -95,6 +95,7 @@ export const WORKBENCH_FEATURE_ORDER = [
   // Compatibility supplies settings; core plugins keep owning their behavior.
   "obsidianCompat",
   "graph",
+  "htmlViewer",
 ] as const;
 
 const owners: readonly string[] = [
