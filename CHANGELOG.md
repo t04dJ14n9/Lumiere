@@ -172,6 +172,10 @@
   different heading. A drop is refused, with the message to try again, once
   the outline has refreshed to a changed note since the row was picked up
   (#818).
+- Markdown: Follow Link, Open Link in New Tab and Open Link to Side (Alt+Enter,
+  Mod+Enter, Mod+Alt+Enter) on a reference link in a table cell open its
+  destination. The cell's editor held only the cell, so a definition written
+  below the table (`[r]: https://example.com`) was not found (#822).
 
 Fixes for several VS Code windows open at once, each with a test; checked
 with two real windows on one profile.
