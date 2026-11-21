@@ -31,6 +31,8 @@ test("Insert Math Block puts $$ lines around the selected lines, as in Obsidian"
     ["above\n\nbelow", 6, 6, "above\n$$\n|\n$$\nbelow"],
     ["above\none\ntwo\nbelow", 6, 13, "above\n$$\n‹one\ntwo›\n$$\nbelow"],
     ["", 0, 0, "$$\n|\n$$"],
+    // A selection ending at the start of a line includes it (1.15.0, read).
+    ["one\ntwo", 0, 4, "$$\n‹one\n›two\n$$"],
   ] as const) {
     const state = EditorState.create({ doc, selection: { anchor, head } });
     const result = state.update(mathBlockEdit(state)).state;

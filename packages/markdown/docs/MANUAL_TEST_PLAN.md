@@ -598,7 +598,7 @@ title, then set `lumiere.markdown.plugins.inlineTitle.enabled` to true.
    `Next steps`, as in Obsidian's default theme. Each task's line and
    checkbox carry `data-task`, so a CSS snippet can style custom statuses.
 2. **Toggle Checklist Status** and **Cycle List Checklist** act on all
-   selected lines; a selection ending at column zero excludes that line.
+   selected lines; a selection ending at column zero includes that line.
 3. Change a task in the other panel, then click the stale checkbox: the
    edit is refused.
 

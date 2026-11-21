@@ -39,18 +39,18 @@ test("formatting toggles exact markers while retaining selection and obeying rea
   assert.equal(state.doc.toString(), "hello");
 });
 
-test("line commands exclude a final column-zero line and numbered lists toggle as a group", () => {
+test("line commands include a final column-zero line, as Obsidian 1.15 does, and numbered lists toggle as a group", () => {
   let state = EditorState.create({
     doc: "alpha\nbeta\ngamma",
     selection: { anchor: 0, head: 11 },
   });
   state = state.update(lineEdit(state, "1. ")).state;
   // Obsidian writes "1. " on every line; the renderer numbers them (1., 2.).
-  assert.equal(state.doc.toString(), "1. alpha\n1. beta\ngamma");
+  assert.equal(state.doc.toString(), "1. alpha\n1. beta\n1. gamma");
   state = state.update(lineEdit(state, "1. ")).state;
   assert.equal(state.doc.toString(), "alpha\nbeta\ngamma");
   state = state.update(lineEdit(state, "## ")).state;
-  assert.equal(state.doc.toString(), "## alpha\n## beta\ngamma");
+  assert.equal(state.doc.toString(), "## alpha\n## beta\n## gamma");
   state = state.update(lineEdit(state, "")).state;
   assert.equal(state.doc.toString(), "alpha\nbeta\ngamma");
 });

@@ -15,7 +15,8 @@ export function isCallout(source: string): boolean {
  * the template alone); otherwise, with a selection or text before the caret,
  * wrap the selected lines in a note callout with a blank line between it and
  * any text above or below. The callout's type is selected. A wrapped
- * selection ending at column zero does not include that line.
+ * selection ending at the start of a line includes that line, as in
+ * Obsidian.
  */
 export function insertCallout(state: EditorState): TransactionSpec {
   const { from, empty } = state.selection.main;
@@ -27,9 +28,9 @@ export function insertCallout(state: EditorState): TransactionSpec {
 
 /** Quote the selected lines under `> [!NOTE]`, apart from text around them. */
 function wrapSelectedLines(state: EditorState): TransactionSpec {
-  const { from, to, empty } = state.selection.main;
+  const { from, to } = state.selection.main;
   const first = state.doc.lineAt(from);
-  const last = state.doc.lineAt(empty ? to : Math.max(from, to - 1));
+  const last = state.doc.lineAt(to);
   const touches = (n: number) =>
     n >= 1 && n <= state.doc.lines && state.doc.line(n).text.trim() !== "";
   const before = touches(first.number - 1) ? "\n" : "";

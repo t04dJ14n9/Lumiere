@@ -48,8 +48,8 @@ function isKind(text: string, prefix: string): boolean {
  * marker goes on the lines without one, or one level comes off when every
  * line has one. Markers go after a line's quote markers and indentation, so
  * a quote or callout stays one. Blank lines in a selection of several are
- * left alone. A caret on an empty line ends up after the marker. A
- * selection ending at column zero does not include that line.
+ * left alone. A caret on an empty line ends up after the marker. As in
+ * Obsidian, a selection ending at the start of a line includes that line.
  */
 export function lineEdit(state: EditorState, prefix: string): TransactionSpec {
   const lines = selectedLines(state);
@@ -67,9 +67,7 @@ export function lineEdit(state: EditorState, prefix: string): TransactionSpec {
 function selectedLines(state: EditorState): Line[] {
   const selection = state.selection.main;
   const first = state.doc.lineAt(selection.from);
-  const last = state.doc.lineAt(
-    selection.empty ? selection.to : Math.max(selection.from, selection.to - 1),
-  );
+  const last = state.doc.lineAt(selection.to);
   const lines = Array.from(
     { length: last.number - first.number + 1 },
     (_, index) => state.doc.line(first.number + index),
@@ -132,17 +130,17 @@ export function ruleEdit(state: EditorState): TransactionSpec {
 
 /**
  * Fence lines around the selected lines, the selection staying on them, as
- * Obsidian's Insert Code Block does. A selection ending at column zero does
- * not include that line.
+ * Obsidian's Insert Code Block does, including the line a selection ends at
+ * the start of.
  */
 export function fenceLines(
   state: EditorState,
   open: string,
   close: string,
 ): TransactionSpec {
-  const { from, to, empty, anchor, head } = state.selection.main;
+  const { from, to, anchor, head } = state.selection.main;
   const first = state.doc.lineAt(from);
-  const last = state.doc.lineAt(empty ? to : Math.max(from, to - 1));
+  const last = state.doc.lineAt(to);
   const before = `${open}\n`;
   return {
     changes: [

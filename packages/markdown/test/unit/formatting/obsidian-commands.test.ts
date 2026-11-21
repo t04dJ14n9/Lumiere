@@ -267,6 +267,28 @@ test("blank lines in a selection of several lines get no marker", () => {
   );
 });
 
+// Read from Obsidian 1.15.0 (not measured): line commands take every line
+// from the selection's first to its last, whichever way it runs, the line
+// it ends at the start of included.
+test("line commands include the line a selection ends at the start of, either way", () => {
+  assert.equal(
+    edit("‹one\n›two", (s) => lineEdit(s, "- ")),
+    "- ‹one\n›- two",
+  );
+  assert.equal(
+    edit("›one\n‹two", (s) => lineEdit(s, "> ")),
+    "> ‹one\n›> two",
+  );
+  assert.equal(
+    edit("‹one\n›two", (s) => fenceLines(s, "```", "```")),
+    "```\n‹one\n›two\n```",
+  );
+  assert.equal(
+    edit("›one\n‹two", (s) => checklistEdit(s, false)),
+    "- [ ] ‹one\n›- [ ] two",
+  );
+});
+
 test("a horizontal rule goes on a line of its own, the caret on the line after", () => {
   assert.equal(edit("|", ruleEdit), "\n---\n|");
   assert.equal(edit("above\n|\nbelow", ruleEdit), "above\n\n---\n|\nbelow");

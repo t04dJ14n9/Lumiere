@@ -50,8 +50,8 @@ type Step = (typeof STEPS)[number];
  * Every task is checked while any is open; once all are done they open
  * again, or lose their boxes when cycling. Lines behind join the others,
  * which stay as they are (Obsidian drops their boxes). Blank lines in a
- * selection of several are left alone. A selection ending at column zero
- * does not include that line.
+ * selection of several are left alone. As in Obsidian, a selection ending
+ * at the start of a line includes that line.
  */
 export function checklistEdit(
   state: EditorState,
@@ -88,9 +88,9 @@ export function runChecklist(view: EditorView, cycle: boolean): boolean {
 }
 
 function selectedLines(state: EditorState): Line[] {
-  const { from, to, empty } = state.selection.main;
+  const { from, to } = state.selection.main;
   const first = state.doc.lineAt(from).number;
-  const last = state.doc.lineAt(empty ? to : Math.max(from, to - 1)).number;
+  const last = state.doc.lineAt(to).number;
   const lines = Array.from({ length: last - first + 1 }, (_, index) =>
     state.doc.line(first + index),
   );

@@ -101,6 +101,10 @@
   task or heading marker, and leave the spaces at the selection's ends
   outside, as Obsidian 1.15 does; a selection running over a table, code
   block or math block skips its lines (#787).
+- Markdown: Set Heading, the list, quote and checklist commands, Insert Code
+  Block, Insert Math Block and Insert Callout include the line a selection
+  ends at the start of, as Obsidian 1.15 does, whichever way it was made
+  (#787).
 
 Fixes for several VS Code windows open at once, each with a test; checked
 with two real windows on one profile.

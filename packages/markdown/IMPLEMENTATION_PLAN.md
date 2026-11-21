@@ -7777,3 +7777,15 @@ running. One commit per item.
   markers, so #787's "comment" was not a difference. Left: the selection
   ends on the formatted text, where Obsidian's keeps a selected leading
   marker. Unit tests in obsidian-commands and highlight-colours.
+- **A selection ending at column 0 includes that line.** Obsidian's line
+  commands take the lines from the lower to the higher of each range's
+  anchor and head lines (`processLines`: Set Heading, the bullet, numbered,
+  quote and checklist toggles), `insertBlock` grows each range to
+  `lineAt(to)` (Insert Code Block, Insert Math Block), and `insertCallout`
+  quotes through the `to` cursor's line, so a forward or backward selection
+  ending at the start of a line includes it. Lumiere left that line out on
+  purpose; `lineEdit`, `fenceLines`, `checklistEdit`, `mathBlockEdit` and
+  Insert Callout now include it. Copy Link for Agent keeps excluding it (its
+  own reference format, DESIGN §17). Tests that pinned the exclusion
+  (formatting, tasks, callouts) now pin the inclusion; new ones cover both
+  directions.

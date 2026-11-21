@@ -28,12 +28,12 @@ export function inlineMathEdit(state: EditorState): TransactionSpec {
 /**
  * Insert Math Block, as in Obsidian: `$$` lines go around the selected lines
  * (an empty line becomes the formula's), and the selection stays on them. A
- * selection ending at column zero does not include that line.
+ * selection ending at the start of a line includes that line, as in Obsidian.
  */
 export function mathBlockEdit(state: EditorState): TransactionSpec {
-  const { from, to, empty, anchor, head } = state.selection.main;
+  const { from, to, anchor, head } = state.selection.main;
   const first = state.doc.lineAt(from);
-  const last = state.doc.lineAt(empty ? to : Math.max(from, to - 1));
+  const last = state.doc.lineAt(to);
   return {
     changes: [
       { from: first.from, insert: "$$\n" },
