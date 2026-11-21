@@ -2,6 +2,7 @@ import type { EditorState } from "@codemirror/state";
 import type { EditorView } from "@codemirror/view";
 import { foldedRanges as languageFoldedRanges } from "@codemirror/language";
 import { blockIndex } from "./blocks";
+import { isSourceRevealed } from "./revealed-block";
 import { revealed } from "./registry";
 import type { RenderBlock } from "./api";
 
@@ -41,7 +42,7 @@ export function revealedSourceBlocks(
           block.to >= from &&
           block.renderer.editing === "reveal" &&
           (Boolean(block.renderer.showSource?.(state, block)) ||
-            revealed(state, block.from, block.to)),
+            isSourceRevealed(state, block)),
       ) ?? []
   );
 }

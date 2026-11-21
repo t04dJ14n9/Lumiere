@@ -9,7 +9,8 @@ import { createRoot } from "@workshop/core";
 import type { EditorService } from "../editor/api";
 import type { BlockRenderer, LivePreview } from "./api";
 import { livePreviewWebview } from "./webview";
-import { blockIndex, editingDecorations } from "./blocks";
+import { blockIndex } from "./blocks";
+import { editingDecorations } from "./revealed-block";
 import { blockDecorations } from "./viewport-decorations";
 import { blockRenderers, revealed } from "./registry";
 import { documentTree } from "./document-tree";
@@ -291,6 +292,20 @@ test("a revealed block with an editing preview marks its source and keeps the re
   assert.equal(widget.from, block.to);
   assert.equal(widget.value.spec.block, true);
   assert.equal(widget.value.spec.side, 1);
+  // A renderer that places its preview inline draws it itself.
+  const inline = {
+    ...block,
+    renderer: {
+      ...block.renderer,
+      editingPreview: { sourceClass: "md-math-source", isBlock: () => false },
+    },
+  };
+  assert.equal(
+    editingDecorations(state, inline, () => new TestWidget()).filter(
+      (range) => range.value.spec.widget,
+    ).length,
+    0,
+  );
   const renderer: BlockRenderer = { ...block.renderer };
   delete renderer.editingPreview;
   const plain = { ...block, renderer };

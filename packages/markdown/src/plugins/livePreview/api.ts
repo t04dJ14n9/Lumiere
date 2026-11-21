@@ -44,6 +44,8 @@ export interface InlineContext {
   ): void;
   hide(from: number, to: number): void;
   replace(from: number, to: number, widget: WidgetType): void;
+  /** A widget just after `at`, in the line (a revealed formula's preview). */
+  widgetAfter(at: number, widget: WidgetType): void;
   line(at: number, cls: string, attributes?: Record<string, string>): void;
 }
 export interface InlineRenderer {
@@ -64,12 +66,21 @@ export interface BlockRenderer {
   editing: "reveal" | "widget";
   showSource?(state: EditorState, block: RenderBlock): boolean;
   /**
-   * While the caret is in a revealed block, keep the rendered result below
-   * the source and mark the source lines with this class. Math no longer
-   * uses this (BH-009: source only while editing); the hook remains for
-   * other block kinds that want an Obsidian-style editing preview.
+   * Reveal the source only while the editor has focus (or under the find
+   * bar's current match), as Obsidian reveals everything; without focus the
+   * block stays rendered wherever the caret is. Display math uses it.
    */
-  editingPreview?: { sourceClass: string };
+  revealsOnlyWhileFocused?: boolean;
+  /**
+   * While a block's source is revealed, mark its lines with `sourceClass`
+   * and keep the rendered result just after it, as Obsidian does for
+   * display math: a block below the source unless `isBlock` says no, in
+   * which case the renderer draws its own inline preview.
+   */
+  editingPreview?: {
+    sourceClass: string;
+    isBlock?(state: EditorState, block: RenderBlock): boolean;
+  };
   range?(node: SyntaxNodeRef, state: EditorState): { from: number; to: number };
   widget(block: RenderBlock): WidgetType;
   estimatedHeight?: number;
@@ -223,3 +234,4 @@ export function markdownTree(state: EditorState): Tree {
 export { editTouches, isPlainTextEdit } from "./plain-edit";
 export { changedBlocks } from "./changed-region";
 export { findMatchTouches } from "./find-match";
+export { hasEditorFocus } from "./editor-focus";

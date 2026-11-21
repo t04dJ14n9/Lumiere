@@ -3,8 +3,10 @@ import type { Range } from "@codemirror/state";
 import { Decoration, WidgetType } from "@codemirror/view";
 import type { EditorView } from "@codemirror/view";
 import type { DecorationSet } from "@codemirror/view";
-import { blockRenderers, revealed } from "./registry";
+import type { revealed } from "./registry";
+import { blockRenderers } from "./registry";
 import { documentTree } from "./document-tree";
+import { editingDecorations, isSourceRevealed } from "./revealed-block";
 import { treeReached, type BlockRenderer, type RenderBlock } from "./api";
 import { rendererMatcher, visitRendererNodes } from "./block-discovery";
 import { unquotedBlock } from "../../markdown/quoted-block";
@@ -253,33 +255,6 @@ function guarded(
   return widget;
 }
 
-/** Revealed source lines, highlighted, with the rendered result below. */
-export function editingDecorations(
-  state: Parameters<typeof revealed>[0],
-  block: RenderBlock & { renderer: BlockRenderer },
-  widget: () => WidgetType,
-): Range<Decoration>[] {
-  const preview = block.renderer.editingPreview;
-  if (!preview) {
-    return [];
-  }
-  const lines: Range<Decoration>[] = [];
-  const last = state.doc.lineAt(block.to).number;
-  for (let n = state.doc.lineAt(block.from).number; n <= last; n++) {
-    lines.push(
-      Decoration.line({ class: preview.sourceClass }).range(
-        state.doc.line(n).from,
-      ),
-    );
-  }
-  lines.push(
-    Decoration.widget({ block: true, side: 1, widget: widget() }).range(
-      block.to,
-    ),
-  );
-  return lines;
-}
-
 export function blockDecoration(
   state: Parameters<typeof revealed>[0],
   block: RenderBlock & { renderer: BlockRenderer },
@@ -289,10 +264,7 @@ export function blockDecoration(
     if (block.renderer.showSource?.(state, block)) {
       return [];
     }
-    if (
-      block.renderer.editing === "reveal" &&
-      revealed(state, block.from, block.to)
-    ) {
+    if (isSourceRevealed(state, block)) {
       return editingDecorations(state, block, () =>
         guarded(state, block, report),
       );
@@ -430,8 +402,7 @@ export function visiblePosition(
     ?.find((block) => block.from <= position && position < block.to);
   if (
     !block ||
-    (block.renderer.editing === "reveal" &&
-      revealed(state, block.from, block.to)) ||
+    isSourceRevealed(state, block) ||
     block.renderer.showSource?.(state, block)
   ) {
     return { position, block: false };
