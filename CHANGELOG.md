@@ -210,6 +210,11 @@
   opened the root's. A click and a preview now look in the same places, in
   the same order (a bare name beside the note, then at the vault root), and
   a click makes a note only when neither has the file (#823).
+- Markdown: a link to a heading of the note it is in (`[jump](#Part)`),
+  inside a hidden note such as `.raw/captured/page.md` that an embed or a
+  preview showed by its path, now previews its heading. It said "Resource
+  not found", because the vault index skips hidden folders and has no
+  entry for the note the link is in (#824).
 
 Fixes for several VS Code windows open at once, each with a test; checked
 with two real windows on one profile.

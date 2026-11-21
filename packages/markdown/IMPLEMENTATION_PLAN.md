@@ -8849,3 +8849,44 @@ checks pass; the unit tests of navigation, resources, link location, the
 open-image intent and rooted links pass (the new ones fail on the old
 source); the full `pnpm check` is recorded with the #824 change that
 follows. Not run: the browser, quality and VS Code suites.
+
+## A fragment-only link in a hidden note names that note (#824; 2026-11-21)
+
+Review finding on #779's disk fallback, an index-only assumption it
+exposed. After a hidden note `.raw/captured/page.md` is loaded by its rooted
+path (`/.raw/captured/page.md`, which the disk fallback finds), a link in it
+to its own heading, `[jump](#Part)`, failed: `load('#Part', source)` sent
+the empty path to the index, whose file table lacks the hidden source
+(`vault/resolve.ts` resolves an empty path only to a listed source, and
+`exclusion.ts` keeps hidden entries out), and the disk fallback declines an
+empty path (a folder is no resource). Result: "Resource not found".
+
+- Rule: a link with no path, only a fragment, names the note it is in.
+  `NoteResources.load` tries the index first (an indexed source answers as
+  before), then `locateSource`, then the disk fallback. `locateSource`
+  returns the source itself when the path is empty, for Markdown links
+  (`#Part`, percent-encoded or not) and wikilinks (`[[#Part]]`, `[[#^id]]`)
+  alike: the note is what the link names whatever the syntax, and no file
+  is found by a name, so a wikilink still resolves a name only through the
+  index.
+- Containment is kept: `load` still requires the source to be a known
+  one (`assertKnown`: a note this panel loaded, or the panel's own, inside
+  the vault), `locateSource` returns nothing when the source no longer
+  exists (so the link is "Resource not found" and remembered missing), and
+  `containedStat` checks the file again by path and through symbolic links,
+  so a note whose real path left the vault since it was loaded is refused.
+- Not changed: a link that names the note (`page.md#Part`, `./page.md#Part`)
+  resolves through the disk fallback as before; an indexed source resolves
+  through the index.
+
+Tests in `src/plugins/resources/note-resources.test.ts` (the first three
+failing before): the two-step hidden load then `#Part`, for Markdown and
+wikilink syntax and with an encoded heading or a block id; the source is
+unknown until it was loaded; a fragment-only link to a note whose real path
+now escapes the vault is refused, and to one that was removed is "Resource
+not found"; controls for `page.md#Part` and `./page.md#Part` from the hidden
+note and for `#Part` in an indexed note. The `resourcesOnDisk` fixture takes
+an index of listed files and a set of escaping URIs.
+
+Checks (this and the #823 change, on the branch): `pnpm check` passes. Not
+run: the browser, quality and VS Code suites.

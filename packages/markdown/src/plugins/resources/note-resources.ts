@@ -5,6 +5,7 @@ import {
   extensionOf,
   folderOf,
   joinVaultPath,
+  splitLinktext,
   splitMarkdownDestination,
   type LinkSyntax,
 } from "../../shared/vault-path";
@@ -74,7 +75,10 @@ export class NoteResources implements Resources {
     }
     const { vault, resourceUrl } = this.options;
     const link = { target, source, syntax };
-    const file = this.locate(link) ?? (await this.locateOnDisk(link));
+    const file =
+      this.locate(link) ??
+      (await this.locateSource(link)) ??
+      (await this.locateOnDisk(link));
     if (!file) {
       this.rememberMissing(link);
       throw new Error("Resource not found");
@@ -153,6 +157,26 @@ export class NoteResources implements Resources {
       vaultPath(vault.root, source),
       syntax,
     );
+  }
+
+  /**
+   * A link with only a fragment (`#Part`, `[[#Part]]`) names the note it is
+   * in. The index answers for a note it lists; a hidden note it never
+   * entered (`/.raw/captured/page.md`, loaded by its rooted path) would
+   * otherwise have no answer, and its links to its own headings said
+   * "Resource not found". The source is a note this panel loaded or showed,
+   * so `assertKnown` has checked it, and `load` still checks the file.
+   */
+  private async locateSource(
+    link: ResourceLink,
+  ): Promise<LinkedFile | undefined> {
+    if (linkPath(link) !== "" || !(await this.exists(link.source))) {
+      return undefined;
+    }
+    return {
+      path: vaultPath(this.options.vault.root, link.source),
+      uri: link.source,
+    };
   }
 
   /**
@@ -236,6 +260,13 @@ export class NoteResources implements Resources {
     const text = (await this.options.host.hostDocuments.open(uri)).getText();
     return text.replace(/\r\n/g, "\n");
   }
+}
+
+/** The path a link names, without its `#subpath`: empty for `#Part`. */
+function linkPath({ target, syntax }: ResourceLink): string {
+  return syntax === "markdown"
+    ? splitMarkdownDestination(target).path
+    : splitLinktext(target).path;
 }
 
 function linkKey({ target, source, syntax }: ResourceLink): string {
