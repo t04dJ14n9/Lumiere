@@ -95,10 +95,11 @@ function readDomSelection(view: EditorView): DomSelection | null {
   const isInContent =
     view.contentDOM.contains(selection.anchorNode) &&
     view.contentDOM.contains(selection.focusNode);
+  const from = isInContent ? domSelectionFrom(view, selection) : undefined;
   return {
     isInContent,
     isCollapsed: selection.isCollapsed,
-    ...(isInContent && { from: domSelectionFrom(view, selection) }),
+    ...(from !== undefined && { from }),
   };
 }
 
