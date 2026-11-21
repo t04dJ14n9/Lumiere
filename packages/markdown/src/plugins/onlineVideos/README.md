@@ -44,8 +44,14 @@ loading 100 ms after it is made (`frame.ts`): the editor renders a block more
 than once while a note opens, and each render drops the frames of the one
 before, so a frame that loaded at once would load, heavily, to be dropped.
 
-The frame starts 400 px tall (`TWEET_DEFAULT_HEIGHT`, shared with Embeds'
-height estimate through `api.ts`), so the block does not jump while it loads.
+The frame starts 400 px tall (`TWEET_DEFAULT_HEIGHT`), so the block does not
+jump while it loads. Embeds learns it by asking `render/claimedHeight` (a bail
+event; see render's `api.ts`) about a link, which this plugin answers for a
+tweet link while it runs and the workspace is trusted: Embeds reserves that
+height, and draws an inline widget of the link again when the answer changes,
+so switching the plugin off or on redraws every tweet link, block or inline
+(an inline widget that compared equal would keep its old DOM, a bare image
+nobody draws).
 The widget posts its height to the page
 (`{"twttr.embed": {method: "twttr.private.resize", params: [{width, height}]}}`);
 `tweet-height.ts` takes it only from a message whose `source` is that frame's
@@ -73,7 +79,6 @@ the widget's origin passes it then and not otherwise.
   (one `message` listener per render pass).
 - `tweet-height.ts`: which messages count as a frame's height, and the clamp.
 - `card.ts`: the Restricted Mode card.
-- `api.ts`: what Embeds may import (`parseTweet`, `TWEET_DEFAULT_HEIGHT`).
 - `onlineVideos.css`: frames and the card, bundled through
   `src/webview/styles/index.css`.
 - `parse.test.ts`, `tweet-embed.test.ts`, `tweet-height.test.ts`,
@@ -87,7 +92,7 @@ the widget's origin passes it then and not otherwise.
 
 Injects `render` (for workspace trust) and `rpc` (Links `open`, for the card's
 button); provides no services; has no host half. Listens to
-`render/postProcess`. Emits no events.
+`render/postProcess` and answers `render/claimedHeight`. Emits no events.
 `lumiere.markdown.plugins.onlineVideos.enabled` (default true) is the only
 setting; switched off, the links fall back to Embeds (a remote image).
 

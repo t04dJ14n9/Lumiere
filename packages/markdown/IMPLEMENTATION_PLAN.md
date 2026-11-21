@@ -8541,6 +8541,33 @@ cleanup, so the second run finds nothing to do). `loadWhenSettled` and
 pass-lifecycle.test.ts`, a small fake DOM and mock timers) fail without the fix
 and pass with it.
 
+Review fixes, round 2 (Gemini review of #842):
+
+- Switching Online Videos off while a note held an inline tweet link
+  (`See ![](https://x.com/jack/status/20) here`, drawn by Embeds' `EmbedInline`)
+  left the widget blank. The stop puts the original `<img>` back, `render/
+  changed` bumps the render revision and the decorations are built again, but
+  CodeMirror keeps the DOM of a widget that `eq` says is unchanged, and Embeds
+  processes an image only in the pass that rendered it, so nothing drew it.
+  (Block widgets were fine: `GuardedWidget` compares the render revision, so a
+  block is drawn again.) The same held in the other direction, switching it on.
+  Embeds now asks a new bail event, `render/claimedHeight(target)`, declared in
+  render's `api.ts`, which Online Videos answers with the frame's starting
+  height for a tweet link in a trusted workspace while it runs. An inline embed
+  records the answer when it is made and `eq` compares it, so the widget built
+  after the switch is a different widget and the link is drawn again (Embeds'
+  own image, or the frame). Only a web address is asked about. Unit tests
+  (`test/unit/embeds/claimed-embeds.test.ts`): switched off and switched on, as
+  the inline widget's `eq` (they fail without the comparison), and a block as
+  the control, through the real block decorations and a `refreshRender`.
+- Embeds reserved a tweet frame's height for every tweet URL, even with the
+  plugin off or the workspace untrusted. It now reserves what is claimed
+  (`embedEstimatedHeight(source, claimedHeight)`) and the card's height
+  otherwise; the cross-plugin `onlineVideos/api.ts` is gone. Unit tests for
+  both, in `estimated-height.test.ts`, `claimed-embeds.test.ts` and
+  `pass-lifecycle.test.ts` (Online Videos answers only for a tweet link, only
+  when trusted).
+
 Checks: format, lint, typecheck, the PDF package's tests and
 `pnpm contributions --check` pass. In `pnpm check`'s one full unit-test run
 five timing tests of the markdown package failed (four `fuzz: ... is linear on

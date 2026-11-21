@@ -5,7 +5,7 @@ import type {} from "../render/api";
 import { linkCard } from "./card";
 import { trackTweetHeights, tweetFrame } from "./frame";
 import { parseTweet } from "./parse";
-import { embedTheme, embedView } from "./tweet-embed";
+import { TWEET_DEFAULT_HEIGHT, embedTheme, embedView } from "./tweet-embed";
 
 interface Mount {
   isTrusted: boolean;
@@ -35,6 +35,11 @@ export const onlineVideosWebview: Plugin = {
     });
     // Runs before embeds, which would otherwise treat the link as an image.
     ctx.on("render/postProcess", (pass) => mountTweets(pass, mount, cleanups));
+    // Tells Embeds which links get a frame (only in a trusted workspace, and
+    // only while this plugin runs) and how tall it starts.
+    ctx.on("render/claimedHeight", (target) =>
+      mount.isTrusted && parseTweet(target) ? TWEET_DEFAULT_HEIGHT : undefined,
+    );
   },
 };
 

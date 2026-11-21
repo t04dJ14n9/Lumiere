@@ -1,6 +1,5 @@
 import { embedsImage } from "../../markdown/images";
 import { mediaKind } from "../../shared/media-kinds";
-import { TWEET_DEFAULT_HEIGHT, parseTweet } from "../onlineVideos/api";
 import { embedsNote } from "./clicks";
 import { writtenHeight, writtenWidth } from "./image-size";
 
@@ -15,8 +14,10 @@ import { writtenHeight, writtenWidth } from "./image-size";
  * Prefer an explicit `|WxH` height; otherwise reserve a stable default so
  * PageDown / click coordinates below the embed stay valid until measure runs.
  *
- * Tweet image links become a frame (Online Videos). Without a dedicated
- * reserve they fall through to CARD_DEFAULT (~64px).
+ * A tweet image link becomes a frame when Online Videos is on and the
+ * workspace is trusted (`render/claimedHeight`); that plugin says how tall it
+ * starts. Otherwise the link is a remote image Embeds draws, and falls through
+ * to CARD_DEFAULT (~64px).
  *
  * Note embeds are worse: the source is one line (`![[Other]]`) while resolved
  * content can be many paragraphs. A modest floor covers first paint; after
@@ -58,7 +59,7 @@ export function clearNoteEmbedHeights(): void {
   measuredNoteHeights.clear();
 }
 
-function embedTarget(source: string): string {
+export function embedTarget(source: string): string {
   return (
     /^!\[\[([^\]|#^]*)/u.exec(source)?.[1] ??
     /^!\[[^\]]*\]\(\s*<?([^)>\s]*)/u.exec(source)?.[1] ??
@@ -66,8 +67,17 @@ function embedTarget(source: string): string {
   ).trim();
 }
 
+/**
+ * The height a plugin says its frame takes in place of a remote link, or
+ * undefined when none draws it (`render/claimedHeight`).
+ */
+export type ClaimedHeight = (target: string) => number | undefined;
+
 /** Reserve embed height from Markdown source before the DOM is measured. */
-export function embedEstimatedHeight(source: string): number {
+export function embedEstimatedHeight(
+  source: string,
+  claimedHeight?: ClaimedHeight,
+): number {
   if (!source) {
     return IMAGE_DEFAULT + CHROME;
   }
@@ -92,10 +102,9 @@ export function embedEstimatedHeight(source: string): number {
     const cached = measuredNoteHeights.get(source);
     return cached === undefined ? floor : Math.max(floor, cached);
   }
-  // Online Videos replaces a tweet's image URL with its frame; an untrusted
-  // workspace's link card is shorter, and measure settles it.
-  if (parseTweet(embedTarget(source))) {
-    return TWEET_DEFAULT_HEIGHT + CHROME;
+  const claimed = claimedHeight?.(embedTarget(source));
+  if (claimed !== undefined) {
+    return claimed + CHROME;
   }
   if (/\.base$/i.test(embedTarget(source))) {
     return BASE_DEFAULT + CHROME;

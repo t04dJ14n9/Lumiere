@@ -7,7 +7,9 @@ import type {} from "../render/api";
 import { MarkdownBlock } from "../../webview/ui/markdown-widget";
 import {
   embedEstimatedHeight,
+  embedTarget,
   rememberNoteEmbedHeight,
+  type ClaimedHeight,
 } from "./estimated-height";
 import type { RenderBlock } from "../livePreview/api";
 import type { EditorState } from "@codemirror/state";
@@ -30,6 +32,7 @@ import { decorateImage } from "./image-reveal";
 import { IMAGE_AFTER_SOURCE } from "./image-anchor";
 import type { RenderService } from "../render/api";
 import type { InlineClick } from "../../webview/ui/inline-widget";
+import type { BlockEditing } from "../../webview/ui/markdown-widget";
 import { writtenHeight } from "./image-size";
 export const embedsWebview: Plugin = {
   name: "embeds",
@@ -100,6 +103,14 @@ function unwatchNoteEmbed(dom: HTMLElement): void {
 
 /** MarkdownBlock with a height reserve so off-viewport remounts stay tall. */
 class EmbedBlock extends MarkdownBlock {
+  constructor(
+    block: RenderBlock,
+    render: RenderService,
+    editing: BlockEditing,
+    private readonly claimedHeight: ClaimedHeight,
+  ) {
+    super(block, render, editing);
+  }
   override toDOM(view: EditorView): HTMLElement {
     const dom = super.toDOM(view);
     watchNoteEmbed(dom, this.block.source);
@@ -110,13 +121,30 @@ class EmbedBlock extends MarkdownBlock {
     super.destroy(dom);
   }
   override get estimatedHeight(): number {
-    return embedEstimatedHeight(this.block.source);
+    return embedEstimatedHeight(this.block.source, this.claimedHeight);
   }
 }
 
+/**
+ * The height another plugin's frame takes in a link's place, if one claims it
+ * now (`render/claimedHeight`). Only a web address is asked about.
+ */
+function claimedHeightOf(ctx: Context): ClaimedHeight {
+  return (target) =>
+    /^https?:/i.test(target)
+      ? ctx.bail("render/claimedHeight", target)
+      : undefined;
+}
+
 function registerEmbedRenderers(ctx: Context): void {
+  const claimedHeight = claimedHeightOf(ctx);
   const widget = (block: RenderBlock) =>
-    new EmbedBlock(block, ctx.render, embedEditing(block.source));
+    new EmbedBlock(
+      block,
+      ctx.render,
+      embedEditing(block.source),
+      claimedHeight,
+    );
   ctx.effect(() =>
     ctx.livePreview.block({
       kind: "embed",
@@ -154,12 +182,11 @@ function registerEmbedRenderers(ctx: Context): void {
       decorate(node, cx) {
         const source = cx.state.sliceDoc(node.from, node.to);
         const image = (isAfterSource = false) =>
-          new EmbedInline(
-            source,
-            ctx.render,
-            inlineEmbedClick(source),
+          new EmbedInline(source, ctx.render, {
+            click: inlineEmbedClick(source),
             isAfterSource,
-          );
+            claimedHeight,
+          });
         if (embedsImage(source)) {
           decorateImage(cx, node, {
             image,
@@ -202,24 +229,39 @@ function isInRevealedImageBlock(
  * overwrite the reserve with a short unresolved placeholder (~one line).
  */
 class EmbedInline extends MarkdownInline {
+  /**
+   * The frame height another plugin claims for this link when the widget was
+   * made (`render/claimedHeight`). A widget that compares equal keeps its DOM,
+   * so a link whose claim changed (Online Videos switched on or off) must not
+   * compare equal, or it would keep the frame, or the bare image left in its
+   * place, instead of being drawn again.
+   */
+  private readonly claimedHeight: number | undefined;
+  /** Drawn just after its shown source (`image-anchor.ts`). */
+  private readonly isAfterSource: boolean;
   constructor(
     source: string,
     render: RenderService,
-    click: InlineClick,
-    /** Drawn just after its shown source (`image-anchor.ts`). */
-    private readonly isAfterSource: boolean,
+    options: {
+      click: InlineClick;
+      isAfterSource: boolean;
+      claimedHeight: ClaimedHeight;
+    },
   ) {
-    super(source, render, click);
+    super(source, render, options.click);
+    this.isAfterSource = options.isAfterSource;
+    this.claimedHeight = options.claimedHeight(embedTarget(source));
   }
   override eq(other: MarkdownInline): boolean {
     return (
       other instanceof EmbedInline &&
       other.isAfterSource === this.isAfterSource &&
+      other.claimedHeight === this.claimedHeight &&
       super.eq(other)
     );
   }
   override get estimatedHeight(): number {
-    return embedEstimatedHeight(this.source);
+    return embedEstimatedHeight(this.source, () => this.claimedHeight);
   }
   /**
    * Explicit `|WxH` missing images paint as short unresolved text. A bare

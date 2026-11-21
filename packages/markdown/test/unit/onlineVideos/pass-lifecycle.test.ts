@@ -89,11 +89,11 @@ after(() => {
 const TWEET = "https://x.com/jack/status/20";
 
 /** The plugin applied to a stand-in context, which keeps what it registers. */
-function startPlugin() {
+function startPlugin(options: { isTrusted?: boolean } = {}) {
   const stops: (() => void)[] = [];
-  const handlers: ((pass: unknown) => void)[] = [];
+  const handlers = new Map<string, (...args: never[]) => unknown>();
   const ctx = {
-    render: { trusted: true },
+    render: { trusted: options.isTrusted ?? true },
     rpc: { call: async () => true },
     logger: { warn() {} },
     effect(register: () => void | (() => void)) {
@@ -102,14 +102,16 @@ function startPlugin() {
         stops.push(stop);
       }
     },
-    on(_event: string, handler: (pass: unknown) => void) {
-      handlers.push(handler);
+    on(event: string, handler: (...args: never[]) => unknown) {
+      handlers.set(event, handler);
     },
   };
   void onlineVideosWebview.apply(ctx as never, undefined as never);
-  assert.equal(handlers.length, 1);
   return {
-    postProcess: handlers[0]!,
+    postProcess: handlers.get("render/postProcess") as (pass: unknown) => void,
+    claimedHeight: handlers.get("render/claimedHeight") as (
+      target: string,
+    ) => number | undefined,
     stop: () => stops.forEach((stop) => stop()),
   };
 }
@@ -224,4 +226,24 @@ test("a live signal does start the timer and the listener, and aborting ends bot
   assert.equal(listeners.length, 0);
   mock.timers.tick(1000);
   assert.equal((frame as unknown as FakeElement).src, undefined);
+});
+
+test("it claims a tweet link's frame height for Embeds, in a trusted workspace only", () => {
+  const trusted = startPlugin();
+  assert.equal(trusted.claimedHeight(TWEET), 400);
+  assert.equal(
+    trusted.claimedHeight("https://twitter.com/jack/status/20"),
+    400,
+  );
+  for (const target of [
+    "https://www.youtube.com/watch?v=dQw4w9WgXcQ",
+    "https://example.com/page",
+    "https://x.com/jack",
+    "photo.png",
+    "",
+  ]) {
+    assert.equal(trusted.claimedHeight(target), undefined, target);
+  }
+  const untrusted = startPlugin({ isTrusted: false });
+  assert.equal(untrusted.claimedHeight(TWEET), undefined);
 });
