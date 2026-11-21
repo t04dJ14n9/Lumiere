@@ -7445,3 +7445,65 @@ the search pane (#792). The others are decided here:
 Documentation only: CAPABILITIES, DESIGN §1, the embeds, footnotes,
 pagePreview and quickSwitcher READMEs, and two PARITY rows ("not observed
 running").
+
+## Display math keeps its formula typeset while edited (#698 item 23; 2026-11-21)
+
+Owner decision (2026-11-21): display math follows Obsidian 1.15.0, reversing
+#269 (2026-10-22), whose source-only reveal answered Host GUI findings
+BH-009 and BH-004 (the stacked formula read as a duplicate). The rule is the
+one the static read above records: while the editor has focus and a
+selection touches a `$$…$$` span, the whole source shows and the formula is
+typeset again just after the closing `$$`, as a block below it when the
+opening `$$` starts its line and the closing one ends its line, inline after
+the `$$` otherwise; without focus it stays rendered; an unclosed `$$` and
+inline `$…$` get no preview.
+
+- Focus: Live Preview keeps the editor's focus in a state field
+  (`livePreview/editor-focus.ts`), set by CodeMirror's focus-change
+  transactions and once when installed into a focused editor
+  (`editor-focus-tracking.ts`), since block decorations are a state field.
+  A block renderer asks for `revealsOnlyWhileFocused`; `isSourceRevealed`
+  (`revealed-block.ts`) applies it to the block decorations and to every
+  query that asks whether a block shows its source (visible position,
+  source visibility, revealed blocks for motion). The find bar's match
+  reveals a formula while the find field has the focus, as Obsidian's
+  search highlight does. A focus change is not "metadata": it redraws only
+  the blocks the selection touches (`invalidation.ts`). A state with no
+  focus field (unit tests) counts as focused, so other reveal tests are
+  unchanged.
+- Preview: math sets `editingPreview` again (the hook #269 left in place),
+  with `isBlock` naming the placement (`math/editing-preview.ts`). The
+  inline placement (a `$$` formula in a paragraph, or one whose closing line
+  carries text) is drawn by math's inline renderer through a new
+  `InlineContext.widgetAfter`; a click on it selects the formula before it,
+  without its `$$`. The preview is a new widget whenever the TeX changes, so
+  it is typeset again as the formula is edited.
+- Differences, documented in the math README, rule 6 and `docs/PARITY.md`:
+  `$$` after quote markers count as starting their line (Lumiere renders
+  quoted display math as a block, so its preview is a block too; Obsidian
+  renders both inline in the quote); a quoted multi-line formula whose
+  closing line carries text gets no inline preview (its click could not map
+  back); `$…$` keeps revealing without focus.
+
+Tests: the BH-009 unit test in `test/unit/livePreview/reveal-plugins.test.ts`
+now pins the preview after the closing `$$` at every caret position while
+focused, the rendered block without focus and the find-bar reveal; a second
+test pins no block preview for text after the closing `$$` or an unclosed
+`$$`. New: `test/unit/math/editing-preview.test.ts` (placement, focus,
+inline preview and its click), a focus case in
+`src/plugins/livePreview/invalidation.test.ts` (selection-only invalidation;
+incremental decorations equal a full rebuild over random caret moves and
+focus changes; it fails without the focus check in `blockDecorations`), and
+an inline-placement case in `core.test.ts`. Browser specs that pinned
+source-only, changed with the owner's approval to the pre-#269 assertions:
+`editing.spec.ts` (preview below the source, now also typeset again after
+typing), `keyboard-widget-input.spec.ts` (one and two clicks, the second on
+the preview), `math-vim-click.spec.ts` and `stable-blocks.spec.ts` (the
+preview keeps its height with the source above it).
+
+Checks: markdown unit tests, typecheck (repository), eslint and Prettier on
+the changed files; the browser specs editing, keyboard-widget-input,
+math-vim-click, stable-blocks, selection-inline and math-remount-height
+(64 passed). The full browser and quality suites and `pnpm test:vscode` were
+not run here (CI runs the first two; the change touches no editor
+integration).
