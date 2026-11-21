@@ -1476,7 +1476,9 @@ and `markdown.previewScripts`. Lumiere v2 adds:
 
 ## 19. Security
 
-- CSP: `default-src 'none'`; scripts by nonce and `webview.cspSource`; styles
+- CSP: `default-src 'none'`; scripts by nonce and `webview.cspSource` (by
+  nonce only where the host asks, `PanelShell.scriptsByNonceOnly`: host-node,
+  whose page shares its origin with a vault's files and its API); styles
   from `cspSource` plus inline style attributes (needed by CodeMirror);
   images from `cspSource`, `https:`, `data:`, `blob:`; media from `cspSource`,
   `https:` and `blob:`; `frame-src https:`; fonts from `cspSource` and

@@ -82,6 +82,19 @@ test("a page gets the editor's HTML, and frames sent before it connects wait for
   assert.deepEqual(received, [{ from: "page" }]);
 });
 
+test("a panel's shell runs scripts by nonce only when its URLs say so", async (t) => {
+  const { uri, hub, shells } = await setup(t);
+  await hub.open({ uri, urls });
+  await hub.open({
+    uri,
+    urls: () => ({ ...urls(), scriptsByNonceOnly: true }),
+  });
+  assert.equal(shells[0]!.scriptsByNonceOnly, false);
+  assert.equal(shells[1]!.scriptsByNonceOnly, true);
+  // No Restricted Mode outside VS Code: remote images and frames show.
+  assert.equal(shells[1]!.trusted, true);
+});
+
 test("focus makes a panel active, and its questions are answered by id", async (t) => {
   const { uri, hub, shells } = await setup(t);
   const { id } = await hub.open({ uri, urls });

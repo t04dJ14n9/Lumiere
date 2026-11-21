@@ -48,6 +48,8 @@ export function awaitReconnect(expire: () => void): () => void {
 export interface PanelUrls {
   /** `'self'` plus the socket's origin, for the page's content security policy. */
   readonly cspSource: string;
+  /** The page runs scripts by its nonce only (`PanelShell.scriptsByNonceOnly`). */
+  readonly scriptsByNonceOnly?: boolean;
   asset(relative: string): string;
   resource(uri: string): string;
 }
@@ -211,6 +213,12 @@ export class LivePanel {
       document: this.document,
       transport,
       cspSource: urls.cspSource,
+      scriptsByNonceOnly: urls.scriptsByNonceOnly === true,
+      // Outside VS Code there is no Restricted Mode (docs/HOSTS_PLAN.md,
+      // section 4): remote images, media and https: frames show. None of
+      // them runs a note's script here: script-src is the nonce's, a frame
+      // runs on its own site's origin (render/security.ts sandboxes it), and
+      // a vault's file is sandboxed (vault-file-headers.ts).
       trusted: true,
       active: () => this.isActive(this),
       reveal: () => {},

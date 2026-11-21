@@ -11,6 +11,7 @@ import * as path from "node:path";
 import { Readable } from "node:stream";
 import { pathToFileURL } from "node:url";
 import { WebSocket } from "ws";
+import type { PanelUrls } from "../../src/host/panel";
 import { BASE, createEditorRoutes, SOCKET_PATH } from "../../src/host/routes";
 import type { LumiereHost } from "../../src/host/start";
 import { TreeHub } from "../../src/host/trees";
@@ -209,10 +210,12 @@ async function serveEditorPages(t: {
   const roots = new Set<string>();
   const added: string[] = [];
   const opened: string[] = [];
+  const pageUrls: PanelUrls[] = [];
   const host = {
     panels: {
-      open: async () => {
+      open: async (request: { urls(panelId: string): PanelUrls }) => {
         opened.push("p1");
+        pageUrls.push(request.urls("p1"));
         return {
           id: "p1",
           html: '<!doctype html><html><head><meta charset="UTF-8"></head><body><script type="module" nonce="n" src="/e.js"></script></body></html>',
@@ -256,7 +259,7 @@ async function serveEditorPages(t: {
     ).status;
   const register = (folder: string) =>
     host.addRoot(pathToFileURL(folder).toString());
-  return { host, added, opened, status, register };
+  return { host, added, opened, pageUrls, status, register };
 }
 
 /** Real notes under a scratch folder, which is removed when the test ends. */
@@ -290,6 +293,17 @@ test("an editor page opens from a workspace the embedder registered, and registe
   );
   assert.deepEqual(opened, ["p1", "p1"]);
   assert.deepEqual(added, [pathToFileURL(at("vault")).toString()]);
+});
+
+test("an editor page runs scripts by its nonce only, and reaches its socket", async (t) => {
+  // 'self' here is the embedder's origin, which also serves a vault's files.
+  const { at } = await notes(t, ["vault/Note.md"]);
+  const { pageUrls, status, register } = await serveEditorPages(t);
+  register(at("vault"));
+  assert.equal(await status(at("vault", "Note.md"), at("vault")), 200);
+  const [urls] = pageUrls;
+  assert.equal(urls?.scriptsByNonceOnly, true);
+  assert.match(urls?.cspSource ?? "", /ws:\/\/127\.0\.0\.1:\d+/);
 });
 
 test("an editor page cannot make the host trust a folder it names", async (t) => {
