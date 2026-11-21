@@ -8,7 +8,10 @@ commands: emphasis, code, comments, headings, lists, quotes, links and line move
 Inline toggling uses the shared dialect to locate enclosing syntax at the caret;
 otherwise it wraps the word or selection, or removes selected delimiters. As
 in Obsidian 1.14, a selection anywhere inside a span unwraps the whole span,
-and one over or around spans merges them into one (`spans.ts`).
+and one over or around spans merges them into one (`spans.ts`). As in
+Obsidian 1.15, a selection is wrapped line by line after each line's quote,
+list, task and heading markers, the spaces at its ends left outside, and a
+table, code or math line it runs past is skipped (`line-parts.ts`).
 Clear Formatting strips the syntax markers of inline, image, reference,
 autolink and link-definition forms, keeping label, URL and reference text
 (`[l](u)` becomes `lu`, as in Obsidian); escaped literals, code text, bare URLs,
@@ -57,6 +60,7 @@ Insert (link), where host-node labels each by its short title (Bold).
 - `format-keys.test.ts`: Mod+B/I mapping and native-field skip.
 - `inline.ts`: inline clearing, caret/word wrapping and selection toggling.
 - `spans.ts`: the formatted spans around a selection.
+- `line-parts.ts`: the part of each selected line an inline format wraps.
 - `highlight-colour.ts`: the coloured highlight commands.
 - `highlight-suggest.ts`: the colour list after `==`.
 - `lines.ts`: heading/list/quote edits and link insertion.
@@ -74,6 +78,10 @@ through the shared `src/markdown/table-cell.ts`.
 Insert Link and Toggle Comment use Mod+B, Mod+I, Mod+K and Mod+/.
 
 ## Limits and differences from Obsidian
+
+After an inline format the selection ends on the formatted text; Obsidian's
+keeps a selected leading marker (`‹- **item›**`). Toggle Comment wraps the
+selection as it is, markers and spaces included, as Obsidian's does.
 
 After a highlight colour command the selection stays on the same text;
 Obsidian 1.14 sometimes leaves it elsewhere, and with a selection running past

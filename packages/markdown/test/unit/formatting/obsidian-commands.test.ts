@@ -81,6 +81,27 @@ test("bold and the other markers wrap each selected line on its own, and unwrap 
   assert.equal(wrap("‹**one**\n**two**›", "`"), "`‹**one**`\n`**two**›`");
 });
 
+// Read from Obsidian 1.15.0's toggleMarkdownFormatting (not measured): the
+// line's quote, list, task and heading markers and the selection's edge
+// spaces stay outside the markers; table, code and math lines are skipped.
+// Obsidian's selection keeps a selected leading marker; Lumiere's ends on
+// the formatted text.
+test("inline formats wrap a line's text after its markers, edge spaces outside", () => {
+  assert.equal(wrap("‹- item›", "**"), "- **‹item›**");
+  assert.equal(wrap("‹ hello ›", "**"), " **‹hello›** ");
+  assert.equal(wrap("‹# Title›", "*"), "# *‹Title›*");
+  assert.equal(wrap("‹> quote›", "~~"), "> ~~‹quote›~~");
+  assert.equal(wrap("‹- [ ] task›", "`"), "- [ ] `‹task›`");
+  assert.equal(wrap("‹> 1. a  \n> 2. b›", "=="), "> 1. ==‹a==  \n> 2. ==b›==");
+  assert.equal(wrap("‹- **item**›", "**"), "- ‹item›");
+  assert.equal(wrap("‹- a\n- b›", "**"), "- **‹a**\n- **b›**");
+  assert.equal(
+    wrap("‹text\n```\ncode\n```›", "**"),
+    "**‹text›**\n```\ncode\n```",
+  );
+  assert.equal(wrap("‹- ›", "**"), "‹- ›");
+});
+
 test("inline math wraps the word at the caret, as bold does", () => {
   assert.equal(wrap("te|xt", "$"), "$te|xt$");
   assert.equal(wrap("a |b", "$"), "a $|b$");

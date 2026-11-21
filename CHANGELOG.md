@@ -96,6 +96,11 @@
   Mod+Shift+Enter creates it in a new tab. They apply only while the
   switcher is open. With nothing typed, it also lists the images, PDFs and
   other attachments recently opened from it, as Obsidian does (#787).
+- Markdown: bold, italics, strikethrough, highlight (and its colours), inline
+  code and inline math wrap a selected line's text after its list, quote,
+  task or heading marker, and leave the spaces at the selection's ends
+  outside, as Obsidian 1.15 does; a selection running over a table, code
+  block or math block skips its lines (#787).
 
 Fixes for several VS Code windows open at once, each with a test; checked
 with two real windows on one profile.

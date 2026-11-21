@@ -60,6 +60,13 @@ test("a colour wraps the word or selection, its emoji after the opening ==", () 
   );
 });
 
+test("a colour skips the line's markers and the selection's edge spaces, as Obsidian 1.15 reads", () => {
+  const red = toggleHighlightColour("red");
+  assert.equal(run(red, "- item", 0, 6).text, "- ==🔴item==");
+  assert.equal(run(red, "> # a b ", 0, 8).text, "> # ==🔴a b== ");
+  assert.equal(run(red, "- a\n- b", 0, 7).text, "- ==🔴a==\n- ==🔴b==");
+});
+
 test("a highlight takes another colour, and loses its own", () => {
   const cases: [string, number, number, string, string][] = [
     ["one ==two== three", 7, 7, "blue", "one ==🔵two== three"],

@@ -7759,3 +7759,21 @@ command run), `ranking.test.ts` (recent attachments listed, others not),
 (the keys are bound only in the open switcher; no note key on Mod+Enter);
 unit tests, typecheck, ESLint and Prettier pass. Not run: `test:browser`,
 `test:quality`, `test:vscode`.
+
+## Editing commands follow Obsidian 1.15.0 (#787), 2026-11-21
+
+Items of #787 the owner approved fixing (2026-11-21), each read in Obsidian
+1.15.0's shipped code (behaviour only, nothing copied) and not observed
+running. One commit per item.
+
+- **Inline formats skip line markers and edge spaces.** Obsidian's
+  `toggleMarkdownFormatting` and `toggleHighlight` trim the selection's edge
+  spaces, then wrap each line from after its list indent, quote, list, task
+  or heading marker, trimmed, and skip a table, code or math line the
+  selection runs past. `formattableParts` (formatting/line-parts.ts) picks
+  those parts for bold, italics, strikethrough, highlight, inline code,
+  inline math and the highlight colours. Toggle Comment keeps wrapping the
+  selection as it is: 1.15.0's `toggleComment` neither trims nor skips
+  markers, so #787's "comment" was not a difference. Left: the selection
+  ends on the formatted text, where Obsidian's keeps a selected leading
+  marker. Unit tests in obsidian-commands and highlight-colours.

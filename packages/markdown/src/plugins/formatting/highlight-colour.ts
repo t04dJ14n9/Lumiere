@@ -10,6 +10,7 @@ import {
   HIGHLIGHT_COLOURS,
   type HighlightColour,
 } from "../../markdown/dialect/highlight";
+import { formattableParts } from "./line-parts";
 import { spanContent, spansIn, type Span } from "./spans";
 
 /** A highlight's colour, `"default"` for a plain one. */
@@ -23,7 +24,8 @@ const opening = (tint: Tint) =>
  * them (measured): the selected text, or the word at the caret, takes the
  * colour; a highlight it is in keeps its colour around it, split at the
  * selection, and highlights it spans merge. Toggling a highlight's own
- * colour removes it. Each line of a selection is its own.
+ * colour removes it. Each line of a selection is its own, its markers and
+ * the spaces at its ends left outside (`formattableParts`).
  */
 export function toggleHighlightColour(colour: HighlightColour): Command {
   return (view) => {
@@ -46,7 +48,7 @@ function colourRange(
   if (range.empty) {
     return colourAtCaret(state, range.from, colour);
   }
-  const parts = lineParts(state, range).map((part) =>
+  const parts = formattableParts(state, range.from, range.to).map((part) =>
     colourPart(state, part, colour),
   );
   if (!parts.length) {
@@ -97,30 +99,6 @@ function colourAtCaret(
     changes: { from: word.from, to: word.to, insert },
     range: EditorSelection.cursor(at + opening(colour).length),
   };
-}
-
-/** Each line's selected part, without its spaces at either end. */
-function lineParts(
-  state: EditorState,
-  range: SelectionRange,
-): { from: number; to: number }[] {
-  const parts: { from: number; to: number }[] = [];
-  const last = state.doc.lineAt(range.to).number;
-  for (let n = state.doc.lineAt(range.from).number; n <= last; n++) {
-    const line = state.doc.line(n);
-    let from = Math.max(line.from, range.from);
-    let to = Math.min(line.to, range.to);
-    while (from < to && /\s/u.test(state.sliceDoc(from, from + 1))) {
-      from++;
-    }
-    while (to > from && /\s/u.test(state.sliceDoc(to - 1, to))) {
-      to--;
-    }
-    if (to > from) {
-      parts.push({ from, to });
-    }
-  }
-  return parts;
 }
 
 /** A line's edit, and where its selected text is once the edit is made. */
