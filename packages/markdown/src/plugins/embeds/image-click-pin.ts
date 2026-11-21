@@ -15,6 +15,10 @@ interface Range {
  * double-click (the inspector) could land on the source instead. The note
  * scrolls by that height instead, when it can. An image in a line of text
  * moves along its line and is left alone.
+ *
+ * The pin never overrides the reader: it ends at the first drawing of the
+ * image after the release, moved or not, and at once on any scroll the
+ * reader starts (wheel, touch, a key, the scrollbar).
  */
 export class ClickedImagePin {
   private pin:
@@ -25,6 +29,35 @@ export class ClickedImagePin {
     private readonly imagesOf: (range: Range) => HTMLImageElement[],
     private readonly now: () => number = Date.now,
   ) {}
+
+  /**
+   * Ends the pin on the reader's own scrolling input in the editor; returns
+   * what removes the listeners. CodeMirror's and the pin's own scrolling
+   * fire `scroll` too, so that event cannot tell the reader's apart.
+   */
+  attach(): () => void {
+    const events = new AbortController();
+    const { scrollDOM, dom } = this.view;
+    const end = () => {
+      this.pin = undefined;
+    };
+    const options = { passive: true, signal: events.signal };
+    for (const type of ["wheel", "touchstart"]) {
+      scrollDOM.addEventListener(type, end, options);
+    }
+    // A press on the scroller itself is its scrollbar.
+    scrollDOM.addEventListener(
+      "pointerdown",
+      (event) => {
+        if (event.target === scrollDOM) {
+          end();
+        }
+      },
+      options,
+    );
+    dom.addEventListener("keydown", end, { ...options, capture: true });
+    return () => events.abort();
+  }
 
   /** Remembers where a pressed image is drawn, if it is a block. */
   press(image: HTMLImageElement, range: Range): void {
@@ -42,7 +75,8 @@ export class ClickedImagePin {
    * its source shows. That may be a little after the release: the image
    * drawn below the source may come in a later frame, once it is rendered
    * (see `redrawn`). So the pin lasts a short while after the release, and
-   * ends with the first move it undoes, or when the reader moves on.
+   * ends with the image's first drawing after it, when the reader scrolls,
+   * or when the reader moves on.
    */
   update(update: ViewUpdate): void {
     const pin = this.pin;
@@ -81,15 +115,16 @@ export class ClickedImagePin {
       key: this,
       read: () => this.imagesOf(pin.range)[0]?.getBoundingClientRect().top,
       write: (top) => {
-        if (
-          this.pin !== pin ||
-          top === undefined ||
-          Math.abs(top - pin.top) < 1
-        ) {
+        // Not drawn yet: its drawing below the source may come later.
+        if (this.pin !== pin || top === undefined) {
           return;
         }
+        // Drawn: whether it moved or not, this is the release's doing, the
+        // only move to undo; later ones are the reader's.
         this.pin = undefined;
-        view.scrollDOM.scrollTop += (top - pin.top) / view.scaleY;
+        if (Math.abs(top - pin.top) >= 1) {
+          view.scrollDOM.scrollTop += (top - pin.top) / view.scaleY;
+        }
       },
     });
   }

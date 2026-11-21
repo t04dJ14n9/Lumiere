@@ -70,7 +70,7 @@ it go (`image-selection.ts`, `image-size.ts`). While selected, the caret is hidd
 - `image-reveal.ts`: when an image's source shows, and the image drawn in its place or just after it.
 - `image-selection.ts`: selecting an image by a click, and its keys.
 - `image-anchor.ts`: which embed a rendered image shows, from where CodeMirror reports it (a block over its whole line or below it, an image in place of its source or after it, abutting images told apart).
-- `image-click-pin.ts`: scrolls a clicked block image back under the pointer once its source shows above it.
+- `image-click-pin.ts`: scrolls a clicked block image back under the pointer once its source shows above it; never against the reader: it ends at the image's first drawing after the release and on the reader's wheel, touch, key or scrollbar press.
 - `image-double-press.ts`: a double-click whose second press misses the image the first selected (it moved) opens that image's inspector.
 - `image-size.ts`: an image's written size and the resize steps.
 - `estimated-height.ts`: CodeMirror height-map reserve for off-viewport remounts (inline embeds use `persistent` decorations so the reserve stays outside the viewport).

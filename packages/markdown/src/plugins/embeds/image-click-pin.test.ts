@@ -20,15 +20,20 @@ function image(top: { value: number }, inLine: boolean) {
 function setup(inLine: boolean) {
   const top = { value: 300 };
   const drawn = image(top, inLine);
+  /** Whether the image is in the editor's DOM (not between two drawings). */
+  const isDrawn = { value: true };
   const measures: { read(): unknown; write(value: unknown): void }[] = [];
   const view = {
     scaleY: 1,
-    scrollDOM: { scrollTop: 1000 },
+    dom: new EventTarget(),
+    scrollDOM: Object.assign(new EventTarget(), { scrollTop: 1000 }),
     requestMeasure(request: (typeof measures)[number]) {
       measures.push(request);
     },
   };
-  const pin = new ClickedImagePin(view as unknown as EditorView, () => [drawn]);
+  const pin = new ClickedImagePin(view as unknown as EditorView, () =>
+    isDrawn.value ? [drawn] : [],
+  );
   const base = EditorState.create({ doc: "x", extensions: [pointerSelection] });
   const frozen = base.update({
     effects: setPointerSelection(EditorSelection.single(0)),
@@ -40,7 +45,7 @@ function setup(inLine: boolean) {
       request.write(request.read());
     }
   };
-  return { top, drawn, view, pin, base, frozen, update, measure };
+  return { top, drawn, isDrawn, view, pin, base, frozen, update, measure };
 }
 
 test("a clicked image alone on its line is scrolled back under the pointer once its source shows", () => {
@@ -112,14 +117,17 @@ test("an edit while the button is down moves the pinned image's range with it", 
 });
 
 test("an image that moves a moment after the release, its drawing below the source rendered in a later frame, is still scrolled back", () => {
-  const { top, drawn, view, pin, base, frozen, update, measure } = setup(false);
+  const { top, drawn, isDrawn, view, pin, base, frozen, update, measure } =
+    setup(false);
   pin.press(drawn, { from: 0, to: 1 });
   pin.update(update(frozen));
   // Released, the image below the source not drawn yet: nothing moves ...
+  isDrawn.value = false;
   pin.update(update(base));
   measure();
   assert.equal(view.scrollDOM.scrollTop, 1000);
   // ... then it is drawn, below the source.
+  isDrawn.value = true;
   top.value = 324;
   pin.redrawn();
   measure();
@@ -187,4 +195,84 @@ test("the pin ends when the reader moves on, edits, or after a short while", () 
     }
     assert.equal(view.scrollDOM.scrollTop, 1000, name);
   }
+});
+
+test("a release that leaves the image where it was ends the pin, so a later scroll of the reader's stands", () => {
+  // An image already selected, its source already shown: nothing to undo.
+  const { top, drawn, view, pin, base, frozen, update, measure } = setup(false);
+  pin.press(drawn, { from: 0, to: 1 });
+  pin.update(update(frozen));
+  pin.update(update(base));
+  measure();
+  assert.equal(view.scrollDOM.scrollTop, 1000);
+  // The reader scrolls 80 px; CodeMirror draws the content again.
+  view.scrollDOM.scrollTop = 1080;
+  top.value = 220;
+  pin.update(update(base));
+  pin.redrawn();
+  measure();
+  assert.equal(view.scrollDOM.scrollTop, 1080);
+});
+
+test("the reader's wheel, touch, key or scrollbar press ends a pin still waiting for the image", () => {
+  for (const [name, input] of [
+    [
+      "wheel",
+      (scroller: EventTarget) => scroller.dispatchEvent(new Event("wheel")),
+    ],
+    [
+      "touch",
+      (scroller: EventTarget) =>
+        scroller.dispatchEvent(new Event("touchstart")),
+    ],
+    [
+      "scrollbar",
+      (scroller: EventTarget) =>
+        scroller.dispatchEvent(new Event("pointerdown")),
+    ],
+    [
+      "key",
+      (_scroller: EventTarget, dom: EventTarget) =>
+        dom.dispatchEvent(new Event("keydown")),
+    ],
+  ] as const) {
+    const { top, drawn, isDrawn, view, pin, base, frozen, update, measure } =
+      setup(false);
+    const detach = pin.attach();
+    pin.press(drawn, { from: 0, to: 1 });
+    pin.update(update(frozen));
+    isDrawn.value = false;
+    pin.update(update(base));
+    measure();
+    input(view.scrollDOM, view.dom);
+    // The reader's scroll moved the image, drawn now.
+    view.scrollDOM.scrollTop = 1080;
+    isDrawn.value = true;
+    top.value = 220;
+    pin.redrawn();
+    measure();
+    assert.equal(view.scrollDOM.scrollTop, 1080, name);
+    detach();
+  }
+});
+
+test("a press inside the note's content is not a scrollbar press", () => {
+  const { top, drawn, isDrawn, view, pin, base, frozen, update, measure } =
+    setup(false);
+  pin.attach();
+  pin.press(drawn, { from: 0, to: 1 });
+  pin.update(update(frozen));
+  isDrawn.value = false;
+  pin.update(update(base));
+  measure();
+  // A press bubbling up from the content (a target below the scroller).
+  const content = new EventTarget();
+  const press = new Event("pointerdown");
+  Object.defineProperty(press, "target", { value: content });
+  view.scrollDOM.dispatchEvent(press);
+  isDrawn.value = true;
+  top.value = 324;
+  pin.redrawn();
+  measure();
+  assert.equal(view.scrollDOM.scrollTop, 1024);
 });

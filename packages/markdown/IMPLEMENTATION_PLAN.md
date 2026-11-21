@@ -8140,3 +8140,20 @@ note-embed-remount-height, embed-under-tall-props, vim-caret-geometry
 math-vim-click and tables-vim (37 + 57, with the specs above). Not run:
 the full browser suite, `test:quality`, `test:vscode`.
 
+Follow-up (owner-approved review nit, after #806 merged): the click pin
+could fight the reader's scroll. When a release left the image where it was
+(an image already selected, its source already shown), the pin stayed for
+its 400 ms, and a scroll by the reader within them, followed by a redraw,
+was undone. The pin now ends at the image's first drawing after the
+release, moved or not (only a release that has not drawn the image yet
+keeps it waiting), and at once on the reader's own scrolling input in the
+editor: wheel, touch, any key, or a press on the scroller itself (its
+scrollbar). `scroll` events are not used: CodeMirror's anchoring and the
+pin's own correction fire them too. Tests in
+`src/plugins/embeds/image-click-pin.test.ts` (three new, failing before;
+one existing test now models "not drawn yet" as no image, rather than an
+unmoved one). Checks: `pnpm check`; browser specs image-selection-chrome
+and image-remount-height pass; a throwaway probe confirmed a clicked block
+image still stays under the pointer and a double-click near its top edge
+opens the inspector.
+
