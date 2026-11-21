@@ -102,9 +102,9 @@ export function enterTable(view: EditorView, direction: -1 | 1): boolean {
   }
   for (const root of view.dom.querySelectorAll<HTMLElement>(".hybrid-table")) {
     const controller = controllers.get(root);
+    // In a read-only note no cell opens: the caret moves on past the table.
     if (controller && entersTable(view.state, controller.bounds(), direction)) {
-      controller.enter(direction);
-      return true;
+      return controller.enter(direction);
     }
   }
   return false;

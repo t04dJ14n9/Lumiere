@@ -33,6 +33,7 @@ function keyboardFixture(position: CellPosition, standalone = false) {
     open(position: CellPosition, selection?: number | "all") {
       this.active = position;
       opened.push({ position, selection });
+      return true;
     },
     close() {
       this.active = undefined;

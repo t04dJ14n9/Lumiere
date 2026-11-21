@@ -11,9 +11,12 @@ import { nestedSync, noteReadOnly } from "../editor/api";
 import { insertCellBreak } from "./cell-editor";
 import { TableClipboard } from "./clipboard";
 import { ColumnResize } from "./column-resize";
+import { TableController } from "./controller";
+import type { CellEditor } from "./cell-editor";
+import type { TableEnvironment } from "./environment";
 import type { TableGrid } from "./grid";
 import { TableKeyboard } from "./keyboard";
-import type { CellProjection } from "./projection";
+import { CellProjection } from "./projection";
 import type { TableSelection } from "./selection";
 import { TableToolbar } from "./toolbar";
 
@@ -195,7 +198,8 @@ test("Tab past the last row of a read-only note's table leaves no cell waiting t
       {} as never,
       { request: (position: unknown) => requests.push(position) } as never,
     );
-    assert.equal(keyboard.move(0, 1), true);
+    // Nothing written: the key is not taken.
+    assert.equal(keyboard.move(0, 1), !readOnly);
     assert.deepEqual(
       requests.at(-1),
       readOnly ? undefined : { row: 2, column: 0 },
@@ -240,5 +244,149 @@ test("a handle's move keeps the column widths when nothing is written", () => {
     assert.equal(result, written);
     const now = (resize as unknown as { widths: number[] }).widths;
     assert.deepEqual(now, written ? [200, 100] : widths);
+  }
+});
+
+/** A grid over the one table, without DOM, whose note may change state. */
+function gridOver(state: () => EditorState) {
+  return {
+    outer: {
+      get state() {
+        return state();
+      },
+      focus() {},
+    },
+    model: parseTable(source)!,
+    block: { source },
+    root: { isConnected: true, focus() {} },
+    contentElement: () => ({ replaceChildren() {} }),
+    display() {},
+    replace: () => !state().readOnly,
+  } as unknown as TableGrid;
+}
+
+/** A projection with cell (1, 0) already open, showing `text`. */
+function openProjection(grid: TableGrid, inner: EditorView) {
+  const projection = new CellProjection(grid, {} as TableEnvironment, {
+    activate() {},
+    highlight() {},
+    move: () => false,
+    arrow: () => false,
+  });
+  let destroyed = 0;
+  projection.active = { row: 1, column: 0 };
+  projection.cellEditor = {
+    view: inner,
+    destroy: () => destroyed++,
+  } as unknown as CellEditor;
+  return { projection, destroyed: () => destroyed };
+}
+
+test("in a read-only note, Up or Down into a table opens no cell, so the key moves the caret on", () => {
+  const grid = gridOver(() => note(true));
+  const projection = new CellProjection(grid, {} as TableEnvironment, {
+    activate() {},
+    highlight() {},
+    move: () => false,
+    arrow: () => false,
+  });
+  const controller = Object.create(TableController.prototype);
+  Object.assign(controller, {
+    keyboard: new TableKeyboard(grid, projection, {} as never, {} as never),
+  });
+  for (const direction of [1, -1] as const) {
+    assert.equal((controller as TableController).enter(direction), false);
+  }
+  assert.equal(projection.active, undefined);
+});
+
+test("a cell open when the note turned read-only stays for itself but closes for another", () => {
+  const grid = gridOver(() => note(true));
+  const same = openProjection(grid, cellView("one", true, 0, 2));
+  assert.equal(same.projection.open({ row: 1, column: 0 }), true);
+  assert.equal(same.destroyed(), 0);
+  const other = openProjection(grid, cellView("one", true, 0, 2));
+  assert.equal(other.projection.open({ row: 1, column: 1 }), false);
+  assert.equal(other.destroyed(), 1);
+  assert.equal(other.projection.active, undefined);
+});
+
+test("Copy from the menu of a right-clicked cell copies that cell, not one left open", () => {
+  for (const [column, copied] of [
+    [1, "2"],
+    // The open cell itself: its selected text, as before.
+    [0, "on"],
+  ] as const) {
+    const grid = gridOver(() => note(true));
+    const { projection } = openProjection(grid, cellView("one", true, 0, 2));
+    const copies: string[] = [];
+    const clipboard = new TableClipboard(
+      grid,
+      projection,
+      { range: undefined } as unknown as TableSelection,
+      {
+        copy: (text: string) => copies.push(text),
+        paste: async () => "",
+        wrap: () => true,
+        clearFormatting: (text: string) => text,
+        canFormat: true,
+      },
+    );
+    let items: { label?: string; run?: () => void }[] = [];
+    const toolbar = new TableToolbar(
+      grid,
+      {
+        range: () => undefined,
+        active: () => projection.active,
+        open: (position) => projection.open(position),
+        request() {},
+        execute() {},
+        selectAll() {},
+      },
+      clipboard,
+      (_root, menu) => {
+        items = menu as typeof items;
+        return () => {};
+      },
+    );
+    toolbar.showMenu({ row: 1, column }, { x: 0, y: 0 });
+    items.find((item) => item.label === "Copy")!.run!();
+    assert.deepEqual(copies, [copied]);
+  }
+});
+
+test("Paste from the menu writes nothing when the note turns read-only while the clipboard is read", async () => {
+  for (const turnsReadOnly of [true, false]) {
+    let readOnly = false;
+    const grid = gridOver(() => note(readOnly));
+    // Open before the note turned read-only, so the cell itself is writable.
+    const inner = cellView("ab", false, 1);
+    const { projection, destroyed } = openProjection(grid, inner);
+    const selection = {
+      range: undefined as CellRange | undefined,
+      highlight() {},
+    };
+    for (const pasted of ["X", "x\ty"]) {
+      const clipboard = new TableClipboard(
+        grid,
+        projection,
+        selection as unknown as TableSelection,
+        {
+          copy() {},
+          paste: async () => {
+            readOnly = turnsReadOnly;
+            return pasted;
+          },
+          wrap: () => true,
+          clearFormatting: (text: string) => text,
+          canFormat: true,
+        },
+      );
+      readOnly = false;
+      await clipboard.pasteFromMenu(range);
+    }
+    assert.equal(inner.state.doc.toString(), turnsReadOnly ? "ab" : "aXb");
+    assert.equal(destroyed(), turnsReadOnly ? 0 : 1);
+    assert.equal(selection.range, turnsReadOnly ? undefined : range);
   }
 });

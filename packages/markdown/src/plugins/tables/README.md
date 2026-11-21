@@ -93,8 +93,9 @@ Padding and internal trailing pipes belong to the preceding cell; the leading
 and final pipes fall back to the first cell at offset zero.
 Render passes are cancelled before a cell editor takes over their DOM. All
 plugin registrations and widget lifetimes end when the plugin stops.
-A read-only note (sync failed for good) edits no table: no cell opens and a
-press starts no selection, the table commands and every whole-table write
+A read-only note (sync failed for good) edits no table: no cell opens (Up
+and Down move the caret past the table, and a cell left open closes when
+another is asked for) and a press starts no selection, the table commands and every whole-table write
 refuse (a sort also after rendering its keys), leaving the table at the
 note's edge adds no blank line, and an open cell becomes
 read-only with the note, so typing and formatting commands in it refuse too.

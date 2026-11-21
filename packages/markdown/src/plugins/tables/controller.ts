@@ -152,8 +152,8 @@ export class TableController {
     return { from, to: from + this.grid.block.source.length };
   }
 
-  enter(direction: -1 | 1): void {
-    this.keyboard.enter(direction);
+  enter(direction: -1 | 1): boolean {
+    return this.keyboard.enter(direction);
   }
   enterSourcePosition(head: number): boolean {
     if (this.active || this.range || !this.grid.root.isConnected) {
@@ -166,8 +166,7 @@ export class TableController {
     if (!target) {
       return false;
     }
-    this.projection.open(target.position, target.offset);
-    return true;
+    return this.projection.open(target.position, target.offset);
   }
   highlight(): void {
     this.selected.highlight();

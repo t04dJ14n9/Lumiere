@@ -157,17 +157,15 @@ export class TableKeyboard {
     if (target.row >= this.grid.model.rows.length) {
       // The new row's cell opens when the table is drawn again.
       this.actions.request(target);
-      if (
-        !this.grid.replace(
-          insertRow(this.grid.model, this.grid.model.rows.length - 1),
-        )
-      ) {
+      const written = this.grid.replace(
+        insertRow(this.grid.model, this.grid.model.rows.length - 1),
+      );
+      if (!written) {
         this.actions.request(undefined);
       }
-    } else {
-      this.projection.open(target, "all");
+      return written;
     }
-    return true;
+    return this.projection.open(target, "all");
   }
 
   arrow(step: CellStep, extend: boolean): boolean {
@@ -189,10 +187,9 @@ export class TableKeyboard {
     const wrapped = wrapCell(target, this.grid.model.alignments.length);
     const cell = this.grid.model.rows[wrapped.row]?.[wrapped.column];
     if (cell) {
-      this.projection.open(wrapped, step.column < 0 ? undefined : 0);
-    } else {
-      this.leave(wrapped.row < 0 ? -1 : 1);
+      return this.projection.open(wrapped, step.column < 0 ? undefined : 0);
     }
+    this.leave(wrapped.row < 0 ? -1 : 1);
     return true;
   }
 
@@ -276,8 +273,9 @@ export class TableKeyboard {
     outer.focus();
   }
 
-  enter(direction: -1 | 1): void {
-    this.projection.open(
+  /** Open the first or last row's cell; false when none opens. */
+  enter(direction: -1 | 1): boolean {
+    return this.projection.open(
       {
         row: direction < 0 ? this.grid.model.rows.length - 1 : 0,
         column: Math.min(
