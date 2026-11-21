@@ -1,8 +1,9 @@
 # Templates
 
 **Insert Template** picks a note from your templates folder and inserts it at
-the caret, filling in the date, the time and the note's title. Obsidian's
-Templates core plugin.
+the caret, filling in the date, the time and the note's title. **Insert
+Current Date** and **Insert Current Time** write the date or the time at the
+caret. Obsidian's Templates core plugin.
 
 ## How it works
 
@@ -29,8 +30,15 @@ properties are still not valid YAML gets only its body inserted, never its
 `---` block, and the message names the template. A body inserted right
 after a closing `---` with no line break gets one first.
 
+Insert Current Date and Insert Current Time need no templates folder: they
+format the current date or time with `templates.dateFormat` or
+`templates.timeFormat` (`currentDateTime`) and insert it at the selection's
+head, leaving any selected text in place, with the caret after it, as
+Obsidian's commands do (`insertAtCaret`). Neither has a key, as in Obsidian.
+
 Tokens: `{{title}}` (the destination note's basename), `{{date}}`,
-`{{time}}`, and `{{date:FORMAT}}` / `{{time:FORMAT}}`. Formats are Moment.js
+`{{time}}`, and `{{date:FORMAT}}` / `{{time:FORMAT}}`, their names in any
+case (`{{Title}}`, `{{DATE:YYYY}}`), as Obsidian matches them. Formats are Moment.js
 patterns in local time, written by `src/markdown/moment-format.ts` (shared
 with Bases): years (`YYYY`, `YY`, `Y`, and `YYY`, which Moment reads as
 `YY` then `Y`), quarters, months (`M`, `MM`, `MMM`, `MMMM`, `Mo`), days
@@ -42,10 +50,12 @@ to write it literally.
 
 ## Files
 
-- `manifest.ts`: the command and the three settings.
-- `host.ts`: the Insert Template command.
+- `manifest.ts`: the three commands and the three settings.
+- `host.ts`: the Insert Template, Insert Current Date and Insert Current
+  Time commands.
 - `list.ts`: the folder setting, the template files and the picker rows.
-- `insert.ts`: applies the template's edits at the panel's selection.
+- `insert.ts`: applies the template's edits at the panel's selection, and
+  inserts text at its head.
 
 ## Services, events and settings
 

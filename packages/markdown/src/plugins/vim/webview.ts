@@ -8,6 +8,7 @@ import {
 import { EditorView } from "@codemirror/view";
 import type { Context, Infer, Plugin } from "@workshop/core";
 import type {} from "../editor/api";
+import { dropCommentOperator } from "./comment-operator";
 import type {} from "./api";
 import type {} from "../commands/api";
 import type { ViewDocument } from "../document/api";
@@ -76,6 +77,8 @@ export const vimWebview: Plugin<Infer<typeof config>> = {
     releaseQuickOpenFromVim(ctx);
     // BH-029: default <C-a> increment steals Select All.
     releaseSelectAllFromVim(ctx);
+    // Obsidian's Vim has no gc (toggle comment); vim-core's would differ.
+    ctx.effect(() => dropCommentOperator());
     // BH-046: vim-core has foldCode but no za/zc/zo maps; wire Obsidian folds.
     installVimFoldKeys(ctx);
     // BH-047: INSERT Ctrl+[ must outdent (Obsidian), not Esc.

@@ -137,10 +137,17 @@ export interface Vaults {
    * Open a vault file in the editor, at an offset in its current text when
    * given (for example a heading or a link found in that text). A `fragment`
    * is forwarded to the native viewer for non-Markdown files (PDF `#page=`).
+   * `side` opens it in the group beside; `tab` in a tab of its own that
+   * stays open (Obsidian's new tab).
    */
   open(
     uri: string,
-    options?: { offset?: number; side?: boolean; fragment?: string },
+    options?: {
+      offset?: number;
+      side?: boolean;
+      tab?: boolean;
+      fragment?: string;
+    },
   ): Promise<void>;
   all(): readonly Vault[];
 }

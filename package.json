@@ -650,6 +650,26 @@
         "category": "Lumiere"
       },
       {
+        "command": "lumiere.markdown.quickSwitcher.openInNewTab",
+        "title": "Quick Switcher: Open in New Tab",
+        "category": "Lumiere"
+      },
+      {
+        "command": "lumiere.markdown.quickSwitcher.openToSide",
+        "title": "Quick Switcher: Open to the Side",
+        "category": "Lumiere"
+      },
+      {
+        "command": "lumiere.markdown.quickSwitcher.create",
+        "title": "Quick Switcher: Create Note",
+        "category": "Lumiere"
+      },
+      {
+        "command": "lumiere.markdown.quickSwitcher.createInNewTab",
+        "title": "Quick Switcher: Create Note in New Tab",
+        "category": "Lumiere"
+      },
+      {
         "command": "lumiere.markdown.scratch.new",
         "title": "New Scratch Note",
         "category": "Lumiere"
@@ -854,6 +874,16 @@
       {
         "command": "lumiere.markdown.templates.insert",
         "title": "Insert Template",
+        "category": "Lumiere"
+      },
+      {
+        "command": "lumiere.markdown.templates.insertCurrentDate",
+        "title": "Insert Current Date",
+        "category": "Lumiere"
+      },
+      {
+        "command": "lumiere.markdown.templates.insertCurrentTime",
+        "title": "Insert Current Time",
         "category": "Lumiere"
       },
       {
@@ -1423,6 +1453,29 @@
         "key": "ctrl+;",
         "mac": "cmd+;",
         "when": "activeCustomEditorId == 'lumiere.markdown.editor' && lumiere.markdown.plugin.properties && lumiere.markdown.editorFocus"
+      },
+      {
+        "command": "lumiere.markdown.quickSwitcher.openInNewTab",
+        "key": "ctrl+enter",
+        "mac": "cmd+enter",
+        "when": "config.lumiere.markdown.preset != 'minimal' && config.lumiere.markdown.plugins.quickSwitcher.enabled && inQuickOpen && lumiere.markdown.quickSwitcherOpen"
+      },
+      {
+        "command": "lumiere.markdown.quickSwitcher.openToSide",
+        "key": "ctrl+alt+enter",
+        "mac": "cmd+alt+enter",
+        "when": "config.lumiere.markdown.preset != 'minimal' && config.lumiere.markdown.plugins.quickSwitcher.enabled && inQuickOpen && lumiere.markdown.quickSwitcherOpen"
+      },
+      {
+        "command": "lumiere.markdown.quickSwitcher.create",
+        "key": "shift+enter",
+        "when": "config.lumiere.markdown.preset != 'minimal' && config.lumiere.markdown.plugins.quickSwitcher.enabled && inQuickOpen && lumiere.markdown.quickSwitcherOpen"
+      },
+      {
+        "command": "lumiere.markdown.quickSwitcher.createInNewTab",
+        "key": "ctrl+shift+enter",
+        "mac": "cmd+shift+enter",
+        "when": "config.lumiere.markdown.preset != 'minimal' && config.lumiere.markdown.plugins.quickSwitcher.enabled && inQuickOpen && lumiere.markdown.quickSwitcherOpen"
       },
       {
         "command": "lumiere.markdown.toggleChecklist",
@@ -2089,6 +2142,22 @@
           "when": "config.lumiere.markdown.preset != 'minimal' && config.lumiere.markdown.plugins.quickSwitcher.enabled"
         },
         {
+          "command": "lumiere.markdown.quickSwitcher.openInNewTab",
+          "when": "false"
+        },
+        {
+          "command": "lumiere.markdown.quickSwitcher.openToSide",
+          "when": "false"
+        },
+        {
+          "command": "lumiere.markdown.quickSwitcher.create",
+          "when": "false"
+        },
+        {
+          "command": "lumiere.markdown.quickSwitcher.createInNewTab",
+          "when": "false"
+        },
+        {
           "command": "lumiere.markdown.scratch.new",
           "when": "config.lumiere.markdown.preset != 'minimal' && config.lumiere.markdown.plugins.scratch.enabled"
         },
@@ -2238,6 +2307,14 @@
         },
         {
           "command": "lumiere.markdown.templates.insert",
+          "when": "config.lumiere.markdown.preset != 'minimal' && config.lumiere.markdown.plugins.templates.enabled && activeCustomEditorId == 'lumiere.markdown.editor'"
+        },
+        {
+          "command": "lumiere.markdown.templates.insertCurrentDate",
+          "when": "config.lumiere.markdown.preset != 'minimal' && config.lumiere.markdown.plugins.templates.enabled && activeCustomEditorId == 'lumiere.markdown.editor'"
+        },
+        {
+          "command": "lumiere.markdown.templates.insertCurrentTime",
           "when": "config.lumiere.markdown.preset != 'minimal' && config.lumiere.markdown.plugins.templates.enabled && activeCustomEditorId == 'lumiere.markdown.editor'"
         },
         {
@@ -3674,13 +3751,13 @@
           "lumiere.markdown.templates.dateFormat": {
             "type": "string",
             "default": "YYYY-MM-DD",
-            "description": "Format of {{date}} in templates. Tokens: YYYY, MM, DD, HH, mm and ss.",
+            "description": "Format of {{date}} in templates and of Insert Current Date. Tokens: YYYY, MM, DD, HH, mm and ss.",
             "scope": "resource"
           },
           "lumiere.markdown.templates.timeFormat": {
             "type": "string",
             "default": "HH:mm",
-            "description": "Format of {{time}} in templates. Tokens: YYYY, MM, DD, HH, mm and ss.",
+            "description": "Format of {{time}} in templates and of Insert Current Time. Tokens: YYYY, MM, DD, HH, mm and ss.",
             "scope": "resource"
           },
           "lumiere.markdown.vault.rootMarkers": {

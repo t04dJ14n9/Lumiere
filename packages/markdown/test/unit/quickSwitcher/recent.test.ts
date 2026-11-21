@@ -31,8 +31,8 @@ test("rememberOpen records md URIs newest first and drops duplicates", async () 
   assert.deepEqual(storage.data[RECENT_KEY], readRecent(storage));
 });
 
-test("rememberOpen ignores non-markdown targets", async () => {
+test("rememberOpen records attachments too, as Obsidian's recent files do", async () => {
   const storage = memoryStorage();
   await rememberOpen(storage, "file:///vault/image.png");
-  assert.deepEqual(readRecent(storage), []);
+  assert.deepEqual(readRecent(storage), ["file:///vault/image.png"]);
 });

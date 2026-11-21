@@ -21,6 +21,12 @@ test("Obsidian: heading text matches without case, punctuation or extra spaces",
   assert.equal(headingAt(source, "  c   & more "), "## C++ & more");
 });
 
+test("a % that starts no escape is read as text", () => {
+  const source = "# 100% done\n";
+  assert.equal(headingAt(source, "100% done"), "# 100% done");
+  assert.equal(headingAt(source, "100%25%20done"), "# 100% done");
+});
+
 test("Obsidian: A#B is a deeper heading after A, not only its child", () => {
   const source = "# Top\n## Middle\n### Deep\n# Other\n### Deep\n";
   const range = noteFragment(source, "Top#Deep");

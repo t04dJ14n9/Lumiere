@@ -50,7 +50,7 @@ product choices for VS Code, not parity claims.
 | outline | Explorer **Markdown Outline** and **Go to Heading…** (Ctrl+Shift+O); drag a heading to move its section | A section dropped on a heading goes before it (VS Code's tree has no drop position after a row; below the last row is the note's end); no dragging outside VS Code (deferred by the owner, 2026-11-21); VS Code's native Outline and breadcrumbs apply to the plain text editor |
 | backlinks | Explorer **Backlinks** with unlinked mentions and a status bar count | Off by default (owner decision) |
 | outgoingLinks | Explorer **Outgoing Links** | Off by default; no unlinked mentions section |
-| quickSwitcher | **Quick Switcher** over notes, aliases and unresolved links | No key binding (Mod+O is VS Code's Open File; see [Hotkeys](#hotkeys); the README shows how to bind it in notes); an empty query lists recently opened notes, then recently modified ones never opened here |
+| quickSwitcher | **Quick Switcher** over notes, aliases and unresolved links | No key binding (Mod+O is VS Code's Open File; see [Hotkeys](#hotkeys); the README shows how to bind it in notes); an empty query lists recently opened notes and attachments, then recently modified notes never opened here; in the switcher, Mod+Enter opens in a tab of its own, Mod+Alt+Enter to the side, Shift+Enter creates the typed name (Mod+Shift+Enter in a tab of its own), as in Obsidian; no bookmarks (Lumiere has none) |
 | wordCount | Words and characters in the status bar | Counting rules are this extension's reading of Obsidian's |
 | linkUpdates | Updates links when notes or folders are renamed in VS Code | Asks first by default (`prompt`, matching Obsidian's `alwaysUpdateLinks: false`), with a persistent **Always Update** (saved for the renamed file's workspace folder); `always` rewrites without asking, `never` leaves links untouched; **Rename Heading…** (palette, or the note's right-click menu on a heading line) updates links to a heading; editing a heading's text in the note does not, as in Obsidian |
 | folding | Heading and list folding; a note's folds are kept for the note, so reopening it, a second panel and a reload show them, as Obsidian keeps folds per file; Fold All and Unfold All also collapse the note's Properties, as in Obsidian | Open panels keep their own folds; the note keeps those of the panel last folded in (Obsidian: the last changed or closed) |
@@ -72,7 +72,7 @@ product choices for VS Code, not parity claims.
 | bridge | **Copy Bridge Envelope** copies a versioned JSON selection. The hidden `bridge.envelope` command returns the same object. Agent PDF Viewer is called only when `vscodeEmbedPdf.bridge.envelope` is registered | Does not open a chat. See `docs/bridge-envelope.md` |
 | attachments | Drop, paste, or HTML-paste images into `files.attachmentFolder` with Obsidian-style timestamp names and embeds | Shares folder/embed rules with sketches. Import Asset / `assets.path` removed |
 | scratch | **New Scratch Note** writes a temporary note in `scratch.folder` | No automatic filing |
-| templates | **Insert Template** inserts a note from `templates.folder` at the caret, expanding `{{title}}`, `{{date}}`, `{{time}}` and `{{date:FORMAT}}` | Formats know `YYYY MM DD HH mm ss` only; Lumiere's editor only |
+| templates | **Insert Template** inserts a note from `templates.folder` at the caret, expanding `{{title}}`, `{{date}}`, `{{time}}` and `{{date:FORMAT}}` in any case, as Obsidian does; **Insert Current Date** and **Insert Current Time** write the date or time in `templates.dateFormat` / `templates.timeFormat` at the caret (no keys, as in Obsidian) | Formats know `YYYY MM DD HH mm ss` only; Lumiere's editor only |
 | marp | Detects `marp: true` and bridges to VS Code preview and Marp export | Slide widgets and Marp themes are not drawn here |
 | markers | Badges and actions that other extensions place on source ranges | Plain text only; at most 1,000 per plugin per editor |
 | graph | **Open Vault Graph**: a vault's notes as a directed graph in a panel, global or local, filtered by type, tag, folder, text and orphans | Hard caps (2000 notes, 20000 links); a larger graph is refused, not sampled; no 3D view |
@@ -108,6 +108,13 @@ Left unbound, because the key already does something here:
 | Mod+Enter | Open link under cursor in new tab | The note follows the link in place, as a Mod-click does (VS Code has none) |
 | Mod+K in Cursor | Insert link | Cursor's inline edit, through the Cursor bridge |
 | Mod+L in Cursor | Toggle checkbox status | Cursor's chat, through the Cursor bridge |
+
+Inside the quick switcher's list, its own Obsidian keys apply: Mod+Enter
+(open in a tab of its own), Mod+Alt+Enter (to the side), Shift+Enter (create
+the typed name) and Mod+Shift+Enter (create it in a tab of its own). They are
+bound only while the switcher is open (`inQuickOpen` and
+`lumiere.markdown.quickSwitcherOpen`), so the note's Mod+Enter and VS Code's
+other quick picks are untouched.
 
 Mod+Alt+Shift+Enter (open link in a new window) has no Lumiere command.
 Follow Link, Open Link in New Tab, Delete Paragraph and the Quick Switcher are

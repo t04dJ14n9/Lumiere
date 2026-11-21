@@ -104,15 +104,47 @@ export function headingLinkEdits(
   return linkRewriteEdits(text, rewrites);
 }
 
-/** A link's source text with its `#subpath` replaced by `name`. */
+/**
+ * What a link to a heading named `name` holds after its `#`, as Obsidian
+ * writes it: the characters a link cannot carry (`:`, `#`, `|`, `^`, `\`,
+ * line breaks, `%%`, `[[`, `]]`) become spaces, and runs of spaces one.
+ * Links still reach the heading: they are matched with punctuation read as
+ * spaces. Empty when nothing of the name is left for a link.
+ */
+export function headingSubpath(name: string): string {
+  return name
+    .replace(/[:#|^\\\r\n]|%%|\[\[|\]\]/gu, " ")
+    .replace(/\s+/gu, " ")
+    .trim();
+}
+
+/**
+ * Characters a Markdown destination cannot hold as written, percent-encoded
+ * (links are decoded before they resolve): a bare one ends at a space and
+ * breaks on an unbalanced parenthesis, an angled one ends at `>`; a `%` is
+ * encoded so it is not read as the start of an escape.
+ */
+const BARE_UNSAFE = /[% ()]/gu;
+const ANGLED_UNSAFE = /[%<>]/gu;
+
+function percentEncoded(text: string, unsafe: RegExp): string {
+  return text.replace(
+    unsafe,
+    (char) => `%${char.charCodeAt(0).toString(16).toUpperCase()}`,
+  );
+}
+
+/** A link's source text with its `#subpath` replaced by heading `name`'s. */
 function withSubpath(original: string, name: string): string {
   const source = linkSource(original);
   if (!source) {
     return original;
   }
-  const isBare = !source.isAngled && !source.opening.endsWith("[[");
-  const subpath = `#${isBare ? name.replace(/ /gu, "%20") : name}`;
-  return `${source.opening}${destinationOf(source, subpath)}${source.closing}`;
+  const subpath = headingSubpath(name);
+  const written = source.opening.endsWith("[[")
+    ? subpath
+    : percentEncoded(subpath, source.isAngled ? ANGLED_UNSAFE : BARE_UNSAFE);
+  return `${source.opening}${destinationOf(source, `#${written}`)}${source.closing}`;
 }
 
 /** The path as written followed by `subpath`, in the link's own brackets. */

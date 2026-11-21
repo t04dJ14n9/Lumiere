@@ -1059,7 +1059,8 @@ Short specifications, beyond the source's tested behaviour:
 - **suggest**: sources are `[[` files and frontmatter `aliases` and unresolved
   link texts; `[[Note#` headings; `[[Note#^` and `[[^^` blocks; `#` tags.
   Scoring uses Obsidian's fuzzy formula (study §8; `src/shared/fuzzy.ts`
-  replaces `shared/match.ts`), with each CJK character its own token; measured
+  replaces `shared/match.ts`), with each CJK character its own token and
+  accents folded as in Obsidian 1.15.0 (`cafe` finds `café`); measured
   against Obsidian's lists, the word-start term applies only when whole words
   match, a note matched by its name comes before one matched only through its
   folder, a note matches on its path without `.md`, and an alias, heading or
@@ -1096,7 +1097,10 @@ Short specifications, beyond the source's tested behaviour:
 - **quickSwitcher**: **Lumiere: Quick Switcher** opens a quick pick
   over notes, aliases and unresolved links, with Obsidian's scoring. Enter
   opens; an unresolved or new name creates the note in the configured
-  new-note folder.
+  new-note folder. Obsidian's switcher keys apply while it is open:
+  Mod+Enter opens in a tab of its own, Mod+Alt+Enter to the side,
+  Shift+Enter creates the typed name and Mod+Shift+Enter creates it in a
+  tab of its own.
 - **wordCount**: words and characters for the note or selection in the status
   bar, counting CJK characters individually.
 - **properties**: everything in the source, including types per vault (now

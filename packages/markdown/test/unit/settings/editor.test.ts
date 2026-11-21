@@ -331,9 +331,28 @@ test("Obsidian 1.15.0's default editor keys are bound where VS Code and Cursor l
           binding.key === chord &&
           binding.command.startsWith("lumiere.markdown.") &&
           // Vim's Control keys, which the vim plugin consumes on purpose.
-          !/Vim/.test(binding.command),
+          !/Vim/.test(binding.command) &&
+          // The quick switcher's own keys, live only inside its quick pick.
+          !binding.when?.includes("inQuickOpen"),
       ),
       chord,
+    );
+  }
+  // Obsidian's switcher keys: Mod+Enter, Mod+Alt+Enter, Shift+Enter and
+  // Mod+Shift+Enter, only while Lumiere's quick switcher is open.
+  for (const [id, key] of [
+    ["quickSwitcher.openInNewTab", "ctrl+enter"],
+    ["quickSwitcher.openToSide", "ctrl+alt+enter"],
+    ["quickSwitcher.create", "shift+enter"],
+    ["quickSwitcher.createInNewTab", "ctrl+shift+enter"],
+  ] as const) {
+    const [binding] = keysOf(id);
+    assert.equal(binding?.[0], key, id);
+    assert.ok(
+      binding?.[2]?.endsWith(
+        "inQuickOpen && lumiere.markdown.quickSwitcherOpen",
+      ),
+      id,
     );
   }
 });

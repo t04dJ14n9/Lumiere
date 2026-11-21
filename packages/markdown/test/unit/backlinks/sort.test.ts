@@ -18,6 +18,17 @@ test("backlink files sort alphabetically by basename then path (Obsidian default
   );
 });
 
+test("numbers in names sort by value, as Obsidian's collator sorts them", () => {
+  assert.deepEqual(
+    sortBacklinkPaths(["Note 10.md", "Note 2.md", "Note 1.md"]),
+    ["Note 1.md", "Note 2.md", "Note 10.md"],
+  );
+  assert.deepEqual(
+    sortBacklinkPaths(["Note 2.md", "Note 10.md"], "alphabeticalReverse"),
+    ["Note 10.md", "Note 2.md"],
+  );
+});
+
 test("alphabeticalReverse is Z to A by basename then path", () => {
   assert.deepEqual(
     sortBacklinkPaths(

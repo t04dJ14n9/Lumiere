@@ -10,12 +10,12 @@ export const config = Schema.object({
   dateFormat: Schema.string()
     .default("YYYY-MM-DD")
     .description(
-      "Format of {{date}} in templates. Tokens: YYYY, MM, DD, HH, mm and ss.",
+      "Format of {{date}} in templates and of Insert Current Date. Tokens: YYYY, MM, DD, HH, mm and ss.",
     ),
   timeFormat: Schema.string()
     .default("HH:mm")
     .description(
-      "Format of {{time}} in templates. Tokens: YYYY, MM, DD, HH, mm and ss.",
+      "Format of {{time}} in templates and of Insert Current Time. Tokens: YYYY, MM, DD, HH, mm and ss.",
     ),
 });
 
@@ -36,6 +36,19 @@ export default defineManifest({
         title: "Insert Template",
         // The editor host sets no plugin key for a window feature, so only
         // the setting and the open editor decide.
+        scope: "workbench",
+        when: "activeCustomEditorId == 'lumiere.markdown.editor'",
+      },
+      // Obsidian's Insert current date and time: no default keys there.
+      {
+        id: "templates.insertCurrentDate",
+        title: "Insert Current Date",
+        scope: "workbench",
+        when: "activeCustomEditorId == 'lumiere.markdown.editor'",
+      },
+      {
+        id: "templates.insertCurrentTime",
+        title: "Insert Current Time",
         scope: "workbench",
         when: "activeCustomEditorId == 'lumiere.markdown.editor'",
       },

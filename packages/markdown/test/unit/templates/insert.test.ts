@@ -2,7 +2,10 @@ import assert from "node:assert/strict";
 import test from "node:test";
 import type { EditorPanel } from "../../../src/plugins/editor/api";
 import type { TextEdit } from "../../../src/shared/host";
-import { insertAtSelection } from "../../../src/plugins/templates/insert";
+import {
+  insertAtCaret,
+  insertAtSelection,
+} from "../../../src/plugins/templates/insert";
 import { SourceCoordinates } from "../../../src/shared/document/coordinates";
 import { fakeDocument } from "../../support/vscode-fake";
 
@@ -10,6 +13,8 @@ function panelWith(options: {
   text: string;
   eol?: "\n" | "\r\n";
   selection: { from: number; to: number; version: number };
+  /** The selection's head, when it is not `selection.to`. */
+  head?: number;
   version?: number;
 }) {
   const calls: { method: string; params: unknown }[] = [];
@@ -32,6 +37,12 @@ function panelWith(options: {
     rpc: {
       call: async (_protocol: unknown, method: string, params: unknown) => {
         calls.push({ method, params });
+        if (method === "captureCursor") {
+          return {
+            head: options.head ?? options.selection.to,
+            version: options.selection.version,
+          };
+        }
         return method === "captureSelection"
           ? { ...options.selection, text: "" }
           : true;
@@ -166,5 +177,26 @@ test("Insert Template merges properties into a CRLF note and inserts the body at
       focus: true,
       version: 1,
     },
+  });
+});
+
+test("Insert Current Date goes in at the selection's head and keeps the selected text, as in Obsidian", async () => {
+  const { panel, calls } = panelWith({
+    text: "abcd",
+    selection: { from: 1, to: 3, version: 2 },
+    head: 1,
+  });
+  const edits: TextEdit[][] = [];
+  const isInserted = await insertAtCaret(
+    { apply: async (_document, next) => (edits.push([...next]), true) },
+    panel,
+    "2026-11-21",
+  );
+  assert.equal(isInserted, true);
+  assert.deepEqual(edits, [[{ from: 1, to: 1, insert: "2026-11-21" }]]);
+  assert.ok(!calls.some((call) => call.method === "captureSelection"));
+  assert.deepEqual(calls.at(-1), {
+    method: "reveal",
+    params: { from: 11, to: 11, focus: true, version: 2 },
   });
 });

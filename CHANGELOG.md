@@ -73,6 +73,29 @@
 - Markdown: sorting a table by a column compares the text each cell shows,
   as Obsidian does, not its Markdown: `[[Note|Zed]]` sorts as "Zed" and
   `**b**` as "b" (#787).
+- Markdown: link suggestions, the quick switcher and the other fuzzy
+  pickers ignore accents, as Obsidian 1.15.0 does: `cafe` finds `café`, and
+  a query typed with an accent puts the notes that have it first (#787).
+- Markdown: Backlinks sorts note names by their numbers, as Obsidian does:
+  "Note 2" comes before "Note 10" (#787).
+- Markdown: in Vim mode `gc` no longer toggles a comment. Obsidian's Vim has
+  no `gc`; Mod+/ still toggles one (#787).
+- Markdown: Rename Heading… accepts any name, as Obsidian does, `#`, `|`, `^`,
+  `[` and `]` included. Links to the heading get the name as Obsidian writes
+  them (those characters as spaces) and still reach it. A link to a heading
+  with a `%` in its name, such as `[[Note#100% done]]`, now reaches it
+  (#787).
+- Markdown: **Insert Current Date** and **Insert Current Time**, Obsidian's
+  Templates commands, write the date or time in the Templates formats at the
+  caret (no keys, as in Obsidian). Template variables match in any case:
+  `{{Title}}` and `{{DATE:YYYY}}` are filled in like `{{title}}` and
+  `{{date:YYYY}}` (#787).
+- Markdown: Obsidian's quick switcher keys work in Lumiere's Quick Switcher:
+  Mod+Enter opens the note in a tab that stays open, Mod+Alt+Enter opens it
+  to the side, Shift+Enter creates a note with the typed name and
+  Mod+Shift+Enter creates it in a new tab. They apply only while the
+  switcher is open. With nothing typed, it also lists the images, PDFs and
+  other attachments recently opened from it, as Obsidian does (#787).
 
 Fixes for several VS Code windows open at once, each with a test; checked
 with two real windows on one profile.

@@ -7600,3 +7600,162 @@ menu.
 Validation: src/plugins/tables/operations.test.ts; tables tests, typecheck,
 ESLint and Prettier pass. Not run here: `pnpm test:browser`,
 `test:quality`, `test:vscode`.
+
+## Fuzzy search ignores accents (#787; 2026-11-21)
+
+Obsidian 1.15.0's fuzzy search (read in its shipped code, behaviour only,
+nothing copied) matches without accents: a Latin or Greek letter, or
+Cyrillic `ё`, folds to its canonical decomposition without the combining
+marks U+0300–U+036F, the marks fold to nothing, and a query typed with an
+accent loses 0.05 on a match whose text does not keep it. Lumiere's
+`src/shared/fuzzy.ts` compared the text as written, so `cafe` missed
+`café` in link suggestions, the quick switcher, the tag and symbol pickers
+and the settings search. `src/shared/fuzzy-fold.ts` now folds the query and
+the text, keeps where each folded character came from, and gives the
+matched ranges back in the text as written (a decomposed letter's marks
+join its range). Scores are computed on the folded text, as Obsidian's are,
+so the 1.14.4 score table still holds for unaccented text. A ligature
+(`ﬃ`) is still its own text: neither app folds compatibility forms.
+
+Validation: `test/unit/ported/match.test.ts` (the old "text is not
+normalized" test now expects a decomposed `Å` to match `å`, as 1.15.0
+does; new tests for folding and the 0.05); unit tests, typecheck, ESLint
+and Prettier pass. Not run: `test:browser`, `test:quality`, `test:vscode`
+(no editor-integration change).
+
+## Backlinks sort names numerically (#787; 2026-11-21)
+
+Obsidian 1.15.0's backlinks view sorts files by name with its numeric
+collator (base sensitivity), so "Note 2" comes before "Note 10" (read in its
+shipped code, the sort table its search results share; behaviour only).
+`sortBacklinkPaths` compared names with `localeCompare` without numeric
+order. It now uses a numeric, base-sensitivity `Intl.Collator`, both ways
+and as the modified-time orders' tie-break; the full path still breaks
+ties between equal names.
+
+Validation: `test/unit/backlinks/sort.test.ts` (numbers sort by value);
+unit tests, typecheck, ESLint and Prettier pass. Not run: `test:browser`,
+`test:quality`, `test:vscode` (no editor-integration change).
+
+## Vim: no `gc`, as in Obsidian (#787; 2026-11-21)
+
+Obsidian 1.15.0's `lib/codemirror/vim.js` maps no `gc` (read in its shipped
+file; behaviour only). `@replit/codemirror-vim` maps `gc` to its
+toggle-comment operator, and the Vim README and PARITY listed it as the one
+key Lumiere's engine had beyond Obsidian's, a difference rather than a
+deliberate addition (DESIGN, the plan and the docs name no reason for it).
+`comment-operator.ts` unmaps it when the Vim plugin starts and maps the
+library default back when it stops, as `<C-p>` and `<C-a>` are released.
+Toggle Comment stays on Mod+/.
+
+Validation: `src/plugins/vim/comment-operator.test.ts` (`gcc` runs
+`toggleLineComment` before, nothing after, and again after the restore);
+unit tests, typecheck, ESLint and Prettier pass. Not run: `test:browser`,
+`test:quality`, `test:vscode`.
+
+## Rename Heading accepts any name (#787; 2026-11-21)
+
+Obsidian 1.15.0's Rename heading (read in its shipped code, the modal near
+line 87580; behaviour only) refuses only an empty name. It writes the name
+as typed into the heading line, and into each link to the heading with
+`:`, `#`, `|`, `^`, `\`, line breaks, `%%`, `[[` and `]]` turned to spaces
+(runs of spaces made one, ends trimmed); a Markdown destination gets its
+spaces encoded. Links still reach the heading because headings are matched
+with punctuation read as spaces. Lumiere refused `# | ^ [ ]` in the name.
+
+`headingSubpath` (`heading-rename.ts`) now gives a link's subpath as
+Obsidian writes it, and `headingNameProblem` accepts any name except one
+with nothing left for a link (`#|^`), for which Obsidian would write
+`[[Note#]]`, a link that no longer names the heading. Markdown destinations also get `%`,
+and a space or parenthesis (bare) or `<` and `>` (angled), percent-encoded,
+where Obsidian's form could break the link. Checking that every renamed
+link resolves found `noteFragment` refusing a fragment with a `%` that
+starts no escape (`[[Note#100% done]]`); it now reads such a `%` as text,
+as `decodeLinkPath` does. A heading whose text looks like an HTML tag
+(`a < b > c`) is still labelled without it by `headingLabel`, so a link
+written with that text does not reach it; that is the heading index's
+existing difference, not the rename's.
+
+Validation: `test/unit/linkUpdates/heading-rename.test.ts` (any name
+accepted; links renamed with `| # ^ [ ] [[ ]] : % ( >` resolve to the
+heading through `metadata` and `noteFragment`; the written forms) and
+`test/unit/metadata/fragments.test.ts` (a bare `%`); unit tests,
+typecheck, ESLint and Prettier pass. Not run: `test:browser`,
+`test:quality`, `test:vscode`.
+
+## Templates: variables in any case, Insert Current Date and Time (#787; 2026-11-21)
+
+Obsidian 1.15.0's Templates core plugin (read in its shipped code, lines
+172445–172660 and its variable expansion near line 78394; behaviour only,
+nothing copied) matches `{{title}}`, `{{date}}`, `{{time}}` and their
+`:FORMAT` forms without case, and has two more commands, Insert current
+date and Insert current time, with no default keys. They format the current
+moment with the plugin's date format (default `YYYY-MM-DD`) or time format
+(default `HH:mm`) and insert it at the selection's head without replacing
+the selected text, the caret after it; they need no templates folder.
+Lumiere's variables were case-sensitive and it had neither command.
+
+- `src/markdown/templates.ts`: the variable pattern ignores case;
+  `currentDateTime` formats one date or time, shared by the variables and
+  the commands.
+- `insert.ts`: `insertAtCaret` takes the head from `captureCursor` and
+  inserts there; `insertAtSelection` and `insertTemplate` are unchanged.
+- **Insert Current Date** and **Insert Current Time**
+  (`lumiere.markdown.templates.insertCurrentDate`/`insertCurrentTime`), in
+  the palette while a Lumiere editor is active, with no keys; a format
+  token Lumiere cannot write is inserted as written and named in a message,
+  as for templates.
+
+Contributions changed (two commands, two setting descriptions):
+`pnpm contributions --check` passes; `pnpm test:vscode` was not run here.
+
+Validation: `test/unit/templates/expand.test.ts` (variables in any case;
+the two formats and their defaults), `test/unit/templates/insert.test.ts`
+(the head insert keeps the selection's text); the inventory test lists the
+commands in `docs/MANUAL_TEST_PLAN.md` (a new templates step) and
+`docs/PARITY.md`. Unit tests, typecheck, ESLint and Prettier pass. Not run:
+`test:browser`, `test:quality`, `test:vscode`.
+
+## Quick switcher: Obsidian's modifier keys, attachments in the empty query (#787; 2026-11-21)
+
+Obsidian 1.15.0's switcher (read in its shipped code, `switcher:open` near
+line 166846 and its file suggester near line 140805; behaviour only)
+opens the chosen row in the current tab on Enter, in a new tab on
+Mod+Enter, to the right on Mod+Alt+Enter and in a new window on
+Mod+Alt+Shift+Enter; Shift+Enter creates the typed name and
+Mod+Shift+Enter creates it in a new tab. With an empty query it lists the
+recently opened files, attachments included under its default "Show
+attachments". Lumiere's switcher had only Enter and left attachments out
+of the empty query.
+
+- VS Code tells a quick pick nothing about the keys that accepted it, so
+  `accept.ts` contributes one hidden command per key, bound with
+  `inQuickOpen && lumiere.markdown.quickSwitcherOpen`: the switcher sets
+  that context while its pick is open, and each command notes how to open
+  and runs `workbench.action.acceptSelectedQuickOpenItem`. The bindings
+  therefore never reach the note (where Mod+Enter follows a link) or VS
+  Code's other quick picks (where Mod+Enter opens to the side). New tab
+  maps to `vaults.open(…, { tab: true })`, the navigation's `tab` place
+  (a tab that stays open, Lumiere's Mod-click); to the right maps to
+  `side`. The new window (Mod+Alt+Shift+Enter) is not bound. In host-node
+  `setContext` and `workbench.*` do nothing, so only Enter applies there.
+- `recent.ts` records any file; the switcher records the files it opens,
+  since VS Code's image and PDF editors do not report opens to Lumiere.
+  `switcherItems` lists an attachment for an empty query only when it is
+  among the recent files; notes keep their mtime fallback.
+- Bookmarks: Lumiere has no bookmarks feature (CAPABILITIES, "Not
+  implemented"), so the switcher lists none; the README says so. Nothing
+  was built.
+
+Contributions changed (four hidden commands with keys):
+`pnpm contributions --check` passes; `pnpm test:vscode` was not run here
+and is needed before merging (new keybindings and a context key in the
+extension host).
+
+Validation: `test/unit/quickSwitcher/host.test.ts` (each key's place,
+creation from the typed name, the context set and cleared, the accept
+command run), `ranking.test.ts` (recent attachments listed, others not),
+`recent.test.ts` (attachments recorded), `test/unit/settings/editor.test.ts`
+(the keys are bound only in the open switcher; no note key on Mod+Enter);
+unit tests, typecheck, ESLint and Prettier pass. Not run: `test:browser`,
+`test:quality`, `test:vscode`.

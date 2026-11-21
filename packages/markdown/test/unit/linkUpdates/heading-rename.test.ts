@@ -3,8 +3,16 @@ import assert from "node:assert/strict";
 import {
   headingAt,
   headingLinkEdits,
+  headingSubpath,
   type RenamedHeading,
 } from "../../../src/plugins/linkUpdates/heading-rename";
+import { metadata } from "../../../src/markdown/metadata";
+import { noteFragment } from "../../../src/markdown/metadata/fragments";
+import { linkSyntax } from "../../../src/markdown/metadata/linkpaths";
+import {
+  splitLinktext,
+  splitMarkdownDestination,
+} from "../../../src/shared/vault-path";
 import { headingNameProblem } from "../../../src/plugins/linkUpdates/rename-heading";
 
 // Expected notes are Obsidian's, measured with its Rename heading in a
@@ -58,12 +66,77 @@ test("renaming a heading updates the links to it in the note and in other notes,
   );
 });
 
-test("a new heading name must not break the links to it", () => {
+test("any heading name is accepted, as in Obsidian, unless no link could reach it", () => {
   assert.equal(headingNameProblem("Fine name"), undefined);
   assert.ok(headingNameProblem("  "));
-  for (const bad of ["a#b", "a|b", "a^b", "a[b", "a]b"]) {
-    assert.ok(headingNameProblem(bad), bad);
+  for (const name of ["a#b", "a|b", "a^b", "a[b", "a]b", "[[x]]"]) {
+    assert.equal(headingNameProblem(name), undefined, name);
   }
+  assert.ok(headingNameProblem("#|^"));
+});
+
+// Obsidian 1.15.0 (read in its shipped code) writes the new name into links
+// with : # | ^ \ line breaks %% [[ ]] as spaces; links match headings with
+// punctuation read as spaces, so they still reach it.
+test("links to a heading renamed with characters links cannot hold still reach it", () => {
+  const heading = headingAt(PROBE, PROBE.indexOf("Old Name"))!;
+  const links =
+    "[[probe#Old Name]] [[probe#Old Name|alias]] [y](probe.md#Old%20Name) [z](<probe.md#Old Name>)";
+  for (const name of [
+    "A | B",
+    "C# notes",
+    "x ^ y",
+    "[draft] plan",
+    "a [[b]] c",
+    "Q: why?",
+    "100% done",
+    "f(x) = (y",
+    "x > y",
+  ]) {
+    const renamed: RenamedHeading = {
+      path: "probe.md",
+      text: PROBE,
+      heading,
+      name,
+    };
+    const note = apply(PROBE, [
+      { from: heading.nameFrom, to: heading.nameTo, insert: name },
+    ]);
+    const updated = apply(
+      links,
+      headingLinkEdits(links, "other.md", renamed, resolve),
+    );
+    const found = [...metadata(updated).links];
+    assert.equal(found.length, 4, `${name}: ${updated}`);
+    for (const link of found) {
+      const { subpath } =
+        linkSyntax(link) === "wikilink"
+          ? splitLinktext(link.link)
+          : splitMarkdownDestination(link.link);
+      assert.equal(
+        noteFragment(note, subpath.slice(1))?.from,
+        heading.from,
+        `${name}: ${link.original}`,
+      );
+    }
+  }
+});
+
+test("a heading's links get its name as Obsidian writes it, encoded where Markdown needs it", () => {
+  assert.equal(headingSubpath("A | B: c#d ^e"), "A B c d e");
+  const heading = headingAt(PROBE, PROBE.indexOf("Old Name"))!;
+  const renamed: RenamedHeading = {
+    path: "probe.md",
+    text: PROBE,
+    heading,
+    name: "f(x) | 5%",
+  };
+  const links =
+    "[[probe#Old Name]] [y](probe.md#Old%20Name) [z](<probe.md#Old Name>)";
+  assert.equal(
+    apply(links, headingLinkEdits(links, "other.md", renamed, resolve)),
+    "[[probe#f(x) 5%]] [y](probe.md#f%28x%29%205%25) [z](<probe.md#f(x) 5%25>)",
+  );
 });
 
 test("a renamed heading keeps a table row's escaped pipe, angle brackets and titles", () => {

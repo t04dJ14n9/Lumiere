@@ -54,8 +54,10 @@ take its entries, as in Obsidian. Each entry builds its acceptance transaction
 from the current editor state, so it can replace surrounding text as well as
 insert at the caret.
 
-Ranking is Obsidian 1.14's: the fuzzy score of `src/shared/fuzzy.ts` (checked
-against Obsidian's own on 2,463 query and text pairs). A note matches on its
+Ranking is Obsidian's: the fuzzy score of `src/shared/fuzzy.ts` (checked
+against Obsidian 1.14.4's own on 2,463 query and text pairs), with 1.15.0's
+accent folding: `cafe` finds `café`, and a query typed with an accent ranks
+text that keeps it 0.05 higher (`src/shared/fuzzy-fold.ts`). A note matches on its
 name, or on its path a point lower; an excluded note is still offered, 10
 points lower. Aliases, headings and unresolved links match their own text; a
 tag matches lower-cased, from every tag path in the vault (parents too),

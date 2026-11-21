@@ -15,7 +15,7 @@ interface Candidate {
   mtime: number;
   /** Aliases are found by search but not listed for an empty query. */
   isAlias?: boolean;
-  /** Only notes are listed for an empty query. */
+  /** Listed for an empty query only when recently opened. */
   isAttachment?: boolean;
   /** An excluded file ranks 10 points lower, as in Obsidian. */
   penalty: number;
@@ -36,7 +36,7 @@ const ATTACHMENTS = new Set([
 
 export interface SwitcherOptions {
   limit?: number;
-  /** Recently opened note URIs, newest first. */
+  /** Recently opened file URIs (or vault paths), newest first. */
   recent?: readonly string[];
   /** Also list files of types Obsidian cannot open (`vault.showUnsupportedFiles`). */
   showUnsupportedFiles?: boolean;
@@ -46,8 +46,8 @@ export interface SwitcherOptions {
  * Quick switcher items for a query, as Obsidian's switcher: notes and
  * attachments by name, then by path, notes' aliases, and links whose note
  * does not exist yet, best match first (excluded files 10 points lower). An
- * empty query lists recently **opened** notes (`recent`), falling back to
- * mtime for notes never opened in this workspace. A query that names no note
+ * empty query lists recently **opened** notes and attachments (`recent`),
+ * then, by mtime, notes never opened in this workspace. A query that names no note
  * offers to create it. With `showUnsupportedFiles` every file of the vault is
  * found, not only the types Obsidian can open.
  */
@@ -68,8 +68,9 @@ export function switcherItems(
         (candidate) =>
           candidate.item.value.kind === "note" &&
           !candidate.isAlias &&
-          !candidate.isAttachment &&
-          candidate.penalty === 0,
+          candidate.penalty === 0 &&
+          (!candidate.isAttachment ||
+            noteRecentRank(candidate, order) !== Number.POSITIVE_INFINITY),
       )
       .sort((a, b) => {
         const ar = noteRecentRank(a, order);

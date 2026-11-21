@@ -52,6 +52,18 @@ test("an empty query prefers recently opened notes over mtime", () => {
   );
 });
 
+test("an empty query lists recently opened attachments with the notes, as Obsidian does, and no others", () => {
+  const index = vault();
+  const image = index.files().find((file) => file.path === "image.png")!;
+  assert.deepEqual(labels(switcherItems(index, "", { recent: [image.uri] })), [
+    "image.png",
+    "Daily",
+    "Project Plan",
+    "Planning",
+  ]);
+  assert.ok(!labels(switcherItems(index, "")).includes("image.png"));
+});
+
 test("prefix matches rank first, names above paths; aliases, not-created links and attachments are found; excluded files rank 10 lower", () => {
   assert.deepEqual(labels(switcherItems(vault(), "plan")), [
     "Planning",

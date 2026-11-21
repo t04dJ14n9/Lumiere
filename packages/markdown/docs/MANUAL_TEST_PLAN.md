@@ -717,6 +717,13 @@ Both are off by default (owner decision). Turn on
 1. **Quick Switcher** with an empty query lists recent notes. `Dest`
    finds `Target` by its alias; Enter opens it.
 2. A new name creates the note (in the new-note folder).
+3. Open an image from the switcher, then run it again with an empty query:
+   the image is listed with the recent notes.
+4. Type `Target`: Mod+Enter opens it in a tab that stays open, Mod+Alt+Enter
+   opens it to the side. Type `Targ` with `Target` selected: Shift+Enter
+   creates `Targ`, Mod+Shift+Enter creates it in a tab of its own. In VS
+   Code's own Go to File (Mod+P), Mod+Enter still opens to the side, and in
+   a note Mod+Enter still follows the link in place.
 
 ### wordCount
 
@@ -1149,6 +1156,14 @@ Use a disposable vault with `Templates/Meeting.md` containing
    Lumiere setting is set explicitly. A `dateFormat` such as
    `YYYY-MM-DD dddd` is not carried over. No `.obsidian` file changes.
 3. In host-node (the app or DSH), repeat step 1 from its Command Palette.
+4. A template written `# {{Title}}` and `{{DATE:YYYY}}` fills both in, as
+   `{{title}}` and `{{date:YYYY}}` do.
+5. With no templates folder set, **Insert Current Date** writes today's
+   date (`YYYY-MM-DD`) at the caret and **Insert Current Time** the time
+   (`HH:mm`), with the caret after it; with text selected, the date goes in
+   at the selection's head (where the drag ended), and the selected text
+   stays. With `templates.dateFormat` set to `DD.MM.YYYY`, the date follows
+   it. Neither has a key.
 
 ### scratch and Marp
 
@@ -1282,8 +1297,14 @@ Use the disposable fixture vault from Setup. These rows enumerate every generate
 | `lumiere.markdown.openCopiedAgentReference` — Open Copied Agent Reference | unbound | On a disposable fixture, run Open Copied Agent Reference; confirm its named action using the plugin scenarios above, then undo where applicable. Repeat after disable/re-enable and switching panes. |
 | `lumiere.markdown.showPluginStatus` — Show Plugin Status | unbound | On a disposable fixture, run Show Plugin Status; confirm its named action using the plugin scenarios above, then undo where applicable. Repeat after disable/re-enable and switching panes. |
 | `lumiere.markdown.quickSwitcher` — Quick Switcher | unbound | On a disposable fixture, run Quick Switcher; confirm its named action using the plugin scenarios above, then undo where applicable. Repeat after disable/re-enable and switching panes. |
+| `lumiere.markdown.quickSwitcher.openInNewTab` — Quick Switcher: Open in New Tab | ctrl+enter (Mac cmd+enter), only in the open quick switcher | Hidden from the palette. In the quick switcher, press the key on a row; confirm it opens or creates as quickSwitcher step 4 says. |
+| `lumiere.markdown.quickSwitcher.openToSide` — Quick Switcher: Open to the Side | ctrl+alt+enter (Mac cmd+alt+enter), only in the open quick switcher | Hidden from the palette. In the quick switcher, press the key on a row; confirm it opens or creates as quickSwitcher step 4 says. |
+| `lumiere.markdown.quickSwitcher.create` — Quick Switcher: Create Note | shift+enter, only in the open quick switcher | Hidden from the palette. In the quick switcher, press the key on a row; confirm it opens or creates as quickSwitcher step 4 says. |
+| `lumiere.markdown.quickSwitcher.createInNewTab` — Quick Switcher: Create Note in New Tab | ctrl+shift+enter (Mac cmd+shift+enter), only in the open quick switcher | Hidden from the palette. In the quick switcher, press the key on a row; confirm it opens or creates as quickSwitcher step 4 says. |
 | `lumiere.markdown.scratch.new` — New Scratch Note | unbound | On a disposable fixture, run New Scratch Note; confirm its named action using the plugin scenarios above, then undo where applicable. Repeat after disable/re-enable and switching panes. |
 | `lumiere.markdown.templates.insert` — Insert Template | unbound | On a disposable fixture, run Insert Template; confirm its named action using the plugin scenarios above, then undo where applicable. Repeat after disable/re-enable and switching panes. |
+| `lumiere.markdown.templates.insertCurrentDate` — Insert Current Date | unbound | On a disposable fixture, run Insert Current Date; confirm its named action using the plugin scenarios above, then undo where applicable. Repeat after disable/re-enable and switching panes. |
+| `lumiere.markdown.templates.insertCurrentTime` — Insert Current Time | unbound | On a disposable fixture, run Insert Current Time; confirm its named action using the plugin scenarios above, then undo where applicable. Repeat after disable/re-enable and switching panes. |
 | `lumiere.markdown.openSettings` — Open Settings | unbound | On a disposable fixture, run Open Settings; confirm its named action using the plugin scenarios above, then undo where applicable. Repeat after disable/re-enable and switching panes. |
 | `lumiere.markdown.changeSetting` — Change Setting… | unbound | On a disposable fixture, run Change Setting…; confirm its named action using the plugin scenarios above, then undo where applicable. Repeat after disable/re-enable and switching panes. |
 | `lumiere.markdown.setNoteFontSize` — Set Note Font Size | unbound | On a disposable fixture, run Set Note Font Size; confirm its named action using the plugin scenarios above, then undo where applicable. Repeat after disable/re-enable and switching panes. |

@@ -1,6 +1,17 @@
+import {
+  accentedWords,
+  foldAccents,
+  foldWithPositions,
+  keepsAccents,
+  originalRanges,
+} from "./fuzzy-fold";
+
 /**
- * Fuzzy matching as Obsidian 1.14 matches its suggestions and quick switcher,
- * checked score for score against its public `prepareFuzzySearch`.
+ * Fuzzy matching as Obsidian matches its suggestions and quick switcher,
+ * checked score for score against 1.14.4's public `prepareFuzzySearch`, with
+ * the accent folding 1.15.0 added (`fuzzy-fold.ts`): query and text are
+ * matched without their accents, and a query typed with accents ranks texts
+ * that keep them 0.05 higher.
  *
  * The query's words are found in order, each after the last; failing that,
  * its letters are. A match is better when it is in fewer pieces, starts its
@@ -28,7 +39,12 @@ interface PreparedQuery {
   words: string[];
   /** Every character but spaces, lower-cased. */
   letters: string[];
+  /** The query's words typed with an accent (`fuzzy-fold.ts`). */
+  accented: string[];
 }
+
+/** What a query typed with an accent loses on a text without it. */
+const UNACCENTED_PENALTY = 0.05;
 
 export function queryTokens(query: string): string[] {
   const lower = query.toLowerCase();
@@ -58,13 +74,15 @@ let last: PreparedQuery | undefined;
 
 function prepared(query: string): PreparedQuery {
   if (last?.query !== query) {
+    const folded = foldAccents(query);
     last = {
       query,
-      words: queryTokens(query),
-      letters: query
+      words: queryTokens(folded),
+      letters: folded
         .toLowerCase()
         .split("")
         .filter((char) => char !== " "),
+      accented: accentedWords(query),
     };
   }
   return last;
@@ -159,17 +177,30 @@ export function fuzzyMatch(
   if (query === "") {
     return { score: 0, matches: [] };
   }
-  const { words, letters } = prepared(query);
-  const lower = lowerCased(text);
+  const { words, letters, accented } = prepared(query);
+  // Matched and scored in the folded text; the ranges are given back in
+  // the text as written.
+  const folded = foldWithPositions(text);
+  const matched = folded?.text ?? text;
+  const lower = lowerCased(matched);
   const found =
-    matchPieces(words, text, lower, false) ??
-    matchPieces(letters, text, lower, true);
+    matchPieces(words, matched, lower, false) ??
+    matchPieces(letters, matched, lower, true);
   if (!found) {
     return undefined;
   }
+  const matches = folded ? originalRanges(folded, found.ranges) : found.ranges;
+  const score = rangesScore(
+    found.ranges,
+    found.inside,
+    query.length,
+    lower.length,
+  );
+  const isUnaccented =
+    accented.length > 0 && !keepsAccents(text, matches, accented);
   return {
-    score: rangesScore(found.ranges, found.inside, query.length, lower.length),
-    matches: found.ranges,
+    score: isUnaccented ? score - UNACCENTED_PENALTY : score,
+    matches,
   };
 }
 

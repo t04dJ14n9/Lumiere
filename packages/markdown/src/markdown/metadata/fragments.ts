@@ -18,7 +18,8 @@ export function noteFragment(
   try {
     fragment = decodeURIComponent(fragment);
   } catch {
-    return undefined;
+    // A `%` that starts no escape is text: `[[Note#100% done]]` names the
+    // heading "100% done".
   }
   const note = metadata(source);
   if (fragment.startsWith("^")) {

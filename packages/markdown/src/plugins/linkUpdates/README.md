@@ -72,6 +72,15 @@ command says so. As after a file rename, a linking note is saved if it had
 no unsaved changes, and one that had is left unsaved. A linking note that
 cannot be updated or saved does not stop the others; a message names it.
 
+Any name is accepted, as in Obsidian. The heading gets the name as typed;
+links get it as Obsidian writes them, with the characters a link cannot
+hold (`:`, `#`, `|`, `^`, `\`, `%%`, `[[`, `]]`) as spaces, which still
+reach the heading since links match headings with punctuation read as
+spaces (`headingSubpath`). A Markdown link's destination also has `%`, and
+a space or parenthesis (bare) or `<` and `>` (in `<…>`), percent-encoded so
+the link stays a link. Only a name with nothing left for a link (`#|^`) is
+refused.
+
 ## Files
 
 - `host.ts`: the rename hook, the prompt and folder expansion.
@@ -101,3 +110,7 @@ cannot be updated or saved does not stop the others; a message names it.
 - Rename Heading asks for the new name in a prompt; Obsidian renames in
   its own prompt too. Nested subpaths (`#Parent#Heading`) are left, as in
   Obsidian.
+- Obsidian writes a Markdown link's new subpath with only spaces encoded,
+  so a parenthesis or `%` in the name can break it there; Lumiere encodes
+  them. Obsidian accepts a name with nothing left for a link and writes
+  `[[Note#]]`; Lumiere refuses it.
