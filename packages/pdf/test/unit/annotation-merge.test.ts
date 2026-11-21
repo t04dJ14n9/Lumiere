@@ -3,6 +3,7 @@ import { test } from "node:test";
 import {
   annotationEntries,
   mergeAnnotationFile,
+  sameAnnotations,
 } from "../../src/shared/annotation-merge";
 import {
   parseAnnotations,
@@ -144,4 +145,17 @@ test("the annotations of a file are listed by identity, not by ref", () => {
   );
   assert.equal(annotationEntries("not json"), undefined);
   assert.equal(annotationEntries(undefined)?.size, 0);
+});
+
+test("a merge that keeps the file's annotations as they are holds the same ones, written anew", () => {
+  const disk = mergeAnnotationFile(file(A), undefined, file(B));
+  const again = mergeAnnotationFile(disk, file(A), file(A));
+  assert.equal(sameAnnotations(again, disk), true);
+  assert.equal(sameAnnotations(disk, file(A)), false);
+  assert.equal(
+    sameAnnotations(file({ ...A, contents: "changed" }), file(A)),
+    false,
+  );
+  assert.equal(sameAnnotations(undefined, undefined), true);
+  assert.equal(sameAnnotations("not a file", "not a file either"), false);
 });

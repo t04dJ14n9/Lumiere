@@ -9,6 +9,7 @@ import {
   cp,
   lstat,
   mkdir,
+  mkdtemp,
   readdir,
   readFile,
   rename,
@@ -50,7 +51,10 @@ export function createNodePlatform(options: NodePlatformOptions): HostPlatform {
     async writeScratchFile(name, text) {
       const folder = path.join(options.data, "agent");
       await mkdir(folder, { recursive: true, mode: 0o700 });
-      const file = path.join(folder, path.basename(name));
+      // A folder of its own: the name repeats (lines 1 to 5 of any README.md),
+      // and a later passage must not replace one an agent already has.
+      const own = await mkdtemp(path.join(folder, "copy-"));
+      const file = path.join(own, path.basename(name));
       await writeFile(file, text, { mode: 0o600 });
       return pathToFileURL(file).toString();
     },

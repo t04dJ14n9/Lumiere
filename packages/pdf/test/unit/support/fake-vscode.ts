@@ -186,8 +186,26 @@ export const window = {
   },
 };
 
+const workspaceFoldersChanged = new Set<Listener>();
+
+/** Change the window's workspace folders, as Add Folder to Workspace does. */
+export function setWorkspaceFolders(folders: Uri[]): void {
+  workspace.workspaceFolders = folders.map((uri) => ({ uri }));
+  for (const listener of [...workspaceFoldersChanged]) {
+    listener({ added: [], removed: [] });
+  }
+}
+
 export const workspace = {
   workspaceFolders: undefined as { uri: Uri }[] | undefined,
+  onDidChangeWorkspaceFolders: (listener: Listener) => {
+    workspaceFoldersChanged.add(listener);
+    const handle = track("listener:workspace.workspaceFolders");
+    return new Disposable(() => {
+      workspaceFoldersChanged.delete(listener);
+      handle.dispose();
+    });
+  },
   getConfiguration: (section = "") => ({
     get: <T>(key: string, fallback?: T) =>
       (configuration.has(`${section}.${key}`)

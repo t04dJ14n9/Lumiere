@@ -32,3 +32,22 @@ export async function makePrivateFolder(folder: string): Promise<void> {
     await fs.chmod(folder, 0o700);
   }
 }
+
+/**
+ * Write `text` as `name` in a folder of its own under the private `folder`;
+ * its path. The name repeats (`a.md-12-18.md` for lines 12 to 18 of any
+ * `a.md`), and the folder is one for every VS Code window of this user's: a
+ * fixed path would let a later copy, in another project's window perhaps,
+ * replace the passage an agent was already handed.
+ */
+export async function writeOwnFile(
+  folder: string,
+  name: string,
+  text: string,
+): Promise<string> {
+  await makePrivateFolder(folder);
+  const own = await fs.mkdtemp(path.join(folder, "copy-"));
+  const file = path.join(own, path.basename(name));
+  await fs.writeFile(file, text, { mode: 0o600 });
+  return file;
+}

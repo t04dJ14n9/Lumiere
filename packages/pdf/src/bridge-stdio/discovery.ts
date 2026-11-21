@@ -5,12 +5,14 @@
  *
  * Invariant: the shim connects only to a bridge it can attribute to the
  * agent without guessing. That is the window whose workspace contains the
- * agent's folder (the most specific one when workspaces nest), or the window
- * named by AGENT_PDF_BRIDGE_PID. No match, or two windows matching equally,
- * is an error, never "the newest window": another window's selection
- * belongs to another project. Records that are malformed, stale (their
- * process is gone) or point anywhere but a loopback /mcp endpoint are ignored.
+ * agent's folder (the most specific one when workspaces nest; paths are
+ * compared with their links resolved), or the window named by
+ * AGENT_PDF_BRIDGE_PID. No match, or two windows matching equally, is an
+ * error, never "the newest window": another window's selection belongs to
+ * another project. Records that are malformed, stale (their process is
+ * gone) or point anywhere but a loopback /mcp endpoint are ignored.
  */
+import { realpathSync } from "node:fs";
 import * as path from "node:path";
 
 export interface BridgeRecord {
@@ -93,8 +95,23 @@ function isLoopbackEndpoint(value: string): boolean {
   );
 }
 
+/**
+ * The folder's path with its links resolved. VS Code keeps the path a
+ * folder was opened by (`~/code/project`, a link), while the agent's
+ * `process.cwd()` is the real one (`~/src/project`), and on macOS `/tmp` is
+ * itself a link to `/private/tmp`: compared as written, they never match. A
+ * path that does not exist (any more) is compared as written.
+ */
+function realFolder(folder: string): string {
+  try {
+    return realpathSync.native(folder);
+  } catch {
+    return path.resolve(folder);
+  }
+}
+
 function contains(folder: string, file: string): boolean {
-  const relative = path.relative(path.resolve(folder), path.resolve(file));
+  const relative = path.relative(folder, file);
   return (
     relative === "" ||
     (!relative.startsWith("..") && !path.isAbsolute(relative))
@@ -115,6 +132,7 @@ export function chooseBridge(
       error: `No running Lumiere PDF bridge has AGENT_PDF_BRIDGE_PID ${options.pid}.`,
     };
   }
+  const cwd = realFolder(options.cwd);
   // How specific a match is: the length of the deepest workspace folder containing cwd.
   const scored = live
     .map((record) => ({
@@ -122,8 +140,9 @@ export function chooseBridge(
       score: Math.max(
         0,
         ...record.workspaceFolders
-          .filter((folder) => contains(folder, options.cwd))
-          .map((folder) => path.resolve(folder).length),
+          .map(realFolder)
+          .filter((folder) => contains(folder, cwd))
+          .map((folder) => folder.length),
       ),
     }))
     .filter(({ score }) => score > 0);

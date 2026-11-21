@@ -1,6 +1,9 @@
 import type { PdfAnnotationFiles, PdfFiles } from "../../shared/host";
 import type { ViewerMessage } from "../../shared/messages";
-import { mergeAnnotationFile } from "../../shared/annotation-merge";
+import {
+  mergeAnnotationFile,
+  sameAnnotations,
+} from "../../shared/annotation-merge";
 
 /**
  * The editors whose annotation files one host's `PdfAnnotationFiles` keeps,
@@ -168,11 +171,17 @@ export class AnnotationStore {
   ): Promise<void> {
     const key = this.keyOf(sha256);
     let disk: string | undefined;
-    let merged: string | undefined;
+    let written: string | undefined;
     try {
       disk = await store.read(this.fileUri, sha256);
-      merged = mergeAnnotationFile(disk, this.base.get(sha256), mine);
-      await store.write(this.fileUri, sha256, merged);
+      const merged = mergeAnnotationFile(disk, this.base.get(sha256), mine);
+      // Nothing of this editor's to add: writing would only put back what
+      // was read, over whatever another window wrote since (a viewer saves
+      // again after showing another window's marks).
+      written = sameAnnotations(merged, disk) ? disk : merged;
+      if (written !== disk) {
+        await store.write(this.fileUri, sha256, written);
+      }
     } catch (error) {
       const text = error instanceof Error ? error.message : String(error);
       this.deps.error(`Could not save PDF annotations: ${text}`);
@@ -185,13 +194,13 @@ export class AnnotationStore {
     // watcher has not said so yet: this viewer has not seen that either.
     const isNewToAll = known?.has(key) === true && known.get(key) !== disk;
     if (known?.has(key)) {
-      known.set(key, merged);
+      known.set(key, written);
     }
     // Nothing changed for the others: telling them would only echo.
-    if (merged === disk && !isNewToAll) {
+    if (written === disk && !isNewToAll) {
       return;
     }
-    this.tell(key, sha256, merged, isNewToAll ? undefined : this);
+    this.tell(key, sha256, written, isNewToAll ? undefined : this);
   }
 
   /** Send the editors of the file `key` what it holds now, except `except`. */
