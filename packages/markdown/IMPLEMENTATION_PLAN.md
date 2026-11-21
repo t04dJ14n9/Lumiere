@@ -7333,3 +7333,26 @@ offered, the caret's block left out, ids for this note and another, a
 cancelled query reads nothing, a note is read again only after it changes),
 `test/unit/suggest/*.test.ts`, the markdown typecheck and eslint. Browser,
 quality and real-VS Code suites not run here.
+
+## Outline: drag a heading to move its section (#699; 2026-11-21)
+
+Obsidian 1.15.0's Outline, read in its shipped code (behaviour only, nothing
+copied): a heading row dropped before or after another moves the heading's
+section, up to the next heading of the same or a higher level, to that
+place in the note; levels are kept, the text before the insertion point and
+the section are padded to end in a blank line, and a drop inside the section
+or right after it does nothing. Markdown Outline does the same. `TreeSource`
+gains an optional `drop`; VS Code's adapter gives such a tree a
+drag-and-drop controller that carries rows only within the tree. VS Code
+reports the row dropped on, not its half, so a drop goes before that
+heading, and below the last row to the end of the note. The move is one
+edit to the note's `TextDocument` (one Undo), refused if the note changed
+since the rows were built. host-node's trees never call `drop`, so outside
+VS Code rows are not draggable yet (its README says so).
+
+Validation: unit tests for the section move (`move-section.test.ts`), the
+drop's document edit with CRLF and stale-text guards (`section-drag.test.ts`)
+and the VS Code controller (`test/unit/host/tree-drag.test.ts`); outline
+tests, typecheck, ESLint and Prettier pass. Not run here (another agent's
+real VS Code suite was running): `pnpm test:browser`, `test:quality`,
+`test:vscode`.

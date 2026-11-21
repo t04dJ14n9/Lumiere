@@ -43,6 +43,10 @@
   already have an `^id`, as in Obsidian. Picking one without an id gives it
   one (six hex digits) at the end of the block, in this note or the other.
   The block being typed in is not offered (#698).
+- Markdown: drag a heading in **Markdown Outline** to move its section, with
+  its subheadings, as in Obsidian's Outline. Dropped on a heading, the
+  section goes before it; dropped below the last heading, to the end of the
+  note. One Undo takes the move back (#699).
 
 Fixes for several VS Code windows open at once, each with a test; checked
 with two real windows on one profile.

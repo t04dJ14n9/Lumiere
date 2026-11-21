@@ -13,6 +13,7 @@ import { OPEN_COMMAND, VIEW_ID } from "./commands";
 import { createOutlineFocus } from "./focus";
 import { jumpToHeading, type HeadingJumps } from "./jump";
 import { protocol } from "./protocol";
+import { sectionMover } from "./section-drag";
 import { registerSymbolPicker } from "./symbol-picker";
 import { OutlineSource } from "./tree";
 import { OutlineView } from "./view";
@@ -29,11 +30,18 @@ export const outlineHost: Plugin = {
       "views",
       "dialogs",
       "activeEditor",
+      "hostDocuments",
     ],
   },
   apply(ctx) {
     const editors = ctx.editors;
-    const source = new OutlineSource();
+    const source = new OutlineSource(
+      sectionMover({
+        editors,
+        hostDocuments: ctx.hostDocuments,
+        dialogs: ctx.dialogs,
+      }),
+    );
     const tree = ctx.views.tree(VIEW_ID, source, { showCollapseAll: true });
     ctx.effect(() => () => tree.dispose());
     const view = new OutlineView({

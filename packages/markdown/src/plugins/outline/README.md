@@ -2,8 +2,9 @@
 
 Shows the active note's headings beside this editor, with Collapse All,
 Expand All and an optional Follow Cursor toggle. Clicking a heading jumps to
-its section, like Obsidian's **Outline** core plugin. **Go to Heading…** searches
-these headings in a native Quick Pick while the Lumiere editor is active.
+its section, and dragging it moves the section, like Obsidian's **Outline**
+core plugin. **Go to Heading…** searches these headings in a native Quick
+Pick while the Lumiere editor is active.
 
 ## How it works
 
@@ -59,6 +60,17 @@ Above the first heading (frontmatter or a preamble) no section is current, and
 Obsidian clears the highlight; the view does the same through the tree's
 optional `clearSelection`, leaving the open rows as they are.
 
+Dragging a heading's row moves its section: the heading, its text and its
+subheadings, up to the next heading of the same or a higher level. Dropped
+on another row, the section goes before that heading; dropped below the last
+row, to the end of the note. Levels are kept, as in Obsidian, and the text
+before the insertion point and the moved section each end in a blank line
+(`move-section.ts`). The move is one edit to the note's `TextDocument`
+(`section-drag.ts`), so one Undo takes it back and every panel of the note
+follows. A drop inside the dragged section, or right after it, changes
+nothing, and a note edited since the outline last refreshed is not moved
+(the rows' offsets would no longer fit it); a message says to try again.
+
 Ctrl+Shift+O (Command+Shift+O on macOS), or **Lumiere: Go to
 Heading…** in the command palette, opens a searchable heading picker. It reads
 the active panel's authoritative text, shows heading levels and parent titles,
@@ -99,7 +111,11 @@ Markdown Outline so they do not linger beside non-Lumiere editors.
 - `jump.ts`: opens a note at a heading for rows and Go to Heading; checks
   Links and logs a failed jump.
 - `symbols.ts`: nested heading symbols with enclosing section ranges.
-- `tree.ts`: heading nodes, parent lookup and editor-to-source coordinates.
+- `tree.ts`: heading nodes, parent lookup, editor-to-source coordinates and
+  the dropped row's move.
+- `move-section.ts`: the edit that moves a heading's section before another
+  heading or to the end of the note.
+- `section-drag.ts`: applies a dropped row's move to the note's document.
 - `view.ts`: refresh timing, cursor following and expansion traversal.
 - `jump-window.ts`: the second after an outline click, when the tree and scroll follow are left alone.
 - `actions.ts`: commands, configuration reads and the follow context key.
@@ -110,7 +126,9 @@ Markdown Outline so they do not linger beside non-Lumiere editors.
 
 ## Services, events and settings
 
-- Injects the host services `hostCommands`, `dialogs`, `views` and `settings`, `vaults` (navigation) and `editors`.
+- Injects the host services `hostCommands`, `dialogs`, `views`, `settings`
+  and `hostDocuments` (a dropped row's edit), `vaults` (navigation) and
+  `editors`.
 - Depends on the Links plugin of the note's editor for every jump (row
   clicks and Go to Heading): Links registers the editor's reveal with the
   `navigation` host service and moves the view. Links runs per note and
@@ -143,7 +161,12 @@ Markdown Outline so they do not linger beside non-Lumiere editors.
 - VS Code's TreeView API can select a row but not clear the selection, so
   there the last row stays highlighted while the caret or the top line is above
   the first heading. The app's outline panel (host-node) clears it.
-- No drag-and-drop reordering of sections.
+- VS Code's tree reports only the row a heading is dropped on, not which
+  half of it, so a drop always puts the section before that heading (below
+  the last row for the end of the note); Obsidian also offers the position
+  after a row. Obsidian's drop at the very top of a note adds blank lines
+  before the section; here it starts the note.
+- Outside VS Code (host-node's outline panel) rows cannot be dragged yet.
 - VS Code's native Outline and breadcrumbs require an editor integration that
   the supported CustomTextEditorProvider API does not supply. Lumiere uses
   Markdown Outline and Go to Heading. The plain text editor uses VS Code's built-in

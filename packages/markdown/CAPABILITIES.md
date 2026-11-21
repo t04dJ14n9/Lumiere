@@ -47,7 +47,7 @@ product choices for VS Code, not parity claims.
 | tags | Tag rendering and search, Explorer **Tags** view | Search results are a quick pick, not a search pane |
 | suggest | `[[`, `[[#`, `[[^`, `[[^^` and `#` completions; a picked block without an id gets one, as in Obsidian | At most 50 results |
 | search | `query` blocks with Obsidian's search syntax | No Dataview |
-| outline | Explorer **Markdown Outline** and **Go to Heading…** (Ctrl+Shift+O) | No drag to reorder sections; VS Code's native Outline and breadcrumbs apply to the plain text editor |
+| outline | Explorer **Markdown Outline** and **Go to Heading…** (Ctrl+Shift+O); drag a heading to move its section | A section dropped on a heading goes before it (VS Code's tree has no drop position after a row; below the last row is the note's end); no dragging outside VS Code; VS Code's native Outline and breadcrumbs apply to the plain text editor |
 | backlinks | Explorer **Backlinks** with unlinked mentions and a status bar count | Off by default (owner decision) |
 | outgoingLinks | Explorer **Outgoing Links** | Off by default; no unlinked mentions section |
 | quickSwitcher | **Quick Switcher** over notes, aliases and unresolved links | No key binding (Mod+O is VS Code's Open File; see [Hotkeys](#hotkeys)); an empty query lists recently opened notes, then recently modified ones never opened here |
