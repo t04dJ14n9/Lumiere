@@ -123,19 +123,23 @@ export class PropertyEditing {
 
   /**
    * Obsidian's "Add alias": an empty `aliases` property, unless there is one,
-   * then the caret in it, ready for a name.
+   * then the caret in it, ready for a name. False, changing nothing, when
+   * the editor is gone or read-only.
    */
-  addAlias(): void {
+  addAlias(): boolean {
     const view = this.options.view();
-    if (!view || document.querySelector("dialog[open]")) {
-      return;
+    if (!view || view.state.readOnly) {
+      return false;
+    }
+    if (document.querySelector("dialog[open]")) {
+      return true;
     }
     const header = frontmatter(view.state.doc.toString());
     if (header?.error) {
       this.options.setStatus(
         "Fix the properties source before adding an alias.",
       );
-      return;
+      return true;
     }
     this.options.show();
     if (!header?.values || !("aliases" in header.values)) {
@@ -145,13 +149,14 @@ export class PropertyEditing {
       view.dom,
       '[data-property-list="aliases"] [data-property-list-input]',
     );
+    return true;
   }
 
   /** Obsidian's "Clear file properties": the whole properties block goes. */
   clear(): boolean {
     const view = this.options.view();
     const header = view && headerParts(view.state.doc.toString());
-    if (!view || !header) {
+    if (!view || !header || view.state.readOnly) {
       return false;
     }
     view.dispatch({
@@ -161,11 +166,17 @@ export class PropertyEditing {
     return true;
   }
 
-  /** Obsidian's "Add file property": create the sheet if needed and start a new row. */
-  add(): void {
+  /**
+   * Obsidian's "Add file property": create the sheet if needed and start a
+   * new row. False, changing nothing, when the editor is gone or read-only.
+   */
+  add(): boolean {
     const view = this.options.view();
-    if (!view || document.querySelector("dialog[open]")) {
-      return;
+    if (!view || view.state.readOnly) {
+      return false;
+    }
+    if (document.querySelector("dialog[open]")) {
+      return true;
     }
     const source = view.state.doc.toString();
     const header = frontmatter(source);
@@ -173,7 +184,7 @@ export class PropertyEditing {
       this.options.setStatus(
         "Fix the properties source before adding a field.",
       );
-      return;
+      return true;
     }
     this.options.show();
     view.dispatch({
@@ -185,6 +196,7 @@ export class PropertyEditing {
         ?.dom.querySelector<HTMLButtonElement>("[data-property-add]")
         ?.click(),
     );
+    return true;
   }
 
   /** Registry updates only change presentation; values and undo remain untouched. */

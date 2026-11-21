@@ -272,10 +272,7 @@ function registerEditorControls(
       keymap.of([
         {
           key: "Mod-;",
-          run: () => {
-            options.editing.add();
-            return true;
-          },
+          run: () => options.editing.add(),
         },
       ]),
     ]);
@@ -327,16 +324,12 @@ function enterProperties(
 
 function registerAddProperty(ctx: Context, editing: PropertyEditing): void {
   ctx.effect(() =>
-    ctx.commands.register("markdown:add-metadata-property", () => {
-      editing.add();
-      return true;
-    }),
+    ctx.commands.register("markdown:add-metadata-property", () =>
+      editing.add(),
+    ),
   );
   ctx.effect(() =>
-    ctx.commands.register("markdown:add-alias", () => {
-      editing.addAlias();
-      return true;
-    }),
+    ctx.commands.register("markdown:add-alias", () => editing.addAlias()),
   );
   ctx.effect(() =>
     ctx.commands.register("markdown:clear-metadata-properties", () =>
