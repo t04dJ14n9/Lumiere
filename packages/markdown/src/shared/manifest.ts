@@ -107,8 +107,8 @@ export interface Manifest {
       icon?: string;
       /**
        * VS Code's `shortTitle`: the label inside a submenu, where the
-       * submenu's name says the rest (Bold under Format). host-node shows
-       * it there; VS Code's context menus keep the title.
+       * submenu's name says the rest (Bold under Format). VS Code's
+       * context menus keep the title.
        */
       shortTitle?: string;
       editorCommand?: string;

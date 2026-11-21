@@ -1,9 +1,9 @@
 /**
- * How far the embedder's controls reach over the top of the page. On the
- * iPad they float as glass over the note, which scrolls under them; the
- * window says how tall they are (host-node's embedding.ts, `inset`), and the
- * page keeps line 1, the sticky headings, the find bar and every jump below
- * them. Elsewhere it is 0.
+ * How far the embedder's controls reach over the top of the page. In the
+ * iPad app (now on the hosts-snapshot-2026-11-21 branch) they float as glass
+ * over the note, which scrolls under them; the window says how tall they
+ * are (`inset`), and the page keeps line 1, the sticky headings, the find
+ * bar and every jump below them. In VS Code it is 0.
  */
 import { EditorView } from "@codemirror/view";
 

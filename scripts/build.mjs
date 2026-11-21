@@ -51,7 +51,7 @@ const host = await esbuild.build({
 });
 // The PDF engine ships once, in the PDF viewer's folder: the Markdown editor's
 // PDF embeds load that copy (packages/markdown/src/host/editor-panels.ts), so
-// the Markdown build's own copy (for the hosts outside VS Code) stays out.
+// the Markdown build's own copy (which its browser tests load) stays out.
 const sharedPdfEngine = path.join("markdown", "webview", "embedpdf.wasm");
 for (const name of products) {
   const from = path.join(root, "packages", name, "dist");

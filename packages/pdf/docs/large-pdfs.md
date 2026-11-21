@@ -19,14 +19,11 @@ file URI and host, kept while an editor of it is open:
 The SHA-256 (which names the annotation file) is computed in 16 MB slices,
 yielding between them, so a large PDF does not hold up the extension host.
 
-Outside VS Code (`packages/host-node`), the pages of one workspace share
-one set of files, so they share reads the same way.
-
 ## The size limit
 
 The viewer opens PDFs up to **512 MB** (`MAX_PDF_BYTES`; a host may set
 `PdfFiles.maxBytes`). A larger file is refused before it is read, when the
-host can tell its size (VS Code and host-node both can), with a message
+host can tell its size (VS Code can), with a message
 naming the file and the limit; a host that cannot is refused once the bytes
 are read. The file is not streamed instead: the engine opens a PDF only
 from its whole bytes in memory, and those are held by the extension host,
@@ -38,9 +35,9 @@ limit (200 MB), as it runs in the extension host.
 
 ## Why the viewer cannot load a PDF by range
 
-Outside VS Code, `packages/host-node` serves the bytes at
-`/lumiere/pdf/bytes` and answers `Range` requests. The viewer still fetches
-the whole file once, because EmbedPDF 3.0.0, the engine it runs, opens a
+A host that serves the bytes over HTTP could answer `Range` requests (the
+Node host on the `hosts-snapshot-2026-11-21` branch does). The viewer would
+still fetch the whole file once, because EmbedPDF 3.0.0, the engine it runs, opens a
 document in the browser only from all its bytes:
 
 - `LocalEngine.open` (`@embedpdf/engine`) accepts `kind: "bytes"`,
@@ -62,18 +59,14 @@ document in the browser only from all its bytes:
   input or request of EmbedPDF 3 reaches it, and a page cannot answer a
   synchronous read from the network without blocking the worker.
 
-So what the hosts do instead is hold as few copies as they can:
+So what the extension does instead is hold as few copies as it can:
 
 - VS Code sends the bytes in the `load` message; the extension host keeps
   none of them once sent.
-- host-node keeps the newest load's bytes for its page only until the page
-  has fetched them whole (a ranged request leaves them), then lets them go;
-  serving a range is a view of those bytes, not a copy. The pages of one
-  workspace share each read of a file.
-- The viewer page lets its fetched copy go as soon as the engine has opened
+- The viewer page lets its copy go as soon as the engine has opened
   the document (`engine.tsx`). Until then it hands the engine a view, which
   the engine copies: an `ArrayBuffer` would be moved into the worker,
   leaving nothing for the main-thread engine to open if the worker fails.
 
 If a later EmbedPDF opens a document from a range reader in the browser,
-the host route is ready for it.
+the snapshot branch's host route shows how a host could serve it.

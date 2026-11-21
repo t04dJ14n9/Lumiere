@@ -64,6 +64,5 @@ switcher sets): its command notes how to open, then accepts the selected row
 - Bookmarks are not listed: Lumiere has no bookmarks (CAPABILITIES, "Not
   implemented"). Obsidian's switcher also finds bookmarked searches, graphs
   and URLs by their titles.
-- Mod+Alt+Shift+Enter (Obsidian's open in a new window) is not bound. In
-  host-node the switcher keys do nothing: they rely on VS Code's quick pick
-  and context keys; Enter works there.
+- Mod+Alt+Shift+Enter (Obsidian's open in a new window) is not bound. The
+  switcher keys rely on VS Code's quick pick and context keys.

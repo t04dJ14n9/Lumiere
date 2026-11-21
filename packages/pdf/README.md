@@ -31,8 +31,7 @@ is opt-in (`lumiere.pdf.regions.enabled`, default off).
   working once the PDF is open (its worker fails, or PDFium crashes), the
   viewer says so and offers **Reload**, which starts a new engine at the
   same page, instead of leaving pages that never draw.
-- **View controls.** A View picker in the editor title/status bar, and a
-  compact **View** menu in the slim toolbar of the web and iPad hosts, selects zoom, layout,
+- **View controls.** A View picker in the editor title/status bar selects zoom, layout,
   scrolling mode and direction. Saved choices and reading position return
   when a PDF reopens (the place is kept two seconds after the view stops
   moving, for the 500 PDFs read most recently). Next/previous moves by spreads in two-page layouts;
@@ -499,7 +498,6 @@ request and on pushes to `main`. Each job, and how to run it locally:
 | ------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------ | ------------------------------------------------------------- |
 | `check` | Prettier, lint, typecheck, unit tests and generated contributions pass | `pnpm check` |
 | `check (windows)` | The unit tests pass on Windows | `pnpm test` |
-| `desktop` | The desktop app's Rust: `cargo check` and its unit tests | `pnpm check:desktop` |
 | `browser` | The webview suite in Chromium; on failure, `test-results/` is uploaded | `pnpm test:browser` |
 | `quality` | Scroll smoothness and opening speed stay within their budgets | `pnpm test:quality` |
 | `package` | `pnpm package` builds the VSIX, leaves committed files unchanged, and the VSIX is under 20 MB with no tests, sources, source maps or unreviewed secret-shaped strings, and the PDF engine once; the webview entry and the extension host grow no more than 10% over `scripts/bundle-baseline.json`; the VSIX is uploaded as the `vsix` artifact | `pnpm package && bash .github/scripts/check-vsix.sh *.vsix 20 && node scripts/bundle-size.mjs` |

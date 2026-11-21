@@ -77,7 +77,7 @@ export interface TreeSource {
   /**
    * Makes rows draggable within the tree: `dragged` was dropped on `target`,
    * or below the last row when `target` is undefined. A host whose trees
-   * cannot drag rows (host-node's, so far) never calls it.
+   * cannot drag rows never calls it.
    */
   drop?(dragged: TreeNode, target: TreeNode | undefined): Promise<void>;
 }

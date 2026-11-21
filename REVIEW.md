@@ -3,7 +3,7 @@
 Failure modes that matter in this repo (not style nits):
 
 - **It lies** — docs, PR body, or comments claim behaviour the code does not do.
-- **It misroutes** — wrong host/plugin layer (see AGENTS.md + docs/HOSTS_PLAN.md); Markdown fix in a host; cross-product settings/commands.
+- **It misroutes** — wrong layer (see AGENTS.md); Markdown fix in `src/host` instead of the plugin; cross-product settings/commands.
 - **Trust boundary** — webview messages without schema/validation; path escape; secrets in diff/fixtures/VSIX.
 - **Plugin graph** — importing another plugin’s internals; side effects not tied to plugin context lifecycle.
 - **Obsidian copy** — any copied Obsidian code/CSS/assets (behaviour reference only).

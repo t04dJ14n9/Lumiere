@@ -160,13 +160,12 @@ Markdown Outline so they do not linger beside non-Lumiere editors.
 
 - VS Code's TreeView API can select a row but not clear the selection, so
   there the last row stays highlighted while the caret or the top line is above
-  the first heading. The app's outline panel (host-node) clears it.
+  the first heading.
 - VS Code's tree reports only the row a heading is dropped on, not which
   half of it, so a drop always puts the section before that heading (below
   the last row for the end of the note); Obsidian also offers the position
   after a row. Obsidian's drop at the very top of a note adds blank lines
   before the section; here it starts the note.
-- Outside VS Code (host-node's outline panel) rows cannot be dragged yet.
 - VS Code's native Outline and breadcrumbs require an editor integration that
   the supported CustomTextEditorProvider API does not supply. Lumiere uses
   Markdown Outline and Go to Heading. The plain text editor uses VS Code's built-in

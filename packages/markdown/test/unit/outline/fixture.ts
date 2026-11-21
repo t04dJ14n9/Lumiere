@@ -36,8 +36,7 @@ export async function outlineFixture(
      */
     native = true,
     /**
-     * Whether the tree can unselect a row, as host-node's can and VS Code's
-     * cannot.
+     * Whether the tree can unselect a row, as VS Code's cannot.
      */
     clearsSelection = false,
   }: { native?: boolean; clearsSelection?: boolean } = {},

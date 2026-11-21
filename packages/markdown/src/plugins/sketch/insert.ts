@@ -74,7 +74,7 @@ export async function insertSketch(
     return undefined;
   }
   // The embed resolves through the index on its first render; a host
-  // reports its own writes a moment later (host-web after a native stat).
+  // may report its own writes a moment later (after a native stat, say).
   await whenIndexed(index, saved.path, host.indexWait ?? INDEX_WAIT_MS);
   const key = lookupKey(saved.path);
   const embed = embedFor({

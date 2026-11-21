@@ -1,8 +1,9 @@
 /**
  * The `ink` host service: a canvas to draw on, provided by the host where
- * one exists. On the iPad it is PencilKit (apps/ipad's `LumiereInk`); in a
- * browser, the web canvas (`@workshop/ink/canvas`); VS Code has none yet. A
- * plugin that injects `ink` starts only where a host provides it.
+ * one exists: in a browser, the web canvas (`@workshop/ink/canvas`); on the
+ * iPad, PencilKit (that app is on the hosts-snapshot-2026-11-21 branch).
+ * VS Code has none. A plugin that injects `ink` starts only where a host
+ * provides it.
  *
  * The service knows nothing of notes or files: it is given a drawing (or
  * none) and gives one back. Where the drawing lives is the plugin's

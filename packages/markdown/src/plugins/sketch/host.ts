@@ -1,8 +1,8 @@
 /**
  * The sketch plugin's host half, once per window: Insert Sketch, and the
  * edits each note's page asks for when a sketch is tapped. It needs a
- * canvas (`ink`), so it runs only where the host has one (the iPad); the
- * pages elsewhere leave sketches to show as images.
+ * canvas (`ink`), so it runs only where the host has one (VS Code has
+ * none); the pages elsewhere leave sketches to show as images.
  */
 import type { Context, Plugin, PluginHandle } from "@workshop/core";
 import type {} from "@workshop/ink/service";

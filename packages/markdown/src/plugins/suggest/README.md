@@ -89,7 +89,7 @@ Provides `suggest.register`; webview injects `editor` and `rpc`, host injects
 extension's root provides it from Lumiere PDF; the editor host hands it to each
 panel). The window half injects `vaults`, the host services `settings` and
 `hostDocuments`, and optionally `pdfOutlines`, and does nothing where
-`hostDocuments` has no `registerCompletions` (outside VS Code). Emits the
+`hostDocuments` has no `registerCompletions`. Emits the
 `suggest/trigger` bail event; Links and
 Tags listen independently. `lumiere.markdown.plugins.suggest.enabled` defaults
 to true. No palette commands or assigned verify shortcuts.
@@ -108,8 +108,8 @@ canvas card's Narrow to block), so neither does Lumiere.
 
 PDF bookmarks are listed flat, in document order, without their nesting, and
 only those that open a page of the PDF itself. They exist only where a PDF
-engine does: in VS Code and Cursor. Elsewhere (the web app, the iPad, DSH)
-`[[paper.pdf#` offers nothing. Obsidian offers no PDF bookmarks; the
+engine does: in VS Code and Cursor, through Lumiere PDF's `pdfOutlines`;
+without it `[[paper.pdf#` offers nothing. Obsidian offers no PDF bookmarks; the
 `#page=N|title` form is Lumiere's.
 
 With `links.useWikilinks` off, accepting a link/head/block completion replaces

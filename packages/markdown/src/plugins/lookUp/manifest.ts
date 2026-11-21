@@ -13,8 +13,8 @@ export default defineManifest({
   surfaces: ["host", "webview"],
   capabilities: ["commands"],
   // VS Code's window: its `isMac` key shows the menu item, and it hands the
-  // `dict:` URL to macOS. host-node's menu has no `isMac`, so the item could
-  // never show there; the plugin stays off.
+  // `dict:` URL to macOS. A host without that window has no `isMac`, so the
+  // item could never show there; the plugin stays off.
   needs: ["workbench"],
   contributes: {
     menus: [

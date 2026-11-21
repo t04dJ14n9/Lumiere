@@ -18,7 +18,7 @@ async function main() {
       : command.command.endsWith("handleVimCtrlN")
         ? "Enable Vim in Live Preview and press Ctrl+N; must not open Untitled and must move like j (<C-n>). Disable Vim: Ctrl+N opens Untitled. Hidden from the palette."
         : command.command.endsWith("insertSketch")
-          ? "On the iPad, in a disposable vault, run Insert Sketch from the right-click menu (More… in the edit menu) and from the edit menu; draw, press Done, and confirm a `*.sketch.svg` in the attachment folder and its embed below the caret's line. Tap the sketch, change it, press Done: the note shows the new drawing. Cancel leaves the vault and the note unchanged. Not shown in VS Code or the desktop app."
+          ? "VS Code and Cursor provide no canvas: confirm Insert Sketch is absent from the Command Palette and the note's right-click menu, and that an existing `*.sketch.svg` embed shows as an image."
           : `On a disposable fixture, run ${command.title}; confirm its named action using the plugin scenarios above, then undo where applicable. Repeat after disable/re-enable and switching panes.`;
     return `| \`${command.command}\` — ${escape(command.title)} | ${escape(keys)} | ${escape(action)} |`;
   });
@@ -30,7 +30,7 @@ async function main() {
             ?.title ?? command,
       )
       .join(", ");
-    const action = `Right-click the note's text (on the iPad, More… in the edit menu) and open ${submenu.label}: it lists its items beside its row, by tap, click or Right, and each runs as from the palette. VS Code and Cursor show the titles; the app shows the short ones.`;
+    const action = `Right-click the note's text and open ${submenu.label}: it lists its items beside its row, by click or Right, and each runs as from the palette, with the commands' titles.`;
     return `| \`${submenu.id}\` — ${escape(submenu.label)} | ${escape(items)} | ${escape(action)} |`;
   });
   const settingProcedure = (key: string, values: string) => {
@@ -38,7 +38,7 @@ async function main() {
       return "boolean; drop/paste an image into a note, confirm a timestamp file under `files.attachmentFolder` and its embed; turn off and confirm drop/paste leave the vault unchanged; then reset.";
     }
     if (key === "lumiere.markdown.plugins.sketch.enabled") {
-      return "boolean; turn off on the iPad and confirm Insert Sketch leaves the right-click menu and a tap on a sketch selects it as an image; then reset.";
+      return "boolean; VS Code and Cursor provide no canvas, so Insert Sketch stays hidden whether it is on or off; confirm a `*.sketch.svg` embed shows as an image either way; then reset.";
     }
     return `${values}; change at workspace-folder scope, verify the owning plugin scenario, then reset the override.`;
   };

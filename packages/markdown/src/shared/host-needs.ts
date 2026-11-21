@@ -2,9 +2,9 @@
  * Which of Lumiere's settings mean something in a given host. A plugin, or
  * one of its settings, that needs more than the host offers (Manifest
  * `needs`, `settingNeeds`) could do nothing there, so a host's settings page
- * leaves it out: in the desktop app there is no Cursor chat to send to and no
- * text editor to share a note with. When a host gains what is needed (Git,
- * say), the settings come back by themselves.
+ * leaves it out: a host without VS Code's window has no Cursor chat to send
+ * to and no text editor to share a note with. When a host gains what is
+ * needed (Git, say), the settings come back by themselves.
  */
 import type { HostNeed, Manifest } from "./manifest";
 import { contributionId } from "./setting-schema";

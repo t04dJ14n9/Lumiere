@@ -1,6 +1,5 @@
 // Unit tests of every package, each run from its own directory: the core,
-// the agent formats, then Lumiere, Lumiere PDF, the Node host, the web host,
-// DSH, the app, ink, the iPad app and the web app.
+// the agent formats, then Lumiere, Lumiere PDF and ink.
 // Root scripts are tested too.
 import { readdirSync } from "node:fs";
 import { spawnSync } from "node:child_process";
@@ -46,12 +45,6 @@ const failures = [
   ]),
   run("packages/markdown", "node", ["scripts/test.mjs"]),
   run("packages/pdf", "pnpm", ["test"]),
-  run("packages/host-node", "pnpm", ["test"]),
-  run("packages/host-web", "pnpm", ["test"]),
-  run("packages/dsh", "pnpm", ["test"]),
-  run("packages/app", "pnpm", ["test"]),
   run("packages/ink", "pnpm", ["test"]),
-  run("apps/ipad", "pnpm", ["test"]),
-  run("apps/web", "pnpm", ["test"]),
 ].filter((status) => status !== 0);
 process.exit(failures.length ? 1 : 0);

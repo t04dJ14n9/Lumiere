@@ -1,11 +1,12 @@
 # Lumiere architecture
 
 How the whole repository fits together: the two products, the plugin core,
-the plugin trees, the hosts and the contracts between them, and how a note
-travels from disk to the screen and back. It also records where the design
-is sound, where it has drifted, and what to change next.
+the plugin trees, the host services that connect the plugins to VS Code, and
+how a note travels from disk to the screen and back. It also records where
+the design is sound, where it has drifted, and what to change next.
 
-State: `main` at 0.1.17 (#774). Update this document when the structure it
+State: `main` at 0.1.17 (#774); section 7 updated on 2026-11-21, when the
+hosts outside VS Code left `main`. Update this document when the structure it
 describes changes.
 
 Read this first, then the detailed documents it points to:
@@ -14,7 +15,7 @@ Read this first, then the detailed documents it points to:
 | --- | --- |
 | The Markdown editor in depth: plugin API, document sync, Live Preview, vault, settings, public API | [packages/markdown/DESIGN.md](../packages/markdown/DESIGN.md) |
 | The plugin core and its lifecycle guarantees | [packages/core/README.md](../packages/core/README.md) |
-| Hosts other than VS Code: layers, contracts, milestones | [HOSTS_PLAN.md](HOSTS_PLAN.md), [IPAD_PLAN.md](IPAD_PLAN.md) |
+| The hosts outside VS Code (no longer on `main`) | [HOSTS_PLAN.md](HOSTS_PLAN.md): a pointer to the frozen `hosts-snapshot-2026-11-21` branch |
 | The PDF product | [packages/pdf/README.md](../packages/pdf/README.md), [packages/pdf/AGENTS.md](../packages/pdf/AGENTS.md) |
 | One plugin | its `README.md` under `packages/markdown/src/plugins/<id>/` or `packages/pdf/src/extension/plugins/<id>/` |
 | Rules for changing code | [AGENTS.md](../AGENTS.md), [REVIEW.md](../REVIEW.md) |
@@ -56,19 +57,10 @@ ships two products that share one plugin tree:
   locator and the quote, for agents. A note's deep link to a passage
   (`paper.pdf#page=3#:~:text=…`) paints a backlink overlay back onto the PDF.
 
-The Markdown product also runs outside VS Code, on the same plugins:
-
-| Host | Package | Where it runs |
-| --- | --- | --- |
-| VS Code, Cursor | `packages/markdown/src/host` | the extension host (Node) plus one webview per editor |
-| DeepSeek Harness | `packages/dsh` on `packages/host-node` | DSH's server and preview sidebar |
-| Lumiere's own server and window | `packages/app` on `packages/host-node` | a local server and a browser page |
-| Desktop app | `apps/desktop` (Tauri) around `packages/app` | a native window |
-| Web app | `apps/web` on `packages/host-web` | a static, offline site |
-| iPad | `apps/ipad` (Capacitor) on `packages/host-web` | a native app with no server |
-
-The PDF product runs only in VS Code and Cursor today (see
-[section 13](#13-the-pdf-product)).
+Both run only in VS Code and Cursor: the extension host (Node) plus one
+webview per editor. The hosts that once ran the Markdown product elsewhere
+(the desktop app, the web app, the iPad app and the DeepSeek Harness
+integration) left `main` on 2026-11-21 (section 7).
 
 ## 2. Repository layout and dependency direction
 
@@ -78,11 +70,6 @@ packages/agents        what both products hand to coding agents. Pure.
 packages/ink           sketch format, outlines and the ink service. Pure + a web canvas.
 packages/markdown      the Markdown plugins, their webview, and VS Code's host services
 packages/pdf           the PDF plugins (VS Code only), its portable host code and React webview
-packages/host-node     host services outside VS Code; the shared host core has no Node
-packages/host-web      the shared host on a browser's or the iPad's folders
-packages/dsh           DSH embedder
-packages/app           Lumiere's server and window
-apps/desktop, web, ipad
 src/extension.ts       the composition root of the VS Code extension
 ```
 
@@ -90,9 +77,6 @@ Imports point one way:
 
 ```text
 core, agents, ink  ◄── markdown, pdf ◄── markdown/src/host (VS Code) ◄── src/extension.ts
-                                    ◄── host-node ◄── host-web ◄── apps/web, apps/ipad
-                                                 ◄── dsh
-                                                 ◄── app ◄── apps/desktop
 ```
 
 Inside each product, `src/shared` and `src/markdown` are pure too. The
@@ -259,48 +243,24 @@ in `packages/markdown/src/shared/host`:
 | `customEditors` | the custom editor registration |
 | `agentHost`, `git`, `diffViews` | agent bridge, git data, diff editors |
 
-They have two implementations:
-
-- **VS Code:** `packages/markdown/src/host/services` (about 1,000 lines).
-- **Everything else:** `packages/host-node/src/host/services.ts`, on a
-  `HostPlatform` (Node files, or a browser's mounted folders through
-  host-web). Services a host cannot offer are inert stubs
-  (`host-node/src/host/inert.ts`), and a manifest's `needs` keeps the plugin
-  off there.
-
-Both hosts run the same `bootstrap`, which is what lets DSH, the app, the
-web app and the iPad use the plugins unchanged. Tests fake the seam with
-`fakeHost(overrides)`.
-
-Known duplication: the vault's file listing, stat and watch are written
-twice (`host/vault-system.ts` and `host-node/src/host/vault.ts`), each with
-its own concurrent tree walk. Two link-resolution helpers had already
-drifted between the hosts before they were unified in
-`shared/link-location.ts`.
+On `main` they have one implementation, VS Code's:
+`packages/markdown/src/host/services` (about 1,000 lines). Tests fake the
+seam with `fakeHost(overrides)`. The seam stays even with one host: it keeps
+`vscode` out of the plugins and lets them be tested without VS Code. A
+service the host does not provide leaves the plugins that need it off: VS
+Code provides no `ink` canvas, so the `sketch` plugin's host half does not
+start and Insert Sketch is not shown.
 
 ## 7. Hosts
 
-```text
-packages/core, agents, markdown, pdf   the plugins: the same in every host
-        │
-        ├─ packages/markdown/src/host  VS Code's host services
-        └─ packages/host-node          the shared host (src/core.ts has no Node)
-             ├─ packages/host-web      on a browser's or the iPad's folders
-             ├─ packages/dsh           on DSH's server and preview sidebar
-             └─ packages/app           the window over a WindowBackend (HTTP, or host-web in-page)
-                  ├─ apps/desktop      Tauri: native window, menu, picker
-                  └─ apps/web          a static, offline site
-```
+`main` is the VS Code and Cursor extension only (owner decision,
+2026-11-21). The hosts outside VS Code (the shared Node and browser hosts,
+the DeepSeek Harness integration, Lumiere's own server and window, the
+desktop, web and iPad apps) live, frozen, on the `hosts-snapshot-2026-11-21`
+branch (commit `db1a5aaf`), which takes no further merges from `main`.
 
-The editor page is the same webview bundle in every host. Outside VS Code a
-page shim stands in for the webview API and talks to host-node over a socket
-or a `MessagePort` (`host-node/src/protocol.ts`). Each contract between the
-layers is written once in code and changed on both sides in one PR; the full
-table is [HOSTS_PLAN.md section 4](HOSTS_PLAN.md#4-the-contracts).
-
-Where a change belongs: how a note edits, renders or links goes in the
-plugin, for every host at once; never patch one host for a Markdown bug
-([HOSTS_PLAN.md section 3](HOSTS_PLAN.md#3-architecture)).
+Where a change belongs is unchanged: how a note edits, renders or links goes
+in the plugin, never in `packages/markdown/src/host` as a special case.
 
 ## 8. Services shared by the two products
 
@@ -313,8 +273,8 @@ provider:
 | `noteSelections` | Markdown's public API | PDF agent bridge | `src/note-selections.ts` |
 | `pdfOutlines` | PDF's outline reader (PDFium in the extension host, loaded on first use) | Markdown suggestions (`[[paper.pdf#`) | `packages/markdown/src/shared/pdf-outlines.ts` |
 
-Neither product imports the other. Hosts that lack a provider simply lack
-the feature (no PDF sections outside VS Code).
+Neither product imports the other. A tree without a provider simply lacks
+the feature: an optional service is absent, never a failure.
 
 The PDF backlink index does not use Markdown's vault index: it scans notes
 itself (`pdf/src/shared/pdf-backlink-index.ts`, `pdfBacklinks/plugin.ts`),
@@ -343,8 +303,6 @@ writes a file; it edits a local CodeMirror copy and synchronizes.
   text with the host's full text and could drop unsent typing.)
 - Undo and redo are VS Code's: the webview forwards the commands; the host
   runs them on the document; the result comes back as an ordinary change.
-  Outside VS Code, host-node's notes keep the same steps
-  (`packages/host-node/src/host/note-history.ts`).
 - Save is VS Code's; plugins may contribute to a flush before save
   (`document/save.ts`).
 
@@ -356,9 +314,9 @@ A **vault** is the workspace folder that contains a note (or the note's
 folder outside a workspace). `vaults.forDocument(uri)` indexes it on first
 use; `vaults.locate(uri)` gives the vault and the vault path.
 
-- **Indexing** runs in a worker (`workers/vault-worker.ts`; a web variant for
-  host-web): it parses each note's metadata (headings, blocks, links,
-  embeds, tags, frontmatter, aliases) with the same parser the editor uses.
+- **Indexing** runs in a worker (`workers/vault-worker.ts`): it parses each
+  note's metadata (headings, blocks, links, embeds, tags, frontmatter,
+  aliases) with the same parser the editor uses.
   A snapshot in workspace storage lets the next window start warm. Open
   notes are re-indexed from their unsaved text.
 - **The index** (`plugins/vault/api.ts`, `VaultIndex`) answers files,
@@ -398,7 +356,7 @@ Obsidian; ties go by path.
 | Index outgoing links, resolve them, keep unresolved sets | `plugins/vault` (worker + `resolve.ts`) |
 | Render in Live Preview, dim unresolved | `plugins/links/webview.ts`, `livePreview/inline.ts` |
 | Follow (click, Alt+Enter, Mod+Enter), navigate to heading or block | `plugins/links` (webview → RPC → host `navigation`) |
-| Open in the host: note, PDF page, external URL (with scheme policy), create a missing note | `host/navigation.ts`, `host-node` equivalent |
+| Open in the host: note, PDF page, external URL (with scheme policy), create a missing note | `host/navigation.ts` |
 | Suggest while typing in Lumiere's editor | `plugins/suggest` (`SuggestionIndex`, Obsidian's fuzzy ranking) via `links/suggestions.ts` |
 | Suggest while typing in VS Code's own text editor | `suggest/native-host.ts` → `hostDocuments.registerCompletions` → `host/text-completions.ts` |
 | Suggest a PDF's sections after `[[paper.pdf#` | `pdfOutlines` → `SuggestionIndex.prepare`; inserts `[[paper.pdf#page=N\|Title]]` |
@@ -418,13 +376,12 @@ extension host                                   webview (React, EmbedPDF 3 + PD
   pdfToolbar, pdfOutline, pdfHistory, …            outline, backlink overlays, annotations
   pdfBacklinks (scans notes, matches quotes)
   outlines/ (PDFium in Node, on demand)
-src/host (no vscode): portable viewer logic, reused by host-node
+src/host (no vscode): portable viewer logic
 ```
 
 - The extension plugins are VS Code-only: 43 of 73 production files import
   `vscode`, and 10 of 12 plugins inject the `pdfPanels` hub.
-  `packages/pdf/src/host` (no `vscode` imports) holds the portable part,
-  already reused by host-node's PDF pages.
+  `packages/pdf/src/host` (no `vscode` imports) holds the portable part.
 - Links into PDFs are plain fragments (`#page=N`, `#:~:text=`), so Obsidian
   and browsers open them too. A note's link may add a text fragment for a
   passage, in the standard form (`[prefix-,]start[,end][,-suffix]`, as a

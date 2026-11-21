@@ -161,10 +161,7 @@ In VS Code a new tab is a tab of its own in the same group, one VS Code keeps
 rather than a preview the next link replaces; the note stays open. A link
 to a heading or block of the same note moves in place whatever the key,
 except to the side, because VS Code shows a note once in a group (Obsidian
-opens the note again in the new tab). Outside VS Code (the app and DSH,
-through host-node) every followed link opens its file in a tab of its own
-there, or shows the tab it is already in, whichever key or click opened it:
-those tabs neither replace a note in place nor split.
+opens the note again in the new tab).
 
 Clicks follow Obsidian 1.15.0's Live Preview (`Keymap.isModEvent`) except for
 a plain click: Mod-click opens a new tab, Mod+Alt-click the side and a middle

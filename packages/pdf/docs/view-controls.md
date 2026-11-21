@@ -18,7 +18,7 @@ live change.
 
 | Area           | EmbedPDF 3 support                                                                                                                              | Decision                                                                                                                                                                                      |
 | -------------- | ----------------------------------------------------------------------------------------------------------------------------------------------- | --------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| Toolbar        | Not EmbedPDF's concern.                                                                                                                         | `ToolbarControls` is the slim bar of the web and iPad hosts; chrome (the VS Code default) uses commands, editor title actions and page/zoom status entries. There is also a hidden `none` mode. |
+| Toolbar        | Not EmbedPDF's concern.                                                                                                                         | `ToolbarControls` is the slim bar, for a host with no VS Code status bar (the web and iPad apps, now on the `hosts-snapshot-2026-11-21` branch); chrome (the VS Code default) uses commands, editor title actions and page/zoom status entries. There is also a hidden `none` mode. |
 | Zoom           | `ZoomSpec`: `fit-width`, `fit-page`, or a level. `stage.zoomTo` takes any of them; fit modes measure whole spreads and stay live while resized. | `viewUnitsPerPoint: 1`, so 100% is one pixel per point. Actual size is level **1**; custom percentages keep the 25–400% range. Buttons and keys walk Lumiere's ladder (`shared/zoom-steps.ts`). |
 | Spreads        | `spread: 'none' \| 'odd' \| 'even'` in the Stage settings.                                                                                       | Map `single` to `none`, `spread` to `odd`, and `spreadCover` to `even`; one `updateSettings` for a combined change.                                                                           |
 | Direction      | `layout: 'vertical' \| 'horizontal'`. Next/previous move by the shown item, a page or a spread.                                                  | Reuse it for both directions and spread stepping.                                                                                                                                             |
@@ -35,9 +35,10 @@ element: Lumiere reads and moves the view with Stage verbs, and the pages
 shorter than the viewer cannot reach its top (the Stage clamps the end of the
 document, as a scrolling page would).
 
-**View** exposes zoom mode, page layout, scrolling mode and direction in the
-slim bar of the web and iPad hosts, and through a status bar picker and editor
-action in VS Code's chrome mode. All choices are also available as PDF
+**View** exposes zoom mode, page layout, scrolling mode and direction through
+a status bar picker and editor action in VS Code's chrome mode (and in the
+slim bar of the web and iPad apps, now on the `hosts-snapshot-2026-11-21`
+branch). All choices are also available as PDF
 commands and in the PDF context menu, including when the toolbar is hidden.
 
 - **Fit width** fits the document's widest page or spread; **Fit page**
@@ -110,6 +111,6 @@ Two pages with cover (page 1 alone, then 2–3), fit page:
 
 ![Two pages with cover](images/view-controls-two-pages.png)
 
-Slim bar (web and iPad hosts): the **View** menu next to the zoom controls.
+Slim bar (the web and iPad apps, on the `hosts-snapshot-2026-11-21` branch): the **View** menu next to the zoom controls.
 
 ![Slim bar View menu](images/view-controls-slim-menu.png)

@@ -127,6 +127,12 @@
   still reveals the link's source. Page Preview loses Alt+Enter: it opens on
   a Mod-hover or with **Preview Link at Caret** in the Command Palette
   (#699).
+- The desktop app, the web app, the iPad app and the DeepSeek Harness
+  integration left `main`, which is now the VS Code and Cursor extension
+  only (owner decision, 2026-11-21). They live, frozen, on the
+  `hosts-snapshot-2026-11-21` branch (commit `db1a5aaf`), which takes no
+  further changes from `main`. The entries above that name them describe
+  that branch, not this release.
 
 Fixes for several VS Code windows open at once, each with a test; checked
 with two real windows on one profile.

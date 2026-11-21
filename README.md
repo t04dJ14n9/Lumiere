@@ -94,18 +94,6 @@ views and anything you open with **Open as Text** stay as they are. Cursor
 keeps most extension buttons in the editor's **…** menu, so the PDF reader's
 page and zoom controls live in the status bar.
 
-### In DeepSeek Harness
-
-Lumiere's Markdown editor also runs in
-[DeepSeek Harness](https://www.deepseek.com/en/harness/) (0.2.1 or later), as
-a DSH plugin: a workspace's notes open in Lumiere in DSH's preview sidebar,
-with the same Live Preview, links, properties and math, and save as you type.
-Build it with `pnpm --filter @workshop/dsh build`, then add
-`packages/dsh/dist/bundle` to a DSH profile:
-`dsh plugin --profile web add link:<path to dist/bundle>`. PDFs, Git
-features and the side views are VS Code and Cursor only for now; see
-[packages/dsh](packages/dsh/README.md).
-
 ## Develop
 
 ```sh
@@ -124,7 +112,7 @@ pnpm package        # the .vsix
 | `packages/agents` | What both parts hand to agents: handoff text, IDE context |
 | `packages/markdown` | The Markdown editor ([README](packages/markdown/README.md), [plugins](packages/markdown/CAPABILITIES.md)) |
 | `packages/pdf` | The PDF reader ([README](packages/pdf/README.md)) |
-| `packages/dsh` | The Markdown editor in DeepSeek Harness ([README](packages/dsh/README.md)) |
+| `packages/ink` | The sketch file format and the `ink` service a drawing canvas provides |
 | `scripts/` | Build, `package.json` contributions, third-party notices, tests |
 | `test/vscode` | End-to-end tests in a real, isolated VS Code (or Cursor) |
 
@@ -134,6 +122,11 @@ rest. To write a plugin of your own as a separate extension, start with
 [packages/markdown/AGENT.md](packages/markdown/AGENT.md) and
 [packages/markdown/API.md](packages/markdown/API.md). Contributors and coding
 agents: read [AGENTS.md](AGENTS.md) first.
+
+This repository's `main` is the VS Code and Cursor extension only. The
+desktop app, the web app, the iPad app and the DeepSeek Harness integration
+are preserved, frozen, on the `hosts-snapshot-2026-11-21` branch
+([docs/HOSTS_PLAN.md](docs/HOSTS_PLAN.md)).
 
 ## License
 
