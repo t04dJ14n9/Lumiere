@@ -33,15 +33,23 @@ export class ClickedImagePin {
 
   /** Once the press has ended, scrolls the image back to where it was. */
   update(update: ViewUpdate): void {
-    const pin = this.pin;
-    if (!pin || isPointerSelecting(update.state)) {
+    if (!this.pin) {
+      return;
+    }
+    // An edit while the button is down (another panel's, a sync) moves it.
+    const pin = {
+      top: this.pin.top,
+      range: {
+        from: update.changes.mapPos(this.pin.range.from, 1),
+        to: update.changes.mapPos(this.pin.range.to, -1),
+      },
+    };
+    if (isPointerSelecting(update.state)) {
+      this.pin = pin;
       return;
     }
     this.pin = undefined;
-    const range = {
-      from: update.changes.mapPos(pin.range.from, 1),
-      to: update.changes.mapPos(pin.range.to, -1),
-    };
+    const { range } = pin;
     const { view } = this;
     view.requestMeasure({
       read: () => this.imagesOf(range)[0]?.getBoundingClientRect().top,

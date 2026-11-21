@@ -30,8 +30,8 @@ export function isImageSourceShown(
 }
 
 export interface ImageDrawing {
-  /** A rendered image of the embed. */
-  image(): WidgetType;
+  /** A rendered image of the embed, in place of its source or after it. */
+  image(isAfterSource: boolean): WidgetType;
   /**
    * Whether the image is alone on its line in a block whose source is
    * revealed: Live Preview then draws the image below that source.
@@ -65,7 +65,7 @@ export function decorateImage(
     return;
   }
   if (!isShown) {
-    cx.replace(node.from, node.to, drawing.image());
+    cx.replace(node.from, node.to, drawing.image(false));
     return;
   }
   // A node across two visible ranges is decorated twice; draw it once.
@@ -73,5 +73,5 @@ export function decorateImage(
   if (visible && (node.to < visible.from || node.to > visible.to)) {
     return;
   }
-  cx.widgetAfter(node.to, drawing.image());
+  cx.widgetAfter(node.to, drawing.image(true));
 }

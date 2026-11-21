@@ -1,13 +1,10 @@
-import { syntaxTree } from "@codemirror/language";
 import {
   Prec,
   StateEffect,
   StateField,
-  type EditorState,
   type Extension,
 } from "@codemirror/state";
 import { ViewPlugin, keymap, type EditorView } from "@codemirror/view";
-import { embedsNote } from "./clicks";
 import { IMAGE_EMBED } from "./embed-actions";
 import {
   aliasRange,
@@ -16,19 +13,12 @@ import {
   withWidth,
   writtenWidth,
 } from "./image-size";
-import {
-  isSelectableImage,
-  setImageSelectedChrome,
-} from "./image-resize-corner";
+import { setImageSelectedChrome } from "./image-resize-corner";
+import { embedOfImage, type Range } from "./image-anchor";
 import { imageKeyFromEvent } from "./image-selection-keys";
 import { ClickedImagePin } from "./image-click-pin";
 
 export { imageKeyFromEvent } from "./image-selection-keys";
-
-interface Range {
-  from: number;
-  to: number;
-}
 
 export const selectImage = StateEffect.define<Range | null>();
 export const editImage = StateEffect.define<Range | null>();
@@ -75,47 +65,11 @@ export const selectedImage = StateField.define<Range | null>({
   },
 });
 
-/** The image embeds (`![[a.png]]`, `![](a.png)`) on the line holding `at`. */
-function imagesOnLine(state: EditorState, at: number): Range[] {
-  const line = state.doc.lineAt(at);
-  const found: Range[] = [];
-  syntaxTree(state).iterate({
-    from: line.from,
-    to: line.to,
-    enter(node) {
-      if (!["WikiEmbed", "Image"].includes(node.name)) {
-        return true;
-      }
-      if (!embedsNote(state.sliceDoc(node.from, node.to))) {
-        found.push({ from: node.from, to: node.to });
-      }
-      return false;
-    },
-  });
-  return found;
-}
-
-/** The image embed drawn at `at`: the one around it, else the next on its line. */
-function embedAt(state: EditorState, at: number): Range | undefined {
-  const images = imagesOnLine(state, at);
-  return (
-    images.find((range) => at >= range.from && at <= range.to) ??
-    images.find((range) => range.from >= at)
-  );
-}
-
-/**
- * The rendered images of the selected embed: those drawn at its source (a
- * block's image may report its block's start or end).
- */
+/** The rendered images of the selected embed. */
 export function imagesOf(view: EditorView, range: Range): HTMLImageElement[] {
   return [...view.contentDOM.querySelectorAll("img")].filter((image) => {
-    try {
-      const at = isSelectableImage(image) ? view.posAtDOM(image) : -1;
-      return at >= range.from && at <= range.to;
-    } catch {
-      return false;
-    }
+    const embed = embedOfImage(view, image);
+    return embed?.from === range.from && embed.to === range.to;
   });
 }
 
@@ -131,19 +85,16 @@ function selectOnClick(
     event.target instanceof HTMLImageElement ? event.target : undefined;
   if (
     !image ||
-    !isSelectableImage(image) ||
     event.button !== 0 ||
     event.shiftKey ||
     event.metaKey ||
     event.ctrlKey ||
     event.altKey ||
-    image.closest(
-      "a, button, .hybrid-Callout, .hybrid-Blockquote, .hybrid-BulletList, .hybrid-OrderedList, .cm-table-widget",
-    )
+    image.closest("a, button")
   ) {
     return undefined;
   }
-  const range = embedAt(view.state, view.posAtDOM(image));
+  const range = embedOfImage(view, image);
   if (!range) {
     return undefined;
   }

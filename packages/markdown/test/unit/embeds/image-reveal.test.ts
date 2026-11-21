@@ -31,6 +31,10 @@ import {
   selectedImage,
   selectImage,
 } from "../../../src/plugins/embeds/image-selection";
+import {
+  escapeBlock,
+  verticalBlock,
+} from "../../../src/plugins/livePreview/motion";
 import { fixture } from "../features/fixture";
 
 type Renderers = Extension;
@@ -241,8 +245,11 @@ test("a click keeps the image drawn while the button is down and shows its sourc
     });
   }));
 
-/** A view over a state, enough for the selected image's keys. */
-function viewOf(initial: EditorState, image: { at: number; width: number }) {
+/**
+ * A view over a state, enough for the selected image's keys: one image in
+ * a line of text, drawn just after its shown source.
+ */
+function viewOf(initial: EditorState, width: number) {
   let state = initial;
   const view = {
     get state() {
@@ -258,11 +265,16 @@ function viewOf(initial: EditorState, image: { at: number; width: number }) {
         {
           classList: { contains: () => false },
           parentElement: { classList: { contains: () => false } },
-          getBoundingClientRect: () => ({ width: image.width }),
+          closest: (selector: string) =>
+            [".cm-line", ".md-image-after-source"].includes(selector)
+              ? {}
+              : null,
+          getBoundingClientRect: () => ({ width }),
         },
       ],
     },
-    posAtDOM: () => image.at,
+    // Its widget stands at the embed's end.
+    posAtDOM: () => state.doc.toString().indexOf("]]") + 2,
   };
   return view as unknown as EditorView & { state: EditorState };
 }
@@ -283,7 +295,7 @@ test("with its source shown, a selected image still resizes, and the caret stays
         EditorSelection.single(image.from),
         { extensions: [selectedImage, editingImage] },
       ).update({ effects: selectImage.of(image) }).state;
-      const view = viewOf(state, { at: image.from, width: 100 });
+      const view = viewOf(state, 100);
       assert.equal(drawing(view.state).text, doc);
       for (const [key, source] of [
         ["+", "![[a.png|125]]"],
@@ -345,3 +357,20 @@ test("arrow keys select no image: they move through its shown source, as through
   state = state.update({ selection: { anchor: image.from + 1 } }).state;
   assert.equal(state.field(selectedImage), null);
 });
+
+test("Up and Down enter an image alone on its line at its source line, and Escape leaves it", () =>
+  withRenderers((renderers) => {
+    const doc = "before\n\n![[a.png]]  \n\nafter";
+    const from = doc.indexOf("!");
+    const line = (at: number) =>
+      editorState(renderers, doc, EditorSelection.single(at));
+    // From the blank line above, Down lands at the start of its source line.
+    assert.equal(verticalBlock(line(from - 1), 1), from);
+    // From the blank line below, Up lands at the start of its last line.
+    assert.equal(verticalBlock(line(from + 13), -1), from);
+    // With the source shown, the caret leaves by plain motion ...
+    assert.equal(verticalBlock(line(from + 3), 1), undefined);
+    assert.equal(verticalBlock(line(from + 3), -1), undefined);
+    // ... and Escape moves it to the line after the block.
+    assert.equal(escapeBlock(line(from + 3)), from + 13);
+  }));

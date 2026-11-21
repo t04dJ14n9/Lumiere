@@ -148,10 +148,15 @@ keeps its formula (rule 6). The rules, which the tests pin:
    current match touching it shows its source too (the find field has the
    focus then).
 3. **Placement.** While its source shows, the image stays drawn just
-   after it: as a block below the source line when the embed is alone on
-   its line (a caret on that line's trailing spaces reveals it too), and
-   inline right after the source otherwise (in a sentence, a list item, a
-   revealed callout).
+   after it, where Lumiere draws it when the source is hidden. As a block
+   below the source line when the embed is alone on its line, also after a
+   list or quote marker (`- ![[a.png]]`, `1. ![[a.png]]`, `> ![[a.png]]`);
+   a caret on that line's trailing spaces reveals it too. Inline right
+   after the source otherwise: in a sentence, in a task item
+   (`- [ ] ![[a.png]]`, whose image stays in its line), in a revealed
+   callout. Where Obsidian 1.12 put the image of a list item that holds
+   only an image was not measured; Lumiere keeps it where it was, so
+   revealing never moves it from block to line.
 4. **Click.** A click on the image selects it as rule 12 describes
    (outline, `+`/`=`/`-` resize, `0`, Space opens the inspector, Enter
    selects the file name, Tab the size, Backspace or Delete removes it,

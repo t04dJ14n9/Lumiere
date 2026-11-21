@@ -872,7 +872,8 @@ One function, `revealed(state, from, to, kind)`, used by every renderer:
   read it; a focus change redraws only the blocks the selection touches.
 - Images (`![[a.png]]`, `![alt](a.png)`) reveal by the same rules as display
   math, the image kept just after the source: a block below it when the
-  embed is alone on its line, inline after it otherwise. This is Obsidian
+  embed is alone on its line (after any list or quote marker), inline
+  after it otherwise. This is Obsidian
   1.12's behaviour, which Lumiere keeps at the owner's request
   (2026-11-21); 1.13 and later keep images rendered under the caret
   (docs/OBSIDIAN_REVEAL_RULES.md, "Intentional divergence: images").

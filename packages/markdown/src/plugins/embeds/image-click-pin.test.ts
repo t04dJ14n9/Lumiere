@@ -70,3 +70,43 @@ test("an image in a line of text is not pinned", () => {
   measure();
   assert.equal(view.scrollDOM.scrollTop, 1000);
 });
+
+test("an edit while the button is down moves the pinned image's range with it", () => {
+  const top = { value: 300 };
+  const drawn = image(top, false);
+  const asked: { from: number; to: number }[] = [];
+  const measures: { read(): unknown; write(value: unknown): void }[] = [];
+  const view = {
+    scaleY: 1,
+    scrollDOM: { scrollTop: 0 },
+    requestMeasure(request: (typeof measures)[number]) {
+      measures.push(request);
+    },
+  };
+  const pin = new ClickedImagePin(view as unknown as EditorView, (range) => {
+    asked.push(range);
+    return [drawn];
+  });
+  const base = EditorState.create({
+    doc: "![[a.png]]",
+    extensions: [pointerSelection],
+  });
+  const frozen = base.update({
+    effects: setPointerSelection(EditorSelection.single(0)),
+  }).state;
+  pin.press(drawn, { from: 0, to: 10 });
+  // Five characters land before the image while the button is down ...
+  pin.update({
+    state: frozen,
+    changes: ChangeSet.of({ from: 0, insert: "abcde" }, 10),
+  } as unknown as ViewUpdate);
+  // ... and the release finds the image where it now is.
+  pin.update({
+    state: base,
+    changes: ChangeSet.empty(15),
+  } as unknown as ViewUpdate);
+  for (const request of measures.splice(0)) {
+    request.write(request.read());
+  }
+  assert.deepEqual(asked, [{ from: 5, to: 15 }]);
+});

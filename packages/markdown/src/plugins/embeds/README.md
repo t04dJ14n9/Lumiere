@@ -28,9 +28,9 @@ As in Obsidian 1.12 and earlier (owner request 2026-11-21; 1.13 and later
 keep images rendered), the caret or a selection touching an image shows its
 source while the editor has focus, by the rule other inline elements follow
 (chains of abutting elements included), and the image stays drawn just after
-it: below the source line when the embed is alone on its line (Live
-Preview's `editingPreview`, as display math), inline after the source
-otherwise (`InlineContext.widgetAfter`, `image-reveal.ts`). Without focus
+it: below the source line when the embed is alone on its line, after any
+list or quote marker (Live Preview's `editingPreview`, as display math),
+inline after the source otherwise (a sentence, a task item) (`InlineContext.widgetAfter`, `image-reveal.ts`). Without focus
 it stays rendered; the find bar's current match inside its source shows the
 source, as Obsidian's search highlight does. An image has no Edit button.
 Arrow keys move through a shown source as through a link's. A click selects
@@ -66,6 +66,7 @@ it go (`image-selection.ts`, `image-size.ts`). While selected, the caret is hidd
 - `image.ts`: zoom toolbar, fit/actual sizing, pan and resize controls.
 - `image-reveal.ts`: when an image's source shows, and the image drawn in its place or just after it.
 - `image-selection.ts`: selecting an image by a click, and its keys.
+- `image-anchor.ts`: which embed a rendered image shows, from where CodeMirror reports it (a block over its whole line or below it, an image in place of its source or after it, abutting images told apart).
 - `image-click-pin.ts`: scrolls a clicked block image back under the pointer once its source shows above it.
 - `image-size.ts`: an image's written size and the resize steps.
 - `estimated-height.ts`: CodeMirror height-map reserve for off-viewport remounts (inline embeds use `persistent` decorations so the reserve stays outside the viewport).
@@ -89,7 +90,8 @@ it go (`image-selection.ts`, `image-size.ts`). While selected, the caret is hidd
 - `estimated-height.test.ts`: height reserves for sized, unsized and note embeds.
 - `missing.test.ts`: the text shown for missing files, headings and blocks.
 - `image-selection-keys.test.ts`, `image-resize-corner.test.ts`, `embed-actions.test.ts`: selected-image keys and chrome.
-- `image-click-pin.test.ts`: a clicked block image keeps its place once its source shows; `test/unit/embeds/image-reveal.test.ts`: reveal, placement, focus, chains, selections, the click's press, resizing and arrows with the source shown.
+- `image-anchor.test.ts`: an image alone on a line with trailing spaces, and abutting images, are found where they are drawn.
+- `image-click-pin.test.ts`: a clicked block image keeps its place once its source shows, an edit during the press included; `test/unit/embeds/image-reveal.test.ts`: reveal, placement, focus, chains, selections, the click's press, resizing and arrows with the source shown.
 - `open-intent.test.ts`: wiki embeds carry `data-wiki`, Markdown images do not.
 - `wide-block.test.ts`: image width and horizontal scrolling in Live Preview.
 - `embeds.css`: embeds and the image inspector, bundled through

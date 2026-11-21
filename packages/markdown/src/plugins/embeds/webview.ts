@@ -27,6 +27,9 @@ import {
 } from "./clicks";
 import { imageSelection } from "./image-selection";
 import { decorateImage } from "./image-reveal";
+import { IMAGE_AFTER_SOURCE } from "./image-anchor";
+import type { RenderService } from "../render/api";
+import type { InlineClick } from "../../webview/ui/inline-widget";
 import { writtenHeight } from "./image-size";
 export const embedsWebview: Plugin = {
   name: "embeds",
@@ -151,8 +154,13 @@ function registerEmbedRenderers(ctx: Context): void {
       persistent: true,
       decorate(node, cx) {
         const source = cx.state.sliceDoc(node.from, node.to);
-        const image = () =>
-          new EmbedInline(source, ctx.render, inlineEmbedClick(source));
+        const image = (isAfterSource = false) =>
+          new EmbedInline(
+            source,
+            ctx.render,
+            inlineEmbedClick(source),
+            isAfterSource,
+          );
         if (embedsImage(source)) {
           decorateImage(cx, node, {
             image,
@@ -195,6 +203,22 @@ function isInRevealedImageBlock(
  * overwrite the reserve with a short unresolved placeholder (~one line).
  */
 class EmbedInline extends MarkdownInline {
+  constructor(
+    source: string,
+    render: RenderService,
+    click: InlineClick,
+    /** Drawn just after its shown source (`image-anchor.ts`). */
+    private readonly isAfterSource: boolean,
+  ) {
+    super(source, render, click);
+  }
+  override eq(other: MarkdownInline): boolean {
+    return (
+      other instanceof EmbedInline &&
+      other.isAfterSource === this.isAfterSource &&
+      super.eq(other)
+    );
+  }
   override get estimatedHeight(): number {
     return embedEstimatedHeight(this.source);
   }
@@ -208,6 +232,9 @@ class EmbedInline extends MarkdownInline {
    */
   override toDOM(view: EditorView): HTMLElement {
     const node = super.toDOM(view);
+    if (this.isAfterSource) {
+      node.classList.add(IMAGE_AFTER_SOURCE);
+    }
     if (writtenHeight(this.source) !== undefined) {
       const height = this.estimatedHeight;
       if (height > 0) {

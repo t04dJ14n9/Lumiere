@@ -8056,3 +8056,29 @@ still moves along its line on release. A double-click whose second press
 lands before the first press's freeze has thawed (a zero-delay synthetic
 one, as Playwright's `dblclick` sends; a person's double-click leaves time)
 still reveals mid-gesture, as it does for any element.
+
+Review fixes (PR #806 review, 2026-11-21), each with a unit test that
+failed before it:
+
+- A block image's line may end in spaces, which its block covers
+  (`![[a.png]]  ` is a block over 0–12, the embed 0–10), so its image drawn
+  below the revealed source stood at 12, outside the embed: the selected
+  outline, the inspector key, the resize width and the click pin found no
+  image, and a click on it selected nothing. Abutting inline images
+  (`![[a.png]]![[b.png]]`) share a position, the end of one and the start
+  of the other, so a click on one selected both. `embeds/image-anchor.ts`
+  now finds the embed a drawn image shows from where CodeMirror reports it
+  (the start of its widget): a block image is its line's only image, an
+  image drawn in place of its source starts there, and one drawn after its
+  source (marked `md-image-after-source`) ends there.
+  `image-anchor.test.ts`.
+- The click pin now carries its range through edits made while the button
+  is down. `image-click-pin.test.ts`.
+- An image alone in a list item or quote line (`- ![[a.png]]`,
+  `> ![[a.png]]`) is a block in Lumiere, so its revealed image is drawn
+  below the source; the rules now say so (they said inline). A task
+  item's image stays inline. Obsidian 1.12's placement there was not
+  measured.
+- New coverage: Up and Down entering a block image's source line, plain
+  motion leaving it, Escape leaving it (`image-reveal.test.ts`).
+
