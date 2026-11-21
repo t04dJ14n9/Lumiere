@@ -152,6 +152,20 @@
   min-height: 1.3em;
 }
 /*
+ * A cell's text rendered for a sort (sort-keys.ts): laid out, so its
+ * innerText reads as a shown cell's, but never seen and gone at once.
+ */
+.table-sort-probe {
+  position: absolute;
+  top: 0;
+  left: 0;
+  width: 1px;
+  height: 1px;
+  overflow: hidden;
+  clip-path: inset(50%);
+  pointer-events: none;
+}
+/*
  * Cell bodies go through markdown-rendered, whose `p { margin: 0.6em 0 }`
  * (and siblings) inflate every row to ~85px. estimatedHeight assumes tight
  * Obsidian-like cells (~ROW 29px); without collapsing those margins a 41-row

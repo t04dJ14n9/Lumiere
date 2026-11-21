@@ -91,13 +91,15 @@ plugin registrations and widget lifetimes end when the plugin stops.
 - `manifest.ts`: settings identity and table command contributions.
 - `webview.ts`: named registrations for rendering, wheel input, projection and commands.
 - `environment.ts`: injected capabilities available to table interactions.
-- `content.ts`: asynchronous render-pass ownership, cancellation, and moving a kept rendering to its cell's new line.
+- `content.ts`: asynchronous render-pass ownership, cancellation, moving a kept rendering to its cell's new line, and rendering a cell's text apart for a sort key.
 - `renderer-match.ts`: which `Table` nodes the editor takes: those it can parse, so not one inside a block quote.
 - `widget.ts`: Live Preview widget creation, reuse and disposal; `estimatedHeight` reserves row height before measure and across off-viewport rebuilds.
 - `estimated-height.ts`: pure row-count reserve used by the widget.
 - `estimated-height.test.ts`: empty/invalid, row scaling, and tall-table unit cases.
 - `controller.ts`: collaborator wiring and incoming snapshot reconciliation.
 - `grid.ts`: source snapshot, rendered cells (and the text they show, for sorting) and whole-table edits.
+- `sort-keys.ts`: each row's sort key as the cell's rendered text, whichever cell is being edited; a table edited while keys render is not sorted.
+- `sort-keys.test.ts`: the same order from the edited cell as from the header, one edit for one undo, and a stale table left alone.
 - `projection.ts`: active cell lifetime and edits into outer source offsets.
 - `source-edits.ts`: aligned source edits that preserve unchanged cell anchors.
 - `cell-editor.ts`: temporary raw Markdown cell view, input groups and Vim transfer.

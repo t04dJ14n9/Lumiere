@@ -22,6 +22,14 @@ export interface TableEnvironment {
   disposeContent(element: HTMLElement): void;
   /** The cell text rendered into `element`, if it holds a rendering. */
   renderedSource(element: HTMLElement): string | undefined;
+  /** The cell text `element` shows a finished rendering of, if any. */
+  finishedSource(element: HTMLElement): string | undefined;
+  /** The text `source` shows rendered as the cell at `offset` (see TableContent). */
+  renderedText(
+    source: string,
+    offset: number,
+    host: HTMLElement,
+  ): Promise<string>;
   /** Keep `element`'s rendering for the same text, now at `offset`. */
   moveContent(element: HTMLElement, offset: number): void;
   position(
