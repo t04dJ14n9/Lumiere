@@ -9088,3 +9088,30 @@ head (d270e47b) failed one test, the PDF timing test "a dark page drawn
 in slices is the page drawn at once", a known flaky test under load, and
 passed everything else. Its `pnpm test:vscode` and CI passed. Not run
 here: `pnpm test:browser`, `pnpm test:quality`, `pnpm test:vscode`.
+
+Fifth review round (PR #814, 2026-11-22), each with a unit test in
+`read-only-cells.test.ts` that fails with the change undone:
+
+- **Arrows trapped in one cell.** Collapsing a grid selection opens its
+  cell (`collapseSelection`, `extendSelection` through `openGridCell`),
+  and the key was taken whether a cell opened or not; in a read-only note
+  none opens and the one-cell grid selection stayed, so after Select all
+  and Down every further arrow was swallowed. Where a key would open a
+  cell and the note is read-only, `TableKeyboard.openOrSelect` selects that
+  cell in the grid instead, with the focus on the grid; and in a
+  read-only note an arrow moves a one-cell grid selection to the next
+  cell (leaving the table at its edge) rather than collapsing onto it.
+- **Focus lost from a cell left open.** Tab or an arrow at a cell's edge
+  asked for the next cell; since the fourth round that closes the open
+  cell in a read-only note, and destroying the focused cell editor left
+  the focus on the page's body, where keys go nowhere. The same fallback
+  selects the target cell in the grid and focuses the grid.
+- The tables README lists `read-only-cells.test.ts`.
+
+The keyboard and navigation tests' fake grids gain a writable note state
+and their fake `open` returns true, as the real ones have and do.
+
+Checks: my `pnpm check` (private TMPDIR) passed. The PR gate on the fourth
+round's head (2b3599db) passed `pnpm check`, `pnpm test:vscode` and CI.
+Not run here: `pnpm test:browser`, `pnpm test:quality`,
+`pnpm test:vscode`.
