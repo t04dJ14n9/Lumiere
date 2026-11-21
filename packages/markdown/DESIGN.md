@@ -1141,9 +1141,10 @@ the active editor. They work in the command palette, keybindings and menus.
 | `cycleListChecklist` | `editor:cycle-list-checklist` | tasks | — (1.15.0 binds none) |
 | `toggleBulletList`, `toggleNumberedList`, `toggleBlockquote` | `editor:toggle-*` | formatting | — |
 | `swapLineUp`, `swapLineDown` | `editor:swap-line-up/down` | formatting | — |
-| `followLink` | `editor:follow-link` | links | — (1.15.0's Alt+Enter is Page Preview's key here; the editor's own Mod+Enter follows in place) |
-| `openLinkInNewTab` | `editor:open-link-in-new-leaf` | links | — (1.15.0's Mod+Enter follows in place here) |
+| `followLink` | `editor:follow-link` | links | Alt+Enter (as 1.15.0) |
+| `openLinkInNewTab` | `editor:open-link-in-new-leaf` | links | Mod+Enter (as 1.15.0) |
 | `openLinkToSide` | `editor:open-link-in-new-split` | links | Mod+Alt+Enter (as 1.15.0) |
+| `previewLink` | none (`page-preview:preview-link` in the webview; 1.15.0's Page Preview has no command) | pagePreview | — (Alt+Enter, its key before 2026-11-21, is Follow Link's) |
 | `foldAll`, `unfoldAll`, `toggleFold` | `editor:fold-all`, `editor:unfold-all`, `editor:toggle-fold` | folding | — |
 | `addProperty` | `markdown:add-metadata-property` | properties | Mod+; |
 | table commands (insert/move/delete row and column, align, sort) | `editor:table-*` (Lumiere's own names such as `editor:table-insert-row-above`; 1.15.0's are `editor:table-row-before` and so on, and it sorts only from the cell menu) | tables | — |
@@ -1165,14 +1166,19 @@ Rules:
   other command in this table has none. Owner decision (2026-11-21): Lumiere
   binds each where neither VS Code nor Cursor has a default on the key while a
   note has focus, and leaves the clashes unbound, listed in CAPABILITIES.md
-  ("Hotkeys"). So Mod+B, Mod+I, Mod+K, Mod+/, Mod+L, Mod+; and Mod+Alt+Enter
-  are contributed (Mod+K and Mod+L not in Cursor), each scoped to the focused
-  note. All but Mod+; are also handled in the editor's own keymap, which
-  stops the event so VS Code does not run them twice and which works in hosts
-  without VS Code's keybindings; Find and Replace are the editor's own keys. Mod+D, Mod+O,
-  Alt+Enter and Mod+Enter keep what they already do here (VS Code's Add
-  Selection to Next Find Match and Open File, Lumiere's Page Preview and
-  follow in place); Mod+E is Lumiere's Toggle Text Editor
+  ("Hotkeys"). So Mod+B, Mod+I, Mod+K, Mod+/, Mod+L, Mod+;, Alt+Enter,
+  Mod+Enter and Mod+Alt+Enter are contributed (Mod+K and Mod+L not in
+  Cursor), each scoped to the focused note. All but Mod+; are also handled in
+  the editor's own keymap, which stops the event so VS Code does not run them
+  twice and which works in hosts without VS Code's keybindings; Find and
+  Replace are the editor's own keys. A second owner decision (2026-11-21)
+  gave Alt+Enter and Mod+Enter back to Obsidian's link commands: until then
+  Alt+Enter was Lumiere's Page Preview key and Mod+Enter followed in place.
+  The link keys act on the caret of the editor that has the focus, a table
+  cell's included; the commands VS Code runs for them do nothing while the
+  focus is in a property, the Vim prompt or another field of the note, whose
+  key it is. Mod+D and Mod+O keep what they already do here (VS Code's Add
+  Selection to Next Find Match and Open File); Mod+E is Lumiere's Toggle Text Editor
   (there is no Reading view, §1); Mod+Alt+Shift+Enter has no command (no new
   windows). Mod+Alt+0…6 for Set Heading is Lumiere's own (#310): 1.15.0 has no
   default key for those commands, so a heading key in Obsidian is a user
@@ -1362,8 +1368,14 @@ The host `links` plugin owns one pipeline:
    - other schemes: a modal confirmation, then `openExternal`;
    - otherwise resolve with `vault.resolveLink` (wikilinks) or relative to the
      source (Markdown links); then
-     - Markdown notes open in `lumiere.markdown.editor`, or in place in the
-       same group with Mod for the side, and pass the fragment to `navigate`;
+     - Markdown notes open in `lumiere.markdown.editor`: in the same group
+       (Follow Link, Alt+Enter), in a tab of their own in the same group
+       that VS Code keeps rather than a preview (Open Link in New Tab,
+       Mod+Enter, Mod-click, a middle click) or in the group beside (Open
+       Link to Side, Mod+Alt+Enter, Mod+Alt-click), and pass the fragment to
+       `navigate`. A link to a heading or block of the same note
+       (`#Heading`) moves in place whatever the key, except to the side:
+       VS Code shows a note once in a group;
      - folders: §12.3;
      - other files: `vscode.open`, so PDFs use PDF Workbench when it is the
        default;

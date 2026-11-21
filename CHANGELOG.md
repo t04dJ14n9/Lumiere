@@ -119,6 +119,14 @@
 - Markdown: a highlight coloured with a square emoji (`==🟥text==`, and
   🟧🟨🟩🟦🟪) shows in its colour, in the note and in embeds, as Obsidian
   1.15 reads it; the colour commands treat it as that colour (#787).
+- Markdown: the link keys and clicks are Obsidian 1.15's. With the caret in
+  a link, Alt+Enter follows it, Mod+Enter opens it in a new tab (the note
+  stays open) and Mod+Alt+Enter to the side; they also follow reference
+  links and search a tag, and work in table cells. Mod-click and a middle
+  click open a link in a new tab, Mod+Alt-click to the side; a plain click
+  still reveals the link's source. Page Preview loses Alt+Enter: it opens on
+  a Mod-hover or with **Preview Link at Caret** in the Command Palette
+  (#699).
 
 Fixes for several VS Code windows open at once, each with a test; checked
 with two real windows on one profile.

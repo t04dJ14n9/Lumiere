@@ -17,8 +17,9 @@ export type OpenLink = (
 /**
  * Clicks on rendered links (BH-020 + Alt-edit):
  * plain click does not follow — CodeMirror places the caret so the link source
- * reveals; Ctrl/Cmd-click follows in the same editor; Ctrl/Cmd+Alt-click opens
- * beside; Alt alone places a single caret to edit the link source (no
+ * reveals; Ctrl/Cmd-click opens a new tab and Ctrl/Cmd+Alt-click opens beside,
+ * as in Obsidian (owner decision, 2026-11-21); a middle click opens a new tab,
+ * as in Obsidian; Alt alone places a single caret to edit the link source (no
  * multi-cursor); Shift-click extends the selection without following. The
  * Mod-press is the link's, so the caret stays put while the link opens.
  */
@@ -27,9 +28,18 @@ export function linkClickHandlers(
   open: OpenLink,
   report: (error: unknown) => void,
 ) {
+  const follow = (link: HTMLElement, event: MouseEvent) =>
+    void followClickedLink(open, link, event).catch(report);
   return {
     mousedown(event: MouseEvent) {
       const link = clickedLink(event);
+      // Obsidian follows a middle click on its press, into a new tab.
+      if (event.button === 1 && link) {
+        event.preventDefault();
+        event.stopPropagation();
+        follow(link, event);
+        return true;
+      }
       if (event.button !== 0 || !link?.hasAttribute("data-href")) {
         return false;
       }
@@ -60,28 +70,47 @@ export function linkClickHandlers(
       if (isAltEditLinkClick(event, link)) {
         return true;
       }
-      const selection = view.dom.ownerDocument.getSelection();
-      if (
-        !allowsLinkClick(event, link) ||
-        (selection &&
-          !selection.isCollapsed &&
-          (link.contains(selection.anchorNode) ||
-            link.contains(selection.focusNode)))
-      ) {
-        return true;
-      }
-      const href = link.getAttribute("href") ?? link.dataset.href;
-      const source =
-        link.closest<HTMLElement>("[data-note-source]")?.dataset.noteSource;
-      if (href) {
-        void open(href, isWikiLink(link), {
-          ...placeOfClick(event),
-          ...(source === undefined ? {} : { source }),
-        }).catch((error) => report(error));
+      // A click that ends a text selection over the link only selects.
+      if (allowsLinkClick(event, link) && !selectionTouches(view, link)) {
+        follow(link, event);
       }
       return true;
     },
+    /** A middle click's release must not open an `<a href>` in a browser tab. */
+    auxclick(event: MouseEvent) {
+      if (event.button === 1 && clickedLink(event)) {
+        event.preventDefault();
+      }
+    },
   };
+}
+
+/** Whether a text selection (not a caret) starts or ends in the link. */
+function selectionTouches(view: EditorView, link: HTMLElement): boolean {
+  const selection = view.dom.ownerDocument.getSelection();
+  return (
+    !!selection &&
+    !selection.isCollapsed &&
+    (link.contains(selection.anchorNode) || link.contains(selection.focusNode))
+  );
+}
+
+/** Open the clicked link at the place the click names. */
+async function followClickedLink(
+  open: OpenLink,
+  link: HTMLElement,
+  event: MouseEvent,
+): Promise<boolean> {
+  const href = link.getAttribute("href") ?? link.dataset.href;
+  if (!href) {
+    return false;
+  }
+  const source =
+    link.closest<HTMLElement>("[data-note-source]")?.dataset.noteSource;
+  return open(href, isWikiLink(link), {
+    ...placeOfClick(event),
+    ...(source === undefined ? {} : { source }),
+  });
 }
 
 /**
@@ -128,17 +157,20 @@ function isWikiLink(link: HTMLElement): boolean {
 }
 
 /**
- * Where a Mod-follow opens. Once plain click reveals (BH-020), Ctrl/Cmd alone
- * means "follow" in the **same** editor (`tab: false`) — preferred over the
- * older Obsidian-when-plain-opens mapping that treated every Mod-follow as a
- * new tab. Ctrl/Cmd+Alt still opens beside. New-tab remains
- * `editor:open-link-in-new-leaf` / the command palette.
+ * Where a click follows a link, as Obsidian 1.15.0's Live Preview places it
+ * (`Keymap.isModEvent`): Ctrl/Cmd opens a new tab, Ctrl/Cmd+Alt the side, a
+ * middle click a new tab. Obsidian's Ctrl/Cmd+Alt+Shift, a new window, opens
+ * the side here: Lumiere opens no windows. A plain click on a rendered HTML
+ * link (table cells, callouts, embeds) follows here.
  */
 export function placeOfClick(
-  event: Pick<MouseEvent, "metaKey" | "ctrlKey" | "altKey">,
+  event: Pick<MouseEvent, "metaKey" | "ctrlKey" | "altKey" | "button">,
 ): { side: boolean; tab: boolean } {
+  if (event.button === 1) {
+    return { side: false, tab: true };
+  }
   const mod = event.metaKey || event.ctrlKey;
-  return { side: mod && event.altKey, tab: false };
+  return { side: mod && event.altKey, tab: mod && !event.altKey };
 }
 
 const LINK = "a, [data-href]";

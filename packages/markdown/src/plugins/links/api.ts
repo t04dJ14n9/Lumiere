@@ -4,9 +4,19 @@ import type { Infer } from "@workshop/core";
 import type { request as requestSchema } from "./protocol";
 import { unresolvedKey } from "./target";
 
+/** Where a followed link opens: here, in a new tab (`tab`) or to the side. */
+export interface LinkPlace {
+  tab?: boolean;
+  side?: boolean;
+}
+
 export interface LinksService {
-  /** Follow the link at the focused editor's caret, including a projected cell. */
-  follow(view: EditorView): boolean;
+  /**
+   * Follow the link (or tag) at the focused editor's caret, including a
+   * projected cell's, here or at `place`. False when the editor does not
+   * have the focus or nothing at its caret follows.
+   */
+  follow(view: EditorView, place?: LinkPlace): boolean;
 }
 export type LinkRequest = Infer<typeof requestSchema> & {
   source: string;

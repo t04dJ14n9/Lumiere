@@ -44,23 +44,25 @@ export default defineManifest({
         title: "Insert Wikilink",
         editorCommand: "editor:insert-wikilink",
       },
+      // Obsidian 1.15.0's default keys (owner decision, 2026-11-21). The
+      // editor's own keymap binds them too (follow-caret.ts).
       {
         id: "followLink",
         title: "Follow Link",
         editorCommand: "editor:follow-link",
+        key: "alt+enter",
       },
       {
         id: "openLinkInNewTab",
         title: "Open Link in New Tab",
         editorCommand: "editor:open-link-in-new-leaf",
+        key: "ctrl+enter",
+        mac: "cmd+enter",
       },
       {
         id: "openLinkToSide",
         title: "Open Link to Side",
         editorCommand: "editor:open-link-in-new-split",
-        // Obsidian 1.15.0's default. Its Alt+Enter (Follow Link) and
-        // Mod+Enter (Open Link in New Tab) stay unbound: in the note they
-        // are Page Preview's and the editor's follow-in-place keys.
         key: "ctrl+alt+enter",
         mac: "cmd+alt+enter",
       },

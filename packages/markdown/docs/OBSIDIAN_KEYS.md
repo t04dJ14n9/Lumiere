@@ -81,5 +81,7 @@ Code.
 - Cmd+D: Obsidian deletes the line; Lumiere selects the next match, as VS
   Code does (Delete Paragraph is in the Command Palette).
 - Alt+Up and Alt+Down move the line, as in VS Code; Obsidian moves the caret.
-- Cmd+Enter inserts a line below, as in VS Code; Obsidian follows a link.
+- Cmd+Enter away from a link inserts a line below, as in VS Code. On a
+  link it opens the link in a new tab, as in Obsidian (since 2026-11-21;
+  measured on 2026-10-17, Lumiere's Cmd+Enter inserted a line there too).
 - Cmd+L in Cursor opens Cursor's chat (with a selection, Add to Chat).

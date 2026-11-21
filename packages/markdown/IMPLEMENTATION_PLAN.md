@@ -7852,3 +7852,70 @@ whole branch: the Markdown package's unit tests (3,742 pass), typecheck,
 ESLint and Prettier. Not run here (other agents share the machine): `pnpm
 test:browser`, `test:quality`, `test:vscode`. No browser spec runs the
 changed commands (searched for their command IDs).
+
+## Link keys and clicks follow Obsidian 1.15.0 (#699; 2026-11-21)
+
+Owner decision (2026-11-21), replacing #791's: Lumiere binds Obsidian
+1.15.0's link keys. With the caret in a link, Alt+Enter is Follow Link
+(here), Mod+Enter Open Link in New Tab (in VS Code a tab of its own in the
+same group, the note staying open), Mod+Alt+Enter Open Link to Side as
+before. Mod-click opens a new tab, as in Obsidian. Page Preview loses
+Alt+Enter and gets no other key.
+
+Read in Obsidian 1.15.0's shipped code (behaviour only, nothing copied):
+`editor:follow-link` (Alt+Enter, line 135851), `editor:open-link-in-new-leaf`
+(Mod+Enter, line 135876) and `editor:open-link-in-new-split` (Mod+Alt+Enter,
+line 135938) call `triggerClickableToken` with `false`, `"tab"` and
+`"split"`. Clicks go through `onEditorClick` (lines 122713–122787, on click
+and on mousedown, line 122201) and `Keymap.isModEvent` (line 64203): in Live
+Preview a plain left click on a rendered link follows it in the same tab
+(Alt- or Shift-click alone do not); Mod-click opens a new tab, Mod+Alt-click
+a split, Mod+Alt+Shift-click a new window, and a middle click, taken on its
+press, a new tab. In Source mode only Mod-click (in place; with Shift a new
+tab) and a middle click follow. The Page preview plugin has no command.
+
+What changed:
+
+- `follow-caret.ts` (links) holds the three commands, their keys in the
+  editor's keymap and the `links` service. The keys follow what the commands
+  follow (links, reference links, tags through `links/followToken`), for a
+  collapsed caret in the focused editor, and stop the event so VS Code's
+  binding does not run a second time. The commands act on the active editor
+  (a table cell's included) and do nothing while the focus is in a field of
+  the note (a property, the Vim prompt, a dialog): VS Code runs them for keys
+  such a field left alone. `links.follow(view, place)` takes the place;
+  table cells bind the same three keys.
+- The manifest binds Alt+Enter and Mod+Enter, scoped as #791 scoped the
+  others (`activeCustomEditorId`, the plugin, `lumiere.markdown.editorFocus`);
+  `pnpm contributions` regenerated package.json.
+- `placeOfClick` (clicks.ts): Mod opens a tab, Mod+Alt the side (Mod+Alt+Shift
+  too: no windows), a middle click a tab, followed on its press; `auxclick`
+  is prevented on links. A plain click still reveals the source (BH-020,
+  owner decision, not reopened); a plain click on a link rendered as HTML
+  follows here, as before.
+- Page Preview drops its Alt+Enter listener. **Preview Link at Caret**
+  (`lumiere.markdown.previewLink`, `page-preview:preview-link`, no key)
+  previews the rendered link at the caret, so the preview stays reachable
+  from the keyboard and the Command Palette.
+- Outside VS Code nothing changed in host-node: its navigation ignores the
+  place and the app and DSH open every followed link in a tab of their own
+  (or show the one it is in), so a new tab there is what any follow does.
+  Documented in the links README.
+
+Documentation: CAPABILITIES (links, pagePreview, Hotkeys), DESIGN §14 and
+§16, PARITY (link click rows, followLink, openLinkInNewTab, openLinkToSide,
+previewLink, the key audit row), MANUAL_TEST_PLAN (links, pagePreview,
+quickSwitcher, command rows), the links and pagePreview READMEs,
+OBSIDIAN_KEYS, OBSIDIAN_REVEAL_RULES and ARCHITECTURE's link gaps.
+
+Tests: unit tests pin the keys and places (test/unit/features/link-keys.test.ts,
+table-links.test.ts), the click places (test/unit/links/clicks.test.ts), the
+caret guards and lookup (src/plugins/links/links.test.ts,
+src/plugins/pagePreview/caret.test.ts) and the contributed keybindings
+(test/unit/settings/editor.test.ts). The browser spec
+test/browser/follow-link-keyboard.spec.ts now presses Alt+Enter as well as
+Mod+Enter (owner decision covers updating it); link-clicks.spec.ts's comment
+follows Mod-click. Checks: `pnpm test` (all packages), typecheck, ESLint,
+Prettier and `pnpm contributions --check` pass. Not run here (a real VS Code
+suite was running on the machine): `pnpm test:browser`, `test:quality`,
+`test:vscode`.

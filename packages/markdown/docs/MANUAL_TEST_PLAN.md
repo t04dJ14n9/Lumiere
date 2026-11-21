@@ -359,18 +359,27 @@ title, then set `lumiere.markdown.plugins.inlineTitle.enabled` to true.
 `Links.md`.
 
 1. Off the caret, a wikilink shows its label; a plain click reveals its
-   source and places the caret (does not navigate). Mod-click follows in the
-   same editor; Mod+Alt-click opens it to the side. Selecting across a link
+   source and places the caret (does not navigate). Mod-click opens the
+   target in a new tab of the same group and the note stays open, as does a
+   middle click; Mod+Alt-click opens it to the side. Selecting across a link
    does not follow it.
 2. Follow heading, block (`#^key-point`) and same-note links: the target
-   scrolls into view. **Follow Link** and **Open Link to Side** work with
-   the caret in link syntax.
-3. `[[Missing note]]` is dimmed; clicking creates and opens the note (in
+   scrolls into view. **Follow Link**, **Open Link in New Tab** and **Open
+   Link to Side** work with the caret in link syntax, a reference link
+   (`[text][label]`) or a tag (which searches it).
+3. With the caret in a link to another note: Alt+Enter follows it in the
+   same group, Mod+Enter opens it in a tab of its own that stays open (the
+   note stays open too), Mod+Alt+Enter opens it to the side; in a table cell
+   the same keys follow the cell's link. In a property value, the Vim `:`
+   prompt or the find panel, none of the three keys opens the note's link.
+   With the focus in the Explorer, Alt+Enter and Mod+Enter do what VS Code
+   does there.
+4. `[[Missing note]]` is dimmed; clicking creates and opens the note (in
    `lumiere.markdown.files.newNoteFolder` when set). `[[Home]]` stays
    unresolved (an alias is not a file name), as in Obsidian.
-4. HTTPS and mail links open externally; `obsidian://` asks first.
-5. **Insert Wikilink** wraps the selection; undo restores it.
-6. `lumiere.markdown.links.folderNote` sets the note a folder link opens.
+5. HTTPS and mail links open externally; `obsidian://` asks first.
+6. **Insert Wikilink** wraps the selection; undo restores it.
+7. `lumiere.markdown.links.folderNote` sets the note a folder link opens.
    `lumiere.markdown.links.newLinkFormat` and
    `lumiere.markdown.links.useWikilinks` shape links inserted by
    suggestions and link updates. With
@@ -431,8 +440,9 @@ title, then set `lumiere.markdown.plugins.inlineTitle.enabled` to true.
 
 1. Hold Mod over an internal link in `Links.md` for about 300 ms: a preview
    opens; moving into it keeps it, leaving closes it.
-2. Focus a rendered link and press Alt+Enter: focus moves into the preview;
-   Escape closes it and returns focus.
+2. With the caret in a link, run **Preview Link at Caret** from the Command
+   Palette: the preview opens with the focus in it; Escape closes it and
+   returns focus. Alt+Enter no longer previews: it follows the link.
 3. Move quickly between links: a late preview never replaces a newer one.
    Editing the note closes the preview. Tasks in previews are read-only.
 
@@ -723,7 +733,7 @@ Both are off by default (owner decision). Turn on
    opens it to the side. Type `Targ` with `Target` selected: Shift+Enter
    creates `Targ`, Mod+Shift+Enter creates it in a tab of its own. In VS
    Code's own Go to File (Mod+P), Mod+Enter still opens to the side, and in
-   a note Mod+Enter still follows the link in place.
+   a note Mod+Enter still opens the caret's link in a new tab.
 
 ### wordCount
 
@@ -1267,8 +1277,8 @@ Use the disposable fixture vault from Setup. These rows enumerate every generate
 | `lumiere.markdown.downloadAttachments` — Download Attachments for Current File | unbound | On a disposable fixture with `![A cat](https://…/cat.png)` twice, a web page link written as an image and a `data:` image: run the command and choose Download; confirm one `cat.png` (or `cat 1.png`) and one `Image.*` in the attachment folder, embeds that keep the alt text, the page link left as it was, and that one undo restores the note. Choosing nothing changes nothing. |
 | `lumiere.markdown.renameHeading` — Rename Heading… | unbound | On a disposable fixture, run Rename Heading…; confirm its named action using the plugin scenarios above, then undo where applicable. Repeat after disable/re-enable and switching panes. |
 | `lumiere.markdown.insertWikilink` — Insert Wikilink | unbound | On a disposable fixture, run Insert Wikilink; confirm its named action using the plugin scenarios above, then undo where applicable. Repeat after disable/re-enable and switching panes. |
-| `lumiere.markdown.followLink` — Follow Link | unbound | On a disposable fixture, run Follow Link; confirm its named action using the plugin scenarios above, then undo where applicable. Repeat after disable/re-enable and switching panes. |
-| `lumiere.markdown.openLinkInNewTab` — Open Link in New Tab | unbound | On a disposable fixture, run Open Link in New Tab; confirm its named action using the plugin scenarios above, then undo where applicable. Repeat after disable/re-enable and switching panes. |
+| `lumiere.markdown.followLink` — Follow Link | alt+enter | On a disposable fixture, run Follow Link; confirm its named action using the plugin scenarios above, then undo where applicable. Repeat after disable/re-enable and switching panes. |
+| `lumiere.markdown.openLinkInNewTab` — Open Link in New Tab | ctrl+enter (Mac cmd+enter) | On a disposable fixture, run Open Link in New Tab; confirm its named action using the plugin scenarios above, then undo where applicable. Repeat after disable/re-enable and switching panes. |
 | `lumiere.markdown.openLinkToSide` — Open Link to Side | ctrl+alt+enter (Mac cmd+alt+enter) | On a disposable fixture, run Open Link to Side; confirm its named action using the plugin scenarios above, then undo where applicable. Repeat after disable/re-enable and switching panes. |
 | `lumiere.markdown.toggleSourceMode` — Toggle Live Preview/Source Mode | unbound | On a disposable fixture, run Toggle Live Preview/Source Mode; confirm its named action using the plugin scenarios above, then undo where applicable. Repeat after disable/re-enable and switching panes. |
 | `lumiere.markdown.lookUp` — Look Up | unbound | On macOS, right-click a word in a note and choose Look Up: the Dictionary app opens at that word (see the lookUp scenarios above). Hidden from the palette and absent from the menu off macOS. |
@@ -1289,6 +1299,7 @@ Use the disposable fixture vault from Setup. These rows enumerate every generate
 | `lumiere.markdown.outline.disableFollowCursor` — ✓ Follow Cursor | unbound | On a disposable fixture, run ✓ Follow Cursor; confirm its named action using the plugin scenarios above, then undo where applicable. Repeat after disable/re-enable and switching panes. |
 | `lumiere.markdown.outline.toggle` — Toggle Markdown Outline | ctrl+alt+o (Mac ctrl+cmd+o) | On a disposable fixture, run Toggle Markdown Outline; confirm its named action using the plugin scenarios above, then undo where applicable. Repeat after disable/re-enable and switching panes. |
 | `lumiere.markdown.outline.goToHeading` — Go to Heading… | ctrl+shift+o (Mac cmd+shift+o) | On a disposable fixture, run Go to Heading…; confirm its named action using the plugin scenarios above, then undo where applicable. Repeat after disable/re-enable and switching panes. |
+| `lumiere.markdown.previewLink` — Preview Link at Caret | unbound | With the caret in an internal link, run Preview Link at Caret: the page preview opens with the focus in it (pagePreview step 2); on plain text nothing opens. Repeat after disable/re-enable and switching panes. |
 | `lumiere.markdown.addProperty` — Add File Property | ctrl+; (Mac cmd+;) | On a disposable fixture, run Add File Property; confirm its named action using the plugin scenarios above, then undo where applicable. Repeat after disable/re-enable and switching panes. |
 | `lumiere.markdown.addAlias` — Add Alias | unbound | On a disposable fixture, run Add Alias; confirm its named action using the plugin scenarios above, then undo where applicable. Repeat after disable/re-enable and switching panes. |
 | `lumiere.markdown.clearProperties` — Clear File Properties | unbound | On a disposable fixture, run Clear File Properties; confirm its named action using the plugin scenarios above, then undo where applicable. Repeat after disable/re-enable and switching panes. |
