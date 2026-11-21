@@ -21,7 +21,6 @@ test("mw:properties frame already has Properties sheet and lineNumbers gutter", 
     );
     window.harness.trusted = false;
     window.harness.features = {};
-    window.harness.videoDetails = {};
     window.harness.notes = {};
     const opening = window.harness.open("obsidian");
     const mark = (name: string) =>

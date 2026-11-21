@@ -17,7 +17,6 @@ import { protocol as lookUpProtocol } from "../../src/plugins/lookUp/protocol";
 import { protocol as propertiesProtocol } from "../../src/plugins/properties/protocol";
 import { frontmatter } from "../../src/markdown/properties";
 import type { PropertyTypes } from "../../src/markdown/properties/types";
-import { protocol as videoProtocol } from "../../src/plugins/onlineVideos/protocol";
 import { protocol as resourcesProtocol } from "../../src/plugins/resources/protocol";
 import { protocol as vimProtocol } from "../../src/plugins/vim/protocol";
 import { bootstrap } from "../../src/webview/bootstrap";
@@ -54,12 +53,9 @@ export class BrowserHost {
     string,
     { enabled: boolean; config: Record<string, unknown> }
   > = {};
-  /** Online video details by `provider:id`; others fail as if offline. */
-  videoDetails: Record<string, Record<string, unknown>> = {};
   /** Sibling notes by basename (no `.md`) for embed resolve in remount probes. */
   notes: Record<string, string> = {};
   pdfs: Record<string, string> = {};
-  readonly videoRequests: string[] = [];
   /** The git baseline the change bars compare with; undefined: no repository. */
   gitBaseline: string | undefined;
   /** Whether the host has a status bar that shows Vim's mode; set before `open`. */
@@ -257,15 +253,6 @@ export class BrowserHost {
     host.handle(lookUpProtocol, "lookUp", ({ word }) => {
       this.lookedUp.push(word);
       return true;
-    });
-    host.handle(videoProtocol, "details", ({ provider, id }) => {
-      const key = `${provider}:${id}`;
-      this.videoRequests.push(key);
-      const details = this.videoDetails[key];
-      if (!details) {
-        throw new Error("offline");
-      }
-      return details;
     });
     host.handle(resourcesProtocol, "load", ({ target }) => {
       const path = target.split("|")[0]!.split("#")[0]!.trim();

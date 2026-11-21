@@ -3273,7 +3273,7 @@
             "type": "boolean",
             "default": true,
             "scope": "resource",
-            "description": "Show YouTube and Bilibili links embedded as images as video cards, with titles and covers in trusted workspaces."
+            "description": "Show YouTube links embedded as images as video cards."
           },
           "lumiere.markdown.plugins.outgoingLinks.enabled": {
             "type": "boolean",
@@ -3656,12 +3656,6 @@
             "type": "string",
             "default": ".obsidian",
             "description": "Obsidian configuration folder relative to the vault root, such as .obsidian-awesome. Root markers discover the vault; they do not select this folder.",
-            "scope": "resource"
-          },
-          "lumiere.markdown.onlineVideos.bilibiliPlayer": {
-            "type": "boolean",
-            "default": false,
-            "description": "Offer **Play here** on Bilibili cards in trusted workspaces. Off by default: Bilibili's player does not play inside VS Code's webview.",
             "scope": "resource"
           },
           "lumiere.markdown.outgoingLinks.sortOrder": {

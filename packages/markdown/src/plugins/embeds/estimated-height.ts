@@ -15,8 +15,8 @@ import { writtenHeight, writtenWidth } from "./image-size";
  * Prefer an explicit `|WxH` height; otherwise reserve a stable default so
  * PageDown / click coordinates below the embed stay valid until measure runs.
  *
- * YouTube / Bilibili image links become `.mw-video` cards (16:9 thumb ≈200px
- * wide). Without a dedicated reserve they fall through to CARD_DEFAULT (~64px).
+ * YouTube image links become `.mw-video` cards (16:9 thumb ≈200px wide).
+ * Without a dedicated reserve they fall through to CARD_DEFAULT (~64px).
  *
  * Note embeds are worse: the source is one line (`![[Other]]`) while resolved
  * content can be many paragraphs. A modest floor covers first paint; after
@@ -31,7 +31,7 @@ const MEDIA_DEFAULT = 180;
 /**
  * Online video card with cover: thumb flex-basis 200px at 16:9 (~112px) plus
  * title/meta/actions. Stacked layout in a narrow pane is taller; 200 covers
- * both until measure. Playing frames (Bilibili opt-in) grow further via measure.
+ * both until measure.
  */
 const ONLINE_VIDEO_DEFAULT = 200;
 /** PDF and other attachment cards. */

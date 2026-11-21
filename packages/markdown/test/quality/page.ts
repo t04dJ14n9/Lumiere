@@ -32,7 +32,6 @@ export async function openNote(
     window.harness = new window.BrowserHost(text);
     window.harness.trusted = false;
     window.harness.features = {};
-    window.harness.videoDetails = {};
     window.harness.notes = {};
     const started = performance.now();
     await window.harness.open("obsidian");

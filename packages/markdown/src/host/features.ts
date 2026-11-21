@@ -12,7 +12,6 @@ import {
   tagsHost,
   suggestHost,
   searchHost,
-  onlineVideosHost,
   cursorBridgePanelHost,
   lookUpHost,
   vimPanelHost,
@@ -32,16 +31,15 @@ const CRITICAL_PANEL_HOSTS: readonly PanelHost[] = [
 ];
 
 /**
- * Host halves that only answer later RPC (blame, search, suggest, video
- * cards, …). Started after the ready response so they do not block first
- * paint on large notes or slow SSH FS.
+ * Host halves that only answer later RPC (blame, search, suggest, …).
+ * Started after the ready response so they do not block first paint on large
+ * notes or slow SSH FS.
  */
 const DEFERRED_PANEL_HOSTS: readonly PanelHost[] = [
   gitGutterHost,
   gitBlameHost,
   suggestHost,
   searchHost,
-  onlineVideosHost,
   lookUpHost,
 ];
 

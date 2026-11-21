@@ -69,7 +69,6 @@ test("a note's first screen is on screen before the editor starts", async ({
     window.harness = new window.BrowserHost(source);
     window.harness.trusted = false;
     window.harness.features = {};
-    window.harness.videoDetails = {};
     window.harness.notes = {};
     await window.harness.open("obsidian");
     while (performance.getEntriesByName("mw:first-paint").length === 0) {

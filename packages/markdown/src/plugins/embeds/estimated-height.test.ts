@@ -65,18 +65,15 @@ test("inline WxH images use the same height reserve as block embeds", () => {
   assert.ok(height > 700, `got ${height}`);
 });
 
-test("YouTube and Bilibili image links reserve video-card height, not PDF card", () => {
+test("YouTube image links reserve video-card height, not PDF card", () => {
   // Online Videos post-processes these into `.mw-video` cards (~16:9 thumb).
   // Without a dedicated reserve they fell through to CARD_DEFAULT (~64px).
   const youtube = embedEstimatedHeight(
     "![Never](https://www.youtube.com/watch?v=dQw4w9WgXcQ)",
   );
   const short = embedEstimatedHeight("![](https://youtu.be/dQw4w9WgXcQ)");
-  const bilibili = embedEstimatedHeight(
-    "![](https://www.bilibili.com/video/BV1DRHU6LELy)",
-  );
   const pdf = embedEstimatedHeight("![[doc.pdf]]");
-  for (const height of [youtube, short, bilibili]) {
+  for (const height of [youtube, short]) {
     assert.ok(height > 150, `got ${height}`);
     assert.ok(height > pdf * 2, `video=${height} pdf=${pdf}`);
   }
