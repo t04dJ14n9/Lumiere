@@ -60,6 +60,9 @@ Listens to `render/postProcess`; emits no events. Enabled by
 is a name→replacement map, like the MathJax macros that Obsidian community plugins
 add (Obsidian core has no macro setting); `#1`…`#9` mark arguments.
 Commands are Toggle Inline Math and Insert Math Block; neither has a default keybinding.
+Insert Math Block puts `$$` lines around the lines of every selection, one
+block for selections that share a line (`src/markdown/fence-lines.ts`). Both
+refuse a read-only editor.
 
 ## Limits and differences from Obsidian
 

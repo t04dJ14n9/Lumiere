@@ -8918,3 +8918,45 @@ an index of listed files and a set of escaping URIs.
 
 Checks (this and the #823 change, on the branch): `pnpm check` passes. Not
 run: the browser, quality and VS Code suites.
+## Fence commands with carets on one line; editing commands refuse read-only (#810, #812; 2026-11-21)
+
+Two issues from the post-merge review of #800 (#787's editing commands).
+
+- **#810: one block per shared line.** #800 made Insert Code Block
+  (`fenceLines`) and Insert Math Block (`mathBlockEdit`) edit every
+  selection through `changeByRange`, each range grown to its whole lines on
+  its own. Two carets on one line (`a|lpha be|ta`), or ranges whose first
+  and last lines meet, each put fences around the same text: the line ended
+  up outside two empty blocks. Both now go through
+  `fenceSelectedLines` (`src/markdown/fence-lines.ts`, pure, shared because
+  the two commands live in different plugins): the ranges' line spans are
+  merged where they share a line, one block goes around each merged span,
+  and every range keeps its place on the text and the main selection stays
+  main. Carets on consecutive lines still get a block each, as #787 pinned
+  ("line and insert commands act at every caret"); Obsidian's own result
+  for carets on one line was not observed. Unit tests in
+  obsidian-commands (two carets on a line, overlapping multi-line ranges, a
+  range ending at the start of a caret's line, carets at both ends of a
+  line, and controls: one caret, a shared line followed by a separate one)
+  for both commands; each failed before the change.
+- **#812: read-only.** CodeMirror's `readOnly` facet only advises commands;
+  a dispatched change still applies. The formatting plugin's commands check
+  it; the registered `editor:insert-mathblock` did not (before #800 too).
+  Checked the commands #800 added or changed and the math and code-block
+  insert paths: formatting's inline toggles, highlight colours, line
+  commands, Insert Link, Insert Horizontal Rule, Insert Code Block, Insert
+  Tag, Clear Formatting and Swap Line Up/Down check it, and Delete Paragraph
+  is CodeMirror's `deleteLine`, which does; Add Cursor Above/Below only move
+  the selection. Missing and now refused: Insert Math Block, Toggle Inline
+  Math without the formatting plugin (with it, `formatting.wrap` refuses),
+  Insert Wikilink (links), Insert Embed (embeds), Insert Callout
+  (`insertCalloutCommand`) and the two checklist commands (`runChecklist`,
+  so the Mod+L keymap's own check went). In VS Code the editor turns
+  read-only when syncing fails for good (document/sync.ts), so these edits
+  would never have reached the note. New
+  `test/unit/features/read-only-commands.test.ts` runs each registered
+  handler on a read-only state (refused, note unchanged; each edited it
+  before) and on a writable one (edits).
+
+Checks: `pnpm check` passes. Not run here: `pnpm test:browser`,
+`pnpm test:quality`, `pnpm test:vscode` (others run them on this machine).
