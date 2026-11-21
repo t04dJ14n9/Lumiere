@@ -192,6 +192,9 @@ function registerTableCommands(ctx: Context): void {
   const view = ctx.editor.view;
   ctx.effect(() =>
     ctx.commands.register("editor:insert-table", () => {
+      if (view.state.readOnly) {
+        return false;
+      }
       view.dispatch(insertTable(view.state));
       return true;
     }),
@@ -199,6 +202,10 @@ function registerTableCommands(ctx: Context): void {
   for (const [id] of tableCommands) {
     ctx.effect(() =>
       ctx.commands.register("editor:table-" + id, () => {
+        // The table writes its new source into this note's editor.
+        if (view.state.readOnly) {
+          return false;
+        }
         const controller = activeTables.get(view);
         const position = controller?.range?.head ?? controller?.active;
         if (!controller || !position) {
