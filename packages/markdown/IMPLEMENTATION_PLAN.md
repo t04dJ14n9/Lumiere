@@ -9259,9 +9259,13 @@ active group. It now runs the pure checks (the vault in a workspace folder, or a
 `file:` vault when there is none; the file in the vault by path) before the trust
 branch, refuses in both modes, and passes `{ viewColumn }` to `vscode.open`. A
 virtual workspace's folder still counts as a workspace folder, so its files open
-as text as they did. Still different from main: a Cmd-clicked link in Restricted
-Mode opens a preview tab rather than a kept one, and `preserveFocus` is not
-passed, because the command is given only a column. (2) `htmlEmbedTarget` and
+as text as they did. A link opened by navigation did not get main's options in
+Restricted Mode (a Cmd-clicked link opened a preview tab, and `preserveFocus` was
+lost), because the command is given only a column. `host/navigation.ts` now opens
+the file as text itself when the workspace is not trusted, after `contained`, with
+the options main gave (`preview: false` for a kept tab, `preserveFocus`, the
+column); the command's own Restricted Mode branch is for direct callers, and keeps
+the column. (2) `htmlEmbedTarget` and
 `parseHtmlEmbedBlock` took addresses: a vault target only now (`resources`'
 rule), so `![alt](https://host/page.html)` is no card and an `html-embed` block
 naming an address or `C:/…` stays code. (3) `embedsNote` is false for an
