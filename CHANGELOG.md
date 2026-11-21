@@ -73,6 +73,9 @@
 - Markdown: sorting a table by a column compares the text each cell shows,
   as Obsidian does, not its Markdown: `[[Note|Zed]]` sorts as "Zed" and
   `**b**` as "b" (#787).
+- Markdown: link suggestions, the quick switcher and the other fuzzy
+  pickers ignore accents, as Obsidian 1.15.0 does: `cafe` finds `café`, and
+  a query typed with an accent puts the notes that have it first (#787).
 
 Fixes for several VS Code windows open at once, each with a test; checked
 with two real windows on one profile.

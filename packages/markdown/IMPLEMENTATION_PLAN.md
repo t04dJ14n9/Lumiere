@@ -7600,3 +7600,25 @@ menu.
 Validation: src/plugins/tables/operations.test.ts; tables tests, typecheck,
 ESLint and Prettier pass. Not run here: `pnpm test:browser`,
 `test:quality`, `test:vscode`.
+
+## Fuzzy search ignores accents (#787; 2026-11-21)
+
+Obsidian 1.15.0's fuzzy search (read in its shipped code, behaviour only,
+nothing copied) matches without accents: a Latin or Greek letter, or
+Cyrillic `ё`, folds to its canonical decomposition without the combining
+marks U+0300–U+036F, the marks fold to nothing, and a query typed with an
+accent loses 0.05 on a match whose text does not keep it. Lumiere's
+`src/shared/fuzzy.ts` compared the text as written, so `cafe` missed
+`café` in link suggestions, the quick switcher, the tag and symbol pickers
+and the settings search. `src/shared/fuzzy-fold.ts` now folds the query and
+the text, keeps where each folded character came from, and gives the
+matched ranges back in the text as written (a decomposed letter's marks
+join its range). Scores are computed on the folded text, as Obsidian's are,
+so the 1.14.4 score table still holds for unaccented text. A ligature
+(`ﬃ`) is still its own text: neither app folds compatibility forms.
+
+Validation: `test/unit/ported/match.test.ts` (the old "text is not
+normalized" test now expects a decomposed `Å` to match `å`, as 1.15.0
+does; new tests for folding and the 0.05); unit tests, typecheck, ESLint
+and Prettier pass. Not run: `test:browser`, `test:quality`, `test:vscode`
+(no editor-integration change).

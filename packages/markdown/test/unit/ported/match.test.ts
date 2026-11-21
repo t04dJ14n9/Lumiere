@@ -3,7 +3,8 @@ import assert from "node:assert/strict";
 import { fuzzyMatch, queryTokens } from "../../../src/shared/fuzzy";
 
 // Every expected score and range below is what Obsidian 1.14.4's public
-// prepareFuzzySearch returned for the same query and text.
+// prepareFuzzySearch returned for the same query and text (none has an accent,
+// so 1.15.0's folding leaves them as they were).
 const cases: [string, string, number | undefined, [number, number][]][] = [
   ["att", "Attention", -0.0109, [[0, 3]]],
   ["ten", "Attention", -0.1129, [[2, 5]]],
@@ -123,8 +124,30 @@ test("Han and kana are words alone in a query, as punctuation is", () => {
   assert.deepEqual(queryTokens("a-b  c"), ["a", "-", "b", "c"]);
 });
 
-test("text is not normalized: a ligature or decomposed letter is its own text", () => {
-  assert.equal(fuzzyMatch("ffi", "ﬃ"), undefined);
-  assert.equal(fuzzyMatch("å", "Å"), undefined);
-  assert.deepEqual(fuzzyMatch("å", "å")?.matches, [[0, 1]]);
+test("a ligature is its own text; a decomposed letter folds like a composed one", () => {
+  assert.equal(fuzzyMatch("ffi", "\uFB03"), undefined);
+  // The ring above belongs to the A it follows, so the range covers both.
+  assert.deepEqual(fuzzyMatch("\u00E5", "A\u030A")?.matches, [[0, 2]]);
+  assert.deepEqual(fuzzyMatch("\u00E5", "\u00E5")?.matches, [[0, 1]]);
+});
+
+// Obsidian 1.15.0 folds accents (read in its shipped code; behaviour only).
+test("accents are ignored: cafe finds café, and café finds cafe", () => {
+  assert.deepEqual(fuzzyMatch("cafe", "Caf\u00E9"), {
+    score: fuzzyMatch("cafe", "Cafe")!.score,
+    matches: [[0, 4]],
+  });
+  assert.deepEqual(fuzzyMatch("ecole", "\u00C9COLE")?.matches, [[0, 5]]);
+  assert.deepEqual(fuzzyMatch("cafe", "Cafe\u0301 au lait")?.matches, [[0, 5]]);
+  assert.deepEqual(
+    fuzzyMatch("\u0435\u043B\u043A\u0430", "\u0401\u043B\u043A\u0430")?.matches,
+    [[0, 4]],
+  );
+});
+
+test("a query typed with an accent ranks the accented text higher", () => {
+  const accented = fuzzyMatch("caf\u00E9", "caf\u00E9")!.score;
+  const plain = fuzzyMatch("caf\u00E9", "cafe")!.score;
+  assert.equal(Math.round((accented - plain) * 1e4) / 1e4, 0.05);
+  assert.equal(accented, fuzzyMatch("cafe", "cafe")!.score);
 });

@@ -9,8 +9,8 @@ opens it, or creates it when no note has that name. This is Obsidian's
 The command opens a quick pick over the active note's vault (or the first
 workspace folder's). Each keystroke ranks notes, attachments (images, audio,
 video, PDFs, canvases and bases, as Obsidian's default "Show attachments"),
-notes' aliases and links whose note does not exist yet with Obsidian 1.14's
-fuzzy scoring (`src/shared/fuzzy.ts`): a file matches on its name, or on its
+notes' aliases and links whose note does not exist yet with Obsidian's
+fuzzy scoring, accents folded as in 1.15.0 (`src/shared/fuzzy.ts`): a file matches on its name, or on its
 path a point lower, and an excluded file ranks 10 points lower. An empty query
 lists recently opened notes (mtime fallback). Choosing a missing note, or pressing Enter on
 a name no note has, creates it in the new-note folder.
