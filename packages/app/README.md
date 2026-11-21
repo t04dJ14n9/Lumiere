@@ -39,7 +39,9 @@ cookie, and the server reads and writes whatever its vaults hold. Its scripts
 run by nonce only, and its frame has a `sandbox` (`src/shell/editor-sandbox.ts`)
 that takes away top navigation, downloads and dialogs; it keeps
 `allow-same-origin`, so it is no wall against script in the page (that file
-says what dropping the origin needs). So the two
+says what dropping the origin needs). Isolating the page (per-page tokens
+with CORS, or an origin of its own) is deferred by the owner (2026-11-21,
+#744; `docs/HOSTS_PLAN.md`, risk 4). So the two
 routes that can add a folder as a vault (`POST /api/vaults`, `POST /api/open`)
 answer only the window itself (`fromShell` in `auth.ts`):
 
@@ -183,6 +185,13 @@ With no `--vault`, the vault used last opens again, if it is still there.
   plugins (Copy Link for Agent, look up, the outline view) and the PDF
   settings work only in VS Code for now, and links in a PDF do not open.
 - One window per server.
+- Deferred by the owner (2026-11-21; `docs/HOSTS_PLAN.md`, section 2):
+  - Search Vault… is in the Command Palette, but the window has no Vault
+    Search view, so its results fill a view nobody sees (#792).
+  - The outline's rows cannot be dragged: moving a section by dragging its
+    heading works in VS Code only, as host-node never calls a tree's `drop`
+    (#788).
+  - A note's page keeps the window's origin (above, #744).
 - The file list names files only, so an empty folder shows only while the
   window that made it is open.
 - Git blame and the change gutter start off in the app (`src/server/defaults.ts`):

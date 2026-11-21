@@ -89,6 +89,31 @@ request, launch arguments, which links leave for the system, and the page
 that says why the server did not start. The server and window have their own tests in
 `packages/app` (`pnpm check` at the root runs them).
 
+## Known limits, deferred by the owner (2026-11-21)
+
+The owner decided to leave these as they are for now (`docs/HOSTS_PLAN.md`,
+section 2):
+
+- **Undo and Redo from the Edit menu.** ⌘Z and ⇧⌘Z undo and redo in the
+  note, with each note's own steps (host-node, #783): the page takes the
+  keys before the menu does. The Edit menu is Tauri's default
+  (`Menu::default` in `src-tauri/src/menu.rs`, which adds no undo item of
+  its own). On macOS its Undo and Redo, chosen with the mouse, send the
+  system's `undo:` and `redo:` to the web view with no key event, so they
+  probably do not reach Lumière's undo at all; read from the code, not tried
+  in the window. On Windows they press Ctrl+Z and Ctrl+Y for the window,
+  which the page takes like the keys; on Linux the menu has no Undo or Redo.
+- **Vault Search.** Search Vault… is in the Command Palette, but the window
+  has no Vault Search view, so it fills a view nobody sees (#792).
+- **Outline.** Dragging a heading to move its section works in VS Code
+  only; the outline's rows here cannot be dragged (#788).
+- **A note's page is not isolated from the window.** Its frame keeps
+  `allow-same-origin` (`packages/app/src/shell/editor-sandbox.ts`), so script
+  that ran in the page could reach the window and the server's routes. The
+  page's nonce-only script policy and the sanitizer keep a note's content
+  from running; full isolation needs per-page tokens with CORS, or an origin
+  of its own (#744; `docs/HOSTS_PLAN.md`, risk 4).
+
 ## Not done yet
 
 See `docs/HOSTS_PLAN.md` (milestones M4 and M5) for the order. In short:

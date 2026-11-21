@@ -1,6 +1,7 @@
 # Lumière on three hosts: VS Code, DeepSeek Harness and a desktop app
 
-Status: 2026-10-22, after the desktop skeleton. Owner: t04dJ14n9.
+Status: 2026-10-22, after the desktop skeleton; what does not work outside
+VS Code, 2026-11-21 (section 2). Owner: t04dJ14n9.
 
 Who does what:
 
@@ -116,6 +117,42 @@ These are not caused by #265 or this PR:
   - graph-view parity with Obsidian;
   - the full test pass;
   - the README motivation rewrite.
+
+### Outside VS Code: limits the owner deferred (2026-11-21)
+
+On 2026-11-21 the owner decided to leave these as they are for now, written
+down here, rather than follow them up in DSH and the desktop app. "The
+window" is the app's window, on its server in a browser or in the desktop
+app:
+
+- **Vault Search (#792).** Search Vault… and the Vault Search view
+  (`VIEW_IDS.search`) exist, and host-node serves the view like the other
+  trees, but neither the app's window nor DSH shows it. In the window,
+  Search Vault… is in the Command Palette and fills a view nobody sees. DSH
+  has no palette, so there it cannot be run at all.
+- **Dragging an Outline heading (#788)** moves its section in VS Code only.
+  host-node never calls a tree's optional `drop` (`TreeSource.drop`), and
+  the app's outline panel lets no row be dragged. DSH does not show the
+  Outline yet.
+- **Undo and Redo from the desktop app's Edit menu.** The keys reach
+  host-node's per-note undo (#783): ⌘Z and ⇧⌘Z go to the note's page first,
+  as ⌘B does (`menu.rs`), and the page runs Lumière's history
+  (`keepHistoryKeysInEditor`,
+  `packages/markdown/src/plugins/commands/history-keys.ts`). The Edit menu
+  is Tauri's default (`Menu::default` in
+  `apps/desktop/src-tauri/src/menu.rs`, which adds no undo item of its own).
+  On macOS its Undo and Redo, chosen with the mouse, send the system's
+  `undo:` and `redo:` to the web view with no key event, and nothing in
+  Lumière listens for what WebKit then does, so they probably do not reach
+  host-node's undo: at most WebKit undoes its own record of the typing, which
+  the editor would read as a new edit. This is read from the code (Tauri
+  2.12, muda 0.20), not tried in the window. On Windows the same menu items
+  press Ctrl+Z and Ctrl+Y for the window, which the page takes as it takes
+  the keys; on Linux the default Edit menu has no Undo or Redo.
+- **A note's page shares its embedder's origin (#744).** Risk 4 in section
+  8: the app's frame keeps `allow-same-origin`, DSH's frame has no
+  `sandbox`, and full isolation needs per-page tokens with CORS, or an origin
+  of its own.
 
 ## 3. Architecture
 
@@ -297,7 +334,9 @@ The pass, in the Tauri window:
    - Open a note and type: the file on disk changes within a second.
    - Undo and redo work: a run of typing undoes at once, and only in the
      tab that has focus (host-node's per-note history, #743; unit-tested,
-     not yet tried in the window).
+     not yet tried in the window). Try them with ⌘Z and ⇧⌘Z: Edit > Undo
+     and Redo chosen with the mouse probably do not reach it on macOS, a
+     known limit the owner deferred (section 2, 2026-11-21).
    - Copy, cut and paste work, from the Edit menu and with the keys.
    - IME (Chinese) input works.
 3. **Right-click.**
@@ -319,6 +358,8 @@ The pass, in the Tauri window:
    - Clicking a heading scrolls to it.
    - Moving the caret highlights its section.
    - Expanding and collapsing work.
+   - Dragging a heading does nothing: moving a section by dragging is VS
+     Code's only (section 2, deferred 2026-11-21).
 6. **Theme.**
    - With Color Theme on Follow System, switch macOS between light and dark:
      the window, its title bar and the editor follow together.
@@ -425,7 +466,9 @@ Do not:
    app's window frames each page with a `sandbox` that keeps
    `allow-same-origin` (`packages/app/src/shell/editor-sandbox.ts`): it takes
    away top navigation, downloads and dialogs, but script that ran in the
-   page could still reach the window and the server's routes (#744).
+   page could still reach the window and the server's routes (#744). DSH's
+   own frame for a note (`packages/dsh/src/client/note-frame.ts`) has no
+   `sandbox` at all, so the same holds there for DSH's window and routes.
    Dropping the origin needs the page's requests and socket to authenticate
    without the window's cookie, the window to stop reaching into the page's
    window, both sides to check messages by source rather than origin, the
@@ -436,7 +479,13 @@ Do not:
    images, audio, video and PDFs as themselves and anything else as an
    attachment of bytes, every one but a PDF with `default-src 'none';
    sandbox` (`packages/host-node/src/vault-file-headers.ts`), so neither a
-   page nor `script-src 'self'` runs a vault's file.
+   page nor `script-src 'self'` runs a vault's file. Full isolation, in each
+   host, needs either per-page tokens (each page's requests and socket
+   carrying a token of its own instead of the embedder's cookie, answered
+   with CORS for the page's opaque origin) or pages served from an origin of
+   their own. The owner deferred that work on 2026-11-21 (#744); until it is
+   done, the page's script policy, the sanitizer and the vault files'
+   headers are what keep a note's content from running.
 5. **Two Cordis versions in DSH's process** (DSH's 4.0.0-rc.7 fork and
    Lumière's rc.13). They coexist because they never share objects. Check
    again whenever either changes.
