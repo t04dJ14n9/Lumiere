@@ -183,3 +183,33 @@ test("an html-embed block is no note embed: it gets no note's height watching", 
   assert.equal(embedsNote("![[folder/Other.md]]"), true);
   assert.equal(embedEditing(block).reveal, "button");
 });
+
+test("an HTML card's height and a claimed link's both stand in one reserve", () => {
+  const claims = (target: string) =>
+    target === "https://x.com/user/status/1" ? 500 : undefined;
+  const card = embedEstimatedHeight("![[doc.pdf]]");
+  // A vault HTML file is a card, whatever any plugin claims.
+  assert.equal(
+    embedEstimatedHeight("![[a.html]]", () => 999),
+    card,
+  );
+  assert.equal(
+    embedEstimatedHeight("```html-embed\nfile: a.html\n```", () => 999),
+    card,
+  );
+  // A link a plugin claims reserves what it claims (#842), HTML-named or not.
+  assert.equal(
+    embedEstimatedHeight("![](https://x.com/user/status/1)", claims),
+    500 + 16,
+  );
+  // A remote page named .html is no card, and only what is claimed is reserved.
+  assert.equal(
+    embedEstimatedHeight("![alt](https://host/page.html)", () => 700),
+    700 + 16,
+  );
+  assert.equal(
+    embedEstimatedHeight("![alt](https://host/page.html)", claims),
+    card,
+    "unclaimed: the default of any other link",
+  );
+});
