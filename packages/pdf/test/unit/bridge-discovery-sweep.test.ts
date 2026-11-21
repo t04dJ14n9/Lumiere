@@ -89,7 +89,7 @@ test("a sweep removes the file it judged, not a record published under another n
   assert.deepEqual(await readdir(dir), [`${port}-13-bbbbbbbbbbbb.json`]);
 });
 
-test("every other file naming the port the sweeping bridge listens on goes, whichever process it names", async (t) => {
+test("every other file naming the port the sweeping bridge listens on goes, whichever process it names, and its own file stays", async (t) => {
   const dir = await mkdtemp(path.join(tmpdir(), "lumiere-bridges-"));
   t.after(() => rm(dir, { recursive: true, force: true }));
   // Both ports answer: the bridges of the files are live, or the stale
@@ -100,14 +100,36 @@ test("every other file naming the port the sweeping bridge listens on goes, whic
       pid: process.pid,
       url: `http://127.0.0.1:${port}/mcp`,
     });
+  const own = `${held}-${process.pid}-cccccccccccc.json`;
+  // The sweeping bridge's own file is already written (the sweep must not
+  // depend on running before it is), and names the port it holds.
+  await writeFile(path.join(dir, own), record(held));
   await writeFile(path.join(dir, `${held}.json`), record(held));
   await writeFile(path.join(dir, `${held}-1-aaaaaaaaaaaa.json`), record(held));
   await writeFile(
     path.join(dir, `${other}-1-bbbbbbbbbbbb.json`),
     record(other),
   );
-  await sweepDiscoveryFiles(dir, { heldPort: held });
-  assert.deepEqual(await readdir(dir), [`${other}-1-bbbbbbbbbbbb.json`]);
+  await sweepDiscoveryFiles(dir, { self: { port: held, file: own } });
+  assert.deepEqual((await readdir(dir)).sort(), [
+    own,
+    `${other}-1-bbbbbbbbbbbb.json`,
+  ]);
+});
+
+test("a file is not the sweeping bridge's own just because it names the same port", async (t) => {
+  const dir = await mkdtemp(path.join(tmpdir(), "lumiere-bridges-"));
+  t.after(() => rm(dir, { recursive: true, force: true }));
+  const held = await openPort(t);
+  await writeFile(
+    path.join(dir, `${held}-1-aaaaaaaaaaaa.json`),
+    JSON.stringify({ pid: 1, url: `http://127.0.0.1:${held}/mcp` }),
+  );
+  await sweepDiscoveryFiles(dir, {
+    isGone: () => false,
+    self: { port: held, file: `${held}-2-bbbbbbbbbbbb.json` },
+  });
+  assert.deepEqual(await readdir(dir), []);
 });
 
 /** A loopback port nothing listens on (just closed). */

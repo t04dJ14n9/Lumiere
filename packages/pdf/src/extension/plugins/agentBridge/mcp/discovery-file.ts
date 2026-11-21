@@ -39,15 +39,16 @@ export async function announce(
   },
 ): Promise<void> {
   const { discoveryDir, port, undo, log } = where;
-  const discoveryFile = path.join(
-    discoveryDir,
-    `${port}-${info.pid}-${randomBytes(6).toString("hex")}.json`,
-  );
+  const fileName = `${port}-${info.pid}-${randomBytes(6).toString("hex")}.json`;
+  const discoveryFile = path.join(discoveryDir, fileName);
   await mkdir(discoveryDir, { recursive: true, mode: 0o700 });
   // Only this bridge can listen on `port`, so an older file naming it is
   // stale. Publishing under the same name used to replace it; now it must
-  // go, or it would stay for as long as this bridge holds the port.
-  await sweepDiscoveryFiles(discoveryDir, { heldPort: port });
+  // go, or it would stay for as long as this bridge holds the port. The
+  // sweep leaves this bridge's own file alone, written yet or not.
+  await sweepDiscoveryFiles(discoveryDir, {
+    self: { port, file: fileName },
+  });
   // VS Code ends a closing window's extension host a few milliseconds after
   // it asks the extensions to stop, long before this undo step's turn: the
   // file goes on `exit` too, which runs synchronously as the process ends.

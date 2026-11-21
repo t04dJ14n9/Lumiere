@@ -12,10 +12,11 @@ export interface SweepOptions {
   /** Whether nothing listens on this loopback port. */
   refuses?: (port: number) => Promise<boolean>;
   /**
-   * The port the sweeping bridge itself listens on. Only one process can
-   * listen there, so any other file naming it is stale.
+   * The sweeping bridge itself: the port it listens on, and the name of its
+   * own file in the folder. Only one process can listen on that port, so
+   * any other file naming it is stale; the bridge's own file never is.
    */
-  heldPort?: number;
+  self?: { port: number; file: string };
 }
 
 /**
@@ -27,10 +28,11 @@ export interface SweepOptions {
  * process id, and the shim would then count the file as a second window
  * with the same folder. A bridge listens before it writes its file and
  * removes the file before it stops listening, so a live one always
- * answers. A file that names the port the sweeping bridge itself listens
- * on goes too: nothing else can listen there. A file that cannot be read
- * or parsed, whose process exists (even another user's) and whose port
- * answers (or cannot be told), is left.
+ * answers. A file other than its own that names the port the sweeping
+ * bridge listens on goes too: nothing else can listen there. The bridge's
+ * own file (`self.file`) is never removed, whether or not it is written
+ * yet. A file that cannot be read or parsed, whose process exists (even
+ * another user's) and whose port answers (or cannot be told), is left.
  *
  * The file is removed by the name it was read under, after the probe has
  * answered, while other windows publish. That is safe only because no
@@ -51,6 +53,9 @@ export async function sweepDiscoveryFiles(
   }
   await Promise.all(
     names.map(async (name) => {
+      if (name === options.self?.file) {
+        return;
+      }
       const file = path.join(dir, name);
       const record = await readRecord(file);
       if (record && (await isStale(record, options))) {
@@ -64,14 +69,14 @@ async function isStale(
   record: { pid: number; port: number | undefined },
   options: SweepOptions,
 ): Promise<boolean> {
-  const { isGone = processIsGone, refuses = portRefuses, heldPort } = options;
+  const { isGone = processIsGone, refuses = portRefuses, self } = options;
   if (isGone(record.pid)) {
     return true;
   }
   if (record.port === undefined) {
     return false;
   }
-  return record.port === heldPort || (await refuses(record.port));
+  return record.port === self?.port || (await refuses(record.port));
 }
 
 async function readRecord(
