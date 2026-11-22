@@ -1,6 +1,6 @@
 # Changelog
 
-## Unreleased
+## 0.1.22 (pre-release, 2026-11-22)
 
 - Markdown: a jump to a heading (a click in the Markdown Outline, Go to Heading,
   a `[[#Heading]]` link, a Search match) no longer flickers. The heading was
