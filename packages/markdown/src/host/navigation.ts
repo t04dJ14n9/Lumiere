@@ -18,7 +18,7 @@ import { contained } from "./navigation-containment";
 import { openExternalLink } from "./external-link";
 import { registerNativeLinks } from "./native-links";
 import { MARKDOWN_EDITOR } from "../shared/editor-provider";
-import { openedInHtmlViewer } from "./html-viewer-route";
+import { openedInIntegratedBrowser } from "./integrated-browser-route";
 import {
   creationLocation,
   followsNewNoteFolder,
@@ -27,7 +27,6 @@ import {
 } from "../shared/link-location";
 
 export { contained };
-export { HTML_VIEWER_COMMAND } from "./html-viewer-route";
 
 export type OffsetRevealTarget =
   number | { at: number; to?: number; preserveFocus?: boolean };
@@ -328,7 +327,7 @@ interface OpenNavigation {
   logger: Logger;
   /** Show the destination without moving the keyboard focus to it. */
   preserveFocus?: boolean;
-  /** An HTML file opens in a text editor, not in the HTML viewer. */
+  /** An HTML file opens in a text editor, not in the Integrated Browser. */
   asText?: boolean;
 }
 
@@ -371,7 +370,7 @@ async function openNavigation(options: OpenNavigation): Promise<void> {
     await revealOpenedNote(options, before, activeColumn);
   } else if (/\.pdf$/i.test(uri.path)) {
     await openPdf(uri, options.fragment, column);
-  } else if (!(await openedInHtmlViewer(uri, options, column))) {
+  } else if (!(await openedInIntegratedBrowser(uri, options))) {
     await vscode.commands.executeCommand(
       "vscode.open",
       uri.with({ fragment: options.fragment }),

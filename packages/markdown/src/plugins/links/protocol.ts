@@ -11,7 +11,7 @@ export const request = Schema.object({
   tab: Schema.boolean().optional(),
   /**
    * In a text editor, though a viewer of its own would show the file (an HTML
-   * file, by default shown in the HTML viewer).
+   * file, by default shown in VS Code's Integrated Browser).
    */
   text: Schema.boolean().optional(),
 });

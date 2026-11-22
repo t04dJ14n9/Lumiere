@@ -1,4 +1,4 @@
-import test from "node:test";
+import test, { type TestContext } from "node:test";
 import assert from "node:assert/strict";
 import {
   mkdtemp,
@@ -154,221 +154,227 @@ test("a link to a PDF opens it in Lumiere PDF at its page, beside when asked", a
   ]);
 });
 
-test("a link to an HTML file goes to the HTML viewer with its vault, as text when asked; one outside the vault goes nowhere", async (t) => {
+const OPEN_FILE = "workbench.action.browser.openFile";
+const OPEN_URL = "workbench.action.browser.open";
+
+/**
+ * Navigation over a fake VS Code and a vault folder. `available` are the
+ * Integrated Browser commands the window has, `refuse` the ones that throw.
+ */
+async function htmlNavigation(
+  t: TestContext,
+  setup: { trusted?: boolean; available?: string[]; refuse?: string[] } = {},
+) {
   const directory = await mkdtemp(join(tmpdir(), "mw-navigation-unit-"));
   t.after(() => rm(directory, { recursive: true, force: true }));
   const outsideDirectory = await mkdtemp(join(tmpdir(), "mw-navigation-out-"));
   t.after(() => rm(outsideDirectory, { recursive: true, force: true }));
-  const root = pathToFileURL(directory).href;
-  const page = pathToFileURL(join(directory, "diagram.html")).href;
-  const old = pathToFileURL(join(directory, "old.htm")).href;
-  const outside = pathToFileURL(join(outsideDirectory, "secret.html")).href;
-  const commands: unknown[][] = [];
+  const href = (name: string) => pathToFileURL(join(directory, name)).href;
+  const calls: unknown[][] = [];
+  const state = { asked: 0 };
   const withFragment = (uri: string) =>
     Object.assign(parseUri(uri), {
       with: ({ fragment }: { fragment: string }) =>
         withFragment(`${uri.split("#")[0]}${fragment ? `#${fragment}` : ""}`),
     });
-  const { createNavigation, HTML_VIEWER_COMMAND } = loadNavigation({
+  const { createNavigation } = loadNavigation({
     Uri: { parse: withFragment },
     ViewColumn: { Beside: -2 },
     env: { appName: "Visual Studio Code", uriScheme: "vscode" },
     window: { tabGroups: { activeTabGroup: { viewColumn: 1 } } },
     workspace: {
-      isTrusted: true,
+      isTrusted: setup.trusted ?? true,
       getConfiguration: () => ({ get: () => "on" }),
     },
     commands: {
-      getCommands: async () => [
-        "vscode.open",
-        "lumiere.markdown.htmlViewer.open",
-      ],
+      getCommands: async () => {
+        state.asked += 1;
+        return ["vscode.open", ...(setup.available ?? [OPEN_FILE, OPEN_URL])];
+      },
       async executeCommand(command: string, ...args: unknown[]) {
-        commands.push([command, ...args]);
+        calls.push([command, ...args]);
+        if (setup.refuse?.includes(command)) {
+          throw new Error(`${command} refused`);
+        }
       },
     },
   });
-  assert.equal(HTML_VIEWER_COMMAND, "lumiere.markdown.htmlViewer.open");
-  const navigation = createNavigation(() => []);
-  await navigation.open(root, page, "", "here");
-  await navigation.open(root, old, "", "side");
-  // A subpath (`#height=480`, `#gamma`) is the embed's, not a place to scroll a text editor to.
-  await navigation.open(root, page, "height=480", "tab");
-  assert.deepEqual(commands, [
-    [HTML_VIEWER_COMMAND, page, root, { viewColumn: 1 }],
-    [HTML_VIEWER_COMMAND, old, root, { viewColumn: -2 }],
-    [HTML_VIEWER_COMMAND, page, root, { viewColumn: 1 }],
-  ]);
+  return {
+    navigation: createNavigation(() => []),
+    root: pathToFileURL(directory).href,
+    href,
+    outside: pathToFileURL(join(outsideDirectory, "secret.html")).href,
+    state,
+    /** The commands run since the last call, the files shown as text. */
+    ran: () =>
+      calls.splice(0).map(([command, uri, ...rest]) => [
+        command,
+        // The file's URI as text, or what an open by address was given.
+        command === OPEN_URL ? uri : String(uri),
+        ...rest,
+      ]),
+  };
+}
 
-  // Open as Text (an HTML embed's second button) skips the viewer, as for any file.
-  commands.length = 0;
-  await navigation.open(root, page, "", "here", undefined, undefined, {
+test("a link to an HTML file opens in VS Code's Integrated Browser by its URI, as text when asked", async (t) => {
+  const f = await htmlNavigation(t);
+  const page = f.href("diagram.html");
+  const old = f.href("old.htm");
+  await f.navigation.open(f.root, page, "", "here");
+  await f.navigation.open(f.root, old, "", "tab");
+  // A subpath (`#height=480`, `#gamma`) is the embed's: the file is what opens.
+  await f.navigation.open(f.root, page, "height=480", "here");
+  assert.deepEqual(f.ran(), [
+    [OPEN_FILE, page],
+    [OPEN_FILE, old],
+    [OPEN_FILE, page],
+  ]);
+  // Open as Text (an HTML card's second button) skips the browser, as for any file.
+  await f.navigation.open(f.root, page, "", "here", undefined, undefined, {
     asText: true,
   });
-  assert.deepEqual(
-    commands.map(([command, uri]) => [command, String(uri)]),
-    [["vscode.open", page]],
-  );
-
-  // The vault's own check stands before the viewer is asked.
-  commands.length = 0;
+  assert.deepEqual(f.ran(), [["vscode.open", page, 1]]);
+  // The vault's own check stands before anything is opened.
   await assert.rejects(
-    navigation.open(root, outside, "", "here"),
+    f.navigation.open(f.root, f.outside, "", "here"),
     /Link escapes the vault/,
   );
-  assert.deepEqual(commands, []);
+  assert.deepEqual(f.ran(), []);
 });
 
-test("an HTML file whose name has a # or a ? goes to the viewer, not to a text editor", async (t) => {
-  const directory = await mkdtemp(join(tmpdir(), "mw-navigation-unit-"));
-  t.after(() => rm(directory, { recursive: true, force: true }));
-  const root = pathToFileURL(directory).href;
-  const files = ["C# notes.html", "a?b.htm"].map(
-    (name) => pathToFileURL(join(directory, name)).href,
+test("Open to the Side asks the browser for the group beside, where it can, else opens the file", async (t) => {
+  const both = await htmlNavigation(t);
+  const page = both.href("diagram.html");
+  await both.navigation.open(both.root, page, "", "side");
+  assert.deepEqual(both.ran(), [[OPEN_URL, { url: page, openToSide: true }]]);
+
+  // No command to open by address: the file's own.
+  const fileOnly = await htmlNavigation(t, { available: [OPEN_FILE] });
+  await fileOnly.navigation.open(
+    fileOnly.root,
+    fileOnly.href("a.html"),
+    "",
+    "side",
   );
-  const commands: unknown[][] = [];
-  const withFragment = (uri: string) =>
-    Object.assign(parseUri(uri), {
-      with: ({ fragment }: { fragment: string }) =>
-        withFragment(`${uri.split("#")[0]}${fragment ? `#${fragment}` : ""}`),
-    });
-  const { createNavigation, HTML_VIEWER_COMMAND } = loadNavigation({
-    Uri: { parse: withFragment },
-    ViewColumn: { Beside: -2 },
-    env: { appName: "Visual Studio Code", uriScheme: "vscode" },
-    window: { tabGroups: { activeTabGroup: { viewColumn: 1 } } },
-    workspace: {
-      isTrusted: true,
-      getConfiguration: () => ({ get: () => "on" }),
-    },
-    commands: {
-      getCommands: async () => [
-        "vscode.open",
-        "lumiere.markdown.htmlViewer.open",
-      ],
-      async executeCommand(command: string, ...args: unknown[]) {
-        commands.push([command, ...args]);
-      },
-    },
-  });
-  const navigation = createNavigation(() => []);
+  assert.deepEqual(fileOnly.ran(), [[OPEN_FILE, fileOnly.href("a.html")]]);
+
+  // The address open refuses: the file's own, once.
+  const refusing = await htmlNavigation(t, { refuse: [OPEN_URL] });
+  await refusing.navigation.open(
+    refusing.root,
+    refusing.href("a.html"),
+    "",
+    "side",
+  );
+  assert.deepEqual(refusing.ran(), [
+    [OPEN_URL, { url: refusing.href("a.html"), openToSide: true }],
+    [OPEN_FILE, refusing.href("a.html")],
+  ]);
+});
+
+test("an HTML file whose name has a # or a ? opens in the browser too", async (t) => {
+  const f = await htmlNavigation(t);
+  const files = ["C# notes.html", "a?b.htm"].map((name) => f.href(name));
   for (const file of files) {
-    await navigation.open(root, file, "", "here");
+    await f.navigation.open(f.root, file, "", "here");
   }
   assert.deepEqual(
-    commands.map(([command, uri]) => [command, uri]),
-    files.map((file) => [HTML_VIEWER_COMMAND, file]),
+    f.ran(),
+    files.map((file) => [OPEN_FILE, file]),
   );
 });
 
-test("an HTML file opens as text when the viewer is not there, and other files never ask for it", async (t) => {
-  const directory = await mkdtemp(join(tmpdir(), "mw-navigation-unit-"));
-  t.after(() => rm(directory, { recursive: true, force: true }));
-  const root = pathToFileURL(directory).href;
-  const page = pathToFileURL(join(directory, "diagram.html")).href;
-  const data = pathToFileURL(join(directory, "data.csv")).href;
-  const commands: unknown[][] = [];
-  let asked = 0;
-  const withFragment = (uri: string) =>
-    Object.assign(parseUri(uri), {
-      with: ({ fragment }: { fragment: string }) =>
-        withFragment(`${uri.split("#")[0]}${fragment ? `#${fragment}` : ""}`),
-    });
-  const { createNavigation } = loadNavigation({
-    Uri: { parse: withFragment },
-    ViewColumn: { Beside: -2 },
-    env: { appName: "Visual Studio Code", uriScheme: "vscode" },
-    window: { tabGroups: { activeTabGroup: { viewColumn: 1 } } },
-    workspace: {
-      isTrusted: true,
-      getConfiguration: () => ({ get: () => "on" }),
-    },
-    commands: {
-      // The HTML Viewer plugin is turned off: its command is not registered.
-      getCommands: async () => {
-        asked += 1;
-        return ["vscode.open"];
-      },
-      async executeCommand(command: string, ...args: unknown[]) {
-        commands.push([command, ...args]);
-      },
-    },
+test("a window without the Integrated Browser opens an HTML link as text, as main did", async (t) => {
+  // Cursor, an older VS Code: neither command is there.
+  const f = await htmlNavigation(t, { available: [] });
+  const page = f.href("diagram.html");
+  await f.navigation.open(f.root, page, "", "here");
+  await f.navigation.open(f.root, page, "", "tab");
+  await f.navigation.open(f.root, page, "", "side");
+  await f.navigation.open(f.root, page, "", "side", undefined, undefined, {
+    preserveFocus: true,
   });
-  const navigation = createNavigation(() => []);
-  await navigation.open(root, page, "", "here");
-  assert.equal(asked, 1);
-  assert.deepEqual(
-    commands.map(([command, uri]) => [command, String(uri)]),
-    [["vscode.open", page]],
+  assert.deepEqual(f.ran(), [
+    ["vscode.open", page, 1],
+    ["vscode.open", page, { viewColumn: 1, preview: false }],
+    ["vscode.open", page, -2],
+    ["vscode.open", page, { viewColumn: -2, preserveFocus: true }],
+  ]);
+  // A window with only the address command has no file command to rely on.
+  const addressOnly = await htmlNavigation(t, { available: [OPEN_URL] });
+  await addressOnly.navigation.open(
+    addressOnly.root,
+    addressOnly.href("a.html"),
+    "",
+    "side",
   );
-  commands.length = 0;
-  await navigation.open(root, data, "", "here");
-  assert.equal(asked, 1, "a CSV never asks whether there is a viewer");
-  assert.equal(commands[0]![0], "vscode.open");
+  assert.deepEqual(addressOnly.ran(), [
+    ["vscode.open", addressOnly.href("a.html"), -2],
+  ]);
 });
 
-test("in Restricted Mode an HTML link opens as text with the options main gave it, and never asks for the viewer", async (t) => {
-  const directory = await mkdtemp(join(tmpdir(), "mw-navigation-unit-"));
-  t.after(() => rm(directory, { recursive: true, force: true }));
-  const outsideDirectory = await mkdtemp(join(tmpdir(), "mw-navigation-out-"));
-  t.after(() => rm(outsideDirectory, { recursive: true, force: true }));
-  const root = pathToFileURL(directory).href;
-  const page = pathToFileURL(join(directory, "diagram.html")).href;
-  const outside = pathToFileURL(join(outsideDirectory, "secret.html")).href;
-  const commands: unknown[][] = [];
-  let asked = 0;
-  const withFragment = (uri: string) =>
-    Object.assign(parseUri(uri), {
-      with: ({ fragment }: { fragment: string }) =>
-        withFragment(`${uri.split("#")[0]}${fragment ? `#${fragment}` : ""}`),
-    });
-  const { createNavigation } = loadNavigation({
-    Uri: { parse: withFragment },
-    ViewColumn: { Beside: -2 },
-    env: { appName: "Visual Studio Code", uriScheme: "vscode" },
-    window: { tabGroups: { activeTabGroup: { viewColumn: 1 } } },
-    workspace: {
-      isTrusted: false,
-      getConfiguration: () => ({ get: () => "on" }),
-    },
-    commands: {
-      // The viewer is there, and is not asked: Restricted Mode is main's path.
-      getCommands: async () => {
-        asked += 1;
-        return ["vscode.open", "lumiere.markdown.htmlViewer.open"];
-      },
-      async executeCommand(command: string, ...args: unknown[]) {
-        commands.push([command, ...args]);
-      },
-    },
-  });
-  const navigation = createNavigation(() => []);
-  const opened = () =>
-    commands
-      .splice(0)
-      .map(([command, uri, ...rest]) => [command, String(uri), ...rest]);
+test("a browser that refuses the file leaves the link opening as text, with the same options", async (t) => {
+  // A remote file, or a build that refuses it.
+  const f = await htmlNavigation(t, { refuse: [OPEN_FILE] });
+  const page = f.href("diagram.html");
+  await f.navigation.open(f.root, page, "", "tab");
+  assert.deepEqual(f.ran(), [
+    [OPEN_FILE, page],
+    ["vscode.open", page, { viewColumn: 1, preview: false }],
+  ]);
+});
+
+test("the browser's commands are asked for once, and a window without them is asked again after a while", async (t) => {
+  let now = 1_000;
+  t.mock.method(Date, "now", () => now);
+  const present = await htmlNavigation(t);
+  for (const name of ["a.html", "b.html", "c.htm"]) {
+    await present.navigation.open(present.root, present.href(name), "", "here");
+  }
+  assert.equal(present.state.asked, 1, "found once, believed for good");
+
+  const absent = await htmlNavigation(t, { available: [] });
+  await absent.navigation.open(absent.root, absent.href("a.html"), "", "here");
+  await absent.navigation.open(absent.root, absent.href("b.html"), "", "here");
+  assert.equal(absent.state.asked, 1, "not asked again at once");
+  now += 31_000;
+  await absent.navigation.open(absent.root, absent.href("c.html"), "", "here");
+  assert.equal(absent.state.asked, 2, "asked again after 30 seconds");
+  // Other files never ask.
+  await absent.navigation.open(
+    absent.root,
+    absent.href("data.csv"),
+    "",
+    "here",
+  );
+  assert.equal(absent.state.asked, 2);
+});
+
+test("in Restricted Mode an HTML link opens as text with the options main gave it, and never asks for the browser", async (t) => {
+  const f = await htmlNavigation(t, { trusted: false });
+  const page = f.href("diagram.html");
   // Plain click: the current group, a bare column, as for any other file.
-  await navigation.open(root, page, "", "here");
-  assert.deepEqual(opened(), [["vscode.open", page, 1]]);
+  await f.navigation.open(f.root, page, "", "here");
+  assert.deepEqual(f.ran(), [["vscode.open", page, 1]]);
   // Mod-click: a tab VS Code keeps, not the preview the next link replaces.
-  await navigation.open(root, page, "", "tab");
-  assert.deepEqual(opened(), [
+  await f.navigation.open(f.root, page, "", "tab");
+  assert.deepEqual(f.ran(), [
     ["vscode.open", page, { viewColumn: 1, preview: false }],
   ]);
   // Open Link to Side (Mod+Alt-click): the group beside.
-  await navigation.open(root, page, "", "side");
-  assert.deepEqual(opened(), [["vscode.open", page, -2]]);
+  await f.navigation.open(f.root, page, "", "side");
+  assert.deepEqual(f.ran(), [["vscode.open", page, -2]]);
   // `focusNewTab` off: opened without taking the focus.
-  await navigation.open(root, page, "", "side", undefined, undefined, {
+  await f.navigation.open(f.root, page, "", "side", undefined, undefined, {
     preserveFocus: true,
   });
-  assert.deepEqual(opened(), [
+  assert.deepEqual(f.ran(), [
     ["vscode.open", page, { viewColumn: -2, preserveFocus: true }],
   ]);
-  await navigation.open(root, page, "", "tab", undefined, undefined, {
+  await f.navigation.open(f.root, page, "", "tab", undefined, undefined, {
     preserveFocus: true,
   });
-  assert.deepEqual(opened(), [
+  assert.deepEqual(f.ran(), [
     [
       "vscode.open",
       page,
@@ -376,15 +382,19 @@ test("in Restricted Mode an HTML link opens as text with the options main gave i
     ],
   ]);
   // A fragment goes to the text editor as it did.
-  await navigation.open(root, page, "L3", "here");
-  assert.deepEqual(opened(), [["vscode.open", `${page}#L3`, 1]]);
-  assert.equal(asked, 0, "the viewer was never asked for");
+  await f.navigation.open(f.root, page, "L3", "here");
+  assert.deepEqual(f.ran(), [["vscode.open", `${page}#L3`, 1]]);
+  assert.equal(
+    f.state.asked,
+    0,
+    "the browser's commands were never looked for",
+  );
   // The same containment check first: nothing outside the vault opens.
   await assert.rejects(
-    navigation.open(root, outside, "", "here"),
+    f.navigation.open(f.root, f.outside, "", "here"),
     /Link escapes the vault/,
   );
-  assert.deepEqual(opened(), []);
+  assert.deepEqual(f.ran(), []);
 });
 
 test("a Cmd-clicked link opens a tab VS Code keeps, not the preview the next link replaces", async (t) => {

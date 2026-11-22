@@ -40,7 +40,7 @@ export interface OpenOptions {
   preserveFocus?: boolean;
   /**
    * Open the file in a text editor even where a viewer of its own would show
-   * it (an HTML file, in the HTML viewer). Other files open as they do.
+   * it (an HTML file, in VS Code's Integrated Browser). Other files open as they do.
    */
   asText?: boolean;
 }
