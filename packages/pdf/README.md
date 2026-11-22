@@ -391,8 +391,9 @@ characters of selected text) and answers with:
   (shown by its editor group), `active` (the one you are in) and `dirty`;
   `focus` says whether that is a note or a PDF.
 
-What Lumiere's API does not report is left out: a note's caret when nothing
-is selected, and the lines a note shows.
+What Lumiere's API does not report is left out: a note's caret (a selection
+comes as its lines and text; a caret with line and column comes only from a
+text editor showing the same note), and the lines a note shows.
 
 The server is off by default because it opens a port. When on, it listens on
 `127.0.0.1` only, on a random port, requires a random bearer token in the

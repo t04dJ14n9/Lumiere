@@ -11,8 +11,9 @@ const WHAT_IT_HOLDS =
   "Where the user is in Lumiere: the active note (path, selected lines and text, the headings above the " +
   "selection, unsaved or not), the PDF viewed last (path, page, page count, zoom, the selected passage or region " +
   "with a locator such as path#page=3#:~:text=…, SHA-256), and the Lumiere tabs open (notes and PDFs, with " +
-  "visible, active and dirty flags). Limits: a note's caret is reported only when text is selected (Lumiere's " +
-  "API has no caret for a collapsed selection), and the lines a note shows are not reported.";
+  "visible, active and dirty flags). Limits: a note's selection is reported as its lines and text, never as a " +
+  "caret; a caret (line and column) comes only from a text editor showing the same note. The lines a note shows " +
+  "are not reported.";
 
 export function registerIdeContext(server: McpServer, deps: BridgeDeps): void {
   server.registerTool(
