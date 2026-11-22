@@ -93,3 +93,30 @@ export function decodeDataValue(value: string): string {
     return value;
   }
 }
+
+interface Found {
+  from: number;
+  at: number;
+}
+
+/**
+ * `source.indexOf(needle, from)` for the many `from`s one inline run asks,
+ * remembering the last answer: no `needle` starts in `[found.from, found.at)`,
+ * so it still holds for a later `from` up to `at` (or for every later one
+ * when there is no `needle`). Without it a run of `[[` with no `]]` after it
+ * scans the rest of the text once per bracket, which is quadratic.
+ */
+export function rememberedIndexOf(
+  needle: string,
+): (state: { src: string }, from: number) => number {
+  const last = new WeakMap<object, Found>();
+  return (state, from) => {
+    const found = last.get(state);
+    if (found && from >= found.from && (found.at < 0 || from <= found.at)) {
+      return found.at;
+    }
+    const at = state.src.indexOf(needle, from);
+    last.set(state, { from, at });
+    return at;
+  };
+}

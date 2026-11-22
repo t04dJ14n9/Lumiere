@@ -7,6 +7,7 @@ import test from "node:test";
 import assert from "node:assert/strict";
 import { spawnSync } from "node:child_process";
 import { fileURLToPath } from "node:url";
+import { growsTooFast } from "./target";
 import type { Target } from "./target";
 
 const probe = fileURLToPath(new URL("./probe.ts", import.meta.url));
@@ -19,6 +20,8 @@ interface Line {
   start?: string;
   done?: string;
   ms?: number;
+  /** For a target with `scaling`: the time of the smaller run. */
+  smallMs?: number;
 }
 
 /** One test per target in the module at `path` (which exports `targets`). */
@@ -44,9 +47,22 @@ export function fuzzSuite(
       const last = lines.filter((line) => line.start).at(-1)?.start;
       assert.equal(child.signal, null, `stalled (killed) on case ${last}`);
       assert.equal(child.status, 0, `${last}: ${child.stderr}`);
-      const slow = lines.filter((line) => line.done && line.ms! > caseMs);
+      const { scaling } = target;
+      const slow = lines.filter(
+        (line) =>
+          line.done &&
+          (scaling
+            ? growsTooFast(scaling, line.smallMs!, line.ms!)
+            : line.ms! > caseMs),
+      );
       assert.deepEqual(
-        slow.map((line) => `${line.done}: ${Math.round(line.ms!)} ms`),
+        slow.map(
+          (line) =>
+            `${line.done}: ${Math.round(line.ms!)} ms` +
+            (scaling
+              ? ` at ${scaling.large} characters, ${Math.round(line.smallMs!)} ms at ${scaling.small}`
+              : ""),
+        ),
         [],
       );
     });

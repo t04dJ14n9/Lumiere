@@ -2,9 +2,12 @@
  * Adversarial texts for the fuzz harness: long runs of the characters
  * Markdown and diff regexes care about, at 80k-110k characters, alone and
  * embedded where a changed segment or a table/list/fence line would put them.
+ * `inputsOfSize(n)` builds the same texts at other sizes, for a target judged
+ * by how its time grows rather than by its time (see ./target.ts).
  */
 const N = 100_000;
-const run = (s: string, n = N) => s.repeat(Math.ceil(n / s.length)).slice(0, n);
+const run = (s: string, n: number) =>
+  s.repeat(Math.ceil(n / s.length)).slice(0, n);
 
 const runs: Record<string, string> = {
   spaces: " ",
@@ -39,21 +42,27 @@ const runs: Record<string, string> = {
   bom: "\u00a0",
 };
 
-export const INPUTS: Record<string, string> = {};
-for (const [name, unit] of Object.entries(runs)) {
-  INPUTS[name] = run(unit);
-  // Inside a changed segment: non-space on both sides of the run.
-  INPUTS[`${name}-inner`] = `a${run(unit, N - 2)}b`;
+export function inputsOfSize(n: number): Record<string, string> {
+  const inputs: Record<string, string> = {};
+  const most = (n * 4) / 5;
+  const half = (n * 2) / 5;
+  for (const [name, unit] of Object.entries(runs)) {
+    inputs[name] = run(unit, n);
+    // Inside a changed segment: non-space on both sides of the run.
+    inputs[`${name}-inner`] = `a${run(unit, n - 2)}b`;
+  }
+  return Object.assign(inputs, {
+    "indented-row": `${run(" ", most)}| a |`,
+    "fence-spaces": `${run("`", half)}${run(" ", half)}x`,
+    "fence-tildes": `~~~\n${run("~", half)}${run(" ", half)}x`,
+    "separator-spaces": `|${run(" ", half)}|${run(" ", half)}x`,
+    "def-title": `[g]: /u\n"${run("a", most)}`,
+    "def-many": run("[g]:\n", n),
+    "footnotes-open": run("[^a", n),
+    "table-wide": `| a |\n| --- |\n| ${run("b ", most)} |`,
+    "table-cell-spaces": `| a |\n| --- |\n| a${run(" ", most)}b |`,
+    "list-deep": run("    ", most) + "- x",
+  });
 }
-Object.assign(INPUTS, {
-  "indented-row": `${run(" ", 80_000)}| a |`,
-  "fence-spaces": `${run("`", 40_000)}${run(" ", 40_000)}x`,
-  "fence-tildes": `~~~\n${run("~", 40_000)}${run(" ", 40_000)}x`,
-  "separator-spaces": `|${run(" ", 40_000)}|${run(" ", 40_000)}x`,
-  "def-title": `[g]: /u\n"${run("a", 80_000)}`,
-  "def-many": run("[g]:\n", N),
-  "footnotes-open": run("[^a", N),
-  "table-wide": `| a |\n| --- |\n| ${run("b ", 80_000)} |`,
-  "table-cell-spaces": `| a |\n| --- |\n| a${run(" ", 80_000)}b |`,
-  "list-deep": run("    ", 80_000) + "- x",
-});
+
+export const INPUTS = inputsOfSize(N);
