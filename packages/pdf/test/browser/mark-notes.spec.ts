@@ -59,6 +59,9 @@ async function keptNotes(page: Page): Promise<(string | undefined)[]> {
     : [];
 }
 
+/** Longer than the card's close delay (note-hover.ts), so a close that was going to happen has. */
+const NOTE_CLOSE_WAIT_MS = 500;
+
 const card = (page: Page) => page.locator(".note-card");
 const field = (page: Page) => page.getByRole("textbox", { name: "Note" });
 
@@ -235,6 +238,56 @@ test("a mark with a note shows the note icon by its corner; resting on it shows 
   expect(Math.abs(box.y - inside[1])).toBeLessThan(40);
   await badge.hover();
   await expect(card(page)).toContainText("Found by its icon");
+});
+
+test("a press on the note icon shows the note at once, and only a press elsewhere closes it", async ({
+  page,
+}) => {
+  await open(page, "?toolbar=chrome");
+  const inside = await highlightWords(page);
+  await setNote(page, inside, "Opened by a click");
+  const badge = page.locator(".note-badge");
+  await expect(card(page)).toHaveCount(0);
+
+  // No pointer movement before it, so nothing but the press can show the card.
+  await badge.dispatchEvent("pointerdown", { button: 0 });
+  await expect(card(page)).toContainText("Opened by a click");
+  await expect(field(page)).toHaveCount(0);
+  await page.mouse.click(inside[0] + 300, inside[1] + 300);
+  await expect(card(page)).toHaveCount(0);
+
+  // A real click: the card shows, and stays while the pointer rests on the
+  // icon, even after the press moved a little.
+  const box = (await badge.boundingBox())!;
+  const [x, y] = [box.x + box.width / 2, box.y + box.height / 2];
+  await page.mouse.move(x, y);
+  await page.mouse.down();
+  await page.mouse.move(x + 1, y);
+  await page.waitForTimeout(NOTE_CLOSE_WAIT_MS);
+  await page.mouse.up();
+  await expect(card(page)).toContainText("Opened by a click");
+  await page.waitForTimeout(NOTE_CLOSE_WAIT_MS);
+  await expect(card(page)).toBeVisible();
+  await expect(page.locator(".note-card-edit")).toBeVisible();
+
+  // Away from icon and card, it closes as a hover's does.
+  await page.mouse.move(inside[0] + 300, inside[1] + 300);
+  await expect(card(page)).toHaveCount(0);
+});
+
+test("a press on the note icon while writing keeps what was written and shows it", async ({
+  page,
+}) => {
+  await open(page, "?toolbar=chrome");
+  const inside = await highlightWords(page);
+  await setNote(page, inside, "before");
+  await editNote(page, inside);
+  await page.keyboard.type(" and after");
+  // No pointer movement before it, so nothing but the press can show the card.
+  await page.locator(".note-badge").dispatchEvent("pointerdown", { button: 0 });
+  await expect(field(page)).toHaveCount(0);
+  await expect(card(page)).toContainText("before and after");
+  await expect.poll(() => keptNotes(page)).toEqual(["before and after"]);
 });
 
 test("Highlight with Note marks the text and opens its note to write", async ({

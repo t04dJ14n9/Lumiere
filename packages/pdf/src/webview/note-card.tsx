@@ -216,8 +216,9 @@ function useEditRequests(
 /**
  * Tell the hover which mark with a note is under the pointer, once a frame.
  * A press, a wheel that moves the pages, Escape or the pointer leaving the
- * viewer closes the card; a drag (a selection being made) shows none. While a note is being
- * written, a press outside the card keeps what was written.
+ * viewer closes the card; a drag (a selection being made) shows none. A left
+ * press on a note icon shows that mark's note at once instead. While a note
+ * is being written, a press outside the card keeps what was written.
  */
 function usePointerOverMarks(
   annotation: AnnotationCapability | null,
@@ -255,7 +256,7 @@ function cardListeners(
   const check = (): void => {
     frame = 0;
     if (last && !isInNoteCard(last.target)) {
-      hover.pointerOver(last.buttons ? undefined : noteKeyAt(annotation, last));
+      hover.pointerOver(keyUnderPointer(annotation, hover, last));
     }
   };
   const onMove = (event: PointerEvent): void => {
@@ -263,9 +264,15 @@ function cardListeners(
     frame ||= requestAnimationFrame(check);
   };
   const onPress = (event: PointerEvent): void => {
-    if (!isInNoteCard(event.target)) {
-      (hover.editing() ? commit.current : null)?.();
+    if (isInNoteCard(event.target)) {
+      return;
+    }
+    (hover.editing() ? commit.current : null)?.();
+    const icon = event.button === 0 ? noteKeyOfBadge(event.target) : undefined;
+    if (icon === undefined) {
       hover.dismiss();
+    } else {
+      hover.open(icon);
     }
   };
   const onWheel = (event: WheelEvent): void => {
@@ -293,6 +300,23 @@ function cardListeners(
     ],
     stop: () => cancelAnimationFrame(frame),
   };
+}
+
+/**
+ * What a moving pointer rests on. A held button is a drag (a selection being
+ * made), which shows no card; only the press that opened a note from its icon
+ * keeps it, however the pointer slips while it is held.
+ */
+function keyUnderPointer(
+  annotation: AnnotationCapability,
+  hover: NoteHover,
+  event: PointerEvent,
+): string | undefined {
+  if (!event.buttons) {
+    return noteKeyAt(annotation, event);
+  }
+  const icon = noteKeyOfBadge(event.target);
+  return icon === hover.shown() ? icon : undefined;
 }
 
 /** The key of the mark with a note under the pointer (or its note icon), if there is one. */
