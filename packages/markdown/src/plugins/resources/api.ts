@@ -3,11 +3,6 @@ import type { DiffSide } from "../../shared/git";
 import type { BaseNoteEntry } from "../../markdown/bases";
 
 export type { BaseNoteEntry } from "../../markdown/bases";
-/**
- * The vault containment rule, for plugins that serve a vault file to a page
- * of their own (the HTML viewer): by path, then through symbolic links.
- */
-export { containedResource, contains } from "./containment";
 
 export interface Resource {
   kind: "note" | "base" | "image" | "audio" | "video" | "pdf" | "html" | "file";

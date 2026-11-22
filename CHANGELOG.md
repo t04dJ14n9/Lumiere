@@ -1,5 +1,16 @@
 # Changelog
 
+## Unreleased
+
+- Markdown: a link to a local HTML file in the vault (`[Open](/wiki/diagram.html)`),
+  and the Open button of an HTML embed's card, open the page in VS Code's
+  Integrated Browser (`workbench.action.browser.openFile`), where the window has
+  one and the workspace is trusted. Open Link to Side opens it beside. Where the
+  window has no Integrated Browser (Cursor, an older VS Code), and in Restricted
+  Mode, the file opens as text, as before. This replaces the HTML viewer tab of
+  0.1.20, which Lumiere no longer draws: its command, `lumiere.markdown.htmlViewer.open`,
+  and its setting, `lumiere.markdown.plugins.htmlViewer.enabled`, are gone (#831).
+
 ## 0.1.20 (pre-release, 2026-11-22)
 
 Fixes for several VS Code windows, the review bot's findings, Obsidian 1.15.0 parity

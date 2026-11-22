@@ -123,7 +123,6 @@ export function fakeViews(settings: Record<string, unknown> = {}) {
       webview: {
         cspSource: "csp://webview",
         asset: (relative) => relative,
-        resource: (uri) => uri,
         setHTML() {},
         post() {},
         onMessage: () => () => {},

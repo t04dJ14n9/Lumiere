@@ -9158,6 +9158,10 @@ Not run here: `pnpm test:browser`, `pnpm test:quality`,
 `pnpm test:vscode`.
 ## HTML embeds and the HTML viewer (#831; 2026-11-22)
 
+**Superseded in part (2026-11-22, the same day): the HTML viewer described below was
+removed; links to an HTML file open in VS Code's Integrated Browser. See the next
+record.** The card, the `html` kind and the review fixes below stand.
+
 Owner-approved 2026-11-21: a vault's `.html` / `.htm` file can be shown in a
 note and opened from a link, without coupling to any generator. VS Code and
 Cursor only; the hosts outside it are on `hosts-snapshot-2026-11-21` and are
@@ -9331,3 +9335,70 @@ relative stylesheet, script and image load from the vault; that an `https:`
 library loads; that a `fetch` of a vault file works across the webview's origins;
 that the hidden tab keeps its page (`retainContextWhenHidden`); and what a link
 inside the page does.
+
+## HTML links open in VS Code's Integrated Browser; Lumiere's HTML viewer is removed (#831; 2026-11-22)
+
+Owner decision, 2026-11-22: reuse VS Code's own Integrated Browser instead of
+Lumiere's `htmlViewer` panel (added in #845). Checked in the installed VS Code
+1.147 (`workbench.desktop.main.js`): `workbench.action.browser.openFile` ("Open in
+Integrated Browser") takes a file URI (else the active editor's) for `.html`,
+`.htm` and `.mht(ml)` files (a `file:` URI, or a remote one with a setting) and
+opens it in the Integrated Browser, an Electron browser view that reloads a
+`file:` page as it changes; `workbench.action.browser.open` takes a URL string or
+`{ url, openToSide }`. Cursor and older VS Code builds may not have either. This is
+less to keep: no panel, no policy (a `<meta>` CSP with `'unsafe-eval'`), no page
+text read in the host, no message-handler rule to uphold, no lifecycle of tabs.
+
+What changed.
+
+- `host/navigation.ts` hands an `.html` link to `host/integrated-browser-route.ts`
+  after the same `contained` check every link gets. In a trusted workspace, if the
+  window has `workbench.action.browser.openFile`, it runs that command with the
+  file's `Uri`. **Open to the Side** (`place: "side"`) runs
+  `workbench.action.browser.open` with `{ url: uri.toString(), openToSide: true }`
+  when that command exists, and the file's own command when it does not or when it
+  rejects. A browser that rejects the file (a remote file, a build that refuses it)
+  or a window without the command opens the file as text, as main did, with the
+  options the link was opened with (a kept tab for Mod-click, `preserveFocus`, the
+  group). Restricted Mode is unchanged: text, and the browser's commands are never
+  looked for. `links.open`'s `text` and `OpenOptions.asText` stay, for the card's
+  Open as Text, and skip the browser.
+- **Availability** is detected by asking VS Code for its commands
+  (`vscode.commands.getCommands(true)`) and looking for the two ids, in the host
+  adapter (plugins never import `vscode`; the card's Open reaches it through the
+  `links.open` RPC). A window that has the command keeps it for good (one
+  `getCommands` call per window); one that does not is asked again after 30 seconds,
+  since the workbench registers its commands as it starts. Other files never ask.
+- **Removed**: the `htmlViewer` plugin (command `lumiere.markdown.htmlViewer.open`,
+  setting `lumiere.markdown.plugins.htmlViewer.enabled`, both gone from
+  `package.json` by `pnpm contributions`), its page and policy builder, request
+  checks, tab lifecycle and tests; `PanelOptions` and `webview.resource` (only it
+  used them; `host/panel-adapter.ts` and the panel fakes are as before #845); the
+  containment re-export in `resources/api.ts`. **Kept**: the card with its Open and
+  Open as Text, the `html` resource kind, `isHtmlPath` and `isHtmlLinkTarget`, the
+  `html-embed` block, and `links.open`'s `text`.
+- The two records above are history and are left as they were; their viewer
+  sections no longer describe the code.
+
+Tests (unit only). `editor/navigation-host.test.ts`: `openFile` with the file's URI
+(`.html`, `.htm`, names with `#` and `?`, a subpath ignored), as text when asked,
+the side open by address and its two fallbacks, a window without the commands (every
+place and `preserveFocus` option text, as main), a window with only the address
+command, a browser that refuses the file, the commands asked for once and again after
+30 seconds when absent, other files never asking, Restricted Mode's options and no
+lookup, and a file outside the vault refused first. `embeds/html-embed.test.ts`: the
+card's Open and Open as Text wiring (unchanged).
+
+Checks: `pnpm check` passes (core 97, agents 50, scroll 13, markdown 3,887, pdf 953
+passed and 1 skipped; a private `TMPDIR`). Browser specs run, only those the change
+can touch (48 passed): pdf-embed, image-remount-height, inline-image-remount-height,
+note-embed-remount-height, embed-under-tall-props, link-clicks, build,
+first-paint-snapshot, iframe-remount-height, html-css-height-remount,
+html-media-remount-height, the online-videos and tweet specs, selection-inline. Not
+run: `test:vscode` and the full browser suite (the owner probes the Integrated
+Browser in a real window).
+
+Not verified, for the owner's probe in a real window: that `workbench.action.browser.
+openFile` opens the page and reloads it on save; that `workbench.action.browser.open`
+with a `file:` address opens it beside (if it does not, the file's own command
+opens it in the active group); what Cursor does.

@@ -560,7 +560,7 @@ img.md-image-selected {
 
 /*
  * An HTML file in a note is a card: its name, and buttons that open it in the
- * HTML viewer or as text. The page itself never runs in the note.
+ * Integrated Browser or as text. The page itself never runs in the note.
  */
 .file-embed:has(.html-embed) {
   display: block;

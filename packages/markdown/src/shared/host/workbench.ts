@@ -131,37 +131,10 @@ export interface LumierePanel {
   readonly webview: {
     readonly cspSource: string;
     asset(relative: string): string;
-    /**
-     * The address a file under the panel's `resourceRoots` has in the page
-     * (VS Code's `asWebviewUri`). A file outside them is never served.
-     */
-    resource(uri: string): string;
     setHTML(html: string): void;
     post(message: unknown): void;
     onMessage(listener: (message: unknown) => void): Disposer;
   };
-}
-
-/** What a standalone panel may do beyond showing the extension's own page. */
-export interface PanelOptions {
-  /**
-   * Which panel of its view type this is: one panel per key, and asking for
-   * the same key again reveals it. Without a key there is one per view type.
-   */
-  readonly key?: string;
-  /** The editor column to open it in (VS Code's `ViewColumn`, `-2` beside). */
-  readonly column?: number;
-  /**
-   * The folders (URIs) its page may load files from, and nothing else: not
-   * even the extension's own built files, which the default roots hold. A
-   * panel that shows a vault's files names the vault here.
-   */
-  readonly resourceRoots?: readonly string[];
-  /**
-   * Keep the page alive while its tab is hidden, as a page whose state
-   * cannot be saved needs (an interactive HTML file); it costs memory.
-   */
-  readonly retainContext?: boolean;
 }
 
 /** Native views: trees, status bar entries and standalone webview panels. */
@@ -183,10 +156,10 @@ export interface WorkbenchViews {
     options?: { alignment?: "left" | "right" },
   ): StatusHandle;
   /**
-   * A document-independent webview panel. One panel per view type, or per
-   * `options.key`; a second call for the same one reveals it.
+   * A document-independent webview panel. One panel per view type; a second
+   * call reveals the existing one.
    */
-  panel(viewType: string, title: string, options?: PanelOptions): LumierePanel;
+  panel(viewType: string, title: string): LumierePanel;
 }
 
 /** Which note is in front, in this editor or a text editor. */

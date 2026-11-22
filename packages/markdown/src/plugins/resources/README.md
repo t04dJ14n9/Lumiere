@@ -45,7 +45,7 @@ whole list, so twenty base embeds in a note cost one snapshot, not twenty.
 ## Files
 
 - `manifest.ts`: core plugin metadata and surfaces.
-- `api.ts`: resource kind and service contracts, and the containment functions other plugins may use (the HTML viewer).
+- `api.ts`: resource kind and service contracts.
 - `protocol.ts`: load request/result schemas.
 - `host.ts`: service and RPC registration.
 - `diff-resources.ts`: independent diff-side resolution and Git revision selection.
@@ -81,5 +81,5 @@ through the index (a fragment-only one, naming its own note, excepted), and a fi
 showed it is not told when it changes. Virtual filesystem symlinks are refused. Notes use the `.md`
 extension for resource classification. An `.html` or `.htm` file is kind `html`: the
 resource carries the file's address (`url`, with `?v=` its modification time) and no
-text, and the embeds plugin shows it as a card that opens it in the HTML viewer. Host authorization is rechecked before
+text, and the embeds plugin shows it as a card that opens it in VS Code's Integrated Browser. Host authorization is rechecked before
 embedded edits by consuming plugins.

@@ -242,7 +242,7 @@ class EmbedPass implements PassEmbeds {
 
   /**
    * An HTML file is a card that opens it (html-embed.ts), whatever the trust
-   * of the workspace: the page itself runs only in the HTML viewer. A Markdown
+   * of the workspace: the page itself runs only in the Integrated Browser. A Markdown
    * image is an `<img>`, which shows no children: a block stands in for it, as
    * for a failed image.
    */
