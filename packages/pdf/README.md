@@ -423,9 +423,12 @@ needed.
   equally, it refuses rather than guess; set `AGENT_PDF_BRIDGE_PID` (shown
   in the extension's log) to name the window.
 
-This is a prototype: only the on/off switch has an end-to-end test, and the
-Cursor registration is checked by unit tests against the API's shape, not
-against a running Cursor.
+This is a prototype: the tools, the stdio shim and the header-only token have
+a real-VS Code test (`test/vscode/agent-bridge-mcp.spec.ts`), but the Cursor
+registration is checked by unit tests against the API's shape, not by an
+automated test against a running Cursor (it was checked by hand in Cursor
+3.30.14: **Cursor Settings → Tools & MCPs** lists the server connected, with
+its 6 tools and 1 resource).
 
 ## Selection envelope
 
