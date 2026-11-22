@@ -54,10 +54,10 @@ function wrapSelectedLines(state: EditorState): TransactionSpec {
 
 /**
  * Run Insert Callout as an editor command. Obsidian's check callback refuses
- * it in a table cell, so nothing is edited there.
+ * it in a table cell, so nothing is edited there, nor in a read-only editor.
  */
 export function insertCalloutCommand(view: EditorView): boolean {
-  if (selectionTouchesTableCell(view.state)) {
+  if (view.state.readOnly || selectionTouchesTableCell(view.state)) {
     return false;
   }
   view.dispatch(insertCallout(view.state));

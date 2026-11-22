@@ -13,6 +13,8 @@ import { difference } from "../../shared/document/wire";
 import type { InputGrouping } from "../document/api";
 import { editGroup } from "../document/api";
 import { CellSource, cellSyntax } from "./cell-source";
+import { followNoteReadOnly, nestedSync, noteReadOnly } from "../editor/api";
+import { watchNoteReadOnly } from "./cell-read-only";
 import type { Action, TableEnvironment } from "./environment";
 import { cellNavKey, cellNavigation, type CellStep } from "./navigation";
 import { installCellWordNavigation } from "./word-navigation";
@@ -54,6 +56,7 @@ export class CellEditor {
   private unbindMode?: () => void;
   private readonly word: CellEditorOptions["word"];
   private readonly documentLine: CellEditorOptions["documentLine"];
+  private readonly unwatchReadOnly: () => void;
 
   constructor(options: CellEditorOptions) {
     const { cell, selection } = options;
@@ -83,6 +86,8 @@ export class CellEditor {
         extensions: [
           options.environment.language,
           cellSyntax,
+          // Read-only while the note is, so no command or typing edits it.
+          noteReadOnly(options.outer.state),
           cellNavigation(
             (step, extend) => options.arrow(step, extend),
             (view) => options.environment.vim?.mode(view),
@@ -108,6 +113,15 @@ export class CellEditor {
     this.label(options.position);
     this.groups.attach(this.view);
     this.bindMode();
+    this.unwatchReadOnly = watchNoteReadOnly(this.outer, this);
+  }
+
+  /** Become read-only, or writable again, with the note. */
+  followReadOnly(): void {
+    const spec = followNoteReadOnly(this.view.state, this.outer.state);
+    if (spec) {
+      this.view.dispatch(spec);
+    }
   }
 
   /** Edits go to the document, and its caret follows the cell's. */
@@ -190,6 +204,7 @@ export class CellEditor {
       if (this.view.state.doc.toString() !== text) {
         this.view.dispatch({
           changes: difference(this.view.state.doc.toString(), text),
+          annotations: nestedSync.of(true),
         });
       }
       if (this.vimEnabled !== vim) {
@@ -217,6 +232,7 @@ export class CellEditor {
       this.view.dispatch({
         changes: { from: 0, to: this.view.state.doc.length, insert: cell.text },
         selection: { anchor: head },
+        annotations: nestedSync.of(true),
       });
     } finally {
       this.reconciling = false;
@@ -224,9 +240,20 @@ export class CellEditor {
   }
 
   destroy(): void {
+    this.unwatchReadOnly();
     this.unbindMode?.();
     this.view.destroy();
     this.groups.dispose();
+  }
+}
+
+/**
+ * Shift+Enter in a cell: a `<br>`, since a cell is one line of the table.
+ * Nothing in a read-only note.
+ */
+export function insertCellBreak(view: EditorView): void {
+  if (!view.state.readOnly) {
+    view.dispatch(view.state.replaceSelection("<br>"));
   }
 }
 
@@ -242,7 +269,7 @@ export function cellKeymap(options: CellEditorOptions) {
           return false;
         }
         if (nav === "br") {
-          view.dispatch(view.state.replaceSelection("<br>"));
+          insertCellBreak(view);
         } else if (!options.move(nav.row, nav.column)) {
           return false;
         }

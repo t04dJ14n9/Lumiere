@@ -93,6 +93,19 @@ Padding and internal trailing pipes belong to the preceding cell; the leading
 and final pipes fall back to the first cell at offset zero.
 Render passes are cancelled before a cell editor takes over their DOM. All
 plugin registrations and widget lifetimes end when the plugin stops.
+A read-only note (sync failed for good) edits no table: no cell opens (Up
+and Down move the caret past the table, and a cell left open closes when
+another is asked for). Where a key would open a cell (Tab, the arrows,
+leaving a grid selection) the cell is selected in the grid instead, with
+the focus on the grid, so the keys keep moving through the table, and a
+right-click outside the grid selection selects the clicked cell the same
+way (focus on the grid), so its menu acts on it. A press starts no selection, the table commands and every whole-table write
+refuse (a sort also after rendering its keys), leaving the table at the
+note's edge adds no blank line, and an open cell becomes
+read-only with the note, so typing and formatting commands in it refuse too.
+A change dispatched to the cell anyway (Shift+Enter's `<br>`, the menu's
+Cut, Paste and Clear formatting) is dropped, and those menu items leave the
+cell, its selection and the grid selection as they were.
 
 ## Files
 
@@ -111,6 +124,9 @@ plugin registrations and widget lifetimes end when the plugin stops.
 - `projection.ts`: active cell lifetime and edits into outer source offsets.
 - `source-edits.ts`: aligned source edits that preserve unchanged cell anchors.
 - `cell-editor.ts`: temporary raw Markdown cell view, input groups and Vim transfer.
+- `cell-read-only.ts`: open cells follow the note's read-only state (their copy of it comes from the editor's `noteReadOnly`).
+- `read-only.test.ts`: nothing in a table edits a read-only note.
+- `read-only-cells.test.ts`: an open cell drops edits, the menu, + strips and handles write nothing, and the keys keep moving through a read-only note's table.
 - `cell-source.ts`: session whitespace, alignment padding and source-range tracking.
 - `selection.ts`: grid selection, active-cell chrome and projected source selection.
 - `selection-chrome.test.ts`: selected-cell matrix and inset selection-box CSS unit tests.

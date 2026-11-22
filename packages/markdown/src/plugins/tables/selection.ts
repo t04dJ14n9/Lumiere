@@ -155,6 +155,10 @@ export class TableSelection {
   }
 
   pointerDown(event: PointerEvent): void {
+    // No cell opens or selection is dragged in a read-only note.
+    if (this.grid.outer.state.readOnly) {
+      return;
+    }
     const insideCellEditor =
       event.target instanceof Node &&
       this.projection.inner?.dom.contains(event.target);

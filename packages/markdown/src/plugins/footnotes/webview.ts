@@ -99,14 +99,31 @@ function registerInsertFootnote(ctx: Context): void {
   let closePopover = () => {};
   ctx.effect(() => () => closePopover());
   ctx.effect(() =>
-    ctx.commands.register("editor:insert-footnote", () => {
-      const { label, reference, ...edit } = insertFootnote(view.state);
-      view.dispatch(edit);
-      closePopover();
-      closePopover = editDefinition(view, label, reference);
-      return true;
-    }),
+    ctx.commands.register("editor:insert-footnote", () =>
+      insertFootnoteCommand(view, (label, reference) => {
+        closePopover();
+        closePopover = editDefinition(view, label, reference);
+      }),
+    ),
   );
+}
+
+/**
+ * Insert Footnote as an editor command: the reference and its definition,
+ * then `openDefinition` for the new definition. A read-only editor is left
+ * alone, with no popover.
+ */
+export function insertFootnoteCommand(
+  view: EditorView,
+  openDefinition: (label: string, reference: number) => void,
+): boolean {
+  if (view.state.readOnly) {
+    return false;
+  }
+  const { label, reference, ...edit } = insertFootnote(view.state);
+  view.dispatch(edit);
+  openDefinition(label, reference);
+  return true;
 }
 
 function navigateReference(

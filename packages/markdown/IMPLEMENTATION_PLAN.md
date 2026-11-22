@@ -8918,3 +8918,241 @@ an index of listed files and a set of escaping URIs.
 
 Checks (this and the #823 change, on the branch): `pnpm check` passes. Not
 run: the browser, quality and VS Code suites.
+## Fence commands with carets on one line; editing commands refuse read-only (#810, #812; 2026-11-21)
+
+Two issues from the post-merge review of #800 (#787's editing commands).
+
+- **#810: one block per shared line.** #800 made Insert Code Block
+  (`fenceLines`) and Insert Math Block (`mathBlockEdit`) edit every
+  selection through `changeByRange`, each range grown to its whole lines on
+  its own. Two carets on one line (`a|lpha be|ta`), or ranges whose first
+  and last lines meet, each put fences around the same text: the line ended
+  up outside two empty blocks. Both now go through
+  `fenceSelectedLines` (`src/markdown/fence-lines.ts`, pure, shared because
+  the two commands live in different plugins): the ranges' line spans are
+  merged where they share a line, one block goes around each merged span,
+  and every range keeps its place on the text and the main selection stays
+  main. Carets on consecutive lines still get a block each, as #787 pinned
+  ("line and insert commands act at every caret"); Obsidian's own result
+  for carets on one line was not observed. Unit tests in
+  obsidian-commands (two carets on a line, overlapping multi-line ranges, a
+  range ending at the start of a caret's line, carets at both ends of a
+  line, and controls: one caret, a shared line followed by a separate one)
+  for both commands; each failed before the change.
+- **#812: read-only.** CodeMirror's `readOnly` facet only advises commands;
+  a dispatched change still applies. In VS Code the editor turns read-only
+  when syncing fails for good (document/sync.ts), so such an edit would
+  never reach the note. The formatting plugin's commands check it; the
+  registered `editor:insert-mathblock` did not (before #800 too). Every
+  command registered through `ctx.commands` in packages/markdown was
+  checked:
+  - Refused now (return false, no dispatch): Insert Math Block; Toggle
+    Inline Math without the formatting plugin; Insert Wikilink (links);
+    Insert Embed (embeds); Insert Callout (`insertCalloutCommand`); Toggle
+    checkbox status and Cycle bullet/checkbox (`runChecklist`, so the Mod+L
+    keymap's own check went); Insert Footnote (`insertFootnoteCommand`, no
+    definition popover either); Insert Table and every `editor:table-*`
+    command (refused before the active table's controller runs, so a
+    read-only editor never starts #821's asynchronous sort); Add file
+    property (and its Mod+; key), Add alias and Clear file properties
+    (`PropertyEditing.add`, `addAlias` and `clear`; `add` and `addAlias`
+    now return whether they ran, false only with no editor or a read-only
+    one, so the commands and Mod+; report a refusal).
+  - Already refused: formatting's inline toggles, highlight colours, line
+    commands, Insert Link, Insert Horizontal Rule, Insert Code Block, Insert
+    Tag, Clear Formatting, Swap Line Up/Down, Toggle Comment; Delete
+    Paragraph (CodeMirror's `deleteLine` checks it).
+  - Not editing commands: Add Cursor Above/Below (selection only); fold
+    commands (folding, Toggle Fold Properties); Toggle Source; Follow Link
+    and opening links; page preview; Look Up; the git change navigation
+    and Show Change; Copy Link for Agent; `vim:consume-host-shortcut` and
+    `vim:handle-ctrl-n` (replays a key to Vim); the host actions the
+    commands plugin forwards (save, undo, redo, close, open as text, quick
+    open), which act on the TextDocument in the extension host.
+  - Not swept (no registered command): editing that a widget or key does
+    itself, such as typing in a table cell, its clipboard and drags, the
+    Properties sheet's inputs, image size keys, list continuation on Enter.
+  `test/unit/features/read-only-commands.test.ts` runs the registered
+  handlers in the unit fixture on a read-only state (refused, note
+  unchanged) and a writable one (edits); the table commands with a stand-in
+  active table whose `execute` is asynchronous like #821's (never started
+  when read-only; a writable run resolves after it finishes); Insert Footnote
+  and the three Properties commands through `insertFootnoteCommand` and
+  `PropertyEditing`, whose popover and sheet need a DOM the fixture lacks
+  (the registered Insert Footnote is also run read-only). Each read-only
+  assertion failed with its guard removed; each has a writable control.
+
+Checks: `pnpm check` passes. Not run here: `pnpm test:browser`,
+`pnpm test:quality`, `pnpm test:vscode` (others run them on this machine).
+
+Second review round (PR #814, 2026-11-22), each with a unit test that
+failed before it (part of #826):
+
+- **Table cells.** Formatting commands run on the active view, which with
+  a table cell open is the cell's own `EditorView`; its state never had
+  the note's `readOnly`, so Bold, Insert Link, Set Heading, Clear
+  Formatting, Delete Paragraph and the rest edited the cell, and
+  `CellProjection.projectChange` wrote the edit into the read-only note.
+  The cell now carries the note's read-only state: set when it opens and
+  changed through a compartment when the note turns read-only or writable
+  (`noteReadOnly` and `followNoteReadOnly` in editor/api.ts; tables'
+  `cell-read-only.ts` keeps the open cells and tells them from an update
+  listener on the note's editor). The copy comes from the editor plugin
+  because it owns the note's read-only state: the composition policy test
+  forbids features from setting `EditorState.readOnly`. So those commands
+  refuse and CodeMirror ignores typing in the cell.
+  `CellProjection.open` opens no cell, `TableSelection.pointerDown` starts
+  no selection, and `projectChange` writes nothing while the note is
+  read-only. `TableGrid.replace`, through which table commands, the sort,
+  the table clipboard (cut, paste, delete) and row/column moves by handle
+  write, refuses too, and `TableController.write` checks again after a
+  sort's keys have rendered, before it closes the open cell. Leaving a
+  table at the note's edge (`TableKeyboard.leave`) adds no blank line.
+  `src/plugins/tables/read-only.test.ts`, and in read-only-commands every
+  formatting command (bar Add Cursor Above/Below) in a stand-in open cell
+  of a read-only note.
+- Coverage: Toggle Inline Math through `formatting.wrap` with the formatting
+  plugin running (already refused), and the three Properties commands
+  through their registered handlers (read-only; Clear file properties
+  writable).
+
+Of #826 this covers typing in a table cell and the table's clipboard and
+drag (handle) writes. Left for #826: the Properties sheet's inputs, the
+image size keys and list continuation on Enter.
+
+Checks: `pnpm check` passes. CI's quality job failed once on this PR with
+the known flaky large-vault byte check (#843); its Playwright quality specs
+passed. Not run here: `pnpm test:browser`, `pnpm test:quality`,
+`pnpm test:vscode`.
+
+Third review round (PR #814, 2026-11-22), each with a unit test that
+failed before it (`src/plugins/tables/read-only-cells.test.ts`):
+
+- **Changes dispatched straight to an open cell.** The read-only facet only
+  advises commands: Shift+Enter's `<br>` (`insertCellBreak`), the menu's
+  Cut in a cell, Paste of one line into a cell and Clear formatting
+  dispatched to the cell's view, which showed text the note never got. At
+  the root, the nested editor's read-only extension (`noteReadOnly` in
+  editor/api.ts) now also has a transaction filter that drops document
+  changes while the note is read-only, whatever dispatches them;
+  transactions that bring the cell's text to the note's (the note changed
+  under it, or word motion moved it to another cell) are marked
+  `nestedSync` and still apply. Up front, Shift+Enter adds nothing, Cut
+  still copies but removes nothing, Paste reads no clipboard and writes
+  nothing (also when the note turned read-only while the clipboard was
+  read: no cell closes and the grid selection stays; that case got its
+  test in the fourth round), Clear cells selects nothing, and formatting
+  from the menu does not select the cell's text first.
+- **No stale cell request.** Tab past the last row and the + strips below
+  and right of the table ask for the new cell to open once the table is
+  drawn again; when the write is refused the request is dropped
+  (`TableToolbar.addRow`, `addColumn`).
+- **Handle moves.** A row or column dragged by its handle remaps the
+  column widths and moves the axis selection only when the move is written
+  (`ColumnResize.remapFor` restores the widths otherwise; the operation
+  comes from `moveOperation`).
+
+Of #826 this round completes typing in a table cell (every edit path of
+an open cell) and the table clipboard. Left for #826: the Properties
+sheet's inputs, the image size keys and list continuation on Enter.
+
+Fourth review round (PR #814, 2026-11-22), each with a unit test in
+`read-only-cells.test.ts` that fails with the change undone:
+
+- **Up and Down past a table in a read-only note.** The editor's
+  ArrowUp/ArrowDown binding (`enterTable`) opened the table's first or last
+  cell and took the key. Since the third round no cell opens in a
+  read-only note, but the key was still taken, so the caret stuck above or
+  below the table (a regression of this PR). `CellProjection.open` now
+  returns whether a cell is open, and `TableKeyboard.enter`,
+  `TableController.enter` and `enterTable` pass it on: the key falls
+  through and the caret moves past the table as through text.
+  `TableController.enterSourcePosition` and `TableKeyboard.arrow` pass it
+  on too, and Tab past the last row reports whether the new row was
+  written. `enterSelectedCell` already checked for an open cell; the
+  pointer gestures do not run in a read-only note, and the menu's open
+  only needs the cell closed (next item).
+- **A cell left open when the note turned read-only.** Asking for another
+  cell closes it (closing is not an edit), so the context menu of a
+  right-clicked cell acts on that cell: Copy copies it, not the old cell's
+  selection. The open cell itself stays open and focused.
+- **Paste while the clipboard is read.** The guard for a note that turns
+  read-only while Paste waits for the clipboard (`insertPasted`) is now
+  tested: writable when Paste starts, read-only before the text arrives;
+  one line leaves the open cell as it was, and cells close nothing and
+  keep the grid selection.
+
+Checks: my `pnpm check` runs for the third and fourth rounds, with a
+private TMPDIR, passed. The PR gate's `pnpm check` on the third round's
+head (d270e47b) failed one test, the PDF timing test "a dark page drawn
+in slices is the page drawn at once", a known flaky test under load, and
+passed everything else. Its `pnpm test:vscode` and CI passed. Not run
+here: `pnpm test:browser`, `pnpm test:quality`, `pnpm test:vscode`.
+
+Fifth review round (PR #814, 2026-11-22), each with a unit test in
+`read-only-cells.test.ts` that fails with the change undone:
+
+- **Arrows trapped in one cell.** Collapsing a grid selection opens its
+  cell (`collapseSelection`, `extendSelection` through `openGridCell`),
+  and the key was taken whether a cell opened or not; in a read-only note
+  none opens and the one-cell grid selection stayed, so after Select all
+  and Down every further arrow was swallowed. Where a key would open a
+  cell and the note is read-only, `TableKeyboard.openOrSelect` selects that
+  cell in the grid instead, with the focus on the grid; and in a
+  read-only note an arrow moves a one-cell grid selection to the next
+  cell (leaving the table at its edge) rather than collapsing onto it.
+- **Focus lost from a cell left open.** Tab or an arrow at a cell's edge
+  asked for the next cell; since the fourth round that closes the open
+  cell in a read-only note, and destroying the focused cell editor left
+  the focus on the page's body, where keys go nowhere. The same fallback
+  selects the target cell in the grid and focuses the grid.
+- The tables README lists `read-only-cells.test.ts`.
+
+The keyboard and navigation tests' fake grids gain a writable note state
+and their fake `open` returns true, as the real ones have and do.
+
+Checks: my `pnpm check` (private TMPDIR) passed. The PR gate on the fourth
+round's head (2b3599db) passed `pnpm check`, `pnpm test:vscode` and CI.
+Not run here: `pnpm test:browser`, `pnpm test:quality`,
+`pnpm test:vscode`.
+
+Sixth review round (PR #814, 2026-11-22), with a unit test in
+`read-only-cells.test.ts` that fails with the change undone:
+
+- **Right-click outside the grid selection.** The context menu
+  (`TableToolbar.showMenu`) opened a right-clicked cell outside the
+  selection, which, when writable, also clears the grid selection. In a
+  read-only note no cell opens, so the menu kept the old selection: Copy
+  copied the old cells and the highlight stayed. Now `open` reports
+  whether a cell opened, and in a read-only note the right-clicked cell is
+  selected in the grid before the menu is built; inside the selection,
+  the selection stays the menu's target.
+
+Checks: my `pnpm check` (private TMPDIR) passed. The PR gate on the fifth
+round's head (6c26d3c4) passed `pnpm check`, `pnpm test:vscode` and CI.
+Not run here: `pnpm test:browser`, `pnpm test:quality`,
+`pnpm test:vscode`.
+
+Seventh review round (PR #814, 2026-11-22), with a unit test that fails
+with the change undone:
+
+- **Focus after a right-click.** The sixth round's menu fallback selected
+  the right-clicked cell in the grid but did not focus the grid. With a
+  cell left open from before the note turned read-only, asking for the
+  clicked cell closed it, destroying the focused cell editor, and the
+  focus fell to the page's body; the table's focus binding
+  (`bindTableFocus`) could then clear the active table while the menu
+  opened. The menu now takes its target through the keyboard's
+  `openOrSelect` (made public; the controller wires it as the toolbar's
+  `open`), so both paths select and focus alike and cannot drift; the
+  toolbar's separate `select` is gone.
+- The test builds the collaborators as `TableController` wires them, over
+  a table without DOM: with a cell left open in a read-only note, a
+  right-click on another cell leaves the focus on the grid as the menu
+  opens and the table active, and Copy copies the clicked cell. The sixth
+  round's test now runs on the same wiring.
+
+Checks: my `pnpm check` (private TMPDIR) passed. The PR gate on the sixth
+round's head (31c54c90) passed `pnpm check`, `pnpm test:vscode` and CI.
+Not run here: `pnpm test:browser`, `pnpm test:quality`,
+`pnpm test:vscode`.

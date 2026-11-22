@@ -26,6 +26,7 @@ import { TableStickyHScroll } from "./sticky-hscroll";
 import { bindTableFocus } from "./focus-lifetime";
 import { followDiagonalWheel } from "./diagonal-wheel";
 import { withShownText } from "./sort-keys";
+import { moveOperation } from "./commands";
 
 /** Wires table interactions and reconciles snapshots from the outer document. */
 export class TableController {
@@ -94,14 +95,15 @@ export class TableController {
       selected,
       environment,
     );
-    const request = (position: CellPosition) =>
+    const request = (position: CellPosition | undefined) =>
       void (this.requested = position);
     const toolbar = new TableToolbar(
       this.grid,
       {
         range: () => this.selected.range,
         active: () => this.projection.active,
-        open: (position) => this.projection.open(position),
+        // The keyboard is wired after the toolbar; this runs later.
+        open: (position) => this.keyboard.openOrSelect(position),
         request,
         execute: (operation, focus) => this.execute(operation, focus),
         selectAll: () => this.selected.selectAll(),
@@ -151,8 +153,8 @@ export class TableController {
     return { from, to: from + this.grid.block.source.length };
   }
 
-  enter(direction: -1 | 1): void {
-    this.keyboard.enter(direction);
+  enter(direction: -1 | 1): boolean {
+    return this.keyboard.enter(direction);
   }
   enterSourcePosition(head: number): boolean {
     if (this.active || this.range || !this.grid.root.isConnected) {
@@ -165,8 +167,7 @@ export class TableController {
     if (!target) {
       return false;
     }
-    this.projection.open(target.position, target.offset);
-    return true;
+    return this.projection.open(target.position, target.offset);
   }
   highlight(): void {
     this.selected.highlight();
@@ -220,16 +221,13 @@ export class TableController {
       {
         select: (axis, index) => this.selected.selectAxis(axis, index),
         move: (axis, from, to) => {
-          const op: TableOperation = {
-            type: "move",
-            axis,
-            from,
-            to: from,
-            destination: to,
-          };
-          this.columnResize.remap(op);
-          this.grid.replace(operateTable(this.grid.model, op));
-          this.selected.selectAxis(axis, to);
+          const op = moveOperation(axis, from, to);
+          const written = this.columnResize.remapFor(op, () =>
+            this.grid.replace(operateTable(this.grid.model, op)),
+          );
+          if (written) {
+            this.selected.selectAxis(axis, to);
+          }
         },
         menu: (axis, index, point) => {
           this.selected.selectAxis(axis, index, false);
@@ -388,8 +386,9 @@ export class TableController {
       (this.editor ?? this.grid.outer).focus();
       return;
     }
-    // A palette command can reach a table that has scrolled out of view.
-    if (this.grid.locate() === undefined) {
+    // A palette command can reach a table that has scrolled out of view; a
+    // sort renders its keys first, and the note may turn read-only meanwhile.
+    if (this.grid.locate() === undefined || this.grid.outer.state.readOnly) {
       return;
     }
     const next = parsedTable(table);

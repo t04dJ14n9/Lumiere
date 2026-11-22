@@ -19,8 +19,12 @@ import type { TableEnvironment } from "./environment";
 interface MenuSelection {
   range(): CellRange | undefined;
   active(): CellPosition | undefined;
-  open(position: CellPosition): void;
-  request(position: CellPosition): void;
+  /**
+   * Open the cell, or in a read-only note select it in the grid, the focus
+   * on the grid (`TableKeyboard.openOrSelect`).
+   */
+  open(position: CellPosition): boolean;
+  request(position: CellPosition | undefined): void;
   execute(operation: TableOperation, focus: CellPosition): void | Promise<void>;
   selectAll(): void;
 }
@@ -38,24 +42,40 @@ export class TableToolbar {
   controls(): HTMLElement {
     const controls = document.createElement("div");
     controls.className = "table-controls";
-    this.bindAddStrip(controls, "Add row below", "row", () => {
-      this.selection.request({ row: this.grid.model.rows.length, column: 0 });
-      this.grid.replace(
-        insertRow(this.grid.model, this.grid.model.rows.length - 1),
-      );
-    });
-    this.bindAddStrip(controls, "Add column to the right", "column", () => {
-      // Measured in Obsidian 1.14.4: the caret lands in the new header cell,
-      // whichever row it was in.
-      this.selection.request({
-        row: 0,
-        column: this.grid.model.alignments.length,
-      });
-      this.grid.replace(
-        insertColumn(this.grid.model, this.grid.model.alignments.length - 1),
-      );
-    });
+    this.bindAddStrip(controls, "Add row below", "row", () => this.addRow());
+    this.bindAddStrip(controls, "Add column to the right", "column", () =>
+      this.addColumn(),
+    );
     return controls;
+  }
+
+  /** The + below the table: a row, its first cell open once it is drawn. */
+  addRow(): void {
+    this.selection.request({ row: this.grid.model.rows.length, column: 0 });
+    this.writeOrForget(
+      insertRow(this.grid.model, this.grid.model.rows.length - 1),
+    );
+  }
+
+  /**
+   * The + right of the table: a column. Measured in Obsidian 1.14.4: the
+   * caret lands in the new header cell, whichever row it was in.
+   */
+  addColumn(): void {
+    this.selection.request({
+      row: 0,
+      column: this.grid.model.alignments.length,
+    });
+    this.writeOrForget(
+      insertColumn(this.grid.model, this.grid.model.alignments.length - 1),
+    );
+  }
+
+  /** Write the table, or drop the cell request when nothing is written. */
+  private writeOrForget(table: string): void {
+    if (!this.grid.replace(table)) {
+      this.selection.request(undefined);
+    }
   }
 
   /**
@@ -132,6 +152,9 @@ export class TableToolbar {
   ): void {
     this.close();
     const range = this.selection.range();
+    // A cell outside the selection becomes the menu's target: opened, or in
+    // a read-only note selected in the grid, so the menu acts on it rather
+    // than on the cells selected before.
     if (!containsCell(range, position)) {
       this.selection.open(position);
     }

@@ -3,7 +3,7 @@ import {
   type CellPosition,
   type CellRange,
 } from "../../markdown/tables/model";
-import type { TableOperation } from "../../markdown/tables/operations";
+import type { Axis, TableOperation } from "../../markdown/tables/operations";
 import type { EditorState, TransactionSpec } from "@codemirror/state";
 
 /** The table Insert Table adds: two empty columns, as Obsidian's. */
@@ -22,6 +22,15 @@ export function insertTable(state: EditorState): TransactionSpec {
     selection: { anchor: line.to + before.length },
     userEvent: "input",
   };
+}
+
+/** A handle drag's move: one row or column to `destination`. */
+export function moveOperation(
+  axis: Axis,
+  index: number,
+  destination: number,
+): TableOperation {
+  return { type: "move", axis, from: index, to: index, destination };
 }
 
 /**

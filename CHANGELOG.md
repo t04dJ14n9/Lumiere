@@ -217,6 +217,16 @@
   preview showed by its path, now previews its heading. It said "Resource
   not found", because the vault index skips hidden folders and has no
   entry for the note the link is in (#824).
+- Markdown: Insert Code Block and Insert Math Block with several carets or
+  selections on one line put one block around the line, instead of two empty
+  blocks with the text left outside them (#810). Insert Math Block, Toggle
+  Inline Math, Insert Wikilink, Insert Embed, Insert Callout, Insert
+  Footnote, Insert Table and the table commands, the checklist commands, Add
+  file property (Mod+;), Add alias and Clear file properties no longer
+  change a note whose editor has turned read-only after it stopped syncing
+  (#812). Neither do tables in such a note: a cell no longer opens, an open
+  cell takes no typing or formatting, and table commands, sorting, the
+  table clipboard and moving rows or columns write nothing.
 
 Fixes for several VS Code windows open at once, each with a test; checked
 with two real windows on one profile.

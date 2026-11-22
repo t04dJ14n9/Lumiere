@@ -354,6 +354,9 @@ function registerInsertion(ctx: Context): void {
   ctx.effect(() =>
     ctx.commands.register("editor:insert-embed", () => {
       const view = ctx.editor.view;
+      if (view.state.readOnly) {
+        return false;
+      }
       view.dispatch(wikilinkEdit(view.state, true));
       return true;
     }),

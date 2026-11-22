@@ -42,15 +42,27 @@ export class CellProjection {
     private readonly actions: ProjectionActions,
   ) {}
 
-  open(position: CellPosition, selection?: CellSelection): void {
+  /**
+   * Open the cell at `position` for editing, or focus it if it is open.
+   * False when no cell is open there: a key that asked for it then does what
+   * it does outside a table.
+   */
+  open(position: CellPosition, selection?: CellSelection): boolean {
     const cell = this.grid.model.rows[position.row]?.[position.column];
     const element = this.grid.contentElement(position);
     if (!cell || !element) {
-      return;
+      return false;
     }
     if (sameCell(this.active, position) && this.inner) {
       this.inner.focus();
-      return;
+      return true;
+    }
+    // A read-only note's cells are not edited, so none opens. One open from
+    // before the note turned read-only closes (not an edit), so a menu or
+    // key acts on the cell asked for rather than on it.
+    if (this.grid.outer.state.readOnly) {
+      this.close();
+      return false;
     }
     this.close();
     this.active = position;
@@ -81,6 +93,7 @@ export class CellProjection {
     this.grid.outer.state.facet(tableSelectionChanges)(
       !this.cellEditor.view.state.selection.main.empty,
     );
+    return true;
   }
 
   private moveDocumentLine(target: number | "last"): boolean {
@@ -182,6 +195,11 @@ export class CellProjection {
     text: string,
     group: string,
   ): void {
+    // The cell follows the note's read-only state; this holds for an edit
+    // that reaches the cell some other way.
+    if (this.grid.outer.state.readOnly) {
+      return;
+    }
     this.cellEditor?.source.remember(text);
     const start = this.grid.locate();
     if (start === undefined) {

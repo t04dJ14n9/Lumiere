@@ -3,6 +3,7 @@ import assert from "node:assert/strict";
 import {
   EditorSelection,
   EditorState,
+  type SelectionRange,
   type TransactionSpec,
 } from "@codemirror/state";
 import type { EditorView } from "@codemirror/view";
@@ -563,6 +564,79 @@ test("line and insert commands act at every caret", () => {
     atEveryCaret("a|b\nc|d", ruleEdit),
     "a\n\n---\n|b\nc\n\n---\n|d",
   );
+});
+
+/**
+ * `doc` with a caret at each "|" and a range from each "‹" to the next "›",
+ * as several selections, the last of them the main one.
+ */
+function selections(doc: string): EditorState {
+  const ranges: SelectionRange[] = [];
+  let text = "";
+  let anchor = 0;
+  for (const char of doc) {
+    if (char === "|") {
+      ranges.push(EditorSelection.cursor(text.length));
+    } else if (char === "‹") {
+      anchor = text.length;
+    } else if (char === "›") {
+      ranges.push(EditorSelection.range(anchor, text.length));
+    } else {
+      text += char;
+    }
+  }
+  return EditorState.create({
+    doc: text,
+    selection: EditorSelection.create(ranges, ranges.length - 1),
+    extensions: [
+      markdownLanguageSupport(),
+      EditorState.allowMultipleSelections.of(true),
+    ],
+  });
+}
+
+function showSelections(state: EditorState): string {
+  let text = state.doc.toString();
+  for (const { from, to } of [...state.selection.ranges].reverse()) {
+    text =
+      from === to
+        ? `${text.slice(0, from)}|${text.slice(from)}`
+        : `${text.slice(0, from)}‹${text.slice(from, to)}›${text.slice(to)}`;
+  }
+  return text;
+}
+
+// #810: selections that share a line get one block around it, not one each
+// (which left the text outside two empty blocks).
+test("Insert Code Block and Insert Math Block put one block around selections that share a line", () => {
+  for (const [f, make] of [
+    ["```", (s: EditorState) => fenceLines(s, "```", "```")],
+    ["$$", mathBlockEdit],
+  ] as const) {
+    const block = (doc: string) => {
+      const state = selections(doc);
+      const next = state.update(make(state)).state;
+      assert.equal(next.selection.mainIndex, state.selection.mainIndex);
+      return showSelections(next);
+    };
+    // Two carets on one line.
+    assert.equal(block("a|lpha be|ta"), `${f}\na|lpha be|ta\n${f}`);
+    // Selections over several lines whose lines overlap.
+    assert.equal(
+      block("‹one\ntw›o t‹hree\nfour›"),
+      `${f}\n‹one\ntw›o t‹hree\nfour›\n${f}`,
+    );
+    // A selection ending at the start of a caret's line includes that line.
+    assert.equal(block("‹one\n›tw|o"), `${f}\n‹one\n›tw|o\n${f}`);
+    // Carets at both ends of the shared line stay inside the block.
+    assert.equal(block("|alpha|"), `${f}\n|alpha|\n${f}`);
+    // Controls: one caret; selections on lines apart, after a shared one.
+    assert.equal(block("a|lpha beta"), `${f}\na|lpha beta\n${f}`);
+    assert.equal(
+      block("a|b c|d\nmid\n‹e›f"),
+      `${f}\na|b c|d\n${f}\nmid\n${f}\n‹e›f\n${f}`,
+    );
+  }
 });
 
 test("two carets on blank lines count as a selection of several lines", () => {

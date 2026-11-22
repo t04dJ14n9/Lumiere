@@ -5,6 +5,7 @@ import {
   type TransactionSpec,
 } from "@codemirror/state";
 import { selectedLines } from "../../markdown/selected-lines";
+import { fenceSelectedLines } from "../../markdown/fence-lines";
 
 /**
  * A line's quote markers and indentation, which stay as they are, then its
@@ -138,27 +139,14 @@ export function ruleEdit(state: EditorState): TransactionSpec {
 /**
  * Fence lines around the lines of every selection, each staying on its text,
  * as Obsidian's Insert Code Block does, including the line a selection ends
- * at the start of.
+ * at the start of. Selections that share a line share one block.
  */
 export function fenceLines(
   state: EditorState,
   open: string,
   close: string,
 ): TransactionSpec {
-  const before = `${open}\n`;
-  return {
-    ...state.changeByRange(({ from, to, anchor, head }) => ({
-      changes: [
-        { from: state.doc.lineAt(from).from, insert: before },
-        { from: state.doc.lineAt(to).to, insert: `\n${close}` },
-      ],
-      range: EditorSelection.range(
-        anchor + before.length,
-        head + before.length,
-      ),
-    })),
-    userEvent: "input",
-  };
+  return { ...fenceSelectedLines(state, open, close), userEvent: "input" };
 }
 
 /**

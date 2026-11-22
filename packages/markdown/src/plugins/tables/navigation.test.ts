@@ -25,7 +25,7 @@ function keyboardFixture(position: CellPosition, standalone = false) {
     position: CellPosition;
     selection: number | "all" | undefined;
   }[] = [];
-  const requested: CellPosition[] = [];
+  const requested: (CellPosition | undefined)[] = [];
   const replacements: string[] = [];
   const projection = {
     active: position as CellPosition | undefined,
@@ -33,6 +33,7 @@ function keyboardFixture(position: CellPosition, standalone = false) {
     open(position: CellPosition, selection?: number | "all") {
       this.active = position;
       opened.push({ position, selection });
+      return true;
     },
     close() {
       this.active = undefined;
@@ -55,6 +56,7 @@ function keyboardFixture(position: CellPosition, standalone = false) {
     commandGroup: () => "table-test",
     replace(text: string) {
       replacements.push(text);
+      return true;
     },
   } as unknown as TableGrid;
   const keyboard = new TableKeyboard(
@@ -281,9 +283,12 @@ test("collapsing a grid selection keeps Shift arrows extending a cell rectangle"
     open(position: CellPosition) {
       opened.push(position);
       delete selection.range;
+      return true;
     },
   } as unknown as CellProjection;
   const grid = {
+    // A writable note, whose cells open.
+    outer: { state: EditorState.create() },
     model,
     root: { focus() {} },
     cells: model.rows.map((row) => row.map(() => ({ scrollIntoView() {} }))),

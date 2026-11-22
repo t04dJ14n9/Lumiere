@@ -14,11 +14,12 @@ import {
 } from "./navigation";
 import { tableSelectionChanges } from "./state";
 import { sameCell, type TableGrid } from "./grid";
+import type { CellSelection } from "./cell-editor";
 import type { CellProjection } from "./projection";
 import type { TableSelection } from "./selection";
 
 interface KeyboardActions {
-  request(position: CellPosition): void;
+  request(position: CellPosition | undefined): void;
   deactivate(): void;
   menu(position: CellPosition, point: { x: number; y: number }): void;
 }
@@ -116,7 +117,7 @@ export class TableKeyboard {
     return true;
   }
 
-  private openGridCell(position: CellPosition): void {
+  private openGridCell(position: CellPosition): boolean {
     const length =
       this.grid.model.rows[position.row]![position.column]!.text.length;
     // Source edits can shorten a cell while its saved grid caret survives.
@@ -124,7 +125,26 @@ export class TableKeyboard {
       0,
       Math.min(this.selection.gridCursor ?? length, length),
     );
-    this.projection.open(position, offset);
+    return this.openOrSelect(position, offset);
+  }
+
+  /**
+   * Open the cell at `position`. In a read-only note none opens: the cell
+   * is selected in the grid instead, with the focus on the grid, so the
+   * keys go on moving through the table, and a cell left open from before
+   * the note turned read-only does not take the focus with it as it closes.
+   * The context menu takes its target cell the same way.
+   */
+  openOrSelect(position: CellPosition, selection?: CellSelection): boolean {
+    if (this.projection.open(position, selection)) {
+      return true;
+    }
+    if (!this.grid.outer.state.readOnly) {
+      return false;
+    }
+    this.selection.select({ anchor: position, head: position });
+    this.grid.root.focus();
+    return true;
   }
 
   private openMenu(event: KeyboardEvent): void {
@@ -155,19 +175,28 @@ export class TableKeyboard {
       return true;
     }
     if (target.row >= this.grid.model.rows.length) {
+      // The new row's cell opens when the table is drawn again.
       this.actions.request(target);
-      this.grid.replace(
+      const written = this.grid.replace(
         insertRow(this.grid.model, this.grid.model.rows.length - 1),
       );
-    } else {
-      this.projection.open(target, "all");
+      if (!written) {
+        this.actions.request(undefined);
+      }
+      return written;
     }
-    return true;
+    return this.openOrSelect(target, "all");
   }
 
   arrow(step: CellStep, extend: boolean): boolean {
     const range = this.selection.range;
-    if (range && !extend) {
+    // A read-only note's one selected cell stands for the open cell it
+    // cannot have: the arrows move it, rather than open it.
+    const movesSelectedCell =
+      range &&
+      this.grid.outer.state.readOnly &&
+      sameCell(range.anchor, range.head);
+    if (range && !extend && !movesSelectedCell) {
       return this.collapseSelection(range, step);
     }
     const current = range?.head ?? this.projection.active;
@@ -184,10 +213,9 @@ export class TableKeyboard {
     const wrapped = wrapCell(target, this.grid.model.alignments.length);
     const cell = this.grid.model.rows[wrapped.row]?.[wrapped.column];
     if (cell) {
-      this.projection.open(wrapped, step.column < 0 ? undefined : 0);
-    } else {
-      this.leave(wrapped.row < 0 ? -1 : 1);
+      return this.openOrSelect(wrapped, step.column < 0 ? undefined : 0);
     }
+    this.leave(wrapped.row < 0 ? -1 : 1);
     return true;
   }
 
@@ -208,8 +236,7 @@ export class TableKeyboard {
       this.grid.root.focus();
       return true;
     }
-    this.openGridCell(target);
-    return true;
+    return this.openGridCell(target);
   }
 
   private extendSelection(
@@ -221,8 +248,7 @@ export class TableKeyboard {
     }
     const anchor = this.selection.range?.anchor ?? current;
     if (sameCell(anchor, target)) {
-      this.openGridCell(target);
-      return true;
+      return this.openGridCell(target);
     }
     if (!this.selection.range) {
       const head = this.projection.inner?.state.selection.main.head;
@@ -257,7 +283,7 @@ export class TableKeyboard {
         selection: { anchor: doc.line(adjacent).from },
         scrollIntoView: true,
       });
-    } else {
+    } else if (!outer.state.readOnly) {
       // Keep newly typed prose separate from the table's Markdown rows.
       outer.dispatch({
         changes: { from: edge, insert: "\n\n" },
@@ -271,8 +297,9 @@ export class TableKeyboard {
     outer.focus();
   }
 
-  enter(direction: -1 | 1): void {
-    this.projection.open(
+  /** Open the first or last row's cell; false when none opens. */
+  enter(direction: -1 | 1): boolean {
+    return this.projection.open(
       {
         row: direction < 0 ? this.grid.model.rows.length - 1 : 0,
         column: Math.min(

@@ -31,6 +31,7 @@ import { listenForTableWheel } from "./scroll-input";
 import { cellPointerOffset } from "./cell-pointer";
 import { matchesEditableTable } from "./renderer-match";
 import { reportingFailures } from "./menu";
+import { cellsFollowNoteReadOnly } from "./cell-read-only";
 export const tablesWebview: Plugin = {
   name: "tables",
   inject: {
@@ -130,6 +131,7 @@ function registerTableExtensions(ctx: Context): void {
           { key: "ArrowUp", run: (view) => enterTable(view, -1) },
           { key: "ArrowDown", run: (view) => enterTable(view, 1) },
         ]),
+        cellsFollowNoteReadOnly,
         tableActions.of((action) => {
           void ctx.commands.run(action);
         }),
@@ -195,6 +197,9 @@ function registerTableCommands(ctx: Context): void {
   const view = ctx.editor.view;
   ctx.effect(() =>
     ctx.commands.register("editor:insert-table", () => {
+      if (view.state.readOnly) {
+        return false;
+      }
       view.dispatch(insertTable(view.state));
       return true;
     }),
@@ -202,6 +207,11 @@ function registerTableCommands(ctx: Context): void {
   for (const [id] of tableCommands) {
     ctx.effect(() =>
       ctx.commands.register("editor:table-" + id, async () => {
+        // The table writes its new source into this note's editor; refuse
+        // before the controller starts (a sort first renders its keys).
+        if (view.state.readOnly) {
+          return false;
+        }
         const controller = activeTables.get(view);
         const position = controller?.range?.head ?? controller?.active;
         if (!controller || !position) {
