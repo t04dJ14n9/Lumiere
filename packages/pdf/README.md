@@ -311,7 +311,10 @@ with the PDF wherever it is.
   a tooltip and an accessible name) styled as the Panel's title tabs; rows are 22
   px with twisties and indent guides; a 4 px sash on the right edge resizes the
   panel (160 px up to 60 % of the viewer; double-click, or Enter on the sash,
-  puts it back to 240 px; the Left and Right keys move it from the keyboard).
+  puts it back to 240 px; the Left and Right keys move it from the keyboard). A
+  width saved in a wide editor is drawn within that share of a narrower one
+  (a split, a floating window) and comes back when the viewer is wide enough:
+  only a drag changes it.
   High-contrast themes draw the borders and outlines their variables ask for.
 - **Keys**, as in a VS Code list: Up and Down, Home and End, Page Up and Page Down
   move; Left and Right close and open a branch (and step out of and into it);

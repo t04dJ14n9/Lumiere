@@ -34,6 +34,10 @@ export function TabStrip({
 }): React.JSX.Element {
   const buttons = useRef(new Map<SidePanelTab, HTMLButtonElement>());
   const move = (event: React.KeyboardEvent): void => {
+    // Alt+Left and Ctrl+Right are VS Code's (back, editor navigation).
+    if (event.altKey || event.ctrlKey || event.metaKey || event.shiftKey) {
+      return;
+    }
     const next = nextTab(tab, event.key);
     if (next) {
       event.preventDefault();

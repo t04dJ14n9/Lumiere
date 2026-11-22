@@ -25,9 +25,20 @@ export function Sash({
   onResize: (width: number) => void;
   onCommit: (width: number) => void;
 }): React.JSX.Element {
-  const drag = useRef<{ x: number; width: number } | undefined>(undefined);
+  const drag = useRef<{ x: number; width: number; moved: boolean } | undefined>(
+    undefined,
+  );
   const last = useRef(width);
   last.current = width;
+  // A press that moved nothing saves nothing: the width drawn may be less
+  // than the reader's saved one, in a narrow viewer.
+  const end = (): void => {
+    const moved = drag.current?.moved;
+    drag.current = undefined;
+    if (moved) {
+      onCommit(last.current);
+    }
+  };
   return (
     <div
       className="sp-sash"
@@ -41,24 +52,17 @@ export function Sash({
       onPointerDown={(event) => {
         if (event.button === 0) {
           event.currentTarget.setPointerCapture(event.pointerId);
-          drag.current = { x: event.clientX, width };
+          drag.current = { x: event.clientX, width, moved: false };
         }
       }}
       onPointerMove={(event) => {
         if (drag.current) {
+          drag.current.moved = true;
           onResize(drag.current.width + event.clientX - drag.current.x);
         }
       }}
-      onPointerUp={() => {
-        if (drag.current) {
-          drag.current = undefined;
-          onCommit(last.current);
-        }
-      }}
-      onPointerCancel={() => {
-        drag.current = undefined;
-        onCommit(last.current);
-      }}
+      onPointerUp={() => end()}
+      onPointerCancel={() => end()}
       onDoubleClick={() => onCommit(DEFAULT_SIDE_PANEL_WIDTH)}
       onKeyDown={(event) => {
         const step = event.shiftKey ? KEY_STEP_LARGE : KEY_STEP;

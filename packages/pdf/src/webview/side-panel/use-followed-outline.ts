@@ -80,6 +80,9 @@ export function useFollowedOutline(options: {
     (id: OutlineRowId): void => {
       hold.click(id, Date.now());
       setClicked(id);
+      // The tree is now as the click left it, not as following left it: the
+      // next bookmark followed, even the one followed last, is applied anew.
+      last.current = undefined;
       // Where the click landed is read when the jump has had its time, even
       // if the view never moves (a heading that only groups others).
       later(follow, CLICK_HOLD_MS);

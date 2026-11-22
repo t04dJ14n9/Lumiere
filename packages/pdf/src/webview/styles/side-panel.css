@@ -22,6 +22,8 @@
   flex-direction: column;
   box-sizing: border-box;
   min-width: 0;
+  /* Whatever width it is given, the pages keep their share (the script clamps it too). */
+  max-width: max(160px, 60%);
   color: var(--vscode-sideBar-foreground, var(--vscode-foreground, #ccc));
   background: var(--vscode-sideBar-background, #252526);
   border-right: 1px solid

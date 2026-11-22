@@ -12,6 +12,7 @@ import { Sash } from "./sash";
 import { chooseSidePanel, useSidePanelState } from "./state";
 import { TabStrip, tabId, tabPanelId } from "./tab-strip";
 import { ThumbnailsTab } from "./thumbnails-tab";
+import { useViewerWidth } from "./viewer-width";
 
 /** Go to a place in the PDF as a deliberate jump, which Back returns from. */
 export type SidePanelJump = (
@@ -38,15 +39,16 @@ export interface SidePanelProps {
  */
 export function SidePanel(props: SidePanelProps): React.JSX.Element | null {
   const state = useSidePanelState();
+  const viewerWidth = useViewerWidth();
   if (!state.open) {
     return null;
   }
+  // Drawn within the share of this viewer that a panel may take. The width
+  // the reader chose stays as it was saved: it comes back in a wider editor,
+  // and only a drag changes it.
+  const width = clampSidePanelWidth(state.width, viewerWidth);
   return (
-    <aside
-      className="side-panel"
-      style={{ width: state.width }}
-      aria-label="Side panel"
-    >
+    <aside className="side-panel" style={{ width }} aria-label="Side panel">
       <TabStrip
         tab={state.tab}
         onSelect={(tab) => chooseSidePanel({ tab })}
@@ -58,14 +60,14 @@ export function SidePanel(props: SidePanelProps): React.JSX.Element | null {
         id={tabPanelId(state.tab)}
         aria-labelledby={tabId(state.tab)}
       >
-        <TabBody tab={state.tab} width={state.width} {...props} />
+        <TabBody tab={state.tab} width={width} {...props} />
       </div>
       <Sash
-        width={state.width}
-        onResize={(width) =>
-          chooseSidePanel({ width: clampWidth(width) }, { commit: false })
+        width={width}
+        onResize={(next) =>
+          chooseSidePanel({ width: clampWidth(next) }, { commit: false })
         }
-        onCommit={(width) => chooseSidePanel({ width: clampWidth(width) })}
+        onCommit={(next) => chooseSidePanel({ width: clampWidth(next) })}
       />
     </aside>
   );

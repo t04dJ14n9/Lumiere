@@ -86,6 +86,42 @@ test("the panel stays closed until the extension opens it, and the pages make ro
   expect(await widthOf(page.locator(".viewport"))).toBeCloseTo(whole, 0);
 });
 
+test("a saved width wider than the viewer allows is drawn within it, and comes back when the viewer is wide enough", async ({
+  page,
+}) => {
+  // 600 px was chosen in a wide editor; this one is 500 px, and a panel may
+  // take 60 % of the viewer (300 px), so the pages keep room and the sash stays on screen.
+  await page.setViewportSize({ width: 500, height: 900 });
+  await openPanel(page, { width: 600 });
+  const panel = page.locator(".side-panel");
+  await expect.poll(() => widthOf(panel)).toBe(300);
+  expect(await widthOf(page.locator(".viewport"))).toBeGreaterThan(190);
+  const sash = (await page
+    .getByRole("separator", { name: "Resize Side Panel" })
+    .boundingBox())!;
+  expect(sash.x + sash.width).toBeLessThanOrEqual(500);
+  // The reader has not resized it: nothing is saved over the 600 px, not
+  // even by a click on the sash that moves nothing.
+  await page.getByRole("separator", { name: "Resize Side Panel" }).click();
+  expect(await sent(page, "sidePanel")).toHaveLength(0);
+  // The editor grows (a split closed, the window dragged wider): the panel is as saved.
+  await page.setViewportSize({ width: 1000, height: 900 });
+  await expect.poll(() => widthOf(panel)).toBe(600);
+  // And narrower again: within the limit, whatever the saved width.
+  await page.setViewportSize({ width: 300, height: 900 });
+  await expect.poll(() => widthOf(panel)).toBe(180);
+  expect(await sent(page, "sidePanel")).toHaveLength(0);
+});
+
+test("a viewer narrower than the panel's minimum still shows the pages beside it", async ({
+  page,
+}) => {
+  await page.setViewportSize({ width: 220, height: 900 });
+  await openPanel(page, { width: 240 });
+  // The minimum wins where the share would be smaller: a panel narrower is unusable.
+  await expect.poll(() => widthOf(page.locator(".side-panel"))).toBe(160);
+});
+
 test("opening the panel does not take the keyboard from the pages", async ({
   page,
 }) => {
@@ -283,6 +319,30 @@ test("the tree is a VS Code tree to the keyboard: arrows move and fold, Enter op
   await expect.poll(() => reading(page)).toMatchObject({ page: 2 });
 });
 
+test("clicking another branch and coming back to the bookmark the reader was at applies Follow Cursor again", async ({
+  page,
+}) => {
+  await openPanel(page);
+  const outline = tree(page, "Outline");
+  const partOne = outline.getByRole("treeitem", { name: /^Part One/u });
+  const partTwo = outline.getByRole("treeitem", { name: /^Part Two/u });
+  await expect(partOne).toHaveAttribute("aria-expanded", "true");
+  // The click opens Part Two and leaves Part One as it was.
+  await partTwo.click();
+  await expect.poll(() => reading(page)).toMatchObject({ page: 6 });
+  await expect(partTwo).toHaveAttribute("aria-expanded", "true");
+  await expect(partOne).toHaveAttribute("aria-expanded", "true");
+  await page.waitForTimeout(1400);
+  // Back where the reader was: Follow Cursor closes the branch it left, and
+  // the bookmark is selected again, though it is the one it last followed.
+  await act(page, { action: "goToPage", page: 1 });
+  await expect(partOne).toHaveAttribute("aria-selected", "true");
+  await expect(partTwo).toHaveAttribute("aria-expanded", "false");
+  await expect(
+    outline.getByRole("treeitem", { name: /^Section 2\.1/u }),
+  ).toHaveCount(0);
+});
+
 test("the tabs are a tablist the arrow keys move along, each with its own panel", async ({
   page,
 }) => {
@@ -302,6 +362,27 @@ test("the tabs are a tablist the arrow keys move along, each with its own panel"
   // The panel is not one of the page's keys: Left from the first goes round.
   await page.keyboard.press("ArrowLeft");
   await expect(panel).toHaveAttribute("aria-labelledby", "sp-tab-annotations");
+});
+
+test("a modified arrow on a tab is not the tab strip's: Alt+Left and Ctrl+Right stay VS Code's", async ({
+  page,
+}) => {
+  await openPanel(page);
+  const outlineTab = page.getByRole("tab", { name: "Outline", exact: true });
+  await outlineTab.focus();
+  for (const key of [
+    "Alt+ArrowLeft",
+    "Control+ArrowRight",
+    "Meta+ArrowRight",
+    "Shift+ArrowLeft",
+  ]) {
+    await page.keyboard.press(key);
+    await expect(outlineTab).toHaveAttribute("aria-selected", "true");
+  }
+  await page.keyboard.press("ArrowRight");
+  await expect(
+    page.getByRole("tab", { name: "Bookmarks", exact: true }),
+  ).toHaveAttribute("aria-selected", "true");
 });
 
 test("the Thumbnails tab draws the pages in view, marks the one being read, and goes to a page on a click", async ({
