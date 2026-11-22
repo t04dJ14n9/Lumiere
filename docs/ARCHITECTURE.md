@@ -496,10 +496,13 @@ Context), `bridge` (a versioned JSON selection envelope) and `cursorBridge`
 (Cmd/Ctrl+L and K in Cursor). In Lumiere PDF: `agentBridge` (Copy link to this,
 which only copies), `ideContext`, and an opt-in MCP server
 (`lumiere.pdf.agentBridge.enabled`, off by default: 127.0.0.1 only, a random
-port, a bearer token) whose tools return the PDF selection, open a PDF location
-and return the note selection. The two products meet in `noteSelections`: the
-root provides it from Markdown's public API so the PDF's bridge can report a
-note's selection.
+port, a bearer token in a header) whose tools return the PDF and note selections,
+open a PDF location, describe a PDF and the notes that cite it, and return the
+IDE context (where the user is in notes and PDFs). A tool's file argument must
+be inside the workspace. Cursor starts the stdio shim as its MCP server; VS
+Code registers the HTTP endpoint. The two products meet in `noteSelections`:
+the root provides it from Markdown's public API so the PDF's bridge can report a
+note's selection and the active note.
 
 ## 13. Security boundaries
 

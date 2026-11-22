@@ -52,7 +52,19 @@ function panelsShowing(opened: Uri) {
         VIEW_TYPE: "lumiere.pdf.viewer",
       },
     },
-  ) as { PdfPanels: new () => { add(panel: unknown): void; active: unknown } };
+  ) as {
+    PdfPanels: new () => {
+      add(panel: unknown): void;
+      active: unknown;
+      editorsOf(uri: Uri): unknown[];
+      waitForNew(
+        uri: Uri,
+        known: ReadonlySet<unknown>,
+        current?: () => boolean,
+        timeoutMs?: number,
+      ): Promise<unknown>;
+    };
+  };
   return new PdfPanels();
 }
 
@@ -73,6 +85,58 @@ test("a PDF opened from a link with a #page fragment is the active one", () => {
   };
   panels.add(panel);
   assert.equal(panels.active, panel);
+});
+
+/** A panel for `file` in `viewColumn`; it is not the active tab's. */
+function panelOf(file: Uri, viewColumn: number) {
+  return {
+    uri: file,
+    webviewPanel: {
+      viewColumn,
+      active: false,
+      onDidChangeViewState: subscription,
+      onDidDispose: subscription,
+    },
+    onDidChange: subscription,
+    dispose: () => undefined,
+  };
+}
+
+test("the editors of a PDF are found in any group, not only the active one", () => {
+  const file = new Uri("/work/paper.pdf");
+  const panels = panelsShowing(new Uri("/work/note.pdf"));
+  const left = panelOf(file, 1);
+  const right = panelOf(new Uri("/work/paper.pdf"), 2);
+  const other = panelOf(new Uri("/work/other.pdf"), 2);
+  for (const panel of [left, other, right]) {
+    panels.add(panel);
+  }
+  assert.deepEqual(panels.editorsOf(file), [left, right]);
+});
+
+test("waiting for a new editor of a PDF ignores the ones that were open and takes one in a group the reader is not in", async () => {
+  const file = new Uri("/work/paper.pdf");
+  const panels = panelsShowing(new Uri("/work/note.pdf"));
+  const before = panelOf(file, 1);
+  panels.add(before);
+  const waiting = panels.waitForNew(file, new Set([before]));
+  const created = panelOf(file, 2);
+  setTimeout(() => panels.add(created), 20);
+  // Neither is the active tab's: `waitFor` would never find it.
+  assert.equal(await waiting, created);
+});
+
+test("waiting for a new editor gives up at the timeout, and when the open is superseded", async () => {
+  const file = new Uri("/work/paper.pdf");
+  const panels = panelsShowing(new Uri("/work/note.pdf"));
+  assert.equal(
+    await panels.waitForNew(file, new Set(), undefined, 80),
+    undefined,
+  );
+  assert.equal(
+    await panels.waitForNew(file, new Set(), () => false),
+    undefined,
+  );
 });
 
 test("a view report sets only the context keys whose values changed", () => {

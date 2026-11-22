@@ -22,7 +22,12 @@ import { registerAgentBridge } from "./mcp/controller";
 export const agentBridgePlugin: Plugin = {
   name: manifest.id,
   inject: {
-    required: ["pdfPanels", "extensionContext", "outputChannel"],
+    required: [
+      "pdfPanels",
+      "pdfBacklinkIndex",
+      "extensionContext",
+      "outputChannel",
+    ],
     optional: ["regionSnapshots", "noteSelections"],
   },
   provides: ["pdfHandoff"],
@@ -65,10 +70,13 @@ export const agentBridgePlugin: Plugin = {
       registerAgentBridge({
         extensionUri: context.extensionUri,
         globalStorageUri: context.globalStorageUri,
-        panels,
-        lastPdf,
-        handoff,
-        ...(ctx.noteSelections && { notes: ctx.noteSelections }),
+        deps: {
+          panels,
+          lastPdf,
+          handoff,
+          backlinks: ctx.pdfBacklinkIndex,
+          ...(ctx.noteSelections && { notes: ctx.noteSelections }),
+        },
         log: ctx.outputChannel,
       }),
       "mcp controller",

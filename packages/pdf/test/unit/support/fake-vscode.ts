@@ -79,20 +79,36 @@ export class Uri {
   private constructor(
     readonly scheme: string,
     readonly path: string,
+    readonly fragment = "",
   ) {}
   static file(path: string): Uri {
-    return new Uri("file", path);
+    // As VS Code's: separators are slashes, and a Windows drive letter
+    // follows a slash (`C:\x` is the path `/C:/x`).
+    const slashed = path.replaceAll("\\", "/");
+    return new Uri(
+      "file",
+      /^[A-Za-z]:/u.test(slashed) ? `/${slashed}` : slashed,
+    );
   }
   static parse(value: string): Uri {
     // The scheme ends at the first colon; a Windows drive (`/C:/x`) has one too.
     const colon = value.indexOf(":");
     const scheme = colon < 0 ? value : value.slice(0, colon);
     const rest = colon < 0 ? "" : value.slice(colon + 1);
-    return new Uri(scheme, decodeURIComponent(rest.replace(/^\/\//u, "")));
+    const hash = rest.indexOf("#");
+    const path = hash < 0 ? rest : rest.slice(0, hash);
+    return new Uri(
+      scheme,
+      decodeURIComponent(path.replace(/^\/\//u, "")),
+      hash < 0 ? "" : rest.slice(hash + 1),
+    );
   }
   static joinPath(base: Uri, ...parts: string[]): Uri {
     // As VS Code's: `..` and repeated separators are resolved.
     return new Uri(base.scheme, path.posix.join(base.path, ...parts));
+  }
+  with(change: { fragment?: string }): Uri {
+    return new Uri(this.scheme, this.path, change.fragment ?? this.fragment);
   }
   get fsPath(): string {
     // As VS Code's: on Windows, `/C:/x` is `c:\x`.
@@ -105,7 +121,7 @@ export class Uri {
     return this.path;
   }
   toString(): string {
-    return `${this.scheme}://${this.path}`;
+    return `${this.scheme}://${this.path}${this.fragment ? `#${this.fragment}` : ""}`;
   }
 }
 
@@ -140,6 +156,7 @@ export const TreeItemCollapsibleState = { None: 0, Collapsed: 1, Expanded: 2 };
 export const StatusBarAlignment = { Left: 1, Right: 2 };
 export const ConfigurationTarget = { Global: 1, Workspace: 2 };
 export const ViewColumn = { Active: -1, Beside: -2, One: 1 };
+export const FileType = { File: 1, Directory: 2, SymbolicLink: 64 };
 
 export const commands = {
   registerCommand: (id: string) => track(`command:${id}`),
@@ -240,6 +257,12 @@ export const workspace = {
       onDidDelete: event("watcher.delete"),
     }),
   asRelativePath: (value: unknown) => String(value),
+  getWorkspaceFolder: (uri: Uri) =>
+    workspace.workspaceFolders?.find(
+      (folder) =>
+        uri.path === folder.uri.path ||
+        uri.path.startsWith(`${folder.uri.path}/`),
+    ),
   fs: {
     readFile: async () => new Uint8Array(),
     stat: async () => ({ size: 0 }),
@@ -259,6 +282,14 @@ export const extensions = {
   all: [] as { packageJSON: unknown }[],
   getExtension: (_id: string) => undefined,
 };
+
+/** Cursor's own API; `mcp` is set by the tests that run as Cursor. */
+export const cursor: {
+  mcp?: {
+    registerServer(config: unknown): void;
+    unregisterServer(name: string): void;
+  };
+} = {};
 
 export const lm = {
   registerMcpServerDefinitionProvider: (id: string) =>

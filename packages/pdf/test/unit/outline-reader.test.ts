@@ -15,7 +15,10 @@ import { test } from "node:test";
 import { pathToFileURL } from "node:url";
 import type { OutlineSection } from "../../src/shared/outline-sections";
 import type { OutlineEngine } from "../../src/extension/outlines/engine";
-import { insideFolders } from "../../src/extension/outlines/inside-folders";
+import {
+  containingFolder,
+  insideFolders,
+} from "../../src/extension/outlines/inside-folders";
 import {
   MAX_OUTLINE_PDF_BYTES,
   PdfOutlineReader,
@@ -272,5 +275,35 @@ test("a PDF has bookmarks only when its real path is inside the workspace", asyn
       }).sections("vscode-vfs://github/repo/paper.pdf"),
     ),
     ["remote"],
+  );
+});
+
+test("the folder that holds a file is found by real paths, with where the file is in it", async (t) => {
+  const base = await realpath(await mkdtemp(path.join(tmpdir(), "outline-")));
+  t.after(() => rm(base, { recursive: true }));
+  const real = path.join(base, "real");
+  const opened = path.join(base, "opened");
+  const other = path.join(base, "other");
+  await mkdir(path.join(real, "papers"), { recursive: true });
+  await mkdir(other);
+  await writeFile(path.join(real, "papers", "a.pdf"), "x");
+  // The window opened the folder through a link; the file is named by its real path.
+  await symlink(real, opened, "junction");
+  const file = pathToFileURL(path.join(real, "papers", "a.pdf")).href;
+  assert.deepEqual(await containingFolder([other, opened], file), {
+    folder: opened,
+    relative: path.join("papers", "a.pdf"),
+  });
+  assert.deepEqual(await containingFolder([other, real], file), {
+    folder: real,
+    relative: path.join("papers", "a.pdf"),
+  });
+  assert.equal(await containingFolder([other], file), undefined);
+  assert.equal(
+    await containingFolder(
+      [real],
+      pathToFileURL(path.join(real, "gone.pdf")).href,
+    ),
+    undefined,
   );
 });

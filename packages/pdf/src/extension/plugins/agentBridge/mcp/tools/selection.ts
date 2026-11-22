@@ -1,41 +1,26 @@
-/**
- * The MCP tools the agent bridge serves. They read live editor state, so
- * every MCP client (Cursor, Claude Code, Codex, VS Code chat) sees the
- * selection the user has right now, without the clipboard.
- */
+/** The tools that hand over what the user has selected right now. */
 import { readFile } from "node:fs/promises";
 import * as vscode from "vscode";
-import { McpServer } from "@modelcontextprotocol/sdk/server/mcp.js";
+import type { McpServer } from "@modelcontextprotocol/sdk/server/mcp.js";
 import { z } from "zod";
 import { notePayload, noteReference } from "@workshop/agents/handoff";
-import { OPEN_LOCATION_COMMAND_ID } from "../../../../shared/command-ids";
-import type { AgentHandoff } from "../handoff";
-import type { NoteSelections } from "../note-selections";
-import { LastPdf } from "../last-pdf";
+import type { AgentHandoff } from "../../handoff";
+import type { LastPdf } from "../../last-pdf";
+import type { NoteSelections } from "../../note-selections";
+import type { BridgeDeps } from "../deps";
+import type { Content } from "./results";
 
-export { LastPdf };
-
-type Content =
-  | { type: "text"; text: string }
-  | { type: "image"; data: string; mimeType: string };
-
-/** A fresh server for one request (the bridge is stateless). */
-export function createBridgeServer(
-  lastPdf: LastPdf,
-  handoff: AgentHandoff,
-  notes?: NoteSelections,
-): McpServer {
-  const server = new McpServer({ name: "agent-pdf-viewer", version: "0.1.0" });
-  registerPdfSelection(server, lastPdf, handoff);
-  registerOpenLocation(server);
-  registerNoteSelection(server, notes);
-  return server;
+export function registerSelectionTools(
+  server: McpServer,
+  deps: BridgeDeps,
+): void {
+  registerPdfSelection(server, deps);
+  registerNoteSelection(server, deps.notes);
 }
 
 function registerPdfSelection(
   server: McpServer,
-  lastPdf: LastPdf,
-  handoff: AgentHandoff,
+  { lastPdf, handoff }: BridgeDeps,
 ): void {
   server.registerTool(
     "get_current_pdf_selection",
@@ -99,34 +84,6 @@ async function pdfSelection(
     }),
   });
   return content;
-}
-
-function registerOpenLocation(server: McpServer): void {
-  server.registerTool(
-    "open_pdf_location",
-    {
-      title: "Open PDF at location",
-      description:
-        "Open a PDF in the user's editor at a page and box, to show them a citation. Accepts a link such as " +
-        '"papers/paper.pdf#page=3&viewrect=72,83,134,21" (workspace-relative or absolute path), or a Markdown link to one.',
-      inputSchema: {
-        link: z
-          .string()
-          .min(1)
-          .describe("PDF path with optional #page=…&viewrect=… fragment."),
-      },
-    },
-    async ({ link }) => {
-      const opened = await vscode.commands.executeCommand<boolean>(
-        OPEN_LOCATION_COMMAND_ID,
-        link,
-      );
-      const text = opened
-        ? `Opened ${link}`
-        : `Could not open ${link}: no such PDF.`;
-      return { content: [{ type: "text", text }], isError: !opened };
-    },
-  );
 }
 
 function registerNoteSelection(

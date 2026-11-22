@@ -4,9 +4,12 @@
  * coding agents. It is announced to:
  *
  *   VS Code (Copilot Chat)  vscode.lm.registerMcpServerDefinitionProvider
- *   Cursor                  vscode.cursor.mcp.registerServer (Cursor ignores the VS Code API)
+ *   Cursor                  vscode.cursor.mcp.registerServer, as a stdio server (the shim)
  *   Claude Code, Codex      a discovery file read by the stdio shim
  *                           (`claude mcp add` / `codex mcp add` -- node <shim>)
+ *
+ * The token travels only in the `Authorization` header: the HTTP clients get
+ * it from their registration, the shim from the discovery file.
  *
  * `controller.ts` decides when it runs.
  *
@@ -33,15 +36,9 @@ import * as vscode from "vscode";
 import { StreamableHTTPServerTransport } from "@modelcontextprotocol/sdk/server/streamableHttp.js";
 import { tokenScrubber } from "./scrub";
 import { announce, workspaceFolderPaths } from "./discovery-file";
-import type { AgentHandoff } from "../handoff";
-import type { NoteSelections } from "../note-selections";
-import type { LastPdf } from "../last-pdf";
-import {
-  DISCOVERY_DIR,
-  PROVIDER_ID,
-  SERVER_NAME,
-  type BridgeInfo,
-} from "./constants";
+import { DISCOVERY_DIR, type BridgeInfo } from "./constants";
+import type { BridgeDeps } from "./deps";
+import { registerWithEditor } from "./register";
 import { createBridgeServer } from "./tools";
 
 /** How long open connections get to finish when the bridge stops. */
@@ -63,11 +60,8 @@ export interface ServerOptions {
   extensionUri: vscode.Uri;
   /** Where the stable copy of the stdio shim goes. */
   shim: string;
-  /** Plugin-owned tracker shared with the envelope command (do not dispose here). */
-  lastPdf: LastPdf;
-  handoff: AgentHandoff;
-  /** The Markdown editor's selections, when Lumiere runs. */
-  notes?: NoteSelections;
+  /** What the tools read (see `BridgeDeps`); nothing in it is disposed here. */
+  deps: BridgeDeps;
   log: BridgeLog;
   /** Where to announce the bridge for the stdio shim; tests use a temp folder. */
   discoveryDir?: string;
@@ -112,7 +106,7 @@ async function undoAll(steps: Undo[]): Promise<unknown[]> {
 
 /**
  * The route a request asked for, as a fixed label: never the URL itself,
- * which carries the token for Cursor (/mcp/<token>).
+ * which a client may have put anything in.
  */
 export function routeLabel(url: string | undefined): string {
   const first = (url ?? "").split(/[/?#]/u)[1];
@@ -137,13 +131,7 @@ async function listen(
     error: (message) => options.log.error(scrub(message)),
   };
   // The scrubbing log, never options.log: request errors may quote the token.
-  const context: RequestContext = {
-    token,
-    log,
-    lastPdf: options.lastPdf,
-    handoff: options.handoff,
-    ...(options.notes ? { notes: options.notes } : {}),
-  };
+  const context: RequestContext = { token, log, deps: options.deps };
   const port = await startHttp(
     context,
     undo,
@@ -166,8 +154,13 @@ async function listen(
     undo,
     log,
   });
-  await copyShim(options, log);
-  registerWithEditor(info, undo, log);
+  const shim = await copyShim(options, log);
+  registerWithEditor({
+    info,
+    shim: { path: shim, discoveryDir: options.discoveryDir ?? DISCOVERY_DIR },
+    undo,
+    log,
+  });
   const steps = undo.splice(0);
   let stopping: Promise<void> | undefined;
   return {
@@ -185,9 +178,7 @@ async function listen(
 interface RequestContext {
   token: string;
   log: BridgeLog;
-  lastPdf: LastPdf;
-  handoff: AgentHandoff;
-  notes?: NoteSelections;
+  deps: BridgeDeps;
 }
 
 /** Listen on a random loopback port; returns it. Closing is added to `undo`. */
@@ -227,13 +218,8 @@ async function serve(
     res.writeHead(403).end();
     return;
   }
-  // Token in the Authorization header, or in the path (/mcp/<token>): Cursor 3.24 drops the
-  // headers of servers registered through vscode.cursor.mcp.registerServer.
-  const requestPath = req.url?.split("?")[0] ?? "";
-  if (
-    !sameSecret(req.headers.authorization, `Bearer ${token}`) &&
-    !sameSecret(requestPath, `/mcp/${token}`)
-  ) {
+  // Only the header carries the token: a URL ends up in logs and histories.
+  if (!sameSecret(req.headers.authorization, `Bearer ${token}`)) {
     log.warn(`Agent bridge rejected ${req.method} ${route}: no valid token`);
     // 404 for OAuth discovery probes (/.well-known/...), so clients don't start an OAuth flow.
     res.writeHead(route === "/mcp" ? 401 : 404).end();
@@ -268,9 +254,9 @@ function sameSecret(candidate: string | undefined, expected: string): boolean {
 async function serveMcp(
   req: http.IncomingMessage,
   res: http.ServerResponse,
-  { lastPdf, handoff, notes, log }: RequestContext,
+  { deps, log }: RequestContext,
 ): Promise<void> {
-  const server = createBridgeServer(lastPdf, handoff, notes);
+  const server = createBridgeServer(deps);
   const transport = new StreamableHTTPServerTransport({
     enableJsonResponse: true,
   }); // no session id: stateless
@@ -294,63 +280,27 @@ async function serveMcp(
   await transport.handleRequest(req, res);
 }
 
-/** A stable copy of the shim, so `claude mcp add` survives extension updates. */
-async function copyShim(options: ServerOptions, log: BridgeLog): Promise<void> {
+/**
+ * A stable copy of the shim, so `claude mcp add` survives extension updates;
+ * returns the shim to start. The bundled one stands in when the copy fails.
+ */
+async function copyShim(
+  options: ServerOptions,
+  log: BridgeLog,
+): Promise<string> {
+  const bundled = vscode.Uri.joinPath(
+    options.extensionUri,
+    "dist",
+    "pdf",
+    "bridge-stdio.js",
+  ).fsPath;
   try {
     await mkdir(path.dirname(options.shim), { recursive: true });
-    await copyFile(
-      vscode.Uri.joinPath(
-        options.extensionUri,
-        "dist",
-        "pdf",
-        "bridge-stdio.js",
-      ).fsPath,
-      options.shim,
-    );
+    await copyFile(bundled, options.shim);
+    return options.shim;
   } catch (error) {
     log.warn(`Could not copy the stdio shim: ${describe(error)}`);
-  }
-}
-
-/**
- * Register with the editor's own agent: Cursor through its API (it only
- * warns on VS Code's), VS Code (1.101+) through the MCP server definition
- * provider that Copilot Chat's agent mode reads.
- */
-function registerWithEditor(
-  info: BridgeInfo,
-  undo: Undo[],
-  log: BridgeLog,
-): void {
-  const headers = { Authorization: `Bearer ${info.token}` };
-  const apis = vscode as unknown as McpApis;
-  const cursorMcp = apis.cursor?.mcp;
-  if (cursorMcp) {
-    cursorMcp.registerServer({
-      name: SERVER_NAME,
-      server: { url: `${info.url}/${info.token}`, headers },
-    });
-    undo.push(() => cursorMcp.unregisterServer(SERVER_NAME));
-    log.info("Registered with Cursor (vscode.cursor.mcp.registerServer)");
-    return;
-  }
-  const lm = apis.lm;
-  const HttpDefinition = apis.McpHttpServerDefinition;
-  if (lm?.registerMcpServerDefinitionProvider && HttpDefinition) {
-    const registration = lm.registerMcpServerDefinitionProvider(PROVIDER_ID, {
-      provideMcpServerDefinitions: () => [
-        new HttpDefinition(
-          "Lumiere PDF",
-          vscode.Uri.parse(info.url),
-          headers,
-          "0.1.0",
-        ),
-      ],
-    });
-    undo.push(() => registration.dispose());
-    log.info(
-      "Registered with VS Code (vscode.lm.registerMcpServerDefinitionProvider)",
-    );
+    return bundled;
   }
 }
 
@@ -393,29 +343,4 @@ async function within(promise: Promise<unknown>, ms: number): Promise<boolean> {
 
 function describe(error: unknown): string {
   return error instanceof Error ? error.message : String(error);
-}
-
-/**
- * MCP registration APIs missing from the @types/vscode this builds against:
- * Cursor's own, and VS Code's server definition provider (1.101+).
- */
-interface McpApis {
-  cursor?: {
-    mcp?: {
-      registerServer(config: unknown): void;
-      unregisterServer(name: string): void;
-    };
-  };
-  lm?: {
-    registerMcpServerDefinitionProvider?(
-      id: string,
-      provider: unknown,
-    ): vscode.Disposable;
-  };
-  McpHttpServerDefinition?: new (
-    label: string,
-    uri: vscode.Uri,
-    headers?: Record<string, string>,
-    version?: string,
-  ) => unknown;
 }

@@ -4,8 +4,11 @@ import {
   extractPdfLink,
   parseLocationFragment,
   parsePdfLocation,
+  pdfPathReadings,
 } from "../../../shared/pdf-location";
+import { editorToShow } from "../../../shared/open-placement";
 import { resolvePdfCandidates } from "../../../shared/pdf-target-resolution";
+import type { PdfPanel } from "./panel";
 import { VIEW_TYPE, type PdfPanels } from "./panels";
 import { OPEN_LOCATION_COMMAND_ID } from "../../../shared/command-ids";
 
@@ -37,7 +40,7 @@ export function registerOpenLocation(panels: PdfPanels): vscode.Disposable {
           current: () => request === generation,
           token: cancellation.token,
           dispatch,
-          column: viewColumnOf(options),
+          ...openPlaceOf(options),
         });
       } finally {
         if (pending === cancellation) {
@@ -64,14 +67,29 @@ interface OpenRequest {
   dispatch(run: () => Promise<boolean>): Promise<boolean>;
   /** Where to open the PDF; the active group by default. */
   column: vscode.ViewColumn | undefined;
+  /** Open without taking the keyboard focus (an agent's call must not steal it). */
+  preserveFocus: boolean;
 }
 
-/** `{ viewColumn }` from a caller such as a note's link; anything else is ignored. */
-function viewColumnOf(options: unknown): vscode.ViewColumn | undefined {
-  const column = (options as { viewColumn?: unknown } | undefined)?.viewColumn;
-  return typeof column === "number" && Number.isInteger(column) && column >= -2
-    ? column
-    : undefined;
+/**
+ * `{ viewColumn, preserveFocus }` from a caller such as a note's link or the
+ * agent bridge; anything else is ignored.
+ */
+function openPlaceOf(
+  options: unknown,
+): Pick<OpenRequest, "column" | "preserveFocus"> {
+  const { viewColumn, preserveFocus } = (options ?? {}) as {
+    viewColumn?: unknown;
+    preserveFocus?: unknown;
+  };
+  const isColumn =
+    typeof viewColumn === "number" &&
+    Number.isInteger(viewColumn) &&
+    viewColumn >= -2;
+  return {
+    column: isColumn ? viewColumn : undefined,
+    preserveFocus: preserveFocus === true,
+  };
 }
 
 type PdfDestination = ReturnType<typeof parsePdfLocation>;
@@ -84,7 +102,11 @@ type PdfDestination = ReturnType<typeof parsePdfLocation>;
  *     vscode.commands.executeCommand('lumiere.pdf.openLocation', uri, { page: 3 })
  *
  * A third argument, `{ viewColumn }`, opens it in another editor group
- * (`ViewColumn.Beside` for a link opened to the side).
+ * (`ViewColumn.Beside` for a link opened to the side). `{ preserveFocus: true }`
+ * is for a caller that must not disturb the reader (the agent bridge): a PDF
+ * already open is shown where it is, else it opens beside the current editor
+ * as a tab that stays, and the focus, the active group and the editor in
+ * front are left as they are (see `openKeepingFocus`).
  */
 async function openLocation(
   panels: PdfPanels,
@@ -156,16 +178,9 @@ async function openAt(
   if (!request.current()) {
     return false;
   }
-  await vscode.commands.executeCommand(
-    "vscode.openWith",
-    file,
-    VIEW_TYPE,
-    ...(request.column === undefined ? [] : [request.column]),
-  );
-  if (!request.current()) {
-    return false;
-  }
-  const panel = await panels.waitFor(file);
+  const panel = request.preserveFocus
+    ? await openKeepingFocus(panels, file, request)
+    : await openInActiveGroup(panels, file, request);
   if (!panel || !request.current()) {
     return false;
   }
@@ -173,6 +188,56 @@ async function openAt(
     panel.goTo(destination);
   }
   return true;
+}
+
+/** The human's open: in the active group (or the column asked for), and the viewer takes the focus. */
+async function openInActiveGroup(
+  panels: PdfPanels,
+  file: vscode.Uri,
+  request: OpenRequest,
+): Promise<PdfPanel | undefined> {
+  await vscode.commands.executeCommand(
+    "vscode.openWith",
+    file,
+    VIEW_TYPE,
+    ...(request.column === undefined ? [] : [request.column]),
+  );
+  return request.current() ? panels.waitFor(file) : undefined;
+}
+
+/**
+ * An agent's open, which must not move what the reader is doing: neither the
+ * keyboard, nor the active group, nor the editor they are in. A PDF already
+ * open somewhere is shown where it is (`editorToShow`); otherwise it opens
+ * beside the current editor (or in the column asked for), never on top of
+ * it, and never as a preview tab that the next open would replace.
+ */
+async function openKeepingFocus(
+  panels: PdfPanels,
+  file: vscode.Uri,
+  request: OpenRequest,
+): Promise<PdfPanel | undefined> {
+  const open = panels.editorsOf(file);
+  const shown = editorToShow(
+    open.map((panel) => ({
+      panel,
+      viewColumn: panel.webviewPanel.viewColumn,
+      visible: panel.webviewPanel.visible,
+    })),
+    vscode.window.tabGroups.activeTabGroup.viewColumn,
+  );
+  if (shown) {
+    if (!shown.visible) {
+      shown.panel.webviewPanel.reveal(undefined, true);
+    }
+    return shown.panel;
+  }
+  await vscode.commands.executeCommand("vscode.openWith", file, VIEW_TYPE, {
+    viewColumn: request.column ?? vscode.ViewColumn.Beside,
+    preserveFocus: true,
+    preview: false,
+  });
+  return panels.waitForNew(file, new Set(open), request.current);
 }
 
 /**
@@ -212,32 +277,18 @@ function candidatesFor(target: unknown): vscode.Uri[] | undefined {
     }
     const hash = text.indexOf("#");
     const fragment = hash < 0 ? "" : text.slice(hash + 1);
-    const files = pathReadings(hash < 0 ? text : text.slice(0, hash)).flatMap(
-      (file) =>
-        path.isAbsolute(file)
-          ? [vscode.Uri.file(file)]
-          : (vscode.workspace.workspaceFolders ?? []).map((folder) =>
-              vscode.Uri.joinPath(folder.uri, file),
-            ),
+    const files = pdfPathReadings(
+      hash < 0 ? text : text.slice(0, hash),
+    ).flatMap((file) =>
+      path.isAbsolute(file)
+        ? [vscode.Uri.file(file)]
+        : (vscode.workspace.workspaceFolders ?? []).map((folder) =>
+            vscode.Uri.joinPath(folder.uri, file),
+          ),
     );
     return files.map((uri) => uri.with({ fragment }));
   } catch {
     return undefined;
-  }
-}
-
-/**
- * Copy link writes a Markdown destination, so `my paper.pdf` arrives as
- * `my%20paper.pdf`; a path typed into the prompt is as it is on disk. Try the
- * decoded reading first, and the text as given for a file named with a literal
- * `%20`: only a reading that is a PDF opens.
- */
-function pathReadings(file: string): string[] {
-  try {
-    const decoded = decodeURIComponent(file);
-    return decoded === file ? [file] : [decoded, file];
-  } catch {
-    return [file];
   }
 }
 

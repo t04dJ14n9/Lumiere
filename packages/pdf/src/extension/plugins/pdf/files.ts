@@ -192,3 +192,18 @@ export function workspaceLocation(uri: vscode.Uri): PdfFile {
     path: displayPath(uri),
   };
 }
+
+/** Whether the folder holds a file at `path`; anything else (even an error) is no. */
+export async function isWorkspaceFile(file: PdfFile): Promise<boolean> {
+  if (!file.folder) {
+    return false;
+  }
+  try {
+    const stat = await vscode.workspace.fs.stat(
+      vscode.Uri.joinPath(vscode.Uri.parse(file.folder), file.path),
+    );
+    return (stat.type & vscode.FileType.File) !== 0;
+  } catch {
+    return false;
+  }
+}

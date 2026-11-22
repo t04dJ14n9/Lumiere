@@ -14,6 +14,31 @@
   protected folder can have them) and another VS Code window shows a change
   when it lands. The side panel for floating windows (#867, part 2) and MCP
   tools for bookmarks (#864) come later.
+- Agent bridge (MCP): Cursor now starts the bridge's stdio shim through its
+  documented `vscode.cursor.mcp.registerServer`, told this window's process
+  id. The bridge no longer accepts its token in the URL (`/mcp/<token>`); it
+  is read from the `Authorization` header only (#864).
+- Agent bridge: a tool's file argument (`open_pdf_location`, `get_pdf_info`,
+  `find_notes_citing_pdf`) must name a PDF inside the window's workspace
+  folders. A path outside them, through `..` or a symbolic link, is refused,
+  and so is a folder named like a PDF. The real path of a folder the window
+  opened through a link (`~/vault`) is read as that folder's own.
+- Agent bridge: new read-only tools `get_pdf_info` (page count, position,
+  bookmarks, hash, protected folder) and `find_notes_citing_pdf` (the notes
+  that link to a PDF, with page and quote); `open_pdf_location` says which
+  page it opened.
+- Agent bridge: `open_pdf_location` no longer disturbs the editor the user is
+  typing in. It used to open the PDF as a new tab of the focused group, which
+  could hide the note being edited (the keyboard stayed in the hidden note) and
+  left an open viewer where it was. A PDF that is already open is now shown
+  where it is, and one that is not opens beside the current editor; the
+  keyboard focus, the active group and the editor in front stay put. Open PDF
+  at Location from a link or the palette is unchanged.
+- Agent bridge: `get_ide_context` and the resource `lumiere://ide-context`
+  tell an agent where the user is in Lumiere (the active note with its
+  selection and headings, the PDF viewed last with its page and selected
+  passage or region, and the open Lumiere tabs), which text-editor
+  integrations cannot see in a custom editor.
 - Release workflow: a version published as a Marketplace pre-release is a
   GitHub pre-release too.
 - Markdown: a long run of `[[` with no `]]` after it no longer renders in
