@@ -12,7 +12,8 @@ import { NOTE_KEY_ATTRIBUTE } from "./note-card-target";
 /**
  * A small note icon by the top right corner of each text mark that has a
  * note, so a note is found without hovering every mark. Resting the pointer
- * on it shows the note, as on the mark (note-card.tsx reads its key).
+ * on it shows the note, as on the mark, and a left click shows it at once
+ * (note-card.tsx reads its key).
  *
  * Pinned `Anchored` UI in the Stage's overlay: it keeps its size while the
  * pages zoom, and only the marks on pages on screen are drawn.

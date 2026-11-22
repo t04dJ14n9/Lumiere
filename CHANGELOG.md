@@ -1,5 +1,12 @@
 # Changelog
 
+## Unreleased
+
+- PDF: a left click on the small note icon by a mark shows the mark's note at
+  once. The click used to close the card, so only resting the pointer on the
+  icon showed the note. The card stays while the pointer is on the icon or the
+  card; a press anywhere else closes it. The icon's pointer is now a hand.
+
 ## 0.1.21 (pre-release, 2026-11-22)
 
 - Markdown: a link to a local HTML file in the vault (`[Open](/wiki/diagram.html)`),

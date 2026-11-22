@@ -151,3 +151,64 @@ test("closing an edit with nothing left closes the card", () => {
   assert.deepEqual(shown, ["a", undefined]);
   assert.equal(hover.editing(), false);
 });
+
+test("open shows a note at once, to read, whatever was waiting", () => {
+  const { hover, shown, editing, tick } = setUp();
+  hover.pointerOver("b");
+  tick(NOTE_OPEN_DELAY_MS / 2);
+  hover.open("a");
+  assert.deepEqual(shown, ["a"], "no delay");
+  assert.deepEqual(editing, [false], "a card to read, not a field");
+  assert.equal(hover.shown(), "a");
+  assert.equal(hover.editing(), false);
+  tick(NOTE_OPEN_DELAY_MS * 2);
+  assert.deepEqual(
+    shown,
+    ["a"],
+    "the mark it was resting on does not replace it",
+  );
+});
+
+test("open keeps the card while the pointer stays on its icon, and closes it after the pointer leaves", () => {
+  const { hover, shown, tick } = setUp();
+  hover.open("a");
+  hover.pointerOver("a");
+  tick(NOTE_OPEN_DELAY_MS + NOTE_CLOSE_DELAY_MS * 4);
+  assert.deepEqual(shown, ["a"]);
+  hover.pointerOver(undefined);
+  tick(NOTE_CLOSE_DELAY_MS - 1);
+  assert.deepEqual(shown, ["a"]);
+  tick(1);
+  assert.deepEqual(shown, ["a", undefined]);
+});
+
+test("open on the note already shown changes nothing and cancels a pending close", () => {
+  const { hover, shown, tick } = setUp();
+  hover.pointerOver("a");
+  tick(NOTE_OPEN_DELAY_MS);
+  hover.pointerOver(undefined);
+  tick(NOTE_CLOSE_DELAY_MS / 2);
+  hover.open("a");
+  tick(NOTE_CLOSE_DELAY_MS * 4);
+  assert.deepEqual(shown, ["a"], "reported once, and not closed");
+});
+
+test("open replaces the note of another mark, and the card closes later as a hover does", () => {
+  const { hover, shown, tick } = setUp();
+  hover.pointerOver("a");
+  tick(NOTE_OPEN_DELAY_MS);
+  hover.open("b");
+  assert.deepEqual(shown, ["a", "b"]);
+  hover.pointerOver(undefined);
+  tick(NOTE_CLOSE_DELAY_MS);
+  assert.deepEqual(shown, ["a", "b", undefined]);
+});
+
+test("open does not take over a note being written", () => {
+  const { hover, shown, editing } = setUp();
+  hover.edit("a");
+  hover.open("b");
+  assert.deepEqual(shown, ["a"]);
+  assert.deepEqual(editing, [true]);
+  assert.equal(hover.editing(), true);
+});

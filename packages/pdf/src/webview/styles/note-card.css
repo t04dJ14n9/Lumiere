@@ -188,7 +188,7 @@
   color: var(--vscode-editorHoverWidget-foreground, var(--vscode-foreground));
   background: var(--vscode-editorHoverWidget-background, #252526);
   opacity: 0.85;
-  cursor: default;
+  cursor: pointer;
 }
 
 .note-badge:hover {

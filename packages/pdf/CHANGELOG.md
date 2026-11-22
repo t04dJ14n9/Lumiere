@@ -2,6 +2,12 @@
 
 ## Unreleased
 
+- A left click on a mark's note icon shows its note at once. The press used
+  to close the card, so a click never showed the note (only resting the
+  pointer on the icon did). The card is the one a hover shows, to read; it
+  stays while the pointer is on the icon or the card, and a press anywhere
+  else closes it.
+
 - Leaving a PDF no longer moves the keyboard focus to restore VS Code's
   Outline (it focused the main window's Outline, then the active editor
   group, a moment after the reader had left, possibly for another window).

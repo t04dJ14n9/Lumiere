@@ -26,6 +26,12 @@ export interface NoteHover {
   cardLeft(): void;
   /** Close now (a press, a scroll, Escape), and forget a pending one. */
   dismiss(): void;
+  /**
+   * Show this mark's note at once, to read (a press on its note icon). It
+   * then stays and closes as a hover's does; a note being written is left
+   * as it is.
+   */
+  open(key: string): void;
   /** Show this mark's note at once, to be written. */
   edit(key: string): void;
   /** The note is written (or not): a hover again, or closed with `close`. */
@@ -118,6 +124,14 @@ class NoteHoverController implements NoteHover {
       this.dispose();
       this.overCard = false;
       this.show(undefined, false);
+    }
+  }
+
+  open(key: string): void {
+    if (!this.writing) {
+      this.dispose();
+      this.overCard = false;
+      this.show(key, false);
     }
   }
 

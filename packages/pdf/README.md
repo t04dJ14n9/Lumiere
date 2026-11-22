@@ -80,15 +80,17 @@ is opt-in (`lumiere.pdf.regions.enabled`, default off).
   mark, and the PDF's own annotations do not answer the menu.
 - **Notes on marks, in Markdown.** Rest the pointer on a mark with a note
   (or on the small note icon by its corner) and the note shows under it,
-  rendered as Markdown, in a card drawn like VS Code's own hovers. Links in
-  it open in the browser (web and mail links only); raw HTML stays text and
-  images are not loaded. **Edit Note…**, **Highlight with Note** or the
-  card's Edit button turn the card into a field to write in:
-  ⌘Enter / Ctrl+Enter or a click elsewhere keeps the note, Escape leaves it
-  as it was, and an emptied note is removed. Notes are kept with the mark
-  (its `contents`), so Save Annotations into This PDF and Export Annotated
-  Copy… carry them; other PDF readers show the Markdown as plain text. The
-  PDF's own annotations show their notes read-only.
+  rendered as Markdown, in a card drawn like VS Code's own hovers; a left
+  click on the note icon shows it at once, and it stays while the pointer is
+  on the icon or the card. Links in it open in the browser (web and mail
+  links only); raw HTML stays text and images are not loaded. **Edit
+  Note…**, **Highlight with Note** or the card's Edit button turn the card
+  into a field to write in: ⌘Enter / Ctrl+Enter or a click elsewhere keeps
+  the note, Escape leaves it as it was, and an emptied note is removed.
+  Notes are kept with the mark (its `contents`), so Save Annotations into
+  This PDF and Export Annotated Copy… carry them; other PDF readers show the
+  Markdown as plain text. The PDF's own annotations show their notes
+  read-only.
 - **Annotations never change the PDF.** Marks are kept in
   `.lumiere/pdf-annotations/<sha256>.json` in the PDF's workspace folder
   (`~/.lumiere/…` for a PDF outside every folder), named by the PDF's
