@@ -1,10 +1,11 @@
 /** The Lumiere tabs (notes and PDFs) open in this window, for the IDE context. */
 import * as vscode from "vscode";
 import { KNOWN_LUMIERE_VIEW_TYPES } from "@workshop/agents/ide-context";
+import { displayPath } from "../../pdf/files";
 
 export interface LumiereTab {
   kind: "note" | "pdf";
-  /** Relative to its workspace folder. */
+  /** Relative to its workspace folder, with `/` separators on every platform. */
   path: string;
   /** The tab its group shows (each editor group shows one). */
   visible: boolean;
@@ -65,7 +66,7 @@ export function listLumiereTabs(max: number): {
       } else {
         tabs.push({
           kind: input.kind,
-          path: vscode.workspace.asRelativePath(input.uri, false),
+          path: displayPath(input.uri),
           visible: tab.isActive,
           active,
           dirty: tab.isDirty,

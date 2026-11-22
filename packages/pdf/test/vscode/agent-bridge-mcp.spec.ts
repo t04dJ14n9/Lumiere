@@ -8,6 +8,7 @@ import {
   writeFileSync,
 } from "node:fs";
 import path from "node:path";
+import { pathToFileURL } from "node:url";
 import type { Frame, Page } from "@playwright/test";
 import { bridgeRequest, StdioShim } from "./mcp-client";
 import { paths } from "./state";
@@ -480,7 +481,7 @@ test("an MCP client reaches this window through the stdio shim, and the bridge r
       const escapes = [
         OUTSIDE,
         path.relative(paths.workspace, OUTSIDE),
-        `file://${OUTSIDE}`,
+        pathToFileURL(OUTSIDE).href,
         "docs/escape-link.pdf",
       ];
       expect(escapes[1]).toMatch(/^\.\.\//u);

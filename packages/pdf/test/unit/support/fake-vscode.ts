@@ -82,7 +82,13 @@ export class Uri {
     readonly fragment = "",
   ) {}
   static file(path: string): Uri {
-    return new Uri("file", path);
+    // As VS Code's: separators are slashes, and a Windows drive letter
+    // follows a slash (`C:\x` is the path `/C:/x`).
+    const slashed = path.replaceAll("\\", "/");
+    return new Uri(
+      "file",
+      /^[A-Za-z]:/u.test(slashed) ? `/${slashed}` : slashed,
+    );
   }
   static parse(value: string): Uri {
     // The scheme ends at the first colon; a Windows drive (`/C:/x`) has one too.

@@ -4,6 +4,7 @@ import {
   mkdtemp,
   readdir,
   readFile,
+  realpath,
   rm,
   writeFile,
 } from "node:fs/promises";
@@ -628,9 +629,14 @@ test("in Cursor, a shim that cannot be copied is started from the extension itse
   );
   t.after(() => bridge.dispose());
   const [config] = cursor.registered as { server: { args: string[] } }[];
-  assert.deepEqual(config!.server.args, [
-    path.join(folder, "extension", "dist", "pdf", "bridge-stdio.js"),
-  ]);
+  // The extension's own file, however the platform spells its path.
+  assert.equal(config!.server.args.length, 1);
+  assert.equal(
+    await realpath(config!.server.args[0]!),
+    await realpath(
+      path.join(folder, "extension", "dist", "pdf", "bridge-stdio.js"),
+    ),
+  );
   assert.ok(
     lines.some((line) => line.startsWith("warn Could not copy the stdio shim")),
     lines.join("\n"),

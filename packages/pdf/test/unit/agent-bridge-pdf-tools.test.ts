@@ -70,7 +70,10 @@ test("open_pdf_location opens a workspace PDF at its page, without taking the fo
   assert.equal(id, OPEN_LOCATION_COMMAND_ID);
   assert.equal(
     String(target),
-    `file://${path.join(workspace.root, "papers", "a.pdf")}#page=3&viewrect=72,83,134,21`,
+    workspace
+      .uri("papers/a.pdf")
+      .with({ fragment: "page=3&viewrect=72,83,134,21" })
+      .toString(),
   );
   assert.equal(location, undefined);
   assert.deepEqual(options, { preserveFocus: true });
@@ -108,7 +111,7 @@ test("open_pdf_location refuses what is not a PDF inside the workspace, and neve
     workspace.outside, // absolute, beside the workspace
     "../outside.pdf", // relative, out through `..`
     outsideLink, // absolute, out through `..`
-    `file://${workspace.outside}#page=1`, // a URI
+    `${vscode.Uri.file(workspace.outside).toString()}#page=1`, // a URI
     "papers/escape.pdf", // inside by name, a link to a file outside
     "papers/notes.txt", // not a PDF
     "papers/missing.pdf", // not there
@@ -295,7 +298,8 @@ function indexNotes(notes: Record<string, string>): PdfBacklinkIndex {
   const index = new PdfBacklinkIndex();
   const folder = vscode.Uri.file(workspace.root).toString();
   for (const [file, text] of Object.entries(notes)) {
-    index.replaceNote(`file://${workspace.root}/${file}`, file, text, folder);
+    const noteUri = vscode.Uri.file(path.join(workspace.root, file)).toString();
+    index.replaceNote(noteUri, file, text, folder);
   }
   return index;
 }
