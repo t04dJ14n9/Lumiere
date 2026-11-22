@@ -265,6 +265,90 @@ test("a zoom step never shows a page without its picture, and the pictures come 
   }
 });
 
+test("a picture taken back while it decodes is dropped, not shown as a broken image over the page's picture", async ({
+  page,
+}) => {
+  // EmbedPDF revokes a picture's URL when it starts the next one, a pinch step
+  // later, and that picture arrives later still. A slow machine's decode of the
+  // picture ends in between, and giving the revoked URL to the page loads a
+  // broken image over its picture. This decode always ends there: the moment
+  // its URL is revoked, whatever the machine's speed (or after a second, for
+  // the last picture, which nothing revokes).
+  await page.addInitScript(() => {
+    const counter = window as unknown as { brokenPictures: number };
+    counter.brokenPictures = 0;
+    document.addEventListener(
+      "error",
+      (event) => {
+        if (
+          event.target instanceof HTMLImageElement &&
+          event.target.closest(".page")
+        ) {
+          counter.brokenPictures++;
+        }
+      },
+      true,
+    );
+    const endsOnRevoke = new Map<string, () => void>();
+    const decode = HTMLImageElement.prototype.decode;
+    HTMLImageElement.prototype.decode = function () {
+      const url = this.src;
+      return decode.call(this).then(
+        (result) =>
+          new Promise((resolve) => {
+            endsOnRevoke.set(url, () => resolve(result));
+            setTimeout(() => resolve(result), 1_000);
+          }),
+      );
+    };
+    const revoke = URL.revokeObjectURL.bind(URL);
+    URL.revokeObjectURL = (url) => {
+      revoke(url);
+      endsOnRevoke.get(url)?.();
+      endsOnRevoke.delete(url);
+    };
+  });
+  await open(page, {
+    scrollMode: "continuous",
+    pageLayout: "single",
+    defaultZoom: "actual",
+  });
+  const had = new Set((await shownNow(page)).split(","));
+  const frames = sample(page, 2_500);
+  await page.evaluate(async () => {
+    const viewport = document.querySelector(".viewport")!;
+    const view = viewport.getBoundingClientRect();
+    for (let i = 0; i < 30; i++) {
+      viewport.dispatchEvent(
+        new WheelEvent("wheel", {
+          deltaY: -2.5,
+          deltaMode: 0,
+          ctrlKey: true,
+          clientX: view.left + view.width / 2,
+          clientY: view.top + view.height / 3,
+          bubbles: true,
+          cancelable: true,
+        }),
+      );
+      await new Promise(requestAnimationFrame);
+    }
+  });
+  const seen = await frames;
+  expect(
+    await page.evaluate(
+      () => (window as unknown as { brokenPictures: number }).brokenPictures,
+    ),
+    "pictures that loaded as broken images",
+  ).toBe(0);
+  expect(
+    seen.filter((frame) => frame.blankPages.some((index) => had.has(index)))
+      .length,
+  ).toBe(0);
+  // The pictures the pinch dropped were stale: the last one is shown and sharp.
+  await expect.poll(() => softPages(page), { timeout: 5_000 }).toBe(0);
+  expect(await painted(page)).toBe(true);
+});
+
 test("continuous scrolling: the pages that come into view have a picture within a bound and rest sharp", async ({
   page,
 }) => {

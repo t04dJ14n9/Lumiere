@@ -5,6 +5,7 @@
  */
 import { performance } from "node:perf_hooks";
 import { bootstrap } from "../../src/host/bootstrap";
+import type {} from "../../src/plugins/vault/api";
 import { protocol as editorProtocol } from "../../src/plugins/editor/protocol";
 import type { PanelShell } from "../../src/shared/host";
 import { Endpoint } from "../../src/shared/rpc/endpoint";
@@ -13,6 +14,7 @@ import { fakeViews } from "../unit/views/fakes";
 import { MemoryFileSystem, memorySystem, wait } from "../unit/vault/memory-fs";
 
 const ROOT = "memory:///vault";
+const NOTE = `${ROOT}/notes/Note 0.md`;
 
 /** `notes` linked, tagged notes, and `files - notes` small code files. */
 export function vaultFiles(files: number, notes: number) {
@@ -46,6 +48,12 @@ export interface OpenVault {
   ready(): Promise<number>;
   /** Change `count` notes on disk, as a pull or a build would. */
   changeNotes(count: number): void;
+  /**
+   * Wait until the host is idle: the vault's initial indexing is done (a
+   * large vault's runs on after `ready`, and what it sends the note when it
+   * ends, the list of known notes, is not the cost of a change) and every
+   * change so far is indexed and sent.
+   */
   settle(): Promise<void>;
   dispose(): Promise<void>;
 }
@@ -94,7 +102,7 @@ export async function openVault(
   open({
     id: "panel",
     column: undefined,
-    document: fakeDocument({ uri: `${ROOT}/notes/Note 0.md` }),
+    document: fakeDocument({ uri: NOTE }),
     cspSource: "test",
     trusted: true,
     transport: {
@@ -136,6 +144,7 @@ export async function openVault(
     },
     async settle() {
       await root.settled();
+      await (await root.service("vaults")!.forDocument(NOTE)).settled();
       await wait(50);
     },
     dispose: () => root.dispose(),
