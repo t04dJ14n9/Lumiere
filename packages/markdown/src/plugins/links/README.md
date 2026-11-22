@@ -65,10 +65,16 @@ renderer adds `is-unresolved` to rendered links whose path is in it.
 - `navigate.ts`: webview fragment navigation (top-of-viewport jump).
 - `scroll-to-top.ts`: fragment / outline / Search-match jumps use `y: "start"`
   and hold the target there (`EditorService.holdAtTop`) while the layout
-  settles, with the sticky chrome height as the margin once a parent pin is
-  present. The sticky bar can draw after the jump (its feature loads late) or
-  change height; the margin follows it for about a second and a half, a few
-  times at most, until the reader scrolls.
+  settles. The first scroll already leaves room for the sticky bar the target
+  will have (`pinnedChromeHeight`: its ancestors, from the heading index, not
+  the bar on screen, which belongs to the place the jump leaves), so the
+  heading is never painted under the bar. What the bar turns out to be
+  (CodeMirror re-measures its row height from whichever short lines are drawn
+  after the jump, or the bar is not there yet) is corrected in the frame of
+  the jump, after CodeMirror's measuring and before that frame is painted:
+  one painted frame, at the final place. The margin then follows a bar that
+  draws late or changes height for about a second and a half, a few times at
+  most, until the reader scrolls.
 - `links.test.ts`: target parsing, caret lookup and reference-link units.
 - `host.test.ts`: source identity, scheme policy, side opens and handler lifecycle.
 - `test/unit/links/unresolved.test.ts`: unresolved keys, styled decorations and

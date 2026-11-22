@@ -9402,3 +9402,104 @@ Not verified, for the owner's probe in a real window: that `workbench.action.bro
 openFile` opens the page and reloads it on save; that `workbench.action.browser.open`
 with a `file:` address opens it beside (if it does not, the file's own command
 opens it in the active group); what Cursor does.
+
+## A jump paints its heading at its final place in the first frame (owner report, 2026-11-22)
+
+Report: "when I click the section in outline of markdown and go to that
+section, the markdown editor flickers". Measured in VS Code 1.147 with a note
+of `# Long note` and six `## Topic n` sections (a paragraph, a callout, a
+list, a code block, a table): per animation frame inside the webview, the first
+frame after a click on "Topic 4" had `scrollTop` 2933 with the heading's text 4.8
+px below the scroller's top, under the sticky bar (25 px, now pinning "Long
+note"); the next frame had 2913 and the text 24.8 px down, where it stays. A
+jolt of the whole note by 20 px on every jump.
+
+Cause. `links/scroll-to-top.ts` scrolled the target to the top with CodeMirror's
+default margin (5 px) and looked for the sticky bar only two animation frames
+later (`defaultSchedule`, a `requestAnimationFrame` inside one), then moved the
+held target below it (`ScrollHold.move`), which CodeMirror applied in the frame
+after that. The bar itself is drawn in the jump's own frame (the sticky plugin's
+measure, then its microtask redraw after the scroll), so the frames in between
+were painted with the heading under the bar: one in VS Code, three in the
+browser harness.
+
+Two more findings, both of which a first attempt tripped over:
+
+- A bar of several rows is not found in one step by looking at the page. With
+  the heading 5 px from the top, the bar for "Sub 5.1.1" showed three rows (its
+  own too: 73 px); moving the heading below that made it two rows (49 px), a
+  second correction. Correcting after the fact, even in the same frame, left
+  a frame at 73 px in the browser spec.
+- CodeMirror's `defaultLineHeight`, which is the sticky rows' height, is
+  re-measured from the first short, plain line it has drawn. In the VS Code
+  note it was 21 px at the top of the note (a code block's lines) and 24 px
+  once the jump drew other lines, so the bar a jump finds is 25 px where the
+  page said 22 before it. Predicting the bar alone left 3 px, in a frame of its
+  own.
+
+Fix, in two parts that need each other.
+
+1. The first scroll leaves room for the bar the target will have. The sticky
+   plugin answers `heightAt(position)`: the ancestors it would pin with that
+   line first below it (the same `stickyHeadings`, the same row limit), times
+   the row height, plus the bar's own border, which the page measures with it.
+   It reaches the jump through a new editor facet, `pinnedChromeHeight`
+   (`editor/api.ts`), not an import of the sticky plugin: any chrome pinned over
+   the note can contribute, and with no sticky plugin the height is 0 and the
+   jump is as before. `navigate.ts` passes it to `scrollTargetToTop`
+   (`pinnedHeight`), which uses it as the margin of the scroll and the hold, and
+   as the height the correction assumes. The height of the bar on screen is still
+   never used (it belongs to the place the jump leaves; the clamp bug the old
+   comment names).
+2. What that leaves is corrected before the frame is painted. The first look
+   for the bar is the frame the jump scrolls in (`nextFrame`: a
+   `requestAnimationFrame` asked for right after CodeMirror's own, so it runs
+   after CodeMirror's measuring and the bar's redraw), not two frames on; the
+   ones after it are as before. And `ScrollHold.move` measures at once
+   (`measureNow`, the reading trick `measureOnResize` already uses), where it
+   used to leave the scroll to CodeMirror's next frame.
+
+Alternatives. Correcting in the same frame without predicting (the first
+attempt) fails the multi-row case above. Predicting without correcting leaves
+the 3 px. Using the bar on screen as the first margin is the clamp bug. A
+scroll margin contributed by the sticky plugin is the design the sticky README
+rules out (a bar that resizes would retarget the scroll mid-read).
+
+Not changed. A click on a pinned heading in the sticky bar scrolls on its own
+(`stickyScroll/webview.ts`, `editor.navigate` with the bar's current height as
+the margin), not through the links plugin's `navigate`; it is as before.
+
+Tests. Unit (fail before, pass after): `scroll-to-top.test.ts` (the first scroll's
+margin and hold are the predicted height and nothing is corrected when the bar is
+as predicted; a bar that is not is still corrected; no bar, CodeMirror's margin;
+the first look is one frame and later ones two; a bar drawn in the jump's frame is
+corrected in it), `view-state.test.ts` (moving a hold measures at once),
+`stickyScroll/view.test.ts` (`heightAt`: parents only, the row limit, the border),
+`editor/pinned-chrome.test.ts` (the tallest contribution). Owner-requested
+browser and native specs, which sample every frame where it is about to be
+painted (a resize observer, which runs after the frame's animation callbacks and
+before paint; a sampler of animation callbacks of its own can run between
+CodeMirror's and the correction and see a state that is never painted):
+`test/browser/outline-jump-jolt.spec.ts` (six jumps in a note with parents, a
+code block, a chapter with no parent, the first section and the end of the note;
+every painted frame within 2 px of where the heading settles and never under the
+bar) and `test/vscode/outline-jump-jolt.spec.ts` (five Outline clicks in a real
+window, the last to a heading with two parents; the same two checks). The old
+`outline-jump-flash.spec.ts` stays as it was: its 40 px tolerance is right for a
+note an image above the heading moves on its own, which it measures.
+
+Before and after, real VS Code 1.147, first painted frames of the click on
+"Topic 4": before `[scrollTop 2933, heading text 4.76, bar bottom 25]`, then
+`[2913, 24.76, 25]`; after `[2913, 24.76, 25]` from the first frame on, and the
+same for Topic 1 (737.5), Topic 5 (3870.5), Topic 0 (46) and Sub 3 (3040, text
+49.75, bar 49 for two rows).
+
+Checks (a private `TMPDIR`; suites one after another): `pnpm check` passes
+(core 97, agents 50, scroll 13, markdown 3,897, pdf 958 passed and 1
+skipped). `pnpm test:browser`, Markdown half: 486 passed, with the new spec
+(the PDF half is not touched, not run). `pnpm test:quality`: 9 passed, and the
+large-vault test passed. Real VS Code 1.147 on the built-in display, one spec
+at a time under the shared lock: `outline-jump-jolt`, `outline-jump-flash` and
+`outline-jump-top`, 3 passed; `outline-jump-jolt` failed first (a frame at
+2933 against 2913, then, with the second part missing, at 2916). The
+whole `pnpm test:vscode` was not run.

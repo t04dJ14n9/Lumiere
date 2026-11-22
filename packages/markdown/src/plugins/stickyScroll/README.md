@@ -12,8 +12,12 @@ A document state field indexes top-level ATX and Setext headings with the shared
 Markdown parser and heading labels. A view plugin measures the first visible
 block and draws its scrolled-away ancestors in an overlay, without changing the
 document's height. CodeMirror scroll margins keep navigation targets below the
-overlay. Each panel owns its own chrome; removing the editor extension removes
-the field, overlay, scroll listener and margins. A wheel over the pinned rows
+overlay. Jumps ask it how tall it will be once their target is the first line
+below it (`heightAt`, offered through the editor's `pinnedChromeHeight`
+facet) and leave that room in the first scroll, so a jump's target is never
+painted under the bar. Each panel owns its own chrome; removing the editor
+extension removes the field, overlay, scroll listener, margins and that
+facet. A wheel over the pinned rows
 scrolls the note (the overlay sits outside the scroller); one that axis-locked
 scrolling (`scrollAxisLock`) has already taken is not scrolled again.
 
@@ -26,11 +30,12 @@ scrolling (`scrollAxisLock`) has already taken is not scrolled again.
   blocks Live Preview's `changedBlocks` names (every block when Live Preview's
   tree is absent). `test/unit/stickyScroll/incremental-headings.test.ts`
   checks both against a rebuild over random edits.
-- `view.ts`: measured overlay, heading buttons and scroll margins.
+- `view.ts`: measured overlay, heading buttons, scroll margins and the height
+  the bar will have for a jump (`heightAt`).
 - `webview.ts`: owned registration, configuration updates and jump history.
 - `stickyScroll.css`: VS Code theme colors, compact rows and focus styling.
 - `model.test.ts`: section, syntax, editing and ancestor selection tests.
-- `view.test.ts`: measured overlay, navigation and disposal tests.
+- `view.test.ts`: measured overlay, navigation, disposal and `heightAt` tests.
 - `test/unit/stickyScroll/webview.test.ts`: settings, panel isolation and lifecycle tests.
 
 ## Services, events and settings

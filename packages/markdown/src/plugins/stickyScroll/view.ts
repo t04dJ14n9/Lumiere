@@ -3,11 +3,20 @@ import { Direction, EditorView, ViewPlugin } from "@codemirror/view";
 import type { ViewUpdate } from "@codemirror/view";
 import type { Heading } from "../../markdown/metadata/heading-extract";
 import { chromeInsetTop } from "../../webview/ui/chrome-inset";
+import { pinnedChromeHeight } from "../editor/api";
 import { headingIndex, stickyHeadings } from "./model";
 
 export const stickyMaxLines = Facet.define<number, number>({
   combine: (values) => values.at(-1) ?? 5,
 });
+
+/** Rows the bar may show: the setting, and at most a third of the pane. */
+function rowLimit(view: EditorView, rowHeight: number): number {
+  return Math.min(
+    view.state.facet(stickyMaxLines),
+    Math.floor(view.scrollDOM.clientHeight / (3 * rowHeight)),
+  );
+}
 
 interface StickyLayout {
   headings: readonly Heading[];
@@ -117,6 +126,32 @@ export class StickyScrollView {
     }
   }
 
+  /**
+   * How tall the bar will be, as the page measures it, once the line at
+   * `position` is the first below it: it then pins that line's ancestors, and
+   * a jump puts the line right under them. The row height is the one CodeMirror
+   * has now, which it re-measures from whichever short lines are drawn, so a
+   * jump can still find the bar a few pixels off; its row count is exact. The
+   * bar's own border counts, as it is part of the box that covers the note.
+   */
+  heightAt(position: number): number {
+    const view = this.view;
+    const rowHeight = view.defaultLineHeight;
+    const rows = stickyHeadings(
+      view.state.field(headingIndex),
+      view.state.doc.lineAt(position).from,
+      rowLimit(view, rowHeight),
+    ).length;
+    return rows === 0 ? 0 : rows * rowHeight + this.borderHeight();
+  }
+
+  private borderHeight(): number {
+    const style = this.dom.ownerDocument.defaultView?.getComputedStyle(
+      this.dom,
+    );
+    return Number.parseFloat(style?.borderBottomWidth ?? "") || 0;
+  }
+
   /** `lineAt` finds the line at a height; undefined when it cannot say. */
   private measure(
     lineAt: (height: number) => { from: number } | undefined = (height) =>
@@ -132,10 +167,7 @@ export class StickyScrollView {
       scroll.top +
       view.scrollDOM.clientTop +
       chromeInsetTop(view.dom.ownerDocument);
-    const limit = Math.min(
-      view.state.facet(stickyMaxLines),
-      Math.floor(view.scrollDOM.clientHeight / (3 * rowHeight)),
-    );
+    const limit = rowLimit(view, rowHeight);
     const index = view.state.field(headingIndex);
     // Probe the first line still visible *below* the sticky chrome. The
     // viewport top sits under the overlay (scroll margins keep the caret
@@ -315,6 +347,9 @@ export function stickyScrollExtension(navigate: (position: number) => void) {
   return [
     headingIndex,
     chrome,
+    pinnedChromeHeight.of(
+      (view, position) => view.plugin(chrome)?.heightAt(position) ?? 0,
+    ),
     EditorView.scrollMargins.of((view) => ({
       // Host chrome only. Sticky pin height is applied as scrollIntoView
       // yMargin on pin click (see webview.ts) so resizing pins does not

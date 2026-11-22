@@ -478,3 +478,36 @@ async function microtasks(): Promise<void> {
   await Promise.resolve();
   await Promise.resolve();
 }
+
+test("heightAt is what the bar will measure once a position is the first line below it", () => {
+  const f = fixture();
+  const source = f.view.state.doc.toString();
+  assert.equal(f.chrome.heightAt(source.indexOf("# Root")), 0, "no parent");
+  assert.equal(
+    f.chrome.heightAt(source.indexOf("## <script>")),
+    24,
+    "the heading itself is not pinned over itself",
+  );
+  assert.equal(f.chrome.heightAt(source.indexOf("child body") + 3), 48);
+  assert.equal(f.chrome.heightAt(source.indexOf("# Next")), 0);
+  // Where the bar already is does not matter.
+  f.scrollTo("child body");
+  assert.equal(f.chrome.heightAt(source.indexOf("# Next")), 0);
+  // A small pane shows fewer rows.
+  f.view.scrollDOM.clientHeight = 100;
+  assert.equal(f.chrome.heightAt(source.indexOf("child body")), 24);
+});
+
+test("heightAt counts the bar's border, which the page measures with it", () => {
+  const f = fixture();
+  (f.dom.ownerDocument as { defaultView?: unknown }).defaultView = {
+    getComputedStyle: () => ({ borderBottomWidth: "1px" }),
+  };
+  const source = f.view.state.doc.toString();
+  assert.equal(f.chrome.heightAt(source.indexOf("child body")), 49);
+  assert.equal(
+    f.chrome.heightAt(source.indexOf("# Root")),
+    0,
+    "no bar, no border",
+  );
+});

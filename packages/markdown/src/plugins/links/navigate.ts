@@ -6,6 +6,7 @@ import {
   unfoldTargetEffects,
 } from "./target-highlight";
 import { scrollTargetToTop } from "./scroll-to-top";
+import { pinnedChromeHeight } from "../editor/api";
 
 export type Navigate = (target: {
   fragment: string;
@@ -43,8 +44,8 @@ export function navigator(ctx: Context): Navigate {
       if (!preserveFocus) {
         view.focus();
       }
-      // Top of viewport (Outline / Go to Heading / in-note fragments); sticky
-      // chrome is applied in scrollTargetToTop's post-paint correction.
+      // Top of viewport, below the sticky bar the target will have (Outline /
+      // Go to Heading / in-note fragments).
       scrollTargetToTop(
         view,
         target,
@@ -54,6 +55,8 @@ export function navigator(ctx: Context): Navigate {
         ],
         {
           isCurrent: () => generation === jump,
+          pinnedHeight: (position) =>
+            view.state.facet(pinnedChromeHeight)(view, position),
           ...(ctx.editor.holdAtTop
             ? { holdAtTop: ctx.editor.holdAtTop.bind(ctx.editor) }
             : {}),

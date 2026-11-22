@@ -8,9 +8,9 @@ const DEFAULT_Y_MARGIN = 5;
 /**
  * How many times to look for the sticky bar while a jump is held: a jump can
  * arrive before the feature that draws the bar has loaded, and the bar then
- * appears a few hundred ms later, over the line just jumped to. Each look is
- * two frames on, so this is about a second and a half, the time a held line
- * takes to settle.
+ * appears a few hundred ms later, over the line just jumped to. Each look
+ * after the first is two frames on, so this is about a second and a half, the
+ * time a held line takes to settle.
  */
 const STICKY_WAIT_ATTEMPTS = 45;
 
@@ -54,7 +54,11 @@ export function correctScrollForStickyGrowth(
 
 export type StickyScrollCorrectionOptions = {
   measure?: () => number;
-  /** Defaults to double requestAnimationFrame (after sticky paints). */
+  /**
+   * Runs each look. Defaults to the frame the jump scrolls in for the first
+   * (`nextFrame`), and to double requestAnimationFrame (after sticky paints)
+   * for the ones after it.
+   */
   schedule?: (run: () => void) => void;
   /** Skip the correction when a newer jump has already started. */
   isCurrent?: () => boolean;
@@ -70,6 +74,22 @@ export type StickyScrollCorrectionOptions = {
   keepWaiting?: () => boolean;
 };
 
+/**
+ * The first look: in the frame the jump scrolls in, after CodeMirror's
+ * measuring (it asked for that frame when the jump was dispatched, before
+ * this was asked), which has made the scroll and drawn the sticky bar for it,
+ * and still before that frame is painted. A correction made then is the only
+ * position the jump is ever painted at; made two frames on, the line would
+ * be painted under the bar for those frames.
+ */
+function nextFrame(run: () => void): void {
+  if (typeof requestAnimationFrame !== "function") {
+    queueMicrotask(run);
+    return;
+  }
+  requestAnimationFrame(run);
+}
+
 function defaultSchedule(run: () => void): void {
   if (typeof requestAnimationFrame !== "function") {
     queueMicrotask(() => queueMicrotask(run));
@@ -81,12 +101,12 @@ function defaultSchedule(run: () => void): void {
 }
 
 /**
- * Sticky often updates after the first scroll (empty → parent pin). Schedule a
- * single correction with the updated height. A newer navigate invalidates this
- * correction via `isCurrent`. The bar can also appear, or change height, after
- * the first look, when its feature loads or its line height settles late: with
- * `keepWaiting` the look repeats, bounded, and corrects when the height
- * differs from what the jump last assumed.
+ * Sticky often updates after the first scroll (empty → parent pin). Look for
+ * it in the frame of the jump and correct with the updated height. A newer
+ * navigate invalidates this correction via `isCurrent`. The bar can also
+ * appear, or change height, after the first look, when its feature loads or
+ * its line height settles late: with `keepWaiting` the look repeats, bounded,
+ * and corrects when the height differs from what the jump last assumed.
  */
 export function scheduleStickyScrollCorrection(
   view: EditorView,
@@ -110,8 +130,11 @@ export function scheduleStickyScrollCorrection(
   const keepWaiting = options.keepWaiting ?? (() => false);
   let assumed = initialHeight;
   let corrections = 0;
-  const look = (remaining: number): void => {
-    schedule(() => {
+  const look = (
+    remaining: number,
+    scheduleLook: (run: () => void) => void,
+  ): void => {
+    scheduleLook(() => {
       if (!isCurrent()) {
         return;
       }
@@ -125,16 +148,23 @@ export function scheduleStickyScrollCorrection(
         corrections < MAX_STICKY_CORRECTIONS &&
         keepWaiting()
       ) {
-        look(remaining - 1);
+        look(remaining - 1, schedule);
       }
     });
   };
-  look(STICKY_WAIT_ATTEMPTS);
+  look(STICKY_WAIT_ATTEMPTS, options.schedule ?? nextFrame);
 }
 
 export type ScrollToTopOptions = {
   /** Skip the sticky correction when a newer jump has already started. */
   isCurrent: () => boolean;
+  /**
+   * How tall the sticky bar will be once the line at `position` is the first
+   * below it (`pinnedChromeHeight`). The first scroll leaves that much room
+   * above the target, so the bar it draws has the rows it keeps, and the
+   * correction has at most a few pixels to move. Defaults to no bar.
+   */
+  pinnedHeight?: (position: number) => number;
   /**
    * Holds the line at the top while the layout settles, when the editor can
    * (`EditorService.holdAtTop`). Without it the jump is CodeMirror's alone.
@@ -143,10 +173,14 @@ export type ScrollToTopOptions = {
 };
 
 /**
- * Jump a navigation target to the top of the viewport, then correct once for
- * sticky chrome that appears after paint. Do not apply sticky height on the
- * first scroll: leftover pin height from the previous position skews
- * start-of-note clamps.
+ * Jump a navigation target to the top of the viewport, below the sticky bar
+ * it will have. The first scroll takes the bar's height from the target
+ * (`pinnedHeight`: the ancestors it pins), never from the bar on screen: that
+ * one belongs to the previous position, and its height skews start-of-note
+ * clamps. Then correct for sticky chrome that differs from that, in the frame
+ * of the jump and so before anything is painted: a row height that
+ * CodeMirror re-measures with the jump, a bar that is not there yet (its
+ * feature loads late), a jump that clamps at an end of the note.
  *
  * Features loaded after the jump (line numbers, tables, callouts, the sticky
  * bar itself) change the heights above the target, so with `holdAtTop` the
@@ -159,7 +193,9 @@ export function scrollTargetToTop(
   extras: readonly StateEffect<unknown>[],
   options: ScrollToTopOptions,
 ): void {
-  const hold = options.holdAtTop?.(target.from, DEFAULT_Y_MARGIN);
+  const stickyHeight = options.pinnedHeight?.(target.from) ?? 0;
+  const yMargin = stickyHeight > 0 ? stickyHeight : DEFAULT_Y_MARGIN;
+  const hold = options.holdAtTop?.(target.from, yMargin);
   view.dispatch({
     selection: {
       anchor: target.from,
@@ -167,10 +203,10 @@ export function scrollTargetToTop(
     },
     effects: [
       ...extras,
-      EditorView.scrollIntoView(target.from, { y: "start" }),
+      EditorView.scrollIntoView(target.from, { y: "start", yMargin }),
     ],
   });
-  scheduleStickyScrollCorrection(view, target.from, 0, {
+  scheduleStickyScrollCorrection(view, target.from, stickyHeight, {
     isCurrent: options.isCurrent,
     ...(hold
       ? {
