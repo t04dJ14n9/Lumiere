@@ -91,8 +91,6 @@ export class PdfViewerPanel {
     (m) => this.post(m),
     () => this.loads.current,
   );
-  /** The PDF's bookmarks, for the viewer's side panel. */
-  readonly bookmarks = new BookmarkOutlet((m) => this.post(m));
   /** The viewer's side panel: open or not, how wide, and which tab. */
   readonly sidePanel: PanelSidePanel;
   private zen = false;
@@ -110,7 +108,10 @@ export class PdfViewerPanel {
     post: (message: HostMessage) => this.post(message),
     changed: () => this.changed.fire(),
     refocus: () => this.host.refocus(),
+    sha256: () => this.source.sha256,
   };
+  /** The PDF's bookmarks, for the viewer's side panel. */
+  readonly bookmarks = new BookmarkOutlet(this.chrome);
   /** Whether Back and Forward have a place to go to. */
   readonly historyButtons = new HistoryButtons(this.chrome);
   private readonly annotations: PanelAnnotations;

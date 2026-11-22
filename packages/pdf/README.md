@@ -289,8 +289,11 @@ with the PDF wherever it is.
   view's setting (`lumiere.pdf.outline.followCursor`, on by default), keeps the
   bookmark of your reading position selected, with its parents and its own
   sub-bookmarks open and every other branch closed (the same rule as the
-  Explorer's: `findActiveOutlineItem`). A click leaves the tree as it is for a
-  second, so a double-click's second click does not land on another row.
+  Explorer's: `findActiveOutlineItem`). A click selects its row at once and
+  leaves the tree as it is until you move on from where it landed (so a
+  double-click's second click does not land on another row, and a heading the
+  jump cannot bring to the top of the page, or one that only groups others, stays
+  selected); a click on a branch with a page also opens it.
 - **Bookmarks.** Your own bookmarks, from the same file as the **PDF Bookmarks**
   view and **Go to Bookmark…** (see [Bookmarks](#bookmarks)): a click goes to
   one; Add Bookmark (header button), Rename (F2, or the pencil on a row) and
@@ -321,8 +324,8 @@ with the PDF wherever it is.
 
 **Limits.** The panel's state is not kept across a VS Code restart for a PDF
 editor of its own (the last choice starts it). Search results and attachments
-are not here yet. The Outline tab follows the cursor as the reader moves, and
-takes the setting at the next move after it changes.
+are not here yet. The Outline tab follows the cursor at each move, and takes
+the setting at the next move after it changes.
 
 ## Toolbar and shortcuts
 

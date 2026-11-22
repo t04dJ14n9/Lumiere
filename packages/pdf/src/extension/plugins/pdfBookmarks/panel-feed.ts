@@ -20,18 +20,14 @@ export function feedPanelBookmarks(
 ): vscode.Disposable {
   const feeds = new Set<PanelFeed>();
   const start = (panel: PdfPanel): void => {
-    const feed = new PanelFeed(panel, store, log);
+    const feed = new PanelFeed(panel, store, log, () => feeds.delete(feed));
     feeds.add(feed);
-    panel.webviewPanel.onDidDispose(() => {
-      feed.dispose();
-      feeds.delete(feed);
-    });
   };
   panels.all.forEach(start);
   const opened = panels.onDidOpen(start);
   return new vscode.Disposable(() => {
     opened.dispose();
-    for (const feed of feeds) {
+    for (const feed of [...feeds]) {
       feed.dispose();
     }
     feeds.clear();
@@ -51,15 +47,25 @@ class PanelFeed {
     private readonly panel: PdfPanel,
     private readonly store: BookmarkStore,
     private readonly log: Pick<vscode.LogOutputChannel, "warn">,
+    /** The editor closed, and the feed with it. */
+    onClosed: () => void,
   ) {
     this.subscriptions = [
       // Page reports come every 100 ms while scrolling: only a different
       // file (other bytes) is read.
       panel.onDidChange(() => this.follow()),
+      // A viewer given other bytes may never report (a PDF that will not
+      // open), so the outlet says so itself.
+      panel.bookmarks.onStale(() => this.follow()),
       store.onDidChange((key) => {
         if (key === this.shown?.key) {
           void this.reload();
         }
+      }),
+      // Kept, so stopping the plugin lets go of it: the editors stay open.
+      panel.webviewPanel.onDidDispose(() => {
+        this.dispose();
+        onClosed();
       }),
     ];
     this.follow();
@@ -103,7 +109,7 @@ class PanelFeed {
       this.log.warn(`Could not read the bookmarks: ${problem}`);
     }
     if (generation === this.generation && !this.disposed) {
-      this.panel.bookmarks.set(items, problem);
+      this.panel.bookmarks.set(items, file.sha256, problem);
     }
   }
 }

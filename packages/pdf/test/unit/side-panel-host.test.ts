@@ -1,7 +1,7 @@
 import assert from "node:assert/strict";
 import { test } from "node:test";
 import { PdfViewerPanel } from "../../src/host/viewer/panel";
-import type { PdfWebview } from "../../src/shared/host";
+import type { PdfFiles, PdfWebview } from "../../src/shared/host";
 import type { HostMessage } from "../../src/shared/messages";
 import type { SidePanelState } from "../../src/shared/side-panel";
 import { parseViewSettings } from "../../src/shared/view-settings";
@@ -9,7 +9,7 @@ import { parseViewSettings } from "../../src/shared/view-settings";
 const OPEN: SidePanelState = { open: true, width: 300, tab: "bookmarks" };
 
 /** The portable panel on a fake page, with a memory for the side panel. */
-function open(initial?: SidePanelState) {
+function open(initial?: SidePanelState, files: Partial<PdfFiles> = {}) {
   const posted: HostMessage[] = [];
   const remembered: SidePanelState[] = [];
   const events = { changes: 0, refocus: 0 };
@@ -33,6 +33,7 @@ function open(initial?: SidePanelState) {
         read: async () => new Uint8Array([37, 80, 68, 70]),
         watch: () => () => undefined,
         displayPath: () => "papers/paper.pdf",
+        ...files,
       },
       error: () => undefined,
       openExternal: async () => undefined,
@@ -161,8 +162,9 @@ test("the bookmarks the extension reads are sent to the viewer, and again to a v
   // Nothing was read yet: nothing to say to a new viewer.
   await h.receive({ type: "ready" });
   assert.equal(h.posted.filter((m) => m.type === "bookmarks").length, 0);
-  h.panel.bookmarks.set(items);
-  h.panel.bookmarks.set([], "Cannot use the file.");
+  const sha256 = h.panel.sha256!;
+  h.panel.bookmarks.set(items, sha256);
+  h.panel.bookmarks.set([], sha256, "Cannot use the file.");
   assert.deepEqual(
     h.posted.filter((m) => m.type === "bookmarks"),
     [
@@ -197,4 +199,42 @@ test("Back and Forward being possible is told to the viewer and the menus, once 
     back: true,
     forward: false,
   });
+});
+
+test("bookmarks read for other bytes are not sent again to a viewer that has new ones, and whoever reads them is told", async () => {
+  let bytes = new Uint8Array([37, 80, 68, 70]);
+  const h = open(undefined, { read: async () => bytes });
+  const items = [
+    {
+      id: "a",
+      title: "In the old file",
+      page: 1,
+      position: { top: 0, left: 0 },
+      created: "2026-11-23T08:00:00.000Z",
+    },
+  ];
+  await h.receive({ type: "ready" });
+  h.panel.bookmarks.set(items, h.panel.sha256!);
+  let stale = 0;
+  h.panel.bookmarks.onStale(() => {
+    stale++;
+  });
+  const sent = () => h.posted.filter((m) => m.type === "bookmarks").length;
+  const before = sent();
+  // The same bytes again (a touch of the file): still the same PDF's bookmarks.
+  await h.panel.reloadFromDisk();
+  assert.equal(stale, 0);
+  assert.equal(sent(), before + 1);
+  // A different PDF in its place, which may not even open: the old list is
+  // not what its viewer is told.
+  bytes = new Uint8Array([37, 80, 68, 70, 45, 50]);
+  await h.panel.reloadFromDisk();
+  assert.equal(stale, 1);
+  assert.equal(sent(), before + 1);
+  h.panel.bookmarks.set([], h.panel.sha256!);
+  assert.equal(sent(), before + 2);
+  // Once read for the new bytes, they are sent as usual to a new viewer.
+  await h.receive({ type: "ready" });
+  assert.equal(stale, 1);
+  assert.equal(sent(), before + 3);
 });

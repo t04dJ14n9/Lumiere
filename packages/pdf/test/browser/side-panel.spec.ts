@@ -164,6 +164,32 @@ test("Follow Cursor keeps the reading position's bookmark selected, its branch o
   await expect(partTwo).toHaveAttribute("aria-selected", "false");
 });
 
+test("a click selects its row at once and keeps it through the hold, until the reader moves on", async ({
+  page,
+}) => {
+  await openPanel(page);
+  const outline = tree(page, "Outline");
+  const partOne = outline.getByRole("treeitem", { name: /^Part One/u });
+  const section = outline.getByRole("treeitem", { name: /^Section 1\.2/u });
+  // Follow Cursor had Part One selected, and the click does not wait for it.
+  await expect(partOne).toHaveAttribute("aria-selected", "true");
+  await section.click();
+  await expect(section).toHaveAttribute("aria-selected", "true");
+  await expect(partOne).toHaveAttribute("aria-selected", "false");
+  await expect.poll(() => reading(page)).toMatchObject({ page: 3 });
+  // Through the hold and after it, while the reader stays where the click landed.
+  await page.waitForTimeout(1400);
+  await expect(section).toHaveAttribute("aria-selected", "true");
+  // Moving on gives the selection back to Follow Cursor.
+  await act(page, { action: "goToPage", page: 9 });
+  await expect(
+    outline.getByRole("treeitem", { name: /^Part Two/u }),
+  ).toHaveAttribute("aria-selected", "true");
+  await expect(
+    outline.getByRole("treeitem", { name: /^Section 1\.2/u }),
+  ).toHaveCount(0);
+});
+
 test("Follow Cursor off leaves the branches as the reader opened them", async ({
   page,
 }) => {
@@ -185,6 +211,39 @@ test("Follow Cursor off leaves the branches as the reader opened them", async ({
   await expect(outline.getByRole("treeitem")).toHaveCount(5);
   await page.getByRole("button", { name: "Collapse All" }).click();
   await expect(outline.getByRole("treeitem")).toHaveCount(2);
+});
+
+test("Follow Cursor is read at each move, so changing the setting takes effect without leaving the page", async ({
+  page,
+}) => {
+  await openPanel(page);
+  const outline = tree(page, "Outline");
+  const partTwo = outline.getByRole("treeitem", { name: /^Part Two/u });
+  const section = outline.getByRole("treeitem", { name: /^Section 2\.1/u });
+  const settings = (outlineFollowCursor: boolean) => ({
+    type: "viewSettings" as const,
+    settings: {
+      defaultZoom: "fitWidth" as const,
+      pageLayout: "single" as const,
+      scrollMode: "continuous" as const,
+      scrollDirection: "vertical" as const,
+      smoothScrolling: false,
+      regionsEnabled: false,
+      arrowsKeepPlace: true,
+      outlineFollowCursor,
+    },
+  });
+  await act(page, { action: "goToPage", page: 9 });
+  await expect(partTwo).toHaveAttribute("aria-selected", "true");
+  // Off: the next move, on this same page, selects nothing new.
+  await send(page, settings(false));
+  await send(page, { type: "goTo", location: { page: 9 }, top: 140 });
+  await expect(partTwo).toHaveAttribute("aria-selected", "false");
+  await expect(section).toHaveAttribute("aria-selected", "false");
+  // On again: the next move on the same page follows.
+  await send(page, settings(true));
+  await send(page, { type: "goTo", location: { page: 9 }, top: 150 });
+  await expect(section).toHaveAttribute("aria-selected", "true");
 });
 
 test("the tree is a VS Code tree to the keyboard: arrows move and fold, Enter opens", async ({

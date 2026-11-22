@@ -132,8 +132,12 @@ function feedPanel(options: Parameters<typeof fakePanel>[0] = {}) {
   const base = fakePanel(options);
   const listeners = new Set<() => void>();
   const closers = new Set<() => void>();
-  const sent: { items: readonly Bookmark[]; problem: string | undefined }[] =
-    [];
+  const staleListeners = new Set<() => void>();
+  const sent: {
+    items: readonly Bookmark[];
+    sha256: string;
+    problem: string | undefined;
+  }[] = [];
   const panel = {
     ...base,
     onDidChange: (listener: () => void) => {
@@ -141,8 +145,12 @@ function feedPanel(options: Parameters<typeof fakePanel>[0] = {}) {
       return { dispose: () => listeners.delete(listener) };
     },
     bookmarks: {
-      set: (items: readonly Bookmark[], problem?: string) =>
-        sent.push({ items, problem }),
+      set: (items: readonly Bookmark[], sha256: string, problem?: string) =>
+        sent.push({ items, sha256, problem }),
+      onStale: (listener: () => void) => {
+        staleListeners.add(listener);
+        return { dispose: () => staleListeners.delete(listener) };
+      },
     },
     webviewPanel: {
       onDidDispose: (listener: () => void) => {
@@ -156,7 +164,11 @@ function feedPanel(options: Parameters<typeof fakePanel>[0] = {}) {
     sent,
     report: () => listeners.forEach((listener) => listener()),
     close: () => closers.forEach((listener) => listener()),
+    /** The editor's viewer was given other bytes than the list was read for. */
+    stale: () => staleListeners.forEach((listener) => listener()),
     listeners,
+    closers,
+    staleListeners,
   };
 }
 
@@ -211,6 +223,7 @@ test("an editor's bookmarks are sent to it when it opens", async () => {
   const shown = await h.show();
   assert.deepEqual(shown.sent.at(-1), {
     items: [mark("a", 2, 0, "Methods")],
+    sha256: sha("a"),
     problem: undefined,
   });
   h.registration.dispose();
@@ -298,4 +311,57 @@ test("a closed editor, and a stopped plugin, are left alone", async () => {
   assert.equal(next.listeners.size, 0);
   assert.equal(h.listenerCount(), 0);
   assert.equal(h.files.watchers.size, 0);
+});
+
+test("a PDF replaced by another is read again when its list is said to be stale, with no report to wait for", async () => {
+  const h = await feeding((files) => {
+    files.files.set(
+      files.keyOf(sha("a")),
+      JSON.stringify({ version: 1, bookmarks: [mark("a", 2, 0, "Old PDF")] }),
+    );
+    files.files.set(
+      files.keyOf(sha("b")),
+      JSON.stringify({ version: 1, bookmarks: [mark("b", 3, 0, "New PDF")] }),
+    );
+  });
+  const shown = await h.show({ sha256: sha("a") });
+  assert.deepEqual(
+    shown.sent.at(-1)?.items.map((bookmark) => bookmark.title),
+    ["Old PDF"],
+  );
+  // The new file fails to open, so its viewer never reports: only the outlet knows.
+  (shown.panel as { sha256: string | undefined }).sha256 = sha("b");
+  shown.stale();
+  await tick();
+  const last = shown.sent.at(-1);
+  assert.deepEqual(
+    last?.items.map((bookmark) => bookmark.title),
+    ["New PDF"],
+  );
+  assert.equal(last?.sha256, sha("b"));
+  h.registration.dispose();
+});
+
+test("stopping the plugin lets go of every editor's subscriptions, though the editors stay open", async () => {
+  const h = await feeding();
+  const one = await h.show({ sha256: sha("one") });
+  const two = await h.show({ sha256: sha("two") });
+  assert.equal(one.closers.size, 1);
+  assert.equal(one.staleListeners.size, 1);
+  h.registration.dispose();
+  for (const shown of [one, two]) {
+    assert.equal(shown.closers.size, 0, "the editor's dispose listener");
+    assert.equal(shown.staleListeners.size, 0, "the stale listener");
+    assert.equal(shown.listeners.size, 0, "the change listener");
+  }
+  assert.equal(h.files.watchers.size, 0);
+});
+
+test("an editor that closes lets go of its own subscriptions", async () => {
+  const h = await feeding();
+  const shown = await h.show();
+  shown.close();
+  assert.equal(shown.closers.size, 0);
+  assert.equal(shown.staleListeners.size, 0);
+  h.registration.dispose();
 });

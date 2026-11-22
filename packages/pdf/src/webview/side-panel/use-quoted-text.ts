@@ -3,13 +3,18 @@ import { useEffect, useState } from "react";
 import { annotationKey } from "@embedpdf/engine-core/public";
 import type { PageRect } from "../../shared/geometry";
 import { oneLine, QUOTE_EXCERPT } from "../../shared/annotation-rows";
-import { RecentCache } from "../../shared/recent-cache";
+import { ScopedCache } from "../../shared/scoped-cache";
+import { annotationLoadState } from "../annotation-load-state";
 import { readText } from "../region-details";
 import { useTextAccess, type TextAccess } from "../text-access";
 
-/** Quotes kept, so a list scrolled back over is not read from the pages again. */
+/**
+ * Quotes kept, so a list scrolled back over is not read from the pages again.
+ * They belong to one load of the PDF: a reloaded file keeps page and object
+ * numbers, and its marks must not quote the old file's text.
+ */
 const KEPT_QUOTES = 500;
-const quotes = new RecentCache<string, string>(KEPT_QUOTES);
+const quotes = new ScopedCache<string>(KEPT_QUOTES);
 
 /**
  * The text a text mark covers: the characters inside each of its boxes,
@@ -23,9 +28,10 @@ export function useQuotedText(
 ): string | undefined {
   const access = useTextAccess();
   const key = annotationKey(mark.ref);
-  const [quote, setQuote] = useState(() => quotes.get(key));
+  const load = annotationLoadState()?.load;
+  const [quote, setQuote] = useState(() => quotes.get(load, key));
   useEffect(() => {
-    const kept = quotes.get(key);
+    const kept = quotes.get(load, key);
     if (kept !== undefined || !wanted || !access) {
       setQuote(kept);
       return;
@@ -33,7 +39,7 @@ export function useQuotedText(
     let current = true;
     void readQuote(access, mark).then((text) => {
       if (text !== undefined) {
-        quotes.set(key, text);
+        quotes.set(load, key, text);
       }
       if (current) {
         setQuote(text);
@@ -42,7 +48,7 @@ export function useQuotedText(
     return () => {
       current = false;
     };
-  }, [access, key, mark, wanted]);
+  }, [access, key, load, mark, wanted]);
   return quote;
 }
 

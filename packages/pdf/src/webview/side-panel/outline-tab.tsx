@@ -6,7 +6,6 @@ import {
   type OutlineRow,
   type OutlineRowId,
 } from "../../shared/outline-tree";
-import { currentViewSettings } from "../reading-position";
 import { ActionButton, EmptyMessage, SectionHeader } from "./section-header";
 import { Tree } from "./tree";
 import { useFollowedOutline } from "./use-followed-outline";
@@ -72,14 +71,11 @@ function useOutlineTree(
   const [expanded, setExpanded] = useState<ReadonlySet<OutlineRowId>>(
     () => new Set(),
   );
-  const [clicked, setClicked] = useState<{ id: OutlineRowId }>();
-  const follow = currentViewSettings().outlineFollowCursor !== false;
-  const followed = useFollowedOutline({
-    items,
-    enabled: follow,
-    onFollow: setExpanded,
-    clicked,
-  });
+  const {
+    click: clickRow,
+    id: selectedId,
+    reveal,
+  } = useFollowedOutline({ items, onFollow: setExpanded });
   const rows = useMemo(
     () => outlineRows(items ?? [], expanded),
     [items, expanded],
@@ -97,21 +93,25 @@ function useOutlineTree(
   }, []);
   const open = useCallback(
     (row: OutlineRow) => {
-      setClicked({ id: row.id });
+      clickRow(row.id);
       if (row.item.page !== undefined) {
         jumpTo({ page: row.item.page }, row.item.top);
+        // As a click on a folder in VS Code's trees opens it.
+        if (row.expandable && !row.expanded) {
+          toggle(row.id, true);
+        }
       } else if (row.expandable) {
         toggle(row.id, !row.expanded);
       }
     },
-    [jumpTo, toggle],
+    [jumpTo, toggle, clickRow],
   );
   return {
     rows,
     open,
     toggle,
-    reveal: followed.reveal,
-    selectedId: follow ? (followed.id ?? clicked?.id) : clicked?.id,
+    reveal,
+    selectedId,
     expandAll: () => setExpanded(branchIds(items ?? [])),
     collapseAll: () => setExpanded(new Set()),
   };
