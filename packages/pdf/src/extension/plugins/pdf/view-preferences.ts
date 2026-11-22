@@ -1,6 +1,7 @@
 import type * as vscode from "vscode";
 import type { PdfState } from "../../../shared/host";
 import type { ReadingPosition } from "../../../shared/reading-position";
+import type { SidePanelState } from "../../../shared/side-panel";
 import type { ViewSettings } from "../../../shared/view-settings";
 import type { PdfViewerPanel } from "../../../host/viewer/panel";
 import { PdfViewPreferences } from "../../../host/viewer/preferences";
@@ -34,6 +35,14 @@ export class ViewPreferences implements vscode.Disposable {
 
   save(uri: vscode.Uri, position: ReadingPosition): void {
     this.preferences.save(uri.toString(), position);
+  }
+
+  sidePanel(): SidePanelState | undefined {
+    return this.preferences.sidePanel();
+  }
+
+  saveSidePanel(state: SidePanelState): void {
+    this.preferences.saveSidePanel(state);
   }
 
   dispose(): void {

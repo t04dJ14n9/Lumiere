@@ -113,6 +113,17 @@ export const BOOKMARK_COMMAND_IDS = {
   deleteBookmark: "lumiere.pdf.deleteBookmark",
 } as const;
 
+/**
+ * The in-viewer side panel (#867). The title bar shows Show or Hide, whichever
+ * the panel is not, so its button reads as a toggle; the palette and keys get
+ * Toggle.
+ */
+export const SIDE_PANEL_COMMAND_IDS = {
+  toggleSidePanel: "lumiere.pdf.toggleSidePanel",
+  showSidePanel: "lumiere.pdf.showSidePanel",
+  hideSidePanel: "lumiere.pdf.hideSidePanel",
+} as const;
+
 export const IDE_CONTEXT_COMMAND_IDS = {
   copy: "lumiere.pdf.ideContext.copy",
   send: "lumiere.pdf.ideContext.send",
@@ -138,6 +149,7 @@ export const RUNTIME_COMMAND_IDS: readonly string[] = [
   ...Object.values(LOOK_UP_COMMAND_IDS),
   ...Object.values(OUTLINE_COMMAND_IDS),
   ...Object.values(BOOKMARK_COMMAND_IDS),
+  ...Object.values(SIDE_PANEL_COMMAND_IDS),
   ...Object.values(AGENT_BRIDGE_COMMAND_IDS),
   ...Object.values(IDE_CONTEXT_COMMAND_IDS),
 ];

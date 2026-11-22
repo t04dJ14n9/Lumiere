@@ -181,10 +181,10 @@ function refreshEntry(
       entry.command = view.canGoForward ? item.command : undefined;
       return;
     case "historyBack":
-      entry.command = panel?.canHistoryBack ? item.command : undefined;
+      entry.command = panel?.historyButtons.back ? item.command : undefined;
       return;
     case "historyForward":
-      entry.command = panel?.canHistoryForward ? item.command : undefined;
+      entry.command = panel?.historyButtons.forward ? item.command : undefined;
       return;
     default:
       return;

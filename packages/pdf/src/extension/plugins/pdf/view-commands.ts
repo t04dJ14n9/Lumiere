@@ -9,7 +9,10 @@ import {
 import { VIEW_ACTION_COMMANDS } from "../../../shared/view-commands";
 import { ZOOM_STEPS } from "../../../shared/zoom-steps";
 import type { PdfPanels } from "./panels";
-import { VIEW_COMMAND_IDS } from "../../../shared/command-ids";
+import {
+  SIDE_PANEL_COMMAND_IDS,
+  VIEW_COMMAND_IDS,
+} from "../../../shared/command-ids";
 
 /**
  * The commands behind the viewer's controls, wherever they are: the editor
@@ -20,6 +23,12 @@ export function registerViewCommands(panels: PdfPanels): vscode.Disposable {
   return vscode.Disposable.from(
     ...VIEW_ACTION_COMMANDS.map(({ id, action }) =>
       vscode.commands.registerCommand(id, () => panels.active?.act(action)),
+    ),
+    // Show and Hide are the same toggle: each is offered only while it applies.
+    ...Object.values(SIDE_PANEL_COMMAND_IDS).map((id) =>
+      vscode.commands.registerCommand(id, () =>
+        panels.active?.sidePanel.toggle(),
+      ),
     ),
     vscode.commands.registerCommand(
       VIEW_COMMAND_IDS.goToPage,

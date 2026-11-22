@@ -15,7 +15,8 @@ in [README.md](README.md). Highlight **store** is vault Markdown (Chrome
 | pdfBacklinks | Vault Markdown index → backlink overlays on open PDF | Derived cache only, built from the first PDF opened; refresh on MD save, one push per burst |
 | pdfRegions | Empty-page / Select Region + optional `viewrect=` in the Copy link locator | **Off by default** (`lumiere.pdf.regions.enabled`) |
 | pdfOutline | Explorer PDF Outline + Follow Cursor | Accordion like Markdown Outline |
-| pdfBookmarks | The reader's own bookmarks: **Add Bookmark** (⌘D / Ctrl+D), **Go to Bookmark…** (Quick Pick, rename and delete buttons), Explorer **PDF Bookmarks** view | Kept in `<annotations folder>/<sha256>.bookmarks.json` (`{ "version": 1, "bookmarks": [{ id, title, page, position, created }] }`), merged by id, watched across windows; a sidecar, so the PDF is never written and protected folders are fine |
+| pdfBookmarks | The reader's own bookmarks: **Add Bookmark** (⌘D / Ctrl+D), **Go to Bookmark…** (Quick Pick, rename and delete buttons), Explorer **PDF Bookmarks** view | Kept in `<annotations folder>/<sha256>.bookmarks.json` (`{ "version": 1, "bookmarks": [{ id, title, page, position, created }] }`), merged by id, watched across windows; a sidecar, so the PDF is never written and protected folders are fine. Also sent to each editor's side panel Bookmarks tab (`panel-feed.ts`) |
+| (pdf) | **PDF: Toggle Side Panel** and its editor title button: a panel inside the viewer (Thumbnails, Outline, Bookmarks, Annotations) that goes with the PDF into a floating window | Hidden at first; state per editor, the last choice starts the next (`lumiere.pdf.sidePanel`); no default key. The native PDF Outline is unchanged |
 | pdfHistory | In-memory Back / Forward for deliberate jumps | |
 | pdfToolbar | Chrome / slim controls | |
 | pdfSettings | PDF: Open Settings / Change Setting… | |

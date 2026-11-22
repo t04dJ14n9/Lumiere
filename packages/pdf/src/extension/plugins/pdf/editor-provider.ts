@@ -27,6 +27,8 @@ export class PdfEditorProvider implements vscode.CustomReadonlyEditorProvider {
       settings: this.preferences.settings(uri),
       position: this.preferences.position(uri),
       savePosition: (position) => this.preferences.save(uri, position),
+      sidePanel: this.preferences.sidePanel(),
+      saveSidePanel: (state) => this.preferences.saveSidePanel(state),
       // Messages arrive only after the page loads, once `panel` is set.
       route: (message) => this.panels.route(panel, message),
     });

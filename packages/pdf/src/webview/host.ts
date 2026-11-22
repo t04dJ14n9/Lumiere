@@ -9,6 +9,7 @@ import { HostInbox } from "../shared/host-inbox";
 import { rememberAnnotationLoad } from "./annotation-load-state";
 import { rememberPageColors } from "./page-colors";
 import { createLoadReceiver, fetchPdfBytes } from "./load";
+import { prepareSidePanel } from "./side-panel/state";
 
 declare function acquireVsCodeApi(): { postMessage(message: unknown): void };
 
@@ -72,6 +73,7 @@ export function connectToHost(onLoad: (data: ArrayBuffer) => void): void {
           message.annotations,
         );
         prepareReadingPosition(message.settings, message.position);
+        prepareSidePanel(message.sidePanel);
         receiveBytes(message);
       } else {
         if (message.type === "pageColors") {

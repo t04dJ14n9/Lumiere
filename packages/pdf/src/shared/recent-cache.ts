@@ -5,7 +5,11 @@
 export class RecentCache<Key, Value> {
   private readonly values = new Map<Key, Value>();
 
-  constructor(private readonly limit: number) {}
+  constructor(
+    private readonly limit: number,
+    /** Told of each value dropped for room, or by `clear`: a value that holds a resource lets it go. */
+    private readonly onDrop?: (key: Key, value: Value) => void,
+  ) {}
 
   get size(): number {
     return this.values.size;
@@ -27,7 +31,17 @@ export class RecentCache<Key, Value> {
     this.values.set(key, value);
     while (this.values.size > this.limit) {
       const oldest = this.values.keys().next().value as Key;
+      const dropped = this.values.get(oldest) as Value;
       this.values.delete(oldest);
+      this.onDrop?.(oldest, dropped);
+    }
+  }
+
+  clear(): void {
+    const all = [...this.values];
+    this.values.clear();
+    for (const [key, value] of all) {
+      this.onDrop?.(key, value);
     }
   }
 

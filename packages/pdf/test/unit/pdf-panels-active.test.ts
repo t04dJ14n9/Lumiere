@@ -81,6 +81,7 @@ test("a PDF opened from a link with a #page fragment is the active one", () => {
       onDidDispose: subscription,
     },
     onDidChange: subscription,
+    sidePanel: { current: { open: false } },
     dispose: () => undefined,
   };
   panels.add(panel);
@@ -157,6 +158,7 @@ test("a view report sets only the context keys whose values changed", () => {
   const panel = {
     view,
     outline: [],
+    sidePanel: { current: { open: false } },
     onDidChange: (listener: () => void) => {
       changed = listener;
       return subscription();
@@ -174,4 +176,41 @@ test("a view report sets only the context keys whose values changed", () => {
   view.tool = "region";
   changed();
   assert.deepEqual(set.slice(first), ["lumiere.pdf.tool=region"]);
+});
+
+test("the title button follows whether the active editor's side panel is open", () => {
+  const set: string[] = [];
+  let changed = (): void => undefined;
+  class Panels extends PdfViewerPanels<never> {
+    constructor() {
+      super((key, value) => set.push(`${key}=${String(value)}`));
+    }
+    open(panel: never): void {
+      this.track(panel, { onState: subscription, onDispose: subscription });
+    }
+    protected findActive(panels: ReadonlySet<never>): never | undefined {
+      return [...panels][0];
+    }
+  }
+  const sidePanel = { current: { open: false } };
+  const panel = {
+    view: undefined,
+    outline: [],
+    sidePanel,
+    onDidChange: (listener: () => void) => {
+      changed = listener;
+      return subscription();
+    },
+    dispose: () => undefined,
+  } as unknown as never;
+  const panels = new Panels();
+  panels.open(panel);
+  assert.ok(set.includes("lumiere.pdf.sidePanelOpen=false"));
+  sidePanel.current = { open: true };
+  changed();
+  assert.equal(set.at(-1), "lumiere.pdf.sidePanelOpen=true");
+  // Another report with the panel still open sets no key again.
+  const count = set.length;
+  changed();
+  assert.equal(set.length, count);
 });

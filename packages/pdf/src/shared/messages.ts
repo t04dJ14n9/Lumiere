@@ -30,6 +30,9 @@
  *    │                                    from the context menu)
  *    │  pdfBacklinks { load, hits } ►     vault Markdown PDF backlink overlays
  *    │  ◄──────────── openBacklinkNote   click a backlink overlay → open note
+ *    │  sidePanel / bookmarks ►           the side panel's state and the PDF's
+ *    │  ◄──────────── sidePanel,          bookmarks, and the reader's changes to
+ *    │                bookmarkAction      them (see side-panel-messages.ts)
  *
  * State reports are batched: the viewer collects what changed for a frame
  * and sends one `patch` (only the latest of each part), so scrolling or a
@@ -64,6 +67,12 @@ import {
 } from "./backlink-messages";
 import type { PdfLocation } from "./pdf-location";
 import { parseSelection, type PdfSelection } from "./selection";
+import type { SidePanelState } from "./side-panel";
+import {
+  SIDE_PANEL_VIEWER_PARSERS,
+  type SidePanelHostMessage,
+  type SidePanelViewerMessage,
+} from "./side-panel-messages";
 import {
   isFloatingDock,
   type FloatingDock,
@@ -143,6 +152,7 @@ export type ViewerMessage =
   | { type: "zen"; exit: boolean }
   | { type: "error"; message: string }
   | AnnotationViewerMessage
+  | SidePanelViewerMessage
   | OpenBacklinkNoteMessage;
 
 /**
@@ -164,6 +174,8 @@ export type HostMessage =
       position?: ReadingPosition;
       /** The text of the annotation file kept for these bytes (`annotation-store`), if any. */
       annotations?: string;
+      /** The side panel as this editor left it, for a viewer that has no state of its own. */
+      sidePanel?: SidePanelState;
     } & PdfDelivery)
   /**
    * `top` and `left`: with no box, show the page from this many points below
@@ -198,6 +210,7 @@ export type HostMessage =
   /** Host-resolved page colors; webview must not re-derive theme kind. */
   | { type: "pageColors"; effective: "normal" | "dark" }
   | AnnotationHostMessage
+  | SidePanelHostMessage
   | PdfBacklinksHostMessage;
 
 const MAX_OUTLINE_ITEMS = 10_000;
@@ -264,6 +277,7 @@ const VIEWER_PARSERS: Readonly<
       ? { type: "error", message: message.message.slice(0, 1_000) }
       : undefined,
   ...ANNOTATION_VIEWER_PARSERS,
+  ...SIDE_PANEL_VIEWER_PARSERS,
 };
 
 function parseHistoryJump(message: Fields): ViewerMessage | undefined {

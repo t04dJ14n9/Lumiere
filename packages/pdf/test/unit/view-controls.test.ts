@@ -107,6 +107,7 @@ test("view settings parse defaults, percentages and malformed configuration with
     arrowsKeepPlace: true,
     keyboardShortcuts: true,
     predominantAxis: true,
+    outlineFollowCursor: true,
   });
   const settings = {
     defaultZoom: "actual",
@@ -118,6 +119,7 @@ test("view settings parse defaults, percentages and malformed configuration with
     arrowsKeepPlace: false,
     keyboardShortcuts: false,
     predominantAxis: false,
+    outlineFollowCursor: false,
   };
   assert.deepEqual(parseViewSettings(settings), settings);
   assert.equal(

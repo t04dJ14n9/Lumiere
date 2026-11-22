@@ -6,7 +6,7 @@ import { useStageApi, type StageApi } from "./stage-capability";
 
 /** Elements that keep the arrow keys for themselves (text, numbers, menus). */
 const OWN_KEYS =
-  'input, textarea, select, [contenteditable], [role="slider"], [role="spinbutton"], [role="listbox"], [role="menu"], [role="combobox"], .view-menu';
+  'input, textarea, select, [contenteditable], [role="slider"], [role="spinbutton"], [role="listbox"], [role="menu"], [role="combobox"], .view-menu, .side-panel';
 
 export interface PagingInput {
   mode: ScrollMode;

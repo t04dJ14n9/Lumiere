@@ -2,6 +2,18 @@
 
 ## Unreleased
 
+- **Side panel**, inside the viewer, for a PDF in a floating window (#867).
+  **PDF: Toggle Side Panel** and an editor title button (`layout-sidebar-left`
+  while open, `-off` while closed) show Thumbnails, Outline, Bookmarks and
+  Annotations on the viewer's left. State is kept by the extension per editor
+  (`PanelSidePanel`: open, width, tab) and, as the next editor's start, in the
+  global state (`lumiere.pdf.sidePanel`); it travels in `load` and in
+  `sidePanel` messages. The Bookmarks tab is fed by the extension
+  (`bookmarks` messages; `bookmarkAction` back), through the same store and
+  input boxes as the commands. Follow Cursor follows
+  `lumiere.pdf.outline.followCursor` (`ViewSettings.outlineFollowCursor`).
+  The panel lists and trees draw only the rows in view (`list-window.ts`).
+
 - **Bookmarks**, your own named places in a PDF (#867). **PDF: Add Bookmark**
   (⌘D / Ctrl+D) saves the page and the point on it under a title that starts
   as the outline section you are in; **PDF: Go to Bookmark…** is a Quick Pick

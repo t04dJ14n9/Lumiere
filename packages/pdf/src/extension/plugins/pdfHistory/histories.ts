@@ -74,7 +74,7 @@ export class PdfHistories {
     for (const [panel, state] of this.states) {
       state.generation++;
       panel.cancelHistoryRestore();
-      panel.setHistoryState(false, false);
+      panel.historyButtons.set(false, false);
     }
     this.states.clear();
     this.publish();
@@ -89,7 +89,7 @@ export class PdfHistories {
         continue;
       }
       const ready = Boolean(panel.view) && !state.busy;
-      panel.setHistoryState(
+      panel.historyButtons.set(
         ready && state.history.canGoBack,
         ready && state.history.canGoForward,
       );

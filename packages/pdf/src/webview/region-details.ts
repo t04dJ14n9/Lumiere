@@ -44,7 +44,7 @@ export async function readRegionDetails(
  * Read the characters inside the region, not the text of the lines it
  * crosses: a region cuts a table row or a column out of them.
  */
-async function readText(
+export async function readText(
   access: TextAccess | null,
   page: PageRef,
   rect: PageRect,

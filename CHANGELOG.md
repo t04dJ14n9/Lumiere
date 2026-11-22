@@ -39,6 +39,21 @@
   selection and headings, the PDF viewed last with its page and selected
   passage or region, and the open Lumiere tabs), which text-editor
   integrations cannot see in a custom editor.
+  when it lands. MCP tools for bookmarks (#864) come later.
+- PDF: a side panel inside the viewer, for a PDF in a floating window (#867).
+  A PDF moved with **View: Move Editor into New Window** has no side bar, so
+  the PDF Outline in the Explorer is out of reach (reaching it means clicking
+  the main window, which makes that window's note the active editor and hides
+  the PDF Outline). **PDF: Toggle Side Panel**, and a button in the editor
+  title bar (floating windows have one too), show a panel on the viewer's left
+  that goes with the PDF: **Thumbnails** (drawn only for the pages in view),
+  the **Outline** with Follow Cursor, your **Bookmarks** with Add, Rename and
+  Delete, and every **Annotation** in reading order with its colour, the text
+  it marks and its note. Each takes the viewer to a place, and Back returns.
+  It is hidden at first; it looks like VS Code's own side bar and Panel
+  (theme colours, 22 px rows, twisties and indent guides, a sash to resize it,
+  the keys of a VS Code list, high-contrast themes). The PDF Outline in the
+  Explorer is unchanged: it still shows only while a PDF is active.
 - Release workflow: a version published as a Marketplace pre-release is a
   GitHub pre-release too.
 - Markdown: a long run of `[[` with no `]]` after it no longer renders in

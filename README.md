@@ -131,6 +131,9 @@ vault over.
 - **Your own bookmarks.** Add Bookmark (⌘D, Ctrl+D) saves a place under a title,
   Go to Bookmark… returns to it, and a PDF Bookmarks view in the Explorer lists
   them. They are kept beside the annotations, never in the PDF.
+- **A side panel in the viewer.** Thumbnails, the outline, your bookmarks and
+  the annotations in a panel that goes with the PDF, so a PDF in a floating
+  window still has them (**PDF: Toggle Side Panel**).
 - **Annotations.** Select text and right-click for Highlight, Underline,
   Strikeout, Squiggly or a highlight with a note written in Markdown. Marks
   are kept outside the PDF, under `.lumiere/pdf-annotations/`, and the PDF

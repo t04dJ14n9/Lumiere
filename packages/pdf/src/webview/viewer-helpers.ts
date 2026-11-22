@@ -1,4 +1,5 @@
 import { useState, type Dispatch, type SetStateAction } from "react";
+import type { PdfLocation } from "../shared/pdf-location";
 import type { ViewChoices } from "../shared/view-settings";
 import type { Navigation } from "./navigation";
 import type { useJumpHistory } from "./jump-history";
@@ -23,6 +24,9 @@ export function rememberedChoices(): ViewChoices {
 export function withHistory(navigation: Navigation, history: JumpHistory) {
   return {
     ...navigation,
+    /** A deliberate move to a place on a page (a panel row, a bookmark). */
+    jumpTo: (location: PdfLocation, top?: number, left?: number) =>
+      history.jump(() => navigation.show(location, top, left)),
     goToPage: (page: number, top?: number) =>
       history.jump(() => navigation.goToPage(page, top)),
     reveal: (

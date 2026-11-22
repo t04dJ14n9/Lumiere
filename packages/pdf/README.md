@@ -142,6 +142,9 @@ is opt-in (`lumiere.pdf.regions.enabled`, default off).
   in a book or a chapter to revisit: **PDF: Add Bookmark**, **PDF: Go to
   Bookmark…** and a **PDF Bookmarks** view in the Explorer. They are not the
   PDF's outline. See [Bookmarks](#bookmarks).
+- **Side panel.** A panel inside the viewer, hidden until you turn it on,
+  with Thumbnails, Outline, Bookmarks and Annotations, for a PDF in a floating
+  window, which has no side bar. See [Side panel](#side-panel).
 - **Section links from notes.** In a Markdown note in Lumiere, typing
   `[[paper.pdf#` lists the PDF's bookmarks; typing more filters them, and
   picking one inserts `[[paper.pdf#page=5|Methods]]` (or
@@ -246,6 +249,80 @@ virtual workspace it shows the next time you switch to the PDF, as with
 annotations, and a PDF outside every folder that is not a local file has
 nowhere to keep bookmarks). Two windows changing a PDF's bookmarks at the same instant can
 keep only one of the changes.
+
+## Side panel
+
+A PDF moved into a floating window (**View: Move Editor into New Window**) has
+no side bar: VS Code gives such a window only editors, a title bar and a status
+bar. The PDF Outline in the Explorer is then out of reach, because reaching it
+means clicking the main window, which makes that window's note the active
+editor, and the PDF Outline shows only while a PDF is active. That is as it
+should be, and it is unchanged. The fix is a panel inside the viewer, which goes
+with the PDF wherever it is.
+
+- **Turning it on.** **PDF: Toggle Side Panel**, or the button in the editor
+  title bar (`layout-sidebar-left-off` to show it, `layout-sidebar-left` to hide
+  it, as VS Code's own side bar toggles; a floating window has the title bar
+  button too). It is hidden at first, and manual: nothing detects a floating
+  window. It takes no default key (the free ones are VS Code's, or are taken
+  by the viewer); bind `lumiere.pdf.toggleSidePanel` in Keyboard Shortcuts, with
+  the `when` of the other viewer keys if you like
+  (`activeCustomEditorId == 'lumiere.pdf.viewer' && !inputFocus`).
+  The panel never takes the keyboard from the pages: it has it only after you
+  click into it or Tab to it.
+- **Remembered.** The extension keeps the panel's state, open or not, its width
+  and its tab, for each PDF editor while it exists (hiding and showing the tab,
+  moving it into a window, or the file changing leave it as it was), and the last
+  state you chose in any editor, in the extension's global state, as the start of
+  the next one. So a new PDF opens with the panel as you last left it, and each
+  open PDF keeps its own.
+- **Thumbnails.** Small pictures of the pages, drawn by EmbedPDF's render plugin
+  as they scroll into view: only the pages in view and a few around them are
+  drawn (nearest the middle first), a page scrolled away before it was drawn is
+  cancelled, and the pictures kept are limited, so a thousand-page PDF costs
+  no more than a short one. The page number is under each; the page being read
+  is selected, and a click goes to a page. The paper's colour (dark paper) and
+  new marks draw them again.
+- **Outline.** The PDF's own outline as a tree: a click goes to the bookmark's page
+  and place; the twisty, and the Left and Right keys, close and open a branch.
+  Expand All and Collapse All are in its header. **Follow Cursor**, the Explorer
+  view's setting (`lumiere.pdf.outline.followCursor`, on by default), keeps the
+  bookmark of your reading position selected, with its parents and its own
+  sub-bookmarks open and every other branch closed (the same rule as the
+  Explorer's: `findActiveOutlineItem`). A click leaves the tree as it is for a
+  second, so a double-click's second click does not land on another row.
+- **Bookmarks.** Your own bookmarks, from the same file as the **PDF Bookmarks**
+  view and **Go to Bookmark…** (see [Bookmarks](#bookmarks)): a click goes to
+  one; Add Bookmark (header button), Rename (F2, or the pencil on a row) and
+  Delete (the Delete key, or the trash on a row) ask the extension, which
+  shows the same input boxes and writes the file, so the extension stays the
+  only writer. A change made in another window shows here when it lands.
+- **Annotations.** Every mark of the PDF, yours and the file's own, in reading
+  order: its icon, its colour, the text it marks (read from the page, for the
+  rows in view), its note, and its page. A click goes to the mark and flashes its box.
+  Links, popups' anchors and form fields are not listed.
+- **Looks like VS Code.** It uses only VS Code's theme variables (`sideBar.*`,
+  `sideBarSectionHeader.*`, `list.*`, `tree.indentGuidesStroke`, `focusBorder`,
+  `sash.hoverBorder`, `panelTitle.*`, `badge.*`) and its fonts, with codicons for
+  every icon. The tabs are icons (four names do not fit a narrow panel; each has
+  a tooltip and an accessible name) styled as the Panel's title tabs; rows are 22
+  px with twisties and indent guides; a 4 px sash on the right edge resizes the
+  panel (160 px up to 60 % of the viewer; double-click, or Enter on the sash,
+  puts it back to 240 px; the Left and Right keys move it from the keyboard).
+  High-contrast themes draw the borders and outlines their variables ask for.
+- **Keys**, as in a VS Code list: Up and Down, Home and End, Page Up and Page Down
+  move; Left and Right close and open a branch (and step out of and into it);
+  Enter and Space open the row. Left and Right on the tabs move between and choose
+  them. These keys are the panel's while it has the keyboard, not the pages'
+  (Find, and Escape for it, work as in the pages). Roles are `tablist`, `tab` and
+  `tabpanel`, and `tree` and `treeitem` with `aria-level` and `aria-expanded`
+  (`listbox` and `option` for the flat lists), with the focused row as the list's
+  `aria-activedescendant`.
+
+**Limits.** The panel's state is not kept across a VS Code restart for a PDF
+editor of its own (the last choice starts it). Search results and attachments
+are not here yet. The Outline tab follows the cursor as the reader moves, and
+takes the setting at the next move after it changes.
 
 ## Toolbar and shortcuts
 
@@ -476,6 +553,9 @@ src/
 │   ├── region-text.ts    the text inside a region, line by line
 │   ├── outline-sections.ts  a PDF's bookmarks as a flat list of pages and titles
 │   ├── zoom-steps.ts     the zoom levels the buttons and keys step through
+│   ├── side-panel.ts, side-panel-messages.ts  the panel's state, and its messages
+│   ├── list-window.ts, thumbnails.ts, tree-keys.ts, outline-tree.ts,
+│   │                     annotation-rows.ts  what the panel's lists show and do
 │   ├── view-state.ts     page and zoom reported by the viewer; view actions
 │   ├── toolbar-settings.ts  toolbar modes; old floating-bar values still parse
 │   ├── picture-swap.ts   a page keeps its picture until the next is decoded
@@ -499,6 +579,8 @@ src/
 │       │                       selections, navigation, view commands, page HTML
 │       ├── pdfToolbar/         where the controls go; status bar entries
 │       ├── pdfOutline/         the PDF Outline tree
+│       ├── pdfBookmarks/       Add and Go to Bookmark, the Explorer view, and the
+│       │                       side panel's Bookmarks (panel-feed.ts)
 │       ├── pdfRegions/         region snapshots saved for agents (size-capped)
 │       └── agentBridge/        AgentHandoff (Copy link to this), the agent
 │                               chat, and the opt-in MCP bridge (mcp/), whose
@@ -531,6 +613,7 @@ src/
     ├── annotation-store-sync.ts     another pane's saved marks, shown here
     ├── selection.ts            reporting text and region selections
     ├── region-details.ts       a region's text and PNG snapshot
+    ├── side-panel/             the side panel: tabs, trees, thumbnails, sash
     ├── drag-release.ts         ending drags released outside the viewer
     ├── secondary-buttons.ts    right-clicks left to the context menu
     └── styles/                 CSS using VS Code theme colours
