@@ -21,7 +21,7 @@ default-src 'none'; script-src 'unsafe-inline' 'unsafe-eval' S https:; style-src
 
 It lets the page's own inline scripts and styles, and the vault's, run; and `https:` scripts and styles, for the library a page loads from a CDN, which a trusted workspace allows. `unsafe-eval` is there because many generated pages (charts, dashboards) need it, and a page that can run its own script gains nothing from it. Images, fonts and media also come from `data:` and `blob:` and `https:`; the page may `fetch` the vault and `https:`. Forms cannot navigate, no other `<base>` takes effect (ours is first, and `base-uri` allows no other), and nothing is allowed that is not named.
 
-If the plugin is turned off the command does not exist, and navigation opens an HTML file as text.
+If the plugin is turned off its tabs are closed (they are the plugin's; a page does not outlive it), a file still being read makes no tab, the command does not exist, and navigation opens an HTML file as text.
 
 ## Files
 

@@ -9179,7 +9179,7 @@ editor page's message check were removed with it.
 
 Design.
 
-- `resources`: `Resource["kind"]` has `"html"` (`resourceKind`, `isHtmlFile` in
+- `resources`: `Resource["kind"]` has `"html"` (`resourceKind`, `isHtmlPath` and `isHtmlLinkTarget` in
   `src/shared/html-file.ts`); the resource carries the file's address and no
   text, so a missing or escaping file fails as any embed's does. The resources
   api also exports the containment functions, so the viewer reuses the rule.
@@ -9270,6 +9270,21 @@ the column. (2) `htmlEmbedTarget` and
 rule), so `![alt](https://host/page.html)` is no card and an `html-embed` block
 naming an address or `C:/…` stays code. (3) `embedsNote` is false for an
 `html-embed` block, so `EmbedBlock` watches no height and keeps none.
+
+Review fixes, second round (2026-11-22). (4) The viewer's tabs were not tied to the
+plugin's lifecycle: turning `lumiere.markdown.plugins.htmlViewer.enabled` off left
+them open and running scripts, and a read that finished after the stop still made a
+panel. The plugin now keeps the tabs it opened (one per file; asking again gives the
+same panel, which the adapter keeps), closes them in a `ctx.effect` cleanup (as
+`graph/session.ts` and `gitDiffEditor/host.ts` do), forgets one the reader closes, and
+makes no panel when `ctx.isLive` is false after the read. (5) `isHtmlFile` stripped
+`?` and `#`, right for a link's text and wrong for a decoded file path, where they are
+part of the name: `C# notes.html` was not HTML, so it was a generic card and opened as
+text. Two checks now (`src/shared/html-file.ts`): `isHtmlPath` for a vault path or a
+decoded URI path (`resourceKind`, the viewer's request, navigation), by extension
+alone; and `isHtmlLinkTarget` for a link's text, read as `resources` reads it (a
+wikilink ends at its first `#`; a Markdown destination ends at its first literal `#`
+and is then percent-decoded, so `%23` stays in the name; `?` is part of the name).
 
 Left for a separate change. `fromHost` (`webview/transport.ts`) accepts a message
 with no `source`, and a frame removed right after it posted reaches the page that
