@@ -1,6 +1,6 @@
 # Changelog
 
-## Unreleased
+## 0.1.21 (pre-release, 2026-11-22)
 
 - Markdown: a link to a local HTML file in the vault (`[Open](/wiki/diagram.html)`),
   and the Open button of an HTML embed's card, open the page in VS Code's
