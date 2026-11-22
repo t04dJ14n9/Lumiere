@@ -1,5 +1,14 @@
 # Changelog
 
+## 0.1.23 (2026-11-22)
+
+The same extension as 0.1.22, published on the Marketplace as a release
+instead of a pre-release.
+
+- Release workflow: the version's heading in this changelog picks the
+  Marketplace channel. A heading marked `(pre-release, …)` publishes a
+  pre-release, and any other a release.
+
 ## 0.1.22 (pre-release, 2026-11-22)
 
 - Markdown: a jump to a heading (a click in the Markdown Outline, Go to Heading,
