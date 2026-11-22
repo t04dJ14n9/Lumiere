@@ -1,6 +1,25 @@
 import type { OutlineItem } from "./messages";
 
 /**
+ * The position Follow Cursor asks `findActiveOutlineItem` about, for the
+ * Explorer's PDF Outline and the viewer's side panel alike: the page shown,
+ * with the offset only where it belongs to that page. The offset is the
+ * reading place's, which is on `readingPage`, the first visible page: in a
+ * spread, or at the end of a PDF whose last page cannot scroll to the top,
+ * that precedes the page shown, and then the page counts from its top.
+ */
+export function followPosition(view: {
+  page: number;
+  readingPage: number;
+  top: number;
+}): { page: number; top: number } {
+  return {
+    page: view.page,
+    top: view.readingPage === view.page ? view.top : 0,
+  };
+}
+
+/**
  * The last bookmark destination at or before the reading position. Destinations
  * need not be in page order; at identical destinations the deeper heading wins.
  * Entries without a local destination only group their children.

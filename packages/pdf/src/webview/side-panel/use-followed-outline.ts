@@ -1,7 +1,7 @@
 import { useStageEvent } from "@embedpdf/react/stage";
 import { useCallback, useEffect, useRef, useState } from "react";
 import type { OutlineItem } from "../../shared/messages";
-import { findActiveOutlineItem } from "../../shared/outline";
+import { findActiveOutlineItem, followPosition } from "../../shared/outline";
 import { CLICK_HOLD_MS, OutlineClickHold } from "../../shared/outline-click";
 import {
   followedBranches,
@@ -9,7 +9,7 @@ import {
   type OutlineRowId,
 } from "../../shared/outline-tree";
 import { currentViewSettings } from "../reading-position";
-import { useStageApi } from "../stage-capability";
+import { useStageApi, type StageApi } from "../stage-capability";
 import { readingPlace } from "../stage-position";
 
 export interface FollowedOutline {
@@ -92,15 +92,25 @@ export function useFollowedOutline(options: {
   return { id: clicked ?? followed.id, reveal: followed.reveal, click };
 }
 
-/** The row of the bookmark the reader's position is at, if it is at one. */
+/**
+ * The row of the bookmark the reader's position is at, if it is at one, by the
+ * rule the Explorer's outline follows (`followPosition`): the page shown, and
+ * the offset only when it is on that page.
+ */
 function activeRowId(
   items: readonly OutlineItem[],
-  stage: Parameters<typeof readingPlace>[0],
+  stage: StageApi,
 ): OutlineRowId | undefined {
   const place = readingPlace(stage);
-  const item =
-    place && findActiveOutlineItem(items, { page: place.page, top: place.top });
-  return outlineRowIdOf(items, item);
+  if (!place) {
+    return undefined;
+  }
+  const position = followPosition({
+    page: stage.getCurrentPageIndex() + 1,
+    readingPage: place.page,
+    top: place.top,
+  });
+  return outlineRowIdOf(items, findActiveOutlineItem(items, position));
 }
 
 /** Run something after a delay, replacing what was waiting; nothing runs once the viewer is gone. */

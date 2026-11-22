@@ -4,6 +4,7 @@ import type { OutlineItem } from "../../src/shared/messages";
 import {
   findActiveOutlineItem,
   flattenOutlineForPicker,
+  followPosition,
 } from "../../src/shared/outline";
 
 const heading = (
@@ -120,4 +121,35 @@ test("flattenOutlineForPicker lists navigable bookmarks with page labels and anc
     },
   ]);
   assert.deepEqual(flattenOutlineForPicker([]), []);
+});
+
+test("the position Follow Cursor follows is the page shown, and the offset only where it belongs to that page", () => {
+  // Alone on its page, the reader's offset is where they are in it.
+  assert.deepEqual(followPosition({ page: 3, readingPage: 3, top: 120 }), {
+    page: 3,
+    top: 120,
+  });
+  // In a spread, or at the end of a PDF, the page shown can come after the
+  // first visible one: the offset belongs to the earlier page, so the shown
+  // page counts from its top.
+  assert.deepEqual(followPosition({ page: 4, readingPage: 3, top: 300 }), {
+    page: 4,
+    top: 0,
+  });
+});
+
+test("in a spread the Explorer and the side panel select the heading at the top of the page shown, not the earlier one", () => {
+  const earlier = heading("Earlier", 3, 100);
+  const later = heading("Later", 4);
+  const view = { page: 4, readingPage: 3, top: 300 };
+  // The offset 300 of page 3 would pass "Earlier" and stop there; the rule
+  // takes the heading at the top of page 4.
+  assert.equal(
+    findActiveOutlineItem([earlier, later], followPosition(view)),
+    later,
+  );
+  assert.equal(
+    findActiveOutlineItem([earlier, later], { page: 3, top: view.top }),
+    earlier,
+  );
 });

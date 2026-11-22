@@ -8,6 +8,7 @@ function fakeRender() {
   const requests: {
     page: number;
     width: number;
+    rotation: number | undefined;
     signal: AbortSignal;
     finish: () => void;
     fail: (error: Error) => void;
@@ -16,12 +17,13 @@ function fakeRender() {
   const render = {
     renderPage: (
       page: number,
-      options: { width: number; signal: AbortSignal },
+      options: { width: number; rotation?: number; signal: AbortSignal },
     ) =>
       new Promise((resolve, reject) => {
         const request = {
           page,
           width: options.width,
+          rotation: options.rotation,
           signal: options.signal,
           finish: () =>
             resolve({
@@ -45,12 +47,16 @@ function fakeRender() {
 
 const settle = () => new Promise<void>((resolve) => setImmediate(resolve));
 
-function open() {
+function open(rotationOf: (page: number) => 0 | 90 | 180 | 270 = () => 0) {
   const fake = fakeRender();
   let changes = 0;
-  const images = new ThumbnailImages(fake.render as never, () => {
-    changes++;
-  });
+  const images = new ThumbnailImages(
+    fake.render as never,
+    () => {
+      changes++;
+    },
+    rotationOf,
+  );
   return { ...fake, images, changes: () => changes };
 }
 
@@ -162,4 +168,24 @@ test("the recent cache tells what it drops for room, and what clear drops", () =
   cache.clear();
   assert.deepEqual(dropped, ["b", "a", "c"]);
   assert.equal(cache.size, 0);
+});
+
+test("a page turned on screen is drawn turned, as wide as asked, and one that is not is drawn as stored", () => {
+  const turns = [0, 90, 180, 270] as const;
+  const h = open((page) => turns[page] ?? 0);
+  h.images.want([0, 1], 160);
+  assert.deepEqual(
+    h.requests.map((request) => [
+      request.page,
+      request.rotation,
+      request.width,
+    ]),
+    [
+      [0, 0, 160],
+      [1, 90, 160],
+    ],
+  );
+  h.requests[0]!.finish();
+  h.requests[1]!.finish();
+  h.images.dispose();
 });

@@ -1,6 +1,6 @@
 import { useRender } from "@embedpdf/react/render";
 import { useDocuments } from "@embedpdf/react/runtime";
-import React, { useEffect, useMemo, useReducer, useState } from "react";
+import React, { useEffect, useMemo, useReducer, useRef, useState } from "react";
 import type { ItemRange } from "../../shared/list-window";
 import {
   drawOrder,
@@ -62,6 +62,7 @@ export function ThumbnailsTab({
   );
   const { urlOf, onRange } = useThumbnailPictures(
     thumbnailPixelWidth(cellWidth, window.devicePixelRatio),
+    pages,
   );
   const reveal = useMemo(() => ({ id: String(currentPage) }), [currentPage]);
   return (
@@ -114,10 +115,25 @@ function Thumbnail({
  * The pictures are drawn anew when the pages' pixels change (page colours,
  * a new mark).
  */
-function useThumbnailPictures(pixelWidth: number) {
+function useThumbnailPictures(
+  pixelWidth: number,
+  pages: readonly { rotation: 0 | 90 | 180 | 270 }[],
+) {
   const render = useRender();
   const [, redraw] = useReducer((count: number) => count + 1, 0);
-  const images = useMemo(() => new ThumbnailImages(render, redraw), [render]);
+  // The pages' turns, read when a picture is asked for: they change only with
+  // the pages themselves.
+  const latest = useRef(pages);
+  latest.current = pages;
+  const images = useMemo(
+    () =>
+      new ThumbnailImages(
+        render,
+        redraw,
+        (page) => latest.current[page]?.rotation ?? 0,
+      ),
+    [render],
+  );
   useEffect(() => () => images.dispose(), [images]);
   useEffect(
     () => render.onInvalidated(() => images.invalidate()),

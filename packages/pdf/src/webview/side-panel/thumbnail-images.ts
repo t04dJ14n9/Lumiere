@@ -36,6 +36,13 @@ export class ThumbnailImages {
     private readonly render: RenderCapability,
     /** Something changed: a picture arrived, or the pictures went. */
     private readonly changed: () => void,
+    /**
+     * How a page is turned on screen (its /Rotate, in degrees clockwise). The
+     * render plugin draws a page as stored unless told, as the Stage does
+     * (its pages are turned by CSS), so a picture drawn for a thumbnail of a
+     * page laid out sideways must be turned too.
+     */
+    private readonly rotationOf: (page: number) => 0 | 90 | 180 | 270,
   ) {}
 
   /** The picture of a page at a width, once it is drawn. */
@@ -103,8 +110,11 @@ export class ThumbnailImages {
     const controller = new AbortController();
     this.drawing.set(pictureKey, controller);
     try {
+      // `width` is the picture's own: a turned page is as wide as asked, for
+      // the box it is laid out in.
       const image = await this.render.renderPage(page, {
         width,
+        rotation: this.rotationOf(page),
         signal: controller.signal,
       });
       const picture = await image.objectUrl();

@@ -281,7 +281,8 @@ with the PDF wherever it is.
   drawn (nearest the middle first), a page scrolled away before it was drawn is
   cancelled, and the pictures kept are limited, so a thousand-page PDF costs
   no more than a short one. The page number is under each; the page being read
-  is selected, and a click goes to a page. The paper's colour (dark paper) and
+  is selected, and a click goes to a page. A page stored with `/Rotate` is drawn
+  turned, as the viewer shows it. The paper's colour (dark paper) and
   new marks draw them again.
 - **Outline.** The PDF's own outline as a tree: a click goes to the bookmark's page
   and place; the twisty, and the Left and Right keys, close and open a branch.

@@ -415,6 +415,94 @@ test("the Thumbnails tab draws the pages in view, marks the one being read, and 
   await expect(pages.getByRole("option", { name: "Page 12" })).toBeInViewport();
 });
 
+/** Where the ink is on `locator`, as a share of its width and height (dark pixels of a white page). */
+async function inkCentre(
+  page: Page,
+  locator: Locator,
+): Promise<{ x: number; y: number }> {
+  const png = (await locator.screenshot()).toString("base64");
+  return page.evaluate(async (data) => {
+    const blob = await (await fetch(`data:image/png;base64,${data}`)).blob();
+    const bitmap = await createImageBitmap(blob);
+    const canvas = document.createElement("canvas");
+    canvas.width = bitmap.width;
+    canvas.height = bitmap.height;
+    const context = canvas.getContext("2d")!;
+    context.drawImage(bitmap, 0, 0);
+    const { data: pixels } = context.getImageData(
+      0,
+      0,
+      canvas.width,
+      canvas.height,
+    );
+    let x = 0;
+    let y = 0;
+    let count = 0;
+    for (let at = 0; at < pixels.length; at += 4) {
+      if (pixels[at]! < 100 && pixels[at + 1]! < 100 && pixels[at + 2]! < 100) {
+        const pixel = at / 4;
+        x += pixel % canvas.width;
+        y += Math.floor(pixel / canvas.width);
+        count++;
+      }
+    }
+    return { x: x / count / canvas.width, y: y / count / canvas.height };
+  }, png);
+}
+
+test("thumbnails of pages stored with /Rotate are turned as the viewer shows them", async ({
+  page,
+}) => {
+  // rotated.pdf: 300 x 400 pages with /Rotate 0, 90, 180 and 270, and their
+  // text near the stored top left.
+  await page.setViewportSize({ width: 1200, height: 1400 });
+  await openPanel(page, { tab: "thumbnails" }, "&pdf=rotated.pdf");
+  const pages = tree(page, "Thumbnails");
+  const rotations = [0, 90, 180, 270];
+  for (const [index, rotation] of rotations.entries()) {
+    const option = pages.getByRole("option", { name: `Page ${index + 1}` });
+    const box = option.locator(".sp-thumbnail");
+    const image = box.locator("img");
+    await expect(image).toBeVisible();
+    await expect
+      .poll(() =>
+        image.evaluate(
+          (el: HTMLImageElement) => el.complete && el.naturalWidth,
+        ),
+      )
+      .toBeGreaterThan(0);
+    const picture = await image.evaluate((el: HTMLImageElement) => ({
+      width: el.naturalWidth,
+      height: el.naturalHeight,
+    }));
+    const shown = (await box.boundingBox())!;
+    const turned = rotation === 90 || rotation === 270;
+    // Landscape for the turned pages, portrait for the others, and the picture
+    // is the shape of its box: nothing sideways in a pillarboxed frame.
+    expect(picture.width > picture.height, `page ${index + 1} picture`).toBe(
+      turned,
+    );
+    expect(shown.width > shown.height, `page ${index + 1} box`).toBe(turned);
+    expect(picture.width / picture.height).toBeCloseTo(
+      shown.width / shown.height,
+      1,
+    );
+  }
+  // The same ink where the viewer puts it: its page, shown as /Rotate says.
+  await act(page, { action: "fitPage" });
+  for (const index of [1, 2, 3]) {
+    const option = pages.getByRole("option", { name: `Page ${index + 1}` });
+    await act(page, { action: "goToPage", page: index + 1 });
+    const shownPage = page.locator(`.page[data-page-index="${index}"]`);
+    await expect(shownPage.locator("img").first()).toBeVisible();
+    await page.waitForTimeout(600);
+    const inPage = await inkCentre(page, shownPage);
+    const inThumbnail = await inkCentre(page, option.locator(".sp-thumbnail"));
+    expect(inThumbnail.x, `page ${index + 1} across`).toBeCloseTo(inPage.x, 1);
+    expect(inThumbnail.y, `page ${index + 1} down`).toBeCloseTo(inPage.y, 1);
+  }
+});
+
 test("thumbnails of a long PDF are drawn only where the list is, and again where it goes", async ({
   page,
 }) => {
