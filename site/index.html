@@ -1,0 +1,777 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>Lumiere: Obsidian-style notes in VS Code</title>
+    <meta
+      name="description"
+      content="Lumiere is a better Markdown editor and PDF reader for VS Code and Cursor that keeps the good properties of Obsidian: Live Preview, wikilinks, embeds, backlinks and a graph. Try it in your browser."
+    />
+    <meta name="color-scheme" content="light dark" />
+    <meta property="og:type" content="website" />
+    <meta
+      property="og:title"
+      content="Lumiere: Obsidian-style notes in VS Code"
+    />
+    <meta
+      property="og:description"
+      content="A Markdown editor and PDF reader for VS Code and Cursor with Obsidian's Live Preview, wikilinks, embeds, backlinks and graph. Try it in a browser."
+    />
+    <meta
+      property="og:image"
+      content="https://t04dj14n9.github.io/Lumiere/img/social.jpg"
+    />
+    <meta
+      property="og:image:alt"
+      content="Lumiere in VS Code, showing a note in Live Preview."
+    />
+    <meta name="twitter:card" content="summary_large_image" />
+    <link rel="icon" type="image/png" href="img/icon-64.png" />
+    <link rel="stylesheet" href="style.css" />
+  </head>
+  <body>
+    <a class="skip" href="#main">Skip to content</a>
+
+    <header class="wrap site-header">
+      <a class="brand" href="#top">
+        <img src="img/icon-64.png" width="32" height="32" alt="" />
+        Lumiere
+      </a>
+      <nav class="site-nav" aria-label="Page">
+        <a href="#features">Features</a>
+        <a class="nav-extra" href="#why">Why VS Code</a>
+        <a href="#differences">Differences</a>
+        <a href="#sample-vault">Sample vault</a>
+        <a class="nav-extra" href="https://github.com/t04dJ14n9/Lumiere"
+          >GitHub</a
+        >
+      </nav>
+    </header>
+
+    <main id="main">
+      <div class="wrap hero" id="top">
+        <div class="hero-text">
+          <div>
+            <p class="eyebrow">For VS Code and Cursor</p>
+            <h1>
+              <span class="nowrap">Obsidian-style</span> notes, inside VS Code.
+            </h1>
+          </div>
+          <div>
+            <p class="lead">
+              Lumiere is a better Markdown editor for VS Code that keeps the
+              good properties of Obsidian: notes render as you type, wikilinks
+              resolve the way Obsidian resolves them, and embeds, callouts,
+              properties, an outline, a graph and backlinks are there. It reads
+              PDFs too.
+            </p>
+            <div class="actions">
+              <a
+                class="button"
+                href="https://codespaces.new/t04dJ14n9/lumiere-sample-vault?quickstart=1"
+                rel="noopener"
+                >Try it in your browser</a
+              >
+              <a
+                class="button secondary"
+                href="https://marketplace.visualstudio.com/items?itemName=t04dJ14n9.lumiere"
+                >Install from Marketplace</a
+              >
+              <a class="text-link" href="https://github.com/t04dJ14n9/Lumiere"
+                >View on GitHub</a
+              >
+            </div>
+            <p class="fineprint">
+              The browser demo opens a GitHub Codespace with VS Code, Lumiere
+              and a sample vault. It needs a GitHub account, and Codespaces
+              includes a free monthly allowance on personal accounts. Lumiere is
+              not affiliated with Obsidian.
+            </p>
+          </div>
+        </div>
+
+        <figure class="shot">
+          <picture>
+            <source
+              media="(prefers-color-scheme: dark)"
+              type="image/webp"
+              srcset="
+                img/hero-dark-800.webp   800w,
+                img/hero-dark-1600.webp 1600w
+              "
+              sizes="(min-width: 75rem) 1120px, 100vw"
+            />
+            <img
+              src="img/hero-light-1600.webp"
+              srcset="
+                img/hero-light-800.webp   800w,
+                img/hero-light-1600.webp 1600w
+              "
+              sizes="(min-width: 75rem) 1120px, 100vw"
+              width="1600"
+              height="1004"
+              fetchpriority="high"
+              alt="Lumiere in VS Code. A note is open in Live Preview, with rendered math, a table and callouts. The Explorer beside it shows the vault's files, the note's backlinks and its outline."
+            />
+          </picture>
+          <figcaption>
+            Lumiere in VS Code on the sample vault: a note in Live Preview, with
+            its backlinks and outline in the Explorer.
+          </figcaption>
+        </figure>
+      </div>
+
+      <section id="features" aria-labelledby="features-title">
+        <div class="wrap">
+          <div class="section-head">
+            <h2 id="features-title">What it does</h2>
+            <p>
+              Every feature is a plugin you can switch off. Where Lumiere
+              differs from Obsidian, the
+              <a href="#differences">differences</a> are listed below.
+            </p>
+          </div>
+
+          <div class="feature">
+            <div class="text">
+              <h3>Writing</h3>
+              <p>
+                Formatting renders in place. Its Markdown shows only around the
+                caret, then hides again.
+              </p>
+              <ul>
+                <li>
+                  <strong>Live Preview or Source mode</strong>, one command
+                  apart. VS Code keeps the text, saving and undo.
+                </li>
+                <li>
+                  <strong>Obsidian's Markdown:</strong> wikilinks, embeds,
+                  callouts, tags, <code>==highlights==</code>,
+                  <code>%%comments%%</code>, footnotes, math, block ids and task
+                  lists.
+                </li>
+                <li>
+                  <strong>Rich blocks:</strong> tables you edit as a grid,
+                  foldable and nested callouts, MathJax, Mermaid diagrams that
+                  follow the VS Code theme, and code blocks with syntax
+                  highlighting and a Copy button.
+                </li>
+                <li>
+                  <strong>Properties:</strong> a typed editor for a note's front
+                  matter (text, list, number, checkbox, date, tags, aliases).
+                </li>
+                <li>
+                  <strong>Obsidian's editing keys</strong> (Ctrl/Cmd+B, I, K),
+                  smart lists, paired brackets, find and replace, rich-text
+                  paste as Markdown, and an optional Vim mode.
+                </li>
+              </ul>
+            </div>
+            <figure class="shot">
+              <picture>
+                <source
+                  media="(prefers-color-scheme: dark)"
+                  type="image/webp"
+                  srcset="
+                    img/writing-dark-640.webp   640w,
+                    img/writing-dark-1280.webp 1280w
+                  "
+                  sizes="(min-width: 60rem) 620px, 100vw"
+                />
+                <img
+                  src="img/writing-light-1280.webp"
+                  srcset="
+                    img/writing-light-640.webp   640w,
+                    img/writing-light-1280.webp 1280w
+                  "
+                  sizes="(min-width: 60rem) 620px, 100vw"
+                  width="1280"
+                  height="1153"
+                  loading="lazy"
+                  alt="A note in Live Preview. The line under the caret shows its bold markers; the rest of the note is rendered, with a bulleted list, a red callout and footnote marks."
+                />
+              </picture>
+              <figcaption>
+                The caret is in the first bullet: only that line shows its
+                Markdown.
+              </figcaption>
+            </figure>
+          </div>
+
+          <div class="feature flip">
+            <div class="text">
+              <h3>Linking and navigation</h3>
+              <p>
+                Links resolve by Obsidian's rules: case-insensitive, with
+                <code>.md</code> optional, <code>./</code> and
+                <code>../</code> from the note's folder and other paths from the
+                vault root.
+              </p>
+              <ul>
+                <li>
+                  <strong>Suggestions as you type</strong> for notes, aliases,
+                  headings, blocks, tags and the sections of a PDF. The
+                  <code>[[</code> suggestions also work in VS Code's own text
+                  editor.
+                </li>
+                <li>
+                  <strong>Follow, preview, go back.</strong> Alt+Enter follows
+                  the link at the caret, Ctrl/Cmd+Enter opens it in a new tab,
+                  Ctrl/Cmd-hover previews the target, and Go Back in Note
+                  returns to where you jumped from.
+                </li>
+                <li>
+                  <strong>Renames update links.</strong> Rename or move a note
+                  in VS Code and links to it are rewritten in other notes (it
+                  asks first by default).
+                </li>
+                <li>
+                  Links to notes that do not exist yet are dimmed, and following
+                  one creates the note.
+                </li>
+              </ul>
+            </div>
+            <pre
+              tabindex="0"
+              role="region"
+              aria-label="Link syntax examples"
+            ><code>[[Note]]               a note
+[[Note|alias]]         shown as "alias"
+[[Note#Heading]]       a section
+[[Note#^block]]        one block
+
+![[Note#Heading]]      embed a section
+![[paper.pdf#page=3]]  embed a PDF page
+![[tasks.base]]        embed a Bases view</code></pre>
+          </div>
+
+          <div class="feature">
+            <div class="text">
+              <h3>Embeds</h3>
+              <p>
+                Pull other notes, files and live views into a note, the way you
+                do in Obsidian.
+              </p>
+              <ul>
+                <li>
+                  <strong>Notes, headings and block ids</strong>, shown in
+                  place.
+                </li>
+                <li>
+                  <strong>Obsidian Bases</strong> files as table, card or list
+                  views.
+                </li>
+                <li>
+                  <strong>PDFs:</strong> one page inline, with page buttons and
+                  an Open button that opens the reader.
+                </li>
+                <li>
+                  <strong>Images</strong> with sizes, keyboard resizing and a
+                  viewer, plus audio and video.
+                </li>
+                <li>
+                  <strong>Mermaid diagrams</strong>, drawn in your theme's
+                  colours.
+                </li>
+                <li>
+                  <strong>HTML files</strong> as a card whose Open button shows
+                  the page in VS Code's Integrated Browser.
+                </li>
+              </ul>
+            </div>
+            <figure class="shot">
+              <picture>
+                <source
+                  media="(prefers-color-scheme: dark)"
+                  type="image/webp"
+                  srcset="
+                    img/inline-dark-640.webp   640w,
+                    img/inline-dark-1280.webp 1280w
+                  "
+                  sizes="(min-width: 60rem) 620px, 100vw"
+                />
+                <img
+                  src="img/inline-light-1280.webp"
+                  srcset="
+                    img/inline-light-640.webp   640w,
+                    img/inline-light-1280.webp 1280w
+                  "
+                  sizes="(min-width: 60rem) 620px, 100vw"
+                  width="1280"
+                  height="1153"
+                  loading="lazy"
+                  alt="A note with a PDF page embedded in it. The embed shows the file name, page buttons reading Page 2 of 3 and an Open PDF button, and then the page itself."
+                />
+              </picture>
+              <figcaption>
+                A PDF page embedded in a note, with page buttons and an Open
+                button.
+              </figcaption>
+            </figure>
+          </div>
+
+          <div class="feature flip portrait">
+            <div class="text">
+              <h3>Vault tools</h3>
+              <p>
+                A folder with <code>.obsidian/</code> is a vault; without one,
+                the workspace folder is. Lumiere reads the vault's settings for
+                link format, new-note and attachment folders and more.
+              </p>
+              <ul>
+                <li>
+                  <strong>Quick Switcher</strong> over notes, aliases and
+                  unresolved links.
+                </li>
+                <li>
+                  <strong>Markdown Outline</strong> in the Explorer, with Go to
+                  Heading. Drag a heading to move its section.
+                </li>
+                <li>
+                  <strong>Backlinks and Outgoing Links</strong> views, with
+                  unlinked mentions (off by default; the sample vault turns them
+                  on).
+                </li>
+                <li>
+                  <strong>Tags</strong> view, and
+                  <strong>Search Vault</strong> with Obsidian's search syntax,
+                  plus <code>query</code> blocks that show live results in a
+                  note.
+                </li>
+                <li><strong>Vault graph</strong>, global or local.</li>
+              </ul>
+            </div>
+            <figure class="shot">
+              <picture>
+                <source
+                  media="(prefers-color-scheme: dark)"
+                  type="image/webp"
+                  srcset="
+                    img/sidebar-dark-360.webp 360w,
+                    img/sidebar-dark-720.webp 720w
+                  "
+                  sizes="360px"
+                />
+                <img
+                  src="img/sidebar-light-720.webp"
+                  srcset="
+                    img/sidebar-light-360.webp 360w,
+                    img/sidebar-light-720.webp 720w
+                  "
+                  sizes="360px"
+                  width="720"
+                  height="1324"
+                  loading="lazy"
+                  alt="The Explorer sidebar with the Backlinks, Outgoing Links and Markdown Outline views open for one note."
+                />
+              </picture>
+              <figcaption>
+                Backlinks, Outgoing Links and the Markdown Outline are Explorer
+                views.
+              </figcaption>
+            </figure>
+          </div>
+
+          <div class="feature stacked">
+            <div class="text">
+              <h3>A PDF reader, with notes</h3>
+              <p>
+                Lumiere PDF is built on EmbedPDF and the PDFium engine, running
+                in a worker. Single pages or two-page spreads, continuous or
+                page by page, zoom and fit, find, and internal and web links.
+              </p>
+              <ul>
+                <li>
+                  <strong>Annotations.</strong> Select text and right-click for
+                  Highlight, Underline, Strikeout, Squiggly, or a highlight with
+                  a note written in Markdown. Marks are kept outside the PDF, in
+                  <code>.lumiere/pdf-annotations/</code>; the PDF changes only
+                  if you run Save Annotations into This PDF.
+                </li>
+                <li>
+                  <strong>Backlinks from notes.</strong> A note's link to
+                  <code>paper.pdf#page=3#:~:text=…</code> paints a highlight on
+                  that passage; clicking it opens the note.
+                </li>
+                <li>
+                  <strong>Bookmarks as an outline</strong> in the Explorer,
+                  following the page you read.
+                </li>
+                <li>
+                  Dark paper that follows the theme, and a reader that comes
+                  back at the same page and zoom when a paper is rebuilt.
+                </li>
+              </ul>
+            </div>
+            <figure class="shot">
+              <picture>
+                <source
+                  media="(prefers-color-scheme: dark)"
+                  type="image/webp"
+                  srcset="
+                    img/pdf-dark-800.webp   800w,
+                    img/pdf-dark-1600.webp 1600w
+                  "
+                  sizes="(min-width: 75rem) 1120px, 100vw"
+                />
+                <img
+                  src="img/pdf-light-1600.webp"
+                  srcset="
+                    img/pdf-light-800.webp   800w,
+                    img/pdf-light-1600.webp 1600w
+                  "
+                  sizes="(min-width: 75rem) 1120px, 100vw"
+                  width="1600"
+                  height="1004"
+                  loading="lazy"
+                  alt="The PDF reader showing page 2 of the lecture notes, with one line highlighted and its note in a small card. The Explorer beside it shows the PDF's outline."
+                />
+              </picture>
+              <figcaption>
+                A highlight with a note, and the PDF's bookmarks as an outline
+                in the Explorer.
+              </figcaption>
+            </figure>
+          </div>
+
+          <div class="feature flip">
+            <div class="text">
+              <h3>Made to work with agents</h3>
+              <p>
+                Links that point an agent back to the exact lines of a note or
+                the exact page of a PDF.
+              </p>
+              <ul>
+                <li>
+                  <strong>Copy link to this.</strong> In a note it copies a link
+                  to the selected lines with the passage quoted under it. In a
+                  PDF it copies a link to the page with the selected text.
+                </li>
+                <li>
+                  <strong>Straight into the chat, if you want it.</strong> Send
+                  a note's passage to Cursor's chat, VS Code's chat, Claude Code
+                  or Codex.
+                </li>
+                <li>
+                  <strong>Open what an agent printed.</strong> Open Copied Agent
+                  Reference opens those lines, and Open Location… opens that
+                  page.
+                </li>
+                <li>
+                  <strong>IDE context.</strong> Copy IDE Context builds a packet
+                  with the active note or PDF, the selection, open tabs and
+                  diagnostics, for Claude Code and Codex.
+                </li>
+                <li>
+                  A public API (v1) lets other VS Code extensions add markers,
+                  actions, link handlers and code block renderers.
+                </li>
+              </ul>
+            </div>
+            <pre
+              tabindex="0"
+              role="region"
+              aria-label="Agent link examples"
+            ><code>@notes/a.md#12-18      lines 12 to 18 of a note
+@papers/a.pdf#page=3   page 3 of a PDF</code></pre>
+          </div>
+        </div>
+      </section>
+
+      <section class="alt" id="why" aria-labelledby="why-title">
+        <div class="wrap">
+          <div class="section-head">
+            <h2 id="why-title">Why inside VS Code</h2>
+            <p>
+              Obsidian's editing is why people keep notes in Markdown. It is
+              also a separate application. Lumiere puts it in the editor you
+              already work in, beside everything VS Code gives you.
+            </p>
+          </div>
+          <ul class="points">
+            <li>
+              <h3>Git</h3>
+              <p>
+                Change bars beside the line numbers, a rendered peek with Revert
+                and Stage, and a side-by-side rendered diff of two versions of a
+                note.
+              </p>
+            </li>
+            <li>
+              <h3>Agents</h3>
+              <p>
+                Claude Code, Codex, Cursor's chat and VS Code chat, with links
+                back to the exact lines or page.
+              </p>
+            </li>
+            <li>
+              <h3>Terminals, tasks and extensions</h3>
+              <p>
+                Terminals, tasks and the extensions you already use, next to
+                your notes.
+              </p>
+            </li>
+            <li>
+              <h3>Remote and Codespaces</h3>
+              <p>
+                SSH, Dev Containers and Codespaces: VS Code runs the extension
+                on the machine that holds your files. That is how the browser
+                demo works.
+              </p>
+            </li>
+          </ul>
+        </div>
+      </section>
+
+      <section id="differences" aria-labelledby="differences-title">
+        <div class="wrap">
+          <div class="section-head">
+            <h2 id="differences-title">Differences from Obsidian</h2>
+            <p>
+              Lumiere is not Obsidian and does not cover all of it. It uses
+              Obsidian 1.15.0 as its behaviour reference and never copies its
+              code, styles or assets. Read this before you move a vault over.
+            </p>
+          </div>
+          <ul class="differences">
+            <li>
+              <strong>No Reading view.</strong>
+              <span
+                >A note is in Live Preview or Source mode. Ctrl/Cmd+E switches
+                between Lumiere and VS Code's own text editor instead.</span
+              >
+            </li>
+            <li>
+              <strong>HTML pages are not drawn in a note.</strong>
+              <span
+                >An embedded or linked <code>.html</code> file opens in VS
+                Code's Integrated Browser where the window has one. The embed is
+                a card with Open and Open as Text.</span
+              >
+            </li>
+            <li>
+              <strong
+                >A plain click on a rendered link reveals its source.</strong
+              >
+              <span>Ctrl/Cmd-click or Alt+Enter follows it.</span>
+            </li>
+            <li>
+              <strong>Some embeds differ.</strong>
+              <span
+                >A PDF embed shows one page, not Obsidian's whole viewer.
+                YouTube links are not embedded.</span
+              >
+            </li>
+            <li>
+              <strong>Native views, not panes.</strong>
+              <span
+                >The outline, backlinks, tags and search results are Explorer
+                views. There is no Dataview, and the graph has no 3D view and
+                refuses a vault of more than 2,000 notes or 20,000 links.</span
+              >
+            </li>
+            <li>
+              <strong>Not implemented:</strong>
+              <span>Canvas, bookmarks, Publish and Sync.</span>
+            </li>
+            <li>
+              <strong>No community plugins or themes.</strong>
+              <span
+                >Colours follow your VS Code theme, and the
+                <code>.obsidian</code> CSS snippets you have enabled load.
+                Extensions to Lumiere are VS Code extensions that use its
+                API.</span
+              >
+            </li>
+            <li>
+              <strong>Some keys are left to VS Code.</strong>
+              <span
+                >Obsidian's Ctrl/Cmd+O and Ctrl/Cmd+D are not bound, and in
+                Cursor, Ctrl/Cmd+K and L stay Cursor's.</span
+              >
+            </li>
+            <li>
+              <strong>Three editor defaults differ on purpose.</strong>
+              <span
+                >Readable line length is off, the inline title is off and line
+                numbers are on. Each is a setting.</span
+              >
+            </li>
+            <li>
+              <strong>Not in VS Code for the Web.</strong>
+              <span
+                >Lumiere runs in a Node extension host, so it does not run in
+                vscode.dev or github.dev. A Codespace works because the
+                extension runs on its server.</span
+              >
+            </li>
+          </ul>
+          <p class="fineprint">
+            Every row of the comparison, with how it was checked and on which
+            Obsidian version, is in
+            <a
+              href="https://github.com/t04dJ14n9/Lumiere/blob/main/packages/markdown/docs/PARITY.md"
+              >PARITY.md</a
+            >. Automated checks do not establish visual parity, and many rows
+            there are marked as not yet compared by hand.
+          </p>
+        </div>
+      </section>
+
+      <section class="alt" id="sample-vault" aria-labelledby="vault-title">
+        <div class="wrap vault">
+          <div>
+            <h2 id="vault-title">Try it on a vault, not a blank page</h2>
+            <p class="lead">
+              The sample vault is about 35 linked notes on distributed systems,
+              written for this demo and free to reuse (CC0). Its
+              <code>wiki/index.md</code> is a five-minute tour.
+            </p>
+            <div class="actions">
+              <a
+                class="button"
+                href="https://codespaces.new/t04dJ14n9/lumiere-sample-vault?quickstart=1"
+                rel="noopener"
+                >Try it in your browser</a
+              >
+              <a
+                class="text-link"
+                href="https://github.com/t04dJ14n9/lumiere-sample-vault"
+                >Browse the vault on GitHub</a
+              >
+            </div>
+            <p class="fineprint">
+              GitHub starts a Codespace, installs Lumiere and opens the tour.
+              Your edits stay in your own Codespace. If it opens without
+              Lumiere, install it from the Extensions view and reopen the note
+              with Open With… &gt; Lumiere.
+            </p>
+          </div>
+          <table>
+            <caption class="visually-hidden">
+              Where to look in the sample vault for each feature
+            </caption>
+            <thead>
+              <tr>
+                <th scope="col">Feature</th>
+                <th scope="col">Look at</th>
+              </tr>
+            </thead>
+            <tbody>
+              <tr>
+                <td>Callouts, some folded</td>
+                <td>CAP Theorem, Quorum Reads and Writes</td>
+              </tr>
+              <tr>
+                <td>Inline and display math</td>
+                <td>Quorum Reads and Writes, Lamport Clocks</td>
+              </tr>
+              <tr>
+                <td>Mermaid diagrams</td>
+                <td>Replication Strategies, Raft Leader Election</td>
+              </tr>
+              <tr>
+                <td>Bases, as a live table and as cards</td>
+                <td>Distributed Systems Map</td>
+              </tr>
+              <tr>
+                <td>PDF reader, page links, an inline page</td>
+                <td>Replication and Quorums Lecture Notes</td>
+              </tr>
+              <tr>
+                <td>A local HTML file as a card</td>
+                <td>Consistent Hashing</td>
+              </tr>
+              <tr>
+                <td>A live search in a <code>query</code> block</td>
+                <td>Consensus and Replication Map</td>
+              </tr>
+            </tbody>
+          </table>
+        </div>
+      </section>
+
+      <section id="install" aria-labelledby="install-title">
+        <div class="wrap">
+          <div class="section-head">
+            <h2 id="install-title">Use it on your own notes</h2>
+          </div>
+          <ol class="steps">
+            <li>
+              Install
+              <a
+                href="https://marketplace.visualstudio.com/items?itemName=t04dJ14n9.lumiere"
+                >Lumiere</a
+              >
+              (<code>t04dJ14n9.lumiere</code>) from the Marketplace, or search
+              for it in the Extensions view.
+            </li>
+            <li>
+              Open a folder of notes. An existing Obsidian vault works as it is.
+            </li>
+            <li>
+              Run
+              <strong>Use Lumiere for Markdown in This Workspace</strong> from
+              the Command Palette, so <code>*.md</code> files in that folder
+              open in Lumiere. It is an option, not the default, so it does not
+              take over every README you open.
+            </li>
+            <li>
+              Open a PDF. If another PDF extension opens it first, use
+              <strong>Open With… &gt; Lumiere PDF</strong>.
+            </li>
+          </ol>
+        </div>
+      </section>
+    </main>
+
+    <footer class="site-footer">
+      <div class="wrap">
+        <ul>
+          <li>
+            <a href="https://github.com/t04dJ14n9/Lumiere">GitHub</a>
+          </li>
+          <li>
+            <a
+              href="https://marketplace.visualstudio.com/items?itemName=t04dJ14n9.lumiere"
+              >Marketplace</a
+            >
+          </li>
+          <li>
+            <a href="https://github.com/t04dJ14n9/Lumiere/releases">Releases</a>
+          </li>
+          <li>
+            <a
+              href="https://github.com/t04dJ14n9/Lumiere/blob/main/CHANGELOG.md"
+              >Changelog</a
+            >
+          </li>
+          <li>
+            <a href="https://github.com/t04dJ14n9/lumiere-sample-vault"
+              >Sample vault</a
+            >
+          </li>
+          <li>
+            <a href="https://github.com/t04dJ14n9/Lumiere/issues">Issues</a>
+          </li>
+        </ul>
+        <p>
+          Lumiere is MIT licensed.
+          <a href="https://github.com/t04dJ14n9/Lumiere/blob/main/LICENSE"
+            >License</a
+          >
+          and
+          <a
+            href="https://github.com/t04dJ14n9/Lumiere/blob/main/THIRD_PARTY_NOTICES.md"
+            >third-party notices</a
+          >.
+        </p>
+        <p>
+          Lumiere is not affiliated with or endorsed by Obsidian. This page has
+          no scripts, trackers or external fonts.
+        </p>
+      </div>
+    </footer>
+  </body>
+</html>
