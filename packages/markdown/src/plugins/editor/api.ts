@@ -9,6 +9,7 @@ import {
   Annotation,
   Compartment,
   EditorState,
+  Facet,
   type Extension,
   type StateEffect,
   type TransactionSpec,
@@ -24,6 +25,24 @@ export type { CaretMode, VimCaretProfile } from "./caret";
  * saves no view state for it.
  */
 export const backgroundUpdate = Annotation.define<boolean>();
+
+/**
+ * How tall the chrome a plugin pins over the top of the note (the sticky
+ * headings) will be once the line at `position` is the first one below it,
+ * 0 when there is none. A jump leaves that much room above its target in the
+ * first scroll: the chrome on screen belongs to the place the jump leaves,
+ * and measuring it after the jump has drawn it would take a second scroll,
+ * with the first one's row count (the bar can flip between 3 rows and 2 as
+ * the line moves) to correct. Every contribution counts the whole chrome, so
+ * the tallest is used.
+ */
+export const pinnedChromeHeight = Facet.define<
+  (view: EditorView, position: number) => number,
+  (view: EditorView, position: number) => number
+>({
+  combine: (heights) => (view, position) =>
+    Math.max(0, ...heights.map((height) => height(view, position))),
+});
 
 /**
  * A nested editor, such as a table cell's, is a view of its own whose state
@@ -98,7 +117,11 @@ export interface Menu {
 }
 /** A line held below the top of the viewport while the layout settles. */
 export interface ScrollHold {
-  /** Hold it `yMargin` px below the top instead; false once the hold has ended. */
+  /**
+   * Hold it `yMargin` px below the top instead, scrolled there at once (the
+   * measuring is run now, not in the next frame); false once the hold has
+   * ended.
+   */
   move(yMargin: number): boolean;
   /** Whether the hold is still keeping the line in place. */
   isHeld(): boolean;

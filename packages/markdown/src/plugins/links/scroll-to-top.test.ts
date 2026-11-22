@@ -115,9 +115,10 @@ test("scheduleStickyScrollCorrection skips work when a newer jump superseded it"
 
 test("scrollTargetToTop first jump omits sticky yMargin and corrects from initialHeight 0", async () => {
   // Leftover pin from a prior nested scroll. Applying that height on the first
-  // scrollIntoView is the clamp bug this helper refuses: production must start
-  // at CM's default yMargin (omit sticky) and scheduleStickyScrollCorrection
-  // with initialHeight 0 so a post-paint measure can still differ.
+  // scrollIntoView is the clamp bug this helper refuses: without a prediction
+  // for the target (`pinnedHeight`), production must start at CM's default
+  // yMargin (omit sticky) and scheduleStickyScrollCorrection with
+  // initialHeight 0 so a post-paint measure can still differ.
   const leftoverSticky = 40;
   const stickyEl = {
     hidden: false,
@@ -212,7 +213,9 @@ const drain = () => new Promise<void>((resolve) => setImmediate(resolve));
 function jumpView(options: {
   /** The sticky bar's height at each look, the last one for every later. */
   heights: number[];
-  onDispatch?: () => void;
+  onDispatch?: (transaction: {
+    effects?: Array<{ value: { y: string; yMargin: number } }>;
+  }) => void;
 }) {
   let looks = 0;
   const sticky = {
@@ -226,7 +229,9 @@ function jumpView(options: {
       querySelector: (selector: string) =>
         selector === ".mw-sticky-scroll" ? sticky : null,
     },
-    dispatch: () => options.onDispatch?.(),
+    dispatch: (
+      transaction: Parameters<NonNullable<typeof options.onDispatch>>[0],
+    ) => options.onDispatch?.(transaction),
   } as unknown as EditorView;
   return { view, looks: () => looks };
 }
@@ -372,4 +377,227 @@ test("scrollTargetToTop stops waiting for the bar once the hold has ended", asyn
   await drain();
   assert.equal(looks(), 2, "no look after the hold ended");
   assert.deepEqual(moves, [], "and a bar that comes later is left alone");
+});
+
+test("scrollTargetToTop leaves room for the bar the target will have, so the first scroll is where it settles", async () => {
+  const events: string[] = [];
+  const margins: number[] = [];
+  const moves: number[] = [];
+  // The bar the target pins is 25px tall, however tall the one on screen is.
+  const { view } = jumpView({
+    heights: [25],
+    onDispatch: (transaction) => {
+      events.push("dispatch");
+      margins.push(transaction.effects!.at(-1)!.value.yMargin);
+    },
+  });
+
+  scrollTargetToTop(view, { from: 12, to: 20 }, [], {
+    isCurrent: () => true,
+    pinnedHeight: (position) => {
+      events.push(`predict ${position}`);
+      return 25;
+    },
+    holdAtTop: (position, yMargin) => {
+      events.push(`hold ${position} ${yMargin}`);
+      return {
+        isHeld: () => true,
+        move: (margin) => {
+          moves.push(margin);
+          return true;
+        },
+      };
+    },
+  });
+  assert.deepEqual(events, ["predict 12", "hold 12 25", "dispatch"]);
+  assert.deepEqual(margins, [25], "the scroll puts it below the bar");
+
+  await drain();
+  assert.deepEqual(moves, [], "the bar is as predicted: nothing to move");
+  assert.deepEqual(margins, [25], "and no second scroll");
+});
+
+test("scrollTargetToTop still corrects a bar that is not the one it predicted", async () => {
+  const moves: number[] = [];
+  const { view } = jumpView({ heights: [30] });
+  scrollTargetToTop(view, { from: 12, to: 20 }, [], {
+    isCurrent: () => true,
+    pinnedHeight: () => 25,
+    holdAtTop: () => ({
+      isHeld: () => true,
+      move: (margin) => {
+        moves.push(margin);
+        return true;
+      },
+    }),
+  });
+  await drain();
+  assert.deepEqual(moves, [30]);
+});
+
+test("scrollTargetToTop keeps CodeMirror's margin for a target no bar pins", () => {
+  const margins: number[] = [];
+  const holds: number[] = [];
+  const { view } = jumpView({
+    heights: [0],
+    onDispatch: (transaction) =>
+      margins.push(transaction.effects!.at(-1)!.value.yMargin),
+  });
+  scrollTargetToTop(view, { from: 12, to: 20 }, [], {
+    isCurrent: () => true,
+    pinnedHeight: () => 0,
+    holdAtTop: (_position, yMargin) => {
+      holds.push(yMargin);
+      return { isHeld: () => true, move: () => true };
+    },
+  });
+  assert.deepEqual(margins, [5]);
+  assert.deepEqual(holds, [5]);
+});
+
+test("the first look for the sticky bar is in the frame of the jump, so its correction is painted with it; later ones are two frames on", (t) => {
+  const frames: Array<() => void> = [];
+  const original = globalThis.requestAnimationFrame;
+  globalThis.requestAnimationFrame = ((run: () => void) =>
+    frames.push(run)) as typeof requestAnimationFrame;
+  t.after(() => {
+    globalThis.requestAnimationFrame = original;
+  });
+  const moves: number[] = [];
+  const { view } = jumpView({ heights: [0, 30] });
+
+  scrollTargetToTop(view, { from: 12, to: 20 }, [], {
+    isCurrent: () => true,
+    holdAtTop: () => ({
+      isHeld: () => true,
+      move: (margin) => {
+        moves.push(margin);
+        return true;
+      },
+    }),
+  });
+  // CodeMirror asked for the jump's frame when it was dispatched; this runs
+  // in it, after CodeMirror's measuring, and a bar drawn then moves the hold.
+  assert.equal(frames.length, 1, "one frame callback, not two nested");
+  frames.shift()!();
+  assert.deepEqual(moves, [], "no bar yet at the first look");
+
+  // The next look is a frame after a frame, so the bar is painted before it.
+  assert.equal(frames.length, 1);
+  frames.shift()!();
+  assert.deepEqual(moves, [], "not in the first of the two");
+  frames.shift()!();
+  assert.deepEqual(moves, [30]);
+});
+
+test("a bar drawn in the frame of the jump is corrected in that frame", (t) => {
+  const frames: Array<() => void> = [];
+  const original = globalThis.requestAnimationFrame;
+  globalThis.requestAnimationFrame = ((run: () => void) =>
+    frames.push(run)) as typeof requestAnimationFrame;
+  t.after(() => {
+    globalThis.requestAnimationFrame = original;
+  });
+  const moves: number[] = [];
+  const { view } = jumpView({ heights: [30] });
+  scrollTargetToTop(view, { from: 12, to: 20 }, [], {
+    isCurrent: () => true,
+    holdAtTop: () => ({
+      isHeld: () => true,
+      move: (margin) => {
+        moves.push(margin);
+        return true;
+      },
+    }),
+  });
+  frames.shift()!();
+  assert.deepEqual(moves, [30]);
+});
+
+test("a bar shorter than the room the jump reserved leaves the line where it is", () => {
+  // The target's parent is still on screen near the start of the note, so it
+  // is not pinned and the bar is empty. Taking the room back would scroll the
+  // parent away and bring the bar over the line.
+  const rescrolls: number[] = [];
+  const runs: Array<() => void> = [];
+  let height = 0;
+  scheduleStickyScrollCorrection({} as EditorView, 100, 25, {
+    measure: () => height,
+    schedule: (run) => runs.push(run),
+    keepWaiting: () => true,
+    rescroll: (yMargin) => rescrolls.push(yMargin),
+  });
+  runs.shift()!();
+  assert.deepEqual(rescrolls, [], "an empty bar: nothing to take back");
+  assert.equal(runs.length, 1, "and it keeps looking");
+
+  height = 49;
+  runs.shift()!();
+  assert.deepEqual(rescrolls, [49], "a taller bar still moves the line");
+
+  height = 30;
+  runs.shift()!();
+  assert.deepEqual(
+    rescrolls,
+    [49, 30],
+    "a shorter one, but not below the room",
+  );
+
+  height = 5;
+  runs.shift()!();
+  assert.deepEqual(rescrolls, [49, 30, 25], "never below the room reserved");
+});
+
+test("a correction that would only undo the last one ends the looking and keeps the taller margin", () => {
+  const rescrolls: number[] = [];
+  const runs: Array<() => void> = [];
+  const heights = [25, 0];
+  scheduleStickyScrollCorrection({} as EditorView, 100, 0, {
+    measure: () => heights.shift() ?? 0,
+    schedule: (run) => runs.push(run),
+    keepWaiting: () => true,
+    rescroll: (yMargin) => rescrolls.push(yMargin),
+  });
+  runs.shift()!();
+  assert.deepEqual(rescrolls, [25]);
+  // The bar went again, as the line moved: the line stays below where it was.
+  runs.shift()!();
+  assert.deepEqual(rescrolls, [25], "not moved back up under the bar");
+  assert.equal(runs.length, 0, "and no more looks");
+});
+
+test("a bar between two heights is moved to the taller of them, once", () => {
+  // The jump reserved 25: the bar is 49 over the line at that margin, 25 at
+  // 49, and 49 again at 25.
+  const rescrolls: number[] = [];
+  const runs: Array<() => void> = [];
+  const heights = [49, 25, 49];
+  scheduleStickyScrollCorrection({} as EditorView, 100, 25, {
+    measure: () => heights.shift() ?? 0,
+    schedule: (run) => runs.push(run),
+    keepWaiting: () => true,
+    rescroll: (yMargin) => rescrolls.push(yMargin),
+  });
+  runs.shift()!();
+  runs.shift()!();
+  assert.deepEqual(rescrolls, [49], "25 is the margin the jump had");
+  assert.equal(runs.length, 0);
+});
+
+test("scrollTargetToTop does not take back the room it reserved for a bar that is not there", async () => {
+  const moves: number[] = [];
+  const { view } = jumpView({ heights: [0] });
+  scrollTargetToTop(view, { from: 12, to: 20 }, [], {
+    isCurrent: () => true,
+    pinnedHeight: () => 25,
+    holdAtTop: () => ({
+      isHeld: () => true,
+      move: (margin) => {
+        moves.push(margin);
+        return true;
+      },
+    }),
+  });
+  await drain();
+  assert.deepEqual(moves, []);
 });

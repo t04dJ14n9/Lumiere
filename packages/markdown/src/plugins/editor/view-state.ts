@@ -83,6 +83,16 @@ function measureOnResize(
   until.addEventListener("abort", () => watcher.disconnect());
 }
 
+/**
+ * Run the measuring CodeMirror has pending now, not in the next frame:
+ * reading its layout does it, and requesting one first makes sure there is
+ * one.
+ */
+function measureNow(view: EditorView): void {
+  view.requestMeasure();
+  view.lineBlockAtHeight(0);
+}
+
 /** True when something other than the pin moved the scroller since it last wrote. */
 function isScrolledByOthers(scrollTop: number, saved: PendingScroll): boolean {
   return (
@@ -109,10 +119,7 @@ class ViewState {
       this.readerListeners.set(view, listening);
       measureOnResize(view, listening.signal, () => {
         if (this.pendingScroll.get(view)?.applied) {
-          // Reading CodeMirror's layout runs a measure it has pending at
-          // once, rather than in the next frame: request one, then read.
-          view.requestMeasure();
-          view.lineBlockAtHeight(0);
+          measureNow(view);
         }
       });
     }
@@ -341,6 +348,10 @@ class ViewState {
         view.dispatch({
           effects: EditorView.scrollIntoView(position, { y: "start" }),
         });
+        // The sticky bar is drawn in the frame the jump scrolled in, and so
+        // is this: scrolled in the next frame instead, the line would be
+        // painted under the bar first.
+        measureNow(view);
         return true;
       },
     };

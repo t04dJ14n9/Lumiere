@@ -506,6 +506,23 @@ test("moving a hold puts the line below the sticky bar without letting it go", a
   await root.dispose();
 });
 
+test("moving a hold scrolls at once, in the frame that is being measured, not in the next", async () => {
+  const root = createRoot();
+  const presentation = createViewState(root);
+  const panel = jumpedPanel(presentation);
+  const hold = presentation.holdAtTop(panel.view, 40, 5);
+  panel.scroll(40);
+  assert.equal(panel.measured, 0);
+
+  // The sticky bar is drawn over the line in the frame of the jump: its
+  // correction is measured in that frame too, or the line is painted under
+  // the bar first.
+  hold.move(22);
+  assert.equal(panel.measured, 1, "CodeMirror measured at once");
+  assert.equal(panel.lineOnScreen, 22);
+  await root.dispose();
+});
+
 test("the reader's input ends a hold, and it is not put back", async () => {
   const root = createRoot();
   const presentation = createViewState(root);

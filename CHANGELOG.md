@@ -1,5 +1,15 @@
 # Changelog
 
+## Unreleased
+
+- Markdown: a jump to a heading (a click in the Markdown Outline, Go to Heading,
+  a `[[#Heading]]` link, a Search match) no longer flickers. The heading was
+  painted for a frame or two under the sticky heading bar that appears with the
+  jump, then the whole note shifted down by the bar's height. The first scroll
+  now leaves room for the bar the heading will have, and what that leaves to
+  correct (the bar's row height, a bar that draws late) is corrected before the
+  frame is painted, so the first frame shows the heading where it stays (#859).
+
 ## 0.1.21 (pre-release, 2026-11-22)
 
 - Markdown: a link to a local HTML file in the vault (`[Open](/wiki/diagram.html)`),
