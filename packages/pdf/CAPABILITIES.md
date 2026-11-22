@@ -15,6 +15,7 @@ in [README.md](README.md). Highlight **store** is vault Markdown (Chrome
 | pdfBacklinks | Vault Markdown index → backlink overlays on open PDF | Derived cache only, built from the first PDF opened; refresh on MD save, one push per burst |
 | pdfRegions | Empty-page / Select Region + optional `viewrect=` in the Copy link locator | **Off by default** (`lumiere.pdf.regions.enabled`) |
 | pdfOutline | Explorer PDF Outline + Follow Cursor | Accordion like Markdown Outline |
+| pdfBookmarks | The reader's own bookmarks: **Add Bookmark** (⌘D / Ctrl+D), **Go to Bookmark…** (Quick Pick, rename and delete buttons), Explorer **PDF Bookmarks** view | Kept in `<annotations folder>/<sha256>.bookmarks.json` (`{ "version": 1, "bookmarks": [{ id, title, page, position, created }] }`), merged by id, watched across windows; a sidecar, so the PDF is never written and protected folders are fine |
 | pdfHistory | In-memory Back / Forward for deliberate jumps | |
 | pdfToolbar | Chrome / slim controls | |
 | pdfSettings | PDF: Open Settings / Change Setting… | |

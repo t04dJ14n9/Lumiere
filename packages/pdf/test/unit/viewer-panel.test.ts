@@ -1,4 +1,5 @@
 import assert from "node:assert/strict";
+import { createHash } from "node:crypto";
 import { test } from "node:test";
 import { PdfViewerPanel } from "../../src/host/viewer/panel";
 import type { PdfFiles, PdfWebview } from "../../src/shared/host";
@@ -120,4 +121,42 @@ test("a change on disk reloads once the writes settle, with the next load number
     .filter((message) => message.type === "load")
     .map((message) => message.load);
   assert.deepEqual(loads, [1, 2]);
+});
+
+test("the panel's hash is that of the bytes the viewer was given, for the bookmark file they name", async () => {
+  const { panel, receive } = open();
+  assert.equal(panel.sha256, undefined);
+  await receive({ type: "ready" });
+  assert.equal(
+    panel.sha256,
+    createHash("sha256")
+      .update(new Uint8Array([37, 80, 68, 70]))
+      .digest("hex"),
+  );
+});
+
+test("a page, the point of it and how far across it are sent as a deliberate jump once the viewer has the PDF", async () => {
+  const { panel, posted, receive } = open();
+  // Asked for before the PDF is open: held, and sent right after the bytes.
+  panel.goTo({ page: 3 }, 120, 40);
+  assert.equal(
+    posted.some((message) => message.type === "goTo"),
+    false,
+  );
+  await receive({ type: "ready" });
+  const sent = posted.filter((message) => message.type === "goTo");
+  assert.equal(sent.length, 1);
+  assert.deepEqual(
+    { ...sent[0], requestId: undefined },
+    {
+      type: "goTo",
+      location: { page: 3 },
+      top: 120,
+      left: 40,
+      requestId: undefined,
+    },
+  );
+  panel.goTo({ page: 5 });
+  const [, second] = posted.filter((message) => message.type === "goTo");
+  assert.equal(second?.type === "goTo" && second.left, undefined);
 });

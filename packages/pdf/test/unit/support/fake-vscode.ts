@@ -5,6 +5,8 @@
  * providers) stays in `outstanding()` until it is disposed. See
  * `install-fake-vscode.ts`, which makes `import 'vscode'` load this file.
  */
+import * as path from "node:path";
+
 type Listener = (value: unknown) => unknown;
 
 const live = new Map<object, string>();
@@ -89,7 +91,8 @@ export class Uri {
     return new Uri(scheme, decodeURIComponent(rest.replace(/^\/\//u, "")));
   }
   static joinPath(base: Uri, ...parts: string[]): Uri {
-    return new Uri(base.scheme, [base.path, ...parts].join("/"));
+    // As VS Code's: `..` and repeated separators are resolved.
+    return new Uri(base.scheme, path.posix.join(base.path, ...parts));
   }
   get fsPath(): string {
     // As VS Code's: on Windows, `/C:/x` is `c:\x`.
@@ -103,6 +106,18 @@ export class Uri {
   }
   toString(): string {
     return `${this.scheme}://${this.path}`;
+  }
+}
+
+export class FileSystemError extends Error {
+  constructor(
+    message: string,
+    readonly code = "Unknown",
+  ) {
+    super(message);
+  }
+  static FileNotFound(message = ""): FileSystemError {
+    return new FileSystemError(message, "FileNotFound");
   }
 }
 

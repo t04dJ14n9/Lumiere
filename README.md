@@ -128,6 +128,9 @@ vault over.
   web links. Page, zoom and view controls sit in the status bar and the
   editor's title bar.
 - **Bookmarks as an outline** in the Explorer, following the page you read.
+- **Your own bookmarks.** Add Bookmark (⌘D, Ctrl+D) saves a place under a title,
+  Go to Bookmark… returns to it, and a PDF Bookmarks view in the Explorer lists
+  them. They are kept beside the annotations, never in the PDF.
 - **Annotations.** Select text and right-click for Highlight, Underline,
   Strikeout, Squiggly or a highlight with a note written in Markdown. Marks
   are kept outside the PDF, under `.lumiere/pdf-annotations/`, and the PDF

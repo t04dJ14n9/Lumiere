@@ -6,6 +6,7 @@ import assert from "node:assert/strict";
 import crypto from "node:crypto";
 import os from "node:os";
 import * as annotationStore from "../../src/shared/annotation-store";
+import * as bookmarks from "../../src/shared/bookmarks";
 import path from "node:path";
 import { test } from "node:test";
 import * as backlinkNoteUri from "../../src/shared/backlink-note-uri";
@@ -127,6 +128,7 @@ function launch(options: {
       "node:path": path,
       "../../../host/atomic-write": { writeAtomicFile: async () => undefined },
       "../../../shared/annotation-store": annotationStore,
+      "../../../shared/bookmarks": bookmarks,
       "../../protected-folders": { isProtectedPdf: () => false },
     },
   );

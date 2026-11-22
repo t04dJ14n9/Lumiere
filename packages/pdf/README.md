@@ -120,6 +120,8 @@ is opt-in (`lumiere.pdf.regions.enabled`, default off).
   - **PDF: Export Annotated Copy…** writes a new PDF with them, for sharing.
   - Annotations a PDF already holds show as usual; a change to one is kept
     only by saving into the PDF, and Lumiere says so the first time.
+  - Bookmarks are kept the same way, in `<sha256>.bookmarks.json` beside the
+    annotation file (see [Bookmarks](#bookmarks)).
 - **PDF Outline in the Explorer.** The PDF's bookmarks appear as a native
   tree view; click an entry to open its page. The title bar offers **Expand All**
   and **Collapse All**. **Follow Cursor** (on by default; toggle it in the **…**
@@ -136,6 +138,10 @@ is opt-in (`lumiere.pdf.regions.enabled`, default off).
   when Lumiere already owns the active tab; restoring it leaves the keyboard
   focus where it is. VS Code lists PDF Outline
   collapsed the first time; it remembers once you expand it.
+- **Bookmarks.** Your own named places in a PDF, such as where you stopped
+  in a book or a chapter to revisit: **PDF: Add Bookmark**, **PDF: Go to
+  Bookmark…** and a **PDF Bookmarks** view in the Explorer. They are not the
+  PDF's outline. See [Bookmarks](#bookmarks).
 - **Section links from notes.** In a Markdown note in Lumiere, typing
   `[[paper.pdf#` lists the PDF's bookmarks; typing more filters them, and
   picking one inserts `[[paper.pdf#page=5|Methods]]` (or
@@ -164,6 +170,82 @@ is opt-in (`lumiere.pdf.regions.enabled`, default off).
 
 - **Open Location.** **PDF: Open Location…** takes a link an agent printed and
   opens that page with the box highlighted.
+
+## Bookmarks
+
+Bookmarks are your own named places in a PDF: where you stopped in a book, a
+chapter to revisit. They are not the PDF's outline, its table of contents,
+which some tools also call its bookmarks: the outline comes with the file,
+bookmarks are yours.
+
+- **PDF: Add Bookmark** (⌘D, Ctrl+D on Windows and Linux; also in the editor's
+  **…** menu and the PDF Bookmarks view's title bar) saves the page you are
+  reading and the point on it, the same place the viewer keeps when it
+  remembers where you were. VS Code's Input Box asks for a title, filled in
+  with the outline section that place is in (the deepest one reached, as
+  Follow Cursor picks it), or `Page N` when the PDF has no outline. Enter
+  keeps the title, Escape cancels, and an empty title is refused. A bookmark
+  has a title only.
+- **PDF: Go to Bookmark…** is a Quick Pick of this PDF's bookmarks in page
+  order, each with its title and, beside it, `Page N` and the outline section
+  it is in; typing filters by any of them. Enter goes to the bookmark, at the
+  zoom you have now. The pencil button renames it (the Quick Pick comes back
+  afterwards) and the trash button deletes it at once. Going to a bookmark is
+  a deliberate jump like the outline's: **PDF: Back to Previous Location**
+  returns from it. It has no default key: bind `lumiere.pdf.goToBookmark` in
+  Keyboard Shortcuts. **Add Bookmark**'s ⌘D / Ctrl+D follows
+  `lumiere.pdf.keyboardShortcuts` and can be rebound or removed there too.
+- **PDF Bookmarks** in the Explorer, below PDF Outline, is a native tree view
+  of the same bookmarks, shown only while a PDF is active. A click goes to
+  the bookmark. Each row has Rename and Delete buttons, which are also in its
+  right-click menu, and the view's title bar has Add Bookmark. With no
+  bookmarks it says so and offers **Add Bookmark**. **PDF: Rename Bookmark…**
+  and **PDF: Delete Bookmark** are for these rows and the Quick Pick's
+  buttons, so the command palette does not list them.
+
+**Where they are kept.** Beside the PDF's annotation file, as
+`.lumiere/pdf-annotations/<sha256>.bookmarks.json` (the annotation file is
+`<sha256>.json`), named by the PDF's SHA-256: one folder, so
+`lumiere.pdf.annotations.folder` moves both and the PDF's bytes never change.
+The same PDF anywhere shows the same bookmarks, a renamed or moved copy keeps
+them, and a PDF whose bytes change (a rebuilt paper) starts with none while
+the old file stays for the old version. The file is versioned JSON, written
+whole and atomically (a temporary file renamed over the old one), and removed
+when the last bookmark is deleted:
+
+```json
+{
+  "version": 1,
+  "bookmarks": [
+    {
+      "id": "6f1d…",
+      "title": "Methods",
+      "page": 12,
+      "position": { "top": 340, "left": 0 },
+      "created": "2026-11-22T08:15:00.000Z"
+    }
+  ]
+}
+```
+
+`position` is the offset on the page, in points from its top-left, that the
+reading position memory keeps, so a bookmark returns to the same spot at any
+zoom. Bookmarks are a sidecar like the annotations: Lumiere never writes the PDF
+to keep one, so they work for a PDF in a protected folder (`.raw/` by default),
+where only **Save Annotations into This PDF** is refused. An entry in the file
+that is not a bookmark is skipped; a file that is not a bookmark file, or comes
+from a newer Lumiere, is never overwritten: the change fails and says which
+file.
+
+**Panes and windows.** Each change (add, rename, delete) is applied by the
+bookmark's id to the file as it is on disk, one after another, so a change in
+one pane is never undone by another's. The Explorer view and an open Quick
+Pick show a change at once; another VS Code window watches the file and
+shows the change when it lands on disk (a local file only: on a remote or
+virtual workspace it shows the next time you switch to the PDF, as with
+annotations, and a PDF outside every folder that is not a local file has
+nowhere to keep bookmarks). Two windows changing a PDF's bookmarks at the same instant can
+keep only one of the changes.
 
 ## Toolbar and shortcuts
 
@@ -194,6 +276,7 @@ editor has focus (not in a text field, the side bar or the panel):
 | Fit page               | Ctrl+Alt+0                | ⌥⌘0                 |
 | Find in PDF            | Ctrl+F                    | ⌘F                  |
 | Go to outline item…    | Ctrl+Shift+O              | ⌘⇧O                 |
+| Add Bookmark           | Ctrl+D                    | ⌘D                  |
 | Toggle the PDF Outline | Ctrl+Alt+O                | ⌃⌘O                 |
 | Select Text tool       | Ctrl+Alt+T                | ⌃⌘T                 |
 | Select Region tool (when regions enabled) | Ctrl+Alt+R                | ⌃⌘R                 |

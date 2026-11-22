@@ -118,7 +118,11 @@ test("toggle: a plugin can be turned off and on again without leaving a registra
   await root.settled();
   const all = vscode.outstanding();
   await handles.get("pdfOutline")!.dispose();
-  assert.ok(!vscode.outstanding().some((kind) => kind.startsWith("treeView:")));
+  const trees = vscode
+    .outstanding()
+    .filter((kind) => kind.startsWith("treeView:"));
+  // Each tree view goes with its own plugin: the outline's, not the bookmarks'.
+  assert.deepEqual(trees, ["treeView:lumiere.pdf.bookmarks"]);
   root.plugin(plugins.find((plugin) => plugin.name === "pdfOutline")!);
   await root.settled();
   assert.deepEqual(vscode.outstanding().sort(), [...all].sort());

@@ -165,11 +165,15 @@ export type HostMessage =
       /** The text of the annotation file kept for these bytes (`annotation-store`), if any. */
       annotations?: string;
     } & PdfDelivery)
-  /** `top`: with no box, show the page from this many points below its top. */
+  /**
+   * `top` and `left`: with no box, show the page from this many points below
+   * its top and across from its left edge (`left` is 0 when missing).
+   */
   | {
       type: "goTo";
       location: PdfLocation;
       top?: number | undefined;
+      left?: number | undefined;
       requestId?: number;
       expectedIntent?: number;
     }
