@@ -92,17 +92,33 @@ test("authorizeTarget contains PDFs without requiring a known source note", asyn
   );
 });
 
-/** Resources over a vault whose index knows no file, and a disk that has `files`. */
-function resourcesOnDisk(root: string, files: Record<string, string>) {
+interface DiskOptions {
+  /** Vault paths the index lists; by default it knows no file. */
+  indexed?: string[];
+  /** URIs whose real path is outside the vault (a symbolic link). */
+  escaping?: string[];
+}
+
+/** Resources over a vault whose index knows `indexed`, and a disk that has `files`. */
+function resourcesOnDisk(
+  root: string,
+  files: Record<string, string | undefined>,
+  { indexed = [], escaping }: DiskOptions = {},
+) {
   const stats: string[] = [];
+  // The index resolves a link with no path to the note it is in, when it
+  // lists that note, and knows nothing else.
+  const vault = {
+    root,
+    resolveLink(linktext: string, source: string) {
+      return linktext.split("#")[0] === "" && indexed.includes(source)
+        ? { path: source, uri: `${root}/${source}` }
+        : undefined;
+    },
+  } as unknown as VaultIndex;
   const resources = new NoteResources({
     source: `${root}/wiki/notes/source.md`,
-    vault: {
-      root,
-      resolveLink() {
-        return undefined;
-      },
-    } as unknown as VaultIndex,
+    vault,
     host: {
       workspace: {
         async stat(uri: string) {
@@ -116,6 +132,13 @@ function resourcesOnDisk(root: string, files: Record<string, string>) {
           }
           return { mtime: 7, symbolicLink: false };
         },
+        ...(escaping
+          ? {
+              async realContains(_root: string, uri: string) {
+                return !escaping.includes(uri);
+              },
+            }
+          : {}),
       },
       hostDocuments: {
         async open(uri: string) {
@@ -170,4 +193,102 @@ test("a name with # or a space is found by its percent-encoded URI", async () =>
   const { resources } = resourcesOnDisk(root, { [page]: "x" });
   const loaded = await resources.load("/.raw/C%23%20notes.md");
   assert.equal(loaded.source, page);
+});
+
+// The disk is asked in the order a click asks (`linkLocation`): the same
+// existing file whether or not the click could make a note.
+test("a bare Markdown link is looked for beside the note, then at the vault root", async () => {
+  const root = "file:///home/reader/vault";
+  const { resources, stats } = resourcesOnDisk(root, {
+    [`${root}/wiki/notes/.twin.md`]: "beside",
+    [`${root}/.twin.md`]: "root",
+    [`${root}/.rootonly.md`]: "root only",
+  });
+  assert.equal((await resources.load(".twin.md")).text, "beside");
+  assert.equal((await resources.load("./.twin.md")).text, "beside");
+  assert.equal((await resources.load("/.twin.md")).text, "root");
+  // No neighbour: the vault root's file of that name.
+  assert.equal((await resources.load(".rootonly.md")).text, "root only");
+  // `./` is only the note's folder, with no fallback.
+  await assert.rejects(resources.load("./.rootonly.md"), /Resource not found/);
+
+  stats.length = 0;
+  await assert.rejects(resources.load(".nowhere.md"), /Resource not found/);
+  assert.deepEqual(stats, [
+    `${root}/wiki/notes/.nowhere.md`,
+    `${root}/.nowhere.md`,
+  ]);
+});
+
+// A hidden note loaded by its rooted path is a known source, and a link in it
+// to its own heading (`#Part`) has no path for the index to find it by.
+test("a fragment-only link in a hidden note loaded by its rooted path names that note", async () => {
+  const root = "file:///home/reader/vault";
+  const page = `${root}/.raw/captured/page.md`;
+  const text = "## Part\n\n[jump](#Part)";
+  const { resources } = resourcesOnDisk(root, { [page]: text });
+
+  const loaded = await resources.load("/.raw/captured/page.md");
+  assert.equal(loaded.source, page);
+  for (const syntax of ["markdown", "wikilink"] as const) {
+    const jumped = await resources.load("#Part", loaded.source, syntax);
+    assert.equal(jumped.kind, "note", syntax);
+    assert.equal(jumped.source, page, syntax);
+    assert.equal(jumped.text, text, syntax);
+  }
+  // A heading with a space, as the page's own links write it.
+  assert.equal((await resources.load("#My%20Part", page)).source, page);
+  assert.equal((await resources.load("#^block-id", page)).source, page);
+});
+
+test("a hidden note is a source for its own fragment links only once it was loaded", async () => {
+  const root = "file:///home/reader/vault";
+  const page = `${root}/.raw/captured/page.md`;
+  const { resources } = resourcesOnDisk(root, { [page]: "## Part" });
+  await assert.rejects(resources.load("#Part", page), /Unknown note source/);
+  await resources.load("/.raw/captured/page.md");
+  assert.equal((await resources.load("#Part", page)).source, page);
+});
+
+test("a fragment-only link keeps the containment and existence checks of its note", async () => {
+  const root = "file:///home/reader/vault";
+  const page = `${root}/.raw/captured/page.md`;
+  const files: Record<string, string | undefined> = { [page]: "## Part" };
+  const escaping: string[] = [];
+  const { resources } = resourcesOnDisk(root, files, { escaping });
+  await resources.load("/.raw/captured/page.md");
+
+  // The file turned into a link that leaves the vault since it was loaded.
+  escaping.push(page);
+  await assert.rejects(
+    resources.load("#Part", page),
+    /symlink escapes the vault/,
+  );
+  escaping.length = 0;
+
+  // The file went away: nothing to show, and the link is remembered missing.
+  delete files[page];
+  await assert.rejects(resources.load("#Part", page), /Resource not found/);
+});
+
+test("a link naming the hidden note itself (page.md#Part) still resolves beside it", async () => {
+  const root = "file:///home/reader/vault";
+  const page = `${root}/.raw/captured/page.md`;
+  const { resources } = resourcesOnDisk(root, { [page]: "## Part" });
+  await resources.load("/.raw/captured/page.md");
+  assert.equal((await resources.load("page.md#Part", page)).source, page);
+  assert.equal((await resources.load("./page.md#Part", page)).source, page);
+});
+
+test("a fragment-only link in an indexed note still resolves through the index", async () => {
+  const root = "file:///home/reader/vault";
+  const source = `${root}/wiki/notes/source.md`;
+  const { resources } = resourcesOnDisk(
+    root,
+    { [source]: "## Part" },
+    { indexed: ["wiki/notes/source.md"] },
+  );
+  const jumped = await resources.load("#Part");
+  assert.equal(jumped.source, source);
+  assert.equal(jumped.text, "## Part");
 });

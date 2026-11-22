@@ -23,6 +23,7 @@ export { isIgnoredPath } from "../plugins/vault/exclusion";
 export { ListingBudget } from "../plugins/vault/listing-budget";
 export { MARKDOWN_EDITOR } from "../shared/editor-provider";
 export {
+  creationLocation,
   followsNewNoteFolder,
   linkLocation,
   type LinkFolder,

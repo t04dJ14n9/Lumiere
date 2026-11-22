@@ -83,8 +83,9 @@ export function knownNoteKeys(vault: VaultIndex): string[] {
 /**
  * Whether an unresolved Markdown destination may create a note on click.
  * Basename-only note paths (`Note`, `Note.md`) match Obsidian; relative
- * paths (`./x`, `folder/x`) keep open-only so source-relative lookup stays
- * correct when `navigation.resolve` prefers the vault root under `create`.
+ * paths (`./x`, `folder/x`) keep open-only. Creating is a last resort and
+ * never changes which existing file a link names: `navigation.resolve`
+ * looks for that first, the same way for either answer.
  */
 export function mayCreateNote(path: string): boolean {
   if (

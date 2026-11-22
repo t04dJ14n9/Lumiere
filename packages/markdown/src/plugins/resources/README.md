@@ -9,9 +9,16 @@ Each panel owns a set of known note sources and a validated resource RPC channel
 Targets resolve through the injected vault index; URI and realpath containment
 are checked before reads. A Markdown link the index does not know is looked
 for on disk where a click on it looks (`shared/link-location.ts`: a leading
-`/` from the vault root, `./` and `../` from the note's folder), so a link
-into a hidden folder the index skips (`/.raw/captured/page.md`) previews and
-embeds the file a click opens. Notes use open-document text when available, preserving
+`/` from the vault root, `./` and `../` from the note's folder, a bare name
+beside the note and then at the vault root), so a link into a hidden folder
+the index skips (`/.raw/captured/page.md`, `.hidden.md`) previews and embeds
+the file a click opens: the click looks in the same places in the same order
+whether or not it may make a note, and only a link that names no file makes
+one. A link with only a
+fragment (`#Part`, `[[#Part]]`) names the note it is in, so in a hidden note
+loaded by its rooted path, which the index cannot find, it resolves against
+that note itself: it was loaded as a known source and is checked for
+containment again. Notes use open-document text when available, preserving
 unsaved edits. Successfully loaded notes become authorized sources for nested
 requests. Webview URLs include modification time for cache invalidation.
 The webview keeps resolved media, not note text; loads of one file that
@@ -70,7 +77,7 @@ resolution for standalone diff panels.
 Only contained vault links are loadable; external URLs and unknown source notes
 are rejected. Obsidian does not resolve links into hidden folders at all;
 Lumiere resolves Markdown links there, as its clicks do, but a wikilink only
-through the index, and a file found on disk is not watched, so a page that
+through the index (a fragment-only one, naming its own note, excepted), and a file found on disk is not watched, so a page that
 showed it is not told when it changes. Virtual filesystem symlinks are refused. Notes use the `.md`
 extension for resource classification. Host authorization is rechecked before
 embedded edits by consuming plugins.

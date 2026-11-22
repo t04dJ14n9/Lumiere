@@ -33,7 +33,7 @@ test("a /-rooted Markdown link resolves from the vault root inside wiki/", () =>
     "wiki/resources/notes/ARP.md",
   );
   assert.equal(vault.unresolvedLinks("wiki/hot.md").size, 0);
-  assert.deepEqual(linkLocation("/wiki/resources/notes/ARP.md", false), {
+  assert.deepEqual(linkLocation("/wiki/resources/notes/ARP.md"), {
     relative: "wiki/resources/notes/ARP.md",
     folders: ["vault"],
   });

@@ -8790,3 +8790,131 @@ scrolling wait for the page" (budget 0, unchanged) and the scroll smoothness
 checks, and the large-vault check passes. Not run: the full browser suites and
 `test:vscode` (the owner runs it; the change adds a setting to `package.json`
 and runs in the webview).
+## A bare link to a hidden file names one file to a click and a preview (#823; 2026-11-21)
+
+Review finding on #779's disk fallback. With `.hidden.md` both at the vault
+root and in the note's folder (`notes/`), neither in the index, a link
+`[peek](.hidden.md)` in `notes/Note.md` previewed `notes/.hidden.md` and a
+click opened the root's. The preview asked `linkLocation(link, false)`: a
+bare name is the source note's neighbour. The click asks
+`linkLocation(link, true)` because `mayCreateNote` lets a basename Markdown
+link make a note, and `create` also chose where to look: the vault root only.
+
+- Rule: whether a click may make a note no longer changes which existing
+  file a link names. `linkLocation(link)` has no `create` argument and is
+  the one lookup order, for `host/navigation.ts` (`resolveNavigation`) and
+  the resources plugin's disk fallback (`locateOnDisk`); where a missing note
+  is made is `creationLocation(link)`, asked only after no candidate exists.
+  Both are pure, in `src/shared/link-location.ts`, and both stay exported
+  from `host/portable.ts`. Containment is checked for every candidate as
+  before (`contained` for the click, `containedStat` for the preview).
+- Order for a bare name: the note's folder, then the vault root. The
+  neighbour first is what the helper documented and what two tests pin
+  (`Open image file for a Markdown embed resolves the sibling, not the
+  vault-root twin`; Markdown links are left to navigation for the neighbour).
+  The vault root second keeps what a click on a bare `.md` link already did
+  when only a root file existed (`create` made the root the one candidate),
+  and without it that click would have made a second note in
+  `newNoteFolder` beside the root's. `./` and `../` are the note's folder only,
+  `/` the vault root only, other paths with folders the vault root then the
+  note's folder, as before.
+- Behaviour changes for a click, recorded: a bare `.md` or extensionless
+  link with a file beside the note and a twin at the root opens the file
+  beside the note (it opened the root's); a bare link to another extension
+  (`[x](image.png)`) with only a root file now opens it (it did nothing).
+  A bare link with no file anywhere makes the note where it did.
+- Not changed: the index's own pick for a file it lists. For a bare Markdown
+  link with twins the index prefers the root file
+  (`vault.resolveLink`, `resolve.ts`), so a preview of an indexed twin can
+  still differ from the click, as it already did for an image
+  (`test/unit/links/opened-target.test.ts` records that the index's pick is
+  not what Markdown navigation opens). Only the disk fallback and the click
+  share one order here; the indexed case is a separate question for the
+  owner.
+
+Tests: `test/unit/editor/navigation-host.test.ts` runs one real directory
+through both sides, `resolve` (fake `vscode` over the disk) and
+`NoteResources` over the same files: two existing hidden twins, with
+`create` true and false, giving the same file for the preview and the
+click (failing before: the click opened the root's), the explicit `./` and
+`/` forms, a root-only file with `newNoteFolder` set (no second note), and a
+link that names no file (the preview says "Resource not found", the click
+makes the note where it did, and the preview then finds it). Review nit,
+added later: `resolve` for a bare link to another kind of file
+(`[x](image.png)`, `create: false`) from a note in a subfolder opens a
+vault-root file when none is beside the note (failing before: it did
+nothing), the file beside the note when both exist, nothing for neither, and
+`./` still never falls back to the vault root.
+`note-resources.test.ts` adds the probe order of the disk fallback;
+`test/unit/shared/link-location.test.ts` is rewritten for the two
+functions (the open-image and rooted-link tests lose only the removed
+argument; the image test keeps "the sibling first" and now expects the
+vault root as its second place). Checks: Prettier, ESLint and the type
+checks pass; the unit tests of navigation, resources, link location, the
+open-image intent and rooted links pass (the new ones fail on the old
+source); the full `pnpm check` is recorded with the #824 change that
+follows. Not run: the browser, quality and VS Code suites.
+
+Review finding (regression of the shared lookup order, fixed): the Quick
+Switcher, with no note open, calls `navigation.resolve` with the vault root
+as a folder URI for `source` (`file:///vault/`, no note). Looking beside the
+source note used the source's parent, which for that URI is the folder above
+the vault, and the containment check then refused the link
+("Link escapes the vault"), so a note typed into the switcher could not be
+made (`NewNote`, `area/NewNote`). Before the shared order a creating call
+only looked at the vault root. `sourceFolderOf` (`host/navigation.ts`) now
+takes a source URI that ends in `/` as its own folder, for the lookup, for a
+`./` link and for the `newNoteFolder` of `.`; a note's folder is its parent
+as before. A place two folders share (a note at the vault root, whose folder
+is the vault) is asked about once. A path above the vault is still refused.
+Tests (the first two fail before): `resolve` with `source = ${root}/` for a
+bare and a foldered name and `./`, with `create` true and false, existing
+and missing files, a `newNoteFolder` of a folder and of `.`, and `../` still
+refused; the duplicate place asked once (the file system's `stat` is
+counted); `test/unit/quickSwitcher/create-note.test.ts` types a name into the
+real switcher with no note open, over the real navigation on a temporary
+vault (`NewNote`, `area/NewNote`, and an existing name left as it was; fails
+before). `test/support/disk-navigation.ts` now holds the `vscode` fake over
+the real disk that `navigation-host.test.ts` carried twice, and
+`memoryVaults` takes a root. Checks: `pnpm check`.
+
+## A fragment-only link in a hidden note names that note (#824; 2026-11-21)
+
+Review finding on #779's disk fallback, an index-only assumption it
+exposed. After a hidden note `.raw/captured/page.md` is loaded by its rooted
+path (`/.raw/captured/page.md`, which the disk fallback finds), a link in it
+to its own heading, `[jump](#Part)`, failed: `load('#Part', source)` sent
+the empty path to the index, whose file table lacks the hidden source
+(`vault/resolve.ts` resolves an empty path only to a listed source, and
+`exclusion.ts` keeps hidden entries out), and the disk fallback declines an
+empty path (a folder is no resource). Result: "Resource not found".
+
+- Rule: a link with no path, only a fragment, names the note it is in.
+  `NoteResources.load` tries the index first (an indexed source answers as
+  before), then `locateSource`, then the disk fallback. `locateSource`
+  returns the source itself when the path is empty, for Markdown links
+  (`#Part`, percent-encoded or not) and wikilinks (`[[#Part]]`, `[[#^id]]`)
+  alike: the note is what the link names whatever the syntax, and no file
+  is found by a name, so a wikilink still resolves a name only through the
+  index.
+- Containment is kept: `load` still requires the source to be a known
+  one (`assertKnown`: a note this panel loaded, or the panel's own, inside
+  the vault), `locateSource` returns nothing when the source no longer
+  exists (so the link is "Resource not found" and remembered missing), and
+  `containedStat` checks the file again by path and through symbolic links,
+  so a note whose real path left the vault since it was loaded is refused.
+- Not changed: a link that names the note (`page.md#Part`, `./page.md#Part`)
+  resolves through the disk fallback as before; an indexed source resolves
+  through the index.
+
+Tests in `src/plugins/resources/note-resources.test.ts` (the first three
+failing before): the two-step hidden load then `#Part`, for Markdown and
+wikilink syntax and with an encoded heading or a block id; the source is
+unknown until it was loaded; a fragment-only link to a note whose real path
+now escapes the vault is refused, and to one that was removed is "Resource
+not found"; controls for `page.md#Part` and `./page.md#Part` from the hidden
+note and for `#Part` in an indexed note. The `resourcesOnDisk` fixture takes
+an index of listed files and a set of escaping URIs.
+
+Checks (this and the #823 change, on the branch): `pnpm check` passes. Not
+run: the browser, quality and VS Code suites.

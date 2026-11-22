@@ -5,6 +5,7 @@ import {
   extensionOf,
   folderOf,
   joinVaultPath,
+  splitLinktext,
   splitMarkdownDestination,
   type LinkSyntax,
 } from "../../shared/vault-path";
@@ -74,7 +75,10 @@ export class NoteResources implements Resources {
     }
     const { vault, resourceUrl } = this.options;
     const link = { target, source, syntax };
-    const file = this.locate(link) ?? (await this.locateOnDisk(link));
+    const file =
+      this.locate(link) ??
+      (await this.locateSource(link)) ??
+      (await this.locateOnDisk(link));
     if (!file) {
       this.rememberMissing(link);
       throw new Error("Resource not found");
@@ -156,9 +160,30 @@ export class NoteResources implements Resources {
   }
 
   /**
+   * A link with only a fragment (`#Part`, `[[#Part]]`) names the note it is
+   * in. The index answers for a note it lists; a hidden note it never
+   * entered (`/.raw/captured/page.md`, loaded by its rooted path) would
+   * otherwise have no answer, and its links to its own headings said
+   * "Resource not found". The source is a note this panel loaded or showed,
+   * so `assertKnown` has checked it, and `load` still checks the file.
+   */
+  private async locateSource(
+    link: ResourceLink,
+  ): Promise<LinkedFile | undefined> {
+    if (linkPath(link) !== "" || !(await this.exists(link.source))) {
+      return undefined;
+    }
+    return {
+      path: vaultPath(this.options.vault.root, link.source),
+      uri: link.source,
+    };
+  }
+
+  /**
    * A Markdown link the index does not know, looked for where a click on it
-   * looks (`linkLocation`): a leading `/` from the vault root, `./` and `../`
-   * from the note's folder. The index never enters hidden folders, so
+   * looks (`linkLocation`, in its order): a leading `/` from the vault root,
+   * `./` and `../` from the note's folder, a bare name beside the note and
+   * then at the vault root. The index never enters hidden folders, so
    * `[source](/.raw/captured/page.md)` opened on a click while its preview
    * and embed said "Resource not found". `load` still checks that the file
    * is inside the vault, through symbolic links too.
@@ -177,7 +202,7 @@ export class NoteResources implements Resources {
       return undefined;
     }
     const { root } = this.options.vault;
-    const { relative, folders } = linkLocation(link, false);
+    const { relative, folders } = linkLocation(link);
     const sourceFolder = folderOf(vaultPath(root, source));
     for (const folder of folders) {
       const path = joinVaultPath(
@@ -235,6 +260,13 @@ export class NoteResources implements Resources {
     const text = (await this.options.host.hostDocuments.open(uri)).getText();
     return text.replace(/\r\n/g, "\n");
   }
+}
+
+/** The path a link names, without its `#subpath`: empty for `#Part`. */
+function linkPath({ target, syntax }: ResourceLink): string {
+  return syntax === "markdown"
+    ? splitMarkdownDestination(target).path
+    : splitLinktext(target).path;
 }
 
 function linkKey({ target, source, syntax }: ResourceLink): string {
