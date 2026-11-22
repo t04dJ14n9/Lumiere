@@ -27,14 +27,21 @@ export function bookmarkPickItems(
     const section = sectionOf(bookmark)?.trim();
     const page = `Page ${bookmark.page}`;
     return {
-      // `$(name)` in a label is an icon: a title is text.
-      label: bookmark.title.replaceAll("$(", "\\$("),
+      // `$(name)` in a label or a description is an icon: a title, and the
+      // outline's section name, are text.
+      label: asText(bookmark.title),
       description:
-        section && section !== bookmark.title ? `${page} · ${section}` : page,
+        section && section !== bookmark.title
+          ? `${page} · ${asText(section)}`
+          : page,
       buttons: [RENAME_BUTTON, DELETE_BUTTON],
       bookmark,
     };
   });
+}
+
+function asText(text: string): string {
+  return text.replaceAll("$(", "\\$(");
 }
 
 /** What the picker needs from the PDF whose bookmarks it lists. */

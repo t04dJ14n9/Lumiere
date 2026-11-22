@@ -141,8 +141,13 @@ async function goToBookmark(
       jumpTo(panel, choice.bookmark);
       return;
     }
-    // The title is asked for in the Quick Pick's place; the list comes back.
+    // The title is asked for in the Quick Pick's place; the list comes back,
+    // unless the reader left the PDF meanwhile (the box stays open while they
+    // switch tabs or close it).
     await rename(parts.store, file, choice.bookmark);
+    if (parts.panels.active !== panel) {
+      return;
+    }
   }
 }
 
