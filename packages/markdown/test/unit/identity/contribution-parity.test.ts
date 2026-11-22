@@ -30,7 +30,6 @@ import { registerJumpHistory } from "../../../src/plugins/editor/jump-host";
 import type { EditorPanel, Selections } from "../../../src/plugins/editor/api";
 import { gitDiffEditorHost } from "../../../src/plugins/gitDiffEditor/host";
 import { graphHost } from "../../../src/plugins/graph/host";
-import { htmlViewerHost } from "../../../src/plugins/htmlViewer/host";
 import { linkUpdatesHost } from "../../../src/plugins/linkUpdates/host";
 import { livePreviewHost } from "../../../src/plugins/livePreview/host";
 import { marpHost } from "../../../src/plugins/marp/host";
@@ -278,7 +277,6 @@ function installHosts(
   root.plugin(cursorBridgeHost);
   root.plugin(ideContextHost);
   root.plugin(graphHost);
-  root.plugin(htmlViewerHost);
   root.plugin(bridgeHost);
   root.plugin(scratchHost);
   root.plugin(templatesHost);

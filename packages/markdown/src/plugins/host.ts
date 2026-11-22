@@ -40,7 +40,6 @@ export { codeBlocksHost } from "./codeBlocks/host";
 
 export { obsidianCompatHost } from "./obsidianCompat/host";
 export { graphHost } from "./graph/host";
-export { htmlViewerHost } from "./htmlViewer/host";
 export { publicApiHost } from "./publicApi/host";
 export { settingsHost } from "./settings/host";
 
