@@ -2,7 +2,7 @@ import { splitLinktext, splitMarkdownDestination } from "./vault-path";
 
 /**
  * An HTML file a note shows as a card (`![[diagram.html]]`) or a link opens in
- * the HTML viewer, as the community plugins' notes name them.
+ * VS Code's Integrated Browser, as the community plugins' notes name them.
  *
  * There are two questions, and a `#` or `?` means a different thing in each:
  * in a file's own path it is part of the name (`C# notes.html`, `a?b.html`),

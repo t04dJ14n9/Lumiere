@@ -1,12 +1,12 @@
 /**
  * What a note shows for an HTML file: a card with its name and two buttons,
- * never the page. Open hands the file to link navigation, which shows it in
- * the HTML viewer, a tab of its own (plugins/htmlViewer); Open as Text opens
- * the file in a text editor. Community plugins draw the page inside the note,
- * in a frame. VS Code serves a vault file only to its own webview documents,
- * so a frame in the editor's page would stay blank (checked in VS Code 1.147,
- * 2026-11-22), and the page stays out of the editor's own document too, where
- * it could not be kept apart from the note.
+ * never the page. Open hands the file to link navigation, which opens it in
+ * VS Code's Integrated Browser (a trusted workspace, where the window has one;
+ * otherwise, and in Restricted Mode, as text); Open as Text opens the file in a
+ * text editor. Community plugins draw the page inside the note, in a frame.
+ * VS Code serves a vault file only to its own webview documents, so a frame in
+ * the editor's page would stay blank (checked in VS Code 1.147, 2026-11-22), and
+ * a page in the editor's own document could not be kept apart from the note.
  */
 
 /** What the card says in Restricted Mode, where Open shows the file as text. */
@@ -22,7 +22,7 @@ export interface MountHtmlCardOptions {
   readonly trusted: boolean;
   readonly wiki: boolean;
   readonly signal: AbortSignal;
-  /** Show the file as a link to it does: in the viewer, or as text in Restricted Mode. */
+  /** Show the file as a link to it does: in the Integrated Browser, or as text. */
   readonly open: (target: string, wiki: boolean) => void;
   /** Show the file in a text editor. */
   readonly openAsText: (target: string, wiki: boolean) => void;

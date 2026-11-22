@@ -2,7 +2,7 @@
 
 Transcludes notes, headings and block IDs and displays images, audio and video,
 like Obsidian's embeds. A PDF shows one page inline; a local HTML file appears
-as a card that opens it in the HTML viewer; other attachments appear as cards
+as a card that opens it in VS Code's Integrated Browser; other attachments appear as cards
 that open files.
 
 ## How it works
@@ -55,14 +55,15 @@ it go (`image-selection.ts`, `image-size.ts`). While selected, the caret is hidd
 An HTML file (`![[diagram.html]]`, `![alt](/wiki/diagram.html)`, or a fenced
 `html-embed` block) is a resource of kind `html`, and a note shows it as a
 **card**: the file's name and two buttons, Open and Open as Text (`html-embed.ts`).
-Open hands the file to link navigation, which shows it in the HTML Viewer
-(`plugins/htmlViewer`: the page in a tab of its own, in a trusted workspace;
-Restricted Mode opens it as text, and the card says so there). Open as Text
-asks link navigation for the text editor (`links.open` with `text`). The page
-never runs in the note: community plugins such as Embed HTML draw it in a frame,
-but VS Code serves a vault file only to its own webview documents, so a frame in
-the editor's page stays blank (checked in VS Code 1.147, 2026-11-22), and the page
-could not be kept apart from the note in the editor's own document.
+Open hands the file to link navigation, which opens it in **VS Code's Integrated
+Browser** (`workbench.action.browser.openFile`, which takes the file's URI and
+reloads the page as the file changes) when the workspace is trusted and the window
+has that command; Restricted Mode opens it as text, and the card says so there.
+Open as Text asks link navigation for the text editor (`links.open` with `text`).
+The page never runs in the note: community plugins such as Embed HTML draw it in a
+frame, but VS Code serves a vault file only to its own webview documents, so a frame
+in the editor's page stays blank (checked in VS Code 1.147, 2026-11-22), and a page in
+the editor's own document could not be kept apart from the note.
 A card reserves the height of an attachment card (`estimated-height.ts`), whatever
 size the source writes. It waits until it is near the screen, like a note or PDF
 embed. Clicks stay with its buttons; the note's Markdown is edited from the
