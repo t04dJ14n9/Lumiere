@@ -5,6 +5,7 @@ import {
   mkdtemp,
   readdir,
   readFile,
+  realpath,
   rm,
   symlink,
 } from "node:fs/promises";
@@ -79,5 +80,10 @@ test("the selection for Codex goes to a private folder, never through another us
   if (process.platform !== "win32") {
     assert.equal(folder.mode & 0o777, 0o700);
   }
-  assert.equal(path.dirname(path.dirname(file)), temp);
+  // The file's path comes through a `vscode.Uri`, whose `fsPath` writes a
+  // Windows drive letter in lower case: the same folder, spelled its way.
+  assert.equal(
+    await realpath(path.dirname(path.dirname(file))),
+    await realpath(temp),
+  );
 });
