@@ -111,10 +111,14 @@ vault over.
 - One index of the vault (headings, blocks, links, tags, properties) is built
   in a worker thread and saved in workspace storage, so a reopened window
   starts warm.
-- Git: change bars beside the line numbers, a rendered peek with Revert and
-  Stage, and **Open Rendered Git Diff** for a side-by-side diff of two
-  versions of a note. Inline track changes and the author of the caret line
-  are available but off by default.
+- Git: change bars beside the line numbers against `HEAD` or the index (on by
+  default, for a file in a Git repository). Clicking a bar opens a peek with
+  the hunk's unified diff and **Revert**; Alt+F5 and Shift+Alt+F5 move between
+  changes. There is no hunk staging. **Open Rendered Git Diff** shows two
+  versions of a note rendered side by side, and setting
+  `lumiere.markdown.gitDiffEditor.diffEditor` to `rendered` makes Source
+  Control and the Timeline use it. Inline track changes and the author of the
+  caret line are available but off by default.
 
 ### PDF
 
@@ -146,8 +150,9 @@ vault over.
   chat, VS Code's chat, Claude Code or Codex. The default, `auto`, opens a
   chat only when the editor's own chat is the only agent installed, because an
   extension cannot see which agent you use. A PDF's Copy link only copies.
-- **Open Copied Agent Reference** and the PDF's **Open Location…** take a link
-  an agent printed and open those lines, or that page.
+- **Open Copied Agent Reference** opens the lines that the `@path#lines`
+  reference on your clipboard names, and the PDF's **Open Location…** opens
+  the page that a pasted locator or link names.
 - **IDE context.** **Copy IDE Context** and **Send IDE Context to Agent…**
   build a packet (the active note or PDF, the selection, open tabs,
   diagnostics) for Claude Code and Codex.
@@ -194,15 +199,19 @@ live in the status bar.
 
 ## Settings
 
-**Open Settings** shows all of Lumiere's settings, grouped by plugin, and
-**Change Setting…** edits any one of them from the Command Palette. Markdown
-settings start with `lumiere.markdown.`, PDF settings with `lumiere.pdf.`, and
-each product has its own **Open Settings**.
+Markdown settings start with `lumiere.markdown.` and PDF settings with
+`lumiere.pdf.`, and each product has its own commands. **Lumiere: Open
+Settings** opens VS Code's Settings editor filtered to the Markdown settings,
+and **PDF: Open Settings** to the PDF ones. **Lumiere: Change Setting…** and
+**PDF: Change Setting…** list that product's settings in the Command Palette,
+grouped, and edit the one you pick by its type (a list or
+an object opens the Settings editor on that setting).
 
 - **Every feature is a plugin you can switch off:**
   `lumiere.markdown.plugins.<id>.enabled`, for example `tables`, `graph` or
-  `vim`. **Manage Plugins** lists them and **Show Plugin Status** says which
-  are running. `lumiere.markdown.preset` set to `minimal` loads only the core
+  `vim`. **Manage Plugins** opens Settings on those switches and **Show Plugin
+  Status** lists the active note's plugins with their state.
+  `lumiere.markdown.preset` set to `minimal` loads only the core
   plugins, so notes open in Source mode.
 - **Three editor defaults differ from Obsidian's on purpose.** Readable line
   length is off (`lumiere.markdown.editor.readableLineLength`), the inline

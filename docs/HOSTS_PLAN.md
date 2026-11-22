@@ -25,4 +25,4 @@ What stayed on `main`: the extension (`src/`, `test/`) and the packages it
 builds from (`packages/core`, `packages/agents`, `packages/markdown`,
 `packages/pdf`). The host services in
 `packages/markdown/src/shared/host` remain the seam between the Markdown
-plugins and VS Code ([ARCHITECTURE.md section 6](ARCHITECTURE.md#6-host-services-the-seam-between-plugins-and-a-host)).
+plugins and VS Code ([ARCHITECTURE.md section 6](ARCHITECTURE.md#6-host-services-the-seam-to-vs-code)).
