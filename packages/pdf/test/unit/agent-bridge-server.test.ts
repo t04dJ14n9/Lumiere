@@ -1,5 +1,12 @@
 import assert from "node:assert/strict";
-import { mkdtemp, readdir, readFile, rm, writeFile } from "node:fs/promises";
+import {
+  mkdir,
+  mkdtemp,
+  readdir,
+  readFile,
+  rm,
+  writeFile,
+} from "node:fs/promises";
 import type * as NodeCrypto from "node:crypto";
 import { createRequire } from "node:module";
 import * as net from "node:net";
@@ -19,9 +26,11 @@ import {
   type ServerOptions,
 } from "../../src/extension/plugins/agentBridge/mcp/server";
 import type { BridgeInfo } from "../../src/extension/plugins/agentBridge/mcp/constants";
-import type { AgentHandoff } from "../../src/extension/plugins/agentBridge/handoff";
-import { LastPdf } from "../../src/extension/plugins/agentBridge/last-pdf";
-import type { PdfPanels } from "../../src/extension/plugins/pdf/panels";
+import {
+  chooseBridge,
+  readBridgeRecords,
+} from "../../src/bridge-stdio/discovery";
+import { fakeDeps, fakePanels } from "./support/bridge-tools";
 
 /**
  * The real agent bridge server and its controller, over real loopback
@@ -36,15 +45,11 @@ const log = {
   warn: (message: string) => void lines.push(`warn ${message}`),
   error: (message: string) => void lines.push(`error ${message}`),
 };
-const noEvent = () => ({ dispose() {} });
-const panels = (open: number) =>
-  ({
-    all: Array.from({ length: open }, () => ({})),
-    active: undefined,
-    onDidChange: noEvent,
-    onDidOpen: noEvent,
-  }) as unknown as PdfPanels;
-const handoff = {} as AgentHandoff;
+/** Deps over `open` PDF editors. */
+const depsWith = (open: number) =>
+  fakeDeps({
+    panels: fakePanels(Array.from({ length: open }, () => ({}))),
+  });
 
 beforeEach(async () => {
   folder = await mkdtemp(path.join(tmpdir(), "agent-bridge-"));
@@ -60,8 +65,7 @@ function options(extra: Partial<ServerOptions> = {}): ServerOptions {
   return {
     extensionUri: vscode.Uri.file("/nonexistent-extension") as never,
     shim: path.join(folder, "shim", "bridge-stdio.js"),
-    lastPdf: new LastPdf(panels(0)),
-    handoff,
+    deps: depsWith(0),
     log,
     discoveryDir: path.join(folder, "bridges"),
     shutdownGraceMs: 100,
@@ -163,7 +167,30 @@ test("no rejection path writes the token or the Authorization value to the log",
   assert.ok(!logged.includes("Bearer"), logged);
 });
 
-test("the token is compared in constant time, in the header and in the path", async () => {
+test("the token is accepted only in the Authorization header, never in the path", async () => {
+  const bridge = await startAgentBridge(options());
+  const { token } = bridge.info;
+  const port = portOf(bridge.info.url);
+  try {
+    // The path form Cursor needed while it dropped headers (/mcp/<token>).
+    assert.equal(await request(port, "POST", `/mcp/${token}`), 401);
+    assert.equal(
+      await request(port, "GET", `/mcp/${token}?token=${token}`),
+      401,
+    );
+    // The header on the same route is the one way in: it reaches MCP, which
+    // answers a bodiless GET with its own status, not 401.
+    const status = await request(port, "GET", "/mcp", {
+      Authorization: `Bearer ${token}`,
+    });
+    assert.notEqual(status, 401);
+    assert.notEqual(status, 404);
+  } finally {
+    await bridge.dispose();
+  }
+});
+
+test("the token is compared in constant time", async () => {
   // The module object server.ts calls into, not an import's copy of it.
   const crypto: typeof NodeCrypto = createRequire(import.meta.url)(
     "node:crypto",
@@ -177,7 +204,10 @@ test("the token is compared in constant time, in the header and in the path", as
       await request(port, "GET", "/other", {
         Authorization: `Bearer ${token}`,
       }),
-      await request(port, "GET", `/mcp/${token.slice(0, -1)}x`),
+      // Right length, wrong last character: compared in full, then refused.
+      await request(port, "GET", "/mcp", {
+        Authorization: `Bearer ${token.slice(0, -1)}x`,
+      }),
       await request(port, "GET", "/mcp", { Authorization: "Bearer é" }),
     ];
     assert.deepEqual(statuses, [404, 401, 401]);
@@ -309,9 +339,7 @@ test("the controller disposed while the server starts leaves no listener, file o
   const controller = registerAgentBridge({
     extensionUri: vscode.Uri.file("/nonexistent-extension") as never,
     globalStorageUri: vscode.Uri.file(folder) as never,
-    panels: panels(1),
-    lastPdf: new LastPdf(panels(1)),
-    handoff,
+    deps: depsWith(1),
     log,
     discoveryDir: path.join(folder, "bridges"),
     shutdownGraceMs: 100,
@@ -336,9 +364,7 @@ test("the controller disposed while the bridge runs waits for it to stop", async
   const controller = registerAgentBridge({
     extensionUri: vscode.Uri.file("/nonexistent-extension") as never,
     globalStorageUri: vscode.Uri.file(folder) as never,
-    panels: panels(1),
-    lastPdf: new LastPdf(panels(1)),
-    handoff,
+    deps: depsWith(1),
     log,
     discoveryDir: path.join(folder, "bridges"),
     shutdownGraceMs: 100,
@@ -416,9 +442,7 @@ test("copyMcpSetup quotes a globalStorage path containing spaces", async () => {
   const controller = registerAgentBridge({
     extensionUri: vscode.Uri.file("/nonexistent-extension") as never,
     globalStorageUri: vscode.Uri.file(storage) as never,
-    panels: panels(0),
-    lastPdf: new LastPdf(panels(0)),
-    handoff,
+    deps: depsWith(0),
     log,
     discoveryDir: path.join(folder, "bridges"),
     shutdownGraceMs: 100,
@@ -526,5 +550,102 @@ test("the Codex config.toml snippet escapes DEL, which a TOML basic string may n
   assert.equal(
     toml,
     '[mcp_servers.agent-pdf-viewer]\ncommand = "node"\nargs = ["/tmp/a\\u007fb/bridge-stdio.js"]',
+  );
+});
+
+/** An extension folder that holds the built shim, as `dist/pdf/bridge-stdio.js`. */
+async function extensionWithShim(): Promise<vscode.Uri> {
+  const extension = path.join(folder, "extension");
+  await mkdir(path.join(extension, "dist", "pdf"), { recursive: true });
+  await writeFile(path.join(extension, "dist", "pdf", "bridge-stdio.js"), "//");
+  return vscode.Uri.file(extension);
+}
+
+/** Run as Cursor: its own `vscode.cursor.mcp`, recording what is registered. */
+function asCursor(t: { after(fn: () => void): void }) {
+  const registered: unknown[] = [];
+  const unregistered: string[] = [];
+  vscode.cursor.mcp = {
+    registerServer: (config) => void registered.push(config),
+    unregisterServer: (name) => void unregistered.push(name),
+  };
+  t.after(() => {
+    vscode.cursor.mcp = undefined as never;
+  });
+  return { registered, unregistered };
+}
+
+test("in Cursor the bridge registers its stdio shim for this window, with no token", async (t) => {
+  const cursor = asCursor(t);
+  const shim = path.join(folder, "shim", "bridge-stdio.js");
+  const bridge = await startAgentBridge(
+    options({ extensionUri: (await extensionWithShim()) as never }),
+  );
+  t.after(() => bridge.dispose());
+  const env = {
+    ELECTRON_RUN_AS_NODE: "1",
+    AGENT_PDF_BRIDGE_PID: String(process.pid),
+    AGENT_PDF_BRIDGE_DIR: path.join(folder, "bridges"),
+  };
+  assert.deepEqual(cursor.registered, [
+    {
+      name: "agent-pdf-viewer",
+      server: { command: process.execPath, args: [shim], env },
+    },
+  ]);
+  assert.ok(
+    !JSON.stringify(cursor.registered).includes(bridge.info.token),
+    "the registration holds no token",
+  );
+  // Not also as a VS Code provider, which Cursor stubs.
+  assert.deepEqual(
+    vscode.outstanding().filter((kind) => kind.startsWith("mcpProvider:")),
+    [],
+  );
+  // The shim, started with that environment, serves this window and no other.
+  const choice = chooseBridge(readBridgeRecords(env.AGENT_PDF_BRIDGE_DIR), {
+    cwd: "/not/a/workspace",
+    alive: () => true,
+    pid: env.AGENT_PDF_BRIDGE_PID,
+  });
+  assert.ok("bridge" in choice, JSON.stringify(choice));
+  assert.equal(choice.bridge.url, bridge.info.url);
+  assert.equal(choice.bridge.pid, process.pid);
+  assert.equal((await readFile(shim, "utf8")).length > 0, true);
+  await bridge.dispose();
+  assert.deepEqual(cursor.unregistered, ["agent-pdf-viewer"]);
+});
+
+test("in Cursor, a shim that cannot be copied is started from the extension itself", async (t) => {
+  const cursor = asCursor(t);
+  // The shim's folder is a file, so the copy fails.
+  await writeFile(path.join(folder, "blocker"), "");
+  const bridge = await startAgentBridge(
+    options({
+      extensionUri: (await extensionWithShim()) as never,
+      shim: path.join(folder, "blocker", "bridge-stdio.js"),
+    }),
+  );
+  t.after(() => bridge.dispose());
+  const [config] = cursor.registered as { server: { args: string[] } }[];
+  assert.deepEqual(config!.server.args, [
+    path.join(folder, "extension", "dist", "pdf", "bridge-stdio.js"),
+  ]);
+  assert.ok(
+    lines.some((line) => line.startsWith("warn Could not copy the stdio shim")),
+    lines.join("\n"),
+  );
+});
+
+test("outside Cursor, or with a Cursor API that cannot register, VS Code's provider gets the token in a header", async (t) => {
+  vscode.cursor.mcp = {} as never;
+  t.after(() => {
+    vscode.cursor.mcp = undefined as never;
+  });
+  const bridge = await startAgentBridge(options());
+  t.after(() => bridge.dispose());
+  assert.deepEqual(
+    vscode.outstanding().filter((kind) => kind.startsWith("mcpProvider:")),
+    ["mcpProvider:lumiere.pdf.agentBridge"],
   );
 });

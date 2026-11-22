@@ -15,12 +15,9 @@
  * listener never opens it.
  */
 import * as vscode from "vscode";
-import type { PdfPanels } from "../../pdf/panels";
 import { AGENT_BRIDGE_COMMAND_IDS } from "../../../../shared/command-ids";
-import type { AgentHandoff } from "../handoff";
-import type { NoteSelections } from "../note-selections";
-import type { LastPdf } from "../last-pdf";
 import { SERVER_NAME } from "./constants";
+import type { BridgeDeps } from "./deps";
 import type { BridgeLog, RunningBridge } from "./server";
 
 /** Whether the user has turned the bridge on. Off by default: it starts a local server. */
@@ -35,12 +32,8 @@ export function agentBridgeEnabled(): boolean {
 export interface BridgeOptions {
   extensionUri: vscode.Uri;
   globalStorageUri: vscode.Uri;
-  panels: PdfPanels;
-  /** Plugin-owned LastPdf shared with the envelope command. */
-  lastPdf: LastPdf;
-  handoff: AgentHandoff;
-  /** The Markdown editor's selections, when Lumiere runs. */
-  notes?: NoteSelections;
+  /** What the tools read (see `BridgeDeps`). */
+  deps: BridgeDeps;
   log: BridgeLog;
   /** See ServerOptions.discoveryDir. */
   discoveryDir?: string;
@@ -68,7 +61,7 @@ export function registerAgentBridge(
         void bridge.sync();
       }
     }),
-    options.panels.onDidOpen(() => bridge.use()),
+    options.deps.panels.onDidOpen(() => bridge.use()),
     vscode.commands.registerCommand(
       AGENT_BRIDGE_COMMAND_IDS.copyMcpSetup,
       async () => {
@@ -105,7 +98,7 @@ class BridgeController {
     private readonly options: BridgeOptions,
     private readonly shim: string,
   ) {
-    this.used = options.panels.all.length > 0;
+    this.used = options.deps.panels.all.length > 0;
   }
 
   use(): void {

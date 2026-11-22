@@ -360,23 +360,62 @@ Turn on `lumiere.pdf.agentBridge.enabled` (or run **PDF: Copy MCP Setup
 for Claude Code / Codex…**, which offers to) and the extension starts a local
 [MCP](https://modelcontextprotocol.io/) server with these tools:
 
-| Tool                         | What it does                                                                                                                                                                    |
-| ---------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| `get_current_pdf_selection`  | The text or region selected in the PDF you last looked at: the same text Copy link to this copies, and for a region its PNG snapshot.                                         |
-| `open_pdf_location`          | Opens a `path#page=N&viewrect=…` link in the viewer.                                                                                                                            |
-| `get_current_note_selection` | The selection in Lumiere (the same extension), as `@path#lines` and the quoted text (the same text as its Copy link to this; see `packages/agents/docs/agent-handoff-format.md`). |
+| Tool                         | What it does                                                                                                                                                                                                                                                                                      |
+| ---------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `get_current_pdf_selection`  | The text or region selected in the PDF you last looked at: the same text Copy link to this copies, and for a region its PNG snapshot.                                                                                                                                                           |
+| `get_current_note_selection` | The selection in Lumiere (the same extension), as `@path#lines` and the quoted text (the same text as its Copy link to this; see `packages/agents/docs/agent-handoff-format.md`).                                                                                                              |
+| `get_ide_context`            | Where you are in Lumiere's notes and PDFs, as JSON (below). Also the resource `lumiere://ide-context`, for agents that can @-mention MCP resources.                                                                                                                                              |
+| `open_pdf_location`          | Opens a `path#page=N&viewrect=…` link in the viewer, without taking the keyboard focus, and says which page it opened. The PDF must be in the workspace.                                                                                                                                        |
+| `get_pdf_info`               | A PDF's page count, the page and zoom you are at, its bookmarks (title, page and depth; the first 200), its SHA-256, and whether it is in `lumiere.pdf.annotations.protectedFolders`. `path` is optional: the last PDF you viewed. Page count, position, bookmarks and hash are those of the **open** viewer; a PDF that is not open reports only that. Document metadata is not read yet. |
+| `find_notes_citing_pdf`      | The Markdown notes that link to a PDF (`[p. 3](papers/paper.pdf#page=3)`), each with the page, the quoted passage and the region the link names (the first 100). `path` is optional: the last PDF you viewed. Notes are indexed in the background once a PDF is open in the window.            |
+
+Every tool but `open_pdf_location` is read-only (`readOnlyHint`). A tool that
+takes a file (`path`, `link`) accepts a PDF **inside the window's workspace
+folders** and nothing else: a path outside them, a `..` or a symbolic link
+that leads out, and a file that is missing all get the same refusal, which
+does not say whether the file exists. Left out, `path` is the PDF you last
+viewed, wherever it is. A path in two folders of a multi-root workspace is
+refused as ambiguous (give an absolute path).
+
+`get_ide_context` reads the IDE context packet that **Copy IDE Context** builds
+(`packages/agents/src/ide-context`: scrubbed and truncated to its caps, 8,000
+characters of selected text) and answers with:
+
+- `note`: the active note (else the first open one): `path`, `dirty`, the
+  selected lines and text, the headings above the selection (`headingPath`);
+- `pdf`: the PDF you viewed last: `path`, `page`, `pageCount`, `zoomPercent`,
+  `sha256`, the selected passage with its pages or the selected region as a
+  `viewrect`, and a `locator` (`path#page=3#:~:text=…`, or
+  `path#page=2&viewrect=…`);
+- `tabs`: Lumiere's open tabs (notes and PDFs of the workspace) with `visible`
+  (shown by its editor group), `active` (the one you are in) and `dirty`;
+  `focus` says whether that is a note or a PDF.
+
+What Lumiere's API does not report is left out: a note's caret when nothing
+is selected, and the lines a note shows.
 
 The server is off by default because it opens a port. When on, it listens on
-`127.0.0.1` only, on a random port, requires a random bearer token, and
-refuses requests that carry a browser `Origin`. Turning the setting off stops
-it at once; no reload is needed.
+`127.0.0.1` only, on a random port, requires a random bearer token in the
+`Authorization` header (never in the URL), and refuses requests that carry a
+browser `Origin`. Turning the setting off stops it at once; no reload is
+needed.
 
-- **VS Code** (chat agent mode) and **Cursor** find it by themselves.
-- **Claude Code** and **Codex** connect through a small stdio shim: **PDF: Copy
-  MCP Setup for Claude Code / Codex…** copies the `claude mcp add …` or
-  `codex mcp add …` command (or a config snippet) to run once; on Windows each
-  command comes in a PowerShell and a cmd form, and the cmd form is left out
-  when the shim's path contains `%`, which cmd would expand. The shim picks
+- **VS Code** (chat agent mode) registers the server through
+  `vscode.lm.registerMcpServerDefinitionProvider`, with the token in a header.
+- **Cursor** registers it through its documented
+  [`vscode.cursor.mcp.registerServer`](https://cursor.com/docs/context/mcp-extension-api)
+  as a stdio server: Cursor starts the shim below with its own Electron as
+  the Node runtime (`ELECTRON_RUN_AS_NODE`), told this window's process id,
+  so each window's agent talks to its own window. No token is registered; the
+  shim reads it from the bridge's discovery file. (Cursor stubs VS Code's
+  provider API, and its remote registration drops request headers as of
+  3.30.14, so a URL registration cannot carry the token.) Check it in
+  **Cursor Settings → MCP**: `agent-pdf-viewer` is listed with its tools.
+- **Claude Code** and **Codex** connect through the same small stdio shim:
+  **PDF: Copy MCP Setup for Claude Code / Codex…** copies the `claude mcp add …`
+  or `codex mcp add …` command (or a config snippet) to run once; on Windows
+  each command comes in a PowerShell and a cmd form, and the cmd form is left
+  out when the shim's path contains `%`, which cmd would expand. The shim picks
   the window whose workspace contains the agent's folder (the most specific
   one when workspaces nest), from the files each running bridge writes to
   `~/.agent-pdf-viewer/bridges/` (a bridge starting removes those of
@@ -384,8 +423,9 @@ it at once; no reload is needed.
   equally, it refuses rather than guess; set `AGENT_PDF_BRIDGE_PID` (shown
   in the extension's log) to name the window.
 
-This is a prototype: the Cursor registration uses an undocumented API, and
-only the on/off switch has an end-to-end test.
+This is a prototype: only the on/off switch has an end-to-end test, and the
+Cursor registration is checked by unit tests against the API's shape, not
+against a running Cursor.
 
 ## Selection envelope
 

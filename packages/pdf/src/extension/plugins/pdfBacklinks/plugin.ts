@@ -7,11 +7,8 @@ import {
   isMarkdownPath,
   scanExclude,
 } from "../../../shared/markdown-scan";
-import {
-  PdfBacklinkIndex,
-  type PdfFile,
-} from "../../../shared/pdf-backlink-index";
-import { workspaceLocation } from "../pdf/files";
+import { PdfBacklinkIndex } from "../../../shared/pdf-backlink-index";
+import { isWorkspaceFile, workspaceLocation } from "../pdf/files";
 import type { PdfPanel } from "../pdf/panel";
 import type { PdfPanels } from "../pdf/panels";
 import type {} from "../services";
@@ -175,21 +172,6 @@ function wirePanelPush(
   }
   ctx.own(panels.onDidOpen(pushPanel), "open listener");
   return pushAll;
-}
-
-/** Whether the folder holds a file at `path`; anything else (even an error) is no. */
-async function isWorkspaceFile(file: PdfFile): Promise<boolean> {
-  if (!file.folder) {
-    return false;
-  }
-  try {
-    const stat = await vscode.workspace.fs.stat(
-      vscode.Uri.joinPath(vscode.Uri.parse(file.folder), file.path),
-    );
-    return (stat.type & vscode.FileType.File) !== 0;
-  } catch {
-    return false;
-  }
 }
 
 /**

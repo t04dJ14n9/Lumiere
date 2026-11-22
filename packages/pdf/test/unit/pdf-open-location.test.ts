@@ -63,6 +63,8 @@ class CancellationTokenSource {
 
 interface OpenRequest {
   file: string;
+  /** What followed the view type: a column, or show options. */
+  placement: unknown[];
   resolve(): void;
   reject(error: Error): void;
 }
@@ -70,7 +72,12 @@ interface OpenRequest {
 /** Actual command module; only the VS Code transport is replaced with controlled promises. */
 function harness(isFile: (file: string) => boolean = () => true) {
   let invoke:
-    ((target?: unknown, location?: unknown) => Promise<boolean>) | undefined;
+    | ((
+        target?: unknown,
+        location?: unknown,
+        options?: unknown,
+      ) => Promise<boolean>)
+    | undefined;
   const opened: OpenRequest[] = [];
   const jumps: { file: string; page: number }[] = [];
   const warnings: string[] = [];
@@ -102,10 +109,15 @@ function harness(isFile: (file: string) => boolean = () => true) {
         invoke = callback;
         return new Disposable(() => undefined);
       },
-      executeCommand: (id: string, file: Uri) => {
+      executeCommand: (
+        id: string,
+        file: Uri,
+        _viewType: string,
+        ...placement: unknown[]
+      ) => {
         assert.equal(id, "vscode.openWith");
         return new Promise<void>((resolve, reject) => {
-          opened.push({ file: file.path, resolve, reject });
+          opened.push({ file: file.path, placement, resolve, reject });
         });
       },
     },
@@ -163,6 +175,9 @@ function harness(isFile: (file: string) => boolean = () => true) {
     invoke: (file: string, page = 2) => invoke!(file, { page }),
     /** Open from a single durable link; page/box come from the URI fragment. */
     invokeLink: (link: string) => invoke!(link),
+    /** Open with the command's third argument, as a note's link or the agent bridge does. */
+    invokeWith: (file: string, options: unknown) =>
+      invoke!(file, { page: 2 }, options),
   };
 }
 
@@ -308,5 +323,34 @@ test("a Copy link quote link opens the PDF at its page, pasted bare or inside it
     { file: "/work/papers/attention.pdf", page: 3 },
     { file: "/work/papers/attention.pdf", page: 3 },
   ]);
+  state.registration.dispose();
+});
+
+test("preserveFocus reaches the editor open, with or without a column; a plain open sends neither", async () => {
+  const state = harness();
+  const cases: [unknown, unknown[]][] = [
+    [undefined, []],
+    [{ viewColumn: -2 }, [-2]],
+    [{ preserveFocus: true }, [{ preserveFocus: true }]],
+    [
+      { viewColumn: 2, preserveFocus: true },
+      [{ viewColumn: 2, preserveFocus: true }],
+    ],
+    // Only the boolean true keeps the focus.
+    [{ preserveFocus: "yes" }, []],
+  ];
+  for (const [options, placement] of cases) {
+    const done = state.invokeWith("/a.pdf", options);
+    await microtasks();
+    const request = state.opened.at(-1)!;
+    // Compared as JSON: the command ran in another realm (see `harness`).
+    assert.equal(
+      JSON.stringify(request.placement),
+      JSON.stringify(placement),
+      JSON.stringify(options),
+    );
+    request.resolve();
+    assert.equal(await done, true);
+  }
   state.registration.dispose();
 });

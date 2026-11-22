@@ -27,6 +27,15 @@ const workspaceFiles: OutlineFiles = {
 };
 
 /**
+ * `workspaceFiles` for the PDFs of this window's workspace folders only: any
+ * other PDF reads as missing (see `insideFolders`).
+ */
+export const workspacePdfFiles: OutlineFiles = insideFolders(
+  workspaceFiles,
+  localWorkspaceFolders,
+);
+
+/**
  * The reader of PDF bookmarks that Lumiere offers to notes (`[[paper.pdf#`).
  * PDFium is the viewer's: the engine bundle is built beside the viewer and
  * loads the viewer's embedpdf.wasm, both from dist/pdf/ in the extension.
@@ -37,7 +46,7 @@ export function createPdfOutlines(
 ): PdfOutlineReader {
   const assets = path.join(context.extensionPath, "dist", "pdf");
   return new PdfOutlineReader({
-    files: insideFolders(workspaceFiles, localWorkspaceFolders),
+    files: workspacePdfFiles,
     engine: async () => {
       // A file URL, which `import` needs for an absolute path on Windows.
       const { createOutlineEngine } = (await import(

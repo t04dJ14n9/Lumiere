@@ -14,6 +14,22 @@
   protected folder can have them) and another VS Code window shows a change
   when it lands. The side panel for floating windows (#867, part 2) and MCP
   tools for bookmarks (#864) come later.
+- Agent bridge (MCP): Cursor now starts the bridge's stdio shim through its
+  documented `vscode.cursor.mcp.registerServer`, told this window's process
+  id. The bridge no longer accepts its token in the URL (`/mcp/<token>`); it
+  is read from the `Authorization` header only (#864).
+- Agent bridge: a tool's file argument (`open_pdf_location`, `get_pdf_info`,
+  `find_notes_citing_pdf`) must name a PDF inside the window's workspace
+  folders. A path outside them, through `..` or a symbolic link, is refused.
+- Agent bridge: new read-only tools `get_pdf_info` (page count, position,
+  bookmarks, hash, protected folder) and `find_notes_citing_pdf` (the notes
+  that link to a PDF, with page and quote); `open_pdf_location` opens without
+  taking the keyboard focus and says which page it opened.
+- Agent bridge: `get_ide_context` and the resource `lumiere://ide-context`
+  tell an agent where the user is in Lumiere (the active note with its
+  selection and headings, the PDF viewed last with its page and selected
+  passage or region, and the open Lumiere tabs), which text-editor
+  integrations cannot see in a custom editor.
 - Release workflow: a version published as a Marketplace pre-release is a
   GitHub pre-release too.
 - Markdown: a long run of `[[` with no `]]` after it no longer renders in

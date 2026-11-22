@@ -118,6 +118,21 @@ export function extractPdfLink(text: string): string {
   return link.trim().replace(/^<(.*)>$/, "$1");
 }
 
+/**
+ * Copy link writes a Markdown destination, so `my paper.pdf` arrives as
+ * `my%20paper.pdf`; a path typed into the prompt is as it is on disk. Try the
+ * decoded reading first, and the text as given for a file named with a literal
+ * `%20`: only a reading that is a PDF opens.
+ */
+export function pdfPathReadings(file: string): string[] {
+  try {
+    const decoded = decodeURIComponent(file);
+    return decoded === file ? [file] : [decoded, file];
+  } catch {
+    return [file];
+  }
+}
+
 function parseViewRect(value: string | undefined): ViewRect | undefined {
   if (!value) {
     return undefined;
