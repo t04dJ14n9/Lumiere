@@ -163,9 +163,11 @@ vault over.
 
 1. Install [Lumiere](https://marketplace.visualstudio.com/items?itemName=t04dJ14n9.lumiere)
    (`t04dJ14n9.lumiere`) from the VS Code Marketplace, or search for **Lumiere**
-   in the Extensions view. Releases are published as Marketplace
-   pre-releases (0.1.x). Each [GitHub release](https://github.com/t04dJ14n9/Lumiere/releases)
-   also attaches the `.vsix` for **Extensions: Install from VSIX…**.
+   in the Extensions view. Each version is published to the Marketplace as a
+   release or a pre-release (its CHANGELOG heading says which), and each
+   [GitHub release](https://github.com/t04dJ14n9/Lumiere/releases) attaches the
+   `.vsix` for **Extensions: Install from VSIX…**. `code --install-extension`
+   and Codespaces install the release channel.
 2. Open a folder of notes. An existing Obsidian vault works as it is.
 3. Run **Use Lumiere for Markdown in This Workspace** from the Command Palette,
    so `*.md` files in that folder open in Lumiere. It is an option rather than
