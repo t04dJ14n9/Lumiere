@@ -9132,3 +9132,27 @@ Checks: my `pnpm check` (private TMPDIR) passed. The PR gate on the fifth
 round's head (6c26d3c4) passed `pnpm check`, `pnpm test:vscode` and CI.
 Not run here: `pnpm test:browser`, `pnpm test:quality`,
 `pnpm test:vscode`.
+
+Seventh review round (PR #814, 2026-11-22), with a unit test that fails
+with the change undone:
+
+- **Focus after a right-click.** The sixth round's menu fallback selected
+  the right-clicked cell in the grid but did not focus the grid. With a
+  cell left open from before the note turned read-only, asking for the
+  clicked cell closed it, destroying the focused cell editor, and the
+  focus fell to the page's body; the table's focus binding
+  (`bindTableFocus`) could then clear the active table while the menu
+  opened. The menu now takes its target through the keyboard's
+  `openOrSelect` (made public; the controller wires it as the toolbar's
+  `open`), so both paths select and focus alike and cannot drift; the
+  toolbar's separate `select` is gone.
+- The test builds the collaborators as `TableController` wires them, over
+  a table without DOM: with a cell left open in a read-only note, a
+  right-click on another cell leaves the focus on the grid as the menu
+  opens and the table active, and Copy copies the clicked cell. The sixth
+  round's test now runs on the same wiring.
+
+Checks: my `pnpm check` (private TMPDIR) passed. The PR gate on the sixth
+round's head (31c54c90) passed `pnpm check`, `pnpm test:vscode` and CI.
+Not run here: `pnpm test:browser`, `pnpm test:quality`,
+`pnpm test:vscode`.
