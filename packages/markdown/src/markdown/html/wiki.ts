@@ -1,6 +1,8 @@
 import type { MarkdownIt } from "markdown-it";
-import { attr, escape, wikiTarget } from "./helpers";
+import { attr, escape, rememberedIndexOf, wikiTarget } from "./helpers";
 import type { WikiTarget } from "./helpers";
+const closerFrom = rememberedIndexOf("]]");
+const newlineFrom = rememberedIndexOf("\n");
 export function wiki(md: MarkdownIt): void {
   md.inline.ruler.before("link", "wiki-link", (state, silent) => {
     const embed = state.src.startsWith("![[", state.pos);
@@ -8,8 +10,9 @@ export function wiki(md: MarkdownIt): void {
       return false;
     }
     const start = state.pos + (embed ? 3 : 2);
-    const end = state.src.indexOf("]]", start);
-    if (end < 0 || state.src.slice(start, end).includes("\n")) {
+    const end = closerFrom(state, start);
+    const newline = newlineFrom(state, start);
+    if (end < 0 || (newline >= 0 && newline < end)) {
       return false;
     }
     if (!silent) {

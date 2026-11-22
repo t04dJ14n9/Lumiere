@@ -16,6 +16,9 @@
   tools for bookmarks (#864) come later.
 - Release workflow: a version published as a Marketplace pre-release is a
   GitHub pre-release too.
+- Markdown: a long run of `[[` with no `]]` after it no longer renders in
+  quadratic time (a note or diff of 100,000 `[` took 0.3 s, 400,000 took 3.3 s;
+  now 0.1 s and 1.0 s).
 
 ## 0.1.23 (2026-11-22)
 
