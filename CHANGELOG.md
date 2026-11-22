@@ -12,8 +12,7 @@
   annotation file, as `<sha256>.bookmarks.json` in
   `lumiere.pdf.annotations.folder`, so the PDF is never written (a PDF in a
   protected folder can have them) and another VS Code window shows a change
-  when it lands. The side panel for floating windows (#867, part 2) and MCP
-  tools for bookmarks (#864) come later.
+  when it lands. MCP tools for bookmarks (#864) come later.
 - Agent bridge (MCP): Cursor now starts the bridge's stdio shim through its
   documented `vscode.cursor.mcp.registerServer`, told this window's process
   id. The bridge no longer accepts its token in the URL (`/mcp/<token>`); it
@@ -39,7 +38,6 @@
   selection and headings, the PDF viewed last with its page and selected
   passage or region, and the open Lumiere tabs), which text-editor
   integrations cannot see in a custom editor.
-  when it lands. MCP tools for bookmarks (#864) come later.
 - PDF: a side panel inside the viewer, for a PDF in a floating window (#867).
   A PDF moved with **View: Move Editor into New Window** has no side bar, so
   the PDF Outline in the Explorer is out of reach (reaching it means clicking
