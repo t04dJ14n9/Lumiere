@@ -1,6 +1,6 @@
 # Changelog
 
-## Unreleased
+## 0.1.24 (2026-11-23)
 
 - PDF: bookmarks, your own named places in a PDF (#867). **PDF: Add Bookmark**
   (⌘D, Ctrl+D on Windows and Linux) saves the page and the point on it, under
