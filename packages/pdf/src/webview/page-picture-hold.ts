@@ -7,6 +7,10 @@ const NATIVE_SRC = Object.getOwnPropertyDescriptor(
 
 const held = new WeakSet<HTMLImageElement>();
 
+/** The URLs given to a held element that their owner has not revoked yet. */
+const unrevoked = new Set<string>();
+let watchingRevokes = false;
+
 /**
  * Keep the picture a page's `<img>` shows until the one replacing it is
  * decoded (shared/picture-swap.ts).
@@ -22,6 +26,14 @@ const held = new WeakSet<HTMLImageElement>();
  * own `src` is wrapped: a new picture is decoded off screen first, and then
  * given to the element, which takes it from the memory cache at once.
  *
+ * `RenderLayer` revokes a picture's URL as soon as it starts the next picture
+ * (a zoom step), whether or not the page has shown it. While a pinch runs
+ * faster than pictures decode, a picture can be revoked before its decode
+ * ends; giving it to the element then would load a revoked URL, a broken
+ * image, and take away the picture the page has (a blank page until the next
+ * picture comes). So a picture that was revoked while decoding is dropped,
+ * and the page keeps its picture until the next one comes.
+ *
  * Wraps each element once, for as long as it lives.
  */
 export function holdPictureUntilDecoded(image: HTMLImageElement): void {
@@ -29,9 +41,11 @@ export function holdPictureUntilDecoded(image: HTMLImageElement): void {
     return;
   }
   held.add(image);
+  watchRevokes();
   const give = swapWhenDecoded(
     {
       hasPicture: () => image.complete && image.naturalWidth > 0,
+      isAvailable: (url) => unrevoked.has(url),
       show: (url) => NATIVE_SRC.set!.call(image, url),
     },
     decodeOffScreen,
@@ -40,8 +54,24 @@ export function holdPictureUntilDecoded(image: HTMLImageElement): void {
     configurable: true,
     enumerable: true,
     get: () => NATIVE_SRC.get!.call(image) as string,
-    set: give,
+    set: (url: string) => {
+      unrevoked.add(url);
+      give(url);
+    },
   });
+}
+
+/** Learn which URLs are revoked, once: the only signal EmbedPDF gives. */
+function watchRevokes(): void {
+  if (watchingRevokes) {
+    return;
+  }
+  watchingRevokes = true;
+  const revoke = URL.revokeObjectURL.bind(URL);
+  URL.revokeObjectURL = (url) => {
+    unrevoked.delete(url);
+    revoke(url);
+  };
 }
 
 /** Load and decode the picture at `url` in an element of its own; resolves to that element. */

@@ -11,6 +11,13 @@
   written. Going to a bookmark is a deliberate jump, which Back returns from;
   the viewer's `goTo` now also takes how far across the page to show.
 
+- A pinch or Ctrl+wheel zoom no longer blanks pages on a slow machine. The
+  viewer keeps a page's picture until the sharper one is decoded, but gave
+  the page a picture that the renderer had already taken back when the
+  decode ended after the next zoom step started: the page loaded a broken
+  image and showed nothing until the next picture arrived. Such a picture is
+  now dropped, and the page keeps the one it has (#852).
+
 - A left click on a mark's note icon shows its note at once. The press used
   to close the card, so a click never showed the note (only resting the
   pointer on the icon did). The card is the one a hover shows, to read; it

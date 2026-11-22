@@ -9,8 +9,10 @@ function harness(hasPicture: boolean) {
     string,
     { resolve: () => void; reject: (error: Error) => void }
   >();
+  const revoked = new Set<string>();
   const slot = {
     hasPicture: () => hasPicture || shown.length > 0,
+    isAvailable: (url: string) => !revoked.has(url),
     show: (url: string) => {
       shown.push(url);
     },
@@ -23,7 +25,7 @@ function harness(hasPicture: boolean) {
       }),
   );
   const settle = () => new Promise((resolve) => setImmediate(resolve));
-  return { shown, pending, give, settle };
+  return { shown, pending, give, settle, revoked };
 }
 
 test("a page's first picture is shown at once: there is nothing to keep", () => {
@@ -73,4 +75,26 @@ test("the latest picture is shown even when it cannot be decoded, so its failure
   pending.get("blob:broken")!.reject(new Error("EncodingError"));
   await settle();
   assert.deepEqual(shown, ["blob:broken"]);
+});
+
+test("a picture revoked while it decodes is not shown: the page keeps the one it has", async () => {
+  const { shown, pending, give, settle, revoked } = harness(true);
+  give("blob:stale");
+  revoked.add("blob:stale");
+  pending.get("blob:stale")!.resolve();
+  await settle();
+  assert.deepEqual(shown, []);
+  give("blob:next");
+  pending.get("blob:next")!.resolve();
+  await settle();
+  assert.deepEqual(shown, ["blob:next"], "the next picture is shown as usual");
+});
+
+test("a revoked picture whose decode failed is dropped, not shown as a broken image", async () => {
+  const { shown, pending, give, settle, revoked } = harness(true);
+  give("blob:stale");
+  revoked.add("blob:stale");
+  pending.get("blob:stale")!.reject(new Error("EncodingError"));
+  await settle();
+  assert.deepEqual(shown, []);
 });
