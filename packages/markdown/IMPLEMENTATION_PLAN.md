@@ -9546,3 +9546,44 @@ and `outline-jump-top`, 4 passed; `outline-jump-jolt` failed first (a frame at
 2933 against 2913, then, with the second part missing, at 2916; and for the
 finding, a frame at 47 under the bar). The whole `pnpm test:vscode` was not
 run.
+
+## README and ARCHITECTURE rewritten (owner request, 2026-11-22)
+
+The owner asked for the README and docs/ARCHITECTURE.md to say what Lumiere
+is: an Obsidian-style Live Preview Markdown editor, plus a fast PDF reader,
+inside VS Code and Cursor, whose aim is to keep the good properties of
+Obsidian. Both are rewritten against `main` at 0.1.22, with each claim checked
+against the code, the plugin READMEs, `package.json` contributions and
+CAPABILITIES and PARITY.
+
+README: the positioning and a short "why", then the features grouped (Writing,
+Linking and navigation, Embeds, Your vault as it is, PDF, Agents), a link to
+the sample vault's Codespace, install, settings, "Differences from Obsidian"
+and links to the deeper documents. It embeds no screenshot: the images in
+`docs/screenshots` and `docs/pr-screenshots` show the product under earlier
+names ("Markdown Workshop", "Lumière") and test fixtures, so they no longer
+match.
+
+ARCHITECTURE: rewritten as a one-read description of the system (extension host
+and webviews, layering, the plugin core and a plugin's anatomy, the plugin
+trees, host services, the document, the pipeline from dialect to Live Preview,
+the vault index, navigation and reveal, the PDF reader, agents, security, the
+opening path, the test layers and the merge gate). It drops the old
+assessment tables and the measured opening times, which the code and the
+quality budgets now carry, and keeps six verified rough edges.
+
+Claims removed or corrected from the old text: the README no longer says a PDF
+Copy link carries a snapshot of a drawn region (it never puts an image on the
+clipboard; the region tool is off by default, and a snapshot goes only to the
+opt-in MCP tool and the IDE context). Its agents section no longer says the
+selection opens in the editor's own chat as a rule: for notes, `auto` opens a
+chat only when it is the only agent installed (or the `target` setting forces
+one), and a PDF's Copy link only copies. It says Backlinks and Outgoing Links
+are off by default, and "Lumiere was briefly called Lumiere" now reads "Lumia"
+(its name before #673). ARCHITECTURE no longer says
+EmbedPDF is 3.0.0 (it is 3.2.0), no longer lists five critical panel hosts
+(there are seven), and no longer says 17 window features wait for the first
+editor (it is 15).
+
+No code changed. `pnpm check` passes. The Markdown documents are not part of
+`pnpm check`: Prettier ignores `*.md`, and no test reads them.
