@@ -191,6 +191,7 @@ function contextKeys(
     hasTextSelection: panel?.selection?.kind === "text",
     hasAnnotationSelection: isAnnotationMarkSelection(panel?.selection),
     outlineLoading: Boolean(panel && !panel.outline),
+    sidePanelOpen: panel?.sidePanel.current.open ?? false,
     ...(view ? viewKeys(view) : NO_VIEW),
   };
 }

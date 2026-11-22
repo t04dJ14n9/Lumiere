@@ -463,6 +463,69 @@ test("Escape in the rename box changes nothing, and the Quick Pick is back", asy
   h.close();
 });
 
+test("a section whose name has $(…) in it is text in the description too, not an icon", async () => {
+  const h = await open({
+    panel: {
+      outline: [{ title: "Intro $(star)", page: 1, top: 0, children: [] }],
+    },
+    bookmarks: [mark("a", 2, 10, "Notes")],
+  });
+  void h.run(GO);
+  const { picker } = await h.pickerAt(0);
+  assert.deepEqual(
+    picker.items.map((item) => [item.label, item.description]),
+    [["Notes", "Page 2 · Intro \\$(star)"]],
+  );
+  picker.hide();
+  h.close();
+});
+
+test("a rename box left open while the reader goes to another editor brings no Quick Pick back", async () => {
+  const other = fakePanel({ sha256: sha("other") });
+  const opened: { current?: Awaited<ReturnType<typeof open>> } = {};
+  const h = await open({
+    bookmarks: stored,
+    input: () => {
+      // The reader switches tabs, then answers the box.
+      opened.current?.panels.activate(other);
+      return "Method details";
+    },
+  });
+  opened.current = h;
+  const done = h.run(GO);
+  const first = await h.pickerAt(0);
+  first.press(first.picker.items[1]!, "edit");
+  await done;
+  await tick();
+  assert.equal(h.pickers.length, 1, "no second Quick Pick");
+  // The rename still happened: the reader asked for it.
+  assert.equal(
+    h.saved().find((bookmark) => bookmark.id === "a")?.title,
+    "Method details",
+  );
+  assert.deepEqual(h.panel.jumps, []);
+  h.close();
+});
+
+test("a rename box left open while the PDF is closed brings no Quick Pick back either", async () => {
+  const opened: { current?: Awaited<ReturnType<typeof open>> } = {};
+  const h = await open({
+    bookmarks: stored,
+    input: () => {
+      opened.current?.panels.activate(undefined);
+      return undefined;
+    },
+  });
+  opened.current = h;
+  const done = h.run(GO);
+  const first = await h.pickerAt(0);
+  first.press(first.picker.items[0]!, "edit");
+  await done;
+  await tick();
+  assert.equal(h.pickers.length, 1);
+  h.close();
+});
+
 test("with no bookmarks the Quick Pick says so", async () => {
   const h = await open();
   void h.run(GO);

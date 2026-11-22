@@ -16,6 +16,7 @@ import { rememberBacklinks } from "./backlink-store";
 import { parsePdfBacklinkHits } from "../shared/pdf-backlink-index";
 import { annotationLoadState } from "./annotation-load-state";
 import { rememberToolbarSettings } from "./toolbar-settings";
+import { handleSidePanelMessage } from "./side-panel/messages";
 import type { useViewActions } from "./view-sync";
 
 export interface HostMessageHandlers {
@@ -56,7 +57,7 @@ function handleHostMessage(
   handlers: HostMessageHandlers,
 ): void {
   const { history, show } = handlers;
-  if (history.handle(message)) {
+  if (history.handle(message) || handleSidePanelMessage(message)) {
     return;
   }
   switch (message.type) {

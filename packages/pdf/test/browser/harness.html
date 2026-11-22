@@ -31,13 +31,17 @@
       // with the PDF named in ?pdf= (and, with ?goto=, a location right away).
       // ?toolbar= is the toolbar setting; the tests default to the slim bar,
       // whose fields and buttons most of them drive. ?dock= is the floating
-      // bar's edge.
+      // bar's edge. ?sidePanel= is the side panel's state as the editor
+      // would send it with the load.
       const parameters = new URLSearchParams(location.search);
       document.getElementById("root").dataset.toolbar =
         parameters.get("toolbar") ?? "slim";
       document.getElementById("root").dataset.dock =
         parameters.get("dock") ?? "bottom";
       const viewSettings = JSON.parse(parameters.get("view") ?? "{}");
+      const sidePanel = parameters.get("sidePanel")
+        ? JSON.parse(parameters.get("sidePanel"))
+        : undefined;
       let savedPosition = parameters.get("position")
         ? JSON.parse(parameters.get("position"))
         : undefined;
@@ -92,6 +96,7 @@
                 data,
                 settings: viewSettings,
                 position: savedPosition,
+                sidePanel,
               });
               const goto = parameters.get("goto");
               if (goto)

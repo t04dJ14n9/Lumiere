@@ -175,6 +175,26 @@
       "icon": "$(trash)"
     },
     {
+      "command": "lumiere.pdf.toggleSidePanel",
+      "title": "Toggle Side Panel",
+      "category": "PDF",
+      "enablement": "lumiere.pdf.pdfActive"
+    },
+    {
+      "command": "lumiere.pdf.showSidePanel",
+      "title": "Show Side Panel",
+      "category": "PDF",
+      "icon": "$(layout-sidebar-left-off)",
+      "enablement": "lumiere.pdf.pdfActive"
+    },
+    {
+      "command": "lumiere.pdf.hideSidePanel",
+      "title": "Hide Side Panel",
+      "category": "PDF",
+      "icon": "$(layout-sidebar-left)",
+      "enablement": "lumiere.pdf.pdfActive"
+    },
+    {
       "command": "lumiere.pdf.copyMcpSetup",
       "title": "Copy MCP Setup for Claude Code / Codex\u2026",
       "category": "PDF"
@@ -518,6 +538,16 @@
     ],
     "editor/title": [
       {
+        "command": "lumiere.pdf.showSidePanel",
+        "when": "activeCustomEditorId == 'lumiere.pdf.viewer' && !lumiere.pdf.sidePanelOpen",
+        "group": "navigation@1"
+      },
+      {
+        "command": "lumiere.pdf.hideSidePanel",
+        "when": "activeCustomEditorId == 'lumiere.pdf.viewer' && lumiere.pdf.sidePanelOpen",
+        "group": "navigation@1"
+      },
+      {
         "command": "lumiere.pdf.find",
         "when": "activeCustomEditorId == 'lumiere.pdf.viewer'",
         "group": "0_pdfFind@1"
@@ -700,6 +730,18 @@
       },
       {
         "command": "lumiere.pdf.deleteBookmark",
+        "when": "false"
+      },
+      {
+        "command": "lumiere.pdf.toggleSidePanel",
+        "when": "activeCustomEditorId == 'lumiere.pdf.viewer'"
+      },
+      {
+        "command": "lumiere.pdf.showSidePanel",
+        "when": "false"
+      },
+      {
+        "command": "lumiere.pdf.hideSidePanel",
         "when": "false"
       },
       {

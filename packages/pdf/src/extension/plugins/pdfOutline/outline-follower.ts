@@ -1,6 +1,6 @@
 import * as vscode from "vscode";
 import type { OutlineItem } from "../../../shared/messages";
-import { findActiveOutlineItem } from "../../../shared/outline";
+import { findActiveOutlineItem, followPosition } from "../../../shared/outline";
 import type { PdfSettings } from "../../settings";
 import type { PdfPanels } from "../pdf/panels";
 
@@ -143,11 +143,10 @@ export class OutlineFollower implements vscode.Disposable {
     if (!state) {
       return false;
     }
-    // The offset belongs to readingPage, which can precede current page.
-    const item = findActiveOutlineItem(this.provider.getChildren(), {
-      page: state.page,
-      top: state.readingPage === state.page ? state.top : 0,
-    });
+    const item = findActiveOutlineItem(
+      this.provider.getChildren(),
+      followPosition(state),
+    );
     if (!item) {
       return false;
     }

@@ -7,6 +7,7 @@ import type { OutlineItem } from "../../src/shared/messages";
 import {
   findActiveOutlineItem,
   flattenOutlineForPicker,
+  followPosition,
 } from "../../src/shared/outline";
 import { OUTLINE_COMMAND_IDS } from "../../src/shared/command-ids";
 import {
@@ -206,6 +207,7 @@ function harness(enabled = false, visible = true) {
     "../../../shared/outline": {
       findActiveOutlineItem,
       flattenOutlineForPicker,
+      followPosition,
     },
     "../../../shared/command-ids": { OUTLINE_COMMAND_IDS },
     "./focus": {

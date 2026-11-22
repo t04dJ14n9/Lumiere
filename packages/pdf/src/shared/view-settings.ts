@@ -32,6 +32,12 @@ export interface ViewSettings extends ViewChoices {
    * PDF). Optional so hosts without the setting need not name it: missing is on.
    */
   predominantAxis?: boolean;
+  /**
+   * The side panel's outline keeps the reading position's bookmark selected,
+   * as the Explorer's does (`lumiere.pdf.outline.followCursor`). Optional so
+   * hosts without the setting need not name it: missing is on.
+   */
+  outlineFollowCursor?: boolean;
 }
 
 /**
@@ -121,6 +127,7 @@ export function parseViewSettings(value: unknown): ViewSettings {
     arrowsKeepPlace: settings.arrowsKeepPlace !== false,
     keyboardShortcuts: settings.keyboardShortcuts !== false,
     predominantAxis: settings.predominantAxis !== false,
+    outlineFollowCursor: settings.outlineFollowCursor !== false,
   };
 }
 

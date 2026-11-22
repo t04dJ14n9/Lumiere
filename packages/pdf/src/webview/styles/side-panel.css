@@ -1,0 +1,433 @@
+/*
+ * The side panel inside the viewer (side-panel/). It looks like VS Code's own
+ * side bar and Panel and uses only its theme variables: the side bar's
+ * colours, the section header, the Panel's title tabs, list and tree states,
+ * indent guides, the sash and the badge. The fallbacks are the dark theme's
+ * values, for the browser tests.
+ */
+.workspace {
+  display: flex;
+  min-width: 0;
+  min-height: 0;
+}
+
+.workspace > .document {
+  flex: 1 1 0;
+}
+
+.side-panel {
+  position: relative;
+  display: flex;
+  flex: none;
+  flex-direction: column;
+  box-sizing: border-box;
+  min-width: 0;
+  /* Whatever width it is given, the pages keep their share (the script clamps it too). */
+  max-width: max(160px, 60%);
+  color: var(--vscode-sideBar-foreground, var(--vscode-foreground, #ccc));
+  background: var(--vscode-sideBar-background, #252526);
+  border-right: 1px solid
+    var(--vscode-sideBar-border, var(--vscode-contrastBorder, #80808059));
+  font-family: var(--vscode-font-family, system-ui, sans-serif);
+  font-size: var(--vscode-font-size, 13px);
+  user-select: none;
+}
+
+/* The tab strip: the Panel's title tabs. */
+.sp-tab-strip {
+  display: flex;
+  flex: none;
+  align-items: center;
+  height: 35px;
+  box-sizing: border-box;
+  padding-right: 6px;
+}
+
+.sp-tabs {
+  display: flex;
+  flex: 1;
+  min-width: 0;
+  height: 100%;
+}
+
+.sp-tab {
+  display: inline-flex;
+  flex: none;
+  align-items: center;
+  justify-content: center;
+  box-sizing: border-box;
+  height: 100%;
+  min-width: 34px;
+  padding: 0 8px;
+  border: 0;
+  border-bottom: 1px solid transparent;
+  border-radius: 0;
+  color: var(--vscode-panelTitle-inactiveForeground, #e7e7e799);
+  background: transparent;
+  cursor: pointer;
+}
+
+.sp-tab:hover {
+  color: var(--vscode-panelTitle-activeForeground, #e7e7e7);
+}
+
+.sp-tab[aria-selected="true"] {
+  color: var(--vscode-panelTitle-activeForeground, #e7e7e7);
+  border-bottom-color: var(
+    --vscode-panelTitle-activeBorder,
+    var(--vscode-panelTitle-activeForeground, #e7e7e7)
+  );
+}
+
+/* High-contrast themes outline what the pointer or the keyboard is on. */
+.sp-tab:hover {
+  outline: 1px dashed var(--vscode-contrastActiveBorder, transparent);
+  outline-offset: -4px;
+}
+
+.sp-tab:focus-visible,
+.sp-action:focus-visible,
+.sp-button:focus-visible,
+.sp-sash:focus-visible {
+  outline: 1px solid var(--vscode-focusBorder, #007fd4);
+  outline-offset: -1px;
+}
+
+.sp-tab .codicon {
+  font-size: 16px;
+}
+
+/* The section header: the view's title, its count and its actions. */
+.sp-section-header {
+  display: flex;
+  flex: none;
+  align-items: center;
+  gap: 6px;
+  box-sizing: border-box;
+  height: 22px;
+  padding: 0 4px 0 8px;
+  color: var(
+    --vscode-sideBarSectionHeader-foreground,
+    var(--vscode-foreground, #ccc)
+  );
+  background: var(--vscode-sideBarSectionHeader-background, #80808033);
+  border-top: 1px solid
+    var(
+      --vscode-sideBarSectionHeader-border,
+      var(--vscode-contrastBorder, transparent)
+    );
+  font-size: 11px;
+  font-weight: 700;
+  text-transform: uppercase;
+}
+
+.sp-section-title {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.sp-spacer-flex {
+  flex: 1;
+}
+
+.sp-badge {
+  flex: none;
+  box-sizing: border-box;
+  min-width: 18px;
+  padding: 2px 5px;
+  border-radius: 11px;
+  border: 1px solid var(--vscode-contrastBorder, transparent);
+  color: var(--vscode-badge-foreground, #fff);
+  background: var(--vscode-badge-background, #4d4d4d);
+  font-size: 11px;
+  font-weight: 400;
+  line-height: 11px;
+  text-align: center;
+}
+
+.sp-actions-bar {
+  display: flex;
+  align-items: center;
+}
+
+/* An action button: 22 pixels, a hover as VS Code's action bars have. */
+.sp-action {
+  display: inline-grid;
+  flex: none;
+  place-items: center;
+  width: 22px;
+  height: 22px;
+  padding: 0;
+  border: 0;
+  border-radius: 5px;
+  color: var(--vscode-icon-foreground, var(--vscode-foreground, #ccc));
+  background: transparent;
+  cursor: pointer;
+}
+
+.sp-action:hover {
+  background: var(--vscode-toolbar-hoverBackground, #5a5d5e50);
+  outline: 1px dashed var(--vscode-contrastActiveBorder, transparent);
+  outline-offset: -1px;
+}
+
+.sp-action .codicon {
+  font-size: 16px;
+}
+
+.sp-body {
+  display: flex;
+  flex: 1;
+  flex-direction: column;
+  min-height: 0;
+}
+
+/* Lists and trees: rows of 22 pixels in a scrolling box that is the one focus. */
+.sp-scroll {
+  flex: 1;
+  min-height: 0;
+  overflow: hidden auto;
+  outline: none;
+}
+
+.sp-spacer {
+  position: relative;
+  width: 100%;
+}
+
+.sp-row {
+  display: flex;
+  align-items: center;
+  box-sizing: border-box;
+  right: 0;
+  left: 0;
+  padding-left: calc(6px + var(--depth, 0) * 8px);
+  padding-right: 6px;
+  overflow: hidden;
+  line-height: 22px;
+  white-space: nowrap;
+  cursor: pointer;
+}
+
+.sp-row:hover {
+  color: var(--vscode-list-hoverForeground, inherit);
+  background: var(--vscode-list-hoverBackground, #2a2d2e);
+  outline: 1px dashed var(--vscode-contrastActiveBorder, transparent);
+  outline-offset: -1px;
+}
+
+/* Selected: in the colours of a list that has focus, or of one that has not. */
+.sp-row.selected {
+  color: var(--vscode-list-inactiveSelectionForeground, inherit);
+  background: var(--vscode-list-inactiveSelectionBackground, #37373d);
+}
+
+.sp-scroll:focus .sp-row.selected {
+  color: var(--vscode-list-activeSelectionForeground, #fff);
+  background: var(--vscode-list-activeSelectionBackground, #04395e);
+}
+
+.sp-scroll:focus .sp-row.selected .codicon {
+  color: var(--vscode-list-activeSelectionIconForeground, inherit);
+}
+
+.sp-row.selected {
+  outline: 1px dotted var(--vscode-contrastActiveBorder, transparent);
+  outline-offset: -1px;
+}
+
+/* The row the keyboard is on, while the list has focus. */
+.sp-scroll:focus .sp-row.focused {
+  outline: 1px solid
+    var(--vscode-list-focusOutline, var(--vscode-focusBorder, #007fd4));
+  outline-offset: -1px;
+}
+
+/* The icon font's own rule sets its display and line height: beat it to centre the chevron. */
+.sp-row .sp-twistie {
+  display: inline-flex;
+  flex: none;
+  align-items: center;
+  justify-content: center;
+  width: 16px;
+  height: 22px;
+  font-size: 16px;
+  line-height: 22px;
+}
+
+/* Indent guides: one thin line at each level above a row, joining its rows. */
+.sp-guide {
+  position: absolute;
+  top: 0;
+  bottom: 0;
+  width: 1px;
+  background: var(--vscode-tree-inactiveIndentGuidesStroke, #a9a9a933);
+  pointer-events: none;
+}
+
+.sp-tree:hover .sp-guide,
+.sp-tree:focus .sp-guide {
+  background: var(--vscode-tree-indentGuidesStroke, #a9a9a966);
+}
+
+.sp-icon {
+  flex: none;
+  margin-right: 6px;
+  font-size: 16px;
+  color: var(--vscode-icon-foreground, inherit);
+}
+
+.sp-swatch {
+  flex: none;
+  box-sizing: border-box;
+  width: 10px;
+  height: 10px;
+  margin-right: 6px;
+  border-radius: 2px;
+  box-shadow: inset 0 0 0 1px var(--vscode-contrastBorder, #80808099);
+}
+
+.sp-label {
+  flex: 1 1 auto;
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.sp-description {
+  /* Gives way before the label does: the title is what a row is about. */
+  flex: 0 4 auto;
+  min-width: 0;
+  margin-left: 6px;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  color: var(--vscode-descriptionForeground, #ccccccb3);
+  font-size: 0.9em;
+}
+
+.sp-scroll:focus .sp-row.selected .sp-description,
+.sp-scroll:focus .sp-row.selected .sp-page {
+  color: inherit;
+}
+
+.sp-page {
+  flex: none;
+  margin-left: 8px;
+  color: var(--vscode-descriptionForeground, #ccccccb3);
+  font-size: 0.9em;
+}
+
+/* A row's own buttons show while the pointer or the keyboard is on it. */
+.sp-row-actions {
+  position: absolute;
+  top: 0;
+  right: 2px;
+  display: none;
+  height: 22px;
+  background: inherit;
+}
+
+.sp-row:hover .sp-row-actions,
+.sp-row.focused .sp-row-actions {
+  display: flex;
+}
+
+.sp-scroll:not(:focus) .sp-row.focused .sp-row-actions {
+  display: none;
+}
+
+.sp-scroll:not(:focus) .sp-row:hover .sp-row-actions {
+  display: flex;
+}
+
+/* Thumbnails: a page's picture over its number, the page being read selected. */
+.sp-thumbnails .sp-row {
+  flex-direction: column;
+  justify-content: center;
+  padding: 0;
+  line-height: 18px;
+}
+
+.sp-thumbnail {
+  display: block;
+  flex: none;
+  box-sizing: border-box;
+  overflow: hidden;
+  margin-top: 8px;
+  background: var(--vscode-editor-background, #1e1e1e);
+  box-shadow:
+    0 0 0 1px var(--vscode-contrastBorder, #80808066),
+    0 1px 4px var(--vscode-widget-shadow, #00000060);
+}
+
+.sp-thumbnail img {
+  display: block;
+  width: 100%;
+  height: 100%;
+  object-fit: contain;
+}
+
+.sp-thumbnail-label {
+  flex: none;
+  height: 18px;
+  margin-top: 8px;
+  font-size: 11px;
+}
+
+.sp-thumbnails .sp-row.selected .sp-thumbnail {
+  box-shadow:
+    0 0 0 2px var(--vscode-focusBorder, #007fd4),
+    0 1px 4px var(--vscode-widget-shadow, #00000060);
+}
+
+/* What a tab says when it has nothing to list: a view's welcome text. */
+.sp-empty {
+  padding: 8px 12px;
+  color: var(--vscode-descriptionForeground, #ccccccb3);
+  line-height: 1.5;
+  user-select: text;
+}
+
+.sp-empty p {
+  margin: 0 0 8px;
+}
+
+.sp-button {
+  box-sizing: border-box;
+  width: 100%;
+  max-width: 260px;
+  padding: 4px 12px;
+  border: 1px solid
+    var(--vscode-button-border, var(--vscode-contrastBorder, transparent));
+  border-radius: 2px;
+  color: var(--vscode-button-foreground, #fff);
+  background: var(--vscode-button-background, #0e639c);
+  cursor: pointer;
+}
+
+.sp-button:hover {
+  background: var(--vscode-button-hoverBackground, #1177bb);
+}
+
+/* The sash on the panel's edge: four pixels that light up under the pointer. */
+.sp-sash {
+  position: absolute;
+  z-index: 5;
+  top: 0;
+  right: -3px;
+  bottom: 0;
+  width: 4px;
+  background: transparent;
+  cursor: ew-resize;
+  touch-action: none;
+  transition: background-color 0.1s ease-out 0.1s;
+}
+
+.sp-sash:hover,
+.sp-sash:active {
+  background: var(
+    --vscode-sash-hoverBorder,
+    var(--vscode-focusBorder, #007fd4)
+  );
+}

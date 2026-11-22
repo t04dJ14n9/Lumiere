@@ -47,12 +47,22 @@ export function registerBookmarkCommands(
   );
 }
 
-/** Save the place the reader is at, under a title they can change. */
+/** Save the place the reader is at in the active PDF, under a title they can change. */
 async function addBookmark({ panels, store }: BookmarkParts): Promise<void> {
-  const panel = panels.active;
-  if (!panel) {
-    return;
+  if (panels.active) {
+    await addBookmarkTo(store, panels.active);
   }
+}
+
+/**
+ * Save the place the reader is at in `panel`'s PDF, under a title they can
+ * change. The side panel's Add button asks for it in the editor it is in,
+ * which is not always the active one.
+ */
+export async function addBookmarkTo(
+  store: BookmarkStore,
+  panel: PdfPanel,
+): Promise<void> {
   const position = await readingPlace(panel);
   const file = bookmarkFileOf(panel);
   if (!position || !file) {
@@ -141,8 +151,13 @@ async function goToBookmark(
       jumpTo(panel, choice.bookmark);
       return;
     }
-    // The title is asked for in the Quick Pick's place; the list comes back.
+    // The title is asked for in the Quick Pick's place; the list comes back,
+    // unless the reader left the PDF meanwhile (the box stays open while they
+    // switch tabs or close it).
     await rename(parts.store, file, choice.bookmark);
+    if (parts.panels.active !== panel) {
+      return;
+    }
   }
 }
 
@@ -207,6 +222,32 @@ async function renameBookmark(
   }
 }
 
+/** Rename the bookmark `id` of `panel`'s PDF, as the side panel's row asks; no title is asked for a bookmark that is gone. */
+export async function renameBookmarkIn(
+  store: BookmarkStore,
+  panel: PdfPanel,
+  id: string,
+): Promise<void> {
+  const file = bookmarkFileOf(panel);
+  const bookmark = file && (await readBookmark(store, file, id));
+  if (file && bookmark) {
+    await rename(store, file, bookmark);
+  }
+}
+
+async function readBookmark(
+  store: BookmarkStore,
+  file: BookmarkFileRef,
+  id: string,
+): Promise<Bookmark | undefined> {
+  try {
+    return (await store.read(file)).find((bookmark) => bookmark.id === id);
+  } catch (error) {
+    tellFailed("read the bookmarks", error);
+    return undefined;
+  }
+}
+
 async function rename(
   store: BookmarkStore,
   file: BookmarkFileRef,
@@ -236,6 +277,18 @@ async function deleteBookmark(
   }
 }
 
+/** Delete the bookmark `id` of `panel`'s PDF, as the side panel's row asks. */
+export async function deleteBookmarkIn(
+  store: BookmarkStore,
+  panel: PdfPanel,
+  id: string,
+): Promise<void> {
+  const file = bookmarkFileOf(panel);
+  if (file) {
+    await attempt("delete the bookmark", () => store.remove(file, id));
+  }
+}
+
 /** Run a change to a bookmark file; a failure is said to the reader, not thrown. */
 async function attempt(
   what: string,
@@ -245,8 +298,12 @@ async function attempt(
     await change();
     return true;
   } catch (error) {
-    const why = error instanceof Error ? error.message : String(error);
-    void vscode.window.showErrorMessage(`Could not ${what}. ${why}`);
+    tellFailed(what, error);
     return false;
   }
+}
+
+function tellFailed(what: string, error: unknown): void {
+  const why = error instanceof Error ? error.message : String(error);
+  void vscode.window.showErrorMessage(`Could not ${what}. ${why}`);
 }

@@ -1,6 +1,7 @@
 import type { HostMessage } from "../../shared/messages";
 import type { EffectivePageColors } from "../../shared/page-colors";
 import type { ToolbarSettings } from "../../shared/toolbar-settings";
+import type { BookmarkOutlet } from "./bookmark-outlet";
 import type { PdfBacklinkOutlet } from "./pdf-backlinks";
 
 /** Re-send toolbar / colors / history / overlays after a viewer load. */
@@ -11,6 +12,7 @@ export function rehydrateViewerChrome(args: {
   historyState: { back: boolean; forward: boolean };
   lookUp: boolean;
   backlinks: PdfBacklinkOutlet;
+  bookmarks: BookmarkOutlet;
   zen: boolean;
 }): void {
   const { post } = args;
@@ -21,6 +23,7 @@ export function rehydrateViewerChrome(args: {
     post({ type: "lookUp", enabled: true });
   }
   args.backlinks.rehydrate();
+  args.bookmarks.rehydrate();
   if (args.zen) {
     post({ type: "zen", on: true });
   }

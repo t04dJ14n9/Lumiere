@@ -204,7 +204,13 @@ test("a PDF opened through VS Code with a Copy link fragment goes to its page", 
       viewerToolbar: () => undefined,
       add: () => undefined,
     },
-    { settings: () => ({}), position: () => undefined, save: () => undefined },
+    {
+      settings: () => ({}),
+      position: () => undefined,
+      save: () => undefined,
+      sidePanel: () => undefined,
+      saveSidePanel: () => undefined,
+    },
   );
   provider.resolveCustomEditor({ uri: uri(FRAGMENT) }, {});
   assert.deepEqual(jumps, [{ page: 3 }]);

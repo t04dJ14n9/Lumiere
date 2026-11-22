@@ -4,8 +4,9 @@ import { useEndDragsReleasedOutside } from "./drag-release";
 import { usePagedDragNavigate } from "./paged-drag-navigate";
 import { usePagedWheel } from "./paged-wheel";
 import { useNavigation } from "./navigation";
-import { useOutlinePublishing } from "./outline";
+import { useOutline } from "./outline";
 import { Page } from "./page";
+import { SidePanel } from "./side-panel/side-panel";
 import { currentViewSettings, useRestorePosition } from "./reading-position";
 import { isFindKey, type ViewChoices } from "../shared/view-settings";
 import { usePagingKeys } from "./paging-input";
@@ -73,22 +74,29 @@ export function Viewer(): React.JSX.Element {
           history={history}
         />
       )}
-      <div className="document" ref={view.documentArea}>
-        {search.isOpen && (
-          <SearchBar
-            navigation={navigation}
-            focusRequest={search.focusRequest}
-            onPreviewEnd={history.endPreview}
-            onClose={search.close}
-          />
-        )}
-        <DocumentPages
-          choices={choices}
-          navigation={navigation}
-          selection={view.selection}
-          searching={search.isOpen}
-          isOwnMark={view.isOwnMark}
+      <div className="workspace">
+        <SidePanel
+          jumpTo={navigation.jumpTo}
+          currentPage={navigation.currentPage}
+          outline={view.outline}
         />
+        <div className="document" ref={view.documentArea}>
+          {search.isOpen && (
+            <SearchBar
+              navigation={navigation}
+              focusRequest={search.focusRequest}
+              onPreviewEnd={history.endPreview}
+              onClose={search.close}
+            />
+          )}
+          <DocumentPages
+            choices={choices}
+            navigation={navigation}
+            selection={view.selection}
+            searching={search.isOpen}
+            isOwnMark={view.isOwnMark}
+          />
+        </div>
       </div>
     </div>
   );
@@ -106,7 +114,7 @@ function useViewerState() {
   const history = useJumpHistory(rawNavigation, choices, setChoices);
   const navigation = withHistory(rawNavigation, history);
   const search = useSearch();
-  useOutlinePublishing();
+  const outline = useOutline();
   useRepaintOnPageColors();
   const documentArea = useRef<HTMLDivElement>(null);
   useDocumentInput(documentArea, { choices, navigation, smooth });
@@ -141,6 +149,7 @@ function useViewerState() {
     choices,
     smooth,
     navigation,
+    outline,
     history,
     selection: tools.selection,
     search,

@@ -2,6 +2,7 @@ import type { ViewerMessage } from "../../shared/messages";
 import type { PdfFiles } from "../../shared/host";
 import type { ReadingPosition } from "../../shared/reading-position";
 import type { ToolbarSettings } from "../../shared/toolbar-settings";
+import type { SidePanelState } from "../../shared/side-panel";
 import type { ViewSettings } from "../../shared/view-settings";
 
 /** Messages the panel leaves to plugins (see `PdfViewerPanels.handle`). */
@@ -16,6 +17,7 @@ export type PluginMessage = Extract<
       | "zen"
       | "historyJump"
       | "historyTraverse"
+      | "bookmarkAction"
       | "openBacklinkNote";
   }
 >;
@@ -41,6 +43,13 @@ export interface ViewerPanelOptions {
   settings: ViewSettings;
   position: ReadingPosition | undefined;
   savePosition(position: ReadingPosition): void;
+  /**
+   * The side panel as the last editor left it, which this one starts from.
+   * Both are optional: a host that keeps no memory starts every editor closed.
+   */
+  sidePanel?: SidePanelState | undefined;
+  /** The reader chose a state of the side panel: keep it as the next editor's start. */
+  saveSidePanel?(state: SidePanelState): void;
   /** Hand a message the panel does not handle itself to the plugin that does. */
   route(message: PluginMessage): Promise<void>;
 }

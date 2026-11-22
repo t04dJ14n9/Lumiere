@@ -5,6 +5,10 @@ import {
   type ReadingPosition,
 } from "../../shared/reading-position";
 import {
+  parseSidePanelState,
+  type SidePanelState,
+} from "../../shared/side-panel";
+import {
   parseViewSettings,
   resolveSmoothScrolling,
   type ViewSettings,
@@ -16,6 +20,7 @@ const EDITOR_SMOOTH_SCROLLING = "editor.smoothScrolling";
 const EDITOR_PREDOMINANT_AXIS = "editor.scrollPredominantAxis";
 const REGIONS_SETTING = "lumiere.pdf.regions.enabled";
 const SHORTCUTS_SETTING = "lumiere.pdf.keyboardShortcuts";
+const FOLLOW_CURSOR_SETTING = "lumiere.pdf.outline.followCursor";
 
 /** Defaults for new views; saved positions are read once, independently by each panel. */
 export class PdfViewPreferences {
@@ -32,7 +37,8 @@ export class PdfViewPreferences {
         !affects(EDITOR_SMOOTH_SCROLLING) &&
         !affects(EDITOR_PREDOMINANT_AXIS) &&
         !affects(REGIONS_SETTING) &&
-        !affects(SHORTCUTS_SETTING)
+        !affects(SHORTCUTS_SETTING) &&
+        !affects(FOLLOW_CURSOR_SETTING)
       ) {
         return;
       }
@@ -56,6 +62,7 @@ export class PdfViewPreferences {
       regionsEnabled: this.configuration.get(REGIONS_SETTING, uri) === true,
       keyboardShortcuts: this.configuration.get(SHORTCUTS_SETTING, uri),
       predominantAxis: this.configuration.get(EDITOR_PREDOMINANT_AXIS, uri),
+      outlineFollowCursor: this.configuration.get(FOLLOW_CURSOR_SETTING, uri),
     });
     settings.smoothScrolling = resolveSmoothScrolling(
       settings.smoothScrolling,
@@ -99,6 +106,19 @@ export class PdfViewPreferences {
     }
   }
 
+  /** The side panel as the reader last left it in any editor; a new editor starts from it. */
+  sidePanel(): SidePanelState | undefined {
+    return parseSidePanelState(this.state.get(SIDE_PANEL_KEY));
+  }
+
+  saveSidePanel(state: SidePanelState): void {
+    void this.state
+      .update(SIDE_PANEL_KEY, state)
+      .catch((error: unknown) =>
+        console.error("Could not save the PDF side panel", error),
+      );
+  }
+
   /** The saved positions by PDF, oldest first; a copy to change. */
   private positions(): Record<string, unknown> {
     const saved = this.state.get(POSITIONS_KEY);
@@ -112,6 +132,8 @@ export class PdfViewPreferences {
   }
 }
 
+/** The side panel's last state, for every PDF: one state entry. */
+const SIDE_PANEL_KEY = "lumiere.pdf.sidePanel";
 /** Where each PDF was left, by URI: one state entry for all of them. */
 const POSITIONS_KEY = "lumiere.pdf.readingPositions";
 /** PDFs whose place is kept; reading one more forgets the one read longest ago. */

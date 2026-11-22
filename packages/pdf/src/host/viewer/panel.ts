@@ -28,6 +28,9 @@ import { PdfSource } from "./source";
 import { ViewerLoads } from "./loads";
 import { createPdfViewId } from "./view-id";
 import { PdfBacklinkOutlet } from "./pdf-backlinks";
+import { BookmarkOutlet } from "./bookmark-outlet";
+import { HistoryButtons } from "./panel-history-buttons";
+import { PanelSidePanel } from "./panel-side-panel";
 import { rehydrateViewerChrome } from "./panel-rehydrate";
 import { awaitSelectionReport } from "./selection-report";
 import type { ViewerPanelHost, ViewerPanelOptions } from "./panel-types";
@@ -88,6 +91,8 @@ export class PdfViewerPanel {
     (m) => this.post(m),
     () => this.loads.current,
   );
+  /** The viewer's side panel: open or not, how wide, and which tab. */
+  readonly sidePanel: PanelSidePanel;
   private zen = false;
   private readonly loads = new ViewerLoads();
   /** The last patch version applied. */
@@ -98,7 +103,17 @@ export class PdfViewerPanel {
   private pageColorsMode: EffectivePageColors = "normal";
   private lastJump = 0;
   private readonly history = new HistoryRequests((m) => this.post(m));
-  private historyState = { back: false, forward: false };
+  /** What the buttons and menus on the editor read of this one. */
+  private readonly chrome = {
+    post: (message: HostMessage) => this.post(message),
+    changed: () => this.changed.fire(),
+    refocus: () => this.host.refocus(),
+    sha256: () => this.source.sha256,
+  };
+  /** The PDF's bookmarks, for the viewer's side panel. */
+  readonly bookmarks = new BookmarkOutlet(this.chrome);
+  /** Whether Back and Forward have a place to go to. */
+  readonly historyButtons = new HistoryButtons(this.chrome);
   private readonly annotations: PanelAnnotations;
 
   constructor(
@@ -112,6 +127,7 @@ export class PdfViewerPanel {
       options.savePosition(position),
     );
     this.settings = options.settings;
+    this.sidePanel = new PanelSidePanel(options, this.chrome);
     this.toolbar = { ...options.toolbar };
     this.navigation = new PdfNavigation((message) => this.post(message));
     this.source = new PdfSource(fileUri, host.files, {
@@ -183,26 +199,6 @@ export class PdfViewerPanel {
     }
     this.navigation.cancel();
     this.cancelHistoryRestore();
-  }
-
-  setHistoryState(back: boolean, forward: boolean): void {
-    if (
-      back === this.historyState.back &&
-      forward === this.historyState.forward
-    ) {
-      return;
-    }
-    this.historyState = { back, forward };
-    this.post({ type: "historyState", back, forward });
-    this.changed.fire();
-  }
-
-  get canHistoryBack(): boolean {
-    return this.historyState.back;
-  }
-
-  get canHistoryForward(): boolean {
-    return this.historyState.forward;
   }
 
   get pageColors(): EffectivePageColors {
@@ -363,6 +359,9 @@ export class PdfViewerPanel {
       case "patch":
         this.onPatch(message);
         break;
+      case "sidePanel":
+        this.sidePanel.chosenInViewer(message.state);
+        break;
       case "openExternal":
         await this.host.openExternal(message.url);
         break;
@@ -484,6 +483,7 @@ export class PdfViewerPanel {
       sha256: bytes.sha256,
       ...(this.position.current ? { position: this.position.current } : {}),
       ...(annotations === undefined ? {} : { annotations }),
+      sidePanel: this.sidePanel.current,
     });
     this.history.newViewer();
     this.loads.finished();
@@ -494,9 +494,10 @@ export class PdfViewerPanel {
       post: (message) => this.post(message),
       toolbar: this.toolbar,
       pageColorsMode: this.pageColorsMode,
-      historyState: this.historyState,
+      historyState: this.historyButtons.current,
       lookUp: this.lookUp,
       backlinks: this.backlinks,
+      bookmarks: this.bookmarks,
       zen: this.zen,
     });
   }
