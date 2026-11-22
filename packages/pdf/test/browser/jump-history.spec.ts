@@ -42,6 +42,26 @@ async function topOffset(
   }, pageNumber);
 }
 
+test("a jump to a point across a zoomed page, as a bookmark makes it, lands on that point", async ({
+  page,
+}) => {
+  // 300 points at 400% are wider than the viewer: there is room to the right.
+  await openView(page, { defaultZoom: 400, smoothScrolling: false });
+  await send(page, {
+    type: "goTo",
+    location: { page: 3 },
+    top: 130,
+    left: 40,
+  });
+  await expect
+    .poll(async () => (await messages(page, "historyJump")).length)
+    .toBe(1);
+  const jump = (await messages(page, "historyJump"))[0]!;
+  expect(jump.to.page).toBe(3);
+  expect(jump.to.top).toBeCloseTo(130, 0);
+  expect(jump.to.left).toBeCloseTo(40, 0);
+});
+
 test("a deliberate coordinate jump reports its origin and replay adds no new jump", async ({
   page,
 }) => {

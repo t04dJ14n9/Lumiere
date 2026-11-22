@@ -144,15 +144,24 @@ export class PdfViewerPanel {
     return this.selectionState.selection;
   }
 
+  /** SHA-256 of the bytes the viewer was given; it names the PDF's annotation and bookmark files. */
+  get sha256(): string | undefined {
+    return this.source.sha256;
+  }
+
   /** The selection with the hash of the bytes it was made in (and a region's image). */
   selectionSnapshot(): SelectionSnapshot | undefined {
     return this.selectionState.snapshot();
   }
 
-  /** Show a page (and box), or with no box the page from `top` points below its top. */
-  goTo(location: PdfLocation, top?: number): number {
+  /**
+   * Show a page (and box), or with no box the page from `top` points below
+   * its top and `left` points across from its left edge: a deliberate jump,
+   * which Back returns from.
+   */
+  goTo(location: PdfLocation, top?: number, left?: number): number {
     const requestId = this.history.nextId();
-    this.navigation.goTo(location, top, requestId);
+    this.navigation.goTo(location, { top, left }, requestId);
     return requestId;
   }
 

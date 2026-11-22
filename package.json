@@ -1004,6 +1004,29 @@
         "icon": "$(check)"
       },
       {
+        "command": "lumiere.pdf.addBookmark",
+        "title": "Add Bookmark",
+        "category": "PDF",
+        "icon": "$(add)"
+      },
+      {
+        "command": "lumiere.pdf.goToBookmark",
+        "title": "Go to Bookmark…",
+        "category": "PDF"
+      },
+      {
+        "command": "lumiere.pdf.renameBookmark",
+        "title": "Rename Bookmark…",
+        "category": "PDF",
+        "icon": "$(edit)"
+      },
+      {
+        "command": "lumiere.pdf.deleteBookmark",
+        "title": "Delete Bookmark",
+        "category": "PDF",
+        "icon": "$(trash)"
+      },
+      {
         "command": "lumiere.pdf.copyMcpSetup",
         "title": "Copy MCP Setup for Claude Code / Codex…",
         "category": "PDF"
@@ -1588,6 +1611,12 @@
         "when": "activeCustomEditorId == 'lumiere.pdf.viewer' && !inputFocus && !sideBarFocus && !panelFocus && !auxiliaryBarFocus && config.lumiere.pdf.keyboardShortcuts"
       },
       {
+        "command": "lumiere.pdf.addBookmark",
+        "key": "ctrl+d",
+        "mac": "cmd+d",
+        "when": "activeCustomEditorId == 'lumiere.pdf.viewer' && !inputFocus && !sideBarFocus && !panelFocus && !auxiliaryBarFocus && config.lumiere.pdf.keyboardShortcuts"
+      },
+      {
         "command": "lumiere.pdf.zoomIn",
         "key": "ctrl+=",
         "mac": "cmd+=",
@@ -1725,6 +1754,12 @@
         {
           "id": "lumiere.pdf.outline",
           "name": "PDF Outline",
+          "when": "lumiere.pdf.pdfActive",
+          "visibility": "visible"
+        },
+        {
+          "id": "lumiere.pdf.bookmarks",
+          "name": "PDF Bookmarks",
           "when": "lumiere.pdf.pdfActive",
           "visibility": "visible"
         }
@@ -2369,6 +2404,22 @@
           "when": "activeCustomEditorId == 'lumiere.pdf.viewer'"
         },
         {
+          "command": "lumiere.pdf.addBookmark",
+          "when": "activeCustomEditorId == 'lumiere.pdf.viewer'"
+        },
+        {
+          "command": "lumiere.pdf.goToBookmark",
+          "when": "activeCustomEditorId == 'lumiere.pdf.viewer'"
+        },
+        {
+          "command": "lumiere.pdf.renameBookmark",
+          "when": "false"
+        },
+        {
+          "command": "lumiere.pdf.deleteBookmark",
+          "when": "false"
+        },
+        {
           "command": "lumiere.pdf.openNativeLink",
           "when": "false"
         },
@@ -2908,6 +2959,11 @@
           "group": "navigation@1"
         },
         {
+          "command": "lumiere.pdf.addBookmark",
+          "when": "view == lumiere.pdf.bookmarks",
+          "group": "navigation@1"
+        },
+        {
           "command": "lumiere.pdf.enableOutlineFollowCursor",
           "when": "view == lumiere.pdf.outline && !lumiere.pdf.outlineFollowCursor",
           "group": "1_outline@1"
@@ -2963,6 +3019,16 @@
           "command": "lumiere.pdf.goToPage",
           "when": "activeCustomEditorId == 'lumiere.pdf.viewer'",
           "group": "1_pdfPage@3"
+        },
+        {
+          "command": "lumiere.pdf.addBookmark",
+          "when": "activeCustomEditorId == 'lumiere.pdf.viewer'",
+          "group": "1_pdfPage@4"
+        },
+        {
+          "command": "lumiere.pdf.goToBookmark",
+          "when": "activeCustomEditorId == 'lumiere.pdf.viewer'",
+          "group": "1_pdfPage@5"
         },
         {
           "command": "lumiere.pdf.zoomIn",
@@ -3068,6 +3134,28 @@
           "command": "lumiere.pdf.historyForward",
           "when": "activeCustomEditorId == 'lumiere.pdf.viewer'",
           "group": "1_pdfPage@0.5"
+        }
+      ],
+      "view/item/context": [
+        {
+          "command": "lumiere.pdf.renameBookmark",
+          "when": "view == lumiere.pdf.bookmarks && viewItem == lumiere.pdf.bookmark",
+          "group": "inline@1"
+        },
+        {
+          "command": "lumiere.pdf.deleteBookmark",
+          "when": "view == lumiere.pdf.bookmarks && viewItem == lumiere.pdf.bookmark",
+          "group": "inline@2"
+        },
+        {
+          "command": "lumiere.pdf.renameBookmark",
+          "when": "view == lumiere.pdf.bookmarks && viewItem == lumiere.pdf.bookmark",
+          "group": "1_modification@1"
+        },
+        {
+          "command": "lumiere.pdf.deleteBookmark",
+          "when": "view == lumiere.pdf.bookmarks && viewItem == lumiere.pdf.bookmark",
+          "group": "1_modification@2"
         }
       ],
       "lumiere.pdf.annotationColor": [
@@ -3986,7 +4074,7 @@
             "type": "string",
             "default": ".lumiere/pdf-annotations",
             "scope": "resource",
-            "markdownDescription": "Where PDF annotations are kept, one file per PDF named by its SHA-256, so annotating never changes the PDF. A relative path is inside the PDF's workspace folder (the home folder for a PDF outside every folder); `~/…` is inside the home folder; an absolute path is used as it is. Changing it does not move existing files."
+            "markdownDescription": "Where PDF annotations and bookmarks are kept, one file of each per PDF named by its SHA-256 (`<sha256>.json` and `<sha256>.bookmarks.json`), so annotating or bookmarking never changes the PDF. A relative path is inside the PDF's workspace folder (the home folder for a PDF outside every folder); `~/…` is inside the home folder; an absolute path is used as it is. Changing it does not move existing files."
           },
           "lumiere.pdf.annotations.protectedFolders": {
             "type": "array",
@@ -4050,6 +4138,10 @@
         "view": "lumiere.pdf.outline",
         "contents": "This PDF has no outline.",
         "when": "!lumiere.pdf.outlineLoading"
+      },
+      {
+        "view": "lumiere.pdf.bookmarks",
+        "contents": "No bookmarks yet.\n[Add Bookmark](command:lumiere.pdf.addBookmark)"
       }
     ],
     "mcpServerDefinitionProviders": [

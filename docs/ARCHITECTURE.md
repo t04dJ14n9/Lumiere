@@ -198,9 +198,9 @@ opens notes in Source mode.
 **Lumiere PDF's plugins** (`packages/pdf/src/extension/plugins/<id>/`, listed
 in `catalog.ts`) use the same core but are simpler: a `plugin.ts` and a manifest
 each, and most inject the `pdfPanels` service that the `pdf` plugin provides.
-There are 12: `pdf`, `pdfBacklinks`, `pdfAnnotations`, `pdfHistory`,
-`pdfToolbar`, `pdfOutline`, `pdfRegions`, `pdfLookUp`, `pdfZen`, `pdfSettings`,
-`agentBridge` and `ideContext`. The viewer itself is one React application, not
+There are 13: `pdf`, `pdfBacklinks`, `pdfAnnotations`, `pdfHistory`,
+`pdfToolbar`, `pdfOutline`, `pdfBookmarks`, `pdfRegions`, `pdfLookUp`, `pdfZen`,
+`pdfSettings`, `agentBridge` and `ideContext`. The viewer itself is one React application, not
 plugin halves.
 
 ## 5. Plugin trees at run time

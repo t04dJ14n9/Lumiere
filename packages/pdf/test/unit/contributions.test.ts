@@ -456,3 +456,131 @@ test("pdfRegions setting defaults off and gates Select Region menus and shortcut
     "keybinding must require regions.enabled",
   );
 });
+
+interface BookmarkContributes {
+  commands: {
+    command: string;
+    title: string;
+    category?: string;
+    icon?: string;
+  }[];
+  views: Record<string, { id: string; name: string; when: string }[]>;
+  viewsWelcome: { view: string; contents: string; when?: string }[];
+  menus: Record<string, { command: string; when?: string; group?: string }[]>;
+}
+const bookmarks = contributes as unknown as BookmarkContributes;
+
+test("bookmarks: Add and Go to are in the palette only for a PDF, Rename and Delete only on rows", () => {
+  const titles = Object.fromEntries(
+    bookmarks.commands
+      .filter((entry) => /Bookmark$|Bookmark…$/u.test(entry.title))
+      .map((entry) => [entry.command, [entry.category, entry.title]]),
+  );
+  assert.deepEqual(titles, {
+    "lumiere.pdf.addBookmark": ["PDF", "Add Bookmark"],
+    "lumiere.pdf.goToBookmark": ["PDF", "Go to Bookmark…"],
+    "lumiere.pdf.renameBookmark": ["PDF", "Rename Bookmark…"],
+    "lumiere.pdf.deleteBookmark": ["PDF", "Delete Bookmark"],
+  });
+  const palette = Object.fromEntries(
+    (bookmarks.menus["commandPalette"] ?? []).map((entry) => [
+      entry.command,
+      entry.when,
+    ]),
+  );
+  for (const id of ["addBookmark", "goToBookmark"]) {
+    assert.equal(
+      palette[`lumiere.pdf.${id}`],
+      "activeCustomEditorId == 'lumiere.pdf.viewer'",
+    );
+  }
+  for (const id of ["renameBookmark", "deleteBookmark"]) {
+    assert.equal(palette[`lumiere.pdf.${id}`], "false");
+  }
+});
+
+test("bookmarks: PDF Bookmarks is an Explorer view shown while a PDF is active, with a welcome that offers Add Bookmark", () => {
+  const explorer = bookmarks.views["explorer"] ?? [];
+  const outline = explorer.find((view) => view.id === "lumiere.pdf.outline");
+  const view = explorer.find((entry) => entry.id === "lumiere.pdf.bookmarks");
+  assert.equal(view?.name, "PDF Bookmarks");
+  // The same condition as PDF Outline: not shown once the PDF is left.
+  assert.equal(view?.when, outline?.when);
+  assert.equal(view?.when, "lumiere.pdf.pdfActive");
+  const welcome = bookmarks.viewsWelcome.filter(
+    (entry) => entry.view === "lumiere.pdf.bookmarks",
+  );
+  assert.deepEqual(
+    welcome.map((entry) => entry.contents),
+    ["No bookmarks yet.\n[Add Bookmark](command:lumiere.pdf.addBookmark)"],
+  );
+});
+
+test("bookmarks: the view title adds one, and each row renames or deletes, inline and in its menu", () => {
+  const add = bookmarks.menus["view/title"]?.filter(
+    (entry) => entry.command === "lumiere.pdf.addBookmark",
+  );
+  assert.deepEqual(add, [
+    {
+      command: "lumiere.pdf.addBookmark",
+      when: "view == lumiere.pdf.bookmarks",
+      group: "navigation@1",
+    },
+  ]);
+  const rows = bookmarks.menus["view/item/context"] ?? [];
+  const groups = (command: string) =>
+    rows
+      .filter((entry) => entry.command === command)
+      .map((entry) => entry.group)
+      .sort();
+  assert.deepEqual(groups("lumiere.pdf.renameBookmark"), [
+    "1_modification@1",
+    "inline@1",
+  ]);
+  assert.deepEqual(groups("lumiere.pdf.deleteBookmark"), [
+    "1_modification@2",
+    "inline@2",
+  ]);
+  for (const entry of rows) {
+    assert.equal(
+      entry.when,
+      "view == lumiere.pdf.bookmarks && viewItem == lumiere.pdf.bookmark",
+    );
+  }
+  for (const entry of bookmarks.commands) {
+    if (entry.command === "lumiere.pdf.renameBookmark") {
+      assert.equal(entry.icon, "$(edit)");
+    }
+    if (entry.command === "lumiere.pdf.deleteBookmark") {
+      assert.equal(entry.icon, "$(trash)");
+    }
+  }
+});
+
+test("bookmarks: the editor's … menu has Add Bookmark and Go to Bookmark… for a PDF", () => {
+  const menu = Object.fromEntries(
+    (bookmarks.menus["editor/title"] ?? []).map((entry) => [
+      entry.command,
+      [entry.when, entry.group],
+    ]),
+  );
+  const viewer = "activeCustomEditorId == 'lumiere.pdf.viewer'";
+  assert.deepEqual(menu["lumiere.pdf.addBookmark"], [viewer, "1_pdfPage@4"]);
+  assert.deepEqual(menu["lumiere.pdf.goToBookmark"], [viewer, "1_pdfPage@5"]);
+});
+
+test("bookmarks: Add Bookmark is Preview's Cmd+D (Ctrl+D elsewhere), and Go to Bookmark has no key of its own", () => {
+  const bindings = (contributes.keybindings ?? []).filter((entry) =>
+    /Bookmark$/u.test(entry.command),
+  );
+  assert.deepEqual(
+    bindings.map((entry) => [entry.command, entry.key, entry.mac]),
+    [["lumiere.pdf.addBookmark", "ctrl+d", "cmd+d"]],
+  );
+  // VS Code's own Ctrl/Cmd+D is Add Selection to Next Find Match, in a text
+  // editor: no other binding of ours takes the key.
+  const taken = (contributes.keybindings ?? []).filter(
+    (entry) => entry.key === "ctrl+d" || entry.mac === "cmd+d",
+  );
+  assert.equal(taken.length, 1);
+});

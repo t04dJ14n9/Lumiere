@@ -7,6 +7,7 @@
  *   pdfAnnotations conflict Reload/Keep mine and Retry for direct-to-PDF annotations
  *   pdfToolbar   where the controls are: status bar entries, the mode setting
  *   pdfOutline   the PDF Outline view in the Explorer
+ *   pdfBookmarks the reader's own bookmarks: Add and Go to Bookmark, the PDF Bookmarks view
  *   pdfLookUp    macOS Look Up: a force click or the context menu opens the Dictionary
  *   pdfSettings  PDF: Open Settings and the commands that change the common settings
  *   pdfZen       zen mode: core Zen Mode, and a floating bar with Exit zen in the viewer
@@ -19,6 +20,7 @@ import { ideContextPlugin } from "./ideContext/plugin";
 import { pdfAnnotationsPlugin } from "./pdfAnnotations/plugin";
 import { pdfPlugin } from "./pdf/plugin";
 import { pdfBacklinksPlugin } from "./pdfBacklinks/plugin";
+import { pdfBookmarksPlugin } from "./pdfBookmarks/plugin";
 import { pdfLookUpPlugin } from "./pdfLookUp/plugin";
 import { pdfSettingsPlugin } from "./pdfSettings/plugin";
 import { pdfOutlinePlugin } from "./pdfOutline/plugin";
@@ -35,6 +37,7 @@ export const plugins: readonly Plugin[] = [
   pdfHistoryPlugin,
   pdfToolbarPlugin,
   pdfOutlinePlugin,
+  pdfBookmarksPlugin,
   pdfRegionsPlugin,
   pdfLookUpPlugin,
   pdfZenPlugin,

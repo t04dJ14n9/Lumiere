@@ -2,6 +2,15 @@
 
 ## Unreleased
 
+- **Bookmarks**, your own named places in a PDF (#867). **PDF: Add Bookmark**
+  (⌘D / Ctrl+D) saves the page and the point on it under a title that starts
+  as the outline section you are in; **PDF: Go to Bookmark…** is a Quick Pick
+  with rename and delete buttons; a **PDF Bookmarks** view in the Explorer
+  lists them. Kept in `<annotations folder>/<sha256>.bookmarks.json` (versioned
+  JSON, merged by bookmark id across panes and windows), so the PDF is never
+  written. Going to a bookmark is a deliberate jump, which Back returns from;
+  the viewer's `goTo` now also takes how far across the page to show.
+
 - A left click on a mark's note icon shows its note at once. The press used
   to close the card, so a click never showed the note (only resting the
   pointer on the icon did). The card is the one a hover shows, to read; it

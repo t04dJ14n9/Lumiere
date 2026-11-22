@@ -30,6 +30,11 @@ export interface PdfFiles {
    * between sessions.
    */
   annotations?: PdfAnnotationFiles;
+  /**
+   * The bookmark file kept for the same PDF (see `bookmarks`): the same
+   * contract and folder as its annotation file, under another name.
+   */
+  bookmarks?: PdfBookmarkFiles;
 }
 
 export interface PdfAnnotationFiles {
@@ -50,3 +55,6 @@ export interface PdfAnnotationFiles {
    */
   watch?(uri: string, sha256: string, onChange: () => void): () => void;
 }
+
+/** The reader's bookmarks of a PDF: one file, kept as `PdfAnnotationFiles` keeps its own. */
+export type PdfBookmarkFiles = PdfAnnotationFiles;

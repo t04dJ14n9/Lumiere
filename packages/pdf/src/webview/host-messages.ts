@@ -62,7 +62,7 @@ function handleHostMessage(
   switch (message.type) {
     case "goTo":
       history.jump(
-        () => show(message.location, message.top),
+        () => show(message.location, message.top, message.left),
         message.requestId,
         false,
         message.expectedIntent,

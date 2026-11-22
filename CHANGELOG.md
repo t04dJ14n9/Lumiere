@@ -2,6 +2,18 @@
 
 ## Unreleased
 
+- PDF: bookmarks, your own named places in a PDF (#867). **PDF: Add Bookmark**
+  (⌘D, Ctrl+D on Windows and Linux) saves the page and the point on it, under
+  a title that starts as the outline section you are in (Escape cancels).
+  **PDF: Go to Bookmark…** is a Quick Pick of the PDF's bookmarks with rename
+  and delete buttons on each; going to one is a jump that Back returns from.
+  A **PDF Bookmarks** view in the Explorer, shown only while a PDF is active,
+  lists them, with Rename, Delete and Add Bookmark. They are kept beside the
+  annotation file, as `<sha256>.bookmarks.json` in
+  `lumiere.pdf.annotations.folder`, so the PDF is never written (a PDF in a
+  protected folder can have them) and another VS Code window shows a change
+  when it lands. The side panel for floating windows (#867, part 2) and MCP
+  tools for bookmarks (#864) come later.
 - Release workflow: a version published as a Marketplace pre-release is a
   GitHub pre-release too.
 

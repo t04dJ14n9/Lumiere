@@ -13,16 +13,28 @@ import type { ViewerAction } from "../../shared/view-state";
 export class PdfNavigation {
   private loaded = false;
   private pending:
-    | { location: PdfLocation; top?: number | undefined; requestId?: number }
+    | {
+        location: PdfLocation;
+        top?: number | undefined;
+        left?: number | undefined;
+        requestId?: number;
+      }
     | undefined;
 
   constructor(private readonly post: (message: HostMessage) => void) {}
 
-  /** Show a page (and box), or with no box the page from `top` points below its top. */
-  goTo(location: PdfLocation, top?: number, requestId?: number): void {
+  /**
+   * Show a page (and box), or with no box the page from `place.top` points
+   * below its top and `place.left` points across from its left edge.
+   */
+  goTo(
+    location: PdfLocation,
+    place: { top?: number | undefined; left?: number | undefined } = {},
+    requestId?: number,
+  ): void {
     const target = {
       location,
-      top,
+      ...place,
       ...(requestId === undefined ? {} : { requestId }),
     };
     if (this.loaded) {

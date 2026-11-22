@@ -2,7 +2,8 @@ import { createHash, randomBytes } from "node:crypto";
 import * as os from "node:os";
 import * as path from "node:path";
 import * as vscode from "vscode";
-import type { PdfFiles } from "../../../shared/host";
+import type { PdfAnnotationFiles, PdfFiles } from "../../../shared/host";
+import { bookmarkStoreName } from "../../../shared/bookmarks";
 import {
   annotationFolder,
   annotationStoreName,
@@ -37,15 +38,29 @@ export const vscodePdfFiles: PdfFiles = {
     }
     return writeAtomicFile(parsed.fsPath, bytes);
   },
-  annotations: {
+  annotations: sidecarFiles(annotationStoreName, "annotations"),
+  bookmarks: sidecarFiles(bookmarkStoreName, "bookmarks"),
+};
+
+/**
+ * The files Lumiere keeps about a PDF outside it: one per content hash in
+ * the annotations folder, named by `nameOf`. Writes are whole and atomic.
+ */
+function sidecarFiles(
+  nameOf: (sha256: string) => string,
+  kind: string,
+): PdfAnnotationFiles {
+  const fileOf = (uri: string, sha256: string) =>
+    sidecarFile(vscode.Uri.parse(uri), nameOf(sha256));
+  return {
     read: async (uri, sha256) => {
-      const file = annotationFile(vscode.Uri.parse(uri), sha256);
+      const file = fileOf(uri, sha256);
       return file ? readText(file) : undefined;
     },
     write: async (uri, sha256, text) => {
-      const file = annotationFile(vscode.Uri.parse(uri), sha256);
+      const file = fileOf(uri, sha256);
       if (!file) {
-        throw new Error("There is no folder to keep this PDF's annotations in");
+        throw new Error(`There is no folder to keep this PDF's ${kind} in`);
       }
       if (text === undefined) {
         await vscode.workspace.fs
@@ -70,29 +85,24 @@ export const vscodePdfFiles: PdfFiles = {
       await vscode.workspace.fs.writeFile(temp, new TextEncoder().encode(text));
       await vscode.workspace.fs.rename(temp, file, { overwrite: true });
     },
-    key: (uri, sha256) =>
-      annotationFile(vscode.Uri.parse(uri), sha256)?.toString() ?? sha256,
+    key: (uri, sha256) => fileOf(uri, sha256)?.toString() ?? sha256,
     // Another VS Code window has its own extension host: only the disk
     // tells this one that it saved the file.
     watch: (uri, sha256, onChange) => {
-      const file = annotationFile(vscode.Uri.parse(uri), sha256);
+      const file = fileOf(uri, sha256);
       return file ? watchFile(file, onChange) : () => undefined;
     },
-  },
-};
+  };
+}
 
 /**
- * Where the annotations of a PDF with this hash are kept, as
- * `lumiere.pdf.annotations.folder` says: by default under the PDF's
- * workspace folder, else (a local file outside every folder) the home
+ * Where the file `name` about a PDF is kept (its annotations, its
+ * bookmarks), as `lumiere.pdf.annotations.folder` says: by default under the
+ * PDF's workspace folder, else (a local file outside every folder) the home
  * folder. Never beside the PDF, which may sit among sources that must not
  * change.
  */
-function annotationFile(
-  pdf: vscode.Uri,
-  sha256: string,
-): vscode.Uri | undefined {
-  const name = annotationStoreName(sha256);
+function sidecarFile(pdf: vscode.Uri, name: string): vscode.Uri | undefined {
   const folder = annotationFolder(
     vscode.workspace
       .getConfiguration("lumiere.pdf.annotations", pdf)
