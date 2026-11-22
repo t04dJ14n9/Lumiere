@@ -101,8 +101,31 @@ jobs:
       - uses: ./.github/actions/setup
       - name: pnpm check
         run: pnpm check
-      - name: pnpm package
-        run: pnpm package
+      - name: Package for the channel
+        env:
+          PRE_RELEASE: ${{ needs.tag.outputs.pre-release }}
+        run: |
+          if [ "${PRE_RELEASE}" = "true" ]; then
+            pnpm package:pre-release
+          else
+            pnpm package:release
+          fi
+      - name: The VSIX is marked for its channel
+        env:
+          PRE_RELEASE: ${{ needs.tag.outputs.pre-release }}
+        run: |
+          # vsce publish uploads the VSIX's manifest as it is: the channel is
+          # the PreRelease property that vsce package wrote, not a publish flag.
+          if unzip -p "$(ls *.vsix)" extension.vsixmanifest |
+            grep -q 'Id="Microsoft.VisualStudio.Code.PreRelease" Value="true"'; then
+            marked=true
+          else
+            marked=false
+          fi
+          if [ "${marked}" != "${PRE_RELEASE}" ]; then
+            echo "::error::The VSIX's pre-release mark is ${marked}, the changelog asks for ${PRE_RELEASE}"
+            exit 1
+          fi
       - name: Check the VSIX size and file list
         run: bash .github/scripts/check-vsix.sh "$(ls *.vsix)" 20
       - name: Publish to Visual Studio Marketplace
