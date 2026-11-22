@@ -1,4 +1,4 @@
-import { isHtmlFile } from "../../shared/html-file";
+import { isHtmlLinkTarget } from "../../shared/html-file";
 
 /**
  * Where an HTML embed's file is written, in the three syntaxes notes already
@@ -25,14 +25,23 @@ function isVaultTarget(target: string): boolean {
   return !/^[a-z][a-z\d+.-]*:/iu.test(target) && !target.startsWith("//");
 }
 
-function isHtmlVaultFile(target: string): boolean {
-  return isVaultTarget(target) && isHtmlFile(target);
+function isHtmlVaultFile(
+  target: string,
+  syntax: "markdown" | "wikilink",
+): boolean {
+  return isVaultTarget(target) && isHtmlLinkTarget(target, syntax);
 }
 
 /** The file an embed or Markdown image's source names, if it is a vault HTML file. */
 export function htmlEmbedTarget(source: string): string | undefined {
-  const target = wikiTarget(source) ?? markdownTarget(source);
-  return target !== undefined && isHtmlVaultFile(target) ? target : undefined;
+  const wiki = wikiTarget(source);
+  if (wiki !== undefined) {
+    return isHtmlVaultFile(wiki, "wikilink") ? wiki : undefined;
+  }
+  const markdown = markdownTarget(source);
+  return markdown !== undefined && isHtmlVaultFile(markdown, "markdown")
+    ? markdown
+    : undefined;
 }
 
 function wikiTarget(source: string): string | undefined {
@@ -73,7 +82,8 @@ export function parseHtmlEmbedBlock(content: string): string | undefined {
     }
     line += 1;
   }
-  return file && isHtmlVaultFile(file) ? file : undefined;
+  // A block names its file as a wikilink does: it is resolved as one.
+  return file && isHtmlVaultFile(file, "wikilink") ? file : undefined;
 }
 
 function unquoted(value: string): string {

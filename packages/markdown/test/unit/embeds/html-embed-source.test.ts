@@ -213,3 +213,24 @@ test("an HTML card's height and a claimed link's both stand in one reserve", () 
     "unclaimed: the default of any other link",
   );
 });
+
+test("a file whose name has a # or a ? is an HTML card by its encoded link", () => {
+  for (const source of [
+    "![alt](C%23%20notes.html)",
+    "![alt](a%3Fb.html)",
+    "![alt](dir/C%23.htm)",
+    "![alt|600x200](C%23%20notes.html)",
+    "![alt](a?b.html)",
+    "![[a?b.html]]",
+    "![[a?b.html#gamma]]",
+  ]) {
+    assert.equal(embedsHtml(source), true, source);
+  }
+  assert.equal(
+    htmlEmbedTarget("![alt](C%23%20notes.html)"),
+    "C%23%20notes.html",
+  );
+  // A wikilink's # starts its subpath: this is the file `C`, no HTML file.
+  assert.equal(embedsHtml("![[C# notes.html]]"), false);
+  assert.equal(parseHtmlEmbedBlock("file: a?b.html"), "a?b.html");
+});

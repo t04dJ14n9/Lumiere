@@ -1,6 +1,6 @@
 import type { HostServices } from "../../shared/host";
 import { linkLocation } from "../../shared/link-location";
-import { isHtmlFile } from "../../shared/html-file";
+import { isHtmlPath } from "../../shared/html-file";
 import { mediaKind } from "../../shared/media-kinds";
 import {
   extensionOf,
@@ -297,7 +297,7 @@ export function resourceKind(path: string): Resource["kind"] {
   if (/\.pdf$/i.test(path)) {
     return "pdf";
   }
-  if (isHtmlFile(path)) {
+  if (isHtmlPath(path)) {
     return "html";
   }
   return mediaKind(path) ?? "file";

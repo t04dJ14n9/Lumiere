@@ -1,4 +1,4 @@
-import { isHtmlFile } from "../../shared/html-file";
+import { isHtmlPath } from "../../shared/html-file";
 
 /** What a call of the open command asks for. */
 export interface HtmlViewerRequest {
@@ -22,7 +22,7 @@ export function parseHtmlViewerRequest(
   args: readonly unknown[],
 ): HtmlViewerRequest | undefined {
   const [uri, root, options] = args;
-  if (!isUri(uri) || !isUri(root) || !isHtmlFile(pathOf(uri))) {
+  if (!isUri(uri) || !isUri(root) || !isHtmlPath(pathOf(uri))) {
     return undefined;
   }
   const column = (options as { viewColumn?: unknown } | undefined)?.viewColumn;

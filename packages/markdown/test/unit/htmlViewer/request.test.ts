@@ -28,6 +28,18 @@ test("the open command takes an HTML file, its vault and a column", () => {
   );
 });
 
+test("a file whose name has a # or a ? is an HTML file: the path is the decoded name", () => {
+  for (const name of ["C%23%20notes.html", "a%3Fb.htm", "dir/a%23.HTML"]) {
+    assert.deepEqual(parseHtmlViewerRequest([`${ROOT}/${name}`, ROOT]), {
+      uri: `${ROOT}/${name}`,
+      root: ROOT,
+    });
+  }
+  // `a.html#x` is a file named so (its extension is `html#x`), and no HTML file.
+  assert.equal(parseHtmlViewerRequest([`${ROOT}/a.html%23x`, ROOT]), undefined);
+  assert.equal(viewerTitle(`${ROOT}/C%23%20notes.html`), "C# notes.html");
+});
+
 test("anything else a caller passes is refused, not guessed at", () => {
   for (const args of [
     [],

@@ -219,6 +219,48 @@ test("a link to an HTML file goes to the HTML viewer with its vault, as text whe
   assert.deepEqual(commands, []);
 });
 
+test("an HTML file whose name has a # or a ? goes to the viewer, not to a text editor", async (t) => {
+  const directory = await mkdtemp(join(tmpdir(), "mw-navigation-unit-"));
+  t.after(() => rm(directory, { recursive: true, force: true }));
+  const root = pathToFileURL(directory).href;
+  const files = ["C# notes.html", "a?b.htm"].map(
+    (name) => pathToFileURL(join(directory, name)).href,
+  );
+  const commands: unknown[][] = [];
+  const withFragment = (uri: string) =>
+    Object.assign(parseUri(uri), {
+      with: ({ fragment }: { fragment: string }) =>
+        withFragment(`${uri.split("#")[0]}${fragment ? `#${fragment}` : ""}`),
+    });
+  const { createNavigation, HTML_VIEWER_COMMAND } = loadNavigation({
+    Uri: { parse: withFragment },
+    ViewColumn: { Beside: -2 },
+    env: { appName: "Visual Studio Code", uriScheme: "vscode" },
+    window: { tabGroups: { activeTabGroup: { viewColumn: 1 } } },
+    workspace: {
+      isTrusted: true,
+      getConfiguration: () => ({ get: () => "on" }),
+    },
+    commands: {
+      getCommands: async () => [
+        "vscode.open",
+        "lumiere.markdown.htmlViewer.open",
+      ],
+      async executeCommand(command: string, ...args: unknown[]) {
+        commands.push([command, ...args]);
+      },
+    },
+  });
+  const navigation = createNavigation(() => []);
+  for (const file of files) {
+    await navigation.open(root, file, "", "here");
+  }
+  assert.deepEqual(
+    commands.map(([command, uri]) => [command, uri]),
+    files.map((file) => [HTML_VIEWER_COMMAND, file]),
+  );
+});
+
 test("an HTML file opens as text when the viewer is not there, and other files never ask for it", async (t) => {
   const directory = await mkdtemp(join(tmpdir(), "mw-navigation-unit-"));
   t.after(() => rm(directory, { recursive: true, force: true }));

@@ -296,3 +296,35 @@ test("an html-embed block that names a file becomes an embed; one that does not 
     restore();
   }
 });
+
+test("a file named with a # shows its card, and Open hands over its encoded link", async () => {
+  const restore = installFakeDom();
+  try {
+    const image = new FakeImage();
+    image.dataset = { resource: "/notes/C%23%20notes.html" };
+    const page = new FakeNode("p");
+    page.append(image);
+    const opened: unknown[][] = [];
+    const embeds = enhanceEmbeds({
+      pass: passOf([image]),
+      render: { trusted: true } as unknown as RenderService,
+      resources: {
+        async load(): Promise<Resource> {
+          return {
+            kind: "html",
+            source: "file:///vault/notes/C%23%20notes.html",
+            url: "https://file%2B.vscode-resource.vscode-cdn.net/x",
+          };
+        },
+      },
+      open: (...args) => opened.push(args),
+    });
+    await settled();
+    assert.ok(textOf(page).includes("C# notes.html"));
+    elementsOf(page, "button")[0]!.click();
+    assert.deepEqual(opened, [["/notes/C%23%20notes.html", false]]);
+    embeds.dispose();
+  } finally {
+    restore();
+  }
+});

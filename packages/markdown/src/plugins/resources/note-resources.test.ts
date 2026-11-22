@@ -305,6 +305,15 @@ test("a fragment-only link in an indexed note still resolves through the index",
   assert.equal(jumped.text, "## Part");
 });
 
+test("a file name with a # or a ? is no subpath or query: it is still an HTML file", () => {
+  assert.equal(resourceKind("C# notes.html"), "html");
+  assert.equal(resourceKind("dir/a?b.htm"), "html");
+  assert.equal(resourceKind("100%.html"), "html");
+  // The name is the whole name: nothing after an extension makes it HTML.
+  assert.equal(resourceKind("a.html#x"), "file");
+  assert.equal(resourceKind("a.html?v=3"), "file");
+});
+
 test("an HTML file in the vault loads as the html kind, with a URL that changes with the file", async () => {
   const root = "file:///home/reader/vault";
   const page = `${root}/wiki/assets/diagram.html`;

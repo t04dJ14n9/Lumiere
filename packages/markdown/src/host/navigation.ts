@@ -18,7 +18,7 @@ import { contained } from "./navigation-containment";
 import { openExternalLink } from "./external-link";
 import { registerNativeLinks } from "./native-links";
 import { MARKDOWN_EDITOR } from "../shared/editor-provider";
-import { isHtmlFile } from "../shared/html-file";
+import { isHtmlPath } from "../shared/html-file";
 import { contributionId } from "../shared/setting-schema";
 import {
   creationLocation,
@@ -400,7 +400,7 @@ async function openedInHtmlViewer(
   options: OpenNavigation,
   column: vscode.ViewColumn,
 ): Promise<boolean> {
-  if (options.asText || !isHtmlFile(uri.path) || !vscode.workspace.isTrusted) {
+  if (options.asText || !isHtmlPath(uri.path) || !vscode.workspace.isTrusted) {
     return false;
   }
   const commands = await vscode.commands.getCommands(true);
