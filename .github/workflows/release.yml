@@ -3,7 +3,10 @@ name: Release
 # Push a tag such as v0.2.0 (matching package.json's version) to build the
 # VSIX, publish it through Marketplace Trusted Publishing, and attach it to a
 # GitHub Release. The tag's commit must be on main, and the release runs the
-# merge gate's suites (AGENTS.md) on that commit before it publishes.
+# merge gate's suites (AGENTS.md) on that commit before it publishes. The
+# version's CHANGELOG.md heading picks the Marketplace channel:
+# "## 0.1.22 (pre-release, 2026-11-22)" publishes a pre-release, and
+# "## 0.1.23 (2026-11-22)" a release. A published version keeps its channel.
 on:
   push:
     tags: ["v*"]
@@ -20,6 +23,8 @@ jobs:
     name: tag
     runs-on: ${{ fromJSON(vars.RELEASE_RUNNER || '["ubuntu-latest"]') }}
     timeout-minutes: 5
+    outputs:
+      pre-release: ${{ steps.channel.outputs.pre-release }}
     steps:
       - uses: actions/checkout@v7
         with:
@@ -42,6 +47,21 @@ jobs:
             echo "::error::Tag ${GITHUB_REF_NAME} (${GITHUB_SHA}) is not on main"
             exit 1
           fi
+      - name: The changelog names the version and its channel
+        id: channel
+        run: |
+          version=$(node -p 'require("./package.json").version')
+          heading=$(grep -m1 -E "^## ${version//./\\.} \(" CHANGELOG.md || true)
+          if [ -z "${heading}" ]; then
+            echo "::error::CHANGELOG.md has no '## ${version} (…)' heading"
+            exit 1
+          fi
+          case "${heading}" in
+            *"(pre-release"*) pre_release=true ;;
+            *) pre_release=false ;;
+          esac
+          echo "${heading} → pre-release: ${pre_release}"
+          echo "pre-release=${pre_release}" >> "${GITHUB_OUTPUT}"
 
   browser:
     name: browser
@@ -81,17 +101,43 @@ jobs:
       - uses: ./.github/actions/setup
       - name: pnpm check
         run: pnpm check
-      - name: pnpm package
-        run: pnpm package
+      - name: Package for the channel
+        env:
+          PRE_RELEASE: ${{ needs.tag.outputs.pre-release }}
+        run: |
+          if [ "${PRE_RELEASE}" = "true" ]; then
+            pnpm package:pre-release
+          else
+            pnpm package:release
+          fi
+      - name: The VSIX is marked for its channel
+        env:
+          PRE_RELEASE: ${{ needs.tag.outputs.pre-release }}
+        run: |
+          # vsce publish uploads the VSIX's manifest as it is: the channel is
+          # the PreRelease property that vsce package wrote, not a publish flag.
+          if unzip -p "$(ls *.vsix)" extension.vsixmanifest |
+            grep -q 'Id="Microsoft.VisualStudio.Code.PreRelease" Value="true"'; then
+            marked=true
+          else
+            marked=false
+          fi
+          if [ "${marked}" != "${PRE_RELEASE}" ]; then
+            echo "::error::The VSIX's pre-release mark is ${marked}, the changelog asks for ${PRE_RELEASE}"
+            exit 1
+          fi
       - name: Check the VSIX size and file list
         run: bash .github/scripts/check-vsix.sh "$(ls *.vsix)" 20
       - name: Publish to Visual Studio Marketplace
-        run: >
-          pnpm exec vsce publish
-          --oidc
-          --pre-release
-          --skip-duplicate
-          --packagePath "$(ls *.vsix)"
+        env:
+          PRE_RELEASE: ${{ needs.tag.outputs.pre-release }}
+        run: |
+          channel=()
+          if [ "${PRE_RELEASE}" = "true" ]; then
+            channel=(--pre-release)
+          fi
+          pnpm exec vsce publish --oidc "${channel[@]}" --skip-duplicate \
+            --packagePath "$(ls *.vsix)"
       - name: Create the GitHub Release
         env:
           GH_TOKEN: ${{ github.token }}
