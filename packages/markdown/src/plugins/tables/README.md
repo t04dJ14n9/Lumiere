@@ -98,8 +98,8 @@ and Down move the caret past the table, and a cell left open closes when
 another is asked for). Where a key would open a cell (Tab, the arrows,
 leaving a grid selection) the cell is selected in the grid instead, with
 the focus on the grid, so the keys keep moving through the table, and a
-right-click outside the grid selection selects the clicked cell, so its
-menu acts on it. A press starts no selection, the table commands and every whole-table write
+right-click outside the grid selection selects the clicked cell the same
+way (focus on the grid), so its menu acts on it. A press starts no selection, the table commands and every whole-table write
 refuse (a sort also after rendering its keys), leaving the table at the
 note's edge adds no blank line, and an open cell becomes
 read-only with the note, so typing and formatting commands in it refuse too.

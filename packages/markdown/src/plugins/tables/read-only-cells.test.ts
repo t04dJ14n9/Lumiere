@@ -23,6 +23,7 @@ import { TableKeyboard } from "./keyboard";
 import { CellProjection } from "./projection";
 import type { TableSelection } from "./selection";
 import { TableToolbar } from "./toolbar";
+import { activeTables } from "./state";
 
 // Edits dispatched straight to an open cell's editor do not ask its
 // read-only facet, which only advises commands (#814 review). The cell's
@@ -343,7 +344,6 @@ test("Copy from the menu of a right-clicked cell copies that cell, not one left 
         range: () => undefined,
         active: () => projection.active,
         open: (position) => projection.open(position),
-        select() {},
         request() {},
         execute() {},
         selectAll() {},
@@ -500,68 +500,121 @@ test("Tab or Right from a cell left open in a read-only note moves the focus to 
   }
 });
 
-test("in a read-only note the menu of a cell outside the grid selection acts on that cell", () => {
+/**
+ * A table controller's collaborators as the controller wires them, over a
+ * three-row table of a read-only note without DOM; a cell may be left open
+ * from before the note turned read-only. `focused` follows the focus, and
+ * `menus` records each context menu with where the focus was as it opened.
+ */
+function wiredTable(openCell?: CellPosition) {
   const tall = "| a | b |\n| --- | --- |\n| 1 | 2 |\n| 3 | 4 |";
+  const model = parseTable(tall)!;
+  let focused = openCell ? "cell" : "grid";
+  const outer = {
+    state: note(true),
+    scrollDOM: new EventTarget(),
+    focus: () => (focused = "note"),
+  };
+  const grid = {
+    outer,
+    model,
+    block: { source: tall },
+    start: () => 0,
+    root: Object.assign(new EventTarget(), {
+      isConnected: true,
+      focus: () => (focused = "grid"),
+    }),
+    table: new EventTarget(),
+    scroll: new EventTarget(),
+    cells: model.rows.map((row) =>
+      row.map(() => ({ classList: { toggle() {} }, setAttribute() {} })),
+    ),
+    contentElement: () => ({ replaceChildren() {} }),
+    display() {},
+    replace: () => false,
+  } as unknown as TableGrid;
+  const copies: string[] = [];
+  const menus: {
+    focused: string;
+    items: { label?: string; run?: () => void }[];
+  }[] = [];
+  const environment = {
+    position: () => 0,
+    copy: (text: string) => copies.push(text),
+    paste: async () => "",
+    wrap: () => true,
+    clearFormatting: (text: string) => text,
+    canFormat: true,
+    openMenu: (_root: unknown, items: never) => {
+      menus.push({ focused, items });
+      return () => {};
+    },
+  } as unknown as TableEnvironment;
+  const controller = Object.create(TableController.prototype);
+  Object.assign(controller, {
+    grid,
+    events: new AbortController(),
+    handles: { setActive() {} },
+  });
+  controller.projection = controller["createProjection"](environment);
+  const wired = controller["wireCollaborators"](environment);
+  Object.assign(controller, wired, { selected: wired.selected });
+  const projection = controller.projection as CellProjection;
+  if (openCell) {
+    projection.active = openCell;
+    projection.cellEditor = {
+      view: cellView("1", true),
+      destroy: () => {
+        if (focused === "cell") {
+          focused = "body";
+        }
+      },
+    } as unknown as CellEditor;
+  }
+  return {
+    controller: controller as TableController,
+    outer,
+    selection: wired.selected as TableSelection,
+    toolbar: wired.toolbar as TableToolbar,
+    copies,
+    menus,
+    focused: () => focused,
+  };
+}
+
+/** Right-click `position`, then take Copy from its menu. */
+function copyFromMenuOf(
+  table: ReturnType<typeof wiredTable>,
+  position: CellPosition,
+) {
+  table.toolbar.showMenu(position, { x: 0, y: 0 });
+  table.menus.at(-1)!.items.find((item) => item.label === "Copy")!.run!();
+}
+
+test("in a read-only note the menu of a cell outside the grid selection acts on that cell", () => {
   for (const [clicked, copied] of [
     [{ row: 0, column: 0 }, "a"],
     // Inside the selection: the selection stays the menu's target.
     [{ row: 2, column: 1 }, "4"],
   ] as const) {
-    const grid = {
-      outer: { state: note(true), focus() {} },
-      model: parseTable(tall)!,
-      block: { source: tall },
-      root: { isConnected: true, focus() {} },
-      contentElement: () => ({ replaceChildren() {} }),
-      display() {},
-    } as unknown as TableGrid;
-    const projection = new CellProjection(grid, {} as TableEnvironment, {
-      activate() {},
-      highlight() {},
-      move: () => false,
-      arrow: () => false,
-    });
+    const table = wiredTable();
     // The grid selection the keys left on (2, 1), and its highlight.
-    const selection = {
-      range: cell(2, 1) as CellRange | undefined,
-      select(next: CellRange) {
-        this.range = next;
-      },
-    };
-    const copies: string[] = [];
-    const clipboard = new TableClipboard(
-      grid,
-      projection,
-      selection as unknown as TableSelection,
-      {
-        copy: (text: string) => copies.push(text),
-        paste: async () => "",
-        wrap: () => true,
-        clearFormatting: (text: string) => text,
-        canFormat: true,
-      },
-    );
-    let items: { label?: string; run?: () => void }[] = [];
-    const toolbar = new TableToolbar(
-      grid,
-      {
-        range: () => selection.range,
-        active: () => projection.active,
-        open: (position) => projection.open(position),
-        select: (next) => selection.select(next),
-        request() {},
-        execute() {},
-        selectAll() {},
-      },
-      clipboard,
-      (_root, menu) => {
-        items = menu as typeof items;
-        return () => {};
-      },
-    );
-    toolbar.showMenu(clicked, { x: 0, y: 0 });
-    items.find((item) => item.label === "Copy")!.run!();
-    assert.deepEqual(copies, [copied]);
-    assert.deepEqual(selection.range, cell(clicked.row, clicked.column));
+    table.selection.select(cell(2, 1));
+    copyFromMenuOf(table, clicked);
+    assert.deepEqual(table.copies, [copied]);
+    assert.deepEqual(table.selection.range, cell(clicked.row, clicked.column));
   }
+});
+
+test("right-clicking another cell than one left open in a read-only note keeps the focus on the grid and the table active", () => {
+  const table = wiredTable({ row: 1, column: 0 });
+  table.toolbar.showMenu({ row: 0, column: 0 }, { x: 0, y: 0 });
+  // The open cell's editor was destroyed; the focus went to the grid, not
+  // the page's body, before the menu opened, so the table stays active.
+  assert.equal(table.menus[0]!.focused, "grid");
+  assert.equal(table.focused(), "grid");
+  assert.equal(activeTables.get(table.outer as never), table.controller);
+  assert.deepEqual(table.selection.range, cell(0, 0));
+  table.menus[0]!.items.find((item) => item.label === "Copy")!.run!();
+  assert.deepEqual(table.copies, ["a"]);
 });

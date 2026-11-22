@@ -255,7 +255,6 @@ test("the menu's Paste as plain text asks for plain text", async () => {
       range: () => ({ anchor: position, head: position }),
       active: () => position,
       open: () => true,
-      select() {},
       request() {},
       execute() {},
       selectAll() {},

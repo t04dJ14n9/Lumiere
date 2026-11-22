@@ -102,8 +102,8 @@ export class TableController {
       {
         range: () => this.selected.range,
         active: () => this.projection.active,
-        open: (position) => this.projection.open(position),
-        select: (range) => this.selected.select(range),
+        // The keyboard is wired after the toolbar; this runs later.
+        open: (position) => this.keyboard.openOrSelect(position),
         request,
         execute: (operation, focus) => this.execute(operation, focus),
         selectAll: () => this.selected.selectAll(),

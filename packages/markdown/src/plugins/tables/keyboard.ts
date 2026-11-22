@@ -133,11 +133,9 @@ export class TableKeyboard {
    * is selected in the grid instead, with the focus on the grid, so the
    * keys go on moving through the table, and a cell left open from before
    * the note turned read-only does not take the focus with it as it closes.
+   * The context menu takes its target cell the same way.
    */
-  private openOrSelect(
-    position: CellPosition,
-    selection?: CellSelection,
-  ): boolean {
+  openOrSelect(position: CellPosition, selection?: CellSelection): boolean {
     if (this.projection.open(position, selection)) {
       return true;
     }
