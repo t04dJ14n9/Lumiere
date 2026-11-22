@@ -1,5 +1,10 @@
 # Changelog
 
+## Unreleased
+
+- Release workflow: a version published as a Marketplace pre-release is a
+  GitHub pre-release too.
+
 ## 0.1.23 (2026-11-22)
 
 The same extension as 0.1.22, published on the Marketplace as a release
