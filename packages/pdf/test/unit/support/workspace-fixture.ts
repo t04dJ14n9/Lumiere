@@ -18,11 +18,18 @@ import * as path from "node:path";
 import * as vscode from "./fake-vscode";
 
 export interface WorkspaceFixture {
-  /** The workspace folder. */
+  /** The workspace folder: its real path. */
   root: string;
+  /** A link to `root`, beside it: the path a window can have opened it by. */
+  link: string;
   /** A PDF beside the workspace, not in it. */
   outside: string;
+  /** A file of the workspace, by the real path of the folder. */
   uri(relative: string): vscode.Uri;
+  /** The same file, by the link. */
+  linkUri(relative: string): vscode.Uri;
+  /** Make the window's workspace folder the link, as when `~/vault` is a symbolic link. */
+  openThroughLink(): void;
   /** Restore the fake and delete the folders. */
   remove(): Promise<void>;
 }
@@ -39,6 +46,11 @@ export async function installWorkspace(): Promise<WorkspaceFixture> {
     await writeFile(path.join(root, file), PDF);
   }
   await writeFile(path.join(root, "papers", "notes.txt"), "x");
+  // A folder that is named like a PDF.
+  await mkdir(path.join(root, "papers", "archive.pdf"));
+  const link = path.join(base, "workspace-link");
+  // A junction needs no privilege on Windows; POSIX ignores the type.
+  await symlink(root, link, "junction");
   await writeFile(outside, PDF);
   await symlink(outside, path.join(root, "papers", "escape.pdf"));
 
@@ -67,8 +79,13 @@ export async function installWorkspace(): Promise<WorkspaceFixture> {
   }) as never;
   return {
     root,
+    link,
     outside,
     uri: (relative) => vscode.Uri.file(path.join(root, relative)),
+    linkUri: (relative) => vscode.Uri.file(path.join(link, relative)),
+    openThroughLink() {
+      vscode.workspace.workspaceFolders = [{ uri: vscode.Uri.file(link) }];
+    },
     async remove() {
       vscode.workspace.workspaceFolders = original.folders;
       vscode.workspace.fs.stat = original.stat;

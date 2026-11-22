@@ -156,6 +156,7 @@ export const TreeItemCollapsibleState = { None: 0, Collapsed: 1, Expanded: 2 };
 export const StatusBarAlignment = { Left: 1, Right: 2 };
 export const ConfigurationTarget = { Global: 1, Workspace: 2 };
 export const ViewColumn = { Active: -1, Beside: -2, One: 1 };
+export const FileType = { File: 1, Directory: 2, SymbolicLink: 64 };
 
 export const commands = {
   registerCommand: (id: string) => track(`command:${id}`),

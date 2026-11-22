@@ -7,7 +7,11 @@
  */
 import * as path from "node:path";
 import * as vscode from "vscode";
-import { workspacePdfFiles } from "../../../../outlines/vscode";
+import { containingFolder } from "../../../../outlines/inside-folders";
+import {
+  localWorkspaceFolders,
+  workspacePdfFiles,
+} from "../../../../outlines/vscode";
 import {
   extractPdfLink,
   pdfPathReadings,
@@ -34,8 +38,9 @@ export interface WorkspacePdf {
 export async function resolveWorkspacePdf(text: string): Promise<WorkspacePdf> {
   const found = new Map<string, WorkspacePdf>();
   for (const candidate of candidatesFor(text)) {
-    if (await isWorkspacePdf(candidate.uri)) {
-      found.set(candidate.uri.toString(), candidate);
+    const uri = await workspacePdf(candidate.uri);
+    if (uri) {
+      found.set(uri.toString(), { uri, fragment: candidate.fragment });
     }
   }
   const [only, ...others] = [...found.values()];
@@ -78,17 +83,43 @@ function candidatesFor(text: string): WorkspacePdf[] {
   }
 }
 
-/** A `.pdf` file the workspace holds: its real path is in a folder (see `insideFolders`). */
-async function isWorkspacePdf(uri: vscode.Uri): Promise<boolean> {
+/**
+ * `uri` as the window names the PDF, when it is a `.pdf` file the workspace
+ * holds: its real path is in a folder (see `insideFolders`). Undefined
+ * otherwise.
+ */
+async function workspacePdf(uri: vscode.Uri): Promise<vscode.Uri | undefined> {
   if (!/\.pdf$/iu.test(uri.path)) {
-    return false;
+    return undefined;
   }
   // `insideFolders` leaves a remote or virtual file to its file system, so
   // the window itself must say it belongs to a workspace folder.
   if (uri.scheme !== "file" && !vscode.workspace.getWorkspaceFolder(uri)) {
-    return false;
+    return undefined;
   }
-  return (await workspacePdfFiles.stat(uri.toString())) !== undefined;
+  if ((await workspacePdfFiles.stat(uri.toString())) === undefined) {
+    return undefined;
+  }
+  return inWindowsFolder(uri);
+}
+
+/**
+ * A window can open a folder through a link (`~/vault`) while an agent names
+ * a file by the real path (`~/Documents/vault/…`): inside the folder, but
+ * to VS Code in no workspace folder, so its editors, settings and notes
+ * would not match. Put such a path back under the folder as opened.
+ */
+async function inWindowsFolder(uri: vscode.Uri): Promise<vscode.Uri> {
+  if (uri.scheme !== "file" || vscode.workspace.getWorkspaceFolder(uri)) {
+    return uri;
+  }
+  const found = await containingFolder(localWorkspaceFolders(), uri.toString());
+  const folder = (vscode.workspace.workspaceFolders ?? []).find(
+    ({ uri: opened }) => opened.fsPath === found?.folder,
+  );
+  return found && folder
+    ? vscode.Uri.joinPath(folder.uri, ...found.relative.split(path.sep))
+    : uri;
 }
 
 /** The PDF a tool is about: its file, and the editor showing it when one is open. */

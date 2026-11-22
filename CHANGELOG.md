@@ -20,7 +20,9 @@
   is read from the `Authorization` header only (#864).
 - Agent bridge: a tool's file argument (`open_pdf_location`, `get_pdf_info`,
   `find_notes_citing_pdf`) must name a PDF inside the window's workspace
-  folders. A path outside them, through `..` or a symbolic link, is refused.
+  folders. A path outside them, through `..` or a symbolic link, is refused,
+  and so is a folder named like a PDF. The real path of a folder the window
+  opened through a link (`~/vault`) is read as that folder's own.
 - Agent bridge: new read-only tools `get_pdf_info` (page count, position,
   bookmarks, hash, protected folder) and `find_notes_citing_pdf` (the notes
   that link to a PDF, with page and quote); `open_pdf_location` says which

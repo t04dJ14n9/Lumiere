@@ -109,7 +109,26 @@ export async function collectIdeContext(deps: BridgeDeps): Promise<IdeContext> {
     ...(note ? { note } : {}),
     ...(pdf ? { pdf } : {}),
     tabs,
-    warnings,
+    // Both packets may say the same thing (a budget cut, say).
+    warnings: [...new Set(warnings)],
+  };
+}
+
+/**
+ * The host the packet is gathered from, for the Lumiere editor at `uri`. The
+ * text editor in focus is the packet's only when it shows `uri` (a note open
+ * in both editors gives its caret); any other makes the packet warn that it
+ * left the editor out, which is no news to an agent. The packet's own tabs
+ * and diagnostics are not used here (the tabs come from `listLumiereTabs`),
+ * so they are not gathered, and cannot warn.
+ */
+function packetHost(host: IdeContextHostApis, uri: string): IdeContextHostApis {
+  const { activeTextEditor, workspace } = host;
+  return {
+    listTabs: () => ({ visible: [], open: [] }),
+    getDiagnostics: () => [],
+    ...(workspace ? { workspace } : {}),
+    ...(activeTextEditor?.uri === uri ? { activeTextEditor } : {}),
   };
 }
 
@@ -155,9 +174,10 @@ function notePacket(
   host: IdeContextHostApis,
 ): IdeContextPacket {
   const { selection } = note;
-  return gatherIdeContext(host, {
+  const uri = note.uri.toString();
+  return gatherIdeContext(packetHost(host, uri), {
     product: "markdownWorkshop",
-    uri: note.uri.toString(),
+    uri,
     markdown: { editorKind: "livePreview" },
     ...(selection ? { selection: { ...selection, truncated: false } } : {}),
   });
@@ -179,7 +199,7 @@ function pdfContext(
       selection: selected?.selection,
       ...viewedPages(panel.view),
       ...(sha256 ? { sourceSha256: sha256 } : {}),
-      host,
+      host: packetHost(host, panel.uri.toString()),
     }),
   );
   warnings.push(...packet.warnings);

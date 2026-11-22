@@ -29,6 +29,7 @@ beforeEach(async () => {
 });
 afterEach(async () => {
   vscode.window.tabGroups.all = [];
+  delete (vscode.window as { activeTextEditor?: unknown }).activeTextEditor;
   await workspace.remove();
 });
 
@@ -151,6 +152,41 @@ test("a long note selection is cut to the packet's cap and says so", async () =>
     result.warnings.some((warning) => /truncat/u.test(warning)),
     result.warnings.join(),
   );
+});
+
+/** A text editor in focus, as VS Code reports it. */
+function focusTextEditor(relative: string, caret = { line: 4, character: 2 }) {
+  (vscode.window as { activeTextEditor?: unknown }).activeTextEditor = {
+    document: {
+      uri: workspace.uri(relative),
+      languageId: "typescript",
+      isDirty: false,
+    },
+    selection: { active: caret },
+  } as never;
+}
+
+test("a text editor in focus does not put the packet's internal warning in the context, and its caret is not taken for the note's", async () => {
+  focusTextEditor("src/x.ts");
+  const panel = pdfPanel();
+  const result = (await context(
+    fakeDeps({ panels: fakePanels([panel], panel), notes: note() }),
+  )) as {
+    note: Record<string, unknown>;
+    warnings: string[];
+  };
+  assert.deepEqual(result.warnings, []);
+  assert.equal("caret" in result.note, false);
+});
+
+test("a text editor that shows the note gives its caret, one-based", async () => {
+  focusTextEditor("notes/idea.md");
+  const result = (await context(fakeDeps({ notes: note() }))) as {
+    note: { caret?: { line: number; column: number } };
+    warnings: string[];
+  };
+  assert.deepEqual(result.note.caret, { line: 5, column: 3 });
+  assert.deepEqual(result.warnings, []);
 });
 
 test("the PDF: path, page, page count, zoom and hash, with a locator to the page", async () => {

@@ -410,7 +410,8 @@ needed.
   shim reads it from the bridge's discovery file. (Cursor stubs VS Code's
   provider API, and its remote registration drops request headers as of
   3.30.14, so a URL registration cannot carry the token.) Check it in
-  **Cursor Settings → MCP**: `agent-pdf-viewer` is listed with its tools.
+  **Cursor Settings → Tools & MCPs**: the server is listed as
+  `extension-agent-pdf-viewer`, connected, with its tools.
 - **Claude Code** and **Codex** connect through the same small stdio shim:
   **PDF: Copy MCP Setup for Claude Code / Codex…** copies the `claude mcp add …`
   or `codex mcp add …` command (or a config snippet) to run once; on Windows

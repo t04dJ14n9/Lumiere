@@ -11,12 +11,16 @@ import { PdfOutlineReader, type OutlineFiles } from "./reader";
  * are read where the extension host runs.
  */
 const workspaceFiles: OutlineFiles = {
+  /** A file's stamp; a folder (even one named `x.pdf`) is no PDF, so it reads as missing. */
   async stat(uri) {
     try {
-      const { mtime, size } = await vscode.workspace.fs.stat(
+      const { type, mtime, size } = await vscode.workspace.fs.stat(
         vscode.Uri.parse(uri),
       );
-      return { mtime, size };
+      const isFile =
+        (type & vscode.FileType.File) !== 0 &&
+        (type & vscode.FileType.Directory) === 0;
+      return isFile ? { mtime, size } : undefined;
     } catch {
       return undefined;
     }
@@ -61,7 +65,7 @@ export function createPdfOutlines(
 }
 
 /** The paths of the workspace's folders on this machine's disk. */
-function localWorkspaceFolders(): string[] {
+export function localWorkspaceFolders(): string[] {
   return (vscode.workspace.workspaceFolders ?? [])
     .filter((folder) => folder.uri.scheme === "file")
     .map((folder) => folder.uri.fsPath);

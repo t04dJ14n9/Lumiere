@@ -114,6 +114,7 @@ test("open_pdf_location refuses what is not a PDF inside the workspace, and neve
     `${vscode.Uri.file(workspace.outside).toString()}#page=1`, // a URI
     "papers/escape.pdf", // inside by name, a link to a file outside
     "papers/notes.txt", // not a PDF
+    "papers/archive.pdf", // a folder named like one
     "papers/missing.pdf", // not there
     "/etc/hosts",
   ];
@@ -268,6 +269,69 @@ test("get_pdf_info and find_notes_citing_pdf say when no PDF has been viewed, an
   }
 });
 
+/** The window opened the workspace through a link (`~/vault`); the agent names the real path. */
+function realPathForms(relative: string): string[] {
+  const real = workspace.uri(relative);
+  return [
+    `${real.fsPath}#page=3`, // an absolute path
+    `${real.toString()}#page=3`, // a file: URI
+  ];
+}
+
+test("a real path under a workspace folder that was opened through a link names the PDF of that window", async () => {
+  workspace.openThroughLink();
+  recordOpen(true);
+  // The editor has the PDF open by the folder's own path, as the window opened it.
+  const panel = fakePanel("papers/a.pdf", {
+    uri: workspace.linkUri("papers/a.pdf"),
+  });
+  const deps = fakeDeps({ panels: fakePanels([panel], panel) });
+  for (const form of realPathForms("papers/a.pdf")) {
+    const info = await callTool(deps, "get_pdf_info", { path: form });
+    assert.equal(info.isError, false, form);
+    assert.deepEqual(info.json(), {
+      file: "papers/a.pdf",
+      open: true,
+      protectedFolder: false,
+      pageCount: 12,
+      page: 3,
+      zoomPercent: 110,
+      sha256: "ab".repeat(32),
+    });
+    const opening = await callTool(deps, "open_pdf_location", { link: form });
+    assert.equal(opening.text, "Opened papers/a.pdf at page 3.", form);
+  }
+  // Opened in the window's form of the path, so the command finds the open editor.
+  assert.deepEqual(
+    opened.map(([, target]) => String(target)),
+    [
+      workspace.linkUri("papers/a.pdf").with({ fragment: "page=3" }).toString(),
+      workspace.linkUri("papers/a.pdf").with({ fragment: "page=3" }).toString(),
+    ],
+  );
+});
+
+test("a real path under a linked workspace folder is in its protected folder, and its notes are found", async () => {
+  workspace.openThroughLink();
+  const raw = fakePanel(".raw/c.pdf", { uri: workspace.linkUri(".raw/c.pdf") });
+  const deps = fakeDeps({
+    panels: fakePanels([raw], raw),
+    backlinks: indexNotes({ "notes/a.md": "[p](.raw/c.pdf#page=4)" }, true),
+  });
+  const real = workspace.uri(".raw/c.pdf").fsPath;
+  const info = await callTool(deps, "get_pdf_info", { path: real });
+  assert.deepEqual(
+    (info.json() as { protectedFolder: boolean }).protectedFolder,
+    true,
+  );
+  const found = await callTool(deps, "find_notes_citing_pdf", { path: real });
+  assert.deepEqual(found.json(), {
+    file: ".raw/c.pdf",
+    count: 1,
+    links: [{ note: "notes/a.md", page: 4 }],
+  });
+});
+
 test("the outline is cut at its cap with a flag, titles are clipped and depth counts", () => {
   const long = "T".repeat(500);
   const chain = (depth: number): never =>
@@ -294,9 +358,15 @@ test("the outline is cut at its cap with a flag, titles are clipped and depth co
 });
 
 /** A note's link to a.pdf, as the backlink index reads it. */
-function indexNotes(notes: Record<string, string>): PdfBacklinkIndex {
+function indexNotes(
+  notes: Record<string, string>,
+  throughLink = false,
+): PdfBacklinkIndex {
   const index = new PdfBacklinkIndex();
-  const folder = vscode.Uri.file(workspace.root).toString();
+  // The notes are indexed under the workspace folder as the window has it.
+  const folder = vscode.Uri.file(
+    throughLink ? workspace.link : workspace.root,
+  ).toString();
   for (const [file, text] of Object.entries(notes)) {
     const noteUri = vscode.Uri.file(path.join(workspace.root, file)).toString();
     index.replaceNote(noteUri, file, text, folder);
