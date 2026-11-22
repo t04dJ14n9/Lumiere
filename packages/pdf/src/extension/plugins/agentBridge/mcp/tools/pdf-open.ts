@@ -16,7 +16,8 @@ export function registerOpenLocation(server: McpServer): void {
       description:
         "Open a PDF in the user's editor at a page and box, to show them a citation. Accepts a link such as " +
         '"papers/paper.pdf#page=3&viewrect=72,83,134,21" (a path relative to a workspace folder, or an absolute path inside ' +
-        "the workspace), or a Markdown link to one. The editor opens it without taking the keyboard focus.",
+        "the workspace), or a Markdown link to one. A PDF that is already open is shown where it is; otherwise it opens " +
+        "beside the editor the user is in. The keyboard focus, the active editor group and the editor in front do not change.",
       inputSchema: {
         link: z
           .string()

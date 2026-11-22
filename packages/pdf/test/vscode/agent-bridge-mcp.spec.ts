@@ -147,6 +147,22 @@ function focusedGroup(page: Page): Promise<number> {
   );
 }
 
+/** What each editor group holds: its tabs' labels, and the label of the tab it shows. */
+function groupTabs(
+  page: Page,
+): Promise<{ tabs: string[]; shown: string | undefined }[]> {
+  return page.evaluate(() =>
+    [...document.querySelectorAll(".editor-group-container")].map((group) => {
+      const tabs = [...group.querySelectorAll(".tab")];
+      return {
+        tabs: tabs.map((tab) => tab.textContent ?? ""),
+        shown: tabs.find((tab) => tab.classList.contains("active"))
+          ?.textContent,
+      };
+    }),
+  );
+}
+
 /** Whether any PDF viewer, in any tab, holds the keyboard. */
 async function viewerHasKeyboard(page: Page): Promise<boolean> {
   for (const frame of page.frames()) {
@@ -378,10 +394,17 @@ test("an MCP client reaches this window through the stdio shim, and the bridge r
         });
     });
 
-    await test.step("open_pdf_location opens the page without taking the keyboard", async () => {
-      // The user is typing in the note, in the left group.
-      expect(await hasKeyboard(page, await noteFrame(page))).toBe(true);
+    await test.step("open_pdf_location shows the PDF where it is open, and leaves the note the user is in alone", async () => {
+      // The user is typing in the note, in the left group; the PDF is in the right one.
+      const note = await noteFrame(page);
+      expect(await hasKeyboard(page, note)).toBe(true);
+      const before = await groupTabs(page);
+      expect(before).toHaveLength(2);
+      expect(before[0]!.shown).toContain(NOTE);
+      expect(before[1]!.tabs).toHaveLength(1);
+      expect(before[1]!.tabs[0]).toContain("outline.pdf");
       const groupBefore = await focusedGroup(page);
+
       const opened = await shim.callTool("open_pdf_location", {
         link: `${PDF}#page=5&viewrect=72,83,134,21`,
       });
@@ -389,14 +412,67 @@ test("an MCP client reaches this window through the stdio shim, and the bridge r
         isError: false,
         text: `Opened ${PDF} at page 5.`,
       });
+
+      // The viewer that was open went to the page: no second PDF tab.
       await expect.poll(() => hasLocationHighlight(page, 5)).toBe(true);
-      // The viewer opened the page and did not take the keyboard from the
-      // group the user is in. (The note may now be hidden behind the PDF tab
-      // that opened in its group, and still hold the keyboard.)
-      expect(await viewerHasKeyboard(page)).toBe(false);
+      expect(
+        JSON.parse((await shim.callTool("get_pdf_info", {})).text),
+      ).toMatchObject({ page: 5 });
+      expect(await groupTabs(page)).toEqual(before);
+      // The note is still the editor in front in its group, and the user's.
+      await expect(
+        (await noteFrame(page)).getByRole("textbox", {
+          name: "Markdown content",
+        }),
+      ).toBeVisible();
       expect(await focusedGroup(page)).toBe(groupBefore);
-      const info = await shim.callTool("get_pdf_info", {});
-      expect(JSON.parse(info.text)).toMatchObject({ page: 5 });
+      expect(await viewerHasKeyboard(page)).toBe(false);
+      expect(await hasKeyboard(page, await noteFrame(page))).toBe(true);
+    });
+
+    await test.step("a PDF behind the note in the same group opens beside it, never over it", async () => {
+      // The PDF joins the note's group as a background tab, then the note comes to the front.
+      await page
+        .locator(".editor-group-container .tab", { hasText: "outline.pdf" })
+        .first()
+        .click();
+      await command(page, "View: Move Editor into Left Group");
+      await page
+        .locator(".editor-group-container .tab", { hasText: NOTE })
+        .first()
+        .click();
+      await expect.poll(async () => (await groupTabs(page)).length).toBe(1);
+      await selectNoteLines(page);
+      expect(await hasKeyboard(page, await noteFrame(page))).toBe(true);
+      const groupBefore = await focusedGroup(page);
+
+      const opened = await shim.callTool("open_pdf_location", {
+        link: `${PDF}#page=7&viewrect=72,83,134,21`,
+      });
+      expect(opened).toEqual({
+        isError: false,
+        text: `Opened ${PDF} at page 7.`,
+      });
+
+      // A PDF tab opened in a group beside; the note's group is as it was.
+      await expect.poll(async () => (await groupTabs(page)).length).toBe(2);
+      const after = await groupTabs(page);
+      expect(after[0]!.shown).toContain(NOTE);
+      expect(after[0]!.tabs).toHaveLength(2);
+      expect(after[1]!.tabs).toHaveLength(1);
+      expect(after[1]!.shown).toContain("outline.pdf");
+      await expect.poll(() => hasLocationHighlight(page, 7)).toBe(true);
+      await expect(
+        (await noteFrame(page)).getByRole("textbox", {
+          name: "Markdown content",
+        }),
+      ).toBeVisible();
+      expect(await focusedGroup(page)).toBe(groupBefore);
+      expect(await viewerHasKeyboard(page)).toBe(false);
+      // VS Code puts the focus back when it adds the group; it takes a moment.
+      await expect
+        .poll(async () => hasKeyboard(page, await noteFrame(page)))
+        .toBe(true);
     });
 
     await test.step("a PDF outside the workspace, a .. escape and a link out are refused alike, and no differently from a missing file", async () => {

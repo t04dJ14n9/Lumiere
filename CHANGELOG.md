@@ -23,8 +23,15 @@
   folders. A path outside them, through `..` or a symbolic link, is refused.
 - Agent bridge: new read-only tools `get_pdf_info` (page count, position,
   bookmarks, hash, protected folder) and `find_notes_citing_pdf` (the notes
-  that link to a PDF, with page and quote); `open_pdf_location` opens without
-  taking the keyboard focus and says which page it opened.
+  that link to a PDF, with page and quote); `open_pdf_location` says which
+  page it opened.
+- Agent bridge: `open_pdf_location` no longer disturbs the editor the user is
+  typing in. It used to open the PDF as a new tab of the focused group, which
+  could hide the note being edited (the keyboard stayed in the hidden note) and
+  left an open viewer where it was. A PDF that is already open is now shown
+  where it is, and one that is not opens beside the current editor; the
+  keyboard focus, the active group and the editor in front stay put. Open PDF
+  at Location from a link or the palette is unchanged.
 - Agent bridge: `get_ide_context` and the resource `lumiere://ide-context`
   tell an agent where the user is in Lumiere (the active note with its
   selection and headings, the PDF viewed last with its page and selected

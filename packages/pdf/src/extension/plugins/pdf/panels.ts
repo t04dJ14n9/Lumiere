@@ -54,6 +54,34 @@ export class PdfPanels
     return undefined;
   }
 
+  /** Every open editor of the PDF at `uri`. */
+  editorsOf(uri: vscode.Uri): PdfPanel[] {
+    const key = uri.toString();
+    return this.all.filter((panel) => panel.uri.toString() === key);
+  }
+
+  /**
+   * Wait (briefly) for an editor of `uri` other than `known` to register. It
+   * may be in any group, which `waitFor` does not look at: that one wants
+   * the editor the reader is in.
+   */
+  async waitForNew(
+    uri: vscode.Uri,
+    known: ReadonlySet<PdfPanel>,
+    current: () => boolean = () => true,
+    timeoutMs = 5_000,
+  ): Promise<PdfPanel | undefined> {
+    const deadline = Date.now() + timeoutMs;
+    while (Date.now() < deadline && current()) {
+      const found = this.editorsOf(uri).find((panel) => !known.has(panel));
+      if (found) {
+        return found;
+      }
+      await new Promise((resolve) => setTimeout(resolve, 50));
+    }
+    return undefined;
+  }
+
   /**
    * Stop tracking every editor. The webviews themselves belong to VS Code
    * and stay open; they no longer talk to this extension.
