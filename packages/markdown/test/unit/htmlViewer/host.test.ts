@@ -21,6 +21,11 @@ interface Opened {
   title: string;
   options: PanelOptions | undefined;
   html: string[];
+  disposed: boolean;
+  /** How many times `dispose` was called on the panel. */
+  disposeCalls: number;
+  /** The reader closes the tab. */
+  close(): void;
 }
 
 /** The plugin over a workspace with `folders`, trusted or not, and `stat` as given. */
@@ -31,7 +36,7 @@ async function viewer(
     stat?: (uri: string) => { mtime: number; symbolicLink: boolean };
     realContains?: (root: string, uri: string) => boolean;
     /** The file's bytes, by URI; the default is a small page. */
-    read?: (uri: string) => Uint8Array;
+    read?: (uri: string) => Uint8Array | Promise<Uint8Array>;
   } = {},
 ) {
   const opened: Opened[] = [];
@@ -40,20 +45,54 @@ async function viewer(
   const stats: string[] = [];
   const reads: string[] = [];
   let command: ((...args: unknown[]) => unknown) | undefined;
+  /** Panels asked for, by key, as VS Code's adapter keeps them: asking again is the same panel. */
+  const live = new Map<string, LumierePanel>();
+  const requests: (PanelOptions | undefined)[] = [];
   const panel = (
     viewType: string,
     title: string,
     options?: PanelOptions,
   ): LumierePanel => {
-    const record: Opened = { viewType, title, options, html: [] };
+    requests.push(options);
+    const key = options?.key;
+    const existing = key === undefined ? undefined : live.get(key);
+    if (existing) {
+      return existing;
+    }
+    const record: Opened = {
+      viewType,
+      title,
+      options,
+      html: [],
+      disposed: false,
+      disposeCalls: 0,
+      close: () => made.dispose(),
+    };
+    const disposal = new Set<() => void>();
     opened.push(record);
-    return {
+    const made: LumierePanel = {
       reveal() {},
       setTitle() {},
       visible: true,
       onDidChangeVisibility: () => () => {},
-      onDispose: () => () => {},
-      dispose() {},
+      onDispose: (listener) => {
+        disposal.add(listener);
+        return () => {
+          disposal.delete(listener);
+        };
+      },
+      dispose() {
+        record.disposeCalls += 1;
+        if (!record.disposed) {
+          record.disposed = true;
+          if (key !== undefined) {
+            live.delete(key);
+          }
+          for (const listener of [...disposal]) {
+            listener();
+          }
+        }
+      },
       webview: {
         cspSource: "https://*.vscode-cdn.net",
         asset: (relative) => relative,
@@ -68,6 +107,10 @@ async function viewer(
         },
       },
     };
+    if (key !== undefined) {
+      live.set(key, made);
+    }
+    return made;
   };
   const realContains = setup.realContains;
   const host = fakeHost({
@@ -91,7 +134,7 @@ async function viewer(
       async read(uri: string) {
         reads.push(uri);
         return (
-          setup.read?.(uri) ??
+          (await setup.read?.(uri)) ??
           new TextEncoder().encode(
             "<!doctype html><html><head><title>T</title></head><body>Hi</body></html>",
           )
@@ -111,10 +154,13 @@ async function viewer(
   });
   const root = createRoot({ logger: { debug() {}, warn() {}, error() {} } });
   provideHostServices(root, host);
-  root.plugin(htmlViewerHost);
+  const fiber = root.plugin(htmlViewerHost);
   await root.settled();
   return {
+    /** Stop the plugin, as turning it off does. */
+    stop: () => fiber.dispose(),
     opened,
+    requests,
     executed,
     errors,
     stats,
@@ -181,7 +227,7 @@ test("the host listens to nothing from the page and sends it nothing", async () 
   const v = await viewer();
   await v.open(FILE, ROOT);
   await v.open(FILE, ROOT);
-  assert.equal(v.opened.length, 2);
+  assert.equal(v.opened.length, 1, "the same file is the same tab");
   assert.deepEqual(v.errors, []);
 });
 
@@ -192,7 +238,7 @@ test("opening the file again loads it again", async () => {
   await new Promise((resolve) => setTimeout(resolve, 2));
   bytes.text = "<p>two</p>";
   await v.open(FILE, ROOT);
-  const [first, second] = [v.opened[0]!.html[0]!, v.opened[1]!.html[0]!];
+  const [first, second] = v.opened[0]!.html as [string, string];
   assert.ok(first.includes("<p>one</p>") && second.includes("<p>two</p>"));
   assert.notEqual(first, second);
 });
@@ -368,7 +414,67 @@ test("one panel per file: the same file asks for the same key", async () => {
   await v.open(FILE, ROOT);
   await v.open(`${ROOT}/other.html`, ROOT);
   assert.deepEqual(
-    v.opened.map((panel) => panel.options?.key),
+    v.requests.map((options) => options?.key),
     [FILE, FILE, `${ROOT}/other.html`],
   );
+  assert.equal(v.opened.length, 2);
+});
+
+test("stopping the plugin closes the tabs it opened, each once", async () => {
+  const v = await viewer();
+  await v.open(FILE, ROOT);
+  await v.open(`${ROOT}/other.html`, ROOT);
+  // The same file again is the same tab.
+  await v.open(FILE, ROOT);
+  assert.deepEqual(
+    v.opened.map((panel) => panel.disposed),
+    [false, false],
+  );
+  await v.stop();
+  assert.deepEqual(
+    v.opened.map((panel) => [panel.disposed, panel.disposeCalls]),
+    [
+      [true, 1],
+      [true, 1],
+    ],
+  );
+});
+
+test("a tab the reader closed is forgotten: stopping later does not close it again", async () => {
+  const v = await viewer();
+  await v.open(FILE, ROOT);
+  await v.open(`${ROOT}/other.html`, ROOT);
+  const [closed, open] = v.opened as [
+    (typeof v.opened)[number],
+    (typeof v.opened)[number],
+  ];
+  closed.close();
+  assert.equal(closed.disposeCalls, 1);
+  await v.stop();
+  assert.equal(closed.disposeCalls, 1, "not closed again");
+  assert.deepEqual([open.disposed, open.disposeCalls], [true, 1]);
+  assert.deepEqual(v.errors, []);
+});
+
+test("a read that finishes after the plugin stopped creates no panel", async () => {
+  let finish: (bytes: Uint8Array) => void = () => {};
+  let started: () => void = () => {};
+  const reading = new Promise<void>((resolve) => {
+    started = resolve;
+  });
+  const v = await viewer({
+    read: () =>
+      new Promise<Uint8Array>((resolve) => {
+        started();
+        finish = resolve;
+      }),
+  });
+  const opening = v.open(FILE, ROOT);
+  await reading;
+  await v.stop();
+  finish(new TextEncoder().encode("<p>late</p>"));
+  await opening;
+  await tick();
+  assert.deepEqual(v.opened, []);
+  assert.deepEqual(v.errors, []);
 });

@@ -1,4 +1,5 @@
 import type { Context, Plugin } from "@workshop/core";
+import type { LumierePanel } from "../../shared/host";
 import { contributionId } from "../../shared/setting-schema";
 import { containedResource, contains } from "../resources/api";
 import { viewerDocument } from "./document";
@@ -28,11 +29,20 @@ export const htmlViewerHost: Plugin = {
   name: "htmlViewer",
   inject: { required: ["hostCommands", "views", "workspace", "dialogs"] },
   apply(ctx) {
+    // The tabs this plugin opened, by file. They are the plugin's: turning it
+    // off must not leave a page running in a tab.
+    const tabs = new Map<string, LumierePanel>();
+    ctx.effect(() => () => {
+      for (const tab of [...tabs.values()]) {
+        tab.dispose();
+      }
+      tabs.clear();
+    });
     ctx.effect(() =>
       ctx.hostCommands.register(
         contributionId("htmlViewer.open"),
         (...args: unknown[]) => {
-          void open(ctx, args).catch((error: unknown) => {
+          void open(ctx, tabs, args).catch((error: unknown) => {
             ctx.logger.error("HTML viewer failed to open", error);
             ctx.dialogs.error("The HTML file could not be opened.");
           });
@@ -42,7 +52,11 @@ export const htmlViewerHost: Plugin = {
   },
 };
 
-async function open(ctx: Context, args: readonly unknown[]): Promise<void> {
+async function open(
+  ctx: Context,
+  tabs: Map<string, LumierePanel>,
+  args: readonly unknown[],
+): Promise<void> {
   const request = parseHtmlViewerRequest(args);
   if (!request) {
     ctx.logger.warn("HTML viewer asked to open something it cannot");
@@ -62,6 +76,10 @@ async function open(ctx: Context, args: readonly unknown[]): Promise<void> {
     return;
   }
   const html = await readContained(ctx, request);
+  // The plugin may have been turned off while the file was read.
+  if (!ctx.isLive) {
+    return;
+  }
   const panel = ctx.views.panel(VIEW_TYPE, viewerTitle(request.uri), {
     key: request.uri,
     resourceRoots: [request.root],
@@ -69,6 +87,12 @@ async function open(ctx: Context, args: readonly unknown[]): Promise<void> {
     retainContext: true,
     ...(request.column === undefined ? {} : { column: request.column }),
   });
+  if (!tabs.has(request.uri)) {
+    // Asking again for a file's tab gives the same panel: it is kept once, and
+    // forgotten when the reader closes it.
+    tabs.set(request.uri, panel);
+    panel.onDispose(() => tabs.delete(request.uri));
+  }
   panel.webview.setHTML(
     viewerDocument({
       html,
