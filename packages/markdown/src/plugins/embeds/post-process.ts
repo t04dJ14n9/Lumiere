@@ -2,13 +2,15 @@ import type { RenderPass, RenderService } from "../render/api";
 import type { Resource, Resources } from "../resources/api";
 import { mediaKind } from "../../shared/media-kinds";
 import { mediaRecovery } from "./webm";
-import { ImageLoadError, missingEmbedText, noteName } from "./missing";
+import { ImageLoadError } from "./missing";
+import { EmbedErrors } from "./embed-errors";
 import { ImageStandIns } from "./stand-in";
 import { inspectImage } from "./image-dialog";
 import { IMAGE_EMBED, mountImageEmbedActions } from "./embed-actions";
-import { embeddedNote, MissingSection, RefusedEmbed } from "./note";
+import { embeddedNote } from "./note";
 import { renderBaseEmbed } from "./base-embed";
 import { mountPdfEmbed } from "./pdf-embed";
+import { mountHtmlCard } from "./html-embed";
 import { EmbedLives } from "./embed-lives";
 import { vaultEmbedResource } from "./resource-cache";
 import { NearViewport, waitsUntilNear } from "./near-viewport";
@@ -17,7 +19,7 @@ interface EmbedOptions {
   pass: RenderPass;
   render: RenderService;
   resources: Resources;
-  open(target: string, wiki: boolean): void;
+  open(target: string, wiki: boolean, asText?: boolean): void;
 }
 
 /** True when the resource element came from a wikilink embed (`![[...]]`). */
@@ -46,15 +48,20 @@ class EmbedPass implements PassEmbeds {
   private readonly restore: (() => void)[] = [];
   /** Embeds whose file could not be loaded. */
   private readonly missing = new Set<HTMLElement>();
-  /** The title an embed had before an error replaced it. */
-  private readonly ownTitles = new Map<HTMLElement, string>();
   private readonly standIns = new ImageStandIns();
+  private readonly errors: EmbedErrors;
   /** How many times each embed was shown: only the latest lands. */
   private readonly showings = new Map<HTMLElement, number>();
   /** Notes, bases and PDFs load only when they come near the screen. */
   private readonly near = new NearViewport();
   private isActive = true;
-  constructor(private readonly options: EmbedOptions) {}
+  constructor(private readonly options: EmbedOptions) {
+    this.errors = new EmbedErrors(
+      options.pass,
+      this.standIns,
+      () => this.isActive,
+    );
+  }
 
   start(): void {
     const { container } = this.options.pass;
@@ -105,7 +112,7 @@ class EmbedPass implements PassEmbeds {
     const showing = (this.showings.get(node) ?? 0) + 1;
     this.showings.set(node, showing);
     const isLatest = () => this.showings.get(node) === showing;
-    const showError = (error: unknown) => this.showError(node, target, error);
+    const showError = (error: unknown) => this.errors.show(node, target, error);
     const resource = this.resolve(node, target);
     if (!resource) {
       return;
@@ -127,43 +134,6 @@ class EmbedPass implements PassEmbeds {
         showError(error);
       }
     });
-  }
-
-  private showError(node: HTMLElement, target: string, error: unknown): void {
-    if (!this.isActive) {
-      return;
-    }
-    const { pass } = this.options;
-    if (!this.ownTitles.has(node)) {
-      this.ownTitles.set(node, node.title);
-    }
-    // After showImage wraps a markdown <img>, the error surface is the
-    // .image-embed host; before, the <img> itself cannot show text.
-    const surface = this.standIns.surfaceFor(node);
-    surface.classList.remove(IMAGE_EMBED);
-    surface.classList.add("unresolved-embed");
-    surface.textContent = missingEmbedText(target, {
-      note: noteName(pass.documentUri),
-      section: error instanceof MissingSection,
-      refused: error instanceof RefusedEmbed ? error.reason : undefined,
-      fetchFailed: error instanceof ImageLoadError,
-    });
-    surface.title = String(error);
-    pass.measure();
-  }
-
-  /** An embed that said it could not be shown shows its file now. */
-  private clearError(node: HTMLElement): void {
-    const title = this.ownTitles.get(node);
-    if (title === undefined) {
-      return;
-    }
-    this.ownTitles.delete(node);
-    if (this.standIns.restore(node)) {
-      return;
-    }
-    node.classList.remove("unresolved-embed");
-    node.title = title;
   }
 
   private rememberPlaceholder(node: HTMLElement): void {
@@ -233,7 +203,7 @@ class EmbedPass implements PassEmbeds {
       return;
     }
     this.lives.setSource(node, resource.source);
-    this.clearError(node);
+    this.errors.clear(node);
     const wiki = embedIsWiki(node);
     if (resource.kind === "image") {
       this.showImage(node, target, resource, wiki);
@@ -248,6 +218,8 @@ class EmbedPass implements PassEmbeds {
         resource,
         open: (href, isWiki) => this.options.open(href, isWiki),
       });
+    } else if (resource.kind === "html") {
+      this.showHtml(node, target, wiki);
     } else if (resource.kind === "pdf") {
       mountPdfEmbed({
         node,
@@ -266,6 +238,25 @@ class EmbedPass implements PassEmbeds {
     if (this.isActive) {
       this.options.pass.measure();
     }
+  }
+
+  /**
+   * An HTML file is a card that opens it (html-embed.ts), whatever the trust
+   * of the workspace: the page itself runs only in the HTML viewer. A Markdown
+   * image is an `<img>`, which shows no children: a block stands in for it, as
+   * for a failed image.
+   */
+  private showHtml(node: HTMLElement, target: string, wiki: boolean): void {
+    mountHtmlCard({
+      node: this.standIns.surfaceFor(node),
+      target,
+      trusted: this.options.render.trusted === true,
+      wiki,
+      signal: this.lives.signal(node),
+      open: (openTarget, isWiki) => this.options.open(openTarget, isWiki),
+      openAsText: (openTarget, isWiki) =>
+        this.options.open(openTarget, isWiki, true),
+    });
   }
 
   private showImage(
@@ -300,7 +291,7 @@ class EmbedPass implements PassEmbeds {
           image.parentElement?.classList.contains(IMAGE_EMBED) === true
             ? image.parentElement
             : node;
-        this.showError(surface, target, new ImageLoadError(target));
+        this.errors.show(surface, target, new ImageLoadError(target));
       },
       { signal: this.lives.signal(node) },
     );

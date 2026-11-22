@@ -9,6 +9,11 @@ export const request = Schema.object({
   side: Schema.boolean().default(false),
   /** In a tab of its own (Cmd-click), rather than the current one. */
   tab: Schema.boolean().optional(),
+  /**
+   * In a text editor, though a viewer of its own would show the file (an HTML
+   * file, by default shown in the HTML viewer).
+   */
+  text: Schema.boolean().optional(),
 });
 export const MAX_UNRESOLVED = 10_000;
 export const MAX_KNOWN_NOTES = 150_000;

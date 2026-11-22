@@ -65,6 +65,7 @@ export function fakeGraphPanel() {
     webview: {
       cspSource: "test:",
       asset: (relative) => relative,
+      resource: (uri) => uri,
       setHTML() {},
       post: (message) => deliver(toWebview.live, message),
       onMessage: (listener) => toHost.add(listener),

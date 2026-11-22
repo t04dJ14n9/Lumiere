@@ -4,7 +4,10 @@ import type {} from "../commands/api";
 import type {} from "../livePreview/api";
 import type {} from "../resources/api";
 import type {} from "../render/api";
-import { MarkdownBlock } from "../../webview/ui/markdown-widget";
+import {
+  FENCED_PREVIEW,
+  MarkdownBlock,
+} from "../../webview/ui/markdown-widget";
 import {
   embedEstimatedHeight,
   embedTarget,
@@ -34,6 +37,8 @@ import type { RenderService } from "../render/api";
 import type { InlineClick } from "../../webview/ui/inline-widget";
 import type { BlockEditing } from "../../webview/ui/markdown-widget";
 import { writtenHeight } from "./image-size";
+import { embedsHtml, htmlEmbedBlockFile } from "./html-embed-source";
+import { convertHtmlEmbedBlocks } from "./html-embed-block";
 export const embedsWebview: Plugin = {
   name: "embeds",
   inject: {
@@ -60,6 +65,21 @@ export const embedsWebview: Plugin = {
     registerInsertion(ctx);
   },
 };
+
+/**
+ * Whether a fenced block is an `html-embed` block that names a file. Its
+ * language is read first, a few characters: most fences are code, and a long
+ * one is not cut out of the note on every redraw to find that out.
+ */
+function namesHtmlEmbedBlock(node: SyntaxNodeRef, state: EditorState): boolean {
+  const info = node.node.getChild("CodeInfo");
+  return (
+    node.name === "FencedCode" &&
+    info !== null &&
+    /^html-embed$/iu.test(state.sliceDoc(info.from, info.to).trim()) &&
+    htmlEmbedBlockFile(state.sliceDoc(node.from, node.to)) !== undefined
+  );
+}
 
 /** The embed a paragraph holds alone, as its source, if it does. */
 function soleEmbed(
@@ -136,6 +156,23 @@ function claimedHeightOf(ctx: Context): ClaimedHeight {
       : undefined;
 }
 
+/**
+ * A fenced `html-embed` block (the community plugins' syntax) is an embed
+ * too: a card, not code, once it names a file.
+ */
+function registerHtmlEmbedBlock(ctx: Context): void {
+  ctx.effect(() =>
+    ctx.livePreview.block({
+      kind: "embed",
+      nodes: ["FencedCode"],
+      editing: "reveal",
+      match: (node, state) => namesHtmlEmbedBlock(node, state),
+      widget: (block) =>
+        new EmbedBlock(block, ctx.render, FENCED_PREVIEW, claimedHeightOf(ctx)),
+    }),
+  );
+}
+
 function registerEmbedRenderers(ctx: Context): void {
   const claimedHeight = claimedHeightOf(ctx);
   const widget = (block: RenderBlock) =>
@@ -157,6 +194,7 @@ function registerEmbedRenderers(ctx: Context): void {
       widget,
     }),
   );
+  registerHtmlEmbedBlock(ctx);
   // Obsidian 1.12 and earlier (owner request 2026-11-21): the caret on an
   // image shows its source, with or without focus (`image-reveal.ts`), the
   // image kept below it, as display math keeps its formula.
@@ -276,7 +314,7 @@ class EmbedInline extends MarkdownInline {
     if (this.isAfterSource) {
       node.classList.add(IMAGE_AFTER_SOURCE);
     }
-    if (writtenHeight(this.source) !== undefined) {
+    if (writtenHeight(this.source) !== undefined || embedsHtml(this.source)) {
       const height = this.estimatedHeight;
       if (height > 0) {
         node.style.minHeight = `${height}px`;
@@ -316,6 +354,7 @@ function registerEmbedContent(ctx: Context, cleanups: Set<() => void>): void {
     }
   });
   ctx.on("render/postProcess", (pass) => {
+    convertHtmlEmbedBlocks(pass.container);
     if (
       pass.container.querySelectorAll<HTMLElement>("[data-resource]").length ===
       0
@@ -326,12 +365,13 @@ function registerEmbedContent(ctx: Context, cleanups: Set<() => void>): void {
       pass,
       render: ctx.render,
       resources: ctx.resources,
-      open: (target, wiki) => {
+      open: (target, wiki, asText = false) => {
         void ctx.rpc
           .call(links, "open", {
             href: target,
             wiki,
             side: false,
+            ...(asText ? { text: true } : {}),
             ...(pass.documentUri === undefined
               ? {}
               : { source: pass.documentUri }),

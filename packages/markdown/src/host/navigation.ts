@@ -18,6 +18,7 @@ import { contained } from "./navigation-containment";
 import { openExternalLink } from "./external-link";
 import { registerNativeLinks } from "./native-links";
 import { MARKDOWN_EDITOR } from "../shared/editor-provider";
+import { openedInHtmlViewer } from "./html-viewer-route";
 import {
   creationLocation,
   followsNewNoteFolder,
@@ -26,6 +27,7 @@ import {
 } from "../shared/link-location";
 
 export { contained };
+export { HTML_VIEWER_COMMAND } from "./html-viewer-route";
 
 export type OffsetRevealTarget =
   number | { at: number; to?: number; preserveFocus?: boolean };
@@ -68,6 +70,16 @@ async function deliverToOpenedPanel(
     return;
   }
   await reveals.deliver(target.intent, panel.id, toOffsetTarget(target.offset));
+}
+
+/** What an open asks beyond where it goes: not to take the focus, to open as text. */
+function openFlags(
+  options: Parameters<Navigation["open"]>[6],
+): Pick<OpenNavigation, "preserveFocus" | "asText"> {
+  return {
+    ...(options?.preserveFocus ? { preserveFocus: true } : {}),
+    ...(options?.asText ? { asText: true } : {}),
+  };
 }
 
 export function createNavigation(
@@ -121,7 +133,7 @@ export function createNavigation(
         reveals,
         intent: intent ?? reveals.begin(),
         logger,
-        ...(options?.preserveFocus ? { preserveFocus: true } : {}),
+        ...openFlags(options),
       }),
     registerNativeLinks() {
       const links = registerNativeLinks(navigation);
@@ -316,6 +328,8 @@ interface OpenNavigation {
   logger: Logger;
   /** Show the destination without moving the keyboard focus to it. */
   preserveFocus?: boolean;
+  /** An HTML file opens in a text editor, not in the HTML viewer. */
+  asText?: boolean;
 }
 
 /** A bare column, or options where the tab must be kept or must not take the focus. */
@@ -357,7 +371,7 @@ async function openNavigation(options: OpenNavigation): Promise<void> {
     await revealOpenedNote(options, before, activeColumn);
   } else if (/\.pdf$/i.test(uri.path)) {
     await openPdf(uri, options.fragment, column);
-  } else {
+  } else if (!(await openedInHtmlViewer(uri, options, column))) {
     await vscode.commands.executeCommand(
       "vscode.open",
       uri.with({ fragment: options.fragment }),

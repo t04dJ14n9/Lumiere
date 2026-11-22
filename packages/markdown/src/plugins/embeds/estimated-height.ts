@@ -1,6 +1,7 @@
 import { embedsImage } from "../../markdown/images";
 import { mediaKind } from "../../shared/media-kinds";
 import { embedsNote } from "./clicks";
+import { embedsHtml } from "./html-embed-source";
 import { writtenHeight, writtenWidth } from "./image-size";
 
 /**
@@ -29,7 +30,7 @@ const CHROME = 16;
 const IMAGE_DEFAULT = 240;
 /** `<video>` / `<audio>` controls chrome before metadata. */
 const MEDIA_DEFAULT = 180;
-/** PDF and other attachment cards. */
+/** PDF and other attachment cards, and an HTML file's. */
 const CARD_DEFAULT = 48;
 /** Embedded Obsidian Base (.base) table/cards/list view. */
 const BASE_DEFAULT = 240;
@@ -80,6 +81,10 @@ export function embedEstimatedHeight(
 ): number {
   if (!source) {
     return IMAGE_DEFAULT + CHROME;
+  }
+  // Before `embedsNote`, which takes a fenced block, with no file name, for a note.
+  if (embedsHtml(source)) {
+    return CARD_DEFAULT + CHROME;
   }
   if (embedsImage(source)) {
     const height = writtenHeight(source);

@@ -201,6 +201,7 @@ async function openInternal(
   const place = placeOf(request);
   await navigation.open(root, uri, fragment, place, request.at, intent, {
     preserveFocus: keepsFocus(ctx, panel, place),
+    ...(request.text ? { asText: true } : {}),
   });
   return true;
 }

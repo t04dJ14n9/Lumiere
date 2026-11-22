@@ -1582,6 +1582,24 @@ and `markdown.previewScripts`. Lumiere v2 adds:
   `https:` and `blob:`; `frame-src https:`; fonts from `cspSource` and
   `data:`; `connect-src` from `cspSource` and `blob:` (resource and worker
   fetches). In untrusted workspaces, drop remote images, media and frames.
+- HTML files (`![[diagram.html]]`, an `html-embed` block, a link to one): the
+  editor's page never runs one. A note shows a card (a frame there stays blank:
+  VS Code serves a vault file only to its own webview documents, checked in VS
+  Code 1.147, 2026-11-22), and the HTML viewer, the only place a vault page
+  runs, is a webview of its own whose page is the file, in trusted workspaces
+  only (Restricted Mode opens the file as text and reads nothing). Its isolation
+  is that webview's own origin, so the page cannot reach Lumiere's editors; it has
+  `acquireVsCodeApi`, so the host registers no message handler for the panel and
+  posts nothing, `enableCommandUris` is false, and `localResourceRoots` is the vault
+  alone. The file is read in the host after `resources`' path and symbolic-link
+  containment, set as the panel's HTML with a `<meta>` policy and a `<base href>`
+  (the webview address of the file's folder) first in its head. The policy:
+  `default-src 'none'; script-src 'unsafe-inline' 'unsafe-eval' S https:;
+  style-src 'unsafe-inline' S https:; img-src S data: blob: https:; font-src S
+  data: https:; media-src S data: blob: https:; connect-src S blob: https:;
+  frame-src https:; worker-src S blob:; base-uri S; form-action 'none'` for the
+  webview source `S` (plugins/htmlViewer/README.md says why each source is
+  there). The editor page's policy and its message check are as they were.
 - DOMPurify sanitizes all rendered HTML. Iframes are sandboxed and lazy;
   graphics (MathJax, Mermaid) go through the graphics sanitizer. The
   LLM Wiki-specific source-link exception in `render/sanitize.ts` is replaced

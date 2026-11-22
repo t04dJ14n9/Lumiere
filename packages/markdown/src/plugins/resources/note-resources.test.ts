@@ -14,6 +14,18 @@ test("resource kinds preserve note and PDF precedence and unknown-file fallback"
   assert.equal(resourceKind("other.bin"), "file");
 });
 
+test("an HTML file is a resource of its own kind, whatever its case or subpath", () => {
+  assert.equal(resourceKind("diagram.html"), "html");
+  assert.equal(resourceKind("folder/Page.HTM"), "html");
+  assert.equal(resourceKind("report.Html"), "html");
+  // Only the extension decides: no sniffing, and no other web file runs.
+  assert.equal(resourceKind("diagram.html.txt"), "file");
+  assert.equal(resourceKind("diagram.xhtml"), "file");
+  assert.equal(resourceKind("script.js"), "file");
+  assert.equal(resourceKind("style.css"), "file");
+  assert.equal(resourceKind("image.svg"), "image");
+});
+
 test("resource loading defaults to markdown syntax", async () => {
   const root = "vscode-remote://host/vault";
   const seen: Array<LinkSyntax | undefined> = [];
@@ -291,4 +303,88 @@ test("a fragment-only link in an indexed note still resolves through the index",
   const jumped = await resources.load("#Part");
   assert.equal(jumped.source, source);
   assert.equal(jumped.text, "## Part");
+});
+
+test("a file name with a # or a ? is no subpath or query: it is still an HTML file", () => {
+  assert.equal(resourceKind("C# notes.html"), "html");
+  assert.equal(resourceKind("dir/a?b.htm"), "html");
+  assert.equal(resourceKind("100%.html"), "html");
+  // The name is the whole name: nothing after an extension makes it HTML.
+  assert.equal(resourceKind("a.html#x"), "file");
+  assert.equal(resourceKind("a.html?v=3"), "file");
+});
+
+test("an HTML file in the vault loads as the html kind, with a URL that changes with the file", async () => {
+  const root = "file:///home/reader/vault";
+  const page = `${root}/wiki/assets/diagram.html`;
+  const { resources } = resourcesOnDisk(root, { [page]: "<p>hi</p>" });
+  const loaded = await resources.load("/wiki/assets/diagram.html");
+  assert.equal(loaded.kind, "html");
+  assert.equal(loaded.source, page);
+  assert.equal(loaded.url, `${page}?v=7`);
+  // The page is shown by its URL: its text never travels to the editor.
+  assert.equal(loaded.text, undefined);
+});
+
+test("an HTML file outside the vault, or behind a link out of it, is never loaded", async () => {
+  const root = "file:///home/reader/vault";
+  const outside = "file:///home/reader/secret.html";
+  const { resources, stats } = resourcesOnDisk(root, {
+    [outside]: "<script>1</script>",
+  });
+  await assert.rejects(
+    resources.load("../../../secret.html"),
+    /Resource not found/,
+  );
+  await assert.rejects(resources.load("/../secret.html"), /Resource not found/);
+  // A link that names a scheme is no vault link.
+  await assert.rejects(
+    resources.load(outside),
+    /Resource must be a vault link/,
+  );
+  assert.equal(
+    stats.some((uri) => uri.startsWith(outside)),
+    false,
+    "the file outside the vault was never asked of the disk",
+  );
+  // `authorizeTarget` reads the file's stat, then refuses it: it is never served.
+  await assert.rejects(
+    resources.authorizeTarget(outside),
+    /Resource escapes the vault/,
+  );
+});
+
+test("an HTML file that is a symbolic link out of the vault is refused", async () => {
+  const root = "vscode-remote://host/vault";
+  const resources = new NoteResources({
+    source: `${root}/notes/source.md`,
+    vault: {
+      root,
+      resolveLink: () => ({
+        path: "linked.html",
+        uri: `${root}/linked.html`,
+        basename: "linked",
+        extension: "html",
+        mtime: 1,
+        size: 1,
+      }),
+    } as unknown as VaultIndex,
+    host: {
+      workspace: {
+        async stat() {
+          return { mtime: 1, symbolicLink: true };
+        },
+      },
+      hostDocuments: {
+        async open() {
+          throw new Error("unused");
+        },
+      },
+    } as never,
+    resourceUrl: (uri) => uri,
+  });
+  await assert.rejects(
+    resources.load("linked.html", undefined, "wikilink"),
+    /symbolic links are not supported/,
+  );
 });

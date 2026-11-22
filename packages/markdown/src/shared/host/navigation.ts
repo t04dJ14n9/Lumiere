@@ -38,6 +38,11 @@ export type OpenPlace = "here" | "tab" | "side";
  */
 export interface OpenOptions {
   preserveFocus?: boolean;
+  /**
+   * Open the file in a text editor even where a viewer of its own would show
+   * it (an HTML file, in the HTML viewer). Other files open as they do.
+   */
+  asText?: boolean;
 }
 
 /** Opening notes, links and locations in VS Code. */

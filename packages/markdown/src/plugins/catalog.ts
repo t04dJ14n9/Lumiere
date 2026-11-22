@@ -64,6 +64,7 @@ import gitDiffEditor from "./gitDiffEditor/manifest";
 import marp from "./marp/manifest";
 import obsidianCompat from "./obsidianCompat/manifest";
 import graph from "./graph/manifest";
+import htmlViewer from "./htmlViewer/manifest";
 /**
  * Which plugins exist; nothing else. Their precedence is plugin-order.ts,
  * their dependencies plugin-graph.ts, and their lifecycle the kernel.
@@ -129,6 +130,7 @@ export const workbenchFeatures: readonly Manifest[] = inPluginOrder(
     wordCount,
     obsidianCompat,
     graph,
+    htmlViewer,
   ],
   WORKBENCH_FEATURE_ORDER,
 );

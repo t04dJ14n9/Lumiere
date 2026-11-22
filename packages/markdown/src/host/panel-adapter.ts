@@ -1,34 +1,44 @@
 import * as vscode from "vscode";
 import type { Disposer } from "@workshop/core";
-import type { LumierePanel } from "../shared/host";
+import type { LumierePanel, PanelOptions } from "../shared/host";
 
-/** One webview panel per view type, independent of any Markdown document. */
+/**
+ * One webview panel per view type, or per `options.key`, independent of any
+ * Markdown document.
+ */
 export function createLumierePanel(
   extensionUri: vscode.Uri,
-): (viewType: string, title: string) => LumierePanel {
+): (viewType: string, title: string, options?: PanelOptions) => LumierePanel {
   const open = new Map<string, vscode.WebviewPanel>();
-  return (viewType, title) => {
-    const existing = open.get(viewType);
+  return (viewType, title, options = {}) => {
+    const id = `${viewType}\0${options.key ?? ""}`;
+    const column = options.column ?? vscode.ViewColumn.Active;
+    const existing = open.get(id);
     if (existing) {
-      existing.reveal(vscode.ViewColumn.Active);
+      existing.reveal(column);
       return wrap(existing, extensionUri);
     }
-    const panel = vscode.window.createWebviewPanel(
-      viewType,
-      title,
-      vscode.ViewColumn.Active,
-      {
-        enableScripts: true,
-        retainContextWhenHidden: false,
-        localResourceRoots: [
-          vscode.Uri.joinPath(extensionUri, "dist", "markdown"),
-        ],
-      },
-    );
-    open.set(viewType, panel);
-    panel.onDidDispose(() => open.delete(viewType));
+    const panel = vscode.window.createWebviewPanel(viewType, title, column, {
+      enableScripts: true,
+      // No `command:` link in a panel's page runs a command.
+      enableCommandUris: false,
+      retainContextWhenHidden: options.retainContext === true,
+      localResourceRoots: resourceRoots(extensionUri, options),
+    });
+    open.set(id, panel);
+    panel.onDidDispose(() => open.delete(id));
     return wrap(panel, extensionUri);
   };
+}
+
+/** What the page may load: the roots asked for, else the extension's own files. */
+function resourceRoots(
+  extensionUri: vscode.Uri,
+  options: PanelOptions,
+): vscode.Uri[] {
+  return options.resourceRoots
+    ? options.resourceRoots.map((root) => vscode.Uri.parse(root))
+    : [vscode.Uri.joinPath(extensionUri, "dist", "markdown")];
 }
 
 function wrap(
@@ -58,6 +68,8 @@ function wrap(
         panel.webview
           .asWebviewUri(vscode.Uri.joinPath(dist, relative))
           .toString(),
+      resource: (uri) =>
+        panel.webview.asWebviewUri(vscode.Uri.parse(uri)).toString(),
       setHTML: (html) => {
         panel.webview.html = html;
       },

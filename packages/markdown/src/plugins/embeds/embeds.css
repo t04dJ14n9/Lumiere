@@ -557,3 +557,47 @@ img.md-image-selected {
   max-width: 100%;
   height: auto;
 }
+
+/*
+ * An HTML file in a note is a card: its name, and buttons that open it in the
+ * HTML viewer or as text. The page itself never runs in the note.
+ */
+.file-embed:has(.html-embed) {
+  display: block;
+  width: 100%;
+}
+.html-embed {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 6px 10px;
+  margin: 6px 0;
+  padding: 8px 12px;
+  border: 1px solid var(--line);
+  border-radius: 6px;
+  background: var(--code);
+}
+.html-embed .html-embed-title {
+  flex: 1;
+  min-width: 0;
+  overflow: hidden;
+  font-weight: 600;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+.html-embed .html-embed-note {
+  color: var(--muted);
+  font-size: 0.85em;
+}
+.html-embed .html-embed-button {
+  padding: 3px 10px;
+  border: 1px solid var(--line);
+  border-radius: 4px;
+  color: var(--accent);
+  background: transparent;
+  font: inherit;
+  cursor: pointer;
+}
+.html-embed .html-embed-button:hover {
+  background: var(--hover);
+}
