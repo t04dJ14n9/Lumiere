@@ -177,8 +177,12 @@ GitHub Actions updates weekly.
 Pushing a tag `v<version>` that matches `package.json` runs
 [`release.yml`](.github/workflows/release.yml). It checks that the tag's
 commit is on `main`, runs `pnpm test:browser` and `pnpm test:quality` on it,
-then `pnpm check`, `pnpm package`, Marketplace Trusted Publishing, and a
-GitHub Release with the VSIX attached.
+then `pnpm check`, Marketplace Trusted Publishing, and a GitHub Release
+with the VSIX attached. The version's `CHANGELOG.md` heading picks the
+channel: `(pre-release, …)` packages with `pnpm package:pre-release` and
+publishes a pre-release (a GitHub pre-release too), any other heading
+`pnpm package:release` and a release. The job checks the VSIX's own
+pre-release mark, which is what the Marketplace reads, before it publishes.
 The jobs use `ubuntu-latest` by default. Set the repository variable
 `RELEASE_RUNNER` to a JSON array such as
 `["self-hosted","lumiere-release"]` to use a labelled self-hosted runner when
