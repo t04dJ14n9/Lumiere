@@ -9204,7 +9204,9 @@ Design.
 - `views.panel` gained `PanelOptions` (key, column, resource roots, retain
   context) and `webview.resource(uri)`; every panel has `enableCommandUris:
   false`. The graph's panel is unchanged. `host/navigation.ts` hands an HTML link
-  to the command when it is registered, else opens it as text.
+  to the command when it is registered, else opens it as text; that routing lives
+  in `host/html-viewer-route.ts`, since #848 left `navigation.ts` at the 400-line
+  limit.
 - `post-process.ts` reached the 400-line limit, so what an embed that cannot be
   shown says (`showError`, `clearError`) moved, with no change of behaviour, to
   `embed-errors.ts`.
