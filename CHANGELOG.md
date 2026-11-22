@@ -8,7 +8,7 @@
   jump, then the whole note shifted down by the bar's height. The first scroll
   now leaves room for the bar the heading will have, and what that leaves to
   correct (the bar's row height, a bar that draws late) is corrected before the
-  frame is painted, so the first frame shows the heading where it stays.
+  frame is painted, so the first frame shows the heading where it stays (#859).
 
 ## 0.1.21 (pre-release, 2026-11-22)
 

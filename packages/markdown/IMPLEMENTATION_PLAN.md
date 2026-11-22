@@ -9403,7 +9403,7 @@ openFile` opens the page and reloads it on save; that `workbench.action.browser.
 with a `file:` address opens it beside (if it does not, the file's own command
 opens it in the active group); what Cursor does.
 
-## A jump paints its heading at its final place in the first frame (owner report, 2026-11-22)
+## A jump paints its heading at its final place in the first frame (#859; owner report, 2026-11-22)
 
 Report: "when I click the section in outline of markdown and go to that
 section, the markdown editor flickers". Measured in VS Code 1.147 with a note
