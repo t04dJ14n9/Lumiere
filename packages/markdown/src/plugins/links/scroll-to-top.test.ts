@@ -513,3 +513,91 @@ test("a bar drawn in the frame of the jump is corrected in that frame", (t) => {
   frames.shift()!();
   assert.deepEqual(moves, [30]);
 });
+
+test("a bar shorter than the room the jump reserved leaves the line where it is", () => {
+  // The target's parent is still on screen near the start of the note, so it
+  // is not pinned and the bar is empty. Taking the room back would scroll the
+  // parent away and bring the bar over the line.
+  const rescrolls: number[] = [];
+  const runs: Array<() => void> = [];
+  let height = 0;
+  scheduleStickyScrollCorrection({} as EditorView, 100, 25, {
+    measure: () => height,
+    schedule: (run) => runs.push(run),
+    keepWaiting: () => true,
+    rescroll: (yMargin) => rescrolls.push(yMargin),
+  });
+  runs.shift()!();
+  assert.deepEqual(rescrolls, [], "an empty bar: nothing to take back");
+  assert.equal(runs.length, 1, "and it keeps looking");
+
+  height = 49;
+  runs.shift()!();
+  assert.deepEqual(rescrolls, [49], "a taller bar still moves the line");
+
+  height = 30;
+  runs.shift()!();
+  assert.deepEqual(
+    rescrolls,
+    [49, 30],
+    "a shorter one, but not below the room",
+  );
+
+  height = 5;
+  runs.shift()!();
+  assert.deepEqual(rescrolls, [49, 30, 25], "never below the room reserved");
+});
+
+test("a correction that would only undo the last one ends the looking and keeps the taller margin", () => {
+  const rescrolls: number[] = [];
+  const runs: Array<() => void> = [];
+  const heights = [25, 0];
+  scheduleStickyScrollCorrection({} as EditorView, 100, 0, {
+    measure: () => heights.shift() ?? 0,
+    schedule: (run) => runs.push(run),
+    keepWaiting: () => true,
+    rescroll: (yMargin) => rescrolls.push(yMargin),
+  });
+  runs.shift()!();
+  assert.deepEqual(rescrolls, [25]);
+  // The bar went again, as the line moved: the line stays below where it was.
+  runs.shift()!();
+  assert.deepEqual(rescrolls, [25], "not moved back up under the bar");
+  assert.equal(runs.length, 0, "and no more looks");
+});
+
+test("a bar between two heights is moved to the taller of them, once", () => {
+  // The jump reserved 25: the bar is 49 over the line at that margin, 25 at
+  // 49, and 49 again at 25.
+  const rescrolls: number[] = [];
+  const runs: Array<() => void> = [];
+  const heights = [49, 25, 49];
+  scheduleStickyScrollCorrection({} as EditorView, 100, 25, {
+    measure: () => heights.shift() ?? 0,
+    schedule: (run) => runs.push(run),
+    keepWaiting: () => true,
+    rescroll: (yMargin) => rescrolls.push(yMargin),
+  });
+  runs.shift()!();
+  runs.shift()!();
+  assert.deepEqual(rescrolls, [49], "25 is the margin the jump had");
+  assert.equal(runs.length, 0);
+});
+
+test("scrollTargetToTop does not take back the room it reserved for a bar that is not there", async () => {
+  const moves: number[] = [];
+  const { view } = jumpView({ heights: [0] });
+  scrollTargetToTop(view, { from: 12, to: 20 }, [], {
+    isCurrent: () => true,
+    pinnedHeight: () => 25,
+    holdAtTop: () => ({
+      isHeld: () => true,
+      move: (margin) => {
+        moves.push(margin);
+        return true;
+      },
+    }),
+  });
+  await drain();
+  assert.deepEqual(moves, []);
+});

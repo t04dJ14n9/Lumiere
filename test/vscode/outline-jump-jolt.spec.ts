@@ -43,11 +43,16 @@ const NOTE = [
   ...Array.from({ length: 6 }, (_, n) => section(n)),
 ].join("\n\n");
 
-/**
- * Where each jump goes, the headings the bar pins above it, and the row the
- * Outline shows it under (a collapsed one is opened first).
- */
-const JUMPS = [
+interface Jump {
+  title: string;
+  /** The headings the bar pins above it once it lands, when it pins any. */
+  parents?: string[];
+  /** The row the Outline shows it under (a collapsed one is opened first). */
+  under?: string;
+}
+
+/** Where each jump goes. */
+const JUMPS: Jump[] = [
   { title: "Topic 4", parents: ["Long note"] },
   { title: "Topic 1", parents: ["Long note"] },
   { title: "Topic 5", parents: ["Long note"] },
@@ -168,11 +173,27 @@ async function watchFrames(frame: Frame, title: string) {
     });
 }
 
-test("a jump from the Markdown Outline paints the heading at its final place in the first frame, below the sticky bar", async () => {
-  test.setTimeout(120_000);
+/**
+ * A note whose first heading has a section right under it: when that section
+ * is at the top, its parent is still on screen and no bar covers it, so the
+ * room a jump reserved for the bar must not be taken back.
+ */
+const NEAR_TOP_NOTE = [
+  "# Near top\n## Early",
+  ...Array.from({ length: 60 }, (_, n) => `Filler ${n}.`),
+  "## Far",
+  ...Array.from({ length: 60 }, (_, n) => `Filler ${n}.`),
+].join("\n\n");
+
+const NEAR_TOP_JUMPS: Jump[] = [
+  { title: "Far", parents: ["Near top"] },
+  { title: "Early" },
+];
+
+async function expectSteadyJumps(note: string, jumps: Jump[]) {
   const notePath = path.join(paths.workspace, "Note.md");
   const original = readFileSync(notePath, "utf8");
-  writeFileSync(notePath, NOTE);
+  writeFileSync(notePath, note);
   const browser = await chromium.connectOverCDP(readState().webSocket);
   try {
     const page = workbenchPage(browser);
@@ -180,7 +201,7 @@ test("a jump from the Markdown Outline paints the heading at its final place in 
     await command(page, "View: Show Explorer");
     // A toast left by an earlier spec can cover the Outline's header.
     await command(page, "Notifications: Clear All Notifications");
-    for (const { title, parents, under } of JUMPS) {
+    for (const { title, parents = [], under } of jumps) {
       if (under) {
         await expandOutlineRow(page, under);
       }
@@ -223,4 +244,14 @@ test("a jump from the Markdown Outline paints the heading at its final place in 
     writeFileSync(notePath, original);
     await closeBrowser(browser);
   }
+}
+
+test("a jump from the Markdown Outline paints the heading at its final place in the first frame, below the sticky bar", async () => {
+  test.setTimeout(120_000);
+  await expectSteadyJumps(NOTE, JUMPS);
+});
+
+test("a jump to a section right under the note's first heading is as steady", async () => {
+  test.setTimeout(120_000);
+  await expectSteadyJumps(NEAR_TOP_NOTE, NEAR_TOP_JUMPS);
 });

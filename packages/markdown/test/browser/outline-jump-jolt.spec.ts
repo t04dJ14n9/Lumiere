@@ -157,6 +157,42 @@ const JUMPS: Array<{ heading: string; parents?: string[] }> = [
   { heading: "## Last" },
 ];
 
+/**
+ * Jumps to `heading`, and checks every frame from the jump on: the heading
+ * within `TOLERANCE` of where it settles, and never under the sticky bar.
+ * Returns the frames, from the first with the jump's scroll.
+ */
+async function expectSteadyJump(page: Page, source: string, heading: string) {
+  const title = heading.replace(/^#+ /, "");
+  const { before, frames } = await recordFrames(page, title, () =>
+    page.evaluate(
+      (at) => window.harness.navigate({ fragment: "", at }),
+      source.indexOf(`\n${heading}\n`) + 1,
+    ),
+  );
+  const jumped = frames.findIndex((frame) => frame.scrollTop !== before);
+  expect(jumped, `${title}: the jump scrolled`).toBeGreaterThanOrEqual(0);
+  const after = frames.slice(jumped);
+  const settled = after.at(-1)!;
+  expect(settled.heading, `${title}: landed`).toBeDefined();
+  const report = JSON.stringify(after.slice(0, 8));
+  for (const frame of after) {
+    expect(
+      frame.heading,
+      `${title}: a frame lost the heading: ${report}`,
+    ).toBeDefined();
+    expect(
+      Math.abs(frame.heading! - settled.heading!),
+      `${title}: a frame painted the heading away from its place: ${report}`,
+    ).toBeLessThanOrEqual(TOLERANCE);
+    expect(
+      frame.heading!,
+      `${title}: a frame painted the heading under the sticky bar: ${report}`,
+    ).toBeGreaterThanOrEqual(frame.stickyBottom - TOLERANCE);
+  }
+  return after;
+}
+
 test("a jump paints its heading at its final place in the first frame, below the sticky bar", async ({
   page,
 }) => {
@@ -165,17 +201,8 @@ test("a jump paints its heading at its final place in the first frame, below the
   await openWithSticky(page, source);
   for (const { heading, parents } of JUMPS) {
     const title = heading.replace(/^#+ /, "");
-    const { before, frames } = await recordFrames(page, title, () =>
-      page.evaluate(
-        (at) => window.harness.navigate({ fragment: "", at }),
-        source.indexOf(`\n${heading}\n`) + 1,
-      ),
-    );
-    const jumped = frames.findIndex((frame) => frame.scrollTop !== before);
-    expect(jumped, `${title}: the jump scrolled`).toBeGreaterThanOrEqual(0);
-    const after = frames.slice(jumped);
+    const after = await expectSteadyJump(page, source, heading);
     const settled = after.at(-1)!;
-    expect(settled.heading, `${title}: landed`).toBeDefined();
     for (const parent of parents ?? []) {
       expect(settled.sticky, `${title}: the parents are pinned`).toContain(
         parent,
@@ -184,20 +211,39 @@ test("a jump paints its heading at its final place in the first frame, below the
     if (parents?.length === 0) {
       expect(settled.sticky, `${title}: nothing is pinned`).toBe("");
     }
-    const report = JSON.stringify(after.slice(0, 8));
-    for (const frame of after) {
-      expect(
-        frame.heading,
-        `${title}: a frame lost the heading: ${report}`,
-      ).toBeDefined();
-      expect(
-        Math.abs(frame.heading! - settled.heading!),
-        `${title}: a frame painted the heading away from its place: ${report}`,
-      ).toBeLessThanOrEqual(TOLERANCE);
-      expect(
-        frame.heading!,
-        `${title}: a frame painted the heading under the sticky bar: ${report}`,
-      ).toBeGreaterThanOrEqual(frame.stickyBottom - TOLERANCE);
-    }
   }
 });
+
+/**
+ * The note's first heading with a section right under it, where the parent
+ * is still on screen when the section is at the top: it is not pinned then, so
+ * no bar covers the section, and a jump that reserved room for the bar anyway
+ * must not take the room back, which scrolls the parent away and brings the
+ * bar over the section, and back again.
+ */
+const NEAR_TOP_FILLER = Array.from(
+  { length: 60 },
+  (_, n) => `Filler ${n}.`,
+).join("\n\n");
+
+for (const mode of ["Live Preview", "Source"]) {
+  for (const [gap, name] of [
+    ["", "right under"],
+    ["\n", "a blank line under"],
+  ] as const) {
+    test(`a jump to a section ${name} the note's first heading is steady in ${mode}`, async ({
+      page,
+    }) => {
+      await page.setViewportSize({ width: 1000, height: 700 });
+      const source = `# Title\n${gap}## Early\n\n${NEAR_TOP_FILLER}\n\n## Far\n\n${NEAR_TOP_FILLER}`;
+      await openWithSticky(page, source);
+      if (mode === "Source") {
+        await page.evaluate(() => window.harness.mode());
+        await expect(page.locator(".cm-editor.is-source-mode")).toHaveCount(1);
+      }
+      await expectSteadyJump(page, source, "## Far");
+      await page.waitForTimeout(300);
+      await expectSteadyJump(page, source, "## Early");
+    });
+  }
+}

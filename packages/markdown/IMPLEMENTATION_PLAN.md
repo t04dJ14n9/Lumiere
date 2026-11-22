@@ -9494,12 +9494,55 @@ Before and after, real VS Code 1.147, first painted frames of the click on
 same for Topic 1 (737.5), Topic 5 (3870.5), Topic 0 (46) and Sub 3 (3040, text
 49.75, bar 49 for two rows).
 
-Checks (a private `TMPDIR`; suites one after another): `pnpm check` passes
-(core 97, agents 50, scroll 13, markdown 3,897, pdf 958 passed and 1
-skipped). `pnpm test:browser`, Markdown half: 486 passed, with the new spec
-(the PDF half is not touched, not run). `pnpm test:quality`: 9 passed, and the
-large-vault test passed. Real VS Code 1.147 on the built-in display, one spec
-at a time under the shared lock: `outline-jump-jolt`, `outline-jump-flash` and
-`outline-jump-top`, 3 passed; `outline-jump-jolt` failed first (a frame at
-2933 against 2913, then, with the second part missing, at 2916). The
-whole `pnpm test:vscode` was not run.
+Review finding (Gemini on #859, checked and confirmed). Near the start of a
+note the target's parent can still be on screen when the target is at the top:
+`# Title` and `## Early` with no blank line (Source mode: lines 0 to 24 and 24
+to 48; Live Preview: the parent's line is 31 px and the text of the section
+starts 47 px down), or with a blank line in Source mode. The sticky bar does not
+pin a parent that is on screen, so the prediction (25 px, from the ancestors)
+and the bar the page shows (0) disagreed; the correction took the room back
+(margin 0), which scrolled the parent away and brought the bar over the section,
+and the next look put the room back, three times, ending with the section under
+the bar. Reproduced before the fix in both the browser harness (Live Preview
+adjacent headings; Source with a blank line) and real VS Code (Live Preview,
+adjacent): the first frames `[scrollTop 47, heading text 0.06, bar bottom 25]`,
+then `[22, 25.06, 0]`, then `[47, 0.06, 25]` again, settled under the bar.
+
+Fix, in `links/scroll-to-top.ts`: the line is never moved above the room the
+jump reserved (`initialHeight`), so a bar shorter than the prediction (the parent
+on screen) takes nothing back, and a correction that would only restore the
+margin before the last one (the bar flips between two heights as the line moves)
+ends the looking, keeping the taller margin (`MarginCorrection`). Why not the
+other options: predicting the bar from the landing scroll position needs the
+layout of lines that are not drawn yet, so it would be wrong by a heading's
+padding near the borders it exists for; accepting the prediction only at the
+start-of-note clamp misses Live Preview's headings, whose scroll does not clamp.
+The cost: a bar that turns out shorter than predicted leaves the line a little
+lower than flush (here 25 px from the top, with the parent's tail above, no bar),
+never under a bar. The sticky plugin and the start-of-note clamp rule for a
+heading without a parent (`outline-jump-top.spec.ts`) are unchanged.
+
+Tests for it. Unit, fail before: `scroll-to-top.test.ts` (a shorter bar leaves
+the line; never below the reserved room; a correction back to the last margin
+ends the looking and keeps the taller one; the same through `scrollTargetToTop`).
+Browser, fail before in two of four: `outline-jump-jolt.spec.ts` jumps to a
+section right under, and a blank line under, the note's first heading, in Live
+Preview and in Source mode, every painted frame within 2 px of where it settles
+and never under the bar. Real VS Code, fails before:
+`test/vscode/outline-jump-jolt.spec.ts` second test (adjacent headings). After,
+the first frame is the settled one: Live Preview adjacent `[22, 25.06, bar 0]`,
+a blank line under `[46, 25.06, 25]`; Source adjacent `[0, 27, 0]`, a blank
+line under `[23, 28, 0]`.
+
+Checks (a private `TMPDIR`; suites one after another), after the review
+finding's fix: `pnpm check` passes (core 97, agents 50, scroll 13, markdown
+3,901, pdf 958 passed and 1 skipped). `pnpm test:browser`, Markdown half: 490
+passed, with the new specs (the PDF half is not touched, not run).
+`pnpm test:quality` was run before the finding's fix (9 passed, and the
+large-vault test passed) and not again: the fix changes only the correction made
+after a jump. Real VS Code 1.147 on the built-in display, one spec at a time
+under the shared lock: `outline-jump-jolt` (both tests), `outline-jump-flash`
+and `outline-jump-top`, 4 passed; `outline-jump-jolt` failed first (a frame at
+2933 against 2913, then, with the second part missing, at 2916; and for the
+finding, a frame at 47 under the bar). The whole `pnpm test:vscode` was not
+run.

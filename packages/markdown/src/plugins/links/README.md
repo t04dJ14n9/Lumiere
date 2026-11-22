@@ -74,7 +74,12 @@ renderer adds `is-unresolved` to rendered links whose path is in it.
   the jump, after CodeMirror's measuring and before that frame is painted:
   one painted frame, at the final place. The margin then follows a bar that
   draws late or changes height for about a second and a half, a few times at
-  most, until the reader scrolls.
+  most, until the reader scrolls. It never goes below the room the jump
+  reserved, and a correction that would only undo the one before it ends the
+  looking, keeping the taller margin: near the start of the note the parent
+  heading can still be on screen (not pinned, so no bar), and taking the room
+  back would scroll it away, bring the bar over the target and, putting it back,
+  the parent again.
 - `links.test.ts`: target parsing, caret lookup and reference-link units.
 - `host.test.ts`: source identity, scheme policy, side opens and handler lifecycle.
 - `test/unit/links/unresolved.test.ts`: unresolved keys, styled decorations and

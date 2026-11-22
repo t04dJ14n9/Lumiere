@@ -100,6 +100,34 @@ function defaultSchedule(run: () => void): void {
   });
 }
 
+/** The margin a jump holds its line at, and the corrections made to it. */
+class MarginCorrection {
+  corrections = 0;
+  /** Set when a correction would only undo the one before it. */
+  isSettled = false;
+  private previous: number | undefined;
+
+  constructor(
+    public assumed: number,
+    private readonly rescroll: (yMargin: number) => void,
+  ) {}
+
+  correct(yMargin: number): void {
+    let margin = yMargin;
+    if (margin === this.previous) {
+      this.isSettled = true;
+      margin = Math.max(margin, this.assumed);
+      if (margin === this.assumed) {
+        return;
+      }
+    }
+    this.previous = this.assumed;
+    this.assumed = margin;
+    this.corrections++;
+    this.rescroll(margin);
+  }
+}
+
 /**
  * Sticky often updates after the first scroll (empty → parent pin). Look for
  * it in the frame of the jump and correct with the updated height. A newer
@@ -107,6 +135,14 @@ function defaultSchedule(run: () => void): void {
  * appear, or change height, after the first look, when its feature loads or
  * its line height settles late: with `keepWaiting` the look repeats, bounded,
  * and corrects when the height differs from what the jump last assumed.
+ *
+ * `initialHeight` is what the jump reserved above the line, and the line is
+ * never moved above that. A bar shorter than it is the parent heading still
+ * on screen, near the start of the note, and so not pinned: taking the room
+ * back scrolls the parent away, which brings the bar over the line, and
+ * putting it back brings the parent again, for ever. A correction that would
+ * only undo the one before it ends the looking for the same reason, keeping
+ * the taller margin, under which the line is never covered.
  */
 export function scheduleStickyScrollCorrection(
   view: EditorView,
@@ -128,8 +164,7 @@ export function scheduleStickyScrollCorrection(
       });
     });
   const keepWaiting = options.keepWaiting ?? (() => false);
-  let assumed = initialHeight;
-  let corrections = 0;
+  const margin = new MarginCorrection(initialHeight, rescroll);
   const look = (
     remaining: number,
     scheduleLook: (run: () => void) => void,
@@ -138,14 +173,15 @@ export function scheduleStickyScrollCorrection(
       if (!isCurrent()) {
         return;
       }
-      correctScrollForStickyGrowth(assumed, measure, (yMargin) => {
-        assumed = yMargin;
-        corrections++;
-        rescroll(yMargin);
-      });
+      correctScrollForStickyGrowth(
+        margin.assumed,
+        () => Math.max(initialHeight, measure()),
+        (yMargin) => margin.correct(yMargin),
+      );
       if (
+        !margin.isSettled &&
         remaining > 0 &&
-        corrections < MAX_STICKY_CORRECTIONS &&
+        margin.corrections < MAX_STICKY_CORRECTIONS &&
         keepWaiting()
       ) {
         look(remaining - 1, schedule);
