@@ -1,6 +1,11 @@
 # Changelog
 
-## Unreleased
+## 0.1.20 (pre-release, 2026-11-22)
+
+Fixes for several VS Code windows, the review bot's findings, Obsidian 1.15.0 parity
+(#698, #699, #787) and owner requests: tweet embeds, the HTML viewer, images
+showing their source at the caret, axis-locked scrolling. `main` is now the VS Code
+and Cursor extension only; the other hosts are on `hosts-snapshot-2026-11-21`.
 
 - Markdown: links to a PDF, an image or another attachment, and links to
   excluded notes, are no longer dimmed as if their file were missing (#698).
