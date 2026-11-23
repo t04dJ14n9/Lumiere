@@ -12,6 +12,19 @@ import { errorMessage } from "../../shared/errors";
 import { createMermaidTrust, type MermaidTrust } from "./trust";
 import { MermaidQueue } from "./mount-queue";
 import { bindDiagramInspector } from "./diagram-dialog";
+import { defaultSankeyNodeColors } from "./sankey";
+import { mermaidTransaction } from "./mermaid-session";
+import {
+  readMermaidPalette,
+  mermaidConfiguration,
+  mermaidCacheKey,
+  type MermaidPalette,
+} from "./theme";
+
+interface MermaidAppearance {
+  trusted: boolean;
+  palette: MermaidPalette;
+}
 
 export interface MermaidLinkPlace {
   side: boolean;
@@ -42,7 +55,7 @@ function createMermaidStagingElement(): HTMLElement | undefined {
 export class DiagramRenderer {
   private readonly prefix = `mw-${Array.from(crypto.getRandomValues(new Uint32Array(2)), (value) => value.toString(16)).join("-")}`;
   private sequence = 0;
-  private lastInitKey = "";
+  private readonly mermaidOwner = Symbol("diagram-renderer");
   private readonly cleanups = new Set<() => void>();
   private readonly trust: MermaidTrust;
   private readonly openLink: MermaidLinkOpen | undefined;
@@ -62,6 +75,7 @@ export class DiagramRenderer {
     this.queue = new MermaidQueue({
       render: (source) => this.renderMermaidSvg(source),
       cacheKey: (source) => this.cacheKeyFor(source),
+      prepare: (source) => this.prepareMermaid(source),
     });
   }
 
@@ -122,47 +136,75 @@ export class DiagramRenderer {
     this.cleanups.clear();
   }
 
-  /** Trust + source. Dark is a CSS invert, so one SVG serves both appearances. */
-  private cacheKeyFor(source: string): string {
-    const trust = this.trust.isTrusted() ? "t" : "u";
-    return `${trust}|${source}`;
+  /** Scheduled jobs keep the palette/trust associated with their cache key. */
+  private prepareMermaid(source: string) {
+    const appearance = {
+      trusted: this.trust.isTrusted(),
+      palette: readMermaidPalette(),
+    };
+    return {
+      key: mermaidCacheKey(source, appearance.trusted, appearance.palette),
+      render: () => this.renderMermaidSvg(source, appearance),
+    };
   }
 
-  private async renderMermaidSvg(source: string): Promise<string> {
+  private cacheKeyFor(source: string): string {
+    return mermaidCacheKey(
+      source,
+      this.trust.isTrusted(),
+      readMermaidPalette(),
+    );
+  }
+
+  private renderMermaidSvg(
+    source: string,
+    appearance: MermaidAppearance = {
+      trusted: this.trust.isTrusted(),
+      palette: readMermaidPalette(),
+    },
+  ): Promise<string> {
+    const key = mermaidCacheKey("", appearance.trusted, appearance.palette);
+    return mermaidTransaction(this.mermaidOwner, key, (initialize) =>
+      this.drawMermaidSvg(source, appearance, initialize),
+    );
+  }
+
+  private async drawMermaidSvg(
+    source: string,
+    appearance: MermaidAppearance,
+    initialize: boolean,
+  ): Promise<string> {
     const { default: mermaid } = await import("mermaid");
-    // Obsidian Allow (`mermaid-vault-trust`) enables HTML labels; Lumiere still
-    // sanitizes SVG output once before caching. Untrusted stays strict.
-    // Obsidian omits theme → Mermaid default (light); dark UI uses CSS invert.
-    const trusted = this.trust.isTrusted();
-    const initKey = trusted ? "t" : "u";
-    if (this.lastInitKey !== initKey) {
-      mermaid.initialize({
-        startOnLoad: false,
-        securityLevel: "strict",
-        htmlLabels: trusted,
-        flowchart: { htmlLabels: trusted, useMaxWidth: false },
-        sequence: { useMaxWidth: false },
-        gitGraph: { useMaxWidth: false },
-        er: { useMaxWidth: false },
-        gantt: { useMaxWidth: true },
-        journey: { useMaxWidth: true },
-        class: { useMaxWidth: true },
-        state: { useMaxWidth: true },
-        pie: { useMaxWidth: true },
-        themeVariables: {
-          fontFamily:
-            "var(--font-mermaid, var(--vscode-editor-font-family, inherit))",
-        },
-        suppressErrorRendering: true,
-      });
-      this.lastInitKey = initKey;
+    // Trust enables HTML labels, not loose Mermaid security or unsanitized output.
+    const { trusted, palette } = appearance;
+    const configuration = mermaidConfiguration(palette, trusted);
+    if (initialize) {
+      mermaid.initialize(configuration);
     }
     const stage = createMermaidStagingElement();
+    let isSankey = false;
     try {
+      isSankey = mermaid.detectType(source) === "sankey";
       const id = `${this.prefix}-${++this.sequence}`;
-      const result = stage
-        ? await mermaid.render(id, source, stage)
-        : await mermaid.render(id, source);
+      const limit = mermaid.mermaidAPI.getSiteConfig().maxTextSize ?? 50_000;
+      // Raw length bounds cleaned length. For larger raw documents, only the
+      // ordinary guarded renderer may decide whether the cleaned CSV fits.
+      let result =
+        isSankey && source.length > limit
+          ? await mermaid.render(id, source, stage)
+          : undefined;
+      if (!result || result.diagramType === "sankey") {
+        if (isSankey) {
+          // Bars have no outline; use a contrasting editor color.
+          const nodeColors = await defaultSankeyNodeColors(
+            mermaid,
+            source,
+            palette.border,
+          );
+          mermaid.mermaidAPI.updateSiteConfig({ sankey: { nodeColors } });
+        }
+        result = await mermaid.render(id, source, stage);
+      }
       if (this.sanitize) {
         return this.sanitize(result.svg, { allowForeignObject: trusted });
       }
@@ -171,6 +213,10 @@ export class DiagramRenderer {
         : result.svg;
     } finally {
       stage?.remove();
+      if (isSankey) {
+        // Do not leak per-diagram nodes/directives into the next render.
+        mermaid.initialize(configuration);
+      }
     }
   }
 }

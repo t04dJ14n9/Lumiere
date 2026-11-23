@@ -25,7 +25,14 @@ import { RENDER_REMOUNT_EVENT } from "../render/api";
 /** Calls `onMount` each time `element` is put in the page; returns a stop. */
 export type MountWatch = (element: Element, onMount: () => void) => () => void;
 
+export interface PreparedMermaidRender {
+  key: string;
+  render: () => Promise<string>;
+}
+
 export interface MermaidQueueOptions {
+  /** Capture mutable appearance/trust before a job waits for its frame. */
+  prepare?: (source: string) => PreparedMermaidRender;
   render: (source: string) => Promise<string>;
   /** The cache key of a source (trust and source); the source by default. */
   cacheKey?: (source: string) => string;
@@ -48,6 +55,7 @@ export interface MermaidHandlers {
 }
 
 interface Job {
+  readonly render: () => Promise<string>;
   readonly element: Element;
   readonly source: string;
   readonly key: string;
@@ -146,6 +154,7 @@ function followScrolling(target: Document): {
 
 export class MermaidQueue {
   private readonly render: (source: string) => Promise<string>;
+  private readonly prepare: MermaidQueueOptions["prepare"];
   private readonly cacheKey: (source: string) => string;
   private readonly cache: MermaidSvgCache;
   private readonly watchMount: MountWatch;
@@ -159,6 +168,7 @@ export class MermaidQueue {
 
   constructor(options: MermaidQueueOptions) {
     this.render = options.render;
+    this.prepare = options.prepare;
     this.cacheKey = options.cacheKey ?? ((source) => source);
     this.cache = options.cache ?? sharedCache;
     this.watchMount = options.watchMount ?? watchMount;
@@ -186,13 +196,15 @@ export class MermaidQueue {
     source: string,
     handlers: MermaidHandlers,
   ): () => void {
-    const key = this.cacheKey(source);
+    const prepared = this.prepare?.(source);
+    const key = prepared?.key ?? this.cacheKey(source);
     const cached = this.cache.get(key);
     if (cached !== undefined) {
       handlers.onSvg(cached);
       return () => {};
     }
     const job: Job = {
+      render: prepared?.render ?? (() => this.render(source)),
       element,
       source,
       key,
@@ -273,7 +285,7 @@ export class MermaidQueue {
     let svg = this.cache.get(job.key);
     try {
       if (svg === undefined) {
-        svg = await this.render(job.source);
+        svg = await job.render();
         this.cache.set(job.key, svg);
       }
     } catch (error) {
