@@ -187,7 +187,8 @@ test("a small flowchart stays its native size", async ({ page }) => {
   expect(small.svgWidth, JSON.stringify(small)).toBeGreaterThan(200);
   expect(small.svgWidth).toBeLessThan(500);
   expect(small.preScrollWidth).toBeLessThanOrEqual(small.preClientWidth + 4);
-  expect(small.filter).toContain("invert");
+  // Colors come from the editor-derived Mermaid theme, not from inverting the SVG.
+  expect(small.filter).toBe("none");
   expect(small.scrollerScrollWidth).toBeLessThan(
     small.scrollerClientWidth + 48,
   );
