@@ -5,9 +5,24 @@ export interface MermaidPalette {
   background: string;
   foreground: string;
   surface: string;
+  /** A node's outline: clearly visible on its fill, quiet beside the text. */
   border: string;
+  /** Lines that frame a diagram without carrying it (lifelines); the foreground in high contrast. */
+  line: string;
+  /** The editor's six chart colors, in an order whose neighbors differ. */
+  chart: readonly string[];
   darkMode: boolean;
 }
+
+/** VS Code's chart colors with its own defaults, for a theme that sets none. */
+const CHART_TOKENS: ReadonlyArray<readonly [string, string, string]> = [
+  ["blue", "#3794ff", "#1a85ff"],
+  ["orange", "#d18616", "#d18616"],
+  ["green", "#89d185", "#388a34"],
+  ["purple", "#b180d7", "#652d90"],
+  ["red", "#f14c4c", "#e51400"],
+  ["yellow", "#cca700", "#bf8803"],
+];
 
 function defaultDocument(): Document | undefined {
   return typeof document === "undefined" ? undefined : document;
@@ -44,16 +59,39 @@ function blend(background: string, foreground: string, amount: number): string {
     .join("")}`;
 }
 
+/** Which of VS Code's theme kinds the body's classes name. */
+function themeKind(body: HTMLElement | null | undefined) {
+  const has = (name: string) => Boolean(body?.classList.contains(name));
+  return {
+    darkMode: has("vscode-dark") || has("vscode-high-contrast"),
+    contrast: has("vscode-high-contrast") || has("vscode-high-contrast-light"),
+  };
+}
+
+/**
+ * The fill, outline and quiet line colors. A theme's own widget border is
+ * often as faint as the fill, so outside high contrast the outline is mixed
+ * from the editor colors, as the fill is.
+ */
+function outlines(
+  colors: Pick<MermaidPalette, "background" | "foreground">,
+  contrast: boolean,
+  contrastBorder: string,
+): Pick<MermaidPalette, "surface" | "border" | "line"> {
+  const { background, foreground } = colors;
+  if (contrast) {
+    return { surface: background, border: contrastBorder, line: foreground };
+  }
+  return {
+    surface: blend(background, foreground, 0.06),
+    border: blend(background, foreground, 0.22),
+    line: blend(background, foreground, 0.35),
+  };
+}
+
 export function readMermaidPalette(doc = defaultDocument()): MermaidPalette {
   const body = doc?.body;
-  const darkMode = Boolean(
-    body?.classList.contains("vscode-dark") ||
-    body?.classList.contains("vscode-high-contrast"),
-  );
-  const contrast = Boolean(
-    body?.classList.contains("vscode-high-contrast") ||
-    body?.classList.contains("vscode-high-contrast-light"),
-  );
+  const { darkMode, contrast } = themeKind(body);
   const style = body && doc?.defaultView?.getComputedStyle(body);
   const token = (name: string, fallback: string) =>
     opaqueColor(style?.getPropertyValue(name) ?? "", fallback);
@@ -65,16 +103,18 @@ export function readMermaidPalette(doc = defaultDocument()): MermaidPalette {
     "--vscode-editor-foreground",
     darkMode ? "#d4d4d4" : "#333333",
   );
-  const border = token(
-    "--vscode-contrastBorder",
-    token("--vscode-widget-border", blend(background, foreground, 0.5)),
-  );
   return {
     background,
     foreground,
-    border,
     darkMode,
-    surface: contrast ? background : blend(background, foreground, 0.06),
+    chart: CHART_TOKENS.map(([name, dark, light]) =>
+      token(`--vscode-charts-${name}`, darkMode ? dark : light),
+    ),
+    ...outlines(
+      { background, foreground },
+      contrast,
+      token("--vscode-contrastBorder", blend(background, foreground, 0.5)),
+    ),
   };
 }
 
@@ -133,7 +173,6 @@ const textVariables = [
   "titleColor",
   "classText",
   "actorTextColor",
-  "actorLineColor",
   "signalColor",
   "signalTextColor",
   "loopTextColor",
@@ -223,6 +262,8 @@ export function mermaidThemeVariables(palette: MermaidPalette): ThemeVariables {
     fontFamily:
       "var(--font-mermaid, var(--vscode-editor-font-family, inherit))",
     useGradient: false,
+    // Flat nodes: Mermaid's own default is an offset grey shadow.
+    dropShadow: "none",
     attributeBackgroundColorEven: palette.background,
     rowEven: palette.background,
     compositeBackground: palette.background,
@@ -237,22 +278,37 @@ export function mermaidThemeVariables(palette: MermaidPalette): ThemeVariables {
   for (const name of borderVariables) {
     variables[name] = palette.border;
   }
-  addNeutralScales(variables, palette);
+  // Lifelines are quieter than the messages that cross them.
+  variables.actorLineColor = palette.line;
+  addCategoryScales(variables, palette);
   addNestedPalettes(variables, palette);
   return variables;
 }
 
-function addNeutralScales(
+/**
+ * Twelve fills for categories (pie slices, Sankey nodes, color scales): the
+ * editor's chart colors, eased toward the background so the editor's text
+ * stays readable on them, then the same colors paler.
+ */
+export function categoryColors(palette: MermaidPalette): string[] {
+  const strength = palette.darkMode ? 0.7 : 0.55;
+  const fills = palette.chart.map((color) =>
+    blend(palette.background, color, strength),
+  );
+  return [
+    ...fills,
+    ...fills.map((fill) => blend(palette.background, fill, 0.6)),
+  ];
+}
+
+function addCategoryScales(
   variables: ThemeVariables,
   palette: MermaidPalette,
 ): void {
-  // Distinguishable grayscale steps, not hue rotations, for chart families.
+  // Neighboring categories must be told apart: a grayscale ladder was not.
+  const colors = categoryColors(palette);
   for (let index = 0; index < 12; index++) {
-    const shade = blend(
-      palette.background,
-      palette.foreground,
-      0.06 + index * 0.02,
-    );
+    const shade = colors[index]!;
     variables[`pie${index + 1}`] = shade;
     variables[`cScale${index}`] = shade;
     variables[`cScaleLabel${index}`] = palette.foreground;
@@ -336,6 +392,10 @@ export function mermaidConfiguration(
 ): MermaidConfig {
   return {
     startOnLoad: false,
+    // Mermaid 12's default "neo" look adds offset shadows and gradients of its
+    // own (a filter on each node, besides the `dropShadow` variable); the
+    // classic look is the flat one.
+    look: "classic",
     theme: "base",
     securityLevel: "strict",
     htmlLabels: trusted,

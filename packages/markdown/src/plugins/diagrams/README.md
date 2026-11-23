@@ -33,7 +33,7 @@ Pass and plugin disposal restore the source and prevent late results from writin
 - `manifest.ts`: feature metadata and default enablement.
 - `webview.ts`: language recognition, block and fence registrations, and link opening.
 - `sankey.ts` / `sankey.test.ts`: normalized Sankey node defaults through Mermaid configuration, preserving authored precedence.
-- `theme.ts` / `theme.test.ts`: editor-derived neutral defaults, palette identity and theme-change observation.
+- `theme.ts` / `theme.test.ts`: editor-derived defaults (flat classic look, category colors), palette identity and theme-change observation.
 - `mermaid-session.ts`: serializes complete Mermaid configuration/render transactions across renderer disposal and recreation, retaining only owner tokens.
 - `renderer.ts`: Mermaid engine calls, `.internal-link` node wiring, per-render cancellation and cleanup.
 - `mount-queue.ts`: the render queue (start on mount, one at a time, ahead of the reader and nearest first) and the SVG cache.
@@ -51,9 +51,17 @@ No commands or default keybindings.
 ## Limits and differences from Obsidian
 
 HTML labels are disabled until Allow and SVG is always sanitized. Mermaid's
-base theme receives neutral defaults from the editor's actual foreground and
-background, including dark and high-contrast themes. Authored `classDef`, `style`
-and `linkStyle` colors are left to Mermaid; no SVG inversion changes them.
+base theme receives defaults from the editor's actual foreground and
+background, including dark and high-contrast themes, in Mermaid's flat
+`classic` look (its default `neo` look adds offset shadows). Nodes are filled a
+step off the editor background and outlined clearly; lifelines are quieter than
+the messages across them. Charts that need categories (pie slices, Sankey
+nodes, color scales) cycle the editor's own chart colors (`--vscode-charts-*`),
+eased toward the background so the editor's text stays readable on them.
+Authored `classDef`, `style` and `linkStyle` colors are left to Mermaid; no SVG
+inversion changes them. Only the look is Obsidian's reference: no Obsidian
+code, CSS or palette is used, and Lumiere's frame and its Inspect, Copy and
+Edit buttons differ from Obsidian's bordered frame and `</>` button.
 The inspector clones the same sanitized SVG. A theme change refreshes inline
 renders and closes an open inspector; reopen it for the refreshed palette.
 Sankey node defaults are supplied through Mermaid’s per-node configuration using

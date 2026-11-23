@@ -4,7 +4,7 @@ import { setImmediate } from "node:timers/promises";
 import { JSDOM } from "jsdom";
 import type { MermaidConfig } from "mermaid";
 import { DiagramRenderer } from "./renderer";
-import { readMermaidPalette } from "./theme";
+import { categoryColors, readMermaidPalette } from "./theme";
 
 function deferred() {
   let resolve: () => void = () => {};
@@ -130,7 +130,10 @@ for (const failingOld of [false, true]) {
         assert.equal(last?.htmlLabels, true);
         assert.equal(last?.securityLevel, "strict");
         assert.equal(last?.sankey?.nodeColors?.Source, "#ff0000");
-        assert.equal(last?.sankey?.nodeColors?.NewTarget, palette.border);
+        assert.equal(
+          last?.sankey?.nodeColors?.NewTarget,
+          categoryColors(palette)[1],
+        );
         assert.equal(
           overlapped,
           false,

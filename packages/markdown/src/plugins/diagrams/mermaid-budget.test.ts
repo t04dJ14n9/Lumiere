@@ -123,7 +123,7 @@ test("raw-large but cleaned-small Sankey keeps editor defaults and authored colo
     value: dom.window,
   });
   const { default: mermaid } = await import("mermaid");
-  const { readMermaidPalette } = await import("./theme");
+  const { categoryColors, readMermaidPalette } = await import("./theme");
   const initialize = mermaid.initialize;
   const parse = mermaid.parse;
   const render = mermaid.render;
@@ -160,7 +160,9 @@ test("raw-large but cleaned-small Sankey keeps editor defaults and authored colo
     );
     assert.equal(
       seen[1]?.Source,
-      readMermaidPalette(dom.window.document as unknown as Document).border,
+      categoryColors(
+        readMermaidPalette(dom.window.document as unknown as Document),
+      )[0],
     );
     assert.equal(seen[1]?.Target, "#ff0000");
   } finally {

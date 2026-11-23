@@ -18,6 +18,7 @@ import {
   readMermaidPalette,
   mermaidConfiguration,
   mermaidCacheKey,
+  categoryColors,
   type MermaidPalette,
 } from "./theme";
 
@@ -195,11 +196,11 @@ export class DiagramRenderer {
           : undefined;
       if (!result || result.diagramType === "sankey") {
         if (isSankey) {
-          // Bars have no outline; use a contrasting editor color.
+          // Bars have no outline: each node takes the next category color.
           const nodeColors = await defaultSankeyNodeColors(
             mermaid,
             source,
-            palette.border,
+            categoryColors(palette),
           );
           mermaid.mermaidAPI.updateSiteConfig({ sankey: { nodeColors } });
         }

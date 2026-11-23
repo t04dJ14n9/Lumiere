@@ -4,7 +4,7 @@ import type { Mermaid } from "mermaid";
 export async function defaultSankeyNodeColors(
   mermaid: Mermaid,
   source: string,
-  color: string,
+  colors: readonly string[],
 ): Promise<Record<string, string>> {
   // Apply the same sanitized frontmatter/directives used by the normal render.
   await mermaid.parse(source);
@@ -13,6 +13,8 @@ export async function defaultSankeyNodeColors(
     getGraph(): { nodes: Array<{ id: string }> };
   };
   return Object.fromEntries(
-    database.getGraph().nodes.map(({ id }) => [id, color]),
+    database
+      .getGraph()
+      .nodes.map(({ id }, index) => [id, colors[index % colors.length]!]),
   );
 }

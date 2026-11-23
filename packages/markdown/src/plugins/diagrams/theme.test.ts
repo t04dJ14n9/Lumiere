@@ -2,6 +2,8 @@ import assert from "node:assert/strict";
 import test from "node:test";
 import { JSDOM } from "jsdom";
 import {
+  categoryColors,
+  mermaidConfiguration,
   readMermaidPalette,
   mermaidThemeVariables,
   mermaidCacheKey,
@@ -63,6 +65,7 @@ test("default variables cover flow, class, state, ER, sequence and color-scale f
       "textColor",
       "primaryTextColor",
       "actorTextColor",
+      "signalColor",
       "transitionColor",
       "relationColor",
     ]) {
@@ -80,12 +83,13 @@ test("default variables cover flow, class, state, ER, sequence and color-scale f
         assert.match(String(variables[key]), /^#[\da-f]{6}$/i, key);
       }
     }
-    // Neutral editor inputs must never generate a rainbow default palette.
-    for (let index = 0; index < 12; index++) {
-      assert.match(
-        String(variables[`pie${index + 1}`]),
-        /^#([\da-f]{2})\1\1$/i,
+    // Neighboring categories are told apart, not stepped along a gray ladder.
+    for (const family of ["pie", "cScale", "git", "venn"]) {
+      const from = family === "pie" || family === "venn" ? 1 : 0;
+      const colors = Array.from({ length: 12 }, (_, index) =>
+        String(variables[`${family}${index + from}`]),
       );
+      assert.equal(new Set(colors).size, 12, family);
     }
   } finally {
     dom.window.close();
@@ -233,7 +237,7 @@ test("renderer reinitializes on real host palette changes and preserves source a
   }
 });
 
-test("real Mermaid base derivation keeps nested chart defaults neutral and dark ER rows readable", async () => {
+test("real Mermaid base derivation keeps nested chart colors distinct and dark ER rows readable", async () => {
   const { default: mermaid } = await import("mermaid");
   const { dom, document } = themedDocument();
   try {
@@ -253,9 +257,8 @@ test("real Mermaid base derivation keeps nested chart defaults neutral and dark 
     assert.equal(variables.cynefin.cliffColor, palette.foreground);
     assert.equal(variables.wardley.evolutionStroke, palette.foreground);
     assert.equal(variables.radar.graticuleColor, palette.border);
-    for (const color of String(variables.xyChart.plotColorPalette).split(",")) {
-      assert.match(color, /^#([\da-f]{2})\1\1$/i);
-    }
+    const plot = String(variables.xyChart.plotColorPalette).split(",");
+    assert.equal(new Set(plot).size, 12);
   } finally {
     dom.window.close();
   }
@@ -284,4 +287,74 @@ test("actual Mermaid parsing retains authored classDef, style and linkStyle hex 
   assert.deepEqual(db.getVertices().get("A")?.classes, ["red"]);
   assert.deepEqual(db.getVertices().get("B")?.styles, ["fill:#0f0"]);
   assert.ok(db.getEdges()[0]?.style.includes("stroke:#f80"));
+});
+
+test("diagram nodes are flat, outlined and framed in quiet lines, beside bright messages", () => {
+  const { dom, document } = themedDocument();
+  try {
+    for (const [className, style] of [
+      [
+        "vscode-light",
+        "--vscode-editor-background:#ffffff;--vscode-editor-foreground:#3b3b3b",
+      ],
+      [
+        "vscode-dark",
+        "--vscode-editor-background:#1f1f1f;--vscode-editor-foreground:#cccccc",
+      ],
+    ] as const) {
+      document.body.className = className;
+      document.body.style.cssText = style;
+      const palette = readMermaidPalette(document);
+      const variables = mermaidThemeVariables(palette);
+      // Mermaid's own default shadow is an offset grey one, and its default
+      // look draws another: the classic look is flat.
+      assert.equal(variables.dropShadow, "none", className);
+      assert.equal(mermaidConfiguration(palette, false).look, "classic");
+      assert.equal(mermaidConfiguration(palette, true).look, "classic");
+      // The outline shows against the fill; the lifelines are quieter than
+      // the message lines, which stay in the foreground color.
+      assert.notEqual(palette.border, palette.surface, className);
+      assert.notEqual(palette.border, palette.background, className);
+      assert.equal(variables.actorLineColor, palette.line, className);
+      assert.notEqual(palette.line, palette.foreground, className);
+      assert.equal(variables.signalColor, palette.foreground, className);
+    }
+    // High contrast keeps its bright lines and its own border color.
+    document.body.className = "vscode-high-contrast";
+    document.body.style.cssText =
+      "--vscode-editor-background:#000000;--vscode-editor-foreground:#ffffff;--vscode-contrastBorder:#6fc3df";
+    const contrast = readMermaidPalette(document);
+    assert.equal(contrast.border, "#6fc3df");
+    assert.equal(contrast.line, contrast.foreground);
+  } finally {
+    dom.window.close();
+  }
+});
+
+test("category colors come from the editor's chart colors and differ in every theme", () => {
+  const { dom, document } = themedDocument();
+  try {
+    document.body.style.setProperty("--vscode-charts-blue", "#0000ff");
+    const light = readMermaidPalette(document);
+    assert.equal(light.chart[0], "#0000ff");
+    // A token the theme leaves out falls back to VS Code's own default.
+    assert.equal(light.chart.length, 6);
+    assert.equal(new Set(light.chart).size, 6);
+    for (const className of [
+      "vscode-light",
+      "vscode-dark",
+      "vscode-high-contrast",
+      "vscode-high-contrast-light",
+    ]) {
+      document.body.className = className;
+      const colors = categoryColors(readMermaidPalette(document));
+      assert.equal(colors.length, 12, className);
+      assert.equal(new Set(colors).size, 12, className);
+      for (const color of colors) {
+        assert.match(color, /^#[\da-f]{6}$/, className);
+      }
+    }
+  } finally {
+    dom.window.close();
+  }
 });

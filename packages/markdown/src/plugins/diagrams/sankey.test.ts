@@ -3,7 +3,7 @@ import test from "node:test";
 import { JSDOM } from "jsdom";
 import type { MermaidConfig } from "mermaid";
 import { DiagramRenderer } from "./renderer";
-import { readMermaidPalette } from "./theme";
+import { categoryColors, readMermaidPalette } from "./theme";
 
 interface SankeyFixture {
   draw: (source: string) => Promise<string>;
@@ -102,11 +102,14 @@ test("Sankey normalized CSV node IDs receive editor defaults through real Mermai
   await withSankeyFixture(async ({ draw, configurations, document }) => {
     await draw('sankey-beta\n"Source, quoted","Target",2\n');
     const palette = readMermaidPalette(document);
+    const colors = categoryColors(palette);
+    // Each node takes the next category color, so flows can be told apart.
     assert.equal(
       configurations[0]?.sankey?.nodeColors?.["Source, quoted"],
-      palette.border,
+      colors[0],
     );
-    assert.equal(configurations[0]?.sankey?.nodeColors?.Target, palette.border);
+    assert.equal(configurations[0]?.sankey?.nodeColors?.Target, colors[1]);
+    assert.notEqual(colors[0], colors[1]);
     const { default: mermaid } = await import("mermaid");
     assert.deepEqual(
       mermaid.mermaidAPI.getSiteConfig().sankey?.nodeColors ?? {},
@@ -128,9 +131,15 @@ test("Sankey frontmatter and init colors win across host theme and trust changes
       setTrusted(true);
       await draw(source);
       const dark = readMermaidPalette(document);
-      assert.notEqual(light.border, dark.border);
-      assert.equal(configurations[0]?.sankey?.nodeColors?.Target, light.border);
-      assert.equal(configurations[1]?.sankey?.nodeColors?.Target, dark.border);
+      assert.notEqual(categoryColors(light)[1], categoryColors(dark)[1]);
+      assert.equal(
+        configurations[0]?.sankey?.nodeColors?.Target,
+        categoryColors(light)[1],
+      );
+      assert.equal(
+        configurations[1]?.sankey?.nodeColors?.Target,
+        categoryColors(dark)[1],
+      );
       for (const config of configurations) {
         assert.equal(config.sankey?.nodeColors?.Source, "#ff0000");
         assert.equal(config.sankey?.linkColor, "#00ff00");
@@ -144,11 +153,14 @@ test("Sankey frontmatter and init colors win across host theme and trust changes
         '%%{init: {"sankey": {"nodeColors": {"Target": "#abcdef"}}}}%%\nsankey-beta\nSource,Target,2\n',
       );
       assert.equal(configurations[2]?.sankey?.nodeColors?.Target, "#abcdef");
-      assert.equal(configurations[2]?.sankey?.nodeColors?.Source, dark.border);
+      assert.equal(
+        configurations[2]?.sankey?.nodeColors?.Source,
+        categoryColors(dark)[0],
+      );
       await draw("sankey-beta\nOther,Last,1\n");
       assert.deepEqual(configurations[3]?.sankey?.nodeColors, {
-        Other: dark.border,
-        Last: dark.border,
+        Other: categoryColors(dark)[0],
+        Last: categoryColors(dark)[1],
       });
     },
   );
@@ -164,7 +176,7 @@ test("Sankey default configuration is restored after a failed render", async () 
       );
       assert.equal(
         configurations[0]?.sankey?.nodeColors?.Source,
-        readMermaidPalette(document).border,
+        categoryColors(readMermaidPalette(document))[0],
       );
       const { default: mermaid } = await import("mermaid");
       assert.deepEqual(
@@ -185,7 +197,10 @@ test("Sankey defaults follow high contrast without replacing authored colors", a
       "---\nconfig:\n  sankey:\n    nodeColors:\n      Source: '#ff0000'\n---\nsankey-beta\nSource,Target,2\n",
     );
     assert.equal(configurations[0]?.sankey?.nodeColors?.Source, "#ff0000");
-    assert.equal(configurations[0]?.sankey?.nodeColors?.Target, "#ffff00");
+    assert.equal(
+      configurations[0]?.sankey?.nodeColors?.Target,
+      categoryColors(readMermaidPalette(document))[1],
+    );
   });
 });
 
@@ -218,8 +233,14 @@ test("prepared Sankey cache identities keep captured theme and trust across defe
       assert.notEqual(pendingLight.key, pendingDark.key);
       await pendingLight.render();
       await pendingDark.render();
-      assert.equal(configurations[0]?.sankey?.nodeColors?.Source, light.border);
-      assert.equal(configurations[1]?.sankey?.nodeColors?.Source, dark.border);
+      assert.equal(
+        configurations[0]?.sankey?.nodeColors?.Source,
+        categoryColors(light)[0],
+      );
+      assert.equal(
+        configurations[1]?.sankey?.nodeColors?.Source,
+        categoryColors(dark)[0],
+      );
       assert.deepEqual(
         configurations.map((config) => config.htmlLabels),
         [false, true],

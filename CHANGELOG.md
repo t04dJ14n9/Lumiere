@@ -5,8 +5,11 @@
 - Markdown: Mermaid preparation respects the renderer’s input-size limit, and
   disabling/re-enabling diagrams cannot restore an obsolete theme configuration.
 - Markdown: Mermaid defaults follow the editor’s light, dark and
-  high-contrast colors, without inverting colors written in a diagram. Theme
-  changes refresh cached diagrams; the inspector uses the same SVG.
+  high-contrast colors, without inverting colors written in a diagram. Diagrams
+  are flat, as in Obsidian: no offset shadows, nodes outlined clearly, lifelines
+  quieter than messages. Pie slices, Sankey nodes and other category colors use
+  the editor’s chart colors, so they can be told apart. Theme changes refresh
+  cached diagrams; the inspector uses the same SVG.
 - Markdown: regression tests exercise trusted Mermaid labels through the real
   DOM-backed sanitizer, including namespace and unsafe-URL boundaries.
 
