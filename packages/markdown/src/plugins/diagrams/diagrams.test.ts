@@ -63,18 +63,9 @@ test("wide mermaid scrolls inside the column instead of widening the note", () =
   assert.match(host, /overflow-y\s*:\s*hidden/);
 });
 
-test("dark Mermaid SVG uses Obsidian invert filter", () => {
-  assert.match(
-    css,
-    /body:not\(\.vscode-light\):not\(\.vscode-high-contrast-light\)[\s\S]*?pre\[data-fence="mermaid"\][\s\S]*?>\s*svg[\s\S]*?filter:\s*invert\(100%\)\s+hue-rotate\(180deg\)\s+saturate\(1\.25\)/,
-  );
-});
-
-test("diagram inspector Mermaid SVG uses the same dark invert", () => {
-  assert.match(
-    css,
-    /body:not\(\.vscode-light\):not\(\.vscode-high-contrast-light\)[\s\S]*?\.diagram-inspector[\s\S]*?svg[\s\S]*?filter:\s*invert\(100%\)\s+hue-rotate\(180deg\)\s+saturate\(1\.25\)/,
-  );
+test("inline and inspector diagrams do not invert authored colors or force SVG colors", () => {
+  assert.doesNotMatch(css, /filter:\s*(?:invert|hue-rotate|saturate)/);
+  assert.doesNotMatch(css, /(?:fill|stroke|color)\s*:[^;}]*!important/);
 });
 
 test("markdown webview defines --font-mermaid from the note text font", () => {

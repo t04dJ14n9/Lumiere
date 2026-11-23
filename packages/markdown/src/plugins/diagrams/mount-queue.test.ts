@@ -311,3 +311,36 @@ test("watchMount takes a diagram up at once, and again each time its block remou
   target.dispatchEvent(new Event(RENDER_REMOUNT_EVENT));
   assert.equal(count, 2);
 });
+
+test("prepared jobs keep their scheduled appearance across a deferred theme change", async () => {
+  let palette = "light";
+  const seen: string[] = [];
+  const cache = new MermaidSvgCache(8);
+  const frame = frames();
+  const instance = new MermaidQueue({
+    render: async () => "wrong fallback",
+    prepare(source) {
+      const captured = palette;
+      return {
+        key: `${captured}|${source}`,
+        render: async () => `${captured}:${source}`,
+      };
+    },
+    afterFrame: frame.afterFrame,
+    cache,
+    watchMount: (_element, mounted) => {
+      mounted();
+      return () => {};
+    },
+    offset: () => 0,
+    scrolling: () => 0,
+  });
+  instance.schedule({} as Element, "A", { onSvg: (svg) => seen.push(svg) });
+  palette = "dark";
+  await frame.next();
+  await instance.whenIdle();
+  assert.deepEqual(seen, ["light:A"]);
+  assert.equal(cache.get("light|A"), "light:A");
+  assert.equal(cache.get("dark|A"), undefined);
+  instance.dispose();
+});

@@ -323,10 +323,12 @@ test("wireMermaidInternalLinks binds click, modifier keys, keyboard, and abort c
   assert.equal(nodeA.listeners.click?.length ?? 0, 0);
 });
 
-test("DiagramRenderer initializes mermaid only when trust changes", async () => {
+test("DiagramRenderer initializes Mermaid only when trust or palette changes", async () => {
   const { default: mermaid } = await import("mermaid");
   const { DiagramRenderer } = await import("./renderer");
   const origInit = mermaid.initialize;
+  // Register real detectors before observing subsequent initialize calls.
+  origInit({ securityLevel: "strict" });
   const origRender = mermaid.render;
   let initCalls = 0;
   let renderCalls = 0;
@@ -387,20 +389,77 @@ test("DiagramRenderer initializes mermaid only when trust changes", async () => 
       "var(--font-mermaid, var(--vscode-editor-font-family, inherit))",
     );
     assert.ok(
-      initArg.theme === undefined || initArg.theme === "default",
-      `expected default Mermaid theme, got ${initArg.theme}`,
+      initArg.theme === "base",
+      `expected editor-derived base Mermaid theme, got ${initArg.theme}`,
     );
     const cacheKey = (
       renderer as unknown as { cacheKeyFor: (source: string) => string }
     ).cacheKeyFor.bind(renderer);
     const key = cacheKey("flowchart LR\nA-->B");
-    assert.equal(key, `u|flowchart LR\nA-->B`);
+    assert.ok(key.startsWith("u|"));
+    assert.ok(key.endsWith("|flowchart LR\nA-->B"));
 
     trusted = true;
     await renderOne("flowchart LR\nE-->F");
     assert.equal(initCalls, 2);
     await renderOne("flowchart LR\nG-->H");
     assert.equal(initCalls, 2);
+  } finally {
+    mermaid.initialize = origInit;
+    mermaid.render = origRender;
+    renderer.dispose();
+  }
+});
+
+test("DiagramRenderer passes allowForeignObject to the sanitizer only when trusted", async () => {
+  const { default: mermaid } = await import("mermaid");
+  const { DiagramRenderer } = await import("./renderer");
+  const origInit = mermaid.initialize;
+  // Register real detectors before observing subsequent initialize calls.
+  origInit({ securityLevel: "strict" });
+  const origRender = mermaid.render;
+  const sanitizeCalls: Array<{ svg: string; allowForeignObject?: boolean }> =
+    [];
+
+  mermaid.initialize = (() => {}) as typeof mermaid.initialize;
+  mermaid.render = (async (id: string) => ({
+    svg: `<svg id="${id}"></svg>`,
+    bindFunctions: undefined,
+  })) as unknown as typeof mermaid.render;
+
+  let trusted = false;
+  const renderer = new DiagramRenderer(
+    { debug() {}, warn() {}, error() {} },
+    {
+      isTrusted: () => trusted,
+      allow: () => {
+        trusted = true;
+      },
+    },
+    undefined,
+    (svg, options) => {
+      sanitizeCalls.push({
+        svg,
+        ...(options?.allowForeignObject === undefined
+          ? {}
+          : { allowForeignObject: options.allowForeignObject }),
+      });
+      return svg;
+    },
+  );
+  try {
+    const renderOne = (
+      renderer as unknown as {
+        renderMermaidSvg: (src: string) => Promise<string>;
+      }
+    ).renderMermaidSvg.bind(renderer);
+    await renderOne("flowchart LR\nA-->B");
+    trusted = true;
+    await renderOne("flowchart LR\nC-->D");
+    assert.deepEqual(
+      sanitizeCalls.map((call) => call.allowForeignObject),
+      [false, true],
+    );
   } finally {
     mermaid.initialize = origInit;
     mermaid.render = origRender;

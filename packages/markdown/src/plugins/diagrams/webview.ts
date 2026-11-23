@@ -7,6 +7,7 @@ import {
   MarkdownBlock,
 } from "../../webview/ui/markdown-widget";
 import { DiagramRenderer } from "./renderer";
+import { watchMermaidTheme } from "./theme";
 export function diagramLanguage(info: string): boolean {
   return info.trim().split(/\s+/)[0]?.toLowerCase() === "mermaid";
 }
@@ -32,6 +33,7 @@ export const diagramsWebview: Plugin = {
       },
     );
     ctx.effect(() => () => renderer.dispose());
+    ctx.effect(() => watchMermaidTheme(() => ctx.emit("render/changed")));
     registerDiagramBlocks(ctx);
     registerDiagramFences(ctx, renderer);
   },
