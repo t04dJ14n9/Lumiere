@@ -408,6 +408,60 @@ test("DiagramRenderer initializes mermaid only when trust changes", async () => 
   }
 });
 
+test("DiagramRenderer passes allowForeignObject to the sanitizer only when trusted", async () => {
+  const { default: mermaid } = await import("mermaid");
+  const { DiagramRenderer } = await import("./renderer");
+  const origInit = mermaid.initialize;
+  const origRender = mermaid.render;
+  const sanitizeCalls: Array<{ svg: string; allowForeignObject?: boolean }> =
+    [];
+
+  mermaid.initialize = (() => {}) as typeof mermaid.initialize;
+  mermaid.render = (async (id: string) => ({
+    svg: `<svg id="${id}"></svg>`,
+    bindFunctions: undefined,
+  })) as unknown as typeof mermaid.render;
+
+  let trusted = false;
+  const renderer = new DiagramRenderer(
+    { debug() {}, warn() {}, error() {} },
+    {
+      isTrusted: () => trusted,
+      allow: () => {
+        trusted = true;
+      },
+    },
+    undefined,
+    (svg, options) => {
+      sanitizeCalls.push({
+        svg,
+        ...(options?.allowForeignObject === undefined
+          ? {}
+          : { allowForeignObject: options.allowForeignObject }),
+      });
+      return svg;
+    },
+  );
+  try {
+    const renderOne = (
+      renderer as unknown as {
+        renderMermaidSvg: (src: string) => Promise<string>;
+      }
+    ).renderMermaidSvg.bind(renderer);
+    await renderOne("flowchart LR\nA-->B");
+    trusted = true;
+    await renderOne("flowchart LR\nC-->D");
+    assert.deepEqual(
+      sanitizeCalls.map((call) => call.allowForeignObject),
+      [false, true],
+    );
+  } finally {
+    mermaid.initialize = origInit;
+    mermaid.render = origRender;
+    renderer.dispose();
+  }
+});
+
 test("svgDimensions reads viewBox dimensions and falls back to bounding box", async () => {
   const { svgDimensions } = await import("./diagram-dialog");
   const withViewBox = el("svg");

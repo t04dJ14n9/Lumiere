@@ -4,7 +4,10 @@ import {
   type Fence,
   type RenderPass,
 } from "../render/api";
-import { sanitizeGraphics } from "../../webview/ui/graphics";
+import {
+  sanitizeGraphics,
+  type SanitizeGraphicsOptions,
+} from "../../webview/ui/graphics";
 import { errorMessage } from "../../shared/errors";
 import { createMermaidTrust, type MermaidTrust } from "./trust";
 import { MermaidQueue } from "./mount-queue";
@@ -43,15 +46,19 @@ export class DiagramRenderer {
   private readonly cleanups = new Set<() => void>();
   private readonly trust: MermaidTrust;
   private readonly openLink: MermaidLinkOpen | undefined;
+  private readonly sanitize:
+    ((html: string, options?: SanitizeGraphicsOptions) => string) | undefined;
   private readonly queue: MermaidQueue;
 
   constructor(
     private readonly logger: Logger,
     trust: MermaidTrust = createMermaidTrust(),
     openLink?: MermaidLinkOpen,
+    sanitize?: (html: string, options?: SanitizeGraphicsOptions) => string,
   ) {
     this.trust = trust;
     this.openLink = openLink;
+    this.sanitize = sanitize;
     this.queue = new MermaidQueue({
       render: (source) => this.renderMermaidSvg(source),
       cacheKey: (source) => this.cacheKeyFor(source),
@@ -156,8 +163,11 @@ export class DiagramRenderer {
       const result = stage
         ? await mermaid.render(id, source, stage)
         : await mermaid.render(id, source);
+      if (this.sanitize) {
+        return this.sanitize(result.svg, { allowForeignObject: trusted });
+      }
       return typeof window !== "undefined"
-        ? sanitizeGraphics(result.svg)
+        ? sanitizeGraphics(result.svg, { allowForeignObject: trusted })
         : result.svg;
     } finally {
       stage?.remove();
