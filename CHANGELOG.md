@@ -1,5 +1,22 @@
 # Changelog
 
+## 0.1.30 (2026-11-25)
+
+- PDF: **Toggle Side Panel** is in the viewer's right-click menu, so the
+  side panel (thumbnails, outline, bookmarks, annotations) is a right-click
+  away in a floating window too.
+- PDF: a bookmark made right after jumping to an outline entry is titled
+  after that entry, not its parent, and Follow Cursor selects it.
+- PDF agent bridge: four read-only tools read a PDF's text with Lumiere's own
+  PDFium, so the PDF need not be open: `get_pdf_page_text`, `find_in_pdf`,
+  `locate_pdf_quote` and `list_pdf_annotations` (#864).
+- PDF: the viewer's engine is EmbedPDF 3.3.0.
+- Markdown: a trackpad pinch in the Mermaid inspector zooms in proportion
+  to the fingers' movement instead of 15 % per event; a mouse wheel notch
+  still zooms by 15 %.
+- Markdown: an embedded tweet loads once while a note opens, also on a slow
+  machine.
+
 ## 0.1.29 (2026-11-24)
 
 - Markdown: in a zoomed-in Mermaid inspector, a drag that starts on a label
