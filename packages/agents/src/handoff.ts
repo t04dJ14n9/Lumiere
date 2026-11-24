@@ -27,18 +27,14 @@ export function noteReference(
  * keeps the URI, `file:///My%20Notes/a.md`.
  */
 export function noteLocation(uri: string): string {
-  let url: URL;
-  try {
-    url = new URL(uri);
-  } catch {
-    return uri;
-  }
-  if (url.protocol !== "file:" || url.host || url.search || url.hash) {
+  // A local file only: `file:///…` with no host, query or fragment.
+  const local = /^file:\/\/(\/[^?#]*)$/iu.exec(uri);
+  if (!local) {
     return uri;
   }
   let path: string;
   try {
-    path = decodeURIComponent(url.pathname);
+    path = decodeURIComponent(local[1]!);
   } catch {
     return uri;
   }
