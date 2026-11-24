@@ -61,6 +61,7 @@ function clipboardFixture() {
   return {
     clipboard,
     inner,
+    projection,
     grid,
     copied,
     selection,
@@ -113,6 +114,26 @@ test("a Cut clears its cells only once the write has succeeded", async () => {
   finish(true);
   await cut;
   assert.notEqual(fixture.grid.block.source, source);
+});
+
+test("a Cut whose cell changes during the write clears nothing, and says so", async () => {
+  const fixture = clipboardFixture();
+  let finish: (ok: boolean) => void = () => {};
+  fixture.setWrite(
+    () =>
+      new Promise((resolve) => {
+        finish = resolve;
+      }),
+  );
+  const cut = fixture.clipboard.copyFromMenu(
+    { anchor: { row: 1, column: 0 }, head: { row: 1, column: 0 } },
+    true,
+  );
+  // The cell editor moved on to another cell while the clipboard was written.
+  (fixture.projection as { sessionRevision?: number }).sessionRevision = 7;
+  finish(true);
+  await assert.rejects(cut, /changed before Cut completed/);
+  assert.equal(fixture.inner.state.doc.toString(), "first");
 });
 
 test("a Cut over a note that turns read-only during the write keeps its cells", async () => {

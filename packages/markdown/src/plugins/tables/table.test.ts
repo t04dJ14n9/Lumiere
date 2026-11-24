@@ -53,7 +53,7 @@ test("a palette command acts on the whole cell selection, as the context menu do
   const range = { anchor: { row: 1, column: 0 }, head: { row: 2, column: 1 } };
   let executed: TableOperation | undefined;
   const menu = tableMenu(model, range, {
-    copy() {},
+    async copy() {},
     paste: async () => {},
     selectAll() {},
     format() {},

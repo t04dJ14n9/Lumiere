@@ -163,20 +163,7 @@ export class TableClipboard {
         inner.focus();
         return;
       }
-      if (!(await context.copy(text))) {
-        inner.focus();
-        return;
-      }
-      const now = inner.state.selection.main;
-      if (inner.state.sliceDoc(now.from, now.to) !== text) {
-        throw new Error(
-          "The selection changed before Cut completed. Cut again.",
-        );
-      }
-      if (!this.isReadOnly) {
-        inner.dispatch(inner.state.replaceSelection(""));
-      }
-      inner.focus();
+      await this.cutCellText(inner, text);
       return;
     }
     const text = copyCells(this.grid.model, range);
@@ -185,6 +172,9 @@ export class TableClipboard {
       (this.projection.inner ?? this.grid.outer).focus();
       return;
     }
+    // Menus remove their focused DOM before the action runs: restore focus so
+    // blur cleanup does not close the table while the clipboard is written.
+    (this.projection.inner ?? this.grid.outer).focus();
     const expected = this.grid.block.source;
     const grid = this.selection.range;
     if (!(await context.copy(text))) {
@@ -196,6 +186,42 @@ export class TableClipboard {
       );
     }
     this.clearCells(range);
+  }
+
+  /**
+   * Cut of selected cell text: the cut is for the cell it was copied from,
+   * and clears nothing when the clipboard write fails or the cell changes.
+   */
+  private async cutCellText(
+    inner: NonNullable<CellProjection["inner"]>,
+    text: string,
+  ): Promise<void> {
+    // Menus remove their focused DOM before the action runs: restore focus so
+    // blur cleanup does not close the editor while the clipboard is written.
+    inner.focus();
+    // The cell editor is retained and reused, so the cut is for the cell it
+    // copied from: the same checks as paste's re-check after its read.
+    const session = {
+      revision: this.projection.sessionRevision,
+      active: { ...this.projection.active },
+    };
+    if (!(await this.environment.copy(text))) {
+      inner.focus();
+      return;
+    }
+    const now = inner.state.selection.main;
+    if (
+      inner !== this.projection.inner ||
+      !isCurrentCellSession(this.projection, session) ||
+      inner.state.sliceDoc(now.from, now.to) !== text
+    ) {
+      throw new Error("The selection changed before Cut completed. Cut again.");
+    }
+    if (!this.isReadOnly) {
+      inner.dispatch(inner.state.replaceSelection(""));
+    }
+    inner.focus();
+    return;
   }
 
   async pasteFromMenu(range: CellRange, plainText = false): Promise<void> {
