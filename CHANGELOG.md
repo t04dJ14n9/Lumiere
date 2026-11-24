@@ -59,6 +59,28 @@
   a text node's links are rewritten, and a file node whose subpath names the
   heading takes the new name. Every heading rename reads every canvas once,
   with no time limit (#913).
+- Markdown: the editor page takes a message as the extension host's only from
+  the host's own window, so a frame in a note (including one removed right
+  after it posted) cannot pass as the host (#850).
+- Markdown: a panel whose edits the host refuses 8 times in a row (about 30 s)
+  stops retrying, turns read-only with the typing kept and says so; a host
+  that is only slow is still retried (#897).
+- Markdown: a save's two flushes of the open panels share one 1.2 s budget,
+  so a panel that does not answer no longer makes the save wait 2.4 s and
+  risk VS Code dropping the save listener (#891).
+- Markdown: a block link whose `^id` cannot be written to the other note
+  links to the note instead, and says why; in the same note, a block that
+  changed since the list was made gets no link and a message (#903).
+- Markdown: a folder created or moved into a vault is walked only up to the
+  listing limit, and a full index refuses new files with the existing
+  "more than 50,000" warning (#925).
+- Markdown (Cursor): a Git state change reads only as many changed notes as
+  its warm-up cap needs, instead of every changed file (#925).
+- Lumiere PDF: a note card closes when its mark is removed while it shows,
+  instead of shutting every other note out; a pointer that has left the
+  viewer no longer opens a card (#922).
+- CI: every GitHub Action is pinned to a full commit SHA, and Dependabot
+  updates the composite actions' pins too (#917).
 
 ## 0.1.25 (2026-11-23)
 
