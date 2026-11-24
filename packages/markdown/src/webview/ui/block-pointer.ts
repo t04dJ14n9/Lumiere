@@ -220,15 +220,17 @@ export function isBlockControl(
 }
 
 /**
- * Mermaid labels are SVG `<text>` / `<tspan>` (see diagrams.css). Keep their
- * mouse events so native selection can start; CM still owns blank diagram area.
+ * Mermaid labels are SVG `<text>` / `<tspan>`, or HTML inside a
+ * `<foreignObject>` once the vault's diagrams are trusted (`htmlLabels`; see
+ * diagrams.css). Keep their mouse events so native selection can start; CM
+ * still owns blank diagram area.
  */
 function isNativeSelectableLabel(shell: HTMLElement, target: Element): boolean {
   let node: Element | null = target;
   while (node && node !== shell) {
     const tag = node.tagName.toLowerCase();
     if (
-      (tag === "text" || tag === "tspan") &&
+      (tag === "text" || tag === "tspan" || tag === "foreignobject") &&
       node.closest("svg") &&
       shell.contains(node)
     ) {
