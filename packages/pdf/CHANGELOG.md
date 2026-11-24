@@ -2,6 +2,12 @@
 
 ## Unreleased
 
+- Fixed: a bookmark made right after jumping to an outline entry was titled
+  after the entry's parent, and Follow Cursor could select the parent. The
+  jump scrolls in whole device pixels and can land a fraction of a point
+  short of the destination; a position within a point of a destination now
+  counts as at it (`DESTINATION_TOLERANCE`).
+
 - **Toggle Side Panel in the right-click menu.** Right-click the PDF to show
   or hide its side panel, first among the view items.
 
