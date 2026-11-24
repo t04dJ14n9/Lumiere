@@ -74,6 +74,9 @@
 - Markdown: a folder created or moved into a vault is walked only up to the
   listing limit, and a full index refuses new files with the existing
   "more than 50,000" warning (#925).
+- Markdown: a vault search stops after ten notes too slow to evaluate and
+  says so, as its README already promised, instead of going on for every slow
+  note (#900).
 - Markdown (Cursor): a Git state change reads only as many changed notes as
   its warm-up cap needs, instead of every changed file (#925).
 - Lumiere PDF: a note card closes when its mark is removed while it shows,
