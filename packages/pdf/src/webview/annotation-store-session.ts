@@ -220,6 +220,14 @@ export class StoreSession {
           { previous: state.annotations, next: change.text },
           RESTORE_OP_ID,
         );
+        if (lost === undefined) {
+          // Unacknowledged, and no later save: one would replace the file with
+          // this viewer's annotations alone.
+          this.leaveFileAlone(
+            "was saved by another editor in a form this viewer cannot show",
+          );
+          return;
+        }
         if (lost > 0) {
           this.error(
             `${lost} annotation(s) saved in another editor of this PDF could not be shown here.`,

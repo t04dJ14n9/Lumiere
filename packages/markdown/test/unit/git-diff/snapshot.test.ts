@@ -49,6 +49,38 @@ test("INDEX→WORKTREE sets liveAnchor on every hunk", () => {
   );
 });
 
+test("a context row that differs from the base is not part of a hunk, and rows past it are not paired with it", () => {
+  const snap = buildWorktreeSnapshot({
+    repository: "file:///repo",
+    fileUri: "file:///repo/a.md",
+    baseText: "p\nq\nr\nold",
+    targetText: "p\nQ\nr\nnew",
+    base: { kind: "INDEX", fingerprint: "i1" },
+    target: { kind: "WORKTREE" },
+    worktreeBytes: {
+      origin: "document",
+      uri: "file:///repo/a.md",
+      version: 3,
+      isDirty: true,
+    },
+    liveDocumentUri: "file:///repo/a.md",
+    mapLiveAnchor: ({ modifiedFrom, modifiedTo }) => ({
+      uri: "file:///repo/a.md",
+      from: modifiedFrom,
+      to: modifiedTo,
+    }),
+    capabilitiesFor: () => caps,
+    computedAt: 1,
+  });
+  const last = snap.hunks[snap.hunks.length - 1]!;
+  assert.deepEqual(
+    last.lines
+      .filter((line) => line.kind === "context")
+      .map((line) => line.text),
+    ["r"],
+  );
+});
+
 test("live anchors use the same offsets as gutter hunks", () => {
   const base = "a\nold\nz\n";
   const now = "a\nnew\nz\nextra\n";

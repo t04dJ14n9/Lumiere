@@ -45,6 +45,8 @@ export class NoteResources implements Resources {
   /** The files the page loaded, by vault path: their URIs. */
   private readonly shown = new RecentlyUsed<string, string>(SHOWN_LIMIT);
   private readonly bases: BaseSnapshots;
+  /** The disk check running now, shared by callers (see `takeFoundOnDisk`). */
+  private pendingDiskCheck: Promise<boolean> | undefined;
   constructor(private readonly options: ResourceOptions) {
     this.known = new Set([options.source]);
     this.bases = new BaseSnapshots(options.vault);
@@ -128,6 +130,42 @@ export class NoteResources implements Resources {
   }
 
   /**
+   * `takeFound` for a file the index never lists (a hidden folder such as
+   * `/.raw/`): only the candidates it does not list are stat'ed. A check
+   * already running is shared, so a burst of index settles stats only once.
+   */
+  takeFoundOnDisk(): Promise<boolean> {
+    this.pendingDiskCheck ??= this.forgetFoundOnDisk().finally(() => {
+      this.pendingDiskCheck = undefined;
+    });
+    return this.pendingDiskCheck;
+  }
+
+  private async forgetFoundOnDisk(): Promise<boolean> {
+    let isFound = false;
+    for (const [key, link] of [...this.missing]) {
+      if (await this.isOnDiskUnlisted(link)) {
+        this.missing.delete(key);
+        isFound = true;
+      }
+    }
+    return isFound;
+  }
+
+  /** Only a hidden candidate needs a stat: the index lists every other file it can see. */
+  private async isOnDiskUnlisted(link: ResourceLink): Promise<boolean> {
+    for (const candidate of this.diskCandidates(link)) {
+      if (
+        isUnlistedPath(candidate.path) &&
+        (await this.exists(candidate.uri))
+      ) {
+        return true;
+      }
+    }
+    return false;
+  }
+
+  /**
    * The URI of a file the page shows that this change rewrote (on disk, or
    * as unsaved text in an editor), moved or removed, so its embeds load it
    * again. A moved or removed file is forgotten until it is loaded again.
@@ -189,36 +227,45 @@ export class NoteResources implements Resources {
    * and embed said "Resource not found". `load` still checks that the file
    * is inside the vault, through symbolic links too.
    */
-  private async locateOnDisk({
+  private async locateOnDisk(
+    link: ResourceLink,
+  ): Promise<LinkedFile | undefined> {
+    for (const candidate of this.diskCandidates(link)) {
+      if (await this.exists(candidate.uri)) {
+        return candidate;
+      }
+    }
+    return undefined;
+  }
+
+  /** Where `locateOnDisk` looks, in `linkLocation`'s order. */
+  private diskCandidates({
     target,
     source,
     syntax,
-  }: ResourceLink): Promise<LinkedFile | undefined> {
+  }: ResourceLink): LinkedFile[] {
     if (syntax !== "markdown") {
-      return undefined;
+      return [];
     }
     const link = splitMarkdownDestination(target).path;
     // A folder is no resource, and the host's stat cannot tell one apart.
     if (!extensionOf(link)) {
-      return undefined;
+      return [];
     }
     const { root } = this.options.vault;
     const { relative, folders } = linkLocation(link);
     const sourceFolder = folderOf(vaultPath(root, source));
+    const candidates: LinkedFile[] = [];
     for (const folder of folders) {
       const path = joinVaultPath(
         folder === "vault" ? "" : sourceFolder,
         relative,
       );
-      if (!path) {
-        continue;
-      }
-      const uri = uriInVault(root, path);
-      if (await this.exists(uri)) {
-        return { path, uri };
+      if (path) {
+        candidates.push({ path, uri: uriInVault(root, path) });
       }
     }
-    return undefined;
+    return candidates;
   }
 
   private async exists(uri: string): Promise<boolean> {
@@ -272,6 +319,17 @@ function linkPath({ target, syntax }: ResourceLink): string {
 
 function linkKey({ target, source, syntax }: ResourceLink): string {
   return `${syntax}\0${source}\0${target}`;
+}
+
+/**
+ * A vault path the index never enters: a hidden folder (`.raw`, `.git`) or
+ * `node_modules`, as the vault plugin's `isIgnoredPath` decides. Kept here
+ * because the resources plugin does not import the vault's internals.
+ */
+function isUnlistedPath(path: string): boolean {
+  return path
+    .split("/")
+    .some((segment) => segment.startsWith(".") || segment === "node_modules");
 }
 
 /** The URI of a path inside the vault, each name percent-encoded. */

@@ -17,8 +17,11 @@ function file(path: string) {
   return { uri: `${ROOT}/${path}`, path, mtime: 7, size: 1 };
 }
 
-/** A note's panel and its page, with the vault index the host reads. */
-async function notePage() {
+/**
+ * A note's panel and its page, with the vault index the host reads. `disk`,
+ * when given, is the set of URIs that exist: a stat of any other URI fails.
+ */
+async function notePage(disk?: Set<string>) {
   const pair = rpcPair();
   const vault = new MemoryVaultIndex({
     root: ROOT,
@@ -26,11 +29,20 @@ async function notePage() {
     linkFormat: "shortest",
   });
   vault.replaceFiles([file("Note.md")]);
+  const statted: string[] = [];
   const host = createRoot();
   provideHostServices(
     host,
     fakeHost({
-      workspace: { stat: async () => ({ mtime: 7, symbolicLink: false }) },
+      workspace: {
+        stat: async (uri: string) => {
+          statted.push(uri);
+          if (disk && !disk.has(uri)) {
+            throw new Error(`No file ${uri}`);
+          }
+          return { mtime: 7, symbolicLink: false };
+        },
+      },
     }),
   );
   host.provide("rpc", pair.host);
@@ -58,7 +70,9 @@ async function notePage() {
   return {
     vault,
     load: (target: string) => resources!.load(target, NOTE, "wikilink"),
+    loadMarkdown: (target: string) => resources!.load(target, NOTE, "markdown"),
     found: () => found,
+    stats: () => statted.length,
     async dispose() {
       await page.dispose();
       await host.dispose();
@@ -91,6 +105,31 @@ test("a page hears when a file it could not load is created", async () => {
   page.vault.upsertFile(file("Later.png"));
   await delivered();
   assert.equal(page.found(), 1, "a found link is forgotten");
+  await page.dispose();
+});
+
+test("a missing link to a visible file is not stat'ed again at each index settle", async () => {
+  const page = await notePage(new Set([NOTE]));
+  await assert.rejects(page.loadMarkdown("images/pic.png"), /not found/);
+  const before = page.stats();
+
+  page.vault.notifyResolved();
+  await delivered();
+
+  assert.equal(page.stats(), before, "only hidden folders are looked for here");
+  await page.dispose();
+});
+
+test("a page hears when a file under a hidden folder it could not load arrives", async () => {
+  const disk = new Set([NOTE]);
+  const page = await notePage(disk);
+  await assert.rejects(page.loadMarkdown(".raw/pic.png"), /not found/);
+
+  // The index never lists hidden folders, so no event reports this file.
+  disk.add(`${ROOT}/.raw/pic.png`);
+  page.vault.notifyResolved();
+  await delivered();
+  assert.equal(page.found(), 1);
   await page.dispose();
 });
 

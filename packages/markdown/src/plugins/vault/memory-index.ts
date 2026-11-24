@@ -125,6 +125,14 @@ export class MemoryVaultIndex implements VaultIndex {
     this.addFiles(entries);
   }
 
+  /**
+   * Whether the index holds `limit` files of the kind `path` is (a note, or
+   * another file), counted apart as a listing's budget counts them.
+   */
+  isFull(path: string, limit: number): boolean {
+    return this.table.countOfKind(path) >= limit;
+  }
+
   /** Add or update files without events, as at start-up. */
   addFiles(entries: readonly FileEntry[]): void {
     const added: string[] = [];

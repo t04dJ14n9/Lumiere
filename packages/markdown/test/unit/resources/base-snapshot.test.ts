@@ -102,6 +102,25 @@ test("a note added or removed sends the whole snapshot again", () => {
   );
 });
 
+test("a nested frontmatter object reads as its JSON text, so a view shows its keys", () => {
+  const index = vault({ "Nested.md": "---\nmeta:\n  k: 1\n---\n" });
+  const snapshots = new BaseSnapshots(index);
+  const page = new PageBaseSnapshot();
+  const snap = page.take(base(snapshots.reply("Nested.md", page.have)));
+  assert.deepEqual(snap.entries?.[0]?.frontmatter, { meta: '{"k":1}' });
+});
+
+test("an aliased nested object reads as JSON text in every key that uses it", () => {
+  const index = vault({ "Alias.md": "---\na: &x\n  k: 1\nb: *x\n---\n" });
+  const snapshots = new BaseSnapshots(index);
+  const page = new PageBaseSnapshot();
+  const snap = page.take(base(snapshots.reply("Alias.md", page.have)));
+  assert.deepEqual(snap.entries?.[0]?.frontmatter, {
+    a: '{"k":1}',
+    b: '{"k":1}',
+  });
+});
+
 test("a late reply for an older snapshot does not take the page's copy back", () => {
   const index = vault({ "A.md": "", "B.md": "" });
   const snapshots = new BaseSnapshots(index);

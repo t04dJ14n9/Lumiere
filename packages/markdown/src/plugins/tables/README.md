@@ -84,7 +84,8 @@ leaves the table, mounted or not.
 Grid Ctrl+C/Cmd+C snapshots the selected rectangle as TSV and writes through
 Editor's validated host clipboard service, preserving grid focus and selection.
 Native copy events and menu commands use the same TSV serialization; ordinary
-cell-text selection remains with CodeMirror.
+cell-text selection remains with CodeMirror. A menu Cut clears its cells only
+after the clipboard has the text: a write that fails leaves them as they were.
 With Vim enabled, collapsed normal-mode outer source landings open the owning
 cell at its mapped offset after the outer update. Entry rejects stale work,
 pointer selections, document edits, pending/visual/insert modes and projection

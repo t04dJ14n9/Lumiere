@@ -53,3 +53,35 @@ test("a value or a new name that opens like a document marker is written quoted"
   });
   assert.deepEqual(frontmatter(renamed)?.values, { "...bar": "x" });
 });
+
+test("removing the last property does not turn a body's --- block into the properties", () => {
+  for (const eol of ["\n", "\r\n"]) {
+    for (const bom of ["", "﻿"]) {
+      for (const body of ["x: 2", "just text"]) {
+        const source = [
+          `${bom}---`,
+          "a: 1",
+          "---",
+          "---",
+          body,
+          "---",
+          "Body",
+          "",
+        ].join(eol);
+        const next = apply(source, { type: "remove", keys: ["a"] });
+        assert.equal(
+          next,
+          bom + eol + ["---", body, "---", "Body", ""].join(eol),
+        );
+        assert.equal(frontmatter(next), undefined);
+      }
+    }
+  }
+});
+
+test("removing the last property of a note whose body is plain text leaves the text", () => {
+  assert.equal(
+    apply("---\na: 1\n---\nbody\n", { type: "remove", keys: ["a"] }),
+    "body\n",
+  );
+});

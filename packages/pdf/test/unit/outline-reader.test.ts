@@ -11,7 +11,7 @@ import {
 } from "node:fs/promises";
 import { tmpdir } from "node:os";
 import path from "node:path";
-import { test } from "node:test";
+import { test, type TestContext } from "node:test";
 import { pathToFileURL } from "node:url";
 import type { OutlineSection } from "../../src/shared/outline-sections";
 import type { OutlineEngine } from "../../src/extension/outlines/engine";
@@ -206,10 +206,10 @@ test("disposing while the first PDF is being read leaves no PDFium running", asy
   assert.equal(calls.disposed, calls.engines);
 });
 
-test("a PDF has bookmarks only when its real path is inside the workspace", async (t) => {
-  const root = await realpath(await mkdtemp(path.join(tmpdir(), "outline-")));
+async function bookmarksOnlyInsideWorkspace(t: TestContext, prefix: string) {
+  const root = await realpath(await mkdtemp(path.join(tmpdir(), prefix)));
   const outside = await realpath(
-    await mkdtemp(path.join(tmpdir(), "outline-outside-")),
+    await mkdtemp(path.join(tmpdir(), `${prefix}outside-`)),
   );
   t.after(() =>
     Promise.all([root, outside].map((dir) => rm(dir, { recursive: true }))),
@@ -250,10 +250,11 @@ test("a PDF has bookmarks only when its real path is inside the workspace", asyn
   assert.deepEqual(await bookmarks(root, "link.pdf"), []);
   assert.deepEqual(await bookmarks(root, "linked-folder", "other.pdf"), []);
   assert.deepEqual(await bookmarks(root, "sub", "missing.pdf"), []);
-  assert.equal(
-    reads.some((uri) => uri.includes("other.pdf") || uri.includes("link")),
-    false,
-  );
+  // Only the two files inside the workspace were read, whatever the folder is called.
+  assert.deepEqual(reads, [
+    pathToFileURL(path.join(root, "paper.pdf")).href,
+    pathToFileURL(path.join(root, "inner.pdf")).href,
+  ]);
   // Where files have no real path, the editor's own file system decides.
   assert.deepEqual(
     titles(
@@ -276,7 +277,13 @@ test("a PDF has bookmarks only when its real path is inside the workspace", asyn
     ),
     ["remote"],
   );
-});
+}
+
+test("a PDF has bookmarks only when its real path is inside the workspace", (t) =>
+  bookmarksOnlyInsideWorkspace(t, "outline-"));
+
+test('a PDF has bookmarks only when its real path is inside the workspace, also when the temp folder\'s path contains "link"', (t) =>
+  bookmarksOnlyInsideWorkspace(t, "outline-link-"));
 
 test("the folder that holds a file is found by real paths, with where the file is in it", async (t) => {
   const base = await realpath(await mkdtemp(path.join(tmpdir(), "outline-")));

@@ -90,6 +90,29 @@ test("schema bounds keep numeric, array and string measurement and JSON keywords
   assert.throws(() => Schema.unknown().max(3).parse(true));
 });
 
+test("a bound on a schema whose values have no size is refused where it is written", () => {
+  assert.throws(() => Schema.object({ a: Schema.string() }).min(1), TypeError);
+  assert.throws(() => Schema.object({ a: Schema.string() }).max(3), TypeError);
+  assert.throws(() => Schema.record(Schema.number()).max(3), TypeError);
+  assert.throws(() => Schema.boolean().min(1), TypeError);
+  assert.throws(() => Schema.object({}).optional().min(1), TypeError);
+  // An unknown schema keeps its parse-time check: a sized value passes.
+  assert.equal(Schema.unknown().min(1).parse("ab"), "ab");
+});
+
+test("a default that is not plain data is refused where it is written", () => {
+  assert.throws(() => Schema.unknown().default(new Date(0)), TypeError);
+  assert.throws(() => Schema.unknown().default({ when: new Map() }), TypeError);
+  assert.throws(
+    () => Schema.array(Schema.unknown()).default([new Date(0)]),
+    TypeError,
+  );
+  // Control: plain data is still copied for each parse.
+  const schema = Schema.unknown().default({ list: [1] });
+  assert.deepEqual(schema.parse(undefined), { list: [1] });
+  assert.notEqual(schema.parse(undefined), schema.parse(undefined));
+});
+
 test("bounds and patterns after optional() accept an absent value and still check a present one", () => {
   const schema = Schema.object({
     count: Schema.number().optional().min(1).max(4),

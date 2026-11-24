@@ -412,3 +412,38 @@ test("a save for the old hash keeps what it owned there, though Save into This P
   // The original PDF (and every copy of it) still has 101 in its file.
   assert.deepEqual((await kept(old.text)).sort(), [101, 300]);
 });
+
+test("another editor's file in a form this viewer cannot show is not acknowledged, and nothing is saved over it", async () => {
+  const { session, posted, present, saves } = open();
+  session.restore(true);
+  session.showStoreFile({
+    sha256: SHA,
+    revision: 1,
+    text: '{"version":1,"annotations":[]}',
+  });
+  await new Promise((resolve) => setTimeout(resolve, 30));
+  assert.equal(
+    posted.filter((message) => message.type === "annotationStoreShown").length,
+    0,
+  );
+  present.set(300, "highlight");
+  session.committed("create", [refOn(300)], {});
+  await new Promise((resolve) => setTimeout(resolve, 30));
+  assert.equal(saves().length, 0);
+  assert.ok(
+    posted.some((message) =>
+      (message as { message?: string }).message?.includes("cannot show"),
+    ),
+  );
+});
+
+test("a change with no file is still acknowledged, as there is nothing to compare", async () => {
+  const { session, posted } = open();
+  session.restore(true);
+  session.showStoreFile({ sha256: SHA, revision: 2, text: undefined });
+  await new Promise((resolve) => setTimeout(resolve, 30));
+  assert.deepEqual(
+    posted.filter((message) => message.type === "annotationStoreShown"),
+    [{ type: "annotationStoreShown", load: 3, sha256: SHA, revision: 2 }],
+  );
+});

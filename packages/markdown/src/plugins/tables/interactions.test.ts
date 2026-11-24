@@ -156,7 +156,7 @@ test("closing a cell restores its render and clears the projected selection noti
 test("table menus preserve axis bounds, command focus and action order", () => {
   const calls: unknown[] = [];
   const actions: TableMenuActions = {
-    copy: (cut) => {
+    copy: async (cut) => {
       calls.push(cut);
     },
     paste: async () => {},
@@ -225,7 +225,7 @@ test("a column menu adds columns aligned as the selection's edge columns", () =>
   )!;
   const operations: unknown[] = [];
   const actions: TableMenuActions = {
-    copy: () => {},
+    copy: async () => {},
     paste: async () => {},
     selectAll: () => {},
     format: () => {},
@@ -250,7 +250,7 @@ test("a column menu adds columns aligned as the selection's edge columns", () =>
 test("cell menu includes all row operations, disabled boundary moves and working clipboard callbacks", async () => {
   const calls: unknown[] = [];
   const actions: TableMenuActions = {
-    copy: (cut) => {
+    copy: async (cut) => {
       calls.push(cut ? "cut" : "copy");
     },
     paste: async (plainText) => {

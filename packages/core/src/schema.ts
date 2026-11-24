@@ -58,7 +58,15 @@ export class Schema<T> {
     return this.bound(value, true);
   }
   private bound(value: number, max: boolean): Schema<T> {
-    const key = boundKeyword(this.json.type, max);
+    const type = this.json.type;
+    if (type === "object" || type === "boolean") {
+      // No value of this type has a size, so at parse time every present
+      // value would fail. Refused here, where the schema is written.
+      throw new TypeError(
+        `${max ? "max" : "min"}() cannot bound a ${type} schema`,
+      );
+    }
+    const key = boundKeyword(type, max);
     return new Schema(
       (v, p) => {
         const parsed = this.read(v, p);
@@ -224,8 +232,13 @@ function copied<T>(value: T): T {
   if (Array.isArray(value)) {
     return value.map(copied) as T;
   }
-  if (!isPlainObject(value)) {
+  if (typeof value !== "object" || value === null) {
     return value;
+  }
+  if (!isPlainObject(value)) {
+    // A Date, Map or class instance cannot be copied here or written into
+    // the JSON Schema, so every parse would share it.
+    throw new TypeError("a default must be plain data");
   }
   return Object.fromEntries(
     Object.entries(value).map(([key, item]) => [key, copied(item)]),

@@ -1,6 +1,6 @@
 import test from "node:test";
 import assert from "node:assert/strict";
-import { EditorState } from "@codemirror/state";
+import { EditorSelection, EditorState } from "@codemirror/state";
 import type { EditorView } from "@codemirror/view";
 import {
   isInTableCell,
@@ -131,6 +131,130 @@ test("selectionTouchesTableCell looks at the head and at the lower end", () => {
     selectionTouchesTableCell(state(WITH_TEXT, outside, inside)),
     true,
   );
+});
+
+test("a caret at the end of a table's last row is in the table", () => {
+  assert.equal(isInTableCell(state(TABLE, TABLE.length)), true);
+  assert.equal(isInTableCell(state(WITH_TEXT, TABLE.length)), true);
+  assert.equal(isInTableCell(state(WITH_TEXT, TABLE.length + 1)), false);
+});
+
+function multiState(
+  doc: string,
+  ranges: [number, number][],
+  main: number,
+): EditorState {
+  return EditorState.create({
+    doc,
+    selection: EditorSelection.create(
+      ranges.map(([anchor, head]) => EditorSelection.range(anchor, head)),
+      main,
+    ),
+    extensions: [EditorState.allowMultipleSelections.of(true)],
+  });
+}
+
+test("a secondary caret in a table cell refuses the block commands, whichever range is main", () => {
+  const commands = formattingCommands();
+  const cell = WITH_TEXT.indexOf("c");
+  const prose = WITH_TEXT.indexOf("after");
+  const orders = [
+    multiState(
+      WITH_TEXT,
+      [
+        [cell, cell],
+        [prose, prose],
+      ],
+      1,
+    ),
+    multiState(
+      WITH_TEXT,
+      [
+        [prose, prose],
+        [cell, cell],
+      ],
+      0,
+    ),
+  ];
+  for (const initial of orders) {
+    assert.equal(selectionTouchesTableCell(initial), true);
+    for (const id of REFUSED) {
+      const { view, dispatched } = fakeView(initial);
+      assert.equal(commands.get(id)!(view), false, `${id} returns false`);
+      assert.equal(dispatched(), false, `${id} dispatches no edit`);
+    }
+  }
+});
+
+test("two carets in the prose line still run a block command", () => {
+  const commands = formattingCommands();
+  const first = WITH_TEXT.indexOf("after");
+  const initial = multiState(
+    WITH_TEXT,
+    [
+      [first, first],
+      [first + 2, first + 2],
+    ],
+    0,
+  );
+  const { view, dispatched } = fakeView(initial);
+  assert.equal(commands.get("editor:toggle-bullet-list")!(view), true);
+  assert.equal(dispatched(), true);
+  assert.equal(view.state.doc.toString(), `${TABLE}\n\n- after text`);
+});
+
+test("a selection that spans a table refuses the line commands, and the prose on either side still runs", () => {
+  const commands = formattingCommands();
+  const doc = `before\n\n${TABLE}\n\nafter`;
+  for (const id of REFUSED) {
+    const spanning = fakeView(state(doc, 0, doc.length));
+    assert.equal(commands.get(id)!(spanning.view), false, `${id} refuses`);
+    assert.equal(spanning.dispatched(), false, `${id} dispatches no edit`);
+  }
+  // Controls: the line before the table, up to the blank line before it, and the
+  // line after the table, still run.
+  const blankBefore = doc.indexOf("\n\n") + 1;
+  const controls: [number, number][] = [
+    [0, "before".length],
+    [0, blankBefore],
+    [doc.indexOf("after"), doc.length],
+  ];
+  for (const [anchor, head] of controls) {
+    const { view, dispatched } = fakeView(state(doc, anchor, head));
+    assert.equal(commands.get("editor:toggle-bullet-list")!(view), true);
+    assert.equal(dispatched(), true);
+  }
+});
+
+test("a secondary range that spans a table refuses while the main caret is in prose", () => {
+  const commands = formattingCommands();
+  const doc = `before\n\n${TABLE}\n\nafter`;
+  const prose = doc.indexOf("after");
+  const spanning = [
+    multiState(
+      doc,
+      [
+        [0, doc.length],
+        [prose, prose],
+      ],
+      1,
+    ),
+    multiState(
+      doc,
+      [
+        [prose, prose],
+        [0, doc.length],
+      ],
+      0,
+    ),
+  ];
+  for (const initial of spanning) {
+    for (const id of REFUSED) {
+      const { view, dispatched } = fakeView(initial);
+      assert.equal(commands.get(id)!(view), false, `${id} refuses`);
+      assert.equal(dispatched(), false, `${id} dispatches no edit`);
+    }
+  }
 });
 
 test("the guard matches Obsidian's list: headings are not refused", () => {

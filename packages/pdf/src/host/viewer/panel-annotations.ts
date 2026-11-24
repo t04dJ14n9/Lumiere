@@ -21,6 +21,8 @@ export class PanelAnnotations implements Subscription {
   readonly exported = new Emitter<ArrayBuffer>();
   /** An annotation that is part of the PDF changed; only saving into the PDF keeps that. */
   readonly embeddedEdit = new Emitter<void>();
+  /** The PDF was rewritten by a save into it: the bytes it had are replaced by these. */
+  readonly rewritten = new Emitter<{ from: string; to: string }>();
   private readonly save: AnnotationSave;
   private readonly store: AnnotationStore;
   /** Where the save that failed last was going: Retry repeats that one. */
@@ -41,6 +43,7 @@ export class PanelAnnotations implements Subscription {
       post: deps.post,
       error: (message) => host.error(message),
       conflict: (payload) => this.conflict.fire(payload),
+      rewrote: (change) => this.rewritten.fire(change),
       failed: (message) => this.fail("pdf", message),
       saved: () => {
         this.failure = "file";
@@ -135,6 +138,7 @@ export class PanelAnnotations implements Subscription {
   dispose(): void {
     this.store.dispose();
     this.conflict.dispose();
+    this.rewritten.dispose();
     this.failed.dispose();
     this.exported.dispose();
     this.embeddedEdit.dispose();

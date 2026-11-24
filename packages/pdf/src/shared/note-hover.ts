@@ -17,6 +17,11 @@ export interface NoteHoverOptions {
   schedule: (run: () => void, ms: number) => { cancel: () => void };
   /** The mark whose note now shows (undefined for none), and whether it is being written. */
   onChange: (key: string | undefined, editing: boolean) => void;
+  /**
+   * Ends the note being written, keeping its text. Asked before another
+   * mark's note opens for writing, so the text written is not lost.
+   */
+  commitEdit?: () => void;
 }
 
 export interface NoteHover {
@@ -32,10 +37,19 @@ export interface NoteHover {
    * as it is.
    */
   open(key: string): void;
-  /** Show this mark's note at once, to be written. */
+  /** Show this mark's note at once, to be written; another being written is committed first. */
   edit(key: string): void;
   /** The note is written (or not): a hover again, or closed with `close`. */
   endEdit(options?: { close?: boolean }): void;
+  /**
+   * Whether the card for mark `key` can be drawn now. A card that could be
+   * drawn and no longer can (its mark was removed) closes, even while its note
+   * is being written: there is nothing left to keep the text on, and a card
+   * held in writing mode would shut every other note out. A mark not yet seen
+   * is waited for, as one just made may not be listed yet, and a report about
+   * a mark that is no longer the one shown is ignored.
+   */
+  markPresent(key: string | undefined, present: boolean): void;
   shown(): string | undefined;
   editing(): boolean;
   dispose(): void;
@@ -43,6 +57,14 @@ export interface NoteHover {
 
 export function createNoteHover(options: NoteHoverOptions): NoteHover {
   return new NoteHoverController(options);
+}
+
+/**
+ * The text a finished edit keeps: undefined when the writer left it as the
+ * editor started, so a note changed elsewhere meanwhile is not written back.
+ */
+export function changedText(started: string, text: string): string | undefined {
+  return text === started ? undefined : text;
 }
 
 type Schedule = NoteHoverOptions["schedule"];
@@ -77,6 +99,8 @@ class TimerSlot {
 class NoteHoverController implements NoteHover {
   private key: string | undefined;
   private writing = false;
+  /** Whether the shown mark has been reported present (`markPresent`). */
+  private seen = false;
   private overCard = false;
   private readonly opening: TimerSlot;
   private readonly closing: TimerSlot;
@@ -136,6 +160,9 @@ class NoteHoverController implements NoteHover {
   }
 
   edit(key: string): void {
+    if (this.writing && this.key !== key) {
+      this.options.commitEdit?.();
+    }
     this.dispose();
     this.overCard = false;
     this.show(key, true);
@@ -144,6 +171,19 @@ class NoteHoverController implements NoteHover {
   endEdit(options: { close?: boolean } = {}): void {
     if (this.writing) {
       this.show(options.close ? undefined : this.key, false);
+    }
+  }
+
+  markPresent(key: string | undefined, present: boolean): void {
+    if (key === undefined || key !== this.key) {
+      return;
+    }
+    if (present) {
+      this.seen = true;
+    } else if (this.seen) {
+      this.dispose();
+      this.overCard = false;
+      this.show(undefined, false);
     }
   }
 
@@ -163,6 +203,9 @@ class NoteHoverController implements NoteHover {
 
   private show(key: string | undefined, writing: boolean): void {
     if (this.key !== key || this.writing !== writing) {
+      if (this.key !== key) {
+        this.seen = false;
+      }
       this.key = key;
       this.writing = writing;
       this.options.onChange(key, writing);

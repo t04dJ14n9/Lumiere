@@ -207,7 +207,7 @@ function keepSpaceBeforeCaret(
 export function continueList(target: Target): boolean {
   const { state } = target;
   const range = state.selection.main;
-  if (state.selection.ranges.length > 1 || !range.empty) {
+  if (state.readOnly || state.selection.ranges.length > 1 || !range.empty) {
     return false;
   }
   if (exitSetextHeading(target)) {
@@ -381,6 +381,11 @@ function newItemAfter(target: Target, item: SyntaxNode): boolean {
   return true;
 }
 
+/** A list line is continued only in an editable editor, with one caret. */
+function hasOneEditableCaret(state: Target["state"]): boolean {
+  return !state.readOnly && state.selection.ranges.length === 1;
+}
+
 /**
  * Shift+Enter: a line break inside the block, as in Obsidian: the new line
  * keeps the quotes and lines up with a list item's text. Thematic breaks
@@ -400,7 +405,7 @@ function newItemAfter(target: Target, item: SyntaxNode): boolean {
  */
 export function continueLine(target: Target): boolean {
   const { state } = target;
-  if (state.selection.ranges.length > 1) {
+  if (!hasOneEditableCaret(state)) {
     return false;
   }
   // Same setext exit as Enter (BH-076): soft-break must not orphan ===/---.

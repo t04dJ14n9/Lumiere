@@ -39,7 +39,8 @@ While it runs it sets the `smartListsOn` editor facet
 Line Up and Down move list items whole, as Obsidian's Smart lists setting
 does.
 `lumiere.markdown.plugins.smartLists.enabled` defaults to true. Enter and
-Shift+Enter are the only bindings; no palette commands.
+Shift+Enter are the only bindings; no palette commands. In a read-only editor
+they do not continue a list.
 
 ## Limits and differences from Obsidian
 

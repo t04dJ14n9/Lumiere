@@ -4,6 +4,7 @@ import {
   warmMarkdownDocumentFor,
   type DocumentWarmHost,
 } from "./document-warm-core";
+import { markdownChangeUris } from "./document-warm-policy";
 
 export type { DocumentWarmHost } from "./document-warm-core";
 export {
@@ -113,7 +114,7 @@ export async function warmMarkdownDocument(uri: vscode.Uri): Promise<void> {
  */
 function watchGit(
   warmGitChanges: (
-    changeUris: readonly string[],
+    changeUris: Iterable<string>,
     live: () => boolean,
     source: string,
   ) => void,
@@ -123,13 +124,13 @@ function watchGit(
   const subscriptions: vscode.Disposable[] = [];
 
   const sweep = (repository: GitRepository) => {
-    const changes = [
-      ...repository.state.workingTreeChanges,
-      ...repository.state.indexChanges,
-      ...(repository.state.mergeChanges ?? []),
-    ];
+    const {
+      workingTreeChanges,
+      indexChanges,
+      mergeChanges = [],
+    } = repository.state;
     warmGitChanges(
-      changes.map((change) => change.uri.toString()),
+      markdownChangeUris([workingTreeChanges, indexChanges, mergeChanges]),
       () => live,
       repository.rootUri.toString(),
     );

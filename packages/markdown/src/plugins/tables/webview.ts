@@ -107,11 +107,14 @@ function createEnvironment(ctx: Context): TableEnvironment {
         void stop?.();
       };
     },
-    copy: (text) => {
-      void editor.clipboard
-        .write(text)
-        .catch((error) => ctx.logger.error("Copy failed", error));
-    },
+    copy: (text) =>
+      editor.clipboard.write(text).then(
+        () => true,
+        (error: unknown) => {
+          ctx.logger.error("Copy failed", error);
+          return false;
+        },
+      ),
     paste: () => editor.clipboard.read(),
   };
 }

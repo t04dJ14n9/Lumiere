@@ -91,7 +91,13 @@ export class ContextImpl implements BaseContext {
       );
     }
     if (value === undefined) {
-      throw new CoreError("DuplicateService", `${name} cannot be undefined`);
+      throw new CoreError("InvalidService", `${name} cannot be undefined`);
+    }
+    if (isAnsweredByContext(this, name)) {
+      throw new CoreError(
+        "InvalidService",
+        `${name} is a name the context uses itself`,
+      );
     }
     const entry = { owner: this.owner, value };
     const previous = this.runtime.published.get(name);
@@ -228,4 +234,12 @@ export class ContextImpl implements BaseContext {
     }
     return this.facades.get(value);
   }
+}
+
+/**
+ * Names the context's proxy answers itself (see the constructor), so a
+ * service published under one could never be read.
+ */
+function isAnsweredByContext(context: object, name: string): boolean {
+  return name === "then" || Reflect.has(context, name);
 }

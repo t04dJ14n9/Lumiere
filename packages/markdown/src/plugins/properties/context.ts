@@ -35,6 +35,7 @@ export interface PropertyContext {
       yaml?: string,
     ): boolean;
     edit?(header: string, operation: PropertyEdit): boolean;
+    isReadOnly?(): boolean;
     types?(): PropertyTypes;
     names?(): Promise<readonly string[]>;
     collapsed?(): boolean;

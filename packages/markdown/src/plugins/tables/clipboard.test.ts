@@ -40,12 +40,18 @@ function clipboardFixture() {
   const projection = { inner, active: { row: 1, column: 0 } } as CellProjection;
   const selection = {
     range: undefined as CellRange | undefined,
+    activate(range: CellRange) {
+      this.range = range;
+    },
+    highlight() {},
   } as TableSelection;
   const copied: string[] = [];
   let read: () => Promise<string> = async () => "pasted";
+  let write: (text: string) => Promise<boolean> = async () => true;
   const clipboard = new TableClipboard(grid, projection, selection, {
     copy: (text) => {
       copied.push(text);
+      return write(text);
     },
     paste: () => read(),
     wrap: () => false,
@@ -55,11 +61,15 @@ function clipboardFixture() {
   return {
     clipboard,
     inner,
+    projection,
     grid,
     copied,
     selection,
     setRead(reader: () => Promise<string>) {
       read = reader;
+    },
+    setWrite(writer: (text: string) => Promise<boolean>) {
+      write = writer;
     },
   };
 }
@@ -70,11 +80,82 @@ test("cell clipboard menu copies and cuts selected raw text and pastes at the se
   const range = { anchor: position, head: position };
   fixture.clipboard.copyFromMenu(range, false);
   assert.deepEqual(fixture.copied, ["irs"]);
-  fixture.clipboard.copyFromMenu(range, true);
+  await fixture.clipboard.copyFromMenu(range, true);
   assert.equal(fixture.inner.state.doc.toString(), "ft");
   await fixture.clipboard.pasteFromMenu(range);
   assert.equal(fixture.inner.state.doc.toString(), "fpastedt");
   assert.equal(fixture.clipboard.canFormat, false);
+});
+
+test("a Cut whose clipboard write fails keeps its cells", async () => {
+  const fixture = clipboardFixture();
+  const position = { row: 1, column: 0 };
+  const range = { anchor: position, head: position };
+  fixture.selection.range = range;
+  fixture.setWrite(async () => false);
+  await fixture.clipboard.copyFromMenu(range, true);
+  assert.equal(fixture.grid.block.source, source);
+});
+
+test("a Cut clears its cells only once the write has succeeded", async () => {
+  const fixture = clipboardFixture();
+  const position = { row: 1, column: 0 };
+  const range = { anchor: position, head: position };
+  fixture.selection.range = range;
+  let finish: (ok: boolean) => void = () => {};
+  fixture.setWrite(
+    () =>
+      new Promise((resolve) => {
+        finish = resolve;
+      }),
+  );
+  const cut = fixture.clipboard.copyFromMenu(range, true);
+  assert.equal(fixture.grid.block.source, source, "cleared before the write");
+  finish(true);
+  await cut;
+  assert.notEqual(fixture.grid.block.source, source);
+});
+
+test("a Cut whose cell changes during the write clears nothing, and says so", async () => {
+  const fixture = clipboardFixture();
+  let finish: (ok: boolean) => void = () => {};
+  fixture.setWrite(
+    () =>
+      new Promise((resolve) => {
+        finish = resolve;
+      }),
+  );
+  const cut = fixture.clipboard.copyFromMenu(
+    { anchor: { row: 1, column: 0 }, head: { row: 1, column: 0 } },
+    true,
+  );
+  // The cell editor moved on to another cell while the clipboard was written.
+  (fixture.projection as { sessionRevision?: number }).sessionRevision = 7;
+  finish(true);
+  await assert.rejects(cut, /changed before Cut completed/);
+  assert.equal(fixture.inner.state.doc.toString(), "first");
+});
+
+test("a Cut over a note that turns read-only during the write keeps its cells", async () => {
+  const fixture = clipboardFixture();
+  const position = { row: 1, column: 0 };
+  const range = { anchor: position, head: position };
+  fixture.selection.range = range;
+  let finish: (ok: boolean) => void = () => {};
+  fixture.setWrite(
+    () =>
+      new Promise((resolve) => {
+        finish = resolve;
+      }),
+  );
+  const cut = fixture.clipboard.copyFromMenu(range, true);
+  (fixture.grid as unknown as { outer: unknown }).outer = {
+    focus() {},
+    state: { readOnly: true },
+  };
+  finish(true);
+  await cut;
+  assert.equal(fixture.grid.block.source, source);
 });
 
 test("delayed clipboard paste refuses a changed table or cell selection", async () => {

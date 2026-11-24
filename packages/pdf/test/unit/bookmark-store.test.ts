@@ -7,9 +7,11 @@ import {
   bookmarkFileOf,
 } from "../../src/host/viewer/bookmark-store";
 
+const keyOf = (sha: string) =>
+  `/vault/.lumiere/pdf-annotations/${sha}.bookmarks.json`;
 const SHA = "cd".repeat(32);
 const FILE = { uri: "file:///vault/papers/a.pdf", sha256: SHA };
-const KEY = `/vault/.lumiere/pdf-annotations/${SHA}.bookmarks.json`;
+const KEY = keyOf(SHA);
 const tick = () => new Promise<void>((resolve) => setImmediate(resolve));
 
 const mark = (id: string, page: number, title = `Mark ${id}`): Bookmark => ({
@@ -30,19 +32,19 @@ function disk() {
   const watchers = new Set<() => void>();
   const writes: Array<string | undefined> = [];
   const window = (): PdfBookmarkFiles => ({
-    read: async (_uri, _sha) => files.get(KEY),
-    write: async (_uri, _sha, text) => {
+    read: async (_uri, sha) => files.get(keyOf(sha)),
+    write: async (_uri, sha, text) => {
       writes.push(text);
       if (text === undefined) {
-        files.delete(KEY);
+        files.delete(keyOf(sha));
       } else {
-        files.set(KEY, text);
+        files.set(keyOf(sha), text);
       }
       for (const watcher of [...watchers]) {
         watcher();
       }
     },
-    key: () => KEY,
+    key: (_uri, sha) => keyOf(sha),
     watch: (_uri, _sha, onChange) => {
       watchers.add(onChange);
       return () => watchers.delete(onChange);
@@ -234,4 +236,83 @@ test("a panel's bookmark file is the one for the bytes the viewer has", () => {
     undefined,
   );
   assert.equal(bookmarkFileOf(undefined), undefined);
+});
+
+test("a PDF's bookmarks are carried to the bytes Lumiere rewrote it to, and the old file is kept", async () => {
+  const d = disk();
+  const OLD = "ef".repeat(32);
+  const text = `${JSON.stringify({ version: 1, bookmarks: [mark("a", 3)] }, null, 2)}\n`;
+  d.files.set(keyOf(OLD), text);
+  await store(d.window()).carry({ uri: FILE.uri, sha256: OLD }, FILE);
+  assert.equal(d.files.get(KEY), text);
+  assert.equal(d.files.get(keyOf(OLD)), text);
+});
+
+test("a carry never overwrites the bookmarks already under the new bytes", async () => {
+  const d = disk();
+  const OLD = "ef".repeat(32);
+  const newer = `${JSON.stringify({ version: 1, bookmarks: [mark("b", 1)] }, null, 2)}\n`;
+  d.files.set(
+    keyOf(OLD),
+    `${JSON.stringify({ version: 1, bookmarks: [mark("a", 3)] }, null, 2)}\n`,
+  );
+  d.files.set(KEY, newer);
+  await store(d.window()).carry({ uri: FILE.uri, sha256: OLD }, FILE);
+  assert.equal(d.files.get(KEY), newer);
+});
+
+test("a carry from a PDF with no bookmarks file writes nothing", async () => {
+  const d = disk();
+  await store(d.window()).carry(
+    { uri: FILE.uri, sha256: "ef".repeat(32) },
+    FILE,
+  );
+  assert.deepEqual(d.writes, []);
+});
+
+test("an entry this version cannot read is kept verbatim, and the other entries still change", async () => {
+  const d = disk();
+  d.files.set(
+    KEY,
+    `${JSON.stringify({ version: 1, bookmarks: [mark("a", 3), { id: "broken" }] }, null, 2)}\n`,
+  );
+  const bookmarks = store(d.window());
+  await bookmarks.add(FILE, mark("b", 1));
+  assert.deepEqual(JSON.parse(d.files.get(KEY)!).bookmarks.at(-1), {
+    id: "broken",
+  });
+  assert.deepEqual(ids(await bookmarks.read(FILE)), ["b", "a"]);
+  // Removing every readable bookmark keeps the file: it still holds the entry.
+  await bookmarks.remove(FILE, "a");
+  await bookmarks.remove(FILE, "b");
+  assert.deepEqual(JSON.parse(d.files.get(KEY)!).bookmarks, [{ id: "broken" }]);
+  assert.deepEqual(await bookmarks.read(FILE), []);
+});
+
+test("a repeat of a bookmark's id is kept, and reads as that bookmark once the first is removed", async () => {
+  const d = disk();
+  d.files.set(
+    KEY,
+    `${JSON.stringify({ version: 1, bookmarks: [mark("a", 3), mark("a", 5, "Second")] }, null, 2)}\n`,
+  );
+  const bookmarks = store(d.window());
+  await bookmarks.remove(FILE, "a");
+  assert.equal(JSON.parse(d.files.get(KEY)!).bookmarks[0].title, "Second");
+  assert.deepEqual(ids(await bookmarks.read(FILE)), ["a"]);
+  assert.equal((await bookmarks.read(FILE))[0]!.title, "Second");
+});
+
+test("a bookmark that would not read back is refused, and the file is left as it was", async () => {
+  const d = disk();
+  const text = `${JSON.stringify({ version: 1, bookmarks: [mark("a", 3)] }, null, 2)}\n`;
+  d.files.set(KEY, text);
+  await assert.rejects(
+    store(d.window()).add(FILE, {
+      ...mark("n", 1),
+      position: { top: Number.NaN, left: 0 },
+    }),
+    /would not read back/u,
+  );
+  assert.deepEqual(d.writes, []);
+  assert.equal(d.files.get(KEY), text);
 });

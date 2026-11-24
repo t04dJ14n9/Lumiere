@@ -46,6 +46,7 @@ export interface TableEnvironment {
     point: { x: number; y: number },
     report: (message: string) => void,
   ): () => void;
-  copy(text: string): void;
+  /** Writes text to the clipboard. Resolves false when the write failed; it never rejects. */
+  copy(text: string): Promise<boolean>;
   paste(): Promise<string>;
 }

@@ -57,7 +57,11 @@ function wrapSelectedLines(state: EditorState): TransactionSpec {
  * it in a table cell, so nothing is edited there, nor in a read-only editor.
  */
 export function insertCalloutCommand(view: EditorView): boolean {
-  if (view.state.readOnly || selectionTouchesTableCell(view.state)) {
+  // Insert Callout edits only the main selection, so only its ends count.
+  if (
+    view.state.readOnly ||
+    selectionTouchesTableCell(view.state, [view.state.selection.main])
+  ) {
     return false;
   }
   view.dispatch(insertCallout(view.state));

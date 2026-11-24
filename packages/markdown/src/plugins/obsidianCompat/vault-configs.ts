@@ -35,7 +35,7 @@ export class VaultConfigs implements ObsidianCompat {
   constructor(private readonly options: VaultConfigsOptions) {}
 
   async getPropertyTypes(scope: VaultConfigScope) {
-    return (await this.resolve(scope)).types.types;
+    return (await this.resolve(scope))?.types.types ?? Object.freeze({});
   }
   async setPropertyType(
     scope: VaultConfigScope,
@@ -43,12 +43,15 @@ export class VaultConfigs implements ObsidianCompat {
     type: WirePropertyType | null,
   ): Promise<void> {
     const config = await this.resolve(scope);
+    if (!config) {
+      throw new Error("An untitled note has no vault configuration to change.");
+    }
     await config.types.set(name, type);
   }
   async getObsidianOverrides(
     scope: VaultConfigScope,
   ): Promise<ObsidianOverrides> {
-    return (await this.resolve(scope)).overrides;
+    return (await this.resolve(scope))?.overrides ?? Object.freeze({});
   }
   onDidChangeVaultConfig(
     listener: (change: VaultConfigChange) => void,
@@ -101,8 +104,17 @@ export class VaultConfigs implements ObsidianCompat {
     this.listeners.clear();
   }
 
-  private async resolve(scope: VaultConfigScope): Promise<VaultConfig> {
+  /**
+   * Undefined for an untitled note: it has no file system, so its vault's
+   * `.obsidian` cannot be read (the host has no provider for `untitled:`).
+   */
+  private async resolve(
+    scope: VaultConfigScope,
+  ): Promise<VaultConfig | undefined> {
     this.assertLive();
+    if ("documentUri" in scope && scope.documentUri.startsWith("untitled:")) {
+      return undefined;
+    }
     const resource =
       "documentUri" in scope
         ? scope.documentUri

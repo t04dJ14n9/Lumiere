@@ -44,9 +44,22 @@ export function isAttachmentDrag(data: DragPayload | null): boolean {
   return data.files.length > 0;
 }
 
-/** Alias used by the webview: claiming the drop blocks VS Code's open-tab. */
-export function shouldClaimEditorDrop(data: DragPayload | null): boolean {
-  return isAttachmentDrag(data);
+/**
+ * Alias used by the webview: claiming the drop blocks VS Code's open-tab.
+ * Over a text field only a file drag is claimed: a link or resource dropped
+ * there is the text the field takes.
+ */
+export function shouldClaimEditorDrop(
+  data: DragPayload | null,
+  overTextField = false,
+): boolean {
+  if (!overTextField) {
+    return isAttachmentDrag(data);
+  }
+  return (
+    data !== null &&
+    (Array.from(data.types).includes("Files") || data.files.length > 0)
+  );
 }
 
 /** Push trimmed string entries from a JSON array uri-list payload. */

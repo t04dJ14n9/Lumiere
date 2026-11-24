@@ -21,9 +21,36 @@ export function documentWarmEnabled({
   return mode === "on";
 }
 
+const MARKDOWN_NOTE = /\.(md|markdown)$/i;
+
 /** Notes on disk that our custom editor may open. */
 export function isWarmableMarkdown(uri: string): boolean {
-  return /^file:/i.test(uri) && /\.(md|markdown)$/i.test(uri);
+  return /^file:/i.test(uri) && MARKDOWN_NOTE.test(uri);
+}
+
+/** What a Git change's URI offers before it is made a string. */
+interface ChangedUri {
+  readonly scheme: string;
+  readonly path: string;
+  toString(): string;
+}
+
+/**
+ * The warmable notes among changes, as URI strings made one at a time as the
+ * caller reads on. A repository can report tens of thousands of changes and
+ * `toString()` is the costly part of each; the path says at once whether a
+ * change is a note (`isWarmableMarkdown` still has the last word).
+ */
+export function* markdownChangeUris(
+  changeLists: Iterable<Iterable<{ readonly uri: ChangedUri }>>,
+): Generator<string> {
+  for (const changes of changeLists) {
+    for (const { uri } of changes) {
+      if (uri.scheme === "file" && MARKDOWN_NOTE.test(uri.path)) {
+        yield uri.toString();
+      }
+    }
+  }
 }
 
 /**
@@ -40,19 +67,28 @@ export function shouldWarmUri(
 /**
  * Deduplicated warmable change URIs that still need materialization.
  * Already-open entries are omitted so they do not consume a warm budget.
+ * Collecting stops at `limit` targets, without reading the changes after
+ * them (a lazy `changeUris` is never advanced past its last target).
  */
 export function collectGitWarmTargets(
-  changeUris: readonly string[],
+  changeUris: Iterable<string>,
   openUris: ReadonlySet<string>,
+  limit = Number.POSITIVE_INFINITY,
 ): string[] {
   const out: string[] = [];
   const seen = new Set<string>();
+  if (limit <= 0) {
+    return out;
+  }
   for (const uri of changeUris) {
     if (seen.has(uri) || !shouldWarmUri(uri, openUris)) {
       continue;
     }
     seen.add(uri);
     out.push(uri);
+    if (out.length >= limit) {
+      break;
+    }
   }
   return out;
 }

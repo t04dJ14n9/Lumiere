@@ -114,7 +114,7 @@ export function createDocumentWarmer(
    * (the repository) supersedes this one: it stops at its next batch.
    */
   warmGitChanges: (
-    changeUris: readonly string[],
+    changeUris: Iterable<string>,
     live: () => boolean,
     source?: string,
   ) => void;
@@ -143,7 +143,7 @@ export function createDocumentWarmer(
   };
 
   const warmGitChanges = (
-    changeUris: readonly string[],
+    changeUris: Iterable<string>,
     live: () => boolean,
     source?: string,
   ) => {
@@ -154,9 +154,11 @@ export function createDocumentWarmer(
     const current = () =>
       live() && (source === undefined || latestSweep.get(source) === sweep);
     // Capped before the per-note setting is read: that read is the cost.
-    const targets = collectGitWarmTargets(changeUris, host.textDocumentUris())
-      .slice(0, gitCap)
-      .filter((uri) => enabledFor(host, uri));
+    const targets = collectGitWarmTargets(
+      changeUris,
+      host.textDocumentUris(),
+      gitCap,
+    ).filter((uri) => enabledFor(host, uri));
     // All repositories and change events share one concurrency budget.
     gitDrain = gitDrain.then(() =>
       drainGitWarmTargets({ host, targets, gitLimit, pending, live: current }),

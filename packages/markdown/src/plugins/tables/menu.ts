@@ -8,7 +8,7 @@ import type { Axis, TableOperation } from "../../markdown/tables/operations";
 import type { MenuItem } from "../editor/api";
 
 export interface TableMenuActions {
-  copy(cut: boolean): void;
+  copy(cut: boolean): Promise<void>;
   paste(plainText: boolean): Promise<void>;
   selectAll(): void;
   format(marker: string | null): void;

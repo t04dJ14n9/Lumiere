@@ -116,7 +116,8 @@ is opt-in (`lumiere.pdf.regions.enabled`, default off).
     `lumiere.pdf.annotations.protectedFolders` (default `[".raw"]`). The
     extension writes the PDF only for a save this command (or its Retry)
     asked the viewer for, and checks the protected folders again just
-    before writing.
+    before writing. The save also copies the PDF's bookmarks to the new
+    bytes; the bookmark file for the old bytes stays.
   - **PDF: Export Annotated Copy…** writes a new PDF with them, for sharing.
   - Annotations a PDF already holds show as usual; a change to one is kept
     only by saving into the PDF, and Lumiere says so the first time.
@@ -209,12 +210,15 @@ bookmarks are yours.
 **Where they are kept.** Beside the PDF's annotation file, as
 `.lumiere/pdf-annotations/<sha256>.bookmarks.json` (the annotation file is
 `<sha256>.json`), named by the PDF's SHA-256: one folder, so
-`lumiere.pdf.annotations.folder` moves both and the PDF's bytes never change.
+`lumiere.pdf.annotations.folder` names where both are kept; changing it does not move existing files, and nothing migrates them, so after a change the old annotations and bookmarks are no longer found. The PDF's bytes never change.
 The same PDF anywhere shows the same bookmarks, a renamed or moved copy keeps
 them, and a PDF whose bytes change (a rebuilt paper) starts with none while
-the old file stays for the old version. The file is versioned JSON, written
+the old file stays for the old version. **Save Annotations into This PDF**
+changes the bytes, so it copies the bookmarks to the new ones, and the old
+file stays. The file is versioned JSON, written
 whole and atomically (a temporary file renamed over the old one), and removed
-when the last bookmark is deleted:
+when the last bookmark is deleted, unless it still holds an entry this version
+cannot read, which is kept as it was written:
 
 ```json
 {
@@ -442,7 +446,9 @@ itself does not put the image path on the clipboard. See
 Instead of pasting, an agent can ask the viewer for what you have selected.
 Turn on `lumiere.pdf.agentBridge.enabled` (or run **PDF: Copy MCP Setup
 for Claude Code / Codex…**, which offers to) and the extension starts a local
-[MCP](https://modelcontextprotocol.io/) server with these tools:
+[MCP](https://modelcontextprotocol.io/) server with these tools. In a folder
+that is not trusted the server does not run, and Copy MCP Setup says so; it
+starts when the folder is trusted.
 
 | Tool                         | What it does                                                                                                                                                                                                                                                                                      |
 | ---------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |

@@ -4,6 +4,7 @@ import { CancelToken } from "../../shared/rpc/lifecycle";
 import type { WorkerLauncher } from "../../shared/workers";
 import type { Vault } from "../vault/api";
 import type { SearchResponse } from "./protocol";
+import { SEARCH_RESULT_LIMIT, SEARCH_SKIP_LIMIT } from "./limits";
 import { searchVault } from "./query";
 import type { SearchResultsTree } from "./results-tree";
 import { SearchWorker, type SearchEvaluator } from "./runner";
@@ -131,9 +132,18 @@ function summary(
     files === 0
       ? `No notes match “${query}”.`
       : `${files} ${files === 1 ? "file matches" : "files match"} “${query}”.`;
-  if (response.unreadable === 0) {
-    return found;
-  }
-  const noun = response.unreadable === 1 ? "file" : "files";
-  return `${found} ${response.unreadable} ${noun} could not be read.`;
+  const unreadable =
+    response.unreadable === 0
+      ? ""
+      : ` ${response.unreadable} ${response.unreadable === 1 ? "file" : "files"} could not be read.`;
+  const skipped = response.skipped?.length
+    ? ` Skipped, as their evaluation took too long: ${response.skipped.join(", ")}.`
+    : "";
+  const truncated = response.truncated
+    ? ` Stopped at ${SEARCH_RESULT_LIMIT} matching files; the rest were not searched.`
+    : "";
+  const tooSlow = response.tooSlow
+    ? ` Stopped after ${SEARCH_SKIP_LIMIT} files took too long; the rest were not searched.`
+    : "";
+  return `${found}${unreadable}${skipped}${truncated}${tooSlow}`;
 }

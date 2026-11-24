@@ -58,6 +58,7 @@ beforeEach(async () => {
 });
 afterEach(async () => {
   vscode.configuration.clear();
+  vscode.setWorkspaceTrusted(true);
   vscode.forgetAll();
   await rm(folder, { recursive: true, force: true });
 });
@@ -118,6 +119,32 @@ function listening(port: number): Promise<boolean> {
     });
     socket.once("error", () => resolve(false));
   });
+}
+
+/**
+ * Retries `read` until it answers `expected`. The discovery file is replaced
+ * by a rename, so a read during the replacement may fail: a failed read is
+ * retried too. At the deadline the last answer or error is the failure.
+ */
+async function eventually<T>(
+  read: () => Promise<T>,
+  expected: T,
+): Promise<void> {
+  const deadline = Date.now() + 2000;
+  for (;;) {
+    try {
+      assert.deepEqual(await read(), expected);
+      return;
+    } catch (error) {
+      if (Date.now() >= deadline) {
+        throw new Error(
+          `The discovery file did not show ${JSON.stringify(expected)} within 2 s: ${String(error)}`,
+          { cause: error },
+        );
+      }
+    }
+    await new Promise((resolve) => setTimeout(resolve, 10));
+  }
 }
 
 test("routes are logged as fixed labels, never as the URL", () => {
@@ -269,8 +296,7 @@ test("a folder added to the window or removed from it is in the discovery file t
       .workspaceFolders;
   assert.deepEqual(await folders(), [vscode.Uri.file("/work/a").fsPath]);
   vscode.setWorkspaceFolders([vscode.Uri.file("/work/b")]);
-  await new Promise((resolve) => setTimeout(resolve, 50));
-  assert.deepEqual(await folders(), [vscode.Uri.file("/work/b").fsPath]);
+  await eventually(folders, [vscode.Uri.file("/work/b").fsPath]);
   await bridge.dispose();
   // A change after the bridge stopped writes no file again.
   vscode.setWorkspaceFolders([vscode.Uri.file("/work/c")]);
@@ -358,6 +384,102 @@ test("the controller disposed while the server starts leaves no listener, file o
     !lines.some((line) => line.includes("listening")),
     lines.join("\n"),
   );
+});
+
+test("Copy MCP Setup in an untrusted folder says so, and offers and copies nothing", async () => {
+  vscode.setWorkspaceTrusted(false);
+  vscode.configuration.set("lumiere.pdf.agentBridge.enabled", false);
+  const registerCommand = vscode.commands.registerCommand;
+  const showInformationMessage = vscode.window.showInformationMessage;
+  const showQuickPick = vscode.window.showQuickPick;
+  const writeText = vscode.env.clipboard.writeText;
+  let runCommand: (() => Promise<void>) | undefined;
+  const messages: string[] = [];
+  const copied: string[] = [];
+  let offered = false;
+  vscode.commands.registerCommand = ((id: string, cb: () => Promise<void>) => {
+    if (id === "lumiere.pdf.copyMcpSetup") {
+      runCommand = cb;
+    }
+    return registerCommand(id);
+  }) as never;
+  vscode.window.showInformationMessage = (async (message: string) => {
+    messages.push(message);
+    return undefined;
+  }) as never;
+  vscode.window.showQuickPick = (async () => {
+    offered = true;
+    return undefined;
+  }) as never;
+  vscode.env.clipboard.writeText = (async (text: string) => {
+    copied.push(text);
+  }) as never;
+  const controller = registerAgentBridge({
+    extensionUri: vscode.Uri.file("/nonexistent-extension") as never,
+    globalStorageUri: vscode.Uri.file(folder) as never,
+    deps: depsWith(0),
+    log,
+    discoveryDir: path.join(folder, "bridges"),
+    shutdownGraceMs: 100,
+  });
+  try {
+    await runCommand!();
+    assert.deepEqual(messages, [
+      "The agent bridge runs only in a trusted folder. Trust this folder to use it.",
+    ]);
+    assert.equal(offered, false);
+    assert.deepEqual(copied, []);
+    assert.equal(
+      vscode.workspace
+        .getConfiguration("lumiere.pdf")
+        .get("agentBridge.enabled", false),
+      false,
+    );
+  } finally {
+    await controller.dispose();
+    vscode.commands.registerCommand = registerCommand;
+    vscode.window.showInformationMessage = showInformationMessage;
+    vscode.window.showQuickPick = showQuickPick;
+    vscode.env.clipboard.writeText = writeText;
+    vscode.setWorkspaceTrusted(true);
+  }
+});
+
+test("an untrusted folder runs no bridge, and granting trust starts it", async () => {
+  vscode.setWorkspaceTrusted(false);
+  vscode.configuration.set("lumiere.pdf.agentBridge.enabled", true);
+  const controller = registerAgentBridge({
+    extensionUri: vscode.Uri.file("/nonexistent-extension") as never,
+    globalStorageUri: vscode.Uri.file(folder) as never,
+    deps: depsWith(1),
+    log,
+    discoveryDir: path.join(folder, "bridges"),
+    shutdownGraceMs: 100,
+  });
+  try {
+    // Time for a start that should not happen to run its course.
+    await new Promise((done) => setTimeout(done, 300));
+    assert.ok(
+      !lines.some((line) => line.includes("listening")),
+      lines.join("\n"),
+    );
+    assert.deepEqual(await readdir(folder), []);
+    vscode.setWorkspaceTrusted(true);
+    // The bridge logs "listening" before it writes its discovery file, so wait
+    // for the file itself: a loaded machine can read the folder in between.
+    await eventually(
+      async () =>
+        (await readdir(path.join(folder, "bridges")).catch(() => [])).filter(
+          (name) => name.endsWith(".json"),
+        ).length,
+      1,
+    );
+    await discoveryFile();
+  } finally {
+    // A failure above must not leave a listener that keeps the run alive.
+    await controller.dispose();
+  }
+  assert.deepEqual(vscode.outstanding(), []);
 });
 
 test("the controller disposed while the bridge runs waits for it to stop", async () => {

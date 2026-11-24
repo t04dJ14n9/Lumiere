@@ -65,6 +65,22 @@ export interface RenamedHeading {
  * alias. Nested subpaths (`#Parent#Heading`) are left, as Obsidian leaves
  * them.
  */
+/**
+ * Whether a link's fragment (what follows its `#`) names the renamed heading:
+ * it is one level of text, and the heading it finds is this one. Shared by
+ * note links and canvas file nodes.
+ */
+export function namesRenamedHeading(
+  renamed: RenamedHeading,
+  fragment: string,
+): boolean {
+  return (
+    fragment !== "" &&
+    !fragment.includes("#") &&
+    noteFragment(renamed.text, fragment)?.from === renamed.heading.from
+  );
+}
+
 export function headingLinkEdits(
   text: string,
   sourcePath: string,
@@ -89,12 +105,9 @@ export function headingLinkEdits(
         ? splitLinktext(link.link)
         : splitMarkdownDestination(link.link);
     const target = path ? resolve(path, sourcePath, syntax) : sourcePath;
-    const fragment = subpath.slice(1);
     if (
       target !== renamed.path ||
-      !fragment ||
-      fragment.includes("#") ||
-      noteFragment(renamed.text, fragment)?.from !== renamed.heading.from
+      !namesRenamedHeading(renamed, subpath.slice(1))
     ) {
       continue;
     }

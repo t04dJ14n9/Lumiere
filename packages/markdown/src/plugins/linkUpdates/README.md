@@ -66,7 +66,9 @@ on a heading line (as in Obsidian's editor menu), renames the heading at the
 caret and updates the links to it, as Obsidian's Rename heading does: each link whose single `#subpath`
 names the heading (as links resolve, so case does not matter), in the note
 and in every note linking to it, keeping its path, form and alias
-(`heading-rename.ts`, `rename-heading.ts`). The note itself is edited first;
+(`heading-rename.ts`, `rename-heading.ts`). Every canvas in the vault is read
+too: a text node's links to the heading are rewritten, and a file node whose
+`subpath` names it takes the new name (`canvas.ts`). The note itself is edited first;
 if it changed while the name was being asked for, nothing is renamed and the
 command says so. As after a file rename, a linking note is saved if it had
 no unsaved changes, and one that had is left unsaved. A linking note that

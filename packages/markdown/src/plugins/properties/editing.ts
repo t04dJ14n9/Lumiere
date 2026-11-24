@@ -55,6 +55,7 @@ export class PropertyEditing {
       set: (expected, key, value, yaml) =>
         this.edit(expected, { type: "set", key, value, yaml }),
       edit: (expected, operation) => this.edit(expected, operation),
+      isReadOnly: () => this.options.view()?.state.readOnly ?? false,
       types: () => this.preferences,
       setType: (key, kind) => {
         this.options.setType(key, kind);
@@ -95,7 +96,7 @@ export class PropertyEditing {
    */
   edit(expected: string, operation: PropertyEdit): boolean {
     const view = this.options.view();
-    if (!view) {
+    if (!view || view.state.readOnly) {
       return false;
     }
     const displayed = [

@@ -12,9 +12,10 @@ export interface DocumentSession {
   attach(id: string, rpc: Endpoint): Disposer;
   /**
    * Bring in every panel's unsent edits. Rejects only when `origin` (the
-   * panel id of the caller) cannot; other panels are best effort.
+   * panel id of the caller) cannot; other panels are best effort. Panels get
+   * until `deadline` (epoch ms) to answer, 1.2 s from now by default.
    */
-  flush(origin?: string): Promise<void>;
+  flush(origin?: string, deadline?: number): Promise<void>;
   changed(): void;
   save(): Promise<boolean>;
   withAction<T>(action: () => Promise<T>): Promise<T>;
@@ -55,8 +56,11 @@ declare module "@workshop/core" {
       session: DocumentSession,
       changes?: readonly SourceEdit[],
     ) => void;
+    // `deadline` is set by a native save, whose listeners share one time
+    // budget (epoch ms): flush with it, not a fresh wait.
     /** @mode serial */ "document/willSave": (
       session: DocumentSession,
+      deadline?: number,
     ) => void | Promise<void>;
   }
 }

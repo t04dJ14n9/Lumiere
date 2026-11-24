@@ -1,6 +1,6 @@
 import test from "node:test";
 import assert from "node:assert/strict";
-import { EditorState } from "@codemirror/state";
+import { EditorSelection, EditorState } from "@codemirror/state";
 import type { EditorView } from "@codemirror/view";
 import { taskEdit, checklistEdit, runChecklist } from "./edits";
 test("checkbox changes check the expected line and preserve quotes, labels and custom states", () => {
@@ -64,6 +64,67 @@ test("toggling on an empty line leaves the caret after the new box", () => {
   const next = state.update(checklistEdit(state, false)).state;
   assert.equal(next.doc.toString(), "- [ ] ");
   assert.equal(next.selection.main.head, 6);
+});
+
+test("the checklist commands also refuse a caret at a table's end and a secondary caret in a row", () => {
+  const table = "| a | b |\n| --- | --- |\n| c | d |";
+  const doc = `${table}\n\nafter`;
+  const initials = [
+    EditorState.create({ doc, selection: { anchor: table.length } }),
+    EditorState.create({
+      doc,
+      selection: EditorSelection.create(
+        [
+          EditorSelection.cursor(doc.indexOf("c")),
+          EditorSelection.cursor(doc.indexOf("after")),
+        ],
+        1,
+      ),
+      extensions: [EditorState.allowMultipleSelections.of(true)],
+    }),
+  ];
+  for (const cycle of [false, true]) {
+    for (const initial of initials) {
+      let state = initial;
+      let dispatched = false;
+      const view = {
+        get state() {
+          return state;
+        },
+        dispatch(spec: Parameters<EditorState["update"]>[0]) {
+          dispatched = true;
+          state = state.update(spec).state;
+        },
+      } as unknown as EditorView;
+      assert.equal(runChecklist(view, cycle), false);
+      assert.equal(dispatched, false);
+      assert.equal(state.doc.toString(), doc);
+    }
+  }
+});
+
+test("the checklist commands refuse a selection that spans a table", () => {
+  const table = "| a | b |\n| --- | --- |\n| c | d |";
+  const doc = `before\n\n${table}\n\nafter`;
+  for (const cycle of [false, true]) {
+    let state = EditorState.create({
+      doc,
+      selection: { anchor: 0, head: doc.length },
+    });
+    let dispatched = false;
+    const view = {
+      get state() {
+        return state;
+      },
+      dispatch(spec: Parameters<EditorState["update"]>[0]) {
+        dispatched = true;
+        state = state.update(spec).state;
+      },
+    } as unknown as EditorView;
+    assert.equal(runChecklist(view, cycle), false);
+    assert.equal(dispatched, false);
+    assert.equal(state.doc.toString(), doc);
+  }
 });
 
 // Obsidian 1.15.0 registers both checklist commands behind

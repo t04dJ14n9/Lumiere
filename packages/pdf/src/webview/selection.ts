@@ -18,7 +18,7 @@ import type { PageRect } from "../shared/geometry";
 import { copiedText, type RegionSelection } from "../shared/selection";
 import { isEditableTarget } from "./editable-target";
 import { isInNoteCard } from "./note-card-target";
-import { postToHost, reportToHost } from "./host";
+import { reportToHost } from "./host";
 import { followMenuContext } from "./menu-context";
 import { readRegionDetails } from "./region-details";
 import { onRegionEnd, type RegionEnd } from "./region-drag";
@@ -84,10 +84,6 @@ export function useSelectionReporting(
   const reportNow = useCallback((): void => {
     void state.reportSelection(selection);
   }, [state, selection]);
-  const copyLinkForAgent = useCallback(async (): Promise<void> => {
-    await state.reportSelection(selection);
-    postToHost({ type: "copyLinkForAgent" });
-  }, [state, selection]);
   /** Clear whatever is selected, text or region (Escape). */
   const clear = useCallback((): void => {
     if (state.region) {
@@ -104,7 +100,7 @@ export function useSelectionReporting(
     },
     [state],
   );
-  return { region, clear, copyLinkForAgent, reportNow, setAnnotationRegion };
+  return { region, clear, reportNow, setAnnotationRegion };
 }
 
 function useSelectionMenuContext(
@@ -217,6 +213,8 @@ export class SelectionTracker {
     this.annotationOwned = false;
     this.region = undefined;
     this.setRegion(undefined);
+    // Until this read ends, Cmd/Ctrl+C must not copy the selection it replaces.
+    this.selectedText = undefined;
     void reportText(selection, this.source).then((text) => {
       // A newer selection's read may have finished first.
       if (rangeKey(selection.getRange()) === selected) {

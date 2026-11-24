@@ -9299,7 +9299,10 @@ today for a raw `<iframe src="https://…">` in a note in a trusted workspace (a
 remote page that posts, then is removed by a redraw). Fixing it (refusing an
 opaque origin and the window of an `iframe` in the page) was in the first
 version of this change with a test; it is not part of an HTML viewer and was
-dropped to keep this one focused.
+dropped to keep this one focused. Done since (#850, 2026-11-24): `fromHost` takes
+a message only when its origin is the page's own (not `"null"`) and its source is
+a window that is not one of the page's `iframe`s, so a message with no source is
+refused (`test/unit/ported/host-event.test.ts`).
 
 Community plugin compatibility (owner request 2026-11-21). Read, not run:
 https://community.obsidian.md/plugins/embed-html (Embed HTML) and its demo notes

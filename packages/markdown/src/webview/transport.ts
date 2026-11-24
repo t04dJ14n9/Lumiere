@@ -1,10 +1,24 @@
 import type { Transport } from "../shared/rpc/endpoint";
-// VS Code masks window.parent, but its actual wrapper still has the webview's origin.
+/**
+ * Whether a `message` event is the extension host's. VS Code masks
+ * window.parent, but its actual wrapper still has the webview's origin and
+ * names itself as the source. A frame a note put in the page (trusted
+ * workspaces allow `<iframe src="https://…">`) has its own origin, `"null"`
+ * if sandboxed, or the page's own if it is `about:blank` or `srcdoc`; and one
+ * that posts and is removed at once arrives with no source at all. None of
+ * those is the host, so the origin must be the page's and the source a window
+ * that is not one of the page's frames.
+ */
 export function fromHost(event: MessageEvent<unknown>): boolean {
-  return (
-    event.source === null ||
-    event.source === window ||
-    event.origin === window.location.origin
+  if (event.origin === "null" || event.origin !== window.location.origin) {
+    return false;
+  }
+  return event.source !== null && !isPageFrame(event.source);
+}
+
+function isPageFrame(source: MessageEventSource): boolean {
+  return Array.from(window.document.querySelectorAll("iframe")).some(
+    (frame) => frame.contentWindow === source,
   );
 }
 /**

@@ -72,10 +72,10 @@ test("smooth page/outline jumps animate (a zoom step lands at once); explicit fa
   );
   // The Stage takes every wheel event; without smooth motion a notch moves the view at once.
   const instant = await scrollTop(page);
-  expect(await wheel(page, 100)).toEqual({
-    prevented: true,
-    position: instant + 100,
-  });
+  const scrolled = await wheel(page, 100);
+  expect(scrolled.prevented).toBe(true);
+  // Within a thousandth: the browser may round the last digit of a position.
+  expect(scrolled.position).toBeCloseTo(instant + 100, 3);
   await act(page, { action: "actualSize" });
   await expect.poll(() => lastView(page)).toMatchObject({ zoomPercent: 100 });
   await page.emulateMedia({ reducedMotion: "no-preference" });
@@ -97,10 +97,9 @@ test("smooth page/outline jumps animate (a zoom step lands at once); explicit fa
     "false",
   );
   const resting = await scrollTop(page);
-  expect(await wheel(page, 100)).toEqual({
-    prevented: true,
-    position: resting + 100,
-  });
+  const settled = await wheel(page, 100);
+  expect(settled.prevented).toBe(true);
+  expect(settled.position).toBeCloseTo(resting + 100, 3);
 });
 
 /** Distinct scroll positions seen over the frames while `run` triggers a page jump. */

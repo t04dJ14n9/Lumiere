@@ -121,3 +121,15 @@ test("the sync's fake export matches the file format", async () => {
   const text = serializeAnnotations(await annotation.export())!;
   assert.equal((await parseAnnotations(text))?.bundle.items.length, 1);
 });
+
+test("a file in a form this viewer cannot compare is shown and deleted nothing, and is not counted as shown", async () => {
+  const one = viewer([A]);
+  const result = await showStoreFile(
+    one.annotation,
+    one.ownership,
+    { previous: file([A]), next: '{"version":1,"annotations":[]}' },
+    "op",
+  );
+  assert.equal(result, undefined);
+  assert.deepEqual(one.shown(), ["uuid-a=A"]);
+});

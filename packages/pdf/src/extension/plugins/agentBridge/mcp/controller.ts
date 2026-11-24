@@ -5,8 +5,8 @@
  * server starts.
  *
  * Invariant: the server runs only while `lumiere.pdf.agentBridge.enabled`
- * is on AND it has been used in this window: a PDF editor was opened, or the
- * user ran Copy MCP Setup. Turning the setting off stops it at once, without
+ * is on, the folder is trusted, AND it has been used in this window: a PDF
+ * editor was opened, or the user ran Copy MCP Setup. A trust grant starts it. Turning the setting off stops it at once, without
  * a reload; starts and stops run one at a time, in order.
  *
  * Invariant: the returned `dispose()` resolves only after the bridge has
@@ -62,9 +62,17 @@ export function registerAgentBridge(
       }
     }),
     options.deps.panels.onDidOpen(() => bridge.use()),
+    vscode.workspace.onDidGrantWorkspaceTrust(() => void bridge.sync()),
     vscode.commands.registerCommand(
       AGENT_BRIDGE_COMMAND_IDS.copyMcpSetup,
       async () => {
+        // In an untrusted folder the setting does not take effect, so there is nothing to turn on.
+        if (!vscode.workspace.isTrusted) {
+          void vscode.window.showInformationMessage(
+            "The agent bridge runs only in a trusted folder. Trust this folder to use it.",
+          );
+          return;
+        }
         if (await bridgeTurnedOn()) {
           bridge.use();
           await copyMcpSetup(shim);
@@ -135,7 +143,12 @@ class BridgeController {
   }
 
   private wanted(): boolean {
-    return !this.stopped && this.used && agentBridgeEnabled();
+    return (
+      !this.stopped &&
+      this.used &&
+      agentBridgeEnabled() &&
+      vscode.workspace.isTrusted
+    );
   }
 
   private async start(): Promise<void> {

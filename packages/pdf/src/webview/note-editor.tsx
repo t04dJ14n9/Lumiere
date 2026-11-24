@@ -1,4 +1,5 @@
-import React, { useEffect, useRef } from "react";
+import React, { useEffect, useRef, useState } from "react";
+import { changedText } from "../shared/note-hover";
 import { MAX_NOTE } from "../shared/selection";
 
 const MAC = /Mac|iPhone|iPad/u.test(navigator.userAgent);
@@ -9,7 +10,8 @@ export interface NoteEditorProps {
   /**
    * The edit ends: with the text to keep (Cmd/Ctrl+Enter, or the focus or
    * the pointer going elsewhere), or undefined to keep the note as it was
-   * (Escape). Called once.
+   * (Escape, or a text left as it started: a note changed elsewhere meanwhile
+   * is not written back). Called once.
    */
   onDone: (text: string | undefined) => void;
   /** Where the card puts how to end the edit keeping the text, for a press outside it. */
@@ -28,13 +30,16 @@ export function NoteEditor({
 }: NoteEditorProps): React.JSX.Element {
   const field = useRef<HTMLTextAreaElement>(null);
   const done = useRef(false);
+  const [started] = useState(initial);
   const finish = (text: string | undefined): void => {
     if (!done.current) {
       done.current = true;
       onDone(text);
     }
   };
-  const keep = (): void => finish(field.current?.value ?? initial);
+  const keep = (): void => {
+    finish(changedText(started, field.current?.value ?? started));
+  };
   commit.current = keep;
   useEffect(() => {
     const input = field.current;

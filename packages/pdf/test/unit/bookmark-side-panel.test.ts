@@ -133,6 +133,9 @@ function feedPanel(options: Parameters<typeof fakePanel>[0] = {}) {
   const listeners = new Set<() => void>();
   const closers = new Set<() => void>();
   const staleListeners = new Set<() => void>();
+  const rewriteListeners = new Set<
+    (change: { from: string; to: string }) => void
+  >();
   const sent: {
     items: readonly Bookmark[];
     sha256: string;
@@ -152,6 +155,12 @@ function feedPanel(options: Parameters<typeof fakePanel>[0] = {}) {
         return { dispose: () => staleListeners.delete(listener) };
       },
     },
+    onAnnotationRewritten: (
+      listener: (change: { from: string; to: string }) => void,
+    ) => {
+      rewriteListeners.add(listener);
+      return { dispose: () => rewriteListeners.delete(listener) };
+    },
     webviewPanel: {
       onDidDispose: (listener: () => void) => {
         closers.add(listener);
@@ -166,6 +175,9 @@ function feedPanel(options: Parameters<typeof fakePanel>[0] = {}) {
     close: () => closers.forEach((listener) => listener()),
     /** The editor's viewer was given other bytes than the list was read for. */
     stale: () => staleListeners.forEach((listener) => listener()),
+    /** A save into the PDF rewrote it. */
+    rewritten: (change: { from: string; to: string }) =>
+      rewriteListeners.forEach((listener) => listener(change)),
     listeners,
     closers,
     staleListeners,
@@ -262,6 +274,65 @@ test("page reports read nothing again; a save here, or another window's, sends t
   assert.deepEqual(
     shown.sent.at(-1)?.items.map((bookmark) => bookmark.title),
     ["Added"],
+  );
+  h.registration.dispose();
+});
+
+test("a save that rewrites the PDF carries its bookmarks to the new bytes; the tab shows them and the old file stays", async () => {
+  const h = await feeding((files) =>
+    files.files.set(
+      files.keyOf(sha("a")),
+      JSON.stringify({ version: 1, bookmarks: [mark("kept", 3, 0, "Kept")] }),
+    ),
+  );
+  const shown = await h.show({ sha256: sha("a") });
+  shown.panel.sha256 = sha("b");
+  shown.report();
+  shown.rewritten({ from: sha("a"), to: sha("b") });
+  await tick();
+  assert.deepEqual(
+    shown.sent.at(-1)?.items.map((bookmark) => bookmark.title),
+    ["Kept"],
+  );
+  assert.equal(shown.sent.at(-1)?.sha256, sha("b"));
+  assert.ok(h.files.files.has(h.files.keyOf(sha("a"))));
+  h.registration.dispose();
+});
+
+test("a PDF whose bytes changed with no rewrite signal shows none of the old bookmarks", async () => {
+  const h = await feeding((files) =>
+    files.files.set(
+      files.keyOf(sha("a")),
+      JSON.stringify({ version: 1, bookmarks: [mark("kept", 3, 0, "Kept")] }),
+    ),
+  );
+  const shown = await h.show({ sha256: sha("a") });
+  shown.panel.sha256 = sha("b");
+  shown.report();
+  await tick();
+  assert.deepEqual(shown.sent.at(-1)?.items, []);
+  h.registration.dispose();
+});
+
+test("a carry that cannot read the old file is logged; the save itself is not failed", async () => {
+  const h = await feeding();
+  const shown = await h.show({ sha256: sha("a") });
+  const original = h.files.api.read;
+  h.files.api.read = async (uri, sha256) => {
+    if (sha256 === sha("a")) {
+      throw new Error("disk gone");
+    }
+    return original(uri, sha256);
+  };
+  shown.panel.sha256 = sha("b");
+  shown.rewritten({ from: sha("a"), to: sha("b") });
+  await tick();
+  assert.ok(
+    h.warnings.some(
+      (message) =>
+        message.includes("Could not carry the bookmarks") &&
+        message.includes("disk gone"),
+    ),
   );
   h.registration.dispose();
 });

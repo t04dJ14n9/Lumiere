@@ -22,10 +22,15 @@ item, quotes and callouts, code, tables, math and footnote definitions. A
 block without an id gets one when picked, six hex digits, as in Obsidian: after
 a space at the end of a paragraph, list item or footnote, or on a line of its
 own after any other block, in this note or in the other one (if the text
-there has not changed). `[[^^` does the same across the vault, as Obsidian
-1.15.0 does: it reads every note once (16 at a time, kept until the note
-changes; a query cancelled by the next keystroke leaves the rest for it,
-offering what is read so far) and leaves out the block the caret is in.
+there has not changed). When the id cannot be written, no link to a block
+without an id is left. In the other note (it changed since the list was made,
+is excluded or read-only, or VS Code refuses the edit) the link goes to the
+note without `#^id`; in this one (its text moved since the list was made) no
+link is inserted. Either way a message says why. `[[^^` does the same across
+the vault, as Obsidian 1.15.0 does: it reads every note once (16 at a time,
+kept until the note changes; a query cancelled by the next keystroke leaves
+the rest for it, offering what is read so far) and leaves out the block the
+caret is in.
 
 `[[paper.pdf#` offers the PDF's bookmarks, as Obsidian offers a note's
 headings. Picking one writes the page and its title:
@@ -73,6 +78,8 @@ nothing typed, notes come most recently changed first.
 - `sources.ts`: indexed candidate groups and per-file cache invalidation.
 - `candidates.ts`: metadata candidate construction, PDF bookmarks included.
 - `insertion.ts`: deferred wiki/Markdown insertion and destination encoding.
+- `accept.ts`: the edit of an accepted suggestion, with the id of a picked block
+  and the repair when the host cannot write it.
 - `rank.ts`: Obsidian's scoring and bounded best-50 selection.
 - `host.ts`: per-panel RPC and source enablement checks.
 - `native-host.ts`: window half for VS Code's text editor: `[[` completions
@@ -85,9 +92,9 @@ nothing typed, notes come most recently changed first.
 
 Provides `suggest.register`; webview injects `editor` and `rpc`, host injects
 `rpc`, `vault` and the host service `settings`, and optionally `vaults`,
-`hostDocuments` and `pdfOutlines` (`src/shared/pdf-outlines.ts`: the
-extension's root provides it from Lumiere PDF; the editor host hands it to each
-panel). The window half injects `vaults`, the host services `settings` and
+`hostDocuments`, `dialogs` (the message when a block id is not written) and
+`pdfOutlines` (`src/shared/pdf-outlines.ts`: the extension's root provides it
+from Lumiere PDF; the editor host hands it to each panel). The window half injects `vaults`, the host services `settings` and
 `hostDocuments`, and optionally `pdfOutlines`, and does nothing where
 `hostDocuments` has no `registerCompletions`. Emits the
 `suggest/trigger` bail event; Links and

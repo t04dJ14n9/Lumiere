@@ -354,3 +354,30 @@ test("the Properties commands, as registered, refuse a read-only editor", async 
     },
   );
 });
+
+test("a property value edit refuses a read-only editor and a writable one still runs", () => {
+  const source = "---\na: 1\n---\nalpha";
+  for (const readOnly of [true, false]) {
+    const dom = { querySelectorAll: () => [], querySelector: () => null };
+    const { view, dispatches } = fakeView(source, readOnly, dom);
+    const editing = new PropertyEditing({
+      view: () => view,
+      setStatus: () => {},
+      action: () => {},
+      refresh: () => {},
+      setType: () => {},
+      show: () => {},
+      focusTitle: () => {},
+      pageHeading: () => {},
+      signal: new AbortController().signal,
+    });
+    // The sheet passes the frontmatter's raw text, fences included.
+    const applied = editing.edit("---\na: 1\n---\n", {
+      type: "set",
+      key: "a",
+      value: 2,
+    });
+    assert.equal(applied, !readOnly, `readOnly=${readOnly}`);
+    assert.equal(dispatches(), readOnly ? 0 : 1, `readOnly=${readOnly}`);
+  }
+});

@@ -8,6 +8,8 @@ import { mkdtemp, rm } from "node:fs/promises";
 import { tmpdir } from "node:os";
 import { CancelToken } from "../../../src/shared/rpc/lifecycle";
 import { SearchWorker } from "../../../src/plugins/search/runner";
+import { searchVault } from "../../../src/plugins/search/query";
+import { MemoryVaultIndex } from "../../../src/plugins/vault/memory-index";
 import { nodeWorkerLauncher } from "../../../src/host/node-workers";
 import type { WorkerLauncher } from "../../../src/shared/workers";
 
@@ -114,6 +116,43 @@ test("a regex that is slow only line by line times out in the worker, not on the
       worker.matches({ path: "Slow.md", text: "a\n" + "x".repeat(34) }),
       /evaluation timed out/,
     );
+  } finally {
+    await worker.dispose();
+  }
+});
+
+test("a note whose evaluation times out is skipped and named, and the others are still searched", async () => {
+  const texts: Record<string, string> = {
+    "A.md": "aaa",
+    "Slow.md": "a".repeat(40) + "!",
+    "Z.md": "aa",
+  };
+  const vault = new MemoryVaultIndex({
+    root: "file:///vault",
+    folderNote: "",
+    linkFormat: "shortest",
+  });
+  vault.replaceFiles(
+    Object.keys(texts).map((path) => ({
+      uri: `file:///vault/${path}`,
+      path,
+      mtime: 1,
+      size: 1,
+    })),
+  );
+  const worker = new SearchWorker(workers, "/(a+)+$/", { timeoutMs: 100 });
+  try {
+    const response = await searchVault({
+      vault,
+      worker,
+      token: new CancelToken(),
+      read: async (uri) => texts[uri.replace("file:///vault/", "")]!,
+    });
+    assert.deepEqual(
+      response.results.map((hit) => hit.path),
+      ["A.md", "Z.md"],
+    );
+    assert.deepEqual(response.skipped, ["Slow.md"]);
   } finally {
     await worker.dispose();
   }

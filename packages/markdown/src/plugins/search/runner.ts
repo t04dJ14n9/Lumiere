@@ -16,6 +16,13 @@ interface Pending {
   reject(error: Error): void;
   timer: ReturnType<typeof setTimeout>;
 }
+/** A document whose evaluation ran past its deadline: the search skips it. */
+export class SearchTimeoutError extends Error {
+  constructor(readonly path: string) {
+    super(`Search evaluation timed out for ${path}`);
+    this.name = "SearchTimeoutError";
+  }
+}
 export interface SearchEvaluator {
   ready: Promise<void>;
   includesFiles: boolean;
@@ -25,24 +32,43 @@ export interface SearchEvaluator {
   matches(document: SearchDocument): Promise<SearchVerdict>;
   dispose(): Promise<void>;
 }
-/** One query per worker: a stuck regex can be terminated without blocking the host. */
+/** A channel's start-up: settled by its `ready` message, or by its failure. */
+interface Startup {
+  promise: Promise<void>;
+  resolve(): void;
+  reject(error: Error): void;
+}
+function createStartup(): Startup {
+  let resolve!: () => void;
+  let reject!: (error: Error) => void;
+  const promise = new Promise<void>((done, fail) => {
+    resolve = done;
+    reject = fail;
+  });
+  void promise.catch(() => {});
+  return { promise, resolve, reject };
+}
+/**
+ * One query per worker. A stuck regex cannot be stopped inside its worker, so
+ * an evaluation that runs past its deadline gets a fresh channel: that
+ * document is skipped (`SearchTimeoutError`) and the search goes on. Only a
+ * failure of the channel itself closes the worker.
+ */
 export class SearchWorker implements SearchEvaluator {
-  readonly ready: Promise<void>;
-  private readonly worker: WorkerChannel;
+  private startup!: Startup;
+  private channel!: WorkerChannel;
   private readonly pending = new Map<number, Pending>();
   private sequence = 0;
   private closed?: Error;
-  private termination?: Promise<unknown>;
-  private readonly resolveReady: () => void;
-  private readonly rejectReady: (error: Error) => void;
-  private readonly startupTimer: ReturnType<typeof setTimeout>;
+  private readonly terminations: Promise<unknown>[] = [];
+  private startupTimer?: ReturnType<typeof setTimeout>;
   private stopCancellation: Disposer = () => {};
   includesFiles = false;
   requiresText = true;
   requiresMetadata = true;
   constructor(
-    workers: WorkerLauncher,
-    query: string,
+    private readonly workers: WorkerLauncher,
+    private readonly query: string,
     private readonly options: {
       token?: Cancellation;
       timeoutMs?: number;
@@ -52,32 +78,14 @@ export class SearchWorker implements SearchEvaluator {
     if (options.token?.cancelled) {
       throw new RpcError("Cancelled", "Search cancelled");
     }
-    let resolveReady!: () => void;
-    let rejectReady!: (error: Error) => void;
-    this.ready = new Promise<void>((resolve, reject) => {
-      resolveReady = resolve;
-      rejectReady = reject;
-    });
-    this.resolveReady = resolveReady;
-    this.rejectReady = rejectReady;
-    void this.ready.catch(() => {});
-    this.worker = workers.start("search", {
-      data: startup.parse({ query }),
-      memoryLimitMb: 256,
-    });
-    this.startupTimer = setTimeout(
-      () => this.fail(new Error("Search worker startup timed out")),
-      options.startupMs ?? 15000,
-    );
-    this.worker.onMessage((message) => this.receive(message));
-    this.worker.onError((error) => this.fail(error));
-    this.worker.onExit((code) =>
-      this.fail(new Error(`Search worker exited (${code})`)),
-    );
+    this.launch();
     this.stopCancellation =
       options.token?.onCancel(
         () => void this.fail(new RpcError("Cancelled", "Search cancelled")),
       ) ?? (() => {});
+  }
+  get ready(): Promise<void> {
+    return this.startup.promise;
   }
   get stopped(): boolean {
     return this.closed !== undefined;
@@ -90,17 +98,42 @@ export class SearchWorker implements SearchEvaluator {
     const request = submission.parse({ id: ++this.sequence, document });
     return new Promise((resolve, reject) => {
       const timer = setTimeout(
-        () =>
-          this.fail(
-            new Error(`Search evaluation timed out for ${document.path}`),
-          ),
+        () => this.timeOut(request.id, document.path),
         this.options.timeoutMs ?? 5000,
       );
       this.pending.set(request.id, { resolve, reject, timer });
       try {
-        this.worker.post(request);
+        this.channel.post(request);
       } catch (error) {
         this.fail(new Error(errorMessage(error)));
+      }
+    });
+  }
+  /** Starts a channel with its own start-up; only the current channel's messages count. */
+  private launch(): void {
+    this.startup = createStartup();
+    const channel = this.workers.start("search", {
+      data: startup.parse({ query: this.query }),
+      memoryLimitMb: 256,
+    });
+    this.channel = channel;
+    this.startupTimer = setTimeout(
+      () => this.fail(new Error("Search worker startup timed out")),
+      this.options.startupMs ?? 15000,
+    );
+    channel.onMessage((message) => {
+      if (channel === this.channel) {
+        this.receive(message);
+      }
+    });
+    channel.onError((error) => {
+      if (channel === this.channel) {
+        this.fail(error);
+      }
+    });
+    channel.onExit((code) => {
+      if (channel === this.channel) {
+        this.fail(new Error(`Search worker exited (${code})`));
       }
     });
   }
@@ -119,7 +152,7 @@ export class SearchWorker implements SearchEvaluator {
         this.requiresText = reply.content;
         this.requiresMetadata = reply.metadata;
         clearTimeout(this.startupTimer);
-        this.resolveReady();
+        this.startup.resolve();
         return;
       }
       const request = this.pending.get(reply.id);
@@ -140,6 +173,28 @@ export class SearchWorker implements SearchEvaluator {
       this.fail(new Error(errorMessage(error)));
     }
   }
+  /** Ends the evaluation of `path` at its deadline, and moves on in a fresh channel. */
+  private timeOut(id: number, path: string): void {
+    if (this.closed) {
+      return;
+    }
+    clearTimeout(this.startupTimer);
+    for (const [pendingId, request] of this.pending) {
+      clearTimeout(request.timer);
+      request.reject(
+        pendingId === id
+          ? new SearchTimeoutError(path)
+          : new Error("Search evaluation was interrupted"),
+      );
+    }
+    this.pending.clear();
+    this.terminate();
+    try {
+      this.launch();
+    } catch (error) {
+      this.fail(new Error(errorMessage(error)));
+    }
+  }
   private fail(error: Error): void {
     if (this.closed) {
       return;
@@ -147,17 +202,21 @@ export class SearchWorker implements SearchEvaluator {
     this.closed = error;
     clearTimeout(this.startupTimer);
     void this.stopCancellation();
-    this.rejectReady(error);
+    this.startup.reject(error);
     for (const request of this.pending.values()) {
       clearTimeout(request.timer);
       request.reject(error);
     }
     this.pending.clear();
-    this.termination = this.worker.terminate();
-    void this.termination.catch(() => {});
+    this.terminate();
+  }
+  private terminate(): void {
+    const termination = this.channel.terminate();
+    void termination.catch(() => {});
+    this.terminations.push(termination);
   }
   async dispose(): Promise<void> {
     this.fail(new RpcError("Cancelled", "Search cancelled"));
-    await this.termination;
+    await Promise.all(this.terminations);
   }
 }

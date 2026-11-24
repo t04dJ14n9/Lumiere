@@ -1,11 +1,19 @@
+import type { TextEdit } from "../../shared/host/documents";
 import { rewriteLinks, type RewriteContext } from "./rewrite";
+import {
+  headingLinkEdits,
+  namesRenamedHeading,
+  type RenamedHeading,
+} from "./heading-rename";
 
 type Edit = ReturnType<typeof rewriteLinks>[number];
+type Resolve = Parameters<typeof headingLinkEdits>[3];
 
 /** A canvas node as JSON Canvas stores it; only these fields matter here. */
 interface CanvasNode {
   type?: unknown;
   file?: unknown;
+  subpath?: unknown;
   text?: unknown;
 }
 
@@ -23,6 +31,73 @@ export function rewriteCanvas(
   canvasPath: string,
   context: RewriteContext,
 ): string | undefined {
+  return rewriteNodes(text, (node) => {
+    let isChanged = false;
+    if (typeof node.file === "string" && context.renames.has(node.file)) {
+      node.file = context.renames.get(node.file);
+      isChanged = true;
+    }
+    if (node.type === "text" && typeof node.text === "string") {
+      const rewritten = applyEdits(
+        node.text,
+        rewriteLinks(node.text, canvasPath, context),
+      );
+      if (rewritten !== node.text) {
+        node.text = rewritten;
+        isChanged = true;
+      }
+    }
+    return isChanged;
+  });
+}
+
+/**
+ * A canvas's text after a note's heading is renamed: a text node's links to
+ * the heading are rewritten as a note's are, and a file node that names the
+ * heading (`"subpath": "#Old"` on the note) takes the new name. Undefined when
+ * nothing changes, or when the file is not a JSON Canvas object.
+ */
+export function rewriteCanvasHeading(
+  text: string,
+  canvasPath: string,
+  renamed: RenamedHeading,
+  resolve: Resolve,
+): string | undefined {
+  return rewriteNodes(text, (node) => {
+    let isChanged = false;
+    if (
+      node.type === "file" &&
+      node.file === renamed.path &&
+      typeof node.subpath === "string" &&
+      node.subpath.startsWith("#") &&
+      namesRenamedHeading(renamed, node.subpath.slice(1))
+    ) {
+      node.subpath = `#${renamed.subpath}`;
+      isChanged = true;
+    }
+    if (node.type === "text" && typeof node.text === "string") {
+      const rewritten = applyTextEdits(
+        node.text,
+        headingLinkEdits(node.text, canvasPath, renamed, resolve),
+      );
+      if (rewritten !== node.text) {
+        node.text = rewritten;
+        isChanged = true;
+      }
+    }
+    return isChanged;
+  });
+}
+
+/**
+ * Parses a canvas, applies `change` to each node, and writes it back when a
+ * node changed. Undefined for text that is not a canvas, or that nothing
+ * changed in.
+ */
+function rewriteNodes(
+  text: string,
+  change: (node: CanvasNode) => boolean,
+): string | undefined {
   let data: unknown;
   try {
     data = JSON.parse(text);
@@ -38,20 +113,7 @@ export function rewriteCanvas(
     if (!node || typeof node !== "object") {
       continue;
     }
-    if (typeof node.file === "string" && context.renames.has(node.file)) {
-      node.file = context.renames.get(node.file);
-      isChanged = true;
-    }
-    if (node.type === "text" && typeof node.text === "string") {
-      const rewritten = applyEdits(
-        node.text,
-        rewriteLinks(node.text, canvasPath, context),
-      );
-      if (rewritten !== node.text) {
-        node.text = rewritten;
-        isChanged = true;
-      }
-    }
+    isChanged = change(node) || isChanged;
   }
   if (!isChanged) {
     return undefined;
@@ -69,6 +131,17 @@ function indentOf(text: string): string | undefined {
     return undefined;
   }
   return /\n([ \t]+)\S/.exec(text)?.[1] ?? "\t";
+}
+
+/** Applies offset edits, as a heading rename makes them, to a node's text. */
+function applyTextEdits(text: string, edits: readonly TextEdit[]): string {
+  return [...edits]
+    .sort((a, b) => b.from - a.from)
+    .reduce(
+      (result, edit) =>
+        result.slice(0, edit.from) + edit.insert + result.slice(edit.to),
+      text,
+    );
 }
 
 function applyEdits(text: string, edits: readonly Edit[]): string {

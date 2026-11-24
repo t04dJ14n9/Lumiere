@@ -1,5 +1,90 @@
 # Changelog
 
+## 0.1.26 (2026-11-24)
+
+- Markdown: a list, quote, code-block or checklist command refuses when any
+  caret or selection end in a table is involved, so a secondary caret in a
+  table row no longer changes the table. Those commands and Insert Callout
+  also refuse at the end of a table's last row, and the list, quote,
+  code-block and checklist commands refuse a selection that runs across a
+  table (#829).
+- Markdown: removing a note's last property keeps the note's own `---` block
+  as text instead of reading it as the properties (#904).
+- Markdown: in a read-only editor, the Properties sheet's edits, Enter and
+  Shift+Enter list continuation, and the image size keys and Backspace or
+  Delete on a selected image no longer change the note (#826).
+- Markdown: the rendered diff parses each side's reference definitions once,
+  not once per block, with byte-identical output (#871).
+- Lumiere PDF: the agent bridge refuses a file argument that names a network
+  share (a UNC path or `//host`) before any file-system call, and a folder
+  named `..x` under the workspace now matches its window (#919, #921).
+- Core: `min()` and `max()` on object or boolean schemas throw where the
+  schema is written, instead of rejecting every value (#911). A default that
+  is not plain data is refused where it is written (#927). `provide()` refuses
+  an undefined value and a name the context answers itself with the new
+  `InvalidService` error code (#927).
+- Lumiere PDF: Save Annotations into This PDF copies the PDF's bookmarks to
+  the new bytes, so the side panel keeps them; the bookmark file for the old
+  bytes stays (#884).
+- Lumiere PDF: a save into the PDF that meets a reload reports that it did not
+  write, instead of leaving the viewer waiting for a result (#896).
+- Lumiere PDF: a malformed bookmark entry or a repeated id in a bookmark file
+  is kept as written when another bookmark changes, instead of being dropped;
+  a bookmark that would not read back is refused (#901).
+- Lumiere PDF: a viewer that cannot read a PDF's annotation file leaves it
+  alone and says so, and its later saves do not overwrite it (#906).
+- Markdown: a vault search no longer ends at a note that is too slow to
+  evaluate; that note is skipped and named in the query block's status, and
+  the other notes are still searched (#900).
+- Markdown: a note written while the vault is first listed is indexed, not
+  missed (#898).
+- Markdown: a base view shows a nested frontmatter object as its JSON text,
+  not `[object Object]` (#926).
+- Lumiere PDF: the agent bridge runs only in a trusted folder; in an untrusted
+  one, Copy MCP Setup says so and nothing is served until the folder is trusted
+  (#920).
+- Markdown: a link dropped on a find box or another text field is inserted as
+  its text, not claimed by the attachment drop; a file drop is still claimed
+  (#902).
+- Markdown: a vault search stops at 1000 matching notes and says so, in the
+  query block and the Vault Search view, instead of listing every match
+  (#925).
+- Markdown: a row next to a git-gutter hunk is its context only while it
+  matches the base, so a neighbouring change's text no longer goes into the
+  hunk's identity (#886).
+- Markdown: a table's menu Cut clears its cells only after the clipboard has
+  the text, so a clipboard write that fails leaves the cells as they were
+  (#888).
+- Markdown: Rename Heading also updates the links to the heading in canvases:
+  a text node's links are rewritten, and a file node whose subpath names the
+  heading takes the new name. Every heading rename reads every canvas once,
+  with no time limit (#913).
+- Markdown: the editor page takes a message as the extension host's only from
+  the host's own window, so a frame in a note (including one removed right
+  after it posted) cannot pass as the host (#850).
+- Markdown: a panel whose edits the host refuses 8 times in a row (about 30 s)
+  stops retrying, turns read-only with the typing kept and says so; a host
+  that is only slow is still retried (#897).
+- Markdown: a save's two flushes of the open panels share one 1.2 s budget,
+  so a panel that does not answer no longer makes the save wait 2.4 s and
+  risk VS Code dropping the save listener (#891).
+- Markdown: a block link whose `^id` cannot be written to the other note
+  links to the note instead, and says why; in the same note, a block that
+  changed since the list was made gets no link and a message (#903).
+- Markdown: a folder created or moved into a vault is walked only up to the
+  listing limit, and a full index refuses new files with the existing
+  "more than 50,000" warning (#925).
+- Markdown: a vault search stops after ten notes too slow to evaluate and
+  says so, as its README already promised, instead of going on for every slow
+  note (#900).
+- Markdown (Cursor): a Git state change reads only as many changed notes as
+  its warm-up cap needs, instead of every changed file (#925).
+- Lumiere PDF: a note card closes when its mark is removed while it shows,
+  instead of shutting every other note out; a pointer that has left the
+  viewer no longer opens a card (#922).
+- CI: every GitHub Action is pinned to a full commit SHA, and Dependabot
+  updates the composite actions' pins too (#917).
+
 ## 0.1.25 (2026-11-23)
 
 - Markdown: Mermaid preparation respects the renderer’s input-size limit, and

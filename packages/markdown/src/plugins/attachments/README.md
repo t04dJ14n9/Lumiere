@@ -24,7 +24,9 @@ while holding Shift). Explorer drops that only carry URIs are imported on the
 host; OS `File` drops are read in the webview. A web address is imported only
 when it is an image's: an image dragged from a page (named by the dragged
 `<img>`) or an address whose path ends in an image extension. A link dragged
-from a browser is inserted as its text, as any dragged text is. Remote HTML images are
+from a browser is inserted as its text, as any dragged text is, and so is a link
+dropped on a text field (a find box, a property): only a file drag is claimed
+over one. Remote HTML images are
 downloaded on the host because the editor CSP `connect-src` does not allow
 `https:`.
 

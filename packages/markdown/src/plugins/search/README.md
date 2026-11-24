@@ -12,7 +12,8 @@ The host lists eligible indexed files, reads current text through the shared
 vault service, and sends each document to a worker. A conservative query plan
 uses indexed tags/properties and file paths without reading note content when
 possible; mixed content predicates read one coherent current text snapshot. Per-document parse errors are
-counted; timeout or cancellation terminates the worker. Index resolution refreshes
+counted; a document past its deadline is skipped and named, and the search goes on
+in a fresh worker (ten skips end the search); cancellation terminates the worker. Index resolution refreshes
 live subscriptions once it has been quiet for a second (it resolves after every
 typing pause), and a block keeps its results until the new ones arrive. Result links use encoded relative paths and normal navigation.
 
@@ -69,8 +70,10 @@ context key `lumiere.markdown.search.hasResults` keeps the view shown.
 
 Uses the documented pure search grammar; no Dataview scripting. Worker startup
 has a 15-second deadline and each document has a 5-second evaluation deadline.
-A failed worker affects its query only, and the block keeps listing what it found
-before the failure. Results reflect the index's eligible files
+A document past its deadline is skipped and named (the search does not stop), and
+a failed worker affects its query only, and the block keeps listing what it found
+before the failure. A search stops at 1000 matching notes and says so; the notes
+after its last match are not searched. Results reflect the index's eligible files
 and unsaved text available through the host. Large vault searches may be slow:
 the query has no RPC deadline (refresh or disposal cancels it), up to eight notes
 are read ahead of the one being evaluated, and

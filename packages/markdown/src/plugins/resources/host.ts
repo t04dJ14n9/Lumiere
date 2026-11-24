@@ -75,17 +75,20 @@ function reportChangedFiles(ctx: Context, resources: NoteResources): void {
  * has resolved links.
  */
 function reportFoundFiles(ctx: Context, resources: NoteResources): void {
-  const check = () => {
-    if (resources.takeFound()) {
+  const check = async () => {
+    // The index first; the disk then finds what the index never lists.
+    const isFound =
+      resources.takeFound() || (await resources.takeFoundOnDisk());
+    if (isFound && ctx.isLive) {
       ctx.rpc.notify(protocol, "found", {}, { coalesce: true });
     }
   };
   ctx.effect(() =>
     ctx.vault.onDidChange((change) => {
       if (change.type === "create" || change.type === "rename") {
-        check();
+        void check();
       }
     }),
   );
-  ctx.effect(() => ctx.vault.onDidResolve(check));
+  ctx.effect(() => ctx.vault.onDidResolve(() => void check()));
 }

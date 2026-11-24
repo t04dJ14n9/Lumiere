@@ -20,9 +20,11 @@ import { rpcPair } from "../../support/rpc-pair";
 function hostNote(initial: string, refusals = 0) {
   let text = initial;
   let refuse = refusals;
+  let attempts = 0;
   const host = fakeHost({
     hostDocuments: {
       async apply(_document, edits: readonly TextEdit[]) {
+        attempts++;
         if (refuse > 0) {
           refuse--;
           return false;
@@ -40,6 +42,10 @@ function hostNote(initial: string, refusals = 0) {
     session,
     get text() {
       return text;
+    },
+    /** How many times the workbench was asked to apply an edit. */
+    get attempts() {
+      return attempts;
     },
   };
 }
@@ -210,4 +216,74 @@ test("a panel that cannot flush fails only its own commands, not another panel's
   await session.flush();
   await a.pair.dispose();
   await b.pair.dispose();
+});
+
+test("a host that keeps refusing the edit ends sync with a message, and the typing stays", async (t) => {
+  const note = hostNote("base", Infinity);
+  const panel = connect(note);
+  t.after(() => panel.pair.dispose());
+  t.after(() => panel.sync.dispose());
+
+  panel.view.dispatch({ changes: { from: 4, insert: "!" } });
+  panel.sync.pump();
+  await until(() => panel.sync.error !== undefined);
+
+  assert.match(String(panel.sync.error), /refused .* times/);
+  assert.match(String(panel.sync.error), /copy your edits/);
+  assert.equal(panel.statuses.at(-1), panel.sync.error);
+  await settle();
+  assert.equal(panel.view.state.readOnly, true);
+  // The typing is still there to copy, and the host did not take it.
+  assert.equal(panel.view.state.doc.toString(), "base!");
+  assert.equal(note.text, "base");
+  // Bounded: it did not go on asking.
+  const attempts = note.attempts;
+  assert.equal(attempts, 8);
+  await settle();
+  assert.equal(note.attempts, attempts);
+  // A save waiting on the panel is told, not left to time out.
+  await assert.rejects(panel.sync.flush(), /refused/);
+});
+
+test("refusals that end before the limit leave sync working", async (t) => {
+  const note = hostNote("base", 7);
+  const panel = connect(note);
+  t.after(() => panel.pair.dispose());
+  t.after(() => panel.sync.dispose());
+
+  panel.view.dispatch({ changes: { from: 4, insert: "!" } });
+  panel.sync.pump();
+  await until(() => note.text === "base!");
+
+  assert.equal(panel.sync.error, undefined);
+  assert.equal(note.attempts, 8);
+  // A new refusal streak counts from zero again.
+  assert.equal(panel.view.state.readOnly, false);
+});
+
+test("a host that is only slow is retried without a limit", async (t) => {
+  const note = hostNote("base");
+  let timeouts = 12;
+  const panel = connect(
+    note,
+    (client) =>
+      ({
+        call: (...args: Parameters<Endpoint["call"]>) => {
+          if (args[1] === "push" && timeouts > 0) {
+            timeouts--;
+            return Promise.reject(callFailed.timeout("push", 10_000));
+          }
+          return client.call(...args);
+        },
+      }) as unknown as Endpoint,
+  );
+  t.after(() => panel.pair.dispose());
+  t.after(() => panel.sync.dispose());
+
+  panel.view.dispatch({ changes: { from: 0, insert: "# " } });
+  panel.sync.pump();
+  await until(() => note.text === "# base");
+
+  assert.equal(panel.sync.error, undefined);
+  assert.equal(note.text, "# base");
 });

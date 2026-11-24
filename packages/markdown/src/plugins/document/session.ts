@@ -8,6 +8,18 @@ import { RpcError, type Endpoint } from "../../shared/rpc/endpoint";
 import { UndoGroups } from "./undo-groups";
 import { protocol } from "./protocol";
 import type { DocumentSession } from "./api";
+/**
+ * How long panels may take to answer a flush, in all. VS Code gives every
+ * listener of a save one 1.5 s budget, skips those after one that overruns
+ * and stops calling a listener that overruns three times.
+ */
+const FLUSH_BUDGET_MS = 1200;
+
+/** The moment a flush that starts now must be done by. */
+export function flushDeadline(): number {
+  return Date.now() + FLUSH_BUDGET_MS;
+}
+
 export class Session implements DocumentSession {
   readonly authority: Authority;
   private readonly clients = new Map<string, { rpc: Endpoint; sent: number }>();
@@ -201,16 +213,15 @@ export class Session implements DocumentSession {
    * Bring in every panel's unsent typing. Only the failure of `origin`, the
    * panel asking, rejects: another panel of the note that cannot answer (busy,
    * or stopped syncing) must not make Save, Undo or Redo fail in this one.
+   * Panels get until `deadline` (a `flushDeadline()`) to answer, not a
+   * fresh wait per call, so flushes that follow each other can share one.
    */
-  async flush(origin?: string): Promise<void> {
+  async flush(origin?: string, deadline = flushDeadline()): Promise<void> {
+    // The panels are asked together, so they share what time is left.
+    const timeout = Math.max(deadline - Date.now(), 0);
     await Promise.all(
       [...this.clients].map(([id, client]) => {
-        const flushed = client.rpc.call(
-          protocol,
-          "flush",
-          {},
-          { timeout: 1200 },
-        );
+        const flushed = client.rpc.call(protocol, "flush", {}, { timeout });
         return id === origin ? flushed : flushed.catch(() => false);
       }),
     );

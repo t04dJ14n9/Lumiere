@@ -11,7 +11,7 @@
 import assert from "node:assert/strict";
 import { readFileSync } from "node:fs";
 import { createRequire } from "node:module";
-import { test } from "node:test";
+import { mock, test } from "node:test";
 import { LocalEngine } from "@embedpdf/engine";
 import { createPdfRuntime } from "@embedpdf/engine-runtime";
 import type { PdfRuntimeModule } from "@embedpdf/engine-runtime";
@@ -34,6 +34,14 @@ interface Request {
   /** Degrees clockwise; the viewer turns pages with CSS and asks for none. */
   rotation?: 0 | 90 | 180 | 270;
 }
+
+/**
+ * A slice budget a machine cannot use up: the page is drawn at once. PDFium
+ * pauses a render whose slice outlasts its budget in wall-clock time (8 ms by
+ * default), and a test process that is not scheduled for 8 ms, as under a
+ * full `pnpm check`, would draw "at once" in slices.
+ */
+const WHOLE_PAGE = { sliceMs: 60_000 };
 
 interface Session {
   render(mode: EffectivePageColors, request: Request): Promise<Picture>;
@@ -244,8 +252,23 @@ test("a tile of a dark page is the part of the dark page it shows", async () => 
   }
 });
 
+test("a whole-page render is not paused by a slow machine", async () => {
+  const session = await openPdf(figurePdf(), WHOLE_PAGE);
+  // A machine that is busy: every look at the clock finds 100 ms gone.
+  const real = performance.now.bind(performance);
+  let late = 0;
+  const clock = mock.method(performance, "now", () => real() + (late += 100));
+  try {
+    await session.render("dark", { scale: 2 });
+  } finally {
+    clock.mock.restore();
+    await session.close();
+  }
+  assert.equal(session.continues(), 0);
+});
+
 test("a dark page drawn in slices is the page drawn at once", async () => {
-  const session = await openPdf(figurePdf());
+  const session = await openPdf(figurePdf(), WHOLE_PAGE);
   const sliced = await openPdf(figurePdf(), { sliceMs: 0 });
   try {
     const atOnce = await session.render("dark", { scale: 2 });

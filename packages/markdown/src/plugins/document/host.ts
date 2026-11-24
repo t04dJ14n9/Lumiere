@@ -1,6 +1,6 @@
 import type { Context, Plugin } from "@workshop/core";
 import type { HostDocument } from "../../shared/host";
-import { Session } from "./session";
+import { Session, flushDeadline } from "./session";
 import { Autosave } from "./autosave";
 import type { Documents } from "./api";
 /** A document's session, kept while panels use it, with its autosave countdown. */
@@ -35,7 +35,9 @@ export const documentHost: Plugin = {
       },
     };
     ctx.provide("documents", documents);
-    ctx.on("document/willSave", (session) => session.flush());
+    ctx.on("document/willSave", (session, deadline) =>
+      session.flush(undefined, deadline),
+    );
     ctx.effect(() =>
       ctx.hostDocuments.onChange((document, changes) => {
         const entry = sessions.get(document);
@@ -49,15 +51,7 @@ export const documentHost: Plugin = {
         }
       }),
     );
-    ctx.effect(() =>
-      ctx.hostDocuments.onWillSave(async (document) => {
-        const session = sessions.get(document)?.session;
-        if (session) {
-          await ctx.serial("document/willSave", session);
-          await session.flush();
-        }
-      }),
-    );
+    registerNativeSaveFlush(ctx, sessions);
     ctx.effect(() =>
       ctx.hostDocuments.onSave((document) => {
         const session = sessions.get(document)?.session;
@@ -74,6 +68,29 @@ export const documentHost: Plugin = {
     });
   },
 };
+
+/**
+ * Before VS Code saves a note, bring in every panel's typing. The flush runs
+ * twice, in the `document/willSave` listeners and after all of them (a failure
+ * of the last one rejects the save). VS Code gives all of a save's listeners
+ * one time budget and drops one that overruns it, so both flushes spend the
+ * same deadline, set when the save began.
+ */
+function registerNativeSaveFlush(
+  ctx: Context,
+  sessions: Map<HostDocument, Entry>,
+): void {
+  ctx.effect(() =>
+    ctx.hostDocuments.onWillSave(async (document) => {
+      const session = sessions.get(document)?.session;
+      if (session) {
+        const deadline = flushDeadline();
+        await ctx.serial("document/willSave", session, deadline);
+        await session.flush(undefined, deadline);
+      }
+    }),
+  );
+}
 
 function openEntry(ctx: Context, document: HostDocument): Entry {
   const session = new Session(document, ctx);

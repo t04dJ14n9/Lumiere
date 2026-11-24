@@ -17,11 +17,6 @@ import {
   type EditorView,
   type ViewUpdate,
 } from "@codemirror/view";
-import type {
-  ChangeSpec,
-  EditorState,
-  TransactionSpec,
-} from "@codemirror/state";
 import {
   bindCaller,
   type CallerBound,
@@ -31,7 +26,8 @@ import {
 import type {} from "../editor/api";
 import type { LocalSuggestions, Suggest, SuggestionTrigger } from "./api";
 import { CancelToken } from "../../shared/rpc/lifecycle";
-import { protocol, type Suggestion } from "./protocol";
+import { protocol } from "./protocol";
+import { acceptSuggestion, type BlockIdHost } from "./accept";
 import { registerCompletionHooks } from "../../shared/completion-hooks";
 import {
   allowsSuggestions,
@@ -176,17 +172,13 @@ async function requestCompletions(
       options: items.map((item) => ({
         label: item.label,
         detail: item.detail,
-        apply: (view, _completion, from, to) => {
-          const edit = acceptance(view, { from, to }, item, trigger);
-          view.dispatch(withBlockId(view.state, edit, item.blockId));
-          if (item.blockId && !item.blockId.here) {
-            void ctx.rpc
-              .call(protocol, "addBlockId", item.blockId)
-              .catch((error: unknown) =>
-                ctx.logger.warn("Block id not added", error),
-              );
-          }
-        },
+        apply: (view, _completion, from, to) =>
+          acceptSuggestion({
+            view,
+            edit: acceptance(view, { from, to }, item, trigger),
+            blockId: item.blockId,
+            host: blockIdHost(ctx),
+          }),
       })),
     };
   } catch (error) {
@@ -199,33 +191,11 @@ async function requestCompletions(
   }
 }
 
-/**
- * `edit`, and for a picked block of this note without an id, the id added
- * where it goes (when the text there is unchanged), as Obsidian adds it.
- */
-function withBlockId(
-  state: EditorState,
-  edit: TransactionSpec,
-  blockId: Suggestion["blockId"],
-): TransactionSpec {
-  if (
-    !blockId?.here ||
-    state.sliceDoc(blockId.at - blockId.before.length, blockId.at) !==
-      blockId.before
-  ) {
-    return edit;
-  }
-  const link = edit.changes as { from: number };
-  const { anchor } = edit.selection as { anchor: number };
-  // The id goes elsewhere in the note; it moves the caret when it is before.
-  const shift = blockId.at <= link.from ? blockId.insert.length : 0;
+function blockIdHost(ctx: Context): BlockIdHost {
   return {
-    ...edit,
-    changes: [
-      edit.changes as ChangeSpec,
-      { from: blockId.at, insert: blockId.insert },
-    ],
-    selection: { anchor: anchor + shift },
+    write: (blockId) => ctx.rpc.call(protocol, "addBlockId", blockId),
+    changed: () => ctx.rpc.notify(protocol, "blockChanged", {}),
+    warn: (message, error) => ctx.logger.warn(message, error),
   };
 }
 
