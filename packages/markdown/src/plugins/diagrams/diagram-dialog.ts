@@ -223,8 +223,12 @@ class DiagramInspector {
     dialog.addEventListener(
       "keydown",
       (event) => {
-        event.stopPropagation();
         this.keyDown(event);
+        // Keep only the keys the inspector uses: VS Code's own shortcuts
+        // (Ctrl+Alt+B and the rest) must still reach the workbench.
+        if (event.defaultPrevented || event.key === "Escape") {
+          event.stopPropagation();
+        }
       },
       { signal },
     );
@@ -284,6 +288,9 @@ class DiagramInspector {
         if (
           event.button !== 0 ||
           this.scale === null ||
+          // A drag that starts on a label selects its text, not pans.
+          (event.target instanceof Element &&
+            event.target.closest("text, foreignObject")) ||
           (area.scrollWidth <= area.clientWidth &&
             area.scrollHeight <= area.clientHeight)
         ) {

@@ -120,9 +120,17 @@ class ImageInspector {
       },
       { signal },
     );
-    dialog.addEventListener("keydown", (event) => event.stopPropagation(), {
-      signal,
-    });
+    // Keep only the keys the inspector uses: VS Code's own shortcuts
+    // (Ctrl+Alt+B and the rest) must still reach the workbench.
+    dialog.addEventListener(
+      "keydown",
+      (event) => {
+        if (event.defaultPrevented || event.key === "Escape") {
+          event.stopPropagation();
+        }
+      },
+      { signal },
+    );
   }
 }
 
