@@ -4,6 +4,9 @@
 
 - Markdown: Clear File Properties no longer turns a `---` block that opens
   the note's text into its properties (#904).
+- Markdown: a drag that starts on a wrapped line with hidden markers (a
+  heading with inline code) selects from where it started, not from a point
+  on the line's other row.
 
 ## 0.1.27 (2026-11-24)
 
