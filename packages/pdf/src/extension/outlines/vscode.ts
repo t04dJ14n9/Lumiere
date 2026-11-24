@@ -40,25 +40,37 @@ export const workspacePdfFiles: OutlineFiles = insideFolders(
 );
 
 /**
+ * The host's PDFium, built beside the viewer: the engine bundle and the
+ * viewer's embedpdf.wasm it loads, both from dist/pdf/ in the extension.
+ * Read from `extensionPath` when asked, never earlier.
+ */
+export async function loadEngineBundle(
+  extensionPath: string,
+): Promise<{ bundle: typeof EngineModule; wasm: Uint8Array }> {
+  const assets = path.join(extensionPath, "dist", "pdf");
+  // A file URL, which `import` needs for an absolute path on Windows.
+  const bundle = (await import(
+    pathToFileURL(path.join(assets, "outline-engine.js")).href
+  )) as typeof EngineModule;
+  return {
+    bundle,
+    wasm: await readFile(path.join(assets, "webview", "embedpdf.wasm")),
+  };
+}
+
+/**
  * The reader of PDF bookmarks that Lumiere offers to notes (`[[paper.pdf#`).
- * PDFium is the viewer's: the engine bundle is built beside the viewer and
- * loads the viewer's embedpdf.wasm, both from dist/pdf/ in the extension.
+ * PDFium is the viewer's (see `loadEngineBundle`).
  */
 export function createPdfOutlines(
   context: vscode.ExtensionContext,
   log: vscode.LogOutputChannel,
 ): PdfOutlineReader {
-  const assets = path.join(context.extensionPath, "dist", "pdf");
   return new PdfOutlineReader({
     files: workspacePdfFiles,
     engine: async () => {
-      // A file URL, which `import` needs for an absolute path on Windows.
-      const { createOutlineEngine } = (await import(
-        pathToFileURL(path.join(assets, "outline-engine.js")).href
-      )) as typeof EngineModule;
-      return createOutlineEngine(
-        await readFile(path.join(assets, "webview", "embedpdf.wasm")),
-      );
+      const { bundle, wasm } = await loadEngineBundle(context.extensionPath);
+      return bundle.createOutlineEngine(wasm);
     },
     log: (message) => log.warn(message),
   });

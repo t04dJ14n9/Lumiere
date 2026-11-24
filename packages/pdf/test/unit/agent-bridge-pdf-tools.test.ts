@@ -555,6 +555,10 @@ test("the new tools are read-only, and open_pdf_location is not", async () => {
     get_current_note_selection: true,
     get_pdf_info: true,
     find_notes_citing_pdf: true,
+    get_pdf_page_text: true,
+    find_in_pdf: true,
+    locate_pdf_quote: true,
+    list_pdf_annotations: true,
     get_ide_context: true,
   });
 });

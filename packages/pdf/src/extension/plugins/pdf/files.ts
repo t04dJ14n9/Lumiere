@@ -12,8 +12,13 @@ import type { PdfFile } from "../../../shared/pdf-backlink-index";
 import { writeAtomicFile } from "../../../host/atomic-write";
 import { isProtectedPdf, PROTECTED_FOLDERS } from "../../protected-folders";
 
-/** PDF files through VS Code's file system, so remote and virtual files open too. */
-export const vscodePdfFiles: PdfFiles = {
+/**
+ * PDF files through VS Code's file system, so remote and virtual files open
+ * too. Size, hash and annotation files are all there, for the code that
+ * needs them without a viewer (the agent bridge).
+ */
+export const vscodePdfFiles: PdfFiles &
+  Required<Pick<PdfFiles, "size" | "hash" | "annotations">> = {
   read: (uri) =>
     Promise.resolve(vscode.workspace.fs.readFile(vscode.Uri.parse(uri))),
   watch: (uri, onChange) => watchFile(vscode.Uri.parse(uri), onChange),

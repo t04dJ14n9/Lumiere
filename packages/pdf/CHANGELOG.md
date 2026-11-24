@@ -2,6 +2,19 @@
 
 ## Unreleased
 
+- **Agent bridge: tools that read a PDF's text** (#864). `get_pdf_page_text`
+  (pages 1-based, at most 20 pages and about 50,000 characters a call),
+  `find_in_pdf` (case- and whitespace-insensitive, each match with a snippet
+  and a link), `locate_pdf_quote` (which page holds a quoted passage, with
+  `ambiguous` when several do) and `list_pdf_annotations` (Lumiere's marks
+  from their file, in reading order, with the text each covers) are read-only
+  and work on a PDF that is not open: the extension host reads it with its
+  own PDFium (`PdfTextReader`, started on the first call, in the same
+  `outline-engine.js` bundle as the bookmark reader) and keeps the text of the
+  last four PDFs while they are unchanged. A PDF that needs a password, forbids
+  copying its text, is over 200 MB or is outside the workspace is refused
+  with the reason, as for the other tools' `path`.
+
 - Fixed: a bookmark made right after jumping to an outline entry was titled
   after the entry's parent, and Follow Cursor could select the parent. The
   jump scrolls in whole device pixels and can land a fraction of a point

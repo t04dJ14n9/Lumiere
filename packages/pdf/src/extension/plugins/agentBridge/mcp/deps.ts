@@ -1,4 +1,5 @@
 import type { PdfBacklinkIndex } from "../../../../shared/pdf-backlink-index";
+import type { PdfTextReader } from "../../../pdf-text/reader";
 import type { PdfPanels } from "../../pdf/panels";
 import type { AgentHandoff } from "../handoff";
 import type { LastPdf } from "../last-pdf";
@@ -15,6 +16,8 @@ export interface BridgeDeps {
   lastPdf: LastPdf;
   handoff: AgentHandoff;
   backlinks: PdfBacklinkIndex;
+  /** PDF text from the host's own PDFium; owned (and disposed) by the plugin. */
+  text: PdfTextReader;
   /** The Markdown editor's selections, when Lumiere runs. */
   notes?: NoteSelections;
 }
