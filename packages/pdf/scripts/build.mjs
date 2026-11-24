@@ -7,7 +7,8 @@
 //   dist/bridge-stdio.js         the stdio shim MCP clients run (see Copy MCP
 //                                Setup)
 //   dist/outline-engine.js       the extension host's PDFium for reading
-//                                bookmarks (note suggestions); loaded on first
+//                                bookmarks (note suggestions) and a PDF's text
+//                                (the bridge's text tools); loaded on first
 //                                use, with the viewer's embedpdf.wasm
 //   dist/webview/viewer.js       the PDF viewer page (browser), plus viewer.css
 //   dist/webview/embedpdf.wasm   the PDF engine, loaded by the viewer at

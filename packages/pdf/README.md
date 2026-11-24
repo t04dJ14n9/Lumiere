@@ -459,6 +459,23 @@ starts when the folder is trusted.
 | `open_pdf_location`          | Opens a `path#page=N&viewrect=…` link in the viewer and says which page it opened. A PDF that is already open is shown where it is (no new tab); otherwise it opens beside the editor you are in. The keyboard focus, the active group and the editor in front do not change. The PDF must be in the workspace.                                                                                                                                        |
 | `get_pdf_info`               | A PDF's page count, the page and zoom you are at, its bookmarks (title, page and depth; the first 200), its SHA-256, and whether it is in `lumiere.pdf.annotations.protectedFolders`. `path` is optional: the last PDF you viewed. Page count, position, bookmarks and hash are those of the **open** viewer; a PDF that is not open reports only that. Document metadata is not read yet. |
 | `find_notes_citing_pdf`      | The Markdown notes that link to a PDF (`[p. 3](papers/paper.pdf#page=3)`), each with the page, the quoted passage and the region the link names (the first 100). `path` is optional: the last PDF you viewed. Notes are indexed in the background once a PDF is open in the window.            |
+| `get_pdf_page_text`          | The text of pages of a PDF (`firstPage`, optional `lastPage`; 1-based), as PDFium extracts it, line breaks as `\n`. At most 20 pages and about 50,000 characters a call: `truncated` and `nextPage` say where to carry on. |
+| `find_in_pdf`                | Where a text occurs in a PDF: case and whitespace (line breaks included) do not matter. The total `count`, and the first `maxResults` (default 20, at most 50) as page, a one-line snippet of about 160 characters and a link that opens the page at the match. Plain text, no patterns. |
+| `locate_pdf_quote`           | Which page holds a quoted passage (`quote`, optional `prefix`, `suffix` and `page`), matched like a browser's text fragment, with a link to it. One match per page (the first place on it), at most 10 pages; `ambiguous` is true when more than one page matches, and nothing found is `found: false`, not an error. |
+| `list_pdf_annotations`       | Lumiere's own marks on a PDF, read from their file (`.lumiere/pdf-annotations/<sha256>.json`; not the annotations inside the PDF): page, kind, colour, the text a text mark covers (read from the PDF, up to 120 characters), the start of its note and a link, in reading order. The first 500; none when there is no file. |
+
+The four text tools read the PDF **from its file** with the extension host's
+own PDFium (the second one, `dist/pdf/outline-engine.js`, started on the first
+call), so the PDF need not be open in a viewer. The text of the last four PDFs
+read is kept while their modification time and size stay the same, and one PDF
+is read at a time. A PDF that needs a password, forbids copying its text in its
+permissions, is larger than 200 MB, or is not inside the workspace is refused
+with that reason (for `list_pdf_annotations` the marks are still listed, without
+their text, and `textNote` says why). A scanned PDF has no text layer, so its
+pages come back empty. Links are `path#page=N#:~:text=…` (or
+`&viewrect=…` for a mark that covers no text), the path as the other tools write
+it; a link finds the first occurrence of its text on the page, so several matches
+on one page share a link.
 
 Every tool but `open_pdf_location` is read-only (`readOnlyHint`). A tool that
 takes a file (`path`, `link`) accepts a PDF **inside the window's workspace
@@ -565,6 +582,9 @@ src/
 │   ├── note-reference.ts the @note#lines text the agent bridge returns
 │   │                     (shared format: packages/agents/docs/agent-handoff-format.md)
 │   ├── region-text.ts    the text inside a region, line by line
+│   ├── region-reader.ts  reading a region's text from a page; a mark's boxes. The
+│   │                     viewer and the host's PDFium both use it
+│   ├── text-boxes.ts     the box of each character of a page's text layout
 │   ├── outline-sections.ts  a PDF's bookmarks as a flat list of pages and titles
 │   ├── zoom-steps.ts     the zoom levels the buttons and keys step through
 │   ├── side-panel.ts, side-panel-messages.ts  the panel's state, and its messages
@@ -584,6 +604,11 @@ src/
 │   │                           engine.ts, a separate lazily loaded bundle
 │   │                           (outline-engine.js) of PDFium that loads the
 │   │                           viewer's embedpdf.wasm
+│   ├── pdf-text/               a PDF's text for the agent bridge's tools: the
+│   │                           reader (cached, one PDF at a time, refuses a locked,
+│   │                           copy-protected, large or outside PDF with its
+│   │                           reason) and its engine, which is exported from the
+│   │                           same outline-engine.js bundle
 │   ├── runtime/                plugin manifests and the runtime: dependency order,
 │   │                           transactional start (a failed plugin rolls back what
 │   │                           it registered), teardown in reverse order

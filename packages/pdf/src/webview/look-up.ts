@@ -3,10 +3,10 @@ import { StageToken } from "@embedpdf/plugin-stage/contract";
 import { useOptionalCapability } from "@embedpdf/react/runtime";
 import { useCallback, useEffect, useRef } from "react";
 import { coreWord } from "../shared/look-up";
+import { charBox, unionBounds } from "../shared/text-boxes";
 import { postToHost } from "./host";
 import { lookUpPageAt } from "./look-up-pages";
 import { setLookUpTarget, type LookUpTarget } from "./look-up-target";
-import { charBox, unionBounds } from "./text-boxes";
 import { useTextAccess, type TextAccess } from "./text-access";
 
 /** How often the word under the pointer is looked for while it moves. */

@@ -1,12 +1,21 @@
 /**
- * The extension host's own PDFium, for reading bookmarks. Built as its own
- * bundle (dist/outline-engine.js) and loaded by `PdfOutlineReader` when the
- * first outline is asked for, so notes that never link to a PDF section do
- * not pay for the engine.
+ * The extension host's own PDFium, for reading bookmarks and, through
+ * `createPdfTextEngine`, a PDF's text for the agent bridge. Built as its own
+ * bundle (dist/outline-engine.js; the name predates the text reader) and
+ * loaded by `PdfOutlineReader` when the first outline is asked for, and by
+ * `PdfTextReader` when an agent first asks for text, so notes that never link
+ * to a PDF section and sessions with no agent do not pay for the engine.
  */
 import { createLocalEngine } from "@embedpdf/engine";
 import type { OutlineSection } from "../../shared/outline-sections";
 import { sectionsOfOutline } from "./outline-items";
+
+export { createPdfTextEngine } from "../pdf-text/engine";
+export type {
+  PdfOpening,
+  PdfTextEngine,
+  QuoteRegion,
+} from "../pdf-text/engine";
 
 export interface OutlineEngine {
   /** The sections of the PDF whose bytes these are; rejects when PDFium cannot open it. */

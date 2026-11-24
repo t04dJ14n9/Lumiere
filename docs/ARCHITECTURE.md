@@ -442,7 +442,7 @@ extension host                                       webview (React, EmbedPDF + 
   pdfOutline, pdfHistory, pdfToolbar, ...              outline, backlink overlays, annotations
   pdfBacklinks (scans notes, matches quotes)           engine in a web worker (engine-host.ts)
   pdfAnnotations, pdfRegions, agentBridge, ...
-  outlines/ (PDFium in Node, on demand)
+  outlines/, pdf-text/ (PDFium in Node, on demand)
 ```
 
 - **Split.** `packages/pdf/src/extension` holds the VS Code plugins;
@@ -463,7 +463,10 @@ extension host                                       webview (React, EmbedPDF + 
   dies after the PDF opened is shown as stopped, with Reload.
   The host reads a PDF once per change for all its panes and opens files up to
   512 MB. The extension host has a second PDFium (`dist/pdf/outline-engine.js`)
-  that reads bookmarks for `[[paper.pdf#` suggestions, started on first use.
+  that reads bookmarks for `[[paper.pdf#` suggestions and, for the agent
+  bridge's text tools (`get_pdf_page_text`, `find_in_pdf`, `locate_pdf_quote`,
+  `list_pdf_annotations`), the text of PDFs that need not be open; it starts on
+  first use.
   A Markdown note's PDF embed runs the engine in the editor webview's own thread.
 - **Links into PDFs** are plain fragments (`#page=N`, `#:~:text=`), so Obsidian and
   browsers read them too. `pdfBacklinks` scans the workspace's Markdown notes
