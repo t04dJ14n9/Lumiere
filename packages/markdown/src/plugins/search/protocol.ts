@@ -21,6 +21,8 @@ export const response = Schema.object({
   skipped: Schema.array(Schema.string().max(8192)).max(100000).optional(),
   /** The search stopped at the result limit, so the notes after its last match were not searched. */
   truncated: Schema.boolean().optional(),
+  /** The search stopped at the skip limit, so the notes after its last skip were not searched. */
+  tooSlow: Schema.boolean().optional(),
 });
 export type SearchResponse = Infer<typeof response>;
 export const openTarget = Schema.object({

@@ -8,7 +8,7 @@ import {
   type SearchVerdict,
 } from "./runner";
 import type { SearchResponse } from "./protocol";
-import { SEARCH_RESULT_LIMIT } from "./limits";
+import { SEARCH_RESULT_LIMIT, SEARCH_SKIP_LIMIT } from "./limits";
 import type { SearchDocument } from "../../markdown/search/evaluate";
 import { readAhead } from "./read-ahead";
 export interface SearchInput {
@@ -54,7 +54,7 @@ export async function searchVault(input: SearchInput): Promise<SearchResponse> {
   const results: SearchResponse["results"] = [];
   const skipped: string[] = [];
   let unreadable = 0;
-  let truncated = false;
+  let stopped: Stop | undefined;
   const emit = createPartialEmitter(results, input.onPartial);
   const files = vault
     .files()
@@ -66,8 +66,8 @@ export async function searchVault(input: SearchInput): Promise<SearchResponse> {
     READ_AHEAD,
   );
   for (const file of files) {
-    if (results.length >= SEARCH_RESULT_LIMIT) {
-      truncated = true;
+    stopped = stopBefore(results, skipped);
+    if (stopped) {
       break;
     }
     const prepared = token.cancelled ? undefined : await documents.next();
@@ -96,8 +96,25 @@ export async function searchVault(input: SearchInput): Promise<SearchResponse> {
     results,
     unreadable,
     ...(skipped.length > 0 ? { skipped } : {}),
-    ...(truncated ? { truncated } : {}),
+    ...(stopped ? { [stopped]: true } : {}),
   };
+}
+
+/** Why a search ends before its next note: a limit it has reached. */
+type Stop = "truncated" | "tooSlow";
+
+/**
+ * Checked before each note, so a search whose last note reaches a limit is
+ * not reported as cut short.
+ */
+function stopBefore(
+  results: readonly unknown[],
+  skipped: readonly string[],
+): Stop | undefined {
+  if (results.length >= SEARCH_RESULT_LIMIT) {
+    return "truncated";
+  }
+  return skipped.length >= SEARCH_SKIP_LIMIT ? "tooSlow" : undefined;
 }
 
 /** Never rejects: a read that fails counts as an unreadable file. */

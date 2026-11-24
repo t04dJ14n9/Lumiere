@@ -1,7 +1,10 @@
 import test from "node:test";
 import assert from "node:assert/strict";
 import { searchVault } from "../../../src/plugins/search/query";
-import type { SearchEvaluator } from "../../../src/plugins/search/runner";
+import {
+  SearchTimeoutError,
+  type SearchEvaluator,
+} from "../../../src/plugins/search/runner";
 import { MemoryVaultIndex } from "../../../src/plugins/vault/memory-index";
 import { CancelToken, RpcError } from "../../../src/shared/rpc/lifecycle";
 import {
@@ -258,6 +261,42 @@ test("a search stops at 1000 matching notes, says so, and evaluates no more", as
   assert.equal(result.results.length, 1000);
   assert.equal(result.truncated, true);
   assert.equal(evaluations(), 1000);
+});
+
+/** A vault of `count` notes whose evaluation always runs past the deadline. */
+function allSlowVault(count: number) {
+  const { index, worker } = allMatchingVault(count);
+  let evaluations = 0;
+  worker.matches = async (document) => {
+    evaluations++;
+    throw new SearchTimeoutError(document.path);
+  };
+  return { index, worker, evaluations: () => evaluations };
+}
+
+test("a search stops after 10 notes too slow to evaluate, says so, and evaluates no more", async () => {
+  const { index, worker, evaluations } = allSlowVault(12);
+  const result = await searchVault({
+    vault: index,
+    worker,
+    token: new CancelToken(),
+    read: async () => "x",
+  });
+  assert.equal(result.skipped?.length, 10);
+  assert.equal(result.tooSlow, true);
+  assert.equal(evaluations(), 10);
+});
+
+test("a search whose last note is its 10th too slow to evaluate is not cut short", async () => {
+  const { index, worker } = allSlowVault(10);
+  const result = await searchVault({
+    vault: index,
+    worker,
+    token: new CancelToken(),
+    read: async () => "x",
+  });
+  assert.equal(result.skipped?.length, 10);
+  assert.equal(result.tooSlow, undefined);
 });
 
 test("a search of exactly 1000 matching notes is not cut short", async () => {

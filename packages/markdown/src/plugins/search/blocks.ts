@@ -1,7 +1,7 @@
 import type { RenderPass, Fence } from "../render/api";
 import type { QueryClient, SearchUpdate } from "./client";
 import type { SearchResponse } from "./protocol";
-import { SEARCH_RESULT_LIMIT } from "./limits";
+import { SEARCH_RESULT_LIMIT, SEARCH_SKIP_LIMIT } from "./limits";
 
 /** Open a vault path from a search result (match line carries an offset). */
 export type OpenSearchResult = (target: {
@@ -100,7 +100,7 @@ function resultsView(
       status.textContent = `Search failed: ${update.error}${kept}`;
     } else {
       show(update.results ?? []);
-      status.textContent = `${shown} ${shown === 1 ? "result" : "results"}${unreadableNote(update.unreadable)}${skippedNote(update.skipped)}${truncatedNote(update.truncated)}`;
+      status.textContent = `${shown} ${shown === 1 ? "result" : "results"}${unreadableNote(update.unreadable)}${skippedNote(update.skipped)}${truncatedNote(update.truncated)}${tooSlowNote(update.tooSlow)}`;
     }
   };
 }
@@ -117,6 +117,11 @@ function skippedNote(skipped: readonly string[] | undefined): string {
 function truncatedNote(truncated: boolean | undefined): string {
   return truncated
     ? ` · stopped at ${SEARCH_RESULT_LIMIT} matching files; the rest were not searched`
+    : "";
+}
+function tooSlowNote(tooSlow: boolean | undefined): string {
+  return tooSlow
+    ? ` · stopped after ${SEARCH_SKIP_LIMIT} files took too long; the rest were not searched`
     : "";
 }
 function paintMatches(

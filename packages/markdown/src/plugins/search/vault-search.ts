@@ -4,7 +4,7 @@ import { CancelToken } from "../../shared/rpc/lifecycle";
 import type { WorkerLauncher } from "../../shared/workers";
 import type { Vault } from "../vault/api";
 import type { SearchResponse } from "./protocol";
-import { SEARCH_RESULT_LIMIT } from "./limits";
+import { SEARCH_RESULT_LIMIT, SEARCH_SKIP_LIMIT } from "./limits";
 import { searchVault } from "./query";
 import type { SearchResultsTree } from "./results-tree";
 import { SearchWorker, type SearchEvaluator } from "./runner";
@@ -142,5 +142,8 @@ function summary(
   const truncated = response.truncated
     ? ` Stopped at ${SEARCH_RESULT_LIMIT} matching files; the rest were not searched.`
     : "";
-  return `${found}${unreadable}${skipped}${truncated}`;
+  const tooSlow = response.tooSlow
+    ? ` Stopped after ${SEARCH_SKIP_LIMIT} files took too long; the rest were not searched.`
+    : "";
+  return `${found}${unreadable}${skipped}${truncated}${tooSlow}`;
 }
