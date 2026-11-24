@@ -4,6 +4,7 @@ import {
   collectGitWarmTargets,
   documentWarmEnabled,
   isWarmableMarkdown,
+  markdownChangeUris,
   nextWarmBatch,
   shouldWarmUri,
 } from "../../../src/host/document-warm-policy";
@@ -312,6 +313,85 @@ test("P13: one git sweep warms at most its cap of notes", async () => {
   warmGitChanges(changes, () => true, "file:///vault");
   await settle();
   assert.deepEqual(host.opened, changes.slice(0, 3));
+});
+
+/** URIs that count how many were read, as a lazy source of changes does. */
+function countedNotes(total: number) {
+  const counter = { read: 0 };
+  function* uris() {
+    for (let i = 0; i < total; i++) {
+      counter.read++;
+      yield `file:///vault/n${String(i).padStart(4, "0")}.md`;
+    }
+  }
+  return { counter, uris: uris() };
+}
+
+test("git target collection stops reading changes once it has its limit", () => {
+  const { counter, uris } = countedNotes(1000);
+  assert.deepEqual(collectGitWarmTargets(uris, new Set(), 3), [
+    "file:///vault/n0000.md",
+    "file:///vault/n0001.md",
+    "file:///vault/n0002.md",
+  ]);
+  assert.equal(counter.read, 3);
+
+  const none = countedNotes(10);
+  assert.deepEqual(collectGitWarmTargets(none.uris, new Set(), 0), []);
+  assert.equal(none.counter.read, 0);
+});
+
+test("one git sweep reads no more of a repository's changes than its cap needs", async () => {
+  const { counter, uris } = countedNotes(1000);
+  const host = fakeHost({ modeFor: () => "on" });
+  const { warmGitChanges } = createDocumentWarmer(host, {
+    gitLimit: 2,
+    gitCap: 3,
+  });
+
+  warmGitChanges(uris, () => true, "file:///vault");
+  await settle();
+
+  assert.equal(host.opened.length, 3);
+  assert.equal(counter.read, 3);
+});
+
+test("a repository's changes are turned into URI strings only for the notes read", () => {
+  const stringified: string[] = [];
+  const change = (path: string, scheme = "file") => ({
+    uri: {
+      scheme,
+      path,
+      toString() {
+        stringified.push(path);
+        return `${scheme}://${path}`;
+      },
+    },
+  });
+  const working = [
+    change("/vault/a.ts"),
+    change("/vault/B.MD"),
+    change("/vault/c.png"),
+    change("/vault/d.md", "git"),
+    change("/vault/e.markdown"),
+  ];
+  const staged = [change("/vault/f.md"), change("/vault/g.md")];
+
+  const uris = markdownChangeUris([working, staged]);
+  assert.deepEqual(stringified, [], "nothing is read until asked");
+  const first = [uris.next().value, uris.next().value];
+
+  assert.deepEqual(first, ["file:///vault/B.MD", "file:///vault/e.markdown"]);
+  assert.deepEqual(stringified, ["/vault/B.MD", "/vault/e.markdown"]);
+  assert.deepEqual(
+    collectGitWarmTargets(markdownChangeUris([working, staged]), new Set()),
+    [
+      "file:///vault/B.MD",
+      "file:///vault/e.markdown",
+      "file:///vault/f.md",
+      "file:///vault/g.md",
+    ],
+  );
 });
 
 test("foreground missing-file rejection does not throw", async () => {
