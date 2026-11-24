@@ -2,6 +2,7 @@ import assert from "node:assert/strict";
 import { test } from "node:test";
 import type { OutlineItem } from "../../src/shared/messages";
 import {
+  DESTINATION_TOLERANCE,
   findActiveOutlineItem,
   flattenOutlineForPicker,
   followPosition,
@@ -26,7 +27,10 @@ test("no active bookmark for an empty tree or a position before its first destin
     findActiveOutlineItem([first], { page: 2, top: 999 }),
     undefined,
   );
-  assert.equal(findActiveOutlineItem([first], { page: 3, top: 99 }), undefined);
+  assert.equal(
+    findActiveOutlineItem([first], { page: 3, top: 98.9 }),
+    undefined,
+  );
 });
 
 test("a heading stays active across pages until the next heading, including after the final one", () => {
@@ -40,15 +44,18 @@ test("a heading stays active across pages until the next heading, including afte
   }
 });
 
-test("headings on the same page change exactly at their vertical destinations", () => {
+test("headings on the same page change at their vertical destinations, less a point of rounding", () => {
+  assert.equal(DESTINATION_TOLERANCE, 1);
   const first = heading("Start", 2);
   const middle = heading("Middle", 2, 120.5);
   const end = heading("End", 2, 300);
   const items = [first, middle, end];
   assert.equal(findActiveOutlineItem(items, { page: 2 }), first);
-  assert.equal(findActiveOutlineItem(items, { page: 2, top: 120.4 }), first);
+  assert.equal(findActiveOutlineItem(items, { page: 2, top: 119.4 }), first);
+  assert.equal(findActiveOutlineItem(items, { page: 2, top: 119.5 }), middle);
   assert.equal(findActiveOutlineItem(items, { page: 2, top: 120.5 }), middle);
-  assert.equal(findActiveOutlineItem(items, { page: 2, top: 299 }), middle);
+  assert.equal(findActiveOutlineItem(items, { page: 2, top: 298.9 }), middle);
+  assert.equal(findActiveOutlineItem(items, { page: 2, top: 299 }), end);
   assert.equal(findActiveOutlineItem(items, { page: 2, top: 300 }), end);
   assert.equal(findActiveOutlineItem(items, { page: 3 }), end);
 });
@@ -152,4 +159,15 @@ test("in a spread the Explorer and the side panel select the heading at the top 
     findActiveOutlineItem([earlier, later], { page: 3, top: view.top }),
     earlier,
   );
+});
+
+test("a jump to a bookmark that lands a fraction short, in whole device pixels, is at that bookmark, not its parent", () => {
+  // VS Code read Section 2.1's destination (page 9, 130 points) back as 129.87.
+  const section = heading("Section 2.1", 9, 130);
+  const part = heading("Part Two", 6, undefined, [section]);
+  assert.equal(
+    findActiveOutlineItem([part], { page: 9, top: 129.87 }),
+    section,
+  );
+  assert.equal(findActiveOutlineItem([part], { page: 9, top: 128.5 }), part);
 });

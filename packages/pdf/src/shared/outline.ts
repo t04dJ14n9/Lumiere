@@ -56,6 +56,16 @@ interface Candidate {
   depth: number;
 }
 
+/**
+ * How far above a destination, in points, the reading position may be and
+ * still count as at it. A jump to a bookmark scrolls the page in whole device
+ * pixels, so the place it reports can fall short of the destination (130 read
+ * back as 129.87 in VS Code), and the bookmark just jumped to would lose to
+ * its parent. A point is far less than a line of text, so no heading is
+ * reached before its line shows.
+ */
+export const DESTINATION_TOLERANCE = 1;
+
 /** At or before the reading position. */
 function reached(
   candidate: Candidate,
@@ -63,7 +73,8 @@ function reached(
 ): boolean {
   return (
     candidate.page < position.page ||
-    (candidate.page === position.page && candidate.top <= (position.top ?? 0))
+    (candidate.page === position.page &&
+      candidate.top <= (position.top ?? 0) + DESTINATION_TOLERANCE)
   );
 }
 

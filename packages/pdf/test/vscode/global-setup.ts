@@ -26,6 +26,7 @@ import {
   placeWindowOnBuiltInScreen,
   startPrivateDisplay,
 } from "../../../../test/vscode/display";
+import { withoutParentVsCode } from "../../../../test/vscode/parent-environment";
 import {
   devToolsWebSocket,
   freePort,
@@ -184,7 +185,7 @@ export default async function globalSetup(config: FullConfig): Promise<void> {
  */
 function cleanEnvironment(): NodeJS.ProcessEnv {
   const environment: NodeJS.ProcessEnv = {
-    ...process.env,
+    ...withoutParentVsCode(process.env),
     HOME: paths.home,
     ...(display === undefined ? {} : { DISPLAY: display }),
   };

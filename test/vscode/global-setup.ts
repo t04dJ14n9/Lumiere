@@ -21,6 +21,7 @@ import path from "node:path";
 import { createVSIX } from "@vscode/vsce";
 import { hostExecutable, paths, writeState } from "./state";
 import { placeWindowOnBuiltInScreen, startPrivateDisplay } from "./display";
+import { withoutParentVsCode } from "./parent-environment";
 import { devToolsWebSocket, freePort, resolveVsCode } from "./vscode-host";
 
 /** The private X display the test VS Code opens on (see display.ts). */
@@ -163,7 +164,7 @@ export default async function globalSetup(): Promise<void> {
  */
 function cleanEnvironment(): NodeJS.ProcessEnv {
   const environment: NodeJS.ProcessEnv = {
-    ...process.env,
+    ...withoutParentVsCode(process.env),
     HOME: paths.home,
     MARKDOWN_WORKBENCH_PROBE_DIR: paths.probe,
     ...(display === undefined ? {} : { DISPLAY: display }),

@@ -40,9 +40,11 @@ replaces each `img.note-image` whose `data-resource` parses with the frame or
 the card; the image comes back, the `message` listener goes and the load
 timers are cleared when the pass is disposed or the plugin stops, whichever
 comes first (a pass outlives the plugin when it is switched off). A frame starts
-loading 100 ms after it is made (`frame.ts`): the editor renders a block more
-than once while a note opens, and each render drops the frames of the one
-before, so a frame that loaded at once would load, heavily, to be dropped.
+loading 100 ms after it is made, once the page is idle (`frame.ts`): the
+editor renders a block more than once while a note opens (the host's answers
+about properties come after the first render), and each render drops the
+frames of the one before, so a frame that loaded at once would load, heavily,
+to be dropped. The idle wait gives up after 2 s.
 
 The frame starts 400 px tall (`TWEET_DEFAULT_HEIGHT`), so the block does not
 jump while it loads. Embeds learns it by asking `render/claimedHeight` (a bail
