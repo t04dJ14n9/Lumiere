@@ -39,5 +39,11 @@ export const protocol = defineProtocol("suggest", {
     query: { params: query, result: Schema.array(suggestion).max(50) },
     addBlockId: { params: blockId, result: Schema.boolean() },
   },
-  notifications: {},
+  notifications: {
+    /**
+     * The block this note's own link was to get an id changed first, so no
+     * link was inserted. The host tells the user, in words of its own.
+     */
+    blockChanged: Schema.object({}),
+  },
 });
