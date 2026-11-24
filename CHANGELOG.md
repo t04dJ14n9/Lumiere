@@ -1,5 +1,11 @@
 # Changelog
 
+## 0.1.27 (2026-11-24)
+
+- Markdown: text in a Mermaid diagram's labels can be selected and copied
+  again once the vault's diagrams are trusted (Allow), when labels are drawn
+  as HTML.
+
 ## 0.1.26 (2026-11-24)
 
 - Markdown: a list, quote, code-block or checklist command refuses when any
