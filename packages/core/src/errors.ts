@@ -1,5 +1,9 @@
 export type CoreErrorCode =
-  "UndeclaredService" | "DuplicateService" | "PluginFailed" | "Disposed";
+  | "UndeclaredService"
+  | "DuplicateService"
+  | "InvalidService"
+  | "PluginFailed"
+  | "Disposed";
 
 /** An error raised by the plugin core itself, as opposed to by a plugin. */
 export class CoreError extends Error {

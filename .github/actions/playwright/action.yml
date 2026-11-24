@@ -14,7 +14,7 @@ runs:
       uses: actions/cache@v6
       with:
         path: ~/.cache/ms-playwright
-        key: playwright-${{ runner.os }}-${{ steps.playwright.outputs.version }}-chromium
+        key: playwright-${{ runner.os }}-${{ runner.arch }}-${{ steps.playwright.outputs.version }}-chromium
     - name: Install Chromium and its system dependencies
       if: steps.browsers.outputs.cache-hit != 'true'
       shell: bash

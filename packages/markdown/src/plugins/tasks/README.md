@@ -9,7 +9,8 @@ List Checklist has no key. A line without a list
 gets `- [ ] ` after its quotes and indentation. Selected lines move together,
 as in Obsidian: every task is checked while any is open, and blank lines in
 the selection are left alone. As in Obsidian, both commands are refused (no
-edit) with the caret or selection in a table cell.
+edit) when any caret or selection touches a table's lines, including the end of a
+table's last row.
 
 ## How it works
 

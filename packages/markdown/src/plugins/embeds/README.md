@@ -50,7 +50,7 @@ and Tab the alias / size segment (as Obsidian's
 `editSelectedImageAlias`); Backspace or Delete
 removes the embed; Escape leaves source edit and re-selects the image
 (Obsidian), or clears the outline; a click elsewhere or any edit also lets
-it go (`image-selection.ts`, `image-size.ts`). While selected, the caret is hidden: the keys resize or edit the image rather than type. With Vim on, those keys still win: a capture-phase keydown runs them before `@replit/codemirror-vim`'s handler (BH-006).
+it go (`image-selection.ts`, `image-size.ts`). In a read-only editor the size keys and Backspace or Delete change nothing. While selected, the caret is hidden: the keys resize or edit the image rather than type. With Vim on, those keys still win: a capture-phase keydown runs them before `@replit/codemirror-vim`'s handler (BH-006).
 
 An HTML file (`![[diagram.html]]`, `![alt](/wiki/diagram.html)`, or a fenced
 `html-embed` block) is a resource of kind `html`, and a note shows it as a

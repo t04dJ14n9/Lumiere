@@ -80,6 +80,7 @@ export class Uri {
     readonly scheme: string,
     readonly path: string,
     readonly fragment = "",
+    readonly authority = "",
   ) {}
   static file(path: string): Uri {
     // As VS Code's: separators are slashes, and a Windows drive letter
@@ -101,14 +102,25 @@ export class Uri {
       scheme,
       decodeURIComponent(path.replace(/^\/\//u, "")),
       hash < 0 ? "" : rest.slice(hash + 1),
+      /^\/\/([^/]*)/u.exec(path)?.[1] ?? "",
     );
   }
   static joinPath(base: Uri, ...parts: string[]): Uri {
     // As VS Code's: `..` and repeated separators are resolved.
-    return new Uri(base.scheme, path.posix.join(base.path, ...parts));
+    return new Uri(
+      base.scheme,
+      path.posix.join(base.path, ...parts),
+      "",
+      base.authority,
+    );
   }
   with(change: { fragment?: string }): Uri {
-    return new Uri(this.scheme, this.path, change.fragment ?? this.fragment);
+    return new Uri(
+      this.scheme,
+      this.path,
+      change.fragment ?? this.fragment,
+      this.authority,
+    );
   }
   get fsPath(): string {
     // As VS Code's: on Windows, `/C:/x` is `c:\x`.
@@ -219,6 +231,7 @@ export const window = {
 };
 
 const workspaceFoldersChanged = new Set<Listener>();
+const trustGranted = new Set<Listener>();
 
 /** Change the window's workspace folders, as Add Folder to Workspace does. */
 export function setWorkspaceFolders(folders: Uri[]): void {
@@ -228,8 +241,27 @@ export function setWorkspaceFolders(folders: Uri[]): void {
   }
 }
 
+/** Trust the window's folders, as the Trust dialog does: a grant fires onDidGrantWorkspaceTrust. */
+export function setWorkspaceTrusted(trusted: boolean): void {
+  workspace.isTrusted = trusted;
+  if (trusted) {
+    for (const listener of [...trustGranted]) {
+      listener(undefined);
+    }
+  }
+}
+
 export const workspace = {
   workspaceFolders: undefined as { uri: Uri }[] | undefined,
+  isTrusted: true,
+  onDidGrantWorkspaceTrust: (listener: Listener) => {
+    trustGranted.add(listener);
+    const handle = track("listener:workspace.trust");
+    return new Disposable(() => {
+      trustGranted.delete(listener);
+      handle.dispose();
+    });
+  },
   onDidChangeWorkspaceFolders: (listener: Listener) => {
     workspaceFoldersChanged.add(listener);
     const handle = track("listener:workspace.workspaceFolders");

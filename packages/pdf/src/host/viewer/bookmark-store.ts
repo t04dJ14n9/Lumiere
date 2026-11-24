@@ -1,6 +1,7 @@
 import type { PdfBookmarkFiles } from "../../shared/host";
 import {
-  parseBookmarkFile,
+  parseBookmark,
+  parseBookmarkEntries,
   serializeBookmarkFile,
   withBookmark,
   withoutBookmark,
@@ -8,6 +9,11 @@ import {
   type Bookmark,
 } from "../../shared/bookmarks";
 import { Emitter } from "../events";
+
+/** JSON writes a NaN page or position as null, which the parser then refuses. */
+function readsBack(bookmark: Bookmark): boolean {
+  return parseBookmark(JSON.parse(JSON.stringify(bookmark))) !== undefined;
+}
 
 /** The bookmark file of one PDF: where it is, and the hash of the bytes that names it. */
 export interface BookmarkFileRef {
@@ -41,7 +47,9 @@ export function bookmarkFileOf(
  * through the file watcher.
  *
  * A file this version cannot read (not a bookmark file, or from a newer
- * Lumiere) is never written over: the change fails and says which file.
+ * Lumiere) is never written over, and neither is one that holds an entry this
+ * version refuses (malformed, or a repeat of an id): the change fails and says
+ * which file. Reads still show the entries it does read.
  */
 export class BookmarkStore {
   private readonly queues = new Map<string, Promise<void>>();
@@ -119,12 +127,19 @@ export class BookmarkStore {
     edit: (list: readonly Bookmark[]) => readonly Bookmark[],
   ): Promise<void> {
     return this.enqueue(file, async (files) => {
-      const { list, text } = await this.load(files, file);
+      const { list, text, unread } = await this.load(files, file);
       const edited = edit(list);
       if (edited === list) {
         return;
       }
-      const written = serializeBookmarkFile(edited);
+      // A bookmark that would not read back (JSON turns a NaN into null) would
+      // make every later change fail, so it is refused before anything is written.
+      if (!edited.every(readsBack)) {
+        throw new Error(
+          "Cannot save a bookmark that would not read back from its file.",
+        );
+      }
+      const written = serializeBookmarkFile(edited, unread);
       if (written === text) {
         return;
       }
@@ -134,18 +149,43 @@ export class BookmarkStore {
     });
   }
 
+  /**
+   * Copies a PDF's bookmarks to the bytes Lumiere rewrote it to. The old file
+   * stays, since another copy of the old PDF still reads it, and a file that
+   * already exists under the new bytes is never overwritten.
+   */
+  carry(from: BookmarkFileRef, to: BookmarkFileRef): Promise<void> {
+    return this.enqueue(to, async (files) => {
+      const text = await files.read(from.uri, from.sha256);
+      if (
+        text === undefined ||
+        (await files.read(to.uri, to.sha256)) !== undefined
+      ) {
+        return;
+      }
+      await files.write(to.uri, to.sha256, text);
+      this.known.set(this.key(to), text);
+      this.changed.fire(this.key(to));
+    });
+  }
+
   /** The file's text and what it holds; reading it is what the host knows of it from now on. */
   private async load(
     files: PdfBookmarkFiles,
     file: BookmarkFileRef,
-  ): Promise<{ list: readonly Bookmark[]; text: string | undefined }> {
+  ): Promise<{
+    list: readonly Bookmark[];
+    text: string | undefined;
+    unread: unknown[];
+  }> {
     const text = await files.read(file.uri, file.sha256);
     this.known.set(this.key(file), text);
     if (text === undefined) {
-      return { list: [], text };
+      return { list: [], text, unread: [] };
     }
     try {
-      return { list: parseBookmarkFile(text), text };
+      const { bookmarks, unread } = parseBookmarkEntries(text);
+      return { list: bookmarks, text, unread };
     } catch (error) {
       const why = error instanceof Error ? error.message : String(error);
       throw new Error(`Cannot use ${this.key(file)}. ${why}`, { cause: error });

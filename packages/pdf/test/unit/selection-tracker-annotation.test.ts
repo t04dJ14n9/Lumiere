@@ -416,3 +416,21 @@ test("a mark over a box with no page text hands its note to Copy Link for Agent"
     "@papers/a.pdf#page=2\n\n> Compare with figure 3\n",
   );
 });
+
+test("Cmd/Ctrl+C does not copy the previous text selection while a new selection's read is in flight", async () => {
+  const reports: unknown[] = [];
+  const { SelectionTracker } = loadSelectionTracker(reports);
+  const tracker = new SelectionTracker(() => undefined);
+  const text = mockSelection();
+  tracker.follow(text.selection, source);
+  text.select(0);
+  text.reads[0]!.resolve("first");
+  await tick();
+  assert.equal(tracker.selectedText, "first");
+  // A second selection replaces the first without a clear in between.
+  text.select(10);
+  assert.equal(tracker.selectedText, undefined);
+  text.reads[1]!.resolve("second");
+  await tick();
+  assert.equal(tracker.selectedText, "second");
+});

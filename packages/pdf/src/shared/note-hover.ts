@@ -17,6 +17,11 @@ export interface NoteHoverOptions {
   schedule: (run: () => void, ms: number) => { cancel: () => void };
   /** The mark whose note now shows (undefined for none), and whether it is being written. */
   onChange: (key: string | undefined, editing: boolean) => void;
+  /**
+   * Ends the note being written, keeping its text. Asked before another
+   * mark's note opens for writing, so the text written is not lost.
+   */
+  commitEdit?: () => void;
 }
 
 export interface NoteHover {
@@ -32,7 +37,7 @@ export interface NoteHover {
    * as it is.
    */
   open(key: string): void;
-  /** Show this mark's note at once, to be written. */
+  /** Show this mark's note at once, to be written; another being written is committed first. */
   edit(key: string): void;
   /** The note is written (or not): a hover again, or closed with `close`. */
   endEdit(options?: { close?: boolean }): void;
@@ -43,6 +48,14 @@ export interface NoteHover {
 
 export function createNoteHover(options: NoteHoverOptions): NoteHover {
   return new NoteHoverController(options);
+}
+
+/**
+ * The text a finished edit keeps: undefined when the writer left it as the
+ * editor started, so a note changed elsewhere meanwhile is not written back.
+ */
+export function changedText(started: string, text: string): string | undefined {
+  return text === started ? undefined : text;
 }
 
 type Schedule = NoteHoverOptions["schedule"];
@@ -136,6 +149,9 @@ class NoteHoverController implements NoteHover {
   }
 
   edit(key: string): void {
+    if (this.writing && this.key !== key) {
+      this.options.commitEdit?.();
+    }
     this.dispose();
     this.overCard = false;
     this.show(key, true);

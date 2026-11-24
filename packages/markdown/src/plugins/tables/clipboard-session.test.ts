@@ -86,7 +86,9 @@ function retainedCellFixture() {
     complete = resolve;
   });
   const clipboard = new TableClipboard(grid, projection, {} as TableSelection, {
-    copy() {},
+    async copy() {
+      return true;
+    },
     paste: () => pending,
     wrap: () => false,
     clearFormatting: (text) => text,

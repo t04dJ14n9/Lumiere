@@ -44,6 +44,8 @@ export class AnnotationSave {
       conflict: (payload: PdfWriteConflict) => void;
       failed: (message: string) => void;
       saved: () => void;
+      /** The PDF was rewritten: its bookmarks, keyed by the bytes it had, move to the new ones. */
+      rewrote: (change: { from: string; to: string }) => void;
     },
   ) {}
 
@@ -131,6 +133,7 @@ export class AnnotationSave {
     message: Extract<ViewerMessage, { type: "annotationSave" }>,
   ): Promise<void> {
     if (!this.deps.isCurrentLoad(message.load)) {
+      this.reportReloaded(message);
       return;
     }
     if (!this.takeRequest(message.load)) {
@@ -163,6 +166,7 @@ export class AnnotationSave {
     // A reload during the check gave the viewer other bytes than these; a
     // conflict could no longer be settled with Keep mine.
     if (!this.deps.isCurrentLoad(message.load)) {
+      this.reportReloaded(message);
       return;
     }
     if (!diskMatches) {
@@ -182,10 +186,15 @@ export class AnnotationSave {
     { load, write }: { load: number; write: number },
     bytes: Uint8Array,
   ): Promise<void> {
+    // The hash the PDF's bookmarks are keyed by, read before the write replaces it.
+    const from = this.source.sha256;
     this.source.expectWrite(createHash("sha256").update(bytes).digest("hex"));
     this.dirty = "saving";
+    let to: string | undefined;
     try {
       const written = await writeAtomic(this.fileUri, bytes);
+      // The PDF is rewritten from here on, whatever is reported after it.
+      to = written.sha256;
       this.wrote(load, written.sha256);
       this.dirty = "clean";
       this.deps.saved();
@@ -210,6 +219,29 @@ export class AnnotationSave {
         message: text,
       });
     }
+    // After the result: a listener that throws must not turn a written save into a failed one.
+    if (from !== undefined && to !== undefined && from !== to) {
+      this.deps.rewrote({ from, to });
+    }
+  }
+
+  /**
+   * A reload replaced the bytes this save was made on, so the write did not
+   * happen. The viewer must hear that: with no result it keeps waiting. Not a
+   * conflict: Keep mine is refused for a load that is no longer current, so a
+   * conflict would never settle.
+   */
+  private reportReloaded(
+    message: Extract<ViewerMessage, { type: "annotationSave" }>,
+  ): void {
+    this.deps.post({
+      type: "annotationSaveResult",
+      load: message.load,
+      write: message.write,
+      ok: false,
+      reason: "error",
+      message: "The PDF was reloaded before the annotations were saved.",
+    });
   }
 
   private reportConflict(

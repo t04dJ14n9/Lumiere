@@ -1,7 +1,11 @@
 import test from "node:test";
 import assert from "node:assert/strict";
 import { history, undo } from "@codemirror/commands";
-import { EditorState, type Transaction } from "@codemirror/state";
+import {
+  EditorSelection,
+  EditorState,
+  type Transaction,
+} from "@codemirror/state";
 import type { EditorView } from "@codemirror/view";
 import { insertCallout, insertCalloutCommand, isCallout } from "./edit";
 
@@ -161,6 +165,55 @@ function fakeView(doc: string, anchor: number) {
   } as unknown as EditorView;
   return { view, didDispatch: () => dispatched };
 }
+
+test("Insert Callout refuses a caret at a table's end, and a secondary caret in a row does not block it", () => {
+  const table = "| a | b |\n| --- | --- |\n| c | d |";
+  const atEnd = fakeView(table, table.length);
+  assert.equal(insertCalloutCommand(atEnd.view), false);
+  assert.equal(atEnd.didDispatch(), false);
+  assert.equal(atEnd.view.state.doc.toString(), table);
+
+  const doc = `${table}\n\nafter`;
+  let state = EditorState.create({
+    doc,
+    selection: EditorSelection.create(
+      [
+        EditorSelection.cursor(doc.indexOf("c")),
+        EditorSelection.cursor(doc.indexOf("after")),
+      ],
+      1,
+    ),
+    extensions: [EditorState.allowMultipleSelections.of(true)],
+  });
+  const view = {
+    get state() {
+      return state;
+    },
+    dispatch(spec: Parameters<EditorState["update"]>[0]) {
+      state = state.update(spec).state;
+    },
+  } as unknown as EditorView;
+  assert.equal(insertCalloutCommand(view), true);
+  assert.ok(state.doc.toString().startsWith(`${table}\n\n`));
+});
+
+test("Insert Callout still runs on a main selection that spans a table", () => {
+  const table = "| a | b |\n| --- | --- |\n| c | d |";
+  const doc = `before\n\n${table}\n\nafter`;
+  let state = EditorState.create({
+    doc,
+    selection: { anchor: 0, head: doc.length },
+  });
+  const view = {
+    get state() {
+      return state;
+    },
+    dispatch(spec: Parameters<EditorState["update"]>[0]) {
+      state = state.update(spec).state;
+    },
+  } as unknown as EditorView;
+  assert.equal(insertCalloutCommand(view), true);
+});
 
 // Obsidian 1.15.0 registers Insert Callout behind `if (!a.inTableCell)`
 // (issue #693).

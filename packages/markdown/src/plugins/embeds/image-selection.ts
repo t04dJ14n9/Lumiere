@@ -120,6 +120,9 @@ function maxWidth(view: EditorView): number {
 }
 
 function resize(view: EditorView, change: 1 | -1 | 0): boolean {
+  if (view.state.readOnly) {
+    return false;
+  }
   const range = view.state.field(selectedImage);
   if (!range) {
     return false;
@@ -170,6 +173,9 @@ function editSource(view: EditorView, part: "target" | "alias"): boolean {
 }
 
 function remove(view: EditorView): boolean {
+  if (view.state.readOnly) {
+    return false;
+  }
   const range = view.state.field(selectedImage);
   if (!range) {
     return false;

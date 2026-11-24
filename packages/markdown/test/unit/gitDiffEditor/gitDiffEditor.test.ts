@@ -4,6 +4,7 @@ import type { HostDocument } from "../../../src/shared/host";
 import test from "node:test";
 import assert from "node:assert/strict";
 import { createRoot } from "@workshop/core";
+import MarkdownIt from "markdown-it";
 import {
   gitDiffEditorHost,
   sideLabel,
@@ -16,6 +17,7 @@ import {
 } from "../../../src/plugins/gitDiffEditor/comparison";
 import { alignBlocks, rowMarkdown } from "../../../src/shared/diff";
 import { createRenderer } from "../../../src/markdown/html";
+import type { RenderOptions } from "../../../src/markdown/html";
 import { definitions, diffRows } from "../../../src/webview/diff/rows";
 import { stepChange } from "../../../src/webview/diff/step";
 import { contributionId } from "../../../src/shared/setting-schema";
@@ -592,6 +594,100 @@ test("R3 B4: the second of two adjacent footnote definitions is found", () => {
   assert.match(rows[0]!.after!, /Second note\./);
   assert.doesNotMatch(rows[0]!.after!, /First note\./);
   assert.match(rows[1]!.after!, /mw-gd-line/);
+});
+
+/** Paragraphs that each cite their own definition, then 200 definitions. */
+const citingDocument = (word: (i: number) => string) => {
+  const body = Array.from(
+    { length: 60 },
+    (_, i) => `${word(i)} ${i} with [link ${i}][r${i}].`,
+  );
+  const defs = Array.from(
+    { length: 200 },
+    (_, i) => `[r${i}]: https://example.test/${i}`,
+  );
+  return `${body.join("\n\n")}\n\n${defs.join("\n")}\n`;
+};
+const editedFirst = (i: number) => (i < 10 ? "Edited" : "Item");
+
+/** The same options, with a shared definition set passed as the legacy string. */
+const asStringDefinitions = (options: RenderOptions = {}): RenderOptions => {
+  const { definitionSet, ...rest } = options;
+  return definitionSet
+    ? { ...rest, referenceDefinitions: definitionSet.text }
+    : rest;
+};
+
+test("B4 #871: a rendered diff parses the reference definitions once per side", (t) => {
+  const parse = t.mock.method(MarkdownIt.prototype, "parse");
+  diffRows(
+    citingDocument(() => "Item"),
+    citingDocument(editedFirst),
+    renderSide,
+  );
+  // Only the definitions parse contains the last definition's label.
+  const parses = parse.mock.calls.filter((call) =>
+    String(call.arguments[0]).includes("[r199]:"),
+  );
+  assert.equal(parses.length, 2);
+});
+
+test("B4 #871: a shared definition set renders the same rows as the string path", () => {
+  const legacy: Parameters<typeof diffRows>[2] = (markdown, options) =>
+    renderer.renderMarkdown(markdown, asStringDefinitions(options));
+  const before = citingDocument(() => "Item");
+  const after = citingDocument(editedFirst);
+  assert.deepEqual(
+    diffRows(before, after, renderSide),
+    diffRows(before, after, legacy),
+  );
+});
+
+test("B4 #871: a shared definition set does not carry one block's definitions into the next", () => {
+  const set = { text: "[z]: https://shared.example/z" };
+  const first =
+    "Local [x] and [z].\n\n[x]: https://block.example/x\n[z]: https://local.example/z\n";
+  const second = "Again [x] and [z].\n";
+  const shared = (source: string) =>
+    renderer.renderMarkdown(source, { fragment: true, definitionSet: set });
+  const legacy = (source: string) =>
+    renderer.renderMarkdown(source, {
+      fragment: true,
+      referenceDefinitions: set.text,
+    });
+  assert.equal(shared(first), legacy(first));
+  assert.equal(shared(second), legacy(second));
+  assert.doesNotMatch(shared(second), /block\.example/);
+  assert.match(shared(second), /href="https:\/\/shared\.example\/z"/);
+  // Text that the Markdown parser reads as no definition leaves no table.
+  const notDefinition = "not a definition";
+  assert.equal(
+    renderer.renderMarkdown("A [x] line.\n", {
+      fragment: true,
+      definitionSet: { text: notDefinition },
+    }),
+    renderer.renderMarkdown("A [x] line.\n", {
+      fragment: true,
+      referenceDefinitions: notDefinition,
+    }),
+  );
+});
+
+test("B4 #871: a set that holds footnote state renders as the string path does, every time", () => {
+  const set = { text: "[^n]: A note." };
+  const source = "A note[^n] here.\n";
+  const legacy = renderer.renderMarkdown(source, {
+    fragment: true,
+    referenceDefinitions: set.text,
+  });
+  assert.equal(
+    renderer.renderMarkdown(source, { fragment: true, definitionSet: set }),
+    legacy,
+  );
+  assert.equal(
+    renderer.renderMarkdown(source, { fragment: true, definitionSet: set }),
+    legacy,
+  );
 });
 
 test("R3 B1: disabling while a read is pending drops its change listener at once", async () => {

@@ -9,6 +9,11 @@ import { parseViewSettings } from "../../src/shared/view-settings";
 const INITIAL = new Uint8Array([37, 80, 68, 70]); // %PDF
 const INITIAL_SHA = createHash("sha256").update(INITIAL).digest("hex");
 
+/** The viewer as the tests see it: its rewrite event, which the panel keeps protected. */
+class RewriteProbe extends PdfViewerPanel {
+  readonly onRewritten = this.annotations.rewritten.event;
+}
+
 function open(files: Partial<PdfFiles> = {}) {
   const posted: HostMessage[] = [];
   const errors: string[] = [];
@@ -31,7 +36,7 @@ function open(files: Partial<PdfFiles> = {}) {
     }),
   };
   let disk = INITIAL;
-  const panel = new PdfViewerPanel(
+  const panel = new RewriteProbe(
     "file:///papers/paper.pdf",
     webview,
     {
@@ -112,6 +117,70 @@ test("annotationSave overwrites and suppresses watcher reload", async () => {
     loadsBeforeWatch,
     "self-write must not reload the viewer",
   );
+});
+
+test("a PDF write reports the rewrite after its result, with the hash it replaced", async () => {
+  const { panel, posted, receive, saveAsked } = open();
+  const rewrites: {
+    change: { from: string; to: string };
+    resultFirst: boolean;
+  }[] = [];
+  panel.onRewritten((change) => {
+    rewrites.push({
+      change,
+      resultFirst: posted.some(
+        (m) => m.type === "annotationSaveResult" && m.ok,
+      ),
+    });
+  });
+  await receive({ type: "ready" });
+  const load = posted.find((m) => m.type === "load");
+  assert.ok(load && load.type === "load");
+  const next = bytesOf(97);
+  const to = createHash("sha256").update(next).digest("hex");
+  assert.equal(panel.sha256, INITIAL_SHA);
+  await saveAsked(save(load.load, INITIAL_SHA, next));
+  assert.equal(panel.sha256, to);
+  assert.deepEqual(rewrites, [
+    {
+      change: {
+        from: INITIAL_SHA,
+        to,
+      },
+      resultFirst: true,
+    },
+  ]);
+});
+
+test("a PDF write that fails reports no rewrite", async () => {
+  const { panel, posted, receive, saveAsked } = open({
+    writeAtomic: async () => {
+      throw new Error("disk full");
+    },
+  });
+  const rewrites: unknown[] = [];
+  panel.onRewritten((change) => rewrites.push(change));
+  await receive({ type: "ready" });
+  const load = posted.find((m) => m.type === "load");
+  assert.ok(load && load.type === "load");
+  await saveAsked(save(load.load, INITIAL_SHA, bytesOf(97)));
+  assert.deepEqual(rewrites, []);
+});
+
+test("a save for a load the viewer no longer has gets one failed result and writes nothing", async () => {
+  const { posted, receive, writes } = open();
+  await receive({ type: "ready" });
+  const before = posted.length;
+  await receive(save(999, INITIAL_SHA, bytesOf(97)));
+  assert.equal(writes(), 0);
+  const results = posted
+    .slice(before)
+    .filter((m) => m.type === "annotationSaveResult");
+  assert.equal(results.length, 1);
+  const [result] = results;
+  assert.ok(result && result.type === "annotationSaveResult" && !result.ok);
+  assert.equal(result.load, 999);
+  assert.equal(result.write, 1);
 });
 
 const bytesOf = (...values: number[]) =>
@@ -544,4 +613,57 @@ test("a save after a failed reload never writes over bytes another reload read b
   assert.deepEqual([...disk], [...CHANGED]);
   heldStore[0]!();
   await reading;
+});
+
+test("a save for a load a reload has replaced is answered with a failed result", async () => {
+  let disk = INITIAL;
+  const { posted, receive, triggerWatch, saveAsked } = open({
+    read: async () => disk,
+  });
+  await receive({ type: "ready" });
+  const first = posted.find((m) => m.type === "load");
+  assert.ok(first && first.type === "load");
+  disk = bytesOf(9);
+  triggerWatch();
+  await untilLoads(posted, 2);
+  const before = posted.length;
+  await saveAsked(save(first.load, INITIAL_SHA, bytesOf(1)));
+  const result = posted
+    .slice(before)
+    .find((m) => m.type === "annotationSaveResult");
+  assert.ok(result && result.type === "annotationSaveResult" && !result.ok);
+  assert.equal(result.load, first.load);
+  assert.equal(result.write, 1);
+  assert.equal(result.reason, "error");
+});
+
+test("a save whose disk check outlasts a reload is answered with a failed result", async () => {
+  let disk = INITIAL;
+  let release: (() => void) | undefined;
+  let stalled = false;
+  const { posted, receive, triggerWatch, saveAsked } = open({
+    read: async () => disk,
+    hash: async () => {
+      if (!stalled) {
+        stalled = true;
+        await new Promise<void>((resolve) => {
+          release = resolve;
+        });
+      }
+      return createHash("sha256").update(disk).digest("hex");
+    },
+  });
+  await receive({ type: "ready" });
+  const first = posted.find((m) => m.type === "load");
+  assert.ok(first && first.type === "load");
+  const saving = saveAsked(save(first.load, INITIAL_SHA, bytesOf(1)));
+  disk = bytesOf(9);
+  triggerWatch();
+  await untilLoads(posted, 2);
+  release?.();
+  await saving;
+  const result = posted.find((m) => m.type === "annotationSaveResult");
+  assert.ok(result && result.type === "annotationSaveResult" && !result.ok);
+  assert.equal(result.load, first.load);
+  assert.equal(result.reason, "error");
 });

@@ -21,7 +21,7 @@ import { swapLine } from "./swap-lines";
 import { linkPasteHandler } from "./paste-link";
 import { keepFormatKeys } from "./format-keys";
 import { selectAllOccurrences } from "./select-occurrences";
-import { selectionTouchesTableCell } from "../../markdown/table-cell";
+import { selectionCoversTable } from "../../markdown/table-cell";
 
 /** Commands whose Obsidian registrations check `inTableCell`. */
 const REFUSE_IN_TABLE_CELL = new Set([
@@ -31,10 +31,13 @@ const REFUSE_IN_TABLE_CELL = new Set([
   "editor:insert-codeblock",
 ]);
 
-/** A block command must not edit a table row, whichever way the selection runs. */
+/**
+ * A block command must not edit a table row, whichever way the selection runs,
+ * nor rewrite the lines of a selection that runs across a table.
+ */
 function refuseInTableCell(run: Command): Command {
   return (view) => {
-    if (selectionTouchesTableCell(view.state)) {
+    if (selectionCoversTable(view.state)) {
       return false;
     }
     return run(view);

@@ -33,7 +33,9 @@ export interface WorkspacePdf {
  * The PDF in this window's workspace that `text` names: a path (relative to
  * a workspace folder, or absolute), a `file:` URI, a Markdown link or an
  * `@path#page=N` locator. Throws a `ToolError` when it names no PDF inside
- * the workspace, or names one in several of its folders.
+ * the workspace, or names one in several of its folders. A name of another
+ * machine (see `isOtherMachine`) is refused the same way, before any
+ * file-system call.
  */
 export async function resolveWorkspacePdf(text: string): Promise<WorkspacePdf> {
   const found = new Map<string, WorkspacePdf>();
@@ -59,17 +61,66 @@ export async function resolveWorkspacePdf(text: string): Promise<WorkspacePdf> {
   return only;
 }
 
+/** `\\?\` and `\\.\` name this machine's device namespace, not a host. */
+const DEVICE_NAMESPACE = /^[\\/]{2}[?.][\\/]/u;
+
+/** `\\?\UNC\host\…` and `\\.\UNC\host\…` are UNC paths in device form. */
+const DEVICE_UNC = /^[\\/]{2}[?.][\\/]UNC[\\/]+([^\\/]+)/iu;
+
+/** A UNC prefix, or a `file:` URI with a host, then the host's name. */
+const NETWORK_PREFIX =
+  /^(?:[\\/]{2}|file:(?![\\/]{3}[^\\/])[\\/]{2})[\\/]*([^\\/?#]+)/iu;
+
+/**
+ * The host a name of another machine names, lower-cased, or undefined for a
+ * name of this machine (a device path, `file:///…`, `localhost`). Windows
+ * resolves such a name over the network at the first file-system call, so
+ * it is judged before any URI is made from it.
+ */
+function namedHost(name: string): string | undefined {
+  const deviceUnc = DEVICE_UNC.exec(name);
+  if (!deviceUnc && DEVICE_NAMESPACE.test(name)) {
+    return undefined;
+  }
+  const host = (deviceUnc ?? NETWORK_PREFIX.exec(name))?.[1]?.toLowerCase();
+  return host === "localhost" ? undefined : host;
+}
+
+/**
+ * Whether `name` names a machine other than the hosts this window's folders
+ * are on: a workspace opened from a share keeps its own share's paths open.
+ */
+function isOtherMachine(name: string): boolean {
+  const host = namedHost(name);
+  if (host === undefined) {
+    return false;
+  }
+  const own = (vscode.workspace.workspaceFolders ?? [])
+    .filter((folder) => folder.uri.scheme === "file")
+    .map((folder) => folder.uri.authority.toLowerCase());
+  return !own.includes(host);
+}
+
 /** The URIs `text` may mean; each keeps its fragment. */
 function candidatesFor(text: string): WorkspacePdf[] {
   const link = extractPdfLink(text);
   try {
     if (/^[a-z][a-z0-9+.-]*:\/\//iu.test(link)) {
+      if (isOtherMachine(link)) {
+        return [];
+      }
       const uri = vscode.Uri.parse(link);
       return [{ uri: uri.with({ fragment: "" }), fragment: uri.fragment }];
     }
     const hash = link.indexOf("#");
     const fragment = hash < 0 ? "" : link.slice(hash + 1);
-    return pdfPathReadings(hash < 0 ? link : link.slice(0, hash))
+    // Every reading of the path is checked, decoded ones included: one that
+    // is a network name refuses the whole argument.
+    const readings = pdfPathReadings(hash < 0 ? link : link.slice(0, hash));
+    if (readings.some(isOtherMachine)) {
+      return [];
+    }
+    return readings
       .flatMap((file) =>
         path.isAbsolute(file)
           ? [vscode.Uri.file(file)]

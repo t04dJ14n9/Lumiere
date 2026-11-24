@@ -57,6 +57,8 @@ class PanelFeed {
       // A viewer given other bytes may never report (a PDF that will not
       // open), so the outlet says so itself.
       panel.bookmarks.onStale(() => this.follow()),
+      // A save rewrote the PDF, so its bookmarks go to the new bytes too.
+      panel.onAnnotationRewritten((change) => void this.carry(change)),
       store.onDidChange((key) => {
         if (key === this.shown?.key) {
           void this.reload();
@@ -91,6 +93,24 @@ class PanelFeed {
     this.shown =
       file && key ? { file, key, stop: this.store.watch(file) } : undefined;
     void this.reload();
+  }
+
+  /**
+   * Never rejects: a carry that fails is logged, and the tab shows what the
+   * new file holds. The store's change tells the tab to read it.
+   */
+  private async carry(change: { from: string; to: string }): Promise<void> {
+    const uri = this.panel.fileUri;
+    try {
+      await this.store.carry(
+        { uri, sha256: change.from },
+        { uri, sha256: change.to },
+      );
+    } catch (error) {
+      this.log.warn(
+        `Could not carry the bookmarks to the saved PDF: ${String(error)}`,
+      );
+    }
   }
 
   /** Never rejects: a file that cannot be read is said in the tab. */

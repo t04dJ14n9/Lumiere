@@ -42,10 +42,12 @@ Rule and Insert Code Block act at every selection, as in Obsidian 1.15;
 selections that share a line share one code block (`src/markdown/fence-lines.ts`,
 also used by Insert Math Block). Registered
 commands target the active projected editor (including table cells), except the
-list, quote and code-block commands: they check the outer document for a parsed
-table at the caret or selection start and return false there, as do Insert
-Callout and the checklist commands in their own plugins (`src/markdown/table-cell.ts`
-holds the shared check). Owned keymaps
+list, quote and code-block commands: they check the outer document and return
+false when any selection range covers a line of a parsed table, from its first
+line to its last. That includes a caret at the end of a table's last row and a
+selection that runs across a table. The check is shared with the checklist
+commands; Insert Callout applies it to its main selection only
+(`src/markdown/table-cell.ts`). Owned keymaps
 provide bold, italic, link and comment shortcuts. As in Obsidian,
 Insert Link leaves the caret in the empty URL after a selected label (else in
 the empty label), and Toggle Comment wraps the selection or the word at the

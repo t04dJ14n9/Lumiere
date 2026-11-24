@@ -2,6 +2,26 @@
 
 ## 0.1.0 (unreleased)
 
+- Fixed: in a read-only editor the Properties sheet's edits, Enter and
+  Shift+Enter list continuation, and the image size keys and Backspace or
+  Delete on a selected image no longer change the note (#826). Known gaps: a
+  refused list or checkbox edit, and a refused field draft, show no read-only
+  message, and a refused list edit says "The properties changed".
+
+- The rendered diff parses each side's reference definitions once, not once
+  per block, with byte-identical output (#871).
+
+- Fixed: the list, quote, code-block and checklist commands refuse when any
+  caret or selection end in any selection range is in a table, so a secondary
+  caret in a table row no longer changes the table. The list, quote,
+  code-block, checklist and Insert Callout commands also refuse at the end of
+  a table's last row, which the check used to miss, and a selection that runs
+  across a table is refused too (#829).
+
+- Fixed: removing a note's last property keeps the note's own `---` block as
+  text instead of reading it as the properties. When the body opens with a
+  `---` block, a blank line takes the fence's place (#904).
+
 - A Markdown link into a hidden folder, such as
   `[source](/.raw/captured/page.md)`, now previews and embeds its file. A
   click already opened it, but the hover preview said "Resource not found":

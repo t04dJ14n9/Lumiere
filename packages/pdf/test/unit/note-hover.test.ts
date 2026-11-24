@@ -1,18 +1,20 @@
 import assert from "node:assert/strict";
 import test from "node:test";
 import {
+  changedText,
   createNoteHover,
   NOTE_CLOSE_DELAY_MS,
   NOTE_OPEN_DELAY_MS,
 } from "../../src/shared/note-hover";
 
 /** A hover with a fake clock: `tick(ms)` runs what was due by then. */
-function setUp() {
+function setUp(commitEdit?: () => void) {
   let now = 0;
   const timers: { at: number; run: () => void; live: boolean }[] = [];
   const shown: (string | undefined)[] = [];
   const editing: boolean[] = [];
   const hover = createNoteHover({
+    commitEdit: () => commitEdit?.(),
     schedule: (run, ms) => {
       const timer = { at: now + ms, run, live: true };
       timers.push(timer);
@@ -211,4 +213,56 @@ test("open does not take over a note being written", () => {
   assert.deepEqual(shown, ["a"]);
   assert.deepEqual(editing, [true]);
   assert.equal(hover.editing(), true);
+});
+
+test("editing another mark ends the note being written first, so its text is kept", () => {
+  let ended = 0;
+  const { hover, shown, editing } = setUp(() => {
+    ended += 1;
+    hover.endEdit();
+  });
+  hover.edit("a");
+  hover.edit("b");
+  assert.equal(ended, 1);
+  // "a" ends (not writing) before "b" opens for writing.
+  assert.deepEqual(shown, ["a", "a", "b"]);
+  assert.deepEqual(editing, [true, false, true]);
+  assert.equal(hover.shown(), "b");
+  assert.equal(hover.editing(), true);
+});
+
+test("ending the first note with nothing left closes the card before the other opens", () => {
+  const { hover, shown, editing } = setUp(() => hover.endEdit({ close: true }));
+  hover.edit("a");
+  hover.edit("b");
+  assert.deepEqual(shown, ["a", undefined, "b"]);
+  assert.deepEqual(editing, [true, false, true]);
+});
+
+test("editing the mark already being written ends nothing", () => {
+  let ended = 0;
+  const { hover, shown } = setUp(() => {
+    ended += 1;
+  });
+  hover.edit("a");
+  hover.edit("a");
+  assert.equal(ended, 0);
+  assert.deepEqual(shown, ["a"]);
+  assert.equal(hover.editing(), true);
+});
+
+test("a note edit left as it started keeps no text, so a note changed meanwhile is not written back", () => {
+  assert.equal(changedText("A", "A"), undefined);
+  assert.equal(changedText("A", "B"), "B");
+});
+
+test("editing while nothing is written ends nothing", () => {
+  let ended = 0;
+  const { hover, shown } = setUp(() => {
+    ended += 1;
+  });
+  hover.open("a");
+  hover.edit("b");
+  assert.equal(ended, 0);
+  assert.deepEqual(shown, ["a", "b"]);
 });

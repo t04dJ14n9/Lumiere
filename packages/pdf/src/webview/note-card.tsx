@@ -44,8 +44,8 @@ export function NoteCard({
 }): React.JSX.Element | null {
   const annotation = useOptionalCapability(AnnotationToken);
   const [shown, setShown] = useState<Shown>({ key: undefined, editing: false });
-  const hover = useNoteHover(setShown);
   const commit = useRef<(() => void) | null>(null);
+  const hover = useNoteHover(setShown, commit);
   usePointerOverMarks(annotation, hover, commit);
   const onSaved = useEditRequests(hover);
   const mark = useShownMark(shown.key);
@@ -181,7 +181,10 @@ function useShownMark(key: string | undefined): Annotation | null {
   );
 }
 
-function useNoteHover(onChange: (shown: Shown) => void): NoteHover {
+function useNoteHover(
+  onChange: (shown: Shown) => void,
+  commit: React.RefObject<(() => void) | null>,
+): NoteHover {
   const hover = useMemo(
     () =>
       createNoteHover({
@@ -190,8 +193,9 @@ function useNoteHover(onChange: (shown: Shown) => void): NoteHover {
           return { cancel: () => window.clearTimeout(handle) };
         },
         onChange: (key, editing) => onChange({ key, editing }),
+        commitEdit: () => commit.current?.(),
       }),
-    [onChange],
+    [onChange, commit],
   );
   useEffect(() => () => hover.dispose(), [hover]);
   return hover;
@@ -205,8 +209,11 @@ function useEditRequests(
   useEffect(
     () =>
       onNoteEditRequest((request) => {
-        onSaved.current = request.onSaved;
+        // Edit first: a note still being written is saved by `commitEdit`
+        // inside it, and that save must take the callback of its own request,
+        // which this one replaces.
         hover.edit(annotationKey(request.ref));
+        onSaved.current = request.onSaved;
       }),
     [hover],
   );

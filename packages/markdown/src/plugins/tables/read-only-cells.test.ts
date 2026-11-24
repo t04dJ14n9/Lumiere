@@ -119,7 +119,10 @@ function clipboard(
     } as unknown as CellProjection,
     selection as unknown as TableSelection,
     {
-      copy: (text: string) => calls.copied.push(text),
+      copy: async (text: string) => {
+        calls.copied.push(text);
+        return true;
+      },
       paste: async () => {
         calls.read++;
         return options.pasted ?? "";
@@ -132,20 +135,20 @@ function clipboard(
   return { instance, calls, selection };
 }
 
-test("Cut from the menu copies a read-only note's cell text but leaves it", () => {
+test("Cut from the menu copies a read-only note's cell text but leaves it", async () => {
   for (const readOnly of [true, false]) {
     const inner = cellView("hello", readOnly, 0, 2);
     const { instance, calls } = clipboard(readOnly, { inner });
-    instance.copyFromMenu(range, true);
+    await instance.copyFromMenu(range, true);
     assert.deepEqual(calls.copied, ["he"]);
     assert.equal(inner.state.doc.toString(), readOnly ? "hello" : "llo");
   }
 });
 
-test("Cut from the menu over cells of a read-only note neither selects nor clears them", () => {
+test("Cut from the menu over cells of a read-only note neither selects nor clears them", async () => {
   for (const readOnly of [true, false]) {
     const { instance, calls } = clipboard(readOnly, { range });
-    instance.copyFromMenu(range, true);
+    await instance.copyFromMenu(range, true);
     assert.equal(calls.copied.length, 1);
     assert.equal(calls.activated, readOnly ? 0 : 1);
     assert.equal(calls.replaced, readOnly ? 0 : 1);
@@ -330,7 +333,10 @@ test("Copy from the menu of a right-clicked cell copies that cell, not one left 
       projection,
       { range: undefined } as unknown as TableSelection,
       {
-        copy: (text: string) => copies.push(text),
+        copy: async (text: string) => {
+          copies.push(text);
+          return true;
+        },
         paste: async () => "",
         wrap: () => true,
         clearFormatting: (text: string) => text,
@@ -377,7 +383,9 @@ test("Paste from the menu writes nothing when the note turns read-only while the
         projection,
         selection as unknown as TableSelection,
         {
-          copy() {},
+          async copy() {
+            return true;
+          },
           paste: async () => {
             readOnly = turnsReadOnly;
             return pasted;
@@ -540,7 +548,10 @@ function wiredTable(openCell?: CellPosition) {
   }[] = [];
   const environment = {
     position: () => 0,
-    copy: (text: string) => copies.push(text),
+    copy: async (text: string) => {
+      copies.push(text);
+      return true;
+    },
     paste: async () => "",
     wrap: () => true,
     clearFormatting: (text: string) => text,

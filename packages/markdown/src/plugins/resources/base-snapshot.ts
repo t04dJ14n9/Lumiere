@@ -206,7 +206,8 @@ function sanitizeValue(value: unknown): unknown {
   if (Array.isArray(value)) {
     return value.map((item) => sanitizeValue(item));
   }
-  return String(value);
+  // A nested object reads as its JSON, so a view shows its keys, not [object Object].
+  return typeof value === "object" ? JSON.stringify(value) : String(value);
 }
 
 function collectNoteTags(

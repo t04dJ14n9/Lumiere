@@ -55,7 +55,9 @@ function registerEditorCapture(ctx: Context): void {
         // cm-content) must be claimed so the host does not open a tab.
         const root = view.dom.ownerDocument;
         const claimDrag = (event: DragEvent) => {
-          if (!shouldClaimEditorDrop(event.dataTransfer)) {
+          if (
+            !shouldClaimEditorDrop(event.dataTransfer, overTextField(event))
+          ) {
             return;
           }
           event.preventDefault();
@@ -86,13 +88,21 @@ function registerEditorCapture(ctx: Context): void {
   );
 }
 
+/** Whether a drop lands in a text field, which takes a dragged link as its text. */
+function overTextField(event: DragEvent): boolean {
+  return (
+    event.target instanceof HTMLElement &&
+    event.target.closest("input, textarea") !== null
+  );
+}
+
 async function onDrop(
   ctx: Context,
   outer: EditorView,
   event: DragEvent,
   isLive: () => boolean,
 ): Promise<void> {
-  if (!shouldClaimEditorDrop(event.dataTransfer)) {
+  if (!shouldClaimEditorDrop(event.dataTransfer, overTextField(event))) {
     return;
   }
   // Claim before any await so VS Code never opens the file as a tab.

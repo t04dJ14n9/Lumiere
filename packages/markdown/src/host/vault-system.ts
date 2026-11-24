@@ -294,9 +294,9 @@ function watchVault(
   const watcher = vscode.workspace.createFileSystemWatcher(
     new vscode.RelativePattern(base, "**/*"),
   );
-  const isExcluded = filesExcludeMatcher(base);
   const created = async (uri: vscode.Uri, type: "create" | "change") => {
-    if (isExcluded(uri)) {
+    // Read per event: files.exclude can change while the vault is watched.
+    if (filesExcludeMatcher(base)(uri)) {
       return;
     }
     for (const file of await filesAt(base, uri)) {

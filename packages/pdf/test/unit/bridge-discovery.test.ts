@@ -55,6 +55,20 @@ test("a folder that only shares a prefix is not inside the workspace", () => {
   assert.ok("error" in choice);
 });
 
+test("a folder whose name starts with .. is inside the workspace, not above it", () => {
+  const choice = chooseBridge([record(1, ["/work/project"])], {
+    cwd: "/work/project/..x",
+    ...allAlive,
+  });
+  assert.deepEqual(choice, { bridge: record(1, ["/work/project"]) });
+  // The folder above the workspace is still outside it.
+  const parent = chooseBridge([record(1, ["/work/project"])], {
+    cwd: "/work",
+    ...allAlive,
+  });
+  assert.ok("error" in parent);
+});
+
 test("nested workspaces: the most specific one wins", () => {
   const choice = chooseBridge(
     [record(1, ["/work"]), record(2, ["/work/project"])],

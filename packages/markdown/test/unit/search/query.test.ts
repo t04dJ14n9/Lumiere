@@ -3,7 +3,7 @@ import assert from "node:assert/strict";
 import { searchVault } from "../../../src/plugins/search/query";
 import type { SearchEvaluator } from "../../../src/plugins/search/runner";
 import { MemoryVaultIndex } from "../../../src/plugins/vault/memory-index";
-import { CancelToken } from "../../../src/shared/rpc/lifecycle";
+import { CancelToken, RpcError } from "../../../src/shared/rpc/lifecycle";
 import {
   compileSearch,
   type SearchDocument,
@@ -220,6 +220,58 @@ test("searchVault reads notes ahead while evaluating them one at a time, in orde
   assert.ok(mostReading <= 8, `reads are bounded (${mostReading})`);
 });
 
+/** A vault of `count` notes that all match, and a worker that counts its evaluations. */
+function allMatchingVault(count: number) {
+  const index = new MemoryVaultIndex({
+    root: "file:///vault",
+    folderNote: "",
+    linkFormat: "shortest",
+  });
+  for (let n = 0; n < count; n++) {
+    const path = `N${String(n).padStart(4, "0")}.md`;
+    index.upsertFile({ path, uri: `file:///vault/${path}`, mtime: 0, size: 1 });
+  }
+  let evaluations = 0;
+  const worker: SearchEvaluator = {
+    ready: Promise.resolve(),
+    includesFiles: false,
+    requiresText: true,
+    requiresMetadata: false,
+    stopped: false,
+    matches: async () => {
+      evaluations++;
+      return { matched: true };
+    },
+    dispose: async () => {},
+  };
+  return { index, worker, evaluations: () => evaluations };
+}
+
+test("a search stops at 1000 matching notes, says so, and evaluates no more", async () => {
+  const { index, worker, evaluations } = allMatchingVault(1001);
+  const result = await searchVault({
+    vault: index,
+    worker,
+    token: new CancelToken(),
+    read: async () => "x",
+  });
+  assert.equal(result.results.length, 1000);
+  assert.equal(result.truncated, true);
+  assert.equal(evaluations(), 1000);
+});
+
+test("a search of exactly 1000 matching notes is not cut short", async () => {
+  const { index, worker } = allMatchingVault(1000);
+  const result = await searchVault({
+    vault: index,
+    worker,
+    token: new CancelToken(),
+    read: async () => "x",
+  });
+  assert.equal(result.results.length, 1000);
+  assert.equal(result.truncated, undefined);
+});
+
 test("searchVault supports EMBEDS.md query syntax (tag:#project status:done) and blanks origin query fences", async () => {
   const { metadata } = await import("../../../src/markdown/metadata");
   const { queryRequirements } =
@@ -297,5 +349,29 @@ test("with no source note, links are relative to the vault's root", async () => 
   assert.deepEqual(
     result.results.map((item) => item.href),
     ["other/A%20%23.md", "folder/Note.md"],
+  );
+});
+
+test("cancelling the search ends it, even when the evaluation then times out", async () => {
+  const token = new CancelToken();
+  await assert.rejects(
+    searchVault({
+      vault: vault(),
+      worker: {
+        ready: Promise.resolve(),
+        includesFiles: false,
+        requiresText: true,
+        requiresMetadata: false,
+        stopped: false,
+        matches: async () => {
+          token.cancel();
+          throw new RpcError("Cancelled", "Search cancelled");
+        },
+        dispose: async () => {},
+      },
+      token,
+      read: async () => "Meeting",
+    }),
+    { code: "Cancelled" },
   );
 });

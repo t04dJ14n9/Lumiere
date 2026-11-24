@@ -1,7 +1,11 @@
 import test from "node:test";
 import assert from "node:assert/strict";
-import { rewriteCanvas } from "../../../src/plugins/linkUpdates/canvas";
+import {
+  rewriteCanvas,
+  rewriteCanvasHeading,
+} from "../../../src/plugins/linkUpdates/canvas";
 import type { RewriteContext } from "../../../src/plugins/linkUpdates/rewrite";
+import type { RenamedHeading } from "../../../src/plugins/linkUpdates/heading-rename";
 import { memoryVaults } from "../views/fakes";
 
 function context(
@@ -73,5 +77,60 @@ test("text node links resolve from the canvas and keep their form", () => {
   assert.equal(
     result,
     '{"nodes":[{"type":"text","text":"# Title\\n![[Renamed#Part|alias]] [o](Renamed.md)"}]}',
+  );
+});
+
+const renamedOld: RenamedHeading = {
+  path: "Note.md",
+  text: "# Old\n",
+  heading: { from: 0, name: "Old", nameFrom: 2, nameTo: 5 },
+  name: "New",
+  subpath: "New",
+};
+const toNote = (linkpath: string) =>
+  linkpath === "Note" ? "Note.md" : undefined;
+
+test("a canvas's heading links and file-node subpaths follow a heading rename, with its form kept", () => {
+  const board = `${JSON.stringify(
+    {
+      nodes: [
+        { id: "1", type: "text", text: "see [[Note#Old]]" },
+        { id: "2", type: "file", file: "Note.md", subpath: "#Old" },
+      ],
+    },
+    null,
+    2,
+  )}\n`;
+  const expected = `${JSON.stringify(
+    {
+      nodes: [
+        { id: "1", type: "text", text: "see [[Note#New]]" },
+        { id: "2", type: "file", file: "Note.md", subpath: "#New" },
+      ],
+    },
+    null,
+    2,
+  )}\n`;
+  assert.equal(
+    rewriteCanvasHeading(board, "boards/Board.canvas", renamedOld, toNote),
+    expected,
+  );
+});
+
+test("a canvas with no link to the renamed heading, or another note's heading, is left alone", () => {
+  const board = `${JSON.stringify(
+    {
+      nodes: [
+        { id: "1", type: "text", text: "see [[Note#Other]]" },
+        { id: "2", type: "file", file: "Other.md", subpath: "#Old" },
+        { id: "3", type: "file", file: "Note.md", subpath: "#Old#Deep" },
+      ],
+    },
+    null,
+    2,
+  )}\n`;
+  assert.equal(
+    rewriteCanvasHeading(board, "boards/Board.canvas", renamedOld, toNote),
+    undefined,
   );
 });

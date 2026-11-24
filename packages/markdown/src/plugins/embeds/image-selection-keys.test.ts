@@ -224,6 +224,53 @@ test("runSelectedImageKey Escape clears a selected outline (BH-006 path)", () =>
   assert.equal(state.field(selectedImage), null);
 });
 
+/** Presses a key on a selected image, read-only or writable. */
+function pressImageKey(key: string, readOnly: boolean) {
+  const doc = "![[pic.png|100]]";
+  let state = EditorState.create({
+    doc,
+    selection: { anchor: 0 },
+    extensions: [
+      selectedImage,
+      editingImage,
+      ...(readOnly ? [EditorState.readOnly.of(true)] : []),
+    ],
+  });
+  state = state.update({
+    effects: selectImage.of({ from: 0, to: doc.length }),
+  }).state;
+  let dispatched = false;
+  const view = {
+    get state() {
+      return state;
+    },
+    dispatch(spec: TransactionSpec) {
+      dispatched = true;
+      state = state.update(spec).state;
+    },
+  } as unknown as EditorView;
+  const handled = runSelectedImageKey(view, key);
+  return { handled, dispatched, doc: state.doc.toString() };
+}
+
+test("the size and delete keys change no image in a read-only editor", () => {
+  for (const key of ["+", "-", "0", "Backspace", "Delete"]) {
+    const result = pressImageKey(key, true);
+    assert.equal(result.handled, false, `${key} is not handled`);
+    assert.equal(result.dispatched, false, `${key} dispatches no edit`);
+    assert.equal(result.doc, "![[pic.png|100]]");
+  }
+});
+
+test("the reset size key and Backspace still change an image in a writable editor", () => {
+  const reset = pressImageKey("0", false);
+  assert.equal(reset.handled, true);
+  assert.equal(reset.dispatched, true);
+  const deleted = pressImageKey("Backspace", false);
+  assert.equal(deleted.handled, true);
+  assert.equal(deleted.doc, "");
+});
+
 test("imagesOf excludes CodeMirror cm-widgetBuffer and direct .cm-line images", () => {
   const cmLine = el(["cm-line"]);
   const embedHost = el([IMAGE_EMBED]);

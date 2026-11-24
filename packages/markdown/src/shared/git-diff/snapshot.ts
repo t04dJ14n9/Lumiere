@@ -194,38 +194,60 @@ interface LineEnds {
   readonly targetLines: readonly string[];
 }
 
+/**
+ * The unchanged rows next to a hunk, up to CONTEXT, nearest first in reading
+ * order. A row whose base and target text differ ends the run: a neighbouring
+ * change is not context, and the rows past it are not paired with base rows
+ * they no longer match, so an edit to that change cannot mint a new hunk id.
+ */
 function pushContextBefore(lines: LineRecord[], ends: LineEnds): void {
   const { hunk } = ends;
-  const start = Math.max(0, hunk.oldFrom - CONTEXT);
-  for (let oldIndex = start; oldIndex < hunk.oldFrom; oldIndex++) {
-    const newIndex = hunk.newFrom - (hunk.oldFrom - oldIndex);
-    pushContext(lines, ends, oldIndex, newIndex);
+  const before: LineRecord[] = [];
+  for (let step = 1; step <= CONTEXT; step++) {
+    const row = contextRow(ends, hunk.oldFrom - step, hunk.newFrom - step);
+    if (!row) {
+      break;
+    }
+    before.unshift(row);
   }
+  lines.push(...before);
 }
 
 function pushContextAfter(lines: LineRecord[], ends: LineEnds): void {
   for (let step = 0; step < CONTEXT; step++) {
-    pushContext(lines, ends, ends.hunk.oldTo + step, ends.hunk.newTo + step);
+    const row = contextRow(
+      ends,
+      ends.hunk.oldTo + step,
+      ends.hunk.newTo + step,
+    );
+    if (!row) {
+      break;
+    }
+    lines.push(row);
   }
 }
 
-function pushContext(
-  lines: LineRecord[],
+/** The unchanged row at these indexes, or undefined when there is none or its text differs. */
+function contextRow(
   ends: LineEnds,
   oldIndex: number,
   newIndex: number,
-): void {
+): LineRecord | undefined {
   const { baseLines, targetLines } = ends;
   if (oldIndex < 0 || newIndex < 0) {
-    return;
+    return undefined;
   }
   if (oldIndex >= baseLines.length || newIndex >= targetLines.length) {
-    return;
+    return undefined;
   }
-  lines.push({
+  const text = targetLines[newIndex] ?? "";
+  if (baseLines[oldIndex] !== text) {
+    return undefined;
+  }
+  return {
     kind: "context",
     originalLine: oldIndex + 1,
     modifiedLine: newIndex + 1,
-    text: targetLines[newIndex] ?? "",
-  });
+    text,
+  };
 }

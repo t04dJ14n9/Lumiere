@@ -106,12 +106,15 @@ function parsePosition(value: unknown): Bookmark["position"] | undefined {
 }
 
 /**
- * The bookmarks a file holds. An entry that is not a bookmark is skipped, and
- * of two with one id the first is kept. A file that is not a bookmark file, or
- * comes from a newer version of Lumiere, throws: the caller must not write
- * over it.
+ * The bookmarks a file holds, and the entries this version does not read: an
+ * entry that is not a bookmark, or a repeat of an id, kept as it was written.
+ * A file that is not a bookmark file, or comes from a newer version of
+ * Lumiere, throws: the caller must not write over it.
  */
-export function parseBookmarkFile(text: string): Bookmark[] {
+export function parseBookmarkEntries(text: string): {
+  bookmarks: Bookmark[];
+  unread: unknown[];
+} {
   let file: unknown;
   try {
     file = JSON.parse(text);
@@ -130,26 +133,38 @@ export function parseBookmarkFile(text: string): Bookmark[] {
   }
   const seen = new Set<string>();
   const kept: Bookmark[] = [];
+  const unread: unknown[] = [];
   for (const entry of bookmarks) {
     const bookmark = parseBookmark(entry);
     if (bookmark && !seen.has(bookmark.id)) {
       seen.add(bookmark.id);
       kept.push(bookmark);
+    } else {
+      unread.push(entry);
     }
   }
-  return sortBookmarks(kept);
+  return { bookmarks: sortBookmarks(kept), unread };
 }
 
-/** The file's text, or undefined when there is nothing to keep (no file). */
+/** The bookmarks a file holds; an entry this version does not read is skipped (see `parseBookmarkEntries`). */
+export function parseBookmarkFile(text: string): Bookmark[] {
+  return parseBookmarkEntries(text).bookmarks;
+}
+
+/**
+ * The file's text, or undefined when there is nothing to keep (no file). The
+ * entries this version does not read are written back after the bookmarks.
+ */
 export function serializeBookmarkFile(
   bookmarks: readonly Bookmark[],
+  unread: readonly unknown[] = [],
 ): string | undefined {
-  if (bookmarks.length === 0) {
+  if (bookmarks.length === 0 && unread.length === 0) {
     return undefined;
   }
   const file = {
     version: BOOKMARK_FILE_VERSION,
-    bookmarks: sortBookmarks(bookmarks),
+    bookmarks: [...sortBookmarks(bookmarks), ...unread],
   };
   return `${JSON.stringify(file, null, 2)}\n`;
 }

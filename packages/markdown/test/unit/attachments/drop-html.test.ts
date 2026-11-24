@@ -122,6 +122,23 @@ test("shouldClaimEditorDrop is true for file drags so VS Code must not open tabs
   );
 });
 
+test("a link dropped on a text field is not claimed, so the field takes it as text", () => {
+  const link = transfer({ types: ["text/uri-list"] });
+  assert.equal(shouldClaimEditorDrop(link), true);
+  assert.equal(shouldClaimEditorDrop(link, true), false);
+});
+
+test("a file dropped on a text field is still claimed, since a field cannot take it as text", () => {
+  assert.equal(
+    shouldClaimEditorDrop(transfer({ types: ["Files"] }), true),
+    true,
+  );
+  assert.equal(
+    shouldClaimEditorDrop(transfer({ types: ["text/plain"] }), true),
+    false,
+  );
+});
+
 test("an image that cannot be imported keeps its link; the others are still rewritten", async () => {
   const markdown =
     "![a](https://ex.com/a.png) ![slow](https://slow.example/b.png) ![c](https://ex.com/c.png)";

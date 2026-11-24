@@ -2,8 +2,13 @@ import type { VaultIndex, VaultFile } from "../vault/api";
 import type { Cancellation } from "../../shared/rpc/lifecycle";
 import { RpcError } from "../../shared/rpc/lifecycle";
 import { folderOf, nameOf, relativeVaultPath } from "../../shared/vault-path";
-import type { SearchEvaluator, SearchVerdict } from "./runner";
+import {
+  SearchTimeoutError,
+  type SearchEvaluator,
+  type SearchVerdict,
+} from "./runner";
 import type { SearchResponse } from "./protocol";
+import { SEARCH_RESULT_LIMIT } from "./limits";
 import type { SearchDocument } from "../../markdown/search/evaluate";
 import { readAhead } from "./read-ahead";
 export interface SearchInput {
@@ -47,7 +52,9 @@ export async function searchVault(input: SearchInput): Promise<SearchResponse> {
   }
   await worker.ready;
   const results: SearchResponse["results"] = [];
+  const skipped: string[] = [];
   let unreadable = 0;
+  let truncated = false;
   const emit = createPartialEmitter(results, input.onPartial);
   const files = vault
     .files()
@@ -59,6 +66,10 @@ export async function searchVault(input: SearchInput): Promise<SearchResponse> {
     READ_AHEAD,
   );
   for (const file of files) {
+    if (results.length >= SEARCH_RESULT_LIMIT) {
+      truncated = true;
+      break;
+    }
     const prepared = token.cancelled ? undefined : await documents.next();
     const outcome = prepared
       ? await evaluateDocument(input, { origin, file, prepared }, results)
@@ -71,6 +82,8 @@ export async function searchVault(input: SearchInput): Promise<SearchResponse> {
       emit.push(++unreadable);
     } else if (outcome === "hit") {
       emit.push(unreadable);
+    } else if (outcome === "timeout") {
+      skipped.push(file.path);
     }
   }
   emit.flush();
@@ -79,7 +92,12 @@ export async function searchVault(input: SearchInput): Promise<SearchResponse> {
       nameOf(a.path).localeCompare(nameOf(b.path)) ||
       a.path.localeCompare(b.path),
   );
-  return { results, unreadable };
+  return {
+    results,
+    unreadable,
+    ...(skipped.length > 0 ? { skipped } : {}),
+    ...(truncated ? { truncated } : {}),
+  };
 }
 
 /** Never rejects: a read that fails counts as an unreadable file. */
@@ -107,7 +125,7 @@ async function evaluateDocument(
     prepared: Prepared;
   },
   results: SearchResponse["results"],
-): Promise<"skip" | "hit" | "unreadable" | "cancel"> {
+): Promise<"skip" | "hit" | "unreadable" | "timeout" | "cancel"> {
   const { worker, token } = input;
   const { origin, file, prepared } = target;
   if (token.cancelled) {
@@ -126,7 +144,7 @@ async function evaluateDocument(
     if (worker.stopped || token.cancelled) {
       throw error;
     }
-    return "unreadable";
+    return error instanceof SearchTimeoutError ? "timeout" : "unreadable";
   }
   if (!verdict.matched) {
     return "skip";

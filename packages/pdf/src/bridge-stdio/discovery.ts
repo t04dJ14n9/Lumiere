@@ -135,9 +135,12 @@ function realFolder(folder: string): string {
 
 function contains(folder: string, file: string): boolean {
   const relative = path.relative(folder, file);
+  // `..x` is a folder inside the workspace; only `..` itself, or `../…`, leaves it.
   return (
     relative === "" ||
-    (!relative.startsWith("..") && !path.isAbsolute(relative))
+    (relative !== ".." &&
+      !relative.startsWith(".." + path.sep) &&
+      !path.isAbsolute(relative))
   );
 }
 

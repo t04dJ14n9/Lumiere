@@ -1,20 +1,21 @@
 import { inSlices, inSlicesBatch, waitUpTo } from "./indexer-slices";
 export { waitUpTo } from "./indexer-slices";
-import type { Disposer } from "@workshop/core";
 import { isMarkdownPath } from "../../shared/vault-path";
 import { exclusionMatcher, isIgnoredPath } from "./exclusion";
 import type { FileEntry } from "./file-table";
 import { MemoryVaultIndex } from "./memory-index";
 import { ParseQueue } from "./parse-queue";
-import { Snapshot } from "./snapshot";
+import { Snapshot, reusableHash } from "./snapshot";
 import { KeyedTimers } from "./keyed-timers";
 import { LateStats } from "./late-stats";
+import { ListingWatch } from "./listing-watch";
 import type {
   FileEvent,
   ListedFile,
   NoteParser,
   SnapshotStore,
   VaultFileSystem,
+  VaultListing,
   VaultSettings,
 } from "./api";
 
@@ -67,9 +68,9 @@ export class VaultIndexer {
   private readonly queue: ParseQueue;
   private readonly snapshot = new Snapshot();
   private readonly timers = new KeyedTimers();
-  private stopWatching?: Disposer;
   private disposed = false;
   private reconciling = false;
+  private readonly listingWatch: ListingWatch;
   private isExcluded: (path: string) => boolean;
   /** The settings the index was built with (`indexSettingsKey`). */
   private indexedWith: string;
@@ -85,6 +86,11 @@ export class VaultIndexer {
   private readonly lateStats = new LateStats();
 
   constructor(private readonly options: IndexerOptions) {
+    this.listingWatch = new ListingWatch(
+      options.fs,
+      options.root,
+      this.onFileEvent.bind(this),
+    );
     const settings = options.settings();
     const { folderNote, linkFormat, excludedFiles } = settings;
     this.indexedWith = indexSettingsKey(settings);
@@ -177,7 +183,7 @@ export class VaultIndexer {
   async dispose(): Promise<void> {
     this.disposed = true;
     void this.queue.stop();
-    void this.stopWatching?.();
+    this.listingWatch.stopAndDiscard();
     this.timers.cancelAll();
     await this.save();
   }
@@ -254,61 +260,71 @@ export class VaultIndexer {
   /** Compare the file system with the index; parse only what changed. */
   private async reconcile(): Promise<void> {
     this.reconciling = true;
+    // Watching starts before the listing, so a file written while it runs gets
+    // an event. The listing may predate such an event, so events wait until the
+    // listing is in the index (see applyListing).
+    this.listingWatch.start();
     try {
-      const listing = await this.options.fs.list(this.options.root, FILE_LIMIT);
+      const listing = await this.listingWatch.untilListed(
+        this.options.fs.list(this.options.root, FILE_LIMIT),
+      );
       if (this.disposed) {
         return;
       }
       if (listing.partial) {
         this.options.onPartial?.();
       }
-      this.stopWatching = this.options.fs.watch(this.options.root, (event) =>
-        this.onFileEvent(event),
-      );
-      const take = this.takeLateStats.bind(this);
-      const lateStats =
-        listing.stats && this.lateStats.apply(listing.stats, take);
-      const files = listing.files.filter((file) => !isIgnoredPath(file.path));
-      if (
-        this.index.files().length > 0 ||
-        Object.keys(this.snapshot.files).length > 0
-      ) {
-        const present = new Set(files.map((file) => file.path));
-        for (const path of this.queue.overlayPaths()) {
-          present.add(path);
-        }
-        this.index.removeFilesExcept(present);
-        this.forgetMissing(present);
-      }
-      const toParse: string[] = [];
-      await inSlicesBatch(files, (batch) => {
-        if (this.disposed) {
-          return;
-        }
-        this.index.addFiles(batch.map((file) => this.entry(file)));
-        for (const file of batch) {
-          if (this.needsParse(file)) {
-            toParse.push(file.path);
-          }
-        }
-      });
-      this.completeFileList();
-      if (toParse.length > 0 && !this.disposed) {
-        await new Promise((resolve) => setTimeout(resolve, 0));
-      }
-      for (const path of toParse) {
-        if (this.disposed) {
-          break;
-        }
-        this.queue.enqueue(path);
-      }
-      if (!this.disposed && this.queue.isIdle) {
-        this.drained();
-      }
-      await lateStats;
+      await this.applyListing(listing);
     } finally {
+      this.listingWatch.release();
       this.reconciling = false;
     }
+  }
+
+  /** Adds a listing to the index, drops what it lacks and parses what changed. */
+  private async applyListing(listing: VaultListing): Promise<void> {
+    const take = this.takeLateStats.bind(this);
+    const lateStats =
+      listing.stats && this.lateStats.apply(listing.stats, take);
+    const files = listing.files.filter((file) => !isIgnoredPath(file.path));
+    if (
+      this.index.files().length > 0 ||
+      Object.keys(this.snapshot.files).length > 0
+    ) {
+      const present = new Set(files.map((file) => file.path));
+      for (const path of this.queue.overlayPaths()) {
+        present.add(path);
+      }
+      this.index.removeFilesExcept(present);
+      this.forgetMissing(present);
+    }
+    const toParse: string[] = [];
+    await inSlicesBatch(files, (batch) => {
+      if (this.disposed) {
+        return;
+      }
+      this.index.addFiles(batch.map((file) => this.entry(file)));
+      for (const file of batch) {
+        if (this.needsParse(file)) {
+          toParse.push(file.path);
+        }
+      }
+    });
+    this.listingWatch.release();
+    this.completeFileList();
+    if (toParse.length > 0 && !this.disposed) {
+      await new Promise((resolve) => setTimeout(resolve, 0));
+    }
+    for (const path of toParse) {
+      if (this.disposed) {
+        break;
+      }
+      this.queue.enqueue(path);
+    }
+    if (!this.disposed && this.queue.isIdle) {
+      this.drained();
+    }
+    await lateStats;
   }
 
   /** Late stats of files still listed, added without events as the listing's are. */
@@ -338,7 +354,7 @@ export class VaultIndexer {
     if (!isMarkdownPath(file.path)) {
       return this.recordAttachment(file, cached);
     }
-    const hash = this.reusableHash(file, cached);
+    const hash = reusableHash(file, cached);
     const metadata = hash ? this.snapshot.metadata[hash] : undefined;
     if (!hash || !metadata) {
       return true;
@@ -362,18 +378,6 @@ export class VaultIndexer {
       this.scheduleSave();
     }
     return false;
-  }
-
-  private reusableHash(
-    file: ListedFile,
-    cached: Snapshot["files"][string] | undefined,
-  ): string | undefined {
-    if (!cached?.hash) {
-      return undefined;
-    }
-    const isSeeded = cached.mtime === 0 && cached.size === 0;
-    const isSame = cached.mtime === file.mtime && cached.size === file.size;
-    return isSeeded || isSame ? cached.hash : undefined;
   }
 
   private forgetMissing(present: Set<string>): void {

@@ -145,7 +145,7 @@ class PropertyMapEdits {
       case "rename":
         return this.rename(edit);
       case "remove":
-        return this.remove(edit.keys);
+        return this.remove(source, edit.keys);
       case "set": {
         const pair = this.items.find(
           (pair) =>
@@ -220,7 +220,10 @@ class PropertyMapEdits {
     ];
   }
 
-  private remove(keys: readonly string[]): PropertyChange[] | undefined {
+  private remove(
+    source: string,
+    keys: readonly string[],
+  ): PropertyChange[] | undefined {
     // Every key counts, not only the strings: a note with `1: a` has a property
     // named "1" that the fence must outlive, and that can itself be removed.
     const stored = this.items.flatMap((item) => keyName(item.key) ?? []);
@@ -230,7 +233,7 @@ class PropertyMapEdits {
     // Obsidian drops the empty `---` fence when the last property is removed
     // (BH-013); leaving `---\n---` would count as body and inflate stats.
     if (stored.length > 0 && stored.every((key) => keys.includes(key))) {
-      return dropFrontmatterFence(this.header);
+      return dropFrontmatterFence(source, this.header);
     }
     const map = this.document.contents;
     if (loadYaml().isMap(map) && map.flow) {
@@ -306,9 +309,24 @@ function keyName(key: unknown): string | undefined {
     : undefined;
 }
 
-/** Remove the opening fence, body and closing fence, leaving a byte order mark. */
-function dropFrontmatterFence(header: Header): PropertyChange[] {
-  return [{ from: header.start, to: header.end, insert: "" }];
+/**
+ * Remove the opening fence, body and closing fence, leaving a byte order mark.
+ * When the note's own text opens with a `---` block, a blank line takes the
+ * fence's place: at the top of the note that block would be read as the
+ * properties.
+ */
+function dropFrontmatterFence(
+  source: string,
+  header: Header,
+): PropertyChange[] {
+  const rest = source.slice(0, header.start) + source.slice(header.end);
+  return [
+    {
+      from: header.start,
+      to: header.end,
+      insert: headerParts(rest) ? header.eol : "",
+    },
+  ];
 }
 
 function newPropertyLine(

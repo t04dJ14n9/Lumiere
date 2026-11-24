@@ -34,6 +34,9 @@ export class PdfPanel extends PdfViewerPanel implements vscode.Disposable {
       options,
     );
   }
+
+  /** A save into the PDF rewrote it: what its bookmarks were keyed by is replaced by the new bytes. */
+  readonly onAnnotationRewritten = this.annotations.rewritten.event;
 }
 
 const VSCODE_PANEL_HOST: ViewerPanelHost = {

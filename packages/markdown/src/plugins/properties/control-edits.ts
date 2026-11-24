@@ -9,6 +9,24 @@ export interface PropertyControlEdits {
   report(message: string): void;
 }
 
+/**
+ * What the sheet says about an edit it could not apply, if anything. A
+ * read-only note is named as such, not as a duplicate-name problem; an add or
+ * rename is refused silently when the note is writable (its input stays).
+ */
+export function refusalNotice(
+  operation: PropertyEdit,
+  isReadOnly: boolean,
+): string | undefined {
+  if (isReadOnly) {
+    return "This note is read-only, so its properties cannot be changed.";
+  }
+  if (operation.type === "add" || operation.type === "rename") {
+    return undefined;
+  }
+  return "This change could not be applied. Check for duplicate names or YAML aliases, then try again.";
+}
+
 /** Keep draft blur from racing a structural edit that replaces its input. */
 export function createControlEdits(options: {
   container: HTMLElement;
@@ -41,10 +59,12 @@ export function createControlEdits(options: {
         }
       }
       if (!applied) {
-        if (operation.type !== "add" && operation.type !== "rename") {
-          report(
-            "This change could not be applied. Check for duplicate names or YAML aliases, then try again.",
-          );
+        const message = refusalNotice(
+          operation,
+          editor?.isReadOnly?.() ?? false,
+        );
+        if (message) {
+          report(message);
         }
         return false;
       }

@@ -19,7 +19,8 @@ or an empty line) inserts `\n> [!NOTE] Title\n> Contents\n` at the caret, which
 leaves the rest of the line below the callout; whitespace before the caret
 stays. Text before the caret, or any selection, wraps instead. The `NOTE` type
 is selected and one editor transaction makes the insertion one undo step. As in Obsidian, the
-command is refused (no edit) with the caret or selection in a table cell.
+command is refused (no edit) with the main caret or selection in a table cell,
+including the end of a table's last row. Other carets do not block it.
 The post-processor binds disclosures to panel-local memory.
 As in Obsidian, a callout starts as its note says (`-` closed, `+` or no
 sign open) whenever the note loads (an open, a second panel, a window

@@ -11,6 +11,7 @@ import {
   type HeadingToRename,
   type RenamedHeading,
 } from "./heading-rename";
+import { rewriteCanvasHeading } from "./canvas";
 import { sourceText } from "./source-text";
 import { contributionId } from "../../shared/setting-schema";
 import { isMarkdownPath } from "../../shared/vault-path";
@@ -149,12 +150,18 @@ async function updateLinks(
   const sources = new Set(
     vault.index.backlinks(renamed.path).map((link) => link.path),
   );
+  // Canvases are not in the backlinks: each one is read for its links.
+  for (const file of vault.index.files()) {
+    if (file.extension === "canvas") {
+      sources.add(file.path);
+    }
+  }
   sources.delete(renamed.path);
   const failed: string[] = [];
   const unsaved: string[] = [];
   for (const source of sources) {
     const file = vault.index.file(source);
-    if (!file || !isMarkdownPath(file.path)) {
+    if (!file || !(isMarkdownPath(file.path) || file.extension === "canvas")) {
       continue;
     }
     const outcome = await updateLinksIn(ctx, vault, renamed, file);
@@ -184,6 +191,20 @@ type LinkUpdate = "updated" | "unsaved" | "failed";
  * afterwards, as a file rename's link updates are, so the rename leaves no
  * note edited out of sight; one with unsaved changes is left for its writer.
  */
+/** The edits a heading rename makes to one file: a note's links, or a canvas rewritten whole. */
+function renameEdits(
+  text: string,
+  file: VaultFile,
+  renamed: RenamedHeading,
+  resolve: Parameters<typeof headingLinkEdits>[3],
+): ReturnType<typeof headingLinkEdits> {
+  if (file.extension !== "canvas") {
+    return headingLinkEdits(text, file.path, renamed, resolve);
+  }
+  const next = rewriteCanvasHeading(text, file.path, renamed, resolve);
+  return next === undefined ? [] : [{ from: 0, to: text.length, insert: next }];
+}
+
 async function updateLinksIn(
   ctx: Services,
   vault: Vault,
@@ -194,17 +215,15 @@ async function updateLinksIn(
     const text = editorText(
       await sourceText(ctx.vaults, ctx.hostDocuments, file.uri),
     );
-    if (
-      headingLinkEdits(text, file.path, renamed, resolver(vault)).length === 0
-    ) {
+    if (renameEdits(text, file, renamed, resolver(vault)).length === 0) {
       return "updated";
     }
     const document = await ctx.hostDocuments.open(file.uri);
     // The note can change while it is read and opened, so the offsets come
     // from the text the document has now, with no await before they apply.
-    const edits = headingLinkEdits(
+    const edits = renameEdits(
       editorText(document.getText()),
-      file.path,
+      file,
       renamed,
       resolver(vault),
     );

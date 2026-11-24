@@ -19,7 +19,9 @@ what Cordis does not guarantee:
   of a plugin gets an `Activation` that owns its effects, listeners, services
   and child plugins. Every release (early, rollback, stop, concurrent stops)
   waits for the same cleanup, and a stop resolves only once every cleanup has
-  settled. A failing cleanup is logged and the rest still run.
+  settled. A failing cleanup at teardown is logged and the rest still run. A
+  release a caller starts itself returns its error to that caller, which must
+  handle it; the core does not log it again.
 - **A start can be abandoned.** Stopping, or a dependency changing, while an
   asynchronous `apply` is still running does not wait for it: whatever the
   abandoned `apply` acquires afterwards is undone at once.
@@ -34,8 +36,10 @@ what Cordis does not guarantee:
   tree's Cordis root; the tree is tracked here.)
 - **Declared dependencies.** A plugin reads only the services it `inject`s
   and publishes only the services it lists in `provides`; anything else
-  throws. A root context provides anything. So the definitions alone say
-  which plugin needs which, and tools can check that graph without running it.
+  throws. A root context provides anything. No context can publish `undefined`
+  or a name the context answers itself (`logger`, `effect`, `on`, …); both
+  throw `InvalidService`. So the definitions alone say which plugin needs
+  which, and tools can check that graph without running it.
 
 `packages/core/test/conformance` holds 23 lifecycle scenarios (joined
 release, cancellation, rollback, dependency barriers, late drains) that the

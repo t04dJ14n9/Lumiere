@@ -19,20 +19,24 @@ import {
  * back as the file has it). One changed here as well keeps this viewer's
  * change, which its next save merges. New ones are imported as at open,
  * under `opId`, out of the undo history. Resolves how many the file held
- * that could not be shown.
+ * that could not be shown, or undefined when `next` is not a version 2 file
+ * (no file is one, read as empty): then nothing was compared or shown.
  */
 export async function showStoreFile(
   annotation: AnnotationCapability,
   ownership: AnnotationOwnership,
   file: { previous: string | undefined; next: string | undefined },
   opId: string,
-): Promise<number> {
+): Promise<number | undefined> {
   const before = annotationEntries(file.previous) ?? new Map();
   const after = annotationEntries(file.next);
   const shown = annotationEntries(
     (await exportStoreText(annotation, ownership)) ?? undefined,
   );
-  if (!after || !shown) {
+  if (!after) {
+    return undefined;
+  }
+  if (!shown) {
     return 0;
   }
   for (const [id, entry] of shown) {

@@ -2,7 +2,7 @@ import type { EditorState, Line, TransactionSpec } from "@codemirror/state";
 import type { EditorView } from "@codemirror/view";
 import { lineMarkup } from "../../markdown/list-markup";
 import { selectedLines } from "../../markdown/selected-lines";
-import { selectionTouchesTableCell } from "../../markdown/table-cell";
+import { selectionCoversTable } from "../../markdown/table-cell";
 import { taskMarker } from "../../markdown/tasks";
 import type { TextEdit } from "../../shared/host";
 export function taskEdit(
@@ -83,7 +83,7 @@ export function checklistEdit(
  * read-only editor.
  */
 export function runChecklist(view: EditorView, cycle: boolean): boolean {
-  if (view.state.readOnly || selectionTouchesTableCell(view.state)) {
+  if (view.state.readOnly || selectionCoversTable(view.state)) {
     return false;
   }
   view.dispatch(checklistEdit(view.state, cycle));

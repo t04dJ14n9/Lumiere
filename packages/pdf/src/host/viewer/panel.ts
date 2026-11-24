@@ -114,7 +114,7 @@ export class PdfViewerPanel {
   readonly bookmarks = new BookmarkOutlet(this.chrome);
   /** Whether Back and Forward have a place to go to. */
   readonly historyButtons = new HistoryButtons(this.chrome);
-  private readonly annotations: PanelAnnotations;
+  protected readonly annotations: PanelAnnotations;
 
   constructor(
     /** The file's URI, without a fragment. */

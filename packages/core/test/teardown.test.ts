@@ -277,3 +277,21 @@ test("a replacement whose old fiber is still stopping when the tree shuts down d
   await disposed;
   assert.deepEqual(log, ["stop"]);
 });
+
+test("provide refuses an undefined value, and a name the context answers itself, as an invalid service", async () => {
+  const root = createRoot();
+  assert.throws(
+    () => root.provide("invalid.absent" as never, undefined as never),
+    {
+      name: "InvalidService",
+    },
+  );
+  for (const name of ["logger", "effect", "provide", "toString", "then"]) {
+    assert.throws(() => root.provide(name as never, {} as never), {
+      name: "InvalidService",
+    });
+  }
+  // Control: any other name with a value is published.
+  root.provide("invalid.control" as never, {} as never);
+  await root.dispose();
+});

@@ -7,7 +7,7 @@
 import { alignBlocks, lineBlockHtml, rowMarkdown } from "../../shared/diff";
 import type { Block, BlockRow } from "../../shared/diff";
 import { blockDefinitions, citations, definitions } from "./definitions";
-import type { RenderOptions } from "../../markdown/html";
+import type { DefinitionSet, RenderOptions } from "../../markdown/html";
 import type { PanelRow } from "./panel";
 
 export { definitions } from "./definitions";
@@ -15,7 +15,8 @@ export { definitions } from "./definitions";
 const isDefinitions = (block: Block) => definitions(block) !== undefined;
 
 interface SideContext {
-  readonly references: readonly string[];
+  /** One object per side, so every block of the side shares its parse. */
+  readonly definitions: DefinitionSet;
   readonly footnotes: ReadonlyMap<string, string>;
 }
 
@@ -31,7 +32,7 @@ function sideContext(blocks: readonly (Block | undefined)[]): SideContext {
       }
     }
   }
-  return { references, footnotes };
+  return { definitions: { text: references.join("\n") }, footnotes };
 }
 
 /** A block's Markdown with the definitions it uses from other blocks. */
@@ -68,7 +69,7 @@ function sideHtml(
           : markdown,
         {
           fragment: true,
-          referenceDefinitions: context.references.join("\n"),
+          definitionSet: context.definitions,
         },
       );
 }

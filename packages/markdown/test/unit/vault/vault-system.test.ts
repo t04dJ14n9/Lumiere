@@ -318,3 +318,70 @@ test("vault-system says file names ignore case where VS Code's workspace folders
     );
   }
 });
+
+test("vault-system's watch applies a files.exclude change to the events after it", async () => {
+  const FileType = { Unknown: 0, File: 1, Directory: 2, SymbolicLink: 64 };
+  const parseUri = (raw: string) => {
+    const url = new URL(raw);
+    return {
+      scheme: url.protocol.slice(0, -1),
+      path: decodeURIComponent(url.pathname),
+      toString: () => url.href,
+    };
+  };
+  const folder = { uri: parseUri("file:///repo") };
+  let exclude: Record<string, boolean> = { "**/*.log": true };
+  const created: ((uri: unknown) => void)[] = [];
+  const { createVaultSystem } = loadVaultSystem({
+    FileType,
+    RelativePattern: class {},
+    Uri: {
+      parse: parseUri,
+      joinPath: (base: { toString(): string }, ...parts: string[]) =>
+        parseUri(
+          `${base.toString().replace(/\/+$/, "")}/${parts.map(encodeURIComponent).join("/")}`,
+        ),
+    },
+    workspace: {
+      workspaceFolders: [folder],
+      getWorkspaceFolder: () => folder,
+      getConfiguration: (section: string) => ({
+        get: (key: string) =>
+          section === "files" && key === "exclude" ? exclude : undefined,
+      }),
+      createFileSystemWatcher: () => ({
+        onDidCreate: (listener: (uri: unknown) => void) => {
+          created.push(listener);
+          return { dispose() {} };
+        },
+        onDidChange: () => ({ dispose() {} }),
+        onDidDelete: () => ({ dispose() {} }),
+        dispose() {},
+      }),
+      onDidRenameFiles: () => ({ dispose() {} }),
+      fs: {
+        async stat() {
+          return { type: FileType.File, mtime: 1, size: 1 };
+        },
+      },
+    },
+  });
+  const system = createVaultSystem(
+    { storageUri: undefined } as never,
+    fakeConfiguration(),
+  );
+  const seen: string[] = [];
+  system.watch("file:///repo", (event) => {
+    if (event.type !== "delete") {
+      seen.push(event.file.path);
+    }
+  });
+
+  created[0]!(parseUri("file:///repo/build/first.md"));
+  await new Promise((resolve) => setImmediate(resolve));
+  exclude = { build: true };
+  created[0]!(parseUri("file:///repo/build/second.md"));
+  await new Promise((resolve) => setImmediate(resolve));
+
+  assert.deepEqual(seen, ["build/first.md"]);
+});

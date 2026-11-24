@@ -145,6 +145,58 @@ async function rename(
   };
 }
 
+test("a canvas linking to the renamed heading is updated and saved, as a note's links are", async () => {
+  const board = `${JSON.stringify(
+    {
+      nodes: [
+        {
+          id: "1",
+          type: "text",
+          text: "see [[Note#Old]]",
+          x: 0,
+          y: 0,
+          width: 10,
+          height: 10,
+        },
+      ],
+    },
+    null,
+    2,
+  )}\n`;
+  const { text, saved, errors } = await rename(
+    { "Note.md": "# Old\n", "Board.canvas": board },
+    "# Old",
+    () => "New",
+  );
+  assert.equal(
+    text("Board.canvas"),
+    board.replace("[[Note#Old]]", "[[Note#New]]"),
+  );
+  assert.ok(saved.includes(uriOf("Board.canvas")));
+  assert.deepEqual(errors, []);
+});
+
+test("a canvas with no link to the renamed heading is not edited", async () => {
+  const board = '{\n  "nodes": []\n}\n';
+  const { text, applies } = await rename(
+    { "Note.md": "# Old\n", "Board.canvas": board },
+    "# Old",
+    () => "New",
+  );
+  assert.equal(text("Board.canvas"), board);
+  assert.ok(!applies.includes("Board.canvas"));
+});
+
+test("a canvas that is not JSON is left alone, and is not named as failed", async () => {
+  const { text, errors } = await rename(
+    { "Note.md": "# Old\n", "Board.canvas": "not json [[Note#Old]]" },
+    "# Old",
+    () => "New",
+  );
+  assert.equal(text("Board.canvas"), "not json [[Note#Old]]");
+  assert.deepEqual(errors, []);
+});
+
 test("renaming a heading in a CRLF note edits the heading and its links in place", async () => {
   const { text } = await rename(
     { "Note.md": "Intro\r\n\r\n# Old\r\nSee [[#Old]]\r\n" },

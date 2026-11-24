@@ -17,6 +17,10 @@ export const result = Schema.object({
 export const response = Schema.object({
   results: Schema.array(result).max(100000),
   unreadable: Schema.number().min(0),
+  /** Notes whose evaluation ran past its deadline, so the search went on without them. */
+  skipped: Schema.array(Schema.string().max(8192)).max(100000).optional(),
+  /** The search stopped at the result limit, so the notes after its last match were not searched. */
+  truncated: Schema.boolean().optional(),
 });
 export type SearchResponse = Infer<typeof response>;
 export const openTarget = Schema.object({

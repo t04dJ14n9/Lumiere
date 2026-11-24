@@ -75,7 +75,7 @@ export class TableClipboard {
     // access in VS Code. Claim the key so forwarding cannot overwrite the TSV.
     event.preventDefault();
     event.stopPropagation();
-    this.environment.copy(copyCells(this.grid.model, range));
+    void this.environment.copy(copyCells(this.grid.model, range));
   }
 
   copy(event: ClipboardEvent, cut: boolean): void {
@@ -147,24 +147,55 @@ export class TableClipboard {
     this.grid.replace(writeCells(this.grid.model, range, cells));
   }
 
-  copyFromMenu(range: CellRange, cut: boolean): void {
+  /**
+   * Menu Copy or Cut. A Cut clears only after the clipboard has the text, and
+   * only if the table or cell still holds what was copied; a write that fails
+   * keeps the cells. Copy does not wait for the clipboard.
+   */
+  async copyFromMenu(range: CellRange, cut: boolean): Promise<void> {
     const context = this.environment;
     const inner = this.projection.inner;
     const selection = inner?.state.selection.main;
     if (!this.selection.range && inner && selection && !selection.empty) {
-      context.copy(inner.state.sliceDoc(selection.from, selection.to));
-      if (cut && !this.isReadOnly) {
+      const text = inner.state.sliceDoc(selection.from, selection.to);
+      if (!cut) {
+        void context.copy(text);
+        inner.focus();
+        return;
+      }
+      if (!(await context.copy(text))) {
+        inner.focus();
+        return;
+      }
+      const now = inner.state.selection.main;
+      if (inner.state.sliceDoc(now.from, now.to) !== text) {
+        throw new Error(
+          "The selection changed before Cut completed. Cut again.",
+        );
+      }
+      if (!this.isReadOnly) {
         inner.dispatch(inner.state.replaceSelection(""));
       }
       inner.focus();
       return;
     }
-    context.copy(copyCells(this.grid.model, range));
-    if (cut) {
-      this.clearCells(range);
-    } else {
+    const text = copyCells(this.grid.model, range);
+    if (!cut) {
+      void context.copy(text);
       (this.projection.inner ?? this.grid.outer).focus();
+      return;
     }
+    const expected = this.grid.block.source;
+    const grid = this.selection.range;
+    if (!(await context.copy(text))) {
+      return;
+    }
+    if (expected !== this.grid.block.source || grid !== this.selection.range) {
+      throw new Error(
+        "The table or selection changed before Cut completed. Cut again.",
+      );
+    }
+    this.clearCells(range);
   }
 
   async pasteFromMenu(range: CellRange, plainText = false): Promise<void> {

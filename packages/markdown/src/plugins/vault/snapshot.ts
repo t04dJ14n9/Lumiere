@@ -1,5 +1,5 @@
 import type { NoteMetadata } from "../../markdown/metadata";
-import type { SnapshotStore } from "./api";
+import type { ListedFile, SnapshotStore } from "./api";
 
 export interface CachedFile {
   uri: string;
@@ -103,13 +103,21 @@ export class Snapshot {
       }
     }
     let sliceStart = Date.now();
-    for (const name of changed) {
-      const file = name === FILES ? FILES : `metadata-${name}`;
-      await store.write(file, this.serialize(name, byShard.get(name) ?? {}));
-      if (Date.now() - sliceStart > 8) {
-        await nextTurn();
-        sliceStart = Date.now();
+    try {
+      for (const name of changed) {
+        const file = name === FILES ? FILES : `metadata-${name}`;
+        await store.write(file, this.serialize(name, byShard.get(name) ?? {}));
+        if (Date.now() - sliceStart > 8) {
+          await nextTurn();
+          sliceStart = Date.now();
+        }
       }
+    } catch (error) {
+      // Not written, so still changed: the next save must write them again.
+      for (const name of changed) {
+        this.dirty.add(name);
+      }
+      throw error;
     }
   }
 
@@ -125,6 +133,23 @@ export class Snapshot {
       metadata: pack(metadata),
     });
   }
+}
+
+/**
+ * The cached hash of a listed file, when the cache still describes it: the
+ * time and size match, or the cache is a seeded entry (0 and 0) whose hash
+ * the indexer takes on trust until the file's stats arrive.
+ */
+export function reusableHash(
+  file: ListedFile,
+  cached: CachedFile | undefined,
+): string | undefined {
+  if (!cached?.hash) {
+    return undefined;
+  }
+  const isSeeded = cached.mtime === 0 && cached.size === 0;
+  const isSame = cached.mtime === file.mtime && cached.size === file.size;
+  return isSeeded || isSame ? cached.hash : undefined;
 }
 
 function shardOf(hash: string): string {

@@ -1,11 +1,14 @@
 import assert from "node:assert/strict";
+import type * as NodeFsPromises from "node:fs/promises";
+import { createRequire } from "node:module";
 import * as path from "node:path";
-import { afterEach, beforeEach, test } from "node:test";
+import { afterEach, beforeEach, mock, test } from "node:test";
 // First: everything below imports 'vscode', which this points at the fake.
 import "./support/install-fake-vscode";
 import * as vscode from "./support/fake-vscode";
 import { OPEN_LOCATION_COMMAND_ID } from "../../src/shared/command-ids";
 import { PdfBacklinkIndex } from "../../src/shared/pdf-backlink-index";
+import { workspacePdfFiles } from "../../src/extension/outlines/vscode";
 import { flattenOutline } from "../../src/extension/plugins/agentBridge/mcp/tools/pdf-info";
 import {
   callTool,
@@ -142,6 +145,115 @@ test("an outside PDF is refused with the answer for a missing one, so a path can
       "X",
     ),
   );
+});
+
+test("a network-location argument is refused before any file-system call, so no host is contacted", async () => {
+  recordOpen(true);
+  const deps = fakeDeps();
+  // The module object the source calls into, not an import's copy of it.
+  const fsPromises: typeof NodeFsPromises = createRequire(import.meta.url)(
+    "node:fs/promises",
+  );
+  const stat = mock.method(workspacePdfFiles, "stat");
+  const realpath = mock.method(fsPromises, "realpath");
+  try {
+    // The control: a PDF inside the workspace does reach both calls, so zero below means none were made.
+    const inside = await callTool(deps, "open_pdf_location", {
+      link: "papers/a.pdf",
+    });
+    assert.equal(inside.isError, false, inside.text);
+    // This machine's file as a file:/// URI is still allowed.
+    const byUri = await callTool(deps, "open_pdf_location", {
+      link: workspace.uri("papers/a.pdf").toString(),
+    });
+    assert.equal(byUri.isError, false, byUri.text);
+    assert.ok(stat.mock.callCount() > 0, "the stat spy sees the calls");
+    assert.ok(realpath.mock.callCount() > 0, "the realpath spy sees the calls");
+    stat.mock.resetCalls();
+    realpath.mock.resetCalls();
+    const network = [
+      "\\\\server\\share\\papers\\a.pdf", // a UNC path
+      "//server/share/papers/a.pdf", // the same, with slashes
+      "file://server/share/papers/a.pdf", // a file URI with a host
+      "file:////server/share/papers/a.pdf", // a file URI with a UNC path
+      "%5C%5Cserver%5Cshare%5Cpapers%5Ca.pdf", // a UNC path, percent-encoded
+      "%5C%5Cserver%5Cshare%5Cpapers%5Ca.pdf#page=%", // the same, a bad fragment
+      "file:\\\\server\\share\\papers\\a.pdf", // a file URI, backslashes
+      "\\\\?\\UNC\\server\\share\\papers\\a.pdf", // a UNC path in device form
+      "\\\\.\\UNC\\server\\share\\papers\\a.pdf", // the same, the other device form
+    ];
+    for (const link of network) {
+      const answer = await callTool(deps, "open_pdf_location", { link });
+      assert.equal(answer.isError, true, link);
+      assert.match(answer.text, OUTSIDE_MESSAGE, link);
+    }
+    assert.equal(stat.mock.callCount(), 0, "no stat");
+    assert.equal(realpath.mock.callCount(), 0, "no realpath");
+    assert.equal(opened.length, 2, "only the two controls opened");
+  } finally {
+    stat.mock.restore();
+    realpath.mock.restore();
+  }
+});
+
+test("a device-namespace or localhost name is this machine's, so it reaches the file system", async () => {
+  recordOpen(true);
+  const deps = fakeDeps();
+  const stat = mock.method(workspacePdfFiles, "stat");
+  try {
+    for (const link of [
+      "\\\\?\\C:\\papers\\a.pdf",
+      "\\\\.\\C:\\papers\\a.pdf",
+      "file://localhost/papers/a.pdf",
+    ]) {
+      stat.mock.resetCalls();
+      await callTool(deps, "open_pdf_location", { link });
+      assert.ok(stat.mock.callCount() > 0, `${link} reaches stat`);
+    }
+  } finally {
+    stat.mock.restore();
+  }
+});
+
+test("a workspace on a share keeps that share's paths, and no other host's", async () => {
+  recordOpen(true);
+  const deps = fakeDeps();
+  const stat = mock.method(workspacePdfFiles, "stat");
+  const original = vscode.workspace.workspaceFolders;
+  try {
+    vscode.workspace.workspaceFolders = [
+      { uri: vscode.Uri.parse("file://server/share/proj") },
+    ];
+    await callTool(deps, "open_pdf_location", {
+      link: "\\\\server\\share\\proj\\papers\\a.pdf",
+    });
+    assert.ok(
+      stat.mock.callCount() > 0,
+      "the workspace's own host reaches stat",
+    );
+
+    stat.mock.resetCalls();
+    await callTool(deps, "open_pdf_location", {
+      link: "\\\\other\\share\\papers\\a.pdf",
+    });
+    assert.equal(stat.mock.callCount(), 0, "another host does not");
+
+    vscode.workspace.workspaceFolders = [
+      { uri: vscode.Uri.parse("vscode-vfs://server/proj") },
+    ];
+    stat.mock.resetCalls();
+    await callTool(deps, "open_pdf_location", {
+      link: "\\\\server\\share\\proj\\papers\\a.pdf",
+    });
+    assert.equal(
+      stat.mock.callCount(),
+      0,
+      "a folder that is not a file folder owns no host",
+    );
+  } finally {
+    vscode.workspace.workspaceFolders = original;
+    stat.mock.restore();
+  }
 });
 
 test("open_pdf_location refuses an invalid page and says when the editor did not open it", async () => {

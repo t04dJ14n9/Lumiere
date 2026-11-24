@@ -72,18 +72,21 @@ test("nearest display rematch does not let Revert mutate the neighbor", async ()
 test("an edit that only changes context keeps Revert on that baseline hunk", () => {
   const session = new DiffSession("HEAD");
   const baseline = "a\n\nold\n";
-  const first = session.publish("file", baseline, "b\n\nnew\n");
-  const target = first.hunks[1];
+  // The row above the change is unchanged here, so it is context of the hunk.
+  const first = session.publish("file", baseline, "a\n\nnew\n");
+  const target = first.hunks[0];
   assert.ok(target?.liveAnchor);
   const open = {
     at: target.liveAnchor.from,
     ref: { generationId: first.generationId, hunkId: target.hunkId },
   };
-  const next = session.publish("file", baseline, "bb\n\nnew\n");
+  // Now it differs from the base, so it is no longer context: a new hunk id.
+  const next = session.publish("file", baseline, "b\n\nnew\n");
+  // The change to "new" is its second hunk: "a" is changed as well.
   const still = next.hunks[1];
   assert.ok(still?.liveAnchor);
   assert.notEqual(still.hunkId, target.hunkId);
-  const doc = EditorState.create({ doc: "bb\n\nnew\n" }).doc;
+  const doc = EditorState.create({ doc: "b\n\nnew\n" }).doc;
   const rematched = session.rematch(first, open, computeHunks(baseline, doc));
   assert.ok(rematched);
   assert.equal(peekAt(rematched), still.liveAnchor.from);
