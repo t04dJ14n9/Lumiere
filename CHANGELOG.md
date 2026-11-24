@@ -1,5 +1,13 @@
 # Changelog
 
+## 0.1.29 (2026-11-24)
+
+- Markdown: in a zoomed-in Mermaid inspector, a drag that starts on a label
+  selects its text; a drag on empty space still pans the diagram.
+- Markdown: the Mermaid and image inspectors pass VS Code's own shortcuts
+  (Ctrl+Alt+B and the rest) to the workbench; they keep only their zoom keys
+  and Escape.
+
 ## 0.1.28 (2026-11-24)
 
 - Markdown: Clear File Properties no longer turns a `---` block that opens
