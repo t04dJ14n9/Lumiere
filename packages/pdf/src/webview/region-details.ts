@@ -1,9 +1,8 @@
 import type { PageRef } from "@embedpdf/engine";
 import type { RenderCapability } from "@embedpdf/plugin-render/contract";
 import type { PageRect } from "../shared/geometry";
-import { regionRuns, regionText } from "../shared/region-text";
+import { readRegionText, type RegionPage } from "../shared/region-reader";
 import type { TextAccess } from "./text-access";
-import { charBounds } from "./text-boxes";
 
 /** Render regions at twice the page's point size (144 dpi) for legible text… */
 const SNAPSHOT_SCALE = 2;
@@ -40,37 +39,21 @@ export async function readRegionDetails(
   return { text, ...(image ? { image } : {}) };
 }
 
-/**
- * Read the characters inside the region, not the text of the lines it
- * crosses: a region cuts a table row or a column out of them.
- */
+/** A page of the viewer's text plugin, as `readRegionText` reads it. */
+export function regionPage(access: TextAccess, page: PageRef): RegionPage {
+  return {
+    layout: () => access.layoutOf(page),
+    slice: (range) => access.slice(page, range),
+  };
+}
+
+/** The text inside the region; empty without text access. See `readRegionText`. */
 export async function readText(
   access: TextAccess | null,
   page: PageRef,
   rect: PageRect,
 ): Promise<string> {
-  try {
-    const layout = await access?.layoutOf(page);
-    const runs = layout ? regionRuns(charBounds(layout), rect) : [];
-    if (!access || runs.length === 0) {
-      return "";
-    }
-    const texts = await Promise.all(
-      runs.map(({ charIndex, charCount }) =>
-        access.slice(page, { start: charIndex, count: charCount }),
-      ),
-    );
-    return regionText(
-      runs.map((run, index) => ({
-        content: texts[index] ?? "",
-        rect: run.rect,
-      })),
-      rect,
-    );
-  } catch {
-    // Copy or select forbidden by the PDF, or the page gone.
-    return "";
-  }
+  return access ? readRegionText(regionPage(access, page), rect) : "";
 }
 
 async function readImage(
