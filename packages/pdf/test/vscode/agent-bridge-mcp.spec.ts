@@ -54,11 +54,15 @@ const NOTE_TEXT = [
 ].join("\n");
 
 const TOOLS = [
+  "find_in_pdf",
   "find_notes_citing_pdf",
   "get_current_note_selection",
   "get_current_pdf_selection",
   "get_ide_context",
   "get_pdf_info",
+  "get_pdf_page_text",
+  "list_pdf_annotations",
+  "locate_pdf_quote",
   "open_pdf_location",
 ];
 

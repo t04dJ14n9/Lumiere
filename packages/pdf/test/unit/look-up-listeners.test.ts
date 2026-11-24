@@ -4,7 +4,7 @@ import { test } from "node:test";
 import { runInNewContext } from "node:vm";
 import ts from "typescript";
 import * as words from "../../src/shared/look-up";
-import * as boxes from "../../src/webview/text-boxes";
+import * as boxes from "../../src/shared/text-boxes";
 
 /** A glyph cell, the way EmbedPDF reads a page's text geometry. */
 const cell = (x: number, width: number) => ({
@@ -78,7 +78,7 @@ function harness() {
     "@embedpdf/react/runtime": { useOptionalCapability: () => stage },
     "@embedpdf/plugin-stage/contract": { StageToken: {} },
     "./text-access": { useTextAccess: () => text },
-    "./text-boxes": boxes,
+    "../shared/text-boxes": boxes,
     // One page, 100 points wide, at one pixel per point.
     "./look-up-pages": {
       lookUpPageAt: (x: number, y: number) => ({

@@ -2,8 +2,8 @@ import {
   isRotatedGeometryRun,
   type PageGeometryRun,
   type TextLayout,
-} from "@embedpdf/engine";
-import type { PageRect } from "../shared/geometry";
+} from "@embedpdf/engine-core/public";
+import type { PageRect } from "./geometry";
 
 /** A box in page space as `[left, top, right, bottom]`, Lumiere's `PageRect`. */
 export type Bounds = PageRect;

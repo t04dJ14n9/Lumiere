@@ -1,7 +1,7 @@
 import assert from "node:assert/strict";
 import { test } from "node:test";
 import type { TextLayout } from "@embedpdf/engine";
-import { charBounds, charBox, unionBounds } from "../../src/webview/text-boxes";
+import { charBounds, charBox, unionBounds } from "../../src/shared/text-boxes";
 
 const box = (x: number, y: number, width: number, height: number) => ({
   x,

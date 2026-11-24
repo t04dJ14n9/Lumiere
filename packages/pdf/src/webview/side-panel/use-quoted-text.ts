@@ -1,11 +1,11 @@
 import type { Annotation } from "@embedpdf/react/annotation";
 import { useEffect, useState } from "react";
 import { annotationKey } from "@embedpdf/engine-core/public";
-import type { PageRect } from "../../shared/geometry";
 import { oneLine, QUOTE_EXCERPT } from "../../shared/annotation-rows";
+import { quoteBoxes, readBoxesText } from "../../shared/region-reader";
 import { ScopedCache } from "../../shared/scoped-cache";
 import { annotationLoadState } from "../annotation-load-state";
-import { readText } from "../region-details";
+import { regionPage } from "../region-details";
 import { useTextAccess, type TextAccess } from "../text-access";
 
 /**
@@ -57,32 +57,9 @@ async function readQuote(
   access: TextAccess,
   mark: Annotation,
 ): Promise<string | undefined> {
-  const boxes = quoteBoxes(mark);
-  const lines = await Promise.all(
-    boxes.map((box) => readText(access, mark.page, box)),
+  const text = await readBoxesText(
+    regionPage(access, mark.page),
+    quoteBoxes(mark),
   );
-  return oneLine(lines.join(" "), QUOTE_EXCERPT);
-}
-
-/** One box a line: the corners of each quad of a text mark, as a page rectangle. */
-function quoteBoxes(mark: Annotation): PageRect[] {
-  const quads =
-    "quadPoints" in mark && Array.isArray(mark.quadPoints)
-      ? mark.quadPoints
-      : [];
-  return quads.map((quad) => {
-    const xs = [
-      quad.upperLeft.x,
-      quad.upperRight.x,
-      quad.lowerLeft.x,
-      quad.lowerRight.x,
-    ];
-    const ys = [
-      quad.upperLeft.y,
-      quad.upperRight.y,
-      quad.lowerLeft.y,
-      quad.lowerRight.y,
-    ];
-    return [Math.min(...xs), Math.min(...ys), Math.max(...xs), Math.max(...ys)];
-  });
+  return oneLine(text, QUOTE_EXCERPT);
 }

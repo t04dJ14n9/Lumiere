@@ -2,6 +2,8 @@ import * as vscode from "vscode";
 import type { Plugin } from "@workshop/core";
 import type {} from "../services";
 import { AGENT_BRIDGE_COMMAND_IDS } from "../../../shared/command-ids";
+import type { PdfTextReader } from "../../pdf-text/reader";
+import { createPdfTextReader } from "../../pdf-text/vscode";
 import { PdfEnvelopePublisher } from "./envelope";
 import { AgentHandoff } from "./handoff";
 import { LastPdf } from "./last-pdf";
@@ -66,6 +68,7 @@ export const agentBridgePlugin: Plugin = {
       ),
       "message handler",
     );
+    let text: PdfTextReader | undefined;
     ctx.own(
       registerAgentBridge({
         extensionUri: context.extensionUri,
@@ -75,6 +78,15 @@ export const agentBridgePlugin: Plugin = {
           lastPdf,
           handoff,
           backlinks: ctx.pdfBacklinkIndex,
+          // Made by the first tool call that reads PDF text, so a session
+          // that never asks pays for nothing (PDFium starts then too). The
+          // tools take `deps` whole: copying it would run this at once.
+          get text() {
+            return (text ??= ctx.own(
+              createPdfTextReader(context, ctx.outputChannel),
+              "pdf text reader",
+            ));
+          },
           ...(ctx.noteSelections && { notes: ctx.noteSelections }),
         },
         log: ctx.outputChannel,

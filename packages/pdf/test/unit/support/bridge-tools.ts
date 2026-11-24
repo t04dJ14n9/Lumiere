@@ -10,6 +10,7 @@ import { LastPdf } from "../../../src/extension/plugins/agentBridge/last-pdf";
 import type { AgentHandoff } from "../../../src/extension/plugins/agentBridge/handoff";
 import { PdfBacklinkIndex } from "../../../src/shared/pdf-backlink-index";
 import type { PdfPanels } from "../../../src/extension/plugins/pdf/panels";
+import { fakeTextReader } from "./pdf-text-fake";
 
 const noEvent = () => ({ dispose() {} });
 
@@ -30,6 +31,8 @@ export function fakeDeps(extra: Partial<BridgeDeps> = {}): BridgeDeps {
     lastPdf: new LastPdf(panels),
     handoff: {} as AgentHandoff,
     backlinks: new PdfBacklinkIndex(),
+    // Knows no PDF: every one reads as missing.
+    text: fakeTextReader().reader,
     ...extra,
   };
 }
