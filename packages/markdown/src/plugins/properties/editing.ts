@@ -156,12 +156,21 @@ export class PropertyEditing {
   /** Obsidian's "Clear file properties": the whole properties block goes. */
   clear(): boolean {
     const view = this.options.view();
-    const header = view && headerParts(view.state.doc.toString());
+    const source = view?.state.doc.toString() ?? "";
+    const header = view && headerParts(source);
     if (!view || !header || view.state.readOnly) {
       return false;
     }
+    // A note whose own text opens with a `---` block would have that block
+    // read as its properties; a blank line keeps it text, as removing the
+    // last property does. CodeMirror's text always separates lines with \n.
+    const rest = source.slice(0, header.start) + source.slice(header.end);
     view.dispatch({
-      changes: { from: header.start, to: header.end },
+      changes: {
+        from: header.start,
+        to: header.end,
+        insert: headerParts(rest) ? "\n" : "",
+      },
       annotations: editGroup.of(`property-${++this.sequence}`),
     });
     return true;

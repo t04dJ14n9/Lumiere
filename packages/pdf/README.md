@@ -264,7 +264,8 @@ editor, and the PDF Outline shows only while a PDF is active. That is as it
 should be, and it is unchanged. The fix is a panel inside the viewer, which goes
 with the PDF wherever it is.
 
-- **Turning it on.** **PDF: Toggle Side Panel**, or the button in the editor
+- **Turning it on.** **PDF: Toggle Side Panel**, from the Command Palette or
+  the viewer's right-click menu, or the button in the editor
   title bar (`layout-sidebar-left-off` to show it, `layout-sidebar-left` to hide
   it, as VS Code's own side bar toggles; a floating window has the title bar
   button too). It is hidden at first, and manual: nothing detects a floating

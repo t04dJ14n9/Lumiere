@@ -18,7 +18,19 @@
       "path": "file:///elsewhere/b.md",
       "startLine": 1,
       "endLine": 2,
-      "text": "@file:///elsewhere/b.md#1-2"
+      "text": "@/elsewhere/b.md#1-2"
+    },
+    {
+      "path": "file:///elsewhere/%E8%B5%A0%E7%A4%BC.md",
+      "startLine": 3,
+      "endLine": 3,
+      "text": "@/elsewhere/赠礼.md#3"
+    },
+    {
+      "path": "file:///My%20Notes/b.md",
+      "startLine": 1,
+      "endLine": 2,
+      "text": "@file:///My%20Notes/b.md#1-2"
     }
   ],
   "notePayloads": [

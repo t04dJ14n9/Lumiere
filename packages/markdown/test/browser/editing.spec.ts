@@ -145,8 +145,9 @@ test("mermaid margin click stays rendered after inserting a line above", async (
     .poll(() => page.evaluate(() => window.harness.text))
     .toMatch(/^inserted line\nabove the diagram/);
   const box = (await diagram.boundingBox())!;
-  // Editor margin to the right of the widget (misses shell, maps into fence).
-  await page.mouse.click(box.x + box.width + 12, box.y + box.height / 2);
+  // Editor margin beside the widget (misses shell, maps into fence): the left
+  // one, as without readable line length the note has no right margin.
+  await page.mouse.click(box.x - 12, box.y + box.height / 2);
   await expect(diagram).toHaveCount(1);
   await expect(page.locator(".cm-content")).not.toContainText("```mermaid");
 });
@@ -165,7 +166,8 @@ test("mermaid margin plain click keeps prior caret and stays rendered", async ({
   await page.evaluate(() => window.harness.reveal(2));
   const before = await page.evaluate(() => window.harness.capture());
   const box = (await page.locator(".hybrid-diagram").boundingBox())!;
-  await page.mouse.click(box.x + box.width + 12, box.y + box.height / 2);
+  // The left margin: without readable line length the note has no right one.
+  await page.mouse.click(box.x - 12, box.y + box.height / 2);
   await expect(page.locator(".hybrid-diagram")).toHaveCount(1);
   await expect(page.locator(".cm-content")).not.toContainText("```mermaid");
   const after = await page.evaluate(() => window.harness.capture());

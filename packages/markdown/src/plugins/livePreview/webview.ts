@@ -3,7 +3,7 @@ import type { CallerBound, Context, Plugin } from "@workshop/core";
 import { pointerSelectionTracking } from "../../webview/ui/pointer-selection";
 import { fenceGuardSelectionSupport } from "../../webview/ui/fence-click-guard";
 import type { LivePreview } from "./api";
-import { clickPositionSync } from "./click-position";
+import { clickPositionSync, pointerDragPosition } from "./click-position";
 import { ruleClick } from "./rule-click";
 import { renderedPosition } from "./rendered-position";
 import { Compartment } from "@codemirror/state";
@@ -173,6 +173,7 @@ function engineExtensions(ctx: Context) {
     pointerSelectionTracking,
     fenceGuardSelectionSupport,
     clickPositionSync,
+    pointerDragPosition,
     ruleClick,
     headingDragStart,
     persistentNodesCarry,

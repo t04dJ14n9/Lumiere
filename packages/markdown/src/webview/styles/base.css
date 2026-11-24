@@ -119,6 +119,14 @@ button {
    */
   min-width: 0;
 }
+/*
+ * Without readable line length the note runs to the pane's edge: a right
+ * margin there is only an unused strip before the scrollbar. The left one
+ * stays, beside the gutters.
+ */
+#app .cm-editor:not(.is-readable-line-width) .cm-content {
+  padding-inline-end: 0;
+}
 #app .cm-line {
   padding: 0 2px;
 }

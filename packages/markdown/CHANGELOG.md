@@ -2,6 +2,11 @@
 
 ## 0.1.0 (unreleased)
 
+- Fixed: on a slow machine a tweet embedded in a note loaded two or three
+  times while the note opened, because the opening renders outlasted the
+  frame's 100 ms wait. The frame now also waits for the page to be idle (at
+  most 2 s) before it loads.
+
 - Fixed: in a read-only editor the Properties sheet's edits, Enter and
   Shift+Enter list continuation, and the image size keys and Backspace or
   Delete on a selected image no longer change the note (#826). Known gaps: a

@@ -21,7 +21,7 @@ const SETTLE_MS = 100;
 /**
  * The shell and frame for a tweet the view says to draw. The frame gets
  * every attribute but `src` here (so the `sandbox` is on it before any
- * load), and its `src` once the render has settled (`SETTLE_MS`). Aborting
+ * load), and its `src` once the render has settled (`SETTLE_MS`) and the page is idle. Aborting
  * `signal`, the render pass ending, cancels the load. A frame not in the page
  * does not load until it is, so no check is made here.
  */
@@ -56,11 +56,39 @@ function loadWhenSettled(
   if (signal.aborted) {
     return;
   }
+  let idle: number | undefined;
   const timer = setTimeout(() => {
-    frame.src = src;
+    // Then when the page is idle: the host's answers to an opening note
+    // (property types, the sheet's state) each render the note's blocks
+    // again, and on a slow machine they come after the settle time (CI: the
+    // tweet loaded two or three times). Idle callbacks run after the
+    // messages and renders already waiting; the timeout keeps a page that
+    // is never idle from never loading the tweet.
+    if (typeof requestIdleCallback !== "function") {
+      frame.src = src;
+      return;
+    }
+    idle = requestIdleCallback(
+      () => {
+        frame.src = src;
+      },
+      { timeout: IDLE_TIMEOUT_MS },
+    );
   }, SETTLE_MS);
-  signal.addEventListener("abort", () => clearTimeout(timer), { once: true });
+  signal.addEventListener(
+    "abort",
+    () => {
+      clearTimeout(timer);
+      if (idle !== undefined) {
+        cancelIdleCallback(idle);
+      }
+    },
+    { once: true },
+  );
 }
+
+/** The longest a settled frame waits for the page to be idle. */
+const IDLE_TIMEOUT_MS = 2000;
 
 /**
  * Sizes tweet frames to the height their widget asks for. One `message`

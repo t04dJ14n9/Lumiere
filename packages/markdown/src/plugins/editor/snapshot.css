@@ -43,7 +43,8 @@
 .mw-snapshot-text {
   flex: 2 1 auto;
   min-width: 0;
-  padding: var(--file-margin-top) var(--file-margins) 40vh 0;
+  /* No right margin: the settled editor has none without readable line length. */
+  padding: var(--file-margin-top) 0 40vh 0;
   white-space: break-spaces;
   word-break: break-word;
   overflow-wrap: anywhere;
