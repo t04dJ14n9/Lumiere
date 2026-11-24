@@ -35,6 +35,15 @@ test("full URI references keep authority, escaping and query text", () => {
   );
 });
 
+test("an absolute path, as Copy Link for Agent writes a note outside the workspace, reads as its file URI", () => {
+  assert.deepEqual(parseAgentReference("@/notes/赠礼/a（1）.md#12-18"), {
+    location: "file:///notes/%E8%B5%A0%E7%A4%BC/a%EF%BC%881%EF%BC%89.md",
+    isUri: true,
+    startLine: 12,
+    endLine: 18,
+  });
+});
+
 test("malformed references and workspace escapes are rejected", () => {
   for (const value of [
     "",
@@ -46,7 +55,6 @@ test("malformed references and workspace escapes are rejected", () => {
     "@a.md#9007199254740992",
     "@../private.md#1",
     "@notes/../a.md#1",
-    "@/outside/a.md#1",
     "@\\outside.md#1",
     "@a.md\n#1",
     "@a.md#1\n> passage",

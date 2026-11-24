@@ -1,3 +1,4 @@
+import { fileUriOfPath } from "@workshop/agents/handoff";
 import {
   formatMarkdownAgentReference,
   formatUriAgentReference,
@@ -19,7 +20,11 @@ export function parseAgentReference(input: string): AgentReferenceInput {
       "Use @path/to/note.md#12-18 or a full note URI with #12-18.",
     );
   }
-  const location = match[1]!;
+  // An absolute path is a local file outside the workspace folder, as Copy
+  // Link for Agent writes it (`noteLocation`).
+  const location = match[1]!.startsWith("/")
+    ? fileUriOfPath(match[1]!)
+    : match[1]!;
   const startLine = Number(match[2]);
   const endLine = Number(match[3] ?? match[2]);
   const isUri = /^[A-Za-z][A-Za-z0-9+.-]*:/.test(location);

@@ -7,7 +7,7 @@ test("a saved note gets the @path#lines reference Markdown Workbench writes", ()
   assert.equal(noteReference("notes/a.md", 4, 4, false), "@notes/a.md#4");
   assert.equal(
     noteReference("file:///elsewhere/b.md", 1, 2, false),
-    "@file:///elsewhere/b.md#1-2",
+    "@/elsewhere/b.md#1-2",
   );
 });
 
