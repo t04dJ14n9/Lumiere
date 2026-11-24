@@ -2,6 +2,11 @@
 
 ## 0.1.0 (unreleased)
 
+- Fixed: a trackpad pinch in the Mermaid inspector zoomed far too fast and
+  could not be stopped where wanted: every wheel event, however small, zoomed
+  by 15 %. Zoom now follows how far the fingers move (1 % per pixel of
+  delta); a mouse wheel notch still zooms by 15 %.
+
 - Fixed: on a slow machine a tweet embedded in a note loaded two or three
   times while the note opened, because the opening renders outlasted the
   frame's 100 ms wait. The frame now also waits for the page to be idle (at
