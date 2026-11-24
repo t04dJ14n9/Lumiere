@@ -56,8 +56,10 @@ Non-goals for v1:
 
 - Reading view (Obsidian's rendered, read-only mode). Live Preview and Source
   mode only. The plugin model leaves room for it.
-- Canvas, Sync, Publish, daily notes. (Graph view, Bases and templates
-  have since shipped.)
+- Canvas, Sync, Publish, daily notes. (Graph view and templates have since
+  shipped. Bases has shipped only as an embed: a `.base` file embedded in a
+  note renders as a table, card or list, and Lumiere has no view of its own
+  for a `.base` file outside an embed.)
 - Plugins that change the Markdown grammar (Obsidian does not allow it either).
 - Markdown linting, LLM Wiki Queries, anchors, exports, repository cards.
   These stay in LLM Wiki. (Git diff gutters and agent chat handoff have since
