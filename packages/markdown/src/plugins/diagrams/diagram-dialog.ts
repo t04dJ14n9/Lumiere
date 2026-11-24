@@ -1,4 +1,5 @@
 import { cloneDiagramSvg } from "./clone-svg";
+import { wheelZoomFactor } from "./wheel-zoom";
 
 interface Point {
   x: number;
@@ -262,7 +263,7 @@ class DiagramInspector {
           return;
         }
         event.preventDefault();
-        this.zoom(Math.exp(-Math.sign(event.deltaY) * 0.15), {
+        this.zoom(wheelZoomFactor(event), {
           x: event.clientX,
           y: event.clientY,
         });

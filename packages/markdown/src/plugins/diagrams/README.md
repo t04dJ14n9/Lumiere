@@ -40,6 +40,7 @@ Pass and plugin disposal restore the source and prevent late results from writin
 - `diagrams.test.ts` / `mount-queue.test.ts`: language recognition, editing, and render-queue coverage.
 - `clone-svg.ts` / `clone-svg.test.ts`: lightbox SVG clone keeps a unique id and rewrites Mermaid `#id`-scoped theme CSS.
 - `diagram-dialog.ts`: inspect lightbox (zoom/pan); clones via `cloneDiagramSvg`.
+- `wheel-zoom.ts`: how much a wheel event or trackpad pinch zooms the lightbox (in proportion to its delta; a mouse notch is 15 %).
 - `diagrams.css`: the plugin's styles, bundled through `src/webview/styles/index.css`.
 
 ## Services, events and settings
