@@ -91,6 +91,11 @@ export function cardListeners(
   };
   const onLeave = (event: PointerEvent): void => {
     if (!event.relatedTarget) {
+      // A frame still waiting would read the last move and put the pointer
+      // back on the mark it just left, arming the open timer again.
+      last = undefined;
+      cancelAnimationFrame(frame);
+      frame = 0;
       hover.pointerOver(undefined);
     }
   };
