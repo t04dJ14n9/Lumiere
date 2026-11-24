@@ -465,9 +465,14 @@ test("an untrusted folder runs no bridge, and granting trust starts it", async (
     );
     assert.deepEqual(await readdir(folder), []);
     vscode.setWorkspaceTrusted(true);
+    // The bridge logs "listening" before it writes its discovery file, so wait
+    // for the file itself: a loaded machine can read the folder in between.
     await eventually(
-      async () => lines.some((line) => line.includes("listening")),
-      true,
+      async () =>
+        (await readdir(path.join(folder, "bridges")).catch(() => [])).filter(
+          (name) => name.endsWith(".json"),
+        ).length,
+      1,
     );
     await discoveryFile();
   } finally {
