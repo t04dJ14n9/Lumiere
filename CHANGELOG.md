@@ -7,6 +7,8 @@
   as HTML.
 - Markdown: without readable line length, the note runs to the pane's right
   edge; the 32 px right margin left an unused strip before the scrollbar.
+- Markdown: Clear File Properties no longer turns a `---` block that opens
+  the note's text into its properties (#904).
 
 ## 0.1.26 (2026-11-24)
 
