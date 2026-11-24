@@ -25,9 +25,11 @@ on a line of its own.
 ```
 
 - The reference is `@` + path + `#` + line range; one line is `#12`.
-- The path is relative to the only local workspace folder; in multi-root
-  and remote workspaces it is the note's full URI
-  (`@file:///elsewhere/b.md#1-2`).
+- The path is relative to the only local workspace folder. In multi-root
+  and remote workspaces a local file is named by its absolute path as
+  written (`@/elsewhere/赠礼.md#1-2`), which agents read as it stands; a path
+  with whitespace, `#`, `%` or a drive letter, and any other location, is
+  the note's full URI (`@file:///My%20Notes/b.md#1-2`).
 - After a blank line comes the selection, every line quoted with `> `
   (an empty line is a bare `>`), line endings normalised to `\n` and
   trailing newlines dropped; the text ends with one `\n` (`⏎` above).

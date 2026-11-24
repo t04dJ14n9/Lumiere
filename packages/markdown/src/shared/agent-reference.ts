@@ -1,3 +1,4 @@
+import { noteLocation } from "@workshop/agents/handoff";
 const MAX_AGENT_CLIPBOARD_PATH_CHARACTERS = 32 * 1024;
 export function formatMarkdownAgentReference(
   relativePath: string,
@@ -14,9 +15,9 @@ export function formatMarkdownAgentReference(
 }
 
 /**
- * The same reference with a full URI, for notes outside a single local
- * workspace folder (multi-root and remote workspaces), where a relative path
- * would be ambiguous.
+ * The same reference for notes outside a single local workspace folder
+ * (multi-root and remote workspaces), where a relative path would be
+ * ambiguous: a local file's absolute path, else its full URI (`noteLocation`).
  */
 export function formatUriAgentReference(
   uri: string,
@@ -31,7 +32,7 @@ export function formatUriAgentReference(
   ) {
     throw new TypeError("Markdown agent reference URI is not valid.");
   }
-  return `@${uri}#${lineRange(startLine, endLine)}`;
+  return `@${noteLocation(uri)}#${lineRange(startLine, endLine)}`;
 }
 
 function lineRange(startLine: number, endLine: number): string {

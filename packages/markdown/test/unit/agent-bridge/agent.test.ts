@@ -68,7 +68,7 @@ test("references use the workspace-relative path in one local folder, else the f
   );
   assert.equal(
     agentReferenceText("file:///vault2/A.md", ["file:///vault"], 1, 3),
-    "@file:///vault2/A.md#1-3",
+    "@/vault2/A.md#1-3",
   );
   assert.equal(
     agentReferenceText(
@@ -77,7 +77,7 @@ test("references use the workspace-relative path in one local folder, else the f
       4,
       4,
     ),
-    "@file:///vault/A.md#4",
+    "@/vault/A.md#4",
   );
   assert.equal(
     agentReferenceText(

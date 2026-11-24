@@ -1,7 +1,7 @@
 import { EditorSelection } from "@codemirror/state";
 import type { EditorState } from "@codemirror/state";
-import { ViewPlugin } from "@codemirror/view";
-import type { EditorView, ViewUpdate } from "@codemirror/view";
+import { EditorView, ViewPlugin } from "@codemirror/view";
+import type { MouseSelectionStyle, ViewUpdate } from "@codemirror/view";
 import { CLICK_DRAG_PX, latchClickDrag } from "../../webview/ui/block-pointer";
 
 /**
@@ -208,3 +208,58 @@ class ClickPositionSync {
 }
 
 export const clickPositionSync = ViewPlugin.fromClass(ClickPositionSync);
+
+/**
+ * Where a press or drag lands: the browser caret's offset when it is on the
+ * same source line as CodeMirror's, else CodeMirror's. On a wrapped line whose
+ * hidden markers are empty widgets (a heading with inline code), `posAtCoords`
+ * can answer a point on the line's other visual row.
+ */
+function pointerPosition(
+  view: EditorView,
+  event: { clientX: number; clientY: number },
+): number {
+  const fallback = view.posAtCoords(
+    { x: event.clientX, y: event.clientY },
+    false,
+  );
+  const domPos = domCaretPosition(view, event);
+  if (domPos === undefined) {
+    return fallback;
+  }
+  const { doc } = view.state;
+  return doc.lineAt(domPos).number === doc.lineAt(fallback).number
+    ? domPos
+    : fallback;
+}
+
+/**
+ * A plain press and its drag select from where the press landed, by the same
+ * rule as a settled click (`ClickPositionSync`): otherwise a drag started at a
+ * heading's first glyph could start rows away. Double clicks, modifiers and
+ * other buttons keep CodeMirror's own styles.
+ */
+export const pointerDragPosition = EditorView.mouseSelectionStyle.of(
+  (view, event): MouseSelectionStyle | null => {
+    if (
+      event.button !== 0 ||
+      event.detail > 1 ||
+      event.shiftKey ||
+      event.altKey ||
+      event.metaKey ||
+      event.ctrlKey
+    ) {
+      return null;
+    }
+    let anchor = pointerPosition(view, event);
+    return {
+      get: (current) =>
+        EditorSelection.single(anchor, pointerPosition(view, current)),
+      update: (update) => {
+        if (update.docChanged) {
+          anchor = update.changes.mapPos(anchor);
+        }
+      },
+    };
+  },
+);

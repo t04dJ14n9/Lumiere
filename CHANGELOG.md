@@ -1,5 +1,17 @@
 # Changelog
 
+## 0.1.28 (2026-11-24)
+
+- Markdown: Clear File Properties no longer turns a `---` block that opens
+  the note's text into its properties (#904).
+- Markdown: a drag that starts on a wrapped line with hidden markers (a
+  heading with inline code) selects from where it started, not from a point
+  on the line's other row.
+- Copy Link for Agent and the PDF bridge name a local note outside the
+  workspace folder by its plain absolute path (`@/notes/赠礼.md#3`) instead
+  of a percent-encoded `file:` URI, so agents read Chinese file names as they
+  are. A path with spaces, `#` or `%` keeps the URI.
+
 ## 0.1.27 (2026-11-24)
 
 - Markdown: text in a Mermaid diagram's labels can be selected and copied
