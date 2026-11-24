@@ -266,3 +266,53 @@ test("editing while nothing is written ends nothing", () => {
   assert.equal(ended, 0);
   assert.deepEqual(shown, ["a", "b"]);
 });
+
+test("a note being written closes when its mark is removed, and hovering works again", () => {
+  const { hover, shown, editing, tick } = setUp();
+  hover.edit("a");
+  hover.markPresent("a", true);
+  hover.markPresent("a", false);
+  assert.deepEqual(shown, ["a", undefined]);
+  assert.deepEqual(editing, [true, false]);
+  assert.equal(hover.editing(), false);
+  // Not stuck in writing mode: another mark's note shows as the pointer rests on it.
+  hover.pointerOver("b");
+  tick(NOTE_OPEN_DELAY_MS);
+  assert.deepEqual(shown, ["a", undefined, "b"]);
+});
+
+test("a note being read closes when its mark is removed", () => {
+  const { hover, shown } = setUp();
+  hover.open("a");
+  hover.markPresent("a", true);
+  hover.markPresent("a", false);
+  assert.deepEqual(shown, ["a", undefined]);
+});
+
+test("a mark that was never seen is not taken for a removed one, as one just made may not be listed yet", () => {
+  const { hover, shown } = setUp();
+  hover.edit("a");
+  hover.markPresent("a", false);
+  assert.deepEqual(shown, ["a"]);
+  assert.equal(hover.editing(), true);
+  hover.markPresent("a", true);
+  hover.markPresent("a", false);
+  assert.equal(hover.editing(), false);
+});
+
+test("a report about a mark no longer shown is ignored", () => {
+  const { hover, shown } = setUp(() => hover.endEdit());
+  hover.edit("a");
+  hover.markPresent("a", true);
+  hover.edit("b");
+  // The card had not yet drawn "b" when it reported "a" gone, and "b" is not listed yet.
+  hover.markPresent("a", false);
+  hover.markPresent("b", false);
+  assert.equal(hover.shown(), "b");
+  assert.equal(hover.editing(), true);
+  // Seen for "a" does not carry over to "b".
+  hover.markPresent("b", false);
+  assert.deepEqual(shown, ["a", "a", "b"]);
+  hover.markPresent(undefined, false);
+  assert.equal(hover.shown(), "b");
+});

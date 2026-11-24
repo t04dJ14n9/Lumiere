@@ -45,6 +45,8 @@ export function NoteCard({
   const onSaved = useEditRequests(hover);
   const mark = useShownMark(shown.key);
   const anchor = useAnnotationAnchor(mark?.ref ?? null);
+  useCloseWhenMarkGone(hover, { key: shown.key, drawable: !!anchor && !!mark });
+  useForgetSavedCallback(shown.key, onSaved);
   if (!anchor || !mark || !annotation) {
     return null;
   }
@@ -189,6 +191,38 @@ function useNoteHover(
   );
   useEffect(() => () => hover.dispose(), [hover]);
   return hover;
+}
+
+/**
+ * A card whose mark is removed (by another editor of the same PDF, or an
+ * undo) closes. The card draws nothing without its mark, so the note being
+ * written in it would be gone with no way to keep it, and left in writing mode
+ * the hover would shut every other note out.
+ */
+function useCloseWhenMarkGone(
+  hover: NoteHover,
+  card: { key: string | undefined; drawable: boolean },
+): void {
+  const { key, drawable } = card;
+  useEffect(() => {
+    hover.markPresent(key, drawable);
+  }, [hover, key, drawable]);
+}
+
+/**
+ * The callback of an edit request belongs to the mark it opened. A card that
+ * closes without saving (its mark was removed) must not hand it to the next
+ * edit, which the card's own Edit button starts with none.
+ */
+function useForgetSavedCallback(
+  key: string | undefined,
+  onSaved: React.RefObject<((mark: Annotation) => void) | undefined>,
+): void {
+  useEffect(() => {
+    if (key === undefined) {
+      onSaved.current = undefined;
+    }
+  }, [key, onSaved]);
 }
 
 /** Edit Note… and Highlight with Note open a mark's note to write it. */

@@ -41,6 +41,15 @@ export interface NoteHover {
   edit(key: string): void;
   /** The note is written (or not): a hover again, or closed with `close`. */
   endEdit(options?: { close?: boolean }): void;
+  /**
+   * Whether the card for mark `key` can be drawn now. A card that could be
+   * drawn and no longer can (its mark was removed) closes, even while its note
+   * is being written: there is nothing left to keep the text on, and a card
+   * held in writing mode would shut every other note out. A mark not yet seen
+   * is waited for, as one just made may not be listed yet, and a report about
+   * a mark that is no longer the one shown is ignored.
+   */
+  markPresent(key: string | undefined, present: boolean): void;
   shown(): string | undefined;
   editing(): boolean;
   dispose(): void;
@@ -90,6 +99,8 @@ class TimerSlot {
 class NoteHoverController implements NoteHover {
   private key: string | undefined;
   private writing = false;
+  /** Whether the shown mark has been reported present (`markPresent`). */
+  private seen = false;
   private overCard = false;
   private readonly opening: TimerSlot;
   private readonly closing: TimerSlot;
@@ -163,6 +174,19 @@ class NoteHoverController implements NoteHover {
     }
   }
 
+  markPresent(key: string | undefined, present: boolean): void {
+    if (key === undefined || key !== this.key) {
+      return;
+    }
+    if (present) {
+      this.seen = true;
+    } else if (this.seen) {
+      this.dispose();
+      this.overCard = false;
+      this.show(undefined, false);
+    }
+  }
+
   shown(): string | undefined {
     return this.key;
   }
@@ -179,6 +203,9 @@ class NoteHoverController implements NoteHover {
 
   private show(key: string | undefined, writing: boolean): void {
     if (this.key !== key || this.writing !== writing) {
+      if (this.key !== key) {
+        this.seen = false;
+      }
       this.key = key;
       this.writing = writing;
       this.options.onChange(key, writing);
