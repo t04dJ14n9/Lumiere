@@ -22,10 +22,22 @@ const revisionMismatch =
  */
 function isTransient(error: unknown): boolean {
   return (
-    error instanceof RpcError &&
-    (error.code === "Timeout" || error.code === "ApplyRefused")
+    error instanceof RpcError && (error.code === "Timeout" || isRefusal(error))
   );
 }
+
+function isRefusal(error: unknown): boolean {
+  return error instanceof RpcError && error.code === "ApplyRefused";
+}
+
+/**
+ * How many pushes in a row the host may refuse before the panel gives up: with
+ * the back-off below, about 30 s. A refusal has no cause the panel can learn
+ * or wait out (a read-only note, a closed document), so past this the typing
+ * is going nowhere. A host that is only slow (`Timeout`) is never given up on:
+ * it answers again when it is no longer busy.
+ */
+const MAX_REFUSALS = 8;
 
 /** Wait before the next try: 0.5 s, doubling up to 8 s. */
 function backoff(attempt: number): number {
@@ -50,6 +62,8 @@ export class Synchronizer {
   /** Pending while a transient failure waits for its retry. */
   private retry?: ReturnType<typeof setTimeout>;
   private failures = 0;
+  /** Pushes the host refused since one last went through. */
+  private refusals = 0;
   private readonly waiting: { resolve(): void; reject(error: Error): void }[] =
     [];
   constructor(
@@ -176,6 +190,7 @@ export class Synchronizer {
         () => {
           this.sending = false;
           this.failures = 0;
+          this.refusals = 0;
           this.pump();
         },
         (error) => {
@@ -186,8 +201,9 @@ export class Synchronizer {
   }
   /**
    * Keep the typing and try again later after a transient failure; stop for
-   * good after any other. Waiting flushes fail now with the reason, so a save
-   * reports it instead of timing out, while the retry goes on behind it.
+   * good after any other, or after `MAX_REFUSALS` refusals in a row. Waiting
+   * flushes fail now with the reason, so a save reports it instead of timing
+   * out, while the retry goes on behind it.
    */
   private retryOrFail(error: unknown, again: () => void): void {
     if (this.stopped || this.error) {
@@ -195,6 +211,14 @@ export class Synchronizer {
     }
     if (!isTransient(error)) {
       this.fail(error);
+      return;
+    }
+    if (isRefusal(error) && ++this.refusals >= MAX_REFUSALS) {
+      this.fail(
+        new Error(
+          `The host refused the edit ${this.refusals} times in a row (${String(error)}). Keep this tab open and copy your edits before reopening.`,
+        ),
+      );
       return;
     }
     const reason = `Not synced yet (${String(error)}). Retrying…`;

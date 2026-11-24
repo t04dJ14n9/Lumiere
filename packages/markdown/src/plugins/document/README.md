@@ -29,9 +29,11 @@ and edits the host already took are confirmed, never dropped or applied twice.
 A push or catch-up that times out (a busy extension host) or an edit the
 workbench refuses is not the end of sync: the panel keeps the unsent edits,
 says so in its status line, and tries again after 0.5 s, doubling up to 8 s.
-Sending again is safe because the host drops updates it already took. Any
-other failure means the panel and the note have diverged; the panel stops
-syncing, shows the error and turns read-only so no more typing is lost.
+Sending again is safe because the host drops updates it already took. A slow
+host is waited for as long as it takes, but one that refuses the edit 8 times
+in a row (about 30 s) is given up on, like any other failure: the panel and the
+note have diverged, so the panel stops syncing, shows the error and turns
+read-only so no more typing is lost.
 `Session.flush(origin)` rejects only when `origin`, the panel asking, cannot
 flush: another panel of the same note that cannot answer does not make Save,
 Undo or Redo fail.
