@@ -2,6 +2,9 @@
 
 ## Unreleased
 
+- **Toggle Side Panel in the right-click menu.** Right-click the PDF to show
+  or hide its side panel, first among the view items.
+
 - **Side panel**, inside the viewer, for a PDF in a floating window (#867).
   **PDF: Toggle Side Panel** and an editor title button (`layout-sidebar-left`
   while open, `-off` while closed) show Thumbnails, Outline, Bookmarks and

@@ -74,6 +74,20 @@ test("the palette offers Toggle for a PDF, and keeps Show and Hide to the button
   assert.equal(when(IDS.hideSidePanel), "false");
 });
 
+test("the viewer's right-click menu offers Toggle, first among the view items, in every PDF", () => {
+  const context = contributes.menus["webview/context"]!;
+  const toggle = context.find((entry) => entry.command === IDS.toggleSidePanel);
+  assert.equal(toggle?.when, "webviewId == 'lumiere.pdf.viewer'");
+  assert.equal(toggle?.group, "1_pdfView@0");
+  for (const id of [IDS.showSidePanel, IDS.hideSidePanel]) {
+    assert.equal(
+      context.some((entry) => entry.command === id),
+      false,
+      id,
+    );
+  }
+});
+
 test("no key is bound by default; Keyboard Shortcuts can bind Toggle Side Panel", () => {
   const bound = (contributes.keybindings ?? []).map((entry) => entry.command);
   for (const id of Object.values(IDS)) {

@@ -2728,6 +2728,11 @@
           "group": "0_mark@7"
         },
         {
+          "command": "lumiere.pdf.toggleSidePanel",
+          "when": "webviewId == 'lumiere.pdf.viewer'",
+          "group": "1_pdfView@0"
+        },
+        {
           "command": "lumiere.pdf.goToPage",
           "when": "webviewId == 'lumiere.pdf.viewer'",
           "group": "1_pdfView@1"
