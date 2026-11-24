@@ -1,5 +1,10 @@
 # Changelog
 
+## 0.1.28 (2026-11-24)
+
+- Markdown: Clear File Properties no longer turns a `---` block that opens
+  the note's text into its properties (#904).
+
 ## 0.1.27 (2026-11-24)
 
 - Markdown: text in a Mermaid diagram's labels can be selected and copied
@@ -7,8 +12,6 @@
   as HTML.
 - Markdown: without readable line length, the note runs to the pane's right
   edge; the 32 px right margin left an unused strip before the scrollbar.
-- Markdown: Clear File Properties no longer turns a `---` block that opens
-  the note's text into its properties (#904).
 
 ## 0.1.26 (2026-11-24)
 
