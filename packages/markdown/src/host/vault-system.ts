@@ -11,6 +11,7 @@ import type {
   VaultSystem,
 } from "../plugins/vault/api";
 import { globToRegExp, isIgnoredPath } from "../plugins/vault/exclusion";
+import { FILE_LIMIT } from "../plugins/vault/file-limit";
 import { ListingBudget } from "../plugins/vault/listing-budget";
 import { isMarkdownPath } from "../shared/vault-path";
 import { createVaultParser } from "./vault-parser";
@@ -284,11 +285,13 @@ async function listedFile(
 
 /**
  * File events under a vault. VS Code reports a folder by itself when it is
- * created, deleted or renamed, so folder events expand to their files.
+ * created, deleted or renamed, so folder events expand to their files, as
+ * many as a listing keeps (`limit`).
  */
 function watchVault(
   root: string,
   listener: (event: FileEvent) => void,
+  limit = FILE_LIMIT,
 ): () => void {
   const base = vscode.Uri.parse(root);
   const watcher = vscode.workspace.createFileSystemWatcher(
@@ -299,7 +302,7 @@ function watchVault(
     if (filesExcludeMatcher(base)(uri)) {
       return;
     }
-    for (const file of await filesAt(base, uri)) {
+    for (const file of (await filesAt(base, uri, limit)).files) {
       listener({ type, file });
     }
   };
@@ -315,7 +318,7 @@ function watchVault(
     }),
     vscode.workspace.onDidRenameFiles((event) => {
       for (const { oldUri, newUri } of event.files) {
-        void renamed(base, oldUri, newUri, listener);
+        void renamed({ base, oldUri, newUri, limit }, listener);
       }
     }),
   ];
@@ -326,27 +329,30 @@ function watchVault(
   };
 }
 
-/** The files at a URI: the file itself, or every file in a folder. */
+/**
+ * The files at a URI: the file itself, or the files of a folder as a
+ * listing keeps them (`limit`: a huge folder must not flood the index).
+ */
 async function filesAt(
   base: vscode.Uri,
   uri: vscode.Uri,
-): Promise<ListedFile[]> {
+  limit: number,
+): Promise<{ files: ListedFile[]; isPartial: boolean }> {
   const file = await listedFile(base, uri);
   if (file) {
-    return [file];
+    return { files: [file], isPartial: false };
   }
   const path = relativePath(base, uri);
   if (path === undefined || isIgnoredPath(path)) {
-    return [];
+    return { files: [], isPartial: false };
   }
-  const everything = new ListingBudget(Number.POSITIVE_INFINITY);
-  return statAll(base, await collectFiles(uri, everything, false));
+  const budget = new ListingBudget(limit);
+  const files = await statAll(base, await collectFiles(uri, budget, false));
+  return { files, isPartial: budget.isPartial };
 }
 
 async function renamed(
-  base: vscode.Uri,
-  oldUri: vscode.Uri,
-  newUri: vscode.Uri,
+  { base, oldUri, newUri, limit }: RenamedUris,
   listener: (event: FileEvent) => void,
 ): Promise<void> {
   const oldPath = relativePath(base, oldUri);
@@ -354,10 +360,23 @@ async function renamed(
   if (oldPath === undefined || newPath === undefined) {
     return;
   }
-  for (const file of await filesAt(base, newUri)) {
+  const { files, isPartial } = await filesAt(base, newUri, limit);
+  for (const file of files) {
     const suffix = file.path.slice(newPath.length);
     listener({ type: "rename", oldPath: oldPath + suffix, file });
   }
+  // The files past the limit moved too: what the index still has under the
+  // old folder is gone, and nothing else would tell it.
+  if (isPartial) {
+    listener({ type: "delete", path: oldPath });
+  }
+}
+
+interface RenamedUris {
+  base: vscode.Uri;
+  oldUri: vscode.Uri;
+  newUri: vscode.Uri;
+  limit: number;
 }
 
 /** A folder of JSON files per vault in the workspace's extension storage. */

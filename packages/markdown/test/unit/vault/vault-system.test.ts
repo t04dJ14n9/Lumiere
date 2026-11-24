@@ -385,3 +385,121 @@ test("vault-system's watch applies a files.exclude change to the events after it
 
   assert.deepEqual(seen, ["build/first.md"]);
 });
+
+/**
+ * A watched vault at file:///repo over a fake VS Code whose folders are the
+ * keys of `tree`. `created` and `renamed` report a file event as VS Code does.
+ */
+function watchedFolders(tree: Record<string, [string, number][]>) {
+  const FileType = { Unknown: 0, File: 1, Directory: 2, SymbolicLink: 64 };
+  const parseUri = (raw: string) => {
+    const url = new URL(raw);
+    return {
+      scheme: url.protocol.slice(0, -1),
+      path: decodeURIComponent(url.pathname),
+      toString: () => url.href,
+    };
+  };
+  const created: ((uri: unknown) => void)[] = [];
+  const renamed: ((event: unknown) => void)[] = [];
+  const { createVaultSystem } = loadVaultSystem({
+    FileType,
+    RelativePattern: class {},
+    Uri: {
+      parse: parseUri,
+      joinPath: (base: { toString(): string }, ...parts: string[]) =>
+        parseUri(
+          `${base.toString().replace(/\/+$/, "")}/${parts.map(encodeURIComponent).join("/")}`,
+        ),
+    },
+    workspace: {
+      workspaceFolders: [],
+      getWorkspaceFolder: () => undefined,
+      createFileSystemWatcher: () => ({
+        onDidCreate: (listener: (uri: unknown) => void) => {
+          created.push(listener);
+          return { dispose() {} };
+        },
+        onDidChange: () => ({ dispose() {} }),
+        onDidDelete: () => ({ dispose() {} }),
+        dispose() {},
+      }),
+      onDidRenameFiles: (listener: (event: unknown) => void) => {
+        renamed.push(listener);
+        return { dispose() {} };
+      },
+      fs: {
+        async readDirectory(uri: { path: string }) {
+          return tree[uri.path] ?? [];
+        },
+        async stat(uri: { path: string }) {
+          const type = uri.path in tree ? FileType.Directory : FileType.File;
+          return { type, mtime: 1, size: 1 };
+        },
+      },
+    },
+  });
+  const system = createVaultSystem(
+    { storageUri: undefined } as never,
+    fakeConfiguration(),
+  );
+  return {
+    watch(limit: number) {
+      const events: string[] = [];
+      system.watch(
+        "file:///repo",
+        (event) =>
+          events.push(
+            event.type === "delete"
+              ? `delete ${event.path}`
+              : `${event.type} ${event.file.path}`,
+          ),
+        limit,
+      );
+      return events;
+    },
+    created: (uri: string) => created.at(-1)!(parseUri(uri)),
+    renamed: (oldUri: string, newUri: string) =>
+      renamed.at(-1)!({
+        files: [{ oldUri: parseUri(oldUri), newUri: parseUri(newUri) }],
+      }),
+  };
+}
+
+const settled = () => new Promise((resolve) => setTimeout(resolve, 20));
+
+function notesIn(count: number): [string, number][] {
+  return Array.from({ length: count }, (_, n) => [`n${n}.md`, 1]);
+}
+
+test("vault-system's watch reports at most the limit of the files of a folder created in", async () => {
+  const folders = watchedFolders({ "/repo/big": notesIn(8) });
+  const events = folders.watch(5);
+
+  folders.created("file:///repo/big");
+  await settled();
+
+  assert.deepEqual(
+    events,
+    [0, 1, 2, 3, 4].map((n) => `create big/n${n}.md`),
+  );
+});
+
+test("vault-system's watch drops what a folder rename's walk left behind under the old name", async () => {
+  const folders = watchedFolders({
+    "/repo/new": notesIn(8),
+    "/repo/small": notesIn(2),
+  });
+  const events = folders.watch(5);
+
+  folders.renamed("file:///repo/old", "file:///repo/new");
+  await settled();
+  assert.equal(events.length, 6);
+  assert.equal(events[0], "rename new/n0.md");
+  assert.equal(events.at(-1), "delete old", "the files the walk never reached");
+
+  events.length = 0;
+  folders.renamed("file:///repo/before", "file:///repo/small");
+  await settled();
+  assert.deepEqual(events, ["rename small/n0.md", "rename small/n1.md"]);
+});

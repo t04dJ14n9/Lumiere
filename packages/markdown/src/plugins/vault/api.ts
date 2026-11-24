@@ -74,8 +74,17 @@ export interface VaultFileSystem {
   /** Files under the root outside ignored folders, up to `limit` notes and `limit` other files (ListingBudget); only the root's own files when `shallow`. */
   list(root: string, limit: number, shallow?: boolean): Promise<VaultListing>;
   read(uri: string): Promise<Uint8Array>;
-  /** File events under the root; created and changed files carry fresh stats. */
-  watch(root: string, listener: (event: FileEvent) => void): Disposer;
+  /**
+   * File events under the root; created and changed files carry fresh stats.
+   * A folder created or moved in reports its files as a listing keeps them,
+   * up to `limit` notes and `limit` other files (ListingBudget); when a
+   * moved folder has more, a `delete` of its old path follows its renames.
+   */
+  watch(
+    root: string,
+    listener: (event: FileEvent) => void,
+    limit?: number,
+  ): Disposer;
 }
 /** Where one vault's snapshot files are kept between sessions. */
 export interface SnapshotStore {

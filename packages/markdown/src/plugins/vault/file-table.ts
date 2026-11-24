@@ -1,3 +1,4 @@
+import { isMarkdownPath } from "../../shared/vault-path";
 import type { VaultFile } from "./api";
 
 /** What the host knows about a file before the index adds derived fields. */
@@ -40,9 +41,15 @@ export class FileTable {
   private readonly byLowerPath = new Map<string, VaultFile>();
   private readonly byKey = new Map<string, VaultFile[]>();
   private sorted?: VaultFile[];
+  private noteCount = 0;
 
   get size(): number {
     return this.byPath.size;
+  }
+
+  /** How many files of the kind `path` is the table holds: notes and other files, counted apart. */
+  countOfKind(path: string): number {
+    return isMarkdownPath(path) ? this.noteCount : this.size - this.noteCount;
   }
 
   all(): readonly VaultFile[] {
@@ -84,6 +91,7 @@ export class FileTable {
   set(file: VaultFile): void {
     this.delete(file.path);
     this.byPath.set(file.path, file);
+    this.noteCount += isMarkdownPath(file.path) ? 1 : 0;
     this.byLowerPath.set(file.path.toLowerCase(), file);
     const key = fileLookupKey(file);
     const list = this.byKey.get(key);
@@ -101,6 +109,7 @@ export class FileTable {
       return undefined;
     }
     this.byPath.delete(path);
+    this.noteCount -= isMarkdownPath(path) ? 1 : 0;
     if (this.byLowerPath.get(path.toLowerCase()) === file) {
       this.byLowerPath.delete(path.toLowerCase());
     }

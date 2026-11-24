@@ -21,11 +21,16 @@ export class ListingWatch {
     this.events = new HeldFileEvents(apply);
   }
 
-  start(): void {
+  /** Starts the watch with the limit its folder events keep (`VaultFileSystem.watch`). */
+  start(limit: number): void {
     if (this.isStopped) {
       return;
     }
-    this.stop = this.fs.watch(this.root, (event) => this.events.receive(event));
+    this.stop = this.fs.watch(
+      this.root,
+      (event) => this.events.receive(event),
+      limit,
+    );
   }
 
   /** The listing, or its failure: a failed listing leaves no index for events, so none is kept. */

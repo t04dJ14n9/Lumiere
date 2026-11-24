@@ -8,6 +8,7 @@ import { ParseQueue } from "./parse-queue";
 import { Snapshot, reusableHash } from "./snapshot";
 import { KeyedTimers } from "./keyed-timers";
 import { LateStats } from "./late-stats";
+import { FileLimit, type FileLimitOptions } from "./file-limit";
 import { ListingWatch } from "./listing-watch";
 import type {
   FileEvent,
@@ -19,8 +20,6 @@ import type {
   VaultSettings,
 } from "./api";
 
-/** Obsidian's limit is higher; past this the index says it is partial. */
-const FILE_LIMIT = 50_000;
 /** At most one snapshot write per interval (DESIGN §12.2). */
 const SAVE_DELAY_MS = 2_000;
 
@@ -42,7 +41,7 @@ export const OVERLAY_DELAY_MS = 50;
 export const INITIAL_READY_BUDGET_MS = 500;
 /** Long start-up work runs in slices of about this long, between other events. */
 
-export interface IndexerOptions {
+export interface IndexerOptions extends FileLimitOptions {
   root: string;
   fs: VaultFileSystem;
   store?: SnapshotStore;
@@ -51,7 +50,6 @@ export interface IndexerOptions {
   settings: () => VaultSettings;
   /** Called each time indexing settles (Obsidian's `resolved`). */
   onResolved?: () => void;
-  onPartial?: () => void;
   onError?: (message: string, error: unknown) => void;
   delays?: { save: number; overlay: number; ready?: number };
 }
@@ -71,6 +69,7 @@ export class VaultIndexer {
   private disposed = false;
   private reconciling = false;
   private readonly listingWatch: ListingWatch;
+  private readonly fileLimit: FileLimit;
   private isExcluded: (path: string) => boolean;
   /** The settings the index was built with (`indexSettingsKey`). */
   private indexedWith: string;
@@ -100,6 +99,7 @@ export class VaultIndexer {
       folderNote,
       linkFormat,
     });
+    this.fileLimit = new FileLimit(options, this.index);
     this.fileListReady = new Promise<void>((resolve) => {
       this.markFileListReady = resolve;
     });
@@ -263,17 +263,15 @@ export class VaultIndexer {
     // Watching starts before the listing, so a file written while it runs gets
     // an event. The listing may predate such an event, so events wait until the
     // listing is in the index (see applyListing).
-    this.listingWatch.start();
+    this.listingWatch.start(this.fileLimit.perKind);
     try {
       const listing = await this.listingWatch.untilListed(
-        this.options.fs.list(this.options.root, FILE_LIMIT),
+        this.options.fs.list(this.options.root, this.fileLimit.perKind),
       );
       if (this.disposed) {
         return;
       }
-      if (listing.partial) {
-        this.options.onPartial?.();
-      }
+      this.fileLimit.reportListing(listing);
       await this.applyListing(listing);
     } finally {
       this.listingWatch.release();
@@ -397,7 +395,7 @@ export class VaultIndexer {
       this.deletePath(event.path);
       return;
     }
-    if (isIgnoredPath(event.file.path)) {
+    if (isIgnoredPath(event.file.path) || this.fileLimit.refuses(event)) {
       return;
     }
     if (event.type === "rename") {
