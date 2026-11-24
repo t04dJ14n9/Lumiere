@@ -5,6 +5,8 @@
 - Markdown: text in a Mermaid diagram's labels can be selected and copied
   again once the vault's diagrams are trusted (Allow), when labels are drawn
   as HTML.
+- Markdown: without readable line length, the note runs to the pane's right
+  edge; the 32 px right margin left an unused strip before the scrollbar.
 
 ## 0.1.26 (2026-11-24)
 
