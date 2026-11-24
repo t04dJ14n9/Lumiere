@@ -36,7 +36,13 @@ note have diverged, so the panel stops syncing, shows the error and turns
 read-only so no more typing is lost.
 `Session.flush(origin)` rejects only when `origin`, the panel asking, cannot
 flush: another panel of the same note that cannot answer does not make Save,
-Undo or Redo fail.
+Undo or Redo fail. The panels have 1.2 s to answer, together, because VS Code
+gives all of a save's listeners one 1.5 s budget and stops calling one that
+keeps overrunning it. A native save flushes twice, in the `document/willSave`
+listener (the event bus logs a listener's failure and goes on) and again after
+every listener has run (a failure there rejects the save), so both take their
+deadline from the moment the save began: the second flush gets only the time
+the first left.
 
 While a panel has a note open and the note is dirty, the host saves it 2 s
 after the last edit, as Obsidian does (`autosave.ts`). The countdown lives with
