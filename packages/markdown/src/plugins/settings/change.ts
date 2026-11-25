@@ -1,6 +1,7 @@
 import { fuzzyMatch } from "../../shared/fuzzy";
 import type { ContributedSetting, PickItem } from "../../shared/host";
 import { SETTING_PREFIX, type Schema } from "../../shared/setting-schema";
+import { t } from "@workshop/l10n";
 
 /** The `lumiere.markdown.` prefix of every key this extension contributes. */
 export const PREFIX = SETTING_PREFIX;
@@ -44,7 +45,7 @@ function plainDescription(schema: Schema): string {
 /** A value as the list shows it. */
 export function formatValue(value: unknown): string {
   if (value === undefined) {
-    return "unset";
+    return t("unset");
   }
   const text = typeof value === "string" ? `"${value}"` : JSON.stringify(value);
   return text.length > 40 ? `${text.slice(0, 39)}…` : text;
@@ -66,7 +67,9 @@ export function settingRows(
       searchable: `${group} ${name} ${relativeKey(setting.key)} ${plainDescription(setting.schema)}`,
       item: {
         label: name,
-        description: `${formatValue(value)}${isDefault ? " (default)" : ""}`,
+        description: isDefault
+          ? t("{0} (default)", formatValue(value))
+          : formatValue(value),
         detail: plainDescription(setting.schema) || relativeKey(setting.key),
         value: setting,
       } satisfies PickItem<ContributedSetting>,

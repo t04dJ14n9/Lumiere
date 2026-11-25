@@ -1,9 +1,10 @@
 import type { MarkdownIt } from "markdown-it";
 import { attr, escape } from "./helpers";
 import { readTag } from "../tags/grammar";
+import { t } from "@workshop/l10n";
 export function tags(md: MarkdownIt): void {
   const tagButton = (tag: string): string =>
-    `<button type="button" class="md-tag"${attr("data-tag", tag)}${attr("aria-label", `Search tag #${tag}`)}>#${escape(tag)}</button>`;
+    `<button type="button" class="md-tag"${attr("data-tag", tag)}${attr("aria-label", t("Search tag #{0}", tag))}>#${escape(tag)}</button>`;
   md.inline.ruler.before("text", "tag", (state, silent) => {
     const tag = readTag(state.src, state.pos);
     if (!tag) {

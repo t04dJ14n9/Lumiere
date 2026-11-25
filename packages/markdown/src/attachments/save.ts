@@ -9,6 +9,7 @@ import type { WorkspaceFiles } from "../shared/workspace-files";
 import { embedFor, type EmbedLink } from "./embed";
 import { resolveAttachmentDir } from "./folder";
 import { uniqueName, uniqueTimestampName } from "./naming";
+import { t } from "@workshop/l10n";
 
 export interface SaveAttachmentInput {
   readonly files: Pick<
@@ -114,7 +115,9 @@ async function createUnique(
     taken.push(name);
   }
   throw new Error(
-    `Could not find a free name for the attachment in ${folder || "the vault"}.`,
+    folder
+      ? t("Could not find a free name for the attachment in {0}.", folder)
+      : t("Could not find a free name for the attachment in the vault."),
   );
 }
 

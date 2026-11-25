@@ -3,6 +3,7 @@ import type {} from "../commands/api";
 import type {} from "../editor/api";
 import type {} from "../document/api";
 import { protocol } from "./protocol";
+import { t } from "@workshop/l10n";
 export const agentBridgeWebview: Plugin = {
   name: "agentBridge",
   inject: { required: ["editor", "commands", "document", "rpc", "menu"] },
@@ -19,7 +20,7 @@ export const agentBridgeWebview: Plugin = {
     ctx.effect(() => ctx.commands.register("copyLinkForAgent", copy));
     // Always first in the selection / table context menu (user standing rule).
     ctx.on("editor/selectionMenu", (items) => [
-      { label: "Copy link to this", run: copyNow },
+      { label: t("Copy link to this"), run: copyNow },
       ...items,
     ]);
   },

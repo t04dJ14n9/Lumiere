@@ -1,6 +1,7 @@
 import * as vscode from "vscode";
 import { LinkTickets, type Ticket } from "./link-tickets";
 import { nativeLinks, localFragment } from "../shared/native-links";
+import { t } from "@workshop/l10n";
 
 export interface LinkRun {
   current(): boolean;
@@ -137,7 +138,7 @@ async function boundedResult(
   } catch (error) {
     if (run.current()) {
       void vscode.window.showWarningMessage(
-        `Could not open precise link: ${String(error)}`,
+        t("Could not open precise link: {0}", String(error)),
       );
     }
     return false;

@@ -8,9 +8,13 @@ import type { EditorView } from "@codemirror/view";
 import { RpcError, type Endpoint } from "../../shared/rpc/endpoint";
 import { protocol } from "./protocol";
 import { editGroup } from "./input-annotation";
+import { t } from "@workshop/l10n";
 
-const revisionMismatch =
-  "Document revisions differ. Keep this tab open and copy your edits before reopening.";
+/** A function: the text is translated when shown, not when the module loads. */
+const revisionMismatch = () =>
+  t(
+    "Document revisions differ. Keep this tab open and copy your edits before reopening.",
+  );
 
 /**
  * Failures that say nothing about the two documents: the host did not answer
@@ -100,7 +104,7 @@ export class Synchronizer {
    */
   private startCatchUp(version: number, message: UpdatesMessage): void {
     this.catchUp = { held: [message] };
-    this.status("Syncing…");
+    this.status(t("Syncing…"));
     this.requestCatchUp(version);
   }
   private requestCatchUp(version: number): void {
@@ -122,7 +126,7 @@ export class Synchronizer {
     this.failures = 0;
     // An empty log cannot explain the skew that triggered the request.
     if (log.version !== requested || !log.updates.length) {
-      this.fail(new Error(revisionMismatch));
+      this.fail(new Error(revisionMismatch()));
       return;
     }
     if (!this.applyUpdates(log)) {
@@ -171,7 +175,7 @@ export class Synchronizer {
       return;
     }
     this.sending = true;
-    this.status("Syncing…");
+    this.status(t("Syncing…"));
     const group = updates[0]!.origin.annotation(editGroup);
     const end = updates.findIndex(
       (update) => update.origin.annotation(editGroup) !== group,
@@ -216,12 +220,16 @@ export class Synchronizer {
     if (isRefusal(error) && ++this.refusals >= MAX_REFUSALS) {
       this.fail(
         new Error(
-          `The host refused the edit ${this.refusals} times in a row (${String(error)}). Keep this tab open and copy your edits before reopening.`,
+          t(
+            "The host refused the edit {0} times in a row ({1}). Keep this tab open and copy your edits before reopening.",
+            this.refusals,
+            String(error),
+          ),
         ),
       );
       return;
     }
-    const reason = `Not synced yet (${String(error)}). Retrying…`;
+    const reason = t("Not synced yet ({0}). Retrying…", String(error));
     this.status(reason);
     for (const pending of this.waiting.splice(0)) {
       pending.reject(new Error(reason));

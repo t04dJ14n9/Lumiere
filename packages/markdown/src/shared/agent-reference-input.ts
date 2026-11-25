@@ -3,6 +3,7 @@ import {
   formatMarkdownAgentReference,
   formatUriAgentReference,
 } from "./agent-reference";
+import { t } from "@workshop/l10n";
 
 export interface AgentReferenceInput {
   readonly location: string;
@@ -17,7 +18,7 @@ export function parseAgentReference(input: string): AgentReferenceInput {
   const match = /^(.*)#([1-9]\d*)(?:-([1-9]\d*))?$/.exec(value);
   if (!match) {
     throw new TypeError(
-      "Use @path/to/note.md#12-18 or a full note URI with #12-18.",
+      t("Use @path/to/note.md#12-18 or a full note URI with #12-18."),
     );
   }
   // An absolute path is a local file outside the workspace folder, as Copy
@@ -30,13 +31,15 @@ export function parseAgentReference(input: string): AgentReferenceInput {
   const isUri = /^[A-Za-z][A-Za-z0-9+.-]*:/.test(location);
   if (/^[A-Za-z]:[\\/]/.test(location)) {
     throw new TypeError(
-      "Use a file:/// URI for an absolute drive-letter path.",
+      t("Use a file:/// URI for an absolute drive-letter path."),
     );
   }
   if (isUri) {
     if (location.includes("#")) {
       throw new TypeError(
-        "Encode a literal URI filename # as %23; only the final line reference may be a fragment.",
+        t(
+          "Encode a literal URI filename # as %23; only the final line reference may be a fragment.",
+        ),
       );
     }
     formatUriAgentReference(location, startLine, endLine);
@@ -64,7 +67,7 @@ function unquote(value: string): string {
     return value;
   }
   if (!value.endsWith(closing) || value.length < 2) {
-    throw new TypeError("The reference's surrounding quotes must match.");
+    throw new TypeError(t("The reference's surrounding quotes must match."));
   }
   return value.slice(1, -1).trim();
 }

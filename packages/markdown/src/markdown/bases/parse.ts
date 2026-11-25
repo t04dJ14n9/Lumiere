@@ -7,6 +7,7 @@ import type {
   BaseViewConfig,
   BaseViewType,
 } from "./types";
+import { t } from "@workshop/l10n";
 
 const VIEW_TYPES: ReadonlySet<string> = new Set([
   "table",
@@ -281,7 +282,7 @@ export function parseBaseYaml(source: string): BaseDefinition {
   }
   const raw: unknown = document.toJS({ maxAliasCount: 100 }) ?? {};
   if (typeof raw !== "object" || Array.isArray(raw)) {
-    throw new Error("Base file must be a YAML mapping.");
+    throw new Error(t("Base file must be a YAML mapping."));
   }
   const record = raw as Record<string, unknown>;
   const filters = parseFilter(record.filters);

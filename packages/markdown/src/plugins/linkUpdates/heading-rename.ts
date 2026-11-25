@@ -11,6 +11,7 @@ import {
 } from "../../shared/vault-path";
 import { linkSource, type LinkSource } from "./link-source";
 import { linkRewriteEdits, type LinkRewrite } from "./yaml-safe-edits";
+import { t } from "@workshop/l10n";
 
 /** A heading to rename: where it starts, its name and where the name is. */
 export interface HeadingToRename {
@@ -159,18 +160,24 @@ export function renamedHeadingFragment(
     (entry) => entry.from === heading.from,
   )?.heading;
   if (shown === undefined) {
-    return { problem: "With this name the line would no longer be a heading." };
+    return {
+      problem: t("With this name the line would no longer be a heading."),
+    };
   }
   const subpath = headingSubpath(shown);
   if (!subpath) {
     return {
-      problem:
+      problem: t(
         "Links could not reach a heading with only formatting or : # | ^ \\ [[ ]] in its name.",
+      ),
     };
   }
   if (noteLineFragment(subpath)) {
     return {
-      problem: `Links would read #${subpath} as a line number, not as this heading.`,
+      problem: t(
+        "Links would read #{0} as a line number, not as this heading.",
+        subpath,
+      ),
     };
   }
   // Checked against the heading's line alone, so an earlier heading with
@@ -178,7 +185,9 @@ export function renamedHeadingFragment(
   const lineEnd = note.indexOf("\n", heading.from);
   const line = note.slice(heading.from, lineEnd < 0 ? undefined : lineEnd);
   if (noteFragment(line, subpath)?.from !== 0) {
-    return { problem: "Links could not reach a heading with this name." };
+    return {
+      problem: t("Links could not reach a heading with this name."),
+    };
   }
   return { subpath };
 }

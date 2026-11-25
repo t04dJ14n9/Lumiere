@@ -2,6 +2,7 @@ import type { Document } from "yaml";
 import { headerParts } from "./header-parts";
 import { loadYaml } from "./load-yaml";
 import { plainDocumentDates, settablePropertyNode } from "./values";
+import { t } from "@workshop/l10n";
 
 export { headerParts } from "./header-parts";
 
@@ -28,7 +29,7 @@ export function frontmatter(source: string):
     }
     const value: unknown = plainDocumentDates(document);
     if (value !== null && (typeof value !== "object" || Array.isArray(value))) {
-      throw new Error("Properties must be a YAML mapping.");
+      throw new Error(t("Properties must be a YAML mapping."));
     }
     const editableKeys = isMap(document.contents)
       ? document.contents.items.flatMap((pair) =>

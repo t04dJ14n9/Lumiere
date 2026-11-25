@@ -8,6 +8,7 @@ import type { HostServices } from "../../shared/host";
 import { RpcError, type Cancellation } from "../../shared/rpc/lifecycle";
 import { agentPayload, agentReferenceText } from "./reference";
 import { openAgentChat } from "./chat";
+import { t } from "@workshop/l10n";
 /** A saved note's line reference: `@notes/a.md#12-18` (LLM Wiki wording). */
 export interface AgentReference {
   readonly text: string;
@@ -72,15 +73,20 @@ export class AgentHandoff {
     }
     this.assertActive(panel, token);
     if (panel.document.isDirty || panel.document.isUntitled) {
+      // The buttons are translated, so the choice is compared with the same text.
+      const saveAndCopy = t("Save and Copy");
+      const copyTextOnly = t("Copy Text Only");
       const choice = await this.options.host.dialogs.ask(
-        "This note has unsaved changes. Save it so the reference matches the file?",
-        ["Save and Copy", "Copy Text Only"],
+        t(
+          "This note has unsaved changes. Save it so the reference matches the file?",
+        ),
+        [saveAndCopy, copyTextOnly],
       );
       this.assertActive(panel, token);
-      if (choice === "Copy Text Only") {
+      if (choice === copyTextOnly) {
         return this.copyText(selection);
       }
-      if (choice !== "Save and Copy") {
+      if (choice !== saveAndCopy) {
         return false;
       }
       await this.save(panel);
@@ -117,16 +123,18 @@ export class AgentHandoff {
       },
     );
     if (target === "chatWithClipboard") {
-      host.dialogs.inform("Link and passage copied: paste them into the chat.");
+      host.dialogs.inform(
+        t("Link and passage copied: paste them into the chat."),
+      );
     }
     if (target === "codex") {
       host.dialogs.inform(
-        "Link and passage copied and attached in Codex: type your question.",
+        t("Link and passage copied and attached in Codex: type your question."),
       );
     }
     if (target === "clipboard") {
       host.dialogs.inform(
-        "Link and passage copied: paste them into your agent's chat.",
+        t("Link and passage copied: paste them into your agent's chat."),
       );
     }
   }

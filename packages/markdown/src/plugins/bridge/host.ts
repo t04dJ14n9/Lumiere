@@ -8,6 +8,7 @@ import type { HostServices } from "../../shared/host";
 import type { EditorPanel, SourceSelection } from "../editor/api";
 import type { BridgeCapture, MarkdownHandoff } from "./api";
 import { envelopeFromPdf, handoffFromSelection } from "./capture";
+import { t } from "@workshop/l10n";
 
 export const bridgeHost: Plugin = {
   name: "bridge",
@@ -63,7 +64,7 @@ async function markdownSelection(
     ctx.dialogs.error(
       error instanceof Error
         ? error.message
-        : "Could not build the bridge envelope.",
+        : t("Could not build the bridge envelope."),
     );
     return undefined;
   }
@@ -83,12 +84,12 @@ async function copyEnvelope(ctx: Context): Promise<void> {
   const envelope = await activeSelection(ctx);
   if (!envelope) {
     ctx.dialogs.error(
-      "No selection to copy. Select text in a note or a PDF first.",
+      t("No selection to copy. Select text in a note or a PDF first."),
     );
     return;
   }
   await ctx.clipboard.write(JSON.stringify(envelope, null, 2));
-  ctx.dialogs.inform("Copied the bridge envelope. No agent was started.");
+  ctx.dialogs.inform(t("Copied the bridge envelope. No agent was started."));
 }
 
 async function pdfEnvelope(
@@ -142,7 +143,7 @@ function command(
     ctx.hostCommands.register(id, (...args) => {
       void Promise.resolve(run(...args)).catch((error: unknown) => {
         ctx.dialogs.error(
-          error instanceof Error ? error.message : "Command failed",
+          error instanceof Error ? error.message : t("Command failed"),
         );
       });
     }),

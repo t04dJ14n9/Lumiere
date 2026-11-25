@@ -9,6 +9,7 @@ import {
   publishIdeContextTemp,
   renewLeaseAtomic,
 } from "@workshop/agents/ide-context";
+import { t } from "@workshop/l10n";
 
 export const ideContextHost: Plugin = {
   name: "ideContext",
@@ -51,12 +52,12 @@ export const ideContextHost: Plugin = {
 async function gatherInput(ctx: Context) {
   const panel = ctx.editors.active();
   if (!panel) {
-    ctx.dialogs.inform("Open a Lumiere note first");
+    ctx.dialogs.inform(t("Open a Lumiere note first"));
     return undefined;
   }
   const host = ctx.agentHost.ideContextHost?.();
   if (!host) {
-    ctx.dialogs.inform("IDE context is not available in this editor");
+    ctx.dialogs.inform(t("IDE context is not available in this editor"));
     return undefined;
   }
   const selection = await ctx.selections.capture(panel.id);
@@ -77,7 +78,7 @@ async function runCopy(ctx: Context): Promise<void> {
   const packet = buildMwIdeContextPacket(input);
   await copyIdeContext(
     packet,
-    (t) => ctx.clipboard.write(t),
+    (text) => ctx.clipboard.write(text),
     (m) => ctx.dialogs.inform(m),
   );
 }
@@ -94,11 +95,11 @@ async function runSend(ctx: Context): Promise<void> {
   await sendIdeContext(packet, {
     setting,
     commands,
-    clipboardWrite: (t) => ctx.clipboard.write(t),
+    clipboardWrite: (text) => ctx.clipboard.write(text),
     executeCommand: (id, ...args) => ctx.hostCommands.execute(id, ...args),
     showQuickPick: async (items) => {
       const labels = items.map((i) => i.label);
-      const choice = await ctx.dialogs.ask("Send IDE Context to…", labels);
+      const choice = await ctx.dialogs.ask(t("Send IDE Context to…"), labels);
       if (!choice) {
         return undefined;
       }

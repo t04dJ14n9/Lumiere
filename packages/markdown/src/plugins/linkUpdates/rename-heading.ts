@@ -15,6 +15,7 @@ import { rewriteCanvasHeading } from "./canvas";
 import { sourceText } from "./source-text";
 import { contributionId } from "../../shared/setting-schema";
 import { isMarkdownPath } from "../../shared/vault-path";
+import { t } from "@workshop/l10n";
 
 interface Services {
   /** Undefined when the window has no Lumiere editors. */
@@ -60,12 +61,12 @@ export async function renameHeading(ctx: Services): Promise<void> {
   const text = editorText(panel?.document.getText() ?? "");
   const heading = caret && headingAt(text, caret.from);
   if (!panel || !heading) {
-    ctx.dialogs.inform("Put the caret on a heading to rename it.");
+    ctx.dialogs.inform(t("Put the caret on a heading to rename it."));
     return;
   }
   const name = (
     await ctx.dialogs.input({
-      prompt: "Rename heading",
+      prompt: t("Rename heading"),
       value: heading.name,
       validate: (value) => headingNameProblem(text, heading, value),
     })
@@ -107,7 +108,7 @@ async function applyRename(
 ): Promise<void> {
   if (editorText(document.getText()) !== renamed.text) {
     ctx.dialogs.inform(
-      "The note changed while the heading was being renamed. Try again.",
+      t("The note changed while the heading was being renamed. Try again."),
     );
     return;
   }
@@ -173,12 +174,18 @@ async function updateLinks(
   }
   if (failed.length > 0) {
     ctx.dialogs.error(
-      `The heading was renamed, but its links could not be updated in ${failed.join(", ")}.`,
+      t(
+        "The heading was renamed, but its links could not be updated in {0}.",
+        failed.join(", "),
+      ),
     );
   }
   if (unsaved.length > 0) {
     ctx.dialogs.error(
-      `The heading's links were updated in ${unsaved.join(", ")}, but could not be saved.`,
+      t(
+        "The heading's links were updated in {0}, but could not be saved.",
+        unsaved.join(", "),
+      ),
     );
   }
 }

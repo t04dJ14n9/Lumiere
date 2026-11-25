@@ -20,11 +20,15 @@ import {
 import type { EditorPanel } from "../editor/api";
 import type {} from "../vault/api";
 import { registerDeleteUnlinked } from "./delete-unlinked";
-import { NO_VAULT, registerDownloadAttachments } from "./download-command";
+import {
+  noVaultMessage,
+  registerDownloadAttachments,
+} from "./download-command";
 import { hostFetch } from "./host-fetch";
 import { containedReader } from "./local-source";
 import { MAX_ATTACHMENT_BYTES, protocol } from "./protocol";
 import { attachmentTarget } from "./target";
+import { t } from "@workshop/l10n";
 
 type SaveResult = {
   ok: boolean;
@@ -142,7 +146,7 @@ async function saveForPanel(
 ): Promise<SaveResult> {
   const bytes = decodeBase64(params.bytesBase64);
   if (!bytes) {
-    return fail(ctx, "Could not read the image data.");
+    return fail(ctx, t("Could not read the image data."));
   }
   return writeAttachment(ctx, panel, bytes, params.ext);
 }
@@ -160,7 +164,7 @@ async function importUrlForPage(
   if (/^https?:/i.test(url) && !ctx.workspace.isTrusted()) {
     return fail(
       ctx,
-      "Images from the web are downloaded only in a trusted workspace.",
+      t("Images from the web are downloaded only in a trusted workspace."),
     );
   }
   return importUrlForPanel(ctx, panel, url, { imagesOnly: true });
@@ -188,7 +192,7 @@ async function importUrlForPanel(
         },
   });
   if (!loaded) {
-    return fail(ctx, "Could not download or read that image.");
+    return fail(ctx, t("Could not download or read that image."));
   }
   return writeAttachment(ctx, panel, loaded.bytes, loaded.ext);
 }
@@ -201,17 +205,19 @@ async function writeAttachment(
 ): Promise<SaveResult> {
   const target = await attachmentTarget(ctx, panel);
   if (!target) {
-    return fail(ctx, NO_VAULT);
+    return fail(ctx, noVaultMessage());
   }
   try {
     const saved = await saveAttachment({ ...target, ext, bytes });
     if (!saved) {
-      return fail(ctx, "Could not save the attachment.");
+      return fail(ctx, t("Could not save the attachment."));
     }
     return { ok: true, embed: saved.embed, path: saved.path };
   } catch (error) {
     const message =
-      error instanceof Error ? error.message : "Could not save the attachment.";
+      error instanceof Error
+        ? error.message
+        : t("Could not save the attachment.");
     return fail(ctx, message);
   }
 }
@@ -223,8 +229,12 @@ export function refusalMessage(
 ): string {
   const megabytes = MAX_ATTACHMENT_BYTES / 1_000_000;
   return reason === "tooLarge"
-    ? `“${name}” is larger than ${megabytes} MB, so it was not added to the note.`
-    : `“${name}” could not be read, so it was not added to the note.`;
+    ? t(
+        "“{0}” is larger than {1} MB, so it was not added to the note.",
+        name,
+        megabytes,
+      )
+    : t("“{0}” could not be read, so it was not added to the note.", name);
 }
 
 function fail(ctx: Context, error: string): SaveResult {

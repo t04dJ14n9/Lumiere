@@ -10,12 +10,19 @@ import {
   validateValue,
 } from "../../shared/setting-schema";
 import { PREFIX, relativeKey } from "./change";
+import { t } from "@workshop/l10n";
 
-export const where: Record<SettingTarget, string> = {
-  workspaceFolder: "folder settings",
-  workspace: "workspace settings",
-  user: "user settings",
-};
+/** Where a setting was written, for the confirmation. */
+export function where(target: SettingTarget): string {
+  switch (target) {
+    case "workspaceFolder":
+      return t("folder settings");
+    case "workspace":
+      return t("workspace settings");
+    case "user":
+      return t("user settings");
+  }
+}
 
 /** What editing a setting needs from the window. */
 export interface Editing {
@@ -56,14 +63,14 @@ export async function writeSetting(
   const key = relativeKey(setting.key);
   const problem = validateValue(setting.schema, value);
   if (problem) {
-    editing.error(`Not changed: ${key}. ${problem}`);
+    editing.error(t("Not changed: {0}. {1}", key, problem));
     return false;
   }
   const target = await editing.settings.update(key, value, editing.resource());
   editing.inform(
     describe
-      ? `${describe} (${where[target]})`
-      : `${key} set to ${JSON.stringify(value)} (${where[target]})`,
+      ? t("{0} ({1})", describe, where(target))
+      : t("{0} set to {1} ({2})", key, JSON.stringify(value), where(target)),
   );
   return true;
 }
@@ -109,7 +116,7 @@ async function editChoice(
       values
         .map((value, index) => ({
           label: String(value),
-          description: value === current ? "current" : "",
+          description: value === current ? t("current") : "",
           detail: schema.enumDescriptions?.[index] ?? "",
           value,
         }))
@@ -143,16 +150,12 @@ async function editNumber(
   write: Write,
 ): Promise<void> {
   const { schema } = setting;
-  const range =
+  const key = relativeKey(setting.key);
+  const prompt =
     typeof schema.minimum === "number" && typeof schema.maximum === "number"
-      ? ` (${schema.minimum} to ${schema.maximum})`
-      : "";
-  const typed = await askNumber(
-    editing,
-    setting,
-    current,
-    `${relativeKey(setting.key)}${range}`,
-  );
+      ? t("{0} ({1} to {2})", key, schema.minimum, schema.maximum)
+      : key;
+  const typed = await askNumber(editing, setting, current, prompt);
   if (typed !== undefined) {
     await write(Number(typed.trim()));
   }

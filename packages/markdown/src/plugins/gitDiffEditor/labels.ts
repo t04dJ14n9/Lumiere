@@ -1,4 +1,5 @@
 import type { DiffSide } from "../../shared/git";
+import { t } from "@workshop/l10n";
 
 /** The last path segment, without query or fragment (no regex on the URI). */
 export function fileName(uri: string): string {
@@ -14,19 +15,23 @@ export function fileName(uri: string): string {
 
 /** "HEAD", "Index" or "Working tree", from a git: URI's query or its scheme. */
 export function sideLabel(uri: string): string {
-  if (!uri.startsWith("git:")) {
-    return "Working tree";
+  if (!isGitUri(uri)) {
+    return t("Working tree");
   }
   try {
     const query = decodeURIComponent(uri.slice(uri.indexOf("?") + 1));
     const ref = (JSON.parse(query) as { ref?: string }).ref ?? "";
     if (ref === "" || ref === "~") {
-      return "Index";
+      return t("Index");
     }
     return /^[0-9a-f]{40}$/.test(ref) ? ref.slice(0, 7) : ref;
   } catch {
     return "Git";
   }
+}
+
+function isGitUri(uri: string): boolean {
+  return uri.startsWith("git:");
 }
 
 /**
@@ -39,13 +44,15 @@ export function sideLabels(
 ): { left: string; right: string } {
   const left = sideLabel(original);
   const right = sideLabel(modified);
-  if (left !== "Working tree" || right !== "Working tree") {
+  // Both sides are files, not git snapshots (the labels are translated, so
+  // they cannot be compared with the English text).
+  if (isGitUri(original) || isGitUri(modified)) {
     return { left, right };
   }
   const a = fileName(original);
   const b = fileName(modified);
   if (!a || !b || a === b) {
-    return { left: "Original", right: "Modified" };
+    return { left: t("Original"), right: t("Modified") };
   }
   return { left: a, right: b };
 }

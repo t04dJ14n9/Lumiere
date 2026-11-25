@@ -2,6 +2,7 @@ import type { Uri } from "vscode";
 import type { AgentReferenceInput } from "../../shared/agent-reference-input";
 import type { HostServices } from "../../shared/host";
 import type { ApiPlatform } from "./platform";
+import { t } from "@workshop/l10n";
 
 /** Relative references search workspace roots only; full URIs stay explicit. */
 export async function resolveReference(
@@ -11,7 +12,7 @@ export async function resolveReference(
 ): Promise<Uri | undefined> {
   if (reference.isUri) {
     if (!/^[A-Za-z][A-Za-z0-9+.-]*:\//.test(reference.location)) {
-      throw new Error("The reference must use an absolute URI path.");
+      throw new Error(t("The reference must use an absolute URI path."));
     }
     const uri = platform.uri(reference.location);
     validateMarkdownUri(uri);
@@ -19,7 +20,7 @@ export async function resolveReference(
   }
   const roots = host.workspace.folders() ?? [];
   if (!roots.length) {
-    throw new Error("Open a workspace folder or use a full note URI.");
+    throw new Error(t("Open a workspace folder or use a full note URI."));
   }
   const candidates = await referenceCandidates(
     reference,
@@ -31,8 +32,9 @@ export async function resolveReference(
     return confirmCandidate(candidates[0]!, host, platform);
   }
   const picked = await host.dialogs.pick({
-    placeholder:
+    placeholder: t(
       "This reference matches multiple workspace folders. Choose the note to open.",
+    ),
     items: (query) =>
       candidates
         .filter(({ root }) => root.toLowerCase().includes(query.toLowerCase()))
@@ -73,7 +75,7 @@ async function referenceCandidates(
       throw containmentError;
     }
     throw new Error(
-      "The referenced Markdown file was not found in this workspace.",
+      t("The referenced Markdown file was not found in this workspace."),
     );
   }
   return candidates;
@@ -85,7 +87,7 @@ async function confirmCandidate(
   platform: ApiPlatform,
 ): Promise<Uri> {
   if (!host.workspace.folders().includes(candidate.root)) {
-    throw new Error("The reference's workspace folder is no longer open.");
+    throw new Error(t("The reference's workspace folder is no longer open."));
   }
   // A picker can stay open while folders or symlinks change. Check again
   // after the choice, rather than trusting a previously safe candidate.
@@ -100,7 +102,9 @@ function validateMarkdownUri(uri: Uri): void {
     !/\.(md|markdown)$/i.test(uri.path)
   ) {
     throw new Error(
-      "The reference must identify a Markdown file with an absolute URI path.",
+      t(
+        "The reference must identify a Markdown file with an absolute URI path.",
+      ),
     );
   }
 }

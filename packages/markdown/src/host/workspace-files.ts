@@ -1,6 +1,7 @@
 import * as vscode from "vscode";
 import type { WorkspaceFiles } from "../shared/workspace-files";
 import { contained } from "./navigation";
+import { t } from "@workshop/l10n";
 
 /** VS Code file operations behind `HostWorkspace.files`. Missing files are undefined, not throws. */
 export function createWorkspaceFiles(): WorkspaceFiles {
@@ -49,7 +50,7 @@ async function createFile(uri: string, contents: Uint8Array): Promise<boolean> {
   if (await exists(target)) {
     return false;
   }
-  throw new Error(`Could not create ${target.toString()}`);
+  throw new Error(t("Could not create {0}", target.toString()));
 }
 
 async function exists(target: vscode.Uri): Promise<boolean> {
