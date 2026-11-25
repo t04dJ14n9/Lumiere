@@ -85,10 +85,31 @@ async function writeDiscoveryFile(file: string, info: BridgeInfo) {
   const temporary = `${file}.${randomBytes(6).toString("hex")}.tmp`;
   try {
     await writeFile(temporary, JSON.stringify(info, null, 2), { mode: 0o600 });
-    await rename(temporary, file);
+    await renameOver(temporary, file);
   } catch (error) {
     await rm(temporary, { force: true });
     throw error;
+  }
+}
+
+/**
+ * Windows refuses to replace a file another process has open (EPERM, EACCES
+ * or EBUSY), and the shim reading the old discovery file is such a process.
+ * Its read is brief, so the rename is tried again for about a second.
+ */
+async function renameOver(from: string, to: string): Promise<void> {
+  for (let attempt = 0; ; attempt++) {
+    try {
+      await rename(from, to);
+      return;
+    } catch (error) {
+      const code = (error as NodeJS.ErrnoException).code;
+      const busy = code === "EPERM" || code === "EACCES" || code === "EBUSY";
+      if (!busy || process.platform !== "win32" || attempt >= 20) {
+        throw error;
+      }
+      await new Promise((resolve) => setTimeout(resolve, 50));
+    }
   }
 }
 

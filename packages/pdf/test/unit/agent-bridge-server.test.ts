@@ -9,6 +9,7 @@ import {
   writeFile,
 } from "node:fs/promises";
 import type * as NodeCrypto from "node:crypto";
+import type * as NodeFsPromises from "node:fs/promises";
 import { createRequire } from "node:module";
 import * as net from "node:net";
 import { tmpdir } from "node:os";
@@ -303,6 +304,45 @@ test("a folder added to the window or removed from it is in the discovery file t
   await new Promise((resolve) => setTimeout(resolve, 50));
   assert.deepEqual(await readdir(path.join(folder, "bridges")), []);
   assert.deepEqual(vscode.outstanding(), []);
+});
+
+test("on Windows, a rewrite that finds the discovery file open (EPERM) tries the rename again", async (t) => {
+  // The module object discovery-file.ts calls into, not an import's copy of it.
+  const fsPromises: typeof NodeFsPromises = createRequire(import.meta.url)(
+    "node:fs/promises",
+  );
+  const platform = Object.getOwnPropertyDescriptor(process, "platform")!;
+  vscode.workspace.workspaceFolders = [{ uri: vscode.Uri.file("/work/a") }];
+  const bridge = await startAgentBridge(options());
+  const realRename = fsPromises.rename;
+  let refused = 0;
+  const rename = mock.method(
+    fsPromises,
+    "rename",
+    async (...args: Parameters<typeof realRename>) => {
+      if (refused === 0) {
+        refused++;
+        throw Object.assign(new Error("EPERM: operation not permitted"), {
+          code: "EPERM",
+        });
+      }
+      return realRename(...args);
+    },
+  );
+  Object.defineProperty(process, "platform", { value: "win32" });
+  t.after(async () => {
+    Object.defineProperty(process, "platform", platform);
+    rename.mock.restore();
+    await bridge.dispose();
+    vscode.workspace.workspaceFolders = undefined;
+  });
+  const folders = async () =>
+    (JSON.parse(await readFile(await discoveryFile(), "utf8")) as BridgeInfo)
+      .workspaceFolders;
+  vscode.setWorkspaceFolders([vscode.Uri.file("/work/b")]);
+  await eventually(folders, [vscode.Uri.file("/work/b").fsPath]);
+  assert.equal(refused, 1, "the first rename was refused");
+  assert.ok(rename.mock.callCount() >= 2, "and tried again");
 });
 
 test("a window that closes removes its discovery file as its process exits, before any async cleanup could run", async (t) => {
