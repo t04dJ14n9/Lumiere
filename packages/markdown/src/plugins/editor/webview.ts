@@ -1,5 +1,6 @@
 import { registerJumpRecorder } from "./jump-webview";
 import { selectionLayer } from "./selection-layer";
+import { sideInset } from "./side-inset";
 import { afterLayout } from "./layout";
 import {
   runNavigation,
@@ -229,6 +230,7 @@ function createEditorView(
         drawSelection(),
         multipleCarets,
         selectionLayer,
+        sideInset,
         selectionDragScroll,
         caretExtension(),
         findExtension(),

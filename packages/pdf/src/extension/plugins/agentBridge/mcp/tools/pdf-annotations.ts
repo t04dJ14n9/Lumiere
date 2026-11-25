@@ -54,10 +54,10 @@ export function registerListPdfAnnotations(
         "The highlights, underlines, notes and other marks Lumiere keeps for a PDF in the workspace, read from " +
         "their file (.lumiere/pdf-annotations/<sha256>.json by default) for the PDF's SHA-256, so the PDF need not " +
         "be open; the file is what the viewer last saved. Not the annotations written inside the PDF itself. " +
-        "Returns { file, sha256, count, marks: [{ page, kind, color?, text?, note?, link }] } in reading order " +
+        "Returns { file, sha256, count, marks: [{ page, kind, color?, text?, note?, created?, link }] } in reading order " +
         "(page, then top to bottom). `kind` is the mark's type (highlight, underline, strikeout, squiggly, text, " +
         "free-text, ink, …), `color` its #rrggbb, `text` the text a text mark covers (read from the PDF, at most " +
-        `${QUOTE_EXCERPT} characters), \`note\` the start of its note (at most 80 characters), \`link\` opens ` +
+        `${QUOTE_EXCERPT} characters), \`note\` the start of its note (at most 80 characters), \`created\` when it was made (ISO 8601), \`link\` opens ` +
         `the page at the text or box (usable with open_pdf_location). At most ${MAX_MARKS} marks, with ` +
         "`truncated` when there are more. A PDF with no marks gives an empty list. When the PDF's text cannot be " +
         "read (a password, copying forbidden, too large) the marks are listed without `text`, and `textNote` says why. " +
@@ -187,6 +187,7 @@ export function marksOf(bundle: AnnotationBundle): Mark[] {
       left: data.rect.x,
       color: "color" in data ? data.color : undefined,
       contents: data.contents,
+      createdAt: data.createdAt,
     });
   }
   return annotationRows(inputs).map((row) => {
@@ -218,6 +219,7 @@ export function markEntry(
     ...(row.color ? { color: row.color } : {}),
     ...(quote ? { text: quote } : {}),
     ...(row.note ? { note: row.note } : {}),
+    ...(row.createdAt ? { created: row.createdAt } : {}),
     link: formatPdfDeepLink(
       file,
       linkText

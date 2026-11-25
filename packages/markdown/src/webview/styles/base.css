@@ -224,6 +224,26 @@ body.vscode-high-contrast-light
 #app .cm-scroller:has(> .cm-gutters) .cm-content {
   padding-inline-start: 0;
 }
+/*
+ * Line numbers off: only the change bars and the fold arrows stay at the
+ * left, in a narrow column, and the text keeps as much room on the right
+ * (the scrollbar counts towards it), so it sits as far from either edge.
+ * side-inset.ts measures both widths.
+ */
+#app
+  .cm-editor:not(.is-readable-line-width)
+  > .cm-scroller:has(> .cm-gutters):not(:has(.cm-lineNumbers))
+  > .cm-content {
+  padding-inline-end: max(
+    0px,
+    calc(var(--mw-gutters-width, 0px) - var(--mw-scrollbar-width, 0px))
+  );
+}
+#app .cm-scroller:not(:has(.cm-lineNumbers)) .cm-foldGutter .cm-gutterElement {
+  width: 14px;
+  padding: 0;
+  text-align: center;
+}
 /* VS Code's folding area between the numbers and the text. */
 #app .cm-foldGutter .cm-gutterElement {
   box-sizing: border-box;

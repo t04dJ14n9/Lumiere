@@ -2,6 +2,22 @@
 
 ## 0.1.0 (unreleased)
 
+- Fixed: with line numbers off, the text started 33 px from the left (the
+  change bars, a 24 px fold column and padding) but ran to the right edge.
+  The fold column narrows to 14 px, and the text keeps as much room on the
+  right as the gutters take on the left, the scrollbar included.
+
+- Fixed: in Vim's visual mode the selection tinted the character under the
+  block cursor as well, so back on the starting character one character
+  still looked selected. The tint now leaves that character to the cursor,
+  and the cursor no longer blinks inside a selection.
+
+- Fixed: the selection tinted space that holds no text: the gap above a
+  heading, the full editor width beside a narrow table, and a table's hidden
+  add-row and add-column buttons. A line's padding (over 2 px) stays
+  untinted, and a rendered block is tinted only where it draws something (a
+  callout's box, a table's cells, a formula).
+
 - Fixed: a trackpad pinch in the Mermaid inspector zoomed far too fast and
   could not be stopped where wanted: every wheel event, however small, zoomed
   by 15 %. Zoom now follows how far the fingers move (1 % per pixel of

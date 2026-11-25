@@ -2,6 +2,12 @@
 
 ## Unreleased
 
+- **Annotation dates.** The side panel's Annotations list shows when each
+  mark was made (the time for today's, the day for this year's, the full
+  date before), and its tooltip gives the date and time.
+  `list_pdf_annotations` returns it as `created` (ISO 8601). The date is the
+  one the mark already records; a mark without one shows none.
+
 - **Agent bridge: tools that read a PDF's text** (#864). `get_pdf_page_text`
   (pages 1-based, at most 20 pages and about 50,000 characters a call),
   `find_in_pdf` (case- and whitespace-insensitive, each match with a snippet

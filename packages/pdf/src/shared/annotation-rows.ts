@@ -39,6 +39,8 @@ export interface MarkInput {
   left: number;
   color?: unknown;
   contents?: unknown;
+  /** When the mark was made (EmbedPDF's `createdAt`, an ISO date). */
+  createdAt?: unknown;
 }
 
 export interface AnnotationRow {
@@ -55,6 +57,8 @@ export interface AnnotationRow {
   note?: string;
   /** Whether the text under the mark is what it quotes. */
   quotesText: boolean;
+  /** When the mark was made, as an ISO date; missing when the file does not say. */
+  createdAt?: string;
 }
 
 /** Whether a mark is the reader's to see: not a link, a popup's anchor, or a form field. */
@@ -70,6 +74,7 @@ export function annotationRows(marks: readonly MarkInput[]): AnnotationRow[] {
       const kind = KINDS[mark.subtype]!;
       const color = swatchColor(mark.color);
       const note = noteExcerpt(mark.contents);
+      const createdAt = isoDate(mark.createdAt);
       return {
         key: mark.key,
         subtype: mark.subtype,
@@ -81,6 +86,7 @@ export function annotationRows(marks: readonly MarkInput[]): AnnotationRow[] {
         left: mark.left,
         ...(note ? { note } : {}),
         quotesText: TEXT_MARKS.has(mark.subtype),
+        ...(createdAt ? { createdAt } : {}),
       };
     })
     .sort(
@@ -90,6 +96,41 @@ export function annotationRows(marks: readonly MarkInput[]): AnnotationRow[] {
         a.left - b.left ||
         compare(a.key, b.key),
     );
+}
+
+/** `value` when it is a date a reader can be shown. */
+function isoDate(value: unknown): string | undefined {
+  return typeof value === "string" && !Number.isNaN(Date.parse(value))
+    ? value
+    : undefined;
+}
+
+/**
+ * The row's short date for when a mark was made, in the reader's locale:
+ * the time for a mark made today, the day and month this year, the full
+ * date before that.
+ */
+export function shortCreated(iso: string, now: Date, locale?: string): string {
+  const date = new Date(iso);
+  if (date.toDateString() === now.toDateString()) {
+    return date.toLocaleTimeString(locale, {
+      hour: "2-digit",
+      minute: "2-digit",
+    });
+  }
+  if (date.getFullYear() === now.getFullYear()) {
+    return date.toLocaleDateString(locale, { month: "short", day: "numeric" });
+  }
+  return date.toLocaleDateString(locale, { dateStyle: "medium" });
+}
+
+/** The tooltip's line for when a mark was made. */
+export function createdLine(iso: string, locale?: string): string {
+  const when = new Date(iso).toLocaleString(locale, {
+    dateStyle: "medium",
+    timeStyle: "short",
+  });
+  return `Created ${when}`;
 }
 
 function compare(a: string, b: string): number {
@@ -129,14 +170,19 @@ export function noteExcerpt(contents: unknown): string | undefined {
 /** How much of the quoted text a row shows. */
 export const QUOTE_EXCERPT = 120;
 
-/** What the row's tooltip says: the kind and page, the quote, then the whole note. */
+/**
+ * What the row's tooltip says: the kind and page, when it was made, the
+ * quote, then the whole note.
+ */
 export function rowTooltip(
   row: AnnotationRow,
   quote: string | undefined,
   contents: unknown,
+  locale?: string,
 ): string {
   const note = typeof contents === "string" ? contents.trim() : "";
-  return [`${row.label}, page ${row.page}`, quote, note]
+  const created = row.createdAt ? createdLine(row.createdAt, locale) : "";
+  return [`${row.label}, page ${row.page}`, created, quote, note]
     .filter((part) => part)
     .join("\n");
 }

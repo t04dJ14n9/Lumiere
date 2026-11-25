@@ -1,5 +1,18 @@
 # Changelog
 
+## 0.1.31 (2026-11-25)
+
+- Markdown: in Vim's visual mode the block cursor holds still, and the
+  selection leaves the cursor's character to it, so moving back to where the
+  selection started shows only the cursor.
+- Markdown: the selection hugs what is selected: no tint in the gap above a
+  heading, and a narrow table is tinted over the table only, not the editor's
+  full width.
+- Markdown: with line numbers off, the text sits as far from the left edge
+  as from the right.
+- PDF: the side panel's Annotations list shows when each mark was made, and
+  `list_pdf_annotations` returns it as `created`.
+
 ## 0.1.30 (2026-11-25)
 
 - PDF: **Toggle Side Panel** is in the viewer's right-click menu, so the

@@ -1,6 +1,6 @@
 import { Facet, type Extension } from "@codemirror/state";
 import { ViewPlugin, type EditorView, type ViewUpdate } from "@codemirror/view";
-import type { CaretModeSource } from "./api";
+import type { CaretMode, CaretModeSource } from "./api";
 import {
   caretAppearance,
   type CaretAppearance,
@@ -186,6 +186,11 @@ class CaretView {
 }
 
 const caretView = ViewPlugin.fromClass(CaretView);
+
+/** The caret's current mode: `typing` unless a modal source (Vim) says otherwise. */
+export function caretModeOf(view: EditorView): CaretMode {
+  return view.state.facet(caretSource).mode(view);
+}
 
 /** The same plugin instance draws typing carets and any injected modal source. */
 export function caretExtension(source?: CaretSource): Extension {

@@ -168,7 +168,16 @@ test("the marks of the PDF's file are listed in reading order with the text unde
     path: "papers/a.pdf",
   });
   assert.equal(answer.isError, false, answer.text);
-  assert.deepEqual(answer.json(), {
+  const json = answer.json() as { marks: { created?: string }[] };
+  // The engine stamps a mark with the time it was made.
+  for (const mark of json.marks) {
+    assert.ok(
+      !Number.isNaN(Date.parse(mark.created ?? "")),
+      String(mark.created),
+    );
+    delete mark.created;
+  }
+  assert.deepEqual(json, {
     file: "papers/a.pdf",
     sha256: sha,
     count: 2,

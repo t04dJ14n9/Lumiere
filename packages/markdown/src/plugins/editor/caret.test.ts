@@ -143,7 +143,7 @@ test("normal typing honours all six native styles and their thicknesses", () => 
   assert.equal(caretAppearance({ ...base, cursorWidth: 5 }, "insert").width, 5);
 });
 
-test("native blinking selects distinct hard, smooth, phase, expand or solid animations in every mode", () => {
+test("native blinking selects distinct hard, smooth, phase, expand or solid animations outside visual mode", () => {
   for (const cursorBlinking of [
     "blink",
     "smooth",
@@ -153,9 +153,10 @@ test("native blinking selects distinct hard, smooth, phase, expand or solid anim
   ] as const) {
     for (const mode of modes) {
       const { variables } = caretAppearance({ ...base, cursorBlinking }, mode);
+      const steady = cursorBlinking === "solid" || mode === "visual";
       assert.equal(
         variables["--caret-animation"],
-        cursorBlinking === "solid" ? "none" : `mw-caret-${cursorBlinking}`,
+        steady ? "none" : `mw-caret-${cursorBlinking}`,
       );
       // Measured in VS Code 1.141: hard blink 500 ms on and 500 ms off, forever;
       // the others 0.5 s ease-in-out, alternating, 20 half cycles.
@@ -174,6 +175,15 @@ test("native blinking selects distinct hard, smooth, phase, expand or solid anim
             : ["0.5s", "ease-in-out", "20", "alternate"],
       );
     }
+  }
+});
+
+test("the cursor inside a visual selection holds still in every profile", () => {
+  for (const profile of ["obsidian", "vscodevim", "codemirror"] as const) {
+    const { variables } = caretAppearance(base, "visual", true, profile);
+    assert.equal(variables["--caret-animation"], "none");
+    const normal = caretAppearance(base, "normal", true, profile);
+    assert.notEqual(normal.variables["--caret-animation"], "none");
   }
 });
 

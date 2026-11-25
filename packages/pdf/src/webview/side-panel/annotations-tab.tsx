@@ -5,6 +5,7 @@ import React, { useCallback, useMemo, useState } from "react";
 import {
   annotationRows,
   rowTooltip,
+  shortCreated,
   type AnnotationRow,
   type MarkInput,
 } from "../../shared/annotation-rows";
@@ -90,6 +91,7 @@ function markRows(
       left: mark.rect.x,
       color: "color" in mark ? mark.color : undefined,
       contents: mark.contents,
+      createdAt: mark.createdAt,
     });
   }
   return annotationRows(inputs).map((mark) => ({
@@ -125,6 +127,11 @@ function MarkLabel({ row }: { row: MarkRow }): React.JSX.Element {
         {quote ?? mark.label}
       </span>
       {mark.note && <span className="sp-description">{mark.note}</span>}
+      {mark.createdAt && (
+        <span className="sp-date">
+          {shortCreated(mark.createdAt, new Date())}
+        </span>
+      )}
       <span className="sp-page">p. {mark.page}</span>
     </>
   );
