@@ -254,9 +254,12 @@ export class ColumnResize {
   private paint(widths: ColumnWidth[] | undefined): void {
     this.table.querySelector("colgroup")?.remove();
     if (!widths?.some((width) => width !== undefined)) {
+      this.table.classList.remove("table-sized-columns");
       this.table.style.tableLayout = "";
       return;
     }
+    // Dragged widths are the reader's: no readable minimum (tables.css).
+    this.table.classList.add("table-sized-columns");
     this.table.style.tableLayout = "fixed";
     const group = document.createElement("colgroup");
     const count = Math.max(

@@ -1,5 +1,12 @@
 # Changelog
 
+## Unreleased
+
+- Markdown: a table fits the note's width and its cells wrap, instead of
+  each cell running on one line. Short columns keep their full width; a
+  long column narrows to about 12 characters at most before the table
+  scrolls sideways. A column whose border you drag keeps that width.
+
 ## 0.1.32 (2026-11-25)
 
 - Lumiere follows VS Code's display language. Simplified Chinese (zh-cn)
