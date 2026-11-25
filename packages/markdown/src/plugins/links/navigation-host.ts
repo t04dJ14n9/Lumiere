@@ -3,6 +3,7 @@ import type { NavigationTarget, PanelShell } from "../../shared/host";
 import { CancelToken, type Cancellation } from "../../shared/rpc/lifecycle";
 import type {} from "../editor/api";
 import { protocol } from "./protocol";
+import { t } from "@workshop/l10n";
 
 export function registerNavigation(ctx: Context, panel: PanelShell): void {
   const navigation = new PanelNavigation(ctx, panel);
@@ -15,7 +16,7 @@ export function registerNavigation(ctx: Context, panel: PanelShell): void {
   ctx.effect(() => () => navigation.dispose());
   ctx.effect(() =>
     ctx.rpc.handle(protocol, "missing", ({ fragment }) => {
-      ctx.dialogs.inform(`Heading or block was not found: #${fragment}`);
+      ctx.dialogs.inform(t("Heading or block was not found: #{0}", fragment));
       return true;
     }),
   );

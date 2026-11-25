@@ -14,6 +14,7 @@ import { protocol } from "./protocol";
 import { readGraphSettings } from "./settings";
 import { emptySnapshot, presentSnapshot } from "./snapshot";
 import type { GraphSnapshot } from "./snapshot";
+import { t } from "@workshop/l10n";
 
 const VIEW_TYPE = contributionId("graph");
 const DEBOUNCE_MS = 300;
@@ -99,7 +100,9 @@ async function openPanel(
     return;
   }
   state.scope = chosen;
-  state.panel?.setTitle(chosen ? `Graph: ${chosen.scope.name}` : "Vault Graph");
+  state.panel?.setTitle(
+    chosen ? t("Graph: {0}", chosen.scope.name) : t("Vault Graph"),
+  );
   await publish(state);
 }
 
@@ -108,7 +111,7 @@ function ensurePanel(state: SessionState, views: WorkbenchViews): void {
     state.panel.reveal();
     return;
   }
-  const panel = views.panel(VIEW_TYPE, "Vault Graph");
+  const panel = views.panel(VIEW_TYPE, t("Vault Graph"));
   const endpoint = new Endpoint(
     panelTransport(panel),
     clock,

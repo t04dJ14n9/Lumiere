@@ -4,6 +4,7 @@ import type { Vault, Vaults } from "../vault/api";
 import { linkedLines, unlinkedLines } from "../../markdown/mentions";
 import { contributionId } from "../../shared/setting-schema";
 import type { MentionLine } from "../../markdown/mentions";
+import { t } from "@workshop/l10n";
 
 export const VIEW_ID = contributionId("backlinks");
 export const OPEN_COMMAND = contributionId("backlinks.open");
@@ -94,11 +95,11 @@ export class BacklinksTree implements TreeSource {
     return [
       {
         id: "linked",
-        label: "Linked mentions",
+        label: t("Linked mentions"),
         description: String(this.linkedCount()),
         expanded: true,
       },
-      { id: "unlinked", label: "Unlinked mentions", expanded: false },
+      { id: "unlinked", label: t("Unlinked mentions"), expanded: false },
     ];
   }
 

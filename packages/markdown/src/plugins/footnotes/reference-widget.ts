@@ -7,6 +7,7 @@ import {
 } from "../../webview/ui/element-lifetime";
 import { placePreview } from "../../webview/ui/popover-position";
 import { selectFootnoteDefinition } from "./select-definition";
+import { t } from "@workshop/l10n";
 /**
  * The text a reference shows: its number in order of first reference, as
  * in a LaTeX paper. Named labels are numbered too.
@@ -46,7 +47,10 @@ class ReferenceControl {
   ) {
     this.button.type = "button";
     this.button.textContent = referenceText(note);
-    this.button.setAttribute("aria-label", `Footnote ${referenceText(note)}`);
+    this.button.setAttribute(
+      "aria-label",
+      t("Footnote {0}", referenceText(note)),
+    );
     this.preview.className = "footnote-preview";
     this.preview.hidden = true;
     this.preview.setAttribute("role", "tooltip");

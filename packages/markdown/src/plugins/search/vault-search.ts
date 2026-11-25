@@ -8,6 +8,7 @@ import { SEARCH_RESULT_LIMIT, SEARCH_SKIP_LIMIT } from "./limits";
 import { searchVault } from "./query";
 import type { SearchResultsTree } from "./results-tree";
 import { SearchWorker, type SearchEvaluator } from "./runner";
+import { t } from "@workshop/l10n";
 
 interface VaultSearchOptions {
   tree: TreeHandle;
@@ -42,7 +43,7 @@ export class VaultSearch {
     this.query = query;
     this.options.results.clear();
     this.options.tree.refresh();
-    this.options.tree.setMessage(`Searching for “${query}”…`);
+    this.options.tree.setMessage(t("Searching for “{0}”…", query));
     await this.run(query);
   }
 
@@ -75,7 +76,7 @@ export class VaultSearch {
       return;
     }
     if (!vault) {
-      this.show("Open a note or a folder to search its vault.");
+      this.show(t("Open a note or a folder to search its vault."));
       return;
     }
     let response: SearchResponse;
@@ -83,7 +84,7 @@ export class VaultSearch {
       response = await this.evaluate(vault, query, token);
     } catch (error) {
       if (!token.cancelled) {
-        this.show(`Search failed: ${errorMessage(error)}`);
+        this.show(t("Search failed: {0}", errorMessage(error)));
       }
       return;
     }
@@ -128,22 +129,46 @@ function summary(
   files: number,
   response: SearchResponse,
 ): string {
-  const found =
-    files === 0
-      ? `No notes match “${query}”.`
-      : `${files} ${files === 1 ? "file matches" : "files match"} “${query}”.`;
-  const unreadable =
-    response.unreadable === 0
-      ? ""
-      : ` ${response.unreadable} ${response.unreadable === 1 ? "file" : "files"} could not be read.`;
-  const skipped = response.skipped?.length
-    ? ` Skipped, as their evaluation took too long: ${response.skipped.join(", ")}.`
-    : "";
-  const truncated = response.truncated
-    ? ` Stopped at ${SEARCH_RESULT_LIMIT} matching files; the rest were not searched.`
-    : "";
-  const tooSlow = response.tooSlow
-    ? ` Stopped after ${SEARCH_SKIP_LIMIT} files took too long; the rest were not searched.`
-    : "";
-  return `${found}${unreadable}${skipped}${truncated}${tooSlow}`;
+  return [
+    found(query, files),
+    unreadable(response.unreadable),
+    response.skipped?.length
+      ? t(
+          "Skipped, as their evaluation took too long: {0}.",
+          response.skipped.join(", "),
+        )
+      : "",
+    response.truncated
+      ? t(
+          "Stopped at {0} matching files; the rest were not searched.",
+          SEARCH_RESULT_LIMIT,
+        )
+      : "",
+    response.tooSlow
+      ? t(
+          "Stopped after {0} files took too long; the rest were not searched.",
+          SEARCH_SKIP_LIMIT,
+        )
+      : "",
+  ]
+    .filter(Boolean)
+    .join(" ");
+}
+
+function found(query: string, files: number): string {
+  if (files === 0) {
+    return t("No notes match “{0}”.", query);
+  }
+  return files === 1
+    ? t("{0} file matches “{1}”.", files, query)
+    : t("{0} files match “{1}”.", files, query);
+}
+
+function unreadable(count: number): string {
+  if (count === 0) {
+    return "";
+  }
+  return count === 1
+    ? t("{0} file could not be read.", count)
+    : t("{0} files could not be read.", count);
 }

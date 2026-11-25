@@ -2,6 +2,7 @@ import { tagMatches } from "../../markdown/tags/grammar";
 import { fuzzyMatch } from "../../shared/fuzzy";
 import type { Dialogs, PickItem } from "../../shared/host";
 import type { VaultFile, VaultIndex } from "../vault/api";
+import { t } from "@workshop/l10n";
 
 /** Metadata already includes YAML and footnote tags; no file reads are needed. */
 export function taggedNotes(
@@ -57,9 +58,11 @@ export async function pickTaggedNote(
   tag: string,
 ): Promise<VaultFile | undefined> {
   const items = taggedNotes(vault, tag);
-  const noun = items.length === 1 ? "note" : "notes";
   const selected = await dialogs.pick({
-    placeholder: `#${tag} — ${items.length} ${noun}`,
+    placeholder:
+      items.length === 1
+        ? t("#{0} — {1} note", tag, items.length)
+        : t("#{0} — {1} notes", tag, items.length),
     items: (query) => filterTagNotes(items, query),
   });
   return selected?.item?.value;

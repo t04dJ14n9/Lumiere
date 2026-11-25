@@ -3,10 +3,14 @@ import type { BlockInfo, EditorView } from "@codemirror/view";
 import type { Extension } from "@codemirror/state";
 import type { DocHunk } from "./api";
 import { hunkField } from "./hunks";
+import { t } from "@workshop/l10n";
 
 /** Hover / aria text for a gutter bar color. */
 export function barTooltip(kind: DocHunk["kind"] | "deleted-end"): string {
-  return kind === "deleted-end" ? "deleted" : kind;
+  if (kind === "added") {
+    return t("added");
+  }
+  return kind === "modified" ? t("modified") : t("deleted");
 }
 
 class BarMarker extends GutterMarker {

@@ -1,3 +1,4 @@
+import { t } from "@workshop/l10n";
 /** Obsidian `--popover-height` (REA app.css). */
 export const POPOVER_HEIGHT = 400;
 
@@ -17,16 +18,16 @@ export function createPreviewPopup(actions: PopupActions): {
   // Obsidian uses `.popover.hover-popover`; keep `link-preview` for existing CSS.
   popup.className = "link-preview popover hover-popover";
   popup.setAttribute("role", "dialog");
-  popup.setAttribute("aria-label", "Link preview");
+  popup.setAttribute("aria-label", t("Link preview"));
   const label = previewLabel(actions.href);
-  const open = iconButton("↗", `Open ${label}`, actions.open);
-  const dismiss = iconButton("×", "Close link preview", actions.close);
+  const open = iconButton("↗", t("Open {0}", label), actions.open);
+  const dismiss = iconButton("×", t("Close link preview"), actions.close);
   const toolbar = document.createElement("div");
   toolbar.className = "link-preview-actions";
   toolbar.append(open, dismiss);
   const body = document.createElement("div");
   body.className = "link-preview-body";
-  body.textContent = "Loading…";
+  body.textContent = t("Loading…");
   popup.append(toolbar, body);
   return { popup, body, open };
 }

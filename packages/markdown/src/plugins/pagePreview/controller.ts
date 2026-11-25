@@ -2,6 +2,7 @@ import type { RenderPass, RenderService } from "../render/api";
 import type { Resources } from "../resources/api";
 import { renderPreview } from "./content";
 import { createPreviewPopup, mountPreviewPopup, setPreviewBody } from "./popup";
+import { t } from "@workshop/l10n";
 
 export interface PreviewContext {
   resources: Resources;
@@ -128,7 +129,7 @@ class LinkPreviews {
     if (this.body) {
       void this.renderedPass?.dispose();
       delete this.renderedPass;
-      setPreviewBody(this.body, "Loading…", "loading");
+      setPreviewBody(this.body, t("Loading…"), "loading");
     }
     try {
       const resource = await base.resources.load(
@@ -140,7 +141,7 @@ class LinkPreviews {
         return;
       }
       if (!resource) {
-        setPreviewBody(this.body, "No preview available", "empty");
+        setPreviewBody(this.body, t("No preview available"), "empty");
         return;
       }
       this.body.classList.remove("mod-empty");
@@ -182,7 +183,7 @@ class LinkPreviews {
     const message = error instanceof Error ? error.message : String(error);
     setPreviewBody(
       this.body,
-      message.replace(/^Error:\s*/i, "") || "No preview available",
+      message.replace(/^Error:\s*/i, "") || t("No preview available"),
       "empty",
     );
   }

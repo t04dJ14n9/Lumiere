@@ -3,6 +3,7 @@ import type { NoteBlock } from "../../markdown/metadata/note-blocks";
 import type { PdfSection } from "../../shared/pdf-outlines";
 import { tagTree } from "../../markdown/tags/tree";
 import { nameOf } from "../../shared/vault-path";
+import { t } from "@workshop/l10n";
 export type Value =
   | { kind: "literal"; text: string }
   | { kind: "file"; target: VaultFile; alias?: string }
@@ -123,7 +124,7 @@ export function pdfSectionCandidates(
   sections: readonly PdfSection[],
 ): Candidate[] {
   return sections.map(({ title, page }) =>
-    candidate(title, `p.${page} · ${file.path}`, {
+    candidate(title, t("p.{0} · {1}", page, file.path), {
       kind: "pdfSection",
       target: file,
       page,
@@ -152,7 +153,7 @@ export function tagCandidates(vault: VaultIndex): Candidate[] {
     .map(({ tag, count }) =>
       candidate(
         tag,
-        `${count} occurrences`,
+        t("{0} occurrences", count),
         { kind: "literal", text: tag },
         { text: tag.toLowerCase() },
       ),

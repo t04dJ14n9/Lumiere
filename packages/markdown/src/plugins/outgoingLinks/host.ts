@@ -23,6 +23,7 @@ import {
   parseSortOrder,
   type OutgoingSortOrder,
 } from "./tree";
+import { t } from "@workshop/l10n";
 
 const REFRESH_DELAY_MS = 300;
 
@@ -49,7 +50,7 @@ function wireRefresh(
     ).catch(() => undefined);
     await source.setNote(ctx.activeEditor.note());
     tree.setMessage(
-      source.hasNote ? undefined : "Open a note to see its outgoing links.",
+      source.hasNote ? undefined : t("Open a note to see its outgoing links."),
     );
     tree.refresh();
   };

@@ -5,6 +5,7 @@ import type {} from "../vault/api";
 import type {} from "../../shared/pdf-outlines";
 import { protocol, type Suggestion } from "./protocol";
 import { SuggestionIndex } from "./sources";
+import { t } from "@workshop/l10n";
 export const suggestHost: Plugin<{ panel: PanelShell }> = {
   name: "suggest",
   inject: {
@@ -74,7 +75,9 @@ function registerBlockIds(ctx: Context): void {
   ctx.effect(() =>
     ctx.rpc.on(protocol, "blockChanged", () =>
       ctx.dialogs?.inform(
-        "The block changed before it could be given an ID, so no link was inserted. Pick it again.",
+        t(
+          "The block changed before it could be given an ID, so no link was inserted. Pick it again.",
+        ),
       ),
     ),
   );
@@ -87,9 +90,13 @@ async function addBlockId(ctx: Context, request: BlockId): Promise<boolean> {
   if (problem !== undefined) {
     const note =
       ctx.vault.files().find((file) => file.uri === request.uri)?.path ??
-      "that note";
+      t("that note");
     ctx.dialogs?.inform(
-      `Lumiere could not give the block an ID in ${note}, because ${problem}. The link goes to the note.`,
+      t(
+        "Lumiere could not give the block an ID in {0}, because {1}. The link goes to the note.",
+        note,
+        problem,
+      ),
     );
   }
   return problem === undefined;
@@ -102,32 +109,32 @@ async function blockIdProblem(
 ): Promise<string | undefined> {
   const documents = ctx.hostDocuments;
   if (!documents) {
-    return "this window cannot change notes";
+    return t("this window cannot change notes");
   }
   if (!isVaultNote(ctx, request.uri)) {
-    return "it is not in this vault, or is excluded from it";
+    return t("it is not in this vault, or is excluded from it");
   }
   try {
     await ctx.resources?.authorizeTarget?.(request.uri);
   } catch {
-    return "it is outside the folders Lumiere may edit";
+    return t("it is outside the folders Lumiere may edit");
   }
   const { uri, at, before, insert } = request;
   if (!Number.isInteger(at)) {
-    return "the place for it is not valid";
+    return t("the place for it is not valid");
   }
   try {
     const document = await documents.open(uri);
     const text = documents.text(uri) ?? document.getText();
     if (text.slice(at - before.length, at) !== before) {
-      return "it changed after the list was made";
+      return t("it changed after the list was made");
     }
     const edited = await documents.apply(document, [
       { from: at, to: at, insert },
     ]);
-    return edited ? undefined : "VS Code did not accept the edit";
+    return edited ? undefined : t("VS Code did not accept the edit");
   } catch {
-    return "it could not be opened or edited";
+    return t("it could not be opened or edited");
   }
 }
 

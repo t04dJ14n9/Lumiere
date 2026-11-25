@@ -21,6 +21,7 @@ import type { DocHunk, GitDiff, HunkSet } from "../gitGutter/api";
 import type { RenderService } from "../render/api";
 import { currentHunk, lineMarks } from "./open";
 import { ghostEstimatedHeight } from "./estimated-height";
+import { t } from "@workshop/l10n";
 
 export interface InlineActions {
   readonly diff: GitDiff;
@@ -51,7 +52,7 @@ class RemovedText extends WidgetType {
     const element = document.createElement("del");
     element.className = "mw-gd-del mw-gi-removed";
     element.textContent = this.text.replace(/\n/g, " ⏎ ");
-    element.setAttribute("aria-label", `removed: ${this.text}`);
+    element.setAttribute("aria-label", t("removed: {0}", this.text));
     return element;
   }
   override ignoreEvent(): boolean {
@@ -69,11 +70,18 @@ interface GhostModel {
   readonly label: string;
 }
 
-const CAPTIONS: Record<GhostKind, string> = {
-  removed: "Removed",
-  before: "Before",
-  added: "Added",
-};
+/** A ghost's caption: what it is, and the line it stands for. */
+function ghostCaption(
+  { hunk, kind, label }: GhostModel,
+  addedLine: number,
+): string {
+  if (kind === "added") {
+    return t("Added · line {0}", addedLine);
+  }
+  return kind === "removed"
+    ? t("Removed · line {0} in {1}", hunk.oldLine, label)
+    : t("Before · line {0} in {1}", hunk.oldLine, label);
+}
 
 const lifetimes = new WeakMap<HTMLElement, PassLifetime>();
 const signals = new WeakMap<PassLifetime, AbortSignal>();
@@ -101,22 +109,18 @@ class GhostBlock extends WidgetType {
     );
   }
   override toDOM(view: EditorView): HTMLElement {
-    const { hunk, kind, label } = this.model;
+    const { hunk, kind } = this.model;
     const root = document.createElement("div");
     root.className = `mw-gi-ghost is-${kind}`;
     const caption = root.appendChild(document.createElement("div"));
     caption.className = "mw-gi-caption";
-    const where =
-      kind === "added"
-        ? `line ${view.state.doc.lineAt(hunk.from).number}`
-        : `line ${hunk.oldLine} in ${label}`;
     caption.appendChild(document.createElement("span")).textContent =
-      `${CAPTIONS[kind]} · ${where}`;
+      ghostCaption(this.model, view.state.doc.lineAt(hunk.from).number);
     const restore = caption.appendChild(document.createElement("button"));
     restore.type = "button";
     restore.className = "mw-gi-restore";
-    restore.textContent = "Restore";
-    restore.title = "Put the baseline text back";
+    restore.textContent = t("Restore");
+    restore.title = t("Put the baseline text back");
     restore.addEventListener("mousedown", (event) => event.preventDefault());
     restore.addEventListener("click", (event) => {
       event.preventDefault();

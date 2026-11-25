@@ -4,6 +4,7 @@ import { contributionId } from "../../shared/setting-schema";
 import type { Vault, Vaults } from "../vault/api";
 import { unlinkedLines } from "../../markdown/mentions";
 import type { MentionLine } from "../../markdown/mentions";
+import { t } from "@workshop/l10n";
 
 export const VIEW_ID = contributionId("outgoingLinks");
 export const OPEN_COMMAND = contributionId("outgoingLinks.open");
@@ -84,19 +85,19 @@ export class OutgoingLinksTree implements TreeSource {
     return [
       {
         id: "links",
-        label: "Links",
+        label: t("Links"),
         description: String(resolved.size),
         expanded: true,
       },
       {
         id: "unresolved",
-        label: "Not created yet",
+        label: t("Not created yet"),
         description: String(unresolved.size),
         expanded: unresolved.size > 0,
       },
       {
         id: "unlinked",
-        label: "Unlinked mentions",
+        label: t("Unlinked mentions"),
         expanded: false,
       },
     ];
@@ -150,7 +151,7 @@ export class OutgoingLinksTree implements TreeSource {
         label: linkpath,
         description: countText("", count),
         icon: "circle-slash",
-        tooltip: "No note has this name yet. Click to create it.",
+        tooltip: t("No note has this name yet. Click to create it."),
         command: {
           id: CREATE_COMMAND,
           args: [this.note!.uri, linkpath],

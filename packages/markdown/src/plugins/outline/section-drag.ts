@@ -3,6 +3,7 @@ import type { Dialogs, HostDocuments } from "../../shared/host";
 import type { Editors } from "../editor/api";
 import { moveSectionEdit } from "./move-section";
 import type { SectionDrops } from "./tree";
+import { t } from "@workshop/l10n";
 
 interface Services {
   editors: Pick<Editors, "all">;
@@ -21,7 +22,7 @@ interface Services {
 export function sectionMover(services: Services): SectionDrops {
   const informChanged = () =>
     services.dialogs.inform(
-      "The note changed while the heading was dragged. Try again.",
+      t("The note changed while the heading was dragged. Try again."),
     );
   return {
     refuseStale: informChanged,

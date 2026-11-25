@@ -11,6 +11,7 @@ import {
   SEARCH_COMMAND,
   SEARCH_VIEW_ID,
 } from "./view-ids";
+import { t } from "@workshop/l10n";
 
 /**
  * The window half of `search`: **Search Vault…** and the Explorer's Vault
@@ -78,10 +79,10 @@ function registerSearchCommands(ctx: Context, search: VaultSearch): void {
     hostCommands.register(SEARCH_COMMAND, async () => {
       const query = (
         await dialogs.input({
-          prompt: "Search the vault, with Obsidian's search syntax",
+          prompt: t("Search the vault, with Obsidian's search syntax"),
           value: search.lastQuery,
           validate: (value) =>
-            value.trim() ? undefined : "Type something to search for.",
+            value.trim() ? undefined : t("Type something to search for."),
         })
       )?.trim();
       if (!query) {

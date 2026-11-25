@@ -6,6 +6,7 @@ import type { Dialogs, PickItem } from "../../shared/host";
 import { GO_TO_HEADING_COMMAND } from "./commands";
 import { jumpToHeading, type HeadingJumps } from "./jump";
 import { outlineSymbols, type OutlineSymbolNode } from "./symbols";
+import { t } from "@workshop/l10n";
 
 /**
  * CustomTextEditorProvider supplies a TextDocument, but its active control is
@@ -38,8 +39,8 @@ export function registerSymbolPicker(ctx: Context, dialogs: Dialogs): void {
       const items = symbolItems(outlineSymbols(headings), coordinates);
       const result = await dialogs.pick({
         placeholder: items.length
-          ? "Go to heading…"
-          : "No headings in this note.",
+          ? t("Go to heading…")
+          : t("No headings in this note."),
         items: (query) => filterSymbols(items, query),
       });
       if (

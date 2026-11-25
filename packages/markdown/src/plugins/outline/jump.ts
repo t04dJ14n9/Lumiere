@@ -1,9 +1,7 @@
 import type { Logger } from "@workshop/core";
 import type { Dialogs, HostDocument, HostSettings } from "../../shared/host";
 import type { Vaults } from "../vault/api";
-
-const LINKS_OFF_MESSAGE =
-  "Markdown Outline jumps to headings through the Links plugin, which is off for this note.";
+import { t } from "@workshop/l10n";
 
 /** What a jump to a heading needs from the plugin's services. */
 export interface HeadingJumps {
@@ -33,7 +31,11 @@ export async function jumpToHeading(
     document &&
     jumps.settings.forNote(document).features?.links?.enabled === false
   ) {
-    jumps.dialogs.inform(LINKS_OFF_MESSAGE);
+    jumps.dialogs.inform(
+      t(
+        "Markdown Outline jumps to headings through the Links plugin, which is off for this note.",
+      ),
+    );
     return;
   }
   try {

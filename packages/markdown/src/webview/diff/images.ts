@@ -1,3 +1,5 @@
+import { t } from "@workshop/l10n";
+
 /** Image placeholders remain readable while resolving, on failure and on load errors. */
 export function resolveDiffImages(options: {
   container: HTMLElement;
@@ -9,7 +11,10 @@ export function resolveDiffImages(options: {
   )) {
     const target = image.dataset.resource ?? "";
     const fallback = image.ownerDocument.createElement("code");
-    fallback.textContent = `![${image.alt}](${target}) — image unavailable`;
+    fallback.textContent = t(
+      "{0} — image unavailable",
+      `![${image.alt}](${target})`,
+    );
     image.after(fallback);
     image.hidden = true;
     image.loading = "eager";
