@@ -1,7 +1,12 @@
 import * as vscode from "vscode";
+import { t } from "@workshop/l10n";
 import type { PdfPanel } from "../pdf/panel";
 import type { SelectionSnapshot } from "../../../host/viewer/selection";
-import { RegionTooLargeError, type RegionImages } from "./region-images";
+import {
+  megabytes,
+  RegionTooLargeError,
+  type RegionImages,
+} from "./region-images";
 
 /**
  * The `regions` service: saves a region selection's PNG snapshot so an agent
@@ -39,11 +44,18 @@ export class RegionSnapshots {
       }
       if (error instanceof RegionTooLargeError) {
         void vscode.window.showWarningMessage(
-          `${error.message}, so it was not attached. Raise the limit to attach large regions.`,
+          t(
+            "The region snapshot is {0}, more than the {1} snapshot limit (lumiere.pdf.regionImageCache.maxSizeMB), so it was not attached. Raise the limit to attach large regions.",
+            megabytes(error.bytes),
+            megabytes(error.maxBytes),
+          ),
         );
       } else {
         void vscode.window.showWarningMessage(
-          `Could not save the region snapshot: ${error instanceof Error ? error.message : String(error)}`,
+          t(
+            "Could not save the region snapshot: {0}",
+            error instanceof Error ? error.message : String(error),
+          ),
         );
       }
       return undefined;

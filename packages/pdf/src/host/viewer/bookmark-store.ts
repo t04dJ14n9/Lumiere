@@ -1,3 +1,4 @@
+import { t } from "@workshop/l10n";
 import type { PdfBookmarkFiles } from "../../shared/host";
 import {
   parseBookmark,
@@ -136,7 +137,7 @@ export class BookmarkStore {
       // make every later change fail, so it is refused before anything is written.
       if (!edited.every(readsBack)) {
         throw new Error(
-          "Cannot save a bookmark that would not read back from its file.",
+          t("Cannot save a bookmark that would not read back from its file."),
         );
       }
       const written = serializeBookmarkFile(edited, unread);
@@ -188,7 +189,9 @@ export class BookmarkStore {
       return { list: bookmarks, text, unread };
     } catch (error) {
       const why = error instanceof Error ? error.message : String(error);
-      throw new Error(`Cannot use ${this.key(file)}. ${why}`, { cause: error });
+      throw new Error(t("Cannot use {0}. {1}", this.key(file), why), {
+        cause: error,
+      });
     }
   }
 
@@ -215,7 +218,7 @@ export class BookmarkStore {
     const files = this.files;
     if (!files) {
       return Promise.reject(
-        new Error("This host has nowhere to keep bookmarks."),
+        new Error(t("This host has nowhere to keep bookmarks.")),
       );
     }
     return this.enqueueOn(this.key(file), () => run(files));

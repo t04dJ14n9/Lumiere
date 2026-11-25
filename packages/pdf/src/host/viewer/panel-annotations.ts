@@ -1,3 +1,4 @@
+import { t } from "@workshop/l10n";
 import type { AnnotationViewerMessage } from "../../shared/annotation-messages";
 import type { HostMessage } from "../../shared/messages";
 import { Emitter, type Subscription } from "../events";
@@ -113,7 +114,9 @@ export class PanelAnnotations implements Subscription {
       case "annotationSaveFailed":
         if (this.deps.loads.isCurrent(message.load)) {
           this.save.markFailed();
-          this.host.error(`Could not save PDF annotations: ${message.message}`);
+          this.host.error(
+            t("Could not save PDF annotations: {0}", message.message),
+          );
           this.fail("file", message.message);
         }
         return;

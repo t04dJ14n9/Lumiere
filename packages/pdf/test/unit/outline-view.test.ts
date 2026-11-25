@@ -3,6 +3,7 @@ import { readFileSync } from "node:fs";
 import { test } from "node:test";
 import { runInNewContext } from "node:vm";
 import ts from "typescript";
+import * as l10n from "@workshop/l10n";
 import type { OutlineItem } from "../../src/shared/messages";
 import {
   findActiveOutlineItem,
@@ -204,6 +205,7 @@ function harness(enabled = false, visible = true) {
   };
   const modules: Record<string, unknown> = {
     vscode: api,
+    "@workshop/l10n": l10n,
     "../../../shared/outline": {
       findActiveOutlineItem,
       flattenOutlineForPicker,

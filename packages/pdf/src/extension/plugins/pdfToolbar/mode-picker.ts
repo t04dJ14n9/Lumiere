@@ -1,28 +1,34 @@
 import * as vscode from "vscode";
+import { t } from "@workshop/l10n";
 import { parseVsCodeToolbarMode } from "../../../shared/toolbar-settings";
 import type { PdfSettings } from "../../settings";
 import { SECTION } from "./preferences";
 
 type VsCodeToolbarMode = "chrome" | "none";
 
-const MODE_CHOICES: {
+/** The places the controls can go; made when asked, so its text is in the reader's language. */
+function modeChoices(): {
   mode: VsCodeToolbarMode;
   label: string;
   detail: string;
-}[] = [
-  {
-    mode: "chrome",
-    label: "$(layout-statusbar) Status Bar",
-    detail:
-      "Page, zoom, View, page colors and navigation on the VS Code status bar",
-  },
-  {
-    mode: "none",
-    label: "$(eye-closed) None",
-    detail:
-      "No status-bar PDF entries: keyboard shortcuts, menus and the command palette only",
-  },
-];
+}[] {
+  return [
+    {
+      mode: "chrome",
+      label: `$(layout-statusbar) ${t("Status Bar")}`,
+      detail: t(
+        "Page, zoom, View, page colors and navigation on the VS Code status bar",
+      ),
+    },
+    {
+      mode: "none",
+      label: `$(eye-closed) ${t("None")}`,
+      detail: t(
+        "No status-bar PDF entries: keyboard shortcuts, menus and the command palette only",
+      ),
+    },
+  ];
+}
 
 /** Ask where the controls go, and save the answer in the setting the Settings editor shows. */
 export async function selectToolbarMode(settings: PdfSettings): Promise<void> {
@@ -30,13 +36,13 @@ export async function selectToolbarMode(settings: PdfSettings): Promise<void> {
     vscode.workspace.getConfiguration(SECTION).get("mode"),
   );
   const choice = await vscode.window.showQuickPick(
-    MODE_CHOICES.map((choice) => ({
+    modeChoices().map((choice) => ({
       ...choice,
-      ...(choice.mode === current ? { description: "current" } : {}),
+      ...(choice.mode === current ? { description: t("current") } : {}),
     })),
     {
-      title: "PDF Viewer Controls",
-      placeHolder: "Where should the page, zoom and find controls be?",
+      title: t("PDF Viewer Controls"),
+      placeHolder: t("Where should the page, zoom and find controls be?"),
     },
   );
   if (choice && choice.mode !== current) {

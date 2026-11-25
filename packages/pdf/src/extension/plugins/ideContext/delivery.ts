@@ -1,3 +1,4 @@
+import { t } from "@workshop/l10n";
 import { pathToFileUriString } from "./file-uri";
 import { AGENT_COMMANDS } from "../../../shared/agent-target";
 import {
@@ -48,7 +49,7 @@ export async function copyIdeContext(
 ): Promise<string> {
   const md = renderMarkdown(packet);
   await clipboardWrite(md);
-  inform?.("IDE context copied");
+  inform?.(t("IDE context copied"));
   return md;
 }
 
@@ -63,7 +64,7 @@ export async function sendIdeContext(
     return { markdown, opened: "cancelled" };
   }
   if (target === "clipboard") {
-    deps.inform?.("IDE context copied");
+    deps.inform?.(t("IDE context copied"));
     return { markdown, opened: "clipboard" };
   }
   if (target === "claudeCode") {
@@ -90,7 +91,7 @@ async function chooseTarget(deps: SendIdeContextDeps): Promise<Target> {
   const pick = await deps.showQuickPick([
     { label: "Claude Code", id: "claudeCode" },
     { label: "Codex", id: "codex" },
-    { label: "Copy only", id: "clipboard" },
+    { label: t("Copy only"), id: "clipboard" },
   ]);
   return pick ?? "cancelled";
 }

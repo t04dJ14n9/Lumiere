@@ -1,4 +1,5 @@
 import * as vscode from "vscode";
+import { t } from "@workshop/l10n";
 import {
   parsePageInput,
   parseZoomInput,
@@ -56,13 +57,13 @@ async function goToPage(panels: PdfPanels, page: unknown): Promise<void> {
     return;
   }
   const text = await vscode.window.showInputBox({
-    title: "Go to Page",
-    prompt: `Type a page number between 1 and ${view.pageCount}`,
+    title: t("Go to Page"),
+    prompt: t("Type a page number between 1 and {0}", view.pageCount),
     value: String(view.page),
     valueSelection: [0, String(view.page).length],
     validateInput: (value) =>
       parsePageInput(value, view.pageCount) === undefined
-        ? `Type a page number between 1 and ${view.pageCount}`
+        ? t("Type a page number between 1 and {0}", view.pageCount)
         : undefined,
   });
   const target =
@@ -77,7 +78,7 @@ type ZoomItem = vscode.QuickPickItem & { action: ViewerAction };
 
 /** `current` beside the item that is in effect. */
 const current = (on: boolean): { description?: string } =>
-  on ? { description: "current" } : {};
+  on ? { description: t("current") } : {};
 
 /** Zoom levels offered in the picker, in percent. */
 const PICKER_ZOOMS = ZOOM_STEPS.filter((step) => step >= 0.5).map((step) =>
@@ -108,17 +109,17 @@ async function selectZoom(panels: PdfPanels, percent: unknown): Promise<void> {
 function zoomItems(view: ViewState): ZoomItem[] {
   return [
     {
-      label: "$(arrow-both) Fit Width",
+      label: `$(arrow-both) ${t("Fit Width")}`,
       ...current(view.fit === "width"),
       action: { action: "fitWidth" },
     },
     {
-      label: "$(screen-full) Fit Page",
+      label: `$(screen-full) ${t("Fit Page")}`,
       ...current(view.fit === "page"),
       action: { action: "fitPage" },
     },
     {
-      label: "$(symbol-numeric) Actual size (100%)",
+      label: `$(symbol-numeric) ${t("Actual size (100%)")}`,
       ...current(!view.fit && (view.zoom === 100 || view.zoom === "actual")),
       action: { action: "actualSize" },
     },
@@ -141,8 +142,8 @@ async function pickZoom(
   fixed: ZoomItem[],
 ): Promise<ZoomItem | undefined> {
   const picker = vscode.window.createQuickPick<ZoomItem>();
-  picker.title = `Zoom (now ${zoomLabel(view)})`;
-  picker.placeholder = "Pick a zoom, or type one such as 140";
+  picker.title = t("Zoom (now {0})", zoomLabel(view));
+  picker.placeholder = t("Pick a zoom, or type one such as 140");
   picker.items = fixed;
   picker.matchOnDescription = false;
   picker.onDidChangeValue((value) => {
@@ -154,7 +155,7 @@ async function pickZoom(
         : [
             {
               label: `${Math.round(typed * 10) / 10}%`,
-              description: "typed",
+              description: t("typed"),
               alwaysShow: true,
               action: { action: "setZoom", percent: typed },
             },

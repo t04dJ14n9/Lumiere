@@ -15,6 +15,7 @@
  * listener never opens it.
  */
 import * as vscode from "vscode";
+import { t } from "@workshop/l10n";
 import { AGENT_BRIDGE_COMMAND_IDS } from "../../../../shared/command-ids";
 import { SERVER_NAME } from "./constants";
 import type { BridgeDeps } from "./deps";
@@ -69,7 +70,9 @@ export function registerAgentBridge(
         // In an untrusted folder the setting does not take effect, so there is nothing to turn on.
         if (!vscode.workspace.isTrusted) {
           void vscode.window.showInformationMessage(
-            "The agent bridge runs only in a trusted folder. Trust this folder to use it.",
+            t(
+              "The agent bridge runs only in a trusted folder. Trust this folder to use it.",
+            ),
           );
           return;
         }
@@ -172,9 +175,11 @@ async function bridgeTurnedOn(): Promise<boolean> {
   if (agentBridgeEnabled()) {
     return true;
   }
-  const turnOn = "Turn On";
+  const turnOn = t("Turn On");
   const choice = await vscode.window.showInformationMessage(
-    "The agent bridge is off. It serves the PDF selection to coding agents over a local MCP server (127.0.0.1, token-protected). Turn it on?",
+    t(
+      "The agent bridge is off. It serves the PDF selection to coding agents over a local MCP server (127.0.0.1, token-protected). Turn it on?",
+    ),
     turnOn,
   );
   if (choice !== turnOn) {
@@ -255,7 +260,7 @@ export function mcpSetupOptions(
       detail: `[mcp_servers.${SERVER_NAME}]\ncommand = "${node}"\nargs = [${tomlShim}]`,
     },
     {
-      label: "Project .mcp.json (Claude Code)",
+      label: t("Project .mcp.json (Claude Code)"),
       detail: JSON.stringify(
         { mcpServers: { [SERVER_NAME]: { command: node, args: [shim] } } },
         null,
@@ -268,13 +273,16 @@ export function mcpSetupOptions(
 /** Let the user wire Claude Code / Codex (and any stdio MCP client) to the bridge. */
 async function copyMcpSetup(shim: string): Promise<void> {
   const picked = await vscode.window.showQuickPick(mcpSetupOptions(shim), {
-    title: "Copy MCP setup for…",
+    title: t("Copy MCP setup for…"),
   });
   if (!picked) {
     return;
   }
   await vscode.env.clipboard.writeText(picked.detail);
   void vscode.window.showInformationMessage(
-    `Copied the ${picked.label} MCP setup. Run it in a terminal (or paste it into the config).`,
+    t(
+      "Copied the {0} MCP setup. Run it in a terminal (or paste it into the config).",
+      picked.label,
+    ),
   );
 }

@@ -37,7 +37,7 @@ export class RegionTooLargeError extends Error {
   }
 }
 
-function megabytes(bytes: number): string {
+export function megabytes(bytes: number): string {
   return `${(bytes / MB).toFixed(bytes < 10 * MB ? 1 : 0)} MB`;
 }
 

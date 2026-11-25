@@ -1,4 +1,5 @@
 import * as vscode from "vscode";
+import { t } from "@workshop/l10n";
 import type { OutlineItem } from "../../../shared/messages";
 import { flattenOutlineForPicker } from "../../../shared/outline";
 import type { PdfSettings } from "../../settings";
@@ -145,7 +146,7 @@ function refreshOutlinePicker(
   const outline = panel.outline;
   if (outline === undefined) {
     picker.busy = true;
-    picker.placeholder = "Loading outline…";
+    picker.placeholder = t("Loading outline…");
     picker.items = [];
     return;
   }
@@ -160,8 +161,8 @@ function refreshOutlinePicker(
     outline,
   }));
   picker.placeholder = entries.length
-    ? "Go to outline item…"
-    : "No outline in this PDF.";
+    ? t("Go to outline item…")
+    : t("No outline in this PDF.");
 }
 
 async function pickOutlineDestination(
@@ -170,7 +171,7 @@ async function pickOutlineDestination(
   isDisposed: () => boolean,
 ): Promise<OutlinePick | undefined> {
   const picker = vscode.window.createQuickPick<OutlinePick>();
-  picker.title = "Go to Outline Item";
+  picker.title = t("Go to Outline Item");
   picker.matchOnDescription = true;
   picker.matchOnDetail = true;
   const applyOutline = (): void => {
@@ -313,10 +314,10 @@ class OutlineProvider
     const node = new vscode.TreeItem(item.title, this.collapsibleState(item));
     if (item.page !== undefined) {
       node.description = String(item.page);
-      node.tooltip = `${item.title} — page ${item.page}`;
+      node.tooltip = t("{0} — page {1}", item.title, item.page);
       node.command = {
         command: OUTLINE_COMMAND_IDS.goToOutlineItem,
-        title: "Go to page",
+        title: t("Go to page"),
         arguments: [item.page, item.top],
       };
     }

@@ -6,6 +6,7 @@
 import assert from "node:assert/strict";
 import path from "node:path";
 import { test } from "node:test";
+import * as l10n from "@workshop/l10n";
 import { OPEN_NATIVE_LINK_COMMAND_ID } from "../../src/shared/command-ids";
 import { localFragment, nativeLinks } from "../../src/shared/native-links";
 import * as locations from "../../src/shared/pdf-location";
@@ -131,6 +132,7 @@ function loadNativeLinks() {
       },
       "node:fs/promises": { realpath: async (value: string) => value },
       "node:path": path,
+      "@workshop/l10n": l10n,
       "../../../shared/pdf-location": locations,
       "./source-links": {
         registerSourceLinks: (options: SourceLinkOptions) => {
