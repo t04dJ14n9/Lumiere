@@ -4,6 +4,18 @@
  * Lumiere PDF's agent bridge returns it for the note selection.
  */
 
+/**
+ * A location as an @-mention names it: quoted when it has a space, as Claude
+ * Code reads `@"My Notes/a.md"` (an unquoted mention ends at the first
+ * space), else as it is. A location with a `"` stays unquoted: no quoting
+ * would read back.
+ */
+export function mention(location: string): string {
+  return location.includes(" ") && !location.includes('"')
+    ? `"${location}"`
+    : location;
+}
+
 /** `@notes/a.md#12-18` (one line: `#12`), with `noteLocation` outside the workspace folder. */
 export function noteReference(
   path: string,
@@ -13,7 +25,7 @@ export function noteReference(
 ): string {
   const lines =
     startLine === endLine ? String(startLine) : `${startLine}-${endLine}`;
-  const location = noteLocation(path);
+  const location = mention(noteLocation(path));
   return isDirty
     ? `${location} (unsaved, lines ${lines})`
     : `@${location}#${lines}`;

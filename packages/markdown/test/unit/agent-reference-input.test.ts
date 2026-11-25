@@ -71,7 +71,7 @@ test("malformed references and workspace escapes are rejected", () => {
 
 test("an absolute path with spaces, as Copy Link for Agent writes it, reads back as its file URI", () => {
   assert.deepEqual(
-    parseAgentReference("@/vault/projects/AI 活动/BCS 41350 修复.md#20-24"),
+    parseAgentReference('@"/vault/projects/AI 活动/BCS 41350 修复.md"#20-24'),
     {
       location:
         "file:///vault/projects/AI%20%E6%B4%BB%E5%8A%A8/BCS%2041350%20%E4%BF%AE%E5%A4%8D.md",
@@ -80,4 +80,18 @@ test("an absolute path with spaces, as Copy Link for Agent writes it, reads back
       endLine: 24,
     },
   );
+});
+
+test("a quoted workspace path reads back without its quotes; the bare form still reads", () => {
+  for (const reference of [
+    '@"notes/My Notes/a.md"#3-4',
+    "@notes/My Notes/a.md#3-4",
+  ]) {
+    assert.deepEqual(parseAgentReference(reference), {
+      location: "notes/My Notes/a.md",
+      isUri: false,
+      startLine: 3,
+      endLine: 4,
+    });
+  }
 });

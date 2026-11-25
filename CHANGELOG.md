@@ -1,5 +1,11 @@
 # Changelog
 
+## Unreleased
+
+- Copy Link for Agent quotes a note path that has a space,
+  `@"/notes/AI 活动/a.md"#20-24`, as Claude Code reads an @-mention (an
+  unquoted one ends at the first space); other paths are unchanged.
+
 ## 0.1.33 (2026-11-25)
 
 - Markdown: a table fits the note's width and its cells wrap, instead of

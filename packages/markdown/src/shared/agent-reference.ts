@@ -1,4 +1,4 @@
-import { noteLocation } from "@workshop/agents/handoff";
+import { mention, noteLocation } from "@workshop/agents/handoff";
 import { t } from "@workshop/l10n";
 const MAX_AGENT_CLIPBOARD_PATH_CHARACTERS = 32 * 1024;
 export function formatMarkdownAgentReference(
@@ -12,7 +12,7 @@ export function formatMarkdownAgentReference(
       t("Markdown agent reference path must be workspace-relative."),
     );
   }
-  return `@${normalizedPath}#${lineRange(startLine, endLine)}`;
+  return `@${mention(normalizedPath)}#${lineRange(startLine, endLine)}`;
 }
 
 /**
@@ -33,7 +33,7 @@ export function formatUriAgentReference(
   ) {
     throw new TypeError(t("Markdown agent reference URI is not valid."));
   }
-  return `@${noteLocation(uri)}#${lineRange(startLine, endLine)}`;
+  return `@${mention(noteLocation(uri))}#${lineRange(startLine, endLine)}`;
 }
 
 function lineRange(startLine: number, endLine: number): string {
