@@ -2,6 +2,7 @@ import { EditorState, type ChangeSpec, type Text } from "@codemirror/state";
 import { EditorView, keymap } from "@codemirror/view";
 import { footnotes } from "../../markdown/metadata/footnotes";
 import { placePreview } from "../../webview/ui/popover-position";
+import { t } from "@workshop/l10n";
 
 /** What follows `[^label]:` before the definition's text. */
 const MARKER = /^\[\^[^\]]+\]:[ \t]?/u;
@@ -99,7 +100,7 @@ export function editDefinition(
   const popover = view.dom.ownerDocument.createElement("div");
   popover.className = "mw-footnote-popover";
   popover.setAttribute("role", "dialog");
-  popover.setAttribute("aria-label", `Footnote ${label}`);
+  popover.setAttribute("aria-label", t("Footnote {0}", label));
   let open = true;
   const close = () => {
     if (open) {

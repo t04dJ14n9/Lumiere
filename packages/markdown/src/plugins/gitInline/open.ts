@@ -3,6 +3,7 @@ import type { EditorView } from "@codemirror/view";
 import type { EditorState, Range } from "@codemirror/state";
 import type { HunkRef } from "../../shared/git-diff";
 import type { DocHunk, GitDiff } from "../gitGutter/api";
+import { t } from "@workshop/l10n";
 
 /**
  * Whether a collapsed inline click may open the hunk. A selection drag or an
@@ -47,8 +48,8 @@ class ShowDiffControl extends WidgetType {
     const button = document.createElement("button");
     button.type = "button";
     button.className = "mw-gi-show-diff";
-    button.textContent = "Show Diff";
-    button.title = "Show the git change";
+    button.textContent = t("Show Diff");
+    button.title = t("Show the git change");
     button.addEventListener("click", (event) => {
       // The button itself is the opener. A nested link or checkbox, or a
       // selection drag, keeps its own action.

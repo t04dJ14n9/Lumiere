@@ -2,6 +2,7 @@ import type { RenderPass, Fence } from "../render/api";
 import type { QueryClient, SearchUpdate } from "./client";
 import type { SearchResponse } from "./protocol";
 import { SEARCH_RESULT_LIMIT, SEARCH_SKIP_LIMIT } from "./limits";
+import { t } from "@workshop/l10n";
 
 /** Open a vault path from a search result (match line carries an offset). */
 export type OpenSearchResult = (target: {
@@ -28,14 +29,14 @@ export function bindSearchBlock(input: {
   code.textContent = fence.source.trim();
   const refresh = document.createElement("button");
   refresh.type = "button";
-  refresh.textContent = "Refresh";
-  refresh.setAttribute("aria-label", "Refresh search results");
+  refresh.textContent = t("Refresh");
+  refresh.setAttribute("aria-label", t("Refresh search results"));
   header.append(code, refresh);
   const status = document.createElement("p");
   status.setAttribute("role", "status");
   const results = document.createElement("ul");
   results.className = "search-result-container";
-  results.setAttribute("aria-label", "Search results");
+  results.setAttribute("aria-label", t("Search results"));
   fence.element.replaceChildren(header, status, results);
   let stop: (() => void) | undefined;
   let live = true;
@@ -89,39 +90,61 @@ function resultsView(
       shown += update.added.length;
       status.textContent =
         shown === 0
-          ? "Searching…"
-          : `Searching… ${shown} so far${unreadableNote(update.unreadable)}`;
+          ? t("Searching…")
+          : statusLine(
+              t("Searching… {0} so far", shown),
+              unreadableNote(update.unreadable),
+            );
     } else if (update.loading) {
       show([]);
-      status.textContent = "Searching…";
+      status.textContent = t("Searching…");
     } else if (update.error) {
       show(update.results ?? []);
-      const kept = shown > 0 ? ` · showing ${shown} found before it` : "";
-      status.textContent = `Search failed: ${update.error}${kept}`;
+      status.textContent = statusLine(
+        t("Search failed: {0}", update.error),
+        shown > 0 ? t("showing {0} found before it", shown) : "",
+      );
     } else {
       show(update.results ?? []);
-      status.textContent = `${shown} ${shown === 1 ? "result" : "results"}${unreadableNote(update.unreadable)}${skippedNote(update.skipped)}${truncatedNote(update.truncated)}${tooSlowNote(update.tooSlow)}`;
+      status.textContent = statusLine(
+        shown === 1 ? t("{0} result", shown) : t("{0} results", shown),
+        unreadableNote(update.unreadable),
+        skippedNote(update.skipped),
+        truncatedNote(update.truncated),
+        tooSlowNote(update.tooSlow),
+      );
     }
   };
 }
 
+/** A status line: its parts that are not empty, set apart by " · ". */
+function statusLine(...parts: string[]): string {
+  return parts.filter(Boolean).join(" · ");
+}
+
 function unreadableNote(unreadable: number | undefined): string {
-  return unreadable ? ` · ${unreadable} files could not be searched` : "";
+  return unreadable ? t("{0} files could not be searched", unreadable) : "";
 }
 
 function skippedNote(skipped: readonly string[] | undefined): string {
   return skipped?.length
-    ? ` · skipped, evaluation too slow: ${skipped.join(", ")}`
+    ? t("skipped, evaluation too slow: {0}", skipped.join(", "))
     : "";
 }
 function truncatedNote(truncated: boolean | undefined): string {
   return truncated
-    ? ` · stopped at ${SEARCH_RESULT_LIMIT} matching files; the rest were not searched`
+    ? t(
+        "stopped at {0} matching files; the rest were not searched",
+        SEARCH_RESULT_LIMIT,
+      )
     : "";
 }
 function tooSlowNote(tooSlow: boolean | undefined): string {
   return tooSlow
-    ? ` · stopped after ${SEARCH_SKIP_LIMIT} files took too long; the rest were not searched`
+    ? t(
+        "stopped after {0} files took too long; the rest were not searched",
+        SEARCH_SKIP_LIMIT,
+      )
     : "";
 }
 function paintMatches(
@@ -150,7 +173,7 @@ function paintMatches(
         row.setAttribute("data-offset", String(line.offset));
         row.setAttribute("role", "button");
         row.tabIndex = 0;
-        row.setAttribute("aria-label", `Open ${result.path} at match`);
+        row.setAttribute("aria-label", t("Open {0} at match", result.path));
         paintMatchText(row, line);
         if (open) {
           wireSearchOpen(row, { path: result.path, offset: line.offset }, open);

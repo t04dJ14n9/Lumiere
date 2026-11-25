@@ -1,5 +1,6 @@
 /** The rendered diff panel's DOM: header, aligned rows and change navigation. */
 import { stepChange } from "./step";
+import { t } from "@workshop/l10n";
 
 export interface PanelRow {
   readonly kind: "equal" | "modified" | "added" | "deleted";
@@ -50,7 +51,7 @@ function setLabels(head: Head, names: { left: string; right: string }): void {
   left!.append(names.left);
   const badge = left!.appendChild(document.createElement("span"));
   badge.className = "mw-diff-readonly";
-  badge.textContent = "read-only";
+  badge.textContent = t("read-only");
   right!.textContent = names.right;
 }
 
@@ -99,12 +100,14 @@ export function setupPanel(
       row.classList.toggle("is-current", index === current),
     );
     list[current]!.scrollIntoView({ block: "center" });
-    head.count.textContent = `${current + 1} of ${list.length} changes`;
+    head.count.textContent = t("{0} of {1} changes", current + 1, list.length);
   };
-  addButton(head.tools, "Previous change", "↑", () => go(-1));
-  addButton(head.tools, "Next change", "↓", () => go(1));
-  addButton(head.tools, "Open the file", "Open File", () => act("openFile"));
-  addButton(head.tools, "Open VS Code's text diff", "Text Diff", () =>
+  addButton(head.tools, t("Previous change"), "↑", () => go(-1));
+  addButton(head.tools, t("Next change"), "↓", () => go(1));
+  addButton(head.tools, t("Open the file"), t("Open File"), () =>
+    act("openFile"),
+  );
+  addButton(head.tools, t("Open VS Code's text diff"), t("Text Diff"), () =>
     act("openNative"),
   );
   document.addEventListener("keydown", (event) => {
@@ -120,7 +123,8 @@ export function setupPanel(
       const total = changes().length;
       // The rows were rebuilt: no change is selected any more.
       current = -1;
-      head.count.textContent = total === 0 ? "No changes" : `${total} changes`;
+      head.count.textContent =
+        total === 0 ? t("No changes") : t("{0} changes", total);
     },
   };
 }

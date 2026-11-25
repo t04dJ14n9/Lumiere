@@ -1,3 +1,5 @@
+import { t } from "@workshop/l10n";
+
 /** Hard caps. A confirmation cannot raise them, and nothing is sampled to fit. */
 export const HARD_MAX_NODES = 2000;
 export const HARD_MAX_EDGES = 20_000;
@@ -53,13 +55,21 @@ function refusal(input: {
 }): string | undefined {
   const { nodeCount, edgeCount, payloadBytes, maxNodes, maxEdges } = input;
   if (nodeCount > maxNodes) {
-    return `This graph has ${nodeCount} notes. Narrow the filters below ${maxNodes}.`;
+    return t(
+      "This graph has {0} notes. Narrow the filters below {1}.",
+      nodeCount,
+      maxNodes,
+    );
   }
   if (edgeCount > maxEdges) {
-    return `This graph has ${edgeCount} links. Narrow the filters below ${maxEdges}.`;
+    return t(
+      "This graph has {0} links. Narrow the filters below {1}.",
+      edgeCount,
+      maxEdges,
+    );
   }
   if (payloadBytes > HARD_MAX_PAYLOAD_BYTES) {
-    return "This graph is too large to draw. Narrow the filters.";
+    return t("This graph is too large to draw. Narrow the filters.");
   }
   return undefined;
 }

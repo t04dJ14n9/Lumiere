@@ -1,5 +1,6 @@
 import type { GraphSnapshot } from "../../plugins/graph/snapshot";
 import type { GraphViewState } from "./persist";
+import { t } from "@workshop/l10n";
 
 export interface GraphChrome {
   show(snapshot: GraphSnapshot, needsRelayout: boolean): void;
@@ -81,8 +82,8 @@ interface Fields {
 function buildControls(root: HTMLElement, initial: GraphViewState): Fields {
   const mode = select(
     [
-      ["global", "Global"],
-      ["local", "Local"],
+      ["global", t("Global")],
+      ["local", t("Local")],
     ],
     initial.mode,
   );
@@ -93,23 +94,23 @@ function buildControls(root: HTMLElement, initial: GraphViewState): Fields {
   depth.value = String(initial.depth);
   const color = select(
     [
-      ["type", "Type"],
-      ["folder", "Folder"],
-      ["tag", "Tag"],
+      ["type", t("Type")],
+      ["folder", t("Folder")],
+      ["tag", t("Tag")],
     ],
     initial.colorBy,
   );
   const search = document.createElement("input");
   search.type = "search";
-  search.placeholder = "Search title, path or description";
+  search.placeholder = t("Search title, path or description");
   search.value = initial.filters.text;
-  const orphans = checkbox("Orphans", initial.filters.showOrphans);
-  const clear = button("Clear filters");
-  const relayout = button("Re-layout");
+  const orphans = checkbox(t("Orphans"), initial.filters.showOrphans);
+  const clear = button(t("Clear filters"));
+  const relayout = button(t("Re-layout"));
   root.append(
-    label("Mode", mode),
-    label("Depth", depth),
-    label("Color", color),
+    label(t("Mode"), mode),
+    label(t("Depth"), depth),
+    label(t("Color"), color),
     search,
     orphans.label,
     clear,
@@ -145,7 +146,7 @@ function viewFrom(fields: Fields, facets: HTMLElement): GraphViewState {
 
 function scopeLabel(snapshot: GraphSnapshot): string {
   if (!snapshot.scopeName) {
-    return "No vault";
+    return t("No vault");
   }
   if (!snapshot.scopePath) {
     return snapshot.scopeName;
@@ -170,17 +171,19 @@ function bannerText(snapshot: GraphSnapshot, needsRelayout: boolean): string[] {
     lines.push(snapshot.reason);
   }
   if (snapshot.focusExcluded) {
-    lines.push("Focus excluded by filters");
+    lines.push(t("Focus excluded by filters"));
   }
   if (snapshot.completeness === "indexing") {
-    lines.push("Indexing notes…");
+    lines.push(t("Indexing notes…"));
   }
   if (snapshot.completeness === "partial") {
-    lines.push("The vault index is partial, so some notes may be missing.");
+    lines.push(t("The vault index is partial, so some notes may be missing."));
   }
   if (needsRelayout) {
     lines.push(
-      "The graph changed enough to keep this layout. Re-layout draws it again.",
+      t(
+        "The graph changed enough to keep this layout. Re-layout draws it again.",
+      ),
     );
   }
   return lines;
@@ -194,10 +197,18 @@ function legendNodes(snapshot: GraphSnapshot): HTMLElement[] {
     swatch.style.background = entry.color;
     item.append(
       swatch,
-      document.createTextNode(`${entry.key} (${entry.count})`),
+      document.createTextNode(`${legendKey(entry.key)} (${entry.count})`),
     );
     return item;
   });
+}
+
+/** The legend names the host writes for notes with no folder or no value. */
+function legendKey(key: string): string {
+  if (key === "(root)") {
+    return t("(root)");
+  }
+  return key === "(none)" ? t("(none)") : key;
 }
 
 function syncFacets(
@@ -206,11 +217,11 @@ function syncFacets(
   selected: Map<string, Set<string>>,
 ): void {
   root.replaceChildren(
-    facetGroup("type", "Types", snapshot.facets.types, selected.get("type")),
-    facetGroup("tag", "Tags", snapshot.facets.tags, selected.get("tag")),
+    facetGroup("type", t("Types"), snapshot.facets.types, selected.get("type")),
+    facetGroup("tag", t("Tags"), snapshot.facets.tags, selected.get("tag")),
     facetGroup(
       "folder",
-      "Folders",
+      t("Folders"),
       snapshot.facets.folders,
       selected.get("folder"),
     ),

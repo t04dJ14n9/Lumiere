@@ -44,6 +44,7 @@ import {
 } from "./peek";
 import { protocol } from "./protocol";
 import { BaselineSource } from "./baseline";
+import { t } from "@workshop/l10n";
 
 type Status = ReturnType<GitDiff["status"]>;
 type Options = Infer<typeof config>;
@@ -308,7 +309,7 @@ class GitDiffModel implements GitDiff {
     return {
       comparisonLabel: () =>
         this.session.snapshot
-          ? `${this.source.label} → Working tree`
+          ? t("{0} → Working tree", this.source.label)
           : this.source.label,
       move: (target: EditorView, direction: 1 | -1) =>
         this.move(target, direction, true),

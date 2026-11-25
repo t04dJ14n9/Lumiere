@@ -1,4 +1,5 @@
 import type { GitBlameOk, GitIdentity } from "../../shared/git-blame";
+import { t } from "@workshop/l10n";
 
 type GhostBlame = Pick<
   GitBlameOk,
@@ -12,14 +13,19 @@ type GhostBlame = Pick<
 const graphemes = new Intl.Segmenter("en", { granularity: "grapheme" });
 /** Match VS Code git.blame subject truncate (`_subjectMaxLength = 50`). */
 const SUBJECT_MAX_GRAPHEMES = 50;
-const relativeUnits = [
-  [31536000, "year"],
-  [2592000, "month"],
-  [604800, "week"],
-  [86400, "day"],
-  [3600, "hour"],
-  [60, "minute"],
-] as const;
+/** Each unit's length in seconds and how a count of it reads, when shown. */
+const relativeUnits: readonly (readonly [number, (count: number) => string])[] =
+  [
+    [31536000, (n) => (n === 1 ? t("{0} year ago", n) : t("{0} years ago", n))],
+    [
+      2592000,
+      (n) => (n === 1 ? t("{0} month ago", n) : t("{0} months ago", n)),
+    ],
+    [604800, (n) => (n === 1 ? t("{0} week ago", n) : t("{0} weeks ago", n))],
+    [86400, (n) => (n === 1 ? t("{0} day ago", n) : t("{0} days ago", n))],
+    [3600, (n) => (n === 1 ? t("{0} hour ago", n) : t("{0} hours ago", n))],
+    [60, (n) => (n === 1 ? t("{0} minute ago", n) : t("{0} minutes ago", n))],
+  ];
 
 const absoluteFormat = new Intl.DateTimeFormat(undefined, {
   dateStyle: "long",
@@ -57,15 +63,17 @@ export function formatBlameTooltip(
   const author = authorLabel(blame, identity);
   const relative = relativeTime(blame.authorDate, now);
   const absolute = absoluteFormat.format(new Date(blame.authorDate * 1000));
-  let when = `${relative} (${absolute}`;
-  if (
+  const when =
     blame.committerDate !== undefined &&
     blame.committerDate > 0 &&
     blame.committerDate !== blame.authorDate
-  ) {
-    when += `, committed ${relativeTime(blame.committerDate, now)}`;
-  }
-  when += ")";
+      ? t(
+          "{0} ({1}, committed {2})",
+          relative,
+          absolute,
+          relativeTime(blame.committerDate, now),
+        )
+      : `${relative} (${absolute})`;
   const subject = firstLine(blame.subject);
   const body = (blame.body ?? "").replace(/^\s+|\s+$/gu, "");
   const lines = [author, when];
@@ -89,20 +97,19 @@ function authorLabel(
     email.toLowerCase() === identity?.userEmail?.trim().toLowerCase();
   const sameName = name.length > 0 && name === identity?.userName?.trim();
   if (sameEmail || sameName) {
-    return "You";
+    return t("You");
   }
-  return name || email.split("@")[0] || "Unknown author";
+  return name || email.split("@")[0] || t("Unknown author");
 }
 
 function relativeTime(date: number, now: number): string {
   const elapsed = Math.max(0, now - date);
-  for (const [seconds, unit] of relativeUnits) {
+  for (const [seconds, ago] of relativeUnits) {
     if (elapsed >= seconds) {
-      const count = Math.floor(elapsed / seconds);
-      return `${count} ${unit}${count === 1 ? "" : "s"} ago`;
+      return ago(Math.floor(elapsed / seconds));
     }
   }
-  return "just now";
+  return t("just now");
 }
 
 function truncateSubject(subject: string): string {

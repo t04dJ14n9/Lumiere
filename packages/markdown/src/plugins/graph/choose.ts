@@ -3,6 +3,7 @@ import { nameOf } from "../../shared/vault-path";
 import type { Vault } from "../vault/api";
 import { selectScope } from "./scope";
 import type { GraphScope } from "./scope";
+import { t } from "@workshop/l10n";
 
 export interface HeldScope {
   vault: Vault;
@@ -51,7 +52,7 @@ export async function resolveScope(input: {
     return hold(input.ctx, decision.scope, located?.path);
   }
   const picked = await input.ctx.dialogs.pick({
-    placeholder: "Choose a vault to graph",
+    placeholder: t("Choose a vault to graph"),
     items: (query) => scopeItems(decision.choices, query),
   });
   if (!picked?.item) {

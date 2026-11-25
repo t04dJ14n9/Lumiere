@@ -15,6 +15,7 @@ import {
   TagsTree,
   VIEW_ID,
 } from "./tree";
+import { t } from "@workshop/l10n";
 
 /** Refreshes wait for a burst of file events to end. */
 const REFRESH_DELAY_MS = 300;
@@ -138,9 +139,9 @@ async function currentVault(
 
 function message(vault: Vault | undefined, isEmpty: boolean) {
   if (!vault) {
-    return "Open a note or a folder to see its tags.";
+    return t("Open a note or a folder to see its tags.");
   }
-  return isEmpty ? "No tags in this vault yet." : undefined;
+  return isEmpty ? t("No tags in this vault yet.") : undefined;
 }
 
 /** Clicking a tag: choose a note that uses it, then open that note. */
