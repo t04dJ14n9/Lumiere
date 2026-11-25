@@ -1,7 +1,8 @@
 /**
- * A tall properties sheet, with `sources` as plain text, must keep its
- * estimated height when a rebuild happens off-screen. The old Sources
- * expand-all path is gone; this still guards the height map (#100).
+ * A tall properties sheet, with a `sources` string (a Text property like any
+ * other), must keep its estimated height when a rebuild happens off-screen.
+ * The old Sources expand-all path is gone; this still guards the height map
+ * (#100).
  */
 import { expect, test, type Page } from "@playwright/test";
 import { open } from "./harness";
@@ -26,7 +27,7 @@ async function constrain(page: Page) {
   await page.evaluate(() => window.dispatchEvent(new Event("resize")));
 }
 
-test("off-viewport rebuild keeps a tall sheet height when sources is plain text", async ({
+test("off-viewport rebuild keeps a tall sheet height when sources is text", async ({
   page,
 }) => {
   await page.setViewportSize({ width: 1100, height: 760 });

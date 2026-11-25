@@ -174,40 +174,39 @@ test("cssclasses frontmatter applies classes onto editor DOM and custom callouts
   );
 });
 
-test("sources property edits as plain text, like any other string", async ({
+test("sources is a property like any other: its wikilinks are links, a list of maps is Unknown", async ({
   page,
 }) => {
   const doc = [
     "---",
     "title: Sources Note",
     "sources:",
+    '  - "[[notes/Attention Is All You Need|Attention Is All You Need]]"',
+    '  - "[[notes/The-Illustrated-Transformer|The Illustrated Transformer]]"',
+    "generated:",
     "  - id: src-1",
     "    resource: https://example.com/a",
-    "    title: Original Source",
     "---",
     "",
     "# Body",
   ].join("\n");
   await open(page, doc);
-  await expect(
-    page.locator(".source-title, .source-row, [data-source-more]"),
-  ).toHaveCount(0);
   const sourcesRow = page.locator('[data-property-row="sources"]');
-  const input = sourcesRow.locator('[data-property-input="sources"]');
-  await expect(input).toHaveAttribute("data-property-kind", "text");
   await expect(sourcesRow.locator(".metadata-property-value")).toHaveAttribute(
     "data-property-type",
-    "text",
+    "multitext",
   );
-  await expect(input).toContainText("title: Original Source");
-  await input.fill("Updated Source Title");
-  await page.keyboard.press("Enter");
-  // A list replaced by text is still a string. The writer keeps the value
-  // indented under the key, which YAML reads as a plain scalar.
-  await expect
-    .poll(() => page.evaluate(() => window.harness.text))
-    .toContain("sources:\n  Updated Source Title");
-  await expect
-    .poll(() => page.evaluate(() => window.harness.text))
-    .toContain("title: Sources Note");
+  const links = sourcesRow.locator("a.internal-link");
+  await expect(links).toHaveText([
+    "Attention Is All You Need",
+    "The Illustrated Transformer",
+  ]);
+  await expect(links.first()).toHaveAttribute(
+    "data-href",
+    "notes/Attention Is All You Need",
+  );
+  // A list of maps is Obsidian's Unknown, under sources as under any key.
+  await expect(
+    page.locator('[data-property-row="generated"] .mod-unknown'),
+  ).toContainText('"resource":"https://example.com/a"');
 });

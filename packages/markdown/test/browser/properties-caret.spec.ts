@@ -215,25 +215,18 @@ test.describe("the caret stays out of the Properties block", () => {
       .toContain("title: SourceEdited");
   });
 
-  test("a sources value edits as plain text and commits", async ({ page }) => {
-    const note = [
-      "---",
-      "sources:",
-      "  - title: Original Source",
-      "    resource: ../raw/original.md",
-      "    id: src-1",
-      "---",
-      "Body text",
-    ].join("\n");
-    await start(page, 6, 0, note);
+  test("a sources string edits as text and commits", async ({ page }) => {
+    const note = ["---", "sources: Original Source", "---", "Body text"].join(
+      "\n",
+    );
+    await start(page, 3, 0, note);
     const row = page.locator('[data-property-key="sources"]');
-    await expect(row.locator(".source-title, .source-row")).toHaveCount(0);
     const input = row.locator('[data-property-input="sources"]');
     await expect(input).toHaveAttribute("data-property-kind", "text");
     await input.fill("Updated Source");
     await input.press("Enter");
     await expect
       .poll(() => page.evaluate(() => window.harness.text))
-      .toContain("sources:\n  Updated Source");
+      .toContain("sources: Updated Source");
   });
 });

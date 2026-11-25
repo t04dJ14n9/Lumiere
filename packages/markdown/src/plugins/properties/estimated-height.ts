@@ -155,8 +155,6 @@ function listHeight(row: string): number | undefined {
  * that unfocused paint so remounts do not reserve a full unclamped essay.
  */
 const LONGTEXT_CLAMP_LINES = 3;
-/** `sources` (`mod-scroll`) shows up to this height, then scrolls. */
-const SCROLL_TEXT_MAX = 300;
 
 function longTextHeight(row: string): number {
   const field =
@@ -171,9 +169,6 @@ function longTextHeight(row: string): number {
   for (const line of plain.split("\n")) {
     const width = Math.max(line.length, 1) * CHAR_WIDTH;
     rows += Math.max(1, Math.ceil(width / LIST_WIDTH));
-  }
-  if (tag.includes("mod-scroll")) {
-    return Math.max(VALUE_MIN, Math.min(rows * LINE, SCROLL_TEXT_MAX));
   }
   return Math.max(VALUE_MIN, Math.min(rows, LONGTEXT_CLAMP_LINES) * LINE);
 }

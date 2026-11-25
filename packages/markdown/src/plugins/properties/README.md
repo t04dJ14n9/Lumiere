@@ -10,7 +10,7 @@ retaining focused draft inputs. Edits use the pure YAML operations and become on
 outer-document transaction. List and chip drafts resolve the selected occurrence
 against current values before committing, so a stale render cannot replace a
 concurrently edited list. Save participants commit drafts and reject invalid
-input. Nested maps render as Obsidian Unknown (`JSON.stringify`). `sources` is a plain text property, the same control as any other string, without the three-line clamp: it shows up to 300px and scrolls past that, focused or not. Lists show every item, as in Obsidian; `properties.listPreviewCount` (default 0, off) caps them behind a disclosure. Unsupported/tagged YAML prefers Source mode. If a settable value's slice cannot
+input. Nested maps render as Obsidian Unknown (`JSON.stringify`). `sources` is a property like any other, as in Obsidian: a list of links is a List whose links open, a list of maps is Unknown. Lists show every item, as in Obsidian; `properties.listPreviewCount` (default 0, off) caps them behind a disclosure. Unsupported/tagged YAML prefers Source mode. If a settable value's slice cannot
 parse independently, a serialized copy keeps it editable. Blank row/value space
 focuses the value editor; native field, pill and link clicks keep their own actions.
 Replaced anchors materialize their external aliases with exact integers.
@@ -96,7 +96,6 @@ The host injects `rpc`, `vault` and the host service `storage`, and
 optionally `obsidianCompat` for `types.json`; the webview injects `editor`,
 `document`, `livePreview`, `commands`, `rpc` and `menu`. The webview provides
 `propertyRenderers`, so another feature can replace one property's markup.
-`sources` does not use that hook: it always renders as text.
 Widgets bind sheet content; heading interactions call `editor/focusTitle`.
 Edits emit `render/changed` and `editor/clearProjection`; RPC receives type
 preferences and shared disclosure; name suggestions use indexed vault metadata.
@@ -119,7 +118,7 @@ property leaves a blank line where the fence was when the body opens with a
 `---` block, so that block stays body text rather than becoming the properties;
 Add File Property can temporarily show the sheet when properties are hidden.
 Collapse state is kept in the VS Code workspace's storage, so it is not shared
-with unrelated workspaces. Native picker appearance depends on Chromium, OS and locale. Heading/add markup includes Obsidian class aliases (`metadata-properties-title`, `collapse-indicator collapse-icon`, `metadata-add-button`) and a lucide-plus add control. Unfocused text values clamp to three lines with a 300px max height, as in Obsidian 1.14.4; focus expands them with scroll (`sources` is never clamped). The sheet uses 0.875em metadata type, 8px top padding, 2rem bottom margin, 3px row gap, 6px hover/focus rings, and link values (`metadata-link`) padded 4px 8px like Obsidian's `--metadata-input-padding` (VS Code colours). Value inputs use Obsidian `--metadata-input-padding` (4px 8px). List, tags and aliases pills use Obsidian `.multi-select-pill` chrome (transparent fill, 1px border, 2em radius, content/remove `--pill-padding-x`, focus ring via `::after`). Daily
+with unrelated workspaces. Native picker appearance depends on Chromium, OS and locale. Heading/add markup includes Obsidian class aliases (`metadata-properties-title`, `collapse-indicator collapse-icon`, `metadata-add-button`) and a lucide-plus add control. Unfocused text values clamp to three lines with a 300px max height, as in Obsidian 1.14.4; focus expands them with scroll. The sheet uses 0.875em metadata type, 8px top padding, 2rem bottom margin, 3px row gap, 6px hover/focus rings, and link values (`metadata-link`) padded 4px 8px like Obsidian's `--metadata-input-padding` (VS Code colours). Value inputs use Obsidian `--metadata-input-padding` (4px 8px). List, tags and aliases pills use Obsidian `.multi-select-pill` chrome (transparent fill, 1px border, 2em radius, content/remove `--pill-padding-x`, focus ring via `::after`). Daily
 note links are not provided because the editor has no daily-note capability.
 Unknown nested maps use Obsidian `mod-unknown` JSON with 4px 8px padding (`--metadata-input-padding`). YAML drafts must parse independently; external references use serialized copies,
 which may lose original formatting or precision when committed. Recursive aliases,
