@@ -4,6 +4,8 @@
  * text and vectors). Images stay as-is under Dark; see EmbedPDF #679.
  */
 
+import { t } from "@workshop/l10n";
+
 export type PageColorsSetting = "follow" | "normal" | "dark";
 export type EffectivePageColors = "normal" | "dark";
 
@@ -49,10 +51,10 @@ export function cyclePageColors(current: PageColorsSetting): PageColorsSetting {
 export function pageColorsLabel(setting: PageColorsSetting): string {
   switch (setting) {
     case "follow":
-      return "Follow";
+      return t("Follow");
     case "normal":
-      return "Normal";
+      return t("Normal");
     case "dark":
-      return "Dark";
+      return t("Dark");
   }
 }

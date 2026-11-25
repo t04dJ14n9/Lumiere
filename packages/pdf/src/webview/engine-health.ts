@@ -1,3 +1,4 @@
+import { t } from "@workshop/l10n";
 /**
  * Whether the PDF engine still works after it started. EmbedPDF 3 does not
  * notice an engine that dies once its worker has booted: its worker
@@ -32,7 +33,7 @@ export class EngineHealth {
 
   /** The engine's worker raised an error, or sent what cannot be read. */
   workerFailed(message: string): void {
-    this.die(message || "The PDF engine's worker stopped.");
+    this.die(message || t("The PDF engine's worker stopped."));
   }
 
   /** One of the engine's answers to a call (a `WorkerResponse`). */

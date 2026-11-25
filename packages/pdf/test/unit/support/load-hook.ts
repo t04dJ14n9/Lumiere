@@ -2,12 +2,14 @@ import assert from "node:assert/strict";
 import { readFileSync } from "node:fs";
 import { runInNewContext } from "node:vm";
 import ts from "typescript";
+import * as l10n from "@workshop/l10n";
 
 /**
  * Run `src/webview/<file>` as written, with each import replaced by
  * `modules[specifier]` and the given globals (`document`, animation frames…),
  * so a viewer hook is exercised without React or a browser. An import that is
- * not listed fails the test instead of loading something real.
+ * not listed fails the test instead of loading something real, except the
+ * translator (`@workshop/l10n`): it is pure, and says the English text here.
  */
 export function loadHook(
   file: string,
@@ -35,6 +37,9 @@ export function loadHook(
   ) => void;
   evaluate(
     (id) => {
+      if (id === "@workshop/l10n") {
+        return l10n;
+      }
       assert.ok(id in modules, `Unexpected runtime dependency: ${id}`);
       return modules[id];
     },

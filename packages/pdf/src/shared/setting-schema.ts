@@ -5,6 +5,8 @@
  * drifts from the Settings editor.
  */
 
+import { t } from "@workshop/l10n";
+
 /** One entry of `contributes.configuration.properties`, the parts used here. */
 export interface SchemaProperty {
   type?: string | string[];
@@ -55,6 +57,23 @@ const words = (text: string): string =>
     .replace(/([a-z0-9])([A-Z])/gu, "$1 $2")
     .replace(/^./u, (first) => first.toUpperCase());
 
+/** The picker's heading for each first part of a key; the names are translated when shown. */
+const GROUP_NAMES: Readonly<Record<string, () => string>> = {
+  outline: () => t("Outline"),
+  copyLinkForAgent: () => t("Copy Link For Agent"),
+  regionImageCache: () => t("Region Image Cache"),
+  regions: () => t("Regions"),
+  toolbar: () => t("Toolbar"),
+  agentBridge: () => t("Agent Bridge"),
+  view: () => t("View"),
+  lookUp: () => t("Look Up"),
+  annotations: () => t("Annotations"),
+};
+
+function groupName(part: string): string {
+  return Object.hasOwn(GROUP_NAMES, part) ? GROUP_NAMES[part]!() : words(part);
+}
+
 /** Markdown reduced to plain text: code marks, links, bold and `#setting#` references. */
 export function plainText(markdown: string): string {
   return markdown
@@ -104,7 +123,7 @@ export function settingEntries(
     const kind = settingKind(property);
     return {
       key,
-      group: parts.length > 1 ? words(parts[0]!) : "General",
+      group: parts.length > 1 ? groupName(parts[0]!) : t("General"),
       title: words(parts.slice(1).join(" ") || parts[0]!),
       kind,
       description: plainText(
@@ -126,13 +145,13 @@ export function settingEntries(
 /** A value as a short label: `on`, `off`, `paged`, `100`, `follows the editor` for null. */
 export function formatValue(value: unknown, kind: SettingKind): string {
   if (value === null || value === undefined) {
-    return kind === "tristate" ? "follows the editor" : "not set";
+    return kind === "tristate" ? t("follows the editor") : t("not set");
   }
   if (typeof value === "boolean") {
-    return value ? "on" : "off";
+    return value ? t("on") : t("off");
   }
   if (typeof value === "string") {
-    return value === "" ? "empty" : value;
+    return value === "" ? t("empty") : value;
   }
   return typeof value === "number" ? String(value) : JSON.stringify(value);
 }
@@ -144,13 +163,13 @@ export function numberProblem(
 ): string | undefined {
   const value = Number(text);
   if (text.trim() === "" || !Number.isFinite(value)) {
-    return "Enter a number";
+    return t("Enter a number");
   }
   if (entry.minimum !== undefined && value < entry.minimum) {
-    return `Enter a number of at least ${entry.minimum}`;
+    return t("Enter a number of at least {0}", entry.minimum);
   }
   if (entry.maximum !== undefined && value > entry.maximum) {
-    return `Enter a number of at most ${entry.maximum}`;
+    return t("Enter a number of at most {0}", entry.maximum);
   }
   return undefined;
 }

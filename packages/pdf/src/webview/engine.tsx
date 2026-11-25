@@ -23,6 +23,7 @@ import { postToHost } from "./host";
 import { PasswordPrompt } from "./password-prompt";
 import { DOCUMENT_ID, viewerPlugins } from "./plugins";
 import { Viewer } from "./viewer";
+import { t } from "@workshop/l10n";
 
 /** Who the author of a mark made in the viewer is. */
 const AUTHOR: Identity = { displayName: "Lumiere" };
@@ -168,7 +169,7 @@ function EngineSession({
     report: reportToHost,
   });
   if (!engine) {
-    return <Status text="Starting the PDF engine…" />;
+    return <Status text={t("Starting the PDF engine…")} />;
   }
   if (died !== undefined && (answered || !worker)) {
     return <EngineStopped cause={died} onReload={() => reload(host)} />;
@@ -214,7 +215,7 @@ function OpenedDocument({
 }): React.JSX.Element {
   return (
     <DocumentGate
-      fallback={<Status text="Opening the PDF…" />}
+      fallback={<Status text={t("Opening the PDF…")} />}
       locked={(document) => (
         <OnMount callback={onAnswer}>
           <PasswordPrompt document={document} />
@@ -293,8 +294,10 @@ function OpenFailed({
     <Status
       text={
         engineFailed
-          ? "This PDF could not be opened."
-          : "This PDF could not be opened: the file is damaged or is not a PDF."
+          ? t("This PDF could not be opened.")
+          : t(
+              "This PDF could not be opened: the file is damaged or is not a PDF.",
+            )
       }
     />
   );
@@ -322,13 +325,13 @@ function EngineStopped({
   onReload: () => void;
 }): React.JSX.Element {
   useEffect(() => {
-    reportToHost(`The PDF engine stopped working: ${cause}`);
+    reportToHost(t("The PDF engine stopped working: {0}", cause));
   }, [cause]);
   return (
     <div className="status engine-stopped" role="alert">
-      <p>The PDF engine stopped working, so this PDF cannot be shown.</p>
+      <p>{t("The PDF engine stopped working, so this PDF cannot be shown.")}</p>
       <button type="button" onClick={onReload}>
-        Reload
+        {t("Reload")}
       </button>
     </div>
   );
@@ -339,10 +342,10 @@ function Failed({ error }: { error: unknown }): React.JSX.Element {
   useEffect(() => {
     postToHost({
       type: "error",
-      message: `The PDF viewer failed to start: ${String(error)}`,
+      message: t("The PDF viewer failed to start: {0}", String(error)),
     });
   }, [error]);
-  return <Status text="This PDF could not be opened." />;
+  return <Status text={t("This PDF could not be opened.")} />;
 }
 
 function OnMount({

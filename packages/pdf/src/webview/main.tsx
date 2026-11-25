@@ -27,6 +27,7 @@ import "./styles/page.css";
 import "./styles/view-controls.css";
 import "./styles/note-card.css";
 import "./styles/side-panel.css";
+import { t } from "@workshop/l10n";
 
 performance.mark("pdf:main");
 const container = document.getElementById("root");
@@ -39,7 +40,7 @@ const root = createRoot(container);
 
 if (!wasmUrl) {
   root.render(
-    <Status text="The PDF engine is missing from this installation." />,
+    <Status text={t("The PDF engine is missing from this installation.")} />,
   );
 } else {
   const host = new EngineHost<ViewerEngine>(browserEngineEnvironment(wasmUrl));
@@ -50,7 +51,7 @@ if (!wasmUrl) {
     () => undefined,
   );
   let generation = 0;
-  root.render(<Status text="Loading the PDF…" />);
+  root.render(<Status text={t("Loading the PDF…")} />);
   connectToHost((buffer) => {
     performance.mark("pdf:buffer");
     // Replace the old viewer first (flushSync unmounts it now), so nothing
