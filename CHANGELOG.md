@@ -1,6 +1,6 @@
 # Changelog
 
-## Unreleased
+## 0.1.34 (2026-11-25)
 
 - Markdown: the `sources` property is typed like any other, as in Obsidian,
   so a list of wikilinks there (`- "[[notes/Paper|Paper]]"`) shows as links
