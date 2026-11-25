@@ -21,10 +21,11 @@ export function noteReference(
 
 /**
  * How a reference names a note outside the one workspace folder: a local file
- * by its absolute path as written, `/notes/赠礼.md`, which agents read as it
- * stands, and anything else by its full URI. A path that would not read back
- * unambiguously (whitespace, `#`, `%`, a drive letter, control characters)
- * keeps the URI, `file:///My%20Notes/a.md`.
+ * by its absolute path as written, `/notes/赠礼.md` or `/My Notes/a.md`, which
+ * agents read as it stands (as they read a workspace-relative path with
+ * spaces), and anything else by its full URI. A path that would not read back
+ * unambiguously (a tab or line break, `#`, `%`, a drive letter, control
+ * characters) keeps the URI, `file:///a%23b.md`.
  */
 export function noteLocation(uri: string): string {
   // A local file only: `file:///…` with no host, query or fragment.
@@ -39,7 +40,9 @@ export function noteLocation(uri: string): string {
     return uri;
   }
   const isUnclear = (character: string): boolean =>
-    /[\s#%]/u.test(character) ||
+    // A space reads as part of the path; other whitespace would break the line.
+    (character !== " " && /\s/u.test(character)) ||
+    /[#%]/u.test(character) ||
     character.charCodeAt(0) < 0x20 ||
     character.charCodeAt(0) === 0x7f;
   return !path.startsWith("/") ||
