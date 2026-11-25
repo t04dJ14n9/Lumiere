@@ -1,0 +1,10 @@
+{
+  "name": "@workshop/l10n",
+  "version": "0.0.0",
+  "private": true,
+  "description": "Lumiere's translated text: `t` and the bundle each webview page carries, in VS Code's display language.",
+  "type": "module",
+  "exports": {
+    ".": "./src/l10n.ts"
+  }
+}

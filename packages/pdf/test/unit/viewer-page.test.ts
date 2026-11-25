@@ -26,7 +26,9 @@ test("the viewer page loads its files with the nonce, and nothing else runs", ()
   );
   assert.match(html, /data-toolbar="chrome" data-dock="bottom"/);
   assert.equal(html.match(/<script/g)?.length, 1);
-  assert.doesNotMatch(html, /<meta name="(?!viewport)/);
+  // Besides the viewport, only the translations (VS Code's display language).
+  assert.doesNotMatch(html, /<meta name="(?!viewport|lumiere-l10n)/);
+  assert.match(html, /<meta name="lumiere-l10n" content="/);
 });
 
 test("a page of its own adds scripts before the viewer, and named values, escaped", () => {

@@ -6,11 +6,13 @@
  */
 import { readFileSync, writeFileSync } from "node:fs";
 import { contributions as markdownContributions } from "../packages/markdown/scripts/contributions";
+import { externalize } from "./manifest-nls";
 
 type Contributes = Record<string, unknown>;
 
 const manifestFile = new URL("../package.json", import.meta.url);
 const pdfFile = new URL("../packages/pdf/contributes.json", import.meta.url);
+const nlsFile = new URL("../package.nls.json", import.meta.url);
 
 /** Lists concatenate; menus and views concatenate per location; settings stay separate sections. */
 export function mergeContributions(...products: Contributes[]): Contributes {
@@ -44,20 +46,27 @@ function mergeEntry(key: string, current: unknown, next: unknown): unknown {
 
 async function main(): Promise<void> {
   const manifest = JSON.parse(readFileSync(manifestFile, "utf8"));
-  const generated = mergeContributions(
-    await markdownContributions(),
-    JSON.parse(readFileSync(pdfFile, "utf8")) as Contributes,
+  const { contributes, nls } = externalize(
+    mergeContributions(
+      await markdownContributions(),
+      JSON.parse(readFileSync(pdfFile, "utf8")) as Contributes,
+    ),
   );
+  const nlsText = JSON.stringify(nls, null, 2) + "\n";
   if (process.argv.includes("--check")) {
-    if (JSON.stringify(manifest.contributes) !== JSON.stringify(generated)) {
+    const stale =
+      JSON.stringify(manifest.contributes) !== JSON.stringify(contributes) ||
+      readFileSync(nlsFile, "utf8") !== nlsText;
+    if (stale) {
       throw new Error(
-        "package.json contributes are stale: run pnpm contributions",
+        "package.json contributes or package.nls.json are stale: run pnpm contributions",
       );
     }
     return;
   }
-  manifest.contributes = generated;
+  manifest.contributes = contributes;
   writeFileSync(manifestFile, JSON.stringify(manifest, null, 2) + "\n");
+  writeFileSync(nlsFile, nlsText);
 }
 
 if (process.argv[1]?.endsWith("contributions.ts")) {

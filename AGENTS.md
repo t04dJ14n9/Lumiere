@@ -56,6 +56,14 @@ If the task is a user / third-party custom plugin, read
 - Keep the Copy Link for Agent reference wording compatible with LLM Wiki
   (`@path#start-end`). What both products hand to agents (the handoff text,
   the IDE context packet) is defined once, in `packages/agents`.
+- User-facing text follows VS Code's display language. Write it with `t()`
+  from `@workshop/l10n` (English text as the key, `{0}` placeholders, whole
+  sentences), called where the text is shown, never in a module-level table.
+  Manifest text comes from `package.nls.json` (`pnpm contributions`). Add each
+  new message's translation to `l10n/<language>/<area>.json` (`manifest.json`
+  for the manifest); `pnpm l10n --check` fails on a missing one. Text agents
+  or files read (MCP tool text, saved data, logs, command and setting IDs)
+  stays English.
 - Obsidian is a behaviour reference only. Never copy its code, CSS or assets.
   Compare in a disposable vault, never the owner's.
 - Read the source from `~/Code/human-learning` at commit `ff3a902e`; never

@@ -13,6 +13,7 @@ import { EmptyMessage, SectionHeader } from "./section-header";
 import type { SidePanelJump } from "./side-panel";
 import { Tree, type TreeNode } from "./tree";
 import { useQuotedText } from "./use-quoted-text";
+import { t } from "@workshop/l10n";
 
 interface MarkRow extends TreeNode {
   mark: AnnotationRow;
@@ -49,16 +50,16 @@ export function AnnotationsTab({
   );
   return (
     <>
-      <SectionHeader title="Annotations" count={rows.length} />
+      <SectionHeader title={t("Annotations")} count={rows.length} />
       {rows.length === 0 ? (
         <EmptyMessage>
-          <p>This PDF has no annotations.</p>
-          <p>Select text and right-click to highlight it.</p>
+          <p>{t("This PDF has no annotations.")}</p>
+          <p>{t("Select text and right-click to highlight it.")}</p>
         </EmptyMessage>
       ) : (
         <Tree
           kind="list"
-          label="Annotations"
+          label={t("Annotations")}
           rows={rows}
           selectedId={selected}
           onOpen={open}
@@ -132,7 +133,7 @@ function MarkLabel({ row }: { row: MarkRow }): React.JSX.Element {
           {shortCreated(mark.createdAt, new Date())}
         </span>
       )}
-      <span className="sp-page">p. {mark.page}</span>
+      <span className="sp-page">{t("p. {0}", mark.page)}</span>
     </>
   );
 }

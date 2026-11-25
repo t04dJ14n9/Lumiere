@@ -5,6 +5,7 @@ import { useBookmarks } from "./bookmarks-state";
 import { ActionButton, EmptyMessage, SectionHeader } from "./section-header";
 import type { SidePanelJump } from "./side-panel";
 import { Tree, type TreeNode } from "./tree";
+import { t } from "@workshop/l10n";
 
 interface BookmarkRow extends TreeNode {
   bookmark: Bookmark;
@@ -40,15 +41,19 @@ export function BookmarksTab({
   );
   return (
     <>
-      <SectionHeader title="Bookmarks" count={items.length}>
-        <ActionButton icon="add" label="Add Bookmark" onClick={addBookmark} />
+      <SectionHeader title={t("Bookmarks")} count={items.length}>
+        <ActionButton
+          icon="add"
+          label={t("Add Bookmark")}
+          onClick={addBookmark}
+        />
       </SectionHeader>
       {rows.length === 0 ? (
         <EmptyBookmarks problem={problem} />
       ) : (
         <Tree
           kind="list"
-          label="Bookmarks"
+          label={t("Bookmarks")}
           rows={rows}
           selectedId={selected}
           onOpen={open}
@@ -108,12 +113,12 @@ function BookmarkLabel({
       <span className="sp-row-actions">
         <RowAction
           icon="edit"
-          label="Rename Bookmark"
+          label={t("Rename Bookmark")}
           act={{ action: "rename", id: bookmark.id }}
         />
         <RowAction
           icon="trash"
-          label="Delete Bookmark"
+          label={t("Delete Bookmark")}
           act={{ action: "delete", id: bookmark.id }}
         />
       </span>
@@ -158,7 +163,7 @@ function EmptyBookmarks({
   }
   return (
     <EmptyMessage>
-      <p>You have not added any bookmarks to this PDF.</p>
+      <p>{t("You have not added any bookmarks to this PDF.")}</p>
       <button type="button" className="sp-button" onClick={addBookmark}>
         Add Bookmark
       </button>

@@ -4,7 +4,8 @@
  * and the services every plugin may inject from the root. Each product adds
  * its own plugins; deactivation stops them all, last started first.
  */
-import { window, workspace, type ExtensionContext } from "vscode";
+import { env, l10n, window, workspace, type ExtensionContext } from "vscode";
+import { configureL10n } from "@workshop/l10n";
 import { createRoot, type RootContext } from "@workshop/core";
 import {
   outputLogger,
@@ -21,6 +22,9 @@ export async function activate(
   context: ExtensionContext,
 ): Promise<MarkdownWorkshopApi> {
   const started = performance.now();
+  // VS Code's display language: its bundle for Lumiere's own text, shared
+  // with every module and handed to each webview page.
+  configureL10n(l10n.bundle, env.language);
   const channel = window.createOutputChannel("Lumiere", { log: true });
   context.subscriptions.push(channel);
   const debugLogging = () =>

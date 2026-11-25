@@ -10,6 +10,7 @@ import { ActionButton, EmptyMessage, SectionHeader } from "./section-header";
 import { Tree } from "./tree";
 import { useFollowedOutline } from "./use-followed-outline";
 import type { SidePanelJump } from "./side-panel";
+import { t } from "@workshop/l10n";
 
 /**
  * The PDF's own outline as a tree. A click goes to the bookmark's page and
@@ -29,28 +30,28 @@ export function OutlineTab({
   const tree = useOutlineTree(items, jumpTo);
   return (
     <>
-      <SectionHeader title="Outline">
+      <SectionHeader title={t("Outline")}>
         <ActionButton
           icon="expand-all"
-          label="Expand All"
+          label={t("Expand All")}
           onClick={tree.expandAll}
         />
         <ActionButton
           icon="collapse-all"
-          label="Collapse All"
+          label={t("Collapse All")}
           onClick={tree.collapseAll}
         />
       </SectionHeader>
       {items === undefined || items.length === 0 ? (
         <EmptyMessage>
           {items === undefined
-            ? "Reading the outline…"
-            : "This PDF has no outline."}
+            ? t("Reading the outline…")
+            : t("This PDF has no outline.")}
         </EmptyMessage>
       ) : (
         <Tree
           kind="tree"
-          label="Outline"
+          label={t("Outline")}
           rows={tree.rows}
           selectedId={tree.selectedId}
           reveal={tree.reveal}
@@ -124,7 +125,7 @@ function OutlineLabel({ item }: { item: OutlineItem }): React.JSX.Element {
         {item.title}
       </span>
       {item.page !== undefined && (
-        <span className="sp-page">p. {item.page}</span>
+        <span className="sp-page">{t("p. {0}", item.page)}</span>
       )}
     </>
   );

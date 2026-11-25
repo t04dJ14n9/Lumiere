@@ -13,6 +13,7 @@ import { chooseSidePanel, useSidePanelState } from "./state";
 import { TabStrip, tabId, tabPanelId } from "./tab-strip";
 import { ThumbnailsTab } from "./thumbnails-tab";
 import { useViewerWidth } from "./viewer-width";
+import { t } from "@workshop/l10n";
 
 /** Go to a place in the PDF as a deliberate jump, which Back returns from. */
 export type SidePanelJump = (
@@ -48,7 +49,11 @@ export function SidePanel(props: SidePanelProps): React.JSX.Element | null {
   // and only a drag changes it.
   const width = clampSidePanelWidth(state.width, viewerWidth);
   return (
-    <aside className="side-panel" style={{ width }} aria-label="Side panel">
+    <aside
+      className="side-panel"
+      style={{ width }}
+      aria-label={t("Side panel")}
+    >
       <TabStrip
         tab={state.tab}
         onSelect={(tab) => chooseSidePanel({ tab })}

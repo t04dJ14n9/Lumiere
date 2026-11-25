@@ -52,6 +52,15 @@ const failures = [
       file.replace("packages/scroll/", ""),
     ),
   ]),
+  run("packages/l10n", "pnpm", [
+    "exec",
+    "tsx",
+    "--test",
+    ...options,
+    ...testFiles("packages/l10n/test").map((file) =>
+      file.replace("packages/l10n/", ""),
+    ),
+  ]),
   run("packages/markdown", "node", ["scripts/test.mjs"]),
   run("packages/pdf", "pnpm", ["test"]),
 ].filter((status) => status !== 0);

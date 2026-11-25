@@ -4,6 +4,7 @@ import {
   MAX_SIDE_PANEL_WIDTH,
   MIN_SIDE_PANEL_WIDTH,
 } from "../../shared/side-panel";
+import { t } from "@workshop/l10n";
 
 /** A key press moves the sash this far; Shift moves it further. */
 const KEY_STEP = 16;
@@ -44,7 +45,7 @@ export function Sash({
       className="sp-sash"
       role="separator"
       aria-orientation="vertical"
-      aria-label="Resize Side Panel"
+      aria-label={t("Resize Side Panel")}
       aria-valuenow={width}
       aria-valuemin={MIN_SIDE_PANEL_WIDTH}
       aria-valuemax={MAX_SIDE_PANEL_WIDTH}
