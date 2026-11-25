@@ -1,11 +1,15 @@
 import React, { useRef } from "react";
 import { SIDE_PANEL_TABS, type SidePanelTab } from "../../shared/side-panel";
+import { t } from "@workshop/l10n";
 
-const TABS: Readonly<Record<SidePanelTab, { label: string; icon: string }>> = {
-  thumbnails: { label: "Thumbnails", icon: "file-media" },
-  outline: { label: "Outline", icon: "list-tree" },
-  bookmarks: { label: "Bookmarks", icon: "bookmark" },
-  annotations: { label: "Annotations", icon: "note" },
+/** Labels are functions: translated when shown, not when the module loads. */
+const TABS: Readonly<
+  Record<SidePanelTab, { label: () => string; icon: string }>
+> = {
+  thumbnails: { label: () => t("Thumbnails"), icon: "file-media" },
+  outline: { label: () => t("Outline"), icon: "list-tree" },
+  bookmarks: { label: () => t("Bookmarks"), icon: "bookmark" },
+  annotations: { label: () => t("Annotations"), icon: "note" },
 };
 
 export function tabId(tab: SidePanelTab): string {
@@ -50,7 +54,7 @@ export function TabStrip({
       <div
         className="sp-tabs"
         role="tablist"
-        aria-label="Side panel"
+        aria-label={t("Side panel")}
         onKeyDown={move}
       >
         {SIDE_PANEL_TABS.map((name) => (
@@ -70,8 +74,8 @@ export function TabStrip({
       <button
         type="button"
         className="sp-action"
-        title="Hide Side Panel"
-        aria-label="Hide Side Panel"
+        title={t("Hide Side Panel")}
+        aria-label={t("Hide Side Panel")}
         onClick={onClose}
       >
         <i className="codicon codicon-close" aria-hidden="true" />
@@ -118,8 +122,8 @@ function TabButton({
       className="sp-tab"
       aria-selected={isSelected}
       aria-controls={tabPanelId(name)}
-      aria-label={TABS[name].label}
-      title={TABS[name].label}
+      aria-label={TABS[name].label()}
+      title={TABS[name].label()}
       tabIndex={isSelected ? 0 : -1}
       onClick={() => onSelect(name)}
     >

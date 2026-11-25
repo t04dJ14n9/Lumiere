@@ -1,3 +1,4 @@
+import { l10nLanguage, l10nMeta } from "@workshop/l10n";
 import type { PanelShell } from "../../shared/host";
 import { scriptNonce } from "../../shared/nonce";
 import { SNAPSHOT_CLASS } from "./snapshot-layout";
@@ -42,7 +43,7 @@ export function webviewHTML(panel: PanelShell, snapshot = ""): string {
   const script = snapshot
     ? `<script nonce="${nonce}">${importEditor(entry)}</script>`
     : `<script type="module" nonce="${nonce}" src="${escape(entry)}"></script>`;
-  return `<!doctype html><html><head><meta charset="UTF-8"><meta http-equiv="Content-Security-Policy" content="${escape(policy)}"><meta name="viewport" content="width=device-width,initial-scale=1"><link rel="stylesheet" href="${escape(panel.asset("webview/editor.css"))}">${preloads(panel, nonce)}<style>html,body,#app{height:100%;margin:0;background:var(--vscode-editor-background,transparent)}</style></head><body><main id="app" data-pdfium-wasm="${escape(panel.pdfEngine ?? panel.asset("webview/embedpdf.wasm"))}">${snapshot}</main>${script}</body></html>`;
+  return `<!doctype html><html lang="${escape(l10nLanguage())}"><head><meta charset="UTF-8">${l10nMeta()}<meta http-equiv="Content-Security-Policy" content="${escape(policy)}"><meta name="viewport" content="width=device-width,initial-scale=1"><link rel="stylesheet" href="${escape(panel.asset("webview/editor.css"))}">${preloads(panel, nonce)}<style>html,body,#app{height:100%;margin:0;background:var(--vscode-editor-background,transparent)}</style></head><body><main id="app" data-pdfium-wasm="${escape(panel.pdfEngine ?? panel.asset("webview/embedpdf.wasm"))}">${snapshot}</main>${script}</body></html>`;
 }
 
 /**

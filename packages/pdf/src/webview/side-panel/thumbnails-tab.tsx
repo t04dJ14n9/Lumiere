@@ -13,6 +13,7 @@ import { SectionHeader } from "./section-header";
 import type { SidePanelJump } from "./side-panel";
 import { ThumbnailImages } from "./thumbnail-images";
 import { Tree, type TreeNode } from "./tree";
+import { t } from "@workshop/l10n";
 
 interface PageRow extends TreeNode {
   /** 1-based. */
@@ -56,7 +57,7 @@ export function ThumbnailsTab({
         expanded: false,
         position: index + 1,
         siblings: pages.length,
-        ariaLabel: `Page ${index + 1}`,
+        ariaLabel: t("Page {0}", index + 1),
       })),
     [pages, layout, cellWidth],
   );
@@ -67,10 +68,10 @@ export function ThumbnailsTab({
   const reveal = useMemo(() => ({ id: String(currentPage) }), [currentPage]);
   return (
     <>
-      <SectionHeader title="Thumbnails" count={pages.length} />
+      <SectionHeader title={t("Thumbnails")} count={pages.length} />
       <Tree
         kind="list"
-        label="Thumbnails"
+        label={t("Thumbnails")}
         className="sp-thumbnails"
         rows={rows}
         offsets={layout.offsets}

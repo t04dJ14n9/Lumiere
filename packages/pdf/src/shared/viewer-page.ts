@@ -1,3 +1,4 @@
+import { l10nLanguage, l10nMeta } from "@workshop/l10n";
 import {
   DEFAULT_FLOATING_DOCK,
   type ToolbarSettings,
@@ -62,9 +63,10 @@ export function viewerPageHtml(parts: ViewerPageParts): string {
     )
     .join("");
   return `<!DOCTYPE html>
-<html lang="en">
+<html lang="${attribute(l10nLanguage())}">
 <head>
   <meta charset="UTF-8">
+  ${l10nMeta()}
   <meta http-equiv="Content-Security-Policy" content="${csp}">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">${meta}
   <link rel="stylesheet" href="${asset("viewer.css")}">

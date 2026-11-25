@@ -3,25 +3,29 @@
  * order, with the icon, colour and note it shows. Pure; the webview reads the
  * marks from EmbedPDF's annotation plugin and the quoted text from the page.
  */
+import { t } from "@workshop/l10n";
 
-/** What a mark is called, and the codicon that stands for it. */
-const KINDS: Readonly<Record<string, { label: string; icon: string }>> = {
-  highlight: { label: "Highlight", icon: "edit" },
-  underline: { label: "Underline", icon: "text-size" },
-  strikeout: { label: "Strikeout", icon: "strikethrough" },
-  squiggly: { label: "Squiggly", icon: "pulse" },
-  text: { label: "Note", icon: "note" },
-  "free-text": { label: "Text", icon: "symbol-string" },
-  ink: { label: "Drawing", icon: "pencil" },
-  line: { label: "Line", icon: "dash" },
-  square: { label: "Rectangle", icon: "primitive-square" },
-  circle: { label: "Ellipse", icon: "circle-large-outline" },
-  polygon: { label: "Polygon", icon: "symbol-misc" },
-  polyline: { label: "Polyline", icon: "symbol-misc" },
-  stamp: { label: "Stamp", icon: "verified" },
-  caret: { label: "Caret", icon: "triangle-up" },
-  "file-attachment": { label: "Attachment", icon: "attach" },
-  redact: { label: "Redaction", icon: "eye-closed" },
+/**
+ * What a mark is called, and the codicon that stands for it. Labels are
+ * functions: translated when shown, not when the module loads.
+ */
+const KINDS: Readonly<Record<string, { label: () => string; icon: string }>> = {
+  highlight: { label: () => t("Highlight"), icon: "edit" },
+  underline: { label: () => t("Underline"), icon: "text-size" },
+  strikeout: { label: () => t("Strikeout"), icon: "strikethrough" },
+  squiggly: { label: () => t("Squiggly"), icon: "pulse" },
+  text: { label: () => t("Note"), icon: "note" },
+  "free-text": { label: () => t("Text"), icon: "symbol-string" },
+  ink: { label: () => t("Drawing"), icon: "pencil" },
+  line: { label: () => t("Line"), icon: "dash" },
+  square: { label: () => t("Rectangle"), icon: "primitive-square" },
+  circle: { label: () => t("Ellipse"), icon: "circle-large-outline" },
+  polygon: { label: () => t("Polygon"), icon: "symbol-misc" },
+  polyline: { label: () => t("Polyline"), icon: "symbol-misc" },
+  stamp: { label: () => t("Stamp"), icon: "verified" },
+  caret: { label: () => t("Caret"), icon: "triangle-up" },
+  "file-attachment": { label: () => t("Attachment"), icon: "attach" },
+  redact: { label: () => t("Redaction"), icon: "eye-closed" },
 };
 
 /** The marks of a text a reader quotes: the text under them is what they mark. */
@@ -78,7 +82,7 @@ export function annotationRows(marks: readonly MarkInput[]): AnnotationRow[] {
       return {
         key: mark.key,
         subtype: mark.subtype,
-        label: kind.label,
+        label: kind.label(),
         icon: kind.icon,
         ...(color ? { color } : {}),
         page: mark.page,
@@ -130,7 +134,7 @@ export function createdLine(iso: string, locale?: string): string {
     dateStyle: "medium",
     timeStyle: "short",
   });
-  return `Created ${when}`;
+  return t("Created {0}", when);
 }
 
 function compare(a: string, b: string): number {
@@ -182,7 +186,7 @@ export function rowTooltip(
 ): string {
   const note = typeof contents === "string" ? contents.trim() : "";
   const created = row.createdAt ? createdLine(row.createdAt, locale) : "";
-  return [`${row.label}, page ${row.page}`, created, quote, note]
+  return [t("{0}, page {1}", row.label, row.page), created, quote, note]
     .filter((part) => part)
     .join("\n");
 }

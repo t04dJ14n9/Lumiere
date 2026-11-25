@@ -29,6 +29,11 @@ function buildProduct(name) {
 }
 
 await rm(dist, { recursive: true, force: true });
+// The translations VS Code loads, built from l10n/<language>/ (scripts/l10n.ts).
+execFileSync(process.execPath, ["--import", "tsx", "scripts/l10n.ts"], {
+  cwd: root,
+  stdio: "inherit",
+});
 for (const name of products) {
   buildProduct(name);
 }

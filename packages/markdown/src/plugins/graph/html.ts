@@ -1,3 +1,4 @@
+import { l10nLanguage, l10nMeta } from "@workshop/l10n";
 import { scriptNonce } from "../../shared/nonce";
 
 const escape = (value: string) =>
@@ -23,5 +24,5 @@ export function graphPanelHtml(assets: {
     `font-src ${assets.cspSource}`,
     `connect-src ${assets.cspSource}`,
   ].join("; ");
-  return `<!doctype html><html><head><meta charset="UTF-8"><meta http-equiv="Content-Security-Policy" content="${escape(policy)}"><link rel="stylesheet" href="${escape(assets.style)}"></head><body data-worker="${escape(assets.worker)}"><main id="app"></main><script type="module" nonce="${nonce}" src="${escape(assets.script)}"></script></body></html>`;
+  return `<!doctype html><html lang="${escape(l10nLanguage())}"><head><meta charset="UTF-8">${l10nMeta()}<meta http-equiv="Content-Security-Policy" content="${escape(policy)}"><link rel="stylesheet" href="${escape(assets.style)}"></head><body data-worker="${escape(assets.worker)}"><main id="app"></main><script type="module" nonce="${nonce}" src="${escape(assets.script)}"></script></body></html>`;
 }

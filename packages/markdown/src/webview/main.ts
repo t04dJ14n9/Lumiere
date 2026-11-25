@@ -1,3 +1,4 @@
+import "./l10n-init";
 import { webviewLogging } from "../plugins/editor/logging";
 import { protocol } from "../plugins/editor/protocol";
 import { webviewTransport } from "./transport";

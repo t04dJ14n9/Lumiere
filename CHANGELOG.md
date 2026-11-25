@@ -1,5 +1,12 @@
 # Changelog
 
+## Unreleased
+
+- Lumiere follows VS Code's display language. Simplified Chinese (zh-cn)
+  is the first translation: every command, setting description and view
+  name, and the PDF viewer's side panel; the rest of Lumiere's text
+  follows.
+
 ## 0.1.31 (2026-11-25)
 
 - Markdown: in Vim's visual mode the block cursor holds still, and the

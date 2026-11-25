@@ -9,6 +9,7 @@
  *   engine.tsx           PDFium startup (worker, with a main-thread fallback)
  *   viewer.tsx           toolbar, search and pages
  */
+import "./l10n-init";
 import React from "react";
 import { flushSync } from "react-dom";
 import { createRoot } from "react-dom/client";
