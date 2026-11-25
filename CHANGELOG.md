@@ -1,5 +1,12 @@
 # Changelog
 
+## Unreleased
+
+- Lumiere installs on VS Code 1.101 and later (it required 1.128), so
+  editors built on an older VS Code, such as CodeBuddy (1.106), can run it.
+  1.101 is the first release with the MCP server API the PDF agent bridge
+  registers through.
+
 ## 0.1.34 (2026-11-25)
 
 - Markdown: the `sources` property is typed like any other, as in Obsidian,
