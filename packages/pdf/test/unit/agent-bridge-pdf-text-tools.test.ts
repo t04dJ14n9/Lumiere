@@ -858,3 +858,22 @@ test("a PDF that is not open is hashed to find its marks' file", async () => {
   assert.equal(answer.sha256, sha);
   assert.equal(answer.count, 1);
 });
+
+test("a listed mark says when it was made, when its file records it", () => {
+  const [dated, undated] = marksOf(
+    marks([
+      highlight(1, 5, box(72, 50, 100, 12), {
+        createdAt: "2026-11-20T07:29:25Z",
+      }),
+      highlight(2, 5, box(72, 200, 100, 12), { createdAt: null }),
+    ]),
+  );
+  assert.equal(
+    markEntry(dated!, undefined, "papers/a.pdf").created,
+    "2026-11-20T07:29:25Z",
+  );
+  assert.equal(
+    "created" in markEntry(undated!, undefined, "papers/a.pdf"),
+    false,
+  );
+});

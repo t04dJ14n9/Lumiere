@@ -194,6 +194,10 @@ export function caretAppearance(
       "var(--vscode-editor-foreground, var(--vscode-editorCursor-foreground, #222))";
     variables["--caret-background"] = "var(--vscode-editor-background, #fff)";
   }
+  if (mode === "visual") {
+    // The cursor inside a selection holds still, as in VS Code's own visual mode.
+    variables["--caret-animation"] = "none";
+  }
   return {
     style,
     // VSCodeVim draws a thin end caret in visual; Obsidian/CM fat cursor does not.

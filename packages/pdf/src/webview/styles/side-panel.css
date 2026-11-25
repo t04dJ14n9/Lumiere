@@ -307,8 +307,17 @@
 }
 
 .sp-scroll:focus .sp-row.selected .sp-description,
+.sp-scroll:focus .sp-row.selected .sp-date,
 .sp-scroll:focus .sp-row.selected .sp-page {
   color: inherit;
+}
+
+/* When an annotation was made, before its page. */
+.sp-date {
+  flex: none;
+  margin-left: 8px;
+  color: var(--vscode-descriptionForeground, #ccccccb3);
+  font-size: 0.9em;
 }
 
 .sp-page {

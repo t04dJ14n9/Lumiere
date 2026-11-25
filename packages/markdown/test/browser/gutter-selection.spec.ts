@@ -204,8 +204,10 @@ for (const vim of [false, true]) {
       fenceBox,
     );
     expect(onFence).toBe(0);
-    // The empty line shows a thin stub, not a full-width band. The layer
-    // draws after the next measure, so wait for it.
+    // The empty line shows a thin stub, not a full-width band; in Vim the
+    // line break is the block cursor's character, so the cursor shows it
+    // and nothing is tinted. The layer draws after the next measure, so
+    // wait for it.
     const stubs = () =>
       page.evaluate(() =>
         [
@@ -214,8 +216,10 @@ for (const vim of [false, true]) {
           ),
         ].map((element) => element.getBoundingClientRect().width),
       );
-    await expect.poll(async () => (await stubs()).length).toBe(1);
-    expect((await stubs())[0]).toBeLessThanOrEqual(5);
+    await expect.poll(async () => (await stubs()).length).toBe(vim ? 0 : 1);
+    if (!vim) {
+      expect((await stubs())[0]).toBeLessThanOrEqual(5);
+    }
     if (shots) {
       await page.screenshot({
         path: `${shots}/fence${vim ? "-vim" : ""}.png`,

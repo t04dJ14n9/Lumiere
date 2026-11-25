@@ -1,6 +1,9 @@
-import type { Extension, SelectionRange } from "@codemirror/state";
+import type { Extension } from "@codemirror/state";
 import { BlockType, RectangleMarker, layer } from "@codemirror/view";
 import type { BlockInfo, EditorView, ViewUpdate } from "@codemirror/view";
+import { caretModeOf } from "./caret-view";
+import { tintedSpans, type Span } from "./cursor-cell";
+import { paintsBox, spacing, widgetElement } from "./block-geometry";
 
 /**
  * The selection drawn as Obsidian's native selection looks: on each line it
@@ -221,9 +224,11 @@ function visualRows(view: EditorView, block: BlockInfo): Row[] {
   // The line's own box, not the height map: CodeMirror's block heights can
   // still be estimates when the layer measures, which stretched the last
   // band past the line.
-  const box = lineElement(view, block)?.getBoundingClientRect();
-  const top = box ? box.top : block.top + view.documentTop;
-  const bottom = box ? box.bottom : top + block.height;
+  const line = lineElement(view, block);
+  const box = line?.getBoundingClientRect();
+  const pad = line ? spacing(line) : { top: 0, bottom: 0 };
+  const top = box ? box.top + pad.top : block.top + view.documentTop;
+  const bottom = box ? box.bottom - pad.bottom : top + block.height;
   const range = domRange(view, block.from, block.to);
   const boxes = range ? flowRects(range).filter((r) => r.height > 0) : [];
   const rows: { top: number; bottom: number }[] = [];
@@ -326,28 +331,92 @@ function textMarkers(
   return out;
 }
 
+/**
+ * Where a rendered block shows something: the box of the first element on
+ * the way down that paints one (a callout, a table's cells), or the text and
+ * atomic content (a formula, an image) of elements that don't. Empty layout
+ * space around them (a narrow table's row, a centred formula's margins) is
+ * not part of it.
+ */
+function visibleBoxes(
+  element: Element,
+  cache: Map<Element, boolean>,
+): DOMRect[] {
+  if (outOfFlow(element, cache)) {
+    return [];
+  }
+  const style = getComputedStyle(element);
+  // Controls that show on hover (a table's add-row button) take no room.
+  if (style.visibility === "hidden" || style.opacity === "0") {
+    return [];
+  }
+  // The block itself is a widget (contenteditable=false), so only replaced
+  // content and formulas count as one box here.
+  const replaced =
+    ATOMIC_TAGS.has(element.localName) ||
+    element.classList.contains("MathJax") ||
+    element.classList.contains("katex");
+  if (replaced || paintsBox(style)) {
+    return [...element.getClientRects()];
+  }
+  const boxes: DOMRect[] = [];
+  const range = element.ownerDocument.createRange();
+  for (let child = element.firstChild; child; child = child.nextSibling) {
+    if (child instanceof Element) {
+      boxes.push(...visibleBoxes(child, cache));
+    } else if (child.nodeType === Node.TEXT_NODE && child.textContent?.trim()) {
+      range.selectNodeContents(child);
+      boxes.push(...range.getClientRects());
+    }
+  }
+  return boxes.filter((box) => box.width > 0 && box.height > 0);
+}
+
+/** A rendered block in the selection, tinted where it shows something. */
+function widgetMarker(
+  view: EditorView,
+  block: BlockInfo,
+  { origin, content }: Geometry,
+): RectangleMarker {
+  const element = widgetElement(view, block);
+  const boxes = element ? visibleBoxes(element, new Map()) : [];
+  const top = block.top + view.documentTop;
+  if (boxes.length === 0) {
+    return new RectangleMarker(
+      CLASS,
+      content.left - origin.left,
+      top - origin.top,
+      content.width,
+      block.height,
+    );
+  }
+  const left = Math.min(...boxes.map((box) => box.left));
+  const right = Math.max(...boxes.map((box) => box.right));
+  const upper = Math.min(...boxes.map((box) => box.top));
+  const lower = Math.max(...boxes.map((box) => box.bottom));
+  return new RectangleMarker(
+    CLASS,
+    left - origin.left,
+    upper - origin.top,
+    right - left,
+    lower - upper,
+  );
+}
+
 function blockMarkers(
   view: EditorView,
-  range: SelectionRange,
+  range: Span,
   block: BlockInfo,
   geometry: Geometry,
 ): RectangleMarker[] {
-  const { origin, content } = geometry;
   if (block.type !== BlockType.Text) {
     // A rendered block (table, HTML, math, embed) inside the selection.
     if (range.from > block.from || range.to < block.to) {
       return [];
     }
-    return [
-      new RectangleMarker(
-        CLASS,
-        content.left - origin.left,
-        block.top + view.documentTop - origin.top,
-        content.width,
-        block.height,
-      ),
-    ];
+    return [widgetMarker(view, block, geometry)];
   }
+  const { origin } = geometry;
   const markers: RectangleMarker[] = [];
   const rows = visualRows(view, block);
   const from = Math.max(range.from, block.from);
@@ -383,22 +452,32 @@ export function selectionMarkers(view: EditorView): RectangleMarker[] {
     origin: base(view),
     content: view.contentDOM.getBoundingClientRect(),
   };
+  const visual = caretModeOf(view) === "visual";
   const out: RectangleMarker[] = [];
-  for (const range of view.state.selection.ranges) {
-    if (range.empty) {
+  for (const selected of view.state.selection.ranges) {
+    for (const range of tintedSpans(view.state.doc, selected, visual)) {
+      out.push(...spanMarkers(view, range, geometry));
+    }
+  }
+  return out;
+}
+
+function spanMarkers(
+  view: EditorView,
+  range: Span,
+  geometry: Geometry,
+): RectangleMarker[] {
+  const out: RectangleMarker[] = [];
+  for (const block of view.viewportLineBlocks) {
+    if (block.to < range.from || block.from > range.to) {
       continue;
     }
-    for (const block of view.viewportLineBlocks) {
-      if (block.to < range.from || block.from > range.to) {
+    const parts = Array.isArray(block.type) ? block.type : [block];
+    for (const part of parts) {
+      if (part.to < range.from || part.from > range.to) {
         continue;
       }
-      const parts = Array.isArray(block.type) ? block.type : [block];
-      for (const part of parts) {
-        if (part.to < range.from || part.from > range.to) {
-          continue;
-        }
-        out.push(...blockMarkers(view, range, part, geometry));
-      }
+      out.push(...blockMarkers(view, range, part, geometry));
     }
   }
   return out;

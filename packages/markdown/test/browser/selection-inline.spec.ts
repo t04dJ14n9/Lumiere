@@ -143,7 +143,7 @@ for (const [name, text] of Object.entries(LINES)) {
   });
 }
 
-test("block math: the rendered block is tinted as one box while dragging", async ({
+test("block math: the rendered formula is tinted as one box while dragging", async ({
   page,
 }) => {
   await page.setViewportSize({ width: 900, height: 600 });
@@ -164,14 +164,17 @@ test("block math: the rendered block is tinted as one box while dragging", async
   await page.waitForTimeout(200);
   await expect(math).toBeVisible();
   const result = await math.evaluate((block) => {
-    const box = block.getBoundingClientRect();
+    const outer = block.getBoundingClientRect();
+    // The formula, not the empty width of the block around it.
+    const formula = block.querySelector("mjx-container, .katex, svg") ?? block;
+    const box = formula.getBoundingClientRect();
     const marks = [
       ...document.querySelectorAll(
         ".mw-selection-layer .cm-selectionBackground",
       ),
     ]
       .map((m) => m.getBoundingClientRect())
-      .filter((r) => r.top < box.bottom - 1 && r.bottom > box.top + 1);
+      .filter((r) => r.top < outer.bottom - 1 && r.bottom > outer.top + 1);
     return {
       box: {
         top: box.top,
@@ -187,7 +190,7 @@ test("block math: the rendered block is tinted as one box while dragging", async
       })),
     };
   });
-  // One marker for the block, covering it, not one per glyph.
+  // One marker for the formula, covering it, not one per glyph.
   expect(result.marks).toHaveLength(1);
   const [mark] = result.marks;
   expect(mark!.top).toBeLessThanOrEqual(result.box.top + 1);
