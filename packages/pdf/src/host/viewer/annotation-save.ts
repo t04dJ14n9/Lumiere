@@ -1,4 +1,5 @@
 import { createHash } from "node:crypto";
+import { t } from "@workshop/l10n";
 import type { HostMessage, ViewerMessage } from "../../shared/messages";
 import type { PdfFiles } from "../../shared/host";
 import type { PdfSource } from "./source";
@@ -138,7 +139,9 @@ export class AnnotationSave {
     }
     if (!this.takeRequest(message.load)) {
       this.deps.error(
-        "The PDF viewer sent the PDF to write although it was not asked to; the file is left as it is.",
+        t(
+          "The PDF viewer sent the PDF to write although it was not asked to; the file is left as it is.",
+        ),
       );
       return;
     }
@@ -151,7 +154,7 @@ export class AnnotationSave {
     }
     if (!this.files.writeAtomic) {
       this.dirty = "failed";
-      this.deps.error("This host cannot overwrite PDF files in place.");
+      this.deps.error(t("This host cannot overwrite PDF files in place."));
       this.deps.post({
         type: "annotationSaveResult",
         load: message.load,
@@ -208,7 +211,7 @@ export class AnnotationSave {
     } catch (error) {
       this.dirty = "failed";
       const text = error instanceof Error ? error.message : String(error);
-      this.deps.error(`Could not save PDF annotations: ${text}`);
+      this.deps.error(t("Could not save PDF annotations: {0}", text));
       this.deps.failed(text);
       this.deps.post({
         type: "annotationSaveResult",

@@ -1,3 +1,4 @@
+import { t } from "@workshop/l10n";
 import type { PdfAnnotationFiles, PdfFiles } from "../../shared/host";
 import type { ViewerMessage } from "../../shared/messages";
 import {
@@ -127,7 +128,11 @@ export class AnnotationStore {
       return text;
     } catch (error) {
       this.deps.error(
-        `Could not read the annotations of ${this.files.displayPath(this.fileUri)}: ${String(error)}`,
+        t(
+          "Could not read the annotations of {0}: {1}",
+          this.files.displayPath(this.fileUri),
+          String(error),
+        ),
       );
       return undefined;
     }
@@ -184,7 +189,7 @@ export class AnnotationStore {
       }
     } catch (error) {
       const text = error instanceof Error ? error.message : String(error);
-      this.deps.error(`Could not save PDF annotations: ${text}`);
+      this.deps.error(t("Could not save PDF annotations: {0}", text));
       this.deps.failed(text);
       return;
     }
@@ -273,7 +278,10 @@ export class AnnotationStore {
     }).catch((error: unknown) => {
       // The next save reads and merges the file again; nothing is lost.
       this.deps.error(
-        `Could not read the annotations another window saved: ${String(error)}`,
+        t(
+          "Could not read the annotations another window saved: {0}",
+          String(error),
+        ),
       );
     });
   }
@@ -334,7 +342,9 @@ export class AnnotationStore {
     if (!this.toldUnsupported) {
       this.toldUnsupported = true;
       this.deps.error(
-        "Annotations on this PDF are not kept after it closes: this host has nowhere to store them.",
+        t(
+          "Annotations on this PDF are not kept after it closes: this host has nowhere to store them.",
+        ),
       );
     }
   }

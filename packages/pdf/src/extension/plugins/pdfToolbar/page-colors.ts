@@ -1,4 +1,5 @@
 import * as vscode from "vscode";
+import { t } from "@workshop/l10n";
 import {
   cyclePageColors,
   pageColorsLabel,
@@ -42,7 +43,7 @@ export async function cycleAndPublish(
   await settings.update(KEY, next);
   publishPageColors(panels);
   void vscode.window.setStatusBarMessage(
-    `PDF: page colors ${pageColorsLabel(next)}`,
+    t("PDF: page colors {0}", pageColorsLabel(next)),
     3_000,
   );
 }

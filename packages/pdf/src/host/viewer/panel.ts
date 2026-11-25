@@ -1,3 +1,4 @@
+import { t } from "@workshop/l10n";
 import {
   isCurrentPatch,
   parseViewerMessage,
@@ -149,9 +150,7 @@ export class PdfViewerPanel {
       this.selected,
       this.annotations,
       this.source,
-      {
-        dispose: stopReceiving,
-      },
+      { dispose: stopReceiving },
     );
     webview.setHTML(viewerHtml(webview, options.toolbar));
   }
@@ -366,7 +365,7 @@ export class PdfViewerPanel {
         await this.host.openExternal(message.url);
         break;
       case "error":
-        this.host.error(`PDF viewer: ${message.message}`);
+        this.host.error(t("PDF viewer: {0}", message.message));
         break;
       case "historyCaptured":
       case "historyRestored":

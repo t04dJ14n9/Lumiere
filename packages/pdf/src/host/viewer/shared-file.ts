@@ -1,4 +1,5 @@
 import { createHash } from "node:crypto";
+import { t } from "@workshop/l10n";
 import type { PdfFiles } from "../../shared/host";
 
 /** Let a file write settle before reloading the PDF. */
@@ -117,7 +118,7 @@ export class SharedPdfFile {
         },
       };
     } catch (error) {
-      return { error: `Could not read ${name}: ${String(error)}` };
+      return { error: t("Could not read {0}: {1}", name, String(error)) };
     }
   }
 }
@@ -145,9 +146,17 @@ export function sharedPdfFile(files: PdfFiles, uri: string): SharedPdfFile {
 }
 
 function tooLarge(name: string, limit: number): string {
-  const size =
-    limit % 2 ** 20 === 0 ? `${limit / 2 ** 20} MB` : `${limit} bytes`;
-  return `${name} is larger than ${size}, the most Lumiere PDF opens.`;
+  return limit % 2 ** 20 === 0
+    ? t(
+        "{0} is larger than {1} MB, the most Lumiere PDF opens.",
+        name,
+        limit / 2 ** 20,
+      )
+    : t(
+        "{0} is larger than {1} bytes, the most Lumiere PDF opens.",
+        name,
+        limit,
+      );
 }
 
 async function hashInSlices(bytes: Uint8Array): Promise<string> {

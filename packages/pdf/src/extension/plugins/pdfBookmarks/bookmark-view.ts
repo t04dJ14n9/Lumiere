@@ -1,4 +1,5 @@
 import * as vscode from "vscode";
+import { t } from "@workshop/l10n";
 import {
   bookmarkFileOf,
   type BookmarkFileRef,
@@ -81,13 +82,13 @@ class BookmarkProvider
     );
     // The id keeps the selection on a row when the rows change around it.
     row.id = bookmark.id;
-    row.description = `Page ${bookmark.page}`;
-    row.tooltip = `${bookmark.title} — page ${bookmark.page}`;
+    row.description = t("Page {0}", bookmark.page);
+    row.tooltip = t("{0} — page {1}", bookmark.title, bookmark.page);
     row.iconPath = new vscode.ThemeIcon("bookmark");
     row.contextValue = BOOKMARK_ITEM_CONTEXT;
     row.command = {
       command: BOOKMARK_COMMAND_IDS.goToBookmark,
-      title: "Go to Bookmark",
+      title: t("Go to Bookmark"),
       arguments: [bookmark],
     };
     return row;
