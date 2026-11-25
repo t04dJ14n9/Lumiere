@@ -30,7 +30,13 @@
       "path": "file:///My%20Notes/b.md",
       "startLine": 1,
       "endLine": 2,
-      "text": "@file:///My%20Notes/b.md#1-2"
+      "text": "@/My Notes/b.md#1-2"
+    },
+    {
+      "path": "file:///notes/a%23b.md",
+      "startLine": 1,
+      "endLine": 2,
+      "text": "@file:///notes/a%23b.md#1-2"
     }
   ],
   "notePayloads": [

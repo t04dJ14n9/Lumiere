@@ -8,6 +8,9 @@
   outline, backlinks, search, graph, Git views) and the PDF viewer (toolbar,
   side panel, notes, prompts and messages). Text written into notes and
   what agents read stay English.
+- Copy Link for Agent names a note outside the workspace by its plain path
+  even when the path has spaces, `@/notes/AI 活动/a.md#20-24`, instead of a
+  percent-encoded `file:///` URI.
 
 ## 0.1.31 (2026-11-25)
 
