@@ -1,3 +1,4 @@
+import "../l10n-init";
 import { protocol } from "../../plugins/graph/protocol";
 import { isCurrentGeneration } from "../../plugins/graph/admission";
 import type { GraphSnapshot } from "../../plugins/graph/snapshot";

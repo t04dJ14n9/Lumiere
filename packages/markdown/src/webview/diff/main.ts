@@ -1,3 +1,4 @@
+import "../l10n-init";
 import {
   diffUpdate,
   diffReady,

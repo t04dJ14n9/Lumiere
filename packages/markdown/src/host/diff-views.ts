@@ -1,3 +1,4 @@
+import { l10nLanguage, l10nMeta } from "@workshop/l10n";
 import { diffImageUrl, diffResourceRoots } from "./diff-image-url";
 import {
   diffImageRequest,
@@ -119,7 +120,7 @@ function panelHtml(webview: vscode.Webview, dist: vscode.Uri): string {
   const source = webview.cspSource;
   const policy = `default-src 'none'; script-src 'nonce-${nonce}' ${source}; style-src ${source} 'unsafe-inline'; img-src ${source} data:; font-src ${source} data:;`;
   return [
-    `<!doctype html><html><head><meta charset="UTF-8">`,
+    `<!doctype html><html lang="${escape(l10nLanguage())}"><head><meta charset="UTF-8">${l10nMeta()}`,
     `<meta http-equiv="Content-Security-Policy" content="${escape(policy)}">`,
     `<meta name="viewport" content="width=device-width,initial-scale=1">`,
     `<link rel="stylesheet" href="${asset("webview/editor.css")}">`,

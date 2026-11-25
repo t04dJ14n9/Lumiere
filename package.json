@@ -16,6 +16,7 @@
   },
   "packageManager": "pnpm@10.28.2",
   "main": "./dist/extension.js",
+  "l10n": "./l10n",
   "types": "./dist/markdown/api/types.d.ts",
   "categories": [
     "Other",
@@ -73,7 +74,7 @@
     "customEditors": [
       {
         "viewType": "lumiere.markdown.editor",
-        "displayName": "Lumiere",
+        "displayName": "%customEditor.lumiere.markdown.editor.displayName%",
         "selector": [
           {
             "filenamePattern": "*.md"
@@ -86,7 +87,7 @@
       },
       {
         "viewType": "lumiere.pdf.viewer",
-        "displayName": "Lumiere PDF",
+        "displayName": "%customEditor.lumiere.pdf.viewer.displayName%",
         "selector": [
           {
             "filenamePattern": "*.pdf"
@@ -98,1173 +99,1173 @@
     "commands": [
       {
         "command": "lumiere.markdown.copyLinkForAgent",
-        "title": "Copy link to this",
+        "title": "%command.lumiere.markdown.copyLinkForAgent.title%",
         "category": "Lumiere",
         "icon": "$(comment-discussion)"
       },
       {
         "command": "lumiere.markdown.downloadAttachments",
-        "title": "Download Attachments for Current File",
+        "title": "%command.lumiere.markdown.downloadAttachments.title%",
         "category": "Lumiere"
       },
       {
         "command": "lumiere.markdown.backlinks.sortByAlphabetical",
-        "title": "✓ File name (A to Z)",
+        "title": "%command.lumiere.markdown.backlinks.sortByAlphabetical.title%",
         "category": "Lumiere"
       },
       {
         "command": "lumiere.markdown.backlinks.sortByAlphabeticalReverse",
-        "title": "✓ File name (Z to A)",
+        "title": "%command.lumiere.markdown.backlinks.sortByAlphabeticalReverse.title%",
         "category": "Lumiere"
       },
       {
         "command": "lumiere.markdown.backlinks.sortByModifiedTime",
-        "title": "✓ Modified time (new to old)",
+        "title": "%command.lumiere.markdown.backlinks.sortByModifiedTime.title%",
         "category": "Lumiere"
       },
       {
         "command": "lumiere.markdown.backlinks.sortByModifiedTimeReverse",
-        "title": "✓ Modified time (old to new)",
+        "title": "%command.lumiere.markdown.backlinks.sortByModifiedTimeReverse.title%",
         "category": "Lumiere"
       },
       {
         "command": "lumiere.markdown.backlinks.enableExtraContext",
-        "title": "Show More Context",
+        "title": "%command.lumiere.markdown.backlinks.enableExtraContext.title%",
         "category": "Lumiere"
       },
       {
         "command": "lumiere.markdown.backlinks.disableExtraContext",
-        "title": "✓ Show More Context",
+        "title": "%command.lumiere.markdown.backlinks.disableExtraContext.title%",
         "category": "Lumiere"
       },
       {
         "command": "lumiere.markdown.bridge.copyEnvelope",
-        "title": "Copy Bridge Envelope",
+        "title": "%command.lumiere.markdown.bridge.copyEnvelope.title%",
         "category": "Lumiere"
       },
       {
         "command": "lumiere.markdown.bridge.envelope",
-        "title": "Bridge Envelope",
+        "title": "%command.lumiere.markdown.bridge.envelope.title%",
         "category": "Lumiere"
       },
       {
         "command": "lumiere.markdown.insertCallout",
-        "title": "Insert Callout",
+        "title": "%command.lumiere.markdown.insertCallout.title%",
         "category": "Lumiere"
       },
       {
         "command": "lumiere.markdown.save",
-        "title": "Save",
+        "title": "%command.lumiere.markdown.save.title%",
         "category": "Lumiere"
       },
       {
         "command": "lumiere.markdown.undo",
-        "title": "Undo",
+        "title": "%command.lumiere.markdown.undo.title%",
         "category": "Lumiere"
       },
       {
         "command": "lumiere.markdown.redo",
-        "title": "Redo",
+        "title": "%command.lumiere.markdown.redo.title%",
         "category": "Lumiere"
       },
       {
         "command": "lumiere.markdown.close",
-        "title": "Close",
+        "title": "%command.lumiere.markdown.close.title%",
         "category": "Lumiere"
       },
       {
         "command": "lumiere.markdown.saveClose",
-        "title": "Save and Close",
+        "title": "%command.lumiere.markdown.saveClose.title%",
         "category": "Lumiere"
       },
       {
         "command": "lumiere.markdown.openAsText",
-        "title": "Open as Text",
+        "title": "%command.lumiere.markdown.openAsText.title%",
         "category": "Lumiere",
         "icon": "$(go-to-file)"
       },
       {
         "command": "lumiere.markdown.cursorBridge.chat",
-        "title": "Cursor Chat with Selection",
+        "title": "%command.lumiere.markdown.cursorBridge.chat.title%",
         "category": "Lumiere"
       },
       {
         "command": "lumiere.markdown.cursorBridge.edit",
-        "title": "Cursor Edit Selection",
+        "title": "%command.lumiere.markdown.cursorBridge.edit.title%",
         "category": "Lumiere"
       },
       {
         "command": "lumiere.markdown.cursorBridge.dismissEditMirror",
-        "title": "Return to Lumiere",
+        "title": "%command.lumiere.markdown.cursorBridge.dismissEditMirror.title%",
         "category": "Lumiere"
       },
       {
         "command": "lumiere.markdown.jumpBack",
-        "title": "Go Back in Note",
+        "title": "%command.lumiere.markdown.jumpBack.title%",
         "category": "Lumiere",
         "icon": "$(arrow-left)"
       },
       {
         "command": "lumiere.markdown.jumpForward",
-        "title": "Go Forward in Note",
+        "title": "%command.lumiere.markdown.jumpForward.title%",
         "category": "Lumiere",
         "icon": "$(arrow-right)"
       },
       {
         "command": "lumiere.markdown.titleActions",
-        "title": "Note Actions",
+        "title": "%command.lumiere.markdown.titleActions.title%",
         "category": "Lumiere",
         "icon": "$(zap)"
       },
       {
         "command": "lumiere.markdown.selectionActions",
-        "title": "Selection Actions",
+        "title": "%command.lumiere.markdown.selectionActions.title%",
         "category": "Lumiere"
       },
       {
         "command": "lumiere.markdown.useForMarkdownInWorkspace",
-        "title": "Use Lumiere for Markdown in This Workspace",
+        "title": "%command.lumiere.markdown.useForMarkdownInWorkspace.title%",
         "category": "Lumiere"
       },
       {
         "command": "lumiere.markdown.toggleTextEditor",
-        "title": "Toggle Text Editor",
+        "title": "%command.lumiere.markdown.toggleTextEditor.title%",
         "category": "Lumiere"
       },
       {
         "command": "lumiere.markdown.goToLine",
-        "title": "Go to Line…",
+        "title": "%command.lumiere.markdown.goToLine.title%",
         "category": "Lumiere"
       },
       {
         "command": "lumiere.markdown.insertEmbed",
-        "title": "Insert Embed",
+        "title": "%command.lumiere.markdown.insertEmbed.title%",
         "category": "Lumiere"
       },
       {
         "command": "lumiere.markdown.foldAll",
-        "title": "Fold All",
+        "title": "%command.lumiere.markdown.foldAll.title%",
         "category": "Lumiere"
       },
       {
         "command": "lumiere.markdown.unfoldAll",
-        "title": "Unfold All",
+        "title": "%command.lumiere.markdown.unfoldAll.title%",
         "category": "Lumiere"
       },
       {
         "command": "lumiere.markdown.toggleFold",
-        "title": "Toggle Fold",
+        "title": "%command.lumiere.markdown.toggleFold.title%",
         "category": "Lumiere"
       },
       {
         "command": "lumiere.markdown.foldMore",
-        "title": "Fold More",
+        "title": "%command.lumiere.markdown.foldMore.title%",
         "category": "Lumiere"
       },
       {
         "command": "lumiere.markdown.foldLess",
-        "title": "Fold Less",
+        "title": "%command.lumiere.markdown.foldLess.title%",
         "category": "Lumiere"
       },
       {
         "command": "lumiere.markdown.insertFootnote",
-        "title": "Insert Footnote",
+        "title": "%command.lumiere.markdown.insertFootnote.title%",
         "category": "Lumiere"
       },
       {
         "command": "lumiere.markdown.toggleBold",
-        "title": "Toggle Bold",
+        "title": "%command.lumiere.markdown.toggleBold.title%",
         "category": "Lumiere",
-        "shortTitle": "Bold"
+        "shortTitle": "%command.lumiere.markdown.toggleBold.shortTitle%"
       },
       {
         "command": "lumiere.markdown.toggleItalics",
-        "title": "Toggle Italics",
+        "title": "%command.lumiere.markdown.toggleItalics.title%",
         "category": "Lumiere",
-        "shortTitle": "Italics"
+        "shortTitle": "%command.lumiere.markdown.toggleItalics.shortTitle%"
       },
       {
         "command": "lumiere.markdown.toggleStrikethrough",
-        "title": "Toggle Strikethrough",
+        "title": "%command.lumiere.markdown.toggleStrikethrough.title%",
         "category": "Lumiere",
-        "shortTitle": "Strikethrough"
+        "shortTitle": "%command.lumiere.markdown.toggleStrikethrough.shortTitle%"
       },
       {
         "command": "lumiere.markdown.toggleHighlight",
-        "title": "Toggle Highlight",
+        "title": "%command.lumiere.markdown.toggleHighlight.title%",
         "category": "Lumiere",
-        "shortTitle": "Highlight"
+        "shortTitle": "%command.lumiere.markdown.toggleHighlight.shortTitle%"
       },
       {
         "command": "lumiere.markdown.toggleHighlightRed",
-        "title": "Toggle Red Highlight",
+        "title": "%command.lumiere.markdown.toggleHighlightRed.title%",
         "category": "Lumiere",
-        "shortTitle": "Red"
+        "shortTitle": "%command.lumiere.markdown.toggleHighlightRed.shortTitle%"
       },
       {
         "command": "lumiere.markdown.toggleHighlightOrange",
-        "title": "Toggle Orange Highlight",
+        "title": "%command.lumiere.markdown.toggleHighlightOrange.title%",
         "category": "Lumiere",
-        "shortTitle": "Orange"
+        "shortTitle": "%command.lumiere.markdown.toggleHighlightOrange.shortTitle%"
       },
       {
         "command": "lumiere.markdown.toggleHighlightYellow",
-        "title": "Toggle Yellow Highlight",
+        "title": "%command.lumiere.markdown.toggleHighlightYellow.title%",
         "category": "Lumiere",
-        "shortTitle": "Yellow"
+        "shortTitle": "%command.lumiere.markdown.toggleHighlightYellow.shortTitle%"
       },
       {
         "command": "lumiere.markdown.toggleHighlightGreen",
-        "title": "Toggle Green Highlight",
+        "title": "%command.lumiere.markdown.toggleHighlightGreen.title%",
         "category": "Lumiere",
-        "shortTitle": "Green"
+        "shortTitle": "%command.lumiere.markdown.toggleHighlightGreen.shortTitle%"
       },
       {
         "command": "lumiere.markdown.toggleHighlightBlue",
-        "title": "Toggle Blue Highlight",
+        "title": "%command.lumiere.markdown.toggleHighlightBlue.title%",
         "category": "Lumiere",
-        "shortTitle": "Blue"
+        "shortTitle": "%command.lumiere.markdown.toggleHighlightBlue.shortTitle%"
       },
       {
         "command": "lumiere.markdown.toggleHighlightPurple",
-        "title": "Toggle Purple Highlight",
+        "title": "%command.lumiere.markdown.toggleHighlightPurple.title%",
         "category": "Lumiere",
-        "shortTitle": "Purple"
+        "shortTitle": "%command.lumiere.markdown.toggleHighlightPurple.shortTitle%"
       },
       {
         "command": "lumiere.markdown.toggleCode",
-        "title": "Toggle Inline Code",
+        "title": "%command.lumiere.markdown.toggleCode.title%",
         "category": "Lumiere",
-        "shortTitle": "Inline Code"
+        "shortTitle": "%command.lumiere.markdown.toggleCode.shortTitle%"
       },
       {
         "command": "lumiere.markdown.toggleComment",
-        "title": "Toggle Comment",
+        "title": "%command.lumiere.markdown.toggleComment.title%",
         "category": "Lumiere"
       },
       {
         "command": "lumiere.markdown.insertLink",
-        "title": "Insert Link",
+        "title": "%command.lumiere.markdown.insertLink.title%",
         "category": "Lumiere",
-        "shortTitle": "Link"
+        "shortTitle": "%command.lumiere.markdown.insertLink.shortTitle%"
       },
       {
         "command": "lumiere.markdown.insertHorizontalRule",
-        "title": "Insert Horizontal Rule",
+        "title": "%command.lumiere.markdown.insertHorizontalRule.title%",
         "category": "Lumiere"
       },
       {
         "command": "lumiere.markdown.insertCodeBlock",
-        "title": "Insert Code Block",
+        "title": "%command.lumiere.markdown.insertCodeBlock.title%",
         "category": "Lumiere"
       },
       {
         "command": "lumiere.markdown.insertTag",
-        "title": "Insert Tag",
+        "title": "%command.lumiere.markdown.insertTag.title%",
         "category": "Lumiere"
       },
       {
         "command": "lumiere.markdown.clearFormatting",
-        "title": "Clear Formatting",
+        "title": "%command.lumiere.markdown.clearFormatting.title%",
         "category": "Lumiere"
       },
       {
         "command": "lumiere.markdown.deleteParagraph",
-        "title": "Delete Paragraph",
+        "title": "%command.lumiere.markdown.deleteParagraph.title%",
         "category": "Lumiere"
       },
       {
         "command": "lumiere.markdown.addCursorAbove",
-        "title": "Add Cursor Above",
+        "title": "%command.lumiere.markdown.addCursorAbove.title%",
         "category": "Lumiere"
       },
       {
         "command": "lumiere.markdown.addCursorBelow",
-        "title": "Add Cursor Below",
+        "title": "%command.lumiere.markdown.addCursorBelow.title%",
         "category": "Lumiere"
       },
       {
         "command": "lumiere.markdown.toggleBulletList",
-        "title": "Toggle Bullet List",
+        "title": "%command.lumiere.markdown.toggleBulletList.title%",
         "category": "Lumiere"
       },
       {
         "command": "lumiere.markdown.toggleNumberedList",
-        "title": "Toggle Numbered List",
+        "title": "%command.lumiere.markdown.toggleNumberedList.title%",
         "category": "Lumiere"
       },
       {
         "command": "lumiere.markdown.toggleBlockquote",
-        "title": "Toggle Blockquote",
+        "title": "%command.lumiere.markdown.toggleBlockquote.title%",
         "category": "Lumiere"
       },
       {
         "command": "lumiere.markdown.swapLineUp",
-        "title": "Swap Line Up",
+        "title": "%command.lumiere.markdown.swapLineUp.title%",
         "category": "Lumiere"
       },
       {
         "command": "lumiere.markdown.swapLineDown",
-        "title": "Swap Line Down",
+        "title": "%command.lumiere.markdown.swapLineDown.title%",
         "category": "Lumiere"
       },
       {
         "command": "lumiere.markdown.setHeading0",
-        "title": "Set Heading 0",
+        "title": "%command.lumiere.markdown.setHeading0.title%",
         "category": "Lumiere"
       },
       {
         "command": "lumiere.markdown.setHeading1",
-        "title": "Set Heading 1",
+        "title": "%command.lumiere.markdown.setHeading1.title%",
         "category": "Lumiere"
       },
       {
         "command": "lumiere.markdown.setHeading2",
-        "title": "Set Heading 2",
+        "title": "%command.lumiere.markdown.setHeading2.title%",
         "category": "Lumiere"
       },
       {
         "command": "lumiere.markdown.setHeading3",
-        "title": "Set Heading 3",
+        "title": "%command.lumiere.markdown.setHeading3.title%",
         "category": "Lumiere"
       },
       {
         "command": "lumiere.markdown.setHeading4",
-        "title": "Set Heading 4",
+        "title": "%command.lumiere.markdown.setHeading4.title%",
         "category": "Lumiere"
       },
       {
         "command": "lumiere.markdown.setHeading5",
-        "title": "Set Heading 5",
+        "title": "%command.lumiere.markdown.setHeading5.title%",
         "category": "Lumiere"
       },
       {
         "command": "lumiere.markdown.setHeading6",
-        "title": "Set Heading 6",
+        "title": "%command.lumiere.markdown.setHeading6.title%",
         "category": "Lumiere"
       },
       {
         "command": "lumiere.markdown.gitDiffEditor.open",
-        "title": "Open Rendered Git Diff",
+        "title": "%command.lumiere.markdown.gitDiffEditor.open.title%",
         "category": "Lumiere",
         "icon": "$(diff)"
       },
       {
         "command": "lumiere.markdown.gitGutter.nextChange",
-        "title": "Go to Next Git Change",
+        "title": "%command.lumiere.markdown.gitGutter.nextChange.title%",
         "category": "Lumiere"
       },
       {
         "command": "lumiere.markdown.gitGutter.previousChange",
-        "title": "Go to Previous Git Change",
+        "title": "%command.lumiere.markdown.gitGutter.previousChange.title%",
         "category": "Lumiere"
       },
       {
         "command": "lumiere.markdown.gitGutter.showChange",
-        "title": "Show Git Change",
+        "title": "%command.lumiere.markdown.gitGutter.showChange.title%",
         "category": "Lumiere"
       },
       {
         "command": "lumiere.markdown.graph.open",
-        "title": "Open Vault Graph",
+        "title": "%command.lumiere.markdown.graph.open.title%",
         "category": "Lumiere"
       },
       {
         "command": "lumiere.markdown.graph.chooseVault",
-        "title": "Choose Vault for Graph",
+        "title": "%command.lumiere.markdown.graph.chooseVault.title%",
         "category": "Lumiere"
       },
       {
         "command": "lumiere.markdown.ideContext.copy",
-        "title": "Copy IDE Context",
+        "title": "%command.lumiere.markdown.ideContext.copy.title%",
         "category": "Lumiere",
         "icon": "$(clippy)"
       },
       {
         "command": "lumiere.markdown.ideContext.send",
-        "title": "Send IDE Context to Agent…",
+        "title": "%command.lumiere.markdown.ideContext.send.title%",
         "category": "Lumiere",
         "icon": "$(comment-discussion)"
       },
       {
         "command": "lumiere.markdown.renameHeading",
-        "title": "Rename Heading…",
+        "title": "%command.lumiere.markdown.renameHeading.title%",
         "category": "Lumiere"
       },
       {
         "command": "lumiere.markdown.insertWikilink",
-        "title": "Insert Wikilink",
+        "title": "%command.lumiere.markdown.insertWikilink.title%",
         "category": "Lumiere"
       },
       {
         "command": "lumiere.markdown.followLink",
-        "title": "Follow Link",
+        "title": "%command.lumiere.markdown.followLink.title%",
         "category": "Lumiere"
       },
       {
         "command": "lumiere.markdown.openLinkInNewTab",
-        "title": "Open Link in New Tab",
+        "title": "%command.lumiere.markdown.openLinkInNewTab.title%",
         "category": "Lumiere"
       },
       {
         "command": "lumiere.markdown.openLinkToSide",
-        "title": "Open Link to Side",
+        "title": "%command.lumiere.markdown.openLinkToSide.title%",
         "category": "Lumiere"
       },
       {
         "command": "lumiere.markdown.toggleSourceMode",
-        "title": "Toggle Live Preview/Source Mode",
+        "title": "%command.lumiere.markdown.toggleSourceMode.title%",
         "category": "Lumiere"
       },
       {
         "command": "lumiere.markdown.lookUp",
-        "title": "Look Up",
+        "title": "%command.lumiere.markdown.lookUp.title%",
         "category": "Lumiere"
       },
       {
         "command": "lumiere.markdown.marp.preview",
-        "title": "Open Marp Preview to the Side",
+        "title": "%command.lumiere.markdown.marp.preview.title%",
         "category": "Lumiere"
       },
       {
         "command": "lumiere.markdown.marp.export",
-        "title": "Export Marp Slide Deck",
+        "title": "%command.lumiere.markdown.marp.export.title%",
         "category": "Lumiere"
       },
       {
         "command": "lumiere.markdown.marp.toggle",
-        "title": "Toggle Marp",
+        "title": "%command.lumiere.markdown.marp.toggle.title%",
         "category": "Lumiere"
       },
       {
         "command": "lumiere.markdown.marp.keepInWorkshop",
-        "title": "Keep Marp Deck in Lumiere",
+        "title": "%command.lumiere.markdown.marp.keepInWorkshop.title%",
         "category": "Lumiere"
       },
       {
         "command": "lumiere.markdown.toggleInlineMath",
-        "title": "Toggle Inline Math",
+        "title": "%command.lumiere.markdown.toggleInlineMath.title%",
         "category": "Lumiere"
       },
       {
         "command": "lumiere.markdown.insertMathBlock",
-        "title": "Insert Math Block",
+        "title": "%command.lumiere.markdown.insertMathBlock.title%",
         "category": "Lumiere"
       },
       {
         "command": "lumiere.markdown.outgoingLinks.sortByAlphabetical",
-        "title": "✓ File name (A to Z)",
+        "title": "%command.lumiere.markdown.outgoingLinks.sortByAlphabetical.title%",
         "category": "Lumiere"
       },
       {
         "command": "lumiere.markdown.outgoingLinks.sortByAlphabeticalReverse",
-        "title": "✓ File name (Z to A)",
+        "title": "%command.lumiere.markdown.outgoingLinks.sortByAlphabeticalReverse.title%",
         "category": "Lumiere"
       },
       {
         "command": "lumiere.markdown.outgoingLinks.sortByModifiedTime",
-        "title": "✓ Modified time (new to old)",
+        "title": "%command.lumiere.markdown.outgoingLinks.sortByModifiedTime.title%",
         "category": "Lumiere"
       },
       {
         "command": "lumiere.markdown.outgoingLinks.sortByModifiedTimeReverse",
-        "title": "✓ Modified time (old to new)",
+        "title": "%command.lumiere.markdown.outgoingLinks.sortByModifiedTimeReverse.title%",
         "category": "Lumiere"
       },
       {
         "command": "lumiere.markdown.outgoingLinks.enableExtraContext",
-        "title": "Show More Context",
+        "title": "%command.lumiere.markdown.outgoingLinks.enableExtraContext.title%",
         "category": "Lumiere"
       },
       {
         "command": "lumiere.markdown.outgoingLinks.disableExtraContext",
-        "title": "✓ Show More Context",
+        "title": "%command.lumiere.markdown.outgoingLinks.disableExtraContext.title%",
         "category": "Lumiere"
       },
       {
         "command": "lumiere.markdown.outline.expandAll",
-        "title": "Expand All",
+        "title": "%command.lumiere.markdown.outline.expandAll.title%",
         "category": "Lumiere",
         "icon": "$(expand-all)"
       },
       {
         "command": "lumiere.markdown.outline.enableFollowCursor",
-        "title": "Follow Cursor",
+        "title": "%command.lumiere.markdown.outline.enableFollowCursor.title%",
         "category": "Lumiere"
       },
       {
         "command": "lumiere.markdown.outline.disableFollowCursor",
-        "title": "✓ Follow Cursor",
+        "title": "%command.lumiere.markdown.outline.disableFollowCursor.title%",
         "category": "Lumiere"
       },
       {
         "command": "lumiere.markdown.outline.toggle",
-        "title": "Toggle Markdown Outline",
+        "title": "%command.lumiere.markdown.outline.toggle.title%",
         "category": "Lumiere",
         "icon": "$(list-tree)"
       },
       {
         "command": "lumiere.markdown.outline.goToHeading",
-        "title": "Go to Heading…",
+        "title": "%command.lumiere.markdown.outline.goToHeading.title%",
         "category": "Lumiere"
       },
       {
         "command": "lumiere.markdown.previewLink",
-        "title": "Preview Link at Caret",
+        "title": "%command.lumiere.markdown.previewLink.title%",
         "category": "Lumiere"
       },
       {
         "command": "lumiere.markdown.addProperty",
-        "title": "Add File Property",
+        "title": "%command.lumiere.markdown.addProperty.title%",
         "category": "Lumiere",
         "icon": "$(symbol-property)"
       },
       {
         "command": "lumiere.markdown.addAlias",
-        "title": "Add Alias",
+        "title": "%command.lumiere.markdown.addAlias.title%",
         "category": "Lumiere"
       },
       {
         "command": "lumiere.markdown.clearProperties",
-        "title": "Clear File Properties",
+        "title": "%command.lumiere.markdown.clearProperties.title%",
         "category": "Lumiere"
       },
       {
         "command": "lumiere.markdown.toggleFoldProperties",
-        "title": "Toggle Fold Properties",
+        "title": "%command.lumiere.markdown.toggleFoldProperties.title%",
         "category": "Lumiere"
       },
       {
         "command": "lumiere.markdown.managePlugins",
-        "title": "Manage Plugins",
+        "title": "%command.lumiere.markdown.managePlugins.title%",
         "category": "Lumiere"
       },
       {
         "command": "lumiere.markdown.openCopiedAgentReference",
-        "title": "Open Copied Agent Reference",
+        "title": "%command.lumiere.markdown.openCopiedAgentReference.title%",
         "category": "Lumiere"
       },
       {
         "command": "lumiere.markdown.showPluginStatus",
-        "title": "Show Plugin Status",
+        "title": "%command.lumiere.markdown.showPluginStatus.title%",
         "category": "Lumiere"
       },
       {
         "command": "lumiere.markdown.quickSwitcher",
-        "title": "Quick Switcher",
+        "title": "%command.lumiere.markdown.quickSwitcher.title%",
         "category": "Lumiere"
       },
       {
         "command": "lumiere.markdown.quickSwitcher.openInNewTab",
-        "title": "Quick Switcher: Open in New Tab",
+        "title": "%command.lumiere.markdown.quickSwitcher.openInNewTab.title%",
         "category": "Lumiere"
       },
       {
         "command": "lumiere.markdown.quickSwitcher.openToSide",
-        "title": "Quick Switcher: Open to the Side",
+        "title": "%command.lumiere.markdown.quickSwitcher.openToSide.title%",
         "category": "Lumiere"
       },
       {
         "command": "lumiere.markdown.quickSwitcher.create",
-        "title": "Quick Switcher: Create Note",
+        "title": "%command.lumiere.markdown.quickSwitcher.create.title%",
         "category": "Lumiere"
       },
       {
         "command": "lumiere.markdown.quickSwitcher.createInNewTab",
-        "title": "Quick Switcher: Create Note in New Tab",
+        "title": "%command.lumiere.markdown.quickSwitcher.createInNewTab.title%",
         "category": "Lumiere"
       },
       {
         "command": "lumiere.markdown.scratch.new",
-        "title": "New Scratch Note",
+        "title": "%command.lumiere.markdown.scratch.new.title%",
         "category": "Lumiere"
       },
       {
         "command": "lumiere.markdown.search.vault",
-        "title": "Search Vault…",
+        "title": "%command.lumiere.markdown.search.vault.title%",
         "category": "Lumiere",
         "icon": "$(search)"
       },
       {
         "command": "lumiere.markdown.search.clearResults",
-        "title": "Clear Search Results",
+        "title": "%command.lumiere.markdown.search.clearResults.title%",
         "category": "Lumiere",
         "icon": "$(clear-all)"
       },
       {
         "command": "lumiere.markdown.openSettings",
-        "title": "Open Settings",
+        "title": "%command.lumiere.markdown.openSettings.title%",
         "category": "Lumiere"
       },
       {
         "command": "lumiere.markdown.changeSetting",
-        "title": "Change Setting…",
+        "title": "%command.lumiere.markdown.changeSetting.title%",
         "category": "Lumiere"
       },
       {
         "command": "lumiere.markdown.setNoteFontSize",
-        "title": "Set Note Font Size",
+        "title": "%command.lumiere.markdown.setNoteFontSize.title%",
         "category": "Lumiere"
       },
       {
         "command": "lumiere.markdown.increaseFontSize",
-        "title": "Increase Font Size",
+        "title": "%command.lumiere.markdown.increaseFontSize.title%",
         "category": "Lumiere"
       },
       {
         "command": "lumiere.markdown.decreaseFontSize",
-        "title": "Decrease Font Size",
+        "title": "%command.lumiere.markdown.decreaseFontSize.title%",
         "category": "Lumiere"
       },
       {
         "command": "lumiere.markdown.toggleLineNumbers",
-        "title": "Toggle Line Numbers",
+        "title": "%command.lumiere.markdown.toggleLineNumbers.title%",
         "category": "Lumiere"
       },
       {
         "command": "lumiere.markdown.toggleReadableLineWidth",
-        "title": "Toggle Readable Line Width",
+        "title": "%command.lumiere.markdown.toggleReadableLineWidth.title%",
         "category": "Lumiere"
       },
       {
         "command": "lumiere.markdown.toggleMermaid",
-        "title": "Toggle Mermaid Diagrams",
+        "title": "%command.lumiere.markdown.toggleMermaid.title%",
         "category": "Lumiere"
       },
       {
         "command": "lumiere.markdown.toggleInlineTitle",
-        "title": "Toggle Inline Title",
+        "title": "%command.lumiere.markdown.toggleInlineTitle.title%",
         "category": "Lumiere"
       },
       {
         "command": "lumiere.markdown.toggleInlineGitChanges",
-        "title": "Toggle Inline Git Changes",
+        "title": "%command.lumiere.markdown.toggleInlineGitChanges.title%",
         "category": "Lumiere"
       },
       {
         "command": "lumiere.markdown.toggleVim",
-        "title": "Toggle Vim Mode",
+        "title": "%command.lumiere.markdown.toggleVim.title%",
         "category": "Lumiere"
       },
       {
         "command": "lumiere.markdown.toggleSpellcheck",
-        "title": "Toggle Spellcheck",
+        "title": "%command.lumiere.markdown.toggleSpellcheck.title%",
         "category": "Lumiere"
       },
       {
         "command": "lumiere.markdown.insertTable",
-        "title": "Insert Table",
+        "title": "%command.lumiere.markdown.insertTable.title%",
         "category": "Lumiere"
       },
       {
         "command": "lumiere.markdown.tableInsertRowAbove",
-        "title": "Table: Insert Row Above",
+        "title": "%command.lumiere.markdown.tableInsertRowAbove.title%",
         "category": "Lumiere"
       },
       {
         "command": "lumiere.markdown.tableInsertRowBelow",
-        "title": "Table: Insert Row Below",
+        "title": "%command.lumiere.markdown.tableInsertRowBelow.title%",
         "category": "Lumiere"
       },
       {
         "command": "lumiere.markdown.tableInsertColumnLeft",
-        "title": "Table: Insert Column Left",
+        "title": "%command.lumiere.markdown.tableInsertColumnLeft.title%",
         "category": "Lumiere"
       },
       {
         "command": "lumiere.markdown.tableInsertColumnRight",
-        "title": "Table: Insert Column Right",
+        "title": "%command.lumiere.markdown.tableInsertColumnRight.title%",
         "category": "Lumiere"
       },
       {
         "command": "lumiere.markdown.tableDeleteRow",
-        "title": "Table: Delete Row",
+        "title": "%command.lumiere.markdown.tableDeleteRow.title%",
         "category": "Lumiere"
       },
       {
         "command": "lumiere.markdown.tableDeleteColumn",
-        "title": "Table: Delete Column",
+        "title": "%command.lumiere.markdown.tableDeleteColumn.title%",
         "category": "Lumiere"
       },
       {
         "command": "lumiere.markdown.tableDuplicateRow",
-        "title": "Table: Duplicate Row",
+        "title": "%command.lumiere.markdown.tableDuplicateRow.title%",
         "category": "Lumiere"
       },
       {
         "command": "lumiere.markdown.tableDuplicateColumn",
-        "title": "Table: Duplicate Column",
+        "title": "%command.lumiere.markdown.tableDuplicateColumn.title%",
         "category": "Lumiere"
       },
       {
         "command": "lumiere.markdown.tableMoveRowUp",
-        "title": "Table: Move Row Up",
+        "title": "%command.lumiere.markdown.tableMoveRowUp.title%",
         "category": "Lumiere"
       },
       {
         "command": "lumiere.markdown.tableMoveRowDown",
-        "title": "Table: Move Row Down",
+        "title": "%command.lumiere.markdown.tableMoveRowDown.title%",
         "category": "Lumiere"
       },
       {
         "command": "lumiere.markdown.tableMoveColumnLeft",
-        "title": "Table: Move Column Left",
+        "title": "%command.lumiere.markdown.tableMoveColumnLeft.title%",
         "category": "Lumiere"
       },
       {
         "command": "lumiere.markdown.tableMoveColumnRight",
-        "title": "Table: Move Column Right",
+        "title": "%command.lumiere.markdown.tableMoveColumnRight.title%",
         "category": "Lumiere"
       },
       {
         "command": "lumiere.markdown.tableAlignLeft",
-        "title": "Table: Align Left",
+        "title": "%command.lumiere.markdown.tableAlignLeft.title%",
         "category": "Lumiere"
       },
       {
         "command": "lumiere.markdown.tableAlignCenter",
-        "title": "Table: Align Center",
+        "title": "%command.lumiere.markdown.tableAlignCenter.title%",
         "category": "Lumiere"
       },
       {
         "command": "lumiere.markdown.tableAlignRight",
-        "title": "Table: Align Right",
+        "title": "%command.lumiere.markdown.tableAlignRight.title%",
         "category": "Lumiere"
       },
       {
         "command": "lumiere.markdown.tableSortAscending",
-        "title": "Table: Sort Ascending",
+        "title": "%command.lumiere.markdown.tableSortAscending.title%",
         "category": "Lumiere"
       },
       {
         "command": "lumiere.markdown.tableSortDescending",
-        "title": "Table: Sort Descending",
+        "title": "%command.lumiere.markdown.tableSortDescending.title%",
         "category": "Lumiere"
       },
       {
         "command": "lumiere.markdown.tags.sortByFrequency",
-        "title": "✓ Sort by Frequency",
+        "title": "%command.lumiere.markdown.tags.sortByFrequency.title%",
         "category": "Lumiere"
       },
       {
         "command": "lumiere.markdown.tags.sortByName",
-        "title": "✓ Sort by Name",
+        "title": "%command.lumiere.markdown.tags.sortByName.title%",
         "category": "Lumiere"
       },
       {
         "command": "lumiere.markdown.tags.enableNested",
-        "title": "Show Nested Tags",
+        "title": "%command.lumiere.markdown.tags.enableNested.title%",
         "category": "Lumiere"
       },
       {
         "command": "lumiere.markdown.tags.disableNested",
-        "title": "✓ Show Nested Tags",
+        "title": "%command.lumiere.markdown.tags.disableNested.title%",
         "category": "Lumiere"
       },
       {
         "command": "lumiere.markdown.toggleChecklist",
-        "title": "Toggle Checklist Status",
+        "title": "%command.lumiere.markdown.toggleChecklist.title%",
         "category": "Lumiere"
       },
       {
         "command": "lumiere.markdown.cycleListChecklist",
-        "title": "Cycle List Checklist",
+        "title": "%command.lumiere.markdown.cycleListChecklist.title%",
         "category": "Lumiere"
       },
       {
         "command": "lumiere.markdown.templates.insert",
-        "title": "Insert Template",
+        "title": "%command.lumiere.markdown.templates.insert.title%",
         "category": "Lumiere"
       },
       {
         "command": "lumiere.markdown.templates.insertCurrentDate",
-        "title": "Insert Current Date",
+        "title": "%command.lumiere.markdown.templates.insertCurrentDate.title%",
         "category": "Lumiere"
       },
       {
         "command": "lumiere.markdown.templates.insertCurrentTime",
-        "title": "Insert Current Time",
+        "title": "%command.lumiere.markdown.templates.insertCurrentTime.title%",
         "category": "Lumiere"
       },
       {
         "command": "lumiere.markdown.consumeVimHostShortcut",
-        "title": "Consume Vim Host Shortcut",
+        "title": "%command.lumiere.markdown.consumeVimHostShortcut.title%",
         "category": "Lumiere"
       },
       {
         "command": "lumiere.markdown.handleVimCtrlN",
-        "title": "Vim Ctrl+N",
+        "title": "%command.lumiere.markdown.handleVimCtrlN.title%",
         "category": "Lumiere"
       },
       {
         "command": "lumiere.pdf.lookUp",
-        "title": "Look Up",
+        "title": "%command.lumiere.pdf.lookUp.title%",
         "category": "PDF"
       },
       {
         "command": "lumiere.pdf.openSettings",
-        "title": "Open Settings",
+        "title": "%command.lumiere.pdf.openSettings.title%",
         "category": "PDF",
         "icon": "$(settings-gear)"
       },
       {
         "command": "lumiere.pdf.changeSetting",
-        "title": "Change Setting…",
+        "title": "%command.lumiere.pdf.changeSetting.title%",
         "category": "PDF"
       },
       {
         "command": "lumiere.pdf.toggleSmoothScrolling",
-        "title": "Toggle Smooth Scrolling",
+        "title": "%command.lumiere.pdf.toggleSmoothScrolling.title%",
         "category": "PDF"
       },
       {
         "command": "lumiere.pdf.toggleKeyboardShortcuts",
-        "title": "Toggle Keyboard Shortcuts",
+        "title": "%command.lumiere.pdf.toggleKeyboardShortcuts.title%",
         "category": "PDF"
       },
       {
         "command": "lumiere.pdf.setDefaultZoom",
-        "title": "Set Default Zoom…",
+        "title": "%command.lumiere.pdf.setDefaultZoom.title%",
         "category": "PDF"
       },
       {
         "command": "lumiere.pdf.setDefaultPageLayout",
-        "title": "Set Default Page Layout…",
+        "title": "%command.lumiere.pdf.setDefaultPageLayout.title%",
         "category": "PDF"
       },
       {
         "command": "lumiere.pdf.setDefaultScrollMode",
-        "title": "Set Default Scrolling…",
+        "title": "%command.lumiere.pdf.setDefaultScrollMode.title%",
         "category": "PDF"
       },
       {
         "command": "lumiere.pdf.enterZen",
-        "title": "Enter Zen Mode",
+        "title": "%command.lumiere.pdf.enterZen.title%",
         "category": "PDF",
         "icon": "$(screen-full)"
       },
       {
         "command": "lumiere.pdf.exitZen",
-        "title": "Exit Zen Mode",
+        "title": "%command.lumiere.pdf.exitZen.title%",
         "category": "PDF",
         "icon": "$(screen-normal)"
       },
       {
         "command": "lumiere.pdf.previousPageKeepingPlace",
-        "title": "Previous Page, Keeping Place",
+        "title": "%command.lumiere.pdf.previousPageKeepingPlace.title%",
         "category": "PDF"
       },
       {
         "command": "lumiere.pdf.nextPageKeepingPlace",
-        "title": "Next Page, Keeping Place",
+        "title": "%command.lumiere.pdf.nextPageKeepingPlace.title%",
         "category": "PDF"
       },
       {
         "command": "lumiere.pdf.copyLinkForAgent",
-        "title": "Copy link to this",
+        "title": "%command.lumiere.pdf.copyLinkForAgent.title%",
         "category": "PDF",
         "icon": "$(comment-discussion)",
         "enablement": "lumiere.pdf.pdfActive"
       },
       {
         "command": "vscodeEmbedPdf.bridge.envelope",
-        "title": "Selection Envelope",
+        "title": "%command.vscodeEmbedPdf.bridge.envelope.title%",
         "category": "PDF"
       },
       {
         "command": "lumiere.pdf.openLocation",
-        "title": "Open Location…",
+        "title": "%command.lumiere.pdf.openLocation.title%",
         "category": "PDF"
       },
       {
         "command": "lumiere.pdf.openNativeLink",
-        "title": "Open PDF Link",
+        "title": "%command.lumiere.pdf.openNativeLink.title%",
         "category": "PDF"
       },
       {
         "command": "lumiere.pdf.goToOutlineItem",
-        "title": "Go to Outline Item…",
+        "title": "%command.lumiere.pdf.goToOutlineItem.title%",
         "category": "PDF"
       },
       {
         "command": "lumiere.pdf.expandOutline",
-        "title": "Expand All",
+        "title": "%command.lumiere.pdf.expandOutline.title%",
         "category": "PDF",
         "icon": "$(expand-all)"
       },
       {
         "command": "lumiere.pdf.enableOutlineFollowCursor",
-        "title": "Follow Cursor",
+        "title": "%command.lumiere.pdf.enableOutlineFollowCursor.title%",
         "category": "PDF"
       },
       {
         "command": "lumiere.pdf.disableOutlineFollowCursor",
-        "title": "Follow Cursor",
+        "title": "%command.lumiere.pdf.disableOutlineFollowCursor.title%",
         "category": "PDF",
         "icon": "$(check)"
       },
       {
         "command": "lumiere.pdf.addBookmark",
-        "title": "Add Bookmark",
+        "title": "%command.lumiere.pdf.addBookmark.title%",
         "category": "PDF",
         "icon": "$(add)"
       },
       {
         "command": "lumiere.pdf.goToBookmark",
-        "title": "Go to Bookmark…",
+        "title": "%command.lumiere.pdf.goToBookmark.title%",
         "category": "PDF"
       },
       {
         "command": "lumiere.pdf.renameBookmark",
-        "title": "Rename Bookmark…",
+        "title": "%command.lumiere.pdf.renameBookmark.title%",
         "category": "PDF",
         "icon": "$(edit)"
       },
       {
         "command": "lumiere.pdf.deleteBookmark",
-        "title": "Delete Bookmark",
+        "title": "%command.lumiere.pdf.deleteBookmark.title%",
         "category": "PDF",
         "icon": "$(trash)"
       },
       {
         "command": "lumiere.pdf.toggleSidePanel",
-        "title": "Toggle Side Panel",
+        "title": "%command.lumiere.pdf.toggleSidePanel.title%",
         "category": "PDF",
         "enablement": "lumiere.pdf.pdfActive"
       },
       {
         "command": "lumiere.pdf.showSidePanel",
-        "title": "Show Side Panel",
+        "title": "%command.lumiere.pdf.showSidePanel.title%",
         "category": "PDF",
         "icon": "$(layout-sidebar-left-off)",
         "enablement": "lumiere.pdf.pdfActive"
       },
       {
         "command": "lumiere.pdf.hideSidePanel",
-        "title": "Hide Side Panel",
+        "title": "%command.lumiere.pdf.hideSidePanel.title%",
         "category": "PDF",
         "icon": "$(layout-sidebar-left)",
         "enablement": "lumiere.pdf.pdfActive"
       },
       {
         "command": "lumiere.pdf.copyMcpSetup",
-        "title": "Copy MCP Setup for Claude Code / Codex…",
+        "title": "%command.lumiere.pdf.copyMcpSetup.title%",
         "category": "PDF"
       },
       {
         "command": "lumiere.pdf.previousPage",
-        "title": "Previous Page",
+        "title": "%command.lumiere.pdf.previousPage.title%",
         "category": "PDF",
         "icon": "$(chevron-up)",
         "enablement": "lumiere.pdf.pdfActive && lumiere.pdf.canGoBack"
       },
       {
         "command": "lumiere.pdf.nextPage",
-        "title": "Next Page",
+        "title": "%command.lumiere.pdf.nextPage.title%",
         "category": "PDF",
         "icon": "$(chevron-down)",
         "enablement": "lumiere.pdf.pdfActive && lumiere.pdf.canGoForward"
       },
       {
         "command": "lumiere.pdf.goToPage",
-        "title": "Go to Page…",
+        "title": "%command.lumiere.pdf.goToPage.title%",
         "category": "PDF",
         "icon": "$(list-ordered)"
       },
       {
         "command": "lumiere.pdf.zoomOut",
-        "title": "Zoom Out",
+        "title": "%command.lumiere.pdf.zoomOut.title%",
         "category": "PDF",
         "icon": "$(zoom-out)"
       },
       {
         "command": "lumiere.pdf.zoomIn",
-        "title": "Zoom In",
+        "title": "%command.lumiere.pdf.zoomIn.title%",
         "category": "PDF",
         "icon": "$(zoom-in)"
       },
       {
         "command": "lumiere.pdf.selectZoom",
-        "title": "Zoom…",
+        "title": "%command.lumiere.pdf.selectZoom.title%",
         "category": "PDF",
         "icon": "$(search-fuzzy)"
       },
       {
         "command": "lumiere.pdf.fitWidth",
-        "title": "Fit Width",
+        "title": "%command.lumiere.pdf.fitWidth.title%",
         "category": "PDF",
         "icon": "$(arrow-both)"
       },
       {
         "command": "lumiere.pdf.fitPage",
-        "title": "Fit Page",
+        "title": "%command.lumiere.pdf.fitPage.title%",
         "category": "PDF",
         "icon": "$(screen-full)"
       },
       {
         "command": "lumiere.pdf.find",
-        "title": "Find in PDF",
+        "title": "%command.lumiere.pdf.find.title%",
         "category": "PDF",
         "icon": "$(search)"
       },
       {
         "command": "lumiere.pdf.toggleOutline",
-        "title": "Toggle Outline",
+        "title": "%command.lumiere.pdf.toggleOutline.title%",
         "category": "PDF",
         "icon": "$(list-tree)"
       },
       {
         "command": "lumiere.pdf.selectTextTool",
-        "title": "Select Text Tool",
+        "title": "%command.lumiere.pdf.selectTextTool.title%",
         "category": "PDF",
         "icon": "$(whole-word)"
       },
       {
         "command": "lumiere.pdf.selectRegionTool",
-        "title": "Select Region Tool",
+        "title": "%command.lumiere.pdf.selectRegionTool.title%",
         "category": "PDF",
         "icon": "$(inspect)"
       },
       {
         "command": "lumiere.pdf.highlightSelection",
-        "title": "Highlight",
+        "title": "%command.lumiere.pdf.highlightSelection.title%",
         "category": "PDF",
         "enablement": "lumiere.pdf.pdfActive && lumiere.pdf.hasTextSelection"
       },
       {
         "command": "lumiere.pdf.underlineSelection",
-        "title": "Underline",
+        "title": "%command.lumiere.pdf.underlineSelection.title%",
         "category": "PDF",
         "enablement": "lumiere.pdf.pdfActive && lumiere.pdf.hasTextSelection"
       },
       {
         "command": "lumiere.pdf.strikeoutSelection",
-        "title": "Strikeout",
+        "title": "%command.lumiere.pdf.strikeoutSelection.title%",
         "category": "PDF",
         "enablement": "lumiere.pdf.pdfActive && lumiere.pdf.hasTextSelection"
       },
       {
         "command": "lumiere.pdf.squigglySelection",
-        "title": "Squiggly",
+        "title": "%command.lumiere.pdf.squigglySelection.title%",
         "category": "PDF",
         "enablement": "lumiere.pdf.pdfActive && lumiere.pdf.hasTextSelection"
       },
       {
         "command": "lumiere.pdf.highlightWithNote",
-        "title": "Highlight with Note",
+        "title": "%command.lumiere.pdf.highlightWithNote.title%",
         "category": "PDF",
         "enablement": "lumiere.pdf.pdfActive && lumiere.pdf.hasTextSelection"
       },
       {
         "command": "lumiere.pdf.editAnnotationNote",
-        "title": "Edit Note…",
+        "title": "%command.lumiere.pdf.editAnnotationNote.title%",
         "category": "PDF",
         "enablement": "lumiere.pdf.pdfActive && lumiere.pdf.hasAnnotationSelection"
       },
       {
         "command": "lumiere.pdf.annotationColor.yellow",
-        "title": "Yellow",
+        "title": "%command.lumiere.pdf.annotationColor.yellow.title%",
         "category": "PDF",
         "enablement": "lumiere.pdf.pdfActive && lumiere.pdf.hasAnnotationSelection"
       },
       {
         "command": "lumiere.pdf.annotationColor.red",
-        "title": "Red",
+        "title": "%command.lumiere.pdf.annotationColor.red.title%",
         "category": "PDF",
         "enablement": "lumiere.pdf.pdfActive && lumiere.pdf.hasAnnotationSelection"
       },
       {
         "command": "lumiere.pdf.annotationColor.blue",
-        "title": "Blue",
+        "title": "%command.lumiere.pdf.annotationColor.blue.title%",
         "category": "PDF",
         "enablement": "lumiere.pdf.pdfActive && lumiere.pdf.hasAnnotationSelection"
       },
       {
         "command": "lumiere.pdf.annotationColor.green",
-        "title": "Green",
+        "title": "%command.lumiere.pdf.annotationColor.green.title%",
         "category": "PDF",
         "enablement": "lumiere.pdf.pdfActive && lumiere.pdf.hasAnnotationSelection"
       },
       {
         "command": "lumiere.pdf.annotationColor.purple",
-        "title": "Purple",
+        "title": "%command.lumiere.pdf.annotationColor.purple.title%",
         "category": "PDF",
         "enablement": "lumiere.pdf.pdfActive && lumiere.pdf.hasAnnotationSelection"
       },
       {
         "command": "lumiere.pdf.annotationColor.black",
-        "title": "Black",
+        "title": "%command.lumiere.pdf.annotationColor.black.title%",
         "category": "PDF",
         "enablement": "lumiere.pdf.pdfActive && lumiere.pdf.hasAnnotationSelection"
       },
       {
         "command": "lumiere.pdf.annotationUndo",
-        "title": "Undo Annotation",
+        "title": "%command.lumiere.pdf.annotationUndo.title%",
         "category": "PDF",
         "icon": "$(discard)",
         "enablement": "lumiere.pdf.pdfActive"
       },
       {
         "command": "lumiere.pdf.annotationRedo",
-        "title": "Redo Annotation",
+        "title": "%command.lumiere.pdf.annotationRedo.title%",
         "category": "PDF",
         "icon": "$(redo)",
         "enablement": "lumiere.pdf.pdfActive"
       },
       {
         "command": "lumiere.pdf.annotationRetrySave",
-        "title": "Retry Annotation Save",
+        "title": "%command.lumiere.pdf.annotationRetrySave.title%",
         "category": "PDF",
         "enablement": "lumiere.pdf.pdfActive"
       },
       {
         "command": "lumiere.pdf.saveAnnotationsIntoPdf",
-        "title": "Save Annotations into This PDF",
+        "title": "%command.lumiere.pdf.saveAnnotationsIntoPdf.title%",
         "category": "PDF",
         "enablement": "lumiere.pdf.pdfActive"
       },
       {
         "command": "lumiere.pdf.exportAnnotatedCopy",
-        "title": "Export Annotated Copy…",
+        "title": "%command.lumiere.pdf.exportAnnotatedCopy.title%",
         "category": "PDF",
         "enablement": "lumiere.pdf.pdfActive"
       },
       {
         "command": "lumiere.pdf.deleteAnnotation",
-        "title": "Delete Annotation",
+        "title": "%command.lumiere.pdf.deleteAnnotation.title%",
         "category": "PDF",
         "enablement": "lumiere.pdf.pdfActive && lumiere.pdf.hasAnnotationSelection"
       },
       {
         "command": "lumiere.pdf.selectToolbarMode",
-        "title": "Choose Toolbar Location…",
+        "title": "%command.lumiere.pdf.selectToolbarMode.title%",
         "category": "PDF",
         "icon": "$(layout)"
       },
       {
         "command": "lumiere.pdf.cyclePageColors",
-        "title": "Cycle Page Colors",
+        "title": "%command.lumiere.pdf.cyclePageColors.title%",
         "category": "PDF",
         "icon": "$(color-mode)",
         "enablement": "lumiere.pdf.pdfActive"
       },
       {
         "command": "lumiere.pdf.actualSize",
-        "title": "Actual Size (100%)",
+        "title": "%command.lumiere.pdf.actualSize.title%",
         "category": "PDF",
         "icon": "$(symbol-numeric)",
         "enablement": "lumiere.pdf.pdfActive"
       },
       {
         "command": "lumiere.pdf.selectView",
-        "title": "View…",
+        "title": "%command.lumiere.pdf.selectView.title%",
         "category": "PDF",
         "icon": "$(layout)",
         "enablement": "lumiere.pdf.pdfActive"
       },
       {
         "command": "lumiere.pdf.singlePage",
-        "title": "Single Page",
+        "title": "%command.lumiere.pdf.singlePage.title%",
         "category": "PDF",
         "icon": "$(file)",
         "enablement": "lumiere.pdf.pdfActive",
@@ -1272,7 +1273,7 @@
       },
       {
         "command": "lumiere.pdf.twoPageSpread",
-        "title": "Two Pages (1–2, 3–4)",
+        "title": "%command.lumiere.pdf.twoPageSpread.title%",
         "category": "PDF",
         "icon": "$(book)",
         "enablement": "lumiere.pdf.pdfActive",
@@ -1280,7 +1281,7 @@
       },
       {
         "command": "lumiere.pdf.twoPageCover",
-        "title": "Two Pages with Cover (1, 2–3)",
+        "title": "%command.lumiere.pdf.twoPageCover.title%",
         "category": "PDF",
         "icon": "$(book)",
         "enablement": "lumiere.pdf.pdfActive",
@@ -1288,7 +1289,7 @@
       },
       {
         "command": "lumiere.pdf.continuousScroll",
-        "title": "Continuous Scrolling",
+        "title": "%command.lumiere.pdf.continuousScroll.title%",
         "category": "PDF",
         "icon": "$(list-ordered)",
         "enablement": "lumiere.pdf.pdfActive",
@@ -1296,7 +1297,7 @@
       },
       {
         "command": "lumiere.pdf.pageByPage",
-        "title": "Page-by-page Scrolling",
+        "title": "%command.lumiere.pdf.pageByPage.title%",
         "category": "PDF",
         "icon": "$(file)",
         "enablement": "lumiere.pdf.pdfActive",
@@ -1304,7 +1305,7 @@
       },
       {
         "command": "lumiere.pdf.verticalScroll",
-        "title": "Vertical Scrolling",
+        "title": "%command.lumiere.pdf.verticalScroll.title%",
         "category": "PDF",
         "icon": "$(arrow-down)",
         "enablement": "lumiere.pdf.pdfActive",
@@ -1312,7 +1313,7 @@
       },
       {
         "command": "lumiere.pdf.horizontalScroll",
-        "title": "Horizontal Scrolling",
+        "title": "%command.lumiere.pdf.horizontalScroll.title%",
         "category": "PDF",
         "icon": "$(arrow-right)",
         "enablement": "lumiere.pdf.pdfActive",
@@ -1320,45 +1321,45 @@
       },
       {
         "command": "lumiere.pdf.historyBack",
-        "title": "Back to Previous Location",
+        "title": "%command.lumiere.pdf.historyBack.title%",
         "category": "PDF",
         "icon": "$(arrow-left)",
         "enablement": "lumiere.pdf.historyBack"
       },
       {
         "command": "lumiere.pdf.historyForward",
-        "title": "Forward to Next Location",
+        "title": "%command.lumiere.pdf.historyForward.title%",
         "category": "PDF",
         "icon": "$(arrow-right)",
         "enablement": "lumiere.pdf.historyForward"
       },
       {
         "command": "lumiere.pdf.ideContext.copy",
-        "title": "Copy IDE Context",
+        "title": "%command.lumiere.pdf.ideContext.copy.title%",
         "category": "Lumiere PDF"
       },
       {
         "command": "lumiere.pdf.ideContext.send",
-        "title": "Send IDE Context to Agent…",
+        "title": "%command.lumiere.pdf.ideContext.send.title%",
         "category": "Lumiere PDF"
       }
     ],
     "submenus": [
       {
         "id": "lumiere.markdown.menu.format",
-        "label": "Format"
+        "label": "%submenu.lumiere.markdown.menu.format.label%"
       },
       {
         "id": "lumiere.markdown.menu.highlight",
-        "label": "Highlight"
+        "label": "%submenu.lumiere.markdown.menu.highlight.label%"
       },
       {
         "id": "lumiere.markdown.menu.insert",
-        "label": "Insert"
+        "label": "%submenu.lumiere.markdown.menu.insert.label%"
       },
       {
         "id": "lumiere.pdf.annotationColor",
-        "label": "Change Color"
+        "label": "%submenu.lumiere.pdf.annotationColor.label%"
       }
     ],
     "keybindings": [
@@ -1737,49 +1738,49 @@
       "explorer": [
         {
           "id": "lumiere.markdown.backlinks",
-          "name": "Backlinks",
+          "name": "%view.lumiere.markdown.backlinks.name%",
           "when": "config.lumiere.markdown.preset != 'minimal' && config.lumiere.markdown.plugins.backlinks.enabled",
           "visibility": "collapsed"
         },
         {
           "id": "lumiere.markdown.cursorBridge.editPromptProbe",
-          "name": "·",
+          "name": "%view.lumiere.markdown.cursorBridge.editPromptProbe.name%",
           "when": "config.lumiere.markdown.preset != 'minimal' && config.lumiere.markdown.plugins.cursorBridge.enabled && (editcontextbarcursor || editorHasPromptBar) && lumiere.markdown.editPromptArmed",
           "visibility": "collapsed"
         },
         {
           "id": "lumiere.markdown.outgoingLinks",
-          "name": "Outgoing Links",
+          "name": "%view.lumiere.markdown.outgoingLinks.name%",
           "when": "config.lumiere.markdown.preset != 'minimal' && config.lumiere.markdown.plugins.outgoingLinks.enabled",
           "visibility": "collapsed"
         },
         {
           "id": "lumiere.markdown.outline",
-          "name": "Markdown Outline",
+          "name": "%view.lumiere.markdown.outline.name%",
           "when": "config.lumiere.markdown.preset != 'minimal' && config.lumiere.markdown.plugins.outline.enabled && activeCustomEditorId == 'lumiere.markdown.editor'",
           "visibility": "visible"
         },
         {
           "id": "lumiere.markdown.search",
-          "name": "Vault Search",
+          "name": "%view.lumiere.markdown.search.name%",
           "when": "config.lumiere.markdown.preset != 'minimal' && config.lumiere.markdown.plugins.search.enabled && (activeCustomEditorId == 'lumiere.markdown.editor' || lumiere.markdown.search.hasResults)",
           "visibility": "collapsed"
         },
         {
           "id": "lumiere.markdown.tags",
-          "name": "Tags",
+          "name": "%view.lumiere.markdown.tags.name%",
           "when": "config.lumiere.markdown.preset != 'minimal' && config.lumiere.markdown.plugins.tags.enabled && activeCustomEditorId == 'lumiere.markdown.editor'",
           "visibility": "collapsed"
         },
         {
           "id": "lumiere.pdf.outline",
-          "name": "PDF Outline",
+          "name": "%view.lumiere.pdf.outline.name%",
           "when": "lumiere.pdf.pdfActive",
           "visibility": "visible"
         },
         {
           "id": "lumiere.pdf.bookmarks",
-          "name": "PDF Bookmarks",
+          "name": "%view.lumiere.pdf.bookmarks.name%",
           "when": "lumiere.pdf.pdfActive",
           "visibility": "visible"
         }
@@ -3240,289 +3241,289 @@
             "type": "boolean",
             "default": true,
             "scope": "resource",
-            "description": "Copy selected text with a link to its saved source lines, for an agent."
+            "description": "%config.lumiere.markdown.plugins.agentBridge.enabled.description%"
           },
           "lumiere.markdown.plugins.attachments.enabled": {
             "type": "boolean",
             "default": true,
             "scope": "resource",
-            "description": "Save dropped, pasted, and HTML-paste images into the vault attachment folder with Obsidian-style embeds."
+            "description": "%config.lumiere.markdown.plugins.attachments.enabled.description%"
           },
           "lumiere.markdown.plugins.autoPair.enabled": {
             "type": "boolean",
             "default": true,
             "scope": "resource",
-            "description": "Auto pair in the Markdown editor."
+            "description": "%config.lumiere.markdown.plugins.autoPair.enabled.description%"
           },
           "lumiere.markdown.plugins.backlinks.enabled": {
             "type": "boolean",
             "default": false,
             "scope": "resource",
-            "description": "Backlinks view and status bar count for the active note, with unlinked mentions."
+            "description": "%config.lumiere.markdown.plugins.backlinks.enabled.description%"
           },
           "lumiere.markdown.plugins.bridge.enabled": {
             "type": "boolean",
             "default": true,
             "scope": "resource",
-            "description": "Build a versioned selection envelope for an agent, from the note's selection or else the PDF's. This does not open a chat."
+            "description": "%config.lumiere.markdown.plugins.bridge.enabled.description%"
           },
           "lumiere.markdown.plugins.callouts.enabled": {
             "type": "boolean",
             "default": true,
             "scope": "resource",
-            "description": "Render callouts and remember their disclosure state per panel."
+            "description": "%config.lumiere.markdown.plugins.callouts.enabled.description%"
           },
           "lumiere.markdown.plugins.codeBlocks.enabled": {
             "type": "boolean",
             "default": true,
             "scope": "resource",
-            "description": "Highlight rendered and editable code fences; copy code."
+            "description": "%config.lumiere.markdown.plugins.codeBlocks.enabled.description%"
           },
           "lumiere.markdown.plugins.cursorBridge.enabled": {
             "type": "boolean",
             "default": true,
             "scope": "resource",
-            "description": "In Cursor, Cmd/Ctrl+L opens Chat and Cmd/Ctrl+K opens Edit on the Live Preview selection."
+            "description": "%config.lumiere.markdown.plugins.cursorBridge.enabled.description%"
           },
           "lumiere.markdown.plugins.diagrams.enabled": {
             "type": "boolean",
             "default": true,
             "scope": "resource",
-            "description": "Render Mermaid diagrams; Allow enables HTML labels after a failed guard."
+            "description": "%config.lumiere.markdown.plugins.diagrams.enabled.description%"
           },
           "lumiere.markdown.plugins.embeds.enabled": {
             "type": "boolean",
             "default": true,
             "scope": "resource",
-            "description": "Transclude notes, images and media; open attachment cards."
+            "description": "%config.lumiere.markdown.plugins.embeds.enabled.description%"
           },
           "lumiere.markdown.plugins.folding.enabled": {
             "type": "boolean",
             "default": true,
             "scope": "resource",
-            "description": "Folding in the Markdown editor."
+            "description": "%config.lumiere.markdown.plugins.folding.enabled.description%"
           },
           "lumiere.markdown.plugins.footnotes.enabled": {
             "type": "boolean",
             "default": true,
             "scope": "resource",
-            "description": "Footnote references, definitions, previews and navigation."
+            "description": "%config.lumiere.markdown.plugins.footnotes.enabled.description%"
           },
           "lumiere.markdown.plugins.formatting.enabled": {
             "type": "boolean",
             "default": true,
             "scope": "resource",
-            "description": "Markdown editing commands."
+            "description": "%config.lumiere.markdown.plugins.formatting.enabled.description%"
           },
           "lumiere.markdown.plugins.gitBlame.enabled": {
             "type": "boolean",
             "default": false,
             "scope": "resource",
-            "description": "Shows who last committed the caret line at the end of the line in Live Preview."
+            "description": "%config.lumiere.markdown.plugins.gitBlame.enabled.description%"
           },
           "lumiere.markdown.plugins.gitDiffEditor.enabled": {
             "type": "boolean",
             "default": true,
             "scope": "resource",
-            "description": "A side-by-side diff of two versions of a note, both rendered, blocks aligned and changed words marked. Opens from Source Control when diffEditor is rendered."
+            "description": "%config.lumiere.markdown.plugins.gitDiffEditor.enabled.description%"
           },
           "lumiere.markdown.plugins.gitGutter.enabled": {
             "type": "boolean",
             "default": true,
             "scope": "resource",
-            "description": "Added, modified and deleted bars beside the line numbers, like VS Code's quick diff, with a raw unified peek to revert a hunk."
+            "description": "%config.lumiere.markdown.plugins.gitGutter.enabled.description%"
           },
           "lumiere.markdown.plugins.gitInline.enabled": {
             "type": "boolean",
             "default": false,
             "scope": "resource",
-            "description": "Track changes in the rendered note: removed words struck through, added words tinted, removed blocks shown with Restore. Needs Git change bars."
+            "description": "%config.lumiere.markdown.plugins.gitInline.enabled.description%"
           },
           "lumiere.markdown.plugins.graph.enabled": {
             "type": "boolean",
             "default": true,
             "scope": "resource",
-            "description": "Draw a vault's notes as a directed graph in a panel of its own."
+            "description": "%config.lumiere.markdown.plugins.graph.enabled.description%"
           },
           "lumiere.markdown.plugins.ideContext.enabled": {
             "type": "boolean",
             "default": true,
             "scope": "resource",
-            "description": "Copy or send a deeper IDE-context packet for Claude Code and Codex (clipboard-first; never silent-guess)."
+            "description": "%config.lumiere.markdown.plugins.ideContext.enabled.description%"
           },
           "lumiere.markdown.plugins.indentGuides.enabled": {
             "type": "boolean",
             "default": true,
             "scope": "resource",
-            "description": "Indentation guides in the Markdown editor."
+            "description": "%config.lumiere.markdown.plugins.indentGuides.enabled.description%"
           },
           "lumiere.markdown.plugins.inlineTitle.enabled": {
             "type": "boolean",
             "default": false,
             "scope": "resource",
-            "description": "Show and rename the note title above its Markdown content."
+            "description": "%config.lumiere.markdown.plugins.inlineTitle.enabled.description%"
           },
           "lumiere.markdown.plugins.lineNumbers.enabled": {
             "type": "boolean",
             "default": true,
             "scope": "resource",
-            "description": "Line numbers in the Markdown editor, laid out like VS Code's text editor and following editor.lineNumbers."
+            "description": "%config.lumiere.markdown.plugins.lineNumbers.enabled.description%"
           },
           "lumiere.markdown.plugins.linkUpdates.enabled": {
             "type": "boolean",
             "default": true,
             "scope": "resource",
-            "description": "Update links in other notes when a note or attachment is renamed or moved in VS Code."
+            "description": "%config.lumiere.markdown.plugins.linkUpdates.enabled.description%"
           },
           "lumiere.markdown.plugins.links.enabled": {
             "type": "boolean",
             "default": true,
             "scope": "resource",
-            "description": "Follow Markdown links and wikilinks."
+            "description": "%config.lumiere.markdown.plugins.links.enabled.description%"
           },
           "lumiere.markdown.plugins.lookUp.enabled": {
             "type": "boolean",
             "default": true,
             "scope": "resource",
-            "description": "macOS: Look Up in a note's right-click menu opens the word in the Dictionary app."
+            "description": "%config.lumiere.markdown.plugins.lookUp.enabled.description%"
           },
           "lumiere.markdown.plugins.marp.enabled": {
             "type": "boolean",
             "default": true,
             "scope": "resource",
-            "description": "Detect Marp decks and open Marp's preview or export."
+            "description": "%config.lumiere.markdown.plugins.marp.enabled.description%"
           },
           "lumiere.markdown.plugins.math.enabled": {
             "type": "boolean",
             "default": true,
             "scope": "resource",
-            "description": "Render TeX formulas with MathJax."
+            "description": "%config.lumiere.markdown.plugins.math.enabled.description%"
           },
           "lumiere.markdown.plugins.obsidianCompat.enabled": {
             "type": "boolean",
             "default": true,
             "scope": "resource",
-            "description": "Use Obsidian property types and vault settings in Lumiere."
+            "description": "%config.lumiere.markdown.plugins.obsidianCompat.enabled.description%"
           },
           "lumiere.markdown.plugins.onlineVideos.enabled": {
             "type": "boolean",
             "default": true,
             "scope": "resource",
-            "description": "Embed tweets written as images (![](link)) as Obsidian does. In an untrusted workspace they show a link card."
+            "description": "%config.lumiere.markdown.plugins.onlineVideos.enabled.description%"
           },
           "lumiere.markdown.plugins.outgoingLinks.enabled": {
             "type": "boolean",
             "default": false,
             "scope": "resource",
-            "description": "Outgoing links view: the notes and files the active note links to, and links not created yet."
+            "description": "%config.lumiere.markdown.plugins.outgoingLinks.enabled.description%"
           },
           "lumiere.markdown.plugins.outline.enabled": {
             "type": "boolean",
             "default": true,
             "scope": "resource",
-            "description": "Markdown Outline with expansion actions and optional cursor following. Go to Heading (Ctrl+Shift+O) searches the active Lumiere note's headings."
+            "description": "%config.lumiere.markdown.plugins.outline.enabled.description%"
           },
           "lumiere.markdown.plugins.pagePreview.enabled": {
             "type": "boolean",
             "default": true,
             "scope": "resource",
-            "description": "Preview internal links with a modifier hover or a command."
+            "description": "%config.lumiere.markdown.plugins.pagePreview.enabled.description%"
           },
           "lumiere.markdown.plugins.pasteHtml.enabled": {
             "type": "boolean",
             "default": true,
             "scope": "resource",
-            "description": "Convert rich clipboard HTML into Markdown in notes and table cells."
+            "description": "%config.lumiere.markdown.plugins.pasteHtml.enabled.description%"
           },
           "lumiere.markdown.plugins.properties.enabled": {
             "type": "boolean",
             "default": true,
             "scope": "resource",
-            "description": "Edit YAML properties as typed fields, lists and ordered rows."
+            "description": "%config.lumiere.markdown.plugins.properties.enabled.description%"
           },
           "lumiere.markdown.plugins.quickSwitcher.enabled": {
             "type": "boolean",
             "default": true,
             "scope": "resource",
-            "description": "Find a note by name, alias or path, or create it, like Obsidian's quick switcher."
+            "description": "%config.lumiere.markdown.plugins.quickSwitcher.enabled.description%"
           },
           "lumiere.markdown.plugins.scratch.enabled": {
             "type": "boolean",
             "default": true,
             "scope": "resource",
-            "description": "Temporary notes in a scratch folder."
+            "description": "%config.lumiere.markdown.plugins.scratch.enabled.description%"
           },
           "lumiere.markdown.plugins.scrollAxisLock.enabled": {
             "type": "boolean",
             "default": true,
             "scope": "resource",
-            "description": "A trackpad or wheel scroll that is nearly straight up and down or sideways moves the note, its tables and its code blocks along that one axis, following editor.scrollPredominantAxis."
+            "description": "%config.lumiere.markdown.plugins.scrollAxisLock.enabled.description%"
           },
           "lumiere.markdown.plugins.search.enabled": {
             "type": "boolean",
             "default": true,
             "scope": "resource",
-            "description": "Render query blocks as live vault search results, and search the vault with Obsidian's syntax in the Vault Search view."
+            "description": "%config.lumiere.markdown.plugins.search.enabled.description%"
           },
           "lumiere.markdown.plugins.smartLists.enabled": {
             "type": "boolean",
             "default": true,
             "scope": "resource",
-            "description": "Smart lists in the Markdown editor."
+            "description": "%config.lumiere.markdown.plugins.smartLists.enabled.description%"
           },
           "lumiere.markdown.plugins.spellcheck.enabled": {
             "type": "boolean",
             "default": true,
             "scope": "resource",
-            "description": "Spellcheck in the Markdown editor."
+            "description": "%config.lumiere.markdown.plugins.spellcheck.enabled.description%"
           },
           "lumiere.markdown.plugins.stickyScroll.enabled": {
             "type": "boolean",
             "default": true,
             "scope": "resource",
-            "description": "Pin ancestor Markdown headings at the top while scrolling in Live Preview and Source mode. Click a pinned heading to return to it."
+            "description": "%config.lumiere.markdown.plugins.stickyScroll.enabled.description%"
           },
           "lumiere.markdown.plugins.suggest.enabled": {
             "type": "boolean",
             "default": true,
             "scope": "resource",
-            "description": "Complete links, headings, blocks and tags from the vault index."
+            "description": "%config.lumiere.markdown.plugins.suggest.enabled.description%"
           },
           "lumiere.markdown.plugins.tables.enabled": {
             "type": "boolean",
             "default": true,
             "scope": "resource",
-            "description": "Edit Markdown tables as grids with projected cell editing."
+            "description": "%config.lumiere.markdown.plugins.tables.enabled.description%"
           },
           "lumiere.markdown.plugins.tags.enabled": {
             "type": "boolean",
             "default": true,
             "scope": "resource",
-            "description": "Render tags, find notes with matching hierarchical tags, and list the vault's tags in the Tags view."
+            "description": "%config.lumiere.markdown.plugins.tags.enabled.description%"
           },
           "lumiere.markdown.plugins.tasks.enabled": {
             "type": "boolean",
             "default": true,
             "scope": "resource",
-            "description": "Interactive checkboxes and checklist commands."
+            "description": "%config.lumiere.markdown.plugins.tasks.enabled.description%"
           },
           "lumiere.markdown.plugins.templates.enabled": {
             "type": "boolean",
             "default": true,
             "scope": "resource",
-            "description": "Insert a note from your templates folder at the caret, like Obsidian's Templates."
+            "description": "%config.lumiere.markdown.plugins.templates.enabled.description%"
           },
           "lumiere.markdown.plugins.vim.enabled": {
             "type": "boolean",
             "default": false,
             "scope": "resource",
-            "description": "Vim in the Markdown editor."
+            "description": "%config.lumiere.markdown.plugins.vim.enabled.description%"
           },
           "lumiere.markdown.plugins.wordCount.enabled": {
             "type": "boolean",
             "default": true,
             "scope": "resource",
-            "description": "Word and character count of the active note, or of the selection, in the status bar."
+            "description": "%config.lumiere.markdown.plugins.wordCount.enabled.description%"
           },
           "lumiere.markdown.attachments.deleteUnlinkedAttachments": {
             "enum": [
@@ -3531,7 +3532,7 @@
               "never"
             ],
             "default": "ask",
-            "description": "Obsidian's Delete attachments when deleting files: when notes are deleted in VS Code, `ask` offers to delete the attachments only they linked, `always` deletes them (to the trash while files.enableTrash is on), and `never` leaves them. Deleting a folder does not offer; neither does a deletion made outside VS Code.",
+            "description": "%config.lumiere.markdown.attachments.deleteUnlinkedAttachments.description%",
             "scope": "resource"
           },
           "lumiere.markdown.autoPair.brackets": {
@@ -3552,13 +3553,13 @@
               "byModifiedTimeReverse"
             ],
             "default": "alphabetical",
-            "description": "Order of Linked and Unlinked mentions in the Backlinks view (Obsidian sortOrder). Created-time sorts are omitted: the vault index has mtime only.",
+            "description": "%config.lumiere.markdown.backlinks.sortOrder.description%",
             "scope": "resource"
           },
           "lumiere.markdown.backlinks.extraContext": {
             "type": "boolean",
             "default": false,
-            "description": "Show the lines above and below each backlink match (Obsidian “Show more context”). Off by default.",
+            "description": "%config.lumiere.markdown.backlinks.extraContext.description%",
             "scope": "resource"
           },
           "lumiere.markdown.editor.defaultMode": {
@@ -3586,7 +3587,7 @@
           "lumiere.markdown.editor.reclaimInPlaceTextEditor": {
             "type": "boolean",
             "default": false,
-            "description": "Reclaim when a tool replaces a Lumiere tab in place with the text editor (Claude chat open_file). Off by default.",
+            "description": "%config.lumiere.markdown.editor.reclaimInPlaceTextEditor.description%",
             "scope": "resource"
           },
           "lumiere.markdown.editor.warmTextDocument": {
@@ -3601,7 +3602,7 @@
           "lumiere.markdown.editor.firstPaintSnapshot": {
             "type": "boolean",
             "default": true,
-            "description": "Draw the note's first screen in the editor's first HTML, so its text shows before the editor has loaded and is replaced by the live editor without moving. Skipped for Source mode, a centred page, an inline title and notes with unusual gutters. Applies to notes opened after the change.",
+            "description": "%config.lumiere.markdown.editor.firstPaintSnapshot.description%",
             "scope": "resource"
           },
           "lumiere.markdown.editor.strictLineBreaks": {
@@ -3619,13 +3620,13 @@
             "minimum": 1,
             "maximum": 10,
             "default": 4,
-            "description": "Speed multiplier for text-selection auto-scroll near the editor edges (1–10). Default: 4; 1 restores CodeMirror's original speed. Applies immediately in Live Preview and Source mode.",
+            "description": "%config.lumiere.markdown.editor.dragScrollSpeed.description%",
             "scope": "resource"
           },
           "lumiere.markdown.editor.autosave": {
             "type": "boolean",
             "default": true,
-            "description": "Save a note 2 seconds after its last edit while it is open in Lumiere, as Obsidian does. Turn it off to save only with Save. When VS Code's files.autoSave is on it saves the note instead, and a note that has no file yet (untitled) is never saved this way.",
+            "description": "%config.lumiere.markdown.editor.autosave.description%",
             "scope": "resource"
           },
           "lumiere.markdown.editor.useTabs": {
@@ -3644,7 +3645,7 @@
             "type": "number",
             "minimum": 8,
             "maximum": 48,
-            "description": "Font size of the note text in pixels (Obsidian's default is 16). Headings, code, tables, line numbers, properties and footnotes scale with it. It replaces editor.fontSize for notes; the font family still follows editor.fontFamily.",
+            "description": "%config.lumiere.markdown.editor.fontSize.description%",
             "default": 16,
             "scope": "resource"
           },
@@ -3652,7 +3653,7 @@
             "type": "number",
             "minimum": 1,
             "maximum": 3,
-            "description": "Line height of the note text as a multiple of its font size (Obsidian's default is 1.5). It replaces editor.lineHeight for notes.",
+            "description": "%config.lumiere.markdown.editor.lineHeight.description%",
             "default": 1.5,
             "scope": "resource"
           },
@@ -3672,7 +3673,7 @@
               "rendered"
             ],
             "default": "native",
-            "description": "How a Markdown diff opened from Source Control or the Timeline is shown: VS Code's text diff (native), or both versions rendered side by side (rendered).",
+            "description": "%config.lumiere.markdown.gitDiffEditor.diffEditor.description%",
             "scope": "resource"
           },
           "lumiere.markdown.gitGutter.compareTo": {
@@ -3681,7 +3682,7 @@
               "index"
             ],
             "default": "HEAD",
-            "description": "What the change bars compare the note with: the last commit (HEAD) or the staged version (index).",
+            "description": "%config.lumiere.markdown.gitGutter.compareTo.description%",
             "scope": "resource"
           },
           "lumiere.markdown.graph.maxNodes": {
@@ -3689,7 +3690,7 @@
             "minimum": 1,
             "maximum": 2000,
             "default": 2000,
-            "description": "Hard cap on notes drawn in the vault graph.",
+            "description": "%config.lumiere.markdown.graph.maxNodes.description%",
             "scope": "resource"
           },
           "lumiere.markdown.graph.maxEdges": {
@@ -3697,7 +3698,7 @@
             "minimum": 1,
             "maximum": 20000,
             "default": 20000,
-            "description": "Hard cap on aggregated links drawn in the vault graph.",
+            "description": "%config.lumiere.markdown.graph.maxEdges.description%",
             "scope": "resource"
           },
           "lumiere.markdown.graph.defaultMode": {
@@ -3706,7 +3707,7 @@
               "local"
             ],
             "default": "global",
-            "description": "Open the vault graph in global or local mode.",
+            "description": "%config.lumiere.markdown.graph.defaultMode.description%",
             "scope": "resource"
           },
           "lumiere.markdown.graph.localDepth": {
@@ -3714,7 +3715,7 @@
             "minimum": 1,
             "maximum": 3,
             "default": 2,
-            "description": "How many hops the local graph includes.",
+            "description": "%config.lumiere.markdown.graph.localDepth.description%",
             "scope": "resource"
           },
           "lumiere.markdown.graph.colorBy": {
@@ -3724,7 +3725,7 @@
               "tag"
             ],
             "default": "type",
-            "description": "Color graph notes by type, folder or first tag.",
+            "description": "%config.lumiere.markdown.graph.colorBy.description%",
             "scope": "resource"
           },
           "lumiere.markdown.linkUpdates.mode": {
@@ -3734,7 +3735,7 @@
               "never"
             ],
             "default": "prompt",
-            "description": "Obsidian's Automatically update internal links: `prompt` (the default, matching `alwaysUpdateLinks: false`) asks before rewriting links in other notes when a file is renamed or moved; its Always Update button sets this to `always` for the note's workspace folder, `always` rewrites without asking, and `never` leaves links untouched.",
+            "description": "%config.lumiere.markdown.linkUpdates.mode.description%",
             "scope": "resource"
           },
           "lumiere.markdown.links.newLinkFormat": {
@@ -3759,19 +3760,19 @@
           "lumiere.markdown.links.focusNewTab": {
             "type": "boolean",
             "default": true,
-            "description": "Obsidian's Always focus new tabs: when a link opens in a new tab or beside, the new tab takes the keyboard focus. Off keeps the focus where it was (VS Code's preserveFocus); PDFs always take it.",
+            "description": "%config.lumiere.markdown.links.focusNewTab.description%",
             "scope": "resource"
           },
           "lumiere.markdown.files.newNoteFolder": {
             "type": "string",
             "default": "",
-            "description": "New notes: empty for vault root, . for current folder, or a vault-relative path.",
+            "description": "%config.lumiere.markdown.files.newNoteFolder.description%",
             "scope": "resource"
           },
           "lumiere.markdown.files.attachmentFolder": {
             "type": "string",
             "default": "",
-            "description": "Attachment destination policy: empty for vault root, . for current folder, or ./sub. Dropped, pasted, and HTML-paste images are saved here under timestamp names.",
+            "description": "%config.lumiere.markdown.files.attachmentFolder.description%",
             "scope": "resource"
           },
           "lumiere.markdown.marp.open": {
@@ -3780,7 +3781,7 @@
               "textEditor"
             ],
             "default": "workbench",
-            "description": "Where a Marp deck opens. textEditor sends it to VS Code's text editor, where Marp's own preview and export run. Keep Marp Deck in Lumiere remembers a deck.",
+            "description": "%config.lumiere.markdown.marp.open.description%",
             "scope": "resource"
           },
           "lumiere.markdown.math.macros": {
@@ -3790,13 +3791,13 @@
               "maxLength": 4096
             },
             "default": {},
-            "description": "MathJax TeX macros (name → replacement), as in Obsidian’s MathJax macros setting. Use #1…#9 for arguments.",
+            "description": "%config.lumiere.markdown.math.macros.description%",
             "scope": "resource"
           },
           "lumiere.markdown.obsidianCompat.configFolder": {
             "type": "string",
             "default": ".obsidian",
-            "description": "Obsidian configuration folder relative to the vault root, such as .obsidian-awesome. Root markers discover the vault; they do not select this folder.",
+            "description": "%config.lumiere.markdown.obsidianCompat.configFolder.description%",
             "scope": "resource"
           },
           "lumiere.markdown.outgoingLinks.sortOrder": {
@@ -3807,19 +3808,19 @@
               "byModifiedTimeReverse"
             ],
             "default": "alphabetical",
-            "description": "Order of Links, Not created yet, and Unlinked mentions in the Outgoing links view (Obsidian sortOrder). Created-time sorts are omitted: the vault index has mtime only.",
+            "description": "%config.lumiere.markdown.outgoingLinks.sortOrder.description%",
             "scope": "resource"
           },
           "lumiere.markdown.outgoingLinks.extraContext": {
             "type": "boolean",
             "default": false,
-            "description": "Show the lines above and below each Unlinked mention match (Obsidian “Show more context”). Off by default.",
+            "description": "%config.lumiere.markdown.outgoingLinks.extraContext.description%",
             "scope": "resource"
           },
           "lumiere.markdown.outline.followCursor": {
             "type": "boolean",
             "default": true,
-            "description": "Select and reveal the current heading in Markdown Outline as the cursor moves or the note scrolls, without taking focus.",
+            "description": "%config.lumiere.markdown.outline.followCursor.description%",
             "scope": "resource"
           },
           "lumiere.markdown.outline.expandMode": {
@@ -3828,7 +3829,7 @@
               "all"
             ],
             "default": "accordion",
-            "description": "How Markdown Outline expands headings while Follow Cursor is on: accordion keeps only the active path open; all expands every parent (previous behavior).",
+            "description": "%config.lumiere.markdown.outline.expandMode.description%",
             "scope": "resource"
           },
           "lumiere.markdown.properties.display": {
@@ -3845,13 +3846,13 @@
             "minimum": 0,
             "maximum": 50,
             "default": 0,
-            "description": "How many list items to show before a Showing N of M control. 0, the default, shows them all, as Obsidian does. Applies to tags, aliases, cssclasses, and other lists.",
+            "description": "%config.lumiere.markdown.properties.listPreviewCount.description%",
             "scope": "resource"
           },
           "lumiere.markdown.scratch.folder": {
             "type": "string",
             "default": "scratch",
-            "description": "Project-relative folder for scratch notes. The folder is created when you create a note.",
+            "description": "%config.lumiere.markdown.scratch.folder.description%",
             "scope": "resource"
           },
           "lumiere.markdown.stickyScroll.maxLines": {
@@ -3859,7 +3860,7 @@
             "minimum": 1,
             "maximum": 6,
             "default": 5,
-            "description": "Maximum pinned heading rows. Keeps the nearest ancestors when the limit is exceeded; fractional values round down. Small editor panes may show fewer rows.",
+            "description": "%config.lumiere.markdown.stickyScroll.maxLines.description%",
             "scope": "resource"
           },
           "lumiere.markdown.tags.viewSort": {
@@ -3868,31 +3869,31 @@
               "frequency"
             ],
             "default": "frequency",
-            "description": "Order of the Tags view: `frequency` (most used first, as in Obsidian) or `name` (A to Z).",
+            "description": "%config.lumiere.markdown.tags.viewSort.description%",
             "scope": "resource"
           },
           "lumiere.markdown.tags.viewNested": {
             "type": "boolean",
             "default": true,
-            "description": "Show nested tags (`#a/b`) under their parent in the Tags view, rather than as a flat list.",
+            "description": "%config.lumiere.markdown.tags.viewNested.description%",
             "scope": "resource"
           },
           "lumiere.markdown.templates.folder": {
             "type": "string",
             "default": "",
-            "description": "Vault-relative folder of template notes. Insert Template lists the Markdown files in it.",
+            "description": "%config.lumiere.markdown.templates.folder.description%",
             "scope": "resource"
           },
           "lumiere.markdown.templates.dateFormat": {
             "type": "string",
             "default": "YYYY-MM-DD",
-            "description": "Format of {{date}} in templates and of Insert Current Date. Tokens: YYYY, MM, DD, HH, mm and ss.",
+            "description": "%config.lumiere.markdown.templates.dateFormat.description%",
             "scope": "resource"
           },
           "lumiere.markdown.templates.timeFormat": {
             "type": "string",
             "default": "HH:mm",
-            "description": "Format of {{time}} in templates and of Insert Current Time. Tokens: YYYY, MM, DD, HH, mm and ss.",
+            "description": "%config.lumiere.markdown.templates.timeFormat.description%",
             "scope": "resource"
           },
           "lumiere.markdown.vault.rootMarkers": {
@@ -3903,7 +3904,7 @@
             "default": [
               ".obsidian"
             ],
-            "description": "A folder containing one of these entries is a vault root; without one, the workspace folder is the vault.",
+            "description": "%config.lumiere.markdown.vault.rootMarkers.description%",
             "scope": "resource"
           },
           "lumiere.markdown.vault.excludedFiles": {
@@ -3912,13 +3913,13 @@
               "type": "string"
             },
             "default": [],
-            "description": "Obsidian's Excluded files: path prefixes such as `Archive/`, or globs such as `**/*.excalidraw.md`. Excluded files stay linkable but are left out of the quick switcher, suggestions, search and unlinked mentions.",
+            "description": "%config.lumiere.markdown.vault.excludedFiles.description%",
             "scope": "resource"
           },
           "lumiere.markdown.vault.showUnsupportedFiles": {
             "type": "boolean",
             "default": false,
-            "description": "Obsidian's Show all file types: the quick switcher also finds files Obsidian cannot open (such as .csv or .zip), not only notes and the attachments it opens. Link suggestions already list every file, and the Explorer is VS Code's.",
+            "description": "%config.lumiere.markdown.vault.showUnsupportedFiles.description%",
             "scope": "resource"
           },
           "lumiere.markdown.vim.caretStyle": {
@@ -3941,22 +3942,22 @@
               "clipboard"
             ],
             "enumDescriptions": [
-              "The editor's own chat (Cursor, or VS Code with a chat extension such as Copilot Chat) when it is the only agent installed; with Claude Code or Codex installed too, only copy, to paste into the agent you use.",
-              "Cursor's agent chat, with the passage on the clipboard to paste.",
-              "VS Code's chat, with the passage typed in.",
-              "Claude Code: a new conversation with the passage typed in.",
-              "Codex: the passage attached to the thread as a file.",
-              "Only copy the passage."
+              "%config.lumiere.markdown.copyLinkForAgent.target.enumDescriptions.0%",
+              "%config.lumiere.markdown.copyLinkForAgent.target.enumDescriptions.1%",
+              "%config.lumiere.markdown.copyLinkForAgent.target.enumDescriptions.2%",
+              "%config.lumiere.markdown.copyLinkForAgent.target.enumDescriptions.3%",
+              "%config.lumiere.markdown.copyLinkForAgent.target.enumDescriptions.4%",
+              "%config.lumiere.markdown.copyLinkForAgent.target.enumDescriptions.5%"
             ],
             "default": "auto",
             "scope": "window",
-            "markdownDescription": "Which chat **Copy link to this** opens after copying the link and passage. Extensions cannot see which agent you are working in, so `auto` only opens a chat when the editor's own chat is the only agent; pick one here to send the passage to it."
+            "markdownDescription": "%config.lumiere.markdown.copyLinkForAgent.target.markdownDescription%"
           },
           "lumiere.markdown.debug.logging": {
             "type": "boolean",
             "default": false,
             "scope": "window",
-            "description": "Log plugin load/stop timings and debug messages in the Lumiere output channel."
+            "description": "%config.lumiere.markdown.debug.logging.description%"
           },
           "lumiere.markdown.plugins.external": {
             "type": "object",
@@ -3965,7 +3966,7 @@
               "type": "boolean"
             },
             "scope": "resource",
-            "description": "External host plugin enablement by registered plugin ID."
+            "description": "%config.lumiere.markdown.plugins.external.description%"
           },
           "lumiere.markdown.preset": {
             "type": "string",
@@ -3975,7 +3976,7 @@
             ],
             "default": "obsidian",
             "scope": "resource",
-            "description": "Editor plugin preset."
+            "description": "%config.lumiere.markdown.preset.description%"
           }
         }
       },
@@ -3985,7 +3986,7 @@
           "lumiere.pdf.outline.followCursor": {
             "type": "boolean",
             "default": true,
-            "description": "Select the bookmark of the current PDF page and reading position in PDF Outline as you scroll, without moving focus. Its parents and its own sub-bookmarks open and every other branch closes. Toggle Follow Cursor in the outline's More Actions menu."
+            "description": "%config.lumiere.pdf.outline.followCursor.description%"
           },
           "lumiere.pdf.copyLinkForAgent.target": {
             "type": "string",
@@ -3999,25 +4000,25 @@
               "clipboard"
             ],
             "enumDescriptions": [
-              "Claude Code or Codex, whichever is installed; asks which when both are; with neither, only copy.",
-              "Only copy, as Clipboard does (kept for older settings: Cursor's chat is no longer opened).",
-              "Only copy, as Clipboard does (kept for older settings: VS Code's chat is no longer opened).",
-              "Claude Code: a new conversation with the context typed in.",
-              "Codex: the context attached to the thread as a file.",
-              "Only copy the context."
+              "%config.lumiere.pdf.copyLinkForAgent.target.enumDescriptions.0%",
+              "%config.lumiere.pdf.copyLinkForAgent.target.enumDescriptions.1%",
+              "%config.lumiere.pdf.copyLinkForAgent.target.enumDescriptions.2%",
+              "%config.lumiere.pdf.copyLinkForAgent.target.enumDescriptions.3%",
+              "%config.lumiere.pdf.copyLinkForAgent.target.enumDescriptions.4%",
+              "%config.lumiere.pdf.copyLinkForAgent.target.enumDescriptions.5%"
             ],
-            "markdownDescription": "Where **Send IDE Context to Agent…** sends the context. **Copy link to this** never opens an agent chat: it only writes a quote or page link to the clipboard. `cursor` and `chat` remain for older settings and only copy."
+            "markdownDescription": "%config.lumiere.pdf.copyLinkForAgent.target.markdownDescription%"
           },
           "lumiere.pdf.regionImageCache.maxSizeMB": {
             "type": "number",
             "default": 100,
             "minimum": 1,
-            "markdownDescription": "The most disk space, in megabytes, that PNG snapshots of selected regions may use in the extension's storage. This is a hard limit: when a new snapshot takes them past it, the least recently used ones are deleted, and a single snapshot larger than the limit is not saved (Copy link to this then copies the link without the image). Values below 1 count as 1."
+            "markdownDescription": "%config.lumiere.pdf.regionImageCache.maxSizeMB.markdownDescription%"
           },
           "lumiere.pdf.regions.enabled": {
             "type": "boolean",
             "default": false,
-            "markdownDescription": "Allow empty-page region drags and the **Select Region** tool. When off (default), only text selection and page links are available for Copy link; new links never include `viewrect=`. Turn on to draw boxes and optionally emit `viewrect=` in Copy link."
+            "markdownDescription": "%config.lumiere.pdf.regions.enabled.markdownDescription%"
           },
           "lumiere.pdf.toolbar.mode": {
             "type": "string",
@@ -4027,10 +4028,10 @@
               "none"
             ],
             "enumDescriptions": [
-              "VS Code status bar entries for page, zoom, View, page colors and navigation.",
-              "No status-bar PDF entries: keyboard shortcuts, menus and the command palette only."
+              "%config.lumiere.pdf.toolbar.mode.enumDescriptions.0%",
+              "%config.lumiere.pdf.toolbar.mode.enumDescriptions.1%"
             ],
-            "markdownDescription": "Where the page, zoom, find and page-colors controls of the PDF viewer appear. Slim and floating viewer bars were removed. Every control also has a command and a keyboard shortcut."
+            "markdownDescription": "%config.lumiere.pdf.toolbar.mode.markdownDescription%"
           },
           "lumiere.pdf.toolbar.statusBarButtons": {
             "type": "string",
@@ -4041,16 +4042,16 @@
               "never"
             ],
             "enumDescriptions": [
-              "Show the buttons: the editor title bar keeps the PDF actions in its \"…\" menu.",
-              "Always show the buttons.",
-              "Only the page, zoom and View."
+              "%config.lumiere.pdf.toolbar.statusBarButtons.enumDescriptions.0%",
+              "%config.lumiere.pdf.toolbar.statusBarButtons.enumDescriptions.1%",
+              "%config.lumiere.pdf.toolbar.statusBarButtons.enumDescriptions.2%"
             ],
-            "markdownDescription": "With `#lumiere.pdf.toolbar.mode#` set to `chrome`, whether the status bar also shows history, previous and next page, zoom out and in, and find buttons around the page and zoom."
+            "markdownDescription": "%config.lumiere.pdf.toolbar.statusBarButtons.markdownDescription%"
           },
           "lumiere.pdf.agentBridge.enabled": {
             "type": "boolean",
             "default": false,
-            "markdownDescription": "**Experimental, off by default.** Serve the current PDF selection to coding agents (VS Code chat, Cursor, Claude Code, Codex) over a local MCP server: 127.0.0.1 only, a random port, a bearer token, no browser origins. It starts and stops when this changes. **PDF: Copy MCP Setup for Claude Code / Codex…** gives the command that connects those agents."
+            "markdownDescription": "%config.lumiere.pdf.agentBridge.enabled.markdownDescription%"
           },
           "lumiere.pdf.view.defaultZoom": {
             "type": [
@@ -4073,7 +4074,7 @@
                 "maximum": 400
               }
             ],
-            "markdownDescription": "Zoom for PDFs without a saved view: fit width, fit page, actual size (100%), or a numeric percentage (25–400)."
+            "markdownDescription": "%config.lumiere.pdf.view.defaultZoom.markdownDescription%"
           },
           "lumiere.pdf.view.pageLayout": {
             "type": "string",
@@ -4084,11 +4085,11 @@
               "spreadCover"
             ],
             "enumDescriptions": [
-              "One page per row.",
-              "Pair pages 1–2, 3–4, and so on.",
-              "Cover page alone, then pair pages 2–3, 4–5, and so on."
+              "%config.lumiere.pdf.view.pageLayout.enumDescriptions.0%",
+              "%config.lumiere.pdf.view.pageLayout.enumDescriptions.1%",
+              "%config.lumiere.pdf.view.pageLayout.enumDescriptions.2%"
             ],
-            "markdownDescription": "Page layout for PDFs without a saved view."
+            "markdownDescription": "%config.lumiere.pdf.view.pageLayout.markdownDescription%"
           },
           "lumiere.pdf.view.scrollMode": {
             "type": "string",
@@ -4098,10 +4099,10 @@
               "paged"
             ],
             "enumDescriptions": [
-              "Scroll through the document.",
-              "Show one page or spread at a time; use next/previous to change it."
+              "%config.lumiere.pdf.view.scrollMode.enumDescriptions.0%",
+              "%config.lumiere.pdf.view.scrollMode.enumDescriptions.1%"
             ],
-            "markdownDescription": "Scrolling mode for PDFs without a saved view."
+            "markdownDescription": "%config.lumiere.pdf.view.scrollMode.markdownDescription%"
           },
           "lumiere.pdf.view.scrollDirection": {
             "type": "string",
@@ -4110,18 +4111,18 @@
               "vertical",
               "horizontal"
             ],
-            "markdownDescription": "Reading direction for PDFs without a saved view."
+            "markdownDescription": "%config.lumiere.pdf.view.scrollDirection.markdownDescription%"
           },
           "lumiere.pdf.lookUp.enabled": {
             "type": "boolean",
             "default": true,
-            "markdownDescription": "macOS only: look up the word under the pointer with a force click (hard press on the trackpad) or a three-finger tap, which shows the Dictionary popover, or with **Look Up** in the right-click menu of a PDF, which opens the Dictionary app. Has no effect on other systems."
+            "markdownDescription": "%config.lumiere.pdf.lookUp.enabled.markdownDescription%"
           },
           "lumiere.pdf.annotations.folder": {
             "type": "string",
             "default": ".lumiere/pdf-annotations",
             "scope": "resource",
-            "markdownDescription": "Where PDF annotations and bookmarks are kept, one file of each per PDF named by its SHA-256 (`<sha256>.json` and `<sha256>.bookmarks.json`), so annotating or bookmarking never changes the PDF. A relative path is inside the PDF's workspace folder (the home folder for a PDF outside every folder); `~/…` is inside the home folder; an absolute path is used as it is. Changing it does not move existing files."
+            "markdownDescription": "%config.lumiere.pdf.annotations.folder.markdownDescription%"
           },
           "lumiere.pdf.annotations.protectedFolders": {
             "type": "array",
@@ -4132,17 +4133,17 @@
               ".raw"
             ],
             "scope": "resource",
-            "markdownDescription": "Workspace folders whose PDFs **Save Annotations into This PDF** never writes, such as a vault's immutable sources. Annotations are always kept in `#lumiere.pdf.annotations.folder#`, named by the PDF's SHA-256, so the PDF itself never changes unless you save into it."
+            "markdownDescription": "%config.lumiere.pdf.annotations.protectedFolders.markdownDescription%"
           },
           "lumiere.pdf.keyboardShortcuts": {
             "type": "boolean",
             "default": true,
-            "markdownDescription": "Default keyboard shortcuts of the PDF viewer, active only while a PDF is the active editor and focus is not in an input, the side bar, the panel or the auxiliary bar. They take Ctrl/⌘+G (Go to Line elsewhere), Ctrl/⌘+0 (focus the side bar), Ctrl/⌘+= and Ctrl/⌘+- (zoom the window) and Ctrl/⌘+F in that situation. Turn off to leave every key to VS Code; each **PDF:** command can still be bound in Keyboard Shortcuts."
+            "markdownDescription": "%config.lumiere.pdf.keyboardShortcuts.markdownDescription%"
           },
           "lumiere.pdf.view.restoreOnReopen": {
             "type": "boolean",
             "default": true,
-            "markdownDescription": "Reopen each PDF at its last page, scroll position, zoom and view choices (layout, scrolling, direction). When off, every PDF opens with the defaults above."
+            "markdownDescription": "%config.lumiere.pdf.view.restoreOnReopen.markdownDescription%"
           },
           "lumiere.pdf.view.smoothScrolling": {
             "type": [
@@ -4150,12 +4151,12 @@
               "null"
             ],
             "default": null,
-            "markdownDescription": "Animate discrete mouse-wheel scrolling, page jumps and displayed zoom changes. `null` follows `#editor.smoothScrolling#`; `false` disables motion. Always disabled when the system prefers reduced motion."
+            "markdownDescription": "%config.lumiere.pdf.view.smoothScrolling.markdownDescription%"
           },
           "lumiere.pdf.view.arrowsKeepPlace": {
             "type": "boolean",
             "default": true,
-            "markdownDescription": "Plain ←/→ turn the page keeping the zoom and the place in the page. ⌥←/→ (Ctrl+Alt+←/→ on Windows and Linux) then pan a zoomed page and turn it at its edge, going to the top of the next page. Turn this off to swap them back."
+            "markdownDescription": "%config.lumiere.pdf.view.arrowsKeepPlace.markdownDescription%"
           },
           "lumiere.pdf.pageColors": {
             "type": "string",
@@ -4166,11 +4167,11 @@
               "dark"
             ],
             "enumDescriptions": [
-              "Match the editor color theme kind: dark themes get dark paper; light themes stay normal.",
-              "White paper (classic PDF rendering).",
-              "Dark paper with recolored text and vectors; embedded images stay as-is. Scanned pages stay largely bright."
+              "%config.lumiere.pdf.pageColors.enumDescriptions.0%",
+              "%config.lumiere.pdf.pageColors.enumDescriptions.1%",
+              "%config.lumiere.pdf.pageColors.enumDescriptions.2%"
             ],
-            "markdownDescription": "PDF page surface colors. **Follow** tracks `#window.activeColorTheme#` kind. Dark paper is drawn by the PDF engine (PDFium's colour-scheme render, with each colour's lightness inverted and its hue kept), and embedded pictures stay as authored. Scanned and image-only pages stay largely bright. No CSS invert."
+            "markdownDescription": "%config.lumiere.pdf.pageColors.markdownDescription%"
           }
         }
       }
@@ -4178,17 +4179,17 @@
     "viewsWelcome": [
       {
         "view": "lumiere.pdf.outline",
-        "contents": "Reading the outline…",
+        "contents": "%viewsWelcome.lumiere.pdf.outline.0.contents%",
         "when": "lumiere.pdf.outlineLoading"
       },
       {
         "view": "lumiere.pdf.outline",
-        "contents": "This PDF has no outline.",
+        "contents": "%viewsWelcome.lumiere.pdf.outline.1.contents%",
         "when": "!lumiere.pdf.outlineLoading"
       },
       {
         "view": "lumiere.pdf.bookmarks",
-        "contents": "No bookmarks yet.\n[Add Bookmark](command:lumiere.pdf.addBookmark)"
+        "contents": "%viewsWelcome.lumiere.pdf.bookmarks.0.contents%"
       }
     ],
     "mcpServerDefinitionProviders": [
@@ -4200,7 +4201,7 @@
   },
   "scripts": {
     "build": "node scripts/build.mjs",
-    "typecheck": "tsc -p tsconfig.json && tsc -p test && tsc -p packages/core && tsc -p packages/agents && tsc -p packages/agents/test && tsc -p packages/scroll && tsc -p packages/scroll/test && pnpm --filter @workshop/markdown typecheck && pnpm --filter @workshop/pdf typecheck",
+    "typecheck": "tsc -p tsconfig.json && tsc -p test && tsc -p packages/core && tsc -p packages/agents && tsc -p packages/agents/test && tsc -p packages/scroll && tsc -p packages/scroll/test && tsc -p packages/l10n && tsc -p packages/l10n/test && pnpm --filter @workshop/markdown typecheck && pnpm --filter @workshop/pdf typecheck",
     "lint": "eslint . --max-warnings=0",
     "format": "prettier --write .",
     "format:check": "prettier --check .",
@@ -4209,7 +4210,8 @@
     "test:quality": "pnpm --filter @workshop/markdown test:quality",
     "test:vscode": "pnpm build && playwright test -c test/vscode/playwright.config.ts && playwright test -c packages/pdf/test/vscode/playwright.config.ts",
     "contributions": "tsx scripts/contributions.ts",
-    "check": "pnpm format:check && pnpm lint && pnpm typecheck && pnpm test && pnpm contributions --check",
+    "l10n": "tsx scripts/l10n.ts",
+    "check": "pnpm format:check && pnpm lint && pnpm typecheck && pnpm test && pnpm contributions --check && pnpm l10n --check",
     "check:full": "pnpm check && pnpm test:browser && pnpm test:quality && pnpm test:vscode",
     "notices": "node scripts/third-party-notices.mjs",
     "package": "node scripts/build.mjs --production && node scripts/third-party-notices.mjs --check && vsce package --pre-release --no-dependencies --no-rewrite-relative-links",
@@ -4218,6 +4220,7 @@
   },
   "dependencies": {
     "@workshop/core": "workspace:*",
+    "@workshop/l10n": "workspace:*",
     "@workshop/markdown": "workspace:*",
     "@workshop/pdf": "workspace:*"
   },

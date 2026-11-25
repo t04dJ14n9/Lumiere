@@ -14,3 +14,6 @@ packages/pdf/src/**/*.d.ts
 # Git worktrees (AGENTS.md: <repo>/.worktree/<branch>) and agents' worktrees.
 .worktree/
 .claude/worktrees/
+# Built from l10n/<language>/ by scripts/l10n.ts.
+l10n/bundle.l10n.*.json
+package.nls.*.json

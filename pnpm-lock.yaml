@@ -11,6 +11,9 @@ importers:
       '@workshop/core':
         specifier: workspace:*
         version: link:packages/core
+      '@workshop/l10n':
+        specifier: workspace:*
+        version: link:packages/l10n
       '@workshop/markdown':
         specifier: workspace:*
         version: link:packages/markdown
@@ -65,6 +68,8 @@ importers:
       cordis:
         specifier: 4.0.0-rc.13
         version: 4.0.0-rc.13
+
+  packages/l10n: {}
 
   packages/markdown:
     dependencies:
@@ -167,6 +172,9 @@ importers:
       '@workshop/core':
         specifier: workspace:*
         version: link:../core
+      '@workshop/l10n':
+        specifier: workspace:*
+        version: link:../l10n
       '@workshop/scroll':
         specifier: workspace:*
         version: link:../scroll
@@ -291,6 +299,9 @@ importers:
       '@workshop/core':
         specifier: workspace:*
         version: link:../core
+      '@workshop/l10n':
+        specifier: workspace:*
+        version: link:../l10n
       '@workshop/scroll':
         specifier: workspace:*
         version: link:../scroll
