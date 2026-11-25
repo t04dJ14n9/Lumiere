@@ -3,6 +3,7 @@ import type { ActiveEditor, HostDocument, PanelPort } from "../../shared/host";
 import type { EditorPanel, Editors } from "../editor/api";
 import { protocol as editorProtocol } from "../editor/protocol";
 import { countText, formatCounts, type Counts } from "./count";
+import { t } from "@workshop/l10n";
 
 const UPDATE_DELAY_MS = 200;
 /** Do not block the status bar on a webview that is still booting (BH-018). */
@@ -37,7 +38,7 @@ export const wordCountHost: Plugin = {
         status.hide();
         return;
       }
-      status.show(formatCounts(text), "Words and characters");
+      status.show(formatCounts(text), t("Words and characters"));
     };
     const schedule = () => {
       clearTimeout(timer);

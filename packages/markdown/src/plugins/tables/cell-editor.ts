@@ -19,6 +19,7 @@ import type { Action, TableEnvironment } from "./environment";
 import { cellNavKey, cellNavigation, type CellStep } from "./navigation";
 import { installCellWordNavigation } from "./word-navigation";
 import type { WordMotion } from "./word-motion";
+import { t } from "@workshop/l10n";
 
 export type CellSelection = number | "all" | { anchor: number; head: number };
 
@@ -187,7 +188,7 @@ export class CellEditor {
   label(position: CellPosition): void {
     this.view.contentDOM.setAttribute(
       "aria-label",
-      `Table cell ${position.row + 1}, ${position.column + 1}`,
+      t("Table cell {0}, {1}", position.row + 1, position.column + 1),
     );
   }
 

@@ -20,6 +20,7 @@ import {
 } from "./find-count";
 import { readFindCaret, restoreFindCaret } from "./find-caret";
 import { findActionFor } from "./find-keys";
+import { t } from "@workshop/l10n";
 
 const panels = new WeakMap<EditorView, FindPanel>();
 
@@ -57,8 +58,8 @@ function field(placeholder: string, name: string): HTMLInputElement {
 export class FindPanel implements Panel {
   readonly dom = document.createElement("div");
   readonly top = true;
-  private readonly find = field("Find...", "search");
-  private readonly replace = field("Replace...", "replace");
+  private readonly find = field(t("Find..."), "search");
+  private readonly replace = field(t("Replace..."), "replace");
   private readonly count = document.createElement("span");
   private readonly replaceRow = document.createElement("div");
   private readonly caseToggle: HTMLButtonElement;
@@ -78,7 +79,7 @@ export class FindPanel implements Panel {
     this.find.value = query.search;
     this.replace.value = query.replace;
     this.find.setAttribute("main-field", "true");
-    this.caseToggle = button("Aa", "Match case", () => this.toggleCase());
+    this.caseToggle = button("Aa", t("Match case"), () => this.toggleCase());
     this.caseToggle.setAttribute("aria-pressed", String(query.caseSensitive));
     this.build();
     this.refresh();
@@ -111,19 +112,19 @@ export class FindPanel implements Panel {
       this.find,
       this.count,
       this.caseToggle,
-      button("↑", "Previous match (Shift+Enter)", () => this.next(true)),
-      button("↓", "Next match (Enter)", () => this.next()),
-      button("⇄", "Toggle replace", () =>
+      button("↑", t("Previous match (Shift+Enter)"), () => this.next(true)),
+      button("↓", t("Next match (Enter)"), () => this.next()),
+      button("⇄", t("Toggle replace"), () =>
         this.show(this.replaceRow.hidden !== false, false),
       ),
-      button("×", "Close (Escape)", () => this.close()),
+      button("×", t("Close (Escape)"), () => this.close()),
     );
     this.replaceRow.className = "mw-find-row";
     this.replaceRow.hidden = true;
     this.replaceRow.append(
       this.replace,
-      button("Replace", "Replace", () => replaceNext(this.view)),
-      button("Replace all", "Replace all", () => replaceAll(this.view)),
+      button(t("Replace"), t("Replace"), () => replaceNext(this.view)),
+      button(t("Replace all"), t("Replace all"), () => replaceAll(this.view)),
     );
     this.dom.append(findRow, this.replaceRow);
     this.find.addEventListener("input", () => this.commit(true));
@@ -224,13 +225,11 @@ export class FindPanel implements Panel {
     if (!stillFound(this.found, state, query)) {
       this.found = findMatches(state, query);
     }
-    this.count.textContent = countLabel(
-      query,
-      selectedMatch(this.found, state.selection.main),
-    );
+    const match = selectedMatch(this.found, state.selection.main);
+    this.count.textContent = countLabel(query, match);
     this.dom.classList.toggle(
       "is-empty",
-      Boolean(query.search) && this.count.textContent === "No results",
+      Boolean(query.search) && match.total === 0,
     );
   }
 

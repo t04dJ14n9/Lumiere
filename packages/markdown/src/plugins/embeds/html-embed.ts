@@ -9,7 +9,12 @@
  * a page in the editor's own document could not be kept apart from the note.
  */
 
-/** What the card says in Restricted Mode, where Open shows the file as text. */
+import { t } from "@workshop/l10n";
+
+/**
+ * What the card says in Restricted Mode, where Open shows the file as text:
+ * the English text, which the card translates with `t`.
+ */
 export const HTML_EMBED_DISABLED_NOTE =
   "Interactive HTML is disabled in Restricted Mode";
 
@@ -58,21 +63,21 @@ export function mountHtmlCard(options: MountHtmlCardOptions): void {
   if (!trusted) {
     const note = document.createElement("span");
     note.className = "html-embed-note";
-    note.textContent = HTML_EMBED_DISABLED_NOTE;
+    note.textContent = t("Interactive HTML is disabled in Restricted Mode");
     card.classList.add("html-embed-restricted");
     card.append(note);
   }
   card.append(
     button({
-      label: "Open",
-      aria: `Open ${name}`,
+      label: t("Open"),
+      aria: t("Open {0}", name),
       className: "html-embed-open",
       signal,
       run: () => options.open(file, wiki),
     }),
     button({
-      label: "Open as Text",
-      aria: `Open ${name} as text`,
+      label: t("Open as Text"),
+      aria: t("Open {0} as text", name),
       className: "html-embed-open-text",
       signal,
       run: () => options.openAsText(file, wiki),

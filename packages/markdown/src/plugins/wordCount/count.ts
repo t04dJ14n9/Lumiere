@@ -1,3 +1,5 @@
+import { t } from "@workshop/l10n";
+
 /**
  * Characters that are a word each, as Obsidian counts them (measured): the
  * main block of Han ideographs, kana with the long-vowel mark `ー`, and
@@ -38,8 +40,16 @@ export function countText(text: string, isWholeNote = true): Counts {
   };
 }
 
+/** The status bar text: each count with its unit, singular or plural. */
 export function formatCounts({ words, characters }: Counts): string {
-  const plural = (count: number, unit: string) =>
-    `${count.toLocaleString("en-US")} ${unit}${count === 1 ? "" : "s"}`;
-  return `${plural(words, "word")} ${plural(characters, "character")}`;
+  const w = words.toLocaleString("en-US");
+  const c = characters.toLocaleString("en-US");
+  if (words === 1) {
+    return characters === 1
+      ? t("{0} word {1} character", w, c)
+      : t("{0} word {1} characters", w, c);
+  }
+  return characters === 1
+    ? t("{0} words {1} character", w, c)
+    : t("{0} words {1} characters", w, c);
 }

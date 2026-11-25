@@ -14,6 +14,7 @@ import {
   setInputText,
   setInputValidity,
 } from "./value-input";
+import { t } from "@workshop/l10n";
 
 /** Parsed frontmatter snapshot shared across property field bindings. */
 export type PropertyBaseline = NonNullable<ReturnType<typeof frontmatter>>;
@@ -118,8 +119,8 @@ export class PropertyField {
 
   private invalidMessage(): string {
     return this.input.dataset.propertyKind === "yaml"
-      ? "Enter valid YAML for this property."
-      : "Enter a valid value for this property type.";
+      ? t("Enter valid YAML for this property.")
+      : t("Enter a valid value for this property type.");
   }
 
   private conflicted(): boolean {
@@ -157,7 +158,7 @@ export class PropertyField {
     }
     if (this.conflicted() || !this.apply(value)) {
       this.input.dataset.propertyEditing = "true";
-      return this.reject("The property changed. Reopen it and try again.");
+      return this.reject(t("The property changed. Reopen it and try again."));
     }
     this.isDirty = false;
     delete this.input.dataset.propertyDirty;

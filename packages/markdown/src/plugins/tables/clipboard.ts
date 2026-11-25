@@ -20,6 +20,7 @@ import type { TableGrid } from "./grid";
 import type { CellProjection } from "./projection";
 import type { TableSelection } from "./selection";
 import type { TableEnvironment } from "./environment";
+import { t } from "@workshop/l10n";
 
 interface CellSessionSnapshot {
   revision: number;
@@ -182,7 +183,7 @@ export class TableClipboard {
     }
     if (expected !== this.grid.block.source || grid !== this.selection.range) {
       throw new Error(
-        "The table or selection changed before Cut completed. Cut again.",
+        t("The table or selection changed before Cut completed. Cut again."),
       );
     }
     this.clearCells(range);
@@ -215,7 +216,9 @@ export class TableClipboard {
       !isCurrentCellSession(this.projection, session) ||
       inner.state.sliceDoc(now.from, now.to) !== text
     ) {
-      throw new Error("The selection changed before Cut completed. Cut again.");
+      throw new Error(
+        t("The selection changed before Cut completed. Cut again."),
+      );
     }
     if (!this.isReadOnly) {
       inner.dispatch(inner.state.replaceSelection(""));
@@ -239,7 +242,7 @@ export class TableClipboard {
     const grid = this.selection.range;
     const context = this.environment;
     if (!context.paste) {
-      throw new Error("Use the keyboard paste shortcut in this view.");
+      throw new Error(t("Use the keyboard paste shortcut in this view."));
     }
     // Menus remove their focused DOM before awaiting clipboard RPC.
     // Restore focus now so blur cleanup does not close a still-valid editor.
@@ -256,7 +259,9 @@ export class TableClipboard {
       (selection && !selection.eq(editor.state.selection))
     ) {
       throw new Error(
-        "The table or selection changed before paste completed. Paste again.",
+        t(
+          "The table or selection changed before paste completed. Paste again.",
+        ),
       );
     }
     this.insertPasted(text, range, plainText);

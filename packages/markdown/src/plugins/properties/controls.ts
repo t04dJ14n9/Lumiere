@@ -12,6 +12,7 @@ import { bindRowName } from "./row-name";
 import { bindRowNavigation } from "./row-navigation";
 import { bindRowValueFocus } from "./row-click";
 import { bindRowMenu, type PropertyMenuState } from "./row-menu";
+import { t } from "@workshop/l10n";
 
 const boundRows = new WeakSet<HTMLElement>();
 interface PanelControls extends PropertyMenuState {
@@ -170,7 +171,9 @@ function registerOrder(bindings: RowBindings): void {
       });
       if (!applied) {
         edits.report(
-          "This order could not be saved because it would invalidate the YAML. Keep anchors before their aliases.",
+          t(
+            "This order could not be saved because it would invalidate the YAML. Keep anchors before their aliases.",
+          ),
         );
       }
       return applied;

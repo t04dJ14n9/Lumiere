@@ -1,6 +1,7 @@
 import type { PropertyScalar } from "../../markdown/properties";
 import type { ChipActions } from "./chip-actions";
 import { itemOccurrence } from "./chip-values";
+import { t } from "@workshop/l10n";
 
 interface ChipDraftOptions {
   chip: HTMLElement;
@@ -27,7 +28,10 @@ export class ChipDraft {
     this.input.className = "property-chip-input";
     this.input.dataset.propertyChipEdit = String(index);
     this.input.dataset.propertyEditing = "true";
-    this.input.setAttribute("aria-label", `Edit item ${index + 1} in ${key}`);
+    this.input.setAttribute(
+      "aria-label",
+      t("Edit item {0} in {1}", index + 1, key),
+    );
     this.input.value = this.initial;
     this.registerEvents();
     chip.replaceWith(this.input);
@@ -92,8 +96,10 @@ export class ChipDraft {
     }
     this.input.setCustomValidity(
       index < 0
-        ? "This item changed in another editor. Press Escape to use the current list."
-        : "This item is already in the list.",
+        ? t(
+            "This item changed in another editor. Press Escape to use the current list.",
+          )
+        : t("This item is already in the list."),
     );
     this.input.reportValidity();
     return false;

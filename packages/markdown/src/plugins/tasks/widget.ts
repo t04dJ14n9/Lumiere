@@ -5,6 +5,7 @@ import {
   untilDestroyed,
 } from "../../webview/ui/element-lifetime";
 import { taskEdit } from "./edits";
+import { t } from "@workshop/l10n";
 export class TaskBox extends WidgetType {
   constructor(
     readonly line: string,
@@ -25,7 +26,7 @@ export class TaskBox extends WidgetType {
     const checkbox = document.createElement("input");
     checkbox.type = "checkbox";
     checkbox.checked = this.checked;
-    checkbox.setAttribute("aria-label", "Task");
+    checkbox.setAttribute("aria-label", t("Task"));
     checkbox.dataset.task = this.status;
     const events = new AbortController();
     untilDestroyed(checkbox, () => events.abort());

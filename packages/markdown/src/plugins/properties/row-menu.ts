@@ -1,12 +1,13 @@
 import {
   inferPropertyKind,
-  propertyKindLabels,
+  propertyKindLabel,
   reservedPropertyKind,
 } from "../../markdown/properties/types";
 import type { MenuItem } from "../editor/api";
 import type { PropertyContext } from "./context";
 import type { PropertySelection } from "./selection";
 import type { PropertyControlEdits, PropertyEditor } from "./control-edits";
+import { t } from "@workshop/l10n";
 
 export interface PropertyMenuState {
   closeMenu?: () => void;
@@ -77,14 +78,14 @@ function openRowMenu(
       copy: () => {
         if (!selection.copy(keys)) {
           throw new Error(
-            "Could not copy properties. Try the keyboard copy shortcut.",
+            t("Could not copy properties. Try the keyboard copy shortcut."),
           );
         }
       },
       cut: () => {
         if (!selection.cut(keys)) {
           throw new Error(
-            "Could not cut properties. Try the keyboard cut shortcut.",
+            t("Could not cut properties. Try the keyboard cut shortcut."),
           );
         }
       },
@@ -97,7 +98,7 @@ function openRowMenu(
     }),
     point,
     edits.report,
-    "Property actions",
+    t("Property actions"),
   );
 }
 
@@ -111,13 +112,13 @@ export function propertyRowMenu(actions: {
 }): MenuItem[] {
   const items: MenuItem[] = actions.multiple
     ? []
-    : [{ label: "Property type", children: actions.types }];
+    : [{ label: t("Property type"), children: actions.types }];
   return [
     ...items,
-    { label: "Cut", run: () => actions.cut() },
-    { label: "Copy", run: () => actions.copy() },
-    { label: "Paste", run: () => actions.paste() },
-    { label: "Remove", run: () => actions.remove() },
+    { label: t("Cut"), run: () => actions.cut() },
+    { label: t("Copy"), run: () => actions.copy() },
+    { label: t("Paste"), run: () => actions.paste() },
+    { label: t("Remove"), run: () => actions.remove() },
   ];
 }
 
@@ -134,7 +135,10 @@ export function propertyTypeChoices(
     ? []
     : [
         {
-          label: `Automatic (${propertyKindLabels[inferPropertyKind(key, value)]})`,
+          label: t(
+            "Automatic ({0})",
+            propertyKindLabel(inferPropertyKind(key, value)),
+          ),
           checked: !registered,
           run: () => editor?.setType?.(key, null),
         },
@@ -144,7 +148,7 @@ export function propertyTypeChoices(
     ...(
       ["checkbox", "date", "datetime", "list", "number", "text"] as const
     ).map((kind) => ({
-      label: propertyKindLabels[kind],
+      label: propertyKindLabel(kind),
       checked: (registered || reserved) && kind === current,
       disabled: reserved,
       run: () => editor?.setType?.(key, kind),

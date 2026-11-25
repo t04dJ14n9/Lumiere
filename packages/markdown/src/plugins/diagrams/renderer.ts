@@ -21,6 +21,7 @@ import {
   categoryColors,
   type MermaidPalette,
 } from "./theme";
+import { t } from "@workshop/l10n";
 
 interface MermaidAppearance {
   trusted: boolean;
@@ -99,7 +100,7 @@ export class DiagramRenderer {
       onSvg: (svg) => {
         fence.element.removeAttribute(RENDER_PENDING_ATTRIBUTE);
         fence.element.innerHTML = svg;
-        fence.element.setAttribute("aria-label", "Mermaid diagram");
+        fence.element.setAttribute("aria-label", t("Mermaid diagram"));
         if (this.openLink) {
           wireMermaidInternalLinks(
             fence.element,
@@ -382,7 +383,7 @@ export function showMermaidGuard(
   text.className = "mermaid-guard-text";
   const title = doc.createElement("div");
   title.className = "mermaid-guard-title";
-  title.textContent = "Mermaid could not draw this diagram";
+  title.textContent = t("Mermaid could not draw this diagram");
   const description = doc.createElement("div");
   description.className = "mermaid-guard-description";
   description.textContent = errorMessage(error);
@@ -394,10 +395,10 @@ export function showMermaidGuard(
     actions.className = "mermaid-guard-actions";
     const allow = doc.createElement("button");
     allow.type = "button";
-    allow.textContent = "Allow";
+    allow.textContent = t("Allow");
     allow.setAttribute(
       "aria-label",
-      "Allow Mermaid HTML labels for this vault",
+      t("Allow Mermaid HTML labels for this vault"),
     );
     allow.addEventListener("click", (event) => {
       event.preventDefault();

@@ -5,6 +5,7 @@ import {
   MARKDOWN_WORKSPACE_EDITOR_KEY,
 } from "../../shared/editor-provider";
 import { contributionId } from "../../shared/setting-schema";
+import { t } from "@workshop/l10n";
 
 const { viewType, filenamePatterns: markdownPatterns } = MARKDOWN_EDITOR;
 const NATIVE_TEXT_EDITOR = "default";
@@ -84,20 +85,24 @@ export async function useForMarkdownInWorkspace(
   const existing = associations.read();
   if (existing === undefined) {
     host.dialogs.error(
-      "Open a folder or workspace first: the association is saved in the workspace settings.",
+      t(
+        "Open a folder or workspace first: the association is saved in the workspace settings.",
+      ),
     );
     return;
   }
   if (opensMarkdownHere(existing, host.storage)) {
     host.dialogs.inform(
-      "Markdown files in this workspace already open in Lumiere.",
+      t("Markdown files in this workspace already open in Lumiere."),
     );
     return;
   }
   await host.storage.update(MARKDOWN_WORKSPACE_EDITOR_KEY, true);
   await associations.write(withMarkdownLumiere(existing));
   host.dialogs.inform(
-    "Markdown files in this workspace now open in Lumiere. Use Open as Text or Reopen Editor With… for the text editor.",
+    t(
+      "Markdown files in this workspace now open in Lumiere. Use Open as Text or Reopen Editor With… for the text editor.",
+    ),
   );
 }
 

@@ -1,5 +1,6 @@
 import { webmMime, WebmStream } from "./webm-stream";
 import { appendWebm, openMediaSource } from "./media-source";
+import { t } from "@workshop/l10n";
 
 export function mediaRecovery(
   media: HTMLMediaElement,
@@ -27,7 +28,7 @@ class MediaRecovery {
       () => {
         if (this.attempted || !/\.webm(?:[?#]|$)/i.test(this.url)) {
           this.report(
-            this.media.error?.message ?? "Media could not be decoded.",
+            this.media.error?.message ?? t("Media could not be decoded."),
           );
           return;
         }
@@ -58,7 +59,7 @@ class MediaRecovery {
     const signal = this.abort.signal;
     const response = await fetch(this.url, { signal });
     if (!response.ok || !response.body) {
-      throw new Error("Could not read the WebM attachment.");
+      throw new Error(t("Could not read the WebM attachment."));
     }
     const reader = response.body.getReader();
     signal.addEventListener(
@@ -70,7 +71,7 @@ class MediaRecovery {
     );
     const { header, mime } = await readWebmHeader(reader);
     if (!MediaSource.isTypeSupported(mime)) {
-      throw new Error(`This host cannot decode ${mime}.`);
+      throw new Error(t("This host cannot decode {0}.", mime));
     }
     if (signal.aborted) {
       return;

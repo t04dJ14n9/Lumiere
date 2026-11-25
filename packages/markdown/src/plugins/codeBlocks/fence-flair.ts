@@ -3,6 +3,7 @@ import { revealRanges } from "../../webview/ui/pointer-selection";
 import { WidgetType } from "@codemirror/view";
 import type { SyntaxNodeRef } from "@lezer/common";
 import { languageLabel } from "./code-label";
+import { t } from "@workshop/l10n";
 
 /**
  * Whether Live Preview shows a fence's source: the same inclusive test as
@@ -62,8 +63,8 @@ export class FenceFlair extends WidgetType {
     const button = document.createElement("button");
     button.type = "button";
     button.className = "copy-code";
-    button.textContent = "Copy";
-    button.setAttribute("aria-label", "Copy code");
+    button.textContent = t("Copy");
+    button.setAttribute("aria-label", t("Copy code"));
     button.addEventListener("mousedown", (event) => event.preventDefault());
     button.addEventListener("click", (event) => {
       event.preventDefault();

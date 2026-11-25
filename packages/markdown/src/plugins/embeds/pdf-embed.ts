@@ -6,6 +6,7 @@ import {
   type RenderedPdfPage,
 } from "./pdf-documents";
 import { openPdfInEngine } from "./pdf-engine";
+import { t } from "@workshop/l10n";
 
 export interface PdfEmbedParams {
   readonly page: number;
@@ -132,14 +133,14 @@ function buildPdfEmbedDom(
   const prevBtn = createNavButton(
     "pdf-prev-page",
     "‹",
-    "Previous page",
+    t("Previous page"),
     initialPage <= 1,
   );
   const pageNumbers = document.createElement("span");
   pageNumbers.className = "pdf-page-numbers";
   pageNumbers.setAttribute("aria-live", "polite");
-  pageNumbers.textContent = `Page ${initialPage}`;
-  const nextBtn = createNavButton("pdf-next-page", "›", "Next page", true);
+  pageNumbers.textContent = t("Page {0}", initialPage);
+  const nextBtn = createNavButton("pdf-next-page", "›", t("Next page"), true);
   left.append(title, prevBtn, pageNumbers, nextBtn);
 
   const right = document.createElement("div");
@@ -147,7 +148,7 @@ function buildPdfEmbedDom(
   const openBtn = document.createElement("button");
   openBtn.type = "button";
   openBtn.className = "open-embed pdf-open-button";
-  openBtn.textContent = "Open PDF ↗";
+  openBtn.textContent = t("Open PDF ↗");
   right.append(openBtn);
   toolbar.append(left, right);
 
@@ -183,12 +184,16 @@ function drawRenderedPdfPage(
     );
     ctx2d.putImageData(imageData, 0, 0);
   }
-  dom.pageNumbers.textContent = `Page ${rendered.page} / ${rendered.pageCount}`;
+  dom.pageNumbers.textContent = t(
+    "Page {0} / {1}",
+    rendered.page,
+    rendered.pageCount,
+  );
   dom.prevBtn.disabled = rendered.page <= 1;
   dom.nextBtn.disabled = rendered.page >= rendered.pageCount;
   dom.openBtn.setAttribute(
     "aria-label",
-    `Open ${formatPdfOpenTarget(target, rendered.page)}`,
+    t("Open {0}", formatPdfOpenTarget(target, rendered.page)),
   );
 }
 
@@ -252,7 +257,7 @@ export function mountPdfEmbed(options: MountPdfEmbedOptions): void {
   const dom = buildPdfEmbedDom(target, currentPage, parsed.height);
   dom.openBtn.setAttribute(
     "aria-label",
-    `Open ${formatPdfOpenTarget(target, currentPage)}`,
+    t("Open {0}", formatPdfOpenTarget(target, currentPage)),
   );
   node.replaceChildren(dom.container);
 
@@ -275,8 +280,12 @@ export function mountPdfEmbed(options: MountPdfEmbedOptions): void {
         () => undefined,
       );
       dom.container.classList.add("pdf-embed-error");
-      dom.pageNumbers.textContent = `Page ${currentPage}`;
-      dom.viewer.textContent = `Could not render ${pdfFilename(target)}: ${String(error)}`;
+      dom.pageNumbers.textContent = t("Page {0}", currentPage);
+      dom.viewer.textContent = t(
+        "Could not render {0}: {1}",
+        pdfFilename(target),
+        String(error),
+      );
       measure();
     },
   });

@@ -6,6 +6,7 @@ import {
 } from "../../markdown/tables/model";
 import type { Axis, TableOperation } from "../../markdown/tables/operations";
 import type { MenuItem } from "../editor/api";
+import { t } from "@workshop/l10n";
 
 export interface TableMenuActions {
   copy(cut: boolean): Promise<void>;
@@ -32,26 +33,26 @@ export function tableMenu(
     ];
   }
   return [
-    { label: "Cut", run: () => actions.copy(true) },
-    { label: "Copy", run: () => actions.copy(false) },
-    { label: "Paste", run: () => actions.paste(false) },
-    { label: "Paste as plain text", run: () => actions.paste(true) },
-    { label: "Select all", run: () => actions.selectAll() },
+    { label: t("Cut"), run: () => actions.copy(true) },
+    { label: t("Copy"), run: () => actions.copy(false) },
+    { label: t("Paste"), run: () => actions.paste(false) },
+    { label: t("Paste as plain text"), run: () => actions.paste(true) },
+    { label: t("Select all"), run: () => actions.selectAll() },
     {
-      label: "Format",
+      label: t("Format"),
       children: formatItems(actions),
       disabled: actions.canFormat === false,
     },
     {
-      label: "Row",
+      label: t("Row"),
       children: axisItems({ table, range, actions, axis: "row" }),
     },
     {
-      label: "Column",
+      label: t("Column"),
       children: axisItems({ table, range, actions, axis: "column" }),
     },
     ...sorting,
-    { label: "Clear selected cells", run: () => actions.clear() },
+    { label: t("Clear selected cells"), run: () => actions.clear() },
   ];
 }
 
@@ -74,7 +75,7 @@ export function reportingFailures(
           report(
             error instanceof Error
               ? error.message
-              : "The table action could not be completed.",
+              : t("The table action could not be completed."),
           );
           throw error;
         }
@@ -114,27 +115,28 @@ function axisItems(options: AxisMenuOptions): MenuItem[] {
     disabled,
   });
   // As in Obsidian, a new column is aligned as the one it is added beside.
+  const words = axisWords(row);
   const items = [
     item(
-      `Add ${axis} ${row ? "above" : "to the left"}`,
+      words.addBefore,
       { type: "insert", axis, index: from, ...(!row && { alignAs: from }) },
       from,
     ),
     item(
-      `Add ${axis} ${row ? "below" : "to the right"}`,
+      words.addAfter,
       { type: "insert", axis, index: to + 1, ...(!row && { alignAs: to }) },
       to + 1,
     ),
   ];
   items.push(
     item(
-      `Move ${axis} ${row ? "up" : "left"}`,
+      words.moveBack,
       { type: "move", axis, from, to, destination: from - 1 },
       from - 1,
       from === 0,
     ),
     item(
-      `Move ${axis} ${row ? "down" : "right"}`,
+      words.moveForward,
       { type: "move", axis, from, to, destination: from + 1 },
       from + 1,
       to === size - 1,
@@ -144,10 +146,31 @@ function axisItems(options: AxisMenuOptions): MenuItem[] {
     items.push(...alignmentItems(range, actions));
   }
   items.push(
-    item(`Duplicate ${axis}`, { type: "duplicate", axis, from, to }, to + 1),
-    item(`Delete ${axis}`, { type: "delete", axis, from, to }, from),
+    item(words.duplicate, { type: "duplicate", axis, from, to }, to + 1),
+    item(words.remove, { type: "delete", axis, from, to }, from),
   );
   return items;
+}
+
+/** What each row or column item says, as whole sentences to translate. */
+function axisWords(row: boolean) {
+  return row
+    ? {
+        addBefore: t("Add row above"),
+        addAfter: t("Add row below"),
+        moveBack: t("Move row up"),
+        moveForward: t("Move row down"),
+        duplicate: t("Duplicate row"),
+        remove: t("Delete row"),
+      }
+    : {
+        addBefore: t("Add column to the left"),
+        addAfter: t("Add column to the right"),
+        moveBack: t("Move column left"),
+        moveForward: t("Move column right"),
+        duplicate: t("Duplicate column"),
+        remove: t("Delete column"),
+      };
 }
 
 function alignmentItems(
@@ -155,8 +178,13 @@ function alignmentItems(
   actions: TableMenuActions,
 ): MenuItem[] {
   const area = rectangle(range);
+  const labels = {
+    left: t("Align left"),
+    center: t("Align center"),
+    right: t("Align right"),
+  };
   return (["left", "center", "right"] as const).map((alignment) => ({
-    label: `Align ${alignment}`,
+    label: labels[alignment],
     run: () =>
       actions.execute(
         { type: "align", from: area.left, to: area.right, alignment },
@@ -168,21 +196,24 @@ function alignmentItems(
 function formatItems(actions: TableMenuActions): MenuItem[] {
   return (
     [
-      ["Bold", "**"],
-      ["Italic", "*"],
-      ["Strikethrough", "~~"],
-      ["Highlight", "=="],
-      ["Code", "`"],
-      ["Math", "$"],
-      ["Comment", "%%"],
-      ["Clear formatting", null],
+      [t("Bold"), "**"],
+      [t("Italic"), "*"],
+      [t("Strikethrough"), "~~"],
+      [t("Highlight"), "=="],
+      [t("Code"), "`"],
+      [t("Math"), "$"],
+      [t("Comment"), "%%"],
+      [t("Clear formatting"), null],
     ] as const
   ).map(([label, marker]) => ({ label, run: () => actions.format(marker) }));
 }
 
 function sortingItems(range: CellRange, actions: TableMenuActions): MenuItem[] {
   return (["ascending", "descending"] as const).map((direction) => ({
-    label: `Sort by column (${direction === "ascending" ? "A to Z" : "Z to A"})`,
+    label:
+      direction === "ascending"
+        ? t("Sort by column (A to Z)")
+        : t("Sort by column (Z to A)"),
     run: () =>
       actions.execute(
         { type: "sort", column: range.head.column, direction },

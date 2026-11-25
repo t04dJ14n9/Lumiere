@@ -1,3 +1,5 @@
+import { t } from "@workshop/l10n";
+
 export interface MenuItem {
   label: string;
   run?: () => void | Promise<void>;
@@ -98,7 +100,7 @@ class MenuSession {
     panel.setAttribute("role", "menu");
     panel.setAttribute(
       "aria-label",
-      parent?.textContent ?? this.options.label ?? "Table actions",
+      parent?.textContent ?? this.options.label ?? t("Table actions"),
     );
     panel.style.left = `${at.x}px`;
     panel.style.top = `${at.y}px`;
@@ -184,7 +186,7 @@ class MenuSession {
         this.options.error(
           reason instanceof Error
             ? reason.message
-            : "The command could not be completed.",
+            : t("The command could not be completed."),
         );
       });
   }

@@ -11,7 +11,7 @@ import {
 } from "../../markdown/properties/list-preview";
 import {
   inferPropertyKind,
-  propertyKindLabels,
+  propertyKindLabel,
 } from "../../markdown/properties/types";
 import type {
   PropertyKind,
@@ -21,6 +21,7 @@ import { propertyIcon, propertyFlairIcon } from "../../webview/ui/icons";
 import { validTag } from "../../markdown/tags/grammar";
 import { attr, escape } from "../../markdown/html/helpers";
 import { createRenderer } from "../../markdown/html";
+import { t } from "@workshop/l10n";
 
 /** Defer markdown-it plugin setup until a wiki-link value needs inline HTML. */
 let renderInlineFn: ((source: string) => string) | undefined;
@@ -89,7 +90,7 @@ export function renderProperties(
       }),
     )
     .join("");
-  return `<div class="properties metadata-container${options.collapsed ? " is-collapsed" : ""}"><div class="metadata-properties-heading" data-properties-heading tabindex="0" role="button" aria-expanded="${!options.collapsed}"><span class="metadata-collapse-indicator collapse-indicator collapse-icon">${propertyFlairIcon("collapse")}</span><span class="metadata-properties-title">Properties</span></div><div class="metadata-content"${options.collapsed ? " hidden" : ""}><div class="metadata-properties">${rows}</div><button type="button" class="metadata-add-button text-icon-button" data-property-add>${propertyFlairIcon("plus")} Add property</button></div><p class="property-message" aria-live="polite"></p></div>`;
+  return `<div class="properties metadata-container${options.collapsed ? " is-collapsed" : ""}"><div class="metadata-properties-heading" data-properties-heading tabindex="0" role="button" aria-expanded="${!options.collapsed}"><span class="metadata-collapse-indicator collapse-indicator collapse-icon">${propertyFlairIcon("collapse")}</span><span class="metadata-properties-title">${escape(t("Properties"))}</span></div><div class="metadata-content"${options.collapsed ? " hidden" : ""}><div class="metadata-properties">${rows}</div><button type="button" class="metadata-add-button text-icon-button" data-property-add>${propertyFlairIcon("plus")} ${escape(t("Add property"))}</button></div><p class="property-message" aria-live="polite"></p></div>`;
 }
 
 function isPlainTextSources(key: string): boolean {
@@ -126,7 +127,7 @@ function propertyBody(
   // Custom renderers: typed UI with an on-demand YAML editor when draftable.
   if (options.custom) {
     if (options.draft !== undefined) {
-      return `<div class="property-complex" data-property-display>${options.custom}<button type="button" tabindex="-1" class="metadata-property-link-flair property-complex-edit" data-property-edit${attr("aria-label", `Edit ${key}`)}>${propertyFlairIcon("pencil")}</button></div>${editableYaml(key, options.draft).replace("<textarea ", "<textarea hidden ")}`;
+      return `<div class="property-complex" data-property-display>${options.custom}<button type="button" tabindex="-1" class="metadata-property-link-flair property-complex-edit" data-property-edit${attr("aria-label", t("Edit {0}", key))}>${propertyFlairIcon("pencil")}</button></div>${editableYaml(key, options.draft).replace("<textarea ", "<textarea hidden ")}`;
     }
     return `<div class="property-complex">${options.custom}</div>`;
   }
@@ -158,11 +159,11 @@ function propertyTypeMeta(
     options.draft !== undefined &&
     isUnknownPropertyValue(value);
   if (unknown) {
-    return { unknown, typeLabel: "Unknown", typeName: "unknown" };
+    return { unknown, typeLabel: t("Unknown"), typeName: "unknown" };
   }
   return {
     unknown,
-    typeLabel: propertyKindLabels[kind],
+    typeLabel: propertyKindLabel(kind),
     typeName: kind === "list" ? "multitext" : kind,
   };
 }
@@ -184,15 +185,15 @@ function propertyRow(
   );
   const body = propertyBody(key, value, options);
   const icon = propertyIcon(key, value, unknown ? "unknown" : kind);
-  return `<div class="property-row metadata-property" tabindex="0"${attr("data-property-row", key)}${attr("data-property-key", key)}><div class="metadata-property-key"><button type="button" tabindex="-1" data-property-type${attr("aria-label", `Type of ${key}: ${typeLabel}`)}><span class="metadata-property-icon">${icon}</span></button><input class="property-key metadata-property-key-input" tabindex="-1"${attr("data-property-name", key)}${attr("aria-label", `Property name: ${key}`)}${attr("title", key)}${attr("value", key)}></div><div class="metadata-property-value"${attr("data-property-type", typeName)}>${body}</div>${warning}</div>`;
+  return `<div class="property-row metadata-property" tabindex="0"${attr("data-property-row", key)}${attr("data-property-key", key)}><div class="metadata-property-key"><button type="button" tabindex="-1" data-property-type${attr("aria-label", t("Type of {0}: {1}", key, typeLabel))}><span class="metadata-property-icon">${icon}</span></button><input class="property-key metadata-property-key-input" tabindex="-1"${attr("data-property-name", key)}${attr("aria-label", t("Property name: {0}", key))}${attr("title", key)}${attr("value", key)}></div><div class="metadata-property-value"${attr("data-property-type", typeName)}>${body}</div>${warning}</div>`;
 }
 
 export function pendingPropertyRow(): string {
-  return `<div class="property-row metadata-property" data-property-new tabindex="0"><div class="metadata-property-key"><span class="metadata-property-icon">${propertyIcon("", null)}</span><input class="property-key metadata-property-key-input" aria-label="New property name" placeholder="Property name" autocomplete="off" role="combobox" aria-autocomplete="list" aria-expanded="false"></div><div class="metadata-property-value"><span class="property-empty">Empty</span></div></div>`;
+  return `<div class="property-row metadata-property" data-property-new tabindex="0"><div class="metadata-property-key"><span class="metadata-property-icon">${propertyIcon("", null)}</span><input class="property-key metadata-property-key-input"${attr("aria-label", t("New property name"))}${attr("placeholder", t("Property name"))} autocomplete="off" role="combobox" aria-autocomplete="list" aria-expanded="false"></div><div class="metadata-property-value"><span class="property-empty">${escape(t("Empty"))}</span></div></div>`;
 }
 
 function mismatchWarning(kind: PropertyKind, hasMismatch: boolean): string {
-  const label = `Type mismatch, expected ${propertyKindLabels[kind]}`;
+  const label = t("Type mismatch, expected {0}", propertyKindLabel(kind));
   return `<span class="property-type-warning metadata-property-warning-icon"${hasMismatch ? "" : " hidden"} role="img"${attr("aria-label", label)}${attr("title", label)}>${propertyFlairIcon("warning")}</span>`;
 }
 
@@ -216,9 +217,9 @@ function editableValue(
   const text = propertyInputText(value);
   if (kind === "text") {
     const scroll = options.scrollText ? " mod-scroll" : "";
-    const input = `<div class="metadata-input-longtext${scroll}" contenteditable="true" role="textbox" tabindex="-1" data-placeholder="Empty"${attr("aria-label", key)}${attr("data-property-input", key)} data-property-kind="text">${escape(text)}</div>`;
+    const input = `<div class="metadata-input-longtext${scroll}" contenteditable="true" role="textbox" tabindex="-1"${attr("data-placeholder", t("Empty"))}${attr("aria-label", key)}${attr("data-property-input", key)} data-property-kind="text">${escape(text)}</div>`;
     if (/^\[\[[^\n]+\]\]$/.test(text)) {
-      return `<span class="metadata-link" data-property-display>${renderInline(text)}<button type="button" tabindex="-1" class="metadata-property-link-flair" data-property-edit${attr("aria-label", `Edit ${key}`)}>${propertyFlairIcon("pencil")}</button></span>${input.replace("<div ", "<div hidden ")}`;
+      return `<span class="metadata-link" data-property-display>${renderInline(text)}<button type="button" tabindex="-1" class="metadata-property-link-flair" data-property-edit${attr("aria-label", t("Edit {0}", key))}>${propertyFlairIcon("pencil")}</button></span>${input.replace("<div ", "<div hidden ")}`;
     }
     return input;
   }
@@ -248,19 +249,19 @@ function editableList(
         capped && index >= previewCount
           ? " hidden data-property-chip-extra"
           : "";
-      return `<span class="property-chip multi-select-pill"${extra} tabindex="-1" data-property-chip="${index}"><span class="multi-select-pill-content">${label}</span><button type="button" tabindex="-1" class="multi-select-pill-remove-button" data-property-remove="${index}"${attr("aria-label", `Remove ${text} from ${key}`)}>×</button></span>`;
+      return `<span class="property-chip multi-select-pill"${extra} tabindex="-1" data-property-chip="${index}"><span class="multi-select-pill-content">${label}</span><button type="button" tabindex="-1" class="multi-select-pill-remove-button" data-property-remove="${index}"${attr("aria-label", t("Remove {0} from {1}", text, key))}>×</button></span>`;
     })
     .join("");
   const more =
     capped && values.length > previewCount
-      ? `<button type="button" data-property-list-more>Showing ${previewCount} of ${values.length}</button>`
+      ? `<button type="button" data-property-list-more>${escape(t("Showing {0} of {1}", previewCount, values.length))}</button>`
       : "";
-  return `<div class="property-list multi-select-container"${attr("data-property-list", key)}>${chips}${more}<div class="multi-select-input" contenteditable="true" role="textbox" tabindex="-1" data-property-list-input${attr("aria-label", `Add item to ${key}`)}${values.length ? "" : ' data-placeholder="Empty"'}></div></div>`;
+  return `<div class="property-list multi-select-container"${attr("data-property-list", key)}>${chips}${more}<div class="multi-select-input" contenteditable="true" role="textbox" tabindex="-1" data-property-list-input${attr("aria-label", t("Add item to {0}", key))}${values.length ? "" : attr("data-placeholder", t("Empty"))}></div></div>`;
 }
 
 function pillLabel(text: string, isTags: boolean): string {
   if (isTags && validTag(text)) {
-    return `<button type="button" tabindex="-1" class="md-tag"${attr("data-tag", text)}${attr("aria-label", `Search tag #${text}`)}>${escape(text)}</button>`;
+    return `<button type="button" tabindex="-1" class="md-tag"${attr("data-tag", text)}${attr("aria-label", t("Search tag #{0}", text))}>${escape(text)}</button>`;
   }
   if (/^\[\[[^\n]+\]\]$/.test(text)) {
     return `<span class="metadata-link">${renderInline(text)}</span>`;
@@ -302,10 +303,10 @@ function editableYaml(key: string, text: string): string {
   // textarea keeps Enter as real newlines (contenteditable textContent does not).
   const lines = text.replace(/\n$/, "").split("\n").length;
   const rows = Math.min(12, Math.max(3, lines));
-  return `<textarea class="metadata-input-longtext metadata-input-yaml" rows="${rows}" tabindex="-1" data-placeholder="Empty"${attr("aria-label", key)}${attr("data-property-input", key)} data-property-kind="yaml">${escape(text)}</textarea>`;
+  return `<textarea class="metadata-input-longtext metadata-input-yaml" rows="${rows}" tabindex="-1"${attr("data-placeholder", t("Empty"))}${attr("aria-label", key)}${attr("data-property-input", key)} data-property-kind="yaml">${escape(text)}</textarea>`;
 }
 
 function complexFallback(draft: string | undefined): string {
   void draft;
-  return '<span class="property-empty">Edit in Source mode: tagged, recursive or unsupported YAML.</span>';
+  return `<span class="property-empty">${escape(t("Edit in Source mode: tagged, recursive or unsupported YAML."))}</span>`;
 }
