@@ -91,8 +91,9 @@ function registerWithVsCode(
 }
 
 /**
- * MCP registration APIs missing from the @types/vscode this builds against:
- * Cursor's own, and VS Code's server definition provider (1.101+).
+ * MCP registration APIs, all optional: Cursor's own is not in @types/vscode,
+ * and VS Code's server definition provider (1.101+, the engine floor) can
+ * still be missing or stubbed in a fork, so each is checked before use.
  */
 interface McpApis {
   cursor?: {
