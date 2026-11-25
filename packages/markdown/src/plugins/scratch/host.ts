@@ -3,6 +3,7 @@ import { registerReportedCommands } from "../../shared/reported-command";
 import { contributionId } from "../../shared/setting-schema";
 import { asString, asStrings } from "../../shared/values";
 import { createScratchNote } from "./run";
+import { t } from "@workshop/l10n";
 
 /** Temporary notes in the scratch folder. */
 export const scratchHost: Plugin = {
@@ -24,13 +25,14 @@ export const scratchHost: Plugin = {
 async function newScratch(ctx: Context): Promise<void> {
   const root = asStrings(ctx.workspace.folders())[0];
   if (!root) {
-    ctx.dialogs.error("Open a folder before creating a scratch note.");
+    ctx.dialogs.error(t("Open a folder before creating a scratch note."));
     return;
   }
   const title = await ctx.dialogs.input({
-    prompt: "Scratch note title",
+    prompt: t("Scratch note title"),
+    // The title is written into the note and its file name, so it stays English.
     value: "Untitled",
-    validate: (value) => (value.trim() ? undefined : "Enter a title."),
+    validate: (value) => (value.trim() ? undefined : t("Enter a title.")),
   });
   if (typeof title !== "string" || title.trim() === "") {
     return;

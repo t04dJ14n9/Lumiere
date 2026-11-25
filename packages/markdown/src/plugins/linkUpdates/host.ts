@@ -8,6 +8,7 @@ import { changesLinkText, rewriteLinks } from "./rewrite";
 import { sourceText } from "./source-text";
 import { registerRenameHeading } from "./rename-heading";
 import { rewriteCanvas, wholeTextEdit } from "./canvas";
+import { t } from "@workshop/l10n";
 
 export { sourceText };
 import type { LinkFormat, RewriteContext } from "./rewrite";
@@ -105,11 +106,24 @@ function reportUnchecked(
 /** Names what a rename could not check, so the user can fix those links. */
 function uncheckedMessage(unchecked: readonly string[]): string {
   const shown = unchecked.slice(0, 5).join(", ");
-  const more = unchecked.length > 5 ? ` and ${unchecked.length - 5} more` : "";
-  return (
-    `Links were not checked in ${unchecked.length} ` +
-    `file${unchecked.length === 1 ? "" : "s"} still being indexed or ` +
-    `unreadable: ${shown}${more}. Check them for links to the renamed file.`
+  if (unchecked.length === 1) {
+    return t(
+      "Links were not checked in 1 file still being indexed or unreadable: {0}. Check them for links to the renamed file.",
+      shown,
+    );
+  }
+  if (unchecked.length <= 5) {
+    return t(
+      "Links were not checked in {0} files still being indexed or unreadable: {1}. Check them for links to the renamed file.",
+      unchecked.length,
+      shown,
+    );
+  }
+  return t(
+    "Links were not checked in {0} files still being indexed or unreadable: {1} and {2} more. Check them for links to the renamed file.",
+    unchecked.length,
+    shown,
+    unchecked.length - 5,
   );
 }
 
@@ -119,11 +133,14 @@ async function askToUpdate(
   files: number,
   resource: string | undefined,
 ): Promise<boolean> {
-  const update = "Update Links";
-  const always = "Always Update";
+  // The buttons are translated, so the answer is compared with the same text.
+  const update = t("Update Links");
+  const always = t("Always Update");
   const answer = await host.dialogs.ask(
-    `Update links in ${files} file${files === 1 ? "" : "s"}?`,
-    [update, always, "Don't Update"],
+    files === 1
+      ? t("Update links in 1 file?")
+      : t("Update links in {0} files?", files),
+    [update, always, t("Don't Update")],
   );
   if (answer === always) {
     await rememberAlwaysUpdate(host, resource);
@@ -152,7 +169,10 @@ async function rememberAlwaysUpdate(
   } catch (error) {
     const reason = error instanceof Error ? error.message : String(error);
     host.dialogs.error(
-      `Lumiere could not save "Always Update" (${reason}). The links are updated this time.`,
+      t(
+        'Lumiere could not save "Always Update" ({0}). The links are updated this time.',
+        reason,
+      ),
     );
   }
 }

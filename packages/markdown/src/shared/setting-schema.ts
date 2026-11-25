@@ -1,4 +1,5 @@
 import type { ContributedSetting } from "./host";
+import { t } from "@workshop/l10n";
 
 /**
  * What a command may write to a setting, decided from the setting's own
@@ -62,22 +63,22 @@ function bounds(schema: Schema): { minimum?: number; maximum?: number } {
 /** Why a number is not allowed by the schema's range and integer type, or undefined. */
 export function checkNumber(value: number, schema: Schema): string | undefined {
   if (typeof value !== "number" || !Number.isFinite(value)) {
-    return "Enter a number.";
+    return t("Enter a number.");
   }
   if (editKind(schema) === "integer" && !Number.isInteger(value)) {
-    return "Enter a whole number.";
+    return t("Enter a whole number.");
   }
   const { minimum, maximum } = bounds(schema);
   if (minimum !== undefined && maximum !== undefined) {
     return value < minimum || value > maximum
-      ? `Use a value from ${minimum} to ${maximum}.`
+      ? t("Use a value from {0} to {1}.", minimum, maximum)
       : undefined;
   }
   if (minimum !== undefined && value < minimum) {
-    return `Use a value of at least ${minimum}.`;
+    return t("Use a value of at least {0}.", minimum);
   }
   if (maximum !== undefined && value > maximum) {
-    return `Use a value of at most ${maximum}.`;
+    return t("Use a value of at most {0}.", maximum);
   }
   return undefined;
 }
@@ -88,7 +89,7 @@ export function checkNumberText(
   schema: Schema,
 ): string | undefined {
   return text.trim() === ""
-    ? "Enter a number."
+    ? t("Enter a number.")
     : checkNumber(Number(text.trim()), schema);
 }
 
@@ -99,18 +100,20 @@ export function validateValue(
 ): string | undefined {
   switch (editKind(schema)) {
     case "boolean":
-      return typeof value === "boolean" ? undefined : "Expected true or false.";
+      return typeof value === "boolean"
+        ? undefined
+        : t("Expected true or false.");
     case "enum":
       return (schema!.enum as readonly unknown[]).includes(value)
         ? undefined
-        : "Not one of the setting's values.";
+        : t("Not one of the setting's values.");
     case "number":
     case "integer":
       return checkNumber(value as number, schema!);
     case "string":
-      return typeof value === "string" ? undefined : "Expected text.";
+      return typeof value === "string" ? undefined : t("Expected text.");
     default:
-      return "This setting is edited in the Settings UI.";
+      return t("This setting is edited in the Settings UI.");
   }
 }
 

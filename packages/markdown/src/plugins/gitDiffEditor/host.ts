@@ -13,6 +13,7 @@ import { openFullDiff } from "./open-snapshot";
 import { prepareResources } from "./resources";
 import type {} from "../resources/api";
 import type {} from "../gitGutter/api";
+import { t } from "@workshop/l10n";
 
 export { fileName, sideLabel, sideLabels } from "./labels";
 
@@ -106,11 +107,28 @@ export const gitDiffEditorHost: Plugin = {
   },
 };
 
-function report(ctx: Context, what: string, error: unknown): void {
+/** What went wrong, as the English text the log gets; the reader gets it in their language. */
+type Problem =
+  | "Could not open the rendered diff"
+  | "Could not read the diff"
+  | "Could not open";
+
+function problemText(what: Problem, reason: string): string {
+  switch (what) {
+    case "Could not open the rendered diff":
+      return t("Could not open the rendered diff: {0}", reason);
+    case "Could not read the diff":
+      return t("Could not read the diff: {0}", reason);
+    case "Could not open":
+      return t("Could not open: {0}", reason);
+  }
+}
+
+function report(ctx: Context, what: Problem, error: unknown): void {
   ctx.logger.warn(what, error);
   const reason = error instanceof Error ? error.message : String(error);
   try {
-    ctx.dialogs.error(`${what}: ${reason}`);
+    ctx.dialogs.error(problemText(what, reason));
   } catch {
     // Reporting must not throw out of an event handler.
   }
@@ -169,7 +187,7 @@ async function openActive(ctx: Context, life: Life): Promise<void> {
   const original = note ? ctx.git.toGitUri(note, "HEAD") : undefined;
   if (!note || !original) {
     ctx.dialogs.error(
-      "Open a Markdown note in a git repository to compare it with HEAD.",
+      t("Open a Markdown note in a git repository to compare it with HEAD."),
     );
     return;
   }
@@ -263,7 +281,7 @@ async function prepare(
     report(
       ctx,
       "Could not read the diff",
-      new Error("Both sides resolve to the same URI"),
+      new Error(t("Both sides resolve to the same URI")),
     );
     return undefined;
   }

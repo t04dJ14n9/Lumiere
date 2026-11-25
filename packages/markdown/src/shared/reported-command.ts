@@ -1,5 +1,6 @@
 import type { Disposer } from "@workshop/core";
 import type { HostCommands } from "./host";
+import { t } from "@workshop/l10n";
 
 export interface ReportedCommand {
   readonly id: string;
@@ -30,7 +31,7 @@ function registerOne(
   effect(() =>
     host.register(command.id, (...args) => {
       void Promise.resolve(command.run(...args)).catch((error: unknown) => {
-        report(error instanceof Error ? error.message : "Command failed.");
+        report(error instanceof Error ? error.message : t("Command failed."));
       });
     }),
   );

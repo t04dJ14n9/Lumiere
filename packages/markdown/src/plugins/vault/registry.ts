@@ -5,6 +5,7 @@ import type { Vault, VaultChange, Vaults, VaultSystem } from "./api";
 import { VaultIndexer } from "./indexer";
 import { MemoryVaultIndex } from "./memory-index";
 import { findVaultRoot, foldersUpTo } from "./roots";
+import { t } from "@workshop/l10n";
 
 export interface RegistryEvents {
   changed(root: string, change: VaultChange): void;
@@ -185,7 +186,9 @@ export class VaultRegistry implements Vaults {
       onResolved: () => this.events.resolved(root),
       onPartial: () =>
         this.system.warn(
-          `This vault has more than 50,000 notes or 50,000 other files. Lumiere indexes the first 50,000 of each.`,
+          t(
+            "This vault has more than 50,000 notes or 50,000 other files. Lumiere indexes the first 50,000 of each.",
+          ),
         ),
       onError: (message, error) => this.events.error(message, error),
     });

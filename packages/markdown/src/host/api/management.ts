@@ -8,6 +8,7 @@ import type {
   PluginDescriptor,
   PluginState,
 } from "./types";
+import { t } from "@workshop/l10n";
 
 /** What choosing a row of Show Plugin Status opens. */
 export interface PluginStatusTarget {
@@ -34,17 +35,28 @@ const icons: Record<PluginState["state"], string> = {
 function stateText(state: PluginState): string {
   switch (state.state) {
     case "failed":
-      return "Failed";
+      return t("Failed");
     case "pending":
       return state.waitingFor.length
-        ? `Waiting for ${state.waitingFor.join(", ")}`
-        : "Waiting";
+        ? t("Waiting for {0}", state.waitingFor.join(", "))
+        : t("Waiting");
     case "loading":
-      return "Loading";
+      return t("Loading");
     case "active":
-      return "Active";
+      return t("Active");
     case "disabled":
-      return "Disabled";
+      return t("Disabled");
+  }
+}
+
+function kindText(kind: PluginDescriptor["kind"]): string {
+  switch (kind) {
+    case "core":
+      return t("core");
+    case "feature":
+      return t("feature");
+    case "external":
+      return t("external");
   }
 }
 
@@ -77,7 +89,7 @@ export function pluginStatusItems(
     const setting = settingOf(descriptor);
     return {
       label: `${icons[state.state]} ${descriptor.title}`,
-      description: `${stateText(state)} · ${descriptor.kind}`,
+      description: t("{0} · {1}", stateText(state), kindText(descriptor.kind)),
       detail: state.error ?? descriptor.description,
       value: setting ? { id: descriptor.id, setting } : { id: descriptor.id },
     };
@@ -91,7 +103,7 @@ async function showPluginStatus(
 ): Promise<void> {
   const editor = api.getActiveEditor();
   if (!editor) {
-    ctx.dialogs.inform("Open a note in Lumiere to see its plugin states.");
+    ctx.dialogs.inform(t("Open a note in Lumiere to see its plugin states."));
     return;
   }
   const items = pluginStatusItems(
@@ -99,7 +111,10 @@ async function showPluginStatus(
     api.getPlugins(editor.editorId),
   );
   const chosen = await ctx.dialogs.pick({
-    placeholder: `Plugins in ${basename(editor.uri)}: choose one to open its setting`,
+    placeholder: t(
+      "Plugins in {0}: choose one to open its setting",
+      basename(editor.uri),
+    ),
     items: (query) => filterItems(items, query),
   });
   const setting = chosen?.item?.value.setting;

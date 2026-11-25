@@ -1,6 +1,7 @@
 import * as vscode from "vscode";
 import path from "node:path";
 import type { HostDocument } from "../shared/host";
+import { t } from "@workshop/l10n";
 
 /** Native recheck: a title rename cannot move a note out of its current folder. */
 export async function renameFile(
@@ -14,7 +15,7 @@ export async function renameFile(
     source.scheme !== "file" ||
     destination.scheme !== "file"
   ) {
-    throw new Error("Save the note before renaming it.");
+    throw new Error(t("Save the note before renaming it."));
   }
   if (
     source.authority !== destination.authority ||
@@ -24,11 +25,11 @@ export async function renameFile(
     destination.fragment ||
     /[\\\r\n\0]/.test(path.basename(destination.path))
   ) {
-    throw new Error("Invalid note rename target.");
+    throw new Error(t("Invalid note rename target."));
   }
   const edit = new vscode.WorkspaceEdit();
   edit.renameFile(source, destination, { overwrite: false });
   if (!(await vscode.workspace.applyEdit(edit))) {
-    throw new Error("The note could not be renamed.");
+    throw new Error(t("The note could not be renamed."));
   }
 }

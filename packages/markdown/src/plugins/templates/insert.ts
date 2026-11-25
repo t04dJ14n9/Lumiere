@@ -2,6 +2,7 @@ import { templateInsertion } from "../../markdown/template-insert";
 import type { HostDocuments, TextEdit } from "../../shared/host";
 import type { EditorPanel } from "../editor/api";
 import { protocol as editorProtocol } from "../editor/protocol";
+import { t } from "@workshop/l10n";
 
 /** What to change for a selection, in the editor's `\n` offsets. */
 type Plan = (
@@ -90,7 +91,7 @@ async function applyAtSelection(
     await panel.session.flush(panel.id);
     const selection = await capturedSelection(panel, capture);
     if (selection.version !== panel.session.version) {
-      throw new Error("The note changed while inserting. Try again.");
+      throw new Error(t("The note changed while inserting. Try again."));
     }
     const note = panel.document.getText().replace(/\r\n?/g, "\n");
     const planned = plan(selection, note);

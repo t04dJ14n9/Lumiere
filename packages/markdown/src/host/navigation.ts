@@ -25,6 +25,7 @@ import {
   linkLocation,
   type LinkFolder,
 } from "../shared/link-location";
+import { t } from "@workshop/l10n";
 
 export { contained };
 
@@ -106,8 +107,8 @@ export function createNavigation(
       (await vscode.window.showWarningMessage(
         message,
         { modal: true },
-        "Open",
-      )) === "Open",
+        t("Open"),
+      )) === t("Open"),
     async resolve(request) {
       await configuration.prepare(request.source);
       return resolveNavigation({
@@ -310,7 +311,7 @@ async function createNote({
   const edit = new vscode.WorkspaceEdit();
   edit.createFile(uri, { ignoreIfExists: true });
   if (!(await vscode.workspace.applyEdit(edit))) {
-    throw new Error("Could not create note");
+    throw new Error(t("Could not create note"));
   }
   return uri.toString();
 }

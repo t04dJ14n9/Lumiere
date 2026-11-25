@@ -4,6 +4,7 @@ import { contributionId } from "../../shared/setting-schema";
 import type { ApiPlatform } from "./platform";
 import type { MarkdownWorkshopApi } from "./types";
 import { resolveReference } from "./reference-target";
+import { t } from "@workshop/l10n";
 
 /** Explicit fallback when the editor host cannot forward an agent link's range. */
 export function registerOpenReference(
@@ -36,8 +37,9 @@ async function openReference(
   // prefill a valid first line; unrelated clipboard content stays private.
   const firstLine = (await ctx.clipboard.read()).split(/\r?\n/, 1)[0] ?? "";
   const value = await ctx.dialogs.input({
-    prompt:
+    prompt: t(
       "Open a Markdown source reference (@path/to/note.md#12-18 or a full URI)",
+    ),
     value: referenceError(firstLine) ? "" : firstLine.trim(),
     validate: referenceError,
   });

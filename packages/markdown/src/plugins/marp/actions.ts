@@ -5,6 +5,7 @@ import type { HostDocument, TextEdit } from "../../shared/host";
 import { isKept, rememberDeck } from "./keep";
 import type { KeepStorage } from "./keep";
 import { shouldOpenMarpAsText } from "./redirect";
+import { t } from "@workshop/l10n";
 
 export const MARP_EXTENSION = "marp-team.marp-vscode";
 
@@ -28,7 +29,9 @@ export async function previewDeck(
   await actions.execute("markdown.showPreviewToSide", uri);
   if (!actions.marpInstalled()) {
     actions.inform(
-      "Opened the Markdown preview. Install Marp for VS Code to render slides.",
+      t(
+        "Opened the Markdown preview. Install Marp for VS Code to render slides.",
+      ),
     );
   }
 }
@@ -38,7 +41,7 @@ export async function exportDeck(
   uri: string,
 ): Promise<void> {
   if (actions.trusted() === false) {
-    actions.error("Marp export needs a trusted workspace.");
+    actions.error(t("Marp export needs a trusted workspace."));
     return;
   }
   if (!actions.marpInstalled()) {
@@ -46,7 +49,7 @@ export async function exportDeck(
     return;
   }
   if (!actions.reveal) {
-    actions.error("Cannot show the text editor for export.");
+    actions.error(t("Cannot show the text editor for export."));
     return;
   }
   await actions.reveal(uri);
@@ -61,13 +64,15 @@ export async function toggleMarp(
   const next = setMarpEnabled(source, !isMarpDocument(source));
   if (next === source) {
     actions.inform(
-      isMarpDocument(source) ? "Marp is already on." : "Marp is already off.",
+      isMarpDocument(source)
+        ? t("Marp is already on.")
+        : t("Marp is already off."),
     );
     return;
   }
   const applied = await actions.apply(document, [replaceAllEdit(source, next)]);
   if (!applied) {
-    actions.error("Could not update the Marp frontmatter.");
+    actions.error(t("Could not update the Marp frontmatter."));
   }
 }
 
@@ -77,7 +82,7 @@ export async function keepDeck(
 ): Promise<void> {
   await rememberDeck(actions.storage, uri);
   await actions.execute("vscode.openWith", uri, MARKDOWN_EDITOR.viewType);
-  actions.inform("This deck stays in Lumiere.");
+  actions.inform(t("This deck stays in Lumiere."));
 }
 
 export function redirectToTextEditor(input: {
@@ -94,10 +99,11 @@ export function redirectToTextEditor(input: {
 }
 
 async function offerMarpInstall(actions: MarpActions): Promise<void> {
-  const answer = await actions.ask("Export needs Marp for VS Code.", [
-    "Install Marp for VS Code",
+  const install = t("Install Marp for VS Code");
+  const answer = await actions.ask(t("Export needs Marp for VS Code."), [
+    install,
   ]);
-  if (answer === "Install Marp for VS Code") {
+  if (answer === install) {
     await actions.execute("workbench.extensions.search", MARP_EXTENSION);
   }
 }

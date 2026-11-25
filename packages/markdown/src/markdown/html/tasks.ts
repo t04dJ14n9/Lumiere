@@ -1,5 +1,6 @@
 import type { MarkdownIt } from "markdown-it";
 import { attr } from "./helpers";
+import { t } from "@workshop/l10n";
 export function tasks(md: MarkdownIt): void {
   md.core.ruler.after("inline", "tasks", (state) => {
     for (let index = 0; index < state.tokens.length; index++) {
@@ -13,7 +14,7 @@ export function tasks(md: MarkdownIt): void {
           first?.type === "text" ? /^\[([^\]])\] /.exec(first.content) : null;
         if (task && first) {
           const checkbox = new state.Token("html_inline", "", 0);
-          checkbox.content = `<input type="checkbox"${attr("data-task", task[1])}${attr("data-line", token.map?.[0])} aria-label="Task"${task[1] === " " ? "" : " checked"}> `;
+          checkbox.content = `<input type="checkbox"${attr("data-task", task[1])}${attr("data-line", token.map?.[0])}${attr("aria-label", t("Task"))}${task[1] === " " ? "" : " checked"}> `;
           const label = new state.Token("html_inline", "", 0);
           const endLabel = new state.Token("html_inline", "", 0);
           label.content = '<span class="task-label">';

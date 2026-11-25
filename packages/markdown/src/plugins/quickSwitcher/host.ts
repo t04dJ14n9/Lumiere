@@ -6,6 +6,7 @@ import { AcceptKeys, type Acceptance } from "./accept";
 import { switcherItems } from "./ranking";
 import type { SwitcherTarget } from "./ranking";
 import { readRecent, rememberOpen } from "./recent";
+import { t } from "@workshop/l10n";
 
 /** **Lumiere: Quick Switcher**: open or create a note by name. */
 export const quickSwitcherHost: Plugin = {
@@ -45,7 +46,7 @@ async function runSwitcher(ctx: Context, keys: AcceptKeys): Promise<void> {
   const active = ctx.activeEditor.note();
   const vault = await switcherVault(ctx.vaults, active);
   if (!vault) {
-    ctx.dialogs.error("Open a folder to use the quick switcher.");
+    ctx.dialogs.error(t("Open a folder to use the quick switcher."));
     return;
   }
   // Keep the initiating note through the picker, even if focus changes.
@@ -60,7 +61,7 @@ async function runSwitcher(ctx: Context, keys: AcceptKeys): Promise<void> {
   let acceptance: Acceptance;
   try {
     result = await ctx.dialogs.pick({
-      placeholder: "Find or create a note…",
+      placeholder: t("Find or create a note…"),
       items: (query) =>
         switcherItems(vault.index, query, { recent, showUnsupportedFiles }),
     });

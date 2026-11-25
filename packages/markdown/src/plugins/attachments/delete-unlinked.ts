@@ -2,11 +2,9 @@ import type { Context } from "@workshop/core";
 import type { AfterDelete } from "../../shared/host";
 import type { Vault, VaultFile, Vaults } from "../vault/api";
 import { unlinkedAttachments } from "./unlinked";
+import { t } from "@workshop/l10n";
 
 const SETTING = "attachments.deleteUnlinkedAttachments";
-const DELETE = "Delete";
-const ALWAYS = "Always Delete";
-const NEVER = "Never Delete";
 
 /**
  * How long a deletion waits for the index to finish parsing. VS Code holds
@@ -56,7 +54,7 @@ async function planDeletion(
   return () =>
     offerDeletion(ctx, { mode, resource, files }).catch((error: unknown) => {
       ctx.dialogs.error(
-        `Could not delete the attachments: ${messageOf(error)}`,
+        t("Could not delete the attachments: {0}", messageOf(error)),
       );
     });
 }
@@ -94,16 +92,20 @@ async function settledWithin(
 /** Asks unless the setting says `always`; Always and Never Delete also stop the asking. */
 async function offerDeletion(ctx: Context, plan: Plan): Promise<void> {
   if (plan.mode !== "always") {
+    // The buttons are translated, so the answer is compared with the same text.
+    const deleteNow = t("Delete");
+    const always = t("Always Delete");
+    const never = t("Never Delete");
     const answer = await ctx.dialogs.ask(question(plan.files), [
-      DELETE,
-      ALWAYS,
-      NEVER,
+      deleteNow,
+      always,
+      never,
     ]);
-    if (answer === NEVER || answer === ALWAYS) {
-      const mode = answer === NEVER ? "never" : "always";
+    if (answer === never || answer === always) {
+      const mode = answer === never ? "never" : "always";
       await ctx.settings.access.update(SETTING, mode, plan.resource);
     }
-    if (answer !== DELETE && answer !== ALWAYS) {
+    if (answer !== deleteNow && answer !== always) {
       return;
     }
   }
@@ -117,18 +119,31 @@ async function trash(ctx: Context, file: VaultFile): Promise<void> {
   try {
     await ctx.workspace.files.remove(file.uri, { trash: true });
   } catch (error) {
-    ctx.dialogs.error(`Could not delete ${file.path}: ${messageOf(error)}`);
+    ctx.dialogs.error(
+      t("Could not delete {0}: {1}", file.path, messageOf(error)),
+    );
   }
 }
 
 function question(files: readonly VaultFile[]): string {
   const shown = files.slice(0, 5).map((file) => file.path);
   const more = files.length - shown.length;
-  const names =
-    more > 0 ? `${shown.join(", ")} and ${more} more` : shown.join(", ");
-  const count =
-    files.length === 1 ? "1 attachment" : `${files.length} attachments`;
-  return `Delete ${count} that no other note uses? ${names}`;
+  const names = shown.join(", ");
+  if (files.length === 1) {
+    return t("Delete 1 attachment that no other note uses? {0}", names);
+  }
+  return more > 0
+    ? t(
+        "Delete {0} attachments that no other note uses? {1} and {2} more",
+        files.length,
+        names,
+        more,
+      )
+    : t(
+        "Delete {0} attachments that no other note uses? {1}",
+        files.length,
+        names,
+      );
 }
 
 function messageOf(error: unknown): string {

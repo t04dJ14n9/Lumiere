@@ -10,6 +10,7 @@ import {
   type PropertyChange,
 } from "../markdown/properties";
 import { mediaExtensions, mediaKind } from "../shared/media-kinds";
+import { t } from "@workshop/l10n";
 
 /** A Markdown image whose source is on the web or in a data URI. */
 export interface RemoteImage {
@@ -183,7 +184,7 @@ export function imageChoice(url: string): {
   const data = /^data:([^;,]*)/iu.exec(url);
   if (data) {
     return {
-      label: "Embedded image",
+      label: t("Embedded image"),
       description: data[1]!.toLowerCase(),
       detail: cut(url, 60),
     };

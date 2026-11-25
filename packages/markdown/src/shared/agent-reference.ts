@@ -1,4 +1,5 @@
 import { noteLocation } from "@workshop/agents/handoff";
+import { t } from "@workshop/l10n";
 const MAX_AGENT_CLIPBOARD_PATH_CHARACTERS = 32 * 1024;
 export function formatMarkdownAgentReference(
   relativePath: string,
@@ -8,7 +9,7 @@ export function formatMarkdownAgentReference(
   const normalizedPath = normalizeWorkspaceRelativePath(relativePath);
   if (!normalizedPath) {
     throw new TypeError(
-      "Markdown agent reference path must be workspace-relative.",
+      t("Markdown agent reference path must be workspace-relative."),
     );
   }
   return `@${normalizedPath}#${lineRange(startLine, endLine)}`;
@@ -30,7 +31,7 @@ export function formatUriAgentReference(
     hasControlCharacters(uri) ||
     /\s/.test(uri)
   ) {
-    throw new TypeError("Markdown agent reference URI is not valid.");
+    throw new TypeError(t("Markdown agent reference URI is not valid."));
   }
   return `@${noteLocation(uri)}#${lineRange(startLine, endLine)}`;
 }
@@ -38,11 +39,11 @@ export function formatUriAgentReference(
 function lineRange(startLine: number, endLine: number): string {
   if (!isPositiveSafeInteger(startLine) || !isPositiveSafeInteger(endLine)) {
     throw new TypeError(
-      "Markdown agent reference lines must be positive safe integers.",
+      t("Markdown agent reference lines must be positive safe integers."),
     );
   }
   if (endLine < startLine) {
-    throw new RangeError("Markdown agent reference lines must be ordered.");
+    throw new RangeError(t("Markdown agent reference lines must be ordered."));
   }
   return startLine === endLine ? String(startLine) : `${startLine}-${endLine}`;
 }

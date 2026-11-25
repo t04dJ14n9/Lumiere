@@ -1,5 +1,6 @@
 import { EditorView, ViewPlugin, type ViewUpdate } from "@codemirror/view";
 import type { EditorView as View } from "@codemirror/view";
+import { t } from "@workshop/l10n";
 
 /** Whether the Cursor selection chrome should be visible. */
 export function shouldShowSelectionToolbar(input: {
@@ -23,8 +24,8 @@ export function selectionToolbarActions(
 ): readonly SelectionToolbarAction[] {
   const mod = isMac ? "⌘" : "Ctrl";
   return [
-    { id: "chat", label: "Add to Chat", shortcut: `${mod}+L` },
-    { id: "edit", label: "Quick Edit", shortcut: `${mod}+K` },
+    { id: "chat", label: t("Add to Chat"), shortcut: `${mod}+L` },
+    { id: "edit", label: t("Quick Edit"), shortcut: `${mod}+K` },
   ];
 }
 
@@ -97,7 +98,7 @@ export function selectionToolbarExtension(
           this.dom = document.createElement("div");
           this.dom.className = "cm-cursor-selection-toolbar";
           this.dom.setAttribute("role", "toolbar");
-          this.dom.setAttribute("aria-label", "Cursor selection actions");
+          this.dom.setAttribute("aria-label", t("Cursor selection actions"));
           this.dom.style.display = "none";
           for (const action of selectionToolbarActions(isMac)) {
             this.dom.append(toolbarButton(action, handOff));

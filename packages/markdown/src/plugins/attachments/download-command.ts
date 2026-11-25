@@ -18,8 +18,11 @@ import { SourceCoordinates } from "../../shared/document/coordinates";
 import { contributionId } from "../../shared/setting-schema";
 import { hostFetch } from "./host-fetch";
 import { attachmentTarget, type AttachmentTarget } from "./target";
+import { t } from "@workshop/l10n";
 
-export const NO_VAULT = "Attachments need a vault: open this note from one.";
+export function noVaultMessage(): string {
+  return t("Attachments need a vault: open this note from one.");
+}
 
 /** Register Download Attachments for Current File; it reads the active editor when it runs. */
 export function registerDownloadAttachments(ctx: Context): void {
@@ -39,22 +42,27 @@ export function registerDownloadAttachments(ctx: Context): void {
 export async function downloadAttachments(ctx: Context): Promise<void> {
   const panel = ctx.editors.active();
   if (!panel) {
-    ctx.dialogs.inform("Open a note to download its attachments.");
+    ctx.dialogs.inform(t("Open a note to download its attachments."));
     return;
   }
   const urls = imageUrls(editorText(panel.document));
   if (urls.length === 0) {
-    ctx.dialogs.inform("This note shows no images from the web.");
+    ctx.dialogs.inform(t("This note shows no images from the web."));
     return;
   }
   const target = await attachmentTarget(ctx, panel);
   if (!target) {
-    ctx.dialogs.error(NO_VAULT);
+    ctx.dialogs.error(noVaultMessage());
     return;
   }
-  const images = urls.length === 1 ? "1 image" : `${urls.length} images`;
   const chosen = await ctx.dialogs.pickMany({
-    placeholder: `Download ${images} into the vault? Untick any to leave out.`,
+    placeholder:
+      urls.length === 1
+        ? t("Download 1 image into the vault? Untick any to leave out.")
+        : t(
+            "Download {0} images into the vault? Untick any to leave out.",
+            urls.length,
+          ),
     items: urls.map((url) => ({ ...imageChoice(url), value: url })),
   });
   if (!chosen?.length) {
@@ -183,19 +191,36 @@ function summary({
   skipped,
   edited,
 }: SummaryFacts): string {
-  const count = downloaded === 1 ? "1 attachment" : `${downloaded} attachments`;
-  const parts = [
-    edited
-      ? `Downloaded ${count}.`
-      : `Saved ${count} in the vault, but the note was not changed.`,
-  ];
+  const parts = [downloadedLine(downloaded, edited)];
   if (failed > 0) {
-    parts.push(`${failed} could not be downloaded.`);
+    parts.push(t("{0} could not be downloaded.", failed));
   }
   if (skipped.length > 0) {
     const named = skipped.slice(0, 3).join(", ");
-    const more = skipped.length > 3 ? ` and ${skipped.length - 3} more` : "";
-    parts.push(`${skipped.length} skipped, not an image: ${named}${more}.`);
+    parts.push(
+      skipped.length > 3
+        ? t(
+            "{0} skipped, not an image: {1} and {2} more.",
+            skipped.length,
+            named,
+            skipped.length - 3,
+          )
+        : t("{0} skipped, not an image: {1}.", skipped.length, named),
+    );
   }
   return parts.join(" ");
+}
+
+function downloadedLine(downloaded: number, edited: boolean): string {
+  if (downloaded === 1) {
+    return edited
+      ? t("Downloaded 1 attachment.")
+      : t("Saved 1 attachment in the vault, but the note was not changed.");
+  }
+  return edited
+    ? t("Downloaded {0} attachments.", downloaded)
+    : t(
+        "Saved {0} attachments in the vault, but the note was not changed.",
+        downloaded,
+      );
 }
