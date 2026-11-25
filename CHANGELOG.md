@@ -1,6 +1,6 @@
 # Changelog
 
-## Unreleased
+## 0.1.32 (2026-11-25)
 
 - Lumiere follows VS Code's display language. Simplified Chinese (zh-cn)
   is the first translation, of all of Lumiere's own text: commands, settings
