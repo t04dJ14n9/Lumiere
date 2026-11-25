@@ -8,6 +8,7 @@ import { NumberField } from "./number-field";
 import { fitMode } from "./view-sync";
 import type { ViewChoices } from "../shared/view-settings";
 import { ViewControls } from "./view-controls";
+import { t } from "@workshop/l10n";
 
 const MAC = /Mac|iPhone|iPad/u.test(navigator.userAgent);
 
@@ -91,13 +92,13 @@ function ToolbarControls({
       <span className="toolbar-group">
         <IconButton
           icon="list-tree"
-          label="Toggle outline"
+          label={t("Toggle outline")}
           keys={shortcut("⌃⌘O", "Ctrl+Alt+O")}
           onClick={() => postToHost({ type: "toggleOutline" })}
         />
         <IconButton
           icon="search"
-          label="Find in PDF"
+          label={t("Find in PDF")}
           keys={shortcut("⌘F", "Ctrl+F")}
           onClick={() => run({ action: "find" })}
         />
@@ -115,13 +116,13 @@ function HistoryGroup({
     <span className="toolbar-group">
       <IconButton
         icon="arrow-left"
-        label="Back to previous location"
+        label={t("Back to previous location")}
         disabled={!history.back}
         onClick={history.onBack}
       />
       <IconButton
         icon="arrow-right"
-        label="Forward to next location"
+        label={t("Forward to next location")}
         disabled={!history.forward}
         onClick={history.onForward}
       />
@@ -141,15 +142,15 @@ function PageGroup({
     <span className="toolbar-group">
       <IconButton
         icon="chevron-up"
-        label="Previous page"
+        label={t("Previous page")}
         keys="Alt+PageUp"
         disabled={!navigation.canGoBack}
         onClick={() => run({ action: "previousPage" })}
       />
       <NumberField
-        label="Page"
+        label={t("Page")}
         value={currentPage}
-        suffix={`of ${pageCount}`}
+        suffix={t("of {0}", pageCount)}
         onCommit={(page) => {
           if (!Number.isInteger(page)) {
             return false;
@@ -161,7 +162,7 @@ function PageGroup({
       />
       <IconButton
         icon="chevron-down"
-        label="Next page"
+        label={t("Next page")}
         keys="Alt+PageDown"
         disabled={!navigation.canGoForward}
         onClick={() => run({ action: "nextPage" })}
@@ -177,12 +178,12 @@ function ZoomGroup({ run }: { run: Run }): React.JSX.Element {
     <span className="toolbar-group">
       <IconButton
         icon="zoom-out"
-        label="Zoom out"
+        label={t("Zoom out")}
         keys={shortcut("⌘-", "Ctrl+-")}
         onClick={() => run({ action: "zoomOut" })}
       />
       <NumberField
-        label="Zoom"
+        label={t("Zoom")}
         value={Math.round(zoomLevel * 100)}
         suffix="%"
         onCommit={(percent) => {
@@ -193,20 +194,20 @@ function ZoomGroup({ run }: { run: Run }): React.JSX.Element {
       />
       <IconButton
         icon="zoom-in"
-        label="Zoom in"
+        label={t("Zoom in")}
         keys={shortcut("⌘=", "Ctrl+=")}
         onClick={() => run({ action: "zoomIn" })}
       />
       <IconButton
         icon="arrow-both"
-        label="Fit width"
+        label={t("Fit width")}
         keys={shortcut("⌘0", "Ctrl+0")}
         pressed={fit === "width"}
         onClick={() => run({ action: "fitWidth" })}
       />
       <IconButton
         icon="screen-full"
-        label="Fit page"
+        label={t("Fit page")}
         keys={shortcut("⌥⌘0", "Ctrl+Alt+0")}
         pressed={fit === "page"}
         onClick={() => run({ action: "fitPage" })}
@@ -228,7 +229,7 @@ function ToolGroup({
     <span className="toolbar-group">
       <IconButton
         icon="whole-word"
-        label="Select text"
+        label={t("Select text")}
         keys={shortcut("⌃⌘T", "Ctrl+Alt+T")}
         pressed={tool === "text"}
         onClick={() => run({ action: "setTool", tool: "text" })}
@@ -236,7 +237,7 @@ function ToolGroup({
       {regionsEnabled && (
         <IconButton
           icon="inspect"
-          label="Select region"
+          label={t("Select region")}
           keys={shortcut("⌃⌘R", "Ctrl+Alt+R")}
           pressed={tool === "region"}
           onClick={() => run({ action: "setTool", tool: "region" })}
@@ -249,7 +250,7 @@ function ToolGroup({
 /** The controls as a slim bar along the top of the viewer (`toolbar.mode`: `slim`). */
 export function Toolbar(props: ToolbarProps): React.JSX.Element {
   return (
-    <div className="toolbar" role="toolbar" aria-label="PDF toolbar">
+    <div className="toolbar" role="toolbar" aria-label={t("PDF toolbar")}>
       <ToolbarControls {...props} />
     </div>
   );

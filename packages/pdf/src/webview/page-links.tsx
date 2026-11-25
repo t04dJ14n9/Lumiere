@@ -16,6 +16,7 @@ import {
 } from "../shared/page-link-clusters";
 import { targetPage, targetTop, targetUrl } from "../shared/pdf-link-target";
 import { postToHost } from "./host";
+import { t } from "@workshop/l10n";
 
 const NO_LINKS: readonly never[] = Object.freeze([]);
 
@@ -69,8 +70,10 @@ function PageLinkGroup({
   onOpenPage: (page: number, top?: number) => void;
 }): React.JSX.Element {
   const href = link.url ?? `#page=${link.page}`;
-  const title = link.url ?? `Page ${link.page}`;
-  const label = link.url ? `Open ${link.url}` : `Go to page ${link.page}`;
+  const title = link.url ?? t("Page {0}", String(link.page));
+  const label = link.url
+    ? t("Open {0}", link.url)
+    : t("Go to page {0}", String(link.page));
   const open = (event: React.MouseEvent): void => {
     event.preventDefault();
     if (link.page) {

@@ -7,6 +7,7 @@ import { useSearchState } from "@embedpdf/react/search";
 import { useOptionalCapability } from "@embedpdf/react/runtime";
 import React, { useEffect, useRef, useState } from "react";
 import type { Navigation } from "./navigation";
+import { t } from "@workshop/l10n";
 
 /** Wait this long after typing before searching the whole document. */
 const SEARCH_DELAY_MS = 150;
@@ -38,7 +39,7 @@ export function SearchBar({
   const { state, step } = useDocumentSearch(query, navigation);
   useEffect(() => onPreviewEnd, [onPreviewEnd]);
   return (
-    <div className="search-bar" role="search" aria-label="Find in PDF">
+    <div className="search-bar" role="search" aria-label={t("Find in PDF")}>
       <SearchField
         query={query}
         focusRequest={focusRequest}
@@ -56,20 +57,20 @@ export function SearchBar({
       </span>
       <SearchButton
         icon="arrow-up"
-        label="Previous match"
+        label={t("Previous match")}
         keys="Shift+Enter"
         onClick={() => step(-1)}
       />
       <SearchButton
         icon="arrow-down"
-        label="Next match"
+        label={t("Next match")}
         keys="Enter"
         onClick={() => step(1)}
       />
       <button
         type="button"
-        aria-label="Close search"
-        title="Close (Escape)"
+        aria-label={t("Close search")}
+        title={t("Close (Escape)")}
         onClick={onClose}
       >
         <i className="codicon codicon-close" aria-hidden="true" />
@@ -94,8 +95,8 @@ function SearchField(props: {
   return (
     <input
       type="search"
-      aria-label="Find in PDF"
-      placeholder="Find"
+      aria-label={t("Find in PDF")}
+      placeholder={t("Find")}
       ref={input}
       value={props.query}
       onChange={(event) => props.onQuery(event.currentTarget.value)}
@@ -137,8 +138,8 @@ function matchCount(state: {
     return "…";
   }
   return state.hitCount > 0
-    ? `${state.activeHitIndex + 1} of ${state.hitCount}`
-    : "No results";
+    ? t("{0} of {1}", state.activeHitIndex + 1, state.hitCount)
+    : t("No results");
 }
 
 /**

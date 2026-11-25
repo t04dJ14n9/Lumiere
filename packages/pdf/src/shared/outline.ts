@@ -1,4 +1,5 @@
 import type { OutlineItem } from "./messages";
+import { t } from "@workshop/l10n";
 
 /**
  * The position Follow Cursor asks `findActiveOutlineItem` about, for the
@@ -116,7 +117,7 @@ export function flattenOutlineForPicker(
         title: item.title,
         page: item.page,
         ...(item.top !== undefined ? { top: item.top } : {}),
-        description: `p.${item.page}`,
+        description: t("p.{0}", item.page),
         ...(ancestors.length ? { detail: ancestors.join(" › ") } : {}),
       });
     }

@@ -17,6 +17,7 @@ import { NOTE_CARD_CLASS, scrollsNoteCard } from "./note-card-target";
 import { noteOf, usePointerOverMarks } from "./note-card-pointer";
 import { onNoteEditRequest } from "./note-edit-request";
 import { NoteEditor } from "./note-editor";
+import { t } from "@workshop/l10n";
 
 type Shown = { key: string | undefined; editing: boolean };
 
@@ -70,7 +71,7 @@ export function NoteCard({
         ref={keepWheelInCard}
         className={`${NOTE_CARD_CLASS}${shown.editing ? " editing" : ""}`}
         role={shown.editing ? "dialog" : "tooltip"}
-        aria-label="Note"
+        aria-label={t("Note")}
         onPointerEnter={() => hover.cardEntered()}
         onPointerLeave={() => hover.cardLeft()}
       >
@@ -124,8 +125,8 @@ function NoteBody({
         <button
           type="button"
           className="note-card-edit"
-          title="Edit Note"
-          aria-label="Edit Note"
+          title={t("Edit Note")}
+          aria-label={t("Edit Note")}
           onClick={onEdit}
         >
           <i className="codicon codicon-edit" aria-hidden="true" />
@@ -154,9 +155,10 @@ function saveNote(
     .catch((error: unknown) =>
       postToHost({
         type: "error",
-        message: `Could not change the note: ${
-          error instanceof Error ? error.message : String(error)
-        }`,
+        message: t(
+          "Could not change the note: {0}",
+          error instanceof Error ? error.message : String(error),
+        ),
       }),
     );
 }

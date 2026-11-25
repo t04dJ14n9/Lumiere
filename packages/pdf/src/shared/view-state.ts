@@ -11,6 +11,7 @@ import {
 } from "./annotation-tools";
 import { MAX_ZOOM, MIN_ZOOM } from "./zoom-steps";
 import { isPageOffset } from "./reading-position";
+import { t } from "@workshop/l10n";
 import {
   isPageLayout,
   isScrollMode,
@@ -274,16 +275,16 @@ export function parseZoomInput(text: string): number | undefined {
 
 /** "Page 4 / 15", as the status bar shows it. */
 export function pageLabel(view: ViewState): string {
-  return `Page ${view.page} / ${view.pageCount}`;
+  return t("Page {0} / {1}", view.page, view.pageCount);
 }
 
 /** "Fit Width (164%)", "Fit Page (80%)" or "125%". */
 export function zoomLabel(view: ViewState): string {
   if (view.fit === "width") {
-    return `Fit Width (${view.zoomPercent}%)`;
+    return t("Fit Width ({0}%)", view.zoomPercent);
   }
   if (view.fit === "page") {
-    return `Fit Page (${view.zoomPercent}%)`;
+    return t("Fit Page ({0}%)", view.zoomPercent);
   }
   return `${view.zoomPercent}%`;
 }

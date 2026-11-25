@@ -12,6 +12,7 @@
  * Raise the version, and keep reading the old one, when the format changes.
  */
 import type { OutlineItem } from "./messages";
+import { t } from "@workshop/l10n";
 import { findActiveOutlineItem } from "./outline";
 import { isPageOffset } from "./reading-position";
 
@@ -46,10 +47,10 @@ export function bookmarkStoreName(sha256: string): string {
 export function validateBookmarkTitle(title: string): string | undefined {
   const length = title.trim().length;
   if (length === 0) {
-    return "Enter a title for the bookmark.";
+    return t("Enter a title for the bookmark.");
   }
   return length > MAX_BOOKMARK_TITLE_LENGTH
-    ? `A title has at most ${MAX_BOOKMARK_TITLE_LENGTH} characters.`
+    ? t("A title has at most {0} characters.", MAX_BOOKMARK_TITLE_LENGTH)
     : undefined;
 }
 

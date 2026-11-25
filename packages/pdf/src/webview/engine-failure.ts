@@ -1,4 +1,5 @@
 import { useEffect } from "react";
+import { t } from "@workshop/l10n";
 
 /** A worker that has not answered for the PDF within this time is given up. */
 export const WORKER_TIMEOUT_MS = 15_000;
@@ -68,6 +69,6 @@ export function reportEngineFailure(
     );
     onWorkerFailure();
   } else {
-    report(`The PDF engine failed: ${String(error)}`);
+    report(t("The PDF engine failed: {0}", String(error)));
   }
 }

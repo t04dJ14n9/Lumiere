@@ -1,6 +1,7 @@
 import type { LockedDocumentInfo } from "@embedpdf/core";
 import { useDocuments } from "@embedpdf/react/runtime";
 import React, { useState } from "react";
+import { t } from "@workshop/l10n";
 
 /**
  * A password-protected PDF: ask for its password and open it with it. The
@@ -34,8 +35,8 @@ export function PasswordPrompt({
       <div className="password-box">
         <label htmlFor="pdf-password">
           {wrong
-            ? "That password is not right. Enter the PDF's password:"
-            : "This PDF is password-protected. Enter its password:"}
+            ? t("That password is not right. Enter the PDF's password:")
+            : t("This PDF is password-protected. Enter its password:")}
         </label>
         <input
           id="pdf-password"
@@ -47,7 +48,7 @@ export function PasswordPrompt({
           onChange={(event) => setPassword(event.target.value)}
         />
         <button type="submit" disabled={trying || password === ""}>
-          Open
+          {t("Open")}
         </button>
       </div>
     </form>
