@@ -28,15 +28,20 @@ on a line of its own.
 - The path is relative to the only local workspace folder. In multi-root
   and remote workspaces a local file is named by its absolute path as
   written (`@/elsewhere/赠礼.md#1-2`), which agents read as it stands; a path
-  with whitespace, `#`, `%` or a drive letter, and any other location, is
-  the note's full URI (`@file:///My%20Notes/b.md#1-2`).
+  with a tab or line break, `#`, `%` or a drive letter, and any other
+  location, is the note's full URI (`@file:///a%23b.md#1-2`).
+- A path with a space is quoted, the line range after the quotes, as Claude
+  Code reads an @-mention (an unquoted one ends at the first space):
+  `@"notes/My Notes/a.md"#4`, `@"/My Notes/b.md"#1-2`. Other paths are
+  never quoted.
 - After a blank line comes the selection, every line quoted with `> `
   (an empty line is a bare `>`), line endings normalised to `\n` and
   trailing newlines dropped; the text ends with one `\n` (`⏎` above).
 - Lumiere saves the note first, so the lines are those on disk.
   Lumiere PDF's MCP tool `get_current_note_selection` returns the same text for a
   note open in Lumiere; for an unsaved note, which has no stable
-  line numbers, its reference reads `notes/a.md (unsaved, lines 12-18)`.
+  line numbers, its reference reads `notes/a.md (unsaved, lines 12-18)` (a path with a
+  space quoted the same way).
 
 ## PDF selections (Lumiere PDF)
 

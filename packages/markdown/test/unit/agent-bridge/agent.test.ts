@@ -64,7 +64,7 @@ test("references use the workspace-relative path in one local folder, else the f
       2,
       2,
     ),
-    "@folder/A B.md#2",
+    '@"folder/A B.md"#2',
   );
   assert.equal(
     agentReferenceText("file:///vault2/A.md", ["file:///vault"], 1, 3),

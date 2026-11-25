@@ -14,7 +14,10 @@ export interface AgentReferenceInput {
 
 /** Parse the emitted reference, never the quoted passage or a chat command. */
 export function parseAgentReference(input: string): AgentReferenceInput {
-  const value = unquote(input.trim()).replace(/^@/, "");
+  const mentioned = unquote(input.trim()).replace(/^@/, "");
+  // A path with spaces is quoted, `@"My Notes/a.md"#3`, as Claude Code reads it.
+  const quoted = /^"([^"]+)"(#.*)$/.exec(mentioned);
+  const value = quoted ? `${quoted[1]}${quoted[2]}` : mentioned;
   const match = /^(.*)#([1-9]\d*)(?:-([1-9]\d*))?$/.exec(value);
   if (!match) {
     throw new TypeError(
