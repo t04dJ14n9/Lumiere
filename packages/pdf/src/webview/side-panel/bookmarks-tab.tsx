@@ -165,7 +165,7 @@ function EmptyBookmarks({
     <EmptyMessage>
       <p>{t("You have not added any bookmarks to this PDF.")}</p>
       <button type="button" className="sp-button" onClick={addBookmark}>
-        Add Bookmark
+        {t("Add Bookmark")}
       </button>
     </EmptyMessage>
   );
