@@ -1,6 +1,6 @@
 # Changelog
 
-## Unreleased
+## 0.1.36 (2026-11-26)
 
 - PDF agent bridge on Windows: when a folder is added to or removed from the
   window while an agent is reading the bridge's discovery file, the update
