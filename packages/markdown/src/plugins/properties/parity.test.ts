@@ -74,9 +74,18 @@ test("reserved aliases and cssclasses types cannot be overridden by preferences"
     inferPropertyKind("CSSClasses", "wide", { cssclasses: "checkbox" }),
     "list",
   );
+});
+
+test("sources is typed like any other property and follows preferences", () => {
+  assert.equal(inferPropertyKind("sources", ["paper"]), "list");
+  assert.equal(inferPropertyKind("sources", "paper"), "text");
   assert.equal(
-    inferPropertyKind("sources", ["paper"], { sources: "list" }),
+    inferPropertyKind("sources", ["paper"], { sources: "text" }),
     "text",
+  );
+  assert.equal(
+    inferPropertyKind("Sources", "paper", { sources: "list" }),
+    "list",
   );
 });
 

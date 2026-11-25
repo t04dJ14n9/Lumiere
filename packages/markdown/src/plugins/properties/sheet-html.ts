@@ -37,8 +37,6 @@ interface PropertyRowOptions {
   draft: string | undefined;
   listPreviewCount: number;
   listExpanded: boolean;
-  /** No three-line clamp: up to 300px, then the field scrolls (`sources`). */
-  scrollText?: boolean;
 }
 
 export function renderProperties(
@@ -93,37 +91,11 @@ export function renderProperties(
   return `<div class="properties metadata-container${options.collapsed ? " is-collapsed" : ""}"><div class="metadata-properties-heading" data-properties-heading tabindex="0" role="button" aria-expanded="${!options.collapsed}"><span class="metadata-collapse-indicator collapse-indicator collapse-icon">${propertyFlairIcon("collapse")}</span><span class="metadata-properties-title">${escape(t("Properties"))}</span></div><div class="metadata-content"${options.collapsed ? " hidden" : ""}><div class="metadata-properties">${rows}</div><button type="button" class="metadata-add-button text-icon-button" data-property-add>${propertyFlairIcon("plus")} ${escape(t("Add property"))}</button></div><p class="property-message" aria-live="polite"></p></div>`;
 }
 
-function isPlainTextSources(key: string): boolean {
-  return key.toLowerCase() === "sources";
-}
-
-/**
- * A string stays a string. Any other shape is shown as its YAML text inside
- * the same text control, so the sheet never grows a Sources widget.
- */
-function sourcesDisplayValue(
-  value: unknown,
-  draft: string | undefined,
-): unknown {
-  if (typeof value === "string" || value === null || value === undefined) {
-    return value;
-  }
-  return draft ?? value;
-}
-
 function propertyBody(
   key: string,
   value: unknown,
   options: PropertyRowOptions,
 ): string {
-  if (isPlainTextSources(key)) {
-    // A source a line: they show unclamped, and a long list scrolls.
-    return editableValue(key, sourcesDisplayValue(value, options.draft), {
-      ...options,
-      kind: "text",
-      scrollText: true,
-    });
-  }
   // Custom renderers: typed UI with an on-demand YAML editor when draftable.
   if (options.custom) {
     if (options.draft !== undefined) {
@@ -153,7 +125,6 @@ function propertyTypeMeta(
 ): { unknown: boolean; typeLabel: string; typeName: string } {
   const { kind } = options;
   const unknown =
-    !isPlainTextSources(key) &&
     !options.custom &&
     !options.editable &&
     options.draft !== undefined &&
@@ -181,7 +152,7 @@ function propertyRow(
   );
   const warning = mismatchWarning(
     kind,
-    !isPlainTextSources(key) && !unknown && !matchesPropertyKind(kind, value),
+    !unknown && !matchesPropertyKind(kind, value),
   );
   const body = propertyBody(key, value, options);
   const icon = propertyIcon(key, value, unknown ? "unknown" : kind);
@@ -216,8 +187,7 @@ function editableValue(
   }
   const text = propertyInputText(value);
   if (kind === "text") {
-    const scroll = options.scrollText ? " mod-scroll" : "";
-    const input = `<div class="metadata-input-longtext${scroll}" contenteditable="true" role="textbox" tabindex="-1"${attr("data-placeholder", t("Empty"))}${attr("aria-label", key)}${attr("data-property-input", key)} data-property-kind="text">${escape(text)}</div>`;
+    const input = `<div class="metadata-input-longtext" contenteditable="true" role="textbox" tabindex="-1"${attr("data-placeholder", t("Empty"))}${attr("aria-label", key)}${attr("data-property-input", key)} data-property-kind="text">${escape(text)}</div>`;
     if (/^\[\[[^\n]+\]\]$/.test(text)) {
       return `<span class="metadata-link" data-property-display>${renderInline(text)}<button type="button" tabindex="-1" class="metadata-property-link-flair" data-property-edit${attr("aria-label", t("Edit {0}", key))}>${propertyFlairIcon("pencil")}</button></span>${input.replace("<div ", "<div hidden ")}`;
     }

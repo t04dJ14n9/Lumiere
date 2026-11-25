@@ -2,6 +2,10 @@
 
 ## Unreleased
 
+- Markdown: the `sources` property is typed like any other, as in Obsidian,
+  so a list of wikilinks there (`- "[[notes/Paper|Paper]]"`) shows as links
+  that open, not as YAML text. A list of maps shows as Unknown (JSON), like
+  any other property's.
 - Copy Link for Agent quotes a note path that has a space,
   `@"/notes/AI 活动/a.md"#20-24`, as Claude Code reads an @-mention (an
   unquoted one ends at the first space); other paths are unchanged.

@@ -76,7 +76,6 @@ test("property RPC shares preferences, validates keys and disposes handlers on d
     "cssclasses",
     "due",
     "list",
-    "sources",
     "status",
     "tags",
   ]);
@@ -85,7 +84,7 @@ test("property RPC shares preferences, validates keys and disposes handlers on d
     await client.call(protocol, "setCollapsed", { collapsed: true }),
     true,
   );
-  for (const key of ["tags", "aliases", "cssclasses", "sources"]) {
+  for (const key of ["tags", "aliases", "cssclasses"]) {
     await assert.rejects(
       client.call(protocol, "setType", { key, kind: "text" }),
     );

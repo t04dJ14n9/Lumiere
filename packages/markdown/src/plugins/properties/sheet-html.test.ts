@@ -20,21 +20,51 @@ test("property sheet distinguishes editable scalars, list chips and Obsidian unk
   assert.doesNotMatch(html, /<script>|<b>/);
 });
 
-test("generated is Obsidian Unknown JSON; sources is a plain text property that scrolls", () => {
+test("generated and a sources list of maps are Obsidian Unknown JSON", () => {
   const html = renderProperties(
     '---\ngenerated:\n  by: agent\n  at: "2026-10-15T00:00:00Z"\nsources:\n  - resource: ../raw/a.pdf\n    id: a1\nnote: hello\n---\n',
   );
   assert.match(html, /data-property-key="generated"[\s\S]*mod-unknown/);
   assert.doesNotMatch(html, /data-property-type="generated"/);
-  assert.match(
-    html,
-    /data-property-input="sources"[^>]*data-property-kind="text"/,
+  const sources = html.slice(
+    html.indexOf('data-property-row="sources"'),
+    html.indexOf('data-property-row="note"'),
   );
-  // No three-line clamp: the field shows its sources, then scrolls.
-  assert.match(
+  assert.match(sources, /data-property-type="unknown"/);
+  assert.match(sources, /mod-unknown/);
+  assert.match(sources, /&quot;resource&quot;:&quot;\.\.\/raw\/a\.pdf&quot;/);
+  assert.doesNotMatch(
     html,
-    /class="metadata-input-longtext mod-scroll"[^>]*data-property-input="sources"/,
+    /data-property-input="sources"|mod-scroll|data-property-kind="yaml"/,
   );
+});
+
+test("a sources list of wikilinks is a List of internal-link pills showing the alias", () => {
+  const html = renderProperties(
+    '---\nsources:\n  - "[[wiki/resources/notes/Attention Is All You Need|Attention Is All You Need]]"\n  - "[[wiki/resources/notes/The-Illustrated-Transformer|The Illustrated Transformer]]"\n---\n',
+  );
+  assert.match(html, /data-property-row="sources"/);
+  assert.match(html, /aria-label="Type of sources: List"/);
+  assert.match(html, /data-property-type="multitext"/);
+  assert.match(html, /data-property-list="sources"/);
+  assert.doesNotMatch(html, /data-property-input="sources"|mod-unknown/);
+  const links = [
+    ...html.matchAll(
+      /<a class="internal-link"[^>]* data-href="([^"]*)"[^>]*>([^<]*)<\/a>/g,
+    ),
+  ].map((match) => [match[1], match[2]]);
+  assert.deepEqual(links, [
+    [
+      "wiki/resources/notes/Attention Is All You Need",
+      "Attention Is All You Need",
+    ],
+    [
+      "wiki/resources/notes/The-Illustrated-Transformer",
+      "The Illustrated Transformer",
+    ],
+  ]);
+  // The pill shows only the alias; the raw wikilink text stays in the remove label.
+  assert.doesNotMatch(html, /multi-select-pill-content">[^<]*\[\[/);
 });
 
 test("colliding mapping keys stay Source-mode (no dropped entry draft)", () => {

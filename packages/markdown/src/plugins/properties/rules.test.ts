@@ -32,10 +32,13 @@ test("registry inference covers every scalar/list kind and reserved names before
     assert.equal(inferPropertyKind("status", value), kind);
   }
   assert.equal(inferPropertyKind("Status", true, { status: "text" }), "text");
-  for (const name of ["tags", "aliases", "cssclasses", "sources"]) {
+  for (const name of ["tags", "aliases", "cssclasses"]) {
     assert.equal(canSetPropertyType(name, "text"), false);
     assert.equal(canSetPropertyType(name, null), false);
   }
+  // `sources` is no longer reserved: it is typed like any other key.
+  assert.equal(canSetPropertyType("sources", "text"), true);
+  assert.equal(canSetPropertyType("sources", null), true);
   assert.equal(canSetPropertyType("x", "tags"), false);
   assert.equal(canSetPropertyType("x", "aliases"), false);
   assert.equal(canSetPropertyType("status", null), true);
@@ -69,12 +72,16 @@ test("type submenu order, Automatic and checked state follow the registry", () =
   choices[0]!.run!();
   assert.deepEqual(calls, [["status", null]]);
   assert.equal(propertyTypeChoices("status", editor(), true)[0]!.checked, true);
-  for (const key of ["tags", "aliases", "cssclasses", "sources"]) {
+  for (const key of ["tags", "aliases", "cssclasses"]) {
     const reserved = propertyTypeChoices(key, service, ["x"]);
     assert.equal(reserved.length, 6);
     assert.ok(reserved.every((item) => item.disabled));
     assert.ok(reserved.every((item) => !item.label.startsWith("Automatic")));
   }
+  const sources = propertyTypeChoices("sources", service, ["x"]);
+  assert.equal(sources.length, 7);
+  assert.ok(sources.every((item) => !item.disabled));
+  assert.ok(sources[0]!.label.startsWith("Automatic"));
 });
 
 test("icon and heading menus expose the measured action labels and submenus", async () => {
@@ -150,7 +157,6 @@ test("vault name suggestions combine registered and inferred names, filter and f
     "cssclasses",
     "due",
     "list",
-    "sources",
     "status",
     "tags",
     "title",

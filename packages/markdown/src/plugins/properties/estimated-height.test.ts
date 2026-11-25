@@ -61,23 +61,16 @@ test("a multiline text value uses YAML-draft estimate (not one row per source li
   assert.equal(estimate("---\nnote: |\n  one\n  two\n  three\n---\n"), 182);
 });
 
-test("a large sources list estimates as a scrolling field, not stacked articles", () => {
+test("a large sources list of maps estimates as one Unknown JSON line, not stacked articles", () => {
   const entries = Array.from(
     { length: 108 },
     (_, index) =>
       `  - title: Source ${index}\n    resource: https://example.com/${index}\n    id: id-${index}`,
   ).join("\n");
-  const source = `---\nsources:\n${entries}\n---\n`;
-  const height = estimate(source);
-  const short = estimate("---\nsources: hi\n---\n");
-  assert.ok(height > short, `${height} vs ${short}`);
-  // 324 lines of YAML, held to the field's 300px.
-  assert.ok(height < 300 + 121, String(height));
-  const ignored = estimate(source, {
-    renderValue: () =>
-      '<div class="source-rows"><article class="source-row"><p class="source-title">Tall</p></article></div>',
-  });
-  assert.equal(ignored, height);
+  const height = estimate(`---\nsources:\n${entries}\n---\n`);
+  // Obsidian types a list of maps as Unknown: one value line, however long.
+  assert.equal(height, estimate("---\ngenerated:\n  by: agent\n---\n"));
+  assert.equal(height, estimate("---\nfield: value\n---\n"));
 });
 
 test("an unreadable frontmatter reserves the source it shows", () => {
@@ -109,7 +102,7 @@ test("longtext estimate caps at three unfocused lines, as in Obsidian", () => {
   assert.ok(height < 200, String(height));
 });
 
-test("sources has no three-line clamp: it is reserved up to its scroll height", () => {
+test("a sources list of strings estimates like any other list", () => {
   const sources = (count: number) =>
     Array.from(
       { length: count },
@@ -118,4 +111,5 @@ test("sources has no three-line clamp: it is reserved up to its scroll height", 
   const three = estimate(`---\nsources:\n${sources(3)}\n---\n`);
   const ten = estimate(`---\nsources:\n${sources(10)}\n---\n`);
   assert.ok(ten > three + 100, `${ten} vs ${three}`);
+  assert.equal(ten, estimate(`---\nrefs:\n${sources(10)}\n---\n`));
 });

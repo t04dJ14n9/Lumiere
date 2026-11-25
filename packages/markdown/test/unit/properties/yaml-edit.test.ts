@@ -84,18 +84,19 @@ for (const eol of ["\n", "\r\n"]) {
   });
 }
 
-test("sources nested mappings render as plain text; a YAML set still preserves comments", () => {
+test("sources list-of-maps renders as Obsidian Unknown JSON; a YAML set still preserves comments", () => {
   const source =
     "---\nsources:\n  - resource: ../raw/old.pdf\n    # stable id\n    id: '01'\nkeep: yes\n---\n";
   const html = renderProperties(source);
-  assert.match(
-    html,
-    /data-property-input="sources"[^>]*data-property-kind="text"/,
+  const row = html.slice(
+    html.indexOf('data-property-row="sources"'),
+    html.indexOf('data-property-row="keep"'),
   );
-  assert.match(html, /resource: \.\.\/raw\/old\.pdf/);
+  assert.match(row, /data-property-type="unknown"[\s\S]*mod-unknown/);
+  assert.match(row, /&quot;resource&quot;:&quot;\.\.\/raw\/old\.pdf&quot;/);
   assert.doesNotMatch(
     html,
-    /mod-unknown|source-row|data-property-type="sources"|data-property-kind="yaml"/,
+    /data-property-input="sources"|source-row|data-property-type="sources"|data-property-kind="yaml"/,
   );
   const yaml = yamlDraft(source, "sources").replace("old.pdf", "new.pdf");
   assert.equal(
